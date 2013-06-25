@@ -924,10 +924,10 @@ convertDefIExpression cp exprLoaded defI defType = do
     guidIntoPl (pl, x) = pl & SugarInfer.plData %~ \() -> x
   typeInfo <-
     makeTypeInfo cp defI (addStoredGuids id <$> defType) (mempty <$ inferredType) success
-  let
-    holeInferStateKey = ilr ^. SugarInfer.iwiBaseInferContextKey
-    holeInferState = ilr ^. SugarInfer.iwiBaseInferContext
-  context <- lift $ mkContext cp holeInferStateKey holeInferState
+  context <-
+    lift $ mkContext cp
+    (ilr ^. SugarInfer.iwiBaseInferContextKey)
+    (ilr ^. SugarInfer.iwiBaseInferContext)
   SugarM.run context $ do
     content <-
       iwiExpr

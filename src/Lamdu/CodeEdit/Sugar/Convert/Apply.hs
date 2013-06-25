@@ -212,13 +212,9 @@ typeCheckIdentityAt ::
   Infer.InferNode (DefI (Tag m)) -> SugarM m Bool
 typeCheckIdentityAt point = do
   sugarContext <- SugarM.readContext
-  let
-    inferState = sugarContext ^. SugarM.scHoleInferState
-    inferStateKey = sugarContext ^. SugarM.scHoleInferStateKey
   SugarM.liftCTransaction .
     fmap (Lens.has Lens._Just) $
-    SugarInfer.memoLoadInfer Nothing identityFunc
-    inferStateKey (inferState, point)
+    SugarM.memoLoadInferInHoleContext sugarContext identityFunc point
   where
     identityFunc =
       ExprLens.pureExpr #

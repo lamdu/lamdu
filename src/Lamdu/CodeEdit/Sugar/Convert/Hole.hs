@@ -110,22 +110,19 @@ convertTypeCheckedHoleH exprPl =
   (convertInferred exprPl)
 
 accept ::
-  MonadA m =>
+  (MonadA m, Typeable1 m, Binary a, Cache.Key a) =>
   SugarM.Context m ->
   Infer.InferNode (DefI (Tag m)) ->
   ExprIRef.ExpressionM m a ->
   ExprIRef.ExpressionIM m ->
   T m (Maybe Guid)
 accept sugarContext point expr iref = do
-  loaded <- SugarInfer.load Nothing expr
-  let
-    (exprInferred, _) =
-      unjust "The inferred value of a hole must type-check!" $
-      SugarInfer.inferMaybe_ loaded inferState point
+  (exprInferred, _) <-
+    Cache.unmemoS $
+    unjust "The inferred value of a hole must type-check!" <$>
+    SugarM.memoLoadInferInHoleContext sugarContext expr point
   fmap fst . pickResult iref $
-    flip (,) Nothing <$> cleanUpInferredVal exprInferred
-  where
-    inferState = sugarContext ^. SugarM.scHoleInferState
+    flip (,) Nothing <$> cleanUpInferredVal (fst <$> exprInferred)
 
 convertInferred ::
   (MonadA m, Typeable1 m, Monoid a) =>
@@ -172,8 +169,6 @@ mkHole exprPl = do
   sugarContext <- SugarM.readContext
   mPaste <- fmap join . traverse mkPaste $ exprPl ^. SugarInfer.plStored
   let
-    inferState = sugarContext ^. SugarM.scHoleInferState
-    inferStateKey = sugarContext ^. SugarM.scHoleInferStateKey
     mkWritableHoleActions exprPlStored = do
       globals <-
         SugarM.liftTransaction . Transaction.getP . Anchors.globals $
@@ -195,7 +190,7 @@ mkHole exprPl = do
         , _holeInferExprType = inferExprType
         , holeResult = makeHoleResult sugarContext exprPlStored
         }
-    inferExprType = inferOnTheSide inferStateKey inferState $ Infer.nScope point
+    inferExprType = inferOnTheSide sugarContext $ Infer.nScope point
   mActions <-
     exprPl
     & SugarInfer.plData .~ ()
@@ -232,21 +227,23 @@ chooseHoleType inferredVals plain inferred =
   _ -> plain
 
 inferOnTheSide ::
-  (MonadA m, Typeable1 m) => Cache.KeyBS ->
-  Infer.Context (DefI (Tag m)) ->
+  (MonadA m, Typeable1 m) =>
+  SugarM.Context m ->
   Infer.Scope (DefI (Tag m)) ->
   ExprIRef.ExpressionM m () ->
   CT m (Maybe (ExprIRef.ExpressionM m ()))
 -- token represents the given holeInferContext
-inferOnTheSide inferStateKey holeInferContext scope expr =
+inferOnTheSide sugarContext scope expr =
   (fmap . fmap) (void . Infer.iType . (^. Lens._1 . Expr.ePayload . Lens._1)) .
-  SugarInfer.memoLoadInfer Nothing expr
   -- We can use the same inferStateKey despite making a new node here,
   -- because we haven't altered the context in a meaningful way, we've
   -- added an independent node. This won't collide with inference at
   -- the hole point because the point is an input to the memo.
-  inferStateKey . swap $
-  runState (Infer.newNodeWithScope scope) holeInferContext
+  SugarInfer.memoLoadInfer Nothing expr inferStateKey . swap $
+  runState (Infer.newNodeWithScope scope) inferState
+  where
+    inferState = sugarContext ^. SugarM.scHoleInferState
+    inferStateKey = sugarContext ^. SugarM.scHoleInferStateKey
 
 getScopeElement ::
   MonadA m => SugarM.Context m ->
@@ -389,10 +386,7 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
     mkSeedExprEnv = seedExprEnv (Nothing, mempty) cp seed
     makeInferredExpr = do
       (seedExpr, mJumpTo) <- lift mkSeedExprEnv
-      mInferredExpr <-
-        SugarInfer.memoLoadInfer Nothing seedExpr
-        (sugarContext ^. SugarM.scHoleInferStateKey)
-        (sugarContext ^. SugarM.scHoleInferState, holePoint)
+      mInferredExpr <- SugarM.memoLoadInferInHoleContext sugarContext seedExpr holePoint
       return (seedExpr, mInferredExpr, mJumpTo)
     holePoint = Infer.iPoint $ iwcInferred iwc
     mkHoleResult fakeSeedExpr (fakeInferredResult, fakeCtx) = do

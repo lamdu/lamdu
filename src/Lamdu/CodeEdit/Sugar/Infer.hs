@@ -17,8 +17,7 @@ module Lamdu.CodeEdit.Sugar.Infer
   -- TODO: These don't belong here:
   -- Type-check an expression into an ordinary Inferred Expression,
   -- short-circuit on error:
-  , load, inferMaybe, inferMaybe_
-  , memoLoadInfer
+  , load, memoLoadInfer
 
   , exprInferred
   , exprStored
@@ -109,22 +108,6 @@ load ::
   T m (Infer.Loaded (DefI (Tag m)) a)
 load = Infer.load loader
 
--- TODO: All uses of inferMaybe wrap it with memoization, so put
--- memoization here...
-inferMaybe ::
-  MonadA m =>
-  Infer.Loaded (DefI (Tag m)) a ->
-  Infer.Context (DefI (Tag m)) ->
-  Infer.InferNode (DefI (Tag m)) ->
-  Maybe
-  ( ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), a)
-  , Infer.Context (DefI (Tag m))
-  )
-inferMaybe loaded inferContext inferPoint =
-  (`runStateT` inferContext) $
-  Infer.inferLoaded (Infer.InferActions (const Nothing))
-  loaded inferPoint
-
 pureMemoBy ::
   (Cache.Key k, Binary v, Typeable v, MonadA m) =>
   k -> v -> StateT Cache m v
@@ -153,19 +136,9 @@ memoLoadInfer ::
 memoLoadInfer mDefI expr inferStateKey (inferState, point) = do
   loaded <- lift $ load mDefI expr
   pureMemoBy (loaded, inferStateKey, point) $
-    inferMaybe loaded inferState point
-
-inferMaybe_ ::
-  MonadA m =>
-  Infer.Loaded (DefI (Tag m)) a ->
-  Infer.Context (DefI (Tag m)) ->
-  Infer.InferNode (DefI (Tag m)) ->
-  Maybe
-  ( ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
-  , Infer.Context (DefI (Tag m))
-  )
-inferMaybe_ loaded inferContext inferPoint =
-  (Lens._Just . Lens._1 . Lens.traversed %~ fst) $ inferMaybe loaded inferContext inferPoint
+    (`runStateT` inferState) $
+    Infer.inferLoaded (Infer.InferActions (const Nothing))
+    loaded point
 
 inferWithVariables ::
   (RandomGen g, MonadA m) => g ->
