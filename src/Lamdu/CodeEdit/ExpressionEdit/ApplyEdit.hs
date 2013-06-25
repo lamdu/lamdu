@@ -76,17 +76,17 @@ make (ParentPrecedence parentPrecedence) exprS (Sugar.Apply func specialArgs ann
 assignCursorGuid :: MonadA m => Widget.Id -> Guid -> ExprGuiM m a -> ExprGuiM m a
 assignCursorGuid myId = ExprGuiM.assignCursor myId . WidgetIds.fromGuid
 
-makeTagView :: MonadA m => Widget.Id -> Sugar.TagG Sugar.Name -> ExprGuiM m (ExpressionGui m)
-makeTagView myId tagG =
-  TagEdit.makeView tagG . Widget.toAnimId . mappend myId .
-  WidgetIds.fromGuid $ tagG ^. Sugar.tagGuid
+makeTagView :: MonadA m => Guid -> Sugar.TagG Sugar.Name -> ExprGuiM m (ExpressionGui m)
+makeTagView tagExprGuid tagG =
+  TagEdit.makeView tagG . Widget.toAnimId $
+  WidgetIds.fromGuid tagExprGuid
 
 makeArgRow ::
-  MonadA m => Widget.Id ->
+  MonadA m =>
   Sugar.AnnotatedArg Sugar.Name (ExprGuiM.SugarExpr m) ->
   ExprGuiM m [(Grid.Alignment, ExprGuiM.WidgetT m)]
-makeArgRow myId arg = do
-  argTagEdit <- makeTagView myId $ arg ^. Sugar.aaTag
+makeArgRow arg = do
+  argTagEdit <- makeTagView (arg ^. Sugar.aaTagExprGuid) (arg ^. Sugar.aaTag)
   argValEdit <- ExprGuiM.makeSubexpression 0 $ arg ^. Sugar.aaExpr
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
@@ -110,7 +110,7 @@ mkBoxed destGuid mkFuncRow annotatedArgs =
   assignCursorGuid myId destGuid $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     argEdits <-
-      Grid.toWidget . Grid.make <$> traverse (makeArgRow myId) annotatedArgs
+      Grid.toWidget . Grid.make <$> traverse makeArgRow annotatedArgs
     ExpressionGui.withBgColor Layers.labeledApplyBG
       (Config.labeledApplyBGColor config) (Widget.toAnimId myId ++ ["bg"]) .
       ExpressionGui.addBelow 0 [(0, argEdits)] <$> mkFuncRow

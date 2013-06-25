@@ -39,7 +39,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
   , GetParams(..), gpDefGuid, gpDefName, gpJumpTo
   , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
-  , AnnotatedArg(..), aaTag, aaExpr
+  , AnnotatedArg(..), aaTag, aaTagExprGuid, aaExpr
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
   , Lam(..), lKind, lParam, lIsDep, lResultType
   , FuncParamType(..)
@@ -311,6 +311,8 @@ data SpecialArgs expr
 
 data AnnotatedArg name expr = AnnotatedArg
   { _aaTag :: TagG name
+  , -- Used for animation ids consistent with record.
+    _aaTagExprGuid :: Guid
   , _aaExpr :: expr
   } deriving (Functor, Foldable, Traversable)
 

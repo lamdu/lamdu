@@ -86,6 +86,7 @@ convertLabeled funcS argS exprPl = do
       tagG <- maybeToMPlus $ field ^? rfTag . rBody . _BodyTag
       pure AnnotatedArg
         { _aaTag = tagG
+        , _aaTagExprGuid = field ^. rfTag . rPayload . plGuid
         , _aaExpr = field ^. rfExpr
         }
   args@(arg0 : args1toN@(arg1 : args2toN)) <-
