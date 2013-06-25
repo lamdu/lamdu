@@ -234,14 +234,16 @@ inferOnTheSide ::
   CT m (Maybe (ExprIRef.ExpressionM m ()))
 -- token represents the given holeInferContext
 inferOnTheSide sugarContext scope expr =
-  (fmap . fmap) (void . Infer.iType . (^. Lens._1 . Expr.ePayload . Lens._1)) .
+  (fmap . fmap)
+  (void . Infer.iType . (^. Lens._1 . Expr.ePayload . Lens._1)) .
   -- We can use the same inferStateKey despite making a new node here,
   -- because we haven't altered the context in a meaningful way, we've
   -- added an independent node. This won't collide with inference at
   -- the hole point because the point is an input to the memo.
   SugarInfer.memoLoadInfer Nothing expr inferStateKey . swap $
-  runState (Infer.newNodeWithScope scope) inferState
+  runState newNode inferState
   where
+    newNode = Infer.newNodeWithScope scope
     inferState = sugarContext ^. SugarM.scHoleInferState
     inferStateKey = sugarContext ^. SugarM.scHoleInferStateKey
 
