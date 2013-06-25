@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types, PatternGuards #-}
 module Lamdu.CodeEdit.Sugar
   ( module Lamdu.CodeEdit.Sugar.Types
-  , loadConvertDefI
+  , convertDefI
   , StorePoint
   , Hole.holeResultHasHoles
   , SugarExpr.removeHoleResultTypes, SugarExpr.removeNonHoleTypes
@@ -836,27 +836,6 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
           assertedGetProp "Where must be stored" whereBody
         }
 
-loadConvertDefI ::
-  (MonadA m, Typeable1 m) =>
-  Anchors.CodeProps m -> DefI (Tag m) ->
-  CT m (DefinitionU m [Guid])
-loadConvertDefI cp defI =
-  convertDefI =<< lift (Load.loadDefinitionClosure defI)
-  where
-    defGuid = IRef.guid defI
-    convertDefBody (Definition.BodyBuiltin builtin) =
-      convertDefIBuiltin cp builtin defI
-    convertDefBody (Definition.BodyExpression exprLoaded) =
-      convertDefIExpression cp exprLoaded defI
-    convertDefI (Definition.Definition defBody typeLoaded) = do
-      bodyS <- convertDefBody defBody $ Load.propertyOfClosure <$> typeLoaded
-      name <- lift $ SugarExpr.getStoredName defGuid
-      return Definition
-        { _drGuid = defGuid
-        , _drName = name
-        , _drBody = bodyS
-        }
-
 convertDefIBuiltin ::
   (Typeable1 m, MonadA m) => Anchors.CodeProps m ->
   Definition.Builtin -> DefI (Tag m) ->
@@ -956,3 +935,23 @@ convertDefIExpression cp exprLoaded defI defType = do
     defGuid = IRef.guid defI
     recordParamsInfo = SugarM.RecordParamsInfo defGuid $ jumpToDefI cp defI
     inferLoadedGen = SugarExpr.mkGen 0 3 defGuid
+
+convertDefI ::
+  (MonadA m, Typeable1 m) =>
+  Anchors.CodeProps m -> DefI (Tag m) ->
+  Definition.Definition (Load.LoadedClosure (Tag m)) ->
+  CT m (Definition (Maybe String) m (ExpressionU m [Guid]))
+convertDefI cp defI (Definition.Definition defBody typeLoaded) = do
+  bodyS <- convertDefBody defBody $ Load.propertyOfClosure <$> typeLoaded
+  name <- lift $ SugarExpr.getStoredName defGuid
+  return Definition
+    { _drGuid = defGuid
+    , _drName = name
+    , _drBody = bodyS
+    }
+  where
+    defGuid = IRef.guid defI
+    convertDefBody (Definition.BodyBuiltin builtin) =
+      convertDefIBuiltin cp builtin defI
+    convertDefBody (Definition.BodyExpression exprLoaded) =
+      convertDefIExpression cp exprLoaded defI

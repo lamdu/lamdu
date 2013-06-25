@@ -40,6 +40,7 @@ import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.CodeEdit.Sugar.AddNames as AddNames
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Expression.Load as Load
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
@@ -71,7 +72,8 @@ loadConvertDefI ::
   Anchors.CodeProps m -> DefI (Tag m) ->
   CT m (Sugar.DefinitionU m ExprGuiM.Payload)
 loadConvertDefI cp defI =
-  Sugar.loadConvertDefI cp defI
+  lift (Load.loadDefinitionClosure defI) >>=
+  Sugar.convertDefI cp defI
   <&> Lens.mapped . Lens.mapped . Lens.mapped %~ mkPayload
   where
     mkPayload guids = ExprGuiM.Payload
