@@ -84,18 +84,22 @@ convertLabeled funcS argS exprPl = do
   let
     getArg field = do
       tagG <- maybeToMPlus $ field ^? rfTag . rBody . _BodyTag
-      pure (tagG, field ^. rfExpr)
-  args@((_, arg0) : args1toN@((_, arg1) : args2toN)) <-
+      pure AnnotatedArg
+        { _aaTag = tagG
+        , _aaExpr = field ^. rfExpr
+        }
+  args@(arg0 : args1toN@(arg1 : args2toN)) <-
     traverse getArg $ fields ^. flItems
-  let tagGuids = args ^.. Lens.traversed . Lens._1 . tagGuid
+  let
+    tagGuids = args ^.. Lens.traversed . aaTag . tagGuid
   guard $ noRepetitions tagGuids
   presentationMode <- MaybeT $ indirectDefinitionPresentationMode funcS
   let
     (specialArgs, annotatedArgs) =
       case presentationMode of
       Verbose -> (NoSpecialArgs, args)
-      OO -> (ObjectArg arg0, args1toN)
-      Infix -> (InfixArgs arg0 arg1, args2toN)
+      OO -> (ObjectArg (arg0 ^. aaExpr), args1toN)
+      Infix -> (InfixArgs (arg0 ^. aaExpr) (arg1 ^. aaExpr), args2toN)
   (lift . SugarExpr.make exprPl . BodyApply) Apply
     { _aFunc = funcS
     , _aSpecialArgs = specialArgs

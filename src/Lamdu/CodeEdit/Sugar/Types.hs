@@ -39,6 +39,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
   , GetParams(..), gpDefGuid, gpDefName, gpJumpTo
   , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
+  , AnnotatedArg(..), aaTag, aaExpr
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
   , Lam(..), lKind, lParam, lIsDep, lResultType
   , FuncParamType(..)
@@ -308,10 +309,15 @@ data SpecialArgs expr
   | InfixArgs expr expr
   deriving (Functor, Foldable, Traversable)
 
+data AnnotatedArg name expr = AnnotatedArg
+  { _aaTag :: TagG name
+  , _aaExpr :: expr
+  } deriving (Functor, Foldable, Traversable)
+
 data Apply name expr = Apply
   { _aFunc :: expr
   , _aSpecialArgs :: SpecialArgs expr
-  , _aAnnotatedArgs :: [(TagG name, expr)]
+  , _aAnnotatedArgs :: [AnnotatedArg name expr]
   } deriving (Functor, Foldable, Traversable)
 
 data Body name m expr
@@ -448,6 +454,7 @@ Lens.makeLenses ''Record
 Lens.makeLenses ''RecordField
 Lens.makeLenses ''Scope
 Lens.makeLenses ''TagG
+Lens.makeLenses ''AnnotatedArg
 Lens.makePrisms ''Body
 Lens.makePrisms ''DefinitionTypeInfo
 Lens.makePrisms ''HoleResultSeed

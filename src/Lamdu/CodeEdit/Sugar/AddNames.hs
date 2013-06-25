@@ -353,7 +353,7 @@ toApply ::
 toApply la@Apply{..} = do
   func <- toExpression _aFunc
   specialArgs <- traverse toExpression _aSpecialArgs
-  annotatedArgs <- traverse (Lens._1 toTag <=< Lens._2 toExpression) _aAnnotatedArgs
+  annotatedArgs <- traverse (aaTag toTag <=< aaExpr toExpression) _aAnnotatedArgs
   pure la
     { _aFunc = func
     , _aSpecialArgs = specialArgs

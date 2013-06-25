@@ -83,11 +83,11 @@ makeTagView myId tagG =
 
 makeArgRow ::
   MonadA m => Widget.Id ->
-  (Sugar.TagG Sugar.Name, ExprGuiM.SugarExpr m) ->
+  Sugar.AnnotatedArg Sugar.Name (ExprGuiM.SugarExpr m) ->
   ExprGuiM m [(Grid.Alignment, ExprGuiM.WidgetT m)]
-makeArgRow myId (tagG, namedArgExpr) = do
-  argTagEdit <- makeTagView myId tagG
-  argValEdit <- ExprGuiM.makeSubexpression 0 namedArgExpr
+makeArgRow myId arg = do
+  argTagEdit <- makeTagView myId $ arg ^. Sugar.aaTag
+  argValEdit <- ExprGuiM.makeSubexpression 0 $ arg ^. Sugar.aaExpr
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     scaleTag =
@@ -103,7 +103,7 @@ makeArgRow myId (tagG, namedArgExpr) = do
 
 mkBoxed ::
   MonadA m => Guid -> ExprGuiM m (ExpressionGui m) ->
-  [(Sugar.TagG Sugar.Name, ExprGuiM.SugarExpr m)] ->
+  [Sugar.AnnotatedArg Sugar.Name (ExprGuiM.SugarExpr m)] ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 mkBoxed destGuid mkFuncRow annotatedArgs =
   ExpressionGui.wrapExpression $ \myId ->
