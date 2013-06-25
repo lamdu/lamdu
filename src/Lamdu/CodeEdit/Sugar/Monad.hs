@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents #-}
 module Lamdu.CodeEdit.Sugar.Monad
   ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
-  , scInferState, scHoleInferStateKey, scHoleInferState
+  , scHoleInferStateKey, scHoleInferState
   , scCodeAnchors, scSpecialFunctions, scTagParamInfos, scRecordParamsInfos
   , SugarM(..), run
   , readContext, liftCTransaction, liftTransaction, local
@@ -41,8 +41,7 @@ data RecordParamsInfo m = RecordParamsInfo
   }
 
 data Context m = Context
-  { _scInferState :: Infer.Context (DefI (Tag m))
-  , _scHoleInferStateKey :: Cache.KeyBS
+  { _scHoleInferStateKey :: Cache.KeyBS
   , _scHoleInferState :: Infer.Context (DefI (Tag m))
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)

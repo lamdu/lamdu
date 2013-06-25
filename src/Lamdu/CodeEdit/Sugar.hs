@@ -444,13 +444,11 @@ mkContext ::
   Anchors.Code (Transaction.MkProperty m) (Tag m) ->
   Cache.KeyBS ->
   Infer.Context (DefI (Tag m)) ->
-  Infer.Context (DefI (Tag m)) ->
   T m (Context m)
-mkContext cp holeInferStateKey inferState holeInferState = do
+mkContext cp holeInferStateKey holeInferState = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   return Context
-    { _scInferState = inferState
-    , _scHoleInferStateKey = holeInferStateKey
+    { _scHoleInferStateKey = holeInferStateKey
     , _scHoleInferState = holeInferState
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
@@ -466,7 +464,7 @@ convertExpressionPure ::
 convertExpressionPure cp gen res = do
   context <-
     lift $ mkContext cp (err "holeInferStateKey")
-    (err "inferState") (err "holeInferState")
+    (err "holeInferState")
   fmap removeRedundantTypes .
     SugarM.run context .
     SugarM.convertSubexpression $
@@ -941,9 +939,8 @@ convertDefIExpression cp exprLoaded defI defType = do
     makeTypeInfo cp defI (addStoredGuids id <$> defType) (mempty <$ inferredType) success
   let
     holeInferStateKey = ilr ^. SugarInfer.iwiBaseInferContextKey
-    inferState = ilr ^. SugarInfer.iwiInferContext
     holeInferState = ilr ^. SugarInfer.iwiBaseInferContext
-  context <- lift $ mkContext cp holeInferStateKey inferState holeInferState
+  context <- lift $ mkContext cp holeInferStateKey holeInferState
   SugarM.run context $ do
     content <-
       iwiExpr
