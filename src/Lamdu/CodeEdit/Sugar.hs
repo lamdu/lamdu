@@ -153,25 +153,20 @@ convertPositionalFuncParam (Expr.Lambda _k paramGuid paramType body) lamExprPl =
     lamGuid = lamExprPl ^. SugarInfer.plGuid
     lamData = lamExprPl ^. SugarInfer.plData
 
-convertPositionalLambda ::
-  (Typeable1 m, MonadA m, Monoid a) => Expr.Lambda (SugarInfer.ExprMM m a) ->
-  SugarInfer.PayloadMM m a ->
-  SugarM m (FuncParam MStoredName m (ExpressionU m a), ExpressionU m a)
-convertPositionalLambda lam lamExprPl = do
-  param <- convertPositionalFuncParam lam lamExprPl
-  result <- SugarM.convertSubexpression (lam ^. Expr.lambdaResult)
-  return (param & fpType %~ SugarExpr.setNextHoleToFirstSubHole result, result)
-
 convertLam ::
   (MonadA m, Typeable1 m, Monoid a) =>
   Expr.Lambda (SugarInfer.ExprMM m a) ->
   SugarInfer.PayloadMM m a -> SugarM m (ExpressionU m a)
-convertLam lambda@(Expr.Lambda k paramGuid _paramType result) exprPl = do
-  (param, sBody) <- convertPositionalLambda lambda exprPl
+convertLam lam@(Expr.Lambda k paramGuid _paramType result) exprPl = do
+  param <- convertPositionalFuncParam lam exprPl
+  resultS <- SugarM.convertSubexpression result
   SugarExpr.make exprPl $ BodyLam
     Lam
-    { _lParam = param
-    , _lResultType = sBody
+    { _lParam =
+        param
+        & fpType %~ SugarExpr.setNextHoleToFirstSubHole resultS
+        & fpMActions .~ Nothing
+    , _lResultType = resultS
     , _lKind = k
     , _lIsDep = isDep
     }
