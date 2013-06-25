@@ -442,15 +442,14 @@ isCompleteType =
 mkContext ::
   (MonadA m, Typeable1 m) =>
   Anchors.Code (Transaction.MkProperty m) (Tag m) ->
-  DefI (Tag m) -> Cache.KeyBS ->
+  Cache.KeyBS ->
   Infer.Context (DefI (Tag m)) ->
   Infer.Context (DefI (Tag m)) ->
   T m (Context m)
-mkContext cp defI holeInferStateKey inferState holeInferState = do
+mkContext cp holeInferStateKey inferState holeInferState = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   return Context
-    { _scMDefI = Just defI
-    , _scInferState = inferState
+    { _scInferState = inferState
     , _scHoleInferStateKey = holeInferStateKey
     , _scHoleInferState = holeInferState
     , _scCodeAnchors = cp
@@ -462,11 +461,11 @@ mkContext cp defI holeInferStateKey inferState holeInferState = do
 
 convertExpressionPure ::
   (MonadA m, Typeable1 m, RandomGen g, Monoid a) =>
-  Anchors.CodeProps m -> DefI (Tag m) -> g ->
+  Anchors.CodeProps m -> g ->
   ExprIRef.ExpressionM m a -> CT m (ExpressionU m a)
-convertExpressionPure cp defI gen res = do
+convertExpressionPure cp gen res = do
   context <-
-    lift $ mkContext cp defI (err "holeInferStateKey")
+    lift $ mkContext cp (err "holeInferStateKey")
     (err "inferState") (err "holeInferState")
   fmap removeRedundantTypes .
     SugarM.run context .
@@ -868,7 +867,7 @@ convertDefIBuiltin ::
 convertDefIBuiltin cp (Definition.Builtin name) defI defType =
   DefinitionBodyBuiltin <$> do
     defTypeS <-
-      convertExpressionPure cp defI iDefTypeGen (void defType)
+      convertExpressionPure cp iDefTypeGen (void defType)
       <&> Lens.mapped . Lens.mapped .~ mempty
     pure DefinitionBuiltin
       { biName = name
@@ -913,7 +912,7 @@ makeTypeInfo cp defI defType inferredType success = do
               ExprIRef.newExpression (void inferredType)
             }
   where
-    conv = convertExpressionPure cp defI
+    conv = convertExpressionPure cp
     iDefTypeGen = SugarExpr.mkGen 1 3 defGuid
     iNewTypeGen = SugarExpr.mkGen 2 3 defGuid
     typesMatch = (snd <$> defType) `ExprUtil.alphaEq` inferredType
@@ -944,7 +943,7 @@ convertDefIExpression cp exprLoaded defI defType = do
     holeInferStateKey = ilr ^. SugarInfer.iwiBaseInferContextKey
     inferState = ilr ^. SugarInfer.iwiInferContext
     holeInferState = ilr ^. SugarInfer.iwiBaseInferContext
-  context <- lift $ mkContext cp defI holeInferStateKey inferState holeInferState
+  context <- lift $ mkContext cp holeInferStateKey inferState holeInferState
   SugarM.run context $ do
     content <-
       iwiExpr
