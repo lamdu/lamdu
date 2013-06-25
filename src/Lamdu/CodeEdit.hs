@@ -38,6 +38,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Settings as Settings
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.CodeEdit.Sugar.AddNames as AddNames
+import qualified Lamdu.CodeEdit.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression.Load as Load
@@ -202,5 +203,5 @@ makePaneWidget rawDefS = do
     defS =
       case infoMode of
       Settings.Types -> rawDefS
-      _ -> Sugar.removeNonHoleTypes <$> rawDefS
+      _ -> SugarRemoveTypes.nonHoleTypes <$> rawDefS
   onEachPane <$> DefinitionEdit.make (AddNames.addToDef defS)

@@ -19,7 +19,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.Wrap as Wrap
-import qualified Lamdu.CodeEdit.Sugar as Sugar
+import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE

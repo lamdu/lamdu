@@ -41,7 +41,8 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results as HoleResults
-import qualified Lamdu.CodeEdit.Sugar as Sugar
+import qualified Lamdu.CodeEdit.Sugar.RemoveTypes as SugarRemoveTypes
+import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
@@ -89,7 +90,7 @@ resultPickEventMap ::
 resultPickEventMap config holeInfo holeResult =
   case hiMNextHoleGuid holeInfo of
   Just nextHoleGuid
-    | not (Sugar.holeResultHasHoles holeResult) ->
+    | not (holeResult ^. Sugar.holeResultHasHoles) ->
       mappend (simplePickRes (Config.pickResultKeys config)) .
       E.keyPresses (Config.pickAndMoveToNextHoleKeys config)
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) $
@@ -182,7 +183,7 @@ makeHoleResultWidget holeInfo resultId holeResult = do
       Anim.onDepth (+ (Layers.activeHoleBG - Layers.maxLayer))
     ) .
     (^. ExpressionGui.egWidget) =<<
-    (ExprGuiM.makeSubexpression 0 . Sugar.removeHoleResultTypes)
+    (ExprGuiM.makeSubexpression 0 . SugarRemoveTypes.holeResultTypes)
     (holeResult ^. Sugar.holeResultConverted)
 
 asNewLabelScaleFactor :: Fractional a => a

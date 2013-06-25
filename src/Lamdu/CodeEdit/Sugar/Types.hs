@@ -55,6 +55,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , holeResultConverted
     , holeResultPick, holeResultPickWrapped
     , holeResultPickPrefix
+    , holeResultHasHoles
   , PickedResult(..), prMJumpTo, prIdTranslation
   , LiteralInteger(..)
   , TagG(..), tagName, tagGuid
@@ -179,6 +180,7 @@ data HoleResult name m a = HoleResult
   , _holeResultPick :: T m PickedResult
   , _holeResultPickWrapped :: T m PickedResult
   , _holeResultPickPrefix :: PrefixAction m
+  , _holeResultHasHoles :: Bool
   }
 
 data HoleResultSeed m a

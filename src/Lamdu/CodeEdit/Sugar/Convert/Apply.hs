@@ -32,6 +32,7 @@ import qualified Lamdu.CodeEdit.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.CodeEdit.Sugar.Expression as SugarExpr
 import qualified Lamdu.CodeEdit.Sugar.Infer as SugarInfer
 import qualified Lamdu.CodeEdit.Sugar.Monad as SugarM
+import qualified Lamdu.CodeEdit.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
@@ -123,7 +124,7 @@ makeCollapsed exprPl g compact hasInfo fullExpression =
   , _cFullExprHasInfo = hasInfo
   , _cFullExpression =
     fullExpression
-    & SugarExpr.removeInferredTypes
+    & SugarRemoveTypes.inferredTypes
     & rPayload . plGuid .~ expandedGuid
     & rPayload . plData .~ mempty
   }

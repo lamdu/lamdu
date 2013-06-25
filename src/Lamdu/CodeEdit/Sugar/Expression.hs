@@ -1,8 +1,6 @@
 module Lamdu.CodeEdit.Sugar.Expression
   ( make, mkGen
   , mkReplaceWithNewHole
-  , removeSuccessfulType, removeInferredTypes
-  , removeTypes, removeNonHoleTypes, removeHoleResultTypes
   , setNextHoleToFirstSubHole
   , setNextHole
   , subExpressions
@@ -34,37 +32,6 @@ import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Ops as DataOps
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
-
-removeSuccessfulType :: Expression name m a -> Expression name m a
-removeSuccessfulType = rPayload %~ payloadRemoveSuccessfulType
-
-payloadRemoveSuccessfulType :: Payload name m a -> Payload name m a
-payloadRemoveSuccessfulType =
-  plInferredTypes . Lens.filtered (null . drop 1) .~ []
-
-removeInferredTypes :: Expression name m a -> Expression name m a
-removeInferredTypes = rPayload . plInferredTypes .~ []
-
-removeTypes :: Expression name m a -> Expression name m a
-removeTypes = fmap payloadRemoveSuccessfulType
-
-removeNonHoleTypes :: Expression name m a -> Expression name m a
-removeNonHoleTypes =
-  removeSuccessfulType . (innerLayer %~ removeNonHoleTypes)
-  & (Lens.outside . Lens.filtered . Lens.has) (rBody . _BodyHole) .~
-    (innerLayer . innerLayer %~ removeNonHoleTypes)
-  where
-    innerLayer = rBody . Lens.traversed
-
-removeHoleResultTypes :: Expression name m a -> Expression name m a
-removeHoleResultTypes =
-  removeSuccessfulType .
-  ( rBody %~
-    ( (Lens.traversed %~ removeTypes)
-      & Lens.outside _BodyHole .~
-        BodyHole . (Lens.traversed . rBody . Lens.traversed %~ removeTypes)
-    )
-  )
 
 mkGen :: Int -> Int -> Guid -> Random.StdGen
 mkGen select count =

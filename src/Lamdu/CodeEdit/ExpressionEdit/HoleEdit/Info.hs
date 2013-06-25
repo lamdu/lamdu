@@ -15,7 +15,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.Sugar as Sugar
+import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 
 type T = Transaction
 

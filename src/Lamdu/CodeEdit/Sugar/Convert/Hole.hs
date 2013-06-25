@@ -1,7 +1,7 @@
 {-# LANGUAGE ConstraintKinds, DeriveFunctor #-}
 
 module Lamdu.CodeEdit.Sugar.Convert.Hole
-  ( convert, convertPlain, holeResultHasHoles
+  ( convert, convertPlain
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
@@ -415,6 +415,8 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
               { _prMJumpTo = Just . ExprIRef.exprGuid $ written ^. Expr.ePayload . Lens._1
               , _prIdTranslation = mkTranslations $ fst <$> written
               }
+        , _holeResultHasHoles =
+          not . null . uninferredHoles $ (,) () . fst <$> fakeInferredResult
         }
     pick mkTranslations = do
       (_seedExpr, mFinalExprCtx, mJumpTo) <- Cache.unmemoS makeInferredExpr
@@ -547,7 +549,3 @@ uninferredHoles e =
       guard $ lamKind == Type
       uninferredHoles paramType
   body -> Foldable.concatMap uninferredHoles body
-
-holeResultHasHoles :: HoleResult name m a -> Bool
-holeResultHasHoles =
-  not . null . uninferredHoles . fmap ((,) ()) . (^. holeResultInferred)

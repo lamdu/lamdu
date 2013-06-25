@@ -3,8 +3,6 @@ module Lamdu.CodeEdit.Sugar
   ( module Lamdu.CodeEdit.Sugar.Types
   , convertDefI
   , StorePoint
-  , Hole.holeResultHasHoles
-  , SugarExpr.removeHoleResultTypes, SugarExpr.removeNonHoleTypes
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
@@ -43,6 +41,7 @@ import qualified Lamdu.CodeEdit.Sugar.Convert.Hole as Hole
 import qualified Lamdu.CodeEdit.Sugar.Expression as SugarExpr
 import qualified Lamdu.CodeEdit.Sugar.Infer as SugarInfer
 import qualified Lamdu.CodeEdit.Sugar.Monad as SugarM
+import qualified Lamdu.CodeEdit.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
@@ -140,7 +139,7 @@ convertPositionalFuncParam (Expr.Lambda _k paramGuid paramType body) lamExprPl =
     , _fpId = Guid.combine lamGuid paramGuid
     , _fpAltIds = [paramGuid] -- For easy jumpTo
     , _fpType =
-      SugarExpr.removeSuccessfulType paramTypeS
+      SugarRemoveTypes.successfulType paramTypeS
       -- Slightly strange but we mappend the hidden lambda's
       -- annotation into the param type:
       & rPayload . plData <>~ lamData
@@ -405,12 +404,12 @@ removeRedundantSubExprTypes =
     fields = rFields . flItems . Lens.traversed
     remSuc =
       Lens.filtered (Lens.nullOf (rBody . _BodyHole)) %~
-      SugarExpr.removeSuccessfulType
+      SugarRemoveTypes.successfulType
 
 removeRedundantTypes :: Expression name m a -> Expression name m a
 removeRedundantTypes =
   removeRedundantSubExprTypes .
-  (Lens.filtered cond %~ SugarExpr.removeSuccessfulType)
+  (Lens.filtered cond %~ SugarRemoveTypes.successfulType)
   where
     cond e =
       Lens.anyOf (rBody . _BodyGetVar) ((/= GetDefinition) . (^. gvVarType)) e ||
@@ -523,7 +522,7 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
         , _fpId = Guid.combine lamGuid guid
         , _fpAltIds = []
         , _fpVarKind = FuncFieldParameter
-        , _fpType = SugarExpr.removeSuccessfulType typeS
+        , _fpType = SugarRemoveTypes.successfulType typeS
         , _fpMActions =
           fpActions tagExprGuid
           <$> mLambdaP <*> mParamTypeI <*> mBodyStored
