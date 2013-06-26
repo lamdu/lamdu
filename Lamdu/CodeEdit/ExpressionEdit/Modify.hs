@@ -17,9 +17,9 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
-import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.Types as Sugar
 
 wrapEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (Transaction m)
 wrapEventMap config actions =

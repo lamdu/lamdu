@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-
 module Lamdu.CodeEdit.ExpressionEdit.LambdaEdit
   ( make, makeParamNameEdit, makeParamEdit
   ) where
@@ -16,10 +15,10 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
-import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.Types as Sugar
 
 paramFDConfig :: FocusDelegator.Config
 paramFDConfig = FocusDelegator.Config

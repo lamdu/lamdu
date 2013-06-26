@@ -34,9 +34,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Settings as Settings
-import qualified Lamdu.CodeEdit.Sugar as Sugar
-import qualified Lamdu.CodeEdit.Sugar.AddNames as AddNames
-import qualified Lamdu.CodeEdit.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression.Load as Load
@@ -44,6 +41,9 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar as Sugar
+import qualified Lamdu.Sugar.AddNames as AddNames
+import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 
 type T = Transaction
 type CT m = StateT Cache (T m)

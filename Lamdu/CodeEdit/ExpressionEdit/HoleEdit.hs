@@ -41,12 +41,12 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results as HoleResults
-import qualified Lamdu.CodeEdit.Sugar.RemoveTypes as SugarRemoveTypes
-import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
+import qualified Lamdu.Sugar.Types as Sugar
 
 extraSymbol :: String
 extraSymbol = "▷"

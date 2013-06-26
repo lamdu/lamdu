@@ -35,10 +35,10 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.Modify as Modify
 import qualified Lamdu.CodeEdit.ExpressionEdit.PiEdit as PiEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.RecordEdit as RecordEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
-import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.Types as Sugar
 
 data IsHole = NotAHole | IsAHole
 

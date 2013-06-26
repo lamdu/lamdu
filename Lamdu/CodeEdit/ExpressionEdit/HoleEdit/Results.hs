@@ -26,11 +26,11 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument)
-import Lamdu.CodeEdit.Sugar.Types (Scope(..))
 import Lamdu.Config (Config)
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefM)
 import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..), pureHole)
+import Lamdu.Sugar.Types (Scope(..))
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Foldable as Foldable
@@ -38,7 +38,6 @@ import qualified Data.List.Class as List
 import qualified Data.Store.Guid as Guid
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
@@ -46,6 +45,7 @@ import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 type CT m = StateT Cache (T m)

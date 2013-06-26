@@ -1,6 +1,6 @@
 {-# LANGUAGE ConstraintKinds, DeriveFunctor #-}
 
-module Lamdu.CodeEdit.Sugar.Convert.Hole
+module Lamdu.Sugar.Convert.Hole
   ( convert, convertPlain, orderedInnerHoles
   ) where
 
@@ -22,11 +22,11 @@ import Data.Store.IRef (Tag)
 import Data.Traversable (sequenceA, traverse)
 import Data.Tuple (swap)
 import Data.Typeable (Typeable1)
-import Lamdu.CodeEdit.Sugar.Infer (InferredWC, Stored)
-import Lamdu.CodeEdit.Sugar.Internal
-import Lamdu.CodeEdit.Sugar.Monad (SugarM)
-import Lamdu.CodeEdit.Sugar.Types
-import Lamdu.CodeEdit.Sugar.Types.Internal
+import Lamdu.Sugar.Infer (InferredWC, Stored)
+import Lamdu.Sugar.Internal
+import Lamdu.Sugar.Monad (SugarM)
+import Lamdu.Sugar.Types
+import Lamdu.Sugar.Types.Internal
 import Lamdu.Data.Expression.IRef (DefM)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), iwcInferred, iwcInferredValues)
 import qualified Control.Lens as Lens
@@ -38,9 +38,9 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import qualified Lamdu.CodeEdit.Sugar.Expression as SugarExpr
-import qualified Lamdu.CodeEdit.Sugar.Infer as SugarInfer
-import qualified Lamdu.CodeEdit.Sugar.Monad as SugarM
+import qualified Lamdu.Sugar.Expression as SugarExpr
+import qualified Lamdu.Sugar.Infer as SugarInfer
+import qualified Lamdu.Sugar.Monad as SugarM
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr

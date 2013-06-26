@@ -11,11 +11,11 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
-import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
   MonadA m =>

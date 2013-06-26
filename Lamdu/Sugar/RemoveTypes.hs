@@ -1,4 +1,4 @@
-module Lamdu.CodeEdit.Sugar.RemoveTypes
+module Lamdu.Sugar.RemoveTypes
   ( nonHoleTypes
   , holeResultTypes
   , successfulType
@@ -7,7 +7,7 @@ module Lamdu.CodeEdit.Sugar.RemoveTypes
   ) where
 
 import Control.Lens.Operators
-import Lamdu.CodeEdit.Sugar.Types
+import Lamdu.Sugar.Types
 import qualified Control.Lens as Lens
 
 nonHoleTypes :: Expression name m a -> Expression name m a

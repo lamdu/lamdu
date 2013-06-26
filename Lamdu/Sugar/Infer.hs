@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, ConstraintKinds #-}
-module Lamdu.CodeEdit.Sugar.Infer
+module Lamdu.Sugar.Infer
   ( Payload(..), plGuid, plInferred, plStored, plData
   , ExpressionSetter
   , NoInferred(..), InferredWC

@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
-module Lamdu.CodeEdit.Sugar.Types.Internal
+module Lamdu.Sugar.Types.Internal
   ( StorePoint(..), T, CT
   ) where
 

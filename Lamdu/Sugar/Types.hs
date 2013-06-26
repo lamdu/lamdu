@@ -1,5 +1,5 @@
 {-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, DeriveDataTypeable, RankNTypes #-}
-module Lamdu.CodeEdit.Sugar.Types
+module Lamdu.Sugar.Types
   ( Definition(..), drName, drGuid, drBody
   , DefinitionBody(..)
   , ListItemActions(..), itemAddNext, itemDelete
@@ -74,12 +74,12 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
-import Lamdu.CodeEdit.Sugar.Types.Internal (T, CT)
+import Lamdu.Sugar.Types.Internal (T, CT)
 import Lamdu.Data.Expression (Kind(..))
 import Lamdu.Data.Expression.IRef (DefM)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
-import qualified Lamdu.CodeEdit.Sugar.Types.Internal as TypesInternal
+import qualified Lamdu.Sugar.Types.Internal as TypesInternal
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
