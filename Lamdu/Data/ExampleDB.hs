@@ -24,13 +24,13 @@ import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
-import qualified Lamdu.Anchors as A
-import qualified Lamdu.Data.FFI as FFI
+import qualified Lamdu.Data.DbLayout as Db
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.FFI as FFI
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.WidgetIdIRef as WidgetIdIRef
 
@@ -47,7 +47,7 @@ fixIRef createOuter = do
   return x
 
 createBuiltins ::
-  MonadA m => Transaction m ((FFI.Env (Tag m), A.SpecialFunctions (Tag m)), [ExprIRef.DefM m])
+  MonadA m => Transaction m ((FFI.Env (Tag m), Db.SpecialFunctions (Tag m)), [ExprIRef.DefM m])
 createBuiltins =
   Writer.runWriterT $ do
     list <- mkDefinitionRef $ publicBuiltin "Data.List.List" setToSet
@@ -173,11 +173,11 @@ createBuiltins =
       mkPiRecord [("initial", a), ("step", endo a)] $ listOf a
 
     let
-      specialFunctions = A.SpecialFunctions
-        { A.sfNil = nil
-        , A.sfCons = cons
-        , A.sfHeadTag = headTagGuid
-        , A.sfTailTag = tailTagGuid
+      specialFunctions = Db.SpecialFunctions
+        { Db.sfNil = nil
+        , Db.sfCons = cons
+        , Db.sfHeadTag = headTagGuid
+        , Db.sfTailTag = tailTagGuid
         }
       ffiEnv = FFI.Env
         { FFI.trueDef = true
@@ -204,7 +204,7 @@ createBuiltins =
     integer = ExprIRef.newExprBody $ Expr.BodyLeaf Expr.IntegerType
     forAll name f = fmap ExprIRef.ExpressionI . fixIRef $ \aI -> do
       let aGuid = IRef.guid aI
-      setP (A.assocNameRef aGuid) name
+      setP (Db.assocNameRef aGuid) name
       s <- set
       return . ExprUtil.makePi aGuid s =<<
         f ((ExprIRef.newExprBody . Lens.review ExprLens.bodyParameterRef) aGuid)
@@ -214,7 +214,7 @@ createBuiltins =
       ExprIRef.newExprBody =<< liftA2 ExprUtil.makeApply mkFunc mkArg
     newTag name = namedTag name =<< Transaction.newKey
     namedTag name tagGuid = do
-      setP (A.assocNameRef tagGuid) name
+      setP (Db.assocNameRef tagGuid) name
       ExprIRef.newExprBody $ ExprLens.bodyTag # tagGuid
     mkRecordType mkTag fields = do
       tagFields <- traverse (Lens._1 mkTag <=< Lens.sequenceOf Lens._2) fields
@@ -241,36 +241,36 @@ createBuiltins =
 newBranch :: MonadA m => String -> Version (Tag m) -> Transaction m (Branch (Tag m))
 newBranch name ver = do
   branch <- Branch.new ver
-  setP (A.assocNameRef (Branch.guid branch)) name
+  setP (Db.assocNameRef (Branch.guid branch)) name
   return branch
 
 initDB :: Db -> IO ()
 initDB db =
-  A.runDbTransaction db $ do
-    exists <- Transaction.irefExists $ A.branches A.revisionIRefs
+  Db.runDbTransaction db $ do
+    exists <- Transaction.irefExists $ Db.branches Db.revisionIRefs
     unless exists $ do
       emptyVersion <- Version.makeInitialVersion []
       master <- newBranch "master" emptyVersion
       view <- View.new master
-      let writeRevAnchor f = Transaction.writeIRef (f A.revisionIRefs)
-      writeRevAnchor A.view view
-      writeRevAnchor A.branches [master]
-      writeRevAnchor A.currentBranch master
-      writeRevAnchor A.redos []
-      let paneWId = WidgetIdIRef.fromIRef $ A.panes A.codeIRefs
-      writeRevAnchor A.cursor paneWId
-      A.runViewTransaction view $ do
+      let writeRevAnchor f = Transaction.writeIRef (f Db.revisionIRefs)
+      writeRevAnchor Db.view view
+      writeRevAnchor Db.branches [master]
+      writeRevAnchor Db.currentBranch master
+      writeRevAnchor Db.redos []
+      let paneWId = WidgetIdIRef.fromIRef $ Db.panes Db.codeIRefs
+      writeRevAnchor Db.cursor paneWId
+      Db.runViewTransaction view $ do
         ((ffiEnv, specialFunctions), builtins) <- createBuiltins
-        let writeCodeAnchor f = Transaction.writeIRef (f A.codeIRefs)
-        writeCodeAnchor A.clipboards []
-        writeCodeAnchor A.specialFunctions specialFunctions
-        writeCodeAnchor A.ffiEnv ffiEnv
-        writeCodeAnchor A.globals builtins
-        writeCodeAnchor A.panes []
-        writeCodeAnchor A.preJumps []
-        writeCodeAnchor A.preCursor paneWId
-        writeCodeAnchor A.postCursor paneWId
-        writeCodeAnchor A.tags []
+        let writeCodeAnchor f = Transaction.writeIRef (f Db.codeIRefs)
+        writeCodeAnchor Db.clipboards []
+        writeCodeAnchor Db.specialFunctions specialFunctions
+        writeCodeAnchor Db.ffiEnv ffiEnv
+        writeCodeAnchor Db.globals builtins
+        writeCodeAnchor Db.panes []
+        writeCodeAnchor Db.preJumps []
+        writeCodeAnchor Db.preCursor paneWId
+        writeCodeAnchor Db.postCursor paneWId
+        writeCodeAnchor Db.tags []
       -- Prevent undo into the invalid empty revision
       newVer <- Branch.curVersion master
       Version.preventUndo newVer

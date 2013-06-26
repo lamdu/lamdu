@@ -40,7 +40,7 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
-import qualified Lamdu.Anchors as Anchors
+import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.CodeEdit.Settings as Settings
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.ExampleDB as ExampleDB
@@ -248,7 +248,7 @@ runDb getConfig font db = do
   wrapFlyNav <- makeFlyNav
   let
     makeWidget (config, size) = do
-      cursor <- dbToIO . Transaction.getP $ Anchors.cursor Anchors.revisionProps
+      cursor <- dbToIO . Transaction.getP $ DbLayout.cursor DbLayout.revisionProps
       sizeFactor <- readIORef sizeFactorRef
       globalEventMap <- mkGlobalEventMap config settingsRef
       let eventMap = globalEventMap `mappend` sizeFactorEvents config
@@ -265,7 +265,7 @@ runDb getConfig font db = do
     , addHelpWithStyle (helpConfig font config) size
     )
   where
-    dbToIO = Anchors.runDbTransaction db
+    dbToIO = DbLayout.runDbTransaction db
 
 nextInfoMode :: Settings.InfoMode -> Settings.InfoMode
 nextInfoMode Settings.None = Settings.Types
@@ -286,7 +286,7 @@ mkGlobalEventMap config settingsRef = do
 mkWidgetWithFallback ::
   Config -> IORef Settings ->
   TextEdit.Style ->
-  (forall a. Transaction Anchors.DbM a -> IO a) ->
+  (forall a. Transaction DbLayout.DbM a -> IO a) ->
   (Widget.Size, Widget.Id) ->
   StateT Cache IO (Widget IO)
 mkWidgetWithFallback config settingsRef style dbToIO (size, cursor) = do
@@ -299,7 +299,7 @@ mkWidgetWithFallback config settingsRef style dbToIO (size, cursor) = do
         then return (True, candidateWidget)
         else do
           finalWidget <- fromCursor settings rootCursor
-          lift $ Transaction.setP (Anchors.cursor Anchors.revisionProps) rootCursor
+          lift $ Transaction.setP (DbLayout.cursor DbLayout.revisionProps) rootCursor
           return (False, finalWidget)
       unless (widget ^. Widget.wIsFocused) $
         fail "Root cursor did not match"
@@ -311,20 +311,20 @@ mkWidgetWithFallback config settingsRef style dbToIO (size, cursor) = do
     rootCursor = WidgetIds.fromGuid rootGuid
 
 rootGuid :: Guid
-rootGuid = IRef.guid $ Anchors.panes Anchors.codeIRefs
+rootGuid = IRef.guid $ DbLayout.panes DbLayout.codeIRefs
 
 makeRootWidget ::
   Config -> Settings -> TextEdit.Style ->
-  (forall a. Transaction Anchors.DbM a -> IO a) ->
+  (forall a. Transaction DbLayout.DbM a -> IO a) ->
   Widget.Size -> Widget.Id ->
-  StateT Cache (Transaction Anchors.DbM) (Widget IO)
+  StateT Cache (Transaction DbLayout.DbM) (Widget IO)
 makeRootWidget config settings style dbToIO size cursor = do
   actions <- lift VersionControl.makeActions
   mapStateT (runWidgetEnvT cursor style config) $ do
     codeEdit <-
       (fmap . Widget.atEvents) (VersionControl.runEvent cursor) .
       (mapStateT . WE.mapWidgetEnvT) VersionControl.runAction $
-      CodeEdit.make Anchors.codeProps settings rootGuid
+      CodeEdit.make DbLayout.codeProps settings rootGuid
     branchGui <- lift $ VersionControlGUI.make id size actions codeEdit
     let
       quitEventMap =
@@ -334,6 +334,6 @@ makeRootWidget config settings style dbToIO size cursor = do
       Widget.strongerEvents quitEventMap branchGui
   where
     attachCursor eventResult = do
-      maybe (return ()) (Transaction.setP (Anchors.cursor Anchors.revisionProps)) $
+      maybe (return ()) (Transaction.setP (DbLayout.cursor DbLayout.revisionProps)) $
         eventResult ^. Widget.eCursor
       return eventResult

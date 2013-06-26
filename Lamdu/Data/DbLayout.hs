@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
-module Lamdu.Anchors
+module Lamdu.Data.DbLayout
   ( DbM, runDbTransaction
   , ViewM, runViewTransaction
   , CodeProps, codeProps, codeIRefs
