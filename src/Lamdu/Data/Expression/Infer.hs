@@ -248,7 +248,7 @@ derefNode context inferNode =
   , iType = deref . tvType $ nRefs inferNode
   , iScope =
     Map.fromList . mapMaybe onScopeElement . Map.toList $ nScope inferNode
-  , iPoint = inferNode
+  , iNode = inferNode
   }
   where
     onScopeElement (Expr.ParameterRef guid, ref) = Just (guid, deref ref)

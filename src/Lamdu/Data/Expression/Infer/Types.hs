@@ -71,7 +71,7 @@ data IsRestrictedPoly = UnrestrictedPoly | RestrictedPoly
   deriving (Eq, Ord, Show, Typeable)
 
 data Inferred def = Inferred
-  { iPoint :: InferNode def
+  { iNode :: InferNode def
   , iValue :: Expr.Expression def IsRestrictedPoly
   , iType  :: Expr.Expression def IsRestrictedPoly
   , iScope :: Map Guid (Expr.Expression def IsRestrictedPoly)

@@ -64,7 +64,7 @@ inferWithConflicts loaded node = do
     Infer.inferLoaded (Infer.InferActions reportConflict) loaded node
   let
     conflicts getRef x =
-      getConflicts ((getRef . Infer.nRefs . Infer.iPoint) x)
+      getConflicts ((getRef . Infer.nRefs . Infer.iNode) x)
       conflictsMap
     toIWC x =
       InferredWithConflicts

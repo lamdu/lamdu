@@ -131,4 +131,4 @@ assertResume origExpr position newExpr =
   doInferM point newExpr
   where
     (tExpr, inferContext) = doInfer_ origExpr
-    Just point = tExpr ^? position . Expr.ePayload . Lens.to Infer.iPoint
+    Just point = tExpr ^? position . Expr.ePayload . Lens.to Infer.iNode

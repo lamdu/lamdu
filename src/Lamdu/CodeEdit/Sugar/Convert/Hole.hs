@@ -143,7 +143,7 @@ convertInferred exprPl wvInferredVal = do
     , _iValue = (mempty <$) <$> val
     , _iMAccept =
       fmap (fromMaybe eGuid) .
-      accept sugarContext (Infer.iPoint inferred) inferredVal .
+      accept sugarContext (Infer.iNode inferred) inferredVal .
       Property.value <$> exprPl ^. SugarInfer.plStored
     }
   where
@@ -201,7 +201,7 @@ mkHole exprPl = do
     , _holeMArg = Nothing
     }
   where
-    point = Infer.iPoint inferred
+    point = Infer.iNode inferred
     inferred = iwcInferred $ exprPl ^. SugarInfer.plInferred
 
 cleanUpInferredVal ::
@@ -390,7 +390,7 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
       (seedExpr, mJumpTo) <- lift mkSeedExprEnv
       mInferredExpr <- SugarM.memoLoadInferInHoleContext sugarContext seedExpr holePoint
       return (seedExpr, mInferredExpr, mJumpTo)
-    holePoint = Infer.iPoint $ iwcInferred iwc
+    holePoint = Infer.iNode $ iwcInferred iwc
     mkHoleResult fakeSeedExpr (fakeInferredResult, fakeCtx) = do
       let
         newContext =

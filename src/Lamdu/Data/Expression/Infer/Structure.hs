@@ -42,4 +42,4 @@ addToNodes loader expr@(Expr.Expression body (inferred, a))
   | otherwise =
     (`Expr.Expression` (point, a)) <$> (body & Lens.traversed %%~ addToNodes loader)
   where
-    point = Infer.iPoint inferred
+    point = Infer.iNode inferred

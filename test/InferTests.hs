@@ -152,7 +152,7 @@ resumptionTests = testGroup "type infer resume" $
     let
       (exprD, inferContext) =
         doInfer_ $ lambda "" hole (const hole)
-      scope = exprD ^?! lamBody . Expr.ePayload . Lens.to (Infer.nScope . Infer.iPoint)
+      scope = exprD ^?! lamBody . Expr.ePayload . Lens.to (Infer.nScope . Infer.iNode)
       exprR = (`evalState` inferContext) $ do
         node <- Infer.newNodeWithScope scope
         doInferM_ node getRecursiveDef
@@ -174,7 +174,7 @@ failResumptionAddsRules =
       inferWithConflicts (doLoad resumptionValue) resumptionPoint
     resumptionValue = getDef "Bool" -- <- anything but Pi
     resumptionPoint =
-      origInferred ^?! lamParamType . lamBody . Expr.ePayload . Lens.to Infer.iPoint
+      origInferred ^?! lamParamType . lamBody . Expr.ePayload . Lens.to Infer.iNode
     (origInferred, origInferContext) =
       doInfer_ . lambda "x" (hole ~> hole) $
       \x -> x $$ hole $$ hole
@@ -244,7 +244,7 @@ infiniteTypeTests =
   testGroup "Infinite types"
   [ wrongRecurseMissingArg
   , getFieldWasntAllowed
-  ]  
+  ]
 
 expectLeft :: Show r => String -> (l -> HUnit.Assertion) -> Either l r -> HUnit.Assertion
 expectLeft _ handleLeft (Left x) = handleLeft x

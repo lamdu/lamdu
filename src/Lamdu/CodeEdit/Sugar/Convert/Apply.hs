@@ -250,7 +250,7 @@ convertAppliedHole funcI rawArgS argI exprPl
   | Lens.has ExprLens.exprHole funcI = lift $ do
     isTypeMatch <-
       maybe (return False)
-      (typeCheckIdentityAt . Infer.iPoint . iwcInferred) $
+      (typeCheckIdentityAt . Infer.iNode . iwcInferred) $
       funcI ^. SugarInfer.exprInferred
     let
       holeArg = HoleArg

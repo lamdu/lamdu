@@ -52,7 +52,7 @@ addVariableForHole holePoint = do
       "ImplicitVariables.addVariableForHole" getVarLoaded holePoint
     let
       paramTypeRef =
-        Infer.tvType . Infer.nRefs . Infer.iPoint . fst $
+        Infer.tvType . Infer.nRefs . Infer.iNode . fst $
         inferredGetVar ^. Expr.ePayload
     paramTypeTypeRef <- Infer.createRefExpr
     return
@@ -68,11 +68,11 @@ addVariablesForExpr ::
 addVariablesForExpr loader expr = do
   reinferred <-
     lift . State.gets . Infer.derefExpr $
-    expr & Lens.traversed . Lens._1 %~ Infer.iPoint
+    expr & Lens.traversed . Lens._1 %~ Infer.iNode
   if isUnrestrictedHole $ inferredVal reinferred
     then
       fmap (:[]) . mapStateT toStateT . addVariableForHole $
-      Infer.iPoint . fst $ expr ^. Expr.ePayload
+      Infer.iNode . fst $ expr ^. Expr.ePayload
     else do
       reloaded <-
         lift . lift . Infer.load loader Nothing $ -- <-- TODO: Nothing?
@@ -81,7 +81,7 @@ addVariablesForExpr loader expr = do
         lift . toStateT .
         InferUntilConflict.inferAssertNoConflict
         "ImplicitVariables.addVariableForExpr" reloaded .
-        Infer.iPoint $ reinferred ^. Expr.ePayload . Lens._1
+        Infer.iNode $ reinferred ^. Expr.ePayload . Lens._1
       fmap concat . mapM (addVariablesForExpr loader) .
         filter (isUnrestrictedHole . inferredVal) $
         ExprUtil.subExpressionsWithoutTags reinferredLoaded
@@ -137,5 +137,5 @@ add gen loader expr = do
   where
     baseExpr =
       expr & Lens.traversed %~
-      (Lens._1 %~ Infer.iPoint) .
+      (Lens._1 %~ Infer.iNode) .
       (Lens._2 %~ Stored)
