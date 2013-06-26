@@ -877,7 +877,7 @@
     "layers": {
         "layerActiveHoleBG": -1,
         "layerInactiveHole": 24,
-        "layerCursorBG": 25,
+        "layerCursorBG": 0,
         "layerTypes": 27,
         "layerCollapsedCompactBG": 28,
         "layerCollapsedExpandedBG": 29,
