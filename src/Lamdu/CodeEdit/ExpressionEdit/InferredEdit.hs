@@ -47,26 +47,32 @@ make parentPrecedence pl inferred guid myId = do
        (E.Doc ["Edit", "Inferred value", "Accept"]) .
        fmap WidgetIds.fromGuid) $
       inferred ^. Sugar.iMAccept
-  ExpressionGui.wrapDelegated pl (fdConfig config) FocusDelegator.NotDelegating
-    (makeUnwrapped parentPrecedence inferred guid) myId
+  ExprGuiM.wrapDelegated (fdConfig config)
+    FocusDelegator.NotDelegating (ExpressionGui.egWidget %~)
+    (makeUnwrapped parentPrecedence pl inferred guid) myId
     <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
-
 
 makeUnwrapped ::
   MonadA m => ParentPrecedence ->
+  Sugar.Payload Sugar.Name m a ->
   Sugar.Inferred Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Guid -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makeUnwrapped (ParentPrecedence parentPrecedence) inferred guid myId = do
+makeUnwrapped (ParentPrecedence parentPrecedence) pl inferred guid myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   mInnerCursor <- ExprGuiM.widgetEnv $ WE.subCursor myId
-  case mInnerCursor of
-    Nothing ->
-      ExpressionGui.egWidget
-      ( ExprGuiM.widgetEnv
-      . BWidgets.makeFocusableView myId
-      . Widget.tint (Config.inferredValueTint config)
-      . Widget.scale (realToFrac <$> Config.inferredValueScaleFactor config)
-      ) =<< ExprGuiM.makeSubexpression parentPrecedence (inferred ^. Sugar.iValue)
-    Just _ ->
-      HoleEdit.makeUnwrapped Nothing (inferred ^. Sugar.iHole) Nothing guid myId
+  inactive <-
+    ExpressionGui.addInferredTypes pl =<<
+    ExpressionGui.egWidget
+    ( ExprGuiM.widgetEnv
+    . BWidgets.makeFocusableView myId
+    . Widget.tint (Config.inferredValueTint config)
+    . Widget.scale (realToFrac <$> Config.inferredValueScaleFactor config)
+    ) =<< ExprGuiM.makeSubexpression parentPrecedence (inferred ^. Sugar.iValue)
+  case (mInnerCursor, inferred ^. Sugar.iHole . Sugar.holeMActions) of
+    (Just _, Just actions) ->
+      HoleEdit.makeUnwrappedActive pl actions
+      (inactive ^. ExpressionGui.egWidget . Widget.wSize)
+      Nothing -- TODO: next hole
+      guid myId
+    _ -> return inactive

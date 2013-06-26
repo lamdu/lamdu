@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.CodeEdit.ExpressionEdit.HoleEdit
-  ( make, makeUnwrapped
+  ( make, makeUnwrappedActive
   , HoleState(..), hsSearchTerm
   , setHoleStateAndJump
   ) where
@@ -169,22 +169,12 @@ makeHoleResultWidget ::
   Widget.Id -> Sugar.HoleResult Sugar.Name m ExprGuiM.Payload -> ExprGuiM m (WidgetT m)
 makeHoleResultWidget holeInfo resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    layers = Config.layers config
-    layer = Config.layerActiveHoleBG layers
-    maxLayer = Config.layerMax layers
   ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
     -- TODO: No need for this if we just add a pick result event map
     -- to the whole hole
     Widget.scale (realToFrac <$> Config.holeResultScaleFactor config) .
     Widget.strongerEvents (resultPickEventMap config holeInfo holeResult) .
-    (Widget.wFrame %~
-      Anim.mapIdentities (`mappend` Widget.toAnimId resultId) .
-      -- labeled applies inside hole results should have their
-      -- background visible, even though hole's background covers
-      -- labeled applies background outside of it.
-      Anim.onDepth (+ (layer - maxLayer))
-    ) .
+    (Widget.wFrame %~ Anim.mapIdentities (`mappend` Widget.toAnimId resultId)) .
     (^. ExpressionGui.egWidget) =<<
     (ExprGuiM.makeSubexpression 0 . SugarRemoveTypes.holeResultTypes)
     (holeResult ^. Sugar.holeResultConverted)
@@ -333,8 +323,12 @@ holeBackgroundColor config holeArg
   | holeArg ^. Sugar.haTypeIsAMatch = Config.deletableHoleBackgroundColor config
   | otherwise = Config.typeErrorHoleWrapBackgroundColor config
 
-makeActiveHoleEdit :: MonadA m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
-makeActiveHoleEdit holeInfo = do
+makeActiveHoleEdit ::
+  MonadA m =>
+  Widget.Size ->
+  Sugar.Payload Sugar.Name m a -> HoleInfo m ->
+  ExprGuiM m (ExpressionGui m)
+makeActiveHoleEdit size pl holeInfo = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   (shownResults, hasHiddenResults) <-
     HoleResults.makeAll config holeInfo MakeWidgets
@@ -362,16 +356,22 @@ makeActiveHoleEdit holeInfo = do
       let
         adHocEditor = adHocTextEditEventMap $ searchTermProperty holeInfo
         holeEventMap = mkEventMap holeInfo (isJust mSelectedResult) mResult
-      return .
-        (ExpressionGui.egWidget %~
-         Widget.strongerEvents holeEventMap .
-         makeBackground (hiId holeInfo)
-         (Config.layerActiveHoleBG (Config.layers config))
-         (Config.activeHoleBackgroundColor config)) $
-        ExpressionGui.addBelow 0.5
-        [ (0.5, Widget.strongerEvents adHocEditor resultsWidget)
-        ]
-        searchTermWidget
+        layers = Config.layers config
+        layerDiff = Config.layerActiveHoleBG layers - Config.layerMax layers
+      ExpressionGui.addInferredTypes pl
+        ( ExpressionGui.addBelow 0.5
+          [(0.5, Widget.strongerEvents adHocEditor resultsWidget)]
+          searchTermWidget
+        )
+        <&>
+          ExpressionGui.truncateSize size .
+          ( ExpressionGui.egWidget %~
+            Widget.strongerEvents holeEventMap .
+            makeBackground (hiId holeInfo)
+              (Config.layerActiveHoleBG (Config.layers config))
+              (Config.activeHoleBackgroundColor config) .
+            (Widget.wFrame %~ Anim.onDepth (+ layerDiff))
+          )
 
 make ::
   MonadA m =>
@@ -392,10 +392,12 @@ make pl hole mNextHoleGuid guid outerId = do
         if isWritable && not inCollapsed
         then Just <$> ExprGuiM.nextHoleNumber
         else pure Nothing
-      makeUnwrappedH mHoleNumber stateProp hole mNextHoleGuid guid myId
+      makeUnwrappedH mHoleNumber stateProp pl hole mNextHoleGuid guid myId
   config <- ExprGuiM.widgetEnv WE.readConfig
-  ExpressionGui.wrapDelegated pl holeFDConfig delegatingMode inner outerId
-    & Lens.mapped . ExpressionGui.egWidget %~
+  ExprGuiM.wrapDelegated holeFDConfig delegatingMode
+    (ExpressionGui.egWidget %~) inner outerId
+    <&>
+      ExpressionGui.egWidget %~
       Widget.weakerEvents
       (maybe mempty
         ( E.keyPresses (Config.acceptKeys config ++ Config.delKeys config)
@@ -411,32 +413,43 @@ makeUnwrappedH ::
   MonadA m =>
   Maybe ExprGuiM.HoleNumber ->
   Property (T m) HoleState ->
+  Sugar.Payload Sugar.Name m a ->
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Maybe Guid -> Guid ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeUnwrappedH mHoleNumber stateProp hole mNextHoleGuid guid myId = do
+  Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
+makeUnwrappedH mHoleNumber stateProp pl hole mNextHoleGuid guid myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
+  inactive <- ExpressionGui.addInferredTypes pl =<< makeInactive mHoleNumber hole myId
   case (hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
     (Just holeActions, Just _) ->
-      makeActiveHoleEdit HoleInfo
-        { hiGuid = guid
-        , hiId = myId
-        , hiState = stateProp
-        , hiActions = holeActions
-        , hiMNextHoleGuid = mNextHoleGuid
-        , hiMArgument = hole ^. Sugar.holeMArg
-        }
-    _ -> makeInactive mHoleNumber hole myId
+      makeActiveHoleEdit (inactive ^. ExpressionGui.egWidget . Widget.wSize)
+      pl HoleInfo
+      { hiGuid = guid
+      , hiId = myId
+      , hiState = stateProp
+      , hiActions = holeActions
+      , hiMNextHoleGuid = mNextHoleGuid
+      , hiMArgument = hole ^. Sugar.holeMArg
+      }
+    _ -> return inactive
 
-makeUnwrapped ::
+makeUnwrappedActive ::
   MonadA m =>
-  Maybe ExprGuiM.HoleNumber ->
-  Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Maybe Guid -> Guid ->
+  Sugar.Payload Sugar.Name m a ->
+  Sugar.HoleActions Sugar.Name m ->
+  Widget.Size -> Maybe Guid -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeUnwrapped mHoleNumber hole mNextHoleGuid guid myId = do
+makeUnwrappedActive pl holeActions size mNextHoleGuid guid myId = do
   stateProp <- ExprGuiM.transaction $ assocStateRef guid ^. Transaction.mkProperty
-  makeUnwrappedH mHoleNumber stateProp hole mNextHoleGuid guid myId
+  makeActiveHoleEdit size pl HoleInfo
+    { hiGuid = guid
+    , hiId = myId
+    , hiState = stateProp
+    , hiActions = holeActions
+    , hiMNextHoleGuid = mNextHoleGuid
+    , hiMArgument = Nothing
+    }
 
 searchTermWIdOfHoleGuid :: Guid -> Widget.Id
 searchTermWIdOfHoleGuid = WidgetIds.searchTermId . FocusDelegator.delegatingId . WidgetIds.fromGuid

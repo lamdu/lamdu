@@ -20,6 +20,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui
   , makeRow
   , makeNameView
   , addInferredTypes
+  , truncateSize
   ) where
 
 import Control.Applicative ((<$>))
@@ -65,6 +66,12 @@ fromValueWidget widget = ExpressionGui widget 0.5
 scaleFromTop :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
 scaleFromTop ratio (ExpressionGui widget alignment) =
   ExpressionGui (Widget.scale ratio widget) (alignment / (ratio ^. Lens._2))
+
+truncateSize :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
+truncateSize newSize (ExpressionGui widget alignment) =
+  ExpressionGui
+  (widget & Widget.wSize .~ newSize)
+  (alignment * (widget ^. Widget.wSize / newSize) ^. Lens._2)
 
 hbox :: [ExpressionGui m] -> ExpressionGui m
 hbox guis =

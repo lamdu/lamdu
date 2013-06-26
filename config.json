@@ -565,7 +565,7 @@
         0.1,
         0.1,
         0.3,
-        1.0
+        0.9
     ],
     "pasteKeys": [
         [
@@ -875,13 +875,13 @@
         ]
     ],
     "layers": {
+        "layerActiveHoleBG": -1,
         "layerInactiveHole": 24,
         "layerCursorBG": 25,
         "layerTypes": 27,
         "layerCollapsedCompactBG": 28,
         "layerCollapsedExpandedBG": 29,
         "layerChoiceBG": 30,
-        "layerActiveHoleBG": 31,
         "layerNameCollisionBG": 32,
         "layerLabeledApplyBG": 33,
         "layerParensHighlightBG": 34,

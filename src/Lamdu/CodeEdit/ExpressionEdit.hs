@@ -68,7 +68,6 @@ shrinkIfHigherThanLine w = do
     if ratio < 1
     then ExpressionGui.scaleFromTop (realToFrac ratio) w
     else w
-  where
 
 make ::
   MonadA m => ParentPrecedence ->
