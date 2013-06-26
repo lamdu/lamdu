@@ -151,20 +151,28 @@ idTranslations ::
   [(Guid, Guid)]
 idTranslations seedExpr writtenExpr =
   execWriter . runApplicativeMonoid . getConst $
-  ExprUtil.matchExpressionG paramGuidOverride
-  tell mismatch
+  go
   (combineLamGuids ((^. SugarInfer.plGuid) <$> seedExpr))
   (combineLamGuids (ExprIRef.exprGuid <$> writtenExpr))
   where
-    ignore = Const . ApplicativeMonoid $ pure ()
+    go = ExprUtil.matchExpressionG paramGuidOverride tell mismatch
     paramGuidOverride xGuid yGuid = tell xGuid yGuid
     mismatch
       (Expr.Expression (Expr.BodyLeaf (Expr.Tag tagx)) plx)
       (Expr.Expression (Expr.BodyLeaf (Expr.Tag tagy)) ply) =
         tell tagx tagy *>
         tell plx ply
-    mismatch (Expr.Expression (Expr.BodyLeaf Expr.Hole) _) _ = ignore
-    mismatch _ (Expr.Expression (Expr.BodyLeaf Expr.Hole) _) = ignore
+    mismatch inferredVal (Expr.Expression (Expr.BodyLeaf Expr.Hole) guid) =
+      -- This happens only when inferred val is accepted after
+      -- cleanUpInferredVal such that inferred parts are written as
+      -- holes. Then they will be re-inferred to same val, and their
+      -- guids will be generated via SugarInfer.mkExprPure with a
+      -- random-gen based on the hole guid.  Let's map the old
+      -- inferred val guids to the ones the new inferred val will get
+      -- in the hole:
+      go inferredVal $
+      ExprUtil.randomizeExpr (genFromHashable guid)
+      (flip const <$> inferredVal)
     mismatch _x _y =
       error $
       unlines
@@ -192,7 +200,7 @@ convertInferred exprPl wvInferredVal = do
     , _iValue = (mempty <$) <$> val
     , _iMAccept =
       fmap mkResult .
-      accept sugarContext (Infer.iNode inferred) inferredVal .
+      accept sugarContext (Infer.iNode inferred) reinferredVal .
       Property.value <$> exprPl ^. SugarInfer.plStored
     }
   where
@@ -202,11 +210,10 @@ convertInferred exprPl wvInferredVal = do
       { _prMJumpTo = mPickGuid
       , _prIdTranslation = idTranslations expr written
       }
-    wvInferredValGen = genFromHashable (eGuid, show wvInferredVal)
-    inferredVal =
+    wvInferredValGen = genFromHashable $ exprPl ^. SugarInfer.plGuid
+    reinferredVal =
       ExprUtil.structureForType . void $ Infer.iType inferred
     inferred = iwcInferred $ exprPl ^. SugarInfer.plInferred
-    eGuid = exprPl ^. SugarInfer.plGuid
 
 convertPlainTyped ::
   (MonadA m, Typeable1 m, Monoid a) =>
