@@ -14,6 +14,7 @@ import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Hashable (Hashable, hashWithSalt)
 import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
@@ -119,7 +120,7 @@ accept ::
 accept sugarContext point expr iref = do
   (exprInferred, _) <-
     Cache.unmemoS $
-    unjust "The inferred value of a hole must type-check!" <$>
+    unsafeUnjust "The inferred value of a hole must type-check!" <$>
     SugarM.memoLoadInferInHoleContext sugarContext expr point
   fmap fst . pickResult iref $
     flip (,) Nothing <$> cleanUpInferredVal (fst <$> exprInferred)
@@ -424,7 +425,7 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
         (finalExpr, _ctx) =
           -- TODO: Makes no sense here anymore, move deeper inside
           -- makeInferredExpr:
-          unjust
+          unsafeUnjust
           ("Arbitrary fake tag successfully inferred as hole result, " ++
            "but real new tag failed!")
           mFinalExprCtx
@@ -482,9 +483,6 @@ seedHashable (ResultSeedExpression expr) = show (void expr)
 -- changes, thus we ignore the name:
 seedHashable (ResultSeedNewTag _) = "NewTag"
 seedHashable (ResultSeedNewDefinition _) = "NewDefinition"
-
-unjust :: String -> Maybe a -> a
-unjust = fromMaybe . error
 
 pickResult ::
   MonadA m =>
