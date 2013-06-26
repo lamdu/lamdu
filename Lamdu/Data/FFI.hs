@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.CodeEdit.FFI (Env(..), table) where
+module Lamdu.Data.FFI (Env(..), table) where
 
 import Control.Lens.Operators
 import Data.Binary (Binary(..))

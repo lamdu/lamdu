@@ -25,7 +25,7 @@ import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Anchors as A
-import qualified Lamdu.CodeEdit.FFI as FFI
+import qualified Lamdu.Data.FFI as FFI
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef

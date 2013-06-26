@@ -24,7 +24,7 @@ import Data.Store.Transaction (MkProperty(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
-import qualified Lamdu.CodeEdit.FFI as FFI
+import qualified Lamdu.Data.FFI as FFI
 
 data SpecialFunctions t = SpecialFunctions
   { sfNil :: DefI t
