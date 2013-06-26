@@ -81,7 +81,6 @@ data Config = Config
 
   , parenHighlightColor :: Draw.Color
 
-  , lambdaWrapKeys :: [E.ModKey]
   , addWhereItemKeys :: [E.ModKey]
 
   , lambdaColor :: Draw.Color

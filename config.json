@@ -537,18 +537,6 @@
         0.5,
         1.0
     ],
-    "lambdaWrapKeys": [
-        [
-            {
-                "modShift": false,
-                "modAlt": false,
-                "modCtrl": false
-            },
-            {
-                "CharKey": "\\"
-            }
-        ]
-    ],
     "enterSubexpressionKeys": [
         [
             {
