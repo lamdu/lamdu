@@ -14,7 +14,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -62,7 +61,7 @@ make parentPrecedence (Sugar.Lam _ param _isDep resultType) =
           | paramUsed =
               ExpressionGui.egWidget %~
               Widget.backgroundColor
-              Layers.collapsedExpandedBG
+              (Config.layerCollapsedExpandedBG (Config.layers config))
               (mappend (Widget.toAnimId paramId) ["polymorphic bg"])
               (Config.collapsedExpandedBGColor config)
           | otherwise = id

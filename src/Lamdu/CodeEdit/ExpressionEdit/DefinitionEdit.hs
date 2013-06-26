@@ -29,7 +29,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -77,7 +76,8 @@ makePolyNameEdit name guid depParamsEdits myId = do
     f wId =
       Collapser
       { cMakeExpanded =
-        ExpressionGui.withBgColor Layers.collapsedExpandedBG
+        ExpressionGui.withBgColor
+        (Config.layerCollapsedExpandedBG (Config.layers config))
         (Config.collapsedExpandedBGColor config) bgId .
         ExpressionGui.hboxSpaced . (: depParamsEdits) <$>
         nameGui (Config.monomorphicDefOriginForegroundColor config)
@@ -113,8 +113,8 @@ makeWheres whereItems myId = do
       ]
     ]
 
-presentationModeChoiceConfig :: BWidgets.ChoiceWidgetConfig
-presentationModeChoiceConfig = BWidgets.ChoiceWidgetConfig
+presentationModeChoiceConfig :: Config -> BWidgets.ChoiceWidgetConfig
+presentationModeChoiceConfig config = BWidgets.ChoiceWidgetConfig
   { BWidgets.cwcFDConfig = FocusDelegator.Config
     { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
     , FocusDelegator.startDelegatingDoc = E.Doc ["Presentation Mode", "Select"]
@@ -123,6 +123,7 @@ presentationModeChoiceConfig = BWidgets.ChoiceWidgetConfig
     }
   , BWidgets.cwcOrientation = Box.vertical
   , BWidgets.cwcExpandMode = BWidgets.ExplicitEntry
+  , BWidgets.cwcBgLayer = Config.layerChoiceBG $ Config.layers config
   }
 
 mkPresentationEdits :: MonadA m => Guid -> Widget.Id -> ExprGuiM m (Widget (T m))
@@ -140,7 +141,7 @@ mkPresentationEdits guid myId = do
   fmap (Widget.scale (realToFrac <$> Config.presentationChoiceScaleFactor config)) .
     ExprGuiM.widgetEnv $
     BWidgets.makeChoiceWidget (Transaction.setP mkProp) pairs cur
-    presentationModeChoiceConfig myId
+    (presentationModeChoiceConfig config) myId
   where
     mkProp = Anchors.assocPresentationMode guid
 

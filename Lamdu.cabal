@@ -188,7 +188,6 @@ Executable lamdu
                        Lamdu.Data.Expression.IRef,
                        Lamdu.Data.Expression.Load,
                        Lamdu.ExampleDB,
-                       Lamdu.Layers,
                        Lamdu.Main,
                        Lamdu.VersionControl.Actions,
                        Lamdu.VersionControl,

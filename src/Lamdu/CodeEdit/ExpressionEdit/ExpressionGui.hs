@@ -51,7 +51,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -124,7 +123,7 @@ addType config style exprId typeEdits eg =
     typesBox = Box.vboxCentered typeEdits
     isError = length typeEdits >= 2
     bgAnimId = Widget.toAnimId exprId ++ ["type background"]
-    addBackground = maybe id (Widget.backgroundColor Layers.types bgAnimId) bgColor
+    addBackground = maybe id (Widget.backgroundColor (Config.layerTypes (Config.layers config)) bgAnimId) bgColor
     bgColor
       | isError = Just $ Config.inferredTypeErrorBGColor config
       | otherwise = do
@@ -287,7 +286,7 @@ makeCollisionSuffixLabels (Sugar.Collision suffix) animId = do
   config <- WE.readConfig
   let
     onSuffixWidget =
-      Widget.backgroundColor Layers.nameCollisionBG
+      Widget.backgroundColor (Config.layerNameCollisionBG (Config.layers config))
         (animId ++ ["bg"]) (Config.collisionSuffixBGColor config) .
       Widget.scale (realToFrac <$> Config.collisionSuffixScaleFactor config)
   BWidgets.makeLabel (show suffix) animId

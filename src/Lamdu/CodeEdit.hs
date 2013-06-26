@@ -42,7 +42,6 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression.Load as Load
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -194,8 +193,9 @@ makePaneWidget rawDefS = do
       | widget ^. Widget.wIsFocused = onActivePane widget
       | otherwise = onInactivePane widget
     onActivePane =
-      Widget.backgroundColor Layers.activePane WidgetIds.activeDefBackground $
-      Config.activeDefBGColor config
+      Widget.backgroundColor
+      (Config.layerActivePane (Config.layers config))
+      WidgetIds.activeDefBackground $ Config.activeDefBGColor config
     onInactivePane =
       Widget.wFrame %~
       Anim.onImages (Draw.tint (Config.inactiveTintColor config))

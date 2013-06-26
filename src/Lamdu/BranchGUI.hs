@@ -74,6 +74,7 @@ choiceWidgetConfig config = BWidgets.ChoiceWidgetConfig
   , BWidgets.cwcExpandMode =
       BWidgets.AutoExpand $ Config.selectedBranchColor config
   , BWidgets.cwcOrientation = Box.vertical
+  , BWidgets.cwcBgLayer = Config.layerChoiceBG $ Config.layers config
   }
 
 make ::

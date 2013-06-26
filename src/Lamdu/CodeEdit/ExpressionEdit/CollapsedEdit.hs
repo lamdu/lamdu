@@ -15,7 +15,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -35,7 +34,8 @@ make (ParentPrecedence parentPrecedence) collapsed myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     makeExpanded wId =
-      ExpressionGui.withBgColor Layers.collapsedExpandedBG
+      ExpressionGui.withBgColor
+      (Config.layerCollapsedExpandedBG (Config.layers config))
       (Config.collapsedExpandedBGColor config) (bgId wId) <$>
       ExprGuiM.inCollapsedExpression
       (ExprGuiM.makeSubexpression parentPrecedence fullExpression)
@@ -52,7 +52,7 @@ make (ParentPrecedence parentPrecedence) collapsed myId = do
     colorizeGetParameter wId =
       fmap
       (ExpressionGui.withBgColor
-       Layers.collapsedCompactBG
+       (Config.layerCollapsedCompactBG (Config.layers config))
        (Config.collapsedCompactBGColor config) (bgId wId)) .
       ExprGuiM.withFgColor (Config.parameterColor config)
   case () of

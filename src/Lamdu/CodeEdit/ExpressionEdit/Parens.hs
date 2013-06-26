@@ -16,7 +16,6 @@ import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -43,7 +42,8 @@ addTextParensI onLParen onRParen parenId widget = do
 
 highlightExpression :: Config -> Widget.Widget f -> Widget.Widget f
 highlightExpression config =
-  Widget.backgroundColor Layers.parensHighlightBG WidgetIds.parenHighlightId $
+  Widget.backgroundColor (Config.layerParensHighlightBG (Config.layers config))
+  WidgetIds.parenHighlightId $
   Config.parenHighlightColor config
 
 addTextParens

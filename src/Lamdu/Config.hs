@@ -1,6 +1,6 @@
 {-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.Config (Config(..), delKeys) where
+module Lamdu.Config (Layers(..), Config(..), delKeys) where
 
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import Data.Aeson.TH (deriveJSON)
@@ -10,8 +10,24 @@ import Graphics.DrawingCombinators.Utils () -- Read instance for Color
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 
+data Layers = Layers
+  { layerInactiveHole
+  , layerCursorBG
+  , layerTypes
+  , layerCollapsedCompactBG
+  , layerCollapsedExpandedBG
+  , layerChoiceBG
+  , layerActiveHoleBG
+  , layerNameCollisionBG
+  , layerLabeledApplyBG
+  , layerParensHighlightBG
+  , layerActivePane
+  , layerMax :: Int
+  } deriving (Eq)
+
 data Config = Config
-  { baseColor :: Draw.Color
+  { layers :: Layers
+  , baseColor :: Draw.Color
   , baseTextSize :: Int
   , helpTextColor :: Draw.Color
   , helpTextSize :: Int
@@ -183,6 +199,7 @@ deriveJSON id ''Draw.Color
 deriveJSON id ''E.ModState
 deriveJSON id ''E.ModKey
 deriveJSON id ''E.Key
+deriveJSON id ''Layers
 deriveJSON id ''Config
 
 instance FromJSON CDouble where

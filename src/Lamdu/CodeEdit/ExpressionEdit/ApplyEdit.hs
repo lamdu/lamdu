@@ -21,7 +21,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -111,7 +110,7 @@ mkBoxed destGuid mkFuncRow annotatedArgs =
     config <- ExprGuiM.widgetEnv WE.readConfig
     argEdits <-
       Grid.toWidget . Grid.make <$> traverse makeArgRow annotatedArgs
-    ExpressionGui.withBgColor Layers.labeledApplyBG
+    ExpressionGui.withBgColor (Config.layerLabeledApplyBG (Config.layers config))
       (Config.labeledApplyBGColor config) (Widget.toAnimId myId ++ ["bg"]) .
       ExpressionGui.addBelow 0 [(0, argEdits)] <$> mkFuncRow
 

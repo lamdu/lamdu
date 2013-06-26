@@ -44,7 +44,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.CodeEdit.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -170,6 +169,10 @@ makeHoleResultWidget ::
   Widget.Id -> Sugar.HoleResult Sugar.Name m ExprGuiM.Payload -> ExprGuiM m (WidgetT m)
 makeHoleResultWidget holeInfo resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    layers = Config.layers config
+    layer = Config.layerActiveHoleBG layers
+    maxLayer = Config.layerMax layers
   ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
     -- TODO: No need for this if we just add a pick result event map
     -- to the whole hole
@@ -180,7 +183,7 @@ makeHoleResultWidget holeInfo resultId holeResult = do
       -- labeled applies inside hole results should have their
       -- background visible, even though hole's background covers
       -- labeled applies background outside of it.
-      Anim.onDepth (+ (Layers.activeHoleBG - Layers.maxLayer))
+      Anim.onDepth (+ (layer - maxLayer))
     ) .
     (^. ExpressionGui.egWidget) =<<
     (ExprGuiM.makeSubexpression 0 . SugarRemoveTypes.holeResultTypes)
@@ -363,7 +366,8 @@ makeActiveHoleEdit holeInfo = do
         (ExpressionGui.egWidget %~
          Widget.strongerEvents holeEventMap .
          makeBackground (hiId holeInfo)
-         Layers.activeHoleBG (Config.activeHoleBackgroundColor config)) $
+         (Config.layerActiveHoleBG (Config.layers config))
+         (Config.activeHoleBackgroundColor config)) $
         ExpressionGui.addBelow 0.5
         [ (0.5, Widget.strongerEvents adHocEditor resultsWidget)
         ]
@@ -554,7 +558,9 @@ makeInactive mHoleNumber hole myId = do
       holeBackgroundColor config <$> hole ^. Sugar.holeMArg
   ExprGuiM.widgetEnv $
     holeGui
-    & ExpressionGui.egWidget %~ makeBackground myId Layers.inactiveHole bgColor
+    & ExpressionGui.egWidget %~
+      makeBackground myId
+      (Config.layerInactiveHole (Config.layers config)) bgColor
     & ExpressionGui.egWidget %%~
       if holeGui ^. ExpressionGui.egWidget . Widget.wIsFocused
       then return

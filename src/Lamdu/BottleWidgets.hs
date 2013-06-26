@@ -38,7 +38,6 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -66,8 +65,10 @@ makeFocusableView myId widget = do
   config <- WE.readConfig
   let
     setBackground
-      | hasFocus = Widget.backgroundColor Layers.cursorBG WidgetIds.backgroundCursorId $
-                   Config.cursorBGColor config
+      | hasFocus =
+        Widget.backgroundColor
+        (Config.layerCursorBG (Config.layers config))
+        WidgetIds.backgroundCursorId $ Config.cursorBGColor config
       | otherwise = id
   return .
     (Widget.wIsFocused .~ hasFocus) . setBackground $
@@ -94,7 +95,7 @@ makeFocusableLabel text myIdPrefix = do
 fdStyle :: Config -> FocusDelegator.Style
 fdStyle config = FocusDelegator.Style
   { FocusDelegator.color = Config.cursorBGColor config
-  , FocusDelegator.layer = Layers.cursorBG
+  , FocusDelegator.layer = Config.layerCursorBG $ Config.layers config
   , FocusDelegator.cursorBGAnimId = WidgetIds.backgroundCursorId
   }
 
@@ -194,6 +195,7 @@ data ChoiceWidgetConfig = ChoiceWidgetConfig
   { cwcFDConfig :: FocusDelegator.Config
   , cwcOrientation :: Box.Orientation
   , cwcExpandMode :: ChoiceWidgetExpandMode
+  , cwcBgLayer :: Int
   }
 
 makeChoiceWidget ::
@@ -224,7 +226,7 @@ makeChoiceWidget choose children curChild config myId = do
       case cwcExpandMode config ^? _AutoExpand of
       Just color
         | item == curChild ->
-          Widget.backgroundColor Layers.choiceBG
+          Widget.backgroundColor (cwcBgLayer config)
           (Widget.toAnimId myId) color w
       _ -> w
     pairs = map mkPair children
