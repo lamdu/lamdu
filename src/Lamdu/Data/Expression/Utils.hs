@@ -17,7 +17,7 @@ module Lamdu.Data.Expression.Utils
   , randomizeParamIdsG
   , NameGen(..), onNgMakeName
   , randomNameGen, debugNameGen
-  , matchBody, matchExpression
+  , matchBody, matchExpression, matchExpressionG
   , subExpressions, subExpressionsWithoutTags
   , isDependentPi, exprHasGetVar
   , curriedFuncArguments
@@ -279,8 +279,7 @@ matchBody matchLamResult matchOther matchGetPar body0 body1 =
     matchPair (k0, v0) (k1, v1) =
       (matchOther k0 k1, matchOther v0 v1)
 
--- TODO: Generalize to defa/defb/defc with hof's to handle matching
--- them?  The returned expression gets the same guids as the left
+-- The returned expression gets the same guids as the left
 -- expression
 {-# INLINE matchExpression #-}
 matchExpression ::
@@ -288,7 +287,16 @@ matchExpression ::
   (a -> b -> f c) ->
   (Expression def a -> Expression def b -> f (Expression def c)) ->
   Expression def a -> Expression def b -> f (Expression def c)
-matchExpression onMatch onMismatch =
+matchExpression = matchExpressionG . const . const $ pure ()
+
+{-# INLINE matchExpressionG #-}
+matchExpressionG ::
+  (Eq def, Applicative f) =>
+  (Guid -> Guid -> f ()) -> -- ^ Left expr guid overrides right expr guid
+  (a -> b -> f c) ->
+  (Expression def a -> Expression def b -> f (Expression def c)) ->
+  Expression def a -> Expression def b -> f (Expression def c)
+matchExpressionG overrideGuids onMatch onMismatch =
   go Map.empty
   where
     go scope e0@(Expression body0 pl0) e1@(Expression body1 pl1) =
@@ -299,7 +307,7 @@ matchExpression onMatch onMismatch =
       Just bodyMatched -> Expression <$> sequenceA bodyMatched <*> onMatch pl0 pl1
       where
         matchGetPar p0 p1 = p0 == lookupGuid p1
-        matchLamResult p0 p1 = go $ Map.insert p1 p0 scope
+        matchLamResult p0 p1 r0 r1 = overrideGuids p0 p1 *> go (Map.insert p1 p0 scope) r0 r1
         matchOther = go scope
         lookupGuid guid = fromMaybe guid $ Map.lookup guid scope
 

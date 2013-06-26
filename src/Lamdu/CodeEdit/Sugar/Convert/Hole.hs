@@ -34,6 +34,7 @@ import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Cache as Cache
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
+import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -126,6 +127,23 @@ accept sugarContext point expr iref = do
   pickResult iref $
     flip (,) Nothing <$> cleanUpInferredVal (fst <$> exprInferred)
 
+-- Sugar exports fpId of Lambda params as:
+--   Guid.combine lamGuid paramGuid
+--
+-- So to be compatible with that in our idTranslations, we want to
+-- change our param Guids to match that:
+combineLamGuids :: Expr.Expression def Guid -> Expr.Expression def Guid
+combineLamGuids (Expr.Expression body guid) =
+  -- TODO: Lens.outside
+  (`Expr.Expression` guid) $
+  case body of
+  Expr.BodyLam (Expr.Lambda k paramGuid paramType result) ->
+    Expr.BodyLam
+    (Expr.Lambda k (Guid.combine guid paramGuid)
+     (combineLamGuids paramType)
+     (combineLamGuids result))
+  _ -> combineLamGuids <$> body
+
 idTranslations ::
   Eq def =>
   Expr.Expression def (SugarInfer.Payload inferred stored a) ->
@@ -133,14 +151,18 @@ idTranslations ::
   [(Guid, Guid)]
 idTranslations seedExpr writtenExpr =
   execWriter . runApplicativeMonoid . getConst $
-  ExprUtil.matchExpression writePls mismatch seedExpr writtenExpr
+  ExprUtil.matchExpressionG paramGuidOverride
+  tell mismatch
+  (combineLamGuids ((^. SugarInfer.plGuid) <$> seedExpr))
+  (combineLamGuids (ExprIRef.exprGuid <$> writtenExpr))
   where
     ignore = Const . ApplicativeMonoid $ pure ()
+    paramGuidOverride xGuid yGuid = tell xGuid yGuid
     mismatch
       (Expr.Expression (Expr.BodyLeaf (Expr.Tag tagx)) plx)
       (Expr.Expression (Expr.BodyLeaf (Expr.Tag tagy)) ply) =
-        write tagx tagy *>
-        writePls plx ply
+        tell tagx tagy *>
+        tell plx ply
     mismatch (Expr.Expression (Expr.BodyLeaf Expr.Hole) _) _ = ignore
     mismatch _ (Expr.Expression (Expr.BodyLeaf Expr.Hole) _) = ignore
     mismatch _x _y =
@@ -151,8 +173,7 @@ idTranslations seedExpr writtenExpr =
       , showExpr writtenExpr
       ]
     showExpr expr = expr & ExprLens.exprDef .~ () & void & show
-    writePls src dstI = write (src ^. SugarInfer.plGuid) (ExprIRef.exprGuid dstI)
-    write src dst = Const . ApplicativeMonoid $ Writer.tell [(src, dst)]
+    tell src dst = Const . ApplicativeMonoid $ Writer.tell [(src, dst)]
 
 convertInferred ::
   (MonadA m, Typeable1 m, Monoid a) =>
