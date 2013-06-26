@@ -60,10 +60,9 @@ pickedResultAnimIdTranslation ::
   [(Guid, Guid)] ->
   AnimId -> AnimId
 pickedResultAnimIdTranslation idTranslations =
-  mapping
+  -- Map only the first anim id component
+  Lens.ix 0 %~ \x -> fromMaybe x $ Map.lookup x idMap
   where
-    mapping [] = []
-    mapping (x:xs) = fromMaybe x (Map.lookup x idMap) : xs
     idMap =
       idTranslations
       & Lens.traversed . Lens.both %~ head . Widget.toAnimId . WidgetIds.fromGuid
