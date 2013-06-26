@@ -18,11 +18,13 @@ import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
 make ::
-  MonadA m => ExpressionGui.ParentPrecedence ->
+  MonadA m =>
+  ExpressionGui.ParentPrecedence ->
+  Sugar.Payload Sugar.Name m a ->
   Sugar.Lam Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make parentPrecedence (Sugar.Lam _ param _isDep resultType) =
-  ExpressionGui.wrapParenify parentPrecedence (ExpressionGui.MyPrecedence 0)
+make parentPrecedence pl (Sugar.Lam _ param _isDep resultType) =
+  ExpressionGui.wrapParenify pl parentPrecedence (ExpressionGui.MyPrecedence 0)
   Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId typeId $ do
     (resultTypeEdit, usedVars) <-

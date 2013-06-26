@@ -77,7 +77,7 @@ make parentPrecedence sExpr = assignCursor $ do
   ((isHole, gui), _) <-
     ExprGuiM.listenResultPickers $ makeEditor parentPrecedence sExpr exprId
   exprEventMap <- expressionEventMap isHole sExpr
-  (maybeShrink =<< ExpressionGui.addInferredTypes pl gui)
+  maybeShrink gui
     <&>
     ExpressionGui.egWidget %~
     ( maybe Widget.doesntTakeFocus (const id) (pl ^. Sugar.plActions)
@@ -112,35 +112,36 @@ makeEditor parentPrecedence sExpr myId = do
     mkEditor =
       case sExpr ^. Sugar.rBody of
       Sugar.BodyInferred i ->
-        isAHole (i ^. Sugar.iHole) $ InferredEdit.make parentPrecedence i exprGuid
+        isAHole (i ^. Sugar.iHole) $ InferredEdit.make parentPrecedence pl i exprGuid
       Sugar.BodyHole hole ->
-        isAHole hole $ HoleEdit.make hole mNextHoleGuid exprGuid
+        isAHole hole $ HoleEdit.make pl hole mNextHoleGuid exprGuid
       Sugar.BodyCollapsed poly ->
         notAHole $ CollapsedEdit.make parentPrecedence poly
       Sugar.BodyApply apply ->
-        notAHole $ ApplyEdit.make parentPrecedence (sExpr ^. Sugar.rPayload) apply
+        notAHole $ ApplyEdit.make parentPrecedence pl apply
       Sugar.BodyLam lam@(Sugar.Lam Sugar.Type _ _ _) ->
-        notAHole $ PiEdit.make parentPrecedence lam
+        notAHole $ PiEdit.make parentPrecedence pl lam
       Sugar.BodyLam lam@(Sugar.Lam Sugar.Val _ _ _) ->
-        notAHole $ LambdaEdit.make parentPrecedence lam
+        notAHole $ LambdaEdit.make parentPrecedence pl lam
       Sugar.BodyLiteralInteger integer ->
-        notAHole $ LiteralEdit.makeInt integer
+        notAHole $ LiteralEdit.makeInt pl integer
       Sugar.BodyAtom atom ->
         notAHole $ AtomEdit.make atom
       Sugar.BodyList list ->
-        notAHole $ ListEdit.make list
+        notAHole $ ListEdit.make pl list
       Sugar.BodyRecord record ->
-        notAHole $ RecordEdit.make record
+        notAHole $ RecordEdit.make pl record
       Sugar.BodyGetField getField ->
-        notAHole $ GetFieldEdit.make getField
+        notAHole $ GetFieldEdit.make pl getField
       Sugar.BodyTag tag ->
-        notAHole $ TagEdit.make tag
+        notAHole $ TagEdit.make pl tag
       Sugar.BodyGetVar gv ->
-        notAHole $ GetVarEdit.make gv
+        notAHole $ GetVarEdit.make pl gv
       Sugar.BodyGetParams gp ->
-        notAHole $ GetParamsEdit.make gp
+        notAHole $ GetParamsEdit.make pl gp
   mkEditor myId
   where
+    pl = sExpr ^. Sugar.rPayload
     notAHole = (fmap . fmap) ((,) NotAHole)
     mNextHoleGuid = sExpr ^. Sugar.rPayload . Sugar.plMNextHoleGuid
 

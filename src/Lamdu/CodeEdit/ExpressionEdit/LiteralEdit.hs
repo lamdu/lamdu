@@ -1,9 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Lamdu.CodeEdit.ExpressionEdit.LiteralEdit(makeInt, makeIntView) where
+module Lamdu.CodeEdit.ExpressionEdit.LiteralEdit
+  ( makeInt
+  ) where
 
 import Control.Lens.Operators
-import Control.MonadA(MonadA)
+import Control.MonadA (MonadA)
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
@@ -25,29 +27,29 @@ setColor action = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExprGuiM.withFgColor (Config.literalIntColor config) action
 
-makeIntView
-  :: MonadA m
-  => AnimId -> Integer
-  -> ExprGuiM m (ExpressionGui m)
+makeIntView ::
+  MonadA m =>
+  AnimId -> Integer ->
+  ExprGuiM m (ExpressionGui m)
 makeIntView myId integer =
   fmap ExpressionGui.fromValueWidget .
   setColor . ExprGuiM.widgetEnv $
   BWidgets.makeTextViewWidget (show integer) myId
 
-makeIntEdit
-  :: MonadA m
-  => Sugar.LiteralInteger m -> Widget.Id
-  -> ExprGuiM m (ExpressionGui m)
+makeIntEdit ::
+  MonadA m =>
+  Sugar.LiteralInteger m -> Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
 makeIntEdit integer myId =
   case Sugar.liSetValue integer of
     Nothing -> makeIntView (Widget.toAnimId myId) (Sugar.liValue integer)
     Just setValue -> makeIntEditI integer myId setValue
 
-makeIntEditI
-  :: MonadA m
-  => Sugar.LiteralInteger m -> Widget.Id
-  -> (Integer -> Transaction m ())
-  -> ExprGuiM m (ExpressionGui m)
+makeIntEditI ::
+  MonadA m =>
+  Sugar.LiteralInteger m -> Widget.Id ->
+  (Integer -> Transaction m ()) ->
+  ExprGuiM m (ExpressionGui m)
 makeIntEditI integer myId setValue = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   let
@@ -90,11 +92,12 @@ literalFDConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Stop changing integer"]
   }
 
-makeInt
-  :: MonadA m
-  => Sugar.LiteralInteger m
-  -> Widget.Id
-  -> ExprGuiM m (ExpressionGui m)
-makeInt integer =
-  ExpressionGui.wrapDelegated literalFDConfig FocusDelegator.NotDelegating
+makeInt ::
+  MonadA m =>
+  Sugar.Payload Sugar.Name m a ->
+  Sugar.LiteralInteger m ->
+  Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
+makeInt pl integer =
+  ExpressionGui.wrapDelegated pl literalFDConfig FocusDelegator.NotDelegating
   (setColor . makeIntEdit integer)

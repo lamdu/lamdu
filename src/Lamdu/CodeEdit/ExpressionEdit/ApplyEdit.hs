@@ -64,13 +64,12 @@ make (ParentPrecedence parentPrecedence) pl (Sugar.Apply func specialArgs annota
       ]
   where
     isBoxed = not $ null annotatedArgs
-    destGuid = func ^. Sugar.rPayload . Sugar.plGuid
     mk mPrecedence mkFuncRow
-      | isBoxed = mkBoxed destGuid mkFuncRow annotatedArgs myId
+      | isBoxed = mkBoxed pl mkFuncRow annotatedArgs myId
       | otherwise =
-        mkMParened
+        mkMParened pl
         (ParentPrecedence parentPrecedence)
-        (ExpressionGui.MyPrecedence <$> mPrecedence) destGuid mkFuncRow myId
+        (ExpressionGui.MyPrecedence <$> mPrecedence) mkFuncRow myId
 
 assignCursorGuid :: MonadA m => Widget.Id -> Guid -> ExprGuiM m a -> ExprGuiM m a
 assignCursorGuid myId = ExprGuiM.assignCursor myId . WidgetIds.fromGuid
@@ -101,12 +100,14 @@ makeArgRow arg = do
     space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
 
 mkBoxed ::
-  MonadA m => Guid -> ExprGuiM m (ExpressionGui m) ->
+  MonadA m =>
+  Sugar.Payload Sugar.Name m a ->
+  ExprGuiM m (ExpressionGui m) ->
   [Sugar.AnnotatedArg Sugar.Name (ExprGuiM.SugarExpr m)] ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-mkBoxed destGuid mkFuncRow annotatedArgs =
-  ExpressionGui.wrapExpression $ \myId ->
-  assignCursorGuid myId destGuid $ do
+mkBoxed pl mkFuncRow annotatedArgs =
+  ExpressionGui.wrapExpression pl $ \myId ->
+  assignCursorGuid myId (pl ^. Sugar.plGuid) $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     argEdits <-
       Grid.toWidget . Grid.make <$> traverse makeArgRow annotatedArgs
@@ -115,12 +116,14 @@ mkBoxed destGuid mkFuncRow annotatedArgs =
       ExpressionGui.addBelow 0 [(0, argEdits)] <$> mkFuncRow
 
 mkMParened ::
-  MonadA m => ParentPrecedence ->
-  Maybe ExpressionGui.MyPrecedence -> Guid ->
+  MonadA m =>
+  Sugar.Payload Sugar.Name m a ->
+  ParentPrecedence ->
+  Maybe ExpressionGui.MyPrecedence ->
   ExprGuiM m  (ExpressionGui m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-mkMParened parentPrecedence mPrecedence destGuid mkFuncRow =
-  ExpressionGui.wrapExpression . parenify $ \myId ->
-  assignCursorGuid myId destGuid mkFuncRow
+mkMParened pl parentPrecedence mPrecedence mkFuncRow =
+  ExpressionGui.wrapExpression pl . parenify $ \myId ->
+  assignCursorGuid myId (pl ^. Sugar.plGuid) mkFuncRow
   where
     parenify = case mPrecedence of
       Nothing -> id

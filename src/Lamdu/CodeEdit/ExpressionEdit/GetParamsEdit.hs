@@ -19,12 +19,13 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
-make
-  :: MonadA m
-  => Sugar.GetParams Sugar.Name m
-  -> Widget.Id
-  -> ExprGuiM m (ExpressionGui m)
-make getParams myId = do
+make ::
+  MonadA m =>
+  Sugar.Payload Sugar.Name m a ->
+  Sugar.GetParams Sugar.Name m ->
+  Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
+make pl getParams myId = do
   cp <- ExprGuiM.readCodeAnchors
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
@@ -40,15 +41,17 @@ make getParams myId = do
     ExprGuiM.withFgColor (Config.definitionColor config) .
     ExprGuiM.widgetEnv $ ExpressionGui.makeNameView defName animId
   suffixLabel <- label ")"
-  ExprGuiM.widgetEnv .
+  ExpressionGui.addInferredTypes pl =<<
+    (ExprGuiM.widgetEnv .
     fmap ExpressionGui.fromValueWidget .
     BWidgets.makeFocusableView myId .
-    Widget.weakerEvents jumpToDefinitionEventMap $
-    BWidgets.hboxCenteredSpaced
-    [ paramsLabel
-    , Widget.scale (realToFrac <$> Config.paramDefSuffixScaleFactor config) $
-      Box.hboxCentered [prefixLabel, defNameLabel, suffixLabel]
-    ]
+    Widget.weakerEvents jumpToDefinitionEventMap)
+    ( BWidgets.hboxCenteredSpaced
+      [ paramsLabel
+      , Widget.scale (realToFrac <$> Config.paramDefSuffixScaleFactor config) $
+        Box.hboxCentered [prefixLabel, defNameLabel, suffixLabel]
+      ]
+    )
   where
     animId = Widget.toAnimId myId
     label = ExprGuiM.widgetEnv . flip BWidgets.makeLabel animId

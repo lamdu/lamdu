@@ -19,9 +19,13 @@ import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
 make ::
-  MonadA m => Sugar.List m (ExprGuiM.SugarExpr m) -> Widget.Id ->
+  MonadA m =>
+  Sugar.Payload Sugar.Name m a ->
+  Sugar.List m (ExprGuiM.SugarExpr m) ->
+  Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-make = ExpressionGui.wrapExpression . makeUnwrapped
+make pl list =
+  ExpressionGui.wrapExpression pl $ makeUnwrapped list
 
 makeBracketLabel :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui f)
 makeBracketLabel label myId = do

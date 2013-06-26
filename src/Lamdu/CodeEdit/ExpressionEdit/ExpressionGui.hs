@@ -25,6 +25,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui
 import Control.Applicative ((<$>))
 import Control.Lens (Lens')
 import Control.Lens.Operators
+import Control.Monad ((<=<))
 import Control.MonadA (MonadA)
 import Data.Function (on)
 import Data.Monoid (Monoid(..))
@@ -187,20 +188,23 @@ makeNameEdit (Sugar.Name nameSrc nameCollision name) ident myId = do
       EventMap.filterSChars (curry (`notElem` disallowedNameChars))
 
 wrapDelegated ::
-  (MonadA f, MonadA m) =>
+  MonadA m =>
+  Sugar.Payload Sugar.Name m a ->
   FocusDelegator.Config -> FocusDelegator.IsDelegating ->
-  (Widget.Id -> ExprGuiM m (ExpressionGui f)) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui f)
-wrapDelegated fdConfig isDelegating =
-  ExprGuiM.wrapDelegated fdConfig isDelegating (egWidget %~)
+  (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+wrapDelegated pl fdConfig isDelegating f =
+  addInferredTypes pl <=<
+  ExprGuiM.wrapDelegated fdConfig isDelegating (egWidget %~) f
 
 wrapExpression ::
-  (MonadA m, MonadA f) =>
-  (Widget.Id -> ExprGuiM m (ExpressionGui f)) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui f)
-wrapExpression f myId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  wrapDelegated (exprFocusDelegatorConfig config) FocusDelegator.Delegating f myId
+  MonadA m =>
+  Sugar.Payload Sugar.Name m a ->
+  (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+wrapExpression pl f myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig  
+  wrapDelegated pl (exprFocusDelegatorConfig config) FocusDelegator.Delegating f myId
 
 makeLabel ::
   MonadA m => String -> Widget.Id -> ExprGuiM m (WidgetT f)
@@ -229,13 +233,14 @@ parenify (ParentPrecedence parent) (MyPrecedence prec) addParens mkWidget myId
   | otherwise = mkWidget myId
 
 wrapParenify ::
-  (MonadA f, MonadA m) =>
+  MonadA m =>
+  Sugar.Payload Sugar.Name m a ->
   ParentPrecedence -> MyPrecedence ->
-  (Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)) ->
-  (Widget.Id -> ExprGuiM m (ExpressionGui f)) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui f)
-wrapParenify parentPrec prec addParens =
-  wrapExpression . parenify parentPrec prec addParens
+  (Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)) ->
+  (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+wrapParenify pl parentPrec prec addParens =
+  wrapExpression pl . parenify parentPrec prec addParens
 
 withBgColor :: Layer -> Draw.Color -> AnimId -> ExpressionGui m -> ExpressionGui m
 withBgColor layer color animId =
@@ -252,7 +257,7 @@ makeCollapser ::
   (Widget.Id -> Collapser m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeCollapser fdConfig f =
-  wrapDelegated fdConfig FocusDelegator.NotDelegating $
+  ExprGuiM.wrapDelegated fdConfig FocusDelegator.NotDelegating (egWidget %~) $
   \myId -> do
     let Collapser makeExpanded makeFocusedCompact = f myId
     -- TODO: This is just to detect whether cursor is in the full

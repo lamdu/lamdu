@@ -374,10 +374,12 @@ makeActiveHoleEdit holeInfo = do
         searchTermWidget
 
 make ::
-  MonadA m => Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  MonadA m =>
+  Sugar.Payload Sugar.Name m a ->
+  Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Maybe Guid -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make hole mNextHoleGuid guid outerId = do
+make pl hole mNextHoleGuid guid outerId = do
   stateProp <- ExprGuiM.transaction $ assocStateRef guid ^. Transaction.mkProperty
   let
     delegatingMode
@@ -392,7 +394,7 @@ make hole mNextHoleGuid guid outerId = do
         else pure Nothing
       makeUnwrappedH mHoleNumber stateProp hole mNextHoleGuid guid myId
   config <- ExprGuiM.widgetEnv WE.readConfig
-  ExpressionGui.wrapDelegated holeFDConfig delegatingMode inner outerId
+  ExpressionGui.wrapDelegated pl holeFDConfig delegatingMode inner outerId
     & Lens.mapped . ExpressionGui.egWidget %~
       Widget.weakerEvents
       (maybe mempty

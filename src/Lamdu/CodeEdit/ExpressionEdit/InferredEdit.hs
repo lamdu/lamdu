@@ -33,10 +33,11 @@ fdConfig config = FocusDelegator.Config
 
 make ::
   MonadA m => ParentPrecedence ->
+  Sugar.Payload Sugar.Name m a ->
   Sugar.Inferred Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Guid -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-make parentPrecedence inferred guid myId = do
+make parentPrecedence pl inferred guid myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     eventMap =
@@ -46,7 +47,7 @@ make parentPrecedence inferred guid myId = do
        (E.Doc ["Edit", "Inferred value", "Accept"]) .
        fmap WidgetIds.fromGuid) $
       inferred ^. Sugar.iMAccept
-  ExpressionGui.wrapDelegated (fdConfig config) FocusDelegator.NotDelegating
+  ExpressionGui.wrapDelegated pl (fdConfig config) FocusDelegator.NotDelegating
     (makeUnwrapped parentPrecedence inferred guid) myId
     <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
 
