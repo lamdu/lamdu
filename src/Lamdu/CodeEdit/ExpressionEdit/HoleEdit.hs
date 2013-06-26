@@ -384,6 +384,8 @@ makeActiveHoleEdit size pl holeInfo = do
           )
         & return
 
+data IsActive = Inactive | Active
+
 make ::
   MonadA m =>
   Sugar.Payload Sugar.Name m a ->
@@ -405,16 +407,23 @@ make pl hole mNextHoleGuid guid outerId = do
         else pure Nothing
       makeUnwrappedH mHoleNumber stateProp pl hole mNextHoleGuid guid myId
   config <- ExprGuiM.widgetEnv WE.readConfig
-  ExprGuiM.wrapDelegated holeFDConfig delegatingMode
-    (ExpressionGui.egWidget %~) inner outerId
-    <&>
-      ExpressionGui.egWidget %~
+  (isActive, innerGui) <-
+    ExprGuiM.wrapDelegated holeFDConfig delegatingMode
+    (Lens._2 . ExpressionGui.egWidget %~) inner outerId
+  gui <-
+    innerGui
+    & case isActive of
+      Inactive -> ExpressionGui.addInferredTypes pl
+      Active -> return
+  gui
+    & ExpressionGui.egWidget %~
       Widget.weakerEvents
       (maybe mempty
         ( E.keyPresses (Config.acceptKeys config ++ Config.delKeys config)
           (E.Doc ["Edit", "Unwrap"])
         . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
         ) mUnWrap)
+    & return
   where
     mUnWrap =
       hole ^? Sugar.holeMActions . Lens._Just . Sugar.holeMUnwrap . Lens._Just
@@ -428,22 +437,24 @@ makeUnwrappedH ::
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Maybe Guid -> Guid ->
   Widget.Id ->
-  ExprGuiM m (ExpressionGui m)
+  ExprGuiM m (IsActive, ExpressionGui m)
 makeUnwrappedH mHoleNumber stateProp pl hole mNextHoleGuid guid myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
-  inactive <- ExpressionGui.addInferredTypes pl =<< makeInactive mHoleNumber hole myId
+  inactive <- makeInactive mHoleNumber hole myId
   case (hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
-    (Just holeActions, Just _) ->
-      makeActiveHoleEdit (inactive ^. ExpressionGui.egWidget . Widget.wSize)
-      pl HoleInfo
-      { hiGuid = guid
-      , hiId = myId
-      , hiState = stateProp
-      , hiActions = holeActions
-      , hiMNextHoleGuid = mNextHoleGuid
-      , hiMArgument = hole ^. Sugar.holeMArg
-      }
-    _ -> return inactive
+    (Just holeActions, Just _) -> do
+      inactiveWithTypes <- ExpressionGui.addInferredTypes pl inactive
+      (,) Active <$> makeActiveHoleEdit
+        (inactiveWithTypes ^. ExpressionGui.egWidget . Widget.wSize) pl
+        HoleInfo
+        { hiGuid = guid
+        , hiId = myId
+        , hiState = stateProp
+        , hiActions = holeActions
+        , hiMNextHoleGuid = mNextHoleGuid
+        , hiMArgument = hole ^. Sugar.holeMArg
+        }
+    _ -> return $ (Inactive, inactive)
 
 makeUnwrappedActive ::
   MonadA m =>
