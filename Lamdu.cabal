@@ -105,7 +105,6 @@ Library
   ghc-prof-options:    -auto-all -caf-all -rtsopts
 
 Executable lamdu
-  hs-Source-Dirs:      src
   Build-Depends:       base >= 4,
                        aeson >= 0.6,
                        hashable,

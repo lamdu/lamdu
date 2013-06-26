@@ -1,1 +1,1 @@
-hlint bottlelib/ test src/ --hint=hlint/lensfixities.hs
+hlint bottlelib/ test Lamdu/ --hint=hlint/lensfixities.hs
