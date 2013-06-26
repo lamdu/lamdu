@@ -42,7 +42,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
-import qualified Lamdu.CodeEdit as CodeEdit
+import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import qualified Lamdu.CodeEdit.Settings as Settings
 import qualified Lamdu.Config as Config
 import qualified Lamdu.ExampleDB as ExampleDB

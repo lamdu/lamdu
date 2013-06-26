@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
-module Lamdu.CodeEdit (make) where
+module Lamdu.GUI.CodeEdit (make) where
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Lens.Operators
