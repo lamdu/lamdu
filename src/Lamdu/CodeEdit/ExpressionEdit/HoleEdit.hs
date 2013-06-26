@@ -358,13 +358,15 @@ makeActiveHoleEdit size pl holeInfo = do
         holeEventMap = mkEventMap holeInfo (isJust mSelectedResult) mResult
         layers = Config.layers config
         layerDiff = Config.layerActiveHoleBG layers - Config.layerMax layers
-      ExpressionGui.addInferredTypes pl
-        ( ExpressionGui.addBelow 0.5
-          [(0.5, Widget.strongerEvents adHocEditor resultsWidget)]
-          searchTermWidget
-        )
-        <&>
-          ExpressionGui.truncateSize size .
+      gui <-
+        ExpressionGui.addInferredTypes pl $
+        ExpressionGui.addBelow 0.5
+        [(0.5, Widget.strongerEvents adHocEditor resultsWidget)]
+        searchTermWidget
+      gui
+        & ExpressionGui.truncateSize
+          ( size
+            & Lens._1 %~ max (gui ^. ExpressionGui.egWidget . Widget.wSize . Lens._1) ) .
           ( ExpressionGui.egWidget %~
             Widget.strongerEvents holeEventMap .
             makeBackground (hiId holeInfo)
@@ -372,6 +374,7 @@ makeActiveHoleEdit size pl holeInfo = do
               (Config.activeHoleBackgroundColor config) .
             (Widget.wFrame %~ Anim.onDepth (+ layerDiff))
           )
+        & return
 
 make ::
   MonadA m =>
