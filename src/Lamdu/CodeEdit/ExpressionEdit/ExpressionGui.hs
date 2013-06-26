@@ -19,6 +19,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui
   , makeFocusableView
   , makeRow
   , makeNameView
+  , addInferredTypes
   ) where
 
 import Control.Applicative ((<$>))
@@ -26,6 +27,7 @@ import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Function (on)
+import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
@@ -292,3 +294,24 @@ makeCollisionSuffixLabels (Sugar.Collision suffix) animId = do
   BWidgets.makeLabel (show suffix) animId
     & (WE.localEnv . WE.setTextColor . Config.collisionSuffixTextColor) config
     <&> (:[]) . onSuffixWidget
+
+addInferredTypes ::
+  MonadA m =>
+  Sugar.Payload Sugar.Name m a ->
+  ExpressionGui m ->
+  ExprGuiM m (ExpressionGui m)
+addInferredTypes exprPl eg = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  typeEdits <-
+    exprPl ^. Sugar.plInferredTypes
+    & Lens.traversed . Lens.mapped . Lens.mapped .~ mempty
+    & Lens.traversed (ExprGuiM.makeSubexpression 0)
+    <&>
+      map
+      ( Widget.tint (Config.inferredTypeTint config)
+      . Widget.scale (realToFrac <$> Config.typeScaleFactor config)
+      . (^. egWidget)
+      )
+  return $ addType config Background exprId typeEdits eg
+  where
+    exprId = WidgetIds.fromGuid $ exprPl ^. Sugar.plGuid

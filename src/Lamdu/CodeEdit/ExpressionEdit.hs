@@ -6,7 +6,6 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
-import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
@@ -77,35 +76,21 @@ make ::
 make parentPrecedence sExpr = assignCursor $ do
   ((isHole, gui), _) <-
     ExprGuiM.listenResultPickers $ makeEditor parentPrecedence sExpr exprId
-  typeEdits <-
-    exprITypes
-    & Lens.traversed . Lens.mapped . Lens.mapped .~ mempty
-    & traverse (make (ParentPrecedence 0))
-  let onReadOnly = Widget.doesntTakeFocus
   exprEventMap <- expressionEventMap isHole sExpr
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    addInferredTypes =
-      ExpressionGui.addType config ExpressionGui.Background exprId $
-      Widget.tint (Config.inferredTypeTint config) .
-      Widget.scale (realToFrac <$> Config.typeScaleFactor config) .
-      (^. ExpressionGui.egWidget) <$> typeEdits
+  (maybeShrink =<< ExpressionGui.addInferredTypes pl gui)
+    <&>
+    ExpressionGui.egWidget %~
+    ( maybe Widget.doesntTakeFocus (const id) (pl ^. Sugar.plActions)
+    . Widget.weakerEvents exprEventMap
+    )
+  where
+    pl = sExpr ^. Sugar.rPayload
+    ExprGuiM.Payload guids isInjecteds = pl ^. Sugar.plData
+    exprHiddenGuids = List.delete (pl ^. Sugar.plGuid) guids
+    exprId = WidgetIds.fromGuid $ pl ^. Sugar.plGuid
     maybeShrink
       | or isInjecteds = shrinkIfHigherThanLine
       | otherwise = return
-  gui
-    & addInferredTypes
-    & ExpressionGui.egWidget %~
-      ( maybe onReadOnly (const id) exprActions
-      . Widget.weakerEvents exprEventMap
-      )
-    & maybeShrink
-  where
-    Sugar.Payload exprITypes exprActions _nextHole exprGuid exprData =
-      sExpr ^. Sugar.rPayload
-    ExprGuiM.Payload guids isInjecteds = exprData
-    exprHiddenGuids = List.delete exprGuid guids
-    exprId = WidgetIds.fromGuid exprGuid
     assignCursor f =
       foldr (`ExprGuiM.assignCursorPrefix` exprId) f $
       WidgetIds.fromGuid <$> exprHiddenGuids
