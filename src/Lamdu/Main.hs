@@ -8,43 +8,31 @@ import Control.Lens.Operators
 import Control.Monad (unless, forever)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runStateT, mapStateT)
-import Data.ByteString (unpack)
 import Data.Cache (Cache)
 import Data.IORef
-import Data.List(intercalate)
 import Data.MRUMemo(memoIO)
 import Data.Monoid(Monoid(..))
 import Data.Store.Db (Db)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
-import Data.Word(Word8)
-import Graphics.DrawingCombinators((%%))
-import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget(Widget)
 import Lamdu.CodeEdit.Settings (Settings(..))
 import Lamdu.Config (Config)
 import Lamdu.WidgetEnvT (runWidgetEnvT)
-import Numeric (showHex)
 import Paths_lamdu (getDataFileName)
 import System.Environment (getArgs)
 import System.FilePath ((</>))
 import qualified Control.Exception as E
-import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Cache as Cache
-import qualified Data.Map as Map
 import qualified Data.Store.Db as Db
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
-import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.DrawingCombinators.Utils as DrawUtils
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
-import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
@@ -153,48 +141,14 @@ runEditor lamduDir mFontPath = do
       Just path -> getFont path
     Db.withDb (lamduDir </> "codeedit.db") $ runDb getConfig font
 
-
-rjust :: Int -> a -> [a] -> [a]
-rjust len x xs = replicate (length xs - len) x ++ xs
-
-encodeHex :: [Word8] -> String
-encodeHex = concatMap (rjust 2 '0' . (`showHex` ""))
-
-drawAnimId :: Draw.Font -> AnimId -> DrawUtils.Image
-drawAnimId font = DrawUtils.drawText font . intercalate "." . map (encodeHex . take 2 . unpack)
-
-annotationSize :: Vector2 Draw.R
-annotationSize = 5
-
-addAnnotations :: Draw.Font -> Anim.Frame -> Anim.Frame
-addAnnotations font = Anim.fSubImages %~ Map.mapWithKey annotateItem
-  where
-    annotateItem animId = Lens.mapped . Lens._2 %~ annotatePosImage animId
-    annotatePosImage animId posImage =
-      posImage & Anim.piImage %~ mappend annotationImg
-      where
-        annotationImg =
-          Vector2.uncurry Draw.scale antiScale %%
-          Draw.translate (0, -1) %%
-          drawAnimId font animId
-        -- Cancel out on the scaling done in Anim so
-        -- that our annotation is always the same size
-        antiScale =
-          annotationSize /
-          (max 1 <$> posImage ^. Anim.piRect . Rect.size)
-
-whenApply :: Bool -> (a -> a) -> a -> a
-whenApply False _ = id
-whenApply True f = f
-
 mainLoopDebugMode ::
-  IO (Version, Config) -> Draw.Font ->
+  IO (Version, Config) ->
   ( Config -> Widget.Size ->
     ( IO (Widget IO)
     , Widget IO -> IO (Widget IO)
     )
   ) -> IO a
-mainLoopDebugMode getConfig font iteration = do
+mainLoopDebugMode getConfig iteration = do
   debugModeRef <- newIORef False
   lastVersionNumRef <- newIORef 0
   let
@@ -206,8 +160,8 @@ mainLoopDebugMode getConfig font iteration = do
       let
         doc = EventMap.Doc $ "Debug Mode" : if isDebugMode then ["Disable"] else ["Enable"]
         set = writeIORef debugModeRef (not isDebugMode)
-      return .
-        whenApply isDebugMode (Widget.wFrame %~ addAnnotations font) $
+      return $
+        -- whenApply isDebugMode (Widget.wFrame %~ addAnnotations font) $
         Widget.strongerEvents
         (Widget.keysEventMap (Config.debugModeKeys config) doc set)
         widget
@@ -306,7 +260,7 @@ runDb getConfig font db = do
       writeIORef cacheRef newCache
       return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
   makeWidgetCached <- cacheMakeWidget makeWidget
-  mainLoopDebugMode getConfig font $ \config size ->
+  mainLoopDebugMode getConfig $ \config size ->
     ( wrapFlyNav =<< makeWidgetCached (config, size)
     , addHelpWithStyle (helpConfig font config) size
     )
