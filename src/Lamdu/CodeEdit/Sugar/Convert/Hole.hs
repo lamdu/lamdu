@@ -418,7 +418,10 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
             pure
               PickedResult
               { _prMJumpTo = Just . ExprIRef.exprGuid $ written ^. Expr.ePayload . Lens._1
-              , _prIdTranslation = mkTranslations $ fst <$> written
+              , _prIdTranslation =
+                mkTranslations $ fst <$>
+                unsafeUnjust "We just hole-wrapped, and now there's no hole-wrap?!"
+                (written ^? ExprLens.exprApply . Expr.applyArg)
               }
         , _holeResultHasHoles =
           not . null . uninferredHoles $ (,) () . fst <$> fakeInferredResult
