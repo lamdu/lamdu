@@ -41,7 +41,7 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import qualified Lamdu.Anchors as Anchors
-import qualified Lamdu.BranchGUI as BranchGUI
+import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.CodeEdit as CodeEdit
 import qualified Lamdu.CodeEdit.Settings as Settings
 import qualified Lamdu.Config as Config
@@ -325,7 +325,7 @@ makeRootWidget config settings style dbToIO size cursor = do
       (fmap . Widget.atEvents) (VersionControl.runEvent cursor) .
       (mapStateT . WE.mapWidgetEnvT) VersionControl.runAction $
       CodeEdit.make Anchors.codeProps settings rootGuid
-    branchGui <- lift $ BranchGUI.make id size actions codeEdit
+    branchGui <- lift $ VersionControlGUI.make id size actions codeEdit
     let
       quitEventMap =
         Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")

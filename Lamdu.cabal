@@ -129,7 +129,7 @@ Executable lamdu
                        TypeCompose
   Other-Modules:       Lamdu.Anchors,
                        Lamdu.BottleWidgets,
-                       Lamdu.BranchGUI,
+                       Lamdu.GUI.VersionControl,
                        Lamdu.CodeEdit.ExpressionEdit,
                        Lamdu.CodeEdit.ExpressionEdit.ApplyEdit,
                        Lamdu.CodeEdit.ExpressionEdit.AtomEdit,

@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeOperators, OverloadedStrings, RankNTypes #-}
-module Lamdu.BranchGUI (make) where
+module Lamdu.GUI.VersionControl (make) where
 
 import Control.Applicative (Applicative, (<$>), pure)
 import Control.Lens.Operators
