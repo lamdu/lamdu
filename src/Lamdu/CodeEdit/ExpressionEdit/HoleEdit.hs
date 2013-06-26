@@ -3,6 +3,7 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit
   ( make, makeUnwrappedActive
   , HoleState(..), hsSearchTerm
   , setHoleStateAndJump
+  , pickedResultAnimIdTranslation
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
@@ -55,6 +56,19 @@ extraSymbolScaleFactor = 0.5
 
 type T = Transaction
 
+pickedResultAnimIdTranslation ::
+  [(Guid, Guid)] ->
+  AnimId -> AnimId
+pickedResultAnimIdTranslation idTranslations =
+  mapping
+  where
+    mapping [] = []
+    mapping (x:xs) = fromMaybe x (Map.lookup x idMap) : xs
+    idMap =
+      idTranslations
+      & Lens.traversed . Lens.both %~ head . Widget.toAnimId . WidgetIds.fromGuid
+      & Map.fromList
+
 pick :: Monad m => HoleInfo m -> Sugar.PickedResult -> T m Widget.EventResult
 pick holeInfo pr = do
   Property.set (hiState holeInfo) HoleInfo.emptyState
@@ -63,15 +77,9 @@ pick holeInfo pr = do
     { Widget._eCursor =
         Just . WidgetIds.fromGuid $
         fromMaybe (hiGuid holeInfo) (pr ^. Sugar.prMJumpTo)
-    , Widget._eAnimIdMapping = mapping
+    , Widget._eAnimIdMapping =
+        pickedResultAnimIdTranslation (pr ^. Sugar.prIdTranslation)
     }
-  where
-    mapping [] = []
-    mapping (x:xs) = fromMaybe x (Map.lookup x idMap) : xs
-    idMap =
-      pr ^. Sugar.prIdTranslation
-      & Lens.traversed . Lens.both %~ head . Widget.toAnimId . WidgetIds.fromGuid
-      & Map.fromList
 
 pickAndSetNextHoleState ::
   MonadA m =>

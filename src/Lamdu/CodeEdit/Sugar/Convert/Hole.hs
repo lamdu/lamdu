@@ -117,13 +117,13 @@ accept ::
   Infer.InferNode (DefM m) ->
   ExprIRef.ExpressionM m a ->
   ExprIRef.ExpressionIM m ->
-  T m (Maybe Guid)
+  T m (Maybe Guid, ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m))
 accept sugarContext point expr iref = do
   (exprInferred, _) <-
     Cache.unmemoS $
     unsafeUnjust "The inferred value of a hole must type-check!" <$>
     SugarM.memoLoadInferInHoleContext sugarContext expr point
-  fmap fst . pickResult iref $
+  pickResult iref $
     flip (,) Nothing <$> cleanUpInferredVal (fst <$> exprInferred)
 
 convertInferred ::
@@ -134,9 +134,7 @@ convertInferred ::
 convertInferred exprPl wvInferredVal = do
   sugarContext <- SugarM.readContext
   hole <- mkHole exprPl
-  val <-
-    SugarM.convertSubexpression $
-    SugarInfer.mkExprPure wvInferredValGen wvInferredVal
+  val <- SugarM.convertSubexpression expr
   -- wvInferredVal uses wvInferContext, but for "accept" purposes, we
   -- must use the holeInferContext:
   SugarExpr.make (exprPl & SugarInfer.plInferred %~ Just) $
@@ -144,11 +142,18 @@ convertInferred exprPl wvInferredVal = do
     { _iHole = hole
     , _iValue = (mempty <$) <$> val
     , _iMAccept =
-      fmap (fromMaybe eGuid) .
+      fmap mkResult .
       accept sugarContext (Infer.iNode inferred) inferredVal .
       Property.value <$> exprPl ^. SugarInfer.plStored
     }
   where
+    expr = SugarInfer.mkExprPure wvInferredValGen wvInferredVal
+    mkResult (mPickGuid, written) =
+      PickedResult
+      { _prMJumpTo = mPickGuid
+      , _prIdTranslation =
+          idTranslations ((^. SugarInfer.plGuid) <$> expr) written
+      }
     wvInferredValGen = genFromHashable (eGuid, show (void wvInferredVal))
     inferredVal =
       ExprUtil.structureForType . void $ Infer.iType inferred

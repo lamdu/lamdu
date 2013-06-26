@@ -42,15 +42,22 @@ make parentPrecedence pl inferred guid myId = do
   let
     eventMap =
       maybe mempty
-      (Widget.keysEventMapMovesCursor
+      (E.keyPresses
        (Config.acceptInferredValueKeys config)
        (E.Doc ["Edit", "Inferred value", "Accept"]) .
-       fmap WidgetIds.fromGuid) $
+       fmap mkResult) $
       inferred ^. Sugar.iMAccept
   ExprGuiM.wrapDelegated (fdConfig config)
     FocusDelegator.NotDelegating (ExpressionGui.egWidget %~)
     (makeUnwrapped parentPrecedence pl inferred guid) myId
     <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
+  where
+    mkResult pr =
+      Widget.EventResult
+      { Widget._eCursor = WidgetIds.fromGuid <$> pr ^. Sugar.prMJumpTo
+      , Widget._eAnimIdMapping =
+          HoleEdit.pickedResultAnimIdTranslation (pr ^. Sugar.prIdTranslation)
+      }
 
 makeUnwrapped ::
   MonadA m => ParentPrecedence ->

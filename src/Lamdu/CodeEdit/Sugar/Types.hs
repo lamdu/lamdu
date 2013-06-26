@@ -234,7 +234,7 @@ data LiteralInteger m = LiteralInteger
 
 data Inferred name m expr = Inferred
   { _iValue :: expr
-  , _iMAccept :: Maybe (T m Guid)
+  , _iMAccept :: Maybe (T m PickedResult)
   , _iHole :: Hole name m expr
   } deriving (Functor, Foldable, Traversable)
 
