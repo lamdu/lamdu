@@ -13,7 +13,7 @@ import Control.Monad.Trans.Writer (execWriter)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Hashable (Hashable, hashWithSalt)
-import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Maybe (listToMaybe)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Monoid.Applicative (ApplicativeMonoid(..))
@@ -126,6 +126,25 @@ accept sugarContext point expr iref = do
   pickResult iref $
     flip (,) Nothing <$> cleanUpInferredVal (fst <$> exprInferred)
 
+idTranslations ::
+  Eq def =>
+  Expr.Expression def (SugarInfer.Payload inferred stored a) ->
+  Expr.Expression def (ExprIRef.ExpressionI t) ->
+  [(Guid, Guid)]
+idTranslations seedExpr writtenExpr =
+  execWriter . runApplicativeMonoid . getConst $
+  ExprUtil.matchExpression match mismatch seedExpr writtenExpr
+  where
+    mismatch _x _y =
+      error $
+      unlines
+      [ "Mismatch idTranslations: "
+      , showExpr seedExpr
+      , showExpr writtenExpr
+      ]
+    showExpr expr = expr & ExprLens.exprDef .~ () & void & show
+    match src dstI = Const . ApplicativeMonoid $ Writer.tell [(src ^. SugarInfer.plGuid, ExprIRef.exprGuid dstI)]
+
 convertInferred ::
   (MonadA m, Typeable1 m, Monoid a) =>
   SugarInfer.Payload (InferredWC (Tag m)) (Maybe (Stored m)) a ->
@@ -151,8 +170,7 @@ convertInferred exprPl wvInferredVal = do
     mkResult (mPickGuid, written) =
       PickedResult
       { _prMJumpTo = mPickGuid
-      , _prIdTranslation =
-          idTranslations ((^. SugarInfer.plGuid) <$> expr) written
+      , _prIdTranslation = idTranslations expr written
       }
     wvInferredValGen = genFromHashable (eGuid, show (void wvInferredVal))
     inferredVal =
@@ -357,18 +375,6 @@ seedExprEnv emptyPl cp (ResultSeedNewDefinition name) = do
     , Just jumpToDef
     )
 
-idTranslations ::
-  Eq def =>
-  Expr.Expression def Guid ->
-  Expr.Expression def Guid ->
-  [(Guid, Guid)]
-idTranslations seedExpr writtenExpr =
-  execWriter . runApplicativeMonoid . getConst $
-  ExprUtil.matchExpression match ((const . const . Const . ApplicativeMonoid . return) ())
-  seedExpr writtenExpr
-  where
-    match src dst = Const . ApplicativeMonoid $ Writer.tell [(src, dst)]
-
 makeHoleResult ::
   (Typeable1 m, MonadA m, Cache.Key a, Binary a, Monoid a) =>
   SugarM.Context m ->
@@ -397,7 +403,7 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
           & SugarM.scHoleInferState .~ fakeCtx
           & SugarM.scHoleInferStateKey %~ \key -> Cache.bsOfKey (fakeSeedExpr, key)
         expr = prepareExprToSugar gen fakeInferredResult
-        mkTranslations = idTranslations ((^. SugarInfer.plGuid) <$> expr) . fmap ExprIRef.exprGuid
+        mkTranslations = idTranslations expr
       fakeConverted <- convertHoleResult newContext expr
       pure HoleResult
         { _holeResultInferred = fst <$> fakeInferredResult
