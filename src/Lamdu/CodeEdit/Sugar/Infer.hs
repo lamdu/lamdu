@@ -94,8 +94,6 @@ mkExprPure g =
   where
     f a guid = Payload guid Nothing Nothing a
 
--- {{{{{{{{{{{{{{{{{
--- TODO: These don't belong here
 loader :: MonadA m => Infer.Loader (DefM m) (T m)
 loader =
   Infer.Loader
