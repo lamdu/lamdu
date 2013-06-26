@@ -457,8 +457,14 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
               { _prMJumpTo = Just . ExprIRef.exprGuid $ written ^. Expr.ePayload . Lens._1
               , _prIdTranslation =
                 mkTranslations $ fst <$>
-                unsafeUnjust "We just hole-wrapped, and now there's no hole-wrap?!"
-                (written ^? ExprLens.exprApply . Expr.applyArg)
+                if Lens.has (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole) seedExpr
+                then
+                  -- Original expr is hole-wrapped so it corresponds to written,
+                  -- which doesn't double hole-wrap.
+                  written
+                else
+                  unsafeUnjust "We just hole-wrapped, and now there's no hole-wrap?!"
+                  (written ^? ExprLens.exprApply . Expr.applyArg)
               }
         , _holeResultHasHoles =
           not . null . uninferredHoles $ (,) () . fst <$> fakeInferredResult
