@@ -32,10 +32,10 @@ prefixPrecedence = 10
 
 make ::
   MonadA m => ParentPrecedence ->
-  ExprGuiM.SugarExpr m ->
+  Sugar.Payload Sugar.Name m a ->
   Sugar.Apply Sugar.Name (ExprGuiM.SugarExpr m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make (ParentPrecedence parentPrecedence) exprS (Sugar.Apply func specialArgs annotatedArgs) myId = do
+make (ParentPrecedence parentPrecedence) pl (Sugar.Apply func specialArgs annotatedArgs) myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     maybeOverrideHoleWrap
@@ -45,7 +45,7 @@ make (ParentPrecedence parentPrecedence) exprS (Sugar.Apply func specialArgs ann
       ExpressionGui.egWidget %~ Widget.strongerEvents overrideWrapEventMap
     overrideWrapEventMap =
       maybe mempty (Modify.eventMap config) $
-      exprS ^. Sugar.rPayload . Sugar.plActions
+      pl ^. Sugar.plActions
   case specialArgs of
     Sugar.NoSpecialArgs ->
       mk Nothing $
