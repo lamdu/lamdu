@@ -181,7 +181,7 @@ convertInferred exprPl wvInferredVal = do
       { _prMJumpTo = mPickGuid
       , _prIdTranslation = idTranslations expr written
       }
-    wvInferredValGen = genFromHashable (eGuid, show (void wvInferredVal))
+    wvInferredValGen = genFromHashable (eGuid, show wvInferredVal)
     inferredVal =
       ExprUtil.structureForType . void $ Infer.iType inferred
     inferred = iwcInferred $ exprPl ^. SugarInfer.plInferred
