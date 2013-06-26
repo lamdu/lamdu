@@ -134,7 +134,7 @@ makeEditor parentPrecedence sExpr myId = do
       Sugar.BodyCollapsed poly ->
         notAHole $ CollapsedEdit.make parentPrecedence poly
       Sugar.BodyApply apply ->
-        notAHole $ ApplyEdit.make parentPrecedence apply
+        notAHole $ ApplyEdit.make parentPrecedence sExpr apply
       Sugar.BodyLam lam@(Sugar.Lam Sugar.Type _ _ _) ->
         notAHole $ PiEdit.make parentPrecedence lam
       Sugar.BodyLam lam@(Sugar.Lam Sugar.Val _ _ _) ->
