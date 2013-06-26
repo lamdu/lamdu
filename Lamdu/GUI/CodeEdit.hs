@@ -20,7 +20,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Lamdu.CodeEdit.Settings (Settings)
 import Lamdu.Data.Expression.IRef (DefM)
-import Lamdu.WidgetEnvT (WidgetEnvT)
+import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
@@ -30,7 +30,6 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -42,8 +41,9 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression.Load as Load
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.WidgetEnvT as WE
-import qualified Lamdu.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 type T = Transaction
 type CT m = StateT Cache (T m)

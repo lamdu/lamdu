@@ -13,7 +13,6 @@ import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecede
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.Modify as Modify
@@ -21,8 +20,9 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.WidgetEnvT as WE
-import qualified Lamdu.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.WidgetEnvT as WE
 
 infixPrecedence :: ExpressionGui.Precedence
 infixPrecedence = 5

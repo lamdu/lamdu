@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
-module Lamdu.WidgetEnvT
+module Lamdu.GUI.WidgetEnvT
   ( WidgetEnvT, runWidgetEnvT
   , mapWidgetEnvT
   , readCursor, subCursor, isSubCursor

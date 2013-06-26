@@ -1,6 +1,6 @@
 -- This module is used to avoid a dependency on WidgetIds by
 -- ExampleDB/tests/etc
-module Lamdu.WidgetIdIRef (fromGuid, fromIRef) where
+module Lamdu.GUI.WidgetIdIRef (fromGuid, fromIRef) where
 
 import Graphics.UI.Bottle.WidgetId (Id(..))
 import Data.Store.IRef(IRef)

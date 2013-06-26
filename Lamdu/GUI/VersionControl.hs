@@ -12,7 +12,7 @@ import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Config (Config)
 import Lamdu.VersionControl.Actions (Actions(..))
-import Lamdu.WidgetEnvT (WidgetEnvT)
+import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Store.Property as Property
@@ -26,8 +26,8 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.WidgetEnvT as WE
-import qualified Lamdu.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 branchNameFDConfig :: FocusDelegator.Config
 branchNameFDConfig = FocusDelegator.Config

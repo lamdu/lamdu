@@ -45,7 +45,7 @@ import Data.Typeable (Typeable)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types (ExpressionGui, WidgetT, ParentPrecedence(..), Precedence)
 import Lamdu.CodeEdit.Settings (Settings)
-import Lamdu.WidgetEnvT (WidgetEnvT)
+import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.RWS as RWS
 import qualified Data.Cache as Cache
@@ -57,7 +57,7 @@ import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetEnvT as WE
 
 type T = Transaction
 type AccessedVars = [Guid]

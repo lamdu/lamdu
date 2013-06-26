@@ -45,7 +45,7 @@ import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
-import qualified Lamdu.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 type T = Transaction
 type CT m = StateT Cache (T m)

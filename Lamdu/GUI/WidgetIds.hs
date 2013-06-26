@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.WidgetIds where
+module Lamdu.GUI.WidgetIds where
 
 import Data.ByteString.Char8() -- IsString instance
 import Data.Monoid(mappend)

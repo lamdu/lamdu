@@ -20,7 +20,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetEnvT as WE
 
 setColor :: MonadA m => ExprGuiM m a -> ExprGuiM m a
 setColor action = do

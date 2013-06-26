@@ -32,7 +32,7 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.FFI as FFI
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.WidgetIdIRef as WidgetIdIRef
+import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 
 newTodoIRef :: MonadA m => Transaction m (IRef (Tag m) a)
 newTodoIRef = fmap IRef.unsafeFromGuid Transaction.newKey

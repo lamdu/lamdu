@@ -9,15 +9,15 @@ import Control.MonadA (MonadA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.Config (Config)
-import Lamdu.WidgetIds (parensPrefix)
+import Lamdu.GUI.WidgetIds (parensPrefix)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Config as Config
-import qualified Lamdu.WidgetEnvT as WE
-import qualified Lamdu.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 type WidgetMaker m = ExprGuiM m (WidgetT m)
 

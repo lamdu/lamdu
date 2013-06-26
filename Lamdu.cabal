@@ -191,8 +191,9 @@ Executable lamdu
                        Lamdu.Main,
                        Lamdu.VersionControl,
                        Lamdu.VersionControl.Actions,
-                       Lamdu.WidgetEnvT,
-                       Lamdu.WidgetIds,
+                       Lamdu.GUI.WidgetEnvT,
+                       Lamdu.GUI.WidgetIds,
+                       Lamdu.GUI.WidgetIdIRef,
                        Paths_lamdu
   ghc-options:         -O -Wall
   -- ghc-options is prepended to ghc-prof-options

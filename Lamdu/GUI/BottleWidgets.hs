@@ -25,7 +25,7 @@ import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.View (View)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Config (Config)
-import Lamdu.WidgetEnvT (WidgetEnvT)
+import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
 import qualified Graphics.DrawingCombinators as Draw
@@ -38,8 +38,8 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
-import qualified Lamdu.WidgetEnvT as WE
-import qualified Lamdu.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.WidgetEnvT as WE
 
 makeTextView ::
   MonadA m => String -> AnimId -> WidgetEnvT m View

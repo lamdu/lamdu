@@ -9,7 +9,7 @@ import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Config as Config
-import qualified Lamdu.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetEnvT as WE
 
 make :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 make name myId = do

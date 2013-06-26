@@ -20,7 +20,7 @@ import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget(Widget)
 import Lamdu.CodeEdit.Settings (Settings(..))
 import Lamdu.Config (Config)
-import Lamdu.WidgetEnvT (runWidgetEnvT)
+import Lamdu.GUI.WidgetEnvT (runWidgetEnvT)
 import Paths_lamdu (getDataFileName)
 import System.Environment (getArgs)
 import System.FilePath ((</>))
@@ -40,15 +40,15 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
-import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.CodeEdit.Settings as Settings
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.ExampleDB as ExampleDB
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
+import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.VersionControl as VersionControl
-import qualified Lamdu.WidgetEnvT as WE
-import qualified Lamdu.WidgetIds as WidgetIds
 import qualified System.Directory as Directory
 
 data ParsedOpts = ParsedOpts
