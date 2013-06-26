@@ -1,4 +1,4 @@
-module Lamdu.ExampleDB(initDB, createBuiltins) where
+module Lamdu.Data.ExampleDB(initDB, createBuiltins) where
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
 import Control.Lens.Operators

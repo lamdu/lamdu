@@ -11,7 +11,7 @@ import Data.Store.Guid (Guid)
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Utils (pureHole, pureIntegerType)
-import Lamdu.ExampleDB (createBuiltins)
+import Lamdu.Data.ExampleDB (createBuiltins)
 import qualified Control.Lens as Lens
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Map as Map

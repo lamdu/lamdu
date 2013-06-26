@@ -41,11 +41,11 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import qualified Lamdu.Anchors as Anchors
-import qualified Lamdu.GUI.VersionControl as VersionControlGUI
-import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import qualified Lamdu.CodeEdit.Settings as Settings
 import qualified Lamdu.Config as Config
-import qualified Lamdu.ExampleDB as ExampleDB
+import qualified Lamdu.Data.ExampleDB as ExampleDB
+import qualified Lamdu.GUI.CodeEdit as CodeEdit
+import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
