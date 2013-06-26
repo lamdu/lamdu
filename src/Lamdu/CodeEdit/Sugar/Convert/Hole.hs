@@ -135,11 +135,14 @@ idTranslations seedExpr writtenExpr =
   execWriter . runApplicativeMonoid . getConst $
   ExprUtil.matchExpression writePls mismatch seedExpr writtenExpr
   where
+    ignore = Const . ApplicativeMonoid $ pure ()
     mismatch
       (Expr.Expression (Expr.BodyLeaf (Expr.Tag tagx)) plx)
       (Expr.Expression (Expr.BodyLeaf (Expr.Tag tagy)) ply) =
         write tagx tagy *>
         writePls plx ply
+    mismatch (Expr.Expression (Expr.BodyLeaf Expr.Hole) _) _ = ignore
+    mismatch _ (Expr.Expression (Expr.BodyLeaf Expr.Hole) _) = ignore
     mismatch _x _y =
       error $
       unlines
