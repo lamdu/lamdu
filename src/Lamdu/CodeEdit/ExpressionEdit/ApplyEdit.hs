@@ -16,9 +16,9 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.CodeEdit.ExpressionEdit.Modify as Modify
 import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
-import qualified Lamdu.CodeEdit.ExpressionEdit.Wrap as Wrap
 import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Layers as Layers
@@ -45,7 +45,7 @@ make (ParentPrecedence parentPrecedence) exprS (Sugar.Apply func specialArgs ann
     overrideHoleWrap =
       ExpressionGui.egWidget %~ Widget.strongerEvents overrideWrapEventMap
     overrideWrapEventMap =
-      maybe mempty (Wrap.eventMap config) $
+      maybe mempty (Modify.eventMap config) $
       exprS ^. Sugar.rPayload . Sugar.plActions
   case specialArgs of
     Sugar.NoSpecialArgs ->

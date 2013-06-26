@@ -4,7 +4,6 @@ module Lamdu.CodeEdit.ExpressionEdit(make) where
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
@@ -33,10 +32,10 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.InferredEdit as InferredEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.Modify as Modify
 import qualified Lamdu.CodeEdit.ExpressionEdit.PiEdit as PiEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.RecordEdit as RecordEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
-import qualified Lamdu.CodeEdit.ExpressionEdit.Wrap as Wrap
 import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetEnvT as WE
@@ -180,14 +179,7 @@ actionsEventMap sExpr isHole actions = do
   let
     delKeys = Config.replaceKeys config ++ Config.delKeys config
     replace
-      | isSelected =
-          fromMaybe mempty . listToMaybe $ concat
-          [ actions ^.. Sugar.mSetToInnerExpr . Lens._Just
-            <&> mkEventMap delKeys (E.Doc ["Edit", "Replace with inner expression"]) id
-          , actions ^.. Sugar.mSetToHole . Lens._Just
-            <&> mkEventMap delKeys (E.Doc ["Edit", "Replace expression"])
-                FocusDelegator.delegatingId
-          ]
+      | isSelected = Modify.replaceEventMap config actions
       | otherwise =
         mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
         FocusDelegator.notDelegatingId $ return exprGuid
@@ -197,7 +189,7 @@ actionsEventMap sExpr isHole actions = do
         mkEventMap (Config.cutKeys config) (E.Doc ["Edit", "Cut"]) id $
         actions ^. Sugar.cut
   return $ mconcat
-    [ Wrap.eventMap config actions
+    [ Modify.wrapEventMap config actions
     , replace
     , cut
     ]
