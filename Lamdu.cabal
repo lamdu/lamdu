@@ -19,6 +19,7 @@ Library
                        Data.List.Assoc,
                        Data.List.Utils,
                        Data.Maybe.Utils,
+                       Data.Monoid.Applicative,
                        Data.Monoid.Instances,
                        Data.MRUMemo,
                        Data.Vector.Vector2,

@@ -4,7 +4,7 @@ module Lamdu.CodeEdit.Sugar.Convert.Hole
   ( convert, convertPlain, orderedInnerHoles
   ) where
 
-import Control.Applicative (Applicative(..), (<$>), (<$))
+import Control.Applicative (Applicative(..), (<$>), (<$), Const(..))
 import Control.Lens.Operators
 import Control.Monad (MonadPlus(..), guard, join, void)
 import Control.Monad.Trans.Class (lift)
@@ -16,6 +16,7 @@ import Data.Hashable (Hashable, hashWithSalt)
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
+import Data.Monoid.Applicative (ApplicativeMonoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (sequenceA, traverse)
@@ -351,25 +352,17 @@ seedExprEnv emptyPl cp (ResultSeedNewDefinition name) = do
     , Just jumpToDef
     )
 
--- TODO: Does this Applicative Transformer already exist?
--- If not, think of a proper name for it.
-data Blah f a = Blah { runBlah :: f () }
-  deriving Functor
-instance Applicative f => Applicative (Blah f) where
-  Blah x <*> Blah y = Blah $ x <* y
-  pure = const . Blah $ pure ()
-
 idTranslations ::
   Eq def =>
   Expr.Expression def Guid ->
-  Expr.Expression def (ExprIRef.ExpressionI t) ->
+  Expr.Expression def Guid ->
   [(Guid, Guid)]
 idTranslations seedExpr writtenExpr =
-  execWriter . runBlah $
-  ExprUtil.matchExpression match ((const . const . Blah . return) ())
+  execWriter . runApplicativeMonoid . getConst $
+  ExprUtil.matchExpression match ((const . const . Const . ApplicativeMonoid . return) ())
   seedExpr writtenExpr
   where
-    match src dstI = Blah $ Writer.tell [(src, ExprIRef.exprGuid dstI)]
+    match src dst = Const . ApplicativeMonoid $ Writer.tell [(src, dst)]
 
 makeHoleResult ::
   (Typeable1 m, MonadA m, Cache.Key a, Binary a, Monoid a) =>
@@ -399,7 +392,7 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
           & SugarM.scHoleInferState .~ fakeCtx
           & SugarM.scHoleInferStateKey %~ \key -> Cache.bsOfKey (fakeSeedExpr, key)
         expr = prepareExprToSugar gen fakeInferredResult
-        mkTranslations = idTranslations ((^. SugarInfer.plGuid) <$> expr)
+        mkTranslations = idTranslations ((^. SugarInfer.plGuid) <$> expr) . fmap ExprIRef.exprGuid
       fakeConverted <- convertHoleResult newContext expr
       pure HoleResult
         { _holeResultInferred = fst <$> fakeInferredResult
