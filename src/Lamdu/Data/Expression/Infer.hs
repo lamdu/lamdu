@@ -14,7 +14,6 @@ module Lamdu.Data.Expression.Infer
   -- Used for inferring independent expressions in an inner infer context
   -- (See hole apply forms).
   , newNodeWithScope
-  , newTypedNodeWithScope
   , createRefExpr
   ) where
 
@@ -197,11 +196,6 @@ createTypedVal = TypedValue <$> createRefExpr <*> createRefExpr
 
 newNodeWithScope :: Scope def -> State (Context def) (InferNode def)
 newNodeWithScope scope = (`InferNode` scope) <$> createTypedVal
-
-newTypedNodeWithScope ::
-  Scope def -> ExprRef -> State (Context def) (InferNode def)
-newTypedNodeWithScope scope typ =
-  (`InferNode` scope) . (`TypedValue` typ) <$> createRefExpr
 
 initial :: Ord def => Maybe def -> (Context def, InferNode def)
 initial mRecursiveDefI =
