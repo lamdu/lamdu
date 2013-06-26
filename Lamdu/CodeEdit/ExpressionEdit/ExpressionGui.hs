@@ -50,7 +50,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Lamdu.BottleWidgets as BWidgets
+import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar.Types as Sugar
 import qualified Lamdu.Config as Config
@@ -210,7 +210,7 @@ wrapExpression ::
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 wrapExpression pl f myId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig  
+  config <- ExprGuiM.widgetEnv WE.readConfig
   wrapDelegated pl (exprFocusDelegatorConfig config) FocusDelegator.Delegating f myId
 
 makeLabel ::

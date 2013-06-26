@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.BottleWidgets
+module Lamdu.GUI.BottleWidgets
   ( makeTextView, makeTextViewWidget, makeLabel
   , makeFocusableView
   , makeFocusableTextView, makeFocusableLabel

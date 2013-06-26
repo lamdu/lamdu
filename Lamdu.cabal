@@ -128,7 +128,7 @@ Executable lamdu
                        utf8-string,
                        TypeCompose
   Other-Modules:       Lamdu.Anchors,
-                       Lamdu.BottleWidgets,
+                       Lamdu.GUI.BottleWidgets,
                        Lamdu.GUI.VersionControl,
                        Lamdu.CodeEdit.ExpressionEdit,
                        Lamdu.CodeEdit.ExpressionEdit.ApplyEdit,
