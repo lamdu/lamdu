@@ -1,18 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.CodeEdit.ExpressionEdit.ListEdit(make) where
+module Lamdu.GUI.CodeEdit.ExpressionEdit.ListEdit(make) where
 
 import Control.Applicative ((<$>))
 import Control.Lens ((&), (%~), (^.))
 import Control.MonadA (MonadA)
 import Data.Maybe (listToMaybe)
 import Data.Monoid (Monoid(..))
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds

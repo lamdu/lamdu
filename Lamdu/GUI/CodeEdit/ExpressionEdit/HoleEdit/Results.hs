@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
-module Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results
+module Lamdu.GUI.CodeEdit.ExpressionEdit.HoleEdit.Results
   ( makeAll, HaveHiddenResults(..)
   , Result(..)
   , ResultsList(..), rlExtraResultsPrefixId, rlMain, rlExtra
@@ -24,8 +24,8 @@ import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument)
 import Lamdu.Config (Config)
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefM)
@@ -37,7 +37,7 @@ import qualified Data.Foldable as Foldable
 import qualified Data.List.Class as List
 import qualified Data.Store.Guid as Guid
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef

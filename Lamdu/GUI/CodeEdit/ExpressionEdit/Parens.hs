@@ -1,19 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.CodeEdit.ExpressionEdit.Parens
+module Lamdu.GUI.CodeEdit.ExpressionEdit.Parens
   ( addTextParens
   , addHighlightedTextParens
   ) where
 
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.Config (Config)
 import Lamdu.GUI.WidgetIds (parensPrefix)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.WidgetEnvT as WE

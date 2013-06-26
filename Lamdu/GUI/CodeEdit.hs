@@ -17,8 +17,8 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
-import Lamdu.CodeEdit.Settings (Settings)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
+import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.Data.Expression.IRef (DefM)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
@@ -30,10 +30,10 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-import qualified Lamdu.CodeEdit.ExpressionEdit as ExpressionEdit
-import qualified Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit as DefinitionEdit
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.Settings as Settings
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit as ExpressionEdit
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.DefinitionEdit as DefinitionEdit
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression.Load as Load

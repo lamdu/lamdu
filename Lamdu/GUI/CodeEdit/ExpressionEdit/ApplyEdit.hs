@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.CodeEdit.ExpressionEdit.ApplyEdit
+module Lamdu.GUI.CodeEdit.ExpressionEdit.ApplyEdit
   ( make
   ) where
 
@@ -9,15 +9,15 @@ import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (traverse, sequenceA)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.ExpressionEdit.Modify as Modify
-import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
-import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.Modify as Modify
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.Parens as Parens
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.WidgetEnvT as WE

@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.CodeEdit.ExpressionEdit.RecordEdit(make) where
+module Lamdu.GUI.CodeEdit.ExpressionEdit.RecordEdit(make) where
 
 import Control.Applicative ((<$>), (<*>), (*>))
 import Control.Lens.Operators
@@ -7,16 +7,16 @@ import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Config (Config)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.WidgetEnvT as WE

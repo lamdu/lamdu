@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info
+module Lamdu.GUI.CodeEdit.ExpressionEdit.HoleEdit.Info
   ( HoleInfo(..), hsSearchTerm
   , HoleState(..), emptyState, hiSearchTerm
   ) where
@@ -14,7 +14,7 @@ import Data.Store.Transaction (Transaction)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction

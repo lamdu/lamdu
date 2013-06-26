@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui
+module Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui
   ( ExpressionGui(..), egWidget
   , fromValueWidget
   , scaleFromTop
@@ -35,8 +35,8 @@ import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId, Layer)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Box (KBox)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types (WidgetT, MyPrecedence(..), ParentPrecedence(..), Precedence, ExpressionGui(..), egWidget, egAlignment)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Types (WidgetT, MyPrecedence(..), ParentPrecedence(..), Precedence, ExpressionGui(..), egWidget, egAlignment)
 import Lamdu.Config (Config)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
@@ -49,7 +49,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.BottleWidgets as BWidgets

@@ -1,16 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.CodeEdit.ExpressionEdit.PiEdit(make) where
+module Lamdu.GUI.CodeEdit.ExpressionEdit.PiEdit(make) where
 
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (mappend)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
-import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.WidgetEnvT as WE

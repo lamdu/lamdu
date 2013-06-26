@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies, DeriveDataTypeable #-}
-module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
+module Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   ( ExprGuiM, WidgetT, runWidget
   , widgetEnv
   , Payload(..), SugarExpr
@@ -43,8 +43,8 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Typeable (Typeable)
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types (ExpressionGui, WidgetT, ParentPrecedence(..), Precedence)
-import Lamdu.CodeEdit.Settings (Settings)
+import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Types (ExpressionGui, WidgetT, ParentPrecedence(..), Precedence)
+import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.RWS as RWS

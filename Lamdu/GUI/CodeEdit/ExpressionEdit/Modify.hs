@@ -1,4 +1,4 @@
-module Lamdu.CodeEdit.ExpressionEdit.Modify
+module Lamdu.GUI.CodeEdit.ExpressionEdit.Modify
   ( eventMap, wrapEventMap, replaceEventMap
   ) where
 
@@ -10,13 +10,13 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import Lamdu.CharClassification (operatorChars)
-import Lamdu.CodeEdit.ExpressionEdit.HoleEdit (HoleState(..))
+import Lamdu.GUI.CodeEdit.ExpressionEdit.HoleEdit (HoleState(..))
 import Lamdu.Config (Config)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
+import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar

@@ -18,7 +18,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget(Widget)
-import Lamdu.CodeEdit.Settings (Settings(..))
+import Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import Lamdu.Config (Config)
 import Lamdu.GUI.WidgetEnvT (runWidgetEnvT)
 import Paths_lamdu (getDataFileName)
@@ -40,7 +40,7 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
-import qualified Lamdu.CodeEdit.Settings as Settings
+import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.ExampleDB as ExampleDB

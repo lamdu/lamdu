@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.CodeEdit.Settings
+module Lamdu.GUI.CodeEdit.Settings
   ( Settings(..), sInfoMode, InfoMode(..), defaultInfoMode
   ) where
 
