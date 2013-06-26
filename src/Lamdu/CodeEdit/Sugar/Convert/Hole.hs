@@ -133,8 +133,13 @@ idTranslations ::
   [(Guid, Guid)]
 idTranslations seedExpr writtenExpr =
   execWriter . runApplicativeMonoid . getConst $
-  ExprUtil.matchExpression match mismatch seedExpr writtenExpr
+  ExprUtil.matchExpression writePls mismatch seedExpr writtenExpr
   where
+    mismatch
+      (Expr.Expression (Expr.BodyLeaf (Expr.Tag tagx)) plx)
+      (Expr.Expression (Expr.BodyLeaf (Expr.Tag tagy)) ply) =
+        write tagx tagy *>
+        writePls plx ply
     mismatch _x _y =
       error $
       unlines
@@ -143,7 +148,8 @@ idTranslations seedExpr writtenExpr =
       , showExpr writtenExpr
       ]
     showExpr expr = expr & ExprLens.exprDef .~ () & void & show
-    match src dstI = Const . ApplicativeMonoid $ Writer.tell [(src ^. SugarInfer.plGuid, ExprIRef.exprGuid dstI)]
+    writePls src dstI = write (src ^. SugarInfer.plGuid) (ExprIRef.exprGuid dstI)
+    write src dst = Const . ApplicativeMonoid $ Writer.tell [(src, dst)]
 
 convertInferred ::
   (MonadA m, Typeable1 m, Monoid a) =>
