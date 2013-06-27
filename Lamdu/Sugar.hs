@@ -1,8 +1,6 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types, PatternGuards #-}
 module Lamdu.Sugar
-  ( module Lamdu.Sugar.Types
-  , convertDefI
-  , StorePoint
+  ( convertDefI
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))

@@ -41,7 +41,8 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar as Sugar
+import qualified Lamdu.Sugar as SugarConvert
+import qualified Lamdu.Sugar.Types as Sugar
 import qualified Lamdu.Sugar.AddNames as AddNames
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 
@@ -72,7 +73,7 @@ loadConvertDefI ::
   CT m (Sugar.DefinitionU m ExprGuiM.Payload)
 loadConvertDefI cp defI =
   lift (Load.loadDefinitionClosure defI) >>=
-  Sugar.convertDefI cp defI
+  SugarConvert.convertDefI cp defI
   <&> Lens.mapped . Lens.mapped . Lens.mapped %~ mkPayload
   where
     mkPayload guids = ExprGuiM.Payload
