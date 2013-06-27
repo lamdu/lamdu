@@ -31,7 +31,6 @@ module Lamdu.Sugar.Convert.Infer
   ) where
 
 import Control.Applicative ((<$>))
-import Control.Arrow ((&&&))
 import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Monad (void, (<=<))
@@ -155,28 +154,22 @@ inferWithVariables gen loaded baseInferContext node =
   (`evalStateT` baseInferContext) $ do
     (success, expr) <- toStateT $ inferWithConflicts loaded node
     intermediateContext <- State.get
-    mWithVariables <- if success
+    mWithVariables <-
+      if success
       then do
+        -- success chceked above, guarantees no conflicts:
+        let asIWC newInferred = InferredWithConflicts newInferred [] []
         wvExpr <-
           ImplicitVariables.add gen loader =<<
           Structure.add loader
-          ((iwcInferred . fst &&& id) <$> expr)
+          (expr <&> Lens._1 %~ iwcInferred)
         wvContext <- State.get
-        return $ Just (wvContext, asIWC <$> wvExpr)
+        return $ Just (wvContext, wvExpr <&> Lens._1 %~ asIWC)
       else
         return Nothing
     return
       ( (intermediateContext, expr)
       , mWithVariables
-      )
-  where
-    asIWC (newInferred, ImplicitVariables.Stored (oldIWC, a)) =
-      ( oldIWC { iwcInferred = newInferred }
-      , ImplicitVariables.Stored a
-      )
-    asIWC (newInferred, ImplicitVariables.AutoGen guid) =
-      ( InferredWithConflicts newInferred [] []
-      , ImplicitVariables.AutoGen guid
       )
 
 data InferredWithImplicits m a = InferredWithImplicits
