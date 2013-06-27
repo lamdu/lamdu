@@ -64,12 +64,13 @@ Library
                        Data.Store.Property,
                        Data.Store.Db,
 
+                       Control.Applicative.Reverse,
+                       Control.Lens.Utils,
                        Control.Monad.Trans.Either.Utils,
                        Control.Monad.Trans.State.Utils,
-                       Control.MonadA,
-                       System.Random.Utils,
                        Control.Monad.Unit,
-                       Control.Lens.Utils
+                       Control.MonadA,
+                       System.Random.Utils
 
   Other-Modules:       Data.Store.Rev.ViewBranchInternal,
                        Data.Cache.Types
