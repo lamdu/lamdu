@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds #-}
 module Lamdu.Sugar.Convert.Monad
   ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
-  , scHoleInferStateKey, scHoleInferState
+  , scHoleInferStateKey, scHoleInferState, scStructureInferState
   , scCodeAnchors, scSpecialFunctions, scTagParamInfos, scRecordParamsInfos
   , SugarM(..), run
   , readContext, liftCTransaction, liftTransaction, local
@@ -48,6 +48,7 @@ data RecordParamsInfo m = RecordParamsInfo
 data Context m = Context
   { _scHoleInferStateKey :: Cache.KeyBS
   , _scHoleInferState :: Infer.Context (DefM m)
+  , _scStructureInferState :: Infer.Context (DefM m)
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
   , _scTagParamInfos :: Map Guid TagParamInfo -- tag guids

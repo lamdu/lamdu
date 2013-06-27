@@ -113,19 +113,23 @@ convertTypeCheckedHoleH exprPl =
   (convertInferred exprPl)
 
 accept ::
-  (MonadA m, Typeable1 m, Binary a, Cache.Key a) =>
+  (MonadA m, Typeable1 m) =>
   SugarM.Context m ->
   Infer.InferNode (DefM m) ->
-  ExprIRef.ExpressionM m a ->
   ExprIRef.ExpressionIM m ->
   T m (Maybe Guid, ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m))
-accept sugarContext point expr iref = do
+accept sugarContext point iref = do
+  -- Reinfer the inferred value so we can know which parts to clean
+  -- up:
   (exprInferred, _) <-
     Cache.unmemoS $
     unsafeUnjust "The inferred value of a hole must type-check!" <$>
     SugarM.memoLoadInferInHoleContext sugarContext expr point
   pickResult iref $
     flip (,) Nothing <$> cleanUpInferredVal (fst <$> exprInferred)
+  where
+    expr = Infer.iValue $ Infer.derefNode structureInferState point
+    structureInferState = sugarContext ^. SugarM.scStructureInferState
 
 -- Sugar exports fpId of Lambda params as:
 --   Guid.combine lamGuid paramGuid
@@ -200,7 +204,7 @@ convertInferred exprPl wvInferredVal = do
     , _iValue = (mempty <$) <$> val
     , _iMAccept =
       fmap mkResult .
-      accept sugarContext (Infer.iNode inferred) reinferredVal .
+      accept sugarContext (Infer.iNode inferred) .
       Property.value <$> exprPl ^. SugarInfer.plStored
     }
   where
@@ -211,8 +215,6 @@ convertInferred exprPl wvInferredVal = do
       , _prIdTranslation = idTranslations expr written
       }
     wvInferredValGen = genFromHashable $ exprPl ^. SugarInfer.plGuid
-    reinferredVal =
-      ExprUtil.structureForType . void $ Infer.iType inferred
     inferred = iwcInferred $ exprPl ^. SugarInfer.plInferred
 
 convertPlainTyped ::

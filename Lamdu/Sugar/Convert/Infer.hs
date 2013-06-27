@@ -9,8 +9,11 @@ module Lamdu.Sugar.Convert.Infer
   , isPolymorphicFunc
   , inferAddImplicits
   , InferredWithImplicits(..)
-  , iwiSuccess, iwiBaseInferContextKey, iwiInferContext
-  , iwiExpr, iwiBaseExpr, iwiBaseInferContext
+
+  , iwiSuccess
+  , iwiBaseInferContextKey, iwiInferContext
+  , iwiStructureInferContext, iwiBaseInferContext
+  , iwiExpr, iwiBaseExpr
 
   , mkExprPure
 
@@ -147,26 +150,31 @@ inferWithVariables ::
     )
   , Maybe
     ( Infer.Context (DefM m)
+    , Infer.Context (DefM m)
     , ExprIRef.ExpressionM m (InferredWithConflicts (DefM m), ImplicitVariables.Payload a)
     )
   )
 inferWithVariables gen loaded baseInferContext node =
   (`evalStateT` baseInferContext) $ do
+
     (success, expr) <- toStateT $ inferWithConflicts loaded node
     intermediateContext <- State.get
+
     mWithVariables <-
-      if success
-      then do
+      if not success
+      then return Nothing
+      else Just <$> do
         -- success chceked above, guarantees no conflicts:
         let asIWC newInferred = InferredWithConflicts newInferred [] []
-        wvExpr <-
-          ImplicitVariables.add gen loader =<<
-          Structure.add loader
-          (expr <&> Lens._1 %~ iwcInferred)
+
+        withStructureExpr <- Structure.add loader (expr <&> Lens._1 %~ iwcInferred)
+        withStructureContext <- State.get
+
+        wvExpr <- ImplicitVariables.add gen loader withStructureExpr
         wvContext <- State.get
-        return $ Just (wvContext, wvExpr <&> Lens._1 %~ asIWC)
-      else
-        return Nothing
+
+        return (withStructureContext, wvContext, wvExpr <&> Lens._1 %~ asIWC)
+
     return
       ( (intermediateContext, expr)
       , mWithVariables
@@ -175,6 +183,7 @@ inferWithVariables gen loaded baseInferContext node =
 data InferredWithImplicits m a = InferredWithImplicits
   { _iwiSuccess :: Bool
   , _iwiInferContext :: Infer.Context (DefM m)
+  , _iwiStructureInferContext :: Infer.Context (DefM m)
   , _iwiExpr :: ExprIRef.ExpressionM m (Payload (InferredWC (Tag m)) (Maybe (Stored m)) a)
   -- Prior to adding variables
   , _iwiBaseInferContext :: Infer.Context (DefM m)
@@ -203,10 +212,11 @@ inferAddImplicits gen mDefI lExpr inferContextKey inferState = do
     , _iwiBaseInferContext = baseContext
     , _iwiBaseExpr = baseExpr
 
-    , _iwiInferContext = maybe baseContext fst mWithVariables
+    , _iwiStructureInferContext = maybe baseContext (^. Lens._1) mWithVariables
+    , _iwiInferContext = maybe baseContext (^. Lens._2) mWithVariables
     , _iwiExpr =
       maybe (baseExpr & Lens.mapped . plStored %~ Just)
-      (fmap mkWVPayload . snd) mWithVariables
+      (fmap mkWVPayload . (^. Lens._3)) mWithVariables
     }
   where
     uncurriedInfer (loaded, (inferContext, inferNode)) =
