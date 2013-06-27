@@ -165,6 +165,7 @@ convertLam lam@(Expr.Lambda k paramGuid _paramType result) exprPl = do
     }
     & SugarExpr.make exprPl
     <&> rPayload . plActions . Lens._Just . mSetToInnerExpr .~ do
+      guard $ Lens.nullOf ExprLens.exprHole result
       bodyStored <- traverse (^. SugarInfer.plStored) result
       stored <- exprPl ^. SugarInfer.plStored
       return $ do
