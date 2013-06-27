@@ -143,7 +143,13 @@ makeResultGroup results = do
         else
           (,) Nothing <$>
           makeExtraResultsPlaceholderWidget (results ^. HoleResults.rlExtra)
-  return ([mainResultWidget, extraSymbolWidget, extraResWidget], mResult)
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    onExtraSymbol =
+      case mResult of
+      Nothing -> Widget.tint $ Config.holeInactiveExtraSymbolColor config
+      Just _ -> id
+  return ([mainResultWidget, onExtraSymbol extraSymbolWidget, extraResWidget], mResult)
   where
     mainResult = results ^. HoleResults.rlMain
     makeExtra = makeExtraResultsWidget $ results ^. HoleResults.rlExtra

@@ -466,6 +466,12 @@
         0.6,
         1.0
     ],
+    "holeInactiveExtraSymbolColor": [
+        1.0,
+        1.0,
+        1.0,
+        0.3
+    ],
     "recordAddFieldKeys": [
         [
             {

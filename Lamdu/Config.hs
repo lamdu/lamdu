@@ -80,6 +80,7 @@ data Config = Config
   , holeSearchTermScaleFactor :: Vector2 Double
   , holeNumLabelScaleFactor :: Vector2 Double
   , holeNumLabelColor :: Draw.Color
+  , holeInactiveExtraSymbolColor :: Draw.Color
 
   , typeErrorHoleWrapBackgroundColor :: Draw.Color
   , deletableHoleBackgroundColor :: Draw.Color
