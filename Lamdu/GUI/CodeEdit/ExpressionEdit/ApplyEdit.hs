@@ -64,12 +64,13 @@ make (ParentPrecedence parentPrecedence) pl (Sugar.Apply func specialArgs annota
       ]
   where
     isBoxed = not $ null annotatedArgs
+    destGuid = func ^. Sugar.rPayload . Sugar.plGuid
     mk mPrecedence mkFuncRow
-      | isBoxed = mkBoxed pl mkFuncRow annotatedArgs myId
+      | isBoxed = mkBoxed pl destGuid mkFuncRow annotatedArgs myId
       | otherwise =
         mkMParened pl
         (ParentPrecedence parentPrecedence)
-        (ExpressionGui.MyPrecedence <$> mPrecedence) mkFuncRow myId
+        (ExpressionGui.MyPrecedence <$> mPrecedence) destGuid mkFuncRow myId
 
 assignCursorGuid :: MonadA m => Widget.Id -> Guid -> ExprGuiM m a -> ExprGuiM m a
 assignCursorGuid myId = ExprGuiM.assignCursor myId . WidgetIds.fromGuid
@@ -102,12 +103,12 @@ makeArgRow arg = do
 mkBoxed ::
   MonadA m =>
   Sugar.Payload Sugar.Name m a ->
-  ExprGuiM m (ExpressionGui m) ->
+  Guid -> ExprGuiM m (ExpressionGui m) ->
   [Sugar.AnnotatedArg Sugar.Name (ExprGuiM.SugarExpr m)] ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-mkBoxed pl mkFuncRow annotatedArgs =
+mkBoxed pl destGuid mkFuncRow annotatedArgs =
   ExpressionGui.wrapExpression pl $ \myId ->
-  assignCursorGuid myId (pl ^. Sugar.plGuid) $ do
+  assignCursorGuid myId destGuid $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     argEdits <-
       Grid.toWidget . Grid.make <$> traverse makeArgRow annotatedArgs
@@ -120,10 +121,11 @@ mkMParened ::
   Sugar.Payload Sugar.Name m a ->
   ParentPrecedence ->
   Maybe ExpressionGui.MyPrecedence ->
-  ExprGuiM m  (ExpressionGui m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-mkMParened pl parentPrecedence mPrecedence mkFuncRow =
+  Guid -> ExprGuiM m  (ExpressionGui m) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+mkMParened pl parentPrecedence mPrecedence destGuid mkFuncRow =
   ExpressionGui.wrapExpression pl . parenify $ \myId ->
-  assignCursorGuid myId (pl ^. Sugar.plGuid) mkFuncRow
+  assignCursorGuid myId destGuid mkFuncRow
   where
     parenify = case mPrecedence of
       Nothing -> id
