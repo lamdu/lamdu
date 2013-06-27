@@ -11,9 +11,8 @@ import Control.Monad.Trans.Either.Utils (justToLeft)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.MonadA (MonadA)
 import Data.Maybe.Utils (maybeToMPlus)
-import Data.Monoid (Monoid(..), (<>))
+import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.Data.Anchors (PresentationMode(..))
@@ -38,6 +37,7 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Expression as SugarExpr
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
+import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as SugarM
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 
@@ -50,10 +50,9 @@ convert ::
   PayloadMM m a -> SugarM m (ExpressionU m a)
 convert app@(Expr.Apply funcI argI) exprPl =
   fmap uneither . runEitherT $ do
-    justToLeft $ convertEmptyList app exprPl
     argS <- lift $ SugarM.convertSubexpression argI
     justToLeft $ convertAppliedHole funcI argS argI exprPl
-    justToLeft $ convertList app argS exprPl
+    justToLeft $ ConvertList.convert app argS exprPl
     funcS <- lift $ SugarM.convertSubexpression funcI
     justToLeft $ convertLabeled funcS argS argI exprPl
     lift $ convertPrefix funcS funcI argS argI exprPl
@@ -171,42 +170,6 @@ convertPrefix funcRef funcI argS argI applyPl
       , _aAnnotatedArgs = []
       }
 
-mkListAddFirstItem ::
-  MonadA m => Anchors.SpecialFunctions (Tag m) -> SugarInfer.Stored m -> T m Guid
-mkListAddFirstItem specialFunctions =
-  fmap (ExprIRef.exprGuid . snd) . DataOps.addListItem specialFunctions
-
-convertEmptyList ::
-  (Typeable1 m, MonadA m, Monoid a) =>
-  Expr.Apply (ExprMM m a) ->
-  PayloadMM m a ->
-  MaybeT (SugarM m) (ExpressionU m a)
-convertEmptyList app@(Expr.Apply funcI _) exprPl = do
-  specialFunctions <-
-    lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
-  let
-    mkListActions exprS =
-      ListActions
-      { addFirstItem = mkListAddFirstItem specialFunctions exprS
-      , replaceNil = ExprIRef.exprGuid <$> DataOps.setToHole exprS
-      }
-  guard $
-    Lens.anyOf ExprLens.exprDefinitionRef
-    (== Anchors.sfNil specialFunctions) funcI
-  let
-    hiddenData = app ^. Lens.traversed . Lens.traversed . SugarInfer.plData
-  (lift . SugarExpr.make exprPl . BodyList)
-    (List [] (mkListActions <$> exprPl ^. SugarInfer.plStored))
-    <&> rPayload . plData <>~ hiddenData
-
-isCons ::
-  Anchors.SpecialFunctions t ->
-  ExprIRef.Expression t a -> Bool
-isCons specialFunctions =
-  Lens.anyOf
-  (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprDefinitionRef)
-  (== Anchors.sfCons specialFunctions)
-
 typeCheckIdentityAt ::
   (MonadA m, Typeable1 m) =>
   Infer.InferNode (DefM m) -> SugarM m Bool
@@ -277,58 +240,3 @@ convertAppliedHole funcI rawArgS argI exprPl
       (rPayload . plActions . Lens._Just . wrap .~
        AlreadyWrapped guid) $
       rawArgS
-
-convertList ::
-  (Typeable1 m, MonadA m, Monoid a) =>
-  Expr.Apply (ExprMM m a) -> ExpressionU m a -> PayloadMM m a ->
-  MaybeT (SugarM m) (ExpressionU m a)
-convertList (Expr.Apply funcI argI) argS exprPl = do
-  specialFunctions <- lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
-  Record KVal (FieldList fields@[headField, tailField] _) <-
-    maybeToMPlus $ argS ^? rBody . _BodyRecord
-  let
-    verifyTag tag field =
-      guard . (== tag specialFunctions) =<<
-      maybeToMPlus (field ^? rfTag . rBody . _BodyTag . tagGuid)
-  verifyTag Anchors.sfHeadTag headField
-  verifyTag Anchors.sfTailTag tailField
-  List innerValues innerListMActions <-
-    maybeToMPlus $ tailField ^? rfExpr . rBody . _BodyList
-  guard $ isCons specialFunctions funcI
-  let
-    listItem =
-      mkListItem (headField ^. rfExpr) argS exprPl argI
-      (addFirstItem <$> innerListMActions)
-      & liExpr . rPayload . plData <>~
-        (funcI ^. Lens.traversed . SugarInfer.plData <>
-         tailField ^. rfExpr . rPayload . plData <>
-         fields ^. Lens.traversed . rfTag . rPayload . plData)
-    mListActions = do
-      exprS <- exprPl ^. SugarInfer.plStored
-      innerListActions <- innerListMActions
-      pure ListActions
-        { addFirstItem = mkListAddFirstItem specialFunctions exprS
-        , replaceNil = replaceNil innerListActions
-        }
-  lift . SugarExpr.make exprPl . BodyList $
-    List (listItem : innerValues) mListActions
-
-mkListItem ::
-  (MonadA m, Monoid a) =>
-  ExpressionU m a -> ExpressionU m a ->
-  PayloadMM m a -> ExprMM m a -> Maybe (T m Guid) ->
-  ListItem m (ExpressionU m a)
-mkListItem listItemExpr recordArgS exprPl argI mAddNextItem =
-  ListItem
-  { _liExpr =
-    listItemExpr
-    & rPayload . plData <>~ recordArgS ^. rPayload . plData
-  , _liMActions = do
-      addNext <- mAddNextItem
-      exprProp <- exprPl ^. SugarInfer.plStored
-      argProp <- argI ^. SugarInfer.exprStored
-      return ListItemActions
-        { _itemAddNext = addNext
-        , _itemDelete = SugarInfer.replaceWith exprProp argProp
-        }
-  }
