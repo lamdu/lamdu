@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Lamdu.Sugar.Convert.Expression
   ( make, mkGen
   , mkReplaceWithNewHole
@@ -77,8 +78,20 @@ make exprPl body = do
     seeds = RandomUtils.splits . mkGen 0 3 $ exprPl ^. SugarInfer.plGuid
     types = maybe [] iwcInferredTypes $ exprPl ^. SugarInfer.plInferred
 
-subExpressions :: Expression name m a -> [Expression name m a]
-subExpressions x = x : x ^.. rBody . Lens.traversed . Lens.folding subExpressions
+-- Parent payloads come after children. Children are in Body-Foldable
+-- order
+subExpressions ::
+  Lens.IndexedTraversal
+  (Body name m (ExpressionP name m ()))
+  (ExpressionP name m a) (ExpressionP name m b) a b
+subExpressions f (Expression body pl) =
+  Expression <$>
+  (Lens.traversed .> subExpressions) f body <*>
+  Lens.indexed f
+  -- Remove annotations from body so it is a legal traversal (index
+  -- mustn't overlap with what's being traversed)
+  (body & Lens.mapped . Lens.mapped .~ ())
+  pl
 
 getStoredName :: MonadA m => Guid -> T m (Maybe String)
 getStoredName guid = do

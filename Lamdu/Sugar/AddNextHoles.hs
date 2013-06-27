@@ -32,10 +32,10 @@ processExpr mNextHole (Expression body pl) =
         then Lens._1 .~ Just (curExpr ^. rPayload . plGuid)
         else id
 
-isHoleToJumpTo :: Body namea m (Expression nameb n b) -> Bool
+isHoleToJumpTo :: Body namea m (ExpressionP nameb n b) -> Bool
 isHoleToJumpTo expr =
   Lens.has (_BodyHole) expr ||
-  Lens.anyOf (_BodyInferred . iValue . Lens.folding subExpressions . rBody) isHoleToJumpTo expr
+  Lens.anyOf (_BodyInferred . iValue . subExpressions . Lens.asIndex) isHoleToJumpTo expr
 
 toExpr ::
   MonadA m =>
