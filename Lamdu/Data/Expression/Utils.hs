@@ -96,7 +96,7 @@ onNgMakeName onMakeName =
 getPiWrappers :: Expression def a -> PiWrappers def a
 getPiWrappers expr =
   case expr ^? ExprLens.exprLam of
-  Just (Lambda KType param paramType resultType)
+  Just (Lam KType param paramType resultType)
     | isDependentPi expr ->
       getPiWrappers resultType & dependentPiParams %~ (p :)
     | otherwise ->
@@ -149,7 +149,7 @@ data ApplyFormAnnotation =
 -- with all different sensible levels of currying.
 applyForms :: Expression def () -> Expression def () -> [Expression def ApplyFormAnnotation]
 applyForms exprType rawExpr
-  | Lens.has (ExprLens.exprLam . lambdaKind . _KVal) expr = [expr]
+  | Lens.has (ExprLens.exprLam . lamKind . _KVal) expr = [expr]
   | otherwise = reverse withAllAppliesAdded
   where
     expr = Untouched <$ rawExpr
@@ -184,7 +184,7 @@ structureForType expr =
   BodyRecord (Record KType fields) ->
     ExprLens.pureExpr . ExprLens.bodyKindedRecordFields KVal #
     (fields & Lens.traversed . Lens._2 %~ structureForType)
-  BodyLam (Lambda KType paramId paramType resultType) ->
+  BodyLam (Lam KType paramId paramType resultType) ->
     ExprLens.pureExpr . ExprLens.bodyKindedLam KVal #
     (paramId, paramType, structureForType resultType)
   _ -> ExprLens.pureExpr . ExprLens.bodyHole # ()
@@ -227,9 +227,9 @@ randomizeParamIdsG preNG gen initMap convertPL =
       newGen <- lift $ state ngSplit
       (`Expression` convertPL newGen guidMap s) <$>
         case v of
-        BodyLam (Lambda k oldParamId paramType body) -> do
+        BodyLam (Lam k oldParamId paramType body) -> do
           newParamId <- lift . state $ makeName oldParamId s
-          fmap BodyLam $ liftA2 (Lambda k newParamId) (go paramType) .
+          fmap BodyLam $ liftA2 (Lam k newParamId) (go paramType) .
             Reader.local (Map.insert oldParamId newParamId) $ go body
         BodyLeaf (GetVariable (ParameterRef guid)) ->
           pure $ ExprLens.bodyParameterRef #
@@ -245,17 +245,17 @@ randomizeParamIdsG preNG gen initMap convertPL =
 {-# INLINE matchBody #-}
 matchBody ::
   Eq def =>
-  (Guid -> Guid -> a -> b -> c) -> -- ^ Lambda/Pi result match
+  (Guid -> Guid -> a -> b -> c) -> -- ^ Lam/Pi result match
   (a -> b -> c) ->                 -- ^ Ordinary structural match (Apply components, param type)
   (Guid -> Guid -> Bool) ->        -- ^ Match ParameterRef's
   Body def a -> Body def b -> Maybe (Body def c)
 matchBody matchLamResult matchOther matchGetPar body0 body1 =
   case body0 of
-  BodyLam (Lambda k0 p0 pt0 r0) -> do
-    Lambda k1 p1 pt1 r1 <- body1 ^? _BodyLam
+  BodyLam (Lam k0 p0 pt0 r0) -> do
+    Lam k1 p1 pt1 r1 <- body1 ^? _BodyLam
     guard $ k0 == k1
     return . BodyLam $
-      Lambda k0 p0 (matchOther pt0 pt1) $
+      Lam k0 p0 (matchOther pt0 pt1) $
       matchLamResult p0 p1 r0 r1
   BodyApply (Apply f0 a0) -> do
     Apply f1 a1 <- body1 ^? _BodyApply
@@ -376,7 +376,7 @@ makeApply func arg = BodyApply $ Apply func arg
 
 makeLam :: Kind -> Guid -> expr -> expr -> Body def expr
 makeLam k argId argType resultType =
-  BodyLam $ Lambda k argId argType resultType
+  BodyLam $ Lam k argId argType resultType
 
 -- TODO: Remove the kind-passing wrappers
 makePi :: Guid -> expr -> expr -> Body def expr
@@ -389,7 +389,7 @@ isTypeConstructorType :: Expression def a -> Bool
 isTypeConstructorType expr =
   case expr ^. eBody of
   BodyLeaf Type -> True
-  BodyLam (Lambda KType _ _ res) -> isTypeConstructorType res
+  BodyLam (Lam KType _ _ res) -> isTypeConstructorType res
   _ -> False
 
 -- Show isntances:
@@ -398,12 +398,12 @@ showsPrecBody ::
   Int -> Body def expr -> ShowS
 showsPrecBody mayDepend prec body =
   case body of
-  BodyLam (Lambda KVal paramId paramType result) ->
+  BodyLam (Lam KVal paramId paramType result) ->
     paren 0 $
     showChar '\\' . shows paramId . showChar ':' .
     showsPrec 11 paramType . showString "==>" .
     shows result
-  BodyLam (Lambda KType paramId paramType resultType) ->
+  BodyLam (Lam KType paramId paramType resultType) ->
     paren 0 $
     paramStr . showString "->" . shows resultType
     where
@@ -461,10 +461,10 @@ addBodyContexts ::
 addBodyContexts tob (Context intoContainer body) =
   afterSetter %~ intoContainer $
   case body of
-  BodyLam (Lambda k paramId func arg) ->
-    Lambda k paramId
-    (Context (flip (Lambda k paramId) (tob arg)) func)
-    (Context (Lambda k paramId (tob func)) arg)
+  BodyLam (Lam k paramId func arg) ->
+    Lam k paramId
+    (Context (flip (Lam k paramId) (tob arg)) func)
+    (Context (Lam k paramId (tob func)) arg)
     & BodyLam
     & afterSetter %~ BodyLam
   BodyApply (Apply func arg) ->

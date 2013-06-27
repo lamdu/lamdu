@@ -2,7 +2,7 @@
 module Lamdu.Data.Expression
   ( VariableRef(..), _ParameterRef, _DefinitionRef
   , Kind(..), _KVal, _KType
-  , Lambda(..), lambdaKind, lambdaParamId, lambdaParamType, lambdaResult
+  , Lam(..), lamKind, lamParamId, lamParamType, lamResult
   , Apply(..), applyFunc, applyArg
   , GetField(..), getFieldRecord, getFieldTag
   , Record(..), recordKind, recordFields
@@ -29,12 +29,12 @@ import qualified Control.Lens as Lens
 data Kind = KVal | KType
   deriving (Eq, Ord, Show, Typeable)
 
-data Lambda expr = Lambda
-  { _lambdaKind :: !Kind
-  , _lambdaParamId :: {-# UNPACK #-}!Guid
-  , _lambdaParamType :: expr
-  -- TODO: Rename to _lambdaResult (for Pi it is not a body)
-  , _lambdaResult :: expr
+data Lam expr = Lam
+  { _lamKind :: !Kind
+  , _lamParamId :: {-# UNPACK #-}!Guid
+  , _lamParamType :: expr
+  -- TODO: Rename to _lamResult (for Pi it is not a body)
+  , _lamResult :: expr
   } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 data Apply expr = Apply
@@ -83,7 +83,7 @@ data GetField expr = GetField
   } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 data Body def expr
-  = BodyLam {-# UNPACK #-}!(Lambda expr)
+  = BodyLam {-# UNPACK #-}!(Lam expr)
   | BodyApply {-# UNPACK #-}!(Apply expr)
   | BodyRecord {-# UNPACK #-}!(Record expr)
   | BodyGetField {-# UNPACK #-}!(GetField expr)
@@ -99,11 +99,11 @@ data Expression def a = Expression
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
 
 fmap concat $ mapM Lens.makePrisms [''Kind, ''VariableRef, ''Leaf, ''Body]
-fmap concat $ mapM Lens.makeLenses [''Expression, ''Record, ''GetField, ''Lambda, ''Apply]
+fmap concat $ mapM Lens.makeLenses [''Expression, ''Record, ''GetField, ''Lam, ''Apply]
 
 fmap concat . sequence $
   derive
   <$> [makeBinary, makeNFData]
-  <*> [ ''Kind, ''VariableRef, ''Lambda, ''Apply, ''Leaf, ''Body, ''Record, ''GetField
+  <*> [ ''Kind, ''VariableRef, ''Lam, ''Apply, ''Leaf, ''Body, ''Record, ''GetField
       , ''Expression
       ]

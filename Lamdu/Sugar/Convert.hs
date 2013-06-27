@@ -126,10 +126,10 @@ addFuncParamName fp = do
   pure fp { _fpName = name }
 
 convertPositionalFuncParam ::
-  (Typeable1 m, MonadA m, Monoid a) => Expr.Lambda (SugarInfer.ExprMM m a) ->
+  (Typeable1 m, MonadA m, Monoid a) => Expr.Lam (SugarInfer.ExprMM m a) ->
   SugarInfer.PayloadMM m a ->
   SugarM m (FuncParam MStoredName m (ExpressionU m a))
-convertPositionalFuncParam (Expr.Lambda _k paramGuid paramType body) lamExprPl = do
+convertPositionalFuncParam (Expr.Lam _k paramGuid paramType body) lamExprPl = do
   paramTypeS <- SugarM.convertSubexpression paramType
   addFuncParamName FuncParam
     { _fpName = Nothing
@@ -149,9 +149,9 @@ convertPositionalFuncParam (Expr.Lambda _k paramGuid paramType body) lamExprPl =
 
 convertLam ::
   (MonadA m, Typeable1 m, Monoid a) =>
-  Expr.Lambda (SugarInfer.ExprMM m a) ->
+  Expr.Lam (SugarInfer.ExprMM m a) ->
   SugarInfer.PayloadMM m a -> SugarM m (ExpressionU m a)
-convertLam lam@(Expr.Lambda k paramGuid _paramType result) exprPl = do
+convertLam lam@(Expr.Lam k paramGuid _paramType result) exprPl = do
   param <- convertPositionalFuncParam lam exprPl
   resultS <- SugarM.convertSubexpression result
   BodyLam
@@ -641,7 +641,7 @@ convertDefinitionParams ::
   )
 convertDefinitionParams recordParamsInfo usedTags expr =
   case expr ^. Expr.eBody of
-  Expr.BodyLam lambda@(Expr.Lambda KVal paramGuid origParamType body) -> do
+  Expr.BodyLam lambda@(Expr.Lam KVal paramGuid origParamType body) -> do
     param <-
       convertPositionalFuncParam lambda (expr ^. Expr.ePayload)
       -- Slightly strange but we mappend the hidden lambda's

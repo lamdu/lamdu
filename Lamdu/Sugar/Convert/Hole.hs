@@ -141,9 +141,9 @@ combineLamGuids (Expr.Expression body guid) =
   -- TODO: Lens.outside
   (`Expr.Expression` guid) $
   case body of
-  Expr.BodyLam (Expr.Lambda k paramGuid paramType result) ->
+  Expr.BodyLam (Expr.Lam k paramGuid paramType result) ->
     Expr.BodyLam
-    (Expr.Lambda k (Guid.combine guid paramGuid)
+    (Expr.Lam k (Guid.combine guid paramGuid)
      (combineLamGuids paramType)
      (combineLamGuids result))
   _ -> combineLamGuids <$> body
@@ -591,7 +591,7 @@ uninferredHoles e =
   Expr.BodyApply (Expr.Apply func _)
     | (ExprUtil.isDependentPi . Infer.iType . (^. Expr.ePayload . Lens._2)) func ->
       uninferredHoles func
-  Expr.BodyLam (Expr.Lambda lamKind _ paramType result) ->
+  Expr.BodyLam (Expr.Lam lamKind _ paramType result) ->
     uninferredHoles result ++ do
       guard $ lamKind == KType
       uninferredHoles paramType

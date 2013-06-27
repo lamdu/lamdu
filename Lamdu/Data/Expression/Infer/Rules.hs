@@ -164,11 +164,11 @@ makeForNode (Expr.Expression exprBody typedVal) =
       fields
       & Lens.mapped . Lens._1 %~ tvVal
       & Lens.mapped . Lens._2 %~ tvType
-    lamKindRules (Expr.Lambda Expr.KType _ _ body) =
+    lamKindRules (Expr.Lam Expr.KType _ _ body) =
       [setterRule (tvType body)]
-    lamKindRules (Expr.Lambda Expr.KVal param _ body) =
+    lamKindRules (Expr.Lam Expr.KVal param _ body) =
       lambdaRules param typedVal (tvType body)
-    onLambda lam = setterRule . tvType $ lam ^. Expr.lambdaParamType
+    onLambda lam = setterRule . tvType $ lam ^. Expr.lamParamType
     setterRule ref = SetterRule [(ref, typeExpr)]
 
 makeForAll :: Expr.Expression def TypedValue -> [Rule def ExprRef]
@@ -199,7 +199,7 @@ runLambdaBodyTypeToPiResultType (param, lambdaTypeRef) bodyTypeExpr =
 runPiToLambda :: (Guid, ExprRef, ExprRef) -> RefExpression def -> RuleResult def
 runPiToLambda (param, lambdaValueRef, bodyTypeRef) piBody = do
   -- TODO: Use exprKindedLam
-  Expr.Lambda Expr.KType piParam paramType resultType <-
+  Expr.Lam Expr.KType piParam paramType resultType <-
     piBody ^.. ExprLens.exprLam
   [ -- Pi result type -> Body type
     ( bodyTypeRef
@@ -349,7 +349,7 @@ runSimpleType typ valExpr =
   Expr.BodyLeaf Expr.GetVariable {} -> []
   Expr.BodyLeaf Expr.Hole {} -> []
   Expr.BodyLeaf Expr.Tag {} -> [(typ, tagTypeExpr)]
-  Expr.BodyLam (Expr.Lambda Expr.KType _ _ _) -> simpleType
+  Expr.BodyLam (Expr.Lam Expr.KType _ _ _) -> simpleType
   Expr.BodyRecord (Expr.Record Expr.KType _) -> simpleType
   Expr.BodyRecord (Expr.Record Expr.KVal _) ->
     -- The rule to copy inferred types of fields to the inferred type
@@ -358,7 +358,7 @@ runSimpleType typ valExpr =
     -- handled in the recordValueRules
     []
   Expr.BodyLam
-    (Expr.Lambda Expr.KVal param paramType _) ->
+    (Expr.Lam Expr.KVal param paramType _) ->
     [( typ
      , makeRefExpr . ExprUtil.makePi param paramType $
        holeRefExpr
@@ -378,7 +378,7 @@ ruleSimpleType (TypedValue val typ) = SimpleType typ val
 runIntoApplyResult :: (Expr.Kind, ExprRef, ExprRef) -> RefExpression2 def -> RuleResult def
 runIntoApplyResult (k, applyRef, arg) (funcExpr, argExpr) = do
   -- TODO: Use exprKindedLam
-  Expr.Lambda bk param _ result <- funcExpr ^.. ExprLens.exprLam
+  Expr.Lam bk param _ result <- funcExpr ^.. ExprLens.exprLam
   guard $ k == bk
   return
     ( applyRef
@@ -396,7 +396,7 @@ runIntoArg (k, arg) (applyExpr, funcExpr) = do
   --     PostSubst part <=> arg
   -- (apply, func) -> arg
   -- TODO: Use exprKindedLam
-  Expr.Lambda bk param _ result <- funcExpr ^.. ExprLens.exprLam
+  Expr.Lam bk param _ result <- funcExpr ^.. ExprLens.exprLam
   guard $ bk == k
   mergeToArg param arg result applyExpr
 
@@ -405,12 +405,12 @@ runIntoArg (k, arg) (applyExpr, funcExpr) = do
 -- apply -> func result
 runIntoFuncResultType :: Eq def => (Expr.Kind, ExprRef) -> RefExpression2 def -> RuleResult def
 runIntoFuncResultType (k, func) (applyExpr, funcExpr) = do
-  Expr.Lambda kb param paramT result <- funcExpr ^.. Expr.eBody . Expr._BodyLam
+  Expr.Lam kb param paramT result <- funcExpr ^.. Expr.eBody . Expr._BodyLam
   guard $ k == kb
   return
     ( func
     , makeRefExpr .
-      Expr.BodyLam . Expr.Lambda k param paramT $
+      Expr.BodyLam . Expr.Lam k param paramT $
       mergeToPiResult result applyExpr
     )
 
@@ -449,7 +449,7 @@ rigidValue e = case e ^. Expr.eBody of
   Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef _)) -> False
   -- A lambda is a black box, don't want to break and enter into it to
   -- figure out whether it has information content
-  Expr.BodyLam (Expr.Lambda Expr.KVal _ _ _) -> False
+  Expr.BodyLam (Expr.Lam Expr.KVal _ _ _) -> False
   -- An apply is of a function, which is a black box (see above).
   Expr.BodyApply (Expr.Apply _ _) -> False
   Expr.BodyRecord (Expr.Record Expr.KVal fields) -> all (rigidValue . snd) fields
@@ -462,7 +462,7 @@ rigidValue e = case e ^. Expr.eBody of
   Expr.BodyLeaf Expr.Type -> True
   Expr.BodyLeaf Expr.IntegerType -> True
   Expr.BodyLeaf Expr.TagType -> True
-  Expr.BodyLam (Expr.Lambda Expr.KType _ _ _) -> True
+  Expr.BodyLam (Expr.Lam Expr.KType _ _ _) -> True
   Expr.BodyRecord (Expr.Record Expr.KType _) -> True
 
 -- If Arg is rigid
@@ -484,7 +484,7 @@ runRigidArgApplyTypeToResultType funcTypeRef (applyTypeExpr, argExpr) = do
 
 runRedexApplyTypeToResultType :: ExprRef -> RefExpression2 def -> RuleResult def
 runRedexApplyTypeToResultType funcTypeRef (applyTypeExpr, funcExpr) = do
-  Expr.Lambda Expr.KVal paramGuid paramType _ <-
+  Expr.Lam Expr.KVal paramGuid paramType _ <-
     funcExpr ^.. Expr.eBody . Expr._BodyLam
   return
     ( funcTypeRef
@@ -496,14 +496,14 @@ runPiParamTypeToArgType :: ExprRef -> RefExpression def -> RuleResult def
 runPiParamTypeToArgType argTypeRef (Expr.Expression funcTExpr _) = do
   -- If func type is Pi
   -- Pi's ParamT => ArgT
-  Expr.Lambda Expr.KType _ paramT _ <- funcTExpr ^.. Expr._BodyLam
+  Expr.Lam Expr.KType _ paramT _ <- funcTExpr ^.. Expr._BodyLam
   return (argTypeRef, paramT)
 
 runLambdaParamTypeToArgType :: ExprRef -> RefExpression def -> RuleResult def
 runLambdaParamTypeToArgType argTypeRef (Expr.Expression funcExpr _) = do
   -- If func is Lambda
   -- Lambda's ParamT => ArgT
-  Expr.Lambda Expr.KVal _ paramT _ <-
+  Expr.Lam Expr.KVal _ paramT _ <-
     funcExpr ^.. Expr._BodyLam
   return (argTypeRef, paramT)
 
@@ -511,7 +511,7 @@ runArgTypeToLambdaParamType :: ExprRef -> RefExpression2 def -> RuleResult def
 runArgTypeToLambdaParamType funcValRef (funcExpr, argTExpr) = do
   -- If func is Lambda,
   -- ArgT => Lambda's ParamT
-  Expr.Lambda Expr.KVal param _ _ <- funcExpr ^.. Expr.eBody . Expr._BodyLam
+  Expr.Lam Expr.KVal param _ _ <- funcExpr ^.. Expr.eBody . Expr._BodyLam
   return
     ( funcValRef
     , makeRefExpr $
@@ -529,7 +529,7 @@ runNonLambdaToApplyValue applyValRef (funcExpr, argExpr, applyTypExpr) =
   --
   -- Func Arg => Outer
   case funcExpr ^. Expr.eBody of
-  Expr.BodyLam (Expr.Lambda Expr.KVal _ _ _) -> []
+  Expr.BodyLam (Expr.Lam Expr.KVal _ _ _) -> []
   Expr.BodyLeaf Expr.Hole -> []
   _ -> do
     guard $ ExprUtil.isTypeConstructorType applyTypExpr
@@ -544,7 +544,7 @@ runApplyToParts refs (applyExpr, funcExpr) = do
   -- Apply-Arg => Arg
   -- Apply-Func => Func
   -- TODO: Use exprKindedLam
-  guard $ Lens.nullOf (ExprLens.exprLam . Expr.lambdaKind . Expr._KVal) funcExpr
+  guard $ Lens.nullOf (ExprLens.exprLam . Expr.lamKind . Expr._KVal) funcExpr
   guard $ Lens.nullOf ExprLens.exprHole funcExpr
   Expr.Apply aFunc aArg <- applyExpr ^.. ExprLens.exprApply
   [(refs ^. Expr.applyFunc, aFunc), (refs ^. Expr.applyArg, aArg)]

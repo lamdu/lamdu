@@ -439,7 +439,7 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
       inferNode <- toInferNode scope (void <$> body) createdTV
       newBody <-
         case body of
-        Expr.BodyLam (Expr.Lambda k paramGuid paramType result) -> do
+        Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
           paramTypeDone <- go scope paramType
           let
             paramTypeRef = tvVal . nRefs . fst $ paramTypeDone ^. Expr.ePayload

@@ -35,7 +35,7 @@ import Data.Traversable (traverse)
 import qualified Control.Lens as Lens
 
 -- Traversals:
-exprLam :: Lens.Traversal' (Expression def a) (Lambda (Expression def a))
+exprLam :: Lens.Traversal' (Expression def a) (Lam (Expression def a))
 exprLam = eBody . _BodyLam
 
 exprApply :: Lens.Traversal' (Expression def a) (Apply (Expression def a))
@@ -177,12 +177,12 @@ kindedRecordFields k0 = Lens.prism' to from
       | k0 == k1 = Just fields
       | otherwise = Nothing
 
-kindedLam :: Kind -> Lens.Prism' (Lambda expr) (Guid, expr, expr)
+kindedLam :: Kind -> Lens.Prism' (Lam expr) (Guid, expr, expr)
 kindedLam k = Lens.prism' toLam fromLam
   where
     toLam (paramGuid, paramType, result) =
-      Lambda k paramGuid paramType result
-    fromLam (Lambda k0 paramGuid paramType result)
+      Lam k paramGuid paramType result
+    fromLam (Lam k0 paramGuid paramType result)
       | k == k0 = Just (paramGuid, paramType, result)
       | otherwise = Nothing
 

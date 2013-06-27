@@ -4,7 +4,7 @@ module Lamdu.Data.Expression.IRef
   , ExpressionI(..), ExpressionIM
   , ExpressionBody
   , ExpressionProperty, epGuid
-  , Lambda, Apply
+  , Lam, Apply
   , newExprBody, readExprBody, writeExprBody, exprGuid
   , newLambda, newPi
   , newExpression, writeExpression, readExpression
@@ -50,7 +50,7 @@ type ExpressionIM m = ExpressionI (Tag m)
 -- called Expression.IRef
 type ExpressionProperty m = Property (T m) (ExpressionIM m)
 type ExpressionBody t = Expr.Body (DefI t) (ExpressionI t)
-type Lambda t = Expr.Lambda (ExpressionI t)
+type Lam t = Expr.Lam (ExpressionI t)
 type Apply t = Expr.Apply (ExpressionI t)
 
 epGuid :: ExpressionProperty m -> Guid
