@@ -26,6 +26,7 @@ import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
 import System.Random (RandomGen)
+import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Data.Cache as Cache
 import qualified Data.List.Utils as ListUtils
@@ -609,6 +610,25 @@ delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored =
         fromMaybe (error "field param must have tags") $
         tagExpr ^? ExprLens.bodyTag
 
+-- | Convert a (potentially stored) param type hole with inferred val
+-- to the unstored inferred val
+paramTypeExprMM ::
+  Monoid a => SugarInfer.ExprMM m a -> SugarInfer.ExprMM m a
+paramTypeExprMM origParamType
+  | Lens.has ExprLens.exprHole origParamType
+  , Just inferredParamType <- origParamType ^. SugarInfer.exprInferred
+  = paramTypeOfInferredVal . Infer.iValue $ iwcInferred inferredParamType
+  | otherwise = origParamType
+  where
+    paramTypeGen = genFromHashable $ origParamType ^. SugarInfer.exprGuid
+    paramTypeOfInferredVal iVal =
+      iVal
+      & Lens.mapped .~ mempty
+      -- Copy the paramType payload to top-level of inferred val so it
+      -- isn't lost:
+      & Expr.ePayload .~ origParamType ^. SugarInfer.exprData
+      & SugarInfer.mkExprPure paramTypeGen
+
 convertDefinitionParams ::
   (MonadA m, Typeable1 m, Monoid a) =>
   SugarM.RecordParamsInfo m -> [Guid] -> SugarInfer.ExprMM m a ->
@@ -619,12 +639,13 @@ convertDefinitionParams ::
   )
 convertDefinitionParams recordParamsInfo usedTags expr =
   case expr ^. Expr.eBody of
-  Expr.BodyLam lambda@(Expr.Lambda Val paramGuid paramType body) -> do
+  Expr.BodyLam lambda@(Expr.Lambda Val paramGuid origParamType body) -> do
     param <-
       convertPositionalFuncParam lambda (expr ^. Expr.ePayload)
       -- Slightly strange but we mappend the hidden lambda's
       -- annotation into the param type:
-      <&> fpType . rPayload . plData <>~ (expr ^. Expr.ePayload . SugarInfer.plData)
+      <&> fpType . rPayload . plData <>~ expr ^. SugarInfer.exprData
+    let paramType = paramTypeExprMM origParamType
     if SugarInfer.isPolymorphicFunc $ expr ^. Expr.ePayload
       then do -- Dependent:
         (depParams, convParams, deepBody) <- convertDefinitionParams recordParamsInfo usedTags body
@@ -637,13 +658,13 @@ convertDefinitionParams recordParamsInfo usedTags expr =
         , all ((`notElem` usedTags) . fpTagGuid) fieldParams -> do
           convParams <-
             mkRecordParams recordParamsInfo paramGuid fieldParams
-            expr (paramType ^? SugarInfer.exprIRef)
+            expr (origParamType ^? SugarInfer.exprIRef)
             (traverse (^. SugarInfer.plStored) body)
           return ([], convParams, body)
       _ ->
         pure
         ( []
-        , singleConventionalParam stored param paramGuid paramType body
+        , singleConventionalParam stored param paramGuid origParamType body
         , body
         )
   _ -> return ([], emptyConventionalParams stored, expr)

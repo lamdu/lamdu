@@ -23,6 +23,7 @@ module Lamdu.Sugar.Convert.Infer
   , exprStored
   , exprGuid
   , exprStoredGuid
+  , exprData
 
   , plIRef
   , exprIRef
@@ -245,6 +246,10 @@ exprStored = Expr.ePayload . plStored
 exprInferred ::
   Lens' (Expr.Expression def (Payload inferred stored a)) inferred
 exprInferred = Expr.ePayload . plInferred
+
+exprData ::
+  Lens' (Expr.Expression def (Payload inferred stored a)) a
+exprData = Expr.ePayload . plData
 
 plIRef ::
   Lens.Traversal' (Payload i (Maybe (Stored m)) a) (ExprIRef.ExpressionIM m)

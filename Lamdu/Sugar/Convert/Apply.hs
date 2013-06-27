@@ -269,7 +269,7 @@ convertAppliedHole funcI rawArgS argI exprPl
       <&> rBody . _BodyHole %~
           (holeMArg .~ Just holeArg) .
           (holeMActions . Lens._Just . holeMUnwrap .~ mUnwrap)
-      <&> rPayload . plData <>~ funcI ^. Expr.ePayload . SugarInfer.plData
+      <&> rPayload . plData <>~ funcI ^. SugarInfer.exprData
   | otherwise = mzero
   where
     guid = exprPl ^. SugarInfer.plGuid

@@ -12,7 +12,6 @@ import Control.Monad.Trans.State (runState, mapStateT)
 import Control.Monad.Trans.Writer (execWriter)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
-import Data.Hashable (Hashable, hashWithSalt)
 import Data.Maybe (listToMaybe)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
@@ -29,6 +28,7 @@ import Lamdu.Sugar.Convert.Monad (SugarM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
+import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Cache as Cache
@@ -523,9 +523,6 @@ prepareExprToSugar gen =
       , SugarInfer._plStored = Nothing
       , SugarInfer._plData = x
       }
-
-genFromHashable :: Hashable a => a -> Random.StdGen
-genFromHashable = Random.mkStdGen . hashWithSalt 0
 
 seedHashable :: HoleResultSeed m a -> String
 seedHashable (ResultSeedExpression expr) = show (void expr)
