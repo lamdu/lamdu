@@ -354,7 +354,7 @@ pureHole :: Expression def ()
 pureHole = ExprLens.pureExpr . ExprLens.bodyHole # ()
 
 pureSet :: Expression def ()
-pureSet = ExprLens.pureExpr . ExprLens.bodySet # ()
+pureSet = ExprLens.pureExpr . ExprLens.bodyType # ()
 
 pureRecord :: Kind -> [(Expression def (), Expression def ())] -> Expression def ()
 pureRecord k fields = ExprLens.pureExpr . ExprLens.bodyKindedRecordFields k # fields
@@ -388,7 +388,7 @@ makeLambda = makeLam KVal
 isTypeConstructorType :: Expression def a -> Bool
 isTypeConstructorType expr =
   case expr ^. eBody of
-  BodyLeaf Set -> True
+  BodyLeaf Type -> True
   BodyLam (Lambda KType _ _ res) -> isTypeConstructorType res
   _ -> False
 

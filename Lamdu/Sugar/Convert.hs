@@ -425,7 +425,7 @@ convertExpressionI ee =
   Expr.BodyLeaf (Expr.LiteralInteger x) -> convertLiteralInteger x
   Expr.BodyLeaf (Expr.Tag x) -> convertTag x
   Expr.BodyLeaf Expr.Hole -> Hole.convert
-  Expr.BodyLeaf Expr.Set -> convertAtom "Set"
+  Expr.BodyLeaf Expr.Type -> convertAtom "Type"
   Expr.BodyLeaf Expr.IntegerType -> convertAtom "Int"
   Expr.BodyLeaf Expr.TagType -> convertAtom "Tag"
 

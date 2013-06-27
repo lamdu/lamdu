@@ -228,7 +228,7 @@ createBuiltins =
     publicBuiltin_ builtinName typeMaker =
       void $ publicBuiltin builtinName typeMaker
     endo = join mkPi
-    set = ExprIRef.newExprBody $ Expr.BodyLeaf Expr.Set
+    set = ExprIRef.newExprBody $ ExprLens.bodyType # ()
     integer = ExprIRef.newExprBody $ Expr.BodyLeaf Expr.IntegerType
     forAll name f = fmap ExprIRef.ExpressionI . fixIRef $ \aI -> do
       let aGuid = IRef.guid aI

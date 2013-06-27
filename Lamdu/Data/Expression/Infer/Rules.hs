@@ -49,7 +49,7 @@ data Rule def a
   | Copy ExprRef a
   | ParentToChildren (Expr.Body def ExprRef) a
   | ChildrenToParent ExprRef (Expr.Body def a)
-  | SetRule [(ExprRef, RefExpression def)]
+  | SetterRule [(ExprRef, RefExpression def)]
   | SimpleType ExprRef a
   | IntoApplyResult (Expr.Kind, ExprRef, ExprRef) (a, a)
   | IntoArg (Expr.Kind, ExprRef) (a, a)
@@ -88,8 +88,8 @@ runRule rule =
     runParentToChildren x e
   ChildrenToParent x e ->
     runChildrenToParent x e
-  SetRule x ->
-    runSetRule x
+  SetterRule x ->
+    runSetterRule x
   SimpleType x e ->
     runSimpleType x e
   IntoApplyResult x e ->
@@ -129,7 +129,7 @@ childrenToParentRules valRef bodyWithRefs =
 tagRules :: Expr.Expression def TypedValue -> [Rule def ExprRef]
 tagRules tagExpr =
   [ VerifyTagRule tagRef tagRef
-  , SetRule [(tvType pl, makeRefExpr $ Expr.BodyLeaf Expr.TagType)]
+  , SetterRule [(tvType pl, makeRefExpr $ Expr.BodyLeaf Expr.TagType)]
   ]
   where
     pl = tagExpr ^. Expr.ePayload
@@ -158,18 +158,18 @@ makeForNode (Expr.Expression exprBody typedVal) =
     pl = (^. Expr.ePayload)
     bodyWithValRefs = tvVal . pl <$> exprBody
     recordKindRules (Expr.Record Expr.KType fields) =
-      map (setRule . tvType . snd) fields
+      map (setterRule . tvType . snd) fields
     recordKindRules (Expr.Record Expr.KVal fields) =
       recordValueRules (tvType typedVal) $
       fields
       & Lens.mapped . Lens._1 %~ tvVal
       & Lens.mapped . Lens._2 %~ tvType
     lamKindRules (Expr.Lambda Expr.KType _ _ body) =
-      [setRule (tvType body)]
+      [setterRule (tvType body)]
     lamKindRules (Expr.Lambda Expr.KVal param _ body) =
       lambdaRules param typedVal (tvType body)
-    onLambda lam = setRule . tvType $ lam ^. Expr.lambdaParamType
-    setRule ref = SetRule [(ref, setExpr)]
+    onLambda lam = setterRule . tvType $ lam ^. Expr.lambdaParamType
+    setterRule ref = SetterRule [(ref, typeExpr)]
 
 makeForAll :: Expr.Expression def TypedValue -> [Rule def ExprRef]
 makeForAll = concatMap makeForNode . ExprUtil.subExpressions
@@ -177,8 +177,8 @@ makeForAll = concatMap makeForNode . ExprUtil.subExpressions
 holeRefExpr :: RefExpression def
 holeRefExpr = makeRefExpr $ Expr.BodyLeaf Expr.Hole
 
-setExpr :: RefExpression def
-setExpr = makeRefExpr $ Expr.BodyLeaf Expr.Set
+typeExpr :: RefExpression def
+typeExpr = makeRefExpr $ ExprLens.bodyType # ()
 
 intTypeExpr :: RefExpression def
 intTypeExpr = makeRefExpr $ Expr.BodyLeaf Expr.IntegerType
@@ -315,8 +315,8 @@ runParentToChildren childrenRefs expr = do
 runChildrenToParent :: ExprRef -> Expr.Body def (RefExpression def) -> RuleResult def
 runChildrenToParent destRef bodyWithExprs = [(destRef, makeRefExpr bodyWithExprs)]
 
-runSetRule :: [(ExprRef, RefExpression def)] -> RuleResult def
-runSetRule outputs = outputs
+runSetterRule :: [(ExprRef, RefExpression def)] -> RuleResult def
+runSetterRule outputs = outputs
 
 mergeToPiResult ::
   Eq def => RefExpression def -> RefExpression def -> RefExpression def
@@ -342,7 +342,7 @@ mergeToPiResult =
 runSimpleType :: ExprRef -> RefExpression def -> RuleResult def
 runSimpleType typ valExpr =
   case valExpr ^. Expr.eBody of
-  Expr.BodyLeaf Expr.Set -> simpleType
+  Expr.BodyLeaf Expr.Type -> simpleType
   Expr.BodyLeaf Expr.IntegerType -> simpleType
   Expr.BodyLeaf Expr.TagType -> simpleType
   Expr.BodyLeaf Expr.LiteralInteger {} -> [(typ, intTypeExpr)]
@@ -368,7 +368,7 @@ runSimpleType typ valExpr =
   Expr.BodyApply {} -> []
   Expr.BodyGetField {} -> []
   where
-    simpleType = [(typ, setExpr)]
+    simpleType = [(typ, typeExpr)]
 
 ruleSimpleType :: TypedValue -> Rule def ExprRef
 ruleSimpleType (TypedValue val typ) = SimpleType typ val
@@ -459,7 +459,7 @@ rigidValue e = case e ^. Expr.eBody of
   -- Can't really use a tag (at least yet...)
   Expr.BodyLeaf (Expr.Tag _) -> True
   -- Types have no (runtime) information content
-  Expr.BodyLeaf Expr.Set -> True
+  Expr.BodyLeaf Expr.Type -> True
   Expr.BodyLeaf Expr.IntegerType -> True
   Expr.BodyLeaf Expr.TagType -> True
   Expr.BodyLam (Expr.Lambda Expr.KType _ _ _) -> True

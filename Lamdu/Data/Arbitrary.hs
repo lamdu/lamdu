@@ -49,7 +49,7 @@ arbitraryLeaf = do
   Env scope mGenDefI <- Reader.ask
   join . liftGen . Gen.elements $
     [ Expr.LiteralInteger <$> liftGen arbitrary
-    , pure Expr.Set
+    , pure Expr.Type
     , pure Expr.IntegerType
     , pure Expr.Hole
     ] ++

@@ -67,7 +67,7 @@ inferFromOneArgToOther =
   [holeWithInferredType (getDef "Bool"), x, y]
 
 monomorphRedex =
-  testInfer "foo = f (\\~ x -> (\\~ -> x) _) where f ~:(a:Set -> _ -> a) = _" $
+  testInfer "foo = f (\\~ x -> (\\~ -> x) _) where f ~:(a:Type -> _ -> a) = _" $
   whereItem "f" (lambda "" fArgType (const hole)) $ \f ->
   f $$
   lambda "b" (asHole set)
@@ -75,7 +75,7 @@ monomorphRedex =
    lambda "x" (asHole b) $ \x ->
    lambda "c" (holeWithInferredType set) (const x) $$ hole)
   where
-    -- (a:Set -> _[=a] -> a)
+    -- (a:Type -> _[=a] -> a)
     fArgType = piType "a" set $ \a -> asHole a ~> a
 
 fOfXIsFOf5 =
@@ -92,7 +92,7 @@ idOnAnInt =
   getDef "id" $$ asHole integerType $$ literalInteger 5
 
 idOnARecord =
-  testInfer "id ({:Set) <hole> does not infer { val" $
+  testInfer "id ({:Type) <hole> does not infer { val" $
   getDef "id" $$ rec $$ holeWithInferredType rec
   where
     rec = record KType [(holeWithInferredType tagType, integerType)]
@@ -103,7 +103,7 @@ forceMono =
   testInfer "id (id _ _)" $
   getDef "id" $$ (getDef "id" $$ asHole set $$ holeWithInferredType set)
 
--- | depApply (t : Set) (rt : t -> Set) (f : (d : t) -> rt d) (x : t) = f x
+-- | depApply (t : Type) (rt : t -> Type) (f : (d : t) -> rt d) (x : t) = f x
 depApply =
   testInfer "dep apply" $
   lambda "t" set $ \t ->

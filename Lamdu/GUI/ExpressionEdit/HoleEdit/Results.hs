@@ -379,7 +379,7 @@ makeAllGroups holeInfo = do
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
-  [ mkGroup ["Set", "Type"] $ Expr.BodyLeaf Expr.Set
+  [ mkGroup ["Type"] $ Expr.BodyLeaf Expr.Type
   , mkGroup ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
   , mkGroup ["Apply", "Give argument"] . Expr.BodyApply $
     Expr.Apply pureHole pureHole

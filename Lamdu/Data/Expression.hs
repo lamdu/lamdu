@@ -6,7 +6,7 @@ module Lamdu.Data.Expression
   , Apply(..), applyFunc, applyArg
   , GetField(..), getFieldRecord, getFieldTag
   , Record(..), recordKind, recordFields
-  , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Set, _IntegerType, _Tag, _TagType
+  , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Type, _IntegerType, _Tag, _TagType
   , Body(..), _BodyLam, _BodyApply, _BodyLeaf, _BodyRecord, _BodyGetField
   , BodyExpr
   , Expression(..), eBody, ePayload
@@ -54,7 +54,7 @@ instance Show def => Show (VariableRef def) where
 data Leaf def
   = GetVariable !(VariableRef def)
   | LiteralInteger !Integer
-  | Set
+  | Type
   | IntegerType
   | Hole
   | TagType
@@ -67,7 +67,7 @@ instance Show def => Show (Leaf def) where
     GetVariable varRef -> shows varRef
     LiteralInteger int -> shows int
     Tag guid -> showString "Tag<" . shows guid . showChar '>'
-    Set -> showString "Set"
+    Type -> showString "Type"
     IntegerType -> showString "Int"
     Hole -> showString "?"
     TagType -> showString "Tag"

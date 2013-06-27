@@ -53,7 +53,7 @@ pureApply :: [PureExpr def] -> PureExpr def
 pureApply = foldl1 ExprUtil.pureApply
 
 bodySet :: Expr.Body def expr
-bodySet = ExprLens.bodySet # ()
+bodySet = ExprLens.bodyType # ()
 
 bodyHole :: Expr.Body def expr
 bodyHole = ExprLens.bodyHole # ()

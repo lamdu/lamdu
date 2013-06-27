@@ -18,7 +18,7 @@ module Lamdu.Data.Expression.Lens
   , bodyLiteralInteger, exprLiteralInteger
   , bodyHole, exprHole
   , bodyTag, exprTag
-  , bodySet, exprSet
+  , bodyType, exprType
   , bodyIntegerType, exprIntegerType
   , bodyTagType, exprTagType
   , bodyGetVariable, exprGetVariable
@@ -78,8 +78,8 @@ exprDefinitionRef = eBody . bodyDefinitionRef
 exprHole :: Lens.Traversal' (Expression def a) ()
 exprHole = eBody . bodyHole
 
-exprSet :: Lens.Traversal' (Expression def a) ()
-exprSet = eBody . bodySet
+exprType :: Lens.Traversal' (Expression def a) ()
+exprType = eBody . bodyType
 
 exprIntegerType :: Lens.Traversal' (Expression def a) ()
 exprIntegerType = eBody . bodyIntegerType
@@ -159,8 +159,8 @@ bodyHole = _BodyLeaf . _Hole
 bodyTag :: Lens.Prism' (Body def expr) Guid
 bodyTag = _BodyLeaf . _Tag
 
-bodySet :: Lens.Prism' (Body def expr) ()
-bodySet = _BodyLeaf . _Set
+bodyType :: Lens.Prism' (Body def expr) ()
+bodyType = _BodyLeaf . _Type
 
 bodyIntegerType :: Lens.Prism' (Body def expr) ()
 bodyIntegerType = _BodyLeaf . _IntegerType
