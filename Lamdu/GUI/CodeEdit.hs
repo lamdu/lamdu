@@ -114,9 +114,9 @@ makeSugarPanes cp rootGuid = do
   traverse convertPane $ enumerate panes
 
 makeClipboardsEdit ::
-  MonadA m => [Sugar.DefinitionU m ExprGuiM.Payload] -> ExprGuiM m (WidgetT m)
-makeClipboardsEdit clipboards = do
-  clipboardsEdits <- traverse makePaneWidget clipboards
+  MonadA m => Widget.R -> [Sugar.DefinitionU m ExprGuiM.Payload] -> ExprGuiM m (WidgetT m)
+makeClipboardsEdit width clipboards = do
+  clipboardsEdits <- traverse (makePaneWidget width) clipboards
   clipboardTitle <-
     if null clipboardsEdits
     then return Spacer.empty
@@ -130,23 +130,25 @@ makeSugarClipboards cp =
 
 make ::
   (MonadA m, Typeable1 m) =>
-  Anchors.CodeProps m -> Settings -> Guid ->
+  Anchors.CodeProps m -> Widget.Size -> Settings -> Guid ->
   StateT Cache (WidgetEnvT (T m)) (Widget (T m))
-make cp settings rootGuid = do
+make cp size settings rootGuid = do
   (sugarPanes, sugarClipboards) <-
     mapStateT lift $
     (,) <$> makeSugarPanes cp rootGuid <*> makeSugarClipboards cp
   ExprGuiM.runWidget ExpressionEdit.make cp settings $ do
-    panesEdit <- makePanesEdit sugarPanes $ WidgetIds.fromGuid rootGuid
-    clipboardsEdit <- makeClipboardsEdit sugarClipboards
+    panesEdit <- makePanesEdit width sugarPanes $ WidgetIds.fromGuid rootGuid
+    clipboardsEdit <- makeClipboardsEdit width sugarClipboards
     return $
       Box.vboxAlign 0
       [ panesEdit
       , clipboardsEdit
       ]
+  where
+    width = size ^. Lens._1
 
-makePanesEdit :: MonadA m => [SugarPane m] -> Widget.Id -> ExprGuiM m (WidgetT m)
-makePanesEdit panes myId = do
+makePanesEdit :: MonadA m => Widget.R -> [SugarPane m] -> Widget.Id -> ExprGuiM m (WidgetT m)
+makePanesEdit width panes myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     paneEventMap pane = mconcat
@@ -162,7 +164,7 @@ makePanesEdit panes myId = do
       ]
     makePaneEdit pane =
       (fmap . Widget.weakerEvents) (paneEventMap pane) .
-      makePaneWidget . spDef $ pane
+      makePaneWidget width . spDef $ pane
   panesWidget <-
     case panes of
     [] -> ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "<No panes>" myId
@@ -185,23 +187,30 @@ makePanesEdit panes myId = do
       ]
   return $ Widget.weakerEvents panesEventMap panesWidget
 
-makePaneWidget :: MonadA m => Sugar.DefinitionU m ExprGuiM.Payload -> ExprGuiM m (Widget (T m))
-makePaneWidget rawDefS = do
+makePaneWidget :: MonadA m => Widget.R -> Sugar.DefinitionU m ExprGuiM.Payload -> ExprGuiM m (Widget (T m))
+makePaneWidget width rawDefS = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
   let
-    onEachPane widget
-      | widget ^. Widget.wIsFocused = onActivePane widget
-      | otherwise = onInactivePane widget
-    onActivePane =
+    colorize widget
+      | widget ^. Widget.wIsFocused = colorizeActivePane widget
+      | otherwise = colorizeInactivePane widget
+    colorizeActivePane =
       Widget.backgroundColor
       (Config.layerActivePane (Config.layers config))
       WidgetIds.activeDefBackground $ Config.activeDefBGColor config
-    onInactivePane =
+    colorizeInactivePane =
       Widget.wFrame %~
       Anim.onImages (Draw.tint (Config.inactiveTintColor config))
     defS =
       case infoMode of
       Settings.Types -> rawDefS
       _ -> SugarRemoveTypes.nonHoleTypes <$> rawDefS
-  onEachPane <$> DefinitionEdit.make (AddNames.addToDef defS)
+  fitToWidth width . colorize <$> DefinitionEdit.make (AddNames.addToDef defS)
+
+fitToWidth :: Widget.R -> Widget f -> Widget f
+fitToWidth width w
+  | ratio < 1 = w & Widget.scale (realToFrac ratio)
+  | otherwise = w
+  where
+    ratio = width / w ^. Widget.wSize . Lens._1

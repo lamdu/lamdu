@@ -324,7 +324,7 @@ makeRootWidget config settings style dbToIO size cursor = do
     codeEdit <-
       (fmap . Widget.atEvents) (VersionControl.runEvent cursor) .
       (mapStateT . WE.mapWidgetEnvT) VersionControl.runAction $
-      CodeEdit.make DbLayout.codeProps settings rootGuid
+      CodeEdit.make DbLayout.codeProps size settings rootGuid
     branchGui <- lift $ VersionControlGUI.make id size actions codeEdit
     let
       quitEventMap =
