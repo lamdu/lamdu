@@ -515,7 +515,7 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
         { _fpName = Nothing
         , _fpGuid = guid
         , _fpId = Guid.combine lamGuid guid
-        , _fpAltIds = []
+        , _fpAltIds = [tagExprGuid]
         , _fpVarKind = FuncFieldParameter
         , _fpType = SugarRemoveTypes.successfulType typeS
         , _fpMActions =
