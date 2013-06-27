@@ -161,7 +161,7 @@ createBuiltins =
         )
       ] b
 
-    publicBuiltin_ "Data.List.listana" . forAll "a" $ \a -> forAll "b" $ \b ->
+    publicBuiltin_ "Data.List.listcase" . forAll "a" $ \a -> forAll "b" $ \b ->
       mkPiRecord
       [ ( "list", listOf a )
       , ( "empty", b )
