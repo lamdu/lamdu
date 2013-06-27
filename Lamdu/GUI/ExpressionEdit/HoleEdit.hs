@@ -17,6 +17,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction, MkProperty)
 import Data.Traversable (traverse, sequenceA)
+import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CharClassification (operatorChars, alphaNumericChars)
@@ -125,9 +126,7 @@ makeResultGroup results = do
   extraSymbolWidget <-
     if Lens.has (HoleResults.rlExtra . traverse) results
     then
-      BWidgets.hboxCenteredSpaced .
-      (Spacer.makeWidget (mainResultWidget ^. Widget.wSize & Lens._1 .~ 0) :) .
-      (: []) .
+      BWidgets.hboxCenteredSpaced . (Spacer.empty :) . (: []) .
       Widget.scale extraSymbolScaleFactor
       <$>
       ExprGuiM.widgetEnv
@@ -143,7 +142,9 @@ makeResultGroup results = do
         ExprGuiM.widgetEnv . WE.isSubCursor $ results ^. HoleResults.rlExtraResultsPrefixId
       if cursorOnExtra
         then makeExtra
-        else (,) Nothing <$> makeExtraResultsPlaceholderWidget (results ^. HoleResults.rlExtra)
+        else
+          (,) Nothing <$>
+          makeExtraResultsPlaceholderWidget (results ^. HoleResults.rlExtra)
   return ([mainResultWidget, extraSymbolWidget, extraResWidget], mResult)
   where
     mainResult = results ^. HoleResults.rlMain
@@ -170,7 +171,7 @@ makeExtraResultsWidget extraResults@(firstResult:_) = do
       & makeBackground (rId firstResult)
         (Config.layerMax (Config.layers config))
         (Config.activeHoleBackgroundColor config)
-      & Widget.wSize .~ 0
+      & Widget.wSize .~ (head widgets ^. Widget.wSize & Lens._1 .~ 0)
     )
   where
     mkResWidget result = do
@@ -256,7 +257,9 @@ makeResultsWidget holeInfo shownResults hiddenResults = do
     else
       return .
       Box.vboxCentered $
-      (blockDownEvents . Grid.toWidget . Grid.make . (map . map) ((,) 0)) rows :
+      ( blockDownEvents . Grid.toWidget . Grid.make
+      . (map . map) ((,) (Vector2 0 0.5))
+      ) rows :
       hiddenResultsWidgets
   return (mResult, widget)
   where
