@@ -120,7 +120,7 @@ addListItem specialFunctions exprP = do
   headTag <- ExprIRef.newExprBody $ ExprLens.bodyTag # Anchors.sfHeadTag specialFunctions
   tailTag <- ExprIRef.newExprBody $ ExprLens.bodyTag # Anchors.sfTailTag specialFunctions
   argsI <-
-    ExprIRef.newExprBody $ ExprLens.bodyKindedRecordFields Expr.Val #
+    ExprIRef.newExprBody $ ExprLens.bodyKindedRecordFields Expr.KVal #
       [ (headTag, newItemI)
       , (tailTag, Property.value exprP)
       ]

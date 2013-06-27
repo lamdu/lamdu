@@ -270,7 +270,7 @@ cleanUpInferredVal ::
   Expr.Expression defa (Infer.Inferred defb) ->
   Expr.Expression defa (Infer.Inferred defb)
 cleanUpInferredVal =
-  (ExprLens.exprKindedLam Val . Lens._2 . Expr.eBody .~ bodyHole) .
+  (ExprLens.exprKindedLam KVal . Lens._2 . Expr.eBody .~ bodyHole) .
   (ExprLens.exprApply . Lens.filtered isDependentApply .
    Expr.applyArg . Expr.eBody .~ bodyHole) .
   (Expr.eBody . Lens.traversed %~ cleanUpInferredVal)
@@ -591,6 +591,6 @@ uninferredHoles e =
       uninferredHoles func
   Expr.BodyLam (Expr.Lambda lamKind _ paramType result) ->
     uninferredHoles result ++ do
-      guard $ lamKind == Type
+      guard $ lamKind == KType
       uninferredHoles paramType
   body -> Foldable.concatMap uninferredHoles body

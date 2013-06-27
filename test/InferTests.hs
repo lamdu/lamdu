@@ -95,7 +95,7 @@ idOnARecord =
   testInfer "id ({:Set) <hole> does not infer { val" $
   getDef "id" $$ rec $$ holeWithInferredType rec
   where
-    rec = record Type [(holeWithInferredType tagType, integerType)]
+    rec = record KType [(holeWithInferredType tagType, integerType)]
 
 idOnHole = testInfer "id hole" $ getDef "id" $$ holeWithInferredType set
 
@@ -181,15 +181,15 @@ failResumptionAddsRules =
 
 emptyRecordTests =
   testGroup "empty record"
-  [ testInfer "type infer" $ record Type []
-  , testInfer "val infer" $ record Val []
+  [ testInfer "type infer" $ record KType []
+  , testInfer "val infer" $ record KVal []
   ]
 
 recordTest =
   testInfer "f a x:a = {x" $
   lambda "a" set $ \a ->
   lambda "x" a $ \x ->
-  record Val
+  record KVal
   [ (tag fieldGuid, x) ]
   where
     fieldGuid = Guid.fromString "field"
@@ -259,7 +259,7 @@ getFieldWasntAllowed =
     topLevel =
       getDef "map" $$ asHole recType $$ hole $$:
       [ getDef ":" $$ asHole recType $$:
-        [ record Val []
+        [ record KVal []
         , holeWithInferredType $ listOf recType
         ]
       , lambda "x" (asHole recType) $
@@ -270,10 +270,10 @@ getFieldWasntAllowed =
     lambdaPos :: Lens.Traversal' (Expression def a) (Guid, Expression def a, Expression def a)
     lambdaPos =
       applyArg .
-      ExprLens.exprKindedRecordFields Val . Lens.ix 1 . Lens._2 .
-      ExprLens.exprKindedLam Val
+      ExprLens.exprKindedRecordFields KVal . Lens.ix 1 . Lens._2 .
+      ExprLens.exprKindedLam KVal
     param = topLevel ^?! lambdaPos . Lens._1
-    recType = record Type []
+    recType = record KType []
 
 wrongRecurseMissingArg =
   testCase "f x = f" $

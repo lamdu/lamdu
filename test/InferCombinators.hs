@@ -77,7 +77,7 @@ lambda ::
   InferResults t
 lambda name paramType mkResult =
   simple (ExprUtil.makeLambda guid paramType result) $
-  ExprUtil.pureLam Type guid (paramType ^. iVal) (result ^. iType)
+  ExprUtil.pureLam KType guid (paramType ^. iVal) (result ^. iType)
   where
     guid = Guid.fromString name
     result = mkResult $ getParam name paramType
@@ -92,7 +92,7 @@ getField recordVal tagVal
   | allFieldsMismatch = error "getField on record with only mismatching field tags"
   | otherwise = simple (Expr._BodyGetField # Expr.GetField recordVal tagVal) pureFieldType
   where
-    mFields = recordVal ^? iType . ExprLens.exprKindedRecordFields Type
+    mFields = recordVal ^? iType . ExprLens.exprKindedRecordFields KType
     allFieldsMismatch =
       case mFields of
       Nothing -> False
@@ -115,7 +115,7 @@ lambdaRecord ::
   String -> [(String, InferResults t)] ->
   ([InferResults t] -> InferResults t) -> InferResults t
 lambdaRecord paramsName strFields mkResult =
-  lambda paramsName (record Type fields) $ \params ->
+  lambda paramsName (record KType fields) $ \params ->
   mkResult $ map (getField params) fieldTags
   where
     fields = strFields & Lens.traversed . Lens._1 %~ tagStr
@@ -173,12 +173,12 @@ infixl 3 $$:
 
 ($$:) :: InferResults t -> [InferResults t] -> InferResults t
 ($$:) f args =
-  f $$ record Val (zip tags args)
+  f $$ record KVal (zip tags args)
   where
     tags = recType ^.. Lens.traversed . Lens._1 . ExprLens.exprTag . Lens.to tag
     recType =
       fromMaybe (error "$$: must be applied on a func of record type") $
-      f ^? iType . ExprLens.exprKindedLam Type . Lens._2 . ExprLens.exprKindedRecordFields Type
+      f ^? iType . ExprLens.exprKindedLam KType . Lens._2 . ExprLens.exprKindedRecordFields KType
 
 ($$) :: InferResults t -> InferResults t -> InferResults t
 ($$) func@(Expr.Expression _ (funcVal, funcType)) nextArg =
@@ -192,11 +192,11 @@ infixl 3 $$:
         | k == k1 -> ExprUtil.substGetPar paramGuid (nextArg ^. iVal) result
       _ -> seeOther
     applyVal =
-      handleLam funcVal Val pureHole $
+      handleLam funcVal KVal pureHole $
       if ExprUtil.isTypeConstructorType applyType
       then bodyToPureExpr application
       else pureHole
-    applyType = handleLam funcType Type piErr piErr
+    applyType = handleLam funcType KType piErr piErr
     piErr = error "Apply of non-Pi type!"
 
 record :: Kind -> [(InferResults t, InferResults t)] -> InferResults t
@@ -204,10 +204,10 @@ record k fields =
   simple (ExprLens.bodyKindedRecordFields k # fields) typ
   where
     typ = case k of
-      Val ->
-        ExprLens.pureExpr . ExprLens.bodyKindedRecordFields Type #
+      KVal ->
+        ExprLens.pureExpr . ExprLens.bodyKindedRecordFields KType #
         map (void *** (^. iType)) fields
-      Type -> pureSet
+      KType -> pureSet
 
 asHole :: InferResults t -> InferResults t
 asHole expr =

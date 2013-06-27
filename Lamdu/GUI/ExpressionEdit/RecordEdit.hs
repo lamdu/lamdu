@@ -84,8 +84,8 @@ makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
       , resizedBracket closeBracketWidget
       ]
   where
-    parensColor Sugar.Type = Config.recordTypeParensColor
-    parensColor Sugar.Val = Config.recordValParensColor
+    parensColor Sugar.KType = Config.recordTypeParensColor
+    parensColor Sugar.KVal = Config.recordValParensColor
     bracketId = Widget.joinId myId ["{"]
     mkEventMap f mAction keys doc =
       maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction

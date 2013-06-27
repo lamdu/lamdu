@@ -96,7 +96,7 @@ onNgMakeName onMakeName =
 getPiWrappers :: Expression def a -> PiWrappers def a
 getPiWrappers expr =
   case expr ^? ExprLens.exprLam of
-  Just (Lambda Type param paramType resultType)
+  Just (Lambda KType param paramType resultType)
     | isDependentPi expr ->
       getPiWrappers resultType & dependentPiParams %~ (p :)
     | otherwise ->
@@ -149,7 +149,7 @@ data ApplyFormAnnotation =
 -- with all different sensible levels of currying.
 applyForms :: Expression def () -> Expression def () -> [Expression def ApplyFormAnnotation]
 applyForms exprType rawExpr
-  | Lens.has (ExprLens.exprLam . lambdaKind . _Val) expr = [expr]
+  | Lens.has (ExprLens.exprLam . lambdaKind . _KVal) expr = [expr]
   | otherwise = reverse withAllAppliesAdded
   where
     expr = Untouched <$ rawExpr
@@ -169,11 +169,11 @@ applyForms exprType rawExpr
 recordValForm :: Expression def () -> Maybe (Expression def ())
 recordValForm paramType =
   replaceFieldTypesWithHoles <$>
-  (paramType ^? ExprLens.exprKindedRecordFields Type)
+  (paramType ^? ExprLens.exprKindedRecordFields KType)
   where
     replaceFieldTypesWithHoles fields =
       ExprLens.pureExpr . _BodyRecord .
-      ExprLens.kindedRecordFields Val #
+      ExprLens.kindedRecordFields KVal #
       (fields & Lens.traversed . Lens._2 .~ pureHole)
 
 structureForType ::
@@ -181,11 +181,11 @@ structureForType ::
   Expression def ()
 structureForType expr =
   case expr ^. eBody of
-  BodyRecord (Record Type fields) ->
-    ExprLens.pureExpr . ExprLens.bodyKindedRecordFields Val #
+  BodyRecord (Record KType fields) ->
+    ExprLens.pureExpr . ExprLens.bodyKindedRecordFields KVal #
     (fields & Lens.traversed . Lens._2 %~ structureForType)
-  BodyLam (Lambda Type paramId paramType resultType) ->
-    ExprLens.pureExpr . ExprLens.bodyKindedLam Val #
+  BodyLam (Lambda KType paramId paramType resultType) ->
+    ExprLens.pureExpr . ExprLens.bodyKindedLam KVal #
     (paramId, paramType, structureForType resultType)
   _ -> ExprLens.pureExpr . ExprLens.bodyHole # ()
 
@@ -325,7 +325,7 @@ subExpressionsWithoutTags x =
 
 isDependentPi :: Expression def a -> Bool
 isDependentPi =
-  Lens.has (ExprLens.exprKindedLam Type . Lens.filtered f)
+  Lens.has (ExprLens.exprKindedLam KType . Lens.filtered f)
   where
     f (g, _, resultType) = exprHasGetVar g resultType
 
@@ -337,7 +337,7 @@ exprHasGetVar g = Lens.anyOf parameterRefs (== g)
 
 curriedFuncArguments :: Expression def a -> [Expression def a]
 curriedFuncArguments =
-  (^.. ExprLens.exprLam . ExprLens.kindedLam Val . Lens.folding f)
+  (^.. ExprLens.exprLam . ExprLens.kindedLam KVal . Lens.folding f)
   where
     f (_, paramType, body) = paramType : curriedFuncArguments body
 
@@ -380,16 +380,16 @@ makeLam k argId argType resultType =
 
 -- TODO: Remove the kind-passing wrappers
 makePi :: Guid -> expr -> expr -> Body def expr
-makePi = makeLam Type
+makePi = makeLam KType
 
 makeLambda :: Guid -> expr -> expr -> Body def expr
-makeLambda = makeLam Val
+makeLambda = makeLam KVal
 
 isTypeConstructorType :: Expression def a -> Bool
 isTypeConstructorType expr =
   case expr ^. eBody of
   BodyLeaf Set -> True
-  BodyLam (Lambda Type _ _ res) -> isTypeConstructorType res
+  BodyLam (Lambda KType _ _ res) -> isTypeConstructorType res
   _ -> False
 
 -- Show isntances:
@@ -398,12 +398,12 @@ showsPrecBody ::
   Int -> Body def expr -> ShowS
 showsPrecBody mayDepend prec body =
   case body of
-  BodyLam (Lambda Val paramId paramType result) ->
+  BodyLam (Lambda KVal paramId paramType result) ->
     paren 0 $
     showChar '\\' . shows paramId . showChar ':' .
     showsPrec 11 paramType . showString "==>" .
     shows result
-  BodyLam (Lambda Type paramId paramType resultType) ->
+  BodyLam (Lambda KType paramId paramType resultType) ->
     paren 0 $
     paramStr . showString "->" . shows resultType
     where
@@ -422,10 +422,10 @@ showsPrecBody mayDepend prec body =
         concat ["Rec", recType k, "{", List.intercalate ", " (map showField fields), "}"]
       showField (field, typ) =
         unwords [show field, sep k, show typ]
-      sep Val = "="
-      sep Type = ":"
-      recType Val = "V"
-      recType Type = "T"
+      sep KVal = "="
+      sep KType = ":"
+      recType KVal = "V"
+      recType KType = "T"
   BodyGetField (GetField r tag) ->
     paren 8 $ showsPrec 8 r . showChar '.' . showsPrec 9 tag
   BodyLeaf leaf -> showsPrec prec leaf

@@ -118,9 +118,9 @@ makeEditor parentPrecedence sExpr myId = do
         notAHole $ CollapsedEdit.make parentPrecedence poly
       Sugar.BodyApply apply ->
         notAHole $ ApplyEdit.make parentPrecedence pl apply
-      Sugar.BodyLam lam@(Sugar.Lam Sugar.Type _ _ _) ->
+      Sugar.BodyLam lam@(Sugar.Lam Sugar.KType _ _ _) ->
         notAHole $ PiEdit.make parentPrecedence pl lam
-      Sugar.BodyLam lam@(Sugar.Lam Sugar.Val _ _ _) ->
+      Sugar.BodyLam lam@(Sugar.Lam Sugar.KVal _ _ _) ->
         notAHole $ LambdaEdit.make parentPrecedence pl lam
       Sugar.BodyLiteralInteger integer ->
         notAHole $ LiteralEdit.makeInt pl integer

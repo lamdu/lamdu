@@ -388,9 +388,9 @@ primitiveGroups holeInfo =
   , mkGroup ["\\", "Lambda", "Λ", "λ"] $
     ExprUtil.makeLambda (Guid.fromString "NewLambda") pureHole pureHole
   , Group ["Record Value", "{"] .
-    fromMaybe (record Expr.Val) . ExprUtil.recordValForm $
+    fromMaybe (record Expr.KVal) . ExprUtil.recordValForm $
     hiActions holeInfo ^. Sugar.holeInferredType
-  , Group ["Record Type", "{"] $ record Expr.Type
+  , Group ["Record Type", "{"] $ record Expr.KType
   , mkGroup [".", "Get Field"] . Expr.BodyGetField $
     Expr.GetField pureHole pureHole
   ]

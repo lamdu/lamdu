@@ -346,8 +346,8 @@ instance Show expr => Show (FuncParam name m expr) where
     concat ["(", show (_fpGuid fp), ":", show (_fpType fp), ")"]
 
 instance Show expr => Show (Body name m expr) where
-  show (BodyLam (Lam Val _paramType _isDep _body)) = "TODO:Lam"
-  show (BodyLam (Lam Type paramType isDep resultType)) =
+  show (BodyLam (Lam KVal _paramType _isDep _body)) = "TODO:Lam"
+  show (BodyLam (Lam KType paramType isDep resultType)) =
     paramName ++ show paramType ++ " -> " ++ show resultType
     where
       paramName | isDep = "_:"

@@ -81,7 +81,7 @@ convertLabeled ::
   ExpressionU m a -> ExpressionU m a -> ExprMM m a -> PayloadMM m a ->
   MaybeT (SugarM m) (ExpressionU m a)
 convertLabeled funcS argS argI exprPl = do
-  Record Val fields <- maybeToMPlus $ argS ^? rBody . _BodyRecord
+  Record KVal fields <- maybeToMPlus $ argS ^? rBody . _BodyRecord
   let
     getArg field = do
       tagG <- maybeToMPlus $ field ^? rfTag . rBody . _BodyTag
@@ -284,7 +284,7 @@ convertList ::
   MaybeT (SugarM m) (ExpressionU m a)
 convertList (Expr.Apply funcI argI) argS exprPl = do
   specialFunctions <- lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
-  Record Val (FieldList [headField, tailField] _) <-
+  Record KVal (FieldList [headField, tailField] _) <-
     maybeToMPlus $ argS ^? rBody . _BodyRecord
   let
     verifyTag tag field =

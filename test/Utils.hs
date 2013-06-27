@@ -143,14 +143,14 @@ innerMostPi =
   last . pis
   where
     pis expr =
-      case expr ^? ExprLens.exprKindedLam Type . Lens._3 of
+      case expr ^? ExprLens.exprKindedLam KType . Lens._3 of
       Just resultType -> expr : pis resultType
       _ -> []
 
 piTags :: Lens.Traversal' (Expression def a) Guid
 piTags =
-  ExprLens.exprKindedLam Type . Lens._2 .
-  ExprLens.exprKindedRecordFields Type .
+  ExprLens.exprKindedLam KType . Lens._2 .
+  ExprLens.exprKindedRecordFields KType .
   Lens.traversed . Lens._1 . ExprLens.exprTag
 
 defParamTags :: String -> [Guid]

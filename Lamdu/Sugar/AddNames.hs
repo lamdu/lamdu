@@ -271,7 +271,7 @@ toLam lam@Lam {..} = do
   where
     isDep =
       case _lKind of
-      Val | not _lIsDep -> NameGen.Independent
+      KVal | not _lIsDep -> NameGen.Independent
       _ -> NameGen.Dependent
 
 toScope :: MonadNaming m => Scope (OldName m) tm -> m (Scope (NewName m) tm)

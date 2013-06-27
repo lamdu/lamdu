@@ -175,8 +175,8 @@ convertLam lam@(Expr.Lambda k paramGuid _paramType result) exprPl = do
   where
     isDep =
       case k of
-      Val -> SugarInfer.isPolymorphicFunc exprPl
-      Type -> ExprUtil.exprHasGetVar paramGuid result
+      KVal -> SugarInfer.isPolymorphicFunc exprPl
+      KType -> ExprUtil.exprHasGetVar paramGuid result
 
 convertParameterRef ::
   (MonadA m, Typeable1 m) => Guid ->
@@ -394,7 +394,7 @@ removeRedundantSubExprTypes =
   (_BodyLam . lResultType %~ remSuc) .
   (_BodyRecord %~
     (fields . rfTag %~ remSuc) .
-    (Lens.filtered ((== Type) . (^. rKind)) . fields . rfExpr %~ remSuc)
+    (Lens.filtered ((== KType) . (^. rKind)) . fields . rfExpr %~ remSuc)
   )
   where
     fields = rFields . flItems . Lens.traversed
@@ -543,7 +543,7 @@ rereadFieldParamTypes tagExprGuid paramTypeI f = do
   paramType <- ExprIRef.readExprBody paramTypeI
   let
     mBrokenFields =
-      paramType ^? Expr._BodyRecord . ExprLens.kindedRecordFields Type .
+      paramType ^? Expr._BodyRecord . ExprLens.kindedRecordFields KType .
       (Lens.to . break) ((tagExprGuid ==) . ExprIRef.exprGuid . fst)
   case mBrokenFields of
     Just (prevFields, theField : nextFields) -> f prevFields theField nextFields
@@ -553,7 +553,7 @@ rewriteFieldParamTypes ::
   MonadA m => ExprIRef.ExpressionIM m -> [ExprField m] -> T m ()
 rewriteFieldParamTypes paramTypeI fields =
   ExprIRef.writeExprBody paramTypeI . Expr.BodyRecord $
-  Expr.Record Type fields
+  Expr.Record KType fields
 
 addFieldParamAfter :: MonadA m => Guid -> Guid -> ExprIRef.ExpressionIM m -> T m Guid
 addFieldParamAfter lamGuid tagExprGuid paramTypeI =
@@ -639,7 +639,7 @@ convertDefinitionParams ::
   )
 convertDefinitionParams recordParamsInfo usedTags expr =
   case expr ^. Expr.eBody of
-  Expr.BodyLam lambda@(Expr.Lambda Val paramGuid origParamType body) -> do
+  Expr.BodyLam lambda@(Expr.Lambda KVal paramGuid origParamType body) -> do
     param <-
       convertPositionalFuncParam lambda (expr ^. Expr.ePayload)
       -- Slightly strange but we mappend the hidden lambda's
@@ -652,7 +652,7 @@ convertDefinitionParams recordParamsInfo usedTags expr =
         return (param : depParams, convParams, deepBody)
       else -- Independent:
       case paramType ^. Expr.eBody of
-      Expr.BodyRecord (Expr.Record Type fields)
+      Expr.BodyRecord (Expr.Record KType fields)
         | ListUtils.isLengthAtLeast 2 fields
         , Just fieldParams <- traverse makeFieldParam fields
         , all ((`notElem` usedTags) . fpTagGuid) fieldParams -> do
@@ -709,7 +709,7 @@ singleConventionalParam lamProp existingParam existingParamGuid existingParamTyp
       let existingParamField = (existingParamTagI, existingParamTypeIRef)
       (newTagGuid, newParamField) <- newField
       newParamTypeI <-
-        ExprIRef.newExprBody . Expr.BodyRecord . Expr.Record Type $
+        ExprIRef.newExprBody . Expr.BodyRecord . Expr.Record KType $
         mkFields existingParamField newParamField
       newParamsGuid <- Transaction.newKey
       ExprIRef.writeExprBody (Property.value lamProp) $
@@ -749,7 +749,7 @@ data ExprWhereItem def a = ExprWhereItem
 mExtractWhere :: Expr.Expression def a -> Maybe (ExprWhereItem def a)
 mExtractWhere expr = do
   Expr.Apply func arg <- expr ^? ExprLens.exprApply
-  (paramGuid, paramType, body) <- func ^? ExprLens.exprKindedLam Val
+  (paramGuid, paramType, body) <- func ^? ExprLens.exprKindedLam KVal
   -- paramType has to be Hole for this to be sugarred to Where
   paramType ^? ExprLens.exprHole
   Just ExprWhereItem
@@ -811,11 +811,11 @@ newField = do
 addFirstFieldParam :: MonadA m => Guid -> ExprIRef.ExpressionIM m -> T m Guid
 addFirstFieldParam lamGuid recordI = do
   recordBody <- ExprIRef.readExprBody recordI
-  case recordBody ^? Expr._BodyRecord . ExprLens.kindedRecordFields Type of
+  case recordBody ^? Expr._BodyRecord . ExprLens.kindedRecordFields KType of
     Just fields -> do
       (newTagGuid, field) <- newField
       ExprIRef.writeExprBody recordI $
-        Expr.BodyRecord . Expr.Record Type $ field : fields
+        Expr.BodyRecord . Expr.Record KType $ field : fields
       pure $ Guid.combine lamGuid newTagGuid
     _ -> pure $ ExprIRef.exprGuid recordI
 

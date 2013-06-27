@@ -157,16 +157,16 @@ makeForNode (Expr.Expression exprBody typedVal) =
   where
     pl = (^. Expr.ePayload)
     bodyWithValRefs = tvVal . pl <$> exprBody
-    recordKindRules (Expr.Record Expr.Type fields) =
+    recordKindRules (Expr.Record Expr.KType fields) =
       map (setRule . tvType . snd) fields
-    recordKindRules (Expr.Record Expr.Val fields) =
+    recordKindRules (Expr.Record Expr.KVal fields) =
       recordValueRules (tvType typedVal) $
       fields
       & Lens.mapped . Lens._1 %~ tvVal
       & Lens.mapped . Lens._2 %~ tvType
-    lamKindRules (Expr.Lambda Expr.Type _ _ body) =
+    lamKindRules (Expr.Lambda Expr.KType _ _ body) =
       [setRule (tvType body)]
-    lamKindRules (Expr.Lambda Expr.Val param _ body) =
+    lamKindRules (Expr.Lambda Expr.KVal param _ body) =
       lambdaRules param typedVal (tvType body)
     onLambda lam = setRule . tvType $ lam ^. Expr.lambdaParamType
     setRule ref = SetRule [(ref, setExpr)]
@@ -199,7 +199,7 @@ runLambdaBodyTypeToPiResultType (param, lambdaTypeRef) bodyTypeExpr =
 runPiToLambda :: (Guid, ExprRef, ExprRef) -> RefExpression def -> RuleResult def
 runPiToLambda (param, lambdaValueRef, bodyTypeRef) piBody = do
   -- TODO: Use exprKindedLam
-  Expr.Lambda Expr.Type piParam paramType resultType <-
+  Expr.Lambda Expr.KType piParam paramType resultType <-
     piBody ^.. ExprLens.exprLam
   [ -- Pi result type -> Body type
     ( bodyTypeRef
@@ -223,7 +223,7 @@ runRecordValToType :: ExprRef -> [RefExpression2 def] -> RuleResult def
 runRecordValToType recordTypeRef fields =
   [ ( recordTypeRef
     , makeRefExpr . Expr.BodyRecord $
-      Expr.Record Expr.Type fields
+      Expr.Record Expr.KType fields
     )
   ]
 
@@ -252,7 +252,7 @@ runGetFieldTypeToRecordFieldType recordTypeRef (recordTypeExpr, fieldTag, getFie
   _ -> makeError
   where
     recordTypeExample =
-      makeRefExpr . Expr.BodyRecord . Expr.Record Expr.Type $
+      makeRefExpr . Expr.BodyRecord . Expr.Record Expr.KType $
       [ (fieldTag, makeRefExpr (Expr.BodyLeaf Expr.Hole)) ]
     makeError = [(recordTypeRef, recordTypeExample)]
     recordTypeIsHole =
@@ -263,7 +263,7 @@ runGetFieldTypeToRecordFieldType recordTypeRef (recordTypeExpr, fieldTag, getFie
     verifyRecordWithField =
       case recordTypeExpr ^. Expr.eBody of
       Expr.BodyLeaf Expr.Hole -> recordTypeIsHole
-      Expr.BodyRecord (Expr.Record Expr.Type (_:_)) -> []
+      Expr.BodyRecord (Expr.Record Expr.KType (_:_)) -> []
       _ -> makeError
     putTypeIntoRecordField guid =
       case recordTypeExpr ^. Expr.eBody of
@@ -287,7 +287,7 @@ getFieldRules getFieldTypeRef tagExpr recordTypeRef =
 recordValueRules :: ExprRef -> [(ExprRef, ExprRef)] -> [Rule def ExprRef]
 recordValueRules recTypeRef fieldTypeRefs =
   [ RecordValToType recTypeRef fieldTypeRefs
-  , ParentToChildren (Expr.BodyRecord (Expr.Record Expr.Type fieldTypeRefs)) recTypeRef
+  , ParentToChildren (Expr.BodyRecord (Expr.Record Expr.KType fieldTypeRefs)) recTypeRef
   ]
 
 runCopy :: ExprRef -> RefExpression def -> RuleResult def
@@ -349,16 +349,16 @@ runSimpleType typ valExpr =
   Expr.BodyLeaf Expr.GetVariable {} -> []
   Expr.BodyLeaf Expr.Hole {} -> []
   Expr.BodyLeaf Expr.Tag {} -> [(typ, tagTypeExpr)]
-  Expr.BodyLam (Expr.Lambda Expr.Type _ _ _) -> simpleType
-  Expr.BodyRecord (Expr.Record Expr.Type _) -> simpleType
-  Expr.BodyRecord (Expr.Record Expr.Val _) ->
+  Expr.BodyLam (Expr.Lambda Expr.KType _ _ _) -> simpleType
+  Expr.BodyRecord (Expr.Record Expr.KType _) -> simpleType
+  Expr.BodyRecord (Expr.Record Expr.KVal _) ->
     -- The rule to copy inferred types of fields to the inferred type
     -- of the whole record requiers dereferencing the inferred types
     -- of the field exprs which is impossible in this context. This is
     -- handled in the recordValueRules
     []
   Expr.BodyLam
-    (Expr.Lambda Expr.Val param paramType _) ->
+    (Expr.Lambda Expr.KVal param paramType _) ->
     [( typ
      , makeRefExpr . ExprUtil.makePi param paramType $
        holeRefExpr
@@ -449,10 +449,10 @@ rigidValue e = case e ^. Expr.eBody of
   Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef _)) -> False
   -- A lambda is a black box, don't want to break and enter into it to
   -- figure out whether it has information content
-  Expr.BodyLam (Expr.Lambda Expr.Val _ _ _) -> False
+  Expr.BodyLam (Expr.Lambda Expr.KVal _ _ _) -> False
   -- An apply is of a function, which is a black box (see above).
   Expr.BodyApply (Expr.Apply _ _) -> False
-  Expr.BodyRecord (Expr.Record Expr.Val fields) -> all (rigidValue . snd) fields
+  Expr.BodyRecord (Expr.Record Expr.KVal fields) -> all (rigidValue . snd) fields
   Expr.BodyGetField (Expr.GetField record _) -> rigidValue record
   Expr.BodyLeaf Expr.Hole -> False
   Expr.BodyLeaf (Expr.LiteralInteger _) -> False
@@ -462,8 +462,8 @@ rigidValue e = case e ^. Expr.eBody of
   Expr.BodyLeaf Expr.Set -> True
   Expr.BodyLeaf Expr.IntegerType -> True
   Expr.BodyLeaf Expr.TagType -> True
-  Expr.BodyLam (Expr.Lambda Expr.Type _ _ _) -> True
-  Expr.BodyRecord (Expr.Record Expr.Type _) -> True
+  Expr.BodyLam (Expr.Lambda Expr.KType _ _ _) -> True
+  Expr.BodyRecord (Expr.Record Expr.KType _) -> True
 
 -- If Arg is rigid
 -- ApplyT (Susbt Arg with Hole) => ResultT
@@ -484,7 +484,7 @@ runRigidArgApplyTypeToResultType funcTypeRef (applyTypeExpr, argExpr) = do
 
 runRedexApplyTypeToResultType :: ExprRef -> RefExpression2 def -> RuleResult def
 runRedexApplyTypeToResultType funcTypeRef (applyTypeExpr, funcExpr) = do
-  Expr.Lambda Expr.Val paramGuid paramType _ <-
+  Expr.Lambda Expr.KVal paramGuid paramType _ <-
     funcExpr ^.. Expr.eBody . Expr._BodyLam
   return
     ( funcTypeRef
@@ -496,14 +496,14 @@ runPiParamTypeToArgType :: ExprRef -> RefExpression def -> RuleResult def
 runPiParamTypeToArgType argTypeRef (Expr.Expression funcTExpr _) = do
   -- If func type is Pi
   -- Pi's ParamT => ArgT
-  Expr.Lambda Expr.Type _ paramT _ <- funcTExpr ^.. Expr._BodyLam
+  Expr.Lambda Expr.KType _ paramT _ <- funcTExpr ^.. Expr._BodyLam
   return (argTypeRef, paramT)
 
 runLambdaParamTypeToArgType :: ExprRef -> RefExpression def -> RuleResult def
 runLambdaParamTypeToArgType argTypeRef (Expr.Expression funcExpr _) = do
   -- If func is Lambda
   -- Lambda's ParamT => ArgT
-  Expr.Lambda Expr.Val _ paramT _ <-
+  Expr.Lambda Expr.KVal _ paramT _ <-
     funcExpr ^.. Expr._BodyLam
   return (argTypeRef, paramT)
 
@@ -511,7 +511,7 @@ runArgTypeToLambdaParamType :: ExprRef -> RefExpression2 def -> RuleResult def
 runArgTypeToLambdaParamType funcValRef (funcExpr, argTExpr) = do
   -- If func is Lambda,
   -- ArgT => Lambda's ParamT
-  Expr.Lambda Expr.Val param _ _ <- funcExpr ^.. Expr.eBody . Expr._BodyLam
+  Expr.Lambda Expr.KVal param _ _ <- funcExpr ^.. Expr.eBody . Expr._BodyLam
   return
     ( funcValRef
     , makeRefExpr $
@@ -529,7 +529,7 @@ runNonLambdaToApplyValue applyValRef (funcExpr, argExpr, applyTypExpr) =
   --
   -- Func Arg => Outer
   case funcExpr ^. Expr.eBody of
-  Expr.BodyLam (Expr.Lambda Expr.Val _ _ _) -> []
+  Expr.BodyLam (Expr.Lambda Expr.KVal _ _ _) -> []
   Expr.BodyLeaf Expr.Hole -> []
   _ -> do
     guard $ ExprUtil.isTypeConstructorType applyTypExpr
@@ -544,7 +544,7 @@ runApplyToParts refs (applyExpr, funcExpr) = do
   -- Apply-Arg => Arg
   -- Apply-Func => Func
   -- TODO: Use exprKindedLam
-  guard $ Lens.nullOf (ExprLens.exprLam . Expr.lambdaKind . Expr._Val) funcExpr
+  guard $ Lens.nullOf (ExprLens.exprLam . Expr.lambdaKind . Expr._KVal) funcExpr
   guard $ Lens.nullOf ExprLens.exprHole funcExpr
   Expr.Apply aFunc aArg <- applyExpr ^.. ExprLens.exprApply
   [(refs ^. Expr.applyFunc, aFunc), (refs ^. Expr.applyArg, aArg)]
@@ -589,8 +589,8 @@ applyRules applyTv apply@(Expr.Apply func arg) =
   , NonLambdaToApplyValue (tvVal applyTv) (tvVal func, tvVal arg, tvType applyTv)
   , DisallowTagTypeForApply (tvVal applyTv) (tvType applyTv)
   ]
-  ++ recurseSubstRules Expr.Type (tvType applyTv) (tvType func) (tvVal arg)
-  ++ recurseSubstRules Expr.Val (tvVal applyTv) (tvVal func) (tvVal arg)
+  ++ recurseSubstRules Expr.KType (tvType applyTv) (tvType func) (tvVal arg)
+  ++ recurseSubstRules Expr.KVal (tvVal applyTv) (tvVal func) (tvVal arg)
   where
     recurseSubstRules k applyRef funcRef argValRef =
       [ IntoApplyResult (k, applyRef, argValRef) (funcRef, argValRef)

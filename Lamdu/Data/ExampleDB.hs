@@ -247,7 +247,7 @@ createBuiltins =
     mkRecordType mkTag fields = do
       tagFields <- traverse (Lens._1 mkTag <=< Lens.sequenceOf Lens._2) fields
       ExprIRef.newExprBody $ Expr.BodyRecord Expr.Record
-        { Expr._recordKind = Expr.Type
+        { Expr._recordKind = Expr.KType
         , Expr._recordFields = tagFields
         }
     publicize f = do

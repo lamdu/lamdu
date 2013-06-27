@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable, RankNTypes, NoMonomorphismRestriction #-}
 module Lamdu.Data.Expression
   ( VariableRef(..), _ParameterRef, _DefinitionRef
-  , Kind(..), _Val, _Type
+  , Kind(..), _KVal, _KType
   , Lambda(..), lambdaKind, lambdaParamId, lambdaParamType, lambdaResult
   , Apply(..), applyFunc, applyArg
   , GetField(..), getFieldRecord, getFieldTag
@@ -26,7 +26,7 @@ import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import qualified Control.Lens as Lens
 
-data Kind = Val | Type
+data Kind = KVal | KType
   deriving (Eq, Ord, Show, Typeable)
 
 data Lambda expr = Lambda
