@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types, PatternGuards #-}
-module Lamdu.Sugar
+module Lamdu.Sugar.Convert
   ( convertDefI
   ) where
 
