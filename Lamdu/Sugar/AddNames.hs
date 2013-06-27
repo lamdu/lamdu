@@ -411,9 +411,9 @@ withWhereItem ::
   CPS m (WhereItem (NewName m) tm (Expression (NewName m) tm a))
 withWhereItem item@WhereItem{..} = CPS $ \k -> do
   (name, (value, res)) <-
-    runCPS (opWithWhereItemName wiGuid wiName) $
-    (,) <$> toDefinitionContent wiValue <*> k
-  pure (item { wiValue = value, wiName = name }, res)
+    runCPS (opWithWhereItemName _wiGuid _wiName) $
+    (,) <$> toDefinitionContent _wiValue <*> k
+  pure (item { _wiValue = value, _wiName = name }, res)
 
 toDefinitionContent ::
   (MonadA tm, MonadNaming m) =>

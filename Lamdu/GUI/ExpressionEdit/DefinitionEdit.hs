@@ -251,7 +251,7 @@ makeWhereItemEdit item = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     eventMap
-      | Just wiActions <- Sugar.wiActions item =
+      | Just wiActions <- item ^. Sugar.wiActions =
         mconcat
         [ Widget.keysEventMapMovesCursor (Config.delKeys config)
           (E.Doc ["Edit", "Where item", "Delete"]) .
@@ -262,7 +262,10 @@ makeWhereItemEdit item = do
         ]
       | otherwise = mempty
   Widget.weakerEvents eventMap <$>
-    makeDefContentEdit (Sugar.wiGuid item) (Sugar.wiName item) (Sugar.wiValue item)
+    makeDefContentEdit
+    (item ^. Sugar.wiGuid)
+    (item ^. Sugar.wiName)
+    (item ^. Sugar.wiValue)
 
 makeExprDefinition ::
   MonadA m =>

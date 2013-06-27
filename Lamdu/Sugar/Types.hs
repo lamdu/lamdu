@@ -1,7 +1,7 @@
 {-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, DeriveDataTypeable, RankNTypes #-}
 module Lamdu.Sugar.Types
   ( Definition(..), drName, drGuid, drBody
-  , DefinitionBody(..)
+  , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
   , ListItemActions(..), itemAddNext, itemDelete
   , FuncParamActions(..), fpListItemActions, fpGetExample
   , DefinitionExpression(..), deContent, deTypeInfo
@@ -27,7 +27,7 @@ module Lamdu.Sugar.Types
   , DefinitionN, DefinitionU
   , Expression, ExpressionN
   , BodyN
-  , WhereItem(..)
+  , WhereItem(..), wiValue, wiGuid, wiName, wiActions
   , ListItem(..), liMActions, liExpr
   , ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
@@ -371,10 +371,10 @@ instance Show expr => Show (Body name m expr) where
   show BodyGetParams {} = "GetParams:TODO"
 
 data WhereItem name m expr = WhereItem
-  { wiValue :: DefinitionContent name m expr
-  , wiGuid :: Guid
-  , wiName :: name
-  , wiActions :: Maybe (ListItemActions m)
+  { _wiValue :: DefinitionContent name m expr
+  , _wiGuid :: Guid
+  , _wiName :: name
+  , _wiActions :: Maybe (ListItemActions m)
   } deriving (Functor, Foldable, Traversable)
 
 -- Common data for definitions and where-items
@@ -460,7 +460,9 @@ Lens.makeLenses ''RecordField
 Lens.makeLenses ''Scope
 Lens.makeLenses ''TagG
 Lens.makeLenses ''AnnotatedArg
+Lens.makeLenses ''WhereItem
 Lens.makePrisms ''Body
+Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo
 Lens.makePrisms ''HoleResultSeed
 Lens.makePrisms ''SpecialArgs

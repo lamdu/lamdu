@@ -774,15 +774,15 @@ convertWhereItems usedTags expr =
     let
       hiddenData = ewiHiddenPayloads ewi ^. Lens.traversed . SugarInfer.plData
       item = WhereItem
-        { wiValue =
-          value
-          & dBody . rPayload . plData <>~ hiddenData
-        , wiGuid = defGuid
-        , wiActions =
-          mkWIActions <$>
-          expr ^. SugarInfer.exprStored <*>
-          traverse (^. SugarInfer.plStored) (ewiBody ewi)
-        , wiName = name
+        { _wiValue =
+            value
+            & dBody . rPayload . plData <>~ hiddenData
+        , _wiGuid = defGuid
+        , _wiActions =
+            mkWIActions <$>
+            expr ^. SugarInfer.exprStored <*>
+            traverse (^. SugarInfer.plStored) (ewiBody ewi)
+        , _wiName = name
         }
     (nextItems, whereBody) <- convertWhereItems usedTags $ ewiBody ewi
     return (item : nextItems, whereBody)
