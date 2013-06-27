@@ -183,6 +183,7 @@ Executable lamdu
                        Lamdu.Sugar.AddNames,
                        Lamdu.Sugar.AddNames.CPS,
                        Lamdu.Sugar.AddNames.NameGen,
+                       Lamdu.Sugar.AddNextHoles,
                        Lamdu.Sugar.Convert,
                        Lamdu.Sugar.Convert.Apply,
                        Lamdu.Sugar.Convert.Expression,

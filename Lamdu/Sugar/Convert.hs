@@ -157,7 +157,6 @@ convertLam lam@(Expr.Lambda k paramGuid _paramType result) exprPl = do
     Lam
     { _lParam =
         param
-        & fpType %~ SugarExpr.setNextHoleToFirstSubHole resultS
         & fpMActions .~ Nothing
     , _lResultType = resultS
     , _lKind = k
@@ -334,19 +333,12 @@ convertRecord (Expr.Record k fields) exprPl = do
     { _rKind = k
     , _rFields =
         FieldList
-        { _flItems = map setTagNextHole $ withExprNextHoles sFields
+        { _flItems = sFields
         , _flMAddFirstItem = addField <$> exprPl ^? SugarInfer.plIRef
         }
     }
   where
     defaultGuid = exprPl ^. SugarInfer.plGuid
-    setTagNextHole field =
-      field & rfTag %~ SugarExpr.setNextHoleToFirstSubHole (field ^. rfExpr)
-    withExprNextHoles (field : rest@(nextField:_)) =
-      (field
-       & rfExpr %~ SugarExpr.setNextHoleToFirstSubHole (nextField ^. rfExpr))
-      : withExprNextHoles rest
-    withExprNextHoles xs = xs
     addField iref =
       writeRecordFields iref defaultGuid $ \recordFields -> do
         holeTagExpr <- DataOps.newHole

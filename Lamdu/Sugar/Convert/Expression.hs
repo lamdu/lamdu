@@ -1,15 +1,13 @@
 module Lamdu.Sugar.Convert.Expression
   ( make, mkGen
   , mkReplaceWithNewHole
-  , setNextHoleToFirstSubHole
-  , setNextHole
   , subExpressions
   , getStoredName
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad (zipWithM, mplus)
+import Control.Monad (zipWithM)
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
@@ -79,27 +77,7 @@ make exprPl body = do
     seeds = RandomUtils.splits . mkGen 0 3 $ exprPl ^. SugarInfer.plGuid
     types = maybe [] iwcInferredTypes $ exprPl ^. SugarInfer.plInferred
 
-subHoles ::
-  (Applicative f, Lens.Contravariant f) =>
-  (ExpressionU m a -> f (ExpressionU m a)) ->
-  ExpressionU m a -> f void
-subHoles x =
-  Lens.folding subExpressions . Lens.filtered cond $ x
-  where
-    cond expr =
-      Lens.notNullOf (rBody . _BodyHole) expr ||
-      Lens.notNullOf (rBody . _BodyInferred . iValue . subHoles) expr
-
-setNextHole :: Guid -> ExpressionU m a -> ExpressionU m a
-setNextHole destGuid =
-  -- The mplus ignores holes that are already set:
-  Lens.mapped . plMNextHoleGuid %~ (`mplus` Just destGuid)
-
-setNextHoleToFirstSubHole :: MonadA m => ExpressionU m a -> ExpressionU m a -> ExpressionU m a
-setNextHoleToFirstSubHole dest =
-  maybe id (setNextHole . (^. rPayload . plGuid)) $ dest ^? subHoles
-
-subExpressions :: ExpressionU m a -> [ExpressionU m a]
+subExpressions :: Expression name m a -> [Expression name m a]
 subExpressions x = x : x ^.. rBody . Lens.traversed . Lens.folding subExpressions
 
 getStoredName :: MonadA m => Guid -> T m (Maybe String)

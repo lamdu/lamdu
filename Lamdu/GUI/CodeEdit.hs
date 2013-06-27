@@ -42,6 +42,7 @@ import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.AddNames as AddNames
+import qualified Lamdu.Sugar.AddNextHoles as AddNextHoles
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Sugar.Types as Sugar
@@ -206,7 +207,11 @@ makePaneWidget width rawDefS = do
       case infoMode of
       Settings.Types -> rawDefS
       _ -> SugarRemoveTypes.nonHoleTypes <$> rawDefS
-  fitToWidth width . colorize <$> DefinitionEdit.make (AddNames.addToDef defS)
+  defS
+    & AddNames.addToDef
+    & AddNextHoles.addToDef
+    & DefinitionEdit.make
+    <&> fitToWidth width . colorize
 
 fitToWidth :: Widget.R -> Widget f -> Widget f
 fitToWidth width w

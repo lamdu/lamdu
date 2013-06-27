@@ -163,7 +163,7 @@ convertPrefix funcRef funcI argS argI applyPl
   | otherwise = makeFullApply
   where
     haveInfo = Lens.nullOf ExprLens.exprHole argI
-    makeFullApply = makeApply $ SugarExpr.setNextHoleToFirstSubHole argS funcRef
+    makeFullApply = makeApply funcRef
     makeApply f =
       SugarExpr.make applyPl $ BodyApply Apply
       { _aFunc = f
@@ -274,7 +274,6 @@ convertAppliedHole funcI rawArgS argI exprPl
   where
     guid = exprPl ^. SugarInfer.plGuid
     argS =
-      SugarExpr.setNextHole guid .
       (rPayload . plActions . Lens._Just . wrap .~
        AlreadyWrapped guid) $
       rawArgS
@@ -320,7 +319,6 @@ mkListItem listItemExpr recordArgS exprPl argI mAddNextItem =
   ListItem
   { _liExpr =
     listItemExpr
-    & SugarExpr.setNextHoleToFirstSubHole recordArgS
     & rPayload . plData <>~ recordArgS ^. rPayload . plData
   , _liMActions = do
       addNext <- mAddNextItem
