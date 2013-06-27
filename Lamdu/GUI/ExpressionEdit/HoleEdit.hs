@@ -17,7 +17,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction, MkProperty)
 import Data.Traversable (traverse, sequenceA)
-import Graphics.UI.Bottle.Animation(AnimId)
+import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CharClassification (operatorChars, alphaNumericChars)
 import Lamdu.Config (Config)
@@ -37,6 +37,8 @@ import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -111,58 +113,58 @@ resultPickEventMap config holeInfo holeResult =
       E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) $
       pick holeInfo =<< holeResult ^. Sugar.holeResultPick
 
--- We can't simply return a single widget, because the extra results
--- widget is put on the side and does not bloat the size of the
--- left-side result widget.
-data ResultCompositeWidget m = ResultCompositeWidget
-  { rcwMainWidget :: WidgetT m
-  , rcwExtraWidget :: Maybe (WidgetT m)
-  }
-
-makeResultCompositeWidget
-  :: MonadA m
-  => ResultsList m
-  -> ExprGuiM m
-     (ResultCompositeWidget m, Maybe (Sugar.HoleResult Sugar.Name m ExprGuiM.Payload))
-makeResultCompositeWidget results = do
-  mainResultWidget <-
-    maybeAddExtraSymbol (Lens.has (HoleResults.rlExtra . traverse) results) (rId mainResult) =<< rMkWidget mainResult
-  (mExtraResWidget, mResult) <-
+makeResultGroup ::
+  MonadA m =>
+  ResultsList m ->
+  ExprGuiM m
+  ( [WidgetT m]
+  , Maybe (Sugar.HoleResult Sugar.Name m ExprGuiM.Payload)
+  )
+makeResultGroup results = do
+  mainResultWidget <- rMkWidget mainResult
+  extraSymbolWidget <-
+    if Lens.has (HoleResults.rlExtra . traverse) results
+    then 
+      BWidgets.hboxCenteredSpaced .
+      (Spacer.makeWidget (mainResultWidget ^. Widget.wSize & Lens._1 .~ 0) :) .
+      (: []) .
+      Widget.scale extraSymbolScaleFactor
+      <$>
+      ExprGuiM.widgetEnv
+      (BWidgets.makeLabel extraSymbol (Widget.toAnimId (rId mainResult)))
+    else pure Spacer.empty
+  (mResult, extraResWidget) <-
     if mainResultWidget ^. Widget.wIsFocused
     then do
-      mWidget <- fmap snd <$> makeExtra
-      return (mWidget, Just (rHoleResult (results ^. HoleResults.rlMain)))
+      widget <- snd <$> makeExtra
+      return (Just (rHoleResult (results ^. HoleResults.rlMain)), widget)
     else do
       cursorOnExtra <-
         ExprGuiM.widgetEnv . WE.isSubCursor $ results ^. HoleResults.rlExtraResultsPrefixId
       if cursorOnExtra
-        then do
-          mExtra <- makeExtra
-          return . unzipF $ do
-            (mResult, widget) <- mExtra
-            result <- mResult
-            Just (widget, result)
-        else return (Nothing, Nothing)
-  return
-    ( ResultCompositeWidget
-      { rcwMainWidget = mainResultWidget
-      , rcwExtraWidget = mExtraResWidget
-      }
-    , mResult
-    )
+        then makeExtra
+        else return (Nothing, Spacer.empty)
+  return ([mainResultWidget, extraSymbolWidget, extraResWidget], mResult)
   where
     mainResult = results ^. HoleResults.rlMain
     makeExtra = makeExtraResultsWidget $ results ^. HoleResults.rlExtra
 
 makeExtraResultsWidget ::
   MonadA m => [Result m] ->
-  ExprGuiM m (Maybe (Maybe (Sugar.HoleResult Sugar.Name m ExprGuiM.Payload), WidgetT m))
-makeExtraResultsWidget extraResults
-  | (not . null) extraResults = Just <$> do
-    (mResults, widgets) <-
-      unzip <$> traverse mkResWidget extraResults
-    return (msum mResults, Box.vboxAlign 0 widgets)
-  | otherwise = return Nothing
+  ExprGuiM m (Maybe (Sugar.HoleResult Sugar.Name m ExprGuiM.Payload), WidgetT m)
+makeExtraResultsWidget [] = return (Nothing, Spacer.empty)
+makeExtraResultsWidget extraResults@(firstResult:_) = do
+  (mResults, widgets) <-
+    unzip <$> traverse mkResWidget extraResults
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  return
+    ( msum mResults
+    , Box.vboxAlign 0 widgets
+      & makeBackground (rId firstResult)
+        (Config.layerMax (Config.layers config))
+        (Config.activeHoleBackgroundColor config)
+      & Widget.wSize .~ 0
+    )
   where
     mkResWidget result = do
       isOnResult <- ExprGuiM.widgetEnv $ WE.isSubCursor (rId result)
@@ -201,16 +203,6 @@ makeNewTagResultWidget holeInfo resultId holeResult = do
       BWidgets.makeLabel " (as new tag)" $ Widget.toAnimId resultId
     return $ Box.hboxAlign 0.5 [widget, label]
 
-maybeAddExtraSymbol :: MonadA m => Bool -> Widget.Id -> Widget f -> ExprGuiM m (Widget f)
-maybeAddExtraSymbol haveExtraResults myId w
-  | haveExtraResults = do
-    extraSymbolLabel <-
-      fmap (Widget.scale extraSymbolScaleFactor) .
-      ExprGuiM.widgetEnv .
-      BWidgets.makeLabel extraSymbol $ Widget.toAnimId myId
-    return $ BWidgets.hboxCenteredSpaced [w, extraSymbolLabel]
-  | otherwise = return w
-
 makeNoResults :: MonadA m => HoleInfo m -> AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults holeInfo myId =
   case hiMArgument holeInfo ^? Lens._Just . Sugar.haExpr of
@@ -229,20 +221,11 @@ makeNoResults holeInfo myId =
 hiSearchTermId :: HoleInfo m -> Widget.Id
 hiSearchTermId holeInfo = WidgetIds.searchTermId $ hiId holeInfo
 
-vboxMBiasedAlign ::
-  Maybe Box.Cursor -> Box.Alignment -> [Widget f] -> Widget f
-vboxMBiasedAlign mChildIndex align =
-  maybe Box.toWidget Box.toWidgetBiased mChildIndex .
-  Box.makeAlign align Box.vertical
-
 makeHiddenResultsMWidget :: MonadA m => HaveHiddenResults -> Widget.Id -> ExprGuiM m (Maybe (Widget f))
 makeHiddenResultsMWidget HaveHiddenResults myId =
   fmap Just . ExprGuiM.widgetEnv . BWidgets.makeLabel "..." $
   Widget.toAnimId myId
 makeHiddenResultsMWidget NoHiddenResults _ = return Nothing
-
-unzipF :: Functor f => f (a, b) -> (f a, f b)
-unzipF x = (fst <$> x, snd <$> x)
 
 blockDownEvents :: Monad f => Widget f -> Widget f
 blockDownEvents =
@@ -257,25 +240,18 @@ makeResultsWidget ::
   [ResultsList m] -> HaveHiddenResults ->
   ExprGuiM m (Maybe (Sugar.HoleResult Sugar.Name m ExprGuiM.Payload), WidgetT m)
 makeResultsWidget holeInfo shownResults hiddenResults = do
-  (widgets, mResults) <-
-    unzip <$> traverse makeResultCompositeWidget shownResults
-  let
-    (mIndex, mResult) = unzipF $ mResults ^@? Lens.itraversed <. Lens._Just
-    extraWidget = msum $ rcwExtraWidget <$> widgets
-  shownResultsWidget <-
-    case widgets of
-    [] -> makeNoResults holeInfo $ Widget.toAnimId myId
-    _ ->
-      return . blockDownEvents .
-      vboxMBiasedAlign mIndex 0 $
-      rcwMainWidget <$> widgets
+  (rows, mResults) <- unzip <$> traverse makeResultGroup shownResults
+  let mResult = mResults ^? Lens.traversed . Lens._Just
   hiddenResultsWidgets <- maybeToList <$> makeHiddenResultsMWidget hiddenResults myId
-  return
-    ( mResult
-    , BWidgets.hboxCenteredSpaced $
-      Box.vboxCentered (shownResultsWidget : hiddenResultsWidgets) :
-      maybeToList extraWidget
-    )
+  widget <-
+    if null rows
+    then makeNoResults holeInfo (Widget.toAnimId myId)
+    else
+      return .
+      Box.vboxCentered $
+      (blockDownEvents . Grid.toWidget . Grid.make . (map . map) ((,) 0)) rows :
+      hiddenResultsWidgets
+  return (mResult, widget)
   where
     myId = hiId holeInfo
 
@@ -376,10 +352,10 @@ makeActiveHoleEdit size pl holeInfo = do
             & Lens._1 %~ max (gui ^. ExpressionGui.egWidget . Widget.wSize . Lens._1) ) .
           ( ExpressionGui.egWidget %~
             Widget.strongerEvents holeEventMap .
+            (Widget.wFrame %~ Anim.onDepth (+ layerDiff)) .
             makeBackground (hiId holeInfo)
-              (Config.layerActiveHoleBG (Config.layers config))
-              (Config.activeHoleBackgroundColor config) .
-            (Widget.wFrame %~ Anim.onDepth (+ layerDiff))
+              (Config.layerMax (Config.layers config))
+              (Config.activeHoleBackgroundColor config)
           )
         & return
 
