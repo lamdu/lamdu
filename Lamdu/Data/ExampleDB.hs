@@ -87,6 +87,8 @@ createBuiltins =
       forAll "b" $ \b ->
       mkPi a $ mkPi b a
 
+    publicBuiltin_ "Data.Function.fix" . forAll "a" $ \a -> mkPi (mkPi a a) a
+
     publicBuiltin_ "Data.List.reverse" $ forAll "a" (endo . listOf)
     publicBuiltin_ "Data.List.tail" $ forAll "a" (endo . listOf)
     publicBuiltin_ "Data.List.head" . forAll "a" $ join (mkPi . listOf)
@@ -147,6 +149,30 @@ createBuiltins =
         )
       ] a
 
+    publicBuiltin_ "Data.List.foldr" . forAll "a" $ \a -> forAll "b" $ \b ->
+      mkPiRecord
+      [ ( "list", listOf a )
+      , ( "initial", b )
+      , ( "next"
+        , mkPiRecord
+          [ ("item", a)
+          , ("rest", b)
+          ] b
+        )
+      ] b
+
+    publicBuiltin_ "Data.List.listana" . forAll "a" $ \a -> forAll "b" $ \b ->
+      mkPiRecord
+      [ ( "list", listOf a )
+      , ( "empty", b )
+      , ( "cons"
+        , mkPiRecord
+          [ ("item", a)
+          , ("rest", listOf a)
+          ] b
+        )
+      ] b
+
     publicBuiltin_ "Data.List.zipWith" . forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
       mkPiRecord
       [ ( "func", mkPiRecord [("x", a), ("y", b)] c)
@@ -195,8 +221,9 @@ createBuiltins =
     publicBuiltin fullyQualifiedName =
       publicDef name (DataOps.presentationModeOfName name) path name
       where
-        name = last path
-        path = splitOn "." fullyQualifiedName
+        path = init fqPath
+        name = last fqPath
+        fqPath = splitOn "." fullyQualifiedName
     publicBuiltin_ builtinName typeMaker =
       void $ publicBuiltin builtinName typeMaker
     endo = join mkPi
