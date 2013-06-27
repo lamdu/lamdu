@@ -143,11 +143,18 @@ makeResultGroup results = do
         ExprGuiM.widgetEnv . WE.isSubCursor $ results ^. HoleResults.rlExtraResultsPrefixId
       if cursorOnExtra
         then makeExtra
-        else return (Nothing, Spacer.empty)
+        else (,) Nothing <$> makeExtraResultsPlaceholderWidget (results ^. HoleResults.rlExtra)
   return ([mainResultWidget, extraSymbolWidget, extraResWidget], mResult)
   where
     mainResult = results ^. HoleResults.rlMain
     makeExtra = makeExtraResultsWidget $ results ^. HoleResults.rlExtra
+
+makeExtraResultsPlaceholderWidget ::
+  MonadA m => [Result m] -> ExprGuiM m (WidgetT m)
+makeExtraResultsPlaceholderWidget [] = return Spacer.empty
+makeExtraResultsPlaceholderWidget (result:_) =
+  ExprGuiM.widgetEnv $
+  BWidgets.makeFocusableView (rId result) Spacer.empty
 
 makeExtraResultsWidget ::
   MonadA m => [Result m] ->
