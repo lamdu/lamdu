@@ -2,7 +2,9 @@ module Lamdu.Sugar.AddNextHoles
   ( addToDef
   ) where
 
+import Control.Applicative ((<$), (<|>))
 import Control.Lens.Operators
+import Control.Monad (guard)
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Lamdu.Sugar.Convert.Expression (subExpressions)
@@ -14,25 +16,26 @@ processExpr ::
   MonadA m =>
   Maybe Guid -> Expression name m a ->
   (Maybe Guid, Expression name m a)
-processExpr mNextHole expr =
+processExpr mNextHole (Expression body pl) =
   ( newMNextHole
-  , expr & rBody .~ newBody
+  , Expression newBody pl
   )
   where
+    selfHole = pl ^. plGuid <$ guard (isHoleToJumpTo body)
     (newMNextHole, newBody) =
-      Traversable.mapAccumR step mNextHole $ expr ^. rBody
+      Traversable.mapAccumR step (selfHole <|> mNextHole) body
     step prevMNextHole curExpr =
       curExpr
       & rPayload . plMNextHoleGuid .~ prevMNextHole
       & processExpr prevMNextHole
-      & if isHoleToJumpTo curExpr
+      & if isHoleToJumpTo $ curExpr ^. rBody
         then Lens._1 .~ Just (curExpr ^. rPayload . plGuid)
         else id
 
-isHoleToJumpTo :: Expression name m a -> Bool
+isHoleToJumpTo :: Body namea m (Expression nameb n b) -> Bool
 isHoleToJumpTo expr =
-  Lens.has (rBody . _BodyHole) expr ||
-  Lens.anyOf (rBody . _BodyInferred . iValue . Lens.folding subExpressions) isHoleToJumpTo expr
+  Lens.has (_BodyHole) expr ||
+  Lens.anyOf (_BodyInferred . iValue . Lens.folding subExpressions . rBody) isHoleToJumpTo expr
 
 toExpr ::
   MonadA m =>
