@@ -92,7 +92,7 @@ lambdaWrap stored =
 
 fakeExample :: Guid -> ExpressionP name0 m0 (Payload name1 m1 ())
 fakeExample guid =
-  Expression (BodyAtom "NotImplemented") $ Payload
+  Expression (BodyAtom "NotImplemented") Payload
   { _plGuid = Guid.augment "EXAMPLE" guid
   , _plInferredTypes = []
   , _plActions = Nothing

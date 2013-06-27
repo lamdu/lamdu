@@ -156,7 +156,7 @@ convertPrefix funcRef funcI argS argI applyPl
     case funcRef ^. rBody of
     BodyCollapsed (Collapsed g compact full hadInfo) ->
       makeCollapsed applyPl g compact (hadInfo || haveInfo) =<< makeApply full
-    BodyGetVar var -> do
+    BodyGetVar var ->
       makeCollapsed applyPl (funcI ^. SugarInfer.exprGuid) var haveInfo =<< makeFullApply
     _ -> makeFullApply
   | otherwise = makeFullApply
@@ -237,6 +237,5 @@ convertAppliedHole funcI rawArgS argI exprPl
   where
     guid = exprPl ^. SugarInfer.plGuid
     argS =
-      (rPayload . plActions . Lens._Just . wrap .~
-       AlreadyWrapped guid) $
-      rawArgS
+      rPayload . plActions . Lens._Just . wrap .~
+      AlreadyWrapped guid $ rawArgS

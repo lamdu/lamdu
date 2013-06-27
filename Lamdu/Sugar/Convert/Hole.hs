@@ -159,8 +159,7 @@ idTranslations seedExpr writtenExpr =
   (combineLamGuids ((^. SugarInfer.plGuid) <$> seedExpr))
   (combineLamGuids (ExprIRef.exprGuid <$> writtenExpr))
   where
-    go = ExprUtil.matchExpressionG paramGuidOverride tell mismatch
-    paramGuidOverride xGuid yGuid = tell xGuid yGuid
+    go = ExprUtil.matchExpressionG tell tell mismatch
     mismatch
       (Expr.Expression (Expr.BodyLeaf (Expr.Tag tagx)) plx)
       (Expr.Expression (Expr.BodyLeaf (Expr.Tag tagy)) ply) =

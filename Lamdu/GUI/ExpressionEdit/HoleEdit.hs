@@ -284,12 +284,12 @@ opPickEventMap holeInfo isSelectedResult result
   | ignoreSearchTerm || nonEmptyAll (`notElem` operatorChars) searchTerm =
     E.charGroup "Operator"
     (E.Doc ["Edit", "Result", "Pick and apply operator"])
-    operatorChars $ \c _ -> do
+    operatorChars $ \c _ ->
       pickAndSetNextHoleState holeInfo [c] =<< result ^. Sugar.holeResultPickWrapped
   | ignoreSearchTerm || nonEmptyAll (`elem` operatorChars) searchTerm =
     E.charGroup "Letter/digit"
     (E.Doc ["Edit", "Result", "Pick and resume"])
-    alphaNumericChars $ \c _ -> do
+    alphaNumericChars $ \c _ ->
       pickAndSetNextHoleState holeInfo [c] =<< result ^. Sugar.holeResultPick
   | otherwise = mempty
   where
@@ -395,7 +395,7 @@ make pl hole mNextHoleGuid guid outerId = do
       | Lens.has (Sugar.holeMArg . Lens._Just) hole &&
         null (Property.value stateProp ^. hsSearchTerm) = FocusDelegator.NotDelegating
       | otherwise = FocusDelegator.Delegating
-    inner myId = makeUnwrappedH stateProp pl hole mNextHoleGuid guid myId
+    inner = makeUnwrappedH stateProp pl hole mNextHoleGuid guid
   config <- ExprGuiM.widgetEnv WE.readConfig
   (isActive, innerGui) <-
     ExprGuiM.wrapDelegated holeFDConfig delegatingMode
@@ -442,7 +442,7 @@ makeUnwrappedH stateProp pl hole mNextHoleGuid guid myId = do
         , hiMNextHoleGuid = mNextHoleGuid
         , hiMArgument = hole ^. Sugar.holeMArg
         }
-    _ -> return $ (Inactive, inactive)
+    _ -> return (Inactive, inactive)
 
 makeUnwrappedActive ::
   MonadA m =>
