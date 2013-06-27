@@ -124,7 +124,7 @@ makeResultGroup results = do
   mainResultWidget <- rMkWidget mainResult
   extraSymbolWidget <-
     if Lens.has (HoleResults.rlExtra . traverse) results
-    then 
+    then
       BWidgets.hboxCenteredSpaced .
       (Spacer.makeWidget (mainResultWidget ^. Widget.wSize & Lens._1 .~ 0) :) .
       (: []) .
