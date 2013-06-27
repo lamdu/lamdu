@@ -27,14 +27,12 @@ import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsSearchTerm)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Results (MakeWidgets(..), ResultsList(..), Result(..), HaveHiddenResults(..))
 import qualified Control.Lens as Lens
-import qualified Data.Char as Char
 import qualified Data.Map as Map
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -384,13 +382,7 @@ make pl hole mNextHoleGuid guid outerId = do
       | Lens.has (Sugar.holeMArg . Lens._Just) hole &&
         null (Property.value stateProp ^. hsSearchTerm) = FocusDelegator.NotDelegating
       | otherwise = FocusDelegator.Delegating
-    inner myId = do
-      inCollapsed <- ExprGuiM.isInCollapsedExpression
-      mHoleNumber <-
-        if isWritable && not inCollapsed
-        then Just <$> ExprGuiM.nextHoleNumber
-        else pure Nothing
-      makeUnwrappedH mHoleNumber stateProp pl hole mNextHoleGuid guid myId
+    inner myId = makeUnwrappedH stateProp pl hole mNextHoleGuid guid myId
   config <- ExprGuiM.widgetEnv WE.readConfig
   (isActive, innerGui) <-
     ExprGuiM.wrapDelegated holeFDConfig delegatingMode
@@ -412,20 +404,18 @@ make pl hole mNextHoleGuid guid outerId = do
   where
     mUnWrap =
       hole ^? Sugar.holeMActions . Lens._Just . Sugar.holeMUnwrap . Lens._Just
-    isWritable = isJust $ hole ^. Sugar.holeMActions
 
 makeUnwrappedH ::
   MonadA m =>
-  Maybe ExprGuiM.HoleNumber ->
   Property (T m) HoleState ->
   Sugar.Payload Sugar.Name m a ->
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Maybe Guid -> Guid ->
   Widget.Id ->
   ExprGuiM m (IsActive, ExpressionGui m)
-makeUnwrappedH mHoleNumber stateProp pl hole mNextHoleGuid guid myId = do
+makeUnwrappedH stateProp pl hole mNextHoleGuid guid myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
-  inactive <- makeInactive mHoleNumber hole myId
+  inactive <- makeInactive hole myId
   case (hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
     (Just holeActions, Just _) -> do
       inactiveWithTypes <- ExpressionGui.addInferredTypes pl inactive
@@ -544,20 +534,11 @@ makeBackground myId level =
   Widget.backgroundColor level $
   mappend (Widget.toAnimId myId) ["hole background"]
 
-keysOfNum :: Int -> Maybe [E.ModKey]
-keysOfNum n
-  | 0 <= n && n <= 9 =
-    map alt . (E.charKey char :) . (: []) <$> E.specialCharKey char
-  | otherwise = Nothing
-  where
-    char = Char.intToDigit n
-    alt = E.ModKey E.alt
-
 makeInactive ::
-  MonadA m => Maybe ExprGuiM.HoleNumber ->
+  MonadA m =>
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeInactive mHoleNumber hole myId = do
+makeInactive hole myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   holeGui <-
     case hole ^? Sugar.holeMArg . Lens._Just . Sugar.haExpr of
@@ -573,7 +554,10 @@ makeInactive mHoleNumber hole myId = do
           (E.Doc ["Navigation", "Leave to outer hole"])
           (return myId)
         )
-    Nothing -> makeJumpableSpace mHoleNumber myId
+    Nothing ->
+      ExprGuiM.widgetEnv $
+      ExpressionGui.fromValueWidget <$>
+      BWidgets.makeTextViewWidget "  " (Widget.toAnimId myId)
   let
     bgColor =
       fromMaybe (Config.inactiveHoleBackgroundColor config) $
@@ -587,32 +571,3 @@ makeInactive mHoleNumber hole myId = do
       if holeGui ^. ExpressionGui.egWidget . Widget.wIsFocused
       then return
       else BWidgets.makeFocusableView myId
-
-makeJumpableSpace ::
-  MonadA m => Maybe ExprGuiM.HoleNumber ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m1)
-makeJumpableSpace mHoleNumber myId = do
-  space <-
-    ExprGuiM.widgetEnv .
-    BWidgets.makeTextViewWidget "  " $ Widget.toAnimId myId
-  savePosition <- ExprGuiM.mkPrejumpPosSaver
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    mHolePair holeNumber = do
-      keys <- keysOfNum holeNumber
-      let
-        doc = E.Doc ["Navigation", "Jump to", "Hole " ++ show holeNumber]
-        eventMap =
-          Widget.keysEventMapMovesCursor keys doc $
-          myId <$ savePosition
-      pure ("Alt-" ++ show holeNumber, eventMap)
-    mkHoleNumView (shownStr, eventMap) = do
-      ExprGuiM.appendToTopLevelEventMap eventMap
-      fmap (^. View.scaled (realToFrac <$> Config.holeNumLabelScaleFactor config)) .
-        ExprGuiM.withFgColor (Config.holeNumLabelColor config) .
-        ExprGuiM.widgetEnv .
-        BWidgets.makeTextView shownStr $
-        Widget.toAnimId myId ++ ["hole number"]
-  mHoleNumView <- traverse mkHoleNumView $ mHolePair =<< mHoleNumber
-  pure . ExpressionGui.fromValueWidget $
-    maybe id Widget.overlayView mHoleNumView space

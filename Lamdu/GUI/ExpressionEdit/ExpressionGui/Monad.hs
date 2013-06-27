@@ -20,10 +20,6 @@ module Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad
   , memo, memoT
   , liftMemo, liftMemoT
 
-  , HoleNumber, nextHoleNumber
-  , inCollapsedExpression
-  , isInCollapsedExpression
-
   , appendToTopLevelEventMap
   ) where
 
@@ -85,14 +81,10 @@ data Askable m = Askable
     Sugar.ExpressionN m Payload ->
     ExprGuiM m (ExpressionGui m)
   , _aCodeAnchors :: Anchors.CodeProps m
-  , _aInCollapsedExpression :: Bool
   }
 
-type HoleNumber = Int
-
-data GuiState = GuiState
+newtype GuiState = GuiState
   { _gsCache :: Cache
-  , _gsNextHoleNumber :: HoleNumber
   }
 
 newtype ExprGuiM m a = ExprGuiM
@@ -103,10 +95,6 @@ newtype ExprGuiM m a = ExprGuiM
 Lens.makeLenses ''Askable
 Lens.makeLenses ''ExprGuiM
 Lens.makeLenses ''GuiState
-
-nextHoleNumber :: MonadA m => ExprGuiM m HoleNumber
-nextHoleNumber = ExprGuiM $
-  Lens.use gsNextHoleNumber <* (gsNextHoleNumber += 1)
 
 -- TODO: To lens
 localEnv :: MonadA m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
@@ -152,13 +140,6 @@ memoT ::
   (k -> T m v) -> k -> ExprGuiM m v
 memoT f = memo (lift . f)
 
-inCollapsedExpression :: MonadA m => ExprGuiM m a -> ExprGuiM m a
-inCollapsedExpression =
-  exprGuiM %~ RWS.local (aInCollapsedExpression .~ True)
-
-isInCollapsedExpression :: MonadA m => ExprGuiM m Bool
-isInCollapsedExpression = ExprGuiM $ Lens.view aInCollapsedExpression
-
 run ::
   MonadA m =>
   (ParentPrecedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
@@ -171,11 +152,10 @@ run makeSubexpr codeAnchors settings (ExprGuiM action) =
   { _aSettings = settings
   , _aMakeSubexpression = makeSubexpr
   , _aCodeAnchors = codeAnchors
-  , _aInCollapsedExpression = False
   }
-  (GuiState cache 1)
+  (GuiState cache)
   where
-    f (x, GuiState newCache _, output) = ((oTopLevelEventMap output, x), newCache)
+    f (x, GuiState newCache, output) = ((oTopLevelEventMap output, x), newCache)
 
 runWidget ::
   MonadA m =>
