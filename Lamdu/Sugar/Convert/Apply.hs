@@ -11,7 +11,7 @@ import Control.Monad.Trans.Either.Utils (justToLeft)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.MonadA (MonadA)
 import Data.Maybe.Utils (maybeToMPlus)
-import Data.Monoid (Monoid(..))
+import Data.Monoid (Monoid(..), (<>))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (traverse)
@@ -284,7 +284,7 @@ convertList ::
   MaybeT (SugarM m) (ExpressionU m a)
 convertList (Expr.Apply funcI argI) argS exprPl = do
   specialFunctions <- lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
-  Record KVal (FieldList [headField, tailField] _) <-
+  Record KVal (FieldList fields@[headField, tailField] _) <-
     maybeToMPlus $ argS ^? rBody . _BodyRecord
   let
     verifyTag tag field =
@@ -299,7 +299,10 @@ convertList (Expr.Apply funcI argI) argS exprPl = do
     listItem =
       mkListItem (headField ^. rfExpr) argS exprPl argI
       (addFirstItem <$> innerListMActions)
-      & liExpr . rPayload . plData <>~ funcI ^. Lens.traversed . SugarInfer.plData
+      & liExpr . rPayload . plData <>~
+        (funcI ^. Lens.traversed . SugarInfer.plData <>
+         tailField ^. rfExpr . rPayload . plData <>
+         fields ^. Lens.traversed . rfTag . rPayload . plData)
     mListActions = do
       exprS <- exprPl ^. SugarInfer.plStored
       innerListActions <- innerListMActions
