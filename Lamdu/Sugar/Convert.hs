@@ -627,7 +627,11 @@ convertDefinitionParams ::
 convertDefinitionParams recordParamsInfo usedTags expr =
   case expr ^. Expr.eBody of
   Expr.BodyLam lambda@(Expr.Lambda Val paramGuid paramType body) -> do
-    param <- convertPositionalFuncParam lambda $ expr ^. Expr.ePayload
+    param <-
+      convertPositionalFuncParam lambda (expr ^. Expr.ePayload)
+      -- Slightly strange but we mappend the hidden lambda's
+      -- annotation into the param type:
+      <&> fpType . rPayload . plData <>~ (expr ^. Expr.ePayload . SugarInfer.plData)
     if SugarInfer.isPolymorphicFunc $ expr ^. Expr.ePayload
       then do -- Dependent:
         (depParams, convParams, deepBody) <- convertDefinitionParams recordParamsInfo usedTags body
