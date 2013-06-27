@@ -1,19 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.GUI.CodeEdit.ExpressionEdit.CollapsedEdit(make) where
+module Lamdu.GUI.ExpressionEdit.CollapsedEdit(make) where
 
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..), ParentPrecedence(..))
-import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Config (Config)
+import Lamdu.GUI.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..), ParentPrecedence(..))
+import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
-import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar

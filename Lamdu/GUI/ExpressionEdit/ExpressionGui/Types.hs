@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Types
+module Lamdu.GUI.ExpressionEdit.ExpressionGui.Types
   ( WidgetT, ExpressionGui(..), egWidget, egAlignment
   , Precedence, MyPrecedence(..), ParentPrecedence(..)
   ) where

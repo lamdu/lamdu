@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.GUI.CodeEdit.ExpressionEdit.LambdaEdit
+module Lamdu.GUI.ExpressionEdit.LambdaEdit
   ( make, makeParamNameEdit, makeParamEdit
   ) where
 
@@ -7,15 +7,15 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
-import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Lamdu.GUI.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
-import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionEdit.Parens as Parens
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar

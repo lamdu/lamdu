@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.GUI.CodeEdit.ExpressionEdit.HoleEdit
+module Lamdu.GUI.ExpressionEdit.HoleEdit
   ( make, makeUnwrappedActive
   , HoleState(..), hsSearchTerm
   , setHoleStateAndJump
@@ -20,11 +20,11 @@ import Data.Traversable (traverse, sequenceA)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CharClassification (operatorChars, alphaNumericChars)
-import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
-import Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Lamdu.GUI.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsSearchTerm)
-import Lamdu.GUI.CodeEdit.ExpressionEdit.HoleEdit.Results (MakeWidgets(..), ResultsList(..), Result(..), HaveHiddenResults(..))
 import Lamdu.Config (Config)
+import Lamdu.GUI.ExpressionEdit.ExpressionGui (ExpressionGui(..))
+import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsSearchTerm)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Results (MakeWidgets(..), ResultsList(..), Result(..), HaveHiddenResults(..))
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Map as Map
@@ -37,12 +37,12 @@ import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
-import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.HoleEdit.Info as HoleInfo
-import qualified Lamdu.GUI.CodeEdit.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
