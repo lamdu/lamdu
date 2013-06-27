@@ -95,13 +95,13 @@ mkListItem listItemExpr recordArgS exprPl argI mAddNextItem =
         }
   }
 
-cons ::
-  (Typeable1 m, MonadA m, Monoid a) =>
-  Expr.Apply (ExprMM m a) -> ExpressionU m a -> PayloadMM m a ->
-  MaybeT (SugarM m) (ExpressionU m a)
-cons (Expr.Apply funcI argI) argS exprPl = do
-  specialFunctions <- lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
-  Record KVal (FieldList fields@[headField, tailField] _) <-
+getSugaredHeadTail ::
+  (Monad m, Monoid a) =>
+  Anchors.SpecialFunctions t ->
+  ExpressionU f a ->
+  MaybeT m (a, ExpressionU f a, ExpressionU f a)
+getSugaredHeadTail specialFunctions argS = do
+  Record KVal (FieldList [headField, tailField] _) <-
     maybeToMPlus $ argS ^? rBody . _BodyRecord
   let
     verifyTag tag field =
@@ -109,17 +109,29 @@ cons (Expr.Apply funcI argI) argS exprPl = do
       maybeToMPlus (field ^? rfTag . rBody . _BodyTag . tagGuid)
   verifyTag Anchors.sfHeadTag headField
   verifyTag Anchors.sfTailTag tailField
-  List innerValues innerListMActions <-
-    maybeToMPlus $ tailField ^? rfExpr . rBody . _BodyList
+  return
+    ( [headField, tailField] ^. Lens.traversed . rfTag . rPayload . plData
+    , headField ^. rfExpr
+    , tailField ^. rfExpr
+    )
+
+cons ::
+  (Typeable1 m, MonadA m, Monoid a) =>
+  Expr.Apply (ExprMM m a) -> ExpressionU m a -> PayloadMM m a ->
+  MaybeT (SugarM m) (ExpressionU m a)
+cons (Expr.Apply funcI argI) argS exprPl = do
+  specialFunctions <- lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
+  (hidden, headS, tailS) <- getSugaredHeadTail specialFunctions argS
+  List innerValues innerListMActions <- maybeToMPlus $ tailS ^? rBody . _BodyList
   guard $ isCons specialFunctions funcI
   let
     listItem =
-      mkListItem (headField ^. rfExpr) argS exprPl argI
+      mkListItem headS argS exprPl argI
       (addFirstItem <$> innerListMActions)
       & liExpr . rPayload . plData <>~
         (funcI ^. Lens.traversed . SugarInfer.plData <>
-         tailField ^. rfExpr . rPayload . plData <>
-         fields ^. Lens.traversed . rfTag . rPayload . plData)
+         tailS ^. rPayload . plData <>
+         hidden)
     mListActions = do
       exprS <- exprPl ^. SugarInfer.plStored
       innerListActions <- innerListMActions
