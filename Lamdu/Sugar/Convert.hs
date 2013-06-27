@@ -138,9 +138,6 @@ convertPositionalFuncParam (Expr.Lambda _k paramGuid paramType body) lamExprPl =
     , _fpAltIds = [paramGuid] -- For easy jumpTo
     , _fpType =
       SugarRemoveTypes.successfulType paramTypeS
-      -- Slightly strange but we mappend the hidden lambda's
-      -- annotation into the param type:
-      & rPayload . plData <>~ lamData
     , _fpMActions =
       mkPositionalFuncParamActions paramGuid
       <$> lamExprPl ^. SugarInfer.plStored
@@ -148,7 +145,6 @@ convertPositionalFuncParam (Expr.Lambda _k paramGuid paramType body) lamExprPl =
     }
   where
     lamGuid = lamExprPl ^. SugarInfer.plGuid
-    lamData = lamExprPl ^. SugarInfer.plData
 
 convertLam ::
   (MonadA m, Typeable1 m, Monoid a) =>
