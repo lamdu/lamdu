@@ -18,7 +18,7 @@ import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable, traverse)
 import Lamdu.Sugar.AddNames.CPS (CPS(..))
-import Lamdu.Sugar.NameGen (NameGen)
+import Lamdu.Sugar.AddNames.NameGen (NameGen)
 import Lamdu.Sugar.Types
 import Prelude hiding (pi)
 import qualified Control.Lens as Lens
@@ -27,7 +27,7 @@ import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Lamdu.Sugar.NameGen as NameGen
+import qualified Lamdu.Sugar.AddNames.NameGen as NameGen
 
 type CPSNameConvertor m = Guid -> OldName m -> CPS m (NewName m)
 type NameConvertor m = Guid -> OldName m -> m (NewName m)

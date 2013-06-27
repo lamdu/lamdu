@@ -20,9 +20,9 @@ import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.Data.Expression.IRef (DefM)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..))
-import Lamdu.Sugar.Infer (Stored)
+import Lamdu.Sugar.Convert.Infer (Stored)
+import Lamdu.Sugar.Convert.Monad (SugarM, Context(..))
 import Lamdu.Sugar.Internal
-import Lamdu.Sugar.Monad (SugarM, Context(..))
 import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
 import System.Random (RandomGen)
@@ -44,10 +44,10 @@ import qualified Lamdu.Data.Expression.Load as Load
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Apply as Apply
+import qualified Lamdu.Sugar.Convert.Expression as SugarExpr
 import qualified Lamdu.Sugar.Convert.Hole as Hole
-import qualified Lamdu.Sugar.Expression as SugarExpr
-import qualified Lamdu.Sugar.Infer as SugarInfer
-import qualified Lamdu.Sugar.Monad as SugarM
+import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
+import qualified Lamdu.Sugar.Convert.Monad as SugarM
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 
 onMatchingSubexprs ::

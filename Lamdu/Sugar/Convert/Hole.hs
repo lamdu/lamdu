@@ -22,13 +22,13 @@ import Data.Store.IRef (Tag)
 import Data.Traversable (sequenceA, traverse)
 import Data.Tuple (swap)
 import Data.Typeable (Typeable1)
-import Lamdu.Sugar.Infer (InferredWC, Stored)
-import Lamdu.Sugar.Internal
-import Lamdu.Sugar.Monad (SugarM)
-import Lamdu.Sugar.Types
-import Lamdu.Sugar.Types.Internal
 import Lamdu.Data.Expression.IRef (DefM)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), iwcInferred, iwcInferredValues)
+import Lamdu.Sugar.Convert.Infer (InferredWC, Stored)
+import Lamdu.Sugar.Convert.Monad (SugarM)
+import Lamdu.Sugar.Internal
+import Lamdu.Sugar.Types
+import Lamdu.Sugar.Types.Internal
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Cache as Cache
@@ -38,9 +38,6 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import qualified Lamdu.Sugar.Expression as SugarExpr
-import qualified Lamdu.Sugar.Infer as SugarInfer
-import qualified Lamdu.Sugar.Monad as SugarM
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
@@ -49,6 +46,9 @@ import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
+import qualified Lamdu.Sugar.Convert.Expression as SugarExpr
+import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
+import qualified Lamdu.Sugar.Convert.Monad as SugarM
 import qualified System.Random as Random
 
 convert ::

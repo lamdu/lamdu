@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds #-}
-module Lamdu.Sugar.Monad
+module Lamdu.Sugar.Convert.Monad
   ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
   , scHoleInferStateKey, scHoleInferState
   , scCodeAnchors, scSpecialFunctions, scTagParamInfos, scRecordParamsInfos
@@ -22,18 +22,18 @@ import Data.Monoid (Monoid)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable1)
-import Lamdu.Sugar.Infer (ExprMM)
+import Lamdu.Data.Expression.IRef (DefM)
+import Lamdu.Sugar.Convert.Infer (ExprMM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types.Internal
-import Lamdu.Data.Expression.IRef (DefM)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Cache as Cache
 import qualified Data.Store.Transaction as Transaction
-import qualified Lamdu.Sugar.Infer as SugarInfer
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
+import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 
 data TagParamInfo = TagParamInfo
   { tpiFromParameters :: Guid

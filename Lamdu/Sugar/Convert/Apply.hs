@@ -16,23 +16,18 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
-import Lamdu.Sugar.Infer (ExprMM, PayloadMM)
-import Lamdu.Sugar.Internal
-import Lamdu.Sugar.Monad (SugarM)
-import Lamdu.Sugar.Types
-import Lamdu.Sugar.Types.Internal
 import Lamdu.Data.Anchors (PresentationMode(..))
 import Lamdu.Data.Expression.IRef (DefM)
 import Lamdu.Data.Expression.Infer.Conflicts (iwcInferred)
+import Lamdu.Sugar.Convert.Infer (ExprMM, PayloadMM)
+import Lamdu.Sugar.Convert.Monad (SugarM)
+import Lamdu.Sugar.Internal
+import Lamdu.Sugar.Types
+import Lamdu.Sugar.Types.Internal
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
-import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
-import qualified Lamdu.Sugar.Expression as SugarExpr
-import qualified Lamdu.Sugar.Infer as SugarInfer
-import qualified Lamdu.Sugar.Monad as SugarM
-import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
@@ -40,6 +35,11 @@ import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
+import qualified Lamdu.Sugar.Convert.Expression as SugarExpr
+import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
+import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
+import qualified Lamdu.Sugar.Convert.Monad as SugarM
+import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 
 uneither :: Either a a -> a
 uneither = either id id

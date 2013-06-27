@@ -1,4 +1,4 @@
-module Lamdu.Sugar.Expression
+module Lamdu.Sugar.Convert.Expression
   ( make, mkGen
   , mkReplaceWithNewHole
   , setNextHoleToFirstSubHole
@@ -14,22 +14,22 @@ import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable1)
-import Lamdu.Sugar.Infer (Stored)
+import Lamdu.Data.Expression.Infer.Conflicts (iwcInferredTypes)
+import Lamdu.Sugar.Convert.Infer (Stored)
+import Lamdu.Sugar.Convert.Monad (SugarM)
 import Lamdu.Sugar.Internal
-import Lamdu.Sugar.Monad (SugarM)
 import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
-import Lamdu.Data.Expression.Infer.Conflicts (iwcInferredTypes)
 import qualified Control.Lens as Lens
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import qualified Lamdu.Sugar.Infer as SugarInfer
-import qualified Lamdu.Sugar.Monad as SugarM
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Ops as DataOps
+import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
+import qualified Lamdu.Sugar.Convert.Monad as SugarM
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
