@@ -292,6 +292,10 @@
         0.1,
         1.0
     ],
+    "holeResultPadding": {
+        "_first": 3,
+        "_second": 3
+    },
     "holeResultScaleFactor": {
         "_second": 0.75,
         "_first": 0.75

@@ -112,6 +112,10 @@ resultPickEventMap config holeInfo holeResult =
       E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) $
       pick holeInfo =<< holeResult ^. Sugar.holeResultPick
 
+makePaddedResult :: Functor m => Config -> Result m -> ExprGuiM m (WidgetT m)
+makePaddedResult config res =
+  (Widget.pad . fmap realToFrac . Config.holeResultPadding) config <$> rMkWidget res
+
 makeResultGroup ::
   MonadA m =>
   ResultsList m ->
@@ -120,7 +124,8 @@ makeResultGroup ::
   , Maybe (Sugar.HoleResult Sugar.Name m ExprGuiM.Payload)
   )
 makeResultGroup results = do
-  mainResultWidget <- rMkWidget mainResult
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  mainResultWidget <- makePaddedResult config mainResult
   extraSymbolWidget <-
     if Lens.has (HoleResults.rlExtra . traverse) results
     then
@@ -143,7 +148,6 @@ makeResultGroup results = do
         else
           (,) Nothing <$>
           makeExtraResultsPlaceholderWidget (results ^. HoleResults.rlExtra)
-  config <- ExprGuiM.widgetEnv WE.readConfig
   let
     onExtraSymbol =
       case mResult of
@@ -166,9 +170,19 @@ makeExtraResultsWidget ::
   ExprGuiM m (Maybe (Sugar.HoleResult Sugar.Name m ExprGuiM.Payload), WidgetT m)
 makeExtraResultsWidget [] = return (Nothing, Spacer.empty)
 makeExtraResultsWidget extraResults@(firstResult:_) = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    mkResWidget result = do
+      isOnResult <- ExprGuiM.widgetEnv $ WE.isSubCursor (rId result)
+      widget <- makePaddedResult config result
+      return
+        ( if isOnResult then Just holeResultSugar else Nothing
+        , widget
+        )
+      where
+        holeResultSugar = rHoleResult result
   (mResults, widgets) <-
     unzip <$> traverse mkResWidget extraResults
-  config <- ExprGuiM.widgetEnv WE.readConfig
   return
     ( msum mResults
     , Box.vboxAlign 0 widgets
@@ -177,13 +191,6 @@ makeExtraResultsWidget extraResults@(firstResult:_) = do
         (Config.activeHoleBackgroundColor config)
       & Widget.wSize .~ (head widgets ^. Widget.wSize & Lens._1 .~ 0)
     )
-  where
-    mkResWidget result = do
-      isOnResult <- ExprGuiM.widgetEnv $ WE.isSubCursor (rId result)
-      widget <- rMkWidget result
-      return (if isOnResult then Just holeResultSugar else Nothing, widget)
-      where
-        holeResultSugar = rHoleResult result
 
 makeHoleResultWidget ::
   MonadA m => HoleInfo m ->

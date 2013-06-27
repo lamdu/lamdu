@@ -76,6 +76,7 @@ data Config = Config
 
   , holeResultCount :: Int
   , holeResultScaleFactor :: Vector2 Double
+  , holeResultPadding :: Vector2 Double
   , holeResultInjectedScaleExponent :: Double
   , holeSearchTermScaleFactor :: Vector2 Double
   , holeNumLabelScaleFactor :: Vector2 Double

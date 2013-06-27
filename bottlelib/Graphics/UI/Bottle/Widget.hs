@@ -13,7 +13,7 @@ module Graphics.UI.Bottle.Widget
   , takesFocus, doesntTakeFocus
   , backgroundColor, tint, liftView
   , strongerEvents, weakerEvents
-  , translate, translateBy, scale, scaleDownContent
+  , translate, translateBy, scale, scaleDownContent, pad
   , overlayView
   ) where
 
@@ -165,10 +165,19 @@ scale mult =
 -- | Scale down a widget without affecting its exported size
 scaleDownContent :: Vector2 R -> Vector2 R -> Widget f -> Widget f
 scaleDownContent factor align w =
-  (wSize .~ (w ^. wSize)) .
-  translate ((w ^. wSize) * align * (1 - factor)) .
-  scale factor $
   w
+  & scale factor
+  & translate ((w ^. wSize) * align * (1 - factor))
+  & wSize .~ (w ^. wSize)
+
+-- Surround a widget with padding
+pad :: Vector2 R -> Widget f -> Widget f
+pad p w =
+  w
+  & wSize .~ withPadding
+  & translate p
+  where
+    withPadding = w^.wSize + 2*p
 
 overlayView :: View -> Widget f -> Widget f
 overlayView (size, frame) w =
