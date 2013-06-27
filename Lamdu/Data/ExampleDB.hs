@@ -240,7 +240,7 @@ createBuiltins =
     mkPi mkArgType mkResType = fmap snd . join $ liftA2 ExprIRef.newPi mkArgType mkResType
     mkApply mkFunc mkArg =
       ExprIRef.newExprBody =<< liftA2 ExprUtil.makeApply mkFunc mkArg
-    newTag name = namedTag name =<< Transaction.newKey
+    newTag name = namedTag name . Guid.augment "ExampleDB" $ Guid.fromString name
     namedTag name tagGuid = do
       setP (Db.assocNameRef tagGuid) name
       ExprIRef.newExprBody $ ExprLens.bodyTag # tagGuid
