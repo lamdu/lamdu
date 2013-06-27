@@ -186,6 +186,7 @@ createBuiltins =
     publicDef_ "%" Infix ["Prelude"] "mod" aToAToA
     publicBuiltin_ "Prelude.negate" $ forAll "a" endo
     publicBuiltin_ "Prelude.sqrt" $ forAll "a" endo
+    publicBuiltin_ "Prelude.floor" $ forAll "a" $ \a -> forAll "b" $ \b -> mkPi a b
 
     let aToAToBool = forAll "a" $ \a -> mkInfixType a a bool
     traverse_ ((`publicBuiltin_` aToAToBool) . ("Prelude." ++))
