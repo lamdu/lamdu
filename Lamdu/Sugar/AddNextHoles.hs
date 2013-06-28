@@ -4,7 +4,6 @@ module Lamdu.Sugar.AddNextHoles
   ) where
 
 import Control.Applicative (Applicative(..))
-import Control.Applicative.Reverse (ReverseApplicative(..))
 import Control.Applicative.Utils (when)
 import Control.Lens.Operators
 import Control.Monad.Trans.State (State, evalState)
@@ -16,28 +15,23 @@ import Lamdu.Sugar.Types
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 
-reversedGet :: ReverseApplicative (State s) s
-reversedGet = ReverseApplicative State.get
-
-reversedPut :: s -> ReverseApplicative (State s) ()
-reversedPut = ReverseApplicative . State.put
-
 addToDef ::
   MonadA m =>
   Definition name m (Expression name m a) ->
   Definition name m (Expression name m a)
 addToDef =
-  (`evalState` Nothing) . runReverseApplicative .
-  (drBody . Lens.traversed . subExpressions %%@~ setNextHole)
+  (`evalState` Nothing) .
+  (drBody . Lens.traversed . Lens.backwards subExpressions %%@~ setNextHole)
 
 setNextHole ::
   Body name m (ExpressionP name m ()) ->
   Payload name m a ->
-  ReverseApplicative (State.State (Maybe Guid)) (Payload name m a)
+  State (Maybe Guid) (Payload name m a)
 setNextHole body pl =
+  State.get <*
   when (isJust (pl ^. plActions) && isHoleToJumpTo body)
-    (reversedPut (Just (pl ^. plGuid)))
-  *> reversedGet <&> useMNextGuid
+    (State.put (Just (pl ^. plGuid)))
+  <&> useMNextGuid
   where
     useMNextGuid Nothing = pl
     useMNextGuid nextGuid = pl & plMNextHoleGuid .~ nextGuid

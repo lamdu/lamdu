@@ -64,7 +64,6 @@ Library
                        Data.Store.Property,
                        Data.Store.Db,
 
-                       Control.Applicative.Reverse,
                        Control.Applicative.Utils,
                        Control.Lens.Utils,
                        Control.Monad.Trans.Either.Utils,
