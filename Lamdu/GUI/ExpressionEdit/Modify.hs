@@ -5,14 +5,12 @@ module Lamdu.GUI.ExpressionEdit.Modify
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import Lamdu.CharClassification (operatorChars)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionEdit.HoleEdit (HoleState(..))
-import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -39,21 +37,18 @@ wrapEventMap config actions =
 
 replaceEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (Transaction m)
 replaceEventMap config actions =
-  -- TODO: replaceKeys
-  concat
-  [ actions ^.. Sugar.mSetToInnerExpr . Lens._Just
-    <&> fmap WidgetIds.fromGuid
-    <&>
-      Widget.keysEventMapMovesCursor delKeys
-      (E.Doc ["Edit", "Replace with inner expression"])
-  , actions ^.. Sugar.mSetToHole . Lens._Just
-    <&> fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid)
-    <&>
-      Widget.keysEventMapMovesCursor delKeys
-      (E.Doc ["Edit", "Replace expression"])
-  ] ^? Lens.traversed
-  & fromMaybe mempty
+  mconcat
+  [ actionEventMap Sugar.mSetToInnerExpr
+    "Replace with inner expression" $ Config.delKeys config
+  , actionEventMap Sugar.mSetToHole
+    "Replace expression" delKeys
+  ]
   where
+    actionEventMap lens doc keys =
+      maybe mempty
+      (Widget.keysEventMapMovesCursor keys
+       (E.Doc ["Edit", doc]) .
+       fmap WidgetIds.fromGuid) $ actions ^. lens
     delKeys = Config.replaceKeys config ++ Config.delKeys config
 
 eventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (Transaction m)
