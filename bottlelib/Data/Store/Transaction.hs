@@ -67,38 +67,41 @@ onStoreM f x = x
 newtype Transaction m a = Transaction {
   unTransaction :: ReaderT (Store m) (StateT Changes m) a
   } deriving (Monad, Applicative, Functor)
-liftReaderT :: ReaderT (Store m) (StateT Changes m) a -> Transaction m a
-liftReaderT = Transaction
-liftStateT :: MonadA m => StateT Changes m a -> Transaction m a
-liftStateT = liftReaderT . lift
+liftAskable :: ReaderT (Store m) (StateT Changes m) a -> Transaction m a
+liftAskable = Transaction
+liftChanges :: MonadA m => StateT Changes m a -> Transaction m a
+liftChanges = liftAskable . lift
 liftInner :: MonadA m => m a -> Transaction m a
 liftInner = Transaction . lift . lift
+
+getStore :: Monad m => Transaction m (Store m)
+getStore = liftAskable ask
 
 -- | Run the given transaction in a new "scratch" space forked from
 -- the current transaction. It's
 forkScratch :: MonadA m => Transaction m a -> Transaction m a
 forkScratch discardableTrans = do
-  store <- liftReaderT ask
-  changes <- liftStateT get
+  store <- getStore
+  changes <- liftChanges get
   liftInner . (`evalStateT` changes) . (`runReaderT` store) $ unTransaction discardableTrans
 
 isEmpty :: MonadA m => Transaction m Bool
-isEmpty = liftStateT (gets Map.null)
+isEmpty = liftChanges (gets Map.null)
 
 lookupBS :: MonadA m => Guid -> Transaction m (Maybe Value)
 lookupBS guid = do
-  changes <- liftStateT get
+  changes <- liftChanges get
   case Map.lookup guid changes of
     Nothing -> do
-      store <- liftReaderT ask
+      store <- getStore
       liftInner $ storeLookup store guid
     Just res -> return res
 
 insertBS :: MonadA m => Guid -> ByteString -> Transaction m ()
-insertBS key = liftStateT . modify . Map.insert key . Just
+insertBS key = liftChanges . modify . Map.insert key . Just
 
 delete :: MonadA m => Guid -> Transaction m ()
-delete key = liftStateT . modify . Map.insert key $ Nothing
+delete key = liftChanges . modify . Map.insert key $ Nothing
 
 lookup :: (MonadA m, Binary a) => Guid -> Transaction m (Maybe a)
 lookup = (fmap . fmap) decodeS . lookupBS
@@ -146,7 +149,7 @@ fromIRefDef :: (MonadA m, Binary a) => IRef (Tag m) a -> a -> Transaction m (Pro
 fromIRefDef iref def = fmap (flip Property.Property (writeIRef iref)) $ readIRefDef def iref
 
 newKey :: MonadA m => Transaction m Key
-newKey = liftInner . storeNewKey =<< liftReaderT ask
+newKey = liftInner . storeNewKey =<< getStore
 
 newIRef :: (MonadA m, Binary a) => a -> Transaction m (IRef (Tag m) a)
 newIRef val = do
