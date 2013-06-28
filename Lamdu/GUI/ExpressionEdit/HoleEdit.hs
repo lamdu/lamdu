@@ -386,16 +386,15 @@ make ::
   MonadA m =>
   Sugar.Payload Sugar.Name m a ->
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Maybe Guid -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make pl hole mNextHoleGuid guid outerId = do
+make pl hole outerId = do
   stateProp <- ExprGuiM.transaction $ assocStateRef guid ^. Transaction.mkProperty
   let
     delegatingMode
       | Lens.has (Sugar.holeMArg . Lens._Just) hole &&
         null (Property.value stateProp ^. hsSearchTerm) = FocusDelegator.NotDelegating
       | otherwise = FocusDelegator.Delegating
-    inner = makeUnwrappedH stateProp pl hole mNextHoleGuid guid
+    inner = makeUnwrappedH stateProp pl hole
   config <- ExprGuiM.widgetEnv WE.readConfig
   (isActive, innerGui) <-
     ExprGuiM.wrapDelegated holeFDConfig delegatingMode
@@ -415,6 +414,7 @@ make pl hole mNextHoleGuid guid outerId = do
         ) mUnWrap)
     & return
   where
+    guid = pl ^. Sugar.plGuid
     mUnWrap =
       hole ^? Sugar.holeMActions . Lens._Just . Sugar.holeMUnwrap . Lens._Just
 
@@ -423,10 +423,9 @@ makeUnwrappedH ::
   Property (T m) HoleState ->
   Sugar.Payload Sugar.Name m a ->
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Maybe Guid -> Guid ->
   Widget.Id ->
   ExprGuiM m (IsActive, ExpressionGui m)
-makeUnwrappedH stateProp pl hole mNextHoleGuid guid myId = do
+makeUnwrappedH stateProp pl hole myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   inactive <- makeInactive hole myId
   case (hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
@@ -435,11 +434,11 @@ makeUnwrappedH stateProp pl hole mNextHoleGuid guid myId = do
       (,) Active <$> makeActiveHoleEdit
         (inactiveWithTypes ^. ExpressionGui.egWidget . Widget.wSize) pl
         HoleInfo
-        { hiGuid = guid
+        { hiGuid = pl ^. Sugar.plGuid
         , hiId = myId
         , hiState = stateProp
         , hiActions = holeActions
-        , hiMNextHoleGuid = mNextHoleGuid
+        , hiMNextHoleGuid = pl ^. Sugar.plMNextHoleGuid
         , hiMArgument = hole ^. Sugar.holeMArg
         }
     _ -> return (Inactive, inactive)
@@ -448,16 +447,17 @@ makeUnwrappedActive ::
   MonadA m =>
   Sugar.Payload Sugar.Name m a ->
   Sugar.HoleActions Sugar.Name m ->
-  Widget.Size -> Maybe Guid -> Guid ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeUnwrappedActive pl holeActions size mNextHoleGuid guid myId = do
-  stateProp <- ExprGuiM.transaction $ assocStateRef guid ^. Transaction.mkProperty
+  Widget.Size -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+makeUnwrappedActive pl holeActions size myId = do
+  stateProp <-
+    ExprGuiM.transaction $
+    assocStateRef (pl ^. Sugar.plGuid) ^. Transaction.mkProperty
   makeActiveHoleEdit size pl HoleInfo
-    { hiGuid = guid
+    { hiGuid = pl ^. Sugar.plGuid
     , hiId = myId
     , hiState = stateProp
     , hiActions = holeActions
-    , hiMNextHoleGuid = mNextHoleGuid
+    , hiMNextHoleGuid = pl ^. Sugar.plMNextHoleGuid
     , hiMArgument = Nothing
     }
 

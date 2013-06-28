@@ -107,13 +107,12 @@ makeEditor parentPrecedence sExpr myId = do
       , widget &
         ExpressionGui.egWidget %~ Widget.weakerEvents (pasteEventMap config hole)
       )
-    exprGuid = sExpr ^. Sugar.rPayload . Sugar.plGuid
     mkEditor =
       case sExpr ^. Sugar.rBody of
       Sugar.BodyInferred i ->
-        isAHole (i ^. Sugar.iHole) $ InferredEdit.make parentPrecedence pl i exprGuid
+        isAHole (i ^. Sugar.iHole) $ InferredEdit.make parentPrecedence pl i
       Sugar.BodyHole hole ->
-        isAHole hole $ HoleEdit.make pl hole mNextHoleGuid exprGuid
+        isAHole hole $ HoleEdit.make pl hole
       Sugar.BodyCollapsed poly ->
         notAHole $ CollapsedEdit.make parentPrecedence poly
       Sugar.BodyApply apply ->
@@ -142,7 +141,6 @@ makeEditor parentPrecedence sExpr myId = do
   where
     pl = sExpr ^. Sugar.rPayload
     notAHole = (fmap . fmap) ((,) NotAHole)
-    mNextHoleGuid = sExpr ^. Sugar.rPayload . Sugar.plMNextHoleGuid
 
 expressionEventMap ::
   MonadA m =>

@@ -5,7 +5,6 @@ import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (mempty)
-import Data.Store.Guid (Guid)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
@@ -35,9 +34,8 @@ make ::
   MonadA m => ParentPrecedence ->
   Sugar.Payload Sugar.Name m a ->
   Sugar.Inferred Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Guid -> Widget.Id ->
-  ExprGuiM m (ExpressionGui m)
-make parentPrecedence pl inferred guid myId = do
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+make parentPrecedence pl inferred myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     eventMap =
@@ -49,7 +47,7 @@ make parentPrecedence pl inferred guid myId = do
       inferred ^. Sugar.iMAccept
   ExprGuiM.wrapDelegated (fdConfig config)
     FocusDelegator.NotDelegating (ExpressionGui.egWidget %~)
-    (makeUnwrapped parentPrecedence pl inferred guid) myId
+    (makeUnwrapped parentPrecedence pl inferred) myId
     <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
   where
     mkResult pr =
@@ -63,9 +61,9 @@ makeUnwrapped ::
   MonadA m => ParentPrecedence ->
   Sugar.Payload Sugar.Name m a ->
   Sugar.Inferred Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Guid -> Widget.Id ->
+  Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makeUnwrapped (ParentPrecedence parentPrecedence) pl inferred guid myId = do
+makeUnwrapped (ParentPrecedence parentPrecedence) pl inferred myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   mInnerCursor <- ExprGuiM.widgetEnv $ WE.subCursor myId
   inactive <-
@@ -79,7 +77,5 @@ makeUnwrapped (ParentPrecedence parentPrecedence) pl inferred guid myId = do
   case (mInnerCursor, inferred ^. Sugar.iHole . Sugar.holeMActions) of
     (Just _, Just actions) ->
       HoleEdit.makeUnwrappedActive pl actions
-      (inactive ^. ExpressionGui.egWidget . Widget.wSize)
-      Nothing -- TODO: next hole
-      guid myId
+      (inactive ^. ExpressionGui.egWidget . Widget.wSize) myId
     _ -> return inactive
