@@ -26,7 +26,7 @@ import Control.Applicative (Applicative)
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.State (StateT, runStateT, evalStateT, get, gets, modify)
+import Control.Monad.Trans.State (StateT, runStateT, evalStateT)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Binary.Utils (encodeS, decodeS)
@@ -39,6 +39,7 @@ import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Change (Key, Value)
 import Prelude hiding (lookup)
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.State as State
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -91,15 +92,15 @@ run store transaction = do
 forkScratch :: MonadA m => Transaction m a -> Transaction m a
 forkScratch discardableTrans = do
   store <- getStore
-  changes <- liftChanges get
+  changes <- liftChanges State.get
   liftInner . (`evalStateT` changes) . (`runReaderT` Askable store) $ unTransaction discardableTrans
 
 isEmpty :: MonadA m => Transaction m Bool
-isEmpty = liftChanges (gets Map.null)
+isEmpty = liftChanges (State.gets Map.null)
 
 lookupBS :: MonadA m => Guid -> Transaction m (Maybe Value)
 lookupBS guid = do
-  changes <- liftChanges get
+  changes <- liftChanges State.get
   case Map.lookup guid changes of
     Nothing -> do
       store <- getStore
@@ -107,10 +108,10 @@ lookupBS guid = do
     Just res -> return res
 
 insertBS :: MonadA m => Guid -> ByteString -> Transaction m ()
-insertBS key = liftChanges . modify . Map.insert key . Just
+insertBS key = liftChanges . State.modify . Map.insert key . Just
 
 delete :: MonadA m => Guid -> Transaction m ()
-delete key = liftChanges . modify . Map.insert key $ Nothing
+delete key = liftChanges . State.modify . Map.insert key $ Nothing
 
 lookup :: (MonadA m, Binary a) => Guid -> Transaction m (Maybe a)
 lookup = (fmap . fmap) decodeS . lookupBS
