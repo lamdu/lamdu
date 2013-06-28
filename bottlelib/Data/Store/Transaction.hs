@@ -2,7 +2,6 @@
 
 module Data.Store.Transaction
   ( Transaction, run
-  , Property
   , Store(..), onStoreM
   , forkScratch
   , lookupBS, lookup
@@ -13,10 +12,11 @@ module Data.Store.Transaction
   , isEmpty
   , guidExists, irefExists
   , newIRef, newKey, newIRefWithGuid
-  , fromIRef, fromIRefDef
   , followBy
   , anchorRef, anchorRefDef
   , assocDataRef, assocDataRefDef
+  , Property
+  , fromIRef, fromIRefDef
   , MkProperty(..), mkProperty, mkPropertyFromIRef
   , getP, setP, modP
   )
@@ -25,7 +25,7 @@ where
 import Control.Applicative (Applicative)
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.Reader (ReaderT, runReaderT, ask)
+import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT, runStateT, evalStateT, get, gets, modify)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
@@ -44,8 +44,6 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 
-type Property m = Property.Property (Transaction m)
-
 type Changes = Map Key (Maybe Value)
 
 -- 't' is a phantom-type tag meant to make sure you run Transactions
@@ -63,11 +61,16 @@ onStoreM f x = x
   , storeAtomicWrite = f . storeAtomicWrite x
   }
 
+newtype Askable m = Askable
+  { _aStore :: Store m
+  }
+Lens.makeLenses ''Askable
+
 -- Define transformer stack:
-newtype Transaction m a = Transaction {
-  unTransaction :: ReaderT (Store m) (StateT Changes m) a
+newtype Transaction m a = Transaction
+  { unTransaction :: ReaderT (Askable m) (StateT Changes m) a
   } deriving (Monad, Applicative, Functor)
-liftAskable :: ReaderT (Store m) (StateT Changes m) a -> Transaction m a
+liftAskable :: ReaderT (Askable m) (StateT Changes m) a -> Transaction m a
 liftAskable = Transaction
 liftChanges :: MonadA m => StateT Changes m a -> Transaction m a
 liftChanges = liftAskable . lift
@@ -75,7 +78,13 @@ liftInner :: MonadA m => m a -> Transaction m a
 liftInner = Transaction . lift . lift
 
 getStore :: Monad m => Transaction m (Store m)
-getStore = liftAskable ask
+getStore = liftAskable $ Lens.view aStore
+
+run :: MonadA m => Store m -> Transaction m a -> m a
+run store transaction = do
+  (res, changes) <- (`runStateT` mempty) . (`runReaderT` Askable store) . unTransaction $ transaction
+  storeAtomicWrite store $ Map.toList changes
+  return res
 
 -- | Run the given transaction in a new "scratch" space forked from
 -- the current transaction. It's
@@ -83,7 +92,7 @@ forkScratch :: MonadA m => Transaction m a -> Transaction m a
 forkScratch discardableTrans = do
   store <- getStore
   changes <- liftChanges get
-  liftInner . (`evalStateT` changes) . (`runReaderT` store) $ unTransaction discardableTrans
+  liftInner . (`evalStateT` changes) . (`runReaderT` Askable store) $ unTransaction discardableTrans
 
 isEmpty :: MonadA m => Transaction m Bool
 isEmpty = liftChanges (gets Map.null)
@@ -142,12 +151,6 @@ irefExists = guidExists . IRef.guid
 writeIRef :: (MonadA m, Binary a) => IRef (Tag m) a -> a -> Transaction m ()
 writeIRef = writeGuid . IRef.guid
 
-fromIRef :: (MonadA m, Binary a) => IRef (Tag m) a -> Transaction m (Property m a)
-fromIRef iref = fmap (flip Property.Property (writeIRef iref)) $ readIRef iref
-
-fromIRefDef :: (MonadA m, Binary a) => IRef (Tag m) a -> a -> Transaction m (Property m a)
-fromIRefDef iref def = fmap (flip Property.Property (writeIRef iref)) $ readIRefDef def iref
-
 newKey :: MonadA m => Transaction m Key
 newKey = liftInner . storeNewKey =<< getStore
 
@@ -167,6 +170,16 @@ newIRefWithGuid f = do
   writeIRef iref val
   return (iref, extra)
 
+---------- Properties:
+
+type Property m = Property.Property (Transaction m)
+
+fromIRef :: (MonadA m, Binary a) => IRef (Tag m) a -> Transaction m (Property m a)
+fromIRef iref = fmap (flip Property.Property (writeIRef iref)) $ readIRef iref
+
+fromIRefDef :: (MonadA m, Binary a) => IRef (Tag m) a -> a -> Transaction m (Property m a)
+fromIRefDef iref def = fmap (flip Property.Property (writeIRef iref)) $ readIRefDef def iref
+
 -- Dereference the *current* value of the IRef (Will not track new
 -- values of IRef, by-value and not by-name)
 followBy :: (MonadA m, Binary a) =>
@@ -180,12 +193,6 @@ anchorRef = fromIRef . IRef.anchor
 
 anchorRefDef :: (MonadA m, Binary a) => String -> a -> Transaction m (Property m a)
 anchorRefDef name def = flip fromIRefDef def $ IRef.anchor name
-
-run :: MonadA m => Store m -> Transaction m a -> m a
-run store transaction = do
-  (res, changes) <- (`runStateT` mempty) . (`runReaderT` store) . unTransaction $ transaction
-  storeAtomicWrite store $ Map.toList changes
-  return res
 
 newtype MkProperty m a = MkProperty { _mkProperty :: Transaction m (Property m a) }
 Lens.makeLenses ''MkProperty
