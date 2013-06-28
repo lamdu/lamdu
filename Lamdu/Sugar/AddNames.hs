@@ -439,11 +439,11 @@ toDefinitionBody ::
 toDefinitionBody (DefinitionBodyBuiltin bi) =
   DefinitionBodyBuiltin <$> traverse toExpression bi
 toDefinitionBody
-  (DefinitionBodyExpression (DefinitionExpression content typeInfo)) =
+  (DefinitionBodyExpression (DefinitionExpression typeInfo content)) =
     DefinitionBodyExpression <$>
     (DefinitionExpression <$>
-     toDefinitionContent content <*>
-     traverse toExpression typeInfo)
+     traverse toExpression typeInfo <*>
+     toDefinitionContent content)
 
 toDef ::
   (MonadA tm, MonadNaming m) =>

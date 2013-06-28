@@ -405,8 +405,8 @@ data DefinitionTypeInfo m expr
   deriving (Functor, Foldable, Traversable)
 
 data DefinitionExpression name m expr = DefinitionExpression
-  { _deContent :: DefinitionContent name m expr
-  , _deTypeInfo :: DefinitionTypeInfo m expr
+  { _deTypeInfo :: DefinitionTypeInfo m expr
+  , _deContent :: DefinitionContent name m expr
   } deriving (Functor, Foldable, Traversable)
 
 data DefinitionBuiltin m expr = DefinitionBuiltin
