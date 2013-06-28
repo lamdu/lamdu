@@ -188,7 +188,7 @@ infixl 3 $$:
     handleLam e k seeHole seeOther =
       case e ^. Expr.eBody of
       Expr.BodyLeaf Expr.Hole -> seeHole
-      Expr.BodyLam (Expr.Lambda k1 paramGuid _ result)
+      Expr.BodyLam (Expr.Lam k1 paramGuid _ result)
         | k == k1 -> ExprUtil.substGetPar paramGuid (nextArg ^. iVal) result
       _ -> seeOther
     applyVal =

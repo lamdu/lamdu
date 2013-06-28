@@ -35,10 +35,10 @@ liftGen = lift . lift
 next :: GenExpr def Guid
 next = lift $ State.gets head <* State.modify tail
 
-arbitraryLambda :: Arbitrary a => GenExpr def (Expr.Lambda (Expr.Expression def a))
+arbitraryLambda :: Arbitrary a => GenExpr def (Expr.Lam (Expr.Expression def a))
 arbitraryLambda = do
   guid <- next
-  flip Expr.Lambda guid <$> liftGen arbitrary <*> arbitraryExpr <*>
+  flip Expr.Lam guid <$> liftGen arbitrary <*> arbitraryExpr <*>
     Reader.local (envScope %~ (guid :)) arbitraryExpr
 
 arbitraryApply :: Arbitrary a => GenExpr def (Expr.Apply (Expr.Expression def a))

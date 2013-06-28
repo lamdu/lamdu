@@ -116,9 +116,9 @@ applyFunc = ExprLens.exprApply . Expr.applyFunc
 applyArg :: Lens.Traversal' (Expression def a) (Expression def a)
 applyArg = ExprLens.exprApply . Expr.applyArg
 lamParamType :: Lens.Traversal' (Expression def a) (Expression def a)
-lamParamType = ExprLens.exprLam . Expr.lambdaParamType
+lamParamType = ExprLens.exprLam . Expr.lamParamType
 lamBody :: Lens.Traversal' (Expression def a) (Expression def a)
-lamBody = ExprLens.exprLam . Expr.lambdaResult
+lamBody = ExprLens.exprLam . Expr.lamResult
 
 defaultTestOptions = mempty { topt_timeout = Just (Just 100000) }
 
