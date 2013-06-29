@@ -60,7 +60,7 @@ type AccessedVars = [Guid]
 
 data Output m = Output
   { oAccessedVars :: AccessedVars
-  , oHolePickers :: [Sugar.PrefixAction m]
+  , oHolePickers :: [T m ()]
   , oTopLevelEventMap :: Widget.EventHandlers (T m)
   }
 derive makeMonoid ''Output

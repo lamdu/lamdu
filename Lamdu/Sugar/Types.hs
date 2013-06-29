@@ -54,14 +54,12 @@ module Lamdu.Sugar.Types
     , holeResultInferred
     , holeResultConverted
     , holeResultPick, holeResultPickWrapped
-    , holeResultPickPrefix
     , holeResultHasHoles
   , PickedResult(..), prMJumpTo, prIdTranslation
   , LiteralInteger(..)
   , TagG(..), tagName, tagGuid
   , Inferred(..), iValue, iMAccept, iHole
   , Collapsed(..), cFuncGuid, cCompact, cFullExpression, cFullExprHasInfo
-  , PrefixAction, emptyPrefixAction
   , MStorePoint, ExprStorePoint
   ) where
 
@@ -83,11 +81,6 @@ import qualified Lamdu.Sugar.Types.Internal as TypesInternal
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
-
-type PrefixAction m = T m ()
-
-emptyPrefixAction :: Monad m => PrefixAction m
-emptyPrefixAction = return ()
 
 data WrapAction m = AlreadyWrapped Guid | WrapAction (T m Guid)
 
@@ -180,7 +173,6 @@ data HoleResult name m a = HoleResult
   , _holeResultConverted :: Expression name m a
   , _holeResultPick :: T m PickedResult
   , _holeResultPickWrapped :: T m PickedResult
-  , _holeResultPickPrefix :: PrefixAction m
   , _holeResultHasHoles :: Bool
   }
 

@@ -8,7 +8,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
 
 import Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 import Control.Lens.Operators
-import Control.Monad (msum, when)
+import Control.Monad (msum, when, void)
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
 import Data.Maybe (isJust, listToMaybe, maybeToList, fromMaybe)
@@ -356,7 +356,7 @@ makeActiveHoleEdit size pl holeInfo = do
         & Lens.mapped . ExpressionGui.egWidget %~ Widget.strongerEvents searchTermEventMap
       case mResult of
         Nothing -> return ()
-        Just res -> ExprGuiM.addResultPicker $ res ^. Sugar.holeResultPickPrefix
+        Just res -> ExprGuiM.addResultPicker . void $ res ^. Sugar.holeResultPick
       let
         adHocEditor = adHocTextEditEventMap $ searchTermProperty holeInfo
         holeEventMap = mkEventMap holeInfo (isJust mSelectedResult) mResult

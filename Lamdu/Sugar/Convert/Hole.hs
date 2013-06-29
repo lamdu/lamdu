@@ -485,7 +485,6 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed = do
           { _holeResultInferred = fst <$> forkedInferredExpr
           , _holeResultConverted = forkedConverted
           , _holeResultPick = pick
-          , _holeResultPickPrefix = void pick
           , _holeResultPickWrapped =
             unfork *> pickWrapped iref mkTranslations (snd <$> forkedInferredExpr)
           , _holeResultHasHoles =
