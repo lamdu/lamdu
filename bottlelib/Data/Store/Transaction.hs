@@ -3,6 +3,7 @@
 module Data.Store.Transaction
   ( Transaction, run
   , Store(..), onStoreM
+  , Changes, fork, merge
   , forkScratch
   , lookupBS, lookup
   , insertBS, insert
@@ -26,7 +27,7 @@ import Control.Applicative (Applicative)
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.State (StateT, runStateT, evalStateT)
+import Control.Monad.Trans.State (StateT, runStateT)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Binary.Utils (encodeS, decodeS)
@@ -39,13 +40,14 @@ import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Change (Key, Value)
 import Prelude hiding (lookup)
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 
-type Changes = Map Key (Maybe Value)
+type ChangesMap = Map Key (Maybe Value)
 
 -- 't' is a phantom-type tag meant to make sure you run Transactions
 -- with the right store
@@ -62,56 +64,82 @@ onStoreM f x = x
   , storeAtomicWrite = f . storeAtomicWrite x
   }
 
-newtype Askable m = Askable
+data Askable m = Askable
   { _aStore :: Store m
+  , _aBase :: ChangesMap
   }
 Lens.makeLenses ''Askable
 
 -- Define transformer stack:
-newtype Transaction m a = Transaction
-  { unTransaction :: ReaderT (Askable m) (StateT Changes m) a
-  } deriving (Monad, Applicative, Functor)
-liftAskable :: ReaderT (Askable m) (StateT Changes m) a -> Transaction m a
+newtype Transaction m a =
+  Transaction (ReaderT (Askable m) (StateT ChangesMap m) a)
+  deriving (Monad, Applicative, Functor)
+liftAskable :: ReaderT (Askable m) (StateT ChangesMap m) a -> Transaction m a
 liftAskable = Transaction
-liftChanges :: MonadA m => StateT Changes m a -> Transaction m a
-liftChanges = liftAskable . lift
+liftChangesMap :: MonadA m => StateT ChangesMap m a -> Transaction m a
+liftChangesMap = liftAskable . lift
 liftInner :: MonadA m => m a -> Transaction m a
 liftInner = Transaction . lift . lift
 
 getStore :: Monad m => Transaction m (Store m)
 getStore = liftAskable $ Lens.view aStore
 
+getBase :: Monad m => Transaction m ChangesMap
+getBase = liftAskable $ Lens.view aBase
+
 run :: MonadA m => Store m -> Transaction m a -> m a
-run store transaction = do
-  (res, changes) <- (`runStateT` mempty) . (`runReaderT` Askable store) . unTransaction $ transaction
+run store (Transaction transaction) = do
+  (res, changes) <-
+    transaction
+    & (`runReaderT` Askable store mempty)
+    & (`runStateT` mempty)
   storeAtomicWrite store $ Map.toList changes
   return res
 
 -- | Run the given transaction in a new "scratch" space forked from
--- the current transaction. It's
+-- the current transaction.
 forkScratch :: MonadA m => Transaction m a -> Transaction m a
-forkScratch discardableTrans = do
-  store <- getStore
-  changes <- liftChanges State.get
-  liftInner . (`evalStateT` changes) . (`runReaderT` Askable store) $ unTransaction discardableTrans
+forkScratch = fmap fst . fork
+
+newtype Changes = Changes ChangesMap
+
+-- | Fork the given transaction into its own space.  Unless the
+-- transaction is later "merged" into the main transaction, its
+-- changes will not be committed anywhere.
+fork :: MonadA m => Transaction m a -> Transaction m (a, Changes)
+fork (Transaction discardableTrans) = do
+  changes <- liftChangesMap State.get
+  -- Map.union is left-biased, so changes correctly override base:
+  askable <- liftAskable Reader.ask <&> aBase %~ Map.union changes
+  discardableTrans
+    & (`runReaderT` askable)
+    & (`runStateT` mempty)
+    & liftInner
+    <&> Lens._2 %~ Changes
+
+merge :: MonadA m => Changes -> Transaction m ()
+merge (Changes changes) =
+  liftChangesMap . State.modify $ Map.union changes
 
 isEmpty :: MonadA m => Transaction m Bool
-isEmpty = liftChanges (State.gets Map.null)
+isEmpty = liftChangesMap (State.gets Map.null)
 
 lookupBS :: MonadA m => Guid -> Transaction m (Maybe Value)
 lookupBS guid = do
-  changes <- liftChanges State.get
-  case Map.lookup guid changes of
+  base <- getBase
+  changes <- liftChangesMap State.get
+  -- Map.union is left-biased, so changes correctly override base:
+  case Map.lookup guid (changes `Map.union` base) of
     Nothing -> do
       store <- getStore
       liftInner $ storeLookup store guid
     Just res -> return res
 
 insertBS :: MonadA m => Guid -> ByteString -> Transaction m ()
-insertBS key = liftChanges . State.modify . Map.insert key . Just
+insertBS key = liftChangesMap . State.modify . Map.insert key . Just
 
 delete :: MonadA m => Guid -> Transaction m ()
-delete key = liftChanges . State.modify . Map.insert key $ Nothing
+delete key = liftChangesMap . State.modify . Map.insert key $ Nothing
 
 lookup :: (MonadA m, Binary a) => Guid -> Transaction m (Maybe a)
 lookup = (fmap . fmap) decodeS . lookupBS
