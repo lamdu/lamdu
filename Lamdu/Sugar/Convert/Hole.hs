@@ -413,87 +413,105 @@ seedExprEnv emptyPl cp (ResultSeedNewDefinition name) = do
     , Just jumpToDef
     )
 
+cachedFork :: MonadA m => CT m a -> CT m (a, Transaction.Changes)
+cachedFork =
+  mapStateT fork
+  where
+    fork ctTrans = do
+      ((res, newCache), changes) <- Transaction.fork ctTrans
+      return ((res, changes), newCache)
+
+pickWrapped ::
+  MonadA m =>
+  ExprIRef.ExpressionIM m ->
+  (ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m) ->
+   [(Guid, Guid)]) ->
+  ExprIRef.ExpressionM m (MStorePoint m b) ->
+  T m PickedResult
+pickWrapped iref mkTranslations exprStorePoint = do
+  written <- writeExprMStored iref $ flip (,) () <$> wrapExpr (fst <$> exprStorePoint)
+  pure
+    PickedResult
+    { _prMJumpTo = Just . ExprIRef.exprGuid $ written ^. Expr.ePayload . Lens._1
+    , _prIdTranslation = mkTranslations $ fst <$> unwrapExpr written
+    }
+  where
+    (wrapExpr, unwrapExpr)
+      | -- Don't rewrap already hole-wrapped results.
+        Lens.has (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole)
+        exprStorePoint =
+          (id, id)
+      | otherwise =
+          ( holeWrap
+          , unsafeUnjust "We just hole-wrapped, and now there's no hole-wrap?!" .
+            (^? ExprLens.exprApply . Expr.applyArg)
+          )
+
 makeHoleResult ::
   (Typeable1 m, MonadA m, Cache.Key a, Binary a, Monoid a) =>
   SugarM.Context m ->
   SugarInfer.Payload (InferredWC (Tag m)) (Stored m) () ->
   HoleResultSeed m (MStorePoint m a) ->
   CT m (Maybe (HoleResult MStoredName m a))
-makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
-  mapStateT Transaction.forkScratch $ do
-    (fakeSeedExpr, fakeMInferredExprCtx, _fakeMJumpTo) <-
-      makeInferredExpr
-    traverse (mkHoleResult fakeSeedExpr) fakeMInferredExprCtx
+makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed = do
+  ((mResult, forkedJumpTo), forkChanges) <- cachedFork $ do
+    (forkedSeedExpr, forkedMJumpTo) <-
+      lift $ seedExprEnv (Nothing, mempty) cp seed
+    forkedMInferredExprCtx <-
+      SugarM.memoLoadInferInHoleContext sugarContext forkedSeedExpr holePoint
+    res <- traverse (doSugarConversion forkedSeedExpr) forkedMInferredExprCtx
+    return (res, forkedMJumpTo)
+  traverse (mkResult forkedJumpTo (Transaction.merge forkChanges)) mResult
   where
     iref = Property.value stored
     gen = genFromHashable (guid, seedHashable seed)
     cp = sugarContext ^. SugarM.scCodeAnchors
-    mkSeedExprEnv = seedExprEnv (Nothing, mempty) cp seed
-    makeInferredExpr = do
-      (seedExpr, mJumpTo) <- lift mkSeedExprEnv
-      mInferredExpr <- SugarM.memoLoadInferInHoleContext sugarContext seedExpr holePoint
-      return (seedExpr, mInferredExpr, mJumpTo)
     holePoint = Infer.iNode $ iwcInferred iwc
-    mkHoleResult fakeSeedExpr (fakeInferredResult, fakeCtx) = do
+    doSugarConversion forkedSeedExpr (forkedInferredExpr, forkedCtx) = do
       let
         newContext =
           sugarContext
-          & SugarM.scHoleInferState .~ fakeCtx
-          & SugarM.scHoleInferStateKey %~ \key -> Cache.bsOfKey (fakeSeedExpr, key)
-        expr = prepareExprToSugar gen fakeInferredResult
-        mkTranslations = idTranslations expr
-      fakeConverted <- convertHoleResult newContext expr
-      pure HoleResult
-        { _holeResultInferred = fst <$> fakeInferredResult
-        , _holeResultConverted = fakeConverted
-        , _holeResultPick = pick mkTranslations
-        , _holeResultPickPrefix = void $ pick mkTranslations
-        , _holeResultPickWrapped = do
-            (seedExpr, _mJumpTo) <- mkSeedExprEnv
-            written <-
-              writeExprMStored iref $
-              flip (,) () <$> holeWrap (fst <$> seedExpr)
-            pure
-              PickedResult
-              { _prMJumpTo = Just . ExprIRef.exprGuid $ written ^. Expr.ePayload . Lens._1
-              , _prIdTranslation =
-                mkTranslations $ fst <$>
-                if Lens.has (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole) seedExpr
-                then
-                  -- Original expr is hole-wrapped so it corresponds to written,
-                  -- which doesn't double hole-wrap.
-                  written
-                else
-                  unsafeUnjust "We just hole-wrapped, and now there's no hole-wrap?!"
-                  (written ^? ExprLens.exprApply . Expr.applyArg)
-              }
-        , _holeResultHasHoles =
-          not . null . uninferredHoles $ (,) () . fst <$> fakeInferredResult
-        }
-    pick mkTranslations = do
-      (_seedExpr, mFinalExprCtx, mJumpTo) <- Cache.unmemoS makeInferredExpr
-      let
-        (finalExpr, _ctx) =
-          -- TODO: Makes no sense here anymore, move deeper inside
-          -- makeInferredExpr:
-          unsafeUnjust
-          ("Arbitrary fake tag successfully inferred as hole result, " ++
-           "but real new tag failed!")
-          mFinalExprCtx
-      (mPickGuid, written) <- pickResult iref $ (Lens._2 %~ fst) <$> finalExpr
-      mJumpGuid <- sequenceA mJumpTo
-      pure
-        PickedResult
-        { _prMJumpTo = mJumpGuid `mplus` mPickGuid
-        , _prIdTranslation = mkTranslations written
-        }
+          & SugarM.scHoleInferState .~ forkedCtx
+          & SugarM.scHoleInferStateKey %~ \key -> Cache.bsOfKey (forkedSeedExpr, key)
+        expr = prepareExprToSugar gen forkedInferredExpr
+      forkedConverted <- convertHoleResult newContext expr
+      return (forkedInferredExpr, forkedConverted, idTranslations expr)
+    mkResult
+      forkedMJumpTo unfork
+      (forkedInferredExpr, forkedConverted, mkTranslations)
+      = do
+        let pick = unfork *> pickAndJump iref mkTranslations forkedInferredExpr forkedMJumpTo
+        pure HoleResult
+          { _holeResultInferred = fst <$> forkedInferredExpr
+          , _holeResultConverted = forkedConverted
+          , _holeResultPick = pick
+          , _holeResultPickPrefix = void pick
+          , _holeResultPickWrapped =
+            unfork *> pickWrapped iref mkTranslations (snd <$> forkedInferredExpr)
+          , _holeResultHasHoles =
+            not . null . uninferredHoles $ (,) () . fst <$> forkedInferredExpr
+          }
+
+pickAndJump ::
+  MonadA m =>
+  ExprIRef.ExpressionIM m ->
+  (ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m) ->
+   [(Guid, Guid)]) ->
+  ExprIRef.ExpressionM m (Infer.Inferred (DefM m), MStorePoint m b) ->
+  Maybe (T m Guid) ->
+  T m PickedResult
+pickAndJump iref mkTranslations inferredExpr mJumpTo = do
+  (mPickGuid, written) <- inferredExpr <&> Lens._2 %~ fst & pickResult iref
+  mJumpGuid <- sequenceA mJumpTo
+  pure
+    PickedResult
+    { _prMJumpTo = mJumpGuid `mplus` mPickGuid
+    , _prIdTranslation = mkTranslations written
+    }
 
 holeWrap :: Expr.Expression def (Maybe a) -> Expr.Expression def (Maybe a)
-holeWrap expr
-  | Lens.has (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole) expr =
-    -- Don't rewrap already hole-wrapped results.
-    expr
-  | otherwise = Expr.Expression (ExprUtil.makeApply hole expr) Nothing
+holeWrap expr =
+  Expr.Expression (ExprUtil.makeApply hole expr) Nothing
   where
     hole = Expr.Expression (ExprLens.bodyHole # ()) Nothing
 
