@@ -455,41 +455,41 @@ makeHoleResult ::
   HoleResultSeed m (MStorePoint m a) ->
   CT m (Maybe (HoleResult MStoredName m a))
 makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed = do
-  ((mResult, forkedJumpTo), forkChanges) <- cachedFork $ do
-    (forkedSeedExpr, forkedMJumpTo) <-
+  ((mResult, fJumpTo), forkChanges) <- cachedFork $ do
+    (fSeedExpr, fMJumpTo) <-
       lift $ seedExprEnv (Nothing, mempty) cp seed
-    forkedMInferredExprCtx <-
-      SugarM.memoLoadInferInHoleContext sugarContext forkedSeedExpr holePoint
-    res <- traverse (doSugarConversion forkedSeedExpr) forkedMInferredExprCtx
-    return (res, forkedMJumpTo)
-  traverse (mkResult forkedJumpTo (Transaction.merge forkChanges)) mResult
+    fMInferredExprCtx <-
+      SugarM.memoLoadInferInHoleContext sugarContext fSeedExpr holePoint
+    res <- traverse (doSugarConversion fSeedExpr) fMInferredExprCtx
+    return (res, fMJumpTo)
+  traverse (mkResult fJumpTo (Transaction.merge forkChanges)) mResult
   where
     iref = Property.value stored
     gen = genFromHashable (guid, seedHashable seed)
     cp = sugarContext ^. SugarM.scCodeAnchors
     holePoint = Infer.iNode $ iwcInferred iwc
-    doSugarConversion forkedSeedExpr (forkedInferredExpr, forkedCtx) = do
+    doSugarConversion fSeedExpr (fInferredExpr, fCtx) = do
       let
         newContext =
           sugarContext
-          & SugarM.scHoleInferState .~ forkedCtx
-          & SugarM.scHoleInferStateKey %~ \key -> Cache.bsOfKey (forkedSeedExpr, key)
-        expr = prepareExprToSugar gen forkedInferredExpr
-      forkedConverted <- convertHoleResult newContext expr
-      return (forkedInferredExpr, forkedConverted, idTranslations expr)
+          & SugarM.scHoleInferState .~ fCtx
+          & SugarM.scHoleInferStateKey %~ \key -> Cache.bsOfKey (fSeedExpr, key)
+        expr = prepareExprToSugar gen fInferredExpr
+      fConverted <- convertHoleResult newContext expr
+      return (fInferredExpr, fConverted, idTranslations expr)
     mkResult
-      forkedMJumpTo unfork
-      (forkedInferredExpr, forkedConverted, mkTranslations)
+      fMJumpTo unfork
+      (fInferredExpr, fConverted, mkTranslations)
       = do
-        let pick = unfork *> pickAndJump iref mkTranslations forkedInferredExpr forkedMJumpTo
+        let pick = unfork *> pickAndJump iref mkTranslations fInferredExpr fMJumpTo
         pure HoleResult
-          { _holeResultInferred = fst <$> forkedInferredExpr
-          , _holeResultConverted = forkedConverted
+          { _holeResultInferred = fst <$> fInferredExpr
+          , _holeResultConverted = fConverted
           , _holeResultPick = pick
           , _holeResultPickWrapped =
-            unfork *> pickWrapped iref mkTranslations (snd <$> forkedInferredExpr)
+            unfork *> pickWrapped iref mkTranslations (snd <$> fInferredExpr)
           , _holeResultHasHoles =
-            not . null . uninferredHoles $ (,) () . fst <$> forkedInferredExpr
+            not . null . uninferredHoles $ (,) () . fst <$> fInferredExpr
           }
 
 pickAndJump ::
