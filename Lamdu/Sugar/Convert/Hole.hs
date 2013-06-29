@@ -148,11 +148,13 @@ combineLamGuids (Expr.Expression body guid) =
      (combineLamGuids result))
   _ -> combineLamGuids <$> body
 
-idTranslations ::
-  Eq def =>
-  Expr.Expression def (SugarInfer.Payload inferred stored a) ->
-  Expr.Expression def (ExprIRef.ExpressionI t) ->
+type IdTranslations m =
+  ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m) ->
   [(Guid, Guid)]
+
+idTranslations ::
+  ExprIRef.ExpressionM m (SugarInfer.Payload inferred stored a) ->
+  IdTranslations m
 idTranslations seedExpr writtenExpr =
   execWriter . runApplicativeMonoid . getConst $
   go
@@ -424,8 +426,7 @@ cachedFork =
 pickWrapped ::
   MonadA m =>
   ExprIRef.ExpressionIM m ->
-  (ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m) ->
-   [(Guid, Guid)]) ->
+  IdTranslations m ->
   ExprIRef.ExpressionM m (MStorePoint m b) ->
   T m PickedResult
 pickWrapped iref mkTranslations exprStorePoint = do
@@ -494,8 +495,7 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed = do
 pickAndJump ::
   MonadA m =>
   ExprIRef.ExpressionIM m ->
-  (ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m) ->
-   [(Guid, Guid)]) ->
+  IdTranslations m ->
   ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), MStorePoint m b) ->
   Maybe (T m Guid) ->
   T m PickedResult
