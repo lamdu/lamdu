@@ -11,15 +11,16 @@ module Lamdu.Data.Expression.IRef
   , writeExpressionWithStoredSubexpressions
   , DefI, DefIM
   , variableRefGuid
+  , addProperties
   ) where
 
 import Control.Applicative ((<$>), pure)
-import Control.Lens ((^.))
+import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef, Tag)
-import Data.Store.Property (Property)
+import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable)
@@ -142,3 +143,18 @@ newExpressionFromH expr =
 variableRefGuid :: Expr.VariableRef (DefI t) -> Guid
 variableRefGuid (Expr.ParameterRef i) = i
 variableRefGuid (Expr.DefinitionRef i) = IRef.guid i
+
+addProperties ::
+  MonadA m =>
+  (ExpressionIM m -> T m ()) ->
+  ExpressionM m (ExpressionIM m, a) ->
+  ExpressionM m (ExpressionProperty m, a)
+addProperties setIRef (Expr.Expression body (iref, a)) =
+  Expr.Expression (body & Lens.traversed %@~ f) (Property iref setIRef, a)
+  where
+    f index =
+      addProperties $ \newIRef ->
+      body
+      <&> (^. Expr.ePayload . Lens._1) -- convert to body of IRefs
+      & Lens.element index .~ newIRef
+      & writeExprBody iref
