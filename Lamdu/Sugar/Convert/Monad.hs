@@ -22,7 +22,7 @@ import Data.Monoid (Monoid)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable1)
-import Lamdu.Data.Expression.IRef (DefM)
+import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Sugar.Convert.Infer (ExprMM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types.Internal
@@ -47,8 +47,8 @@ data RecordParamsInfo m = RecordParamsInfo
 
 data Context m = Context
   { _scHoleInferStateKey :: Cache.KeyBS
-  , _scHoleInferState :: Infer.Context (DefM m)
-  , _scStructureInferState :: Infer.Context (DefM m)
+  , _scHoleInferState :: Infer.Context (DefIM m)
+  , _scStructureInferState :: Infer.Context (DefIM m)
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
   , _scTagParamInfos :: Map Guid TagParamInfo -- tag guids
@@ -91,11 +91,11 @@ memoLoadInferInHoleContext ::
   (MonadA m, Typeable1 m, Cache.Key a, Binary a) =>
   Context m ->
   ExprIRef.ExpressionM m a ->
-  Infer.InferNode (DefM m) ->
+  Infer.InferNode (DefIM m) ->
   CT m
   ( Maybe
-    ( ExprIRef.ExpressionM m (Infer.Inferred (DefM m), a)
-    , Infer.Context (DefM m)
+    ( ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), a)
+    , Infer.Context (DefIM m)
     )
   )
 memoLoadInferInHoleContext ctx expr point =

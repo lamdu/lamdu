@@ -21,7 +21,7 @@ import Data.Store.IRef (Tag)
 import Data.Traversable (sequenceA, traverse)
 import Data.Tuple (swap)
 import Data.Typeable (Typeable1)
-import Lamdu.Data.Expression.IRef (DefM)
+import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), iwcInferred, iwcInferredValues)
 import Lamdu.Sugar.Convert.Infer (InferredWC, Stored)
 import Lamdu.Sugar.Convert.Monad (SugarM)
@@ -115,7 +115,7 @@ convertTypeCheckedHoleH exprPl =
 accept ::
   (MonadA m, Typeable1 m) =>
   SugarM.Context m ->
-  Infer.InferNode (DefM m) ->
+  Infer.InferNode (DefIM m) ->
   ExprIRef.ExpressionIM m ->
   T m (Maybe Guid, ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m))
 accept sugarContext point iref = do
@@ -292,7 +292,7 @@ chooseHoleType inferredVals plain inferred =
 inferOnTheSide ::
   (MonadA m, Typeable1 m) =>
   SugarM.Context m ->
-  Infer.Scope (DefM m) ->
+  Infer.Scope (DefIM m) ->
   ExprIRef.ExpressionM m () ->
   CT m (Maybe (ExprIRef.ExpressionM m ()))
 -- token represents the given holeInferContext
@@ -365,7 +365,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
           )
         ] }
 
-getGlobal :: MonadA m => DefM m -> T m (Scope MStoredName m)
+getGlobal :: MonadA m => DefIM m -> T m (Scope MStoredName m)
 getGlobal defI = do
   name <- SugarExpr.getStoredName guid
   pure mempty
@@ -496,7 +496,7 @@ pickAndJump ::
   ExprIRef.ExpressionIM m ->
   (ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m) ->
    [(Guid, Guid)]) ->
-  ExprIRef.ExpressionM m (Infer.Inferred (DefM m), MStorePoint m b) ->
+  ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), MStorePoint m b) ->
   Maybe (T m Guid) ->
   T m PickedResult
 pickAndJump iref mkTranslations inferredExpr mJumpTo = do
@@ -552,7 +552,7 @@ seedHashable (ResultSeedNewDefinition _) = "NewDefinition"
 pickResult ::
   MonadA m =>
   ExprIRef.ExpressionIM m ->
-  ExprIRef.ExpressionM m (Infer.Inferred (DefM m), Maybe (StorePoint (Tag m))) ->
+  ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), Maybe (StorePoint (Tag m))) ->
   T m (Maybe Guid, ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m))
 pickResult exprIRef expr = do
   writtenExpr <- writeExprMStored exprIRef $ swap <$> expr

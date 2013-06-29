@@ -48,7 +48,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Typeable (Typeable, Typeable1)
-import Lamdu.Data.Expression.IRef (DefI, DefM)
+import Lamdu.Data.Expression.IRef (DefI, DefIM)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
@@ -97,16 +97,16 @@ mkExprPure g =
   where
     f a guid = Payload guid Nothing Nothing a
 
-loader :: MonadA m => Infer.Loader (DefM m) (T m)
+loader :: MonadA m => Infer.Loader (DefIM m) (T m)
 loader =
   Infer.Loader
   (fmap void . ExprIRef.readExpression . (^. Definition.defType) <=<
    Transaction.readIRef)
 
 load ::
-  MonadA m => Maybe (DefM m) ->
+  MonadA m => Maybe (DefIM m) ->
   ExprIRef.ExpressionM m a ->
-  T m (Infer.Loaded (DefM m) a)
+  T m (Infer.Loaded (DefIM m) a)
 load = Infer.load loader
 
 pureMemoBy ::
@@ -123,15 +123,15 @@ pureMemoBy k val = Cache.memoS (const (return val)) k
 -- wasteful. Therefore, the caller is in charge of giving us a unique
 -- identifier for the inferState that is preferably small.
 memoLoadInfer ::
-  (MonadA m, Typeable1 m, Cache.Key a, Binary a) => Maybe (DefM m) ->
+  (MonadA m, Typeable1 m, Cache.Key a, Binary a) => Maybe (DefIM m) ->
   ExprIRef.ExpressionM m a -> Cache.KeyBS ->
-  ( Infer.Context (DefM m)
-  , Infer.InferNode (DefM m)
+  ( Infer.Context (DefIM m)
+  , Infer.InferNode (DefIM m)
   ) ->
   CT m
   ( Maybe
-    ( ExprIRef.ExpressionM m (Infer.Inferred (DefM m), a)
-    , Infer.Context (DefM m)
+    ( ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), a)
+    , Infer.Context (DefIM m)
     )
   )
 memoLoadInfer mDefI expr inferStateKey (inferState, point) = do
@@ -143,15 +143,15 @@ memoLoadInfer mDefI expr inferStateKey (inferState, point) = do
 
 inferWithVariables ::
   (RandomGen g, MonadA m) => g ->
-  Infer.Loaded (DefM m) a -> Infer.Context (DefM m) -> Infer.InferNode (DefM m) ->
+  Infer.Loaded (DefIM m) a -> Infer.Context (DefIM m) -> Infer.InferNode (DefIM m) ->
   T m
-  ( ( Infer.Context (DefM m)
-    , ExprIRef.ExpressionM m (InferredWithConflicts (DefM m), a)
+  ( ( Infer.Context (DefIM m)
+    , ExprIRef.ExpressionM m (InferredWithConflicts (DefIM m), a)
     )
   , Maybe
-    ( Infer.Context (DefM m)
-    , Infer.Context (DefM m)
-    , ExprIRef.ExpressionM m (InferredWithConflicts (DefM m), ImplicitVariables.Payload a)
+    ( Infer.Context (DefIM m)
+    , Infer.Context (DefIM m)
+    , ExprIRef.ExpressionM m (InferredWithConflicts (DefIM m), ImplicitVariables.Payload a)
     )
   )
 inferWithVariables gen loaded baseInferContext node =
@@ -182,11 +182,11 @@ inferWithVariables gen loaded baseInferContext node =
 
 data InferredWithImplicits m a = InferredWithImplicits
   { _iwiSuccess :: Bool
-  , _iwiInferContext :: Infer.Context (DefM m)
-  , _iwiStructureInferContext :: Infer.Context (DefM m)
+  , _iwiInferContext :: Infer.Context (DefIM m)
+  , _iwiStructureInferContext :: Infer.Context (DefIM m)
   , _iwiExpr :: ExprIRef.ExpressionM m (Payload (InferredWC (Tag m)) (Maybe (Stored m)) a)
   -- Prior to adding variables
-  , _iwiBaseInferContext :: Infer.Context (DefM m)
+  , _iwiBaseInferContext :: Infer.Context (DefIM m)
   , _iwiBaseInferContextKey :: Cache.KeyBS
   , _iwiBaseExpr :: ExprIRef.ExpressionM m (Payload (InferredWC (Tag m)) (Stored m) a)
   }
@@ -194,11 +194,11 @@ Lens.makeLenses ''InferredWithImplicits
 
 inferAddImplicits ::
   (RandomGen g, MonadA m, Typeable (m ())) => g ->
-  Maybe (DefM m) ->
+  Maybe (DefIM m) ->
   ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m)) ->
   Cache.KeyBS ->
-  ( Infer.Context (DefM m)
-  , Infer.InferNode (DefM m)
+  ( Infer.Context (DefIM m)
+  , Infer.InferNode (DefIM m)
   ) -> CT m (InferredWithImplicits m ())
 inferAddImplicits gen mDefI lExpr inferContextKey inferState = do
   loaded <- lift $ load mDefI lExpr

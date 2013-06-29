@@ -16,7 +16,7 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.Data.Anchors (PresentationMode(..))
-import Lamdu.Data.Expression.IRef (DefM)
+import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Data.Expression.Infer.Conflicts (iwcInferred)
 import Lamdu.Sugar.Convert.Infer (ExprMM, PayloadMM)
 import Lamdu.Sugar.Convert.Monad (SugarM)
@@ -172,7 +172,7 @@ convertPrefix funcRef funcI argS argI applyPl
 
 typeCheckIdentityAt ::
   (MonadA m, Typeable1 m) =>
-  Infer.InferNode (DefM m) -> SugarM m Bool
+  Infer.InferNode (DefIM m) -> SugarM m Bool
 typeCheckIdentityAt point = do
   sugarContext <- SugarM.readContext
   SugarM.liftCTransaction .

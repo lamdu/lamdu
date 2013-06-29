@@ -17,7 +17,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Data.Expression.IRef (DefM)
+import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
@@ -70,7 +70,7 @@ makeNewDefinitionAction = do
 
 loadConvertDefI ::
   (MonadA m, Typeable1 m) =>
-  Anchors.CodeProps m -> DefM m ->
+  Anchors.CodeProps m -> DefIM m ->
   CT m (Sugar.DefinitionU m ExprGuiM.Payload)
 loadConvertDefI cp defI =
   lift (Load.loadDefinitionClosure defI) >>=

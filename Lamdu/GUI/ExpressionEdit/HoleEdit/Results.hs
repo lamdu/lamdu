@@ -26,7 +26,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.Config (Config)
 import Lamdu.Data.Expression (Expression(..))
-import Lamdu.Data.Expression.IRef (DefM)
+import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..), pureHole)
 import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument)
@@ -54,7 +54,7 @@ data Group def = Group
   { _groupNames :: [String]
   , _groupBaseExpr :: Expression def ()
   }
-type GroupM m = Group (DefM m)
+type GroupM m = Group (DefIM m)
 
 Lens.makeLenses ''Group
 
@@ -116,7 +116,7 @@ makeLiteralGroups searchTerm =
     makeLiteralIntResult integer =
       mkGroup [show integer] $ ExprLens.bodyLiteralInteger # integer
 
-resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefM m)) -> Int
+resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefIM m)) -> Int
 resultComplexityScore = length . Foldable.toList . Infer.iType . (^. Expr.ePayload)
 
 prefixId :: HoleInfo m -> Widget.Id
@@ -200,7 +200,7 @@ baseExprWithApplyForms holeInfo baseExpr =
 
 storePointExpr ::
   Monoid a =>
-  Expr.BodyExpr (DefM m) (Sugar.MStorePoint m a) ->
+  Expr.BodyExpr (DefIM m) (Sugar.MStorePoint m a) ->
   Sugar.ExprStorePoint m a
 storePointExpr = (`Expression` (Nothing, mempty))
 

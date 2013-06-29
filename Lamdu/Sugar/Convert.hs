@@ -18,7 +18,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
-import Lamdu.Data.Expression.IRef (DefM)
+import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..))
 import Lamdu.Sugar.Convert.Infer (Stored)
 import Lamdu.Sugar.Convert.Monad (SugarM, Context(..))
@@ -202,12 +202,12 @@ convertParameterRef parGuid exprPl = do
         }
 
 jumpToDefI ::
-  MonadA m => Anchors.CodeProps m -> DefM m -> T m Guid
+  MonadA m => Anchors.CodeProps m -> DefIM m -> T m Guid
 jumpToDefI cp defI = IRef.guid defI <$ DataOps.newPane cp defI
 
 convertGetVariable ::
   (MonadA m, Typeable1 m) =>
-  Expr.VariableRef (DefM m) ->
+  Expr.VariableRef (DefIM m) ->
   SugarInfer.PayloadMM m a -> SugarM m (ExpressionU m a)
 convertGetVariable varRef exprPl = do
   cp <- (^. SugarM.scCodeAnchors) <$> SugarM.readContext
@@ -438,8 +438,8 @@ mkContext ::
   (MonadA m, Typeable1 m) =>
   Anchors.Code (Transaction.MkProperty m) (Tag m) ->
   Cache.KeyBS ->
-  Infer.Context (DefM m) ->
-  Infer.Context (DefM m) ->
+  Infer.Context (DefIM m) ->
+  Infer.Context (DefIM m) ->
   T m (Context m)
 mkContext cp holeInferStateKey holeInferState structureInferState = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
@@ -859,7 +859,7 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
 
 convertDefIBuiltin ::
   (Typeable1 m, MonadA m) => Anchors.CodeProps m ->
-  Definition.Builtin -> DefM m ->
+  Definition.Builtin -> DefIM m ->
   ExprIRef.ExpressionM m (Stored m) ->
   CT m (DefinitionBody MStoredName m (ExpressionU m [Guid]))
 convertDefIBuiltin cp (Definition.Builtin name) defI defType =
@@ -883,7 +883,7 @@ convertDefIBuiltin cp (Definition.Builtin name) defI defType =
 
 makeTypeInfo ::
   (Typeable1 m, MonadA m, Monoid a) =>
-  Anchors.CodeProps m -> DefM m ->
+  Anchors.CodeProps m -> DefIM m ->
   ExprIRef.ExpressionM m (Stored m, a) ->
   ExprIRef.ExpressionM m a -> Bool ->
   CT m (DefinitionTypeInfo m (ExpressionU m a))
@@ -919,7 +919,7 @@ makeTypeInfo cp defI defType inferredType success = do
 convertDefIExpression ::
   (MonadA m, Typeable1 m) => Anchors.CodeProps m ->
   ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m)) ->
-  DefM m ->
+  DefIM m ->
   ExprIRef.ExpressionM m (Stored m) ->
   CT m (DefinitionBody MStoredName m (ExpressionU m [Guid]))
 convertDefIExpression cp exprLoaded defI defType = do
@@ -961,9 +961,10 @@ convertDefIExpression cp exprLoaded defI defType = do
 
 convertDefI ::
   (MonadA m, Typeable1 m) =>
-  Anchors.CodeProps m -> DefM m ->
+  Anchors.CodeProps m -> DefIM m ->
   -- TODO: Use DefinitionClosure?
-  Definition.Definition (ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m))) ->
+  Definition.Definition
+    (ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m))) ->
   CT m (Definition (Maybe String) m (ExpressionU m [Guid]))
 convertDefI cp defI (Definition.Definition defBody typeLoaded) = do
   bodyS <- convertDefBody defBody $ Load.exprPropertyOfClosure <$> typeLoaded

@@ -47,7 +47,7 @@ fixIRef createOuter = do
   return x
 
 createBuiltins ::
-  MonadA m => Transaction m ((FFI.Env (Tag m), Db.SpecialFunctions (Tag m)), [ExprIRef.DefM m])
+  MonadA m => Transaction m ((FFI.Env (Tag m), Db.SpecialFunctions (Tag m)), [ExprIRef.DefIM m])
 createBuiltins =
   Writer.runWriterT $ do
     list <- mkDefinitionRef $ publicBuiltin "Data.List.List" setToSet
