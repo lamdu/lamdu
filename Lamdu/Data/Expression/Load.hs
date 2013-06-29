@@ -51,7 +51,7 @@ exprPropertyOfClosure (SubexpressionProperty exprI body index) =
   Property (body ^?! lens)
   (ExprIRef.writeExprBody exprI . flip (lens .~) body)
   where
-    lens :: Traversable t => Lens.IndexedTraversal' Int (t a) a
+    lens :: Traversable t => Lens.IndexedTraversal' SubexpressionIndex (t a) a
     lens = Lens.element index
 
 irefOfClosure :: MonadA m => ExprPropertyClosure (Tag m) -> ExprI (Tag m)
@@ -75,8 +75,7 @@ loadExpressionBody visited iref
   where
     ourGuid = ExprIRef.exprGuid iref
     newVisited = Set.insert ourGuid visited
-    onBody body =
-      Lens.itraverseOf (Lens.indexing Lens.traverse) (loadElement body) body
+    onBody body = body & Lens.traversed %%@~ loadElement body
     loadElement body i _ = loadExpressionClosure newVisited $ SubexpressionProperty iref body i
 
 -- TODO: Return DefinitionClosure
