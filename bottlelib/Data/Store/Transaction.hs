@@ -23,7 +23,7 @@ module Data.Store.Transaction
   )
 where
 
-import Control.Applicative (Applicative)
+import Control.Applicative (Applicative, (<|>))
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -128,8 +128,7 @@ lookupBS :: MonadA m => Guid -> Transaction m (Maybe Value)
 lookupBS guid = do
   base <- getBase
   changes <- liftChangesMap State.get
-  -- Map.union is left-biased, so changes correctly override base:
-  case Map.lookup guid (changes `Map.union` base) of
+  case Map.lookup guid changes <|> Map.lookup guid base of
     Nothing -> do
       store <- getStore
       liftInner $ storeLookup store guid
