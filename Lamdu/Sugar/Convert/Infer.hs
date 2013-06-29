@@ -101,7 +101,7 @@ mkExprPure g =
 loader :: MonadA m => Infer.Loader (DefIM m) (T m)
 loader =
   Infer.Loader
-  (fmap void . ExprIRef.readExpression . (^. Definition.defType) <=<
+  (fmap void . ExprIRef.readExpression . (^. Definition.bodyType) <=<
    Transaction.readIRef)
 
 load ::

@@ -74,7 +74,7 @@ loadConvertDefI ::
   CT m (Sugar.DefinitionN m ExprGuiM.Payload)
 loadConvertDefI cp defI =
   lift (Load.loadDefinitionClosure defI) >>=
-  SugarConvert.convertDefI cp defI
+  SugarConvert.convertDefI cp
   <&> AddNames.addToDef
   <&> AddNextHoles.addToDef
   <&> Lens.mapped . Lens.mapped . Lens.mapped %~ mkPayload

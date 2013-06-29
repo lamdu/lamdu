@@ -15,7 +15,6 @@ import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction, setP)
 import Data.Traversable (traverse)
 import Lamdu.Data.Anchors (PresentationMode(..))
-import Lamdu.Data.Definition (Definition(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Store.Guid as Guid
@@ -217,7 +216,7 @@ createBuiltins =
     publicDef name presentationMode ffiPath ffiName mkType = publicize $ do
       typeI <- mkType
       DataOps.newDefinition name presentationMode .
-        (`Definition` typeI) . Definition.BodyBuiltin .
+        (`Definition.Body` typeI) . Definition.ContentBuiltin .
         Definition.Builtin $ Definition.FFIName ffiPath ffiName
     publicBuiltin fullyQualifiedName =
       publicDef name (DataOps.presentationModeOfName name) path name

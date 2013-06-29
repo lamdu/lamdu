@@ -23,11 +23,11 @@ import Data.Store.Property (Property)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable)
-import Lamdu.Data.Definition (Definition)
 import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
@@ -36,7 +36,7 @@ type ExpressionM m = Expression (Tag m)
 
 type T = Transaction
 
-type DefI t = IRef t (Definition (ExpressionI t))
+type DefI t = IRef t (Definition.Body (ExpressionI t))
 type DefIM m = DefI (Tag m)
 
 newtype ExpressionI t = ExpressionI {

@@ -96,7 +96,7 @@ mkPaste exprP = do
       let
         clip =
           case clipDef of
-          Definition.Definition (Definition.BodyExpression defExpr) _ -> defExpr
+          Definition.Body (Definition.ContentExpression defExpr) _ -> defExpr
           _ -> error "Clipboard contained a non-expression definition!"
       Transaction.deleteIRef clipDefI
       ~() <- popClip

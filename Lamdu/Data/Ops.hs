@@ -21,7 +21,6 @@ import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction, getP, setP, modP)
 import Lamdu.CharClassification (operatorChars)
 import Lamdu.Data.Anchors (PresentationMode(..))
-import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefIM)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -158,9 +157,9 @@ presentationModeOfName x
 
 newDefinition ::
   MonadA m => String -> PresentationMode ->
-  Definition (ExprIRef.ExpressionIM m) -> T m (DefIM m)
-newDefinition name presentationMode def = do
-  res <- Transaction.newIRef def
+  Definition.Body (ExprIRef.ExpressionIM m) -> T m (DefIM m)
+newDefinition name presentationMode defBody = do
+  res <- Transaction.newIRef defBody
   let guid = IRef.guid res
   setP (Anchors.assocNameRef guid) name
   setP (Anchors.assocPresentationMode guid) presentationMode
@@ -171,7 +170,7 @@ newPublicDefinition ::
 newPublicDefinition codeProps name = do
   defI <-
     newDefinition name (presentationModeOfName name) =<<
-    (Definition . Definition.BodyExpression <$> newHole <*> newHole)
+    (Definition.Body . Definition.ContentExpression <$> newHole <*> newHole)
   modP (Anchors.globals codeProps) (defI :)
   return defI
 
@@ -181,7 +180,7 @@ newClipboard ::
   T m (DefIM m)
 newClipboard codeProps expr = do
   len <- length <$> getP (Anchors.clipboards codeProps)
-  def <- Definition (Definition.BodyExpression expr) <$> newHole
+  def <- Definition.Body (Definition.ContentExpression expr) <$> newHole
   defI <- newDefinition ("clipboard" ++ show len) OO def
   modP (Anchors.clipboards codeProps) (defI:)
   return defI

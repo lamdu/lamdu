@@ -1,9 +1,10 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable #-}
 module Lamdu.Data.Definition
-  ( Definition(..), defBody, defType
-  , Body(..)
-  , FFIName(..)
+  ( FFIName(..)
   , Builtin(..)
+  , Content(..)
+  , Body(..), bodyContent, bodyType
+  , Definition(..), defBody, defPayload
   ) where
 
 import Data.Binary (Binary(..))
@@ -30,16 +31,23 @@ data Builtin = Builtin
   } deriving (Eq, Ord, Show)
 derive makeBinary ''Builtin
 
-data Body expr
-  = BodyExpression expr
-  | BodyBuiltin Builtin
+data Content expr
+  = ContentExpression expr
+  | ContentBuiltin Builtin
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
-data Definition expr = Definition
-  { _defBody :: Body expr
-  , _defType :: expr
+data Body expr = Body
+  { _bodyContent :: Content expr
+  , _bodyType :: expr
   } deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Typeable)
 
+data Definition expr a = Definition
+  { _defBody :: Body expr
+  , _defPayload :: a
+  }
+
+Lens.makeLenses ''Body
 Lens.makeLenses ''Definition
 derive makeBinary ''Body
+derive makeBinary ''Content
 derive makeBinary ''Definition

@@ -4,6 +4,7 @@ module Lamdu.Data.Expression.Load
   , ExprPropertyClosure, exprPropertyOfClosure
   ) where
 
+import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
@@ -35,18 +36,18 @@ type ExprI = ExprIRef.ExpressionI
 type SubexpressionIndex = Int
 
 data ExprPropertyClosure t
-  = DefinitionTypeProperty (DefI t) (Definition (ExprI t))
-  | DefinitionBodyExpressionProperty (DefI t) (ExprI t) (ExprI t)
+  = DefinitionTypeProperty (DefI t) (Definition.Body (ExprI t))
+  | DefinitionContentExpressionProperty (DefI t) (ExprI t) (ExprI t)
   | SubexpressionProperty (ExprI t) (Expr.Body (DefI t) (ExprI t)) SubexpressionIndex
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''ExprPropertyClosure
 
 exprPropertyOfClosure :: MonadA m => ExprPropertyClosure (Tag m) -> ExprIRef.ExpressionProperty m
-exprPropertyOfClosure (DefinitionTypeProperty defI (Definition defBody defType)) =
-  Property defType (Transaction.writeIRef defI . Definition defBody)
-exprPropertyOfClosure (DefinitionBodyExpressionProperty defI bodyExpr defType) =
+exprPropertyOfClosure (DefinitionTypeProperty defI (Definition.Body bodyContent bodyType)) =
+  Property bodyType (Transaction.writeIRef defI . Definition.Body bodyContent)
+exprPropertyOfClosure (DefinitionContentExpressionProperty defI bodyExpr bodyType) =
   Property bodyExpr
-  (Transaction.writeIRef defI . (`Definition` defType) . Definition.BodyExpression)
+  (Transaction.writeIRef defI . (`Definition.Body` bodyType) . Definition.ContentExpression)
 exprPropertyOfClosure (SubexpressionProperty exprI body index) =
   Property (body ^?! lens)
   (ExprIRef.writeExprBody exprI . flip (lens .~) body)
@@ -81,14 +82,14 @@ loadExpressionBody visited iref
 -- TODO: Return DefinitionClosure
 loadDefinitionClosure ::
   MonadA m => DefIM m ->
-  T m (Definition (ExprIRef.ExpressionM m (ExprPropertyClosure (Tag m))))
+  T m (Definition (ExprIRef.ExpressionM m (ExprPropertyClosure (Tag m))) (DefIM m))
 loadDefinitionClosure defI = do
   def <- Transaction.readIRef defI
-  defType <- loadExpressionClosure Set.empty $ DefinitionTypeProperty defI def
-  fmap (`Definition` defType) $
-    case def ^. Definition.defBody of
-    Definition.BodyExpression bodyI ->
-      fmap Definition.BodyExpression . loadExpressionClosure Set.empty $
-      DefinitionBodyExpressionProperty defI bodyI $ def ^. Definition.defType
-    Definition.BodyBuiltin (Definition.Builtin name) ->
-      return . Definition.BodyBuiltin $ Definition.Builtin name
+  bodyType <- loadExpressionClosure Set.empty $ DefinitionTypeProperty defI def
+  (`Definition` defI) . (`Definition.Body` bodyType) <$>
+    case def ^. Definition.bodyContent of
+    Definition.ContentExpression bodyI ->
+      fmap Definition.ContentExpression . loadExpressionClosure Set.empty $
+      DefinitionContentExpressionProperty defI bodyI $ def ^. Definition.bodyType
+    Definition.ContentBuiltin (Definition.Builtin name) ->
+      return . Definition.ContentBuiltin $ Definition.Builtin name

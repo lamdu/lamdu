@@ -878,8 +878,8 @@ convertDefIBuiltin cp (Definition.Builtin name) defI defType =
     typeIRef = Property.value (defType ^. Expr.ePayload)
     setName =
       Transaction.writeIRef defI .
-      (`Definition.Definition` typeIRef) .
-      Definition.BodyBuiltin . Definition.Builtin
+      (`Definition.Body` typeIRef) .
+      Definition.ContentBuiltin . Definition.Builtin
 
 makeTypeInfo ::
   (Typeable1 m, MonadA m, Monoid a) =>
@@ -961,13 +961,14 @@ convertDefIExpression cp exprLoaded defI defType = do
 
 convertDefI ::
   (MonadA m, Typeable1 m) =>
-  Anchors.CodeProps m -> DefIM m ->
+  Anchors.CodeProps m ->
   -- TODO: Use DefinitionClosure?
   Definition.Definition
-    (ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m))) ->
+    (ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m)))
+    (ExprIRef.DefIM m) ->
   CT m (Definition (Maybe String) m (ExpressionU m [Guid]))
-convertDefI cp defI (Definition.Definition defBody typeLoaded) = do
-  bodyS <- convertDefBody defBody $ Load.exprPropertyOfClosure <$> typeLoaded
+convertDefI cp (Definition.Definition (Definition.Body bodyContent typeLoaded) defI) = do
+  bodyS <- convertDefContent bodyContent $ Load.exprPropertyOfClosure <$> typeLoaded
   name <- lift $ SugarExpr.getStoredName defGuid
   return Definition
     { _drGuid = defGuid
@@ -976,7 +977,7 @@ convertDefI cp defI (Definition.Definition defBody typeLoaded) = do
     }
   where
     defGuid = IRef.guid defI
-    convertDefBody (Definition.BodyBuiltin builtin) =
+    convertDefContent (Definition.ContentBuiltin builtin) =
       convertDefIBuiltin cp builtin defI
-    convertDefBody (Definition.BodyExpression exprLoaded) =
+    convertDefContent (Definition.ContentExpression exprLoaded) =
       convertDefIExpression cp exprLoaded defI
