@@ -89,8 +89,7 @@ lookupHelper onMiss onHit key cache =
         ckey = castUnmaybe "lookupHelper:key" key
 
 touch :: Key k => k -> Cache -> Cache
-touch key cache =
-  lookupHelper cache (\newCache _val -> newCache) key cache
+touch key cache = lookupHelper cache const key cache
 
 lookup :: (Key k, Typeable v) => k -> Cache -> (Maybe v, Cache)
 lookup key cache =
