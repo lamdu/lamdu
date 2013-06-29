@@ -3,7 +3,7 @@ module Lamdu.Sugar.AddNextHoles
   ( addToDef
   ) where
 
-import Control.Applicative (Applicative(..))
+import Control.Applicative (Applicative(..), (<$>))
 import Control.Applicative.Utils (when)
 import Control.Lens.Operators
 import Control.Monad.Trans.State (State, evalState)
@@ -24,19 +24,19 @@ addToDef =
   (drBody . Lens.traversed . Lens.backwards subExpressions %%@~ setNextHole)
 
 setNextHole ::
-  Body name m (ExpressionP name m ()) ->
+  ExpressionP name m () ->
   Payload name m a ->
   State (Maybe Guid) (Payload name m a)
-setNextHole body pl =
+setNextHole expr pl =
+  setIt <$>
   State.get <*
-  when (isJust (pl ^. plActions) && isHoleToJumpTo body)
+  when (isJust (pl ^. plActions) && isHoleToJumpTo expr)
     (State.put (Just (pl ^. plGuid)))
-  <&> useMNextGuid
   where
-    useMNextGuid Nothing = pl
-    useMNextGuid nextGuid = pl & plMNextHoleGuid .~ nextGuid
+    setIt x = pl & plMNextHoleGuid .~ x
 
-isHoleToJumpTo :: Body name m (ExpressionP name m a) -> Bool
+isHoleToJumpTo :: ExpressionP name m a -> Bool
 isHoleToJumpTo expr =
-  Lens.has _BodyHole expr ||
-  Lens.anyOf (_BodyInferred . iValue . subExpressions . Lens.asIndex) isHoleToJumpTo expr
+  Lens.has (rBody . _BodyHole) expr ||
+  Lens.anyOf (rBody . _BodyInferred . iValue . subExpressions . Lens.asIndex)
+    isHoleToJumpTo expr

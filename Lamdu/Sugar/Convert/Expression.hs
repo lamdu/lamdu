@@ -8,7 +8,7 @@ module Lamdu.Sugar.Convert.Expression
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad (zipWithM)
+import Control.Monad (void, zipWithM)
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
@@ -82,16 +82,16 @@ make exprPl body = do
 -- order
 subExpressions ::
   Lens.IndexedTraversal
-  (Body name m (ExpressionP name m ()))
+  (ExpressionP name m ())
   (ExpressionP name m a) (ExpressionP name m b) a b
-subExpressions f (Expression body pl) =
+subExpressions f expr =
   Expression <$>
-  (Lens.traversed .> subExpressions) f body <*>
+  (Lens.traversed .> subExpressions) f (expr ^. rBody) <*>
   Lens.indexed f
-  -- Remove annotations from body so it is a legal traversal (index
+  -- Remove annotations from expr so it is a legal traversal (index
   -- mustn't overlap with what's being traversed)
-  (body & Lens.mapped . Lens.mapped .~ ())
-  pl
+  (void expr)
+  (expr ^. rPayload)
 
 getStoredName :: MonadA m => Guid -> T m (Maybe String)
 getStoredName guid = do
