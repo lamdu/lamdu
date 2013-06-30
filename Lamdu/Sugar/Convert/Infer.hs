@@ -69,6 +69,7 @@ type T = Transaction
 type CT m = StateT Cache (T m)
 
 data NoInferred = NoInferred
+-- TODO: Replace (InferredWC t) with (InferredWC m)
 type InferredWC t = InferredWithConflicts (DefI t)
 
 data NoStored = NoStored

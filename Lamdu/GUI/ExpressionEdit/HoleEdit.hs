@@ -95,6 +95,7 @@ resultPickEventMap ::
   MonadA m => Config -> HoleInfo m -> Sugar.HoleResult Sugar.Name m ExprGuiM.Payload ->
   Widget.EventHandlers (T m)
 resultPickEventMap config holeInfo holeResult =
+  -- TODO: Does this guid business make sense?
   case hiMNextHoleGuid holeInfo of
   Just nextHoleGuid
     | not (holeResult ^. Sugar.holeResultHasHoles) ->
