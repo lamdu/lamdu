@@ -304,8 +304,14 @@ mkWidgetWithFallback config settingsRef style dbToIO (size, cursor) = do
       unless (widget ^. Widget.wIsFocused) $
         fail "Root cursor did not match"
       return (isValid, widget)
-  unless isValid . lift . putStrLn $ "Invalid cursor: " ++ show cursor
-  return widget
+  if isValid
+    then return widget
+    else do
+      lift . putStrLn $ "Invalid cursor: " ++ show cursor
+      widget
+        & Widget.backgroundColor (Config.layerMax (Config.layers config))
+          ["invalid cursor bg"] (Config.invalidCursorBGColor config)
+        & return
   where
     fromCursor settings = makeRootWidget config settings style dbToIO size
     rootCursor = WidgetIds.fromGuid rootGuid

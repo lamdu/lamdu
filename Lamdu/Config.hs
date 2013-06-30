@@ -34,6 +34,8 @@ data Config = Config
   , helpInputDocColor :: Draw.Color
   , helpBGColor :: Draw.Color
 
+  , invalidCursorBGColor :: Draw.Color
+
   , quitKeys :: [E.ModKey]
   , undoKeys :: [E.ModKey]
   , redoKeys :: [E.ModKey]
