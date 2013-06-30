@@ -370,14 +370,14 @@ addPrevIds ::
   ( [(Widget.Id, Sugar.FuncParam name m expr)]
   , [(Widget.Id, Sugar.FuncParam name m expr)]
   )
-addPrevIds firstParId depParams params =
+addPrevIds lhsId depParams params =
   (depParamIds, paramIds)
   where
-    (lastDepParamId, depParamIds) = go firstParId depParams
-    (_, paramIds) = go lastDepParamId params
+    depParamIds = go lhsId depParams
+    paramIds = go lhsId params
     fpId param = WidgetIds.fromGuid $ param ^. Sugar.fpId
-    go i [] = (i, [])
-    go i (fp:fps) = Lens._2 %~ ((i, fp) :) $ go (fpId fp) fps
+    go _ [] = []
+    go i (fp:fps) = (i, fp) : go (fpId fp) fps
 
 makeNestedParams ::
   MonadA m =>
@@ -387,11 +387,11 @@ makeNestedParams ::
  -> [Sugar.FuncParam Sugar.Name m (ExprGuiM.SugarExpr m)]
  -> [Sugar.FuncParam Sugar.Name m (ExprGuiM.SugarExpr m)]
  -> ExprGuiM m ([ExpressionGui m], [ExpressionGui m])
-makeNestedParams atParamWidgets rhs firstParId depParams params = do
+makeNestedParams atParamWidgets rhs lhsId depParams params = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
   let
-    (depParamIds, paramIds) = addPrevIds firstParId depParams params
+    (depParamIds, paramIds) = addPrevIds lhsId depParams params
     mkParam (prevId, param) =
       (ExpressionGui.egWidget %~
        (atParamWidgets (param ^. Sugar.fpName) .
