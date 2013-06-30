@@ -53,7 +53,7 @@ module Lamdu.Sugar.Types
   , HoleResult(..)
     , holeResultInferred
     , holeResultConverted
-    , holeResultPick, holeResultPickWrapped
+    , holeResultPick
     , holeResultHasHoles
   , PickedResult(..), prMJumpTo, prIdTranslation
   , LiteralInteger(..)
@@ -172,7 +172,6 @@ data HoleResult name m a = HoleResult
   { _holeResultInferred :: ExprIRef.ExpressionM m (Infer.Inferred (DefIM m))
   , _holeResultConverted :: Expression name m a
   , _holeResultPick :: T m PickedResult
-  , _holeResultPickWrapped :: T m PickedResult
   , _holeResultHasHoles :: Bool
   }
 

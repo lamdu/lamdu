@@ -18,8 +18,8 @@ import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget(Widget)
-import Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import Lamdu.Config (Config)
+import Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import Lamdu.GUI.WidgetEnvT (runWidgetEnvT)
 import Paths_lamdu (getDataFileName)
 import System.Environment (getArgs)
@@ -28,6 +28,7 @@ import qualified Control.Exception as E
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Cache as Cache
+import qualified Data.Monoid as Monoid
 import qualified Data.Store.Db as Db
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
@@ -40,11 +41,11 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
-import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.ExampleDB as ExampleDB
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
+import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -340,6 +341,6 @@ makeRootWidget config settings style dbToIO size cursor = do
       Widget.strongerEvents quitEventMap branchGui
   where
     attachCursor eventResult = do
-      maybe (return ()) (Transaction.setP (DbLayout.cursor DbLayout.revisionProps)) $
-        eventResult ^. Widget.eCursor
+      maybe (return ()) (Transaction.setP (DbLayout.cursor DbLayout.revisionProps)) .
+        Monoid.getLast $ eventResult ^. Widget.eCursor
       return eventResult

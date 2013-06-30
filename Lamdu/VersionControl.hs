@@ -11,6 +11,7 @@ import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, setP, getP, modP)
 import Lamdu.Data.DbLayout (DbM)
 import Lamdu.VersionControl.Actions (Actions(Actions))
+import qualified Data.Monoid as Monoid
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
@@ -66,7 +67,7 @@ runEvent preCursor eventHandler = do
     unless isEmpty $ do
       setP (codeProp DbLayout.preCursor) preCursor
       setP (codeProp DbLayout.postCursor) .
-        fromMaybe preCursor $ eventResult ^. Widget.eCursor
+        fromMaybe preCursor . Monoid.getLast $ eventResult ^. Widget.eCursor
     return (eventResult, isEmpty)
   unless isEmpty $ setP (revProp DbLayout.redos) []
   return eventResult

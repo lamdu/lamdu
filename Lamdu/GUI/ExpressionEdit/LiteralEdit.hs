@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.LiteralEdit
 
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
+import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Lamdu.GUI.ExpressionEdit.ExpressionGui (ExpressionGui)
@@ -59,7 +60,7 @@ makeIntEditI integer myId setValue = do
       | otherwise = (show (Sugar.liValue integer), cursor)
     setter (newText, eventRes)
       | newText == text = return eventRes
-      | not (all Char.isDigit newText) = return Widget.emptyEventResult
+      | not (all Char.isDigit newText) = return mempty
       | null newText = do
         _ <- setValue 0
         return . Widget.eventResultFromCursor $ Widget.joinId myId emptyZeroCursor

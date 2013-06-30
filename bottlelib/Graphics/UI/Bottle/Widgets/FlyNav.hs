@@ -49,7 +49,7 @@ initState :: State
 initState = Nothing
 
 withEmptyResult :: Functor f => f () -> f Widget.EventResult
-withEmptyResult = (fmap . const) Widget.emptyEventResult
+withEmptyResult = (fmap . const) mempty
 
 mkTickHandler :: Functor f => f () -> Widget.EventHandlers f
 mkTickHandler = EventMap.tickHandler . withEmptyResult
@@ -183,5 +183,5 @@ make animId (Just (ActiveState pos movements)) setState w =
         setState Nothing *>
         -- TODO: Just cancel FlyNav in any case if the MaybeEnter is
         -- Nothing...
-        maybe (pure Widget.emptyEventResult) (^. Widget.enterResultEvent)
+        maybe (pure mempty) (^. Widget.enterResultEvent)
           mEnteredChild

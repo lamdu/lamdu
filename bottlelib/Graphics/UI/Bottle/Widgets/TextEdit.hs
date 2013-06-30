@@ -11,8 +11,8 @@ module Graphics.UI.Bottle.Widgets.TextEdit(
   sTextViewStyle
   ) where
 
-import Control.Lens.Tuple
 import Control.Lens.Operators
+import Control.Lens.Tuple
 import Data.Char (isSpace)
 import Data.List (genericLength, minimumBy)
 import Data.List.Split (splitWhen)
@@ -28,6 +28,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Map as Map
+import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -139,8 +140,8 @@ eventResult ::
 eventResult myId strWithIds newText newCursor =
   (map snd newText,
     Widget.EventResult {
-      Widget._eCursor = Just $ makeTextEditCursor myId newCursor,
-      Widget._eAnimIdMapping = mapping
+      Widget._eCursor = Monoid.Last . Just $ makeTextEditCursor myId newCursor,
+      Widget._eAnimIdMapping = Monoid.Endo mapping
     })
   where
     myAnimId = Widget.toAnimId myId

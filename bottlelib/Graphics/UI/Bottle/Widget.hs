@@ -4,7 +4,7 @@ module Graphics.UI.Bottle.Widget
   , Widget(..), MEnter, R, Size
   , EnterResult(..), enterResultEvent, enterResultRect
   , EventHandlers
-  , EventResult(..), emptyEventResult, eventResultFromCursor
+  , EventResult(..), eventResultFromCursor
   , keysEventMap, keysEventMapMovesCursor
   , eAnimIdMapping, eCursor
   , wMaybeEnter, wEventMap, wFrame, wFocalArea
@@ -19,6 +19,8 @@ module Graphics.UI.Bottle.Widget
 
 import Control.Applicative ((<$>), liftA2)
 import Control.Lens.Operators
+import Data.Derive.Monoid (makeMonoid)
+import Data.DeriveTH (derive)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2)
 import Graphics.UI.Bottle.Animation (AnimId, R, Size)
@@ -28,6 +30,7 @@ import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.View (View)
 import Graphics.UI.Bottle.WidgetId (Id(..), augmentId, toAnimId, joinId, subId)
 import qualified Control.Lens as Lens
+import qualified Data.Monoid as Monoid
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
@@ -35,9 +38,10 @@ import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Rect as Rect
 
 data EventResult = EventResult {
-  _eCursor :: Maybe Id,
-  _eAnimIdMapping :: AnimId -> AnimId
+  _eCursor :: Monoid.Last Id,
+  _eAnimIdMapping :: Monoid.Endo AnimId
   }
+derive makeMonoid ''EventResult
 
 data EnterResult f = EnterResult {
   _enterResultRect :: Rect,
@@ -60,16 +64,10 @@ Lens.makeLenses ''EnterResult
 Lens.makeLenses ''EventResult
 Lens.makeLenses ''Widget
 
-emptyEventResult :: EventResult
-emptyEventResult = EventResult {
-  _eCursor = Nothing,
-  _eAnimIdMapping = id
-  }
-
 eventResultFromCursor :: Id -> EventResult
-eventResultFromCursor cursor = EventResult {
-  _eCursor = Just cursor,
-  _eAnimIdMapping = id
+eventResultFromCursor cursor = EventResult
+  { _eCursor = Monoid.Last $ Just cursor
+  , _eAnimIdMapping = mempty
   }
 
 atEvents :: (f EventResult -> g EventResult) -> Widget f -> Widget g
@@ -125,7 +123,7 @@ keysEventMap ::
   Functor f => [EventMap.ModKey] -> EventMap.Doc ->
   f () -> EventHandlers f
 keysEventMap keys doc act =
-  (fmap . fmap . const) emptyEventResult $
+  (fmap . fmap . const) mempty $
   EventMap.keyPresses keys doc act
 
 keysEventMapMovesCursor ::

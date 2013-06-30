@@ -17,7 +17,6 @@ import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Lamdu.GUI.WidgetEnvT as WE
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
 fdConfig :: Config -> FocusDelegator.Config
@@ -43,19 +42,12 @@ make parentPrecedence inferred pl myId = do
       (E.keyPresses
        (Config.acceptInferredValueKeys config)
        (E.Doc ["Edit", "Inferred value", "Accept"]) .
-       fmap mkResult) $
+       fmap HoleEdit.eventResultOfPickedResult) $
       inferred ^. Sugar.iMAccept
   ExprGuiM.wrapDelegated (fdConfig config)
     FocusDelegator.NotDelegating (ExpressionGui.egWidget %~)
     (makeUnwrapped parentPrecedence pl inferred) myId
     <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
-  where
-    mkResult pr =
-      Widget.EventResult
-      { Widget._eCursor = WidgetIds.fromGuid <$> pr ^. Sugar.prMJumpTo
-      , Widget._eAnimIdMapping =
-          HoleEdit.pickedResultAnimIdTranslation (pr ^. Sugar.prIdTranslation)
-      }
 
 makeUnwrapped ::
   MonadA m => ParentPrecedence ->
