@@ -74,7 +74,7 @@ make ::
   ExprGuiM.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence sExpr = assignCursor $ do
   ((isHole, gui), _) <-
-    ExprGuiM.listenResultPickers $ makeEditor parentPrecedence sExpr exprId
+    ExprGuiM.listenResultPickers $ makeEditor parentPrecedence sExpr
   exprEventMap <- expressionEventMap isHole sExpr
   maybeShrink gui
     <&>
@@ -96,9 +96,9 @@ make parentPrecedence sExpr = assignCursor $ do
 
 makeEditor ::
   MonadA m => ParentPrecedence ->
-  ExprGuiM.SugarExpr m -> Widget.Id ->
+  ExprGuiM.SugarExpr m ->
   ExprGuiM m (IsHole, ExpressionGui m)
-makeEditor parentPrecedence sExpr myId = do
+makeEditor parentPrecedence sExpr = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     isAHole hole mkWidget = fmap (handleHole hole) . mkWidget
@@ -137,7 +137,7 @@ makeEditor parentPrecedence sExpr myId = do
         notAHole $ GetVarEdit.make pl gv
       Sugar.BodyGetParams gp ->
         notAHole $ GetParamsEdit.make pl gp
-  mkEditor myId
+  mkEditor . WidgetIds.fromGuid $ pl ^. Sugar.plGuid
   where
     pl = sExpr ^. Sugar.rPayload
     notAHole = (fmap . fmap) ((,) NotAHole)
