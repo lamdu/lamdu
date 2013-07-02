@@ -25,7 +25,7 @@ wrapEventMap config actions =
   fromMaybe mempty $ do
     (doc, wrap) <-
       case actions ^. Sugar.wrap of
-      Sugar.AlreadyWrapped -> Just ("Jump to wrapper", return (actions ^. Sugar.storedGuid))
+      Sugar.AlreadyWrapped guid -> Just ("Jump to wrapper", return guid)
       Sugar.WrapAction action -> Just ("Wrap", action)
       Sugar.WrapNotAllowed -> Nothing
     Just $ mconcat

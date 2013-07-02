@@ -236,5 +236,9 @@ convertAppliedHole funcI rawArgS argI exprPl
   | otherwise = mzero
   where
     argS =
-      rawArgS
-      & rPayload . plActions . Lens._Just . wrap .~ AlreadyWrapped
+      rawArgS &
+      case exprPl ^? SugarInfer.plIRef of
+      Just iref ->
+        rPayload . plActions . Lens._Just . wrap .~
+        (AlreadyWrapped . ExprIRef.exprGuid) iref
+      Nothing -> id
