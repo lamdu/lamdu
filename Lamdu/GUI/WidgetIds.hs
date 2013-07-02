@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.GUI.WidgetIds where
+module Lamdu.GUI.WidgetIds ( module Lamdu.GUI.WidgetIds, module Lamdu.GUI.WidgetIdIRef ) where
 
 import Data.ByteString.Char8() -- IsString instance
 import Data.Monoid(mappend)
-import Data.Store.Guid(Guid, bs)
-import Data.Store.IRef(IRef, guid)
+import Data.Store.IRef(IRef)
 import Graphics.UI.Bottle.Animation (AnimId)
+import Lamdu.GUI.WidgetIdIRef
 import System.Random.Utils (randFunc)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -18,12 +18,6 @@ backgroundCursorId = ["background cursor"]
 
 textCursorId :: AnimId
 textCursorId = ["text cursor"]
-
-fromIRef :: IRef t a -> Widget.Id
-fromIRef = fromGuid . guid
-
-fromGuid :: Guid -> Widget.Id
-fromGuid = Widget.Id . (: []) . bs
 
 collapserId :: Widget.Id -> Widget.Id
 collapserId = flip Widget.joinId ["collapser"]
