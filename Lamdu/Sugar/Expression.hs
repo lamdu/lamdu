@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Lamdu.Sugar.Expression
-  ( subExpressions
+  ( subExpressions, bodyHole
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -23,3 +23,9 @@ subExpressions f expr =
   -- mustn't overlap with what's being traversed)
   (void expr)
   (expr ^. rPayload)
+
+-- Affine traversal:
+bodyHole :: Lens.Traversal' (Body name m expr) (Hole name m expr)
+bodyHole f (BodyHole hole) = BodyHole <$> f hole
+bodyHole f (BodyInferred inferred) = BodyInferred <$> iHole f inferred
+bodyHole _ body = pure body

@@ -15,6 +15,7 @@ import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionEdit.Modify as Modify
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.Expression as SugarExpr
 import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
@@ -39,10 +40,9 @@ actionsEventMap sExpr actions = do
         mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
         FocusDelegator.notDelegatingId $ return exprGuid
   clipboard <-
-    case sExpr ^. Sugar.rBody of
-    Sugar.BodyHole hole -> pasteEventMap hole
-    Sugar.BodyInferred inferred -> pasteEventMap (inferred ^. Sugar.iHole)
-    _ ->
+    case sExpr ^? Sugar.rBody . SugarExpr.bodyHole of
+    Just hole -> pasteEventMap hole
+    Nothing ->
       return .
       mkEventMap (Config.cutKeys config) (E.Doc ["Edit", "Cut"]) id $
       actions ^. Sugar.cut
