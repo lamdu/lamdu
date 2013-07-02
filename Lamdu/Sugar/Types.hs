@@ -422,8 +422,8 @@ data Definition name m expr = Definition
 type DefinitionN m a = Definition Name m (Expression Name m a)
 type DefinitionU m a = Definition MStoredName m (Expression MStoredName m a)
 
-derive makeMonoid ''Scope
 Lens.makeLenses ''Actions
+Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''Apply
 Lens.makeLenses ''Body
 Lens.makeLenses ''Collapsed
@@ -451,10 +451,10 @@ Lens.makeLenses ''Record
 Lens.makeLenses ''RecordField
 Lens.makeLenses ''Scope
 Lens.makeLenses ''TagG
-Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''WhereItem
 Lens.makePrisms ''Body
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo
 Lens.makePrisms ''HoleResultSeed
 Lens.makePrisms ''SpecialArgs
+derive makeMonoid ''Scope
