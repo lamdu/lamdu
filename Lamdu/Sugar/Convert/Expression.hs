@@ -45,7 +45,8 @@ mkReplaceWithNewHole stored =
 mkActions :: MonadA m => SugarM.Context m -> Stored m -> Actions m
 mkActions sugarContext stored =
   Actions
-  { _wrap = WrapAction $ ExprIRef.exprGuid <$> DataOps.wrap stored
+  { _storedGuid = ExprIRef.exprGuid $ Property.value stored
+  , _wrap = WrapAction $ ExprIRef.exprGuid <$> DataOps.wrap stored
   , _mSetToHole = Just $ ExprIRef.exprGuid <$> DataOps.setToHole stored
   , _mSetToInnerExpr = Nothing
   , _cut =

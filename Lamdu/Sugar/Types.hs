@@ -15,7 +15,7 @@ module Lamdu.Sugar.Types
   , DefinitionBuiltin(..)
   , WrapAction(..)
   , Actions(..)
-    , wrap, mSetToHole, mSetToInnerExpr, cut
+    , storedGuid, wrap, mSetToHole, mSetToInnerExpr, cut
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
@@ -49,7 +49,8 @@ module Lamdu.Sugar.Types
   , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
-  , HoleActions(..), holeScope, holePaste, holeMUnwrap, holeInferExprType, holeInferredType
+  , HoleActions(..)
+    , holeScope, holePaste, holeMUnwrap, holeInferExprType, holeInferredType
   , HoleResult(..)
     , holeResultInferred
     , holeResultConverted
@@ -82,10 +83,11 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 
-data WrapAction m = AlreadyWrapped Guid | WrapAction (T m Guid)
+data WrapAction m = AlreadyWrapped | WrapAction (T m Guid)
 
 data Actions m = Actions
-  { _wrap :: WrapAction m
+  { _storedGuid :: Guid
+  , _wrap :: WrapAction m
   , -- mSetToHole not available for holes.
     _mSetToHole :: Maybe (T m Guid)
   , _mSetToInnerExpr :: Maybe (T m Guid)

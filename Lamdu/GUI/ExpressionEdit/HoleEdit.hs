@@ -87,7 +87,7 @@ afterPick holeInfo pr = do
   eventResultOfPickedResult pr
     & Widget.eCursor %~
       (mappend . Monoid.Last . Just .
-       WidgetIds.fromGuid . hiGuid) holeInfo
+       WidgetIds.fromGuid . hiStoredGuid) holeInfo
     & return
 
 setNextHoleState ::
@@ -410,13 +410,6 @@ make ::
   Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole pl outerId = do
-  stateProp <- ExprGuiM.transaction $ assocStateRef guid ^. Transaction.mkProperty
-  let
-    delegatingMode
-      | Lens.has (Sugar.holeMArg . Lens._Just) hole &&
-        null (Property.value stateProp ^. hsSearchTerm) = FocusDelegator.NotDelegating
-      | otherwise = FocusDelegator.Delegating
-    inner = makeUnwrappedH stateProp pl hole
   config <- ExprGuiM.widgetEnv WE.readConfig
   (isActive, innerGui) <-
     ExprGuiM.wrapDelegated holeFDConfig delegatingMode
@@ -436,27 +429,30 @@ make hole pl outerId = do
         ) mUnWrap)
     & return
   where
-    guid = pl ^. Sugar.plGuid
+    delegatingMode
+      | Lens.has (Sugar.holeMArg . Lens._Just) hole = FocusDelegator.NotDelegating
+      | otherwise = FocusDelegator.Delegating
+    inner = makeUnwrappedH pl hole
     mUnWrap =
       hole ^? Sugar.holeMActions . Lens._Just . Sugar.holeMUnwrap . Lens._Just
 
 makeUnwrappedH ::
   MonadA m =>
-  Property (T m) HoleState ->
   Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Widget.Id ->
   ExprGuiM m (IsActive, ExpressionGui m)
-makeUnwrappedH stateProp pl hole myId = do
+makeUnwrappedH pl hole myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   inactive <- makeInactive hole myId
-  case (hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
-    (Just holeActions, Just _) -> do
+  case (mStoredGuid, hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
+    (Just storedGuid, Just holeActions, Just _) -> do
+      stateProp <- ExprGuiM.transaction $ assocStateRef storedGuid ^. Transaction.mkProperty
       inactiveWithTypes <- ExpressionGui.addInferredTypes pl inactive
       (,) Active <$> makeActiveHoleEdit
         (inactiveWithTypes ^. ExpressionGui.egWidget . Widget.wSize) pl
         HoleInfo
-        { hiGuid = pl ^. Sugar.plGuid
+        { hiStoredGuid = storedGuid
         , hiId = myId
         , hiState = stateProp
         , hiActions = holeActions
@@ -464,18 +460,21 @@ makeUnwrappedH stateProp pl hole myId = do
         , hiMArgument = hole ^. Sugar.holeMArg
         }
     _ -> return (Inactive, inactive)
+  where
+    mStoredGuid = pl ^? Sugar.plActions . Lens._Just . Sugar.storedGuid
 
 makeUnwrappedActive ::
   MonadA m =>
   Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Guid ->
   Sugar.HoleActions Sugar.Name m ->
   Widget.Size -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeUnwrappedActive pl holeActions size myId = do
+makeUnwrappedActive pl storedGuid holeActions size myId = do
   stateProp <-
     ExprGuiM.transaction $
-    assocStateRef (pl ^. Sugar.plGuid) ^. Transaction.mkProperty
+    assocStateRef storedGuid ^. Transaction.mkProperty
   makeActiveHoleEdit size pl HoleInfo
-    { hiGuid = pl ^. Sugar.plGuid
+    { hiStoredGuid = storedGuid
     , hiId = myId
     , hiState = stateProp
     , hiActions = holeActions

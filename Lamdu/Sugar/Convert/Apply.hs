@@ -235,7 +235,6 @@ convertAppliedHole funcI rawArgS argI exprPl
       <&> rPayload . plData <>~ funcI ^. SugarInfer.exprData
   | otherwise = mzero
   where
-    guid = exprPl ^. SugarInfer.plGuid
     argS =
-      rPayload . plActions . Lens._Just . wrap .~
-      AlreadyWrapped guid $ rawArgS
+      rawArgS
+      & rPayload . plActions . Lens._Just . wrap .~ AlreadyWrapped

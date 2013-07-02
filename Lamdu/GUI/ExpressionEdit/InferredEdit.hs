@@ -8,6 +8,7 @@ import Data.Monoid (mempty)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -66,8 +67,10 @@ makeUnwrapped (ParentPrecedence parentPrecedence) pl inferred myId = do
     . Widget.tint (Config.inferredValueTint config)
     . Widget.scale (realToFrac <$> Config.inferredValueScaleFactor config)
     ) =<< ExprGuiM.makeSubexpression parentPrecedence (inferred ^. Sugar.iValue)
-  case (mInnerCursor, inferred ^. Sugar.iHole . Sugar.holeMActions) of
-    (Just _, Just actions) ->
-      HoleEdit.makeUnwrappedActive pl actions
+  case (mStoredGuid, mInnerCursor, inferred ^. Sugar.iHole . Sugar.holeMActions) of
+    (Just storedGuid, Just _, Just actions) ->
+      HoleEdit.makeUnwrappedActive pl storedGuid actions
       (inactive ^. ExpressionGui.egWidget . Widget.wSize) myId
     _ -> return inactive
+  where
+    mStoredGuid = pl ^? Sugar.plActions . Lens._Just . Sugar.storedGuid

@@ -32,7 +32,7 @@ wrapEventMap config actions =
   where
     (doc, wrap) =
       case actions ^. Sugar.wrap of
-      Sugar.AlreadyWrapped guid -> ("Jump to wrapper", return guid)
+      Sugar.AlreadyWrapped -> ("Jump to wrapper", return (actions ^. Sugar.storedGuid))
       Sugar.WrapAction action -> ("Wrap", action)
 
 replaceEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (Transaction m)

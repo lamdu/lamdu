@@ -32,7 +32,7 @@ emptyState =
   }
 
 data HoleInfo m = HoleInfo
-  { hiGuid :: Guid
+  { hiStoredGuid :: Guid
   , hiId :: Widget.Id
   , hiState :: Property (T m) HoleState
   , hiActions :: Sugar.HoleActions Sugar.Name m
