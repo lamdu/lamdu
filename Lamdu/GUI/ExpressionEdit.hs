@@ -80,21 +80,21 @@ makeEditor ::
   ExprGuiM m (ExpressionGui m)
 makeEditor parentPrecedence sExpr =
   ( case sExpr ^. Sugar.rBody of
-    Sugar.BodyInferred i -> InferredEdit.make parentPrecedence pl i
-    Sugar.BodyHole hole -> HoleEdit.make pl hole
-    Sugar.BodyCollapsed poly -> CollapsedEdit.make parentPrecedence poly
-    Sugar.BodyApply apply -> ApplyEdit.make parentPrecedence pl apply
-    Sugar.BodyLam lam@(Sugar.Lam Sugar.KType _ _ _) -> PiEdit.make parentPrecedence pl lam
-    Sugar.BodyLam lam@(Sugar.Lam Sugar.KVal _ _ _) -> LambdaEdit.make parentPrecedence pl lam
-    Sugar.BodyLiteralInteger integer -> LiteralEdit.makeInt pl integer
-    Sugar.BodyAtom atom -> AtomEdit.make atom
-    Sugar.BodyList list -> ListEdit.make pl list
-    Sugar.BodyRecord record -> RecordEdit.make pl record
-    Sugar.BodyGetField getField -> GetFieldEdit.make pl getField
-    Sugar.BodyTag tag -> TagEdit.make pl tag
-    Sugar.BodyGetVar gv -> GetVarEdit.make pl gv
-    Sugar.BodyGetParams gp -> GetParamsEdit.make pl gp
-  ) myId
+    Sugar.BodyInferred i -> InferredEdit.make parentPrecedence i
+    Sugar.BodyHole hole -> HoleEdit.make hole
+    Sugar.BodyCollapsed poly -> const (CollapsedEdit.make parentPrecedence poly)
+    Sugar.BodyApply apply -> ApplyEdit.make parentPrecedence apply
+    Sugar.BodyLam lam@(Sugar.Lam Sugar.KType _ _ _) -> PiEdit.make parentPrecedence lam
+    Sugar.BodyLam lam@(Sugar.Lam Sugar.KVal _ _ _) -> LambdaEdit.make parentPrecedence lam
+    Sugar.BodyLiteralInteger integer -> LiteralEdit.makeInt integer
+    Sugar.BodyAtom atom -> const (AtomEdit.make atom)
+    Sugar.BodyList list -> ListEdit.make list
+    Sugar.BodyRecord record -> RecordEdit.make record
+    Sugar.BodyGetField getField -> GetFieldEdit.make getField
+    Sugar.BodyTag tag -> TagEdit.make tag
+    Sugar.BodyGetVar gv -> GetVarEdit.make gv
+    Sugar.BodyGetParams gp -> GetParamsEdit.make gp
+  ) pl myId
   where
     myId = WidgetIds.fromGuid $ pl ^. Sugar.plGuid
     pl = sExpr ^. Sugar.rPayload

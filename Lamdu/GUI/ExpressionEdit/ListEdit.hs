@@ -20,11 +20,11 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m a ->
   Sugar.List m (ExprGuiM.SugarExpr m) ->
+  Sugar.Payload Sugar.Name m a ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-make pl list =
+make list pl =
   ExpressionGui.wrapExpression pl $ makeUnwrapped list
 
 makeBracketLabel :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui f)

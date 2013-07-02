@@ -21,11 +21,11 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m a ->
   Sugar.GetParams Sugar.Name m ->
+  Sugar.Payload Sugar.Name m a ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-make pl getParams myId = do
+make getParams pl myId = do
   cp <- ExprGuiM.readCodeAnchors
   config <- ExprGuiM.widgetEnv WE.readConfig
   let

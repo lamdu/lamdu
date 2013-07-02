@@ -48,11 +48,11 @@ makeView getParam myId = do
 
 make ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m a ->
   Sugar.GetVar Sugar.Name m ->
+  Sugar.Payload Sugar.Name m a ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-make pl getVar myId = do
+make getVar pl myId = do
   ExprGuiM.markVariablesAsUsed [getVar ^. Sugar.gvIdentifier]
   cp <- ExprGuiM.readCodeAnchors
   config <- ExprGuiM.widgetEnv WE.readConfig

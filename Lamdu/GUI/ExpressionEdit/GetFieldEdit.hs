@@ -15,9 +15,10 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
   MonadA m =>
+  Sugar.GetField (ExprGuiM.SugarExpr m) ->
   Sugar.Payload Sugar.Name m a ->
-  Sugar.GetField (ExprGuiM.SugarExpr m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-make pl (Sugar.GetField recExpr tagExpr) =
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+make (Sugar.GetField recExpr tagExpr) pl =
   ExpressionGui.wrapExpression pl $ \myId ->
   ExprGuiM.assignCursor myId destId $ do
     recExprEdit <- ExprGuiM.makeSubexpression 11 recExpr

@@ -34,10 +34,10 @@ onTagWidget config =
 
 make ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m a ->
   Sugar.TagG Sugar.Name ->
+  Sugar.Payload Sugar.Name m a ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make pl (Sugar.TagG tag name) myId = do
+make (Sugar.TagG tag name) pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.wrapDelegated pl fdConfig FocusDelegator.NotDelegating
     (fmap (onTagWidget config) . ExpressionGui.makeNameEdit name tag) myId

@@ -93,10 +93,10 @@ literalFDConfig = FocusDelegator.Config
 
 makeInt ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m a ->
   Sugar.LiteralInteger m ->
+  Sugar.Payload Sugar.Name m a ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makeInt pl integer =
+makeInt integer pl =
   ExpressionGui.wrapDelegated pl literalFDConfig FocusDelegator.NotDelegating
   (setColor . makeIntEdit integer)

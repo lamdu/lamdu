@@ -86,10 +86,10 @@ makeParamEdit prevId param =
 make ::
   MonadA m =>
   ExpressionGui.ParentPrecedence ->
-  Sugar.Payload Sugar.Name m a ->
   Sugar.Lam Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Payload Sugar.Name m a ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make parentPrecedence pl (Sugar.Lam _ param _ body) =
+make parentPrecedence (Sugar.Lam _ param _ body) pl =
   ExpressionGui.wrapParenify pl parentPrecedence (ExpressionGui.MyPrecedence 0)
   Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId bodyId $ do

@@ -32,10 +32,10 @@ fdConfig config = FocusDelegator.Config
 
 make ::
   MonadA m => ParentPrecedence ->
-  Sugar.Payload Sugar.Name m a ->
   Sugar.Inferred Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Payload Sugar.Name m a ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make parentPrecedence pl inferred myId = do
+make parentPrecedence inferred pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     eventMap =

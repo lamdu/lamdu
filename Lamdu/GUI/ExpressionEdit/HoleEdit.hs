@@ -400,10 +400,10 @@ data IsActive = Inactive | Active
 
 make ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m a ->
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Payload Sugar.Name m a ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make pl hole outerId = do
+make hole pl outerId = do
   stateProp <- ExprGuiM.transaction $ assocStateRef guid ^. Transaction.mkProperty
   let
     delegatingMode

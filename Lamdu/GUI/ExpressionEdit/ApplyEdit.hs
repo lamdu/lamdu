@@ -32,10 +32,10 @@ prefixPrecedence = 10
 
 make ::
   MonadA m => ParentPrecedence ->
-  Sugar.Payload Sugar.Name m a ->
   Sugar.Apply Sugar.Name (ExprGuiM.SugarExpr m) ->
+  Sugar.Payload Sugar.Name m a ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make (ParentPrecedence parentPrecedence) pl (Sugar.Apply func specialArgs annotatedArgs) myId = do
+make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotatedArgs) pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     maybeOverrideHoleWrap
