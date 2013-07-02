@@ -105,7 +105,7 @@ resultPickEventMap ::
   Widget.EventHandlers (T m)
 resultPickEventMap config holeInfo holeResult =
   -- TODO:
-  -- flip mappend (srEventMap holeResult) .
+  -- (`mappend` srEventMap holeResult) .
   mappend alphaNumericAfterOperator $
   -- TODO: Does this guid business make sense?
   case hiMNextHoleGuid holeInfo of
@@ -585,18 +585,7 @@ makeInactive hole myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   holeGui <-
     case hole ^? Sugar.holeMArg . Lens._Just . Sugar.haExpr of
-    Just arg ->
-      ExprGuiM.makeSubexpression 0 arg
-      -- Override "Leave Expression" of sub expression
-      -- so that we don't get the inner expression wrapped again.
-      -- TODO: Instead replace just the navigation to whole arg.
-      & Lens.mapped . ExpressionGui.egWidget %~
-        Widget.strongerEvents
-        ( Widget.keysEventMapMovesCursor
-          (Config.leaveSubexpressionKeys config)
-          (E.Doc ["Navigation", "Leave to outer hole"])
-          (return myId)
-        )
+    Just arg -> ExprGuiM.makeSubexpression 0 arg
     Nothing ->
       ExprGuiM.widgetEnv $
       ExpressionGui.fromValueWidget <$>
