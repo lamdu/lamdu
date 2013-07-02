@@ -203,7 +203,7 @@ makeHoleResultWidget holeInfo resultId holeResult = do
     -- TODO: No need for this if we just add a pick result event map
     -- to the whole hole
     Widget.scale (realToFrac <$> Config.holeResultScaleFactor config) .
-    Widget.strongerEvents (resultPickEventMap config holeInfo holeResult) .
+    (Widget.wEventMap .~ resultPickEventMap config holeInfo holeResult) .
     (Widget.wFrame %~ Anim.mapIdentities (`mappend` Widget.toAnimId resultId)) .
     (^. ExpressionGui.egWidget) =<<
     (ExprGuiM.makeSubexpression 0 . SugarRemoveTypes.holeResultTypes . postProcessSugar)
