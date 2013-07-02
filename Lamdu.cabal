@@ -158,6 +158,7 @@ Executable lamdu
                        Lamdu.GUI.ExpressionEdit.BuiltinEdit,
                        Lamdu.GUI.ExpressionEdit.CollapsedEdit,
                        Lamdu.GUI.ExpressionEdit.DefinitionEdit,
+                       Lamdu.GUI.ExpressionEdit.EventMap,
                        Lamdu.GUI.ExpressionEdit.ExpressionGui,
                        Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad,
                        Lamdu.GUI.ExpressionEdit.ExpressionGui.Types,
