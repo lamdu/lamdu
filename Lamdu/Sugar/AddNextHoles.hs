@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Lamdu.Sugar.AddNextHoles
-  ( addToDef
+  ( addToDef, addToExpr
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -21,7 +21,15 @@ addToDef ::
   Definition name m (Expression name m a)
 addToDef =
   (`evalState` Nothing) .
-  (drBody . Lens.traversed . Lens.backwards subExpressions %%@~ setNextHole)
+  (drBody . Lens.traversed) addToExprH
+
+addToExpr ::
+  MonadA m => Expression name m a -> Expression name m a
+addToExpr = (`evalState` Nothing) . addToExprH
+
+addToExprH ::
+  Expression name m a -> State (Maybe Guid) (Expression name m a)
+addToExprH = Lens.backwards subExpressions %%@~ setNextHole
 
 setNextHole ::
   ExpressionP name m () ->

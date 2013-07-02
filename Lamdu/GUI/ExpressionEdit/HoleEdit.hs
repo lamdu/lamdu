@@ -46,6 +46,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.AddNextHoles as AddNextHoles
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -92,7 +93,7 @@ pickAndSetNextHoleState holeInfo searchTerm pr =
     Nothing -> return ()
 
 resultPickEventMap ::
-  MonadA m => Config -> HoleInfo m -> Sugar.HoleResult Sugar.Name m ExprGuiM.Payload ->
+  MonadA m => Config -> HoleInfo m -> Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl ->
   Widget.EventHandlers (T m)
 resultPickEventMap config holeInfo holeResult =
   -- TODO: Does this guid business make sense?
@@ -122,7 +123,7 @@ makeResultGroup ::
   ResultsList m ->
   ExprGuiM m
   ( [WidgetT m]
-  , Maybe (Sugar.HoleResult Sugar.Name m ExprGuiM.Payload)
+  , Maybe (Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl)
   )
 makeResultGroup results = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -168,7 +169,7 @@ makeExtraResultsPlaceholderWidget (result:_) =
 
 makeExtraResultsWidget ::
   MonadA m => [Result m] ->
-  ExprGuiM m (Maybe (Sugar.HoleResult Sugar.Name m ExprGuiM.Payload), WidgetT m)
+  ExprGuiM m (Maybe (Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl), WidgetT m)
 makeExtraResultsWidget [] = return (Nothing, Spacer.empty)
 makeExtraResultsWidget extraResults@(firstResult:_) = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -195,7 +196,7 @@ makeExtraResultsWidget extraResults@(firstResult:_) = do
 
 makeHoleResultWidget ::
   MonadA m => HoleInfo m ->
-  Widget.Id -> Sugar.HoleResult Sugar.Name m ExprGuiM.Payload -> ExprGuiM m (WidgetT m)
+  Widget.Id -> Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl -> ExprGuiM m (WidgetT m)
 makeHoleResultWidget holeInfo resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
@@ -205,15 +206,29 @@ makeHoleResultWidget holeInfo resultId holeResult = do
     Widget.strongerEvents (resultPickEventMap config holeInfo holeResult) .
     (Widget.wFrame %~ Anim.mapIdentities (`mappend` Widget.toAnimId resultId)) .
     (^. ExpressionGui.egWidget) =<<
-    (ExprGuiM.makeSubexpression 0 . SugarRemoveTypes.holeResultTypes)
+    (ExprGuiM.makeSubexpression 0 . SugarRemoveTypes.holeResultTypes . postProcessSugar)
     (holeResult ^. Sugar.holeResultConverted)
+
+postProcessSugar ::
+  MonadA m =>
+  Sugar.ExpressionN m HoleResults.SugarExprPl ->
+  Sugar.ExpressionN m ExprGuiM.Payload
+postProcessSugar =
+  (fmap . fmap) toPayload .
+  AddNextHoles.addToExpr
+  where
+    toPayload (ExprGuiM.StoredGuids guids, ExprGuiM.Injected injected) =
+      ExprGuiM.Payload
+      { ExprGuiM.plStoredGuids = guids
+      , ExprGuiM.plInjected = injected
+      }
 
 asNewLabelScaleFactor :: Fractional a => a
 asNewLabelScaleFactor = 0.5
 
 makeNewTagResultWidget ::
   MonadA m => HoleInfo m ->
-  Widget.Id -> Sugar.HoleResult Sugar.Name m ExprGuiM.Payload ->
+  Widget.Id -> Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl ->
   ExprGuiM m (WidgetT m)
 makeNewTagResultWidget holeInfo resultId holeResult = do
   widget <- makeHoleResultWidget holeInfo resultId holeResult
@@ -258,7 +273,7 @@ blockDownEvents =
 makeResultsWidget ::
   MonadA m => HoleInfo m ->
   [ResultsList m] -> HaveHiddenResults ->
-  ExprGuiM m (Maybe (Sugar.HoleResult Sugar.Name m ExprGuiM.Payload), WidgetT m)
+  ExprGuiM m (Maybe (Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl), WidgetT m)
 makeResultsWidget holeInfo shownResults hiddenResults = do
   (rows, mResults) <- unzip <$> traverse makeResultGroup shownResults
   let mResult = mResults ^? Lens.traversed . Lens._Just

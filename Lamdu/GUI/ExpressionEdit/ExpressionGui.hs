@@ -28,7 +28,6 @@ import Control.Lens.Operators
 import Control.Monad ((<=<))
 import Control.MonadA (MonadA)
 import Data.Function (on)
-import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
@@ -315,7 +314,11 @@ addInferredTypes exprPl eg = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   typeEdits <-
     exprPl ^. Sugar.plInferredTypes
-    & Lens.traversed . Lens.mapped . Lens.mapped .~ mempty
+    & Lens.traversed . Lens.mapped . Lens.mapped .~
+      ExprGuiM.Payload
+      { ExprGuiM.plStoredGuids = []
+      , ExprGuiM.plInjected = []
+      }
     & Lens.traversed (ExprGuiM.makeSubexpression 0)
     <&>
       map

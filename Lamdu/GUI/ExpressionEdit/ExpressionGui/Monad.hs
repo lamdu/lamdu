@@ -2,6 +2,7 @@
 module Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad
   ( ExprGuiM, WidgetT, runWidget
   , widgetEnv
+  , StoredGuids(..), Injected(..)
   , Payload(..), SugarExpr
 
   , transaction, localEnv, withFgColor
@@ -65,12 +66,17 @@ data Output m = Output
   }
 derive makeMonoid ''Output
 
+newtype StoredGuids = StoredGuids [Guid]
+  deriving (Monoid, Binary, Typeable, Eq, Ord)
+
+newtype Injected = Injected [Bool]
+  deriving (Monoid, Binary, Typeable, Eq, Ord)
+
 -- GUI input payload on sugar exprs
 data Payload = Payload
   { plStoredGuids :: [Guid]
   , plInjected :: [Bool]
   } deriving (Typeable, Eq, Ord)
-derive makeMonoid ''Payload
 derive makeBinary ''Payload
 
 type SugarExpr m = Sugar.ExpressionN m Payload
