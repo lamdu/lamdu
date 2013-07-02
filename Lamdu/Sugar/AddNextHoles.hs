@@ -10,7 +10,7 @@ import Control.Monad.Trans.State (State, evalState)
 import Control.MonadA (MonadA)
 import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
-import Lamdu.Sugar.Convert.Expression (subExpressions)
+import Lamdu.Sugar.Expression (subExpressions)
 import Lamdu.Sugar.Types
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State

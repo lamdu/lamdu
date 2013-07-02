@@ -191,6 +191,7 @@ Executable lamdu
                        Lamdu.Sugar.Convert.Hole,
                        Lamdu.Sugar.Convert.List,
                        Lamdu.Sugar.Convert.Monad,
+                       Lamdu.Sugar.Expression,
                        Lamdu.Sugar.Internal,
                        Lamdu.Sugar.RemoveTypes,
                        Lamdu.Sugar.Types,

@@ -1,14 +1,12 @@
-{-# LANGUAGE FlexibleContexts #-}
 module Lamdu.Sugar.Convert.Expression
   ( make, mkGen
   , mkReplaceWithNewHole
-  , subExpressions
   , getStoredName
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad (void, zipWithM)
+import Control.Monad (zipWithM)
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
@@ -19,7 +17,6 @@ import Lamdu.Sugar.Convert.Monad (SugarM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
-import qualified Control.Lens as Lens
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
@@ -77,21 +74,6 @@ make exprPl body = do
   where
     seeds = RandomUtils.splits . mkGen 0 3 $ exprPl ^. SugarInfer.plGuid
     types = maybe [] iwcInferredTypes $ exprPl ^. SugarInfer.plInferred
-
--- Parent payloads come after children. Children are in Body-Foldable
--- order
-subExpressions ::
-  Lens.IndexedTraversal
-  (ExpressionP name m ())
-  (ExpressionP name m a) (ExpressionP name m b) a b
-subExpressions f expr =
-  Expression <$>
-  (Lens.traversed .> subExpressions) f (expr ^. rBody) <*>
-  Lens.indexed f
-  -- Remove annotations from expr so it is a legal traversal (index
-  -- mustn't overlap with what's being traversed)
-  (void expr)
-  (expr ^. rPayload)
 
 getStoredName :: MonadA m => Guid -> T m (Maybe String)
 getStoredName guid = do
