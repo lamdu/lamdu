@@ -134,9 +134,22 @@ resultPickEventMap config holeInfo holeResult =
     simplePickRes keys =
       E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) pick
 
-makePaddedResult :: Functor m => Config -> Result m -> ExprGuiM m (WidgetT m)
-makePaddedResult config res =
+makePaddedResult :: MonadA m => Result m -> ExprGuiM m (WidgetT m)
+makePaddedResult res = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
   (Widget.pad . fmap realToFrac . Config.holeResultPadding) config <$> rMkWidget res
+
+makeShownResult ::
+  MonadA m => Result m -> ExprGuiM m (Widget (Transaction m), ShownResult m)
+makeShownResult result = do
+  widget <- makePaddedResult result
+  return
+    ( widget
+    , ShownResult
+      { srEventMap = widget ^. Widget.wEventMap
+      , srHoleResult = rHoleResult result
+      }
+    )
 
 makeResultGroup ::
   MonadA m =>
@@ -148,13 +161,7 @@ makeResultGroup ::
   )
 makeResultGroup results = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  mainResultWidget <- makePaddedResult config mainResult
-  let
-    shownMainResult =
-      ShownResult
-      { srEventMap = mainResultWidget ^. Widget.wEventMap
-      , srHoleResult = rHoleResult mainResult
-      }
+  (mainResultWidget, shownMainResult) <- makeShownResult mainResult
   extraSymbolWidget <-
     if Lens.has (HoleResults.rlExtra . traverse) results
     then
@@ -202,14 +209,9 @@ makeExtraResultsWidget extraResults@(firstResult:_) = do
   let
     mkResWidget result = do
       isOnResult <- ExprGuiM.widgetEnv $ WE.isSubCursor (rId result)
-      widget <- makePaddedResult config result
+      (widget, shownResult) <- makeShownResult result
       return
-        ( do
-            guard isOnResult
-            Just ShownResult
-              { srEventMap = widget ^. Widget.wEventMap
-              , srHoleResult = rHoleResult result
-              }
+        ( shownResult <$ guard isOnResult
         , widget
         )
   (mResults, widgets) <-
