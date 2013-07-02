@@ -30,9 +30,8 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.RWS (RWST, runRWST)
 import Control.Monad.Trans.State (StateT(..), mapStateT)
 import Control.MonadA (MonadA)
-import Data.Binary (Binary(..))
+import Data.Binary (Binary)
 import Data.Cache (Cache)
-import Data.Derive.Binary (makeBinary)
 import Data.Derive.Monoid (makeMonoid)
 import Data.DeriveTH (derive)
 import Data.Monoid (Monoid(..))
@@ -76,8 +75,7 @@ newtype Injected = Injected [Bool]
 data Payload = Payload
   { plStoredGuids :: [Guid]
   , plInjected :: [Bool]
-  } deriving (Typeable, Eq, Ord)
-derive makeBinary ''Payload
+  }
 
 type SugarExpr m = Sugar.ExpressionN m Payload
 
