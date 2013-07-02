@@ -65,6 +65,7 @@ data Output m = Output
   }
 derive makeMonoid ''Output
 
+-- GUI input payload on sugar exprs
 data Payload = Payload
   { plGuids :: [Guid]
   , plInjected :: [Bool]

@@ -52,7 +52,7 @@ type CT m = StateT Cache (T m)
 
 -- This is not in Sugar because Sugar is for code
 data SugarPane m = SugarPane
-  { spDef :: Sugar.DefinitionU m ExprGuiM.Payload
+  { spDef :: Sugar.DefinitionN m ExprGuiM.Payload
   , mDelPane :: Maybe (T m Guid)
   , mMovePaneDown :: Maybe (T m ())
   , mMovePaneUp :: Maybe (T m ())
@@ -71,10 +71,12 @@ makeNewDefinitionAction = do
 loadConvertDefI ::
   (MonadA m, Typeable1 m) =>
   Anchors.CodeProps m -> DefIM m ->
-  CT m (Sugar.DefinitionU m ExprGuiM.Payload)
+  CT m (Sugar.DefinitionN m ExprGuiM.Payload)
 loadConvertDefI cp defI =
   lift (Load.loadDefinitionClosure defI) >>=
   SugarConvert.convertDefI cp defI
+  <&> AddNames.addToDef
+  <&> AddNextHoles.addToDef
   <&> Lens.mapped . Lens.mapped . Lens.mapped %~ mkPayload
   where
     mkPayload guids = ExprGuiM.Payload
@@ -115,7 +117,7 @@ makeSugarPanes cp rootGuid = do
   traverse convertPane $ enumerate panes
 
 makeClipboardsEdit ::
-  MonadA m => Widget.R -> [Sugar.DefinitionU m ExprGuiM.Payload] -> ExprGuiM m (WidgetT m)
+  MonadA m => Widget.R -> [Sugar.DefinitionN m ExprGuiM.Payload] -> ExprGuiM m (WidgetT m)
 makeClipboardsEdit width clipboards = do
   clipboardsEdits <- traverse (makePaneWidget width) clipboards
   clipboardTitle <-
@@ -124,7 +126,7 @@ makeClipboardsEdit width clipboards = do
     else ExprGuiM.widgetEnv $ BWidgets.makeTextViewWidget "Clipboards:" ["clipboards title"]
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
-makeSugarClipboards :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> CT m [Sugar.DefinitionU m ExprGuiM.Payload]
+makeSugarClipboards :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> CT m [Sugar.DefinitionN m ExprGuiM.Payload]
 makeSugarClipboards cp =
   traverse (loadConvertDefI cp) =<<
   (lift . Transaction.getP . Anchors.clipboards) cp
@@ -188,7 +190,7 @@ makePanesEdit width panes myId = do
       ]
   return $ Widget.weakerEvents panesEventMap panesWidget
 
-makePaneWidget :: MonadA m => Widget.R -> Sugar.DefinitionU m ExprGuiM.Payload -> ExprGuiM m (Widget (T m))
+makePaneWidget :: MonadA m => Widget.R -> Sugar.DefinitionN m ExprGuiM.Payload -> ExprGuiM m (Widget (T m))
 makePaneWidget width rawDefS = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
@@ -207,11 +209,7 @@ makePaneWidget width rawDefS = do
       case infoMode of
       Settings.Types -> rawDefS
       _ -> SugarRemoveTypes.nonHoleTypes <$> rawDefS
-  defS
-    & AddNames.addToDef
-    & AddNextHoles.addToDef
-    & DefinitionEdit.make
-    <&> fitToWidth width . colorize
+  fitToWidth width . colorize <$> DefinitionEdit.make defS
 
 fitToWidth :: Widget.R -> Widget f -> Widget f
 fitToWidth width w
