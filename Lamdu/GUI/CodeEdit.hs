@@ -80,7 +80,7 @@ loadConvertDefI cp defI =
   <&> Lens.mapped . Lens.mapped . Lens.mapped %~ mkPayload
   where
     mkPayload guids = ExprGuiM.Payload
-      { ExprGuiM.plGuids = guids
+      { ExprGuiM.plStoredGuids = guids
       , ExprGuiM.plInjected = [False]
       }
 

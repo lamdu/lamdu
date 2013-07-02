@@ -264,7 +264,7 @@ maybeInjectArgumentExpr holeInfo =
     traverse (injectIntoHoles holeInfo arg . fmap (flip (,) (pl False)))
     where
       pl isInjected = ExprGuiM.Payload
-        { ExprGuiM.plGuids = []
+        { ExprGuiM.plStoredGuids = []
         , ExprGuiM.plInjected = [isInjected]
         }
       arg =
