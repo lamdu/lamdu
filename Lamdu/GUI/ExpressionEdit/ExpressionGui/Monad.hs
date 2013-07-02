@@ -3,7 +3,8 @@ module Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad
   ( ExprGuiM, WidgetT, runWidget
   , widgetEnv
   , StoredGuids(..), Injected(..)
-  , Payload(..), SugarExpr
+  , Payload(..), plStoredGuids, plInjected
+  , SugarExpr
 
   , transaction, localEnv, withFgColor
   , getP, assignCursor, assignCursorPrefix
@@ -73,9 +74,10 @@ newtype Injected = Injected [Bool]
 
 -- GUI input payload on sugar exprs
 data Payload = Payload
-  { plStoredGuids :: [Guid]
-  , plInjected :: [Bool]
+  { _plStoredGuids :: [Guid]
+  , _plInjected :: [Bool]
   }
+Lens.makeLenses ''Payload
 
 type SugarExpr m = Sugar.ExpressionN m Payload
 

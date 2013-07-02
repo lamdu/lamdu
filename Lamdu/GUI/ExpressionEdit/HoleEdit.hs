@@ -256,8 +256,8 @@ postProcessSugar =
   where
     toPayload (ExprGuiM.StoredGuids guids, ExprGuiM.Injected injected) =
       ExprGuiM.Payload
-      { ExprGuiM.plStoredGuids = guids
-      , ExprGuiM.plInjected = injected
+      { ExprGuiM._plStoredGuids = guids
+      , ExprGuiM._plInjected = injected
       }
 
 asNewLabelScaleFactor :: Fractional a => a

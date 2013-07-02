@@ -316,8 +316,8 @@ addInferredTypes exprPl eg = do
     exprPl ^. Sugar.plInferredTypes
     & Lens.traversed . Lens.mapped . Lens.mapped .~
       ExprGuiM.Payload
-      { ExprGuiM.plStoredGuids = []
-      , ExprGuiM.plInjected = []
+      { ExprGuiM._plStoredGuids = []
+      , ExprGuiM._plInjected = []
       }
     & Lens.traversed (ExprGuiM.makeSubexpression 0)
     <&>

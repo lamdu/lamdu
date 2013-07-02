@@ -80,8 +80,8 @@ loadConvertDefI cp defI =
   <&> Lens.mapped . Lens.mapped . Lens.mapped %~ mkPayload
   where
     mkPayload guids = ExprGuiM.Payload
-      { ExprGuiM.plStoredGuids = guids
-      , ExprGuiM.plInjected = [False]
+      { ExprGuiM._plStoredGuids = guids
+      , ExprGuiM._plInjected = [False]
       }
 
 makeSugarPanes :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> Guid -> CT m [SugarPane m]
