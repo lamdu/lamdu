@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad
   ( ExprGuiM, WidgetT, runWidget
   , widgetEnv
   , StoredGuids(..), Injected(..)
-  , Payload(..), plStoredGuids, plInjected
+  , Payload(..), plStoredGuids, plInjected, plMNextHoleGuid
   , SugarExpr
 
   , transaction, localEnv, withFgColor
@@ -76,6 +76,7 @@ newtype Injected = Injected [Bool]
 data Payload = Payload
   { _plStoredGuids :: [Guid]
   , _plInjected :: [Bool]
+  , _plMNextHoleGuid :: Maybe Guid
   }
 Lens.makeLenses ''Payload
 

@@ -32,7 +32,7 @@ fdConfig config = FocusDelegator.Config
 make ::
   MonadA m => ParentPrecedence ->
   Sugar.Inferred Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m a ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence inferred pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -51,7 +51,7 @@ make parentPrecedence inferred pl myId = do
 
 makeUnwrapped ::
   MonadA m => ParentPrecedence ->
-  Sugar.Payload Sugar.Name m a ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Sugar.Inferred Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)

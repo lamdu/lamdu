@@ -38,11 +38,11 @@ import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.DefinitionEdit as DefinitionEdit
+import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.AddNextHoles as AddNextHoles
 import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.AddNames as AddNames
-import qualified Lamdu.Sugar.AddNextHoles as AddNextHoles
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Sugar.Types as Sugar
@@ -76,12 +76,13 @@ loadConvertDefI cp defI =
   lift (Load.loadDefinitionClosure defI) >>=
   SugarConvert.convertDefI cp
   <&> AddNames.addToDef
-  <&> AddNextHoles.addToDef
   <&> Lens.mapped . Lens.mapped . Lens.mapped %~ mkPayload
+  <&> AddNextHoles.addToDef
   where
     mkPayload guids = ExprGuiM.Payload
       { ExprGuiM._plStoredGuids = guids
       , ExprGuiM._plInjected = [False]
+      , ExprGuiM._plMNextHoleGuid = Nothing -- Filled by AddNextHoles above
       }
 
 makeSugarPanes :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> Guid -> CT m [SugarPane m]

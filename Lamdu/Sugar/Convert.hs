@@ -96,7 +96,6 @@ fakeExample guid =
   { _plGuid = Guid.augment "EXAMPLE" guid
   , _plInferredTypes = []
   , _plActions = Nothing
-  , _plMNextHoleGuid = Nothing
   , _plData = ()
   }
 

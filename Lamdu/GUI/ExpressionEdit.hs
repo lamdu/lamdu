@@ -64,7 +64,7 @@ make parentPrecedence sExpr = assignCursor $ do
     )
   where
     pl = sExpr ^. Sugar.rPayload
-    ExprGuiM.Payload guids isInjecteds = pl ^. Sugar.plData
+    ExprGuiM.Payload guids isInjecteds _mNextHoleGuid = pl ^. Sugar.plData
     exprHiddenGuids = List.delete (pl ^. Sugar.plGuid) guids
     exprId = WidgetIds.fromGuid $ pl ^. Sugar.plGuid
     maybeShrink

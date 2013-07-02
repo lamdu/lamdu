@@ -318,6 +318,7 @@ addInferredTypes exprPl eg = do
       ExprGuiM.Payload
       { ExprGuiM._plStoredGuids = []
       , ExprGuiM._plInjected = []
+      , ExprGuiM._plMNextHoleGuid = Nothing
       }
     & Lens.traversed (ExprGuiM.makeSubexpression 0)
     <&>

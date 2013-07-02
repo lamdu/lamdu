@@ -21,7 +21,7 @@ module Lamdu.Sugar.Types
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
     , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
   , Payload(..)
-    , plGuid, plInferredTypes, plActions, plMNextHoleGuid, plData
+    , plGuid, plInferredTypes, plActions, plData
   , ExpressionP(..), rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..), MStoredName
   , DefinitionN, DefinitionU
@@ -95,7 +95,6 @@ data Actions m = Actions
 data Payload name m a = Payload
   { _plInferredTypes :: [Expression name m ()]
   , _plActions :: Maybe (Actions m)
-  , _plMNextHoleGuid :: Maybe Guid
   , _plGuid :: Guid
   , _plData :: a
   } deriving (Functor, Foldable, Traversable)

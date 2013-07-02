@@ -42,12 +42,12 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.AddNextHoles as AddNextHoles
 import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.AddNextHoles as AddNextHoles
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -251,13 +251,14 @@ postProcessSugar ::
   Sugar.ExpressionN m HoleResults.SugarExprPl ->
   Sugar.ExpressionN m ExprGuiM.Payload
 postProcessSugar =
-  (fmap . fmap) toPayload .
-  AddNextHoles.addToExpr
+  AddNextHoles.addToExpr .
+  (fmap . fmap) toPayload
   where
     toPayload (ExprGuiM.StoredGuids guids, ExprGuiM.Injected injected) =
       ExprGuiM.Payload
       { ExprGuiM._plStoredGuids = guids
       , ExprGuiM._plInjected = injected
+      , ExprGuiM._plMNextHoleGuid = Nothing -- filled by AddNextHoles above
       }
 
 asNewLabelScaleFactor :: Fractional a => a
@@ -359,7 +360,7 @@ holeBackgroundColor config holeArg
 makeActiveHoleEdit ::
   MonadA m =>
   Widget.Size ->
-  Sugar.Payload Sugar.Name m a -> HoleInfo m ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload -> HoleInfo m ->
   ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit size pl holeInfo = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -406,7 +407,7 @@ data IsActive = Inactive | Active
 make ::
   MonadA m =>
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m a ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole pl outerId = do
   stateProp <- ExprGuiM.transaction $ assocStateRef guid ^. Transaction.mkProperty
@@ -442,7 +443,7 @@ make hole pl outerId = do
 makeUnwrappedH ::
   MonadA m =>
   Property (T m) HoleState ->
-  Sugar.Payload Sugar.Name m a ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Widget.Id ->
   ExprGuiM m (IsActive, ExpressionGui m)
@@ -459,14 +460,14 @@ makeUnwrappedH stateProp pl hole myId = do
         , hiId = myId
         , hiState = stateProp
         , hiActions = holeActions
-        , hiMNextHoleGuid = pl ^. Sugar.plMNextHoleGuid
+        , hiMNextHoleGuid = pl ^. Sugar.plData . ExprGuiM.plMNextHoleGuid
         , hiMArgument = hole ^. Sugar.holeMArg
         }
     _ -> return (Inactive, inactive)
 
 makeUnwrappedActive ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m a ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Sugar.HoleActions Sugar.Name m ->
   Widget.Size -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrappedActive pl holeActions size myId = do
@@ -478,7 +479,7 @@ makeUnwrappedActive pl holeActions size myId = do
     , hiId = myId
     , hiState = stateProp
     , hiActions = holeActions
-    , hiMNextHoleGuid = pl ^. Sugar.plMNextHoleGuid
+    , hiMNextHoleGuid = pl ^. Sugar.plData . ExprGuiM.plMNextHoleGuid
     , hiMArgument = Nothing
     }
 

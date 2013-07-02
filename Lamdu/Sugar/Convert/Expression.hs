@@ -68,7 +68,6 @@ make exprPl body = do
     , _plInferredTypes = inferredTypes
     , _plActions =
       mkActions sugarContext <$> exprPl ^. SugarInfer.plStored
-    , _plMNextHoleGuid = Nothing
     , _plData = exprPl ^. SugarInfer.plData
     }
   where
