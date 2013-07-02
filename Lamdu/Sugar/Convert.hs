@@ -333,7 +333,10 @@ convertRecord (Expr.Record k fields) exprPl = do
     { _rKind = k
     , _rFields =
         FieldList
-        { _flItems = sFields
+        { _flItems =
+            sFields
+            <&> rfTag . rPayload .
+                plActions . Lens._Just . wrap .~ WrapNotAllowed
         , _flMAddFirstItem = addField <$> exprPl ^? SugarInfer.plIRef
         }
     }
@@ -375,11 +378,13 @@ convertGetField (Expr.GetField recExpr tagExpr) exprPl = do
     Just var ->
       return $ BodyGetVar var
     Nothing ->
-      BodyGetField <$> traverse SugarM.convertSubexpression
+      traverse SugarM.convertSubexpression
       GetField
       { _gfRecord = recExpr
       , _gfTag = tagExpr
       }
+      <&> gfTag . rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
+      <&> BodyGetField
 
 removeRedundantSubExprTypes :: Expression n m a -> Expression n m a
 removeRedundantSubExprTypes =

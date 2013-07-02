@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.Modify
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
+import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widget (EventHandlers)
@@ -21,19 +22,20 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 wrapEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (Transaction m)
 wrapEventMap config actions =
-  mconcat
-  [ (fmap . fmap) Widget.eventResultFromCursor .
-    E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"]) operatorChars $
-    \c _isShifted -> HoleEdit.setHoleStateAndJump (HoleState [c]) =<< wrap
-  , Widget.keysEventMapMovesCursor
-    (Config.wrapKeys config) (E.Doc ["Edit", doc])
-    (FocusDelegator.delegatingId . WidgetIds.fromGuid <$> wrap)
-  ]
-  where
-    (doc, wrap) =
+  fromMaybe mempty $ do
+    (doc, wrap) <-
       case actions ^. Sugar.wrap of
-      Sugar.AlreadyWrapped -> ("Jump to wrapper", return (actions ^. Sugar.storedGuid))
-      Sugar.WrapAction action -> ("Wrap", action)
+      Sugar.AlreadyWrapped -> Just ("Jump to wrapper", return (actions ^. Sugar.storedGuid))
+      Sugar.WrapAction action -> Just ("Wrap", action)
+      Sugar.WrapNotAllowed -> Nothing
+    Just $ mconcat
+      [ (fmap . fmap) Widget.eventResultFromCursor .
+        E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"]) operatorChars $
+        \c _isShifted -> HoleEdit.setHoleStateAndJump (HoleState [c]) =<< wrap
+      , Widget.keysEventMapMovesCursor
+        (Config.wrapKeys config) (E.Doc ["Edit", doc])
+        (FocusDelegator.delegatingId . WidgetIds.fromGuid <$> wrap)
+      ]
 
 replaceEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (Transaction m)
 replaceEventMap config actions =
