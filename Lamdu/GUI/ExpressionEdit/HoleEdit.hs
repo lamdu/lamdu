@@ -104,6 +104,8 @@ resultPickEventMap ::
   MonadA m => Config -> HoleInfo m -> ShownResult m ->
   Widget.EventHandlers (T m)
 resultPickEventMap config holeInfo holeResult =
+  -- TODO:
+  -- flip mappend (srEventMap holeResult) .
   mappend alphaNumericAfterOperator $
   -- TODO: Does this guid business make sense?
   case hiMNextHoleGuid holeInfo of
@@ -206,12 +208,10 @@ makeExtraResultsWidget extraResults@(firstResult:_) = do
             guard isOnResult
             Just ShownResult
               { srEventMap = widget ^. Widget.wEventMap
-              , srHoleResult = holeResultSugar
+              , srHoleResult = rHoleResult result
               }
         , widget
         )
-      where
-        holeResultSugar = rHoleResult result
   (mResults, widgets) <-
     unzip <$> traverse mkResWidget extraResults
   return
