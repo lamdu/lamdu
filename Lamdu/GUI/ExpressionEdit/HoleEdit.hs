@@ -230,9 +230,9 @@ focusProxy wId =
   Widget.doesntTakeFocus
 
 makeHoleResultWidget ::
-  MonadA m => Widget.Id ->
+  MonadA m => HoleInfo m -> Widget.Id ->
   Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl -> ExprGuiM m (WidgetT m)
-makeHoleResultWidget resultId holeResult = do
+makeHoleResultWidget holeInfo resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   resultGui <-
     ExprGuiM.makeSubexpression 0 .
@@ -242,7 +242,7 @@ makeHoleResultWidget resultId holeResult = do
     & Widget.wFrame %~ Anim.mapIdentities (`mappend` Widget.toAnimId resultId)
     & Widget.wEventMap . Lens.mapped %~
       liftA2 mappend
-      (eventResultOfPickedResult <$> (holeResult ^. Sugar.holeResultPick))
+      (afterPick holeInfo =<< holeResult ^. Sugar.holeResultPick)
     & Widget.scale (realToFrac <$> Config.holeResultScaleFactor config)
     & focusProxy resultId
 
@@ -266,10 +266,10 @@ asNewLabelScaleFactor = 0.5
 
 makeNewTagResultWidget ::
   MonadA m =>
-  Widget.Id -> Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl ->
+  HoleInfo m -> Widget.Id -> Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl ->
   ExprGuiM m (WidgetT m)
-makeNewTagResultWidget resultId holeResult = do
-  widget <- makeHoleResultWidget resultId holeResult
+makeNewTagResultWidget holeInfo resultId holeResult = do
+  widget <- makeHoleResultWidget holeInfo resultId holeResult
   ExprGuiM.widgetEnv $ do
     label <-
       fmap (Widget.scale asNewLabelScaleFactor) .
@@ -366,8 +366,8 @@ makeActiveHoleEdit size pl holeInfo = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   (shownResultsLists, hasHiddenResults) <-
     HoleResults.makeAll config holeInfo MakeWidgets
-    { mkNewTagResultWidget = makeNewTagResultWidget
-    , mkResultWidget = makeHoleResultWidget
+    { mkNewTagResultWidget = makeNewTagResultWidget holeInfo
+    , mkResultWidget = makeHoleResultWidget holeInfo
     }
   let
     shownResultsIds = rId . (^. HoleResults.rlMain) <$> shownResultsLists
