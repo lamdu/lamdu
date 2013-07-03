@@ -40,7 +40,15 @@ bsOfKey :: (Binary k, Typeable k) => k -> KeyBS
 bsOfKey key = SHA1.hash $ encodeS (show (typeOf key), key)
 
 castUnmaybe :: (Typeable a, Typeable b) => String -> a -> b
-castUnmaybe suffix x = unsafeUnjust ("cast shouldn't fail, we use typeOf maps (" ++ suffix ++ ")") $ cast x
+castUnmaybe suffix x =
+  result
+  where
+    msg =
+      concat
+      [ "cast of ", show (typeOf x), " to ", show (typeOf result)
+      , " attempted in (", suffix, ")"
+      ]
+    result = unsafeUnjust msg $ cast x
 
 cacheValMap :: Typeable k => k -> Lens.Traversal' Cache ValMap
 cacheValMap key = cEntries . Lens.ix (typeOf key)
@@ -158,7 +166,7 @@ memo funcId f rawKey cache =
     onMiss = do
       val <- f rawKey
       return (val, insertHelper key val cache)
-    onHit newCache (AnyVal val) = return (castUnmaybe "memo:val" val, newCache)
+    onHit newCache (AnyVal val) = return (castUnmaybe (funcId ++ ":memo:val") val, newCache)
 
 memoS ::
   (Key k, Binary v, Typeable v, MonadA m) =>
