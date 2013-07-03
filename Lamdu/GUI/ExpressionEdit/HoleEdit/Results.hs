@@ -10,7 +10,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Results
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens.Operators
 import Control.Lens.Utils (contextSetter, contextVal)
-import Control.Monad ((<=<), void)
+import Control.Monad (void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Either.Utils (leftToJust, justToLeft)
 import Control.Monad.Trans.Maybe (MaybeT(..))
@@ -313,21 +313,24 @@ makeNewTagResultList holeInfo makeNewTagResultWidget
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
 
 collectResults :: MonadA m => Config -> ListT m (ResultsList f) -> m ([ResultsList f], HaveHiddenResults)
-collectResults config =
-  conclude <=<
-  List.splitWhenM (return . (>= Config.holeResultCount config) . length . fst) .
-  List.scanl step ([], [])
+collectResults config resultsM = do
+  (collectedResults, remainingResultsM) <-
+    List.splitWhenM (return . (>= Config.holeResultCount config) . length . fst) $
+    List.scanl step ([], []) resultsM
+  remainingResults <- List.toList $ List.take 2 remainingResultsM
+  let
+    results =
+      last (collectedResults ++ remainingResults)
+      & Lens.both %~ reverse
+  results
+    & Lens._1 %~ sortOn resultsListScore
+    & uncurry (++)
+    & splitAt (Config.holeResultCount config)
+    & Lens._2 %~ haveHiddenResults
+    & return
   where
     haveHiddenResults [] = NoHiddenResults
     haveHiddenResults _ = HaveHiddenResults
-    conclude (collectedResults, remainingResultsM) =
-      ( (Lens._2 %~ haveHiddenResults) . splitAt (Config.holeResultCount config)
-      . uncurry (++)
-      . (Lens._1 %~ sortOn resultsListScore)
-      . (Lens.both %~ reverse)
-      . last . mappend collectedResults
-      ) <$>
-      List.toList (List.take 2 remainingResultsM)
     resultsListScore x = (x ^. rlPreferred, rType (x ^. rlMain))
     step results x =
       results
