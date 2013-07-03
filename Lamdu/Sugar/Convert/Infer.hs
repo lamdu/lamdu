@@ -38,6 +38,7 @@ import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Monad (void, (<=<))
 import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.State (StateT(..), evalStateT)
 import Control.Monad.Trans.State.Utils (toStateT)
 import Control.MonadA (MonadA)
@@ -46,11 +47,10 @@ import Data.Cache (Cache)
 import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
-import Data.Store.Transaction (Transaction)
 import Data.Typeable (Typeable, Typeable1)
 import Lamdu.Data.Expression.IRef (DefI, DefIM)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
-import Lamdu.Sugar.Types.Internal (InferContext(..))
+import Lamdu.Sugar.Types.Internal
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
@@ -65,9 +65,6 @@ import qualified Lamdu.Data.Expression.Infer.ImplicitVariables as ImplicitVariab
 import qualified Lamdu.Data.Expression.Infer.Structure as Structure
 import qualified Lamdu.Data.Expression.Load as Load
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
-
-type T = Transaction
-type CT m = StateT Cache (T m)
 
 data NoInferred = NoInferred
 -- TODO: Replace (InferredWC t) with (InferredWC m)
@@ -128,17 +125,15 @@ memoLoadInfer ::
   (MonadA m, Typeable1 m, Cache.Key a, Binary a) =>
   Maybe (DefIM m) ->
   ExprIRef.ExpressionM m a ->
-  InferContext m -> Infer.Node (DefIM m) ->
-  CT m
-  ( Maybe
-    ( ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), a)
-    , Infer.Context (DefIM m)
-    )
-  )
-memoLoadInfer mDefI expr (InferContext inferState inferStateKey) node = do
-  loaded <- lift $ load mDefI expr
-  pureMemoBy "memoLoadInfer" (loaded, inferStateKey, node) $
-    (`runStateT` inferState) $
+  Infer.Node (DefIM m) ->
+  StateT (InferContext m) (MaybeT (CT m))
+  (ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), a))
+memoLoadInfer mDefI expr node = do
+  loaded <- lift . lift . lift $ load mDefI expr
+  icHashKey %= Cache.bsOfKey . (,,) loaded node
+  k <- Lens.use icHashKey
+  Lens.zoom icContext $
+    StateT . fmap (MaybeT . pureMemoBy "memoLoadInfer" k) . runStateT $
     Infer.inferLoaded (Infer.InferActions (const Nothing))
     loaded node
 
