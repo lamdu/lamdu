@@ -1,14 +1,15 @@
 module Lamdu.GUI.ExpressionEdit.EventMap (make) where
 
-import Control.Applicative ((<$>), Applicative(..))
+import Control.Applicative ((<$>), (<$), Applicative(..))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
+import Data.Foldable (sequenceA_)
 import Data.Monoid (Monoid(..))
-import Data.Store.Transaction (Transaction)
 import Data.Traversable (sequenceA)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
+import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -20,27 +21,29 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Expression as SugarExpr
 import qualified Lamdu.Sugar.Types as Sugar
 
+type T = Transaction.Transaction
+
 make ::
-  MonadA m => Sugar.Expression name m ExprGuiM.Payload ->
-  ExprGuiM m (EventHandlers (Transaction m))
-make sExpr =
+  MonadA m => [T m ()] -> Sugar.Expression name m ExprGuiM.Payload ->
+  ExprGuiM m (EventHandlers (T m))
+make resultPickers sExpr =
   mconcat <$> sequenceA
   [ maybe (return mempty) (actionsEventMap sExpr) $
     pl ^. Sugar.plActions
-  , jumpHolesEventMap $ pl ^. Sugar.plData . ExprGuiM.plHoleGuids
+  , jumpHolesEventMap resultPickers $ pl ^. Sugar.plData . ExprGuiM.plHoleGuids
   ]
   where
     pl = sExpr ^. Sugar.rPayload
 
-jumpHolesEventMap :: MonadA m => ExprGuiM.HoleGuids -> ExprGuiM m (EventHandlers (Transaction m))
-jumpHolesEventMap hg = do
+jumpHolesEventMap :: MonadA m => [T m ()] -> ExprGuiM.HoleGuids -> ExprGuiM m (EventHandlers (T m))
+jumpHolesEventMap resultPickers hg = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     doc dirStr = E.Doc ["Navigation", "Jump to " ++ dirStr ++ " hole"]
     jumpEventMap keys dirStr lens =
       maybe mempty
       (Widget.keysEventMapMovesCursor (keys config) (doc dirStr) .
-       pure . WidgetIds.fromGuid) $ hg ^. lens
+       (<$ sequenceA_ resultPickers) . WidgetIds.fromGuid) $ hg ^. lens
   pure $ mconcat
     [ jumpEventMap Config.jumpToNextHoleKeys "next" ExprGuiM.hgMNextHole
     , jumpEventMap Config.jumpToPrevHoleKeys "previous" ExprGuiM.hgMPrevHole
@@ -49,7 +52,7 @@ jumpHolesEventMap hg = do
 actionsEventMap ::
   MonadA m =>
   Sugar.Expression name m a -> Sugar.Actions m ->
-  ExprGuiM m (EventHandlers (Transaction m))
+  ExprGuiM m (EventHandlers (T m))
 actionsEventMap sExpr actions = do
   isSelected <- ExprGuiM.widgetEnv . WE.isSubCursor $ WidgetIds.fromGuid exprGuid
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -81,7 +84,7 @@ actionsEventMap sExpr actions = do
 pasteEventMap ::
   MonadA m =>
   Sugar.Hole name m expr ->
-  ExprGuiM m (Widget.EventHandlers (Transaction m))
+  ExprGuiM m (Widget.EventHandlers (T m))
 pasteEventMap hole = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   return .

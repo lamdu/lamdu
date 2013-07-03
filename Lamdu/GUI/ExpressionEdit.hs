@@ -54,8 +54,8 @@ make ::
   MonadA m => ParentPrecedence ->
   ExprGuiM.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence sExpr = assignCursor $ do
-  (gui, _) <- ExprGuiM.listenResultPickers $ makeEditor parentPrecedence sExpr
-  exprEventMap <- ExprEventMap.make sExpr
+  (gui, resultPickers) <- ExprGuiM.listenResultPickers $ makeEditor parentPrecedence sExpr
+  exprEventMap <- ExprEventMap.make resultPickers sExpr
   maybeShrink gui
     <&>
     ExpressionGui.egWidget %~
