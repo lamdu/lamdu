@@ -9,7 +9,6 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.Either.Utils (justToLeft)
 import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
@@ -178,8 +177,8 @@ typeCheckIdentityAt point = do
   sugarContext <- SugarM.readContext
   SugarM.liftCTransaction $
     Lens.has Lens._Just <$>
-    (runMaybeT . (`runStateT` (sugarContext ^. SugarM.scHoleInferContext)))
-    (SugarInfer.memoLoadInfer Nothing identityFunc point)
+    SugarInfer.memoLoadInfer Nothing identityFunc
+    (sugarContext ^. SugarM.scHoleInferContext) point
   where
     identityFunc =
       ExprLens.pureExpr #

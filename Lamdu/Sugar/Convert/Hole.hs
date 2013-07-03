@@ -8,8 +8,7 @@ import Control.Applicative (Applicative(..), (<$>), (<|>), (<$), Const(..))
 import Control.Lens.Operators
 import Control.Monad (guard, join, void)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..), mapStateT)
+import Control.Monad.Trans.State (State, runState, mapStateT)
 import Control.Monad.Trans.Writer (execWriter)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
@@ -121,8 +120,8 @@ accept sugarContext point iref = do
   (exprInferred, _) <-
     Cache.unmemoS $
     unsafeUnjust "The inferred value of a hole must type-check!" <$>
-    (runMaybeT . (`runStateT` (sugarContext ^. SugarM.scHoleInferContext)))
-    (SugarInfer.memoLoadInfer Nothing expr point)
+    SugarInfer.memoLoadInfer Nothing expr
+    (sugarContext ^. SugarM.scHoleInferContext) point
   pickResult iref $
     flip (,) Nothing <$> cleanUpInferredVal (fst <$> exprInferred)
   where
@@ -297,13 +296,14 @@ inferOnTheSide ::
   CT m (Maybe (ExprIRef.ExpressionM m ()))
 -- token represents the given holeInferContext
 inferOnTheSide sugarContext scope expr =
-  (fmap . fmap) fst . runMaybeT .
-  (`runStateT` (sugarContext ^. SugarM.scHoleInferContext)) $ do
-    node <- mkNewNode scope
-    SugarInfer.memoLoadInfer Nothing expr node
-      <&> void . Infer.iType . (^. Expr.ePayload . Lens._1)
+  SugarInfer.memoLoadInfer Nothing expr newCtx node
+  <&> Lens.mapped %~
+      void . Infer.iType . (^. Lens._1 . Expr.ePayload . Lens._1)
+  where
+    (node, newCtx) =
+      runState (mkNewNode scope) $ sugarContext ^. SugarM.scHoleInferContext
 
-mkNewNode :: (Typeable1 m, MonadA f) => Infer.Scope (DefIM m) -> StateT (InferContext m) f (Infer.Node (DefIM m))
+mkNewNode :: Typeable1 m => Infer.Scope (DefIM m) -> State (InferContext m) (Infer.Node (DefIM m))
 mkNewNode scope = do
   newNode <- Lens.zoom icContext $ Infer.newNodeWithScope scope
   icHashKey %= Cache.bsOfKey . (,,) "new node" scope
@@ -422,9 +422,9 @@ cachedFork =
 
 writeConvertTypeChecked ::
   (MonadA m, Monoid a) => Random.StdGen ->
-  SugarM.Context m -> Stored m ->
+  SugarM.Context m -> Stored m -> (Cache.KeyBS -> Cache.KeyBS) ->
   ( ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), MStorePoint m a)
-  , InferContext m
+  , Infer.Context (DefIM m)
   ) ->
   CT m
   ( ExpressionU m a
@@ -433,7 +433,7 @@ writeConvertTypeChecked ::
   , ExprIRef.ExpressionM m
     (SugarInfer.Payload (Infer.Inferred (DefIM m)) (Stored m) a)
   )
-writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
+writeConvertTypeChecked gen sugarContext holeStored updateInferStateKey (inferredExpr, newCtx) = do
   -- With the real stored guids:
   writtenExpr <-
     lift $ fmap toPayload .
@@ -444,7 +444,8 @@ writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
     makeConsistentPayload (False, pl) guid = pl & SugarInfer.plGuid .~ guid
     makeConsistentPayload (True, pl) _ = pl
     consistentExpr = ExprUtil.randomizeExpr gen $ makeConsistentPayload <$> writtenExpr
-    newSugarContext = sugarContext & SugarM.scHoleInferContext .~ newCtx
+    updateContext (InferContext _ctx key) = InferContext newCtx (updateInferStateKey key)
+    newSugarContext = sugarContext & SugarM.scHoleInferContext %~ updateContext
   converted <-
     SugarM.run newSugarContext . SugarM.convertSubexpression $
     consistentExpr
@@ -483,11 +484,13 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed = do
   ((fMJumpTo, mResult), forkedChanges) <- cachedFork $ do
     (fSeedExpr, fMJumpTo) <- lift $ seedExprEnv (Nothing, mempty) cp seed
     fMInferredExprCtx <-
-      runMaybeT . (`runStateT` (sugarContext ^. SugarM.scHoleInferContext)) $
-      SugarInfer.memoLoadInfer Nothing fSeedExpr holePoint
+      SugarInfer.memoLoadInfer Nothing fSeedExpr
+      (sugarContext ^. SugarM.scHoleInferContext) holePoint
+    let
+      updateInferStateKey key = Cache.bsOfKey (fSeedExpr, key)
     mResult <-
       traverse
-      (writeConvertTypeChecked gen sugarContext stored)
+      (writeConvertTypeChecked gen sugarContext stored updateInferStateKey)
       fMInferredExprCtx
     return (fMJumpTo, mResult)
 
