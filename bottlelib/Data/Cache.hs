@@ -55,6 +55,13 @@ lookupKey key cache =
 peek :: (Key k, Typeable v) => k -> Cache -> Maybe v
 peek key cache = snd <$> lookupKey key cache
 
+insertNew :: Ord k => String -> k -> v -> Map k v -> Map k v
+insertNew msg k v =
+  Map.alter f k
+  where
+    f Nothing = Just v
+    f (Just _) = error $ "insertNew found old key: " ++ show msg
+
 addKey ::
   (Key k, Typeable v) => k -> ValEntry v ->
   Map TypeRep ValMap -> Map TypeRep ValMap
@@ -64,7 +71,7 @@ addKey key entry =
     f Nothing = Just . ValMap $ Map.singleton key entry
     f (Just (ValMap valMap)) =
       Just . ValMap $
-      Map.insert (castUnmaybe "addKey:key" key) (entry & Lens._2 %~ castUnmaybe "addKey:val") valMap
+      insertNew "addKey" (castUnmaybe "addKey:key" key) (entry & Lens._2 %~ castUnmaybe "addKey:val") valMap
 
 lookupHelper :: Key k => r -> (Cache -> AnyVal -> r) -> k -> Cache -> r
 lookupHelper onMiss onHit key cache =
@@ -128,7 +135,7 @@ insertHelper key val cache =
   evict .
   (cSize +~ valLen) .
   (cEntries %~ addKey key entry) .
-  (cPriorities %~ Map.insert priority (AnyKey key)) .
+  (cPriorities %~ insertNew "insertHelper" priority (AnyKey key)) .
   (cCounter +~ 1) $
   cache
   where
