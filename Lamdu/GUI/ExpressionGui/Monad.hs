@@ -3,7 +3,10 @@ module Lamdu.GUI.ExpressionGui.Monad
   ( ExprGuiM, WidgetT
   , widgetEnv
   , StoredGuids(..), Injected(..)
-  , Payload(..), plStoredGuids, plInjected, plMNextHoleGuid
+  , HoleGuids(..), hgMNextHole, hgMPrevHole
+  , emptyHoleGuids
+  , Payload(..), plStoredGuids, plInjected, plHoleGuids
+  , emptyPayload
   , SugarExpr
 
   , transaction, localEnv, withFgColor
@@ -71,13 +74,29 @@ newtype StoredGuids = StoredGuids [Guid]
 newtype Injected = Injected [Bool]
   deriving (Monoid, Binary, Typeable, Eq, Ord)
 
+data HoleGuids = HoleGuids
+  { _hgMNextHole :: Maybe Guid
+  , _hgMPrevHole :: Maybe Guid
+  }
+Lens.makeLenses ''HoleGuids
+
+emptyHoleGuids :: HoleGuids
+emptyHoleGuids = HoleGuids Nothing Nothing
+
 -- GUI input payload on sugar exprs
 data Payload = Payload
   { _plStoredGuids :: [Guid]
   , _plInjected :: [Bool]
-  , _plMNextHoleGuid :: Maybe Guid
+  , _plHoleGuids :: HoleGuids
   }
 Lens.makeLenses ''Payload
+
+emptyPayload :: Payload
+emptyPayload = Payload
+  { _plStoredGuids = []
+  , _plInjected = []
+  , _plHoleGuids = emptyHoleGuids
+  }
 
 type SugarExpr m = Sugar.ExpressionN m Payload
 

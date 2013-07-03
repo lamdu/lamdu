@@ -1,11 +1,13 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, RankNTypes #-}
 module Lamdu.GUI.ExpressionGui.AddNextHoles
   ( addToDef, addToExpr
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Applicative.Utils (when)
+import Control.Lens (Lens')
 import Control.Lens.Operators
+import Control.Monad ((<=<))
 import Control.Monad.Trans.State (State, evalState)
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
@@ -29,19 +31,22 @@ addToExpr = (`evalState` Nothing) . addToExprH
 
 addToExprH ::
   Sugar.Expression name m ExprGuiM.Payload -> State (Maybe Guid) (Sugar.Expression name m ExprGuiM.Payload)
-addToExprH = Lens.backwards subExpressions %%@~ setNextHole
+addToExprH =
+  (Lens.backwards subExpressions %%@~ setGuid ExprGuiM.hgMNextHole) <=<
+  (subExpressions %%@~ setGuid ExprGuiM.hgMPrevHole)
 
-setNextHole ::
+setGuid ::
+  Lens' ExprGuiM.HoleGuids (Maybe Guid) ->
   Sugar.ExpressionP name m () ->
   Sugar.Payload name m ExprGuiM.Payload ->
   State (Maybe Guid) (Sugar.Payload name m ExprGuiM.Payload)
-setNextHole expr pl =
+setGuid lens expr pl =
   setIt <$>
   State.get <*
   when (Lens.has Lens._Just (pl ^. Sugar.plActions) && isHoleToJumpTo expr)
     (State.put (Just (pl ^. Sugar.plGuid)))
   where
-    setIt x = pl & Sugar.plData . ExprGuiM.plMNextHoleGuid .~ x
+    setIt x = pl & Sugar.plData . ExprGuiM.plHoleGuids . lens .~ x
 
 isHoleToJumpTo :: Sugar.ExpressionP name m a -> Bool
 isHoleToJumpTo expr =

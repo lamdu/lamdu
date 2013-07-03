@@ -153,7 +153,8 @@ loadConvertDefI cp defI =
     mkPayload guids = ExprGuiM.Payload
       { ExprGuiM._plStoredGuids = guids
       , ExprGuiM._plInjected = [False]
-      , ExprGuiM._plMNextHoleGuid = Nothing -- Filled by AddNextHoles above
+      -- Filled by AddNextHoles above:
+      , ExprGuiM._plHoleGuids = ExprGuiM.emptyHoleGuids
       }
 
 makeNewDefinition ::

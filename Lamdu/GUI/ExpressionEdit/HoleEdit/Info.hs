@@ -42,7 +42,7 @@ data HoleInfo m = HoleInfo
   , hiState :: Property (T m) HoleState
   , hiActions :: Sugar.HoleActions Sugar.Name m
   , hiMArgument :: Maybe (Sugar.HoleArg m (ExprGuiM.SugarExpr m))
-  , hiMNextHoleGuid :: Maybe Guid
+  , hiHoleGuids :: ExprGuiM.HoleGuids
   }
 
 hiSearchTerm :: HoleInfo m -> String

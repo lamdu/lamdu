@@ -315,11 +315,7 @@ addInferredTypes exprPl eg = do
   typeEdits <-
     exprPl ^. Sugar.plInferredTypes
     & Lens.traversed . Lens.mapped . Lens.mapped .~
-      ExprGuiM.Payload
-      { ExprGuiM._plStoredGuids = []
-      , ExprGuiM._plInjected = []
-      , ExprGuiM._plMNextHoleGuid = Nothing
-      }
+      ExprGuiM.emptyPayload
     & Lens.traversed (ExprGuiM.makeSubexpression 0)
     <&>
       map

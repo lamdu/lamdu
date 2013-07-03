@@ -107,7 +107,7 @@ resultPickEventMap config holeInfo holeResult =
   -- (`mappend` srEventMap holeResult) .
   mappend alphaNumericAfterOperator $
   -- TODO: Does this guid business make sense?
-  case hiMNextHoleGuid holeInfo of
+  case hiHoleGuids holeInfo ^. ExprGuiM.hgMNextHole of
   Just nextHoleGuid
     | not (srHoleResult holeResult ^. Sugar.holeResultHasHoles) ->
       mappend (simplePickRes (Config.pickResultKeys config)) .
@@ -259,7 +259,8 @@ postProcessSugar =
       ExprGuiM.Payload
       { ExprGuiM._plStoredGuids = guids
       , ExprGuiM._plInjected = injected
-      , ExprGuiM._plMNextHoleGuid = Nothing -- filled by AddNextHoles above
+      -- filled by AddNextHoles above
+      , ExprGuiM._plHoleGuids = ExprGuiM.emptyHoleGuids
       }
 
 asNewLabelScaleFactor :: Fractional a => a
@@ -462,7 +463,7 @@ makeUnwrappedH pl hole myId = do
         , hiId = myId
         , hiState = stateProp
         , hiActions = holeActions
-        , hiMNextHoleGuid = pl ^. Sugar.plData . ExprGuiM.plMNextHoleGuid
+        , hiHoleGuids = pl ^. Sugar.plData . ExprGuiM.plHoleGuids
         , hiMArgument = hole ^. Sugar.holeMArg
         }
     _ -> return (Inactive, inactive)
@@ -484,7 +485,7 @@ makeUnwrappedActive pl storedGuid holeActions size myId = do
     , hiId = myId
     , hiState = stateProp
     , hiActions = holeActions
-    , hiMNextHoleGuid = pl ^. Sugar.plData . ExprGuiM.plMNextHoleGuid
+    , hiHoleGuids = pl ^. Sugar.plData . ExprGuiM.plHoleGuids
     , hiMArgument = Nothing
     }
 
