@@ -9,7 +9,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Infer as Infer
 
 inferUntilConflict ::
-  Ord def => Infer.Loaded def a -> Infer.InferNode def ->
+  Ord def => Infer.Loaded def a -> Infer.Node def ->
   StateT (Infer.Context def) (Either (Infer.Error def))
   (Expr.Expression def (Infer.Inferred def, a))
 inferUntilConflict = Infer.inferLoaded actions
@@ -26,7 +26,7 @@ assertNoConflict msg =
     fromEither (Right x) = return x
 
 inferAssertNoConflict ::
-  (Monad m, Ord def) => String -> Infer.Loaded def a -> Infer.InferNode def ->
+  (Monad m, Ord def) => String -> Infer.Loaded def a -> Infer.Node def ->
   StateT (Infer.Context def) m (Expr.Expression def (Infer.Inferred def, a))
 inferAssertNoConflict msg loaded =
   assertNoConflict msg . inferUntilConflict loaded

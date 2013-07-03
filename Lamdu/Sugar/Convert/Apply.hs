@@ -173,7 +173,7 @@ convertPrefix funcRef funcI argS argI applyPl
 
 typeCheckIdentityAt ::
   (MonadA m, Typeable1 m) =>
-  Infer.InferNode (DefIM m) -> SugarM m Bool
+  Infer.Node (DefIM m) -> SugarM m Bool
 typeCheckIdentityAt point = do
   sugarContext <- SugarM.readContext
   SugarM.liftCTransaction $

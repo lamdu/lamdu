@@ -53,7 +53,7 @@ reportConflict err =
   Set.singleton err
 
 inferWithConflicts ::
-  Ord def => Infer.Loaded def a -> Infer.InferNode def ->
+  Ord def => Infer.Loaded def a -> Infer.Node def ->
   State (Infer.Context def)
   ( Bool
   , Expr.Expression def (InferredWithConflicts def, a)

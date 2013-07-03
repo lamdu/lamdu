@@ -125,7 +125,7 @@ memoLoadInfer ::
   (MonadA m, Typeable1 m, Cache.Key a, Binary a) =>
   Maybe (DefIM m) ->
   ExprIRef.ExpressionM m a ->
-  Infer.InferNode (DefIM m) ->
+  Infer.Node (DefIM m) ->
   StateT (InferContext m) (MaybeT (CT m))
   (ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), a))
 memoLoadInfer mDefI expr node = do
@@ -139,7 +139,7 @@ memoLoadInfer mDefI expr node = do
 
 inferWithVariables ::
   (RandomGen g, MonadA m) => g ->
-  Infer.Loaded (DefIM m) a -> Infer.Context (DefIM m) -> Infer.InferNode (DefIM m) ->
+  Infer.Loaded (DefIM m) a -> Infer.Context (DefIM m) -> Infer.Node (DefIM m) ->
   T m
   ( ( Infer.Context (DefIM m)
     , ExprIRef.ExpressionM m (InferredWithConflicts (DefIM m), a)
@@ -193,7 +193,7 @@ inferAddImplicits ::
   ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m)) ->
   Cache.KeyBS ->
   ( Infer.Context (DefIM m)
-  , Infer.InferNode (DefIM m)
+  , Infer.Node (DefIM m)
   ) -> CT m (InferredWithImplicits m ())
 inferAddImplicits gen mDefI lExpr inferContextKey inferState = do
   loaded <- lift $ load mDefI lExpr

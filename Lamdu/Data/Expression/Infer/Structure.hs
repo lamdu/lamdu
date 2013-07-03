@@ -29,7 +29,7 @@ addToNodes ::
   Infer.Loader def m ->
   Expr.Expression def (Infer.Inferred def, a) ->
   StateT (Infer.Context def) m
-  (Expr.Expression def (Infer.InferNode def, a))
+  (Expr.Expression def (Infer.Node def, a))
 addToNodes loader expr@(Expr.Expression body (inferred, a))
   | Lens.has ExprLens.bodyHole body
   && Lens.has ExprLens.exprHole (Infer.iValue inferred)

@@ -67,7 +67,7 @@ showExpressionWithConflicts =
       map (("  "++) . show . Infer.errDetails) conflicts
 
 doInferM ::
-  Infer.InferNode (DefI t) -> ExprIRef.Expression t a ->
+  Infer.Node (DefI t) -> ExprIRef.Expression t a ->
   State (Infer.Context (DefI t)) (ExprIRef.Expression t (Infer.Inferred (DefI t), a))
 doInferM inferNode expr = do
   (success, exprWC) <-
@@ -83,7 +83,7 @@ doInferM inferNode expr = do
       ]
 
 loadInferM ::
-  Infer.InferNode (DefI t) -> ExprIRef.Expression t a ->
+  Infer.Node (DefI t) -> ExprIRef.Expression t a ->
   StateT (Infer.Context (DefI t)) (Either (Infer.Error (DefI t)))
   (ExprIRef.Expression t (Infer.Inferred (DefI t), a))
 loadInferM inferNode expr =
@@ -103,14 +103,14 @@ loadInferResults ::
 loadInferResults = fmap (inferResults . fmap fst . fst) . loadInfer
 
 fromInitialState ::
-  (Infer.InferNode (DefI t) -> StateT (Infer.Context (DefI t)) m a) -> m (a, Infer.Context (DefI t))
+  (Infer.Node (DefI t) -> StateT (Infer.Context (DefI t)) m a) -> m (a, Infer.Context (DefI t))
 fromInitialState f =
   (`runStateT` ctx) $ f node
   where
     (ctx, node) = Infer.initial $ Just recursiveDefI
 
 doInferM_ ::
-  Infer.InferNode (DefI t) -> ExprIRef.Expression t a ->
+  Infer.Node (DefI t) -> ExprIRef.Expression t a ->
   State (Infer.Context (DefI t)) (ExprIRef.Expression t (Infer.Inferred (DefI t)))
 doInferM_ = (fmap . fmap . fmap . fmap) fst doInferM
 

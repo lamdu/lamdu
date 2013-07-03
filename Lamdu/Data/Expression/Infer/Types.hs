@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving, TemplateHaskell #-}
 
 module Lamdu.Data.Expression.Infer.Types
-  ( InferNode(..), Inferred(..)
+  ( Node(..), Inferred(..)
   , IsRestrictedPoly(..)
   , ExprRef(..)
   , RefExpression, makeRefExpr
@@ -56,22 +56,22 @@ makeRefExpr expr = Expr.Expression expr $ RefExprPayload mempty (Monoid.Any Fals
 type Scope def = Map (Expr.VariableRef def) ExprRef
 
 -- Used to refer to expressions in the inference state and resume inference.
-data InferNode def = InferNode
+data Node def = Node
   { nRefs :: {-# UNPACK #-}!TypedValue
   , nScope :: Scope def
   } deriving (Typeable, Eq, Ord)
 
--- "derive makeBinary ''InferNode" fails because of the Ord constraint
-instance (Ord def, Binary def) => Binary (InferNode def) where
-  get = InferNode <$> get <*> get
-  put (InferNode a b) = sequenceA_ [put a, put b]
-derive makeNFData ''InferNode
+-- "derive makeBinary ''Node" fails because of the Ord constraint
+instance (Ord def, Binary def) => Binary (Node def) where
+  get = Node <$> get <*> get
+  put (Node a b) = sequenceA_ [put a, put b]
+derive makeNFData ''Node
 
 data IsRestrictedPoly = UnrestrictedPoly | RestrictedPoly
   deriving (Eq, Ord, Show, Typeable)
 
 data Inferred def = Inferred
-  { iNode :: InferNode def
+  { iNode :: Node def
   , iValue :: Expr.Expression def IsRestrictedPoly
   , iType  :: Expr.Expression def IsRestrictedPoly
   , iScope :: Map Guid (Expr.Expression def IsRestrictedPoly)

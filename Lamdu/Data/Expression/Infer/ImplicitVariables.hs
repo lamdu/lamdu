@@ -39,8 +39,8 @@ isUnrestrictedHole _ = False
 
 addVariableForHole ::
   (Show def, Ord def, RandomGen g) =>
-  Infer.InferNode def ->
-  StateT g (State (Infer.Context def)) (Guid, Infer.InferNode def)
+  Infer.Node def ->
+  StateT g (State (Infer.Context def)) (Guid, Infer.Node def)
 addVariableForHole holePoint = do
   paramGuid <- state random
   let
@@ -57,14 +57,14 @@ addVariableForHole holePoint = do
     paramTypeTypeRef <- Infer.createRefExpr
     return
       ( paramGuid
-      , Infer.InferNode (Infer.TypedValue paramTypeRef paramTypeTypeRef) mempty
+      , Infer.Node (Infer.TypedValue paramTypeRef paramTypeTypeRef) mempty
       )
 
 addVariablesForExpr ::
   (MonadA m, Show def, Ord def, RandomGen g) =>
   Infer.Loader def m ->
   Expr.Expression def (Infer.Inferred def, a) ->
-  StateT g (StateT (Infer.Context def) m) [(Guid, Infer.InferNode def)]
+  StateT g (StateT (Infer.Context def) m) [(Guid, Infer.Node def)]
 addVariablesForExpr loader expr = do
   reinferred <-
     lift . State.gets . Infer.derefExpr $
@@ -89,11 +89,11 @@ addVariablesForExpr loader expr = do
     inferredVal = Infer.iValue . fst . (^. Expr.ePayload)
 
 lambdaWrap ::
-  Ord def => Guid -> Infer.InferNode def ->
-  Expr.Expression def (Infer.InferNode def, a) ->
+  Ord def => Guid -> Infer.Node def ->
+  Expr.Expression def (Infer.Node def, a) ->
   a -> a ->
   State (Infer.Context def)
-  (Expr.Expression def (Infer.InferNode def, a))
+  (Expr.Expression def (Infer.Node def, a))
 lambdaWrap paramGuid paramTypeNode result lamPl paramTypePl = do
   newNode <- Infer.newNodeWithScope mempty
   let
@@ -112,10 +112,10 @@ lambdaWrap paramGuid paramTypeNode result lamPl paramTypePl = do
 
 addParam ::
   Ord def =>
-  Expr.Expression def (Infer.InferNode def, Payload a) ->
-  (Guid, Infer.InferNode def) ->
+  Expr.Expression def (Infer.Node def, Payload a) ->
+  (Guid, Infer.Node def) ->
   State (Infer.Context def)
-  (Expr.Expression def (Infer.InferNode def, Payload a))
+  (Expr.Expression def (Infer.Node def, Payload a))
 addParam result (paramGuid, paramTypeNode) =
   lambdaWrap paramGuid paramTypeNode result lamPl paramTypePl
   where

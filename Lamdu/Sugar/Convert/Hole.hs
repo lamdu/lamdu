@@ -112,7 +112,7 @@ convertTypeCheckedHoleH exprPl =
 accept ::
   (MonadA m, Typeable1 m) =>
   SugarM.Context m ->
-  Infer.InferNode (DefIM m) ->
+  Infer.Node (DefIM m) ->
   ExprIRef.ExpressionIM m ->
   T m (Maybe Guid, ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m))
 accept sugarContext point iref = do
@@ -303,7 +303,7 @@ inferOnTheSide sugarContext scope expr =
     SugarInfer.memoLoadInfer Nothing expr node
       <&> void . Infer.iType . (^. Expr.ePayload . Lens._1)
 
-mkNewNode :: (Typeable1 m, MonadA f) => Infer.Scope (DefIM m) -> StateT (InferContext m) f (Infer.InferNode (DefIM m))
+mkNewNode :: (Typeable1 m, MonadA f) => Infer.Scope (DefIM m) -> StateT (InferContext m) f (Infer.Node (DefIM m))
 mkNewNode scope = do
   newNode <- Lens.zoom icContext $ Infer.newNodeWithScope scope
   icHashKey %= Cache.bsOfKey . (,,) "new node" scope

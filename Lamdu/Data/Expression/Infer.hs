@@ -6,7 +6,7 @@ module Lamdu.Data.Expression.Infer
   , inferLoaded, addRules
   , derefExpr, derefNode
   , IsRestrictedPoly(..)
-  , InferNode(..), TypedValue(..)
+  , Node(..), TypedValue(..)
   , Error(..), ErrorDetails(..)
   , RefMap, Context, ExprRef, Scope
   , Loader(..), InferActions(..)
@@ -194,10 +194,10 @@ ruleRefsAt k = ruleMap . refsAt (unRuleRef k)
 createTypedVal :: MonadA m => StateT (Context def) m TypedValue
 createTypedVal = TypedValue <$> createRefExpr <*> createRefExpr
 
-newNodeWithScope :: MonadA m => Scope def -> StateT (Context def) m (InferNode def)
-newNodeWithScope scope = (`InferNode` scope) <$> createTypedVal
+newNodeWithScope :: MonadA m => Scope def -> StateT (Context def) m (Node def)
+newNodeWithScope scope = (`Node` scope) <$> createTypedVal
 
-initial :: Ord def => Maybe def -> (Context def, InferNode def)
+initial :: Ord def => Maybe def -> (Context def, Node def)
 initial mRecursiveDefI =
   (context, res)
   where
@@ -210,7 +210,7 @@ initial mRecursiveDefI =
             Nothing -> mempty
             Just recursiveDefI ->
               Map.singleton (Expr.DefinitionRef recursiveDefI) (tvType rootTv)
-        return $ InferNode rootTv scope
+        return $ Node rootTv scope
     emptyContext =
       Context
       { _exprMap = emptyRefMap
@@ -235,7 +235,7 @@ liftState = InferT
 instance MonadTrans (InferT def) where
   lift = liftState . lift
 
-derefNode :: Context def -> InferNode def -> Inferred def
+derefNode :: Context def -> Node def -> Inferred def
 derefNode context inferNode =
   Inferred
   { iValue = deref . tvVal $ nRefs inferNode
@@ -254,7 +254,7 @@ derefNode context inferNode =
       context ^. exprRefsAt ref . rExpression
 
 derefExpr ::
-  Expr.Expression def (InferNode def, a) -> Context def ->
+  Expr.Expression def (Node def, a) -> Context def ->
   Expr.Expression def (Inferred def, a)
 derefExpr expr context =
   expr <&> Lens._1 %~ derefNode context
@@ -417,7 +417,7 @@ liftContextState = liftState . Lens.zoom sContext . toStateT
 exprIntoContext ::
   (MonadA m, Ord def) => Scope def ->
   Loaded def a ->
-  InferT def m (Expr.Expression def (InferNode def, a))
+  InferT def m (Expr.Expression def (Node def, a))
 exprIntoContext rootScope (Loaded rootExpr defTypes) = do
   defTypesRefs <-
     traverse defTypeIntoContext $
@@ -436,7 +436,7 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
       return ref
     addTypedVal x = fmap ((,) x) createTypedVal
     go scope (Expr.Expression body (s, createdTV)) = do
-      inferNode <- toInferNode scope (void <$> body) createdTV
+      inferNode <- toNode scope (void <$> body) createdTV
       newBody <-
         case body of
         Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
@@ -448,7 +448,7 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
           return $ ExprUtil.makeLam k paramGuid paramTypeDone resultDone
         _ -> traverse (go scope) body
       return $ Expr.Expression newBody (inferNode, s)
-    toInferNode scope body tv = do
+    toNode scope body tv = do
       let
         typedValue =
           tv
@@ -458,7 +458,7 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
                 Expr._BodyLeaf . Expr._GetVariable .
                 Lens.folding (`Map.lookup` scope)
           }
-      return $ InferNode typedValue scope
+      return $ Node typedValue scope
 
 ordNub :: Ord a => [a] -> [a]
 ordNub = Set.toList . Set.fromList
@@ -507,7 +507,7 @@ addRule rule = do
 
 addRules ::
   (Eq def, MonadA m) => InferActions def m ->
-  [Expr.Expression def (InferNode def)] ->
+  [Expr.Expression def (Node def)] ->
   StateT (Context def) m ()
 addRules actions exprs =
   execInferT actions . liftState . toStateT .
@@ -517,7 +517,7 @@ addRules actions exprs =
 inferLoaded ::
   (Ord def, MonadA m) =>
   InferActions def m -> Loaded def a ->
-  InferNode def ->
+  Node def ->
   StateT (Context def) m (Expr.Expression def (Inferred def, a))
 inferLoaded actions loadedExpr node =
   State.gets . derefExpr <=<
@@ -535,12 +535,12 @@ inferLoaded actions loadedExpr node =
 {-# SPECIALIZE
   inferLoaded ::
     InferActions (DefI t) Maybe -> Loaded (DefI t) a ->
-    InferNode (DefI t) ->
+    Node (DefI t) ->
     StateT (Context (DefI t)) Maybe (ExprIRef.Expression t (Inferred (DefI t), a))
   #-}
 {-# SPECIALIZE
   inferLoaded ::
     Monoid w => InferActions (DefI t) (Writer w) -> Loaded (DefI t) a ->
-    InferNode (DefI t) ->
+    Node (DefI t) ->
     StateT (Context (DefI t)) (Writer w) (ExprIRef.Expression t (Inferred (DefI t), a))
   #-}
