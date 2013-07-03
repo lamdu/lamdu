@@ -8,7 +8,6 @@ module Lamdu.Sugar.Convert.Monad
   , codeAnchor
   , getP
   , convertSubexpression
-  , memoLoadInferInHoleContext
   ) where
 
 import Control.Applicative (Applicative, (<$>))
@@ -16,24 +15,19 @@ import Control.Lens ((^.))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.MonadA (MonadA)
-import Data.Binary (Binary)
 import Data.Map (Map)
 import Data.Monoid (Monoid)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
-import Data.Typeable (Typeable1)
 import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Sugar.Convert.Infer (ExprMM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types.Internal
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
-import qualified Data.Cache as Cache
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
-import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 
 data TagParamInfo = TagParamInfo
   { tpiFromParameters :: Guid
@@ -85,18 +79,3 @@ convertSubexpression :: (MonadA m, Monoid a) => ExprMM m a -> SugarM m (Expressi
 convertSubexpression exprI = do
   convertSub <- scConvertSubexpression <$> readContext
   convertSub exprI
-
--- Inline and remove:
-memoLoadInferInHoleContext ::
-  (MonadA m, Typeable1 m, Cache.Key a, Binary a) =>
-  Context m ->
-  ExprIRef.ExpressionM m a ->
-  Infer.InferNode (DefIM m) ->
-  CT m
-  ( Maybe
-    ( ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), a)
-    , Infer.Context (DefIM m)
-    )
-  )
-memoLoadInferInHoleContext ctx expr =
-  SugarInfer.memoLoadInfer Nothing expr $ ctx ^. scHoleInferContext

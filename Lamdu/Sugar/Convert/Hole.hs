@@ -120,7 +120,8 @@ accept sugarContext point iref = do
   (exprInferred, _) <-
     Cache.unmemoS $
     unsafeUnjust "The inferred value of a hole must type-check!" <$>
-    SugarM.memoLoadInferInHoleContext sugarContext expr point
+    SugarInfer.memoLoadInfer Nothing expr
+    (sugarContext ^. SugarM.scHoleInferContext) point
   pickResult iref $
     flip (,) Nothing <$> cleanUpInferredVal (fst <$> exprInferred)
   where
@@ -483,7 +484,8 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed = do
   ((fMJumpTo, mResult), forkedChanges) <- cachedFork $ do
     (fSeedExpr, fMJumpTo) <- lift $ seedExprEnv (Nothing, mempty) cp seed
     fMInferredExprCtx <-
-      SugarM.memoLoadInferInHoleContext sugarContext fSeedExpr holePoint
+      SugarInfer.memoLoadInfer Nothing fSeedExpr
+      (sugarContext ^. SugarM.scHoleInferContext) holePoint
     let
       updateInferStateKey key = Cache.bsOfKey (fSeedExpr, key)
     mResult <-
