@@ -11,8 +11,8 @@ module Lamdu.Sugar.Convert.Infer
   , InferredWithImplicits(..)
 
   , iwiSuccess
-  , iwiBaseInferContextKey, iwiInferContext
-  , iwiStructureInferContext, iwiBaseInferContext
+  , iwiBaseInferContext, iwiInferContext
+  , iwiStructureInferContext
   , iwiExpr, iwiBaseExpr
 
   , mkExprPure
@@ -50,6 +50,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Typeable (Typeable, Typeable1)
 import Lamdu.Data.Expression.IRef (DefI, DefIM)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
+import Lamdu.Sugar.Types.Internal (InferContext(..))
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
@@ -124,23 +125,22 @@ pureMemoBy k val = Cache.memoS (const (return val)) k
 -- wasteful. Therefore, the caller is in charge of giving us a unique
 -- identifier for the inferState that is preferably small.
 memoLoadInfer ::
-  (MonadA m, Typeable1 m, Cache.Key a, Binary a) => Maybe (DefIM m) ->
-  ExprIRef.ExpressionM m a -> Cache.KeyBS ->
-  ( Infer.Context (DefIM m)
-  , Infer.InferNode (DefIM m)
-  ) ->
+  (MonadA m, Typeable1 m, Cache.Key a, Binary a) =>
+  Maybe (DefIM m) ->
+  ExprIRef.ExpressionM m a ->
+  InferContext m -> Infer.InferNode (DefIM m) ->
   CT m
   ( Maybe
     ( ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), a)
     , Infer.Context (DefIM m)
     )
   )
-memoLoadInfer mDefI expr inferStateKey (inferState, point) = do
+memoLoadInfer mDefI expr (InferContext inferState inferStateKey) node = do
   loaded <- lift $ load mDefI expr
-  pureMemoBy (loaded, inferStateKey, point) $
+  pureMemoBy (loaded, inferStateKey, node) $
     (`runStateT` inferState) $
     Infer.inferLoaded (Infer.InferActions (const Nothing))
-    loaded point
+    loaded node
 
 inferWithVariables ::
   (RandomGen g, MonadA m) => g ->
@@ -187,8 +187,7 @@ data InferredWithImplicits m a = InferredWithImplicits
   , _iwiStructureInferContext :: Infer.Context (DefIM m)
   , _iwiExpr :: ExprIRef.ExpressionM m (Payload (InferredWC (Tag m)) (Maybe (Stored m)) a)
   -- Prior to adding variables
-  , _iwiBaseInferContext :: Infer.Context (DefIM m)
-  , _iwiBaseInferContextKey :: Cache.KeyBS
+  , _iwiBaseInferContext :: InferContext m
   , _iwiBaseExpr :: ExprIRef.ExpressionM m (Payload (InferredWC (Tag m)) (Stored m) a)
   }
 Lens.makeLenses ''InferredWithImplicits
@@ -208,9 +207,7 @@ inferAddImplicits gen mDefI lExpr inferContextKey inferState = do
   let baseExpr = mkStoredPayload <$> expr
   return InferredWithImplicits
     { _iwiSuccess = isJust mWithVariables
-    , _iwiBaseInferContextKey = Cache.bsOfKey (loaded, inferContextKey)
-
-    , _iwiBaseInferContext = baseContext
+    , _iwiBaseInferContext = InferContext baseContext $ Cache.bsOfKey (loaded, inferContextKey)
     , _iwiBaseExpr = baseExpr
 
     , _iwiStructureInferContext = maybe baseContext (^. Lens._1) mWithVariables

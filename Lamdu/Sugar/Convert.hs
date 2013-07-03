@@ -28,7 +28,6 @@ import Lamdu.Sugar.Types.Internal
 import System.Random (RandomGen)
 import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
-import qualified Data.Cache as Cache
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
@@ -441,15 +440,12 @@ isCompleteType =
 mkContext ::
   (MonadA m, Typeable1 m) =>
   Anchors.Code (Transaction.MkProperty m) (Tag m) ->
-  Cache.KeyBS ->
-  Infer.Context (DefIM m) ->
-  Infer.Context (DefIM m) ->
+  InferContext m -> Infer.Context (DefIM m) ->
   T m (Context m)
-mkContext cp holeInferStateKey holeInferState structureInferState = do
+mkContext cp holeInferContext structureInferState = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   return Context
-    { _scHoleInferStateKey = holeInferStateKey
-    , _scHoleInferState = holeInferState
+    { _scHoleInferContext = holeInferContext
     , _scStructureInferState = structureInferState
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
@@ -464,8 +460,7 @@ convertExpressionPure ::
   ExprIRef.ExpressionM m a -> CT m (ExpressionU m a)
 convertExpressionPure cp gen res = do
   context <-
-    lift $ mkContext cp (err "holeInferStateKey")
-    (err "holeInferState") (err "structureInferState")
+    lift $ mkContext cp (err "holeInferContext") (err "structureInferState")
   fmap removeRedundantTypes .
     SugarM.run context .
     SugarM.convertSubexpression $
@@ -944,7 +939,6 @@ convertDefIExpression cp exprLoaded defI defType = do
     makeTypeInfo cp defI (addStoredGuids id <$> defType) (mempty <$ inferredType) success
   context <-
     lift $ mkContext cp
-    (ilr ^. SugarInfer.iwiBaseInferContextKey)
     (ilr ^. SugarInfer.iwiBaseInferContext)
     (ilr ^. SugarInfer.iwiStructureInferContext)
   SugarM.run context $ do

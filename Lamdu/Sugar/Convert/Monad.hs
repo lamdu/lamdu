@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds #-}
 module Lamdu.Sugar.Convert.Monad
   ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
-  , scHoleInferStateKey, scHoleInferState, scStructureInferState
+  , scHoleInferContext, scStructureInferState
   , scCodeAnchors, scSpecialFunctions, scTagParamInfos, scRecordParamsInfos
   , SugarM(..), run
   , readContext, liftCTransaction, liftTransaction, local
@@ -46,8 +46,7 @@ data RecordParamsInfo m = RecordParamsInfo
   }
 
 data Context m = Context
-  { _scHoleInferStateKey :: Cache.KeyBS
-  , _scHoleInferState :: Infer.Context (DefIM m)
+  { _scHoleInferContext :: InferContext m
   , _scStructureInferState :: Infer.Context (DefIM m)
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
@@ -87,6 +86,7 @@ convertSubexpression exprI = do
   convertSub <- scConvertSubexpression <$> readContext
   convertSub exprI
 
+-- Inline and remove:
 memoLoadInferInHoleContext ::
   (MonadA m, Typeable1 m, Cache.Key a, Binary a) =>
   Context m ->
@@ -98,7 +98,5 @@ memoLoadInferInHoleContext ::
     , Infer.Context (DefIM m)
     )
   )
-memoLoadInferInHoleContext ctx expr point =
-  SugarInfer.memoLoadInfer Nothing expr
-    (ctx ^. scHoleInferStateKey)
-    (ctx ^. scHoleInferState, point)
+memoLoadInferInHoleContext ctx expr =
+  SugarInfer.memoLoadInfer Nothing expr $ ctx ^. scHoleInferContext

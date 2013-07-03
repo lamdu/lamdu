@@ -8,7 +8,7 @@ import Control.Applicative (Applicative(..), (<$>), (<|>), (<$), Const(..))
 import Control.Lens.Operators
 import Control.Monad (guard, join, void)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (runState, mapStateT)
+import Control.Monad.Trans.State (State, runState, mapStateT)
 import Control.Monad.Trans.Writer (execWriter)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
@@ -295,18 +295,18 @@ inferOnTheSide ::
   CT m (Maybe (ExprIRef.ExpressionM m ()))
 -- token represents the given holeInferContext
 inferOnTheSide sugarContext scope expr =
-  (fmap . fmap)
-  (void . Infer.iType . (^. Lens._1 . Expr.ePayload . Lens._1)) .
-  -- We can use the same inferStateKey despite making a new node here,
-  -- because we haven't altered the context in a meaningful way, we've
-  -- added an independent node. This won't collide with inference at
-  -- the hole point because the point is an input to the memo.
-  SugarInfer.memoLoadInfer Nothing expr inferStateKey . swap $
-  runState newNode inferState
+  SugarInfer.memoLoadInfer Nothing expr newCtx node
+  <&> Lens.mapped %~
+      void . Infer.iType . (^. Lens._1 . Expr.ePayload . Lens._1)
   where
-    newNode = Infer.newNodeWithScope scope
-    inferState = sugarContext ^. SugarM.scHoleInferState
-    inferStateKey = sugarContext ^. SugarM.scHoleInferStateKey
+    (node, newCtx) =
+      runState (mkNewNode scope) $ sugarContext ^. SugarM.scHoleInferContext
+
+mkNewNode :: Typeable1 m => Infer.Scope (DefIM m) -> State (InferContext m) (Infer.InferNode (DefIM m))
+mkNewNode scope = do
+  newNode <- Lens.zoom icContext $ Infer.newNodeWithScope scope
+  icHashKey %= Cache.bsOfKey . (,,) "new node" scope
+  return newNode
 
 getScopeElement ::
   MonadA m => SugarM.Context m ->
@@ -432,7 +432,7 @@ writeConvertTypeChecked ::
   , ExprIRef.ExpressionM m
     (SugarInfer.Payload (Infer.Inferred (DefIM m)) (Stored m) a)
   )
-writeConvertTypeChecked gen sugarContext holeStored updateInferState (inferredExpr, ctx) = do
+writeConvertTypeChecked gen sugarContext holeStored updateInferStateKey (inferredExpr, newCtx) = do
   -- With the real stored guids:
   writtenExpr <-
     lift $ fmap toPayload .
@@ -443,12 +443,10 @@ writeConvertTypeChecked gen sugarContext holeStored updateInferState (inferredEx
     makeConsistentPayload (False, pl) guid = pl & SugarInfer.plGuid .~ guid
     makeConsistentPayload (True, pl) _ = pl
     consistentExpr = ExprUtil.randomizeExpr gen $ makeConsistentPayload <$> writtenExpr
-    newContext =
-      sugarContext
-      & SugarM.scHoleInferState .~ ctx
-      & SugarM.scHoleInferStateKey %~ updateInferState
+    updateContext (InferContext _ctx key) = InferContext newCtx (updateInferStateKey key)
+    newSugarContext = sugarContext & SugarM.scHoleInferContext %~ updateContext
   converted <-
-    SugarM.run newContext . SugarM.convertSubexpression $
+    SugarM.run newSugarContext . SugarM.convertSubexpression $
     consistentExpr
     <&> SugarInfer.plStored %~ Just
     <&> SugarInfer.plInferred %~ Just . toIWC
@@ -487,10 +485,10 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed = do
     fMInferredExprCtx <-
       SugarM.memoLoadInferInHoleContext sugarContext fSeedExpr holePoint
     let
-      updateInferState key = Cache.bsOfKey (fSeedExpr, key)
+      updateInferStateKey key = Cache.bsOfKey (fSeedExpr, key)
     mResult <-
       traverse
-      (writeConvertTypeChecked gen sugarContext stored updateInferState)
+      (writeConvertTypeChecked gen sugarContext stored updateInferStateKey)
       fMInferredExprCtx
     return (fMJumpTo, mResult)
 
