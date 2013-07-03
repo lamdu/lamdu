@@ -99,7 +99,7 @@ emptyRefMap =
   }
 
 {-# INLINE createRef #-}
-createRef :: a -> State (RefMap a) Int
+createRef :: MonadA m => a -> StateT (RefMap a) m Int
 createRef val = do
   key <- Lens.use nextRef
   nextRef += 1
@@ -171,7 +171,7 @@ fmap concat . sequence $
 toRefExpression :: Expr.Expression def () -> RefExpression def
 toRefExpression = (RefExprPayload mempty mempty mempty <$)
 
-createRefExpr :: State (Context def) ExprRef
+createRefExpr :: MonadA m => StateT (Context def) m ExprRef
 createRefExpr =
   fmap ExprRef . Lens.zoom exprMap . createRef $
   RefData (toRefExpression ExprUtil.pureHole) mempty
@@ -191,10 +191,10 @@ ruleRefsAt k = ruleMap . refsAt (unRuleRef k)
 
 -------------
 
-createTypedVal :: State (Context def) TypedValue
+createTypedVal :: MonadA m => StateT (Context def) m TypedValue
 createTypedVal = TypedValue <$> createRefExpr <*> createRefExpr
 
-newNodeWithScope :: Scope def -> State (Context def) (InferNode def)
+newNodeWithScope :: MonadA m => Scope def -> StateT (Context def) m (InferNode def)
 newNodeWithScope scope = (`InferNode` scope) <$> createTypedVal
 
 initial :: Ord def => Maybe def -> (Context def, InferNode def)
