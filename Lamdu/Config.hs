@@ -58,6 +58,9 @@ data Config = Config
   , pickResultKeys :: [E.ModKey]
   , pickAndMoveToNextHoleKeys :: [E.ModKey]
 
+  , jumpToNextHoleKeys :: [E.ModKey]
+  , jumpToPrevHoleKeys :: [E.ModKey]
+
   , jumpToDefinitionKeys :: [E.ModKey]
 
   , delForwardKeys :: [E.ModKey]

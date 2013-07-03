@@ -1,9 +1,11 @@
 module Lamdu.GUI.ExpressionEdit.EventMap (make) where
 
+import Control.Applicative ((<$>), Applicative(..))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
+import Data.Traversable (sequenceA)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
@@ -11,19 +13,38 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionEdit.Modify as Modify
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Expression as SugarExpr
 import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
-  MonadA m => Sugar.Expression name m a ->
+  MonadA m => Sugar.Expression name m ExprGuiM.Payload ->
   ExprGuiM m (EventHandlers (Transaction m))
 make sExpr =
-  maybe (return mempty) (actionsEventMap sExpr) $
-  sExpr ^. Sugar.rPayload . Sugar.plActions
+  mconcat <$> sequenceA
+  [ maybe (return mempty) (actionsEventMap sExpr) $
+    pl ^. Sugar.plActions
+  , jumpHolesEventMap $ pl ^. Sugar.plData . ExprGuiM.plHoleGuids
+  ]
+  where
+    pl = sExpr ^. Sugar.rPayload
+
+jumpHolesEventMap :: MonadA m => ExprGuiM.HoleGuids -> ExprGuiM m (EventHandlers (Transaction m))
+jumpHolesEventMap hg = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    doc dirStr = E.Doc ["Navigation", "Jump to " ++ dirStr ++ " hole"]
+    jumpEventMap keys dirStr =
+      maybe mempty
+      (Widget.keysEventMapMovesCursor (keys config) (doc dirStr) .
+       pure . WidgetIds.fromGuid) $ hg ^. ExprGuiM.hgMNextHole
+  pure $ mconcat
+    [ jumpEventMap Config.jumpToNextHoleKeys "next"
+    , jumpEventMap Config.jumpToPrevHoleKeys "previous"
+    ]
 
 actionsEventMap ::
   MonadA m =>

@@ -754,6 +754,30 @@
             }
         ]
     ],
+    "jumpToNextHoleKeys": [
+        [
+            {
+                "modShift": false,
+                "modAlt": false,
+                "modCtrl": false
+            },
+            {
+                "KeyTab": []
+            }
+        ]
+    ],
+    "jumpToPrevHoleKeys": [
+        [
+            {
+                "modShift": true,
+                "modAlt": false,
+                "modCtrl": false
+            },
+            {
+                "KeyTab": []
+            }
+        ]
+    ],
     "pickResultKeys": [
         [
             {
