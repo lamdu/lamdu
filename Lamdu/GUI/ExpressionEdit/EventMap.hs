@@ -37,13 +37,13 @@ jumpHolesEventMap hg = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     doc dirStr = E.Doc ["Navigation", "Jump to " ++ dirStr ++ " hole"]
-    jumpEventMap keys dirStr =
+    jumpEventMap keys dirStr lens =
       maybe mempty
       (Widget.keysEventMapMovesCursor (keys config) (doc dirStr) .
-       pure . WidgetIds.fromGuid) $ hg ^. ExprGuiM.hgMNextHole
+       pure . WidgetIds.fromGuid) $ hg ^. lens
   pure $ mconcat
-    [ jumpEventMap Config.jumpToNextHoleKeys "next"
-    , jumpEventMap Config.jumpToPrevHoleKeys "previous"
+    [ jumpEventMap Config.jumpToNextHoleKeys "next" ExprGuiM.hgMNextHole
+    , jumpEventMap Config.jumpToPrevHoleKeys "previous" ExprGuiM.hgMPrevHole
     ]
 
 actionsEventMap ::
