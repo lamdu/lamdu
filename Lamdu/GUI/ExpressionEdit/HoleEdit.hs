@@ -310,6 +310,12 @@ blockDownEvents =
   (E.Doc ["Navigation", "Move", "down (blocked)"]) $
   return mempty
 
+addSelectedResultPicker :: MonadA m => Maybe (ShownResult m) -> ExprGuiM m ()
+addSelectedResultPicker mSelectedResult =
+  case mSelectedResult of
+    Nothing -> return ()
+    Just res -> ExprGuiM.addResultPicker . void $ srHoleResult res ^. Sugar.holeResultPick
+
 makeResultsWidget ::
   MonadA m => HoleInfo m ->
   [ResultsList m] -> HaveHiddenResults ->
@@ -320,6 +326,7 @@ makeResultsWidget holeInfo shownResultsLists hiddenResults = do
     mSelectedResult = mResults ^? Lens.traversed . Lens._Just
     mFirstResult = mainResults ^? Lens.traversed
     mResult = mSelectedResult <|> mFirstResult
+  addSelectedResultPicker mSelectedResult
   hiddenResultsWidgets <- maybeToList <$> makeHiddenResultsMWidget hiddenResults myId
   widget <-
     if null rows
@@ -379,9 +386,6 @@ makeActiveHoleEdit size pl holeInfo = do
       (mResult, resultsWidget) <-
         makeResultsWidget holeInfo shownResultsLists hasHiddenResults
       searchTermWidget <- makeSearchTermWidget holeInfo
-      case mResult of
-        Nothing -> return ()
-        Just res -> ExprGuiM.addResultPicker . void $ srHoleResult res ^. Sugar.holeResultPick
       let
         adHocEditor = adHocTextEditEventMap $ searchTermProperty holeInfo
         layers = Config.layers config
