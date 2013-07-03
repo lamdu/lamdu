@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
-module Lamdu.GUI.ExpressionEdit.DefinitionEdit (make, diveToNameEdit) where
+module Lamdu.GUI.ExpressionEdit.DefinitionContentEdit (make, diveToNameEdit, makeNameEdit) where
 
 import Control.Applicative ((<$>), (<*>), (<$))
 import Control.Lens.Operators
@@ -8,8 +8,7 @@ import Data.List.Utils (nonEmptyAll, isLengthAtLeast)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Data.Traversable (traverse, sequenceA)
-import Data.Vector.Vector2 (Vector2(..))
+import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CharClassification (operatorChars)
 import Lamdu.Config (Config)
@@ -24,7 +23,6 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
@@ -49,9 +47,6 @@ makeNameEdit name myId ident =
   ExprGuiM.wrapDelegated defFDConfig FocusDelegator.NotDelegating id
   (ExpressionGui.makeNameEdit name ident)
   myId
-
-makeEquals :: MonadA m => Widget.Id -> ExprGuiM m (Widget f)
-makeEquals = ExprGuiM.widgetEnv . BWidgets.makeLabel "=" . Widget.toAnimId
 
 nonOperatorName :: Sugar.Name -> Bool
 nonOperatorName (Sugar.Name Sugar.StoredName _ x) =
@@ -145,12 +140,12 @@ mkPresentationEdits guid myId = do
   where
     mkProp = Anchors.assocPresentationMode guid
 
-makeDefContentEdit ::
+make ::
   MonadA m => Guid -> Sugar.Name ->
   Sugar.DefinitionContent Sugar.Name m (ExprGuiM.SugarExpr m) ->
   ExprGuiM m (WidgetT m)
-makeDefContentEdit guid name content = do
-  equals <- makeEquals myId
+make guid name content = do
+  equals <- ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
   rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs
   let
     jumpToRHSViaEquals n widget
@@ -208,41 +203,6 @@ makeDefContentEdit guid name content = do
       fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid)
     myId = WidgetIds.fromGuid guid
 
-make ::
-  MonadA m =>
-  Sugar.Definition Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  ExprGuiM m (WidgetT m)
-make def =
-  case def ^. Sugar.drBody of
-  Sugar.DefinitionBodyExpression bodyExpr ->
-    makeExprDefinition def bodyExpr
-  Sugar.DefinitionBodyBuiltin builtin ->
-    makeBuiltinDefinition def builtin
-
-makeBuiltinDefinition ::
-  MonadA m =>
-  Sugar.Definition Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.DefinitionBuiltin m (ExprGuiM.SugarExpr m) ->
-  ExprGuiM m (WidgetT m)
-makeBuiltinDefinition def builtin = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  Box.vboxAlign 0 <$> sequenceA
-    [ defTypeScale config . (^. ExpressionGui.egWidget) <$>
-      ExprGuiM.makeSubexpression 0 (Sugar.biType builtin)
-    , BWidgets.hboxCenteredSpaced <$> sequenceA
-      [ ExprGuiM.withFgColor (Config.builtinOriginNameColor config) $
-        makeNameEdit name (Widget.joinId myId ["name"]) guid
-      , makeEquals myId
-      , BuiltinEdit.make builtin myId
-      ]
-    ]
-  where
-    Sugar.Definition guid name _ = def
-    myId = WidgetIds.fromGuid guid
-
-defTypeScale :: Config -> Widget f -> Widget f
-defTypeScale config = Widget.scale $ realToFrac <$> Config.defTypeBoxScaleFactor config
-
 makeWhereItemEdit ::
   MonadA m =>
   Sugar.WhereItem Sugar.Name m (ExprGuiM.SugarExpr m) ->
@@ -262,73 +222,10 @@ makeWhereItemEdit item = do
         ]
       | otherwise = mempty
   Widget.weakerEvents eventMap <$>
-    makeDefContentEdit
+    make
     (item ^. Sugar.wiGuid)
     (item ^. Sugar.wiName)
     (item ^. Sugar.wiValue)
-
-makeExprDefinition ::
-  MonadA m =>
-  Sugar.Definition Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.DefinitionExpression Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  ExprGuiM m (WidgetT m)
-makeExprDefinition def bodyExpr = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    makeGrid = (:[]) . defTypeScale config . BWidgets.gridHSpaced
-    addAcceptanceArrow acceptInferredType label = do
-      acceptanceLabel <-
-        (fmap . Widget.weakerEvents)
-        (Widget.keysEventMapMovesCursor (Config.acceptKeys config)
-         (E.Doc ["Edit", "Accept inferred type"]) (acceptInferredType >> return myId)) .
-        ExprGuiM.widgetEnv .
-        BWidgets.makeFocusableTextView "↱" $ Widget.joinId myId ["accept type"]
-      return $ BWidgets.hboxCenteredSpaced [acceptanceLabel, label]
-    labelStyle =
-      ExprGuiM.localEnv $ WE.setTextSizeColor
-      (Config.defTypeLabelTextSize config)
-      (Config.defTypeLabelColor config)
-    mkTypeRow labelText onLabel typeExpr = do
-      label <-
-        onLabel . labelStyle . ExprGuiM.widgetEnv .
-        BWidgets.makeLabel labelText $ Widget.toAnimId myId
-      typeGui <- ExprGuiM.makeSubexpression 0 typeExpr
-      return
-        [ (right, label)
-        , (center, Widget.doesntTakeFocus (typeGui ^. ExpressionGui.egWidget))
-        ]
-  typeWidgets <-
-    case bodyExpr ^. Sugar.deTypeInfo of
-    Sugar.DefinitionExportedTypeInfo x ->
-      makeGrid <$> sequenceA
-      [ mkTypeRow "Exported type:" id x ]
-    Sugar.DefinitionIncompleteType x ->
-      makeGrid <$> sequenceA
-      [ mkTypeRow "Exported type:" id $ Sugar.sitOldType x
-      , mkTypeRow "Inferred type:" id $ Sugar.sitNewIncompleteType x
-      ]
-    Sugar.DefinitionNewType x ->
-      makeGrid <$> sequenceA
-      [ mkTypeRow "Exported type:" (>>= addAcceptanceArrow (Sugar.antAccept x)) $
-        Sugar.antOldType x
-      , mkTypeRow "Inferred type:" id $ Sugar.antNewType x
-      ]
-  bodyWidget <-
-    makeDefContentEdit guid name $ bodyExpr ^. Sugar.deContent
-  return . Box.vboxAlign 0 $ typeWidgets ++ [bodyWidget]
-  where
-    right = Vector2 1 0.5
-    center = 0.5
-    Sugar.Definition guid name _ = def
-    myId = WidgetIds.fromGuid guid
-
-diveToNameEdit :: Widget.Id -> Widget.Id
-diveToNameEdit =
-  -- If we delegate too deep (e.g: No polymorphic params) that's
-  -- handled OK. So we may as well assume we're always wrapped by a
-  -- polymorphic wrapper:
-  FocusDelegator.delegatingId . -- Collapsed wrapper
-  FocusDelegator.delegatingId -- Name editor
 
 jumpToRHS ::
   (MonadA m, MonadA f) =>
@@ -400,3 +297,11 @@ makeNestedParams atParamWidgets rhs lhsId depParams params = do
   (,)
     <$> traverse mkParam depParamIds
     <*> traverse mkParam paramIds
+
+diveToNameEdit :: Widget.Id -> Widget.Id
+diveToNameEdit =
+  -- If we delegate too deep (e.g: No polymorphic params) that's
+  -- handled OK. So we may as well assume we're always wrapped by a
+  -- polymorphic wrapper:
+  FocusDelegator.delegatingId . -- Collapsed wrapper
+  FocusDelegator.delegatingId -- Name editor

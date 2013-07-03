@@ -36,8 +36,8 @@ import qualified Lamdu.Data.Expression.Load as Load
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
+import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
-import qualified Lamdu.GUI.ExpressionEdit.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.AddNextHoles as AddNextHoles
 import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
