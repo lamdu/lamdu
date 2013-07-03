@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.GUI.ExpressionEdit.ExpressionGui
+module Lamdu.GUI.ExpressionGui
   ( ExpressionGui(..), egWidget
   , fromValueWidget
   , scaleFromTop
@@ -35,8 +35,8 @@ import Graphics.UI.Bottle.Animation (AnimId, Layer)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Box (KBox)
 import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.GUI.ExpressionEdit.ExpressionGui.Types (WidgetT, MyPrecedence(..), ParentPrecedence(..), Precedence, ExpressionGui(..), egWidget, egAlignment)
+import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.GUI.ExpressionGui.Types (WidgetT, MyPrecedence(..), ParentPrecedence(..), Precedence, ExpressionGui(..), egWidget, egAlignment)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Data.Store.Transaction as Transaction
@@ -51,7 +51,7 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar

@@ -6,16 +6,16 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (mempty)
 import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
-import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
+import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui as ExpressionGui
-import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.Sugar.Types as Sugar

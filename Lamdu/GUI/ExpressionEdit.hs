@@ -4,8 +4,8 @@ module Lamdu.GUI.ExpressionEdit(make) where
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Lamdu.GUI.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
-import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
+import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
@@ -17,8 +17,8 @@ import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.ExpressionEdit.AtomEdit as AtomEdit
 import qualified Lamdu.GUI.ExpressionEdit.CollapsedEdit as CollapsedEdit
-import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui as ExpressionGui
-import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionEdit.GetFieldEdit as GetFieldEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetParamsEdit as GetParamsEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit

@@ -9,14 +9,14 @@ import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (traverse, sequenceA)
-import Lamdu.GUI.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
-import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
+import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui as ExpressionGui
-import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionEdit.Modify as Modify
 import qualified Lamdu.GUI.ExpressionEdit.Parens as Parens
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit

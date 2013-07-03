@@ -4,13 +4,13 @@ module Lamdu.GUI.ExpressionEdit.PiEdit(make) where
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (mappend)
-import Lamdu.GUI.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.GUI.ExpressionGui (ExpressionGui)
+import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui as ExpressionGui
-import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionEdit.Parens as Parens
 import qualified Lamdu.GUI.WidgetEnvT as WE

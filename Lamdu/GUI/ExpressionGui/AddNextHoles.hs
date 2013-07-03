@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Lamdu.GUI.ExpressionEdit.ExpressionGui.AddNextHoles
+module Lamdu.GUI.ExpressionGui.AddNextHoles
   ( addToDef, addToExpr
   ) where
 
@@ -12,7 +12,7 @@ import Data.Store.Guid (Guid)
 import Lamdu.Sugar.Expression (subExpressions)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
-import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Sugar.Types as Sugar
 
 addToDef ::
