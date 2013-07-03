@@ -59,7 +59,7 @@ lookupKey key cache =
   where
     findKey (ValMap m) =
       Map.lookup (castUnmaybe "lookupKey:key" key) m
-      <&> (veValue %~ castUnmaybe "lookupKey:val")
+      <&> (veValue %~ \(AnyVal val) -> castUnmaybe "lookupKey:val" val)
 
 -- TODO: Convert to Lens.at so you can poke too
 peek :: (Key k, Typeable v) => k -> Cache -> Maybe v
@@ -78,10 +78,11 @@ addKey ::
 addKey key entry =
   Map.alter f $ typeOf key
   where
-    f Nothing = Just . ValMap $ Map.singleton key entry
+    anyValEntry = entry & veValue %~ AnyVal
+    f Nothing = Just . ValMap $ Map.singleton key anyValEntry
     f (Just (ValMap valMap)) =
       Just . ValMap $
-      insertNew "addKey" (castUnmaybe "addKey:key" key) (entry & veValue %~ castUnmaybe "addKey:val") valMap
+      insertNew "addKey" (castUnmaybe "addKey:key" key) anyValEntry valMap
 
 lookupHelper :: Key k => r -> (Cache -> AnyVal -> r) -> k -> Cache -> r
 lookupHelper onMiss onHit key cache =
@@ -91,7 +92,7 @@ lookupHelper onMiss onHit key cache =
       case Map.lookup ckey m of
       Nothing -> Nothing
       Just (ValEntry prevPriority val) ->
-        Just . onHit newCache $ AnyVal val
+        Just $ onHit newCache val
         where
           newCache =
             cache

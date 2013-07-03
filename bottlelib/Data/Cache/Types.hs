@@ -36,9 +36,9 @@ data ValEntry v = ValEntry
   }
 Lens.makeLenses ''ValEntry
 
-data ValMap = forall k v. (Key k, Typeable v) => ValMap (Map k (ValEntry v))
-data AnyKey = forall k. Key k => AnyKey k
 data AnyVal = forall v. Typeable v => AnyVal v
+data ValMap = forall k. Key k => ValMap (Map k (ValEntry AnyVal))
+data AnyKey = forall k. Key k => AnyKey k
 
 data Cache = Cache
   { _cEntries :: Map TypeRep ValMap
