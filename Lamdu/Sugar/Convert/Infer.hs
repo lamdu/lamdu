@@ -113,8 +113,8 @@ load = Infer.load loader
 
 pureMemoBy ::
   (Cache.Key k, Binary v, Typeable v, MonadA m) =>
-  k -> v -> StateT Cache m v
-pureMemoBy k val = Cache.memoS (const (return val)) k
+  Cache.FuncId -> k -> v -> StateT Cache m v
+pureMemoBy funcId k val = Cache.memoS funcId (const (return val)) k
 
 -- memoLoadInfer does an infer "load" of the given expression (which
 -- loads dependent expression types), and then memoizes the inference
@@ -137,7 +137,7 @@ memoLoadInfer ::
   )
 memoLoadInfer mDefI expr (InferContext inferState inferStateKey) node = do
   loaded <- lift $ load mDefI expr
-  pureMemoBy (loaded, inferStateKey, node) $
+  pureMemoBy "memoLoadInfer" (loaded, inferStateKey, node) $
     (`runStateT` inferState) $
     Infer.inferLoaded (Infer.InferActions (const Nothing))
     loaded node
@@ -203,7 +203,7 @@ inferAddImplicits ::
 inferAddImplicits gen mDefI lExpr inferContextKey inferState = do
   loaded <- lift $ load mDefI lExpr
   ((baseContext, expr), mWithVariables) <-
-    Cache.memoS uncurriedInfer (loaded, inferState)
+    Cache.memoS "inferAddImplicits" uncurriedInfer (loaded, inferState)
   let baseExpr = mkStoredPayload <$> expr
   return InferredWithImplicits
     { _iwiSuccess = isJust mWithVariables

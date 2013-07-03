@@ -1,7 +1,9 @@
 {-# LANGUAGE ConstraintKinds, RankNTypes #-}
 module Data.Cache
   ( Cache, Key
-  , new, peek, touch, lookup, memo, memoS, unmemoS
+  , new, peek, touch, lookup
+  , FuncId
+  , memo, memoS, unmemoS
   , lookupS
   -- For lower-level memoization
   , KeyBS, bsOfKey
@@ -143,20 +145,25 @@ insertHelper key val cache =
     valLen = SBS.length $ encodeS val
     priority = PriorityData (cache ^. cCounter) valLen
 
+type FuncId = String
+
 -- Actually requires only Pointed Functor.
 memo ::
   (Key k, Binary v, Typeable v, MonadA m) =>
-  (k -> m v) -> k -> Cache -> m (v, Cache)
-memo f key cache =
+  FuncId -> (k -> m v) -> k -> Cache -> m (v, Cache)
+memo funcId f rawKey cache =
   lookupHelper onMiss onHit key cache
   where
+    key = (funcId, rawKey)
     onMiss = do
-      val <- f key
+      val <- f rawKey
       return (val, insertHelper key val cache)
     onHit newCache (AnyVal val) = return (castUnmaybe "memo:val" val, newCache)
 
-memoS :: (Key k, Binary v, Typeable v, MonadA m) => (k -> m v) -> k -> StateT Cache m v
-memoS f key = StateT $ memo f key
+memoS ::
+  (Key k, Binary v, Typeable v, MonadA m) =>
+  FuncId -> (k -> m v) -> k -> StateT Cache m v
+memoS funcId f key = StateT $ memo funcId f key
 
 unmemoS :: MonadA m => StateT Cache m a -> m a
 unmemoS = (`evalStateT` new 0)
