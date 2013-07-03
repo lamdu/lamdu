@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies, DeriveDataTypeable #-}
 module Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad
-  ( ExprGuiM, WidgetT, runWidget
+  ( ExprGuiM, WidgetT
   , widgetEnv
   , StoredGuids(..), Injected(..)
   , Payload(..), plStoredGuids, plInjected, plMNextHoleGuid
@@ -22,7 +22,7 @@ module Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad
   , memo, memoT
   , liftMemo, liftMemoT
 
-  , appendToTopLevelEventMap
+  , run
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -62,7 +62,6 @@ type AccessedVars = [Guid]
 data Output m = Output
   { oAccessedVars :: AccessedVars
   , oHolePickers :: [T m ()]
-  , oTopLevelEventMap :: Widget.EventHandlers (T m)
   }
 derive makeMonoid ''Output
 
@@ -152,7 +151,7 @@ run ::
   MonadA m =>
   (ParentPrecedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
   Anchors.CodeProps m -> Settings -> ExprGuiM m a ->
-  StateT Cache (WidgetEnvT (T m)) (Widget.EventHandlers (T m), a)
+  StateT Cache (WidgetEnvT (T m)) a
 run makeSubexpr codeAnchors settings (ExprGuiM action) =
   StateT $ \cache ->
   fmap f $ runRWST action
@@ -163,15 +162,7 @@ run makeSubexpr codeAnchors settings (ExprGuiM action) =
   }
   (GuiState cache)
   where
-    f (x, GuiState newCache, output) = ((oTopLevelEventMap output, x), newCache)
-
-runWidget ::
-  MonadA m =>
-  (ParentPrecedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
-  Anchors.CodeProps m -> Settings -> ExprGuiM m (Widget (T m)) ->
-  StateT Cache (WidgetEnvT (T m)) (Widget (T m))
-runWidget makeSubexpr codeAnchors settings action =
-  uncurry Widget.weakerEvents <$> run makeSubexpr codeAnchors settings action
+    f (x, GuiState newCache, _output) = (x, newCache)
 
 widgetEnv :: MonadA m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv = ExprGuiM . lift
@@ -220,7 +211,3 @@ markVariablesAsUsed vars = ExprGuiM $ RWS.tell mempty { oAccessedVars = vars }
 
 addResultPicker :: MonadA m => T m () -> ExprGuiM m ()
 addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }
-
-appendToTopLevelEventMap :: MonadA m => Widget.EventHandlers (T m) -> ExprGuiM m ()
-appendToTopLevelEventMap eventMap =
-  ExprGuiM $ RWS.tell mempty { oTopLevelEventMap = eventMap }

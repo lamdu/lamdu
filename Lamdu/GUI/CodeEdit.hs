@@ -103,7 +103,7 @@ make cp size settings rootGuid = do
   (sugarPanes, sugarClipboards) <-
     mapStateT lift $
     (,) (makePanes prop rootGuid) <$> getClipboards cp
-  ExprGuiM.runWidget ExpressionEdit.make cp settings $ do
+  ExprGuiM.run ExpressionEdit.make cp settings $ do
     panesEdit <- makePanesEdit width sugarPanes $ WidgetIds.fromGuid rootGuid
     clipboardsEdit <- makeClipboardsEdit width sugarClipboards
     return $
