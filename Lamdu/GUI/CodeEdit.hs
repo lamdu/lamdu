@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
-module Lamdu.GUI.CodeEdit (make) where
+module Lamdu.GUI.CodeEdit (make, Env(..)) where
 
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
@@ -19,7 +19,6 @@ import Data.Typeable (Typeable1)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
-import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
@@ -35,13 +34,11 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
-import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
-import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 type T = Transaction
-type CT m = StateT Cache (T m)
+type CT m = StateT Cache (WidgetEnvT (T m))
 
 data Pane m = Pane
   { paneDefI :: DefIM m
@@ -49,6 +46,15 @@ data Pane m = Pane
   , paneMoveDown :: Maybe (T m ())
   , paneMoveUp :: Maybe (T m ())
   }
+
+data Env m = Env
+  { codeProps :: Anchors.CodeProps m
+  , totalSize :: Widget.Size
+  , settings :: Settings
+  }
+
+totalWidth :: Env m -> Widget.R
+totalWidth = (^. Lens._1) . totalSize
 
 makePanes ::
   (MonadA m, Typeable1 m) =>
@@ -82,42 +88,38 @@ makePanes (Property panes setPanes) rootGuid =
       }
 
 makeClipboardsEdit ::
-  (Typeable1 m, MonadA m) => Widget.R -> [DefIM m] -> ExprGuiM m (WidgetT m)
-makeClipboardsEdit width clipboards = do
-  clipboardsEdits <- traverse (makePaneWidget width) clipboards
+  (Typeable1 m, MonadA m) => Env m -> [DefIM m] -> CT m (Widget (T m))
+makeClipboardsEdit env clipboards = do
+  clipboardsEdits <- traverse (makePaneWidget env) clipboards
   clipboardTitle <-
     if null clipboardsEdits
     then return Spacer.empty
-    else ExprGuiM.widgetEnv $ BWidgets.makeTextViewWidget "Clipboards:" ["clipboards title"]
+    else lift $ BWidgets.makeTextViewWidget "Clipboards:" ["clipboards title"]
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
-getClipboards :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> CT m [DefIM m]
-getClipboards = lift . Transaction.getP . Anchors.clipboards
+getClipboards :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> T m [DefIM m]
+getClipboards = Transaction.getP . Anchors.clipboards
 
 make ::
   (MonadA m, Typeable1 m) =>
-  Anchors.CodeProps m -> Widget.Size -> Settings -> Guid ->
-  StateT Cache (WidgetEnvT (T m)) (Widget (T m))
-make cp size settings rootGuid = do
-  prop <- lift . lift $ Anchors.panes cp ^. Transaction.mkProperty
+  Env m -> Guid -> CT m (Widget (T m))
+make env rootGuid = do
+  prop <- lift . lift $ Anchors.panes (codeProps env) ^. Transaction.mkProperty
   (sugarPanes, sugarClipboards) <-
-    mapStateT lift $
-    (,) (makePanes prop rootGuid) <$> getClipboards cp
-  ExprGuiM.run ExpressionEdit.make cp settings $ do
-    panesEdit <- makePanesEdit width sugarPanes $ WidgetIds.fromGuid rootGuid
-    clipboardsEdit <- makeClipboardsEdit width sugarClipboards
-    return $
-      Box.vboxAlign 0
-      [ panesEdit
-      , clipboardsEdit
-      ]
-  where
-    width = size ^. Lens._1
+    (,) (makePanes prop rootGuid) <$> (lift . lift . getClipboards) (codeProps env)
+  panesEdit <- makePanesEdit env sugarPanes $ WidgetIds.fromGuid rootGuid
+  clipboardsEdit <- makeClipboardsEdit env sugarClipboards
+  return $
+    Box.vboxAlign 0
+    [ panesEdit
+    , clipboardsEdit
+    ]
 
 makePanesEdit ::
-  (Typeable1 m, MonadA m) => Widget.R -> [Pane m] -> Widget.Id -> ExprGuiM m (WidgetT m)
-makePanesEdit width panes myId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  (Typeable1 m, MonadA m) =>
+  Env m -> [Pane m] -> Widget.Id -> CT m (Widget (T m))
+makePanesEdit env panes myId = do
+  config <- lift WE.readConfig
   let
     paneEventMap pane = mconcat
       [ maybe mempty
@@ -132,18 +134,17 @@ makePanesEdit width panes myId = do
       ]
     makePaneEdit pane =
       (fmap . Widget.weakerEvents) (paneEventMap pane) .
-      makePaneWidget width . paneDefI $ pane
+      makePaneWidget env . paneDefI $ pane
   panesWidget <-
     case panes of
-    [] -> ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "<No panes>" myId
+    [] -> lift $ BWidgets.makeFocusableTextView "<No panes>" myId
     (firstPane:_) ->
-      (ExprGuiM.assignCursor myId . WidgetIds.fromIRef . paneDefI) firstPane $ do
+      (mapStateT . WE.assignCursor myId . WidgetIds.fromIRef . paneDefI) firstPane $ do
         definitionEdits <- traverse makePaneEdit panes
         return . Box.vboxAlign 0 $ intersperse (Spacer.makeWidget 50) definitionEdits
 
-  cp <- ExprGuiM.readCodeAnchors
-  mJumpBack <- ExprGuiM.transaction $ DataOps.jumpBack cp
-  newDefinition <- DefinitionEdit.makeNewDefinition
+  mJumpBack <- lift . lift . DataOps.jumpBack $ codeProps env
+  newDefinition <- DefinitionEdit.makeNewDefinition $ codeProps env
   let
     panesEventMap =
       mconcat
@@ -157,9 +158,9 @@ makePanesEdit width panes myId = do
 
 makePaneWidget ::
   (Typeable1 m, MonadA m) =>
-  Widget.R -> DefIM m -> ExprGuiM m (Widget (T m))
-makePaneWidget width defI = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  Env m -> DefIM m -> CT m (Widget (T m))
+makePaneWidget env defI = do
+  config <- lift WE.readConfig
   let
     colorize widget
       | widget ^. Widget.wIsFocused = colorizeActivePane widget
@@ -171,7 +172,8 @@ makePaneWidget width defI = do
     colorizeInactivePane =
       Widget.wFrame %~
       Anim.onImages (Draw.tint (Config.inactiveTintColor config))
-  fitToWidth width . colorize <$> DefinitionEdit.make defI
+  fitToWidth (totalWidth env) . colorize <$>
+    DefinitionEdit.make (codeProps env) (settings env) defI
 
 fitToWidth :: Widget.R -> Widget f -> Widget f
 fitToWidth width w

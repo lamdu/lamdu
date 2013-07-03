@@ -14,6 +14,7 @@ import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Config (Config)
 import Lamdu.Data.Expression.IRef (DefIM)
+import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -25,6 +26,7 @@ import qualified Lamdu.Data.Expression.Load as Load
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
+import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionEdit.DefinitionContentEdit as DefinitionContentEdit
 import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -38,17 +40,19 @@ import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
-type CT m = StateT Cache (T m)
+type CT m = StateT Cache (WE.WidgetEnvT (T m))
 
-make :: (Typeable1 m, MonadA m) => DefIM m -> ExprGuiM m (WidgetT m)
-make defI = do
+make ::
+  (Typeable1 m, MonadA m) =>
+  Anchors.CodeProps m -> Settings ->
+  DefIM m -> CT m (WidgetT m)
+make cp settings defI = ExprGuiM.run ExpressionEdit.make cp settings $ do
   infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
   let
     maybeRemoveTypes =
       case infoMode of
       Settings.Types -> id
       _ -> fmap SugarRemoveTypes.nonHoleTypes
-  cp <- ExprGuiM.readCodeAnchors
   defS <- ExprGuiM.liftMemoT $ maybeRemoveTypes <$> loadConvertDefI cp defI
   case defS ^. Sugar.drBody of
     Sugar.DefinitionBodyExpression bodyExpr ->
@@ -138,7 +142,7 @@ makeExprDefinition def bodyExpr = do
 loadConvertDefI ::
   (MonadA m, Typeable1 m) =>
   Anchors.CodeProps m -> DefIM m ->
-  CT m (Sugar.DefinitionN m ExprGuiM.Payload)
+  StateT Cache (T m) (Sugar.DefinitionN m ExprGuiM.Payload)
 loadConvertDefI cp defI =
   lift (Load.loadDefinitionClosure defI) >>=
   SugarConvert.convertDefI cp
@@ -152,10 +156,11 @@ loadConvertDefI cp defI =
       , ExprGuiM._plMNextHoleGuid = Nothing -- Filled by AddNextHoles above
       }
 
-makeNewDefinition :: MonadA m => ExprGuiM m (T m Widget.Id)
-makeNewDefinition = do
-  curCursor <- ExprGuiM.widgetEnv WE.readCursor
-  cp <- ExprGuiM.readCodeAnchors
+makeNewDefinition ::
+  MonadA m => Anchors.CodeProps m ->
+  CT m (T m Widget.Id)
+makeNewDefinition cp = do
+  curCursor <- lift WE.readCursor
   return $ do
     newDefI <- DataOps.newPublicDefinition cp ""
     DataOps.newPane cp newDefI
