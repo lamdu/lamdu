@@ -236,5 +236,4 @@ convertAppliedHole funcI rawArgS argI exprPl
   | otherwise = mzero
   where
     argS =
-      rawArgS &
-      rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
+      rawArgS & rPayload . plActions . Lens._Just . wrap .~ Nothing

@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit
   ( make, makeUnwrappedActive
-  , HoleState(..), hsSearchTerm
   , eventResultOfPickedResult
   ) where
 
@@ -45,6 +44,7 @@ import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.AddNextHoles as AddNextH
 import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
+import qualified Lamdu.GUI.ExpressionEdit.Modify as Modify
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
@@ -420,22 +420,27 @@ make hole pl outerId = do
     & case isActive of
       Inactive -> ExpressionGui.addInferredTypes pl
       Active -> return
-  gui
-    & ExpressionGui.egWidget %~
-      Widget.weakerEvents
-      (maybe mempty
+  let
+    eventMap =
+      mconcat
+      [ maybe mempty
         ( E.keyPresses (Config.acceptKeys config ++ Config.delKeys config)
           (E.Doc ["Edit", "Unwrap"])
         . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
-        ) mUnWrap)
+        ) (hole ^? Sugar.holeMActions . Lens._Just . Sugar.holeMUnwrap . Lens._Just)
+      , case pl ^. Sugar.plActions of
+        Nothing -> mempty
+        Just actions ->
+          Modify.applyOperatorEventMap (return (actions ^. Sugar.storedGuid))
+      ]
+  gui
+    & ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     & return
   where
     delegatingMode
       | Lens.has (Sugar.holeMArg . Lens._Just) hole = FocusDelegator.NotDelegating
       | otherwise = FocusDelegator.Delegating
     inner = makeUnwrappedH pl hole
-    mUnWrap =
-      hole ^? Sugar.holeMActions . Lens._Just . Sugar.holeMUnwrap . Lens._Just
 
 makeUnwrappedH ::
   MonadA m =>

@@ -70,12 +70,9 @@ convertH ::
   SugarInfer.PayloadMM m a ->
   SugarM m (ExpressionU m a)
 convertH convertTyped exprPl =
-  fixWrap <$>
   maybe convertUntypedHole convertTyped (Lens.sequenceOf SugarInfer.plInferred exprPl)
+  <&> rPayload . plActions . Lens._Just . wrap .~ Nothing
   where
-    fixWrap expr =
-      expr &
-      rPayload . plActions . Lens.mapped . wrap .~ AlreadyWrapped
     convertUntypedHole =
       SugarExpr.make exprPl . BodyHole $ Hole Nothing Nothing
 
