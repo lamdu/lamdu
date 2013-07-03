@@ -75,11 +75,7 @@ convertH convertTyped exprPl =
   where
     fixWrap expr =
       expr &
-      case exprPl ^? SugarInfer.plIRef of
-      Just iref ->
-        rPayload . plActions . Lens.mapped . wrap .~
-        (AlreadyWrapped . ExprIRef.exprGuid) iref
-      Nothing -> id
+      rPayload . plActions . Lens.mapped . wrap .~ AlreadyWrapped
     convertUntypedHole =
       SugarExpr.make exprPl . BodyHole $ Hole Nothing Nothing
 

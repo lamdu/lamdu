@@ -84,7 +84,7 @@ import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 
 data WrapAction m
-  = AlreadyWrapped { _parentStoredGuid :: Guid }
+  = AlreadyWrapped
   | WrapAction (T m Guid)
   | WrapNotAllowed
 

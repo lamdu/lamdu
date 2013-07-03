@@ -23,19 +23,23 @@ import qualified Lamdu.Sugar.Types as Sugar
 wrapEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (Transaction m)
 wrapEventMap config actions =
   fromMaybe mempty $ do
-    (doc, wrap) <-
+    (isWrapped, wrap) <-
       case actions ^. Sugar.wrap of
-      Sugar.AlreadyWrapped guid -> Just ("Jump to wrapper", return guid)
-      Sugar.WrapAction action -> Just ("Wrap", action)
+      Sugar.AlreadyWrapped -> Just (True, return (actions ^. Sugar.storedGuid))
+      Sugar.WrapAction action -> Just (False, action)
       Sugar.WrapNotAllowed -> Nothing
-    Just $ mconcat
-      [ (fmap . fmap) Widget.eventResultFromCursor .
+    let
+      applyOpEv =
+        (fmap . fmap) Widget.eventResultFromCursor .
         E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"]) operatorChars $
         \c _isShifted -> HoleEdit.setHoleStateAndJump (HoleState [c]) =<< wrap
-      , Widget.keysEventMapMovesCursor
-        (Config.wrapKeys config) (E.Doc ["Edit", doc])
-        (FocusDelegator.delegatingId . WidgetIds.fromGuid <$> wrap)
-      ]
+      wrapEv
+        | isWrapped = mempty
+        | otherwise =
+          Widget.keysEventMapMovesCursor
+          (Config.wrapKeys config) (E.Doc ["Edit", "Wrap"])
+          (FocusDelegator.delegatingId . WidgetIds.fromGuid <$> wrap)
+    Just $ mappend applyOpEv wrapEv
 
 replaceEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (Transaction m)
 replaceEventMap config actions =

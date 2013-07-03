@@ -237,8 +237,4 @@ convertAppliedHole funcI rawArgS argI exprPl
   where
     argS =
       rawArgS &
-      case exprPl ^? SugarInfer.plIRef of
-      Just iref ->
-        rPayload . plActions . Lens._Just . wrap .~
-        (AlreadyWrapped . ExprIRef.exprGuid) iref
-      Nothing -> id
+      rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
