@@ -1,37 +1,60 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.GUI.DefinitionEdit (make, DefinitionContentEdit.diveToNameEdit) where
+module Lamdu.GUI.DefinitionEdit (make, makeNewDefinition) where
 
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
+import Data.Cache (Cache)
+import Data.Store.Transaction (Transaction)
 import Data.Traversable (sequenceA)
+import Data.Typeable (Typeable1)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Config (Config)
+import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Expression.Load as Load
+import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionEdit.DefinitionContentEdit as DefinitionContentEdit
 import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.AddNextHoles as AddNextHoles
 import qualified Lamdu.GUI.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.AddNames as AddNames
+import qualified Lamdu.Sugar.Convert as SugarConvert
+import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Sugar.Types as Sugar
 
-make ::
-  MonadA m =>
-  Sugar.Definition Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  ExprGuiM m (WidgetT m)
-make def =
-  case def ^. Sugar.drBody of
-  Sugar.DefinitionBodyExpression bodyExpr ->
-    makeExprDefinition def bodyExpr
-  Sugar.DefinitionBodyBuiltin builtin ->
-    makeBuiltinDefinition def builtin
+type T = Transaction
+type CT m = StateT Cache (T m)
+
+make :: (Typeable1 m, MonadA m) => DefIM m -> ExprGuiM m (WidgetT m)
+make defI = do
+  infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
+  let
+    maybeRemoveTypes =
+      case infoMode of
+      Settings.Types -> id
+      _ -> fmap SugarRemoveTypes.nonHoleTypes
+  cp <- ExprGuiM.readCodeAnchors
+  defS <- ExprGuiM.liftMemoT $ maybeRemoveTypes <$> loadConvertDefI cp defI
+  case defS ^. Sugar.drBody of
+    Sugar.DefinitionBodyExpression bodyExpr ->
+      makeExprDefinition defS bodyExpr
+    Sugar.DefinitionBodyBuiltin builtin ->
+      makeBuiltinDefinition defS builtin
 
 makeBuiltinDefinition ::
   MonadA m =>
@@ -111,3 +134,30 @@ makeExprDefinition def bodyExpr = do
     center = 0.5
     Sugar.Definition guid name _ = def
     myId = WidgetIds.fromGuid guid
+
+loadConvertDefI ::
+  (MonadA m, Typeable1 m) =>
+  Anchors.CodeProps m -> DefIM m ->
+  CT m (Sugar.DefinitionN m ExprGuiM.Payload)
+loadConvertDefI cp defI =
+  lift (Load.loadDefinitionClosure defI) >>=
+  SugarConvert.convertDefI cp
+  <&> AddNames.addToDef
+  <&> Lens.mapped . Lens.mapped . Lens.mapped %~ mkPayload
+  <&> AddNextHoles.addToDef
+  where
+    mkPayload guids = ExprGuiM.Payload
+      { ExprGuiM._plStoredGuids = guids
+      , ExprGuiM._plInjected = [False]
+      , ExprGuiM._plMNextHoleGuid = Nothing -- Filled by AddNextHoles above
+      }
+
+makeNewDefinition :: MonadA m => ExprGuiM m (T m Widget.Id)
+makeNewDefinition = do
+  curCursor <- ExprGuiM.widgetEnv WE.readCursor
+  cp <- ExprGuiM.readCodeAnchors
+  return $ do
+    newDefI <- DataOps.newPublicDefinition cp ""
+    DataOps.newPane cp newDefI
+    DataOps.savePreJumpPosition cp curCursor
+    return . DefinitionContentEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
