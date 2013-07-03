@@ -49,11 +49,11 @@ lookupKey key cache =
   where
     findKey (ValMap m) =
       Map.lookup (castUnmaybe "lookupKey:key" key) m
-      <&> (Lens._2 %~ castUnmaybe "lookupKey:val")
+      <&> (veValue %~ castUnmaybe "lookupKey:val")
 
 -- TODO: Convert to Lens.at so you can poke too
 peek :: (Key k, Typeable v) => k -> Cache -> Maybe v
-peek key cache = snd <$> lookupKey key cache
+peek key cache = (^. veValue) <$> lookupKey key cache
 
 insertNew :: Ord k => String -> k -> v -> Map k v -> Map k v
 insertNew msg k v =
@@ -71,7 +71,7 @@ addKey key entry =
     f Nothing = Just . ValMap $ Map.singleton key entry
     f (Just (ValMap valMap)) =
       Just . ValMap $
-      insertNew "addKey" (castUnmaybe "addKey:key" key) (entry & Lens._2 %~ castUnmaybe "addKey:val") valMap
+      insertNew "addKey" (castUnmaybe "addKey:key" key) (entry & veValue %~ castUnmaybe "addKey:val") valMap
 
 lookupHelper :: Key k => r -> (Cache -> AnyVal -> r) -> k -> Cache -> r
 lookupHelper onMiss onHit key cache =
@@ -80,12 +80,12 @@ lookupHelper onMiss onHit key cache =
     findKey (ValMap m) =
       case Map.lookup ckey m of
       Nothing -> Nothing
-      Just (prevPriority, val) ->
+      Just (ValEntry prevPriority val) ->
         Just . onHit newCache $ AnyVal val
         where
           newCache =
             cache
-            & cEntries %~ Map.insert (typeOf key) (ValMap $ Map.insert ckey (newPriority, val) m)
+            & cEntries %~ Map.insert (typeOf key) (ValMap $ Map.insert ckey (ValEntry newPriority val) m)
             & cPriorities %~
               Map.insert newPriority (AnyKey key) .
               Map.delete prevPriority
@@ -139,7 +139,7 @@ insertHelper key val cache =
   (cCounter +~ 1) $
   cache
   where
-    entry = (priority, val)
+    entry = ValEntry priority val
     valLen = SBS.length $ encodeS val
     priority = PriorityData (cache ^. cCounter) valLen
 

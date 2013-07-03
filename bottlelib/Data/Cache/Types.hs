@@ -10,8 +10,8 @@ import qualified Data.ByteString as SBS
 type Key k = (Typeable k, Ord k)
 
 data PriorityData = PriorityData
-  { pRecentUse :: Int64
-  , pMemoryConsumption :: Int
+  { pRecentUse :: {-# UNPACK #-}!Int64
+  , pMemoryConsumption :: {-# UNPACK #-}!Int
   } deriving Eq
 
 priorityScore :: PriorityData -> Int64
@@ -29,7 +29,12 @@ instance Ord PriorityData where
 
 type KeyBS = SBS.ByteString
 type ValBS = SBS.ByteString
-type ValEntry v = (PriorityData, v)
+
+data ValEntry v = ValEntry
+  { _vePriorityData :: {-# UNPACK #-}!PriorityData
+  , _veValue :: v
+  }
+Lens.makeLenses ''ValEntry
 
 data ValMap = forall k v. (Key k, Typeable v) => ValMap (Map k (ValEntry v))
 data AnyKey = forall k. Key k => AnyKey k
