@@ -2,7 +2,6 @@
 module Lamdu.GUI.ExpressionEdit.HoleEdit
   ( make, makeUnwrappedActive
   , HoleState(..), hsSearchTerm
-  , setHoleStateAndJump
   , eventResultOfPickedResult
   ) where
 
@@ -15,7 +14,7 @@ import Data.Maybe (isJust, maybeToList, fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
-import Data.Store.Transaction (Transaction, MkProperty)
+import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse, sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId)
@@ -97,7 +96,7 @@ setNextHoleState holeInfo searchTerm pr =
   afterPick holeInfo pr <*
   case pr ^. Sugar.prMJumpTo of
     Just newHoleGuid ->
-      Transaction.setP (assocStateRef newHoleGuid) $ HoleState searchTerm
+      Transaction.setP (HoleInfo.assocStateRef newHoleGuid) $ HoleState searchTerm
     Nothing -> return ()
 
 resultPickEventMap ::
@@ -449,7 +448,7 @@ makeUnwrappedH pl hole myId = do
   inactive <- makeInactive hole myId
   case (mStoredGuid, hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
     (Just storedGuid, Just holeActions, Just _) -> do
-      stateProp <- ExprGuiM.transaction $ assocStateRef storedGuid ^. Transaction.mkProperty
+      stateProp <- ExprGuiM.transaction $ HoleInfo.assocStateRef storedGuid ^. Transaction.mkProperty
       inactiveWithTypes <- ExpressionGui.addInferredTypes pl inactive
       (,) Active <$> makeActiveHoleEdit
         (inactiveWithTypes ^. ExpressionGui.egWidget . Widget.wSize) pl
@@ -474,7 +473,7 @@ makeUnwrappedActive ::
 makeUnwrappedActive pl storedGuid holeActions size myId = do
   stateProp <-
     ExprGuiM.transaction $
-    assocStateRef storedGuid ^. Transaction.mkProperty
+    HoleInfo.assocStateRef storedGuid ^. Transaction.mkProperty
   makeActiveHoleEdit size pl HoleInfo
     { hiStoredGuid = storedGuid
     , hiId = myId
@@ -483,17 +482,6 @@ makeUnwrappedActive pl storedGuid holeActions size myId = do
     , hiMNextHoleGuid = pl ^. Sugar.plData . ExprGuiM.plMNextHoleGuid
     , hiMArgument = Nothing
     }
-
-searchTermWIdOfHoleGuid :: Guid -> Widget.Id
-searchTermWIdOfHoleGuid = WidgetIds.searchTermId . FocusDelegator.delegatingId . WidgetIds.fromGuid
-
-setHoleStateAndJump :: MonadA m => HoleState -> Guid -> T m Widget.Id
-setHoleStateAndJump newHoleState newHoleGuid = do
-  Transaction.setP (assocStateRef newHoleGuid) newHoleState
-  pure $ searchTermWIdOfHoleGuid newHoleGuid
-
-assocStateRef :: MonadA m => Guid -> MkProperty m HoleState
-assocStateRef = Transaction.assocDataRefDef HoleInfo.emptyState "searchTerm"
 
 -- TODO: Use this where the hiState is currently used to get the
 -- search term

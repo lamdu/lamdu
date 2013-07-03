@@ -16,7 +16,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit as HoleEdit
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -32,7 +32,7 @@ wrapEventMap config actions =
       applyOpEv =
         (fmap . fmap) Widget.eventResultFromCursor .
         E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"]) operatorChars $
-        \c _isShifted -> HoleEdit.setHoleStateAndJump (HoleState [c]) =<< wrap
+        \c _isShifted -> HoleInfo.setHoleStateAndJump (HoleState [c]) =<< wrap
       wrapEv
         | isWrapped = mempty
         | otherwise =
