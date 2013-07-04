@@ -1,25 +1,29 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionGui
   ( ExpressionGui(..), egWidget
+  -- General:
   , fromValueWidget
   , scaleFromTop
   , hbox, hboxSpaced, addBelow
-  , addType -- TODO: s/type/info
-  , TypeStyle(..)
-  , MyPrecedence(..), ParentPrecedence(..), Precedence
-  , parenify, wrapParenify
-  , wrapExpression, wrapDelegated
-  -- ExprGuiM:
-  , makeNameEdit
-  , withBgColor
-  -- TODO: Maybe move to ExpressionGui.Collapser:
-  , Collapser(..), makeCollapser
+  , truncateSize
+  , makeRow
+  -- Lifted widgets:
   , makeLabel, makeColoredLabel
   , makeFocusableView
-  , makeRow
   , makeNameView
+  , makeNameEdit
+  , withBgColor
+  , Collapser(..), makeCollapser
+  -- Info adding
+  , TypeStyle(..), addType -- TODO: s/type/info
+  -- Expression wrapping
+  , MyPrecedence(..), ParentPrecedence(..), Precedence
+  , parenify
+  -- | stdWrap means addTypes and addExprEventMap
+  , stdWrapParenify
+  , stdWrapDelegated
+  , stdWrapParentExpr
   , addInferredTypes
-  , truncateSize
   ) where
 
 import Control.Applicative ((<$>))
@@ -139,8 +143,8 @@ addType config style exprId typeEdits eg =
         return $ Config.inferredTypeBGColor config
     underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
 
-exprFocusDelegatorConfig :: Config -> FocusDelegator.Config
-exprFocusDelegatorConfig config = FocusDelegator.Config
+parentExprFDConfig :: Config -> FocusDelegator.Config
+parentExprFDConfig config = FocusDelegator.Config
   { FocusDelegator.startDelegatingKeys = Config.enterSubexpressionKeys config
   , FocusDelegator.startDelegatingDoc = EventMap.Doc ["Navigation", "Enter subexpression"]
   , FocusDelegator.stopDelegatingKeys = Config.leaveSubexpressionKeys config
@@ -192,24 +196,24 @@ makeNameEdit (Sugar.Name nameSrc nameCollision name) ident myId = do
       Lens.mapped . Lens.mapped . Widget.wEventMap %~
       EventMap.filterSChars (curry (`notElem` disallowedNameChars))
 
-wrapDelegated ::
+stdWrapDelegated ::
   MonadA m =>
   Sugar.Payload Sugar.Name m a ->
   FocusDelegator.Config -> FocusDelegator.IsDelegating ->
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-wrapDelegated pl fdConfig isDelegating f =
+stdWrapDelegated pl fdConfig isDelegating f =
   addInferredTypes pl <=<
   ExprGuiM.wrapDelegated fdConfig isDelegating (egWidget %~) f
 
-wrapExpression ::
+stdWrapParentExpr ::
   MonadA m =>
   Sugar.Payload Sugar.Name m a ->
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-wrapExpression pl f myId = do
+stdWrapParentExpr pl f myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  wrapDelegated pl (exprFocusDelegatorConfig config) FocusDelegator.Delegating f myId
+  stdWrapDelegated pl (parentExprFDConfig config) FocusDelegator.Delegating f myId
 
 makeLabel ::
   MonadA m => String -> Widget.Id -> ExprGuiM m (WidgetT f)
@@ -237,15 +241,15 @@ parenify (ParentPrecedence parent) (MyPrecedence prec) addParens mkWidget myId
   | parent > prec = addParens myId =<< mkWidget myId
   | otherwise = mkWidget myId
 
-wrapParenify ::
+stdWrapParenify ::
   MonadA m =>
   Sugar.Payload Sugar.Name m a ->
   ParentPrecedence -> MyPrecedence ->
   (Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)) ->
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-wrapParenify pl parentPrec prec addParens =
-  wrapExpression pl . parenify parentPrec prec addParens
+stdWrapParenify pl parentPrec prec addParens =
+  stdWrapParentExpr pl . parenify parentPrec prec addParens
 
 withBgColor :: Layer -> Draw.Color -> AnimId -> ExpressionGui m -> ExpressionGui m
 withBgColor layer color animId =

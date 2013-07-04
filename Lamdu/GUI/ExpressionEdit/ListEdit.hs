@@ -24,7 +24,7 @@ make ::
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make list pl =
-  ExpressionGui.wrapExpression pl $ makeUnwrapped list
+  ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped list
 
 makeBracketLabel :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui f)
 makeBracketLabel label myId = do

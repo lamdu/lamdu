@@ -19,7 +19,7 @@ make ::
   Sugar.Payload Sugar.Name m a ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make (Sugar.GetField recExpr tagExpr) pl =
-  ExpressionGui.wrapExpression pl $ \myId ->
+  ExpressionGui.stdWrapParentExpr pl $ \myId ->
   ExprGuiM.assignCursor myId destId $ do
     recExprEdit <- ExprGuiM.makeSubexpression 11 recExpr
     tagEdit <- ExprGuiM.makeSubexpression 12 tagExpr

@@ -99,5 +99,5 @@ makeInt ::
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeInt integer pl =
-  ExpressionGui.wrapDelegated pl literalFDConfig FocusDelegator.NotDelegating
+  ExpressionGui.stdWrapDelegated pl literalFDConfig FocusDelegator.NotDelegating
   (setColor . makeIntEdit integer)

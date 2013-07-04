@@ -106,7 +106,7 @@ mkBoxed ::
   [Sugar.AnnotatedArg Sugar.Name (ExprGuiM.SugarExpr m)] ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 mkBoxed pl destGuid mkFuncRow annotatedArgs =
-  ExpressionGui.wrapExpression pl $ \myId ->
+  ExpressionGui.stdWrapParentExpr pl $ \myId ->
   assignCursorGuid myId destGuid $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     argEdits <-
@@ -123,7 +123,7 @@ mkMParened ::
   Guid -> ExprGuiM m  (ExpressionGui m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 mkMParened pl parentPrecedence mPrecedence destGuid mkFuncRow =
-  ExpressionGui.wrapExpression pl . parenify $ \myId ->
+  ExpressionGui.stdWrapParentExpr pl . parenify $ \myId ->
   assignCursorGuid myId destGuid mkFuncRow
   where
     parenify = case mPrecedence of

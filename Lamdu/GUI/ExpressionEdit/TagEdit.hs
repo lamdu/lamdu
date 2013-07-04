@@ -39,7 +39,7 @@ make ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make (Sugar.TagG tag name) pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  ExpressionGui.wrapDelegated pl fdConfig FocusDelegator.NotDelegating
+  ExpressionGui.stdWrapDelegated pl fdConfig FocusDelegator.NotDelegating
     (fmap (onTagWidget config) . ExpressionGui.makeNameEdit name tag) myId
 
 makeView ::

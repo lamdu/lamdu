@@ -24,7 +24,7 @@ make ::
   Sugar.Payload Sugar.Name m a ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence (Sugar.Lam _ param _isDep resultType) pl =
-  ExpressionGui.wrapParenify pl parentPrecedence (ExpressionGui.MyPrecedence 0)
+  ExpressionGui.stdWrapParenify pl parentPrecedence (ExpressionGui.MyPrecedence 0)
   Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId typeId $ do
     (resultTypeEdit, usedVars) <-
