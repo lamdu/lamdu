@@ -40,8 +40,8 @@ makeUnwrapped ::
   MonadA m => Sugar.List m (ExprGuiM.SugarExpr m) -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeUnwrapped (Sugar.List items mActions) myId =
-  ExprGuiM.assignCursor myId cursorDest $
-  mapM makeItem items >>= \itemEdits -> do
+  ExprGuiM.assignCursor myId cursorDest $ do
+    itemEdits <- mapM makeItem items
     bracketOpenLabel <- makeBracketLabel "[" myId
     bracketCloseLabel <- makeBracketLabel "]" myId
     config <- ExprGuiM.widgetEnv WE.readConfig
