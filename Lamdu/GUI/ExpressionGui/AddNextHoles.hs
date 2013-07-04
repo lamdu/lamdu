@@ -7,7 +7,6 @@ import Control.Applicative (Applicative(..), (<$>))
 import Control.Applicative.Utils (when)
 import Control.Lens (Lens')
 import Control.Lens.Operators
-import Control.Monad ((<=<))
 import Control.Monad.Trans.State (State, evalState)
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
@@ -22,18 +21,22 @@ addToDef ::
   Sugar.Definition name m (Sugar.Expression name m ExprGuiM.Payload) ->
   Sugar.Definition name m (Sugar.Expression name m ExprGuiM.Payload)
 addToDef =
-  (`evalState` Nothing) .
-  (Sugar.drBody . Lens.traversed) addToExprH
+  (`evalState` Nothing) . (Sugar.drBody . Lens.traversed) addNextHoles .
+  (`evalState` Nothing) . (Sugar.drBody . Lens.traversed) addPrevHoles
 
 addToExpr ::
   MonadA m => Sugar.Expression name m ExprGuiM.Payload -> Sugar.Expression name m ExprGuiM.Payload
-addToExpr = (`evalState` Nothing) . addToExprH
+addToExpr =
+  (`evalState` Nothing) . addNextHoles .
+  (`evalState` Nothing) . addPrevHoles
 
-addToExprH ::
+addNextHoles ::
   Sugar.Expression name m ExprGuiM.Payload -> State (Maybe Guid) (Sugar.Expression name m ExprGuiM.Payload)
-addToExprH =
-  (Lens.backwards subExpressions %%@~ setGuid ExprGuiM.hgMNextHole) <=<
-  (subExpressions %%@~ setGuid ExprGuiM.hgMPrevHole)
+addNextHoles = Lens.backwards subExpressions %%@~ setGuid ExprGuiM.hgMNextHole
+
+addPrevHoles ::
+  Sugar.Expression name m ExprGuiM.Payload -> State (Maybe Guid) (Sugar.Expression name m ExprGuiM.Payload)
+addPrevHoles = subExpressions %%@~ setGuid ExprGuiM.hgMPrevHole
 
 setGuid ::
   Lens' ExprGuiM.HoleGuids (Maybe Guid) ->
