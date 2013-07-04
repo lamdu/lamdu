@@ -443,7 +443,11 @@ writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
     -- Replace the guids with consistently fake ones
     makeConsistentPayload (False, pl) guid = pl & SugarInfer.plGuid .~ guid
     makeConsistentPayload (True, pl) _ = pl
-    consistentExpr = ExprUtil.randomizeExpr gen $ makeConsistentPayload <$> writtenExpr
+    (exprGen, paramGen) = Random.split gen
+    consistentExpr =
+      ExprUtil.randomizeParamIds paramGen .
+      ExprUtil.randomizeExpr exprGen $
+      makeConsistentPayload <$> writtenExpr
     newSugarContext = sugarContext & SugarM.scHoleInferContext .~ newCtx
   converted <-
     SugarM.run newSugarContext . SugarM.convertSubexpression $
