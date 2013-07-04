@@ -119,8 +119,7 @@ type SugarExpr m = Sugar.ExpressionN m Payload
 data Askable m = Askable
   { _aSettings :: Settings
   , _aMakeSubexpression ::
-    ParentPrecedence ->
-    Sugar.ExpressionN m Payload ->
+    ParentPrecedence -> SugarExpr m ->
     ExprGuiM m (ExpressionGui m)
   , _aCodeAnchors :: Anchors.CodeProps m
   }

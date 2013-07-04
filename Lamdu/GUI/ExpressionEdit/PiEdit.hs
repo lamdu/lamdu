@@ -21,7 +21,7 @@ make ::
   MonadA m =>
   ExpressionGui.ParentPrecedence ->
   Sugar.Lam Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m a ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence (Sugar.Lam _ param _isDep resultType) pl =
   ExpressionGui.stdWrapParenify pl parentPrecedence (ExpressionGui.MyPrecedence 0)

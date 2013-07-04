@@ -49,7 +49,7 @@ makeView getParam myId = do
 make ::
   MonadA m =>
   Sugar.GetVar Sugar.Name m ->
-  Sugar.Payload Sugar.Name m a ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make getVar pl myId = do
@@ -62,7 +62,7 @@ make getVar pl myId = do
       (E.Doc ["Navigation", "Jump to definition"]) $ do
         DataOps.savePreJumpPosition cp myId
         WidgetIds.fromGuid <$> getVar ^. Sugar.gvJumpTo
-  (ExpressionGui.addInferredTypes pl =<< makeView getVar myId)
+  ExpressionGui.stdWrap pl (makeView getVar myId)
     <&>
-      ExpressionGui.egWidget %~
-      Widget.weakerEvents jumpToDefinitionEventMap
+    ExpressionGui.egWidget %~
+    Widget.weakerEvents jumpToDefinitionEventMap

@@ -13,7 +13,6 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.ExpressionEdit.AtomEdit as AtomEdit
 import qualified Lamdu.GUI.ExpressionEdit.CollapsedEdit as CollapsedEdit
@@ -54,16 +53,12 @@ make ::
   MonadA m => ParentPrecedence ->
   ExprGuiM.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence sExpr = assignCursor $ do
-  (gui, resultPickers) <-
-    ExprGuiM.listenResultPickers $ makeEditor parentPrecedence body pl myId
-  exprEventMap <- ExprEventMap.make resultPickers sExpr
-  maybeShrink gui
-    <&>
-    ExpressionGui.egWidget %~
-    ( maybe Widget.doesntTakeFocus (const id) (pl ^. Sugar.plActions)
-    . Widget.weakerEvents exprEventMap
-    )
+  gui <- makeEditor parentPrecedence body pl myId
+  maybeShrink gui <&> ExpressionGui.egWidget %~ maybeDoesntTakeFocus
   where
+    maybeDoesntTakeFocus
+      | Lens.has Lens._Nothing (pl ^. Sugar.plActions) = Widget.doesntTakeFocus
+      | otherwise = id
     Sugar.Expression body pl = sExpr
     ExprGuiM.Payload guids isInjecteds _holeGuids = pl ^. Sugar.plData
     exprHiddenGuids = List.delete (pl ^. Sugar.plGuid) guids

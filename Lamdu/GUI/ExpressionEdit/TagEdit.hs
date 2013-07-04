@@ -35,7 +35,7 @@ onTagWidget config =
 make ::
   MonadA m =>
   Sugar.TagG Sugar.Name ->
-  Sugar.Payload Sugar.Name m a ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make (Sugar.TagG tag name) pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig

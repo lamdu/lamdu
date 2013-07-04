@@ -22,7 +22,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 make ::
   MonadA m =>
   Sugar.GetParams Sugar.Name m ->
-  Sugar.Payload Sugar.Name m a ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make getParams pl myId = do
@@ -41,17 +41,16 @@ make getParams pl myId = do
     ExprGuiM.withFgColor (Config.definitionColor config) .
     ExprGuiM.widgetEnv $ ExpressionGui.makeNameView defName animId
   suffixLabel <- label ")"
-  ExpressionGui.addInferredTypes pl =<<
-    (ExprGuiM.widgetEnv .
-    fmap ExpressionGui.fromValueWidget .
-    BWidgets.makeFocusableView myId .
-    Widget.weakerEvents jumpToDefinitionEventMap)
-    ( BWidgets.hboxCenteredSpaced
-      [ paramsLabel
+  ExpressionGui.stdWrap pl $
+    ( ExprGuiM.widgetEnv
+    . fmap ExpressionGui.fromValueWidget
+    . BWidgets.makeFocusableView myId
+    . Widget.weakerEvents jumpToDefinitionEventMap
+    . BWidgets.hboxCenteredSpaced
+    ) [ paramsLabel
       , Widget.scale (realToFrac <$> Config.paramDefSuffixScaleFactor config) $
         Box.hboxCentered [prefixLabel, defNameLabel, suffixLabel]
       ]
-    )
   where
     animId = Widget.toAnimId myId
     label = ExprGuiM.widgetEnv . flip BWidgets.makeLabel animId

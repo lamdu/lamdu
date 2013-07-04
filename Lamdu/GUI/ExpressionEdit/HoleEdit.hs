@@ -441,6 +441,7 @@ make ::
 make hole pl outerId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   (isActive, innerGui) <-
+    ExpressionGui.addExprEventMap Lens._2 pl $
     ExprGuiM.wrapDelegated holeFDConfig delegatingMode
     (Lens._2 . ExpressionGui.egWidget %~) inner outerId
   gui <-

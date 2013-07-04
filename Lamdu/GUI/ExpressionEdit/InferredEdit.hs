@@ -60,7 +60,7 @@ makeUnwrapped (ParentPrecedence parentPrecedence) pl inferred myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   mInnerCursor <- ExprGuiM.widgetEnv $ WE.subCursor myId
   inactive <-
-    ExpressionGui.addInferredTypes pl =<<
+    ExpressionGui.stdWrap pl $
     ExpressionGui.egWidget
     ( ExprGuiM.widgetEnv
     . BWidgets.makeFocusableView myId

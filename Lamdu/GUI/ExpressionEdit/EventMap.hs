@@ -11,7 +11,6 @@ import Lamdu.CharClassification (operatorChars)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleState(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers, holePickersAddDocPrefix, holePickersAction)
-import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -21,22 +20,19 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.Expression as SugarExpr
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
 
 make ::
-  MonadA m => HolePickers m -> Sugar.Expression name m ExprGuiM.Payload ->
+  MonadA m => HolePickers m -> Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   ExprGuiM m (EventHandlers (T m))
-make holePickers sExpr =
+make holePickers pl =
   mconcat <$> sequenceA
-  [ maybe (return mempty) (actionsEventMap holePickers sExpr) $
+  [ maybe (return mempty) (actionsEventMap holePickers pl) $
     pl ^. Sugar.plActions
   , jumpHolesEventMap holePickers pl
   ]
-  where
-    pl = sExpr ^. Sugar.rPayload
 
 jumpHolesEventMap ::
   MonadA m => HolePickers m ->
@@ -68,15 +64,16 @@ jumpHolesEventMap holePickers pl = do
     hg = pl ^. Sugar.plData . ExprGuiM.plHoleGuids
 
 actionsEventMap ::
-  MonadA m => HolePickers m ->
-  Sugar.Expression name m a -> Sugar.Actions m ->
+  MonadA m =>
+  HolePickers m ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Actions m ->
   ExprGuiM m (EventHandlers (T m))
-actionsEventMap holePickers sExpr actions = do
+actionsEventMap holePickers pl actions = do
   isSelected <- ExprGuiM.widgetEnv . WE.isSubCursor $ WidgetIds.fromGuid exprGuid
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     cut
-      | Lens.has (Sugar.rBody . SugarExpr.bodyHole) sExpr = mempty
       | otherwise =
         mkEventMap (Config.cutKeys config) (E.Doc ["Edit", "Cut"]) id $
         actions ^. Sugar.cut
@@ -94,10 +91,10 @@ actionsEventMap holePickers sExpr actions = do
     , cut
     ]
   where
-    enableWrap =
-      Lens.nullOf (Sugar.rBody . SugarExpr.bodyHole) sExpr
-      || not (null holePickers)
-    exprGuid = sExpr ^. Sugar.rPayload . Sugar.plGuid
+    enableWrap = True
+      -- Lens.nullOf (Sugar.rBody . SugarExpr.bodyHole) sExpr
+      -- || not (null holePickers)
+    exprGuid = pl ^. Sugar.plGuid
     mkEventMap keys doc f =
       Widget.keysEventMapMovesCursor keys doc .
       fmap (f . WidgetIds.fromGuid)

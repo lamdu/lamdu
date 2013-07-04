@@ -28,7 +28,7 @@ type T = Transaction
 make ::
   MonadA m =>
   Sugar.Record m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m a ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make rec pl = ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped rec
 
