@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionEdit.ListEdit(make) where
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Data.Maybe (listToMaybe)
 import Data.Monoid (Monoid(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -42,11 +41,11 @@ lastLens = Lens.taking 1 . Lens.backwards $ Lens.traversed
 makeUnwrapped ::
   MonadA m => Sugar.List m (ExprGuiM.SugarExpr m) -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makeUnwrapped (Sugar.List items mActions) myId =
+makeUnwrapped list myId =
   ExprGuiM.assignCursor myId cursorDest $ do
-    itemEdits <- mapM makeItem items
-    bracketOpenLabel <- makeBracketLabel "[" myId
-    bracketCloseLabel <- makeBracketLabel "]" myId
+    itemEdits <- mapM makeItem $ Sugar.lValues list
+    bracketOpenLabel <- makeBracketLabel "[" bracketsIdForAnim
+    bracketCloseLabel <- makeBracketLabel "]" bracketsIdForAnim
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
       addFirstElemEventMap =
@@ -67,7 +66,7 @@ makeUnwrapped (Sugar.List items mActions) myId =
             ( Widget.keysEventMapMovesCursor (Config.listAddItemKeys config)
               (E.Doc ["Edit", "List", "Add Last Item"])
             . fmap WidgetIds.fromGuid
-            ) $ items ^? lastLens . Sugar.liMActions . Lens._Just . Sugar.itemAddNext
+            ) $ Sugar.lValues list ^? lastLens . Sugar.liMActions . Lens._Just . Sugar.itemAddNext
           closerEventMap = mappend nilDeleteEventMap addLastEventMap
         bracketClose <-
           ExpressionGui.makeFocusableView closeBracketId bracketCloseLabel
@@ -75,15 +74,17 @@ makeUnwrapped (Sugar.List items mActions) myId =
         return . ExpressionGui.hbox $ concat
           [[bracketOpen, firstEdit], nextEdits >>= pairToList, [bracketClose]]
   where
+    bracketsIdForAnim = WidgetIds.fromGuid $ Sugar.lNilGuid list
     pairToList (x, y) = [x, y]
     closeBracketId = Widget.joinId myId ["close-bracket"]
     itemId = WidgetIds.fromGuid . (^. Sugar.liExpr . Sugar.rPayload . Sugar.plGuid)
     actionEventMap keys doc actSelect =
       maybe mempty
-      (Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc]) .
-       fmap WidgetIds.fromGuid . actSelect) mActions
+      ( Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc])
+      . fmap WidgetIds.fromGuid . actSelect) $
+      Sugar.lMActions list
     firstBracketId = Widget.joinId myId ["first-bracket"]
-    cursorDest = maybe firstBracketId itemId $ listToMaybe items
+    cursorDest = maybe firstBracketId itemId $ Sugar.lValues list ^? Lens.traversed
 
 makeItem ::
   MonadA m =>

@@ -56,11 +56,13 @@ nil app@(Expr.Apply funcI _) exprPl = do
   guard $
     Lens.anyOf ExprLens.exprDefinitionRef
     (== Anchors.sfNil specialFunctions) funcI
-  let
-    hiddenData = app ^. Lens.traversed . Lens.traversed . SugarInfer.plData
   (lift . SugarExpr.make exprPl . BodyList)
-    (List [] (mkListActions <$> exprPl ^. SugarInfer.plStored))
-    <&> rPayload . plData <>~ hiddenData
+    List
+    { lValues = []
+    , lMActions = mkListActions <$> exprPl ^. SugarInfer.plStored
+    , lNilGuid = exprPl ^. SugarInfer.plGuid
+    }
+    <&> rPayload . plData <>~ app ^. Lens.traversed . Lens.traversed . SugarInfer.plData
 
 mkListAddFirstItem ::
   MonadA m => Anchors.SpecialFunctions (Tag m) -> SugarInfer.Stored m -> T m Guid
@@ -143,7 +145,7 @@ cons (Expr.Apply funcI argI) argS exprPl = do
   specialFunctions <- lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
   (hidden, headS, tailS) <- getSugaredHeadTail specialFunctions argS
   (_headI, tailI) <- getExprHeadTail specialFunctions argI
-  List innerValues innerListMActions <- maybeToMPlus $ tailS ^? rBody . _BodyList
+  List innerValues innerListMActions nilGuid <- maybeToMPlus $ tailS ^? rBody . _BodyList
   guard $ isCons specialFunctions funcI
   let
     listItem =
@@ -161,4 +163,4 @@ cons (Expr.Apply funcI argI) argS exprPl = do
         , replaceNil = replaceNil innerListActions
         }
   lift . SugarExpr.make exprPl . BodyList $
-    List (listItem : innerValues) mListActions
+    List (listItem : innerValues) mListActions nilGuid

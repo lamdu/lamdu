@@ -252,6 +252,9 @@ data ListActions m = ListActions
 data List m expr = List
   { lValues :: [ListItem m expr]
   , lMActions :: Maybe (ListActions m)
+  , -- Nil guid stays consistent when adding items.
+    -- (Exposed for consistent animations)
+    lNilGuid :: Guid
   } deriving (Functor, Foldable, Traversable)
 
 data RecordField m expr = RecordField
@@ -347,7 +350,7 @@ instance Show expr => Show (Body name m expr) where
   show BodyCollapsed {} = "Collapsed"
   show (BodyLiteralInteger (LiteralInteger i _)) = show i
   show (BodyAtom atom) = atom
-  show (BodyList (List items _)) =
+  show (BodyList (List items _ _)) =
     concat
     [ "["
     , List.intercalate ", " $ map (show . _liExpr) items
