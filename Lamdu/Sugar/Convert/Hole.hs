@@ -472,6 +472,8 @@ writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
 
 seedHashable :: HoleResultSeed m () -> String
 seedHashable (ResultSeedExpression expr) = show expr
+-- TODO: The comment below is probably no longer true/relevant, can
+-- just do proper hashing now (probably)
 --- We want the new tag to have the same anim ids even as the name
 --- changes, thus we ignore the name:
 seedHashable (ResultSeedNewTag _) = "NewTag"

@@ -270,7 +270,7 @@ matchBody matchLamResult matchOther matchGetPar body0 body1 =
   BodyLeaf (GetVariable (ParameterRef p0)) -> do
     p1 <- body1 ^? ExprLens.bodyParameterRef
     guard $ matchGetPar p0 p1
-    return $ Lens.review ExprLens.bodyParameterRef p0
+    return $ ExprLens.bodyParameterRef # p0
   BodyLeaf x -> do
     y <- body1 ^? _BodyLeaf
     guard $ x == y
