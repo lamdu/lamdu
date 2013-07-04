@@ -335,7 +335,7 @@ convertRecord (Expr.Record k fields) exprPl = do
         { _flItems =
             sFields
             <&> rfTag . rPayload .
-                plActions . Lens._Just . wrap .~ Nothing
+                plActions . Lens._Just . wrap .~ WrapNotAllowed -- Tag cannot be wrapped
         , _flMAddFirstItem = addField <$> exprPl ^? SugarInfer.plIRef
         }
     }
@@ -382,7 +382,7 @@ convertGetField (Expr.GetField recExpr tagExpr) exprPl = do
       { _gfRecord = recExpr
       , _gfTag = tagExpr
       }
-      <&> gfTag . rPayload . plActions . Lens._Just . wrap .~ Nothing
+      <&> gfTag . rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed -- Tag cannot be wrapped
       <&> BodyGetField
 
 removeRedundantSubExprTypes :: Expression n m a -> Expression n m a

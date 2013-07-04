@@ -40,16 +40,15 @@ make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotated
   let
     maybeOverrideHoleWrap
       | null annotatedArgs = id
-      | otherwise = overrideHoleWrap
-    overrideHoleWrap =
-      ExpressionGui.egWidget %~ Widget.strongerEvents overrideWrapEventMap
-    overrideWrapEventMap =
-      maybe mempty (Modify.eventMap config) $
-      pl ^. Sugar.plActions
+      | otherwise = overrideModifyEventMap
+    overrideModifyEventMap =
+      ExpressionGui.egWidget %~
+      Widget.strongerEvents
+      (maybe mempty (Modify.eventMap config) (pl ^. Sugar.plActions))
   case specialArgs of
     Sugar.NoSpecialArgs ->
       mk Nothing $
-      overrideHoleWrap <$> ExprGuiM.makeSubexpression (if isBoxed then 0 else parentPrecedence) func
+      overrideModifyEventMap <$> ExprGuiM.makeSubexpression (if isBoxed then 0 else parentPrecedence) func
     Sugar.ObjectArg arg ->
       mk (Just prefixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
       [ maybeOverrideHoleWrap <$> ExprGuiM.makeSubexpression (prefixPrecedence+1) func
@@ -59,7 +58,7 @@ make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotated
       mk (Just infixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
       [ ExprGuiM.makeSubexpression (infixPrecedence+1) l
       , -- TODO: What precedence to give when it must be atomic?:
-        overrideHoleWrap <$> ExprGuiM.makeSubexpression 20 func
+        overrideModifyEventMap <$> ExprGuiM.makeSubexpression 20 func
       , ExprGuiM.makeSubexpression (infixPrecedence+1) r
       ]
   where

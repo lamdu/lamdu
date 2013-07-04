@@ -13,6 +13,7 @@ module Lamdu.Sugar.Types
   , DefinitionContent(..)
     , dDepParams, dParams, dBody, dWhereItems, dAddFirstParam, dAddInnermostWhereItem
   , DefinitionBuiltin(..)
+  , WrapAction(..)
   , Actions(..)
     , storedGuid, wrap, mSetToHole, mSetToInnerExpr, cut
   , Body(..)
@@ -82,10 +83,15 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 
+data WrapAction m
+  = WrapperAlready -- I'm an apply-of-hole, no need to wrap
+  | WrapNotAllowed -- I'm already wrapped or a hole or a tag
+  | WrapAction (T m Guid) -- Wrap me!
+
 data Actions m = Actions
   { _storedGuid :: Guid
   , -- wrap not available for wrapped exprs or wrapper exprs
-    _wrap :: Maybe (T m Guid)
+    _wrap :: WrapAction m
   , -- mSetToHole not available for holes.
     _mSetToHole :: Maybe (T m Guid)
   , _mSetToInnerExpr :: Maybe (T m Guid)

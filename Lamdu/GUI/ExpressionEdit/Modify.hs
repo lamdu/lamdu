@@ -1,11 +1,10 @@
 module Lamdu.GUI.ExpressionEdit.Modify
-  ( removeConflicts, eventMap, wrapEventMap, replaceEventMap, applyOperatorEventMap
+  ( removeConflicts, eventMap, wrapEventMap, replaceEventMap
   ) where
 
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Graphics.UI.Bottle.Widget (EventHandlers)
@@ -45,14 +44,17 @@ applyOperatorEventMap wrap =
 
 wrapEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (T m)
 wrapEventMap config actions =
-  fromMaybe mempty $ do
-    wrap <- actions ^. Sugar.wrap
-    let
-      wrapEv =
-        Widget.keysEventMapMovesCursor
-        (Config.wrapKeys config) (E.Doc ["Edit", "Wrap"])
-        (FocusDelegator.delegatingId . WidgetIds.fromGuid <$> wrap)
-    Just $ mappend (applyOperatorEventMap wrap) wrapEv
+  case actions ^. Sugar.wrap of
+  Sugar.WrapAction wrap ->
+    mconcat
+    [ applyOperatorEventMap wrap
+    , Widget.keysEventMapMovesCursor
+      (Config.wrapKeys config) (E.Doc ["Edit", "Wrap"])
+      (FocusDelegator.delegatingId . WidgetIds.fromGuid <$> wrap)
+    ]
+  Sugar.WrapperAlready ->
+    applyOperatorEventMap . return $ actions ^. Sugar.storedGuid
+  Sugar.WrapNotAllowed -> mempty
 
 replaceEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (T m)
 replaceEventMap config actions =

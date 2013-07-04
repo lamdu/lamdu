@@ -235,7 +235,8 @@ convertAppliedHole funcI rawArgS argI exprPl
           (holeMArg .~ Just holeArg) .
           (holeMActions . Lens._Just . holeMUnwrap .~ mUnwrap)
       <&> rPayload . plData <>~ funcI ^. SugarInfer.exprData
+      <&> rPayload . plActions . Lens._Just . wrap .~ WrapperAlready
   | otherwise = mzero
   where
     argS =
-      rawArgS & rPayload . plActions . Lens._Just . wrap .~ Nothing
+      rawArgS & rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed

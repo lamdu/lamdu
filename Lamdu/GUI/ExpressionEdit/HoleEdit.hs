@@ -41,7 +41,6 @@ import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
-import qualified Lamdu.GUI.ExpressionEdit.Modify as Modify
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.AddNextHoles as AddNextHoles
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -430,20 +429,14 @@ make hole pl outerId = do
       Inactive -> ExpressionGui.addInferredTypes pl
       Active -> return
   let
-    eventMap =
-      mconcat
-      [ maybe mempty
-        ( E.keyPresses (Config.acceptKeys config ++ Config.delKeys config)
-          (E.Doc ["Edit", "Unwrap"])
-        . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
-        ) (hole ^? Sugar.holeMActions . Lens._Just . Sugar.holeMUnwrap . Lens._Just)
-      , case pl ^. Sugar.plActions of
-        Nothing -> mempty
-        Just actions ->
-          Modify.applyOperatorEventMap (return (actions ^. Sugar.storedGuid))
-      ]
+    unwrapEventMap =
+      maybe mempty
+      ( E.keyPresses (Config.acceptKeys config ++ Config.delKeys config)
+        (E.Doc ["Edit", "Unwrap"])
+      . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
+      ) (hole ^? Sugar.holeMActions . Lens._Just . Sugar.holeMUnwrap . Lens._Just)
   return $
-    gui & ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
+    gui & ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap
   where
     delegatingMode
       | Lens.has (Sugar.holeMArg . Lens._Just) hole = FocusDelegator.NotDelegating
@@ -455,7 +448,7 @@ makeUnwrappedH ::
   Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Widget.Id ->
-  ExprGuiM m (IsActive, (ExpressionGui m))
+  ExprGuiM m (IsActive, ExpressionGui m)
 makeUnwrappedH pl hole myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   inactive <- makeInactive hole myId
