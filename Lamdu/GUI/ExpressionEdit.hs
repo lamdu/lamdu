@@ -54,7 +54,8 @@ make ::
   MonadA m => ParentPrecedence ->
   ExprGuiM.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence sExpr = assignCursor $ do
-  (gui, resultPickers) <- ExprGuiM.listenResultPickers $ makeEditor parentPrecedence sExpr
+  (gui, resultPickers) <-
+    ExprGuiM.listenResultPickers $ makeEditor parentPrecedence body pl myId
   exprEventMap <- ExprEventMap.make resultPickers sExpr
   maybeShrink gui
     <&>
@@ -63,38 +64,35 @@ make parentPrecedence sExpr = assignCursor $ do
     . Widget.weakerEvents exprEventMap
     )
   where
-    pl = sExpr ^. Sugar.rPayload
+    Sugar.Expression body pl = sExpr
     ExprGuiM.Payload guids isInjecteds _holeGuids = pl ^. Sugar.plData
     exprHiddenGuids = List.delete (pl ^. Sugar.plGuid) guids
-    exprId = WidgetIds.fromGuid $ pl ^. Sugar.plGuid
+    myId = WidgetIds.fromGuid $ pl ^. Sugar.plGuid
     maybeShrink
       | or isInjecteds = shrinkIfHigherThanLine
       | otherwise = return
     assignCursor f =
-      foldr (`ExprGuiM.assignCursorPrefix` exprId) f $
+      foldr (`ExprGuiM.assignCursorPrefix` myId) f $
       WidgetIds.fromGuid <$> exprHiddenGuids
 
 makeEditor ::
   MonadA m => ParentPrecedence ->
-  ExprGuiM.SugarExpr m ->
-  ExprGuiM m (ExpressionGui m)
-makeEditor parentPrecedence sExpr =
-  ( case sExpr ^. Sugar.rBody of
-    Sugar.BodyInferred i -> InferredEdit.make parentPrecedence i
-    Sugar.BodyHole hole -> HoleEdit.make hole
-    Sugar.BodyCollapsed poly -> const (CollapsedEdit.make parentPrecedence poly)
-    Sugar.BodyApply apply -> ApplyEdit.make parentPrecedence apply
-    Sugar.BodyLam lam@(Sugar.Lam Sugar.KType _ _ _) -> PiEdit.make parentPrecedence lam
-    Sugar.BodyLam lam@(Sugar.Lam Sugar.KVal _ _ _) -> LambdaEdit.make parentPrecedence lam
-    Sugar.BodyLiteralInteger integer -> LiteralEdit.makeInt integer
-    Sugar.BodyAtom atom -> const (AtomEdit.make atom)
-    Sugar.BodyList list -> ListEdit.make list
-    Sugar.BodyRecord record -> RecordEdit.make record
-    Sugar.BodyGetField getField -> GetFieldEdit.make getField
-    Sugar.BodyTag tag -> TagEdit.make tag
-    Sugar.BodyGetVar gv -> GetVarEdit.make gv
-    Sugar.BodyGetParams gp -> GetParamsEdit.make gp
-  ) pl myId
-  where
-    myId = WidgetIds.fromGuid $ pl ^. Sugar.plGuid
-    pl = sExpr ^. Sugar.rPayload
+  Sugar.Body Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+makeEditor parentPrecedence body =
+  case body of
+  Sugar.BodyInferred i -> InferredEdit.make parentPrecedence i
+  Sugar.BodyHole hole -> HoleEdit.make hole
+  Sugar.BodyCollapsed poly -> const (CollapsedEdit.make parentPrecedence poly)
+  Sugar.BodyApply apply -> ApplyEdit.make parentPrecedence apply
+  Sugar.BodyLam lam@(Sugar.Lam Sugar.KType _ _ _) -> PiEdit.make parentPrecedence lam
+  Sugar.BodyLam lam@(Sugar.Lam Sugar.KVal _ _ _) -> LambdaEdit.make parentPrecedence lam
+  Sugar.BodyLiteralInteger integer -> LiteralEdit.makeInt integer
+  Sugar.BodyAtom atom -> const (AtomEdit.make atom)
+  Sugar.BodyList list -> ListEdit.make list
+  Sugar.BodyRecord record -> RecordEdit.make record
+  Sugar.BodyGetField getField -> GetFieldEdit.make getField
+  Sugar.BodyTag tag -> TagEdit.make tag
+  Sugar.BodyGetVar gv -> GetVarEdit.make gv
+  Sugar.BodyGetParams gp -> GetParamsEdit.make gp
