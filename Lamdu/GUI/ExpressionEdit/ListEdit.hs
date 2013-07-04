@@ -2,7 +2,7 @@
 module Lamdu.GUI.ExpressionEdit.ListEdit(make) where
 
 import Control.Applicative ((<$>))
-import Control.Lens ((&), (%~), (^.))
+import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Maybe (listToMaybe)
 import Data.Monoid (Monoid(..))
@@ -36,6 +36,9 @@ makeBracketLabel label myId = do
     (Config.listBracketColor config)
     label myId
 
+lastLens :: Lens.Traversal' [a] a
+lastLens = Lens.taking 1 . Lens.backwards $ Lens.traversed
+
 makeUnwrapped ::
   MonadA m => Sugar.List m (ExprGuiM.SugarExpr m) -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
@@ -46,22 +49,29 @@ makeUnwrapped (Sugar.List items mActions) myId =
     bracketCloseLabel <- makeBracketLabel "]" myId
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
-      nilDeleteEventMap =
-        actionEventMap (Config.delKeys config) "Replace nil with hole" Sugar.replaceNil
       addFirstElemEventMap =
         actionEventMap (Config.listAddItemKeys config) "Add First Item" Sugar.addFirstItem
       onFirstBracket label =
         ExpressionGui.makeFocusableView firstBracketId label
-        & Lens.mapped . ExpressionGui.egWidget %~
-          Widget.weakerEvents addFirstElemEventMap
+        <&> ExpressionGui.egWidget %~ Widget.weakerEvents addFirstElemEventMap
     case itemEdits of
       [] ->
         onFirstBracket $ ExpressionGui.hbox [bracketOpenLabel, bracketCloseLabel]
       (_, firstEdit) : nextEdits -> do
         bracketOpen <- onFirstBracket bracketOpenLabel
+        let
+          nilDeleteEventMap =
+            actionEventMap (Config.delKeys config) "Replace nil with hole" Sugar.replaceNil
+          addLastEventMap =
+            maybe mempty
+            ( Widget.keysEventMapMovesCursor (Config.listAddItemKeys config)
+              (E.Doc ["Edit", "List", "Add Last Item"])
+            . fmap WidgetIds.fromGuid
+            ) $ items ^? lastLens . Sugar.liMActions . Lens._Just . Sugar.itemAddNext
+          closerEventMap = mappend nilDeleteEventMap addLastEventMap
         bracketClose <-
           ExpressionGui.makeFocusableView closeBracketId bracketCloseLabel
-          & Lens.mapped . ExpressionGui.egWidget %~ Widget.weakerEvents nilDeleteEventMap
+          <&> ExpressionGui.egWidget %~ Widget.weakerEvents closerEventMap
         return . ExpressionGui.hbox $ concat
           [[bracketOpen, firstEdit], nextEdits >>= pairToList, [bracketClose]]
   where
