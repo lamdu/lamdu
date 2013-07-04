@@ -17,7 +17,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.ExpressionEdit.Modify as Modify
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.Parens as Parens
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -44,7 +44,7 @@ make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotated
     overrideModifyEventMap =
       ExpressionGui.egWidget %~
       Widget.strongerEvents
-      (maybe mempty (Modify.eventMap [] config) (pl ^. Sugar.plActions))
+      (maybe mempty (ExprEventMap.modifyEventMap [] config) (pl ^. Sugar.plActions))
   case specialArgs of
     Sugar.NoSpecialArgs ->
       mk Nothing $
