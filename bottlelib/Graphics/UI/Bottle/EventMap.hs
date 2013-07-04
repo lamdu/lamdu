@@ -9,7 +9,7 @@ module Graphics.UI.Bottle.EventMap
   , charEventMap, allChars, simpleChars
   , charGroup, sCharGroup
   , keyEventMap, keyPress, keyPresses
-  , deleteKey
+  , deleteKey, deleteKeys
   , IsShifted(..)
   , filterSChars
   , anyShiftedChars
@@ -231,6 +231,9 @@ filterByKey p = Map.filterWithKey (const . p)
 
 deleteKey :: KeyEvent -> EventMap a -> EventMap a
 deleteKey key = emKeyMap %~ Map.delete key
+
+deleteKeys :: [KeyEvent] -> EventMap a -> EventMap a
+deleteKeys = foldr ((.) . deleteKey) id
 
 lookup :: Events.KeyEvent -> EventMap a -> Maybe a
 lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict charGroups _ mAllCharHandlers _) =
