@@ -74,25 +74,24 @@ actionsEventMap ::
 actionsEventMap holePickers sExpr actions = do
   isSelected <- ExprGuiM.widgetEnv . WE.isSubCursor $ WidgetIds.fromGuid exprGuid
   config <- ExprGuiM.widgetEnv WE.readConfig
-  clipboard <-
-    case sExpr ^? Sugar.rBody . SugarExpr.bodyHole of
-    Just hole -> pasteEventMap hole
-    Nothing ->
-      return .
-      mkEventMap (Config.cutKeys config) (E.Doc ["Edit", "Cut"]) id $
-      actions ^. Sugar.cut
   let
+    cut
+      | Lens.has (Sugar.rBody . SugarExpr.bodyHole) sExpr = mempty
+      | otherwise =
+        mkEventMap (Config.cutKeys config) (E.Doc ["Edit", "Cut"]) id $
+        actions ^. Sugar.cut
     delKeys = Config.replaceKeys config ++ Config.delKeys config
     replace
       | isSelected = replaceEventMap config actions
       | otherwise =
         mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
-        FocusDelegator.notDelegatingId $ return exprGuid
+        FocusDelegator.notDelegatingId . return $
+        actions ^. Sugar.storedGuid
     wrapAndOp = wrapAndOpEventMap enableWrap holePickers config actions
   return $ mconcat
     [ wrapAndOp
     , replace
-    , clipboard
+    , cut
     ]
   where
     enableWrap =
@@ -102,19 +101,6 @@ actionsEventMap holePickers sExpr actions = do
     mkEventMap keys doc f =
       Widget.keysEventMapMovesCursor keys doc .
       fmap (f . WidgetIds.fromGuid)
-
-pasteEventMap ::
-  MonadA m =>
-  Sugar.Hole name m expr ->
-  ExprGuiM m (Widget.EventHandlers (T m))
-pasteEventMap hole = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  return .
-    maybe mempty
-    (Widget.keysEventMapMovesCursor
-     (Config.pasteKeys config) (E.Doc ["Edit", "Paste"]) .
-     fmap WidgetIds.fromGuid) $
-    hole ^? Sugar.holeMActions . Lens._Just . Sugar.holePaste . Lens._Just
 
 applyOperatorEventMap ::
   MonadA m => HolePickers m -> T m Guid -> EventHandlers (T m)

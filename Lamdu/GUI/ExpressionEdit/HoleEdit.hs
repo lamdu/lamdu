@@ -98,9 +98,10 @@ setNextHoleState holeInfo searchTerm pr =
     Nothing -> return ()
 
 resultPickEventMap ::
-  MonadA m => Config -> HoleInfo m -> ShownResult m ->
+  MonadA m => Config -> HoleInfo m -> Maybe (ShownResult m) ->
   Widget.EventHandlers (T m)
-resultPickEventMap config holeInfo shownResult =
+resultPickEventMap _ _ Nothing = mempty
+resultPickEventMap config holeInfo (Just shownResult) =
   mappend alphaNumericAfterOperator $
   -- TODO: Does this guid business make sense?
   case hiHoleGuids holeInfo ^. ExprGuiM.hgMNextHole of
@@ -404,16 +405,31 @@ makeActiveHoleEdit size pl holeInfo = do
             makeBackground (hiId holeInfo)
               (Config.layerMax (Config.layers config))
               (Config.activeHoleBackgroundColor config) .
-            maybe id (Widget.weakerEvents . resultEventMap) mShownResult .
-            maybe id (Widget.strongerEvents . resultPickEventMap config holeInfo) mShownResult
+            Widget.weakerEvents
+            (pasteEventMap config holeInfo `mappend`
+             resultEventMap holeInfo mShownResult) .
+            Widget.strongerEvents
+            (resultPickEventMap config holeInfo mShownResult)
           )
-  where
-    resultEventMap shownResult =
-      srEventMap shownResult
-      & Lens.mapped %~
-        liftA2 mappend
-        (afterPick holeInfo =<<
-         srHoleResult shownResult ^. Sugar.holeResultPick)
+
+pasteEventMap ::
+  Functor m => Config -> HoleInfo m -> Widget.EventHandlers (T m)
+pasteEventMap config holeInfo =
+  maybe mempty
+  (Widget.keysEventMapMovesCursor
+   (Config.pasteKeys config) (E.Doc ["Edit", "Paste"]) .
+   fmap WidgetIds.fromGuid) $ hiActions holeInfo ^. Sugar.holePaste
+
+resultEventMap ::
+  MonadA m => HoleInfo m -> Maybe (ShownResult m) ->
+  Widget.EventHandlers (T m)
+resultEventMap _ Nothing = mempty
+resultEventMap holeInfo (Just shownResult) =
+  srEventMap shownResult
+  & Lens.mapped %~
+    liftA2 mappend
+    (afterPick holeInfo =<<
+     srHoleResult shownResult ^. Sugar.holeResultPick)
 
 data IsActive = Inactive | Active
 
