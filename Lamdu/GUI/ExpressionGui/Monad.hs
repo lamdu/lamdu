@@ -18,6 +18,7 @@ module Lamdu.GUI.ExpressionGui.Monad
   , readSettings, readCodeAnchors
   , getCodeAnchor, mkPrejumpPosSaver
   --
+  , HolePickers, holePickersAddDocPrefix, holePickersAction
   , addResultPicker, listenResultPickers
 
   , AccessedVars, markVariablesAsUsed, listenUsedVariables
@@ -38,6 +39,7 @@ import Data.Binary (Binary)
 import Data.Cache (Cache)
 import Data.Derive.Monoid (makeMonoid)
 import Data.DeriveTH (derive)
+import Data.Foldable (sequenceA_)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -49,8 +51,10 @@ import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.RWS as RWS
 import qualified Data.Cache as Cache
+import qualified Data.Char as Char
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Data.Anchors as Anchors
@@ -62,9 +66,21 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction
 type AccessedVars = [Guid]
 
+type HolePickers m = [T m ()]
+
+holePickersAddDocPrefix :: HolePickers m -> E.Subtitle -> E.Subtitle
+holePickersAddDocPrefix [] doc = doc
+holePickersAddDocPrefix (_:_) doc =
+  doc
+  & Lens.element 0 %~ Char.toLower
+  & ("Pick result and " ++)
+
+holePickersAction :: MonadA m => HolePickers m -> T m ()
+holePickersAction = sequenceA_
+
 data Output m = Output
   { oAccessedVars :: AccessedVars
-  , oHolePickers :: [T m ()]
+  , oHolePickers :: HolePickers m
   }
 derive makeMonoid ''Output
 
@@ -223,7 +239,7 @@ listener f =
 listenUsedVariables :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, [Guid])
 listenUsedVariables = listener oAccessedVars
 
-listenResultPickers :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, [T m ()])
+listenResultPickers :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, HolePickers m)
 listenResultPickers = listener oHolePickers
 
 markVariablesAsUsed :: MonadA m => AccessedVars -> ExprGuiM m ()

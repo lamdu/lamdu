@@ -44,7 +44,7 @@ make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotated
     overrideModifyEventMap =
       ExpressionGui.egWidget %~
       Widget.strongerEvents
-      (maybe mempty (Modify.eventMap config) (pl ^. Sugar.plActions))
+      (maybe mempty (Modify.eventMap [] config) (pl ^. Sugar.plActions))
   case specialArgs of
     Sugar.NoSpecialArgs ->
       mk Nothing $

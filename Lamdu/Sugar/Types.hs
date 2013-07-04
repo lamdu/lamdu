@@ -85,7 +85,7 @@ import qualified Lamdu.Data.Expression.Infer as Infer
 
 data WrapAction m
   = WrapperAlready -- I'm an apply-of-hole, no need to wrap
-  | WrapNotAllowed -- I'm already wrapped or a hole or a tag
+  | WrapNotAllowed -- I'm already wrapped or a tag
   | WrapAction (T m Guid) -- Wrap me!
 
 data Actions m = Actions

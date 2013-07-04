@@ -1,8 +1,8 @@
 module Lamdu.GUI.ExpressionEdit.Modify
-  ( removeConflicts, eventMap, wrapEventMap, replaceEventMap
+  ( eventMap, wrapEventMap, replaceEventMap
   ) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
@@ -11,6 +11,7 @@ import Graphics.UI.Bottle.Widget (EventHandlers)
 import Lamdu.CharClassification (operatorChars)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleState(..))
+import Lamdu.GUI.ExpressionGui.Monad (HolePickers, holePickersAddDocPrefix, holePickersAction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -22,38 +23,30 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
 
-removeConflicts ::
-  MonadA m => Config -> EventHandlers (T m) -> EventHandlers (T m)
-removeConflicts config = E.deleteKeys $ map (E.KeyEvent E.Press) keys
-  where
-    keys =
-      mconcat
-      [ Config.wrapKeys
-      , Config.delKeys
-      , Config.replaceKeys
-      ] config
-
 applyOperatorEventMap ::
-  MonadA m => T m Guid -> EventHandlers (T m)
-applyOperatorEventMap wrap =
-  E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"]) operatorChars action
+  MonadA m => HolePickers m -> T m Guid -> EventHandlers (T m)
+applyOperatorEventMap holePickers wrap =
+  E.charGroup "Operator" doc operatorChars action
   where
-    action c _isShifted =
+    doc = E.Doc ["Edit", holePickersAddDocPrefix holePickers "Apply operator"]
+    action c _isShifted = do
+      holePickersAction holePickers
       Widget.eventResultFromCursor <$>
-      (HoleInfo.setHoleStateAndJump (HoleState [c]) =<< wrap)
+        (HoleInfo.setHoleStateAndJump (HoleState [c]) =<< wrap)
 
-wrapEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (T m)
-wrapEventMap config actions =
+wrapEventMap :: MonadA m => HolePickers m -> Config -> Sugar.Actions m -> EventHandlers (T m)
+wrapEventMap holePickers config actions =
   case actions ^. Sugar.wrap of
   Sugar.WrapAction wrap ->
     mconcat
-    [ applyOperatorEventMap wrap
+    [ applyOperatorEventMap holePickers wrap
     , Widget.keysEventMapMovesCursor
-      (Config.wrapKeys config) (E.Doc ["Edit", "Wrap"])
+      (Config.wrapKeys config) (E.Doc ["Edit", holePickersAddDocPrefix holePickers "Wrap"]) $
+      holePickersAction holePickers *>
       (FocusDelegator.delegatingId . WidgetIds.fromGuid <$> wrap)
     ]
   Sugar.WrapperAlready ->
-    applyOperatorEventMap . return $ actions ^. Sugar.storedGuid
+    applyOperatorEventMap holePickers . return $ actions ^. Sugar.storedGuid
   Sugar.WrapNotAllowed -> mempty
 
 replaceEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (T m)
@@ -72,9 +65,9 @@ replaceEventMap config actions =
        fmap WidgetIds.fromGuid) $ actions ^. lens
     delKeys = Config.replaceKeys config ++ Config.delKeys config
 
-eventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (T m)
-eventMap config actions =
+eventMap :: MonadA m => HolePickers m -> Config -> Sugar.Actions m -> EventHandlers (T m)
+eventMap holePickers config actions =
   mconcat
-  [ wrapEventMap config actions
+  [ wrapEventMap holePickers config actions
   , replaceEventMap config actions
   ]

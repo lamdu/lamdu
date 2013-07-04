@@ -38,7 +38,6 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -139,11 +138,10 @@ makeShownResult ::
   MonadA m => Result m -> ExprGuiM m (Widget (T m), ShownResult m)
 makeShownResult result = do
   widget <- makePaddedResult result
-  eventMap <- ExprEventMap.removeConflicts $ widget ^. Widget.wEventMap
   return
     ( widget & Widget.wEventMap .~ mempty
     , ShownResult
-      { srEventMap = eventMap
+      { srEventMap = widget ^. Widget.wEventMap
       , srHoleResult = rHoleResult result
       }
     )
@@ -246,9 +244,15 @@ postProcessSugar ::
   MonadA m =>
   Sugar.ExpressionN m HoleResults.SugarExprPl ->
   Sugar.ExpressionN m ExprGuiM.Payload
-postProcessSugar =
-  AddNextHoles.addToExpr .
-  (fmap . fmap) toPayload
+postProcessSugar expr =
+  expr
+  & Lens.mapped . Lens.mapped %~ toPayload
+  & AddNextHoles.addToExpr
+  -- Remove the top-level result's actions so that they come from our
+  -- ExpressionEdit, rather than the result's ExpressionEdit which
+  -- represents the same IRef
+  & Sugar.rPayload . Sugar.plData . ExprGuiM.plHoleGuids .~ ExprGuiM.emptyHoleGuids
+  & Sugar.rPayload . Sugar.plActions .~ Nothing
   where
     toPayload (ExprGuiM.StoredGuids guids, ExprGuiM.Injected injected) =
       ExprGuiM.Payload
