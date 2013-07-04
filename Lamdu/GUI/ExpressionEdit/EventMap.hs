@@ -1,4 +1,4 @@
-module Lamdu.GUI.ExpressionEdit.EventMap (make) where
+module Lamdu.GUI.ExpressionEdit.EventMap (make, removeConflicts) where
 
 import Control.Applicative ((<$>), (<$), Applicative(..))
 import Control.Lens.Operators
@@ -34,6 +34,24 @@ make resultPickers sExpr =
   ]
   where
     pl = sExpr ^. Sugar.rPayload
+
+-- | removeConflicts removes the keys of the expr event map from another event map
+removeConflicts :: MonadA m => EventHandlers (T m) -> ExprGuiM m (EventHandlers (T m))
+removeConflicts eventMap = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    keys =
+      mconcat
+      [ Config.replaceKeys
+      , Config.delKeys
+      , Config.jumpToNextHoleKeys
+      , Config.jumpToPrevHoleKeys
+      , Config.cutKeys
+      , Config.pasteKeys
+      ] config
+  return $ eventMap
+    & E.deleteKeys (map (E.KeyEvent E.Press) keys)
+    & Modify.removeConflicts config
 
 jumpHolesEventMap :: MonadA m => [T m ()] -> ExprGuiM.HoleGuids -> ExprGuiM m (EventHandlers (T m))
 jumpHolesEventMap resultPickers hg = do

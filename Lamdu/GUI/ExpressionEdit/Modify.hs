@@ -1,5 +1,5 @@
 module Lamdu.GUI.ExpressionEdit.Modify
-  ( eventMap, wrapEventMap, replaceEventMap, applyOperatorEventMap
+  ( removeConflicts, eventMap, wrapEventMap, replaceEventMap, applyOperatorEventMap
   ) where
 
 import Control.Applicative ((<$>))
@@ -22,6 +22,17 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
+
+removeConflicts ::
+  MonadA m => Config -> EventHandlers (T m) -> EventHandlers (T m)
+removeConflicts config = E.deleteKeys $ map (E.KeyEvent E.Press) keys
+  where
+    keys =
+      mconcat
+      [ Config.wrapKeys
+      , Config.delKeys
+      , Config.replaceKeys
+      ] config
 
 applyOperatorEventMap ::
   MonadA m => T m Guid -> EventHandlers (T m)
