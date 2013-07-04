@@ -30,7 +30,7 @@ make resultPickers sExpr =
   mconcat <$> sequenceA
   [ maybe (return mempty) (actionsEventMap sExpr) $
     pl ^. Sugar.plActions
-  , jumpHolesEventMap resultPickers $ pl ^. Sugar.plData . ExprGuiM.plHoleGuids
+  , jumpHolesEventMap resultPickers sExpr
   ]
   where
     pl = sExpr ^. Sugar.rPayload
@@ -53,8 +53,10 @@ removeConflicts eventMap = do
     & E.deleteKeys (map (E.KeyEvent E.Press) keys)
     & Modify.removeConflicts config
 
-jumpHolesEventMap :: MonadA m => [T m ()] -> ExprGuiM.HoleGuids -> ExprGuiM m (EventHandlers (T m))
-jumpHolesEventMap resultPickers hg = do
+jumpHolesEventMap :: MonadA m =>
+  [T m ()] -> Sugar.Expression name m (ExprGuiM.Payload) -> ExprGuiM m (EventHandlers (T m))
+jumpHolesEventMap resultPickers sExpr = do
+  isSelected <- ExprGuiM.widgetEnv . WE.isSubCursor $ WidgetIds.fromGuid exprGuid
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     doc dirStr = E.Doc ["Navigation", "Jump to " ++ dirStr ++ " hole"]
@@ -62,10 +64,17 @@ jumpHolesEventMap resultPickers hg = do
       maybe mempty
       (Widget.keysEventMapMovesCursor (keys config) (doc dirStr) .
        (<$ sequenceA_ resultPickers) . WidgetIds.fromGuid) $ hg ^. lens
-  pure $ mconcat
-    [ jumpEventMap Config.jumpToNextHoleKeys "next" ExprGuiM.hgMNextHole
-    , jumpEventMap Config.jumpToPrevHoleKeys "previous" ExprGuiM.hgMPrevHole
-    ]
+  pure $
+    if isSelected
+    then
+      mconcat
+      [ jumpEventMap Config.jumpToNextHoleKeys "next" ExprGuiM.hgMNextHole
+      , jumpEventMap Config.jumpToPrevHoleKeys "previous" ExprGuiM.hgMPrevHole
+      ]
+    else mempty
+  where
+    exprGuid = sExpr ^. Sugar.rPayload . Sugar.plGuid
+    hg = sExpr ^. Sugar.rPayload . Sugar.plData . ExprGuiM.plHoleGuids
 
 actionsEventMap ::
   MonadA m =>
