@@ -103,7 +103,6 @@ resultPickEventMap ::
   MonadA m => Config -> HoleInfo m -> ShownResult m ->
   Widget.EventHandlers (T m)
 resultPickEventMap config holeInfo shownResult =
-  (`mappend` resultEventMap) $
   mappend alphaNumericAfterOperator $
   -- TODO: Does this guid business make sense?
   case hiHoleGuids holeInfo ^. ExprGuiM.hgMNextHole of
@@ -120,12 +119,6 @@ resultPickEventMap config holeInfo shownResult =
     Config.pickResultKeys config ++
     Config.pickAndMoveToNextHoleKeys config
   where
-    resultEventMap =
-      srEventMap shownResult
-      & Lens.mapped %~
-        liftA2 mappend
-        (afterPick holeInfo =<<
-         srHoleResult shownResult ^. Sugar.holeResultPick)
     searchTerm = HoleInfo.hiSearchTerm holeInfo
     alphaNumericAfterOperator
       | nonEmptyAll (`elem` operatorChars) searchTerm =
@@ -408,8 +401,16 @@ makeActiveHoleEdit size pl holeInfo = do
             makeBackground (hiId holeInfo)
               (Config.layerMax (Config.layers config))
               (Config.activeHoleBackgroundColor config) .
+            maybe id (Widget.weakerEvents . resultEventMap) mShownResult .
             maybe id (Widget.strongerEvents . resultPickEventMap config holeInfo) mShownResult
           )
+  where
+    resultEventMap shownResult =
+      srEventMap shownResult
+      & Lens.mapped %~
+        liftA2 mappend
+        (afterPick holeInfo =<<
+         srHoleResult shownResult ^. Sugar.holeResultPick)
 
 data IsActive = Inactive | Active
 
