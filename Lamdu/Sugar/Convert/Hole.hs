@@ -1,4 +1,4 @@
-{-# LANGUAGE ConstraintKinds, DeriveFunctor #-}
+{-# LANGUAGE ConstraintKinds, DeriveFunctor, PatternGuards #-}
 
 module Lamdu.Sugar.Convert.Hole
   ( convert, convertPlain, orderedInnerHoles
@@ -135,16 +135,24 @@ accept sugarContext point iref = do
 -- So to be compatible with that in our idTranslations, we want to
 -- change our param Guids to match that:
 combineLamGuids :: Expr.Expression def Guid -> Expr.Expression def Guid
-combineLamGuids (Expr.Expression body guid) =
-  -- TODO: Lens.outside
-  (`Expr.Expression` guid) $
-  case body of
-  Expr.BodyLam (Expr.Lam k paramGuid paramType result) ->
-    Expr.BodyLam
-    (Expr.Lam k (Guid.combine guid paramGuid)
-     (combineLamGuids paramType)
-     (combineLamGuids result))
-  _ -> combineLamGuids <$> body
+combineLamGuids =
+  go Map.empty
+  where
+    go renames (Expr.Expression body guid) =
+      -- TODO: Lens.outside
+      (`Expr.Expression` guid) $
+      case body of
+      Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef paramGuid))
+        | Just newParamGuid <- Map.lookup paramGuid renames ->
+          ExprLens.bodyParameterRef # newParamGuid
+      Expr.BodyLam (Expr.Lam k paramGuid paramType result) ->
+        Expr.BodyLam
+        (Expr.Lam k newParamGuid
+         (go renames paramType)
+         (go (Map.insert paramGuid newParamGuid renames) result))
+        where
+          newParamGuid = Guid.combine guid paramGuid
+      _ -> go renames <$> body
 
 type IdTranslations m =
   ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m) ->
@@ -176,10 +184,10 @@ idTranslations convertedExpr writtenExpr =
       go inferredVal $
       ExprUtil.randomizeExpr (genFromHashable guid)
       (flip const <$> inferredVal)
-    mismatch _x _y =
+    mismatch x y =
       error $
       unlines
-      [ "Mismatch idTranslations: "
+      [ "Mismatch idTranslations: " ++ show x ++ ", " ++ show y
       , showExpr convertedExpr
       , showExpr writtenExpr
       ]
