@@ -65,14 +65,10 @@ jumpHolesEventMap holePickers pl = do
   isSelected <- isExprSelected pl
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
-    doc dirStr =
-      E.Doc
-      [ "Navigation"
-      , holePickersAddDocPrefix holePickers $ "Jump to " ++ dirStr ++ " hole"
-      ]
     jumpEventMap keys dirStr lens =
       maybe mempty
-      (mkEventMapWithPickers holePickers (keys config) (doc dirStr) id . pure) $
+      (mkEventMapWithPickers holePickers (keys config)
+       (E.Doc ["Navigation", jumpDoc dirStr]) id . pure) $
       hg ^. lens
   pure $
     if isSelected
@@ -83,12 +79,25 @@ jumpHolesEventMap holePickers pl = do
       ]
     else mempty
   where
+    jumpDoc dirStr =
+      holePickersAddDocPrefix holePickers $ "Jump to " ++ dirStr ++ " hole"
     hg = pl ^. Sugar.plData . ExprGuiM.plHoleGuids
 
 cutEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)
 cutEventMap config actions =
   mkEventMap (Config.cutKeys config) (E.Doc ["Edit", "Cut"]) id $
   actions ^. Sugar.cut
+
+replaceOrComeToParentEventMap ::
+  MonadA m => Bool -> Config -> Sugar.Actions m -> EventHandlers (T m)
+replaceOrComeToParentEventMap isSelected config actions
+  | isSelected = replaceEventMap config actions
+  | otherwise =
+    mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
+    (fmap FocusDelegator.notDelegatingId) . return $
+    actions ^. Sugar.storedGuid
+  where
+    delKeys = Config.replaceKeys config ++ Config.delKeys config
 
 actionsEventMap ::
   MonadA m =>
@@ -99,17 +108,9 @@ actionsEventMap ::
 actionsEventMap holePickers pl actions = do
   isSelected <- isExprSelected pl
   config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    delKeys = Config.replaceKeys config ++ Config.delKeys config
-    replace
-      | isSelected = replaceEventMap config actions
-      | otherwise =
-        mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
-        (fmap FocusDelegator.notDelegatingId) . return $
-        actions ^. Sugar.storedGuid
   return $ mconcat
     [ wrapAndOpEventMap holePickers config actions
-    , replace
+    , replaceOrComeToParentEventMap isSelected config actions
     , cutEventMap config actions
     ]
 
@@ -137,9 +138,6 @@ wrapAndOpEventMap holePickers config actions =
         (Config.wrapKeys config)
         (E.Doc ["Edit", holePickersAddDocPrefix holePickers "Wrap"])
         (fmap FocusDelegator.delegatingId) wrap
-      -- TODO: This was in guard:
-      -- Lens.nullOf (Sugar.rBody . SugarExpr.bodyHole) sExpr
-      -- || not (null holePickers)
       ]
     ]
   Sugar.WrapperAlready -> applyOperatorEventMap holePickers . return $ actions ^. Sugar.storedGuid
