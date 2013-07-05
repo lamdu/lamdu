@@ -52,12 +52,17 @@ mkEventMapWithPickers ::
 mkEventMapWithPickers holePickers keys doc f =
   mkEventMap keys doc ((holePickersAction holePickers *>) . f)
 
+isExprSelected :: MonadA m => Sugar.Payload name f a -> ExprGuiM m Bool
+isExprSelected pl =
+  ExprGuiM.widgetEnv . WE.isSubCursor . WidgetIds.fromGuid $
+  pl ^. Sugar.plGuid
+
 jumpHolesEventMap ::
   MonadA m => HolePickers m ->
   Sugar.Payload name m ExprGuiM.Payload ->
   ExprGuiM m (EventHandlers (T m))
 jumpHolesEventMap holePickers pl = do
-  isSelected <- ExprGuiM.widgetEnv . WE.isSubCursor $ WidgetIds.fromGuid exprGuid
+  isSelected <- isExprSelected pl
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     doc dirStr =
@@ -78,7 +83,6 @@ jumpHolesEventMap holePickers pl = do
       ]
     else mempty
   where
-    exprGuid = pl ^. Sugar.plGuid
     hg = pl ^. Sugar.plData . ExprGuiM.plHoleGuids
 
 cutEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)
@@ -93,7 +97,7 @@ actionsEventMap ::
   Sugar.Actions m ->
   ExprGuiM m (EventHandlers (T m))
 actionsEventMap holePickers pl actions = do
-  isSelected <- ExprGuiM.widgetEnv . WE.isSubCursor $ WidgetIds.fromGuid exprGuid
+  isSelected <- isExprSelected pl
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     delKeys = Config.replaceKeys config ++ Config.delKeys config
@@ -108,8 +112,6 @@ actionsEventMap holePickers pl actions = do
     , replace
     , cutEventMap config actions
     ]
-  where
-    exprGuid = pl ^. Sugar.plGuid
 
 applyOperatorEventMap ::
   MonadA m => HolePickers m -> T m Guid -> EventHandlers (T m)
