@@ -281,18 +281,19 @@ makeNewTagResultWidget resultId holeResult = do
 
 makeNoResults :: MonadA m => HoleInfo m -> AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults holeInfo myId =
+  (^. ExpressionGui.egWidget) <$>
   case hiMArgument holeInfo ^? Lens._Just . Sugar.haExpr of
   Nothing -> label "(No results)"
   Just arg ->
-    Box.hboxCentered <$> sequenceA
+    ExpressionGui.hbox <$> sequenceA
     [ label "(No results: "
-    , ExprGuiM.makeSubexpression 0 arg
-      <&> Widget.doesntTakeFocus . (^. ExpressionGui.egWidget)
+    , ExprGuiM.makeSubexpression 0 arg <&>
+      ExpressionGui.egWidget %~ Widget.doesntTakeFocus
     , label ")"
     ]
   where
     label str =
-      ExprGuiM.widgetEnv $ BWidgets.makeLabel str myId
+      ExpressionGui.fromValueWidget <$> ExprGuiM.widgetEnv (BWidgets.makeLabel str myId)
 
 hiSearchTermId :: HoleInfo m -> Widget.Id
 hiSearchTermId holeInfo = WidgetIds.searchTermId $ hiId holeInfo
