@@ -109,38 +109,39 @@ actionsEventMap holePickers pl actions = do
   isSelected <- isExprSelected pl
   config <- ExprGuiM.widgetEnv WE.readConfig
   return $ mconcat
-    [ wrapAndOpEventMap holePickers config actions
+    [ wrapEventMap holePickers config actions
+    , applyOperatorEventMap holePickers actions
     , replaceOrComeToParentEventMap isSelected config actions
     , cutEventMap config actions
     ]
 
 applyOperatorEventMap ::
-  MonadA m => HolePickers m -> T m Guid -> EventHandlers (T m)
-applyOperatorEventMap holePickers wrap =
-  E.charGroup "Operator" doc operatorChars action
+  MonadA m => HolePickers m -> Sugar.Actions m -> EventHandlers (T m)
+applyOperatorEventMap holePickers actions =
+  case actions ^. Sugar.wrap of
+  Sugar.WrapAction wrap -> result wrap
+  Sugar.WrapperAlready -> result . return $ actions ^. Sugar.storedGuid
+  Sugar.WrapNotAllowed -> mempty
   where
+    result = E.charGroup "Operator" doc operatorChars . action
     doc = E.Doc ["Edit", holePickersAddDocPrefix holePickers "Apply operator"]
-    action c _isShifted = do
+    action wrap c _isShifted = do
       holePickersAction holePickers
       Widget.eventResultFromCursor <$>
         (HoleInfo.setHoleStateAndJump (HoleState [c]) =<< wrap)
 
-wrapAndOpEventMap ::
+wrapEventMap ::
   MonadA m =>
   HolePickers m -> Config ->
   Sugar.Actions m -> EventHandlers (T m)
-wrapAndOpEventMap holePickers config actions =
+wrapEventMap holePickers config actions =
   case actions ^. Sugar.wrap of
   Sugar.WrapAction wrap ->
-    mconcat $ concat
-    [ [ applyOperatorEventMap holePickers wrap ]
-    , [ mkEventMapWithPickers holePickers
-        (Config.wrapKeys config)
-        (E.Doc ["Edit", holePickersAddDocPrefix holePickers "Wrap"])
-        (fmap FocusDelegator.delegatingId) wrap
-      ]
-    ]
-  Sugar.WrapperAlready -> applyOperatorEventMap holePickers . return $ actions ^. Sugar.storedGuid
+    mkEventMapWithPickers holePickers
+    (Config.wrapKeys config)
+    (E.Doc ["Edit", holePickersAddDocPrefix holePickers "Wrap"])
+    (fmap FocusDelegator.delegatingId) wrap
+  Sugar.WrapperAlready -> mempty
   Sugar.WrapNotAllowed -> mempty
 
 replaceEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (T m)
@@ -162,6 +163,7 @@ modifyEventMap ::
   Config -> Sugar.Actions m -> EventHandlers (T m)
 modifyEventMap holePickers config actions =
   mconcat
-  [ wrapAndOpEventMap holePickers config actions
+  [ wrapEventMap holePickers config actions
+  , applyOperatorEventMap holePickers actions
   , replaceEventMap config actions
   ]
