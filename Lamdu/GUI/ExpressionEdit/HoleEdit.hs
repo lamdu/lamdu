@@ -449,19 +449,10 @@ make ::
   Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole pl outerId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
   (isActive, gui) <-
     ExprGuiM.wrapDelegated holeFDConfig delegatingMode
     (Lens._2 . ExpressionGui.egWidget %~) inner outerId
-  let
-    unwrapEventMap =
-      maybe mempty
-      ( E.keyPresses (Config.acceptKeys config ++ Config.delKeys config)
-        (E.Doc ["Edit", "Unwrap"])
-      . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
-      ) (hole ^? Sugar.holeMActions . Lens._Just . Sugar.holeMUnwrap . Lens._Just)
   gui
-    & ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap
     & case isActive of
       Inactive -> addInactiveEventMap <=< ExpressionGui.addInferredTypes pl
       Active -> addActiveEventMap
@@ -470,12 +461,37 @@ make hole pl outerId = do
       jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] pl
       return $ gui & ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
     addInactiveEventMap gui = do
+      inactiveEventMap <- inactiveHoleEventMap hole pl
       exprEventMap <- ExprEventMap.make [] pl
-      return $ gui & ExpressionGui.egWidget %~ Widget.weakerEvents exprEventMap
+      gui
+        & ExpressionGui.egWidget %~
+          Widget.weakerEvents (mappend inactiveEventMap exprEventMap)
+        & return
     delegatingMode
       | Lens.has (Sugar.holeMArg . Lens._Just) hole = FocusDelegator.NotDelegating
       | otherwise = FocusDelegator.Delegating
     inner = makeUnwrappedH pl hole
+
+
+inactiveHoleEventMap ::
+  MonadA m =>
+  Sugar.Hole name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Payload name m ExprGuiM.Payload ->
+  ExprGuiM m (E.EventMap (T m Widget.EventResult))
+inactiveHoleEventMap hole pl = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  return $
+    case hole ^? Sugar.holeMActions . Lens._Just . Sugar.holeMUnwrap . Lens._Just of
+    Just unwrap ->
+      E.keyPresses (Config.acceptKeys config ++ Config.delKeys config)
+      (E.Doc ["Edit", "Unwrap"]) $
+      Widget.eventResultFromCursor . WidgetIds.fromGuid <$> unwrap
+    Nothing ->
+      E.keyPresses (Config.acceptKeys config)
+      (FocusDelegator.startDelegatingDoc holeFDConfig) .
+      pure . Widget.eventResultFromCursor .
+      FocusDelegator.delegatingId .
+      WidgetIds.fromGuid $ pl ^. Sugar.plGuid
 
 makeUnwrappedH ::
   MonadA m =>
