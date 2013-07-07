@@ -459,7 +459,11 @@ make hole pl outerId = do
   where
     addActiveEventMap gui = do
       jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] pl
-      return $ gui & ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
+      replaceEventMap <- ExprEventMap.replaceOrComeToParentEventMap pl
+      gui
+        & ExpressionGui.egWidget %~
+          Widget.weakerEvents (mappend jumpHolesEventMap replaceEventMap)
+        & return
     addInactiveEventMap gui = do
       inactiveEventMap <- inactiveHoleEventMap hole pl
       exprEventMap <- ExprEventMap.make [] pl
@@ -471,7 +475,6 @@ make hole pl outerId = do
       | Lens.has (Sugar.holeMArg . Lens._Just) hole = FocusDelegator.NotDelegating
       | otherwise = FocusDelegator.Delegating
     inner = makeUnwrappedH pl hole
-
 
 inactiveHoleEventMap ::
   MonadA m =>

@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.EventMap
   , applyOperatorEventMap
   , cutEventMap
   , jumpHolesEventMap
+  , replaceOrComeToParentEventMap
   ) where
 
 import Control.Applicative ((<$>), Applicative(..))
@@ -35,8 +36,9 @@ make ::
   ExprGuiM m (EventHandlers (T m))
 make holePickers pl =
   mconcat <$> sequenceA
-  [ maybe (return mempty) (actionsEventMap holePickers pl) $
+  [ maybe (return mempty) (actionsEventMap holePickers) $
     pl ^. Sugar.plActions
+  , replaceOrComeToParentEventMap pl
   , jumpHolesEventMap holePickers pl
   ]
 
@@ -95,29 +97,33 @@ cutEventMap config actions =
   actions ^. Sugar.cut
 
 replaceOrComeToParentEventMap ::
-  MonadA m => Bool -> Config -> Sugar.Actions m -> EventHandlers (T m)
-replaceOrComeToParentEventMap isSelected config actions
-  | isSelected = replaceEventMap config actions
-  | otherwise =
-    mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
-    (fmap FocusDelegator.notDelegatingId) . return $
-    actions ^. Sugar.storedGuid
-  where
-    delKeys = Config.replaceKeys config ++ Config.delKeys config
+  MonadA m =>
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  ExprGuiM m (EventHandlers (T m))
+replaceOrComeToParentEventMap pl =
+  case pl ^. Sugar.plActions of
+  Nothing -> return mempty
+  Just actions -> do
+    isSelected <- isExprSelected pl
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    let delKeys = Config.replaceKeys config ++ Config.delKeys config
+    return $ if isSelected 
+      then replaceEventMap config actions
+      else
+        mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
+        (fmap FocusDelegator.notDelegatingId) . return $
+        actions ^. Sugar.storedGuid    
 
 actionsEventMap ::
   MonadA m =>
   HolePickers m ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Sugar.Actions m ->
   ExprGuiM m (EventHandlers (T m))
-actionsEventMap holePickers pl actions = do
-  isSelected <- isExprSelected pl
+actionsEventMap holePickers actions = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   return $ mconcat
     [ wrapEventMap holePickers config actions
     , applyOperatorEventMap holePickers actions
-    , replaceOrComeToParentEventMap isSelected config actions
     , cutEventMap config actions
     ]
 
