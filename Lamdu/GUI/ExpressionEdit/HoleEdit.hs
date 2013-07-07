@@ -6,7 +6,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
 
 import Control.Applicative (Applicative(..), (<$>), (<$), (<|>), liftA2)
 import Control.Lens.Operators
-import Control.Monad (guard, msum, when, void)
+import Control.Monad (guard, msum, when, void, (<=<))
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
 import Data.Maybe (isJust, maybeToList, fromMaybe)
@@ -38,6 +38,7 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -407,7 +408,7 @@ makeActiveHoleEdit size pl holeInfo = do
               (Config.activeHoleBackgroundColor config) .
             Widget.weakerEvents
             (pasteEventMap config holeInfo `mappend`
-             resultEventMap holeInfo mShownResult) .
+             resultEventMap config holeInfo mShownResult) .
             Widget.strongerEvents
             (resultPickEventMap config holeInfo mShownResult)
           )
@@ -421,15 +422,23 @@ pasteEventMap config holeInfo =
    fmap WidgetIds.fromGuid) $ hiActions holeInfo ^. Sugar.holePaste
 
 resultEventMap ::
-  MonadA m => HoleInfo m -> Maybe (ShownResult m) ->
+  MonadA m => Config -> HoleInfo m -> Maybe (ShownResult m) ->
   Widget.EventHandlers (T m)
-resultEventMap _ Nothing = mempty
-resultEventMap holeInfo (Just shownResult) =
-  srEventMap shownResult
+resultEventMap _ _ Nothing = mempty
+resultEventMap config holeInfo (Just (ShownResult eventMap holeResult)) =
+  eventMap
+  & maybe id (mappend . extraResultEventMap) mActions
   & Lens.mapped %~
     liftA2 mappend
     (afterPick holeInfo =<<
-     srHoleResult shownResult ^. Sugar.holeResultPick)
+     holeResult ^. Sugar.holeResultPick)
+  where
+    extraResultEventMap = mconcat
+      [ ExprEventMap.applyOperatorEventMap []
+      , ExprEventMap.cutEventMap config
+      ]
+    convertedResult = holeResult ^. Sugar.holeResultConverted
+    mActions = convertedResult ^. Sugar.rPayload . Sugar.plActions
 
 data IsActive = Inactive | Active
 
@@ -440,15 +449,9 @@ make ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole pl outerId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  (isActive, innerGui) <-
-    ExpressionGui.addExprEventMap Lens._2 pl $
+  (isActive, gui) <-
     ExprGuiM.wrapDelegated holeFDConfig delegatingMode
     (Lens._2 . ExpressionGui.egWidget %~) inner outerId
-  gui <-
-    innerGui
-    & case isActive of
-      Inactive -> ExpressionGui.addInferredTypes pl
-      Active -> return
   let
     unwrapEventMap =
       maybe mempty
@@ -456,9 +459,18 @@ make hole pl outerId = do
         (E.Doc ["Edit", "Unwrap"])
       . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
       ) (hole ^? Sugar.holeMActions . Lens._Just . Sugar.holeMUnwrap . Lens._Just)
-  return $
-    gui & ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap
+  gui
+    & ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap
+    & case isActive of
+      Inactive -> addInactiveEventMap <=< ExpressionGui.addInferredTypes pl
+      Active -> addActiveEventMap
   where
+    addActiveEventMap gui = do
+      jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] pl
+      return $ gui & ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
+    addInactiveEventMap gui = do
+      exprEventMap <- ExprEventMap.make [] pl
+      return $ gui & ExpressionGui.egWidget %~ Widget.weakerEvents exprEventMap
     delegatingMode
       | Lens.has (Sugar.holeMArg . Lens._Just) hole = FocusDelegator.NotDelegating
       | otherwise = FocusDelegator.Delegating

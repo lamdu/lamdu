@@ -1,4 +1,10 @@
-module Lamdu.GUI.ExpressionEdit.EventMap (make, modifyEventMap) where
+module Lamdu.GUI.ExpressionEdit.EventMap
+  ( make
+  , modifyEventMap
+  , applyOperatorEventMap
+  , cutEventMap
+  , jumpHolesEventMap
+  ) where
 
 import Control.Applicative ((<$>), Applicative(..))
 import Control.Lens.Operators
@@ -119,13 +125,12 @@ applyOperatorEventMap ::
   MonadA m => HolePickers m -> Sugar.Actions m -> EventHandlers (T m)
 applyOperatorEventMap holePickers actions =
   case actions ^. Sugar.wrap of
-  Sugar.WrapAction wrap -> result wrap
-  Sugar.WrapperAlready -> result . return $ actions ^. Sugar.storedGuid
+  Sugar.WrapAction wrap -> action wrap
+  Sugar.WrapperAlready -> action . return $ actions ^. Sugar.storedGuid
   Sugar.WrapNotAllowed -> mempty
   where
-    result = E.charGroup "Operator" doc operatorChars . action
     doc = E.Doc ["Edit", holePickersAddDocPrefix holePickers "Apply operator"]
-    action wrap c _isShifted = do
+    action wrap = E.charGroup "Operator" doc operatorChars $ \c _isShifted -> do
       holePickersAction holePickers
       Widget.eventResultFromCursor <$>
         (HoleInfo.setHoleStateAndJump (HoleState [c]) =<< wrap)
