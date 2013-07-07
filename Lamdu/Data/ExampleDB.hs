@@ -69,6 +69,8 @@ createBuiltins =
     true <- publicBuiltin "Prelude.True" bool
     false <- publicBuiltin "Prelude.False" bool
 
+    publicBuiltin_ "Prelude.not" $ mkPi bool bool
+
     traverse_ ((`publicBuiltin_` mkInfixType bool bool bool) . ("Prelude."++))
       ["&&", "||"]
 
