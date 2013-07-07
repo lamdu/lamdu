@@ -29,8 +29,9 @@ collapsedFDConfig config = FocusDelegator.Config
 make ::
   MonadA m => ParentPrecedence ->
   Sugar.Collapsed Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make (ParentPrecedence parentPrecedence) collapsed myId = do
+make (ParentPrecedence parentPrecedence) collapsed pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     makeExpanded wId =
@@ -42,6 +43,7 @@ make (ParentPrecedence parentPrecedence) collapsed myId = do
       Collapser
       { cMakeExpanded = makeExpanded wId
       , cMakeFocusedCompact =
+        ExpressionGui.stdWrap pl $
         colorize wId (compact ^. Sugar.gvVarType) $
         GetVarEdit.makeUncoloredView compact funcId
       }
