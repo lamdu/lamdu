@@ -33,7 +33,6 @@ data Lam expr = Lam
   { _lamKind :: !Kind
   , _lamParamId :: {-# UNPACK #-}!Guid
   , _lamParamType :: expr
-  -- TODO: Rename to _lamResult (for Pi it is not a body)
   , _lamResult :: expr
   } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
