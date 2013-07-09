@@ -45,10 +45,12 @@ make parentPrecedence inferred pl myId = do
        (E.Doc ["Edit", "Inferred value", "Accept"]) .
        fmap HoleEdit.eventResultOfPickedResult) $
       inferred ^. Sugar.iMAccept
-  ExprGuiM.wrapDelegated (fdConfig config)
+  gui <-
+    ExprGuiM.wrapDelegated (fdConfig config)
     FocusDelegator.NotDelegating (ExpressionGui.egWidget %~)
     (makeUnwrapped parentPrecedence pl inferred) myId
     <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
+  ExpressionGui.stdPostProcess pl gui
 
 makeUnwrapped ::
   MonadA m => ParentPrecedence ->

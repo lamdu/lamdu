@@ -19,18 +19,19 @@ module Lamdu.GUI.ExpressionGui
   -- Expression wrapping
   , MyPrecedence(..), ParentPrecedence(..), Precedence
   , parenify
-  -- | stdWrap means addTypes and addExprEventMap
+  -- | stdWrap/stdPostProcess means addTypes and wrapExprEventMap
   , stdWrap
+  , stdPostProcess
   , stdWrapDelegated
   , stdWrapParentExpr
   , stdWrapParenify
-  , addExprEventMap
   , addInferredTypes
   ) where
 
 import Control.Applicative ((<$>))
 import Control.Lens (Lens')
 import Control.Lens.Operators
+import Control.Monad ((<=<))
 import Control.MonadA (MonadA)
 import Data.Function (on)
 import Data.Store.Guid (Guid)
@@ -40,7 +41,7 @@ import Graphics.UI.Bottle.Animation (AnimId, Layer)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Box (KBox)
 import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import Lamdu.GUI.ExpressionGui.Types (WidgetT, MyPrecedence(..), ParentPrecedence(..), Precedence, ExpressionGui(..), egWidget, egAlignment)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
@@ -198,11 +199,19 @@ makeNameEdit (Sugar.Name nameSrc nameCollision name) ident myId = do
       Lens.mapped . Lens.mapped . Widget.wEventMap %~
       EventMap.filterSChars (curry (`notElem` disallowedNameChars))
 
-stdWrap :: 
+stdWrap ::
   MonadA m => Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m) ->
   ExprGuiM m (ExpressionGui m)
-stdWrap pl mkGui = addExprEventMap id pl $ addInferredTypes pl =<< mkGui
+stdWrap pl mkGui = wrapExprEventMap id pl $ addInferredTypes pl =<< mkGui
+
+-- | Assume no hole pickers to handle
+stdPostProcess ::
+  MonadA m =>
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  ExpressionGui m ->
+  ExprGuiM m (ExpressionGui m)
+stdPostProcess pl = addExprEventMap pl [] <=< addInferredTypes pl
 
 stdWrapDelegated ::
   MonadA m =>
@@ -316,15 +325,22 @@ makeCollisionSuffixLabels (Sugar.Collision suffix) animId = do
     & (WE.localEnv . WE.setTextColor . Config.collisionSuffixTextColor) config
     <&> (:[]) . onSuffixWidget
 
-addExprEventMap ::
+wrapExprEventMap ::
   MonadA m =>
-  Lens.Setter' a (ExpressionGui m) ->
+  Lens.Traversal' a (ExpressionGui m) ->
   Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   ExprGuiM m a -> ExprGuiM m a
-addExprEventMap lens pl action = do
+wrapExprEventMap lens pl action = do
   (res, resultPickers) <- ExprGuiM.listenResultPickers action
+  res & lens %%~ addExprEventMap pl resultPickers
+
+addExprEventMap ::
+  MonadA m =>
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload -> HolePickers m ->
+  ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+addExprEventMap pl resultPickers gui = do
   exprEventMap <- ExprEventMap.make resultPickers pl
-  return $ res & lens . egWidget %~ Widget.weakerEvents exprEventMap
+  gui & egWidget %~ Widget.weakerEvents exprEventMap & return
 
 addInferredTypes ::
   MonadA m =>
