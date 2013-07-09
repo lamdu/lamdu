@@ -43,7 +43,6 @@ make (ParentPrecedence parentPrecedence) collapsed pl myId = do
       Collapser
       { cMakeExpanded = makeExpanded wId
       , cMakeFocusedCompact =
-        ExpressionGui.stdWrap pl $
         colorize wId (compact ^. Sugar.gvVarType) $
         GetVarEdit.makeUncoloredView compact funcId
       }
@@ -56,9 +55,10 @@ make (ParentPrecedence parentPrecedence) collapsed pl myId = do
        (Config.layerCollapsedCompactBG (Config.layers config))
        (Config.collapsedCompactBGColor config) (bgId wId)) .
       ExprGuiM.withFgColor (Config.parameterColor config)
-  case () of
-    _ | hasInfo -> makeExpanded myId
-      | otherwise -> ExpressionGui.makeCollapser (collapsedFDConfig config) f myId
+  ExpressionGui.stdWrap pl $
+    if hasInfo
+    then makeExpanded myId
+    else ExpressionGui.makeCollapser (collapsedFDConfig config) f myId
   where
     Sugar.Collapsed funcGuid compact fullExpression hasInfo = collapsed
     bgId wId = Widget.toAnimId wId ++ ["bg"]
