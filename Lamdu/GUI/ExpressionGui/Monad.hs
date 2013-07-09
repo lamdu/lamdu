@@ -93,7 +93,7 @@ newtype Injected = Injected [Bool]
 data HoleGuids = HoleGuids
   { _hgMNextHole :: Maybe Guid
   , _hgMPrevHole :: Maybe Guid
-  }
+  } deriving Show
 Lens.makeLenses ''HoleGuids
 
 emptyHoleGuids :: HoleGuids
