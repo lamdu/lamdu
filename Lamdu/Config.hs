@@ -198,6 +198,7 @@ data Config = Config
   , presentationChoiceColor :: Draw.Color
 
   , labeledApplyBGColor :: Draw.Color
+  , spaceBetweenAnnotatedArgs :: Double
   } deriving (Eq)
 
 delKeys :: Config -> [E.ModKey]

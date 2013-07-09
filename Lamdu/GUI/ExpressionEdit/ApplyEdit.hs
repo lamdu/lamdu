@@ -13,13 +13,14 @@ import Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.Parens as Parens
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
+import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -79,11 +80,11 @@ makeTagView tagExprGuid tagG =
   TagEdit.makeView tagG . Widget.toAnimId $
   WidgetIds.fromGuid tagExprGuid
 
-makeArgRow ::
+makeArgRows ::
   MonadA m =>
   Sugar.AnnotatedArg Sugar.Name (ExprGuiM.SugarExpr m) ->
-  ExprGuiM m [(Grid.Alignment, ExprGuiM.WidgetT m)]
-makeArgRow arg = do
+  ExprGuiM m [[(Grid.Alignment, ExprGuiM.WidgetT m)]]
+makeArgRows arg = do
   argTagEdit <- makeTagView (arg ^. Sugar.aaTagExprGuid) (arg ^. Sugar.aaTag)
   argValEdit <- ExprGuiM.makeSubexpression 0 $ arg ^. Sugar.aaExpr
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -91,10 +92,18 @@ makeArgRow arg = do
     scaleTag =
       ExpressionGui.egWidget %~
       Widget.scale (realToFrac <$> Config.fieldTagScaleFactor config)
-  pure $ ExpressionGui.makeRow
-    [ (0, scaleTag argTagEdit)
-    , (0.5, space)
-    , (0, argValEdit)
+  pure $
+    [ [ (0.5, (BWidgets.vspaceWidget . realToFrac . Config.spaceBetweenAnnotatedArgs) config)
+      -- TODO: This is a workaround for GridEdit bug that
+      -- differing-length'd rows break navigation
+      , (0.5, Spacer.empty)
+      , (0.5, Spacer.empty)
+      ]
+    , ExpressionGui.makeRow
+      [ (0, scaleTag argTagEdit)
+      , (0.5, space)
+      , (0, argValEdit)
+      ]
     ]
   where
     space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
@@ -109,11 +118,11 @@ mkBoxed pl destGuid mkFuncRow annotatedArgs =
   ExpressionGui.stdWrapParentExpr pl $ \myId ->
   assignCursorGuid myId destGuid $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
-    argEdits <-
-      Grid.toWidget . Grid.make <$> traverse makeArgRow annotatedArgs
+    grid <-
+      Grid.toWidget . Grid.make . concat <$> traverse makeArgRows annotatedArgs
     ExpressionGui.withBgColor (Config.layerLabeledApplyBG (Config.layers config))
       (Config.labeledApplyBGColor config) (Widget.toAnimId myId ++ ["bg"]) .
-      ExpressionGui.addBelow 0 [(0, argEdits)] <$> mkFuncRow
+      ExpressionGui.addBelow 0 [(0, grid)] <$> mkFuncRow
 
 mkMParened ::
   MonadA m =>

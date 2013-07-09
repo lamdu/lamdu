@@ -701,6 +701,7 @@
         1.0,
         0.07
     ],
+    "spaceBetweenAnnotatedArgs": 7,
     "holeResultCount": 8,
     "helpInputDocColor": [
         0.1,

@@ -6,7 +6,7 @@ module Lamdu.GUI.BottleWidgets
   , wrapDelegatedWith, wrapDelegatedOT
   , makeTextEdit
   , makeTextEditor, makeLineEdit, makeWordEdit
-  , stdSpaceWidget
+  , stdSpaceWidget, hspaceWidget, vspaceWidget
   , hboxSpaced, hboxCenteredSpaced
   , gridHSpaced, gridHSpacedCentered
   , makeChoiceWidget, ChoiceWidgetConfig(..), ChoiceWidgetExpandMode(..)
@@ -168,6 +168,12 @@ makeWordEdit ::
   WidgetEnvT m (Widget f)
 makeWordEdit textRef myId =
   makeLineEdit textRef myId <&> deleteKeyEventHandler (noMods EventMap.KeySpace)
+
+hspaceWidget :: Widget.R -> Widget f
+hspaceWidget = uncurry Widget.liftView . Spacer.makeHorizontal
+
+vspaceWidget :: Widget.R -> Widget f
+vspaceWidget = uncurry Widget.liftView . Spacer.makeVertical
 
 stdSpaceWidget :: Widget f
 stdSpaceWidget = uncurry Widget.liftView $ Spacer.makeHorizontal 20
