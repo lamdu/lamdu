@@ -426,20 +426,17 @@ cachedFork =
       ((res, newCache), changes) <- Transaction.fork ctTrans
       return ((res, changes), newCache)
 
-writeConvertTypeChecked ::
-  (MonadA m, Monoid a) => Random.StdGen ->
-  SugarM.Context m -> Stored m ->
-  ( ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), MStorePoint m a)
-  , InferContext m
-  ) ->
-  CT m
-  ( ExpressionU m a
-  , ExprIRef.ExpressionM m
+writeTypeChecked ::
+  (MonadA m, Monoid a) =>
+  Random.StdGen -> Stored m ->
+  ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), MStorePoint m a) ->
+  CT m -- TODO: one expression with consistent/stored guids
+  ( ExprIRef.ExpressionM m
     (InputPayloadP (Infer.Inferred (DefIM m)) (Stored m) a)
   , ExprIRef.ExpressionM m
     (InputPayloadP (Infer.Inferred (DefIM m)) (Stored m) a)
   )
-writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
+writeTypeChecked gen holeStored inferredExpr = do
   -- With the real stored guids:
   writtenExpr <-
     lift $ fmap toPayload .
@@ -454,19 +451,11 @@ writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
       ExprUtil.randomizeParamIds paramGen .
       ExprUtil.randomizeExpr exprGen $
       makeConsistentPayload <$> writtenExpr
-    newSugarContext = sugarContext & SugarM.scHoleInferContext .~ newCtx
-  converted <-
-    SugarM.run newSugarContext . SugarM.convertSubexpression $
-    consistentExpr
-    <&> ipStored %~ Just
-    <&> ipInferred %~ Just . toIWC
   return
-    ( converted
-    , consistentExpr
+    ( consistentExpr
     , snd <$> writtenExpr
     )
   where
-    toIWC x = InferredWithConflicts x [] []
     intoStorePoint (inferred, (mStorePoint, a)) =
       (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
     toPayload (stored, (inferred, wasStored, a)) = (,) wasStored InputPayload
@@ -490,33 +479,33 @@ makeHoleResult ::
   SugarM.Context m ->
   InputPayloadP (InferredWC m) (Stored m) () ->
   HoleResultSeed m (MStorePoint m a) ->
-  CT m (Maybe (HoleResult MStoredName m a))
+  CT m (Maybe (HoleResult m a))
 makeHoleResult sugarContext (InputPayload guid iwc stored ()) seed = do
   ((fMJumpTo, mResult), forkedChanges) <- cachedFork $ do
     (fSeedExpr, fMJumpTo) <- lift $ seedExprEnv (Nothing, mempty) cp seed
     fMInferredExprCtx <-
       runMaybeT . (`runStateT` (sugarContext ^. SugarM.scHoleInferContext)) $
       SugarInfer.memoLoadInfer Nothing fSeedExpr holePoint
-    mResult <-
-      traverse
-      (writeConvertTypeChecked gen sugarContext stored)
-      fMInferredExprCtx
-    return (fMJumpTo, mResult)
+    (,) fMJumpTo <$> traverse writeTypeCheckedH fMInferredExprCtx
 
   traverse (mkResult fMJumpTo (Transaction.merge forkedChanges)) mResult
   where
+    writeTypeCheckedH (expr, ctx) =
+      (,) ctx <$> writeTypeChecked gen stored expr
     gen = genFromHashable (guid, seedHashable (void seed))
-    mkResult fMJumpTo unfork (fConverted, fConsistentExpr, fWrittenExpr) = do
-      let
-        pick = unfork *> mkPickedResult fMJumpTo fConsistentExpr fWrittenExpr
-        inferredExpr = (^. ipInferred) <$> fWrittenExpr
+    mkResult fMJumpTo unfork (fNewCtx, (fConsistentExpr, fWrittenExpr)) = do
+      let pick = unfork *> mkPickedResult fMJumpTo fConsistentExpr fWrittenExpr
       pure HoleResult
-        { _holeResultInferred = inferredExpr
-        , _holeResultConverted = fConverted
+        { _holeResultInferred =
+          fConsistentExpr
+          <&> ipInferred %~ Just . toIWC
+          <&> ipStored %~ Just
         , _holeResultPick = pick
+        , _holeResultContext = fNewCtx
         , _holeResultHasHoles =
-          not . null . uninferredHoles $ (,) () <$> inferredExpr
+          not . null . uninferredHoles $ (,) () . (^. ipInferred) <$> fWrittenExpr
         }
+    toIWC x = InferredWithConflicts x [] []
     cp = sugarContext ^. SugarM.scCodeAnchors
     holePoint = Infer.iNode $ iwcInferred iwc
     mkPickedResult mJumpTo consistentExpr writtenExpr = do

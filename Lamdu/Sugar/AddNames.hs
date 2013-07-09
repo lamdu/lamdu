@@ -288,12 +288,7 @@ toHoleActions ::
   m (HoleActions (NewName m) tm)
 toHoleActions ha@HoleActions {..} = do
   RunMonad run <- opRun
-  pure ha
-    { _holeScope =
-      fmap (run . toScope) _holeScope
-    , holeResult =
-      (fmap . fmap . fmap) (run . holeResultConverted toExpression) holeResult
-    }
+  ha & holeScope . Lens.mapped %~ run . toScope & pure
 
 toHole ::
   (MonadA tm, MonadNaming m) =>

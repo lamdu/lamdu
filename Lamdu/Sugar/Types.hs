@@ -54,9 +54,9 @@ module Lamdu.Sugar.Types
     , holeScope, holePaste, holeMUnwrap, holeInferExprType, holeInferredType
   , HoleResult(..)
     , holeResultInferred
-    , holeResultConverted
     , holeResultPick
     , holeResultHasHoles
+    , holeResultContext
   , PickedResult(..), prMJumpTo, prIdTranslation
   , LiteralInteger(..)
   , TagG(..), tagName, tagGuid
@@ -79,13 +79,11 @@ import Data.Store.IRef (Tag)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import Lamdu.Data.Expression (Kind(..))
-import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Sugar.Types.Internal (T, CT, Stored, InferredWC, InferContext)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Sugar.Types.Internal as TypesInternal
 
 data InputPayloadP inferred stored a
@@ -117,7 +115,7 @@ data Actions m = Actions
   }
 
 newtype Convert name m = Convert
-  { _runConvert :: forall a. Monoid a => InferContext m -> InputExpr m a -> CT m (Expression name m a)
+  { runConvert :: forall a. Monoid a => InferContext m -> InputExpr m a -> CT m (Expression name m a)
   }
 
 data Payload name m a = Payload
@@ -199,11 +197,12 @@ data PickedResult = PickedResult
     _prIdTranslation :: [(Guid, Guid)]
   }
 
-data HoleResult name m a = HoleResult
-  { _holeResultInferred :: ExprIRef.ExpressionM m (Infer.Inferred (DefIM m))
-  , _holeResultConverted :: Expression name m a
+data HoleResult m a = HoleResult
+  -- TODO: Rename to holeResultExpr (Consider using non-Maybe for stored/inferred):
+  { _holeResultInferred :: InputExpr m a
   , _holeResultPick :: T m PickedResult
   , _holeResultHasHoles :: Bool
+  , _holeResultContext :: InferContext m -- TODO: Temporary
   }
 
 data HoleResultSeed m a
@@ -233,7 +232,7 @@ data HoleActions name m = HoleActions
       forall a.
       (Binary a, Typeable a, Ord a, Monoid a) =>
       HoleResultSeed m (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
-      CT m (Maybe (HoleResult name m a))
+      CT m (Maybe (HoleResult m a))
   , _holePaste :: Maybe (T m Guid)
   , _holeMUnwrap :: Maybe (T m Guid)
   }
