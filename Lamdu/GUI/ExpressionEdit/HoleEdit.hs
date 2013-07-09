@@ -465,7 +465,7 @@ make hole pl outerId = do
       (Config.layerInactiveHole (Config.layers config)) bgColor
     maybeAddPadding
       | Lens.has (Sugar.holeMArg . Lens._Just) hole =
-        ExpressionGui.egWidget %~ Widget.pad (realToFrac <$> Config.wrapperHolePadding config)
+        ExpressionGui.pad (realToFrac <$> Config.wrapperHolePadding config)
       | otherwise = id
   gui
     & case isActive of

@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionGui
   -- General:
   , fromValueWidget
   , scaleFromTop
+  , pad
   , hbox, hboxSpaced, addBelow
   , truncateSize
   , makeRow
@@ -71,6 +72,14 @@ fromValueWidget widget = ExpressionGui widget 0.5
 scaleFromTop :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
 scaleFromTop ratio (ExpressionGui widget alignment) =
   ExpressionGui (Widget.scale ratio widget) (alignment / (ratio ^. Lens._2))
+
+pad :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
+pad padding (ExpressionGui widget alignment) =
+  ExpressionGui newWidget $
+  (padding ^. Lens._2 + alignment * widget ^. height) / newWidget ^. height
+  where
+    height = Widget.wSize . Lens._2
+    newWidget = Widget.pad padding widget
 
 truncateSize :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
 truncateSize newSize (ExpressionGui widget alignment) =
