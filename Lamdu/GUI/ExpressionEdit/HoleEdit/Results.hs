@@ -37,7 +37,7 @@ import qualified Data.Char as Char
 import qualified Data.Foldable as Foldable
 import qualified Data.List.Class as List
 import qualified Data.Store.Guid as Guid
-import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
@@ -74,7 +74,7 @@ data Result m = Result
   { rType :: ResultType
   , rHoleResult :: Sugar.HoleResult Sugar.Name m SugarExprPl
   , rMkWidget :: ExprGuiM m (WidgetT m)
-  , rId :: Widget.Id
+  , rId :: WidgetId.Id
   }
 
 data IsPreferred = Preferred | NotPreferred
@@ -82,7 +82,7 @@ data IsPreferred = Preferred | NotPreferred
 
 data ResultsList m = ResultsList
   { _rlPreferred :: IsPreferred -- Move to top of result list
-  , _rlExtraResultsPrefixId :: Widget.Id
+  , _rlExtraResultsPrefixId :: WidgetId.Id
   , _rlMain :: Result m
   , _rlExtra :: [Result m]
   }
@@ -122,12 +122,12 @@ makeLiteralGroups searchTerm =
 resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefIM m)) -> Int
 resultComplexityScore = length . Foldable.toList . Infer.iType . (^. Expr.ePayload)
 
-prefixId :: HoleInfo m -> Widget.Id
-prefixId holeInfo = mconcat [hiId holeInfo, Widget.Id ["results"]]
+prefixId :: HoleInfo m -> WidgetId.Id
+prefixId holeInfo = mconcat [hiId holeInfo, WidgetId.Id ["results"]]
 
 type
   WidgetMaker m =
-    Widget.Id -> Sugar.HoleResult Sugar.Name m SugarExprPl ->
+    WidgetId.Id -> Sugar.HoleResult Sugar.Name m SugarExprPl ->
     ExprGuiM m (WidgetT m)
 data MakeWidgets m = MakeWidgets
   { mkResultWidget :: WidgetMaker m
@@ -161,7 +161,7 @@ typeCheckResults holeInfo options = do
     score = resultComplexityScore . (^. Sugar.holeResultInferred)
 
 mResultsListOf ::
-  HoleInfo m -> WidgetMaker m -> Widget.Id ->
+  HoleInfo m -> WidgetMaker m -> WidgetId.Id ->
   [(ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl)] ->
   Maybe (ResultsList m)
 mResultsListOf _ _ _ [] = Nothing
@@ -176,7 +176,7 @@ mResultsListOf holeInfo makeWidget baseId (x:xs) = Just
     extraResultId =
       mappend extraResultsPrefixId . WidgetIds.hash . void .
       (^. Sugar.holeResultInferred)
-    extraResultsPrefixId = mconcat [prefixId holeInfo, Widget.Id ["extra results"], baseId]
+    extraResultsPrefixId = mconcat [prefixId holeInfo, WidgetId.Id ["extra results"], baseId]
     mkResult resultId (typ, holeResult) =
       Result
       { rType = typ
@@ -187,7 +187,7 @@ mResultsListOf holeInfo makeWidget baseId (x:xs) = Just
 
 typeCheckToResultsList ::
   MonadA m => HoleInfo m -> WidgetMaker m ->
-  Widget.Id -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl)] ->
+  WidgetId.Id -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl)] ->
   CT m (Maybe (ResultsList m))
 typeCheckToResultsList holeInfo makeWidget baseId options =
   mResultsListOf holeInfo makeWidget baseId <$>
@@ -307,7 +307,7 @@ makeNewTagResultList ::
 makeNewTagResultList holeInfo makeNewTagResultWidget
   | null (hiSearchTerm holeInfo) = pure Nothing
   | otherwise =
-      typeCheckToResultsList holeInfo makeNewTagResultWidget (Widget.Id ["NewTag"]) $
+      typeCheckToResultsList holeInfo makeNewTagResultWidget (WidgetId.Id ["NewTag"]) $
       maybeInjectArgumentNewTag holeInfo
 
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
