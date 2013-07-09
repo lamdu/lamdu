@@ -28,13 +28,13 @@ import Data.Traversable (traverse)
 import Lamdu.Config (Config)
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefIM)
-import Lamdu.Data.Expression.Infer.Conflicts (iwcInferred)
 import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..), pureHole)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument)
 import Lamdu.Sugar.Types (Scope(..))
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
+import qualified Data.Foldable as Foldable
 import qualified Data.List.Class as List
 import qualified Data.Store.Guid as Guid
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
@@ -74,7 +74,7 @@ type SugarExprPl = (ExprGuiM.StoredGuids, ExprGuiM.Injected)
 
 data Result m = Result
   { rType :: ResultType
-  , rHoleResult :: Sugar.HoleResult m SugarExprPl
+  , rHoleResult :: Sugar.HoleResult Sugar.Name m SugarExprPl
   , rInfo :: ResultInfo
   , rId :: WidgetId.Id
   }
@@ -121,12 +121,8 @@ makeLiteralGroups searchTerm =
     makeLiteralIntResult integer =
       mkGroup [show integer] $ ExprLens.bodyLiteralInteger # integer
 
-resultComplexityScore :: Sugar.InputExpr m a -> Int
-resultComplexityScore =
-  length .
-  (^..
-   Expr.ePayload . Sugar.ipInferred . Lens._Just .
-   Lens.to (Infer.iType . iwcInferred) . traverse)
+resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefIM m)) -> Int
+resultComplexityScore = length . Foldable.toList . Infer.iType . (^. Expr.ePayload)
 
 prefixId :: HoleInfo m -> WidgetId.Id
 prefixId holeInfo = mconcat [hiId holeInfo, WidgetId.Id ["results"]]
@@ -134,7 +130,7 @@ prefixId holeInfo = mconcat [hiId holeInfo, WidgetId.Id ["results"]]
 typeCheckHoleResult ::
   MonadA m => HoleInfo m ->
   Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl) ->
-  CT m (Maybe (ResultType, Sugar.HoleResult m SugarExprPl))
+  CT m (Maybe (ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl))
 typeCheckHoleResult holeInfo seed = do
   mGood <- mkHoleResult seed
   case (mGood, seed) of
@@ -149,17 +145,17 @@ typeCheckHoleResult holeInfo seed = do
 typeCheckResults ::
   MonadA m => HoleInfo m ->
   [Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl)] ->
-  CT m [(ResultType, Sugar.HoleResult m SugarExprPl)]
+  CT m [(ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl)]
 typeCheckResults holeInfo options = do
   rs <- catMaybes <$> traverse (typeCheckHoleResult holeInfo) options
   let (goodResults, badResults) = partition ((== GoodResult) . fst) rs
   return $ sortOn (score . snd) goodResults ++ badResults
   where
-    score = resultComplexityScore . (^. Sugar.holeResultExpr)
+    score = resultComplexityScore . (^. Sugar.holeResultInferred)
 
 mResultsListOf ::
   HoleInfo m -> ResultInfo -> WidgetId.Id ->
-  [(ResultType, Sugar.HoleResult m SugarExprPl)] ->
+  [(ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl)] ->
   Maybe (ResultsList m)
 mResultsListOf _ _ _ [] = Nothing
 mResultsListOf holeInfo resultInfo baseId (x:xs) = Just
@@ -172,7 +168,7 @@ mResultsListOf holeInfo resultInfo baseId (x:xs) = Just
   where
     extraResultId =
       mappend extraResultsPrefixId . WidgetIds.hash . void .
-      (^. Sugar.holeResultExpr)
+      (^. Sugar.holeResultInferred)
     extraResultsPrefixId = mconcat [prefixId holeInfo, WidgetId.Id ["extra results"], baseId]
     mkResult resultId (typ, holeResult) =
       Result

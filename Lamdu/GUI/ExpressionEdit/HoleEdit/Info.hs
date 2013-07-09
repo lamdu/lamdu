@@ -43,7 +43,6 @@ data HoleInfo m = HoleInfo
   , hiActions :: Sugar.HoleActions Sugar.Name m
   , hiMArgument :: Maybe (Sugar.HoleArg m (ExprGuiM.SugarExpr m))
   , hiHoleGuids :: ExprGuiM.HoleGuids
-  , hiConvert :: Sugar.Convert Sugar.Name m
   }
 
 hiSearchTerm :: HoleInfo m -> String

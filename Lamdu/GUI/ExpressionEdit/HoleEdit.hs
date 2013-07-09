@@ -53,8 +53,7 @@ type T = Transaction.Transaction
 
 data ShownResult m = ShownResult
   { srEventMap :: Widget.EventHandlers (T m)
-  , srHoleResult :: Sugar.HoleResult m HoleResults.SugarExprPl
-  , srMActions :: Maybe (Sugar.Actions m)
+  , srHoleResult :: Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl
   }
 
 extraSymbol :: String
@@ -132,13 +131,10 @@ resultPickEventMap config holeInfo (Just shownResult) =
     simplePickRes keys =
       E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) pick
 
-makePaddedResult ::
-  MonadA m => Result m ->
-  Sugar.ExpressionN m ExprGuiM.Payload ->
-  ExprGuiM m (WidgetT m)
-makePaddedResult res converted = do
+makePaddedResult :: MonadA m => Result m -> ExprGuiM m (WidgetT m)
+makePaddedResult res = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  mkWidget (rId res) converted
+  mkWidget (rId res) (rHoleResult res)
     <&> (Widget.pad . fmap realToFrac . Config.holeResultPadding) config
   where
     mkWidget =
@@ -147,36 +143,28 @@ makePaddedResult res converted = do
       HoleResults.ResultInfoNormal -> makeHoleResultWidget
 
 makeShownResult ::
-  MonadA m => HoleInfo m -> Result m -> ExprGuiM m (Widget (T m), ShownResult m)
-makeShownResult holeInfo result = do
-  converted <-
-    ExprGuiM.liftMemoT $
-    Sugar.runConvert (hiConvert holeInfo)
-    (rHoleResult result ^. Sugar.holeResultContext)
-    (rHoleResult result ^. Sugar.holeResultExpr)
-  widget <-
-    makePaddedResult result . SugarRemoveTypes.holeResultTypes $
-    postProcessSugar converted
+  MonadA m => Result m -> ExprGuiM m (Widget (T m), ShownResult m)
+makeShownResult result = do
+  widget <- makePaddedResult result
   return
     ( widget & Widget.wEventMap .~ mempty
     , ShownResult
       { srEventMap = widget ^. Widget.wEventMap
       , srHoleResult = rHoleResult result
-      , srMActions = converted ^. Sugar.rPayload . Sugar.plActions
       }
     )
 
 makeResultGroup ::
-  MonadA m => HoleInfo m ->
+  MonadA m =>
   ResultsList m ->
   ExprGuiM m
   ( ShownResult m
   , [WidgetT m]
   , Maybe (ShownResult m)
   )
-makeResultGroup holeInfo results = do
+makeResultGroup results = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  (mainResultWidget, shownMainResult) <- makeShownResult holeInfo mainResult
+  (mainResultWidget, shownMainResult) <- makeShownResult mainResult
   extraSymbolWidget <-
     if Lens.has (HoleResults.rlExtra . traverse) results
     then
@@ -206,7 +194,7 @@ makeResultGroup holeInfo results = do
   return (shownMainResult, [mainResultWidget, onExtraSymbol extraSymbolWidget, extraResWidget], mResult)
   where
     mainResult = results ^. HoleResults.rlMain
-    makeExtra = makeExtraResultsWidget holeInfo $ results ^. HoleResults.rlExtra
+    makeExtra = makeExtraResultsWidget $ results ^. HoleResults.rlExtra
 
 makeExtraResultsPlaceholderWidget ::
   MonadA m => [Result m] -> ExprGuiM m (WidgetT m)
@@ -216,16 +204,15 @@ makeExtraResultsPlaceholderWidget (result:_) =
   BWidgets.makeFocusableView (rId result) Spacer.empty
 
 makeExtraResultsWidget ::
-  MonadA m =>
-  HoleInfo m -> [Result m] ->
+  MonadA m => [Result m] ->
   ExprGuiM m (Maybe (ShownResult m), WidgetT m)
-makeExtraResultsWidget _ [] = return (Nothing, Spacer.empty)
-makeExtraResultsWidget holeInfo extraResults@(firstResult:_) = do
+makeExtraResultsWidget [] = return (Nothing, Spacer.empty)
+makeExtraResultsWidget extraResults@(firstResult:_) = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     mkResWidget result = do
       isOnResult <- ExprGuiM.widgetEnv $ WE.isSubCursor (rId result)
-      (widget, shownResult) <- makeShownResult holeInfo result
+      (widget, shownResult) <- makeShownResult result
       return
         ( shownResult <$ guard isOnResult
         , widget
@@ -248,12 +235,14 @@ focusProxy wId =
   Widget.doesntTakeFocus
 
 makeHoleResultWidget ::
-  MonadA m =>
-  Widget.Id -> Sugar.ExpressionN m ExprGuiM.Payload ->
-  ExprGuiM m (WidgetT m)
-makeHoleResultWidget resultId converted = do
+  MonadA m => Widget.Id ->
+  Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl -> ExprGuiM m (WidgetT m)
+makeHoleResultWidget resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  resultGui <- ExprGuiM.makeSubexpression 0 converted
+  resultGui <-
+    ExprGuiM.makeSubexpression 0 .
+    SugarRemoveTypes.holeResultTypes .
+    postProcessSugar $ holeResult ^. Sugar.holeResultConverted
   resultGui ^. ExpressionGui.egWidget
     & Widget.wFrame %~ Anim.mapIdentities (`mappend` Widget.toAnimId resultId)
     & Widget.scale (realToFrac <$> Config.holeResultScaleFactor config)
@@ -286,11 +275,10 @@ asNewLabelScaleFactor = 0.5
 
 makeNewTagResultWidget ::
   MonadA m =>
-  Widget.Id ->
-  Sugar.ExpressionN m ExprGuiM.Payload ->
+  Widget.Id -> Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl ->
   ExprGuiM m (WidgetT m)
-makeNewTagResultWidget resultId converted = do
-  widget <- makeHoleResultWidget resultId converted
+makeNewTagResultWidget resultId holeResult = do
+  widget <- makeHoleResultWidget resultId holeResult
   ExprGuiM.widgetEnv $ do
     label <-
       fmap (Widget.scale asNewLabelScaleFactor) .
@@ -341,7 +329,7 @@ makeResultsWidget ::
   [ResultsList m] -> HaveHiddenResults ->
   ExprGuiM m (Maybe (ShownResult m), WidgetT m)
 makeResultsWidget holeInfo shownResultsLists hiddenResults = do
-  (mainResults, rows, mResults) <- unzip3 <$> traverse (makeResultGroup holeInfo) shownResultsLists
+  (mainResults, rows, mResults) <- unzip3 <$> traverse makeResultGroup shownResultsLists
   let
     mSelectedResult = mResults ^? Lens.traversed . Lens._Just
     mFirstResult = mainResults ^? Lens.traversed
@@ -389,8 +377,7 @@ holeBackgroundColor config holeArg
 makeActiveHoleEdit ::
   MonadA m =>
   Widget.Size ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
-  HoleInfo m ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload -> HoleInfo m ->
   ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit size pl holeInfo = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -441,7 +428,7 @@ resultEventMap ::
   MonadA m => Config -> HoleInfo m -> Maybe (ShownResult m) ->
   Widget.EventHandlers (T m)
 resultEventMap _ _ Nothing = mempty
-resultEventMap config holeInfo (Just (ShownResult eventMap holeResult mActions)) =
+resultEventMap config holeInfo (Just (ShownResult eventMap holeResult)) =
   eventMap
   & maybe id (mappend . extraResultEventMap) mActions
   & Lens.mapped %~
@@ -453,6 +440,8 @@ resultEventMap config holeInfo (Just (ShownResult eventMap holeResult mActions))
       [ ExprEventMap.applyOperatorEventMap []
       , ExprEventMap.cutEventMap config
       ]
+    convertedResult = holeResult ^. Sugar.holeResultConverted
+    mActions = convertedResult ^. Sugar.rPayload . Sugar.plActions
 
 data IsActive = Inactive | Active
 
@@ -534,13 +523,10 @@ makeUnwrappedH pl hole myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   inactive <- makeInactive hole myId
   case (mStoredGuid, hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
-    (Just storedGuid, Just holeActions, Just _) -> (,) Active <$> do
-      -- TODO: Dedup with makeUnwrappedActive below
+    (Just storedGuid, Just holeActions, Just _) -> do
+      stateProp <- ExprGuiM.transaction $ HoleInfo.assocStateRef storedGuid ^. Transaction.mkProperty
       inactiveWithTypes <- ExpressionGui.addInferredTypes pl inactive
-      stateProp <-
-        ExprGuiM.transaction $
-        HoleInfo.assocStateRef storedGuid ^. Transaction.mkProperty
-      makeActiveHoleEdit
+      (,) Active <$> makeActiveHoleEdit
         (inactiveWithTypes ^. ExpressionGui.egWidget . Widget.wSize) pl
         HoleInfo
         { hiStoredGuid = storedGuid
@@ -549,7 +535,6 @@ makeUnwrappedH pl hole myId = do
         , hiActions = holeActions
         , hiHoleGuids = pl ^. Sugar.plData . ExprGuiM.plHoleGuids
         , hiMArgument = hole ^. Sugar.holeMArg
-        , hiConvert = pl ^. Sugar.plConvertInContext
         }
     _ -> return (Inactive, inactive)
   where
@@ -572,7 +557,6 @@ makeUnwrappedActive pl storedGuid holeActions size myId = do
     , hiActions = holeActions
     , hiHoleGuids = pl ^. Sugar.plData . ExprGuiM.plHoleGuids
     , hiMArgument = Nothing
-    , hiConvert = pl ^. Sugar.plConvertInContext
     }
 
 -- TODO: Use this where the hiState is currently used to get the
