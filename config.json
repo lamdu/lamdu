@@ -347,6 +347,10 @@
         0.8,
         0.5
     ],
+    "wrapperHolePadding": {
+        "_first": 8,
+        "_second": 8
+    },
     "wrapKeys": [
         [
             {

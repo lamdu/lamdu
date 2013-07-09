@@ -461,6 +461,10 @@ make hole pl outerId = do
       ExpressionGui.egWidget %~
       makeBackground outerId
       (Config.layerInactiveHole (Config.layers config)) bgColor
+    maybeAddPadding
+      | Lens.has (Sugar.holeMArg . Lens._Just) hole =
+        ExpressionGui.egWidget %~ Widget.pad (realToFrac <$> Config.wrapperHolePadding config)
+      | otherwise = id
   gui
     & case isActive of
       Inactive ->
@@ -468,9 +472,6 @@ make hole pl outerId = do
         addInactiveBG . maybeAddPadding
       Active -> addActiveEventMap
   where
-    maybeAddPadding
-      | Lens.has (Sugar.holeMArg . Lens._Just) hole = ExpressionGui.egWidget %~ Widget.pad 8
-      | otherwise = id
     addActiveEventMap gui = do
       jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] pl
       replaceEventMap <- ExprEventMap.replaceOrComeToParentEventMap pl

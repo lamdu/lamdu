@@ -94,6 +94,8 @@ data Config = Config
   , activeHoleBackgroundColor :: Draw.Color
   , inactiveHoleBackgroundColor :: Draw.Color
 
+  , wrapperHolePadding :: Vector2 Double
+
   , tagScaleFactor :: Vector2 Double
 
   , fieldTagScaleFactor :: Vector2 Double
