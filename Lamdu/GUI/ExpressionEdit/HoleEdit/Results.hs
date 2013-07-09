@@ -68,7 +68,7 @@ mkGroup names body = Group
 data ResultType = GoodResult | BadResult
   deriving (Eq, Ord)
 
-data ResultInfo = CreateNewTag | NormalResult
+data ResultInfo = ResultInfoNewTag | ResultInfoNormal
 
 type SugarExprPl = (ExprGuiM.StoredGuids, ExprGuiM.Injected)
 
@@ -300,7 +300,7 @@ makeNewTagResultList ::
 makeNewTagResultList holeInfo
   | null (hiSearchTerm holeInfo) = pure Nothing
   | otherwise =
-      typeCheckToResultsList holeInfo CreateNewTag (WidgetId.Id ["NewTag"]) $
+      typeCheckToResultsList holeInfo ResultInfoNewTag (WidgetId.Id ["NewTag"]) $
       maybeInjectArgumentNewTag holeInfo
 
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
@@ -339,7 +339,7 @@ makeAll config holeInfo = do
   allGroups <- ExprGuiM.transaction $ makeAllGroups holeInfo
   let
     allGroupsList =
-      List.mapL (makeResultsList holeInfo NormalResult) $
+      List.mapL (makeResultsList holeInfo ResultInfoNormal) $
       List.fromList allGroups
     newTagList
       | isTagType =

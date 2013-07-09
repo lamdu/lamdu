@@ -139,8 +139,8 @@ makePaddedResult res = do
   where
     mkWidget =
       case rInfo res of
-      HoleResults.CreateNewTag -> makeNewTagResultWidget
-      HoleResults.NormalResult -> makeHoleResultWidget
+      HoleResults.ResultInfoNewTag -> makeNewTagResultWidget
+      HoleResults.ResultInfoNormal -> makeHoleResultWidget
 
 makeShownResult ::
   MonadA m => Result m -> ExprGuiM m (Widget (T m), ShownResult m)
