@@ -19,7 +19,6 @@ import Data.Typeable (Typeable1)
 import Lamdu.Data.Anchors (PresentationMode(..))
 import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Data.Expression.Infer.Conflicts (iwcInferred)
-import Lamdu.Sugar.Convert.Infer (ExprMM, PayloadMM)
 import Lamdu.Sugar.Convert.Monad (SugarM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
@@ -47,8 +46,8 @@ uneither = either id id
 
 convert ::
   (Typeable1 m, MonadA m, Monoid a) =>
-  Expr.Apply (ExprMM m a) ->
-  PayloadMM m a -> SugarM m (ExpressionU m a)
+  Expr.Apply (InputExpr m a) ->
+  InputPayload m a -> SugarM m (ExpressionU m a)
 convert app@(Expr.Apply funcI argI) exprPl =
   fmap uneither . runEitherT $ do
     argS <- lift $ SugarM.convertSubexpression argI
@@ -78,7 +77,7 @@ noRepetitions x = length x == Set.size (Set.fromList x)
 
 convertLabeled ::
   (MonadA m, Typeable1 m, Monoid a) =>
-  ExpressionU m a -> ExpressionU m a -> ExprMM m a -> PayloadMM m a ->
+  ExpressionU m a -> ExpressionU m a -> InputExpr m a -> InputPayload m a ->
   MaybeT (SugarM m) (ExpressionU m a)
 convertLabeled funcS argS argI exprPl = do
   Record KVal fields <- maybeToMPlus $ argS ^? rBody . _BodyRecord
@@ -115,13 +114,13 @@ convertLabeled funcS argS argI exprPl = do
         (fields ^. flItems . Lens.traversed . rfTag . rPayload . plData)
       ) .
       ( plActions . Lens._Just . mSetToInnerExpr .~ do
-        stored <- exprPl ^. SugarInfer.plStored
+        stored <- exprPl ^. ipStored
         fieldsI <- argI ^? Expr.eBody . Expr._BodyRecord . Expr.recordFields
         val <-
           case filter (Lens.nullOf ExprLens.exprHole) (map snd fieldsI) of
           [x] -> Just x
           _ -> Nothing
-        valStored <- traverse (^. SugarInfer.plStored) val
+        valStored <- traverse (^. ipStored) val
         return $
           ExprIRef.exprGuid <$>
           DataOps.setToWrapper (Property.value (valStored ^. Expr.ePayload)) stored
@@ -129,7 +128,7 @@ convertLabeled funcS argS argI exprPl = do
 
 makeCollapsed ::
   (MonadA m, Typeable1 m, Monoid a) =>
-  PayloadMM m a ->
+  InputPayload m a ->
   Guid -> GetVar MStoredName m -> Bool ->
   ExpressionU m a -> SugarM m (ExpressionU m a)
 makeCollapsed exprPl g compact hasInfo fullExpression =
@@ -146,12 +145,12 @@ makeCollapsed exprPl g compact hasInfo fullExpression =
   & SugarExpr.make exprPl
   <&> rPayload . plData <>~ fullExpression ^. rPayload . plData
   where
-    expandedGuid = Guid.combine (exprPl ^. SugarInfer.plGuid) $ Guid.fromString "polyExpanded"
+    expandedGuid = Guid.combine (exprPl ^. ipGuid) $ Guid.fromString "polyExpanded"
 
 convertPrefix ::
   (MonadA m, Typeable1 m, Monoid a) =>
-  ExpressionU m a -> ExprMM m a -> ExpressionU m a ->
-  ExprMM m a -> PayloadMM m a -> SugarM m (ExpressionU m a)
+  ExpressionU m a -> InputExpr m a -> ExpressionU m a ->
+  InputExpr m a -> InputPayload m a -> SugarM m (ExpressionU m a)
 convertPrefix funcRef funcI argS argI applyPl
   | SugarInfer.isPolymorphicFunc $ funcI ^. Expr.ePayload =
     case funcRef ^. rBody of
@@ -191,7 +190,7 @@ unwrap ::
   MonadA m =>
   ExprIRef.ExpressionProperty m ->
   ExprIRef.ExpressionProperty m ->
-  SugarInfer.ExprMM def stored ->
+  InputExpr def stored ->
   T m Guid
 unwrap outerP argP argExpr = do
   res <- DataOps.replace outerP (Property.value argP)
@@ -200,16 +199,16 @@ unwrap outerP argP argExpr = do
     Just (x:_) -> x ^. Expr.ePayload . Lens._1
     _ -> ExprIRef.exprGuid res
   where
-    mArgInferred = Lens.sequenceOf (Lens.traversed . SugarInfer.plInferred) argExpr
+    mArgInferred = Lens.sequenceOf (Lens.traversed . ipInferred) argExpr
     f x =
-      ( x ^. SugarInfer.plGuid
-      , iwcInferred $ x ^. SugarInfer.plInferred
+      ( x ^. ipGuid
+      , iwcInferred $ x ^. ipInferred
       )
     mOrderedHoles = ConvertHole.orderedInnerHoles . fmap f <$> mArgInferred
 
 convertAppliedHole ::
   (MonadA m, Typeable1 m, Monoid a) =>
-  ExprMM m a -> ExpressionU m a -> ExprMM m a -> PayloadMM m a ->
+  InputExpr m a -> ExpressionU m a -> InputExpr m a -> InputPayload m a ->
   MaybeT (SugarM m) (ExpressionU m a)
 convertAppliedHole funcI rawArgS argI exprPl
   | Lens.has ExprLens.exprHole funcI = lift $ do
@@ -222,12 +221,12 @@ convertAppliedHole funcI rawArgS argI exprPl
         { _haExpr = argS
         , _haExprPresugared =
           flip (,) () . fmap (StorePoint . Property.value) .
-          (^. SugarInfer.plStored) <$> argI
+          (^. ipStored) <$> argI
         , _haTypeIsAMatch = isTypeMatch
         }
       mUnwrap = do
         guard isTypeMatch
-        stored <- exprPl ^. SugarInfer.plStored
+        stored <- exprPl ^. ipStored
         argP <- argI ^. SugarInfer.exprStored
         return $ unwrap stored argP argI
     ConvertHole.convertPlain exprPl

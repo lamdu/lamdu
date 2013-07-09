@@ -62,6 +62,10 @@ module Lamdu.Sugar.Types
   , Inferred(..), iValue, iMAccept, iHole
   , Collapsed(..), cFuncGuid, cCompact, cFullExpression, cFullExprHasInfo
   , MStorePoint, ExprStorePoint
+  -- Input types:
+  , InputPayloadP(..), ipGuid, ipInferred, ipStored, ipData
+  , InputPayload, InputExpr
+  , Stored, InferredWC
   ) where
 
 import Data.Binary (Binary)
@@ -73,15 +77,28 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
-import Lamdu.Sugar.Types.Internal (T, CT)
 import Lamdu.Data.Expression (Kind(..))
 import Lamdu.Data.Expression.IRef (DefIM)
+import Lamdu.Sugar.Types.Internal (T, CT, Stored, InferredWC)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
-import qualified Lamdu.Sugar.Types.Internal as TypesInternal
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
+import qualified Lamdu.Sugar.Types.Internal as TypesInternal
+
+data InputPayloadP inferred stored a
+  = InputPayload
+    { _ipGuid :: Guid
+    , _ipInferred :: inferred
+    , _ipStored :: stored
+    , _ipData :: a
+    }
+Lens.makeLenses ''InputPayloadP
+
+type InputPayload m a =
+  InputPayloadP (Maybe (InferredWC m)) (Maybe (Stored m)) a
+type InputExpr m a = ExprIRef.ExpressionM m (InputPayload m a)
 
 data WrapAction m
   = WrapperAlready -- I'm an apply-of-hole, no need to wrap
@@ -234,7 +251,6 @@ data Inferred name m expr = Inferred
   , _iHole :: Hole name m expr
   } deriving (Functor, Foldable, Traversable)
 
--- TODO: New name. This is not only for polymorphic but also for eta-reduces etc
 data Collapsed name m expr = Collapsed
   { _cFuncGuid :: Guid
   , _cCompact :: GetVar name m

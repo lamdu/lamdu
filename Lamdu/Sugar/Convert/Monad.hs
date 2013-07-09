@@ -20,7 +20,6 @@ import Data.Monoid (Monoid)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Lamdu.Data.Expression.IRef (DefIM)
-import Lamdu.Sugar.Convert.Infer (ExprMM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types.Internal
 import qualified Control.Lens as Lens
@@ -28,6 +27,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression.Infer as Infer
+import qualified Lamdu.Sugar.Types as Sugar
 
 data TagParamInfo = TagParamInfo
   { tpiFromParameters :: Guid
@@ -46,7 +46,7 @@ data Context m = Context
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
   , _scTagParamInfos :: Map Guid TagParamInfo -- tag guids
   , _scRecordParamsInfos :: Map Guid (RecordParamsInfo m) -- param guids
-  , scConvertSubexpression :: forall a. Monoid a => ExprMM m a -> SugarM m (ExpressionU m a)
+  , scConvertSubexpression :: forall a. Monoid a => Sugar.InputExpr m a -> SugarM m (ExpressionU m a)
   }
 
 newtype SugarM m a = SugarM (ReaderT (Context m) (CT m) a)
@@ -75,7 +75,7 @@ codeAnchor f = f . (^. scCodeAnchors) <$> readContext
 getP :: MonadA m => Transaction.MkProperty m a -> SugarM m a
 getP = liftTransaction . Transaction.getP
 
-convertSubexpression :: (MonadA m, Monoid a) => ExprMM m a -> SugarM m (ExpressionU m a)
+convertSubexpression :: (MonadA m, Monoid a) => Sugar.InputExpr m a -> SugarM m (ExpressionU m a)
 convertSubexpression exprI = do
   convertSub <- scConvertSubexpression <$> readContext
   convertSub exprI

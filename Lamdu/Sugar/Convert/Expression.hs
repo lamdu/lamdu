@@ -12,7 +12,6 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable1)
 import Lamdu.Data.Expression.Infer.Conflicts (iwcInferredTypes)
-import Lamdu.Sugar.Convert.Infer (Stored)
 import Lamdu.Sugar.Convert.Monad (SugarM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
@@ -55,7 +54,7 @@ mkActions sugarContext stored =
   }
 
 make ::
-  (Typeable1 m, MonadA m) => SugarInfer.PayloadMM m a ->
+  (Typeable1 m, MonadA m) => InputPayload m a ->
   BodyU m a -> SugarM m (ExpressionU m a)
 make exprPl body = do
   sugarContext <- SugarM.readContext
@@ -65,15 +64,15 @@ make exprPl body = do
     . SugarInfer.mkExprPure
     ) seeds types
   return $ Expression body Payload
-    { _plGuid = exprPl ^. SugarInfer.plGuid
+    { _plGuid = exprPl ^. ipGuid
     , _plInferredTypes = inferredTypes
     , _plActions =
-      mkActions sugarContext <$> exprPl ^. SugarInfer.plStored
-    , _plData = exprPl ^. SugarInfer.plData
+      mkActions sugarContext <$> exprPl ^. ipStored
+    , _plData = exprPl ^. ipData
     }
   where
-    seeds = RandomUtils.splits . mkGen 0 3 $ exprPl ^. SugarInfer.plGuid
-    types = maybe [] iwcInferredTypes $ exprPl ^. SugarInfer.plInferred
+    seeds = RandomUtils.splits . mkGen 0 3 $ exprPl ^. ipGuid
+    types = maybe [] iwcInferredTypes $ exprPl ^. ipInferred
 
 getStoredName :: MonadA m => Guid -> T m (Maybe String)
 getStoredName guid = do

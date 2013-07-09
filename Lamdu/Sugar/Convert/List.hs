@@ -14,7 +14,6 @@ import Data.Monoid (First(..), Monoid(..), (<>))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable1)
-import Lamdu.Sugar.Convert.Infer (ExprMM, PayloadMM)
 import Lamdu.Sugar.Convert.Monad (SugarM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
@@ -31,9 +30,9 @@ import qualified Lamdu.Sugar.Convert.Monad as SugarM
 
 convert ::
   (MonadA m, Typeable1 m, Monoid a) =>
-  Expr.Apply (ExprMM m a) ->
+  Expr.Apply (InputExpr m a) ->
   ExpressionU m a ->
-  PayloadMM m a ->
+  InputPayload m a ->
   MaybeT (SugarM m) (ExpressionU m a)
 convert app argS exprPl = leftToJust $ do
   justToLeft $ nil app exprPl
@@ -41,8 +40,8 @@ convert app argS exprPl = leftToJust $ do
 
 nil ::
   (Typeable1 m, MonadA m, Monoid a) =>
-  Expr.Apply (ExprMM m a) ->
-  PayloadMM m a ->
+  Expr.Apply (InputExpr m a) ->
+  InputPayload m a ->
   MaybeT (SugarM m) (ExpressionU m a)
 nil app@(Expr.Apply funcI _) exprPl = do
   specialFunctions <-
@@ -59,13 +58,13 @@ nil app@(Expr.Apply funcI _) exprPl = do
   (lift . SugarExpr.make exprPl . BodyList)
     List
     { lValues = []
-    , lMActions = mkListActions <$> exprPl ^. SugarInfer.plStored
-    , lNilGuid = exprPl ^. SugarInfer.plGuid
+    , lMActions = mkListActions <$> exprPl ^. ipStored
+    , lNilGuid = exprPl ^. ipGuid
     }
-    <&> rPayload . plData <>~ app ^. Lens.traversed . Lens.traversed . SugarInfer.plData
+    <&> rPayload . plData <>~ app ^. Lens.traversed . Lens.traversed . ipData
 
 mkListAddFirstItem ::
-  MonadA m => Anchors.SpecialFunctions (Tag m) -> SugarInfer.Stored m -> T m Guid
+  MonadA m => Anchors.SpecialFunctions (Tag m) -> Stored m -> T m Guid
 mkListAddFirstItem specialFunctions =
   fmap (ExprIRef.exprGuid . snd) . DataOps.addListItem specialFunctions
 
@@ -80,7 +79,7 @@ isCons specialFunctions =
 mkListItem ::
   (MonadA m, Monoid a) =>
   ExpressionU m a -> ExpressionU m a ->
-  PayloadMM m a -> ExprMM m a -> Maybe (T m Guid) ->
+  InputPayload m a -> InputExpr m a -> Maybe (T m Guid) ->
   ListItem m (ExpressionU m a)
 mkListItem listItemExpr recordArgS exprPl tailI mAddNextItem =
   ListItem
@@ -89,7 +88,7 @@ mkListItem listItemExpr recordArgS exprPl tailI mAddNextItem =
     & rPayload . plData <>~ recordArgS ^. rPayload . plData
   , _liMActions = do
       addNext <- mAddNextItem
-      exprProp <- exprPl ^. SugarInfer.plStored
+      exprProp <- exprPl ^. ipStored
       argProp <- tailI ^. SugarInfer.exprStored
       return ListItemActions
         { _itemAddNext = addNext
@@ -139,7 +138,7 @@ getExprHeadTail specialFunctions argI = do
 
 cons ::
   (Typeable1 m, MonadA m, Monoid a) =>
-  Expr.Apply (ExprMM m a) -> ExpressionU m a -> PayloadMM m a ->
+  Expr.Apply (InputExpr m a) -> ExpressionU m a -> InputPayload m a ->
   MaybeT (SugarM m) (ExpressionU m a)
 cons (Expr.Apply funcI argI) argS exprPl = do
   specialFunctions <- lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
@@ -152,11 +151,11 @@ cons (Expr.Apply funcI argI) argS exprPl = do
       mkListItem headS argS exprPl tailI
       (addFirstItem <$> innerListMActions)
       & liExpr . rPayload . plData <>~
-        (funcI ^. Lens.traversed . SugarInfer.plData <>
+        (funcI ^. Lens.traversed . ipData <>
          tailS ^. rPayload . plData <>
          hidden)
     mListActions = do
-      exprS <- exprPl ^. SugarInfer.plStored
+      exprS <- exprPl ^. ipStored
       innerListActions <- innerListMActions
       pure ListActions
         { addFirstItem = mkListAddFirstItem specialFunctions exprS
