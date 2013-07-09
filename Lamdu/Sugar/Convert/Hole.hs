@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Hole
 
 import Control.Applicative (Applicative(..), (<$>), (<|>), (<$), Const(..))
 import Control.Lens.Operators
-import Control.Monad (guard, join, void)
+import Control.Monad (guard, void)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.State (StateT(..), mapStateT)
@@ -180,9 +180,9 @@ mkHole ::
   SugarM m (Hole MStoredName m (ExpressionU m a))
 mkHole exprPl = do
   sugarContext <- SugarM.readContext
-  mPaste <- fmap join . traverse mkPaste $ exprPl ^. ipStored
   let
     mkWritableHoleActions exprPlStored = do
+      mPaste <- mkPaste $ exprPlStored ^. ipStored
       globals <-
         SugarM.liftTransaction . Transaction.getP . Anchors.globals $
         sugarContext ^. SugarM.scCodeAnchors
