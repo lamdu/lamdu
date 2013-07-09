@@ -95,6 +95,7 @@ fakeExample guid =
   , _plInferredTypes = []
   , _plActions = Nothing
   , _plData = ()
+  , _plConvertInContext = error "TODO: ExampleConvert"
   }
 
 mkPositionalFuncParamActions ::

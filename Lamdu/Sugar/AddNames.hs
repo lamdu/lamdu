@@ -385,10 +385,22 @@ toBody (BodyTag x) = BodyTag <$> toTag x
 toBody (BodyGetVar x) = BodyGetVar <$> toGetVar x
 toBody (BodyGetParams x) = BodyGetParams <$> toGetParams x
 
+toConvert ::
+  (MonadA tm, MonadNaming m) =>
+  Convert (OldName m) tm ->
+  m (Convert (NewName m) tm)
+toConvert (Convert doConvert) = do
+  RunMonad run <- opRun
+  pure $ Convert $ doConvert <&> Lens.mapped . Lens.mapped %~ run . toExpression
+
 toPayload ::
-  (MonadA tm, MonadNaming m) => Payload (OldName m) tm a ->
+  (MonadA tm, MonadNaming m) =>
+  Payload (OldName m) tm a ->
   m (Payload (NewName m) tm a)
-toPayload = (plInferredTypes . traverse) toExpression
+toPayload pl@Payload{..} = do
+  inferredTypes <- traverse toExpression _plInferredTypes
+  convertInContext <- toConvert _plConvertInContext
+  pure pl { _plInferredTypes = inferredTypes, _plConvertInContext = convertInContext }
 
 toExpression ::
   (MonadA tm, MonadNaming m) => Expression (OldName m) tm a ->

@@ -20,8 +20,9 @@ module Lamdu.Sugar.Types
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
     , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
+  , Convert(..)
   , Payload(..)
-    , plGuid, plInferredTypes, plActions, plData
+    , plGuid, plInferredTypes, plActions, plData, plConvertInContext
   , ExpressionP(..), rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..), MStoredName
   , DefinitionN, DefinitionU
@@ -79,7 +80,7 @@ import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import Lamdu.Data.Expression (Kind(..))
 import Lamdu.Data.Expression.IRef (DefIM)
-import Lamdu.Sugar.Types.Internal (T, CT, Stored, InferredWC)
+import Lamdu.Sugar.Types.Internal (T, CT, Stored, InferredWC, InferContext)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
@@ -115,8 +116,16 @@ data Actions m = Actions
   , _cut :: T m Guid
   }
 
+newtype Convert name m = Convert
+  { _runConvert :: forall a. Monoid a => InferContext m -> InputExpr m a -> CT m (Expression name m a)
+  }
+
 data Payload name m a = Payload
   { _plInferredTypes :: [Expression name m ()]
+  -- This must be embedded in the expression AST and not as a separate
+  -- function so that AddNames can correct the "name" here in the
+  -- right context.
+  , _plConvertInContext :: Convert name m
   , _plActions :: Maybe (Actions m)
   , _plGuid :: Guid
   , _plData :: a
