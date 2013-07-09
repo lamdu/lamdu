@@ -58,9 +58,6 @@ jumpToExprPayloads ::
 jumpToExprPayloads f expr =
   case expr ^. Sugar.rBody of
   Sugar.BodyHole _ -> mark
-  Sugar.BodyInferred inferred
-    | Lens.has jumpToExprPayloads (inferred ^. Sugar.iValue)
-    -> mark
   Sugar.BodyCollapsed _ -> pure expr
   Sugar.BodyLam lam
     | lam ^. Sugar.lKind == Sugar.KVal

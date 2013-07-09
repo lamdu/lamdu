@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit
-  ( make, makeUnwrappedActive
+  ( make
   , eventResultOfPickedResult
   ) where
 
@@ -11,7 +11,6 @@ import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
 import Data.Maybe (isJust, maybeToList, fromMaybe)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Traversable (traverse, sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
@@ -539,25 +538,6 @@ makeUnwrappedH pl hole myId = do
     _ -> return (Inactive, inactive)
   where
     mStoredGuid = pl ^? Sugar.plActions . Lens._Just . Sugar.storedGuid
-
-makeUnwrappedActive ::
-  MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
-  Guid ->
-  Sugar.HoleActions Sugar.Name m ->
-  Widget.Size -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeUnwrappedActive pl storedGuid holeActions size myId = do
-  stateProp <-
-    ExprGuiM.transaction $
-    HoleInfo.assocStateRef storedGuid ^. Transaction.mkProperty
-  makeActiveHoleEdit size pl HoleInfo
-    { hiStoredGuid = storedGuid
-    , hiId = myId
-    , hiState = stateProp
-    , hiActions = holeActions
-    , hiHoleGuids = pl ^. Sugar.plData . ExprGuiM.plHoleGuids
-    , hiMArgument = Nothing
-    }
 
 -- TODO: Use this where the hiState is currently used to get the
 -- search term

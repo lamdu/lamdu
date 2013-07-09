@@ -167,7 +167,6 @@ Executable lamdu
                        Lamdu.GUI.ExpressionEdit.HoleEdit,
                        Lamdu.GUI.ExpressionEdit.HoleEdit.Info,
                        Lamdu.GUI.ExpressionEdit.HoleEdit.Results,
-                       Lamdu.GUI.ExpressionEdit.InferredEdit,
                        Lamdu.GUI.ExpressionEdit.LambdaEdit,
                        Lamdu.GUI.ExpressionEdit.ListEdit,
                        Lamdu.GUI.ExpressionEdit.LiteralEdit,

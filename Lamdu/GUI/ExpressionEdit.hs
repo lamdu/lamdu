@@ -22,7 +22,6 @@ import qualified Lamdu.GUI.ExpressionEdit.GetFieldEdit as GetFieldEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetParamsEdit as GetParamsEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit as HoleEdit
-import qualified Lamdu.GUI.ExpressionEdit.InferredEdit as InferredEdit
 import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
@@ -77,7 +76,6 @@ makeEditor ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeEditor parentPrecedence body =
   case body of
-  Sugar.BodyInferred i -> InferredEdit.make parentPrecedence i
   Sugar.BodyHole hole -> HoleEdit.make hole
   Sugar.BodyCollapsed poly -> CollapsedEdit.make parentPrecedence poly
   Sugar.BodyApply apply -> ApplyEdit.make parentPrecedence apply

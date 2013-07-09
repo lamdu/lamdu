@@ -62,7 +62,6 @@ indirectDefinitionGuid funcS =
   case funcS ^. rBody of
   BodyGetVar gv -> Just $ gv ^. gvIdentifier
   BodyCollapsed c -> Just $ c ^. cCompact . gvIdentifier
-  BodyInferred i -> indirectDefinitionGuid $ i ^. iValue
   BodyGetField _ -> Nothing -- TODO: <-- do we want to make something up here?
   _ -> Nothing
 

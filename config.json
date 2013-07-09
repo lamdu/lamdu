@@ -189,18 +189,6 @@
             }
         ]
     ],
-    "keepInferredValueKeys": [
-        [
-            {
-                "modShift": false,
-                "modAlt": false,
-                "modCtrl": false
-            },
-            {
-                "KeyEsc": []
-            }
-        ]
-    ],
     "holeNumLabelScaleFactor": {
         "_second": 0.3,
         "_first": 0.3
@@ -881,18 +869,6 @@
             }
         ]
     ],
-    "acceptInferredValueKeys": [
-        [
-            {
-                "modShift": false,
-                "modAlt": false,
-                "modCtrl": false
-            },
-            {
-                "KeySpace": []
-            }
-        ]
-    ],
     "definitionColor": [
         0.8,
         0.5,
@@ -908,18 +884,6 @@
             },
             {
                 "CharKey": "Z"
-            }
-        ]
-    ],
-    "replaceInferredValueKeys": [
-        [
-            {
-                "modShift": false,
-                "modAlt": false,
-                "modCtrl": false
-            },
-            {
-                "KeyEnter": []
             }
         ]
     ],

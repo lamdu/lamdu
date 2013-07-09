@@ -184,10 +184,6 @@ data Config = Config
   , enterSubexpressionKeys :: [E.ModKey]
   , leaveSubexpressionKeys :: [E.ModKey]
 
-  , replaceInferredValueKeys :: [E.ModKey]
-  , keepInferredValueKeys :: [E.ModKey]
-  , acceptInferredValueKeys :: [E.ModKey]
-
   , nextInfoModeKeys :: [E.ModKey]
 
   , recordTypeParensColor :: Draw.Color

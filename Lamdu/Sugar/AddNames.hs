@@ -303,15 +303,6 @@ toHole =
   (holeMArg . Lens._Just . Lens.traversed) toExpression <=<
   (holeMActions . Lens.traversed) toHoleActions
 
-toInferred ::
-  (MonadA tm, MonadNaming m) =>
-  Inferred (OldName m) tm (Expression (OldName m) tm a) ->
-  m (Inferred (NewName m) tm (Expression (NewName m) tm a))
-toInferred Inferred {..} = do
-  value <- toExpression _iValue
-  hole <- toHole _iHole
-  pure Inferred { _iValue = value, _iHole = hole, .. }
-
 toCollapsed ::
   (MonadA tm, MonadNaming m) =>
   Collapsed (OldName m) tm (Expression (OldName m) tm a) ->
@@ -379,7 +370,6 @@ toBody (BodyAtom x)           = pure $ BodyAtom x
 toBody (BodyLam x) = BodyLam <$> toLam x
 toBody (BodyApply x) = BodyApply <$> toApply x
 toBody (BodyHole x) = BodyHole <$> toHole x
-toBody (BodyInferred x) = BodyInferred <$> toInferred x
 toBody (BodyCollapsed x) = BodyCollapsed <$> toCollapsed x
 toBody (BodyTag x) = BodyTag <$> toTag x
 toBody (BodyGetVar x) = BodyGetVar <$> toGetVar x

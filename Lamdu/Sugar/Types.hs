@@ -18,7 +18,7 @@ module Lamdu.Sugar.Types
     , storedGuid, wrap, mSetToHole, mSetToInnerExpr, cut
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
-    , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
+    , _BodyCollapsed, _BodyLiteralInteger
     , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
   , Convert(..)
   , Payload(..)
@@ -60,7 +60,6 @@ module Lamdu.Sugar.Types
   , PickedResult(..), prMJumpTo, prIdTranslation
   , LiteralInteger(..)
   , TagG(..), tagName, tagGuid
-  , Inferred(..), iValue, iMAccept, iHole
   , Collapsed(..), cFuncGuid, cCompact, cFullExpression, cFullExprHasInfo
   , MStorePoint, ExprStorePoint
   -- Input types:
@@ -254,12 +253,6 @@ data LiteralInteger m = LiteralInteger
   , liSetValue :: Maybe (Integer -> T m ())
   }
 
-data Inferred name m expr = Inferred
-  { _iValue :: expr
-  , _iMAccept :: Maybe (T m PickedResult)
-  , _iHole :: Hole name m expr
-  } deriving (Functor, Foldable, Traversable)
-
 data Collapsed name m expr = Collapsed
   { _cFuncGuid :: Guid
   , _cCompact :: GetVar name m
@@ -353,7 +346,6 @@ data Body name m expr
   = BodyLam (Lam name m expr)
   | BodyApply (Apply name expr)
   | BodyHole (Hole name m expr)
-  | BodyInferred (Inferred name m expr)
   | BodyCollapsed (Collapsed name m expr)
   | BodyLiteralInteger (LiteralInteger m)
   | BodyAtom String
@@ -377,7 +369,6 @@ instance Show expr => Show (Body name m expr) where
       paramName | isDep = "_:"
                 | otherwise = ""
   show BodyHole {} = "Hole"
-  show BodyInferred {} = "Inferred"
   show BodyCollapsed {} = "Collapsed"
   show (BodyLiteralInteger (LiteralInteger i _)) = show i
   show (BodyAtom atom) = atom
@@ -473,7 +464,6 @@ Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg
 Lens.makeLenses ''HoleResult
-Lens.makeLenses ''Inferred
 Lens.makeLenses ''Lam
 Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions
