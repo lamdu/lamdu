@@ -4,6 +4,7 @@ module Lamdu.Config (Layers(..), Config(..), delKeys) where
 
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import Data.Aeson.TH (deriveJSON)
+import Data.Aeson.TH.CompatOptions (compatOptions)
 import Data.Vector.Vector2 (Vector2(..))
 import Foreign.C.Types (CDouble)
 import Graphics.DrawingCombinators.Utils () -- Read instance for Color
@@ -200,13 +201,13 @@ data Config = Config
 delKeys :: Config -> [E.ModKey]
 delKeys config = delForwardKeys config ++ delBackwardKeys config
 
-deriveJSON id ''Vector2
-deriveJSON id ''Draw.Color
-deriveJSON id ''E.ModState
-deriveJSON id ''E.ModKey
-deriveJSON id ''E.Key
-deriveJSON id ''Layers
-deriveJSON id ''Config
+deriveJSON compatOptions ''Vector2
+deriveJSON compatOptions ''Draw.Color
+deriveJSON compatOptions ''E.ModState
+deriveJSON compatOptions ''E.ModKey
+deriveJSON compatOptions ''E.Key
+deriveJSON compatOptions ''Layers
+deriveJSON compatOptions ''Config
 
 instance FromJSON CDouble where
   parseJSON = fmap (realToFrac :: Double -> CDouble) . parseJSON
