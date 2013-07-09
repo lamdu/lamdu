@@ -151,11 +151,12 @@ makeShownResult ::
 makeShownResult holeInfo result = do
   converted <-
     ExprGuiM.liftMemoT $
-    SugarRemoveTypes.holeResultTypes . postProcessSugar <$>
     Sugar.runConvert (hiConvert holeInfo)
     (rHoleResult result ^. Sugar.holeResultContext)
     (rHoleResult result ^. Sugar.holeResultExpr)
-  widget <- makePaddedResult result converted
+  widget <-
+    makePaddedResult result . SugarRemoveTypes.holeResultTypes $
+    postProcessSugar converted
   return
     ( widget & Widget.wEventMap .~ mempty
     , ShownResult
