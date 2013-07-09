@@ -452,11 +452,25 @@ make hole pl outerId = do
   (isActive, gui) <-
     ExprGuiM.wrapDelegated holeFDConfig delegatingMode
     (Lens._2 . ExpressionGui.egWidget %~) inner outerId
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    bgColor =
+      fromMaybe (Config.inactiveHoleBackgroundColor config) $
+      holeBackgroundColor config <$> hole ^. Sugar.holeMArg
+    addInactiveBG =
+      ExpressionGui.egWidget %~
+      makeBackground outerId
+      (Config.layerInactiveHole (Config.layers config)) bgColor
   gui
     & case isActive of
-      Inactive -> addInactiveEventMap <=< ExpressionGui.addInferredTypes pl
+      Inactive ->
+        addInactiveEventMap <=< ExpressionGui.addInferredTypes pl .
+        addInactiveBG . maybeAddPadding
       Active -> addActiveEventMap
   where
+    maybeAddPadding
+      | Lens.has (Sugar.holeMArg . Lens._Just) hole = ExpressionGui.egWidget %~ Widget.pad 8
+      | otherwise = id
     addActiveEventMap gui = do
       jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] pl
       replaceEventMap <- ExprEventMap.replaceOrComeToParentEventMap pl
@@ -629,7 +643,6 @@ makeInactive ::
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeInactive hole myId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
   holeGui <-
     case hole ^? Sugar.holeMArg . Lens._Just . Sugar.haExpr of
     Just arg -> ExprGuiM.makeSubexpression 0 arg
@@ -637,15 +650,8 @@ makeInactive hole myId = do
       ExprGuiM.widgetEnv $
       ExpressionGui.fromValueWidget <$>
       BWidgets.makeTextViewWidget "  " (Widget.toAnimId myId)
-  let
-    bgColor =
-      fromMaybe (Config.inactiveHoleBackgroundColor config) $
-      holeBackgroundColor config <$> hole ^. Sugar.holeMArg
   ExprGuiM.widgetEnv $
     holeGui
-    & ExpressionGui.egWidget %~
-      makeBackground myId
-      (Config.layerInactiveHole (Config.layers config)) bgColor
     & ExpressionGui.egWidget %%~
       if holeGui ^. ExpressionGui.egWidget . Widget.wIsFocused
       then return
