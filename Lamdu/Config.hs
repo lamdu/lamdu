@@ -198,6 +198,7 @@ data Config = Config
   , presentationChoiceColor :: Draw.Color
 
   , labeledApplyBGColor :: Draw.Color
+  , labeledApplyPadding :: Vector2 Double
   , spaceBetweenAnnotatedArgs :: Double
   } deriving (Eq)
 

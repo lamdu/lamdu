@@ -122,6 +122,7 @@ mkBoxed pl destGuid mkFuncRow annotatedArgs =
       Grid.toWidget . Grid.make . concat <$> traverse makeArgRows annotatedArgs
     ExpressionGui.withBgColor (Config.layerLabeledApplyBG (Config.layers config))
       (Config.labeledApplyBGColor config) (Widget.toAnimId myId ++ ["bg"]) .
+      ExpressionGui.pad (realToFrac <$> Config.labeledApplyPadding config) .
       ExpressionGui.addBelow 0 [(0, grid)] <$> mkFuncRow
 
 mkMParened ::

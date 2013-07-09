@@ -701,6 +701,10 @@
         1.0,
         0.07
     ],
+    "labeledApplyPadding": {
+        "_first": 7,
+        "_second": 7
+    },
     "spaceBetweenAnnotatedArgs": 7,
     "holeResultCount": 8,
     "helpInputDocColor": [
