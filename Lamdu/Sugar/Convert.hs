@@ -47,6 +47,7 @@ import qualified Lamdu.Sugar.Convert.Expression as SugarExpr
 import qualified Lamdu.Sugar.Convert.Hole as Hole
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as SugarM
+import qualified Lamdu.Sugar.InputExpr as InputExpr
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 
 onMatchingSubexprs ::
@@ -464,7 +465,7 @@ convertExpressionPure cp gen res = do
   fmap removeRedundantTypes .
     SugarM.run context .
     SugarM.convertSubexpression $
-    SugarInfer.mkExprPure gen res
+    InputExpr.makePure gen res
   where
     err x = error $ "convertExpressionPure: " ++ x
 
@@ -628,7 +629,7 @@ paramTypeExprMM origParamType
       -- Copy the paramType payload to top-level of inferred val so it
       -- isn't lost:
       & Expr.ePayload .~ origParamType ^. SugarInfer.exprData
-      & SugarInfer.mkExprPure paramTypeGen
+      & InputExpr.makePure paramTypeGen
 
 convertDefinitionParams ::
   (MonadA m, Typeable1 m, Monoid a) =>

@@ -193,6 +193,7 @@ Executable lamdu
                        Lamdu.Sugar.Convert.List,
                        Lamdu.Sugar.Convert.Monad,
                        Lamdu.Sugar.Expression,
+                       Lamdu.Sugar.InputExpr,
                        Lamdu.Sugar.Internal,
                        Lamdu.Sugar.RemoveTypes,
                        Lamdu.Sugar.Types,

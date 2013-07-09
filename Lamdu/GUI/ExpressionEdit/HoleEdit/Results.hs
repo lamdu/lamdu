@@ -349,8 +349,8 @@ makeAll config holeInfo = do
   ExprGuiM.liftMemoT $ collectResults config resultList
   where
     isTagType =
-      Lens.has (Sugar.holeInferredType . ExprLens.exprTagType) $
-      hiActions holeInfo
+      Lens.has ExprLens.exprTagType . Infer.iType . Sugar.hiInferred $
+      hiInferred holeInfo
 
 makeAllGroups :: MonadA m => HoleInfo m -> T m [GroupM m]
 makeAllGroups holeInfo = do
@@ -385,8 +385,8 @@ primitiveGroups holeInfo =
   , mkGroup ["\\", "Lambda", "Λ", "λ"] $
     ExprUtil.makeLambda (Guid.fromString "NewLambda") pureHole pureHole
   , Group ["Record Value", "{"] .
-    fromMaybe (record Expr.KVal) . ExprUtil.recordValForm $
-    hiActions holeInfo ^. Sugar.holeInferredType
+    fromMaybe (record Expr.KVal) . ExprUtil.recordValForm .
+    void . Infer.iType . Sugar.hiInferred $ hiInferred holeInfo
   , Group ["Record Type", "{"] $ record Expr.KType
   , mkGroup [".", "Get Field"] . Expr.BodyGetField $
     Expr.GetField pureHole pureHole

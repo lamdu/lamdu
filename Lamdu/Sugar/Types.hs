@@ -46,12 +46,14 @@ module Lamdu.Sugar.Types
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpType, fpMActions
   , HoleArg(..), haExpr, haExprPresugared, haTypeIsAMatch
-  , Hole(..), holeMActions, holeMArg
+  , HoleInferred(..)
+  , Hole(..)
+    , holeMActions, holeMArg, holeMInferred
   , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
   , HoleActions(..)
-    , holeScope, holePaste, holeMUnwrap, holeInferExprType, holeInferredType
+    , holeScope, holePaste, holeMUnwrap, holeInferExprType
   , HoleResult(..)
     , holeResultInferred
     , holeResultConverted
@@ -116,7 +118,7 @@ data Actions m = Actions
   }
 
 newtype Convert name m = Convert
-  { _runConvert :: forall a. Monoid a => InferContext m -> InputExpr m a -> CT m (Expression name m a)
+  { runConvert :: forall a. Monoid a => InferContext m -> InputExpr m a -> CT m (Expression name m a)
   }
 
 data Payload name m a = Payload
@@ -227,7 +229,6 @@ data HoleActions name m = HoleActions
     -- If given expression does not type check on its own, returns Nothing.
     -- (used by HoleEdit to suggest variations based on type)
     _holeInferExprType :: ExprIRef.ExpressionM m () -> CT m (Maybe (ExprIRef.ExpressionM m ()))
-  , _holeInferredType :: ExprIRef.ExpressionM m ()
   , holeResult ::
       forall a.
       (Binary a, Typeable a, Ord a, Monoid a) =>
@@ -243,8 +244,14 @@ data HoleArg m expr = HoleArg
   , _haTypeIsAMatch :: Bool
   } deriving (Functor, Foldable, Traversable)
 
+data HoleInferred m = HoleInferred
+  { hiContext :: InferContext m
+  , hiInferred :: Infer.Inferred (DefIM m)
+  }
+
 data Hole name m expr = Hole
   { _holeMActions :: Maybe (HoleActions name m)
+  , _holeMInferred :: Maybe (HoleInferred m)
   , _holeMArg :: Maybe (HoleArg m expr)
   } deriving (Functor, Foldable, Traversable)
 

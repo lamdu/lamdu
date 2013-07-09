@@ -11,8 +11,6 @@ module Lamdu.Sugar.Convert.Infer
   , iwiStructureInferContext
   , iwiExpr, iwiBaseExpr
 
-  , mkExprPure
-
   -- TODO: These don't belong here:
   -- Type-check an expression into an ordinary Inferred Expression,
   -- short-circuit on error:
@@ -64,14 +62,6 @@ import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Sugar.Types as Sugar
 
 type ExpressionSetter def = Expr.Expression def () -> Expr.Expression def ()
-
--- Not inferred, not stored
-mkExprPure ::
-  RandomGen g => g -> ExprIRef.ExpressionM m a -> Sugar.InputExpr m a
-mkExprPure g =
-  ExprUtil.randomizeExpr g . fmap f
-  where
-    f a guid = Sugar.InputPayload guid Nothing Nothing a
 
 loader :: MonadA m => Infer.Loader (DefIM m) (T m)
 loader =

@@ -36,11 +36,13 @@ emptyState =
   { _hsSearchTerm = ""
   }
 
+-- | Stored/inferred hole info
 data HoleInfo m = HoleInfo
   { hiStoredGuid :: Guid
   , hiId :: Widget.Id
   , hiState :: Property (T m) HoleState
   , hiActions :: Sugar.HoleActions Sugar.Name m
+  , hiInferred :: Sugar.HoleInferred m
   , hiMArgument :: Maybe (Sugar.HoleArg m (ExprGuiM.SugarExpr m))
   , hiHoleGuids :: ExprGuiM.HoleGuids
   }

@@ -70,7 +70,11 @@ convertH convertTyped exprPl =
   maybe convertUntypedHole convertTyped (Lens.sequenceOf ipInferred exprPl)
   where
     convertUntypedHole =
-      SugarExpr.make exprPl . BodyHole $ Hole Nothing Nothing
+      SugarExpr.make exprPl . BodyHole $ Hole
+        { _holeMActions = Nothing
+        , _holeMInferred = Nothing
+        , _holeMArg = Nothing
+        }
 
 mkPaste :: MonadA m => Stored m -> SugarM m (Maybe (T m Guid))
 mkPaste exprP = do
@@ -149,7 +153,7 @@ idTranslations convertedExpr writtenExpr =
       -- This happens only when inferred val is accepted after
       -- cleanUpInferredVal such that inferred parts are written as
       -- holes. Then they will be re-inferred to same val, and their
-      -- guids will be generated via SugarInfer.mkExprPure with a
+      -- guids will be generated via InputExpr.makePure with a
       -- random-gen based on the hole guid.  Let's map the old
       -- inferred val guids to the ones the new inferred val will get
       -- in the hole:
@@ -199,7 +203,6 @@ mkHole exprPl = do
           , mapM getGlobal globals
           , mapM getTag tags
           ]
-        , _holeInferredType = void $ Infer.iType inferred
         , _holeInferExprType = inferExprType
         , holeResult = makeHoleResult sugarContext exprPlStored
         }
@@ -211,6 +214,10 @@ mkHole exprPl = do
     & traverse mkWritableHoleActions
   pure Hole
     { _holeMActions = mActions
+    , _holeMInferred = Just HoleInferred
+      { hiInferred = iwcInferred $ exprPl ^. ipInferred
+      , hiContext = sugarContext ^. SugarM.scHoleInferContext
+      }
     , _holeMArg = Nothing
     }
   where

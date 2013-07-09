@@ -22,6 +22,7 @@ import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsSe
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
@@ -36,6 +37,8 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Data.Expression.Infer as Infer
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
@@ -45,6 +48,7 @@ import qualified Lamdu.GUI.ExpressionGui.AddNextHoles as AddNextHoles
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.InputExpr as InputExpr
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -260,14 +264,15 @@ postProcessSugar expr =
   -- represents the same IRef
   & Sugar.rPayload . Sugar.plData . ExprGuiM.plHoleGuids .~ ExprGuiM.emptyHoleGuids
   & Sugar.rPayload . Sugar.plActions .~ Nothing
-  where
-    toPayload (ExprGuiM.StoredGuids guids, ExprGuiM.Injected injected) =
-      ExprGuiM.Payload
-      { ExprGuiM._plStoredGuids = guids
-      , ExprGuiM._plInjected = injected
-      -- filled by AddNextHoles above
-      , ExprGuiM._plHoleGuids = ExprGuiM.emptyHoleGuids
-      }
+
+toPayload :: HoleResults.SugarExprPl -> ExprGuiM.Payload
+toPayload (ExprGuiM.StoredGuids guids, ExprGuiM.Injected injected) =
+  ExprGuiM.Payload
+  { ExprGuiM._plStoredGuids = guids
+  , ExprGuiM._plInjected = injected
+  -- filled by AddNextHoles above
+  , ExprGuiM._plHoleGuids = ExprGuiM.emptyHoleGuids
+  }
 
 asNewLabelScaleFactor :: Fractional a => a
 asNewLabelScaleFactor = 0.5
@@ -520,9 +525,10 @@ makeUnwrappedH ::
   ExprGuiM m (IsActive, ExpressionGui m)
 makeUnwrappedH pl hole myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
-  inactive <- makeInactive hole myId
-  case (mStoredGuid, hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
-    (Just storedGuid, Just holeActions, Just _) -> do
+  inactive <- makeInactive pl hole myId
+  let activeCursorSuffix = Widget.subId myId cursor
+  case (mStoredGuid, mActions, mInferred, activeCursorSuffix) of
+    (Just storedGuid, Just holeActions, Just holeInferred, Just _) -> do
       stateProp <- ExprGuiM.transaction $ HoleInfo.assocStateRef storedGuid ^. Transaction.mkProperty
       inactiveWithTypes <- ExpressionGui.addInferredTypes pl inactive
       (,) Active <$> makeActiveHoleEdit
@@ -532,11 +538,14 @@ makeUnwrappedH pl hole myId = do
         , hiId = myId
         , hiState = stateProp
         , hiActions = holeActions
+        , hiInferred = holeInferred
         , hiHoleGuids = pl ^. Sugar.plData . ExprGuiM.plHoleGuids
         , hiMArgument = hole ^. Sugar.holeMArg
         }
     _ -> return (Inactive, inactive)
   where
+    mInferred = hole ^. Sugar.holeMInferred
+    mActions = hole ^. Sugar.holeMActions
     mStoredGuid = pl ^? Sugar.plActions . Lens._Just . Sugar.storedGuid
 
 -- TODO: Use this where the hiState is currently used to get the
@@ -623,13 +632,18 @@ makeBackground myId level =
 
 makeInactive ::
   MonadA m =>
+  Sugar.Payload Sugar.Name m a ->
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeInactive hole myId = do
+makeInactive pl hole myId = do
   holeGui <-
-    case hole ^? Sugar.holeMArg . Lens._Just . Sugar.haExpr of
-    Just arg -> ExprGuiM.makeSubexpression 0 arg
-    Nothing ->
+    case (mArg, mInferred) of
+    (Just arg, _) -> ExprGuiM.makeSubexpression 0 arg
+    (_, Just holeInferred)
+      | Lens.nullOf ExprLens.exprHole (iValue holeInferred) ->
+        ExprGuiM.makeSubexpression 0 . (fmap . fmap) toPayload =<<
+        convert holeInferred
+    (Nothing, _) ->
       ExprGuiM.widgetEnv $
       ExpressionGui.fromValueWidget <$>
       BWidgets.makeTextViewWidget "  " (Widget.toAnimId myId)
@@ -639,3 +653,16 @@ makeInactive hole myId = do
       if holeGui ^. ExpressionGui.egWidget . Widget.wIsFocused
       then return
       else BWidgets.makeFocusableView myId
+  where
+    mArg = hole ^? Sugar.holeMArg . Lens._Just . Sugar.haExpr
+    iValue = Infer.iValue . Sugar.hiInferred
+    mInferred = hole ^. Sugar.holeMInferred
+    gen = genFromHashable $ pl ^. Sugar.plGuid
+    emptyPl = (ExprGuiM.StoredGuids [], ExprGuiM.Injected [])
+    convert holeInferred =
+      iValue holeInferred
+      & Lens.mapped .~ emptyPl
+      & InputExpr.makePure gen
+      & Sugar.runConvert (pl ^. Sugar.plConvertInContext)
+        (Sugar.hiContext holeInferred)
+      & ExprGuiM.liftMemoT

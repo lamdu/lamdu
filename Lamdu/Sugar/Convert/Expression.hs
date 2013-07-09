@@ -23,8 +23,8 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as SugarM
+import qualified Lamdu.Sugar.InputExpr as InputExpr
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
@@ -61,7 +61,7 @@ make exprPl body = do
   inferredTypes <-
     zipWithM
     ( fmap SugarM.convertSubexpression
-    . SugarInfer.mkExprPure
+    . InputExpr.makePure
     ) seeds types
   let
     convert inferContext =
