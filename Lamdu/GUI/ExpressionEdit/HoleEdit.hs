@@ -154,7 +154,7 @@ makeShownResult holeInfo result = do
     SugarRemoveTypes.holeResultTypes . postProcessSugar <$>
     Sugar.runConvert (hiConvert holeInfo)
     (rHoleResult result ^. Sugar.holeResultContext)
-    (rHoleResult result ^. Sugar.holeResultInferred)
+    (rHoleResult result ^. Sugar.holeResultExpr)
   widget <- makePaddedResult result converted
   return
     ( widget & Widget.wEventMap .~ mempty

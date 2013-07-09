@@ -496,7 +496,7 @@ makeHoleResult sugarContext (InputPayload guid iwc stored ()) seed = do
     mkResult fMJumpTo unfork (fNewCtx, (fConsistentExpr, fWrittenExpr)) = do
       let pick = unfork *> mkPickedResult fMJumpTo fConsistentExpr fWrittenExpr
       pure HoleResult
-        { _holeResultInferred =
+        { _holeResultExpr =
           fConsistentExpr
           <&> ipInferred %~ Just . toIWC
           <&> ipStored %~ Just

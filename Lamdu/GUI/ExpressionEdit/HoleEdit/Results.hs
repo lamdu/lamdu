@@ -155,7 +155,7 @@ typeCheckResults holeInfo options = do
   let (goodResults, badResults) = partition ((== GoodResult) . fst) rs
   return $ sortOn (score . snd) goodResults ++ badResults
   where
-    score = resultComplexityScore . (^. Sugar.holeResultInferred)
+    score = resultComplexityScore . (^. Sugar.holeResultExpr)
 
 mResultsListOf ::
   HoleInfo m -> ResultInfo -> WidgetId.Id ->
@@ -172,7 +172,7 @@ mResultsListOf holeInfo resultInfo baseId (x:xs) = Just
   where
     extraResultId =
       mappend extraResultsPrefixId . WidgetIds.hash . void .
-      (^. Sugar.holeResultInferred)
+      (^. Sugar.holeResultExpr)
     extraResultsPrefixId = mconcat [prefixId holeInfo, WidgetId.Id ["extra results"], baseId]
     mkResult resultId (typ, holeResult) =
       Result

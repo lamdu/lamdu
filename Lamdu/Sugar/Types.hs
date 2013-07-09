@@ -53,7 +53,7 @@ module Lamdu.Sugar.Types
   , HoleActions(..)
     , holeScope, holePaste, holeMUnwrap, holeInferExprType, holeInferredType
   , HoleResult(..)
-    , holeResultInferred
+    , holeResultExpr
     , holeResultPick
     , holeResultHasHoles
     , holeResultContext
@@ -199,7 +199,7 @@ data PickedResult = PickedResult
 
 data HoleResult m a = HoleResult
   -- TODO: Rename to holeResultExpr (Consider using non-Maybe for stored/inferred):
-  { _holeResultInferred :: InputExpr m a
+  { _holeResultExpr :: InputExpr m a
   , _holeResultPick :: T m PickedResult
   , _holeResultHasHoles :: Bool
   , _holeResultContext :: InferContext m -- TODO: Temporary
