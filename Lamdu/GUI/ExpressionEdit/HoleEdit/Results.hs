@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Results
   ( makeAll, HaveHiddenResults(..)
-  , Result(..)
+  , Result(..), ResultInfo(..)
   , ResultsList(..), rlExtraResultsPrefixId, rlMain, rlExtra
-  , prefixId, MakeWidgets(..)
+  , prefixId
   , SugarExprPl
   ) where
 
@@ -29,7 +29,7 @@ import Lamdu.Config (Config)
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..), pureHole)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument)
 import Lamdu.Sugar.Types (Scope(..))
 import qualified Control.Lens as Lens
@@ -68,12 +68,14 @@ mkGroup names body = Group
 data ResultType = GoodResult | BadResult
   deriving (Eq, Ord)
 
+data ResultInfo = CreateNewTag | NormalResult
+
 type SugarExprPl = (ExprGuiM.StoredGuids, ExprGuiM.Injected)
 
 data Result m = Result
   { rType :: ResultType
   , rHoleResult :: Sugar.HoleResult Sugar.Name m SugarExprPl
-  , rMkWidget :: ExprGuiM m (WidgetT m)
+  , rInfo :: ResultInfo
   , rId :: WidgetId.Id
   }
 
@@ -125,15 +127,6 @@ resultComplexityScore = length . Foldable.toList . Infer.iType . (^. Expr.ePaylo
 prefixId :: HoleInfo m -> WidgetId.Id
 prefixId holeInfo = mconcat [hiId holeInfo, WidgetId.Id ["results"]]
 
-type
-  WidgetMaker m =
-    WidgetId.Id -> Sugar.HoleResult Sugar.Name m SugarExprPl ->
-    ExprGuiM m (WidgetT m)
-data MakeWidgets m = MakeWidgets
-  { mkResultWidget :: WidgetMaker m
-  , mkNewTagResultWidget :: WidgetMaker m
-  }
-
 typeCheckHoleResult ::
   MonadA m => HoleInfo m ->
   Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl) ->
@@ -161,11 +154,11 @@ typeCheckResults holeInfo options = do
     score = resultComplexityScore . (^. Sugar.holeResultInferred)
 
 mResultsListOf ::
-  HoleInfo m -> WidgetMaker m -> WidgetId.Id ->
+  HoleInfo m -> ResultInfo -> WidgetId.Id ->
   [(ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl)] ->
   Maybe (ResultsList m)
 mResultsListOf _ _ _ [] = Nothing
-mResultsListOf holeInfo makeWidget baseId (x:xs) = Just
+mResultsListOf holeInfo resultInfo baseId (x:xs) = Just
   ResultsList
   { _rlPreferred = NotPreferred
   , _rlExtraResultsPrefixId = extraResultsPrefixId
@@ -181,16 +174,16 @@ mResultsListOf holeInfo makeWidget baseId (x:xs) = Just
       Result
       { rType = typ
       , rHoleResult = holeResult
-      , rMkWidget = makeWidget resultId holeResult
+      , rInfo = resultInfo
       , rId = resultId
       }
 
 typeCheckToResultsList ::
-  MonadA m => HoleInfo m -> WidgetMaker m ->
+  MonadA m => HoleInfo m -> ResultInfo ->
   WidgetId.Id -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl)] ->
   CT m (Maybe (ResultsList m))
-typeCheckToResultsList holeInfo makeWidget baseId options =
-  mResultsListOf holeInfo makeWidget baseId <$>
+typeCheckToResultsList holeInfo resultInfo baseId options =
+  mResultsListOf holeInfo resultInfo baseId <$>
   typeCheckResults holeInfo options
 
 baseExprWithApplyForms ::
@@ -284,11 +277,11 @@ maybeInjectArgumentNewTag holeInfo =
     makeNewTag = Sugar.ResultSeedNewTag $ hiSearchTerm holeInfo
 
 makeResultsList ::
-  MonadA m => HoleInfo m -> WidgetMaker m -> GroupM m ->
+  MonadA m => HoleInfo m -> ResultInfo -> GroupM m ->
   CT m (Maybe (ResultsList m))
-makeResultsList holeInfo makeWidget group =
+makeResultsList holeInfo resultInfo group =
   (Lens.mapped . Lens.mapped %~ rlPreferred .~ toPreferred) .
-  typeCheckToResultsList holeInfo makeWidget baseId .
+  typeCheckToResultsList holeInfo resultInfo baseId .
   map Sugar.ResultSeedExpression . filter (not . isHoleWrap) =<<
   maybeInjectArgumentExpr holeInfo =<<
   baseExprWithApplyForms holeInfo baseExpr
@@ -302,12 +295,12 @@ makeResultsList holeInfo makeWidget group =
     baseId = WidgetIds.hash baseExpr
 
 makeNewTagResultList ::
-  MonadA m => HoleInfo m -> WidgetMaker m ->
+  MonadA m => HoleInfo m ->
   CT m (Maybe (ResultsList m))
-makeNewTagResultList holeInfo makeNewTagResultWidget
+makeNewTagResultList holeInfo
   | null (hiSearchTerm holeInfo) = pure Nothing
   | otherwise =
-      typeCheckToResultsList holeInfo makeNewTagResultWidget (WidgetId.Id ["NewTag"]) $
+      typeCheckToResultsList holeInfo CreateNewTag (WidgetId.Id ["NewTag"]) $
       maybeInjectArgumentNewTag holeInfo
 
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
@@ -340,18 +333,17 @@ collectResults config resultsM = do
         %~ (x :)
 
 makeAll ::
-  MonadA m => Config -> HoleInfo m -> MakeWidgets m ->
+  MonadA m => Config -> HoleInfo m ->
   ExprGuiM m ([ResultsList m], HaveHiddenResults)
-makeAll config holeInfo makeWidget = do
+makeAll config holeInfo = do
   allGroups <- ExprGuiM.transaction $ makeAllGroups holeInfo
   let
     allGroupsList =
-      List.mapL (makeResultsList holeInfo (mkResultWidget makeWidget)) $
+      List.mapL (makeResultsList holeInfo NormalResult) $
       List.fromList allGroups
     newTagList
       | isTagType =
-        List.joinM . return . makeNewTagResultList holeInfo $
-        mkNewTagResultWidget makeWidget
+        List.joinM . return $ makeNewTagResultList holeInfo
       | otherwise = mempty
     resultList = List.catMaybes $ mappend allGroupsList newTagList
   ExprGuiM.liftMemoT $ collectResults config resultList

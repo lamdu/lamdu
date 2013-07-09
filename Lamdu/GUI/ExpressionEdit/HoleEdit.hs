@@ -20,7 +20,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CharClassification (operatorChars, alphaNumericChars)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsSearchTerm)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Results (MakeWidgets(..), ResultsList(..), Result(..), HaveHiddenResults(..))
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Control.Lens as Lens
@@ -134,7 +134,13 @@ resultPickEventMap config holeInfo (Just shownResult) =
 makePaddedResult :: MonadA m => Result m -> ExprGuiM m (WidgetT m)
 makePaddedResult res = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  (Widget.pad . fmap realToFrac . Config.holeResultPadding) config <$> rMkWidget res
+  mkWidget (rId res) (rHoleResult res)
+    <&> (Widget.pad . fmap realToFrac . Config.holeResultPadding) config
+  where
+    mkWidget =
+      case rInfo res of
+      HoleResults.CreateNewTag -> makeNewTagResultWidget
+      HoleResults.NormalResult -> makeHoleResultWidget
 
 makeShownResult ::
   MonadA m => Result m -> ExprGuiM m (Widget (T m), ShownResult m)
@@ -375,11 +381,7 @@ makeActiveHoleEdit ::
   ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit size pl holeInfo = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  (shownResultsLists, hasHiddenResults) <-
-    HoleResults.makeAll config holeInfo MakeWidgets
-    { mkNewTagResultWidget = makeNewTagResultWidget
-    , mkResultWidget = makeHoleResultWidget
-    }
+  (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll config holeInfo
   let
     shownResultsIds = rId . (^. HoleResults.rlMain) <$> shownResultsLists
     allResultIds = [rId . (^. HoleResults.rlMain), (^. HoleResults.rlExtraResultsPrefixId)] <*> shownResultsLists
