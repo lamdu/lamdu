@@ -51,7 +51,14 @@ createBuiltins =
   Writer.runWriterT $ do
     list <- mkDefinitionRef $ publicBuiltin "Data.List.List" setToSet
     let listOf = mkApply list
-    bool <- mkDefinitionRef $ publicBuiltin "Prelude.Bool" set
+    headTag <- lift $ namedTag "head" headTagGuid
+    tailTag <- lift $ namedTag "tail" tailTagGuid
+    cons <-
+      publicBuiltin "Prelude.:" $ forAll "a" $ \a ->
+      mkPi (mkRecordType pure [(headTag, a), (tailTag, listOf a)]) $ listOf a
+    nil <- publicBuiltin "Prelude.[]" $ forAll "a" listOf
+    publicBuiltin_ "Data.List.tail" $ forAll "a" (endo . listOf)
+    publicBuiltin_ "Data.List.head" . forAll "a" $ join (mkPi . listOf)
 
     _ <-
       publicBuiltin "Data.Map.Map" $ mkPiRecord
@@ -59,13 +66,12 @@ createBuiltins =
       , ("Value", set)
       ] set
 
-    headTag <- lift $ namedTag "head" headTagGuid
-    tailTag <- lift $ namedTag "tail" tailTagGuid
-    cons <-
-      publicBuiltin "Prelude.:" $ forAll "a" $ \a ->
-      mkPi (mkRecordType pure [(headTag, a), (tailTag, listOf a)]) $ listOf a
-    nil <- publicBuiltin "Prelude.[]" $ forAll "a" listOf
+    mybe <- mkDefinitionRef $ publicBuiltin "Data.Maybe.Maybe" setToSet
+    let maybeOf = mkApply mybe
+    publicBuiltin_ "Prelude.Just" $ forAll "a" $ \a -> mkPi a $ maybeOf a
+    publicBuiltin_ "Prelude.Nothing" $ forAll "a" $ \a -> maybeOf a
 
+    bool <- mkDefinitionRef $ publicBuiltin "Prelude.Bool" set
     true <- publicBuiltin "Prelude.True" bool
     false <- publicBuiltin "Prelude.False" bool
 
@@ -91,8 +97,6 @@ createBuiltins =
     publicBuiltin_ "Data.Function.fix" . forAll "a" $ \a -> mkPi (mkPi a a) a
 
     publicBuiltin_ "Data.List.reverse" $ forAll "a" (endo . listOf)
-    publicBuiltin_ "Data.List.tail" $ forAll "a" (endo . listOf)
-    publicBuiltin_ "Data.List.head" . forAll "a" $ join (mkPi . listOf)
     publicBuiltin_ "Data.List.last" . forAll "a" $ join (mkPi . listOf)
     publicBuiltin_ "Data.List.null" . forAll "a" $ \a -> mkPi (listOf a) bool
 
