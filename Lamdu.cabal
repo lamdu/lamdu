@@ -110,7 +110,6 @@ Library
 Executable lamdu
   Build-Depends:       base >= 4,
                        aeson >= 0.6.2.1 && < 0.6.3,
-                       attoparsec >= 0.10,
                        hashable,
                        containers,
                        directory,

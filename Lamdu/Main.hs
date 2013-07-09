@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, Rank2Types #-}
+{-# LANGUAGE OverloadedStrings, Rank2Types#-}
 module Main(main) where
 
 import Control.Applicative ((<$>), (<*))
@@ -26,8 +26,6 @@ import System.Environment (getArgs)
 import System.FilePath ((</>))
 import qualified Control.Exception as E
 import qualified Data.Aeson as Aeson
-import qualified Data.Attoparsec.ByteString.Char8 as AttoParsecChar8
-import qualified Data.Attoparsec.ByteString.Lazy as AttoParsec
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Cache as Cache
 import qualified Data.Monoid as Monoid
@@ -90,16 +88,10 @@ main = do
 
 loadConfig :: FilePath -> IO Config
 loadConfig configPath = do
-  configStr <- LBS.readFile configPath
-  case AttoParsec.parse onlyJson configStr of
-    AttoParsec.Done _ json ->
-      case Aeson.fromJSON json of
-      Aeson.Success x -> return x
-      Aeson.Error msg -> failIt $ "JSON content error: " ++ msg
-    AttoParsec.Fail _ _ msg -> failIt $ "JSON parse error: " ++ msg
+  eConfig <- Aeson.eitherDecode' <$> LBS.readFile configPath
+  either (fail . (msg ++)) return eConfig
   where
-    onlyJson = Aeson.json' <* AttoParsecChar8.skipSpace <* AttoParsec.endOfInput
-    failIt = fail . (("Config file " ++ show configPath ++ ": ") ++)
+    msg = "Failed to parse config file contents at " ++ show configPath ++ ": "
 
 accessDataFile :: FilePath -> (FilePath -> IO a) -> FilePath -> IO a
 accessDataFile startDir accessor fileName =
