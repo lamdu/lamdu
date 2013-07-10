@@ -217,17 +217,17 @@ convertAppliedHole funcI rawArgS argI exprPl
         , _haExprPresugared =
           flip (,) () . fmap (StorePoint . Property.value) .
           (^. ipStored) <$> argI
-        , _haTypeIsAMatch = isTypeMatch
+        , _haUnwrap =
+          if isTypeMatch
+          then UnwrapMAction mUnwrap
+          else UnwrapTypeMismatch
         }
       mUnwrap = do
-        guard isTypeMatch
         stored <- exprPl ^. ipStored
         argP <- argI ^. SugarInfer.exprStored
         return $ unwrap stored argP argI
     ConvertHole.convertPlain exprPl
-      <&> rBody . _BodyHole %~
-          (holeMArg .~ Just holeArg) .
-          (holeMActions . Lens._Just . holeMUnwrap .~ mUnwrap)
+      <&> rBody . _BodyHole . holeMArg .~ Just holeArg
       <&> rPayload . plData <>~ funcI ^. SugarInfer.exprData
       <&> rPayload . plActions . Lens._Just . wrap .~ WrapperAlready
   | otherwise = mzero

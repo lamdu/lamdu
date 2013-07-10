@@ -195,7 +195,6 @@ mkHole exprPl = do
         sugarContext ^. SugarM.scCodeAnchors
       pure HoleActions
         { _holePaste = mPaste
-        , _holeMUnwrap = Nothing
         , _holeScope =
           mconcat . concat <$> sequence
           [ mapM (getScopeElement sugarContext) . Map.toList $

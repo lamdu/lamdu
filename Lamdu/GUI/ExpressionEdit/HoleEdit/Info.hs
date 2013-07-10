@@ -3,6 +3,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Info
   ( HoleInfo(..), hsSearchTerm
   , HoleState(..), emptyState, hiSearchTerm
   , setHoleStateAndJump, assocStateRef
+  , diveIntoHole, hiActiveId
   ) where
 
 import Control.Lens.Operators
@@ -36,7 +37,7 @@ emptyState =
   { _hsSearchTerm = ""
   }
 
--- | Stored/inferred hole info
+-- | Active hole info
 data HoleInfo m = HoleInfo
   { hiStoredGuid :: Guid
   , hiId :: Widget.Id
@@ -46,6 +47,14 @@ data HoleInfo m = HoleInfo
   , hiMArgument :: Maybe (Sugar.HoleArg m (ExprGuiM.SugarExpr m))
   , hiHoleGuids :: ExprGuiM.HoleGuids
   }
+
+-- TODO: We no longer use a FocusDelegator, use a different id
+-- manipulation function
+diveIntoHole :: Widget.Id -> Widget.Id
+diveIntoHole = FocusDelegator.delegatingId
+
+hiActiveId :: HoleInfo m -> Widget.Id
+hiActiveId = diveIntoHole . hiId
 
 hiSearchTerm :: HoleInfo m -> String
 hiSearchTerm holeInfo = Property.value (hiState holeInfo) ^. hsSearchTerm

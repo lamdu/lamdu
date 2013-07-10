@@ -30,7 +30,7 @@ import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..), pureHole)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument, hiActiveId)
 import Lamdu.Sugar.Types (Scope(..))
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
@@ -125,7 +125,7 @@ resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefIM m)) -> In
 resultComplexityScore = length . Foldable.toList . Infer.iType . (^. Expr.ePayload)
 
 prefixId :: HoleInfo m -> WidgetId.Id
-prefixId holeInfo = mconcat [hiId holeInfo, WidgetId.Id ["results"]]
+prefixId holeInfo = mconcat [hiActiveId holeInfo, WidgetId.Id ["results"]]
 
 typeCheckHoleResult ::
   MonadA m => HoleInfo m ->

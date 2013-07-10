@@ -6,10 +6,14 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
 
 import Control.Applicative (Applicative(..), (<$>), (<$), (<|>), liftA2)
 import Control.Lens.Operators
-import Control.Monad (guard, msum, when, void, (<=<))
+import Control.Monad (guard, msum, when, void)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
+import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
 import Data.Maybe (isJust, maybeToList, fromMaybe)
+import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
 import Data.Store.Property (Property(..))
 import Data.Traversable (traverse, sequenceA)
@@ -18,7 +22,7 @@ import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CharClassification (operatorChars, alphaNumericChars)
 import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsSearchTerm)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsSearchTerm, diveIntoHole)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
@@ -33,12 +37,12 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
@@ -203,8 +207,7 @@ makeExtraResultsPlaceholderWidget ::
   MonadA m => [Result m] -> ExprGuiM m (WidgetT m)
 makeExtraResultsPlaceholderWidget [] = return Spacer.empty
 makeExtraResultsPlaceholderWidget (result:_) =
-  ExprGuiM.widgetEnv $
-  BWidgets.makeFocusableView (rId result) Spacer.empty
+  makeFocusable (rId result) Spacer.empty
 
 makeExtraResultsWidget ::
   MonadA m => [Result m] ->
@@ -231,11 +234,8 @@ makeExtraResultsWidget extraResults@(firstResult:_) = do
       & Widget.wSize .~ (head widgets ^. Widget.wSize & Lens._1 .~ 0)
     )
 
-focusProxy :: (MonadA m, Applicative f) => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
-focusProxy wId =
-  ExprGuiM.widgetEnv .
-  BWidgets.makeFocusableView wId .
-  Widget.doesntTakeFocus
+makeFocusable :: (MonadA m, Applicative f) => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
+makeFocusable wId = ExprGuiM.widgetEnv . BWidgets.makeFocusableView wId
 
 makeHoleResultWidget ::
   MonadA m => Widget.Id ->
@@ -249,7 +249,7 @@ makeHoleResultWidget resultId holeResult = do
   resultGui ^. ExpressionGui.egWidget
     & Widget.wFrame %~ Anim.mapIdentities (`mappend` Widget.toAnimId resultId)
     & Widget.scale (realToFrac <$> Config.holeResultScaleFactor config)
-    & focusProxy resultId
+    & makeFocusable resultId
 
 postProcessSugar ::
   MonadA m =>
@@ -258,6 +258,7 @@ postProcessSugar ::
 postProcessSugar expr =
   expr
   & Lens.mapped . Lens.mapped %~ toPayload
+  -- TODO: AddNextHoles on hole result is unused?
   & AddNextHoles.addToExpr
   -- Remove the top-level result's actions so that they come from our
   -- ExpressionEdit, rather than the result's ExpressionEdit which
@@ -306,7 +307,7 @@ makeNoResults holeInfo myId =
       ExpressionGui.fromValueWidget <$> ExprGuiM.widgetEnv (BWidgets.makeLabel str myId)
 
 hiSearchTermId :: HoleInfo m -> Widget.Id
-hiSearchTermId holeInfo = WidgetIds.searchTermId $ hiId holeInfo
+hiSearchTermId holeInfo = WidgetIds.searchTermId $ HoleInfo.hiActiveId holeInfo
 
 makeHiddenResultsMWidget :: MonadA m => HaveHiddenResults -> Widget.Id -> ExprGuiM m (Maybe (Widget f))
 makeHiddenResultsMWidget HaveHiddenResults myId =
@@ -352,7 +353,7 @@ makeResultsWidget holeInfo shownResultsLists hiddenResults = do
       hiddenResultsWidgets
   return (mResult, widget)
   where
-    myId = hiId holeInfo
+    myId = HoleInfo.hiActiveId holeInfo
 
 assignHoleEditCursor ::
   MonadA m =>
@@ -367,23 +368,18 @@ assignHoleEditCursor holeInfo shownResultsIds allResultIds searchTermId action =
     isOnResult = any sub allResultIds
     assignSource
       | shouldBeOnResult && not isOnResult = cursor
-      | otherwise = hiId holeInfo
+      | otherwise = HoleInfo.hiActiveId holeInfo
     destId
       | null (HoleInfo.hiSearchTerm holeInfo) = searchTermId
       | otherwise = head (shownResultsIds ++ [searchTermId])
   ExprGuiM.assignCursor assignSource destId action
 
-holeBackgroundColor :: Config -> Sugar.HoleArg m expr -> Draw.Color
-holeBackgroundColor config holeArg
-  | holeArg ^. Sugar.haTypeIsAMatch = Config.deletableHoleBackgroundColor config
-  | otherwise = Config.typeErrorHoleWrapBackgroundColor config
-
-makeActiveHoleEdit ::
+makeActive ::
   MonadA m =>
   Widget.Size ->
   Sugar.Payload Sugar.Name m ExprGuiM.Payload -> HoleInfo m ->
   ExprGuiM m (ExpressionGui m)
-makeActiveHoleEdit size pl holeInfo = do
+makeActive inactiveSize pl holeInfo = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll config holeInfo
   let
@@ -403,22 +399,35 @@ makeActiveHoleEdit size pl holeInfo = do
         ExpressionGui.addBelow 0.5
         [(0.5, Widget.strongerEvents adHocEditor resultsWidget)]
         searchTermWidget
-      return $
-        gui
+      jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] pl
+      replaceEventMap <- ExprEventMap.replaceOrComeToParentEventMap pl
+      let
+        eventMap = mconcat
+          [ pasteEventMap config holeInfo
+          , resultEventMap config holeInfo mShownResult
+          , jumpHolesEventMap
+          , replaceEventMap
+          , closeEventMap
+          ]
+      gui
         & ExpressionGui.truncateSize
-          ( size
+          ( inactiveSize
             & Lens._1 %~ max (gui ^. ExpressionGui.egWidget . Widget.wSize . Lens._1) ) .
           ( ExpressionGui.egWidget %~
             (Widget.wFrame %~ Anim.onDepth (+ layerDiff)) .
-            makeBackground (hiId holeInfo)
+            makeBackground (HoleInfo.hiActiveId holeInfo)
               (Config.layerMax (Config.layers config))
               (Config.activeHoleBackgroundColor config) .
-            Widget.weakerEvents
-            (pasteEventMap config holeInfo `mappend`
-             resultEventMap config holeInfo mShownResult) .
+            Widget.weakerEvents eventMap .
             Widget.strongerEvents
             (resultPickEventMap config holeInfo mShownResult)
           )
+        & return
+  where
+    closeEventMap =
+      Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.KeyEsc]
+      (E.Doc ["Navigation", "Hole", "Close"]) . pure $
+      Widget.joinId (hiId holeInfo) ["inactive"]
 
 pasteEventMap ::
   Functor m => Config -> HoleInfo m -> Widget.EventHandlers (T m)
@@ -447,106 +456,150 @@ resultEventMap config holeInfo (Just (ShownResult eventMap holeResult)) =
     convertedResult = holeResult ^. Sugar.holeResultConverted
     mActions = convertedResult ^. Sugar.rPayload . Sugar.plActions
 
-data IsActive = Inactive | Active
+tryActiveHole ::
+  MonadA m =>
+  Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Widget.Size -> Widget.Id ->
+  MaybeT (ExprGuiM m) (ExpressionGui m)
+tryActiveHole hole pl inactiveSize myId = do
+  isSelected <-
+    lift . ExprGuiM.widgetEnv . WE.isSubCursor $ diveIntoHole myId
+  guard isSelected
+  storedGuid <- maybeToMPlus $ pl ^? Sugar.plActions . Lens._Just . Sugar.storedGuid
+  actions <- maybeToMPlus $ hole ^. Sugar.holeMActions
+  inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
+  stateProp <- lift . ExprGuiM.transaction $ HoleInfo.assocStateRef storedGuid ^. Transaction.mkProperty
+  lift $ makeActive inactiveSize pl HoleInfo
+    { hiStoredGuid = storedGuid
+    , hiActions = actions
+    , hiInferred = inferred
+    , hiId = myId
+    , hiState = stateProp
+    , hiHoleGuids = pl ^. Sugar.plData . ExprGuiM.plHoleGuids
+    , hiMArgument = hole ^. Sugar.holeMArg
+    }
+
+makeInactiveWrapper ::
+  MonadA m =>
+  Sugar.HoleArg m (Sugar.ExpressionN m ExprGuiM.Payload) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+makeInactiveWrapper arg myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    bgColor =
+      case arg ^. Sugar.haUnwrap of
+      Sugar.UnwrapMAction {} -> Config.deletableHoleBackgroundColor config
+      Sugar.UnwrapTypeMismatch {} -> Config.typeErrorHoleWrapBackgroundColor config
+    eventMap =
+      case arg ^? Sugar.haUnwrap . Sugar._UnwrapMAction . Lens._Just of
+      Just unwrap ->
+        E.keyPresses (Config.acceptKeys config ++ Config.delKeys config)
+        (E.Doc ["Edit", "Unwrap"]) $
+        Widget.eventResultFromCursor . WidgetIds.fromGuid <$> unwrap
+      Nothing ->
+        E.keyPresses (Config.wrapKeys config)
+        (E.Doc ["Navigation", "Hole", "Open"]) .
+        pure . Widget.eventResultFromCursor $
+        diveIntoHole myId
+  arg ^. Sugar.haExpr
+    & ExprGuiM.makeSubexpression 0
+    >>= ExpressionGui.egWidget %%~
+        makeFocusable myId . (Widget.wEventMap .~ eventMap)
+    <&> ExpressionGui.pad (realToFrac <$> Config.wrapperHolePadding config)
+    <&> ExpressionGui.egWidget %~
+        makeBackground myId
+        (Config.layerInactiveHole (Config.layers config)) bgColor
+
+makeInactiveInferred ::
+  MonadA m =>
+  Sugar.HoleInferred m -> Sugar.Payload Sugar.Name m a ->
+  Widget.Id -> ExprGuiM m (Widget.Id, ExpressionGui m)
+makeInactiveInferred inferred pl myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  gui <-
+    iVal
+    & Lens.mapped .~ emptyPl
+    & InputExpr.makePure gen
+    & Sugar.runConvert (pl ^. Sugar.plConvertInContext)
+      (Sugar.hiContext inferred)
+    & ExprGuiM.liftMemoT
+    <&> Lens.mapped . Lens.mapped %~ toPayload
+    >>= ExprGuiM.makeSubexpression 0
+    >>= ExpressionGui.egWidget %%~
+        makeFocusable myId .
+        Widget.tint (Config.inferredValueTint config) .
+        Widget.scale (realToFrac <$> Config.inferredValueScaleFactor config) .
+        (Widget.wEventMap .~ mempty)
+  return $
+    if fullyInferred
+    then (myId, gui)
+    else
+      ( diveIntoHole myId
+      , gui
+        & ExpressionGui.egWidget %~
+          makeBackground myId (Config.layerInactiveHole (Config.layers config))
+          (Config.inactiveHoleBackgroundColor config)
+      )
+  where
+    fullyInferred = Lens.nullOf (Lens.folding ExprUtil.subExpressions . ExprLens.exprHole) iVal
+    iVal = Infer.iValue $ Sugar.hiInferred inferred
+    -- TODO: should gen still be compatible with the anim id
+    -- translations of PickedResult? If so, document it here
+    gen = genFromHashable $ pl ^. Sugar.plGuid
+    emptyPl = (ExprGuiM.StoredGuids [], ExprGuiM.Injected [])
+
+makeInactiveSimple :: MonadA m => Widget.Id -> ExprGuiM m (ExpressionGui m)
+makeInactiveSimple myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  ExprGuiM.widgetEnv
+    (BWidgets.makeTextViewWidget "  " (Widget.toAnimId myId))
+    <&>
+      makeBackground myId
+      (Config.layerInactiveHole (Config.layers config))
+      (Config.inactiveHoleBackgroundColor config)
+    <&> ExpressionGui.fromValueWidget
+    >>= ExpressionGui.egWidget %%~ makeFocusable myId
+
+createInactive ::
+  MonadA m =>
+  Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Widget.Id ->
+  ExprGuiM m (Widget.Id, ExpressionGui m)
+createInactive hole pl myId = do
+  (destId, rawInactive) <- runMatcherT $ do
+    justToLeft $ do
+      arg <- maybeToMPlus $ hole ^. Sugar.holeMArg
+      lift $ (,) myId <$> makeInactiveWrapper arg myId
+    justToLeft $ do
+      inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
+      guard . Lens.nullOf ExprLens.exprHole . Infer.iValue $ Sugar.hiInferred inferred
+      lift $ makeInactiveInferred inferred pl myId
+    lift $ (,) (diveIntoHole myId) <$> makeInactiveSimple myId
+  exprEventMap <- ExprEventMap.make [] pl
+  inactive <-
+    ExpressionGui.addInferredTypes pl rawInactive
+    <&> ExpressionGui.egWidget %~
+        Widget.weakerEvents (mappend openEventMap exprEventMap)
+  return (destId, inactive)
+  where
+    openEventMap =
+      Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.KeyEnter]
+      (E.Doc ["Navigation", "Hole", "Open"]) . pure $
+      diveIntoHole myId
 
 make ::
   MonadA m =>
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make hole pl outerId = do
-  (isActive, gui) <-
-    ExprGuiM.wrapDelegated holeFDConfig delegatingMode
-    (Lens._2 . ExpressionGui.egWidget %~) inner outerId
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    bgColor =
-      fromMaybe (Config.inactiveHoleBackgroundColor config) $
-      holeBackgroundColor config <$> hole ^. Sugar.holeMArg
-    addInactiveBG =
-      ExpressionGui.egWidget %~
-      makeBackground outerId
-      (Config.layerInactiveHole (Config.layers config)) bgColor
-    maybeAddPadding
-      | Lens.has (Sugar.holeMArg . Lens._Just) hole =
-        ExpressionGui.pad (realToFrac <$> Config.wrapperHolePadding config)
-      | otherwise = id
-  gui
-    & case isActive of
-      Inactive ->
-        addInactiveEventMap <=< ExpressionGui.addInferredTypes pl .
-        addInactiveBG . maybeAddPadding
-      Active -> addActiveEventMap
-  where
-    addActiveEventMap gui = do
-      jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] pl
-      replaceEventMap <- ExprEventMap.replaceOrComeToParentEventMap pl
-      gui
-        & ExpressionGui.egWidget %~
-          Widget.weakerEvents (mappend jumpHolesEventMap replaceEventMap)
-        & return
-    addInactiveEventMap gui = do
-      inactiveEventMap <- inactiveHoleEventMap hole pl
-      exprEventMap <- ExprEventMap.make [] pl
-      gui
-        & ExpressionGui.egWidget %~
-          Widget.weakerEvents (mappend inactiveEventMap exprEventMap)
-        & return
-    delegatingMode
-      | Lens.has (Sugar.holeMArg . Lens._Just) hole = FocusDelegator.NotDelegating
-      | otherwise = FocusDelegator.Delegating
-    inner = makeUnwrappedH pl hole
-
-inactiveHoleEventMap ::
-  MonadA m =>
-  Sugar.Hole name m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload name m ExprGuiM.Payload ->
-  ExprGuiM m (E.EventMap (T m Widget.EventResult))
-inactiveHoleEventMap hole pl = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  return $
-    case hole ^? Sugar.holeMActions . Lens._Just . Sugar.holeMUnwrap . Lens._Just of
-    Just unwrap ->
-      E.keyPresses (Config.acceptKeys config ++ Config.delKeys config)
-      (E.Doc ["Edit", "Unwrap"]) $
-      Widget.eventResultFromCursor . WidgetIds.fromGuid <$> unwrap
-    Nothing ->
-      E.keyPresses (Config.acceptKeys config)
-      (FocusDelegator.startDelegatingDoc holeFDConfig) .
-      pure . Widget.eventResultFromCursor .
-      FocusDelegator.delegatingId .
-      WidgetIds.fromGuid $ pl ^. Sugar.plGuid
-
-makeUnwrappedH ::
-  MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
-  Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Widget.Id ->
-  ExprGuiM m (IsActive, ExpressionGui m)
-makeUnwrappedH pl hole myId = do
-  cursor <- ExprGuiM.widgetEnv WE.readCursor
-  inactive <- makeInactive pl hole myId
-  let activeCursorSuffix = Widget.subId myId cursor
-  case (mStoredGuid, mActions, mInferred, activeCursorSuffix) of
-    (Just storedGuid, Just holeActions, Just holeInferred, Just _) -> do
-      stateProp <- ExprGuiM.transaction $ HoleInfo.assocStateRef storedGuid ^. Transaction.mkProperty
-      inactiveWithTypes <- ExpressionGui.addInferredTypes pl inactive
-      (,) Active <$> makeActiveHoleEdit
-        (inactiveWithTypes ^. ExpressionGui.egWidget . Widget.wSize) pl
-        HoleInfo
-        { hiStoredGuid = storedGuid
-        , hiId = myId
-        , hiState = stateProp
-        , hiActions = holeActions
-        , hiInferred = holeInferred
-        , hiHoleGuids = pl ^. Sugar.plData . ExprGuiM.plHoleGuids
-        , hiMArgument = hole ^. Sugar.holeMArg
-        }
-    _ -> return (Inactive, inactive)
-  where
-    mInferred = hole ^. Sugar.holeMInferred
-    mActions = hole ^. Sugar.holeMActions
-    mStoredGuid = pl ^? Sugar.plActions . Lens._Just . Sugar.storedGuid
+make hole pl myId = do
+  (delegateDestId, inactive) <- createInactive hole pl myId
+  ExprGuiM.assignCursor myId delegateDestId $ do
+    let inactiveSize = inactive ^. ExpressionGui.egWidget . Widget.wSize
+    fromMaybe inactive <$>
+      runMaybeT (tryActiveHole hole pl inactiveSize myId)
 
 -- TODO: Use this where the hiState is currently used to get the
 -- search term
@@ -617,52 +670,7 @@ makeSearchTermWidget holeInfo = do
         then Widget.eCursor .~ (Monoid.Last . Just . HoleResults.prefixId) holeInfo
         else id
 
-holeFDConfig :: FocusDelegator.Config
-holeFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
-  , FocusDelegator.startDelegatingDoc = E.Doc ["Navigation", "Hole", "Enter"]
-  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.KeyEsc]
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["Navigation", "Hole", "Leave"]
-  }
-
 makeBackground :: Widget.Id -> Int -> Draw.Color -> Widget f -> Widget f
 makeBackground myId level =
   Widget.backgroundColor level $
   mappend (Widget.toAnimId myId) ["hole background"]
-
-makeInactive ::
-  MonadA m =>
-  Sugar.Payload Sugar.Name m a ->
-  Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeInactive pl hole myId = do
-  holeGui <-
-    case (mArg, mInferred) of
-    (Just arg, _) -> ExprGuiM.makeSubexpression 0 arg
-    (_, Just holeInferred)
-      | Lens.nullOf ExprLens.exprHole (iValue holeInferred) ->
-        ExprGuiM.makeSubexpression 0 . (fmap . fmap) toPayload =<<
-        convert holeInferred
-    (Nothing, _) ->
-      ExprGuiM.widgetEnv $
-      ExpressionGui.fromValueWidget <$>
-      BWidgets.makeTextViewWidget "  " (Widget.toAnimId myId)
-  ExprGuiM.widgetEnv $
-    holeGui
-    & ExpressionGui.egWidget %%~
-      if holeGui ^. ExpressionGui.egWidget . Widget.wIsFocused
-      then return
-      else BWidgets.makeFocusableView myId
-  where
-    mArg = hole ^? Sugar.holeMArg . Lens._Just . Sugar.haExpr
-    iValue = Infer.iValue . Sugar.hiInferred
-    mInferred = hole ^. Sugar.holeMInferred
-    gen = genFromHashable $ pl ^. Sugar.plGuid
-    emptyPl = (ExprGuiM.StoredGuids [], ExprGuiM.Injected [])
-    convert holeInferred =
-      iValue holeInferred
-      & Lens.mapped .~ emptyPl
-      & InputExpr.makePure gen
-      & Sugar.runConvert (pl ^. Sugar.plConvertInContext)
-        (Sugar.hiContext holeInferred)
-      & ExprGuiM.liftMemoT

@@ -45,7 +45,8 @@ module Lamdu.Sugar.Types
   , Lam(..), lKind, lParam, lIsDep, lResultType
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpType, fpMActions
-  , HoleArg(..), haExpr, haExprPresugared, haTypeIsAMatch
+  , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
+  , HoleArg(..), haExpr, haExprPresugared, haUnwrap
   , HoleInferred(..)
   , Hole(..)
     , holeMActions, holeMArg, holeMInferred
@@ -53,7 +54,7 @@ module Lamdu.Sugar.Types
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
   , HoleActions(..)
-    , holeScope, holePaste, holeMUnwrap, holeInferExprType
+    , holeScope, holePaste, holeInferExprType
   , HoleResult(..)
     , holeResultInferred
     , holeResultConverted
@@ -235,13 +236,16 @@ data HoleActions name m = HoleActions
       HoleResultSeed m (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
       CT m (Maybe (HoleResult name m a))
   , _holePaste :: Maybe (T m Guid)
-  , _holeMUnwrap :: Maybe (T m Guid)
   }
+
+data Unwrap m
+  = UnwrapMAction (Maybe (T m Guid))
+  | UnwrapTypeMismatch
 
 data HoleArg m expr = HoleArg
   { _haExpr :: expr
   , _haExprPresugared :: ExprStorePoint m ()
-  , _haTypeIsAMatch :: Bool
+  , _haUnwrap :: Unwrap m
   } deriving (Functor, Foldable, Traversable)
 
 data HoleInferred m = HoleInferred
@@ -486,4 +490,5 @@ Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo
 Lens.makePrisms ''HoleResultSeed
 Lens.makePrisms ''SpecialArgs
+Lens.makePrisms ''Unwrap
 derive makeMonoid ''Scope
