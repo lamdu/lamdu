@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.BottleWidgets
   ( makeTextView, makeTextViewWidget, makeLabel
-  , makeFocusableView
+  , respondToCursorIn, makeFocusableView
   , makeFocusableTextView, makeFocusableLabel
   , wrapDelegatedWith, wrapDelegatedOT
   , makeTextEdit
@@ -18,7 +18,6 @@ import Control.Monad (when)
 import Control.MonadA (MonadA)
 import Data.ByteString.Char8 (pack)
 import Data.List (findIndex, intersperse)
-import Data.Maybe (isJust)
 import Data.Monoid (mappend)
 import Data.Store.Property (Property)
 import Graphics.UI.Bottle.Animation (AnimId)
@@ -56,23 +55,24 @@ makeLabel :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeLabel text prefix =
   makeTextViewWidget text $ mappend prefix [pack text]
 
-makeFocusableView
-  :: (Applicative f, MonadA m)
-  => Widget.Id -> Widget f
-  -> WidgetEnvT m (Widget f)
-makeFocusableView myId widget = do
-  hasFocus <- fmap isJust $ WE.subCursor myId
+respondToCursorIn ::
+  MonadA m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
+respondToCursorIn myIdPrefix widget = do
+  hasFocus <- WE.isSubCursor myIdPrefix
   config <- WE.readConfig
-  let
-    setBackground
-      | hasFocus =
-        Widget.backgroundColor
+  return $
+    if hasFocus
+    then
+      widget
+      & Widget.backgroundColor
         (Config.layerCursorBG (Config.layers config))
-        WidgetIds.backgroundCursorId $ Config.cursorBGColor config
-      | otherwise = id
-  return .
-    (Widget.wIsFocused .~ hasFocus) . setBackground $
-    Widget.takesFocus (const (pure myId)) widget
+        WidgetIds.backgroundCursorId (Config.cursorBGColor config)
+      & Widget.wIsFocused .~ True
+    else widget
+
+makeFocusableView :: (Applicative f, MonadA m) => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
+makeFocusableView myId widget =
+  respondToCursorIn myId $ Widget.takesFocus (const (pure myId)) widget
 
 makeFocusableTextView
   :: (Applicative f, MonadA m)
