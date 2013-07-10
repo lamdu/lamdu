@@ -6,8 +6,7 @@ import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad (MonadPlus(..), guard)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Either (EitherT(..))
-import Control.Monad.Trans.Either.Utils (justToLeft)
+import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
@@ -41,15 +40,12 @@ import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as SugarM
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 
-uneither :: Either a a -> a
-uneither = either id id
-
 convert ::
   (Typeable1 m, MonadA m, Monoid a) =>
   Expr.Apply (InputExpr m a) ->
   InputPayload m a -> SugarM m (ExpressionU m a)
 convert app@(Expr.Apply funcI argI) exprPl =
-  fmap uneither . runEitherT $ do
+  runMatcherT $ do
     argS <- lift $ SugarM.convertSubexpression argI
     justToLeft $ convertAppliedHole funcI argS argI exprPl
     justToLeft $ ConvertList.convert app argS exprPl
