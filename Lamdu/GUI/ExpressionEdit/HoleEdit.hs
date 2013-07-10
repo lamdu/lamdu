@@ -40,15 +40,15 @@ make hole pl myId = do
       ) gui
   ExprGuiM.assignCursor myId delegateDestId $
     fromMaybe closed <$>
-    runMaybeT (resize <$> tryActiveHole hole pl myId)
+    runMaybeT (resize <$> tryOpenHole hole pl myId)
 
-tryActiveHole ::
+tryOpenHole ::
   MonadA m =>
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Id ->
   MaybeT (ExprGuiM m) (ExpressionGui m)
-tryActiveHole hole pl myId = do
+tryOpenHole hole pl myId = do
   isSelected <-
     lift . ExprGuiM.widgetEnv . WE.isSubCursor $ diveIntoHole myId
   guard isSelected
