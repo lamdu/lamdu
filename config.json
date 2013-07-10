@@ -332,8 +332,8 @@
     "inactiveHoleBackgroundColor": [
         0.2,
         0.2,
-        0.8,
-        0.5
+        0.5,
+        0.35
     ],
     "wrapperHolePadding": {
         "_first": 8,
