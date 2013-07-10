@@ -31,18 +31,24 @@ make ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole pl myId = do
   (delegateDestId, closed) <- HoleClosed.make hole pl myId
-  let closedSize = closed ^. ExpressionGui.egWidget . Widget.wSize
+  let
+    closedSize = closed ^. ExpressionGui.egWidget . Widget.wSize
+    resize gui =
+      ExpressionGui.truncateSize
+      ( closedSize
+        & Lens._1 %~ max (gui ^. ExpressionGui.egWidget . Widget.wSize . Lens._1)
+      ) gui
   ExprGuiM.assignCursor myId delegateDestId $
     fromMaybe closed <$>
-    runMaybeT (tryActiveHole hole pl closedSize myId)
+    runMaybeT (resize <$> tryActiveHole hole pl myId)
 
 tryActiveHole ::
   MonadA m =>
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
-  Widget.Size -> Widget.Id ->
+  Widget.Id ->
   MaybeT (ExprGuiM m) (ExpressionGui m)
-tryActiveHole hole pl closedSize myId = do
+tryActiveHole hole pl myId = do
   isSelected <-
     lift . ExprGuiM.widgetEnv . WE.isSubCursor $ diveIntoHole myId
   guard isSelected
@@ -50,7 +56,7 @@ tryActiveHole hole pl closedSize myId = do
   actions <- maybeToMPlus $ hole ^. Sugar.holeMActions
   inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
   stateProp <- lift . ExprGuiM.transaction $ HoleInfo.assocStateRef storedGuid ^. Transaction.mkProperty
-  lift $ HoleOpen.make closedSize pl HoleInfo
+  lift $ HoleOpen.make pl HoleInfo
     { hiStoredGuid = storedGuid
     , hiActions = actions
     , hiInferred = inferred

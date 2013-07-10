@@ -366,10 +366,9 @@ assignHoleEditCursor holeInfo shownResultsIds allResultIds searchTermId action =
 
 make ::
   MonadA m =>
-  Widget.Size ->
   Sugar.Payload Sugar.Name m ExprGuiM.Payload -> HoleInfo m ->
   ExprGuiM m (ExpressionGui m)
-make closedSize pl holeInfo = do
+make pl holeInfo = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll config holeInfo
   let
@@ -406,13 +405,7 @@ make closedSize pl holeInfo = do
           Widget.strongerEvents
           (resultPickEventMap config holeInfo mShownResult)
         & ExpressionGui.addInferredTypes pl
-        <&> resize
   where
-    resize gui =
-      ExpressionGui.truncateSize
-      ( closedSize
-        & Lens._1 %~ max (gui ^. ExpressionGui.egWidget . Widget.wSize . Lens._1)
-      ) gui
     closeEventMap =
       Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.KeyEsc]
       (E.Doc ["Navigation", "Hole", "Close"]) . pure $
