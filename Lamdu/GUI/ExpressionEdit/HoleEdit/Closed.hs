@@ -42,12 +42,12 @@ make hole pl myId = do
   (destId, rawInactive) <- runMatcherT $ do
     justToLeft $ do
       arg <- maybeToMPlus $ hole ^. Sugar.holeMArg
-      lift $ (,) myId <$> makeInactiveWrapper arg myId
+      lift $ (,) myId <$> makeWrapper arg myId
     justToLeft $ do
       inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
       guard . Lens.nullOf ExprLens.exprHole . Infer.iValue $ Sugar.hiInferred inferred
-      lift $ makeInactiveInferred inferred pl myId
-    lift $ (,) (diveIntoHole myId) <$> makeInactiveSimple myId
+      lift $ makeInferred inferred pl myId
+    lift $ (,) (diveIntoHole myId) <$> makeSimple myId
   exprEventMap <- ExprEventMap.make [] pl
   inactive <-
     ExpressionGui.addInferredTypes pl rawInactive
@@ -60,11 +60,11 @@ make hole pl myId = do
       (E.Doc ["Navigation", "Hole", "Open"]) . pure $
       diveIntoHole myId
 
-makeInactiveWrapper ::
+makeWrapper ::
   MonadA m =>
   Sugar.HoleArg m (Sugar.ExpressionN m ExprGuiM.Payload) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeInactiveWrapper arg myId = do
+makeWrapper arg myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     bgColor =
@@ -91,11 +91,11 @@ makeInactiveWrapper arg myId = do
         makeBackground myId
         (Config.layerInactiveHole (Config.layers config)) bgColor
 
-makeInactiveInferred ::
+makeInferred ::
   MonadA m =>
   Sugar.HoleInferred m -> Sugar.Payload Sugar.Name m a ->
   Widget.Id -> ExprGuiM m (Widget.Id, ExpressionGui m)
-makeInactiveInferred inferred pl myId = do
+makeInferred inferred pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   gui <-
     iVal
@@ -135,8 +135,8 @@ makeInactiveInferred inferred pl myId = do
       , ExprGuiM._plHoleGuids = ExprGuiM.emptyHoleGuids
       }
 
-makeInactiveSimple :: MonadA m => Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeInactiveSimple myId = do
+makeSimple :: MonadA m => Widget.Id -> ExprGuiM m (ExpressionGui m)
+makeSimple myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExprGuiM.widgetEnv
     (BWidgets.makeTextViewWidget "  " (Widget.toAnimId myId))
