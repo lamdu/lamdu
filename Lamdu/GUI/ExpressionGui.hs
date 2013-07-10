@@ -22,17 +22,16 @@ module Lamdu.GUI.ExpressionGui
   , parenify
   -- | stdWrap/stdPostProcess means addTypes and wrapExprEventMap
   , stdWrap
-  , stdPostProcess
   , stdWrapDelegated
   , stdWrapParentExpr
   , stdWrapParenify
   , addInferredTypes
+  , wrapExprEventMap
   ) where
 
 import Control.Applicative ((<$>))
 import Control.Lens (Lens')
 import Control.Lens.Operators
-import Control.Monad ((<=<))
 import Control.MonadA (MonadA)
 import Data.Function (on)
 import Data.Store.Guid (Guid)
@@ -212,15 +211,7 @@ stdWrap ::
   MonadA m => Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m) ->
   ExprGuiM m (ExpressionGui m)
-stdWrap pl mkGui = wrapExprEventMap id pl $ addInferredTypes pl =<< mkGui
-
--- | Assume no hole pickers to handle
-stdPostProcess ::
-  MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
-  ExpressionGui m ->
-  ExprGuiM m (ExpressionGui m)
-stdPostProcess pl = addExprEventMap pl [] <=< addInferredTypes pl
+stdWrap pl mkGui = wrapExprEventMap pl $ addInferredTypes pl =<< mkGui
 
 stdWrapDelegated ::
   MonadA m =>
@@ -336,12 +327,11 @@ makeCollisionSuffixLabels (Sugar.Collision suffix) animId = do
 
 wrapExprEventMap ::
   MonadA m =>
-  Lens.Traversal' a (ExpressionGui m) ->
   Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
-  ExprGuiM m a -> ExprGuiM m a
-wrapExprEventMap lens pl action = do
+  ExprGuiM m (ExpressionGui m) -> ExprGuiM m (ExpressionGui m)
+wrapExprEventMap pl action = do
   (res, resultPickers) <- ExprGuiM.listenResultPickers action
-  res & lens %%~ addExprEventMap pl resultPickers
+  addExprEventMap pl resultPickers res
 
 addExprEventMap ::
   MonadA m =>
