@@ -1,4 +1,4 @@
-module Lamdu.GUI.ExpressionEdit.HoleEdit.Inactive
+module Lamdu.GUI.ExpressionEdit.HoleEdit.Closed
   ( make
   ) where
 

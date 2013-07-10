@@ -40,7 +40,7 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Inactive as HoleInactive
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Closed as HoleClosed
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -374,7 +374,7 @@ makeActive ::
   Widget.Size ->
   Sugar.Payload Sugar.Name m ExprGuiM.Payload -> HoleInfo m ->
   ExprGuiM m (ExpressionGui m)
-makeActive inactiveSize pl holeInfo = do
+makeActive closedSize pl holeInfo = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll config holeInfo
   let
@@ -415,13 +415,13 @@ makeActive inactiveSize pl holeInfo = do
   where
     resize gui =
       ExpressionGui.truncateSize
-      ( inactiveSize
+      ( closedSize
         & Lens._1 %~ max (gui ^. ExpressionGui.egWidget . Widget.wSize . Lens._1)
       ) gui
     closeEventMap =
       Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.KeyEsc]
       (E.Doc ["Navigation", "Hole", "Close"]) . pure $
-      Widget.joinId (hiId holeInfo) ["inactive"]
+      Widget.joinId (hiId holeInfo) ["closed"]
 
 pasteEventMap ::
   Functor m => Config -> HoleInfo m -> Widget.EventHandlers (T m)
@@ -456,7 +456,7 @@ tryActiveHole ::
   Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Size -> Widget.Id ->
   MaybeT (ExprGuiM m) (ExpressionGui m)
-tryActiveHole hole pl inactiveSize myId = do
+tryActiveHole hole pl closedSize myId = do
   isSelected <-
     lift . ExprGuiM.widgetEnv . WE.isSubCursor $ diveIntoHole myId
   guard isSelected
@@ -464,7 +464,7 @@ tryActiveHole hole pl inactiveSize myId = do
   actions <- maybeToMPlus $ hole ^. Sugar.holeMActions
   inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
   stateProp <- lift . ExprGuiM.transaction $ HoleInfo.assocStateRef storedGuid ^. Transaction.mkProperty
-  lift $ makeActive inactiveSize pl HoleInfo
+  lift $ makeActive closedSize pl HoleInfo
     { hiStoredGuid = storedGuid
     , hiActions = actions
     , hiInferred = inferred
@@ -480,11 +480,11 @@ make ::
   Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole pl myId = do
-  (delegateDestId, inactive) <- HoleInactive.make hole pl myId
-  ExprGuiM.assignCursor myId delegateDestId $ do
-    let inactiveSize = inactive ^. ExpressionGui.egWidget . Widget.wSize
-    fromMaybe inactive <$>
-      runMaybeT (tryActiveHole hole pl inactiveSize myId)
+  (delegateDestId, closed) <- HoleClosed.make hole pl myId
+  let closedSize = closed ^. ExpressionGui.egWidget . Widget.wSize
+  ExprGuiM.assignCursor myId delegateDestId $
+    fromMaybe closed <$>
+    runMaybeT (tryActiveHole hole pl closedSize myId)
 
 -- TODO: Use this where the hiState is currently used to get the
 -- search term
