@@ -394,11 +394,6 @@ makeActive inactiveSize pl holeInfo = do
         adHocEditor = adHocTextEditEventMap $ searchTermProperty holeInfo
         layers = Config.layers config
         layerDiff = Config.layerActiveHoleBG layers - Config.layerMax layers
-      gui <-
-        ExpressionGui.addInferredTypes pl $
-        ExpressionGui.addBelow 0.5
-        [(0.5, Widget.strongerEvents adHocEditor resultsWidget)]
-        searchTermWidget
       jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] pl
       replaceEventMap <- ExprEventMap.replaceOrComeToParentEventMap pl
       let
@@ -409,7 +404,9 @@ makeActive inactiveSize pl holeInfo = do
           , replaceEventMap
           , closeEventMap
           ]
-      gui
+      ExpressionGui.addBelow 0.5
+        [(0.5, Widget.strongerEvents adHocEditor resultsWidget)]
+        searchTermWidget
         & ExpressionGui.egWidget %~
           (Widget.wFrame %~ Anim.onDepth (+ layerDiff)) .
           makeBackground (HoleInfo.hiActiveId holeInfo)
@@ -418,12 +415,14 @@ makeActive inactiveSize pl holeInfo = do
           Widget.weakerEvents eventMap .
           Widget.strongerEvents
           (resultPickEventMap config holeInfo mShownResult)
-        & ExpressionGui.truncateSize
-          ( inactiveSize
-            & Lens._1 %~ max (gui ^. ExpressionGui.egWidget . Widget.wSize . Lens._1)
-          )
-        & return
+        & ExpressionGui.addInferredTypes pl
+        <&> resize
   where
+    resize gui =
+      ExpressionGui.truncateSize
+      ( inactiveSize
+        & Lens._1 %~ max (gui ^. ExpressionGui.egWidget . Widget.wSize . Lens._1)
+      ) gui
     closeEventMap =
       Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.KeyEsc]
       (E.Doc ["Navigation", "Hole", "Close"]) . pure $
