@@ -410,10 +410,6 @@ makeActive inactiveSize pl holeInfo = do
           , closeEventMap
           ]
       gui
-        & ExpressionGui.truncateSize
-          ( inactiveSize
-            & Lens._1 %~ max (gui ^. ExpressionGui.egWidget . Widget.wSize . Lens._1)
-          )
         & ExpressionGui.egWidget %~
           (Widget.wFrame %~ Anim.onDepth (+ layerDiff)) .
           makeBackground (HoleInfo.hiActiveId holeInfo)
@@ -422,6 +418,10 @@ makeActive inactiveSize pl holeInfo = do
           Widget.weakerEvents eventMap .
           Widget.strongerEvents
           (resultPickEventMap config holeInfo mShownResult)
+        & ExpressionGui.truncateSize
+          ( inactiveSize
+            & Lens._1 %~ max (gui ^. ExpressionGui.egWidget . Widget.wSize . Lens._1)
+          )
         & return
   where
     closeEventMap =
