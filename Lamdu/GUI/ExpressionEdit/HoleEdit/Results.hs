@@ -349,8 +349,8 @@ makeAll config holeInfo = do
   ExprGuiM.liftMemoT $ collectResults config resultList
   where
     isTagType =
-      Lens.has ExprLens.exprTagType . Infer.iType . Sugar.hiInferred $
-      hiInferred holeInfo
+      Lens.has ExprLens.exprTagType . Infer.iType .
+      Sugar.hiInferred $ hiInferred holeInfo
 
 makeAllGroups :: MonadA m => HoleInfo m -> T m [GroupM m]
 makeAllGroups holeInfo = do
@@ -361,7 +361,10 @@ makeAllGroups holeInfo = do
     , _scopeGetParams = getParams
     } <- hiActions holeInfo ^. Sugar.holeScope
   let
-    allGroups = concat
+    allGroups =
+      (inferredGroups ++) .
+      filter ((/= iVal) . (^. groupBaseExpr)) $
+      concat
       [ primitiveGroups holeInfo, literalGroups
       , localsGroups, globalsGroups, tagsGroups, getParamsGroups
       ]
@@ -370,9 +373,17 @@ makeAllGroups holeInfo = do
     globalsGroups   = sortedGroups getVarsToGroup globals
     tagsGroups      = sortedGroups tagsToGroup tags
     getParamsGroups = sortedGroups getParamsToGroup getParams
+    inferredGroups  =
+      [ Group
+        { _groupNames = ["inferred"]
+        , _groupBaseExpr = iVal
+        }
+      | Lens.nullOf ExprLens.exprHole iVal
+      ]
   pure $ holeMatches (^. groupNames) (hiSearchTerm holeInfo) allGroups
   where
     literalGroups = makeLiteralGroups (hiSearchTerm holeInfo)
+    iVal = void . Infer.iValue . Sugar.hiInferred $ hiInferred holeInfo
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
