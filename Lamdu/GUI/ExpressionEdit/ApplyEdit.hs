@@ -92,7 +92,7 @@ makeArgRows arg = do
     scaleTag =
       ExpressionGui.egWidget %~
       Widget.scale (realToFrac <$> Config.fieldTagScaleFactor config)
-  pure $
+  pure
     [ [ (0.5, (BWidgets.vspaceWidget . realToFrac . Config.spaceBetweenAnnotatedArgs) config)
       -- TODO: This is a workaround for GridEdit bug that
       -- differing-length'd rows break navigation
