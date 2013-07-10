@@ -16,14 +16,13 @@ import Data.Traversable (sequenceA)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import Lamdu.CharClassification (operatorChars)
 import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleState(..))
+import Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers, holePickersAddDocPrefix, holePickersAction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -139,7 +138,7 @@ applyOperatorEventMap holePickers actions =
     action wrap = E.charGroup "Operator" doc operatorChars $ \c _isShifted -> do
       holePickersAction holePickers
       Widget.eventResultFromCursor <$>
-        (HoleInfo.setHoleStateAndJump (HoleState [c]) =<< wrap)
+        (setHoleStateAndJump (HoleState [c]) =<< wrap)
 
 wrapEventMap ::
   MonadA m =>

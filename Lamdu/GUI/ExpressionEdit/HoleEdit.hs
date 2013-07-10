@@ -10,15 +10,16 @@ import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.MonadA (MonadA)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Utils (maybeToMPlus)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), diveIntoHole)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (diveIntoHole)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Closed as HoleClosed
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as HoleOpen
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -55,7 +56,7 @@ tryOpenHole hole pl myId = do
   storedGuid <- maybeToMPlus $ pl ^? Sugar.plActions . Lens._Just . Sugar.storedGuid
   actions <- maybeToMPlus $ hole ^. Sugar.holeMActions
   inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
-  stateProp <- lift . ExprGuiM.transaction $ HoleInfo.assocStateRef storedGuid ^. Transaction.mkProperty
+  stateProp <- lift . ExprGuiM.transaction $ HoleState.assocStateRef storedGuid ^. Transaction.mkProperty
   lift $ HoleOpen.make pl HoleInfo
     { hiStoredGuid = storedGuid
     , hiActions = actions

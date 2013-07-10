@@ -18,8 +18,9 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CharClassification (operatorChars, alphaNumericChars)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (makeBackground)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsSearchTerm)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
+import Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Control.Lens as Lens
@@ -38,6 +39,7 @@ import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.AddNextHoles as AddNextHoles
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -78,7 +80,7 @@ eventResultOfPickedResult pr =
 
 afterPick :: Monad m => HoleInfo m -> Sugar.PickedResult -> T m Widget.EventResult
 afterPick holeInfo pr = do
-  Property.set (hiState holeInfo) HoleInfo.emptyState
+  Property.set (hiState holeInfo) HoleState.emptyState
   eventResultOfPickedResult pr
     & Widget.eCursor %~
       (mappend . Monoid.Last . Just .
@@ -92,7 +94,7 @@ setNextHoleState holeInfo searchTerm pr =
   afterPick holeInfo pr <*
   case pr ^. Sugar.prMJumpTo of
     Just newHoleGuid ->
-      Transaction.setP (HoleInfo.assocStateRef newHoleGuid) $ HoleState searchTerm
+      Transaction.setP (HoleState.assocStateRef newHoleGuid) $ HoleState searchTerm
     Nothing -> return ()
 
 resultPickEventMap ::
@@ -442,7 +444,7 @@ resultEventMap config holeInfo (Just (ShownResult eventMap holeResult)) =
 -- search term
 searchTermProperty :: HoleInfo m -> Property (T m) String
 searchTermProperty holeInfo =
-  Property.composeLens hsSearchTerm $ hiState holeInfo
+  Property.composeLens HoleState.hsSearchTerm $ hiState holeInfo
 
 adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap searchTermProp =
