@@ -20,33 +20,39 @@ addToDef ::
   Sugar.Definition name m (Sugar.Expression name m ExprGuiM.Payload) ->
   Sugar.Definition name m (Sugar.Expression name m ExprGuiM.Payload)
 addToDef =
-  (Lens.traversed . Lens.traversed . Sugar.plData %~ snd) .
-  (`evalState` Nothing) . Lens.traversed addNextHoles .
-  (`evalState` Nothing) . Lens.traversed addPrevHoles .
-  (Lens.traversed %~ addJumpToExprMarkers)
+  (Lens.traverse . Lens.traverse . Sugar.plData %~ snd) .
+  (`evalState` Nothing) . Lens.traverse addNextHoles .
+  (`evalState` Nothing) . Lens.traverse addPrevHoles .
+  (Lens.traverse %~ addJumpToExprMarkers)
 
 addToExpr ::
-  MonadA m => Sugar.Expression name m ExprGuiM.Payload -> Sugar.Expression name m ExprGuiM.Payload
+  MonadA m =>
+  Sugar.Expression name m ExprGuiM.Payload ->
+  Sugar.Expression name m ExprGuiM.Payload
 addToExpr =
-  (Lens.traversed . Sugar.plData %~ snd) .
+  (Lens.traverse . Sugar.plData %~ snd) .
   (`evalState` Nothing) . addNextHoles .
   (`evalState` Nothing) . addPrevHoles .
   addJumpToExprMarkers
 
 addNextHoles ::
-  Sugar.Expression name m (Bool, ExprGuiM.Payload) -> State (Maybe Guid) (Sugar.Expression name m (Bool, ExprGuiM.Payload))
-addNextHoles = Lens.backwards Lens.traversed %%~ setGuid ExprGuiM.hgMNextHole
+  Sugar.Expression name m (Bool, ExprGuiM.Payload) ->
+  State (Maybe Guid) (Sugar.Expression name m (Bool, ExprGuiM.Payload))
+addNextHoles = Lens.backwards Lens.traverse %%~ setGuid ExprGuiM.hgMNextHole
 
 addPrevHoles ::
-  Sugar.Expression name m (Bool, ExprGuiM.Payload) -> State (Maybe Guid) (Sugar.Expression name m (Bool, ExprGuiM.Payload))
-addPrevHoles = Lens.traversed %%~ setGuid ExprGuiM.hgMPrevHole
+  Sugar.Expression name m (Bool, ExprGuiM.Payload) ->
+  State (Maybe Guid) (Sugar.Expression name m (Bool, ExprGuiM.Payload))
+addPrevHoles = Lens.traverse %%~ setGuid ExprGuiM.hgMPrevHole
 
 addJumpToExprMarkers ::
-  Sugar.Expression name m ExprGuiM.Payload -> Sugar.Expression name m (Bool, ExprGuiM.Payload)
-addJumpToExprMarkers =
-  (Lens.traversed %~ removeNonStoredMarks) .
-  (jumpToExprPayloads . Lens._1 .~ True) .
-  (Lens.traversed . Sugar.plData %~ (,) False)
+  Sugar.Expression name m ExprGuiM.Payload ->
+  Sugar.Expression name m (Bool, ExprGuiM.Payload)
+addJumpToExprMarkers expr =
+  expr
+  & Lens.traverse . Sugar.plData %~ (,) False
+  & jumpToExprPayloads . Lens._1 .~ True
+  & Lens.traverse %~ removeNonStoredMarks
   where
     removeNonStoredMarks pl =
       case pl ^. Sugar.plActions of
@@ -62,7 +68,7 @@ jumpToExprPayloads f expr =
   Sugar.BodyLam lam
     | lam ^. Sugar.lKind == Sugar.KVal
     -> (Sugar.rBody . Sugar._BodyLam . Sugar.lResultType) (jumpToExprPayloads f) expr
-  _ -> (Sugar.rBody . Lens.traversed) (jumpToExprPayloads f) expr
+  _ -> (Sugar.rBody . Lens.traverse) (jumpToExprPayloads f) expr
   where
     mark = (Sugar.rPayload . Sugar.plData) f expr
 
