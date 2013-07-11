@@ -441,7 +441,7 @@ isCompleteType =
 mkContext ::
   (MonadA m, Typeable1 m) =>
   Anchors.Code (Transaction.MkProperty m) (Tag m) ->
-  InferContext m -> Infer.Context (DefIM m) ->
+  InferContext m -> InferContext m ->
   T m (Context m)
 mkContext cp holeInferContext structureInferState = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp

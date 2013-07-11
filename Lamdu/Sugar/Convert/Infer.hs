@@ -132,7 +132,7 @@ inferWithVariables gen loaded baseInferContext node =
       if not success
       then return Nothing
       else Just <$> do
-        -- success chceked above, guarantees no conflicts:
+        -- success checked above, guarantees no conflicts:
         let asIWC newInferred = InferredWithConflicts newInferred [] []
 
         withStructureExpr <- Structure.add loader (expr <&> Lens._1 %~ iwcInferred)
@@ -150,8 +150,8 @@ inferWithVariables gen loaded baseInferContext node =
 
 data InferredWithImplicits m a = InferredWithImplicits
   { _iwiSuccess :: Bool
-  , _iwiInferContext :: Infer.Context (DefIM m)
-  , _iwiStructureInferContext :: Infer.Context (DefIM m)
+  , _iwiInferContext :: InferContext m
+  , _iwiStructureInferContext :: InferContext m
   , _iwiExpr :: ExprIRef.ExpressionM m (Sugar.InputPayloadP (InferredWC m) (Maybe (Stored m)) a)
   -- Prior to adding variables
   , _iwiBaseInferContext :: InferContext m
@@ -160,21 +160,24 @@ data InferredWithImplicits m a = InferredWithImplicits
 Lens.makeLenses ''InferredWithImplicits
 
 inferAddImplicits ::
-  (RandomGen g, MonadA m, Typeable (m ())) => g ->
+  (RandomGen g, MonadA m, Typeable1 m, Typeable (m ())) => g ->
   Maybe (DefIM m) ->
   ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m)) ->
   InferContext m -> Infer.Node (DefIM m) -> CT m (InferredWithImplicits m ())
 inferAddImplicits gen mDefI lExpr (InferContext inferContext inferContextKey) node = do
   loaded <- lift $ load mDefI lExpr
+  let inputKey = Cache.bsOfKey (loaded, inferContextKey, node)
   ((baseContext, expr), mWithVariables) <-
-    memoBy "inferAddImplicits" (loaded, inferContextKey, node) $
     inferWithVariables gen loaded inferContext node
+    & memoBy "inferAddImplicits" inputKey
+    <&> Lens._1 . Lens._1 %~ (InferContext ?? Cache.bsOfKey ("base", inputKey))
+    <&> Lens._2 . Lens._Just . Lens._1 %~ (InferContext ?? Cache.bsOfKey ("withStructure", inputKey))
+    <&> Lens._2 . Lens._Just . Lens._2 %~ (InferContext ?? Cache.bsOfKey ("withVariables", inputKey))
   let baseExpr = mkStoredPayload <$> expr
   return InferredWithImplicits
     { _iwiSuccess = isJust mWithVariables
-    , _iwiBaseInferContext = InferContext baseContext $ Cache.bsOfKey (loaded, inferContextKey)
+    , _iwiBaseInferContext = baseContext
     , _iwiBaseExpr = baseExpr
-
     , _iwiStructureInferContext = maybe baseContext (^. Lens._1) mWithVariables
     , _iwiInferContext = maybe baseContext (^. Lens._2) mWithVariables
     , _iwiExpr =

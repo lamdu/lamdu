@@ -19,14 +19,12 @@ import Data.Map (Map)
 import Data.Monoid (Monoid)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
-import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types.Internal
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Sugar.Types as Sugar
 
 data TagParamInfo = TagParamInfo
@@ -41,7 +39,7 @@ data RecordParamsInfo m = RecordParamsInfo
 
 data Context m = Context
   { _scHoleInferContext :: InferContext m
-  , _scStructureInferState :: Infer.Context (DefIM m)
+  , _scStructureInferState :: InferContext m
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
   , _scTagParamInfos :: Map Guid TagParamInfo -- tag guids
