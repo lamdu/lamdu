@@ -161,47 +161,53 @@ idTranslations convertedExpr writtenExpr =
     showExpr expr = expr & ExprLens.exprDef .~ () & void & show
     tell src dst = Const . ApplicativeMonoid $ Writer.tell [(src, dst)]
 
+mkWritableHoleActions ::
+  (MonadA m, Typeable1 m) =>
+  InputPayloadP (InferredWithConflicts (DefIM m)) (Stored m) () ->
+  ConvertM m (HoleActions MStoredName m)
+mkWritableHoleActions exprPlStored = do
+  sugarContext <- ConvertM.readContext
+  mPaste <- mkPaste $ exprPlStored ^. ipStored
+  globals <-
+    ConvertM.liftTransaction . Transaction.getP . Anchors.globals $
+    sugarContext ^. ConvertM.scCodeAnchors
+  tags <-
+    ConvertM.liftTransaction . Transaction.getP . Anchors.tags $
+    sugarContext ^. ConvertM.scCodeAnchors
+  pure HoleActions
+    { _holePaste = mPaste
+    , _holeScope =
+      mconcat . concat <$> sequence
+      [ mapM (getScopeElement sugarContext) . Map.toList $
+        Infer.iScope inferred
+      , mapM getGlobal globals
+      , mapM getTag tags
+      ]
+    , _holeInferExprType =
+      inferOnTheSide sugarContext . Infer.nScope $
+      Infer.iNode inferred
+    , holeResult = makeHoleResult sugarContext exprPlStored
+    }
+  where
+    inferred = iwcInferred $ exprPlStored ^. ipInferred
+
 mkHole ::
   (MonadA m, Typeable1 m, Monoid a) =>
   InputPayloadP (InferredWC m) (Maybe (Stored m)) a ->
   ConvertM m (Hole MStoredName m (ExpressionU m a))
 mkHole exprPl = do
-  sugarContext <- ConvertM.readContext
-  let
-    mkWritableHoleActions exprPlStored = do
-      mPaste <- mkPaste $ exprPlStored ^. ipStored
-      globals <-
-        ConvertM.liftTransaction . Transaction.getP . Anchors.globals $
-        sugarContext ^. ConvertM.scCodeAnchors
-      tags <-
-        ConvertM.liftTransaction . Transaction.getP . Anchors.tags $
-        sugarContext ^. ConvertM.scCodeAnchors
-      pure HoleActions
-        { _holePaste = mPaste
-        , _holeScope =
-          mconcat . concat <$> sequence
-          [ mapM (getScopeElement sugarContext) . Map.toList $
-            Infer.iScope inferred
-          , mapM getGlobal globals
-          , mapM getTag tags
-          ]
-        , _holeInferExprType = inferOnTheSide sugarContext $ Infer.nScope point
-        , holeResult = makeHoleResult sugarContext exprPlStored
-        }
   mActions <-
     exprPl
     & ipData .~ ()
     & Lens.sequenceOf ipStored
     & traverse mkWritableHoleActions
-  holeInferred <- mkHoleInferred inferred
+  holeInferred <-
+    mkHoleInferred . iwcInferred $ exprPl ^. ipInferred
   pure Hole
     { _holeMActions = mActions
     , _holeMInferred = Just holeInferred
     , _holeMArg = Nothing
     }
-  where
-    point = Infer.iNode inferred
-    inferred = iwcInferred $ exprPl ^. ipInferred
 
 mkHoleInferred ::
   MonadA m =>
