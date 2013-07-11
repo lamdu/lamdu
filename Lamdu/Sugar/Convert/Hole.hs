@@ -195,13 +195,17 @@ mkHole exprPl = do
     & Lens.sequenceOf ipStored
     & traverse mkWritableHoleActions
   let
+    inferredValue =
+      Infer.iValue inferred
+      & void
+      & ExprLens.lambdaParamTypes .~ ExprUtil.pureHole
     makeConverted gen =
-      ConvertM.run sugarContext . ConvertM.convertSubexpression .
-      InputExpr.makePure gen . void $ Infer.iValue inferred
+      ConvertM.run sugarContext . ConvertM.convertSubexpression $
+      InputExpr.makePure gen inferredValue
   pure Hole
     { _holeMActions = mActions
     , _holeMInferred = Just HoleInferred
-      { _hiInferredValue = void $ Infer.iValue inferred
+      { _hiInferredValue = inferredValue
       , _hiInferredType = void $ Infer.iType inferred
       , _hiMakeConverted = makeConverted
       }

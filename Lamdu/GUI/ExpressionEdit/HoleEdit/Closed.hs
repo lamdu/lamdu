@@ -11,7 +11,7 @@ import Control.MonadA (MonadA)
 import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (makeBackground, diveIntoHole, inferredValue)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (makeBackground, diveIntoHole)
 import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import System.Random.Utils (genFromHashable)
@@ -117,7 +117,7 @@ makeInferred inferred pl myId = do
   where
     fullyInferred =
       Lens.nullOf (Lens.folding ExprUtil.subExpressions . ExprLens.exprHole) $
-      inferredValue inferred
+      inferred ^. Sugar.hiInferredValue
     -- gen needs to be compatible with the one from Sugar.Convert.Hole
     -- for the hole results, for smooth animation between inferred
     -- pure val and the hole result:
