@@ -44,7 +44,7 @@ make hole pl myId = do
       lift $ (,) myId <$> makeWrapper arg myId
     justToLeft $ do
       inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
-      guard . Lens.nullOf ExprLens.exprHole . Infer.iValue $ Sugar.hiInferred inferred
+      guard . Lens.nullOf ExprLens.exprHole . Infer.iValue $ inferred ^. Sugar.hiInferred
       lift $ makeInferred inferred pl myId
     lift $ (,) (diveIntoHole myId) <$> makeSimple myId
   exprEventMap <- ExprEventMap.make [] pl
@@ -100,7 +100,7 @@ makeInferred inferred pl myId = do
     iVal
     & InputExpr.makePure gen
     & Sugar.runConvert (pl ^. Sugar.plConvertInContext)
-      (Sugar.hiContext inferred)
+      (inferred ^. Sugar.hiContext)
     & ExprGuiM.liftMemoT
     <&> Lens.mapped . Lens.mapped .~ emptyPl
     >>= ExprGuiM.makeSubexpression 0

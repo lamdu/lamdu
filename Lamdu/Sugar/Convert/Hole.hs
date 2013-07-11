@@ -195,8 +195,8 @@ mkHole exprPl = do
   pure Hole
     { _holeMActions = mActions
     , _holeMInferred = Just HoleInferred
-      { hiInferred = iwcInferred $ exprPl ^. ipInferred
-      , hiContext = sugarContext ^. ConvertM.scHoleInferContext
+      { _hiInferred = iwcInferred $ exprPl ^. ipInferred
+      , _hiContext = sugarContext ^. ConvertM.scHoleInferContext
       }
     , _holeMArg = Nothing
     }

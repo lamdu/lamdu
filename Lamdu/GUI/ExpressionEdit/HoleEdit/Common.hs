@@ -36,4 +36,4 @@ diveIntoHole = FocusDelegator.delegatingId
 inferredValue :: Sugar.HoleInferred m -> ExpressionM m ()
 inferredValue =
   (ExprLens.lambdaParamTypes .~ ExprUtil.pureHole) .
-  void . Infer.iValue . Sugar.hiInferred
+  void . Infer.iValue . (^. Sugar.hiInferred)

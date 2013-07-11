@@ -47,7 +47,7 @@ module Lamdu.Sugar.Types
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpType, fpMActions
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
   , HoleArg(..), haExpr, haExprPresugared, haUnwrap
-  , HoleInferred(..)
+  , HoleInferred(..), hiContext, hiInferred
   , Hole(..)
     , holeMActions, holeMArg, holeMInferred
   , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
@@ -251,8 +251,8 @@ data HoleArg m expr = HoleArg
   } deriving (Functor, Foldable, Traversable)
 
 data HoleInferred m = HoleInferred
-  { hiContext :: InferContext m
-  , hiInferred :: Infer.Inferred (DefIM m)
+  { _hiContext :: InferContext m
+  , _hiInferred :: Infer.Inferred (DefIM m)
   }
 
 data Hole name m expr = Hole
@@ -476,6 +476,7 @@ Lens.makeLenses ''GetVar
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg
+Lens.makeLenses ''HoleInferred
 Lens.makeLenses ''HoleResult
 Lens.makeLenses ''Lam
 Lens.makeLenses ''ListItem
