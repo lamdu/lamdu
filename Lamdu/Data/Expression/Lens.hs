@@ -219,7 +219,7 @@ lambdaParamTypes :: Lens.Traversal' (Expression def a) (Expression def a)
 lambdaParamTypes f =
   eBody $
   traverse go
-  & Lens.outside (bodyKindedLam KVal) .~ fmap (bodyKindedLam KVal #) . onLambda
+  & Lens.outside (bodyKindedLam KVal) .~ fmap (bodyKindedLam KVal # ) . onLambda
   where
     go = lambdaParamTypes f
     onLambda (paramId, paramType, body) =

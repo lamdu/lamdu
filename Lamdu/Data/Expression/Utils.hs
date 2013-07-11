@@ -184,9 +184,9 @@ structureForType =
   (eBody %~) $
   const (ExprLens.bodyHole # ())
   & Lens.outside (ExprLens.bodyKindedRecordFields KType) .~
-    (ExprLens.bodyKindedRecordFields KVal #) . (traverse . Lens._2 %~ structureForType)
+    (ExprLens.bodyKindedRecordFields KVal # ) . (traverse . Lens._2 %~ structureForType)
   & Lens.outside (ExprLens.bodyKindedLam KType) .~
-    (ExprLens.bodyKindedLam KVal #) . (Lens._3 %~ structureForType)
+    (ExprLens.bodyKindedLam KVal # ) . (Lens._3 %~ structureForType)
 
 randomizeExprAndParams :: (RandomGen gen, Random r) => gen -> Expression def (r -> a) -> Expression def a
 randomizeExprAndParams gen = randomizeParamIds paramGen . randomizeExpr exprGen
