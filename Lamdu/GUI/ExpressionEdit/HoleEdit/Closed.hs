@@ -51,7 +51,7 @@ make hole pl myId = do
   inactive <-
     ExpressionGui.addInferredTypes pl rawInactive
     <&> ExpressionGui.egWidget %~
-        Widget.weakerEvents (mappend openEventMap exprEventMap)
+        Widget.strongerEvents (mappend openEventMap exprEventMap)
   return (destId, inactive)
   where
     openEventMap =
