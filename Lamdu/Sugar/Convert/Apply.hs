@@ -217,6 +217,7 @@ convertAppliedHole funcI rawArgS argI exprPl = do
         { _haExpr =
           rawArgS
           & rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
+          & rPayload . plActions . Lens._Just . mSetToHole .~ Nothing
         , _haExprPresugared =
           flip (,) () . fmap (StorePoint . Property.value) .
           (^. ipStored) <$> argI
