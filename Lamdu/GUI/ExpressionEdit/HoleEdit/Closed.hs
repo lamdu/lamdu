@@ -42,7 +42,7 @@ make hole pl myId = do
       lift $ (,) myId <$> makeWrapper arg myId
     justToLeft $ do
       inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
-      guard . Lens.nullOf ExprLens.exprHole $ inferred ^. Sugar.hiInferredValue
+      guard . Lens.nullOf ExprLens.exprHole $ inferred ^. Sugar.hiValue
       lift $ makeInferred inferred pl myId
     lift $ (,) (diveIntoHole myId) <$> makeSimple myId
   exprEventMap <- ExprEventMap.make [] pl
@@ -117,7 +117,7 @@ makeInferred inferred pl myId = do
   where
     fullyInferred =
       Lens.nullOf (Lens.folding ExprUtil.subExpressions . ExprLens.exprHole) $
-      inferred ^. Sugar.hiInferredValue
+      inferred ^. Sugar.hiValue
     -- gen needs to be compatible with the one from Sugar.Convert.Hole
     -- for the hole results, for smooth animation between inferred
     -- pure val and the hole result:
