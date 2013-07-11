@@ -14,6 +14,7 @@ import Control.Monad.Trans.Writer (execWriter)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Maybe (listToMaybe)
+import Data.Maybe.Utils(unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Monoid.Applicative (ApplicativeMonoid(..))
 import Data.Store.Guid (Guid)
@@ -46,7 +47,6 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import qualified Lamdu.Sugar.InputExpr as InputExpr
 import qualified System.Random as Random
 
 convert ::
@@ -210,22 +210,38 @@ mkHole exprPl = do
     }
 
 mkHoleInferred ::
-  MonadA m =>
+  (Typeable1 m, MonadA m) =>
   Infer.Inferred (DefIM m) ->
   ConvertM m (HoleInferred MStoredName m)
 mkHoleInferred inferred = do
   sugarContext <- ConvertM.readContext
+  (inferredIVal, newCtx) <-
+    SugarInfer.memoLoadInfer Nothing iVal point
+    & (`runStateT` (sugarContext ^. ConvertM.scWithVarsInferContext))
+    & runMaybeT
+    <&> unsafeUnjust "Inference on inferred val must succeed"
+    & ConvertM.liftCTransaction
   let
     mkConverted gen =
-      ConvertM.run sugarContext . ConvertM.convertSubexpression $
-      InputExpr.makePure gen inferredValue
+      inferredIVal
+      <&> mkInputPayload
+      & ExprUtil.randomizeExprAndParams gen
+      & ConvertM.convertSubexpression
+      & ConvertM.run (sugarContext & ConvertM.scInferContexts .~ newCtx)
   pure HoleInferred
-    { _hiValue = inferredValue
+    { _hiValue = iVal
     , _hiType = void $ Infer.iType inferred
     , _hiMakeConverted = mkConverted
     }
   where
-    inferredValue =
+    point = Infer.iNode inferred
+    mkInputPayload (i, x) guid = InputPayload
+      { _ipGuid = guid
+      , _ipInferred = Just $ InferredWithConflicts i [] []
+      , _ipStored = Nothing
+      , _ipData = x
+      }
+    iVal =
       Infer.iValue inferred
       & void
       & ExprLens.lambdaParamTypes .~ ExprUtil.pureHole
@@ -387,10 +403,7 @@ writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
     consistentExpr =
       ExprUtil.randomizeExprAndParams gen $
       makeConsistentPayload <$> writtenExpr
-    newSugarContext =
-      sugarContext
-      & ConvertM.scHoleInferContext .~ newCtx
-      & ConvertM.scStructureInferContext .~ newCtx
+    newSugarContext = sugarContext & ConvertM.scInferContexts .~ newCtx
   converted <-
     ConvertM.run newSugarContext . ConvertM.convertSubexpression $
     consistentExpr

@@ -27,6 +27,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
@@ -98,6 +99,7 @@ makeInferred inferred pl myId = do
     (inferred ^. Sugar.hiMakeConverted) gen
     & ExprGuiM.liftMemoT
     <&> Lens.mapped . Lens.mapped .~ emptyPl
+    <&> SugarRemoveTypes.holeResultTypes
     >>= ExprGuiM.makeSubexpression 0
     >>= ExpressionGui.egWidget %%~
         makeFocusable myId .

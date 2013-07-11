@@ -1,8 +1,9 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Monad
   ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
   , scHoleInferContext, scStructureInferContext, scWithVarsInferContext
   , scCodeAnchors, scSpecialFunctions, scTagParamInfos, scRecordParamsInfos
+  , scInferContexts
   , ConvertM(..), run
   , readContext, liftCTransaction, liftTransaction, local
   , codeAnchor
@@ -10,7 +11,7 @@ module Lamdu.Sugar.Convert.Monad
   , convertSubexpression
   ) where
 
-import Control.Applicative (Applicative, (<$>))
+import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens ((^.))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -47,6 +48,20 @@ data Context m = Context
   , _scRecordParamsInfos :: Map Guid (RecordParamsInfo m) -- param guids
   , scConvertSubexpression :: forall a. Monoid a => Sugar.InputExpr m a -> ConvertM m (ExpressionU m a)
   }
+
+scInferContexts :: Lens.Traversal' (Context m) (InferContext m)
+scInferContexts f ctx@Context{..} =
+  newCtx
+  <$> f _scHoleInferContext
+  <*> f _scStructureInferContext
+  <*> f _scWithVarsInferContext
+  where
+    newCtx holeInferContext structureInferContext withVarsInferContext =
+      ctx
+      { _scHoleInferContext = holeInferContext
+      , _scStructureInferContext = structureInferContext
+      , _scWithVarsInferContext = withVarsInferContext
+      }
 
 newtype ConvertM m a = ConvertM (ReaderT (Context m) (CT m) a)
   deriving (Functor, Applicative, Monad)
