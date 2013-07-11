@@ -26,7 +26,7 @@ module Lamdu.Sugar.Types
   , DefinitionN, DefinitionU
   , Expression, ExpressionN
   , BodyN
-  , WhereItem(..), wiValue, wiGuid, wiName, wiActions
+  , WhereItem(..), wiValue, wiGuid, wiName, wiActions, wiInferredType
   , ListItem(..), liMActions, liExpr
   , ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
@@ -42,7 +42,7 @@ module Lamdu.Sugar.Types
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
   , Lam(..), lKind, lParam, lIsDep, lResultType
   , FuncParamType(..)
-  , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpType, fpMActions
+  , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpType, fpInferredType, fpMActions
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
   , HoleArg(..), haExpr, haExprPresugared, haUnwrap
   , HoleInferred(..), hiBaseValue, hiWithVarsValue, hiType, hiMakeConverted
@@ -179,6 +179,7 @@ data FuncParam name m expr = FuncParam
   , _fpVarKind :: FuncParamType
   , _fpName :: name
   , _fpType :: expr
+  , _fpInferredType :: ExprIRef.ExpressionM m ()
   , _fpMActions :: Maybe (FuncParamActions name m)
   } deriving (Functor, Foldable, Traversable)
 
@@ -397,6 +398,7 @@ instance Show expr => Show (Body name m expr) where
 
 data WhereItem name m expr = WhereItem
   { _wiValue :: DefinitionContent name m expr
+  , _wiInferredType :: ExprIRef.ExpressionM m ()
   , _wiGuid :: Guid
   , _wiName :: name
   , _wiActions :: Maybe (ListItemActions m)

@@ -30,6 +30,7 @@ module Lamdu.Data.Expression.Utils
   , isTypeConstructorType
   , addExpressionContexts
   , addBodyContexts
+  , PiWrappers(..), getPiWrappers
   ) where
 
 import Prelude hiding (pi)
@@ -92,7 +93,6 @@ onNgMakeName onMakeName =
             ngSplit nameGen
             & Lens.both %~ go
           }
-
 
 getPiWrappers :: Expression def a -> PiWrappers def a
 getPiWrappers expr =

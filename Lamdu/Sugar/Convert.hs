@@ -123,6 +123,12 @@ addFuncParamName fp = do
   name <- getStoredNameS $ fp ^. fpGuid
   pure fp { _fpName = name }
 
+getInferredVal :: InputExpr m a -> ExprIRef.ExpressionM m ()
+getInferredVal x =
+  x ^. Expr.ePayload . ipInferred
+  <&> void . Infer.iValue . iwcInferred
+  & fromMaybe ExprUtil.pureHole
+
 convertPositionalFuncParam ::
   (Typeable1 m, MonadA m, Monoid a) => Expr.Lam (InputExpr m a) ->
   InputPayload m a ->
@@ -135,8 +141,8 @@ convertPositionalFuncParam (Expr.Lam _k paramGuid paramType body) lamExprPl = do
     , _fpVarKind = FuncParameter
     , _fpId = Guid.combine lamGuid paramGuid
     , _fpAltIds = [paramGuid] -- For easy jumpTo
-    , _fpType =
-      SugarRemoveTypes.successfulType paramTypeS
+    , _fpType = SugarRemoveTypes.successfulType paramTypeS
+    , _fpInferredType = getInferredVal paramType
     , _fpMActions =
       mkPositionalFuncParamActions paramGuid
       <$> lamExprPl ^. ipStored
@@ -524,6 +530,7 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
         , _fpAltIds = [tagExprGuid]
         , _fpVarKind = FuncFieldParameter
         , _fpType = SugarRemoveTypes.successfulType typeS
+        , _fpInferredType = getInferredVal $ fpFieldType fp
         , _fpMActions =
           fpActions tagExprGuid
           <$> mLambdaP <*> mParamTypeI <*> mBodyStored
@@ -744,14 +751,15 @@ emptyConventionalParams stored = ConventionalParams
   , cpHiddenPayloads = []
   }
 
-data ExprWhereItem def a = ExprWhereItem
-  { ewiBody :: Expr.Expression def a
+data ExprWhereItem m a = ExprWhereItem
+  { ewiBody :: ExprIRef.ExpressionM m a
   , ewiParamGuid :: Guid
-  , ewiArg :: Expr.Expression def a
+  , ewiArg :: ExprIRef.ExpressionM m a
   , ewiHiddenPayloads :: [a]
+  , ewiInferredType :: ExprIRef.ExpressionM m ()
   }
 
-mExtractWhere :: Expr.Expression def a -> Maybe (ExprWhereItem def a)
+mExtractWhere :: InputExpr m a -> Maybe (ExprWhereItem m (InputPayload m a))
 mExtractWhere expr = do
   Expr.Apply func arg <- expr ^? ExprLens.exprApply
   (paramGuid, paramType, body) <- func ^? ExprLens.exprKindedLam KVal
@@ -762,6 +770,7 @@ mExtractWhere expr = do
     , ewiParamGuid = paramGuid
     , ewiArg = arg
     , ewiHiddenPayloads = (^. Expr.ePayload) <$> [expr, func, paramType]
+    , ewiInferredType = getInferredVal paramType
     }
 
 convertWhereItems ::
@@ -801,6 +810,7 @@ convertWhereItems usedTags expr =
             expr ^. SugarInfer.exprStored <*>
             traverse (^. ipStored) (ewiBody ewi)
         , _wiName = name
+        , _wiInferredType = ewiInferredType ewi
         }
     (nextItems, whereBody) <- convertWhereItems usedTags $ ewiBody ewi
     return (item : nextItems, whereBody)
