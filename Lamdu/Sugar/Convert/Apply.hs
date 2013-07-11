@@ -33,7 +33,7 @@ import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Sugar.Convert.Expression as SugarExpr
+import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.List as ConvertList
@@ -101,7 +101,7 @@ convertLabeled funcS argS argI exprPl = do
     , _aSpecialArgs = specialArgs
     , _aAnnotatedArgs = annotatedArgs
     }
-    & lift . SugarExpr.make exprPl
+    & lift . ConvertExpr.make exprPl
     <&> rPayload %~
       ( plData <>~
         mappend
@@ -137,7 +137,7 @@ makeCollapsed exprPl g compact hasInfo fullExpression =
     & rPayload . plGuid .~ expandedGuid
     & rPayload . plData .~ mempty
   }
-  & SugarExpr.make exprPl
+  & ConvertExpr.make exprPl
   <&> rPayload . plData <>~ fullExpression ^. rPayload . plData
   where
     expandedGuid = Guid.combine (exprPl ^. ipGuid) $ Guid.fromString "polyExpanded"
@@ -159,7 +159,7 @@ convertPrefix funcRef funcI argS argI applyPl
     haveInfo = Lens.nullOf ExprLens.exprHole argI
     makeFullApply = makeApply funcRef
     makeApply f =
-      SugarExpr.make applyPl $ BodyApply Apply
+      ConvertExpr.make applyPl $ BodyApply Apply
       { _aFunc = f
       , _aSpecialArgs = ObjectArg argS
       , _aAnnotatedArgs = []
@@ -205,7 +205,7 @@ convertAppliedHole ::
   (MonadA m, Typeable1 m, Monoid a) =>
   InputExpr m a -> ExpressionU m a -> InputExpr m a -> InputPayload m a ->
   MaybeT (SugarM m) (ExpressionU m a)
-convertAppliedHole funcI rawArgS argI exprPl = do
+convertAppliedHole funcI argS argI exprPl = do
   guard $ Lens.has ExprLens.exprHole funcI
   lift $ do
     isTypeMatch <-
@@ -215,7 +215,7 @@ convertAppliedHole funcI rawArgS argI exprPl = do
     let
       holeArg = HoleArg
         { _haExpr =
-          rawArgS
+          argS
           & rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
           & rPayload . plActions . Lens._Just . mSetToHole .~ Nothing
         , _haExprPresugared =

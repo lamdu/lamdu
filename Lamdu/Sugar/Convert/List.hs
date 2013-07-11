@@ -24,7 +24,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Sugar.Convert.Expression as SugarExpr
+import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as SugarM
 
@@ -55,7 +55,7 @@ nil app@(Expr.Apply funcI _) exprPl = do
   guard $
     Lens.anyOf ExprLens.exprDefinitionRef
     (== Anchors.sfNil specialFunctions) funcI
-  (lift . SugarExpr.make exprPl . BodyList)
+  (lift . ConvertExpr.make exprPl . BodyList)
     List
     { lValues = []
     , lMActions = mkListActions <$> exprPl ^. ipStored
@@ -161,5 +161,5 @@ cons (Expr.Apply funcI argI) argS exprPl = do
         { addFirstItem = mkListAddFirstItem specialFunctions exprS
         , replaceNil = replaceNil innerListActions
         }
-  lift . SugarExpr.make exprPl . BodyList $
+  lift . ConvertExpr.make exprPl . BodyList $
     List (listItem : innerValues) mListActions nilGuid

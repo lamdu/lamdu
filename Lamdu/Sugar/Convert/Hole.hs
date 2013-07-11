@@ -43,7 +43,7 @@ import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Sugar.Convert.Expression as SugarExpr
+import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as SugarM
 import qualified System.Random as Random
@@ -62,7 +62,7 @@ convertPlain exprPl =
   maybe convertUntypedHole convertPlainTyped (Lens.sequenceOf ipInferred exprPl)
   where
     convertUntypedHole =
-      SugarExpr.make exprPl $ BodyHole Hole
+      ConvertExpr.make exprPl $ BodyHole Hole
       { _holeMActions = Nothing
       , _holeMInferred = Nothing
       , _holeMArg = Nothing
@@ -161,7 +161,7 @@ convertPlainTyped ::
   InputPayloadP (InferredWC m) (Maybe (Stored m)) a ->
   SugarM m (ExpressionU m a)
 convertPlainTyped exprPl =
-  SugarExpr.make (exprPl & ipInferred %~ Just) .
+  ConvertExpr.make (exprPl & ipInferred %~ Just) .
   BodyHole =<< mkHole exprPl
 
 mkHole ::
@@ -243,7 +243,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
     mkGetPar =
       case Map.lookup parGuid recordParamsMap of
       Just (SugarM.RecordParamsInfo defGuid jumpTo) -> do
-        defName <- SugarExpr.getStoredName defGuid
+        defName <- ConvertExpr.getStoredName defGuid
         pure mempty
           { _scopeGetParams = [
             ( GetParams
@@ -254,7 +254,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
             , getParam )
           ] }
       Nothing -> do
-        parName <- SugarExpr.getStoredName parGuid
+        parName <- ConvertExpr.getStoredName parGuid
         pure mempty
           { _scopeLocals = [
             ( GetVar
@@ -270,7 +270,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
     exprTag = ExprUtil.pureExpression . Expr.BodyLeaf . Expr.Tag
     getParam = ExprLens.pureExpr . ExprLens.bodyParameterRef # parGuid
     onScopeField tGuid = do
-      name <- SugarExpr.getStoredName tGuid
+      name <- ConvertExpr.getStoredName tGuid
       pure mempty
         { _scopeLocals = [
           ( GetVar
@@ -286,7 +286,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
 
 getGlobal :: MonadA m => DefIM m -> T m (Scope MStoredName m)
 getGlobal defI = do
-  name <- SugarExpr.getStoredName guid
+  name <- ConvertExpr.getStoredName guid
   pure mempty
     { _scopeGlobals = [
       ( GetVar
@@ -304,7 +304,7 @@ getGlobal defI = do
 
 getTag :: MonadA m => Guid -> T m (Scope MStoredName m)
 getTag guid = do
-  name <- SugarExpr.getStoredName guid
+  name <- ConvertExpr.getStoredName guid
   pure mempty
     { _scopeTags = [
       ( TagG

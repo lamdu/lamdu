@@ -42,9 +42,9 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Load as Load
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Sugar.Convert.Apply as Apply
-import qualified Lamdu.Sugar.Convert.Expression as SugarExpr
-import qualified Lamdu.Sugar.Convert.Hole as Hole
+import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
+import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
+import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as SugarM
 import qualified Lamdu.Sugar.InputExpr as InputExpr
@@ -115,7 +115,7 @@ mkPositionalFuncParamActions param lambdaProp body =
   }
 
 getStoredNameS :: MonadA m => Guid -> SugarM m (Maybe String)
-getStoredNameS = SugarM.liftTransaction . SugarExpr.getStoredName
+getStoredNameS = SugarM.liftTransaction . ConvertExpr.getStoredName
 
 addFuncParamName ::
   MonadA m => FuncParam MStoredName f expr ->
@@ -162,7 +162,7 @@ convertLam lam@(Expr.Lam k paramGuid _paramType result) exprPl = do
     , _lKind = k
     , _lIsDep = isDep
     }
-    & SugarExpr.make exprPl
+    & ConvertExpr.make exprPl
     <&> rPayload . plActions . Lens._Just . mSetToInnerExpr .~ do
       guard $ Lens.nullOf ExprLens.exprHole result
       bodyStored <- traverse (^. ipStored) result
@@ -185,14 +185,14 @@ convertParameterRef parGuid exprPl = do
   case Map.lookup parGuid recordParamsMap of
     Just (SugarM.RecordParamsInfo defGuid jumpTo) -> do
       defName <- getStoredNameS defGuid
-      SugarExpr.make exprPl $ BodyGetParams GetParams
+      ConvertExpr.make exprPl $ BodyGetParams GetParams
         { _gpDefGuid = defGuid
         , _gpDefName = defName
         , _gpJumpTo = jumpTo
         }
     Nothing -> do
       parName <- getStoredNameS parGuid
-      SugarExpr.make exprPl .
+      ConvertExpr.make exprPl .
         BodyGetVar $ GetVar
         { _gvName = parName
         , _gvIdentifier = parGuid
@@ -215,7 +215,7 @@ convertGetVariable varRef exprPl = do
     Expr.DefinitionRef defI -> do
       let defGuid = IRef.guid defI
       defName <- getStoredNameS defGuid
-      SugarExpr.make exprPl .
+      ConvertExpr.make exprPl .
         BodyGetVar $ GetVar
         { _gvName = defName
         , _gvIdentifier = defGuid
@@ -227,7 +227,7 @@ convertLiteralInteger ::
   (MonadA m, Typeable1 m) => Integer ->
   InputPayload m a -> SugarM m (ExpressionU m a)
 convertLiteralInteger i exprPl =
-  SugarExpr.make exprPl . BodyLiteralInteger $
+  ConvertExpr.make exprPl . BodyLiteralInteger $
   LiteralInteger
   { liValue = i
   , liSetValue = setValue . Property.value <$> exprPl ^. ipStored
@@ -242,13 +242,13 @@ convertTag ::
   InputPayload m a -> SugarM m (ExpressionU m a)
 convertTag tag exprPl = do
   name <- getStoredNameS tag
-  SugarExpr.make exprPl . BodyTag $ TagG tag name
+  ConvertExpr.make exprPl . BodyTag $ TagG tag name
 
 convertAtom ::
   (MonadA m, Typeable1 m) => String ->
   InputPayload m a -> SugarM m (ExpressionU m a)
 convertAtom str exprPl =
-  SugarExpr.make exprPl $ BodyAtom str
+  ConvertExpr.make exprPl $ BodyAtom str
 
 sideChannel ::
   Monad m =>
@@ -328,7 +328,7 @@ convertRecord ::
   InputPayload m a -> SugarM m (ExpressionU m a)
 convertRecord (Expr.Record k fields) exprPl = do
   sFields <- mapM (convertField (exprPl ^? SugarInfer.plIRef) defaultGuid) fields
-  SugarExpr.make exprPl $ BodyRecord
+  ConvertExpr.make exprPl $ BodyRecord
     Record
     { _rKind = k
     , _rFields =
@@ -373,7 +373,7 @@ convertGetField (Expr.GetField recExpr tagExpr) exprPl = do
     param <- recExpr ^? ExprLens.exprParameterRef
     guard $ param == SugarM.tpiFromParameters paramInfo
     return (tag, SugarM.tpiJumpTo paramInfo)
-  SugarExpr.make exprPl =<<
+  ConvertExpr.make exprPl =<<
     case mVar of
     Just var ->
       return $ BodyGetVar var
@@ -422,13 +422,13 @@ convertExpressionI ee =
   ($ ee ^. Expr.ePayload) $
   case ee ^. Expr.eBody of
   Expr.BodyLam x -> convertLam x
-  Expr.BodyApply x -> Apply.convert x
+  Expr.BodyApply x -> ConvertApply.convert x
   Expr.BodyRecord x -> convertRecord x
   Expr.BodyGetField x -> convertGetField x
   Expr.BodyLeaf (Expr.GetVariable x) -> convertGetVariable x
   Expr.BodyLeaf (Expr.LiteralInteger x) -> convertLiteralInteger x
   Expr.BodyLeaf (Expr.Tag x) -> convertTag x
-  Expr.BodyLeaf Expr.Hole -> Hole.convert
+  Expr.BodyLeaf Expr.Hole -> ConvertHole.convert
   Expr.BodyLeaf Expr.Type -> convertAtom "Type"
   Expr.BodyLeaf Expr.IntegerType -> convertAtom "Int"
   Expr.BodyLeaf Expr.TagType -> convertAtom "Tag"
@@ -874,7 +874,7 @@ convertDefIBuiltin cp (Definition.Builtin name) defI defType =
       }
   where
     defGuid = IRef.guid defI
-    iDefTypeGen = SugarExpr.mkGen 1 3 defGuid
+    iDefTypeGen = ConvertExpr.mkGen 1 3 defGuid
     typeIRef = Property.value (defType ^. Expr.ePayload)
     setName =
       Transaction.writeIRef defI .
@@ -911,8 +911,8 @@ makeTypeInfo cp defI defType inferredType success = do
             }
   where
     conv = convertExpressionPure cp
-    iDefTypeGen = SugarExpr.mkGen 1 3 defGuid
-    iNewTypeGen = SugarExpr.mkGen 2 3 defGuid
+    iDefTypeGen = ConvertExpr.mkGen 1 3 defGuid
+    iNewTypeGen = ConvertExpr.mkGen 2 3 defGuid
     typesMatch = (snd <$> defType) `ExprUtil.alphaEq` inferredType
     defGuid = IRef.guid defI
 
@@ -956,7 +956,7 @@ convertDefIExpression cp exprLoaded defI defType = do
     initialInfer = Infer.initial (Just defI)
     defGuid = IRef.guid defI
     recordParamsInfo = SugarM.RecordParamsInfo defGuid $ jumpToDefI cp defI
-    inferLoadedGen = SugarExpr.mkGen 0 3 defGuid
+    inferLoadedGen = ConvertExpr.mkGen 0 3 defGuid
 
 convertDefI ::
   (MonadA m, Typeable1 m) =>
@@ -968,7 +968,7 @@ convertDefI ::
   CT m (Definition (Maybe String) m (ExpressionU m [Guid]))
 convertDefI cp (Definition.Definition (Definition.Body bodyContent typeLoaded) defI) = do
   bodyS <- convertDefContent bodyContent $ Load.exprPropertyOfClosure <$> typeLoaded
-  name <- lift $ SugarExpr.getStoredName defGuid
+  name <- lift $ ConvertExpr.getStoredName defGuid
   return Definition
     { _drGuid = defGuid
     , _drName = name
