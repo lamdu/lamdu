@@ -196,9 +196,15 @@ randomizeExprAndParams gen = randomizeParamIds paramGen . randomizeExpr exprGen
     (exprGen, paramGen) = Random.split gen
 
 randomizeExpr :: (RandomGen gen, Random r) => gen -> Expression def (r -> a) -> Expression def a
-randomizeExpr gen = (`evalState` gen) . traverse randomize
+randomizeExpr gen (Expression body pl) =
+  (`evalState` gen) $ do
+    r <- state random
+    newBody <- body & traverse %%~ randomizeSubexpr
+    return . Expression newBody $ pl r
   where
-    randomize f = f <$> state random
+    randomizeSubexpr subExpr = do
+      localGen <- state Random.split
+      return $ randomizeExpr localGen subExpr
 
 randomNameGen :: RandomGen g => g -> NameGen dummy
 randomNameGen g = NameGen
