@@ -15,6 +15,7 @@ module Lamdu.Data.Expression.Utils
   , randomizeExpr
   , randomizeParamIds
   , randomizeParamIdsG
+  , randomizeExprAndParams
   , NameGen(..), onNgMakeName
   , randomNameGen, debugNameGen
   , matchBody, matchExpression, matchExpressionG
@@ -188,6 +189,11 @@ structureForType expr =
     ExprLens.pureExpr . ExprLens.bodyKindedLam KVal #
     (paramId, paramType, structureForType resultType)
   _ -> ExprLens.pureExpr . ExprLens.bodyHole # ()
+
+randomizeExprAndParams :: (RandomGen gen, Random r) => gen -> Expression def (r -> a) -> Expression def a
+randomizeExprAndParams gen = randomizeParamIds paramGen . randomizeExpr exprGen
+  where
+    (exprGen, paramGen) = Random.split gen
 
 randomizeExpr :: (RandomGen gen, Random r) => gen -> Expression def (r -> a) -> Expression def a
 randomizeExpr gen = (`evalState` gen) . traverse randomize

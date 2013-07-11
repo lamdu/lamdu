@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Closed
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad (guard)
+import Control.Monad (guard, void)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import Control.MonadA (MonadA)
@@ -98,7 +98,6 @@ makeInferred inferred pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   gui <-
     iVal
-    & Lens.mapped .~ ()
     & InputExpr.makePure gen
     & Sugar.runConvert (pl ^. Sugar.plConvertInContext)
       (Sugar.hiContext inferred)
@@ -122,10 +121,11 @@ makeInferred inferred pl myId = do
       )
   where
     fullyInferred = Lens.nullOf (Lens.folding ExprUtil.subExpressions . ExprLens.exprHole) iVal
-    iVal = Infer.iValue $ Sugar.hiInferred inferred
-    -- TODO: should gen still be compatible with the anim id
-    -- translations of PickedResult? If so, document it here
-    gen = genFromHashable $ pl ^. Sugar.plGuid
+    iVal = void . Infer.iValue $ Sugar.hiInferred inferred
+    -- gen needs to be compatible with the one from Sugar.Convert.Hole
+    -- for the hole results, for smooth animation between inferred
+    -- pure val and the hole result:
+    gen = genFromHashable (pl ^. Sugar.plGuid, show (void iVal))
     emptyPl =
       ExprGuiM.Payload
       { ExprGuiM._plStoredGuids = []

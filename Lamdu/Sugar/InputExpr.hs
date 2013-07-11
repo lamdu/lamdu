@@ -8,7 +8,7 @@ import qualified Lamdu.Data.Expression.Utils as ExprUtil
 -- Not inferred, not stored
 makePure ::
   RandomGen g => g -> ExprIRef.ExpressionM m a -> InputExpr m a
-makePure g =
-  ExprUtil.randomizeExpr g . fmap f
+makePure gen =
+  ExprUtil.randomizeExprAndParams gen . fmap f
   where
     f a guid = InputPayload guid Nothing Nothing a
