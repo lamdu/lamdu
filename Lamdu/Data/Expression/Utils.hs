@@ -19,7 +19,7 @@ module Lamdu.Data.Expression.Utils
   , NameGen(..), onNgMakeName
   , randomNameGen, debugNameGen
   , matchBody, matchExpression, matchExpressionG
-  , subExpressions, subExpressionsWithoutTags
+  , subExpressions, subExpressionsWithout
   , isDependentPi, exprHasGetVar
   , curriedFuncArguments
   , ApplyFormAnnotation(..), applyForms
@@ -327,13 +327,15 @@ subExpressions :: Expression def a -> [Expression def a]
 subExpressions x =
   x : Foldable.concatMap subExpressions (x ^. eBody)
 
-subExpressionsWithoutTags :: Expression def a -> [Expression def a]
-subExpressionsWithoutTags x =
-  x :
-  case x ^. eBody of
-  BodyGetField (GetField record _) -> subExpressionsWithoutTags record
-  BodyRecord (Record _ fields) -> concatMap subExpressionsWithoutTags (map snd fields)
-  body -> Foldable.concatMap subExpressionsWithoutTags body
+subExpressionsWithout ::
+  Lens.Traversal' (Expression def (Bool, a)) (Expression def (Bool, a)) ->
+  Expression def a -> [Expression def a]
+subExpressionsWithout group =
+  map (fmap snd) .
+  filter (fst . (^. ePayload)) .
+  subExpressions .
+  (group . ePayload . Lens._1 .~ False) .
+  fmap ((,) True)
 
 isDependentPi :: Expression def a -> Bool
 isDependentPi =

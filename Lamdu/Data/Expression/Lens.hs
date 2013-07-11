@@ -23,6 +23,7 @@ module Lamdu.Data.Expression.Lens
   , bodyTagType, exprTagType
   , bodyGetVariable, exprGetVariable
   , subTreesThat
+  , tagPositions
   ) where
 
 import Prelude hiding (pi)
@@ -200,3 +201,14 @@ subTreesThat :: (Expression def a -> Bool) -> Lens.Traversal' (Expression def a)
 subTreesThat cond f expr
   | cond expr = f expr
   | otherwise = expr & eBody . Lens.traversed %%~ subTreesThat cond f
+
+-- Expressions in tag positions of Record and GetField.
+-- Not recursive (no tags inside tags), a valid traversal.
+tagPositions :: Lens.Traversal' (Expression def a) (Expression def a)
+tagPositions f =
+  eBody $
+  traverse go
+  & Lens.outside _BodyGetField .~ fmap BodyGetField . getFieldRecord go
+  & Lens.outside _BodyRecord .~ fmap BodyRecord . (recordFields . traverse . Lens._2) go
+  where
+    go = tagPositions f
