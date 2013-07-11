@@ -163,14 +163,12 @@ inferAddImplicits ::
   (RandomGen g, MonadA m, Typeable (m ())) => g ->
   Maybe (DefIM m) ->
   ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m)) ->
-  Cache.KeyBS ->
-  ( Infer.Context (DefIM m)
-  , Infer.Node (DefIM m)
-  ) -> CT m (InferredWithImplicits m ())
-inferAddImplicits gen mDefI lExpr inferContextKey inferState = do
+  InferContext m -> Infer.Node (DefIM m) -> CT m (InferredWithImplicits m ())
+inferAddImplicits gen mDefI lExpr (InferContext inferContext inferContextKey) node = do
   loaded <- lift $ load mDefI lExpr
   ((baseContext, expr), mWithVariables) <-
-    Cache.memoS "inferAddImplicits" uncurriedInfer (loaded, inferState)
+    memoBy "inferAddImplicits" (loaded, inferContextKey, node) $
+    inferWithVariables gen loaded inferContext node
   let baseExpr = mkStoredPayload <$> expr
   return InferredWithImplicits
     { _iwiSuccess = isJust mWithVariables
@@ -184,9 +182,6 @@ inferAddImplicits gen mDefI lExpr inferContextKey inferState = do
       (fmap mkWVPayload . (^. Lens._3)) mWithVariables
     }
   where
-    uncurriedInfer (loaded, (inferContext, inferNode)) =
-      inferWithVariables gen loaded inferContext inferNode
-
     mkStoredPayload (iwc, propClosure) =
       Sugar.InputPayload (ExprIRef.epGuid prop) iwc prop ()
       where

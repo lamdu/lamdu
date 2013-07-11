@@ -2,15 +2,17 @@
 module Lamdu.Sugar.Types.Internal
   ( StorePoint(..), T, CT
   , InferContext(..), icContext, icHashKey
+  , initialInferContext
   , NoInferred(..), InferredWC
   , NoStored(..), Stored
   ) where
 
+import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT)
 import Data.Binary (Binary)
 import Data.Cache (Cache)
 import Data.Store.Transaction (Transaction)
-import Data.Typeable (Typeable)
+import Data.Typeable (Typeable, Typeable1)
 import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..))
 import qualified Control.Lens as Lens
@@ -37,3 +39,10 @@ data InferContext m = InferContext
     -- for cheaper memoization
   }
 Lens.makeLenses ''InferContext
+
+initialInferContext :: Typeable1 m => Maybe (DefIM m) -> (InferContext m, Infer.Node (DefIM m))
+initialInferContext mDefI =
+  Infer.initial mDefI & Lens._1 %~ wrapContext
+  where
+    wrapContext inferContext =
+      InferContext inferContext $ Cache.bsOfKey mDefI

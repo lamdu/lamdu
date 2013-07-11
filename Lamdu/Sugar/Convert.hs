@@ -927,10 +927,8 @@ convertDefIExpression cp exprLoaded defI defType = do
     { SugarInfer._iwiExpr = iwiExpr
     , SugarInfer._iwiSuccess = success
     } <-
-    SugarInfer.inferAddImplicits
-    -- We can use empty string because we always use
-    -- initialInferState, so any key is a unique key
-    inferLoadedGen (Just defI) exprLoaded "" initialInfer
+    SugarInfer.inferAddImplicits inferLoadedGen (Just defI)
+    exprLoaded initialContext rootNode
   let
     inferredType =
       void . Infer.iType . iwcInferred $ iwiExpr ^. SugarInfer.exprInferred
@@ -953,7 +951,7 @@ convertDefIExpression cp exprLoaded defI defType = do
       , _deTypeInfo = typeInfo
       }
   where
-    initialInfer = Infer.initial (Just defI)
+    (initialContext, rootNode) = initialInferContext $ Just defI
     defGuid = IRef.guid defI
     recordParamsInfo = ConvertM.RecordParamsInfo defGuid $ jumpToDefI cp defI
     inferLoadedGen = ConvertExpr.mkGen 0 3 defGuid
