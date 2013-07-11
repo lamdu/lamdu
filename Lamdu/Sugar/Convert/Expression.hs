@@ -65,7 +65,11 @@ make exprPl body = do
     ) seeds types
   let
     convert inferContext =
-      ConvertM.run (sugarContext & ConvertM.scHoleInferContext .~ inferContext) .
+      ConvertM.run
+      ( sugarContext
+        & ConvertM.scHoleInferContext .~ inferContext
+        & ConvertM.scStructureInferState .~ inferContext
+      ) .
       ConvertM.convertSubexpression
   return $ Expression body Payload
     { _plGuid = exprPl ^. ipGuid

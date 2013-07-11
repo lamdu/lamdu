@@ -361,7 +361,10 @@ writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
     consistentExpr =
       ExprUtil.randomizeExprAndParams gen $
       makeConsistentPayload <$> writtenExpr
-    newSugarContext = sugarContext & ConvertM.scHoleInferContext .~ newCtx
+    newSugarContext =
+      sugarContext
+      & ConvertM.scHoleInferContext .~ newCtx
+      & ConvertM.scStructureInferState .~ newCtx
   converted <-
     ConvertM.run newSugarContext . ConvertM.convertSubexpression $
     consistentExpr
