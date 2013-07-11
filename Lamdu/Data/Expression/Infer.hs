@@ -38,7 +38,8 @@ import Data.Functor.Identity (Identity(..))
 import Data.IntMap (IntMap)
 import Data.IntSet (IntSet)
 import Data.Map (Map)
-import Data.Maybe (isJust, mapMaybe, fromMaybe, fromJust)
+import Data.Maybe (isJust, fromMaybe, fromJust)
+import Data.Maybe.Utils(unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable)
@@ -107,10 +108,8 @@ createRef val = do
   return key
 
 {-# INLINE refsAt #-}
-refsAt :: Functor f => Int -> LensLike' f (RefMap a) a
-refsAt k =
-  refs . Lens.at k .
-  LensUtils._fromJust (unwords ["intMapMod: key", show k, "not in map"])
+refsAt :: Functor f => Int -> LensLike' f (RefMap a) (Maybe a)
+refsAt k = refs . Lens.at k
 -------------- InferActions
 
 data ErrorDetails def
@@ -178,7 +177,9 @@ createRefExpr =
 
 {-# INLINE exprRefsAt #-}
 exprRefsAt :: Functor f => ExprRef -> LensLike' f (Context def) (RefData def)
-exprRefsAt k = exprMap . refsAt (unExprRef k)
+exprRefsAt k =
+  exprMap . refsAt (unExprRef k) .
+  LensUtils._fromJust (unwords ["exprRefsAt: key", show k, "not in map"])
 
 -- RuleRefMap
 
@@ -187,7 +188,9 @@ createRuleRef = fmap RuleRef . Lens.zoom ruleMap . createRef
 
 {-# INLINE ruleRefsAt #-}
 ruleRefsAt :: Functor f => RuleRef -> LensLike' f (Context def) (Rule def ExprRef)
-ruleRefsAt k = ruleMap . refsAt (unRuleRef k)
+ruleRefsAt k =
+  ruleMap . refsAt (unRuleRef k) .
+  LensUtils._fromJust (unwords ["ruleRefsAt: key", show k, "not in map"])
 
 -------------
 
@@ -235,29 +238,39 @@ liftState = InferT
 instance MonadTrans (InferT def) where
   lift = liftState . lift
 
-derefNode :: Context def -> Node def -> Inferred def
+derefNode :: Context def -> Node def -> Maybe (Inferred def)
 derefNode context inferNode =
-  Inferred
-  { iValue = deref . tvVal $ nRefs inferNode
-  , iType = deref . tvType $ nRefs inferNode
-  , iScope =
-    Map.fromList . mapMaybe onScopeElement . Map.toList $ nScope inferNode
-  , iNode = inferNode
-  }
+  mkInferred
+  <$> (deref . tvVal . nRefs) inferNode
+  <*> (deref . tvType . nRefs) inferNode
+  <*> ( nScope inferNode
+        & traverse onScopeElement . Map.toList
+        <&> Map.fromList . concat )
   where
-    onScopeElement (Expr.ParameterRef guid, ref) = Just (guid, deref ref)
-    onScopeElement _ = Nothing
+    mkInferred val typ scope =
+      Inferred
+      { iValue = val
+      , iType = typ
+      , iScope = scope
+      , iNode = inferNode
+      }
+    onScopeElement (Expr.ParameterRef guid, ref) = (: []) . (,) guid <$> deref ref
+    onScopeElement _ = pure []
     toIsRestrictedPoly False = UnrestrictedPoly
     toIsRestrictedPoly True = RestrictedPoly
     deref ref =
-      toIsRestrictedPoly . (^. rplRestrictedPoly . Lens.unwrapped) <$>
-      context ^. exprRefsAt ref . rExpression
+      context ^? exprMap . refsAt (unExprRef ref) . Lens._Just . rExpression
+      <&> Lens.mapped %~
+          toIsRestrictedPoly . (^. rplRestrictedPoly . Lens.unwrapped)
+{-# INLINE derefNode #-}
 
 derefExpr ::
   Expr.Expression def (Node def, a) -> Context def ->
   Expr.Expression def (Inferred def, a)
 derefExpr expr context =
-  expr <&> Lens._1 %~ derefNode context
+  expr <&> Lens._1 %~ unsafeUnjust msg . derefNode context
+  where
+    msg = "derefExpr must be given valid expr/context pair"
 
 getRefExpr :: MonadA m => ExprRef -> InferT def m (RefExpression def)
 getRefExpr ref = liftState $ Lens.use (sContext . exprRefsAt ref . rExpression)
