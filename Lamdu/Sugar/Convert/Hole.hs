@@ -402,22 +402,14 @@ writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
       , _ipData = a
       }
 
-seedHashable :: HoleResultSeed m () -> String
-seedHashable (ResultSeedExpression expr) = show expr
--- TODO: The comment below is probably no longer true/relevant, can
--- just do proper hashing now (probably)
---- We want the new tag to have the same anim ids even as the name
---- changes, thus we ignore the name:
-seedHashable (ResultSeedNewTag _) = "NewTag"
-seedHashable (ResultSeedNewDefinition _) = "NewDefinition"
-
 makeHoleResult ::
   (Typeable1 m, MonadA m, Cache.Key a, Binary a, Monoid a) =>
   SugarM.Context m ->
   InputPayloadP (InferredWC m) (Stored m) () ->
+  Random.StdGen ->
   HoleResultSeed m (MStorePoint m a) ->
   CT m (Maybe (HoleResult MStoredName m a))
-makeHoleResult sugarContext (InputPayload guid iwc stored ()) seed = do
+makeHoleResult sugarContext (InputPayload _guid iwc stored ()) gen seed = do
   ((fMJumpTo, mResult), forkedChanges) <- cachedFork $ do
     (fSeedExpr, fMJumpTo) <- lift $ seedExprEnv (Nothing, mempty) cp seed
     fMInferredExprCtx <-
@@ -431,7 +423,6 @@ makeHoleResult sugarContext (InputPayload guid iwc stored ()) seed = do
 
   traverse (mkResult fMJumpTo (Transaction.merge forkedChanges)) mResult
   where
-    gen = genFromHashable (guid, seedHashable (void seed))
     mkResult fMJumpTo unfork (fConverted, fConsistentExpr, fWrittenExpr) = do
       let
         pick = unfork *> mkPickedResult fMJumpTo fConsistentExpr fWrittenExpr

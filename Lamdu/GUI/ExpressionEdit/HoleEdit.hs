@@ -58,7 +58,8 @@ tryOpenHole hole pl myId = do
   inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
   stateProp <- lift . ExprGuiM.transaction $ HoleState.assocStateRef storedGuid ^. Transaction.mkProperty
   lift $ HoleOpen.make pl HoleInfo
-    { hiStoredGuid = storedGuid
+    { hiPlGuid = pl ^. Sugar.plGuid
+    , hiStoredGuid = storedGuid
     , hiActions = actions
     , hiInferred = inferred
     , hiId = myId

@@ -29,9 +29,10 @@ import Lamdu.Config (Config)
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..), pureHole)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument, hiActiveId)
+import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.Types (Scope(..))
+import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Foldable as Foldable
@@ -47,6 +48,7 @@ import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
+import qualified System.Random as Random
 
 type T = Transaction
 type CT m = StateT Cache (T m)
@@ -129,9 +131,10 @@ prefixId holeInfo = mconcat [hiActiveId holeInfo, WidgetId.Id ["results"]]
 
 typeCheckHoleResult ::
   MonadA m => HoleInfo m ->
+  Random.StdGen ->
   Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl) ->
   CT m (Maybe (ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl))
-typeCheckHoleResult holeInfo seed = do
+typeCheckHoleResult holeInfo gen seed = do
   mGood <- mkHoleResult seed
   case (mGood, seed) of
     (Just good, _) -> pure $ Just (GoodResult, good)
@@ -140,14 +143,18 @@ typeCheckHoleResult holeInfo seed = do
       (mkHoleResult . Sugar.ResultSeedExpression . storePointHoleWrap) expr
     _ -> pure Nothing
   where
-    mkHoleResult = Sugar.holeResult (hiActions holeInfo)
+    mkHoleResult = Sugar.holeResult (hiActions holeInfo) gen
 
 typeCheckResults ::
   MonadA m => HoleInfo m ->
+  (Int -> Random.StdGen) ->
   [Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl)] ->
   CT m [(ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl)]
-typeCheckResults holeInfo options = do
-  rs <- catMaybes <$> traverse (typeCheckHoleResult holeInfo) options
+typeCheckResults holeInfo gen options = do
+  rs <-
+    options
+    & Lens.traversed %%@~ typeCheckHoleResult holeInfo . gen
+    <&> catMaybes
   let (goodResults, badResults) = partition ((== GoodResult) . fst) rs
   return $ sortOn (score . snd) goodResults ++ badResults
   where
@@ -179,12 +186,12 @@ mResultsListOf holeInfo resultInfo baseId (x:xs) = Just
       }
 
 typeCheckToResultsList ::
-  MonadA m => HoleInfo m -> ResultInfo ->
+  MonadA m => HoleInfo m -> (Int -> Random.StdGen) -> ResultInfo ->
   WidgetId.Id -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl)] ->
   CT m (Maybe (ResultsList m))
-typeCheckToResultsList holeInfo resultInfo baseId options =
+typeCheckToResultsList holeInfo gen resultInfo baseId options =
   mResultsListOf holeInfo resultInfo baseId <$>
-  typeCheckResults holeInfo options
+  typeCheckResults holeInfo gen options
 
 baseExprWithApplyForms ::
   MonadA m => HoleInfo m -> ExprIRef.ExpressionM m () ->
@@ -281,11 +288,12 @@ makeResultsList ::
   CT m (Maybe (ResultsList m))
 makeResultsList holeInfo resultInfo group =
   (Lens.mapped . Lens.mapped %~ rlPreferred .~ toPreferred) .
-  typeCheckToResultsList holeInfo resultInfo baseId .
+  typeCheckToResultsList holeInfo gen resultInfo baseId .
   map Sugar.ResultSeedExpression . filter (not . isHoleWrap) =<<
   maybeInjectArgumentExpr holeInfo =<<
   baseExprWithApplyForms holeInfo baseExpr
   where
+    gen i = genFromHashable (hiPlGuid holeInfo, group ^. groupNames, i)
     isHoleWrap = Lens.has (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole)
     toPreferred
       | Lens.anyOf (groupNames . traverse) (== searchTerm) group = Preferred
@@ -300,8 +308,10 @@ makeNewTagResultList ::
 makeNewTagResultList holeInfo
   | null (hiSearchTerm holeInfo) = pure Nothing
   | otherwise =
-      typeCheckToResultsList holeInfo ResultInfoNewTag (WidgetId.Id ["NewTag"]) $
+      typeCheckToResultsList holeInfo gen ResultInfoNewTag (WidgetId.Id ["NewTag"]) $
       maybeInjectArgumentNewTag holeInfo
+  where
+    gen i = genFromHashable (hiPlGuid holeInfo, "New tag" :: String, i)
 
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
 

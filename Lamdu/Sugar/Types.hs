@@ -89,6 +89,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Sugar.Types.Internal as TypesInternal
+import qualified System.Random as Random
 
 data InputPayloadP inferred stored a
   = InputPayload
@@ -233,6 +234,7 @@ data HoleActions name m = HoleActions
   , holeResult ::
       forall a.
       (Binary a, Typeable a, Ord a, Monoid a) =>
+      Random.StdGen -> -- for consistent guids
       HoleResultSeed m (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
       CT m (Maybe (HoleResult name m a))
   , _holePaste :: Maybe (T m Guid)
