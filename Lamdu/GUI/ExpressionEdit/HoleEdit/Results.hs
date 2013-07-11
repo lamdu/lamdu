@@ -372,8 +372,7 @@ makeAllGroups holeInfo = do
     } <- hiActions holeInfo ^. Sugar.holeScope
   let
     allGroups =
-      (inferredGroups ++) .
-      filter (not . ExprUtil.alphaEq iVal . (^. groupBaseExpr)) $
+      (inferredGroups ++) . pruneInferredLike $
       concat
       [ primitiveGroups holeInfo, literalGroups
       , localsGroups, globalsGroups, tagsGroups, getParamsGroups
@@ -392,8 +391,9 @@ makeAllGroups holeInfo = do
       ]
   pure $ holeMatches (^. groupNames) (hiSearchTerm holeInfo) allGroups
   where
+    pruneInferredLike = filter (not . ExprUtil.alphaEq iVal . (^. groupBaseExpr))
     literalGroups = makeLiteralGroups (hiSearchTerm holeInfo)
-    iVal = hiInferred holeInfo ^. Sugar.hiValue
+    iVal = hiInferred holeInfo ^. Sugar.hiBaseValue
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =

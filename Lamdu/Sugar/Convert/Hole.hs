@@ -13,7 +13,7 @@ import Control.Monad.Trans.State (StateT(..), mapStateT)
 import Control.Monad.Trans.Writer (execWriter)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
-import Data.Maybe (listToMaybe)
+import Data.Maybe (listToMaybe, fromMaybe)
 import Data.Maybe.Utils(unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Monoid.Applicative (ApplicativeMonoid(..))
@@ -216,7 +216,7 @@ mkHoleInferred ::
 mkHoleInferred inferred = do
   sugarContext <- ConvertM.readContext
   (inferredIVal, newCtx) <-
-    SugarInfer.memoLoadInfer Nothing iVal point
+    SugarInfer.memoLoadInfer Nothing iVal (Infer.iNode inferred)
     & (`runStateT` (sugarContext ^. ConvertM.scWithVarsInferContext))
     & runMaybeT
     <&> unsafeUnjust "Inference on inferred val must succeed"
@@ -228,22 +228,27 @@ mkHoleInferred inferred = do
       & ExprUtil.randomizeExprAndParams gen
       & ConvertM.convertSubexpression
       & ConvertM.run (sugarContext & ConvertM.scInferContexts .~ newCtx)
+    miValInStructureContext =
+      Infer.iNode inferred
+      & Infer.derefNode (sugarContext ^. ConvertM.scStructureInferContext . icContext)
+      <&> truncatedIValue
   pure HoleInferred
-    { _hiValue = iVal
+    { _hiBaseValue = fromMaybe ExprUtil.pureHole miValInStructureContext
+    , _hiWithVarsValue = iVal
     , _hiType = void $ Infer.iType inferred
     , _hiMakeConverted = mkConverted
     }
   where
-    point = Infer.iNode inferred
     mkInputPayload (i, x) guid = InputPayload
       { _ipGuid = guid
       , _ipInferred = Just $ InferredWithConflicts i [] []
       , _ipStored = Nothing
       , _ipData = x
       }
-    iVal =
-      Infer.iValue inferred
-      & void
+    iVal = truncatedIValue inferred
+    truncatedIValue i =
+      i
+      & void . Infer.iValue
       & ExprLens.lambdaParamTypes .~ ExprUtil.pureHole
 
 inferOnTheSide ::
