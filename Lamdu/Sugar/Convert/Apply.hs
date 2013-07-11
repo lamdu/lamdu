@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Apply
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad (MonadPlus(..), guard)
+import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import Control.Monad.Trans.Maybe (MaybeT(..))
@@ -205,15 +205,18 @@ convertAppliedHole ::
   (MonadA m, Typeable1 m, Monoid a) =>
   InputExpr m a -> ExpressionU m a -> InputExpr m a -> InputPayload m a ->
   MaybeT (SugarM m) (ExpressionU m a)
-convertAppliedHole funcI rawArgS argI exprPl
-  | Lens.has ExprLens.exprHole funcI = lift $ do
+convertAppliedHole funcI rawArgS argI exprPl = do
+  guard $ Lens.has ExprLens.exprHole funcI
+  lift $ do
     isTypeMatch <-
       maybe (return False)
       (typeCheckIdentityAt . Infer.iNode . iwcInferred) $
       funcI ^. SugarInfer.exprInferred
     let
       holeArg = HoleArg
-        { _haExpr = argS
+        { _haExpr =
+          rawArgS
+          & rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
         , _haExprPresugared =
           flip (,) () . fmap (StorePoint . Property.value) .
           (^. ipStored) <$> argI
@@ -230,6 +233,3 @@ convertAppliedHole funcI rawArgS argI exprPl
       <&> rBody . _BodyHole . holeMArg .~ Just holeArg
       <&> rPayload . plData <>~ funcI ^. SugarInfer.exprData
       <&> rPayload . plActions . Lens._Just . wrap .~ WrapperAlready
-  | otherwise = mzero
-  where
-    argS = rawArgS & rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
