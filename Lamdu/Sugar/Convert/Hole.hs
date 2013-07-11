@@ -185,35 +185,44 @@ mkHole exprPl = do
           , mapM getGlobal globals
           , mapM getTag tags
           ]
-        , _holeInferExprType = inferExprType
+        , _holeInferExprType = inferOnTheSide sugarContext $ Infer.nScope point
         , holeResult = makeHoleResult sugarContext exprPlStored
         }
-    inferExprType = inferOnTheSide sugarContext $ Infer.nScope point
   mActions <-
     exprPl
     & ipData .~ ()
     & Lens.sequenceOf ipStored
     & traverse mkWritableHoleActions
-  let
-    inferredValue =
-      Infer.iValue inferred
-      & void
-      & ExprLens.lambdaParamTypes .~ ExprUtil.pureHole
-    makeConverted gen =
-      ConvertM.run sugarContext . ConvertM.convertSubexpression $
-      InputExpr.makePure gen inferredValue
+  holeInferred <- mkHoleInferred inferred
   pure Hole
     { _holeMActions = mActions
-    , _holeMInferred = Just HoleInferred
-      { _hiValue = inferredValue
-      , _hiType = void $ Infer.iType inferred
-      , _hiMakeConverted = makeConverted
-      }
+    , _holeMInferred = Just holeInferred
     , _holeMArg = Nothing
     }
   where
     point = Infer.iNode inferred
     inferred = iwcInferred $ exprPl ^. ipInferred
+
+mkHoleInferred ::
+  MonadA m =>
+  Infer.Inferred (DefIM m) ->
+  ConvertM m (HoleInferred MStoredName m)
+mkHoleInferred inferred = do
+  sugarContext <- ConvertM.readContext
+  let
+    makeConverted gen =
+      ConvertM.run sugarContext . ConvertM.convertSubexpression $
+      InputExpr.makePure gen inferredValue
+  pure HoleInferred
+    { _hiValue = inferredValue
+    , _hiType = void $ Infer.iType inferred
+    , _hiMakeConverted = makeConverted
+    }
+  where
+    inferredValue =
+      Infer.iValue inferred
+      & void
+      & ExprLens.lambdaParamTypes .~ ExprUtil.pureHole
 
 inferOnTheSide ::
   (MonadA m, Typeable1 m) =>
