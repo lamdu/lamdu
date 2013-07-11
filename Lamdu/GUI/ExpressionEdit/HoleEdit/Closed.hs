@@ -19,7 +19,6 @@ import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
@@ -43,7 +42,7 @@ make hole pl myId = do
       lift $ (,) myId <$> makeWrapper arg myId
     justToLeft $ do
       inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
-      guard . Lens.nullOf ExprLens.exprHole . Infer.iValue $ inferred ^. Sugar.hiInferred
+      guard . Lens.nullOf ExprLens.exprHole $ inferred ^. Sugar.hiInferredValue
       lift $ makeInferred inferred pl myId
     lift $ (,) (diveIntoHole myId) <$> makeSimple myId
   exprEventMap <- ExprEventMap.make [] pl

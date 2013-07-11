@@ -201,7 +201,8 @@ mkHole exprPl = do
   pure Hole
     { _holeMActions = mActions
     , _holeMInferred = Just HoleInferred
-      { _hiInferred = inferred
+      { _hiInferredValue = void $ Infer.iValue inferred
+      , _hiInferredType = void $ Infer.iType inferred
       , _hiMakeConverted = makeConverted
       }
     , _holeMArg = Nothing
