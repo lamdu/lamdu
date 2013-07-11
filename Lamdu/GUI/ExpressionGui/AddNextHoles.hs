@@ -21,9 +21,27 @@ addToDef ::
   Sugar.Definition name m (Sugar.Expression name m ExprGuiM.Payload)
 addToDef =
   (Lens.traverse . Lens.traverse . Sugar.plData %~ snd) .
-  (`evalState` Nothing) . Lens.traverse addNextHoles .
-  (`evalState` Nothing) . Lens.traverse addPrevHoles .
+  (`evalState` Nothing) . defExprs addNextHoles .
+  (`evalState` Nothing) . defExprs addPrevHoles .
   (Lens.traverse %~ addJumpToExprMarkers)
+
+-- | The exprs of the Definition that we want to include in the
+-- next/prev hole traversals (e.g: don't include the def's FuncParams)
+defExprs :: Lens.Traversal' (Sugar.Definition name m expr) expr
+defExprs =
+  Sugar.drBody . Sugar._DefinitionBodyExpression .
+  Sugar.deContent . defContentExprs
+
+defContentExprs :: Lens.Traversal' (Sugar.DefinitionContent name m expr) expr
+defContentExprs f defContent =
+  mkDefContent
+  <$> f (defContent ^. Sugar.dBody)
+  <*> (Lens.traverse . Sugar.wiValue . defContentExprs) f (defContent ^. Sugar.dWhereItems)
+  where
+    mkDefContent newBody newWhereItems =
+      defContent
+      & Sugar.dBody .~ newBody
+      & Sugar.dWhereItems .~ newWhereItems
 
 addToExpr ::
   MonadA m =>
