@@ -440,13 +440,14 @@ isCompleteType =
 mkContext ::
   (MonadA m, Typeable1 m) =>
   Anchors.Code (Transaction.MkProperty m) (Tag m) ->
-  InferContext m -> InferContext m ->
+  InferContext m -> InferContext m -> InferContext m ->
   T m (Context m)
-mkContext cp holeInferContext structureInferState = do
+mkContext cp holeInferContext structureInferContext withVarsInferContext = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   return Context
     { _scHoleInferContext = holeInferContext
-    , _scStructureInferContext = structureInferState
+    , _scStructureInferContext = structureInferContext
+    , _scWithVarsInferContext = withVarsInferContext
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
     , _scTagParamInfos = mempty
@@ -460,7 +461,10 @@ convertExpressionPure ::
   ExprIRef.ExpressionM m a -> CT m (ExpressionU m a)
 convertExpressionPure cp gen res = do
   context <-
-    lift $ mkContext cp (err "holeInferContext") (err "structureInferState")
+    lift $ mkContext cp
+    (err "holeInferContext")
+    (err "structureInferContext")
+    (err "withVarsInferContext")
   fmap removeRedundantTypes .
     ConvertM.run context .
     ConvertM.convertSubexpression $
@@ -939,6 +943,7 @@ convertDefIExpression cp exprLoaded defI defType = do
     lift $ mkContext cp
     (ilr ^. SugarInfer.iwiBaseInferContext)
     (ilr ^. SugarInfer.iwiStructureInferContext)
+    (ilr ^. SugarInfer.iwiInferContext)
   ConvertM.run context $ do
     content <-
       iwiExpr
