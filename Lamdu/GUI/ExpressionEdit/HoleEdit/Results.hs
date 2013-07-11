@@ -29,6 +29,7 @@ import Lamdu.Config (Config)
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..), pureHole)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (inferredValue)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument, hiActiveId)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.Types (Scope(..))
@@ -373,7 +374,7 @@ makeAllGroups holeInfo = do
   let
     allGroups =
       (inferredGroups ++) .
-      filter ((/= iVal) . (^. groupBaseExpr)) $
+      filter (not . ExprUtil.alphaEq iVal . (^. groupBaseExpr)) $
       concat
       [ primitiveGroups holeInfo, literalGroups
       , localsGroups, globalsGroups, tagsGroups, getParamsGroups
@@ -393,7 +394,7 @@ makeAllGroups holeInfo = do
   pure $ holeMatches (^. groupNames) (hiSearchTerm holeInfo) allGroups
   where
     literalGroups = makeLiteralGroups (hiSearchTerm holeInfo)
-    iVal = void . Infer.iValue . Sugar.hiInferred $ hiInferred holeInfo
+    iVal = inferredValue $ hiInferred holeInfo
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =

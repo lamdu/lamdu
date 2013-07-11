@@ -24,6 +24,7 @@ module Lamdu.Data.Expression.Lens
   , bodyGetVariable, exprGetVariable
   , subTreesThat
   , tagPositions
+  , lambdaParamTypes
   ) where
 
 import Prelude hiding (pi)
@@ -212,3 +213,14 @@ tagPositions f =
   & Lens.outside _BodyRecord .~ fmap BodyRecord . (recordFields . traverse . Lens._2) go
   where
     go = tagPositions f
+
+-- Lambda param types not including param types inside param types (a valid traversal)
+lambdaParamTypes :: Lens.Traversal' (Expression def a) (Expression def a)
+lambdaParamTypes f =
+  eBody $
+  traverse go
+  & Lens.outside (bodyKindedLam KVal) .~ fmap (bodyKindedLam KVal #) . onLambda
+  where
+    go = lambdaParamTypes f
+    onLambda (paramId, paramType, body) =
+      (,,) paramId <$> f paramType <*> go body
