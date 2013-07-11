@@ -184,7 +184,7 @@ structureForType =
   (eBody %~) $
   const (ExprLens.bodyHole # ())
   & Lens.outside (ExprLens.bodyKindedRecordFields KType) .~
-    (ExprLens.bodyKindedRecordFields KVal #) . (traverse . Lens._2 %~ structureForType) 
+    (ExprLens.bodyKindedRecordFields KVal #) . (traverse . Lens._2 %~ structureForType)
   & Lens.outside (ExprLens.bodyKindedLam KType) .~
     (ExprLens.bodyKindedLam KVal #) . (Lens._3 %~ structureForType)
 
