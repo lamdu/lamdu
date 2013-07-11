@@ -180,15 +180,13 @@ recordValForm paramType =
 structureForType ::
   Expression def () ->
   Expression def ()
-structureForType expr =
-  case expr ^. eBody of
-  BodyRecord (Record KType fields) ->
-    ExprLens.pureExpr . ExprLens.bodyKindedRecordFields KVal #
-    (fields & Lens.traversed . Lens._2 %~ structureForType)
-  BodyLam (Lam KType paramId paramType resultType) ->
-    ExprLens.pureExpr . ExprLens.bodyKindedLam KVal #
-    (paramId, paramType, structureForType resultType)
-  _ -> ExprLens.pureExpr . ExprLens.bodyHole # ()
+structureForType =
+  (eBody %~) $
+  const (ExprLens.bodyHole # ())
+  & Lens.outside (ExprLens.bodyKindedRecordFields KType) .~
+    (ExprLens.bodyKindedRecordFields KVal #) . (traverse . Lens._2 %~ structureForType) 
+  & Lens.outside (ExprLens.bodyKindedLam KType) .~
+    (ExprLens.bodyKindedLam KVal #) . (Lens._3 %~ structureForType)
 
 randomizeExprAndParams :: (RandomGen gen, Random r) => gen -> Expression def (r -> a) -> Expression def a
 randomizeExprAndParams gen = randomizeParamIds paramGen . randomizeExpr exprGen
