@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.Monad
   ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
   , scHoleInferContext, scStructureInferState
   , scCodeAnchors, scSpecialFunctions, scTagParamInfos, scRecordParamsInfos
-  , SugarM(..), run
+  , ConvertM(..), run
   , readContext, liftCTransaction, liftTransaction, local
   , codeAnchor
   , getP
@@ -46,36 +46,36 @@ data Context m = Context
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
   , _scTagParamInfos :: Map Guid TagParamInfo -- tag guids
   , _scRecordParamsInfos :: Map Guid (RecordParamsInfo m) -- param guids
-  , scConvertSubexpression :: forall a. Monoid a => Sugar.InputExpr m a -> SugarM m (ExpressionU m a)
+  , scConvertSubexpression :: forall a. Monoid a => Sugar.InputExpr m a -> ConvertM m (ExpressionU m a)
   }
 
-newtype SugarM m a = SugarM (ReaderT (Context m) (CT m) a)
+newtype ConvertM m a = ConvertM (ReaderT (Context m) (CT m) a)
   deriving (Functor, Applicative, Monad)
 
 Lens.makeLenses ''Context
 
-run :: MonadA m => Context m -> SugarM m a -> CT m a
-run ctx (SugarM action) = runReaderT action ctx
+run :: MonadA m => Context m -> ConvertM m a -> CT m a
+run ctx (ConvertM action) = runReaderT action ctx
 
-readContext :: MonadA m => SugarM m (Context m)
-readContext = SugarM Reader.ask
+readContext :: MonadA m => ConvertM m (Context m)
+readContext = ConvertM Reader.ask
 
-local :: Monad m => (Context m -> Context m) -> SugarM m a -> SugarM m a
-local f (SugarM act) = SugarM $ Reader.local f act
+local :: Monad m => (Context m -> Context m) -> ConvertM m a -> ConvertM m a
+local f (ConvertM act) = ConvertM $ Reader.local f act
 
-liftCTransaction :: MonadA m => CT m a -> SugarM m a
-liftCTransaction = SugarM . lift
+liftCTransaction :: MonadA m => CT m a -> ConvertM m a
+liftCTransaction = ConvertM . lift
 
-liftTransaction :: MonadA m => T m a -> SugarM m a
+liftTransaction :: MonadA m => T m a -> ConvertM m a
 liftTransaction = liftCTransaction . lift
 
-codeAnchor :: MonadA m => (Anchors.CodeProps m -> a) -> SugarM m a
+codeAnchor :: MonadA m => (Anchors.CodeProps m -> a) -> ConvertM m a
 codeAnchor f = f . (^. scCodeAnchors) <$> readContext
 
-getP :: MonadA m => Transaction.MkProperty m a -> SugarM m a
+getP :: MonadA m => Transaction.MkProperty m a -> ConvertM m a
 getP = liftTransaction . Transaction.getP
 
-convertSubexpression :: (MonadA m, Monoid a) => Sugar.InputExpr m a -> SugarM m (ExpressionU m a)
+convertSubexpression :: (MonadA m, Monoid a) => Sugar.InputExpr m a -> ConvertM m (ExpressionU m a)
 convertSubexpression exprI = do
   convertSub <- scConvertSubexpression <$> readContext
   convertSub exprI

@@ -14,7 +14,7 @@ import Data.Monoid (First(..), Monoid(..), (<>))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable1)
-import Lamdu.Sugar.Convert.Monad (SugarM)
+import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
@@ -26,14 +26,14 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
-import qualified Lamdu.Sugar.Convert.Monad as SugarM
+import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 
 convert ::
   (MonadA m, Typeable1 m, Monoid a) =>
   Expr.Apply (InputExpr m a) ->
   ExpressionU m a ->
   InputPayload m a ->
-  MaybeT (SugarM m) (ExpressionU m a)
+  MaybeT (ConvertM m) (ExpressionU m a)
 convert app argS exprPl = leftToJust $ do
   justToLeft $ nil app exprPl
   justToLeft $ cons app argS exprPl
@@ -42,10 +42,10 @@ nil ::
   (Typeable1 m, MonadA m, Monoid a) =>
   Expr.Apply (InputExpr m a) ->
   InputPayload m a ->
-  MaybeT (SugarM m) (ExpressionU m a)
+  MaybeT (ConvertM m) (ExpressionU m a)
 nil app@(Expr.Apply funcI _) exprPl = do
   specialFunctions <-
-    lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
+    lift $ (^. ConvertM.scSpecialFunctions) <$> ConvertM.readContext
   let
     mkListActions exprS =
       ListActions
@@ -139,9 +139,9 @@ getExprHeadTail specialFunctions argI = do
 cons ::
   (Typeable1 m, MonadA m, Monoid a) =>
   Expr.Apply (InputExpr m a) -> ExpressionU m a -> InputPayload m a ->
-  MaybeT (SugarM m) (ExpressionU m a)
+  MaybeT (ConvertM m) (ExpressionU m a)
 cons (Expr.Apply funcI argI) argS exprPl = do
-  specialFunctions <- lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
+  specialFunctions <- lift $ (^. ConvertM.scSpecialFunctions) <$> ConvertM.readContext
   (hidden, headS, tailS) <- getSugaredHeadTail specialFunctions argS
   (_headI, tailI) <- getExprHeadTail specialFunctions argI
   List innerValues innerListMActions nilGuid <- maybeToMPlus $ tailS ^? rBody . _BodyList

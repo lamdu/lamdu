@@ -18,7 +18,7 @@ import Data.Typeable (Typeable1)
 import Lamdu.Data.Anchors (PresentationMode(..))
 import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Data.Expression.Infer.Conflicts (iwcInferred)
-import Lamdu.Sugar.Convert.Monad (SugarM)
+import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
@@ -37,19 +37,19 @@ import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.List as ConvertList
-import qualified Lamdu.Sugar.Convert.Monad as SugarM
+import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 
 convert ::
   (Typeable1 m, MonadA m, Monoid a) =>
   Expr.Apply (InputExpr m a) ->
-  InputPayload m a -> SugarM m (ExpressionU m a)
+  InputPayload m a -> ConvertM m (ExpressionU m a)
 convert app@(Expr.Apply funcI argI) exprPl =
   runMatcherT $ do
-    argS <- lift $ SugarM.convertSubexpression argI
+    argS <- lift $ ConvertM.convertSubexpression argI
     justToLeft $ convertAppliedHole funcI argS argI exprPl
     justToLeft $ ConvertList.convert app argS exprPl
-    funcS <- lift $ SugarM.convertSubexpression funcI
+    funcS <- lift $ ConvertM.convertSubexpression funcI
     justToLeft $ convertLabeled funcS argS argI exprPl
     lift $ convertPrefix funcS funcI argS argI exprPl
 
@@ -62,9 +62,9 @@ indirectDefinitionGuid funcS =
   _ -> Nothing
 
 indirectDefinitionPresentationMode ::
-  MonadA m => ExpressionP name m pl -> SugarM m (Maybe PresentationMode)
+  MonadA m => ExpressionP name m pl -> ConvertM m (Maybe PresentationMode)
 indirectDefinitionPresentationMode =
-  traverse (SugarM.getP . Anchors.assocPresentationMode) .
+  traverse (ConvertM.getP . Anchors.assocPresentationMode) .
   indirectDefinitionGuid
 
 noRepetitions :: Ord a => [a] -> Bool
@@ -73,7 +73,7 @@ noRepetitions x = length x == Set.size (Set.fromList x)
 convertLabeled ::
   (MonadA m, Typeable1 m, Monoid a) =>
   ExpressionU m a -> ExpressionU m a -> InputExpr m a -> InputPayload m a ->
-  MaybeT (SugarM m) (ExpressionU m a)
+  MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled funcS argS argI exprPl = do
   Record KVal fields <- maybeToMPlus $ argS ^? rBody . _BodyRecord
   let
@@ -125,7 +125,7 @@ makeCollapsed ::
   (MonadA m, Typeable1 m, Monoid a) =>
   InputPayload m a ->
   Guid -> GetVar MStoredName m -> Bool ->
-  ExpressionU m a -> SugarM m (ExpressionU m a)
+  ExpressionU m a -> ConvertM m (ExpressionU m a)
 makeCollapsed exprPl g compact hasInfo fullExpression =
   BodyCollapsed Collapsed
   { _cFuncGuid = g
@@ -145,7 +145,7 @@ makeCollapsed exprPl g compact hasInfo fullExpression =
 convertPrefix ::
   (MonadA m, Typeable1 m, Monoid a) =>
   ExpressionU m a -> InputExpr m a -> ExpressionU m a ->
-  InputExpr m a -> InputPayload m a -> SugarM m (ExpressionU m a)
+  InputExpr m a -> InputPayload m a -> ConvertM m (ExpressionU m a)
 convertPrefix funcRef funcI argS argI applyPl
   | SugarInfer.isPolymorphicFunc $ funcI ^. Expr.ePayload =
     case funcRef ^. rBody of
@@ -167,12 +167,12 @@ convertPrefix funcRef funcI argS argI applyPl
 
 typeCheckIdentityAt ::
   (MonadA m, Typeable1 m) =>
-  Infer.Node (DefIM m) -> SugarM m Bool
+  Infer.Node (DefIM m) -> ConvertM m Bool
 typeCheckIdentityAt point = do
-  sugarContext <- SugarM.readContext
-  SugarM.liftCTransaction $
+  sugarContext <- ConvertM.readContext
+  ConvertM.liftCTransaction $
     Lens.has Lens._Just <$>
-    (runMaybeT . (`runStateT` (sugarContext ^. SugarM.scHoleInferContext)))
+    (runMaybeT . (`runStateT` (sugarContext ^. ConvertM.scHoleInferContext)))
     (SugarInfer.memoLoadInfer Nothing identityFunc point)
   where
     identityFunc =
@@ -204,7 +204,7 @@ unwrap outerP argP argExpr = do
 convertAppliedHole ::
   (MonadA m, Typeable1 m, Monoid a) =>
   InputExpr m a -> ExpressionU m a -> InputExpr m a -> InputPayload m a ->
-  MaybeT (SugarM m) (ExpressionU m a)
+  MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedHole funcI argS argI exprPl = do
   guard $ Lens.has ExprLens.exprHole funcI
   lift $ do

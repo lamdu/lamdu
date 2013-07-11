@@ -12,7 +12,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable1)
 import Lamdu.Data.Expression.Infer.Conflicts (iwcInferredTypes)
-import Lamdu.Sugar.Convert.Monad (SugarM)
+import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
@@ -23,7 +23,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Sugar.Convert.Monad as SugarM
+import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.InputExpr as InputExpr
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
@@ -41,7 +41,7 @@ mkReplaceWithNewHole :: MonadA m => Stored m -> T m Guid
 mkReplaceWithNewHole stored =
   ExprIRef.exprGuid <$> DataOps.replaceWithHole stored
 
-mkActions :: MonadA m => SugarM.Context m -> Stored m -> Actions m
+mkActions :: MonadA m => ConvertM.Context m -> Stored m -> Actions m
 mkActions sugarContext stored =
   Actions
   { _storedGuid = ExprIRef.exprGuid $ Property.value stored
@@ -49,24 +49,24 @@ mkActions sugarContext stored =
   , _mSetToHole = Just $ ExprIRef.exprGuid <$> DataOps.setToHole stored
   , _mSetToInnerExpr = Nothing
   , _cut =
-    mkCutter (sugarContext ^. SugarM.scCodeAnchors)
+    mkCutter (sugarContext ^. ConvertM.scCodeAnchors)
     (Property.value stored) $ mkReplaceWithNewHole stored
   }
 
 make ::
   (Typeable1 m, MonadA m) => InputPayload m a ->
-  BodyU m a -> SugarM m (ExpressionU m a)
+  BodyU m a -> ConvertM m (ExpressionU m a)
 make exprPl body = do
-  sugarContext <- SugarM.readContext
+  sugarContext <- ConvertM.readContext
   inferredTypes <-
     zipWithM
-    ( fmap SugarM.convertSubexpression
+    ( fmap ConvertM.convertSubexpression
     . InputExpr.makePure
     ) seeds types
   let
     convert inferContext =
-      SugarM.run (sugarContext & SugarM.scHoleInferContext .~ inferContext) .
-      SugarM.convertSubexpression
+      ConvertM.run (sugarContext & ConvertM.scHoleInferContext .~ inferContext) .
+      ConvertM.convertSubexpression
   return $ Expression body Payload
     { _plGuid = exprPl ^. ipGuid
     , _plInferredTypes = inferredTypes

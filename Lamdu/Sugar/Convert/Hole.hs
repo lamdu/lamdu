@@ -21,7 +21,7 @@ import Data.Traversable (sequenceA, traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), iwcInferred)
-import Lamdu.Sugar.Convert.Monad (SugarM)
+import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
@@ -45,19 +45,19 @@ import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
-import qualified Lamdu.Sugar.Convert.Monad as SugarM
+import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified System.Random as Random
 
 convert ::
   (MonadA m, Typeable1 m, Monoid a) =>
-  InputPayload m a -> SugarM m (ExpressionU m a)
+  InputPayload m a -> ConvertM m (ExpressionU m a)
 convert =
   convertPlain
   <&> Lens.mapped . rPayload . plActions . Lens._Just . mSetToHole .~ Nothing
 
 convertPlain ::
   (MonadA m, Typeable1 m, Monoid a) =>
-  InputPayload m a -> SugarM m (ExpressionU m a)
+  InputPayload m a -> ConvertM m (ExpressionU m a)
 convertPlain exprPl =
   maybe convertUntypedHole convertPlainTyped (Lens.sequenceOf ipInferred exprPl)
   where
@@ -68,10 +68,10 @@ convertPlain exprPl =
       , _holeMArg = Nothing
       }
 
-mkPaste :: MonadA m => Stored m -> SugarM m (Maybe (T m Guid))
+mkPaste :: MonadA m => Stored m -> ConvertM m (Maybe (T m Guid))
 mkPaste exprP = do
-  clipboardsP <- SugarM.codeAnchor Anchors.clipboards
-  clipboards <- SugarM.getP clipboardsP
+  clipboardsP <- ConvertM.codeAnchor Anchors.clipboards
+  clipboards <- ConvertM.getP clipboardsP
   let
     mClipPop =
       case clipboards of
@@ -159,7 +159,7 @@ idTranslations convertedExpr writtenExpr =
 convertPlainTyped ::
   (MonadA m, Typeable1 m, Monoid a) =>
   InputPayloadP (InferredWC m) (Maybe (Stored m)) a ->
-  SugarM m (ExpressionU m a)
+  ConvertM m (ExpressionU m a)
 convertPlainTyped exprPl =
   ConvertExpr.make (exprPl & ipInferred %~ Just) .
   BodyHole =<< mkHole exprPl
@@ -167,18 +167,18 @@ convertPlainTyped exprPl =
 mkHole ::
   (MonadA m, Typeable1 m, Monoid a) =>
   InputPayloadP (InferredWC m) (Maybe (Stored m)) a ->
-  SugarM m (Hole MStoredName m (ExpressionU m a))
+  ConvertM m (Hole MStoredName m (ExpressionU m a))
 mkHole exprPl = do
-  sugarContext <- SugarM.readContext
+  sugarContext <- ConvertM.readContext
   let
     mkWritableHoleActions exprPlStored = do
       mPaste <- mkPaste $ exprPlStored ^. ipStored
       globals <-
-        SugarM.liftTransaction . Transaction.getP . Anchors.globals $
-        sugarContext ^. SugarM.scCodeAnchors
+        ConvertM.liftTransaction . Transaction.getP . Anchors.globals $
+        sugarContext ^. ConvertM.scCodeAnchors
       tags <-
-        SugarM.liftTransaction . Transaction.getP . Anchors.tags $
-        sugarContext ^. SugarM.scCodeAnchors
+        ConvertM.liftTransaction . Transaction.getP . Anchors.tags $
+        sugarContext ^. ConvertM.scCodeAnchors
       pure HoleActions
         { _holePaste = mPaste
         , _holeScope =
@@ -201,7 +201,7 @@ mkHole exprPl = do
     { _holeMActions = mActions
     , _holeMInferred = Just HoleInferred
       { hiInferred = iwcInferred $ exprPl ^. ipInferred
-      , hiContext = sugarContext ^. SugarM.scHoleInferContext
+      , hiContext = sugarContext ^. ConvertM.scHoleInferContext
       }
     , _holeMArg = Nothing
     }
@@ -211,14 +211,14 @@ mkHole exprPl = do
 
 inferOnTheSide ::
   (MonadA m, Typeable1 m) =>
-  SugarM.Context m ->
+  ConvertM.Context m ->
   Infer.Scope (DefIM m) ->
   ExprIRef.ExpressionM m () ->
   CT m (Maybe (ExprIRef.ExpressionM m ()))
 -- token represents the given holeInferContext
 inferOnTheSide sugarContext scope expr =
   (fmap . fmap) fst . runMaybeT .
-  (`runStateT` (sugarContext ^. SugarM.scHoleInferContext)) $ do
+  (`runStateT` (sugarContext ^. ConvertM.scHoleInferContext)) $ do
     node <- mkNewNode scope
     SugarInfer.memoLoadInfer Nothing expr node
       <&> void . Infer.iType . (^. Expr.ePayload . Lens._1)
@@ -230,7 +230,7 @@ mkNewNode scope = do
   return newNode
 
 getScopeElement ::
-  MonadA m => SugarM.Context m ->
+  MonadA m => ConvertM.Context m ->
   (Guid, Expr.Expression def a) -> T m (Scope MStoredName m)
 getScopeElement sugarContext (parGuid, typeExpr) = do
   scopePar <- mkGetPar
@@ -242,7 +242,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
   where
     mkGetPar =
       case Map.lookup parGuid recordParamsMap of
-      Just (SugarM.RecordParamsInfo defGuid jumpTo) -> do
+      Just (ConvertM.RecordParamsInfo defGuid jumpTo) -> do
         defName <- ConvertExpr.getStoredName defGuid
         pure mempty
           { _scopeGetParams = [
@@ -265,7 +265,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
               }
             , getParam )
           ] }
-    recordParamsMap = sugarContext ^. SugarM.scRecordParamsInfos
+    recordParamsMap = sugarContext ^. ConvertM.scRecordParamsInfos
     errorJumpTo = error "Jump to on scope item??"
     exprTag = ExprUtil.pureExpression . Expr.BodyLeaf . Expr.Tag
     getParam = ExprLens.pureExpr . ExprLens.bodyParameterRef # parGuid
@@ -342,7 +342,7 @@ cachedFork =
 
 writeConvertTypeChecked ::
   (MonadA m, Monoid a) => Random.StdGen ->
-  SugarM.Context m -> Stored m ->
+  ConvertM.Context m -> Stored m ->
   ( ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), MStorePoint m a)
   , InferContext m
   ) ->
@@ -366,9 +366,9 @@ writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
     consistentExpr =
       ExprUtil.randomizeExprAndParams gen $
       makeConsistentPayload <$> writtenExpr
-    newSugarContext = sugarContext & SugarM.scHoleInferContext .~ newCtx
+    newSugarContext = sugarContext & ConvertM.scHoleInferContext .~ newCtx
   converted <-
-    SugarM.run newSugarContext . SugarM.convertSubexpression $
+    ConvertM.run newSugarContext . ConvertM.convertSubexpression $
     consistentExpr
     <&> ipStored %~ Just
     <&> ipInferred %~ Just . toIWC
@@ -390,7 +390,7 @@ writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
 
 makeHoleResult ::
   (Typeable1 m, MonadA m, Cache.Key a, Binary a, Monoid a) =>
-  SugarM.Context m ->
+  ConvertM.Context m ->
   InputPayloadP (InferredWC m) (Stored m) () ->
   Random.StdGen ->
   HoleResultSeed m (MStorePoint m a) ->
@@ -399,7 +399,7 @@ makeHoleResult sugarContext (InputPayload _guid iwc stored ()) gen seed = do
   ((fMJumpTo, mResult), forkedChanges) <- cachedFork $ do
     (fSeedExpr, fMJumpTo) <- lift $ seedExprEnv (Nothing, mempty) cp seed
     fMInferredExprCtx <-
-      runMaybeT . (`runStateT` (sugarContext ^. SugarM.scHoleInferContext)) $
+      runMaybeT . (`runStateT` (sugarContext ^. ConvertM.scHoleInferContext)) $
       SugarInfer.memoLoadInfer Nothing fSeedExpr holePoint
     mResult <-
       traverse
@@ -420,7 +420,7 @@ makeHoleResult sugarContext (InputPayload _guid iwc stored ()) gen seed = do
         , _holeResultHasHoles =
           not . null . uninferredHoles $ (,) () <$> inferredExpr
         }
-    cp = sugarContext ^. SugarM.scCodeAnchors
+    cp = sugarContext ^. ConvertM.scCodeAnchors
     holePoint = Infer.iNode $ iwcInferred iwc
     mkPickedResult mJumpTo consistentExpr writtenExpr = do
       mJumpGuid <- sequenceA mJumpTo
