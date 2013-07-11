@@ -52,29 +52,21 @@ convert ::
   (MonadA m, Typeable1 m, Monoid a) =>
   InputPayload m a -> SugarM m (ExpressionU m a)
 convert =
-  convertH convertTypeCheckedHoleH
+  convertPlain
   <&> Lens.mapped . rPayload . plActions . Lens._Just . mSetToHole .~ Nothing
 
 convertPlain ::
   (MonadA m, Typeable1 m, Monoid a) =>
   InputPayload m a -> SugarM m (ExpressionU m a)
-convertPlain = convertH convertPlainTyped
-
-convertH ::
-  (MonadA m, Typeable1 m) =>
-  (InputPayloadP (InferredWC m) (Maybe (Stored m)) a ->
-   SugarM m (ExpressionU m a)) ->
-  InputPayload m a ->
-  SugarM m (ExpressionU m a)
-convertH convertTyped exprPl =
-  maybe convertUntypedHole convertTyped (Lens.sequenceOf ipInferred exprPl)
+convertPlain exprPl =
+  maybe convertUntypedHole convertPlainTyped (Lens.sequenceOf ipInferred exprPl)
   where
     convertUntypedHole =
-      SugarExpr.make exprPl . BodyHole $ Hole
-        { _holeMActions = Nothing
-        , _holeMInferred = Nothing
-        , _holeMArg = Nothing
-        }
+      SugarExpr.make exprPl $ BodyHole Hole
+      { _holeMActions = Nothing
+      , _holeMInferred = Nothing
+      , _holeMArg = Nothing
+      }
 
 mkPaste :: MonadA m => Stored m -> SugarM m (Maybe (T m Guid))
 mkPaste exprP = do
@@ -98,12 +90,6 @@ mkPaste exprP = do
       ~() <- popClip
       ~() <- replacer clip
       return $ ExprIRef.exprGuid clip
-
-convertTypeCheckedHoleH ::
-  (MonadA m, Typeable1 m, Monoid a) =>
-  InputPayloadP (InferredWC m) (Maybe (Stored m)) a ->
-  SugarM m (ExpressionU m a)
-convertTypeCheckedHoleH = convertPlainTyped
 
 -- Sugar exports fpId of Lambda params as:
 --   Guid.combine lamGuid paramGuid
