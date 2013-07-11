@@ -375,7 +375,7 @@ writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
     newSugarContext =
       sugarContext
       & ConvertM.scHoleInferContext .~ newCtx
-      & ConvertM.scStructureInferState .~ newCtx
+      & ConvertM.scStructureInferContext .~ newCtx
   converted <-
     ConvertM.run newSugarContext . ConvertM.convertSubexpression $
     consistentExpr

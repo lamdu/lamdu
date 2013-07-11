@@ -446,7 +446,7 @@ mkContext cp holeInferContext structureInferState = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   return Context
     { _scHoleInferContext = holeInferContext
-    , _scStructureInferState = structureInferState
+    , _scStructureInferContext = structureInferState
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
     , _scTagParamInfos = mempty
