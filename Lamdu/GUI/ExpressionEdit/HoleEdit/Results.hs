@@ -398,10 +398,10 @@ makeAllGroups holeInfo = do
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
-  [ mkGroup ["Type"] $ Expr.BodyLeaf Expr.Type
-  , mkGroup ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
-  , mkGroup ["Apply", "Give argument"] . Expr.BodyApply $
+  [ mkGroup ["Apply", "Give argument"] . Expr.BodyApply $
     Expr.Apply pureHole pureHole
+  , mkGroup ["Type"] $ Expr.BodyLeaf Expr.Type
+  , mkGroup ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
   , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $
     ExprUtil.makePi (Guid.fromString "NewPi") pureHole pureHole
   , mkGroup ["\\", "Lambda", "Λ", "λ"] $
