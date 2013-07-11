@@ -34,11 +34,12 @@ make hole pl myId = do
   (delegateDestId, closed) <- HoleClosed.make hole pl myId
   let
     closedSize = closed ^. ExpressionGui.egWidget . Widget.wSize
-    resize gui =
-      ExpressionGui.truncateSize
-      ( closedSize
-        & Lens._1 %~ max (gui ^. ExpressionGui.egWidget . Widget.wSize . Lens._1)
-      ) gui
+    resize =
+      ( ExpressionGui.egWidget . Widget.wSize %~
+        (Lens._1 %~ max (closedSize ^. Lens._1)) .
+        (Lens._2 .~ closedSize ^. Lens._2)
+      ) .
+      (ExpressionGui.egAlignment .~ closed ^. ExpressionGui.egAlignment)
   ExprGuiM.assignCursor myId delegateDestId $
     fromMaybe closed <$>
     runMaybeT (resize <$> tryOpenHole hole pl myId)
