@@ -75,10 +75,15 @@ load ::
   T m (Infer.Loaded (DefIM m) a)
 load = Infer.load loader
 
+memoBy ::
+  (Cache.Key k, Binary v, Typeable v, MonadA m) =>
+  Cache.FuncId -> k -> m v -> StateT Cache m v
+memoBy funcId k act = Cache.memoS funcId (const act) k
+
 pureMemoBy ::
   (Cache.Key k, Binary v, Typeable v, MonadA m) =>
   Cache.FuncId -> k -> v -> StateT Cache m v
-pureMemoBy funcId k val = Cache.memoS funcId (const (return val)) k
+pureMemoBy funcId k = memoBy funcId k . return
 
 -- memoLoadInfer does an infer "load" of the given expression (which
 -- loads dependent expression types), and then memoizes the inference
