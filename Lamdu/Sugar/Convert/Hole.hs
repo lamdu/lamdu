@@ -186,7 +186,7 @@ mkWritableHoleActions exprPlStored = do
     , _holeInferExprType =
       inferOnTheSide sugarContext . Infer.nScope $
       Infer.iNode inferred
-    , holeResult = makeHoleResult sugarContext exprPlStored
+    , holeResult = mkHoleResult sugarContext exprPlStored
     }
   where
     inferred = iwcInferred $ exprPlStored ^. ipInferred
@@ -216,13 +216,13 @@ mkHoleInferred ::
 mkHoleInferred inferred = do
   sugarContext <- ConvertM.readContext
   let
-    makeConverted gen =
+    mkConverted gen =
       ConvertM.run sugarContext . ConvertM.convertSubexpression $
       InputExpr.makePure gen inferredValue
   pure HoleInferred
     { _hiValue = inferredValue
     , _hiType = void $ Infer.iType inferred
-    , _hiMakeConverted = makeConverted
+    , _hiMakeConverted = mkConverted
     }
   where
     inferredValue =
@@ -412,14 +412,14 @@ writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
       , _ipData = a
       }
 
-makeHoleResult ::
+mkHoleResult ::
   (Typeable1 m, MonadA m, Cache.Key a, Binary a, Monoid a) =>
   ConvertM.Context m ->
   InputPayloadP (InferredWC m) (Stored m) () ->
   Random.StdGen ->
   HoleResultSeed m (MStorePoint m a) ->
   CT m (Maybe (HoleResult MStoredName m a))
-makeHoleResult sugarContext (InputPayload _guid iwc stored ()) gen seed = do
+mkHoleResult sugarContext (InputPayload _guid iwc stored ()) gen seed = do
   ((fMJumpTo, mResult), forkedChanges) <- cachedFork $ do
     (fSeedExpr, fMJumpTo) <- lift $ seedExprEnv (Nothing, mempty) cp seed
     fMInferredExprCtx <-
