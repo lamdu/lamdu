@@ -51,15 +51,16 @@ import qualified System.Random as Random
 convert ::
   (MonadA m, Typeable1 m, Monoid a) =>
   InputPayload m a -> ConvertM m (ExpressionU m a)
-convert =
-  convertPlain
-  <&> Lens.mapped . rPayload . plActions . Lens._Just . mSetToHole .~ Nothing
+convert exprPl =
+  convertPlain exprPl
+  <&> rPayload . plActions . Lens._Just . mSetToHole .~ Nothing
 
 convertPlain ::
   (MonadA m, Typeable1 m, Monoid a) =>
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertPlain exprPl =
   maybe convertUntypedHole convertPlainTyped (Lens.sequenceOf ipInferred exprPl)
+  <&> rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
   where
     convertUntypedHole =
       ConvertExpr.make exprPl $ BodyHole Hole
@@ -67,6 +68,8 @@ convertPlain exprPl =
       , _holeMInferred = Nothing
       , _holeMArg = Nothing
       }
+    convertPlainTyped plInferred =
+      ConvertExpr.make exprPl . BodyHole =<< mkHole plInferred
 
 mkPaste :: MonadA m => Stored m -> ConvertM m (Maybe (T m Guid))
 mkPaste exprP = do
@@ -155,14 +158,6 @@ idTranslations convertedExpr writtenExpr =
       ]
     showExpr expr = expr & ExprLens.exprDef .~ () & void & show
     tell src dst = Const . ApplicativeMonoid $ Writer.tell [(src, dst)]
-
-convertPlainTyped ::
-  (MonadA m, Typeable1 m, Monoid a) =>
-  InputPayloadP (InferredWC m) (Maybe (Stored m)) a ->
-  ConvertM m (ExpressionU m a)
-convertPlainTyped exprPl =
-  ConvertExpr.make (exprPl & ipInferred %~ Just) .
-  BodyHole =<< mkHole exprPl
 
 mkHole ::
   (MonadA m, Typeable1 m, Monoid a) =>
