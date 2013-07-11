@@ -63,20 +63,11 @@ make exprPl body = do
     ( fmap ConvertM.convertSubexpression
     . InputExpr.makePure
     ) seeds types
-  let
-    convert inferContext =
-      ConvertM.run
-      ( sugarContext
-        & ConvertM.scHoleInferContext .~ inferContext
-        & ConvertM.scStructureInferState .~ inferContext
-      ) .
-      ConvertM.convertSubexpression
   return $ Expression body Payload
     { _plGuid = exprPl ^. ipGuid
     , _plInferredTypes = inferredTypes
     , _plActions = mkActions sugarContext <$> exprPl ^. ipStored
     , _plData = exprPl ^. ipData
-    , _plConvertInContext = Convert convert
     }
   where
     seeds = RandomUtils.splits . mkGen 0 3 $ exprPl ^. ipGuid

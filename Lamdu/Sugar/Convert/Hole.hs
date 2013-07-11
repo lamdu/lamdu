@@ -46,6 +46,7 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.InputExpr as InputExpr
 import qualified System.Random as Random
 
 convert ::
@@ -139,6 +140,7 @@ idTranslations convertedExpr writtenExpr =
         tell tagx tagy *>
         tell plx ply
     mismatch inferredVal (Expr.Expression (Expr.BodyLeaf Expr.Hole) guid) =
+      -- TODO: Still needed?
       -- This happens only when inferred val is accepted after
       -- cleanUpInferredVal such that inferred parts are written as
       -- holes. Then they will be re-inferred to same val, and their
@@ -192,11 +194,15 @@ mkHole exprPl = do
     & ipData .~ ()
     & Lens.sequenceOf ipStored
     & traverse mkWritableHoleActions
+  let
+    makeConverted gen =
+      ConvertM.run sugarContext . ConvertM.convertSubexpression .
+      InputExpr.makePure gen . void $ Infer.iValue inferred
   pure Hole
     { _holeMActions = mActions
     , _holeMInferred = Just HoleInferred
-      { _hiInferred = iwcInferred $ exprPl ^. ipInferred
-      , _hiContext = sugarContext ^. ConvertM.scHoleInferContext
+      { _hiInferred = inferred
+      , _hiMakeConverted = makeConverted
       }
     , _holeMArg = Nothing
     }

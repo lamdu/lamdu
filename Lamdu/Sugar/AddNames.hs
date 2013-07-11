@@ -295,13 +295,29 @@ toHoleActions ha@HoleActions {..} = do
       (fmap . fmap . fmap . fmap) (run . holeResultConverted toExpression) holeResult
     }
 
+toInferred ::
+  (MonadA tm, MonadNaming m) =>
+  HoleInferred (OldName m) tm ->
+  m (HoleInferred (NewName m) tm)
+toInferred inferred = do
+  RunMonad run <- opRun
+  inferred
+    & hiMakeConverted . Lens.mapped . Lens.mapped %~ run . toExpression
+    & pure
+
 toHole ::
   (MonadA tm, MonadNaming m) =>
   Hole (OldName m) tm (Expression (OldName m) tm a) ->
   m (Hole (NewName m) tm (Expression (NewName m) tm a))
-toHole =
-  (holeMArg . Lens._Just . Lens.traversed) toExpression <=<
-  (holeMActions . Lens.traversed) toHoleActions
+toHole hole@Hole {..} = do
+  mActions <- _holeMActions & Lens._Just %%~ toHoleActions
+  mInferred <- _holeMInferred & Lens._Just %%~ toInferred
+  mArg <- _holeMArg & Lens._Just . Lens.traversed %%~ toExpression
+  pure hole
+    { _holeMActions = mActions
+    , _holeMArg = mArg
+    , _holeMInferred = mInferred
+    }
 
 toCollapsed ::
   (MonadA tm, MonadNaming m) =>
@@ -375,22 +391,13 @@ toBody (BodyTag x) = BodyTag <$> toTag x
 toBody (BodyGetVar x) = BodyGetVar <$> toGetVar x
 toBody (BodyGetParams x) = BodyGetParams <$> toGetParams x
 
-toConvert ::
-  (MonadA tm, MonadNaming m) =>
-  Convert (OldName m) tm ->
-  m (Convert (NewName m) tm)
-toConvert (Convert doConvert) = do
-  RunMonad run <- opRun
-  pure $ Convert $ doConvert <&> Lens.mapped . Lens.mapped %~ run . toExpression
-
 toPayload ::
   (MonadA tm, MonadNaming m) =>
   Payload (OldName m) tm a ->
   m (Payload (NewName m) tm a)
 toPayload pl@Payload{..} = do
   inferredTypes <- traverse toExpression _plInferredTypes
-  convertInContext <- toConvert _plConvertInContext
-  pure pl { _plInferredTypes = inferredTypes, _plConvertInContext = convertInContext }
+  pure pl { _plInferredTypes = inferredTypes }
 
 toExpression ::
   (MonadA tm, MonadNaming m) => Expression (OldName m) tm a ->

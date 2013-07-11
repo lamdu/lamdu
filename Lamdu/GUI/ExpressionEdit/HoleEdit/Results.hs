@@ -360,7 +360,8 @@ makeAll config holeInfo = do
   ExprGuiM.liftMemoT $ collectResults config resultList
   where
     isTagType =
-      Lens.has ExprLens.exprTagType . Infer.iType $ hiInferred holeInfo ^. Sugar.hiInferred
+      Lens.has ExprLens.exprTagType . Infer.iType $
+      hiInferred holeInfo ^. Sugar.hiInferred
 
 makeAllGroups :: MonadA m => HoleInfo m -> T m [GroupM m]
 makeAllGroups holeInfo = do

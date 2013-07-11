@@ -28,7 +28,6 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.InputExpr as InputExpr
 import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
@@ -92,15 +91,12 @@ makeWrapper arg myId = do
 
 makeInferred ::
   MonadA m =>
-  Sugar.HoleInferred m -> Sugar.Payload Sugar.Name m a ->
+  Sugar.HoleInferred Sugar.Name m -> Sugar.Payload Sugar.Name m a ->
   Widget.Id -> ExprGuiM m (Widget.Id, ExpressionGui m)
 makeInferred inferred pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   gui <-
-    iVal
-    & InputExpr.makePure gen
-    & Sugar.runConvert (pl ^. Sugar.plConvertInContext)
-      (inferred ^. Sugar.hiContext)
+    (inferred ^. Sugar.hiMakeConverted) gen
     & ExprGuiM.liftMemoT
     <&> Lens.mapped . Lens.mapped .~ emptyPl
     >>= ExprGuiM.makeSubexpression 0
@@ -120,8 +116,9 @@ makeInferred inferred pl myId = do
           (Config.inactiveHoleBackgroundColor config)
       )
   where
-    fullyInferred = Lens.nullOf (Lens.folding ExprUtil.subExpressions . ExprLens.exprHole) iVal
-    iVal = inferredValue inferred
+    fullyInferred =
+      Lens.nullOf (Lens.folding ExprUtil.subExpressions . ExprLens.exprHole) $
+      inferredValue inferred
     -- gen needs to be compatible with the one from Sugar.Convert.Hole
     -- for the hole results, for smooth animation between inferred
     -- pure val and the hole result:

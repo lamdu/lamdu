@@ -33,7 +33,7 @@ makeBackground myId level =
 diveIntoHole :: Widget.Id -> Widget.Id
 diveIntoHole = FocusDelegator.delegatingId
 
-inferredValue :: Sugar.HoleInferred m -> ExpressionM m ()
+inferredValue :: Sugar.HoleInferred Sugar.Name m -> ExpressionM m ()
 inferredValue =
   (ExprLens.lambdaParamTypes .~ ExprUtil.pureHole) .
   void . Infer.iValue . (^. Sugar.hiInferred)
