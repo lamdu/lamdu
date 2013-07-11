@@ -84,7 +84,7 @@ makeWrapper arg myId = do
   arg ^. Sugar.haExpr
     & ExprGuiM.makeSubexpression 0
     >>= ExpressionGui.egWidget %%~
-        makeFocusable myId . (Widget.wEventMap .~ eventMap)
+        makeFocusable myId . (Widget.weakerEvents eventMap)
     <&> ExpressionGui.pad (realToFrac <$> Config.wrapperHolePadding config)
     <&> ExpressionGui.egWidget %~
         makeBackground myId
