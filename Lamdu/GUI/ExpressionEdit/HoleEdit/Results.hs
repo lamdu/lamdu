@@ -36,7 +36,7 @@ import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Foldable as Foldable
-import qualified Data.List.Class as List
+import qualified Data.List.Class as ListClass
 import qualified Data.Store.Guid as Guid
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
@@ -318,9 +318,9 @@ data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
 collectResults :: MonadA m => Config -> ListT m (ResultsList f) -> m ([ResultsList f], HaveHiddenResults)
 collectResults config resultsM = do
   (collectedResults, remainingResultsM) <-
-    List.splitWhenM (return . (>= Config.holeResultCount config) . length . fst) $
-    List.scanl step ([], []) resultsM
-  remainingResults <- List.toList $ List.take 2 remainingResultsM
+    ListClass.splitWhenM (return . (>= Config.holeResultCount config) . length . fst) $
+    ListClass.scanl step ([], []) resultsM
+  remainingResults <- ListClass.toList $ ListClass.take 2 remainingResultsM
   let
     results =
       last (collectedResults ++ remainingResults)
@@ -349,13 +349,13 @@ makeAll config holeInfo = do
   allGroups <- ExprGuiM.transaction $ makeAllGroups holeInfo
   let
     allGroupsList =
-      List.mapL (makeResultsList holeInfo ResultInfoNormal) $
-      List.fromList allGroups
+      ListClass.mapL (makeResultsList holeInfo ResultInfoNormal) $
+      ListClass.fromList allGroups
     newTagList
       | isTagType =
-        List.joinM . return $ makeNewTagResultList holeInfo
+        ListClass.joinM . return $ makeNewTagResultList holeInfo
       | otherwise = mempty
-    resultList = List.catMaybes $ mappend allGroupsList newTagList
+    resultList = ListClass.catMaybes $ mappend allGroupsList newTagList
   ExprGuiM.liftMemoT $ collectResults config resultList
   where
     isTagType =
