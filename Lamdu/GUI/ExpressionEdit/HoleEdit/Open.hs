@@ -117,13 +117,21 @@ setNextHoleState searchTerm (Just newHoleGuid, eventResult) =
   Transaction.setP (HoleState.assocStateRef newHoleGuid)
   (HoleState searchTerm)
 
+alphaNumericAfterOperator :: MonadA m => HoleInfo m -> ShownResult m -> Widget.EventHandlers (T m)
+alphaNumericAfterOperator holeInfo shownResult
+  | nonEmptyAll (`elem` operatorChars) searchTerm =
+    E.charGroup "Letter/digit"
+    (E.Doc ["Edit", "Result", "Pick and resume"]) alphaNumericChars $
+    \c _ -> setNextHoleState [c] =<< srPick shownResult
+  | otherwise = mempty
+  where
+    searchTerm = HoleInfo.hiSearchTerm holeInfo
+
 -- Handle Enter/Space/Alphanumeric-after-operator
 resultPickEventMap ::
-  MonadA m => Config -> HoleInfo m -> Maybe (ShownResult m) ->
+  MonadA m => Config -> HoleInfo m -> ShownResult m ->
   Widget.EventHandlers (T m)
-resultPickEventMap _ _ Nothing = mempty
-resultPickEventMap config holeInfo (Just shownResult) =
-  mappend alphaNumericAfterOperator $
+resultPickEventMap config holeInfo shownResult =
   -- TODO: Does this guid business make sense?
   case hiHoleGuids holeInfo ^. ExprGuiM.hgMNextHole of
   Just nextHoleGuid
@@ -132,23 +140,14 @@ resultPickEventMap config holeInfo (Just shownResult) =
       E.keyPresses (Config.pickAndMoveToNextHoleKeys config)
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) $
         (Widget.eCursor .~
-         (Monoid.Last . Just . WidgetIds.fromGuid) nextHoleGuid) . snd <$>
-        srPick shownResult
+         (Monoid.Last . Just . WidgetIds.fromGuid) nextHoleGuid) <$> pick
   _ ->
     simplePickRes $
     Config.pickResultKeys config ++
     Config.pickAndMoveToNextHoleKeys config
   where
-    searchTerm = HoleInfo.hiSearchTerm holeInfo
-    alphaNumericAfterOperator
-      | nonEmptyAll (`elem` operatorChars) searchTerm =
-        E.charGroup "Letter/digit"
-        (E.Doc ["Edit", "Result", "Pick and resume"]) alphaNumericChars $
-        \c _ -> setNextHoleState [c] =<< srPick shownResult
-      | otherwise = mempty
-    simplePickRes keys =
-      E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) $
-      snd <$> srPick shownResult
+    pick = snd <$> srPick shownResult
+    simplePickRes keys = E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) pick
 
 makePaddedResult :: MonadA m => Result m -> ExprGuiM m (WidgetT m)
 makePaddedResult res = do
@@ -436,7 +435,12 @@ make pl holeInfo = do
             (Config.activeHoleBackgroundColor config) .
           Widget.weakerEvents eventMap .
           Widget.strongerEvents
-          (resultPickEventMap config holeInfo mShownResult)
+          (maybe mempty
+           (mappend
+            (alphaNumericAfterOperator)
+            (resultPickEventMap config)
+            holeInfo)
+           mShownResult)
         & ExpressionGui.addInferredTypes pl
   where
     closeEventMap =
