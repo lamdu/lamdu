@@ -7,6 +7,7 @@ import Control.Applicative (Applicative(..), (<$>), (<$), (<|>), liftA2)
 import Control.Lens.Operators
 import Control.Monad (guard, msum, when)
 import Control.MonadA (MonadA)
+import Data.List.Lens (suffixed)
 import Data.List.Utils (nonEmptyAll)
 import Data.Maybe (isJust, maybeToList, fromMaybe)
 import Data.Monoid (Monoid(..))
@@ -86,14 +87,26 @@ eventResultOfPickedResult pr =
           & Lens.traversed . Lens.both %~ head . Widget.toAnimId . WidgetIds.fromGuid
           & Map.fromList
 
-afterPick :: Monad m => HoleInfo m -> Sugar.PickedResult -> T m (Maybe Guid, Widget.EventResult)
-afterPick holeInfo pr = do
+resultSuffix :: Lens.Prism' AnimId AnimId
+resultSuffix = suffixed ["result suffix"]
+
+afterPick :: Monad m => HoleInfo m -> Widget.Id -> Sugar.PickedResult -> T m (Maybe Guid, Widget.EventResult)
+afterPick holeInfo resultId pr = do
   Property.set (hiState holeInfo) HoleState.emptyState
   eventResultOfPickedResult pr
     & Lens._2 . Widget.eCursor %~
       (mappend . Monoid.Last . Just .
        WidgetIds.fromGuid . hiStoredGuid) holeInfo
+    & Lens._2 . Widget.eAnimIdMapping %~
+      (mappend (Monoid.Endo obliterateOtherResults))
     & return
+  where
+    obliterateOtherResults animId =
+      case animId ^? resultSuffix of
+      Nothing -> animId
+      Just unsuffixed
+        | Lens.has (suffixed (Widget.toAnimId resultId)) unsuffixed -> animId
+        | otherwise -> "obliterated" : animId
 
 setNextHoleState ::
   MonadA m =>
@@ -157,7 +170,7 @@ makeShownResult holeInfo result = do
       { srEventMap = widget ^. Widget.wEventMap
       , srHoleResult = rHoleResult result
       , srPick =
-        afterPick holeInfo =<< rHoleResult result ^. Sugar.holeResultPick
+        afterPick holeInfo (rId result) =<< rHoleResult result ^. Sugar.holeResultPick
       }
     )
 
@@ -248,7 +261,7 @@ makeHoleResultWidget resultId holeResult = do
     SugarRemoveTypes.holeResultTypes .
     postProcessSugar $ holeResult ^. Sugar.holeResultConverted
   resultGui ^. ExpressionGui.egWidget
-    & Widget.wFrame %~ Anim.mapIdentities (`mappend` Widget.toAnimId resultId)
+    & Widget.wFrame %~ Anim.mapIdentities (`mappend` (resultSuffix # Widget.toAnimId resultId))
     & Widget.scale (realToFrac <$> Config.holeResultScaleFactor config)
     & makeFocusable resultId
 
