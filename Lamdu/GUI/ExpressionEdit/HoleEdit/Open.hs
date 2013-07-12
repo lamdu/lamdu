@@ -38,7 +38,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap as OpenEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
-import qualified Lamdu.GUI.ExpressionGui.AddNextHoles as AddNextHoles
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -224,11 +223,9 @@ postProcessSugar ::
 postProcessSugar expr =
   expr
   & Lens.mapped . Lens.mapped %~ toPayload
-  -- TODO: AddNextHoles on hole result is unused?
-  & AddNextHoles.addToExpr
-  -- Remove the top-level result's actions so that they come from our
-  -- ExpressionEdit, rather than the result's ExpressionEdit which
-  -- represents the same IRef
+  -- Remove the top-level result's actions so that we can safely use
+  -- the special events from the result's event map (e.g: add list
+  -- item) without also getting unwanted handlers like "delete".
   & Sugar.rPayload . Sugar.plData . ExprGuiM.plHoleGuids .~ ExprGuiM.emptyHoleGuids
   & Sugar.rPayload . Sugar.plActions .~ Nothing
 
