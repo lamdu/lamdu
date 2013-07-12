@@ -361,18 +361,18 @@ assignHoleEditCursor ::
   HoleInfo m -> [Widget.Id] -> [Widget.Id] -> Widget.Id ->
   ExprGuiM m a ->
   ExprGuiM m a
-assignHoleEditCursor holeInfo shownResultsIds allResultIds searchTermId action = do
+assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId action = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   let
     sub = isJust . flip Widget.subId cursor
     shouldBeOnResult = sub $ HoleResults.prefixId holeInfo
-    isOnResult = any sub allResultIds
+    isOnResult = any sub allShownResultIds
     assignSource
       | shouldBeOnResult && not isOnResult = cursor
       | otherwise = HoleInfo.hiActiveId holeInfo
     destId
       | null (HoleInfo.hiSearchTerm holeInfo) = searchTermId
-      | otherwise = head (shownResultsIds ++ [searchTermId])
+      | otherwise = head (shownMainResultsIds ++ [searchTermId])
   ExprGuiM.assignCursor assignSource destId action
 
 make ::
@@ -383,10 +383,10 @@ make pl holeInfo = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll config holeInfo
   let
-    shownResultsIds = rId . (^. HoleResults.rlMain) <$> shownResultsLists
-    allResultIds = [rId . (^. HoleResults.rlMain), (^. HoleResults.rlExtraResultsPrefixId)] <*> shownResultsLists
+    shownMainResultsIds = rId . (^. HoleResults.rlMain) <$> shownResultsLists
+    allShownResultIds = [rId . (^. HoleResults.rlMain), (^. HoleResults.rlExtraResultsPrefixId)] <*> shownResultsLists
   assignHoleEditCursor
-    holeInfo shownResultsIds allResultIds (hiSearchTermId holeInfo) $ do
+    holeInfo shownMainResultsIds allShownResultIds (hiSearchTermId holeInfo) $ do
       (mShownResult, resultsWidget) <-
         makeResultsWidget holeInfo shownResultsLists hasHiddenResults
       searchTermWidget <- makeSearchTermWidget holeInfo
