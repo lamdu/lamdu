@@ -31,14 +31,14 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction.Transaction
 
 make ::
-  MonadA m => HolePickers m -> Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  MonadA m => Bool -> HolePickers m -> Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   ExprGuiM m (EventHandlers (T m))
-make holePickers pl =
+make isFocused holePickers pl =
   mconcat <$> sequenceA
   [ maybe (return mempty) (actionsEventMap holePickers) $
     pl ^. Sugar.plActions
-  , replaceOrComeToParentEventMap pl
   , jumpHolesEventMap holePickers pl
+  , replaceOrComeToParentEventMap isFocused pl
   ]
 
 mkEventMap ::
@@ -97,9 +97,10 @@ cutEventMap config actions =
 
 replaceOrComeToParentEventMap ::
   MonadA m =>
+  Bool ->
   Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   ExprGuiM m (EventHandlers (T m))
-replaceOrComeToParentEventMap pl =
+replaceOrComeToParentEventMap isFocused pl =
   case pl ^. Sugar.plActions of
   Nothing -> return mempty
   Just actions -> do
@@ -109,9 +110,12 @@ replaceOrComeToParentEventMap pl =
     return $ if isSelected
       then replaceEventMap config actions
       else
-        mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
-        (fmap FocusDelegator.notDelegatingId) . return $
-        actions ^. Sugar.storedGuid
+        if isFocused
+        then
+          mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
+          (fmap FocusDelegator.notDelegatingId) . return $
+          actions ^. Sugar.storedGuid
+        else mempty
 
 actionsEventMap ::
   MonadA m =>

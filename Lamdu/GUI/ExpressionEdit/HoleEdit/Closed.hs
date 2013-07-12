@@ -49,11 +49,13 @@ make hole pl myId = do
       guard . Lens.nullOf ExprLens.exprHole $ inferred ^. Sugar.hiWithVarsValue
       lift $ makeInferred inferred pl myId
     lift $ (,) (diveIntoHole myId) <$> makeSimple myId
-  exprEventMap <- ExprEventMap.make [] pl
+  exprEventMap <-
+    ExprEventMap.make
+    (rawInactive ^. ExpressionGui.egWidget . Widget.wIsFocused) [] pl
   inactive <-
     ExpressionGui.addInferredTypes pl rawInactive
     <&> ExpressionGui.egWidget %~
-        Widget.strongerEvents (mappend openEventMap exprEventMap)
+        Widget.weakerEvents (mappend openEventMap exprEventMap)
   return (destId, inactive)
   where
     openEventMap =
@@ -63,19 +65,33 @@ make hole pl myId = do
 
 makeWrapperEventMap ::
   (MonadA m, MonadA f) =>
-  Sugar.HoleArg f expr -> Widget.Id ->
+  Bool -> Sugar.HoleArg f (Sugar.ExpressionN f a) -> Widget.Id ->
   ExprGuiM m (Widget.EventHandlers (T f))
-makeWrapperEventMap arg myId = do
+makeWrapperEventMap argIsFocused arg myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    tryUnwrapEventMap =
+      case arg ^? Sugar.haUnwrap . Sugar._UnwrapMAction . Lens._Just of
+      Just unwrap ->
+        Widget.keysEventMapMovesCursor (Config.acceptKeys config ++ Config.delKeys config)
+        (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromGuid <$> unwrap
+      Nothing ->
+        Widget.keysEventMapMovesCursor (Config.wrapKeys config)
+        (E.Doc ["Navigation", "Hole", "Open"]) .
+        pure $ diveIntoHole myId
+    navigateEventMap
+      | argIsFocused =
+        Widget.keysEventMapMovesCursor (Config.leaveSubexpressionKeys config)
+        (E.Doc ["Navigation", "Go to parent wrapper"]) $
+        pure myId
+      | otherwise =
+        maybe mempty
+        (Widget.keysEventMapMovesCursor (Config.enterSubexpressionKeys config)
+         (E.Doc ["Navigation", "Go to wrapped expr"]) .
+         pure . WidgetIds.fromGuid) $
+        arg ^? Sugar.haExpr . Sugar.rPayload . Sugar.plActions . Lens._Just . Sugar.storedGuid
   pure $
-    case arg ^? Sugar.haUnwrap . Sugar._UnwrapMAction . Lens._Just of
-    Just unwrap ->
-      Widget.keysEventMapMovesCursor (Config.acceptKeys config ++ Config.delKeys config)
-      (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromGuid <$> unwrap
-    Nothing ->
-      Widget.keysEventMapMovesCursor (Config.wrapKeys config)
-      (E.Doc ["Navigation", "Hole", "Open"]) .
-      pure $ diveIntoHole myId
+    mappend tryUnwrapEventMap navigateEventMap
 
 makeWrapper ::
   MonadA m =>
@@ -88,11 +104,16 @@ makeWrapper arg myId = do
       case arg ^. Sugar.haUnwrap of
       Sugar.UnwrapMAction {} -> Config.deletableHoleBackgroundColor config
       Sugar.UnwrapTypeMismatch {} -> Config.typeErrorHoleWrapBackgroundColor config
-  eventMap <- makeWrapperEventMap arg myId
-  arg ^. Sugar.haExpr
+  rawArgGui <-
+    arg ^. Sugar.haExpr
     & ExprGuiM.makeSubexpression 0
-    >>= ExpressionGui.egWidget %%~
-        makeFocusable myId . Widget.weakerEvents eventMap
+  eventMap <-
+    makeWrapperEventMap
+    (rawArgGui ^. ExpressionGui.egWidget . Widget.wIsFocused)
+    arg myId
+  rawArgGui
+    & ExpressionGui.egWidget %%~
+      makeFocusable myId . Widget.weakerEvents eventMap
     <&> ExpressionGui.pad (realToFrac <$> Config.wrapperHolePadding config)
     <&> ExpressionGui.egWidget %~
         makeBackground myId

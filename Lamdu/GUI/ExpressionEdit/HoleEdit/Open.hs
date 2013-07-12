@@ -386,7 +386,7 @@ make pl holeInfo = do
         layers = Config.layers config
         layerDiff = Config.layerActiveHoleBG layers - Config.layerMax layers
       jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] pl
-      replaceEventMap <- ExprEventMap.replaceOrComeToParentEventMap pl
+      replaceEventMap <- ExprEventMap.replaceOrComeToParentEventMap True pl
       let
         eventMap = mconcat
           [ pasteEventMap config holeInfo
