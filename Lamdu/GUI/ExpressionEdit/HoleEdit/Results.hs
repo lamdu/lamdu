@@ -119,15 +119,6 @@ sugarNameToGroup (Sugar.Name _ collision varName) expr = Group
       Sugar.NoCollision -> []
       Sugar.Collision suffix -> [show suffix]
 
-makeLiteralGroups :: String -> [Group def]
-makeLiteralGroups searchTerm =
-  [ makeLiteralIntResult (read searchTerm)
-  | nonEmptyAll Char.isDigit searchTerm
-  ]
-  where
-    makeLiteralIntResult integer =
-      mkGroup "LiteralInt" [show integer] $ ExprLens.bodyLiteralInteger # integer
-
 resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefIM m)) -> Int
 resultComplexityScore = length . Foldable.toList . Infer.iType . (^. Expr.ePayload)
 
@@ -379,8 +370,11 @@ makeAllGroups holeInfo = do
     allGroups =
       addInferredGroups $
       concat
-      [ primitiveGroups holeInfo, literalGroups
-      , localsGroups, globalsGroups, tagsGroups, getParamsGroups
+      [ primitiveGroups holeInfo
+      , localsGroups
+      , globalsGroups
+      , tagsGroups
+      , getParamsGroups
       ]
     sortedGroups f  = sortOn (^. groupNames) . map f
     localsGroups    = sortedGroups getVarsToGroup locals
@@ -405,11 +399,13 @@ makeAllGroups holeInfo = do
       in
         ( inferredGroups & Lens.traverse . groupNames <>~ dupsGroupNames
         ) ++ others
-    literalGroups = makeLiteralGroups (hiSearchTerm holeInfo)
     iVal = hiInferred holeInfo ^. Sugar.hiBaseValue
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
+  [ mkGroup "LiteralInt" [searchTerm] $ ExprLens.bodyLiteralInteger # read searchTerm
+  | nonEmptyAll Char.isDigit searchTerm
+  ] ++
   [ mkGroup "Apply" ["Apply", "Give argument"] . Expr.BodyApply $
     Expr.Apply pureHole pureHole
   , mkGroup "Type" ["Type"] $ Expr.BodyLeaf Expr.Type
@@ -426,6 +422,7 @@ primitiveGroups holeInfo =
     Expr.GetField pureHole pureHole
   ]
   where
+    searchTerm = hiSearchTerm holeInfo
     record k =
       ExprUtil.pureExpression . Expr.BodyRecord . Expr.Record k $
       case hiMArgument holeInfo of
