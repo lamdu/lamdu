@@ -139,18 +139,6 @@ idTranslations convertedExpr writtenExpr =
       (Expr.Expression (Expr.BodyLeaf (Expr.Tag tagy)) ply) =
         tell tagx tagy *>
         tell plx ply
-    mismatch inferredVal (Expr.Expression (Expr.BodyLeaf Expr.Hole) guid) =
-      -- TODO: Still needed?
-      -- This happens only when inferred val is accepted after
-      -- cleanUpInferredVal such that inferred parts are written as
-      -- holes. Then they will be re-inferred to same val, and their
-      -- guids will be generated via InputExpr.makePure with a
-      -- random-gen based on the hole guid.  Let's map the old
-      -- inferred val guids to the ones the new inferred val will get
-      -- in the hole:
-      go inferredVal $
-      ExprUtil.randomizeExpr (genFromHashable guid)
-      (flip const <$> inferredVal)
     mismatch x y =
       error $
       unlines
