@@ -140,7 +140,9 @@ instance Functor MismatchError where
     (mis & Lens.both . ExprLens.exprDef %~ f)
     (f <$> details)
 
-data Error def = ErrorMismatch (MismatchError def)
+data Error def
+  = ErrorMismatch (MismatchError def)
+  | ErrorMissingDefType def
   deriving (Functor, Eq, Ord, Show)
 
 newtype InferActions def m = InferActions
@@ -393,6 +395,11 @@ touch ref =
 {-# SPECIALIZE touch :: ExprRef -> InferT (DefI t) Maybe () #-}
 {-# SPECIALIZE touch :: Monoid w => ExprRef -> InferT (DefI t) (Writer w) () #-}
 
+reportAnError :: MonadA m => Error def -> InferT def m ()
+reportAnError err = do
+  report <- reportError <$> askActions
+  lift $ report err
+
 setRefExpr ::
   (Eq def, MonadA m) =>
   Maybe (RuleRef, Rule def (RefExpression def)) ->
@@ -408,13 +415,12 @@ setRefExpr mRule ref newExpr = do
       when isChange $ touch ref
       when (isChange || isHole) $
         liftState $ sContext . exprRefsAt ref . rExpression .= mergedExpr
-    Left details -> do
-      report <- fmap reportError askActions
-      lift . report $ ErrorMismatch MismatchError
-        { errRef = ref
-        , errMismatch = (void curExpr, void newExpr)
-        , errDetails = details
-        }
+    Left details ->
+      reportAnError $ ErrorMismatch MismatchError
+      { errRef = ref
+      , errMismatch = (void curExpr, void newExpr)
+      , errDetails = details
+      }
   where
     equiv x y =
       isJust $
@@ -436,8 +442,8 @@ exprIntoContext ::
   InferT def m (Expr.Expression def (Node def, a))
 exprIntoContext rootScope (Loaded rootExpr defTypes) = do
   defTypesRefs <-
-    traverse defTypeIntoContext $
-    Map.mapKeys Expr.DefinitionRef defTypes
+    Map.traverseWithKey defTypeIntoContext defTypes
+    <&> Map.mapKeys Expr.DefinitionRef
   -- mappend prefers left, so it is critical we put rootScope
   -- first. defTypesRefs may contain the loaded recursive defI because
   -- upon resumption, we load without giving the root defI, so its
@@ -446,7 +452,10 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
     liftContextState
     (traverse addTypedVal rootExpr)
   where
-    defTypeIntoContext defType = do
+    defTypeIntoContext defI (fullType, defType) = do
+      unless
+        (fullType || Map.member (Expr.DefinitionRef defI) rootScope) .
+        reportAnError $ ErrorMissingDefType defI
       ref <- liftContextState createRefExpr
       setRefExpr Nothing ref $ toRefExpression defType
       return ref
@@ -481,7 +490,7 @@ ordNub = Set.toList . Set.fromList
 
 data Loaded def a = Loaded
   { _lExpr :: Expr.Expression def a
-  , _lDefTypes :: Map def (Expr.Expression def ())
+  , _lDefTypes :: Map def (Bool, Expr.Expression def ())
   } deriving (Typeable, Functor, Eq, Ord)
 -- Requires Ord instance for def, cannot derive
 instance (Binary a, Binary def, Ord def) => Binary (Loaded def a) where
@@ -495,14 +504,17 @@ load loader mRecursiveDef expr =
   fmap (Loaded expr) loadDefTypes
   where
     loadDefTypes =
-      fmap Map.fromList .
-      traverse loadType . ordNub $
-      Lens.toListOf
-      ( Lens.folding ExprUtil.subExpressions
-      . ExprLens.exprDefinitionRef
-      . Lens.filtered ((/= mRecursiveDef) . Just)
-      ) expr
-    loadType defI = fmap ((,) defI) $ loadPureDefinitionType loader defI
+      expr ^..
+      Lens.folding ExprUtil.subExpressions .
+      ExprLens.exprDefinitionRef .
+      Lens.filtered ((/= mRecursiveDef) . Just)
+      & traverse loadType . ordNub
+      <&> Map.fromList
+    markFullTypes typeExpr =
+      (Lens.nullOf ExprLens.holePayloads typeExpr, typeExpr)
+    loadType defI =
+      loadPureDefinitionType loader defI
+      <&> (,) defI . markFullTypes
 
 -- An Independent expression has no GetDefinition of any expression
 -- except potentially the given recurse def. The given function should

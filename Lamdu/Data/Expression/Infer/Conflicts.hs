@@ -35,22 +35,27 @@ instance (Ord def, Binary def) => Binary (InferredWithConflicts def) where
   get = InferredWithConflicts <$> get <*> get <*> get
   put (InferredWithConflicts a b c) = sequenceA_ [put a, put b, put c]
 
-newtype ConflictMap def =
-  ConflictMap { unConflictMap :: Map Infer.ExprRef (Set (Infer.MismatchError def)) }
-
+data ConflictMap def = ConflictMap
+  { cmMap :: Map Infer.ExprRef (Set (Infer.MismatchError def))
+  , cmMissingDefs :: [def]
+  }
 instance Ord def => Monoid (ConflictMap def) where
-  mempty = ConflictMap mempty
-  mappend (ConflictMap x) (ConflictMap y) =
-    ConflictMap $ Map.unionWith mappend x y
+  mempty = ConflictMap mempty mempty
+  mappend (ConflictMap x0 x1) (ConflictMap y0 y1) =
+    ConflictMap (Map.unionWith mappend x0 y0) (mappend x1 y1)
 
 getConflicts :: Infer.ExprRef -> ConflictMap def -> [Infer.MismatchError def]
-getConflicts ref = maybe [] Set.toList . Map.lookup ref . unConflictMap
+getConflicts ref = maybe [] Set.toList . Map.lookup ref . cmMap
 
 reportConflict :: Ord def => Infer.Error def -> Writer (ConflictMap def) ()
 reportConflict (Infer.ErrorMismatch err) =
-  Writer.tell . ConflictMap .
-  Map.singleton (Infer.errRef err) $
-  Set.singleton err
+  Writer.tell $ mempty
+  { cmMap =
+    Map.singleton (Infer.errRef err) $
+    Set.singleton err
+  }
+reportConflict (Infer.ErrorMissingDefType def) =
+  Writer.tell $ mempty { cmMissingDefs = [def] }
 
 inferWithConflicts ::
   Ord def => Infer.Loaded def a -> Infer.Node def ->
@@ -73,7 +78,7 @@ inferWithConflicts loaded node = do
       , iwcTypeConflicts = conflicts Infer.tvType x
       }
   return
-    ( Map.null $ unConflictMap conflictsMap
+    ( Map.null $ cmMap conflictsMap
     , Lens.mapped . Lens._1 %~ toIWC $ exprInferred
     )
   where

@@ -285,6 +285,8 @@ wrongRecurseMissingArg =
       Infer.InfiniteExpression _ -> return ()
       _ ->
         HUnit.assertFailure $ "InfiniteExpression error expected, but got: " ++ show err
+    verifyError (Infer.ErrorMissingDefType def) =
+      HUnit.assertFailure $ "InfiniteExpression error expected, but got missing def type error for def: " ++ show def
     expr = lambda "x" hole . const $ recurse hole
 
 mapIdTest =
