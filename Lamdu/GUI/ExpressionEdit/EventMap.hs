@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionEdit.EventMap
   , modifyEventMap
   , applyOperatorEventMap
   , cutEventMap
-  , jumpHolesEventMap
+  , jumpHolesEventMap, jumpHolesEventMapIfSelected
   , replaceOrComeToParentEventMap
   ) where
 
@@ -37,7 +37,7 @@ make isFocused holePickers pl =
   mconcat <$> sequenceA
   [ maybe (return mempty) (actionsEventMap holePickers) $
     pl ^. Sugar.plActions
-  , jumpHolesEventMap holePickers pl
+  , jumpHolesEventMapIfSelected holePickers pl
   , replaceOrComeToParentEventMap isFocused pl
   ]
 
@@ -66,10 +66,9 @@ isExprSelected pl =
 
 jumpHolesEventMap ::
   MonadA m => HolePickers m ->
-  Sugar.Payload name m ExprGuiM.Payload ->
+  ExprGuiM.HoleGuids ->
   ExprGuiM m (EventHandlers (T m))
-jumpHolesEventMap holePickers pl = do
-  isSelected <- isExprSelected pl
+jumpHolesEventMap holePickers hg = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     jumpEventMap keys dirStr lens =
@@ -78,17 +77,23 @@ jumpHolesEventMap holePickers pl = do
        (E.Doc ["Navigation", jumpDoc dirStr]) id . pure) $
       hg ^. lens
   pure $
-    if isSelected
-    then
-      mconcat
-      [ jumpEventMap Config.jumpToNextHoleKeys "next" ExprGuiM.hgMNextHole
-      , jumpEventMap Config.jumpToPrevHoleKeys "previous" ExprGuiM.hgMPrevHole
-      ]
-    else mempty
+    mconcat
+    [ jumpEventMap Config.jumpToNextHoleKeys "next" ExprGuiM.hgMNextHole
+    , jumpEventMap Config.jumpToPrevHoleKeys "previous" ExprGuiM.hgMPrevHole
+    ]
   where
     jumpDoc dirStr =
       holePickersAddDocPrefix holePickers $ "Jump to " ++ dirStr ++ " hole"
-    hg = pl ^. Sugar.plData . ExprGuiM.plHoleGuids
+
+jumpHolesEventMapIfSelected ::
+  MonadA m => HolePickers m ->
+  Sugar.Payload name m ExprGuiM.Payload ->
+  ExprGuiM m (EventHandlers (T m))
+jumpHolesEventMapIfSelected holePickers pl = do
+  isSelected <- isExprSelected pl
+  if isSelected
+    then jumpHolesEventMap holePickers $ pl ^. Sugar.plData . ExprGuiM.plHoleGuids
+    else pure mempty
 
 cutEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)
 cutEventMap config actions =
