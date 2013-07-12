@@ -131,7 +131,7 @@ makeExprDefinition def bodyExpr = do
       , mkTypeRow "Inferred type:" id $ Sugar.antNewType x
       ]
   bodyWidget <-
-    DefinitionContentEdit.make guid name $ bodyExpr ^. Sugar.deContent
+    DefinitionContentEdit.make ExprGuiM.emptyHoleGuids guid name $ bodyExpr ^. Sugar.deContent
   return . Box.vboxAlign 0 $ typeWidgets ++ [bodyWidget]
   where
     right = Vector2 1 0.5

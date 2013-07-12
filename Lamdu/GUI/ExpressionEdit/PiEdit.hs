@@ -43,7 +43,9 @@ make parentPrecedence (Sugar.Lam _ param _isDep resultType) pl =
       paramEdit <-
         if paramUsed
         then do
-          paramNameEdit <- LambdaEdit.makeParamNameEdit name paramGuid paramId
+          paramNameEdit <-
+            LambdaEdit.makeParamNameEdit (param ^. Sugar.fpType . Sugar.rPayload . Sugar.plData . ExprGuiM.plHoleGuids)
+            name paramGuid paramId
           colonLabel <- ExprGuiM.widgetEnv . BWidgets.makeLabel ":" $ Widget.toAnimId paramId
           return $ ExpressionGui.hbox
             [ ExpressionGui.fromValueWidget paramNameEdit

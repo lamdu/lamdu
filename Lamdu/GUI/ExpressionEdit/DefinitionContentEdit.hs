@@ -141,10 +141,10 @@ mkPresentationEdits guid myId = do
     mkProp = Anchors.assocPresentationMode guid
 
 make ::
-  MonadA m => Guid -> Sugar.Name ->
+  MonadA m => ExprGuiM.HoleGuids -> Guid -> Sugar.Name ->
   Sugar.DefinitionContent Sugar.Name m (ExprGuiM.SugarExpr m) ->
   ExprGuiM m (WidgetT m)
-make guid name content = do
+make hg guid name content = do
   equals <- ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
   rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs
   let
@@ -155,7 +155,7 @@ make guid name content = do
         & Widget.weakerEvents rhsJumperEquals
       | otherwise = widget
   (depParamsEdits, paramsEdits) <-
-    makeNestedParams jumpToRHSViaEquals rhs myId depParams params
+    makeNestedParams hg jumpToRHSViaEquals rhs myId depParams params
   config <- ExprGuiM.widgetEnv WE.readConfig
   bodyEdit <- makeResultEdit lhs body
   rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
@@ -222,7 +222,7 @@ makeWhereItemEdit item = do
         ]
       | otherwise = mempty
   Widget.weakerEvents eventMap <$>
-    make
+    make ExprGuiM.emptyHoleGuids
     (item ^. Sugar.wiGuid)
     (item ^. Sugar.wiName)
     (item ^. Sugar.wiValue)
@@ -278,13 +278,14 @@ addPrevIds lhsId depParams params =
 
 makeNestedParams ::
   MonadA m =>
-  (Sugar.Name -> Widget (T m) -> Widget (T m))
- -> (String, ExprGuiM.SugarExpr m)
- -> Widget.Id
- -> [Sugar.FuncParam Sugar.Name m (ExprGuiM.SugarExpr m)]
- -> [Sugar.FuncParam Sugar.Name m (ExprGuiM.SugarExpr m)]
- -> ExprGuiM m ([ExpressionGui m], [ExpressionGui m])
-makeNestedParams atParamWidgets rhs lhsId depParams params = do
+  ExprGuiM.HoleGuids ->
+  (Sugar.Name -> Widget (T m) -> Widget (T m)) ->
+  (String, ExprGuiM.SugarExpr m) ->
+  Widget.Id ->
+  [Sugar.FuncParam Sugar.Name m (ExprGuiM.SugarExpr m)] ->
+  [Sugar.FuncParam Sugar.Name m (ExprGuiM.SugarExpr m)] ->
+  ExprGuiM m ([ExpressionGui m], [ExpressionGui m])
+makeNestedParams hg atParamWidgets rhs lhsId depParams params = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
   let
@@ -293,7 +294,7 @@ makeNestedParams atParamWidgets rhs lhsId depParams params = do
       (ExpressionGui.egWidget %~
        (atParamWidgets (param ^. Sugar.fpName) .
         Widget.weakerEvents rhsJumper)) <$>
-      LambdaEdit.makeParamEdit prevId param
+      LambdaEdit.makeParamEdit hg prevId param
   (,)
     <$> traverse mkParam depParamIds
     <*> traverse mkParam paramIds
