@@ -98,7 +98,7 @@ afterPick holeInfo resultId pr = do
       (mappend . Monoid.Last . Just .
        WidgetIds.fromGuid . hiStoredGuid) holeInfo
     & Lens._2 . Widget.eAnimIdMapping %~
-      (mappend (Monoid.Endo obliterateOtherResults))
+      (mappend . Monoid.Endo) obliterateOtherResults
     & return
   where
     obliterateOtherResults animId =
