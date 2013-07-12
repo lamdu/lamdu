@@ -423,7 +423,7 @@ make pl holeInfo = do
       let
         eventMap = mconcat
           [ pasteEventMap config holeInfo
-          , resultEventMap config mShownResult
+          , maybe mempty (resultEventMap config) mShownResult
           , jumpHolesEventMap
           , replaceEventMap
           , closeEventMap
@@ -459,14 +459,18 @@ pasteEventMap config holeInfo =
    (Config.pasteKeys config) (E.Doc ["Edit", "Paste"]) .
    fmap WidgetIds.fromGuid) $ hiActions holeInfo ^. Sugar.holePaste
 
+pickBefore ::
+  MonadA m =>
+  ShownResult m -> Widget.EventHandlers (T m) -> Widget.EventHandlers (T m)
+pickBefore shownResult = fmap . liftA2 mappend $ srPick shownResult
+
 resultEventMap ::
-  MonadA m => Config -> Maybe (ShownResult m) ->
+  MonadA m => Config -> ShownResult m ->
   Widget.EventHandlers (T m)
-resultEventMap _ Nothing = mempty
-resultEventMap config (Just shownResult) =
+resultEventMap config shownResult =
   srEventMap shownResult
   & maybe id (mappend . extraResultEventMap) mActions
-  & Lens.mapped %~ liftA2 mappend (srPick shownResult)
+  & pickBefore shownResult
   where
     extraResultEventMap = mconcat
       [ ExprEventMap.applyOperatorEventMap []
