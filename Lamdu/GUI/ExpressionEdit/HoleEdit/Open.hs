@@ -130,27 +130,30 @@ alphaNumericAfterOperator holeInfo shownResult
   where
     searchTerm = HoleInfo.hiSearchTerm holeInfo
 
--- Handle Enter/Space/Alphanumeric-after-operator
-resultPickEventMap ::
+-- This relies on pickBefore being applied to it in the event map
+-- buildup to do the actual picking
+pickPlaceholderEventMap ::
   MonadA m => Config -> HoleInfo m -> ShownResult m ->
   Widget.EventHandlers (T m)
-resultPickEventMap config holeInfo shownResult =
+pickPlaceholderEventMap config holeInfo shownResult =
   -- TODO: Does this guid business make sense?
   case hiHoleGuids holeInfo ^. ExprGuiM.hgMNextHole of
-  Just nextHoleGuid
-    | not (srHoleResult shownResult ^. Sugar.holeResultHasHoles) ->
-      mappend (simplePickRes (Config.pickResultKeys config)) .
-      E.keyPresses (Config.pickAndMoveToNextHoleKeys config)
-      (E.Doc ["Edit", "Result", "Pick and move to next hole"]) $
-        (Widget.eCursor .~
-         (Monoid.Last . Just . WidgetIds.fromGuid) nextHoleGuid) <$> pick
+  Just nextHoleGuid | holeResultHasHoles ->
+    mappend
+    (simplePickRes (Config.pickResultKeys config))
+    (pickAndMoveToNextHole nextHoleGuid)
   _ ->
     simplePickRes $
     Config.pickResultKeys config ++
     Config.pickAndMoveToNextHoleKeys config
   where
-    pick = srPick shownResult
-    simplePickRes keys = E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) pick
+    pickAndMoveToNextHole nextHoleGuid =
+      Widget.keysEventMapMovesCursor
+      (Config.pickAndMoveToNextHoleKeys config)
+      (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
+      return $ WidgetIds.fromGuid nextHoleGuid
+    holeResultHasHoles = not $ srHoleResult shownResult ^. Sugar.holeResultHasHoles
+    simplePickRes keys = Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) $ return ()
 
 makePaddedResult :: MonadA m => Result m -> ExprGuiM m (WidgetT m)
 makePaddedResult res = do
@@ -399,6 +402,63 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
       | otherwise = head (shownMainResultsIds ++ [searchTermId])
   ExprGuiM.assignCursor assignSource destId action
 
+makeEventMaps ::
+  MonadA m =>
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  HoleInfo m -> Maybe (ShownResult m) ->
+  ExprGuiM m
+  ( Widget.EventHandlers (T m)
+  , Widget.EventHandlers (T m)
+  )
+makeEventMaps pl holeInfo mShownResult = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  jumpHoles <- ExprEventMap.jumpHolesEventMapIfSelected [] pl
+  replace <- ExprEventMap.replaceOrComeToParentEventMap True pl
+  let
+    applyOp = actionsEventMap $ ExprEventMap.applyOperatorEventMap []
+    close = closeEventMap holeInfo
+    cut = actionsEventMap $ ExprEventMap.cutEventMap config
+    paste = pasteEventMap config holeInfo
+    pick = shownResultEventMap $ pickPlaceholderEventMap config holeInfo
+    alphaAfterOp = onShownResult $ alphaNumericAfterOperator holeInfo
+    fromResult = shownResultEventMap srEventMap
+    adHocEdit = adHocTextEditEventMap $ searchTermProperty holeInfo
+    strongEventMap =
+      mconcat $
+      jumpHoles : close : pick : alphaAfterOp : fromResult :
+      [ applyOp | null searchTerm ]
+    weakEventMap =
+      mconcat $ concat
+      [ [ applyOp | not (null searchTerm) ]
+      , [ cut, paste, replace ]
+      ]
+    -- Used with weaker events, TextEdit events above:
+    searchTermEventMap = mappend strongEventMap weakEventMap
+    -- Used with stronger events, Grid events underneath:
+    resultsEventMap =
+      mconcat [ strongEventMap, adHocEdit, weakEventMap ]
+  pure (searchTermEventMap, resultsEventMap)
+  where
+    searchTerm = HoleInfo.hiSearchTerm holeInfo
+    onShownResult f = maybe mempty f mShownResult
+    shownResultEventMapH f shownResult = pickBefore shownResult $ f shownResult
+    shownResultEventMap = onShownResult . shownResultEventMapH
+    actionsEventMap f =
+      shownResultEventMap $ \shownResult ->
+      let
+        mActions =
+          srHoleResult shownResult ^.
+          Sugar.holeResultConverted . Sugar.rPayload . Sugar.plActions
+      in case mActions of
+        Nothing -> mempty
+        Just actions -> f actions
+
+closeEventMap :: MonadA m => HoleInfo m -> Widget.EventHandlers (T m)
+closeEventMap holeInfo =
+  Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.KeyEsc]
+  (E.Doc ["Navigation", "Hole", "Close"]) . pure $
+  Widget.joinId (hiId holeInfo) ["closed"]
+
 make ::
   MonadA m =>
   Sugar.Payload Sugar.Name m ExprGuiM.Payload -> HoleInfo m ->
@@ -413,43 +473,34 @@ make pl holeInfo = do
     holeInfo shownMainResultsIds allShownResultIds (hiSearchTermId holeInfo) $ do
       (mShownResult, resultsWidget) <-
         makeResultsWidget holeInfo shownResultsLists hasHiddenResults
-      searchTermWidget <- makeSearchTermWidget holeInfo
+      (searchTermEventMap, resultsEventMap) <- makeEventMaps pl holeInfo mShownResult
+      searchTermGui <-
+        makeSearchTermGui holeInfo
+        <&> ExpressionGui.egWidget %~
+            Widget.weakerEvents searchTermEventMap
       let
-        adHocEditor = adHocTextEditEventMap $ searchTermProperty holeInfo
         layers = Config.layers config
         layerDiff = Config.layerHoleBG layers - Config.layerMax layers
-      jumpHolesEventMap <- ExprEventMap.jumpHolesEventMapIfSelected [] pl
-      replaceEventMap <- ExprEventMap.replaceOrComeToParentEventMap True pl
-      let
-        eventMap = mconcat
-          [ pasteEventMap config holeInfo
-          , maybe mempty (resultEventMap config) mShownResult
-          , jumpHolesEventMap
-          , replaceEventMap
-          , closeEventMap
-          ]
-      searchTermWidget
+      searchTermGui
         & ExpressionGui.addBelow 0.5
-          [(0.5, Widget.strongerEvents adHocEditor resultsWidget)]
+          [(0.5, Widget.strongerEvents resultsEventMap resultsWidget)]
         & ExpressionGui.egWidget %~
           (Widget.wFrame %~ Anim.onDepth (+ layerDiff)) .
           makeBackground (HoleInfo.hiActiveId holeInfo)
             (Config.layerMax (Config.layers config))
-            (Config.activeHoleBackgroundColor config) .
-          Widget.weakerEvents eventMap .
-          Widget.strongerEvents
-          (maybe mempty
-           (mappend
-            (alphaNumericAfterOperator)
-            (resultPickEventMap config)
-            holeInfo)
-           mShownResult)
+            (Config.activeHoleBackgroundColor config)
         & ExpressionGui.addInferredTypes pl
-  where
-    closeEventMap =
-      Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.KeyEsc]
-      (E.Doc ["Navigation", "Hole", "Close"]) . pure $
-      Widget.joinId (hiId holeInfo) ["closed"]
+
+pickBefore ::
+  MonadA m =>
+  ShownResult m -> Widget.EventHandlers (T m) -> Widget.EventHandlers (T m)
+pickBefore shownResult = fmap . liftA2 mappend $ srPick shownResult
+
+-- TODO: Use this where the hiState is currently used to get the
+-- search term
+searchTermProperty :: HoleInfo m -> Property (T m) String
+searchTermProperty holeInfo =
+  Property.composeLens HoleState.hsSearchTerm $ hiState holeInfo
 
 pasteEventMap ::
   Functor m => Config -> HoleInfo m -> Widget.EventHandlers (T m)
@@ -458,32 +509,6 @@ pasteEventMap config holeInfo =
   (Widget.keysEventMapMovesCursor
    (Config.pasteKeys config) (E.Doc ["Edit", "Paste"]) .
    fmap WidgetIds.fromGuid) $ hiActions holeInfo ^. Sugar.holePaste
-
-pickBefore ::
-  MonadA m =>
-  ShownResult m -> Widget.EventHandlers (T m) -> Widget.EventHandlers (T m)
-pickBefore shownResult = fmap . liftA2 mappend $ srPick shownResult
-
-resultEventMap ::
-  MonadA m => Config -> ShownResult m ->
-  Widget.EventHandlers (T m)
-resultEventMap config shownResult =
-  srEventMap shownResult
-  & maybe id (mappend . extraResultEventMap) mActions
-  & pickBefore shownResult
-  where
-    extraResultEventMap = mconcat
-      [ ExprEventMap.applyOperatorEventMap []
-      , ExprEventMap.cutEventMap config
-      ]
-    convertedResult = srHoleResult shownResult ^. Sugar.holeResultConverted
-    mActions = convertedResult ^. Sugar.rPayload . Sugar.plActions
-
--- TODO: Use this where the hiState is currently used to get the
--- search term
-searchTermProperty :: HoleInfo m -> Property (T m) String
-searchTermProperty holeInfo =
-  Property.composeLens HoleState.hsSearchTerm $ hiState holeInfo
 
 adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap searchTermProp =
@@ -524,10 +549,10 @@ disallowedHoleChars =
   , ('9', E.Shifted)
   ]
 
-makeSearchTermWidget ::
+makeSearchTermGui ::
   MonadA m => HoleInfo m ->
   ExprGuiM m (ExpressionGui m)
-makeSearchTermWidget holeInfo = do
+makeSearchTermGui holeInfo = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExprGuiM.widgetEnv $
     (ExpressionGui.scaleFromTop (realToFrac <$> Config.holeSearchTermScaleFactor config) .
