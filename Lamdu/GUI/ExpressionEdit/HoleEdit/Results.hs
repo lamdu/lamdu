@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Results
   ( makeAll, HaveHiddenResults(..)
   , Result(..), ResultInfo(..)
@@ -55,21 +55,19 @@ import qualified System.Random as Random
 type T = Transaction
 type CT m = StateT Cache (T m)
 
+newtype SearchTerms = SearchTerms
+  { _searchTerms :: [String]
+  } deriving (Monoid)
+
 data Group def = Group
   { _groupId :: String
-  , _groupNames :: [String]
+  , _groupSearchTerms :: SearchTerms
   , _groupBaseExpr :: Expression def ()
   }
 type GroupM m = Group (DefIM m)
 
+Lens.makeLenses ''SearchTerms
 Lens.makeLenses ''Group
-
-mkGroup :: String -> [String] -> Expr.BodyExpr def () -> Group def
-mkGroup gId names body = Group
-  { _groupId = gId
-  , _groupNames = names
-  , _groupBaseExpr = ExprUtil.pureExpression body
-  }
 
 data ResultType = GoodResult | BadResult
   deriving (Eq, Ord)
@@ -105,12 +103,12 @@ tagsToGroup (tagG, expr) = sugarNameToGroup (tagG ^. Sugar.tagName) expr
 getParamsToGroup :: (Sugar.GetParams Sugar.Name m, Expression def ()) -> Group def
 getParamsToGroup (getParams, expr) =
   sugarNameToGroup (getParams ^. Sugar.gpDefName) expr
-  & groupNames <>~ ["params"]
+  & groupSearchTerms <>~ SearchTerms ["params"]
 
 sugarNameToGroup :: Sugar.Name -> Expression def () -> Group def
 sugarNameToGroup (Sugar.Name _ collision varName) expr = Group
   { _groupId = "Var" ++ varName ++ ":" ++ concat collisionStrs
-  , _groupNames = varName : collisionStrs
+  , _groupSearchTerms = SearchTerms $ varName : collisionStrs
   , _groupBaseExpr = expr
   }
   where
@@ -292,7 +290,7 @@ makeResultsList holeInfo resultInfo group =
     mkGen i guid = genFromHashable (guid, group ^. groupId, i)
     isHoleWrap = Lens.has (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole)
     toPreferred
-      | Lens.anyOf (groupNames . traverse) (== searchTerm) group = Preferred
+      | Lens.anyOf (groupSearchTerms . searchTerms . traverse) (== searchTerm) group = Preferred
       | otherwise = NotPreferred
     searchTerm = hiSearchTerm holeInfo
     baseExpr = group ^. groupBaseExpr
@@ -376,17 +374,17 @@ makeAllGroups holeInfo = do
       , tagsGroups
       , getParamsGroups
       ]
-    sortedGroups f  = sortOn (^. groupNames) . map f
+    sortedGroups f  = sortOn (^. groupSearchTerms . searchTerms) . map f
     localsGroups    = sortedGroups getVarsToGroup locals
     globalsGroups   = sortedGroups getVarsToGroup globals
     tagsGroups      = sortedGroups tagsToGroup tags
     getParamsGroups = sortedGroups getParamsToGroup getParams
-  pure $ holeMatches (^. groupNames) (hiSearchTerm holeInfo) allGroups
+  pure $ holeMatches (^. groupSearchTerms) (hiSearchTerm holeInfo) allGroups
   where
     inferredGroups =
       [ Group
         { _groupId = "inferred"
-        , _groupNames = ["inferred"]
+        , _groupSearchTerms = SearchTerms ["inferred"]
         , _groupBaseExpr = iVal
         }
       | Lens.nullOf ExprLens.exprHole iVal
@@ -395,31 +393,32 @@ makeAllGroups holeInfo = do
       let
         (dupsOfInferred, others) =
           List.partition (ExprUtil.alphaEq iVal . (^. groupBaseExpr)) groups
-        dupsGroupNames = dupsOfInferred ^. Lens.traverse . groupNames
+        dupsGroupNames = dupsOfInferred ^. Lens.traverse . groupSearchTerms
       in
-        ( inferredGroups & Lens.traverse . groupNames <>~ dupsGroupNames
+        ( inferredGroups & Lens.traverse . groupSearchTerms <>~ dupsGroupNames
         ) ++ others
     iVal = hiInferred holeInfo ^. Sugar.hiBaseValue
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
-  [ mkGroup "LiteralInt" [searchTerm] $ ExprLens.bodyLiteralInteger # read searchTerm
+  [ mkGroupBody "LiteralInt" [searchTerm] $ ExprLens.bodyLiteralInteger # read searchTerm
   | nonEmptyAll Char.isDigit searchTerm
   ] ++
-  [ mkGroup "Apply" ["Apply", "Give argument"] . Expr.BodyApply $
-    Expr.Apply pureHole pureHole
-  , mkGroup "Type" ["Type"] $ Expr.BodyLeaf Expr.Type
-  , mkGroup "Integer" ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
-  , mkGroup "Pi" ["->", "Pi", "→", "→", "Π", "π"] $
+  [ mkGroupBody "Pi" ["->", "Pi", "→", "→", "Π", "π"] $
     ExprUtil.makePi (Guid.fromString "NewPi") pureHole pureHole
-  , mkGroup "Lambda" ["\\", "Lambda", "Λ", "λ"] $
+  , mkGroupBody "Lambda" ["\\", "Lambda", "Λ", "λ"] $
     ExprUtil.makeLambda (Guid.fromString "NewLambda") pureHole pureHole
-  , Group "RecValue" ["Record Value", "{"] .
+  , mkGroupBody "GetField" [".", "Get Field"] . Expr.BodyGetField $
+    Expr.GetField pureHole pureHole
+  , mkGroupBody "Apply" ["Apply", "Give argument"] . Expr.BodyApply $
+    Expr.Apply pureHole pureHole
+  , mkGroupBody "Type" ["Type"] $ Expr.BodyLeaf Expr.Type
+  , mkGroupBody "Integer" ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
+  , Group "RecValue" (SearchTerms ["Record Value", "{"]) .
     fromMaybe (record Expr.KVal) . ExprUtil.recordValForm .
     void $ hiInferred holeInfo ^. Sugar.hiType
-  , Group "RecType" ["Record Type", "{"] $ record Expr.KType
-  , mkGroup "GetField" [".", "Get Field"] . Expr.BodyGetField $
-    Expr.GetField pureHole pureHole
+  , Group "RecType" (SearchTerms ["Record Type", "{"]) $
+    record Expr.KType
   ]
   where
     searchTerm = hiSearchTerm holeInfo
@@ -428,9 +427,14 @@ primitiveGroups holeInfo =
       case hiMArgument holeInfo of
       Nothing -> []
       Just _ -> [(pureHole, pureHole)]
+    mkGroupBody gId terms body = Group
+      { _groupId = gId
+      , _groupSearchTerms = SearchTerms terms
+      , _groupBaseExpr = ExprUtil.pureExpression body
+      }
 
-groupOrdering :: String -> [String] -> [Bool]
-groupOrdering searchTerm names =
+groupOrdering :: String -> SearchTerms -> [Bool]
+groupOrdering searchTerm (SearchTerms terms) =
   map not
   [ match (==)
   , match isPrefixOf
@@ -439,12 +443,12 @@ groupOrdering searchTerm names =
   ]
   where
     insensitivePrefixOf = isPrefixOf `on` map Char.toLower
-    match f = any (f searchTerm) names
+    match f = any (f searchTerm) terms
 
-holeMatches :: (a -> [String]) -> String -> [a] -> [a]
-holeMatches getNames searchTerm =
-  sortOn (groupOrdering searchTerm . getNames) .
+holeMatches :: (a -> SearchTerms) -> String -> [a] -> [a]
+holeMatches getSearchTerms searchTerm =
+  sortOn (groupOrdering searchTerm . getSearchTerms) .
   filter nameMatch
   where
-    nameMatch = any (insensitiveInfixOf searchTerm) . getNames
+    nameMatch = any (insensitiveInfixOf searchTerm) . (^. searchTerms) . getSearchTerms
     insensitiveInfixOf = isInfixOf `on` map Char.toLower
