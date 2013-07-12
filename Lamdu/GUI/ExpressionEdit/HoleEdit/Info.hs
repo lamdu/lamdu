@@ -1,5 +1,6 @@
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Info
   ( HoleInfo(..)
+  , hiSearchTermProperty
   , hiSearchTerm
   , hiActiveId
   ) where
@@ -27,6 +28,10 @@ data HoleInfo m = HoleInfo
   , hiMArgument :: Maybe (Sugar.HoleArg m (ExprGuiM.SugarExpr m))
   , hiHoleGuids :: ExprGuiM.HoleGuids
   }
+
+hiSearchTermProperty :: HoleInfo m -> Property (T m) String
+hiSearchTermProperty holeInfo =
+  Property.composeLens hsSearchTerm $ hiState holeInfo
 
 hiActiveId :: HoleInfo m -> Widget.Id
 hiActiveId = diveIntoHole . hiId
