@@ -23,6 +23,7 @@ import Data.List.Utils (sortOn, nonEmptyAll)
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
+import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.Config (Config)
@@ -135,10 +136,10 @@ prefixId holeInfo = mconcat [hiActiveId holeInfo, WidgetId.Id ["results"]]
 
 typeCheckHoleResult ::
   MonadA m => HoleInfo m ->
-  Random.StdGen ->
+  (Guid -> Random.StdGen) ->
   Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl) ->
   CT m (Maybe (ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl))
-typeCheckHoleResult holeInfo gen seed = do
+typeCheckHoleResult holeInfo mkGen seed = do
   mGood <- mkHoleResult seed
   case (mGood, seed) of
     (Just good, _) -> pure $ Just (GoodResult, good)
@@ -147,17 +148,17 @@ typeCheckHoleResult holeInfo gen seed = do
       (mkHoleResult . Sugar.ResultSeedExpression . storePointHoleWrap) expr
     _ -> pure Nothing
   where
-    mkHoleResult = Sugar.holeResult (hiActions holeInfo) gen
+    mkHoleResult = Sugar.holeResult (hiActions holeInfo) mkGen
 
 typeCheckResults ::
   MonadA m => HoleInfo m ->
-  (Int -> Random.StdGen) ->
+  (Int -> Guid -> Random.StdGen) ->
   [Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl)] ->
   CT m [(ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl)]
-typeCheckResults holeInfo gen options = do
+typeCheckResults holeInfo mkGen options = do
   rs <-
     options
-    & Lens.traversed %%@~ typeCheckHoleResult holeInfo . gen
+    & Lens.traversed %%@~ typeCheckHoleResult holeInfo . mkGen
     <&> catMaybes
   let (goodResults, badResults) = partition ((== GoodResult) . fst) rs
   return $ sortOn (score . snd) goodResults ++ badResults
@@ -190,12 +191,12 @@ mResultsListOf holeInfo resultInfo baseId (x:xs) = Just
       }
 
 typeCheckToResultsList ::
-  MonadA m => HoleInfo m -> (Int -> Random.StdGen) -> ResultInfo ->
+  MonadA m => HoleInfo m -> (Int -> Guid -> Random.StdGen) -> ResultInfo ->
   WidgetId.Id -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl)] ->
   CT m (Maybe (ResultsList m))
-typeCheckToResultsList holeInfo gen resultInfo baseId options =
+typeCheckToResultsList holeInfo mkGen resultInfo baseId options =
   mResultsListOf holeInfo resultInfo baseId <$>
-  typeCheckResults holeInfo gen options
+  typeCheckResults holeInfo mkGen options
 
 baseExprWithApplyForms ::
   MonadA m => HoleInfo m -> ExprIRef.ExpressionM m () ->
@@ -292,12 +293,12 @@ makeResultsList ::
   CT m (Maybe (ResultsList m))
 makeResultsList holeInfo resultInfo group =
   (Lens.mapped . Lens.mapped %~ rlPreferred .~ toPreferred) .
-  typeCheckToResultsList holeInfo gen resultInfo baseId .
+  typeCheckToResultsList holeInfo mkGen resultInfo baseId .
   map Sugar.ResultSeedExpression . filter (not . isHoleWrap) =<<
   maybeInjectArgumentExpr holeInfo =<<
   baseExprWithApplyForms holeInfo baseExpr
   where
-    gen i = genFromHashable (hiPlGuid holeInfo, group ^. groupId, i)
+    mkGen i guid = genFromHashable (guid, group ^. groupId, i)
     isHoleWrap = Lens.has (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole)
     toPreferred
       | Lens.anyOf (groupNames . traverse) (== searchTerm) group = Preferred
@@ -312,10 +313,10 @@ makeNewTagResultList ::
 makeNewTagResultList holeInfo
   | null (hiSearchTerm holeInfo) = pure Nothing
   | otherwise =
-      typeCheckToResultsList holeInfo gen ResultInfoNewTag (WidgetId.Id ["NewTag"]) $
+      typeCheckToResultsList holeInfo mkGen ResultInfoNewTag (WidgetId.Id ["NewTag"]) $
       maybeInjectArgumentNewTag holeInfo
   where
-    gen i = genFromHashable (hiPlGuid holeInfo, "New tag" :: String, i)
+    mkGen i guid = genFromHashable (guid, "New tag" :: String, i)
 
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
 

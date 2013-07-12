@@ -100,13 +100,13 @@ mkPaste exprP = do
 --
 -- So to be compatible with that in our idTranslations, we want to
 -- change our param Guids to match that:
-combineLamGuids :: Expr.Expression def Guid -> Expr.Expression def Guid
-combineLamGuids =
+combineLamGuids :: (a -> Guid) -> Expr.Expression def a -> Expr.Expression def a
+combineLamGuids getGuid =
   go Map.empty
   where
-    go renames (Expr.Expression body guid) =
+    go renames (Expr.Expression body a) =
       -- TODO: Lens.outside
-      (`Expr.Expression` guid) $
+      (`Expr.Expression` a) $
       case body of
       Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef paramGuid))
         | Just newParamGuid <- Map.lookup paramGuid renames ->
@@ -117,32 +117,76 @@ combineLamGuids =
          (go renames paramType)
          (go (Map.insert paramGuid newParamGuid renames) result))
         where
-          newParamGuid = Guid.combine guid paramGuid
+          newParamGuid = Guid.combine (getGuid a) paramGuid
       _ -> go renames <$> body
 
-type IdTranslations m =
-  ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m) ->
+markHoles :: Expr.Expression def a -> Expr.Expression def (Bool, a)
+markHoles =
+  (ExprLens.holePayloads . Lens._1 .~ True) .
+  (Lens.mapped %~ (,) False)
+
+aWhen :: Applicative f => Bool -> f () -> f ()
+aWhen False _ = pure ()
+aWhen True x = x
+
+translateIfInferred ::
+  (Guid -> Random.StdGen) ->
+  InputPayloadP (Maybe (Infer.Inferred (DefIM m))) stored a ->
+  Guid ->
   [(Guid, Guid)]
+translateIfInferred mkGen aIP bGuid = do
+  guard $ Lens.nullOf ExprLens.exprHole inferredVal
+  translateInferred mkGen inferredVal (aIP ^. ipGuid) bGuid
+  where
+    inferredVal =
+      aIP ^. ipInferred
+      <&> void . Infer.iValue
+      & fromMaybe ExprUtil.pureHole
+
+translateInferred ::
+  (Guid -> Random.StdGen) ->
+  ExprIRef.ExpressionM m () -> Guid -> Guid ->
+  [(Guid, Guid)]
+translateInferred mkGen inferredVal aGuid bGuid =
+  idTranslations mkGen (intoIP <$> aExpr) bExpr
+  where
+    mkExpr guid = ExprUtil.randomizeExprAndParams (mkGen guid) (id <$ inferredVal)
+    intoIP guid = InputPayload
+      { _ipGuid = guid
+      , _ipInferred = Nothing
+      , _ipStored = Nothing
+      , _ipData = ()
+      }
+    aExpr = mkExpr aGuid
+    bExpr = mkExpr bGuid
 
 idTranslations ::
-  ExprIRef.ExpressionM m (InputPayloadP inferred stored a) ->
-  IdTranslations m
-idTranslations convertedExpr writtenExpr =
+  (Guid -> Random.StdGen) ->
+  ExprIRef.ExpressionM m (InputPayloadP (Maybe (Infer.Inferred (DefIM m))) stored a) ->
+  ExprIRef.ExpressionM m Guid ->
+  [(Guid, Guid)]
+idTranslations mkGen convertedExpr writtenExpr =
   execWriter . runApplicativeMonoid . getConst $
   go
-  (combineLamGuids ((^. ipGuid) <$> convertedExpr))
-  (combineLamGuids (ExprIRef.exprGuid <$> writtenExpr))
+  (convertedExpr & combineLamGuids (^. ipGuid) & markHoles)
+  (writtenExpr & combineLamGuids id & markHoles)
   where
-    go = ExprUtil.matchExpressionG tell tell mismatch
+    go = ExprUtil.matchExpressionG tell match mismatch
+    match (aIsHole, aIP) (bIsHole, bGuid)
+      | aIsHole /= bIsHole = error "match between differing bodies?"
+      | otherwise =
+        tell (aIP ^. ipGuid) bGuid *>
+        aWhen aIsHole (tells $ translateIfInferred mkGen aIP bGuid)
     mismatch x y =
       error $
       unlines
-      [ "Mismatch idTranslations: " ++ show x ++ ", " ++ show y
+      [ "Mismatch idTranslations: " ++ show (void x) ++ ", " ++ show (void y)
       , showExpr convertedExpr
       , showExpr writtenExpr
       ]
     showExpr expr = expr & ExprLens.exprDef .~ () & void & show
-    tell src dst = Const . ApplicativeMonoid $ Writer.tell [(src, dst)]
+    tells = Const . ApplicativeMonoid . Writer.tell
+    tell src dst = tells [(src, dst)]
 
 mkWritableHoleActions ::
   (MonadA m, Typeable1 m) =>
@@ -416,10 +460,10 @@ mkHoleResult ::
   (Typeable1 m, MonadA m, Cache.Key a, Binary a, Monoid a) =>
   ConvertM.Context m ->
   InputPayloadP (InferredWC m) (Stored m) () ->
-  Random.StdGen ->
+  (Guid -> Random.StdGen) ->
   HoleResultSeed m (MStorePoint m a) ->
   CT m (Maybe (HoleResult MStoredName m a))
-mkHoleResult sugarContext (InputPayload _guid iwc stored ()) gen seed = do
+mkHoleResult sugarContext (InputPayload guid iwc stored ()) mkGen seed = do
   ((fMJumpTo, mResult), forkedChanges) <- cachedFork $ do
     (fSeedExpr, fMJumpTo) <- lift $ seedExprEnv (Nothing, mempty) cp seed
     fMInferredExprCtx <-
@@ -427,7 +471,7 @@ mkHoleResult sugarContext (InputPayload _guid iwc stored ()) gen seed = do
       SugarInfer.memoLoadInfer Nothing fSeedExpr holePoint
     mResult <-
       traverse
-      (writeConvertTypeChecked gen sugarContext stored)
+      (writeConvertTypeChecked (mkGen guid) sugarContext stored)
       fMInferredExprCtx
     return (fMJumpTo, mResult)
 
@@ -457,8 +501,9 @@ mkHoleResult sugarContext (InputPayload _guid iwc stored ()) gen seed = do
           mJumpGuid <|>
           (^. Expr.ePayload . Lens._1) <$> mNextHole
         , _prIdTranslation =
-          idTranslations consistentExpr $
-          Property.value . (^. ipStored) <$> writtenExpr
+          idTranslations mkGen
+          (consistentExpr <&> ipInferred %~ Just)
+          (ExprIRef.exprGuid . Property.value . (^. ipStored) <$> writtenExpr)
         }
 
 randomizeNonStoredParamIds ::

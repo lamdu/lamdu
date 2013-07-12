@@ -228,7 +228,7 @@ data HoleActions name m = HoleActions
   , holeResult ::
       forall a.
       (Binary a, Typeable a, Ord a, Monoid a) =>
-      Random.StdGen -> -- for consistent guids
+      (Guid -> Random.StdGen) -> -- for consistent guids
       HoleResultSeed m (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
       CT m (Maybe (HoleResult name m a))
   , _holePaste :: Maybe (T m Guid)

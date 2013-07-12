@@ -25,6 +25,7 @@ module Lamdu.Data.Expression.Lens
   , subTreesThat
   , tagPositions
   , lambdaParamTypes
+  , holePayloads
   ) where
 
 import Prelude hiding (pi)
@@ -207,20 +208,26 @@ subTreesThat cond f expr
 -- Not recursive (no tags inside tags), a valid traversal.
 tagPositions :: Lens.Traversal' (Expression def a) (Expression def a)
 tagPositions f =
-  eBody $
   traverse go
   & Lens.outside _BodyGetField .~ fmap BodyGetField . getFieldRecord go
   & Lens.outside _BodyRecord .~ fmap BodyRecord . (recordFields . traverse . Lens._2) go
+  & eBody
   where
     go = tagPositions f
 
 -- Lambda param types not including param types inside param types (a valid traversal)
 lambdaParamTypes :: Lens.Traversal' (Expression def a) (Expression def a)
 lambdaParamTypes f =
-  eBody $
   traverse go
   & Lens.outside (bodyKindedLam KVal) .~ fmap (bodyKindedLam KVal # ) . onLambda
+  & eBody
   where
     go = lambdaParamTypes f
     onLambda (paramId, paramType, body) =
       (,,) paramId <$> f paramType <*> go body
+
+holePayloads :: Lens.Traversal' (Expression def a) a
+holePayloads f (Expression (BodyLeaf Hole) pl) =
+  Expression (BodyLeaf Hole) <$> f pl
+holePayloads f (Expression body pl) =
+  (`Expression` pl) <$> traverse (holePayloads f) body
