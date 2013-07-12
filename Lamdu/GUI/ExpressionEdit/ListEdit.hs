@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.ListEdit(make) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<|>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
@@ -11,6 +11,7 @@ import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -24,7 +25,7 @@ make ::
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make list pl =
-  ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped list
+  ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped pl list
 
 makeBracketLabel :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui f)
 makeBracketLabel label myId = do
@@ -39,25 +40,42 @@ lastLens :: Lens.Traversal' [a] a
 lastLens = Lens.taking 1 . Lens.backwards $ Lens.traversed
 
 makeUnwrapped ::
-  MonadA m => Sugar.List m (ExprGuiM.SugarExpr m) -> Widget.Id ->
+  MonadA m =>
+  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.List m (ExprGuiM.SugarExpr m) -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makeUnwrapped list myId =
+makeUnwrapped pl list myId =
   ExprGuiM.assignCursor myId cursorDest $ do
-    itemEdits <- mapM makeItem $ Sugar.lValues list
     bracketOpenLabel <- makeBracketLabel "[" bracketsIdForAnim
     bracketCloseLabel <- makeBracketLabel "]" bracketsIdForAnim
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
       addFirstElemEventMap =
         actionEventMap (Config.listAddItemKeys config) "Add First Item" Sugar.addFirstItem
-      onFirstBracket label =
+      onFirstBracket mItem itemPl label = do
+        let hg = itemPl ^. Sugar.plData . ExprGuiM.plHoleGuids
+        jumpHolesEventMap <-
+          hg
+          & case mItem of
+            Just item
+              | Lens.has (Sugar.liExpr . Sugar.rBody . Sugar._BodyHole) item
+              -> ExprGuiM.hgMNextHole %~ (storedGuid <|>)
+              where
+                storedGuid =
+                  item ^? Sugar.liExpr . Sugar.rPayload .
+                  Sugar.plActions . Lens._Just . Sugar.storedGuid
+            _ -> id
+          & ExprEventMap.jumpHolesEventMap []
         ExpressionGui.makeFocusableView firstBracketId label
-        <&> ExpressionGui.egWidget %~ Widget.weakerEvents addFirstElemEventMap
-    case itemEdits of
-      [] ->
-        onFirstBracket $ ExpressionGui.hbox [bracketOpenLabel, bracketCloseLabel]
-      (_, firstEdit) : nextEdits -> do
-        bracketOpen <- onFirstBracket bracketOpenLabel
+          <&> ExpressionGui.egWidget %~
+              Widget.weakerEvents (mappend addFirstElemEventMap jumpHolesEventMap)
+    case Sugar.lValues list of
+      [] -> onFirstBracket Nothing pl $ ExpressionGui.hbox [bracketOpenLabel, bracketCloseLabel]
+      firstValue : nextValues -> do
+        (_, firstEdit) <- makeItem firstValue
+        nextEdits <- mapM makeItem nextValues
+        bracketOpen <-
+          onFirstBracket (Just firstValue) (firstValue ^. Sugar.liExpr . Sugar.rPayload) bracketOpenLabel
         let
           nilDeleteEventMap =
             actionEventMap (Config.delKeys config) "Replace nil with hole" Sugar.replaceNil
