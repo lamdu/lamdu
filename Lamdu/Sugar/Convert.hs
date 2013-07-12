@@ -231,16 +231,7 @@ convertGetVariable varRef exprPl = do
 convertLiteralInteger ::
   (MonadA m, Typeable1 m) => Integer ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
-convertLiteralInteger i exprPl =
-  ConvertExpr.make exprPl . BodyLiteralInteger $
-  LiteralInteger
-  { liValue = i
-  , liSetValue = setValue . Property.value <$> exprPl ^. ipStored
-  }
-  where
-    setValue iref val =
-      ExprIRef.writeExprBody iref $
-      ExprLens.bodyLiteralInteger # val
+convertLiteralInteger i exprPl = ConvertExpr.make exprPl $ BodyLiteralInteger i
 
 convertTag ::
   (MonadA m, Typeable1 m) => Guid ->

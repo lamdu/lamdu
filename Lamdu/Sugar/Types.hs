@@ -59,7 +59,6 @@ module Lamdu.Sugar.Types
     , holeResultPick
     , holeResultHasHoles
   , PickedResult(..), prMJumpTo, prIdTranslation
-  , LiteralInteger(..)
   , TagG(..), tagName, tagGuid
   , Collapsed(..), cFuncGuid, cCompact, cFullExpression, cFullExprHasInfo
   , MStorePoint, ExprStorePoint
@@ -259,11 +258,6 @@ data Hole name m expr = Hole
   , _holeMArg :: Maybe (HoleArg m expr)
   } deriving (Functor, Foldable, Traversable)
 
-data LiteralInteger m = LiteralInteger
-  { liValue :: Integer
-  , liSetValue :: Maybe (Integer -> T m ())
-  }
-
 data Collapsed name m expr = Collapsed
   { _cFuncGuid :: Guid
   , _cCompact :: GetVar name m
@@ -358,7 +352,7 @@ data Body name m expr
   | BodyApply (Apply name expr)
   | BodyHole (Hole name m expr)
   | BodyCollapsed (Collapsed name m expr)
-  | BodyLiteralInteger (LiteralInteger m)
+  | BodyLiteralInteger Integer
   | BodyAtom String
   | BodyList (List m expr)
   | BodyRecord (Record m expr)
@@ -381,7 +375,7 @@ instance Show expr => Show (Body name m expr) where
                 | otherwise = ""
   show BodyHole {} = "Hole"
   show BodyCollapsed {} = "Collapsed"
-  show (BodyLiteralInteger (LiteralInteger i _)) = show i
+  show (BodyLiteralInteger i) = show i
   show (BodyAtom atom) = atom
   show (BodyList (List items _ _)) =
     concat
