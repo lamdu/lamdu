@@ -279,8 +279,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
   mconcat . (scopePar :) <$>
     mapM onScopeField
     (typeExpr ^..
-     -- TODO: Use exprKindedRecordFields Type!
-     ExprLens.exprRecord . Expr.recordFields . traverse . Lens._1 . ExprLens.exprTag)
+     ExprLens.exprKindedRecordFields KType . traverse . Lens._1 . ExprLens.exprTag)
   where
     mkGetPar =
       case Map.lookup parGuid recordParamsMap of
