@@ -117,7 +117,7 @@ makeWrapper arg myId = do
     <&> ExpressionGui.pad (realToFrac <$> Config.wrapperHolePadding config)
     <&> ExpressionGui.egWidget %~
         makeBackground myId
-        (Config.layerInactiveHole (Config.layers config)) bgColor
+        (Config.layerHoleBG (Config.layers config)) bgColor
 
 makeInferred ::
   MonadA m =>
@@ -143,7 +143,7 @@ makeInferred inferred pl myId = do
       ( diveIntoHole myId
       , gui
         & ExpressionGui.egWidget %~
-          makeBackground myId (Config.layerInactiveHole (Config.layers config))
+          makeBackground myId (Config.layerHoleBG (Config.layers config))
           (Config.inactiveHoleBackgroundColor config)
       )
   where
@@ -169,7 +169,7 @@ makeSimple myId = do
     (BWidgets.makeTextViewWidget "  " (Widget.toAnimId myId))
     <&>
       makeBackground myId
-      (Config.layerInactiveHole (Config.layers config))
+      (Config.layerHoleBG (Config.layers config))
       (Config.inactiveHoleBackgroundColor config)
     <&> ExpressionGui.fromValueWidget
     >>= ExpressionGui.egWidget %%~ makeFocusable myId

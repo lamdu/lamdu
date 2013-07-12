@@ -11,13 +11,12 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 
 data Layers = Layers
-  { layerInactiveHole
-  , layerCursorBG
+  { layerCursorBG
   , layerTypes
   , layerCollapsedCompactBG
   , layerCollapsedExpandedBG
   , layerChoiceBG
-  , layerActiveHoleBG
+  , layerHoleBG
   , layerNameCollisionBG
   , layerLabeledApplyBG
   , layerParensHighlightBG

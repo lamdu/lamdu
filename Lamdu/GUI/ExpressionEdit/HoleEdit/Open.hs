@@ -384,7 +384,7 @@ make pl holeInfo = do
       let
         adHocEditor = adHocTextEditEventMap $ searchTermProperty holeInfo
         layers = Config.layers config
-        layerDiff = Config.layerActiveHoleBG layers - Config.layerMax layers
+        layerDiff = Config.layerHoleBG layers - Config.layerMax layers
       jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] pl
       replaceEventMap <- ExprEventMap.replaceOrComeToParentEventMap True pl
       let
