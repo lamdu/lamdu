@@ -324,8 +324,8 @@ blockDownEvents =
   (E.Doc ["Navigation", "Move", "down (blocked)"]) $
   return mempty
 
-addSelectedResultPicker :: MonadA m => Maybe (ShownResult m) -> ExprGuiM m ()
-addSelectedResultPicker mSelectedResult =
+addMResultPicker :: MonadA m => Maybe (ShownResult m) -> ExprGuiM m ()
+addMResultPicker mSelectedResult =
   case mSelectedResult of
     Nothing -> return ()
     Just res -> ExprGuiM.addResultPicker $ snd <$> srPick res
@@ -340,7 +340,7 @@ makeResultsWidget holeInfo shownResultsLists hiddenResults = do
     mSelectedResult = mResults ^? Lens.traversed . Lens._Just
     mFirstResult = mainResults ^? Lens.traversed
     mResult = mSelectedResult <|> mFirstResult
-  addSelectedResultPicker mSelectedResult
+  addMResultPicker mResult
   hiddenResultsWidgets <- maybeToList <$> makeHiddenResultsMWidget hiddenResults myId
   widget <-
     if null rows
