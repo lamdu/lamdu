@@ -2,7 +2,9 @@
 module Lamdu.GUI.ExpressionEdit.TagEdit(make, makeView) where
 
 import Control.Applicative ((<$>))
+import Control.Lens.Operators
 import Control.MonadA (MonadA)
+import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -16,6 +18,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified Lamdu.Sugar.Types as Sugar
 
 fdConfig :: FocusDelegator.Config
@@ -39,8 +42,18 @@ make ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make (Sugar.TagG tag name) pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    nextHoleEventMap =
+      maybe mempty
+      (Widget.keysEventMapMovesCursor
+       (Config.pickAndMoveToNextHoleKeys config)
+       (E.Doc ["Navigation", "Jump to next hole"]) .
+       return . WidgetIdIRef.fromGuid) $
+      pl ^. Sugar.plData . ExprGuiM.plHoleGuids . ExprGuiM.hgMNextHole
   ExpressionGui.stdWrapDelegated pl fdConfig FocusDelegator.NotDelegating
-    (fmap (onTagWidget config) . ExpressionGui.makeNameEdit name tag) myId
+    ( fmap (onTagWidget config . Widget.weakerEvents nextHoleEventMap)
+    . ExpressionGui.makeNameEdit name tag
+    ) myId
 
 makeView ::
   MonadA m => Sugar.TagG Sugar.Name -> AnimId -> ExprGuiM m (ExpressionGui m)
