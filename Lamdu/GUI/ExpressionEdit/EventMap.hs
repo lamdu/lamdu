@@ -7,7 +7,7 @@ module Lamdu.GUI.ExpressionEdit.EventMap
   , replaceOrComeToParentEventMap
   ) where
 
-import Control.Applicative ((<$>), Applicative(..))
+import Control.Applicative ((<$>), Applicative(..), liftA2)
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
@@ -57,7 +57,10 @@ mkEventMapWithPickers ::
   (f Widget.Id -> T m Widget.Id) ->
   f Guid -> EventHandlers (T m)
 mkEventMapWithPickers holePickers keys doc f =
-  mkEventMap keys doc ((holePickersAction holePickers *>) . f)
+  E.keyPresses keys doc .
+  liftA2 mappend (holePickersAction holePickers) .
+  fmap Widget.eventResultFromCursor . f .
+  fmap WidgetIds.fromGuid
 
 isExprSelected :: MonadA m => Sugar.Payload name f a -> ExprGuiM m Bool
 isExprSelected pl =
@@ -145,10 +148,12 @@ applyOperatorEventMap holePickers actions =
   where
     doc = E.Doc ["Edit", holePickersAddDocPrefix holePickers "Apply operator"]
     action wrap =
-      E.charGroup "Operator" doc operatorChars $ \c _isShifted -> do
-        holePickersAction holePickers
-        Widget.eventResultFromCursor <$>
-          (setHoleStateAndJump (HoleState [c]) =<< wrap)
+      E.charGroup "Operator" doc operatorChars $ \c _isShifted ->
+        mappend
+        <$> holePickersAction holePickers
+        <*>
+          (Widget.eventResultFromCursor <$>
+           (setHoleStateAndJump (HoleState [c]) =<< wrap))
 
 wrapEventMap ::
   MonadA m =>

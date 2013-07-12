@@ -5,11 +5,12 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
 
 import Control.Applicative (Applicative(..), (<$>), (<$), (<|>), liftA2)
 import Control.Lens.Operators
-import Control.Monad (guard, msum, when, void)
+import Control.Monad (guard, msum, when)
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
 import Data.Maybe (isJust, maybeToList, fromMaybe)
 import Data.Monoid (Monoid(..))
+import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Traversable (traverse, sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
@@ -53,6 +54,11 @@ type T = Transaction.Transaction
 data ShownResult m = ShownResult
   { srEventMap :: Widget.EventHandlers (T m)
   , srHoleResult :: Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl
+  , srPick ::
+    T m
+    ( Maybe Guid -- Hole target guid
+    , Widget.EventResult
+    )
   }
 
 extraSymbol :: String
@@ -61,13 +67,15 @@ extraSymbol = "▷"
 extraSymbolScaleFactor :: Fractional a => a
 extraSymbolScaleFactor = 0.5
 
-eventResultOfPickedResult :: Sugar.PickedResult -> Widget.EventResult
+eventResultOfPickedResult :: Sugar.PickedResult -> (Maybe Guid, Widget.EventResult)
 eventResultOfPickedResult pr =
-  Widget.EventResult
-  { Widget._eCursor = Monoid.Last $ WidgetIds.fromGuid <$> pr ^. Sugar.prMJumpTo
-  , Widget._eAnimIdMapping =
-    Monoid.Endo $ pickedResultAnimIdTranslation (pr ^. Sugar.prIdTranslation)
-  }
+  ( pr ^. Sugar.prMJumpTo
+  , Widget.EventResult
+    { Widget._eCursor = Monoid.Last $ WidgetIds.fromGuid <$> pr ^. Sugar.prMJumpTo
+    , Widget._eAnimIdMapping =
+      Monoid.Endo $ pickedResultAnimIdTranslation (pr ^. Sugar.prIdTranslation)
+    }
+  )
   where
     pickedResultAnimIdTranslation idTranslations =
       -- Map only the first anim id component
@@ -78,24 +86,23 @@ eventResultOfPickedResult pr =
           & Lens.traversed . Lens.both %~ head . Widget.toAnimId . WidgetIds.fromGuid
           & Map.fromList
 
-afterPick :: Monad m => HoleInfo m -> Sugar.PickedResult -> T m Widget.EventResult
+afterPick :: Monad m => HoleInfo m -> Sugar.PickedResult -> T m (Maybe Guid, Widget.EventResult)
 afterPick holeInfo pr = do
   Property.set (hiState holeInfo) HoleState.emptyState
   eventResultOfPickedResult pr
-    & Widget.eCursor %~
+    & Lens._2 . Widget.eCursor %~
       (mappend . Monoid.Last . Just .
        WidgetIds.fromGuid . hiStoredGuid) holeInfo
     & return
 
 setNextHoleState ::
   MonadA m =>
-  HoleInfo m -> String -> Sugar.PickedResult -> T m Widget.EventResult
-setNextHoleState holeInfo searchTerm pr =
-  afterPick holeInfo pr <*
-  case pr ^. Sugar.prMJumpTo of
-    Just newHoleGuid ->
-      Transaction.setP (HoleState.assocStateRef newHoleGuid) $ HoleState searchTerm
-    Nothing -> return ()
+  String -> (Maybe Guid, Widget.EventResult) -> T m Widget.EventResult
+setNextHoleState _ (Nothing, eventResult) = return eventResult
+setNextHoleState searchTerm (Just newHoleGuid, eventResult) =
+  eventResult <$
+  Transaction.setP (HoleState.assocStateRef newHoleGuid)
+  (HoleState searchTerm)
 
 resultPickEventMap ::
   MonadA m => Config -> HoleInfo m -> Maybe (ShownResult m) ->
@@ -111,8 +118,8 @@ resultPickEventMap config holeInfo (Just shownResult) =
       E.keyPresses (Config.pickAndMoveToNextHoleKeys config)
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) $
         (Widget.eCursor .~
-         (Monoid.Last . Just . WidgetIds.fromGuid) nextHoleGuid) <$>
-        pick
+         (Monoid.Last . Just . WidgetIds.fromGuid) nextHoleGuid) . snd <$>
+        srPick shownResult
   _ ->
     simplePickRes $
     Config.pickResultKeys config ++
@@ -122,13 +129,12 @@ resultPickEventMap config holeInfo (Just shownResult) =
     alphaNumericAfterOperator
       | nonEmptyAll (`elem` operatorChars) searchTerm =
         E.charGroup "Letter/digit"
-        (E.Doc ["Edit", "Result", "Pick and resume"])
-        alphaNumericChars $ \c _ -> setNextHoleState holeInfo [c] =<< holeResultPick
+        (E.Doc ["Edit", "Result", "Pick and resume"]) alphaNumericChars $
+        \c _ -> setNextHoleState [c] =<< srPick shownResult
       | otherwise = mempty
-    holeResultPick = srHoleResult shownResult ^. Sugar.holeResultPick
-    pick = afterPick holeInfo =<< holeResultPick
     simplePickRes keys =
-      E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) pick
+      E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) $
+      snd <$> srPick shownResult
 
 makePaddedResult :: MonadA m => Result m -> ExprGuiM m (WidgetT m)
 makePaddedResult res = do
@@ -142,28 +148,31 @@ makePaddedResult res = do
       HoleResults.ResultInfoNormal -> makeHoleResultWidget
 
 makeShownResult ::
-  MonadA m => Result m -> ExprGuiM m (Widget (T m), ShownResult m)
-makeShownResult result = do
+  MonadA m => HoleInfo m -> Result m -> ExprGuiM m (Widget (T m), ShownResult m)
+makeShownResult holeInfo result = do
   widget <- makePaddedResult result
   return
     ( widget & Widget.wEventMap .~ mempty
     , ShownResult
       { srEventMap = widget ^. Widget.wEventMap
       , srHoleResult = rHoleResult result
+      , srPick =
+        afterPick holeInfo =<< rHoleResult result ^. Sugar.holeResultPick
       }
     )
 
 makeResultGroup ::
   MonadA m =>
+  HoleInfo m ->
   ResultsList m ->
   ExprGuiM m
   ( ShownResult m
   , [WidgetT m]
   , Maybe (ShownResult m)
   )
-makeResultGroup results = do
+makeResultGroup holeInfo results = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  (mainResultWidget, shownMainResult) <- makeShownResult mainResult
+  (mainResultWidget, shownMainResult) <- makeShownResult holeInfo mainResult
   extraSymbolWidget <-
     if Lens.has (HoleResults.rlExtra . traverse) results
     then
@@ -193,7 +202,7 @@ makeResultGroup results = do
   return (shownMainResult, [mainResultWidget, onExtraSymbol extraSymbolWidget, extraResWidget], mResult)
   where
     mainResult = results ^. HoleResults.rlMain
-    makeExtra = makeExtraResultsWidget $ results ^. HoleResults.rlExtra
+    makeExtra = makeExtraResultsWidget holeInfo $ results ^. HoleResults.rlExtra
 
 makeExtraResultsPlaceholderWidget ::
   MonadA m => [Result m] -> ExprGuiM m (WidgetT m)
@@ -202,15 +211,15 @@ makeExtraResultsPlaceholderWidget (result:_) =
   makeFocusable (rId result) Spacer.empty
 
 makeExtraResultsWidget ::
-  MonadA m => [Result m] ->
+  MonadA m => HoleInfo m -> [Result m] ->
   ExprGuiM m (Maybe (ShownResult m), WidgetT m)
-makeExtraResultsWidget [] = return (Nothing, Spacer.empty)
-makeExtraResultsWidget extraResults@(firstResult:_) = do
+makeExtraResultsWidget _ [] = return (Nothing, Spacer.empty)
+makeExtraResultsWidget holeInfo extraResults@(firstResult:_) = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     mkResWidget result = do
       isOnResult <- ExprGuiM.widgetEnv $ WE.isSubCursor (rId result)
-      (widget, shownResult) <- makeShownResult result
+      (widget, shownResult) <- makeShownResult holeInfo result
       return
         ( shownResult <$ guard isOnResult
         , widget
@@ -319,14 +328,14 @@ addSelectedResultPicker :: MonadA m => Maybe (ShownResult m) -> ExprGuiM m ()
 addSelectedResultPicker mSelectedResult =
   case mSelectedResult of
     Nothing -> return ()
-    Just res -> ExprGuiM.addResultPicker . void $ srHoleResult res ^. Sugar.holeResultPick
+    Just res -> ExprGuiM.addResultPicker $ snd <$> srPick res
 
 makeResultsWidget ::
   MonadA m => HoleInfo m ->
   [ResultsList m] -> HaveHiddenResults ->
   ExprGuiM m (Maybe (ShownResult m), WidgetT m)
 makeResultsWidget holeInfo shownResultsLists hiddenResults = do
-  (mainResults, rows, mResults) <- unzip3 <$> traverse makeResultGroup shownResultsLists
+  (mainResults, rows, mResults) <- unzip3 <$> traverse (makeResultGroup holeInfo) shownResultsLists
   let
     mSelectedResult = mResults ^? Lens.traversed . Lens._Just
     mFirstResult = mainResults ^? Lens.traversed
@@ -390,7 +399,7 @@ make pl holeInfo = do
       let
         eventMap = mconcat
           [ pasteEventMap config holeInfo
-          , resultEventMap config holeInfo mShownResult
+          , resultEventMap config mShownResult
           , jumpHolesEventMap
           , replaceEventMap
           , closeEventMap
@@ -422,16 +431,14 @@ pasteEventMap config holeInfo =
    fmap WidgetIds.fromGuid) $ hiActions holeInfo ^. Sugar.holePaste
 
 resultEventMap ::
-  MonadA m => Config -> HoleInfo m -> Maybe (ShownResult m) ->
+  MonadA m => Config -> Maybe (ShownResult m) ->
   Widget.EventHandlers (T m)
-resultEventMap _ _ Nothing = mempty
-resultEventMap config holeInfo (Just (ShownResult eventMap holeResult)) =
+resultEventMap _ Nothing = mempty
+resultEventMap config (Just (ShownResult eventMap holeResult pick)) =
   eventMap
   & maybe id (mappend . extraResultEventMap) mActions
   & Lens.mapped %~
-    liftA2 mappend
-    (afterPick holeInfo =<<
-     holeResult ^. Sugar.holeResultPick)
+    liftA2 mappend (snd <$> pick)
   where
     extraResultEventMap = mconcat
       [ ExprEventMap.applyOperatorEventMap []

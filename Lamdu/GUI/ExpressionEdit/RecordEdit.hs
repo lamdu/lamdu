@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.RecordEdit(make) where
 
-import Control.Applicative ((<$>), (<*>), (*>))
+import Control.Applicative ((<$>), Applicative(..), liftA2)
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
@@ -9,7 +9,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers, holePickersAction)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -91,11 +91,14 @@ makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
       maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction
 
 recordItemEventMap ::
-  MonadA m => Config -> [T m ()] -> Sugar.ListItemActions m -> Widget.EventHandlers (T m)
+  MonadA m => Config -> HolePickers m ->
+  Sugar.ListItemActions m -> Widget.EventHandlers (T m)
 recordItemEventMap config resultPickers (Sugar.ListItemActions addNext delete) =
   mconcat
-  [ Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
-    (E.Doc ["Edit", "Record", "Add Next Field"]) $ WidgetIds.fromGuid <$> (sequence_ resultPickers *> addNext)
+  [ E.keyPresses (Config.recordAddFieldKeys config)
+    (E.Doc ["Edit", "Record", "Add Next Field"]) $
+    liftA2 mappend (holePickersAction resultPickers)
+    (Widget.eventResultFromCursor . WidgetIds.fromGuid <$> addNext)
   , Widget.keysEventMapMovesCursor (Config.delKeys config)
     (E.Doc ["Edit", "Record", "Delete Field"]) $ WidgetIds.fromGuid <$> delete
   ]

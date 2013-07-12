@@ -39,7 +39,6 @@ import Data.Binary (Binary)
 import Data.Cache (Cache)
 import Data.Derive.Monoid (makeMonoid)
 import Data.DeriveTH (derive)
-import Data.Foldable (sequenceA_)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -66,7 +65,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction
 type AccessedVars = [Guid]
 
-type HolePickers m = [T m ()]
+type HolePickers m = [T m Widget.EventResult]
 
 holePickersAddDocPrefix :: HolePickers m -> E.Subtitle -> E.Subtitle
 holePickersAddDocPrefix [] doc = doc
@@ -75,8 +74,8 @@ holePickersAddDocPrefix (_:_) doc =
   & Lens.element 0 %~ Char.toLower
   & ("Pick result and " ++)
 
-holePickersAction :: MonadA m => HolePickers m -> T m ()
-holePickersAction = sequenceA_
+holePickersAction :: MonadA m => HolePickers m -> T m Widget.EventResult
+holePickersAction = fmap mconcat . sequence
 
 data Output m = Output
   { oAccessedVars :: AccessedVars
@@ -244,5 +243,5 @@ listenResultPickers = listener oHolePickers
 markVariablesAsUsed :: MonadA m => AccessedVars -> ExprGuiM m ()
 markVariablesAsUsed vars = ExprGuiM $ RWS.tell mempty { oAccessedVars = vars }
 
-addResultPicker :: MonadA m => T m () -> ExprGuiM m ()
+addResultPicker :: MonadA m => T m Widget.EventResult -> ExprGuiM m ()
 addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }

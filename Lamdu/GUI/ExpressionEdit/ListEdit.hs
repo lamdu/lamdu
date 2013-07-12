@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.ListEdit(make) where
 
-import Control.Applicative ((<$>), (<|>))
+import Control.Applicative ((<$>), (<|>), Applicative(..))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, holePickersAction)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -116,10 +116,10 @@ makeItem item = do
       , Sugar._itemDelete = delItem
       } =
       mconcat
-      [ Widget.keysEventMapMovesCursor
-        (Config.listAddItemKeys config) (doc resultPickers) $ do
-          sequence_ resultPickers
-          WidgetIds.fromGuid <$> addItem
+      [ E.keyPresses (Config.listAddItemKeys config) (doc resultPickers) $
+        mappend
+        <$> holePickersAction resultPickers
+        <*> (Widget.eventResultFromCursor . WidgetIds.fromGuid <$> addItem)
       , Widget.keysEventMapMovesCursor (Config.delKeys config)
         (E.Doc ["Edit", "List", "Delete Item"]) $
         WidgetIds.fromGuid <$> delItem
