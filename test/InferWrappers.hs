@@ -84,7 +84,7 @@ doInferM inferNode expr = do
 
 loadInferM ::
   Infer.Node (DefI t) -> ExprIRef.Expression t a ->
-  StateT (Infer.Context (DefI t)) (Either (Infer.MismatchError (DefI t)))
+  StateT (Infer.Context (DefI t)) (Either (Infer.Error (DefI t)))
   (ExprIRef.Expression t (Infer.Inferred (DefI t), a))
 loadInferM inferNode expr =
   Infer.inferLoaded eitherActions (doLoad expr) inferNode
@@ -93,13 +93,13 @@ loadInferM inferNode expr =
 
 loadInfer ::
   ExprIRef.Expression t a ->
-  Either (Infer.MismatchError (DefI t))
+  Either (Infer.Error (DefI t))
   (ExprIRef.Expression t (Infer.Inferred (DefI t), a), Infer.Context (DefI t))
 loadInfer expr = fromInitialState (`loadInferM` expr)
 
 loadInferResults ::
   ExprIRef.Expression t () ->
-  Either (Infer.MismatchError (DefI t)) (InferResults t)
+  Either (Infer.Error (DefI t)) (InferResults t)
 loadInferResults = fmap (inferResults . fmap fst . fst) . loadInfer
 
 fromInitialState ::

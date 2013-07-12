@@ -280,7 +280,7 @@ wrongRecurseMissingArg =
   expectLeft "Infinite Type" verifyError $
   loadInferResults (void expr)
   where
-    verifyError err =
+    verifyError (Infer.ErrorMismatch err) =
       case Infer.errDetails err of
       Infer.InfiniteExpression _ -> return ()
       _ ->

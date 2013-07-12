@@ -46,8 +46,8 @@ instance Ord def => Monoid (ConflictMap def) where
 getConflicts :: Infer.ExprRef -> ConflictMap def -> [Infer.MismatchError def]
 getConflicts ref = maybe [] Set.toList . Map.lookup ref . unConflictMap
 
-reportConflict :: Ord def => Infer.MismatchError def -> Writer (ConflictMap def) ()
-reportConflict err =
+reportConflict :: Ord def => Infer.Error def -> Writer (ConflictMap def) ()
+reportConflict (Infer.ErrorMismatch err) =
   Writer.tell . ConflictMap .
   Map.singleton (Infer.errRef err) $
   Set.singleton err

@@ -7,7 +7,7 @@ module Lamdu.Data.Expression.Infer
   , derefExpr, derefNode
   , IsRestrictedPoly(..)
   , Node(..), TypedValue(..)
-  , MismatchError(..), MismatchErrorDetails(..)
+  , Error(..), MismatchError(..), MismatchErrorDetails(..)
   , RefMap, Context, ExprRef, Scope
   , Loader(..), InferActions(..)
   , initial
@@ -140,8 +140,11 @@ instance Functor MismatchError where
     (mis & Lens.both . ExprLens.exprDef %~ f)
     (f <$> details)
 
+data Error def = ErrorMismatch (MismatchError def)
+  deriving (Functor, Eq, Ord, Show)
+
 newtype InferActions def m = InferActions
-  { reportMismatchError :: MismatchError def -> m ()
+  { reportError :: Error def -> m ()
   }
 
 --------------
@@ -406,8 +409,8 @@ setRefExpr mRule ref newExpr = do
       when (isChange || isHole) $
         liftState $ sContext . exprRefsAt ref . rExpression .= mergedExpr
     Left details -> do
-      report <- fmap reportMismatchError askActions
-      lift $ report MismatchError
+      report <- fmap reportError askActions
+      lift . report $ ErrorMismatch MismatchError
         { errRef = ref
         , errMismatch = (void curExpr, void newExpr)
         , errDetails = details

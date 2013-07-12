@@ -10,15 +10,15 @@ import qualified Lamdu.Data.Expression.Infer as Infer
 
 inferUntilConflict ::
   Ord def => Infer.Loaded def a -> Infer.Node def ->
-  StateT (Infer.Context def) (Either (Infer.MismatchError def))
+  StateT (Infer.Context def) (Either (Infer.Error def))
   (Expr.Expression def (Infer.Inferred def, a))
 inferUntilConflict = Infer.inferLoaded actions
 
-actions :: Infer.InferActions def (Either (Infer.MismatchError def))
+actions :: Infer.InferActions def (Either (Infer.Error def))
 actions = Infer.InferActions Left
 
 assertNoConflict ::
-  Monad m => String -> StateT s (Either (Infer.MismatchError def)) a -> StateT s m a
+  Monad m => String -> StateT s (Either (Infer.Error def)) a -> StateT s m a
 assertNoConflict msg =
   mapStateT fromEither
   where
