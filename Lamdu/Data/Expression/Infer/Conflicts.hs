@@ -27,8 +27,8 @@ import qualified Lamdu.Data.Expression.Infer as Infer
 
 data InferredWithConflicts def = InferredWithConflicts
   { iwcInferred :: Infer.Inferred def
-  , iwcTypeConflicts :: [Infer.Error def]
-  , iwcValueConflicts :: [Infer.Error def]
+  , iwcTypeConflicts :: [Infer.MismatchError def]
+  , iwcValueConflicts :: [Infer.MismatchError def]
   } deriving (Typeable)
 -- Requires Ord instance for def, cannot derive
 instance (Ord def, Binary def) => Binary (InferredWithConflicts def) where
@@ -36,17 +36,17 @@ instance (Ord def, Binary def) => Binary (InferredWithConflicts def) where
   put (InferredWithConflicts a b c) = sequenceA_ [put a, put b, put c]
 
 newtype ConflictMap def =
-  ConflictMap { unConflictMap :: Map Infer.ExprRef (Set (Infer.Error def)) }
+  ConflictMap { unConflictMap :: Map Infer.ExprRef (Set (Infer.MismatchError def)) }
 
 instance Ord def => Monoid (ConflictMap def) where
   mempty = ConflictMap mempty
   mappend (ConflictMap x) (ConflictMap y) =
     ConflictMap $ Map.unionWith mappend x y
 
-getConflicts :: Infer.ExprRef -> ConflictMap def -> [Infer.Error def]
+getConflicts :: Infer.ExprRef -> ConflictMap def -> [Infer.MismatchError def]
 getConflicts ref = maybe [] Set.toList . Map.lookup ref . unConflictMap
 
-reportConflict :: Ord def => Infer.Error def -> Writer (ConflictMap def) ()
+reportConflict :: Ord def => Infer.MismatchError def -> Writer (ConflictMap def) ()
 reportConflict err =
   Writer.tell . ConflictMap .
   Map.singleton (Infer.errRef err) $
@@ -82,7 +82,7 @@ inferWithConflicts loaded node = do
 iwcInferredExprs ::
   Ord def =>
   (Infer.Inferred def -> Expr.Expression def a) ->
-  (InferredWithConflicts def -> [Infer.Error def]) ->
+  (InferredWithConflicts def -> [Infer.MismatchError def]) ->
   InferredWithConflicts def -> [Expr.Expression def ()]
 iwcInferredExprs getVal eeConflicts ee =
   (void . getVal . iwcInferred) ee :

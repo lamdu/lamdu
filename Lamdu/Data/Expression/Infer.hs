@@ -7,7 +7,7 @@ module Lamdu.Data.Expression.Infer
   , derefExpr, derefNode
   , IsRestrictedPoly(..)
   , Node(..), TypedValue(..)
-  , Error(..), ErrorDetails(..)
+  , MismatchError(..), MismatchErrorDetails(..)
   , RefMap, Context, ExprRef, Scope
   , Loader(..), InferActions(..)
   , initial
@@ -112,36 +112,36 @@ refsAt :: Functor f => Int -> LensLike' f (RefMap a) (Maybe a)
 refsAt k = refs . Lens.at k
 -------------- InferActions
 
-data ErrorDetails def
+data MismatchErrorDetails def
   = MismatchIn
     (Expr.Expression def ())
     (Expr.Expression def ())
   | InfiniteExpression (Rule def (Expr.Expression def ()))
   deriving (Eq, Ord, Show)
 
-instance Functor ErrorDetails where
+instance Functor MismatchErrorDetails where
   fmap f (MismatchIn x y) =
     on MismatchIn (ExprLens.exprDef %~ f) x y
   fmap _ (InfiniteExpression _) =
-    error "TODO: Functor ErrorDetails case of InfiniteExpression"
+    error "TODO: Functor MismatchErrorDetails case of InfiniteExpression"
 
-data Error def = Error
+data MismatchError def = MismatchError
   { errRef :: ExprRef
   , errMismatch ::
     ( Expr.Expression def ()
     , Expr.Expression def ()
     )
-  , errDetails :: ErrorDetails def
+  , errDetails :: MismatchErrorDetails def
   } deriving (Show, Eq, Ord)
 
-instance Functor Error where
-  fmap f (Error ref mis details) =
-    Error ref
+instance Functor MismatchError where
+  fmap f (MismatchError ref mis details) =
+    MismatchError ref
     (mis & Lens.both . ExprLens.exprDef %~ f)
     (f <$> details)
 
 newtype InferActions def m = InferActions
-  { reportError :: Error def -> m ()
+  { reportMismatchError :: MismatchError def -> m ()
   }
 
 --------------
@@ -163,7 +163,7 @@ Lens.makeLenses ''InferState
 fmap concat . sequence $
   derive
   <$> [makeBinary, makeNFData]
-  <*> [''Context, ''ErrorDetails, ''Error, ''RuleRef, ''RefData, ''RefMap]
+  <*> [''Context, ''MismatchErrorDetails, ''MismatchError, ''RuleRef, ''RefData, ''RefMap]
 
 -- ExprRefMap:
 
@@ -346,7 +346,7 @@ mergeExprs ::
   RefExpression def ->
   Maybe (RuleRef, Rule def (RefExpression def)) ->
   RefExpression def ->
-  Either (ErrorDetails def) (RefExpression def)
+  Either (MismatchErrorDetails def) (RefExpression def)
 mergeExprs oldExp mRule newExp =
   runEither $ ExprUtil.matchExpression onMatch onMismatch oldExp newExp
   where
@@ -406,8 +406,8 @@ setRefExpr mRule ref newExpr = do
       when (isChange || isHole) $
         liftState $ sContext . exprRefsAt ref . rExpression .= mergedExpr
     Left details -> do
-      report <- fmap reportError askActions
-      lift $ report Error
+      report <- fmap reportMismatchError askActions
+      lift $ report MismatchError
         { errRef = ref
         , errMismatch = (void curExpr, void newExpr)
         , errDetails = details
