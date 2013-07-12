@@ -30,7 +30,8 @@ module Lamdu.Data.Expression.Utils
   , isTypeConstructorType
   , addExpressionContexts
   , addBodyContexts
-  , PiWrappers(..), getPiWrappers
+  , PiWrappers(..), piWrappersDepParams, piWrappersMIndepParam, piWrappersResultType
+  , getPiWrappers
   ) where
 
 import Prelude hiding (pi)
@@ -62,8 +63,9 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified System.Random as Random
 
 data PiWrappers def a = PiWrappers
-  { _dependentPiParams :: [(Guid, Expression def a)]
-  , mNonDependentPiParam :: Maybe (Guid, Expression def a)
+  { _piWrappersDepParams :: [(Guid, Expression def a)]
+  , _piWrappersMIndepParam :: Maybe (Guid, Expression def a)
+  , _piWrappersResultType :: Expression def a
   }
 Lens.makeLenses ''PiWrappers
 
@@ -99,15 +101,16 @@ getPiWrappers expr =
   case expr ^? ExprLens.exprLam of
   Just (Lam KType param paramType resultType)
     | isDependentPi expr ->
-      getPiWrappers resultType & dependentPiParams %~ (p :)
+      getPiWrappers resultType & piWrappersDepParams %~ (p :)
     | otherwise ->
         PiWrappers
-        { _dependentPiParams = []
-        , mNonDependentPiParam = Just p
+        { _piWrappersDepParams = []
+        , _piWrappersMIndepParam = Just p
+        , _piWrappersResultType = resultType
         }
     where
       p = (param, paramType)
-  _ -> PiWrappers [] Nothing
+  _ -> PiWrappers [] Nothing expr
 
 couldEq :: Eq def => Expression def a -> Expression def a -> Bool
 couldEq x y =
@@ -155,14 +158,21 @@ applyForms exprType rawExpr
   where
     expr = Untouched <$ rawExpr
     withDepAppliesAdded =
-      foldl (addApply DependentParamAdded) expr depParams
+      foldl (addApply DependentParamAdded) expr depParamTypes
     withAllAppliesAdded =
-      scanl (addApply IndependentParamAdded) withDepAppliesAdded $ mNonDepParam ^.. Lens._Just
+      scanl (addApply IndependentParamAdded) withDepAppliesAdded $
+      indepParamTypes ++ assumeHoleIsPi
+    depParamTypes = snd <$> depParams
+    indepParamTypes = mNonDepParam ^.. Lens._Just . Lens._2
+    assumeHoleIsPi
+      | Lens.has ExprLens.exprHole resultType = [pureHole]
+      | otherwise = []
     PiWrappers
-      { _dependentPiParams = depParams
-      , mNonDependentPiParam = mNonDepParam
+      { _piWrappersDepParams = depParams
+      , _piWrappersMIndepParam = mNonDepParam
+      , _piWrappersResultType = resultType
       } = getPiWrappers exprType
-    addApply ann func (_, paramType) =
+    addApply ann func paramType =
       Expression (makeApply func arg) ann
       where
         arg = ann <$ fromMaybe pureHole (recordValForm paramType)

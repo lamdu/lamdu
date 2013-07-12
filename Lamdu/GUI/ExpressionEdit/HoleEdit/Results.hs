@@ -59,7 +59,7 @@ type CT m = StateT Cache (T m)
 
 data SearchTerms = SearchTerms
   { _searchTerms :: [String]
-  , __searchTermsMatchEmptySearchTerm :: Any
+  , __searchTermsHighPrecedence :: Any
   }
 
 data Group def = Group
@@ -121,8 +121,11 @@ sugarNameToGroup (Sugar.Name _ collision varName) expr = Group
       Sugar.NoCollision -> []
       Sugar.Collision suffix -> [show suffix]
 
-resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefIM m)) -> Int
-resultComplexityScore = length . Foldable.toList . Infer.iType . (^. Expr.ePayload)
+resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefIM m)) -> [Int]
+resultComplexityScore expr =
+  [ length . Foldable.toList . Infer.iType $ expr ^. Expr.ePayload
+  , length $ Foldable.toList expr
+  ]
 
 prefixId :: HoleInfo m -> WidgetId.Id
 prefixId holeInfo = mconcat [hiActiveId holeInfo, WidgetId.Id ["results"]]
@@ -154,8 +157,9 @@ typeCheckResults holeInfo mkGen options = do
     & Lens.traversed %%@~ typeCheckHoleResult holeInfo . mkGen
     <&> catMaybes
   let (goodResults, badResults) = partition ((== GoodResult) . fst) rs
-  return $ sortOn (score . snd) goodResults ++ badResults
+  return $ sorted goodResults ++ sorted badResults
   where
+    sorted = sortOn (score . snd)
     score = resultComplexityScore . (^. Sugar.holeResultInferred)
 
 mResultsListOf ::
@@ -294,7 +298,7 @@ makeResultsList holeInfo resultInfo group =
     mkGen i guid = genFromHashable (guid, group ^. groupId, i)
     isHoleWrap = Lens.has (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole)
     toPreferred
-      | Lens.anyOf (groupSearchTerms . searchTerms . traverse) (== searchTerm) group = Preferred
+      | Lens.anyOf groupSearchTerms (preferFor searchTerm) group = Preferred
       | otherwise = NotPreferred
     searchTerm = hiSearchTerm holeInfo
     baseExpr = group ^. groupBaseExpr
@@ -405,7 +409,7 @@ makeAllGroups holeInfo = do
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
-  [ mkGroupBody False "LiteralInt" [searchTerm] $ ExprLens.bodyLiteralInteger # read searchTerm
+  [ mkGroupBody True "LiteralInt" [searchTerm] $ ExprLens.bodyLiteralInteger # read searchTerm
   | nonEmptyAll Char.isDigit searchTerm
   ] ++
   [ mkGroupBody False "Pi" ["->", "Pi", "→", "→", "Π", "π"] $
@@ -414,8 +418,6 @@ primitiveGroups holeInfo =
     ExprUtil.makeLambda (Guid.fromString "NewLambda") pureHole pureHole
   , mkGroupBody False "GetField" [".", "Get Field"] . Expr.BodyGetField $
     Expr.GetField pureHole pureHole
-  , mkGroupBody True "Apply" ["Apply", "Give argument"] . Expr.BodyApply $
-    Expr.Apply pureHole pureHole
   , mkGroupBody True "Type" ["Type"] $ Expr.BodyLeaf Expr.Type
   , mkGroupBody True "Integer" ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
   , Group "RecValue" (SearchTerms ["Record Value", "{"] (Any False)) .
@@ -431,16 +433,21 @@ primitiveGroups holeInfo =
       case hiMArgument holeInfo of
       Nothing -> []
       Just _ -> [(pureHole, pureHole)]
-    mkGroupBody matchEmptySearchTerm gId terms body = Group
+    mkGroupBody highPrecedence gId terms body = Group
       { _groupId = gId
-      , _groupSearchTerms = SearchTerms terms (Any matchEmptySearchTerm)
+      , _groupSearchTerms = SearchTerms terms (Any highPrecedence)
       , _groupBaseExpr = ExprUtil.pureExpression body
       }
 
-groupOrdering :: String -> [String] -> [Bool]
-groupOrdering searchTerm terms =
+preferFor :: String -> SearchTerms -> Bool
+preferFor searchTerm (SearchTerms terms (Any True)) = searchTerm `elem` terms
+preferFor _ _ = False
+
+groupOrdering :: String -> SearchTerms -> [Bool]
+groupOrdering searchTerm (SearchTerms terms (Any highPrecedence)) =
   map not
-  [ match (==)
+  [ highPrecedence
+  , match (==)
   , match isPrefixOf
   , match insensitivePrefixOf
   , match isInfixOf
@@ -451,7 +458,7 @@ groupOrdering searchTerm terms =
 
 holeMatches :: (a -> SearchTerms) -> String -> [a] -> [a]
 holeMatches getSearchTerms searchTerm =
-  sortOn (groupOrdering searchTerm . (^. searchTerms) . getSearchTerms) .
+  sortOn (groupOrdering searchTerm . getSearchTerms) .
   filter (nameMatch . getSearchTerms)
   where
     nameMatch (SearchTerms _ (Any False))

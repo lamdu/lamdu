@@ -245,7 +245,9 @@ isFunctionType typ
   | Lens.has Lens._Just mIndepedentParam = NameGen.Function
   | otherwise = NameGen.NotFunction
   where
-    ExprUtil.PiWrappers _ mIndepedentParam = ExprUtil.getPiWrappers typ
+    mIndepedentParam =
+      ExprUtil.getPiWrappers typ ^.
+      ExprUtil.piWrappersMIndepParam
 
 withFuncParam ::
   (MonadA tm, MonadNaming m) =>
