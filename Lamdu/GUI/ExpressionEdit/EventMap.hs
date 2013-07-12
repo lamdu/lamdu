@@ -106,12 +106,12 @@ replaceOrComeToParentEventMap pl =
     isSelected <- isExprSelected pl
     config <- ExprGuiM.widgetEnv WE.readConfig
     let delKeys = Config.replaceKeys config ++ Config.delKeys config
-    return $ if isSelected 
+    return $ if isSelected
       then replaceEventMap config actions
       else
         mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
         (fmap FocusDelegator.notDelegatingId) . return $
-        actions ^. Sugar.storedGuid    
+        actions ^. Sugar.storedGuid
 
 actionsEventMap ::
   MonadA m =>
