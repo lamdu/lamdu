@@ -134,11 +134,6 @@ idTranslations convertedExpr writtenExpr =
   (combineLamGuids (ExprIRef.exprGuid <$> writtenExpr))
   where
     go = ExprUtil.matchExpressionG tell tell mismatch
-    mismatch
-      (Expr.Expression (Expr.BodyLeaf (Expr.Tag tagx)) plx)
-      (Expr.Expression (Expr.BodyLeaf (Expr.Tag tagy)) ply) =
-        tell tagx tagy *>
-        tell plx ply
     mismatch x y =
       error $
       unlines
