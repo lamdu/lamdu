@@ -194,6 +194,11 @@ makeResultGroup holeInfo results = do
       ExprGuiM.widgetEnv
       (BWidgets.makeLabel extraSymbol (Widget.toAnimId (rId mainResult)))
     else pure Spacer.empty
+  let
+    makeExtra =
+      makeExtraResultsWidget holeInfo
+      (mainResultWidget ^. Widget.wSize . Lens._2)
+      (results ^. HoleResults.rlExtra)
   (mResult, extraResWidget) <-
     if mainResultWidget ^. Widget.wIsFocused
     then do
@@ -215,7 +220,6 @@ makeResultGroup holeInfo results = do
   return (shownMainResult, [mainResultWidget, onExtraSymbol extraSymbolWidget, extraResWidget], mResult)
   where
     mainResult = results ^. HoleResults.rlMain
-    makeExtra = makeExtraResultsWidget holeInfo $ results ^. HoleResults.rlExtra
 
 makeExtraResultsPlaceholderWidget ::
   MonadA m => [Result m] -> ExprGuiM m (WidgetT m)
@@ -224,10 +228,10 @@ makeExtraResultsPlaceholderWidget (result:_) =
   makeFocusable (rId result) Spacer.empty
 
 makeExtraResultsWidget ::
-  MonadA m => HoleInfo m -> [Result m] ->
+  MonadA m => HoleInfo m -> Anim.R -> [Result m] ->
   ExprGuiM m (Maybe (ShownResult m), WidgetT m)
-makeExtraResultsWidget _ [] = return (Nothing, Spacer.empty)
-makeExtraResultsWidget holeInfo extraResults@(firstResult:_) = do
+makeExtraResultsWidget _ _ [] = return (Nothing, Spacer.empty)
+makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     mkResWidget result = do
@@ -239,13 +243,17 @@ makeExtraResultsWidget holeInfo extraResults@(firstResult:_) = do
         )
   (mResults, widgets) <-
     unzip <$> traverse mkResWidget extraResults
+  let
+    headHeight = head widgets ^. Widget.wSize . Lens._2
+    height = min mainResultHeight headHeight
   return
     ( msum mResults
     , Box.vboxAlign 0 widgets
       & makeBackground (rId firstResult)
         (Config.layerMax (Config.layers config))
         (Config.activeHoleBackgroundColor config)
-      & Widget.wSize .~ (head widgets ^. Widget.wSize & Lens._1 .~ 0)
+      & Widget.wSize .~ Vector2 0 height
+      & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
     )
 
 makeFocusable :: (MonadA m, Applicative f) => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
