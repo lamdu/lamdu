@@ -16,6 +16,7 @@ import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
+import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
@@ -29,6 +30,8 @@ import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Sugar.Types as Sugar
+
+type T = Transaction.Transaction
 
 make ::
   MonadA m =>
@@ -58,6 +61,22 @@ make hole pl myId = do
       (E.Doc ["Navigation", "Hole", "Open"]) . pure $
       diveIntoHole myId
 
+makeWrapperEventMap ::
+  (MonadA m, MonadA f) =>
+  Sugar.HoleArg f expr -> Widget.Id ->
+  ExprGuiM m (Widget.EventHandlers (T f))
+makeWrapperEventMap arg myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  pure $
+    case arg ^? Sugar.haUnwrap . Sugar._UnwrapMAction . Lens._Just of
+    Just unwrap ->
+      Widget.keysEventMapMovesCursor (Config.acceptKeys config ++ Config.delKeys config)
+      (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromGuid <$> unwrap
+    Nothing ->
+      Widget.keysEventMapMovesCursor (Config.wrapKeys config)
+      (E.Doc ["Navigation", "Hole", "Open"]) .
+      pure $ diveIntoHole myId
+
 makeWrapper ::
   MonadA m =>
   Sugar.HoleArg m (Sugar.ExpressionN m ExprGuiM.Payload) ->
@@ -69,15 +88,7 @@ makeWrapper arg myId = do
       case arg ^. Sugar.haUnwrap of
       Sugar.UnwrapMAction {} -> Config.deletableHoleBackgroundColor config
       Sugar.UnwrapTypeMismatch {} -> Config.typeErrorHoleWrapBackgroundColor config
-    eventMap =
-      case arg ^? Sugar.haUnwrap . Sugar._UnwrapMAction . Lens._Just of
-      Just unwrap ->
-        Widget.keysEventMapMovesCursor (Config.acceptKeys config ++ Config.delKeys config)
-        (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromGuid <$> unwrap
-      Nothing ->
-        Widget.keysEventMapMovesCursor (Config.wrapKeys config)
-        (E.Doc ["Navigation", "Hole", "Open"]) .
-        pure $ diveIntoHole myId
+  eventMap <- makeWrapperEventMap arg myId
   arg ^. Sugar.haExpr
     & ExprGuiM.makeSubexpression 0
     >>= ExpressionGui.egWidget %%~
