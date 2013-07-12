@@ -135,10 +135,11 @@ applyOperatorEventMap holePickers actions =
   Sugar.WrapNotAllowed -> mempty
   where
     doc = E.Doc ["Edit", holePickersAddDocPrefix holePickers "Apply operator"]
-    action wrap = E.charGroup "Operator" doc operatorChars $ \c _isShifted -> do
-      holePickersAction holePickers
-      Widget.eventResultFromCursor <$>
-        (setHoleStateAndJump (HoleState [c]) =<< wrap)
+    action wrap =
+      E.charGroup "Operator" doc operatorChars $ \c _isShifted -> do
+        holePickersAction holePickers
+        Widget.eventResultFromCursor <$>
+          (setHoleStateAndJump (HoleState [c]) =<< wrap)
 
 wrapEventMap ::
   MonadA m =>

@@ -72,14 +72,12 @@ makeWrapper arg myId = do
     eventMap =
       case arg ^? Sugar.haUnwrap . Sugar._UnwrapMAction . Lens._Just of
       Just unwrap ->
-        E.keyPresses (Config.acceptKeys config ++ Config.delKeys config)
-        (E.Doc ["Edit", "Unwrap"]) $
-        Widget.eventResultFromCursor . WidgetIds.fromGuid <$> unwrap
+        Widget.keysEventMapMovesCursor (Config.acceptKeys config ++ Config.delKeys config)
+        (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromGuid <$> unwrap
       Nothing ->
-        E.keyPresses (Config.wrapKeys config)
+        Widget.keysEventMapMovesCursor (Config.wrapKeys config)
         (E.Doc ["Navigation", "Hole", "Open"]) .
-        pure . Widget.eventResultFromCursor $
-        diveIntoHole myId
+        pure $ diveIntoHole myId
   arg ^. Sugar.haExpr
     & ExprGuiM.makeSubexpression 0
     >>= ExpressionGui.egWidget %%~
