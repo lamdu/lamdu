@@ -55,12 +55,15 @@ type T = Transaction.Transaction
 data ShownResult m = ShownResult
   { srEventMap :: Widget.EventHandlers (T m)
   , srHoleResult :: Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl
-  , srPick ::
+  , srPickTo ::
     T m
     ( Maybe Guid -- Hole target guid
     , Widget.EventResult
     )
   }
+
+srPick :: Functor m => ShownResult m -> T m Widget.EventResult
+srPick = fmap snd . srPickTo
 
 extraSymbol :: String
 extraSymbol = "▷"
@@ -122,7 +125,7 @@ alphaNumericAfterOperator holeInfo shownResult
   | nonEmptyAll (`elem` operatorChars) searchTerm =
     E.charGroup "Letter/digit"
     (E.Doc ["Edit", "Result", "Pick and resume"]) alphaNumericChars $
-    \c _ -> setNextHoleState [c] =<< srPick shownResult
+    \c _ -> setNextHoleState [c] =<< srPickTo shownResult
   | otherwise = mempty
   where
     searchTerm = HoleInfo.hiSearchTerm holeInfo
@@ -146,7 +149,7 @@ resultPickEventMap config holeInfo shownResult =
     Config.pickResultKeys config ++
     Config.pickAndMoveToNextHoleKeys config
   where
-    pick = snd <$> srPick shownResult
+    pick = srPick shownResult
     simplePickRes keys = E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) pick
 
 makePaddedResult :: MonadA m => Result m -> ExprGuiM m (WidgetT m)
@@ -169,7 +172,7 @@ makeShownResult holeInfo result = do
     , ShownResult
       { srEventMap = widget ^. Widget.wEventMap
       , srHoleResult = rHoleResult result
-      , srPick =
+      , srPickTo =
         afterPick holeInfo (rId result) =<< rHoleResult result ^. Sugar.holeResultPick
       }
     )
@@ -349,7 +352,7 @@ addMResultPicker :: MonadA m => Maybe (ShownResult m) -> ExprGuiM m ()
 addMResultPicker mSelectedResult =
   case mSelectedResult of
     Nothing -> return ()
-    Just res -> ExprGuiM.addResultPicker $ snd <$> srPick res
+    Just res -> ExprGuiM.addResultPicker $ srPick res
 
 makeResultsWidget ::
   MonadA m => HoleInfo m ->
@@ -460,17 +463,16 @@ resultEventMap ::
   MonadA m => Config -> Maybe (ShownResult m) ->
   Widget.EventHandlers (T m)
 resultEventMap _ Nothing = mempty
-resultEventMap config (Just (ShownResult eventMap holeResult pick)) =
-  eventMap
+resultEventMap config (Just shownResult) =
+  srEventMap shownResult
   & maybe id (mappend . extraResultEventMap) mActions
-  & Lens.mapped %~
-    liftA2 mappend (snd <$> pick)
+  & Lens.mapped %~ liftA2 mappend (srPick shownResult)
   where
     extraResultEventMap = mconcat
       [ ExprEventMap.applyOperatorEventMap []
       , ExprEventMap.cutEventMap config
       ]
-    convertedResult = holeResult ^. Sugar.holeResultConverted
+    convertedResult = srHoleResult shownResult ^. Sugar.holeResultConverted
     mActions = convertedResult ^. Sugar.rPayload . Sugar.plActions
 
 -- TODO: Use this where the hiState is currently used to get the
