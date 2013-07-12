@@ -123,7 +123,7 @@ makeInferred inferred pl myId = do
     -- gen needs to be compatible with the one from Sugar.Convert.Hole
     -- for the hole results, for smooth animation between inferred
     -- pure val and the hole result:
-    gen = genFromHashable (pl ^. Sugar.plGuid, ["inferred"], 0 :: Int)
+    gen = genFromHashable (pl ^. Sugar.plGuid, "inferred", 0 :: Int)
     emptyPl =
       ExprGuiM.Payload
       { ExprGuiM._plStoredGuids = []

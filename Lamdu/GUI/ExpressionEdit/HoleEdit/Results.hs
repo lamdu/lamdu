@@ -36,6 +36,7 @@ import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Foldable as Foldable
+import qualified Data.List as List
 import qualified Data.List.Class as ListClass
 import qualified Data.Store.Guid as Guid
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
@@ -54,16 +55,18 @@ type T = Transaction
 type CT m = StateT Cache (T m)
 
 data Group def = Group
-  { _groupNames :: [String]
+  { _groupId :: String
+  , _groupNames :: [String]
   , _groupBaseExpr :: Expression def ()
   }
 type GroupM m = Group (DefIM m)
 
 Lens.makeLenses ''Group
 
-mkGroup :: [String] -> Expr.BodyExpr def () -> Group def
-mkGroup names body = Group
-  { _groupNames = names
+mkGroup :: String -> [String] -> Expr.BodyExpr def () -> Group def
+mkGroup gId names body = Group
+  { _groupId = gId
+  , _groupNames = names
   , _groupBaseExpr = ExprUtil.pureExpression body
   }
 
@@ -105,7 +108,8 @@ getParamsToGroup (getParams, expr) =
 
 sugarNameToGroup :: Sugar.Name -> Expression def () -> Group def
 sugarNameToGroup (Sugar.Name _ collision varName) expr = Group
-  { _groupNames = varName : collisionStrs
+  { _groupId = "Var" ++ varName ++ ":" ++ concat collisionStrs
+  , _groupNames = varName : collisionStrs
   , _groupBaseExpr = expr
   }
   where
@@ -121,7 +125,7 @@ makeLiteralGroups searchTerm =
   ]
   where
     makeLiteralIntResult integer =
-      mkGroup [show integer] $ ExprLens.bodyLiteralInteger # integer
+      mkGroup "LiteralInt" [show integer] $ ExprLens.bodyLiteralInteger # integer
 
 resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefIM m)) -> Int
 resultComplexityScore = length . Foldable.toList . Infer.iType . (^. Expr.ePayload)
@@ -293,7 +297,7 @@ makeResultsList holeInfo resultInfo group =
   maybeInjectArgumentExpr holeInfo =<<
   baseExprWithApplyForms holeInfo baseExpr
   where
-    gen i = genFromHashable (hiPlGuid holeInfo, group ^. groupNames, i)
+    gen i = genFromHashable (hiPlGuid holeInfo, group ^. groupId, i)
     isHoleWrap = Lens.has (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole)
     toPreferred
       | Lens.anyOf (groupNames . traverse) (== searchTerm) group = Preferred
@@ -372,7 +376,7 @@ makeAllGroups holeInfo = do
     } <- hiActions holeInfo ^. Sugar.holeScope
   let
     allGroups =
-      (inferredGroups ++) . pruneInferredLike $
+      addInferredGroups $
       concat
       [ primitiveGroups holeInfo, literalGroups
       , localsGroups, globalsGroups, tagsGroups, getParamsGroups
@@ -382,34 +386,42 @@ makeAllGroups holeInfo = do
     globalsGroups   = sortedGroups getVarsToGroup globals
     tagsGroups      = sortedGroups tagsToGroup tags
     getParamsGroups = sortedGroups getParamsToGroup getParams
-    inferredGroups  =
+  pure $ holeMatches (^. groupNames) (hiSearchTerm holeInfo) allGroups
+  where
+    inferredGroups =
       [ Group
-        { _groupNames = ["inferred"]
+        { _groupId = "inferred"
+        , _groupNames = ["inferred"]
         , _groupBaseExpr = iVal
         }
       | Lens.nullOf ExprLens.exprHole iVal
       ]
-  pure $ holeMatches (^. groupNames) (hiSearchTerm holeInfo) allGroups
-  where
-    pruneInferredLike = filter (not . ExprUtil.alphaEq iVal . (^. groupBaseExpr))
+    addInferredGroups groups =
+      let
+        (dupsOfInferred, others) =
+          List.partition (ExprUtil.alphaEq iVal . (^. groupBaseExpr)) groups
+        dupsGroupNames = dupsOfInferred ^. Lens.traverse . groupNames
+      in
+        ( inferredGroups & Lens.traverse . groupNames <>~ dupsGroupNames
+        ) ++ others
     literalGroups = makeLiteralGroups (hiSearchTerm holeInfo)
     iVal = hiInferred holeInfo ^. Sugar.hiBaseValue
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
-  [ mkGroup ["Apply", "Give argument"] . Expr.BodyApply $
+  [ mkGroup "Apply" ["Apply", "Give argument"] . Expr.BodyApply $
     Expr.Apply pureHole pureHole
-  , mkGroup ["Type"] $ Expr.BodyLeaf Expr.Type
-  , mkGroup ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
-  , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $
+  , mkGroup "Type" ["Type"] $ Expr.BodyLeaf Expr.Type
+  , mkGroup "Integer" ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
+  , mkGroup "Pi" ["->", "Pi", "→", "→", "Π", "π"] $
     ExprUtil.makePi (Guid.fromString "NewPi") pureHole pureHole
-  , mkGroup ["\\", "Lambda", "Λ", "λ"] $
+  , mkGroup "Lambda" ["\\", "Lambda", "Λ", "λ"] $
     ExprUtil.makeLambda (Guid.fromString "NewLambda") pureHole pureHole
-  , Group ["Record Value", "{"] .
+  , Group "RecValue" ["Record Value", "{"] .
     fromMaybe (record Expr.KVal) . ExprUtil.recordValForm .
     void $ hiInferred holeInfo ^. Sugar.hiType
-  , Group ["Record Type", "{"] $ record Expr.KType
-  , mkGroup [".", "Get Field"] . Expr.BodyGetField $
+  , Group "RecType" ["Record Type", "{"] $ record Expr.KType
+  , mkGroup "GetField" [".", "Get Field"] . Expr.BodyGetField $
     Expr.GetField pureHole pureHole
   ]
   where
