@@ -117,6 +117,7 @@ setNextHoleState searchTerm (Just newHoleGuid, eventResult) =
   Transaction.setP (HoleState.assocStateRef newHoleGuid)
   (HoleState searchTerm)
 
+-- Handle Enter/Space/Alphanumeric-after-operator
 resultPickEventMap ::
   MonadA m => Config -> HoleInfo m -> Maybe (ShownResult m) ->
   Widget.EventHandlers (T m)
@@ -425,9 +426,9 @@ make pl holeInfo = do
           , replaceEventMap
           , closeEventMap
           ]
-      ExpressionGui.addBelow 0.5
-        [(0.5, Widget.strongerEvents adHocEditor resultsWidget)]
-        searchTermWidget
+      searchTermWidget
+        & ExpressionGui.addBelow 0.5
+          [(0.5, Widget.strongerEvents adHocEditor resultsWidget)]
         & ExpressionGui.egWidget %~
           (Widget.wFrame %~ Anim.onDepth (+ layerDiff)) .
           makeBackground (HoleInfo.hiActiveId holeInfo)
