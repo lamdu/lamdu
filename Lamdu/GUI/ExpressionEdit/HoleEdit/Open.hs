@@ -357,11 +357,11 @@ make pl holeInfo = do
         & ExpressionGui.addBelow 0.5
           [(0.5, Widget.strongerEvents resultsEventMap resultsWidget)]
         & ExpressionGui.egWidget %~
-          (Widget.wFrame %~ Anim.onDepth (+ layerDiff)) .
           makeBackground (HoleInfo.hiActiveId holeInfo)
             (Config.layerMax (Config.layers config))
             (Config.activeHoleBackgroundColor config)
         & ExpressionGui.addInferredTypes pl
+        <&> ExpressionGui.egWidget . Widget.wFrame %~ Anim.onDepth (+ layerDiff)
 
 makeSearchTermGui ::
   MonadA m => HoleInfo m ->
