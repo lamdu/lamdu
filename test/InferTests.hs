@@ -300,7 +300,7 @@ mapIdTest =
   ]
 
 joinListToMaybe =
-  testInfer "\\xs:_ -> caseList xs (empty=Nothing, cons=\\{item,rest}->item)" $
+  testInferAllowFail "\\xs:_ -> caseList xs (empty=Nothing, cons=\\{item,rest}->item)" $
   lambda "xs" (asHole (listOf hole)) $ \xs ->
   getDef "listcase" $$ iset $$ asHole (maybeOf iset)
   $$:
