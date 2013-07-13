@@ -32,6 +32,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Cache as Cache
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Db as Db
+import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
@@ -247,7 +248,7 @@ baseStyle config font = TextEdit.Style
 
 runDb :: IO (Version, Config) -> Draw.Font -> Db -> IO a
 runDb getConfig font db = do
-  ExampleDB.initDB db
+  ExampleDB.initDB (Guid.augment "ExampleDB") db
   (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor
   addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
   settingsRef <- newIORef Settings

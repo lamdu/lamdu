@@ -9,6 +9,7 @@ import Data.Binary (Binary(..))
 import Data.Foldable (traverse_)
 import Data.List.Split (splitOn)
 import Data.Store.Db (Db)
+import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version (Version)
@@ -46,8 +47,8 @@ fixIRef createOuter = do
   return x
 
 createBuiltins ::
-  MonadA m => Transaction m ((FFI.Env (Tag m), Db.SpecialFunctions (Tag m)), [ExprIRef.DefIM m])
-createBuiltins =
+  MonadA m => (Guid -> Guid) -> Transaction m ((FFI.Env (Tag m), Db.SpecialFunctions (Tag m)), [ExprIRef.DefIM m])
+createBuiltins augmentTagGuids =
   Writer.runWriterT $ do
     list <- mkDefinitionRef $ publicBuiltin "Data.List.List" setToSet
     let listOf = mkApply list
@@ -245,7 +246,7 @@ createBuiltins =
     mkPi mkArgType mkResType = fmap snd . join $ liftA2 ExprIRef.newPi mkArgType mkResType
     mkApply mkFunc mkArg =
       ExprIRef.newExprBody =<< liftA2 ExprUtil.makeApply mkFunc mkArg
-    newTag name = namedTag name . Guid.augment "ExampleDB" $ Guid.fromString name
+    newTag name = namedTag name . augmentTagGuids $ Guid.fromString name
     namedTag name tagGuid = do
       setP (Db.assocNameRef tagGuid) name
       ExprIRef.newExprBody $ ExprLens.bodyTag # tagGuid
@@ -277,8 +278,8 @@ newBranch name ver = do
   setP (Db.assocNameRef (Branch.guid branch)) name
   return branch
 
-initDB :: Db -> IO ()
-initDB db =
+initDB :: (Guid -> Guid) -> Db -> IO ()
+initDB augmentTagGuids db =
   Db.runDbTransaction db $ do
     exists <- Transaction.irefExists $ Db.branches Db.revisionIRefs
     unless exists $ do
@@ -293,7 +294,7 @@ initDB db =
       let paneWId = WidgetIdIRef.fromIRef $ Db.panes Db.codeIRefs
       writeRevAnchor Db.cursor paneWId
       Db.runViewTransaction view $ do
-        ((ffiEnv, specialFunctions), builtins) <- createBuiltins
+        ((ffiEnv, specialFunctions), builtins) <- createBuiltins augmentTagGuids
         let writeCodeAnchor f = Transaction.writeIRef (f Db.codeIRefs)
         writeCodeAnchor Db.clipboards []
         writeCodeAnchor Db.specialFunctions specialFunctions

@@ -121,7 +121,7 @@ definitionTypes =
       ]
     exampleDBDefs =
       fst . MapStore.runEmpty . Transaction.run MapStore.mapStore $ do
-        (_, defIs) <- createBuiltins
+        (_, defIs) <- createBuiltins id
         Lens.mapMOf (Lens.traversed . ExprLens.exprDef) reIRef
           =<< Map.fromList <$> mapM readDef defIs
 
