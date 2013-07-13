@@ -133,10 +133,10 @@ actionsEventMap ::
 actionsEventMap holePickers actions = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   return $ mconcat
-    [ wrapEventMap holePickers config actions
-    , applyOperatorEventMap holePickers actions
-    , cutEventMap config actions
-    ]
+    [ wrapEventMap holePickers config
+    , applyOperatorEventMap holePickers
+    , cutEventMap config
+    ] actions
 
 applyOperatorEventMap ::
   MonadA m => HolePickers m -> Sugar.Actions m -> EventHandlers (T m)
@@ -186,9 +186,9 @@ replaceEventMap config actions =
 modifyEventMap ::
   MonadA m => HolePickers m ->
   Config -> Sugar.Actions m -> EventHandlers (T m)
-modifyEventMap holePickers config actions =
+modifyEventMap holePickers config =
   mconcat
-  [ wrapEventMap holePickers config actions
-  , applyOperatorEventMap holePickers actions
-  , replaceEventMap config actions
+  [ wrapEventMap holePickers config
+  , applyOperatorEventMap holePickers
+  , replaceEventMap config
   ]
