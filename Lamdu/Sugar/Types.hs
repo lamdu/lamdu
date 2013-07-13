@@ -103,6 +103,7 @@ type InputExpr m a = ExprIRef.ExpressionM m (InputPayload m a)
 
 data WrapAction m
   = WrapperAlready -- I'm an apply-of-hole, no need to wrap
+  | WrappedAlready Guid -- I'm an arg of apply-of-hole (Guid of apply), no need to wrap
   | WrapNotAllowed -- I'm already wrapped or a tag or a hole
   | WrapAction (T m Guid) -- Wrap me!
 

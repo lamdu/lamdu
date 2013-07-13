@@ -144,6 +144,7 @@ applyOperatorEventMap holePickers actions =
   case actions ^. Sugar.wrap of
   Sugar.WrapAction wrap -> action wrap
   Sugar.WrapperAlready -> action . return $ actions ^. Sugar.storedGuid
+  Sugar.WrappedAlready applyGuid -> action $ return applyGuid
   Sugar.WrapNotAllowed -> mempty
   where
     doc = E.Doc ["Edit", holePickersAddDocPrefix holePickers "Apply operator"]
@@ -167,6 +168,7 @@ wrapEventMap holePickers config actions =
     (E.Doc ["Edit", holePickersAddDocPrefix holePickers "Wrap"])
     (fmap FocusDelegator.delegatingId) wrap
   Sugar.WrapperAlready -> mempty
+  Sugar.WrappedAlready _ -> mempty
   Sugar.WrapNotAllowed -> mempty
 
 replaceEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (T m)

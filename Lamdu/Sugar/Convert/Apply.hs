@@ -213,11 +213,16 @@ convertAppliedHole funcI argS argI exprPl = do
       (typeCheckIdentityAt . Infer.iNode . iwcInferred) $
       funcI ^. SugarInfer.exprInferred
     let
+      argWrap =
+        maybe WrapNotAllowed
+        (WrappedAlready . ExprIRef.exprGuid . Property.value) $
+        exprPl ^. ipStored
       holeArg = HoleArg
         { _haExpr =
           argS
-          & rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
-          & rPayload . plActions . Lens._Just . mSetToHole .~ Nothing
+          & rPayload . plActions . Lens._Just %~
+            (wrap .~ argWrap) .
+            (mSetToHole .~ Nothing)
         , _haExprPresugared =
           flip (,) () . fmap (StorePoint . Property.value) .
           (^. ipStored) <$> argI
