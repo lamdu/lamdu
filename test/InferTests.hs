@@ -299,6 +299,19 @@ mapIdTest =
   , getDef "id" $$ asHole integerType
   ]
 
+joinListToMaybe =
+  testInfer "\\xs:_ -> caseList xs (empty=Nothing, cons=\\{item,rest}->item)" $
+  lambda "xs" (asHole (listOf hole)) $ \xs ->
+  getDef "listcase" $$ iset $$ asHole (maybeOf iset)
+  $$:
+  [ xs
+  , getDef "Nothing" $$ iset
+  , lambdaRecord "pair" [("item", iset), ("rest", listOf iset)] $
+    \ [item, _rest] -> item
+  ]
+  where
+    iset = holeWithInferredType set
+
 hunitTests =
   simpleTests ++
   [ mapIdTest
@@ -322,6 +335,7 @@ hunitTests =
   , implicitVarTests
   , infiniteTypeTests
   , resumptionTests
+  , joinListToMaybe
   ]
 
 inferPreservesShapeProp :: PureExprDefI t -> Property

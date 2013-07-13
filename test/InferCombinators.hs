@@ -143,6 +143,9 @@ getParam = getGuidParam . Guid.fromString
 listOf :: InferResults t -> InferResults t
 listOf = (getDef "List" $$)
 
+maybeOf :: InferResults t -> InferResults t
+maybeOf = (getDef "Maybe" $$)
+
 getDef :: String -> InferResults t
 getDef name =
   simple
@@ -177,8 +180,9 @@ infixl 3 $$:
   where
     tags = recType ^.. Lens.traversed . Lens._1 . ExprLens.exprTag . Lens.to tag
     recType =
-      fromMaybe (error "$$: must be applied on a func of record type") $
+      fromMaybe (error msg) $
       f ^? iType . ExprLens.exprKindedLam KType . Lens._2 . ExprLens.exprKindedRecordFields KType
+    msg = "$$: must be applied on a func of record type, not: " ++ show (f ^. iType)
 
 ($$) :: InferResults t -> InferResults t -> InferResults t
 ($$) func@(Expr.Expression _ (funcVal, funcType)) nextArg =
