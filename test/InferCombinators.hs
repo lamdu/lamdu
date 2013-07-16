@@ -11,70 +11,68 @@ import Data.Store.Guid (Guid)
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Kind(..))
-import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Utils (pureHole, pureSet, pureIntegerType)
 import Utils
 import qualified Control.Lens as Lens
 import qualified Data.Store.Guid as Guid
-import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 iexpr ::
-  PureExprDefI t ->
-  PureExprDefI t ->
-  Expr.Body (DefI t) (InferResults t) -> InferResults t
+  Expr ->
+  Expr ->
+  Expr.Body Def ExprInferred -> ExprInferred
 iexpr val typ body =
   Expr.Expression body (val, typ)
 
-five :: PureExprDefI t
+five :: Expr
 five = pureLiteralInt # 5
 
-iVal :: Lens' (InferResults t) (PureExprDefI t)
+iVal :: Lens' ExprInferred Expr
 iVal = Expr.ePayload . Lens._1
 
-iType :: Lens' (InferResults t) (PureExprDefI t)
+iType :: Lens' ExprInferred Expr
 iType = Expr.ePayload . Lens._2
 
-bodyToPureExpr :: Expr.Body (DefI t) (InferResults t) -> PureExprDefI t
+bodyToPureExpr :: Expr.Body Def ExprInferred -> Expr
 bodyToPureExpr exprBody = ExprLens.pureExpr # fmap (^. iVal) exprBody
 
 -- inferred-val is simply equal to the expr. Type is given
-simple :: Expr.Body (DefI t) (InferResults t) -> PureExprDefI t -> InferResults t
+simple :: Expr.Body Def ExprInferred -> Expr -> ExprInferred
 simple body typ = iexpr (bodyToPureExpr body) typ body
 
-getParamPure :: String -> PureExprDefI t -> InferResults t
+getParamPure :: String -> Expr -> ExprInferred
 getParamPure name = simple $ ExprLens.bodyParameterRef # Guid.fromString name
 
-getRecursiveDef :: PureExprDefI t
+getRecursiveDef :: Expr
 getRecursiveDef =
   ExprLens.pureExpr . ExprLens.bodyDefinitionRef # recursiveDefI
 
 -- New-style:
-recurse :: InferResults t -> InferResults t
+recurse :: ExprInferred -> ExprInferred
 recurse typ = simple (ExprLens.bodyDefinitionRef # recursiveDefI) $ typ ^. iVal
 
-literalInteger :: Integer -> InferResults t
+literalInteger :: Integer -> ExprInferred
 literalInteger x = simple (ExprLens.bodyLiteralInteger # x) pureIntegerType
 
 piType ::
-  String -> InferResults t ->
-  (InferResults t -> InferResults t) -> InferResults t
+  String -> ExprInferred ->
+  (ExprInferred -> ExprInferred) -> ExprInferred
 piType name paramType mkResultType =
   simple (ExprUtil.makePi (Guid.fromString name) paramType result) pureSet
   where
     result = mkResultType $ getParam name paramType
 
 infixr 4 ~>
-(~>) :: InferResults t -> InferResults t -> InferResults t
+(~>) :: ExprInferred -> ExprInferred -> ExprInferred
 (~>) src dest =
   simple (ExprUtil.makePi (Guid.fromString "") src dest) pureSet
 
 lambda ::
-  String -> InferResults t ->
-  (InferResults t -> InferResults t) ->
-  InferResults t
+  String -> ExprInferred ->
+  (ExprInferred -> ExprInferred) ->
+  ExprInferred
 lambda name paramType mkResult =
   simple (ExprUtil.makeLambda guid paramType result) $
   ExprUtil.pureLam KType guid (paramType ^. iVal) (result ^. iType)
@@ -84,10 +82,10 @@ lambda name paramType mkResult =
 
 -- Sometimes we have an inferred type that comes outside-in but cannot
 -- be inferred inside-out:
-setInferredType :: InferResults t -> InferResults t -> InferResults t
+setInferredType :: ExprInferred -> ExprInferred -> ExprInferred
 setInferredType typ val = val & iType .~ typ ^. iVal
 
-getField :: InferResults t -> InferResults t -> InferResults t
+getField :: ExprInferred -> ExprInferred -> ExprInferred
 getField recordVal tagVal
   | allFieldsMismatch = error "getField on record with only mismatching field tags"
   | otherwise = simple (Expr._BodyGetField # Expr.GetField recordVal tagVal) pureFieldType
@@ -112,8 +110,8 @@ getField recordVal tagVal
       mPureFieldType =<< tagVal ^? ExprLens.exprTag
 
 lambdaRecord ::
-  String -> [(String, InferResults t)] ->
-  ([InferResults t] -> InferResults t) -> InferResults t
+  String -> [(String, ExprInferred)] ->
+  ([ExprInferred] -> ExprInferred) -> ExprInferred
 lambdaRecord paramsName strFields mkResult =
   lambda paramsName (record KType fields) $ \params ->
   mkResult $ map (getField params) fieldTags
@@ -122,29 +120,29 @@ lambdaRecord paramsName strFields mkResult =
     fieldTags = map fst fields
 
 whereItem ::
-  String -> InferResults t -> (InferResults t -> InferResults t) -> InferResults t
+  String -> ExprInferred -> (ExprInferred -> ExprInferred) -> ExprInferred
 whereItem name val mkBody =
   lambda name (iexpr (val ^. iType) pureSet bodyHole) mkBody $$ val
 
-holeWithInferredType :: InferResults t -> InferResults t
+holeWithInferredType :: ExprInferred -> ExprInferred
 holeWithInferredType = simple bodyHole . (^. iVal)
 
-hole :: InferResults t
+hole :: ExprInferred
 hole = simple bodyHole pureHole
 
-getGuidParam :: Guid -> InferResults t -> InferResults t
+getGuidParam :: Guid -> ExprInferred -> ExprInferred
 getGuidParam guid typ =
   simple (ExprLens.bodyParameterRef # guid) $
   typ ^. iVal
 
-getParam :: String -> InferResults t -> InferResults t
+getParam :: String -> ExprInferred -> ExprInferred
 getParam = getGuidParam . Guid.fromString
 
-listOf :: InferResults t -> InferResults t
+listOf :: ExprInferred -> ExprInferred
 listOf = (getDef "List" $$)
 
 -- Uses inferred holes for cons type
-list :: [InferResults t] -> InferResults t
+list :: [ExprInferred] -> ExprInferred
 list [] = getDef "[]" $$ hole
 list items@(x:_) =
   foldr cons nil items
@@ -153,38 +151,36 @@ list items@(x:_) =
     nil = getDef "[]" $$ typ
     typ = iexpr (x ^. iType) pureSet (ExprLens.bodyHole # ())
 
-maybeOf :: InferResults t -> InferResults t
+maybeOf :: ExprInferred -> ExprInferred
 maybeOf = (getDef "Maybe" $$)
 
-getDef :: String -> InferResults t
+getDef :: String -> ExprInferred
 getDef name =
   simple
-  (ExprLens.bodyDefinitionRef # IRef.unsafeFromGuid g)
-  (void (definitionTypes ! g))
-  where
-    g = Guid.fromString name
+  (ExprLens.bodyDefinitionRef # Def name)
+  (void (definitionTypes ! Def name))
 
-tag :: Guid -> InferResults t
+tag :: Guid -> ExprInferred
 tag guid =
   simple (ExprLens.bodyTag # guid) $
   ExprLens.pureExpr . ExprLens.bodyTagType # ()
 
-tagStr :: String -> InferResults t
+tagStr :: String -> ExprInferred
 tagStr = tag . Guid.fromString
 
-set :: InferResults t
+set :: ExprInferred
 set = simple bodySet pureSet
 
-tagType :: InferResults t
+tagType :: ExprInferred
 tagType = simple (ExprLens.bodyTagType # ()) pureSet
 
-integerType :: InferResults t
+integerType :: ExprInferred
 integerType = simple bodyIntegerType pureSet
 
 infixl 4 $$
 infixl 3 $$:
 
-($$:) :: InferResults t -> [InferResults t] -> InferResults t
+($$:) :: ExprInferred -> [ExprInferred] -> ExprInferred
 ($$:) f args =
   f $$ record KVal (zip tags args)
   where
@@ -194,8 +190,8 @@ infixl 3 $$:
       f ^? iType . ExprLens.exprKindedLam KType . Lens._2 . ExprLens.exprKindedRecordFields KType
     msg = "$$: must be applied on a func of record type, not: " ++ show (f ^. iType)
 
-($$) :: InferResults t -> InferResults t -> InferResults t
-($$) func@(Expr.Expression _ (funcVal, funcType)) nextArg =
+($$) :: ExprInferred -> ExprInferred -> ExprInferred
+($$) func@(Expr.Expression funcBody (funcVal, funcType)) nextArg =
   iexpr applyVal applyType application
   where
     application = ExprUtil.makeApply func nextArg
@@ -207,13 +203,13 @@ infixl 3 $$:
       _ -> seeOther
     applyVal =
       handleLam funcVal KVal pureHole $
-      if ExprUtil.isTypeConstructorType applyType
+      if Lens.has ExprLens.bodyDefinitionRef funcBody
       then bodyToPureExpr application
       else pureHole
     applyType = handleLam funcType KType piErr piErr
     piErr = error "Apply of non-Pi type!"
 
-record :: Kind -> [(InferResults t, InferResults t)] -> InferResults t
+record :: Kind -> [(ExprInferred, ExprInferred)] -> ExprInferred
 record k fields =
   simple (ExprLens.bodyKindedRecordFields k # fields) typ
   where
@@ -223,7 +219,7 @@ record k fields =
         map (void *** (^. iType)) fields
       KType -> pureSet
 
-asHole :: InferResults t -> InferResults t
+asHole :: ExprInferred -> ExprInferred
 asHole expr =
   iexpr val typ $ ExprLens.bodyHole # ()
   where

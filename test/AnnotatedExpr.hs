@@ -6,7 +6,7 @@ import Control.Monad.Trans.State (State, runState)
 import Utils
 import qualified Control.Lens as Lens
 import qualified Data.List as List
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
+import qualified Lamdu.Data.Expression as Expr
 
 type AnnotationIndex = Int
 type AnnotationM = State (AnnotationIndex, [String])
@@ -19,14 +19,15 @@ addAnnotation msg = do
   pure count
 
 errorMessage ::
-  AnnotationM (ExprIRef.Expression t [AnnotationIndex]) ->
+  Show def =>
+  AnnotationM (Expr.Expression def [AnnotationIndex]) ->
   ([String], String)
 errorMessage mkExpr =
   (resultErrs, fullMsg)
   where
     showErrItem ix err = ansiAround ansiRed ("{" ++ show ix ++ "}:\n") ++ err
     fullMsg =
-      List.intercalate "\n" $ (show . simplifyDef) (ixsStr <$> expr) :
+      List.intercalate "\n" $ show (ixsStr <$> expr) :
       "Errors:" :
       (Lens.itraversed %@~ showErrItem) resultErrs
     (expr, resultErrs) = Lens._2 %~ reverse . snd $ runState mkExpr (0, [])

@@ -1,7 +1,8 @@
 import Control.Exception (evaluate)
 import Control.Monad
 import Data.Foldable (traverse_)
-import InferExamples
+import InferPerf
+import InferTests
 
 run :: Int -> String -> (Int -> a) -> IO ()
 run count name f = do
@@ -10,5 +11,5 @@ run count name f = do
 
 main :: IO ()
 main = do
-  run 100 "factorial" factorial
-  run 100 "euler1" euler1
+  run 100 "factorial" $ inferAndEncode factorialExpr
+  run 100 "euler1" $ inferAndEncode euler1Expr

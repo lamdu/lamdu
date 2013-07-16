@@ -307,10 +307,12 @@ runParentToChildren Expr.BodyApply {} _ = []
 runParentToChildren childrenRefs expr = do
   bodyRules <-
     maybeToList . ExprUtil.matchBody
-    ((const . const) (,)) (,)
+     matchLamResult (,)
     ((const . const) True) childrenRefs $
     expr ^. Expr.eBody
   Foldable.toList bodyRules
+  where
+    matchLamResult aGuid _bGuid x y = (aGuid, (x, y))
 
 runChildrenToParent :: ExprRef -> Expr.Body def (RefExpression def) -> RuleResult def
 runChildrenToParent destRef bodyWithExprs = [(destRef, makeRefExpr bodyWithExprs)]

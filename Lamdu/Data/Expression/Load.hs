@@ -10,8 +10,7 @@ import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
-import Data.Set (Set)
-import Data.Store.Guid (Guid)
+import Data.Function.Decycle (decycleOn)
 import Data.Store.IRef (Tag)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
@@ -20,7 +19,6 @@ import Data.Typeable (Typeable)
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI, DefIM)
 import qualified Control.Lens as Lens
-import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
@@ -59,25 +57,21 @@ irefOfClosure :: MonadA m => ExprPropertyClosure (Tag m) -> ExprI (Tag m)
 irefOfClosure = Property.value . exprPropertyOfClosure
 
 loadExpressionClosure ::
-  MonadA m => Set Guid ->
-  ExprPropertyClosure (Tag m) ->
+  MonadA m => ExprPropertyClosure (Tag m) ->
   T m (ExprIRef.ExpressionM m (ExprPropertyClosure (Tag m)))
-loadExpressionClosure visited closure =
-  fmap (`Expr.Expression` closure) . loadExpressionBody visited $
-  irefOfClosure closure
-
-loadExpressionBody ::
-  MonadA m => Set Guid -> ExprI (Tag m) ->
-  T m
-  (Expr.BodyExpr (DefIM m) (ExprPropertyClosure (Tag m)))
-loadExpressionBody visited iref
-  | ourGuid `Set.member` visited = error "Recursive IRef structure"
-  | otherwise = onBody =<< ExprIRef.readExprBody iref
+loadExpressionClosure =
+  decycleOn irefOfClosure loop
   where
-    ourGuid = ExprIRef.exprGuid iref
-    newVisited = Set.insert ourGuid visited
-    onBody body = body & Lens.traversed %%@~ loadElement body
-    loadElement body i _ = loadExpressionClosure newVisited $ SubexpressionProperty iref body i
+    loop Nothing closure =
+      error $ "Recursive IRef structure: " ++ show (irefOfClosure closure)
+    loop (Just recurse) closure =
+      ExprIRef.readExprBody iref
+      >>= onBody
+      <&> (`Expr.Expression` closure)
+      where
+        onBody body = body & Lens.traversed %%@~ loadElement body
+        iref = irefOfClosure closure
+        loadElement body i _ = recurse $ SubexpressionProperty iref body i
 
 -- TODO: Return DefinitionClosure
 loadDefinitionClosure ::
@@ -85,11 +79,11 @@ loadDefinitionClosure ::
   T m (Definition (ExprIRef.ExpressionM m (ExprPropertyClosure (Tag m))) (DefIM m))
 loadDefinitionClosure defI = do
   def <- Transaction.readIRef defI
-  bodyType <- loadExpressionClosure Set.empty $ DefinitionTypeProperty defI def
+  bodyType <- loadExpressionClosure $ DefinitionTypeProperty defI def
   (`Definition` defI) . (`Definition.Body` bodyType) <$>
     case def ^. Definition.bodyContent of
     Definition.ContentExpression bodyI ->
-      fmap Definition.ContentExpression . loadExpressionClosure Set.empty $
+      fmap Definition.ContentExpression . loadExpressionClosure $
       DefinitionContentExpressionProperty defI bodyI $ def ^. Definition.bodyType
     Definition.ContentBuiltin (Definition.Builtin name) ->
       return . Definition.ContentBuiltin $ Definition.Builtin name

@@ -163,14 +163,13 @@ make pl holeInfo mShownResult = do
       jumpHoles : close : pick : alphaAfterOp :
       [ applyOp | null searchTerm ]
     weakEventMap =
-      mconcat $ concat
-      [ [ applyOp | not (null searchTerm) ]
-      , [ cut, paste, replace
-        -- includes overlapping events like "cut" of sub-expressions
-        -- (since top-level expression gets its actions cut), so put
-        -- at lowest precedence:
-        , fromResult
-        ]
+      mconcat $
+      [ applyOp | not (null searchTerm) ] ++
+      [ cut, paste, replace
+      -- includes overlapping events like "cut" of sub-expressions
+      -- (since top-level expression gets its actions cut), so put
+      -- at lowest precedence:
+      , fromResult
       ]
     -- Used with weaker events, TextEdit events above:
     searchTermEventMap = mappend strongEventMap weakEventMap

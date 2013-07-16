@@ -265,7 +265,7 @@ randomizeParamIdsG preNG gen initMap convertPL =
 {-# INLINE matchBody #-}
 matchBody ::
   Eq def =>
-  (Guid -> Guid -> a -> b -> c) -> -- ^ Lam/Pi result match
+  (Guid -> Guid -> a -> b -> (Guid, c)) -> -- ^ Lam/Pi result match
   (a -> b -> c) ->                 -- ^ Ordinary structural match (Apply components, param type)
   (Guid -> Guid -> Bool) ->        -- ^ Match ParameterRef's
   Body def a -> Body def b -> Maybe (Body def c)
@@ -274,9 +274,9 @@ matchBody matchLamResult matchOther matchGetPar body0 body1 =
   BodyLam (Lam k0 p0 pt0 r0) -> do
     Lam k1 p1 pt1 r1 <- body1 ^? _BodyLam
     guard $ k0 == k1
+    let (p, res) = matchLamResult p0 p1 r0 r1
     return . BodyLam $
-      Lam k0 p0 (matchOther pt0 pt1) $
-      matchLamResult p0 p1 r0 r1
+      Lam k0 p (matchOther pt0 pt1) res
   BodyApply (Apply f0 a0) -> do
     Apply f1 a1 <- body1 ^? _BodyApply
     return . BodyApply $ Apply (matchOther f0 f1) (matchOther a0 a1)
@@ -327,7 +327,7 @@ matchExpressionG overrideGuids onMatch onMismatch =
       Just bodyMatched -> Expression <$> sequenceA bodyMatched <*> onMatch pl0 pl1
       where
         matchGetPar p0 p1 = p0 == lookupGuid p1
-        matchLamResult p0 p1 r0 r1 = overrideGuids p0 p1 *> go (Map.insert p1 p0 scope) r0 r1
+        matchLamResult p0 p1 r0 r1 = (p0, overrideGuids p0 p1 *> go (Map.insert p1 p0 scope) r0 r1)
         matchOther = go scope
         lookupGuid guid = fromMaybe guid $ Map.lookup guid scope
 

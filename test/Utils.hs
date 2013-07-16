@@ -1,19 +1,20 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE FlexibleInstances, OverlappingInstances #-}
+{-# LANGUAGE FlexibleInstances, OverlappingInstances, GeneralizedNewtypeDeriving #-}
 module Utils where
 
 import Control.Applicative ((<$), (<$>), (<*>))
 import Control.Lens.Operators
 import Control.Monad (void)
+import Data.Binary (Binary)
 import Data.Map (Map, (!))
-import Data.Monoid (mappend, mconcat)
+import Data.Monoid (mappend)
 import Data.Store.Guid (Guid)
+import Lamdu.Data.ExampleDB (createBuiltins)
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Utils (pureHole, pureIntegerType)
-import Lamdu.Data.ExampleDB (createBuiltins)
+import Lamdu.Data.Infer.Deref (Derefed(..))
 import qualified Control.Lens as Lens
-import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -23,12 +24,15 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
+newtype Def = Def String
+  deriving (Eq, Ord, Binary)
+instance Show Def where
+  show (Def d) = '#':d
 type PureExpr def = Expr.Expression def ()
-type PureExprDefI t = PureExpr (DefI t)
+type Expr = PureExpr Def
 
 (==>) :: k -> v -> Map k v
 (==>) = Map.singleton
@@ -39,9 +43,6 @@ instance Show UnescapedStr where
 
 showStructure :: Show def => Expr.Body def a -> String
 showStructure = show . (UnescapedStr "" <$)
-
-instance Show def => Show (PureExpr def) where
-  show (Expr.Expression value ()) = show value
 
 namedLambda :: String -> expr -> expr -> Expr.Body def expr
 namedLambda = ExprUtil.makeLambda . Guid.fromString
@@ -62,10 +63,7 @@ bodyIntegerType :: Expr.Body def expr
 bodyIntegerType = ExprLens.bodyIntegerType # ()
 
 -- 1 dependent param
-pureApplyPoly1 ::
-  String ->
-  [ExprIRef.Expression t ()] ->
-  ExprIRef.Expression t ()
+pureApplyPoly1 :: String -> [Expr] -> Expr
 pureApplyPoly1 name xs = pureApply $ pureGetDef name : pureHole : xs
 
 pureLambda ::
@@ -83,17 +81,16 @@ purePi name x y = ExprUtil.pureExpression $ namedPi name x y
 pureLiteralInt :: Lens.Prism' (PureExpr def) Integer
 pureLiteralInt = ExprLens.pureExpr . ExprLens.bodyLiteralInteger
 
-pureGetDef :: String -> PureExprDefI t
+pureGetDef :: String -> Expr
 pureGetDef name =
-  ExprLens.pureExpr . ExprLens.bodyDefinitionRef #
-  IRef.unsafeFromGuid (Guid.fromString name)
+  ExprLens.pureExpr . ExprLens.bodyDefinitionRef # Def name
 
 pureGetParam :: String -> PureExpr def
 pureGetParam name =
   ExprLens.pureExpr . ExprLens.bodyParameterRef #
   Guid.fromString name
 
-pureGetRecursiveDefI :: PureExprDefI t
+pureGetRecursiveDefI :: Expr
 pureGetRecursiveDefI =
   ExprLens.pureExpr . ExprLens.bodyDefinitionRef # recursiveDefI
 
@@ -110,33 +107,27 @@ ansiReset = "\ESC[0m"
 ansiAround :: String -> String -> String
 ansiAround prefix x = prefix ++ x ++ ansiReset
 
-definitionTypes :: Map Guid (PureExprDefI t)
+definitionTypes :: Map Def Expr
 definitionTypes =
   exampleDBDefs `mappend` extras
   where
-    g = Guid.fromString
-    extras =
-      mconcat
-      [ g "IntToBoolFunc" ==> purePi "intToBool" pureIntegerType (pureGetDef "Bool")
-      ]
+    extras = Def "IntToBoolFunc" ==> purePi "intToBool" pureIntegerType (pureGetDef "Bool")
     exampleDBDefs =
       fst . MapStore.runEmpty . Transaction.run MapStore.mapStore $ do
         (_, defIs) <- createBuiltins id
-        Lens.mapMOf (Lens.traversed . ExprLens.exprDef) reIRef
+        (Lens.traversed . ExprLens.exprDef %%~ nameOf)
           =<< Map.fromList <$> mapM readDef defIs
 
-    reIRef = fmap IRef.unsafeFromGuid . guidNameOf
-    guidNameOf =
-      fmap Guid.fromString . Transaction.getP . Anchors.assocNameRef . IRef.guid
+    nameOf = fmap Def . Transaction.getP . Anchors.assocNameRef . IRef.guid
     readDef defI =
       (,)
-      <$> guidNameOf defI
+      <$> nameOf defI
       <*>
       (fmap void . ExprIRef.readExpression . (^. Definition.bodyType) =<<
        Transaction.readIRef defI)
 
-recursiveDefI :: DefI t
-recursiveDefI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
+recursiveDefI :: Def
+recursiveDefI = Def "recursiveDefI"
 
 innerMostPi :: Expression def a -> Expression def a
 innerMostPi =
@@ -153,34 +144,31 @@ piTags =
   ExprLens.exprKindedRecordFields KType .
   Lens.traversed . Lens._1 . ExprLens.exprTag
 
-defParamTags :: String -> [Guid]
+defParamTags :: Def -> [Guid]
 defParamTags defName =
-  innerMostPi (definitionTypes ! Guid.fromString defName) ^.. piTags
+  innerMostPi (definitionTypes ! defName) ^.. piTags
 
-simplifyDef :: ExprIRef.Expression t a -> Expression UnescapedStr a
-simplifyDef =
-  ExprLens.exprDef %~ defIStr
-  where
-    defIStr = UnescapedStr . BS8.unpack . BS8.takeWhile (/= '\0') . Guid.bs . IRef.guid
-
-showRestricted :: Expr.Expression def Infer.IsRestrictedPoly -> Expr.Expression def UnescapedStr
-showRestricted = fmap restrictedStr
-  where
-    restrictedStr Infer.UnrestrictedPoly = UnescapedStr ""
-    restrictedStr Infer.RestrictedPoly = UnescapedStr $ ansiAround ansiYellow "R"
+-- showRestricted ::
+--   Expr.Expression def Infer.IsRestrictedPoly ->
+--   Expr.Expression def UnescapedStr
+-- showRestricted = fmap restrictedStr
+--   where
+--     restrictedStr Infer.UnrestrictedPoly = UnescapedStr ""
+--     restrictedStr Infer.RestrictedPoly = UnescapedStr $ ansiAround ansiYellow "R"
 
 canonizeDebug :: Expression def a -> Expression def a
 canonizeDebug = ExprUtil.randomizeParamIdsG id ExprUtil.debugNameGen Map.empty (\_ _ -> id)
 
-showInferred :: ExprIRef.Expression t Infer.IsRestrictedPoly -> String
+showInferred :: ExprIRef.Expression t () -> String
 showInferred =
-  show . showRestricted . simplifyDef . canonizeDebug
+  show . -- showRestricted .
+  canonizeDebug
 
-showInferredValType :: Expression def (Infer.Inferred (DefI t)) -> String
+showInferredValType :: Expression def (Derefed (DefI t)) -> String
 showInferredValType expr =
   unlines
-  [ "Inferred val:  " ++ f Infer.iValue
-  , "Inferred type: " ++ f Infer.iType
+  [ "Inferred val:  " ++ showInferred val
+  , "Inferred type: " ++ showInferred typ
   ]
   where
-    f t = expr ^. Expr.ePayload . Lens.to (showInferred . t)
+    Derefed val typ = expr ^. Expr.ePayload

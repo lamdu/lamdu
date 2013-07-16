@@ -1,30 +1,26 @@
+{-# LANGUAGE RankNTypes #-}
 {-# OPTIONS -Wall -Werror -fno-warn-missing-signatures #-}
-module InferTests (allTests) where
+module InferTests (allTests, factorialExpr, euler1Expr, solveDepressedQuarticExpr) where
 
+import Control.Applicative
 import Control.Lens.Operators
 import Control.Monad (void)
-import Control.Monad.Trans.State (evalState)
-import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import InferAssert
 import InferCombinators
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..), Kind(..))
-import Lamdu.Data.Expression.Infer.Conflicts (inferWithConflicts)
-import Test.Framework (testGroup, plusTestOptions)
-import Test.Framework.Options (TestOptions'(..))
+import Test.Framework (testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
-import Test.HUnit (assertBool)
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Property (property, rejected)
 import Utils
 import qualified Control.Lens as Lens
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Test.Framework.Providers.HUnit as HUnitProvider
+import qualified Lamdu.Data.Infer as Infer
 import qualified Test.HUnit as HUnit
 
 simpleTests =
@@ -48,26 +44,18 @@ inferPart =
   where
     listInts = listOf (asHole integerType)
 
+-- Depend on Rigidity:
+
 applyOnVar =
-  testInfer "apply on var" $
+  testInferAllowFail "No support for rigidity yet"
+    "apply on var" $
   lambda "x" (holeWithInferredType set) $ \x ->
   getDef "IntToBoolFunc" $$
   (holeWithInferredType (hole ~> integerType) $$ x)
 
-idTest = testInfer "id test" $ getDef "id" $$ integerType
-
-inferFromOneArgToOther =
-  testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}" $
-  lambda "a" (asHole set) $ \a ->
-  lambda "b" (asHole set) $ \b ->
-  let mkMapType f = getDef "Map" $$: [f a, f b] in
-  lambda "x" (mkMapType asHole) $ \x ->
-  lambda "y" (mkMapType id) $ \y ->
-  getDef "if" $$ asHole (mkMapType id) $$:
-  [holeWithInferredType (getDef "Bool"), x, y]
-
 monomorphRedex =
-  testInfer "foo = f (\\~ x -> (\\~ -> x) _) where f ~:(a:Type -> _ -> a) = _" $
+  testInferAllowFail "No support for rigidity detection yet"
+    "foo = f (\\~ x -> (\\~ -> x) _) where f ~:(a:Type -> _ -> a) = _" $
   whereItem "f" (lambda "" fArgType (const hole)) $ \f ->
   f $$
   lambda "b" (asHole set)
@@ -80,12 +68,24 @@ monomorphRedex =
 
 -- Solved in new_infer
 idPreservesDependency =
-  testInferAllowFail "5 + f _ where f x = id _{no inferred type}" $
+  testInfer "5 + f _ where f x = id _{no inferred type}" $
   whereItem "f" (lambda "x" iset (const (getDef "id" $$ iset $$ hole))) $ \f ->
   getDef "+" $$ asHole integerType $$:
   [literalInteger 5, setInferredType integerType (f $$ hole)]
   where
     iset = holeWithInferredType set
+
+idTest = testInfer "id test" $ getDef "id" $$ integerType
+
+inferFromOneArgToOther =
+  testInfer "f = \\ a b (c:Map _ _) (d:Map a b) -> if {_ c d}" $
+  lambda "a" (asHole set) $ \a ->
+  lambda "b" (asHole set) $ \b ->
+  let mkMapType f = getDef "Map" $$: [f a, f b] in
+  lambda "c" (mkMapType asHole) $ \c ->
+  lambda "d" (mkMapType id) $ \d ->
+  getDef "if" $$ asHole (mkMapType id) $$:
+  [holeWithInferredType (getDef "Bool"), c, d]
 
 fOfXIsFOf5 =
   testInfer "f x = f 5" $
@@ -124,27 +124,24 @@ applyFunc :: Lens.Traversal' (Expression def a) (Expression def a)
 applyFunc = ExprLens.exprApply . Expr.applyFunc
 applyArg :: Lens.Traversal' (Expression def a) (Expression def a)
 applyArg = ExprLens.exprApply . Expr.applyArg
-lamParamType :: Lens.Traversal' (Expression def a) (Expression def a)
-lamParamType = ExprLens.exprLam . Expr.lamParamType
-lamBody :: Lens.Traversal' (Expression def a) (Expression def a)
-lamBody = ExprLens.exprLam . Expr.lamResult
+lamParamType :: Kind -> Lens.Traversal' (Expression def a) (Expression def a)
+lamParamType k = ExprLens.exprKindedLam k . Lens._2
+lamResult :: Kind -> Lens.Traversal' (Expression def a) (Expression def a)
+lamResult k = ExprLens.exprKindedLam k . Lens._3
 
-defaultTestOptions = mempty { topt_timeout = Just (Just 100000) }
-
-testCase name = plusTestOptions defaultTestOptions . HUnitProvider.testCase name
-
-resumptionTests = testGroup "type infer resume" $
+resumptionTests =
+  testGroup "type infer resume" $
   [ testResume "{hole->pi}"
     hole id (hole ~> hole)
   , testResume "{hole->id} hole"
     (hole $$ hole) applyFunc (getDef "id")
   , testResume "\\_:hole -> {hole->id}"
-    (lambda "" hole (const hole)) lamBody (getDef "id")
+    (lambda "" hole (const hole)) (lamResult KVal) (getDef "id")
   ] ++
   let
     lambdaAB = lambda "a" hole . const . lambda "b" hole . const $ hole
     lambdaABBody :: Lens.Traversal' (Expression def a) (Expression def a)
-    lambdaABBody = lamBody . lamBody
+    lambdaABBody = lamResult KVal . lamResult KVal
   in
   [ testResume "\\a:hole -> \\b:hole -> {hole->a}"
     lambdaAB lambdaABBody (getParam "a" hole)
@@ -155,38 +152,41 @@ resumptionTests = testGroup "type infer resume" $
     (lambda "a" hole $ \a ->
      lambda "b" set $ \_ ->
      lambda "f" hole $ \f -> f $$ a $$ hole)
-    (lamBody . lamBody . lamBody . applyArg)
+    (lamResult KVal . lamResult KVal . lamResult KVal . applyArg)
     (getParam "b" hole)
   , testCase "ref to the def on the side" $
     let
-      (exprD, inferContext) =
-        doInfer_ $ lambda "" hole (const hole)
-      scope = exprD ^?! lamBody . Expr.ePayload . Lens.to (Infer.nScope . Infer.iNode)
-      exprR = (`evalState` inferContext) $ do
-        node <- Infer.newNodeWithScope scope
-        doInferM_ node getRecursiveDef
-      resultR = inferResults exprR
-    in assertCompareInferred resultR $ recurse (hole ~> hole)
+      resultR = assertSuccess . runNewContext $ do
+        exprD <- inferDef $ infer =<< load (lambda "" hole (const hole))
+        let scope = exprD ^?! lamResult KVal . Expr.ePayload . Lens._1 . Infer.stvScope
+        exprR <- inferScope scope =<< load (recurse (hole ~> hole))
+        deref $ fst <$> exprR
+    in assertCompareInferred resultR (recurse (hole ~> hole))
   ]
 
--- f     x    = x _ _
---   --------
---   (_ -> _)
---         ^ Set Bool here
+expectLeft :: Show r => String -> (l -> HUnit.Assertion) -> Either l r -> HUnit.Assertion
+expectLeft _ handleLeft (Left x) = handleLeft x
+expectLeft msg _ (Right x) =
+  HUnit.assertFailure $
+  unwords ["Error", msg, "expected.  Unexpected success encountered:", show x]
+
 failResumptionAddsRules =
+  -- f     x    = x _ _
+  --   --------
+  --   (_ -> _)
+  --         ^ Set Bool here
   testCase "Resumption that adds rules and fails" .
-  assertBool "Resumption should have failed" $ not success
+  runContextAssertion $ do
+    rootInferred <- inferDef $ infer =<< load expr
+    fmap verifyError . try $
+      loadInferInto (rootInferred ^?! resumptionPoint) resumptionValue
   where
-    (success, _iwc) = (`evalState` origInferContext) $
-      -- TODO: Verify iwc has the right kind of conflict (or add
-      -- different tests to do that)
-      inferWithConflicts (doLoad resumptionValue) resumptionPoint
+    verifyError :: Either Error () -> M ()
+    verifyError (Left (InferError Infer.Mismatch {})) = return ()
+    verifyError _ = error "Resumption did not fail!"
+    expr = lambda "x" (hole ~> hole) $ \x -> x $$ hole $$ hole
     resumptionValue = getDef "Bool" -- <- anything but Pi
-    resumptionPoint =
-      origInferred ^?! lamParamType . lamBody . Expr.ePayload . Lens.to Infer.iNode
-    (origInferred, origInferContext) =
-      doInfer_ . lambda "x" (hole ~> hole) $
-      \x -> x $$ hole $$ hole
+    resumptionPoint = lamParamType KVal . lamResult KType
 
 emptyRecordTests =
   testGroup "empty record"
@@ -203,40 +203,42 @@ recordTest =
   where
     fieldGuid = Guid.fromString "field"
 
--- TODO: Test should verify that ImplicitVariables puts the restricted
--- form (b->c) in the right place.
-addImplicitCurriedApply2Test =
-  testCase "implicitCurriedApply2: \\f -> f ? ?" $
-  inferWVAssertion (expr hole) wvExpr
-  where
-    expr a =
-      lambda "f" (asHole (a ~> hole)) $ \f ->
-      setInferredType (hole ~> hole) (f $$ holeWithInferredType a) $$ hole
-    wvExpr = lambda "a" (asHole set) expr
+-- Depend on ImplicitVariables:
 
-uncurry2Test =
-  testCase "uncurry2: \\params:{?->?->?, x:?, y:?} -> f x y   WV: \\a b c params:{f:?{a->b->c} x:?a y:?b} -> f x y : c" $
-  inferWVAssertion (expr iset iset iset) wvExpr
-  where
-    iset = holeWithInferredType set
-    expr a b c =
-      lambdaRecord "params"
-      [ ("f", asHole (b ~> a ~> c))
-      , ("x", asHole b)
-      , ("y", asHole a)
-      ] $ \[f, x, y] ->
-      f $$ x $$ y
-    wvExpr =
-      lambda "a" (asHole set) $ \a ->
-      lambda "b" (asHole set) $ \b ->
-      lambda "c" (asHole set) $ \c ->
-      expr b c a
+-- -- TODO: Test should verify that ImplicitVariables puts the restricted
+-- -- form (b->c) in the right place.
+-- addImplicitCurriedApply2Test =
+--   testCase "implicitCurriedApply2: \\f -> f ? ?" $
+--   inferWVAssertion (expr hole) wvExpr
+--   where
+--     expr a =
+--       lambda "f" (asHole (a ~> hole)) $ \f ->
+--       setInferredType (hole ~> hole) (f $$ holeWithInferredType a) $$ hole
+--     wvExpr = lambda "a" (asHole set) expr
 
-implicitVarTests =
-  testGroup "add implicit variables"
-  [ addImplicitCurriedApply2Test
-  , uncurry2Test
-  ]
+-- uncurry2Test =
+--   testCase "uncurry2: \\params:{?->?->?, x:?, y:?} -> f x y   WV: \\a b c params:{f:?{a->b->c} x:?a y:?b} -> f x y : c" $
+--   inferWVAssertion (expr iset iset iset) wvExpr
+--   where
+--     iset = holeWithInferredType set
+--     expr a b c =
+--       lambdaRecord "params"
+--       [ ("f", asHole (b ~> a ~> c))
+--       , ("x", asHole b)
+--       , ("y", asHole a)
+--       ] $ \[f, x, y] ->
+--       f $$ x $$ y
+--     wvExpr =
+--       lambda "a" (asHole set) $ \a ->
+--       lambda "b" (asHole set) $ \b ->
+--       lambda "c" (asHole set) $ \c ->
+--       expr b c a
+
+-- implicitVarTests =
+--   testGroup "add implicit variables"
+--   [ addImplicitCurriedApply2Test
+--   , uncurry2Test
+--   ]
 
 inferReplicateOfReplicate =
   testInfer "replicate <hole> (replicate <hole> 1) 2" $
@@ -254,12 +256,6 @@ infiniteTypeTests =
   [ wrongRecurseMissingArg
   , getFieldWasntAllowed
   ]
-
-expectLeft :: Show r => String -> (l -> HUnit.Assertion) -> Either l r -> HUnit.Assertion
-expectLeft _ handleLeft (Left x) = handleLeft x
-expectLeft msg _ (Right x) =
-  HUnit.assertFailure $
-  unwords ["Error", msg, "expected.  Unexpected success encountered:", show x]
 
 getFieldWasntAllowed =
   testCase "map (\\x:_. #x#) {}:_" $
@@ -285,17 +281,12 @@ getFieldWasntAllowed =
     recType = record KType []
 
 wrongRecurseMissingArg =
-  testCase "f x = f" $
-  expectLeft "Infinite Type" verifyError $
-  loadInferResults (void expr)
+  testCase "f x = f" .
+  expectLeft "Infinite Type" verifyError . fmap void $
+  runLoadInferDef (void expr)
   where
-    verifyError (Infer.ErrorMismatch err) =
-      case Infer.errDetails err of
-      Infer.InfiniteExpression _ -> return ()
-      _ ->
-        HUnit.assertFailure $ "InfiniteExpression error expected, but got: " ++ show err
-    verifyError (Infer.ErrorMissingDefType def) =
-      HUnit.assertFailure $ "InfiniteExpression error expected, but got missing def type error for def: " ++ show def
+    verifyError (InferError (Infer.InfiniteExpression _)) = return ()
+    verifyError err = HUnit.assertFailure $ "InfiniteExpression error expected, but got: " ++ show err
     expr = lambda "x" hole . const $ recurse hole
 
 mapIdTest =
@@ -308,21 +299,107 @@ mapIdTest =
   , getDef "id" $$ asHole integerType
   ]
 
+factorialExpr =
+  lambda "x" iInt $ \x ->
+  getDef "if" $$ iInt $$:
+  [ getDef "==" $$ iInt $$:
+    [x, literalInteger 0]
+  , literalInteger 1
+  , getDef "*" $$ iInt $$:
+    [ x
+    , recurse (integerType ~> integerType) $$
+      (getDef "-" $$ iInt $$: [x, literalInteger 1])
+    ]
+  ]
+  where
+    iInt = asHole integerType
+
+euler1Expr =
+  getDef "sum" $$ iInt $$
+  ( getDef "filter" $$ iInt $$:
+    [ getDef ".." $$: [literalInteger 1, literalInteger 1000]
+    , lambda "x" iInt $ \x ->
+      getDef "||" $$:
+      [ getDef "==" $$ iInt $$:
+        [ literalInteger 0, getDef "%" $$ iInt $$: [x, literalInteger 3] ]
+      , getDef "==" $$ iInt $$:
+        [ literalInteger 0, getDef "%" $$ iInt $$: [x, literalInteger 5] ]
+      ]
+    ]
+  )
+  where
+    iInt = asHole integerType
+
+-- Solve depressed quartic polynomial
+solveDepressedQuarticExpr =
+  lambdaRecord "params"
+  [ ("e", asHole integerType)
+  , ("d", asHole integerType)
+  , ("c", asHole integerType)
+  ] $ \[e, d, c] ->
+  whereItem "solvePoly" ( getDef "id" $$ iListInt )
+  $ \solvePoly ->
+  whereItem "sqrts"
+  ( lambda "x" iInt $ \x ->
+    whereItem "r"
+    ( getDef "sqrt" $$ iInt $$ x
+    ) $ \r ->
+    list [r, getDef "negate" $$ iInt $$ r]
+  )
+  $ \sqrts ->
+  getDef "if" $$ iListInt $$:
+  [ getDef "==" $$ iInt $$: [d, literalInteger 0]
+  , getDef "concat" $$ iInt $$
+    ( getDef "map" $$ iInt $$ iListInt $$:
+      [ solvePoly $$ list [e, c, literalInteger 1]
+      , sqrts
+      ]
+    )
+  , getDef "concat" $$ iInt $$
+    ( getDef "map" $$ iInt $$ iListInt $$:
+      [ sqrts $$ (getDef "head" $$ iInt $$ (solvePoly $$ list
+        [ getDef "negate" $$ iInt $$ (d %* d)
+        , (c %* c) %- (literalInteger 4 %* e)
+        , literalInteger 2 %* c
+        , literalInteger 1
+        ]))
+      , lambda "x" iInt $ \x ->
+        solvePoly $$ list
+        [ (c %+ (x %* x)) %- (d %/ x)
+        , literalInteger 2 %* x
+        , literalInteger 2
+        ]
+      ]
+    )
+  ]
+  where
+    iInt = asHole integerType
+    iListInt = asHole $ listOf integerType
+    x %+ y = getDef "+" $$ iInt $$: [x, y]
+    x %- y = getDef "-" $$ iInt $$: [x, y]
+    x %* y = getDef "*" $$ iInt $$: [x, y]
+    x %/ y = getDef "/" $$ iInt $$: [x, y]
+
 joinMaybe =
-  testInferAllowFail "\\x:_ -> caseMaybe x (empty=Nothing, just=\\x->x)" $
-  lambda "xs" (asHole (listOf hole)) $ \xs ->
-  getDef "caseMaybe" $$ iset $$ asHole (maybeOf iset)
+  testInfer "\\x:_ -> caseMaybe x (empty=Nothing, just=\\x->x)" $
+  lambda "x" (asHole (maybeOf (maybeOf iset))) $ \x ->
+  getDef "caseMaybe" $$ maybeOf iset $$ asHole (maybeOf iset)
   $$:
-  [ xs
+  [ x
   , getDef "Nothing" $$ iset
-  , lambda "item" iset id
+  , lambda "item" (asHole (maybeOf iset)) id
   ]
   where
     iset = holeWithInferredType set
 
 hunitTests =
-  simpleTests ++
+  simpleTests
+  ++
   [ mapIdTest
+  , testInfer "factorial" factorialExpr
+  , testInfer "euler1" euler1Expr
+  , testInferAllowFail "Missing type inferences"
+    "solveDepressedQuartic" solveDepressedQuarticExpr
   , applyIntToBoolFuncWithHole
   , applyOnVar
   , idTest
@@ -341,17 +418,17 @@ hunitTests =
   , emptyRecordTests
   , recordTest
   , inferReplicateOfReplicate
-  , implicitVarTests
+  -- , implicitVarTests
   , infiniteTypeTests
   , resumptionTests
   , joinMaybe
   ]
 
-inferPreservesShapeProp :: PureExprDefI t -> Property
+inferPreservesShapeProp :: Expr -> Property
 inferPreservesShapeProp expr =
-  case inferMaybe expr of
-    Nothing -> property rejected
-    Just (inferred, _) -> property (void inferred == expr)
+  case runLoadInferDef expr of
+    Left _ -> property rejected
+    Right inferred -> property (void inferred == expr)
 
 qcProps =
   [ testProperty "infer preserves shape" inferPreservesShapeProp

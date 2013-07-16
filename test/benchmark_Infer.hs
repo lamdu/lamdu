@@ -1,12 +1,14 @@
+import Control.Applicative
 import Control.Monad
 import Criterion.Main
-import InferExamples
+import InferPerf
+import InferTests
 
 benches :: [(String, Int -> Int)]
 benches =
-  [ ("factorial", factorialEncode)
-  , ("euler1", euler1Encode)
-  , ("solveDepressedQuartic", solveDepressedQuarticEncode)
+  [ ("factorial", inferAndEncode factorialExpr)
+  , ("euler1", inferAndEncode euler1Expr)
+  , ("solveDepressedQuartic", inferAndEncode solveDepressedQuarticExpr)
   ]
 
 main :: IO ()
