@@ -6,7 +6,7 @@ module Lamdu.Data.Infer.Load
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.MonadA (MonadA)
-import Data.UnionFind (Ref)
+import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (InferT)
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -18,15 +18,15 @@ data Loader def m = Loader
   }
 
 -- Error includes untyped def use
-loadDef :: MonadA m => Loader def m -> def -> InferT def m (Ref, def)
+loadDef :: MonadA m => Loader def m -> def -> InferT def m (LoadedDef def)
 loadDef (Loader loader) def =
   loader def
   & lift
   >>= ExprRefs.exprIntoContext
-  <&> flip (,) def
+  <&> LoadedDef def
 
 load ::
   MonadA m =>
   Loader def m -> Expr.Expression def a ->
-  InferT def m (Expr.Expression (Ref, def) a)
+  InferT def m (Expr.Expression (LoadedDef def) a)
 load loader expr = expr & ExprLens.exprDef %%~ loadDef loader

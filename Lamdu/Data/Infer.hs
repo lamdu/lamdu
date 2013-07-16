@@ -95,7 +95,7 @@ data ScopedTypedValue = ScopedTypedValue
   }
 
 infer ::
-  Expr.Expression (Ref, def) a ->
-  InferT def m (Expr.Expression (Ref, def) (ScopedTypedValue, a))
-infer _refExpr = do
+  Expr.Expression (LoadedDef def) a ->
+  InferT def m (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
+infer (Expr.Expression _body _a) = do
   error "TODO"

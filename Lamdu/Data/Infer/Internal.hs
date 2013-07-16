@@ -5,6 +5,7 @@ module Lamdu.Data.Infer.Internal
   , RefData(..), rdVars, rdBody
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs
+  , LoadedDef(..), ldDef, ldType
   ) where
 
 import Data.Map (Map)
@@ -39,3 +40,9 @@ newtype Context def = Context
   { _ctxExprRefs :: ExprRefs def
   }
 Lens.makeLenses ''Context
+
+data LoadedDef def = LoadedDef
+  { _ldDef :: def
+  , _ldType :: Ref
+  }
+Lens.makeLenses ''LoadedDef
