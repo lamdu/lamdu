@@ -3,7 +3,7 @@ module Lamdu.Data.Infer.Internal
   ( RefVars(..)
   , RefData(..), rdVars, rdBody
   , ExprRefs(..), exprRefsUF, exprRefsData
-  , Context(..), ctxExprRefs
+  , Context(..), ctxExprRefs, ctxDefRefs
   , LoadedDef(..), ldDef, ldType
   , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
@@ -34,8 +34,11 @@ data ExprRefs def = ExprRefs
   }
 Lens.makeLenses ''ExprRefs
 
-newtype Context def = Context
+data Context def = Context
   { _ctxExprRefs :: ExprRefs def
+  , -- NOTE: This Map is for 2 purposes: Sharing Refs of loaded Defs
+    -- and allowing to specify recursive defs
+    _ctxDefRefs :: Map def Ref
   }
 Lens.makeLenses ''Context
 

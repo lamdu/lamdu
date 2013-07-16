@@ -35,6 +35,7 @@ emptyContext =
     { _exprRefsUF = UF.empty
     , _exprRefsData = mempty
     }
+  , _ctxDefRefs = Map.empty
   }
 
 rename :: Map Guid Guid -> Guid -> Guid

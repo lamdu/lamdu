@@ -11,9 +11,13 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
+import Data.Maybe.Utils (unsafeUnjust)
+import Data.Traversable (sequenceA)
+import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Either as Either
+import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
@@ -26,20 +30,35 @@ data Loader def m = Loader
 newtype LoadError def = LoadUntypedDef def
 
 -- Error includes untyped def use
-loadDef ::
+loadDefTypeIntoRef ::
   MonadA m =>
   Loader def m -> def ->
-  StateT (Context def) (EitherT (LoadError def) m) (LoadedDef def)
-loadDef (Loader loader) def = do
+  StateT (Context def) (EitherT (LoadError def) m) Ref
+loadDefTypeIntoRef (Loader loader) def = do
   loadedDefType <- lift . lift $ loader def
   when (Lens.has ExprLens.holePayloads loadedDefType) .
     lift . Either.left $ LoadUntypedDef def
   ExprRefs.exprIntoContext loadedDefType
-    <&> LoadedDef def
 
 load ::
-  MonadA m =>
+  (Ord def, MonadA m) =>
   Loader def m -> Expr.Expression def a ->
   StateT (Context def) (EitherT (LoadError def) m)
     (Expr.Expression (LoadedDef def) a)
-load loader = ExprLens.exprDef %%~ loadDef loader
+load loader expr = do
+  existingDefRefs <- Lens.use ctxDefRefs <&> Lens.mapped %~ return
+  -- Left wins in union
+  allDefRefs <- sequenceA $ existingDefRefs `Map.union` defLoaders
+  ctxDefRefs .= allDefRefs
+  let
+    getDefRef def =
+      LoadedDef def .
+      unsafeUnjust "We just added all defs!" $
+      allDefRefs ^. Lens.at def
+  expr & ExprLens.exprDef %~ getDefRef & return
+  where
+    defLoaders =
+      Map.fromList
+      [ (def, loadDefTypeIntoRef loader def)
+      | def <- expr ^.. ExprLens.exprDef
+      ]
