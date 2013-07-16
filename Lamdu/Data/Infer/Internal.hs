@@ -3,9 +3,8 @@ module Lamdu.Data.Infer.Internal
   ( Error(..)
   , RefVars(..)
   , RefData(..), rdVars, rdBody
-  , GuidAliases(..), gaUF, gaMap
   , ExprRefs(..), exprRefsUF, exprRefsData
-  , Context(..), ctxExprRefs, ctxGuidAliases
+  , Context(..), ctxExprRefs
   ) where
 
 import Data.Map (Map)
@@ -30,20 +29,13 @@ data RefData def = RefData
   }
 Lens.makeLenses ''RefData
 
-data GuidAliases = GuidAliases
-  { _gaUF :: UF.UnionFind
-  , _gaMap :: Map Guid Ref
-  }
-Lens.makeLenses ''GuidAliases
-
 data ExprRefs def = ExprRefs
   { _exprRefsUF :: UF.UnionFind
   , _exprRefsData :: RefMap (RefData def)
   }
 Lens.makeLenses ''ExprRefs
 
-data Context def = Context
+newtype Context def = Context
   { _ctxExprRefs :: ExprRefs def
-  , _ctxGuidAliases :: GuidAliases
   }
 Lens.makeLenses ''Context

@@ -5,19 +5,18 @@ module Lamdu.Data.Infer
   ) where
 
 import Control.Applicative (Applicative(..), (<*>), (<$>))
-import Control.Lens.Operators
+--import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Map (Map)
-import Data.Maybe.Utils (unsafeUnjust)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (InferT)
-import qualified Control.Lens as Lens
+-- import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Data.UnionFind as UF
+-- import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
@@ -39,25 +38,6 @@ mergeVars (RefVars aScope aGetVars) (RefVars bScope bGetVars)
         then return aref
         else error "Scope unification of differing refs"
 
-sameParameter :: Monad m => Guid -> Guid -> InferT def m Bool
-sameParameter xGuid yGuid = InferT.liftContext . Lens.zoom ctxGuidAliases $ do
-  guidMap <- Lens.use gaMap
-  let
-    xRef = unsafeUnjust "sameParameter:x" $ guidMap ^. Lens.at xGuid
-    yRef = unsafeUnjust "sameParameter:y" $ guidMap ^. Lens.at yGuid
-  Lens.zoom gaUF $ UF.equivalent xRef yRef
-
-unifyGuids :: Monad m => Guid -> Guid -> InferT def m ()
-unifyGuids aGuid bGuid = InferT.liftContext . Lens.zoom ctxGuidAliases $ do
-  setDefault aGuid
-  setDefault bGuid
-  where
-    setDefault guid = do
-      ref <-
-        maybe (Lens.zoom gaUF UF.freshRef) return =<<
-        Lens.use (gaMap . Lens.at guid)
-      gaMap . Lens.at guid .= Just ref
-
 mergeBodies ::
   (Eq def, MonadA m) =>
   Expr.Body def Ref ->
@@ -66,16 +46,14 @@ mergeBodies ::
 mergeBodies a (Expr.BodyLeaf Expr.Hole) = return a
 mergeBodies (Expr.BodyLeaf Expr.Hole) b = return b
 mergeBodies a b = do
-  mBody <- ExprUtil.matchBodyG matchLamResult matchOther matchGetPar a b
-  case mBody of
+  case sequenceA <$> ExprUtil.matchBody matchLamResult matchOther matchGetPar a b of
     Nothing -> InferT.inferError $ Mismatch a b
-    Just body -> return body
+    Just mkBody -> mkBody
   where
-    matchLamResult aGuid bGuid aRef bRef = do
-      unifyGuids aGuid bGuid
-      unify aRef bRef
+    matchLamResult _aGuid _bGuid aRef bRef = do
+      unify {-TODO-} aRef bRef
     matchOther = unify
-    matchGetPar = sameParameter
+    matchGetPar = error "TODO"
 
 mergeRefData :: (Eq def, MonadA m) => RefData def -> RefData def -> InferT def m (RefData def)
 mergeRefData (RefData aVars aBody) (RefData bVars bBody) =
