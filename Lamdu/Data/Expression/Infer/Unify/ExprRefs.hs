@@ -1,13 +1,14 @@
 module Lamdu.Data.Expression.Infer.Unify.ExprRefs
-  ( exprRefsUF, exprRefsData
-  , exprRefsFresh, exprRefsFind
-  , exprRefsReadRep, exprRefsWriteRep
-  , exprRefsPopRep
-  , exprRefsRead, exprRefsWrite
-  , exprRefsUnion, exprRefsEquiv
+  ( fresh, find
+  , readRep, writeRep
+  , popRep
+  , read, write
+  , union, equiv
   , exprIntoContext
+  , unifyRefs
   ) where
 
+import Prelude hiding (read)
 import Control.Applicative ((<$>), (<$), (<*))
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -28,53 +29,73 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Infer.Unify.Monad as InferT
 import qualified Lamdu.Data.Expression.Infer.UnionFind as UF
 
-exprRefsState ::
+state ::
   Monad m =>
   StateT (ExprRefs def) (EitherT (Error def) m) a ->
   InferT def m a
-exprRefsState = InferT.liftContext . Lens.zoom ctxExprRefs
+state = InferT.liftContext . Lens.zoom ctxExprRefs
 
-exprRefsFresh :: MonadA m => RefData def -> InferT def m Ref
-exprRefsFresh dat = do
-  rep <- exprRefsState $ Lens.zoom exprRefsUF UF.freshRef
-  exprRefsWriteRep rep dat
+fresh :: MonadA m => RefData def -> InferT def m Ref
+fresh dat = do
+  rep <- state $ Lens.zoom exprRefsUF UF.freshRef
+  writeRep rep dat
   return rep
 
-exprRefsFind ::
+find ::
   MonadA m => String -> Ref -> InferT def m Ref
-exprRefsFind msg = exprRefsState . Lens.zoom exprRefsUF . UF.lookup msg
+find msg = state . Lens.zoom exprRefsUF . UF.lookup msg
 
-exprRefsReadRep ::
+readRep ::
   MonadA m => Ref -> InferT def m (RefData def)
-exprRefsReadRep rep =
+readRep rep =
   unsafeUnjust ("missing ref: " ++ show rep) <$>
-  (exprRefsState . Lens.use) (exprRefsData . Lens.at rep)
+  (state . Lens.use) (exprRefsData . Lens.at rep)
 
-exprRefsPopRep ::
+popRep ::
   MonadA m => Ref -> InferT def m (RefData def)
-exprRefsPopRep rep =
-  exprRefsState . Lens.zoom (exprRefsData . Lens.at rep) $
+popRep rep =
+  state . Lens.zoom (exprRefsData . Lens.at rep) $
   unsafeUnjust ("missing ref: " ++ show rep)
   <$> State.get <* State.put Nothing
 
-exprRefsWriteRep ::
+writeRep ::
   Monad m => Ref -> RefData def -> InferT def m ()
-exprRefsWriteRep rep dat = exprRefsState $ exprRefsData . Lens.at rep .= Just dat
+writeRep rep dat = state $ exprRefsData . Lens.at rep .= Just dat
 
-exprRefsRead ::
+read ::
   MonadA m => Ref -> InferT def m (RefData def)
-exprRefsRead ref = exprRefsReadRep =<< exprRefsFind "exprRefsRead" ref
+read ref = readRep =<< find "read" ref
 
-exprRefsWrite ::
+write ::
   MonadA m => Ref -> RefData def -> InferT def m ()
-exprRefsWrite ref dat =
-  (`exprRefsWriteRep` dat) =<< exprRefsFind "exprRefsWrite" ref
+write ref dat =
+  (`writeRep` dat) =<< find "write" ref
 
-exprRefsUnion :: MonadA m => Ref -> Ref -> InferT def m Ref
-exprRefsUnion x y = exprRefsState . Lens.zoom exprRefsUF $ UF.union x y
+union :: MonadA m => Ref -> Ref -> InferT def m Ref
+union x y = state . Lens.zoom exprRefsUF $ UF.union x y
 
-exprRefsEquiv :: MonadA m => Ref -> Ref -> InferT def m Bool
-exprRefsEquiv x y = exprRefsState . Lens.zoom exprRefsUF $ UF.equivalent x y
+equiv :: MonadA m => Ref -> Ref -> InferT def m Bool
+equiv x y = state . Lens.zoom exprRefsUF $ UF.equivalent x y
+
+unifyRefs ::
+  MonadA m =>
+  (RefData def ->
+   RefData def ->
+   InferT def m (RefData def)) ->
+  Ref -> Ref -> InferT def m Ref
+unifyRefs mergeRefData x y = do
+  xRep <- find "unify.x" x
+  yRep <- find "unify.y" y
+  if xRep == yRep
+    then return xRep
+    else do
+      xData <- popRep xRep
+      yData <- popRep yRep
+      rep <- union x y
+      writeRep rep $ error "Attempt to read parent during unification"
+      newData <- mergeRefData xData yData
+      writeRep rep newData
+      return rep
 
 exprIntoContext ::
   MonadA m => Expr.Expression def () -> InferT def m Ref
@@ -97,7 +118,7 @@ exprIntoContext =
         Expr.BodyLeaf leaf@(Expr.GetVariable (Expr.ParameterRef guid)) ->
           Expr.BodyLeaf leaf <$ Writer.tell (Set.singleton guid)
         _ -> body & Lens.traverse %%~ go scope
-      lift $ exprRefsFresh RefData
+      lift $ fresh RefData
         { _rdVars = RefVars scope getVars
         , _rdBody = newBody
         }

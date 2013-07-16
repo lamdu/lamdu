@@ -34,7 +34,7 @@ mergeVars (RefVars aScope aGetVars) (RefVars bScope bGetVars)
   where
     -- Expensive assertion
     verifyEquiv aref bref = do
-      equiv <- ExprRefs.exprRefsEquiv aref bref
+      equiv <- ExprRefs.equiv aref bref
       if equiv
         then return aref
         else error "Scope unification of differing refs"
@@ -73,32 +73,20 @@ mergeBodies a b = do
   where
     matchLamResult aGuid bGuid aRef bRef = do
       unifyGuids aGuid bGuid
-      unifyRefs aRef bRef
-    matchOther = unifyRefs
+      unify aRef bRef
+    matchOther = unify
     matchGetPar = sameParameter
 
 mergeRefData :: (Eq def, MonadA m) => RefData def -> RefData def -> InferT def m (RefData def)
 mergeRefData (RefData aVars aBody) (RefData bVars bBody) =
   RefData <$> mergeVars aVars bVars <*> mergeBodies aBody bBody
 
-unifyRefs :: (Eq def, MonadA m) => Ref -> Ref -> InferT def m Ref
-unifyRefs x y = do
-  xRep <- ExprRefs.exprRefsFind "unify.x" x
-  yRep <- ExprRefs.exprRefsFind "unify.y" y
-  if xRep == yRep
-    then return xRep
-    else do
-      xData <- ExprRefs.exprRefsPopRep xRep
-      yData <- ExprRefs.exprRefsPopRep yRep
-      rep <- ExprRefs.exprRefsUnion x y
-      ExprRefs.exprRefsWriteRep rep $ error "Attempt to read parent during unification"
-      newData <- mergeRefData xData yData
-      ExprRefs.exprRefsWriteRep rep newData
-      return rep
+unify :: (Eq def, MonadA m) => Ref -> Ref -> InferT def m Ref
+unify = ExprRefs.unifyRefs mergeRefData
 
--- TODO: Shut warnings up for now:
-_unifyRefs :: (Eq def, MonadA m) => Ref -> Ref -> InferT def m Ref
-_unifyRefs = unifyRefs
+-- TODO: Shut ghc up
+_unify :: (Eq def, MonadA m) => Ref -> Ref -> InferT def m Ref
+_unify = unify
 
 data TypedValue = TypedValue
   { tvVal :: {-# UNPACK #-}! Ref
