@@ -23,6 +23,7 @@ Library
                        Data.Monoid.Instances,
                        Data.MRUMemo,
                        Data.Vector.Vector2,
+                       Data.IntDisjointSet,
                        Numeric.Utils,
                        Graphics.DrawingCombinators.Utils,
                        Graphics.UI.Bottle.Animation,
@@ -108,7 +109,6 @@ Library
 Executable lamdu
   Build-Depends:       base >= 4,
                        aeson >= 0.6,
-                       disjoint-set >= 0.2 && < 0.3,
                        attoparsec >= 0.10,
                        hashable,
                        containers,
