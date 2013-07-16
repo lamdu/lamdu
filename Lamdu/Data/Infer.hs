@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer
-  ( InferT, Context, Error(..)
+  ( Infer, Context, InferError(..)
   , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
   , infer, unify
@@ -8,7 +8,8 @@ module Lamdu.Data.Infer
 
 import Control.Applicative (Applicative(..), (<*>), (<$>))
 import Control.Lens.Operators
-import Control.MonadA (MonadA)
+import Control.Monad.Trans.Class (MonadTrans(..))
+import Control.Monad.Trans.State (StateT)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Utils (unsafeUnjust)
@@ -17,7 +18,6 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
-import Lamdu.Data.Infer.Monad (InferT)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -25,7 +25,6 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
-import qualified Lamdu.Data.Infer.Monad as InferT
 
 data TypedValue = TypedValue
   { _tvVal :: {-# UNPACK #-}! Ref
@@ -50,11 +49,17 @@ renameRefVars renames (RefVars scope getVars) =
   where
     mapping = rename renames
 
-mergeVars :: MonadA m => Map Guid Guid -> RefVars -> RefVars -> InferT def m RefVars
+data InferError def = VarEscapesScope | Mismatch (Expr.Body def Ref) (Expr.Body def Ref)
+
+type Infer def = StateT (Context def) (Either (InferError def))
+
+mergeVars ::
+  Map Guid Guid -> RefVars -> RefVars ->
+  Infer def RefVars
 mergeVars renames aRefVars bRefVars
   | any (`Map.notMember` aScope) (Set.toList bGetVars)
   || any (`Map.notMember` bScope) (Set.toList aGetVars)
-  = InferT.inferError VarEscapesScope
+  = lift $ Left VarEscapesScope
   | otherwise
   = (`RefVars` Set.union aGetVars bGetVars)
     <$> sequenceA (Map.intersectionWith verifyEquiv aScope bScope)
@@ -69,17 +74,17 @@ mergeVars renames aRefVars bRefVars
         else error "Scope unification of differing refs"
 
 mergeBodies ::
-  (Eq def, MonadA m) =>
+  Eq def =>
   Map Guid Guid ->
   Expr.Body def Ref ->
   Expr.Body def Ref ->
-  InferT def m (Expr.Body def Ref)
+  Infer def (Expr.Body def Ref)
 mergeBodies _ a (Expr.BodyLeaf Expr.Hole) = return a
 mergeBodies renames (Expr.BodyLeaf Expr.Hole) b =
   b & ExprLens.bodyParameterRef %~ rename renames & return
 mergeBodies renames a b = do
   case sequenceA <$> ExprUtil.matchBody matchLamResult matchOther matchGetPar a b of
-    Nothing -> InferT.inferError $ Mismatch a b
+    Nothing -> lift . Left $ Mismatch a b
     Just mkBody -> mkBody
   where
     matchLamResult aGuid bGuid aRef bRef = do
@@ -87,31 +92,28 @@ mergeBodies renames a b = do
     matchOther = unifyRename renames
     matchGetPar aGuid bGuid = aGuid == rename renames bGuid
 
-mergeRefData :: (Eq def, MonadA m) => Map Guid Guid -> RefData def -> RefData def -> InferT def m (RefData def)
+mergeRefData :: Eq def => Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
 mergeRefData renames (RefData aVars aBody) (RefData bVars bBody) =
   RefData
   <$> mergeVars renames aVars bVars
   <*> mergeBodies renames aBody bBody
 
-unifyRename :: (Eq def, MonadA m) => Map Guid Guid -> Ref -> Ref -> InferT def m Ref
+unifyRename :: Eq def => Map Guid Guid -> Ref -> Ref -> Infer def Ref
 unifyRename = ExprRefs.unifyRefs . mergeRefData
 
-unify :: (Eq def, MonadA m) => Ref -> Ref -> InferT def m Ref
+unify :: Eq def => Ref -> Ref -> Infer def Ref
 unify = unifyRename Map.empty
 
 infer ::
-  MonadA m =>
   Map Guid Ref -> Expr.Expression (LoadedDef def) a ->
-  InferT def m (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
+  Infer def (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
 infer scope = exprIntoSTV scope . ExprUtil.annotateUsedVars
 
 -- With hole apply vals and hole types
 exprIntoSTV ::
-  MonadA m =>
   Map Guid Ref ->
   Expr.Expression (LoadedDef def) (Set Guid, a) ->
-  InferT def m
-  (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
+  Infer def (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
 exprIntoSTV scope (Expr.Expression body (usedVars, pl)) = do
   (newBody, typeRef) <-
     case body of

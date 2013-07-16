@@ -10,76 +10,67 @@ module Lamdu.Data.Infer.ExprRefs
 
 import Control.Applicative ((<$>), (<*))
 import Control.Lens.Operators
-import Control.Monad.Trans.Either (EitherT)
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
-import Lamdu.Data.Infer.Monad (InferT)
 import Prelude hiding (read)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
-import qualified Lamdu.Data.Infer.Monad as InferT
 
-state ::
-  Monad m =>
-  StateT (ExprRefs def) (EitherT (Error def) m) a ->
-  InferT def m a
-state = InferT.liftContext . Lens.zoom ctxExprRefs
-
-fresh :: MonadA m => RefData def -> InferT def m Ref
+fresh :: MonadA m => RefData def -> StateT (Context def) m Ref
 fresh dat = do
-  rep <- state $ Lens.zoom exprRefsUF UF.freshRef
+  rep <- Lens.zoom (ctxExprRefs . exprRefsUF) UF.freshRef
   writeRep rep dat
   return rep
 
 find ::
-  MonadA m => String -> Ref -> InferT def m Ref
-find msg = state . Lens.zoom exprRefsUF . UF.lookup msg
+  MonadA m => String -> Ref -> StateT (Context def) m Ref
+find msg = Lens.zoom (ctxExprRefs . exprRefsUF) . UF.lookup msg
 
 readRep ::
-  MonadA m => Ref -> InferT def m (RefData def)
+  MonadA m => Ref -> StateT (Context def) m (RefData def)
 readRep rep =
   unsafeUnjust ("missing ref: " ++ show rep) <$>
-  (state . Lens.use) (exprRefsData . Lens.at rep)
+  (Lens.zoom ctxExprRefs . Lens.use) (exprRefsData . Lens.at rep)
 
 popRep ::
-  MonadA m => Ref -> InferT def m (RefData def)
+  MonadA m => Ref -> StateT (Context def) m (RefData def)
 popRep rep =
-  state . Lens.zoom (exprRefsData . Lens.at rep) $
+  Lens.zoom (ctxExprRefs . exprRefsData . Lens.at rep) $
   unsafeUnjust ("missing ref: " ++ show rep)
   <$> State.get <* State.put Nothing
 
 writeRep ::
-  Monad m => Ref -> RefData def -> InferT def m ()
-writeRep rep dat = state $ exprRefsData . Lens.at rep .= Just dat
+  Monad m => Ref -> RefData def -> StateT (Context def) m ()
+writeRep rep dat = Lens.zoom ctxExprRefs $ exprRefsData . Lens.at rep .= Just dat
 
 read ::
-  MonadA m => Ref -> InferT def m (RefData def)
+  MonadA m => Ref -> StateT (Context def) m (RefData def)
 read ref = readRep =<< find "read" ref
 
 write ::
-  MonadA m => Ref -> RefData def -> InferT def m ()
+  MonadA m => Ref -> RefData def -> StateT (Context def) m ()
 write ref dat =
   (`writeRep` dat) =<< find "write" ref
 
-union :: MonadA m => Ref -> Ref -> InferT def m Ref
-union x y = state . Lens.zoom exprRefsUF $ UF.union x y
+union :: MonadA m => Ref -> Ref -> StateT (Context def) m Ref
+union x y = Lens.zoom (ctxExprRefs . exprRefsUF) $ UF.union x y
 
-equiv :: MonadA m => Ref -> Ref -> InferT def m Bool
-equiv x y = state . Lens.zoom exprRefsUF $ UF.equivalent x y
+equiv :: MonadA m => Ref -> Ref -> StateT (Context def) m Bool
+equiv x y = Lens.zoom (ctxExprRefs . exprRefsUF) $ UF.equivalent x y
 
 unifyRefs ::
   MonadA m =>
   (RefData def ->
    RefData def ->
-   InferT def m (RefData def)) ->
-  Ref -> Ref -> InferT def m Ref
+   StateT (Context def) m (RefData def)) ->
+  Ref -> Ref -> StateT (Context def) m Ref
 unifyRefs mergeRefData x y = do
   xRep <- find "unify.x" x
   yRep <- find "unify.y" y
@@ -95,7 +86,7 @@ unifyRefs mergeRefData x y = do
       return rep
 
 exprIntoContext ::
-  MonadA m => Expr.Expression def () -> InferT def m Ref
+  MonadA m => Expr.Expression def () -> StateT (Context def) m Ref
 exprIntoContext =
   go mempty . ExprUtil.annotateUsedVars
   where

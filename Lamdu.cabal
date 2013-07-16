@@ -154,7 +154,6 @@ Executable lamdu
                        Lamdu.Data.Infer.ExprRefs,
                        Lamdu.Data.Infer.Internal,
                        Lamdu.Data.Infer.Load,
-                       Lamdu.Data.Infer.Monad,
                        Lamdu.Data.FFI,
                        Lamdu.Data.Ops,
                        Lamdu.GUI.BottleWidgets,

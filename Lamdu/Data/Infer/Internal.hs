@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.Internal
-  ( Error(..)
-  , RefVars(..)
+  ( RefVars(..)
   , RefData(..), rdVars, rdBody
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs
@@ -15,9 +14,6 @@ import Data.UnionFind (Ref, RefMap)
 import qualified Control.Lens as Lens
 import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
-
--- TODO: Differing ref types
-data Error def = VarEscapesScope | Mismatch (Expr.Body def Ref) (Expr.Body def Ref)
 
 data RefVars = RefVars
   { _rvScopeTypes :: Map Guid Ref -- intersected
