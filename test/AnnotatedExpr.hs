@@ -26,7 +26,7 @@ errorMessage mkExpr =
   where
     showErrItem ix err = ansiAround ansiRed ("{" ++ show ix ++ "}:\n") ++ err
     fullMsg =
-      List.intercalate "\n" $ (show . simplifyDef) (ixsStr <$> expr) :
+      List.intercalate "\n" $ show (ixsStr <$> expr) :
       "Errors:" :
       (Lens.itraversed %@~ showErrItem) resultErrs
     (expr, resultErrs) = Lens._2 %~ reverse . snd $ runState mkExpr (0, [])

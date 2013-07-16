@@ -11,27 +11,24 @@ import Data.Functor.Identity (Identity(..))
 import Data.Maybe (fromMaybe)
 import Data.Traversable (traverse)
 import Lamdu.Data.Expression.IRef (DefI)
-import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
+import Lamdu.Data.Infer.Deref (Derefed(..))
+import Lamdu.Data.Infer.Load (LoadedDef)
 import Utils
 import qualified Control.Lens as Lens
 import qualified Data.ByteString as SBS
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
+import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Infer as Infer
+import qualified Lamdu.Data.Infer as Infer
 
+type ExprInferred t = Expr.Expression Def ( Expr, Expr )
 
-type InferResults t =
-  ExprIRef.Expression t
-  ( PureExprDefI t
-  , PureExprDefI t
-  )
+inferResults :: ExprIRef.Expression t (Derefed (DefI t)) -> ExprInferred t
+inferResults = fmap $ \(Derefed val typ) -> (val, typ)
 
-inferResults :: ExprIRef.Expression t (Infer.Inferred (DefI t)) -> InferResults t
-inferResults = fmap (void . Infer.iValue &&& void . Infer.iType)
-
-doLoad :: ExprIRef.Expression t a -> Infer.Loaded (DefI t) a
+doLoad :: Expr -> Expr.Expression (LoadedDef Def) ()
 doLoad expr =
   case Infer.load loader (Just recursiveDefI) expr of
   Left err -> error err
@@ -97,10 +94,10 @@ loadInfer ::
   (ExprIRef.Expression t (Infer.Inferred (DefI t), a), Infer.Context (DefI t))
 loadInfer expr = fromInitialState (`loadInferM` expr)
 
-loadInferResults ::
+loadExprInferred ::
   ExprIRef.Expression t () ->
-  Either (Infer.Error (DefI t)) (InferResults t)
-loadInferResults = fmap (inferResults . fmap fst . fst) . loadInfer
+  Either (Infer.Error (DefI t)) (ExprInferred t)
+loadExprInferred = fmap (inferResults . fmap fst . fst) . loadInfer
 
 fromInitialState ::
   (Infer.Node (DefI t) -> StateT (Infer.Context (DefI t)) m a) -> m (a, Infer.Context (DefI t))

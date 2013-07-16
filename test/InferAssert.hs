@@ -2,6 +2,7 @@
 {-# OPTIONS -Wall -Werror #-}
 module InferAssert where
 
+-- import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables
 import AnnotatedExpr
 import Control.Applicative ((<$>), Applicative(..))
 import Control.Lens.Operators
@@ -21,14 +22,13 @@ import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Infer as Infer
-import qualified Lamdu.Data.Expression.Infer.ImplicitVariables as ImplicitVariables
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Infer as Infer
 import qualified System.Random as Random
 import qualified Test.Framework as TestFramework
 import qualified Test.HUnit as HUnit
 
-canonizeInferred :: InferResults t -> InferResults t
+canonizeInferred :: ExprInferred t -> ExprInferred t
 canonizeInferred =
   ExprUtil.randomizeParamIdsG (const ()) ExprUtil.debugNameGen Map.empty canonizePayload
   where
@@ -40,7 +40,7 @@ canonizeInferred =
         (gen1, gen2) = ExprUtil.ngSplit gen
 
 assertCompareInferred ::
-  InferResults t -> InferResults t -> HUnit.Assertion
+  ExprInferred t -> ExprInferred t -> HUnit.Assertion
 assertCompareInferred result expected =
   assertBool errorMsg (null resultErrs)
   where
@@ -67,13 +67,13 @@ assertCompareInferred result expected =
       ]
     redShow = ansiAround ansiRed . show . void
 
-inferAssertion :: InferResults t -> HUnit.Assertion
+inferAssertion :: ExprInferred t -> HUnit.Assertion
 inferAssertion expr =
   assertCompareInferred inferredExpr expr
   where
     inferredExpr = inferResults . fst . doInfer_ $ void expr
 
-inferWVAssertion :: InferResults t -> InferResults t -> HUnit.Assertion
+inferWVAssertion :: ExprInferred t -> ExprInferred t -> HUnit.Assertion
 inferWVAssertion expr wvExpr = do
   -- TODO: assertCompareInferred should take an error prefix string,
   -- and do ALL the error printing itself. It has more information
@@ -103,10 +103,10 @@ allowFailAssertion assertion =
     errorOccurred =
       hPutStrLn stderr . ansiAround ansiYellow $ "WARNING: Allowing failure in:"
 
-testInfer :: String -> InferResults t -> TestFramework.Test
+testInfer :: String -> ExprInferred t -> TestFramework.Test
 testInfer name = testCase name . inferAssertion
 
-testInferAllowFail :: String -> InferResults t -> TestFramework.Test
+testInferAllowFail :: String -> ExprInferred t -> TestFramework.Test
 testInferAllowFail name expr =
   testCase name . allowFailAssertion $ inferAssertion expr
 
@@ -114,17 +114,17 @@ type InferredExpr t = ExprIRef.Expression t (Infer.Inferred (DefI t))
 
 testResume ::
   String ->
-  InferResults t ->
+  ExprInferred t ->
   Lens.Traversal' (InferredExpr t) (InferredExpr t) ->
-  InferResults t ->
+  ExprInferred t ->
   TestFramework.Test
 testResume name origExpr position newExpr =
   testCase name $ assertResume origExpr position newExpr
 
 assertResume ::
-  InferResults t ->
+  ExprInferred t ->
   Lens.Traversal' (InferredExpr t) (InferredExpr t) ->
-  InferResults t ->
+  ExprInferred t ->
   HUnit.Assertion
 assertResume origExpr position newExpr =
   void . E.evaluate . DeepSeq.force . (`runState` inferContext) $
