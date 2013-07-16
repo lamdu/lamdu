@@ -11,14 +11,14 @@ import Data.Map (Map)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
-import Lamdu.Data.Expression.Infer.UnionFind (Ref)
+import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (InferT)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.Infer.UnionFind as UF
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferT

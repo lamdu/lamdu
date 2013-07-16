@@ -11,10 +11,10 @@ module Lamdu.Data.Infer.Internal
 import Data.Map (Map)
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
-import Lamdu.Data.Expression.Infer.UnionFind (Ref, RefMap)
+import Data.UnionFind (Ref, RefMap)
 import qualified Control.Lens as Lens
+import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.Infer.UnionFind as UF
 
 -- TODO: Differing ref types
 data Error def = VarEscapesScope | Mismatch (Expr.Body def Ref) (Expr.Body def Ref)

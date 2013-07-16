@@ -8,7 +8,6 @@ module Lamdu.Data.Infer.ExprRefs
   , unifyRefs
   ) where
 
-import Prelude hiding (read)
 import Control.Applicative ((<$>), (<$), (<*))
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -18,15 +17,16 @@ import Control.Monad.Trans.Writer (runWriterT)
 import Control.MonadA (MonadA)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
-import Lamdu.Data.Expression.Infer.UnionFind (Ref)
+import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (InferT)
+import Prelude hiding (read)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Set as Set
+import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.Infer.UnionFind as UF
 import qualified Lamdu.Data.Infer.Monad as InferT
 
 state ::

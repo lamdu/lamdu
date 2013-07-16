@@ -1,6 +1,6 @@
 -- TODO: Move to bottlelib, and put fork of IntDisjointSet in bottlelib
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.Data.Expression.Infer.UnionFind
+module Data.UnionFind
   ( UnionFind
   , freshRef, lookup, union, equivalent
   , Ref, RefMap, RefSet

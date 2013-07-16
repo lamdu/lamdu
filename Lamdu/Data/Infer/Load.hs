@@ -6,7 +6,7 @@ module Lamdu.Data.Infer.Load
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.MonadA (MonadA)
-import Lamdu.Data.Expression.Infer.UnionFind (Ref)
+import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Monad (InferT)
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
