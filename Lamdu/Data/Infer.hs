@@ -102,9 +102,9 @@ _unify = unify
 
 infer ::
   MonadA m =>
-  Expr.Expression (LoadedDef def) a ->
+  Map Guid Ref -> Expr.Expression (LoadedDef def) a ->
   InferT def m (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
-infer = exprIntoSTV Map.empty . ExprUtil.annotateUsedVars
+infer scope = exprIntoSTV scope . ExprUtil.annotateUsedVars
 
 -- With hole apply vals and hole types
 exprIntoSTV ::
@@ -134,6 +134,8 @@ exprIntoSTV scope (Expr.Expression body (usedVars, pl)) = do
       ( Expr.BodyLeaf leaf
       , unsafeUnjust "GetVar out of scope!" $ scope ^. Lens.at guid
       )
+    Expr.BodyLeaf leaf@(Expr.GetVariable (Expr.DefinitionRef (LoadedDef _ ref))) ->
+      return (Expr.BodyLeaf leaf, ref)
     _ ->
       (,)
       <$> (body & Lens.traverse %%~ exprIntoSTV scope)
