@@ -58,6 +58,7 @@ import qualified System.Directory as Directory
 -- TODO: Remove this
 import Lamdu.Data.Infer ()
 import Lamdu.Data.Infer.Load ()
+import Lamdu.Data.Infer.Deref ()
 
 data ParsedOpts = ParsedOpts
   { poShouldDeleteDB :: Bool
