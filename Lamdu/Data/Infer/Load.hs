@@ -1,4 +1,4 @@
-module Lamdu.Data.Expression.Infer.Unify.Load
+module Lamdu.Data.Infer.Load
   ( Loader(..)
   , load
   ) where
@@ -6,11 +6,11 @@ module Lamdu.Data.Expression.Infer.Unify.Load
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.MonadA (MonadA)
-import Lamdu.Data.Expression.Infer.Unify.Monad (InferT)
 import Lamdu.Data.Expression.Infer.UnionFind (Ref)
+import Lamdu.Data.Infer.Monad (InferT)
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.Infer.Unify.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 
 data Loader def m = Loader
   { loadDefType :: def -> m (Expr.Expression def ())

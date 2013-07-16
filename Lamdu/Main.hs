@@ -56,8 +56,8 @@ import qualified Lamdu.VersionControl as VersionControl
 import qualified System.Directory as Directory
 
 -- TODO: Remove this
-import Lamdu.Data.Expression.Infer.Unify ()
-import Lamdu.Data.Expression.Infer.Unify.Load ()
+import Lamdu.Data.Infer ()
+import Lamdu.Data.Infer.Load ()
 
 data ParsedOpts = ParsedOpts
   { poShouldDeleteDB :: Bool

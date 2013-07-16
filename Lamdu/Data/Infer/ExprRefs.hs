@@ -1,4 +1,4 @@
-module Lamdu.Data.Expression.Infer.Unify.ExprRefs
+module Lamdu.Data.Infer.ExprRefs
   ( fresh, find
   , readRep, writeRep
   , popRep
@@ -18,16 +18,16 @@ import Control.Monad.Trans.Writer (runWriterT)
 import Control.MonadA (MonadA)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
-import Lamdu.Data.Expression.Infer.Unify.Internal
-import Lamdu.Data.Expression.Infer.Unify.Monad (InferT)
 import Lamdu.Data.Expression.Infer.UnionFind (Ref)
+import Lamdu.Data.Infer.Internal
+import Lamdu.Data.Infer.Monad (InferT)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.Infer.Unify.Monad as InferT
 import qualified Lamdu.Data.Expression.Infer.UnionFind as UF
+import qualified Lamdu.Data.Infer.Monad as InferT
 
 state ::
   Monad m =>

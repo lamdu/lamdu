@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.Data.Expression.Infer.Unify
+module Lamdu.Data.Infer
   ( InferT, Context, Error(..), TypedValue(..), ScopedTypedValue(..)
   , infer
   ) where
@@ -11,17 +11,17 @@ import Data.Map (Map)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
-import Lamdu.Data.Expression.Infer.Unify.Internal
-import Lamdu.Data.Expression.Infer.Unify.Monad (InferT)
 import Lamdu.Data.Expression.Infer.UnionFind (Ref)
+import Lamdu.Data.Infer.Internal
+import Lamdu.Data.Infer.Monad (InferT)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.Infer.Unify.ExprRefs as ExprRefs
-import qualified Lamdu.Data.Expression.Infer.Unify.Monad as InferT
 import qualified Lamdu.Data.Expression.Infer.UnionFind as UF
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
+import qualified Lamdu.Data.Infer.Monad as InferT
 
 mergeVars :: MonadA m => RefVars -> RefVars -> InferT def m RefVars
 mergeVars (RefVars aScope aGetVars) (RefVars bScope bGetVars)

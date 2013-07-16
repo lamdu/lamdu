@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Lamdu.Data.Expression.Infer.Unify.Monad
+module Lamdu.Data.Infer.Monad
   ( InferT(..), liftContext, inferError
   ) where
 
@@ -8,7 +8,7 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT)
 import Control.Monad.Trans.State (StateT(..))
 import qualified Control.Monad.Trans.Either as Either
-import qualified Lamdu.Data.Expression.Infer.Unify.Internal as I
+import qualified Lamdu.Data.Infer.Internal as I
 
 newtype InferT def m a = InferT { runInferT :: StateT (I.Context def) (EitherT (I.Error def) m) a }
   deriving (Functor, Applicative, Monad)

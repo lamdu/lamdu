@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.Data.Expression.Infer.Unify.Internal
+module Lamdu.Data.Infer.Internal
   ( Error(..)
   , RefVars(..)
   , RefData(..), rdVars, rdBody
