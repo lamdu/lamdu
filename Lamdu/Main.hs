@@ -55,6 +55,10 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.VersionControl as VersionControl
 import qualified System.Directory as Directory
 
+-- TODO: Remove this
+import Lamdu.Data.Expression.Infer.Unify ()
+import Lamdu.Data.Expression.Infer.Unify.Load ()
+
 data ParsedOpts = ParsedOpts
   { poShouldDeleteDB :: Bool
   , poMFontPath :: Maybe FilePath
