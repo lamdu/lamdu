@@ -32,6 +32,7 @@ module Lamdu.Data.Expression.Utils
   , addBodyContexts
   , PiWrappers(..), piWrappersDepParams, piWrappersMIndepParam, piWrappersResultType
   , getPiWrappers
+  , annotateUsedVars
   ) where
 
 import Prelude hiding (pi)
@@ -46,18 +47,22 @@ import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
+import Control.Monad.Trans.Writer (runWriter)
 import Data.Map (Map)
 import Data.Maybe (isJust, fromMaybe)
 import Data.Monoid (Any)
+import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable(..), sequenceA)
 import System.Random (Random, RandomGen, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
+import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified System.Random as Random
@@ -524,3 +529,21 @@ addExpressionContexts atob (Context intoContainer (Expression body a)) =
       addBodyContexts (fmap atob) bodyPtr
     bodyPtr =
       Context (intoContainer . (`Expression` atob a)) body
+
+annotateUsedVars :: Expression def a -> Expression def (Set Guid, a)
+annotateUsedVars =
+  fst . runWriter . go
+  where
+    go (Expression body pl) =
+      fmap (toExpr pl) . Writer.listen $
+      case body of
+      BodyLam (Lam k paramGuid paramType result) ->
+        BodyLam <$>
+        ( Lam k paramGuid
+          <$> go paramType
+          <*> Writer.censor (Set.delete paramGuid) (go result)
+        )
+      BodyLeaf leaf@(GetVariable (ParameterRef guid)) ->
+        BodyLeaf leaf <$ Writer.tell (Set.singleton guid)
+      _ -> body & Lens.traverse %%~ go
+    toExpr pl (newBody, guids) = Expression newBody (guids, pl)
