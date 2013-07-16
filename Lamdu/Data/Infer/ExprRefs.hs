@@ -8,12 +8,10 @@ module Lamdu.Data.Infer.ExprRefs
   , unifyRefs
   ) where
 
-import Control.Applicative ((<$>), (<$), (<*))
+import Control.Applicative ((<$>), (<*))
 import Control.Lens.Operators
-import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT)
 import Control.Monad.Trans.State (StateT(..))
-import Control.Monad.Trans.Writer (runWriterT)
 import Control.MonadA (MonadA)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
@@ -23,10 +21,9 @@ import Lamdu.Data.Infer.Monad (InferT)
 import Prelude hiding (read)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
-import qualified Control.Monad.Trans.Writer as Writer
-import qualified Data.Set as Set
 import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.Monad as InferT
 
 state ::
@@ -100,25 +97,20 @@ unifyRefs mergeRefData x y = do
 exprIntoContext ::
   MonadA m => Expr.Expression def () -> InferT def m Ref
 exprIntoContext =
-  fmap verifyEmptyGetVars . runWriterT . go mempty
+  go mempty . ExprUtil.annotateUsedVars
   where
-    -- Expensive assertion
-    verifyEmptyGetVars (ref, getVars)
-      | Set.null getVars = ref
-      | otherwise = error "GetVar not in Lam"
-    go scope (Expr.Expression body ()) = do
-      (newBody, getVars) <-
-        Writer.listen $
+    go scope (Expr.Expression body (getVars, ())) = do
+      newBody <-
         case body of
-        Expr.BodyLam (Expr.Lam k paramGuid paramType result) ->
-          Writer.censor (Set.delete paramGuid) $ do
-            paramTypeRef <- go scope paramType
-            Expr.BodyLam . Expr.Lam k paramGuid paramTypeRef <$>
-              go (scope & Lens.at paramGuid .~ Just paramTypeRef) result
-        Expr.BodyLeaf leaf@(Expr.GetVariable (Expr.ParameterRef guid)) ->
-          Expr.BodyLeaf leaf <$ Writer.tell (Set.singleton guid)
+        Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
+          paramTypeRef <- go scope paramType
+          Expr.BodyLam . Expr.Lam k paramGuid paramTypeRef <$>
+            go (scope & Lens.at paramGuid .~ Just paramTypeRef) result
+        -- Expensive assertion:
+        Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid))
+          | Lens.has Lens._Nothing (scope ^. Lens.at guid) -> error "GetVar out of scope"
         _ -> body & Lens.traverse %%~ go scope
-      lift $ fresh RefData
+      fresh RefData
         { _rdVars = RefVars scope getVars
         , _rdBody = newBody
         }
