@@ -1,6 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer
-  ( InferT, Context, Error(..), TypedValue(..), ScopedTypedValue(..)
+  ( InferT, Context, Error(..)
+  , TypedValue(..), tvVal, tvType
+  , ScopedTypedValue(..), stvTV, stvScope
   , infer
   ) where
 
@@ -9,6 +11,8 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
+import Data.Maybe.Utils (unsafeUnjust)
+import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
 import Data.UnionFind (Ref)
@@ -22,6 +26,20 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferT
+
+data TypedValue = TypedValue
+  { _tvVal :: {-# UNPACK #-}! Ref
+  , _tvType :: {-# UNPACK #-}! Ref
+  } deriving (Eq, Ord)
+Lens.makeLenses ''TypedValue
+instance Show TypedValue where
+  show (TypedValue v t) = unwords [show v, ":", show t]
+
+data ScopedTypedValue = ScopedTypedValue
+  { _stvTV :: TypedValue
+  , _stvScope :: Map Guid Ref
+  }
+Lens.makeLenses ''ScopedTypedValue
 
 rename :: Map Guid Guid -> Guid -> Guid
 rename renames guid = fromMaybe guid $ renames ^. Lens.at guid
@@ -82,20 +100,56 @@ unify = ExprRefs.unifyRefs . mergeRefData
 _unify :: (Eq def, MonadA m) => Map Guid Guid -> Ref -> Ref -> InferT def m Ref
 _unify = unify
 
-data TypedValue = TypedValue
-  { tvVal :: {-# UNPACK #-}! Ref
-  , tvType :: {-# UNPACK #-}! Ref
-  } deriving (Eq, Ord)
-instance Show TypedValue where
-  show (TypedValue v t) = unwords [show v, ":", show t]
-
-data ScopedTypedValue = ScopedTypedValue
-  { stvTV :: TypedValue
-  , stvScope :: Map Guid Ref
-  }
-
 infer ::
+  MonadA m =>
   Expr.Expression (LoadedDef def) a ->
   InferT def m (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
-infer (Expr.Expression _body _a) = do
-  error "TODO"
+infer = exprIntoSTV Map.empty . ExprUtil.annotateUsedVars
+
+-- With hole apply vals and hole types
+exprIntoSTV ::
+  MonadA m =>
+  Map Guid Ref ->
+  Expr.Expression (LoadedDef def) (Set Guid, a) ->
+  InferT def m
+  (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
+exprIntoSTV scope (Expr.Expression body (usedVars, pl)) = do
+  (newBody, typeRef) <-
+    case body of
+    Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
+      paramTypeS <- exprIntoSTV scope paramType
+      let
+        newScope =
+          scope
+          & Lens.at paramGuid .~
+            Just (paramTypeS ^. Expr.ePayload . Lens._1 . stvTV . tvVal)
+      resultS <- exprIntoSTV newScope result
+      typeRef <- mkHoleRef
+      return
+        ( Expr.BodyLam $ Expr.Lam k paramGuid paramTypeS resultS
+        , typeRef
+        )
+    Expr.BodyLeaf leaf@(Expr.GetVariable (Expr.ParameterRef guid)) ->
+      return
+      ( Expr.BodyLeaf leaf
+      , unsafeUnjust "GetVar out of scope!" $ scope ^. Lens.at guid
+      )
+    _ ->
+      (,)
+      <$> (body & Lens.traverse %%~ exprIntoSTV scope)
+      <*> mkHoleRef
+  valRef <-
+    newBody
+    <&> (^. Expr.ePayload . Lens._1 . stvTV . tvVal)
+    & ExprLens.bodyDef %~ (^. ldDef)
+    & RefData (RefVars scope usedVars)
+    & circumcizeApply
+    & ExprRefs.fresh
+  pure $
+    Expr.Expression newBody
+    ((ScopedTypedValue (TypedValue valRef typeRef) scope), pl)
+  where
+    mkHoleRef = ExprRefs.fresh . RefData (RefVars scope Set.empty) $ ExprLens.bodyHole # ()
+    circumcizeApply (RefData (RefVars s _) Expr.BodyApply{}) =
+      RefData (RefVars s Set.empty) $ ExprLens.bodyHole # ()
+    circumcizeApply x = x
