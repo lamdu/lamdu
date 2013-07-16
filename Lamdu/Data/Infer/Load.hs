@@ -2,7 +2,7 @@ module Lamdu.Data.Infer.Load
   ( Loader(..)
   , LoadError(..)
   , LoadedDef(..), ldDef, ldType -- re-export
-  , load
+  , load, newDefinition
   ) where
 
 import Control.Lens.Operators
@@ -39,6 +39,16 @@ loadDefTypeIntoRef (Loader loader) def = do
   when (Lens.has ExprLens.holePayloads loadedDefType) .
     lift . Either.left $ LoadUntypedDef def
   ExprRefs.exprIntoContext loadedDefType
+
+newDefinition ::
+  (MonadA m, Ord def) => def -> StateT (Context def) m Ref
+newDefinition def = do
+  ref <- ExprRefs.freshHole
+  ctxDefRefs . Lens.at def %= setRef ref
+  return ref
+  where
+    setRef ref Nothing = Just ref
+    setRef _ (Just _) = error "newDefinition overrides existing def type"
 
 load ::
   (Ord def, MonadA m) =>

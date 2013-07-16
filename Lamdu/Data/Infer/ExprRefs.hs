@@ -1,5 +1,5 @@
 module Lamdu.Data.Infer.ExprRefs
-  ( fresh, find
+  ( fresh, freshHole, find
   , readRep, writeRep
   , popRep
   , read, write
@@ -19,8 +19,11 @@ import Lamdu.Data.Infer.Internal
 import Prelude hiding (read)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
+import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 fresh :: MonadA m => RefData def -> StateT (Context def) m Ref
@@ -28,6 +31,9 @@ fresh dat = do
   rep <- Lens.zoom (ctxExprRefs . exprRefsUF) UF.freshRef
   writeRep rep dat
   return rep
+
+freshHole :: MonadA m => StateT (Context def) m Ref
+freshHole = fresh . RefData (RefVars Map.empty Set.empty) $ ExprLens.bodyHole # ()
 
 find ::
   MonadA m => String -> Ref -> StateT (Context def) m Ref
