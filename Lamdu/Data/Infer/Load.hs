@@ -1,6 +1,7 @@
 module Lamdu.Data.Infer.Load
   ( Loader(..)
   , LoadError(..)
+  , LoadedDef(..), ldDef, ldType -- re-export
   , load
   ) where
 

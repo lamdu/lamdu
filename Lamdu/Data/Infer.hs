@@ -1,8 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer
   ( Infer, Context, Error(..)
-  , TypedValue(..), tvVal, tvType
-  , ScopedTypedValue(..), stvTV, stvScope
   , infer, unify
   , emptyContext
   ) where
@@ -28,20 +26,6 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
-
-data TypedValue = TypedValue
-  { _tvVal :: {-# UNPACK #-}! Ref
-  , _tvType :: {-# UNPACK #-}! Ref
-  } deriving (Eq, Ord)
-Lens.makeLenses ''TypedValue
-instance Show TypedValue where
-  show (TypedValue v t) = unwords [show v, ":", show t]
-
-data ScopedTypedValue = ScopedTypedValue
-  { _stvTV :: TypedValue
-  , _stvScope :: Map Guid Ref
-  }
-Lens.makeLenses ''ScopedTypedValue
 
 emptyContext :: Context def
 emptyContext =

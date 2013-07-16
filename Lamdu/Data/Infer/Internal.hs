@@ -5,6 +5,8 @@ module Lamdu.Data.Infer.Internal
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs
   , LoadedDef(..), ldDef, ldType
+  , TypedValue(..), tvVal, tvType
+  , ScopedTypedValue(..), stvTV, stvScope
   ) where
 
 import Data.Map (Map)
@@ -42,3 +44,17 @@ data LoadedDef def = LoadedDef
   , _ldType :: Ref
   }
 Lens.makeLenses ''LoadedDef
+
+data TypedValue = TypedValue
+  { _tvVal :: {-# UNPACK #-}! Ref
+  , _tvType :: {-# UNPACK #-}! Ref
+  } deriving (Eq, Ord)
+Lens.makeLenses ''TypedValue
+instance Show TypedValue where
+  show (TypedValue v t) = unwords [show v, ":", show t]
+
+data ScopedTypedValue = ScopedTypedValue
+  { _stvTV :: TypedValue
+  , _stvScope :: Map Guid Ref
+  }
+Lens.makeLenses ''ScopedTypedValue
