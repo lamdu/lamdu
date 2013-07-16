@@ -3,6 +3,7 @@
 module Data.UnionFind
   ( UnionFind
   , freshRef, lookup, union, equivalent
+  , empty
   , Ref, RefMap, RefSet
   ) where
 
@@ -30,6 +31,13 @@ data UnionFind = UnionFind
   , _ufNextRef :: Int
   }
 Lens.makeLenses ''UnionFind
+
+empty :: UnionFind
+empty =
+  UnionFind
+  { _ufRefs = IDS.empty
+  , _ufNextRef = 0
+  }
 
 ufState ::
   Monad m =>

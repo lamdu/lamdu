@@ -4,6 +4,7 @@ module Lamdu.Data.Infer
   , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
   , infer, unify
+  , emptyContext
   ) where
 
 import Control.Applicative (Applicative(..), (<*>), (<$>))
@@ -13,6 +14,7 @@ import Control.Monad.Trans.State (StateT)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Utils (unsafeUnjust)
+import Data.Monoid (mempty)
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
@@ -21,6 +23,7 @@ import Lamdu.Data.Infer.Internal
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
@@ -39,6 +42,16 @@ data ScopedTypedValue = ScopedTypedValue
   , _stvScope :: Map Guid Ref
   }
 Lens.makeLenses ''ScopedTypedValue
+
+emptyContext :: Context def
+emptyContext =
+  Context
+  { _ctxExprRefs =
+    ExprRefs
+    { _exprRefsUF = UF.empty
+    , _exprRefsData = mempty
+    }
+  }
 
 rename :: Map Guid Guid -> Guid -> Guid
 rename renames guid = fromMaybe guid $ renames ^. Lens.at guid
