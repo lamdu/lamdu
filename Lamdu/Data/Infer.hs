@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer
-  ( Infer, Context, InferError(..)
+  ( Infer, Context, Error(..)
   , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
   , infer, unify
@@ -49,9 +49,9 @@ renameRefVars renames (RefVars scope getVars) =
   where
     mapping = rename renames
 
-data InferError def = VarEscapesScope | Mismatch (Expr.Body def Ref) (Expr.Body def Ref)
+data Error def = VarEscapesScope | Mismatch (Expr.Body def Ref) (Expr.Body def Ref)
 
-type Infer def = StateT (Context def) (Either (InferError def))
+type Infer def = StateT (Context def) (Either (Error def))
 
 mergeVars ::
   Map Guid Guid -> RefVars -> RefVars ->
