@@ -3,7 +3,7 @@ module Lamdu.Data.Infer
   ( InferT, Context, Error(..)
   , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
-  , infer
+  , infer, unify
   ) where
 
 import Control.Applicative (Applicative(..), (<*>), (<$>))
@@ -83,8 +83,8 @@ mergeBodies renames a b = do
     Just mkBody -> mkBody
   where
     matchLamResult aGuid bGuid aRef bRef = do
-      unify (renames & Lens.at bGuid .~ Just aGuid) aRef bRef
-    matchOther = unify renames
+      unifyRename (renames & Lens.at bGuid .~ Just aGuid) aRef bRef
+    matchOther = unifyRename renames
     matchGetPar aGuid bGuid = aGuid == rename renames bGuid
 
 mergeRefData :: (Eq def, MonadA m) => Map Guid Guid -> RefData def -> RefData def -> InferT def m (RefData def)
@@ -93,12 +93,11 @@ mergeRefData renames (RefData aVars aBody) (RefData bVars bBody) =
   <$> mergeVars renames aVars bVars
   <*> mergeBodies renames aBody bBody
 
-unify :: (Eq def, MonadA m) => Map Guid Guid -> Ref -> Ref -> InferT def m Ref
-unify = ExprRefs.unifyRefs . mergeRefData
+unifyRename :: (Eq def, MonadA m) => Map Guid Guid -> Ref -> Ref -> InferT def m Ref
+unifyRename = ExprRefs.unifyRefs . mergeRefData
 
--- TODO: Shut ghc up
-_unify :: (Eq def, MonadA m) => Map Guid Guid -> Ref -> Ref -> InferT def m Ref
-_unify = unify
+unify :: (Eq def, MonadA m) => Ref -> Ref -> InferT def m Ref
+unify = unifyRename Map.empty
 
 infer ::
   MonadA m =>
