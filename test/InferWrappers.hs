@@ -2,8 +2,7 @@ module InferWrappers where
 
 import Control.Lens.Operators
 import Control.Monad.Trans.Either (EitherT(..))
-import Control.Monad.Trans.State (State, mapStateT, evalState)
-import Lamdu.Data.Infer (Infer)
+import Control.Monad.Trans.State (State, mapStateT, runState)
 import Lamdu.Data.Infer.Deref (Derefed(..))
 import Lamdu.Data.Infer.Load (LoadedDef)
 import Utils
@@ -38,24 +37,41 @@ ridEither = return . unEither
 ridEitherT :: (Functor m, Show err) => EitherT err m a -> m a
 ridEitherT = fmap unEither . runEitherT
 
-doLoad :: PureExpr Def -> State (Infer.Context Def) (PureExpr (LoadedDef Def))
+doLoad ::
+  Expr.Expression Def a ->
+  State (Infer.Context Def)
+  (Expr.Expression (LoadedDef Def) a)
 doLoad = mapStateT (ridEither . ridEitherT) . InferLoad.load loader
 
+doInfer ::
+  Expr.Expression (LoadedDef Def) a ->
+  State (Infer.Context Def)
+  (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a))
+doInfer = mapStateT ridEither . Infer.infer Map.empty
+
+doLoadInfer ::
+  Expr.Expression Def a ->
+  State (Infer.Context Def)
+  (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a))
+doLoadInfer expr =
+  doLoad expr >>= doInfer
+
 runContext ::
-  Infer Def (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, ())) ->
-  ExprInferred
+  State (Infer.Context Def) (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, ())) ->
+  (Expr.Expression Def (Derefed Def), Infer.Context Def)
 runContext act =
-  inferResults . (`evalState` Infer.emptyContext) $ do
-    inferredExpr <- mapStateT ridEither $ do
-      recursiveDefRef <- InferLoad.newDefinition recursiveDefI
-      inferredExpr <- act
-      let
-        inferredExprTypeRef =
-          inferredExpr ^. Expr.ePayload . Lens._1 . Infer.stvTV . Infer.tvType
-      Infer.unify recursiveDefRef inferredExprTypeRef
-      return inferredExpr
+  (`runState` Infer.emptyContext) $ do
+    recursiveDefRef <- InferLoad.newDefinition recursiveDefI
+    inferredExpr <- act
+    let
+      inferredExprTypeRef =
+        inferredExpr ^. Expr.ePayload . Lens._1 . Infer.stvTV . Infer.tvType
+    mapStateT ridEither $ Infer.unify recursiveDefRef inferredExprTypeRef
     inferredExpr
       & ExprLens.exprDef %~ (^. InferLoad.ldDef)
       & InferDeref.expr
       <&> Lens.mapped %~ fst
       & mapStateT ridEither
+
+doLoadInferRun :: PureExpr Def -> (Expr.Expression Def (Derefed Def), Infer.Context Def)
+doLoadInferRun = runContext . doLoadInfer

@@ -2,30 +2,28 @@
 {-# OPTIONS -Wall -Werror #-}
 module InferAssert where
 
+-- import Control.Lens.Operators
+-- import Control.Monad.Trans.State (runStateT, runState)
+-- import qualified Control.DeepSeq as DeepSeq
+-- import qualified Control.Lens as Lens
+-- import qualified Lamdu.Data.Infer as Infer
 -- import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables
+-- import qualified System.Random as Random
 import AnnotatedExpr
 import Control.Applicative ((<$>), Applicative(..))
-import Control.Lens.Operators
 import Control.Monad (void)
-import Control.Monad.Trans.State (runStateT, runState)
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
-import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Infer.Deref (Derefed)
 import System.IO (hPutStrLn, stderr)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool)
 import Utils
-import qualified Control.DeepSeq as DeepSeq
 import qualified Control.Exception as E
-import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
-import qualified Lamdu.Data.Infer as Infer
-import qualified System.Random as Random
 import qualified Test.Framework as TestFramework
 import qualified Test.HUnit as HUnit
 
@@ -72,7 +70,7 @@ inferAssertion :: ExprInferred -> HUnit.Assertion
 inferAssertion expr =
   assertCompareInferred inferredExpr expr
   where
-    inferredExpr = inferResults . fst . doInfer_ $ void expr
+    inferredExpr = inferResults . fst . doLoadInferRun $ void expr
 
 -- inferWVAssertion :: ExprInferred -> ExprInferred -> HUnit.Assertion
 -- inferWVAssertion expr wvExpr = do
@@ -113,23 +111,23 @@ testInferAllowFail name expr =
 
 type InferredExpr = Expr.Expression Def (Derefed Def)
 
-testResume ::
-  String ->
-  ExprInferred ->
-  Lens.Traversal' InferredExpr InferredExpr ->
-  ExprInferred ->
-  TestFramework.Test
-testResume name origExpr position newExpr =
-  testCase name $ assertResume origExpr position newExpr
+-- testResume ::
+--   String ->
+--   ExprInferred ->
+--   Lens.Traversal' InferredExpr InferredExpr ->
+--   ExprInferred ->
+--   TestFramework.Test
+-- testResume name origExpr position newExpr =
+--   testCase name $ assertResume origExpr position newExpr
 
-assertResume ::
-  ExprInferred ->
-  Lens.Traversal' InferredExpr InferredExpr ->
-  ExprInferred ->
-  HUnit.Assertion
-assertResume origExpr position newExpr =
-  void . E.evaluate . DeepSeq.force . (`runState` inferContext) $
-  doInferM point newExpr
-  where
-    (tExpr, inferContext) = doInfer_ origExpr
-    Just point = tExpr ^? position . Expr.ePayload . Lens.to Infer.iNode
+-- assertResume ::
+--   ExprInferred ->
+--   Lens.Traversal' InferredExpr InferredExpr ->
+--   ExprInferred ->
+--   HUnit.Assertion
+-- assertResume origExpr position newExpr =
+--   void . E.evaluate . DeepSeq.force . (`runState` inferContext) $
+--   doInferM point newExpr
+--   where
+--     (tExpr, inferContext) = doInfer_ origExpr
+--     Just point = tExpr ^? position . Expr.ePayload . Lens.to Infer.iNode
