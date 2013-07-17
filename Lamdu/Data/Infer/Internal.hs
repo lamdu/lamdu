@@ -34,8 +34,8 @@ data Subst = Subst
     _sPiGuid :: Guid
   , -- Arg val to subst with
     _sArgVal :: Ref
-  , -- For each new name guid, remember the old name it was copied as
-    -- (this is the name its known by in the apply context):
+  , -- For each src (pi result) guid, remember the dest (apply type)
+    -- guid it was copied as
     _sCopiedNames :: Map Guid Guid
   }
 Lens.makeLenses ''Subst

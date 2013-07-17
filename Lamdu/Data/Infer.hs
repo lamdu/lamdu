@@ -11,9 +11,10 @@ module Lamdu.Data.Infer
 
 import Control.Applicative (Applicative(..), (<*>), (<$>), (<$))
 import Control.Lens.Operators
+import Control.Monad (when, void)
 import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.State (StateT)
-import Data.Foldable (traverse_)
+import Control.Monad.Trans.State (StateT, state)
+import Data.Foldable (traverse_, sequenceA_)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
@@ -22,6 +23,7 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
+import System.Random (Random, random)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -190,7 +192,7 @@ unify :: Eq def => Ref -> Ref -> Infer def Ref
 unify x y = unifyRecurse mempty mempty x (UnifyRef y)
 
 infer ::
-  Scope -> Expr.Expression (LoadedDef def) a ->
+  Eq def => Scope -> Expr.Expression (LoadedDef def) a ->
   Infer def (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
 infer = exprIntoSTV
 
@@ -220,8 +222,124 @@ makeRecordType fields =
   where
     onField (tag, val) = (tag ^. tvVal, val ^. tvType)
 
+fresh :: Scope -> Expr.Body def Ref -> Infer def Ref
+fresh scope body = ExprRefs.fresh RefData
+  { _rdScope = scope
+  , _rdSubsts = []
+  , _rdMRenameHistory = Nothing
+  , _rdBody = body
+  }
+
+newRandom :: Random r => Infer def r
+newRandom = Lens.zoom ctxRandomGen $ state random
+
+forcePiType :: Eq def => Scope -> Ref -> Ref -> Infer def (Guid, Ref)
+forcePiType piScope paramTypeRef destRef = do
+  newGuid <- newRandom
+  let
+    piResultScope = piScope & scopeMap %~ Map.insert newGuid paramTypeRef
+  newResultType <- fresh piResultScope $ ExprLens.bodyHole # ()
+  newPiType <-
+    fresh piScope . Expr.BodyLam $
+    Expr.Lam Expr.KType newGuid paramTypeRef newResultType
+  -- left is renamed into right (keep existing names of destRef):
+  rep <- unify newPiType destRef
+  body <- (^. rdBody) <$> ExprRefs.readRep rep
+  return $
+    case body ^? ExprLens.bodyKindedLam Expr.KType of
+    Just (paramGuid, _piParamTypeRef, piResultRef) -> (paramGuid, piResultRef)
+    Nothing -> error "We just unified Lam KType into rep"
+
+-- Remap a Guid from piResult context to the Apply context
+remapSubstGuid :: Subst -> RefData def -> Guid -> Maybe Guid
+remapSubstGuid subst applyTypeData src =
+  case subst ^? sCopiedNames . Lens.ix src of
+  -- If it's not a copied guid, it should be the same guid in both
+  -- contexts
+  Nothing -> Nothing
+  Just copiedAs ->
+    Just . fromMaybe copiedAs $
+    applyTypeData ^? rdMRenameHistory . Lens._Just . Lens.ix copiedAs
+
+copySubstGetPar ::
+  Eq def => Guid -> Ref -> Ref -> RefData defa -> Subst -> Infer def ()
+copySubstGetPar paramGuid piResultRef applyTypeRef applyTypeData subst =
+  void $ unify applyTypeRef =<< ref
+  where
+    ref
+      | paramGuid == subst ^. sPiGuid = return $ subst ^. sArgVal
+      | otherwise =
+        case remapSubstGuid subst applyTypeData paramGuid of
+        Nothing -> return piResultRef
+        Just destGuid ->
+          fresh (applyTypeData ^. rdScope) $ ExprLens.bodyParameterRef # destGuid
+
+freshSubstDestHole :: Scope -> Infer def Ref
+freshSubstDestHole scope =
+  ExprRefs.fresh RefData
+  { _rdScope = scope
+  , _rdSubsts = []
+  , _rdMRenameHistory = Just Map.empty
+  , _rdBody = ExprLens.bodyHole # ()
+  }
+
+substParent :: Eq def => Scope -> Ref -> Subst -> Expr.Body def Ref -> Infer def ()
+substParent destScope destRef subst srcBody = do
+  destBodyRef <-
+    srcBody & Lens.traverse %%~ const (freshSubstDestHole destScope)
+    >>= fresh destScope
+  void $ unify destBodyRef destRef -- destBodyRef is swallowed by destRef if it had anything...
+  destBody <- (^. rdBody) <$> ExprRefs.read destRef
+  matchRes <-
+    sequenceA $ sequenceA_ <$>
+    ExprUtil.matchBody matchLamResult matchOther
+    (error "Parent cannot be getPar") srcBody destBody
+  when (Lens.has Lens._Nothing matchRes) $
+    error "We just successfully unified src and dest bodies!"
+  where
+    matchLamResult srcGuid destGuid srcChildRef destChildRef =
+      subst
+      & sCopiedNames %~ Map.insert srcGuid destGuid
+      & doSubst srcChildRef destChildRef
+    matchOther srcChildRef destChildRef = doSubst srcChildRef destChildRef subst
+
+doSubst :: Eq def => Ref -> Ref -> Subst -> Infer def ()
+doSubst piResultRef applyTypeRef subst = do
+  piResultData <- ExprRefs.read piResultRef
+  applyTypeData <- ExprRefs.read applyTypeRef
+  let onParent = substParent (applyTypeData ^. rdScope) applyTypeRef subst
+  case piResultData ^. rdBody of
+    Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef paramGuid)) ->
+      copySubstGetPar paramGuid piResultRef applyTypeRef applyTypeData subst
+    Expr.BodyLeaf Expr.Hole ->
+      piResultData & rdSubsts %~ (subst :) & ExprRefs.write piResultRef
+    Expr.BodyLeaf {} -> void $ unify applyTypeRef piResultRef
+    Expr.BodyLam lam ->
+      lam
+      & Expr.lamParamId %%~ const newRandom
+      <&> Expr.BodyLam
+      >>= onParent
+    body -> onParent body
+
+makeApplyType ::
+  Eq def => Scope -> ScopedTypedValue -> ScopedTypedValue ->
+  Infer def Ref
+makeApplyType applyScope func arg = do
+  (piGuid, piResultRef) <-
+    forcePiType
+    (func ^. stvScope)
+    (arg ^. stvTV . tvType)
+    (func ^. stvTV . tvType)
+  applyTypeRef <- fresh applyScope $ ExprLens.bodyHole # ()
+  doSubst piResultRef applyTypeRef Subst
+    { _sPiGuid = piGuid
+    , _sArgVal = arg ^. stvTV . tvVal
+    , _sCopiedNames = mempty
+    }
+  return applyTypeRef
+
 makeTypeRef ::
-  Scope ->
+  Eq def => Scope ->
   Expr.Body (LoadedDef def) ScopedTypedValue ->
   Infer def Ref
 makeTypeRef scope body =
@@ -232,33 +350,25 @@ makeTypeRef scope body =
   Expr.BodyLeaf Expr.TagType -> typeIsType
   Expr.BodyLam (Expr.Lam Expr.KType _ _ _) -> typeIsType
   Expr.BodyRecord (Expr.Record Expr.KType _) -> typeIsType
-  Expr.BodyLeaf Expr.LiteralInteger {} -> fresh $ ExprLens.bodyIntegerType # ()
-  Expr.BodyLeaf Expr.Tag {} -> fresh $ ExprLens.bodyTagType # ()
+  Expr.BodyLeaf Expr.LiteralInteger {} -> fresh scope $ ExprLens.bodyIntegerType # ()
+  Expr.BodyLeaf Expr.Tag {} -> fresh scope $ ExprLens.bodyTagType # ()
+  Expr.BodyLeaf Expr.Hole -> fresh scope $ ExprLens.bodyHole # ()
   -- GetPars
   Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (LoadedDef _ ref))) -> pure ref
   Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) -> lift $ scopeLookup scope guid
-  -- Unknown
-  Expr.BodyGetField {} -> unknownType -- TODO
-  Expr.BodyLeaf Expr.Hole -> unknownType
-  -- Other:
-  Expr.BodyApply {} -> unknownType
+  -- Complex:
+  Expr.BodyGetField {} -> fresh scope $ ExprLens.bodyHole # () -- TODO
+  Expr.BodyApply (Expr.Apply func arg) -> makeApplyType scope func arg
   Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) ->
-    fresh $ makePiType paramGuid (paramType ^. stvTV) (result ^. stvTV)
+    fresh scope $ makePiType paramGuid (paramType ^. stvTV) (result ^. stvTV)
   Expr.BodyRecord (Expr.Record Expr.KVal fields) ->
-    fresh . makeRecordType $ fields <&> Lens.both %~ (^. stvTV)
+    fresh scope . makeRecordType $ fields <&> Lens.both %~ (^. stvTV)
   where
-    unknownType = fresh $ ExprLens.bodyHole # ()
-    fresh typeBody = ExprRefs.fresh RefData
-      { _rdScope = scope
-      , _rdSubsts = []
-      , _rdMRenameHistory = Nothing
-      , _rdBody = typeBody
-      }
-    typeIsType = fresh $ ExprLens.bodyType # ()
+    typeIsType = fresh scope $ ExprLens.bodyType # ()
 
 -- With hole apply vals and hole types
 exprIntoSTV ::
-  Scope -> Expr.Expression (LoadedDef def) a ->
+  Eq def => Scope -> Expr.Expression (LoadedDef def) a ->
   Infer def (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
 exprIntoSTV scope (Expr.Expression body pl) = do
   newBody <-
