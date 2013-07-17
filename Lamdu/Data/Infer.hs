@@ -77,14 +77,13 @@ mergeBodies recurse renames a (Expr.BodyLeaf Expr.Hole) =
   a <$ traverse_ (flip (recurse renames) Nothing) a
 mergeBodies _ _ (Expr.BodyLeaf Expr.Hole) b = return b
 mergeBodies recurse renames a b = do
-  case sequenceA <$> ExprUtil.matchBody matchLamResult matchOther matchGetPar a b of
+  case sequenceA <$> ExprUtil.matchBody matchLamResult matchOther (==) a b of
     Nothing -> lift . Left $ Mismatch a b
     Just mkBody -> mkBody
   where
     matchLamResult aGuid bGuid aRef bRef =
       recurse (renames & Lens.at aGuid .~ Just bGuid) aRef (Just bRef)
     matchOther x y = recurse renames x (Just y)
-    matchGetPar aGuid bGuid = aGuid == rename renames bGuid
 
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
 renameRefData renames (RefData scope body)
@@ -96,13 +95,6 @@ renameRefData renames (RefData scope body)
     (scope & scopeMap %~ Map.mapKeys (rename renames))
     (body & ExprLens.bodyParameterRef %~ rename renames)
 
-renameMergeRefData ::
-  Eq def =>
-  (Map Guid Guid -> Ref -> Maybe Ref -> Infer def Ref) ->
-  Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
-renameMergeRefData recurse renames a b =
-  mergeRefData recurse renames (renameRefData renames a) b
-
 mergeRefData ::
   Eq def =>
   (Map Guid Guid -> Ref -> Maybe Ref -> Infer def Ref) ->
@@ -111,6 +103,13 @@ mergeRefData recurse renames (RefData aScope aBody) (RefData bScope bBody) =
   RefData
   <$> intersectScopes aScope bScope
   <*> mergeBodies recurse renames aBody bBody
+
+renameMergeRefData ::
+  Eq def =>
+  (Map Guid Guid -> Ref -> Maybe Ref -> Infer def Ref) ->
+  Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
+renameMergeRefData recurse renames a b =
+  mergeRefData recurse renames (renameRefData renames a) b
 
 unifyRename :: Eq def => Set Ref -> Map Guid Guid -> Ref -> Maybe Ref -> Infer def Ref
 unifyRename visited renames rawNode mOther = do
