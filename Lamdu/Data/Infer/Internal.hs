@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Infer.Internal
   ( Scope(..), scopeMap
-  , RefData(..), rdScope, rdBody, rdSubsts
+  , RefData(..), rdScope, rdSubsts, rdMRenameHistory, rdBody
   , SubstDest(..), sdPiGuid, sdArgVal, sdCopiedRefs
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs
@@ -42,6 +42,10 @@ Lens.makeLenses ''SubstDest
 data RefData def = RefData
   { _rdScope :: Scope
   , _rdSubsts :: [SubstDest]
+  , -- Rename history is only active(Just) if we're a subst dest
+    -- (inside an apply type). Then we remember any rename that
+    -- happened since the subst wrote us.
+    _rdMRenameHistory :: Maybe (Map Guid Guid)
   , _rdBody :: Expr.Body def Ref
   }
 Lens.makeLenses ''RefData

@@ -75,14 +75,14 @@ newtype HoleConstraints = HoleConstraints
 -- You must apply this recursively
 applyHoleConstraints ::
   HoleConstraints -> RefData def -> Either (Error def) (RefData def)
-applyHoleConstraints (HoleConstraints unusableSet) (RefData scope substs body)
+applyHoleConstraints (HoleConstraints unusableSet) (RefData scope substs mRenameHistory body)
   | Lens.anyOf ExprLens.bodyParameterRef (`Set.member` unusableSet) body =
     Left VarEscapesScope
   -- Expensive assertion
   | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Set.member` unusableSet) body =
     error "applyHoleConstraints: Shadowing detected"
   | otherwise =
-    return $ RefData newScope substs body
+    return $ RefData newScope substs mRenameHistory body
   where
     unusableMap = Map.fromSet (const ()) unusableSet
     newScope = scope & scopeMap %~ (`Map.difference` unusableMap)
@@ -122,7 +122,7 @@ mergeBodies recurse renames x y =
     matchOther xRef yRef = recurse renames xRef (UnifyRef yRef)
 
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
-renameRefData renames (RefData scope substs body)
+renameRefData renames (RefData scope substs mRenameHistory body)
   -- Expensive assertion
   | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Map.member` renames) body =
     error "Shadowing encountered, what to do?"
@@ -130,6 +130,7 @@ renameRefData renames (RefData scope substs body)
     RefData
     (scope & scopeMap %~ Map.mapKeys (rename renames))
     {-TODO:-}substs
+    (mRenameHistory <&> Map.union renames)
     (body & ExprLens.bodyParameterRef %~ rename renames)
 
 mergeRefData ::
@@ -145,6 +146,7 @@ mergeRefData recurse renames a b =
       RefData
       { _rdScope = scope
       , _rdSubsts = on (++) (^. rdSubsts) a b
+      , _rdMRenameHistory = Nothing
       , _rdBody = body
       }
 
@@ -243,6 +245,7 @@ makeTypeRef scope body =
     fresh typeBody = ExprRefs.fresh RefData
       { _rdScope = scope
       , _rdSubsts = []
+      , _rdMRenameHistory = Nothing
       , _rdBody = typeBody
       }
     typeIsType = fresh $ ExprLens.bodyType # ()
@@ -270,7 +273,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     <&> (^. Expr.ePayload . Lens._1 . stvTV . tvVal)
     & ExprLens.bodyDef %~ (^. ldDef)
     & circumcizeApply
-    & RefData scope {- TODO: -}[]
+    & RefData scope {- TODO: -}[] Nothing
     & ExprRefs.fresh
   typeRef <-
     newBody <&> (^. Expr.ePayload . Lens._1 . stvTV) & makeTypeRef scope
