@@ -223,7 +223,7 @@ makeRecordType fields =
 
 makeTypeRef ::
   Scope ->
-  Expr.Body (LoadedDef def) TypedValue ->
+  Expr.Body (LoadedDef def) ScopedTypedValue ->
   Infer def Ref
 makeTypeRef scope body =
   case body of
@@ -243,8 +243,10 @@ makeTypeRef scope body =
   Expr.BodyLeaf Expr.Hole -> unknownType
   -- Other:
   Expr.BodyApply {} -> unknownType
-  Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) -> fresh $ makePiType paramGuid paramType result
-  Expr.BodyRecord (Expr.Record Expr.KVal fields) -> fresh $ makeRecordType fields
+  Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) ->
+    fresh $ makePiType paramGuid (paramType ^. stvTV) (result ^. stvTV)
+  Expr.BodyRecord (Expr.Record Expr.KVal fields) ->
+    fresh . makeRecordType $ fields <&> Lens.both %~ (^. stvTV)
   where
     unknownType = fresh $ ExprLens.bodyHole # ()
     fresh typeBody = ExprRefs.fresh RefData
@@ -281,7 +283,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     & mkRefData
     & ExprRefs.fresh
   typeRef <-
-    newBody <&> (^. Expr.ePayload . Lens._1 . stvTV) & makeTypeRef scope
+    newBody <&> (^. Expr.ePayload . Lens._1) & makeTypeRef scope
   pure $
     Expr.Expression newBody
     ((ScopedTypedValue (TypedValue valRef typeRef) scope), pl)
