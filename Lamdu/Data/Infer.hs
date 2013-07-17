@@ -124,6 +124,10 @@ mergeBodies recurse renames xScope xBody yScope yBody =
       recurse (renames & Lens.at xGuid .~ Just yGuid) xRef (UnifyRef yRef)
     matchOther xRef yRef = recurse renames xRef (UnifyRef yRef)
 
+renameSubst :: Map Guid Guid -> Subst -> Subst
+renameSubst renames (Subst piGuid argVal copiedNames) =
+  Subst (rename renames piGuid) argVal (Map.mapKeys (rename renames) copiedNames)
+
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
 renameRefData renames (RefData scope substs mRenameHistory body)
   -- Expensive assertion
@@ -132,7 +136,7 @@ renameRefData renames (RefData scope substs mRenameHistory body)
   | otherwise =
     RefData
     (scope & scopeMap %~ Map.mapKeys (rename renames))
-    {-TODO:-}substs
+    (substs <&> renameSubst renames)
     (mRenameHistory <&> Map.union renames)
     (body & ExprLens.bodyParameterRef %~ rename renames)
 
