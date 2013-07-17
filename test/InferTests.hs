@@ -29,8 +29,8 @@ import Lamdu.Data.Arbitrary () -- Arbitrary instance
 
 simpleTests =
   [ testInfer "literal int" $ literalInteger 5
-  -- , testInfer "simple apply" $
-  --   holeWithInferredType (hole ~> hole) $$ hole
+  , testInfer "simple apply" $
+    holeWithInferredType (hole ~> hole) $$ hole
   -- , testInfer "simple pi" $
   --   holeWithInferredType set ~>
   --   holeWithInferredType set
