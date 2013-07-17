@@ -53,11 +53,10 @@ data Error def
 type Infer def = StateT (Context def) (Either (Error def))
 
 -- If we don't assert that the scopes have same refs we could be pure
-intersectScopes :: Map Guid Guid -> Scope -> Scope -> Infer def Scope
-intersectScopes renames (Scope aScope) (Scope rawBScope) =
+intersectScopes :: Scope -> Scope -> Infer def Scope
+intersectScopes (Scope aScope) (Scope bScope) =
   Scope <$> sequenceA (Map.intersectionWith verifyEquiv aScope bScope)
   where
-    bScope = Map.mapKeys (rename renames) rawBScope
     -- Expensive assertion
     verifyEquiv aref bref = do
       equiv <- ExprRefs.equiv aref bref
@@ -73,8 +72,7 @@ mergeBodies ::
   Expr.Body def Ref ->
   Infer def (Expr.Body def Ref)
 mergeBodies _ _ a (Expr.BodyLeaf Expr.Hole) = return a
-mergeBodies _ renames (Expr.BodyLeaf Expr.Hole) b =
-  b & ExprLens.bodyParameterRef %~ rename renames & return
+mergeBodies _ _ (Expr.BodyLeaf Expr.Hole) b = return b
 mergeBodies recurse renames a b = do
   case sequenceA <$> ExprUtil.matchBody matchLamResult matchOther matchGetPar a b of
     Nothing -> lift . Left $ Mismatch a b
@@ -85,13 +83,30 @@ mergeBodies recurse renames a b = do
     matchOther = recurse renames
     matchGetPar aGuid bGuid = aGuid == rename renames bGuid
 
+renameRefData :: Map Guid Guid -> RefData def -> RefData def
+renameRefData renames (RefData scope body)
+  -- Expensive assertion
+  | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Map.member` renames) body =
+    error "Shadowing encountered, what to do?"
+  | otherwise =
+    RefData
+    (scope & scopeMap %~ Map.mapKeys (rename renames))
+    (body & ExprLens.bodyParameterRef %~ rename renames)
+
+renameMergeRefData ::
+  Eq def =>
+  (Map Guid Guid -> Ref -> Ref -> Infer def Ref) ->
+  Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
+renameMergeRefData recurse renames a b =
+  mergeRefData recurse renames a (renameRefData renames b)
+
 mergeRefData ::
   Eq def =>
   (Map Guid Guid -> Ref -> Ref -> Infer def Ref) ->
   Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
 mergeRefData recurse renames (RefData aScope aBody) (RefData bScope bBody) =
   RefData
-  <$> intersectScopes renames aScope bScope
+  <$> intersectScopes aScope bScope
   <*> mergeBodies recurse renames aBody bBody
 
 unifyRename :: Eq def => Set Ref -> Map Guid Guid -> Ref -> Ref -> Infer def Ref
@@ -102,7 +117,7 @@ unifyRename visited renames rawX y = do
     else ExprRefs.unifyRefs merge x y <&> fromMaybe x
   where
     merge ref a b =
-      mergeRefData
+      renameMergeRefData
       (unifyRename (visited & Lens.contains ref .~ True))
       renames a b
       <&> flip (,) ref
