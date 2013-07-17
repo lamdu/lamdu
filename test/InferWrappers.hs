@@ -3,6 +3,7 @@ module InferWrappers where
 import Control.Lens.Operators
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (State, mapStateT, runState)
+import Data.Monoid (Monoid(..))
 import Lamdu.Data.Infer.Deref (Derefed(..))
 import Lamdu.Data.Infer.Load (LoadedDef)
 import Utils
@@ -47,7 +48,7 @@ doInfer ::
   Expr.Expression (LoadedDef Def) a ->
   State (Infer.Context Def)
   (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a))
-doInfer = mapStateT ridEither . Infer.infer Map.empty
+doInfer = mapStateT ridEither . Infer.infer mempty
 
 doLoadInfer ::
   Expr.Expression Def a ->

@@ -1,6 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Infer.Internal
-  ( RefVars(..)
+  ( Scope(..), scopeMap
   , RefData(..), rdVars, rdBody
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs
@@ -10,20 +10,22 @@ module Lamdu.Data.Infer.Internal
   ) where
 
 import Data.Map (Map)
-import Data.Set (Set)
+import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.UnionFind (Ref, RefMap)
 import qualified Control.Lens as Lens
 import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
 
-data RefVars = RefVars
-  { _rvScopeTypes :: Map Guid Ref -- intersected
-  , _rvGetVars :: Set Guid -- unified
-  }
+newtype Scope = Scope (Map Guid Ref) -- intersected
+  deriving (Monoid)
+Lens.makeIso ''Scope
+
+scopeMap :: Lens.Iso' Scope (Map Guid Ref)
+scopeMap = Lens.from scope
 
 data RefData def = RefData
-  { _rdVars :: RefVars
+  { _rdVars :: Scope
   , _rdBody :: Expr.Body def Ref
   }
 Lens.makeLenses ''RefData
@@ -58,6 +60,6 @@ instance Show TypedValue where
 
 data ScopedTypedValue = ScopedTypedValue
   { _stvTV :: TypedValue
-  , _stvScope :: Map Guid Ref
+  , _stvScope :: Scope
   }
 Lens.makeLenses ''ScopedTypedValue

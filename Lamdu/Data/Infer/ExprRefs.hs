@@ -20,11 +20,9 @@ import Prelude hiding (read)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 fresh :: MonadA m => RefData def -> StateT (Context def) m Ref
 fresh dat = do
@@ -33,7 +31,7 @@ fresh dat = do
   return rep
 
 freshHole :: MonadA m => StateT (Context def) m Ref
-freshHole = fresh . RefData (RefVars Map.empty Set.empty) $ ExprLens.bodyHole # ()
+freshHole = fresh . RefData (Scope Map.empty) $ ExprLens.bodyHole # ()
 
 find ::
   MonadA m => String -> Ref -> StateT (Context def) m Ref
@@ -94,9 +92,9 @@ unifyRefs mergeRefData x y = do
 exprIntoContext ::
   MonadA m => Expr.Expression def () -> StateT (Context def) m Ref
 exprIntoContext =
-  go mempty . ExprUtil.annotateUsedVars
+  go mempty
   where
-    go scope (Expr.Expression body (getVars, ())) = do
+    go scope (Expr.Expression body ()) = do
       newBody <-
         case body of
         Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
@@ -108,6 +106,6 @@ exprIntoContext =
           | Lens.has Lens._Nothing (scope ^. Lens.at guid) -> error "GetVar out of scope"
         _ -> body & Lens.traverse %%~ go scope
       fresh RefData
-        { _rdVars = RefVars scope getVars
+        { _rdVars = Scope scope
         , _rdBody = newBody
         }
