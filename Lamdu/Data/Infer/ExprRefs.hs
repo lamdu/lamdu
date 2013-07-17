@@ -81,7 +81,7 @@ unifyRefs ::
    RefData def ->
    StateT (Context def) m (RefData def, res)) ->
   Ref -> Ref -> StateT (Context def) m (Maybe res)
-unifyRefs mergeRefData x y = do
+unifyRefs merge x y = do
   xRep <- find "unify.x" x
   yRep <- find "unify.y" y
   if xRep == yRep
@@ -91,7 +91,7 @@ unifyRefs mergeRefData x y = do
       yData <- popRep yRep
       rep <- union x y
       writeRep rep $ error "Attempt to read parent during unification"
-      (newData, res) <- mergeRefData rep xData yData
+      (newData, res) <- merge rep xData yData
       writeRep rep newData
       return $ Just res
 
