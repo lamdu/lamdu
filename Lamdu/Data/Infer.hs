@@ -105,35 +105,29 @@ makeHoleRef :: MonadA m => Scope -> StateT (Context def) m Ref
 makeHoleRef scope =
   ExprRefs.fresh . RefData scope $ ExprLens.bodyHole # ()
 
-makeTypeRef ::
-  Scope ->
-  Expr.Body (LoadedDef def) (Expr.Expression (LoadedDef def) (ScopedTypedValue, a)) ->
-  Infer def Ref
-makeTypeRef scope (Expr.BodyLeaf leaf) =
-  case leaf of
-  Expr.GetVariable (Expr.DefinitionRef (LoadedDef _ ref)) -> pure ref
-  Expr.GetVariable (Expr.ParameterRef guid) ->
-    case scope ^. scopeMap . Lens.at guid of
-    Nothing -> lift $ Left VarNotInScope
-    Just ref -> pure ref
-  Expr.LiteralInteger _ -> resNoScope $ ExprLens.bodyIntegerType # ()
-  Expr.Type -> resType
-  Expr.IntegerType -> resType
-  Expr.Hole -> makeHoleRef scope
-  Expr.TagType -> resType
-  Expr.Tag _ -> resNoScope $ ExprLens.bodyTagType # ()
-  where
-    resType = resNoScope $ ExprLens.bodyType # ()
-    resNoScope = ExprRefs.fresh . RefData mempty
-makeTypeRef _ (Expr.BodyLam (Expr.Lam Expr.KType _ _ _)) =
-  ExprRefs.fresh . RefData mempty $ ExprLens.bodyType # ()
-makeTypeRef scope (Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType body)) =
+scopeLookup :: Scope -> Guid -> Either (Error def) Ref
+scopeLookup scope guid =
+  case scope ^. scopeMap . Lens.at guid of
+  Nothing -> Left VarNotInScope
+  Just ref -> pure ref
+
+makePiType ::
+  MonadA m =>
+  Scope -> Guid ->
+  Expr.Expression defb (ScopedTypedValue, a) ->
+  Expr.Expression defb (ScopedTypedValue, a) ->
+  StateT (Context defa) m Ref
+makePiType scope paramGuid paramType body =
   ExprRefs.fresh . RefData scope . Expr.BodyLam .
   Expr.Lam Expr.KType paramGuid (paramType ^. Expr.ePayload . Lens._1 . stvTV . tvVal) =<<
   makeHoleRef (body ^. Expr.ePayload . Lens._1 . stvScope)
-makeTypeRef _ (Expr.BodyRecord (Expr.Record Expr.KType _)) =
-  ExprRefs.fresh . RefData mempty $ ExprLens.bodyType # ()
-makeTypeRef scope (Expr.BodyRecord (Expr.Record Expr.KVal fields)) =
+
+makeRecordType ::
+  MonadA m =>
+  Scope ->
+  [(Expr.Expression defb (ScopedTypedValue, a), t)] ->
+  StateT (Context defa) m Ref
+makeRecordType scope fields =
   fields
   & Lens.traverse %%~ onField
   >>= ExprRefs.fresh . RefData scope .
@@ -142,8 +136,33 @@ makeTypeRef scope (Expr.BodyRecord (Expr.Record Expr.KVal fields)) =
     onField (tag, _) =
       (,) (tag ^. Expr.ePayload . Lens._1 . stvTV . tvVal)
       <$> makeHoleRef scope
-makeTypeRef scope (Expr.BodyApply _) = makeHoleRef scope
-makeTypeRef scope (Expr.BodyGetField _) = makeHoleRef scope
+
+makeTypeRef ::
+  Scope ->
+  Expr.Body (LoadedDef def) (Expr.Expression (LoadedDef def) (ScopedTypedValue, a)) ->
+  Infer def Ref
+makeTypeRef scope body =
+  case body of
+  -- Simple types
+  Expr.BodyLeaf Expr.Type -> typeIsType
+  Expr.BodyLeaf Expr.IntegerType -> typeIsType
+  Expr.BodyLeaf Expr.TagType -> typeIsType
+  Expr.BodyLam (Expr.Lam Expr.KType _ _ _) -> typeIsType
+  Expr.BodyRecord (Expr.Record Expr.KType _) -> typeIsType
+  Expr.BodyLeaf Expr.LiteralInteger {} -> resNoScope $ ExprLens.bodyIntegerType # ()
+  -- Unknown
+  Expr.BodyApply {} -> makeHoleRef scope
+  Expr.BodyGetField {} -> makeHoleRef scope
+  Expr.BodyLeaf Expr.Hole -> makeHoleRef scope
+  -- GetPars
+  Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (LoadedDef _ ref))) -> pure ref
+  Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) -> lift $ scopeLookup scope guid
+  Expr.BodyLeaf Expr.Tag {} -> resNoScope $ ExprLens.bodyTagType # ()
+  Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) -> makePiType scope paramGuid paramType result
+  Expr.BodyRecord (Expr.Record Expr.KVal fields) -> makeRecordType scope fields
+  where
+    typeIsType = resNoScope $ ExprLens.bodyType # ()
+    resNoScope = ExprRefs.fresh . RefData mempty
 
 -- With hole apply vals and hole types
 exprIntoSTV ::
