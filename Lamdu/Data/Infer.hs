@@ -14,7 +14,6 @@ import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT)
-import Control.MonadA (MonadA)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
@@ -101,10 +100,6 @@ infer ::
   Infer def (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
 infer = exprIntoSTV
 
-makeHoleRef :: MonadA m => Scope -> StateT (Context def) m Ref
-makeHoleRef scope =
-  ExprRefs.fresh . RefData scope $ ExprLens.bodyHole # ()
-
 scopeLookup :: Scope -> Guid -> Either (Error def) Ref
 scopeLookup scope guid =
   case scope ^. scopeMap . Lens.at guid of
@@ -112,28 +107,25 @@ scopeLookup scope guid =
   Just ref -> pure ref
 
 makePiType ::
-  MonadA m =>
-  Scope -> Guid -> ScopedTypedValue -> ScopedTypedValue ->
-  StateT (Context defa) m Ref
-makePiType scope paramGuid paramType body =
-  ExprRefs.fresh . RefData scope . Expr.BodyLam .
-  Expr.Lam Expr.KType paramGuid (paramType ^. stvTV . tvVal) =<<
-  makeHoleRef (body ^. stvScope)
+  Guid -> ScopedTypedValue -> ScopedTypedValue ->
+  Expr.Body def Ref
+makePiType paramGuid paramType body =
+  Expr.BodyLam $
+  Expr.Lam Expr.KType paramGuid
+  (paramType ^. stvTV . tvVal)
+  -- We rely on the scope of the Lam KVal body being equal to the
+  -- scope of the Lam KType body, because we use the same
+  -- paramGuid. This means param guids cannot be unique.
+  (body ^. stvTV . tvType)
 
 makeRecordType ::
-  MonadA m =>
-  Scope ->
-  [(ScopedTypedValue, t)] ->
-  StateT (Context defa) m Ref
-makeRecordType scope fields =
-  fields
-  & Lens.traverse %%~ onField
-  >>= ExprRefs.fresh . RefData scope .
-      Expr.BodyRecord . Expr.Record Expr.KType
+  [(ScopedTypedValue, ScopedTypedValue)] ->
+  Expr.Body def Ref
+makeRecordType fields =
+  Expr.BodyRecord . Expr.Record Expr.KType $ onField <$> fields
   where
-    onField (tag, _) =
-      (,) (tag ^. stvTV . tvVal)
-      <$> makeHoleRef scope
+    onField (tag, val) =
+      (tag ^. stvTV . tvVal, val ^. stvTV . tvType)
 
 makeTypeRef ::
   Scope ->
@@ -149,16 +141,18 @@ makeTypeRef scope body =
   Expr.BodyRecord (Expr.Record Expr.KType _) -> typeIsType
   Expr.BodyLeaf Expr.LiteralInteger {} -> resNoScope $ ExprLens.bodyIntegerType # ()
   -- Unknown
-  Expr.BodyApply {} -> makeHoleRef scope
-  Expr.BodyGetField {} -> makeHoleRef scope
-  Expr.BodyLeaf Expr.Hole -> makeHoleRef scope
+  Expr.BodyApply {} -> unknownType
+  Expr.BodyGetField {} -> unknownType
+  Expr.BodyLeaf Expr.Hole -> unknownType
   -- GetPars
   Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (LoadedDef _ ref))) -> pure ref
   Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) -> lift $ scopeLookup scope guid
   Expr.BodyLeaf Expr.Tag {} -> resNoScope $ ExprLens.bodyTagType # ()
-  Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) -> makePiType scope paramGuid paramType result
-  Expr.BodyRecord (Expr.Record Expr.KVal fields) -> makeRecordType scope fields
+  Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) -> fresh $ makePiType paramGuid paramType result
+  Expr.BodyRecord (Expr.Record Expr.KVal fields) -> fresh $ makeRecordType fields
   where
+    unknownType = fresh $ ExprLens.bodyHole # ()
+    fresh = ExprRefs.fresh . RefData scope
     typeIsType = resNoScope $ ExprLens.bodyType # ()
     resNoScope = ExprRefs.fresh . RefData mempty
 
