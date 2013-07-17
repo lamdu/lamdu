@@ -48,6 +48,7 @@ rename renames guid = fromMaybe guid $ renames ^. Lens.at guid
 data Error def
   = VarEscapesScope
   | VarNotInScope
+  | InfiniteType Ref
   | Mismatch (Expr.Body def Ref) (Expr.Body def Ref)
   deriving (Show)
 
@@ -113,21 +114,21 @@ mergeRefData recurse renames (RefData aScope aBody) (RefData bScope bBody) =
 
 unifyRename :: Eq def => Set Ref -> Map Guid Guid -> Ref -> Maybe Ref -> Infer def Ref
 unifyRename visited renames rawNode mOther = do
-  node <- ExprRefs.find "unifyRename:rawNode" rawNode
-  if visited ^. Lens.contains node
-    then return node
+  nodeRep <- ExprRefs.find "unifyRename:rawNode" rawNode
+  if visited ^. Lens.contains nodeRep
+    then lift . Left $ InfiniteType nodeRep
     else
     case mOther of
     Nothing -> do
-      nodeData <- ExprRefs.readRep node
+      nodeData <- ExprRefs.readRep nodeRep
       let renamedNodeData = renameRefData renames nodeData
-      ExprRefs.writeRep node renamedNodeData
-      traverse_ (flip (recurse node renames) Nothing) $
+      ExprRefs.writeRep nodeRep renamedNodeData
+      traverse_ (flip (recurse nodeRep renames) Nothing) $
         renamedNodeData ^. rdBody
-      return node
+      return nodeRep
     Just other ->
-      ExprRefs.unifyRefs merge node other
-      <&> fromMaybe node
+      ExprRefs.unifyRefs merge nodeRep other
+      <&> fromMaybe nodeRep
   where
     recurse visitedRef = unifyRename (visited & Lens.contains visitedRef .~ True)
     merge ref a b =

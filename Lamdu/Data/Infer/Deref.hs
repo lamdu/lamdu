@@ -1,13 +1,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.Deref
-  ( Error(..), deref, expr
+  ( deref, expr
   , Derefed(..), dValue, dType
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT)
+import Control.MonadA (MonadA)
 import Data.Function.Decycle (decycle)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
@@ -16,20 +16,17 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 
-data Error = InfiniteExpression Ref
-  deriving (Show)
-
 data Derefed def = Derefed
   { _dValue :: Expr.Expression def ()
   , _dType :: Expr.Expression def ()
   }
 Lens.makeLenses ''Derefed
 
-deref :: Ref -> StateT (Context def) (Either Error) (Expr.Expression def ())
+deref :: MonadA m => Ref -> StateT (Context def) m (Expr.Expression def ())
 deref =
   decycle loop
   where
-    loop Nothing ref = lift . Left $ InfiniteExpression ref
+    loop Nothing _ = error "Cycle at deref?!"
     loop (Just recurse) ref = do
       RefData _ body <- ExprRefs.read ref
       body
@@ -37,9 +34,9 @@ deref =
         <&> ExprUtil.pureExpression
 
 expr ::
+  MonadA m =>
   Expr.Expression defa (ScopedTypedValue, a) ->
-  StateT (Context defb) (Either Error)
-  (Expr.Expression defa (Derefed defb, a))
+  StateT (Context defb) m (Expr.Expression defa (Derefed defb, a))
 expr =
   Lens.traverse . Lens._1 %%~ derefEach . (^. stvTV)
   where

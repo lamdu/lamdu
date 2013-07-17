@@ -72,7 +72,6 @@ runContext act =
       & ExprLens.exprDef %~ (^. InferLoad.ldDef)
       & InferDeref.expr
       <&> Lens.mapped %~ fst
-      & mapStateT ridEither
 
 doLoadInferRun :: PureExpr Def -> (Expr.Expression Def (Derefed Def), Infer.Context Def)
 doLoadInferRun = runContext . doLoadInfer
