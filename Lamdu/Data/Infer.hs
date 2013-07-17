@@ -138,7 +138,7 @@ makeTypeRef scope body =
   Expr.BodyLeaf Expr.TagType -> typeIsType
   Expr.BodyLam (Expr.Lam Expr.KType _ _ _) -> typeIsType
   Expr.BodyRecord (Expr.Record Expr.KType _) -> typeIsType
-  Expr.BodyLeaf Expr.LiteralInteger {} -> resNoScope $ ExprLens.bodyIntegerType # ()
+  Expr.BodyLeaf Expr.LiteralInteger {} -> fresh $ ExprLens.bodyIntegerType # ()
   -- Unknown
   Expr.BodyApply {} -> unknownType
   Expr.BodyGetField {} -> unknownType
@@ -146,14 +146,13 @@ makeTypeRef scope body =
   -- GetPars
   Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (LoadedDef _ ref))) -> pure ref
   Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) -> lift $ scopeLookup scope guid
-  Expr.BodyLeaf Expr.Tag {} -> resNoScope $ ExprLens.bodyTagType # ()
+  Expr.BodyLeaf Expr.Tag {} -> fresh $ ExprLens.bodyTagType # ()
   Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) -> fresh $ makePiType paramGuid paramType result
   Expr.BodyRecord (Expr.Record Expr.KVal fields) -> fresh $ makeRecordType fields
   where
     unknownType = fresh $ ExprLens.bodyHole # ()
     fresh = ExprRefs.fresh . RefData scope
-    typeIsType = resNoScope $ ExprLens.bodyType # ()
-    resNoScope = ExprRefs.fresh . RefData mempty
+    typeIsType = fresh $ ExprLens.bodyType # ()
 
 -- With hole apply vals and hole types
 exprIntoSTV ::
