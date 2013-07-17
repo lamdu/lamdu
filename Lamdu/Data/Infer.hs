@@ -102,17 +102,18 @@ mergeBodies ::
   Infer def (Expr.Body def Ref)
 mergeBodies recurse renames xScope xBody yScope yBody =
   case (xBody, yBody) of
-  (_, Expr.BodyLeaf Expr.Hole) ->
-    xBody <$ traverse_
-    (flip (recurse renames) (unifyHoleConstraints yScope xScope)) xBody
-  (Expr.BodyLeaf Expr.Hole, _) ->
-    yBody <$ traverse_
-    (flip (recurse Map.empty) (unifyHoleConstraints xScope yScope)) yBody
+  (_, Expr.BodyLeaf Expr.Hole) -> unifyWithHole renames   yScope xScope xBody
+  (Expr.BodyLeaf Expr.Hole, _) -> unifyWithHole Map.empty xScope yScope yBody
   _ ->
     case sequenceA <$> ExprUtil.matchBody matchLamResult matchOther (==) xBody yBody of
     Nothing -> lift . Left $ Mismatch xBody yBody
     Just mkBody -> mkBody
   where
+    unifyWithHole activeRenames holeScope otherScope nonHoleBody =
+      nonHoleBody <$ traverse_
+      ( flip (recurse activeRenames)
+        (unifyHoleConstraints holeScope otherScope)
+      ) nonHoleBody
     unifyHoleConstraints holeScope otherScope =
       UnifyHoleConstraints HoleConstraints
       { hcUnusableInHoleScope =
@@ -151,10 +152,11 @@ mergeRefData recurse renames
   <$> intersectScopes aScope bScope
   <*> mergeBodies recurse renames aScope aBody bScope bBody
   where
+    mergedSubsts = aSubsts ++ bSubsts
     mkRefData intersectedScope mergedBody =
       RefData
       { _rdScope = intersectedScope
-      , _rdSubsts = aSubsts ++ bSubsts
+      , _rdSubsts = mergedSubsts
       , _rdMRenameHistory = mappend aMRenameHistory bMRenameHistory
       , _rdBody = mergedBody
       }
