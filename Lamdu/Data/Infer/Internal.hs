@@ -25,7 +25,7 @@ scopeMap :: Lens.Iso' Scope (Map Guid Ref)
 scopeMap = Lens.from scope
 
 data RefData def = RefData
-  { _rdVars :: Scope
+  { _rdVars :: Scope -- TODO: Rename to rdScope
   , _rdBody :: Expr.Body def Ref
   }
 Lens.makeLenses ''RefData

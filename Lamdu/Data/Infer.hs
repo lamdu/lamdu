@@ -66,24 +66,58 @@ intersectScopes (Scope aScope) (Scope bScope) =
         then return aref
         else error "Scope unification of differing refs"
 
+newtype HoleConstraints = HoleConstraints
+  { hcUnusableInHoleScope :: Set Guid
+  }
+
+-- You must apply this recursively
+applyHoleConstraints ::
+  HoleConstraints -> RefData def -> Either (Error def) (RefData def)
+applyHoleConstraints (HoleConstraints unusableSet) (RefData scope body)
+  | Lens.anyOf ExprLens.bodyParameterRef (`Set.member` unusableSet) body =
+    Left VarEscapesScope
+  -- Expensive assertion
+  | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Set.member` unusableSet) =
+    error "applyHoleConstraints: Shadowing detected"
+  | otherwise =
+    return $ RefData newScope body
+  where
+    unusableMap = Map.fromSet (const ()) unusableSet
+    newScope = scope & scopeMap %~ (`Map.difference` unusableMap)
+
+data UnifyPhase
+  = UnifyHoleConstraints HoleConstraints
+  | UnifyRef Ref
+
 mergeBodies ::
   Eq def =>
-  (Map Guid Guid -> Ref -> Maybe Ref -> Infer def Ref) ->
+  (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
   Map Guid Guid ->
-  Expr.Body def Ref ->
-  Expr.Body def Ref ->
+  RefData def -> RefData def ->
   Infer def (Expr.Body def Ref)
-mergeBodies recurse renames a (Expr.BodyLeaf Expr.Hole) =
-  a <$ traverse_ (flip (recurse renames) Nothing) a
-mergeBodies _ _ (Expr.BodyLeaf Expr.Hole) b = return b
-mergeBodies recurse renames a b = do
-  case sequenceA <$> ExprUtil.matchBody matchLamResult matchOther (==) a b of
-    Nothing -> lift . Left $ Mismatch a b
+mergeBodies recurse renames x y =
+  case (x ^. rdBody, y ^. rdBody) of
+  (xBody, Expr.BodyLeaf Expr.Hole) ->
+    xBody <$ traverse_
+    (flip (recurse renames) (unifyHoleConstraints y x)) xBody
+  (Expr.BodyLeaf Expr.Hole, yBody) ->
+    yBody <$ traverse_
+    (flip (recurse Map.empty) (unifyHoleConstraints x y)) yBody
+  (xBody, yBody) ->
+    case sequenceA <$> ExprUtil.matchBody matchLamResult matchOther (==) xBody yBody of
+    Nothing -> lift . Left $ Mismatch xBody yBody
     Just mkBody -> mkBody
   where
-    matchLamResult aGuid bGuid aRef bRef =
-      recurse (renames & Lens.at aGuid .~ Just bGuid) aRef (Just bRef)
-    matchOther x y = recurse renames x (Just y)
+    unifyHoleConstraints hole other =
+      UnifyHoleConstraints HoleConstraints
+      { hcUnusableInHoleScope =
+        Map.keysSet $ Map.difference
+        (other ^. rdVars . scopeMap)
+        (hole ^. rdVars . scopeMap)
+      }
+    matchLamResult xGuid yGuid xRef yRef =
+      recurse (renames & Lens.at xGuid .~ Just yGuid) xRef (UnifyRef yRef)
+    matchOther xRef yRef = recurse renames xRef (UnifyRef yRef)
 
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
 renameRefData renames (RefData scope body)
@@ -97,35 +131,40 @@ renameRefData renames (RefData scope body)
 
 mergeRefData ::
   Eq def =>
-  (Map Guid Guid -> Ref -> Maybe Ref -> Infer def Ref) ->
+  (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
   Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
-mergeRefData recurse renames (RefData aScope aBody) (RefData bScope bBody) =
+mergeRefData recurse renames a b =
   RefData
-  <$> intersectScopes aScope bScope
-  <*> mergeBodies recurse renames aBody bBody
+  <$> intersectScopes (a ^. rdVars) (b ^. rdVars)
+  <*> mergeBodies recurse renames a b
 
 renameMergeRefData ::
   Eq def =>
-  (Map Guid Guid -> Ref -> Maybe Ref -> Infer def Ref) ->
+  (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
   Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
 renameMergeRefData recurse renames a b =
   mergeRefData recurse renames (renameRefData renames a) b
 
-unifyRename :: Eq def => Set Ref -> Map Guid Guid -> Ref -> Maybe Ref -> Infer def Ref
-unifyRename visited renames rawNode mOther = do
+unifyRename :: Eq def => Set Ref -> Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref
+unifyRename visited renames rawNode phase = do
   nodeRep <- ExprRefs.find "unifyRename:rawNode" rawNode
   if visited ^. Lens.contains nodeRep
     then lift . Left $ InfiniteType nodeRep
     else
-    case mOther of
-    Nothing -> do
-      nodeData <- ExprRefs.readRep nodeRep
-      let renamedNodeData = renameRefData renames nodeData
-      ExprRefs.writeRep nodeRep renamedNodeData
-      traverse_ (flip (recurse nodeRep renames) Nothing) $
-        renamedNodeData ^. rdBody
+    case phase of
+    UnifyHoleConstraints holeConstraints -> do
+      rawNodeData <- ExprRefs.readRep nodeRep
+      let
+        nodeData =
+          applyHoleConstraints holeConstraints $
+          renameRefData renames rawNodeData
+      ExprRefs.writeRep nodeRep nodeData
+      traverse_
+        (flip (recurse nodeRep renames)
+         (UnifyHoleConstraints holeConstraints)) $
+        nodeData ^. rdBody
       return nodeRep
-    Just other ->
+    UnifyRef other ->
       ExprRefs.unifyRefs merge nodeRep other
       <&> fromMaybe nodeRep
   where
@@ -134,7 +173,7 @@ unifyRename visited renames rawNode mOther = do
       renameMergeRefData (recurse ref) renames a b <&> flip (,) ref
 
 unify :: Eq def => Ref -> Ref -> Infer def ()
-unify x y = void $ unifyRename mempty mempty x (Just y)
+unify x y = void $ unifyRename mempty mempty x (UnifyRef y)
 
 infer ::
   Scope -> Expr.Expression (LoadedDef def) a ->
