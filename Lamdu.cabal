@@ -16,6 +16,7 @@ Library
   hs-Source-Dirs:      bottlelib
 
   Exposed-modules:     Data.Cache,
+                       Data.Function.Decycle,
                        Data.List.Assoc,
                        Data.List.Utils,
                        Data.Maybe.Utils,
