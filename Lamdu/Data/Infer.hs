@@ -113,19 +113,17 @@ scopeLookup scope guid =
 
 makePiType ::
   MonadA m =>
-  Scope -> Guid ->
-  Expr.Expression defb ScopedTypedValue ->
-  Expr.Expression defb ScopedTypedValue ->
+  Scope -> Guid -> ScopedTypedValue -> ScopedTypedValue ->
   StateT (Context defa) m Ref
 makePiType scope paramGuid paramType body =
   ExprRefs.fresh . RefData scope . Expr.BodyLam .
-  Expr.Lam Expr.KType paramGuid (paramType ^. Expr.ePayload . stvTV . tvVal) =<<
-  makeHoleRef (body ^. Expr.ePayload . stvScope)
+  Expr.Lam Expr.KType paramGuid (paramType ^. stvTV . tvVal) =<<
+  makeHoleRef (body ^. stvScope)
 
 makeRecordType ::
   MonadA m =>
   Scope ->
-  [(Expr.Expression defb ScopedTypedValue, t)] ->
+  [(ScopedTypedValue, t)] ->
   StateT (Context defa) m Ref
 makeRecordType scope fields =
   fields
@@ -134,12 +132,12 @@ makeRecordType scope fields =
       Expr.BodyRecord . Expr.Record Expr.KType
   where
     onField (tag, _) =
-      (,) (tag ^. Expr.ePayload . stvTV . tvVal)
+      (,) (tag ^. stvTV . tvVal)
       <$> makeHoleRef scope
 
 makeTypeRef ::
   Scope ->
-  Expr.Body (LoadedDef def) (Expr.Expression (LoadedDef def) ScopedTypedValue) ->
+  Expr.Body (LoadedDef def) ScopedTypedValue ->
   Infer def Ref
 makeTypeRef scope body =
   case body of
@@ -189,7 +187,8 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     & circumcizeApply
     & RefData scope
     & ExprRefs.fresh
-  typeRef <- newBody <&> Lens.mapped %~ fst & makeTypeRef scope
+  typeRef <-
+    newBody <&> (^. Expr.ePayload . Lens._1) & makeTypeRef scope
   pure $
     Expr.Expression newBody
     ((ScopedTypedValue (TypedValue valRef typeRef) scope), pl)
