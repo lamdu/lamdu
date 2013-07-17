@@ -21,6 +21,7 @@ import Data.Monoid (Monoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
+import Data.Tuple (swap)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
 import System.Random (Random, random)
@@ -144,7 +145,7 @@ renameRefData renames (RefData scope substs mRenameHistory body)
 mergeRefData ::
   Eq def =>
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
-  Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
+  Map Guid Guid -> RefData def -> RefData def -> Infer def ([Subst], RefData def)
 mergeRefData recurse renames
   (RefData aScope aSubsts aMRenameHistory aBody)
   (RefData bScope bSubsts bMRenameHistory bBody) =
@@ -152,8 +153,15 @@ mergeRefData recurse renames
   <$> intersectScopes aScope bScope
   <*> mergeBodies recurse renames aScope aBody bScope bBody
   where
+    newInfoOnSelf =
+      Lens.has ExprLens.bodyHole aBody /=
+      Lens.has ExprLens.bodyHole bBody
+    substsToExecute
+      | newInfoOnSelf = mergedSubsts
+      | otherwise = []
     mergedSubsts = aSubsts ++ bSubsts
     mkRefData intersectedScope mergedBody =
+      (,) substsToExecute $
       RefData
       { _rdScope = intersectedScope
       , _rdSubsts = mergedSubsts
@@ -164,7 +172,7 @@ mergeRefData recurse renames
 renameMergeRefData ::
   Eq def =>
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
-  Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
+  Map Guid Guid -> RefData def -> RefData def -> Infer def ([Subst], RefData def)
 renameMergeRefData recurse renames a b =
   mergeRefData recurse renames (renameRefData renames a) b
 
@@ -188,11 +196,18 @@ unifyRecurse visited renames rawNode phase = do
       return nodeRep
     UnifyRef other ->
       ExprRefs.unifyRefs merge nodeRep other
-      <&> fromMaybe nodeRep
+      -- This bind will now execute the doSubsts action returned from
+      -- merge, which is now safe because unifyRefs completed.
+      >>= fromMaybe (return nodeRep)
   where
     recurse visitedRef = unifyRecurse (visited & Lens.contains visitedRef .~ True)
-    merge ref a b =
-      renameMergeRefData (recurse ref) renames a b <&> flip (,) ref
+    merge rep a b =
+      renameMergeRefData (recurse rep) renames a b
+      <&> swap
+      -- Schedule the doSubsts to happen after the merge has been
+      -- written to the rep (return the doSubsts as an *action* that's
+      -- not yet executed):
+      <&> Lens._2 %~ (rep <$) . traverse_ (doSubst rep)
 
 unify :: Eq def => Ref -> Ref -> Infer def Ref
 unify x y = unifyRecurse mempty mempty x (UnifyRef y)
