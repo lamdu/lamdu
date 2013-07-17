@@ -106,6 +106,6 @@ exprIntoContext =
           | Lens.has Lens._Nothing (scope ^. Lens.at guid) -> error "GetVar out of scope"
         _ -> body & Lens.traverse %%~ go scope
       fresh RefData
-        { _rdVars = Scope scope
+        { _rdScope = Scope scope
         , _rdBody = newBody
         }

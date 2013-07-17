@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Infer.Internal
   ( Scope(..), scopeMap
-  , RefData(..), rdVars, rdBody
+  , RefData(..), rdScope, rdBody
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs
   , LoadedDef(..), ldDef, ldType
@@ -25,7 +25,7 @@ scopeMap :: Lens.Iso' Scope (Map Guid Ref)
 scopeMap = Lens.from scope
 
 data RefData def = RefData
-  { _rdVars :: Scope -- TODO: Rename to rdScope
+  { _rdScope :: Scope
   , _rdBody :: Expr.Body def Ref
   }
 Lens.makeLenses ''RefData

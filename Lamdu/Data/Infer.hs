@@ -113,8 +113,8 @@ mergeBodies recurse renames x y =
       UnifyHoleConstraints HoleConstraints
       { hcUnusableInHoleScope =
         Map.keysSet $ Map.difference
-        (other ^. rdVars . scopeMap)
-        (hole ^. rdVars . scopeMap)
+        (other ^. rdScope . scopeMap)
+        (hole ^. rdScope . scopeMap)
       }
     matchLamResult xGuid yGuid xRef yRef =
       recurse (renames & Lens.at xGuid .~ Just yGuid) xRef (UnifyRef yRef)
@@ -136,7 +136,7 @@ mergeRefData ::
   Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
 mergeRefData recurse renames a b =
   RefData
-  <$> intersectScopes (a ^. rdVars) (b ^. rdVars)
+  <$> intersectScopes (a ^. rdScope) (b ^. rdScope)
   <*> mergeBodies recurse renames a b
 
 renameMergeRefData ::
