@@ -159,9 +159,9 @@ renameMergeRefData ::
 renameMergeRefData recurse renames a b =
   mergeRefData recurse renames (renameRefData renames a) b
 
-unifyRename :: Eq def => Set Ref -> Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref
-unifyRename visited renames rawNode phase = do
-  nodeRep <- ExprRefs.find "unifyRename:rawNode" rawNode
+unifyRecurse :: Eq def => Set Ref -> Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref
+unifyRecurse visited renames rawNode phase = do
+  nodeRep <- ExprRefs.find "unifyRecurse:rawNode" rawNode
   if visited ^. Lens.contains nodeRep
     then lift . Left $ InfiniteType nodeRep
     else
@@ -181,12 +181,12 @@ unifyRename visited renames rawNode phase = do
       ExprRefs.unifyRefs merge nodeRep other
       <&> fromMaybe nodeRep
   where
-    recurse visitedRef = unifyRename (visited & Lens.contains visitedRef .~ True)
+    recurse visitedRef = unifyRecurse (visited & Lens.contains visitedRef .~ True)
     merge ref a b =
       renameMergeRefData (recurse ref) renames a b <&> flip (,) ref
 
 unify :: Eq def => Ref -> Ref -> Infer def ()
-unify x y = void $ unifyRename mempty mempty x (UnifyRef y)
+unify x y = void $ unifyRecurse mempty mempty x (UnifyRef y)
 
 infer ::
   Scope -> Expr.Expression (LoadedDef def) a ->
