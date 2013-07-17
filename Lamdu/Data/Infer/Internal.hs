@@ -2,7 +2,7 @@
 module Lamdu.Data.Infer.Internal
   ( Scope(..), scopeMap
   , RefData(..), rdScope, rdSubsts, rdMRenameHistory, rdBody
-  , SubstDest(..), sdPiGuid, sdArgVal, sdCopiedRefs, sdCopiedNames
+  , Subst(..), sPiGuid, sArgVal, sCopiedRefs, sCopiedNames
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs
   , LoadedDef(..), ldDef, ldType
@@ -28,23 +28,23 @@ scopeMap = Lens.from scope
 -- Represents a relationship between some subexpression of a Pi result
 -- type and the respective sub-expression of an apply type that it
 -- should be copied(with substs) into
-data SubstDest = SubstDest
+data Subst = Subst
   { -- Guid to subst
-    _sdPiGuid :: Guid
+    _sPiGuid :: Guid
   , -- Arg val to subst with
-    _sdArgVal :: Ref
+    _sArgVal :: Ref
   -- For cycle detection in dest, remember which parents in src
   -- context were copied into which parents in dest context:
-  , _sdCopiedRefs :: Map {-src-}Ref {-dest-}Ref
+  , _sCopiedRefs :: Map {-src-}Ref {-dest-}Ref
   , -- For each new name guid, remember the old name it was copied as
     -- (this is the name its known by in the apply context):
-    _sdCopiedNames :: Map Guid Guid
+    _sCopiedNames :: Map Guid Guid
   }
-Lens.makeLenses ''SubstDest
+Lens.makeLenses ''Subst
 
 data RefData def = RefData
   { _rdScope :: Scope
-  , _rdSubsts :: [SubstDest]
+  , _rdSubsts :: [Subst]
   , -- Rename history is only active(Just) if we're a subst dest
     -- (inside an apply type). Then we remember any rename that
     -- happened since the subst wrote us.
