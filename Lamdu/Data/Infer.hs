@@ -25,6 +25,7 @@ import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -77,7 +78,7 @@ applyHoleConstraints (HoleConstraints unusableSet) (RefData scope body)
   | Lens.anyOf ExprLens.bodyParameterRef (`Set.member` unusableSet) body =
     Left VarEscapesScope
   -- Expensive assertion
-  | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Set.member` unusableSet) =
+  | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Set.member` unusableSet) body =
     error "applyHoleConstraints: Shadowing detected"
   | otherwise =
     return $ RefData newScope body
@@ -154,10 +155,9 @@ unifyRename visited renames rawNode phase = do
     case phase of
     UnifyHoleConstraints holeConstraints -> do
       rawNodeData <- ExprRefs.readRep nodeRep
-      let
-        nodeData =
-          applyHoleConstraints holeConstraints $
-          renameRefData renames rawNodeData
+      nodeData <-
+        lift . applyHoleConstraints holeConstraints $
+        renameRefData renames rawNodeData
       ExprRefs.writeRep nodeRep nodeData
       traverse_
         (flip (recurse nodeRep renames)
