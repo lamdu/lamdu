@@ -2,7 +2,7 @@
 module Lamdu.Data.Infer.Internal
   ( Scope(..), scopeMap
   , RefData(..), rdScope, rdSubsts, rdMRenameHistory, rdBody
-  , Subst(..), sPiGuid, sArgVal, sCopiedRefs, sCopiedNames
+  , Subst(..), sPiGuid, sArgVal, sCopiedNames
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs, ctxRandomGen
   , LoadedDef(..), ldDef, ldType
@@ -34,9 +34,6 @@ data Subst = Subst
     _sPiGuid :: Guid
   , -- Arg val to subst with
     _sArgVal :: Ref
-  -- For cycle detection in dest, remember which parents in src
-  -- context were copied into which parents in dest context:
-  , _sCopiedRefs :: Map {-src-}Ref {-dest-}Ref
   , -- For each new name guid, remember the old name it was copied as
     -- (this is the name its known by in the apply context):
     _sCopiedNames :: Map Guid Guid
