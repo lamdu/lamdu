@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.Deref
-  ( Error(..), deref, derefExpr
+  ( Error(..), deref, expr
   , Derefed(..), dValue, dType
   ) where
 
@@ -17,6 +17,7 @@ import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 
 data Error = InfiniteExpression
+  deriving (Show)
 
 data Derefed def = Derefed
   { _dValue :: Expr.Expression def ()
@@ -36,13 +37,12 @@ deref =
           & Lens.traverse %%~ go (visited & Lens.contains ref .~ True)
           <&> ExprUtil.pureExpression
 
-derefExpr ::
+expr ::
   Expr.Expression defa (ScopedTypedValue, a) ->
   StateT (Context defb) (Either Error)
   (Expr.Expression defa (Derefed defb, a))
-derefExpr expr =
-  expr
-  & Lens.traverse . Lens._1 %%~ derefEach . (^. stvTV)
+expr =
+  Lens.traverse . Lens._1 %%~ derefEach . (^. stvTV)
   where
     derefEach (TypedValue valRef typeRef) =
       Derefed <$> deref valRef <*> deref typeRef

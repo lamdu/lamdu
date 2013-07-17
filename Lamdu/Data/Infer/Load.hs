@@ -28,6 +28,7 @@ data Loader def m = Loader
   }
 
 newtype LoadError def = LoadUntypedDef def
+  deriving (Show)
 
 -- Error includes untyped def use
 loadDefTypeIntoRef ::
@@ -54,7 +55,7 @@ load ::
   (Ord def, MonadA m) =>
   Loader def m -> Expr.Expression def a ->
   StateT (Context def) (EitherT (LoadError def) m)
-    (Expr.Expression (LoadedDef def) a)
+  (Expr.Expression (LoadedDef def) a)
 load loader expr = do
   existingDefRefs <- Lens.use ctxDefRefs <&> Lens.mapped %~ return
   -- Left wins in union

@@ -27,7 +27,7 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 newtype Def = Def String
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 type PureExpr def = Expr.Expression def ()
 type Expr = PureExpr Def
 

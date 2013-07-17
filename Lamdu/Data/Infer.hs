@@ -1,12 +1,17 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer
-  ( Infer, Context, Error(..)
+  ( Infer, Error(..)
   , infer, unify
   , emptyContext
+  -- Re-export:
+  , Context
+  , TypedValue(..), tvVal, tvType
+  , ScopedTypedValue(..), stvTV, stvScope
   ) where
 
 import Control.Applicative (Applicative(..), (<*>), (<$>))
 import Control.Lens.Operators
+import Control.Monad (void)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT)
 import Data.Map (Map)
@@ -48,6 +53,7 @@ renameRefVars renames (RefVars scope getVars) =
     mapping = rename renames
 
 data Error def = VarEscapesScope | Mismatch (Expr.Body def Ref) (Expr.Body def Ref)
+  deriving (Show)
 
 type Infer def = StateT (Context def) (Either (Error def))
 
@@ -99,8 +105,8 @@ mergeRefData renames (RefData aVars aBody) (RefData bVars bBody) =
 unifyRename :: Eq def => Map Guid Guid -> Ref -> Ref -> Infer def Ref
 unifyRename = ExprRefs.unifyRefs . mergeRefData
 
-unify :: Eq def => Ref -> Ref -> Infer def Ref
-unify = unifyRename Map.empty
+unify :: Eq def => Ref -> Ref -> Infer def ()
+unify x y = void $ unifyRename Map.empty x y
 
 infer ::
   Map Guid Ref -> Expr.Expression (LoadedDef def) a ->
