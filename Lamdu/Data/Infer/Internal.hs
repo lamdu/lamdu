@@ -2,7 +2,7 @@
 module Lamdu.Data.Infer.Internal
   ( Scope(..), scopeMap
   , RefData(..), rdScope, rdSubsts, rdMRenameHistory, rdBody
-  , SubstDest(..), sdPiGuid, sdArgVal, sdCopiedRefs
+  , SubstDest(..), sdPiGuid, sdArgVal, sdCopiedRefs, sdCopiedNames
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs
   , LoadedDef(..), ldDef, ldType
@@ -36,6 +36,9 @@ data SubstDest = SubstDest
   -- For cycle detection in dest, remember which parents in src
   -- context were copied into which parents in dest context:
   , _sdCopiedRefs :: Map {-src-}Ref {-dest-}Ref
+  , -- For each new name guid, remember the old name it was copied as
+    -- (this is the name its known by in the apply context):
+    _sdCopiedNames :: Map Guid Guid
   }
 Lens.makeLenses ''SubstDest
 
