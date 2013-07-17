@@ -17,6 +17,7 @@ import Control.Monad.Trans.State (StateT)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
+import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
 import Data.UnionFind (Ref)
@@ -66,34 +67,48 @@ intersectScopes renames (Scope aScope) (Scope rawBScope) =
 
 mergeBodies ::
   Eq def =>
+  (Map Guid Guid -> Ref -> Ref -> Infer def Ref) ->
   Map Guid Guid ->
   Expr.Body def Ref ->
   Expr.Body def Ref ->
   Infer def (Expr.Body def Ref)
-mergeBodies _ a (Expr.BodyLeaf Expr.Hole) = return a
-mergeBodies renames (Expr.BodyLeaf Expr.Hole) b =
+mergeBodies _ _ a (Expr.BodyLeaf Expr.Hole) = return a
+mergeBodies _ renames (Expr.BodyLeaf Expr.Hole) b =
   b & ExprLens.bodyParameterRef %~ rename renames & return
-mergeBodies renames a b = do
+mergeBodies recurse renames a b = do
   case sequenceA <$> ExprUtil.matchBody matchLamResult matchOther matchGetPar a b of
     Nothing -> lift . Left $ Mismatch a b
     Just mkBody -> mkBody
   where
     matchLamResult aGuid bGuid aRef bRef = do
-      unifyRename (renames & Lens.at bGuid .~ Just aGuid) aRef bRef
-    matchOther = unifyRename renames
+      recurse (renames & Lens.at bGuid .~ Just aGuid) aRef bRef
+    matchOther = recurse renames
     matchGetPar aGuid bGuid = aGuid == rename renames bGuid
 
-mergeRefData :: Eq def => Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
-mergeRefData renames (RefData aScope aBody) (RefData bScope bBody) =
+mergeRefData ::
+  Eq def =>
+  (Map Guid Guid -> Ref -> Ref -> Infer def Ref) ->
+  Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
+mergeRefData recurse renames (RefData aScope aBody) (RefData bScope bBody) =
   RefData
   <$> intersectScopes renames aScope bScope
-  <*> mergeBodies renames aBody bBody
+  <*> mergeBodies recurse renames aBody bBody
 
-unifyRename :: Eq def => Map Guid Guid -> Ref -> Ref -> Infer def Ref
-unifyRename = ExprRefs.unifyRefs . mergeRefData
+unifyRename :: Eq def => Set Ref -> Map Guid Guid -> Ref -> Ref -> Infer def Ref
+unifyRename visited renames rawX y = do
+  x <- ExprRefs.find "unifyRename:rawX" rawX
+  if visited ^. Lens.contains x
+    then return x
+    else ExprRefs.unifyRefs merge x y <&> fromMaybe x
+  where
+    merge ref a b =
+      mergeRefData
+      (unifyRename (visited & Lens.contains ref .~ True))
+      renames a b
+      <&> flip (,) ref
 
 unify :: Eq def => Ref -> Ref -> Infer def ()
-unify x y = void $ unifyRename Map.empty x y
+unify x y = void $ unifyRename mempty mempty x y
 
 infer ::
   Scope -> Expr.Expression (LoadedDef def) a ->

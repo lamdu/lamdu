@@ -33,8 +33,7 @@ fresh dat = do
 freshHole :: MonadA m => StateT (Context def) m Ref
 freshHole = fresh . RefData (Scope Map.empty) $ ExprLens.bodyHole # ()
 
-find ::
-  MonadA m => String -> Ref -> StateT (Context def) m Ref
+find :: MonadA m => String -> Ref -> StateT (Context def) m Ref
 find msg = Lens.zoom (ctxExprRefs . exprRefsUF) . UF.lookup msg
 
 readRep ::
@@ -71,23 +70,24 @@ equiv x y = Lens.zoom (ctxExprRefs . exprRefsUF) $ UF.equivalent x y
 
 unifyRefs ::
   MonadA m =>
-  (RefData def ->
+  (Ref ->
    RefData def ->
-   StateT (Context def) m (RefData def)) ->
-  Ref -> Ref -> StateT (Context def) m Ref
+   RefData def ->
+   StateT (Context def) m (RefData def, res)) ->
+  Ref -> Ref -> StateT (Context def) m (Maybe res)
 unifyRefs mergeRefData x y = do
   xRep <- find "unify.x" x
   yRep <- find "unify.y" y
   if xRep == yRep
-    then return xRep
+    then return Nothing
     else do
       xData <- popRep xRep
       yData <- popRep yRep
       rep <- union x y
       writeRep rep $ error "Attempt to read parent during unification"
-      newData <- mergeRefData xData yData
+      (newData, res) <- mergeRefData rep xData yData
       writeRep rep newData
-      return rep
+      return $ Just res
 
 exprIntoContext ::
   MonadA m => Expr.Expression def () -> StateT (Context def) m Ref
