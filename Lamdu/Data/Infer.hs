@@ -128,7 +128,9 @@ mergeBodies recurse renames xScope xBody yScope yBody =
 
 renameSubst :: Map Guid Guid -> Subst -> Subst
 renameSubst renames (Subst piGuid argVal destRef copiedNames) =
-  Subst (rename renames piGuid) argVal destRef (Map.mapKeys (rename renames) copiedNames)
+  Subst
+  (rename renames piGuid) argVal destRef
+  (Map.mapKeys (rename renames) copiedNames)
 
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
 renameRefData renames (RefData scope substs mRenameHistory body)
@@ -139,7 +141,8 @@ renameRefData renames (RefData scope substs mRenameHistory body)
     RefData
     (scope & scopeMap %~ Map.mapKeys (rename renames))
     (substs <&> renameSubst renames)
-    (mRenameHistory <&> Map.union renames)
+    -- Only track renames if mRenameHistory isn't Nothing
+    (mRenameHistory & Lens._Just %~ Map.union renames)
     (body & ExprLens.bodyParameterRef %~ rename renames)
 
 mergeRefData ::
