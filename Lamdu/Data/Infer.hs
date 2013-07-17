@@ -11,7 +11,6 @@ module Lamdu.Data.Infer
 
 import Control.Applicative (Applicative(..), (<*>), (<$>), (<$))
 import Control.Lens.Operators
-import Control.Monad (void)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT)
 import Data.Foldable (traverse_)
@@ -187,8 +186,8 @@ unifyRecurse visited renames rawNode phase = do
     merge ref a b =
       renameMergeRefData (recurse ref) renames a b <&> flip (,) ref
 
-unify :: Eq def => Ref -> Ref -> Infer def ()
-unify x y = void $ unifyRecurse mempty mempty x (UnifyRef y)
+unify :: Eq def => Ref -> Ref -> Infer def Ref
+unify x y = unifyRecurse mempty mempty x (UnifyRef y)
 
 infer ::
   Scope -> Expr.Expression (LoadedDef def) a ->
