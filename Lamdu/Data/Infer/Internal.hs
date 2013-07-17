@@ -4,7 +4,7 @@ module Lamdu.Data.Infer.Internal
   , RefData(..), rdScope, rdSubsts, rdMRenameHistory, rdBody
   , Subst(..), sPiGuid, sArgVal, sCopiedRefs, sCopiedNames
   , ExprRefs(..), exprRefsUF, exprRefsData
-  , Context(..), ctxExprRefs, ctxDefRefs
+  , Context(..), ctxExprRefs, ctxDefRefs, ctxRandomGen
   , LoadedDef(..), ldDef, ldType
   , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
@@ -17,6 +17,7 @@ import Data.UnionFind (Ref, RefMap)
 import qualified Control.Lens as Lens
 import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
+import qualified System.Random as Random
 
 newtype Scope = Scope (Map Guid Ref) -- intersected
   deriving (Monoid)
@@ -64,6 +65,7 @@ data Context def = Context
   , -- NOTE: This Map is for 2 purposes: Sharing Refs of loaded Defs
     -- and allowing to specify recursive defs
     _ctxDefRefs :: Map def Ref
+  , _ctxRandomGen :: Random.StdGen -- for guids
   }
 Lens.makeLenses ''Context
 

@@ -14,6 +14,7 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.Deref as InferDeref
 import qualified Lamdu.Data.Infer.Load as InferLoad
+import qualified System.Random as Random
 
 type ExprInferred = Expr.Expression Def ( Expr, Expr )
 
@@ -61,7 +62,7 @@ runContext ::
   State (Infer.Context Def) (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, ())) ->
   (Expr.Expression Def (Derefed Def), Infer.Context Def)
 runContext act =
-  (`runState` Infer.emptyContext) $ do
+  (`runState` Infer.emptyContext (Random.mkStdGen 0x1337)) $ do
     recursiveDefRef <- InferLoad.newDefinition recursiveDefI
     inferredExpr <- act
     let

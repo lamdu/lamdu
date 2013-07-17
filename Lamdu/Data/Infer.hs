@@ -32,9 +32,10 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
+import qualified System.Random as Random
 
-emptyContext :: Context def
-emptyContext =
+emptyContext :: Random.StdGen -> Context def
+emptyContext gen =
   Context
   { _ctxExprRefs =
     ExprRefs
@@ -42,6 +43,7 @@ emptyContext =
     , _exprRefsData = mempty
     }
   , _ctxDefRefs = Map.empty
+  , _ctxRandomGen = gen
   }
 
 rename :: Map Guid Guid -> Guid -> Guid
