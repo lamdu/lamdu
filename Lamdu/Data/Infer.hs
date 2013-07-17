@@ -9,11 +9,12 @@ module Lamdu.Data.Infer
   , ScopedTypedValue(..), stvTV, stvScope
   ) where
 
-import Control.Applicative (Applicative(..), (<*>), (<$>))
+import Control.Applicative (Applicative(..), (<*>), (<$>), (<$))
 import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT)
+import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
@@ -66,21 +67,22 @@ intersectScopes (Scope aScope) (Scope bScope) =
 
 mergeBodies ::
   Eq def =>
-  (Map Guid Guid -> Ref -> Ref -> Infer def Ref) ->
+  (Map Guid Guid -> Ref -> Maybe Ref -> Infer def Ref) ->
   Map Guid Guid ->
   Expr.Body def Ref ->
   Expr.Body def Ref ->
   Infer def (Expr.Body def Ref)
-mergeBodies _ _ a (Expr.BodyLeaf Expr.Hole) = return a
+mergeBodies recurse renames a (Expr.BodyLeaf Expr.Hole) =
+  a <$ traverse_ (flip (recurse renames) Nothing) a
 mergeBodies _ _ (Expr.BodyLeaf Expr.Hole) b = return b
 mergeBodies recurse renames a b = do
   case sequenceA <$> ExprUtil.matchBody matchLamResult matchOther matchGetPar a b of
     Nothing -> lift . Left $ Mismatch a b
     Just mkBody -> mkBody
   where
-    matchLamResult aGuid bGuid aRef bRef = do
-      recurse (renames & Lens.at aGuid .~ Just bGuid) aRef bRef
-    matchOther = recurse renames
+    matchLamResult aGuid bGuid aRef bRef =
+      recurse (renames & Lens.at aGuid .~ Just bGuid) aRef (Just bRef)
+    matchOther x y = recurse renames x (Just y)
     matchGetPar aGuid bGuid = aGuid == rename renames bGuid
 
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
@@ -95,35 +97,44 @@ renameRefData renames (RefData scope body)
 
 renameMergeRefData ::
   Eq def =>
-  (Map Guid Guid -> Ref -> Ref -> Infer def Ref) ->
+  (Map Guid Guid -> Ref -> Maybe Ref -> Infer def Ref) ->
   Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
 renameMergeRefData recurse renames a b =
   mergeRefData recurse renames (renameRefData renames a) b
 
 mergeRefData ::
   Eq def =>
-  (Map Guid Guid -> Ref -> Ref -> Infer def Ref) ->
+  (Map Guid Guid -> Ref -> Maybe Ref -> Infer def Ref) ->
   Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
 mergeRefData recurse renames (RefData aScope aBody) (RefData bScope bBody) =
   RefData
   <$> intersectScopes aScope bScope
   <*> mergeBodies recurse renames aBody bBody
 
-unifyRename :: Eq def => Set Ref -> Map Guid Guid -> Ref -> Ref -> Infer def Ref
-unifyRename visited renames rawX y = do
-  x <- ExprRefs.find "unifyRename:rawX" rawX
-  if visited ^. Lens.contains x
-    then return x
-    else ExprRefs.unifyRefs merge x y <&> fromMaybe x
+unifyRename :: Eq def => Set Ref -> Map Guid Guid -> Ref -> Maybe Ref -> Infer def Ref
+unifyRename visited renames rawNode mOther = do
+  node <- ExprRefs.find "unifyRename:rawNode" rawNode
+  if visited ^. Lens.contains node
+    then return node
+    else
+    case mOther of
+    Nothing -> do
+      nodeData <- ExprRefs.readRep node
+      let renamedNodeData = renameRefData renames nodeData
+      ExprRefs.writeRep node renamedNodeData
+      traverse_ (flip (recurse node renames) Nothing) $
+        renamedNodeData ^. rdBody
+      return node
+    Just other ->
+      ExprRefs.unifyRefs merge node other
+      <&> fromMaybe node
   where
+    recurse visitedRef = unifyRename (visited & Lens.contains visitedRef .~ True)
     merge ref a b =
-      renameMergeRefData
-      (unifyRename (visited & Lens.contains ref .~ True))
-      renames a b
-      <&> flip (,) ref
+      renameMergeRefData (recurse ref) renames a b <&> flip (,) ref
 
 unify :: Eq def => Ref -> Ref -> Infer def ()
-unify x y = void $ unifyRename mempty mempty x y
+unify x y = void $ unifyRename mempty mempty x (Just y)
 
 infer ::
   Scope -> Expr.Expression (LoadedDef def) a ->
