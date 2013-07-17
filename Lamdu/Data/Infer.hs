@@ -146,12 +146,12 @@ mergeRefData recurse renames
   <$> intersectScopes aScope bScope
   <*> mergeBodies recurse renames aScope aBody bScope bBody
   where
-    mkRefData scope body =
+    mkRefData intersectedScope mergedBody =
       RefData
-      { _rdScope = scope
+      { _rdScope = intersectedScope
       , _rdSubsts = aSubsts ++ bSubsts
       , _rdMRenameHistory = mappend aMRenameHistory bMRenameHistory
-      , _rdBody = body
+      , _rdBody = mergedBody
       }
 
 renameMergeRefData ::
@@ -278,7 +278,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     <&> (^. Expr.ePayload . Lens._1 . stvTV . tvVal)
     & ExprLens.bodyDef %~ (^. ldDef)
     & circumcizeApply
-    & RefData scope {- TODO: -}[] Nothing
+    & mkRefData
     & ExprRefs.fresh
   typeRef <-
     newBody <&> (^. Expr.ePayload . Lens._1 . stvTV) & makeTypeRef scope
@@ -286,5 +286,11 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     Expr.Expression newBody
     ((ScopedTypedValue (TypedValue valRef typeRef) scope), pl)
   where
+    mkRefData newBody = RefData
+      { _rdScope = scope
+      , _rdSubsts = []
+      , _rdMRenameHistory = Nothing
+      , _rdBody = newBody
+      }
     circumcizeApply Expr.BodyApply{} = ExprLens.bodyHole # ()
     circumcizeApply x = x
