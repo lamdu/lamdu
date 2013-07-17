@@ -230,14 +230,15 @@ makeTypeRef scope body =
   Expr.BodyLam (Expr.Lam Expr.KType _ _ _) -> typeIsType
   Expr.BodyRecord (Expr.Record Expr.KType _) -> typeIsType
   Expr.BodyLeaf Expr.LiteralInteger {} -> fresh $ ExprLens.bodyIntegerType # ()
-  -- Unknown
-  Expr.BodyApply {} -> unknownType
-  Expr.BodyGetField {} -> unknownType
-  Expr.BodyLeaf Expr.Hole -> unknownType
+  Expr.BodyLeaf Expr.Tag {} -> fresh $ ExprLens.bodyTagType # ()
   -- GetPars
   Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (LoadedDef _ ref))) -> pure ref
   Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) -> lift $ scopeLookup scope guid
-  Expr.BodyLeaf Expr.Tag {} -> fresh $ ExprLens.bodyTagType # ()
+  -- Unknown
+  Expr.BodyGetField {} -> unknownType -- TODO
+  Expr.BodyLeaf Expr.Hole -> unknownType
+  -- Other:
+  Expr.BodyApply {} -> unknownType
   Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) -> fresh $ makePiType paramGuid paramType result
   Expr.BodyRecord (Expr.Record Expr.KVal fields) -> fresh $ makeRecordType fields
   where
