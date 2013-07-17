@@ -31,9 +31,9 @@ simpleTests =
   [ testInfer "literal int" $ literalInteger 5
   , testInfer "simple apply" $
     holeWithInferredType (hole ~> hole) $$ hole
-  -- , testInfer "simple pi" $
-  --   holeWithInferredType set ~>
-  --   holeWithInferredType set
+  , testInfer "simple pi" $
+    holeWithInferredType set ~>
+    holeWithInferredType set
   ]
 
 -- applyIntToBoolFuncWithHole =
