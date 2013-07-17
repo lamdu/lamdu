@@ -16,7 +16,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 
-data Error = InfiniteExpression
+data Error = InfiniteExpression Ref
   deriving (Show)
 
 data Derefed def = Derefed
@@ -27,9 +27,10 @@ Lens.makeLenses ''Derefed
 
 deref :: Ref -> StateT (Context def) (Either Error) (Expr.Expression def ())
 deref =
-  decycle (lift (Left InfiniteExpression)) loop
+  decycle loop
   where
-    loop recurse ref = do
+    loop Nothing ref = lift . Left $ InfiniteExpression ref
+    loop (Just recurse) ref = do
       RefData _ body <- ExprRefs.read ref
       body
         & Lens.traverse %%~ recurse

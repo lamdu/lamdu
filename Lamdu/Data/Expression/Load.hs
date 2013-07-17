@@ -60,9 +60,11 @@ loadExpressionClosure ::
   MonadA m => ExprPropertyClosure (Tag m) ->
   T m (ExprIRef.ExpressionM m (ExprPropertyClosure (Tag m)))
 loadExpressionClosure =
-  decycleOn irefOfClosure (error "Recursive IRef structure") loop
+  decycleOn irefOfClosure loop
   where
-    loop recurse closure =
+    loop Nothing closure =
+      error $ "Recursive IRef structure: " ++ show (irefOfClosure closure)
+    loop (Just recurse) closure =
       ExprIRef.readExprBody iref
       >>= onBody
       <&> (`Expr.Expression` closure)
