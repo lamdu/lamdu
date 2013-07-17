@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Infer.Internal
   ( Scope(..), scopeMap
-  , RefData(..), rdScope, rdSubsts, rdMRenameHistory, rdBody
-  , Subst(..), sPiGuid, sArgVal, sDestRef, sCopiedNames
+  , RefData(..), rdScope, rdAppliedPiResults, rdMRenameHistory, rdBody
+  , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs, ctxRandomGen
   , LoadedDef(..), ldDef, ldType
@@ -28,23 +28,23 @@ scopeMap = Lens.from scope
 
 -- Represents a relationship between some subexpression of a Pi result
 -- type and the respective sub-expression of an apply type that it
--- should be copied(with substs) into
-data Subst = Subst
+-- should be copied with substs (or unified) into
+data AppliedPiResult = AppliedPiResult
   { -- Guid to subst
-    _sPiGuid :: Guid
+    _aprPiGuid :: Guid
   , -- Arg val to subst with
-    _sArgVal :: Ref
+    _aprArgVal :: Ref
   , -- Dest Ref
-    _sDestRef :: Ref
+    _aprDestRef :: Ref
   , -- For each src (pi result) guid, remember the dest (apply type)
     -- guid it was copied as
-    _sCopiedNames :: Map Guid Guid
+    _aprCopiedNames :: Map Guid Guid
   }
-Lens.makeLenses ''Subst
+Lens.makeLenses ''AppliedPiResult
 
 data RefData def = RefData
   { _rdScope :: Scope
-  , _rdSubsts :: [Subst]
+  , _rdAppliedPiResults :: [AppliedPiResult]
   , -- Rename history is only active(Just) if we're a subst dest
     -- (inside an apply type). Then we remember any rename that
     -- happened since the subst wrote us.

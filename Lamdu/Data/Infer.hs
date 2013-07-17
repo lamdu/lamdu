@@ -126,9 +126,9 @@ mergeBodies recurse renames xScope xBody yScope yBody =
       recurse (renames & Lens.at xGuid .~ Just yGuid) xRef (UnifyRef yRef)
     matchOther xRef yRef = recurse renames xRef (UnifyRef yRef)
 
-renameSubst :: Map Guid Guid -> Subst -> Subst
-renameSubst renames (Subst piGuid argVal destRef copiedNames) =
-  Subst
+renameAppliedPiResult :: Map Guid Guid -> AppliedPiResult -> AppliedPiResult
+renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames) =
+  AppliedPiResult
   (rename renames piGuid) argVal destRef
   (Map.mapKeys (rename renames) copiedNames)
 
@@ -140,7 +140,7 @@ renameRefData renames (RefData scope substs mRenameHistory body)
   | otherwise =
     RefData
     (scope & scopeMap %~ Map.mapKeys (rename renames))
-    (substs <&> renameSubst renames)
+    (substs <&> renameAppliedPiResult renames)
     -- Only track renames if mRenameHistory isn't Nothing
     (mRenameHistory & Lens._Just %~ Map.union renames)
     (body & ExprLens.bodyParameterRef %~ rename renames)
@@ -148,10 +148,10 @@ renameRefData renames (RefData scope substs mRenameHistory body)
 mergeRefData ::
   Eq def =>
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
-  Map Guid Guid -> RefData def -> RefData def -> Infer def ([Subst], RefData def)
+  Map Guid Guid -> RefData def -> RefData def -> Infer def ([AppliedPiResult], RefData def)
 mergeRefData recurse renames
-  (RefData aScope aSubsts aMRenameHistory aBody)
-  (RefData bScope bSubsts bMRenameHistory bBody) =
+  (RefData aScope aAppliedPiResults aMRenameHistory aBody)
+  (RefData bScope bAppliedPiResults bMRenameHistory bBody) =
   mkRefData
   <$> intersectScopes aScope bScope
   <*> mergeBodies recurse renames aScope aBody bScope bBody
@@ -160,14 +160,14 @@ mergeRefData recurse renames
       Lens.has ExprLens.bodyHole aBody /=
       Lens.has ExprLens.bodyHole bBody
     substsToExecute
-      | newInfoOnSelf = mergedSubsts
+      | newInfoOnSelf = mergedAppliedPiResults
       | otherwise = []
-    mergedSubsts = aSubsts ++ bSubsts
+    mergedAppliedPiResults = aAppliedPiResults ++ bAppliedPiResults
     mkRefData intersectedScope mergedBody =
       (,) substsToExecute $
       RefData
       { _rdScope = intersectedScope
-      , _rdSubsts = mergedSubsts
+      , _rdAppliedPiResults = mergedAppliedPiResults
       , _rdMRenameHistory = mappend aMRenameHistory bMRenameHistory
       , _rdBody = mergedBody
       }
@@ -175,7 +175,7 @@ mergeRefData recurse renames
 renameMergeRefData ::
   Eq def =>
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
-  Map Guid Guid -> RefData def -> RefData def -> Infer def ([Subst], RefData def)
+  Map Guid Guid -> RefData def -> RefData def -> Infer def ([AppliedPiResult], RefData def)
 renameMergeRefData recurse renames a b =
   mergeRefData recurse renames (renameRefData renames a) b
 
@@ -199,18 +199,18 @@ unifyRecurse visited renames rawNode phase = do
       return nodeRep
     UnifyRef other ->
       ExprRefs.unifyRefs merge nodeRep other
-      -- This bind will now execute the doSubsts action returned from
-      -- merge, which is now safe because unifyRefs completed.
+      -- This bind will now execute the substOrUnify's action returned
+      -- from merge, which is now safe because unifyRefs completed.
       >>= fromMaybe (return nodeRep)
   where
     recurse visitedRef = unifyRecurse (visited & Lens.contains visitedRef .~ True)
     merge rep a b =
       renameMergeRefData (recurse rep) renames a b
       <&> swap
-      -- Schedule the doSubsts to happen after the merge has been
-      -- written to the rep (return the doSubsts as an *action* that's
+      -- Schedule the substOrUnify's to happen after the merge has been
+      -- written to the rep (return the substOrUnify's as an *action* that's
       -- not yet executed):
-      <&> Lens._2 %~ (rep <$) . traverse_ (doSubst rep)
+      <&> Lens._2 %~ (rep <$) . traverse_ (substOrUnify rep)
 
 unify :: Eq def => Ref -> Ref -> Infer def Ref
 unify x y = unifyRecurse mempty mempty x (UnifyRef y)
@@ -249,7 +249,7 @@ makeRecordType fields =
 fresh :: Scope -> Expr.Body def Ref -> Infer def Ref
 fresh scope body = ExprRefs.fresh RefData
   { _rdScope = scope
-  , _rdSubsts = []
+  , _rdAppliedPiResults = []
   , _rdMRenameHistory = Nothing
   , _rdBody = body
   }
@@ -275,9 +275,9 @@ forcePiType piScope paramTypeRef destRef = do
     Nothing -> error "We just unified Lam KType into rep"
 
 -- Remap a Guid from piResult context to the Apply context
-remapSubstGuid :: Subst -> RefData def -> Guid -> Maybe Guid
+remapSubstGuid :: AppliedPiResult -> RefData def -> Guid -> Maybe Guid
 remapSubstGuid subst applyTypeData src =
-  case subst ^? sCopiedNames . Lens.ix src of
+  case subst ^? aprCopiedNames . Lens.ix src of
   -- If it's not a copied guid, it should be the same guid in both
   -- contexts
   Nothing -> Nothing
@@ -286,12 +286,12 @@ remapSubstGuid subst applyTypeData src =
     applyTypeData ^? rdMRenameHistory . Lens._Just . Lens.ix copiedAs
 
 copySubstGetPar ::
-  Eq def => Guid -> Ref -> Ref -> RefData defa -> Subst -> Infer def ()
+  Eq def => Guid -> Ref -> Ref -> RefData defa -> AppliedPiResult -> Infer def ()
 copySubstGetPar paramGuid piResultRef applyTypeRef applyTypeData subst =
   void $ unify applyTypeRef =<< ref
   where
     ref
-      | paramGuid == subst ^. sPiGuid = return $ subst ^. sArgVal
+      | paramGuid == subst ^. aprPiGuid = return $ subst ^. aprArgVal
       | otherwise =
         case remapSubstGuid subst applyTypeData paramGuid of
         Nothing -> return piResultRef
@@ -302,12 +302,12 @@ freshSubstDestHole :: Scope -> Infer def Ref
 freshSubstDestHole scope =
   ExprRefs.fresh RefData
   { _rdScope = scope
-  , _rdSubsts = []
+  , _rdAppliedPiResults = []
   , _rdMRenameHistory = Just Map.empty
   , _rdBody = ExprLens.bodyHole # ()
   }
 
-substParent :: Eq def => Scope -> Ref -> Subst -> Expr.Body def Ref -> Infer def ()
+substParent :: Eq def => Scope -> Ref -> AppliedPiResult -> Expr.Body def Ref -> Infer def ()
 substParent destScope destRef subst srcBody = do
   destBodyRef <-
     srcBody & Lens.traverse %%~ const (freshSubstDestHole destScope)
@@ -323,16 +323,16 @@ substParent destScope destRef subst srcBody = do
   where
     matchLamResult srcGuid destGuid srcChildRef destChildRef =
       subst
-      & sCopiedNames %~ Map.insert srcGuid destGuid
+      & aprCopiedNames %~ Map.insert srcGuid destGuid
       & recurse srcChildRef destChildRef
     matchOther srcChildRef destChildRef = recurse srcChildRef destChildRef subst
-    recurse srcChildRef destChildRef newSubst =
-      newSubst
-      & sDestRef .~ destChildRef
-      & doSubst srcChildRef
+    recurse srcChildRef destChildRef newAppliedPiResult =
+      newAppliedPiResult
+      & aprDestRef .~ destChildRef
+      & substOrUnify srcChildRef
 
-doSubst :: Eq def => Ref -> Subst -> Infer def ()
-doSubst piResultRef subst = do
+substOrUnify :: Eq def => Ref -> AppliedPiResult -> Infer def ()
+substOrUnify piResultRef subst = do
   piResultData <- ExprRefs.read piResultRef
   applyTypeData <- ExprRefs.read applyTypeRef
   let onParent = substParent (applyTypeData ^. rdScope) applyTypeRef subst
@@ -340,7 +340,7 @@ doSubst piResultRef subst = do
     Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef paramGuid)) ->
       copySubstGetPar paramGuid piResultRef applyTypeRef applyTypeData subst
     Expr.BodyLeaf Expr.Hole ->
-      piResultData & rdSubsts %~ (subst :) & ExprRefs.write piResultRef
+      piResultData & rdAppliedPiResults %~ (subst :) & ExprRefs.write piResultRef
     Expr.BodyLeaf {} -> void $ unify applyTypeRef piResultRef
     Expr.BodyLam lam ->
       lam
@@ -349,7 +349,7 @@ doSubst piResultRef subst = do
       >>= onParent
     body -> onParent body
   where
-    applyTypeRef = subst ^. sDestRef
+    applyTypeRef = subst ^. aprDestRef
 
 makeApplyType ::
   Eq def => Scope -> ScopedTypedValue -> ScopedTypedValue ->
@@ -361,11 +361,11 @@ makeApplyType applyScope func arg = do
     (arg ^. stvTV . tvType)
     (func ^. stvTV . tvType)
   applyTypeRef <- fresh applyScope $ ExprLens.bodyHole # ()
-  doSubst piResultRef Subst
-    { _sPiGuid = piGuid
-    , _sArgVal = arg ^. stvTV . tvVal
-    , _sDestRef = applyTypeRef
-    , _sCopiedNames = mempty
+  substOrUnify piResultRef AppliedPiResult
+    { _aprPiGuid = piGuid
+    , _aprArgVal = arg ^. stvTV . tvVal
+    , _aprDestRef = applyTypeRef
+    , _aprCopiedNames = mempty
     }
   return applyTypeRef
 
@@ -430,7 +430,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
   where
     mkRefData newBody = RefData
       { _rdScope = scope
-      , _rdSubsts = []
+      , _rdAppliedPiResults = []
       , _rdMRenameHistory = Nothing
       , _rdBody = newBody
       }

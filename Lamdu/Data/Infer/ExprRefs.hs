@@ -34,7 +34,7 @@ freshHole :: MonadA m => StateT (Context def) m Ref
 freshHole =
   fresh RefData
   { _rdScope = Scope Map.empty
-  , _rdSubsts = []
+  , _rdAppliedPiResults = []
   , _rdMRenameHistory = Nothing
   , _rdBody = ExprLens.bodyHole # ()
   }
@@ -113,7 +113,7 @@ exprIntoContext =
         _ -> body & Lens.traverse %%~ go scope
       fresh RefData
         { _rdScope = Scope scope
-        , _rdSubsts = []
+        , _rdAppliedPiResults = []
         , _rdBody = newBody
         , _rdMRenameHistory = Nothing
         }
