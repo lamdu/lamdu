@@ -335,8 +335,21 @@ substOrUnify :: Eq def => Ref -> AppliedPiResult -> Infer def ()
 substOrUnify piResultRef subst = do
   piResultData <- ExprRefs.read piResultRef
   applyTypeData <- ExprRefs.read applyTypeRef
-  let onParent = substParent (applyTypeData ^. rdScope) applyTypeRef subst
-  case piResultData ^. rdBody of
+  let
+    piResultScope = piResultData ^. rdScope
+    applyTypeScope = applyTypeData ^. rdScope
+    -- Only if the piResultScope has any variable available that's not
+    -- already available in the applyTypeScope could it be a GetVar.
+    notSubst =
+      Map.null $
+      Map.difference (piResultScope ^. scopeMap) (applyTypeScope ^. scopeMap)
+    onParent = substParent applyTypeScope applyTypeRef subst
+  if notSubst
+    then -- It can't be a GetVar, we can merge and pull information
+         -- from the apply:
+    void $ unify applyTypeRef piResultRef
+    else -- Do the subst:
+    case piResultData ^. rdBody of
     Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef paramGuid)) ->
       copySubstGetPar paramGuid piResultRef applyTypeRef applyTypeData subst
     Expr.BodyLeaf Expr.Hole ->
