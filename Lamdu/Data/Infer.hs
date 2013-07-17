@@ -125,8 +125,8 @@ mergeBodies recurse renames xScope xBody yScope yBody =
     matchOther xRef yRef = recurse renames xRef (UnifyRef yRef)
 
 renameSubst :: Map Guid Guid -> Subst -> Subst
-renameSubst renames (Subst piGuid argVal copiedNames) =
-  Subst (rename renames piGuid) argVal (Map.mapKeys (rename renames) copiedNames)
+renameSubst renames (Subst piGuid argVal destRef copiedNames) =
+  Subst (rename renames piGuid) argVal destRef (Map.mapKeys (rename renames) copiedNames)
 
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
 renameRefData renames (RefData scope substs mRenameHistory body)
@@ -304,11 +304,15 @@ substParent destScope destRef subst srcBody = do
     matchLamResult srcGuid destGuid srcChildRef destChildRef =
       subst
       & sCopiedNames %~ Map.insert srcGuid destGuid
-      & doSubst srcChildRef destChildRef
-    matchOther srcChildRef destChildRef = doSubst srcChildRef destChildRef subst
+      & recurse srcChildRef destChildRef
+    matchOther srcChildRef destChildRef = recurse srcChildRef destChildRef subst
+    recurse srcChildRef destChildRef newSubst =
+      newSubst
+      & sDestRef .~ destChildRef
+      & doSubst srcChildRef
 
-doSubst :: Eq def => Ref -> Ref -> Subst -> Infer def ()
-doSubst piResultRef applyTypeRef subst = do
+doSubst :: Eq def => Ref -> Subst -> Infer def ()
+doSubst piResultRef subst = do
   piResultData <- ExprRefs.read piResultRef
   applyTypeData <- ExprRefs.read applyTypeRef
   let onParent = substParent (applyTypeData ^. rdScope) applyTypeRef subst
@@ -324,6 +328,8 @@ doSubst piResultRef applyTypeRef subst = do
       <&> Expr.BodyLam
       >>= onParent
     body -> onParent body
+  where
+    applyTypeRef = subst ^. sDestRef
 
 makeApplyType ::
   Eq def => Scope -> ScopedTypedValue -> ScopedTypedValue ->
@@ -335,9 +341,10 @@ makeApplyType applyScope func arg = do
     (arg ^. stvTV . tvType)
     (func ^. stvTV . tvType)
   applyTypeRef <- fresh applyScope $ ExprLens.bodyHole # ()
-  doSubst piResultRef applyTypeRef Subst
+  doSubst piResultRef Subst
     { _sPiGuid = piGuid
     , _sArgVal = arg ^. stvTV . tvVal
+    , _sDestRef = applyTypeRef
     , _sCopiedNames = mempty
     }
   return applyTypeRef

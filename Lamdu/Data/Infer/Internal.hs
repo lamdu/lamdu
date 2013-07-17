@@ -2,7 +2,7 @@
 module Lamdu.Data.Infer.Internal
   ( Scope(..), scopeMap
   , RefData(..), rdScope, rdSubsts, rdMRenameHistory, rdBody
-  , Subst(..), sPiGuid, sArgVal, sCopiedNames
+  , Subst(..), sPiGuid, sArgVal, sDestRef, sCopiedNames
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs, ctxRandomGen
   , LoadedDef(..), ldDef, ldType
@@ -34,6 +34,8 @@ data Subst = Subst
     _sPiGuid :: Guid
   , -- Arg val to subst with
     _sArgVal :: Ref
+  , -- Dest Ref
+    _sDestRef :: Ref
   , -- For each src (pi result) guid, remember the dest (apply type)
     -- guid it was copied as
     _sCopiedNames :: Map Guid Guid
