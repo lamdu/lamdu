@@ -79,7 +79,7 @@ mergeBodies recurse renames a b = do
     Just mkBody -> mkBody
   where
     matchLamResult aGuid bGuid aRef bRef = do
-      recurse (renames & Lens.at bGuid .~ Just aGuid) aRef bRef
+      recurse (renames & Lens.at aGuid .~ Just bGuid) aRef bRef
     matchOther = recurse renames
     matchGetPar aGuid bGuid = aGuid == rename renames bGuid
 
@@ -98,7 +98,7 @@ renameMergeRefData ::
   (Map Guid Guid -> Ref -> Ref -> Infer def Ref) ->
   Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
 renameMergeRefData recurse renames a b =
-  mergeRefData recurse renames a (renameRefData renames b)
+  mergeRefData recurse renames (renameRefData renames a) b
 
 mergeRefData ::
   Eq def =>
