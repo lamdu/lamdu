@@ -107,29 +107,28 @@ scopeLookup scope guid =
   Just ref -> pure ref
 
 makePiType ::
-  Guid -> ScopedTypedValue -> ScopedTypedValue ->
+  Guid -> TypedValue -> TypedValue ->
   Expr.Body def Ref
 makePiType paramGuid paramType body =
   Expr.BodyLam $
   Expr.Lam Expr.KType paramGuid
-  (paramType ^. stvTV . tvVal)
+  (paramType ^. tvVal)
   -- We rely on the scope of the Lam KVal body being equal to the
   -- scope of the Lam KType body, because we use the same
   -- paramGuid. This means param guids cannot be unique.
-  (body ^. stvTV . tvType)
+  (body ^. tvType)
 
 makeRecordType ::
-  [(ScopedTypedValue, ScopedTypedValue)] ->
+  [(TypedValue, TypedValue)] ->
   Expr.Body def Ref
 makeRecordType fields =
   Expr.BodyRecord . Expr.Record Expr.KType $ onField <$> fields
   where
-    onField (tag, val) =
-      (tag ^. stvTV . tvVal, val ^. stvTV . tvType)
+    onField (tag, val) = (tag ^. tvVal, val ^. tvType)
 
 makeTypeRef ::
   Scope ->
-  Expr.Body (LoadedDef def) ScopedTypedValue ->
+  Expr.Body (LoadedDef def) TypedValue ->
   Infer def Ref
 makeTypeRef scope body =
   case body of
@@ -182,7 +181,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     & RefData scope
     & ExprRefs.fresh
   typeRef <-
-    newBody <&> (^. Expr.ePayload . Lens._1) & makeTypeRef scope
+    newBody <&> (^. Expr.ePayload . Lens._1 . stvTV) & makeTypeRef scope
   pure $
     Expr.Expression newBody
     ((ScopedTypedValue (TypedValue valRef typeRef) scope), pl)
