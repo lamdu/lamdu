@@ -27,11 +27,11 @@ deref =
   decycle loop
   where
     loop Nothing _ = error "Cycle at deref?!"
-    loop (Just recurse) ref = do
-      RefData _ body <- ExprRefs.read ref
-      body
-        & Lens.traverse %%~ recurse
-        <&> ExprUtil.pureExpression
+    loop (Just recurse) ref =
+      ExprRefs.read ref
+      <&> (^. rdBody)
+      >>= Lens.traverse %%~ recurse
+      <&> ExprUtil.pureExpression
 
 expr ::
   MonadA m =>

@@ -1,7 +1,8 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Infer.Internal
   ( Scope(..), scopeMap
-  , RefData(..), rdScope, rdBody
+  , RefData(..), rdScope, rdBody, rdSubsts
+  , SubstDest(..), sdPiGuid, sdArgVal, sdCopiedRefs
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs
   , LoadedDef(..), ldDef, ldType
@@ -24,8 +25,23 @@ Lens.makeIso ''Scope
 scopeMap :: Lens.Iso' Scope (Map Guid Ref)
 scopeMap = Lens.from scope
 
+-- Represents a relationship between some subexpression of a Pi result
+-- type and the respective sub-expression of an apply type that it
+-- should be copied(with substs) into
+data SubstDest = SubstDest
+  { -- Guid to subst
+    _sdPiGuid :: Guid
+  , -- Arg val to subst with
+    _sdArgVal :: Ref
+  -- For cycle detection in dest, remember which parents in src
+  -- context were copied into which parents in dest context:
+  , _sdCopiedRefs :: Map {-src-}Ref {-dest-}Ref
+  }
+Lens.makeLenses ''SubstDest
+
 data RefData def = RefData
   { _rdScope :: Scope
+  , _rdSubsts :: [SubstDest]
   , _rdBody :: Expr.Body def Ref
   }
 Lens.makeLenses ''RefData

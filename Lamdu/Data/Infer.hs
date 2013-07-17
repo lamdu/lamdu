@@ -15,6 +15,7 @@ import Control.Monad (void)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT)
 import Data.Foldable (traverse_)
+import Data.Function (on)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
@@ -74,14 +75,14 @@ newtype HoleConstraints = HoleConstraints
 -- You must apply this recursively
 applyHoleConstraints ::
   HoleConstraints -> RefData def -> Either (Error def) (RefData def)
-applyHoleConstraints (HoleConstraints unusableSet) (RefData scope body)
+applyHoleConstraints (HoleConstraints unusableSet) (RefData scope substs body)
   | Lens.anyOf ExprLens.bodyParameterRef (`Set.member` unusableSet) body =
     Left VarEscapesScope
   -- Expensive assertion
   | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Set.member` unusableSet) body =
     error "applyHoleConstraints: Shadowing detected"
   | otherwise =
-    return $ RefData newScope body
+    return $ RefData newScope substs body
   where
     unusableMap = Map.fromSet (const ()) unusableSet
     newScope = scope & scopeMap %~ (`Map.difference` unusableMap)
@@ -121,13 +122,14 @@ mergeBodies recurse renames x y =
     matchOther xRef yRef = recurse renames xRef (UnifyRef yRef)
 
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
-renameRefData renames (RefData scope body)
+renameRefData renames (RefData scope substs body)
   -- Expensive assertion
   | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Map.member` renames) body =
     error "Shadowing encountered, what to do?"
   | otherwise =
     RefData
     (scope & scopeMap %~ Map.mapKeys (rename renames))
+    {-TODO:-}substs
     (body & ExprLens.bodyParameterRef %~ rename renames)
 
 mergeRefData ::
@@ -135,9 +137,16 @@ mergeRefData ::
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
   Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
 mergeRefData recurse renames a b =
-  RefData
+  mkRefData
   <$> intersectScopes (a ^. rdScope) (b ^. rdScope)
   <*> mergeBodies recurse renames a b
+  where
+    mkRefData scope body =
+      RefData
+      { _rdScope = scope
+      , _rdSubsts = on (++) (^. rdSubsts) a b
+      , _rdBody = body
+      }
 
 renameMergeRefData ::
   Eq def =>
@@ -231,7 +240,11 @@ makeTypeRef scope body =
   Expr.BodyRecord (Expr.Record Expr.KVal fields) -> fresh $ makeRecordType fields
   where
     unknownType = fresh $ ExprLens.bodyHole # ()
-    fresh = ExprRefs.fresh . RefData scope
+    fresh typeBody = ExprRefs.fresh RefData
+      { _rdScope = scope
+      , _rdSubsts = []
+      , _rdBody = typeBody
+      }
     typeIsType = fresh $ ExprLens.bodyType # ()
 
 -- With hole apply vals and hole types
@@ -257,7 +270,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     <&> (^. Expr.ePayload . Lens._1 . stvTV . tvVal)
     & ExprLens.bodyDef %~ (^. ldDef)
     & circumcizeApply
-    & RefData scope
+    & RefData scope {- TODO: -}[]
     & ExprRefs.fresh
   typeRef <-
     newBody <&> (^. Expr.ePayload . Lens._1 . stvTV) & makeTypeRef scope

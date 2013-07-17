@@ -31,7 +31,12 @@ fresh dat = do
   return rep
 
 freshHole :: MonadA m => StateT (Context def) m Ref
-freshHole = fresh . RefData (Scope Map.empty) $ ExprLens.bodyHole # ()
+freshHole =
+  fresh RefData
+  { _rdScope = Scope Map.empty
+  , _rdSubsts = []
+  , _rdBody = ExprLens.bodyHole # ()
+  }
 
 find :: MonadA m => String -> Ref -> StateT (Context def) m Ref
 find msg = Lens.zoom (ctxExprRefs . exprRefsUF) . UF.lookup msg
@@ -107,5 +112,6 @@ exprIntoContext =
         _ -> body & Lens.traverse %%~ go scope
       fresh RefData
         { _rdScope = Scope scope
+        , _rdSubsts = []
         , _rdBody = newBody
         }
