@@ -15,7 +15,6 @@ import Control.Monad (void)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT)
 import Data.Foldable (traverse_)
-import Data.Function (on)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
@@ -97,27 +96,28 @@ mergeBodies ::
   Eq def =>
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
   Map Guid Guid ->
-  RefData def -> RefData def ->
+  Scope -> Expr.Body def Ref ->
+  Scope -> Expr.Body def Ref ->
   Infer def (Expr.Body def Ref)
-mergeBodies recurse renames x y =
-  case (x ^. rdBody, y ^. rdBody) of
-  (xBody, Expr.BodyLeaf Expr.Hole) ->
+mergeBodies recurse renames xScope xBody yScope yBody =
+  case (xBody, yBody) of
+  (_, Expr.BodyLeaf Expr.Hole) ->
     xBody <$ traverse_
-    (flip (recurse renames) (unifyHoleConstraints y x)) xBody
-  (Expr.BodyLeaf Expr.Hole, yBody) ->
+    (flip (recurse renames) (unifyHoleConstraints yScope xScope)) xBody
+  (Expr.BodyLeaf Expr.Hole, _) ->
     yBody <$ traverse_
-    (flip (recurse Map.empty) (unifyHoleConstraints x y)) yBody
-  (xBody, yBody) ->
+    (flip (recurse Map.empty) (unifyHoleConstraints xScope yScope)) yBody
+  _ ->
     case sequenceA <$> ExprUtil.matchBody matchLamResult matchOther (==) xBody yBody of
     Nothing -> lift . Left $ Mismatch xBody yBody
     Just mkBody -> mkBody
   where
-    unifyHoleConstraints hole other =
+    unifyHoleConstraints holeScope otherScope =
       UnifyHoleConstraints HoleConstraints
       { hcUnusableInHoleScope =
         Map.keysSet $ Map.difference
-        (other ^. rdScope . scopeMap)
-        (hole ^. rdScope . scopeMap)
+        (otherScope ^. scopeMap)
+        (holeScope ^. scopeMap)
       }
     matchLamResult xGuid yGuid xRef yRef =
       recurse (renames & Lens.at xGuid .~ Just yGuid) xRef (UnifyRef yRef)
@@ -139,16 +139,18 @@ mergeRefData ::
   Eq def =>
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
   Map Guid Guid -> RefData def -> RefData def -> Infer def (RefData def)
-mergeRefData recurse renames a b =
+mergeRefData recurse renames
+  (RefData aScope aSubsts aMRenameHistory aBody)
+  (RefData bScope bSubsts bMRenameHistory bBody) =
   mkRefData
-  <$> intersectScopes (a ^. rdScope) (b ^. rdScope)
-  <*> mergeBodies recurse renames a b
+  <$> intersectScopes aScope bScope
+  <*> mergeBodies recurse renames aScope aBody bScope bBody
   where
     mkRefData scope body =
       RefData
       { _rdScope = scope
-      , _rdSubsts = on (++) (^. rdSubsts) a b
-      , _rdMRenameHistory = Nothing
+      , _rdSubsts = aSubsts ++ bSubsts
+      , _rdMRenameHistory = mappend aMRenameHistory bMRenameHistory
       , _rdBody = body
       }
 
