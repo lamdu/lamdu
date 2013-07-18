@@ -46,8 +46,8 @@ data AppliedPiResult = AppliedPiResult
   , -- Dest Ref
     _aprDestRef :: Ref
   , -- For each src (pi result) guid, remember the dest (apply type)
-    -- guid it was copied as
-    _aprCopiedNames :: Map Guid Guid
+    -- guid it was copied as and the Ref of the dest param type
+    _aprCopiedNames :: Map Guid (Guid, Ref)
   }
 Lens.makeLenses ''AppliedPiResult
 

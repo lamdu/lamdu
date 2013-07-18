@@ -139,9 +139,6 @@ renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames
 renameRelations :: Map Guid Guid -> Set Relation -> Set Relation
 renameRelations _ = id
 
-renameScope :: (Guid -> Guid) -> Scope -> Scope
-renameScope f = scopeMap %~ Map.mapKeys f
-
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
 renameRefData renames (RefData scope substs renameHistory relations body)
   -- Expensive assertion
@@ -149,7 +146,7 @@ renameRefData renames (RefData scope substs renameHistory relations body)
     error "Shadowing encountered, what to do?"
   | otherwise =
     RefData
-    (scope & renameScope (rename renames))
+    (scope & scopeMap %~ Map.mapKeys (rename renames))
     (substs <&> renameAppliedPiResult renames)
     (renameHistory & _RenameHistory %~ Map.union renames)
     (relations & renameRelations renames)
@@ -258,8 +255,8 @@ fresh scope body = ExprRefs.fresh $ defaultRefData scope body
 newRandom :: Random r => Infer def r
 newRandom = Lens.zoom ctxRandomGen $ state random
 
-forceLam :: Eq def => Expr.Kind -> Ref -> Scope -> Infer def (Guid, Ref, Ref)
-forceLam k destRef lamScope = do
+forceLam :: Eq def => Expr.Kind -> Scope -> Ref -> Infer def (Guid, Ref, Ref)
+forceLam k lamScope destRef = do
   newGuid <- newRandom
   newParamTypeRef <- fresh lamScope $ ExprLens.bodyHole # ()
   let lamResultScope = lamScope & scopeMap %~ Map.insert newGuid newParamTypeRef
@@ -276,41 +273,45 @@ forceLam k destRef lamScope = do
     Nothing -> error "We just unified Lam into rep"
 
 -- Remap a Guid from piResult context to the Apply context
-remapSubstGuid :: AppliedPiResult -> RenameHistory -> Guid -> Guid
-remapSubstGuid subst destRenameHistory src =
-  case subst ^? aprCopiedNames . Lens.ix src of
-  -- If it's not a copied guid, it should be the same guid in both
+remapSubstGuid :: AppliedPiResult -> RenameHistory -> Guid -> Maybe (Guid, Ref)
+remapSubstGuid apr destRenameHistory src =
+  case apr ^? aprCopiedNames . Lens.ix src of
+  -- If it's not a copied guid, it should be the same guid/ref in both
   -- contexts
-  Nothing -> src
-  Just copiedAs ->
-    fromMaybe copiedAs $
-    destRenameHistory ^? _RenameHistory . Lens.ix copiedAs
+  Nothing -> Nothing
+  Just (dest, destRef) ->
+    Just
+    ( fromMaybe dest $
+      destRenameHistory ^? _RenameHistory . Lens.ix dest
+    , destRef
+    )
 
-injectRenameHistory :: RenameHistory -> Map Guid Guid -> Map Guid Guid
+injectRenameHistory :: RenameHistory -> Map Guid (Guid, Ref) -> Map Guid (Guid, Ref)
 injectRenameHistory Untracked = id
 injectRenameHistory (RenameHistory renames) =
   -- Only the copied names (in our argument map) need to be fixed,
   -- others are in shared scope so need no fixing:
-  fmap (rename renames)
+  Lens.mapped . Lens._1 %~ rename renames
 
 -- TODO: This should also substLeafs, and it should also subst getvars that aren't subst
 substNode :: Eq def => Expr.Body def Ref -> AppliedPiResult -> Infer def ()
-substNode srcBody apr = do
+substNode srcBody rawApr = do
   destData <- ExprRefs.read destRef
   let
-    newApr =
-      apr
+    apr =
+      rawApr
       & aprCopiedNames %~ injectRenameHistory (destData ^. rdRenameHistory)
-    matchLamResult srcGuid destGuid srcChildRef destChildRef =
-      newApr
-      & aprCopiedNames %~ Map.insert srcGuid destGuid
-      & recurse srcChildRef destChildRef
-      & (,) srcGuid
+    renameCopied = rename (fst <$> apr ^. aprCopiedNames)
+    matchLamResult srcGuid destGuid srcChildRef destChildRef
+      | renameCopied srcGuid == destGuid =
+        apr
+        & recurse srcChildRef destChildRef
+        & (,) srcGuid
+      | otherwise = error "Src Guid doesn't match dest guid?!"
     matchOther srcChildRef destChildRef =
-      recurse srcChildRef destChildRef newApr
+      recurse srcChildRef destChildRef apr
     -- Expensive assertion
-    verifyGetParGuids srcGuid destGuid =
-      rename (newApr ^. aprCopiedNames) srcGuid == destGuid
+    verifyGetParGuids srcGuid destGuid = renameCopied srcGuid == destGuid
   matchRes <-
     sequenceA $ sequenceA_ <$>
     ExprUtil.matchBody matchLamResult matchOther
@@ -318,7 +319,7 @@ substNode srcBody apr = do
   when (Lens.has Lens._Nothing matchRes) $
     error "We just successfully unified src and dest bodies!"
   where
-    destRef = apr ^. aprDestRef
+    destRef = rawApr ^. aprDestRef
     recurse srcChildRef destChildRef childApr =
       substOrUnify srcChildRef $
       childApr & aprDestRef .~ destChildRef
@@ -335,8 +336,11 @@ substOrUnify srcRef apr = do
     -- here instead of both places but we're not sure this is correct
     -- because there's a unify into the apply side between here and
     -- there.
-    remapGuid = remapSubstGuid apr (destData ^. rdRenameHistory)
-    renamedSrcScope = renameScope remapGuid srcScope
+    remapGuidRef = remapSubstGuid apr (destData ^. rdRenameHistory)
+    remapGuid guid = maybe guid fst $ remapGuidRef guid
+    remapPair (guid, ref) = fromMaybe (guid, ref) $ remapGuidRef guid
+    renamedSrcScope =
+      srcScope & scopeMap %~ Map.fromList . map remapPair . Map.toList
     -- Only if the srcScope has any variable available that's not
     -- already available in the destScope could it be a GetVar.
     isUnify =
@@ -354,9 +358,10 @@ substOrUnify srcRef apr = do
       srcData & rdAppliedPiResults %~ (apr :) & ExprRefs.write srcRef
       -- We injectRenameHistory of our ancestors into the apr
       destData & rdRenameHistory <>~ RenameHistory mempty & ExprRefs.write destRef
-    srcBody@(Expr.BodyLam (Expr.Lam k _ _ _)) -> do
-      void $ forceLam k destRef renamedSrcScope
-      substNode srcBody apr
+    srcBody@(Expr.BodyLam (Expr.Lam k srcGuid _ _)) -> do
+      (destGuid, destParamType, _) <- forceLam k renamedSrcScope destRef
+      substNode srcBody
+        (apr & aprCopiedNames %~ Map.insert srcGuid (destGuid, destParamType))
     srcBody -> do
       destBodyRef <-
         srcBody
@@ -374,8 +379,8 @@ makeApplyType ::
 makeApplyType applyScope func arg = do
   (piGuid, piParamType, piResultRef) <-
     forceLam Expr.KType
-    (func ^. stvTV . tvType)
     (func ^. stvScope)
+    (func ^. stvTV . tvType)
   void $ unify (arg ^. stvTV . tvType) piParamType
   applyTypeRef <- fresh applyScope $ ExprLens.bodyHole # ()
   substOrUnify piResultRef AppliedPiResult
