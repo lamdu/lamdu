@@ -299,6 +299,7 @@ freshSubstDestHole scope =
   & rdRenameHistory .~ RenameHistory Map.empty
   & ExprRefs.fresh
 
+-- TODO: This should also substLeafs, and it should also subst getvars that aren't subst
 substParent :: Eq def => Scope -> Ref -> AppliedPiResult -> Expr.Body def Ref -> Infer def ()
 substParent destScope destRef subst srcBody = do
   destBodyRef <-
