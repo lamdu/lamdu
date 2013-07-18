@@ -3,7 +3,7 @@ module Lamdu.Data.Infer.Internal
   ( Scope(..), emptyScope, scopeMap
   , RenameHistory(..), _Untracked, _RenameHistory
   -- Relations:
-  , RelGetField(..)
+  , GetFieldRefs(..)
   , Relation(..)
 
   , RefData(..), rdScope, rdAppliedPiResults, rdRenameHistory, rdRelations, rdBody
@@ -64,16 +64,16 @@ instance Monoid RenameHistory where
   mappend (RenameHistory m1) (RenameHistory m2) =
     RenameHistory $ mappend m1 m2
 
-data RelGetField = RelGetField
-  { _rgfTag :: Ref
-  , _rgfType :: Ref
-  , _rgfRecordType :: Ref
+data GetFieldRefs = GetFieldRefs
+  { _gfrTag :: Ref
+  , _gfrType :: Ref
+  , _gfrRecordType :: Ref
   } deriving (Eq, Ord)
 
 data Relation
   = -- Sits in: Record type of get field, get field type, get field
     -- tag, record tags:
-    RelationGetField RelGetField
+    RelationGetField GetFieldRefs
   | RelationIsTag -- Hole | Tag, nothing else
   deriving (Eq, Ord)
 
