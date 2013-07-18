@@ -2,7 +2,10 @@
 module Lamdu.Data.Infer.Internal
   ( Scope(..), scopeMap
   , RenameHistory(..), _Untracked, _RenameHistory
-  , RefData(..), rdScope, rdAppliedPiResults, rdRenameHistory, rdBody
+  , PosGetFieldRecord(..)
+  , Position(..)
+  , RefData(..), rdScope, rdAppliedPiResults, rdRenameHistory, rdPositions, rdBody
+    , defaultRefData
   , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs, ctxRandomGen
@@ -12,6 +15,7 @@ module Lamdu.Data.Infer.Internal
   ) where
 
 import Data.Map (Map)
+import Data.Set (Set)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.UnionFind (Ref, RefMap)
@@ -56,13 +60,37 @@ instance Monoid RenameHistory where
   mappend (RenameHistory m1) (RenameHistory m2) =
     RenameHistory $ mappend m1 m2
 
+data MustContainTag = MustContainTag
+  { _mctTagGuid :: Guid
+  , _mctTagType :: Ref
+  } deriving (Eq, Ord)
+
+data PosGetFieldRecord = PosGetFieldRecord
+  { _pgfrMMustContainTag :: Maybe MustContainTag
+  } deriving (Eq, Ord)
+
+data Position
+  = PositionGetFieldRecord PosGetFieldRecord
+  | PositionTag
+  deriving (Eq, Ord)
+
 data RefData def = RefData
   { _rdScope :: Scope
   , _rdAppliedPiResults :: [AppliedPiResult]
   , _rdRenameHistory :: RenameHistory
+  , _rdPositions :: Set Position
   , _rdBody :: Expr.Body def Ref
   }
 Lens.makeLenses ''RefData
+
+defaultRefData :: Scope -> Expr.Body def Ref -> RefData def
+defaultRefData scop body = RefData
+  { _rdScope = scop
+  , _rdAppliedPiResults = []
+  , _rdRenameHistory = mempty
+  , _rdPositions = mempty
+  , _rdBody = body
+  }
 
 data ExprRefs def = ExprRefs
   { _exprRefsUF :: UF.UnionFind

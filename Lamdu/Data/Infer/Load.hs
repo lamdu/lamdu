@@ -12,6 +12,7 @@ import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
 import Data.Maybe.Utils (unsafeUnjust)
+import Data.Monoid (Monoid(..))
 import Data.Traversable (sequenceA)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
@@ -44,7 +45,7 @@ loadDefTypeIntoRef (Loader loader) def = do
 newDefinition ::
   (MonadA m, Ord def) => def -> StateT (Context def) m Ref
 newDefinition def = do
-  ref <- ExprRefs.freshHole
+  ref <- ExprRefs.fresh . defaultRefData mempty $ ExprLens.bodyHole # ()
   ctxDefRefs . Lens.at def %= setRef ref
   return ref
   where

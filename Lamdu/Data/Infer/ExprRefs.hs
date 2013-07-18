@@ -1,8 +1,8 @@
 module Lamdu.Data.Infer.ExprRefs
-  ( fresh, freshHole, find
+  ( fresh, find
   , readRep, writeRep
   , popRep
-  , read, write
+  , read, write, modify
   , union, equiv
   , exprIntoContext
   , unifyRefs
@@ -19,25 +19,14 @@ import Lamdu.Data.Infer.Internal
 import Prelude hiding (read)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
-import qualified Data.Map as Map
 import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.Lens as ExprLens
 
 fresh :: MonadA m => RefData def -> StateT (Context def) m Ref
 fresh dat = do
   rep <- Lens.zoom (ctxExprRefs . exprRefsUF) UF.freshRef
   writeRep rep dat
   return rep
-
-freshHole :: MonadA m => StateT (Context def) m Ref
-freshHole =
-  fresh RefData
-  { _rdScope = Scope Map.empty
-  , _rdAppliedPiResults = []
-  , _rdRenameHistory = Untracked
-  , _rdBody = ExprLens.bodyHole # ()
-  }
 
 find :: MonadA m => String -> Ref -> StateT (Context def) m Ref
 find msg = Lens.zoom (ctxExprRefs . exprRefsUF) . UF.lookup msg
@@ -67,6 +56,11 @@ write ::
   MonadA m => Ref -> RefData def -> StateT (Context def) m ()
 write ref dat =
   (`writeRep` dat) =<< find "write" ref
+
+modify ::
+  MonadA m => Ref -> (RefData def -> RefData def) ->
+  StateT (Context def) m ()
+modify ref f = write ref . f =<< read ref
 
 union :: MonadA m => Ref -> Ref -> StateT (Context def) m Ref
 union x y = Lens.zoom (ctxExprRefs . exprRefsUF) $ UF.union x y
@@ -111,9 +105,4 @@ exprIntoContext =
         Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid))
           | Lens.has Lens._Nothing (scope ^. Lens.at guid) -> error "GetVar out of scope"
         _ -> body & Lens.traverse %%~ go scope
-      fresh RefData
-        { _rdScope = Scope scope
-        , _rdAppliedPiResults = []
-        , _rdBody = newBody
-        , _rdRenameHistory = Untracked
-        }
+      fresh $ defaultRefData (Scope scope) newBody

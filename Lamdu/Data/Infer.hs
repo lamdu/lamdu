@@ -78,17 +78,17 @@ newtype HoleConstraints = HoleConstraints
 -- You must apply this recursively
 applyHoleConstraints ::
   HoleConstraints -> RefData def -> Either (Error def) (RefData def)
-applyHoleConstraints (HoleConstraints unusableSet) (RefData scope substs mRenameHistory body)
+applyHoleConstraints (HoleConstraints unusableSet) refData
   | Lens.anyOf ExprLens.bodyParameterRef (`Set.member` unusableSet) body =
     Left VarEscapesScope
   -- Expensive assertion
   | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Set.member` unusableSet) body =
     error "applyHoleConstraints: Shadowing detected"
   | otherwise =
-    return $ RefData newScope substs mRenameHistory body
+    return $ refData & rdScope . scopeMap %~ (`Map.difference` unusableMap)
   where
+    body = refData ^. rdBody
     unusableMap = Map.fromSet (const ()) unusableSet
-    newScope = scope & scopeMap %~ (`Map.difference` unusableMap)
 
 data UnifyPhase
   = UnifyHoleConstraints HoleConstraints
@@ -132,8 +132,12 @@ renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames
   (rename renames piGuid) argVal destRef
   (Map.mapKeys (rename renames) copiedNames)
 
+-- No names in Position (yet?)
+renamePositions :: Map Guid Guid -> Set Position -> Set Position
+renamePositions _ = id
+
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
-renameRefData renames (RefData scope substs renameHistory body)
+renameRefData renames (RefData scope substs renameHistory positions body)
   -- Expensive assertion
   | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Map.member` renames) body =
     error "Shadowing encountered, what to do?"
@@ -142,6 +146,7 @@ renameRefData renames (RefData scope substs renameHistory body)
     (scope & scopeMap %~ Map.mapKeys (rename renames))
     (substs <&> renameAppliedPiResult renames)
     (renameHistory & _RenameHistory %~ Map.union renames)
+    (positions & renamePositions renames)
     (body & ExprLens.bodyParameterRef %~ rename renames)
 
 mergeRefData ::
@@ -149,8 +154,8 @@ mergeRefData ::
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
   Map Guid Guid -> RefData def -> RefData def -> Infer def ([AppliedPiResult], RefData def)
 mergeRefData recurse renames
-  (RefData aScope aAppliedPiResults aMRenameHistory aBody)
-  (RefData bScope bAppliedPiResults bMRenameHistory bBody) =
+  (RefData aScope aAppliedPiResults aMRenameHistory aPositions aBody)
+  (RefData bScope bAppliedPiResults bMRenameHistory bPositions bBody) =
   mkRefData
   <$> intersectScopes aScope bScope
   <*> mergeBodies recurse renames aScope aBody bScope bBody
@@ -168,6 +173,7 @@ mergeRefData recurse renames
       { _rdScope = intersectedScope
       , _rdAppliedPiResults = mergedAppliedPiResults
       , _rdRenameHistory = mappend aMRenameHistory bMRenameHistory
+      , _rdPositions = mappend aPositions bPositions
       , _rdBody = mergedBody
       }
 
@@ -238,12 +244,7 @@ makePiTypeOfLam paramGuid paramType body =
   (body ^. tvType)
 
 fresh :: Scope -> Expr.Body def Ref -> Infer def Ref
-fresh scope body = ExprRefs.fresh RefData
-  { _rdScope = scope
-  , _rdAppliedPiResults = []
-  , _rdRenameHistory = Untracked
-  , _rdBody = body
-  }
+fresh scope body = ExprRefs.fresh $ defaultRefData scope body
 
 newRandom :: Random r => Infer def r
 newRandom = Lens.zoom ctxRandomGen $ state random
@@ -291,12 +292,9 @@ copySubstGetPar paramGuid piResultRef applyTypeRef applyTypeData subst =
 
 freshSubstDestHole :: Scope -> Infer def Ref
 freshSubstDestHole scope =
-  ExprRefs.fresh RefData
-  { _rdScope = scope
-  , _rdAppliedPiResults = []
-  , _rdRenameHistory = RenameHistory Map.empty
-  , _rdBody = ExprLens.bodyHole # ()
-  }
+  defaultRefData scope (ExprLens.bodyHole # ())
+  & rdRenameHistory .~ RenameHistory Map.empty
+  & ExprRefs.fresh
 
 substParent :: Eq def => Scope -> Ref -> AppliedPiResult -> Expr.Body def Ref -> Infer def ()
 substParent destScope destRef subst srcBody = do
@@ -389,10 +387,13 @@ makeLambdaType scope paramGuid paramType result = do
 makeRecordType :: Eq def => Scope -> [(TypedValue, TypedValue)] -> Infer def Ref
 makeRecordType scope fields = do
   tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
-  fields & traverse_ . Lens._1 . tvType %%~ unify tagTypeRef
+  fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvType) (unify tagTypeRef)
+  fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvVal) setTagPos
   fresh scope $
     Expr.BodyRecord . Expr.Record Expr.KType $ onField <$> fields
   where
+    setTagPos ref =
+      ExprRefs.modify ref $ rdPositions <>~ Set.singleton PositionTag
     onField (tag, val) = (tag ^. tvVal, val ^. tvType)
 
 makePiType :: Eq def => Scope -> TypedValue -> TypedValue -> Infer def Ref
@@ -454,7 +455,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     & circumcizeApply
     <&> (^. Expr.ePayload . Lens._1 . stvTV . tvVal)
     & ExprLens.bodyDef %~ (^. ldDef)
-    & mkRefData
+    & defaultRefData scope
     & ExprRefs.fresh
   typeRef <-
     newBody <&> (^. Expr.ePayload . Lens._1) & makeTypeRef scope
@@ -462,12 +463,6 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     Expr.Expression newBody
     ((ScopedTypedValue (TypedValue valRef typeRef) scope), pl)
   where
-    mkRefData newBody = RefData
-      { _rdScope = scope
-      , _rdAppliedPiResults = []
-      , _rdRenameHistory = Untracked
-      , _rdBody = newBody
-      }
     -- Except of apply of type constructors:
     circumcizeApply x
       | Lens.nullOf Expr._BodyApply x = x
