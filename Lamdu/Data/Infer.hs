@@ -133,12 +133,12 @@ renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames
   (rename renames piGuid) argVal destRef
   (Map.mapKeys (rename renames) copiedNames)
 
--- No names in Position (yet?)
-renamePositions :: Map Guid Guid -> Set Position -> Set Position
-renamePositions _ = id
+-- No names in Relation (yet?)
+renameRelations :: Map Guid Guid -> Set Relation -> Set Relation
+renameRelations _ = id
 
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
-renameRefData renames (RefData scope substs renameHistory positions body)
+renameRefData renames (RefData scope substs renameHistory relations body)
   -- Expensive assertion
   | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Map.member` renames) body =
     error "Shadowing encountered, what to do?"
@@ -147,7 +147,7 @@ renameRefData renames (RefData scope substs renameHistory positions body)
     (scope & scopeMap %~ Map.mapKeys (rename renames))
     (substs <&> renameAppliedPiResult renames)
     (renameHistory & _RenameHistory %~ Map.union renames)
-    (positions & renamePositions renames)
+    (relations & renameRelations renames)
     (body & ExprLens.bodyParameterRef %~ rename renames)
 
 mergeRefData ::
@@ -155,8 +155,8 @@ mergeRefData ::
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
   Map Guid Guid -> RefData def -> RefData def -> Infer def ([AppliedPiResult], RefData def)
 mergeRefData recurse renames
-  (RefData aScope aAppliedPiResults aMRenameHistory aPositions aBody)
-  (RefData bScope bAppliedPiResults bMRenameHistory bPositions bBody) =
+  (RefData aScope aAppliedPiResults aMRenameHistory aRelations aBody)
+  (RefData bScope bAppliedPiResults bMRenameHistory bRelations bBody) =
   mkRefData
   <$> intersectScopes aScope bScope
   <*> mergeBodies recurse renames aScope aBody bScope bBody
@@ -174,7 +174,7 @@ mergeRefData recurse renames
       { _rdScope = intersectedScope
       , _rdAppliedPiResults = mergedAppliedPiResults
       , _rdRenameHistory = mappend aMRenameHistory bMRenameHistory
-      , _rdPositions = mappend aPositions bPositions
+      , _rdRelations = mappend aRelations bRelations
       , _rdBody = mergedBody
       }
 
@@ -394,7 +394,7 @@ makeRecordType scope fields = do
     Expr.BodyRecord . Expr.Record Expr.KType $ onField <$> fields
   where
     setTagPos ref =
-      ExprRefs.modify ref $ rdPositions <>~ Set.singleton PositionTag
+      ExprRefs.modify ref $ rdRelations <>~ Set.singleton RelationIsTag
     onField (tag, val) = (tag ^. tvVal, val ^. tvType)
 
 makePiType :: Eq def => Scope -> TypedValue -> TypedValue -> Infer def Ref

@@ -2,9 +2,11 @@
 module Lamdu.Data.Infer.Internal
   ( Scope(..), emptyScope, scopeMap
   , RenameHistory(..), _Untracked, _RenameHistory
-  , PosGetFieldRecord(..)
-  , Position(..)
-  , RefData(..), rdScope, rdAppliedPiResults, rdRenameHistory, rdPositions, rdBody
+  -- Relations:
+  , RelGetField(..)
+  , Relation(..)
+
+  , RefData(..), rdScope, rdAppliedPiResults, rdRenameHistory, rdRelations, rdBody
     , defaultRefData
   , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames
   , ExprRefs(..), exprRefsUF, exprRefsData
@@ -62,25 +64,24 @@ instance Monoid RenameHistory where
   mappend (RenameHistory m1) (RenameHistory m2) =
     RenameHistory $ mappend m1 m2
 
-data MustContainTag = MustContainTag
-  { _mctTagGuid :: Guid
-  , _mctTagType :: Ref
+data RelGetField = RelGetField
+  { _rgfTag :: Ref
+  , _rgfType :: Ref
+  , _rgfRecordType :: Ref
   } deriving (Eq, Ord)
 
-data PosGetFieldRecord = PosGetFieldRecord
-  { _pgfrMMustContainTag :: Maybe MustContainTag
-  } deriving (Eq, Ord)
-
-data Position
-  = PositionGetFieldRecord PosGetFieldRecord
-  | PositionTag
+data Relation
+  = -- Sits in: Record type of get field, get field type, get field
+    -- tag, record tags:
+    RelationGetField RelGetField
+  | RelationIsTag -- Hole | Tag, nothing else
   deriving (Eq, Ord)
 
 data RefData def = RefData
   { _rdScope :: Scope
-  , _rdAppliedPiResults :: [AppliedPiResult]
+  , _rdAppliedPiResults :: [AppliedPiResult] -- TODO: Into relations
   , _rdRenameHistory :: RenameHistory
-  , _rdPositions :: Set Position
+  , _rdRelations :: Set Relation
   , _rdBody :: Expr.Body def Ref
   }
 Lens.makeLenses ''RefData
@@ -90,7 +91,7 @@ defaultRefData scop body = RefData
   { _rdScope = scop
   , _rdAppliedPiResults = []
   , _rdRenameHistory = mempty
-  , _rdPositions = mempty
+  , _rdRelations = mempty
   , _rdBody = body
   }
 
