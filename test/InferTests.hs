@@ -36,9 +36,9 @@ simpleTests =
     holeWithInferredType set
   ]
 
--- applyIntToBoolFuncWithHole =
---   testInfer "apply" $
---   getDef "IntToBoolFunc" $$ holeWithInferredType integerType
+applyIntToBoolFuncWithHole =
+  testInfer "apply" $
+  getDef "IntToBoolFunc" $$ holeWithInferredType integerType
 
 -- inferPart =
 --   testInfer "foo (xs:List ?) = 5 : xs" $
@@ -48,13 +48,13 @@ simpleTests =
 --   where
 --     listInts = listOf (asHole integerType)
 
--- applyOnVar =
---   testInfer "apply on var" $
---   lambda "x" (holeWithInferredType set) $ \x ->
---   getDef "IntToBoolFunc" $$
---   (holeWithInferredType (hole ~> integerType) $$ x)
+applyOnVar =
+  testInfer "apply on var" $
+  lambda "x" (holeWithInferredType set) $ \x ->
+  getDef "IntToBoolFunc" $$
+  (holeWithInferredType (hole ~> integerType) $$ x)
 
--- idTest = testInfer "id test" $ getDef "id" $$ integerType
+idTest = testInfer "id test" $ getDef "id" $$ integerType
 
 -- inferFromOneArgToOther =
 --   testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}" $
@@ -83,9 +83,9 @@ simpleTests =
 --   lambda "" (asHole integerType) $ \_ ->
 --   recurse (integerType ~> hole) $$ literalInteger 5
 
--- argTypeGoesToPi =
---   testInfer "arg type goes to pi" $
---   holeWithInferredType (integerType ~> hole) $$ literalInteger 5
+argTypeGoesToPi =
+  testInfer "arg type goes to pi" $
+  holeWithInferredType (integerType ~> hole) $$ literalInteger 5
 
 -- idOnAnInt =
 --   testInfer "id on an int" $
@@ -289,15 +289,15 @@ simpleTests =
 --       HUnit.assertFailure $ "InfiniteExpression error expected, but got missing def type error for def: " ++ show def
 --     expr = lambda "x" hole . const $ recurse hole
 
--- mapIdTest =
---   testInfer "map id (5:_)" $
---   getDef "map" $$ asHole integerType $$ asHole integerType $$:
---   [ getDef ":" $$ asHole integerType $$:
---     [ literalInteger 5
---     , holeWithInferredType $ listOf integerType
---     ]
---   , getDef "id" $$ asHole integerType
---   ]
+mapIdTest =
+  testInfer "map id (5:_)" $
+  getDef "map" $$ asHole integerType $$ asHole integerType $$:
+  [ getDef ":" $$ asHole integerType $$:
+    [ literalInteger 5
+    , holeWithInferredType $ listOf integerType
+    ]
+  , getDef "id" $$ asHole integerType
+  ]
 
 -- joinMaybe =
 --   testInferAllowFail "\\x:_ -> caseMaybe x (empty=Nothing, just=\\x->x)" $
@@ -313,12 +313,12 @@ simpleTests =
 
 hunitTests =
   simpleTests
-  -- ++
-  -- [ mapIdTest
-  -- , applyIntToBoolFuncWithHole
-  -- , applyOnVar
-  -- , idTest
-  -- , argTypeGoesToPi
+  ++
+  [ mapIdTest
+  , applyIntToBoolFuncWithHole
+  , applyOnVar
+  , idTest
+  , argTypeGoesToPi
   -- , idOnAnInt
   -- , idOnARecord
   -- , idOnHole
@@ -336,7 +336,7 @@ hunitTests =
   -- , infiniteTypeTests
   -- , resumptionTests
   -- , joinMaybe
-  -- ]
+  ]
 
 -- inferPreservesShapeProp :: PureExprDefI t -> Property
 -- inferPreservesShapeProp expr =
