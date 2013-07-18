@@ -193,9 +193,10 @@ infixl 3 $$:
       _ -> seeOther
     applyVal =
       handleLam funcVal KVal pureHole $
-      if ExprUtil.isTypeConstructorType applyType
-      then bodyToPureExpr application
-      else pureHole
+      -- if ExprUtil.isTypeConstructorType applyType
+      -- then bodyToPureExpr application
+      -- else
+        pureHole
     applyType = handleLam funcType KType piErr piErr
     piErr = error "Apply of non-Pi type!"
 
