@@ -8,7 +8,7 @@ module Lamdu.Data.Infer.Internal
 
   , RefData(..), rdScope, rdAppliedPiResults, rdRenameHistory, rdRelations, rdBody
     , defaultRefData
-  , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames, aprCopiedRefs
+  , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs, ctxRandomGen
   , LoadedDef(..), ldDef, ldType
@@ -48,8 +48,6 @@ data AppliedPiResult = AppliedPiResult
   , -- For each src (pi result) guid, remember the dest (apply type)
     -- guid it was copied as
     _aprCopiedNames :: Map Guid Guid
-  , -- For scope Ref translations:
-    _aprCopiedRefs :: Map Ref Ref
   }
 Lens.makeLenses ''AppliedPiResult
 

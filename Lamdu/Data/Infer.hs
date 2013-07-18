@@ -130,11 +130,10 @@ mergeBodies recurse renames xScope xBody yScope yBody =
     matchOther xRef yRef = recurse renames xRef (UnifyRef yRef)
 
 renameAppliedPiResult :: Map Guid Guid -> AppliedPiResult -> AppliedPiResult
-renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames copiedRefs) =
+renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames) =
   AppliedPiResult
   (rename renames piGuid) argVal destRef
   (Map.mapKeys (rename renames) copiedNames)
-  copiedRefs
 
 -- No names in Relation (yet?)
 renameRelations :: Map Guid Guid -> Set Relation -> Set Relation
@@ -295,14 +294,13 @@ injectRenameHistory (RenameHistory renames) =
   fmap (rename renames)
 
 -- TODO: This should also substLeafs, and it should also subst getvars that aren't subst
-substNode :: Eq def => Ref -> Expr.Body def Ref -> AppliedPiResult -> Infer def ()
-substNode srcRef srcBody apr = do
+substNode :: Eq def => Expr.Body def Ref -> AppliedPiResult -> Infer def ()
+substNode srcBody apr = do
   destData <- ExprRefs.read destRef
   let
     newApr =
       apr
       & aprCopiedNames %~ injectRenameHistory (destData ^. rdRenameHistory)
-      & aprCopiedRefs . Lens.at srcRef .~ Just destRef
     matchLamResult srcGuid destGuid srcChildRef destChildRef =
       newApr
       & aprCopiedNames %~ Map.insert srcGuid destGuid
@@ -338,10 +336,7 @@ substOrUnify srcRef apr = do
     -- because there's a unify into the apply side between here and
     -- there.
     remapGuid = remapSubstGuid apr (destData ^. rdRenameHistory)
-    renameRef ref = fromMaybe ref $ (apr ^. aprCopiedRefs) ^? Lens.ix ref
-    renamedSrcScope =
-      renameScope remapGuid srcScope
-      & scopeMap . Lens.mapped %~ renameRef
+    renamedSrcScope = renameScope remapGuid srcScope
     -- Only if the srcScope has any variable available that's not
     -- already available in the destScope could it be a GetVar.
     isUnify =
@@ -361,7 +356,7 @@ substOrUnify srcRef apr = do
       destData & rdRenameHistory <>~ RenameHistory mempty & ExprRefs.write destRef
     srcBody@(Expr.BodyLam (Expr.Lam k _ _ _)) -> do
       void $ forceLam k destRef renamedSrcScope
-      substNode srcRef srcBody apr
+      substNode srcBody apr
     srcBody -> do
       destBodyRef <-
         srcBody
@@ -369,7 +364,7 @@ substOrUnify srcRef apr = do
         <&> ExprLens.bodyParameterRef %~ remapGuid
         >>= fresh renamedSrcScope
       void $ unify destBodyRef destRef -- destBodyRef is swallowed by destRef if it had anything...
-      substNode srcRef srcBody apr
+      substNode srcBody apr
   where
     destRef = apr ^. aprDestRef
 
@@ -388,7 +383,6 @@ makeApplyType applyScope func arg = do
     , _aprArgVal = arg ^. stvTV . tvVal
     , _aprDestRef = applyTypeRef
     , _aprCopiedNames = mempty
-    , _aprCopiedRefs = mempty
     }
   return applyTypeRef
 
