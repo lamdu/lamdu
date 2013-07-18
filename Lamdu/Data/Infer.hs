@@ -10,7 +10,7 @@ module Lamdu.Data.Infer
   , ScopedTypedValue(..), stvTV, stvScope
   ) where
 
-import Control.Applicative (Applicative(..), (<*>), (<$>), (<$))
+import Control.Applicative (Applicative(..), (<*>), (<$>))
 import Control.Lens.Operators
 import Control.Monad (when, void)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -72,7 +72,7 @@ intersectScopes (Scope aScope) (Scope bScope) =
         else error "Scope unification of differing refs"
 
 newtype HoleConstraints = HoleConstraints
-  { hcUnusableInHoleScope :: Set Guid
+  { _hcUnusableInHoleScope :: Set Guid
   }
 
 -- You must apply this recursively
@@ -111,17 +111,20 @@ mergeBodies recurse renames xScope xBody yScope yBody =
     Just mkBody -> mkBody
   where
     unifyWithHole activeRenames holeScope otherScope nonHoleBody =
-      nonHoleBody <$ traverse_
-      ( flip (recurse activeRenames)
-        (unifyHoleConstraints holeScope otherScope)
-      ) nonHoleBody
-    unifyHoleConstraints holeScope otherScope =
-      UnifyHoleConstraints HoleConstraints
-      { hcUnusableInHoleScope =
-        Map.keysSet $ Map.difference
-        (otherScope ^. scopeMap)
-        (holeScope ^. scopeMap)
-      }
+      maybeRecurseHoleConstraints activeRenames nonHoleBody $
+      makeUnusableScopeSet holeScope otherScope
+    maybeRecurseHoleConstraints activeRenames nonHoleBody unusableScopeSet
+      | Set.null unusableScopeSet && Map.null renames =
+        return nonHoleBody
+      | otherwise =
+        nonHoleBody
+        & Lens.traverse %%~
+          flip (recurse activeRenames)
+          (UnifyHoleConstraints (HoleConstraints unusableScopeSet))
+    makeUnusableScopeSet holeScope otherScope =
+      Map.keysSet $ Map.difference
+      (otherScope ^. scopeMap)
+      (holeScope ^. scopeMap)
     matchLamResult xGuid yGuid xRef yRef =
       (yGuid, recurse (renames & Lens.at xGuid .~ Just yGuid) xRef (UnifyRef yRef))
     matchOther xRef yRef = recurse renames xRef (UnifyRef yRef)
