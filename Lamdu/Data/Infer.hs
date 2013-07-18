@@ -133,7 +133,7 @@ renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames
   (Map.mapKeys (rename renames) copiedNames)
 
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
-renameRefData renames (RefData scope substs mRenameHistory body)
+renameRefData renames (RefData scope substs renameHistory body)
   -- Expensive assertion
   | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Map.member` renames) body =
     error "Shadowing encountered, what to do?"
@@ -141,8 +141,7 @@ renameRefData renames (RefData scope substs mRenameHistory body)
     RefData
     (scope & scopeMap %~ Map.mapKeys (rename renames))
     (substs <&> renameAppliedPiResult renames)
-    -- Only track renames if mRenameHistory isn't Nothing
-    (mRenameHistory & Lens._Just %~ Map.union renames)
+    (renameHistory & _RenameHistory %~ Map.union renames)
     (body & ExprLens.bodyParameterRef %~ rename renames)
 
 mergeRefData ::
@@ -168,7 +167,7 @@ mergeRefData recurse renames
       RefData
       { _rdScope = intersectedScope
       , _rdAppliedPiResults = mergedAppliedPiResults
-      , _rdMRenameHistory = mappend aMRenameHistory bMRenameHistory
+      , _rdRenameHistory = mappend aMRenameHistory bMRenameHistory
       , _rdBody = mergedBody
       }
 
@@ -250,7 +249,7 @@ fresh :: Scope -> Expr.Body def Ref -> Infer def Ref
 fresh scope body = ExprRefs.fresh RefData
   { _rdScope = scope
   , _rdAppliedPiResults = []
-  , _rdMRenameHistory = Nothing
+  , _rdRenameHistory = Untracked
   , _rdBody = body
   }
 
@@ -283,7 +282,7 @@ remapSubstGuid subst applyTypeData src =
   Nothing -> Nothing
   Just copiedAs ->
     Just . fromMaybe copiedAs $
-    applyTypeData ^? rdMRenameHistory . Lens._Just . Lens.ix copiedAs
+    applyTypeData ^? rdRenameHistory . _RenameHistory . Lens.ix copiedAs
 
 copySubstGetPar ::
   Eq def => Guid -> Ref -> Ref -> RefData defa -> AppliedPiResult -> Infer def ()
@@ -303,7 +302,7 @@ freshSubstDestHole scope =
   ExprRefs.fresh RefData
   { _rdScope = scope
   , _rdAppliedPiResults = []
-  , _rdMRenameHistory = Just Map.empty
+  , _rdRenameHistory = RenameHistory Map.empty
   , _rdBody = ExprLens.bodyHole # ()
   }
 
@@ -455,7 +454,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     mkRefData newBody = RefData
       { _rdScope = scope
       , _rdAppliedPiResults = []
-      , _rdMRenameHistory = Nothing
+      , _rdRenameHistory = Untracked
       , _rdBody = newBody
       }
     circumcizeApply Expr.BodyApply{} = ExprLens.bodyHole # ()

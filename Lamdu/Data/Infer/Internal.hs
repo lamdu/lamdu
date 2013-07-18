@@ -1,7 +1,8 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Infer.Internal
   ( Scope(..), scopeMap
-  , RefData(..), rdScope, rdAppliedPiResults, rdMRenameHistory, rdBody
+  , RenameHistory(..), _Untracked, _RenameHistory
+  , RefData(..), rdScope, rdAppliedPiResults, rdRenameHistory, rdBody
   , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs, ctxRandomGen
@@ -42,13 +43,23 @@ data AppliedPiResult = AppliedPiResult
   }
 Lens.makeLenses ''AppliedPiResult
 
+-- Rename history is only tracked if we're a subst dest (inside an
+-- apply type). Then we remember any rename that happened since the
+-- subst wrote us.
+data RenameHistory = Untracked | RenameHistory (Map Guid Guid)
+Lens.makePrisms ''RenameHistory
+
+instance Monoid RenameHistory where
+  mempty = Untracked
+  mappend Untracked x = x
+  mappend x Untracked = x
+  mappend (RenameHistory m1) (RenameHistory m2) =
+    RenameHistory $ mappend m1 m2
+
 data RefData def = RefData
   { _rdScope :: Scope
   , _rdAppliedPiResults :: [AppliedPiResult]
-  , -- Rename history is only active(Just) if we're a subst dest
-    -- (inside an apply type). Then we remember any rename that
-    -- happened since the subst wrote us.
-    _rdMRenameHistory :: Maybe (Map Guid Guid)
+  , _rdRenameHistory :: RenameHistory
   , _rdBody :: Expr.Body def Ref
   }
 Lens.makeLenses ''RefData

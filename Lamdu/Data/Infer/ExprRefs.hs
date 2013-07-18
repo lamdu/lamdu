@@ -35,7 +35,7 @@ freshHole =
   fresh RefData
   { _rdScope = Scope Map.empty
   , _rdAppliedPiResults = []
-  , _rdMRenameHistory = Nothing
+  , _rdRenameHistory = Untracked
   , _rdBody = ExprLens.bodyHole # ()
   }
 
@@ -115,5 +115,5 @@ exprIntoContext =
         { _rdScope = Scope scope
         , _rdAppliedPiResults = []
         , _rdBody = newBody
-        , _rdMRenameHistory = Nothing
+        , _rdRenameHistory = Untracked
         }
