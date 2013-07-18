@@ -48,23 +48,23 @@ applyIntToBoolFuncWithHole =
 --   where
 --     listInts = listOf (asHole integerType)
 
-applyOnVar =
-  testInfer "apply on var" $
-  lambda "x" (holeWithInferredType set) $ \x ->
-  getDef "IntToBoolFunc" $$
-  (holeWithInferredType (hole ~> integerType) $$ x)
+-- applyOnVar =
+--   testInfer "apply on var" $
+--   lambda "x" (holeWithInferredType set) $ \x ->
+--   getDef "IntToBoolFunc" $$
+--   (holeWithInferredType (hole ~> integerType) $$ x)
 
 idTest = testInfer "id test" $ getDef "id" $$ integerType
 
--- inferFromOneArgToOther =
---   testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}" $
---   lambda "a" (asHole set) $ \a ->
---   lambda "b" (asHole set) $ \b ->
---   let mkMapType f = getDef "Map" $$: [f a, f b] in
---   lambda "x" (mkMapType asHole) $ \x ->
---   lambda "y" (mkMapType id) $ \y ->
---   getDef "if" $$ asHole (mkMapType id) $$:
---   [holeWithInferredType (getDef "Bool"), x, y]
+inferFromOneArgToOther =
+  testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}" $
+  lambda "a" (asHole set) $ \a ->
+  lambda "b" (asHole set) $ \b ->
+  let mkMapType f = getDef "Map" $$: [f a, f b] in
+  lambda "x" (mkMapType asHole) $ \x ->
+  lambda "y" (mkMapType id) $ \y ->
+  getDef "if" $$ asHole (mkMapType id) $$:
+  [holeWithInferredType (getDef "Bool"), x, y]
 
 -- monomorphRedex =
 --   testInfer "foo = f (\\~ x -> (\\~ -> x) _) where f ~:(a:Type -> _ -> a) = _" $
@@ -87,9 +87,9 @@ argTypeGoesToPi =
   testInfer "arg type goes to pi" $
   holeWithInferredType (integerType ~> hole) $$ literalInteger 5
 
--- idOnAnInt =
---   testInfer "id on an int" $
---   getDef "id" $$ asHole integerType $$ literalInteger 5
+idOnAnInt =
+  testInfer "id on an int" $
+  getDef "id" $$ asHole integerType $$ literalInteger 5
 
 -- idOnARecord =
 --   testInfer "id ({:Type) <hole> does not infer { val" $
@@ -97,11 +97,11 @@ argTypeGoesToPi =
 --   where
 --     rec = record KType [(holeWithInferredType tagType, integerType)]
 
--- idOnHole = testInfer "id hole" $ getDef "id" $$ holeWithInferredType set
+idOnHole = testInfer "id hole" $ getDef "id" $$ holeWithInferredType set
 
--- forceMono =
---   testInfer "id (id _ _)" $
---   getDef "id" $$ (getDef "id" $$ asHole set $$ holeWithInferredType set)
+forceMono =
+  testInfer "id (id _ _)" $
+  getDef "id" $$ (getDef "id" $$ asHole set $$ holeWithInferredType set)
 
 -- -- | depApply (t : Type) (rt : t -> Type) (f : (d : t) -> rt d) (x : t) = f x
 -- depApply =
@@ -289,15 +289,15 @@ argTypeGoesToPi =
 --       HUnit.assertFailure $ "InfiniteExpression error expected, but got missing def type error for def: " ++ show def
 --     expr = lambda "x" hole . const $ recurse hole
 
-mapIdTest =
-  testInfer "map id (5:_)" $
-  getDef "map" $$ asHole integerType $$ asHole integerType $$:
-  [ getDef ":" $$ asHole integerType $$:
-    [ literalInteger 5
-    , holeWithInferredType $ listOf integerType
-    ]
-  , getDef "id" $$ asHole integerType
-  ]
+-- mapIdTest =
+--   testInfer "map id (5:_)" $
+--   getDef "map" $$ asHole integerType $$ asHole integerType $$:
+--   [ getDef ":" $$ asHole integerType $$:
+--     [ literalInteger 5
+--     , holeWithInferredType $ listOf integerType
+--     ]
+--   , getDef "id" $$ asHole integerType
+--   ]
 
 -- joinMaybe =
 --   testInferAllowFail "\\x:_ -> caseMaybe x (empty=Nothing, just=\\x->x)" $
@@ -314,17 +314,18 @@ mapIdTest =
 hunitTests =
   simpleTests
   ++
-  [ mapIdTest
-  , applyIntToBoolFuncWithHole
-  , applyOnVar
+  [ -- mapIdTest
+  -- ,
+    applyIntToBoolFuncWithHole
+  -- , applyOnVar
   , idTest
   , argTypeGoesToPi
-  -- , idOnAnInt
+  , idOnAnInt
   -- , idOnARecord
-  -- , idOnHole
-  -- , inferFromOneArgToOther
+  , idOnHole
+  , inferFromOneArgToOther
   -- , depApply
-  -- , forceMono
+  , forceMono
   -- , fOfXIsFOf5
   -- , monomorphRedex
   -- , inferPart
