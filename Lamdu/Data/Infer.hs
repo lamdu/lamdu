@@ -127,14 +127,18 @@ mergeBodies recurse renames xScope xBody yScope yBody =
     matchOther xRef yRef = recurse renames xRef (UnifyRef yRef)
 
 renameAppliedPiResult :: Map Guid Guid -> AppliedPiResult -> AppliedPiResult
-renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames) =
+renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames copiedRefs) =
   AppliedPiResult
   (rename renames piGuid) argVal destRef
   (Map.mapKeys (rename renames) copiedNames)
+  copiedRefs
 
 -- No names in Relation (yet?)
 renameRelations :: Map Guid Guid -> Set Relation -> Set Relation
 renameRelations _ = id
+
+renameScope :: (Guid -> Guid) -> Scope -> Scope
+renameScope f = scopeMap %~ Map.mapKeys f
 
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
 renameRefData renames (RefData scope substs renameHistory relations body)
@@ -143,7 +147,7 @@ renameRefData renames (RefData scope substs renameHistory relations body)
     error "Shadowing encountered, what to do?"
   | otherwise =
     RefData
-    (scope & scopeMap %~ Map.mapKeys (rename renames))
+    (scope & renameScope (rename renames))
     (substs <&> renameAppliedPiResult renames)
     (renameHistory & _RenameHistory %~ Map.union renames)
     (relations & renameRelations renames)
@@ -252,8 +256,8 @@ fresh scope body = ExprRefs.fresh $ defaultRefData scope body
 newRandom :: Random r => Infer def r
 newRandom = Lens.zoom ctxRandomGen $ state random
 
-forceLam :: Eq def => Expr.Kind -> Scope -> Ref -> Infer def (Guid, Ref, Ref)
-forceLam k lamScope destRef = do
+forceLam :: Eq def => Expr.Kind -> Ref -> Scope -> Infer def (Guid, Ref, Ref)
+forceLam k destRef lamScope = do
   newGuid <- newRandom
   newParamTypeRef <- fresh lamScope $ ExprLens.bodyHole # ()
   let lamResultScope = lamScope & scopeMap %~ Map.insert newGuid newParamTypeRef
@@ -270,93 +274,101 @@ forceLam k lamScope destRef = do
     Nothing -> error "We just unified Lam into rep"
 
 -- Remap a Guid from piResult context to the Apply context
-remapSubstGuid :: AppliedPiResult -> RefData def -> Guid -> Maybe Guid
-remapSubstGuid subst applyTypeData src =
+remapSubstGuid :: AppliedPiResult -> RenameHistory -> Guid -> Guid
+remapSubstGuid subst destRenameHistory src =
   case subst ^? aprCopiedNames . Lens.ix src of
   -- If it's not a copied guid, it should be the same guid in both
   -- contexts
-  Nothing -> Nothing
+  Nothing -> src
   Just copiedAs ->
-    Just . fromMaybe copiedAs $
-    applyTypeData ^? rdRenameHistory . _RenameHistory . Lens.ix copiedAs
+    fromMaybe copiedAs $
+    destRenameHistory ^? _RenameHistory . Lens.ix copiedAs
 
-copySubstGetPar ::
-  Eq def => Guid -> Ref -> Ref -> RefData defa -> AppliedPiResult -> Infer def ()
-copySubstGetPar paramGuid piResultRef applyTypeRef applyTypeData subst =
-  void $ unify applyTypeRef =<< ref
-  where
-    ref
-      | paramGuid == subst ^. aprPiGuid = return $ subst ^. aprArgVal
-      | otherwise =
-        case remapSubstGuid subst applyTypeData paramGuid of
-        Nothing -> return piResultRef
-        Just destGuid ->
-          fresh (applyTypeData ^. rdScope) $ ExprLens.bodyParameterRef # destGuid
-
-freshSubstDestHole :: Scope -> Infer def Ref
-freshSubstDestHole scope =
-  defaultRefData scope (ExprLens.bodyHole # ())
-  & rdRenameHistory .~ RenameHistory Map.empty
-  & ExprRefs.fresh
+injectRenameHistory :: RenameHistory -> Map Guid Guid -> Map Guid Guid
+injectRenameHistory Untracked = id
+injectRenameHistory (RenameHistory renames) =
+  -- Only the copied names (in our argument map) need to be fixed,
+  -- others are in shared scope so need no fixing:
+  fmap (rename renames)
 
 -- TODO: This should also substLeafs, and it should also subst getvars that aren't subst
-substParent :: Eq def => Scope -> Ref -> AppliedPiResult -> Expr.Body def Ref -> Infer def ()
-substParent destScope destRef subst srcBody = do
-  destBodyRef <-
-    srcBody & Lens.traverse %%~ const (freshSubstDestHole destScope)
-    >>= fresh destScope
-  void $ unify destBodyRef destRef -- destBodyRef is swallowed by destRef if it had anything...
-  destBody <- (^. rdBody) <$> ExprRefs.read destRef
-  matchRes <-
-    sequenceA $ sequenceA_ <$>
-    ExprUtil.matchBody matchLamResult matchOther
-    (error "Parent cannot be getPar") srcBody destBody
-  when (Lens.has Lens._Nothing matchRes) $
-    error "We just successfully unified src and dest bodies!"
-  where
+substNode :: Eq def => Ref -> Expr.Body def Ref -> AppliedPiResult -> Infer def ()
+substNode srcRef srcBody apr = do
+  destData <- ExprRefs.read destRef
+  let
+    newApr =
+      apr
+      & aprCopiedNames %~ injectRenameHistory (destData ^. rdRenameHistory)
+      & aprCopiedRefs . Lens.at srcRef .~ Just destRef
     matchLamResult srcGuid destGuid srcChildRef destChildRef =
-      subst
+      newApr
       & aprCopiedNames %~ Map.insert srcGuid destGuid
       & recurse srcChildRef destChildRef
       & (,) srcGuid
-    matchOther srcChildRef destChildRef = recurse srcChildRef destChildRef subst
-    recurse srcChildRef destChildRef newAppliedPiResult =
-      newAppliedPiResult
-      & aprDestRef .~ destChildRef
-      & substOrUnify srcChildRef
+    matchOther srcChildRef destChildRef =
+      recurse srcChildRef destChildRef newApr
+    -- Expensive assertion
+    verifyGetParGuids srcGuid destGuid =
+      rename (newApr ^. aprCopiedNames) srcGuid == destGuid
+  matchRes <-
+    sequenceA $ sequenceA_ <$>
+    ExprUtil.matchBody matchLamResult matchOther
+    verifyGetParGuids srcBody (destData ^. rdBody)
+  when (Lens.has Lens._Nothing matchRes) $
+    error "We just successfully unified src and dest bodies!"
+  where
+    destRef = apr ^. aprDestRef
+    recurse srcChildRef destChildRef childApr =
+      substOrUnify srcChildRef $
+      childApr & aprDestRef .~ destChildRef
 
 substOrUnify :: Eq def => Ref -> AppliedPiResult -> Infer def ()
-substOrUnify piResultRef subst = do
-  piResultData <- ExprRefs.read piResultRef
-  applyTypeData <- ExprRefs.read applyTypeRef
+substOrUnify srcRef apr = do
+  srcData <- ExprRefs.read srcRef
+  destData <- ExprRefs.read destRef
   let
-    piResultScope = piResultData ^. rdScope
-    applyTypeScope = applyTypeData ^. rdScope
-    -- Only if the piResultScope has any variable available that's not
-    -- already available in the applyTypeScope could it be a GetVar.
-    notSubst =
+    srcScope = srcData ^. rdScope
+    destScope = destData ^. rdScope
+    -- TODO: this duplicates substNode logic about injecting the
+    -- rename history into the subst, which should probably happen
+    -- here instead of both places but we're not sure this is correct
+    -- because there's a unify into the apply side between here and
+    -- there.
+    remapGuid = remapSubstGuid apr (destData ^. rdRenameHistory)
+    renameRef ref = fromMaybe ref $ (apr ^. aprCopiedRefs) ^? Lens.ix ref
+    renamedSrcScope =
+      renameScope remapGuid srcScope
+      & scopeMap . Lens.mapped %~ renameRef
+    -- Only if the srcScope has any variable available that's not
+    -- already available in the destScope could it be a GetVar.
+    isUnify =
       Map.null $
-      Map.difference (piResultScope ^. scopeMap) (applyTypeScope ^. scopeMap)
-    onParent = substParent applyTypeScope applyTypeRef subst
-  if notSubst
+      Map.difference (srcScope ^. scopeMap) (destScope ^. scopeMap)
+  if isUnify
     then -- It can't be a GetVar, we can merge and pull information
          -- from the apply:
-    void $ unify applyTypeRef piResultRef
+    void $ unify destRef srcRef
     else -- Do the subst:
-    case piResultData ^. rdBody of
-    Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef paramGuid)) ->
-      copySubstGetPar paramGuid piResultRef applyTypeRef applyTypeData subst
-    Expr.BodyLeaf Expr.Hole ->
-      piResultData & rdAppliedPiResults %~ (subst :) & ExprRefs.write piResultRef
-    Expr.BodyLeaf {} -> void $ unify applyTypeRef piResultRef
-    Expr.BodyLam lam ->
-      lam
-      & Expr.lamParamId %%~ const newRandom
-      <&> Expr.BodyLam
-      >>= onParent
-    body -> onParent body
+    case srcData ^. rdBody of
+    Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef paramGuid))
+      | paramGuid == apr ^. aprPiGuid -> void . unify destRef $ apr ^. aprArgVal
+    Expr.BodyLeaf Expr.Hole -> do
+      srcData & rdAppliedPiResults %~ (apr :) & ExprRefs.write srcRef
+      -- We injectRenameHistory of our ancestors into the apr
+      destData & rdRenameHistory <>~ RenameHistory mempty & ExprRefs.write destRef
+    srcBody@(Expr.BodyLam (Expr.Lam k _ _ _)) -> do
+      void $ forceLam k destRef renamedSrcScope
+      substNode srcRef srcBody apr
+    srcBody -> do
+      destBodyRef <-
+        srcBody
+        & Lens.traverse %%~ const (fresh renamedSrcScope $ ExprLens.bodyHole # ())
+        <&> ExprLens.bodyParameterRef %~ remapGuid
+        >>= fresh renamedSrcScope
+      void $ unify destBodyRef destRef -- destBodyRef is swallowed by destRef if it had anything...
+      substNode srcRef srcBody apr
   where
-    applyTypeRef = subst ^. aprDestRef
+    destRef = apr ^. aprDestRef
 
 makeApplyType ::
   Eq def => Scope -> ScopedTypedValue -> ScopedTypedValue ->
@@ -364,8 +376,8 @@ makeApplyType ::
 makeApplyType applyScope func arg = do
   (piGuid, piParamType, piResultRef) <-
     forceLam Expr.KType
-    (func ^. stvScope)
     (func ^. stvTV . tvType)
+    (func ^. stvScope)
   void $ unify (arg ^. stvTV . tvType) piParamType
   applyTypeRef <- fresh applyScope $ ExprLens.bodyHole # ()
   substOrUnify piResultRef AppliedPiResult
@@ -373,6 +385,7 @@ makeApplyType applyScope func arg = do
     , _aprArgVal = arg ^. stvTV . tvVal
     , _aprDestRef = applyTypeRef
     , _aprCopiedNames = mempty
+    , _aprCopiedRefs = mempty
     }
   return applyTypeRef
 

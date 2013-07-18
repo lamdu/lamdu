@@ -8,7 +8,7 @@ module Lamdu.Data.Infer.Internal
 
   , RefData(..), rdScope, rdAppliedPiResults, rdRenameHistory, rdRelations, rdBody
     , defaultRefData
-  , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames
+  , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames, aprCopiedRefs
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs, ctxRandomGen
   , LoadedDef(..), ldDef, ldType
@@ -48,12 +48,15 @@ data AppliedPiResult = AppliedPiResult
   , -- For each src (pi result) guid, remember the dest (apply type)
     -- guid it was copied as
     _aprCopiedNames :: Map Guid Guid
+  , -- For scope Ref translations:
+    _aprCopiedRefs :: Map Ref Ref
   }
 Lens.makeLenses ''AppliedPiResult
 
 -- Rename history is only tracked if we're a subst dest (inside an
 -- apply type). Then we remember any rename that happened since the
 -- subst wrote us.
+-- TODO: Do we want fine-grained set of guids to track?
 data RenameHistory = Untracked | RenameHistory (Map Guid Guid)
 Lens.makePrisms ''RenameHistory
 
