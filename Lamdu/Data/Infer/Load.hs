@@ -45,7 +45,7 @@ loadDefTypeIntoRef (Loader loader) def = do
 newDefinition ::
   (MonadA m, Ord def) => def -> StateT (Context def) m Ref
 newDefinition def = do
-  ref <- ExprRefs.fresh . defaultRefData mempty $ ExprLens.bodyHole # ()
+  ref <- ExprRefs.fresh . defaultRefData (Scope mempty) $ ExprLens.bodyHole # ()
   ctxDefRefs . Lens.at def %= setRef ref
   return ref
   where

@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Infer.Internal
-  ( Scope(..), scopeMap
+  ( Scope(..), emptyScope, scopeMap
   , RenameHistory(..), _Untracked, _RenameHistory
   , PosGetFieldRecord(..)
   , Position(..)
@@ -25,8 +25,10 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified System.Random as Random
 
 newtype Scope = Scope (Map Guid Ref) -- intersected
-  deriving (Monoid)
 Lens.makeIso ''Scope
+
+emptyScope :: Scope
+emptyScope = Scope mempty
 
 scopeMap :: Lens.Iso' Scope (Map Guid Ref)
 scopeMap = Lens.from scope

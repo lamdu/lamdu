@@ -5,6 +5,7 @@ module Lamdu.Data.Infer
   , emptyContext
   -- Re-export:
   , Context
+  , Scope, emptyScope
   , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
   ) where
