@@ -123,7 +123,7 @@ mergeBodies recurse renames xScope xBody yScope yBody =
         (holeScope ^. scopeMap)
       }
     matchLamResult xGuid yGuid xRef yRef =
-      recurse (renames & Lens.at xGuid .~ Just yGuid) xRef (UnifyRef yRef)
+      (yGuid, recurse (renames & Lens.at xGuid .~ Just yGuid) xRef (UnifyRef yRef))
     matchOther xRef yRef = recurse renames xRef (UnifyRef yRef)
 
 renameAppliedPiResult :: Map Guid Guid -> AppliedPiResult -> AppliedPiResult
@@ -324,6 +324,7 @@ substParent destScope destRef subst srcBody = do
       subst
       & aprCopiedNames %~ Map.insert srcGuid destGuid
       & recurse srcChildRef destChildRef
+      & (,) srcGuid
     matchOther srcChildRef destChildRef = recurse srcChildRef destChildRef subst
     recurse srcChildRef destChildRef newAppliedPiResult =
       newAppliedPiResult
