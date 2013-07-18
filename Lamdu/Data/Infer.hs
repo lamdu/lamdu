@@ -392,7 +392,11 @@ makeTypeRef scope body =
   Expr.BodyLeaf Expr.Type -> typeIsType
   Expr.BodyLeaf Expr.IntegerType -> typeIsType
   Expr.BodyLeaf Expr.TagType -> typeIsType
-  Expr.BodyLam (Expr.Lam Expr.KType _ _ _) -> typeIsType
+  Expr.BodyLam (Expr.Lam Expr.KType _ paramType resultType) -> do
+    typeRef <- typeIsType
+    void . unify typeRef $ paramType ^. stvTV . tvType
+    void . unify typeRef $ resultType ^. stvTV . tvType
+    return typeRef
   Expr.BodyRecord (Expr.Record Expr.KType _) -> typeIsType
   Expr.BodyLeaf Expr.LiteralInteger {} -> fresh scope $ ExprLens.bodyIntegerType # ()
   Expr.BodyLeaf Expr.Tag {} -> fresh scope $ ExprLens.bodyTagType # ()
@@ -401,11 +405,18 @@ makeTypeRef scope body =
   Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (LoadedDef _ ref))) -> pure ref
   Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) -> lift $ scopeLookup scope guid
   -- Complex:
-  Expr.BodyGetField {} -> fresh scope $ ExprLens.bodyHole # () -- TODO
+  Expr.BodyGetField (Expr.GetField _record tag) -> do
+    tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
+    void . unify tagTypeRef $ tag ^. stvTV . tvType
+    fresh scope $ ExprLens.bodyHole # () -- TODO
   Expr.BodyApply (Expr.Apply func arg) -> makeApplyType scope func arg
-  Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) ->
+  Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) -> do
+    typeRef <- typeIsType
+    void . unify typeRef $ paramType ^. stvTV . tvType
     fresh scope $ makePiType paramGuid (paramType ^. stvTV) (result ^. stvTV)
-  Expr.BodyRecord (Expr.Record Expr.KVal fields) ->
+  Expr.BodyRecord (Expr.Record Expr.KVal fields) -> do
+    tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
+    fields & traverse_ . Lens._1 . stvTV . tvType %%~ unify tagTypeRef
     fresh scope . makeRecordType $ fields <&> Lens.both %~ (^. stvTV)
   where
     typeIsType = fresh scope $ ExprLens.bodyType # ()
