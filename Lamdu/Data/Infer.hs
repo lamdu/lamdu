@@ -451,9 +451,9 @@ exprIntoSTV scope (Expr.Expression body pl) = do
       body & Lens.traverse %%~ exprIntoSTV scope
   valRef <-
     newBody
+    & circumcizeApply
     <&> (^. Expr.ePayload . Lens._1 . stvTV . tvVal)
     & ExprLens.bodyDef %~ (^. ldDef)
-    & circumcizeApply
     & mkRefData
     & ExprRefs.fresh
   typeRef <-
@@ -468,5 +468,8 @@ exprIntoSTV scope (Expr.Expression body pl) = do
       , _rdRenameHistory = Untracked
       , _rdBody = newBody
       }
-    circumcizeApply Expr.BodyApply{} = ExprLens.bodyHole # ()
-    circumcizeApply x = x
+    -- Except of apply of type constructors:
+    circumcizeApply x
+      | Lens.nullOf Expr._BodyApply x = x
+      | Lens.has (Expr._BodyApply . Expr.applyFunc . ExprLens.exprDefinitionRef) x = x
+      | otherwise = ExprLens.bodyHole # ()

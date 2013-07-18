@@ -181,7 +181,7 @@ infixl 3 $$:
     msg = "$$: must be applied on a func of record type, not: " ++ show (f ^. iType)
 
 ($$) :: ExprInferred -> ExprInferred -> ExprInferred
-($$) func@(Expr.Expression _ (funcVal, funcType)) nextArg =
+($$) func@(Expr.Expression funcBody (funcVal, funcType)) nextArg =
   iexpr applyVal applyType application
   where
     application = ExprUtil.makeApply func nextArg
@@ -193,7 +193,7 @@ infixl 3 $$:
       _ -> seeOther
     applyVal =
       handleLam funcVal KVal pureHole $
-      if ExprUtil.isTypeConstructorType applyType
+      if Lens.has ExprLens.bodyDefinitionRef funcBody
       then bodyToPureExpr application
       else pureHole
     applyType = handleLam funcType KType piErr piErr
