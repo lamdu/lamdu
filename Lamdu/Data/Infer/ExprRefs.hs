@@ -5,6 +5,7 @@ module Lamdu.Data.Infer.ExprRefs
   , read, write, modify
   , union, equiv
   , exprIntoContext
+  , UnifyRefsResult(..)
   , unifyRefs
   ) where
 
@@ -68,26 +69,24 @@ union x y = Lens.zoom (ctxExprRefs . exprRefsUF) $ UF.union x y
 equiv :: MonadA m => Ref -> Ref -> StateT (Context def) m Bool
 equiv x y = Lens.zoom (ctxExprRefs . exprRefsUF) $ UF.equivalent x y
 
+data UnifyRefsResult def
+  = UnifyRefsAlreadyUnified
+  | UnifyRefsUnified (RefData def) (RefData def)
+
 unifyRefs ::
-  MonadA m =>
-  (Ref ->
-   RefData def ->
-   RefData def ->
-   StateT (Context def) m (RefData def, res)) ->
-  Ref -> Ref -> StateT (Context def) m (Maybe res)
-unifyRefs merge x y = do
+  MonadA m => Ref -> Ref ->
+  StateT (Context def) m (Ref, UnifyRefsResult def)
+unifyRefs x y = do
   xRep <- find "unify.x" x
   yRep <- find "unify.y" y
   if xRep == yRep
-    then return Nothing
+    then return (xRep, UnifyRefsAlreadyUnified)
     else do
       xData <- popRep xRep
       yData <- popRep yRep
       rep <- union x y
-      writeRep rep $ error "Attempt to read parent during unification"
-      (newData, res) <- merge rep xData yData
-      writeRep rep newData
-      return $ Just res
+      writeRep rep $ error "unifyRefs caller read the unified ref data before writing it"
+      return (rep, UnifyRefsUnified xData yData)
 
 exprIntoContext ::
   MonadA m => Expr.Expression def () -> StateT (Context def) m Ref

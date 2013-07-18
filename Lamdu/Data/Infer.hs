@@ -22,7 +22,6 @@ import Data.Monoid (Monoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
-import Data.Tuple (swap)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
 import System.Random (Random, random)
@@ -181,9 +180,17 @@ mergeRefData recurse renames
 renameMergeRefData ::
   Eq def =>
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
-  Map Guid Guid -> RefData def -> RefData def -> Infer def ([AppliedPiResult], RefData def)
-renameMergeRefData recurse renames a b =
-  mergeRefData recurse renames (renameRefData renames a) b
+  Ref -> Map Guid Guid -> RefData def -> RefData def ->
+  Infer def ()
+renameMergeRefData recurse rep renames a b = do
+  (appliedPiResults, mergedRefData) <-
+    mergeRefData recurse renames (renameRefData renames a) b
+  -- First let's write the mergedRefData so we're not in danger zone
+  -- of reading missing data:
+  ExprRefs.write rep mergedRefData
+  -- Now we can safely run the relations
+  traverse_ (substOrUnify rep) appliedPiResults
+
 
 unifyRecurse :: Eq def => Set Ref -> Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref
 unifyRecurse visited renames rawNode phase = do
@@ -203,20 +210,15 @@ unifyRecurse visited renames rawNode phase = do
          (UnifyHoleConstraints holeConstraints)) $
         nodeData ^. rdBody
       return nodeRep
-    UnifyRef other ->
-      ExprRefs.unifyRefs merge nodeRep other
-      -- This bind will now execute the substOrUnify's action returned
-      -- from merge, which is now safe because unifyRefs completed.
-      >>= fromMaybe (return nodeRep)
+    UnifyRef other -> do
+      (rep, unifyResult) <- ExprRefs.unifyRefs nodeRep other
+      case unifyResult of
+        ExprRefs.UnifyRefsAlreadyUnified -> return ()
+        ExprRefs.UnifyRefsUnified xData yData -> merge rep xData yData
+      return rep
   where
     recurse visitedRef = unifyRecurse (visited & Lens.contains visitedRef .~ True)
-    merge rep a b =
-      renameMergeRefData (recurse rep) renames a b
-      <&> swap
-      -- Schedule the substOrUnify's to happen after the merge has been
-      -- written to the rep (return the substOrUnify's as an *action* that's
-      -- not yet executed):
-      <&> Lens._2 %~ (rep <$) . traverse_ (substOrUnify rep)
+    merge rep = renameMergeRefData (recurse rep) rep renames
 
 unify :: Eq def => Ref -> Ref -> Infer def Ref
 unify x y = unifyRecurse mempty mempty x (UnifyRef y)
