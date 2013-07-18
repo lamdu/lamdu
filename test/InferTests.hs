@@ -40,13 +40,13 @@ applyIntToBoolFuncWithHole =
   testInfer "apply" $
   getDef "IntToBoolFunc" $$ holeWithInferredType integerType
 
--- inferPart =
---   testInfer "foo (xs:List ?) = 5 : xs" $
---   lambda "xs" listInts $ \xs ->
---   getDef ":" $$ asHole integerType $$:
---   [literalInteger 5, xs]
---   where
---     listInts = listOf (asHole integerType)
+inferPart =
+  testInfer "foo (xs:List ?) = 5 : xs" $
+  lambda "xs" listInts $ \xs ->
+  getDef ":" $$ asHole integerType $$:
+  [literalInteger 5, xs]
+  where
+    listInts = listOf (asHole integerType)
 
 -- applyOnVar =
 --   testInfer "apply on var" $
@@ -78,10 +78,10 @@ inferFromOneArgToOther =
 --     -- (a:Type -> _[=a] -> a)
 --     fArgType = piType "a" set $ \a -> asHole a ~> a
 
--- fOfXIsFOf5 =
---   testInfer "f x = f 5" $
---   lambda "" (asHole integerType) $ \_ ->
---   recurse (integerType ~> hole) $$ literalInteger 5
+fOfXIsFOf5 =
+  testInfer "f x = f 5" $
+  lambda "" (asHole integerType) $ \_ ->
+  recurse (integerType ~> hole) $$ literalInteger 5
 
 argTypeGoesToPi =
   testInfer "arg type goes to pi" $
@@ -103,13 +103,13 @@ forceMono =
   testInfer "id (id _ _)" $
   getDef "id" $$ (getDef "id" $$ asHole set $$ holeWithInferredType set)
 
--- -- | depApply (t : Type) (rt : t -> Type) (f : (d : t) -> rt d) (x : t) = f x
--- depApply =
---   testInfer "dep apply" $
---   lambda "t" set $ \t ->
---   lambda "rt" (t ~> set) $ \rt ->
---   lambda "f" (piType "d" t (\d -> rt $$ d)) $ \f ->
---   lambda "x" t $ \x -> f $$ x
+-- | depApply (t : Type) (rt : t -> Type) (f : (d : t) -> rt d) (x : t) = f x
+depApply =
+  testInfer "dep apply" $
+  lambda "t" set $ \t ->
+  lambda "rt" (t ~> set) $ \rt ->
+  lambda "f" (piType "d" t (\d -> rt $$ d)) $ \f ->
+  lambda "x" t $ \x -> f $$ x
 
 -- applyFunc :: Lens.Traversal' (Expression def a) (Expression def a)
 -- applyFunc = ExprLens.exprApply . Expr.applyFunc
@@ -324,11 +324,11 @@ hunitTests =
   -- , idOnARecord
   , idOnHole
   , inferFromOneArgToOther
-  -- , depApply
+  , depApply
   , forceMono
-  -- , fOfXIsFOf5
+  , fOfXIsFOf5
   -- , monomorphRedex
-  -- , inferPart
+  , inferPart
   -- , failResumptionAddsRules
   -- , emptyRecordTests
   -- , recordTest
