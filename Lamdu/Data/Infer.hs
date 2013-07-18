@@ -225,10 +225,10 @@ scopeLookup scope guid =
   Nothing -> Left VarNotInScope
   Just ref -> pure ref
 
-makePiType ::
+makePiTypeOfLam ::
   Guid -> TypedValue -> TypedValue ->
   Expr.Body def Ref
-makePiType paramGuid paramType body =
+makePiTypeOfLam paramGuid paramType body =
   Expr.BodyLam $
   Expr.Lam Expr.KType paramGuid
   (paramType ^. tvVal)
@@ -236,14 +236,6 @@ makePiType paramGuid paramType body =
   -- scope of the Lam KType body, because we use the same
   -- paramGuid. This means param guids cannot be unique.
   (body ^. tvType)
-
-makeRecordType ::
-  [(TypedValue, TypedValue)] ->
-  Expr.Body def Ref
-makeRecordType fields =
-  Expr.BodyRecord . Expr.Record Expr.KType $ onField <$> fields
-  where
-    onField (tag, val) = (tag ^. tvVal, val ^. tvType)
 
 fresh :: Scope -> Expr.Body def Ref -> Infer def Ref
 fresh scope body = ExprRefs.fresh RefData
@@ -382,6 +374,34 @@ makeApplyType applyScope func arg = do
     }
   return applyTypeRef
 
+makeGetFieldType :: Eq def => Scope -> Expr.GetField TypedValue -> Infer def Ref
+makeGetFieldType scope (Expr.GetField _record tag) = do
+  tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
+  void . unify tagTypeRef $ tag ^. tvType
+  fresh scope $ ExprLens.bodyHole # () -- TODO
+
+makeLambdaType :: Eq def => Scope -> Guid -> TypedValue -> TypedValue -> Infer def Ref
+makeLambdaType scope paramGuid paramType result = do
+  typeRef <- fresh scope $ ExprLens.bodyType # ()
+  void . unify typeRef $ paramType ^. tvType
+  fresh scope $ makePiTypeOfLam paramGuid paramType result
+
+makeRecordType :: Eq def => Scope -> [(TypedValue, TypedValue)] -> Infer def Ref
+makeRecordType scope fields = do
+  tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
+  fields & traverse_ . Lens._1 . tvType %%~ unify tagTypeRef
+  fresh scope $
+    Expr.BodyRecord . Expr.Record Expr.KType $ onField <$> fields
+  where
+    onField (tag, val) = (tag ^. tvVal, val ^. tvType)
+
+makePiType :: Eq def => Scope -> TypedValue -> TypedValue -> Infer def Ref
+makePiType scope paramType resultType = do
+  typeRef <- fresh scope $ ExprLens.bodyType # ()
+  void . unify typeRef $ paramType ^. tvType
+  void . unify typeRef $ resultType ^. tvType
+  return typeRef
+
 makeTypeRef ::
   Eq def => Scope ->
   Expr.Body (LoadedDef def) ScopedTypedValue ->
@@ -392,11 +412,8 @@ makeTypeRef scope body =
   Expr.BodyLeaf Expr.Type -> typeIsType
   Expr.BodyLeaf Expr.IntegerType -> typeIsType
   Expr.BodyLeaf Expr.TagType -> typeIsType
-  Expr.BodyLam (Expr.Lam Expr.KType _ paramType resultType) -> do
-    typeRef <- typeIsType
-    void . unify typeRef $ paramType ^. stvTV . tvType
-    void . unify typeRef $ resultType ^. stvTV . tvType
-    return typeRef
+  Expr.BodyLam (Expr.Lam Expr.KType _ paramType resultType) ->
+    makePiType scope (paramType ^. stvTV) (resultType ^. stvTV)
   Expr.BodyRecord (Expr.Record Expr.KType _) -> typeIsType
   Expr.BodyLeaf Expr.LiteralInteger {} -> fresh scope $ ExprLens.bodyIntegerType # ()
   Expr.BodyLeaf Expr.Tag {} -> fresh scope $ ExprLens.bodyTagType # ()
@@ -405,19 +422,12 @@ makeTypeRef scope body =
   Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (LoadedDef _ ref))) -> pure ref
   Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) -> lift $ scopeLookup scope guid
   -- Complex:
-  Expr.BodyGetField (Expr.GetField _record tag) -> do
-    tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
-    void . unify tagTypeRef $ tag ^. stvTV . tvType
-    fresh scope $ ExprLens.bodyHole # () -- TODO
+  Expr.BodyGetField getField -> makeGetFieldType scope ((^. stvTV) <$> getField)
   Expr.BodyApply (Expr.Apply func arg) -> makeApplyType scope func arg
-  Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) -> do
-    typeRef <- typeIsType
-    void . unify typeRef $ paramType ^. stvTV . tvType
-    fresh scope $ makePiType paramGuid (paramType ^. stvTV) (result ^. stvTV)
-  Expr.BodyRecord (Expr.Record Expr.KVal fields) -> do
-    tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
-    fields & traverse_ . Lens._1 . stvTV . tvType %%~ unify tagTypeRef
-    fresh scope . makeRecordType $ fields <&> Lens.both %~ (^. stvTV)
+  Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) ->
+    makeLambdaType scope paramGuid (paramType ^. stvTV) (result ^. stvTV)
+  Expr.BodyRecord (Expr.Record Expr.KVal fields) ->
+    makeRecordType scope $ fields <&> Lens.both %~ (^. stvTV)
   where
     typeIsType = fresh scope $ ExprLens.bodyType # ()
 
