@@ -403,17 +403,19 @@ makeLambdaType scope paramGuid paramType result = do
   void . unify typeRef $ paramType ^. tvType
   fresh scope $ makePiTypeOfLam paramGuid paramType result
 
-makeRecordType :: Eq def => Scope -> [(TypedValue, TypedValue)] -> Infer def Ref
-makeRecordType scope fields = do
+makeRecordType :: Eq def => Expr.Kind -> Scope -> [(TypedValue, TypedValue)] -> Infer def Ref
+makeRecordType k scope fields = do
   tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
   fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvType) (unify tagTypeRef)
   fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvVal) setTagPos
   fresh scope $
-    Expr.BodyRecord . Expr.Record Expr.KType $ onField <$> fields
+    case k of
+    Expr.KVal -> Expr.BodyRecord . Expr.Record Expr.KType $ onRecVField <$> fields
+    Expr.KType -> ExprLens.bodyType # ()
   where
     setTagPos ref =
       ExprRefs.modify ref $ rdRelations <>~ Set.singleton RelationIsTag
-    onField (tag, val) = (tag ^. tvVal, val ^. tvType)
+    onRecVField (tag, val) = (tag ^. tvVal, val ^. tvType)
 
 makePiType :: Eq def => Scope -> TypedValue -> TypedValue -> Infer def Ref
 makePiType scope paramType resultType = do
@@ -434,7 +436,6 @@ makeTypeRef scope body =
   Expr.BodyLeaf Expr.TagType -> typeIsType
   Expr.BodyLam (Expr.Lam Expr.KType _ paramType resultType) ->
     makePiType scope (paramType ^. stvTV) (resultType ^. stvTV)
-  Expr.BodyRecord (Expr.Record Expr.KType _) -> typeIsType
   Expr.BodyLeaf Expr.LiteralInteger {} -> fresh scope $ ExprLens.bodyIntegerType # ()
   Expr.BodyLeaf Expr.Tag {} -> fresh scope $ ExprLens.bodyTagType # ()
   Expr.BodyLeaf Expr.Hole -> fresh scope $ ExprLens.bodyHole # ()
@@ -446,8 +447,8 @@ makeTypeRef scope body =
   Expr.BodyApply (Expr.Apply func arg) -> makeApplyType scope func arg
   Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) ->
     makeLambdaType scope paramGuid (paramType ^. stvTV) (result ^. stvTV)
-  Expr.BodyRecord (Expr.Record Expr.KVal fields) ->
-    makeRecordType scope $ fields <&> Lens.both %~ (^. stvTV)
+  Expr.BodyRecord (Expr.Record k fields) ->
+    makeRecordType k scope $ fields <&> Lens.both %~ (^. stvTV)
   where
     typeIsType = fresh scope $ ExprLens.bodyType # ()
 
