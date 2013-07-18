@@ -8,6 +8,7 @@ module InferTests (allTests) where
 -- import Data.Store.Guid (Guid)
 -- import InferWrappers
 -- import Lamdu.Data.Expression (Expression(..), Kind(..))
+import Lamdu.Data.Expression (Kind(..))
 -- import Lamdu.Data.Infer.Conflicts (inferWithConflicts)
 -- import Test.Framework (testGroup, plusTestOptions)
 -- import Test.Framework.Options (TestOptions'(..))
@@ -91,11 +92,11 @@ idOnAnInt =
   testInfer "id on an int" $
   getDef "id" $$ asHole integerType $$ literalInteger 5
 
--- idOnARecord =
---   testInfer "id ({:Type) <hole> does not infer { val" $
---   getDef "id" $$ rec $$ holeWithInferredType rec
---   where
---     rec = record KType [(holeWithInferredType tagType, integerType)]
+idOnARecord =
+  testInfer "id ({:Type) <hole> does not infer { val" $
+  getDef "id" $$ rec $$ holeWithInferredType rec
+  where
+    rec = record KType [(holeWithInferredType tagType, integerType)]
 
 idOnHole = testInfer "id hole" $ getDef "id" $$ holeWithInferredType set
 
@@ -321,7 +322,7 @@ hunitTests =
   , idTest
   , argTypeGoesToPi
   , idOnAnInt
-  -- , idOnARecord
+  , idOnARecord
   , idOnHole
   , inferFromOneArgToOther
   , depApply
