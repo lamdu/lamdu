@@ -78,7 +78,7 @@ Library
   Build-depends:       base >= 4,
                        keyvaluehash >= 0.3.1,
                        cryptohash >= 0.7,
-                       GLFW-b >= 0.1.0,
+                       GLFW-b >= 0.1.0 && < 0.2,
                        deepseq,
                        OpenGL,
                        StateVar,
