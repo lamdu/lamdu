@@ -252,14 +252,15 @@ fresh scope body = ExprRefs.fresh $ defaultRefData scope body
 newRandom :: Random r => Infer def r
 newRandom = Lens.zoom ctxRandomGen $ state random
 
-forceLam :: Eq def => Expr.Kind -> Scope -> Ref -> Ref -> Infer def (Guid, Ref, Ref)
-forceLam k lamScope paramTypeRef destRef = do
+forceLam :: Eq def => Expr.Kind -> Scope -> Ref -> Infer def (Guid, Ref, Ref)
+forceLam k lamScope destRef = do
   newGuid <- newRandom
-  let lamResultScope = lamScope & scopeMap %~ Map.insert newGuid paramTypeRef
-  newResultType <- fresh lamResultScope $ ExprLens.bodyHole # ()
+  newParamTypeRef <- fresh lamScope $ ExprLens.bodyHole # ()
+  let lamResultScope = lamScope & scopeMap %~ Map.insert newGuid newParamTypeRef
+  newResultTypeRef <- fresh lamResultScope $ ExprLens.bodyHole # ()
   newLamRef <-
     fresh lamScope . Expr.BodyLam $
-    Expr.Lam k newGuid paramTypeRef newResultType
+    Expr.Lam k newGuid newParamTypeRef newResultTypeRef
   -- left is renamed into right (keep existing names of destRef):
   rep <- unify newLamRef destRef
   body <- (^. rdBody) <$> ExprRefs.readRep rep
@@ -361,11 +362,11 @@ makeApplyType ::
   Eq def => Scope -> ScopedTypedValue -> ScopedTypedValue ->
   Infer def Ref
 makeApplyType applyScope func arg = do
-  (piGuid, _piParamType, piResultRef) <-
+  (piGuid, piParamType, piResultRef) <-
     forceLam Expr.KType
     (func ^. stvScope)
-    (arg ^. stvTV . tvType)
     (func ^. stvTV . tvType)
+  void $ unify (arg ^. stvTV . tvType) piParamType
   applyTypeRef <- fresh applyScope $ ExprLens.bodyHole # ()
   substOrUnify piResultRef AppliedPiResult
     { _aprPiGuid = piGuid
