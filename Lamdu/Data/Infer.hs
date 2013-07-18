@@ -252,22 +252,21 @@ fresh scope body = ExprRefs.fresh $ defaultRefData scope body
 newRandom :: Random r => Infer def r
 newRandom = Lens.zoom ctxRandomGen $ state random
 
-forcePiType :: Eq def => Scope -> Ref -> Ref -> Infer def (Guid, Ref)
-forcePiType piScope paramTypeRef destRef = do
+forceLam :: Eq def => Expr.Kind -> Scope -> Ref -> Ref -> Infer def (Guid, Ref, Ref)
+forceLam k lamScope paramTypeRef destRef = do
   newGuid <- newRandom
-  let
-    piResultScope = piScope & scopeMap %~ Map.insert newGuid paramTypeRef
-  newResultType <- fresh piResultScope $ ExprLens.bodyHole # ()
-  newPiType <-
-    fresh piScope . Expr.BodyLam $
-    Expr.Lam Expr.KType newGuid paramTypeRef newResultType
+  let lamResultScope = lamScope & scopeMap %~ Map.insert newGuid paramTypeRef
+  newResultType <- fresh lamResultScope $ ExprLens.bodyHole # ()
+  newLamRef <-
+    fresh lamScope . Expr.BodyLam $
+    Expr.Lam k newGuid paramTypeRef newResultType
   -- left is renamed into right (keep existing names of destRef):
-  rep <- unify newPiType destRef
+  rep <- unify newLamRef destRef
   body <- (^. rdBody) <$> ExprRefs.readRep rep
   return $
-    case body ^? ExprLens.bodyKindedLam Expr.KType of
-    Just (paramGuid, _piParamTypeRef, piResultRef) -> (paramGuid, piResultRef)
-    Nothing -> error "We just unified Lam KType into rep"
+    case body ^? ExprLens.bodyKindedLam k of
+    Just kindedLam -> kindedLam
+    Nothing -> error "We just unified Lam into rep"
 
 -- Remap a Guid from piResult context to the Apply context
 remapSubstGuid :: AppliedPiResult -> RefData def -> Guid -> Maybe Guid
@@ -362,8 +361,8 @@ makeApplyType ::
   Eq def => Scope -> ScopedTypedValue -> ScopedTypedValue ->
   Infer def Ref
 makeApplyType applyScope func arg = do
-  (piGuid, piResultRef) <-
-    forcePiType
+  (piGuid, _piParamType, piResultRef) <-
+    forceLam Expr.KType
     (func ^. stvScope)
     (arg ^. stvTV . tvType)
     (func ^. stvTV . tvType)
