@@ -56,9 +56,16 @@ infer expr =
   Infer.infer Infer.emptyScope expr
   & mapStateT (Lens._Left %~ InferError)
 
+deref ::
+  Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a) ->
+  M (Expr.Expression Def (Derefed Def, a))
+deref expr = expr
+  & ExprLens.exprDef %~ (^. InferLoad.ldDef)
+  & InferDeref.expr
+
 inferDef ::
-  M (Expr.Expression (LoadedDef a) (Infer.ScopedTypedValue, ())) ->
-  M (Expr.Expression a (Derefed Def))
+  M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a)) ->
+  M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a))
 inferDef act = do
   recursiveDefRef <- InferLoad.newDefinition recursiveDefI
   expr <- act
@@ -66,17 +73,14 @@ inferDef act = do
     mapStateT (Lens._Left %~ InferError) .
     Infer.tempUnify recursiveDefRef $
     expr ^. Expr.ePayload . Lens._1 . Infer.stvTV . Infer.tvType
-  expr
-    & ExprLens.exprDef %~ (^. InferLoad.ldDef)
-    & InferDeref.expr
-    <&> Lens.mapped %~ fst
+  return expr
 
-inferDefInNewContext ::
-  M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, ())) ->
-  Either Error (Expr.Expression Def (Derefed Def))
-inferDefInNewContext act =
-  (`evalStateT` Infer.emptyContext (Random.mkStdGen 0x1337)) $
-  inferDef act
+runNewContext :: M a -> Either Error a
+runNewContext = (`evalStateT` Infer.emptyContext (Random.mkStdGen 0x1337))
 
+-- Weaker and more convenient wrapper around runNewContext, deref,
+-- inferDef, infer, load
 loadInferDef :: Expr -> Either Error (Expr.Expression Def (Derefed Def))
-loadInferDef expr = inferDefInNewContext $ load expr >>= infer
+loadInferDef expr =
+  runNewContext $
+  (fmap . fmap) fst . deref =<< inferDef (infer =<< load expr)
