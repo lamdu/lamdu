@@ -11,6 +11,7 @@ module Lamdu.Data.Infer
 
 import Control.Applicative (Applicative(..))
 import Control.Lens.Operators
+import Control.Monad (void)
 import Control.Monad.Trans.State (StateT)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
@@ -26,8 +27,8 @@ import qualified Lamdu.Data.Infer.Monad as InferM
 
 -- | Temporarily here for tests until we fix API to only have
 -- TypedValue unify:
-tempUnify :: Eq def => Ref -> Ref -> StateT (Context def) (Either (Error def)) Ref
-tempUnify x y = unify x y & runInfer
+tempUnify :: Eq def => Ref -> Ref -> StateT (Context def) (Either (Error def)) ()
+tempUnify x y = unify x y & runInfer & void
 
 infer ::
   Eq def => Scope -> Expr.Expression (LoadedDef def) a ->
