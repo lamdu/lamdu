@@ -1,18 +1,8 @@
 import Control.Applicative
 import Control.Monad
 import Criterion.Main
-import Data.Binary.Utils (encodeS)
+import InferPerf
 import InferTests
-import InferWrappers
-import Utils
-import qualified Data.ByteString as SBS
-import qualified Lamdu.Data.Expression as Expr
-
-inferAndEncode :: Expr.Expression Def a -> Int -> Int
-inferAndEncode expr par =
-  SBS.length $ encodeS result
-  where
-    result = assertSuccess . loadInferDef . void $ par <$ expr
 
 main :: IO ()
 main = do
