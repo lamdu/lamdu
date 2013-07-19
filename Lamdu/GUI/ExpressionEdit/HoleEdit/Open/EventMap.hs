@@ -163,7 +163,7 @@ make pl holeInfo mShownResult = do
       jumpHoles : close : pick : alphaAfterOp :
       [ applyOp | null searchTerm ]
     weakEventMap =
-      mconcat
+      mconcat $
       [ applyOp | not (null searchTerm) ] ++
       [ cut, paste, replace
       -- includes overlapping events like "cut" of sub-expressions
