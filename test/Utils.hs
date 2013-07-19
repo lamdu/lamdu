@@ -1,10 +1,11 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE FlexibleInstances, OverlappingInstances #-}
+{-# LANGUAGE FlexibleInstances, OverlappingInstances, GeneralizedNewtypeDeriving #-}
 module Utils where
 
 import Control.Applicative ((<$), (<$>), (<*>))
 import Control.Lens.Operators
 import Control.Monad (void)
+import Data.Binary (Binary)
 import Data.Map (Map, (!))
 import Data.Monoid (mappend)
 import Data.Store.Guid (Guid)
@@ -27,7 +28,7 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 newtype Def = Def String
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Binary)
 instance Show Def where
   show (Def d) = '#':d
 type PureExpr def = Expr.Expression def ()

@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall -Werror -fno-warn-missing-signatures #-}
-module InferTests (allTests) where
+module InferTests where
 
 -- import Control.Lens.Operators
 -- import Control.Monad.Trans.State (evalState)

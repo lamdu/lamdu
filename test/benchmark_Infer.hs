@@ -2,6 +2,7 @@ import Control.Applicative
 import Control.Monad
 import Criterion.Main
 import Data.Binary.Utils (encodeS)
+import InferTests
 import InferWrappers
 import Utils
 import qualified Data.ByteString as SBS
