@@ -66,18 +66,18 @@ newtype HoleConstraints = HoleConstraints
   }
 
 -- You must apply this recursively
-applyHoleConstraints ::
-  HoleConstraints -> RefData def -> Either (Error def) (RefData def)
-applyHoleConstraints (HoleConstraints unusableSet) refData
+checkHoleConstraints ::
+  HoleConstraints -> Expr.Body def Ref -> Scope ->
+  Either (Error def) Scope
+checkHoleConstraints (HoleConstraints unusableSet) body scope
   | Lens.anyOf ExprLens.bodyParameterRef (`Set.member` unusableSet) body =
     Left VarEscapesScope
   -- Expensive assertion
   | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Set.member` unusableSet) body =
-    error "applyHoleConstraints: Shadowing detected"
+    error "checkHoleConstraints: Shadowing detected"
   | otherwise =
-    return $ refData & rdScope . scopeMap %~ (`Map.difference` unusableMap)
+    return $ scope & scopeMap %~ (`Map.difference` unusableMap)
   where
-    body = refData ^. rdBody
     unusableMap = Map.fromSet (const ()) unusableSet
 
 data UnifyPhase
@@ -180,6 +180,15 @@ renameMergeRefData recurse rep renames a b = do
   -- Now we can safely run the relations
   traverse_ (InferM.substOrUnify rep) appliedPiResults
 
+applyHoleConstraints ::
+  (Ref -> UnifyPhase -> Infer def dummy) -> HoleConstraints ->
+  Expr.Body def Ref -> Scope -> Infer def Scope
+applyHoleConstraints recurse holeConstraints body oldScope = do
+  newScope <-
+    InferM.liftError $
+    checkHoleConstraints holeConstraints body oldScope
+  traverse_ (flip recurse (UnifyHoleConstraints holeConstraints)) body
+  return newScope
 
 unifyRecurse :: Eq def => Set Ref -> Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref
 unifyRecurse visited renames rawNode phase = do
@@ -189,15 +198,14 @@ unifyRecurse visited renames rawNode phase = do
     else
     case phase of
     UnifyHoleConstraints holeConstraints -> do
-      rawNodeData <- ExprRefs.readRep nodeRep
-      nodeData <-
-        InferM.liftError . applyHoleConstraints holeConstraints $
-        renameRefData renames rawNodeData
-      ExprRefs.writeRep nodeRep nodeData
-      traverse_
-        (flip (recurse nodeRep renames)
-         (UnifyHoleConstraints holeConstraints)) $
-        nodeData ^. rdBody
+      oldNodeData <- ExprRefs.readRep nodeRep
+      ExprRefs.writeRep nodeRep $ error "Reading node during write..."
+      let midRefData = renameRefData renames oldNodeData
+      midRefData
+        & rdScope %%~
+          applyHoleConstraints (recurse nodeRep renames) holeConstraints
+          (midRefData ^. rdBody)
+        >>= ExprRefs.writeRep nodeRep
       return nodeRep
     UnifyRef other -> do
       (rep, unifyResult) <- ExprRefs.unifyRefs nodeRep other
