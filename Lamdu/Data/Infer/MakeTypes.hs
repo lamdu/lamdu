@@ -11,7 +11,6 @@ import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import Lamdu.Data.Infer.Subst (substOrUnify)
 import Lamdu.Data.Infer.Unify (unify, forceLam, fresh)
 import qualified Control.Lens as Lens
-import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
@@ -76,7 +75,7 @@ makeRecordType k scope fields = do
     Expr.KType -> ExprLens.bodyType # ()
   where
     setTagPos ref =
-      ExprRefs.modify ref $ rdRelations <>~ Set.singleton RelationIsTag
+      ExprRefs.modify ref $ rdRelations <>~ [RelationIsTag]
     onRecVField (tag, val) = (tag ^. tvVal, val ^. tvType)
 
 makePiType :: Eq def => Scope -> TypedValue -> TypedValue -> Infer def Ref

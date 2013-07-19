@@ -123,7 +123,7 @@ renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames
   (Map.mapKeys (lookupOrSelf renames) copiedNames)
 
 -- No names in Relation (yet?)
-renameRelations :: Map Guid Guid -> Set Relation -> Set Relation
+renameRelations :: Map Guid Guid -> [Relation] -> [Relation]
 renameRelations _ = id
 
 renameRefData :: Map Guid Guid -> RefData def -> RefData def

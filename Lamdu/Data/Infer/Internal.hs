@@ -19,7 +19,6 @@ module Lamdu.Data.Infer.Internal
 
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
-import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.UnionFind (Ref, RefMap)
 import qualified Control.Lens as Lens
@@ -84,7 +83,7 @@ data RefData def = RefData
   { _rdScope :: Scope
   , _rdAppliedPiResults :: [AppliedPiResult] -- TODO: Into relations
   , _rdRenameHistory :: RenameHistory
-  , _rdRelations :: Set Relation
+  , _rdRelations :: [Relation]
   , _rdBody :: Expr.Body def Ref
   }
 Lens.makeLenses ''RefData
