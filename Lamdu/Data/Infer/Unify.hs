@@ -3,7 +3,7 @@ module Lamdu.Data.Infer.Unify
   , forceLam
   ) where
 
-import Control.Applicative (Applicative(..), (<*>), (<$>))
+import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.Monad.Trans.State (state)
 import Data.Foldable (traverse_)
@@ -84,29 +84,30 @@ data UnifyPhase
   = UnifyHoleConstraints HoleConstraints
   | UnifyRef Ref
 
-mergeBodies ::
+mergeScopeBodies ::
   Eq def =>
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
   Map Guid Guid ->
   Scope -> Expr.Body def Ref ->
   Scope -> Expr.Body def Ref ->
-  Infer def (Expr.Body def Ref)
-mergeBodies recurse renames xScope xBody yScope yBody =
-  case (xBody, yBody) of
-  (_, Expr.BodyLeaf Expr.Hole) -> unifyWithHole renames   yScope xScope xBody
-  (Expr.BodyLeaf Expr.Hole, _) -> unifyWithHole Map.empty xScope yScope yBody
-  _ ->
-    fromMaybe (InferM.error (Mismatch xBody yBody)) $
-    sequenceA <$> ExprUtil.matchBody matchLamResult matchOther (==) xBody yBody
-  where
+  Infer def (Scope, Expr.Body def Ref)
+mergeScopeBodies recurse renames xScope xBody yScope yBody = do
+  intersectedScope <- intersectScopes xScope yScope
+  let
     unifyWithHole activeRenames holeScope otherScope nonHoleBody =
-      maybeRecurseHoleConstraints activeRenames nonHoleBody $
-      makeUnusableScopeSet holeScope otherScope
-    maybeRecurseHoleConstraints activeRenames nonHoleBody unusableScopeSet =
-      nonHoleBody
-      & Lens.traverse %%~
-        flip (recurse activeRenames)
-        (UnifyHoleConstraints (HoleConstraints unusableScopeSet))
+      applyHoleConstraints (recurse activeRenames) (HoleConstraints unusableScopeSet)
+      nonHoleBody intersectedScope
+      <&> flip (,) nonHoleBody
+      where
+        unusableScopeSet = makeUnusableScopeSet holeScope otherScope
+  case (xBody, yBody) of
+    (_, Expr.BodyLeaf Expr.Hole) -> unifyWithHole renames   yScope xScope xBody
+    (Expr.BodyLeaf Expr.Hole, _) -> unifyWithHole Map.empty xScope yScope yBody
+    _ ->
+      fmap ((,) intersectedScope) .
+      fromMaybe (InferM.error (Mismatch xBody yBody)) $
+      sequenceA <$> ExprUtil.matchBody matchLamResult matchOther (==) xBody yBody
+  where
     makeUnusableScopeSet holeScope otherScope =
       Map.keysSet $ Map.difference
       (otherScope ^. scopeMap)
@@ -146,8 +147,7 @@ mergeRefData recurse renames
   (RefData aScope aAppliedPiResults aMRenameHistory aRelations aBody)
   (RefData bScope bAppliedPiResults bMRenameHistory bRelations bBody) =
   mkRefData
-  <$> intersectScopes aScope bScope
-  <*> mergeBodies recurse renames aScope aBody bScope bBody
+  <$> mergeScopeBodies recurse renames aScope aBody bScope bBody
   where
     newInfoOnSelf =
       Lens.has ExprLens.bodyHole aBody /=
@@ -156,7 +156,7 @@ mergeRefData recurse renames
       | newInfoOnSelf = mergedAppliedPiResults
       | otherwise = []
     mergedAppliedPiResults = aAppliedPiResults ++ bAppliedPiResults
-    mkRefData intersectedScope mergedBody =
+    mkRefData (intersectedScope, mergedBody) =
       (,) substsToExecute
       RefData
       { _rdScope = intersectedScope
