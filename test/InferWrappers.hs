@@ -19,9 +19,6 @@ import qualified System.Random as Random
 
 type ExprInferred = Expr.Expression Def ( Expr, Expr )
 
-inferResults :: Expr.Expression Def (Derefed Def) -> ExprInferred
-inferResults = fmap $ \(Derefed val typ) -> (val, typ)
-
 loader :: InferLoad.Loader Def (Either String)
 loader =
   InferLoad.Loader loadDefType
@@ -50,19 +47,32 @@ assertSuccessM = mapStateT (return . assertSuccess)
 assertSuccessT :: (MonadA m, Show l) => StateT s (EitherT l m) a -> StateT s m a
 assertSuccessT = mapStateT (fmap assertSuccess . runEitherT)
 
+inferScope ::
+  Infer.Scope -> Expr.Expression (LoadedDef Def) a ->
+  M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a))
+inferScope scope expr =
+  Infer.infer scope expr & mapStateT (Lens._Left %~ InferError)
+
 infer ::
   Expr.Expression (LoadedDef Def) a ->
   M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a))
-infer expr =
-  Infer.infer Infer.emptyScope expr
-  & mapStateT (Lens._Left %~ InferError)
+infer = inferScope Infer.emptyScope
 
-deref ::
+derefWithPL ::
   Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a) ->
   M (Expr.Expression Def (Derefed Def, a))
-deref expr = expr
+derefWithPL expr = expr
   & ExprLens.exprDef %~ (^. InferLoad.ldDef)
   & InferDeref.expr
+
+deref ::
+  Expr.Expression (LoadedDef Def) Infer.ScopedTypedValue ->
+  M ExprInferred
+deref expr =
+  expr
+  <&> flip (,) ()
+  & derefWithPL
+  <&> fmap (\(Derefed val typ, ()) -> (val, typ))
 
 -- Run this function only once per M
 inferDef ::
@@ -87,6 +97,15 @@ unifyExprVals e1 e2 =
   where
     exprValRef = Expr.ePayload . Lens._1 . Infer.stvTV . Infer.tvVal
 
+loadInferInto ::
+  Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a) ->
+  Expr.Expression Def a -> M ()
+loadInferInto dest expr = do
+  resumptionInferred <- inferScope scope =<< load expr
+  unifyExprVals resumptionInferred dest
+  where
+    scope = dest ^. Expr.ePayload . Lens._1 . Infer.stvScope
+
 try :: M a -> M (Either Error a)
 try act = do
   oldState <- State.get
@@ -100,9 +119,9 @@ runNewContext = (`evalStateT` Infer.emptyContext (Random.mkStdGen 0x1337))
 
 -- Weaker and more convenient wrapper around runNewContext, deref,
 -- inferDef, infer, load
-loadInferDef :: Expr -> M (Expr.Expression Def (Derefed Def))
+loadInferDef :: Expr -> M ExprInferred
 loadInferDef expr =
-  (fmap . fmap) fst . deref =<< inferDef (infer =<< load expr)
+  deref . fmap fst =<< inferDef (infer =<< load expr)
 
-runLoadInferDef :: Expr -> Either Error (Expr.Expression Def (Derefed Def))
+runLoadInferDef :: Expr -> Either Error ExprInferred
 runLoadInferDef = runNewContext . loadInferDef
