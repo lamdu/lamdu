@@ -271,7 +271,7 @@ expectLeft msg _ (Right x) =
 
 wrongRecurseMissingArg =
   testCase "f x = f" .
-  expectLeft "Infinite Type" verifyError . fmap (void . fst) $
+  expectLeft "Infinite Type" verifyError . fmap void $
   loadInferRun (void expr)
   where
     verifyError (InferError (Infer.InfiniteExpression _)) = return ()
@@ -364,7 +364,7 @@ inferPreservesShapeProp :: Expr -> Property
 inferPreservesShapeProp expr =
   case loadInferRun expr of
     Left _ -> property rejected
-    Right (inferred, _) -> property (void inferred == expr)
+    Right inferred -> property (void inferred == expr)
 
 qcProps =
   [ testProperty "infer preserves shape" inferPreservesShapeProp

@@ -3,7 +3,7 @@ module InferWrappers where
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Control.Monad.Trans.Either (EitherT(..))
-import Control.Monad.Trans.State (StateT, mapStateT, runStateT)
+import Control.Monad.Trans.State (StateT, mapStateT, evalStateT)
 import Lamdu.Data.Infer.Deref (Derefed(..))
 import Lamdu.Data.Infer.Load (LoadedDef)
 import Utils
@@ -63,10 +63,9 @@ infer expr =
 runContext ::
   StateT (Infer.Context Def) (Either Error)
   (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, ())) ->
-  Either Error
-  (Expr.Expression Def (Derefed Def), Infer.Context Def)
+  Either Error (Expr.Expression Def (Derefed Def))
 runContext act =
-  (`runStateT` Infer.emptyContext (Random.mkStdGen 0x1337)) $ do
+  (`evalStateT` Infer.emptyContext (Random.mkStdGen 0x1337)) $ do
     recursiveDefRef <- InferLoad.newDefinition recursiveDefI
     inferredExpr <- act
     let
@@ -78,5 +77,5 @@ runContext act =
       & InferDeref.expr
       <&> Lens.mapped %~ fst
 
-loadInferRun :: Expr -> Either Error (Expr.Expression Def (Derefed Def), Infer.Context Def)
+loadInferRun :: Expr -> Either Error (Expr.Expression Def (Derefed Def))
 loadInferRun expr = runContext $ load expr >>= infer
