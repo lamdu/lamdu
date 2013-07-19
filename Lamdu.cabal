@@ -19,6 +19,7 @@ Library
                        Data.Function.Decycle,
                        Data.List.Assoc,
                        Data.List.Utils,
+                       Data.Map.Utils,
                        Data.Maybe.Utils,
                        Data.Monoid.Applicative,
                        Data.Monoid.Instances,

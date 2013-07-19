@@ -16,6 +16,7 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT, state)
 import Data.Foldable (traverse_, sequenceA_)
 import Data.Map (Map)
+import Data.Map.Utils (lookupOrSelf)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
@@ -45,9 +46,6 @@ emptyContext gen =
   , _ctxDefRefs = Map.empty
   , _ctxRandomGen = gen
   }
-
-rename :: Map Guid Guid -> Guid -> Guid
-rename renames guid = fromMaybe guid $ renames ^. Lens.at guid
 
 data Error def
   = VarEscapesScope
@@ -128,8 +126,8 @@ mergeBodies recurse renames xScope xBody yScope yBody =
 renameAppliedPiResult :: Map Guid Guid -> AppliedPiResult -> AppliedPiResult
 renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames) =
   AppliedPiResult
-  (rename renames piGuid) argVal destRef
-  (Map.mapKeys (rename renames) copiedNames)
+  (lookupOrSelf renames piGuid) argVal destRef
+  (Map.mapKeys (lookupOrSelf renames) copiedNames)
 
 -- No names in Relation (yet?)
 renameRelations :: Map Guid Guid -> Set Relation -> Set Relation
@@ -142,11 +140,11 @@ renameRefData renames (RefData scope substs renameHistory relations body)
     error "Shadowing encountered, what to do?"
   | otherwise =
     RefData
-    (scope & scopeMap %~ Map.mapKeys (rename renames))
+    (scope & scopeMap %~ Map.mapKeys (lookupOrSelf renames))
     (substs <&> renameAppliedPiResult renames)
     (renameHistory & _RenameHistory %~ Map.union renames)
     (relations & renameRelations renames)
-    (body & ExprLens.bodyParameterRef %~ rename renames)
+    (body & ExprLens.bodyParameterRef %~ lookupOrSelf renames)
 
 mergeRefData ::
   Eq def =>
@@ -287,7 +285,7 @@ injectRenameHistory Untracked = id
 injectRenameHistory (RenameHistory renames) =
   -- Only the copied names (in our argument map) need to be fixed,
   -- others are in shared scope so need no fixing:
-  Lens.mapped . Lens._1 %~ rename renames
+  Lens.mapped . Lens._1 %~ lookupOrSelf renames
 
 -- TODO: This should also substLeafs, and it should also subst getvars that aren't subst
 substNode :: Eq def => Expr.Body def Ref -> AppliedPiResult -> Infer def ()
@@ -297,7 +295,7 @@ substNode srcBody rawApr = do
     apr =
       rawApr
       & aprCopiedNames %~ injectRenameHistory (destData ^. rdRenameHistory)
-    renameCopied = rename (fst <$> apr ^. aprCopiedNames)
+    renameCopied = lookupOrSelf (fst <$> apr ^. aprCopiedNames)
     matchLamResult srcGuid destGuid srcChildRef destChildRef
       | renameCopied srcGuid == destGuid =
         apr
