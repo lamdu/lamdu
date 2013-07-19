@@ -2,31 +2,31 @@
 module InferTests (allTests) where
 
 -- import Control.Lens.Operators
-import Control.Monad (void)
 -- import Control.Monad.Trans.State (evalState)
 -- import Data.Monoid (Monoid(..))
 -- import Data.Store.Guid (Guid)
-import InferWrappers
 -- import Lamdu.Data.Expression (Expression(..), Kind(..))
-import Lamdu.Data.Expression (Kind(..))
 -- import Lamdu.Data.Infer.Conflicts (inferWithConflicts)
-import Test.Framework (testGroup) --, plusTestOptions
 -- import Test.Framework.Options (TestOptions'(..))
-import Test.Framework.Providers.QuickCheck2 (testProperty)
 -- import Test.HUnit (assertBool)
-import Test.QuickCheck (Property)
-import Test.QuickCheck.Property (property, rejected)
-import Utils
 -- import qualified Control.Lens as Lens
--- import qualified Data.Store.Guid as Guid
 -- import qualified Lamdu.Data.Expression as Expr
 -- import qualified Lamdu.Data.Expression.Lens as ExprLens
 -- import qualified Lamdu.Data.Infer as Infer
 -- import qualified Test.Framework.Providers.HUnit as HUnitProvider
 -- import qualified Test.HUnit as HUnit
+import Control.Monad (void)
 import InferAssert
 import InferCombinators
+import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
+import Lamdu.Data.Expression (Kind(..))
+import Test.Framework (testGroup) --, plusTestOptions
+import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Test.QuickCheck (Property)
+import Test.QuickCheck.Property (property, rejected)
+import Utils
+import qualified Data.Store.Guid as Guid
 
 simpleTests =
   [ testInfer "literal int" $ literalInteger 5
@@ -186,14 +186,14 @@ emptyRecordTests =
   , testInfer "val infer" $ record KVal []
   ]
 
--- recordTest =
---   testInfer "f a x:a = {x" $
---   lambda "a" set $ \a ->
---   lambda "x" a $ \x ->
---   record KVal
---   [ (tag fieldGuid, x) ]
---   where
---     fieldGuid = Guid.fromString "field"
+recordTest =
+  testInfer "f a x:a = {x" $
+  lambda "a" set $ \a ->
+  lambda "x" a $ \x ->
+  record KVal
+  [ (tag fieldGuid, x) ]
+  where
+    fieldGuid = Guid.fromString "field"
 
 -- -- TODO: Test should verify that ImplicitVariables puts the restricted
 -- -- form (b->c) in the right place.
@@ -230,16 +230,16 @@ emptyRecordTests =
 --   , uncurry2Test
 --   ]
 
--- inferReplicateOfReplicate =
---   testInfer "replicate <hole> (replicate <hole> 1) 2" $
---   replicat (listOf integerType)
---   (replicat integerType
---    (literalInteger 1)
---    (literalInteger 3))
---   (literalInteger 2)
---   where
---     replicat typ x y =
---       getDef "replicate" $$ asHole typ $$: [ x, y ]
+inferReplicateOfReplicate =
+  testInfer "replicate <hole> (replicate <hole> 1) 2" $
+  replicat (listOf integerType)
+  (replicat integerType
+   (literalInteger 1)
+   (literalInteger 3))
+  (literalInteger 2)
+  where
+    replicat typ x y =
+      getDef "replicate" $$ asHole typ $$: [ x, y ]
 
 -- infiniteTypeTests =
 --   testGroup "Infinite types"
@@ -290,34 +290,33 @@ emptyRecordTests =
 --       HUnit.assertFailure $ "InfiniteExpression error expected, but got missing def type error for def: " ++ show def
 --     expr = lambda "x" hole . const $ recurse hole
 
--- mapIdTest =
---   testInfer "map id (5:_)" $
---   getDef "map" $$ asHole integerType $$ asHole integerType $$:
---   [ getDef ":" $$ asHole integerType $$:
---     [ literalInteger 5
---     , holeWithInferredType $ listOf integerType
---     ]
---   , getDef "id" $$ asHole integerType
---   ]
+mapIdTest =
+  testInfer "map id (5:_)" $
+  getDef "map" $$ asHole integerType $$ asHole integerType $$:
+  [ getDef ":" $$ asHole integerType $$:
+    [ literalInteger 5
+    , holeWithInferredType $ listOf integerType
+    ]
+  , getDef "id" $$ asHole integerType
+  ]
 
--- joinMaybe =
---   testInferAllowFail "\\x:_ -> caseMaybe x (empty=Nothing, just=\\x->x)" $
---   lambda "xs" (asHole (listOf hole)) $ \xs ->
---   getDef "caseMaybe" $$ iset $$ asHole (maybeOf iset)
---   $$:
---   [ xs
---   , getDef "Nothing" $$ iset
---   , lambda "item" iset id
---   ]
---   where
---     iset = holeWithInferredType set
+joinMaybe =
+  testInferAllowFail "\\x:_ -> caseMaybe x (empty=Nothing, just=\\x->x)" $
+  lambda "xs" (asHole (listOf hole)) $ \xs ->
+  getDef "caseMaybe" $$ iset $$ asHole (maybeOf iset)
+  $$:
+  [ xs
+  , getDef "Nothing" $$ iset
+  , lambda "item" iset id
+  ]
+  where
+    iset = holeWithInferredType set
 
 hunitTests =
   simpleTests
   ++
-  [ -- mapIdTest
-  -- ,
-    applyIntToBoolFuncWithHole
+  [ mapIdTest
+  , applyIntToBoolFuncWithHole
   -- , applyOnVar
   , idTest
   , argTypeGoesToPi
@@ -332,12 +331,12 @@ hunitTests =
   , inferPart
   -- , failResumptionAddsRules
   , emptyRecordTests
-  -- , recordTest
-  -- , inferReplicateOfReplicate
+  , recordTest
+  , inferReplicateOfReplicate
   -- , implicitVarTests
   -- , infiniteTypeTests
   -- , resumptionTests
-  -- , joinMaybe
+  , joinMaybe
   ]
 
 inferPreservesShapeProp :: Expr -> Property
