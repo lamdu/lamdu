@@ -1,27 +1,27 @@
+{-# LANGUAGE RankNTypes #-}
 {-# OPTIONS -Wall -Werror -fno-warn-missing-signatures #-}
 module InferTests where
 
--- import Control.Lens.Operators
 -- import Control.Monad.Trans.State (evalState)
 -- import Data.Store.Guid (Guid)
--- import Lamdu.Data.Expression (Expression(..), Kind(..))
 -- import Lamdu.Data.Infer.Conflicts (inferWithConflicts)
 -- import Test.HUnit (assertBool)
--- import qualified Control.Lens as Lens
 -- import qualified Lamdu.Data.Expression as Expr
--- import qualified Lamdu.Data.Expression.Lens as ExprLens
+import Control.Lens.Operators
 import Control.Monad (void)
 import InferAssert
 import InferCombinators
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
-import Lamdu.Data.Expression (Kind(..))
+import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Test.Framework (testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Property (property, rejected)
 import Utils
+import qualified Control.Lens as Lens
 import qualified Data.Store.Guid as Guid
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer as Infer
 import qualified Test.HUnit as HUnit
 
@@ -113,10 +113,10 @@ depApply =
 -- applyFunc = ExprLens.exprApply . Expr.applyFunc
 -- applyArg :: Lens.Traversal' (Expression def a) (Expression def a)
 -- applyArg = ExprLens.exprApply . Expr.applyArg
--- lamParamType :: Lens.Traversal' (Expression def a) (Expression def a)
--- lamParamType = ExprLens.exprLam . Expr.lamParamType
--- lamBody :: Lens.Traversal' (Expression def a) (Expression def a)
--- lamBody = ExprLens.exprLam . Expr.lamResult
+lamKindedParamType :: Kind -> Lens.Traversal' (Expression def a) (Expression def a)
+lamKindedParamType k = ExprLens.exprKindedLam k . Lens._2
+lamKindedResult :: Kind -> Lens.Traversal' (Expression def a) (Expression def a)
+lamKindedResult k = ExprLens.exprKindedLam k . Lens._3
 
 -- resumptionTests = testGroup "type infer resume" $
 --   [ testResume "{hole->pi}"
@@ -124,12 +124,12 @@ depApply =
 --   , testResume "{hole->id} hole"
 --     (hole $$ hole) applyFunc (getDef "id")
 --   , testResume "\\_:hole -> {hole->id}"
---     (lambda "" hole (const hole)) lamBody (getDef "id")
+--     (lambda "" hole (const hole)) lamResult (getDef "id")
 --   ] ++
 --   let
 --     lambdaAB = lambda "a" hole . const . lambda "b" hole . const $ hole
 --     lambdaABBody :: Lens.Traversal' (Expression def a) (Expression def a)
---     lambdaABBody = lamBody . lamBody
+--     lambdaABBody = lamResult . lamResult
 --   in
 --   [ testResume "\\a:hole -> \\b:hole -> {hole->a}"
 --     lambdaAB lambdaABBody (getParam "a" hole)
@@ -140,13 +140,13 @@ depApply =
 --     (lambda "a" hole $ \a ->
 --      lambda "b" set $ \_ ->
 --      lambda "f" hole $ \f -> f $$ a $$ hole)
---     (lamBody . lamBody . lamBody . applyArg)
+--     (lamResult . lamResult . lamResult . applyArg)
 --     (getParam "b" hole)
 --   , testCase "ref to the def on the side" $
 --     let
 --       (exprD, inferContext) =
 --         doInfer_ $ lambda "" hole (const hole)
---       scope = exprD ^?! lamBody . Expr.ePayload . Lens.to (Infer.nScope . Infer.iNode)
+--       scope = exprD ^?! lamResult . Expr.ePayload . Lens.to (Infer.nScope . Infer.iNode)
 --       exprR = (`evalState` inferContext) $ do
 --         node <- Infer.newNodeWithScope scope
 --         doInferM_ node getRecursiveDef
@@ -154,24 +154,30 @@ depApply =
 --     in assertCompareInferred resultR $ recurse (hole ~> hole)
 --   ]
 
--- -- f     x    = x _ _
--- --   --------
--- --   (_ -> _)
--- --         ^ Set Bool here
--- failResumptionAddsRules =
---   testCase "Resumption that adds rules and fails" .
---   assertBool "Resumption should have failed" $ not success
---   where
---     (success, _iwc) = (`evalState` origInferContext) $
---       -- TODO: Verify iwc has the right kind of conflict (or add
---       -- different tests to do that)
---       inferWithConflicts (doLoad resumptionValue) resumptionPoint
---     resumptionValue = getDef "Bool" -- <- anything but Pi
---     resumptionPoint =
---       origInferred ^?! lamParamType . lamBody . Expr.ePayload . Lens.to Infer.iNode
---     (origInferred, origInferContext) =
---       doInfer_ . lambda "x" (hole ~> hole) $
---       \x -> x $$ hole $$ hole
+expectLeft :: Show r => String -> (l -> HUnit.Assertion) -> Either l r -> HUnit.Assertion
+expectLeft _ handleLeft (Left x) = handleLeft x
+expectLeft msg _ (Right x) =
+  HUnit.assertFailure $
+  unwords ["Error", msg, "expected.  Unexpected success encountered:", show x]
+
+failResumptionAddsRules =
+  -- f     x    = x _ _
+  --   --------
+  --   (_ -> _)
+  --         ^ Set Bool here
+  testCase "Resumption that adds rules and fails" .
+  runContextAssertion $ do
+    rootInferred <- inferDef $ infer =<< load expr
+    resumptionInferred <- infer =<< load resumptionValue
+    fmap verifyError . try . unifyExprVals resumptionInferred $
+      rootInferred ^?! resumptionPoint
+  where
+    verifyError :: Either Error () -> M ()
+    verifyError (Left (InferError Infer.Mismatch {})) = return ()
+    verifyError _ = error "Resumption did not fail!"
+    expr = lambda "x" (hole ~> hole) $ \x -> x $$ hole $$ hole
+    resumptionValue = getDef "Bool" -- <- anything but Pi
+    resumptionPoint = lamKindedParamType KVal . lamKindedResult KType
 
 emptyRecordTests =
   testGroup "empty record"
@@ -239,12 +245,6 @@ infiniteTypeTests =
   [ wrongRecurseMissingArg
   -- , getFieldWasntAllowed
   ]
-
-expectLeft :: Show r => String -> (l -> HUnit.Assertion) -> Either l r -> HUnit.Assertion
-expectLeft _ handleLeft (Left x) = handleLeft x
-expectLeft msg _ (Right x) =
-  HUnit.assertFailure $
-  unwords ["Error", msg, "expected.  Unexpected success encountered:", show x]
 
 -- getFieldWasntAllowed =
 --   testCase "map (\\x:_. #x#) {}:_" $
@@ -350,7 +350,7 @@ hunitTests =
   , fOfXIsFOf5
   -- , monomorphRedex
   , inferPart
-  -- , failResumptionAddsRules
+  , failResumptionAddsRules
   , emptyRecordTests
   , recordTest
   , inferReplicateOfReplicate
