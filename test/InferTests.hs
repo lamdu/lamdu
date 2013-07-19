@@ -401,7 +401,7 @@ scopeEscape =
   expectLeft "VarEscapesScope" verifyError . fmap (UnescapedStr . annotateTypes) $
   runLoadInferDef (void expr)
   where
-    verifyError (InferError Infer.VarEscapesScope) = return ()
+    verifyError (InferError Infer.VarEscapesScope {}) = return ()
     verifyError err = error $ "VarEscapesScope error expected, but got: " ++ show err
     expr =
       lambda "x" hole $ \x ->
