@@ -301,13 +301,13 @@ mapIdTest =
   ]
 
 joinMaybe =
-  testInferAllowFail "\\x:_ -> caseMaybe x (empty=Nothing, just=\\x->x)" $
-  lambda "xs" (asHole (listOf hole)) $ \xs ->
-  getDef "caseMaybe" $$ iset $$ asHole (maybeOf iset)
+  testInfer "\\x:_ -> caseMaybe x (empty=Nothing, just=\\x->x)" $
+  lambda "x" (asHole (maybeOf (maybeOf iset))) $ \x ->
+  getDef "caseMaybe" $$ maybeOf iset $$ asHole (maybeOf iset)
   $$:
-  [ xs
+  [ x
   , getDef "Nothing" $$ iset
-  , lambda "item" iset id
+  , lambda "item" (asHole (maybeOf iset)) id
   ]
   where
     iset = holeWithInferredType set
