@@ -167,8 +167,10 @@ resumptionTests =
 expectLeft :: Show r => String -> (l -> HUnit.Assertion) -> Either l r -> HUnit.Assertion
 expectLeft _ handleLeft (Left x) = handleLeft x
 expectLeft msg _ (Right x) =
-  HUnit.assertFailure $
-  unwords ["Error", msg, "expected.  Unexpected success encountered:", show x]
+  error $ unwords
+  [ "Error", msg, "expected.  Unexpected success encountered:"
+  , "\n", show x
+  ]
 
 failResumptionAddsRules =
   -- f     x    = x _ _
@@ -392,6 +394,20 @@ joinMaybe =
   where
     iset = holeWithInferredType set
 
+typeOfUndefined = piType "a" set id
+
+scopeEscape =
+  testCase "scope escape" .
+  expectLeft "VarEscapesScope" verifyError . fmap (UnescapedStr . annotateTypes) $
+  runLoadInferDef (void expr)
+  where
+    verifyError (InferError Infer.VarEscapesScope) = return ()
+    verifyError err = error $ "VarEscapesScope error expected, but got: " ++ show err
+    expr =
+      lambda "x" hole $ \x ->
+      typedWhereItem "undef"
+      typeOfUndefined (lambda "a" set (const x)) id
+
 hunitTests =
   simpleTests
   ++
@@ -422,6 +438,7 @@ hunitTests =
   , infiniteTypeTests
   , resumptionTests
   , joinMaybe
+  , scopeEscape
   ]
 
 inferPreservesShapeProp :: Expr -> Property
