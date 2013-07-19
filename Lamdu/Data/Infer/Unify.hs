@@ -1,9 +1,11 @@
 module Lamdu.Data.Infer.Unify
-  ( unify
+  ( unify, fresh
+  , forceLam
   ) where
 
 import Control.Applicative (Applicative(..), (<*>), (<$>))
 import Control.Lens.Operators
+import Control.Monad.Trans.State (state)
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Map.Utils (lookupOrSelf)
@@ -14,6 +16,7 @@ import Data.Traversable (sequenceA)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
+import System.Random (Random, random)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -22,6 +25,29 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
+
+fresh :: Scope -> Expr.Body def Ref -> Infer def Ref
+fresh scope body = ExprRefs.fresh $ defaultRefData scope body
+
+newRandom :: Random r => Infer def r
+newRandom = Lens.zoom ctxRandomGen $ state random
+
+forceLam :: Eq def => Expr.Kind -> Scope -> Ref -> Infer def (Guid, Ref, Ref)
+forceLam k lamScope destRef = do
+  newGuid <- newRandom
+  newParamTypeRef <- fresh lamScope $ ExprLens.bodyHole # ()
+  let lamResultScope = lamScope & scopeMap %~ Map.insert newGuid newParamTypeRef
+  newResultTypeRef <- fresh lamResultScope $ ExprLens.bodyHole # ()
+  newLamRef <-
+    fresh lamScope . Expr.BodyLam $
+    Expr.Lam k newGuid newParamTypeRef newResultTypeRef
+  -- left is renamed into right (keep existing names of destRef):
+  rep <- unify newLamRef destRef
+  body <- (^. rdBody) <$> ExprRefs.readRep rep
+  return $
+    case body ^? ExprLens.bodyKindedLam k of
+    Just kindedLam -> kindedLam
+    Nothing -> error "We just unified Lam into rep"
 
 -- If we don't assert that the scopes have same refs we could be pure
 intersectScopes :: Scope -> Scope -> Infer def Scope
