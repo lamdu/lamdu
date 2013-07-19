@@ -1,8 +1,9 @@
 module InferWrappers where
 
 import Control.Lens.Operators
+import Control.MonadA (MonadA)
 import Control.Monad.Trans.Either (EitherT(..))
-import Control.Monad.Trans.State (State, mapStateT, runState)
+import Control.Monad.Trans.State (StateT, mapStateT, runStateT)
 import Lamdu.Data.Infer.Deref (Derefed(..))
 import Lamdu.Data.Infer.Load (LoadedDef)
 import Utils
@@ -22,56 +23,64 @@ inferResults = fmap $ \(Derefed val typ) -> (val, typ)
 
 loader :: InferLoad.Loader Def (Either String)
 loader =
-  InferLoad.Loader load
+  InferLoad.Loader loadDefType
   where
-    load key =
+    loadDefType key =
       case Map.lookup key definitionTypes of
       Nothing -> Left ("Could not find" ++ show key)
       Just x -> Right x
 
-unEither :: Show err => Either err a -> a
-unEither = either (error . show) id
+assertSuccess :: Show err => Either err a -> a
+assertSuccess = either (error . show) id
 
-ridEither :: (Show err, Monad m) => Either err a -> m a
-ridEither = return . unEither
+data Error = InferError (Infer.Error Def) | LoadError (InferLoad.Error Def)
+  deriving (Show)
 
-ridEitherT :: (Functor m, Show err) => EitherT err m a -> m a
-ridEitherT = fmap unEither . runEitherT
-
-doLoad ::
+load ::
   Expr.Expression Def a ->
-  State (Infer.Context Def)
+  StateT (Infer.Context Def) (Either Error)
   (Expr.Expression (LoadedDef Def) a)
-doLoad = mapStateT (ridEither . ridEitherT) . InferLoad.load loader
+load expr =
+  InferLoad.load loader expr
+  & mapStateT ((Lens._Left %~ LoadError) . assertSuccess . runEitherT)
 
-doInfer ::
+assertSuccessM :: (Monad m, Show l) => StateT s (Either l) a -> StateT s m a
+assertSuccessM = mapStateT (return . assertSuccess)
+
+assertSuccessT :: (MonadA m, Show l) => StateT s (EitherT l m) a -> StateT s m a
+assertSuccessT = mapStateT (fmap assertSuccess . runEitherT)
+
+infer ::
   Expr.Expression (LoadedDef Def) a ->
-  State (Infer.Context Def)
+  StateT
+  (Infer.Context Def)
+  (Either Error)
   (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a))
-doInfer = mapStateT ridEither . Infer.infer Infer.emptyScope
-
-doLoadInfer ::
-  Expr.Expression Def a ->
-  State (Infer.Context Def)
-  (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a))
-doLoadInfer expr =
-  doLoad expr >>= doInfer
+infer expr =
+  Infer.infer Infer.emptyScope expr
+  & mapStateT (Lens._Left %~ InferError)
 
 runContext ::
-  State (Infer.Context Def) (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, ())) ->
+  StateT (Infer.Context Def) (Either Error)
+  (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, ())) ->
+  Either Error
   (Expr.Expression Def (Derefed Def), Infer.Context Def)
 runContext act =
-  (`runState` Infer.emptyContext (Random.mkStdGen 0x1337)) $ do
+  (`runStateT` Infer.emptyContext (Random.mkStdGen 0x1337)) $ do
     recursiveDefRef <- InferLoad.newDefinition recursiveDefI
     inferredExpr <- act
     let
       inferredExprTypeRef =
         inferredExpr ^. Expr.ePayload . Lens._1 . Infer.stvTV . Infer.tvType
-    _ <- mapStateT ridEither $ Infer.unify recursiveDefRef inferredExprTypeRef
+    _ <- mapStateT (Lens._Left %~ InferError) $ Infer.unify recursiveDefRef inferredExprTypeRef
     inferredExpr
       & ExprLens.exprDef %~ (^. InferLoad.ldDef)
       & InferDeref.expr
       <&> Lens.mapped %~ fst
 
-doLoadInferRun :: PureExpr Def -> (Expr.Expression Def (Derefed Def), Infer.Context Def)
-doLoadInferRun = runContext . doLoadInfer
+loadInferRun :: Expr -> Either Error (Expr.Expression Def (Derefed Def), Infer.Context Def)
+loadInferRun expr = runContext $ load expr >>= infer
+
+loadInferRunAssertSuccess :: Expr -> (Expr.Expression Def (Derefed Def), Infer.Context Def)
+loadInferRunAssertSuccess =
+  assertSuccess . loadInferRun

@@ -2,21 +2,21 @@
 module InferTests (allTests) where
 
 -- import Control.Lens.Operators
--- import Control.Monad (void)
+import Control.Monad (void)
 -- import Control.Monad.Trans.State (evalState)
 -- import Data.Monoid (Monoid(..))
 -- import Data.Store.Guid (Guid)
--- import InferWrappers
+import InferWrappers
 -- import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression (Kind(..))
 -- import Lamdu.Data.Infer.Conflicts (inferWithConflicts)
--- import Test.Framework (testGroup, plusTestOptions)
+import Test.Framework (testGroup) --, plusTestOptions
 -- import Test.Framework.Options (TestOptions'(..))
--- import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Test.Framework.Providers.QuickCheck2 (testProperty)
 -- import Test.HUnit (assertBool)
--- import Test.QuickCheck (Property)
--- import Test.QuickCheck.Property (property, rejected)
--- import Utils
+import Test.QuickCheck (Property)
+import Test.QuickCheck.Property (property, rejected)
+import Utils
 -- import qualified Control.Lens as Lens
 -- import qualified Data.Store.Guid as Guid
 -- import qualified Lamdu.Data.Expression as Expr
@@ -180,11 +180,11 @@ depApply =
 --       doInfer_ . lambda "x" (hole ~> hole) $
 --       \x -> x $$ hole $$ hole
 
--- emptyRecordTests =
---   testGroup "empty record"
---   [ testInfer "type infer" $ record KType []
---   , testInfer "val infer" $ record KVal []
---   ]
+emptyRecordTests =
+  testGroup "empty record"
+  [ testInfer "type infer" $ record KType []
+  , testInfer "val infer" $ record KVal []
+  ]
 
 -- recordTest =
 --   testInfer "f a x:a = {x" $
@@ -331,7 +331,7 @@ hunitTests =
   -- , monomorphRedex
   , inferPart
   -- , failResumptionAddsRules
-  -- , emptyRecordTests
+  , emptyRecordTests
   -- , recordTest
   -- , inferReplicateOfReplicate
   -- , implicitVarTests
@@ -340,14 +340,14 @@ hunitTests =
   -- , joinMaybe
   ]
 
--- inferPreservesShapeProp :: PureExprDefI t -> Property
--- inferPreservesShapeProp expr =
---   case inferMaybe expr of
---     Nothing -> property rejected
---     Just (inferred, _) -> property (void inferred == expr)
+inferPreservesShapeProp :: Expr -> Property
+inferPreservesShapeProp expr =
+  case loadInferRun expr of
+    Left _ -> property rejected
+    Right (inferred, _) -> property (void inferred == expr)
 
--- qcProps =
---   [ testProperty "infer preserves shape" inferPreservesShapeProp
---   ]
+qcProps =
+  [ testProperty "infer preserves shape" inferPreservesShapeProp
+  ]
 
-allTests = hunitTests -- ++ qcProps
+allTests = hunitTests ++ qcProps

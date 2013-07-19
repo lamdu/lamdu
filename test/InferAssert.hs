@@ -70,7 +70,7 @@ inferAssertion :: ExprInferred -> HUnit.Assertion
 inferAssertion expr =
   assertCompareInferred inferredExpr expr
   where
-    inferredExpr = inferResults . fst . doLoadInferRun $ void expr
+    inferredExpr = inferResults . fst . loadInferRunAssertSuccess $ void expr
 
 -- inferWVAssertion :: ExprInferred -> ExprInferred -> HUnit.Assertion
 -- inferWVAssertion expr wvExpr = do

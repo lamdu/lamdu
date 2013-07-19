@@ -1,6 +1,6 @@
 module Lamdu.Data.Infer.Load
   ( Loader(..)
-  , LoadError(..)
+  , Error(..)
   , LoadedDef(..), ldDef, ldType -- re-export
   , load, newDefinition
   ) where
@@ -28,14 +28,14 @@ data Loader def m = Loader
     -- TODO: For synonyms we'll need loadDefVal
   }
 
-newtype LoadError def = LoadUntypedDef def
+newtype Error def = LoadUntypedDef def
   deriving (Show)
 
 -- Error includes untyped def use
 loadDefTypeIntoRef ::
   MonadA m =>
   Loader def m -> def ->
-  StateT (Context def) (EitherT (LoadError def) m) Ref
+  StateT (Context def) (EitherT (Error def) m) Ref
 loadDefTypeIntoRef (Loader loader) def = do
   loadedDefType <- lift . lift $ loader def
   when (Lens.has ExprLens.holePayloads loadedDefType) .
@@ -55,7 +55,7 @@ newDefinition def = do
 load ::
   (Ord def, MonadA m) =>
   Loader def m -> Expr.Expression def a ->
-  StateT (Context def) (EitherT (LoadError def) m)
+  StateT (Context def) (EitherT (Error def) m)
   (Expr.Expression (LoadedDef def) a)
 load loader expr = do
   existingDefRefs <- Lens.use ctxDefRefs <&> Lens.mapped %~ return
