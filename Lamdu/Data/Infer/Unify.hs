@@ -186,7 +186,7 @@ unifyRecurse :: Eq def => Set Ref -> Map Guid Guid -> Ref -> UnifyPhase -> Infer
 unifyRecurse visited renames rawNode phase = do
   nodeRep <- ExprRefs.find "unifyRecurse:rawNode" rawNode
   if visited ^. Lens.contains nodeRep
-    then InferM.error $ InfiniteType nodeRep
+    then InferM.error $ InfiniteExpression nodeRep
     else
     case phase of
     UnifyHoleConstraints holeConstraints -> do

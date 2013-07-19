@@ -17,7 +17,7 @@ import qualified Lamdu.Data.Expression as Expr
 data Error def
   = VarEscapesScope
   | VarNotInScope
-  | InfiniteType Ref
+  | InfiniteExpression Ref
   | Mismatch (Expr.Body def Ref) (Expr.Body def Ref)
   deriving (Show)
 
