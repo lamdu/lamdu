@@ -10,8 +10,6 @@ module InferTests where
 -- import qualified Control.Lens as Lens
 -- import qualified Lamdu.Data.Expression as Expr
 -- import qualified Lamdu.Data.Expression.Lens as ExprLens
--- import qualified Lamdu.Data.Infer as Infer
--- import qualified Test.HUnit as HUnit
 import Control.Monad (void)
 import InferAssert
 import InferCombinators
@@ -24,6 +22,8 @@ import Test.QuickCheck (Property)
 import Test.QuickCheck.Property (property, rejected)
 import Utils
 import qualified Data.Store.Guid as Guid
+import qualified Lamdu.Data.Infer as Infer
+import qualified Test.HUnit as HUnit
 
 simpleTests =
   [ testInfer "literal int" $ literalInteger 5
@@ -234,17 +234,17 @@ inferReplicateOfReplicate =
     replicat typ x y =
       getDef "replicate" $$ asHole typ $$: [ x, y ]
 
--- infiniteTypeTests =
---   testGroup "Infinite types"
---   [ wrongRecurseMissingArg
---   , getFieldWasntAllowed
---   ]
+infiniteTypeTests =
+  testGroup "Infinite types"
+  [ wrongRecurseMissingArg
+  -- , getFieldWasntAllowed
+  ]
 
--- expectLeft :: Show r => String -> (l -> HUnit.Assertion) -> Either l r -> HUnit.Assertion
--- expectLeft _ handleLeft (Left x) = handleLeft x
--- expectLeft msg _ (Right x) =
---   HUnit.assertFailure $
---   unwords ["Error", msg, "expected.  Unexpected success encountered:", show x]
+expectLeft :: Show r => String -> (l -> HUnit.Assertion) -> Either l r -> HUnit.Assertion
+expectLeft _ handleLeft (Left x) = handleLeft x
+expectLeft msg _ (Right x) =
+  HUnit.assertFailure $
+  unwords ["Error", msg, "expected.  Unexpected success encountered:", show x]
 
 -- getFieldWasntAllowed =
 --   testCase "map (\\x:_. #x#) {}:_" $
@@ -269,19 +269,14 @@ inferReplicateOfReplicate =
 --     param = topLevel ^?! lambdaPos . Lens._1
 --     recType = record KType []
 
--- wrongRecurseMissingArg =
---   testCase "f x = f" $
---   expectLeft "Infinite Type" verifyError $
---   loadExprInferred (void expr)
---   where
---     verifyError (Infer.ErrorMismatch err) =
---       case Infer.errDetails err of
---       Infer.InfiniteExpression _ -> return ()
---       _ ->
---         HUnit.assertFailure $ "InfiniteExpression error expected, but got: " ++ show err
---     verifyError (Infer.ErrorMissingDefType def) =
---       HUnit.assertFailure $ "InfiniteExpression error expected, but got missing def type error for def: " ++ show def
---     expr = lambda "x" hole . const $ recurse hole
+wrongRecurseMissingArg =
+  testCase "f x = f" .
+  expectLeft "Infinite Type" verifyError . fmap (void . fst) $
+  loadInferRun (void expr)
+  where
+    verifyError (InferError (Infer.InfiniteExpression _)) = return ()
+    verifyError err = HUnit.assertFailure $ "InfiniteExpression error expected, but got: " ++ show err
+    expr = lambda "x" hole . const $ recurse hole
 
 mapIdTest =
   testInfer "map id (5:_)" $
@@ -360,7 +355,7 @@ hunitTests =
   , recordTest
   , inferReplicateOfReplicate
   -- , implicitVarTests
-  -- , infiniteTypeTests
+  , infiniteTypeTests
   -- , resumptionTests
   , joinMaybe
   ]
