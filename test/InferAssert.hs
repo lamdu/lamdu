@@ -111,6 +111,9 @@ defaultTestOptions = mempty { topt_timeout = Just (Just 100000) }
 testCase :: TestFramework.TestName -> HUnit.Assertion -> TestFramework.Test
 testCase name = plusTestOptions defaultTestOptions . HUnitProvider.testCase name
 
+runContextAssertion :: M a -> HUnit.Assertion
+runContextAssertion = void . E.evaluate . assertSuccess . runNewContext
+
 testInfer :: String -> ExprInferred -> TestFramework.Test
 testInfer name = testCase name . inferAssertion
 

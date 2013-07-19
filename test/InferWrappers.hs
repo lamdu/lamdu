@@ -1,13 +1,14 @@
 module InferWrappers where
 
 import Control.Lens.Operators
-import Control.MonadA (MonadA)
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (StateT, mapStateT, evalStateT)
+import Control.MonadA (MonadA)
 import Lamdu.Data.Infer.Deref (Derefed(..))
 import Lamdu.Data.Infer.Load (LoadedDef)
 import Utils
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.State as State
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -63,6 +64,7 @@ deref expr = expr
   & ExprLens.exprDef %~ (^. InferLoad.ldDef)
   & InferDeref.expr
 
+-- Run this function only once per M
 inferDef ::
   M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a)) ->
   M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a))
@@ -70,10 +72,28 @@ inferDef act = do
   recursiveDefRef <- InferLoad.newDefinition recursiveDefI
   expr <- act
   _ <-
-    mapStateT (Lens._Left %~ InferError) .
-    Infer.tempUnify recursiveDefRef $
     expr ^. Expr.ePayload . Lens._1 . Infer.stvTV . Infer.tvType
+    & Infer.tempUnify recursiveDefRef
+    & mapStateT (Lens._Left %~ InferError)
   return expr
+
+unifyExprVals ::
+  Expr.Expression def (Infer.ScopedTypedValue, a) ->
+  Expr.Expression def (Infer.ScopedTypedValue, a) ->
+  M ()
+unifyExprVals e1 e2 =
+  Infer.tempUnify (e1 ^. exprValRef) (e2 ^. exprValRef)
+  & mapStateT (Lens._Left %~ InferError)
+  where
+    exprValRef = Expr.ePayload . Lens._1 . Infer.stvTV . Infer.tvVal
+
+try :: M a -> M (Either Error a)
+try act = do
+  oldState <- State.get
+  let
+    f (Left err) = Right (Left err, oldState)
+    f (Right (res, newState)) = Right (Right res, newState)
+  mapStateT f act
 
 runNewContext :: M a -> Either Error a
 runNewContext = (`evalStateT` Infer.emptyContext (Random.mkStdGen 0x1337))
