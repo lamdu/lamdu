@@ -10,9 +10,9 @@ import qualified Lamdu.Data.Expression as Expr
 
 inferAndEncode :: Expr.Expression Def a -> Int -> Int
 inferAndEncode expr par =
-  SBS.length . encodeS $ fst result
+  SBS.length $ encodeS result
   where
-    result = assertSuccess . loadInferRun . void $ par <$ expr
+    result = assertSuccess . loadInferDef . void $ par <$ expr
 
 main :: IO ()
 main = do

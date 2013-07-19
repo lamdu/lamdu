@@ -36,10 +36,9 @@ assertSuccess = either (error . show) id
 data Error = InferError (Infer.Error Def) | LoadError (InferLoad.Error Def)
   deriving (Show)
 
-load ::
-  Expr.Expression Def a ->
-  StateT (Infer.Context Def) (Either Error)
-  (Expr.Expression (LoadedDef Def) a)
+type M = StateT (Infer.Context Def) (Either Error)
+
+load :: Expr.Expression Def a -> M (Expr.Expression (LoadedDef Def) a)
 load expr =
   InferLoad.load loader expr
   & mapStateT ((Lens._Left %~ LoadError) . assertSuccess . runEitherT)
@@ -52,30 +51,32 @@ assertSuccessT = mapStateT (fmap assertSuccess . runEitherT)
 
 infer ::
   Expr.Expression (LoadedDef Def) a ->
-  StateT
-  (Infer.Context Def)
-  (Either Error)
-  (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a))
+  M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a))
 infer expr =
   Infer.infer Infer.emptyScope expr
   & mapStateT (Lens._Left %~ InferError)
 
-runContext ::
-  StateT (Infer.Context Def) (Either Error)
-  (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, ())) ->
-  Either Error (Expr.Expression Def (Derefed Def))
-runContext act =
-  (`evalStateT` Infer.emptyContext (Random.mkStdGen 0x1337)) $ do
-    recursiveDefRef <- InferLoad.newDefinition recursiveDefI
-    inferredExpr <- act
-    let
-      inferredExprTypeRef =
-        inferredExpr ^. Expr.ePayload . Lens._1 . Infer.stvTV . Infer.tvType
-    _ <- mapStateT (Lens._Left %~ InferError) $ Infer.tempUnify recursiveDefRef inferredExprTypeRef
-    inferredExpr
-      & ExprLens.exprDef %~ (^. InferLoad.ldDef)
-      & InferDeref.expr
-      <&> Lens.mapped %~ fst
+inferDef ::
+  M (Expr.Expression (LoadedDef a) (Infer.ScopedTypedValue, ())) ->
+  M (Expr.Expression a (Derefed Def))
+inferDef act = do
+  recursiveDefRef <- InferLoad.newDefinition recursiveDefI
+  expr <- act
+  _ <-
+    mapStateT (Lens._Left %~ InferError) .
+    Infer.tempUnify recursiveDefRef $
+    expr ^. Expr.ePayload . Lens._1 . Infer.stvTV . Infer.tvType
+  expr
+    & ExprLens.exprDef %~ (^. InferLoad.ldDef)
+    & InferDeref.expr
+    <&> Lens.mapped %~ fst
 
-loadInferRun :: Expr -> Either Error (Expr.Expression Def (Derefed Def))
-loadInferRun expr = runContext $ load expr >>= infer
+inferDefInNewContext ::
+  M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, ())) ->
+  Either Error (Expr.Expression Def (Derefed Def))
+inferDefInNewContext act =
+  (`evalStateT` Infer.emptyContext (Random.mkStdGen 0x1337)) $
+  inferDef act
+
+loadInferDef :: Expr -> Either Error (Expr.Expression Def (Derefed Def))
+loadInferDef expr = inferDefInNewContext $ load expr >>= infer
