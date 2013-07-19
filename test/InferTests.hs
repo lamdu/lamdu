@@ -3,17 +3,14 @@ module InferTests (allTests) where
 
 -- import Control.Lens.Operators
 -- import Control.Monad.Trans.State (evalState)
--- import Data.Monoid (Monoid(..))
 -- import Data.Store.Guid (Guid)
 -- import Lamdu.Data.Expression (Expression(..), Kind(..))
 -- import Lamdu.Data.Infer.Conflicts (inferWithConflicts)
--- import Test.Framework.Options (TestOptions'(..))
 -- import Test.HUnit (assertBool)
 -- import qualified Control.Lens as Lens
 -- import qualified Lamdu.Data.Expression as Expr
 -- import qualified Lamdu.Data.Expression.Lens as ExprLens
 -- import qualified Lamdu.Data.Infer as Infer
--- import qualified Test.Framework.Providers.HUnit as HUnitProvider
 -- import qualified Test.HUnit as HUnit
 import Control.Monad (void)
 import InferAssert
@@ -21,7 +18,7 @@ import InferCombinators
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Kind(..))
-import Test.Framework (testGroup) --, plusTestOptions
+import Test.Framework (testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Property (property, rejected)
@@ -120,10 +117,6 @@ depApply =
 -- lamParamType = ExprLens.exprLam . Expr.lamParamType
 -- lamBody :: Lens.Traversal' (Expression def a) (Expression def a)
 -- lamBody = ExprLens.exprLam . Expr.lamResult
-
--- defaultTestOptions = mempty { topt_timeout = Just (Just 100000) }
-
--- testCase name = plusTestOptions defaultTestOptions . HUnitProvider.testCase name
 
 -- resumptionTests = testGroup "type infer resume" $
 --   [ testResume "{hole->pi}"
@@ -300,6 +293,37 @@ mapIdTest =
   , getDef "id" $$ asHole integerType
   ]
 
+factorialExpr =
+  lambda "x" iInt $ \x ->
+  getDef "if" $$ iInt $$:
+  [ getDef "==" $$ iInt $$:
+    [x, literalInteger 0]
+  , literalInteger 1
+  , getDef "*" $$ iInt $$:
+    [ x
+    , recurse (integerType ~> integerType) $$
+      (getDef "-" $$ iInt $$: [x, literalInteger 1])
+    ]
+  ]
+  where
+    iInt = asHole integerType
+
+euler1Expr =
+  getDef "sum" $$ iInt $$
+  ( getDef "filter" $$ iInt $$:
+    [ getDef ".." $$: [literalInteger 1, literalInteger 1000]
+    , lambda "x" iInt $ \x ->
+      getDef "||" $$:
+      [ getDef "==" $$ iInt $$:
+        [ literalInteger 0, getDef "%" $$ iInt $$: [x, literalInteger 3] ]
+      , getDef "==" $$ iInt $$:
+        [ literalInteger 0, getDef "%" $$ iInt $$: [x, literalInteger 5] ]
+      ]
+    ]
+  )
+  where
+    iInt = asHole integerType
+
 joinMaybe =
   testInfer "\\x:_ -> caseMaybe x (empty=Nothing, just=\\x->x)" $
   lambda "x" (asHole (maybeOf (maybeOf iset))) $ \x ->
@@ -316,6 +340,8 @@ hunitTests =
   simpleTests
   ++
   [ mapIdTest
+  , testInfer "factorial" factorialExpr
+  , testInfer "euler1" euler1Expr
   , applyIntToBoolFuncWithHole
   -- , applyOnVar
   , idTest

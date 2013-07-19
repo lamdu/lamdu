@@ -12,11 +12,13 @@ module InferAssert where
 import AnnotatedExpr
 import Control.Applicative ((<$>), Applicative(..))
 import Control.Monad (void)
+import Data.Monoid (Monoid(..))
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Infer.Deref (Derefed)
 import System.IO (hPutStrLn, stderr)
-import Test.Framework.Providers.HUnit (testCase)
+import Test.Framework (plusTestOptions)
+import Test.Framework.Options (TestOptions'(..))
 import Test.HUnit (assertBool)
 import Utils
 import qualified Control.Exception as E
@@ -25,6 +27,7 @@ import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Test.Framework as TestFramework
+import qualified Test.Framework.Providers.HUnit as HUnitProvider
 import qualified Test.HUnit as HUnit
 
 canonizeInferred :: ExprInferred -> ExprInferred
@@ -101,6 +104,12 @@ allowFailAssertion assertion =
       hPutStrLn stderr . ansiAround ansiYellow $ "NOTE: doesn't fail. Remove AllowFail?"
     errorOccurred =
       hPutStrLn stderr . ansiAround ansiYellow $ "WARNING: Allowing failure in:"
+
+defaultTestOptions :: TestOptions' Maybe
+defaultTestOptions = mempty { topt_timeout = Just (Just 100000) }
+
+testCase :: TestFramework.TestName -> HUnit.Assertion -> TestFramework.Test
+testCase name = plusTestOptions defaultTestOptions . HUnitProvider.testCase name
 
 testInfer :: String -> ExprInferred -> TestFramework.Test
 testInfer name = testCase name . inferAssertion
