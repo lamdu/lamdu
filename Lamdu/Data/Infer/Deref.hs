@@ -9,6 +9,9 @@ import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT, evalStateT)
 import Control.MonadA (MonadA)
+import Data.Binary (Binary(..))
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Data.Function.Decycle (decycle)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
@@ -22,6 +25,7 @@ data Derefed def = Derefed
   { _dValue :: Expr.Expression def ()
   , _dType :: Expr.Expression def ()
   }
+derive makeBinary ''Derefed
 Lens.makeLenses ''Derefed
 
 deref :: MonadA m => Ref -> StateT (Context def) m (Expr.Expression def ())
