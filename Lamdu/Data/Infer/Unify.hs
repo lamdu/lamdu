@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternGuards #-}
 module Lamdu.Data.Infer.Unify
   ( unify, fresh
   , forceLam
@@ -70,8 +71,9 @@ checkHoleConstraints ::
   HoleConstraints -> Expr.Body def Ref -> Scope ->
   Either (Error def) Scope
 checkHoleConstraints (HoleConstraints unusableSet) body scope
-  | Lens.anyOf ExprLens.bodyParameterRef (`Set.member` unusableSet) body =
-    Left VarEscapesScope
+  | Just paramGuid <- body ^? ExprLens.bodyParameterRef
+  , paramGuid `Set.member` unusableSet
+  = Left $ VarEscapesScope paramGuid
   -- Expensive assertion
   | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Set.member` unusableSet) body =
     error "checkHoleConstraints: Shadowing detected"

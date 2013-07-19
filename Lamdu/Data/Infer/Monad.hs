@@ -8,6 +8,7 @@ import Prelude hiding (error)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT(..))
 import Control.Monad.Trans.State (StateT(..), mapStateT)
+import Data.Store.Guid (Guid)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Expression.Utils () -- Expr.Body Show instance
 import Lamdu.Data.Infer.Internal
@@ -15,7 +16,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Lamdu.Data.Expression as Expr
 
 data Error def
-  = VarEscapesScope
+  = VarEscapesScope Guid
   | VarNotInScope
   | InfiniteExpression Ref
   | Mismatch (Expr.Body def Ref) (Expr.Body def Ref)
