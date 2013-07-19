@@ -9,6 +9,8 @@ import Control.Monad.Trans.State (state)
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Map.Utils (lookupOrSelf)
+import Data.Maybe (fromMaybe)
+import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
@@ -44,10 +46,8 @@ forceLam k lamScope destRef = do
   -- left is renamed into right (keep existing names of destRef):
   rep <- unify newLamRef destRef
   body <- (^. rdBody) <$> ExprRefs.readRep rep
-  return $
-    case body ^? ExprLens.bodyKindedLam k of
-    Just kindedLam -> kindedLam
-    Nothing -> error "We just unified Lam into rep"
+  return . unsafeUnjust "We just unified Lam into rep" $
+    body ^? ExprLens.bodyKindedLam k
 
 -- If we don't assert that the scopes have same refs we could be pure
 intersectScopes :: Scope -> Scope -> Infer def Scope
@@ -96,9 +96,8 @@ mergeBodies recurse renames xScope xBody yScope yBody =
   (_, Expr.BodyLeaf Expr.Hole) -> unifyWithHole renames   yScope xScope xBody
   (Expr.BodyLeaf Expr.Hole, _) -> unifyWithHole Map.empty xScope yScope yBody
   _ ->
-    case sequenceA <$> ExprUtil.matchBody matchLamResult matchOther (==) xBody yBody of
-    Nothing -> InferM.error $ Mismatch xBody yBody
-    Just mkBody -> mkBody
+    fromMaybe (InferM.error (Mismatch xBody yBody)) $
+    sequenceA <$> ExprUtil.matchBody matchLamResult matchOther (==) xBody yBody
   where
     unifyWithHole activeRenames holeScope otherScope nonHoleBody =
       maybeRecurseHoleConstraints activeRenames nonHoleBody $

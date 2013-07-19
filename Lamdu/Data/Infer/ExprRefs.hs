@@ -84,7 +84,7 @@ unifyRefs x y = do
     else do
       xData <- popRep xRep
       yData <- popRep yRep
-      rep <- union x y
+      rep <- x `union` y
       writeRep rep $ error "unifyRefs caller read the unified ref data before writing it"
       return (rep, UnifyRefsUnified xData yData)
 
