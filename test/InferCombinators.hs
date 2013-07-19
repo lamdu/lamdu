@@ -29,10 +29,10 @@ iexpr val typ body =
 five :: Expr
 five = pureLiteralInt # 5
 
-iVal :: Lens' ExprInferred (Expr)
+iVal :: Lens' ExprInferred Expr
 iVal = Expr.ePayload . Lens._1
 
-iType :: Lens' ExprInferred (Expr)
+iType :: Lens' ExprInferred Expr
 iType = Expr.ePayload . Lens._2
 
 bodyToPureExpr :: Expr.Body Def ExprInferred -> Expr

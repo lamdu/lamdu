@@ -158,7 +158,7 @@ mergeRefData recurse renames
       | otherwise = []
     mergedAppliedPiResults = aAppliedPiResults ++ bAppliedPiResults
     mkRefData intersectedScope mergedBody =
-      (,) substsToExecute $
+      (,) substsToExecute
       RefData
       { _rdScope = intersectedScope
       , _rdAppliedPiResults = mergedAppliedPiResults

@@ -67,7 +67,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     newBody <&> (^. Expr.ePayload . Lens._1) & makeTypeRef scope
   pure $
     Expr.Expression newBody
-    ((ScopedTypedValue (TypedValue valRef typeRef) scope), pl)
+    (ScopedTypedValue (TypedValue valRef typeRef) scope, pl)
   where
     -- Except of apply of type constructors:
     circumcizeApply x
