@@ -80,7 +80,3 @@ runContext act =
 
 loadInferRun :: Expr -> Either Error (Expr.Expression Def (Derefed Def), Infer.Context Def)
 loadInferRun expr = runContext $ load expr >>= infer
-
-loadInferRunAssertSuccess :: Expr -> (Expr.Expression Def (Derefed Def), Infer.Context Def)
-loadInferRunAssertSuccess =
-  assertSuccess . loadInferRun
