@@ -113,14 +113,11 @@ mergeBodies recurse renames xScope xBody yScope yBody =
     unifyWithHole activeRenames holeScope otherScope nonHoleBody =
       maybeRecurseHoleConstraints activeRenames nonHoleBody $
       makeUnusableScopeSet holeScope otherScope
-    maybeRecurseHoleConstraints activeRenames nonHoleBody unusableScopeSet
-      | Set.null unusableScopeSet && Map.null renames =
-        return nonHoleBody
-      | otherwise =
-        nonHoleBody
-        & Lens.traverse %%~
-          flip (recurse activeRenames)
-          (UnifyHoleConstraints (HoleConstraints unusableScopeSet))
+    maybeRecurseHoleConstraints activeRenames nonHoleBody unusableScopeSet =
+      nonHoleBody
+      & Lens.traverse %%~
+        flip (recurse activeRenames)
+        (UnifyHoleConstraints (HoleConstraints unusableScopeSet))
     makeUnusableScopeSet holeScope otherScope =
       Map.keysSet $ Map.difference
       (otherScope ^. scopeMap)
