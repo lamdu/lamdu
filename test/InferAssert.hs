@@ -39,6 +39,19 @@ canonizeInferred =
       where
         (gen1, gen2) = ExprUtil.ngSplit gen
 
+annotateTypes :: ExprInferred -> String
+annotateTypes expr =
+  expr
+  & Lens.traverse %%~ annotate
+  & errorMessage
+  & snd
+  where
+    annotate (val, typ) =
+      sequence
+      [ addAnnotation ("Val:  " ++ show val)
+      , addAnnotation ("Type: " ++ show typ)
+      ]
+
 assertCompareInferred ::
   ExprInferred -> ExprInferred -> HUnit.Assertion
 assertCompareInferred result expected =

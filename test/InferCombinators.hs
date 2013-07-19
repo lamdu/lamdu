@@ -124,6 +124,11 @@ whereItem ::
 whereItem name val mkBody =
   lambda name (iexpr (val ^. iType) pureSet bodyHole) mkBody $$ val
 
+typedWhereItem ::
+  String -> ExprInferred -> ExprInferred -> (ExprInferred -> ExprInferred) -> ExprInferred
+typedWhereItem name typ val mkBody =
+  lambda name typ mkBody $$ val
+
 holeWithInferredType :: ExprInferred -> ExprInferred
 holeWithInferredType = simple bodyHole . (^. iVal)
 
