@@ -11,17 +11,19 @@ module Lamdu.Data.Infer.Internal
   , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs, ctxRandomGen
+    , emptyContext
   , LoadedDef(..), ldDef, ldType
   , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
   ) where
 
 import Data.Map (Map)
-import Data.Set (Set)
 import Data.Monoid (Monoid(..))
+import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.UnionFind (Ref, RefMap)
 import qualified Control.Lens as Lens
+import qualified Data.Map as Map
 import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
 import qualified System.Random as Random
@@ -110,6 +112,18 @@ data Context def = Context
   , _ctxRandomGen :: Random.StdGen -- for guids
   }
 Lens.makeLenses ''Context
+
+emptyContext :: Random.StdGen -> Context def
+emptyContext gen =
+  Context
+  { _ctxExprRefs =
+    ExprRefs
+    { _exprRefsUF = UF.empty
+    , _exprRefsData = mempty
+    }
+  , _ctxDefRefs = Map.empty
+  , _ctxRandomGen = gen
+  }
 
 data LoadedDef def = LoadedDef
   { _ldDef :: def

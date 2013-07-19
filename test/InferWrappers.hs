@@ -72,7 +72,7 @@ runContext act =
     let
       inferredExprTypeRef =
         inferredExpr ^. Expr.ePayload . Lens._1 . Infer.stvTV . Infer.tvType
-    _ <- mapStateT (Lens._Left %~ InferError) $ Infer.unify recursiveDefRef inferredExprTypeRef
+    _ <- mapStateT (Lens._Left %~ InferError) $ Infer.tempUnify recursiveDefRef inferredExprTypeRef
     inferredExpr
       & ExprLens.exprDef %~ (^. InferLoad.ldDef)
       & InferDeref.expr
