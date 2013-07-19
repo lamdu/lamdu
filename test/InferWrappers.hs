@@ -100,7 +100,9 @@ runNewContext = (`evalStateT` Infer.emptyContext (Random.mkStdGen 0x1337))
 
 -- Weaker and more convenient wrapper around runNewContext, deref,
 -- inferDef, infer, load
-loadInferDef :: Expr -> Either Error (Expr.Expression Def (Derefed Def))
+loadInferDef :: Expr -> M (Expr.Expression Def (Derefed Def))
 loadInferDef expr =
-  runNewContext $
   (fmap . fmap) fst . deref =<< inferDef (infer =<< load expr)
+
+runLoadInferDef :: Expr -> Either Error (Expr.Expression Def (Derefed Def))
+runLoadInferDef = runNewContext . loadInferDef

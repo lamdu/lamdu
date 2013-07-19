@@ -272,7 +272,7 @@ infiniteTypeTests =
 wrongRecurseMissingArg =
   testCase "f x = f" .
   expectLeft "Infinite Type" verifyError . fmap void $
-  loadInferDef (void expr)
+  runLoadInferDef (void expr)
   where
     verifyError (InferError (Infer.InfiniteExpression _)) = return ()
     verifyError err = HUnit.assertFailure $ "InfiniteExpression error expected, but got: " ++ show err
@@ -362,7 +362,7 @@ hunitTests =
 
 inferPreservesShapeProp :: Expr -> Property
 inferPreservesShapeProp expr =
-  case loadInferDef expr of
+  case runLoadInferDef expr of
     Left _ -> property rejected
     Right inferred -> property (void inferred == expr)
 
