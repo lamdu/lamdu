@@ -419,6 +419,7 @@ tagCompositeTests =
       [ ("in get field", getField hole (holeWithInferredType (hole ~> hole) $$ hole))
       , ("in record val field", record KVal [(hole $$ hole, hole)])
       , ("in record type field", record KVal [(hole $$ hole, hole)])
+      , ("get field in tag of get field", getField hole (getField hole hole))
       ]
 
 getFieldTests =
