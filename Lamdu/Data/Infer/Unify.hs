@@ -6,6 +6,7 @@ module Lamdu.Data.Infer.Unify
 
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
+import Control.Monad (when)
 import Control.Monad.Trans.State (state)
 import Data.Foldable (traverse_)
 import Data.Map (Map)
@@ -131,7 +132,7 @@ renameRelation renames (RelationAppliedPiResult apr) =
 renameRelation _ x = x
 
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
-renameRefData renames (RefData scope renameHistory relations body)
+renameRefData renames (RefData scope renameHistory relations isComposite body)
   -- Expensive assertion
   | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Map.member` renames) body =
     error "Shadowing encountered, what to do?"
@@ -140,33 +141,33 @@ renameRefData renames (RefData scope renameHistory relations body)
     (scope & scopeMap %~ Map.mapKeys (lookupOrSelf renames))
     (renameHistory & _RenameHistory %~ Map.union renames)
     (relations & map (renameRelation renames))
+    isComposite
     (body & ExprLens.bodyParameterRef %~ lookupOrSelf renames)
 
 mergeRefData ::
   Eq def =>
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
-  Map Guid Guid -> RefData def -> RefData def -> Infer def ([Relation], RefData def)
+  Map Guid Guid -> RefData def -> RefData def -> Infer def (Bool, RefData def)
 mergeRefData recurse renames
-  (RefData aScope aMRenameHistory aRelations aBody)
-  (RefData bScope bMRenameHistory bRelations bBody) =
+  (RefData aScope aMRenameHistory aRelations aIsComposite aBody)
+  (RefData bScope bMRenameHistory bRelations bIsComposite bBody) =
   mkRefData
   <$> mergeScopeBodies recurse renames aScope aBody bScope bBody
   where
-    newInfoOnSelf =
+    bodyIsUpdated =
       Lens.has ExprLens.bodyHole aBody /=
       Lens.has ExprLens.bodyHole bBody
-    relationsTriggered
-      | newInfoOnSelf = mergedRelations
-      | otherwise = []
     mergedRelations = aRelations ++ bRelations
     mkRefData (intersectedScope, mergedBody) =
-      (,) relationsTriggered
-      RefData
-      { _rdScope = intersectedScope
-      , _rdRenameHistory = mappend aMRenameHistory bMRenameHistory
-      , _rdRelations = mergedRelations
-      , _rdBody = mergedBody
-      }
+      ( bodyIsUpdated
+      , RefData
+        { _rdScope = intersectedScope
+        , _rdRenameHistory = mappend aMRenameHistory bMRenameHistory
+        , _rdRelations = mergedRelations
+        , _rdIsComposite = mappend aIsComposite bIsComposite
+        , _rdBody = mergedBody
+        }
+      )
 
 renameMergeRefData ::
   Eq def =>
@@ -174,13 +175,13 @@ renameMergeRefData ::
   Ref -> Map Guid Guid -> RefData def -> RefData def ->
   Infer def ()
 renameMergeRefData recurse rep renames a b = do
-  (relations, mergedRefData) <-
+  (bodyIsUpdated, mergedRefData) <-
     mergeRefData recurse renames (renameRefData renames a) b
   -- First let's write the mergedRefData so we're not in danger zone
   -- of reading missing data:
   ExprRefs.write rep mergedRefData
   -- Now we can safely run the relations
-  traverse_ (InferM.executeRelation rep) relations
+  when bodyIsUpdated $ InferM.rerunRelations rep
 
 applyHoleConstraints ::
   (Ref -> UnifyPhase -> Infer def dummy) -> HoleConstraints ->

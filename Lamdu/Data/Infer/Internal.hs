@@ -6,7 +6,7 @@ module Lamdu.Data.Infer.Internal
   , GetFieldRefs(..)
   , Relation(..)
 
-  , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody
+  , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsComposite
     , defaultRefData
   , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames
   , ExprRefs(..), exprRefsUF, exprRefsData
@@ -23,6 +23,7 @@ import Data.Store.Guid (Guid)
 import Data.UnionFind (Ref, RefMap)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
+import qualified Data.Monoid as Monoid
 import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
 import qualified System.Random as Random
@@ -70,7 +71,7 @@ data GetFieldRefs = GetFieldRefs
   { _gfrTag :: Ref
   , _gfrType :: Ref
   , _gfrRecordType :: Ref
-  } deriving (Eq, Ord)
+  }
 
 data Relation
   = -- Sits in: Record type of get field, get field type, get field
@@ -83,6 +84,7 @@ data RefData def = RefData
   { _rdScope :: Scope
   , _rdRenameHistory :: RenameHistory
   , _rdRelations :: [Relation]
+  , _rdIsComposite :: Monoid.Any
   , _rdBody :: Expr.Body def Ref
   }
 Lens.makeLenses ''RefData
@@ -92,6 +94,7 @@ defaultRefData scop body = RefData
   { _rdScope = scop
   , _rdRenameHistory = mempty
   , _rdRelations = mempty
+  , _rdIsComposite = Monoid.Any False
   , _rdBody = body
   }
 
