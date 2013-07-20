@@ -3,7 +3,6 @@ module Lamdu.Data.Infer.MakeTypes (makeTypeRef) where
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad (void)
-import Data.Foldable (traverse_)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.UnionFind (Ref)
@@ -66,16 +65,14 @@ makeGetFieldType scope (Expr.GetField record tag) = do
     fresh scope $ ExprLens.bodyHole # () -- TODO
   addRelation (tag ^. tvVal) RelationIsTag
   let
-    getFieldRel = RelationGetField GetFieldRefs
+    getFieldRel = GetFieldRefs
       { _gfrTag = tag ^. tvVal
       , _gfrType = getFieldType
       , _gfrRecordType = record ^. tvType
       }
-  traverse_ (`addRelation` getFieldRel)
-    [ tag ^. tvVal
-    , getFieldType
-    , record ^. tvType
-    ]
+  getFieldRel
+    & Lens.traverseOf_ getFieldRefsRefs %%~
+      (`addRelation` RelationGetField getFieldRel)
   return getFieldType
 
 makeLambdaType :: Eq def => Scope -> Guid -> TypedValue -> TypedValue -> Infer def Ref

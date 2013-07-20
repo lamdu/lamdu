@@ -1,22 +1,23 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Infer.Internal
-  ( Scope(..), emptyScope, scopeMap
+  ( Scope(..), emptyScope, scopeMap, scopeRefs
   , RenameHistory(..), _Untracked, _RenameHistory
   -- Relations:
-  , GetFieldRefs(..), gfrTag, gfrType, gfrRecordType
-  , Relation(..)
+  , GetFieldRefs(..), gfrTag, gfrType, gfrRecordType, getFieldRefsRefs
+  , Relation(..), relationRefs
 
-  , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsComposite
+  , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsComposite, rdRefs
     , defaultRefData
-  , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames
+  , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames, appliedPiResultRefs
   , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefRefs, ctxRandomGen
     , emptyContext
   , LoadedDef(..), ldDef, ldType
-  , TypedValue(..), tvVal, tvType
-  , ScopedTypedValue(..), stvTV, stvScope
+  , TypedValue(..), tvVal, tvType, tvRefs
+  , ScopedTypedValue(..), stvTV, stvScope, stvRefs
   ) where
 
+import Control.Applicative (Applicative(..), (<$>))
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
@@ -37,6 +38,9 @@ emptyScope = Scope mempty
 scopeMap :: Lens.Iso' Scope (Map Guid Ref)
 scopeMap = Lens.from scope
 
+scopeRefs :: Lens.Traversal' Scope Ref
+scopeRefs = scopeMap . Lens.traverse
+
 -- Represents a relationship between some subexpression of a Pi result
 -- type and the respective sub-expression of an apply type that it
 -- should be copied with substs (or unified) into
@@ -52,6 +56,10 @@ data AppliedPiResult = AppliedPiResult
     _aprCopiedNames :: Map Guid Guid
   }
 Lens.makeLenses ''AppliedPiResult
+
+appliedPiResultRefs :: Lens.Traversal' AppliedPiResult Ref
+appliedPiResultRefs f (AppliedPiResult guid argVal destRef copiedNames) =
+  AppliedPiResult guid <$> f argVal <*> f destRef <*> pure copiedNames
 
 -- Rename history is only tracked if we're a subst dest (inside an
 -- apply type). Then we remember any rename that happened since the
@@ -74,12 +82,21 @@ data GetFieldRefs = GetFieldRefs
   }
 Lens.makeLenses ''GetFieldRefs
 
+getFieldRefsRefs :: Lens.Traversal' GetFieldRefs Ref
+getFieldRefsRefs f (GetFieldRefs tag typ recordType) =
+  GetFieldRefs <$> f tag <*> f typ <*> f recordType
+
 data Relation
   = -- Sits in: Record type of get field, get field type, get field
     -- tag, record tags:
     RelationGetField GetFieldRefs
   | RelationIsTag -- Hole | Tag, nothing else
   | RelationAppliedPiResult AppliedPiResult
+
+relationRefs :: Lens.Traversal' Relation Ref
+relationRefs f (RelationGetField x) = RelationGetField <$> getFieldRefsRefs f x
+relationRefs _ RelationIsTag = pure RelationIsTag
+relationRefs f (RelationAppliedPiResult x) = RelationAppliedPiResult <$> appliedPiResultRefs f x
 
 data RefData def = RefData
   { _rdScope :: Scope
@@ -98,6 +115,15 @@ defaultRefData scop body = RefData
   , _rdIsComposite = Monoid.Any False
   , _rdBody = body
   }
+
+rdRefs :: Lens.Traversal' (RefData def) Ref
+rdRefs f (RefData scop renameHistory relations isComposite body) =
+  RefData
+  <$> scopeRefs f scop
+  <*> pure renameHistory
+  <*> (Lens.traverse . relationRefs) f relations
+  <*> pure isComposite
+  <*> Lens.traverse f body
 
 data ExprRefs def = ExprRefs
   { _exprRefsUF :: UF.UnionFind
@@ -141,8 +167,14 @@ instance Show TypedValue where
   showsPrec n (TypedValue v t) =
     showParen (n > 0) (unwords [show v, ":", show t] ++)
 
+tvRefs :: Lens.Traversal' TypedValue Ref
+tvRefs f (TypedValue val typ) = TypedValue <$> f val <*> f typ
+
 data ScopedTypedValue = ScopedTypedValue
   { _stvTV :: TypedValue
   , _stvScope :: Scope
   }
 Lens.makeLenses ''ScopedTypedValue
+
+stvRefs :: Lens.Traversal' ScopedTypedValue Ref
+stvRefs f (ScopedTypedValue tv scop) = ScopedTypedValue <$> tvRefs f tv <*> scopeRefs f scop
