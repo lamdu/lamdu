@@ -23,25 +23,22 @@ import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 
 -- Remap a Guid from piResult context to the Apply context
-remapSubstGuid :: AppliedPiResult -> RenameHistory -> Guid -> Maybe (Guid, Ref)
+remapSubstGuid :: AppliedPiResult -> RenameHistory -> Guid -> Guid
 remapSubstGuid apr destRenameHistory src =
   case apr ^? aprCopiedNames . Lens.ix src of
   -- If it's not a copied guid, it should be the same guid/ref in both
   -- contexts
-  Nothing -> Nothing
-  Just (dest, destRef) ->
-    Just
-    ( fromMaybe dest $
-      destRenameHistory ^? _RenameHistory . Lens.ix dest
-    , destRef
-    )
+  Nothing -> src
+  Just dest ->
+    fromMaybe dest $
+    destRenameHistory ^? _RenameHistory . Lens.ix dest
 
 injectRenameHistory :: RenameHistory -> AppliedPiResult -> AppliedPiResult
 injectRenameHistory Untracked = id
 injectRenameHistory (RenameHistory renames) =
   -- Only the copied names (in our argument map) need to be fixed,
   -- others are in shared scope so need no fixing:
-  aprCopiedNames . Lens.mapped . Lens._1 %~ lookupOrSelf renames
+  aprCopiedNames . Lens.mapped %~ lookupOrSelf renames
 
 -- TODO: This should also substLeafs, and it should also subst getvars that aren't subst
 substNode :: Eq def => Expr.Body def Ref -> AppliedPiResult -> Infer def ()
@@ -49,7 +46,7 @@ substNode srcBody rawApr = do
   destData <- ExprRefs.read destRef
   let
     apr = rawApr & injectRenameHistory (destData ^. rdRenameHistory)
-    renameCopied = lookupOrSelf (fst <$> apr ^. aprCopiedNames)
+    renameCopied = lookupOrSelf (apr ^. aprCopiedNames)
     matchLamResult srcGuid destGuid srcChildRef destChildRef
       | renameCopied srcGuid == destGuid =
         apr
@@ -84,11 +81,7 @@ substOrUnify srcRef apr = do
     -- here instead of both places but we're not sure this is correct
     -- because there's a unify into the apply side between here and
     -- there.
-    remapGuidRef = remapSubstGuid apr (destData ^. rdRenameHistory)
-    remapGuid guid = maybe guid fst $ remapGuidRef guid
-    remapPair (guid, ref) = fromMaybe (guid, ref) $ remapGuidRef guid
-    renamedSrcScope =
-      srcScope & scopeMap %~ Map.fromList . map remapPair . Map.toList
+    remapGuid = remapSubstGuid apr (destData ^. rdRenameHistory)
     -- Only if the srcScope has any variable available that's not
     -- already available in the destScope could it be a GetVar.
     isUnify =
@@ -107,15 +100,15 @@ substOrUnify srcRef apr = do
       -- We injectRenameHistory of our ancestors into the apr
       destData & rdRenameHistory <>~ RenameHistory mempty & ExprRefs.write destRef
     srcBody@(Expr.BodyLam (Expr.Lam k srcGuid _ _)) -> do
-      (destGuid, destParamType, _) <- forceLam k renamedSrcScope destRef
+      (destGuid, _, _) <- forceLam k destScope destRef
       substNode srcBody
-        (apr & aprCopiedNames %~ Map.insert srcGuid (destGuid, destParamType))
+        (apr & aprCopiedNames %~ Map.insert srcGuid destGuid)
     srcBody -> do
       destBodyRef <-
         srcBody
-        & Lens.traverse %%~ const (fresh renamedSrcScope $ ExprLens.bodyHole # ())
+        & Lens.traverse %%~ const (fresh destScope $ ExprLens.bodyHole # ())
         <&> ExprLens.bodyParameterRef %~ remapGuid
-        >>= fresh renamedSrcScope
+        >>= fresh destScope
       void $ unify destBodyRef destRef -- destBodyRef is swallowed by destRef if it had anything...
       substNode srcBody apr
   where
