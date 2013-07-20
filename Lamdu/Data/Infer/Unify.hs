@@ -97,10 +97,13 @@ mergeScopeBodies ::
 mergeScopeBodies recurse renames xScope xBody yScope yBody = do
   intersectedScope <- intersectScopes xScope yScope
   let
-    unifyWithHole activeRenames holeScope otherScope nonHoleBody =
-      applyHoleConstraints (recurse activeRenames) (HoleConstraints unusableScopeSet)
-      nonHoleBody intersectedScope
-      <&> flip (,) nonHoleBody
+    unifyWithHole activeRenames holeScope otherScope nonHoleBody
+      | Set.null unusableScopeSet && Map.null renames =
+        return (intersectedScope, nonHoleBody)
+      | otherwise =
+        applyHoleConstraints (recurse activeRenames) (HoleConstraints unusableScopeSet)
+        nonHoleBody intersectedScope
+        <&> flip (,) nonHoleBody
       where
         unusableScopeSet = makeUnusableScopeSet holeScope otherScope
   case (xBody, yBody) of
