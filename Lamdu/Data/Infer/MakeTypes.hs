@@ -3,12 +3,13 @@ module Lamdu.Data.Infer.MakeTypes (makeTypeRef) where
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad (void)
+import Data.Foldable (traverse_)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.UnionFind (Ref)
+import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.Unify (unify, forceLam, fresh)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Data.Expression as Expr
@@ -58,11 +59,24 @@ addRelation ref relation = do
   InferM.rerunRelations ref
 
 makeGetFieldType :: Eq def => Scope -> Expr.GetField TypedValue -> Infer def Ref
-makeGetFieldType scope (Expr.GetField _record tag) = do
+makeGetFieldType scope (Expr.GetField record tag) = do
   tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
   void . unify tagTypeRef $ tag ^. tvType
+  getFieldType <-
+    fresh scope $ ExprLens.bodyHole # () -- TODO
   addRelation (tag ^. tvVal) RelationIsTag
-  fresh scope $ ExprLens.bodyHole # () -- TODO
+  let
+    getFieldRel = RelationGetField GetFieldRefs
+      { _gfrTag = tag ^. tvVal
+      , _gfrType = getFieldType
+      , _gfrRecordType = record ^. tvType
+      }
+  traverse_ (`addRelation` getFieldRel)
+    [ tag ^. tvVal
+    , getFieldType
+    , record ^. tvType
+    ]
+  return getFieldType
 
 makeLambdaType :: Eq def => Scope -> Guid -> TypedValue -> TypedValue -> Infer def Ref
 makeLambdaType scope paramGuid paramType result = do

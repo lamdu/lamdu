@@ -3,7 +3,7 @@ module Lamdu.Data.Infer.Internal
   ( Scope(..), emptyScope, scopeMap
   , RenameHistory(..), _Untracked, _RenameHistory
   -- Relations:
-  , GetFieldRefs(..)
+  , GetFieldRefs(..), gfrTag, gfrType, gfrRecordType
   , Relation(..)
 
   , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsComposite
@@ -72,6 +72,7 @@ data GetFieldRefs = GetFieldRefs
   , _gfrType :: Ref
   , _gfrRecordType :: Ref
   }
+Lens.makeLenses ''GetFieldRefs
 
 data Relation
   = -- Sits in: Record type of get field, get field type, get field
