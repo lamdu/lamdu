@@ -19,6 +19,7 @@ data Error def
   = VarEscapesScope Guid
   | VarNotInScope
   | InfiniteExpression Ref
+  | CompositeTag (Expr.Body def Ref)
   | Mismatch (Expr.Body def Ref) (Expr.Body def Ref)
   deriving (Show)
 
