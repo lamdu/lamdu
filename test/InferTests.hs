@@ -462,7 +462,7 @@ getFieldTests =
       inferFailsAssertion "GetFieldRequiresRecord" isExpectedError $
       getField integerType holeTag
   , testGroup "allowed getFields"
-    [ testInfer "GetField hole of hole" $ getField hole (holeTag)
+    [ testInfer "GetField hole of hole" $ getField hole holeTag
     , testInfer "GetField hole of record" $
       getField (record KVal [(holeTag, hole)]) holeTag
     , testInfer "GetField hole of record of 2" $

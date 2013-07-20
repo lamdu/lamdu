@@ -117,7 +117,7 @@ overlaps, the resulting set may have incorrect equivalence relations.
 -}
 unsafeMerge :: IntDisjointSet -> IntDisjointSet -> IntDisjointSet
 unsafeMerge (IntDisjointSet c1 p1) (IntDisjointSet c2 p2) =
-    IntDisjointSet (c1+c2) (IntMap.union p1 p2)
+    IntDisjointSet (c1+c2) (p1 `IntMap.union` p2)
 
 {-|
 Create an equivalence relation between x and y.
