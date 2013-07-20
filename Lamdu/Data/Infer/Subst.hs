@@ -96,7 +96,7 @@ substOrUnify srcRef apr = do
     Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef paramGuid))
       | paramGuid == apr ^. aprPiGuid -> void . unify destRef $ apr ^. aprArgVal
     Expr.BodyLeaf Expr.Hole -> do
-      srcData & rdAppliedPiResults %~ (apr :) & ExprRefs.write srcRef
+      srcData & rdRelations %~ (RelationAppliedPiResult apr :) & ExprRefs.write srcRef
       -- We injectRenameHistory of our ancestors into the apr
       destData & rdRenameHistory <>~ RenameHistory mempty & ExprRefs.write destRef
     srcBody@(Expr.BodyLam (Expr.Lam k srcGuid _ _)) -> do

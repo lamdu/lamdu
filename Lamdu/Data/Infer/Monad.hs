@@ -1,6 +1,6 @@
 module Lamdu.Data.Infer.Monad
   ( Error(..), InferActions(..), Infer, liftError, error
-  , run, substOrUnify
+  , run, executeRelation
   ) where
 
 import Prelude hiding (error)
@@ -23,7 +23,7 @@ data Error def
   deriving (Show)
 
 newtype InferActions def = InferActions
-  { iaSubstOrUnify :: Ref -> AppliedPiResult -> Infer def ()
+  { iaExecuteRelation :: Ref -> Relation -> Infer def ()
   }
 
 type Infer def a =
@@ -40,7 +40,7 @@ error = liftError . Left
 run :: InferActions def -> Infer def a -> StateT (Context def) (Either (Error def)) a
 run inferActions = mapStateT (`runReaderT` inferActions)
 
-substOrUnify :: Eq def => Ref -> AppliedPiResult -> Infer def ()
-substOrUnify ref apr = do
-  act <- lift (Reader.asks iaSubstOrUnify)
+executeRelation :: Eq def => Ref -> Relation -> Infer def ()
+executeRelation ref apr = do
+  act <- lift (Reader.asks iaExecuteRelation)
   act ref apr
