@@ -414,7 +414,7 @@ tagCompositeTests =
     isExpectedError (InferError Infer.CompositeTag {}) = True
     isExpectedError _ = False
     tests =
-      [ ("in get field", getField hole (hole $$ hole))
+      [ ("in get field", getField hole (holeWithInferredType (hole ~> hole) $$ hole))
       , ("in record val field", record KVal [(hole $$ hole, hole)])
       , ("in record type field", record KVal [(hole $$ hole, hole)])
       ]
