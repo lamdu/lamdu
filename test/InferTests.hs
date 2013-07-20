@@ -77,7 +77,7 @@ idPreservesDependency =
 idTest = testInfer "id test" $ getDef "id" $$ integerType
 
 inferFromOneArgToOther =
-  testInfer "f = \\ a (b:set) (c:a) -> if {True b c}" $
+  testInfer "f = \\ (a:set) (b:a) (c:a) -> if<a> {True b c}" $
   lambda "a" set $ \a ->
   lambda "b" a $ \b ->
   lambda "c" a $ \c ->
