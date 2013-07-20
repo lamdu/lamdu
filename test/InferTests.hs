@@ -429,14 +429,13 @@ getFieldTests =
         isExpectedError _ = False
       in
         testCase name .
-        allowFailAssertion "No missing field logic yet" .
         inferFailsAssertion "GetMissingField" isExpectedError $
         getField (record KVal fields) getFieldTag
     | (name, getFieldTag, fields) <-
       [ ("GetField hole on empty record", hole, [])
       , ("GetField non-hole on empty record", tagStr "field", [])
       , ("GetField on one mismatching field", tagStr "bar", [(tagStr "foo", hole)])
-      , ("GetField on one mismatching fields", tagStr "baz", [(tagStr "foo", hole), (tagStr "baz", hole)])
+      , ("GetField on two mismatching fields", tagStr "bar", [(tagStr "foo", hole), (tagStr "baz", hole)])
       ]
     ]
   , let
@@ -445,7 +444,6 @@ getFieldTests =
     in
       testGroup "must-be-the-one-field"
       [ testCase name .
-        allowFailAssertion "GetField doesn't yet handle record-of-one" .
         inferFailsAssertion "Mismatch" isExpectedError $
         getDef "id" $$ integerType $$
         getField (record KVal [(fieldsTag, getDef "True")]) getFieldTag
@@ -455,6 +453,13 @@ getFieldTests =
         , ("getField tag is hole", tagStr "foo", hole)
         ]
       ]
+  , let
+      isExpectedError (InferError Infer.GetFieldRequiresRecord {}) = True
+      isExpectedError _ = False
+    in
+      testCase "getField of non-record" $
+      inferFailsAssertion "GetFieldRequiresRecord" isExpectedError $
+      getField integerType holeTag
   , testGroup "allowed getFields"
     [ testInfer "GetField hole of hole" $ getField hole (holeTag)
     , testInfer "GetField hole of record" $

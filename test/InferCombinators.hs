@@ -86,10 +86,12 @@ setInferredType :: ExprInferred -> ExprInferred -> ExprInferred
 setInferredType typ val = val & iType .~ typ ^. iVal
 
 getField :: ExprInferred -> ExprInferred -> ExprInferred
-getField recordVal tagVal
-  | allFieldsMismatch = error "getField on record with only mismatching field tags"
-  | otherwise = simple (Expr._BodyGetField # Expr.GetField recordVal tagVal) pureFieldType
+getField recordVal tagVal =
+  simple (Expr._BodyGetField # Expr.GetField recordVal tagVal) fieldType
   where
+    fieldType
+      | allFieldsMismatch = error "getField has no valid type because all fields mismatch"
+      | otherwise = pureFieldType
     mFields = recordVal ^? iType . ExprLens.exprKindedRecordFields KType
     allFieldsMismatch =
       case mFields of
