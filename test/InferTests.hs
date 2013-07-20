@@ -21,6 +21,7 @@ import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer as Infer
+import qualified Test.Framework as TestFramework
 import qualified Test.HUnit as HUnit
 
 simpleTests =
@@ -292,14 +293,22 @@ getFieldWasntAllowed =
     param = topLevel ^?! lambdaPos . Lens._1
     recType = record KType []
 
-wrongRecurseMissingArg =
-  testCase "f x = f" .
-  expectLeft "Infinite Type" verifyError $
+testInferFails :: String -> String -> (Error -> Bool) -> ExprInferred -> TestFramework.Test
+testInferFails name errorName isExpectedError expr =
+  testCase name .
+  expectLeft errorName verifyError $
   runLoadInferDef (void expr)
   where
-    verifyError (InferError Infer.InfiniteExpression {}) = return ()
-    verifyError err = error $ "InfiniteExpression error expected, but got: " ++ show err
-    expr = lambda "x" hole . const $ recurse hole
+    verifyError err
+      | isExpectedError err = return ()
+      | otherwise = error $ errorName ++ " error expected, but got: " ++ show err
+
+wrongRecurseMissingArg =
+  testInferFails "f x = f" "Infinite Type" isExpectedError $
+  lambda "x" hole . const $ recurse hole
+  where
+    isExpectedError (InferError Infer.InfiniteExpression {}) = True
+    isExpectedError _ = False
 
 mapIdTest =
   testInfer "map id (5:_)" $
@@ -407,16 +416,27 @@ joinMaybe =
 typeOfUndefined = piType "a" set id
 
 scopeEscape =
-  testCase "scope escape" .
-  expectLeft "VarEscapesScope" verifyError $
-  runLoadInferDef (void expr)
+  testInferFails "scope escape" "VarEscapesScope" isExpectedError $
+  lambda "x" hole $ \x ->
+  typedWhereItem "undef"
+  typeOfUndefined (lambda "a" set (const x)) id
   where
-    verifyError (InferError Infer.VarEscapesScope {}) = return ()
-    verifyError err = error $ "VarEscapesScope error expected, but got: " ++ show err
-    expr =
-      lambda "x" hole $ \x ->
-      typedWhereItem "undef"
-      typeOfUndefined (lambda "a" set (const x)) id
+    isExpectedError (InferError Infer.VarEscapesScope {}) = True
+    isExpectedError _ = False
+
+tagCompositeTests =
+  testGroup "Composite Tags"
+  [ testInferFails name "CompositeTag" isExpectedError expr
+  | (name, expr) <- tests
+  ]
+  where
+    isExpectedError (InferError Infer.CompositeTag {}) = True
+    isExpectedError _ = False
+    tests =
+      [ ("in get field", getField hole (hole $$ hole))
+      , ("in record val field", record KVal [(hole $$ hole, hole)])
+      , ("in record type field", record KVal [(hole $$ hole, hole)])
+      ]
 
 hunitTests =
   simpleTests
@@ -450,6 +470,7 @@ hunitTests =
   , resumptionTests
   , joinMaybe
   , scopeEscape
+  , tagCompositeTests
   ]
 
 inferPreservesShapeProp :: Expr -> Property
