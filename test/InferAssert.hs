@@ -87,6 +87,25 @@ inferAssertion expr =
     inferredExpr =
       assertSuccess . runNewContext . loadInferDef $ void expr
 
+expectLeft ::
+  String -> (l -> HUnit.Assertion) ->
+  Either l ExprInferred -> HUnit.Assertion
+expectLeft _ handleLeft (Left x) = handleLeft x
+expectLeft msg _ (Right x) =
+  error $ unwords
+  [ "Error", msg, "expected.  Unexpected success encountered:"
+  , "\n", x & UnescapedStr . annotateTypes & show
+  ]
+
+inferFailsAssertion :: String -> (Error -> Bool) -> ExprInferred -> HUnit.Assertion
+inferFailsAssertion errorName isExpectedError expr =
+  expectLeft errorName verifyError $
+  runLoadInferDef (void expr)
+  where
+    verifyError err
+      | isExpectedError err = return ()
+      | otherwise = error $ errorName ++ " error expected, but got: " ++ show err
+
 -- inferWVAssertion :: ExprInferred -> ExprInferred -> HUnit.Assertion
 -- inferWVAssertion expr wvExpr = do
 --   -- TODO: assertCompareInferred should take an error prefix string,

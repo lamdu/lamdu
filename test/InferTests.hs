@@ -21,8 +21,6 @@ import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer as Infer
-import qualified Test.Framework as TestFramework
-import qualified Test.HUnit as HUnit
 
 simpleTests =
   [ testInfer "literal int" $ literalInteger 5
@@ -173,16 +171,6 @@ resumptionTests =
     in assertCompareInferred resultR (recurse (hole ~> hole))
   ]
 
-expectLeft ::
-  String -> (l -> HUnit.Assertion) ->
-  Either l ExprInferred -> HUnit.Assertion
-expectLeft _ handleLeft (Left x) = handleLeft x
-expectLeft msg _ (Right x) =
-  error $ unwords
-  [ "Error", msg, "expected.  Unexpected success encountered:"
-  , "\n", x & UnescapedStr . annotateTypes & show
-  ]
-
 failResumptionAddsRules =
   -- f     x    = x _ _
   --   --------
@@ -293,18 +281,9 @@ getFieldWasntAllowed =
     param = topLevel ^?! lambdaPos . Lens._1
     recType = record KType []
 
-testInferFails :: String -> String -> (Error -> Bool) -> ExprInferred -> TestFramework.Test
-testInferFails name errorName isExpectedError expr =
-  testCase name .
-  expectLeft errorName verifyError $
-  runLoadInferDef (void expr)
-  where
-    verifyError err
-      | isExpectedError err = return ()
-      | otherwise = error $ errorName ++ " error expected, but got: " ++ show err
-
 wrongRecurseMissingArg =
-  testInferFails "f x = f" "Infinite Type" isExpectedError $
+  testCase "f x = f" .
+  inferFailsAssertion "Infinite Type" isExpectedError $
   lambda "x" hole . const $ recurse hole
   where
     isExpectedError (InferError Infer.InfiniteExpression {}) = True
@@ -416,7 +395,8 @@ joinMaybe =
 typeOfUndefined = piType "a" set id
 
 scopeEscape =
-  testInferFails "scope escape" "VarEscapesScope" isExpectedError $
+  testCase "scope escape" .
+  inferFailsAssertion "VarEscapesScope" isExpectedError $
   lambda "x" hole $ \x ->
   typedWhereItem "undef"
   typeOfUndefined (lambda "a" set (const x)) id
@@ -426,7 +406,8 @@ scopeEscape =
 
 tagCompositeTests =
   testGroup "Composite Tags"
-  [ testInferFails name "CompositeTag" isExpectedError expr
+  [ testCase name $
+    inferFailsAssertion "CompositeTag" isExpectedError expr
   | (name, expr) <- tests
   ]
   where
