@@ -107,11 +107,13 @@ idOnAnInt =
   testInfer "id on an int" $
   getDef "id" $$ asHole integerType $$ literalInteger 5
 
+holeTag = holeWithInferredType tagType
+
 idOnARecord =
   testInfer "id ({:Type) <hole> does not infer { val" $
   getDef "id" $$ rec $$ holeWithInferredType rec
   where
-    rec = record KType [(holeWithInferredType tagType, integerType)]
+    rec = record KType [(holeTag, integerType)]
 
 idOnHole = testInfer "id hole" $ getDef "id" $$ holeWithInferredType set
 
@@ -419,6 +421,51 @@ tagCompositeTests =
       , ("in record type field", record KVal [(hole $$ hole, hole)])
       ]
 
+getFieldTests =
+  testGroup "GetField tests"
+  [ testGroup "missing fields"
+    [ let
+        isExpectedError (InferError Infer.GetMissingField {}) = True
+        isExpectedError _ = False
+      in
+        testCase name .
+        allowFailAssertion "No missing field logic yet" .
+        inferFailsAssertion "GetMissingField" isExpectedError $
+        getField (record KVal fields) getFieldTag
+    | (name, getFieldTag, fields) <-
+      [ ("GetField hole on empty record", hole, [])
+      , ("GetField non-hole on empty record", tagStr "field", [])
+      , ("GetField on one mismatching field", tagStr "bar", [(tagStr "foo", hole)])
+      , ("GetField on one mismatching fields", tagStr "baz", [(tagStr "foo", hole), (tagStr "baz", hole)])
+      ]
+    ]
+  , let
+      isExpectedError (InferError Infer.Mismatch {}) = True
+      isExpectedError _ = False
+    in
+      testGroup "must-be-the-one-field"
+      [ testCase name .
+        allowFailAssertion "GetField doesn't yet handle record-of-one" .
+        inferFailsAssertion "Mismatch" isExpectedError $
+        getDef "id" $$ integerType $$
+        getField (record KVal [(fieldsTag, getDef "True")]) getFieldTag
+      | (name, fieldsTag, getFieldTag) <-
+        [ ("both tags are holes", hole, hole)
+        , ("fields' tag is hole", hole, tagStr "foo")
+        , ("getField tag is hole", tagStr "foo", hole)
+        ]
+      ]
+  , testGroup "allowed getFields"
+    [ testInfer "GetField hole of hole" $ getField hole (holeTag)
+    , testInfer "GetField hole of record" $
+      getField (record KVal [(holeTag, hole)]) holeTag
+    , testInfer "GetField hole of record of 2" $
+      getField (record KVal [(holeTag, hole), (holeTag, hole)]) holeTag
+    , testInfer "GetField tag of record of 2" $
+      getField (record KVal [(holeTag, hole), (holeTag, hole)]) (tagStr "foo")
+    ]
+  ]
+
 hunitTests =
   simpleTests
   ++
@@ -452,6 +499,7 @@ hunitTests =
   , joinMaybe
   , scopeEscape
   , tagCompositeTests
+  , getFieldTests
   ]
 
 inferPreservesShapeProp :: Expr -> Property
