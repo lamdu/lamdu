@@ -190,7 +190,7 @@ applyHoleConstraints recurse holeConstraints body oldScope = do
   newScope <-
     InferM.liftError $
     checkHoleConstraints holeConstraints body oldScope
-  traverse_ (flip recurse (UnifyHoleConstraints holeConstraints)) body
+  traverse_ (`recurse` UnifyHoleConstraints holeConstraints) body
   return newScope
 
 unifyRecurse :: Eq def => Set Ref -> Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref

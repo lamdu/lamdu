@@ -55,7 +55,7 @@ makeApplyType applyScope func arg = do
 
 addRelation :: Eq def => Ref -> Relation -> Infer def ()
 addRelation ref relation = do
-  ExprRefs.modify ref $ (rdRelations <>~ [relation])
+  ExprRefs.modify ref (rdRelations <>~ [relation])
   InferM.rerunRelations ref
 
 makeGetFieldType :: Eq def => Scope -> Expr.GetField TypedValue -> Infer def Ref
@@ -94,8 +94,7 @@ makeRecordType k scope fields = do
     Expr.KVal -> Expr.BodyRecord . Expr.Record Expr.KType $ onRecVField <$> fields
     Expr.KType -> ExprLens.bodyType # ()
   where
-    setTagPos ref = do
-      addRelation ref RelationIsTag
+    setTagPos ref = addRelation ref RelationIsTag
     onRecVField (tag, val) = (tag ^. tvVal, val ^. tvType)
 
 makePiType :: Eq def => Scope -> TypedValue -> TypedValue -> Infer def Ref
