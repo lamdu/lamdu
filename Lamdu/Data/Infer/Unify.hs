@@ -125,46 +125,46 @@ renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames
   (Map.mapKeys (lookupOrSelf renames) copiedNames)
 
 -- No names in Relation (yet?)
-renameRelations :: Map Guid Guid -> [Relation] -> [Relation]
-renameRelations _ = id
+renameRelation :: Map Guid Guid -> Relation -> Relation
+renameRelation renames (RelationAppliedPiResult apr) =
+  RelationAppliedPiResult $ renameAppliedPiResult renames apr
+renameRelation _ x = x
 
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
-renameRefData renames (RefData scope substs renameHistory relations body)
+renameRefData renames (RefData scope renameHistory relations body)
   -- Expensive assertion
   | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Map.member` renames) body =
     error "Shadowing encountered, what to do?"
   | otherwise =
     RefData
     (scope & scopeMap %~ Map.mapKeys (lookupOrSelf renames))
-    (substs <&> renameAppliedPiResult renames)
     (renameHistory & _RenameHistory %~ Map.union renames)
-    (relations & renameRelations renames)
+    (relations & map (renameRelation renames))
     (body & ExprLens.bodyParameterRef %~ lookupOrSelf renames)
 
 mergeRefData ::
   Eq def =>
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
-  Map Guid Guid -> RefData def -> RefData def -> Infer def ([AppliedPiResult], RefData def)
+  Map Guid Guid -> RefData def -> RefData def -> Infer def ([Relation], RefData def)
 mergeRefData recurse renames
-  (RefData aScope aAppliedPiResults aMRenameHistory aRelations aBody)
-  (RefData bScope bAppliedPiResults bMRenameHistory bRelations bBody) =
+  (RefData aScope aMRenameHistory aRelations aBody)
+  (RefData bScope bMRenameHistory bRelations bBody) =
   mkRefData
   <$> mergeScopeBodies recurse renames aScope aBody bScope bBody
   where
     newInfoOnSelf =
       Lens.has ExprLens.bodyHole aBody /=
       Lens.has ExprLens.bodyHole bBody
-    substsToExecute
-      | newInfoOnSelf = mergedAppliedPiResults
+    relationsTriggered
+      | newInfoOnSelf = mergedRelations
       | otherwise = []
-    mergedAppliedPiResults = aAppliedPiResults ++ bAppliedPiResults
+    mergedRelations = aRelations ++ bRelations
     mkRefData (intersectedScope, mergedBody) =
-      (,) substsToExecute
+      (,) relationsTriggered
       RefData
       { _rdScope = intersectedScope
-      , _rdAppliedPiResults = mergedAppliedPiResults
       , _rdRenameHistory = mappend aMRenameHistory bMRenameHistory
-      , _rdRelations = mappend aRelations bRelations
+      , _rdRelations = mergedRelations
       , _rdBody = mergedBody
       }
 
@@ -174,13 +174,13 @@ renameMergeRefData ::
   Ref -> Map Guid Guid -> RefData def -> RefData def ->
   Infer def ()
 renameMergeRefData recurse rep renames a b = do
-  (appliedPiResults, mergedRefData) <-
+  (relations, mergedRefData) <-
     mergeRefData recurse renames (renameRefData renames a) b
   -- First let's write the mergedRefData so we're not in danger zone
   -- of reading missing data:
   ExprRefs.write rep mergedRefData
   -- Now we can safely run the relations
-  traverse_ (InferM.substOrUnify rep) appliedPiResults
+  traverse_ (InferM.executeRelation rep) relations
 
 applyHoleConstraints ::
   (Ref -> UnifyPhase -> Infer def dummy) -> HoleConstraints ->

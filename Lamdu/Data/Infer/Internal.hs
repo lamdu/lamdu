@@ -6,7 +6,7 @@ module Lamdu.Data.Infer.Internal
   , GetFieldRefs(..)
   , Relation(..)
 
-  , RefData(..), rdScope, rdAppliedPiResults, rdRenameHistory, rdRelations, rdBody
+  , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody
     , defaultRefData
   , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames
   , ExprRefs(..), exprRefsUF, exprRefsData
@@ -77,11 +77,10 @@ data Relation
     -- tag, record tags:
     RelationGetField GetFieldRefs
   | RelationIsTag -- Hole | Tag, nothing else
-  deriving (Eq, Ord)
+  | RelationAppliedPiResult AppliedPiResult
 
 data RefData def = RefData
   { _rdScope :: Scope
-  , _rdAppliedPiResults :: [AppliedPiResult] -- TODO: Into relations
   , _rdRenameHistory :: RenameHistory
   , _rdRelations :: [Relation]
   , _rdBody :: Expr.Body def Ref
@@ -91,7 +90,6 @@ Lens.makeLenses ''RefData
 defaultRefData :: Scope -> Expr.Body def Ref -> RefData def
 defaultRefData scop body = RefData
   { _rdScope = scop
-  , _rdAppliedPiResults = []
   , _rdRenameHistory = mempty
   , _rdRelations = mempty
   , _rdBody = body

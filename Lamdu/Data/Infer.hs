@@ -36,8 +36,15 @@ infer ::
   (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
 infer scope expr = exprIntoSTV scope expr & runInfer
 
+executeRelation :: Eq def => Ref -> Relation -> Infer def ()
+executeRelation ref rel =
+  case rel of
+  RelationAppliedPiResult apr -> substOrUnify ref apr
+  RelationGetField _getField -> return () -- TODO: <--
+  RelationIsTag -> return () -- TODO: <--
+
 runInfer :: Eq def => Infer def a -> StateT (Context def) (Either (Error def)) a
-runInfer = InferM.run $ InferM.InferActions substOrUnify
+runInfer = InferM.run $ InferM.InferActions executeRelation
 
 -- With hole apply vals and hole types
 exprIntoSTV ::
