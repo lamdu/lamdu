@@ -137,7 +137,7 @@ data TypedValue = TypedValue
   } deriving (Eq, Ord)
 Lens.makeLenses ''TypedValue
 instance Show TypedValue where
-  show (TypedValue v t) = unwords [show v, ":", show t]
+  showsPrec n (TypedValue v t) = showParen (n > 0) $ (unwords [show v, ":", show t] ++)
 
 data ScopedTypedValue = ScopedTypedValue
   { _stvTV :: TypedValue
