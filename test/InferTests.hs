@@ -163,12 +163,14 @@ resumptionTests =
     in assertCompareInferred resultR (recurse (hole ~> hole))
   ]
 
-expectLeft :: Show r => String -> (l -> HUnit.Assertion) -> Either l r -> HUnit.Assertion
+expectLeft ::
+  String -> (l -> HUnit.Assertion) ->
+  Either l ExprInferred -> HUnit.Assertion
 expectLeft _ handleLeft (Left x) = handleLeft x
 expectLeft msg _ (Right x) =
   error $ unwords
   [ "Error", msg, "expected.  Unexpected success encountered:"
-  , "\n", show x
+  , "\n", x & UnescapedStr . annotateTypes & show
   ]
 
 failResumptionAddsRules =
@@ -283,11 +285,11 @@ getFieldWasntAllowed =
 
 wrongRecurseMissingArg =
   testCase "f x = f" .
-  expectLeft "Infinite Type" verifyError . fmap void $
+  expectLeft "Infinite Type" verifyError $
   runLoadInferDef (void expr)
   where
-    verifyError (InferError (Infer.InfiniteExpression _)) = return ()
-    verifyError err = HUnit.assertFailure $ "InfiniteExpression error expected, but got: " ++ show err
+    verifyError (InferError Infer.InfiniteExpression {}) = return ()
+    verifyError err = error $ "InfiniteExpression error expected, but got: " ++ show err
     expr = lambda "x" hole . const $ recurse hole
 
 mapIdTest =
@@ -347,7 +349,7 @@ typeOfUndefined = piType "a" set id
 
 scopeEscape =
   testCase "scope escape" .
-  expectLeft "VarEscapesScope" verifyError . fmap (UnescapedStr . annotateTypes) $
+  expectLeft "VarEscapesScope" verifyError $
   runLoadInferDef (void expr)
   where
     verifyError (InferError Infer.VarEscapesScope {}) = return ()
