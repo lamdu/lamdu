@@ -1,5 +1,5 @@
-module Lamdu.Data.Infer.Subst
-  ( substOrUnify
+module Lamdu.Data.Infer.AppliedPiResult
+  ( handleAppliedPiResult
   ) where
 
 import Control.Applicative ((<$>))
@@ -66,11 +66,11 @@ substNode srcBody rawApr = do
   where
     destRef = rawApr ^. aprDestRef
     recurse srcChildRef destChildRef childApr =
-      substOrUnify srcChildRef $
+      handleAppliedPiResult srcChildRef $
       childApr & aprDestRef .~ destChildRef
 
-substOrUnify :: Eq def => Ref -> AppliedPiResult -> Infer def ()
-substOrUnify srcRef apr = do
+handleAppliedPiResult :: Eq def => Ref -> AppliedPiResult -> Infer def ()
+handleAppliedPiResult srcRef apr = do
   srcData <- ExprRefs.read srcRef
   destData <- ExprRefs.read destRef
   let

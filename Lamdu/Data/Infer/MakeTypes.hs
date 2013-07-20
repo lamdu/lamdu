@@ -8,7 +8,7 @@ import Data.Store.Guid (Guid)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.Subst (substOrUnify)
+import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.Unify (unify, forceLam, fresh)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Data.Expression as Expr
@@ -44,7 +44,7 @@ makeApplyType applyScope func arg = do
     (func ^. stvTV . tvType)
   void $ unify (arg ^. stvTV . tvType) piParamType
   applyTypeRef <- fresh applyScope $ ExprLens.bodyHole # ()
-  substOrUnify piResultRef AppliedPiResult
+  handleAppliedPiResult piResultRef AppliedPiResult
     { _aprPiGuid = piGuid
     , _aprArgVal = arg ^. stvTV . tvVal
     , _aprDestRef = applyTypeRef
@@ -52,10 +52,16 @@ makeApplyType applyScope func arg = do
     }
   return applyTypeRef
 
+addRelation :: Eq def => Ref -> Relation -> Infer def ()
+addRelation ref relation = do
+  ExprRefs.modify ref $ (rdRelations <>~ [relation])
+  InferM.rerunRelations ref
+
 makeGetFieldType :: Eq def => Scope -> Expr.GetField TypedValue -> Infer def Ref
 makeGetFieldType scope (Expr.GetField _record tag) = do
   tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
   void . unify tagTypeRef $ tag ^. tvType
+  addRelation (tag ^. tvVal) RelationIsTag
   fresh scope $ ExprLens.bodyHole # () -- TODO
 
 makeLambdaType :: Eq def => Scope -> Guid -> TypedValue -> TypedValue -> Infer def Ref
@@ -74,8 +80,8 @@ makeRecordType k scope fields = do
     Expr.KVal -> Expr.BodyRecord . Expr.Record Expr.KType $ onRecVField <$> fields
     Expr.KType -> ExprLens.bodyType # ()
   where
-    setTagPos ref =
-      ExprRefs.modify ref $ rdRelations <>~ [RelationIsTag]
+    setTagPos ref = do
+      addRelation ref RelationIsTag
     onRecVField (tag, val) = (tag ^. tvVal, val ^. tvType)
 
 makePiType :: Eq def => Scope -> TypedValue -> TypedValue -> Infer def Ref

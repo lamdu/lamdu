@@ -1,6 +1,6 @@
 module Lamdu.Data.Infer.Monad
   ( Error(..), InferActions(..), Infer, liftError, error
-  , run, executeRelation
+  , run, rerunRelations
   ) where
 
 import Prelude hiding (error)
@@ -19,12 +19,12 @@ data Error def
   = VarEscapesScope Guid
   | VarNotInScope
   | InfiniteExpression Ref
-  | CompositeTag (Expr.Body def Ref)
+  | CompositeTag Ref
   | Mismatch (Expr.Body def Ref) (Expr.Body def Ref)
   deriving (Show)
 
 newtype InferActions def = InferActions
-  { iaExecuteRelation :: Ref -> Relation -> Infer def ()
+  { iaRerunRelations :: Ref -> Infer def ()
   }
 
 type Infer def a =
@@ -41,7 +41,7 @@ error = liftError . Left
 run :: InferActions def -> Infer def a -> StateT (Context def) (Either (Error def)) a
 run inferActions = mapStateT (`runReaderT` inferActions)
 
-executeRelation :: Eq def => Ref -> Relation -> Infer def ()
-executeRelation ref apr = do
-  act <- lift (Reader.asks iaExecuteRelation)
-  act ref apr
+rerunRelations :: Eq def => Ref -> Infer def ()
+rerunRelations ref = do
+  act <- lift (Reader.asks iaRerunRelations)
+  act ref
