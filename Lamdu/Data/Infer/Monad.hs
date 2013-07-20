@@ -20,7 +20,8 @@ data Error def
   | VarNotInScope
   | InfiniteExpression Ref
   | CompositeTag Ref
-  | GetMissingField Ref
+  | GetMissingField
+  | GetFieldRequiresRecord
   | Mismatch (Expr.Body def Ref) (Expr.Body def Ref)
   deriving (Show)
 
