@@ -31,7 +31,9 @@ loader =
 assertSuccess :: Show err => Either err a -> a
 assertSuccess = either (error . show) id
 
-data Error = InferError (Infer.Error Def) | LoadError (InferLoad.Error Def)
+data Error
+  = LoadError (InferLoad.Error Def)
+  | InferError (Infer.Error Def)
   deriving (Show)
 
 type M = StateT (Infer.Context Def) (Either Error)
@@ -64,6 +66,9 @@ derefWithPL ::
 derefWithPL expr = expr
   & ExprLens.exprDef %~ (^. InferLoad.ldDef)
   & InferDeref.expr
+  & mapStateT (Lens._Left %~ mapErr)
+  where
+    mapErr (InferDeref.InfiniteExpression ref) = InferError (Infer.InfiniteExpression ref)
 
 deref ::
   Expr.Expression (LoadedDef Def) Infer.ScopedTypedValue ->

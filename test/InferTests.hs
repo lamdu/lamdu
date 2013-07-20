@@ -285,7 +285,7 @@ getFieldWasntAllowed =
 
 wrongRecurseMissingArg =
   testCase "f x = f" .
-  inferFailsAssertion "Infinite Type" isExpectedError $
+  inferFailsAssertion "InfiniteExpression" isExpectedError $
   lambda "x" hole . const $ recurse hole
   where
     isExpectedError (InferError Infer.InfiniteExpression {}) = True
