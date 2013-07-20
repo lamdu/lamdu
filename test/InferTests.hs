@@ -78,12 +78,12 @@ idPreservesDependency =
 idTest = testInfer "id test" $ getDef "id" $$ integerType
 
 inferFromOneArgToOther =
-  testInfer "f = \\ a (b:_) (c:a) -> if {_ b c}" $
-  lambda "a" (asHole set) $ \a ->
-  lambda "b" (asHole a) $ \b ->
+  testInfer "f = \\ a (b:set) (c:a) -> if {True b c}" $
+  lambda "a" set $ \a ->
+  lambda "b" a $ \b ->
   lambda "c" a $ \c ->
-  getDef "if" $$ asHole a $$:
-  [holeWithInferredType (getDef "Bool"), b, c]
+  getDef "if" $$ a $$:
+  [getDef "True", b, c]
 
 inferFromOneArgToOtherMap =
   testInfer "f = \\ a b (c:List _ _) (d:Map a b) -> if {_ c d}" $
