@@ -87,8 +87,12 @@ setInferredType typ val = val & iType .~ typ ^. iVal
 
 getField :: ExprInferred -> ExprInferred -> ExprInferred
 getField recordVal tagVal =
-  simple (Expr._BodyGetField # Expr.GetField recordVal tagVal) fieldType
+  iexpr val fieldType body
   where
+    body = Expr._BodyGetField # Expr.GetField recordVal tagVal
+    val
+      | Lens.has ExprLens.exprDefinitionRef recordVal = bodyToPureExpr body
+      | otherwise = pureHole
     fieldType
       | allFieldsMismatch = error "getField has no valid type because all fields mismatch"
       | otherwise = pureFieldType
