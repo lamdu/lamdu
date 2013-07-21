@@ -2,7 +2,9 @@ module Lamdu.Data.Infer
   ( Infer, Error(..)
   , infer, unify, tempUnify
   , emptyContext
+  , exprSTVRefs
   -- Re-export:
+  , ExprRefs.optimizeContext
   , Context
   , Scope, emptyScope
   , TypedValue(..), tvVal, tvType
@@ -32,11 +34,14 @@ import qualified Lamdu.Data.Infer.Monad as InferM
 tempUnify :: Eq def => Ref -> Ref -> StateT (Context def) (Either (Error def)) ()
 tempUnify x y = unify x y & runInfer & void
 
+exprSTVRefs :: Lens.Traversal' (Expr.Expression (LoadedDef def) (ScopedTypedValue, a)) Ref
+exprSTVRefs f = ExprLens.exprBitraverse (ldType f) ((Lens._1 . stvRefs) f)
+
 infer ::
   Eq def => Scope -> Expr.Expression (LoadedDef def) a ->
   StateT (Context def) (Either (Error def))
   (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
-infer scope expr = exprIntoSTV scope expr & runInfer
+infer scope expr = runInfer $ exprIntoSTV scope expr
 
 isTag :: Ref -> Infer def ()
 isTag ref = do
