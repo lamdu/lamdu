@@ -13,8 +13,9 @@ import Lamdu.Data.ExampleDB (createBuiltins)
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Utils (pureHole, pureIntegerType)
-import Lamdu.Data.Infer.Deref (Derefed(..))
+import Lamdu.Data.Infer.Deref (Derefed(..), Restrictions(..))
 import qualified Control.Lens as Lens
+import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -148,27 +149,23 @@ defParamTags :: Def -> [Guid]
 defParamTags defName =
   innerMostPi (definitionTypes ! defName) ^.. piTags
 
--- showRestricted ::
---   Expr.Expression def Infer.IsRestrictedPoly ->
---   Expr.Expression def UnescapedStr
--- showRestricted = fmap restrictedStr
---   where
---     restrictedStr Infer.UnrestrictedPoly = UnescapedStr ""
---     restrictedStr Infer.RestrictedPoly = UnescapedStr $ ansiAround ansiYellow "R"
+showRestrictions :: Show def => Restrictions def -> UnescapedStr
+showRestrictions (Restrictions xs) =
+  UnescapedStr .
+  List.intercalate "," $
+  map (ansiAround ansiYellow . show) xs
 
 canonizeDebug :: Expression def a -> Expression def a
 canonizeDebug = ExprUtil.randomizeParamIdsG id ExprUtil.debugNameGen Map.empty (\_ _ -> id)
 
-showInferred :: ExprIRef.Expression t () -> String
-showInferred =
-  show . -- showRestricted .
-  canonizeDebug
+showDerefed :: Show def => Expression def (Restrictions def) -> String
+showDerefed = show . fmap showRestrictions . canonizeDebug
 
 showInferredValType :: Expression def (Derefed (DefI t)) -> String
 showInferredValType expr =
   unlines
-  [ "Inferred val:  " ++ showInferred val
-  , "Inferred type: " ++ showInferred typ
+  [ "Inferred val:  " ++ showDerefed val
+  , "Inferred type: " ++ showDerefed typ
   ]
   where
     Derefed val typ = expr ^. Expr.ePayload
