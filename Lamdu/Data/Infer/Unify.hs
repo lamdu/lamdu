@@ -1,13 +1,15 @@
 {-# LANGUAGE PatternGuards #-}
 module Lamdu.Data.Infer.Unify
-  ( unify, fresh
+  ( unify, fresh, freshHole
   , forceLam
   ) where
 
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.Monad (when)
+import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.State (state)
+import Control.MonadA (MonadA)
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Map.Utils (lookupOrSelf)
@@ -30,8 +32,11 @@ import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
 
-fresh :: Scope -> Expr.Body def Ref -> Infer def Ref
+fresh :: MonadA m => Scope -> Expr.Body def Ref -> StateT (Context def) m Ref
 fresh scope body = ExprRefs.fresh $ defaultRefData scope body
+
+freshHole :: MonadA m => Scope -> StateT (Context def) m Ref
+freshHole scope = fresh scope $ ExprLens.bodyHole # ()
 
 newRandom :: Random r => Infer def r
 newRandom = Lens.zoom ctxRandomGen $ state random
