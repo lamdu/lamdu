@@ -1,6 +1,7 @@
 module InferWrappers where
 
 import Control.Lens.Operators
+import Control.Monad (void)
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (StateT, mapStateT, evalStateT)
 import Control.MonadA (MonadA)
@@ -77,7 +78,7 @@ deref expr =
   expr
   <&> flip (,) ()
   & derefWithPL
-  <&> fmap (\(Derefed val typ, ()) -> (val, typ))
+  <&> fmap (\(Derefed val typ, ()) -> (void val, void typ))
 
 -- Run this function only once per M
 inferDef ::

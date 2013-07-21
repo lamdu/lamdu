@@ -3,35 +3,39 @@ module Lamdu.Data.Infer.Deref
   ( deref, expr
   , Derefed(..), dValue, dType
   , Error(..)
+  , Restrictions(..)
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT, evalStateT)
-import Data.Binary (Binary(..))
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
 import Data.Function.Decycle (decycle)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 
 data Error = InfiniteExpression Ref
   deriving (Show, Eq, Ord)
 
-data Derefed def = Derefed
-  { _dValue :: Expr.Expression def ()
-  , _dType :: Expr.Expression def ()
+-- Some infer info flows are one-way. In that case, we may know that
+-- an expression must match certain other expressions either directly
+-- or via use of a getvar from the src's context. These are documented
+-- in restrictions:
+newtype Restrictions def = Restrictions
+  { _rRefs :: [Ref]
   }
-derive makeBinary ''Derefed
+
+data Derefed def = Derefed
+  { _dValue :: Expr.Expression def (Restrictions def)
+  , _dType :: Expr.Expression def (Restrictions def)
+  }
 Lens.makeLenses ''Derefed
 
-deref :: Ref -> StateT (Context def) (Either Error) (Expr.Expression def ())
+deref :: Ref -> StateT (Context def) (Either Error) (Expr.Expression def (Restrictions def))
 deref =
   (`evalStateT` Map.empty) . decycle loop
   where
@@ -42,12 +46,21 @@ deref =
       case mFound of
         Just found -> return found
         Nothing -> do
+          repData <- lift $ ExprRefs.readRep rep
+          let
+            body = repData ^. rdBody
+            restrictions =
+              Restrictions $
+              case body of
+              Expr.BodyLeaf Expr.Hole ->
+                [ apr ^. aprDestRef
+                | RelationAppliedPiResult apr <- repData ^. rdRelations
+                ]
+              _ -> [] -- Only holes need restrictions
           derefed <-
-            ExprRefs.readRep rep
-            & lift
-            <&> (^. rdBody)
-            >>= Lens.traverse %%~ recurse
-            <&> ExprUtil.pureExpression
+            repData ^. rdBody
+            & Lens.traverse %%~ recurse
+            <&> (`Expr.Expression` restrictions)
           Lens.at rep .= Just derefed
           return derefed
 
