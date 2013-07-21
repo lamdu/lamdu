@@ -9,7 +9,7 @@ import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.Unify (unify, forceLam, fresh)
+import Lamdu.Data.Infer.Unify (unify, forceLam, fresh, freshHole)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -43,7 +43,7 @@ makeApplyType applyScope func arg = do
     (func ^. stvScope)
     (func ^. stvTV . tvType)
   void $ unify (arg ^. stvTV . tvType) piParamType
-  applyTypeRef <- fresh applyScope $ ExprLens.bodyHole # ()
+  applyTypeRef <- freshHole applyScope
   handleAppliedPiResult piResultRef AppliedPiResult
     { _aprPiGuid = piGuid
     , _aprArgVal = arg ^. stvTV . tvVal
@@ -61,8 +61,7 @@ makeGetFieldType :: Eq def => Scope -> Expr.GetField TypedValue -> Infer def Ref
 makeGetFieldType scope (Expr.GetField record tag) = do
   tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
   void . unify tagTypeRef $ tag ^. tvType
-  getFieldType <-
-    fresh scope $ ExprLens.bodyHole # () -- TODO
+  getFieldType <- freshHole scope
   addRelation (tag ^. tvVal) RelationIsTag
   let
     getFieldRel = GetFieldRefs
@@ -115,7 +114,7 @@ makeTypeRef scope body =
     makePiType scope (paramType ^. stvTV) (resultType ^. stvTV)
   Expr.BodyLeaf Expr.LiteralInteger {} -> fresh scope $ ExprLens.bodyIntegerType # ()
   Expr.BodyLeaf Expr.Tag {} -> fresh scope $ ExprLens.bodyTagType # ()
-  Expr.BodyLeaf Expr.Hole -> fresh scope $ ExprLens.bodyHole # ()
+  Expr.BodyLeaf Expr.Hole -> freshHole scope
   -- GetPars
   Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (LoadedDef _ ref))) -> pure ref
   Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) ->

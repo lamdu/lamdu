@@ -14,7 +14,7 @@ import Data.Traversable (sequenceA)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
-import Lamdu.Data.Infer.Unify (fresh, unify, forceLam)
+import Lamdu.Data.Infer.Unify (fresh, freshHole, unify, forceLam)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
@@ -106,7 +106,7 @@ handleAppliedPiResult srcRef apr = do
     srcBody -> do
       destBodyRef <-
         srcBody
-        & Lens.traverse %%~ const (fresh destScope $ ExprLens.bodyHole # ())
+        & Lens.traverse %%~ const (freshHole destScope)
         <&> ExprLens.bodyParameterRef %~ remapGuid
         >>= fresh destScope
       void $ unify destBodyRef destRef -- destBodyRef is swallowed by destRef if it had anything...

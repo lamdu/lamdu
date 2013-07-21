@@ -17,6 +17,7 @@ import Data.Monoid (Monoid(..))
 import Data.Traversable (sequenceA)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
+import Lamdu.Data.Infer.Unify (freshHole)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Either as Either
 import qualified Data.Map as Map
@@ -43,15 +44,10 @@ loadDefTypeIntoRef (Loader loader) def = do
     lift . Either.left $ LoadUntypedDef def
   ExprRefs.exprIntoContext loadedDefType
 
-freshHole :: MonadA m => StateT (Context def) m Ref
-freshHole =
-  ExprRefs.fresh . defaultRefData (Scope mempty) $
-  ExprLens.bodyHole # ()
-
 newDefinition ::
   (MonadA m, Ord def) => def -> StateT (Context def) m TypedValue
 newDefinition def = do
-  tv <- TypedValue <$> freshHole <*> freshHole
+  tv <- TypedValue <$> freshHole (Scope mempty) <*> freshHole (Scope mempty)
   ctxDefTVs . Lens.at def %= setRef tv
   return tv
   where
@@ -77,6 +73,6 @@ load loader expr = do
   where
     defLoaders =
       Map.fromList
-      [ (def, TypedValue <$> freshHole <*> loadDefTypeIntoRef loader def)
+      [ (def, TypedValue <$> freshHole (Scope mempty) <*> loadDefTypeIntoRef loader def)
       | def <- expr ^.. ExprLens.exprDef
       ]
