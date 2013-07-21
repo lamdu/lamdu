@@ -88,8 +88,8 @@ inferDef act = do
   recursiveDefRef <- InferLoad.newDefinition recursiveDefI
   expr <- act
   _ <-
-    expr ^. Expr.ePayload . Lens._1 . Infer.stvTV . Infer.tvType
-    & Infer.tempUnify recursiveDefRef
+    expr ^. Expr.ePayload . Lens._1 . Infer.stvTV
+    & Infer.unify recursiveDefRef
     & mapStateT (Lens._Left %~ InferError)
   return expr
 
@@ -98,10 +98,10 @@ unifyExprVals ::
   Expr.Expression def (Infer.ScopedTypedValue, a) ->
   M ()
 unifyExprVals e1 e2 =
-  Infer.tempUnify (e1 ^. exprValRef) (e2 ^. exprValRef)
+  Infer.unify (e1 ^. exprTV) (e2 ^. exprTV)
   & mapStateT (Lens._Left %~ InferError)
   where
-    exprValRef = Expr.ePayload . Lens._1 . Infer.stvTV . Infer.tvVal
+    exprTV = Expr.ePayload . Lens._1 . Infer.stvTV
 
 loadInferInto ::
   Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a) ->

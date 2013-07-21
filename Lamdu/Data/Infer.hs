@@ -1,6 +1,6 @@
 module Lamdu.Data.Infer
   ( Infer, Error(..)
-  , infer, unify, tempUnify
+  , infer, unify
   , emptyContext
   , exprSTVRefs
   -- Re-export:
@@ -21,18 +21,22 @@ import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.MakeTypes (makeTypeRef)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.Unify (unify)
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.Unify as Unify
 
--- | Temporarily here for tests until we fix API to only have
--- TypedValue unify:
-tempUnify :: Eq def => Ref -> Ref -> StateT (Context def) (Either (Error def)) ()
-tempUnify x y = unify x y & runInfer & void
+unify ::
+  Eq def =>
+  TypedValue ->
+  TypedValue ->
+  StateT (Context def) (Either (Error def)) ()
+unify (TypedValue xv xt) (TypedValue yv yt) = do
+  void . runInfer $ Unify.unify xv yv
+  void . runInfer $ Unify.unify xt yt
 
 exprSTVRefs :: Lens.Traversal' (Expr.Expression (LoadedDef def) (ScopedTypedValue, a)) Ref
 exprSTVRefs f = ExprLens.exprBitraverse (ldType f) ((Lens._1 . stvRefs) f)
@@ -84,8 +88,8 @@ handleGetField (GetFieldRefs getFieldTagRef getFieldTypeRef recordTypeRef) = do
     _ -> InferM.error GetFieldRequiresRecord
   where
     unionField fieldTagRef fieldTypeRef = do
-      void $ unify fieldTagRef getFieldTagRef
-      void $ unify fieldTypeRef getFieldTypeRef
+      void $ Unify.unify fieldTagRef getFieldTagRef
+      void $ Unify.unify fieldTypeRef getFieldTypeRef
 
 executeRelation :: Eq def => Relation -> Ref -> Infer def ()
 executeRelation rel =

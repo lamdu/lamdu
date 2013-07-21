@@ -48,7 +48,7 @@ optimizeContext = do
     newRefsData =
       execWriter $
       oldRefsData & IntMap.toList & traverse_ %%~ onOldRefItem
-  ctxDefRefs . Lens.mapped %= refRename "defRefs"
+  ctxDefTVs . Lens.mapped . tvRefs %= refRename "defRefs"
   Lens.zoom ctxExprRefs $
     State.put ExprRefs
     { _exprRefsUF = newUf
