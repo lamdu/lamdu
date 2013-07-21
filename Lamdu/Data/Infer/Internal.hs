@@ -10,7 +10,7 @@ module Lamdu.Data.Infer.Internal
     , defaultRefData
   , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames, appliedPiResultRefs
   , ExprRefs(..), exprRefsUF, exprRefsData
-  , Context(..), ctxExprRefs, ctxDefRefs, ctxRandomGen
+  , Context(..), ctxExprRefs, ctxDefTVs, ctxRandomGen
     , emptyContext
   , LoadedDef(..), ldDef, ldType
   , TypedValue(..), tvVal, tvType, tvRefs
@@ -131,33 +131,7 @@ data ExprRefs def = ExprRefs
   }
 Lens.makeLenses ''ExprRefs
 
-data Context def = Context
-  { _ctxExprRefs :: ExprRefs def
-  , -- NOTE: This Map is for 2 purposes: Sharing Refs of loaded Defs
-    -- and allowing to specify recursive defs
-    _ctxDefRefs :: Map def Ref
-  , _ctxRandomGen :: Random.StdGen -- for guids
-  }
-Lens.makeLenses ''Context
-
-emptyContext :: Random.StdGen -> Context def
-emptyContext gen =
-  Context
-  { _ctxExprRefs =
-    ExprRefs
-    { _exprRefsUF = UF.empty
-    , _exprRefsData = mempty
-    }
-  , _ctxDefRefs = Map.empty
-  , _ctxRandomGen = gen
-  }
-
-data LoadedDef def = LoadedDef
-  { _ldDef :: def
-  , _ldType :: Ref
-  }
-Lens.makeLenses ''LoadedDef
-
+-- TypedValue:
 data TypedValue = TypedValue
   { _tvVal :: {-# UNPACK #-}! Ref
   , _tvType :: {-# UNPACK #-}! Ref
@@ -170,6 +144,7 @@ instance Show TypedValue where
 tvRefs :: Lens.Traversal' TypedValue Ref
 tvRefs f (TypedValue val typ) = TypedValue <$> f val <*> f typ
 
+-- ScopedTypedValue
 data ScopedTypedValue = ScopedTypedValue
   { _stvTV :: TypedValue
   , _stvScope :: Scope
@@ -178,3 +153,31 @@ Lens.makeLenses ''ScopedTypedValue
 
 stvRefs :: Lens.Traversal' ScopedTypedValue Ref
 stvRefs f (ScopedTypedValue tv scop) = ScopedTypedValue <$> tvRefs f tv <*> scopeRefs f scop
+
+-- Context
+data Context def = Context
+  { _ctxExprRefs :: ExprRefs def
+  , -- NOTE: This Map is for 2 purposes: Sharing Refs of loaded Defs
+    -- and allowing to specify recursive defs
+    _ctxDefTVs :: Map def TypedValue
+  , _ctxRandomGen :: Random.StdGen -- for guids
+  }
+Lens.makeLenses ''Context
+
+emptyContext :: Random.StdGen -> Context def
+emptyContext gen =
+  Context
+  { _ctxExprRefs =
+    ExprRefs
+    { _exprRefsUF = UF.empty
+    , _exprRefsData = mempty
+    }
+  , _ctxDefTVs = Map.empty
+  , _ctxRandomGen = gen
+  }
+
+data LoadedDef def = LoadedDef
+  { _ldDef :: def
+  , _ldType :: Ref
+  }
+Lens.makeLenses ''LoadedDef

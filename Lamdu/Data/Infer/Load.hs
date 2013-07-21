@@ -5,6 +5,7 @@ module Lamdu.Data.Infer.Load
   , load, newDefinition
   ) where
 
+import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad (when)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -42,14 +43,19 @@ loadDefTypeIntoRef (Loader loader) def = do
     lift . Either.left $ LoadUntypedDef def
   ExprRefs.exprIntoContext loadedDefType
 
+freshHole :: MonadA m => StateT (Context def) m Ref
+freshHole =
+  ExprRefs.fresh . defaultRefData (Scope mempty) $
+  ExprLens.bodyHole # ()
+
 newDefinition ::
-  (MonadA m, Ord def) => def -> StateT (Context def) m Ref
+  (MonadA m, Ord def) => def -> StateT (Context def) m TypedValue
 newDefinition def = do
-  ref <- ExprRefs.fresh . defaultRefData (Scope mempty) $ ExprLens.bodyHole # ()
-  ctxDefRefs . Lens.at def %= setRef ref
-  return ref
+  tv <- TypedValue <$> freshHole <*> freshHole
+  ctxDefTVs . Lens.at def %= setRef tv
+  return tv
   where
-    setRef ref Nothing = Just ref
+    setRef tv Nothing = Just tv
     setRef _ (Just _) = error "newDefinition overrides existing def type"
 
 load ::
@@ -58,19 +64,19 @@ load ::
   StateT (Context def) (EitherT (Error def) m)
   (Expr.Expression (LoadedDef def) a)
 load loader expr = do
-  existingDefRefs <- Lens.use ctxDefRefs <&> Lens.mapped %~ return
+  existingDefTVs <- Lens.use ctxDefTVs <&> Lens.mapped %~ return
   -- Left wins in union
-  allDefRefs <- sequenceA $ existingDefRefs `Map.union` defLoaders
-  ctxDefRefs .= allDefRefs
+  allDefTVs <- sequenceA $ existingDefTVs `Map.union` defLoaders
+  ctxDefTVs .= allDefTVs
   let
     getDefRef def =
       LoadedDef def .
       unsafeUnjust "We just added all defs!" $
-      allDefRefs ^. Lens.at def
+      allDefTVs ^? Lens.ix def . tvType
   expr & ExprLens.exprDef %~ getDefRef & return
   where
     defLoaders =
       Map.fromList
-      [ (def, loadDefTypeIntoRef loader def)
+      [ (def, TypedValue <$> freshHole <*> loadDefTypeIntoRef loader def)
       | def <- expr ^.. ExprLens.exprDef
       ]
