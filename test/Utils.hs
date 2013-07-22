@@ -32,8 +32,7 @@ newtype Def = Def String
   deriving (Eq, Ord, Binary)
 instance Show Def where
   show (Def d) = '#':d
-type PureExpr def = Expr.Expression def ()
-type Expr = PureExpr Def
+type Expr = Expr.Expression Def
 
 (==>) :: k -> v -> Map k v
 (==>) = Map.singleton
@@ -51,7 +50,7 @@ namedLambda = ExprUtil.makeLambda . Guid.fromString
 namedPi :: String -> expr -> expr -> Expr.Body def expr
 namedPi = ExprUtil.makePi . Guid.fromString
 
-pureApply :: [PureExpr def] -> PureExpr def
+pureApply :: [Expr.Expression def ()] -> Expr.Expression def ()
 pureApply = foldl1 ExprUtil.pureApply
 
 bodySet :: Expr.Body def expr
@@ -64,38 +63,40 @@ bodyIntegerType :: Expr.Body def expr
 bodyIntegerType = ExprLens.bodyIntegerType # ()
 
 -- 1 dependent param
-pureApplyPoly1 :: String -> [Expr] -> Expr
+pureApplyPoly1 :: String -> [Expr ()] -> Expr ()
 pureApplyPoly1 name xs = pureApply $ pureGetDef name : pureHole : xs
 
 pureLambda ::
-  String -> PureExpr def ->
-  PureExpr def ->
-  PureExpr def
+  String ->
+  Expr.Expression def () ->
+  Expr.Expression def () ->
+  Expr.Expression def ()
 pureLambda name x y = ExprUtil.pureExpression $ namedLambda name x y
 
 purePi ::
-  String -> PureExpr def ->
-  PureExpr def ->
-  PureExpr def
+  String ->
+  Expr.Expression def () ->
+  Expr.Expression def () ->
+  Expr.Expression def ()
 purePi name x y = ExprUtil.pureExpression $ namedPi name x y
 
-pureLiteralInt :: Lens.Prism' (PureExpr def) Integer
+pureLiteralInt :: Lens.Prism' (Expr.Expression def ()) Integer
 pureLiteralInt = ExprLens.pureExpr . ExprLens.bodyLiteralInteger
 
-pureGetDef :: String -> Expr
+pureGetDef :: String -> Expr ()
 pureGetDef name =
   ExprLens.pureExpr . ExprLens.bodyDefinitionRef # Def name
 
-pureGetParam :: String -> PureExpr def
+pureGetParam :: String -> Expr.Expression def ()
 pureGetParam name =
   ExprLens.pureExpr . ExprLens.bodyParameterRef #
   Guid.fromString name
 
-pureGetRecursiveDefI :: Expr
+pureGetRecursiveDefI :: Expr ()
 pureGetRecursiveDefI =
   ExprLens.pureExpr . ExprLens.bodyDefinitionRef # recursiveDefI
 
-pureParameterRef :: String -> PureExpr def
+pureParameterRef :: String -> Expr.Expression def ()
 pureParameterRef str =
   ExprLens.pureExpr . ExprLens.bodyParameterRef # Guid.fromString str
 
@@ -108,7 +109,7 @@ ansiReset = "\ESC[0m"
 ansiAround :: String -> String -> String
 ansiAround prefix x = prefix ++ x ++ ansiReset
 
-definitionTypes :: Map Def Expr
+definitionTypes :: Map Def (Expr ())
 definitionTypes =
   exampleDBDefs `mappend` extras
   where
