@@ -11,11 +11,10 @@ module Lamdu.Data.Infer
   , Optimize.optimizeContext
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
+import Control.Applicative (Applicative(..))
 import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans.State (StateT)
-import Data.Foldable (traverse_)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.GetField (handleGetField)
@@ -63,13 +62,8 @@ executeRelation rel =
   RelationGetField getField -> const (handleGetField getField)
   RelationIsTag -> isTag
 
-rerunRelations :: Eq def => Ref -> Infer def ()
-rerunRelations ref = do
-  relations <- (^. rdRelations) <$> ExprRefs.read ref
-  traverse_ (`executeRelation` ref) relations
-
 runInfer :: Eq def => Infer def a -> StateT (Context def) (Either (Error def)) a
-runInfer = InferM.run $ InferM.InferActions rerunRelations
+runInfer = InferM.run $ InferM.InferActions executeRelation
 
 -- With hole apply vals and hole types
 exprIntoSTV ::
