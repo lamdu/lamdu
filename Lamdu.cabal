@@ -160,6 +160,7 @@ Executable lamdu
                        Lamdu.Data.Infer.Load,
                        Lamdu.Data.Infer.MakeTypes,
                        Lamdu.Data.Infer.Monad,
+                       Lamdu.Data.Infer.Optimize,
                        Lamdu.Data.Infer.Unify,
                        Lamdu.Data.FFI,
                        Lamdu.Data.Ops,
