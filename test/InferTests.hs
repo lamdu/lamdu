@@ -459,6 +459,33 @@ getFieldTests =
     , testInfer "GetField tag of record of 2" $
       getField (record KVal [(holeTag, hole), (holeTag, hole)]) (tagStr "foo")
     ]
+  , let intGetField r t = typeAnnotate integerType $ getField r t
+    in
+    testGroup "resumed tags"
+    [ testInfer "GetField (resumed tag) verified against record tags" $
+      intGetField
+      ( record KVal
+        [ (tagStr "x", hole `resumedToType` integerType)
+        , (tagStr "y", hole)
+        ]
+      ) (holeTag `resumeHere` tagStr "x")
+    , testInfer "GetField verified against resumed (record tags)" $
+      intGetField
+      ( record KVal
+        [ (holeTag `resumeHere` tagStr "x", hole)
+        , (holeTag `resumedTo` tagStr "y", hole `resumedToType` integerType)
+        ]
+      ) (tagStr "y")
+    , testInfer "GetField verified against (resumed record) tags" $
+      intGetField
+      ( hole
+        `resumeHere`
+        record KVal
+        [ (tagStr "x", literalInteger 5)
+        , (tagStr "y", hole)
+        ]
+      ) (tagStr "x")
+    ]
   ]
 
 hunitTests =

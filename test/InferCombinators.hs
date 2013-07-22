@@ -334,3 +334,6 @@ record k fields =
 
 asHole :: InputExpr -> InputExpr
 asHole = Expr.eBody .~ (ExprLens.bodyHole # ())
+
+typeAnnotate :: InputExpr -> InputExpr -> InputExpr
+typeAnnotate t v = getDef "id" $$ t $$ v `setInferredType` t
