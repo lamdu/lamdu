@@ -446,7 +446,7 @@ hunitTests =
   , getFieldTests
   ]
 
-inferPreservesShapeProp :: Expr -> Property
+inferPreservesShapeProp :: Expr () -> Property
 inferPreservesShapeProp expr =
   case runLoadInferDef expr of
     Left _ -> property rejected

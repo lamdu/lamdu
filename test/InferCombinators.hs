@@ -20,32 +20,32 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 iexpr ::
-  Expr ->
-  Expr ->
+  Expr () ->
+  Expr () ->
   Expr.Body Def ExprInferred -> ExprInferred
 iexpr val typ body =
   Expr.Expression body (val, typ)
 
-five :: Expr
+five :: Expr ()
 five = pureLiteralInt # 5
 
-iVal :: Lens' ExprInferred Expr
+iVal :: Lens' ExprInferred (Expr ())
 iVal = Expr.ePayload . Lens._1
 
-iType :: Lens' ExprInferred Expr
+iType :: Lens' ExprInferred (Expr ())
 iType = Expr.ePayload . Lens._2
 
-bodyToPureExpr :: Expr.Body Def ExprInferred -> Expr
+bodyToPureExpr :: Expr.Body Def ExprInferred -> Expr ()
 bodyToPureExpr exprBody = ExprLens.pureExpr # fmap (^. iVal) exprBody
 
 -- inferred-val is simply equal to the expr. Type is given
-simple :: Expr.Body Def ExprInferred -> Expr -> ExprInferred
+simple :: Expr.Body Def ExprInferred -> Expr () -> ExprInferred
 simple body typ = iexpr (bodyToPureExpr body) typ body
 
-getParamPure :: String -> Expr -> ExprInferred
+getParamPure :: String -> Expr () -> ExprInferred
 getParamPure name = simple $ ExprLens.bodyParameterRef # Guid.fromString name
 
-getRecursiveDef :: Expr
+getRecursiveDef :: Expr ()
 getRecursiveDef =
   ExprLens.pureExpr . ExprLens.bodyDefinitionRef # recursiveDefI
 
