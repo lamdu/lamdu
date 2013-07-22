@@ -1,6 +1,8 @@
+{-# LANGUAGE TemplateHaskell, DeriveFunctor#-}
 {-# OPTIONS -Wall -Werror #-}
 module InferCombinators where
 
+import Control.Applicative (Applicative(..), ZipList(..), liftA2, (<$>))
 import Control.Arrow ((***))
 import Control.Lens (Lens')
 import Control.Lens.Operators
@@ -8,41 +10,86 @@ import Control.Monad (void)
 import Data.Map ((!))
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
-import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Kind(..))
 import Lamdu.Data.Expression.Utils (pureHole, pureSet, pureIntegerType)
 import Utils
 import qualified Control.Lens as Lens
+import qualified Data.Monoid as Monoid
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
+type InputExpr = Expr.Expression Def InputPayload
+
+data Resumption
+  -- Any resumptions will have no effect:
+  = Same
+  -- Only one ResumeWith allowed for given depth (rest must be Same/NewInferred)
+  | ResumeWith InputExpr
+  | ResumeOnSide {-New expr to load/infer-}InputExpr {-Our new inferred-}InputPayload
+  -- Some ResumeWith must exist at our level, and it will cause us to
+  -- become this for the next level:
+  | NewInferred InputPayload
+
+data InputPayload = InputPayload
+  { _ipVal :: Expr ()
+  , _ipTyp :: Expr ()
+  , _ipResumption :: Resumption
+  }
+Lens.makeLenses ''InputPayload
+
+inferredOfInput :: InputPayload -> (Expr (), Expr ())
+inferredOfInput (InputPayload val typ _) = (val, typ)
+
 iexpr ::
   Expr () ->
   Expr () ->
-  Expr.Body Def ExprInferred -> ExprInferred
+  Expr.Body Def InputExpr -> InputExpr
 iexpr val typ body =
-  Expr.Expression body (val, typ)
+  Expr.Expression body (InputPayload val typ Same)
+
+addResumption :: Resumption -> InputExpr -> InputExpr
+addResumption x a =
+  a & Expr.ePayload . ipResumption %~ resumption
+  where
+    resumption Same = x
+    resumption _ = error "Contradicting resumptions"
+
+resumeHere :: InputExpr -> InputExpr -> InputExpr
+resumeHere x newExpr = addResumption (ResumeWith newExpr) x
+
+inputExprInferredNow :: InputExpr -> InputPayload
+inputExprInferredNow x = InputPayload (x ^. iVal) (x ^. iType) Same
+
+resumeOnSide :: InputExpr -> InputExpr -> InputExpr
+resumeOnSide x newExpr =
+  addResumption (ResumeOnSide newExpr (inputExprInferredNow x)) x
+
+resumedTo :: InputExpr -> InputExpr -> InputExpr
+resumedTo x newVal = addResumption (NewInferred (inputExprInferredNow newVal)) x
+
+resumedToType :: InputExpr -> InputExpr -> InputExpr
+resumedToType x newTyp = addResumption (NewInferred (InputPayload (x ^. iVal) (newTyp ^. iVal) Same)) x
 
 five :: Expr ()
 five = pureLiteralInt # 5
 
-iVal :: Lens' ExprInferred (Expr ())
-iVal = Expr.ePayload . Lens._1
+iVal :: Lens' InputExpr (Expr ())
+iVal = Expr.ePayload . ipVal
 
-iType :: Lens' ExprInferred (Expr ())
-iType = Expr.ePayload . Lens._2
+iType :: Lens' InputExpr (Expr ())
+iType = Expr.ePayload . ipTyp
 
-bodyToPureExpr :: Expr.Body Def ExprInferred -> Expr ()
+bodyToPureExpr :: Expr.Body Def InputExpr -> Expr ()
 bodyToPureExpr exprBody = ExprLens.pureExpr # fmap (^. iVal) exprBody
 
 -- inferred-val is simply equal to the expr. Type is given
-simple :: Expr.Body Def ExprInferred -> Expr () -> ExprInferred
+simple :: Expr.Body Def InputExpr -> Expr () -> InputExpr
 simple body typ = iexpr (bodyToPureExpr body) typ body
 
-getParamPure :: String -> Expr () -> ExprInferred
+getParamPure :: String -> Expr () -> InputExpr
 getParamPure name = simple $ ExprLens.bodyParameterRef # Guid.fromString name
 
 getRecursiveDef :: Expr ()
@@ -50,43 +97,85 @@ getRecursiveDef =
   ExprLens.pureExpr . ExprLens.bodyDefinitionRef # recursiveDefI
 
 -- New-style:
-recurse :: ExprInferred -> ExprInferred
+recurse :: InputExpr -> InputExpr
 recurse typ = simple (ExprLens.bodyDefinitionRef # recursiveDefI) $ typ ^. iVal
 
-literalInteger :: Integer -> ExprInferred
+literalInteger :: Integer -> InputExpr
 literalInteger x = simple (ExprLens.bodyLiteralInteger # x) pureIntegerType
 
 piType ::
-  String -> ExprInferred ->
-  (ExprInferred -> ExprInferred) -> ExprInferred
+  String -> InputExpr ->
+  (InputExpr -> InputExpr) -> InputExpr
 piType name paramType mkResultType =
   simple (ExprUtil.makePi (Guid.fromString name) paramType result) pureSet
   where
     result = mkResultType $ getParam name paramType
 
 infixr 4 ~>
-(~>) :: ExprInferred -> ExprInferred -> ExprInferred
+(~>) :: InputExpr -> InputExpr -> InputExpr
 (~>) src dest =
   simple (ExprUtil.makePi (Guid.fromString "") src dest) pureSet
 
+newtype R a = R (ZipList (Monoid.Any, a))
+  deriving (Functor)
+instance Applicative R where
+  pure = R . pure . pure
+  R f <*> R x = R $ (liftA2 . liftA2) ($) f x
+
+nextResumption :: InputExpr -> (Monoid.Any, InputExpr)
+nextResumption expr@(Expr.Expression body (InputPayload _ _ r)) =
+  case r of
+  Same ->
+    (Monoid.Any False, expr)
+  ResumeWith newExpr ->
+    (Monoid.Any True, newExpr)
+  ResumeOnSide _ ipl  ->
+    (Monoid.Any True, Expr.Expression body ipl)
+  NewInferred ipl ->
+    (Monoid.Any True, Expr.Expression body ipl)
+
+resumptions :: InputExpr -> R InputExpr
+resumptions expr = R . ZipList $ iterate (nextResumption . snd) (Monoid.Any True, expr)
+
+makeResumption :: [(Monoid.Any, (Expr (), Expr ()))] -> Resumption
+makeResumption ((Monoid.Any False, _):_) = Same
+makeResumption ((Monoid.Any True, (val, typ)):nexts) = NewInferred InputPayload
+  { _ipVal = val
+  , _ipTyp = typ
+  , _ipResumption = makeResumption nexts
+  }
+makeResumption [] = error "makeResumption called with finite list"
+
+runR :: R (Expr.Body Def InputExpr, Expr (), Expr ()) -> InputExpr
+runR (R (ZipList ~((_, (body, firstVal, firstTyp)):nexts))) =
+  Expr.Expression body . InputPayload firstVal firstTyp .
+  makeResumption $ nexts <&> Lens._2 %~ valTyp
+  where
+    valTyp (_body, val, typ) = (val, typ)
+
 lambda ::
-  String -> ExprInferred ->
-  (ExprInferred -> ExprInferred) ->
-  ExprInferred
+  String -> InputExpr ->
+  (InputExpr -> InputExpr) ->
+  InputExpr
 lambda name paramType mkResult =
-  simple (ExprUtil.makeLambda guid paramType result) $
-  ExprUtil.pureLam KType guid (paramType ^. iVal) (result ^. iType)
+  runR $ mk <$> resumptions paramType <*> resumptions result
   where
     guid = Guid.fromString name
     result = mkResult $ getParam name paramType
+    mk paramTypeR resultR =
+      ( ExprUtil.makeLam KVal guid paramTypeR resultR
+      , ExprUtil.pureLam KVal guid (paramTypeR ^. iVal) (resultR ^. iVal)
+      , ExprUtil.pureLam KType guid (paramTypeR ^. iVal) (resultR ^. iType)
+      )
 
 -- Sometimes we have an inferred type that comes outside-in but cannot
 -- be inferred inside-out:
-setInferredType :: ExprInferred -> ExprInferred -> ExprInferred
-setInferredType typ val = val & iType .~ typ ^. iVal
+setInferredType :: InputExpr -> InputExpr -> InputExpr
+setInferredType val typ = val & iType .~ typ ^. iVal
 
-getField :: ExprInferred -> ExprInferred -> ExprInferred
+getField :: InputExpr -> InputExpr -> InputExpr
 getField recordVal tagVal =
+  -- TODO: This is likely broken, needs to use runR/resumptions
   iexpr val fieldType body
   where
     body = Expr._BodyGetField # Expr.GetField recordVal tagVal
@@ -116,8 +205,8 @@ getField recordVal tagVal =
       mPureFieldType =<< tagVal ^? ExprLens.exprTag
 
 lambdaRecord ::
-  String -> [(String, ExprInferred)] ->
-  ([ExprInferred] -> ExprInferred) -> ExprInferred
+  String -> [(String, InputExpr)] ->
+  ([InputExpr] -> InputExpr) -> InputExpr
 lambdaRecord paramsName strFields mkResult =
   lambda paramsName (record KType fields) $ \params ->
   mkResult $ map (getField params) fieldTags
@@ -126,34 +215,41 @@ lambdaRecord paramsName strFields mkResult =
     fieldTags = map fst fields
 
 whereItem ::
-  String -> ExprInferred -> (ExprInferred -> ExprInferred) -> ExprInferred
+  String -> InputExpr -> (InputExpr -> InputExpr) -> InputExpr
 whereItem name val mkBody =
-  lambda name (iexpr (val ^. iType) pureSet bodyHole) mkBody $$ val
+  lambda name (runR (mkParamType <$> resumptions val)) mkBody $$ val
+  where
+    mkParamType valR = (bodyHole, valR ^. iType, pureSet)
 
 typedWhereItem ::
-  String -> ExprInferred -> ExprInferred -> (ExprInferred -> ExprInferred) -> ExprInferred
+  String -> InputExpr -> InputExpr -> (InputExpr -> InputExpr) -> InputExpr
 typedWhereItem name typ val mkBody =
   lambda name typ mkBody $$ val
 
-holeWithInferredType :: ExprInferred -> ExprInferred
+holeWithInferredType :: InputExpr -> InputExpr
 holeWithInferredType = simple bodyHole . (^. iVal)
 
-hole :: ExprInferred
+hole :: InputExpr
 hole = simple bodyHole pureHole
 
-getGuidParam :: Guid -> ExprInferred -> ExprInferred
+getGuidParam :: Guid -> InputExpr -> InputExpr
 getGuidParam guid typ =
-  simple (ExprLens.bodyParameterRef # guid) $
-  typ ^. iVal
+  runR $ mk <$> resumptions typ
+  where
+    mk typR =
+      ( ExprLens.bodyParameterRef # guid
+      , ExprLens.pureExpr . ExprLens.bodyParameterRef # guid
+      , typR ^. iVal
+      )
 
-getParam :: String -> ExprInferred -> ExprInferred
+getParam :: String -> InputExpr -> InputExpr
 getParam = getGuidParam . Guid.fromString
 
-listOf :: ExprInferred -> ExprInferred
+listOf :: InputExpr -> InputExpr
 listOf = (getDef "List" $$)
 
 -- Uses inferred holes for cons type
-list :: [ExprInferred] -> ExprInferred
+list :: [InputExpr] -> InputExpr
 list [] = getDef "[]" $$ hole
 list items@(x:_) =
   foldr cons nil items
@@ -162,36 +258,36 @@ list items@(x:_) =
     nil = getDef "[]" $$ typ
     typ = iexpr (x ^. iType) pureSet (ExprLens.bodyHole # ())
 
-maybeOf :: ExprInferred -> ExprInferred
+maybeOf :: InputExpr -> InputExpr
 maybeOf = (getDef "Maybe" $$)
 
-getDef :: String -> ExprInferred
+getDef :: String -> InputExpr
 getDef name =
   simple
   (ExprLens.bodyDefinitionRef # Def name)
   (void (definitionTypes ! Def name))
 
-tag :: Guid -> ExprInferred
+tag :: Guid -> InputExpr
 tag guid =
   simple (ExprLens.bodyTag # guid) $
   ExprLens.pureExpr . ExprLens.bodyTagType # ()
 
-tagStr :: String -> ExprInferred
+tagStr :: String -> InputExpr
 tagStr = tag . Guid.fromString
 
-set :: ExprInferred
+set :: InputExpr
 set = simple bodySet pureSet
 
-tagType :: ExprInferred
+tagType :: InputExpr
 tagType = simple (ExprLens.bodyTagType # ()) pureSet
 
-integerType :: ExprInferred
+integerType :: InputExpr
 integerType = simple bodyIntegerType pureSet
 
 infixl 4 $$
 infixl 3 $$:
 
-($$:) :: ExprInferred -> [ExprInferred] -> ExprInferred
+($$:) :: InputExpr -> [InputExpr] -> InputExpr
 ($$:) f args =
   f $$ record KVal (zip tags args)
   where
@@ -201,37 +297,43 @@ infixl 3 $$:
       f ^? iType . ExprLens.exprKindedLam KType . Lens._2 . ExprLens.exprKindedRecordFields KType
     msg = "$$: must be applied on a func of record type, not: " ++ show (f ^. iType)
 
-($$) :: ExprInferred -> ExprInferred -> ExprInferred
-($$) func@(Expr.Expression funcBody (funcVal, funcType)) nextArg =
-  iexpr applyVal applyType application
+($$) :: InputExpr -> InputExpr -> InputExpr
+($$) func arg =
+  runR $ mk <$> resumptions func <*> resumptions arg
   where
-    application = ExprUtil.makeApply func nextArg
-    handleLam e k seeHole seeOther =
-      case e ^. Expr.eBody of
-      Expr.BodyLeaf Expr.Hole -> seeHole
-      Expr.BodyLam (Expr.Lam k1 paramGuid _ result)
-        | k == k1 -> ExprUtil.substGetPar paramGuid (nextArg ^. iVal) result
-      _ -> seeOther
-    applyVal =
-      handleLam funcVal KVal pureHole $
-      if Lens.has ExprLens.bodyDefinitionRef funcBody
-      then bodyToPureExpr application
-      else pureHole
-    applyType = handleLam funcType KType piErr piErr
+    mk funcR argR =
+      ( ExprUtil.makeApply funcR argR
+      , substLam KVal (funcR ^. iVal) (argR ^. iVal) pureHole $
+        circumcizedApplyVal (funcR ^. iVal) (argR ^. iVal)
+      , substLam KType (funcR ^. iType) (argR ^. iVal) piErr piErr
+      )
     piErr = error "Apply of non-Pi type!"
+    substLam k e argVal caseHole caseOther =
+      case e ^. Expr.eBody of
+      Expr.BodyLam (Expr.Lam k1 paramGuid _ result)
+        | k == k1 -> ExprUtil.substGetPar paramGuid argVal result
+      Expr.BodyLeaf Expr.Hole -> caseHole
+      _ -> caseOther
+    circumcizedApplyVal funcVal argVal
+      | Lens.nullOf ExprLens.exprDefinitionRef funcVal = pureHole
+      | otherwise = ExprUtil.pureApply funcVal argVal
 
-record :: Kind -> [(ExprInferred, ExprInferred)] -> ExprInferred
+record :: Kind -> [(InputExpr, InputExpr)] -> InputExpr
 record k fields =
-  simple (ExprLens.bodyKindedRecordFields k # fields) typ
+  runR $ mk <$> (fields & Lens.traverse . Lens.both %%~ resumptions)
   where
-    typ = case k of
-      KVal ->
-        ExprLens.pureExpr . ExprLens.bodyKindedRecordFields KType #
-        map (void *** (^. iType)) fields
-      KType -> pureSet
+    mk fieldsR =
+      ( ExprLens.bodyKindedRecordFields k # fieldsR
+      , ExprLens.pureExpr .
+        ExprLens.bodyKindedRecordFields k #
+        (fieldsR <&> ((^. iVal) *** (^. iVal)))
+      , case k of
+        KVal ->
+          ExprLens.pureExpr .
+          ExprLens.bodyKindedRecordFields KType #
+          (fieldsR <&> ((^. iVal) *** (^. iType)))
+        KType -> pureSet
+      )
 
-asHole :: ExprInferred -> ExprInferred
-asHole expr =
-  iexpr val typ $ ExprLens.bodyHole # ()
-  where
-    (val, typ) = expr ^. Expr.ePayload
+asHole :: InputExpr -> InputExpr
+asHole = Expr.eBody .~ (ExprLens.bodyHole # ())
