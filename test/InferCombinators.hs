@@ -73,9 +73,6 @@ resumedTo x newVal = addResumption (NewInferred (inputExprInferredNow newVal)) x
 resumedToType :: InputExpr -> InputExpr -> InputExpr
 resumedToType x newTyp = addResumption (NewInferred (InputPayload (x ^. iVal) (newTyp ^. iVal) Same)) x
 
-five :: Expr ()
-five = pureLiteralInt # 5
-
 iVal :: Lens' InputExpr (Expr ())
 iVal = Expr.ePayload . ipVal
 

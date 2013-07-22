@@ -58,11 +58,10 @@ annotateTypes expr =
       , addAnnotation ("Type: " ++ show typ)
       ]
 
-assertInferredEquals ::
-  ExprInferred -> ExprInferred -> a -> a
-assertInferredEquals result expected res
+assertInferredEquals :: String -> ExprInferred -> ExprInferred -> a -> a
+assertInferredEquals errorPrefixStr result expected res
   | null resultErrs = res
-  | otherwise = error errorMsg
+  | otherwise = error $ errorPrefixStr ++ errorMsg
   where
     resultC = canonizeInferred result
     expectedC = canonizeInferred expected
@@ -88,45 +87,47 @@ assertInferredEquals result expected res
     redShow = ansiAround ansiRed . show . void
 
 verifyInferResult ::
+  String ->
   Expr.Expression (InferLoad.LoadedDef Def)
   (Infer.ScopedTypedValue, InputPayload) -> M ()
-verifyInferResult exprLInferred = do
+verifyInferResult msg exprLInferred = do
   exprDerefed <- deref (fst <$> exprLInferred)
   let exprInferred = exprLInferred & ExprLens.exprDef %~ (^. InferLoad.ldDef)
   return ()
-    & assertInferredEquals exprDerefed (exprInferred <&> inferredOfInput . snd)
+    & assertInferredEquals msg exprDerefed (exprInferred <&> inferredOfInput . snd)
 
 inferAssertion :: InputExpr -> HUnit.Assertion
 inferAssertion origExpr =
   runContextAssertion $
-  go =<< inferDef (infer =<< load origExpr)
+  go (1 :: Int) =<< annotateErrors "initial infer: " (inferDef (infer =<< load origExpr))
   where
-    go :: Expr.Expression (InferLoad.LoadedDef Def) (Infer.ScopedTypedValue, InputPayload) -> M ()
-    go exprLInferred = do
-      verifyInferResult exprLInferred
-      (exprNextInput, flags) <- runWriterT $ handleResumption exprLInferred
+    msg count = "Resumption phase " ++ show count ++ " failed: "
+    annotateErrors prefix action =
+      either (error . (prefix ++) . show) return =<< try action
+    go count exprLInferred = do
+      let verify = verifyInferResult $ msg count
+      verify exprLInferred
+      (exprNextInput, flags) <-
+        annotateErrors (msg count) . runWriterT $
+        handleResumption verify exprLInferred
       case flags of
         (Monoid.Any False, Monoid.Sum 0) -> return ()
         (Monoid.Any True, Monoid.Sum 0) -> error "NewInferred specified, but no subexpr has ResumeWith/ResumeOnSide"
-        (_, _) -> go exprNextInput
-    handleResumption ::
-      Expr.Expression (InferLoad.LoadedDef Def) (Infer.ScopedTypedValue, InputPayload) ->
-      WriterT (Monoid.Any, Monoid.Sum Int) M
-      (Expr.Expression (InferLoad.LoadedDef Def) (Infer.ScopedTypedValue, InputPayload))
-    handleResumption (Expr.Expression _ (stv, (InputPayload _ _ (ResumeWith newExpr)))) = do
-      Writer.tell (Monoid.Any True, Monoid.Sum 1)
+        (_, _) -> go (count+1) exprNextInput
+    handleResumption _ (Expr.Expression _ (stv, (InputPayload _ _ (ResumeWith newExpr)))) = do
+      Writer.tell (Monoid.Any True, Monoid.Sum (1::Int))
       lift $ loadInferInto stv newExpr
-    handleResumption (Expr.Expression body (stv, (InputPayload _ _ (ResumeOnSide newExpr ipl)))) = do
+    handleResumption verify (Expr.Expression body (stv, (InputPayload _ _ (ResumeOnSide newExpr ipl)))) = do
       Writer.tell (Monoid.Any True, Monoid.Sum 1)
-      lift $ verifyInferResult =<< loadInferInContext stv newExpr
-      recurseBody body (stv, ipl)
-    handleResumption (Expr.Expression body (stv, InputPayload _ _ (NewInferred ipl))) = do
+      () <- lift $ verify =<< loadInferInContext stv newExpr
+      recurseBody verify body (stv, ipl)
+    handleResumption verify (Expr.Expression body (stv, InputPayload _ _ (NewInferred ipl))) = do
       Writer.tell (Monoid.Any True, Monoid.Sum 0)
-      recurseBody body (stv, ipl)
-    handleResumption (Expr.Expression body (stv, pl@(InputPayload _ _ Same))) =
-      recurseBody body (stv, pl)
-    recurseBody body pl =
-      (`Expr.Expression` pl) <$> Lens.traverse handleResumption body
+      recurseBody verify body (stv, ipl)
+    handleResumption verify (Expr.Expression body (stv, pl@(InputPayload _ _ Same))) =
+      recurseBody verify body (stv, pl)
+    recurseBody verify body pl =
+      (`Expr.Expression` pl) <$> Lens.traverse (handleResumption verify) body
 
 expectLeft ::
   String -> (l -> HUnit.Assertion) ->
@@ -152,13 +153,11 @@ inferFailsAssertion errorName isExpectedError expr =
 --   -- TODO: assertInferredEquals should take an error prefix string,
 --   -- and do ALL the error printing itself. It has more information
 --   -- about what kind of error string would be useful.
---   assertInferredEquals (inferResults inferredExpr) expr
---     `E.onException` printOrig
---   assertInferredEquals (inferResults wvInferredExpr) wvExpr
---     `E.onException` (printOrig >> printWV)
+--   assertInferredEquals origStr (inferResults inferredExpr) expr
+--   assertInferredEquals wvStr (inferResults wvInferredExpr) wvExpr
 --   where
---     printOrig = hPutStrLn stderr $ "WithoutVars:\n" ++ showInferredValType inferredExpr
---     printWV = hPutStrLn stderr $ "WithVars:\n" ++ showInferredValType wvInferredExpr
+--     origStr = "WithoutVars:\n" ++ showInferredValType inferredExpr
+--     wvStr = origStr ++ "\nWithVars:\n" ++ showInferredValType wvInferredExpr
 --     (inferredExpr, inferContext) = doInfer_ $ void expr
 --     wvInferredExpr = fst <$> wvInferredExprPL
 --     (wvInferredExprPL, _) =
