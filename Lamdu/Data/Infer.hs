@@ -4,11 +4,11 @@ module Lamdu.Data.Infer
   , emptyContext
   , exprSTVRefs
   -- Re-export:
-  , ExprRefs.optimizeContext
   , Context
   , Scope, emptyScope
   , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
+  , Optimize.optimizeContext
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -27,6 +27,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.Optimize as Optimize
 import qualified Lamdu.Data.Infer.Unify as Unify
 
 unify ::
