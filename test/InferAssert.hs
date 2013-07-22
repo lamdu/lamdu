@@ -9,20 +9,26 @@ import AnnotatedExpr
 import Control.Applicative ((<$>), Applicative(..))
 import Control.Lens.Operators
 import Control.Monad (void)
+import Control.Monad.Trans.Class (MonadTrans(..))
+import Control.Monad.Trans.Writer (WriterT(..))
 import Data.Monoid (Monoid(..))
+import InferCombinators
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import System.IO (hPutStrLn, stderr)
 import Test.Framework (plusTestOptions)
 import Test.Framework.Options (TestOptions'(..))
-import Test.HUnit (assertBool)
 import Utils
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.List as List
 import qualified Data.Map as Map
+import qualified Data.Monoid as Monoid
 import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.Load as InferLoad
 import qualified Test.Framework as TestFramework
 import qualified Test.Framework.Providers.HUnit as HUnitProvider
@@ -52,10 +58,11 @@ annotateTypes expr =
       , addAnnotation ("Type: " ++ show typ)
       ]
 
-assertCompareInferred ::
-  ExprInferred -> ExprInferred -> HUnit.Assertion
-assertCompareInferred result expected =
-  assertBool errorMsg (null resultErrs)
+assertInferredEquals ::
+  ExprInferred -> ExprInferred -> a -> a
+assertInferredEquals result expected res
+  | null resultErrs = res
+  | otherwise = error errorMsg
   where
     resultC = canonizeInferred result
     expectedC = canonizeInferred expected
@@ -80,12 +87,46 @@ assertCompareInferred result expected =
       ]
     redShow = ansiAround ansiRed . show . void
 
-inferAssertion :: ExprInferred -> HUnit.Assertion
-inferAssertion expr =
-  assertCompareInferred inferredExpr expr
+verifyInferResult ::
+  Expr.Expression (InferLoad.LoadedDef Def)
+  (Infer.ScopedTypedValue, InputPayload) -> M ()
+verifyInferResult exprLInferred = do
+  exprDerefed <- deref (fst <$> exprLInferred)
+  let exprInferred = exprLInferred & ExprLens.exprDef %~ (^. InferLoad.ldDef)
+  return ()
+    & assertInferredEquals exprDerefed (exprInferred <&> inferredOfInput . snd)
+
+inferAssertion :: InputExpr -> HUnit.Assertion
+inferAssertion origExpr =
+  runContextAssertion $
+  go =<< inferDef (infer =<< load origExpr)
   where
-    inferredExpr =
-      assertSuccess . runNewContext . loadInferDef $ void expr
+    go :: Expr.Expression (InferLoad.LoadedDef Def) (Infer.ScopedTypedValue, InputPayload) -> M ()
+    go exprLInferred = do
+      verifyInferResult exprLInferred
+      (exprNextInput, flags) <- runWriterT $ handleResumption exprLInferred
+      case flags of
+        (Monoid.Any False, Monoid.Sum 0) -> return ()
+        (Monoid.Any True, Monoid.Sum 0) -> error "NewInferred specified, but no subexpr has ResumeWith/ResumeOnSide"
+        (_, _) -> go exprNextInput
+    handleResumption ::
+      Expr.Expression (InferLoad.LoadedDef Def) (Infer.ScopedTypedValue, InputPayload) ->
+      WriterT (Monoid.Any, Monoid.Sum Int) M
+      (Expr.Expression (InferLoad.LoadedDef Def) (Infer.ScopedTypedValue, InputPayload))
+    handleResumption (Expr.Expression _ (stv, (InputPayload _ _ (ResumeWith newExpr)))) = do
+      Writer.tell (Monoid.Any True, Monoid.Sum 1)
+      lift $ loadInferInto stv newExpr
+    handleResumption (Expr.Expression body (stv, (InputPayload _ _ (ResumeOnSide newExpr ipl)))) = do
+      Writer.tell (Monoid.Any True, Monoid.Sum 1)
+      lift $ verifyInferResult =<< loadInferInContext stv newExpr
+      recurseBody body (stv, ipl)
+    handleResumption (Expr.Expression body (stv, InputPayload _ _ (NewInferred ipl))) = do
+      Writer.tell (Monoid.Any True, Monoid.Sum 0)
+      recurseBody body (stv, ipl)
+    handleResumption (Expr.Expression body (stv, pl@(InputPayload _ _ Same))) =
+      recurseBody body (stv, pl)
+    recurseBody body pl =
+      (`Expr.Expression` pl) <$> Lens.traverse handleResumption body
 
 expectLeft ::
   String -> (l -> HUnit.Assertion) ->
@@ -97,10 +138,10 @@ expectLeft msg _ (Right x) =
   , "\n", x & UnescapedStr . annotateTypes & show
   ]
 
-inferFailsAssertion :: String -> (Error -> Bool) -> ExprInferred -> HUnit.Assertion
+inferFailsAssertion :: String -> (Error -> Bool) -> InputExpr -> HUnit.Assertion
 inferFailsAssertion errorName isExpectedError expr =
   expectLeft errorName verifyError $
-  runLoadInferDef (void expr)
+  runLoadInferDerefDef (void expr)
   where
     verifyError err
       | isExpectedError err = return ()
@@ -108,12 +149,12 @@ inferFailsAssertion errorName isExpectedError expr =
 
 -- inferWVAssertion :: ExprInferred -> ExprInferred -> HUnit.Assertion
 -- inferWVAssertion expr wvExpr = do
---   -- TODO: assertCompareInferred should take an error prefix string,
+--   -- TODO: assertInferredEquals should take an error prefix string,
 --   -- and do ALL the error printing itself. It has more information
 --   -- about what kind of error string would be useful.
---   assertCompareInferred (inferResults inferredExpr) expr
+--   assertInferredEquals (inferResults inferredExpr) expr
 --     `E.onException` printOrig
---   assertCompareInferred (inferResults wvInferredExpr) wvExpr
+--   assertInferredEquals (inferResults wvInferredExpr) wvExpr
 --     `E.onException` (printOrig >> printWV)
 --   where
 --     printOrig = hPutStrLn stderr $ "WithoutVars:\n" ++ showInferredValType inferredExpr
@@ -146,10 +187,10 @@ testCase name = plusTestOptions defaultTestOptions . HUnitProvider.testCase name
 runContextAssertion :: M a -> HUnit.Assertion
 runContextAssertion = void . E.evaluate . assertSuccess . runNewContext
 
-testInfer :: String -> ExprInferred -> TestFramework.Test
+testInfer :: String -> InputExpr -> TestFramework.Test
 testInfer name = testCase name . inferAssertion
 
-testInferAllowFail :: String -> String -> ExprInferred -> TestFramework.Test
+testInferAllowFail :: String -> String -> InputExpr -> TestFramework.Test
 testInferAllowFail msg name expr =
   testCase name . allowFailAssertion msg $ inferAssertion expr
 
@@ -158,21 +199,3 @@ type ExprPosition def =
   Lens.Traversal'
   (Expr.Expression def a)
   (Expr.Expression def a)
-
-testResume ::
-  String -> ExprInferred ->
-  ExprPosition (InferLoad.LoadedDef Def) ->
-  ExprInferred ->
-  TestFramework.Test
-testResume name origExpr position newExpr =
-  testCase name $ assertResume origExpr position newExpr
-
-assertResume ::
-  ExprInferred ->
-  ExprPosition (InferLoad.LoadedDef Def) ->
-  ExprInferred ->
-  HUnit.Assertion
-assertResume origExpr position newExpr =
-  runContextAssertion $ do
-    origInferred <- inferDef $ infer =<< load origExpr
-    loadInferInto (origInferred ^?! position) newExpr

@@ -18,7 +18,7 @@ import qualified Lamdu.Data.Infer.Deref as InferDeref
 import qualified Lamdu.Data.Infer.Load as InferLoad
 import qualified System.Random as Random
 
-type ExprInferred = Expr.Expression Def (Expr (), Expr ())
+type ExprInferred = Expr (Expr (), Expr ())
 
 loader :: InferLoad.Loader Def (Either String)
 loader =
@@ -89,28 +89,24 @@ inferDef act = do
   expr <- act
   _ <-
     expr ^. Expr.ePayload . Lens._1 . Infer.stvTV
-    & Infer.unify recursiveDefRef
-    & mapStateT (Lens._Left %~ InferError)
+    & unify recursiveDefRef
   return expr
 
-unifyExprVals ::
-  Expr.Expression def (Infer.ScopedTypedValue, a) ->
-  Expr.Expression def (Infer.ScopedTypedValue, a) ->
-  M ()
-unifyExprVals e1 e2 =
-  Infer.unify (e1 ^. exprTV) (e2 ^. exprTV)
-  & mapStateT (Lens._Left %~ InferError)
-  where
-    exprTV = Expr.ePayload . Lens._1 . Infer.stvTV
+unify :: Infer.TypedValue -> Infer.TypedValue -> M ()
+unify e1 e2 = Infer.unify e1 e2 & mapStateT (Lens._Left %~ InferError)
+
+loadInferInContext ::
+  Infer.ScopedTypedValue -> Expr.Expression Def a ->
+  M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a))
+loadInferInContext stv expr = inferScope (stv ^. Infer.stvScope) =<< load expr
 
 loadInferInto ::
-  Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a) ->
-  Expr.Expression Def a -> M ()
-loadInferInto dest expr = do
-  resumptionInferred <- inferScope scope =<< load expr
-  unifyExprVals resumptionInferred dest
-  where
-    scope = dest ^. Expr.ePayload . Lens._1 . Infer.stvScope
+  Infer.ScopedTypedValue -> Expr.Expression Def a ->
+  M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue, a))
+loadInferInto stv expr = do
+  resumptionInferred <- loadInferInContext stv expr
+  unify (resumptionInferred ^. Expr.ePayload . Lens._1 . Infer.stvTV) (stv ^. Infer.stvTV)
+  return resumptionInferred
 
 try :: M a -> M (Either Error a)
 try act = do
@@ -125,9 +121,9 @@ runNewContext = (`evalStateT` Infer.emptyContext (Random.mkStdGen 0x1337))
 
 -- Weaker and more convenient wrapper around runNewContext, deref,
 -- inferDef, infer, load
-loadInferDef :: Expr () -> M ExprInferred
-loadInferDef expr =
+loadInferDerefDef :: Expr () -> M ExprInferred
+loadInferDerefDef expr =
   deref . fmap fst =<< inferDef (infer =<< load expr)
 
-runLoadInferDef :: Expr () -> Either Error ExprInferred
-runLoadInferDef = runNewContext . loadInferDef
+runLoadInferDerefDef :: Expr () -> Either Error ExprInferred
+runLoadInferDerefDef = runNewContext . loadInferDerefDef
