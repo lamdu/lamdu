@@ -140,7 +140,7 @@ renameRelation renames (RelationAppliedPiResult apr) =
 renameRelation _ x = x
 
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
-renameRefData renames (RefData scope renameHistory relations isComposite body)
+renameRefData renames (RefData scope renameHistory relations isCircumsized body)
   -- Expensive assertion
   | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Map.member` renames) body =
     error "Shadowing encountered, what to do?"
@@ -149,7 +149,7 @@ renameRefData renames (RefData scope renameHistory relations isComposite body)
     (scope & scopeMap %~ Map.mapKeys (lookupOrSelf renames))
     (renameHistory & _RenameHistory %~ Map.union renames)
     (relations & map (renameRelation renames))
-    isComposite
+    isCircumsized
     (body & ExprLens.bodyParameterRef %~ lookupOrSelf renames)
 
 mergeRefData ::
@@ -157,8 +157,8 @@ mergeRefData ::
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
   Map Guid Guid -> RefData def -> RefData def -> Infer def (Bool, RefData def)
 mergeRefData recurse renames
-  (RefData aScope aMRenameHistory aRelations aIsComposite aBody)
-  (RefData bScope bMRenameHistory bRelations bIsComposite bBody) =
+  (RefData aScope aMRenameHistory aRelations aIsCircumsized aBody)
+  (RefData bScope bMRenameHistory bRelations bIsCircumsized bBody) =
   mkRefData
   <$> mergeScopeBodies recurse renames aScope aBody bScope bBody
   where
@@ -172,7 +172,7 @@ mergeRefData recurse renames
         { _rdScope = intersectedScope
         , _rdRenameHistory = mappend aMRenameHistory bMRenameHistory
         , _rdRelations = mergedRelations
-        , _rdIsComposite = mappend aIsComposite bIsComposite
+        , _rdIsCircumsized = mappend aIsCircumsized bIsCircumsized
         , _rdBody = mergedBody
         }
       )

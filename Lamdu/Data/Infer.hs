@@ -51,7 +51,7 @@ infer scope expr = runInfer $ exprIntoSTV scope expr
 isTag :: Ref -> Infer def ()
 isTag ref = do
   refData <- ExprRefs.read ref
-  case refData ^. rdIsComposite of
+  case refData ^. rdIsCircumsized of
     Monoid.Any True -> InferM.error $ CompositeTag ref
     _ -> return ()
 
@@ -97,7 +97,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     mkRefData bodySTV
       | shouldCircumsize bodySTV =
         defaultRefData scope (ExprLens.bodyHole # ())
-        & rdIsComposite .~ Monoid.Any True
+        & rdIsCircumsized .~ Monoid.Any True
       | otherwise = defaultRefData scope $ bodySTV <&> (^. Expr.ePayload . Lens._1 . stvTV . tvVal)
     shouldCircumsize (Expr.BodyApply (Expr.Apply func _))
       | Lens.nullOf ExprLens.exprDefinitionRef func = True
