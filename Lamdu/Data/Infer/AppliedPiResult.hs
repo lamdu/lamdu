@@ -21,6 +21,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
+import qualified Lamdu.Data.Infer.Monad as InferM
 
 -- Remap a Guid from piResult context to the Apply context
 remapSubstGuid :: AppliedPiResult -> RenameHistory -> Guid -> Guid
@@ -43,7 +44,7 @@ injectRenameHistory (RenameHistory renames) =
 -- TODO: This should also substLeafs, and it should also subst getvars that aren't subst
 substNode :: Eq def => Expr.Body def Ref -> AppliedPiResult -> Infer def ()
 substNode srcBody rawApr = do
-  destData <- ExprRefs.read destRef
+  destData <- InferM.liftContext $ ExprRefs.read destRef
   let
     apr = rawApr & injectRenameHistory (destData ^. rdRenameHistory)
     renameCopied = lookupOrSelf (apr ^. aprCopiedNames)
@@ -71,8 +72,8 @@ substNode srcBody rawApr = do
 
 handleAppliedPiResult :: Eq def => Ref -> AppliedPiResult -> Infer def ()
 handleAppliedPiResult srcRef apr = do
-  srcData <- ExprRefs.read srcRef
-  destData <- ExprRefs.read destRef
+  srcData <- InferM.liftContext $ ExprRefs.read srcRef
+  destData <- InferM.liftContext $ ExprRefs.read destRef
   let
     srcScope = srcData ^. rdScope
     destScope = destData ^. rdScope
@@ -96,15 +97,19 @@ handleAppliedPiResult srcRef apr = do
     Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef paramGuid))
       | paramGuid == apr ^. aprPiGuid -> void . unify destRef $ apr ^. aprArgVal
     Expr.BodyLeaf Expr.Hole -> do
-      srcData & rdRelations %~ (RelationAppliedPiResult apr :) & ExprRefs.write srcRef
+      srcData & rdRelations %~ (RelationAppliedPiResult apr :)
+        & InferM.liftContext . ExprRefs.write srcRef
       -- We injectRenameHistory of our ancestors into the apr
-      destData & rdRenameHistory <>~ RenameHistory mempty & ExprRefs.write destRef
+      destData
+        & rdRenameHistory <>~ RenameHistory mempty
+        & InferM.liftContext . ExprRefs.write destRef
     srcBody@(Expr.BodyLam (Expr.Lam k srcGuid _ _)) -> do
       (destGuid, _, _) <- forceLam k destScope destRef
       substNode srcBody
         (apr & aprCopiedNames %~ Map.insert srcGuid destGuid)
     srcBody -> do
       destBodyRef <-
+        InferM.liftContext $
         srcBody
         & Lens.traverse %%~ const (freshHole destScope)
         <&> ExprLens.bodyParameterRef %~ remapGuid

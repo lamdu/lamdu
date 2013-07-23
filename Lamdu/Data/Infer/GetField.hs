@@ -24,12 +24,13 @@ tagBodiesMayMatch _ _ = TagBodyMismatch
 
 handleGetField :: Eq def => GetFieldRefs -> Infer def ()
 handleGetField (GetFieldRefs getFieldTagRef getFieldTypeRef recordTypeRef) = do
-  recordTypeBody <- (^. rdBody) <$> ExprRefs.read recordTypeRef
-  getFieldTagBody <- (^. rdBody) <$> ExprRefs.read getFieldTagRef
+  recordTypeBody <- InferM.liftContext $ (^. rdBody) <$> ExprRefs.read recordTypeRef
+  getFieldTagBody <- InferM.liftContext $ (^. rdBody) <$> ExprRefs.read getFieldTagRef
   case recordTypeBody of
     Expr.BodyLeaf Expr.Hole -> return ()
     Expr.BodyRecord (Expr.Record Expr.KType fields) -> do
       matchedFields <-
+        InferM.liftContext $
         fields
         & Lens.traverse . Lens._1 %%~ \tagRef ->
           ExprRefs.read tagRef

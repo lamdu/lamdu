@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE PatternGuards, RecordWildCards #-}
 module Lamdu.Data.Infer.Unify
   ( unify, fresh, freshHole
   , forceLam
@@ -24,6 +24,7 @@ import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import System.Random (Random, random)
 import qualified Control.Lens as Lens
+import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expr
@@ -39,20 +40,20 @@ freshHole :: MonadA m => Scope -> StateT (Context def) m Ref
 freshHole scope = fresh scope $ ExprLens.bodyHole # ()
 
 newRandom :: Random r => Infer def r
-newRandom = Lens.zoom ctxRandomGen $ state random
+newRandom = InferM.liftContext . Lens.zoom ctxRandomGen $ state random
 
 forceLam :: Eq def => Expr.Kind -> Scope -> Ref -> Infer def (Guid, Ref, Ref)
 forceLam k lamScope destRef = do
   newGuid <- newRandom
-  newParamTypeRef <- fresh lamScope $ ExprLens.bodyHole # ()
+  newParamTypeRef <- InferM.liftContext . fresh lamScope $ ExprLens.bodyHole # ()
   let lamResultScope = lamScope & scopeMap %~ Map.insert newGuid newParamTypeRef
-  newResultTypeRef <- fresh lamResultScope $ ExprLens.bodyHole # ()
+  newResultTypeRef <- InferM.liftContext . fresh lamResultScope $ ExprLens.bodyHole # ()
   newLamRef <-
-    fresh lamScope . Expr.BodyLam $
+    InferM.liftContext . fresh lamScope . Expr.BodyLam $
     Expr.Lam k newGuid newParamTypeRef newResultTypeRef
   -- left is renamed into right (keep existing names of destRef):
   rep <- unify newLamRef destRef
-  body <- (^. rdBody) <$> ExprRefs.readRep rep
+  body <- InferM.liftContext $ (^. rdBody) <$> ExprRefs.readRep rep
   return . unsafeUnjust "We just unified Lam into rep" $
     body ^? ExprLens.bodyKindedLam k
 
@@ -63,7 +64,7 @@ intersectScopes (Scope aScope) (Scope bScope) =
   where
     -- Expensive assertion
     verifyEquiv aref bref = do
-      equiv <- ExprRefs.equiv aref bref
+      equiv <- InferM.liftContext $ ExprRefs.equiv aref bref
       if equiv
         then return aref
         else error "Scope unification of differing refs"
@@ -133,32 +134,36 @@ renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames
   (lookupOrSelf renames piGuid) argVal destRef
   (Map.mapKeys (lookupOrSelf renames) copiedNames)
 
--- No names in Relation (yet?)
 renameRelation :: Map Guid Guid -> Relation -> Relation
 renameRelation renames (RelationAppliedPiResult apr) =
   RelationAppliedPiResult $ renameAppliedPiResult renames apr
 renameRelation _ x = x
 
+renameTrigger :: Map Guid Guid -> Trigger -> Trigger
+renameTrigger _renames x = x
+
 renameRefData :: Map Guid Guid -> RefData def -> RefData def
-renameRefData renames (RefData scope renameHistory relations isCircumsized body)
+renameRefData renames RefData {..}
   -- Expensive assertion
-  | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Map.member` renames) body =
+  | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Map.member` renames) _rdBody =
     error "Shadowing encountered, what to do?"
   | otherwise =
     RefData
-    (scope & scopeMap %~ Map.mapKeys (lookupOrSelf renames))
-    (renameHistory & _RenameHistory %~ Map.union renames)
-    (relations & map (renameRelation renames))
-    isCircumsized
-    (body & ExprLens.bodyParameterRef %~ lookupOrSelf renames)
+    { _rdScope         = _rdScope & scopeMap %~ Map.mapKeys (lookupOrSelf renames)
+    , _rdRenameHistory = _rdRenameHistory & _RenameHistory %~ Map.union renames
+    , _rdRelations     = _rdRelations <&> renameRelation renames
+    , _rdIsCircumsized = _rdIsCircumsized
+    , _rdTriggers      = _rdTriggers <&> Set.map (renameTrigger renames)
+    , _rdBody          = _rdBody & ExprLens.bodyParameterRef %~ lookupOrSelf renames
+    }
 
 mergeRefData ::
   Eq def =>
   (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
   Map Guid Guid -> RefData def -> RefData def -> Infer def (Bool, RefData def)
 mergeRefData recurse renames
-  (RefData aScope aMRenameHistory aRelations aIsCircumsized aBody)
-  (RefData bScope bMRenameHistory bRelations bIsCircumsized bBody) =
+  (RefData aScope aMRenameHistory aRelations aIsCircumsized aTriggers aBody)
+  (RefData bScope bMRenameHistory bRelations bIsCircumsized bTriggers bBody) =
   mkRefData
   <$> mergeScopeBodies recurse renames aScope aBody bScope bBody
   where
@@ -173,6 +178,7 @@ mergeRefData recurse renames
         , _rdRenameHistory = mappend aMRenameHistory bMRenameHistory
         , _rdRelations = mergedRelations
         , _rdIsCircumsized = mappend aIsCircumsized bIsCircumsized
+        , _rdTriggers = IntMap.unionWith mappend aTriggers bTriggers
         , _rdBody = mergedBody
         }
       )
@@ -187,7 +193,7 @@ renameMergeRefData recurse rep renames a b = do
     mergeRefData recurse renames (renameRefData renames a) b
   -- First let's write the mergedRefData so we're not in danger zone
   -- of reading missing data:
-  ExprRefs.write rep mergedRefData
+  InferM.liftContext $ ExprRefs.write rep mergedRefData
   -- Now we can safely run the relations
   when bodyIsUpdated $ InferM.rerunRelations rep
 
@@ -203,23 +209,24 @@ applyHoleConstraints recurse holeConstraints body oldScope = do
 
 unifyRecurse :: Eq def => Set Ref -> Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref
 unifyRecurse visited renames rawNode phase = do
-  nodeRep <- ExprRefs.find "unifyRecurse:rawNode" rawNode
+  nodeRep <- InferM.liftContext $ ExprRefs.find "unifyRecurse:rawNode" rawNode
   if visited ^. Lens.contains nodeRep
     then InferM.error $ InfiniteExpression nodeRep
     else
     case phase of
     UnifyHoleConstraints holeConstraints -> do
-      oldNodeData <- ExprRefs.readRep nodeRep
-      ExprRefs.writeRep nodeRep $ error "Reading node during write..."
+      oldNodeData <- InferM.liftContext $ ExprRefs.readRep nodeRep
+      InferM.liftContext . ExprRefs.writeRep nodeRep $
+        error "Reading node during write..."
       let midRefData = renameRefData renames oldNodeData
       midRefData
         & rdScope %%~
           applyHoleConstraints (recurse nodeRep renames) holeConstraints
           (midRefData ^. rdBody)
-        >>= ExprRefs.writeRep nodeRep
+        >>= InferM.liftContext . ExprRefs.writeRep nodeRep
       return nodeRep
     UnifyRef other -> do
-      (rep, unifyResult) <- ExprRefs.unifyRefs nodeRep other
+      (rep, unifyResult) <- InferM.liftContext $ ExprRefs.unifyRefs nodeRep other
       case unifyResult of
         ExprRefs.UnifyRefsAlreadyUnified -> return ()
         ExprRefs.UnifyRefsUnified xData yData -> merge rep xData yData

@@ -15,6 +15,8 @@ import Control.Applicative (Applicative(..))
 import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans.State (StateT)
+import Control.Monad.Trans.Writer (WriterT(..), execWriterT)
+import Data.Monoid (Monoid(..))
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.GetField (handleGetField)
@@ -22,12 +24,14 @@ import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.MakeTypes (makeTypeRef)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import qualified Control.Lens as Lens
+import qualified Data.IntMap as IntMap
 import qualified Data.Monoid as Monoid
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Optimize as Optimize
+import qualified Lamdu.Data.Infer.Rule as Rule
 import qualified Lamdu.Data.Infer.Unify as Unify
 
 unify ::
@@ -48,22 +52,26 @@ infer ::
   (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
 infer scope expr = runInfer $ exprIntoSTV scope expr
 
-isTag :: Ref -> Infer def ()
-isTag ref = do
-  refData <- ExprRefs.read ref
-  case refData ^. rdIsCircumsized of
-    Monoid.Any True -> InferM.error $ CompositeTag ref
-    _ -> return ()
-
 executeRelation :: Eq def => Relation -> Ref -> Infer def ()
 executeRelation rel =
   case rel of
   RelationAppliedPiResult apr -> flip handleAppliedPiResult apr
   RelationGetField getField -> const (handleGetField getField)
-  RelationIsTag -> isTag
 
 runInfer :: Eq def => Infer def a -> StateT (Context def) (Either (Error def)) a
-runInfer = InferM.run $ InferM.InferActions executeRelation
+runInfer act = do
+  (res, rulesTriggered) <- runWriterT $ inferToWriter act
+  go rulesTriggered
+  return res
+  where
+    inferToWriter = InferM.run (InferM.InferActions executeRelation)
+    go (InferM.TriggeredRules oldRuleIds) =
+      case IntMap.minViewWithKey oldRuleIds of
+      Nothing -> return ()
+      Just ((firstRuleId, triggers), ruleIds) ->
+        go . mappend (InferM.TriggeredRules ruleIds) =<<
+        (execWriterT . inferToWriter)
+        (Rule.execute firstRuleId triggers)
 
 -- With hole apply vals and hole types
 exprIntoSTV ::
@@ -87,7 +95,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     bodySTV
     & ExprLens.bodyDef %~ (^. ldDef)
     & mkRefData
-    & ExprRefs.fresh
+    & InferM.liftContext . ExprRefs.fresh
   typeRef <-
     bodySTV <&> (^. Expr.ePayload . Lens._1) & makeTypeRef scope
   pure $

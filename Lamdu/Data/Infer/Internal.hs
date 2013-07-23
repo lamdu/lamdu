@@ -6,11 +6,16 @@ module Lamdu.Data.Infer.Internal
   , GetFieldRefs(..), gfrTag, gfrType, gfrRecordType, getFieldRefsRefs
   , Relation(..), relationRefs
 
-  , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsCircumsized, rdRefs
+  , Trigger(..)
+  , RuleId, RuleIdMap
+  , Rule(..)
+  , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
     , defaultRefData
   , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames, appliedPiResultRefs
   , ExprRefs(..), exprRefsUF, exprRefsData
-  , Context(..), ctxExprRefs, ctxDefTVs, ctxRandomGen
+  , RuleMap(..), rmNext, rmMap
+    , ruleVerifyTagKey
+  , Context(..), ctxExprRefs, ctxDefTVs, ctxRuleMap, ctxRandomGen
     , emptyContext
   , LoadedDef(..), ldDef, ldType
   , TypedValue(..), tvVal, tvType, tvRefs
@@ -18,8 +23,11 @@ module Lamdu.Data.Infer.Internal
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
+import Control.Lens.Operators
+import Data.IntMap (IntMap)
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
+import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.UnionFind (Ref, RefMap)
 import qualified Control.Lens as Lens
@@ -90,19 +98,30 @@ data Relation
   = -- Sits in: Record type of get field, get field type, get field
     -- tag, record tags:
     RelationGetField GetFieldRefs
-  | RelationIsTag -- Hole | Tag, nothing else
   | RelationAppliedPiResult AppliedPiResult
 
 relationRefs :: Lens.Traversal' Relation Ref
 relationRefs f (RelationGetField x) = RelationGetField <$> getFieldRefsRefs f x
-relationRefs _ RelationIsTag = pure RelationIsTag
 relationRefs f (RelationAppliedPiResult x) = RelationAppliedPiResult <$> appliedPiResultRefs f x
+
+-- Triggers are alive as long as their truthfulness is yet
+-- unknown. Once they're known to be false, they're removed. Once
+-- they're known to be true, they trigger a rule and are removed.
+data Trigger
+  = TriggerIsDirectlyTag
+  -- | TriggerIsRecordType
+  deriving (Eq, Ord)
+
+data Rule = RuleVerifyTag
+type RuleId = Int
+type RuleIdMap = IntMap
 
 data RefData def = RefData
   { _rdScope :: Scope
   , _rdRenameHistory :: RenameHistory
   , _rdRelations :: [Relation]
   , _rdIsCircumsized :: Monoid.Any
+  , _rdTriggers :: RuleIdMap (Set Trigger)
   , _rdBody :: Expr.Body def Ref
   }
 Lens.makeLenses ''RefData
@@ -113,16 +132,18 @@ defaultRefData scop body = RefData
   , _rdRenameHistory = mempty
   , _rdRelations = mempty
   , _rdIsCircumsized = Monoid.Any False
+  , _rdTriggers = mempty
   , _rdBody = body
   }
 
 rdRefs :: Lens.Traversal' (RefData def) Ref
-rdRefs f (RefData scop renameHistory relations isCircumsized body) =
+rdRefs f (RefData scop renameHistory relations isCircumsized triggers body) =
   RefData
   <$> scopeRefs f scop
   <*> pure renameHistory
   <*> (Lens.traverse . relationRefs) f relations
   <*> pure isCircumsized
+  <*> pure triggers
   <*> Lens.traverse f body
 
 data ExprRefs def = ExprRefs
@@ -154,9 +175,25 @@ Lens.makeLenses ''ScopedTypedValue
 stvRefs :: Lens.Traversal' ScopedTypedValue Ref
 stvRefs f (ScopedTypedValue tv scop) = ScopedTypedValue <$> tvRefs f tv <*> scopeRefs f scop
 
+data RuleMap = RuleMap
+  { _rmNext :: Int
+  , _rmMap :: RuleIdMap Rule
+  }
+Lens.makeLenses ''RuleMap
+
+ruleVerifyTagKey :: RuleId
+ruleVerifyTagKey = 0
+
+initialRuleMap :: RuleMap
+initialRuleMap = RuleMap
+  { _rmNext = ruleVerifyTagKey + 1
+  , _rmMap = mempty & Lens.at ruleVerifyTagKey .~ Just RuleVerifyTag
+  }
+
 -- Context
 data Context def = Context
   { _ctxExprRefs :: ExprRefs def
+  , _ctxRuleMap :: RuleMap
   , -- NOTE: This Map is for 2 purposes: Sharing Refs of loaded Defs
     -- and allowing to specify recursive defs
     _ctxDefTVs :: Map def TypedValue
@@ -172,6 +209,7 @@ emptyContext gen =
     { _exprRefsUF = UF.empty
     , _exprRefsData = mempty
     }
+  , _ctxRuleMap = initialRuleMap
   , _ctxDefTVs = Map.empty
   , _ctxRandomGen = gen
   }
