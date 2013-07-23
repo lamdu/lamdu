@@ -10,6 +10,7 @@ import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
+import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
@@ -27,9 +28,15 @@ checkTrigger refData trigger =
   case trigger of
   TriggerIsDirectlyTag
     | Lens.has (rdBody . ExprLens.bodyTag) refData -> Just True
-    | refData ^. rdIsCircumsized . Lens.unwrapped
-    || Lens.nullOf (rdBody . ExprLens.bodyHole) refData -> Just False
-    | otherwise -> Nothing
+    | refData ^. rdIsCircumsized . Lens.unwrapped -> Just False
+    | otherwise -> checkHole
+  TriggerIsRecordType
+    | Lens.has (rdBody . ExprLens.bodyKindedRecordFields Expr.KType) refData -> Just True
+    | otherwise -> checkHole
+  where
+    checkHole
+      | Lens.nullOf (rdBody . ExprLens.bodyHole) refData = Just False
+      | otherwise = Nothing
 
 add :: Ref -> Trigger -> RuleId -> Infer def ()
 add ref trigger ruleId = do

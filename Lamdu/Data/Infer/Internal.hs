@@ -8,13 +8,15 @@ module Lamdu.Data.Infer.Internal
 
   , Trigger(..)
   , RuleId, RuleIdMap
+  , GetFieldFindTags(..), gfftTag, gfftType
   , Rule(..)
+    , ruleRefs
   , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
     , defaultRefData
   , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames, appliedPiResultRefs
   , ExprRefs(..), exprRefsUF, exprRefsData
   , RuleMap(..), rmNext, rmMap
-    , ruleVerifyTagKey
+    , newRule, ruleVerifyTagId
   , Context(..), ctxExprRefs, ctxDefTVs, ctxRuleMap, ctxRandomGen
     , emptyContext
   , LoadedDef(..), ldDef, ldType
@@ -24,6 +26,7 @@ module Lamdu.Data.Infer.Internal
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
+import Control.Monad.Trans.State (StateT)
 import Data.IntMap (IntMap)
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
@@ -109,12 +112,27 @@ relationRefs f (RelationAppliedPiResult x) = RelationAppliedPiResult <$> applied
 -- they're known to be true, they trigger a rule and are removed.
 data Trigger
   = TriggerIsDirectlyTag
-  -- | TriggerIsRecordType
+  | TriggerIsRecordType
   deriving (Eq, Ord)
 
-data Rule = RuleVerifyTag
+data GetFieldFindTags = GetFieldFindTags
+  { _gfftTag :: Ref
+  , _gfftType :: Ref
+  }
+Lens.makeLenses ''GetFieldFindTags
+
+gfftRefs :: Lens.Traversal' GetFieldFindTags Ref
+gfftRefs f (GetFieldFindTags tag typ) =
+  GetFieldFindTags <$> f tag <*> f typ
+data Rule
+  = RuleVerifyTag
+  | RuleGetFieldFindTags GetFieldFindTags -- phase 1
 type RuleId = Int
 type RuleIdMap = IntMap
+
+ruleRefs :: Lens.Traversal' Rule Ref
+ruleRefs _ RuleVerifyTag = pure RuleVerifyTag
+ruleRefs f (RuleGetFieldFindTags x) = RuleGetFieldFindTags <$> gfftRefs f x
 
 data RefData def = RefData
   { _rdScope :: Scope
@@ -181,13 +199,20 @@ data RuleMap = RuleMap
   }
 Lens.makeLenses ''RuleMap
 
-ruleVerifyTagKey :: RuleId
-ruleVerifyTagKey = 0
+newRule :: Monad m => Rule -> StateT RuleMap m RuleId
+newRule rule = do
+  ruleId <- Lens.use rmNext
+  rmMap . Lens.at ruleId .= Just rule
+  rmNext += 1
+  return ruleId
+
+ruleVerifyTagId :: RuleId
+ruleVerifyTagId = 0
 
 initialRuleMap :: RuleMap
 initialRuleMap = RuleMap
-  { _rmNext = ruleVerifyTagKey + 1
-  , _rmMap = mempty & Lens.at ruleVerifyTagKey .~ Just RuleVerifyTag
+  { _rmNext = ruleVerifyTagId + 1
+  , _rmMap = mempty & Lens.at ruleVerifyTagId .~ Just RuleVerifyTag
   }
 
 -- Context

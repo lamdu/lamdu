@@ -58,25 +58,32 @@ addRelation ref relation = do
   InferM.liftContext $ ExprRefs.modify ref (rdRelations <>~ [relation])
   InferM.rerunRelations ref
 
-addTagTrigger :: Ref -> Infer def ()
-addTagTrigger ref = Trigger.add ref TriggerIsDirectlyTag ruleVerifyTagKey
+addTagVerification :: Ref -> Infer def ()
+addTagVerification ref = Trigger.add ref TriggerIsDirectlyTag ruleVerifyTagId
 
 makeGetFieldType :: Eq def => Scope -> Expr.GetField TypedValue -> Infer def Ref
 makeGetFieldType scope (Expr.GetField record tag) = do
   tagTypeRef <- InferM.liftContext . fresh scope $ ExprLens.bodyTagType # ()
   void . unify tagTypeRef $ tag ^. tvType
-  getFieldType <- InferM.liftContext $ freshHole scope
-  addTagTrigger (tag ^. tvVal)
+  getFieldTypeRef <- InferM.liftContext $ freshHole scope
+  addTagVerification (tag ^. tvVal)
   let
     getFieldRel = GetFieldRefs
       { _gfrTag = tag ^. tvVal
-      , _gfrType = getFieldType
+      , _gfrType = getFieldTypeRef
       , _gfrRecordType = record ^. tvType
       }
   getFieldRel
     & Lens.traverseOf_ getFieldRefsRefs %%~
       (`addRelation` RelationGetField getFieldRel)
-  return getFieldType
+  findRuleId <-
+    InferM.liftContext . Lens.zoom ctxRuleMap . newRule $
+    RuleGetFieldFindTags GetFieldFindTags
+    { _gfftTag = tag ^. tvVal
+    , _gfftType = getFieldTypeRef
+    }
+  Trigger.add (record ^. tvType) TriggerIsRecordType findRuleId
+  return getFieldTypeRef
 
 makeLambdaType :: Eq def => Scope -> Guid -> TypedValue -> TypedValue -> Infer def Ref
 makeLambdaType scope paramGuid paramType result = do
@@ -88,7 +95,7 @@ makeRecordType :: Eq def => Expr.Kind -> Scope -> [(TypedValue, TypedValue)] -> 
 makeRecordType k scope fields = do
   tagTypeRef <- InferM.liftContext . fresh scope $ ExprLens.bodyTagType # ()
   fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvType) (unify tagTypeRef)
-  fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvVal) addTagTrigger
+  fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvVal) addTagVerification
   InferM.liftContext . fresh scope $
     case k of
     Expr.KVal -> Expr.BodyRecord . Expr.Record Expr.KType $ onRecVField <$> fields
