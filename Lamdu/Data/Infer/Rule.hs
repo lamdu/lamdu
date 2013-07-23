@@ -5,6 +5,7 @@ module Lamdu.Data.Infer.Rule
 
 import Control.Lens (Lens')
 import Control.Lens.Operators
+import Control.Monad (void)
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Foldable (traverse_)
@@ -13,6 +14,7 @@ import Data.Maybe.Utils (unsafeUnjust)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
+import Lamdu.Data.Infer.Unify (unify)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
@@ -48,28 +50,35 @@ assertRecordTypeFields ref =
   <&> (^? rdBody . ExprLens.bodyKindedRecordFields Expr.KType)
   <&> unsafeUnjust "isRecord && not record?!"
 
-getFieldFindTags :: GetFieldFindTags -> RuleFunc def
+getFieldFindTags :: Eq def => GetFieldFindTags -> RuleFunc def
 getFieldFindTags rule triggers =
   case Map.toList triggers of
   [((recordTypeRef, _), isRecord)]
     | isRecord -> do
       recordFields <- InferM.liftContext $ assertRecordTypeFields recordTypeRef
-      verificationRuleId <-
-        error "TODO"
-        --InferM.liftContext . Lens.zoom ctxRuleMap . newRule $
-        --RuleGetFieldVerifyTag GetFieldVerifyTag
-        --{ _gfvtMTag = Nothing
-        --, _gfvtTagRef = rule ^. gfftTag
-        --, _gfvtGetFieldTypeRef = rule ^. gfftType
-        --, _gfvtPossibleMatches = Map.fromList recordFields
-        --}
-      let tagTrigger ref = Trigger.add ref TriggerIsDirectlyTag verificationRuleId
-      traverse_ tagTrigger $ rule ^. gfftTag : map fst recordFields
-      return RuleDelete
+      case recordFields of
+        [] -> InferM.error InferM.GetMissingField
+        [(tag, typ)] -> do
+          void $ unify tag (rule ^. gfftTag)
+          void $ unify typ (rule ^. gfftType)
+          return RuleDelete
+        _ -> do
+          verificationRuleId <-
+            error "TODO"
+            --InferM.liftContext . Lens.zoom ctxRuleMap . newRule $
+            --RuleGetFieldVerifyTag GetFieldVerifyTag
+            --{ _gfvtMTag = Nothing
+            --, _gfvtTagRef = rule ^. gfftTag
+            --, _gfvtGetFieldTypeRef = rule ^. gfftType
+            --, _gfvtPossibleMatches = Map.fromList recordFields
+            --}
+          let tagTrigger ref = Trigger.add ref TriggerIsDirectlyTag verificationRuleId
+          traverse_ tagTrigger $ rule ^. gfftTag : map fst recordFields
+          return RuleDelete
     | otherwise -> InferM.error InferM.GetFieldRequiresRecord
   _ -> error "A singleton trigger must be used with GetFieldFindTags rule"
 
-execute :: RuleId -> Map (Ref, Trigger) Bool -> Infer def ()
+execute :: Eq def => RuleId -> Map (Ref, Trigger) Bool -> Infer def ()
 execute ruleId triggers = do
   mOldRule <- InferM.liftContext $ Lens.use (ruleLens ruleId)
   let oldRule = unsafeUnjust ("Execute called on bad rule id: " ++ show ruleId) mOldRule
