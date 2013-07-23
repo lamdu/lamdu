@@ -15,6 +15,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.Trigger as Trigger
 
 scopeLookup :: Scope -> Guid -> Either (Error def) Ref
 scopeLookup scope guid =
@@ -43,7 +44,7 @@ makeApplyType applyScope func arg = do
     (func ^. stvScope)
     (func ^. stvTV . tvType)
   void $ unify (arg ^. stvTV . tvType) piParamType
-  applyTypeRef <- freshHole applyScope
+  applyTypeRef <- InferM.liftContext $ freshHole applyScope
   handleAppliedPiResult piResultRef AppliedPiResult
     { _aprPiGuid = piGuid
     , _aprArgVal = arg ^. stvTV . tvVal
@@ -54,15 +55,18 @@ makeApplyType applyScope func arg = do
 
 addRelation :: Eq def => Ref -> Relation -> Infer def ()
 addRelation ref relation = do
-  ExprRefs.modify ref (rdRelations <>~ [relation])
+  InferM.liftContext $ ExprRefs.modify ref (rdRelations <>~ [relation])
   InferM.rerunRelations ref
+
+addTagTrigger :: Ref -> Infer def ()
+addTagTrigger ref = Trigger.add ref TriggerIsDirectlyTag ruleVerifyTagKey
 
 makeGetFieldType :: Eq def => Scope -> Expr.GetField TypedValue -> Infer def Ref
 makeGetFieldType scope (Expr.GetField record tag) = do
-  tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
+  tagTypeRef <- InferM.liftContext . fresh scope $ ExprLens.bodyTagType # ()
   void . unify tagTypeRef $ tag ^. tvType
-  getFieldType <- freshHole scope
-  addRelation (tag ^. tvVal) RelationIsTag
+  getFieldType <- InferM.liftContext $ freshHole scope
+  addTagTrigger (tag ^. tvVal)
   let
     getFieldRel = GetFieldRefs
       { _gfrTag = tag ^. tvVal
@@ -76,26 +80,25 @@ makeGetFieldType scope (Expr.GetField record tag) = do
 
 makeLambdaType :: Eq def => Scope -> Guid -> TypedValue -> TypedValue -> Infer def Ref
 makeLambdaType scope paramGuid paramType result = do
-  typeRef <- fresh scope $ ExprLens.bodyType # ()
+  typeRef <- InferM.liftContext . fresh scope $ ExprLens.bodyType # ()
   void . unify typeRef $ paramType ^. tvType
-  fresh scope $ makePiTypeOfLam paramGuid paramType result
+  InferM.liftContext . fresh scope $ makePiTypeOfLam paramGuid paramType result
 
 makeRecordType :: Eq def => Expr.Kind -> Scope -> [(TypedValue, TypedValue)] -> Infer def Ref
 makeRecordType k scope fields = do
-  tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
+  tagTypeRef <- InferM.liftContext . fresh scope $ ExprLens.bodyTagType # ()
   fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvType) (unify tagTypeRef)
-  fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvVal) setTagPos
-  fresh scope $
+  fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvVal) addTagTrigger
+  InferM.liftContext . fresh scope $
     case k of
     Expr.KVal -> Expr.BodyRecord . Expr.Record Expr.KType $ onRecVField <$> fields
     Expr.KType -> ExprLens.bodyType # ()
   where
-    setTagPos ref = addRelation ref RelationIsTag
     onRecVField (tag, val) = (tag ^. tvVal, val ^. tvType)
 
 makePiType :: Eq def => Scope -> TypedValue -> TypedValue -> Infer def Ref
 makePiType scope paramType resultType = do
-  typeRef <- fresh scope $ ExprLens.bodyType # ()
+  typeRef <- InferM.liftContext . fresh scope $ ExprLens.bodyType # ()
   void . unify typeRef $ paramType ^. tvType
   void . unify typeRef $ resultType ^. tvType
   return typeRef
@@ -112,9 +115,9 @@ makeTypeRef scope body =
   Expr.BodyLeaf Expr.TagType -> typeIsType
   Expr.BodyLam (Expr.Lam Expr.KType _ paramType resultType) ->
     makePiType scope (paramType ^. stvTV) (resultType ^. stvTV)
-  Expr.BodyLeaf Expr.LiteralInteger {} -> fresh scope $ ExprLens.bodyIntegerType # ()
-  Expr.BodyLeaf Expr.Tag {} -> fresh scope $ ExprLens.bodyTagType # ()
-  Expr.BodyLeaf Expr.Hole -> freshHole scope
+  Expr.BodyLeaf Expr.LiteralInteger {} -> InferM.liftContext . fresh scope $ ExprLens.bodyIntegerType # ()
+  Expr.BodyLeaf Expr.Tag {} -> InferM.liftContext . fresh scope $ ExprLens.bodyTagType # ()
+  Expr.BodyLeaf Expr.Hole -> InferM.liftContext $ freshHole scope
   -- GetPars
   Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (LoadedDef _ ref))) -> pure ref
   Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) ->
@@ -127,4 +130,4 @@ makeTypeRef scope body =
   Expr.BodyRecord (Expr.Record k fields) ->
     makeRecordType k scope $ fields <&> Lens.both %~ (^. stvTV)
   where
-    typeIsType = fresh scope $ ExprLens.bodyType # ()
+    typeIsType = InferM.liftContext . fresh scope $ ExprLens.bodyType # ()
