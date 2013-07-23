@@ -35,6 +35,7 @@ optimizeContext = do
     newRefsData =
       execWriter $
       oldRefsData & IntMap.toList & traverse_ %%~ onOldRefItem
+      <&> error "TODO: Also fix rule refs!"
   ctxDefTVs . Lens.mapped . tvRefs %= refRename "defRefs"
   Lens.zoom ctxExprRefs $
     State.put ExprRefs
