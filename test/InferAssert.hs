@@ -99,33 +99,33 @@ verifyInferResult msg exprLInferred = do
 inferAssertion :: InputExpr -> HUnit.Assertion
 inferAssertion origExpr =
   runContextAssertion $
-  go (1 :: Int) =<< annotateErrors "initial infer: " (inferDef (infer =<< load origExpr))
+  go (0 :: Int) =<< annotateErrors "initial infer: " (inferDef (infer =<< load origExpr))
   where
     msg count = "Resumption phase " ++ show count ++ " failed: "
     annotateErrors prefix action =
       either (error . (prefix ++) . show) return =<< try action
     go count exprLInferred = do
-      let verify = verifyInferResult $ msg count
-      verify exprLInferred
-      (exprNextInput, flags) <-
+      verifyInferResult (msg count) exprLInferred
+      (exprNextInput, (resumptionsExpected, resumptionsHappened)) <-
         annotateErrors (msg count) . runWriterT $
-        handleResumption verify exprLInferred
-      case flags of
-        (Monoid.Any False, Monoid.Sum 0) -> return ()
-        (Monoid.Any True, Monoid.Sum 0) -> error "NewInferred specified, but no subexpr has ResumeWith/ResumeOnSide"
+        handleResumption (verifyInferResult (msg (count+1))) exprLInferred
+      case (resumptionsExpected, resumptionsHappened) of
+        (Monoid.Any False, Monoid.Any False) -> return ()
+        (Monoid.Any True, Monoid.Any False) ->
+          error "NewInferred specified, but no subexpr has ResumeWith/ResumeOnSide"
         (_, _) -> go (count+1) exprNextInput
     handleResumption _ (Expr.Expression _ (stv, (InputPayload _ _ (ResumeWith newExpr)))) = do
-      Writer.tell (Monoid.Any True, Monoid.Sum (1::Int))
+      Writer.tell (Monoid.Any True, Monoid.Any True)
       lift $ loadInferInto stv newExpr
     handleResumption verify (Expr.Expression body (stv, (InputPayload _ _ (ResumeOnSide newExpr ipl)))) = do
-      Writer.tell (Monoid.Any True, Monoid.Sum 1)
+      Writer.tell (Monoid.Any True, Monoid.Any True)
       () <- lift $ verify =<< loadInferInContext stv newExpr
       recurseBody verify body (stv, ipl)
     handleResumption verify (Expr.Expression body (stv, InputPayload _ _ (NewInferred ipl))) = do
-      Writer.tell (Monoid.Any True, Monoid.Sum 0)
+      Writer.tell (Monoid.Any True, Monoid.Any False)
       recurseBody verify body (stv, ipl)
-    handleResumption verify (Expr.Expression body (stv, pl@(InputPayload _ _ Same))) =
-      recurseBody verify body (stv, pl)
+    handleResumption verify (Expr.Expression body (stv, ipl@(InputPayload _ _ Same))) =
+      recurseBody verify body (stv, ipl)
     recurseBody verify body pl =
       (`Expr.Expression` pl) <$> Lens.traverse (handleResumption verify) body
 
