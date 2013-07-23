@@ -113,6 +113,9 @@ infixr 4 ~>
 (~>) src dest =
   simple (ExprUtil.makePi (Guid.fromString "") src dest) pureSet
 
+-- R represents a cross-section of the whole expression with a new
+-- resume level, where the Monoid.Any represents whether any change
+-- happened (or everyone's the Same)
 newtype R a = R (ZipList (Monoid.Any, a))
   deriving (Functor)
 instance Applicative R where
