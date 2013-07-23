@@ -78,9 +78,9 @@ makeGetFieldType scope (Expr.GetField record tag) = do
       (`addRelation` RelationGetField getFieldRel)
   findRuleId <-
     InferM.liftContext . Lens.zoom ctxRuleMap . newRule $
-    RuleGetFieldFindTags GetFieldFindTags
-    { _gfftTag = tag ^. tvVal
-    , _gfftType = getFieldTypeRef
+    RuleGetFieldPhase0 GetFieldPhase0
+    { _gf0GetFieldTag = tag ^. tvVal
+    , _gf0GetFieldType = getFieldTypeRef
     }
   Trigger.add (record ^. tvType) TriggerIsRecordType findRuleId
   return getFieldTypeRef

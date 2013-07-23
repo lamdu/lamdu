@@ -50,7 +50,7 @@ assertRecordTypeFields ref =
   <&> (^? rdBody . ExprLens.bodyKindedRecordFields Expr.KType)
   <&> unsafeUnjust "isRecord && not record?!"
 
-getFieldFindTags :: Eq def => GetFieldFindTags -> RuleFunc def
+getFieldFindTags :: Eq def => GetFieldPhase0 -> RuleFunc def
 getFieldFindTags rule triggers =
   case Map.toList triggers of
   [((recordTypeRef, _), isRecord)]
@@ -59,8 +59,8 @@ getFieldFindTags rule triggers =
       case recordFields of
         [] -> InferM.error InferM.GetMissingField
         [(tag, typ)] -> do
-          void $ unify tag (rule ^. gfftTag)
-          void $ unify typ (rule ^. gfftType)
+          void $ unify tag (rule ^. gf0GetFieldTag)
+          void $ unify typ (rule ^. gf0GetFieldType)
           return RuleDelete
         _ -> do
           verificationRuleId <-
@@ -68,15 +68,15 @@ getFieldFindTags rule triggers =
             --InferM.liftContext . Lens.zoom ctxRuleMap . newRule $
             --RuleGetFieldVerifyTag GetFieldVerifyTag
             --{ _gfvtMTag = Nothing
-            --, _gfvtTagRef = rule ^. gfftTag
-            --, _gfvtGetFieldTypeRef = rule ^. gfftType
+            --, _gfvtTagRef = rule ^. gf0GetFieldTag
+            --, _gfvtGetFieldTypeRef = rule ^. gf0GetFieldType
             --, _gfvtPossibleMatches = Map.fromList recordFields
             --}
           let tagTrigger ref = Trigger.add ref TriggerIsDirectlyTag verificationRuleId
-          traverse_ tagTrigger $ rule ^. gfftTag : map fst recordFields
+          traverse_ tagTrigger $ rule ^. gf0GetFieldTag : map fst recordFields
           return RuleDelete
     | otherwise -> InferM.error InferM.GetFieldRequiresRecord
-  _ -> error "A singleton trigger must be used with GetFieldFindTags rule"
+  _ -> error "A singleton trigger must be used with GetFieldPhase0 rule"
 
 execute :: Eq def => RuleId -> Map (Ref, Trigger) Bool -> Infer def ()
 execute ruleId triggers = do
@@ -85,7 +85,7 @@ execute ruleId triggers = do
   ruleRes <-
     case oldRule of
     RuleVerifyTag -> verifyTag triggers
-    RuleGetFieldFindTags x -> getFieldFindTags x triggers
+    RuleGetFieldPhase0 x -> getFieldFindTags x triggers
   InferM.liftContext $
     case ruleRes of
     RuleKeep -> return ()

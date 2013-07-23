@@ -8,7 +8,7 @@ module Lamdu.Data.Infer.Internal
 
   , Trigger(..)
   , RuleId, RuleIdMap
-  , GetFieldFindTags(..), gfftTag, gfftType
+  , GetFieldPhase0(..), gf0GetFieldTag, gf0GetFieldType
   , Rule(..)
     , ruleRefs
   , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
@@ -115,24 +115,24 @@ data Trigger
   | TriggerIsRecordType
   deriving (Eq, Ord)
 
-data GetFieldFindTags = GetFieldFindTags
-  { _gfftTag :: Ref
-  , _gfftType :: Ref
+data GetFieldPhase0 = GetFieldPhase0
+  { _gf0GetFieldTag :: Ref
+  , _gf0GetFieldType :: Ref
   }
-Lens.makeLenses ''GetFieldFindTags
+Lens.makeLenses ''GetFieldPhase0
 
-gfftRefs :: Lens.Traversal' GetFieldFindTags Ref
-gfftRefs f (GetFieldFindTags tag typ) =
-  GetFieldFindTags <$> f tag <*> f typ
+gf0Refs :: Lens.Traversal' GetFieldPhase0 Ref
+gf0Refs f (GetFieldPhase0 tag typ) =
+  GetFieldPhase0 <$> f tag <*> f typ
 data Rule
   = RuleVerifyTag
-  | RuleGetFieldFindTags GetFieldFindTags -- phase 1
+  | RuleGetFieldPhase0 GetFieldPhase0 -- phase 1
 type RuleId = Int
 type RuleIdMap = IntMap
 
 ruleRefs :: Lens.Traversal' Rule Ref
 ruleRefs _ RuleVerifyTag = pure RuleVerifyTag
-ruleRefs f (RuleGetFieldFindTags x) = RuleGetFieldFindTags <$> gfftRefs f x
+ruleRefs f (RuleGetFieldPhase0 x) = RuleGetFieldPhase0 <$> gf0Refs f x
 
 data RefData def = RefData
   { _rdScope :: Scope
