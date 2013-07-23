@@ -1,5 +1,4 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor#-}
-{-# OPTIONS -Wall -Werror #-}
 module InferCombinators where
 
 import Control.Applicative (Applicative(..), ZipList(..), liftA2, (<$>))

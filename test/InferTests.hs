@@ -1,5 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
-{-# OPTIONS -Wall -Werror -fno-warn-missing-signatures #-}
+{-# OPTIONS -fno-warn-missing-signatures #-}
 module InferTests (allTests, factorialExpr, euler1Expr, solveDepressedQuarticExpr) where
 
 import Control.Lens.Operators
