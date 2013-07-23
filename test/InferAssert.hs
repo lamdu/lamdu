@@ -1,5 +1,4 @@
 {-# LANGUAGE RankNTypes #-}
-{-# OPTIONS -Wall -Werror #-}
 module InferAssert where
 
 -- import Control.Monad.Trans.State (runStateT, runState)
