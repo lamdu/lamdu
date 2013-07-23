@@ -6,7 +6,7 @@ module Lamdu.Data.Infer.Internal
   , GetFieldRefs(..), gfrTag, gfrType, gfrRecordType, getFieldRefsRefs
   , Relation(..), relationRefs
 
-  , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsComposite, rdRefs
+  , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsCircumsized, rdRefs
     , defaultRefData
   , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames, appliedPiResultRefs
   , ExprRefs(..), exprRefsUF, exprRefsData
@@ -102,7 +102,7 @@ data RefData def = RefData
   { _rdScope :: Scope
   , _rdRenameHistory :: RenameHistory
   , _rdRelations :: [Relation]
-  , _rdIsComposite :: Monoid.Any
+  , _rdIsCircumsized :: Monoid.Any
   , _rdBody :: Expr.Body def Ref
   }
 Lens.makeLenses ''RefData
@@ -112,17 +112,17 @@ defaultRefData scop body = RefData
   { _rdScope = scop
   , _rdRenameHistory = mempty
   , _rdRelations = mempty
-  , _rdIsComposite = Monoid.Any False
+  , _rdIsCircumsized = Monoid.Any False
   , _rdBody = body
   }
 
 rdRefs :: Lens.Traversal' (RefData def) Ref
-rdRefs f (RefData scop renameHistory relations isComposite body) =
+rdRefs f (RefData scop renameHistory relations isCircumsized body) =
   RefData
   <$> scopeRefs f scop
   <*> pure renameHistory
   <*> (Lens.traverse . relationRefs) f relations
-  <*> pure isComposite
+  <*> pure isCircumsized
   <*> Lens.traverse f body
 
 data ExprRefs def = ExprRefs
