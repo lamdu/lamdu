@@ -156,7 +156,6 @@ Executable lamdu
                        Lamdu.Data.Infer.AppliedPiResult,
                        Lamdu.Data.Infer.Deref,
                        Lamdu.Data.Infer.ExprRefs,
-                       Lamdu.Data.Infer.GetField,
                        Lamdu.Data.Infer.Internal,
                        Lamdu.Data.Infer.Load,
                        Lamdu.Data.Infer.MakeTypes,

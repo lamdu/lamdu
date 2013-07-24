@@ -19,7 +19,6 @@ import Control.Monad.Trans.Writer (WriterT(..), execWriterT)
 import Data.Monoid (Monoid(..))
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
-import Lamdu.Data.Infer.GetField (handleGetField)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.MakeTypes (makeTypeRef)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
@@ -56,7 +55,6 @@ executeRelation :: Eq def => Relation -> Ref -> Infer def ()
 executeRelation rel =
   case rel of
   RelationAppliedPiResult apr -> flip handleAppliedPiResult apr
-  RelationGetField getField -> const (handleGetField getField)
 
 runInfer :: Eq def => Infer def a -> StateT (Context def) (Either (Error def)) a
 runInfer act = do
