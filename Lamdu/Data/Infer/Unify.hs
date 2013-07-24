@@ -32,6 +32,7 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.Trigger as Trigger
 
 fresh :: MonadA m => Scope -> Expr.Body def Ref -> StateT (Context def) m Ref
 fresh scope body = ExprRefs.fresh $ defaultRefData scope body
@@ -137,7 +138,6 @@ renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames
 renameRelation :: Map Guid Guid -> Relation -> Relation
 renameRelation renames (RelationAppliedPiResult apr) =
   RelationAppliedPiResult $ renameAppliedPiResult renames apr
-renameRelation _ x = x
 
 renameTrigger :: Map Guid Guid -> Trigger -> Trigger
 renameTrigger _renames x = x
@@ -191,6 +191,7 @@ renameMergeRefData ::
 renameMergeRefData recurse rep renames a b = do
   (bodyIsUpdated, mergedRefData) <-
     mergeRefData recurse renames (renameRefData renames a) b
+    >>= Lens._2 %%~ Trigger.updateRefData rep
   -- First let's write the mergedRefData so we're not in danger zone
   -- of reading missing data:
   InferM.liftContext $ ExprRefs.write rep mergedRefData

@@ -13,7 +13,6 @@ import Lamdu.Data.Infer.Unify (unify, forceLam, fresh, freshHole)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
@@ -53,36 +52,23 @@ makeApplyType applyScope func arg = do
     }
   return applyTypeRef
 
-addRelation :: Eq def => Ref -> Relation -> Infer def ()
-addRelation ref relation = do
-  InferM.liftContext $ ExprRefs.modify ref (rdRelations <>~ [relation])
-  InferM.rerunRelations ref
-
 addTagVerification :: Ref -> Infer def ()
-addTagVerification ref = Trigger.add ref TriggerIsDirectlyTag ruleVerifyTagId
+addTagVerification = Trigger.add TriggerIsDirectlyTag ruleVerifyTagId
 
 makeGetFieldType :: Eq def => Scope -> Expr.GetField TypedValue -> Infer def Ref
 makeGetFieldType scope (Expr.GetField record tag) = do
   tagTypeRef <- InferM.liftContext . fresh scope $ ExprLens.bodyTagType # ()
   void . unify tagTypeRef $ tag ^. tvType
   getFieldTypeRef <- InferM.liftContext $ freshHole scope
-  addTagVerification (tag ^. tvVal)
-  let
-    getFieldRel = GetFieldRefs
-      { _gfrTag = tag ^. tvVal
-      , _gfrType = getFieldTypeRef
-      , _gfrRecordType = record ^. tvType
-      }
-  getFieldRel
-    & Lens.traverseOf_ getFieldRefsRefs %%~
-      (`addRelation` RelationGetField getFieldRel)
-  findRuleId <-
+  addTagVerification $ tag ^. tvVal
+  -- TODO: Move to same place as Phase1/Phase2 rule adders
+  ruleId <-
     InferM.liftContext . Lens.zoom ctxRuleMap . newRule $
     RuleGetFieldPhase0 GetFieldPhase0
     { _gf0GetFieldTag = tag ^. tvVal
     , _gf0GetFieldType = getFieldTypeRef
     }
-  Trigger.add (record ^. tvType) TriggerIsRecordType findRuleId
+  Trigger.add TriggerIsRecordType ruleId $ record ^. tvType
   return getFieldTypeRef
 
 makeLambdaType :: Eq def => Scope -> Guid -> TypedValue -> TypedValue -> Infer def Ref

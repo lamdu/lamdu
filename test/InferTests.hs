@@ -416,6 +416,11 @@ getFieldTests =
   [ testGroup "missing fields"
     [ let
         isExpectedError (InferError Infer.GetMissingField {}) = True
+        isExpectedError
+          (InferError
+           (Infer.Mismatch
+            (Expr.BodyLeaf Expr.Tag{})
+            (Expr.BodyLeaf Expr.Tag{}))) = True
         isExpectedError _ = False
       in
         testCase name .

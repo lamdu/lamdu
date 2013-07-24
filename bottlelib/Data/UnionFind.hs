@@ -5,18 +5,22 @@ module Data.UnionFind
   , freshRef, lookup, union, equivalent
   , empty
   , Ref, RefMap, RefSet
+  , unmaintainedRefMapLookup
   ) where
 
-import Prelude hiding (lookup)
-import Data.IntSet (IntSet)
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
+import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT(..), state)
 import Control.MonadA (MonadA)
 import Data.IntMap (IntMap)
+import Data.IntSet (IntSet)
 import Data.Maybe.Utils (unsafeUnjust)
+import Prelude hiding (lookup)
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.State as State
 import qualified Data.IntDisjointSet as IDS
+import qualified Data.IntMap as IntMap
 
 -- TODO: newtype Ref a = Ref Int
 type Ref = Int
@@ -31,6 +35,28 @@ data UnionFind = UnionFind
   , _ufNextRef :: Int
   }
 Lens.makeLenses ''UnionFind
+
+unmaintainedRefMapLookup ::
+  MonadA m => Ref -> StateT (RefMap a) (StateT UnionFind m) (Maybe a)
+unmaintainedRefMapLookup ref = do
+  tryNow ref $ do
+    rep <- lift $ lookup "unmaintainedRefMapLookup.ref" ref
+    tryNow rep $ do
+      oldMap <- State.get
+      newMap <- lift $ normalizeMap oldMap
+      State.put newMap
+      tryNow rep $ return Nothing
+  where
+    normalizeMap oldMap =
+      oldMap
+      & IntMap.toList
+      & (Lens.traverse . Lens._1 %%~ lookup "unmaintainedRefMapLookup.mapKey")
+      <&> IntMap.fromList
+    tryNow r notFound = do
+      mFound <- State.gets (IntMap.lookup r)
+      case mFound of
+        Just found -> return $ Just found
+        Nothing -> notFound
 
 empty :: UnionFind
 empty =

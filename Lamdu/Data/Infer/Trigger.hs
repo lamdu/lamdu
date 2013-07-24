@@ -1,14 +1,17 @@
 module Lamdu.Data.Infer.Trigger
-  ( add
+  ( add, updateRefData
   ) where
 
+import Control.Applicative ((<$))
 import Control.Lens.Operators
+import Control.Monad (filterM, when)
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import qualified Control.Lens as Lens
+import qualified Data.IntMap as IntMap
 import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -38,12 +41,27 @@ checkTrigger refData trigger =
       | Lens.nullOf (rdBody . ExprLens.bodyHole) refData = Just False
       | otherwise = Nothing
 
-add :: Ref -> Trigger -> RuleId -> Infer def ()
-add ref trigger ruleId = do
+handleTrigger :: Ref -> RefData def -> RuleId -> Trigger -> Infer def Bool
+handleTrigger rep refData ruleId trigger =
+  case checkTrigger refData trigger of
+    Nothing -> return True
+    Just result -> False <$ InferM.ruleTrigger ruleId rep trigger result
+
+updateRefData :: Ref -> RefData def -> Infer def (RefData def)
+updateRefData rep refData =
+  refData &
+  rdTriggers %%~
+  fmap (IntMap.filter (not . Set.null)) .
+  Lens.itraverse onTriggers
+  where
+    onTriggers ruleId =
+      fmap Set.fromList .
+      filterM (handleTrigger rep refData ruleId) .
+      Set.toList
+
+add :: Trigger -> RuleId -> Ref -> Infer def ()
+add trigger ruleId ref = do
   rep <- InferM.liftContext $ ExprRefs.find "Trigger.add" ref
   refData <- InferM.liftContext $ ExprRefs.readRep rep
-  case checkTrigger refData trigger of
-    Nothing -> -- No information yet:
-      InferM.liftContext $ remember rep refData trigger ruleId
-    Just result ->
-      InferM.ruleTrigger ruleId rep trigger result
+  keep <- handleTrigger rep refData ruleId trigger
+  when keep . InferM.liftContext $ remember rep refData trigger ruleId

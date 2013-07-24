@@ -3,12 +3,13 @@ module Lamdu.Data.Infer.Internal
   ( Scope(..), emptyScope, scopeMap, scopeRefs
   , RenameHistory(..), _Untracked, _RenameHistory
   -- Relations:
-  , GetFieldRefs(..), gfrTag, gfrType, gfrRecordType, getFieldRefsRefs
   , Relation(..), relationRefs
 
   , Trigger(..)
   , RuleId, RuleIdMap
   , GetFieldPhase0(..), gf0GetFieldTag, gf0GetFieldType
+  , GetFieldPhase1(..), gf1GetFieldRecordTypeFields, gf1GetFieldType
+  , GetFieldPhase2(..), gf2Tag, gf2TagRef, gf2TypeRef, gf2MaybeMatchers
   , Rule(..)
     , ruleRefs
   , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
@@ -34,6 +35,7 @@ import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.UnionFind (Ref, RefMap)
 import qualified Control.Lens as Lens
+import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.UnionFind as UF
@@ -86,25 +88,10 @@ instance Monoid RenameHistory where
   mappend (RenameHistory m1) (RenameHistory m2) =
     RenameHistory $ mappend m1 m2
 
-data GetFieldRefs = GetFieldRefs
-  { _gfrTag :: Ref
-  , _gfrType :: Ref
-  , _gfrRecordType :: Ref
-  }
-Lens.makeLenses ''GetFieldRefs
-
-getFieldRefsRefs :: Lens.Traversal' GetFieldRefs Ref
-getFieldRefsRefs f (GetFieldRefs tag typ recordType) =
-  GetFieldRefs <$> f tag <*> f typ <*> f recordType
-
-data Relation
-  = -- Sits in: Record type of get field, get field type, get field
-    -- tag, record tags:
-    RelationGetField GetFieldRefs
-  | RelationAppliedPiResult AppliedPiResult
+-- TODO: Convert to Rules
+data Relation = RelationAppliedPiResult AppliedPiResult
 
 relationRefs :: Lens.Traversal' Relation Ref
-relationRefs f (RelationGetField x) = RelationGetField <$> getFieldRefsRefs f x
 relationRefs f (RelationAppliedPiResult x) = RelationAppliedPiResult <$> appliedPiResultRefs f x
 
 -- Triggers are alive as long as their truthfulness is yet
@@ -115,24 +102,62 @@ data Trigger
   | TriggerIsRecordType
   deriving (Eq, Ord)
 
+-- We know of a GetField, waiting to know the record type:
 data GetFieldPhase0 = GetFieldPhase0
   { _gf0GetFieldTag :: Ref
   , _gf0GetFieldType :: Ref
+  -- trigger on record type, no need for Ref
   }
 Lens.makeLenses ''GetFieldPhase0
 
 gf0Refs :: Lens.Traversal' GetFieldPhase0 Ref
 gf0Refs f (GetFieldPhase0 tag typ) =
   GetFieldPhase0 <$> f tag <*> f typ
+
+-- We know of a GetField and the record type, waiting to know the
+-- GetField tag:
+data GetFieldPhase1 = GetFieldPhase1
+  { _gf1GetFieldRecordTypeFields :: [(Ref, Ref)]
+  , _gf1GetFieldType :: Ref
+  -- trigger on getfield tag, no need for Ref
+  }
+Lens.makeLenses ''GetFieldPhase1
+
+gf1Refs :: Lens.Traversal' GetFieldPhase1 Ref
+gf1Refs f (GetFieldPhase1 rFields typ) =
+  GetFieldPhase1 <$> (Lens.traverse . Lens.both) f rFields <*> f typ
+
+-- We know of a GetField and the record type, waiting to know the
+-- GetField tag (trigger on getfield tag):
+data GetFieldPhase2 = GetFieldPhase2
+  { _gf2Tag :: Guid
+  , _gf2TagRef :: Ref
+  , _gf2TypeRef :: Ref
+  , -- Maps Refs of tags to Refs of their field types
+    _gf2MaybeMatchers :: RefMap Ref
+  }
+Lens.makeLenses ''GetFieldPhase2
+
+gf2Refs :: Lens.Traversal' GetFieldPhase2 Ref
+gf2Refs f (GetFieldPhase2 tag tagRef typeRef mMatchers) =
+  GetFieldPhase2 tag <$> f tagRef <*> f typeRef <*>
+  (fmap IntMap.fromList . (Lens.traverse . Lens.both) f . IntMap.toList) mMatchers
+
 data Rule
   = RuleVerifyTag
-  | RuleGetFieldPhase0 GetFieldPhase0 -- phase 1
+  | RuleGetFieldPhase0 GetFieldPhase0
+  | RuleGetFieldPhase1 GetFieldPhase1
+  | RuleGetFieldPhase2 GetFieldPhase2
+  | RuleDeleted
 type RuleId = Int
 type RuleIdMap = IntMap
 
 ruleRefs :: Lens.Traversal' Rule Ref
 ruleRefs _ RuleVerifyTag = pure RuleVerifyTag
+ruleRefs _ RuleDeleted = pure RuleDeleted
 ruleRefs f (RuleGetFieldPhase0 x) = RuleGetFieldPhase0 <$> gf0Refs f x
+ruleRefs f (RuleGetFieldPhase1 x) = RuleGetFieldPhase1 <$> gf1Refs f x
+ruleRefs f (RuleGetFieldPhase2 x) = RuleGetFieldPhase2 <$> gf2Refs f x
 
 data RefData def = RefData
   { _rdScope :: Scope
