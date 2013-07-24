@@ -8,6 +8,7 @@ import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
+import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Store.Guid (Guid)
@@ -17,6 +18,7 @@ import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.Unify (unify)
 import qualified Control.Lens as Lens
 import qualified Data.IntMap as IntMap
+import qualified Data.IntSet as IntSet
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -30,7 +32,7 @@ ruleLens ruleId = ctxRuleMap . rmMap . Lens.at ruleId
 data RuleResult
   = RuleKeep
   | RuleDelete
-  | RuleChange Rule
+  | RuleChange RuleContent
 
 type RuleFunc def = Map (Ref, Trigger) Bool -> Infer def RuleResult
 
@@ -139,22 +141,27 @@ getFieldPhase2 initialRule =
             (rule ^. gf2TypeRef) $
               go filteredRule xs
 
-execute :: Eq def => RuleId -> Map (Ref, Trigger) Bool -> Infer def ()
+execute :: Eq def => RuleId -> Map (Ref, Trigger) Bool -> Infer def Bool
 execute ruleId triggers = do
   mOldRule <- InferM.liftContext $ Lens.use (ruleLens ruleId)
-  let oldRule = unsafeUnjust ("Execute called on bad rule id: " ++ show ruleId) mOldRule
+  let Rule ruleTriggerRefs oldRule = unsafeUnjust ("Execute called on bad rule id: " ++ show ruleId) mOldRule
   ruleRes <- ruleRunner oldRule triggers
   InferM.liftContext $
     case ruleRes of
-    RuleKeep -> return ()
-    RuleDelete ->
-      ruleLens ruleId .= Just RuleDeleted
-    RuleChange new ->
-      ruleLens ruleId .= Just new
+    RuleKeep -> return True
+    RuleDelete -> do
+      let
+        deleteRuleFrom ref =
+          ExprRefs.modify ref $ rdTriggers %~ IntMap.delete ruleId
+      traverse_ deleteRuleFrom $ IntSet.toList ruleTriggerRefs
+      ruleLens ruleId .= Nothing
+      return False
+    RuleChange new -> do
+      ruleLens ruleId .= Just (Rule ruleTriggerRefs new)
+      return True
 
-ruleRunner :: Eq def => Rule -> RuleFunc def
+ruleRunner :: Eq def => RuleContent -> RuleFunc def
 ruleRunner RuleVerifyTag = verifyTag
-ruleRunner RuleDeleted = const (return RuleKeep)
 ruleRunner (RuleGetFieldPhase0 x) = getFieldPhase0 x
 ruleRunner (RuleGetFieldPhase1 x) = getFieldPhase1 x
 ruleRunner (RuleGetFieldPhase2 x) = getFieldPhase2 x
