@@ -37,10 +37,10 @@ data UnionFind = UnionFind
 Lens.makeLenses ''UnionFind
 
 unmaintainedRefMapLookup ::
-  MonadA m => Ref -> StateT (RefMap a) (StateT UnionFind m) (Maybe a)
-unmaintainedRefMapLookup ref = do
+  MonadA m => (String -> Ref -> m Ref) -> Ref -> StateT (RefMap a) m (Maybe a)
+unmaintainedRefMapLookup doLookup ref = do
   tryNow ref $ do
-    rep <- lift $ lookup "unmaintainedRefMapLookup.ref" ref
+    rep <- lift $ doLookup "unmaintainedRefMapLookup.ref" ref
     tryNow rep $ do
       oldMap <- State.get
       newMap <- lift $ normalizeMap oldMap
@@ -50,7 +50,7 @@ unmaintainedRefMapLookup ref = do
     normalizeMap oldMap =
       oldMap
       & IntMap.toList
-      & (Lens.traverse . Lens._1 %%~ lookup "unmaintainedRefMapLookup.mapKey")
+      & (Lens.traverse . Lens._1 %%~ doLookup "unmaintainedRefMapLookup.mapKey")
       <&> IntMap.fromList
     tryNow r notFound = do
       mFound <- State.gets (IntMap.lookup r)

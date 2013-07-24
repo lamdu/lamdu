@@ -1,15 +1,12 @@
 {-# LANGUAGE PatternGuards, RecordWildCards #-}
 module Lamdu.Data.Infer.Unify
-  ( unify, fresh, freshHole
-  , forceLam
+  ( unify, forceLam
   ) where
 
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.Monad (when)
-import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.State (state)
-import Control.MonadA (MonadA)
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Map.Utils (lookupOrSelf)
@@ -34,27 +31,21 @@ import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
-fresh :: MonadA m => Scope -> Expr.Body def Ref -> StateT (Context def) m Ref
-fresh scope body = ExprRefs.fresh $ defaultRefData scope body
-
-freshHole :: MonadA m => Scope -> StateT (Context def) m Ref
-freshHole scope = fresh scope $ ExprLens.bodyHole # ()
-
 newRandom :: Random r => Infer def r
 newRandom = InferM.liftContext . Lens.zoom ctxRandomGen $ state random
 
 forceLam :: Eq def => Expr.Kind -> Scope -> Ref -> Infer def (Guid, Ref, Ref)
 forceLam k lamScope destRef = do
   newGuid <- newRandom
-  newParamTypeRef <- InferM.liftContext . fresh lamScope $ ExprLens.bodyHole # ()
+  newParamTypeRef <- InferM.liftExprRefs . fresh lamScope $ ExprLens.bodyHole # ()
   let lamResultScope = lamScope & scopeMap %~ Map.insert newGuid newParamTypeRef
-  newResultTypeRef <- InferM.liftContext . fresh lamResultScope $ ExprLens.bodyHole # ()
+  newResultTypeRef <- InferM.liftExprRefs . fresh lamResultScope $ ExprLens.bodyHole # ()
   newLamRef <-
-    InferM.liftContext . fresh lamScope . Expr.BodyLam $
+    InferM.liftExprRefs . fresh lamScope . Expr.BodyLam $
     Expr.Lam k newGuid newParamTypeRef newResultTypeRef
   -- left is renamed into right (keep existing names of destRef):
   rep <- unify newLamRef destRef
-  body <- InferM.liftContext $ (^. rdBody) <$> ExprRefs.readRep rep
+  body <- InferM.liftExprRefs $ (^. rdBody) <$> ExprRefs.readRep rep
   return . unsafeUnjust "We just unified Lam into rep" $
     body ^? ExprLens.bodyKindedLam k
 
@@ -65,7 +56,7 @@ intersectScopes (Scope aScope) (Scope bScope) =
   where
     -- Expensive assertion
     verifyEquiv aref bref = do
-      equiv <- InferM.liftContext $ ExprRefs.equiv aref bref
+      equiv <- InferM.liftExprRefs $ ExprRefs.equiv aref bref
       if equiv
         then return aref
         else error "Scope unification of differing refs"
@@ -194,7 +185,7 @@ renameMergeRefData recurse rep renames a b = do
     >>= Lens._2 %%~ Trigger.updateRefData rep
   -- First let's write the mergedRefData so we're not in danger zone
   -- of reading missing data:
-  InferM.liftContext $ ExprRefs.write rep mergedRefData
+  InferM.liftExprRefs $ ExprRefs.write rep mergedRefData
   -- Now we can safely run the relations
   when bodyIsUpdated $ InferM.rerunRelations rep
 
@@ -210,24 +201,24 @@ applyHoleConstraints recurse holeConstraints body oldScope = do
 
 unifyRecurse :: Eq def => Set Ref -> Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref
 unifyRecurse visited renames rawNode phase = do
-  nodeRep <- InferM.liftContext $ ExprRefs.find "unifyRecurse:rawNode" rawNode
+  nodeRep <- InferM.liftExprRefs $ ExprRefs.find "unifyRecurse:rawNode" rawNode
   if visited ^. Lens.contains nodeRep
     then InferM.error $ InfiniteExpression nodeRep
     else
     case phase of
     UnifyHoleConstraints holeConstraints -> do
-      oldNodeData <- InferM.liftContext $ ExprRefs.readRep nodeRep
-      InferM.liftContext . ExprRefs.writeRep nodeRep $
+      oldNodeData <- InferM.liftExprRefs $ ExprRefs.readRep nodeRep
+      InferM.liftExprRefs . ExprRefs.writeRep nodeRep $
         error "Reading node during write..."
       let midRefData = renameRefData renames oldNodeData
       midRefData
         & rdScope %%~
           applyHoleConstraints (recurse nodeRep renames) holeConstraints
           (midRefData ^. rdBody)
-        >>= InferM.liftContext . ExprRefs.writeRep nodeRep
+        >>= InferM.liftExprRefs . ExprRefs.writeRep nodeRep
       return nodeRep
     UnifyRef other -> do
-      (rep, unifyResult) <- InferM.liftContext $ ExprRefs.unifyRefs nodeRep other
+      (rep, unifyResult) <- InferM.liftExprRefs $ ExprRefs.unifyRefs nodeRep other
       case unifyResult of
         ExprRefs.UnifyRefsAlreadyUnified -> return ()
         ExprRefs.UnifyRefsUnified xData yData -> merge rep xData yData

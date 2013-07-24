@@ -16,14 +16,13 @@ import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (sequenceA)
 import Data.UnionFind (Ref)
+import Lamdu.Data.Infer.ExprRefs (ExprRefs)
 import Lamdu.Data.Infer.Internal
-import Lamdu.Data.Infer.Unify (freshHole)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Either as Either
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 
 data Loader def m = Loader
   { loadDefType :: def -> m (Expr.Expression def ())
@@ -33,21 +32,39 @@ data Loader def m = Loader
 newtype Error def = LoadUntypedDef def
   deriving (Show)
 
+exprIntoContext ::
+  MonadA m => Expr.Expression def () -> StateT (ExprRefs (RefData def)) m Ref
+exprIntoContext =
+  go mempty
+  where
+    go scope (Expr.Expression body ()) = do
+      newBody <-
+        case body of
+        Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
+          paramTypeRef <- go scope paramType
+          Expr.BodyLam . Expr.Lam k paramGuid paramTypeRef <$>
+            go (scope & Lens.at paramGuid .~ Just paramTypeRef) result
+        -- Expensive assertion:
+        Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid))
+          | Lens.has Lens._Nothing (scope ^. Lens.at guid) -> error "GetVar out of scope"
+        _ -> body & Lens.traverse %%~ go scope
+      fresh (Scope scope) newBody
+
 -- Error includes untyped def use
 loadDefTypeIntoRef ::
   MonadA m =>
   Loader def m -> def ->
-  StateT (Context def) (EitherT (Error def) m) Ref
+  StateT (ExprRefs (RefData def)) (EitherT (Error def) m) Ref
 loadDefTypeIntoRef (Loader loader) def = do
   loadedDefType <- lift . lift $ loader def
   when (Lens.has ExprLens.holePayloads loadedDefType) .
     lift . Either.left $ LoadUntypedDef def
-  ExprRefs.exprIntoContext loadedDefType
+  exprIntoContext loadedDefType
 
 newDefinition ::
   (MonadA m, Ord def) => def -> StateT (Context def) m TypedValue
 newDefinition def = do
-  tv <- TypedValue <$> freshHole (Scope mempty) <*> freshHole (Scope mempty)
+  tv <- Lens.zoom ctxExprRefs $ TypedValue <$> freshHole (Scope mempty) <*> freshHole (Scope mempty)
   ctxDefTVs . Lens.at def %= setRef tv
   return tv
   where
@@ -73,6 +90,6 @@ load loader expr = do
   where
     defLoaders =
       Map.fromList
-      [ (def, TypedValue <$> freshHole (Scope mempty) <*> loadDefTypeIntoRef loader def)
+      [ (def, Lens.zoom ctxExprRefs $ TypedValue <$> freshHole (Scope mempty) <*> loadDefTypeIntoRef loader def)
       | def <- expr ^.. ExprLens.exprDef
       ]
