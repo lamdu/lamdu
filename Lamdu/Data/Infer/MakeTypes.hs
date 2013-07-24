@@ -9,11 +9,13 @@ import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
+import Lamdu.Data.Infer.Rule.Internal (verifyTagId)
 import Lamdu.Data.Infer.Unify (unify, forceLam, fresh, freshHole)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.Rule as Rule
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
 scopeLookup :: Scope -> Guid -> Either (Error def) Ref
@@ -53,7 +55,7 @@ makeApplyType applyScope func arg = do
   return applyTypeRef
 
 addTagVerification :: Ref -> Infer def ()
-addTagVerification = Trigger.add TriggerIsDirectlyTag ruleVerifyTagId
+addTagVerification = Trigger.add TriggerIsDirectlyTag verifyTagId
 
 makeGetFieldType :: Eq def => Scope -> Expr.GetField TypedValue -> Infer def Ref
 makeGetFieldType scope (Expr.GetField record tag) = do
@@ -61,14 +63,7 @@ makeGetFieldType scope (Expr.GetField record tag) = do
   void . unify tagTypeRef $ tag ^. tvType
   getFieldTypeRef <- InferM.liftContext $ freshHole scope
   addTagVerification $ tag ^. tvVal
-  -- TODO: Move to same place as Phase1/Phase2 rule adders
-  ruleId <-
-    InferM.liftContext . Lens.zoom ctxRuleMap . newRule $
-    RuleGetFieldPhase0 GetFieldPhase0
-    { _gf0GetFieldTag = tag ^. tvVal
-    , _gf0GetFieldType = getFieldTypeRef
-    }
-  Trigger.add TriggerIsRecordType ruleId $ record ^. tvType
+  Rule.makeGetField (tag ^. tvVal) getFieldTypeRef (record ^. tvType)
   return getFieldTypeRef
 
 makeLambdaType :: Eq def => Scope -> Guid -> TypedValue -> TypedValue -> Infer def Ref

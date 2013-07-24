@@ -11,6 +11,7 @@ import Control.MonadA (MonadA)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
+import Lamdu.Data.Infer.Rule.Internal (RuleId)
 import qualified Control.Lens as Lens
 import qualified Data.IntMap as IntMap
 import qualified Data.IntSet as IntSet
@@ -19,6 +20,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.Rule.Internal as Rule
 
 remember ::
   MonadA m =>
@@ -27,9 +29,9 @@ remember ::
 remember rep refData trigger ruleId = do
   ExprRefs.writeRep rep $ refData
     & rdTriggers . Lens.at ruleId <>~ Just (Set.singleton trigger)
-  ctxRuleMap . rmMap . Lens.at ruleId .
+  ctxRuleMap . Rule.rmMap . Lens.at ruleId .
     _fromJust "Trigger.remember to missing rule" .
-    ruleTriggersIn <>= IntSet.singleton rep
+    Rule.ruleTriggersIn <>= IntSet.singleton rep
 
 checkTrigger :: RefData def -> Trigger -> Maybe Bool
 checkTrigger refData trigger =
