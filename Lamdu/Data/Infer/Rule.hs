@@ -50,7 +50,7 @@ verifyTag triggers =
 
 assertRecordTypeFields :: MonadA m => Ref -> StateT (Context def) m [(Ref, Ref)]
 assertRecordTypeFields ref =
-  ExprRefs.read ref
+  Lens.zoom ctxExprRefs $ ExprRefs.read ref
   <&> (^? rdBody . ExprLens.bodyKindedRecordFields Expr.KType)
   <&> unsafeUnjust "isRecord && not record?!"
 
@@ -66,7 +66,7 @@ handlePotentialMatches finish fields tag typ other =
 
 assertTag :: MonadA m => Ref -> StateT (Context def) m Guid
 assertTag ref =
-  ExprRefs.read ref
+  Lens.zoom ctxExprRefs $ ExprRefs.read ref
   <&> (^? rdBody . ExprLens.bodyTag)
   <&> unsafeUnjust "isTag && not tag?!"
 
@@ -121,12 +121,12 @@ getFieldPhase2 initialRule =
     go rule [] = return . RuleChange $ RuleGetFieldPhase2 rule
     go rule ((_, False):xs) = go rule xs
     go rule (((ref, _), True):xs) = do
-      rep <- InferM.liftContext $ ExprRefs.find "getFieldPhase2.ref" ref
+      rep <- InferM.liftExprRefs $ ExprRefs.find "getFieldPhase2.ref" ref
       fieldTag <- InferM.liftContext $ assertTag rep
       (mFieldTypeRef, newMaybeMatchers) <-
         InferM.liftContext .
-        Lens.zoom (ctxExprRefs . exprRefsUF) $
-        unmaintainedRefMapLookup rep `runStateT` (rule ^. gf2MaybeMatchers)
+        Lens.zoom ctxExprRefs $
+        unmaintainedRefMapLookup ExprRefs.find rep `runStateT` (rule ^. gf2MaybeMatchers)
       let
         fieldTypeRef = unsafeUnjust "phase2 triggered by wrong ref!" mFieldTypeRef
         optimizedRule = rule & gf2MaybeMatchers .~ newMaybeMatchers
@@ -164,7 +164,7 @@ execute ruleId triggers = do
       let
         deleteRuleFrom ref =
           ExprRefs.modify ref $ rdTriggers %~ IntMap.delete ruleId
-      traverse_ deleteRuleFrom $ IntSet.toList ruleTriggerRefs
+      Lens.zoom ctxExprRefs . traverse_ deleteRuleFrom $ IntSet.toList ruleTriggerRefs
       ruleLens ruleId .= Nothing
       return False
     RuleChange changed -> do

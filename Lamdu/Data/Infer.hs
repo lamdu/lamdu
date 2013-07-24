@@ -95,7 +95,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     bodySTV
     & ExprLens.bodyDef %~ (^. ldDef)
     & mkRefData
-    & InferM.liftContext . ExprRefs.fresh
+    & InferM.liftExprRefs . ExprRefs.fresh
   typeRef <-
     bodySTV <&> (^. Expr.ePayload . Lens._1) & makeTypeRef scope
   pure $

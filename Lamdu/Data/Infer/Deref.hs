@@ -37,7 +37,7 @@ Lens.makeLenses ''Derefed
 
 deref :: Ref -> StateT (Context def) (Either Error) (Expr.Expression def (Restrictions def))
 deref =
-  (`evalStateT` Map.empty) . decycle loop
+  Lens.zoom ctxExprRefs . (`evalStateT` Map.empty) . decycle loop
   where
     loop Nothing ref = lift . lift . Left $ InfiniteExpression ref
     loop (Just recurse) ref = do

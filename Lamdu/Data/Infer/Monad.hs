@@ -2,7 +2,7 @@ module Lamdu.Data.Infer.Monad
   ( Error(..)
   , TriggeredRules(..)
   , Infer, run
-  , liftContext, liftError, error
+  , liftContext, liftExprRefs, liftError, error
   , ruleTrigger
   -- TODO: Delete these:
   , InferActions(..)
@@ -22,6 +22,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Expression.Utils () -- Expr.Body Show instance
+import Lamdu.Data.Infer.ExprRefs (ExprRefs)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Rule.Internal
 import qualified Control.Lens as Lens
@@ -70,6 +71,11 @@ liftContext ::
   Infer def a
 liftContext = lift . lift
 
+liftExprRefs ::
+  StateT (ExprRefs (RefData def)) (Either (Error def)) a ->
+  Infer def a
+liftExprRefs = liftContext . Lens.zoom ctxExprRefs
+
 liftError :: Either (Error def) a -> Infer def a
 liftError = lift . lift . lift
 
@@ -88,5 +94,5 @@ executeRelation relation ref = do
 
 rerunRelations :: Eq def => Ref -> Infer def ()
 rerunRelations ref = do
-  relations <- liftContext $ ExprRefs.read ref <&> (^. rdRelations)
+  relations <- liftContext . Lens.zoom ctxExprRefs $ ExprRefs.read ref <&> (^. rdRelations)
   traverse_ (`executeRelation` ref) relations

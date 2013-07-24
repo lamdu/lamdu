@@ -27,8 +27,8 @@ remember ::
   Ref -> RefData def -> Trigger -> RuleId ->
   StateT (Context def) m ()
 remember rep refData trigger ruleId = do
-  ExprRefs.writeRep rep $ refData
-    & rdTriggers . Lens.at ruleId <>~ Just (Set.singleton trigger)
+  Lens.zoom ctxExprRefs . ExprRefs.writeRep rep $
+    refData & rdTriggers . Lens.at ruleId <>~ Just (Set.singleton trigger)
   ctxRuleMap . Rule.rmMap . Lens.at ruleId .
     _fromJust "Trigger.remember to missing rule" .
     Rule.ruleTriggersIn <>= IntSet.singleton rep
@@ -68,7 +68,7 @@ updateRefData rep refData =
 
 add :: Trigger -> RuleId -> Ref -> Infer def ()
 add trigger ruleId ref = do
-  rep <- InferM.liftContext $ ExprRefs.find "Trigger.add" ref
-  refData <- InferM.liftContext $ ExprRefs.readRep rep
+  rep <- InferM.liftExprRefs $ ExprRefs.find "Trigger.add" ref
+  refData <- InferM.liftExprRefs $ ExprRefs.readRep rep
   keep <- handleTrigger rep refData ruleId trigger
   when keep . InferM.liftContext $ remember rep refData trigger ruleId

@@ -8,8 +8,8 @@ module Lamdu.Data.Infer.Internal
   , Trigger(..)
   , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
     , defaultRefData
+  , fresh, freshHole
   , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames, appliedPiResultRefs
-  , ExprRefs(..), exprRefsUF, exprRefsData
   , Context(..), ctxExprRefs, ctxDefTVs, ctxRuleMap, ctxRandomGen
     , emptyContext
   , LoadedDef(..), ldDef, ldType
@@ -18,17 +18,22 @@ module Lamdu.Data.Infer.Internal
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
+import Control.Lens.Operators
+import Control.Monad.Trans.State (StateT)
+import Control.MonadA (MonadA)
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
-import Data.UnionFind (Ref, RefMap)
+import Data.UnionFind (Ref)
+import Lamdu.Data.Infer.ExprRefs (ExprRefs)
 import Lamdu.Data.Infer.Rule.Internal (RuleIdMap, RuleMap, initialRuleMap)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
-import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified System.Random as Random
 
 newtype Scope = Scope (Map Guid Ref) -- intersected
@@ -121,12 +126,6 @@ rdRefs f (RefData scop renameHistory relations isCircumsized triggers body) =
   <*> pure triggers
   <*> Lens.traverse f body
 
-data ExprRefs def = ExprRefs
-  { _exprRefsUF :: UF.UnionFind
-  , _exprRefsData :: RefMap (RefData def)
-  }
-Lens.makeLenses ''ExprRefs
-
 -- TypedValue:
 data TypedValue = TypedValue
   { _tvVal :: {-# UNPACK #-}! Ref
@@ -152,7 +151,7 @@ stvRefs f (ScopedTypedValue tv scop) = ScopedTypedValue <$> tvRefs f tv <*> scop
 
 -- Context
 data Context def = Context
-  { _ctxExprRefs :: ExprRefs def
+  { _ctxExprRefs :: ExprRefs (RefData def)
   , _ctxRuleMap :: RuleMap
   , -- NOTE: This Map is for 2 purposes: Sharing Refs of loaded Defs
     -- and allowing to specify recursive defs
@@ -164,11 +163,7 @@ Lens.makeLenses ''Context
 emptyContext :: Random.StdGen -> Context def
 emptyContext gen =
   Context
-  { _ctxExprRefs =
-    ExprRefs
-    { _exprRefsUF = UF.empty
-    , _exprRefsData = mempty
-    }
+  { _ctxExprRefs = ExprRefs.empty
   , _ctxRuleMap = initialRuleMap
   , _ctxDefTVs = Map.empty
   , _ctxRandomGen = gen
@@ -179,3 +174,9 @@ data LoadedDef def = LoadedDef
   , _ldType :: Ref
   }
 Lens.makeLenses ''LoadedDef
+
+fresh :: MonadA m => Scope -> Expr.Body def Ref -> StateT (ExprRefs (RefData def)) m Ref
+fresh scop body = ExprRefs.fresh $ defaultRefData scop body
+
+freshHole :: MonadA m => Scope -> StateT (ExprRefs (RefData def)) m Ref
+freshHole scop = fresh scop $ ExprLens.bodyHole # ()
