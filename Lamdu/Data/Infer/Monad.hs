@@ -23,6 +23,7 @@ import Data.Store.Guid (Guid)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Expression.Utils () -- Expr.Body Show instance
 import Lamdu.Data.Infer.Internal
+import Lamdu.Data.Infer.Rule.Internal
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer

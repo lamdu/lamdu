@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 module Lamdu.Data.Infer.Rule
-  ( execute
+  ( execute, makeGetField
   ) where
 
 import Control.Lens (Lens')
@@ -15,6 +15,7 @@ import Data.Store.Guid (Guid)
 import Data.UnionFind (Ref, unmaintainedRefMapLookup)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
+import Lamdu.Data.Infer.Rule.Internal
 import Lamdu.Data.Infer.Unify (unify)
 import qualified Control.Lens as Lens
 import qualified Data.IntMap as IntMap
@@ -80,7 +81,7 @@ getFieldPhase0 rule triggers =
         (rule ^. gf0GetFieldTag)
         (rule ^. gf0GetFieldType) $ do
           phase1RuleId <-
-            InferM.liftContext . Lens.zoom ctxRuleMap . newRule $
+            InferM.liftContext . Lens.zoom ctxRuleMap . new $
             RuleGetFieldPhase1 GetFieldPhase1
             { _gf1GetFieldRecordTypeFields = recordFields
             , _gf1GetFieldType = rule ^. gf0GetFieldType
@@ -99,7 +100,7 @@ getFieldPhase1 rule triggers =
   [((getFieldTagRef, _), True)] -> do
     getFieldTag <- InferM.liftContext $ assertTag getFieldTagRef
     phase2RuleId <-
-      InferM.liftContext . Lens.zoom ctxRuleMap . newRule $
+      InferM.liftContext . Lens.zoom ctxRuleMap . new $
       RuleGetFieldPhase2 GetFieldPhase2
         { _gf2Tag = getFieldTag
         , _gf2TagRef = getFieldTagRef
@@ -141,6 +142,16 @@ getFieldPhase2 initialRule =
             (rule ^. gf2TypeRef) $
               go filteredRule xs
 
+makeGetField :: Ref -> Ref -> Ref -> Infer def ()
+makeGetField tagValRef getFieldTypeRef recordTypeRef = do
+  ruleId <-
+    InferM.liftContext . Lens.zoom ctxRuleMap . new $
+    RuleGetFieldPhase0 GetFieldPhase0
+    { _gf0GetFieldTag = tagValRef
+    , _gf0GetFieldType = getFieldTypeRef
+    }
+  Trigger.add TriggerIsRecordType ruleId $ recordTypeRef
+
 execute :: Eq def => RuleId -> Map (Ref, Trigger) Bool -> Infer def Bool
 execute ruleId triggers = do
   mOldRule <- InferM.liftContext $ Lens.use (ruleLens ruleId)
@@ -156,8 +167,8 @@ execute ruleId triggers = do
       traverse_ deleteRuleFrom $ IntSet.toList ruleTriggerRefs
       ruleLens ruleId .= Nothing
       return False
-    RuleChange new -> do
-      ruleLens ruleId .= Just (Rule ruleTriggerRefs new)
+    RuleChange changed -> do
+      ruleLens ruleId .= Just (Rule ruleTriggerRefs changed)
       return True
 
 ruleRunner :: Eq def => RuleContent -> RuleFunc def
