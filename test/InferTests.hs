@@ -493,10 +493,21 @@ getFieldTests =
     ]
   ]
 
+fromQuickCheck1 =
+  testCase "fromQuickCheck1: \\a -> a (a a)" .
+  inferFailsAssertion "GetFieldRequiresRecord" isExpectedError $
+  -- QuickCheck discovered: ? (\\a:?==>a (25 (a (a (a a)) ?)))
+  -- simplified to:
+  lambda "a" hole $ \a -> a $$ (a $$ a)
+  where
+    isExpectedError (InferError Infer.InfiniteExpression {}) = True
+    isExpectedError _ = False
+
 hunitTests =
   simpleTests
   ++
-  [ mapIdTest
+  [ fromQuickCheck1
+  , mapIdTest
   , testInfer "factorial" factorialExpr
   , testInfer "euler1" euler1Expr
   , testInferAllowFail "Missing type inferences"
