@@ -4,6 +4,7 @@ module Lamdu.Data.Infer.Trigger
 
 import Control.Applicative ((<$))
 import Control.Lens.Operators
+import Control.Lens.Utils (_fromJust)
 import Control.Monad (filterM, when)
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
@@ -12,6 +13,7 @@ import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import qualified Control.Lens as Lens
 import qualified Data.IntMap as IntMap
+import qualified Data.IntSet as IntSet
 import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -22,9 +24,12 @@ remember ::
   MonadA m =>
   Ref -> RefData def -> Trigger -> RuleId ->
   StateT (Context def) m ()
-remember rep refData trigger ruleId =
+remember rep refData trigger ruleId = do
   ExprRefs.writeRep rep $ refData
-  & rdTriggers . Lens.at ruleId <>~ Just (Set.singleton trigger)
+    & rdTriggers . Lens.at ruleId <>~ Just (Set.singleton trigger)
+  ctxRuleMap . rmMap . Lens.at ruleId .
+    _fromJust "Trigger.remember to missing rule" .
+    ruleTriggersIn <>= IntSet.singleton rep
 
 checkTrigger :: RefData def -> Trigger -> Maybe Bool
 checkTrigger refData trigger =

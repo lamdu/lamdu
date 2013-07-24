@@ -15,8 +15,7 @@ import Control.Applicative (Applicative(..))
 import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans.State (StateT)
-import Control.Monad.Trans.Writer (WriterT(..), execWriterT)
-import Data.Monoid (Monoid(..))
+import Control.Monad.Trans.Writer (WriterT(..), runWriterT)
 import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.Internal
@@ -67,9 +66,12 @@ runInfer act = do
       case IntMap.minViewWithKey oldRuleIds of
       Nothing -> return ()
       Just ((firstRuleId, triggers), ruleIds) ->
-        go . mappend (InferM.TriggeredRules ruleIds) =<<
-        (execWriterT . inferToWriter)
+        go . filterRemovedRule firstRuleId . (Lens._2 <>~ InferM.TriggeredRules ruleIds) =<<
+        (runWriterT . inferToWriter)
         (Rule.execute firstRuleId triggers)
+    filterRemovedRule _ (True, rules) = rules
+    filterRemovedRule ruleId (False, InferM.TriggeredRules rules) =
+      InferM.TriggeredRules $ IntMap.delete ruleId rules
 
 -- With hole apply vals and hole types
 exprIntoSTV ::

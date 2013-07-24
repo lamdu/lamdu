@@ -10,7 +10,8 @@ module Lamdu.Data.Infer.Internal
   , GetFieldPhase0(..), gf0GetFieldTag, gf0GetFieldType
   , GetFieldPhase1(..), gf1GetFieldRecordTypeFields, gf1GetFieldType
   , GetFieldPhase2(..), gf2Tag, gf2TagRef, gf2TypeRef, gf2MaybeMatchers
-  , Rule(..)
+  , RuleContent(..)
+  , Rule(..), ruleTriggersIn, ruleContent
     , ruleRefs
   , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
     , defaultRefData
@@ -33,9 +34,10 @@ import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
-import Data.UnionFind (Ref, RefMap)
+import Data.UnionFind (Ref, RefMap, RefSet)
 import qualified Control.Lens as Lens
 import qualified Data.IntMap as IntMap
+import qualified Data.IntSet as IntSet
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.UnionFind as UF
@@ -143,21 +145,32 @@ gf2Refs f (GetFieldPhase2 tag tagRef typeRef mMatchers) =
   GetFieldPhase2 tag <$> f tagRef <*> f typeRef <*>
   (fmap IntMap.fromList . (Lens.traverse . Lens.both) f . IntMap.toList) mMatchers
 
-data Rule
+data Rule = Rule
+  { _ruleTriggersIn :: RefSet
+  , _ruleContent :: RuleContent
+  }
+
+data RuleContent
   = RuleVerifyTag
   | RuleGetFieldPhase0 GetFieldPhase0
   | RuleGetFieldPhase1 GetFieldPhase1
   | RuleGetFieldPhase2 GetFieldPhase2
-  | RuleDeleted
 type RuleId = Int
 type RuleIdMap = IntMap
 
+Lens.makeLenses ''Rule
+
+ruleContentRefs :: Lens.Traversal' RuleContent Ref
+ruleContentRefs _ RuleVerifyTag = pure RuleVerifyTag
+ruleContentRefs f (RuleGetFieldPhase0 x) = RuleGetFieldPhase0 <$> gf0Refs f x
+ruleContentRefs f (RuleGetFieldPhase1 x) = RuleGetFieldPhase1 <$> gf1Refs f x
+ruleContentRefs f (RuleGetFieldPhase2 x) = RuleGetFieldPhase2 <$> gf2Refs f x
+
 ruleRefs :: Lens.Traversal' Rule Ref
-ruleRefs _ RuleVerifyTag = pure RuleVerifyTag
-ruleRefs _ RuleDeleted = pure RuleDeleted
-ruleRefs f (RuleGetFieldPhase0 x) = RuleGetFieldPhase0 <$> gf0Refs f x
-ruleRefs f (RuleGetFieldPhase1 x) = RuleGetFieldPhase1 <$> gf1Refs f x
-ruleRefs f (RuleGetFieldPhase2 x) = RuleGetFieldPhase2 <$> gf2Refs f x
+ruleRefs f (Rule triggers content) =
+  Rule
+  <$> (fmap IntSet.fromList . Lens.traverse f . IntSet.toList) triggers
+  <*> ruleContentRefs f content
 
 data RefData def = RefData
   { _rdScope :: Scope
@@ -224,10 +237,10 @@ data RuleMap = RuleMap
   }
 Lens.makeLenses ''RuleMap
 
-newRule :: Monad m => Rule -> StateT RuleMap m RuleId
+newRule :: Monad m => RuleContent -> StateT RuleMap m RuleId
 newRule rule = do
   ruleId <- Lens.use rmNext
-  rmMap . Lens.at ruleId .= Just rule
+  rmMap . Lens.at ruleId .= Just (Rule mempty rule)
   rmNext += 1
   return ruleId
 
@@ -237,7 +250,7 @@ ruleVerifyTagId = 0
 initialRuleMap :: RuleMap
 initialRuleMap = RuleMap
   { _rmNext = ruleVerifyTagId + 1
-  , _rmMap = mempty & Lens.at ruleVerifyTagId .~ Just RuleVerifyTag
+  , _rmMap = mempty & Lens.at ruleVerifyTagId .~ Just (Rule mempty RuleVerifyTag)
   }
 
 -- Context
