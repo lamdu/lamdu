@@ -6,6 +6,8 @@ module Lamdu.Data.Infer.Unify
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.Monad (when)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Decycle (DecycleT, runDecycleT, visit)
 import Control.Monad.Trans.State (state)
 import Data.Foldable (traverse_)
 import Data.Map (Map)
@@ -87,19 +89,18 @@ data UnifyPhase
 
 mergeScopeBodies ::
   Eq def =>
-  (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
   Map Guid Guid ->
   Scope -> Expr.Body def Ref ->
   Scope -> Expr.Body def Ref ->
-  Infer def (Scope, Expr.Body def Ref)
-mergeScopeBodies recurse renames xScope xBody yScope yBody = do
-  intersectedScope <- intersectScopes xScope yScope
+  DecycleT Ref (Infer def) (Scope, Expr.Body def Ref)
+mergeScopeBodies renames xScope xBody yScope yBody = do
+  intersectedScope <- lift $ intersectScopes xScope yScope
   let
     unifyWithHole activeRenames holeScope otherScope nonHoleBody
       | Set.null unusableScopeSet && Map.null renames =
         return (intersectedScope, nonHoleBody)
       | otherwise =
-        applyHoleConstraints (recurse activeRenames) (HoleConstraints unusableScopeSet)
+        applyHoleConstraints activeRenames (HoleConstraints unusableScopeSet)
         nonHoleBody intersectedScope
         <&> flip (,) nonHoleBody
       where
@@ -109,7 +110,7 @@ mergeScopeBodies recurse renames xScope xBody yScope yBody = do
     (Expr.BodyLeaf Expr.Hole, _) -> unifyWithHole Map.empty xScope yScope yBody
     _ ->
       fmap ((,) intersectedScope) .
-      fromMaybe (InferM.error (Mismatch xBody yBody)) $
+      (fromMaybe . lift . InferM.error) (Mismatch xBody yBody) $
       sequenceA <$> ExprUtil.matchBody matchLamResult matchOther (==) xBody yBody
   where
     makeUnusableScopeSet holeScope otherScope =
@@ -117,8 +118,8 @@ mergeScopeBodies recurse renames xScope xBody yScope yBody = do
       (otherScope ^. scopeMap)
       (holeScope ^. scopeMap)
     matchLamResult xGuid yGuid xRef yRef =
-      (yGuid, recurse (renames & Lens.at xGuid .~ Just yGuid) xRef (UnifyRef yRef))
-    matchOther xRef yRef = recurse renames xRef (UnifyRef yRef)
+      (yGuid, unifyRecurse (renames & Lens.at xGuid .~ Just yGuid) xRef (UnifyRef yRef))
+    matchOther xRef yRef = unifyRecurse renames xRef (UnifyRef yRef)
 
 renameAppliedPiResult :: Map Guid Guid -> AppliedPiResult -> AppliedPiResult
 renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames) =
@@ -150,13 +151,13 @@ renameRefData renames RefData {..}
 
 mergeRefData ::
   Eq def =>
-  (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
-  Map Guid Guid -> RefData def -> RefData def -> Infer def (Bool, RefData def)
-mergeRefData recurse renames
+  Map Guid Guid -> RefData def -> RefData def ->
+  DecycleT Ref (Infer def) (Bool, RefData def)
+mergeRefData renames
   (RefData aScope aMRenameHistory aRelations aIsCircumsized aTriggers aBody)
   (RefData bScope bMRenameHistory bRelations bIsCircumsized bTriggers bBody) =
   mkRefData
-  <$> mergeScopeBodies recurse renames aScope aBody bScope bBody
+  <$> mergeScopeBodies renames aScope aBody bScope bBody
   where
     bodyIsUpdated =
       Lens.has ExprLens.bodyHole aBody /=
@@ -176,56 +177,62 @@ mergeRefData recurse renames
 
 renameMergeRefData ::
   Eq def =>
-  (Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref) ->
   Ref -> Map Guid Guid -> RefData def -> RefData def ->
-  Infer def ()
-renameMergeRefData recurse rep renames a b = do
+  DecycleT Ref (Infer def) ()
+renameMergeRefData rep renames a b = do
   (bodyIsUpdated, mergedRefData) <-
-    mergeRefData recurse renames (renameRefData renames a) b
-    >>= Lens._2 %%~ Trigger.updateRefData rep
+    mergeRefData renames (renameRefData renames a) b
+    >>= Lens._2 %%~ lift . Trigger.updateRefData rep
   -- First let's write the mergedRefData so we're not in danger zone
   -- of reading missing data:
-  InferM.liftExprRefs $ ExprRefs.write rep mergedRefData
+  lift . InferM.liftExprRefs $ ExprRefs.write rep mergedRefData
   -- Now we can safely run the relations
-  when bodyIsUpdated $ InferM.rerunRelations rep
+  when bodyIsUpdated . lift $ InferM.rerunRelations rep
 
 applyHoleConstraints ::
-  (Ref -> UnifyPhase -> Infer def dummy) -> HoleConstraints ->
-  Expr.Body def Ref -> Scope -> Infer def Scope
-applyHoleConstraints recurse holeConstraints body oldScope = do
+  Eq def =>
+  Map Guid Guid ->
+  HoleConstraints ->
+  Expr.Body def Ref -> Scope ->
+  DecycleT Ref (Infer def) Scope
+applyHoleConstraints renames holeConstraints body oldScope = do
   newScope <-
-    InferM.liftError $
+    lift . InferM.liftError $
     checkHoleConstraints holeConstraints body oldScope
-  traverse_ (`recurse` UnifyHoleConstraints holeConstraints) body
+  traverse_ (unifyRecurse renames ?? UnifyHoleConstraints holeConstraints) body
   return newScope
 
-unifyRecurse :: Eq def => Set Ref -> Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref
-unifyRecurse visited renames rawNode phase = do
-  nodeRep <- InferM.liftExprRefs $ ExprRefs.find "unifyRecurse:rawNode" rawNode
-  if visited ^. Lens.contains nodeRep
-    then InferM.error $ InfiniteExpression nodeRep
-    else
+unifyRecurse ::
+  Eq def =>
+  Map Guid Guid -> Ref -> UnifyPhase ->
+  DecycleT Ref (Infer def) Ref
+unifyRecurse renames rawNode phase = do
+  nodeRep <- lift . InferM.liftExprRefs $ ExprRefs.find "unifyRecurse:rawNode" rawNode
+  mResult <-
+    visit nodeRep $
     case phase of
     UnifyHoleConstraints holeConstraints -> do
-      oldNodeData <- InferM.liftExprRefs $ ExprRefs.readRep nodeRep
-      InferM.liftExprRefs . ExprRefs.writeRep nodeRep $
+      oldNodeData <- lift . InferM.liftExprRefs $ ExprRefs.readRep nodeRep
+      lift . InferM.liftExprRefs . ExprRefs.writeRep nodeRep $
         error "Reading node during write..."
       let midRefData = renameRefData renames oldNodeData
       midRefData
         & rdScope %%~
-          applyHoleConstraints (recurse nodeRep renames) holeConstraints
+          applyHoleConstraints renames holeConstraints
           (midRefData ^. rdBody)
-        >>= InferM.liftExprRefs . ExprRefs.writeRep nodeRep
+        >>= lift . InferM.liftExprRefs . ExprRefs.writeRep nodeRep
       return nodeRep
     UnifyRef other -> do
-      (rep, unifyResult) <- InferM.liftExprRefs $ ExprRefs.unifyRefs nodeRep other
+      (rep, unifyResult) <- lift . InferM.liftExprRefs $ ExprRefs.unifyRefs nodeRep other
       case unifyResult of
         ExprRefs.UnifyRefsAlreadyUnified -> return ()
-        ExprRefs.UnifyRefsUnified xData yData -> merge rep xData yData
+        ExprRefs.UnifyRefsUnified xData yData ->
+          renameMergeRefData rep renames xData yData
       return rep
-  where
-    recurse visitedRef = unifyRecurse (visited & Lens.contains visitedRef .~ True)
-    merge rep = renameMergeRefData (recurse rep) rep renames
+  case mResult of
+    Nothing -> lift . InferM.error $ InfiniteExpression nodeRep
+    Just result -> return result
 
 unify :: Eq def => Ref -> Ref -> Infer def Ref
-unify x y = unifyRecurse mempty mempty x (UnifyRef y)
+unify x y =
+  runDecycleT $ unifyRecurse mempty x (UnifyRef y)

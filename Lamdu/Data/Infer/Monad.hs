@@ -54,11 +54,11 @@ instance Monoid TriggeredRules where
   mappend (TriggeredRules x) (TriggeredRules y) =
     TriggeredRules $ IntMap.unionWith mappend x y
 
-type Infer def a =
+type Infer def =
   ReaderT (InferActions def)
   (WriterT TriggeredRules
    (StateT (Context def)
-    (Either (Error def)))) a
+    (Either (Error def))))
 
 ruleTrigger :: RuleId -> Ref -> Trigger -> Bool -> Infer def ()
 ruleTrigger ruleId ref trigger res =
