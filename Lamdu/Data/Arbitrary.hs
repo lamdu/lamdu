@@ -41,6 +41,22 @@ arbitraryLambda = do
   flip Expr.Lam guid <$> liftGen arbitrary <*> arbitraryExpr <*>
     Reader.local (envScope %~ (guid :)) arbitraryExpr
 
+listOf :: GenExpr def a -> GenExpr def [a]
+listOf gen = do
+  terminate <- liftGen $ Gen.frequency [(1, return True), (2, return False)]
+  if terminate
+    then return []
+    else (:) <$> gen <*> listOf gen
+
+arbitraryRecord :: Arbitrary a => GenExpr def (Expr.Record (Expr.Expression def a))
+arbitraryRecord =
+  Expr.Record
+  <$> liftGen arbitrary
+  <*> listOf ((,) <$> arbitraryExpr <*> arbitraryExpr)
+
+arbitraryGetField :: Arbitrary a => GenExpr def (Expr.GetField (Expr.Expression def a))
+arbitraryGetField = Expr.GetField <$> arbitraryExpr <*> arbitraryExpr
+
 arbitraryApply :: Arbitrary a => GenExpr def (Expr.Apply (Expr.Expression def a))
 arbitraryApply = Expr.Apply <$> arbitraryExpr <*> arbitraryExpr
 
@@ -60,9 +76,11 @@ arbitraryLeaf = do
 arbitraryBody :: Arbitrary a => GenExpr def (Expr.BodyExpr def a)
 arbitraryBody =
   join . liftGen . Gen.frequency . (Lens.mapped . Lens._2 %~ pure) $
-  [ weight 2  $ Expr.BodyLam    <$> arbitraryLambda
-  , weight 5  $ Expr.BodyApply  <$> arbitraryApply
-  , weight 10 $ Expr.BodyLeaf   <$> arbitraryLeaf
+  [ weight 2  $ Expr.BodyLam      <$> arbitraryLambda
+  , weight 2  $ Expr.BodyRecord   <$> arbitraryRecord
+  , weight 2  $ Expr.BodyGetField <$> arbitraryGetField
+  , weight 5  $ Expr.BodyApply    <$> arbitraryApply
+  , weight 17 $ Expr.BodyLeaf     <$> arbitraryLeaf
   ]
   where
     weight = (,)
