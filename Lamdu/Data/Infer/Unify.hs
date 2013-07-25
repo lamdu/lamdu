@@ -200,8 +200,11 @@ applyHoleConstraints recurse holeConstraints body oldScope = do
   return newScope
 
 unifyRecurse :: Eq def => Set Ref -> Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref
-unifyRecurse visited0 renames rawNode phase =
-  refToRep rawNode visited0 $ \nodeRep visited1 ->
+unifyRecurse visited renames rawNode phase = do
+  nodeRep <- InferM.liftExprRefs $ ExprRefs.find "unifyRecurse:rawNode" rawNode
+  if visited ^. Lens.contains nodeRep
+    then InferM.error $ InfiniteExpression nodeRep
+    else
     case phase of
     UnifyHoleConstraints holeConstraints -> do
       oldNodeData <- InferM.liftExprRefs $ ExprRefs.readRep nodeRep
@@ -210,25 +213,19 @@ unifyRecurse visited0 renames rawNode phase =
       let midRefData = renameRefData renames oldNodeData
       midRefData
         & rdScope %%~
-          applyHoleConstraints (unifyRecurse visited1 renames) holeConstraints
+          applyHoleConstraints (recurse nodeRep renames) holeConstraints
           (midRefData ^. rdBody)
         >>= InferM.liftExprRefs . ExprRefs.writeRep nodeRep
       return nodeRep
-    UnifyRef other ->
-      refToRep other visited1 $ \otherRep visited2 -> do
-        (rep, unifyResult) <- InferM.liftExprRefs $ ExprRefs.unifyRefs nodeRep otherRep
-        case unifyResult of
-          ExprRefs.UnifyRefsAlreadyUnified -> return ()
-          ExprRefs.UnifyRefsUnified xData yData ->
-            renameMergeRefData (unifyRecurse visited2) rep renames xData yData
-        return rep
+    UnifyRef other -> do
+      (rep, unifyResult) <- InferM.liftExprRefs $ ExprRefs.unifyRefs nodeRep other
+      case unifyResult of
+        ExprRefs.UnifyRefsAlreadyUnified -> return ()
+        ExprRefs.UnifyRefsUnified xData yData -> merge rep xData yData
+      return rep
   where
-    refToRep ref oldVisited act = do
-      rep <- InferM.liftExprRefs $ ExprRefs.find "unifyRecurse:refToRep" ref
-      if oldVisited ^. Lens.contains rep
-        then InferM.error $ InfiniteExpression rep
-        else act rep $ oldVisited & Lens.contains rep .~ True
-
+    recurse visitedRef = unifyRecurse (visited & Lens.contains visitedRef .~ True)
+    merge rep = renameMergeRefData (recurse rep) rep renames
 
 unify :: Eq def => Ref -> Ref -> Infer def Ref
 unify x y = unifyRecurse mempty mempty x (UnifyRef y)
