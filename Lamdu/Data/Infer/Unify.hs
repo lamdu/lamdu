@@ -200,9 +200,8 @@ applyHoleConstraints recurse holeConstraints body oldScope = do
   return newScope
 
 unifyRecurse :: Eq def => Set Ref -> Map Guid Guid -> Ref -> UnifyPhase -> Infer def Ref
-unifyRecurse visited0 renames rawNode phase = do
-  nodeRep <- InferM.liftExprRefs $ ExprRefs.find "unifyRecurse:rawNode" rawNode
-  visitedCheck nodeRep visited0 $ \visited1 ->
+unifyRecurse visited0 renames rawNode phase =
+  refToRep rawNode visited0 $ \nodeRep visited1 ->
     case phase of
     UnifyHoleConstraints holeConstraints -> do
       oldNodeData <- InferM.liftExprRefs $ ExprRefs.readRep nodeRep
@@ -215,9 +214,8 @@ unifyRecurse visited0 renames rawNode phase = do
           (midRefData ^. rdBody)
         >>= InferM.liftExprRefs . ExprRefs.writeRep nodeRep
       return nodeRep
-    UnifyRef other -> do
-      otherRep <- InferM.liftExprRefs $ ExprRefs.find "unifyRecurse:other" other
-      visitedCheck otherRep visited1 $ \visited2 -> do
+    UnifyRef other ->
+      refToRep other visited1 $ \otherRep visited2 -> do
         (rep, unifyResult) <- InferM.liftExprRefs $ ExprRefs.unifyRefs nodeRep otherRep
         case unifyResult of
           ExprRefs.UnifyRefsAlreadyUnified -> return ()
@@ -225,9 +223,11 @@ unifyRecurse visited0 renames rawNode phase = do
             renameMergeRefData (unifyRecurse visited2) rep renames xData yData
         return rep
   where
-    visitedCheck rep oldVisited f
-      | oldVisited ^. Lens.contains rep = InferM.error $ InfiniteExpression rep
-      | otherwise = f $ oldVisited & Lens.contains rep .~ True
+    refToRep ref oldVisited act = do
+      rep <- InferM.liftExprRefs $ ExprRefs.find "unifyRecurse:refToRep" ref
+      if oldVisited ^. Lens.contains rep
+        then InferM.error $ InfiniteExpression rep
+        else act rep $ oldVisited & Lens.contains rep .~ True
 
 
 unify :: Eq def => Ref -> Ref -> Infer def Ref
