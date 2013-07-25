@@ -83,10 +83,6 @@ checkHoleConstraints (HoleConstraints unusableSet) body scope
   where
     unusableMap = Map.fromSet (const ()) unusableSet
 
-data UnifyPhase
-  = UnifyHoleConstraints HoleConstraints
-  | UnifyRef Ref
-
 mergeScopeBodies ::
   Eq def =>
   Map Guid Guid ->
@@ -118,8 +114,8 @@ mergeScopeBodies renames xScope xBody yScope yBody = do
       (otherScope ^. scopeMap)
       (holeScope ^. scopeMap)
     matchLamResult xGuid yGuid xRef yRef =
-      (yGuid, unifyRecurse (renames & Lens.at xGuid .~ Just yGuid) xRef (UnifyRef yRef))
-    matchOther xRef yRef = unifyRecurse renames xRef (UnifyRef yRef)
+      (yGuid, unifyRecurse (renames & Lens.at xGuid .~ Just yGuid) xRef yRef)
+    matchOther xRef yRef = unifyRecurse renames xRef yRef
 
 renameAppliedPiResult :: Map Guid Guid -> AppliedPiResult -> AppliedPiResult
 renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames) =
@@ -199,40 +195,47 @@ applyHoleConstraints renames holeConstraints body oldScope = do
   newScope <-
     lift . InferM.liftError $
     checkHoleConstraints holeConstraints body oldScope
-  traverse_ (unifyRecurse renames ?? UnifyHoleConstraints holeConstraints) body
+  traverse_ (holeConstraintsRecurse renames holeConstraints) body
   return newScope
 
-unifyRecurse ::
-  Eq def =>
-  Map Guid Guid -> Ref -> UnifyPhase ->
-  DecycleT Ref (Infer def) Ref
-unifyRecurse renames rawNode phase = do
-  nodeRep <- lift . InferM.liftExprRefs $ ExprRefs.find "unifyRecurse:rawNode" rawNode
-  mResult <-
-    visit nodeRep $
-    case phase of
-    UnifyHoleConstraints holeConstraints -> do
-      oldNodeData <- lift . InferM.liftExprRefs $ ExprRefs.readRep nodeRep
-      lift . InferM.liftExprRefs . ExprRefs.writeRep nodeRep $
-        error "Reading node during write..."
-      let midRefData = renameRefData renames oldNodeData
-      midRefData
-        & rdScope %%~
-          applyHoleConstraints renames holeConstraints
-          (midRefData ^. rdBody)
-        >>= lift . InferM.liftExprRefs . ExprRefs.writeRep nodeRep
-      return nodeRep
-    UnifyRef other -> do
-      (rep, unifyResult) <- lift . InferM.liftExprRefs $ ExprRefs.unifyRefs nodeRep other
-      case unifyResult of
-        ExprRefs.UnifyRefsAlreadyUnified -> return ()
-        ExprRefs.UnifyRefsUnified xData yData ->
-          renameMergeRefData rep renames xData yData
-      return rep
+decycleDefend ::
+  Ref -> (Ref -> DecycleT Ref (Infer def) Ref) -> DecycleT Ref (Infer def) Ref
+decycleDefend ref action = do
+  nodeRep <- lift . InferM.liftExprRefs $ ExprRefs.find "holeConstraintsRecurse:rawNode" ref
+  mResult <- visit nodeRep (action nodeRep)
   case mResult of
     Nothing -> lift . InferM.error $ InfiniteExpression nodeRep
     Just result -> return result
 
+holeConstraintsRecurse ::
+  Eq def =>
+  Map Guid Guid -> HoleConstraints -> Ref ->
+  DecycleT Ref (Infer def) Ref
+holeConstraintsRecurse renames holeConstraints rawNode =
+  decycleDefend rawNode $ \nodeRep -> do
+    oldNodeData <- lift . InferM.liftExprRefs $ ExprRefs.readRep nodeRep
+    lift . InferM.liftExprRefs . ExprRefs.writeRep nodeRep $
+      error "Reading node during write..."
+    let midRefData = renameRefData renames oldNodeData
+    midRefData
+      & rdScope %%~
+        applyHoleConstraints renames holeConstraints
+        (midRefData ^. rdBody)
+      >>= lift . InferM.liftExprRefs . ExprRefs.writeRep nodeRep
+    return nodeRep
+
+unifyRecurse ::
+  Eq def =>
+  Map Guid Guid -> Ref -> Ref ->
+  DecycleT Ref (Infer def) Ref
+unifyRecurse renames rawNode other =
+  decycleDefend rawNode $ \nodeRep -> do
+    (rep, unifyResult) <- lift . InferM.liftExprRefs $ ExprRefs.unifyRefs nodeRep other
+    case unifyResult of
+      ExprRefs.UnifyRefsAlreadyUnified -> return ()
+      ExprRefs.UnifyRefsUnified xData yData ->
+        renameMergeRefData rep renames xData yData
+    return rep
+
 unify :: Eq def => Ref -> Ref -> Infer def Ref
-unify x y =
-  runDecycleT $ unifyRecurse mempty x (UnifyRef y)
+unify x = runDecycleT . unifyRecurse mempty x
