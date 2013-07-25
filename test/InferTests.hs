@@ -82,7 +82,7 @@ inferFromOneArgToOther =
   [getDef "True", b, c]
 
 inferFromOneArgToOtherMap =
-  testInfer "f = \\ a b (c:List _ _) (d:Map a b) -> if {_ c d}" $
+  testInfer "f = \\ a b (c:Map _ _) (d:Map a b) -> if {_ c d}" $
   lambda "a" (asHole set) $ \a ->
   lambda "b" (asHole set) $ \b ->
   let mkMapType f = getDef "Map" $$: [f a, f b] in
