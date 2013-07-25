@@ -81,6 +81,14 @@ inferFromOneArgToOther =
   getDef "if" $$ a $$:
   [getDef "True", b, c]
 
+inferFromOneArgToOtherList =
+  testInfer "f = \\ a (b:List _) (c:List a) -> if {_ b c}" $
+  lambda "a" (asHole set) $ \a ->
+  lambda "b" (listOf (asHole a)) $ \b ->
+  lambda "c" (listOf a) $ \c ->
+  getDef "if" $$ asHole (listOf a) $$:
+  [holeWithInferredType (getDef "Bool"), b, c]
+
 inferFromOneArgToOtherMap =
   testInfer "f = \\ a b (c:Map _ _) (d:Map a b) -> if {_ c d}" $
   lambda "a" (asHole set) $ \a ->
@@ -520,6 +528,7 @@ hunitTests =
   , idOnARecord
   , idOnHole
   , inferFromOneArgToOther
+  , inferFromOneArgToOtherList
   , inferFromOneArgToOtherMap
   , depApply
   , forceMono
