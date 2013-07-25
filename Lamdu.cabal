@@ -15,7 +15,8 @@ Library
   -- Modules exported by the library.
   hs-Source-Dirs:      bottlelib
 
-  Exposed-modules:     Data.Cache,
+  Exposed-modules:     Control.Monad.Trans.Decycle,
+                       Data.Cache,
                        Data.Function.Decycle,
                        Data.List.Assoc,
                        Data.List.Utils,
