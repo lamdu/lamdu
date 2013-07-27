@@ -64,24 +64,19 @@ intersectScopes (Scope aScope) (Scope bScope) =
         else error "Scope unification of differing refs"
 
 newtype HoleConstraints = HoleConstraints
-  { _hcUnusableInHoleScope :: Set Guid
+  { hcUnusableInHoleScope :: Set Guid
   }
 
 -- You must apply this recursively
-checkHoleConstraints ::
-  HoleConstraints -> Expr.Body def Ref -> Scope ->
-  Either (Error def) Scope
-checkHoleConstraints (HoleConstraints unusableSet) body scope
+checkHoleConstraints :: HoleConstraints -> Expr.Body def Ref -> Either (Error def) ()
+checkHoleConstraints (HoleConstraints unusableSet) body
   | Just paramGuid <- body ^? ExprLens.bodyParameterRef
   , paramGuid `Set.member` unusableSet
   = Left $ VarEscapesScope paramGuid
   -- Expensive assertion
   | Lens.anyOf (Expr._BodyLam . Expr.lamParamId) (`Set.member` unusableSet) body =
     error "checkHoleConstraints: Shadowing detected"
-  | otherwise =
-    return $ scope & scopeMap %~ (`Map.difference` unusableMap)
-  where
-    unusableMap = Map.fromSet (const ()) unusableSet
+  | otherwise = return ()
 
 type U def = DecycleT Ref (Infer def)
 
@@ -194,11 +189,10 @@ applyHoleConstraints ::
   Expr.Body def Ref -> Scope ->
   U def Scope
 applyHoleConstraints renames holeConstraints body oldScope = do
-  newScope <-
-    lift . InferM.liftError $
-    checkHoleConstraints holeConstraints body oldScope
+  lift . InferM.liftError $ checkHoleConstraints holeConstraints body
   traverse_ (holeConstraintsRecurse renames holeConstraints) body
-  return newScope
+  let unusableMap = Map.fromSet (const ()) $ hcUnusableInHoleScope holeConstraints
+  return $ oldScope & scopeMap %~ (`Map.difference` unusableMap)
 
 decycleDefend :: Ref -> (Ref -> U def Ref) -> U def Ref
 decycleDefend ref action = do
