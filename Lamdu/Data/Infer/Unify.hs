@@ -238,4 +238,4 @@ unifyRecurse renames rawNode other =
     return rep
 
 unify :: Eq def => Ref -> Ref -> Infer def Ref
-unify x = runDecycleT . unifyRecurse mempty x
+unify x y = runDecycleT $ unifyRecurse mempty x y
