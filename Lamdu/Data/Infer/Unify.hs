@@ -83,12 +83,14 @@ checkHoleConstraints (HoleConstraints unusableSet) body scope
   where
     unusableMap = Map.fromSet (const ()) unusableSet
 
+type U def = DecycleT Ref (Infer def)
+
 mergeScopeBodies ::
   Eq def =>
   Map Guid Guid ->
   Scope -> Expr.Body def Ref ->
   Scope -> Expr.Body def Ref ->
-  DecycleT Ref (Infer def) (Scope, Expr.Body def Ref)
+  U def (Scope, Expr.Body def Ref)
 mergeScopeBodies renames xScope xBody yScope yBody = do
   intersectedScope <- lift $ intersectScopes xScope yScope
   let
@@ -148,7 +150,7 @@ renameRefData renames RefData {..}
 mergeRefData ::
   Eq def =>
   Map Guid Guid -> RefData def -> RefData def ->
-  DecycleT Ref (Infer def) (Bool, RefData def)
+  U def (Bool, RefData def)
 mergeRefData renames
   (RefData aScope aMRenameHistory aRelations aIsCircumsized aTriggers aBody)
   (RefData bScope bMRenameHistory bRelations bIsCircumsized bTriggers bBody) =
@@ -174,7 +176,7 @@ mergeRefData renames
 renameMergeRefData ::
   Eq def =>
   Ref -> Map Guid Guid -> RefData def -> RefData def ->
-  DecycleT Ref (Infer def) ()
+  U def ()
 renameMergeRefData rep renames a b = do
   (bodyIsUpdated, mergedRefData) <-
     mergeRefData renames (renameRefData renames a) b
@@ -190,7 +192,7 @@ applyHoleConstraints ::
   Map Guid Guid ->
   HoleConstraints ->
   Expr.Body def Ref -> Scope ->
-  DecycleT Ref (Infer def) Scope
+  U def Scope
 applyHoleConstraints renames holeConstraints body oldScope = do
   newScope <-
     lift . InferM.liftError $
@@ -198,8 +200,7 @@ applyHoleConstraints renames holeConstraints body oldScope = do
   traverse_ (holeConstraintsRecurse renames holeConstraints) body
   return newScope
 
-decycleDefend ::
-  Ref -> (Ref -> DecycleT Ref (Infer def) Ref) -> DecycleT Ref (Infer def) Ref
+decycleDefend :: Ref -> (Ref -> U def Ref) -> U def Ref
 decycleDefend ref action = do
   nodeRep <- lift . InferM.liftExprRefs $ ExprRefs.find "holeConstraintsRecurse:rawNode" ref
   mResult <- visit nodeRep (action nodeRep)
@@ -208,9 +209,7 @@ decycleDefend ref action = do
     Just result -> return result
 
 holeConstraintsRecurse ::
-  Eq def =>
-  Map Guid Guid -> HoleConstraints -> Ref ->
-  DecycleT Ref (Infer def) Ref
+  Eq def => Map Guid Guid -> HoleConstraints -> Ref -> U def Ref
 holeConstraintsRecurse renames holeConstraints rawNode =
   decycleDefend rawNode $ \nodeRep -> do
     oldNodeData <- lift . InferM.liftExprRefs $ ExprRefs.readRep nodeRep
@@ -225,9 +224,7 @@ holeConstraintsRecurse renames holeConstraints rawNode =
     return nodeRep
 
 unifyRecurse ::
-  Eq def =>
-  Map Guid Guid -> Ref -> Ref ->
-  DecycleT Ref (Infer def) Ref
+  Eq def => Map Guid Guid -> Ref -> Ref -> U def Ref
 unifyRecurse renames rawNode other =
   decycleDefend rawNode $ \nodeRep -> do
     (rep, unifyResult) <- lift . InferM.liftExprRefs $ ExprRefs.unifyRefs nodeRep other
