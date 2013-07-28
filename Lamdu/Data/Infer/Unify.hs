@@ -9,12 +9,14 @@ import Control.Monad (when)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Decycle (DecycleT, runDecycleT, visit)
 import Control.Monad.Trans.State (state)
-import Data.Foldable (traverse_)
+import Control.Monad.Trans.Writer (WriterT(..))
+import Data.Foldable (sequenceA_, traverse_)
 import Data.Map (Map)
 import Data.Map.Utils (lookupOrSelf)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
+import Data.Monoid.Applicative (ApplicativeMonoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
@@ -23,6 +25,7 @@ import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import System.Random (Random, random)
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -80,14 +83,25 @@ checkHoleConstraints (HoleConstraints unusableSet) body
 
 type U def = DecycleT Ref (Infer def)
 
+uInfer :: Infer def a -> U def a
+uInfer = lift
+
+type WU def = WriterT (ApplicativeMonoid (U def) ()) (U def)
+wuInfer :: Infer def a -> WU def a
+wuInfer = lift . uInfer
+wuRun :: WU def a -> U def (a, U def ())
+wuRun = fmap (Lens._2 %~ runApplicativeMonoid) . runWriterT
+wuLater :: U def () -> WU def ()
+wuLater = Writer.tell . ApplicativeMonoid
+
 mergeScopeBodies ::
   Eq def =>
   Map Guid Guid ->
   Scope -> Expr.Body def Ref ->
   Scope -> Expr.Body def Ref ->
-  U def (Scope, Expr.Body def Ref)
+  WU def (Scope, Expr.Body def Ref)
 mergeScopeBodies renames xScope xBody yScope yBody = do
-  intersectedScope <- lift $ intersectScopes xScope yScope
+  intersectedScope <- wuInfer $ intersectScopes xScope yScope
   let
     unifyWithHole activeRenames holeScope otherScope nonHoleBody
       | Set.null unusableScopeSet && Map.null renames =
@@ -101,10 +115,13 @@ mergeScopeBodies renames xScope xBody yScope yBody = do
   case (xBody, yBody) of
     (_, Expr.BodyLeaf Expr.Hole) -> unifyWithHole renames   yScope xScope xBody
     (Expr.BodyLeaf Expr.Hole, _) -> unifyWithHole Map.empty xScope yScope yBody
-    _ ->
-      fmap ((,) intersectedScope) .
-      (fromMaybe . lift . InferM.error) (Mismatch xBody yBody) $
-      sequenceA <$> ExprUtil.matchBody matchLamResult matchOther (==) xBody yBody
+    _ -> do
+      wuLater . (fromMaybe . lift . InferM.error) (Mismatch xBody yBody) $
+        sequenceA_ <$> ExprUtil.matchBody matchLamResult matchOther (==) xBody yBody
+      -- We must return the yBody and not xBody here. Ref-wise, both
+      -- are fine. But name-wise, the names are going to be taken from
+      -- y, not x.
+      return (intersectedScope, yBody)
   where
     makeUnusableScopeSet holeScope otherScope =
       Map.keysSet $ Map.difference
@@ -145,7 +162,7 @@ renameRefData renames RefData {..}
 mergeRefData ::
   Eq def =>
   Map Guid Guid -> RefData def -> RefData def ->
-  U def (Bool, RefData def)
+  WU def (Bool, RefData def)
 mergeRefData renames
   (RefData aScope aMRenameHistory aRelations aIsCircumsized aTriggers aBody)
   (RefData bScope bMRenameHistory bRelations bIsCircumsized bTriggers bBody) =
@@ -171,26 +188,20 @@ mergeRefData renames
 renameMergeRefData ::
   Eq def =>
   Ref -> Map Guid Guid -> RefData def -> RefData def ->
-  U def ()
-renameMergeRefData rep renames a b = do
-  (bodyIsUpdated, mergedRefData) <-
-    mergeRefData renames (renameRefData renames a) b
-    >>= Lens._2 %%~ lift . Trigger.updateRefData rep
-  -- First let's write the mergedRefData so we're not in danger zone
-  -- of reading missing data:
-  lift . InferM.liftExprRefs $ ExprRefs.write rep mergedRefData
-  -- Now we can safely run the relations
-  when bodyIsUpdated . lift $ InferM.rerunRelations rep
+  WU def (Bool, RefData def)
+renameMergeRefData rep renames a b =
+  mergeRefData renames (renameRefData renames a) b
+  >>= Lens._2 %%~ wuInfer . Trigger.updateRefData rep
 
 applyHoleConstraints ::
   Eq def =>
   Map Guid Guid ->
   HoleConstraints ->
   Expr.Body def Ref -> Scope ->
-  U def Scope
+  WU def Scope
 applyHoleConstraints renames holeConstraints body oldScope = do
-  lift . InferM.liftError $ checkHoleConstraints holeConstraints body
-  traverse_ (holeConstraintsRecurse renames holeConstraints) body
+  wuInfer . InferM.liftError $ checkHoleConstraints holeConstraints body
+  wuLater $ traverse_ (holeConstraintsRecurse renames holeConstraints) body
   let unusableMap = Map.fromSet (const ()) $ hcUnusableInHoleScope holeConstraints
   return $ oldScope & scopeMap %~ (`Map.difference` unusableMap)
 
@@ -210,11 +221,14 @@ holeConstraintsRecurse renames holeConstraints rawNode =
     lift . InferM.liftExprRefs . ExprRefs.writeRep nodeRep $
       error "Reading node during write..."
     let midRefData = renameRefData renames oldNodeData
-    midRefData
+    (newRefData, later) <-
+      wuRun $
+      midRefData
       & rdScope %%~
         applyHoleConstraints renames holeConstraints
         (midRefData ^. rdBody)
-      >>= lift . InferM.liftExprRefs . ExprRefs.writeRep nodeRep
+    uInfer . InferM.liftExprRefs $ ExprRefs.writeRep nodeRep newRefData
+    later
     return nodeRep
 
 unifyRecurse ::
@@ -224,8 +238,17 @@ unifyRecurse renames rawNode other =
     (rep, unifyResult) <- lift . InferM.liftExprRefs $ ExprRefs.unifyRefs nodeRep other
     case unifyResult of
       ExprRefs.UnifyRefsAlreadyUnified -> return ()
-      ExprRefs.UnifyRefsUnified xData yData ->
-        renameMergeRefData rep renames xData yData
+      ExprRefs.UnifyRefsUnified xData yData -> do
+        ((bodyIsUpdated, mergedRefData), later) <-
+          wuRun $ renameMergeRefData rep renames xData yData
+        -- First let's write the mergedRefData so we're not in danger zone
+        -- of reading missing data:
+        lift . InferM.liftExprRefs $ ExprRefs.write rep mergedRefData
+        -- Now lets do the deferred recursive unifications:
+        later
+        -- TODO: Remove this when replaced Relations with Rules
+        -- Now we can safely re-run the relations
+        when bodyIsUpdated . lift $ InferM.rerunRelations rep
     return rep
 
 unify :: Eq def => Ref -> Ref -> Infer def Ref
