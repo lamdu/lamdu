@@ -4,8 +4,8 @@ import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad (void)
 import Data.Monoid (Monoid(..))
+import Data.OpaqueRef (Ref)
 import Data.Store.Guid (Guid)
-import Data.UnionFind (Ref)
 import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))

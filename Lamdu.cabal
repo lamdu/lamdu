@@ -25,6 +25,7 @@ Library
                        Data.Monoid.Applicative,
                        Data.Monoid.Instances,
                        Data.MRUMemo,
+                       Data.OpaqueRef,
                        Data.Vector.Vector2,
                        Data.IntDisjointSet,
                        Data.UnionFind,

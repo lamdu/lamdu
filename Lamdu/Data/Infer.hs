@@ -6,6 +6,7 @@ module Lamdu.Data.Infer
   -- Re-export:
   , Context
   , Scope, emptyScope
+  , Ref
   , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
   , Optimize.optimizeContext
@@ -16,7 +17,7 @@ import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Writer (WriterT(..), runWriterT)
-import Data.UnionFind (Ref)
+import Data.OpaqueRef (Ref)
 import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.MakeTypes (makeTypeRef)

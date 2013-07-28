@@ -15,7 +15,7 @@ import Control.MonadA (MonadA)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (sequenceA)
-import Data.UnionFind (Ref)
+import Data.OpaqueRef (Ref)
 import Lamdu.Data.Infer.ExprRefs (ExprRefs)
 import Lamdu.Data.Infer.Internal
 import qualified Control.Lens as Lens

@@ -20,12 +20,12 @@ import Control.Monad.Trans.Writer (runWriter)
 import Control.MonadA (MonadA)
 import Data.Foldable (traverse_)
 import Data.Maybe.Utils (unsafeUnjust)
-import Data.UnionFind (Ref, RefMap)
+import Data.OpaqueRef (Ref, RefMap)
 import Prelude hiding (read)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Control.Monad.Trans.Writer as Writer
-import qualified Data.IntMap as IntMap
+import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind as UF
 
 data ExprRefs a = ExprRefs
@@ -37,7 +37,7 @@ Lens.makeLenses ''ExprRefs
 empty :: ExprRefs a
 empty = ExprRefs
   { _exprRefsUF = UF.empty
-  , _exprRefsData = IntMap.empty
+  , _exprRefsData = OR.emptyRefMap
   }
 
 fresh :: MonadA m => a -> StateT (ExprRefs a) m Ref
@@ -114,16 +114,16 @@ optimize onData (ExprRefs oldUf oldRefsData) =
   where
     (newUf, refRenames) =
       runWriter . (`execStateT` UF.empty) $
-      oldRefsData & IntMap.keys & traverse_ %%~ freshRef
+      oldRefsData ^.. OR.unsafeRefMapItems . Lens._1 & traverse_ %%~ freshRef
     refRename msg oldRef =
       let oldRep = (`evalState` oldUf) $ UF.lookup "optimize:in old UF" oldRef
       in refRenames ^? Lens.ix oldRep & unsafeUnjust msg
     newRefsData =
       oldRefsData
-      & IntMap.toList
-      & map (refRename "optimize:onOldRefItem" ***
-             onData (refRename "optimize:onRefData"))
-      & IntMap.fromList
+      & OR.unsafeRefMapItems %~
+        (refRename "optimize:onOldRefItem"
+         ***
+         onData (refRename "optimize:onRefData"))
     freshRef oldRep = do
       newRep <- UF.freshRef
-      lift $ Writer.tell (IntMap.singleton oldRep newRep)
+      lift $ Writer.tell (OR.refMapSingleton oldRep newRep)

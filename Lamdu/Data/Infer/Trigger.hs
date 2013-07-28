@@ -8,13 +8,13 @@ import Control.Lens.Utils (_fromJust)
 import Control.Monad (filterM, when)
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
-import Data.UnionFind (Ref)
+import Data.OpaqueRef (Ref)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.Rule.Internal (RuleId)
 import qualified Control.Lens as Lens
 import qualified Data.IntMap as IntMap
-import qualified Data.IntSet as IntSet
+import qualified Data.OpaqueRef as OR
 import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -31,7 +31,7 @@ remember rep refData trigger ruleId = do
     refData & rdTriggers . Lens.at ruleId <>~ Just (Set.singleton trigger)
   ctxRuleMap . Rule.rmMap . Lens.at ruleId .
     _fromJust "Trigger.remember to missing rule" .
-    Rule.ruleTriggersIn <>= IntSet.singleton rep
+    Rule.ruleTriggersIn <>= OR.refSetSingleton rep
 
 checkTrigger :: RefData def -> Trigger -> Maybe Bool
 checkTrigger refData trigger =
