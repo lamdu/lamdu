@@ -25,7 +25,7 @@ import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
-import Data.UnionFind (Ref)
+import Data.OpaqueRef (Ref)
 import Lamdu.Data.Infer.ExprRefs (ExprRefs)
 import Lamdu.Data.Infer.Rule.Internal (RuleIdMap, RuleMap, initialRuleMap)
 import qualified Control.Lens as Lens

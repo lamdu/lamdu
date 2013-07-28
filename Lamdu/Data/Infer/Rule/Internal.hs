@@ -17,11 +17,10 @@ import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT)
 import Data.IntMap (IntMap)
 import Data.Monoid (Monoid(..))
+import Data.OpaqueRef (Ref, RefMap, RefSet)
 import Data.Store.Guid (Guid)
-import Data.UnionFind (Ref, RefMap, RefSet)
 import qualified Control.Lens as Lens
-import qualified Data.IntMap as IntMap
-import qualified Data.IntSet as IntSet
+import qualified Data.OpaqueRef as OR
 
 type RuleId = Int
 type RuleIdMap = IntMap
@@ -84,8 +83,7 @@ gf1Refs f (GetFieldPhase1 rFields typ) =
 gf2Refs :: Lens.Traversal' GetFieldPhase2 Ref
 gf2Refs f (GetFieldPhase2 tag tagRef typeRef mMatchers) =
   GetFieldPhase2 tag <$> f tagRef <*> f typeRef <*>
-  (fmap IntMap.fromList . (Lens.traverse . Lens.both) f . IntMap.toList) mMatchers
-
+  (mMatchers & OR.unsafeRefMapItems . Lens.both %%~ f)
 
 ruleContentRefs :: Lens.Traversal' RuleContent Ref
 ruleContentRefs _ RuleVerifyTag = pure RuleVerifyTag
@@ -96,7 +94,7 @@ ruleContentRefs f (RuleGetFieldPhase2 x) = RuleGetFieldPhase2 <$> gf2Refs f x
 ruleRefs :: Lens.Traversal' Rule Ref
 ruleRefs f (Rule triggers content) =
   Rule
-  <$> (fmap IntSet.fromList . Lens.traverse f . IntSet.toList) triggers
+  <$> OR.unsafeRefSetKeys f triggers
   <*> ruleContentRefs f content
 
 new :: Monad m => RuleContent -> StateT RuleMap m RuleId

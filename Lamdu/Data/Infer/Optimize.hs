@@ -4,7 +4,7 @@ module Lamdu.Data.Infer.Optimize
 
 import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT(..), state)
-import Data.UnionFind (Ref)
+import Data.OpaqueRef (Ref)
 import Lamdu.Data.Infer.Internal
 import qualified Control.Lens as Lens
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs

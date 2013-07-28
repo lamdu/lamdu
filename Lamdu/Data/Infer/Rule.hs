@@ -11,16 +11,17 @@ import Control.MonadA (MonadA)
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Maybe.Utils (unsafeUnjust)
+import Data.OpaqueRef (Ref)
 import Data.Store.Guid (Guid)
-import Data.UnionFind (Ref, unmaintainedRefMapLookup)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.Rule.Internal
 import Lamdu.Data.Infer.Unify (unify)
 import qualified Control.Lens as Lens
 import qualified Data.IntMap as IntMap
-import qualified Data.IntSet as IntSet
 import qualified Data.Map as Map
+import qualified Data.OpaqueRef as OR
+import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
@@ -105,7 +106,7 @@ getFieldPhase1 rule triggers =
         { _gf2Tag = getFieldTag
         , _gf2TagRef = getFieldTagRef
         , _gf2TypeRef = rule ^. gf1GetFieldType
-        , _gf2MaybeMatchers = IntMap.fromList $ rule ^. gf1GetFieldRecordTypeFields
+        , _gf2MaybeMatchers = OR.refMapFromList $ rule ^. gf1GetFieldRecordTypeFields
         }
     rule ^. gf1GetFieldRecordTypeFields
       & Lens.traverseOf_ (Lens.traverse . Lens._1) %%~
@@ -126,7 +127,7 @@ getFieldPhase2 initialRule =
       (mFieldTypeRef, newMaybeMatchers) <-
         InferM.liftContext .
         Lens.zoom ctxExprRefs $
-        unmaintainedRefMapLookup ExprRefs.find rep `runStateT` (rule ^. gf2MaybeMatchers)
+        UF.unmaintainedRefMapLookup ExprRefs.find rep `runStateT` (rule ^. gf2MaybeMatchers)
       let
         fieldTypeRef = unsafeUnjust "phase2 triggered by wrong ref!" mFieldTypeRef
         optimizedRule = rule & gf2MaybeMatchers .~ newMaybeMatchers
@@ -135,9 +136,9 @@ getFieldPhase2 initialRule =
           void . unify fieldTypeRef $ rule ^. gf2TypeRef
           return . RuleChange $ RuleGetFieldPhase2 optimizedRule
         else do
-          let filteredRule = optimizedRule & gf2MaybeMatchers %~ IntMap.delete rep
+          let filteredRule = optimizedRule & gf2MaybeMatchers . Lens.at rep .~ Nothing
           handlePotentialMatches RuleDelete
-            (IntMap.toList (filteredRule ^. gf2MaybeMatchers))
+            (OR.refMapToList (filteredRule ^. gf2MaybeMatchers))
             (rule ^. gf2TagRef)
             (rule ^. gf2TypeRef) $
               go filteredRule xs
@@ -164,7 +165,7 @@ execute ruleId triggers = do
       let
         deleteRuleFrom ref =
           ExprRefs.modify ref $ rdTriggers %~ IntMap.delete ruleId
-      Lens.zoom ctxExprRefs . traverse_ deleteRuleFrom $ IntSet.toList ruleTriggerRefs
+      Lens.zoom ctxExprRefs . traverse_ deleteRuleFrom $ OR.refSetToList ruleTriggerRefs
       ruleLens ruleId .= Nothing
       return False
     RuleChange changed -> do

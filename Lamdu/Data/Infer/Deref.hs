@@ -11,7 +11,7 @@ import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT, evalStateT)
 import Data.Function.Decycle (decycle)
-import Data.UnionFind (Ref)
+import Data.OpaqueRef (Ref)
 import Lamdu.Data.Infer.Internal
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map

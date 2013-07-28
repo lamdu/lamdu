@@ -19,8 +19,8 @@ import Control.Monad.Trans.Writer (WriterT(..))
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
+import Data.OpaqueRef (Ref)
 import Data.Store.Guid (Guid)
-import Data.UnionFind (Ref)
 import Lamdu.Data.Expression.Utils () -- Expr.Body Show instance
 import Lamdu.Data.Infer.ExprRefs (ExprRefs)
 import Lamdu.Data.Infer.Internal
