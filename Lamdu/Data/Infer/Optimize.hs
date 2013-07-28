@@ -4,12 +4,11 @@ module Lamdu.Data.Infer.Optimize
 
 import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT(..), state)
-import Data.OpaqueRef (Ref)
 import Lamdu.Data.Infer.Internal
 import qualified Control.Lens as Lens
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 
-optimizeContext :: Monad m => StateT (Context def) m (Ref -> Ref)
+optimizeContext :: Monad m => StateT (Context def) m (RefD def -> RefD def)
 optimizeContext = do
   refRename <- Lens.zoom ctxExprRefs . state $ ExprRefs.optimize (rdRefs %~)
   ctxDefTVs . Lens.mapped . tvRefs %= refRename

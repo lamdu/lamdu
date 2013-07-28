@@ -9,7 +9,6 @@ import Data.Foldable (sequenceA_)
 import Data.Map.Utils (lookupOrSelf)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
-import Data.OpaqueRef (Ref)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
 import Lamdu.Data.Infer.Internal
@@ -24,7 +23,7 @@ import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
 
 -- Remap a Guid from piResult context to the Apply context
-remapSubstGuid :: AppliedPiResult -> RenameHistory -> Guid -> Guid
+remapSubstGuid :: AppliedPiResult def -> RenameHistory -> Guid -> Guid
 remapSubstGuid apr destRenameHistory src =
   case apr ^? aprCopiedNames . Lens.ix src of
   -- If it's not a copied guid, it should be the same guid/ref in both
@@ -34,7 +33,7 @@ remapSubstGuid apr destRenameHistory src =
     fromMaybe dest $
     destRenameHistory ^? _RenameHistory . Lens.ix dest
 
-injectRenameHistory :: RenameHistory -> AppliedPiResult -> AppliedPiResult
+injectRenameHistory :: RenameHistory -> AppliedPiResult def -> AppliedPiResult def
 injectRenameHistory Untracked = id
 injectRenameHistory (RenameHistory renames) =
   -- Only the copied names (in our argument map) need to be fixed,
@@ -42,7 +41,7 @@ injectRenameHistory (RenameHistory renames) =
   aprCopiedNames . Lens.mapped %~ lookupOrSelf renames
 
 -- TODO: This should also substLeafs, and it should also subst getvars that aren't subst
-substNode :: Eq def => Expr.Body def Ref -> AppliedPiResult -> Infer def ()
+substNode :: Eq def => Expr.Body def (RefD def) -> AppliedPiResult def -> Infer def ()
 substNode srcBody rawApr = do
   destData <- InferM.liftExprRefs $ ExprRefs.read destRef
   let
@@ -70,7 +69,7 @@ substNode srcBody rawApr = do
       handleAppliedPiResult srcChildRef $
       childApr & aprDestRef .~ destChildRef
 
-handleAppliedPiResult :: Eq def => Ref -> AppliedPiResult -> Infer def ()
+handleAppliedPiResult :: Eq def => RefD def -> AppliedPiResult def -> Infer def ()
 handleAppliedPiResult srcRef apr = do
   srcData <- InferM.liftExprRefs $ ExprRefs.read srcRef
   destData <- InferM.liftExprRefs $ ExprRefs.read destRef
