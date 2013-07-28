@@ -17,7 +17,6 @@ import Data.Maybe (fromMaybe)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Monoid.Applicative (ApplicativeMonoid(..))
-import Data.OpaqueRef (Ref)
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
@@ -39,7 +38,7 @@ import qualified Lamdu.Data.Infer.Trigger as Trigger
 newRandom :: Random r => Infer def r
 newRandom = InferM.liftContext . Lens.zoom ctxRandomGen $ state random
 
-forceLam :: Eq def => Expr.Kind -> Scope -> Ref -> Infer def (Guid, Ref, Ref)
+forceLam :: Eq def => Expr.Kind -> Scope def -> RefD def -> Infer def (Guid, RefD def, RefD def)
 forceLam k lamScope destRef = do
   newGuid <- newRandom
   newParamTypeRef <- InferM.liftExprRefs . fresh lamScope $ ExprLens.bodyHole # ()
@@ -55,7 +54,7 @@ forceLam k lamScope destRef = do
     body ^? ExprLens.bodyKindedLam k
 
 -- If we don't assert that the scopes have same refs we could be pure
-intersectScopes :: Scope -> Scope -> Infer def Scope
+intersectScopes :: Scope def -> Scope def -> Infer def (Scope def)
 intersectScopes (Scope aScope) (Scope bScope) =
   Scope <$> sequenceA (Map.intersectionWith verifyEquiv aScope bScope)
   where
@@ -71,7 +70,7 @@ newtype HoleConstraints = HoleConstraints
   }
 
 -- You must apply this recursively
-checkHoleConstraints :: HoleConstraints -> Expr.Body def Ref -> Either (Error def) ()
+checkHoleConstraints :: HoleConstraints -> Expr.Body def (RefD def) -> Either (Error def) ()
 checkHoleConstraints (HoleConstraints unusableSet) body
   | Just paramGuid <- body ^? ExprLens.bodyParameterRef
   , paramGuid `Set.member` unusableSet
@@ -81,7 +80,7 @@ checkHoleConstraints (HoleConstraints unusableSet) body
     error "checkHoleConstraints: Shadowing detected"
   | otherwise = return ()
 
-type U def = DecycleT Ref (Infer def)
+type U def = DecycleT (RefD def) (Infer def)
 
 uInfer :: Infer def a -> U def a
 uInfer = lift
@@ -97,9 +96,9 @@ wuLater = Writer.tell . ApplicativeMonoid
 mergeScopeBodies ::
   Eq def =>
   Map Guid Guid ->
-  Scope -> Expr.Body def Ref ->
-  Scope -> Expr.Body def Ref ->
-  WU def (Scope, Expr.Body def Ref)
+  Scope def -> Expr.Body def (RefD def) ->
+  Scope def -> Expr.Body def (RefD def) ->
+  WU def (Scope def, Expr.Body def (RefD def))
 mergeScopeBodies renames xScope xBody yScope yBody = do
   intersectedScope <- wuInfer $ intersectScopes xScope yScope
   let
@@ -131,13 +130,13 @@ mergeScopeBodies renames xScope xBody yScope yBody = do
       (yGuid, unifyRecurse (renames & Lens.at xGuid .~ Just yGuid) xRef yRef)
     matchOther xRef yRef = unifyRecurse renames xRef yRef
 
-renameAppliedPiResult :: Map Guid Guid -> AppliedPiResult -> AppliedPiResult
+renameAppliedPiResult :: Map Guid Guid -> AppliedPiResult def -> AppliedPiResult def
 renameAppliedPiResult renames (AppliedPiResult piGuid argVal destRef copiedNames) =
   AppliedPiResult
   (lookupOrSelf renames piGuid) argVal destRef
   (Map.mapKeys (lookupOrSelf renames) copiedNames)
 
-renameRelation :: Map Guid Guid -> Relation -> Relation
+renameRelation :: Map Guid Guid -> Relation def -> Relation def
 renameRelation renames (RelationAppliedPiResult apr) =
   RelationAppliedPiResult $ renameAppliedPiResult renames apr
 
@@ -187,7 +186,7 @@ mergeRefData renames
 
 renameMergeRefData ::
   Eq def =>
-  Ref -> Map Guid Guid -> RefData def -> RefData def ->
+  RefD def -> Map Guid Guid -> RefData def -> RefData def ->
   WU def (Bool, RefData def)
 renameMergeRefData rep renames a b =
   mergeRefData renames (renameRefData renames a) b
@@ -197,15 +196,15 @@ applyHoleConstraints ::
   Eq def =>
   Map Guid Guid ->
   HoleConstraints ->
-  Expr.Body def Ref -> Scope ->
-  WU def Scope
+  Expr.Body def (RefD def) -> Scope def ->
+  WU def (Scope def)
 applyHoleConstraints renames holeConstraints body oldScope = do
   wuInfer . InferM.liftError $ checkHoleConstraints holeConstraints body
   wuLater $ traverse_ (holeConstraintsRecurse renames holeConstraints) body
   let unusableMap = Map.fromSet (const ()) $ hcUnusableInHoleScope holeConstraints
   return $ oldScope & scopeMap %~ (`Map.difference` unusableMap)
 
-decycleDefend :: Ref -> (Ref -> U def Ref) -> U def Ref
+decycleDefend :: RefD def -> (RefD def -> U def (RefD def)) -> U def (RefD def)
 decycleDefend ref action = do
   nodeRep <- lift . InferM.liftExprRefs $ ExprRefs.find "holeConstraintsRecurse:rawNode" ref
   mResult <- visit nodeRep (action nodeRep)
@@ -214,7 +213,7 @@ decycleDefend ref action = do
     Just result -> return result
 
 holeConstraintsRecurse ::
-  Eq def => Map Guid Guid -> HoleConstraints -> Ref -> U def Ref
+  Eq def => Map Guid Guid -> HoleConstraints -> RefD def -> U def (RefD def)
 holeConstraintsRecurse renames holeConstraints rawNode =
   decycleDefend rawNode $ \nodeRep -> do
     oldNodeData <- lift . InferM.liftExprRefs $ ExprRefs.readRep nodeRep
@@ -232,7 +231,7 @@ holeConstraintsRecurse renames holeConstraints rawNode =
     return nodeRep
 
 unifyRecurse ::
-  Eq def => Map Guid Guid -> Ref -> Ref -> U def Ref
+  Eq def => Map Guid Guid -> RefD def -> RefD def -> U def (RefD def)
 unifyRecurse renames rawNode other =
   decycleDefend rawNode $ \nodeRep -> do
     (rep, unifyResult) <- lift . InferM.liftExprRefs $ ExprRefs.unifyRefs nodeRep other
@@ -251,5 +250,5 @@ unifyRecurse renames rawNode other =
         when bodyIsUpdated . lift $ InferM.rerunRelations rep
     return rep
 
-unify :: Eq def => Ref -> Ref -> Infer def Ref
+unify :: Eq def => RefD def -> RefD def -> Infer def (RefD def)
 unify x y = runDecycleT $ unifyRecurse mempty x y

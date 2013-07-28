@@ -5,6 +5,8 @@ module Lamdu.Data.Infer.Internal
   -- Relations:
   , Relation(..), relationRefs
 
+  , ExprRefsD, RefD
+
   , Trigger(..)
   , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
     , defaultRefData
@@ -22,140 +24,48 @@ import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
 import Data.Map (Map)
-import Data.Monoid (Monoid(..))
-import Data.Set (Set)
-import Data.Store.Guid (Guid)
-import Data.OpaqueRef (Ref)
 import Lamdu.Data.Infer.ExprRefs (ExprRefs)
-import Lamdu.Data.Infer.Rule.Internal (RuleIdMap, RuleMap, initialRuleMap)
+import Lamdu.Data.Infer.RefData
+import Lamdu.Data.Infer.Rule.Internal (RuleMap, initialRuleMap)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
-import qualified Data.Monoid as Monoid
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified System.Random as Random
 
-newtype Scope = Scope (Map Guid Ref) -- intersected
-Lens.makeIso ''Scope
-
-emptyScope :: Scope
-emptyScope = Scope mempty
-
-scopeMap :: Lens.Iso' Scope (Map Guid Ref)
-scopeMap = Lens.from scope
-
-scopeRefs :: Lens.Traversal' Scope Ref
-scopeRefs = scopeMap . Lens.traverse
-
--- Represents a relationship between some subexpression of a Pi result
--- type and the respective sub-expression of an apply type that it
--- should be copied with substs (or unified) into
-data AppliedPiResult = AppliedPiResult
-  { -- Guid to subst
-    _aprPiGuid :: Guid
-  , -- Arg val to subst with
-    _aprArgVal :: Ref
-  , -- Dest Ref
-    _aprDestRef :: Ref
-  , -- For each src (pi result) guid, remember the dest (apply type)
-    -- guid it was copied as and the Ref of the dest param type
-    _aprCopiedNames :: Map Guid Guid
-  }
-Lens.makeLenses ''AppliedPiResult
-
-appliedPiResultRefs :: Lens.Traversal' AppliedPiResult Ref
-appliedPiResultRefs f (AppliedPiResult guid argVal destRef copiedNames) =
-  AppliedPiResult guid <$> f argVal <*> f destRef <*> pure copiedNames
-
--- Rename history is only tracked if we're a subst dest (inside an
--- apply type). Then we remember any rename that happened since the
--- subst wrote us.
--- TODO: Do we want fine-grained set of guids to track?
-data RenameHistory = Untracked | RenameHistory (Map Guid Guid)
-Lens.makePrisms ''RenameHistory
-
-instance Monoid RenameHistory where
-  mempty = Untracked
-  mappend Untracked x = x
-  mappend x Untracked = x
-  mappend (RenameHistory m1) (RenameHistory m2) =
-    RenameHistory $ mappend m1 m2
-
--- TODO: Convert to Rules
-data Relation = RelationAppliedPiResult AppliedPiResult
-
-relationRefs :: Lens.Traversal' Relation Ref
-relationRefs f (RelationAppliedPiResult x) = RelationAppliedPiResult <$> appliedPiResultRefs f x
-
--- Triggers are alive as long as their truthfulness is yet
--- unknown. Once they're known to be false, they're removed. Once
--- they're known to be true, they trigger a rule and are removed.
-data Trigger
-  = TriggerIsDirectlyTag
-  | TriggerIsRecordType
-  deriving (Eq, Ord)
-
-data RefData def = RefData
-  { _rdScope :: Scope
-  , _rdRenameHistory :: RenameHistory
-  , _rdRelations :: [Relation]
-  , _rdIsCircumsized :: Monoid.Any
-  , _rdTriggers :: RuleIdMap (Set Trigger)
-  , _rdBody :: Expr.Body def Ref
-  }
-Lens.makeLenses ''RefData
-
-defaultRefData :: Scope -> Expr.Body def Ref -> RefData def
-defaultRefData scop body = RefData
-  { _rdScope = scop
-  , _rdRenameHistory = mempty
-  , _rdRelations = mempty
-  , _rdIsCircumsized = Monoid.Any False
-  , _rdTriggers = mempty
-  , _rdBody = body
-  }
-
-rdRefs :: Lens.Traversal' (RefData def) Ref
-rdRefs f (RefData scop renameHistory relations isCircumsized triggers body) =
-  RefData
-  <$> scopeRefs f scop
-  <*> pure renameHistory
-  <*> (Lens.traverse . relationRefs) f relations
-  <*> pure isCircumsized
-  <*> pure triggers
-  <*> Lens.traverse f body
+type ExprRefsD def = ExprRefs (RefData def) (RefData def)
 
 -- TypedValue:
-data TypedValue = TypedValue
-  { _tvVal :: {-# UNPACK #-}! Ref
-  , _tvType :: {-# UNPACK #-}! Ref
+data TypedValue def = TypedValue
+  { _tvVal :: {-# UNPACK #-}! (RefD def)
+  , _tvType :: {-# UNPACK #-}! (RefD def)
   } deriving (Eq, Ord)
 Lens.makeLenses ''TypedValue
-instance Show TypedValue where
+instance Show (TypedValue def) where
   showsPrec n (TypedValue v t) =
     showParen (n > 0) (unwords [show v, ":", show t] ++)
 
-tvRefs :: Lens.Traversal' TypedValue Ref
+tvRefs :: Lens.Traversal' (TypedValue def) (RefD def)
 tvRefs f (TypedValue val typ) = TypedValue <$> f val <*> f typ
 
 -- ScopedTypedValue
-data ScopedTypedValue = ScopedTypedValue
-  { _stvTV :: TypedValue
-  , _stvScope :: Scope
+data ScopedTypedValue def = ScopedTypedValue
+  { _stvTV :: TypedValue def
+  , _stvScope :: Scope def
   }
 Lens.makeLenses ''ScopedTypedValue
 
-stvRefs :: Lens.Traversal' ScopedTypedValue Ref
+stvRefs :: Lens.Traversal' (ScopedTypedValue def) (RefD def)
 stvRefs f (ScopedTypedValue tv scop) = ScopedTypedValue <$> tvRefs f tv <*> scopeRefs f scop
 
 -- Context
 data Context def = Context
-  { _ctxExprRefs :: ExprRefs (RefData def)
-  , _ctxRuleMap :: RuleMap
+  { _ctxExprRefs :: ExprRefsD def
+  , _ctxRuleMap :: RuleMap (RefData def)
   , -- NOTE: This Map is for 2 purposes: Sharing Refs of loaded Defs
     -- and allowing to specify recursive defs
-    _ctxDefTVs :: Map def TypedValue
+    _ctxDefTVs :: Map def (TypedValue def)
   , _ctxRandomGen :: Random.StdGen -- for guids
   }
 Lens.makeLenses ''Context
@@ -171,12 +81,12 @@ emptyContext gen =
 
 data LoadedDef def = LoadedDef
   { _ldDef :: def
-  , _ldType :: Ref
+  , _ldType :: RefD def
   }
 Lens.makeLenses ''LoadedDef
 
-fresh :: MonadA m => Scope -> Expr.Body def Ref -> StateT (ExprRefs (RefData def)) m Ref
+fresh :: MonadA m => Scope def -> Expr.Body def (RefD def) -> StateT (ExprRefsD def) m (RefD def)
 fresh scop body = ExprRefs.fresh $ defaultRefData scop body
 
-freshHole :: MonadA m => Scope -> StateT (ExprRefs (RefData def)) m Ref
+freshHole :: MonadA m => Scope def -> StateT (ExprRefsD def) m (RefD def)
 freshHole scop = fresh scop $ ExprLens.bodyHole # ()

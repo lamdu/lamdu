@@ -4,7 +4,6 @@ import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad (void)
 import Data.Monoid (Monoid(..))
-import Data.OpaqueRef (Ref)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.Internal
@@ -18,15 +17,15 @@ import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Rule as Rule
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
-scopeLookup :: Scope -> Guid -> Either (Error def) Ref
+scopeLookup :: Scope def -> Guid -> Either (Error def) (RefD def)
 scopeLookup scope guid =
   case scope ^. scopeMap . Lens.at guid of
   Nothing -> Left VarNotInScope
   Just ref -> pure ref
 
 makePiTypeOfLam ::
-  Guid -> TypedValue -> TypedValue ->
-  Expr.Body def Ref
+  Guid -> TypedValue def -> TypedValue def ->
+  Expr.Body def (RefD def)
 makePiTypeOfLam paramGuid paramType body =
   Expr.BodyLam $
   Expr.Lam Expr.KType paramGuid
@@ -37,8 +36,8 @@ makePiTypeOfLam paramGuid paramType body =
   (body ^. tvType)
 
 makeApplyType ::
-  Eq def => Scope -> ScopedTypedValue -> ScopedTypedValue ->
-  Infer def Ref
+  Eq def => Scope def -> ScopedTypedValue def -> ScopedTypedValue def ->
+  Infer def (RefD def)
 makeApplyType applyScope func arg = do
   (piGuid, piParamType, piResultRef) <-
     forceLam Expr.KType
@@ -54,10 +53,10 @@ makeApplyType applyScope func arg = do
     }
   return applyTypeRef
 
-addTagVerification :: Ref -> Infer def ()
+addTagVerification :: RefD def -> Infer def ()
 addTagVerification = Trigger.add TriggerIsDirectlyTag verifyTagId
 
-makeGetFieldType :: Eq def => Scope -> Expr.GetField TypedValue -> Infer def Ref
+makeGetFieldType :: Eq def => Scope def -> Expr.GetField (TypedValue def) -> Infer def (RefD def)
 makeGetFieldType scope (Expr.GetField record tag) = do
   tagTypeRef <- InferM.liftExprRefs . fresh scope $ ExprLens.bodyTagType # ()
   void . unify tagTypeRef $ tag ^. tvType
@@ -66,13 +65,17 @@ makeGetFieldType scope (Expr.GetField record tag) = do
   Rule.makeGetField (tag ^. tvVal) getFieldTypeRef (record ^. tvType)
   return getFieldTypeRef
 
-makeLambdaType :: Eq def => Scope -> Guid -> TypedValue -> TypedValue -> Infer def Ref
+makeLambdaType ::
+  Eq def => Scope def -> Guid ->
+  TypedValue def -> TypedValue def -> Infer def (RefD def)
 makeLambdaType scope paramGuid paramType result = do
   typeRef <- InferM.liftExprRefs . fresh scope $ ExprLens.bodyType # ()
   void . unify typeRef $ paramType ^. tvType
   InferM.liftExprRefs . fresh scope $ makePiTypeOfLam paramGuid paramType result
 
-makeRecordType :: Eq def => Expr.Kind -> Scope -> [(TypedValue, TypedValue)] -> Infer def Ref
+makeRecordType ::
+  Eq def => Expr.Kind -> Scope def ->
+  [(TypedValue def, TypedValue def)] -> Infer def (RefD def)
 makeRecordType k scope fields = do
   tagTypeRef <- InferM.liftExprRefs . fresh scope $ ExprLens.bodyTagType # ()
   fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvType) (unify tagTypeRef)
@@ -84,7 +87,9 @@ makeRecordType k scope fields = do
   where
     onRecVField (tag, val) = (tag ^. tvVal, val ^. tvType)
 
-makePiType :: Eq def => Scope -> TypedValue -> TypedValue -> Infer def Ref
+makePiType ::
+  Eq def => Scope def ->
+  TypedValue def -> TypedValue def -> Infer def (RefD def)
 makePiType scope paramType resultType = do
   typeRef <- InferM.liftExprRefs . fresh scope $ ExprLens.bodyType # ()
   void . unify typeRef $ paramType ^. tvType
@@ -92,9 +97,9 @@ makePiType scope paramType resultType = do
   return typeRef
 
 makeTypeRef ::
-  Eq def => Scope ->
-  Expr.Body (LoadedDef def) ScopedTypedValue ->
-  Infer def Ref
+  Eq def => Scope def ->
+  Expr.Body (LoadedDef def) (ScopedTypedValue def) ->
+  Infer def (RefD def)
 makeTypeRef scope body =
   case body of
   -- Simple types

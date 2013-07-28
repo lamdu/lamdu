@@ -88,7 +88,7 @@ assertInferredEquals errorPrefixStr result expected res
 verifyInferResult ::
   String ->
   Expr.Expression (InferLoad.LoadedDef Def)
-  (Infer.ScopedTypedValue, InputPayload) -> M ()
+  (Infer.ScopedTypedValue Def, InputPayload) -> M ()
 verifyInferResult msg exprLInferred = do
   exprDerefed <- deref (fst <$> exprLInferred)
   let exprInferred = exprLInferred & ExprLens.exprDef %~ (^. InferLoad.ldDef)

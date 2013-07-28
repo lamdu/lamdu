@@ -163,6 +163,7 @@ Executable lamdu
                        Lamdu.Data.Infer.MakeTypes,
                        Lamdu.Data.Infer.Monad,
                        Lamdu.Data.Infer.Optimize,
+                       Lamdu.Data.Infer.RefData,
                        Lamdu.Data.Infer.Rule,
                        Lamdu.Data.Infer.Rule.Internal,
                        Lamdu.Data.Infer.Trigger,

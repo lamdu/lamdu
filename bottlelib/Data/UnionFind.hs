@@ -21,14 +21,14 @@ import qualified Data.IntDisjointSet as IDS
 import qualified Data.OpaqueRef as OpaqueRef
 
 -- TODO: UnionFind a
-data UnionFind = UnionFind
+data UnionFind p = UnionFind
   { _ufRefs :: IDS.IntDisjointSet
-  , _ufFresh :: OpaqueRef.Fresh
+  , _ufFresh :: OpaqueRef.Fresh p
   }
 Lens.makeLenses ''UnionFind
 
 unmaintainedRefMapLookup ::
-  MonadA m => (String -> Ref -> m Ref) -> Ref -> StateT (RefMap a) m (Maybe a)
+  MonadA m => (String -> Ref p -> m (Ref p)) -> Ref p -> StateT (RefMap p a) m (Maybe a)
 unmaintainedRefMapLookup doLookup ref = do
   tryNow ref $ do
     rep <- lift $ doLookup "unmaintainedRefMapLookup.ref" ref
@@ -44,7 +44,7 @@ unmaintainedRefMapLookup doLookup ref = do
         Just found -> return $ Just found
         Nothing -> notFound
 
-empty :: UnionFind
+empty :: UnionFind p
 empty =
   UnionFind
   { _ufRefs = IDS.empty
@@ -54,25 +54,25 @@ empty =
 ufState ::
   Monad m =>
   (IDS.IntDisjointSet -> (b, IDS.IntDisjointSet)) ->
-  StateT UnionFind m b
+  StateT (UnionFind p) m b
 ufState = Lens.zoom ufRefs . state
 
-freshRef :: MonadA m => StateT UnionFind m Ref
+freshRef :: MonadA m => StateT (UnionFind p) m (Ref p)
 freshRef = do
   ref <- Lens.zoom ufFresh OpaqueRef.freshRef
   ufRefs %= IDS.insert (OpaqueRef.unsafeAsInt ref)
   return ref
 
-lookup :: MonadA m => String -> Ref -> StateT UnionFind m Ref
+lookup :: MonadA m => String -> Ref p -> StateT (UnionFind p) m (Ref p)
 lookup msg ref =
   OpaqueRef.unsafeFromInt .
   unsafeUnjust (msg ++ ": " ++ show ref) <$>
   (ufState . IDS.lookup . OpaqueRef.unsafeAsInt) ref
 
-union :: MonadA m => Ref -> Ref -> StateT UnionFind m Ref
+union :: MonadA m => Ref p -> Ref p -> StateT (UnionFind p) m (Ref p)
 union x y =
   OpaqueRef.unsafeFromInt .
   unsafeUnjust "union on invalid ref" <$> ufState (on IDS.unionRep OpaqueRef.unsafeAsInt x y)
 
-equivalent :: Monad m => Ref -> Ref -> StateT UnionFind m Bool
+equivalent :: Monad m => Ref p -> Ref p -> StateT (UnionFind p) m Bool
 equivalent x y = ufState $ on IDS.equivalent OpaqueRef.unsafeAsInt x y

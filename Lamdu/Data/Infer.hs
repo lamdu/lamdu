@@ -35,23 +35,23 @@ import qualified Lamdu.Data.Infer.Unify as Unify
 
 unify ::
   Eq def =>
-  TypedValue ->
-  TypedValue ->
+  TypedValue def ->
+  TypedValue def ->
   StateT (Context def) (Either (Error def)) ()
 unify (TypedValue xv xt) (TypedValue yv yt) = do
   void . runInfer $ Unify.unify xv yv
   void . runInfer $ Unify.unify xt yt
 
-exprSTVRefs :: Lens.Traversal' (Expr.Expression (LoadedDef def) (ScopedTypedValue, a)) Ref
+exprSTVRefs :: Lens.Traversal' (Expr.Expression (LoadedDef def) (ScopedTypedValue def, a)) (RefD def)
 exprSTVRefs f = ExprLens.exprBitraverse (ldType f) ((Lens._1 . stvRefs) f)
 
 infer ::
-  Eq def => Scope -> Expr.Expression (LoadedDef def) a ->
+  Eq def => Scope def -> Expr.Expression (LoadedDef def) a ->
   StateT (Context def) (Either (Error def))
-  (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
+  (Expr.Expression (LoadedDef def) (ScopedTypedValue def, a))
 infer scope expr = runInfer $ exprIntoSTV scope expr
 
-executeRelation :: Eq def => Relation -> Ref -> Infer def ()
+executeRelation :: Eq def => Relation def -> RefD def -> Infer def ()
 executeRelation rel =
   case rel of
   RelationAppliedPiResult apr -> flip handleAppliedPiResult apr
@@ -76,8 +76,8 @@ runInfer act = do
 
 -- With hole apply vals and hole types
 exprIntoSTV ::
-  Eq def => Scope -> Expr.Expression (LoadedDef def) a ->
-  Infer def (Expr.Expression (LoadedDef def) (ScopedTypedValue, a))
+  Eq def => Scope def -> Expr.Expression (LoadedDef def) a ->
+  Infer def (Expr.Expression (LoadedDef def) (ScopedTypedValue def, a))
 exprIntoSTV scope (Expr.Expression body pl) = do
   bodySTV <-
     case body of
