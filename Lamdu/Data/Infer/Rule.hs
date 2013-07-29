@@ -23,7 +23,7 @@ import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind as UF
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
+import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
@@ -50,7 +50,7 @@ verifyTag triggers =
 
 assertRecordTypeFields :: MonadA m => RefD def -> StateT (Context def) m [(RefD def, RefD def)]
 assertRecordTypeFields ref =
-  Lens.zoom ctxExprRefs $ ExprRefs.read ref
+  Lens.zoom ctxExprRefs $ UFData.read ref
   <&> (^? rdBody . ExprLens.bodyKindedRecordFields Expr.KType)
   <&> unsafeUnjust "isRecord && not record?!"
 
@@ -66,7 +66,7 @@ handlePotentialMatches finish fields tag typ other =
 
 assertTag :: MonadA m => RefD def -> StateT (Context def) m Guid
 assertTag ref =
-  Lens.zoom ctxExprRefs $ ExprRefs.read ref
+  Lens.zoom ctxExprRefs $ UFData.read ref
   <&> (^? rdBody . ExprLens.bodyTag)
   <&> unsafeUnjust "isTag && not tag?!"
 
@@ -121,12 +121,12 @@ getFieldPhase2 initialRule =
     go rule [] = return . RuleChange $ RuleGetFieldPhase2 rule
     go rule ((_, False):xs) = go rule xs
     go rule (((ref, _), True):xs) = do
-      rep <- InferM.liftExprRefs $ ExprRefs.find "getFieldPhase2.ref" ref
+      rep <- InferM.liftExprRefs $ UFData.find "getFieldPhase2.ref" ref
       fieldTag <- InferM.liftContext $ assertTag rep
       (mFieldTypeRef, newMaybeMatchers) <-
         InferM.liftContext .
         Lens.zoom ctxExprRefs $
-        UF.unmaintainedRefMapLookup ExprRefs.find rep `runStateT` (rule ^. gf2MaybeMatchers)
+        UF.unmaintainedRefMapLookup UFData.find rep `runStateT` (rule ^. gf2MaybeMatchers)
       let
         fieldTypeRef = unsafeUnjust "phase2 triggered by wrong ref!" mFieldTypeRef
         optimizedRule = rule & gf2MaybeMatchers .~ newMaybeMatchers
@@ -163,7 +163,7 @@ execute ruleId triggers = do
     RuleDelete -> do
       let
         deleteRuleFrom ref =
-          ExprRefs.modify ref $ rdTriggers %~ IntMap.delete ruleId
+          UFData.modify ref $ rdTriggers %~ IntMap.delete ruleId
       Lens.zoom ctxExprRefs . traverse_ deleteRuleFrom $ OR.refSetToList ruleTriggerRefs
       ruleLens ruleId .= Nothing
       return False

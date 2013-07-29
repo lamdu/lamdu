@@ -14,8 +14,8 @@ import Data.Function.Decycle (decycle)
 import Lamdu.Data.Infer.Internal
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
+import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 
 data Error def = InfiniteExpression (RefD def)
   deriving (Show, Eq, Ord)
@@ -40,12 +40,12 @@ deref =
   where
     loop Nothing ref = lift . lift . Left $ InfiniteExpression ref
     loop (Just recurse) ref = do
-      rep <- lift $ ExprRefs.find "deref lookup" ref
+      rep <- lift $ UFData.find "deref lookup" ref
       mFound <- Lens.use (Lens.at rep)
       case mFound of
         Just found -> return found
         Nothing -> do
-          repData <- lift $ ExprRefs.readRep rep
+          repData <- lift $ UFData.readRep rep
           let
             body = repData ^. rdBody
             restrictions =

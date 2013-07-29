@@ -5,7 +5,7 @@ module Lamdu.Data.Infer.Internal
   -- Relations:
   , Relation(..), relationRefs
 
-  , ExprRefsD, RefD
+  , ExprRefs, RefD
 
   , Trigger(..)
   , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
@@ -24,17 +24,17 @@ import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
 import Data.Map (Map)
-import Lamdu.Data.Infer.ExprRefs (ExprRefs)
+import Data.UnionFind.WithData (UFData)
 import Lamdu.Data.Infer.RefData
 import Lamdu.Data.Infer.Rule.Internal (RuleMap, initialRuleMap)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
+import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified System.Random as Random
 
-type ExprRefsD def = ExprRefs (RefData def) (RefData def)
+type ExprRefs def = UFData (RefData def) (RefData def)
 
 -- TypedValue:
 data TypedValue def = TypedValue
@@ -61,7 +61,7 @@ stvRefs f (ScopedTypedValue tv scop) = ScopedTypedValue <$> tvRefs f tv <*> scop
 
 -- Context
 data Context def = Context
-  { _ctxExprRefs :: ExprRefsD def
+  { _ctxExprRefs :: ExprRefs def
   , _ctxRuleMap :: RuleMap (RefData def)
   , -- NOTE: This Map is for 2 purposes: Sharing Refs of loaded Defs
     -- and allowing to specify recursive defs
@@ -73,7 +73,7 @@ Lens.makeLenses ''Context
 emptyContext :: Random.StdGen -> Context def
 emptyContext gen =
   Context
-  { _ctxExprRefs = ExprRefs.empty
+  { _ctxExprRefs = UFData.empty
   , _ctxRuleMap = initialRuleMap
   , _ctxDefTVs = Map.empty
   , _ctxRandomGen = gen
@@ -85,8 +85,8 @@ data LoadedDef def = LoadedDef
   }
 Lens.makeLenses ''LoadedDef
 
-fresh :: MonadA m => Scope def -> Expr.Body def (RefD def) -> StateT (ExprRefsD def) m (RefD def)
-fresh scop body = ExprRefs.fresh $ defaultRefData scop body
+fresh :: MonadA m => Scope def -> Expr.Body def (RefD def) -> StateT (ExprRefs def) m (RefD def)
+fresh scop body = UFData.fresh $ defaultRefData scop body
 
-freshHole :: MonadA m => Scope def -> StateT (ExprRefsD def) m (RefD def)
+freshHole :: MonadA m => Scope def -> StateT (ExprRefs def) m (RefD def)
 freshHole scop = fresh scop $ ExprLens.bodyHole # ()

@@ -31,7 +31,7 @@ newtype Error def = LoadUntypedDef def
   deriving (Show)
 
 exprIntoContext ::
-  MonadA m => Expr.Expression def () -> StateT (ExprRefsD def) m (RefD def)
+  MonadA m => Expr.Expression def () -> StateT (ExprRefs def) m (RefD def)
 exprIntoContext =
   go mempty
   where
@@ -52,7 +52,7 @@ exprIntoContext =
 loadDefTypeIntoRef ::
   MonadA m =>
   Loader def m -> def ->
-  StateT (ExprRefsD def) (EitherT (Error def) m) (RefD def)
+  StateT (ExprRefs def) (EitherT (Error def) m) (RefD def)
 loadDefTypeIntoRef (Loader loader) def = do
   loadedDefType <- lift . lift $ loader def
   when (Lens.has ExprLens.holePayloads loadedDefType) .

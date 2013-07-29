@@ -17,7 +17,7 @@ import qualified Data.OpaqueRef as OR
 import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
+import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Rule.Internal as Rule
 
@@ -26,7 +26,7 @@ remember ::
   RefD def -> RefData def -> Trigger -> RuleId ->
   StateT (Context def) m ()
 remember rep refData trigger ruleId = do
-  Lens.zoom ctxExprRefs . ExprRefs.writeRep rep $
+  Lens.zoom ctxExprRefs . UFData.writeRep rep $
     refData & rdTriggers . Lens.at ruleId <>~ Just (Set.singleton trigger)
   ctxRuleMap . Rule.rmMap . Lens.at ruleId .
     _fromJust "Trigger.remember to missing rule" .
@@ -67,7 +67,7 @@ updateRefData rep refData =
 
 add :: Trigger -> RuleId -> RefD def -> Infer def ()
 add trigger ruleId ref = do
-  rep <- InferM.liftExprRefs $ ExprRefs.find "Trigger.add" ref
-  refData <- InferM.liftExprRefs $ ExprRefs.readRep rep
+  rep <- InferM.liftExprRefs $ UFData.find "Trigger.add" ref
+  refData <- InferM.liftExprRefs $ UFData.readRep rep
   keep <- handleTrigger rep refData ruleId trigger
   when keep . InferM.liftContext $ remember rep refData trigger ruleId

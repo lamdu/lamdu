@@ -16,10 +16,10 @@ import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.Unify (unify, forceLam)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
+import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
-import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
 
 -- Remap a Guid from piResult context to the Apply context
@@ -43,7 +43,7 @@ injectRenameHistory (RenameHistory renames) =
 -- TODO: This should also substLeafs, and it should also subst getvars that aren't subst
 substNode :: Eq def => Expr.Body def (RefD def) -> AppliedPiResult def -> Infer def ()
 substNode srcBody rawApr = do
-  destData <- InferM.liftExprRefs $ ExprRefs.read destRef
+  destData <- InferM.liftExprRefs $ UFData.read destRef
   let
     apr = rawApr & injectRenameHistory (destData ^. rdRenameHistory)
     renameCopied = lookupOrSelf (apr ^. aprCopiedNames)
@@ -71,8 +71,8 @@ substNode srcBody rawApr = do
 
 handleAppliedPiResult :: Eq def => RefD def -> AppliedPiResult def -> Infer def ()
 handleAppliedPiResult srcRef apr = do
-  srcData <- InferM.liftExprRefs $ ExprRefs.read srcRef
-  destData <- InferM.liftExprRefs $ ExprRefs.read destRef
+  srcData <- InferM.liftExprRefs $ UFData.read srcRef
+  destData <- InferM.liftExprRefs $ UFData.read destRef
   let
     srcScope = srcData ^. rdScope
     destScope = destData ^. rdScope
@@ -97,11 +97,11 @@ handleAppliedPiResult srcRef apr = do
       | paramGuid == apr ^. aprPiGuid -> void . unify destRef $ apr ^. aprArgVal
     Expr.BodyLeaf Expr.Hole -> do
       srcData & rdRelations %~ (RelationAppliedPiResult apr :)
-        & InferM.liftExprRefs . ExprRefs.write srcRef
+        & InferM.liftExprRefs . UFData.write srcRef
       -- We injectRenameHistory of our ancestors into the apr
       destData
         & rdRenameHistory <>~ RenameHistory mempty
-        & InferM.liftExprRefs . ExprRefs.write destRef
+        & InferM.liftExprRefs . UFData.write destRef
     srcBody@(Expr.BodyLam (Expr.Lam k srcGuid _ _)) -> do
       (destGuid, _, _) <- forceLam k destScope destRef
       substNode srcBody
