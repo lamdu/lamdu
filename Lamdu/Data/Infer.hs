@@ -25,9 +25,9 @@ import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import qualified Control.Lens as Lens
 import qualified Data.IntMap as IntMap
 import qualified Data.Monoid as Monoid
+import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Optimize as Optimize
 import qualified Lamdu.Data.Infer.Rule as Rule
@@ -96,7 +96,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     bodySTV
     & ExprLens.bodyDef %~ (^. ldDef)
     & mkRefData
-    & InferM.liftExprRefs . ExprRefs.fresh
+    & InferM.liftExprRefs . UFData.fresh
   typeRef <-
     bodySTV <&> (^. Expr.ePayload . Lens._1) & makeTypeRef scope
   pure $

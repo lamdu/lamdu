@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
-module Lamdu.Data.Infer.ExprRefs
-  ( ExprRefs, empty
+module Data.UnionFind.WithData
+  ( UFData, empty
   , fresh, find
   , readRep, writeRep
   , popRep
@@ -28,63 +28,63 @@ import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind as UF
 
-data ExprRefs p a = ExprRefs
-  { _exprRefsUF :: UF.UnionFind p
-  , _exprRefsData :: RefMap p a
+data UFData p a = UFData
+  { _ufdUF :: UF.UnionFind p
+  , _ufdData :: RefMap p a
   } deriving (Functor)
-Lens.makeLenses ''ExprRefs
+Lens.makeLenses ''UFData
 
-empty :: ExprRefs p a
-empty = ExprRefs
-  { _exprRefsUF = UF.empty
-  , _exprRefsData = OR.emptyRefMap
+empty :: UFData p a
+empty = UFData
+  { _ufdUF = UF.empty
+  , _ufdData = OR.emptyRefMap
   }
 
-fresh :: MonadA m => a -> StateT (ExprRefs p a) m (Ref p)
+fresh :: MonadA m => a -> StateT (UFData p a) m (Ref p)
 fresh dat = do
-  rep <- Lens.zoom exprRefsUF UF.freshRef
+  rep <- Lens.zoom ufdUF UF.freshRef
   writeRep rep dat
   return rep
 
-find :: MonadA m => String -> Ref p -> StateT (ExprRefs p a) m (Ref p)
-find msg = Lens.zoom exprRefsUF . UF.lookup msg
+find :: MonadA m => String -> Ref p -> StateT (UFData p a) m (Ref p)
+find msg = Lens.zoom ufdUF . UF.lookup msg
 
 readRep ::
-  MonadA m => Ref p -> StateT (ExprRefs p a) m a
+  MonadA m => Ref p -> StateT (UFData p a) m a
 readRep rep =
-  unsafeUnjust ("missing ref: " ++ show rep) <$>
-  Lens.use (exprRefsData . Lens.at rep)
+  unsafeUnjust ("readRep: missing ref: " ++ show rep) <$>
+  Lens.use (ufdData . Lens.at rep)
 
 popRep ::
-  MonadA m => Ref p -> StateT (ExprRefs p a) m a
+  MonadA m => Ref p -> StateT (UFData p a) m a
 popRep rep =
-  Lens.zoom (exprRefsData . Lens.at rep) $
-  unsafeUnjust ("missing ref: " ++ show rep)
+  Lens.zoom (ufdData . Lens.at rep) $
+  unsafeUnjust ("popRep: missing ref: " ++ show rep)
   <$> State.get <* State.put Nothing
 
 writeRep ::
-  Monad m => Ref p -> a -> StateT (ExprRefs p a) m ()
-writeRep rep dat = exprRefsData . Lens.at rep .= Just dat
+  Monad m => Ref p -> a -> StateT (UFData p a) m ()
+writeRep rep dat = ufdData . Lens.at rep .= Just dat
 
 read ::
-  MonadA m => Ref p -> StateT (ExprRefs p a) m a
+  MonadA m => Ref p -> StateT (UFData p a) m a
 read ref = readRep =<< find "read" ref
 
 write ::
-  MonadA m => Ref p -> a -> StateT (ExprRefs p a) m ()
+  MonadA m => Ref p -> a -> StateT (UFData p a) m ()
 write ref dat =
   (`writeRep` dat) =<< find "write" ref
 
 modify ::
   MonadA m => Ref p -> (a -> a) ->
-  StateT (ExprRefs p a) m ()
+  StateT (UFData p a) m ()
 modify ref f = write ref . f =<< read ref
 
-union :: MonadA m => Ref p -> Ref p -> StateT (ExprRefs p a) m (Ref p)
-union x y = Lens.zoom exprRefsUF $ UF.union x y
+union :: MonadA m => Ref p -> Ref p -> StateT (UFData p a) m (Ref p)
+union x y = Lens.zoom ufdUF $ UF.union x y
 
-equiv :: MonadA m => Ref p -> Ref p -> StateT (ExprRefs p a) m Bool
-equiv x y = Lens.zoom exprRefsUF $ UF.equivalent x y
+equiv :: MonadA m => Ref p -> Ref p -> StateT (UFData p a) m Bool
+equiv x y = Lens.zoom ufdUF $ UF.equivalent x y
 
 data UnifyRefsResult a
   = UnifyRefsAlreadyUnified
@@ -92,7 +92,7 @@ data UnifyRefsResult a
 
 unifyRefs ::
   MonadA m => Ref p -> Ref p ->
-  StateT (ExprRefs p a) m (Ref p, UnifyRefsResult a)
+  StateT (UFData p a) m (Ref p, UnifyRefsResult a)
 unifyRefs x y = do
   xRep <- find "unify.x" x
   yRep <- find "unify.y" y
@@ -106,10 +106,10 @@ unifyRefs x y = do
       return (rep, UnifyRefsUnified xData yData)
 
 optimize ::
-  ((Ref p -> Ref p) -> a -> b) -> ExprRefs p a -> (Ref p -> Ref p, ExprRefs p b)
-optimize onData (ExprRefs oldUf oldRefsData) =
-  ( refRename "ExprRefs.optimize:user ref inexistent"
-  , ExprRefs newUf newRefsData
+  ((Ref p -> Ref p) -> a -> b) -> UFData p a -> (Ref p -> Ref p, UFData p b)
+optimize onData (UFData oldUf oldRefsData) =
+  ( refRename "UFData.optimize:user ref inexistent"
+  , UFData newUf newRefsData
   )
   where
     (newUf, refRenames) =

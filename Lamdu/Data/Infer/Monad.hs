@@ -27,8 +27,8 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.IntMap as IntMap
+import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 
 data Error def
   = VarEscapesScope Guid
@@ -70,7 +70,7 @@ liftContext ::
 liftContext = lift . lift
 
 liftExprRefs ::
-  StateT (ExprRefsD def) (Either (Error def)) a ->
+  StateT (ExprRefs def) (Either (Error def)) a ->
   Infer def a
 liftExprRefs = liftContext . Lens.zoom ctxExprRefs
 
@@ -92,5 +92,5 @@ executeRelation relation ref = do
 
 rerunRelations :: Eq def => RefD def -> Infer def ()
 rerunRelations ref = do
-  relations <- liftContext . Lens.zoom ctxExprRefs $ ExprRefs.read ref <&> (^. rdRelations)
+  relations <- liftContext . Lens.zoom ctxExprRefs $ UFData.read ref <&> (^. rdRelations)
   traverse_ (`executeRelation` ref) relations

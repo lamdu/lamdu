@@ -28,10 +28,10 @@ import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
-import qualified Lamdu.Data.Infer.ExprRefs as ExprRefs
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
@@ -49,7 +49,7 @@ forceLam k lamScope destRef = do
     Expr.Lam k newGuid newParamTypeRef newResultTypeRef
   -- left is renamed into right (keep existing names of destRef):
   rep <- unify newLamRef destRef
-  body <- InferM.liftExprRefs $ (^. rdBody) <$> ExprRefs.readRep rep
+  body <- InferM.liftExprRefs $ (^. rdBody) <$> UFData.readRep rep
   return . unsafeUnjust "We just unified Lam into rep" $
     body ^? ExprLens.bodyKindedLam k
 
@@ -60,7 +60,7 @@ intersectScopes (Scope aScope) (Scope bScope) =
   where
     -- Expensive assertion
     verifyEquiv aref bref = do
-      equiv <- InferM.liftExprRefs $ ExprRefs.equiv aref bref
+      equiv <- InferM.liftExprRefs $ UFData.equiv aref bref
       if equiv
         then return aref
         else error "Scope unification of differing refs"
@@ -205,7 +205,7 @@ applyHoleConstraints renames holeConstraints body oldScope = do
 
 decycleDefend :: RefD def -> (RefD def -> U def (RefD def)) -> U def (RefD def)
 decycleDefend ref action = do
-  nodeRep <- lift . InferM.liftExprRefs $ ExprRefs.find "holeConstraintsRecurse:rawNode" ref
+  nodeRep <- lift . InferM.liftExprRefs $ UFData.find "holeConstraintsRecurse:rawNode" ref
   mResult <- visit nodeRep (action nodeRep)
   case mResult of
     Nothing -> lift . InferM.error $ InfiniteExpression nodeRep
@@ -215,8 +215,8 @@ holeConstraintsRecurse ::
   Eq def => Map Guid Guid -> HoleConstraints -> RefD def -> U def (RefD def)
 holeConstraintsRecurse renames holeConstraints rawNode =
   decycleDefend rawNode $ \nodeRep -> do
-    oldNodeData <- lift . InferM.liftExprRefs $ ExprRefs.readRep nodeRep
-    lift . InferM.liftExprRefs . ExprRefs.writeRep nodeRep $
+    oldNodeData <- lift . InferM.liftExprRefs $ UFData.readRep nodeRep
+    lift . InferM.liftExprRefs . UFData.writeRep nodeRep $
       error "Reading node during write..."
     let midRefData = renameRefData renames oldNodeData
     (newRefData, later) <-
@@ -225,7 +225,7 @@ holeConstraintsRecurse renames holeConstraints rawNode =
       & rdScope %%~
         applyHoleConstraints renames holeConstraints
         (midRefData ^. rdBody)
-    uInfer . InferM.liftExprRefs $ ExprRefs.writeRep nodeRep newRefData
+    uInfer . InferM.liftExprRefs $ UFData.writeRep nodeRep newRefData
     later
     return nodeRep
 
@@ -233,15 +233,15 @@ unifyRecurse ::
   Eq def => Map Guid Guid -> RefD def -> RefD def -> U def (RefD def)
 unifyRecurse renames rawNode other =
   decycleDefend rawNode $ \nodeRep -> do
-    (rep, unifyResult) <- lift . InferM.liftExprRefs $ ExprRefs.unifyRefs nodeRep other
+    (rep, unifyResult) <- lift . InferM.liftExprRefs $ UFData.unifyRefs nodeRep other
     case unifyResult of
-      ExprRefs.UnifyRefsAlreadyUnified -> return ()
-      ExprRefs.UnifyRefsUnified xData yData -> do
+      UFData.UnifyRefsAlreadyUnified -> return ()
+      UFData.UnifyRefsUnified xData yData -> do
         ((bodyIsUpdated, mergedRefData), later) <-
           wuRun $ renameMergeRefData rep renames xData yData
         -- First let's write the mergedRefData so we're not in danger zone
         -- of reading missing data:
-        lift . InferM.liftExprRefs $ ExprRefs.write rep mergedRefData
+        lift . InferM.liftExprRefs $ UFData.write rep mergedRefData
         -- Now lets do the deferred recursive unifications:
         later
         -- TODO: Remove this when replaced Relations with Rules
