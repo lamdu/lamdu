@@ -37,7 +37,7 @@ Lens.makeLenses ''UFData
 empty :: UFData p a
 empty = UFData
   { _ufdUF = UF.empty
-  , _ufdData = OR.emptyRefMap
+  , _ufdData = OR.refMapEmpty
   }
 
 fresh :: MonadA m => a -> StateT (UFData p a) m (Ref p)

@@ -82,7 +82,7 @@ data RefData def = RefData
   , _rdRenameHistory :: RenameHistory
   , _rdRelations :: [Relation def]
   , _rdIsCircumsized :: Monoid.Any
-  , _rdTriggers :: RuleIdMap (Set Trigger)
+  , _rdTriggers :: RuleIdMap (RefData def) (Set Trigger)
   , _rdBody :: Expr.Body def (RefD def)
   }
 Lens.makeLenses ''RefData

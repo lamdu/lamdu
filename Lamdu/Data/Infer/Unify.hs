@@ -25,8 +25,8 @@ import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import System.Random (Random, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
-import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
+import qualified Data.OpaqueRef as OR
 import qualified Data.Set as Set
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
@@ -178,7 +178,7 @@ mergeRefData renames
         , _rdRenameHistory = mappend aMRenameHistory bMRenameHistory
         , _rdRelations = mergedRelations
         , _rdIsCircumsized = mappend aIsCircumsized bIsCircumsized
-        , _rdTriggers = IntMap.unionWith mappend aTriggers bTriggers
+        , _rdTriggers = OR.refMapUnionWith mappend aTriggers bTriggers
         , _rdBody = mergedBody
         }
       )
