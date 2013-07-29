@@ -23,8 +23,8 @@ import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.MakeTypes (makeTypeRef)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import qualified Control.Lens as Lens
-import qualified Data.IntMap as IntMap
 import qualified Data.Monoid as Monoid
+import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -64,7 +64,7 @@ runInfer act = do
   where
     inferToWriter = InferM.run (InferM.InferActions executeRelation)
     go (InferM.TriggeredRules oldRuleIds) =
-      case IntMap.minViewWithKey oldRuleIds of
+      case OR.refMapMinViewWithKey oldRuleIds of
       Nothing -> return ()
       Just ((firstRuleId, triggers), ruleIds) ->
         go . filterRemovedRule firstRuleId . (Lens._2 <>~ InferM.TriggeredRules ruleIds) =<<
@@ -72,7 +72,7 @@ runInfer act = do
         (Rule.execute firstRuleId triggers)
     filterRemovedRule _ (True, rules) = rules
     filterRemovedRule ruleId (False, InferM.TriggeredRules rules) =
-      InferM.TriggeredRules $ IntMap.delete ruleId rules
+      InferM.TriggeredRules $ rules & Lens.at ruleId .~ Nothing
 
 -- With hole apply vals and hole types
 exprIntoSTV ::

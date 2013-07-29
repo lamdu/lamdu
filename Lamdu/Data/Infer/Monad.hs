@@ -26,7 +26,8 @@ import Lamdu.Data.Infer.Rule.Internal
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
-import qualified Data.IntMap as IntMap
+import qualified Data.Map as Map
+import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 
@@ -45,12 +46,12 @@ newtype InferActions def = InferActions
   }
 
 newtype TriggeredRules def = TriggeredRules
-  { triggeredRules :: RuleIdMap (Map (RefD def, Trigger) Bool)
+  { triggeredRules :: RuleIdMap (RefData def) (Map (RefD def, Trigger) Bool)
   }
 instance Monoid (TriggeredRules def) where
-  mempty = TriggeredRules IntMap.empty
+  mempty = TriggeredRules OR.refMapEmpty
   mappend (TriggeredRules x) (TriggeredRules y) =
-    TriggeredRules $ IntMap.unionWith mappend x y
+    TriggeredRules $ OR.refMapUnionWith mappend x y
 
 type Infer def =
   ReaderT (InferActions def)
@@ -58,11 +59,10 @@ type Infer def =
    (StateT (Context def)
     (Either (Error def))))
 
-ruleTrigger :: RuleId -> RefD def -> Trigger -> Bool -> Infer def ()
+ruleTrigger :: RuleId (RefData def) -> RefD def -> Trigger -> Bool -> Infer def ()
 ruleTrigger ruleId ref trigger res =
   lift . Writer.tell . TriggeredRules $
-  IntMap.empty & Lens.at ruleId .~
-  Just (mempty & Lens.at (ref, trigger) .~ Just res)
+  OR.refMapSingleton ruleId (Map.singleton (ref, trigger) res)
 
 liftContext ::
   StateT (Context def) (Either (Error def)) a ->

@@ -5,11 +5,12 @@ module Data.OpaqueRef
       -- ^ Don't use unless you absolutely have to
     , unsafeFromInt
       -- ^ Don't use unless you absolutely have to
-  , RefMap, emptyRefMap
+  , RefMap, refMapEmpty
     , refMapToList, refMapFromList
-    , refMapSingleton
+    , refMapUnionWith, refMapSingleton
+    , refMapFilter, refMapMinViewWithKey
     , unsafeRefMapItems
-  , RefSet, emptyRefSet
+  , RefSet, refSetEmpty
     , refSetToList, refSetFromList
     , refSetSingleton
     , unsafeRefSetKeys
@@ -56,14 +57,26 @@ newtype RefMap p v = RefMap (IntMap v)
 instance Show (Ref p) where
   show (MkRef x) = 'R':show x
 
-emptyRefMap :: RefMap p v
-emptyRefMap = RefMap IntMap.empty
+refMapEmpty :: RefMap p v
+refMapEmpty = RefMap IntMap.empty
 
 unsafeRefMapItems :: Lens.Traversal (RefMap pa a) (RefMap pb b) (Ref pa, a) (Ref pb, b)
 unsafeRefMapItems f = fmap refMapFromList . traverse f . refMapToList
 
+refMapUnionWith :: (a -> a -> a) -> RefMap p a -> RefMap p a -> RefMap p a
+refMapUnionWith f (RefMap x) (RefMap y) = RefMap $ IntMap.unionWith f x y
+
 refMapSingleton :: Ref p -> a -> RefMap p a
 refMapSingleton (MkRef x) = RefMap . IntMap.singleton x
+
+refMapFilter :: (a -> Bool) -> RefMap p a -> RefMap p a
+refMapFilter p (RefMap x) = RefMap $ IntMap.filter p x
+
+refMapMinViewWithKey :: RefMap p a -> Maybe ((Ref p, a), RefMap p a)
+refMapMinViewWithKey (RefMap x) =
+  IntMap.minViewWithKey x
+  <&> Lens._1 . Lens._1 %~ MkRef
+  <&> Lens._2 %~ RefMap
 
 refMapToList :: RefMap p a -> [(Ref p, a)]
 refMapToList (RefMap x) = x & IntMap.toList <&> Lens._1 %~ MkRef
@@ -71,8 +84,8 @@ refMapToList (RefMap x) = x & IntMap.toList <&> Lens._1 %~ MkRef
 refMapFromList :: [(Ref p, a)] -> RefMap p a
 refMapFromList = RefMap . IntMap.fromList . (Lens.mapped . Lens._1 %~ (^. Lens.from mkRef))
 
-emptyRefSet :: RefSet p
-emptyRefSet = RefSet IntSet.empty
+refSetEmpty :: RefSet p
+refSetEmpty = RefSet IntSet.empty
 
 refSetFromList :: [Ref p] -> RefSet p
 refSetFromList = RefSet . IntSet.fromList . map (^. Lens.from mkRef)

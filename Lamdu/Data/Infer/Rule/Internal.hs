@@ -7,27 +7,27 @@ module Lamdu.Data.Infer.Rule.Internal
   , Rule(..), ruleTriggersIn, ruleContent
     , ruleRefs
   , RuleContent(..)
-  , RuleMap(..), rmNext, rmMap
+  , RuleMap(..), rmMap
     , new, verifyTagId
     , initialRuleMap
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad.Trans.State (StateT)
-import Data.IntMap (IntMap)
+import Control.Monad.Trans.State (StateT, runState)
+import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.OpaqueRef (Ref, RefMap, RefSet)
 import Data.Store.Guid (Guid)
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
 
-type RuleId = Int
-type RuleIdMap = IntMap
+type RuleId rd = Ref (Rule rd)
+type RuleIdMap rd = RefMap (Rule rd)
 
 data RuleMap rd = RuleMap
-  { _rmNext :: Int
-  , _rmMap :: RuleIdMap (Rule rd)
+  { _rmFresh :: OR.Fresh (Rule rd)
+  , _rmMap :: RuleIdMap rd (Rule rd)
   }
 
 -- We know of a GetField, waiting to know the record type:
@@ -97,18 +97,17 @@ ruleRefs f (Rule triggers content) =
   <$> OR.unsafeRefSetKeys f triggers
   <*> ruleContentRefs f content
 
-new :: Monad m => RuleContent rd -> StateT (RuleMap rd) m RuleId
+new :: MonadA m => RuleContent rd -> StateT (RuleMap rd) m (RuleId rd)
 new rule = do
-  ruleId <- Lens.use rmNext
+  ruleId <- Lens.zoom rmFresh OR.freshRef
   rmMap . Lens.at ruleId .= Just (Rule mempty rule)
-  rmNext += 1
   return ruleId
 
-verifyTagId :: RuleId
-verifyTagId = 0
-
+verifyTagId :: RuleId rd
 initialRuleMap :: RuleMap rd
-initialRuleMap = RuleMap
-  { _rmNext = verifyTagId + 1
-  , _rmMap = mempty & Lens.at verifyTagId .~ Just (Rule mempty RuleVerifyTag)
+(verifyTagId, initialRuleMap) =
+  runState (new RuleVerifyTag)
+  RuleMap
+  { _rmFresh = OR.initialFresh
+  , _rmMap = mempty
   }

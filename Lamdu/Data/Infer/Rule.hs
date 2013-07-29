@@ -17,7 +17,6 @@ import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.Rule.Internal
 import Lamdu.Data.Infer.Unify (unify)
 import qualified Control.Lens as Lens
-import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
 import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind as UF
@@ -27,7 +26,7 @@ import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
-ruleLens :: RuleId -> Lens' (Context def) (Maybe (Rule (RefData def)))
+ruleLens :: RuleId (RefData def) -> Lens' (Context def) (Maybe (Rule (RefData def)))
 ruleLens ruleId = ctxRuleMap . rmMap . Lens.at ruleId
 
 data RuleResult def
@@ -152,7 +151,7 @@ makeGetField tagValRef getFieldTypeRef recordTypeRef = do
     }
   Trigger.add TriggerIsRecordType ruleId recordTypeRef
 
-execute :: Eq def => RuleId -> Map (RefD def, Trigger) Bool -> Infer def Bool
+execute :: Eq def => RuleId (RefData def) -> Map (RefD def, Trigger) Bool -> Infer def Bool
 execute ruleId triggers = do
   mOldRule <- InferM.liftContext $ Lens.use (ruleLens ruleId)
   let Rule ruleTriggerRefs oldRule = unsafeUnjust ("Execute called on bad rule id: " ++ show ruleId) mOldRule
@@ -163,7 +162,7 @@ execute ruleId triggers = do
     RuleDelete -> do
       let
         deleteRuleFrom ref =
-          UFData.modify ref $ rdTriggers %~ IntMap.delete ruleId
+          UFData.modify ref $ rdTriggers . Lens.at ruleId .~ Nothing
       Lens.zoom ctxExprRefs . traverse_ deleteRuleFrom $ OR.refSetToList ruleTriggerRefs
       ruleLens ruleId .= Nothing
       return False

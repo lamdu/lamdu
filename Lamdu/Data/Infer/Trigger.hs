@@ -12,7 +12,6 @@ import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.Rule.Internal (RuleId)
 import qualified Control.Lens as Lens
-import qualified Data.IntMap as IntMap
 import qualified Data.OpaqueRef as OR
 import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expr
@@ -23,7 +22,7 @@ import qualified Lamdu.Data.Infer.Rule.Internal as Rule
 
 remember ::
   MonadA m =>
-  RefD def -> RefData def -> Trigger -> RuleId ->
+  RefD def -> RefData def -> Trigger -> RuleId (RefData def) ->
   StateT (Context def) m ()
 remember rep refData trigger ruleId = do
   Lens.zoom ctxExprRefs . UFData.writeRep rep $
@@ -47,7 +46,7 @@ checkTrigger refData trigger =
       | Lens.nullOf (rdBody . ExprLens.bodyHole) refData = Just False
       | otherwise = Nothing
 
-handleTrigger :: RefD def -> RefData def -> RuleId -> Trigger -> Infer def Bool
+handleTrigger :: RefD def -> RefData def -> RuleId (RefData def) -> Trigger -> Infer def Bool
 handleTrigger rep refData ruleId trigger =
   case checkTrigger refData trigger of
     Nothing -> return True
@@ -57,7 +56,7 @@ updateRefData :: RefD def -> RefData def -> Infer def (RefData def)
 updateRefData rep refData =
   refData &
   rdTriggers %%~
-  fmap (IntMap.filter (not . Set.null)) .
+  fmap (OR.refMapFilter (not . Set.null)) .
   Lens.itraverse onTriggers
   where
     onTriggers ruleId =
@@ -65,7 +64,7 @@ updateRefData rep refData =
       filterM (handleTrigger rep refData ruleId) .
       Set.toList
 
-add :: Trigger -> RuleId -> RefD def -> Infer def ()
+add :: Trigger -> RuleId (RefData def) -> RefD def -> Infer def ()
 add trigger ruleId ref = do
   rep <- InferM.liftExprRefs $ UFData.find "Trigger.add" ref
   refData <- InferM.liftExprRefs $ UFData.readRep rep
