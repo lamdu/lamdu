@@ -29,7 +29,7 @@ Lens.makeLenses ''UnionFind
 
 unmaintainedRefMapLookup ::
   MonadA m => (String -> Ref p -> m (Ref p)) -> Ref p -> StateT (RefMap p a) m (Maybe a)
-unmaintainedRefMapLookup doLookup ref = do
+unmaintainedRefMapLookup doLookup ref =
   tryNow ref $ do
     rep <- lift $ doLookup "unmaintainedRefMapLookup.ref" ref
     tryNow rep $ do

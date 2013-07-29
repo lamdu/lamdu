@@ -113,10 +113,10 @@ inferAssertion origExpr =
         (Monoid.Any True, Monoid.Any False) ->
           error "NewInferred specified, but no subexpr has ResumeWith/ResumeOnSide"
         (_, _) -> go (count+1) exprNextInput
-    handleResumption _ (Expr.Expression _ (stv, (InputPayload _ _ (ResumeWith newExpr)))) = do
+    handleResumption _ (Expr.Expression _ (stv, InputPayload _ _ (ResumeWith newExpr))) = do
       Writer.tell (Monoid.Any True, Monoid.Any True)
       lift $ loadInferInto stv newExpr
-    handleResumption verify (Expr.Expression body (stv, (InputPayload _ _ (ResumeOnSide newExpr ipl)))) = do
+    handleResumption verify (Expr.Expression body (stv, InputPayload _ _ (ResumeOnSide newExpr ipl))) = do
       Writer.tell (Monoid.Any True, Monoid.Any True)
       () <- lift $ verify =<< loadInferInContext stv newExpr
       recurseBody verify body (stv, ipl)

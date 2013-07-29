@@ -150,7 +150,7 @@ makeGetField tagValRef getFieldTypeRef recordTypeRef = do
     { _gf0GetFieldTag = tagValRef
     , _gf0GetFieldType = getFieldTypeRef
     }
-  Trigger.add TriggerIsRecordType ruleId $ recordTypeRef
+  Trigger.add TriggerIsRecordType ruleId recordTypeRef
 
 execute :: Eq def => RuleId -> Map (RefD def, Trigger) Bool -> Infer def Bool
 execute ruleId triggers = do
