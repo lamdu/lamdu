@@ -20,7 +20,6 @@ import qualified Control.Monad.Trans.State as State
 import qualified Data.IntDisjointSet as IDS
 import qualified Data.OpaqueRef as OpaqueRef
 
--- TODO: UnionFind a
 data UnionFind p = UnionFind
   { _ufRefs :: IDS.IntDisjointSet
   , _ufFresh :: OpaqueRef.Fresh p
