@@ -306,7 +306,7 @@ runParentToChildren ::
 runParentToChildren Expr.BodyApply {} _ = []
 runParentToChildren childrenRefs expr = do
   bodyRules <-
-    maybeToList . ExprUtil.matchBody
+    maybeToList . ExprUtil.matchBodyDeprecated
      matchLamResult (,)
     ((const . const) True) childrenRefs $
     expr ^. Expr.eBody

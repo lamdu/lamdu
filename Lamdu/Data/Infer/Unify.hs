@@ -117,7 +117,7 @@ mergeScopeBodies renames xScope xBody yScope yBody = do
     (Expr.BodyLeaf Expr.Hole, _) -> unifyWithHole Map.empty xScope yScope yBody
     _ -> do
       wuLater . (fromMaybe . lift . InferM.error) (Mismatch xBody yBody) $
-        sequenceA_ <$> ExprUtil.matchBody matchLamResult (unifyRecurse renames) (==) xBody yBody
+        sequenceA_ <$> ExprUtil.matchBodyDeprecated matchLamResult (unifyRecurse renames) (==) xBody yBody
       -- We must return the yBody and not xBody here. Ref-wise, both
       -- are fine. But name-wise, the names are going to be taken from
       -- y, not x.

@@ -19,7 +19,8 @@ module Lamdu.Data.Expression.Utils
   , randomizeExprAndParams
   , NameGen(..), onNgMakeName
   , randomNameGen, debugNameGen
-  , matchBody, matchExpression, matchExpressionG
+  , matchBody, matchBodyDeprecated
+  , matchExpression, matchExpressionG
   , subExpressions, subExpressionsWithout
   , isDependentPi, exprHasGetVar
   , curriedFuncArguments
@@ -47,6 +48,7 @@ import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
+import Data.Functor.Identity (Identity(..))
 import Data.Map (Map)
 import Data.Maybe (isJust, fromMaybe)
 import Data.Monoid (Any)
@@ -265,40 +267,60 @@ randomizeParamIdsG preNG gen initMap convertPL =
 -- Left-biased on parameter guids
 {-# INLINE matchBody #-}
 matchBody ::
+  (Applicative f, Eq def) =>
+  (Guid -> Guid -> a -> b -> f (Guid, c)) -> -- ^ Lam/Pi result match
+  (a -> b -> f c) ->                         -- ^ Ordinary structural match (Apply components, param type)
+  (Guid -> Guid -> f (Maybe Guid)) ->                -- ^ Match ParameterRef's
+  Body def a -> Body def b -> f (Maybe (Body def c))
+matchBody matchLamResult matchOther matchGetPar body0 body1 =
+  case body0 of
+  BodyLam (Lam k0 p0 pt0 r0) -> sequenceA $ do
+    Lam k1 p1 pt1 r1 <- body1 ^? _BodyLam
+    guard $ k0 == k1
+    let buildLam paramType (paramGuid, result) = BodyLam $ Lam k0 paramGuid paramType result
+    Just $
+      buildLam
+      <$> matchOther pt0 pt1
+      <*> matchLamResult p0 p1 r0 r1
+  BodyApply (Apply f0 a0) -> sequenceA $ do
+    Apply f1 a1 <- body1 ^? _BodyApply
+    Just $ BodyApply <$> (Apply <$> matchOther f0 f1 <*> matchOther a0 a1)
+  BodyRecord (Record k0 fs0) -> sequenceA $ do
+    Record k1 fs1 <- body1 ^? _BodyRecord
+    guard $ k0 == k1
+    matchedPairs <- ListUtils.match matchPair fs0 fs1
+    Just $ BodyRecord . Record k0 <$> sequenceA matchedPairs
+  BodyGetField (GetField r0 f0) -> sequenceA $ do
+    GetField r1 f1 <- body1 ^? _BodyGetField
+    Just $ BodyGetField <$> (GetField <$> matchOther r0 r1 <*> matchOther f0 f1)
+  BodyLeaf (GetVariable (ParameterRef p0)) ->
+    case body1 ^? ExprLens.bodyParameterRef of
+    Nothing -> pure Nothing
+    Just p1 -> fmap (ExprLens.bodyParameterRef #) <$> matchGetPar p0 p1
+  BodyLeaf x -> pure $ do
+    y <- body1 ^? _BodyLeaf
+    guard $ x == y
+    Just $ BodyLeaf x
+  where
+    matchPair (k0, v0) (k1, v1) =
+      (,) <$> matchOther k0 k1 <*> matchOther v0 v1
+
+-- TODO: Delete this
+matchBodyDeprecated ::
   Eq def =>
   (Guid -> Guid -> a -> b -> (Guid, c)) -> -- ^ Lam/Pi result match
   (a -> b -> c) ->                 -- ^ Ordinary structural match (Apply components, param type)
   (Guid -> Guid -> Bool) ->        -- ^ Match ParameterRef's
   Body def a -> Body def b -> Maybe (Body def c)
-matchBody matchLamResult matchOther matchGetPar body0 body1 =
-  case body0 of
-  BodyLam (Lam k0 p0 pt0 r0) -> do
-    Lam k1 p1 pt1 r1 <- body1 ^? _BodyLam
-    guard $ k0 == k1
-    let (p, res) = matchLamResult p0 p1 r0 r1
-    return . BodyLam $
-      Lam k0 p (matchOther pt0 pt1) res
-  BodyApply (Apply f0 a0) -> do
-    Apply f1 a1 <- body1 ^? _BodyApply
-    return . BodyApply $ Apply (matchOther f0 f1) (matchOther a0 a1)
-  BodyRecord (Record k0 fs0) -> do
-    Record k1 fs1 <- body1 ^? _BodyRecord
-    guard $ k0 == k1
-    BodyRecord . Record k0 <$> ListUtils.match matchPair fs0 fs1
-  BodyGetField (GetField r0 f0) -> do
-    GetField r1 f1 <- body1 ^? _BodyGetField
-    return . BodyGetField $ GetField (matchOther r0 r1) (matchOther f0 f1)
-  BodyLeaf (GetVariable (ParameterRef p0)) -> do
-    p1 <- body1 ^? ExprLens.bodyParameterRef
-    guard $ matchGetPar p0 p1
-    return $ ExprLens.bodyParameterRef # p0
-  BodyLeaf x -> do
-    y <- body1 ^? _BodyLeaf
-    guard $ x == y
-    return $ BodyLeaf x
+matchBodyDeprecated matchLamResult matchOther matchGetPar body0 body1 =
+  runIdentity $
+  matchBody
+  (matchLamResult & Lens.mapped . Lens.mapped . Lens.mapped . Lens.mapped %~ Identity)
+  (matchOther & Lens.mapped . Lens.mapped %~ Identity)
+  (matchGetPar & Lens.imapped <. Lens.mapped %@~ matchGetParMaybe)
+  body0 body1
   where
-    matchPair (k0, v0) (k1, v1) =
-      (matchOther k0 k1, matchOther v0 v1)
+    matchGetParMaybe apar isMatch = Identity $ apar <$ guard isMatch
 
 -- The returned expression gets the same guids as the left
 -- expression
@@ -321,7 +343,7 @@ matchExpressionG overrideGuids onMatch onMismatch =
   go Map.empty
   where
     go scope e0@(Expression body0 pl0) e1@(Expression body1 pl1) =
-      case matchBody matchLamResult matchOther matchGetPar body0 body1 of
+      case matchBodyDeprecated matchLamResult matchOther matchGetPar body0 body1 of
       Nothing ->
         onMismatch e0 $
         (ExprLens.exprLeaves . ExprLens.parameterRef %~ lookupGuid) e1
