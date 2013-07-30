@@ -7,12 +7,16 @@ module Data.OpaqueRef
       -- ^ Don't use unless you absolutely have to
   , RefMap, refMapEmpty
     , refMapToList, refMapFromList
+    , refMapIntersectionWith
     , refMapUnionWith, refMapSingleton
     , refMapFilter, refMapMinViewWithKey
+    , refMapKeysSet, refMapDifference
+    , refMapNull
     , unsafeRefMapItems
   , RefSet, refSetEmpty
     , refSetToList, refSetFromList
     , refSetSingleton
+    , refSetNull
     , unsafeRefSetKeys
   , Fresh, initialFresh
     , freshRef
@@ -63,6 +67,9 @@ refMapEmpty = RefMap IntMap.empty
 unsafeRefMapItems :: Lens.Traversal (RefMap pa a) (RefMap pb b) (Ref pa, a) (Ref pb, b)
 unsafeRefMapItems f = fmap refMapFromList . traverse f . refMapToList
 
+refMapIntersectionWith :: (a -> b -> c) -> RefMap p a -> RefMap p b -> RefMap p c
+refMapIntersectionWith f (RefMap x) (RefMap y) = RefMap $ IntMap.intersectionWith f x y
+
 refMapUnionWith :: (a -> a -> a) -> RefMap p a -> RefMap p a -> RefMap p a
 refMapUnionWith f (RefMap x) (RefMap y) = RefMap $ IntMap.unionWith f x y
 
@@ -71,6 +78,15 @@ refMapSingleton (MkRef x) = RefMap . IntMap.singleton x
 
 refMapFilter :: (a -> Bool) -> RefMap p a -> RefMap p a
 refMapFilter p (RefMap x) = RefMap $ IntMap.filter p x
+
+refMapKeysSet :: RefMap p a -> RefSet p
+refMapKeysSet (RefMap x) = RefSet $ IntMap.keysSet x
+
+refMapDifference :: RefMap p a -> RefMap p b -> RefMap p a
+refMapDifference (RefMap x) (RefMap y) = RefMap $ IntMap.difference x y
+
+refMapNull :: RefMap p a -> Bool
+refMapNull (RefMap x) = IntMap.null x
 
 refMapMinViewWithKey :: RefMap p a -> Maybe ((Ref p, a), RefMap p a)
 refMapMinViewWithKey (RefMap x) =
@@ -99,11 +115,20 @@ unsafeRefSetKeys f = fmap refSetFromList . traverse f . refSetToList
 refSetSingleton :: Ref p -> RefSet p
 refSetSingleton (MkRef x) = RefSet $ IntSet.singleton x
 
+refSetNull :: RefSet p -> Bool
+refSetNull (RefSet x) = IntSet.null x
+
+type instance Lens.Index (RefSet p) = Ref p
+
 type instance Lens.Index (RefMap p a) = Ref p
 type instance Lens.IxValue (RefMap p a) = a
 
 convertIndex :: Lens.Indexable i p => (i1 -> i) -> p a b -> Lens.Indexed i1 a b
 convertIndex onIndex f = Lens.Indexed (Lens.indexed f . onIndex)
+
+instance Functor f => Lens.Contains f (RefSet p) where
+  contains mk@(MkRef k) f (RefSet x) =
+    RefSet <$> Lens.contains k (convertIndex ((`asTypeOf` mk) . MkRef) f) x
 
 instance Lens.At (RefMap p a) where
   at mk@(MkRef k) f (RefMap x) =

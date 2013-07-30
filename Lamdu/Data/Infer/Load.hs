@@ -22,6 +22,7 @@ import qualified Control.Monad.Trans.Either as Either
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 
 data Loader def m = Loader
   { loadDefType :: def -> m (Expr.Expression def ())
@@ -32,7 +33,7 @@ newtype Error def = LoadUntypedDef def
   deriving (Show)
 
 exprIntoContext ::
-  MonadA m => Expr.Expression def () -> StateT (UFExprs def) m (ExprRef def)
+  MonadA m => Expr.Expression def () -> StateT (Context def) m (ExprRef def)
 exprIntoContext =
   go mempty
   where
@@ -41,19 +42,18 @@ exprIntoContext =
         case body of
         Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
           paramTypeRef <- go scope paramType
+          paramIdRep <- Lens.zoom ctxGuidAliases $ GuidAliases.getRep paramGuid
           Expr.BodyLam . Expr.Lam k paramGuid paramTypeRef <$>
-            go (scope & Lens.at paramGuid .~ Just paramTypeRef) result
-        -- Expensive assertion:
-        Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid))
-          | Lens.has Lens._Nothing (scope ^. Lens.at guid) -> error "GetVar out of scope"
+            go ((paramIdRep, paramTypeRef) : scope) result
+        -- TODO: Assert parameterRefs are not out of scope here
         _ -> body & Lens.traverse %%~ go scope
-      fresh (Scope scope) newBody
+      Lens.zoom ctxUFExprs $ fresh (Scope scope) newBody
 
 -- Error includes untyped def use
 loadDefTypeIntoRef ::
   MonadA m =>
   Loader def m -> def ->
-  StateT (UFExprs def) (EitherT (Error def) m) (ExprRef def)
+  StateT (Context def) (EitherT (Error def) m) (ExprRef def)
 loadDefTypeIntoRef (Loader loader) def = do
   loadedDefType <- lift . lift $ loader def
   when (Lens.has ExprLens.holePayloads loadedDefType) .
@@ -89,6 +89,6 @@ load loader expr = do
   where
     defLoaders =
       Map.fromList
-      [ (def, Lens.zoom ctxUFExprs $ TypedValue <$> freshHole (Scope mempty) <*> loadDefTypeIntoRef loader def)
+      [ (def, TypedValue <$> Lens.zoom ctxUFExprs (freshHole (Scope mempty)) <*> loadDefTypeIntoRef loader def)
       | def <- expr ^.. ExprLens.exprDef
       ]

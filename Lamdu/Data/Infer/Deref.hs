@@ -14,6 +14,7 @@ import Data.Function.Decycle (decycle)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.State as State
 import qualified Data.Map as Map
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
@@ -46,7 +47,7 @@ deref =
       case mFound of
         Just found -> return found
         Nothing -> do
-          repData <- lift $ UFData.readRep rep
+          repData <- lift $ State.gets (UFData.readRep rep)
           let
             body = repData ^. rdBody
             restrictions =

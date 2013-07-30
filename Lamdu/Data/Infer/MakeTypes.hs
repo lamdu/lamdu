@@ -10,19 +10,22 @@ import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule.Internal (verifyTagId)
-import Lamdu.Data.Infer.Unify (unify, forceLam)
+import Lamdu.Data.Infer.Unify (unify, forceLam, normalizeScope)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Rule as Rule
 import qualified Lamdu.Data.Infer.Trigger as Trigger
+import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 
-scopeLookup :: Scope def -> Guid -> Either (Error def) (ExprRef def)
-scopeLookup scope guid =
-  case scope ^. scopeMap . Lens.at guid of
-  Nothing -> Left VarNotInScope
-  Just ref -> pure ref
+scopeLookup :: Scope def -> Guid -> Infer def (ExprRef def)
+scopeLookup scope guid = do
+  scopeNorm <- normalizeScope scope
+  guidRep <- InferM.liftContext . Lens.zoom ctxGuidAliases $ GuidAliases.getRep guid
+  case scopeNorm ^. Lens.at guidRep of
+    Nothing -> InferM.error VarNotInScope
+    Just ref -> pure ref
 
 makePiTypeOfLam ::
   Guid -> TypedValue def -> TypedValue def ->
@@ -114,8 +117,7 @@ makeTypeRef scope body =
   Expr.BodyLeaf Expr.Hole -> InferM.liftUFExprs $ freshHole scope
   -- GetPars
   Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (LoadedDef _ ref))) -> pure ref
-  Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) ->
-    InferM.liftError $ scopeLookup scope guid
+  Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) -> scopeLookup scope guid
   -- Complex:
   Expr.BodyGetField getField -> makeGetFieldType scope ((^. stvTV) <$> getField)
   Expr.BodyApply (Expr.Apply func arg) -> makeApplyType scope func arg

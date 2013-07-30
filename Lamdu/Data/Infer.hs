@@ -29,6 +29,7 @@ import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Optimize as Optimize
 import qualified Lamdu.Data.Infer.Rule as Rule
@@ -84,11 +85,14 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     case body of
     Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
       paramTypeS <- exprIntoSTV scope paramType
+      paramIdRef <-
+        InferM.liftContext . Lens.zoom ctxGuidAliases $
+        GuidAliases.getRep paramGuid
       let
         newScope =
           scope
-          & scopeMap . Lens.at paramGuid .~
-            Just (paramTypeS ^. Expr.ePayload . Lens._1 . stvTV . tvVal)
+          & scopeMap %~
+            ((paramIdRef, paramTypeS ^. Expr.ePayload . Lens._1 . stvTV . tvVal) :)
       resultS <- exprIntoSTV newScope result
       pure . Expr.BodyLam $ Expr.Lam k paramGuid paramTypeS resultS
     _ ->

@@ -159,6 +159,7 @@ Executable lamdu
                        Lamdu.Data.Infer.AppliedPiResult,
                        Lamdu.Data.Infer.Deref,
                        Lamdu.Data.Infer.Internal,
+                       Lamdu.Data.Infer.GuidAliases,
                        Lamdu.Data.Infer.Load,
                        Lamdu.Data.Infer.MakeTypes,
                        Lamdu.Data.Infer.Monad,
