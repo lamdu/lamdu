@@ -14,6 +14,7 @@ import Data.Maybe.Utils (unsafeUnjust)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
+import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule.Internal
 import Lamdu.Data.Infer.Unify (unify)
 import qualified Control.Lens as Lens
@@ -26,15 +27,15 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
-ruleLens :: RuleId (RefData def) -> Lens' (Context def) (Maybe (Rule (RefData def)))
+ruleLens :: RuleId def -> Lens' (Context def) (Maybe (Rule def))
 ruleLens ruleId = ctxRuleMap . rmMap . Lens.at ruleId
 
 data RuleResult def
   = RuleKeep
   | RuleDelete
-  | RuleChange (RuleContent (RefData def))
+  | RuleChange (RuleContent def)
 
-type RuleFunc def = Map (RefD def, Trigger) Bool -> Infer def (RuleResult def)
+type RuleFunc def = Map (ExprRef def, Trigger) Bool -> Infer def (RuleResult def)
 
 verifyTag :: RuleFunc def
 verifyTag triggers =
@@ -47,13 +48,13 @@ verifyTag triggers =
   where
     mViolation = Map.keys (Map.filter not triggers) ^? Lens.traverse . Lens._1
 
-assertRecordTypeFields :: MonadA m => RefD def -> StateT (Context def) m [(RefD def, RefD def)]
+assertRecordTypeFields :: MonadA m => ExprRef def -> StateT (Context def) m [(ExprRef def, ExprRef def)]
 assertRecordTypeFields ref =
-  Lens.zoom ctxExprRefs $ UFData.read ref
+  Lens.zoom ctxUFExprs $ UFData.read ref
   <&> (^? rdBody . ExprLens.bodyKindedRecordFields Expr.KType)
   <&> unsafeUnjust "isRecord && not record?!"
 
-handlePotentialMatches :: Eq def => r -> [(RefD def, RefD def)] -> RefD def -> RefD def -> Infer def r -> Infer def r
+handlePotentialMatches :: Eq def => r -> [(ExprRef def, ExprRef def)] -> ExprRef def -> ExprRef def -> Infer def r -> Infer def r
 handlePotentialMatches finish fields tag typ other =
   case fields of
   [] -> InferM.error InferM.GetMissingField
@@ -63,14 +64,14 @@ handlePotentialMatches finish fields tag typ other =
     return finish
   _ -> other
 
-assertTag :: MonadA m => RefD def -> StateT (Context def) m Guid
+assertTag :: MonadA m => ExprRef def -> StateT (Context def) m Guid
 assertTag ref =
-  Lens.zoom ctxExprRefs $ UFData.read ref
+  Lens.zoom ctxUFExprs $ UFData.read ref
   <&> (^? rdBody . ExprLens.bodyTag)
   <&> unsafeUnjust "isTag && not tag?!"
 
 -- Phase0: Verify record has record type:
-getFieldPhase0 :: Eq def => GetFieldPhase0 (RefData def) -> RuleFunc def
+getFieldPhase0 :: Eq def => GetFieldPhase0 def -> RuleFunc def
 getFieldPhase0 rule triggers =
   case Map.toList triggers of
   [((recordTypeRef, _), isRecord)]
@@ -92,7 +93,7 @@ getFieldPhase0 rule triggers =
   _ -> error "A singleton trigger must be used with GetFieldPhase0 rule"
 
 -- Phase1: Get GetField's tag
-getFieldPhase1 :: Eq def => GetFieldPhase1 (RefData def) -> RuleFunc def
+getFieldPhase1 :: Eq def => GetFieldPhase1 def -> RuleFunc def
 getFieldPhase1 rule triggers =
   case Map.toList triggers of
   [(_, False)] -> return RuleDelete -- Not a tag in that position, do nothing
@@ -113,18 +114,18 @@ getFieldPhase1 rule triggers =
   _ -> error "Only one trigger before phase 1?!"
 
 -- Phase2: Find relevant record fields by triggered tags
-getFieldPhase2 :: Eq def => GetFieldPhase2 (RefData def) -> RuleFunc def
+getFieldPhase2 :: Eq def => GetFieldPhase2 def -> RuleFunc def
 getFieldPhase2 initialRule =
   go initialRule . Map.toList
   where
     go rule [] = return . RuleChange $ RuleGetFieldPhase2 rule
     go rule ((_, False):xs) = go rule xs
     go rule (((ref, _), True):xs) = do
-      rep <- InferM.liftExprRefs $ UFData.find "getFieldPhase2.ref" ref
+      rep <- InferM.liftUFExprs $ UFData.find "getFieldPhase2.ref" ref
       fieldTag <- InferM.liftContext $ assertTag rep
       (mFieldTypeRef, newMaybeMatchers) <-
         InferM.liftContext .
-        Lens.zoom ctxExprRefs $
+        Lens.zoom ctxUFExprs $
         UF.unmaintainedRefMapLookup UFData.find rep `runStateT` (rule ^. gf2MaybeMatchers)
       let
         fieldTypeRef = unsafeUnjust "phase2 triggered by wrong ref!" mFieldTypeRef
@@ -141,7 +142,7 @@ getFieldPhase2 initialRule =
             (rule ^. gf2TypeRef) $
               go filteredRule xs
 
-makeGetField :: RefD def -> RefD def -> RefD def -> Infer def ()
+makeGetField :: ExprRef def -> ExprRef def -> ExprRef def -> Infer def ()
 makeGetField tagValRef getFieldTypeRef recordTypeRef = do
   ruleId <-
     InferM.liftContext . Lens.zoom ctxRuleMap . new $
@@ -151,7 +152,7 @@ makeGetField tagValRef getFieldTypeRef recordTypeRef = do
     }
   Trigger.add TriggerIsRecordType ruleId recordTypeRef
 
-execute :: Eq def => RuleId (RefData def) -> Map (RefD def, Trigger) Bool -> Infer def Bool
+execute :: Eq def => RuleId def -> Map (ExprRef def, Trigger) Bool -> Infer def Bool
 execute ruleId triggers = do
   mOldRule <- InferM.liftContext $ Lens.use (ruleLens ruleId)
   let Rule ruleTriggerRefs oldRule = unsafeUnjust ("Execute called on bad rule id: " ++ show ruleId) mOldRule
@@ -163,14 +164,14 @@ execute ruleId triggers = do
       let
         deleteRuleFrom ref =
           UFData.modify ref $ rdTriggers . Lens.at ruleId .~ Nothing
-      Lens.zoom ctxExprRefs . traverse_ deleteRuleFrom $ OR.refSetToList ruleTriggerRefs
+      Lens.zoom ctxUFExprs . traverse_ deleteRuleFrom $ OR.refSetToList ruleTriggerRefs
       ruleLens ruleId .= Nothing
       return False
     RuleChange changed -> do
       ruleLens ruleId .= Just (Rule ruleTriggerRefs changed)
       return True
 
-ruleRunner :: Eq def => RuleContent (RefData def) -> RuleFunc def
+ruleRunner :: Eq def => RuleContent def -> RuleFunc def
 ruleRunner RuleVerifyTag = verifyTag
 ruleRunner (RuleGetFieldPhase0 x) = getFieldPhase0 x
 ruleRunner (RuleGetFieldPhase1 x) = getFieldPhase1 x

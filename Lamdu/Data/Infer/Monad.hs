@@ -2,7 +2,7 @@ module Lamdu.Data.Infer.Monad
   ( Error(..)
   , TriggeredRules(..)
   , Infer, run
-  , liftContext, liftExprRefs, liftError, error
+  , liftContext, liftUFExprs, liftError, error
   , ruleTrigger
   -- TODO: Delete these:
   , InferActions(..)
@@ -22,6 +22,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Expression.Utils () -- Expr.Body Show instance
 import Lamdu.Data.Infer.Internal
+import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule.Internal
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
@@ -34,19 +35,19 @@ import qualified Lamdu.Data.Expression as Expr
 data Error def
   = VarEscapesScope Guid
   | VarNotInScope
-  | InfiniteExpression (RefD def)
-  | CompositeTag (RefD def)
+  | InfiniteExpression (ExprRef def)
+  | CompositeTag (ExprRef def)
   | GetMissingField
   | GetFieldRequiresRecord
-  | Mismatch (Expr.Body def (RefD def)) (Expr.Body def (RefD def))
+  | Mismatch (Expr.Body def (ExprRef def)) (Expr.Body def (ExprRef def))
   deriving (Show)
 
 newtype InferActions def = InferActions
-  { iaExecuteRelation :: Relation def -> RefD def -> Infer def ()
+  { iaExecuteRelation :: Relation def -> ExprRef def -> Infer def ()
   }
 
 newtype TriggeredRules def = TriggeredRules
-  { triggeredRules :: RuleIdMap (RefData def) (Map (RefD def, Trigger) Bool)
+  { triggeredRules :: RuleIdMap def (Map (ExprRef def, Trigger) Bool)
   }
 instance Monoid (TriggeredRules def) where
   mempty = TriggeredRules OR.refMapEmpty
@@ -59,7 +60,7 @@ type Infer def =
    (StateT (Context def)
     (Either (Error def))))
 
-ruleTrigger :: RuleId (RefData def) -> RefD def -> Trigger -> Bool -> Infer def ()
+ruleTrigger :: RuleId def -> ExprRef def -> Trigger -> Bool -> Infer def ()
 ruleTrigger ruleId ref trigger res =
   lift . Writer.tell . TriggeredRules $
   OR.refMapSingleton ruleId (Map.singleton (ref, trigger) res)
@@ -69,10 +70,10 @@ liftContext ::
   Infer def a
 liftContext = lift . lift
 
-liftExprRefs ::
-  StateT (ExprRefs def) (Either (Error def)) a ->
+liftUFExprs ::
+  StateT (UFExprs def) (Either (Error def)) a ->
   Infer def a
-liftExprRefs = liftContext . Lens.zoom ctxExprRefs
+liftUFExprs = liftContext . Lens.zoom ctxUFExprs
 
 liftError :: Either (Error def) a -> Infer def a
 liftError = lift . lift . lift
@@ -85,12 +86,12 @@ run ::
   WriterT (TriggeredRules def) (StateT (Context def) (Either (Error def))) a
 run = flip runReaderT
 
-executeRelation :: Relation def -> RefD def -> Infer def ()
+executeRelation :: Relation def -> ExprRef def -> Infer def ()
 executeRelation relation ref = do
   act <- Reader.asks iaExecuteRelation
   act relation ref
 
-rerunRelations :: Eq def => RefD def -> Infer def ()
+rerunRelations :: Eq def => ExprRef def -> Infer def ()
 rerunRelations ref = do
-  relations <- liftContext . Lens.zoom ctxExprRefs $ UFData.read ref <&> (^. rdRelations)
+  relations <- liftContext . Lens.zoom ctxUFExprs $ UFData.read ref <&> (^. rdRelations)
   traverse_ (`executeRelation` ref) relations

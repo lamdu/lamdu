@@ -16,6 +16,7 @@ import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (sequenceA)
 import Lamdu.Data.Infer.Internal
+import Lamdu.Data.Infer.RefTags (ExprRef)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Either as Either
 import qualified Data.Map as Map
@@ -31,7 +32,7 @@ newtype Error def = LoadUntypedDef def
   deriving (Show)
 
 exprIntoContext ::
-  MonadA m => Expr.Expression def () -> StateT (ExprRefs def) m (RefD def)
+  MonadA m => Expr.Expression def () -> StateT (UFExprs def) m (ExprRef def)
 exprIntoContext =
   go mempty
   where
@@ -52,7 +53,7 @@ exprIntoContext =
 loadDefTypeIntoRef ::
   MonadA m =>
   Loader def m -> def ->
-  StateT (ExprRefs def) (EitherT (Error def) m) (RefD def)
+  StateT (UFExprs def) (EitherT (Error def) m) (ExprRef def)
 loadDefTypeIntoRef (Loader loader) def = do
   loadedDefType <- lift . lift $ loader def
   when (Lens.has ExprLens.holePayloads loadedDefType) .
@@ -62,7 +63,7 @@ loadDefTypeIntoRef (Loader loader) def = do
 newDefinition ::
   (MonadA m, Ord def) => def -> StateT (Context def) m (TypedValue def)
 newDefinition def = do
-  tv <- Lens.zoom ctxExprRefs $ TypedValue <$> freshHole (Scope mempty) <*> freshHole (Scope mempty)
+  tv <- Lens.zoom ctxUFExprs $ TypedValue <$> freshHole (Scope mempty) <*> freshHole (Scope mempty)
   ctxDefTVs . Lens.at def %= setRef tv
   return tv
   where
@@ -88,6 +89,6 @@ load loader expr = do
   where
     defLoaders =
       Map.fromList
-      [ (def, Lens.zoom ctxExprRefs $ TypedValue <$> freshHole (Scope mempty) <*> loadDefTypeIntoRef loader def)
+      [ (def, Lens.zoom ctxUFExprs $ TypedValue <$> freshHole (Scope mempty) <*> loadDefTypeIntoRef loader def)
       | def <- expr ^.. ExprLens.exprDef
       ]

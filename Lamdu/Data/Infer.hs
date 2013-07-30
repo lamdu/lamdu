@@ -22,6 +22,7 @@ import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.MakeTypes (makeTypeRef)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
+import Lamdu.Data.Infer.RefTags (ExprRef)
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Data.OpaqueRef as OR
@@ -42,7 +43,7 @@ unify (TypedValue xv xt) (TypedValue yv yt) = do
   void . runInfer $ Unify.unify xv yv
   void . runInfer $ Unify.unify xt yt
 
-exprSTVRefs :: Lens.Traversal' (Expr.Expression (LoadedDef def) (ScopedTypedValue def, a)) (RefD def)
+exprSTVRefs :: Lens.Traversal' (Expr.Expression (LoadedDef def) (ScopedTypedValue def, a)) (ExprRef def)
 exprSTVRefs f = ExprLens.exprBitraverse (ldType f) ((Lens._1 . stvRefs) f)
 
 infer ::
@@ -51,7 +52,7 @@ infer ::
   (Expr.Expression (LoadedDef def) (ScopedTypedValue def, a))
 infer scope expr = runInfer $ exprIntoSTV scope expr
 
-executeRelation :: Eq def => Relation def -> RefD def -> Infer def ()
+executeRelation :: Eq def => Relation def -> ExprRef def -> Infer def ()
 executeRelation rel =
   case rel of
   RelationAppliedPiResult apr -> flip handleAppliedPiResult apr
@@ -96,7 +97,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     bodySTV
     & ExprLens.bodyDef %~ (^. ldDef)
     & mkRefData
-    & InferM.liftExprRefs . UFData.fresh
+    & InferM.liftUFExprs . UFData.fresh
   typeRef <-
     bodySTV <&> (^. Expr.ePayload . Lens._1) & makeTypeRef scope
   pure $

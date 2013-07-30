@@ -22,6 +22,7 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
+import Lamdu.Data.Infer.RefTags (ExprRef)
 import System.Random (Random, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
@@ -38,18 +39,18 @@ import qualified Lamdu.Data.Infer.Trigger as Trigger
 newRandom :: Random r => Infer def r
 newRandom = InferM.liftContext . Lens.zoom ctxRandomGen $ state random
 
-forceLam :: Eq def => Expr.Kind -> Scope def -> RefD def -> Infer def (Guid, RefD def, RefD def)
+forceLam :: Eq def => Expr.Kind -> Scope def -> ExprRef def -> Infer def (Guid, ExprRef def, ExprRef def)
 forceLam k lamScope destRef = do
   newGuid <- newRandom
-  newParamTypeRef <- InferM.liftExprRefs . fresh lamScope $ ExprLens.bodyHole # ()
+  newParamTypeRef <- InferM.liftUFExprs . fresh lamScope $ ExprLens.bodyHole # ()
   let lamResultScope = lamScope & scopeMap %~ Map.insert newGuid newParamTypeRef
-  newResultTypeRef <- InferM.liftExprRefs . fresh lamResultScope $ ExprLens.bodyHole # ()
+  newResultTypeRef <- InferM.liftUFExprs . fresh lamResultScope $ ExprLens.bodyHole # ()
   newLamRef <-
-    InferM.liftExprRefs . fresh lamScope . Expr.BodyLam $
+    InferM.liftUFExprs . fresh lamScope . Expr.BodyLam $
     Expr.Lam k newGuid newParamTypeRef newResultTypeRef
   -- left is renamed into right (keep existing names of destRef):
   rep <- unify newLamRef destRef
-  body <- InferM.liftExprRefs $ (^. rdBody) <$> UFData.readRep rep
+  body <- InferM.liftUFExprs $ (^. rdBody) <$> UFData.readRep rep
   return . unsafeUnjust "We just unified Lam into rep" $
     body ^? ExprLens.bodyKindedLam k
 
@@ -60,7 +61,7 @@ intersectScopes (Scope aScope) (Scope bScope) =
   where
     -- Expensive assertion
     verifyEquiv aref bref = do
-      equiv <- InferM.liftExprRefs $ UFData.equiv aref bref
+      equiv <- InferM.liftUFExprs $ UFData.equiv aref bref
       if equiv
         then return aref
         else error "Scope unification of differing refs"
@@ -70,7 +71,7 @@ newtype HoleConstraints = HoleConstraints
   }
 
 -- You must apply this recursively
-checkHoleConstraints :: HoleConstraints -> Expr.Body def (RefD def) -> Either (Error def) ()
+checkHoleConstraints :: HoleConstraints -> Expr.Body def (ExprRef def) -> Either (Error def) ()
 checkHoleConstraints (HoleConstraints unusableSet) body
   | Just paramGuid <- body ^? ExprLens.bodyParameterRef
   , paramGuid `Set.member` unusableSet
@@ -80,7 +81,7 @@ checkHoleConstraints (HoleConstraints unusableSet) body
     error "checkHoleConstraints: Shadowing detected"
   | otherwise = return ()
 
-type U def = DecycleT (RefD def) (Infer def)
+type U def = DecycleT (ExprRef def) (Infer def)
 
 uInfer :: Infer def a -> U def a
 uInfer = lift
@@ -96,9 +97,9 @@ wuLater = Writer.tell . ApplicativeMonoid
 mergeScopeBodies ::
   Eq def =>
   Map Guid Guid ->
-  Scope def -> Expr.Body def (RefD def) ->
-  Scope def -> Expr.Body def (RefD def) ->
-  WU def (Scope def, Expr.Body def (RefD def))
+  Scope def -> Expr.Body def (ExprRef def) ->
+  Scope def -> Expr.Body def (ExprRef def) ->
+  WU def (Scope def, Expr.Body def (ExprRef def))
 mergeScopeBodies renames xScope xBody yScope yBody = do
   intersectedScope <- wuInfer $ intersectScopes xScope yScope
   let
@@ -185,7 +186,7 @@ mergeRefData renames
 
 renameMergeRefData ::
   Eq def =>
-  RefD def -> Map Guid Guid -> RefData def -> RefData def ->
+  ExprRef def -> Map Guid Guid -> RefData def -> RefData def ->
   WU def (Bool, RefData def)
 renameMergeRefData rep renames a b =
   mergeRefData renames (renameRefData renames a) b
@@ -195,7 +196,7 @@ applyHoleConstraints ::
   Eq def =>
   Map Guid Guid ->
   HoleConstraints ->
-  Expr.Body def (RefD def) -> Scope def ->
+  Expr.Body def (ExprRef def) -> Scope def ->
   WU def (Scope def)
 applyHoleConstraints renames holeConstraints body oldScope = do
   wuInfer . InferM.liftError $ checkHoleConstraints holeConstraints body
@@ -203,20 +204,20 @@ applyHoleConstraints renames holeConstraints body oldScope = do
   let unusableMap = Map.fromSet (const ()) $ hcUnusableInHoleScope holeConstraints
   return $ oldScope & scopeMap %~ (`Map.difference` unusableMap)
 
-decycleDefend :: RefD def -> (RefD def -> U def (RefD def)) -> U def (RefD def)
+decycleDefend :: ExprRef def -> (ExprRef def -> U def (ExprRef def)) -> U def (ExprRef def)
 decycleDefend ref action = do
-  nodeRep <- lift . InferM.liftExprRefs $ UFData.find "holeConstraintsRecurse:rawNode" ref
+  nodeRep <- lift . InferM.liftUFExprs $ UFData.find "holeConstraintsRecurse:rawNode" ref
   mResult <- visit nodeRep (action nodeRep)
   case mResult of
     Nothing -> lift . InferM.error $ InfiniteExpression nodeRep
     Just result -> return result
 
 holeConstraintsRecurse ::
-  Eq def => Map Guid Guid -> HoleConstraints -> RefD def -> U def (RefD def)
+  Eq def => Map Guid Guid -> HoleConstraints -> ExprRef def -> U def (ExprRef def)
 holeConstraintsRecurse renames holeConstraints rawNode =
   decycleDefend rawNode $ \nodeRep -> do
-    oldNodeData <- lift . InferM.liftExprRefs $ UFData.readRep nodeRep
-    lift . InferM.liftExprRefs . UFData.writeRep nodeRep $
+    oldNodeData <- lift . InferM.liftUFExprs $ UFData.readRep nodeRep
+    lift . InferM.liftUFExprs . UFData.writeRep nodeRep $
       error "Reading node during write..."
     let midRefData = renameRefData renames oldNodeData
     (newRefData, later) <-
@@ -225,15 +226,15 @@ holeConstraintsRecurse renames holeConstraints rawNode =
       & rdScope %%~
         applyHoleConstraints renames holeConstraints
         (midRefData ^. rdBody)
-    uInfer . InferM.liftExprRefs $ UFData.writeRep nodeRep newRefData
+    uInfer . InferM.liftUFExprs $ UFData.writeRep nodeRep newRefData
     later
     return nodeRep
 
 unifyRecurse ::
-  Eq def => Map Guid Guid -> RefD def -> RefD def -> U def (RefD def)
+  Eq def => Map Guid Guid -> ExprRef def -> ExprRef def -> U def (ExprRef def)
 unifyRecurse renames rawNode other =
   decycleDefend rawNode $ \nodeRep -> do
-    (rep, unifyResult) <- lift . InferM.liftExprRefs $ UFData.unifyRefs nodeRep other
+    (rep, unifyResult) <- lift . InferM.liftUFExprs $ UFData.unifyRefs nodeRep other
     case unifyResult of
       UFData.UnifyRefsAlreadyUnified -> return ()
       UFData.UnifyRefsUnified xData yData -> do
@@ -241,7 +242,7 @@ unifyRecurse renames rawNode other =
           wuRun $ renameMergeRefData rep renames xData yData
         -- First let's write the mergedRefData so we're not in danger zone
         -- of reading missing data:
-        lift . InferM.liftExprRefs $ UFData.write rep mergedRefData
+        lift . InferM.liftUFExprs $ UFData.write rep mergedRefData
         -- Now lets do the deferred recursive unifications:
         later
         -- TODO: Remove this when replaced Relations with Rules
@@ -249,5 +250,5 @@ unifyRecurse renames rawNode other =
         when bodyIsUpdated . lift $ InferM.rerunRelations rep
     return rep
 
-unify :: Eq def => RefD def -> RefD def -> Infer def (RefD def)
+unify :: Eq def => ExprRef def -> ExprRef def -> Infer def (ExprRef def)
 unify x y = runDecycleT $ unifyRecurse mempty x y

@@ -5,14 +5,14 @@ module Lamdu.Data.Infer.Internal
   -- Relations:
   , Relation(..), relationRefs
 
-  , ExprRefs, RefD
+  , UFExprs
 
   , Trigger(..)
   , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
     , defaultRefData
   , fresh, freshHole
   , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames, appliedPiResultRefs
-  , Context(..), ctxExprRefs, ctxDefTVs, ctxRuleMap, ctxRandomGen
+  , Context(..), ctxUFExprs, ctxDefTVs, ctxRuleMap, ctxRandomGen
     , emptyContext
   , LoadedDef(..), ldDef, ldType
   , TypedValue(..), tvVal, tvType, tvRefs
@@ -26,6 +26,7 @@ import Control.MonadA (MonadA)
 import Data.Map (Map)
 import Data.UnionFind.WithData (UFData)
 import Lamdu.Data.Infer.RefData
+import Lamdu.Data.Infer.RefTags (ExprRef, TagExpr)
 import Lamdu.Data.Infer.Rule.Internal (RuleMap, initialRuleMap)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
@@ -34,19 +35,19 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified System.Random as Random
 
-type ExprRefs def = UFData (RefData def) (RefData def)
+type UFExprs def = UFData (TagExpr def) (RefData def)
 
 -- TypedValue:
 data TypedValue def = TypedValue
-  { _tvVal :: {-# UNPACK #-}! (RefD def)
-  , _tvType :: {-# UNPACK #-}! (RefD def)
+  { _tvVal :: {-# UNPACK #-}! (ExprRef def)
+  , _tvType :: {-# UNPACK #-}! (ExprRef def)
   } deriving (Eq, Ord)
 Lens.makeLenses ''TypedValue
 instance Show (TypedValue def) where
   showsPrec n (TypedValue v t) =
     showParen (n > 0) (unwords [show v, ":", show t] ++)
 
-tvRefs :: Lens.Traversal' (TypedValue def) (RefD def)
+tvRefs :: Lens.Traversal' (TypedValue def) (ExprRef def)
 tvRefs f (TypedValue val typ) = TypedValue <$> f val <*> f typ
 
 -- ScopedTypedValue
@@ -56,13 +57,13 @@ data ScopedTypedValue def = ScopedTypedValue
   }
 Lens.makeLenses ''ScopedTypedValue
 
-stvRefs :: Lens.Traversal' (ScopedTypedValue def) (RefD def)
+stvRefs :: Lens.Traversal' (ScopedTypedValue def) (ExprRef def)
 stvRefs f (ScopedTypedValue tv scop) = ScopedTypedValue <$> tvRefs f tv <*> scopeRefs f scop
 
 -- Context
 data Context def = Context
-  { _ctxExprRefs :: ExprRefs def
-  , _ctxRuleMap :: RuleMap (RefData def)
+  { _ctxUFExprs :: UFExprs def
+  , _ctxRuleMap :: RuleMap def
   , -- NOTE: This Map is for 2 purposes: Sharing Refs of loaded Defs
     -- and allowing to specify recursive defs
     _ctxDefTVs :: Map def (TypedValue def)
@@ -73,7 +74,7 @@ Lens.makeLenses ''Context
 emptyContext :: Random.StdGen -> Context def
 emptyContext gen =
   Context
-  { _ctxExprRefs = UFData.empty
+  { _ctxUFExprs = UFData.empty
   , _ctxRuleMap = initialRuleMap
   , _ctxDefTVs = Map.empty
   , _ctxRandomGen = gen
@@ -81,12 +82,12 @@ emptyContext gen =
 
 data LoadedDef def = LoadedDef
   { _ldDef :: def
-  , _ldType :: RefD def
+  , _ldType :: ExprRef def
   }
 Lens.makeLenses ''LoadedDef
 
-fresh :: MonadA m => Scope def -> Expr.Body def (RefD def) -> StateT (ExprRefs def) m (RefD def)
+fresh :: MonadA m => Scope def -> Expr.Body def (ExprRef def) -> StateT (UFExprs def) m (ExprRef def)
 fresh scop body = UFData.fresh $ defaultRefData scop body
 
-freshHole :: MonadA m => Scope def -> StateT (ExprRefs def) m (RefD def)
+freshHole :: MonadA m => Scope def -> StateT (UFExprs def) m (ExprRef def)
 freshHole scop = fresh scop $ ExprLens.bodyHole # ()

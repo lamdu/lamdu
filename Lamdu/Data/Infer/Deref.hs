@@ -12,12 +12,13 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT, evalStateT)
 import Data.Function.Decycle (decycle)
 import Lamdu.Data.Infer.Internal
+import Lamdu.Data.Infer.RefTags (ExprRef)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 
-data Error def = InfiniteExpression (RefD def)
+data Error def = InfiniteExpression (ExprRef def)
   deriving (Show, Eq, Ord)
 
 -- Some infer info flows are one-way. In that case, we may know that
@@ -25,7 +26,7 @@ data Error def = InfiniteExpression (RefD def)
 -- or via use of a getvar from the src's context. These are documented
 -- in restrictions:
 newtype Restrictions def = Restrictions
-  { _rRefs :: [RefD def]
+  { _rRefs :: [ExprRef def]
   }
 
 data Derefed def = Derefed
@@ -34,9 +35,9 @@ data Derefed def = Derefed
   }
 Lens.makeLenses ''Derefed
 
-deref :: RefD def -> StateT (Context def) (Either (Error def)) (Expr.Expression def (Restrictions def))
+deref :: ExprRef def -> StateT (Context def) (Either (Error def)) (Expr.Expression def (Restrictions def))
 deref =
-  Lens.zoom ctxExprRefs . (`evalStateT` Map.empty) . decycle loop
+  Lens.zoom ctxUFExprs . (`evalStateT` Map.empty) . decycle loop
   where
     loop Nothing ref = lift . lift . Left $ InfiniteExpression ref
     loop (Just recurse) ref = do

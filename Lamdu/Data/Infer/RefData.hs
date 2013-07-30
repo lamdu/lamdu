@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.RefData
-  ( RefD
-  , Trigger(..)
+  ( Trigger(..)
   , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
     , defaultRefData
   , Scope(..), emptyScope, scopeMap, scopeRefs
@@ -18,15 +17,13 @@ import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
-import Data.OpaqueRef (Ref)
+import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule.Internal (RuleIdMap)
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Lamdu.Data.Expression as Expr
 
-type RefD def = Ref (RefData def)
-
-newtype Scope def = Scope (Map Guid (RefD def)) -- intersected
+newtype Scope def = Scope (Map Guid (ExprRef def)) -- intersected
 
 emptyScope :: Scope def
 emptyScope = Scope mempty
@@ -38,15 +35,15 @@ data AppliedPiResult def = AppliedPiResult
   { -- Guid to subst
     _aprPiGuid :: Guid
   , -- Arg val to subst with
-    _aprArgVal :: RefD def
+    _aprArgVal :: ExprRef def
   , -- Dest Ref
-    _aprDestRef :: RefD def
+    _aprDestRef :: ExprRef def
   , -- For each src (pi result) guid, remember the dest (apply type)
     -- guid it was copied as and the Ref of the dest param type
     _aprCopiedNames :: Map Guid Guid
   }
 
-appliedPiResultRefs :: Lens.Traversal' (AppliedPiResult def) (RefD def)
+appliedPiResultRefs :: Lens.Traversal' (AppliedPiResult def) (ExprRef def)
 appliedPiResultRefs f (AppliedPiResult guid argVal destRef copiedNames) =
   AppliedPiResult guid <$> f argVal <*> f destRef <*> pure copiedNames
 
@@ -66,7 +63,7 @@ instance Monoid RenameHistory where
 -- TODO: Convert to Rules
 data Relation def = RelationAppliedPiResult (AppliedPiResult def)
 
-relationRefs :: Lens.Traversal' (Relation def) (RefD def)
+relationRefs :: Lens.Traversal' (Relation def) (ExprRef def)
 relationRefs f (RelationAppliedPiResult x) = RelationAppliedPiResult <$> appliedPiResultRefs f x
 
 -- Triggers are alive as long as their truthfulness is yet
@@ -82,12 +79,12 @@ data RefData def = RefData
   , _rdRenameHistory :: RenameHistory
   , _rdRelations :: [Relation def]
   , _rdIsCircumsized :: Monoid.Any
-  , _rdTriggers :: RuleIdMap (RefData def) (Set Trigger)
-  , _rdBody :: Expr.Body def (RefD def)
+  , _rdTriggers :: RuleIdMap def (Set Trigger)
+  , _rdBody :: Expr.Body def (ExprRef def)
   }
 Lens.makeLenses ''RefData
 
-defaultRefData :: Scope def -> Expr.Body def (RefD def) -> RefData def
+defaultRefData :: Scope def -> Expr.Body def (ExprRef def) -> RefData def
 defaultRefData scop body = RefData
   { _rdScope = scop
   , _rdRenameHistory = mempty
@@ -101,13 +98,13 @@ Lens.makeIso ''Scope
 Lens.makeLenses ''AppliedPiResult
 Lens.makePrisms ''RenameHistory
 
-scopeMap :: Lens.Iso' (Scope def) (Map Guid (RefD def))
+scopeMap :: Lens.Iso' (Scope def) (Map Guid (ExprRef def))
 scopeMap = Lens.from scope
 
-scopeRefs :: Lens.Traversal' (Scope def) (RefD def)
+scopeRefs :: Lens.Traversal' (Scope def) (ExprRef def)
 scopeRefs = scopeMap . Lens.traverse
 
-rdRefs :: Lens.Traversal' (RefData def) (RefD def)
+rdRefs :: Lens.Traversal' (RefData def) (ExprRef def)
 rdRefs f (RefData scop renameHistory relations isCircumsized triggers body) =
   RefData
   <$> scopeRefs f scop
