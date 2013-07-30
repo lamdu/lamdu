@@ -49,11 +49,10 @@ fresh dat = do
 find :: MonadA m => String -> Ref p -> StateT (UFData p a) m (Ref p)
 find msg = Lens.zoom ufdUF . UF.lookup msg
 
-readRep ::
-  MonadA m => Ref p -> StateT (UFData p a) m a
-readRep rep =
-  unsafeUnjust ("readRep: missing ref: " ++ show rep) <$>
-  Lens.use (ufdData . Lens.at rep)
+readRep :: Ref p -> UFData p a -> a
+readRep rep ufData =
+  unsafeUnjust ("readRep: missing ref: " ++ show rep) $
+  ufData ^. ufdData . Lens.at rep
 
 popRep ::
   MonadA m => Ref p -> StateT (UFData p a) m a
@@ -68,7 +67,7 @@ writeRep rep dat = ufdData . Lens.at rep .= Just dat
 
 read ::
   MonadA m => Ref p -> StateT (UFData p a) m a
-read ref = readRep =<< find "read" ref
+read ref = State.gets . readRep =<< find "read" ref
 
 write ::
   MonadA m => Ref p -> a -> StateT (UFData p a) m ()

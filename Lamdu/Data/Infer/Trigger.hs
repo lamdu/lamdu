@@ -13,6 +13,7 @@ import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule.Internal (RuleRef)
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.State as State
 import qualified Data.OpaqueRef as OR
 import qualified Data.Set as Set
 import qualified Data.UnionFind.WithData as UFData
@@ -68,6 +69,6 @@ updateRefData rep refData =
 add :: Trigger -> RuleRef def -> ExprRef def -> Infer def ()
 add trigger ruleId ref = do
   rep <- InferM.liftUFExprs $ UFData.find "Trigger.add" ref
-  refData <- InferM.liftUFExprs $ UFData.readRep rep
+  refData <- InferM.liftUFExprs . State.gets $ UFData.readRep rep
   keep <- handleTrigger rep refData ruleId trigger
   when keep . InferM.liftContext $ remember rep refData trigger ruleId

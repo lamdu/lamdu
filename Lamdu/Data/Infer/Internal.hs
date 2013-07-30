@@ -1,18 +1,17 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Infer.Internal
   ( Scope(..), emptyScope, scopeMap, scopeRefs
-  , RenameHistory(..), _Untracked, _RenameHistory
   -- Relations:
   , Relation(..), relationRefs
 
   , UFExprs
 
   , Trigger(..)
-  , RefData(..), rdScope, rdRenameHistory, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
+  , RefData(..), rdScope, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
     , defaultRefData
   , fresh, freshHole
   , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames, appliedPiResultRefs
-  , Context(..), ctxUFExprs, ctxDefTVs, ctxRuleMap, ctxRandomGen
+  , Context(..), ctxUFExprs, ctxDefTVs, ctxRuleMap, ctxRandomGen, ctxGuidAliases
     , emptyContext
   , LoadedDef(..), ldDef, ldType
   , TypedValue(..), tvVal, tvType, tvRefs
@@ -20,22 +19,16 @@ module Lamdu.Data.Infer.Internal
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens.Operators
-import Control.Monad.Trans.State (StateT)
-import Control.MonadA (MonadA)
 import Data.Map (Map)
-import Data.UnionFind.WithData (UFData)
+import Lamdu.Data.Infer.GuidAliases (GuidAliases)
 import Lamdu.Data.Infer.RefData
-import Lamdu.Data.Infer.RefTags (ExprRef, TagExpr)
+import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule.Internal (RuleMap, initialRuleMap)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.UnionFind.WithData as UFData
-import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified System.Random as Random
-
-type UFExprs def = UFData (TagExpr def) (RefData def)
 
 -- TypedValue:
 data TypedValue def = TypedValue
@@ -68,6 +61,7 @@ data Context def = Context
     -- and allowing to specify recursive defs
     _ctxDefTVs :: Map def (TypedValue def)
   , _ctxRandomGen :: Random.StdGen -- for guids
+  , _ctxGuidAliases :: GuidAliases def
   }
 Lens.makeLenses ''Context
 
@@ -78,6 +72,7 @@ emptyContext gen =
   , _ctxRuleMap = initialRuleMap
   , _ctxDefTVs = Map.empty
   , _ctxRandomGen = gen
+  , _ctxGuidAliases = GuidAliases.empty
   }
 
 data LoadedDef def = LoadedDef
@@ -85,9 +80,3 @@ data LoadedDef def = LoadedDef
   , _ldType :: ExprRef def
   }
 Lens.makeLenses ''LoadedDef
-
-fresh :: MonadA m => Scope def -> Expr.Body def (ExprRef def) -> StateT (UFExprs def) m (ExprRef def)
-fresh scop body = UFData.fresh $ defaultRefData scop body
-
-freshHole :: MonadA m => Scope def -> StateT (UFExprs def) m (ExprRef def)
-freshHole scop = fresh scop $ ExprLens.bodyHole # ()
