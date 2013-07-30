@@ -20,9 +20,9 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind as UF
+import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
