@@ -60,7 +60,7 @@ substNode srcBody rawApr = do
     verifyGetParGuids srcGuid destGuid = renameCopied srcGuid == destGuid
   matchRes <-
     sequenceA $ sequenceA_ <$>
-    ExprUtil.matchBody matchLamResult matchOther
+    ExprUtil.matchBodyDeprecated matchLamResult matchOther
     verifyGetParGuids srcBody (destData ^. rdBody)
   when (Lens.has Lens._Nothing matchRes) $
     error "We just successfully unified src and dest bodies!"
