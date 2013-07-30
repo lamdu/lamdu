@@ -17,10 +17,10 @@ import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
-import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.Rule.Internal (RuleIdMap)
+import Lamdu.Data.Infer.RefTags (ExprRef, TagRule)
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
+import qualified Data.OpaqueRef as OR
 import qualified Lamdu.Data.Expression as Expr
 
 newtype Scope def = Scope (Map Guid (ExprRef def)) -- intersected
@@ -79,7 +79,7 @@ data RefData def = RefData
   , _rdRenameHistory :: RenameHistory
   , _rdRelations :: [Relation def]
   , _rdIsCircumsized :: Monoid.Any
-  , _rdTriggers :: RuleIdMap def (Set Trigger)
+  , _rdTriggers :: OR.RefMap (TagRule def) (Set Trigger)
   , _rdBody :: Expr.Body def (ExprRef def)
   }
 Lens.makeLenses ''RefData
