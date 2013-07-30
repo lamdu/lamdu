@@ -64,13 +64,13 @@ runInfer act = do
   return res
   where
     inferToWriter = InferM.run (InferM.InferActions executeRelation)
-    go (InferM.TriggeredRules oldRuleIds) =
-      case OR.refMapMinViewWithKey oldRuleIds of
+    go (InferM.TriggeredRules oldRuleRefs) =
+      case OR.refMapMinViewWithKey oldRuleRefs of
       Nothing -> return ()
-      Just ((firstRuleId, triggers), ruleIds) ->
-        go . filterRemovedRule firstRuleId . (Lens._2 <>~ InferM.TriggeredRules ruleIds) =<<
+      Just ((firstRuleRef, triggers), ruleIds) ->
+        go . filterRemovedRule firstRuleRef . (Lens._2 <>~ InferM.TriggeredRules ruleIds) =<<
         (runWriterT . inferToWriter)
-        (Rule.execute firstRuleId triggers)
+        (Rule.execute firstRuleRef triggers)
     filterRemovedRule _ (True, rules) = rules
     filterRemovedRule ruleId (False, InferM.TriggeredRules rules) =
       InferM.TriggeredRules $ rules & Lens.at ruleId .~ Nothing

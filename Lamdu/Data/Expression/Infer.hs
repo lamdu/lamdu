@@ -527,11 +527,11 @@ loadIndependent errStr mRecursiveDef =
 addRule :: Rule def ExprRef -> State (InferState def m) ()
 addRule rule = do
   ruleRef <- makeRule
-  traverse_ (addRuleId ruleRef) $ Foldable.toList rule
+  traverse_ (addRuleRef ruleRef) $ Foldable.toList rule
   sBfsNextLayer . Lens.contains (unRuleRef ruleRef) .= True
   where
     makeRule = Lens.zoom sContext $ createRuleRef rule
-    addRuleId ruleRef ref = sContext . exprRefsAt ref . rRules %= (ruleRef :)
+    addRuleRef ruleRef ref = sContext . exprRefsAt ref . rRules %= (ruleRef :)
 
 addRules ::
   (Eq def, MonadA m) => InferActions def m ->

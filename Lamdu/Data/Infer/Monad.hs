@@ -22,7 +22,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Expression.Utils () -- Expr.Body Show instance
 import Lamdu.Data.Infer.Internal
-import Lamdu.Data.Infer.RefTags (ExprRef)
+import Lamdu.Data.Infer.RefTags (ExprRef, TagRule)
 import Lamdu.Data.Infer.Rule.Internal
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
@@ -47,7 +47,7 @@ newtype InferActions def = InferActions
   }
 
 newtype TriggeredRules def = TriggeredRules
-  { triggeredRules :: RuleIdMap def (Map (ExprRef def, Trigger) Bool)
+  { triggeredRules :: OR.RefMap (TagRule def) (Map (ExprRef def, Trigger) Bool)
   }
 instance Monoid (TriggeredRules def) where
   mempty = TriggeredRules OR.refMapEmpty
@@ -60,7 +60,7 @@ type Infer def =
    (StateT (Context def)
     (Either (Error def))))
 
-ruleTrigger :: RuleId def -> ExprRef def -> Trigger -> Bool -> Infer def ()
+ruleTrigger :: RuleRef def -> ExprRef def -> Trigger -> Bool -> Infer def ()
 ruleTrigger ruleId ref trigger res =
   lift . Writer.tell . TriggeredRules $
   OR.refMapSingleton ruleId (Map.singleton (ref, trigger) res)

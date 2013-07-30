@@ -27,7 +27,7 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
-ruleLens :: RuleId def -> Lens' (Context def) (Maybe (Rule def))
+ruleLens :: RuleRef def -> Lens' (Context def) (Maybe (Rule def))
 ruleLens ruleId = ctxRuleMap . rmMap . Lens.at ruleId
 
 data RuleResult def
@@ -80,13 +80,13 @@ getFieldPhase0 rule triggers =
       handlePotentialMatches RuleDelete recordFields
         (rule ^. gf0GetFieldTag)
         (rule ^. gf0GetFieldType) $ do
-          phase1RuleId <-
+          phase1RuleRef <-
             InferM.liftContext . Lens.zoom ctxRuleMap . new $
             RuleGetFieldPhase1 GetFieldPhase1
             { _gf1GetFieldRecordTypeFields = recordFields
             , _gf1GetFieldType = rule ^. gf0GetFieldType
             }
-          Trigger.add TriggerIsDirectlyTag phase1RuleId $
+          Trigger.add TriggerIsDirectlyTag phase1RuleRef $
             rule ^. gf0GetFieldTag
           return RuleDelete
     | otherwise -> InferM.error InferM.GetFieldRequiresRecord
@@ -99,7 +99,7 @@ getFieldPhase1 rule triggers =
   [(_, False)] -> return RuleDelete -- Not a tag in that position, do nothing
   [((getFieldTagRef, _), True)] -> do
     getFieldTag <- InferM.liftContext $ assertTag getFieldTagRef
-    phase2RuleId <-
+    phase2RuleRef <-
       InferM.liftContext . Lens.zoom ctxRuleMap . new $
       RuleGetFieldPhase2 GetFieldPhase2
         { _gf2Tag = getFieldTag
@@ -109,7 +109,7 @@ getFieldPhase1 rule triggers =
         }
     rule ^. gf1GetFieldRecordTypeFields
       & Lens.traverseOf_ (Lens.traverse . Lens._1) %%~
-        Trigger.add TriggerIsDirectlyTag phase2RuleId
+        Trigger.add TriggerIsDirectlyTag phase2RuleRef
     return RuleDelete
   _ -> error "Only one trigger before phase 1?!"
 
@@ -152,7 +152,7 @@ makeGetField tagValRef getFieldTypeRef recordTypeRef = do
     }
   Trigger.add TriggerIsRecordType ruleId recordTypeRef
 
-execute :: Eq def => RuleId def -> Map (ExprRef def, Trigger) Bool -> Infer def Bool
+execute :: Eq def => RuleRef def -> Map (ExprRef def, Trigger) Bool -> Infer def Bool
 execute ruleId triggers = do
   mOldRule <- InferM.liftContext $ Lens.use (ruleLens ruleId)
   let Rule ruleTriggerRefs oldRule = unsafeUnjust ("Execute called on bad rule id: " ++ show ruleId) mOldRule

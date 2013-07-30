@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.Rule.Internal
-  ( RuleId, RuleIdMap
+  ( RuleRef
   , GetFieldPhase0(..), gf0GetFieldTag, gf0GetFieldType
   , GetFieldPhase1(..), gf1GetFieldRecordTypeFields, gf1GetFieldType
   , GetFieldPhase2(..), gf2Tag, gf2TagRef, gf2TypeRef, gf2MaybeMatchers
@@ -17,18 +17,14 @@ import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT, runState)
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
-import Data.OpaqueRef (Ref, RefMap, RefSet)
 import Data.Store.Guid (Guid)
-import Lamdu.Data.Infer.RefTags (ExprRef, TagExpr)
+import Lamdu.Data.Infer.RefTags (ExprRef, TagExpr, RuleRef, TagRule)
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
 
-type RuleId def = Ref (Rule def)
-type RuleIdMap def = RefMap (Rule def)
-
 data RuleMap def = RuleMap
-  { _rmFresh :: OR.Fresh (Rule def)
-  , _rmMap :: RuleIdMap def (Rule def)
+  { _rmFresh :: OR.Fresh (TagRule def)
+  , _rmMap :: OR.RefMap (TagRule def) (Rule def)
   }
 
 -- We know of a GetField, waiting to know the record type:
@@ -53,11 +49,11 @@ data GetFieldPhase2 def = GetFieldPhase2
   , _gf2TagRef :: ExprRef def
   , _gf2TypeRef :: ExprRef def
   , -- Maps Refs of tags to Refs of their field types
-    _gf2MaybeMatchers :: RefMap (TagExpr def) (ExprRef def)
+    _gf2MaybeMatchers :: OR.RefMap (TagExpr def) (ExprRef def)
   }
 
 data Rule def = Rule
-  { _ruleTriggersIn :: RefSet (TagExpr def)
+  { _ruleTriggersIn :: OR.RefSet (TagExpr def)
   , _ruleContent :: RuleContent def
   }
 
@@ -98,13 +94,13 @@ ruleRefs f (Rule triggers content) =
   <$> OR.unsafeRefSetKeys f triggers
   <*> ruleContentRefs f content
 
-new :: MonadA m => RuleContent def -> StateT (RuleMap def) m (RuleId def)
+new :: MonadA m => RuleContent def -> StateT (RuleMap def) m (RuleRef def)
 new rule = do
   ruleId <- Lens.zoom rmFresh OR.freshRef
   rmMap . Lens.at ruleId .= Just (Rule mempty rule)
   return ruleId
 
-verifyTagId :: RuleId def
+verifyTagId :: RuleRef def
 initialRuleMap :: RuleMap def
 (verifyTagId, initialRuleMap) =
   runState (new RuleVerifyTag)
