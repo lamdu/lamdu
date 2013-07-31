@@ -39,7 +39,7 @@ newRandom = InferM.liftContext . Lens.zoom ctxRandomGen $ state random
 forceLam :: Eq def => Expr.Kind -> Scope def -> ExprRef def -> Infer def (Guid, ExprRef def, ExprRef def)
 forceLam k lamScope destRef = do
   newGuid <- newRandom
-  newParamRep <- InferM.liftContext . Lens.zoom ctxGuidAliases $ GuidAliases.getRep newGuid
+  newParamRep <- InferM.liftGuidAliases $ GuidAliases.getRep newGuid
   newParamTypeRef <- InferM.liftUFExprs . fresh lamScope $ ExprLens.bodyHole # ()
   -- TODO: Directly manipulate RefData to avoid scope buildup?
   let lamResultScope = lamScope & scopeMap %~ ((newParamRep, newParamTypeRef) :)
@@ -55,8 +55,7 @@ forceLam k lamScope destRef = do
 normalizeScope :: Scope def -> Infer def (OR.RefMap (TagParam def) (ExprRef def))
 normalizeScope (Scope scope) =
   scope
-  & Lens.traverse . Lens._1 %%~
-    InferM.liftContext . Lens.zoom ctxGuidAliases . GuidAliases.find
+  & Lens.traverse . Lens._1 %%~ InferM.liftGuidAliases . GuidAliases.find
   <&> OR.refMapFromList
 
 -- If we don't assert that the scopes have same refs we could be pure
@@ -92,7 +91,7 @@ checkHoleConstraints (HoleConstraints unusableSet) body =
       error "checkHoleConstraints: Shadowing detected"
   _ -> return ()
   where
-    getRep = InferM.liftContext . Lens.zoom ctxGuidAliases . GuidAliases.getRep
+    getRep = InferM.liftGuidAliases . GuidAliases.getRep
 
 type U def = DecycleT (ExprRef def) (Infer def)
 
@@ -141,7 +140,7 @@ mergeScopeBodies xScope xBody yScope yBody = do
         ExprUtil.matchBody matchLamResult unifyRecurse matchGetPars xBody yBody
       return (intersectedScope, yBody)
   where
-    zoomGuidAliases = uInfer . InferM.liftContext . Lens.zoom ctxGuidAliases
+    zoomGuidAliases = uInfer . InferM.liftGuidAliases
     handleMatchResult Nothing = uInfer . InferM.error $ Mismatch xBody yBody
     handleMatchResult (Just _) = return ()
     matchLamResult xGuid yGuid xRef yRef = do

@@ -2,7 +2,8 @@ module Lamdu.Data.Infer.Monad
   ( Error(..)
   , TriggeredRules(..)
   , Infer, run
-  , liftContext, liftUFExprs, liftError, error
+  , liftContext, liftUFExprs, liftGuidAliases
+  , liftError, error
   , ruleTrigger
   -- TODO: Delete these:
   , InferActions(..)
@@ -21,6 +22,7 @@ import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Expression.Utils () -- Expr.Body Show instance
+import Lamdu.Data.Infer.GuidAliases (GuidAliases)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.RefTags (ExprRef, TagRule)
 import Lamdu.Data.Infer.Rule.Internal
@@ -74,6 +76,9 @@ liftUFExprs ::
   StateT (UFExprs def) (Either (Error def)) a ->
   Infer def a
 liftUFExprs = liftContext . Lens.zoom ctxUFExprs
+
+liftGuidAliases :: StateT (GuidAliases def) (Either (Error def)) a -> Infer def a
+liftGuidAliases = liftContext . Lens.zoom ctxGuidAliases
 
 liftError :: Either (Error def) a -> Infer def a
 liftError = lift . lift . lift

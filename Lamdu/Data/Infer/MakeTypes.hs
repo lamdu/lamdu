@@ -22,7 +22,7 @@ import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 scopeLookup :: Scope def -> Guid -> Infer def (ExprRef def)
 scopeLookup scope guid = do
   scopeNorm <- normalizeScope scope
-  guidRep <- InferM.liftContext . Lens.zoom ctxGuidAliases $ GuidAliases.getRep guid
+  guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
   case scopeNorm ^. Lens.at guidRep of
     Nothing -> InferM.error VarNotInScope
     Just ref -> pure ref

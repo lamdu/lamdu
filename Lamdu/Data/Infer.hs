@@ -85,9 +85,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     case body of
     Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
       paramTypeS <- exprIntoSTV scope paramType
-      paramIdRef <-
-        InferM.liftContext . Lens.zoom ctxGuidAliases $
-        GuidAliases.getRep paramGuid
+      paramIdRef <- InferM.liftGuidAliases $ GuidAliases.getRep paramGuid
       let
         newScope =
           scope
