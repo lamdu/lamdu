@@ -78,17 +78,16 @@ handleAppliedPiResult srcRef apr = do
       & InferM.liftUFExprs . UFData.write srcRef
     srcBody@(Expr.BodyLam (Expr.Lam k srcGuid _ _)) -> do
       (destGuid, _, _) <- forceLam k destScope destRef
-      srcRep <- liftGuidAliases $ GuidAliases.getRep srcGuid
-      destRep <- liftGuidAliases $ GuidAliases.getRep destGuid
+      srcRep <- InferM.liftGuidAliases $ GuidAliases.getRep srcGuid
+      destRep <- InferM.liftGuidAliases $ GuidAliases.getRep destGuid
       substNode srcBody (apr & aprCopiedNames %~ ((srcRep, destRep):))
     srcBody -> do
       destBodyRef <-
         srcBody
         & Lens.traverse %%~ const (InferM.liftUFExprs (freshHole destScope))
-        >>= ExprLens.bodyParameterRef %%~ liftGuidAliases . remapSubstGuid apr
+        >>= ExprLens.bodyParameterRef %%~ InferM.liftGuidAliases . remapSubstGuid apr
         >>= InferM.liftUFExprs . fresh destScope
       void $ unify destBodyRef destRef -- destBodyRef is swallowed by destRef if it had anything...
       substNode srcBody apr
   where
-    liftGuidAliases = InferM.liftContext . Lens.zoom ctxGuidAliases
     destRef = apr ^. aprDestRef
