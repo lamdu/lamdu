@@ -26,6 +26,7 @@ module Lamdu.Data.Expression.Lens
   , tagPositions
   , lambdaParamTypes
   , holePayloads
+  , bodyParamIds
   ) where
 
 import Prelude hiding (pi)
@@ -231,3 +232,13 @@ holePayloads f (Expression (BodyLeaf Hole) pl) =
   Expression (BodyLeaf Hole) <$> f pl
 holePayloads f (Expression body pl) =
   (`Expression` pl) <$> traverse (holePayloads f) body
+
+-- Everywhere, including lams:
+bodyParamIds :: Lens.Traversal' (Body def a) Guid
+bodyParamIds f body =
+  case body of
+  BodyLeaf (GetVariable (ParameterRef guid)) ->
+    (bodyParameterRef #) <$> f guid
+  BodyLam lam ->
+    BodyLam <$> (lam & lamParamId %%~ f)
+  _ -> pure body

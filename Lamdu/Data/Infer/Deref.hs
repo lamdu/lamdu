@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.Deref
-  ( deref, expr
+  ( expr
   , Derefed(..), dValue, dType
   , Error(..)
   , Restrictions(..)
@@ -9,15 +9,19 @@ module Lamdu.Data.Infer.Deref
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.State (StateT, evalStateT)
+import Control.Monad.Trans.State (StateT)
+import Control.MonadA (MonadA)
 import Data.Function.Decycle (decycle)
+import Data.Store.Guid (Guid)
+import Lamdu.Data.Infer.GuidAliases (GuidAliases)
 import Lamdu.Data.Infer.Internal
-import Lamdu.Data.Infer.RefTags (ExprRef)
+import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
-import qualified Data.Map as Map
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 
 data Error def = InfiniteExpression (ExprRef def)
   deriving (Show, Eq, Ord)
@@ -30,37 +34,67 @@ newtype Restrictions def = Restrictions
   { _rRefs :: [ExprRef def]
   }
 
+type Expr def = Expr.Expression def (Restrictions def)
+
 data Derefed def = Derefed
-  { _dValue :: Expr.Expression def (Restrictions def)
-  , _dType :: Expr.Expression def (Restrictions def)
+  { _dValue :: Expr def
+  , _dType :: Expr def
   }
 Lens.makeLenses ''Derefed
 
-deref :: ExprRef def -> StateT (Context def) (Either (Error def)) (Expr.Expression def (Restrictions def))
-deref =
-  Lens.zoom ctxUFExprs . (`evalStateT` Map.empty) . decycle loop
+type M def = StateT (Context def) (Either (Error def))
+mError :: Error def -> M def a
+mError = lift . Left
+mGuidAliases :: StateT (GuidAliases def) (Either (Error def)) a -> M def a
+mGuidAliases = Lens.zoom ctxGuidAliases
+
+-- | The stored guid names we know for paremeter refs (different
+-- mapping in different subexprs)
+type StoredGuids def = [(ParamRef def, Guid)]
+
+canonizeGuid ::
+  MonadA m =>
+  StoredGuids def -> Guid -> StateT (GuidAliases def) m Guid
+canonizeGuid storedGuidsOfRefs guid = do
+  guidRep <- GuidAliases.getRep guid
+  storedGuidsOfReps <-
+    storedGuidsOfRefs
+    & Lens.traverse . Lens._1 %%~ GuidAliases.find
+  case lookup guidRep storedGuidsOfReps of
+    Nothing -> State.gets (GuidAliases.guidOfRep guidRep)
+    Just storedGuid -> return storedGuid
+
+deref :: StoredGuids def -> ExprRef def -> M def (Expr def)
+deref storedGuids =
+  decycle go
   where
-    loop Nothing ref = lift . lift . Left $ InfiniteExpression ref
-    loop (Just recurse) ref = do
-      rep <- lift $ UFData.find "deref lookup" ref
-      mFound <- Lens.use (Lens.at rep)
-      case mFound of
-        Just found -> return found
-        Nothing -> do
-          repData <- lift $ State.gets (UFData.readRep rep)
-          derefed <-
-            repData ^. rdBody
-            & Lens.traverse %%~ recurse
-            -- TODO: maintain the restrictions in RefData and get from there:
-            <&> (`Expr.Expression` Restrictions [])
-          Lens.at rep .= Just derefed
-          return derefed
+    go Nothing ref = mError $ InfiniteExpression ref
+    go (Just recurse) ref =
+      Lens.zoom ctxUFExprs (UFData.read ref)
+      <&> (^. rdBody)
+      >>= Lens.traverse %%~ recurse
+      >>= ExprLens.bodyParamIds %%~ mGuidAliases . canonizeGuid storedGuids
+      -- TODO: maintain the restrictions in RefData and get from there:
+      <&> (`Expr.Expression` Restrictions [])
 
 expr ::
-  Expr.Expression defa (ScopedTypedValue defb, a) ->
-  StateT (Context defb) (Either (Error defb)) (Expr.Expression defa (Derefed defb, a))
+  Expr.Expression def (ScopedTypedValue def, a) ->
+  M def (Expr.Expression def (M def (Derefed def), a))
 expr =
-  Lens.traverse . Lens._1 %%~ derefEach . (^. stvTV)
+  go []
   where
-    derefEach (TypedValue valRef typeRef) =
-      Derefed <$> deref valRef <*> deref typeRef
+    go storedGuids (Expr.Expression storedBody (stv, pl)) = do
+      newStoredGuids <-
+        case storedBody ^? Expr._BodyLam . Expr.lamParamId of
+        Nothing -> return storedGuids
+        Just storedParamId -> do
+          storedParamIdRep <- mGuidAliases $ GuidAliases.getRep storedParamId
+          return $ (storedParamIdRep, storedParamId) : storedGuids
+      let
+        derefTV (TypedValue valRef typeRef) =
+          Derefed
+          <$> deref newStoredGuids valRef
+          <*> deref newStoredGuids typeRef
+      storedBody
+        & Lens.traverse %%~ go newStoredGuids
+        <&> (`Expr.Expression` (derefTV (stv ^. stvTV), pl))

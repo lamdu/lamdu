@@ -67,6 +67,7 @@ derefWithPL ::
 derefWithPL expr = expr
   & ExprLens.exprDef %~ (^. InferLoad.ldDef)
   & InferDeref.expr
+  >>= Lens.sequenceOf (Lens.traverse . Lens._1)
   & mapStateT (Lens._Left %~ mapErr)
   where
     mapErr (InferDeref.InfiniteExpression ref) = InferError (Infer.InfiniteExpression ref)
