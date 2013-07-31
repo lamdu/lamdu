@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternGuards #-}
 module Lamdu.Data.Infer.Trigger
   ( add, updateRefData
   ) where
@@ -19,12 +20,13 @@ import qualified Data.Set as Set
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Rule.Internal as Rule
 
 remember ::
   MonadA m =>
-  ExprRef def -> RefData def -> Trigger -> RuleRef def ->
+  ExprRef def -> RefData def -> Trigger def -> RuleRef def ->
   StateT (Context def) m ()
 remember rep refData trigger ruleId = do
   Lens.zoom ctxUFExprs . UFData.writeRep rep $
@@ -33,24 +35,37 @@ remember rep refData trigger ruleId = do
     _fromJust "Trigger.remember to missing rule" .
     Rule.ruleTriggersIn <>= OR.refSetSingleton rep
 
-checkTrigger :: RefData def -> Trigger -> Maybe Bool
+checkTrigger :: RefData def -> Trigger def -> Infer def (Maybe Bool)
 checkTrigger refData trigger =
   case trigger of
   TriggerIsDirectlyTag
-    | Lens.has (rdBody . ExprLens.bodyTag) refData -> Just True
-    | refData ^. rdIsCircumsized . Lens.unwrapped -> Just False
+    | Lens.has (rdBody . ExprLens.bodyTag) refData -> yes
+    | refData ^. rdIsCircumsized . Lens.unwrapped -> no
     | otherwise -> checkHole
+  TriggerIsParameterRef triggerGuidRef
+    | Just guid <- refData ^? rdBody . ExprLens.bodyParameterRef -> do
+      triggerGuidRep <- InferM.liftGuidAliases $ GuidAliases.find triggerGuidRef
+      guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
+      return . Just $ triggerGuidRep == guidRep
+    | Lens.nullOf (rdBody . ExprLens.bodyHole) refData -> no
+    | otherwise ->
+      -- TODO: Check if scope contains this parameter
+      unknown
   TriggerIsRecordType
-    | Lens.has (rdBody . ExprLens.bodyKindedRecordFields Expr.KType) refData -> Just True
+    | Lens.has (rdBody . ExprLens.bodyKindedRecordFields Expr.KType) refData -> yes
     | otherwise -> checkHole
   where
+    yes = return $ Just True
+    no = return $ Just False
+    unknown = return Nothing
     checkHole
-      | Lens.nullOf (rdBody . ExprLens.bodyHole) refData = Just False
-      | otherwise = Nothing
+      | Lens.nullOf (rdBody . ExprLens.bodyHole) refData = no
+      | otherwise = unknown
 
-handleTrigger :: ExprRef def -> RefData def -> RuleRef def -> Trigger -> Infer def Bool
-handleTrigger rep refData ruleId trigger =
-  case checkTrigger refData trigger of
+handleTrigger :: ExprRef def -> RefData def -> RuleRef def -> Trigger def -> Infer def Bool
+handleTrigger rep refData ruleId trigger = do
+  mRes <- checkTrigger refData trigger
+  case mRes of
     Nothing -> return True
     Just result -> False <$ InferM.ruleTrigger ruleId rep trigger result
 
@@ -66,7 +81,7 @@ updateRefData rep refData =
       filterM (handleTrigger rep refData ruleId) .
       Set.toList
 
-add :: Trigger -> RuleRef def -> ExprRef def -> Infer def ()
+add :: Trigger def -> RuleRef def -> ExprRef def -> Infer def ()
 add trigger ruleId ref = do
   rep <- InferM.liftUFExprs $ UFData.find "Trigger.add" ref
   refData <- InferM.liftUFExprs . State.gets $ UFData.readRep rep

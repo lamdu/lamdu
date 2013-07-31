@@ -35,7 +35,7 @@ data RuleResult def
   | RuleDelete
   | RuleChange (RuleContent def)
 
-type RuleFunc def = Map (ExprRef def, Trigger) Bool -> Infer def (RuleResult def)
+type RuleFunc def = Map (ExprRef def, Trigger def) Bool -> Infer def (RuleResult def)
 
 verifyTag :: RuleFunc def
 verifyTag triggers =
@@ -152,7 +152,7 @@ makeGetField tagValRef getFieldTypeRef recordTypeRef = do
     }
   Trigger.add TriggerIsRecordType ruleId recordTypeRef
 
-execute :: Eq def => RuleRef def -> Map (ExprRef def, Trigger) Bool -> Infer def Bool
+execute :: Eq def => RuleRef def -> Map (ExprRef def, Trigger def) Bool -> Infer def Bool
 execute ruleId triggers = do
   mOldRule <- InferM.liftContext $ Lens.use (ruleLens ruleId)
   let Rule ruleTriggerRefs oldRule = unsafeUnjust ("Execute called on bad rule id: " ++ show ruleId) mOldRule

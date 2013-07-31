@@ -65,16 +65,17 @@ relationRefs f (RelationAppliedPiResult x) = RelationAppliedPiResult <$> applied
 -- Triggers are alive as long as their truthfulness is yet
 -- unknown. Once they're known to be false, they're removed. Once
 -- they're known to be true, they trigger a rule and are removed.
-data Trigger
+data Trigger def
   = TriggerIsDirectlyTag
   | TriggerIsRecordType
+  | TriggerIsParameterRef (ParamRef def)
   deriving (Eq, Ord)
 
 data RefData def = RefData
   { _rdScope :: Scope def
   , _rdRelations :: [Relation def]
   , _rdIsCircumsized :: Monoid.Any
-  , _rdTriggers :: OR.RefMap (TagRule def) (Set Trigger)
+  , _rdTriggers :: OR.RefMap (TagRule def) (Set (Trigger def))
   , _rdBody :: Expr.Body def (ExprRef def)
   }
 Lens.makeLenses ''RefData

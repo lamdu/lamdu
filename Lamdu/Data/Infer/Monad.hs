@@ -49,7 +49,7 @@ newtype InferActions def = InferActions
   }
 
 newtype TriggeredRules def = TriggeredRules
-  { triggeredRules :: OR.RefMap (TagRule def) (Map (ExprRef def, Trigger) Bool)
+  { triggeredRules :: OR.RefMap (TagRule def) (Map (ExprRef def, Trigger def) Bool)
   }
 instance Monoid (TriggeredRules def) where
   mempty = TriggeredRules OR.refMapEmpty
@@ -62,7 +62,7 @@ type Infer def =
    (StateT (Context def)
     (Either (Error def))))
 
-ruleTrigger :: RuleRef def -> ExprRef def -> Trigger -> Bool -> Infer def ()
+ruleTrigger :: RuleRef def -> ExprRef def -> Trigger def -> Bool -> Infer def ()
 ruleTrigger ruleId ref trigger res =
   lift . Writer.tell . TriggeredRules $
   OR.refMapSingleton ruleId (Map.singleton (ref, trigger) res)
