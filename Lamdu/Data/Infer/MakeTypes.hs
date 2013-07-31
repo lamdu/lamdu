@@ -49,6 +49,8 @@ makeApplyType applyScope func arg = do
     (func ^. stvTV . tvType)
   void $ unify (arg ^. stvTV . tvType) piParamType
   applyTypeRef <- InferM.liftUFExprs $ freshHole applyScope
+  Rule.makeApply piGuid (arg ^. stvTV . tvVal)
+    piResultRef applyTypeRef
   handleAppliedPiResult piResultRef AppliedPiResult
     { _aprPiGuid = piGuid
     , _aprArgVal = arg ^. stvTV . tvVal

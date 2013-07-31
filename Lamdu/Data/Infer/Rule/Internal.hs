@@ -4,6 +4,7 @@ module Lamdu.Data.Infer.Rule.Internal
   , GetFieldPhase0(..), gf0GetFieldTag, gf0GetFieldType
   , GetFieldPhase1(..), gf1GetFieldRecordTypeFields, gf1GetFieldType
   , GetFieldPhase2(..), gf2Tag, gf2TagRef, gf2TypeRef, gf2MaybeMatchers
+  , Apply(..), aPiGuid, aArgVal, aLinkedExprs, aLinkedNames
   , Rule(..), ruleTriggersIn, ruleContent
     , ruleRefs
   , RuleContent(..)
@@ -18,7 +19,7 @@ import Control.Monad.Trans.State (StateT, runState)
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
-import Lamdu.Data.Infer.RefTags (ExprRef, TagExpr, RuleRef, TagRule)
+import Lamdu.Data.Infer.RefTags (ExprRef, TagExpr, RuleRef, TagRule, ParamRef, TagParam)
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
 
@@ -52,6 +53,14 @@ data GetFieldPhase2 def = GetFieldPhase2
     _gf2MaybeMatchers :: OR.RefMap (TagExpr def) (ExprRef def)
   }
 
+data Apply def = Apply
+  { _aPiGuid :: Guid
+  , _aArgVal :: ExprRef def
+  -- unmaintained pi-result to apply type respective/matching subexprs
+  , _aLinkedExprs :: OR.RefMap (TagExpr def) (ExprRef def)
+  , _aLinkedNames :: OR.RefMap (TagParam def) (ParamRef def)
+  }
+
 data Rule def = Rule
   { _ruleTriggersIn :: OR.RefSet (TagExpr def)
   , _ruleContent :: RuleContent def
@@ -62,12 +71,21 @@ data RuleContent def
   | RuleGetFieldPhase0 (GetFieldPhase0 def)
   | RuleGetFieldPhase1 (GetFieldPhase1 def)
   | RuleGetFieldPhase2 (GetFieldPhase2 def)
+  | RuleApply (Apply def)
 
 Lens.makeLenses ''RuleMap
 Lens.makeLenses ''GetFieldPhase0
 Lens.makeLenses ''GetFieldPhase1
 Lens.makeLenses ''GetFieldPhase2
+Lens.makeLenses ''Apply
 Lens.makeLenses ''Rule
+
+applyExprRefs :: Lens.Traversal' (Apply def) (ExprRef def)
+applyExprRefs f (Apply piGuid argVal linkedExprs linkedNames) =
+  Apply piGuid
+  <$> f argVal
+  <*> (OR.unsafeRefMapItems . Lens.both) f linkedExprs
+  <*> pure linkedNames
 
 gf0Refs :: Lens.Traversal' (GetFieldPhase0 def) (ExprRef def)
 gf0Refs f (GetFieldPhase0 tag typ) =
@@ -87,6 +105,7 @@ ruleContentRefs _ RuleVerifyTag = pure RuleVerifyTag
 ruleContentRefs f (RuleGetFieldPhase0 x) = RuleGetFieldPhase0 <$> gf0Refs f x
 ruleContentRefs f (RuleGetFieldPhase1 x) = RuleGetFieldPhase1 <$> gf1Refs f x
 ruleContentRefs f (RuleGetFieldPhase2 x) = RuleGetFieldPhase2 <$> gf2Refs f x
+ruleContentRefs f (RuleApply x) = RuleApply <$> applyExprRefs f x
 
 ruleRefs :: Lens.Traversal' (Rule def) (ExprRef def)
 ruleRefs f (Rule triggers content) =

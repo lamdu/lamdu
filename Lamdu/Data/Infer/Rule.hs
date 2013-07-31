@@ -1,6 +1,8 @@
 {-# LANGUAGE RankNTypes #-}
 module Lamdu.Data.Infer.Rule
-  ( execute, makeGetField
+  ( execute
+  , makeGetField
+  , makeApply
   ) where
 
 import Control.Lens (Lens')
@@ -27,9 +29,10 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Trigger as Trigger
+import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 
 ruleLens :: RuleRef def -> Lens' (Context def) (Maybe (Rule def))
-ruleLens ruleId = ctxRuleMap . rmMap . Lens.at ruleId
+ruleLens ruleRef = ctxRuleMap . rmMap . Lens.at ruleRef
 
 data RuleResult def
   = RuleKeep
@@ -71,6 +74,9 @@ assertTag ref =
   <&> (^? rdBody . ExprLens.bodyTag)
   <&> unsafeUnjust "isTag && not tag?!"
 
+newRule :: RuleContent def -> Infer def (RuleRef def)
+newRule = InferM.liftContext . Lens.zoom ctxRuleMap . new
+
 -- Phase0: Verify record has record type:
 getFieldPhase0 :: Eq def => GetFieldPhase0 def -> RuleFunc def
 getFieldPhase0 rule triggers =
@@ -82,7 +88,7 @@ getFieldPhase0 rule triggers =
         (rule ^. gf0GetFieldTag)
         (rule ^. gf0GetFieldType) $ do
           phase1RuleRef <-
-            InferM.liftContext . Lens.zoom ctxRuleMap . new $
+            newRule $
             RuleGetFieldPhase1 GetFieldPhase1
             { _gf1GetFieldRecordTypeFields = recordFields
             , _gf1GetFieldType = rule ^. gf0GetFieldType
@@ -101,7 +107,7 @@ getFieldPhase1 rule triggers =
   [((getFieldTagRef, _), True)] -> do
     getFieldTag <- InferM.liftContext $ assertTag getFieldTagRef
     phase2RuleRef <-
-      InferM.liftContext . Lens.zoom ctxRuleMap . new $
+      newRule $
       RuleGetFieldPhase2 GetFieldPhase2
         { _gf2Tag = getFieldTag
         , _gf2TagRef = getFieldTagRef
@@ -143,20 +149,20 @@ getFieldPhase2 initialRule =
             (rule ^. gf2TypeRef) $
               go filteredRule xs
 
-makeGetField :: ExprRef def -> ExprRef def -> ExprRef def -> Infer def ()
-makeGetField tagValRef getFieldTypeRef recordTypeRef = do
-  ruleId <-
-    InferM.liftContext . Lens.zoom ctxRuleMap . new $
-    RuleGetFieldPhase0 GetFieldPhase0
-    { _gf0GetFieldTag = tagValRef
-    , _gf0GetFieldType = getFieldTypeRef
-    }
-  Trigger.add Trigger.IsRecordType ruleId recordTypeRef
+handleApply :: Apply def -> RuleFunc def
+handleApply _apply _triggers = return RuleKeep
+
+ruleRunner :: Eq def => RuleContent def -> RuleFunc def
+ruleRunner RuleVerifyTag = verifyTag
+ruleRunner (RuleGetFieldPhase0 x) = getFieldPhase0 x
+ruleRunner (RuleGetFieldPhase1 x) = getFieldPhase1 x
+ruleRunner (RuleGetFieldPhase2 x) = getFieldPhase2 x
+ruleRunner (RuleApply x) = handleApply x
 
 execute :: Eq def => RuleRef def -> Map (ExprRef def, Trigger def) Bool -> Infer def Bool
-execute ruleId triggers = do
-  mOldRule <- InferM.liftContext $ Lens.use (ruleLens ruleId)
-  let Rule ruleTriggerRefs oldRule = unsafeUnjust ("Execute called on bad rule id: " ++ show ruleId) mOldRule
+execute ruleRef triggers = do
+  mOldRule <- InferM.liftContext $ Lens.use (ruleLens ruleRef)
+  let Rule ruleTriggerRefs oldRule = unsafeUnjust ("Execute called on bad rule id: " ++ show ruleRef) mOldRule
   ruleRes <- ruleRunner oldRule triggers
   InferM.liftContext $
     case ruleRes of
@@ -164,16 +170,34 @@ execute ruleId triggers = do
     RuleDelete -> do
       let
         deleteRuleFrom ref =
-          UFData.modify ref $ rdTriggers . Lens.at ruleId .~ Nothing
+          UFData.modify ref $ rdTriggers . Lens.at ruleRef .~ Nothing
       Lens.zoom ctxUFExprs . traverse_ deleteRuleFrom $ OR.refSetToList ruleTriggerRefs
-      ruleLens ruleId .= Nothing
+      ruleLens ruleRef .= Nothing
       return False
     RuleChange changed -> do
-      ruleLens ruleId .= Just (Rule ruleTriggerRefs changed)
+      ruleLens ruleRef .= Just (Rule ruleTriggerRefs changed)
       return True
 
-ruleRunner :: Eq def => RuleContent def -> RuleFunc def
-ruleRunner RuleVerifyTag = verifyTag
-ruleRunner (RuleGetFieldPhase0 x) = getFieldPhase0 x
-ruleRunner (RuleGetFieldPhase1 x) = getFieldPhase1 x
-ruleRunner (RuleGetFieldPhase2 x) = getFieldPhase2 x
+makeGetField :: ExprRef def -> ExprRef def -> ExprRef def -> Infer def ()
+makeGetField tagValRef getFieldTypeRef recordTypeRef = do
+  ruleRef <-
+    newRule $
+    RuleGetFieldPhase0 GetFieldPhase0
+    { _gf0GetFieldTag = tagValRef
+    , _gf0GetFieldType = getFieldTypeRef
+    }
+  Trigger.add Trigger.IsRecordType ruleRef recordTypeRef
+
+makeApply :: Guid -> ExprRef def -> ExprRef def -> ExprRef def -> Infer def ()
+makeApply piGuid argValRef piResultRef applyTypeRef = do
+  ruleRef <-
+    newRule $
+    RuleApply Apply
+    { _aPiGuid = piGuid
+    , _aArgVal = argValRef
+    , _aLinkedExprs = OR.refMapSingleton piResultRef applyTypeRef
+    , _aLinkedNames = OR.refMapEmpty
+    }
+  piGuidRep <- InferM.liftGuidAliases $ GuidAliases.getRep piGuid
+  Trigger.add (Trigger.IsParameterRef piGuidRep) ruleRef piResultRef
+  Trigger.add (Trigger.ScopeHasParameterRef piGuidRep) ruleRef piResultRef
