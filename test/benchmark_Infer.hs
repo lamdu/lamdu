@@ -13,4 +13,5 @@ main = do
   defaultMain
     [ bench "factorial" $ whnf factorial 0
     , bench "euler1" $ whnf euler1 0
+    , bench "solveDepressedQuartic" $ whnf solveDepressedQuartic 0
     ]
