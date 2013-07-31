@@ -332,9 +332,9 @@ euler1Expr =
 -- Solve depressed quartic polynomial
 solveDepressedQuarticExpr =
   lambdaRecord "params"
-  [ ("e", asHole integerType)
-  , ("d", asHole integerType)
-  , ("c", asHole integerType)
+  [ ("e", iInt)
+  , ("d", iInt)
+  , ("c", iInt)
   ] $ \[e, d, c] ->
   whereItem "solvePoly" ( getDef "id" $$ iListInt )
   $ \solvePoly ->
@@ -518,7 +518,8 @@ hunitTests =
   , mapIdTest
   , testInfer "factorial" factorialExpr
   , testInfer "euler1" euler1Expr
-  , testInferAllowFail "Missing type inferences"
+  , testInferAllowFail
+    "missing infer: record field types are types"
     "solveDepressedQuartic" solveDepressedQuarticExpr
   , applyIntToBoolFuncWithHole
   , applyOnVar
