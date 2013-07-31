@@ -1,15 +1,12 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Infer.Internal
   ( Scope(..), emptyScope, scopeMap, scopeParamRefs, scopeExprRefs
-  -- Relations:
-  , Relation(..), relationRefs
 
   , UFExprs
 
-  , RefData(..), rdScope, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
+  , RefData(..), rdScope, rdBody, rdIsCircumsized, rdTriggers, rdRefs
     , defaultRefData
   , fresh, freshHole
-  , AppliedPiResult(..), aprPiGuid, aprArgVal, aprDestRef, aprCopiedNames, appliedPiResultRefs
   , Context(..), ctxUFExprs, ctxDefTVs, ctxRuleMap, ctxRandomGen, ctxGuidAliases
     , emptyContext
   , LoadedDef(..), ldDef, ldType

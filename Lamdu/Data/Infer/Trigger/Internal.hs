@@ -15,7 +15,7 @@ data Trigger def
   | IsParameterRef (ParamRef def)
   -- ScopeHasParameterRef only triggers "no"
   | ScopeHasParameterRef (ParamRef def)
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 -- TODO: The above IsParameterRef/ScopeHasParameterRef need to be a
 -- single trigger with 3 options.  The current 2 yes/no rules are a

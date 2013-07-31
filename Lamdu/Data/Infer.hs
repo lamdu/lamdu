@@ -18,7 +18,6 @@ import Control.Monad (void)
 import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Writer (WriterT(..), runWriterT)
 import Data.OpaqueRef (Ref)
-import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.MakeTypes (makeTypeRef)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
@@ -53,25 +52,18 @@ infer ::
   (Expr.Expression (LoadedDef def) (ScopedTypedValue def, a))
 infer scope expr = runInfer $ exprIntoSTV scope expr
 
-executeRelation :: Eq def => Relation def -> ExprRef def -> Infer def ()
-executeRelation rel =
-  case rel of
-  RelationAppliedPiResult apr -> flip handleAppliedPiResult apr
-
 runInfer :: Eq def => Infer def a -> StateT (Context def) (Either (Error def)) a
 runInfer act = do
-  (res, rulesTriggered) <- runWriterT $ inferToWriter act
+  (res, rulesTriggered) <- runWriterT act
   go rulesTriggered
   return res
   where
-    inferToWriter = InferM.run (InferM.InferActions executeRelation)
     go (InferM.TriggeredRules oldRuleRefs) =
       case OR.refMapMinViewWithKey oldRuleRefs of
       Nothing -> return ()
       Just ((firstRuleRef, triggers), ruleIds) ->
         go . filterRemovedRule firstRuleRef . (Lens._2 <>~ InferM.TriggeredRules ruleIds) =<<
-        (runWriterT . inferToWriter)
-        (Rule.execute firstRuleRef triggers)
+        runWriterT (Rule.execute firstRuleRef triggers)
     filterRemovedRule _ (True, rules) = rules
     filterRemovedRule ruleId (False, InferM.TriggeredRules rules) =
       InferM.TriggeredRules $ rules & Lens.at ruleId .~ Nothing

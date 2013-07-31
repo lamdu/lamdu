@@ -5,6 +5,7 @@ module Lamdu.Data.Infer.Rule
   , makeApply
   ) where
 
+import Control.Applicative ((<$>))
 import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Monad (void, unless, when, mzero)
@@ -12,16 +13,17 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.State (StateT(..), execStateT)
 import Control.MonadA (MonadA)
-import Data.Foldable (traverse_)
+import Data.Foldable (traverse_, sequenceA_)
 import Data.Map (Map)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Store.Guid (Guid)
+import Data.Traversable (sequenceA)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
-import Lamdu.Data.Infer.RefTags (ExprRef)
+import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef)
 import Lamdu.Data.Infer.Rule.Internal
 import Lamdu.Data.Infer.Trigger (Trigger)
-import Lamdu.Data.Infer.Unify (unify)
+import Lamdu.Data.Infer.Unify (unify, forceLam)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Map as Map
@@ -29,6 +31,7 @@ import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Trigger as Trigger
@@ -157,8 +160,7 @@ getFieldPhase2 =
       mFieldTypeRef <- do
         rule <- State.get
         (mFieldTypeRef, newMaybeMatchers) <-
-          liftInfer . InferM.liftContext .
-          Lens.zoom ctxUFExprs $
+          liftInfer . InferM.liftUFExprs $
           OR.refMapUnmaintainedLookup UFData.find rep `runStateT` (rule ^. gf2MaybeMatchers)
         gf2MaybeMatchers .= newMaybeMatchers
         return mFieldTypeRef
@@ -178,21 +180,105 @@ getFieldPhase2 =
               (rule ^. gf2TypeRef)
           when isFinished ruleDelete
 
-handleApply :: Apply def -> RuleFunc def
-handleApply _apply _triggers = return RuleKeep
+remapSubstGuid :: Guid -> StateT (Apply def) (MaybeT (Infer def)) Guid
+remapSubstGuid srcGuid = do
+  srcRep <- liftInfer . InferM.liftGuidAliases $ GuidAliases.getRep srcGuid
+  mDstRef <-
+    Lens.zoom aLinkedNames $
+    OR.refMapUnmaintainedLookup
+    (const (lift . InferM.liftGuidAliases . GuidAliases.find)) srcRep
+  liftInfer . InferM.liftGuidAliases $
+    State.gets . GuidAliases.guidOfRep =<<
+    maybe (return srcRep) GuidAliases.find mDstRef
 
-ruleRunner :: Eq def => RuleContent def -> RuleFunc def
-ruleRunner RuleVerifyTag = verifyTag
-ruleRunner (RuleGetFieldPhase0 x) = getFieldPhase0 x
-ruleRunner (RuleGetFieldPhase1 x) = getFieldPhase1 x
-ruleRunner (RuleGetFieldPhase2 x) = getFieldPhase2 x
-ruleRunner (RuleApply x) = handleApply x
+link ::
+  Eq def =>
+  RuleRef def ->
+  ExprRef def -> ExprRef def ->
+  StateT (Apply def) (MaybeT (Infer def)) ()
+link ruleRef srcRef dstRef = do
+  aLinkedExprs <>= OR.refMapSingleton srcRef dstRef
+  piGuidRep <- liftInfer . InferM.liftGuidAliases . GuidAliases.getRep =<< Lens.use aPiGuid
+  liftInfer $ addPiResultTriggers ruleRef piGuidRep srcRef
+
+makePiResultCopy ::
+  Eq def =>
+  RuleRef def ->
+  ExprRef def -> ExprRef def ->
+  StateT (Apply def) (MaybeT (Infer def)) ()
+makePiResultCopy ruleRef srcRef destRef = do
+  srcBody <- liftInfer . InferM.liftUFExprs $ (^. rdBody) <$> UFData.read srcRef
+  destScope <- liftInfer . InferM.liftUFExprs $ (^. rdScope) <$> UFData.read destRef
+  case srcBody of
+    Expr.BodyLam (Expr.Lam k srcGuid _ _) -> do
+      (destGuid, _, _) <- liftInfer $ forceLam k destScope destRef
+      srcNameRep <- liftInfer . InferM.liftGuidAliases $ GuidAliases.getRep srcGuid
+      destNameRep <- liftInfer . InferM.liftGuidAliases $ GuidAliases.getRep destGuid
+      aLinkedNames . Lens.at srcNameRep .= Just destNameRep
+    _ -> do
+      destBodyRef <-
+        srcBody
+        & Lens.traverse %%~ (const . liftInfer . InferM.liftUFExprs) (freshHole destScope)
+        >>= ExprLens.bodyParameterRef %%~ remapSubstGuid
+        >>= liftInfer . InferM.liftUFExprs . fresh destScope
+      liftInfer . void $ unify destBodyRef destRef -- destBodyRef is swallowed by destRef if it had anything...
+  destBody <- liftInfer . InferM.liftUFExprs $ (^. rdBody) <$> UFData.read destRef
+  matchRes <-
+    sequenceA $ sequenceA_ <$>
+    ExprUtil.matchBodyDeprecated matchLamResult (link ruleRef)
+    ((const . const) True) srcBody destBody
+  when (Lens.has Lens._Nothing matchRes) $
+    error "We just successfully unified src and dest bodies!"
+  where
+    matchLamResult srcGuid _ srcChildRef destChildRef =
+      (srcGuid, link ruleRef srcChildRef destChildRef)
+
+handleApply :: Eq def => RuleRef def -> Apply def -> RuleFunc def
+handleApply ruleRef =
+  updateRuleTriggers RuleApply handleTrigger
+  where
+    findDestRef =
+      fmap (unsafeUnjust "Trigger.IsParameterRef not on src?!") . mFindDestRef
+    mFindDestRef srcRef =
+      Lens.zoom aLinkedExprs $
+      OR.refMapUnmaintainedLookup
+      (fmap (lift . InferM.liftUFExprs) . UFData.find) srcRef
+    handleTrigger ((srcRef, Trigger.IsParameterRef {}), True) = do
+      destRef <- findDestRef srcRef
+      argVal <- Lens.use aArgVal
+      liftInfer . void $ unify argVal destRef
+    handleTrigger ((srcRef, Trigger.IsParameterRef {}), False) = do
+      -- Triggered when not a hole anymore, so copy:
+      mDestRef <- mFindDestRef srcRef
+      case mDestRef of
+        Nothing ->
+          -- ScopeHasParemeterRef triggered first and unified instead
+          return ()
+        Just destRef -> makePiResultCopy ruleRef srcRef destRef
+    handleTrigger ((_, Trigger.ScopeHasParameterRef {}), True) = error "ScopeHasParameterRef True?!"
+    handleTrigger ((srcRef, Trigger.ScopeHasParameterRef {}), False) = do
+      -- Now we know no subexpr can possibly use the piGuid, so it
+      -- must fully equal the dest:
+      srcRep <-
+        liftInfer . InferM.liftUFExprs $
+        UFData.find "handleApply.srcRef" srcRef
+      liftInfer . void . unify srcRep =<< findDestRef srcRep
+      -- aLinkedExprs now guaranteed to have the rep:
+      aLinkedExprs . Lens.at srcRep .= Nothing
+    handleTrigger trigger = error $ "handleTrigger called with: " ++ show trigger
+
+ruleRunner :: Eq def => RuleContent def -> RuleRef def -> RuleFunc def
+ruleRunner RuleVerifyTag _ = verifyTag
+ruleRunner (RuleGetFieldPhase0 x) _ = getFieldPhase0 x
+ruleRunner (RuleGetFieldPhase1 x) _ = getFieldPhase1 x
+ruleRunner (RuleGetFieldPhase2 x) _ = getFieldPhase2 x
+ruleRunner (RuleApply x) ruleRef = handleApply ruleRef x
 
 execute :: Eq def => RuleRef def -> Map (ExprRef def, Trigger def) Bool -> Infer def Bool
 execute ruleRef triggers = do
   mOldRule <- InferM.liftContext $ Lens.use (ruleLens ruleRef)
   let Rule ruleTriggerRefs oldRule = unsafeUnjust ("Execute called on bad rule id: " ++ show ruleRef) mOldRule
-  ruleRes <- ruleRunner oldRule triggers
+  ruleRes <- ruleRunner oldRule ruleRef triggers
   InferM.liftContext $
     case ruleRes of
     RuleKeep -> return True
@@ -217,6 +303,13 @@ makeGetField tagValRef getFieldTypeRef recordTypeRef = do
     }
   Trigger.add Trigger.IsRecordType ruleRef recordTypeRef
 
+addPiResultTriggers :: RuleRef def -> ParamRef def -> ExprRef def -> Infer def ()
+addPiResultTriggers ruleRef paramRef srcRef = do
+  -- Scope handling should be first so that we do the cheap unify
+  -- rather than an expensive copy:
+  Trigger.add (Trigger.ScopeHasParameterRef paramRef) ruleRef srcRef
+  Trigger.add (Trigger.IsParameterRef paramRef) ruleRef srcRef
+
 makeApply :: Guid -> ExprRef def -> ExprRef def -> ExprRef def -> Infer def ()
 makeApply piGuid argValRef piResultRef applyTypeRef = do
   ruleRef <-
@@ -228,5 +321,4 @@ makeApply piGuid argValRef piResultRef applyTypeRef = do
     , _aLinkedNames = OR.refMapEmpty
     }
   piGuidRep <- InferM.liftGuidAliases $ GuidAliases.getRep piGuid
-  Trigger.add (Trigger.IsParameterRef piGuidRep) ruleRef piResultRef
-  Trigger.add (Trigger.ScopeHasParameterRef piGuidRep) ruleRef piResultRef
+  addPiResultTriggers ruleRef piGuidRep piResultRef

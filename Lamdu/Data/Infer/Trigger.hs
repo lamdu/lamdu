@@ -12,6 +12,7 @@ import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
+import Lamdu.Data.Infer.RefData (normalizeScope)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule.Internal (RuleRef)
 import Lamdu.Data.Infer.Trigger.Internal (Trigger(..))
@@ -59,8 +60,8 @@ checkTrigger refData trigger =
       no
     | otherwise -> do
       triggerGuidRep <- InferM.liftGuidAliases $ GuidAliases.find triggerGuidRef
-      -- Scope is already normalized when checking triggers, no need to re-normalize it
-      if Lens.anyOf (rdScope . scopeParamRefs) (== triggerGuidRep) refData
+      scopeNorm <- InferM.liftGuidAliases $ normalizeScope (refData ^. rdScope)
+      if triggerGuidRep `elem` (scopeNorm ^.. OR.unsafeRefMapItems . Lens._1)
         then unknown -- It may be removed in the future...
         else no
   where

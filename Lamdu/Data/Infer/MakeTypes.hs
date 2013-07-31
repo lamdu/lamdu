@@ -3,25 +3,24 @@ module Lamdu.Data.Infer.MakeTypes (makeTypeRef) where
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad (void, when)
-import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
-import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
+import Lamdu.Data.Infer.RefData (normalizeScope)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule.Internal (verifyTagId)
-import Lamdu.Data.Infer.Unify (unify, forceLam, normalizeScope)
+import Lamdu.Data.Infer.Unify (unify, forceLam)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Rule as Rule
 import qualified Lamdu.Data.Infer.Trigger as Trigger
-import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 
 scopeLookup :: Scope def -> Guid -> Infer def (ExprRef def)
 scopeLookup scope guid = do
-  scopeNorm <- normalizeScope scope
+  scopeNorm <- InferM.liftGuidAliases $ normalizeScope scope
   guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
   case scopeNorm ^. Lens.at guidRep of
     Nothing -> InferM.error VarNotInScope
@@ -49,14 +48,7 @@ makeApplyType applyScope func arg = do
     (func ^. stvTV . tvType)
   void $ unify (arg ^. stvTV . tvType) piParamType
   applyTypeRef <- InferM.liftUFExprs $ freshHole applyScope
-  Rule.makeApply piGuid (arg ^. stvTV . tvVal)
-    piResultRef applyTypeRef
-  handleAppliedPiResult piResultRef AppliedPiResult
-    { _aprPiGuid = piGuid
-    , _aprArgVal = arg ^. stvTV . tvVal
-    , _aprDestRef = applyTypeRef
-    , _aprCopiedNames = mempty
-    }
+  Rule.makeApply piGuid (arg ^. stvTV . tvVal) piResultRef applyTypeRef
   return applyTypeRef
 
 addTagVerification :: ExprRef def -> Infer def ()

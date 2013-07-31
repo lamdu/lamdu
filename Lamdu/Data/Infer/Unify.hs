@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternGuards, RecordWildCards #-}
 module Lamdu.Data.Infer.Unify
-  ( unify, forceLam, normalizeScope
+  ( unify, forceLam
   ) where
 
 import Control.Applicative ((<$>), (<$), Applicative(..))
@@ -18,6 +18,7 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
+import Lamdu.Data.Infer.RefData (normalizeScope)
 import Lamdu.Data.Infer.RefTags (ExprRef, TagParam)
 import System.Random (Random, random)
 import qualified Control.Lens as Lens
@@ -52,17 +53,11 @@ forceLam k lamScope destRef = do
   return . unsafeUnjust "We just unified Lam into rep" $
     body ^? ExprLens.bodyKindedLam k
 
-normalizeScope :: Scope def -> Infer def (OR.RefMap (TagParam def) (ExprRef def))
-normalizeScope (Scope scope) =
-  scope
-  & Lens.traverse . Lens._1 %%~ InferM.liftGuidAliases . GuidAliases.find
-  <&> OR.refMapFromList
-
 -- If we don't assert that the scopes have same refs we could be pure
 intersectScopes :: Scope def -> Scope def -> Infer def (Scope def)
 intersectScopes aScope bScope = do
-  aScopeNorm <- normalizeScope aScope
-  bScopeNorm <- normalizeScope bScope
+  aScopeNorm <- InferM.liftGuidAliases $ normalizeScope aScope
+  bScopeNorm <- InferM.liftGuidAliases $ normalizeScope bScope
   Scope . OR.refMapToList <$> sequenceA (OR.refMapIntersectionWith verifyEquiv aScopeNorm bScopeNorm)
   where
     -- Expensive assertion
@@ -111,7 +106,7 @@ unifyWithHole ::
   WU def (Scope def, Expr.Body def (ExprRef def))
 unifyWithHole holeScope otherScope nonHoleBody = do
   unusableScopeReps <-
-    wuInfer $
+    wuInfer . InferM.liftGuidAliases $
     OR.refMapKeysSet <$>
     ( OR.refMapDifference
       <$> normalizeScope otherScope
@@ -153,33 +148,26 @@ mergeScopeBodies xScope xBody yScope yBody = do
 
 mergeRefData ::
   Eq def => RefData def -> RefData def ->
-  WU def (Bool, RefData def)
+  WU def (RefData def)
 mergeRefData
-  (RefData aScope aRelations aIsCircumsized aTriggers aBody)
-  (RefData bScope bRelations bIsCircumsized bTriggers bBody) =
+  (RefData aScope aIsCircumsized aTriggers aBody)
+  (RefData bScope bIsCircumsized bTriggers bBody) =
   mkRefData <$> mergeScopeBodies aScope aBody bScope bBody
   where
-    bodyIsUpdated =
-      Lens.has ExprLens.bodyHole aBody /=
-      Lens.has ExprLens.bodyHole bBody
-    mergedRelations = aRelations ++ bRelations
     mkRefData (intersectedScope, mergedBody) =
-      ( bodyIsUpdated
-      , RefData
-        { _rdScope = intersectedScope
-        , _rdRelations = mergedRelations
-        , _rdIsCircumsized = mappend aIsCircumsized bIsCircumsized
-        , _rdTriggers = OR.refMapUnionWith mappend aTriggers bTriggers
-        , _rdBody = mergedBody
-        }
-      )
+      RefData
+      { _rdScope = intersectedScope
+      , _rdIsCircumsized = mappend aIsCircumsized bIsCircumsized
+      , _rdTriggers = OR.refMapUnionWith mappend aTriggers bTriggers
+      , _rdBody = mergedBody
+      }
 
 mergeRefDataAndTrigger ::
   Eq def =>
   ExprRef def -> RefData def -> RefData def ->
-  WU def (Bool, RefData def)
+  WU def (RefData def)
 mergeRefDataAndTrigger rep a b =
-  mergeRefData a b >>= Lens._2 %%~ wuInfer . Trigger.updateRefData rep
+  mergeRefData a b >>= wuInfer . Trigger.updateRefData rep
 
 applyHoleConstraints ::
   Eq def => HoleConstraints def ->
@@ -188,7 +176,7 @@ applyHoleConstraints ::
 applyHoleConstraints holeConstraints body oldScope = do
   wuInfer $ checkHoleConstraints holeConstraints body
   let isUnusable x = hcUnusableScopeReps holeConstraints ^. Lens.contains x
-  oldScopeNorm <- wuInfer $ normalizeScope oldScope
+  oldScopeNorm <- wuInfer . InferM.liftGuidAliases $ normalizeScope oldScope
   let (unusables, usables) = List.partition (isUnusable . fst) $ OR.refMapToList oldScopeNorm
   unless (null unusables) . wuLater $
     (traverse_ . holeConstraintsRecurse . HoleConstraints . OR.refSetFromList . map fst) unusables body
@@ -227,16 +215,13 @@ unifyRecurse rawNode other =
     case unifyResult of
       UFData.UnifyRefsAlreadyUnified -> return ()
       UFData.UnifyRefsUnified xData yData -> do
-        ((bodyIsUpdated, mergedRefData), later) <-
+        (mergedRefData, later) <-
           wuRun $ mergeRefDataAndTrigger rep xData yData
         -- First let's write the mergedRefData so we're not in danger zone
         -- of reading missing data:
         lift . InferM.liftUFExprs $ UFData.write rep mergedRefData
         -- Now lets do the deferred recursive unifications:
         later
-        -- TODO: Remove this when replaced Relations with Rules
-        -- Now we can safely re-run the relations
-        when bodyIsUpdated . lift $ InferM.rerunRelations rep
     return rep
 
 unify :: Eq def => ExprRef def -> ExprRef def -> Infer def (ExprRef def)
