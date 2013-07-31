@@ -91,6 +91,14 @@ inferFromOneArgToOtherMap =
   getDef "if" $$ asHole (mkMapType id) $$:
   [holeWithInferredType (getDef "Bool"), c, d]
 
+idPreservesDependency =
+  testInfer "5 + f _ where f x = id _{no inferred type}" $
+  whereItem "f" (lambda "x" iset (const (getDef "id" $$ iset $$ hole))) $ \f ->
+  getDef "+" $$ asHole integerType $$:
+  [literalInteger 5, (f $$ hole) `setInferredType` integerType]
+  where
+    iset = holeWithInferredType set
+
 fOfXIsFOf5 =
   testInfer "f x = f 5" $
   lambda "" (asHole integerType) $ \_ ->
@@ -472,6 +480,7 @@ hunitTests =
   , inferFromOneArgToOtherMap
   , depApply
   , forceMono
+  , idPreservesDependency
   , fOfXIsFOf5
   , monomorphRedex
   , inferPart
