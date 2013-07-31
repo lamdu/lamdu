@@ -36,6 +36,11 @@ data Derefed def = Derefed
   }
 Lens.makeLenses ''Derefed
 
+restrictionsOfBody :: Expr.Body def expr -> [Relation defb] -> Restrictions defb
+restrictionsOfBody (Expr.BodyLeaf Expr.Hole) relations =
+  Restrictions $ [apr ^. aprDestRef | RelationAppliedPiResult apr <- relations]
+restrictionsOfBody _ _ = Restrictions [] -- Only holes need restrictions
+
 deref :: ExprRef def -> StateT (Context def) (Either (Error def)) (Expr.Expression def (Restrictions def))
 deref =
   Lens.zoom ctxUFExprs . (`evalStateT` Map.empty) . decycle loop
@@ -50,14 +55,7 @@ deref =
           repData <- lift $ State.gets (UFData.readRep rep)
           let
             body = repData ^. rdBody
-            restrictions =
-              Restrictions $
-              case body of
-              Expr.BodyLeaf Expr.Hole ->
-                [ apr ^. aprDestRef
-                | RelationAppliedPiResult apr <- repData ^. rdRelations
-                ]
-              _ -> [] -- Only holes need restrictions
+            restrictions = restrictionsOfBody body $ repData ^. rdRelations
           derefed <-
             repData ^. rdBody
             & Lens.traverse %%~ recurse
