@@ -6,7 +6,6 @@ module Lamdu.Data.Infer.Internal
 
   , UFExprs
 
-  , Trigger(..)
   , RefData(..), rdScope, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
     , defaultRefData
   , fresh, freshHole

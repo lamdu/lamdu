@@ -1,6 +1,7 @@
 {-# LANGUAGE PatternGuards #-}
 module Lamdu.Data.Infer.Trigger
-  ( add, updateRefData
+  ( Trigger(..)
+  , add, updateRefData
   ) where
 
 import Control.Applicative ((<$))
@@ -13,6 +14,7 @@ import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule.Internal (RuleRef)
+import Lamdu.Data.Infer.Trigger.Internal (Trigger(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.OpaqueRef as OR
@@ -38,11 +40,11 @@ remember rep refData trigger ruleId = do
 checkTrigger :: RefData def -> Trigger def -> Infer def (Maybe Bool)
 checkTrigger refData trigger =
   case trigger of
-  TriggerIsDirectlyTag
+  IsDirectlyTag
     | Lens.has (rdBody . ExprLens.bodyTag) refData -> yes
     | refData ^. rdIsCircumsized . Lens.unwrapped -> no
     | otherwise -> checkHole
-  TriggerIsParameterRef triggerGuidRef
+  IsParameterRef triggerGuidRef
     | Just guid <- refData ^? rdBody . ExprLens.bodyParameterRef -> do
       triggerGuidRep <- InferM.liftGuidAliases $ GuidAliases.find triggerGuidRef
       guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
@@ -57,7 +59,7 @@ checkTrigger refData trigger =
       if Lens.anyOf (rdScope . scopeParamRefs) (== triggerGuidRep) refData
         then unknown
         else no
-  TriggerIsRecordType
+  IsRecordType
     | Lens.has (rdBody . ExprLens.bodyKindedRecordFields Expr.KType) refData -> yes
     | otherwise -> checkHole
   where

@@ -17,6 +17,7 @@ import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule.Internal
 import Lamdu.Data.Infer.Unify (unify)
+import Lamdu.Data.Infer.Trigger (Trigger)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.OpaqueRef as OR
@@ -86,7 +87,7 @@ getFieldPhase0 rule triggers =
             { _gf1GetFieldRecordTypeFields = recordFields
             , _gf1GetFieldType = rule ^. gf0GetFieldType
             }
-          Trigger.add TriggerIsDirectlyTag phase1RuleRef $
+          Trigger.add Trigger.IsDirectlyTag phase1RuleRef $
             rule ^. gf0GetFieldTag
           return RuleDelete
     | otherwise -> InferM.error InferM.GetFieldRequiresRecord
@@ -109,7 +110,7 @@ getFieldPhase1 rule triggers =
         }
     rule ^. gf1GetFieldRecordTypeFields
       & Lens.traverseOf_ (Lens.traverse . Lens._1) %%~
-        Trigger.add TriggerIsDirectlyTag phase2RuleRef
+        Trigger.add Trigger.IsDirectlyTag phase2RuleRef
     return RuleDelete
   _ -> error "Only one trigger before phase 1?!"
 
@@ -150,7 +151,7 @@ makeGetField tagValRef getFieldTypeRef recordTypeRef = do
     { _gf0GetFieldTag = tagValRef
     , _gf0GetFieldType = getFieldTypeRef
     }
-  Trigger.add TriggerIsRecordType ruleId recordTypeRef
+  Trigger.add Trigger.IsRecordType ruleId recordTypeRef
 
 execute :: Eq def => RuleRef def -> Map (ExprRef def, Trigger def) Bool -> Infer def Bool
 execute ruleId triggers = do

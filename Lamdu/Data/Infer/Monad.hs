@@ -26,6 +26,7 @@ import Lamdu.Data.Infer.GuidAliases (GuidAliases)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.RefTags (ExprRef, TagRule)
 import Lamdu.Data.Infer.Rule.Internal
+import Lamdu.Data.Infer.Trigger.Internal (Trigger)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer

@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.RefData
-  ( Trigger(..)
-  , RefData(..), rdScope, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
+  ( RefData(..), rdScope, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
     , defaultRefData
   , Scope(..), emptyScope, scopeMap, scopeParamRefs, scopeExprRefs
   -- Relations:
@@ -23,6 +22,7 @@ import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.UnionFind.WithData (UFData)
 import Lamdu.Data.Infer.RefTags (TagExpr, ExprRef, ParamRef, TagRule)
+import Lamdu.Data.Infer.Trigger.Internal (Trigger)
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Data.OpaqueRef as OR
@@ -61,15 +61,6 @@ data Relation def = RelationAppliedPiResult (AppliedPiResult def)
 
 relationRefs :: Lens.Traversal' (Relation def) (ExprRef def)
 relationRefs f (RelationAppliedPiResult x) = RelationAppliedPiResult <$> appliedPiResultRefs f x
-
--- Triggers are alive as long as their truthfulness is yet
--- unknown. Once they're known to be false, they're removed. Once
--- they're known to be true, they trigger a rule and are removed.
-data Trigger def
-  = TriggerIsDirectlyTag
-  | TriggerIsRecordType
-  | TriggerIsParameterRef (ParamRef def)
-  deriving (Eq, Ord)
 
 data RefData def = RefData
   { _rdScope :: Scope def

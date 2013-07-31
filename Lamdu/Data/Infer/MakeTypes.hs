@@ -58,7 +58,7 @@ makeApplyType applyScope func arg = do
   return applyTypeRef
 
 addTagVerification :: ExprRef def -> Infer def ()
-addTagVerification = Trigger.add TriggerIsDirectlyTag verifyTagId
+addTagVerification = Trigger.add Trigger.IsDirectlyTag verifyTagId
 
 makeGetFieldType :: Eq def => Scope def -> Expr.GetField (TypedValue def) -> Infer def (ExprRef def)
 makeGetFieldType scope (Expr.GetField record tag) = do
