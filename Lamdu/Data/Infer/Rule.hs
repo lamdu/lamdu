@@ -7,8 +7,10 @@ module Lamdu.Data.Infer.Rule
 
 import Control.Lens (Lens')
 import Control.Lens.Operators
-import Control.Monad (void)
-import Control.Monad.Trans.State (StateT(..))
+import Control.Monad (void, unless, when, mzero)
+import Control.Monad.Trans.Class (MonadTrans(..))
+import Control.Monad.Trans.Maybe (MaybeT(..))
+import Control.Monad.Trans.State (StateT(..), execStateT)
 import Control.MonadA (MonadA)
 import Data.Foldable (traverse_)
 import Data.Map (Map)
@@ -18,18 +20,19 @@ import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule.Internal
-import Lamdu.Data.Infer.Unify (unify)
 import Lamdu.Data.Infer.Trigger (Trigger)
+import Lamdu.Data.Infer.Unify (unify)
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.State as State
 import qualified Data.Map as Map
 import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind as UF
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Trigger as Trigger
-import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 
 ruleLens :: RuleRef def -> Lens' (Context def) (Maybe (Rule def))
 ruleLens ruleRef = ctxRuleMap . rmMap . Lens.at ruleRef
@@ -58,15 +61,18 @@ assertRecordTypeFields ref =
   <&> (^? rdBody . ExprLens.bodyKindedRecordFields Expr.KType)
   <&> unsafeUnjust "isRecord && not record?!"
 
-handlePotentialMatches :: Eq def => r -> [(ExprRef def, ExprRef def)] -> ExprRef def -> ExprRef def -> Infer def r -> Infer def r
-handlePotentialMatches finish fields tag typ other =
+handlePotentialMatches ::
+  Eq def => [(ExprRef def, ExprRef def)] -> ExprRef def -> ExprRef def ->
+  Infer def Bool
+handlePotentialMatches fields tag typ =
   case fields of
   [] -> InferM.error InferM.GetMissingField
   [(fieldTag, fieldTyp)] -> do
     void $ unify fieldTag tag
     void $ unify fieldTyp typ
-    return finish
-  _ -> other
+    return True
+  _ ->
+    return False
 
 assertTag :: MonadA m => ExprRef def -> StateT (Context def) m Guid
 assertTag ref =
@@ -84,18 +90,20 @@ getFieldPhase0 rule triggers =
   [((recordTypeRef, _), isRecord)]
     | isRecord -> do
       recordFields <- InferM.liftContext $ assertRecordTypeFields recordTypeRef
-      handlePotentialMatches RuleDelete recordFields
+      isFinished <-
+        handlePotentialMatches recordFields
         (rule ^. gf0GetFieldTag)
-        (rule ^. gf0GetFieldType) $ do
-          phase1RuleRef <-
-            newRule $
-            RuleGetFieldPhase1 GetFieldPhase1
-            { _gf1GetFieldRecordTypeFields = recordFields
-            , _gf1GetFieldType = rule ^. gf0GetFieldType
-            }
-          Trigger.add Trigger.IsDirectlyTag phase1RuleRef $
-            rule ^. gf0GetFieldTag
-          return RuleDelete
+        (rule ^. gf0GetFieldType)
+      unless isFinished $ do
+        phase1RuleRef <-
+          newRule $
+          RuleGetFieldPhase1 GetFieldPhase1
+          { _gf1GetFieldRecordTypeFields = recordFields
+          , _gf1GetFieldType = rule ^. gf0GetFieldType
+          }
+        Trigger.add Trigger.IsDirectlyTag phase1RuleRef $
+          rule ^. gf0GetFieldTag
+      return RuleDelete
     | otherwise -> InferM.error InferM.GetFieldRequiresRecord
   _ -> error "A singleton trigger must be used with GetFieldPhase0 rule"
 
@@ -120,34 +128,56 @@ getFieldPhase1 rule triggers =
     return RuleDelete
   _ -> error "Only one trigger before phase 1?!"
 
+updateRuleTriggers ::
+  MonadA m =>
+  (rule -> RuleContent def) ->
+  (((ExprRef def, Trigger def), Bool) -> StateT rule (MaybeT m) ()) ->
+  rule -> Map (ExprRef def, Trigger def) Bool ->
+  m (RuleResult def)
+updateRuleTriggers mkContent handleTrigger initialRule =
+  fmap (maybe RuleDelete (RuleChange . mkContent)) .
+  runMaybeT .
+  (`execStateT` initialRule) .
+  traverse_ handleTrigger . Map.toList
+
+liftInfer :: Infer def a -> StateT rule (MaybeT (Infer def)) a
+liftInfer = lift . lift
+
+ruleDelete :: StateT rule (MaybeT (Infer def)) ()
+ruleDelete = lift mzero
+
 -- Phase2: Find relevant record fields by triggered tags
 getFieldPhase2 :: Eq def => GetFieldPhase2 def -> RuleFunc def
-getFieldPhase2 initialRule =
-  go initialRule . Map.toList
+getFieldPhase2 =
+  updateRuleTriggers RuleGetFieldPhase2 handleTrigger
   where
-    go rule [] = return . RuleChange $ RuleGetFieldPhase2 rule
-    go rule ((_, False):xs) = go rule xs
-    go rule (((ref, _), True):xs) = do
-      rep <- InferM.liftUFExprs $ UFData.find "getFieldPhase2.ref" ref
-      fieldTag <- InferM.liftContext $ assertTag rep
-      (mFieldTypeRef, newMaybeMatchers) <-
-        InferM.liftContext .
-        Lens.zoom ctxUFExprs $
-        UF.unmaintainedRefMapLookup UFData.find rep `runStateT` (rule ^. gf2MaybeMatchers)
-      let
-        fieldTypeRef = unsafeUnjust "phase2 triggered by wrong ref!" mFieldTypeRef
-        optimizedRule = rule & gf2MaybeMatchers .~ newMaybeMatchers
-      if fieldTag == rule ^. gf2Tag
+    handleTrigger (_, False) = return ()
+    handleTrigger ((ref, _), True) = do
+      rep <- liftInfer . InferM.liftUFExprs $ UFData.find "getFieldPhase2.ref" ref
+      fieldTag <- liftInfer . InferM.liftContext $ assertTag rep
+      mFieldTypeRef <- do
+        rule <- State.get
+        (mFieldTypeRef, newMaybeMatchers) <-
+          liftInfer . InferM.liftContext .
+          Lens.zoom ctxUFExprs $
+          UF.unmaintainedRefMapLookup UFData.find rep `runStateT` (rule ^. gf2MaybeMatchers)
+        gf2MaybeMatchers .= newMaybeMatchers
+        return mFieldTypeRef
+      tag <- Lens.use gf2Tag
+      if fieldTag == tag
         then do
-          void . unify fieldTypeRef $ rule ^. gf2TypeRef
-          return RuleDelete
+          let fieldTypeRef = unsafeUnjust "phase2 triggered by wrong ref!" mFieldTypeRef
+          liftInfer . void . unify fieldTypeRef =<< Lens.use gf2TypeRef
+          ruleDelete
         else do
-          let filteredRule = optimizedRule & gf2MaybeMatchers . Lens.at rep .~ Nothing
-          handlePotentialMatches RuleDelete
-            (OR.refMapToList (filteredRule ^. gf2MaybeMatchers))
-            (rule ^. gf2TagRef)
-            (rule ^. gf2TypeRef) $
-              go filteredRule xs
+          gf2MaybeMatchers . Lens.at rep .= Nothing
+          isFinished <- do
+            rule <- State.get
+            liftInfer $
+              handlePotentialMatches (OR.refMapToList (rule ^. gf2MaybeMatchers))
+              (rule ^. gf2TagRef)
+              (rule ^. gf2TypeRef)
+          when isFinished ruleDelete
 
 handleApply :: Apply def -> RuleFunc def
 handleApply _apply _triggers = return RuleKeep
