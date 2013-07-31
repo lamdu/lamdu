@@ -2,7 +2,7 @@ module Lamdu.Data.Infer.MakeTypes (makeTypeRef) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.AppliedPiResult (handleAppliedPiResult)
@@ -81,14 +81,18 @@ makeRecordType ::
   Eq def => Expr.Kind -> Scope def ->
   [(TypedValue def, TypedValue def)] -> Infer def (ExprRef def)
 makeRecordType k scope fields = do
-  tagTypeRef <- InferM.liftUFExprs . fresh scope $ ExprLens.bodyTagType # ()
+  tagTypeRef <- mkFresh $ ExprLens.bodyTagType # ()
   fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvType) (unify tagTypeRef)
   fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvVal) addTagVerification
+  when (k == Expr.KType) $ do
+    typeRef <- mkFresh $ ExprLens.bodyType # ()
+    fields & Lens.traverseOf_ (Lens.traverse . Lens._2 . tvType) (unify typeRef)
   InferM.liftUFExprs . fresh scope $
     case k of
     Expr.KVal -> Expr.BodyRecord . Expr.Record Expr.KType $ onRecVField <$> fields
     Expr.KType -> ExprLens.bodyType # ()
   where
+    mkFresh = InferM.liftUFExprs . fresh scope
     onRecVField (tag, val) = (tag ^. tvVal, val ^. tvType)
 
 makePiType ::

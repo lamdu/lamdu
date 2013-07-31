@@ -518,9 +518,7 @@ hunitTests =
   , mapIdTest
   , testInfer "factorial" factorialExpr
   , testInfer "euler1" euler1Expr
-  , testInferAllowFail
-    "missing infer: record field types are types"
-    "solveDepressedQuartic" solveDepressedQuarticExpr
+  , testInfer "solveDepressedQuartic" solveDepressedQuarticExpr
   , applyIntToBoolFuncWithHole
   , applyOnVar
   , idTest
