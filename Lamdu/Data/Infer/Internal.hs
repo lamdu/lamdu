@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Infer.Internal
-  ( Scope(..), emptyScope, scopeMap, scopeRefs
+  ( Scope(..), emptyScope, scopeMap, scopeExprRefs
   -- Relations:
   , Relation(..), relationRefs
 
@@ -51,7 +51,7 @@ data ScopedTypedValue def = ScopedTypedValue
 Lens.makeLenses ''ScopedTypedValue
 
 stvRefs :: Lens.Traversal' (ScopedTypedValue def) (ExprRef def)
-stvRefs f (ScopedTypedValue tv scop) = ScopedTypedValue <$> tvRefs f tv <*> scopeRefs f scop
+stvRefs f (ScopedTypedValue tv scop) = ScopedTypedValue <$> tvRefs f tv <*> scopeExprRefs f scop
 
 -- Context
 data Context def = Context

@@ -3,7 +3,7 @@ module Lamdu.Data.Infer.RefData
   ( Trigger(..)
   , RefData(..), rdScope, rdRelations, rdBody, rdIsCircumsized, rdTriggers, rdRefs
     , defaultRefData
-  , Scope(..), emptyScope, scopeMap, scopeRefs
+  , Scope(..), emptyScope, scopeMap, scopeParamRefs, scopeExprRefs
   -- Relations:
   , Relation(..), relationRefs
 
@@ -95,14 +95,16 @@ Lens.makeLenses ''AppliedPiResult
 scopeMap :: Lens.Iso' (Scope def) [(ParamRef def, ExprRef def)]
 scopeMap = Lens.from scope
 
--- TODO: Rename to scopeExprRefs
-scopeRefs :: Lens.Traversal' (Scope def) (ExprRef def)
-scopeRefs = scopeMap . Lens.traverse . Lens._2
+scopeParamRefs :: Lens.Traversal' (Scope def) (ParamRef def)
+scopeParamRefs = scopeMap . Lens.traverse . Lens._1
+
+scopeExprRefs :: Lens.Traversal' (Scope def) (ExprRef def)
+scopeExprRefs = scopeMap . Lens.traverse . Lens._2
 
 rdRefs :: Lens.Traversal' (RefData def) (ExprRef def)
 rdRefs f (RefData scop relations isCircumsized triggers body) =
   RefData
-  <$> scopeRefs f scop
+  <$> scopeExprRefs f scop
   <*> (Lens.traverse . relationRefs) f relations
   <*> pure isCircumsized
   <*> pure triggers
