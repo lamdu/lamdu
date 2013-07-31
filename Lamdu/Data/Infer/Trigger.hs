@@ -49,7 +49,11 @@ checkTrigger refData trigger =
       triggerGuidRep <- InferM.liftGuidAliases $ GuidAliases.find triggerGuidRef
       guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
       return . Just $ triggerGuidRep == guidRep
-    | Lens.nullOf (rdBody . ExprLens.bodyHole) refData -> no
+    | otherwise -> checkHole
+  IsRecordType
+    | Lens.has (rdBody . ExprLens.bodyKindedRecordFields Expr.KType) refData -> yes
+    | otherwise -> checkHole
+  ScopeHasParameterRef triggerGuidRef
     | Lens.nullOf (rdScope . scopeParamRefs) refData ->
       -- Scope is empty so this cannot be a parameter Ref
       no
@@ -57,11 +61,8 @@ checkTrigger refData trigger =
       triggerGuidRep <- InferM.liftGuidAliases $ GuidAliases.find triggerGuidRef
       -- Scope is already normalized when checking triggers, no need to re-normalize it
       if Lens.anyOf (rdScope . scopeParamRefs) (== triggerGuidRep) refData
-        then unknown
+        then unknown -- It may be removed in the future...
         else no
-  IsRecordType
-    | Lens.has (rdBody . ExprLens.bodyKindedRecordFields Expr.KType) refData -> yes
-    | otherwise -> checkHole
   where
     yes = return $ Just True
     no = return $ Just False

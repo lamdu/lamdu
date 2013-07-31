@@ -10,5 +10,13 @@ import Lamdu.Data.Infer.RefTags (ParamRef)
 data Trigger def
   = IsDirectlyTag
   | IsRecordType
+  -- IsParameterRef may remain "unknown" even though scope makes it
+  -- known that it isn't a parameter ref:
   | IsParameterRef (ParamRef def)
+  -- ScopeHasParameterRef only triggers "no"
+  | ScopeHasParameterRef (ParamRef def)
   deriving (Eq, Ord)
+
+-- TODO: The above IsParameterRef/ScopeHasParameterRef need to be a
+-- single trigger with 3 options.  The current 2 yes/no rules are a
+-- messy way to encode the same
