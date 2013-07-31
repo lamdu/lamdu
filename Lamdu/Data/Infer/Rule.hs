@@ -140,7 +140,7 @@ getFieldPhase2 initialRule =
       if fieldTag == rule ^. gf2Tag
         then do
           void . unify fieldTypeRef $ rule ^. gf2TypeRef
-          return . RuleChange $ RuleGetFieldPhase2 optimizedRule
+          return RuleDelete
         else do
           let filteredRule = optimizedRule & gf2MaybeMatchers . Lens.at rep .~ Nothing
           handlePotentialMatches RuleDelete
