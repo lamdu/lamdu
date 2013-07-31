@@ -78,6 +78,15 @@ monomorphRedex =
     -- (a:Type -> _[=a] -> a)
     fArgType = piType "a" set $ \a -> asHole a ~> a
 
+-- Solved in new_infer
+idPreservesDependency =
+  testInferAllowFail "5 + f _ where f x = id _{no inferred type}" $
+  whereItem "f" (lambda "x" iset (const (getDef "id" $$ iset $$ hole))) $ \f ->
+  getDef "+" $$ asHole integerType $$:
+  [literalInteger 5, setInferredType integerType (f $$ hole)]
+  where
+    iset = holeWithInferredType set
+
 fOfXIsFOf5 =
   testInfer "f x = f 5" $
   lambda "" (asHole integerType) $ \_ ->
@@ -324,6 +333,7 @@ hunitTests =
   , inferFromOneArgToOther
   , depApply
   , forceMono
+  , idPreservesDependency
   , fOfXIsFOf5
   , monomorphRedex
   , inferPart
