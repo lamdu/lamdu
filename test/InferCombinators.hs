@@ -143,6 +143,16 @@ getParam = getGuidParam . Guid.fromString
 listOf :: InferResults t -> InferResults t
 listOf = (getDef "List" $$)
 
+-- Uses inferred holes for cons type
+list :: [InferResults t] -> InferResults t
+list [] = getDef "[]" $$ hole
+list items@(x:_) =
+  foldr cons nil items
+  where
+    cons h t = getDef ":" $$ typ $$: [h, t]
+    nil = getDef "[]" $$ typ
+    typ = iexpr (x ^. iType) pureSet (ExprLens.bodyHole # ())
+
 maybeOf :: InferResults t -> InferResults t
 maybeOf = (getDef "Maybe" $$)
 
