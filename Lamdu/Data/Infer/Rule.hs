@@ -26,7 +26,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Map as Map
 import qualified Data.OpaqueRef as OR
-import qualified Data.UnionFind as UF
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -160,7 +159,7 @@ getFieldPhase2 =
         (mFieldTypeRef, newMaybeMatchers) <-
           liftInfer . InferM.liftContext .
           Lens.zoom ctxUFExprs $
-          UF.unmaintainedRefMapLookup UFData.find rep `runStateT` (rule ^. gf2MaybeMatchers)
+          OR.refMapUnmaintainedLookup UFData.find rep `runStateT` (rule ^. gf2MaybeMatchers)
         gf2MaybeMatchers .= newMaybeMatchers
         return mFieldTypeRef
       tag <- Lens.use gf2Tag

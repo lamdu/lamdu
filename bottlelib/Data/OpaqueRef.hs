@@ -12,6 +12,7 @@ module Data.OpaqueRef
     , refMapFilter, refMapMinViewWithKey
     , refMapKeysSet, refMapDifference
     , refMapNull
+    , refMapUnmaintainedLookup
     , unsafeRefMapItems
   , RefSet, refSetEmpty
     , refSetToList, refSetFromList
@@ -24,6 +25,7 @@ module Data.OpaqueRef
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
+import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Foldable (Foldable)
@@ -32,7 +34,9 @@ import Data.IntSet (IntSet)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (Traversable(..))
 import Prelude hiding (lookup)
+import Prelude hiding (lookup)
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.State as State
 import qualified Data.IntMap as IntMap
 import qualified Data.IntSet as IntSet
 
@@ -99,6 +103,23 @@ refMapToList (RefMap x) = x & IntMap.toList <&> Lens._1 %~ MkRef
 
 refMapFromList :: [(Ref p, a)] -> RefMap p a
 refMapFromList = RefMap . IntMap.fromList . (Lens.mapped . Lens._1 %~ (^. Lens.from mkRef))
+
+refMapUnmaintainedLookup ::
+  MonadA m => (String -> Ref p -> m (Ref p)) -> Ref p -> StateT (RefMap p a) m (Maybe a)
+refMapUnmaintainedLookup doLookup ref =
+  tryNow ref $ do
+    rep <- lift $ doLookup "unmaintainedRefMapLookup.ref" ref
+    tryNow rep $ do
+      oldMap <- State.get
+      newMap <- lift $ oldMap & unsafeRefMapItems . Lens._1 %%~ doLookup "unmaintainedRefMapLookup.mapKey"
+      State.put newMap
+      tryNow rep $ return Nothing
+  where
+    tryNow r notFound = do
+      mFound <- State.gets (^. Lens.at r)
+      case mFound of
+        Just found -> return $ Just found
+        Nothing -> notFound
 
 refSetEmpty :: RefSet p
 refSetEmpty = RefSet IntSet.empty

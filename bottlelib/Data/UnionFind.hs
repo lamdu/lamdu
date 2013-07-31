@@ -3,20 +3,17 @@ module Data.UnionFind
   ( UnionFind
   , freshRef, lookup, union, equivalent
   , empty
-  , unmaintainedRefMapLookup
   ) where
 
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
-import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT(..), state)
 import Control.MonadA (MonadA)
 import Data.Function (on)
 import Data.Maybe.Utils (unsafeUnjust)
-import Data.OpaqueRef (Ref, RefMap)
+import Data.OpaqueRef (Ref)
 import Prelude hiding (lookup)
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Trans.State as State
 import qualified Data.IntDisjointSet as IDS
 import qualified Data.OpaqueRef as OpaqueRef
 
@@ -25,23 +22,6 @@ data UnionFind p = UnionFind
   , _ufFresh :: OpaqueRef.Fresh p
   }
 Lens.makeLenses ''UnionFind
-
-unmaintainedRefMapLookup ::
-  MonadA m => (String -> Ref p -> m (Ref p)) -> Ref p -> StateT (RefMap p a) m (Maybe a)
-unmaintainedRefMapLookup doLookup ref =
-  tryNow ref $ do
-    rep <- lift $ doLookup "unmaintainedRefMapLookup.ref" ref
-    tryNow rep $ do
-      oldMap <- State.get
-      newMap <- lift $ oldMap & OpaqueRef.unsafeRefMapItems . Lens._1 %%~ doLookup "unmaintainedRefMapLookup.mapKey"
-      State.put newMap
-      tryNow rep $ return Nothing
-  where
-    tryNow r notFound = do
-      mFound <- State.gets (^. Lens.at r)
-      case mFound of
-        Just found -> return $ Just found
-        Nothing -> notFound
 
 empty :: UnionFind p
 empty =
