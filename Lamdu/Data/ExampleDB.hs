@@ -143,6 +143,9 @@ createBuiltins augmentTagGuids =
       , ("mapping", mkPi a b)
       ] $ listOf b
 
+    publicBuiltin_ "Data.List.concat" . forAll "a" $ \a ->
+      mkPi (listOf (listOf a)) (listOf a)
+
     publicBuiltin_ "Data.List.replicate" . forAll "a" $ \a ->
       mkPiRecord
       [ ("item", a)
