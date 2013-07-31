@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Infer.Internal
-  ( Scope(..), emptyScope, scopeMap, scopeExprRefs
+  ( Scope(..), emptyScope, scopeMap, scopeParamRefs, scopeExprRefs
   -- Relations:
   , Relation(..), relationRefs
 
