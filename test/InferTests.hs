@@ -511,6 +511,18 @@ fromQuickCheck1 =
     isExpectedError (InferError Infer.InfiniteExpression {}) = True
     isExpectedError _ = False
 
+testUnifiedDependentPis =
+  testInfer "if _ (_ :: a:Set -> a -> _) (_ :: b:Set -> _ -> b)" $
+  getDef "if" $$ asHole (theType "ifvar" id id) $$:
+  [ holeWithInferredType (getDef "Bool")
+  , typeAnnotate (theType "a" id asHole) hole
+  , typeAnnotate (theType "b" asHole id) hole
+  ]
+  where
+    theType name onFst onSnd =
+      piType name set $ \t ->
+      onFst t ~> onSnd t
+
 hunitTests =
   simpleTests
   ++
@@ -546,6 +558,7 @@ hunitTests =
   , scopeEscape
   , tagCompositeTests
   , getFieldTests
+  , testUnifiedDependentPis
   ]
 
 inferPreservesShapeProp :: Expr () -> Property
