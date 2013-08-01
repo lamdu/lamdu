@@ -7,26 +7,23 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.State (StateT(..), execStateT)
 import Data.Foldable (traverse_)
-import Data.Map (Map)
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.Rule.Func (RuleResult(..))
+import Lamdu.Data.Infer.Rule.Func (RuleFunc, RuleResult(..), flatten)
 import Lamdu.Data.Infer.Rule.Types (RuleContent)
-import Lamdu.Data.Infer.Trigger (Trigger)
-import qualified Data.Map as Map
+import Lamdu.Data.Infer.Trigger (Fired)
 
 type RM rule def = StateT rule (MaybeT (Infer def))
 
 run ::
   (rule -> RuleContent def) ->
-  (((ExprRef def, Trigger def), Bool) -> RM rule def ()) ->
-  rule -> Map (ExprRef def, Trigger def) Bool ->
-  Infer def (RuleResult def)
-run mkContent handleTrigger initialRule =
+  ((ExprRef def, Fired def) -> RM rule def ()) ->
+  rule -> RuleFunc def
+run mkContent handleFires initialRule =
   fmap (maybe RuleDelete (RuleChange . mkContent)) .
   runMaybeT .
   (`execStateT` initialRule) .
-  traverse_ handleTrigger . Map.toList
+  traverse_ handleFires . flatten
 
 liftInfer :: Infer def a -> RM rule def a
 liftInfer = lift . lift

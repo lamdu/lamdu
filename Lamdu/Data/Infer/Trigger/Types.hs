@@ -1,5 +1,6 @@
 module Lamdu.Data.Infer.Trigger.Types
   ( Trigger(..)
+  , Fired(..)
   ) where
 
 import Lamdu.Data.Infer.RefTags (ParamRef)
@@ -20,3 +21,10 @@ data Trigger def
 -- TODO: The above IsParameterRef/ScopeHasParameterRef need to be a
 -- single trigger with 3 options.  The current 2 yes/no rules are a
 -- messy way to encode the same
+
+data Fired def
+  = FiredDirectlyTag Bool
+  | FiredRecordType Bool
+  | FiredParameterRef (ParamRef def) Bool
+  | FiredScopeHasParameterRef (ParamRef def) Bool
+  deriving (Eq, Ord, Show)

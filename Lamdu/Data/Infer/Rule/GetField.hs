@@ -11,11 +11,10 @@ import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.Rule.Func (RuleResult(..), RuleFunc)
+import Lamdu.Data.Infer.Rule.Func (RuleResult(..), RuleFunc, flatten)
 import Lamdu.Data.Infer.Unify (unify)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
-import qualified Data.Map as Map
 import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
@@ -53,8 +52,8 @@ assertTag ref =
 -- Phase0: Verify record has record type:
 phase0 :: Eq def => Rule.GetFieldPhase0 def -> RuleFunc def
 phase0 rule triggers =
-  case Map.toList triggers of
-  [((recordTypeRef, _), isRecord)]
+  case flatten triggers of
+  [(recordTypeRef, Trigger.FiredRecordType isRecord)]
     | isRecord -> do
       recordFields <- InferM.liftContext $ assertRecordTypeFields recordTypeRef
       isFinished <-
@@ -72,14 +71,14 @@ phase0 rule triggers =
           rule ^. Rule.gf0GetFieldTag
       return RuleDelete
     | otherwise -> InferM.error InferM.GetFieldRequiresRecord
-  _ -> error "A singleton trigger must be used with GetFieldPhase0 rule"
+  list -> error $ "GetField.phase0: Unexpected firings: " ++ show list
 
 -- Phase1: Get GetField's tag
 phase1 :: Eq def => Rule.GetFieldPhase1 def -> RuleFunc def
 phase1 rule triggers =
-  case Map.toList triggers of
-  [(_, False)] -> return RuleDelete -- Not a tag in that position, do nothing
-  [((getFieldTagRef, _), True)] -> do
+  case flatten triggers of
+  [(_, Trigger.FiredDirectlyTag False)] -> return RuleDelete -- Not a tag in that position, do nothing
+  [(getFieldTagRef, Trigger.FiredDirectlyTag True)] -> do
     getFieldTag <- InferM.liftContext $ assertTag getFieldTagRef
     phase2RuleRef <-
       InferM.liftRuleMap . Rule.new $
@@ -93,15 +92,15 @@ phase1 rule triggers =
       & Lens.traverseOf_ (Lens.traverse . Lens._1) %%~
         Trigger.add Trigger.OnDirectlyTag phase2RuleRef
     return RuleDelete
-  _ -> error "Only one trigger before phase 1?!"
+  list -> error $ "GetField.phase1: Unexpected firings: " ++ show list
 
 -- Phase2: Find relevant record fields by triggered tags
 phase2 :: Eq def => Rule.GetFieldPhase2 def -> RuleFunc def
 phase2 =
   RuleMonad.run Rule.RuleGetFieldPhase2 handleTrigger
   where
-    handleTrigger (_, False) = return ()
-    handleTrigger ((ref, _), True) = do
+    handleTrigger (_, Trigger.FiredDirectlyTag False) = return ()
+    handleTrigger (ref, Trigger.FiredDirectlyTag True) = do
       rep <- RuleMonad.liftInfer . InferM.liftUFExprs $ UFData.find "phase2.ref" ref
       fieldTag <- RuleMonad.liftInfer . InferM.liftContext $ assertTag rep
       mFieldTypeRef <- do
@@ -126,6 +125,7 @@ phase2 =
               (rule ^. Rule.gf2TagRef)
               (rule ^. Rule.gf2TypeRef)
           when isFinished RuleMonad.ruleDelete
+    handleTrigger (_, fire) = error $ "GetField.phase2: Unexpected trigger fired: " ++ show fire
 
 make :: ExprRef def -> ExprRef def -> ExprRef def -> Infer def ()
 make tagValRef getFieldTypeRef recordTypeRef = do
