@@ -13,12 +13,14 @@ import Data.Foldable (traverse_)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Monoid.Applicative (ApplicativeMonoid(..))
+import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import Lamdu.Data.Infer.RefData (scopeNormalize)
-import Lamdu.Data.Infer.RefTags (ExprRef, TagParam)
+import Lamdu.Data.Infer.RefTags (ExprRef, TagParam, TagRule)
+import Lamdu.Data.Infer.Trigger (Trigger)
 import System.Random (Random, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
@@ -179,18 +181,18 @@ applyHoleConstraints holeConstraints body oldScope = do
 
 decycleDefend :: ExprRef def -> (ExprRef def -> U def (ExprRef def)) -> U def (ExprRef def)
 decycleDefend ref action = do
-  nodeRep <- lift . InferM.liftUFExprs $ UFData.find "holeConstraintsRecurse:rawNode" ref
+  nodeRep <- uInfer . InferM.liftUFExprs $ UFData.find "holeConstraintsRecurse:rawNode" ref
   mResult <- visit nodeRep (action nodeRep)
   case mResult of
-    Nothing -> lift . InferM.error $ InfiniteExpression nodeRep
+    Nothing -> uInfer . InferM.error $ InfiniteExpression nodeRep
     Just result -> return result
 
 holeConstraintsRecurse ::
   Eq def => HoleConstraints def -> ExprRef def -> U def (ExprRef def)
 holeConstraintsRecurse holeConstraints rawNode =
   decycleDefend rawNode $ \nodeRep -> do
-    oldNodeData <- lift . InferM.liftUFExprs $ State.gets (UFData.readRep nodeRep)
-    lift . InferM.liftUFExprs . UFData.writeRep nodeRep $
+    oldNodeData <- uInfer . InferM.liftUFExprs $ State.gets (UFData.readRep nodeRep)
+    uInfer . InferM.liftUFExprs . UFData.writeRep nodeRep $
       error "Reading node during write..."
     (newRefData, later) <-
       wuRun $
@@ -202,19 +204,32 @@ holeConstraintsRecurse holeConstraints rawNode =
     later
     return nodeRep
 
+fireUnificationTriggers ::
+  ExprRef def -> OR.RefMap (TagRule def) (Set (Trigger def)) -> ExprRef def ->
+  Infer def ()
+fireUnificationTriggers rep triggers unifiedWithRep =
+  traverse_ act $ triggers ^@.. Lens.itraversed <. Lens.folded
+  where
+    act (ruleRef, Trigger.OnUnify) =
+      InferM.ruleTrigger ruleRef rep $ Trigger.FiredUnify unifiedWithRep
+    act _ = return ()
+
 unifyRecurse ::
   Eq def => ExprRef def -> ExprRef def -> U def (ExprRef def)
-unifyRecurse rawNode other =
-  decycleDefend rawNode $ \nodeRep -> do
-    (rep, unifyResult) <- lift . InferM.liftUFExprs $ UFData.unifyRefs nodeRep other
+unifyRecurse xRef yRef =
+  decycleDefend xRef $ \xRep -> do
+    yRep <- uInfer . InferM.liftUFExprs $ UFData.find "unifyRecurse.yRef" yRef
+    (rep, unifyResult) <- uInfer . InferM.liftUFExprs $ UFData.unifyRefs xRep yRep
     case unifyResult of
       UFData.UnifyRefsAlreadyUnified -> return ()
       UFData.UnifyRefsUnified xData yData -> do
+        uInfer $ fireUnificationTriggers xRep (xData ^. rdTriggers) yRep
+        uInfer $ fireUnificationTriggers yRep (yData ^. rdTriggers) xRep
         (mergedRefData, later) <-
           wuRun $ mergeRefDataAndTrigger rep xData yData
         -- First let's write the mergedRefData so we're not in danger zone
         -- of reading missing data:
-        lift . InferM.liftUFExprs $ UFData.write rep mergedRefData
+        uInfer . InferM.liftUFExprs $ UFData.write rep mergedRefData
         -- Now lets do the deferred recursive unifications:
         later
     return rep

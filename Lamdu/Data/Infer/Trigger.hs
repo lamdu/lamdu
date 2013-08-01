@@ -87,6 +87,7 @@ checkTrigger refData trigger =
   OnRecordType -> return $ checkSimpleBody (ExprLens.bodyKindedRecordFields Expr.KType) FiredRecordType refData
   OnGetDef -> return $ checkSimpleBody ExprLens.bodyDefinitionRef FiredGetDef refData
   OnParameterRef triggerGuidRef -> checkParameterRef triggerGuidRef refData
+  OnUnify -> return Nothing -- unification trigger is handled in unify
 
 -- | Must be called with RefData with normalized scope
 handleTrigger :: ExprRef def -> RefData def -> RuleRef def -> Trigger def -> Infer def Bool

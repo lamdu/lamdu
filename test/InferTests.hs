@@ -550,7 +550,7 @@ testUnificationCarriesOver =
       (holeWithInferredType (hole ~> hole) `resumeHere` getDef "+") $$ hole `resumedToType` set
     ) $$ holeWithInferredType set
 
-  , testInferAllowFail "Unification carrying over resumption not handled properly"
+  , testInfer
     "(\\(_1:Set) -> (? :: (a:?{Type}) -> {l:?{a}, r:?{a}} -> ?{a}) ?) ? :: {l:IntegerType, r:?} -> ?" $
     typeAnnotate
     (recType integerType (holeWithInferredType set `resumedTo` integerType)

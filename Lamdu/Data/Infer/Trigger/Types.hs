@@ -4,7 +4,7 @@ module Lamdu.Data.Infer.Trigger.Types
   , Fired(..)
   ) where
 
-import Lamdu.Data.Infer.RefTags (ParamRef)
+import Lamdu.Data.Infer.RefTags (ParamRef, ExprRef)
 
 -- Triggers are alive as long as their truthfulness is yet
 -- unknown. When they become known, they fire (see Fired) below and
@@ -14,6 +14,7 @@ data Trigger def
   | OnRecordType
   | OnGetDef
   | OnParameterRef (ParamRef def)
+  | OnUnify
   deriving (Eq, Ord, Show)
 
 data ParameterRefEvent
@@ -27,4 +28,5 @@ data Fired def
   | FiredRecordType Bool
   | FiredGetDef Bool
   | FiredParameterRef (ParamRef def) ParameterRefEvent
+  | FiredUnify (ExprRef def)
   deriving (Eq, Ord, Show)

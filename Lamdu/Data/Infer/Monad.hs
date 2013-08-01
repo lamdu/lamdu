@@ -50,9 +50,11 @@ type Infer def =
   (StateT (Context def) (Either (Error def)))
 
 ruleTrigger :: RuleRef def -> ExprRef def -> Fired def -> Infer def ()
-ruleTrigger ruleId ref fired =
-  Writer.tell . TriggeredRules $
-  OR.refMapSingleton ruleId (OR.refMapSingleton ref (Set.singleton fired))
+ruleTrigger ruleRef ref fired =
+  Writer.tell . TriggeredRules .
+  OR.refMapSingleton ruleRef .
+  OR.refMapSingleton ref $
+  Set.singleton fired
 
 liftContext ::
   StateT (Context def) (Either (Error def)) a -> Infer def a

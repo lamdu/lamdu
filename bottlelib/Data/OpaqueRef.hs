@@ -6,7 +6,7 @@ module Data.OpaqueRef
     , unsafeFromInt
       -- ^ Don't use unless you absolutely have to
   , RefMap, refMapEmpty
-    , refMapFromList
+    , refMapFromList, refMapFromListWith
     , refMapIntersectionWith
     , refMapUnionWith, refMapSingleton
     , refMapFilter, refMapMinViewWithKey
@@ -103,6 +103,9 @@ refMapToList (RefMap x) = x & IntMap.toList <&> Lens._1 %~ MkRef
 
 refMapFromList :: [(Ref p, a)] -> RefMap p a
 refMapFromList = RefMap . IntMap.fromList . (Lens.mapped . Lens._1 %~ (^. Lens.from mkRef))
+
+refMapFromListWith :: (a -> a -> a) -> [(Ref p, a)] -> RefMap p a
+refMapFromListWith combine = RefMap . IntMap.fromListWith combine . (Lens.mapped . Lens._1 %~ (^. Lens.from mkRef))
 
 refMapUnmaintainedLookup ::
   MonadA m => (String -> Ref p -> m (Ref p)) -> Ref p -> StateT (RefMap p a) m (Maybe a)
