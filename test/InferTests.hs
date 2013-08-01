@@ -512,14 +512,26 @@ fromQuickCheck1 =
     isExpectedError _ = False
 
 testUnificationCarriesOver =
-  testInfer "(\\(a:Set) -> (+) _) _ :: ({l:IntegerType, r:_}->_)" $
-  typeAnnotate
-  (record KType
-   [ (tagStr "infixlarg", integerType)
-   , (tagStr "infixrarg", asHole integerType)
-   ] ~> asHole integerType) $
-  (lambda "a" set $ \_ -> getDef "+" $$ holeWithInferredType set) $$
-  holeWithInferredType set
+  testGroup "Unification carries over"
+  [ testInfer "(\\(a:Set) -> (+) _) _ :: ({l:IntegerType, r:_}->_)" $
+    typeAnnotate
+    (record KType
+     [ (tagStr "infixlarg", integerType)
+     , (tagStr "infixrarg", asHole integerType)
+     ] ~> asHole integerType) $
+    (lambda "a" set $ \_ -> getDef "+" $$ holeWithInferredType set) $$
+    holeWithInferredType set
+  , testInferAllowFail "No unification trigger yet"
+    "(\\(a:Set) -> _{(+)} _) _ :: ({l:IntegerType, r:_}->_)" $
+    typeAnnotate
+    (record KType
+     [ (tagStr "infixlarg", integerType)
+     , (tagStr "infixrarg", holeWithInferredType set `resumedTo` integerType)
+     ] ~> (holeWithInferredType set `resumedTo` integerType)) $
+    ( lambda "a" set $ \_ ->
+      (holeWithInferredType (hole ~> hole) `resumeHere` getDef "+") $$ hole `resumedTo` integerType
+    ) $$ holeWithInferredType set
+  ]
 
 testUnifiedDependentPis =
   testInfer "if _ (_ :: a:Set -> a -> _) (_ :: b:Set -> _ -> b)" $
