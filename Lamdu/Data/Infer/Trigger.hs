@@ -13,7 +13,7 @@ import Control.MonadA (MonadA)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefData (scopeNormalize)
-import Lamdu.Data.Infer.RefTags (ExprRef)
+import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef)
 import Lamdu.Data.Infer.Rule.Types (RuleRef)
 import Lamdu.Data.Infer.Trigger.Types (Trigger(..), Fired(..), ParameterRefEvent(..))
 import qualified Control.Lens as Lens
@@ -38,41 +38,51 @@ remember rep refData trigger ruleId = do
     _fromJust "Trigger.remember to missing rule" .
     Rule.ruleTriggersIn <>= OR.refSetSingleton rep
 
+checkDirectlyTag :: RefData def -> Maybe (Fired def)
+checkDirectlyTag refData
+  | Lens.has (rdBody . ExprLens.bodyTag) refData = Just $ FiredDirectlyTag True
+  | refData ^. rdIsCircumsized . Lens.unwrapped
+  || Lens.nullOf (rdBody . ExprLens.bodyHole) refData = Just $ FiredDirectlyTag False
+  | otherwise = Nothing
+
+checkParameterRef :: ParamRef def -> RefData def -> Infer def (Maybe (Fired def))
+checkParameterRef triggerGuidRef refData
+  | Lens.nullOf (rdScope . scopeParamRefs) refData =
+    -- Scope is empty so this cannot be a parameter Ref
+    answer triggerGuidRef ParameterRefOutOfScope
+  | otherwise = do
+    triggerGuidRep <- InferM.liftGuidAliases $ GuidAliases.find triggerGuidRef
+    -- Our caller must hand us a normalized scope
+    if triggerGuidRep `notElem` (refData ^.. rdScope . scopeParamRefs)
+      then answer triggerGuidRep ParameterRefOutOfScope
+      else
+        case refData ^. rdBody of
+        Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) -> do
+          guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
+          answer triggerGuidRep $
+            if triggerGuidRep == guidRep
+            then IsParameterRef
+            else NotParameterRef
+        Expr.BodyLeaf Expr.Hole -> return Nothing
+        _ -> answer triggerGuidRep NotParameterRef
+  where
+    answer ref = return . Just . FiredParameterRef ref
+
+checkRecordType :: RefData def -> Maybe (Fired def)
+checkRecordType refData
+  | Lens.has (rdBody . ExprLens.bodyKindedRecordFields Expr.KType) refData = answer True
+  | Lens.has (rdBody . ExprLens.bodyHole) refData = Nothing
+  | otherwise = answer False
+  where
+    answer = Just . FiredRecordType
+
 -- | Must be called with RefData with normalized scope
 checkTrigger :: RefData def -> Trigger def -> Infer def (Maybe (Fired def))
 checkTrigger refData trigger =
   case trigger of
-  OnDirectlyTag
-    | Lens.has (rdBody . ExprLens.bodyTag) refData -> answer $ FiredDirectlyTag True
-    | refData ^. rdIsCircumsized . Lens.unwrapped -> answer $ FiredDirectlyTag False
-    | otherwise -> checkHole $ FiredDirectlyTag False
-  OnParameterRef triggerGuidRef
-    | Lens.nullOf (rdScope . scopeParamRefs) refData ->
-      -- Scope is empty so this cannot be a parameter Ref
-      answer $ FiredParameterRef triggerGuidRef ParameterRefOutOfScope
-    | otherwise -> do
-      triggerGuidRep <- InferM.liftGuidAliases $ GuidAliases.find triggerGuidRef
-      -- Our caller must hand us a normalized scope
-      if triggerGuidRep `notElem` (refData ^.. rdScope . scopeParamRefs)
-        then answer $ FiredParameterRef triggerGuidRep ParameterRefOutOfScope
-        else
-          case refData ^? rdBody . ExprLens.bodyParameterRef of
-            Just guid -> do
-              guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
-              answer . FiredParameterRef triggerGuidRep $
-                if triggerGuidRep == guidRep
-                then IsParameterRef
-                else NotParameterRef
-            _ -> checkHole $ FiredParameterRef triggerGuidRep NotParameterRef
-  OnRecordType
-    | Lens.has (rdBody . ExprLens.bodyKindedRecordFields Expr.KType) refData -> answer $ FiredRecordType True
-    | otherwise -> checkHole $ FiredRecordType False
-  where
-    answer = return . Just
-    unknown = return Nothing
-    checkHole no
-      | Lens.nullOf (rdBody . ExprLens.bodyHole) refData = answer no
-      | otherwise = unknown
+  OnDirectlyTag -> return $ checkDirectlyTag refData
+  OnRecordType -> return $ checkRecordType refData
+  OnParameterRef triggerGuidRef -> checkParameterRef triggerGuidRef refData
 
 -- | Must be called with RefData with normalized scope
 handleTrigger :: ExprRef def -> RefData def -> RuleRef def -> Trigger def -> Infer def Bool
