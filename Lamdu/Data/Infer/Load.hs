@@ -44,7 +44,7 @@ exprIntoContext =
           paramTypeRef <- go scope paramType
           paramIdRep <- Lens.zoom ctxGuidAliases $ GuidAliases.getRep paramGuid
           Expr.BodyLam . Expr.Lam k paramGuid paramTypeRef <$>
-            go ((paramIdRep, paramTypeRef) : scope) result
+            go (scope & Lens.at paramIdRep .~ Just paramTypeRef) result
         -- TODO: Assert parameterRefs are not out of scope here
         _ -> body & Lens.traverse %%~ go scope
       Lens.zoom ctxUFExprs $ fresh (Scope scope) newBody

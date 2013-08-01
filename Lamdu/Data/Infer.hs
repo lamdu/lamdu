@@ -81,8 +81,8 @@ exprIntoSTV scope (Expr.Expression body pl) = do
       let
         newScope =
           scope
-          & scopeMap %~
-            ((paramIdRef, paramTypeS ^. Expr.ePayload . Lens._1 . stvTV . tvVal) :)
+          & scopeMap . Lens.at paramIdRef .~ Just
+            (paramTypeS ^. Expr.ePayload . Lens._1 . stvTV . tvVal)
       resultS <- exprIntoSTV newScope result
       pure . Expr.BodyLam $ Expr.Lam k paramGuid paramTypeS resultS
     _ ->

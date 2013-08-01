@@ -6,7 +6,7 @@ import Control.Monad (void, when)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.RefData (normalizeScope)
+import Lamdu.Data.Infer.RefData (scopeNormalize)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule.Internal (verifyTagId)
 import Lamdu.Data.Infer.Unify (unify, forceLam)
@@ -20,9 +20,9 @@ import qualified Lamdu.Data.Infer.Trigger as Trigger
 
 scopeLookup :: Scope def -> Guid -> Infer def (ExprRef def)
 scopeLookup scope guid = do
-  scopeNorm <- InferM.liftGuidAliases $ normalizeScope scope
+  scopeNorm <- InferM.liftGuidAliases $ scopeNormalize scope
   guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
-  case scopeNorm ^. Lens.at guidRep of
+  case scopeNorm ^. scopeMap . Lens.at guidRep of
     Nothing -> InferM.error VarNotInScope
     Just ref -> pure ref
 

@@ -18,7 +18,7 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.RefData (normalizeScope)
+import Lamdu.Data.Infer.RefData (scopeNormalize)
 import Lamdu.Data.Infer.RefTags (ExprRef, TagParam)
 import System.Random (Random, random)
 import qualified Control.Lens as Lens
@@ -43,7 +43,7 @@ forceLam k lamScope destRef = do
   newParamRep <- InferM.liftGuidAliases $ GuidAliases.getRep newGuid
   newParamTypeRef <- InferM.liftUFExprs . fresh lamScope $ ExprLens.bodyHole # ()
   -- TODO: Directly manipulate RefData to avoid scope buildup?
-  let lamResultScope = lamScope & scopeMap %~ ((newParamRep, newParamTypeRef) :)
+  let lamResultScope = lamScope & scopeMap . Lens.at newParamRep .~ Just newParamTypeRef
   newResultTypeRef <- InferM.liftUFExprs . fresh lamResultScope $ ExprLens.bodyHole # ()
   newLamRef <-
     InferM.liftUFExprs . fresh lamScope . Expr.BodyLam $
@@ -56,9 +56,9 @@ forceLam k lamScope destRef = do
 -- If we don't assert that the scopes have same refs we could be pure
 intersectScopes :: Scope def -> Scope def -> Infer def (Scope def)
 intersectScopes aScope bScope = do
-  aScopeNorm <- InferM.liftGuidAliases $ normalizeScope aScope
-  bScopeNorm <- InferM.liftGuidAliases $ normalizeScope bScope
-  Scope . OR.refMapToList <$> sequenceA (OR.refMapIntersectionWith verifyEquiv aScopeNorm bScopeNorm)
+  Scope aScopeNorm <- InferM.liftGuidAliases $ scopeNormalize aScope
+  Scope bScopeNorm <- InferM.liftGuidAliases $ scopeNormalize bScope
+  Scope <$> sequenceA (OR.refMapIntersectionWith verifyEquiv aScopeNorm bScopeNorm)
   where
     -- Expensive assertion
     verifyEquiv aref bref = do
@@ -105,13 +105,10 @@ unifyWithHole ::
   Eq def => Scope def -> Scope def -> Expr.Body def (ExprRef def) ->
   WU def (Scope def, Expr.Body def (ExprRef def))
 unifyWithHole holeScope otherScope nonHoleBody = do
-  unusableScopeReps <-
+  (Scope holeScopeNorm, Scope otherScopeNorm) <-
     wuInfer . InferM.liftGuidAliases $
-    OR.refMapKeysSet <$>
-    ( OR.refMapDifference
-      <$> normalizeScope otherScope
-      <*> normalizeScope holeScope
-    )
+    (,) <$> scopeNormalize holeScope <*> scopeNormalize otherScope
+  let unusableScopeReps = OR.refMapKeysSet $ OR.refMapDifference otherScopeNorm holeScopeNorm
   if OR.refSetNull unusableScopeReps
     then return (otherScope, nonHoleBody)
     else
@@ -176,11 +173,11 @@ applyHoleConstraints ::
 applyHoleConstraints holeConstraints body oldScope = do
   wuInfer $ checkHoleConstraints holeConstraints body
   let isUnusable x = hcUnusableScopeReps holeConstraints ^. Lens.contains x
-  oldScopeNorm <- wuInfer . InferM.liftGuidAliases $ normalizeScope oldScope
+  Scope oldScopeNorm <- wuInfer . InferM.liftGuidAliases $ scopeNormalize oldScope
   let (unusables, usables) = List.partition (isUnusable . fst) $ OR.refMapToList oldScopeNorm
   unless (null unusables) . wuLater $
     (traverse_ . holeConstraintsRecurse . HoleConstraints . OR.refSetFromList . map fst) unusables body
-  return $ Scope usables
+  return . Scope $ OR.refMapFromList usables
 
 decycleDefend :: ExprRef def -> (ExprRef def -> U def (ExprRef def)) -> U def (ExprRef def)
 decycleDefend ref action = do

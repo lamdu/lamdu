@@ -3,7 +3,7 @@ module Lamdu.Data.Infer.RefData
   ( RefData(..), rdScope, rdBody, rdIsCircumsized, rdTriggers, rdRefs
     , defaultRefData
   , Scope(..), emptyScope, scopeMap, scopeParamRefs, scopeExprRefs
-    , normalizeScope
+    , scopeNormalize
   , UFExprs
   , fresh, freshHole
   ) where
@@ -28,16 +28,10 @@ import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 
 type UFExprs def = UFData (TagExpr def) (RefData def)
 
-newtype Scope def = Scope [(ParamRef def, ExprRef def)] -- intersected
+newtype Scope def = Scope (OR.RefMap (TagParam def) (ExprRef def))
 
 emptyScope :: Scope def
 emptyScope = Scope mempty
-
-normalizeScope :: MonadA m => Scope def -> StateT (GuidAliases def) m (OR.RefMap (TagParam def) (ExprRef def))
-normalizeScope (Scope scope) =
-  scope
-  & Lens.traverse . Lens._1 %%~ GuidAliases.find
-  <&> OR.refMapFromList
 
 data RefData def = RefData
   { _rdScope :: Scope def
@@ -57,14 +51,17 @@ defaultRefData scop body = RefData
 
 Lens.makeIso ''Scope
 
-scopeMap :: Lens.Iso' (Scope def) [(ParamRef def, ExprRef def)]
+scopeMap :: Lens.Iso' (Scope def) (OR.RefMap (TagParam def) (ExprRef def))
 scopeMap = Lens.from scope
 
 scopeParamRefs :: Lens.Traversal' (Scope def) (ParamRef def)
-scopeParamRefs = scopeMap . Lens.traverse . Lens._1
+scopeParamRefs = scopeMap . OR.unsafeRefMapItems . Lens._1
 
 scopeExprRefs :: Lens.Traversal' (Scope def) (ExprRef def)
-scopeExprRefs = scopeMap . Lens.traverse . Lens._2
+scopeExprRefs = scopeMap . Lens.traverse
+
+scopeNormalize :: MonadA m => Scope def -> StateT (GuidAliases def) m (Scope def)
+scopeNormalize = scopeParamRefs %%~ GuidAliases.find
 
 rdRefs :: Lens.Traversal' (RefData def) (ExprRef def)
 rdRefs f (RefData scop isCircumsized triggers body) =
