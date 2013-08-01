@@ -173,7 +173,7 @@ applyHoleConstraints holeConstraints body oldScope = do
   wuInfer $ checkHoleConstraints holeConstraints body
   let isUnusable x = hcUnusableScopeReps holeConstraints ^. Lens.contains x
   Scope oldScopeNorm <- wuInfer . InferM.liftGuidAliases $ scopeNormalize oldScope
-  let (unusables, usables) = List.partition (isUnusable . fst) $ OR.refMapToList oldScopeNorm
+  let (unusables, usables) = List.partition (isUnusable . fst) $ oldScopeNorm ^@.. Lens.itraversed
   unless (null unusables) . wuLater $
     (traverse_ . holeConstraintsRecurse . HoleConstraints . OR.refSetFromList . map fst) unusables body
   return . Scope $ OR.refMapFromList usables

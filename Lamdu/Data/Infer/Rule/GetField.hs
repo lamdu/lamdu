@@ -121,7 +121,7 @@ phase2 =
           isFinished <- do
             rule <- State.get
             RuleMonad.liftInfer $
-              handlePotentialMatches (OR.refMapToList (rule ^. Rule.gf2MaybeMatchers))
+              handlePotentialMatches (rule ^@.. Rule.gf2MaybeMatchers .> Lens.itraversed)
               (rule ^. Rule.gf2TagRef)
               (rule ^. Rule.gf2TypeRef)
           when isFinished RuleMonad.ruleDelete

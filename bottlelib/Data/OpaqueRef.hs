@@ -6,7 +6,7 @@ module Data.OpaqueRef
     , unsafeFromInt
       -- ^ Don't use unless you absolutely have to
   , RefMap, refMapEmpty
-    , refMapToList, refMapFromList
+    , refMapFromList
     , refMapIntersectionWith
     , refMapUnionWith, refMapSingleton
     , refMapFilter, refMapMinViewWithKey
