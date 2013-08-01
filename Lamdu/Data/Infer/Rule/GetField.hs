@@ -11,8 +11,7 @@ import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.Rule.Internal
-import Lamdu.Data.Infer.Rule.Utils (RuleResult(..), RuleFunc, newRule, updateRuleTriggers, liftInfer, ruleDelete)
+import Lamdu.Data.Infer.Rule.Func (RuleResult(..), RuleFunc)
 import Lamdu.Data.Infer.Unify (unify)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
@@ -22,6 +21,8 @@ import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.Rule.Monad as RuleMonad
+import qualified Lamdu.Data.Infer.Rule.Types as Rule
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
 assertRecordTypeFields :: MonadA m => ExprRef def -> StateT (Context def) m [(ExprRef def, ExprRef def)]
@@ -50,7 +51,7 @@ assertTag ref =
   <&> unsafeUnjust "isTag && not tag?!"
 
 -- Phase0: Verify record has record type:
-phase0 :: Eq def => GetFieldPhase0 def -> RuleFunc def
+phase0 :: Eq def => Rule.GetFieldPhase0 def -> RuleFunc def
 phase0 rule triggers =
   case Map.toList triggers of
   [((recordTypeRef, _), isRecord)]
@@ -58,80 +59,80 @@ phase0 rule triggers =
       recordFields <- InferM.liftContext $ assertRecordTypeFields recordTypeRef
       isFinished <-
         handlePotentialMatches recordFields
-        (rule ^. gf0GetFieldTag)
-        (rule ^. gf0GetFieldType)
+        (rule ^. Rule.gf0GetFieldTag)
+        (rule ^. Rule.gf0GetFieldType)
       unless isFinished $ do
         phase1RuleRef <-
-          newRule $
-          RuleGetFieldPhase1 GetFieldPhase1
-          { _gf1GetFieldRecordTypeFields = recordFields
-          , _gf1GetFieldType = rule ^. gf0GetFieldType
+          InferM.liftRuleMap . Rule.new $
+          Rule.RuleGetFieldPhase1 Rule.GetFieldPhase1
+          { Rule._gf1GetFieldRecordTypeFields = recordFields
+          , Rule._gf1GetFieldType = rule ^. Rule.gf0GetFieldType
           }
         Trigger.add Trigger.IsDirectlyTag phase1RuleRef $
-          rule ^. gf0GetFieldTag
+          rule ^. Rule.gf0GetFieldTag
       return RuleDelete
     | otherwise -> InferM.error InferM.GetFieldRequiresRecord
   _ -> error "A singleton trigger must be used with GetFieldPhase0 rule"
 
 -- Phase1: Get GetField's tag
-phase1 :: Eq def => GetFieldPhase1 def -> RuleFunc def
+phase1 :: Eq def => Rule.GetFieldPhase1 def -> RuleFunc def
 phase1 rule triggers =
   case Map.toList triggers of
   [(_, False)] -> return RuleDelete -- Not a tag in that position, do nothing
   [((getFieldTagRef, _), True)] -> do
     getFieldTag <- InferM.liftContext $ assertTag getFieldTagRef
     phase2RuleRef <-
-      newRule $
-      RuleGetFieldPhase2 GetFieldPhase2
-        { _gf2Tag = getFieldTag
-        , _gf2TagRef = getFieldTagRef
-        , _gf2TypeRef = rule ^. gf1GetFieldType
-        , _gf2MaybeMatchers = OR.refMapFromList $ rule ^. gf1GetFieldRecordTypeFields
+      InferM.liftRuleMap . Rule.new $
+      Rule.RuleGetFieldPhase2 Rule.GetFieldPhase2
+        { Rule._gf2Tag = getFieldTag
+        , Rule._gf2TagRef = getFieldTagRef
+        , Rule._gf2TypeRef = rule ^. Rule.gf1GetFieldType
+        , Rule._gf2MaybeMatchers = OR.refMapFromList $ rule ^. Rule.gf1GetFieldRecordTypeFields
         }
-    rule ^. gf1GetFieldRecordTypeFields
+    rule ^. Rule.gf1GetFieldRecordTypeFields
       & Lens.traverseOf_ (Lens.traverse . Lens._1) %%~
         Trigger.add Trigger.IsDirectlyTag phase2RuleRef
     return RuleDelete
   _ -> error "Only one trigger before phase 1?!"
 
 -- Phase2: Find relevant record fields by triggered tags
-phase2 :: Eq def => GetFieldPhase2 def -> RuleFunc def
+phase2 :: Eq def => Rule.GetFieldPhase2 def -> RuleFunc def
 phase2 =
-  updateRuleTriggers RuleGetFieldPhase2 handleTrigger
+  RuleMonad.run Rule.RuleGetFieldPhase2 handleTrigger
   where
     handleTrigger (_, False) = return ()
     handleTrigger ((ref, _), True) = do
-      rep <- liftInfer . InferM.liftUFExprs $ UFData.find "phase2.ref" ref
-      fieldTag <- liftInfer . InferM.liftContext $ assertTag rep
+      rep <- RuleMonad.liftInfer . InferM.liftUFExprs $ UFData.find "phase2.ref" ref
+      fieldTag <- RuleMonad.liftInfer . InferM.liftContext $ assertTag rep
       mFieldTypeRef <- do
         rule <- State.get
         (mFieldTypeRef, newMaybeMatchers) <-
-          liftInfer . InferM.liftUFExprs $
-          OR.refMapUnmaintainedLookup UFData.find rep `runStateT` (rule ^. gf2MaybeMatchers)
-        gf2MaybeMatchers .= newMaybeMatchers
+          RuleMonad.liftInfer . InferM.liftUFExprs $
+          OR.refMapUnmaintainedLookup UFData.find rep `runStateT` (rule ^. Rule.gf2MaybeMatchers)
+        Rule.gf2MaybeMatchers .= newMaybeMatchers
         return mFieldTypeRef
-      tag <- Lens.use gf2Tag
+      tag <- Lens.use Rule.gf2Tag
       if fieldTag == tag
         then do
           let fieldTypeRef = unsafeUnjust "phase2 triggered by wrong ref!" mFieldTypeRef
-          liftInfer . void . unify fieldTypeRef =<< Lens.use gf2TypeRef
-          ruleDelete
+          RuleMonad.liftInfer . void . unify fieldTypeRef =<< Lens.use Rule.gf2TypeRef
+          RuleMonad.ruleDelete
         else do
-          gf2MaybeMatchers . Lens.at rep .= Nothing
+          Rule.gf2MaybeMatchers . Lens.at rep .= Nothing
           isFinished <- do
             rule <- State.get
-            liftInfer $
-              handlePotentialMatches (OR.refMapToList (rule ^. gf2MaybeMatchers))
-              (rule ^. gf2TagRef)
-              (rule ^. gf2TypeRef)
-          when isFinished ruleDelete
+            RuleMonad.liftInfer $
+              handlePotentialMatches (OR.refMapToList (rule ^. Rule.gf2MaybeMatchers))
+              (rule ^. Rule.gf2TagRef)
+              (rule ^. Rule.gf2TypeRef)
+          when isFinished RuleMonad.ruleDelete
 
 make :: ExprRef def -> ExprRef def -> ExprRef def -> Infer def ()
 make tagValRef getFieldTypeRef recordTypeRef = do
   ruleRef <-
-    newRule $
-    RuleGetFieldPhase0 GetFieldPhase0
-    { _gf0GetFieldTag = tagValRef
-    , _gf0GetFieldType = getFieldTypeRef
+    InferM.liftRuleMap . Rule.new $
+    Rule.RuleGetFieldPhase0 Rule.GetFieldPhase0
+    { Rule._gf0GetFieldTag = tagValRef
+    , Rule._gf0GetFieldType = getFieldTypeRef
     }
   Trigger.add Trigger.IsRecordType ruleRef recordTypeRef

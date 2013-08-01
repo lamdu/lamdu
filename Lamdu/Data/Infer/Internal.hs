@@ -19,7 +19,7 @@ import Data.Map (Map)
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
 import Lamdu.Data.Infer.RefData
 import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.Rule.Internal (RuleMap, initialRuleMap)
+import Lamdu.Data.Infer.Rule.Types (RuleMap, initialRuleMap)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.UnionFind.WithData as UFData

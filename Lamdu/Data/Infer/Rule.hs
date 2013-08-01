@@ -1,8 +1,9 @@
 {-# LANGUAGE RankNTypes #-}
 module Lamdu.Data.Infer.Rule
-  ( execute
+  ( execute, verifyTagId
   ) where
 
+-- import Lamdu.Data.Infer.Rule.Func ()
 import Control.Lens (Lens')
 import Control.Lens.Operators
 import Data.Foldable (traverse_)
@@ -11,8 +12,8 @@ import Data.Maybe.Utils (unsafeUnjust)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.Rule.Internal
-import Lamdu.Data.Infer.Rule.Utils (RuleResult(..), RuleFunc)
+import Lamdu.Data.Infer.Rule.Func (RuleResult(..), RuleFunc)
+import Lamdu.Data.Infer.Rule.Types (RuleContent(..), rmMap, Rule(..), RuleRef, verifyTagId)
 import Lamdu.Data.Infer.Trigger (Trigger)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map

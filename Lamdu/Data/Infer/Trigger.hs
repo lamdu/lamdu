@@ -14,7 +14,7 @@ import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefData (scopeNormalize)
 import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.Rule.Internal (RuleRef)
+import Lamdu.Data.Infer.Rule.Types (RuleRef)
 import Lamdu.Data.Infer.Trigger.Internal (Trigger(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
@@ -25,7 +25,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
-import qualified Lamdu.Data.Infer.Rule.Internal as Rule
+import qualified Lamdu.Data.Infer.Rule.Types as Rule
 
 remember ::
   MonadA m =>

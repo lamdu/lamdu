@@ -8,7 +8,7 @@ import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import Lamdu.Data.Infer.RefData (scopeNormalize)
 import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.Rule.Internal (verifyTagId)
+import Lamdu.Data.Infer.Rule (verifyTagId)
 import Lamdu.Data.Infer.Unify (unify, forceLam)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Data.Expression as Expr

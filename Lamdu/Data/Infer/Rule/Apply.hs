@@ -15,8 +15,7 @@ import Data.Traversable (sequenceA)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef)
-import Lamdu.Data.Infer.Rule.Internal
-import Lamdu.Data.Infer.Rule.Utils (RuleFunc, newRule, updateRuleTriggers, liftInfer)
+import Lamdu.Data.Infer.Rule.Func (RuleFunc)
 import Lamdu.Data.Infer.Unify (unify, forceLam)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
@@ -27,51 +26,59 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.Rule.Monad as RuleMonad
+import qualified Lamdu.Data.Infer.Rule.Types as Rule
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
-remapSubstGuid :: Guid -> StateT (Apply def) (MaybeT (Infer def)) Guid
+remapSubstGuid :: Guid -> StateT (Rule.Apply def) (MaybeT (Infer def)) Guid
 remapSubstGuid srcGuid = do
-  srcRep <- liftInfer . InferM.liftGuidAliases $ GuidAliases.getRep srcGuid
+  srcRep <- RuleMonad.liftInfer . InferM.liftGuidAliases $ GuidAliases.getRep srcGuid
   mDstRef <-
-    Lens.zoom aLinkedNames $
+    Lens.zoom Rule.aLinkedNames $
     OR.refMapUnmaintainedLookup
     (const (lift . InferM.liftGuidAliases . GuidAliases.find)) srcRep
-  liftInfer . InferM.liftGuidAliases $
+  RuleMonad.liftInfer . InferM.liftGuidAliases $
     State.gets . GuidAliases.guidOfRep =<<
     maybe (return srcRep) GuidAliases.find mDstRef
 
+mFindDestRef :: ExprRef def -> StateT (Rule.Apply def) (MaybeT (Infer def)) (Maybe (ExprRef def))
+mFindDestRef srcRef =
+  Lens.zoom Rule.aLinkedExprs $
+  OR.refMapUnmaintainedLookup
+  (fmap (lift . InferM.liftUFExprs) . UFData.find) srcRef
+
 link ::
   Eq def =>
-  RuleRef def ->
+  Rule.RuleRef def ->
   ExprRef def -> ExprRef def ->
-  StateT (Apply def) (MaybeT (Infer def)) ()
+  StateT (Rule.Apply def) (MaybeT (Infer def)) ()
 link ruleRef srcRef dstRef = do
-  aLinkedExprs <>= OR.refMapSingleton srcRef dstRef
-  piGuidRep <- liftInfer . InferM.liftGuidAliases . GuidAliases.getRep =<< Lens.use aPiGuid
-  liftInfer $ addPiResultTriggers ruleRef piGuidRep srcRef
+  Rule.aLinkedExprs <>= OR.refMapSingleton srcRef dstRef
+  piGuidRep <- RuleMonad.liftInfer . InferM.liftGuidAliases . GuidAliases.getRep =<< Lens.use Rule.aPiGuid
+  RuleMonad.liftInfer $ addPiResultTriggers ruleRef piGuidRep srcRef
 
 makePiResultCopy ::
   Eq def =>
-  RuleRef def ->
+  Rule.RuleRef def ->
   ExprRef def -> ExprRef def ->
-  StateT (Apply def) (MaybeT (Infer def)) ()
+  StateT (Rule.Apply def) (MaybeT (Infer def)) ()
 makePiResultCopy ruleRef srcRef destRef = do
-  srcBody <- liftInfer . InferM.liftUFExprs $ (^. rdBody) <$> UFData.read srcRef
-  destScope <- liftInfer . InferM.liftUFExprs $ (^. rdScope) <$> UFData.read destRef
+  srcBody <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. rdBody) <$> UFData.read srcRef
+  destScope <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. rdScope) <$> UFData.read destRef
   case srcBody of
     Expr.BodyLam (Expr.Lam k srcGuid _ _) -> do
-      (destGuid, _, _) <- liftInfer $ forceLam k destScope destRef
-      srcNameRep <- liftInfer . InferM.liftGuidAliases $ GuidAliases.getRep srcGuid
-      destNameRep <- liftInfer . InferM.liftGuidAliases $ GuidAliases.getRep destGuid
-      aLinkedNames . Lens.at srcNameRep .= Just destNameRep
+      (destGuid, _, _) <- RuleMonad.liftInfer $ forceLam k destScope destRef
+      srcNameRep <- RuleMonad.liftInfer . InferM.liftGuidAliases $ GuidAliases.getRep srcGuid
+      destNameRep <- RuleMonad.liftInfer . InferM.liftGuidAliases $ GuidAliases.getRep destGuid
+      Rule.aLinkedNames . Lens.at srcNameRep .= Just destNameRep
     _ -> do
       destBodyRef <-
         srcBody
-        & Lens.traverse %%~ (const . liftInfer . InferM.liftUFExprs) (freshHole destScope)
+        & Lens.traverse %%~ (const . RuleMonad.liftInfer . InferM.liftUFExprs) (freshHole destScope)
         >>= ExprLens.bodyParameterRef %%~ remapSubstGuid
-        >>= liftInfer . InferM.liftUFExprs . fresh destScope
-      liftInfer . void $ unify destBodyRef destRef -- destBodyRef is swallowed by destRef if it had anything...
-  destBody <- liftInfer . InferM.liftUFExprs $ (^. rdBody) <$> UFData.read destRef
+        >>= RuleMonad.liftInfer . InferM.liftUFExprs . fresh destScope
+      RuleMonad.liftInfer . void $ unify destBodyRef destRef -- destBodyRef is swallowed by destRef if it had anything...
+  destBody <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. rdBody) <$> UFData.read destRef
   matchRes <-
     sequenceA $ sequenceA_ <$>
     ExprUtil.matchBodyDeprecated matchLamResult (link ruleRef)
@@ -82,20 +89,16 @@ makePiResultCopy ruleRef srcRef destRef = do
     matchLamResult srcGuid _ srcChildRef destChildRef =
       (srcGuid, link ruleRef srcChildRef destChildRef)
 
-execute :: Eq def => RuleRef def -> Apply def -> RuleFunc def
+execute :: Eq def => Rule.RuleRef def -> Rule.Apply def -> RuleFunc def
 execute ruleRef =
-  updateRuleTriggers RuleApply handleTrigger
+  RuleMonad.run Rule.RuleApply handleTrigger
   where
     findDestRef =
       fmap (unsafeUnjust "Trigger.IsParameterRef not on src?!") . mFindDestRef
-    mFindDestRef srcRef =
-      Lens.zoom aLinkedExprs $
-      OR.refMapUnmaintainedLookup
-      (fmap (lift . InferM.liftUFExprs) . UFData.find) srcRef
     handleTrigger ((srcRef, Trigger.IsParameterRef {}), True) = do
       destRef <- findDestRef srcRef
-      argVal <- Lens.use aArgVal
-      liftInfer . void $ unify argVal destRef
+      argVal <- Lens.use Rule.aArgVal
+      RuleMonad.liftInfer . void $ unify argVal destRef
     handleTrigger ((srcRef, Trigger.IsParameterRef {}), False) = do
       -- Triggered when not a hole anymore, so copy:
       mDestRef <- mFindDestRef srcRef
@@ -109,14 +112,14 @@ execute ruleRef =
       -- Now we know no subexpr can possibly use the piGuid, so it
       -- must fully equal the dest:
       srcRep <-
-        liftInfer . InferM.liftUFExprs $
+        RuleMonad.liftInfer . InferM.liftUFExprs $
         UFData.find "handleApply.srcRef" srcRef
-      liftInfer . void . unify srcRep =<< findDestRef srcRep
+      RuleMonad.liftInfer . void . unify srcRep =<< findDestRef srcRep
       -- aLinkedExprs now guaranteed to have the rep:
-      aLinkedExprs . Lens.at srcRep .= Nothing
+      Rule.aLinkedExprs . Lens.at srcRep .= Nothing
     handleTrigger trigger = error $ "handleTrigger called with: " ++ show trigger
 
-addPiResultTriggers :: RuleRef def -> ParamRef def -> ExprRef def -> Infer def ()
+addPiResultTriggers :: Rule.RuleRef def -> ParamRef def -> ExprRef def -> Infer def ()
 addPiResultTriggers ruleRef paramRef srcRef = do
   -- Scope handling should be first so that we do the cheap unify
   -- rather than an expensive copy:
@@ -126,12 +129,12 @@ addPiResultTriggers ruleRef paramRef srcRef = do
 make :: Guid -> ExprRef def -> ExprRef def -> ExprRef def -> Infer def ()
 make piGuid argValRef piResultRef applyTypeRef = do
   ruleRef <-
-    newRule $
-    RuleApply Apply
-    { _aPiGuid = piGuid
-    , _aArgVal = argValRef
-    , _aLinkedExprs = OR.refMapSingleton piResultRef applyTypeRef
-    , _aLinkedNames = OR.refMapEmpty
+    InferM.liftRuleMap . Rule.new $
+    Rule.RuleApply Rule.Apply
+    { Rule._aPiGuid = piGuid
+    , Rule._aArgVal = argValRef
+    , Rule._aLinkedExprs = OR.refMapSingleton piResultRef applyTypeRef
+    , Rule._aLinkedNames = OR.refMapEmpty
     }
   piGuidRep <- InferM.liftGuidAliases $ GuidAliases.getRep piGuid
   addPiResultTriggers ruleRef piGuidRep piResultRef

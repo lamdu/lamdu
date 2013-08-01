@@ -2,7 +2,7 @@ module Lamdu.Data.Infer.Monad
   ( Error(..)
   , TriggeredRules(..)
   , Infer
-  , liftContext, liftUFExprs, liftGuidAliases
+  , liftContext, liftUFExprs, liftGuidAliases, liftRuleMap
   , liftError, error
   , ruleTrigger
   ) where
@@ -19,7 +19,7 @@ import Lamdu.Data.Expression.Utils () -- Expr.Body Show instance
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.RefTags (ExprRef, TagRule)
-import Lamdu.Data.Infer.Rule.Internal
+import Lamdu.Data.Infer.Rule.Types (RuleRef, RuleMap)
 import Lamdu.Data.Infer.Trigger.Internal (Trigger)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
@@ -65,6 +65,9 @@ liftUFExprs = liftContext . Lens.zoom ctxUFExprs
 
 liftGuidAliases :: StateT (GuidAliases def) (Either (Error def)) a -> Infer def a
 liftGuidAliases = liftContext . Lens.zoom ctxGuidAliases
+
+liftRuleMap :: StateT (RuleMap def) (Either (Error def)) a -> Infer def a
+liftRuleMap = liftContext . Lens.zoom ctxRuleMap
 
 liftError :: Either (Error def) a -> Infer def a
 liftError = lift . lift
