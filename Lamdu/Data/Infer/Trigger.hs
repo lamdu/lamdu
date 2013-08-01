@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternGuards #-}
 module Lamdu.Data.Infer.Trigger
-  ( Trigger(..), Fired(..)
+  ( Trigger(..), Fired(..), ParameterRefEvent(..)
   , add, updateRefData
   ) where
 
@@ -15,7 +15,7 @@ import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefData (scopeNormalize)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule.Types (RuleRef)
-import Lamdu.Data.Infer.Trigger.Types (Trigger(..), Fired(..))
+import Lamdu.Data.Infer.Trigger.Types (Trigger(..), Fired(..), ParameterRefEvent(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.OpaqueRef as OR
@@ -47,24 +47,26 @@ checkTrigger refData trigger =
     | refData ^. rdIsCircumsized . Lens.unwrapped -> answer $ FiredDirectlyTag False
     | otherwise -> checkHole $ FiredDirectlyTag False
   OnParameterRef triggerGuidRef
-    | Just guid <- refData ^? rdBody . ExprLens.bodyParameterRef -> do
-      triggerGuidRep <- InferM.liftGuidAliases $ GuidAliases.find triggerGuidRef
-      guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
-      return . Just $ FiredParameterRef triggerGuidRep $ triggerGuidRep == guidRep
-    | otherwise -> checkHole $ FiredParameterRef triggerGuidRef False
-  OnRecordType
-    | Lens.has (rdBody . ExprLens.bodyKindedRecordFields Expr.KType) refData -> answer $ FiredRecordType True
-    | otherwise -> checkHole $ FiredRecordType False
-  OnScopeHasParameterRef triggerGuidRef
     | Lens.nullOf (rdScope . scopeParamRefs) refData ->
       -- Scope is empty so this cannot be a parameter Ref
-      answer $ FiredScopeHasParameterRef triggerGuidRef False
+      answer $ FiredParameterRef triggerGuidRef ParameterRefOutOfScope
     | otherwise -> do
       triggerGuidRep <- InferM.liftGuidAliases $ GuidAliases.find triggerGuidRef
       -- Our caller must hand us a normalized scope
-      if triggerGuidRep `elem` (refData ^.. rdScope . scopeParamRefs)
-        then unknown -- It may be removed in the future...
-        else answer $ FiredScopeHasParameterRef triggerGuidRep False
+      if triggerGuidRep `notElem` (refData ^.. rdScope . scopeParamRefs)
+        then answer $ FiredParameterRef triggerGuidRep ParameterRefOutOfScope
+        else
+          case refData ^? rdBody . ExprLens.bodyParameterRef of
+            Just guid -> do
+              guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
+              answer . FiredParameterRef triggerGuidRep $
+                if triggerGuidRep == guidRep
+                then IsParameterRef
+                else NotParameterRef
+            _ -> checkHole $ FiredParameterRef triggerGuidRep NotParameterRef
+  OnRecordType
+    | Lens.has (rdBody . ExprLens.bodyKindedRecordFields Expr.KType) refData -> answer $ FiredRecordType True
+    | otherwise -> checkHole $ FiredRecordType False
   where
     answer = return . Just
     unknown = return Nothing
