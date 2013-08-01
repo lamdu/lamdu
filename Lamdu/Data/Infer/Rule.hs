@@ -11,7 +11,7 @@ import Data.Set (Set)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (TagExpr)
-import Lamdu.Data.Infer.Rule.Func (RuleResult(..), RuleFunc, flatten)
+import Lamdu.Data.Infer.Rule.Func (RuleResult(..), RuleFunc)
 import Lamdu.Data.Infer.Rule.Types (RuleContent(..), rmMap, Rule(..), RuleRef, verifyTagId)
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
@@ -35,7 +35,7 @@ verifyTag triggers =
   where
     violations =
       [ ref
-      | (ref, Trigger.FiredDirectlyTag False) <- flatten triggers
+      | (ref, Trigger.FiredDirectlyTag False) <- triggers ^@.. Lens.itraversed <. Lens.folded
       ]
 
 ruleRunner :: Eq def => RuleContent def -> RuleRef def -> RuleFunc def

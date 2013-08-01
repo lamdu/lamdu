@@ -11,7 +11,7 @@ import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.Rule.Func (RuleResult(..), RuleFunc, flatten)
+import Lamdu.Data.Infer.Rule.Func (RuleResult(..), RuleFunc)
 import Lamdu.Data.Infer.Unify (unify)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
@@ -52,7 +52,7 @@ assertTag ref =
 -- Phase0: Verify record has record type:
 phase0 :: Eq def => Rule.GetFieldPhase0 def -> RuleFunc def
 phase0 rule triggers =
-  case flatten triggers of
+  case triggers ^@.. Lens.itraversed <. Lens.folded of
   [(recordTypeRef, Trigger.FiredRecordType isRecord)]
     | isRecord -> do
       recordFields <- InferM.liftContext $ assertRecordTypeFields recordTypeRef
@@ -76,7 +76,7 @@ phase0 rule triggers =
 -- Phase1: Get GetField's tag
 phase1 :: Eq def => Rule.GetFieldPhase1 def -> RuleFunc def
 phase1 rule triggers =
-  case flatten triggers of
+  case triggers ^@.. Lens.itraversed <. Lens.folded of
   [(_, Trigger.FiredDirectlyTag False)] -> return RuleDelete -- Not a tag in that position, do nothing
   [(getFieldTagRef, Trigger.FiredDirectlyTag True)] -> do
     getFieldTag <- InferM.liftContext $ assertTag getFieldTagRef
