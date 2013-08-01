@@ -172,7 +172,7 @@ Executable lamdu
                        Lamdu.Data.Infer.Rule.Monad,
                        Lamdu.Data.Infer.Rule.Types,
                        Lamdu.Data.Infer.Trigger,
-                       Lamdu.Data.Infer.Trigger.Internal,
+                       Lamdu.Data.Infer.Trigger.Types,
                        Lamdu.Data.Infer.Unify,
                        Lamdu.Data.FFI,
                        Lamdu.Data.Ops,

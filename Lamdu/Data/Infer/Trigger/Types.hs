@@ -1,4 +1,4 @@
-module Lamdu.Data.Infer.Trigger.Internal
+module Lamdu.Data.Infer.Trigger.Types
   ( Trigger(..)
   ) where
 

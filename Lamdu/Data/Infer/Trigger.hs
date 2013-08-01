@@ -15,7 +15,7 @@ import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefData (scopeNormalize)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule.Types (RuleRef)
-import Lamdu.Data.Infer.Trigger.Internal (Trigger(..))
+import Lamdu.Data.Infer.Trigger.Types (Trigger(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.OpaqueRef as OR

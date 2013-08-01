@@ -17,7 +17,7 @@ import Data.Set (Set)
 import Data.UnionFind.WithData (UFData)
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
 import Lamdu.Data.Infer.RefTags (TagExpr, ExprRef, ParamRef, TagRule, TagParam)
-import Lamdu.Data.Infer.Trigger.Internal (Trigger)
+import Lamdu.Data.Infer.Trigger.Types (Trigger)
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Data.OpaqueRef as OR
