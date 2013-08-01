@@ -512,19 +512,15 @@ fromQuickCheck1 =
     isExpectedError _ = False
 
 testUnificationCarriesOver =
-  testInferAllowFail "No unification-carry-over yet"
-  ( "F _ :: ({l:IntegerType, r:_}->_)" ++
-    "  where F (a:Set) = (+) _"
-  ) $
-  whereItem "f"
-  ( lambda "a" set $ \_ -> getDef "+" $$ holeWithInferredType set ) $
-  \f ->
+  testInferAllowFail "No support for unification carry-over"
+  "(\\(a:Set) -> (+) _) _ :: ({l:IntegerType, r:_}->_)" $
   typeAnnotate
   (record KType
    [ (tagStr "infixlarg", integerType)
    , (tagStr "infixrarg", asHole integerType)
-   ] ~> asHole integerType)
-  (f $$ holeWithInferredType set)
+   ] ~> asHole integerType) $
+  (lambda "a" set $ \_ -> getDef "+" $$ holeWithInferredType set) $$
+  holeWithInferredType set
 
 testUnifiedDependentPis =
   testInfer "if _ (_ :: a:Set -> a -> _) (_ :: b:Set -> _ -> b)" $
