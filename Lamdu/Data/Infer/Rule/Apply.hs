@@ -53,9 +53,15 @@ link ::
   ExprRef def -> ExprRef def ->
   StateT (Rule.Apply def) (MaybeT (Infer def)) ()
 link ruleRef srcRef dstRef = do
-  Rule.aLinkedExprs <>= OR.refMapSingleton srcRef dstRef
-  piGuidRep <- RuleMonad.liftInfer . InferM.liftGuidAliases . GuidAliases.getRep =<< Lens.use Rule.aPiGuid
-  RuleMonad.liftInfer $ addPiResultTriggers ruleRef piGuidRep srcRef
+  mOldDestRef <- mFindDestRef srcRef
+  case mOldDestRef of
+    Just oldDestRef ->
+      -- This src is unified with a src that was already copied somewhere:
+      RuleMonad.liftInfer . void $ unify dstRef oldDestRef
+    Nothing -> do
+      Rule.aLinkedExprs <>= OR.refMapSingleton srcRef dstRef
+      piGuidRep <- RuleMonad.liftInfer . InferM.liftGuidAliases . GuidAliases.getRep =<< Lens.use Rule.aPiGuid
+      RuleMonad.liftInfer $ addPiResultTriggers ruleRef piGuidRep srcRef
 
 makePiResultCopy ::
   Eq def =>

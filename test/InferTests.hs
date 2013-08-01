@@ -512,8 +512,7 @@ fromQuickCheck1 =
     isExpectedError _ = False
 
 testUnificationCarriesOver =
-  testInferAllowFail "No support for unification carry-over"
-  "(\\(a:Set) -> (+) _) _ :: ({l:IntegerType, r:_}->_)" $
+  testInfer "(\\(a:Set) -> (+) _) _ :: ({l:IntegerType, r:_}->_)" $
   typeAnnotate
   (record KType
    [ (tagStr "infixlarg", integerType)
