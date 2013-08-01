@@ -302,15 +302,19 @@ infixl 3 $$:
   where
     mk funcR argR =
       ( ExprUtil.makeApply funcR argR
-      , substLam KVal (funcR ^. iVal) (argR ^. iVal) pureHole $
+      , substLam False -- Redex support disabled in new infer:
+        KVal (funcR ^. iVal) (argR ^. iVal) pureHole $
         circumcizedApplyVal (funcR ^. iVal) (argR ^. iVal)
-      , substLam KType (funcR ^. iType) (argR ^. iVal) piErr piErr
+      , substLam True KType (funcR ^. iType) (argR ^. iVal) piErr piErr
       )
     piErr = error "Apply of non-Pi type!"
-    substLam k e argVal caseHole caseOther =
+    substLam doSubst k e argVal caseHole caseOther =
       case e ^. Expr.eBody of
       Expr.BodyLam (Expr.Lam k1 paramGuid _ result)
-        | k == k1 -> ExprUtil.substGetPar paramGuid argVal result
+        | k == k1 ->
+          if doSubst
+          then ExprUtil.substGetPar paramGuid argVal result
+          else caseOther
       Expr.BodyLeaf Expr.Hole -> caseHole
       _ -> caseOther
     circumcizedApplyVal funcVal argVal
