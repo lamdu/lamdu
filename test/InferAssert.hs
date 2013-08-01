@@ -177,7 +177,7 @@ allowFailAssertion msg assertion =
       concat ["WARNING: Allowing failure (", msg, ") in:"]
 
 defaultTestOptions :: TestOptions' Maybe
-defaultTestOptions = mempty { topt_timeout = Just (Just 100000) }
+defaultTestOptions = mempty { topt_timeout = Just (Just 300000) }
 
 testCase :: TestFramework.TestName -> HUnit.Assertion -> TestFramework.Test
 testCase name = plusTestOptions defaultTestOptions . HUnitProvider.testCase name
