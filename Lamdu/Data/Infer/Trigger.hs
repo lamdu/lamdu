@@ -38,6 +38,7 @@ remember rep refData trigger ruleId = do
     _fromJust "Trigger.remember to missing rule" .
     Rule.ruleTriggersIn <>= OR.refSetSingleton rep
 
+-- | Must be called with RefData with normalized scope
 checkTrigger :: RefData def -> Trigger def -> Infer def (Maybe Bool)
 checkTrigger refData trigger =
   case trigger of
@@ -60,8 +61,8 @@ checkTrigger refData trigger =
       no
     | otherwise -> do
       triggerGuidRep <- InferM.liftGuidAliases $ GuidAliases.find triggerGuidRef
-      scopeNorm <- InferM.liftGuidAliases $ scopeNormalize (refData ^. rdScope)
-      if triggerGuidRep `elem` (scopeNorm ^.. scopeParamRefs)
+      -- Our caller must hand us a normalized scope
+      if triggerGuidRep `elem` (refData ^.. rdScope . scopeParamRefs)
         then unknown -- It may be removed in the future...
         else no
   where
@@ -72,6 +73,7 @@ checkTrigger refData trigger =
       | Lens.nullOf (rdBody . ExprLens.bodyHole) refData = no
       | otherwise = unknown
 
+-- | Must be called with RefData with normalized scope
 handleTrigger :: ExprRef def -> RefData def -> RuleRef def -> Trigger def -> Infer def Bool
 handleTrigger rep refData ruleId trigger = do
   mRes <- checkTrigger refData trigger
@@ -79,6 +81,7 @@ handleTrigger rep refData ruleId trigger = do
     Nothing -> return True
     Just result -> False <$ InferM.ruleTrigger ruleId rep trigger result
 
+-- | Must be called with RefData with normalized scope
 updateRefData :: ExprRef def -> RefData def -> Infer def (RefData def)
 updateRefData rep refData =
   refData &
@@ -95,5 +98,9 @@ add :: Trigger def -> RuleRef def -> ExprRef def -> Infer def ()
 add trigger ruleId ref = do
   rep <- InferM.liftUFExprs $ UFData.find "Trigger.add" ref
   refData <- InferM.liftUFExprs . State.gets $ UFData.readRep rep
-  keep <- handleTrigger rep refData ruleId trigger
+  -- TODO: The tests pass even with the un-normalized Scope. Is there
+  -- some guarantee that when we're called here, scope is always
+  -- already normalized?
+  refDataNorm <- refData & rdScope %%~ InferM.liftGuidAliases . scopeNormalize
+  keep <- handleTrigger rep refDataNorm ruleId trigger
   when keep . InferM.liftContext $ remember rep refData trigger ruleId

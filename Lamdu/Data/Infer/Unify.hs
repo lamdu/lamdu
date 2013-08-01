@@ -110,10 +110,9 @@ unifyWithHole holeScope otherScope nonHoleBody = do
     (,) <$> scopeNormalize holeScope <*> scopeNormalize otherScope
   let unusableScopeReps = OR.refMapKeysSet $ OR.refMapDifference otherScopeNorm holeScopeNorm
   if OR.refSetNull unusableScopeReps
-    then return (otherScope, nonHoleBody)
+    then return (Scope otherScopeNorm, nonHoleBody)
     else
-      applyHoleConstraints (HoleConstraints unusableScopeReps)
-      nonHoleBody otherScope
+      applyHoleConstraints (HoleConstraints unusableScopeReps) nonHoleBody otherScope
       <&> flip (,) nonHoleBody
 
 mergeScopeBodies ::
@@ -151,9 +150,9 @@ mergeRefData
   (RefData bScope bIsCircumsized bTriggers bBody) =
   mkRefData <$> mergeScopeBodies aScope aBody bScope bBody
   where
-    mkRefData (intersectedScope, mergedBody) =
+    mkRefData (scope, mergedBody) =
       RefData
-      { _rdScope = intersectedScope
+      { _rdScope = scope
       , _rdIsCircumsized = mappend aIsCircumsized bIsCircumsized
       , _rdTriggers = OR.refMapUnionWith mappend aTriggers bTriggers
       , _rdBody = mergedBody
