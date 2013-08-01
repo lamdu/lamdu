@@ -16,6 +16,7 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Rule as Rule
+import qualified Lamdu.Data.Infer.Rule.GetField as RuleGetField
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
 scopeLookup :: Scope def -> Guid -> Infer def (ExprRef def)
@@ -60,7 +61,7 @@ makeGetFieldType scope (Expr.GetField record tag) = do
   void . unify tagTypeRef $ tag ^. tvType
   getFieldTypeRef <- InferM.liftUFExprs $ freshHole scope
   addTagVerification $ tag ^. tvVal
-  Rule.makeGetField (tag ^. tvVal) getFieldTypeRef (record ^. tvType)
+  RuleGetField.make (tag ^. tvVal) getFieldTypeRef (record ^. tvType)
   return getFieldTypeRef
 
 makeLambdaType ::
