@@ -68,7 +68,7 @@ phase0 rule triggers =
           { Rule._gf1GetFieldRecordTypeFields = recordFields
           , Rule._gf1GetFieldType = rule ^. Rule.gf0GetFieldType
           }
-        Trigger.add Trigger.IsDirectlyTag phase1RuleRef $
+        Trigger.add Trigger.OnDirectlyTag phase1RuleRef $
           rule ^. Rule.gf0GetFieldTag
       return RuleDelete
     | otherwise -> InferM.error InferM.GetFieldRequiresRecord
@@ -91,7 +91,7 @@ phase1 rule triggers =
         }
     rule ^. Rule.gf1GetFieldRecordTypeFields
       & Lens.traverseOf_ (Lens.traverse . Lens._1) %%~
-        Trigger.add Trigger.IsDirectlyTag phase2RuleRef
+        Trigger.add Trigger.OnDirectlyTag phase2RuleRef
     return RuleDelete
   _ -> error "Only one trigger before phase 1?!"
 
@@ -135,4 +135,4 @@ make tagValRef getFieldTypeRef recordTypeRef = do
     { Rule._gf0GetFieldTag = tagValRef
     , Rule._gf0GetFieldType = getFieldTypeRef
     }
-  Trigger.add Trigger.IsRecordType ruleRef recordTypeRef
+  Trigger.add Trigger.OnRecordType ruleRef recordTypeRef

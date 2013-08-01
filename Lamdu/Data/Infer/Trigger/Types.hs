@@ -8,13 +8,13 @@ import Lamdu.Data.Infer.RefTags (ParamRef)
 -- unknown. Once they're known to be false, they're removed. Once
 -- they're known to be true, they trigger a rule and are removed.
 data Trigger def
-  = IsDirectlyTag
-  | IsRecordType
+  = OnDirectlyTag
+  | OnRecordType
   -- IsParameterRef may remain "unknown" even though scope makes it
   -- known that it isn't a parameter ref:
-  | IsParameterRef (ParamRef def)
+  | OnParameterRef (ParamRef def)
   -- ScopeHasParameterRef only triggers "no"
-  | ScopeHasParameterRef (ParamRef def)
+  | OnScopeHasParameterRef (ParamRef def)
   deriving (Eq, Ord, Show)
 
 -- TODO: The above IsParameterRef/ScopeHasParameterRef need to be a

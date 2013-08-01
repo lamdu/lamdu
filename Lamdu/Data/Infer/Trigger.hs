@@ -42,20 +42,20 @@ remember rep refData trigger ruleId = do
 checkTrigger :: RefData def -> Trigger def -> Infer def (Maybe Bool)
 checkTrigger refData trigger =
   case trigger of
-  IsDirectlyTag
+  OnDirectlyTag
     | Lens.has (rdBody . ExprLens.bodyTag) refData -> yes
     | refData ^. rdIsCircumsized . Lens.unwrapped -> no
     | otherwise -> checkHole
-  IsParameterRef triggerGuidRef
+  OnParameterRef triggerGuidRef
     | Just guid <- refData ^? rdBody . ExprLens.bodyParameterRef -> do
       triggerGuidRep <- InferM.liftGuidAliases $ GuidAliases.find triggerGuidRef
       guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
       return . Just $ triggerGuidRep == guidRep
     | otherwise -> checkHole
-  IsRecordType
+  OnRecordType
     | Lens.has (rdBody . ExprLens.bodyKindedRecordFields Expr.KType) refData -> yes
     | otherwise -> checkHole
-  ScopeHasParameterRef triggerGuidRef
+  OnScopeHasParameterRef triggerGuidRef
     | Lens.nullOf (rdScope . scopeParamRefs) refData ->
       -- Scope is empty so this cannot be a parameter Ref
       no
