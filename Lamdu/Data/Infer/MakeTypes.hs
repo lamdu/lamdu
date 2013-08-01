@@ -15,7 +15,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
-import qualified Lamdu.Data.Infer.Rule as Rule
+import qualified Lamdu.Data.Infer.Rule.Apply as RuleApply
 import qualified Lamdu.Data.Infer.Rule.GetField as RuleGetField
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
@@ -49,7 +49,7 @@ makeApplyType applyScope func arg = do
     (func ^. stvTV . tvType)
   void $ unify (arg ^. stvTV . tvType) piParamType
   applyTypeRef <- InferM.liftUFExprs $ freshHole applyScope
-  Rule.makeApply piGuid (arg ^. stvTV . tvVal) piResultRef applyTypeRef
+  RuleApply.make piGuid (arg ^. stvTV . tvVal) piResultRef applyTypeRef
   return applyTypeRef
 
 addTagVerification :: ExprRef def -> Infer def ()

@@ -166,6 +166,7 @@ Executable lamdu
                        Lamdu.Data.Infer.RefTags,
                        Lamdu.Data.Infer.RefData,
                        Lamdu.Data.Infer.Rule,
+                       Lamdu.Data.Infer.Rule.Apply,
                        Lamdu.Data.Infer.Rule.GetField,
                        Lamdu.Data.Infer.Rule.Internal,
                        Lamdu.Data.Infer.Rule.Utils,
