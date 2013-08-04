@@ -51,14 +51,13 @@ applyOnVar =
   (holeWithInferredType (hole ~> integerType) $$ x)
 
 monomorphRedex =
-  testInferAllowFail "No support for rigidity detection yet"
-    "foo = f (\\~ x -> (\\~ -> x) _) where f ~:(a:Type -> _ -> a) = _" $
-  whereItem "f" (lambda "" fArgType (const hole)) $ \f ->
+  testInfer "foo = f (\\b (x:{b}) -> (\\_1 -> x) ?) where f (_2:(a:Type -> ? -> a)) = ?" $
+  whereItem "f" (lambda "_2" fArgType (const hole)) $ \f ->
   f $$
   lambda "b" (asHole set)
   (\b ->
    lambda "x" (asHole b) $ \x ->
-   lambda "c" (holeWithInferredType set) (const x) $$ hole)
+   lambda "_1" (holeWithInferredType set) (const x) $$ hole)
   where
     -- (a:Type -> _[=a] -> a)
     fArgType = piType "a" set $ \a -> asHole a ~> a
