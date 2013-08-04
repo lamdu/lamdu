@@ -11,7 +11,7 @@ import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Kind(..))
-import Lamdu.Data.Expression.Utils (pureHole, pureSet, pureIntegerType)
+import Lamdu.Data.Expression.Utils (pureHole, pureLiteralInteger, pureSet, pureIntegerType, pureTag, pureTagType, pureType)
 import Utils
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
@@ -41,13 +41,6 @@ Lens.makeLenses ''InputPayload
 
 inferredOfInput :: InputPayload -> (Expr (), Expr ())
 inferredOfInput (InputPayload val typ _) = (val, typ)
-
-iexpr ::
-  Expr () ->
-  Expr () ->
-  Expr.Body Def InputExpr -> InputExpr
-iexpr val typ body =
-  Expr.Expression body (InputPayload val typ Same)
 
 addResumption :: Resumption -> InputExpr -> InputExpr
 addResumption x a =
@@ -81,20 +74,49 @@ iType = Expr.ePayload . ipTyp
 bodyToPureExpr :: Expr.Body Def InputExpr -> Expr ()
 bodyToPureExpr exprBody = ExprLens.pureExpr # fmap (^. iVal) exprBody
 
--- inferred-val is simply equal to the expr. Type is given
-simple :: Expr.Body Def InputExpr -> Expr () -> InputExpr
-simple body typ = iexpr (bodyToPureExpr body) typ body
+iexpr ::
+  Expr () ->
+  Expr () ->
+  Expr.Body Def InputExpr -> InputExpr
+iexpr val typ body =
+  Expr.Expression body (InputPayload val typ Same)
+
+tag :: Guid -> InputExpr
+tag guid =
+  Expr.Expression (ExprLens.bodyTag # guid) (InputPayload (pureTag guid) pureTagType Same)
+
+set :: InputExpr
+set =
+  Expr.Expression (ExprLens.bodyType # ()) (InputPayload pureType pureType Same)
+
+tagType :: InputExpr
+tagType =
+  Expr.Expression (ExprLens.bodyTagType # ()) (InputPayload pureTagType pureType Same)
+
+integerType :: InputExpr
+integerType =
+  Expr.Expression (ExprLens.bodyIntegerType # ()) (InputPayload pureIntegerType pureType Same)
+
+getDef :: String -> InputExpr
+getDef name =
+  Expr.Expression (ExprLens.bodyDefinitionRef # Def name)
+  InputPayload
+  { _ipVal = ExprLens.pureExpr . ExprLens.bodyDefinitionRef # Def name
+  , _ipTyp = void (definitionTypes ! Def name)
+  , _ipResumption = Same
+  }
+
+hole :: InputExpr
+hole = Expr.Expression (ExprLens.bodyHole # ()) (InputPayload pureHole pureHole Same)
 
 getRecursiveDef :: Expr ()
 getRecursiveDef =
   ExprLens.pureExpr . ExprLens.bodyDefinitionRef # recursiveDefI
 
--- New-style:
-recurse :: InputExpr -> InputExpr
-recurse typ = simple (ExprLens.bodyDefinitionRef # recursiveDefI) $ typ ^. iVal
-
 literalInteger :: Integer -> InputExpr
-literalInteger x = simple (ExprLens.bodyLiteralInteger # x) pureIntegerType
+literalInteger x =
+  Expr.Expression (ExprLens.bodyLiteralInteger # x)
+  (InputPayload (pureLiteralInteger x) pureIntegerType Same)
 
 -- R represents a cross-section of the whole expression with a new
 -- resume level, where the Monoid.Any represents whether any change
@@ -136,12 +158,28 @@ runR (R (ZipList ~((_, (body, firstVal, firstTyp)):nexts))) =
   where
     valTyp (_body, val, typ) = (val, typ)
 
+recurse :: InputExpr -> InputExpr
+recurse typ =
+  runR $ mk <$> resumptions typ
+  where
+    mk typR =
+      ( ExprLens.bodyDefinitionRef # recursiveDefI
+      , ExprLens.pureExpr . ExprLens.bodyDefinitionRef # recursiveDefI
+      , typR ^. iVal
+      )
+
+holeWithInferredType :: InputExpr -> InputExpr
+holeWithInferredType typ =
+  runR $ mk <$> resumptions typ
+  where
+    mk typR = (ExprLens.bodyHole # (), pureHole, typR ^. iVal)
+
 mkLam ::
   Kind -> (Guid -> Expr () -> Expr () -> Expr ()) ->
   String -> InputExpr ->
   (InputExpr -> InputExpr) ->
   InputExpr
-mkLam k pureType name paramType mkResult =
+mkLam k mkPureType name paramType mkResult =
   runR $ mk <$> resumptions paramType <*> resumptions result
   where
     guid = Guid.fromString name
@@ -149,7 +187,7 @@ mkLam k pureType name paramType mkResult =
     mk paramTypeR resultR =
       ( ExprUtil.makeLam k guid paramTypeR resultR
       , ExprUtil.pureLam k guid (paramTypeR ^. iVal) (resultR ^. iVal)
-      , pureType guid (paramTypeR ^. iVal) (resultR ^. iType)
+      , mkPureType guid (paramTypeR ^. iVal) (resultR ^. iType)
       )
 
 piType ::
@@ -157,9 +195,9 @@ piType ::
   (InputExpr -> InputExpr) ->
   InputExpr
 piType =
-  mkLam KType pureType
+  mkLam KType mkPureType
   where
-    pureType _name _pureParamType _pureResultType = pureSet
+    mkPureType _name _pureParamType _pureResultType = pureSet
 
 infixr 4 ~>
 (~>) :: InputExpr -> InputExpr -> InputExpr
@@ -229,12 +267,6 @@ typedWhereItem ::
 typedWhereItem name typ val mkBody =
   lambda name typ mkBody $$ val
 
-holeWithInferredType :: InputExpr -> InputExpr
-holeWithInferredType = simple bodyHole . (^. iVal)
-
-hole :: InputExpr
-hole = simple bodyHole pureHole
-
 getGuidParam :: Guid -> InputExpr -> InputExpr
 getGuidParam guid typ =
   runR $ mk <$> resumptions typ
@@ -259,33 +291,14 @@ list items@(x:_) =
   where
     cons h t = getDef ":" $$ typ $$: [h, t]
     nil = getDef "[]" $$ typ
+    -- TODO: iexpr is likely broken, need to use resumptions of x
     typ = iexpr (x ^. iType) pureSet (ExprLens.bodyHole # ())
 
 maybeOf :: InputExpr -> InputExpr
 maybeOf = (getDef "Maybe" $$)
 
-getDef :: String -> InputExpr
-getDef name =
-  simple
-  (ExprLens.bodyDefinitionRef # Def name)
-  (void (definitionTypes ! Def name))
-
-tag :: Guid -> InputExpr
-tag guid =
-  simple (ExprLens.bodyTag # guid) $
-  ExprLens.pureExpr . ExprLens.bodyTagType # ()
-
 tagStr :: String -> InputExpr
 tagStr = tag . Guid.fromString
-
-set :: InputExpr
-set = simple bodySet pureSet
-
-tagType :: InputExpr
-tagType = simple (ExprLens.bodyTagType # ()) pureSet
-
-integerType :: InputExpr
-integerType = simple bodyIntegerType pureSet
 
 infixl 4 $$
 infixl 3 $$:

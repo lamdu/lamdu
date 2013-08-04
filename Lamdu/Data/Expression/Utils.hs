@@ -11,7 +11,9 @@ module Lamdu.Data.Expression.Utils
   , pureGetField
   , pureLiteralInteger
   , pureIntegerType
+  , pureTag
   , pureTagType
+  , pureType
   , pureExpression
   , randomizeExpr
   , randomizeParamIds
@@ -391,6 +393,12 @@ pureIntegerType = ExprLens.pureExpr . ExprLens.bodyIntegerType # ()
 
 pureTagType :: Expression def ()
 pureTagType = ExprLens.pureExpr . ExprLens.bodyTagType # ()
+
+pureType :: Expression def ()
+pureType = ExprLens.pureExpr . ExprLens.bodyType # ()
+
+pureTag :: Guid -> Expression def ()
+pureTag = (ExprLens.pureExpr . ExprLens.bodyTag # )
 
 pureLiteralInteger :: Integer -> Expression def ()
 pureLiteralInteger = (ExprLens.pureExpr . ExprLens.bodyLiteralInteger # )

@@ -545,6 +545,14 @@ testUnifiedDependentPis =
       piType name set $ \t ->
       onFst t ~> onSnd t
 
+testRecurseResumption =
+  testInfer "Resumption with recursion" $
+  lambda "a" (asHole oldFuncType `resumeHere` newFuncType) $ \a ->
+  a $$ (recurse (((hole ~> hole) `resumedTo` newFuncType) ~> (hole `resumedTo` integerType)) $$ a)
+  where
+    oldFuncType = holeWithInferredType set ~> holeWithInferredType set
+    newFuncType = asHole integerType ~> integerType
+
 hunitTests =
   simpleTests
   ++
@@ -582,6 +590,7 @@ hunitTests =
   , getFieldTests
   , testUnificationCarriesOver
   , testUnifiedDependentPis
+  , testRecurseResumption
   ]
 
 inferPreservesShapeProp :: Expr () -> Property
