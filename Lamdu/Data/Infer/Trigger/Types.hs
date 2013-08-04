@@ -12,6 +12,7 @@ import Lamdu.Data.Infer.RefTags (ParamRef)
 data Trigger def
   = OnDirectlyTag
   | OnRecordType
+  | OnGetDef
   | OnParameterRef (ParamRef def)
   deriving (Eq, Ord, Show)
 
@@ -24,5 +25,6 @@ data ParameterRefEvent
 data Fired def
   = FiredDirectlyTag Bool
   | FiredRecordType Bool
+  | FiredGetDef Bool
   | FiredParameterRef (ParamRef def) ParameterRefEvent
   deriving (Eq, Ord, Show)

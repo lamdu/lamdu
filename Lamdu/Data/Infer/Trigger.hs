@@ -18,6 +18,7 @@ import Lamdu.Data.Infer.Rule.Types (RuleRef)
 import Lamdu.Data.Infer.Trigger.Types (Trigger(..), Fired(..), ParameterRefEvent(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
+import qualified Data.Monoid as Monoid
 import qualified Data.OpaqueRef as OR
 import qualified Data.Set as Set
 import qualified Data.UnionFind.WithData as UFData
@@ -68,20 +69,24 @@ checkParameterRef triggerGuidRef refData
   where
     answer ref = return . Just . FiredParameterRef ref
 
-checkRecordType :: RefData def -> Maybe (Fired def)
-checkRecordType refData
-  | Lens.has (rdBody . ExprLens.bodyKindedRecordFields Expr.KType) refData = answer True
+checkSimpleBody ::
+  Lens.Getting Monoid.Any (Expr.Body def (ExprRef def)) a ->
+  (Bool -> Fired def) ->
+  RefData def -> Maybe (Fired def)
+checkSimpleBody lens fire refData
+  | Lens.has (rdBody . lens) refData = answer True
   | Lens.has (rdBody . ExprLens.bodyHole) refData = Nothing
   | otherwise = answer False
   where
-    answer = Just . FiredRecordType
+    answer = Just . fire
 
 -- | Must be called with RefData with normalized scope
 checkTrigger :: RefData def -> Trigger def -> Infer def (Maybe (Fired def))
 checkTrigger refData trigger =
   case trigger of
   OnDirectlyTag -> return $ checkDirectlyTag refData
-  OnRecordType -> return $ checkRecordType refData
+  OnRecordType -> return $ checkSimpleBody (ExprLens.bodyKindedRecordFields Expr.KType) FiredRecordType refData
+  OnGetDef -> return $ checkSimpleBody ExprLens.bodyDefinitionRef FiredGetDef refData
   OnParameterRef triggerGuidRef -> checkParameterRef triggerGuidRef refData
 
 -- | Must be called with RefData with normalized scope
