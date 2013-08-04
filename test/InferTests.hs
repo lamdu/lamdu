@@ -185,6 +185,15 @@ resumptionTests =
     getField
     (hole `resumeHere` record KVal [(tagStr "x", literalInteger 5)])
     (tagStr "x")
+  , testInferAllowFail
+    "Circumsize isn't correctly handled in resumptions"
+    "apply of resumed-get-def" $
+    holeWithInferredType (getDef "Bool" ~> hole) `resumeHere` getDef "not" $$
+    getDef "True"
+  , testInfer "apply of resumed-lam" $
+    holeWithInferredType (hole ~> hole)
+    `resumeHere` (lambda "x" (holeWithInferredType set) (const hole)) $$
+    hole
   ] ++
   let
     lambdaABTest varName sel =
