@@ -74,13 +74,6 @@ iType = Expr.ePayload . ipTyp
 bodyToPureExpr :: Expr.Body Def InputExpr -> Expr ()
 bodyToPureExpr exprBody = ExprLens.pureExpr # fmap (^. iVal) exprBody
 
-iexpr ::
-  Expr () ->
-  Expr () ->
-  Expr.Body Def InputExpr -> InputExpr
-iexpr val typ body =
-  Expr.Expression body (InputPayload val typ Same)
-
 tag :: Guid -> InputExpr
 tag guid =
   Expr.Expression (ExprLens.bodyTag # guid) (InputPayload (pureTag guid) pureTagType Same)
@@ -216,8 +209,8 @@ setInferredType val typ = val & iType .~ typ ^. iVal
 
 getField :: InputExpr -> InputExpr -> InputExpr
 getField recordVal tagVal =
-  -- TODO: This is likely broken, needs to use runR/resumptions
-  iexpr val fieldType body
+  -- TODO: Same is wrong!
+  Expr.Expression body (InputPayload val fieldType Same)
   where
     body = Expr._BodyGetField # Expr.GetField recordVal tagVal
     val
@@ -291,8 +284,8 @@ list items@(x:_) =
   where
     cons h t = getDef ":" $$ typ $$: [h, t]
     nil = getDef "[]" $$ typ
-    -- TODO: iexpr is likely broken, need to use resumptions of x
-    typ = iexpr (x ^. iType) pureType (ExprLens.bodyHole # ())
+    -- TODO: Same is wrong!
+    typ = Expr.Expression (ExprLens.bodyHole # ()) (InputPayload (x ^. iType) pureType Same)
 
 maybeOf :: InputExpr -> InputExpr
 maybeOf = (getDef "Maybe" $$)
