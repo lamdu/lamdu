@@ -137,6 +137,35 @@ depApply =
 idType :: InputExpr
 idType = piType "a" set $ \a -> a ~> a
 
+failResumptionAddsRules =
+  -- f     x    = x _ _
+  --   --------
+  --   (_ -> _)
+  --         ^ Set Bool here
+  testCase "Resumption that adds rules and fails" .
+  runContextAssertion $ do
+    -- TODO: Use standard resumption APIs for failed resumes too?
+    rootInferred <- inferDef $ infer =<< load expr
+    fmap verifyError . try . void $
+      loadInferInto (rootInferred ^?! resumptionPoint) resumptionValue
+  where
+    verifyError :: Either Error () -> M ()
+    verifyError (Left (InferError Infer.Mismatch {})) = return ()
+    verifyError _ = error "Resumption did not fail!"
+    expr = lambda "x" (hole ~> hole) $ \x -> x $$ hole $$ hole
+    resumptionValue = getDef "Bool" -- <- anything but Pi
+    resumptionPoint =
+      lamParamType KVal . lamResult KType .
+      Expr.ePayload . Lens._1
+
+testRecurseResumption =
+  testInfer "Resumption with recursion" $
+  lambda "a" (asHole oldFuncType `resumeHere` newFuncType) $ \a ->
+  a $$ (recurse (((hole ~> hole) `resumedTo` newFuncType) ~> (hole `resumedTo` integerType)) $$ a)
+  where
+    oldFuncType = holeWithInferredType set ~> holeWithInferredType set
+    newFuncType = asHole integerType ~> integerType
+
 resumptionTests =
   testGroup "type infer resume" $
   [ testInfer "{hole->pi}" $
@@ -148,6 +177,14 @@ resumptionTests =
     (hole `resumeHere` getDef "id")
   , testInfer "\\_:hole -> {hole->id}" $
     lambda "" (holeWithInferredType set) $ \_ -> hole `resumeHere` getDef "id"
+  , failResumptionAddsRules
+  , testRecurseResumption
+  , testInfer "Resumption with list" $
+    list [hole `resumeHere` literalInteger 1]
+  , testInfer "Resumption with getfield" $
+    getField
+    (hole `resumeHere` record KVal [(tagStr "x", literalInteger 5)])
+    (tagStr "x")
   ] ++
   let
     lambdaABTest varName sel =
@@ -170,27 +207,6 @@ resumptionTests =
     lambda "" (holeWithInferredType set) $ \_ ->
     hole `resumeOnSide` recurse (hole ~> hole)
   ]
-
-failResumptionAddsRules =
-  -- f     x    = x _ _
-  --   --------
-  --   (_ -> _)
-  --         ^ Set Bool here
-  testCase "Resumption that adds rules and fails" .
-  runContextAssertion $ do
-    -- TODO: Use standard resumption APIs for failed resumes too?
-    rootInferred <- inferDef $ infer =<< load expr
-    fmap verifyError . try . void $
-      loadInferInto (rootInferred ^?! resumptionPoint) resumptionValue
-  where
-    verifyError :: Either Error () -> M ()
-    verifyError (Left (InferError Infer.Mismatch {})) = return ()
-    verifyError _ = error "Resumption did not fail!"
-    expr = lambda "x" (hole ~> hole) $ \x -> x $$ hole $$ hole
-    resumptionValue = getDef "Bool" -- <- anything but Pi
-    resumptionPoint =
-      lamParamType KVal . lamResult KType .
-      Expr.ePayload . Lens._1
 
 lamParamType :: Kind -> Lens.Traversal' (Expression def a) (Expression def a)
 lamParamType k = ExprLens.exprKindedLam k . Lens._2
@@ -545,24 +561,6 @@ testUnifiedDependentPis =
       piType name set $ \t ->
       onFst t ~> onSnd t
 
-testRecurseResumption =
-  testInfer "Resumption with recursion" $
-  lambda "a" (asHole oldFuncType `resumeHere` newFuncType) $ \a ->
-  a $$ (recurse (((hole ~> hole) `resumedTo` newFuncType) ~> (hole `resumedTo` integerType)) $$ a)
-  where
-    oldFuncType = holeWithInferredType set ~> holeWithInferredType set
-    newFuncType = asHole integerType ~> integerType
-
-testListResumption =
-  testInfer "Resumption with list" $
-  list [hole `resumeHere` literalInteger 1]
-
-testGetFieldResumption =
-  testInfer "Resumption with getfield" $
-  getField
-  (hole `resumeHere` record KVal [(tagStr "x", literalInteger 5)])
-  (tagStr "x")
-
 hunitTests =
   simpleTests
   ++
@@ -587,7 +585,6 @@ hunitTests =
   , fOfXIsFOf5
   , monomorphRedex
   , inferPart
-  , failResumptionAddsRules
   , emptyRecordTests
   , recordTest
   , inferReplicateOfReplicate
@@ -600,9 +597,6 @@ hunitTests =
   , getFieldTests
   , testUnificationCarriesOver
   , testUnifiedDependentPis
-  , testRecurseResumption
-  , testListResumption
-  , testGetFieldResumption
   ]
 
 inferPreservesShapeProp :: Expr () -> Property
