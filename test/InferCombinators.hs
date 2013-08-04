@@ -11,7 +11,7 @@ import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Kind(..))
-import Lamdu.Data.Expression.Utils (pureHole, pureLiteralInteger, pureSet, pureIntegerType, pureTag, pureTagType, pureType)
+import Lamdu.Data.Expression.Utils (pureHole, pureLiteralInteger, pureIntegerType, pureTag, pureTagType, pureType)
 import Utils
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
@@ -197,7 +197,7 @@ piType ::
 piType =
   mkLam KType mkPureType
   where
-    mkPureType _name _pureParamType _pureResultType = pureSet
+    mkPureType _name _pureParamType _pureResultType = pureType
 
 infixr 4 ~>
 (~>) :: InputExpr -> InputExpr -> InputExpr
@@ -260,7 +260,7 @@ whereItem ::
 whereItem name val mkBody =
   lambda name (runR (mkParamType <$> resumptions val)) mkBody $$ val
   where
-    mkParamType valR = (bodyHole, valR ^. iType, pureSet)
+    mkParamType valR = (bodyHole, valR ^. iType, pureType)
 
 typedWhereItem ::
   String -> InputExpr -> InputExpr -> (InputExpr -> InputExpr) -> InputExpr
@@ -292,7 +292,7 @@ list items@(x:_) =
     cons h t = getDef ":" $$ typ $$: [h, t]
     nil = getDef "[]" $$ typ
     -- TODO: iexpr is likely broken, need to use resumptions of x
-    typ = iexpr (x ^. iType) pureSet (ExprLens.bodyHole # ())
+    typ = iexpr (x ^. iType) pureType (ExprLens.bodyHole # ())
 
 maybeOf :: InputExpr -> InputExpr
 maybeOf = (getDef "Maybe" $$)
@@ -352,7 +352,7 @@ record k fields =
           ExprLens.pureExpr .
           ExprLens.bodyKindedRecordFields KType #
           (fieldsR <&> ((^. iVal) *** (^. iType)))
-        KType -> pureSet
+        KType -> pureType
       )
 
 asHole :: InputExpr -> InputExpr

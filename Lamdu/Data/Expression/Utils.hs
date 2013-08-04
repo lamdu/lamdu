@@ -5,7 +5,6 @@ module Lamdu.Data.Expression.Utils
   , makePi, makeLambda, makeLam
   , pureApply
   , pureHole
-  , pureSet
   , pureRecord
   , pureLam
   , pureGetField
@@ -408,9 +407,6 @@ pureApply f x = ExprLens.pureExpr . _BodyApply # Apply f x
 
 pureHole :: Expression def ()
 pureHole = ExprLens.pureExpr . ExprLens.bodyHole # ()
-
-pureSet :: Expression def ()
-pureSet = ExprLens.pureExpr . ExprLens.bodyType # ()
 
 pureRecord :: Kind -> [(Expression def (), Expression def ())] -> Expression def ()
 pureRecord k fields = ExprLens.pureExpr . ExprLens.bodyKindedRecordFields k # fields
