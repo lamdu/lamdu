@@ -85,9 +85,6 @@ bodyToPureExpr exprBody = ExprLens.pureExpr # fmap (^. iVal) exprBody
 simple :: Expr.Body Def InputExpr -> Expr () -> InputExpr
 simple body typ = iexpr (bodyToPureExpr body) typ body
 
-getParamPure :: String -> Expr () -> InputExpr
-getParamPure name = simple $ ExprLens.bodyParameterRef # Guid.fromString name
-
 getRecursiveDef :: Expr ()
 getRecursiveDef =
   ExprLens.pureExpr . ExprLens.bodyDefinitionRef # recursiveDefI
