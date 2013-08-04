@@ -553,6 +553,10 @@ testRecurseResumption =
     oldFuncType = holeWithInferredType set ~> holeWithInferredType set
     newFuncType = asHole integerType ~> integerType
 
+testListResumption =
+  testInfer "Resumption with list" $
+  list [hole `resumeHere` literalInteger 1]
+
 hunitTests =
   simpleTests
   ++
@@ -591,6 +595,7 @@ hunitTests =
   , testUnificationCarriesOver
   , testUnifiedDependentPis
   , testRecurseResumption
+  , testListResumption
   ]
 
 inferPreservesShapeProp :: Expr () -> Property

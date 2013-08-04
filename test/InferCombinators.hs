@@ -161,6 +161,23 @@ recurse typ =
       , typR ^. iVal
       )
 
+-- Return a hole whose inferred val is the inferred type of the input
+inferredTypeAsHole :: InputExpr -> InputExpr
+inferredTypeAsHole expr =
+  runR $ mk <$> resumptions expr
+  where
+    mk exprR =
+      -- needs me to get InputExprs here! but I don't have them,
+      -- because I have the expr, not its type!
+      ( ExprLens.bodyHole # ()
+      , exprR ^. iType
+      , pureType
+      )
+
+-- Potential alias for this is holeWithInferredVal:
+asHole :: InputExpr -> InputExpr
+asHole = Expr.eBody .~ (ExprLens.bodyHole # ())
+
 holeWithInferredType :: InputExpr -> InputExpr
 holeWithInferredType typ =
   runR $ mk <$> resumptions typ
@@ -282,10 +299,9 @@ list [] = getDef "[]" $$ hole
 list items@(x:_) =
   foldr cons nil items
   where
+    typ = inferredTypeAsHole x
     cons h t = getDef ":" $$ typ $$: [h, t]
     nil = getDef "[]" $$ typ
-    -- TODO: Same is wrong!
-    typ = Expr.Expression (ExprLens.bodyHole # ()) (InputPayload (x ^. iType) pureType Same)
 
 maybeOf :: InputExpr -> InputExpr
 maybeOf = (getDef "Maybe" $$)
@@ -347,9 +363,6 @@ record k fields =
           (fieldsR <&> ((^. iVal) *** (^. iType)))
         KType -> pureType
       )
-
-asHole :: InputExpr -> InputExpr
-asHole = Expr.eBody .~ (ExprLens.bodyHole # ())
 
 typeAnnotate :: InputExpr -> InputExpr -> InputExpr
 typeAnnotate t v = getDef "id" $$ t $$ v `setInferredType` t
