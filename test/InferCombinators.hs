@@ -99,19 +99,6 @@ recurse typ = simple (ExprLens.bodyDefinitionRef # recursiveDefI) $ typ ^. iVal
 literalInteger :: Integer -> InputExpr
 literalInteger x = simple (ExprLens.bodyLiteralInteger # x) pureIntegerType
 
-piType ::
-  String -> InputExpr ->
-  (InputExpr -> InputExpr) -> InputExpr
-piType name paramType mkResultType =
-  simple (ExprUtil.makePi (Guid.fromString name) paramType result) pureSet
-  where
-    result = mkResultType $ getParam name paramType
-
-infixr 4 ~>
-(~>) :: InputExpr -> InputExpr -> InputExpr
-(~>) src dest =
-  simple (ExprUtil.makePi (Guid.fromString "") src dest) pureSet
-
 -- R represents a cross-section of the whole expression with a new
 -- resume level, where the Monoid.Any represents whether any change
 -- happened (or everyone's the Same)
@@ -152,20 +139,40 @@ runR (R (ZipList ~((_, (body, firstVal, firstTyp)):nexts))) =
   where
     valTyp (_body, val, typ) = (val, typ)
 
-lambda ::
+mkLam ::
+  Kind -> (Guid -> Expr () -> Expr () -> Expr ()) ->
   String -> InputExpr ->
   (InputExpr -> InputExpr) ->
   InputExpr
-lambda name paramType mkResult =
+mkLam k pureType name paramType mkResult =
   runR $ mk <$> resumptions paramType <*> resumptions result
   where
     guid = Guid.fromString name
     result = mkResult $ getParam name paramType
     mk paramTypeR resultR =
-      ( ExprUtil.makeLam KVal guid paramTypeR resultR
-      , ExprUtil.pureLam KVal guid (paramTypeR ^. iVal) (resultR ^. iVal)
-      , ExprUtil.pureLam KType guid (paramTypeR ^. iVal) (resultR ^. iType)
+      ( ExprUtil.makeLam k guid paramTypeR resultR
+      , ExprUtil.pureLam k guid (paramTypeR ^. iVal) (resultR ^. iVal)
+      , pureType guid (paramTypeR ^. iVal) (resultR ^. iType)
       )
+
+piType ::
+  String -> InputExpr ->
+  (InputExpr -> InputExpr) ->
+  InputExpr
+piType =
+  mkLam KType pureType
+  where
+    pureType _name _pureParamType _pureResultType = pureSet
+
+infixr 4 ~>
+(~>) :: InputExpr -> InputExpr -> InputExpr
+(~>) src dest = piType "" src (const dest)
+
+lambda ::
+  String -> InputExpr ->
+  (InputExpr -> InputExpr) ->
+  InputExpr
+lambda = mkLam KVal (ExprUtil.pureLam KType)
 
 -- Sometimes we have an inferred type that comes outside-in but cannot
 -- be inferred inside-out:
