@@ -4,7 +4,7 @@ module Lamdu.Data.Infer.Internal
 
   , UFExprs
 
-  , RefData(..), rdScope, rdBody, rdIsCircumsized, rdTriggers, rdRefs
+  , RefData(..), rdScope, rdBody, rdWasNotDirectlyTag, rdTriggers, rdRefs
     , defaultRefData
   , fresh, freshHole
   , Context(..), ctxUFExprs, ctxDefTVs, ctxRuleMap, ctxRandomGen, ctxGuidAliases

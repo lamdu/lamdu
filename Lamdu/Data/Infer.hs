@@ -101,7 +101,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     mkRefData bodySTV
       | shouldCircumsize bodySTV =
         defaultRefData scope (ExprLens.bodyHole # ())
-        & rdIsCircumsized .~ Monoid.Any True
+        & rdWasNotDirectlyTag .~ Monoid.Any True
       | otherwise = defaultRefData scope $ bodySTV <&> (^. Expr.ePayload . Lens._1 . stvTV . tvVal)
     shouldCircumsize (Expr.BodyApply (Expr.Apply func _))
       | Lens.nullOf ExprLens.exprDefinitionRef func = True

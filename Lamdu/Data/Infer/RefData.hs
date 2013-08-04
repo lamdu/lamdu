@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.RefData
-  ( RefData(..), rdScope, rdBody, rdIsCircumsized, rdTriggers, rdRefs
+  ( RefData(..), rdScope, rdBody, rdWasNotDirectlyTag, rdTriggers, rdRefs
     , defaultRefData
   , Scope(..), emptyScope, scopeMap, scopeParamRefs, scopeExprRefs
     , scopeNormalize
@@ -35,7 +35,7 @@ emptyScope = Scope mempty
 
 data RefData def = RefData
   { _rdScope :: Scope def
-  , _rdIsCircumsized :: Monoid.Any
+  , _rdWasNotDirectlyTag :: Monoid.Any
   , _rdTriggers :: OR.RefMap (TagRule def) (Set (Trigger def))
   , _rdBody :: Expr.Body def (ExprRef def)
   }
@@ -44,7 +44,7 @@ Lens.makeLenses ''RefData
 defaultRefData :: Scope def -> Expr.Body def (ExprRef def) -> RefData def
 defaultRefData scop body = RefData
   { _rdScope = scop
-  , _rdIsCircumsized = Monoid.Any False
+  , _rdWasNotDirectlyTag = Monoid.Any False
   , _rdTriggers = mempty
   , _rdBody = body
   }

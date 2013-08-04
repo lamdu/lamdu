@@ -41,7 +41,7 @@ remember rep refData trigger ruleId = do
 checkDirectlyTag :: RefData def -> Maybe (Fired def)
 checkDirectlyTag refData
   | Lens.has (rdBody . ExprLens.bodyTag) refData = Just $ FiredDirectlyTag True
-  | refData ^. rdIsCircumsized . Lens.unwrapped
+  | refData ^. rdWasNotDirectlyTag . Lens.unwrapped
   || Lens.nullOf (rdBody . ExprLens.bodyHole) refData = Just $ FiredDirectlyTag False
   | otherwise = Nothing
 
