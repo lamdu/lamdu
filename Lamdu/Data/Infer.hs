@@ -19,13 +19,11 @@ import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Writer (WriterT(..), runWriterT)
 import Data.OpaqueRef (Ref)
 import Lamdu.Data.Infer.Internal
-import Lamdu.Data.Infer.MakeTypes (makeTypeRef)
+import Lamdu.Data.Infer.MakeTypes (makeTV)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import qualified Control.Lens as Lens
-import qualified Data.Monoid as Monoid
 import qualified Data.OpaqueRef as OR
-import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
@@ -87,24 +85,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
       pure . Expr.BodyLam $ Expr.Lam k paramGuid paramTypeS resultS
     _ ->
       body & Lens.traverse %%~ exprIntoSTV scope
-  valRef <-
-    bodySTV
-    & ExprLens.bodyDef %~ (^. ldDef)
-    & mkRefData
-    & InferM.liftUFExprs . UFData.fresh
-  typeRef <-
-    bodySTV <&> (^. Expr.ePayload . Lens._1) & makeTypeRef scope
+  tv <- bodySTV <&> (^. Expr.ePayload . Lens._1) & makeTV scope
   pure $
     Expr.Expression bodySTV
-    (ScopedTypedValue (TypedValue valRef typeRef) scope, pl)
-  where
-    mkRefData bodySTV
-      | shouldCircumsize bodySTV =
-        defaultRefData scope (ExprLens.bodyHole # ())
-        & rdWasNotDirectlyTag .~ Monoid.Any True
-      | otherwise = defaultRefData scope $ bodySTV <&> (^. Expr.ePayload . Lens._1 . stvTV . tvVal)
-    shouldCircumsize (Expr.BodyApply (Expr.Apply func _))
-      | Lens.nullOf ExprLens.exprDefinitionRef func = True
-    shouldCircumsize (Expr.BodyGetField (Expr.GetField record _))
-      | Lens.nullOf ExprLens.exprDefinitionRef record = True
-    shouldCircumsize _ = False
+    (ScopedTypedValue tv scope, pl)

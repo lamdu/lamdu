@@ -5,6 +5,7 @@ module Lamdu.Data.Infer.Rule.Types
   , GetFieldPhase1(..), gf1GetFieldRecordTypeFields, gf1GetFieldType
   , GetFieldPhase2(..), gf2Tag, gf2TagRef, gf2TypeRef, gf2MaybeMatchers
   , Apply(..), aPiGuid, aArgVal, aLinkedExprs, aLinkedNames
+  , Uncircumsize(..), uValRef, uApplicantValRef, uUncircumsizedBody
   , Rule(..), ruleTriggersIn, ruleContent
     , ruleRefs
   , RuleContent(..)
@@ -22,6 +23,7 @@ import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.RefTags (ExprRef, TagExpr, RuleRef, TagRule, ParamRef, TagParam)
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
+import qualified Lamdu.Data.Expression as Expr
 
 -- We know of a GetField, waiting to know the record type:
 data GetFieldPhase0 def = GetFieldPhase0
@@ -80,12 +82,24 @@ applyExprRefs f (Apply piGuid argVal linkedExprs linkedNames) =
   <*> (OR.unsafeRefMapItems . Lens.both) f linkedExprs
   <*> pure linkedNames
 
+data Uncircumsize def = Uncircumsize
+  { _uValRef :: ExprRef def
+  , _uApplicantValRef :: ExprRef def
+  , _uUncircumsizedBody :: Expr.Body def (ExprRef def)
+  }
+Lens.makeLenses ''Uncircumsize
+
+uncircumsizeExprRefs :: Lens.Traversal' (Uncircumsize def) (ExprRef def)
+uncircumsizeExprRefs f (Uncircumsize val applicant uncircumsized) =
+  Uncircumsize <$> f val <*> f applicant <*> Lens.traverse f uncircumsized
+
 data RuleContent def
   = RuleVerifyTag
   | RuleGetFieldPhase0 (GetFieldPhase0 def)
   | RuleGetFieldPhase1 (GetFieldPhase1 def)
   | RuleGetFieldPhase2 (GetFieldPhase2 def)
   | RuleApply (Apply def)
+  | RuleUncircumsize (Uncircumsize def)
 
 ruleContentRefs :: Lens.Traversal' (RuleContent def) (ExprRef def)
 ruleContentRefs _ RuleVerifyTag = pure RuleVerifyTag
@@ -93,6 +107,7 @@ ruleContentRefs f (RuleGetFieldPhase0 x) = RuleGetFieldPhase0 <$> gf0Refs f x
 ruleContentRefs f (RuleGetFieldPhase1 x) = RuleGetFieldPhase1 <$> gf1Refs f x
 ruleContentRefs f (RuleGetFieldPhase2 x) = RuleGetFieldPhase2 <$> gf2Refs f x
 ruleContentRefs f (RuleApply x) = RuleApply <$> applyExprRefs f x
+ruleContentRefs f (RuleUncircumsize x) = RuleUncircumsize <$> uncircumsizeExprRefs f x
 
 data Rule def = Rule
   { _ruleTriggersIn :: OR.RefSet (TagExpr def)

@@ -19,6 +19,7 @@ import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Rule.Apply as RuleApply
 import qualified Lamdu.Data.Infer.Rule.GetField as RuleGetField
+import qualified Lamdu.Data.Infer.Rule.Uncircumsize as RuleUncircumsize
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
 ruleLens :: RuleRef def -> Lens' (Context def) (Maybe (Rule def))
@@ -44,6 +45,7 @@ ruleRunner (RuleGetFieldPhase0 x) _ = RuleGetField.phase0 x
 ruleRunner (RuleGetFieldPhase1 x) _ = RuleGetField.phase1 x
 ruleRunner (RuleGetFieldPhase2 x) _ = RuleGetField.phase2 x
 ruleRunner (RuleApply x) ruleRef = RuleApply.execute ruleRef x
+ruleRunner (RuleUncircumsize x) _ = RuleUncircumsize.execute x
 
 execute :: Eq def => RuleRef def -> OR.RefMap (TagExpr def) (Set (Trigger.Fired def)) -> Infer def Bool
 execute ruleRef triggers = do
