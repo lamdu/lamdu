@@ -71,9 +71,6 @@ iVal = Expr.ePayload . ipVal
 iType :: Lens' InputExpr (Expr ())
 iType = Expr.ePayload . ipTyp
 
-bodyToPureExpr :: Expr.Body Def InputExpr -> Expr ()
-bodyToPureExpr exprBody = ExprLens.pureExpr # fmap (^. iVal) exprBody
-
 tag :: Guid -> InputExpr
 tag guid =
   Expr.Expression (ExprLens.bodyTag # guid) (InputPayload (pureTag guid) pureTagType Same)
@@ -226,13 +223,20 @@ setInferredType val typ = val & iType .~ typ ^. iVal
 
 getField :: InputExpr -> InputExpr -> InputExpr
 getField recordVal tagVal =
-  -- TODO: Same is wrong!
-  Expr.Expression body (InputPayload val fieldType Same)
+  runR $ getFieldR <$> resumptions recordVal <*> resumptions tagVal
+
+-- TODO: Support the infer logic of only-one-potentially-matching-field
+getFieldR :: InputExpr -> InputExpr -> (Expr.Body Def InputExpr, Expr (), Expr ())
+getFieldR recordVal tagVal =
+  ( body
+  , circumcizedVal
+  , fieldType
+  )
   where
     body = Expr._BodyGetField # Expr.GetField recordVal tagVal
-    val
-      | Lens.has ExprLens.exprDefinitionRef recordVal = bodyToPureExpr body
-      | otherwise = pureHole
+    circumcizedVal
+      | Lens.nullOf ExprLens.exprDefinitionRef recordVal = pureHole
+      | otherwise = ExprLens.pureExpr # fmap (^. iVal) body
     fieldType
       | allFieldsMismatch = error "getField has no valid type because all fields mismatch"
       | otherwise = pureFieldType

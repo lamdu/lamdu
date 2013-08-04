@@ -557,6 +557,12 @@ testListResumption =
   testInfer "Resumption with list" $
   list [hole `resumeHere` literalInteger 1]
 
+testGetFieldResumption =
+  testInfer "Resumption with getfield" $
+  getField
+  (hole `resumeHere` record KVal [(tagStr "x", literalInteger 5)])
+  (tagStr "x")
+
 hunitTests =
   simpleTests
   ++
@@ -596,6 +602,7 @@ hunitTests =
   , testUnifiedDependentPis
   , testRecurseResumption
   , testListResumption
+  , testGetFieldResumption
   ]
 
 inferPreservesShapeProp :: Expr () -> Property
