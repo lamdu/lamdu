@@ -26,10 +26,12 @@ uncircumsize rule = do
 execute :: Eq def => Rule.Uncircumsize def -> RuleFunc def
 execute rule triggers =
   case triggers ^@.. Lens.itraversed <. Lens.folded of
-  [(_, Trigger.FiredGetDef isGetDef)]
-    | isGetDef -> RuleDelete <$ uncircumsize rule
-    | otherwise -> -- Keep circumsized:
-      return RuleDelete
+  [(_, Trigger.FiredKnownBody knownBody)] ->
+    RuleDelete <$
+    case knownBody of
+    Expr.BodyLeaf (Expr.GetVariable Expr.DefinitionRef {}) ->
+      uncircumsize rule
+    _ -> return () -- Keep circumsized
   list -> error $ "Uncircumsize.execute: Unexpected firings: " ++ show list
 
 make ::
@@ -44,4 +46,4 @@ make valRef applicantValRef uncircumsizedValBody = do
     , Rule._uApplicantValRef = applicantValRef
     , Rule._uUncircumsizedBody = uncircumsizedValBody
     }
-  Trigger.add Trigger.OnGetDef ruleRef applicantValRef
+  Trigger.add Trigger.OnKnownBody ruleRef applicantValRef

@@ -7,7 +7,6 @@ import Control.Lens (Lens')
 import Control.Lens.Operators
 import Data.Foldable (traverse_)
 import Data.Maybe.Utils (unsafeUnjust)
-import Data.Set (Set)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (TagExpr)
@@ -47,7 +46,7 @@ ruleRunner (RuleGetFieldPhase2 x) _ = RuleGetField.phase2 x
 ruleRunner (RuleApply x) ruleRef = RuleApply.execute ruleRef x
 ruleRunner (RuleUncircumsize x) _ = RuleUncircumsize.execute x
 
-execute :: Eq def => RuleRef def -> OR.RefMap (TagExpr def) (Set (Trigger.Fired def)) -> Infer def Bool
+execute :: Eq def => RuleRef def -> OR.RefMap (TagExpr def) [Trigger.Fired def] -> Infer def Bool
 execute ruleRef triggers = do
   mOldRule <- InferM.liftContext $ Lens.use (ruleLens ruleRef)
   let Rule ruleTriggerRefs oldRule = unsafeUnjust ("Execute called on bad rule id: " ++ show ruleRef) mOldRule

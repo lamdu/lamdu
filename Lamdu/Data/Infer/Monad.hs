@@ -13,7 +13,6 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT(..))
 import Control.Monad.Trans.Writer (WriterT(..))
 import Data.Monoid (Monoid(..))
-import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Expression.Utils () -- Expr.Body Show instance
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
@@ -24,7 +23,6 @@ import Lamdu.Data.Infer.Trigger.Types (Fired)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.OpaqueRef as OR
-import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expr
 
 data Error def
@@ -38,7 +36,7 @@ data Error def
   deriving (Show)
 
 newtype TriggeredRules def = TriggeredRules
-  { triggeredRules :: OR.RefMap (TagRule def) (OR.RefMap (TagExpr def) (Set (Fired def)))
+  { triggeredRules :: OR.RefMap (TagRule def) (OR.RefMap (TagExpr def) [Fired def])
   }
 instance Monoid (TriggeredRules def) where
   mempty = TriggeredRules OR.refMapEmpty
@@ -52,9 +50,8 @@ type Infer def =
 ruleTrigger :: RuleRef def -> ExprRef def -> Fired def -> Infer def ()
 ruleTrigger ruleRef ref fired =
   Writer.tell . TriggeredRules .
-  OR.refMapSingleton ruleRef .
-  OR.refMapSingleton ref $
-  Set.singleton fired
+  OR.refMapSingleton ruleRef $
+  OR.refMapSingleton ref [fired]
 
 liftContext ::
   StateT (Context def) (Either (Error def)) a -> Infer def a

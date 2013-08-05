@@ -2,7 +2,6 @@ module Lamdu.Data.Infer.Rule.Func
   ( RuleResult(..), RuleFunc
   ) where
 
-import Data.Set (Set)
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (TagExpr)
 import Lamdu.Data.Infer.Rule.Types
@@ -14,4 +13,4 @@ data RuleResult def
   | RuleDelete
   | RuleChange (RuleContent def)
 
-type RuleFunc def = OR.RefMap (TagExpr def) (Set (Fired def)) -> Infer def (RuleResult def)
+type RuleFunc def = OR.RefMap (TagExpr def) [Fired def] -> Infer def (RuleResult def)

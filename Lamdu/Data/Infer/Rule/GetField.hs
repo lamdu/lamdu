@@ -53,8 +53,9 @@ assertTag ref =
 phase0 :: Eq def => Rule.GetFieldPhase0 def -> RuleFunc def
 phase0 rule triggers =
   case triggers ^@.. Lens.itraversed <. Lens.folded of
-  [(recordTypeRef, Trigger.FiredRecordType isRecord)]
-    | isRecord -> do
+  [(recordTypeRef, Trigger.FiredKnownBody knownBody)] ->
+    case knownBody of
+    Expr.BodyRecord (Expr.Record Expr.KType _) -> do
       recordFields <- InferM.liftContext $ assertRecordTypeFields recordTypeRef
       isFinished <-
         handlePotentialMatches recordFields
@@ -70,7 +71,7 @@ phase0 rule triggers =
         Trigger.add Trigger.OnDirectlyTag phase1RuleRef $
           rule ^. Rule.gf0GetFieldTag
       return RuleDelete
-    | otherwise -> InferM.error InferM.GetFieldRequiresRecord
+    _ -> InferM.error InferM.GetFieldRequiresRecord
   list -> error $ "GetField.phase0: Unexpected firings: " ++ show list
 
 -- Phase1: Get GetField's tag
@@ -135,4 +136,4 @@ make tagValRef getFieldTypeRef recordTypeRef = do
     { Rule._gf0GetFieldTag = tagValRef
     , Rule._gf0GetFieldType = getFieldTypeRef
     }
-  Trigger.add Trigger.OnRecordType ruleRef recordTypeRef
+  Trigger.add Trigger.OnKnownBody ruleRef recordTypeRef

@@ -156,7 +156,7 @@ execute ruleRef =
       -- Some of our sources were potentially unified, so
       -- normalizeSrcLinks will find them and unify the dests
       normalizeSrcLinks
-    handleTrigger trigger = error $ "handleTrigger called with: " ++ show trigger
+    handleTrigger firings = error $ "handleTrigger called with: " ++ show firings
 
 make :: Guid -> ExprRef def -> ExprRef def -> ExprRef def -> Infer def ()
 make piGuid argValRef piResultRef applyTypeRef = do
