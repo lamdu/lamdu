@@ -148,6 +148,14 @@ runR (R (ZipList ~((_, (body, firstVal, firstTyp)):nexts))) =
   where
     valTyp (_body, val, typ) = (val, typ)
 
+-- Sometimes we have an inferred type that comes outside-in but cannot
+-- be inferred inside-out:
+setInferredType :: InputExpr -> InputExpr -> InputExpr
+setInferredType val typ =
+  runR $ mk <$> resumptions val <*> resumptions typ
+  where
+    mk valR typR = (valR ^. Expr.eBody, valR ^. iVal, typR ^. iVal)
+
 recurse :: InputExpr -> InputExpr
 recurse typ =
   runR $ mk <$> resumptions typ
@@ -215,11 +223,6 @@ lambda ::
   (InputExpr -> InputExpr) ->
   InputExpr
 lambda = mkLam KVal (ExprUtil.pureLam KType)
-
--- Sometimes we have an inferred type that comes outside-in but cannot
--- be inferred inside-out:
-setInferredType :: InputExpr -> InputExpr -> InputExpr
-setInferredType val typ = val & iType .~ typ ^. iVal
 
 getField :: InputExpr -> InputExpr -> InputExpr
 getField recordVal tagVal =
