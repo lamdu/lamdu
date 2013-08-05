@@ -100,7 +100,7 @@ inferAssertion origExpr =
   runContextAssertion $
   go (0 :: Int) =<< annotateErrors "initial infer: " (inferDef (infer =<< load origExpr))
   where
-    msg count = "Resumption phase " ++ show count ++ " failed: "
+    msg count = "Resumption phase " ++ show count ++ " failed:\n"
     annotateErrors prefix action =
       either (error . (prefix ++) . show) return =<< try action
     go count exprLInferred = do

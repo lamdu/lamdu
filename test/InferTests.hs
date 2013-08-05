@@ -537,24 +537,40 @@ testUnificationCarriesOver =
   testGroup "Unification carries over"
   [ testInfer "(\\(a:Set) -> (+) _) _ :: ({l:IntegerType, r:_}->_)" $
     typeAnnotate
-    (record KType
-     [ (tagStr "infixlarg", integerType)
-     , (tagStr "infixrarg", asHole integerType)
-     ] ~> asHole integerType) $
+    (recType integerType (asHole integerType) ~> asHole integerType) $
     lambda "a" set (\_ -> getDef "+" $$ holeWithInferredType set) $$
     holeWithInferredType set
 
-  , testInfer "(\\(a:Set) -> _{(+)} _) _ :: ({l:IntegerType, r:_}->_)" $
+  , testInfer "(\\(a:Set) -> ?{(+)} ?) ? :: ({l:IntegerType, r:?}->?)" $
     typeAnnotate
-    (record KType
-     [ (tagStr "infixlarg", integerType)
-     , (tagStr "infixrarg", holeWithInferredType set `resumedTo` integerType)
-     ] ~> (holeWithInferredType set `resumedTo` integerType)) $
+    (recType integerType (holeWithInferredType set `resumedTo` integerType)
+     ~> (holeWithInferredType set `resumedTo` integerType)) $
     lambda "a" set
     ( \_ ->
       (holeWithInferredType (hole ~> hole) `resumeHere` getDef "+") $$ hole `resumedToType` set
     ) $$ holeWithInferredType set
+
+  , testInferAllowFail "Unification carrying over resumption not handled properly"
+    "(\\(_1:Set) -> (? :: (a:?{Type}) -> {l:?{a}, r:?{a}} -> ?{a}) ?) ? :: {l:IntegerType, r:?} -> ?" $
+    typeAnnotate
+    (recType integerType (holeWithInferredType set `resumedTo` integerType)
+     ~> (holeWithInferredType set `resumedTo` integerType)) $
+    lambda "_1" set
+    ( \_ ->
+      typeAnnotate
+      ( piType "a" set
+        (\a ->
+          recType
+          (holeWithInferredType set `resumeHere` a)
+          (holeWithInferredType set `resumeHere` a) ~>
+          (holeWithInferredType set `resumeHere` a))
+      )
+      hole $$
+      holeWithInferredType set
+    ) $$ holeWithInferredType set
   ]
+  where
+    recType lType rType = record KType [(tagStr "infixlarg", lType), (tagStr "infixrarg", rType)]
 
 testUnifiedDependentPis =
   testInfer "if _ (_ :: a:Set -> a -> _) (_ :: b:Set -> _ -> b)" $
