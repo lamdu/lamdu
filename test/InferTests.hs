@@ -189,8 +189,8 @@ resumptionTests =
     getDef "True"
   , testInfer "apply of resumed-lam" $
     holeWithInferredType (hole ~> hole)
-    `resumeHere` (lambda "x" (holeWithInferredType set) (const hole)) $$
-    hole
+    `resumeHere` lambda "x" (holeWithInferredType set) (const hole)
+    $$ hole
   ] ++
   let
     lambdaABTest varName sel =
@@ -541,7 +541,7 @@ testUnificationCarriesOver =
      [ (tagStr "infixlarg", integerType)
      , (tagStr "infixrarg", asHole integerType)
      ] ~> asHole integerType) $
-    (lambda "a" set $ \_ -> getDef "+" $$ holeWithInferredType set) $$
+    lambda "a" set (\_ -> getDef "+" $$ holeWithInferredType set) $$
     holeWithInferredType set
   , testInferAllowFail "No unification trigger yet"
     "(\\(a:Set) -> _{(+)} _) _ :: ({l:IntegerType, r:_}->_)" $
@@ -550,7 +550,8 @@ testUnificationCarriesOver =
      [ (tagStr "infixlarg", integerType)
      , (tagStr "infixrarg", holeWithInferredType set `resumedTo` integerType)
      ] ~> (holeWithInferredType set `resumedTo` integerType)) $
-    ( lambda "a" set $ \_ ->
+    lambda "a" set
+    ( \_ ->
       (holeWithInferredType (hole ~> hole) `resumeHere` getDef "+") $$ hole `resumedTo` integerType
     ) $$ holeWithInferredType set
   ]

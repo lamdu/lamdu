@@ -8,7 +8,7 @@ import Control.Monad (void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.State (StateT(..))
-import Data.Foldable (sequenceA_)
+import Data.Foldable (sequenceA_, traverse_)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
@@ -108,11 +108,9 @@ execute ruleRef =
     handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.NotParameterRef) = do
       -- Triggered when not a hole anymore, so copy:
       mDestRef <- mFindDestRef srcRef
-      case mDestRef of
-        Nothing ->
-          -- ScopeHasParemeterRef triggered first and unified instead
-          return ()
-        Just destRef -> makePiResultCopy ruleRef srcRef destRef
+      -- If mDestRef is Nothing, ScopeHasParemeterRef triggered first
+      -- and unified instead, so no need to make a copy:
+      traverse_ (makePiResultCopy ruleRef srcRef) mDestRef
     handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.ParameterRefOutOfScope) = do
       -- Now we know no subexpr can possibly use the piGuid, so it
       -- must fully equal the dest:
@@ -125,8 +123,7 @@ execute ruleRef =
     handleTrigger trigger = error $ "handleTrigger called with: " ++ show trigger
 
 addPiResultTriggers :: Rule.RuleRef def -> ParamRef def -> ExprRef def -> Infer def ()
-addPiResultTriggers ruleRef paramRef srcRef =
-  Trigger.add (Trigger.OnParameterRef paramRef) ruleRef srcRef
+addPiResultTriggers ruleRef paramRef = Trigger.add (Trigger.OnParameterRef paramRef) ruleRef
 
 make :: Guid -> ExprRef def -> ExprRef def -> ExprRef def -> Infer def ()
 make piGuid argValRef piResultRef applyTypeRef = do

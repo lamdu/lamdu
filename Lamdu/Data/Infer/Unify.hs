@@ -1,4 +1,3 @@
-{-# LANGUAGE PatternGuards, RecordWildCards #-}
 module Lamdu.Data.Infer.Unify
   ( unify, forceLam
   ) where
@@ -120,7 +119,7 @@ mergeScopeBodies ::
   Scope def -> Expr.Body def (ExprRef def) ->
   Scope def -> Expr.Body def (ExprRef def) ->
   WU def (Scope def, Expr.Body def (ExprRef def))
-mergeScopeBodies xScope xBody yScope yBody = do
+mergeScopeBodies xScope xBody yScope yBody =
   case (xBody, yBody) of
     (_, Expr.BodyLeaf Expr.Hole) -> unifyWithHole yScope xScope xBody
     (Expr.BodyLeaf Expr.Hole, _) -> unifyWithHole xScope yScope yBody

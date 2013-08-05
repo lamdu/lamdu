@@ -23,6 +23,8 @@ module Data.OpaqueRef
     , freshRef
   ) where
 
+import Prelude hiding (lookup)
+
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -33,8 +35,6 @@ import Data.IntMap (IntMap)
 import Data.IntSet (IntSet)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (Traversable(..))
-import Prelude hiding (lookup)
-import Prelude hiding (lookup)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.IntMap as IntMap

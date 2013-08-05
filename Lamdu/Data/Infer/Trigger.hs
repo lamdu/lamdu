@@ -1,4 +1,3 @@
-{-# LANGUAGE PatternGuards #-}
 module Lamdu.Data.Infer.Trigger
   ( Trigger(..), Fired(..), ParameterRefEvent(..)
   , add, updateRefData

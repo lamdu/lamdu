@@ -297,7 +297,7 @@ matchBody matchLamResult matchOther matchGetPar body0 body1 =
   BodyLeaf (GetVariable (ParameterRef p0)) ->
     case body1 ^? ExprLens.bodyParameterRef of
     Nothing -> pure Nothing
-    Just p1 -> fmap (ExprLens.bodyParameterRef #) <$> matchGetPar p0 p1
+    Just p1 -> fmap (ExprLens.bodyParameterRef # ) <$> matchGetPar p0 p1
   BodyLeaf x -> pure $ do
     y <- body1 ^? _BodyLeaf
     guard $ x == y
