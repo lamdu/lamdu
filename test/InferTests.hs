@@ -543,8 +543,8 @@ testUnificationCarriesOver =
      ] ~> asHole integerType) $
     lambda "a" set (\_ -> getDef "+" $$ holeWithInferredType set) $$
     holeWithInferredType set
-  , testInferAllowFail "No unification trigger yet"
-    "(\\(a:Set) -> _{(+)} _) _ :: ({l:IntegerType, r:_}->_)" $
+
+  , testInfer "(\\(a:Set) -> _{(+)} _) _ :: ({l:IntegerType, r:_}->_)" $
     typeAnnotate
     (record KType
      [ (tagStr "infixlarg", integerType)
@@ -552,7 +552,7 @@ testUnificationCarriesOver =
      ] ~> (holeWithInferredType set `resumedTo` integerType)) $
     lambda "a" set
     ( \_ ->
-      (holeWithInferredType (hole ~> hole) `resumeHere` getDef "+") $$ hole `resumedTo` integerType
+      (holeWithInferredType (hole ~> hole) `resumeHere` getDef "+") $$ hole `resumedToType` set
     ) $$ holeWithInferredType set
   ]
 
