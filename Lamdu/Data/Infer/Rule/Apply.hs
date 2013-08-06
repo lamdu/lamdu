@@ -35,7 +35,7 @@ unify x y = RuleMonad.liftInfer $ Unify.unify x y
 remapSubstGuid :: Guid -> RuleMonad.RM (Rule.Apply def) def Guid
 remapSubstGuid srcGuid = do
   srcRep <- RuleMonad.liftInfer . InferM.liftGuidAliases $ GuidAliases.getRep srcGuid
-  mDstRef <-
+  (_, mDstRef) <-
     Lens.zoom Rule.aLinkedNames $
     OR.refMapUnmaintainedLookup
     (const (lift . InferM.liftGuidAliases . GuidAliases.find)) srcRep

@@ -101,24 +101,23 @@ phase2 =
   RuleMonad.run Rule.RuleGetFieldPhase2 handleTrigger
   where
     handleTrigger (_, Trigger.FiredDirectlyTag False) = return ()
-    handleTrigger (ref, Trigger.FiredDirectlyTag True) = do
-      rep <- RuleMonad.liftInfer . InferM.liftUFExprs $ UFData.find "phase2.ref" ref
-      fieldTag <- RuleMonad.liftInfer . InferM.liftContext $ assertTag rep
-      mFieldTypeRef <- do
+    handleTrigger (rawRef, Trigger.FiredDirectlyTag True) = do
+      (ref, mFieldTypeRef) <- do
         rule <- State.get
         (mFieldTypeRef, newMaybeMatchers) <-
           RuleMonad.liftInfer . InferM.liftUFExprs $
-          OR.refMapUnmaintainedLookup UFData.find rep `runStateT` (rule ^. Rule.gf2MaybeMatchers)
+          OR.refMapUnmaintainedLookup UFData.find rawRef `runStateT` (rule ^. Rule.gf2MaybeMatchers)
         Rule.gf2MaybeMatchers .= newMaybeMatchers
         return mFieldTypeRef
       tag <- Lens.use Rule.gf2Tag
+      fieldTag <- RuleMonad.liftInfer . InferM.liftContext $ assertTag ref
       if fieldTag == tag
         then do
           let fieldTypeRef = unsafeUnjust "phase2 triggered by wrong ref!" mFieldTypeRef
           RuleMonad.liftInfer . void . unify fieldTypeRef =<< Lens.use Rule.gf2TypeRef
           RuleMonad.ruleDelete
         else do
-          Rule.gf2MaybeMatchers . Lens.at rep .= Nothing
+          Rule.gf2MaybeMatchers . Lens.at ref .= Nothing
           isFinished <- do
             rule <- State.get
             RuleMonad.liftInfer $
