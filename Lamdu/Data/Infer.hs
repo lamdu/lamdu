@@ -2,14 +2,12 @@ module Lamdu.Data.Infer
   ( Infer, Error(..)
   , infer, unify
   , emptyContext
-  , exprSTVRefs
   -- Re-export:
   , Context
   , Scope, emptyScope
   , Ref
   , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
-  , Optimize.optimizeContext
   ) where
 
 import Control.Applicative (Applicative(..))
@@ -21,14 +19,11 @@ import Data.OpaqueRef (Ref)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.MakeTypes (makeTV)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.RefTags (ExprRef)
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
-import qualified Lamdu.Data.Infer.Optimize as Optimize
 import qualified Lamdu.Data.Infer.Rule as Rule
 import qualified Lamdu.Data.Infer.Unify as Unify
 
@@ -40,9 +35,6 @@ unify ::
 unify (TypedValue xv xt) (TypedValue yv yt) = do
   void . runInfer $ Unify.unify xv yv
   void . runInfer $ Unify.unify xt yt
-
-exprSTVRefs :: Lens.Traversal' (Expr.Expression (LoadedDef def) (ScopedTypedValue def, a)) (ExprRef def)
-exprSTVRefs f = ExprLens.exprBitraverse (ldType f) ((Lens._1 . stvRefs) f)
 
 infer ::
   Eq def => Scope def -> Expr.Expression (LoadedDef def) a ->

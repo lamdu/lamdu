@@ -1,14 +1,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.RefData
-  ( RefData(..), rdScope, rdBody, rdWasNotDirectlyTag, rdTriggers, rdRefs
+  ( RefData(..), rdScope, rdBody, rdWasNotDirectlyTag, rdTriggers
     , defaultRefData
-  , Scope(..), emptyScope, scopeMap, scopeParamRefs, scopeExprRefs
+  , Scope(..), emptyScope, scopeMap, scopeParamRefs
     , scopeNormalize
   , UFExprs
   , fresh, freshHole
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
@@ -57,19 +56,8 @@ scopeMap = Lens.from scope
 scopeParamRefs :: Lens.Traversal' (Scope def) (ParamRef def)
 scopeParamRefs = scopeMap . OR.unsafeRefMapItems . Lens._1
 
-scopeExprRefs :: Lens.Traversal' (Scope def) (ExprRef def)
-scopeExprRefs = scopeMap . Lens.traverse
-
 scopeNormalize :: MonadA m => Scope def -> StateT (GuidAliases def) m (Scope def)
 scopeNormalize = scopeParamRefs %%~ GuidAliases.find
-
-rdRefs :: Lens.Traversal' (RefData def) (ExprRef def)
-rdRefs f (RefData scop isCircumsized triggers body) =
-  RefData
-  <$> scopeExprRefs f scop
-  <*> pure isCircumsized
-  <*> pure triggers
-  <*> Lens.traverse f body
 
 fresh :: MonadA m => Scope def -> Expr.Body def (ExprRef def) -> StateT (UFExprs def) m (ExprRef def)
 fresh scop body = UFData.fresh $ defaultRefData scop body

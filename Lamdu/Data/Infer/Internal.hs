@@ -1,17 +1,17 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Infer.Internal
-  ( Scope(..), emptyScope, scopeMap, scopeParamRefs, scopeExprRefs
+  ( Scope(..), emptyScope, scopeMap, scopeParamRefs
 
   , UFExprs
 
-  , RefData(..), rdScope, rdBody, rdWasNotDirectlyTag, rdTriggers, rdRefs
+  , RefData(..), rdScope, rdBody, rdWasNotDirectlyTag, rdTriggers
     , defaultRefData
   , fresh, freshHole
   , Context(..), ctxUFExprs, ctxDefTVs, ctxRuleMap, ctxRandomGen, ctxGuidAliases
     , emptyContext
   , LoadedDef(..), ldDef, ldType
   , TypedValue(..), tvVal, tvType, tvRefs
-  , ScopedTypedValue(..), stvTV, stvScope, stvRefs
+  , ScopedTypedValue(..), stvTV, stvScope
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -45,9 +45,6 @@ data ScopedTypedValue def = ScopedTypedValue
   , _stvScope :: Scope def
   }
 Lens.makeLenses ''ScopedTypedValue
-
-stvRefs :: Lens.Traversal' (ScopedTypedValue def) (ExprRef def)
-stvRefs f (ScopedTypedValue tv scop) = ScopedTypedValue <$> tvRefs f tv <*> scopeExprRefs f scop
 
 -- Context
 data Context def = Context
