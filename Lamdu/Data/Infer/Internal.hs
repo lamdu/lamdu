@@ -8,11 +8,10 @@ module Lamdu.Data.Infer.Internal
     , defaultRefData
   , fresh, freshHole
   , LoadedDef(..), ldDef, ldType
-  , TypedValue(..), tvVal, tvType, tvRefs
+  , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
 import Lamdu.Data.Infer.RefData
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import qualified Control.Lens as Lens
@@ -26,9 +25,6 @@ Lens.makeLenses ''TypedValue
 instance Show (TypedValue def) where
   showsPrec n (TypedValue v t) =
     showParen (n > 0) (unwords [show v, ":", show t] ++)
-
-tvRefs :: Lens.Traversal' (TypedValue def) (ExprRef def)
-tvRefs f (TypedValue val typ) = TypedValue <$> f val <*> f typ
 
 -- ScopedTypedValue
 data ScopedTypedValue def = ScopedTypedValue
