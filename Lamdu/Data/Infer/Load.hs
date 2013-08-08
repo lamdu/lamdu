@@ -1,7 +1,8 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.Load
   ( Loader(..)
   , Error(..)
-  , LoadedDef(..), ldDef, ldType -- re-export
+  , LoadedDef(..), ldDef, ldType
   , load, newDefinition
   ) where
 
@@ -25,6 +26,12 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
+
+data LoadedDef def = LoadedDef
+  { _ldDef :: def
+  , _ldType :: ExprRef def
+  }
+Lens.makeLenses ''LoadedDef
 
 data Loader def m = Loader
   { loadDefType :: def -> m (Expr.Expression def ())

@@ -16,10 +16,11 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Internal as Infer
+import qualified Lamdu.Data.Infer.Load as Load
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Rule.Apply as RuleApply
-import qualified Lamdu.Data.Infer.Rule.Uncircumsize as RuleUncircumsize
 import qualified Lamdu.Data.Infer.Rule.GetField as RuleGetField
+import qualified Lamdu.Data.Infer.Rule.Uncircumsize as RuleUncircumsize
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
 scopeLookup :: Infer.Scope def -> Guid -> Infer def (ExprRef def)
@@ -32,7 +33,7 @@ scopeLookup scope guid = do
 
 makePiTypeOfLam ::
   Guid -> Infer.TypedValue def -> Infer.TypedValue def ->
-  Expr.Body (Infer.LoadedDef def) (ExprRef def)
+  Expr.Body (Load.LoadedDef def) (ExprRef def)
 makePiTypeOfLam paramGuid paramType body =
   Expr.BodyLam $
   Expr.Lam Expr.KType paramGuid
@@ -43,10 +44,10 @@ makePiTypeOfLam paramGuid paramType body =
   (body ^. Infer.tvType)
 
 fresh ::
-  Infer.Scope def -> Expr.Body (Infer.LoadedDef def) (ExprRef def) ->
+  Infer.Scope def -> Expr.Body (Load.LoadedDef def) (ExprRef def) ->
   Infer def (ExprRef def)
 fresh scope body =
-  InferM.liftUFExprs $ Infer.fresh scope (body & ExprLens.bodyDef %~ (^. Infer.ldDef))
+  InferM.liftUFExprs $ Infer.fresh scope (body & ExprLens.bodyDef %~ (^. Load.ldDef))
 
 freshHole :: Infer.Scope def -> Infer def (ExprRef def)
 freshHole = InferM.liftUFExprs . Infer.freshHole
@@ -54,7 +55,7 @@ freshHole = InferM.liftUFExprs . Infer.freshHole
 maybeCircumsize ::
   Infer.Scope def ->
   Infer.TypedValue def ->
-  Expr.Body (Infer.LoadedDef def) (Infer.TypedValue def) ->
+  Expr.Body (Load.LoadedDef def) (Infer.TypedValue def) ->
   ExprRef def ->
   Infer def (Infer.TypedValue def)
 maybeCircumsize scope applicant uncircumsizedValBody typeRef = do
@@ -66,7 +67,7 @@ maybeCircumsize scope applicant uncircumsizedValBody typeRef = do
   RuleUncircumsize.make valRef
     (applicant ^. Infer.tvVal)
     ( uncircumsizedValBody
-      & ExprLens.bodyDef %~ (^. Infer.ldDef)
+      & ExprLens.bodyDef %~ (^. Load.ldDef)
       <&> (^. Infer.tvVal)
     )
   return $ Infer.TypedValue valRef typeRef
@@ -140,7 +141,7 @@ makePiType scope paramType resultType = do
 
 makeTV ::
   Eq def => Infer.Scope def ->
-  Expr.Body (Infer.LoadedDef def) (Infer.ScopedTypedValue def) ->
+  Expr.Body (Load.LoadedDef def) (Infer.ScopedTypedValue def) ->
   Infer def (Infer.TypedValue def)
 makeTV scope body =
   case body of
@@ -155,7 +156,7 @@ makeTV scope body =
   Expr.BodyLeaf Expr.Hole ->
     uncircumsized <*> freshBody (ExprLens.bodyHole # ())
   -- GetPars
-  Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (Infer.LoadedDef _ ref))) ->
+  Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (Load.LoadedDef _ ref))) ->
     uncircumsized <*> pure ref
   Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) ->
     uncircumsized <*> scopeLookup scope guid

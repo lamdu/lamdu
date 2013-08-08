@@ -7,7 +7,6 @@ module Lamdu.Data.Infer.Internal
   , RefData(..), rdScope, rdBody, rdWasNotDirectlyTag, rdTriggers
     , defaultRefData
   , fresh, freshHole
-  , LoadedDef(..), ldDef, ldType
   , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
   ) where
@@ -32,9 +31,3 @@ data ScopedTypedValue def = ScopedTypedValue
   , _stvScope :: Scope def
   }
 Lens.makeLenses ''ScopedTypedValue
-
-data LoadedDef def = LoadedDef
-  { _ldDef :: def
-  , _ldType :: ExprRef def
-  }
-Lens.makeLenses ''LoadedDef

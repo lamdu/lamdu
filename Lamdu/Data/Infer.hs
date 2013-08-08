@@ -3,6 +3,7 @@ module Lamdu.Data.Infer
   , infer, unify
   , emptyContext
   -- Re-export:
+  , Load.LoadedDef
   , Context
   , Scope, emptyScope
   , Ref
@@ -25,6 +26,7 @@ import qualified Data.OpaqueRef as OR
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Data.Infer.Load as Load
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Rule as Rule
 import qualified Lamdu.Data.Infer.Unify as Unify
@@ -44,9 +46,9 @@ unify (TypedValue xv xt) (TypedValue yv yt) = do
   void . runInfer $ Unify.unify xt yt
 
 infer ::
-  Eq def => Scope def -> Expr.Expression (LoadedDef def) a ->
+  Eq def => Scope def -> Expr.Expression (Load.LoadedDef def) a ->
   StateT (Context def) (Either (Error def))
-  (Expr.Expression (LoadedDef def) (ScopedTypedValue def, a))
+  (Expr.Expression (Load.LoadedDef def) (ScopedTypedValue def, a))
 infer scope expr = runInfer $ exprIntoSTV scope expr
 
 runInfer :: Eq def => Infer def a -> StateT (Context def) (Either (Error def)) a
@@ -68,8 +70,8 @@ runInfer act = do
 
 -- With hole apply vals and hole types
 exprIntoSTV ::
-  Eq def => Scope def -> Expr.Expression (LoadedDef def) a ->
-  Infer def (Expr.Expression (LoadedDef def) (ScopedTypedValue def, a))
+  Eq def => Scope def -> Expr.Expression (Load.LoadedDef def) a ->
+  Infer def (Expr.Expression (Load.LoadedDef def) (ScopedTypedValue def, a))
 exprIntoSTV scope (Expr.Expression body pl) = do
   bodySTV <-
     case body of
