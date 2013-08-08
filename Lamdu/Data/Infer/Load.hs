@@ -15,6 +15,7 @@ import Control.MonadA (MonadA)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (sequenceA)
+import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import qualified Control.Lens as Lens
@@ -22,6 +23,7 @@ import qualified Control.Monad.Trans.Either as Either
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 
 data Loader def m = Loader
@@ -42,12 +44,12 @@ exprIntoContext =
         case body of
         Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
           paramTypeRef <- go scope paramType
-          paramIdRep <- Lens.zoom ctxGuidAliases $ GuidAliases.getRep paramGuid
+          paramIdRep <- Lens.zoom Context.guidAliases $ GuidAliases.getRep paramGuid
           Expr.BodyLam . Expr.Lam k paramGuid paramTypeRef <$>
             go (scope & Lens.at paramIdRep .~ Just paramTypeRef) result
         -- TODO: Assert parameterRefs are not out of scope here
         _ -> body & Lens.traverse %%~ go scope
-      Lens.zoom ctxUFExprs $ fresh (Scope scope) newBody
+      Lens.zoom Context.uFExprs $ fresh (Scope scope) newBody
 
 -- Error includes untyped def use
 loadDefTypeIntoRef ::
@@ -63,8 +65,8 @@ loadDefTypeIntoRef (Loader loader) def = do
 newDefinition ::
   (MonadA m, Ord def) => def -> StateT (Context def) m (TypedValue def)
 newDefinition def = do
-  tv <- Lens.zoom ctxUFExprs $ TypedValue <$> freshHole (Scope mempty) <*> freshHole (Scope mempty)
-  ctxDefTVs . Lens.at def %= setRef tv
+  tv <- Lens.zoom Context.uFExprs $ TypedValue <$> freshHole (Scope mempty) <*> freshHole (Scope mempty)
+  Context.defTVs . Lens.at def %= setRef tv
   return tv
   where
     setRef tv Nothing = Just tv
@@ -76,10 +78,10 @@ load ::
   StateT (Context def) (EitherT (Error def) m)
   (Expr.Expression (LoadedDef def) a)
 load loader expr = do
-  existingDefTVs <- Lens.use ctxDefTVs <&> Lens.mapped %~ return
+  existingDefTVs <- Lens.use Context.defTVs <&> Lens.mapped %~ return
   -- Left wins in union
   allDefTVs <- sequenceA $ existingDefTVs `Map.union` defLoaders
-  ctxDefTVs .= allDefTVs
+  Context.defTVs .= allDefTVs
   let
     getDefRef def =
       LoadedDef def .
@@ -89,6 +91,6 @@ load loader expr = do
   where
     defLoaders =
       Map.fromList
-      [ (def, TypedValue <$> Lens.zoom ctxUFExprs (freshHole (Scope mempty)) <*> loadDefTypeIntoRef loader def)
+      [ (def, TypedValue <$> Lens.zoom Context.uFExprs (freshHole (Scope mempty)) <*> loadDefTypeIntoRef loader def)
       | def <- expr ^.. ExprLens.exprDef
       ]

@@ -156,6 +156,7 @@ Executable lamdu
                        Lamdu.Data.Expression.Load,
                        Lamdu.Data.Expression.Utils,
                        Lamdu.Data.Infer,
+                       Lamdu.Data.Infer.Context,
                        Lamdu.Data.Infer.Deref,
                        Lamdu.Data.Infer.Internal,
                        Lamdu.Data.Infer.GuidAliases,

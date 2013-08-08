@@ -16,16 +16,23 @@ import Control.Monad (void)
 import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Writer (WriterT(..), runWriterT)
 import Data.OpaqueRef (Ref)
+import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.MakeTypes (makeTV)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
 import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Rule as Rule
 import qualified Lamdu.Data.Infer.Unify as Unify
+import qualified System.Random as Random
+
+-- Renamed for export purposes
+emptyContext :: Random.StdGen -> Context def
+emptyContext = Context.empty
 
 unify ::
   Eq def =>

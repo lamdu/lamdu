@@ -9,6 +9,7 @@ import Control.Lens.Utils (_fromJust)
 import Control.Monad (filterM, when)
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
+import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefData (scopeNormalize)
@@ -22,6 +23,7 @@ import qualified Data.Set as Set
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Rule.Types as Rule
@@ -31,9 +33,9 @@ remember ::
   ExprRef def -> RefData def -> Trigger def -> RuleRef def ->
   StateT (Context def) m ()
 remember rep refData trigger ruleId = do
-  Lens.zoom ctxUFExprs . UFData.writeRep rep $
+  Lens.zoom Context.uFExprs . UFData.writeRep rep $
     refData & rdTriggers . Lens.at ruleId <>~ Just (Set.singleton trigger)
-  ctxRuleMap . Rule.rmMap . Lens.at ruleId .
+  Context.ruleMap . Rule.rmMap . Lens.at ruleId .
     _fromJust "Trigger.remember to missing rule" .
     Rule.ruleTriggersIn <>= OR.refSetSingleton rep
 

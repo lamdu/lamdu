@@ -31,12 +31,13 @@ import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
 newRandom :: Random r => Infer def r
-newRandom = InferM.liftContext . Lens.zoom ctxRandomGen $ state random
+newRandom = InferM.liftContext . Lens.zoom Context.randomGen $ state random
 
 forceLam :: Eq def => Expr.Kind -> Scope def -> ExprRef def -> Infer def (Guid, ExprRef def, ExprRef def)
 forceLam k lamScope destRef = do

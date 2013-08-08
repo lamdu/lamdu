@@ -2,6 +2,7 @@
 module Lamdu.Data.Infer.Monad
   ( Error(..)
   , TriggeredRules(..)
+  , Context
   , Infer, infer
   , liftContext, liftUFExprs, liftGuidAliases, liftRuleMap
   , liftError, error
@@ -17,6 +18,7 @@ import Control.Monad.Trans.Writer (WriterT(..))
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Expression.Utils () -- Expr.Body Show instance
+import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.RefTags (ExprRef, TagRule, TagExpr)
@@ -26,6 +28,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.OpaqueRef as OR
 import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Infer.Context as Context
 
 data Error def
   = VarEscapesScope Guid
@@ -66,13 +69,13 @@ liftContext = Infer . lift
 liftUFExprs ::
   StateT (UFExprs def) (Either (Error def)) a ->
   Infer def a
-liftUFExprs = liftContext . Lens.zoom ctxUFExprs
+liftUFExprs = liftContext . Lens.zoom Context.uFExprs
 
 liftGuidAliases :: StateT (GuidAliases def) (Either (Error def)) a -> Infer def a
-liftGuidAliases = liftContext . Lens.zoom ctxGuidAliases
+liftGuidAliases = liftContext . Lens.zoom Context.guidAliases
 
 liftRuleMap :: StateT (RuleMap def) (Either (Error def)) a -> Infer def a
-liftRuleMap = liftContext . Lens.zoom ctxRuleMap
+liftRuleMap = liftContext . Lens.zoom Context.ruleMap
 
 liftError :: Either (Error def) a -> Infer def a
 liftError = Infer . lift . lift

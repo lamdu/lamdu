@@ -8,6 +8,7 @@ import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Store.Guid (Guid)
+import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (ExprRef)
@@ -19,6 +20,7 @@ import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.Rule.Monad as RuleMonad
 import qualified Lamdu.Data.Infer.Rule.Types as Rule
@@ -26,7 +28,7 @@ import qualified Lamdu.Data.Infer.Trigger as Trigger
 
 assertRecordTypeFields :: MonadA m => ExprRef def -> StateT (Context def) m [(ExprRef def, ExprRef def)]
 assertRecordTypeFields ref =
-  Lens.zoom ctxUFExprs $ UFData.read ref
+  Lens.zoom Context.uFExprs $ UFData.read ref
   <&> (^? rdBody . ExprLens.bodyKindedRecordFields Expr.KType)
   <&> unsafeUnjust "isRecord && not record?!"
 
@@ -45,7 +47,7 @@ handlePotentialMatches fields tag typ =
 
 assertTag :: MonadA m => ExprRef def -> StateT (Context def) m Guid
 assertTag ref =
-  Lens.zoom ctxUFExprs $ UFData.read ref
+  Lens.zoom Context.uFExprs $ UFData.read ref
   <&> (^? rdBody . ExprLens.bodyTag)
   <&> unsafeUnjust "isTag && not tag?!"
 
