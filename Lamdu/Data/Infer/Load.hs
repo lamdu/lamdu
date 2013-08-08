@@ -17,8 +17,8 @@ import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (sequenceA)
 import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.RefTags (ExprRef)
+import Lamdu.Data.Infer.TypedValue (TypedValue(..), tvType)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Either as Either
 import qualified Data.Map as Map
@@ -26,6 +26,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Data.Infer.RefData as RefData
 
 data LoadedDef def = LoadedDef
   { _ldDef :: def
@@ -56,7 +57,7 @@ exprIntoContext =
             go (scope & Lens.at paramIdRep .~ Just paramTypeRef) result
         -- TODO: Assert parameterRefs are not out of scope here
         _ -> body & Lens.traverse %%~ go scope
-      Lens.zoom Context.uFExprs $ fresh (Scope scope) newBody
+      Lens.zoom Context.uFExprs $ RefData.fresh (RefData.Scope scope) newBody
 
 -- Error includes untyped def use
 loadDefTypeIntoRef ::
@@ -72,7 +73,11 @@ loadDefTypeIntoRef (Loader loader) def = do
 newDefinition ::
   (MonadA m, Ord def) => def -> StateT (Context def) m (TypedValue def)
 newDefinition def = do
-  tv <- Lens.zoom Context.uFExprs $ TypedValue <$> freshHole (Scope mempty) <*> freshHole (Scope mempty)
+  tv <-
+    Lens.zoom Context.uFExprs $
+    TypedValue
+    <$> RefData.freshHole (RefData.Scope mempty)
+    <*> RefData.freshHole (RefData.Scope mempty)
   Context.defTVs . Lens.at def %= setRef tv
   return tv
   where
@@ -98,6 +103,9 @@ load loader expr = do
   where
     defLoaders =
       Map.fromList
-      [ (def, TypedValue <$> Lens.zoom Context.uFExprs (freshHole (Scope mempty)) <*> loadDefTypeIntoRef loader def)
+      [  (def
+        , TypedValue
+          <$> Lens.zoom Context.uFExprs (RefData.freshHole (RefData.Scope mempty))
+          <*> loadDefTypeIntoRef loader def)
       | def <- expr ^.. ExprLens.exprDef
       ]

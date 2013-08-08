@@ -10,8 +10,8 @@ import Control.Monad (filterM, when)
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
+import Lamdu.Data.Infer.RefData (RefData)
 import Lamdu.Data.Infer.RefData (scopeNormalize)
 import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef)
 import Lamdu.Data.Infer.Rule.Types (RuleRef)
@@ -26,6 +26,7 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.RefData as RefData
 import qualified Lamdu.Data.Infer.Rule.Types as Rule
 
 remember ::
@@ -34,30 +35,30 @@ remember ::
   StateT (Context def) m ()
 remember rep refData trigger ruleId = do
   Lens.zoom Context.uFExprs . UFData.writeRep rep $
-    refData & rdTriggers . Lens.at ruleId <>~ Just (Set.singleton trigger)
+    refData & RefData.rdTriggers . Lens.at ruleId <>~ Just (Set.singleton trigger)
   Context.ruleMap . Rule.rmMap . Lens.at ruleId .
     _fromJust "Trigger.remember to missing rule" .
     Rule.ruleTriggersIn <>= OR.refSetSingleton rep
 
 checkDirectlyTag :: RefData def -> Maybe (Fired def)
 checkDirectlyTag refData
-  | Lens.has (rdBody . ExprLens.bodyTag) refData = Just $ FiredDirectlyTag True
-  | refData ^. rdWasNotDirectlyTag . Lens.unwrapped
-  || Lens.nullOf (rdBody . ExprLens.bodyHole) refData = Just $ FiredDirectlyTag False
+  | Lens.has (RefData.rdBody . ExprLens.bodyTag) refData = Just $ FiredDirectlyTag True
+  | refData ^. RefData.rdWasNotDirectlyTag . Lens.unwrapped
+  || Lens.nullOf (RefData.rdBody . ExprLens.bodyHole) refData = Just $ FiredDirectlyTag False
   | otherwise = Nothing
 
 checkParameterRef :: ParamRef def -> RefData def -> Infer def (Maybe (Fired def))
 checkParameterRef triggerGuidRef refData
-  | Lens.nullOf (rdScope . scopeParamRefs) refData =
+  | Lens.nullOf (RefData.rdScope . RefData.scopeParamRefs) refData =
     -- Scope is empty so this cannot be a parameter Ref
     answer triggerGuidRef ParameterRefOutOfScope
   | otherwise = do
     triggerGuidRep <- InferM.liftGuidAliases $ GuidAliases.find triggerGuidRef
     -- Our caller must hand us a normalized scope
-    if triggerGuidRep `notElem` (refData ^.. rdScope . scopeParamRefs)
+    if triggerGuidRep `notElem` (refData ^.. RefData.rdScope . RefData.scopeParamRefs)
       then answer triggerGuidRep ParameterRefOutOfScope
       else
-        case refData ^. rdBody of
+        case refData ^. RefData.rdBody of
         Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) -> do
           guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
           answer triggerGuidRep $
@@ -74,7 +75,7 @@ checkKnownBody refData
   | Lens.has ExprLens.bodyHole body = Nothing
   | otherwise = Just . FiredKnownBody $ body & ExprLens.bodyDef .~ ()
   where
-    body = refData ^. rdBody
+    body = refData ^. RefData.rdBody
 
 -- | Must be called with RefData with normalized scope
 checkTrigger :: RefData def -> Trigger def -> Infer def (Maybe (Fired def))
@@ -97,7 +98,7 @@ handleTrigger rep refData ruleId trigger = do
 updateRefData :: ExprRef def -> RefData def -> Infer def (RefData def)
 updateRefData rep refData =
   refData &
-  rdTriggers %%~
+  RefData.rdTriggers %%~
   fmap (OR.refMapFilter (not . Set.null)) .
   Lens.itraverse onTriggers
   where
@@ -113,6 +114,6 @@ add trigger ruleId ref = do
   -- TODO: The tests pass even with the un-normalized Scope. Is there
   -- some guarantee that when we're called here, scope is always
   -- already normalized?
-  refDataNorm <- refData & rdScope %%~ InferM.liftGuidAliases . scopeNormalize
+  refDataNorm <- refData & RefData.rdScope %%~ InferM.liftGuidAliases . scopeNormalize
   keep <- handleTrigger rep refDataNorm ruleId trigger
   when keep . InferM.liftContext $ remember rep refData trigger ruleId

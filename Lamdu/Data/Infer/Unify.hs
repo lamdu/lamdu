@@ -16,9 +16,8 @@ import Data.Monoid.Applicative (ApplicativeMonoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
-import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.RefData (scopeNormalize)
+import Lamdu.Data.Infer.RefData (RefData(..), Scope(..), scopeNormalize)
 import Lamdu.Data.Infer.RefTags (ExprRef, TagParam, TagRule)
 import Lamdu.Data.Infer.Trigger (Trigger)
 import System.Random (Random, random)
@@ -34,24 +33,29 @@ import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.RefData as RefData
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 
 newRandom :: Random r => Infer def r
 newRandom = InferM.liftContext . Lens.zoom Context.randomGen $ state random
 
-forceLam :: Eq def => Expr.Kind -> Scope def -> ExprRef def -> Infer def (Guid, ExprRef def, ExprRef def)
+forceLam ::
+  Eq def =>
+  Expr.Kind -> RefData.Scope def ->
+  ExprRef def ->
+  Infer def (Guid, ExprRef def, ExprRef def)
 forceLam k lamScope destRef = do
   newGuid <- newRandom
   newParamRep <- InferM.liftGuidAliases $ GuidAliases.getRep newGuid
-  newParamTypeRef <- InferM.liftUFExprs . fresh lamScope $ ExprLens.bodyHole # ()
+  newParamTypeRef <- InferM.liftUFExprs . RefData.fresh lamScope $ ExprLens.bodyHole # ()
   -- TODO: Directly manipulate RefData to avoid scope buildup?
-  let lamResultScope = lamScope & scopeMap . Lens.at newParamRep .~ Just newParamTypeRef
-  newResultTypeRef <- InferM.liftUFExprs . fresh lamResultScope $ ExprLens.bodyHole # ()
+  let lamResultScope = lamScope & RefData.scopeMap . Lens.at newParamRep .~ Just newParamTypeRef
+  newResultTypeRef <- InferM.liftUFExprs . RefData.fresh lamResultScope $ ExprLens.bodyHole # ()
   newLamRef <-
-    InferM.liftUFExprs . fresh lamScope . Expr.BodyLam $
+    InferM.liftUFExprs . RefData.fresh lamScope . Expr.BodyLam $
     Expr.Lam k newGuid newParamTypeRef newResultTypeRef
   rep <- unify newLamRef destRef
-  body <- InferM.liftUFExprs $ (^. rdBody) <$> State.gets (UFData.readRep rep)
+  body <- InferM.liftUFExprs $ (^. RefData.rdBody) <$> State.gets (UFData.readRep rep)
   return . unsafeUnjust "We just unified Lam into rep" $
     body ^? ExprLens.bodyKindedLam k
 
@@ -198,9 +202,9 @@ holeConstraintsRecurse holeConstraints rawNode =
     (newRefData, later) <-
       wuRun $
       oldNodeData
-      & rdScope %%~
+      & RefData.rdScope %%~
         applyHoleConstraints holeConstraints
-        (oldNodeData ^. rdBody)
+        (oldNodeData ^. RefData.rdBody)
     uInfer . InferM.liftUFExprs $ UFData.writeRep nodeRep newRefData
     later
     return nodeRep
@@ -224,8 +228,8 @@ unifyRecurse xRef yRef =
     case unifyResult of
       UFData.UnifyRefsAlreadyUnified -> return ()
       UFData.UnifyRefsUnified xData yData -> do
-        uInfer $ fireUnificationTriggers xRep (xData ^. rdTriggers) yRep
-        uInfer $ fireUnificationTriggers yRep (yData ^. rdTriggers) xRep
+        uInfer $ fireUnificationTriggers xRep (xData ^. RefData.rdTriggers) yRep
+        uInfer $ fireUnificationTriggers yRep (yData ^. RefData.rdTriggers) xRep
         (mergedRefData, later) <-
           wuRun $ mergeRefDataAndTrigger rep xData yData
         -- First let's write the mergedRefData so we're not in danger zone

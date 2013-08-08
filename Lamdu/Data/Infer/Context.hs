@@ -5,8 +5,9 @@ module Lamdu.Data.Infer.Context
 
 import Data.Map (Map)
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
-import Lamdu.Data.Infer.Internal
+import Lamdu.Data.Infer.RefData (UFExprs)
 import Lamdu.Data.Infer.Rule.Types (RuleMap, initialRuleMap)
+import Lamdu.Data.Infer.TypedValue (TypedValue)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.UnionFind.WithData as UFData

@@ -10,7 +10,6 @@ import Data.Foldable (sequenceA_, traverse_)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA, traverse)
-import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef)
 import Lamdu.Data.Infer.Rule.Func (RuleFunc)
@@ -24,6 +23,7 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.RefData as RefData
 import qualified Lamdu.Data.Infer.Rule.Monad as RuleMonad
 import qualified Lamdu.Data.Infer.Rule.Types as Rule
 import qualified Lamdu.Data.Infer.Trigger as Trigger
@@ -103,8 +103,8 @@ makePiResultCopy ::
   ExprRef def -> ExprRef def ->
   RuleMonad.RM (Rule.Apply def) def ()
 makePiResultCopy ruleRef srcRef destRef = do
-  srcBody <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. rdBody) <$> UFData.read srcRef
-  destScope <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. rdScope) <$> UFData.read destRef
+  srcBody <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. RefData.rdBody) <$> UFData.read srcRef
+  destScope <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. RefData.rdScope) <$> UFData.read destRef
   case srcBody of
     Expr.BodyLam (Expr.Lam k srcGuid _ _) -> do
       (destGuid, _, _) <- RuleMonad.liftInfer $ forceLam k destScope destRef
@@ -114,11 +114,11 @@ makePiResultCopy ruleRef srcRef destRef = do
     _ -> do
       destBodyRef <-
         srcBody
-        & Lens.traverse %%~ (const . RuleMonad.liftInfer . InferM.liftUFExprs) (freshHole destScope)
+        & Lens.traverse %%~ (const . RuleMonad.liftInfer . InferM.liftUFExprs) (RefData.freshHole destScope)
         >>= ExprLens.bodyParameterRef %%~ remapSubstGuid
-        >>= RuleMonad.liftInfer . InferM.liftUFExprs . fresh destScope
+        >>= RuleMonad.liftInfer . InferM.liftUFExprs . RefData.fresh destScope
       void $ unify destBodyRef destRef -- destBodyRef is swallowed by destRef if it had anything...
-  destBody <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. rdBody) <$> UFData.read destRef
+  destBody <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. RefData.rdBody) <$> UFData.read destRef
   matchRes <-
     sequenceA $ sequenceA_ <$>
     ExprUtil.matchBodyDeprecated matchLamResult (link ruleRef)

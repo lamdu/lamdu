@@ -15,8 +15,8 @@ import Data.Function.Decycle (decycle)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
-import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef)
+import Lamdu.Data.Infer.TypedValue (TypedValue(..), ScopedTypedValue, stvTV)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.UnionFind.WithData as UFData
@@ -24,6 +24,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Data.Infer.RefData as RefData
 
 data Error def = InfiniteExpression (ExprRef def)
   deriving (Show, Eq, Ord)
@@ -73,7 +74,7 @@ deref storedGuids =
     go Nothing ref = mError $ InfiniteExpression ref
     go (Just recurse) ref =
       Lens.zoom Context.uFExprs (UFData.read ref)
-      <&> (^. rdBody)
+      <&> (^. RefData.rdBody)
       >>= Lens.traverse %%~ recurse
       >>= ExprLens.bodyParamIds %%~ mGuidAliases . canonizeGuid storedGuids
       -- TODO: maintain the restrictions in RefData and get from there:

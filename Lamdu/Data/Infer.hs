@@ -1,11 +1,10 @@
 module Lamdu.Data.Infer
-  ( Infer, Error(..)
-  , infer, unify
-  , emptyContext
+  ( infer, unify
   -- Re-export:
+  , Infer, Error(..)
   , Load.LoadedDef
-  , Context
-  , Scope, emptyScope
+  , Context, emptyContext
+  , Scope, RefData.emptyScope
   , Ref
   , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
@@ -18,9 +17,10 @@ import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Writer (WriterT(..), runWriterT)
 import Data.OpaqueRef (Ref)
 import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.MakeTypes (makeTV)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
+import Lamdu.Data.Infer.RefData (Scope(..))
+import Lamdu.Data.Infer.TypedValue (TypedValue(..), tvVal, tvType, ScopedTypedValue(..), stvTV, stvScope)
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
 import qualified Lamdu.Data.Expression as Expr
@@ -28,6 +28,7 @@ import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Load as Load
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.RefData as RefData
 import qualified Lamdu.Data.Infer.Rule as Rule
 import qualified Lamdu.Data.Infer.Unify as Unify
 import qualified System.Random as Random
@@ -81,7 +82,7 @@ exprIntoSTV scope (Expr.Expression body pl) = do
       let
         newScope =
           scope
-          & scopeMap . Lens.at paramIdRef .~ Just
+          & RefData.scopeMap . Lens.at paramIdRef .~ Just
             (paramTypeS ^. Expr.ePayload . Lens._1 . stvTV . tvVal)
       resultS <- exprIntoSTV newScope result
       pure . Expr.BodyLam $ Expr.Lam k paramGuid paramTypeS resultS

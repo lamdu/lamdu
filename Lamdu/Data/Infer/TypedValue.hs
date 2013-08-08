@@ -1,13 +1,6 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
-module Lamdu.Data.Infer.Internal
-  ( Scope(..), emptyScope, scopeMap, scopeParamRefs
-
-  , UFExprs
-
-  , RefData(..), rdScope, rdBody, rdWasNotDirectlyTag, rdTriggers
-    , defaultRefData
-  , fresh, freshHole
-  , TypedValue(..), tvVal, tvType
+module Lamdu.Data.Infer.TypedValue
+  ( TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
   ) where
 

@@ -8,7 +8,6 @@ import Control.Lens.Operators
 import Data.Foldable (traverse_)
 import Data.Maybe.Utils (unsafeUnjust)
 import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.Internal
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (TagExpr)
 import Lamdu.Data.Infer.Rule.Func (RuleResult(..), RuleFunc)
@@ -18,6 +17,7 @@ import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.RefData as RefData
 import qualified Lamdu.Data.Infer.Rule.Apply as RuleApply
 import qualified Lamdu.Data.Infer.Rule.GetField as RuleGetField
 import qualified Lamdu.Data.Infer.Rule.Uncircumsize as RuleUncircumsize
@@ -59,7 +59,7 @@ execute ruleRef triggers = do
     RuleDelete -> do
       let
         deleteRuleFrom ref =
-          UFData.modify ref $ rdTriggers . Lens.at ruleRef .~ Nothing
+          UFData.modify ref $ RefData.rdTriggers . Lens.at ruleRef .~ Nothing
       Lens.zoom Context.uFExprs . traverse_ deleteRuleFrom $ OR.refSetToList ruleTriggerRefs
       ruleLens ruleRef .= Nothing
       return False
