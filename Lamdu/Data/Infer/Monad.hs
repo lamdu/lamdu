@@ -1,7 +1,8 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module Lamdu.Data.Infer.Monad
   ( Error(..)
   , TriggeredRules(..)
-  , Infer
+  , Infer, infer
   , liftContext, liftUFExprs, liftGuidAliases, liftRuleMap
   , liftError, error
   , ruleTrigger
@@ -9,6 +10,7 @@ module Lamdu.Data.Infer.Monad
 
 import Prelude hiding (error)
 
+import Control.Applicative (Applicative)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT(..))
 import Control.Monad.Trans.Writer (WriterT(..))
@@ -43,19 +45,23 @@ instance Monoid (TriggeredRules def) where
   mappend (TriggeredRules x) (TriggeredRules y) =
     TriggeredRules $ (OR.refMapUnionWith . OR.refMapUnionWith) mappend x y
 
-type Infer def =
-  WriterT (TriggeredRules def)
-  (StateT (Context def) (Either (Error def)))
+newtype Infer def a
+  = Infer
+    ( WriterT (TriggeredRules def)
+      (StateT (Context def)
+       (Either (Error def))) a )
+  deriving (Functor, Applicative, Monad)
+Lens.makeIso ''Infer
 
 ruleTrigger :: RuleRef def -> ExprRef def -> Fired def -> Infer def ()
 ruleTrigger ruleRef ref fired =
-  Writer.tell . TriggeredRules .
+  Infer . Writer.tell . TriggeredRules .
   OR.refMapSingleton ruleRef $
   OR.refMapSingleton ref [fired]
 
 liftContext ::
   StateT (Context def) (Either (Error def)) a -> Infer def a
-liftContext = lift
+liftContext = Infer . lift
 
 liftUFExprs ::
   StateT (UFExprs def) (Either (Error def)) a ->
@@ -69,7 +75,7 @@ liftRuleMap :: StateT (RuleMap def) (Either (Error def)) a -> Infer def a
 liftRuleMap = liftContext . Lens.zoom ctxRuleMap
 
 liftError :: Either (Error def) a -> Infer def a
-liftError = lift . lift
+liftError = Infer . lift . lift
 
 error :: Error def -> Infer def a
 error = liftError . Left

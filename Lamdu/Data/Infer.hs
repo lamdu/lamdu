@@ -44,16 +44,17 @@ infer scope expr = runInfer $ exprIntoSTV scope expr
 
 runInfer :: Eq def => Infer def a -> StateT (Context def) (Either (Error def)) a
 runInfer act = do
-  (res, rulesTriggered) <- runWriterT act
+  (res, rulesTriggered) <- runInferWriter act
   go rulesTriggered
   return res
   where
+    runInferWriter = runWriterT . (^. Lens.from InferM.infer)
     go (InferM.TriggeredRules oldRuleRefs) =
       case OR.refMapMinViewWithKey oldRuleRefs of
       Nothing -> return ()
       Just ((firstRuleRef, triggers), ruleIds) ->
         go . filterRemovedRule firstRuleRef . (Lens._2 <>~ InferM.TriggeredRules ruleIds) =<<
-        runWriterT (Rule.execute firstRuleRef triggers)
+        runInferWriter (Rule.execute firstRuleRef triggers)
     filterRemovedRule _ (True, rules) = rules
     filterRemovedRule ruleId (False, InferM.TriggeredRules rules) =
       InferM.TriggeredRules $ rules & Lens.at ruleId .~ Nothing
