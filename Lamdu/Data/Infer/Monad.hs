@@ -2,7 +2,6 @@
 module Lamdu.Data.Infer.Monad
   ( Error(..)
   , TriggeredRules(..)
-  , Context
   , Infer, infer
   , liftContext, liftUFExprs, liftGuidAliases, liftRuleMap
   , liftError, error

@@ -3,7 +3,7 @@ module Lamdu.Data.Infer.RefData
   ( RefData(..), rdScope, rdBody, rdWasNotDirectlyTag, rdTriggers
     , defaultRefData
   , Scope(..), emptyScope, scopeMap, scopeParamRefs
-    , scopeNormalize
+    , scopeNormalizeParamRefs
   , UFExprs
   , fresh, freshHole
   ) where
@@ -56,8 +56,8 @@ scopeMap = Lens.from scope
 scopeParamRefs :: Lens.Traversal' (Scope def) (ParamRef def)
 scopeParamRefs = scopeMap . OR.unsafeRefMapItems . Lens._1
 
-scopeNormalize :: MonadA m => Scope def -> StateT (GuidAliases def) m (Scope def)
-scopeNormalize = scopeParamRefs %%~ GuidAliases.find
+scopeNormalizeParamRefs :: MonadA m => Scope def -> StateT (GuidAliases def) m (Scope def)
+scopeNormalizeParamRefs = scopeParamRefs %%~ GuidAliases.find
 
 fresh :: MonadA m => Scope def -> Expr.Body def (ExprRef def) -> StateT (UFExprs def) m (ExprRef def)
 fresh scop body = UFData.fresh $ defaultRefData scop body

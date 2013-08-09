@@ -12,7 +12,7 @@ import Control.MonadA (MonadA)
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefData (RefData)
-import Lamdu.Data.Infer.RefData (scopeNormalize)
+import Lamdu.Data.Infer.RefData (scopeNormalizeParamRefs)
 import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef)
 import Lamdu.Data.Infer.Rule.Types (RuleRef)
 import Lamdu.Data.Infer.Trigger.Types (Trigger(..), Fired(..), ParameterRefEvent(..))
@@ -114,6 +114,6 @@ add trigger ruleId ref = do
   -- TODO: The tests pass even with the un-normalized Scope. Is there
   -- some guarantee that when we're called here, scope is always
   -- already normalized?
-  refDataNorm <- refData & RefData.rdScope %%~ InferM.liftGuidAliases . scopeNormalize
+  refDataNorm <- refData & RefData.rdScope %%~ InferM.liftGuidAliases . scopeNormalizeParamRefs
   keep <- handleTrigger rep refDataNorm ruleId trigger
   when keep . InferM.liftContext $ remember rep refData trigger ruleId

@@ -5,7 +5,7 @@ import Control.Lens.Operators
 import Control.Monad (void, when)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.RefData (Scope, scopeNormalize)
+import Lamdu.Data.Infer.RefData (Scope, scopeNormalizeParamRefs)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule (verifyTagId)
 import Lamdu.Data.Infer.TypedValue (TypedValue(..), ScopedTypedValue, tvVal, tvType, stvScope, stvTV)
@@ -26,7 +26,7 @@ import qualified Lamdu.Data.Infer.Trigger as Trigger
 
 scopeLookup :: Scope def -> Guid -> Infer def (ExprRef def)
 scopeLookup scope guid = do
-  scopeNorm <- InferM.liftGuidAliases $ scopeNormalize scope
+  scopeNorm <- InferM.liftGuidAliases $ scopeNormalizeParamRefs scope
   guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
   case scopeNorm ^. RefData.scopeMap . Lens.at guidRep of
     Nothing -> InferM.error VarNotInScope

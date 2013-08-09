@@ -17,7 +17,7 @@ import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.RefData (RefData(..), Scope(..), scopeNormalize)
+import Lamdu.Data.Infer.RefData (RefData(..), Scope(..), scopeNormalizeParamRefs)
 import Lamdu.Data.Infer.RefTags (ExprRef, TagParam, TagRule)
 import Lamdu.Data.Infer.Trigger (Trigger)
 import System.Random (Random, random)
@@ -62,8 +62,8 @@ forceLam k lamScope destRef = do
 -- If we don't assert that the scopes have same refs we could be pure
 intersectScopes :: Scope def -> Scope def -> Infer def (Scope def)
 intersectScopes aScope bScope = do
-  Scope aScopeNorm <- InferM.liftGuidAliases $ scopeNormalize aScope
-  Scope bScopeNorm <- InferM.liftGuidAliases $ scopeNormalize bScope
+  Scope aScopeNorm <- InferM.liftGuidAliases $ scopeNormalizeParamRefs aScope
+  Scope bScopeNorm <- InferM.liftGuidAliases $ scopeNormalizeParamRefs bScope
   Scope <$> sequenceA (OR.refMapIntersectionWith verifyEquiv aScopeNorm bScopeNorm)
   where
     -- Expensive assertion
@@ -113,7 +113,7 @@ unifyWithHole ::
 unifyWithHole holeScope otherScope nonHoleBody = do
   (Scope holeScopeNorm, Scope otherScopeNorm) <-
     wuInfer . InferM.liftGuidAliases $
-    (,) <$> scopeNormalize holeScope <*> scopeNormalize otherScope
+    (,) <$> scopeNormalizeParamRefs holeScope <*> scopeNormalizeParamRefs otherScope
   let unusableScopeReps = OR.refMapKeysSet $ OR.refMapDifference otherScopeNorm holeScopeNorm
   if OR.refSetNull unusableScopeReps
     then return (Scope otherScopeNorm, nonHoleBody)
@@ -178,7 +178,7 @@ applyHoleConstraints ::
 applyHoleConstraints holeConstraints body oldScope = do
   wuInfer $ checkHoleConstraints holeConstraints body
   let isUnusable x = hcUnusableScopeReps holeConstraints ^. Lens.contains x
-  Scope oldScopeNorm <- wuInfer . InferM.liftGuidAliases $ scopeNormalize oldScope
+  Scope oldScopeNorm <- wuInfer . InferM.liftGuidAliases $ scopeNormalizeParamRefs oldScope
   let (unusables, usables) = List.partition (isUnusable . fst) $ oldScopeNorm ^@.. Lens.itraversed
   unless (null unusables) . wuLater $
     (traverse_ . holeConstraintsRecurse . HoleConstraints . OR.refSetFromList . map fst) unusables body
