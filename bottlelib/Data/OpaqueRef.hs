@@ -108,13 +108,13 @@ refMapFromListWith :: (a -> a -> a) -> [(Ref p, a)] -> RefMap p a
 refMapFromListWith combine = RefMap . IntMap.fromListWith combine . (Lens.mapped . Lens._1 %~ (^. Lens.from mkRef))
 
 refMapUnmaintainedLookup ::
-  MonadA m => (String -> Ref p -> m (Ref p)) -> Ref p -> StateT (RefMap p a) m (Ref p, Maybe a)
+  MonadA m => (Ref p -> m (Ref p)) -> Ref p -> StateT (RefMap p a) m (Ref p, Maybe a)
 refMapUnmaintainedLookup doLookup ref =
   tryNow ref $ do
-    rep <- lift $ doLookup "unmaintainedRefMapLookup.ref" ref
+    rep <- lift $ doLookup ref
     tryNow rep $ do
       oldMap <- State.get
-      newMap <- lift $ oldMap & unsafeRefMapItems . Lens._1 %%~ doLookup "unmaintainedRefMapLookup.mapKey"
+      newMap <- lift $ oldMap & unsafeRefMapItems . Lens._1 %%~ doLookup
       State.put newMap
       tryNow rep $ return (rep, Nothing)
   where

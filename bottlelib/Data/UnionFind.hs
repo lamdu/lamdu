@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Data.UnionFind
   ( UnionFind
-  , freshRef, lookup, union, equivalent
+  , freshRef, find, union, equivalent
   , empty
   ) where
 
@@ -12,7 +12,6 @@ import Control.MonadA (MonadA)
 import Data.Function (on)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.OpaqueRef (Ref)
-import Prelude hiding (lookup)
 import qualified Control.Lens as Lens
 import qualified Data.IntDisjointSet as IDS
 import qualified Data.OpaqueRef as OpaqueRef
@@ -42,10 +41,10 @@ freshRef = do
   ufRefs %= IDS.insert (OpaqueRef.unsafeAsInt ref)
   return ref
 
-lookup :: MonadA m => String -> Ref p -> StateT (UnionFind p) m (Ref p)
-lookup msg ref =
+find :: MonadA m => Ref p -> StateT (UnionFind p) m (Ref p)
+find ref =
   OpaqueRef.unsafeFromInt .
-  unsafeUnjust (msg ++ ": " ++ show ref) <$>
+  unsafeUnjust ("UnionFind.find: Not found: " ++ show ref) <$>
   (ufState . IDS.lookup . OpaqueRef.unsafeAsInt) ref
 
 union :: MonadA m => Ref p -> Ref p -> StateT (UnionFind p) m (Ref p)

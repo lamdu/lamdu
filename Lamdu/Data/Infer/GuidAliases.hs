@@ -28,7 +28,7 @@ empty = GuidAliases
   }
 
 find :: MonadA m => ParamRef def -> StateT (GuidAliases def) m (ParamRef def)
-find = Lens.zoom gaUF . UFData.find "GuidAliases.getRep"
+find = Lens.zoom gaUF . UFData.find
 
 getRep :: MonadA m => Guid -> StateT (GuidAliases def) m (ParamRef def)
 getRep guid = do

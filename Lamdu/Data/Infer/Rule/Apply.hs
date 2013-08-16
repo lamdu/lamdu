@@ -38,13 +38,13 @@ remapSubstGuid srcGuid = do
   (_, mDstRef) <-
     Lens.zoom Rule.aLinkedNames $
     OR.refMapUnmaintainedLookup
-    (const (lift . InferM.liftGuidAliases . GuidAliases.find)) srcRep
+    (lift . InferM.liftGuidAliases . GuidAliases.find) srcRep
   RuleMonad.liftInfer . InferM.liftGuidAliases $
     State.gets . GuidAliases.guidOfRep =<<
     maybe (return srcRep) GuidAliases.find mDstRef
 
 findRep :: ExprRef def -> RuleMonad.RM rule def (ExprRef def)
-findRep = RuleMonad.liftInfer . InferM.liftUFExprs . UFData.find "Apply.findRep"
+findRep = RuleMonad.liftInfer . InferM.liftUFExprs . UFData.find
 
 mFindDestRef :: Eq def => ExprRef def -> RuleMonad.RM (Rule.Apply def) def (Maybe (ExprRef def))
 mFindDestRef srcRef =

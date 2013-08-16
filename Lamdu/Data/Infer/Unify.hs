@@ -186,7 +186,7 @@ applyHoleConstraints holeConstraints body oldScope = do
 
 decycleDefend :: ExprRef def -> (ExprRef def -> U def (ExprRef def)) -> U def (ExprRef def)
 decycleDefend ref action = do
-  nodeRep <- uInfer . InferM.liftUFExprs $ UFData.find "holeConstraintsRecurse:rawNode" ref
+  nodeRep <- uInfer . InferM.liftUFExprs $ UFData.find ref
   mResult <- visit nodeRep (action nodeRep)
   case mResult of
     Nothing -> uInfer . InferM.error $ InfiniteExpression nodeRep
@@ -223,7 +223,7 @@ unifyRecurse ::
   Eq def => ExprRef def -> ExprRef def -> U def (ExprRef def)
 unifyRecurse xRef yRef =
   decycleDefend xRef $ \xRep -> do
-    yRep <- uInfer . InferM.liftUFExprs $ UFData.find "unifyRecurse.yRef" yRef
+    yRep <- uInfer . InferM.liftUFExprs $ UFData.find yRef
     (rep, unifyResult) <- uInfer . InferM.liftUFExprs $ UFData.unifyRefs xRep yRep
     case unifyResult of
       UFData.UnifyRefsAlreadyUnified -> return ()

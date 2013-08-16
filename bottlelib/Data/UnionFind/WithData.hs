@@ -46,8 +46,8 @@ fresh dat = do
   writeRep rep dat
   return rep
 
-find :: MonadA m => String -> Ref p -> StateT (UFData p a) m (Ref p)
-find msg = Lens.zoom ufdUF . UF.lookup msg
+find :: MonadA m => Ref p -> StateT (UFData p a) m (Ref p)
+find = Lens.zoom ufdUF . UF.find
 
 readRep :: Ref p -> UFData p a -> a
 readRep rep ufData =
@@ -67,12 +67,11 @@ writeRep rep dat = ufdData . Lens.at rep .= Just dat
 
 read ::
   MonadA m => Ref p -> StateT (UFData p a) m a
-read ref = State.gets . readRep =<< find "read" ref
+read ref = State.gets . readRep =<< find ref
 
 write ::
   MonadA m => Ref p -> a -> StateT (UFData p a) m ()
-write ref dat =
-  (`writeRep` dat) =<< find "write" ref
+write ref dat = (`writeRep` dat) =<< find ref
 
 modify ::
   MonadA m => Ref p -> (a -> a) ->
@@ -93,8 +92,8 @@ unifyRefs ::
   MonadA m => Ref p -> Ref p ->
   StateT (UFData p a) m (Ref p, UnifyRefsResult a)
 unifyRefs x y = do
-  xRep <- find "unify.x" x
-  yRep <- find "unify.y" y
+  xRep <- find x
+  yRep <- find y
   if xRep == yRep
     then return (xRep, UnifyRefsAlreadyUnified)
     else do
@@ -115,7 +114,7 @@ optimize onData (UFData oldUf oldRefsData) =
       runWriter . (`execStateT` UF.empty) $
       oldRefsData ^.. OR.unsafeRefMapItems . Lens._1 & traverse_ %%~ freshRef
     refRename msg oldRef =
-      let oldRep = (`evalState` oldUf) $ UF.lookup "optimize:in old UF" oldRef
+      let oldRep = (`evalState` oldUf) $ UF.find oldRef
       in refRenames ^? Lens.ix oldRep & unsafeUnjust msg
     newRefsData =
       oldRefsData

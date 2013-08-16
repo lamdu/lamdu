@@ -109,7 +109,7 @@ updateRefData rep refData =
 
 add :: Trigger def -> RuleRef def -> ExprRef def -> Infer def ()
 add trigger ruleId ref = do
-  rep <- InferM.liftUFExprs $ UFData.find "Trigger.add" ref
+  rep <- InferM.liftUFExprs $ UFData.find ref
   refData <- InferM.liftUFExprs . State.gets $ UFData.readRep rep
   -- TODO: The tests pass even with the un-normalized Scope. Is there
   -- some guarantee that when we're called here, scope is always
