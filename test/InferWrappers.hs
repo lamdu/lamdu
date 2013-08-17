@@ -59,7 +59,7 @@ inferScope scope expr =
 infer ::
   Expr.Expression (LoadedDef Def) a ->
   M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def, a))
-infer = inferScope Infer.emptyScope
+infer = inferScope $ Infer.emptyScope recursiveDefI
 
 derefWithPL ::
   Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def, a) ->

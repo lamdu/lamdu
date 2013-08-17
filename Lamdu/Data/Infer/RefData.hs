@@ -2,7 +2,9 @@
 module Lamdu.Data.Infer.RefData
   ( RefData(..), rdScope, rdBody, rdWasNotDirectlyTag, rdTriggers
     , defaultRefData
-  , Scope(..), emptyScope, scopeMap, scopeParamRefs
+  , Scope(..), scopeMap, scopeMDef
+    , emptyScope
+    , scopeParamRefs
     , scopeNormalizeParamRefs
   , UFExprs
   , fresh, freshHole
@@ -25,12 +27,19 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 
-type UFExprs def = UFData (TagExpr def) (RefData def)
+data Scope def = Scope
+  { _scopeMap :: OR.RefMap (TagParam def) (ExprRef def)
+  , -- is Just if it belongs to one exclusive Def (and can later see
+    -- its implicit variables):
+    _scopeMDef :: Maybe def
+  }
+Lens.makeLenses ''Scope
 
-newtype Scope def = Scope (OR.RefMap (TagParam def) (ExprRef def))
-
-emptyScope :: Scope def
-emptyScope = Scope mempty
+emptyScope :: def -> Scope def
+emptyScope def = Scope
+  { _scopeMap = OR.refMapEmpty
+  , _scopeMDef = Just def
+  }
 
 data RefData def = RefData
   { _rdScope :: Scope def
@@ -40,6 +49,8 @@ data RefData def = RefData
   }
 Lens.makeLenses ''RefData
 
+type UFExprs def = UFData (TagExpr def) (RefData def)
+
 defaultRefData :: Scope def -> Expr.Body def (ExprRef def) -> RefData def
 defaultRefData scop body = RefData
   { _rdScope = scop
@@ -47,11 +58,6 @@ defaultRefData scop body = RefData
   , _rdTriggers = mempty
   , _rdBody = body
   }
-
-Lens.makeIso ''Scope
-
-scopeMap :: Lens.Iso' (Scope def) (OR.RefMap (TagParam def) (ExprRef def))
-scopeMap = Lens.from scope
 
 scopeParamRefs :: Lens.Traversal' (Scope def) (ParamRef def)
 scopeParamRefs = scopeMap . OR.unsafeRefMapItems . Lens._1

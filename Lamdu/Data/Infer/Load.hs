@@ -43,8 +43,8 @@ newtype Error def = LoadUntypedDef def
   deriving (Show)
 
 exprIntoContext ::
-  MonadA m => Expr.Expression def () -> StateT (Context def) m (ExprRef def)
-exprIntoContext =
+  MonadA m => def -> Expr.Expression def () -> StateT (Context def) m (ExprRef def)
+exprIntoContext def =
   go mempty
   where
     go scope (Expr.Expression body ()) = do
@@ -57,7 +57,8 @@ exprIntoContext =
             go (scope & Lens.at paramIdRep .~ Just paramTypeRef) result
         -- TODO: Assert parameterRefs are not out of scope here
         _ -> body & Lens.traverse %%~ go scope
-      Lens.zoom Context.uFExprs $ RefData.fresh (RefData.Scope scope) newBody
+      Lens.zoom Context.uFExprs $
+        RefData.fresh (RefData.Scope scope (Just def)) newBody
 
 -- Error includes untyped def use
 loadDefTypeIntoRef ::
@@ -68,7 +69,7 @@ loadDefTypeIntoRef (Loader loader) def = do
   loadedDefType <- lift . lift $ loader def
   when (Lens.has ExprLens.holePayloads loadedDefType) .
     lift . Either.left $ LoadUntypedDef def
-  exprIntoContext loadedDefType
+  exprIntoContext def loadedDefType
 
 newDefinition ::
   (MonadA m, Ord def) => def -> StateT (Context def) m (TypedValue def)
@@ -76,8 +77,8 @@ newDefinition def = do
   tv <-
     Lens.zoom Context.uFExprs $
     TypedValue
-    <$> RefData.freshHole (RefData.Scope mempty)
-    <*> RefData.freshHole (RefData.Scope mempty)
+    <$> RefData.freshHole (RefData.Scope mempty (Just def))
+    <*> RefData.freshHole (RefData.Scope mempty (Just def))
   Context.defTVs . Lens.at def %= setRef tv
   return tv
   where
@@ -105,7 +106,7 @@ load loader expr = do
       Map.fromList
       [  (def
         , TypedValue
-          <$> Lens.zoom Context.uFExprs (RefData.freshHole (RefData.Scope mempty))
+          <$> Lens.zoom Context.uFExprs (RefData.freshHole (RefData.Scope mempty (Just def)))
           <*> loadDefTypeIntoRef loader def)
       | def <- expr ^.. ExprLens.exprDef
       ]

@@ -59,12 +59,17 @@ forceLam k lamScope destRef = do
   return . unsafeUnjust "We just unified Lam into rep" $
     body ^? ExprLens.bodyKindedLam k
 
+intersectMDefs :: Eq def => Maybe def -> Maybe def -> Maybe def
+intersectMDefs (Just x) (Just y) | x == y = Just x
+intersectMDefs _ _ = Nothing
+
 -- If we don't assert that the scopes have same refs we could be pure
-intersectScopes :: Scope def -> Scope def -> Infer def (Scope def)
+intersectScopes :: Eq def => Scope def -> Scope def -> Infer def (Scope def)
 intersectScopes aScope bScope = do
-  Scope aScopeNorm <- InferM.liftGuidAliases $ scopeNormalizeParamRefs aScope
-  Scope bScopeNorm <- InferM.liftGuidAliases $ scopeNormalizeParamRefs bScope
-  Scope <$> sequenceA (OR.refMapIntersectionWith verifyEquiv aScopeNorm bScopeNorm)
+  Scope aScopeNorm mADef <- InferM.liftGuidAliases $ scopeNormalizeParamRefs aScope
+  Scope bScopeNorm mBDef <- InferM.liftGuidAliases $ scopeNormalizeParamRefs bScope
+  (`Scope` intersectMDefs mADef mBDef) <$>
+    sequenceA (OR.refMapIntersectionWith verifyEquiv aScopeNorm bScopeNorm)
   where
     -- Expensive assertion
     verifyEquiv aref bref = do
@@ -73,13 +78,14 @@ intersectScopes aScope bScope = do
         then return aref
         else error "Scope unification of differing refs"
 
-newtype HoleConstraints def = HoleConstraints
+data HoleConstraints def = HoleConstraints
   { hcUnusableScopeReps :: OR.RefSet (TagParam def)
+  , hcRemoveDef :: Bool
   }
 
 -- You must apply this recursively
 checkHoleConstraints :: HoleConstraints def -> Expr.Body def (ExprRef def) -> Infer def ()
-checkHoleConstraints (HoleConstraints unusableSet) body =
+checkHoleConstraints (HoleConstraints unusableSet _removeDef) body =
   case body of
   Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef paramGuid)) -> do
     paramIdRep <- getRep paramGuid
@@ -107,18 +113,52 @@ wuRun = fmap (Lens._2 %~ runApplicativeMonoid) . runWriterT
 wuLater :: U def () -> WU def ()
 wuLater = Writer.tell . ApplicativeMonoid
 
+noConstraints :: HoleConstraints def -> Bool
+noConstraints (HoleConstraints unusableScopeReps removeDef) =
+  OR.refSetNull unusableScopeReps && not removeDef
+
+applyHoleConstraints ::
+  Eq def => HoleConstraints def ->
+  Expr.Body def (ExprRef def) -> Scope def ->
+  WU def (Scope def)
+applyHoleConstraints holeConstraints body oldScope = do
+  wuInfer $ checkHoleConstraints holeConstraints body
+  let isUnusable x = oldUnusable ^. Lens.contains x
+  Scope oldScopeNorm oldScopeMDef <- wuInfer . InferM.liftGuidAliases $ scopeNormalizeParamRefs oldScope
+  let
+    (unusables, usables) = List.partition (isUnusable . fst) $ oldScopeNorm ^@.. Lens.itraversed
+    newHoleConstraints = HoleConstraints
+      { hcUnusableScopeReps = OR.refSetFromList $ fst <$> unusables
+      , hcRemoveDef = oldRemoveDef && Lens.has Lens._Just oldScopeMDef
+      }
+  unless (noConstraints newHoleConstraints) . wuLater $
+    traverse_ (holeConstraintsRecurse newHoleConstraints) body
+  return $ oldScope
+    & RefData.scopeMap .~ OR.refMapFromList usables
+    & RefData.scopeMDef %~
+      if oldRemoveDef
+      then const Nothing
+      else id
+  where
+    HoleConstraints oldUnusable oldRemoveDef = holeConstraints
+
 unifyWithHole ::
   Eq def => Scope def -> Scope def -> Expr.Body def (ExprRef def) ->
   WU def (Scope def, Expr.Body def (ExprRef def))
 unifyWithHole holeScope otherScope nonHoleBody = do
-  (Scope holeScopeNorm, Scope otherScopeNorm) <-
+  ( Scope holeScopeMapNorm holeScopeMDef
+    , otherScopeNorm@(Scope otherScopeMapNorm otherScopeMDef)
+    ) <-
     wuInfer . InferM.liftGuidAliases $
     (,) <$> scopeNormalizeParamRefs holeScope <*> scopeNormalizeParamRefs otherScope
-  let unusableScopeReps = OR.refMapKeysSet $ OR.refMapDifference otherScopeNorm holeScopeNorm
-  if OR.refSetNull unusableScopeReps
-    then return (Scope otherScopeNorm, nonHoleBody)
+  let
+    removeDef = Lens.has Lens._Nothing $ intersectMDefs holeScopeMDef otherScopeMDef
+    unusableScopeReps = OR.refMapKeysSet $ OR.refMapDifference otherScopeMapNorm holeScopeMapNorm
+    holeConstraints = HoleConstraints unusableScopeReps removeDef
+  if noConstraints holeConstraints
+    then return (otherScopeNorm, nonHoleBody)
     else
-      applyHoleConstraints (HoleConstraints unusableScopeReps) nonHoleBody otherScope
+      applyHoleConstraints holeConstraints nonHoleBody otherScopeNorm
       <&> flip (,) nonHoleBody
 
 mergeScopeBodies ::
@@ -170,19 +210,6 @@ mergeRefDataAndTrigger ::
   WU def (RefData def)
 mergeRefDataAndTrigger rep a b =
   mergeRefData a b >>= wuInfer . Trigger.updateRefData rep
-
-applyHoleConstraints ::
-  Eq def => HoleConstraints def ->
-  Expr.Body def (ExprRef def) -> Scope def ->
-  WU def (Scope def)
-applyHoleConstraints holeConstraints body oldScope = do
-  wuInfer $ checkHoleConstraints holeConstraints body
-  let isUnusable x = hcUnusableScopeReps holeConstraints ^. Lens.contains x
-  Scope oldScopeNorm <- wuInfer . InferM.liftGuidAliases $ scopeNormalizeParamRefs oldScope
-  let (unusables, usables) = List.partition (isUnusable . fst) $ oldScopeNorm ^@.. Lens.itraversed
-  unless (null unusables) . wuLater $
-    (traverse_ . holeConstraintsRecurse . HoleConstraints . OR.refSetFromList . map fst) unusables body
-  return . Scope $ OR.refMapFromList usables
 
 decycleDefend :: ExprRef def -> (ExprRef def -> U def (ExprRef def)) -> U def (ExprRef def)
 decycleDefend ref action = do
