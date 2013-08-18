@@ -1,31 +1,34 @@
 module Lamdu.Data.Infer
-  ( infer, unify
+  ( infer, unify, unifyRefs, freshHole, lambdaWrap
   -- Re-export:
   , Error(..)
   , Load.LoadedDef
   , Context, emptyContext
   , Scope, RefData.emptyScope
-  , Ref
+  , ExprRef
   , TypedValue(..), tvVal, tvType
   , ScopedTypedValue(..), stvTV, stvScope
   ) where
 
-import Control.Applicative (Applicative(..))
+import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad (void)
 import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Writer (WriterT(..), runWriterT)
-import Data.OpaqueRef (Ref)
+import Control.MonadA (MonadA)
+import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Context (Context)
+import Lamdu.Data.Infer.Load (LoadedDef)
 import Lamdu.Data.Infer.MakeTypes (makeTV)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import Lamdu.Data.Infer.RefData (Scope(..))
+import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.TypedValue (TypedValue(..), tvVal, tvType, ScopedTypedValue(..), stvTV, stvScope)
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Data.Infer.LamWrap as LamWrap
 import qualified Lamdu.Data.Infer.Load as Load
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.RefData as RefData
@@ -37,14 +40,31 @@ import qualified System.Random as Random
 emptyContext :: Random.StdGen -> Context def
 emptyContext = Context.empty
 
+freshHole :: MonadA m => Scope def -> StateT (Context def) m (ExprRef def)
+freshHole = Lens.zoom Context.uFExprs . RefData.freshHole
+
+lambdaWrap ::
+  Eq def =>
+  Guid -> ExprRef def ->
+  Expr.Expression (LoadedDef def) (ScopedTypedValue def, a) ->
+  StateT (Context def) (Either (Error def))
+  (Expr.Expression (LoadedDef def) (ScopedTypedValue def, Maybe a))
+lambdaWrap =
+  LamWrap.lambdaWrap
+  & Lens.mapped . Lens.mapped . Lens.mapped %~ runInfer
+
 unify ::
   Eq def =>
   TypedValue def ->
   TypedValue def ->
-  StateT (Context def) (Either (Error def)) ()
-unify (TypedValue xv xt) (TypedValue yv yt) = do
-  void . runInfer $ Unify.unify xv yv
-  void . runInfer $ Unify.unify xt yt
+  StateT (Context def) (Either (Error def)) (TypedValue def)
+unify (TypedValue xv xt) (TypedValue yv yt) =
+  TypedValue <$> unifyRefs xv yv <*> unifyRefs xt yt
+
+unifyRefs ::
+  Eq def => ExprRef def -> ExprRef def ->
+  StateT (Context def) (Either (Error def)) (ExprRef def)
+unifyRefs x y = runInfer $ Unify.unify x y
 
 infer ::
   Eq def => Scope def -> Expr.Expression (Load.LoadedDef def) a ->

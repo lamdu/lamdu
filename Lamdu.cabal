@@ -159,6 +159,8 @@ Executable lamdu
                        Lamdu.Data.Infer.Context,
                        Lamdu.Data.Infer.Deref,
                        Lamdu.Data.Infer.GuidAliases,
+                       Lamdu.Data.Infer.ImplicitVariables,
+                       Lamdu.Data.Infer.LamWrap,
                        Lamdu.Data.Infer.Load,
                        Lamdu.Data.Infer.MakeTypes,
                        Lamdu.Data.Infer.Monad,

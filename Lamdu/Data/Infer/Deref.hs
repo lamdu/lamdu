@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.Deref
   ( expr
-  , Derefed(..), dValue, dType
+  , Derefed(..), dValue, dType, dScopedTypedValue
   , Error(..)
   , RefData.Restriction(..)
   ) where
@@ -16,7 +16,7 @@ import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
 import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef)
-import Lamdu.Data.Infer.TypedValue (TypedValue(..), ScopedTypedValue, stvTV)
+import Lamdu.Data.Infer.TypedValue (tvVal, tvType, ScopedTypedValue, stvTV)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.UnionFind.WithData as UFData
@@ -34,6 +34,7 @@ type Expr def = Expr.Expression def [RefData.Restriction def]
 data Derefed def = Derefed
   { _dValue :: Expr def
   , _dType :: Expr def
+  , _dScopedTypedValue :: ScopedTypedValue def
   }
 Lens.makeLenses ''Derefed
 
@@ -72,8 +73,8 @@ deref storedGuids =
         <&> (`Expr.Expression` (refData ^. RefData.rdRestrictions))
 
 expr ::
-  Expr.Expression def (ScopedTypedValue def, a) ->
-  M def (Expr.Expression def (M def (Derefed def), a))
+  Expr.Expression ldef (ScopedTypedValue def, a) ->
+  M def (Expr.Expression ldef (M def (Derefed def), a))
 expr =
   go []
   where
@@ -85,10 +86,11 @@ expr =
           storedParamIdRep <- mGuidAliases $ GuidAliases.getRep storedParamId
           return $ (storedParamIdRep, storedParamId) : storedGuids
       let
-        derefTV (TypedValue valRef typeRef) =
+        derefTV =
           Derefed
-          <$> deref newStoredGuids valRef
-          <*> deref newStoredGuids typeRef
+          <$> deref newStoredGuids (stv ^. stvTV . tvVal)
+          <*> deref newStoredGuids (stv ^. stvTV . tvType)
+          <*> pure stv
       storedBody
         & Lens.traverse %%~ go newStoredGuids
-        <&> (`Expr.Expression` (derefTV (stv ^. stvTV), pl))
+        <&> (`Expr.Expression` (derefTV, pl))

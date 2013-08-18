@@ -2,7 +2,6 @@
 module InferAssert where
 
 -- import Control.Monad.Trans.State (runStateT, runState)
--- import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables
 -- import qualified System.Random as Random
 import AnnotatedExpr
 import Control.Applicative ((<$>), Applicative(..))
@@ -29,6 +28,7 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.Load as InferLoad
+-- import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables
 import qualified Test.Framework as TestFramework
 import qualified Test.Framework.Providers.HUnit as HUnitProvider
 import qualified Test.HUnit as HUnit
@@ -95,6 +95,27 @@ verifyInferResult msg exprLInferred = do
   return ()
     & assertInferredEquals msg exprDerefed (exprInferred <&> inferredOfInput . snd)
 
+runContextAssertion :: M a -> HUnit.Assertion
+runContextAssertion = void . E.evaluate . assertSuccess . runNewContext
+
+-- inferWVAssertion :: ExprInferred -> ExprInferred -> HUnit.Assertion
+-- inferWVAssertion expr wvExpr = runContextAssertion xxx $ do
+--   -- TODO: assertInferredEquals should take an error prefix string,
+--   -- and do ALL the error printing itself. It has more information
+--   -- about what kind of error string would be useful.
+--   assertInferredEquals origStr (inferResults inferredExpr) expr
+--   assertInferredEquals wvStr (inferResults wvInferredExpr) wvExpr
+--   where
+--     origStr = "WithoutVars:\n" ++ showInferredValType inferredExpr
+--     wvStr = origStr ++ "\nWithVars:\n" ++ showInferredValType wvInferredExpr
+--     (inferredExpr, inferContext) = doInfer_ $ void expr
+--     wvInferredExpr = fst <$> wvInferredExprPL
+--     (wvInferredExprPL, _) =
+--       either error id $
+--       (`runStateT` inferContext)
+--       (ImplicitVariables.add (Random.mkStdGen 0)
+--        loader (flip (,) () <$> inferredExpr))
+
 inferAssertion :: InputExpr -> HUnit.Assertion
 inferAssertion origExpr =
   runContextAssertion $
@@ -147,24 +168,6 @@ inferFailsAssertion errorName isExpectedError expr =
       | isExpectedError err = return ()
       | otherwise = error $ errorName ++ " error expected, but got: " ++ show err
 
--- inferWVAssertion :: ExprInferred -> ExprInferred -> HUnit.Assertion
--- inferWVAssertion expr wvExpr = do
---   -- TODO: assertInferredEquals should take an error prefix string,
---   -- and do ALL the error printing itself. It has more information
---   -- about what kind of error string would be useful.
---   assertInferredEquals origStr (inferResults inferredExpr) expr
---   assertInferredEquals wvStr (inferResults wvInferredExpr) wvExpr
---   where
---     origStr = "WithoutVars:\n" ++ showInferredValType inferredExpr
---     wvStr = origStr ++ "\nWithVars:\n" ++ showInferredValType wvInferredExpr
---     (inferredExpr, inferContext) = doInfer_ $ void expr
---     wvInferredExpr = fst <$> wvInferredExprPL
---     (wvInferredExprPL, _) =
---       either error id $
---       (`runStateT` inferContext)
---       (ImplicitVariables.add (Random.mkStdGen 0)
---        loader (flip (,) () <$> inferredExpr))
-
 allowFailAssertion :: String -> HUnit.Assertion -> HUnit.Assertion
 allowFailAssertion msg assertion =
   (assertion >> successOccurred) `E.catch`
@@ -181,9 +184,6 @@ defaultTestOptions = mempty { topt_timeout = Just (Just 300000) }
 
 testCase :: TestFramework.TestName -> HUnit.Assertion -> TestFramework.Test
 testCase name = plusTestOptions defaultTestOptions . HUnitProvider.testCase name
-
-runContextAssertion :: M a -> HUnit.Assertion
-runContextAssertion = void . E.evaluate . assertSuccess . runNewContext
 
 testInfer :: String -> InputExpr -> TestFramework.Test
 testInfer name = testCase name . inferAssertion

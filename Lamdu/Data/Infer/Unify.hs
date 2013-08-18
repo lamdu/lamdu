@@ -1,5 +1,6 @@
 module Lamdu.Data.Infer.Unify
   ( unify, forceLam
+  , U, uInfer, decycleDefend
   ) where
 
 import Control.Applicative ((<$>), (<$), Applicative(..))
@@ -212,7 +213,7 @@ mergeRefDataAndTrigger ::
 mergeRefDataAndTrigger rep a b =
   mergeRefData a b >>= wuInfer . Trigger.updateRefData rep
 
-decycleDefend :: ExprRef def -> (ExprRef def -> U def (ExprRef def)) -> U def (ExprRef def)
+decycleDefend :: ExprRef def -> (ExprRef def -> U def a) -> U def a
 decycleDefend ref action = do
   nodeRep <- uInfer . InferM.liftUFExprs $ UFData.find ref
   mResult <- visit nodeRep (action nodeRep)
@@ -224,7 +225,7 @@ holeConstraintsRecurse ::
   Eq def => HoleConstraints def -> ExprRef def -> U def (ExprRef def)
 holeConstraintsRecurse holeConstraints rawNode =
   decycleDefend rawNode $ \nodeRep -> do
-    oldNodeData <- uInfer . InferM.liftUFExprs $ State.gets (UFData.readRep nodeRep)
+    oldNodeData <- uInfer . InferM.liftUFExprs . State.gets $ UFData.readRep nodeRep
     uInfer . InferM.liftUFExprs . UFData.writeRep nodeRep $
       error "Reading node during write..."
     (newRefData, later) <-

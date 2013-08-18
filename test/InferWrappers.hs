@@ -79,7 +79,7 @@ deref expr =
   expr
   <&> flip (,) ()
   & derefWithPL
-  <&> fmap (\(Derefed val typ, ()) -> (void val, void typ))
+  <&> fmap (\(Derefed val typ _stv, ()) -> (void val, void typ))
 
 -- Run this function only once per M
 inferDef ::
@@ -94,7 +94,7 @@ inferDef act = do
   return expr
 
 unify :: Infer.TypedValue Def -> Infer.TypedValue Def -> M ()
-unify e1 e2 = Infer.unify e1 e2 & mapStateT (Lens._Left %~ InferError)
+unify e1 e2 = Infer.unify e1 e2 & mapStateT (Lens._Left %~ InferError) & void
 
 loadInferInContext ::
   Infer.ScopedTypedValue Def -> Expr.Expression Def a ->
