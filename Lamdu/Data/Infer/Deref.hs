@@ -3,7 +3,7 @@ module Lamdu.Data.Infer.Deref
   ( expr
   , Derefed(..), dValue, dType
   , Error(..)
-  , Restrictions(..)
+  , RefData.Restriction(..)
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -29,15 +29,7 @@ import qualified Lamdu.Data.Infer.RefData as RefData
 data Error def = InfiniteExpression (ExprRef def)
   deriving (Show, Eq, Ord)
 
--- Some infer info flows are one-way. In that case, we may know that
--- an expression must match certain other expressions either directly
--- or via use of a getvar from the src's context. These are documented
--- in restrictions:
-newtype Restrictions def = Restrictions
-  { _rRefs :: [ExprRef def]
-  }
-
-type Expr def = Expr.Expression def (Restrictions def)
+type Expr def = Expr.Expression def [RefData.Restriction def]
 
 data Derefed def = Derefed
   { _dValue :: Expr def
@@ -72,13 +64,12 @@ deref storedGuids =
   decycle go
   where
     go Nothing ref = mError $ InfiniteExpression ref
-    go (Just recurse) ref =
-      Lens.zoom Context.uFExprs (UFData.read ref)
-      <&> (^. RefData.rdBody)
-      >>= Lens.traverse %%~ recurse
-      >>= ExprLens.bodyParamIds %%~ mGuidAliases . canonizeGuid storedGuids
-      -- TODO: maintain the restrictions in RefData and get from there:
-      <&> (`Expr.Expression` Restrictions [])
+    go (Just recurse) ref = do
+      refData <- Lens.zoom Context.uFExprs (UFData.read ref)
+      refData ^. RefData.rdBody
+        & Lens.traverse %%~ recurse
+        >>= ExprLens.bodyParamIds %%~ mGuidAliases . canonizeGuid storedGuids
+        <&> (`Expr.Expression` (refData ^. RefData.rdRestrictions))
 
 expr ::
   Expr.Expression def (ScopedTypedValue def, a) ->

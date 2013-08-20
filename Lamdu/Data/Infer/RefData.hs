@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.RefData
-  ( RefData(..), rdScope, rdBody, rdWasNotDirectlyTag, rdTriggers
+  ( Restriction(..)
+  , RefData(..), rdScope, rdBody, rdWasNotDirectlyTag, rdRestrictions, rdTriggers
     , defaultRefData
   , Scope(..), scopeMap, scopeMDef
     , emptyScope
@@ -41,10 +42,18 @@ emptyScope def = Scope
   , _scopeMDef = Just def
   }
 
+data Restriction def
+  = MustMatch (ExprRef def)
+  | MustBeRecordType
+  | MustBeTag
+  | MustBeTypeOf (ExprRef def)
+  deriving (Eq, Show)
+
 data RefData def = RefData
   { _rdScope :: Scope def
   , _rdWasNotDirectlyTag :: Monoid.Any
   , _rdTriggers :: OR.RefMap (TagRule def) (Set (Trigger def))
+  , _rdRestrictions :: [Restriction def]
   , _rdBody :: Expr.Body def (ExprRef def)
   }
 Lens.makeLenses ''RefData
@@ -56,6 +65,7 @@ defaultRefData scop body = RefData
   { _rdScope = scop
   , _rdWasNotDirectlyTag = Monoid.Any False
   , _rdTriggers = mempty
+  , _rdRestrictions = []
   , _rdBody = body
   }
 

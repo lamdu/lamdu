@@ -76,10 +76,13 @@ normalizeSrcLinks = do
   combinedPairs <- traverse unifyAll normalizedPairs
   Rule.aLinkedExprs .= combinedPairs
 
-addPiResultTriggers :: Rule.RuleRef def -> ParamRef def -> ExprRef def -> Infer def ()
-addPiResultTriggers ruleRef paramRef srcRef = do
-  Trigger.add (Trigger.OnParameterRef paramRef) ruleRef srcRef
-  Trigger.add Trigger.OnUnify ruleRef srcRef
+addPiResultTriggers ::
+  Rule.RuleRef def -> ParamRef def ->
+  ExprRef def -> ExprRef def ->
+  Infer def ()
+addPiResultTriggers ruleRef paramRef srcRef dstRef = do
+  Trigger.add [RefData.MustMatch dstRef] (Trigger.OnParameterRef paramRef) ruleRef srcRef -- TODO: Restrictions
+  Trigger.add [] Trigger.OnUnify ruleRef srcRef -- TODO: Restrictions
 
 link ::
   Eq def =>
@@ -95,7 +98,7 @@ link ruleRef srcRef dstRef = do
     Nothing -> do
       Rule.aLinkedExprs <>= OR.refMapSingleton srcRef dstRef
       piGuidRep <- RuleMonad.liftInfer . InferM.liftGuidAliases . GuidAliases.getRep =<< Lens.use Rule.aPiGuid
-      RuleMonad.liftInfer $ addPiResultTriggers ruleRef piGuidRep srcRef
+      RuleMonad.liftInfer $ addPiResultTriggers ruleRef piGuidRep srcRef dstRef
 
 makePiResultCopy ::
   Eq def =>
@@ -169,4 +172,4 @@ make piGuid argValRef piResultRef applyTypeRef = do
     , Rule._aLinkedNames = OR.refMapEmpty
     }
   piGuidRep <- InferM.liftGuidAliases $ GuidAliases.getRep piGuid
-  addPiResultTriggers ruleRef piGuidRep piResultRef
+  addPiResultTriggers ruleRef piGuidRep piResultRef applyTypeRef

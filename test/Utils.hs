@@ -13,7 +13,7 @@ import Lamdu.Data.ExampleDB (createBuiltins)
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Utils (pureHole, pureIntegerType)
-import Lamdu.Data.Infer.Deref (Derefed(..), Restrictions(..))
+import Lamdu.Data.Infer.Deref (Derefed(..), Restriction(..))
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -150,8 +150,8 @@ defParamTags :: Def -> [Guid]
 defParamTags defName =
   innerMostPi (definitionTypes ! defName) ^.. piTags
 
-showRestrictions :: Show def => Restrictions def -> UnescapedStr
-showRestrictions (Restrictions xs) =
+showRestrictions :: Show def => [Restriction def] -> UnescapedStr
+showRestrictions xs =
   UnescapedStr .
   List.intercalate "," $
   map (ansiAround ansiYellow . show) xs
@@ -159,7 +159,7 @@ showRestrictions (Restrictions xs) =
 canonizeDebug :: Expression def a -> Expression def a
 canonizeDebug = ExprUtil.randomizeParamIdsG id ExprUtil.debugNameGen Map.empty (\_ _ -> id)
 
-showDerefed :: Show def => Expression def (Restrictions def) -> String
+showDerefed :: Show def => Expression def [Restriction def] -> String
 showDerefed = show . fmap showRestrictions . canonizeDebug
 
 showInferredValType :: Expression def (Derefed (DefI t)) -> String

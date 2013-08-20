@@ -31,11 +31,14 @@ import qualified Lamdu.Data.Infer.Rule.Types as Rule
 
 remember ::
   MonadA m =>
-  ExprRef def -> RefData def -> Trigger def -> RuleRef def ->
+  ExprRef def -> [RefData.Restriction def] ->
+  RefData def -> Trigger def -> RuleRef def ->
   StateT (Context def) m ()
-remember rep refData trigger ruleId = do
+remember rep restrictions refData trigger ruleId = do
   Lens.zoom Context.uFExprs . UFData.writeRep rep $
-    refData & RefData.rdTriggers . Lens.at ruleId <>~ Just (Set.singleton trigger)
+    refData
+    & RefData.rdTriggers . Lens.at ruleId <>~ Just (Set.singleton trigger)
+    & RefData.rdRestrictions %~ (restrictions ++)
   Context.ruleMap . Rule.rmMap . Lens.at ruleId .
     _fromJust "Trigger.remember to missing rule" .
     Rule.ruleTriggersIn <>= OR.refSetSingleton rep
@@ -107,8 +110,8 @@ updateRefData rep refData =
       filterM (handleTrigger rep refData ruleId) .
       Set.toList
 
-add :: Trigger def -> RuleRef def -> ExprRef def -> Infer def ()
-add trigger ruleId ref = do
+add :: [RefData.Restriction def] -> Trigger def -> RuleRef def -> ExprRef def -> Infer def ()
+add restrictions trigger ruleId ref = do
   rep <- InferM.liftUFExprs $ UFData.find ref
   refData <- InferM.liftUFExprs . State.gets $ UFData.readRep rep
   -- TODO: The tests pass even with the un-normalized Scope. Is there
@@ -116,4 +119,4 @@ add trigger ruleId ref = do
   -- already normalized?
   refDataNorm <- refData & RefData.rdScope %%~ InferM.liftGuidAliases . scopeNormalizeParamRefs
   keep <- handleTrigger rep refDataNorm ruleId trigger
-  when keep . InferM.liftContext $ remember rep refData trigger ruleId
+  when keep . InferM.liftContext $ remember rep restrictions refData trigger ruleId

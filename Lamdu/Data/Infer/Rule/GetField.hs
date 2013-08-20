@@ -70,7 +70,7 @@ phase0 rule triggers =
           { Rule._gf1GetFieldRecordTypeFields = recordFields
           , Rule._gf1GetFieldType = rule ^. Rule.gf0GetFieldType
           }
-        Trigger.add Trigger.OnDirectlyTag phase1RuleRef $
+        Trigger.add [RefData.MustBeTag] Trigger.OnDirectlyTag phase1RuleRef $
           rule ^. Rule.gf0GetFieldTag
       return RuleDelete
     _ -> InferM.error InferM.GetFieldRequiresRecord
@@ -93,7 +93,7 @@ phase1 rule triggers =
         }
     rule ^. Rule.gf1GetFieldRecordTypeFields
       & Lens.traverseOf_ (Lens.traverse . Lens._1) %%~
-        Trigger.add Trigger.OnDirectlyTag phase2RuleRef
+        Trigger.add [RefData.MustBeTag] Trigger.OnDirectlyTag phase2RuleRef
     return RuleDelete
   list -> error $ "GetField.phase1: Unexpected firings: " ++ show list
 
@@ -137,4 +137,4 @@ make tagValRef getFieldTypeRef recordTypeRef = do
     { Rule._gf0GetFieldTag = tagValRef
     , Rule._gf0GetFieldType = getFieldTypeRef
     }
-  Trigger.add Trigger.OnKnownBody ruleRef recordTypeRef
+  Trigger.add [RefData.MustBeRecordType] Trigger.OnKnownBody ruleRef recordTypeRef

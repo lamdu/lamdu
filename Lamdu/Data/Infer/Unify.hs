@@ -192,8 +192,8 @@ mergeRefData ::
   Eq def => RefData def -> RefData def ->
   WU def (RefData def)
 mergeRefData
-  (RefData aScope aWasNotDirectlyTag aTriggers aBody)
-  (RefData bScope bWasNotDirectlyTag bTriggers bBody) =
+  (RefData aScope aWasNotDirectlyTag aTriggers aRestrictions aBody)
+  (RefData bScope bWasNotDirectlyTag bTriggers bRestrictions bBody) =
   mkRefData <$> mergeScopeBodies aScope aBody bScope bBody
   where
     mkRefData (scope, mergedBody) =
@@ -201,6 +201,7 @@ mergeRefData
       { _rdScope = scope
       , _rdWasNotDirectlyTag = mappend aWasNotDirectlyTag bWasNotDirectlyTag
       , _rdTriggers = OR.refMapUnionWith mappend aTriggers bTriggers
+      , _rdRestrictions = aRestrictions ++ bRestrictions
       , _rdBody = mergedBody
       }
 

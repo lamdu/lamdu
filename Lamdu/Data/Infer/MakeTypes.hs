@@ -91,7 +91,7 @@ makeApplyTV scope apply@(Expr.Apply func arg) = do
     applyTypeRef
 
 addTagVerification :: ExprRef def -> Infer def ()
-addTagVerification = Trigger.add Trigger.OnDirectlyTag verifyTagId
+addTagVerification = Trigger.add [RefData.MustBeTag] Trigger.OnDirectlyTag verifyTagId
 
 makeGetFieldTV ::
   Eq def =>
@@ -154,8 +154,14 @@ makeTV scope body =
     uncircumsized <*> freshBody (ExprLens.bodyIntegerType # ())
   Expr.BodyLeaf Expr.Tag {} ->
     uncircumsized <*> freshBody (ExprLens.bodyTagType # ())
-  Expr.BodyLeaf Expr.Hole ->
-    uncircumsized <*> freshBody (ExprLens.bodyHole # ())
+  Expr.BodyLeaf Expr.Hole -> do
+    valRef <- freshVal
+    typRef <-
+      RefData.defaultRefData scope (ExprLens.bodyHole # ())
+      & RefData.rdRestrictions %~ (RefData.MustBeTypeOf valRef:)
+      & UFData.fresh
+      & InferM.liftUFExprs
+    return $ TypedValue valRef typRef
   -- GetPars
   Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (Load.LoadedDef _ ref))) ->
     uncircumsized <*> pure ref
@@ -180,7 +186,7 @@ makeTV scope body =
     uncircumsized <*> makeRecordType k scope (fields <&> Lens.both %~ (^. stvTV))
   where
     freshBody = fresh scope
-    uncircumsized =
-      TypedValue <$> fresh scope (body <&> (^. stvTV . tvVal))
+    freshVal = fresh scope (body <&> (^. stvTV . tvVal))
+    uncircumsized = TypedValue <$> freshVal
     mkRefWithType = freshBody $ ExprLens.bodyType # ()
     typeIsType = uncircumsized <*> mkRefWithType

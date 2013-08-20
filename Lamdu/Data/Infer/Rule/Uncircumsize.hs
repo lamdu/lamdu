@@ -46,4 +46,4 @@ make valRef applicantValRef uncircumsizedValBody = do
     , Rule._uApplicantValRef = applicantValRef
     , Rule._uUncircumsizedBody = uncircumsizedValBody
     }
-  Trigger.add Trigger.OnKnownBody ruleRef applicantValRef
+  Trigger.add [] Trigger.OnKnownBody ruleRef applicantValRef
