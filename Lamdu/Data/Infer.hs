@@ -1,7 +1,7 @@
 module Lamdu.Data.Infer
   ( infer, unify
   -- Re-export:
-  , Infer, Error(..)
+  , Error(..)
   , Load.LoadedDef
   , Context, emptyContext
   , Scope, RefData.emptyScope
