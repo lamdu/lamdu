@@ -120,11 +120,13 @@ try act = do
 runNewContext :: M a -> Either Error a
 runNewContext = (`evalStateT` Infer.emptyContext (Random.mkStdGen 0x1337))
 
+inferLoadedDef :: Expr a -> M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def, a))
+inferLoadedDef expr = inferDef (infer =<< load expr)
+
 -- Weaker and more convenient wrapper around runNewContext, deref,
 -- inferDef, infer, load
 loadInferDerefDef :: Expr () -> M ExprInferred
-loadInferDerefDef expr =
-  deref . fmap fst =<< inferDef (infer =<< load expr)
+loadInferDerefDef expr = deref . fmap fst =<< inferLoadedDef expr
 
 runLoadInferDerefDef :: Expr () -> Either Error ExprInferred
 runLoadInferDerefDef = runNewContext . loadInferDerefDef
