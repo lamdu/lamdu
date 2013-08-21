@@ -38,10 +38,12 @@ canonizeInferred =
   ExprUtil.randomizeParamIdsG (const ()) ExprUtil.debugNameGen Map.empty canonizePayload
   where
     canonizePayload gen guidMap (ival, ityp) =
-      ( ExprUtil.randomizeParamIdsG (const ()) gen1 guidMap (\_ _ x -> x) ival
-      , ExprUtil.randomizeParamIdsG (const ()) gen2 guidMap (\_ _ x -> x) ityp
+      ( randomizeInferred gen1 ival
+      , randomizeInferred gen2 ityp
       )
       where
+        randomizeInferred g =
+          ExprUtil.randomizeParamIdsG (const ()) g guidMap (\_ _ x -> x)
         (gen1, gen2) = ExprUtil.ngSplit gen
 
 annotateTypes :: ExprInferred -> String
@@ -134,20 +136,33 @@ inferAssertion origExpr =
         (Monoid.Any True, Monoid.Any False) ->
           error "NewInferred specified, but no subexpr has ResumeWith/ResumeOnSide"
         (_, _) -> go (count+1) exprNextInput
-    handleResumption _ (Expr.Expression _ (stv, InputPayload _ _ (ResumeWith newExpr))) = do
-      Writer.tell (Monoid.Any True, Monoid.Any True)
-      lift $ loadInferInto stv newExpr
-    handleResumption verify (Expr.Expression body (stv, InputPayload _ _ (ResumeOnSide newExpr ipl))) = do
-      Writer.tell (Monoid.Any True, Monoid.Any True)
-      () <- lift $ verify =<< loadInferInContext stv newExpr
-      recurseBody verify body (stv, ipl)
-    handleResumption verify (Expr.Expression body (stv, InputPayload _ _ (NewInferred ipl))) = do
-      Writer.tell (Monoid.Any True, Monoid.Any False)
-      recurseBody verify body (stv, ipl)
-    handleResumption verify (Expr.Expression body (stv, ipl@(InputPayload _ _ Same))) =
-      recurseBody verify body (stv, ipl)
-    recurseBody verify body pl =
-      (`Expr.Expression` pl) <$> Lens.traverse (handleResumption verify) body
+
+handleResumption ::
+  (Expr.Expression (InferLoad.LoadedDef Def)
+   (Infer.ScopedTypedValue Def, InputPayload) -> M ()) ->
+  Expr.Expression (InferLoad.LoadedDef Def)
+  (Infer.ScopedTypedValue Def, InputPayload) ->
+  WriterT (Monoid.Any, Monoid.Any) M
+  (Expr.Expression (InferLoad.LoadedDef Def)
+   (Infer.ScopedTypedValue Def, InputPayload))
+handleResumption verifyInfersOnSide =
+  go
+  where
+    recurseBody body pl = (`Expr.Expression` pl) <$> Lens.traverse go body
+    go expr =
+      case expr of
+      Expr.Expression _ (stv, InputPayload _ _ (ResumeWith newExpr)) -> do
+        Writer.tell (Monoid.Any True, Monoid.Any True)
+        lift $ loadInferInto stv newExpr
+      Expr.Expression body (stv, InputPayload _ _ (ResumeOnSide newExpr ipl)) -> do
+        Writer.tell (Monoid.Any True, Monoid.Any True)
+        () <- lift $ verifyInfersOnSide =<< loadInferInContext stv newExpr
+        recurseBody body (stv, ipl)
+      Expr.Expression body (stv, InputPayload _ _ (NewInferred ipl)) -> do
+        Writer.tell (Monoid.Any True, Monoid.Any False)
+        recurseBody body (stv, ipl)
+      Expr.Expression body (stv, ipl@(InputPayload _ _ Same)) ->
+        recurseBody body (stv, ipl)
 
 expectLeft ::
   String -> (l -> HUnit.Assertion) ->
