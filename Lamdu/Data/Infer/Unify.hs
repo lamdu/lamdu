@@ -8,7 +8,7 @@ import Control.Lens.Operators
 import Control.Monad (when, unless, guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Decycle (DecycleT, runDecycleT, visit)
-import Control.Monad.Trans.State (state)
+import Control.Monad.Trans.State (StateT, state)
 import Control.Monad.Trans.Writer (WriterT(..))
 import Data.Foldable (traverse_)
 import Data.Maybe.Utils (unsafeUnjust)
@@ -17,12 +17,14 @@ import Data.Monoid.Applicative (ApplicativeMonoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
+import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import Lamdu.Data.Infer.RefData (RefData(..), Scope(..), scopeNormalizeParamRefs)
-import Lamdu.Data.Infer.RefTags (ExprRef, TagParam, TagRule)
+import Lamdu.Data.Infer.RefTags (ExprRef, TagExpr, TagParam, TagRule)
 import Lamdu.Data.Infer.Trigger (Trigger)
 import System.Random (Random, random)
 import qualified Control.Lens as Lens
+import qualified Control.Lens.Utils as LensUtils
 import qualified Control.Monad.Trans.State as State
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.List as List
@@ -41,7 +43,7 @@ newRandom :: Random r => Infer def r
 newRandom = InferM.liftContext . Lens.zoom Context.randomGen $ state random
 
 forceLam ::
-  Eq def =>
+  Ord def =>
   Expr.Kind -> RefData.Scope def ->
   ExprRef def ->
   Infer def (Guid, ExprRef def, ExprRef def)
@@ -163,7 +165,7 @@ unifyWithHole holeScope otherScope nonHoleBody = do
       <&> flip (,) nonHoleBody
 
 mergeScopeBodies ::
-  Eq def =>
+  Ord def =>
   Scope def -> Expr.Body def (ExprRef def) ->
   Scope def -> Expr.Body def (ExprRef def) ->
   WU def (Scope def, Expr.Body def (ExprRef def))
@@ -190,7 +192,7 @@ mergeScopeBodies xScope xBody yScope yBody =
       return $ yGuid <$ guard (xRep == yRep)
 
 mergeRefData ::
-  Eq def => RefData def -> RefData def ->
+  Ord def => RefData def -> RefData def ->
   WU def (RefData def)
 mergeRefData
   (RefData aScope aWasNotDirectlyTag aTriggers aRestrictions aBody)
@@ -206,12 +208,39 @@ mergeRefData
       , _rdBody = mergedBody
       }
 
+atVisibility ::
+  (Ord def, Monad m) => RefData def ->
+  (Maybe (OR.RefSet (TagExpr def)) ->
+   Maybe (OR.RefSet (TagExpr def))) ->
+  StateT (Context def) m ()
+atVisibility refData f =
+  case mDef of
+  Nothing -> return ()
+  Just def -> Context.defVisibility . Lens.at def %= f
+  where
+    mDef = refData ^. RefData.rdScope . RefData.scopeMDef
+
+removeFromVisibility ::
+  (Ord def, Monad m) => (ExprRef def, RefData def) -> StateT (Context def) m ()
+removeFromVisibility (rep, refData) = atVisibility refData $ LensUtils._fromJust "removeFromVisibility" . Lens.contains rep .~ False
+
+addToVisibility ::
+  (Ord def, Monad m) => (ExprRef def, RefData def) -> StateT (Context def) m ()
+addToVisibility (rep, refData) = atVisibility refData . mappend . Just $ OR.refSetSingleton rep
+
 mergeRefDataAndTrigger ::
-  Eq def =>
-  ExprRef def -> RefData def -> RefData def ->
+  Ord def =>
+  ExprRef def ->
+  (ExprRef def, RefData def) ->
+  (ExprRef def, RefData def) ->
   WU def (RefData def)
-mergeRefDataAndTrigger rep a b =
-  mergeRefData a b >>= wuInfer . Trigger.updateRefData rep
+mergeRefDataAndTrigger rep a@(_, aData) b@(_, bData) = do
+  wuInfer . InferM.liftContext $ do
+    removeFromVisibility a
+    removeFromVisibility b
+  mergedData <- mergeRefData aData bData
+  wuInfer . InferM.liftContext $ addToVisibility (rep, mergedData)
+  wuInfer $ Trigger.updateRefData rep mergedData
 
 decycleDefend :: ExprRef def -> (ExprRef def -> U def a) -> U def a
 decycleDefend ref action = do
@@ -249,7 +278,7 @@ fireUnificationTriggers rep triggers unifiedWithRep =
     act _ = return ()
 
 unifyRecurse ::
-  Eq def => ExprRef def -> ExprRef def -> U def (ExprRef def)
+  Ord def => ExprRef def -> ExprRef def -> U def (ExprRef def)
 unifyRecurse xRef yRef =
   decycleDefend xRef $ \xRep -> do
     yRep <- uInfer . InferM.liftUFExprs $ UFData.find yRef
@@ -260,7 +289,7 @@ unifyRecurse xRef yRef =
         uInfer $ fireUnificationTriggers xRep (xData ^. RefData.rdTriggers) yRep
         uInfer $ fireUnificationTriggers yRep (yData ^. RefData.rdTriggers) xRep
         (mergedRefData, later) <-
-          wuRun $ mergeRefDataAndTrigger rep xData yData
+          wuRun $ mergeRefDataAndTrigger rep (xRep, xData) (yRep, yData)
         -- First let's write the mergedRefData so we're not in danger zone
         -- of reading missing data:
         uInfer . InferM.liftUFExprs $ UFData.write rep mergedRefData
@@ -268,5 +297,5 @@ unifyRecurse xRef yRef =
         later
     return rep
 
-unify :: Eq def => ExprRef def -> ExprRef def -> Infer def (ExprRef def)
+unify :: Ord def => ExprRef def -> ExprRef def -> Infer def (ExprRef def)
 unify x y = runDecycleT $ unifyRecurse x y

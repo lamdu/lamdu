@@ -40,7 +40,7 @@ verifyTag triggers =
       | (ref, Trigger.FiredDirectlyTag False) <- triggers ^@.. Lens.itraversed <. Lens.folded
       ]
 
-ruleRunner :: Eq def => RuleContent def -> RuleRef def -> RuleFunc def
+ruleRunner :: Ord def => RuleContent def -> RuleRef def -> RuleFunc def
 ruleRunner RuleVerifyTag _ = verifyTag
 ruleRunner (RuleGetFieldPhase0 x) _ = RuleGetField.phase0 x
 ruleRunner (RuleGetFieldPhase1 x) _ = RuleGetField.phase1 x
@@ -48,7 +48,7 @@ ruleRunner (RuleGetFieldPhase2 x) _ = RuleGetField.phase2 x
 ruleRunner (RuleApply x) ruleRef = RuleApply.execute ruleRef x
 ruleRunner (RuleUncircumsize x) _ = RuleUncircumsize.execute x
 
-execute :: Eq def => RuleRef def -> OR.RefMap (TagExpr def) [Trigger.Fired def] -> Infer def Bool
+execute :: Ord def => RuleRef def -> OR.RefMap (TagExpr def) [Trigger.Fired def] -> Infer def Bool
 execute ruleRef triggers = do
   mOldRule <- InferM.liftContext $ Lens.use (ruleLens ruleRef)
   let Rule ruleTriggerRefs oldRule = unsafeUnjust ("Execute called on bad rule id: " ++ show ruleRef) mOldRule

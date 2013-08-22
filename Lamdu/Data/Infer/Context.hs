@@ -1,15 +1,17 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.Context
-  ( Context(..), uFExprs, defTVs, ruleMap, randomGen, guidAliases, empty
+  ( Context(..), uFExprs, defTVs, defVisibility, ruleMap, randomGen, guidAliases, empty
   ) where
 
 import Data.Map (Map)
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
 import Lamdu.Data.Infer.RefData (UFExprs)
+import Lamdu.Data.Infer.RefTags (TagExpr)
 import Lamdu.Data.Infer.Rule.Types (RuleMap, initialRuleMap)
 import Lamdu.Data.Infer.TypedValue (TypedValue)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
+import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified System.Random as Random
@@ -21,6 +23,7 @@ data Context def = Context
   , -- NOTE: This Map is for 2 purposes: Sharing Refs of loaded Defs
     -- and allowing to specify recursive defs
     _defTVs :: Map def (TypedValue def)
+  , _defVisibility :: Map def (OR.RefSet (TagExpr def))
   , _randomGen :: Random.StdGen -- for guids
   , _guidAliases :: GuidAliases def
   }
@@ -32,6 +35,7 @@ empty gen =
   { _uFExprs = UFData.empty
   , _ruleMap = initialRuleMap
   , _defTVs = Map.empty
+  , _defVisibility = Map.empty
   , _randomGen = gen
   , _guidAliases = GuidAliases.empty
   }

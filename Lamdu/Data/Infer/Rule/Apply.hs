@@ -29,7 +29,7 @@ import qualified Lamdu.Data.Infer.Rule.Types as Rule
 import qualified Lamdu.Data.Infer.Trigger as Trigger
 import qualified Lamdu.Data.Infer.Unify as Unify
 
-unify :: Eq def => ExprRef def -> ExprRef def -> RuleMonad.RM rule def (ExprRef def)
+unify :: Ord def => ExprRef def -> ExprRef def -> RuleMonad.RM rule def (ExprRef def)
 unify x y = RuleMonad.liftInfer $ Unify.unify x y
 
 remapSubstGuid :: Guid -> RuleMonad.RM (Rule.Apply def) def Guid
@@ -46,7 +46,7 @@ remapSubstGuid srcGuid = do
 findRep :: ExprRef def -> RuleMonad.RM rule def (ExprRef def)
 findRep = RuleMonad.liftInfer . InferM.liftUFExprs . UFData.find
 
-mFindDestRef :: Eq def => ExprRef def -> RuleMonad.RM (Rule.Apply def) def (Maybe (ExprRef def))
+mFindDestRef :: Ord def => ExprRef def -> RuleMonad.RM (Rule.Apply def) def (Maybe (ExprRef def))
 mFindDestRef srcRef =
   try srcRef $ do
     srcRep <- findRep srcRef
@@ -62,7 +62,7 @@ mFindDestRef srcRef =
         Just destRef -> return (Just destRef)
         Nothing -> orElse
 
-normalizeSrcLinks :: Eq def => RuleMonad.RM (Rule.Apply def) def ()
+normalizeSrcLinks :: Ord def => RuleMonad.RM (Rule.Apply def) def ()
 normalizeSrcLinks = do
   linkedPairs <- State.gets (^@.. Rule.aLinkedExprs .> Lens.itraversed)
   normalizedPairs <-
@@ -85,7 +85,7 @@ addPiResultTriggers ruleRef paramRef srcRef dstRef = do
   Trigger.add [] Trigger.OnUnify ruleRef srcRef -- TODO: Restrictions
 
 link ::
-  Eq def =>
+  Ord def =>
   Rule.RuleRef def ->
   ExprRef def -> ExprRef def ->
   RuleMonad.RM (Rule.Apply def) def ()
@@ -101,7 +101,7 @@ link ruleRef srcRef dstRef = do
       RuleMonad.liftInfer $ addPiResultTriggers ruleRef piGuidRep srcRef dstRef
 
 makePiResultCopy ::
-  Eq def =>
+  Ord def =>
   Rule.RuleRef def ->
   ExprRef def -> ExprRef def ->
   RuleMonad.RM (Rule.Apply def) def ()
@@ -132,7 +132,7 @@ makePiResultCopy ruleRef srcRef destRef = do
     matchLamResult srcGuid _ srcChildRef destChildRef =
       (srcGuid, link ruleRef srcChildRef destChildRef)
 
-execute :: Eq def => Rule.RuleRef def -> Rule.Apply def -> RuleFunc def
+execute :: Ord def => Rule.RuleRef def -> Rule.Apply def -> RuleFunc def
 execute ruleRef =
   RuleMonad.run Rule.RuleApply handleTrigger
   where

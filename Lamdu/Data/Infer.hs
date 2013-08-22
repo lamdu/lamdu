@@ -44,7 +44,7 @@ freshHole :: MonadA m => Scope def -> StateT (Context def) m (ExprRef def)
 freshHole = Lens.zoom Context.uFExprs . RefData.freshHole
 
 lambdaWrap ::
-  Eq def =>
+  Ord def =>
   Guid -> ExprRef def ->
   Expr.Expression (LoadedDef def) (ScopedTypedValue def, a) ->
   StateT (Context def) (Either (Error def))
@@ -54,7 +54,7 @@ lambdaWrap =
   & Lens.mapped . Lens.mapped . Lens.mapped %~ runInfer
 
 unify ::
-  Eq def =>
+  Ord def =>
   TypedValue def ->
   TypedValue def ->
   StateT (Context def) (Either (Error def)) (TypedValue def)
@@ -62,17 +62,17 @@ unify (TypedValue xv xt) (TypedValue yv yt) =
   TypedValue <$> unifyRefs xv yv <*> unifyRefs xt yt
 
 unifyRefs ::
-  Eq def => ExprRef def -> ExprRef def ->
+  Ord def => ExprRef def -> ExprRef def ->
   StateT (Context def) (Either (Error def)) (ExprRef def)
 unifyRefs x y = runInfer $ Unify.unify x y
 
 infer ::
-  Eq def => Scope def -> Expr.Expression (Load.LoadedDef def) a ->
+  Ord def => Scope def -> Expr.Expression (Load.LoadedDef def) a ->
   StateT (Context def) (Either (Error def))
   (Expr.Expression (Load.LoadedDef def) (ScopedTypedValue def, a))
 infer scope expr = runInfer $ exprIntoSTV scope expr
 
-runInfer :: Eq def => Infer def a -> StateT (Context def) (Either (Error def)) a
+runInfer :: Ord def => Infer def a -> StateT (Context def) (Either (Error def)) a
 runInfer act = do
   (res, rulesTriggered) <- runInferWriter act
   go rulesTriggered
@@ -91,7 +91,7 @@ runInfer act = do
 
 -- With hole apply vals and hole types
 exprIntoSTV ::
-  Eq def => Scope def -> Expr.Expression (Load.LoadedDef def) a ->
+  Ord def => Scope def -> Expr.Expression (Load.LoadedDef def) a ->
   Infer def (Expr.Expression (Load.LoadedDef def) (ScopedTypedValue def, a))
 exprIntoSTV scope (Expr.Expression body pl) = do
   bodySTV <-

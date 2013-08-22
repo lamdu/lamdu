@@ -33,7 +33,7 @@ assertRecordTypeFields ref =
   <&> unsafeUnjust "isRecord && not record?!"
 
 handlePotentialMatches ::
-  Eq def => [(ExprRef def, ExprRef def)] -> ExprRef def -> ExprRef def ->
+  Ord def => [(ExprRef def, ExprRef def)] -> ExprRef def -> ExprRef def ->
   Infer def Bool
 handlePotentialMatches fields tag typ =
   case fields of
@@ -52,7 +52,7 @@ assertTag ref =
   <&> unsafeUnjust "isTag && not tag?!"
 
 -- Phase0: Verify record has record type:
-phase0 :: Eq def => Rule.GetFieldPhase0 def -> RuleFunc def
+phase0 :: Ord def => Rule.GetFieldPhase0 def -> RuleFunc def
 phase0 rule triggers =
   case triggers ^@.. Lens.itraversed <. Lens.folded of
   [(recordTypeRef, Trigger.FiredKnownBody knownBody)] ->
@@ -98,7 +98,7 @@ phase1 rule triggers =
   list -> error $ "GetField.phase1: Unexpected firings: " ++ show list
 
 -- Phase2: Find relevant record fields by triggered tags
-phase2 :: Eq def => Rule.GetFieldPhase2 def -> RuleFunc def
+phase2 :: Ord def => Rule.GetFieldPhase2 def -> RuleFunc def
 phase2 =
   RuleMonad.run Rule.RuleGetFieldPhase2 handleTrigger
   where

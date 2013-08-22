@@ -74,7 +74,7 @@ maybeCircumsize scope applicant uncircumsizedValBody typeRef = do
   return $ TypedValue valRef typeRef
 
 makeApplyTV ::
-  Eq def => Scope def -> Expr.Apply (ScopedTypedValue def) ->
+  Ord def => Scope def -> Expr.Apply (ScopedTypedValue def) ->
   Infer def (TypedValue def)
 makeApplyTV scope apply@(Expr.Apply func arg) = do
   (piGuid, piParamType, piResultRef) <-
@@ -94,7 +94,7 @@ addTagVerification :: ExprRef def -> Infer def ()
 addTagVerification = Trigger.add [RefData.MustBeTag] Trigger.OnDirectlyTag verifyTagId
 
 makeGetFieldTV ::
-  Eq def =>
+  Ord def =>
   Scope def -> Expr.GetField (TypedValue def) -> Infer def (TypedValue def)
 makeGetFieldTV scope getField@(Expr.GetField record tag) = do
   tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
@@ -105,7 +105,7 @@ makeGetFieldTV scope getField@(Expr.GetField record tag) = do
   maybeCircumsize scope record (Expr.BodyGetField getField) getFieldTypeRef
 
 makeLambdaType ::
-  Eq def => Scope def -> Guid ->
+  Ord def => Scope def -> Guid ->
   TypedValue def -> TypedValue def -> Infer def (ExprRef def)
 makeLambdaType scope paramGuid paramType result = do
   typeRef <- fresh scope $ ExprLens.bodyType # ()
@@ -113,7 +113,7 @@ makeLambdaType scope paramGuid paramType result = do
   fresh scope $ makePiTypeOfLam paramGuid paramType result
 
 makeRecordType ::
-  Eq def => Expr.Kind -> Scope def ->
+  Ord def => Expr.Kind -> Scope def ->
   [(TypedValue def, TypedValue def)] -> Infer def (ExprRef def)
 makeRecordType k scope fields = do
   tagTypeRef <- mkFresh $ ExprLens.bodyTagType # ()
@@ -131,7 +131,7 @@ makeRecordType k scope fields = do
     onRecVField (tag, val) = (tag ^. tvVal, val ^. tvType)
 
 makePiType ::
-  Eq def => Scope def ->
+  Ord def => Scope def ->
   TypedValue def -> TypedValue def ->
   Infer def (ExprRef def)
 makePiType scope paramType resultType = do
@@ -141,7 +141,7 @@ makePiType scope paramType resultType = do
   return typeRef
 
 makeTV ::
-  Eq def => Scope def ->
+  Ord def => Scope def ->
   Expr.Body (Load.LoadedDef def) (ScopedTypedValue def) ->
   Infer def (TypedValue def)
 makeTV scope body =
