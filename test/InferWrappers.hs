@@ -29,8 +29,8 @@ loader =
       Nothing -> Left ("Could not find" ++ show key)
       Just x -> Right x
 
-assertSuccess :: Show err => Either err a -> a
-assertSuccess = either (error . show) id
+fromRight :: Show err => Either err a -> a
+fromRight = either (error . show) id
 
 data Error
   = LoadError (InferLoad.Error Def)
@@ -42,13 +42,13 @@ type M = StateT (Infer.Context Def) (Either Error)
 load :: Expr.Expression Def a -> M (Expr.Expression (LoadedDef Def) a)
 load expr =
   InferLoad.load loader expr
-  & mapStateT ((Lens._Left %~ LoadError) . assertSuccess . runEitherT)
+  & mapStateT ((Lens._Left %~ LoadError) . fromRight . runEitherT)
 
-assertSuccessM :: (Monad m, Show l) => StateT s (Either l) a -> StateT s m a
-assertSuccessM = mapStateT (return . assertSuccess)
+fromRightM :: (Monad m, Show l) => StateT s (Either l) a -> StateT s m a
+fromRightM = mapStateT (return . fromRight)
 
-assertSuccessT :: (MonadA m, Show l) => StateT s (EitherT l m) a -> StateT s m a
-assertSuccessT = mapStateT (fmap assertSuccess . runEitherT)
+fromRightT :: (MonadA m, Show l) => StateT s (EitherT l m) a -> StateT s m a
+fromRightT = mapStateT (fmap fromRight . runEitherT)
 
 type InferredLoadedExpr a = Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def, a)
 
