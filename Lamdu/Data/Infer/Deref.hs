@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.Deref
-  ( expr
+  ( expr, deref
+  , toInferError
   , DerefedSTV(..), dValue, dType, dScope
   , Error(..)
   , RefData.Restriction(..), ExprRef
@@ -24,6 +25,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.RefData as RefData
 
 data Error def = InfiniteExpression (ExprRef def)
@@ -94,3 +96,8 @@ expr =
       storedBody
         & Lens.traverse %%~ go newStoredGuids
         <&> (`Expr.Expression` (derefTV, pl))
+
+------- Lifted errors:
+
+toInferError :: Error def -> InferM.Error def
+toInferError (InfiniteExpression ref) = InferM.InfiniteExpression ref
