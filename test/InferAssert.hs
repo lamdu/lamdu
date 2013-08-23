@@ -117,7 +117,7 @@ runContextAssertion = void . E.evaluate . assertSuccess . runNewContext
 inferAssertion :: InputExpr -> HUnit.Assertion
 inferAssertion origExpr =
   runContextAssertion $
-  go (0 :: Int) =<< annotateErrors "initial infer: " (inferLoadedDef origExpr)
+  go (0 :: Int) =<< annotateErrors "initial infer: " (loadInferDef origExpr)
   where
     msg count = "Resumption phase " ++ show count ++ " failed:\n"
     annotateErrors prefix action =
