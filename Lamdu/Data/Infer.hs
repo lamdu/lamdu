@@ -13,7 +13,6 @@ module Lamdu.Data.Infer
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT)
-import Control.Monad.Trans.Writer (WriterT(..), runWriterT)
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Context (Context)
@@ -24,15 +23,14 @@ import Lamdu.Data.Infer.RefData (Scope(..))
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.TypedValue (TypedValue(..), tvVal, tvType, ScopedTypedValue(..), stvTV, stvScope)
 import qualified Control.Lens as Lens
-import qualified Data.OpaqueRef as OR
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.LamWrap as LamWrap
 import qualified Lamdu.Data.Infer.Load as Load
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.Monad.Run as InferMRun
 import qualified Lamdu.Data.Infer.RefData as RefData
-import qualified Lamdu.Data.Infer.Rule as Rule
 import qualified Lamdu.Data.Infer.Unify as Unify
 import qualified System.Random as Random
 
@@ -51,7 +49,7 @@ lambdaWrap ::
   (Expr.Expression (LoadedDef def) (ScopedTypedValue def, Maybe a))
 lambdaWrap =
   LamWrap.lambdaWrap
-  & Lens.mapped . Lens.mapped . Lens.mapped %~ runInfer
+  & Lens.mapped . Lens.mapped . Lens.mapped %~ InferMRun.run
 
 unify ::
   Ord def =>
@@ -64,30 +62,13 @@ unify (TypedValue xv xt) (TypedValue yv yt) =
 unifyRefs ::
   Ord def => ExprRef def -> ExprRef def ->
   StateT (Context def) (Either (Error def)) (ExprRef def)
-unifyRefs x y = runInfer $ Unify.unify x y
+unifyRefs x y = InferMRun.run $ Unify.unify x y
 
 infer ::
   Ord def => Scope def -> Expr.Expression (Load.LoadedDef def) a ->
   StateT (Context def) (Either (Error def))
   (Expr.Expression (Load.LoadedDef def) (ScopedTypedValue def, a))
-infer scope expr = runInfer $ exprIntoSTV scope expr
-
-runInfer :: Ord def => Infer def a -> StateT (Context def) (Either (Error def)) a
-runInfer act = do
-  (res, rulesTriggered) <- runInferWriter act
-  go rulesTriggered
-  return res
-  where
-    runInferWriter = runWriterT . (^. Lens.from InferM.infer)
-    go (InferM.TriggeredRules oldRuleRefs) =
-      case OR.refMapMinViewWithKey oldRuleRefs of
-      Nothing -> return ()
-      Just ((firstRuleRef, triggers), ruleIds) ->
-        go . filterRemovedRule firstRuleRef . (Lens._2 <>~ InferM.TriggeredRules ruleIds) =<<
-        runInferWriter (Rule.execute firstRuleRef triggers)
-    filterRemovedRule _ (True, rules) = rules
-    filterRemovedRule ruleId (False, InferM.TriggeredRules rules) =
-      InferM.TriggeredRules $ rules & Lens.at ruleId .~ Nothing
+infer scope expr = InferMRun.run $ exprIntoSTV scope expr
 
 -- With hole apply vals and hole types
 exprIntoSTV ::
