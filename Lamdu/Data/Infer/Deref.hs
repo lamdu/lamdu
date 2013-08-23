@@ -68,7 +68,7 @@ deref storedGuids =
   where
     go Nothing ref = mError $ InfiniteExpression ref
     go (Just recurse) ref = do
-      refData <- Lens.zoom Context.uFExprs (UFData.read ref)
+      refData <- Lens.zoom Context.ufExprs (UFData.read ref)
       refData ^. RefData.rdBody
         & Lens.traverse %%~ recurse
         >>= ExprLens.bodyParamIds %%~ mGuidAliases . canonizeGuid storedGuids

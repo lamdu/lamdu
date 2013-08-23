@@ -36,7 +36,7 @@ emptyContext :: Random.StdGen -> Context def
 emptyContext = Context.empty
 
 freshHole :: MonadA m => Scope def -> StateT (Context def) m (ExprRef def)
-freshHole = Lens.zoom Context.uFExprs . RefData.freshHole
+freshHole = Lens.zoom Context.ufExprs . RefData.freshHole
 
 unify ::
   Ord def =>

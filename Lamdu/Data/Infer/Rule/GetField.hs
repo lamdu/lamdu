@@ -28,7 +28,7 @@ import qualified Lamdu.Data.Infer.Trigger as Trigger
 
 assertRecordTypeFields :: MonadA m => ExprRef def -> StateT (Context def) m [(ExprRef def, ExprRef def)]
 assertRecordTypeFields ref =
-  Lens.zoom Context.uFExprs $ UFData.read ref
+  Lens.zoom Context.ufExprs $ UFData.read ref
   <&> (^? RefData.rdBody . ExprLens.bodyKindedRecordFields Expr.KType)
   <&> unsafeUnjust "isRecord && not record?!"
 
@@ -47,7 +47,7 @@ handlePotentialMatches fields tag typ =
 
 assertTag :: MonadA m => ExprRef def -> StateT (Context def) m Guid
 assertTag ref =
-  Lens.zoom Context.uFExprs $ UFData.read ref
+  Lens.zoom Context.ufExprs $ UFData.read ref
   <&> (^? RefData.rdBody . ExprLens.bodyTag)
   <&> unsafeUnjust "isTag && not tag?!"
 

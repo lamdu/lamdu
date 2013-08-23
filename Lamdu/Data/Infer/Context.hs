@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.Context
-  ( Context(..), uFExprs, defTVs, defVisibility, ruleMap, randomGen, guidAliases, empty
+  ( Context(..), ufExprs, defTVs, defVisibility, ruleMap, randomGen, guidAliases, empty
   ) where
 
 import Data.Map (Map)
@@ -18,7 +18,7 @@ import qualified System.Random as Random
 
 -- Context
 data Context def = Context
-  { _uFExprs :: UFExprs def
+  { _ufExprs :: UFExprs def
   , _ruleMap :: RuleMap def
   , -- NOTE: This Map is for 2 purposes: Sharing Refs of loaded Defs
     -- and allowing to specify recursive defs
@@ -32,7 +32,7 @@ Lens.makeLenses ''Context
 empty :: Random.StdGen -> Context def
 empty gen =
   Context
-  { _uFExprs = UFData.empty
+  { _ufExprs = UFData.empty
   , _ruleMap = initialRuleMap
   , _defTVs = Map.empty
   , _defVisibility = Map.empty

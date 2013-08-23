@@ -60,7 +60,7 @@ execute ruleRef triggers = do
       let
         deleteRuleFrom ref =
           UFData.modify ref $ RefData.rdTriggers . Lens.at ruleRef .~ Nothing
-      Lens.zoom Context.uFExprs . traverse_ deleteRuleFrom $ OR.refSetToList ruleTriggerRefs
+      Lens.zoom Context.ufExprs . traverse_ deleteRuleFrom $ OR.refSetToList ruleTriggerRefs
       ruleLens ruleRef .= Nothing
       return False
     RuleChange changed -> do

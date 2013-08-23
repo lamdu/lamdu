@@ -68,7 +68,7 @@ liftContext = Infer . lift
 liftUFExprs ::
   StateT (UFExprs def) (Either (Error def)) a ->
   Infer def a
-liftUFExprs = liftContext . Lens.zoom Context.uFExprs
+liftUFExprs = liftContext . Lens.zoom Context.ufExprs
 
 liftGuidAliases :: StateT (GuidAliases def) (Either (Error def)) a -> Infer def a
 liftGuidAliases = liftContext . Lens.zoom Context.guidAliases

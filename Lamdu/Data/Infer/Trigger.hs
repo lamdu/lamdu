@@ -35,7 +35,7 @@ remember ::
   RefData def -> Trigger def -> RuleRef def ->
   StateT (Context def) m ()
 remember rep restrictions refData trigger ruleId = do
-  Lens.zoom Context.uFExprs . UFData.writeRep rep $
+  Lens.zoom Context.ufExprs . UFData.writeRep rep $
     refData
     & RefData.rdTriggers . Lens.at ruleId <>~ Just (Set.singleton trigger)
     & RefData.rdRestrictions %~ (restrictions ++)

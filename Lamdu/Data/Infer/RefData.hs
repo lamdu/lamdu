@@ -46,7 +46,8 @@ data Restriction def
   = MustMatch (ExprRef def)
   | MustBeRecordType
   | MustBeTag
-  | MustBeTypeOf (ExprRef def)
+  | -- Is the type of a hole, so will surely be restricted when hole is filled:
+    MustBeTypeOf (ExprRef def)
   deriving (Eq, Show)
 
 data RefData def = RefData

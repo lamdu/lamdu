@@ -4,6 +4,7 @@ module Lamdu.Data.Infer.Load
   , Error(..)
   , LoadedDef(..), ldDef, ldType
   , load, newDefinition
+  , exprIntoContext
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -43,22 +44,19 @@ newtype Error def = LoadUntypedDef def
   deriving (Show)
 
 exprIntoContext ::
-  MonadA m => def -> Expr.Expression def () -> StateT (Context def) m (ExprRef def)
-exprIntoContext def =
-  go mempty
-  where
-    go scope (Expr.Expression body ()) = do
-      newBody <-
-        case body of
-        Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
-          paramTypeRef <- go scope paramType
-          paramIdRep <- Lens.zoom Context.guidAliases $ GuidAliases.getRep paramGuid
-          Expr.BodyLam . Expr.Lam k paramGuid paramTypeRef <$>
-            go (scope & Lens.at paramIdRep .~ Just paramTypeRef) result
-        -- TODO: Assert parameterRefs are not out of scope here
-        _ -> body & Lens.traverse %%~ go scope
-      Lens.zoom Context.uFExprs $
-        RefData.fresh (RefData.Scope scope (Just def)) newBody
+  MonadA m => RefData.Scope def -> Expr.Expression def () -> StateT (Context def) m (ExprRef def)
+exprIntoContext scope (Expr.Expression body ()) = do
+  newBody <-
+    case body of
+    Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
+      paramTypeRef <- exprIntoContext scope paramType
+      paramIdRep <- Lens.zoom Context.guidAliases $ GuidAliases.getRep paramGuid
+      Expr.BodyLam . Expr.Lam k paramGuid paramTypeRef <$>
+        exprIntoContext (scope & RefData.scopeMap . Lens.at paramIdRep .~ Just paramTypeRef) result
+    -- TODO: Assert parameterRefs are not out of scope here
+    _ -> body & Lens.traverse %%~ exprIntoContext scope
+  Lens.zoom Context.ufExprs $
+    RefData.fresh scope newBody
 
 -- Error includes untyped def use
 loadDefTypeIntoRef ::
@@ -69,13 +67,13 @@ loadDefTypeIntoRef (Loader loader) def = do
   loadedDefType <- lift . lift $ loader def
   when (Lens.has ExprLens.holePayloads loadedDefType) .
     lift . Either.left $ LoadUntypedDef def
-  exprIntoContext def loadedDefType
+  exprIntoContext (RefData.Scope mempty Nothing) loadedDefType
 
 newDefinition ::
   (MonadA m, Ord def) => def -> StateT (Context def) m (TypedValue def)
 newDefinition def = do
   tv <-
-    Lens.zoom Context.uFExprs $
+    Lens.zoom Context.ufExprs $
     TypedValue
     <$> RefData.freshHole (RefData.Scope mempty (Just def))
     <*> RefData.freshHole (RefData.Scope mempty (Just def))
@@ -106,7 +104,7 @@ load loader expr = do
       Map.fromList
       [  (def
         , TypedValue
-          <$> Lens.zoom Context.uFExprs (RefData.freshHole (RefData.Scope mempty (Just def)))
+          <$> Lens.zoom Context.ufExprs (RefData.freshHole (RefData.Scope mempty (Just def)))
           <*> loadDefTypeIntoRef loader def)
       | def <- expr ^.. ExprLens.exprDef
       ]
