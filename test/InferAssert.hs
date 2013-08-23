@@ -26,7 +26,6 @@ import qualified Data.Monoid as Monoid
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
-import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.Load as InferLoad
 -- import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables
 import qualified Test.Framework as TestFramework
@@ -87,10 +86,7 @@ assertInferredEquals errorPrefixStr result expected res
       ]
     redShow = ansiAround ansiRed . show . void
 
-verifyInferResult ::
-  String ->
-  Expr.Expression (InferLoad.LoadedDef Def)
-  (Infer.ScopedTypedValue Def, InputPayload) -> M ()
+verifyInferResult :: String -> InferredLoadedExpr InputPayload -> M ()
 verifyInferResult msg exprLInferred = do
   exprDerefed <- deref (fst <$> exprLInferred)
   let exprInferred = exprLInferred & ExprLens.exprDef %~ (^. InferLoad.ldDef)
@@ -138,13 +134,9 @@ inferAssertion origExpr =
         (_, _) -> go (count+1) exprNextInput
 
 handleResumption ::
-  (Expr.Expression (InferLoad.LoadedDef Def)
-   (Infer.ScopedTypedValue Def, InputPayload) -> M ()) ->
-  Expr.Expression (InferLoad.LoadedDef Def)
-  (Infer.ScopedTypedValue Def, InputPayload) ->
-  WriterT (Monoid.Any, Monoid.Any) M
-  (Expr.Expression (InferLoad.LoadedDef Def)
-   (Infer.ScopedTypedValue Def, InputPayload))
+  (InferredLoadedExpr InputPayload -> M ()) ->
+  InferredLoadedExpr InputPayload ->
+  WriterT (Monoid.Any, Monoid.Any) M (InferredLoadedExpr InputPayload)
 handleResumption verifyInfersOnSide =
   go
   where
