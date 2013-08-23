@@ -5,7 +5,7 @@ import Control.Monad (void)
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (StateT, mapStateT, evalStateT)
 import Control.MonadA (MonadA)
-import Lamdu.Data.Infer.Deref (Derefed(..))
+import Lamdu.Data.Infer.Deref (DerefedSTV(..))
 import Lamdu.Data.Infer.Load (LoadedDef)
 import Utils
 import qualified Control.Lens as Lens
@@ -63,7 +63,7 @@ infer = inferScope $ Infer.emptyScope recursiveDefI
 
 derefWithPL ::
   Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def, a) ->
-  M (Expr.Expression Def (Derefed Def, a))
+  M (Expr.Expression Def (DerefedSTV Def, a))
 derefWithPL expr = expr
   & ExprLens.exprDef %~ (^. InferLoad.ldDef)
   & InferDeref.expr
@@ -79,7 +79,7 @@ deref expr =
   expr
   <&> flip (,) ()
   & derefWithPL
-  <&> fmap (\(Derefed val typ _stv, ()) -> (void val, void typ))
+  <&> fmap (\(DerefedSTV val typ _scope, ()) -> (void val, void typ))
 
 -- Run this function only once per M
 inferDef ::
