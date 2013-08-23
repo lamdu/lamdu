@@ -3,7 +3,7 @@ module Lamdu.Data.Infer.Deref
   ( expr
   , DerefedSTV(..), dValue, dType, dScope
   , Error(..)
-  , RefData.Restriction(..)
+  , RefData.Restriction(..), ExprRef
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -29,7 +29,7 @@ import qualified Lamdu.Data.Infer.RefData as RefData
 data Error def = InfiniteExpression (ExprRef def)
   deriving (Show, Eq, Ord)
 
-type Expr def = Expr.Expression def [RefData.Restriction def]
+type Expr def = Expr.Expression def (ExprRef def, [RefData.Restriction def])
 
 data DerefedSTV def = DerefedSTV
   { _dValue :: Expr def
@@ -70,7 +70,7 @@ deref storedGuids =
       refData ^. RefData.rdBody
         & Lens.traverse %%~ recurse
         >>= ExprLens.bodyParamIds %%~ mGuidAliases . canonizeGuid storedGuids
-        <&> (`Expr.Expression` (refData ^. RefData.rdRestrictions))
+        <&> (`Expr.Expression` (ref, refData ^. RefData.rdRestrictions))
 
 expr ::
   Expr.Expression ldef (ScopedTypedValue def, a) ->
