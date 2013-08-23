@@ -5,8 +5,10 @@ module Lamdu.Data.Infer.LamWrap
 import Control.Lens.Operators
 import Control.Monad (when)
 import Control.Monad.Trans.Decycle (runDecycleT)
+import Control.Monad.Trans.State (StateT)
 import Data.Foldable (traverse_)
 import Data.Store.Guid (Guid)
+import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.Load (LoadedDef)
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (ExprRef, TagParam)
@@ -21,6 +23,7 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
+import qualified Lamdu.Data.Infer.Monad.Run as InferMRun
 import qualified Lamdu.Data.Infer.RefData as RefData
 
 addScopeRecurse ::
@@ -57,12 +60,12 @@ lamWrapRef paramId paramTypeRef def k defRef = do
   where
     emptyScope = RefData.emptyScope def
 
-lambdaWrap ::
+lambdaWrapInfer ::
   Eq def =>
   Guid -> ExprRef def ->
   Expr.Expression (LoadedDef def) (ScopedTypedValue def, a) ->
   Infer def (Expr.Expression (LoadedDef def) (ScopedTypedValue def, Maybe a))
-lambdaWrap paramId paramTypeRef expr = do
+lambdaWrapInfer paramId paramTypeRef expr = do
   typeRef <- InferM.liftUFExprs $ RefData.fresh rootScope $ ExprLens.bodyType # ()
   let
     paramTypeSTVExpr =
@@ -85,3 +88,13 @@ lambdaWrap paramId paramTypeRef expr = do
         RefData.Scope _ (Just def) -> def
     ScopedTypedValue (TypedValue rootValRef rootTypRef) rootScope =
       expr ^. Expr.ePayload . Lens._1
+
+lambdaWrap ::
+  Ord def =>
+  Guid -> ExprRef def ->
+  Expr.Expression (LoadedDef def) (ScopedTypedValue def, a) ->
+  StateT (Context def) (Either (InferM.Error def))
+  (Expr.Expression (LoadedDef def) (ScopedTypedValue def, Maybe a))
+lambdaWrap =
+  lambdaWrapInfer
+  & Lens.mapped . Lens.mapped . Lens.mapped %~ InferMRun.run
