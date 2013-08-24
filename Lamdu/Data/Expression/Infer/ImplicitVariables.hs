@@ -96,9 +96,7 @@ lambdaWrap ::
   (Expr.Expression def (Infer.Node def, a))
 lambdaWrap paramGuid paramTypeNode result lamPl paramTypePl = do
   newNode <- Infer.newNodeWithScope mempty
-  let
-    newExpr =
-      Expr.Expression newLam (newNode, lamPl)
+  let newExpr = Expr.Expression newLam (newNode, lamPl)
   InferUntilConflict.assertNoConflict "Infer error when adding implicit vars" $
     Infer.addRules InferUntilConflict.actions [fst <$> newExpr]
   return newExpr

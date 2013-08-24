@@ -20,7 +20,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
-type InputExpr = Expr.Expression Def InputPayload
+type InputExpr = Expr InputPayload
 
 data Resumption
   -- Any resumptions will have no effect:

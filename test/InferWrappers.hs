@@ -7,6 +7,7 @@ import Control.Monad.Trans.State (StateT, mapStateT, evalStateT)
 import Control.MonadA (MonadA)
 import Lamdu.Data.Infer.Deref (DerefedSTV(..))
 import Lamdu.Data.Infer.Load (LoadedDef)
+import System.Random (RandomGen)
 import Utils
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
@@ -15,6 +16,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.Deref as InferDeref
+import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables
 import qualified Lamdu.Data.Infer.Load as InferLoad
 import qualified System.Random as Random
 
@@ -89,6 +91,15 @@ inferDef act = do
 
 unify :: Infer.TypedValue Def -> Infer.TypedValue Def -> M ()
 unify e1 e2 = Infer.unify e1 e2 & mapStateT (Lens._Left %~ InferError) & void
+
+addImplicitVariables ::
+  RandomGen gen =>
+  gen -> Def -> InferredLoadedExpr c ->
+  M (InferredLoadedExpr (ImplicitVariables.Payload c))
+addImplicitVariables =
+  ImplicitVariables.add
+  & Lens.mapped . Lens.mapped . Lens.mapped %~
+    mapStateT (Lens._Left %~ InferError)
 
 loadInferInContext ::
   Infer.ScopedTypedValue Def -> Expr.Expression Def a -> M (InferredLoadedExpr a)

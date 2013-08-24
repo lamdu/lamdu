@@ -236,16 +236,23 @@ recordTest =
 
 -- Depend on ImplicitVariables:
 
--- -- TODO: Test should verify that ImplicitVariables puts the restricted
--- -- form (b->c) in the right place.
--- addImplicitCurriedApply2Test =
---   testCase "implicitCurriedApply2: \\f -> f ? ?" $
---   inferWVAssertion (expr hole) wvExpr
---   where
---     expr a =
---       lambda "f" (asHole (a ~> hole)) $ \f ->
---       (f $$ holeWithInferredType a) `setInferredType` (hole ~> hole) $$ hole
---     wvExpr = lambda "a" (asHole set) expr
+simplestImplicitTest =
+  testCase "simplestImplicitTest: \\(x:?) -> ?" $
+  inferWVAssertion (expr (holeWithInferredType set)) wvExpr
+  where
+    expr a = lambda "x" (asHole a) $ \_ -> hole
+    wvExpr = lambda "a" (asHole set) expr
+
+-- TODO: Test should verify that ImplicitVariables puts the restricted
+-- form (b->c) in the right place.
+addImplicitCurriedApply2Test =
+  testCase "implicitCurriedApply2: \\f -> f ? ?" $
+  inferWVAssertion (expr hole) wvExpr
+  where
+    expr a =
+      lambda "f" (asHole (a ~> hole)) $ \f ->
+      (f $$ holeWithInferredType a) `setInferredType` (hole ~> hole) $$ hole
+    wvExpr = lambda "a" (asHole set) expr
 
 -- uncurry2Test =
 --   testCase "uncurry2: \\params:{?->?->?, x:?, y:?} -> f x y   WV: \\a b c params:{f:?{a->b->c} x:?a y:?b} -> f x y : c" $
@@ -265,11 +272,12 @@ recordTest =
 --       lambda "c" (asHole set) $ \c ->
 --       expr b c a
 
--- implicitVarTests =
---   testGroup "add implicit variables"
---   [ addImplicitCurriedApply2Test
---   , uncurry2Test
---   ]
+implicitVarTests =
+  testGroup "add implicit variables"
+  [ simplestImplicitTest
+  , addImplicitCurriedApply2Test
+  -- , uncurry2Test
+  ]
 
 inferReplicateOfReplicate =
   testInfer "replicate <hole> (replicate <hole> 1) 2" $
@@ -611,7 +619,7 @@ hunitTests =
   , emptyRecordTests
   , recordTest
   , inferReplicateOfReplicate
-  -- , implicitVarTests
+  , implicitVarTests
   , infiniteTypeTests
   , resumptionTests
   , joinMaybe

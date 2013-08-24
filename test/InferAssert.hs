@@ -1,12 +1,10 @@
 {-# LANGUAGE RankNTypes #-}
 module InferAssert where
 
--- import Control.Monad.Trans.State (runStateT, runState)
--- import qualified System.Random as Random
 import AnnotatedExpr
 import Control.Applicative ((<$>), Applicative(..))
 import Control.Lens.Operators
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Writer (WriterT(..))
 import Data.Monoid (Monoid(..))
@@ -27,7 +25,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.Load as InferLoad
--- import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables
+import qualified System.Random as Random
 import qualified Test.Framework as TestFramework
 import qualified Test.Framework.Providers.HUnit as HUnitProvider
 import qualified Test.HUnit as HUnit
@@ -96,27 +94,11 @@ verifyInferResult msg exprLInferred = do
 runContextAssertion :: M a -> HUnit.Assertion
 runContextAssertion = void . E.evaluate . fromRight . runNewContext
 
--- inferWVAssertion :: ExprInferred -> ExprInferred -> HUnit.Assertion
--- inferWVAssertion expr wvExpr = runContextAssertion xxx $ do
---   -- TODO: assertInferredEquals should take an error prefix string,
---   -- and do ALL the error printing itself. It has more information
---   -- about what kind of error string would be useful.
---   assertInferredEquals origStr (inferResults inferredExpr) expr
---   assertInferredEquals wvStr (inferResults wvInferredExpr) wvExpr
---   where
---     origStr = "WithoutVars:\n" ++ showInferredValType inferredExpr
---     wvStr = origStr ++ "\nWithVars:\n" ++ showInferredValType wvInferredExpr
---     (inferredExpr, inferContext) = doInfer_ $ void expr
---     wvInferredExpr = fst <$> wvInferredExprPL
---     (wvInferredExprPL, _) =
---       either error id $
---       (`runStateT` inferContext)
---       (ImplicitVariables.add (Random.mkStdGen 0)
---        loader (flip (,) () <$> inferredExpr))
-
 inferAssertion :: InputExpr -> HUnit.Assertion
-inferAssertion origExpr =
-  runContextAssertion $
+inferAssertion = runContextAssertion . inferVerifyExpr
+
+inferVerifyExpr :: InputExpr -> M (InferredLoadedExpr InputPayload)
+inferVerifyExpr origExpr =
   go (0 :: Int) =<< annotateErrors "initial infer: " (loadInferDef origExpr)
   where
     msg count = "Resumption phase " ++ show count ++ " failed:\n"
@@ -128,10 +110,30 @@ inferAssertion origExpr =
         annotateErrors (msg count) . runWriterT $
         handleResumption (verifyInferResult (msg (count+1))) exprLInferred
       case (resumptionsExpected, resumptionsHappened) of
-        (Monoid.Any False, Monoid.Any False) -> return ()
+        (Monoid.Any False, Monoid.Any False) -> return exprNextInput
         (Monoid.Any True, Monoid.Any False) ->
           error "NewInferred specified, but no subexpr has ResumeWith/ResumeOnSide"
         (_, _) -> go (count+1) exprNextInput
+
+haveAnyResumptions :: InputExpr -> Bool
+haveAnyResumptions =
+  Lens.anyOf (Lens.traverse . ipResumption) (not . isSame)
+  where
+    isSame Same = True
+    isSame _ = False
+
+inferWVAssertion :: InputExpr -> InputExpr -> HUnit.Assertion
+inferWVAssertion expr wvExpected = runContextAssertion $ do
+  finalExpr <- inferVerifyExpr expr
+  withVarsExpr <- addImplicitVariables (Random.mkStdGen 0) recursiveDefI finalExpr
+  withVarsDerefed <- deref (fst <$> withVarsExpr)
+  when (haveAnyResumptions wvExpected) $ error "Resumptions not supported"
+  return ()
+    & assertInferredEquals "AddVariables result mismatch"
+      withVarsDerefed (wvExpected <&> inferredOfInput)
+  where
+    -- origStr = "WithoutVars:\n" ++ showInferredValType inferredExpr
+    -- wvStr = origStr ++ "\nWithVars:\n" ++ showInferredValType wvInferredExpr
 
 handleResumption ::
   (InferredLoadedExpr InputPayload -> M ()) ->
