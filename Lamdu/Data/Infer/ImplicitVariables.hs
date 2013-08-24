@@ -45,8 +45,8 @@ deref =
   & Lens.mapped . Lens.sets mapStateT . Lens._Left %~ Deref.toInferError
 
 add ::
-  (Show def, Ord def, RandomGen g) =>
-  g -> def ->
+  (Show def, Ord def, RandomGen gen) =>
+  gen -> def ->
   Expr.Expression (Load.LoadedDef def) (ScopedTypedValue def, a) ->
   StateT (Context def) (Either (InferM.Error def))
   (Expr.Expression (Load.LoadedDef def) (ScopedTypedValue def, Payload a))
@@ -72,8 +72,7 @@ onEachType def typeRef = do
     onEachTypeHole (holeRef, []) = do -- no restrictions:
       -- Found unrestricted hole, make type variable here
       paramTypeRef <-
-        lift . lift . Lens.zoom Context.ufExprs $
-        RefData.freshHole (RefData.emptyScope def)
+        lift . lift $ Context.freshHole (RefData.emptyScope def)
       paramId <- state random
       lift State.get
         >>= lift . lift . LamWrap.lambdaWrap paramId paramTypeRef
@@ -99,36 +98,3 @@ setImplicitVar paramId holeRef = do
     Load.exprIntoContext holeScope $
     ExprLens.pureExpr . ExprLens.bodyParameterRef # paramId
   void $ Infer.unifyRefs getVarValRef holeRef
-  --           getVarValRef <-
-  --             (ExprLens.pureExpr . ExprLens.bodyParameterRef # paramId)
-  --             & Infer.infer emptyScope
-  --             <&> (^. Expr.ePayload . Lens._1 . Infer.stvTV . Infer.tvVal)
-  --           void $ Infer.unifyRefs getVarValRef typeRef
-
-  -- derefedExpr <- uneither $ Deref.expr expr
-  -- let derefedMakers = Foldable.toList derefedExpr <&> fst
-  -- varsAdded <-
-  --   derefedMakers
-  --   & traverse onEachDerefed
-  --   & (`evalStateT` gen)
-  --   <&> (^.. Lens.traverse . Lens._Just)
-  -- wrap varsAdded expr & uneither
-  -- where
-  --   emptyScope = Infer.emptyScope def
-  --   onEachDerefed mkDerefed = do
-  --     derefed <- lift $ uneither mkDerefed
-  --     if isUnrestrictedHole (derefed ^. Deref.dType)
-  --       then do
-  --         paramId <- state random
-  --         let
-  --           typeRef =
-  --             derefed ^. Deref.dScopedTypedValue . Infer.stvTV . Infer.tvType
-  --         lift . uneither $ do
-  --           getVarValRef <-
-  --             (ExprLens.pureExpr . ExprLens.bodyParameterRef # paramId)
-  --             & Infer.infer emptyScope
-  --             <&> (^. Expr.ePayload . Lens._1 . Infer.stvTV . Infer.tvVal)
-  --           void $ Infer.unifyRefs getVarValRef typeRef
-  --         return $ Just paramId
-  --       else
-  --         return Nothing

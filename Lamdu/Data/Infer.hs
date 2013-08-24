@@ -1,5 +1,5 @@
 module Lamdu.Data.Infer
-  ( infer, unify, unifyRefs, freshHole
+  ( infer, unify, unifyRefs, Context.freshHole
   -- Re-export:
   , Error(..)
   , Load.LoadedDef
@@ -13,7 +13,6 @@ module Lamdu.Data.Infer
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT)
-import Control.MonadA (MonadA)
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.MakeTypes (makeTV)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
@@ -34,9 +33,6 @@ import qualified System.Random as Random
 -- Renamed for export purposes
 emptyContext :: Random.StdGen -> Context def
 emptyContext = Context.empty
-
-freshHole :: MonadA m => Scope def -> StateT (Context def) m (ExprRef def)
-freshHole = Lens.zoom Context.ufExprs . RefData.freshHole
 
 unify ::
   Ord def =>

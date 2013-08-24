@@ -8,7 +8,6 @@ module Lamdu.Data.Infer.RefData
     , scopeParamRefs
     , scopeNormalizeParamRefs
   , UFExprs
-  , fresh, freshHole
   ) where
 
 import Control.Lens.Operators
@@ -23,9 +22,7 @@ import Lamdu.Data.Infer.Trigger.Types (Trigger)
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Data.OpaqueRef as OR
-import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 
 data Scope def = Scope
@@ -75,9 +72,3 @@ scopeParamRefs = scopeMap . OR.unsafeRefMapItems . Lens._1
 
 scopeNormalizeParamRefs :: MonadA m => Scope def -> StateT (GuidAliases def) m (Scope def)
 scopeNormalizeParamRefs = scopeParamRefs %%~ GuidAliases.find
-
-fresh :: MonadA m => Scope def -> Expr.Body def (ExprRef def) -> StateT (UFExprs def) m (ExprRef def)
-fresh scop body = UFData.fresh $ defaultRefData scop body
-
-freshHole :: MonadA m => Scope def -> StateT (UFExprs def) m (ExprRef def)
-freshHole scop = fresh scop $ ExprLens.bodyHole # ()

@@ -8,7 +8,7 @@ import Control.Lens.Operators
 import Control.Monad (when, unless, guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Decycle (DecycleT, runDecycleT, visit)
-import Control.Monad.Trans.State (StateT, state)
+import Control.Monad.Trans.State (state)
 import Control.Monad.Trans.Writer (WriterT(..))
 import Data.Foldable (traverse_)
 import Data.Maybe.Utils (unsafeUnjust)
@@ -17,14 +17,12 @@ import Data.Monoid.Applicative (ApplicativeMonoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
-import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
 import Lamdu.Data.Infer.RefData (RefData(..), Scope(..), scopeNormalizeParamRefs)
-import Lamdu.Data.Infer.RefTags (ExprRef, TagExpr, TagParam, TagRule)
+import Lamdu.Data.Infer.RefTags (ExprRef, TagParam, TagRule)
 import Lamdu.Data.Infer.Trigger (Trigger)
 import System.Random (Random, random)
 import qualified Control.Lens as Lens
-import qualified Control.Lens.Utils as LensUtils
 import qualified Control.Monad.Trans.State as State
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.List as List
@@ -50,12 +48,12 @@ forceLam ::
 forceLam k lamScope destRef = do
   newGuid <- newRandom
   newParamRep <- InferM.liftGuidAliases $ GuidAliases.getRep newGuid
-  newParamTypeRef <- InferM.liftUFExprs . RefData.fresh lamScope $ ExprLens.bodyHole # ()
+  newParamTypeRef <- InferM.liftContext . Context.fresh lamScope $ ExprLens.bodyHole # ()
   -- TODO: Directly manipulate RefData to avoid scope buildup?
   let lamResultScope = lamScope & RefData.scopeMap . Lens.at newParamRep .~ Just newParamTypeRef
-  newResultTypeRef <- InferM.liftUFExprs . RefData.fresh lamResultScope $ ExprLens.bodyHole # ()
+  newResultTypeRef <- InferM.liftContext . Context.fresh lamResultScope $ ExprLens.bodyHole # ()
   newLamRef <-
-    InferM.liftUFExprs . RefData.fresh lamScope . Expr.BodyLam $
+    InferM.liftContext . Context.fresh lamScope . Expr.BodyLam $
     Expr.Lam k newGuid newParamTypeRef newResultTypeRef
   rep <- unify newLamRef destRef
   body <- InferM.liftUFExprs $ (^. RefData.rdBody) <$> State.gets (UFData.readRep rep)
@@ -208,26 +206,6 @@ mergeRefData
       , _rdBody = mergedBody
       }
 
-atVisibility ::
-  (Ord def, Monad m) => RefData def ->
-  (Maybe (OR.RefSet (TagExpr def)) ->
-   Maybe (OR.RefSet (TagExpr def))) ->
-  StateT (Context def) m ()
-atVisibility refData f =
-  case mDef of
-  Nothing -> return ()
-  Just def -> Context.defVisibility . Lens.at def %= f
-  where
-    mDef = refData ^. RefData.rdScope . RefData.scopeMDef
-
-removeFromVisibility ::
-  (Ord def, Monad m) => (ExprRef def, RefData def) -> StateT (Context def) m ()
-removeFromVisibility (rep, refData) = atVisibility refData $ LensUtils._fromJust "removeFromVisibility" . Lens.contains rep .~ False
-
-addToVisibility ::
-  (Ord def, Monad m) => (ExprRef def, RefData def) -> StateT (Context def) m ()
-addToVisibility (rep, refData) = atVisibility refData . mappend . Just $ OR.refSetSingleton rep
-
 mergeRefDataAndTrigger ::
   Ord def =>
   ExprRef def ->
@@ -236,10 +214,10 @@ mergeRefDataAndTrigger ::
   WU def (RefData def)
 mergeRefDataAndTrigger rep a@(_, aData) b@(_, bData) = do
   wuInfer . InferM.liftContext $ do
-    removeFromVisibility a
-    removeFromVisibility b
+    Context.removeFromVisibility a
+    Context.removeFromVisibility b
   mergedData <- mergeRefData aData bData
-  wuInfer . InferM.liftContext $ addToVisibility (rep, mergedData)
+  wuInfer . InferM.liftContext $ Context.addToVisibility (rep, mergedData)
   wuInfer $ Trigger.updateRefData rep mergedData
 
 decycleDefend :: ExprRef def -> (ExprRef def -> U def a) -> U def a

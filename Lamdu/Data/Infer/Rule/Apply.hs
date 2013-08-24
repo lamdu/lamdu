@@ -21,6 +21,7 @@ import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.RefData as RefData
@@ -117,9 +118,9 @@ makePiResultCopy ruleRef srcRef destRef = do
     _ -> do
       destBodyRef <-
         srcBody
-        & Lens.traverse %%~ (const . RuleMonad.liftInfer . InferM.liftUFExprs) (RefData.freshHole destScope)
+        & Lens.traverse %%~ (const . RuleMonad.liftInfer . InferM.liftContext) (Context.freshHole destScope)
         >>= ExprLens.bodyParameterRef %%~ remapSubstGuid
-        >>= RuleMonad.liftInfer . InferM.liftUFExprs . RefData.fresh destScope
+        >>= RuleMonad.liftInfer . InferM.liftContext . Context.fresh destScope
       void $ unify destBodyRef destRef -- destBodyRef is swallowed by destRef if it had anything...
   destBody <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. RefData.rdBody) <$> UFData.read destRef
   matchRes <-

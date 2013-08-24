@@ -15,6 +15,7 @@ import qualified Data.Monoid as Monoid
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Load as Load
 import qualified Lamdu.Data.Infer.Monad as InferM
@@ -45,13 +46,11 @@ makePiTypeOfLam paramGuid paramType body =
   (body ^. tvType)
 
 fresh ::
+  Ord def =>
   Scope def -> Expr.Body (Load.LoadedDef def) (ExprRef def) ->
   Infer def (ExprRef def)
 fresh scope body =
-  InferM.liftUFExprs $ RefData.fresh scope (body & ExprLens.bodyDef %~ (^. Load.ldDef))
-
-freshHole :: Scope def -> Infer def (ExprRef def)
-freshHole = InferM.liftUFExprs . RefData.freshHole
+  InferM.liftContext $ Context.fresh scope (body & ExprLens.bodyDef %~ (^. Load.ldDef))
 
 maybeCircumsize ::
   Scope def ->
@@ -82,7 +81,7 @@ makeApplyTV scope apply@(Expr.Apply func arg) = do
     (func ^. stvScope)
     (func ^. stvTV . tvType)
   void $ unify (arg ^. stvTV . tvType) piParamType
-  applyTypeRef <- freshHole scope
+  applyTypeRef <- InferM.liftContext $ Context.freshHole scope
   RuleApply.make piGuid (arg ^. stvTV . tvVal) piResultRef applyTypeRef
   maybeCircumsize
     scope
@@ -99,7 +98,7 @@ makeGetFieldTV ::
 makeGetFieldTV scope getField@(Expr.GetField record tag) = do
   tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
   void . unify tagTypeRef $ tag ^. tvType
-  getFieldTypeRef <- freshHole scope
+  getFieldTypeRef <- InferM.liftContext $ Context.freshHole scope
   addTagVerification $ tag ^. tvVal
   RuleGetField.make (tag ^. tvVal) getFieldTypeRef (record ^. tvType)
   maybeCircumsize scope record (Expr.BodyGetField getField) getFieldTypeRef

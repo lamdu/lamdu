@@ -41,12 +41,12 @@ addDefScope def newScopeMap = do
 -- Only call on a "root" ref that has no parents (otherwise the scope
 -- which should be an intersection is wrong):
 lamWrapRef ::
-  Eq def => Guid -> ExprRef def -> RefData.Scope def ->
+  Ord def => Guid -> ExprRef def -> RefData.Scope def ->
   Expr.Kind -> ExprRef def -> Infer def (ExprRef def)
 lamWrapRef paramId paramTypeRef scope k defRef = do
   defRep <- InferM.liftUFExprs $ UFData.find defRef
   let lam = Expr.Lam k paramId paramTypeRef defRep
-  InferM.liftUFExprs . RefData.fresh scope $ Expr.BodyLam lam
+  InferM.liftContext . Context.fresh scope $ Expr.BodyLam lam
 
 lambdaWrap ::
   Ord def =>
@@ -58,7 +58,7 @@ lambdaWrap paramId paramTypeRef expr = InferMRun.run $ do
   paramIdRep <- InferM.liftGuidAliases $ GuidAliases.getRep paramId
   InferM.liftContext . addDefScope rootDef $
     OR.refMapSingleton paramIdRep paramTypeRef
-  typeRef <- InferM.liftUFExprs . RefData.fresh rootScope $ ExprLens.bodyType # ()
+  typeRef <- InferM.liftContext . Context.fresh rootScope $ ExprLens.bodyType # ()
   let
     paramTypeSTVExpr =
       mkRootExpr (ExprLens.bodyHole # ()) $ TypedValue paramTypeRef typeRef
