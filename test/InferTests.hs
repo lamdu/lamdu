@@ -247,6 +247,7 @@ simplestImplicitTest =
 -- form (b->c) in the right place.
 addImplicitCurriedApply2Test =
   testCase "implicitCurriedApply2: \\f -> f ? ?" $
+  allowFailAssertion "Missing rigidity check" $
   inferWVAssertion (expr hole) wvExpr
   where
     expr a =
@@ -254,29 +255,30 @@ addImplicitCurriedApply2Test =
       (f $$ holeWithInferredType a) `setInferredType` (hole ~> hole) $$ hole
     wvExpr = lambda "a" (asHole set) expr
 
--- uncurry2Test =
---   testCase "uncurry2: \\params:{?->?->?, x:?, y:?} -> f x y   WV: \\a b c params:{f:?{a->b->c} x:?a y:?b} -> f x y : c" $
---   inferWVAssertion (expr iset iset iset) wvExpr
---   where
---     iset = holeWithInferredType set
---     expr a b c =
---       lambdaRecord "params"
---       [ ("f", asHole (b ~> a ~> c))
---       , ("x", asHole b)
---       , ("y", asHole a)
---       ] $ \[f, x, y] ->
---       f $$ x $$ y
---     wvExpr =
---       lambda "a" (asHole set) $ \a ->
---       lambda "b" (asHole set) $ \b ->
---       lambda "c" (asHole set) $ \c ->
---       expr b c a
+uncurry2Test =
+  testCase "uncurry2: \\params:{?->?->?, x:?, y:?} -> f x y   WV: \\a b c params:{f:?{a->b->c} x:?a y:?b} -> f x y : c" $
+  allowFailAssertion "Missing rigidity check" $
+  inferWVAssertion (expr iset iset iset) wvExpr
+  where
+    iset = holeWithInferredType set
+    expr a b c =
+      lambdaRecord "params"
+      [ ("f", asHole (b ~> a ~> c))
+      , ("x", asHole b)
+      , ("y", asHole a)
+      ] $ \[f, x, y] ->
+      f $$ x $$ y
+    wvExpr =
+      lambda "a" (asHole set) $ \a ->
+      lambda "b" (asHole set) $ \b ->
+      lambda "c" (asHole set) $ \c ->
+      expr b c a
 
 implicitVarTests =
   testGroup "add implicit variables"
   [ simplestImplicitTest
   , addImplicitCurriedApply2Test
-  -- , uncurry2Test
+  , uncurry2Test
   ]
 
 inferReplicateOfReplicate =
