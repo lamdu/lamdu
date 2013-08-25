@@ -1,5 +1,6 @@
 module InferWrappers where
 
+import Control.Applicative ((<$))
 import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans.Either (EitherT(..))
@@ -17,6 +18,7 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.Deref as InferDeref
 import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables
+import qualified Lamdu.Data.Infer.Structure as Structure
 import qualified Lamdu.Data.Infer.Load as InferLoad
 import qualified System.Random as Random
 
@@ -61,14 +63,17 @@ inferScope scope expr =
 infer :: Expr.Expression (LoadedDef Def) a -> M (InferredLoadedExpr a)
 infer = inferScope $ Infer.emptyScope recursiveDefI
 
+mapDerefError ::
+  StateT s (Either (InferDeref.Error Def)) a ->
+  StateT s (Either Error) a
+mapDerefError = mapStateT (Lens._Left %~ InferError . InferDeref.toInferError)
+
 derefWithPL :: InferredLoadedExpr a -> M (Expr.Expression Def (DerefedSTV Def, a))
 derefWithPL expr = expr
   & ExprLens.exprDef %~ (^. InferLoad.ldDef)
   & InferDeref.expr
   >>= Lens.sequenceOf (Lens.traverse . Lens._1)
-  & mapStateT (Lens._Left %~ mapErr)
-  where
-    mapErr (InferDeref.InfiniteExpression ref) = InferError (Infer.InfiniteExpression ref)
+  & mapDerefError
 
 deref ::
   Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def) ->
@@ -100,6 +105,13 @@ addImplicitVariables =
   ImplicitVariables.add
   & Lens.mapped . Lens.mapped . Lens.mapped %~
     mapStateT (Lens._Left %~ InferError)
+
+addStructure ::
+  Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def, a) ->
+  StateT (Infer.Context Def) (Either Error)
+  (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def, a))
+addStructure expr =
+  expr <$ mapDerefError (Structure.add expr)
 
 loadInferInContext ::
   Infer.ScopedTypedValue Def -> Expr.Expression Def a -> M (InferredLoadedExpr a)

@@ -281,6 +281,27 @@ implicitVarTests =
   , uncurry2Test
   ]
 
+implicitLamReturningRecord =
+  testCase "add implicit structure" $
+  inferWSAssertion
+  (expr (holeWithInferredType (recType ~> recType)))
+  (expr (asHole . lambda "x" recType . const $ mkRecord KVal unknownInt unknownInt))
+  where
+    unknownInt = holeWithInferredType integerType
+    expr next = getDef "iterate" $$ asHole recType $$: [initial, next]
+    initial = mkRecord KVal (literalInteger 0) (literalInteger 1)
+    recType = mkRecord KType integerType integerType
+    mkRecord k cur next =
+      record k
+      [ (tagStr "cur", cur)
+      , (tagStr "next", next)
+      ]
+
+implicitStructureTests =
+  testGroup "implicit structure"
+  [ implicitLamReturningRecord
+  ]
+
 inferReplicateOfReplicate =
   testInfer "replicate <hole> (replicate <hole> 1) 2" $
   replicat (listOf integerType)
@@ -622,6 +643,7 @@ hunitTests =
   , recordTest
   , inferReplicateOfReplicate
   , implicitVarTests
+  , implicitStructureTests
   , infiniteTypeTests
   , resumptionTests
   , joinMaybe

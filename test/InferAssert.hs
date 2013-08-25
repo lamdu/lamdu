@@ -122,18 +122,23 @@ haveAnyResumptions =
     isSame Same = True
     isSame _ = False
 
-inferWVAssertion :: InputExpr -> InputExpr -> HUnit.Assertion
-inferWVAssertion expr wvExpected = runContextAssertion $ do
+withImplicitAssertion ::
+  String -> (InferredLoadedExpr InputPayload -> M (InferredLoadedExpr a)) ->
+  InputExpr -> InputExpr -> HUnit.Assertion
+withImplicitAssertion opName f expr expected = runContextAssertion $ do
   finalExpr <- inferVerifyExpr expr
-  withVarsExpr <- addImplicitVariables (Random.mkStdGen 0) recursiveDefI finalExpr
-  withVarsDerefed <- deref (fst <$> withVarsExpr)
-  when (haveAnyResumptions wvExpected) $ error "Resumptions not supported"
+  withImplicitsExpr <- f finalExpr
+  withImplicitsDerefed <- deref (fst <$> withImplicitsExpr)
+  when (haveAnyResumptions expected) $ error "Resumptions not supported"
   return ()
-    & assertInferredEquals "AddVariables result mismatch"
-      withVarsDerefed (wvExpected <&> inferredOfInput)
-  where
-    -- origStr = "WithoutVars:\n" ++ showInferredValType inferredExpr
-    -- wvStr = origStr ++ "\nWithVars:\n" ++ showInferredValType wvInferredExpr
+    & assertInferredEquals (opName ++ " result mismatch")
+      withImplicitsDerefed (expected <&> inferredOfInput)
+
+inferWVAssertion :: InputExpr -> InputExpr -> HUnit.Assertion
+inferWVAssertion = withImplicitAssertion "AddVariables" (addImplicitVariables (Random.mkStdGen 0) recursiveDefI)
+
+inferWSAssertion :: InputExpr -> InputExpr -> HUnit.Assertion
+inferWSAssertion = withImplicitAssertion "AddStructure" addStructure
 
 handleResumption ::
   (InferredLoadedExpr InputPayload -> M ()) ->
