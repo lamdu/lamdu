@@ -35,7 +35,7 @@ data LoadedDef def = LoadedDef
   }
 Lens.makeLenses ''LoadedDef
 
-data Loader def m = Loader
+newtype Loader def m = Loader
   { loadDefType :: def -> m (Expr.Expression def ())
     -- TODO: For synonyms we'll need loadDefVal
   }

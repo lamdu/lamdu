@@ -22,8 +22,7 @@ add ::
   (Show def, Ord def) =>
   Expr.Expression (Load.LoadedDef def) (ScopedTypedValue def, a) ->
   StateT (Context def) (Either (Deref.Error def)) ()
-add =
-  Lens.traverseOf_ (ExprLens.holePayloads . Lens._1) %%~ addToHole
+add = Lens.traverseOf_ (ExprLens.holePayloads . Lens._1) %%~ addToHole
 
 addToHole ::
   (Show def, Ord def) =>
