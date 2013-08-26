@@ -3,7 +3,7 @@ module Lamdu.Data.Infer.Load
   ( Loader(..)
   , Error(..)
   , LoadedDef(..), ldDef, ldType
-  , load, newDefinition
+  , T, load, newDefinition
   , exprIntoContext
   ) where
 
@@ -43,8 +43,11 @@ data Loader def m = Loader
 newtype Error def = LoadUntypedDef def
   deriving (Show)
 
+type T def m = StateT (Context def) (EitherT (Error def) m)
+
 exprIntoContext ::
-  (Ord def, MonadA m) => RefData.Scope def -> Expr.Expression def () -> StateT (Context def) m (ExprRef def)
+  (Ord def, MonadA m) => RefData.Scope def -> Expr.Expression def () ->
+  StateT (Context def) m (ExprRef def)
 exprIntoContext scope (Expr.Expression body ()) = do
   newBody <-
     case body of
@@ -58,18 +61,14 @@ exprIntoContext scope (Expr.Expression body ()) = do
   Context.fresh scope newBody
 
 -- Error includes untyped def use
-loadDefTypeIntoRef ::
-  (Ord def, MonadA m) =>
-  Loader def m -> def ->
-  StateT (Context def) (EitherT (Error def) m) (ExprRef def)
+loadDefTypeIntoRef :: (Ord def, MonadA m) => Loader def m -> def -> T def m (ExprRef def)
 loadDefTypeIntoRef (Loader loader) def = do
   loadedDefType <- lift . lift $ loader def
   when (Lens.has ExprLens.holePayloads loadedDefType) .
     lift . Either.left $ LoadUntypedDef def
   exprIntoContext (RefData.Scope mempty Nothing) loadedDefType
 
-newDefinition ::
-  (MonadA m, Ord def) => def -> StateT (Context def) m (TypedValue def)
+newDefinition :: (MonadA m, Ord def) => def -> StateT (Context def) m (TypedValue def)
 newDefinition def = do
   tv <-
     TypedValue
@@ -84,8 +83,7 @@ newDefinition def = do
 load ::
   (Ord def, MonadA m) =>
   Loader def m -> Expr.Expression def a ->
-  StateT (Context def) (EitherT (Error def) m)
-  (Expr.Expression (LoadedDef def) a)
+  T def m (Expr.Expression (LoadedDef def) a)
 load loader expr = do
   existingDefTVs <- Lens.use Context.defTVs <&> Lens.mapped %~ return
   -- Left wins in union

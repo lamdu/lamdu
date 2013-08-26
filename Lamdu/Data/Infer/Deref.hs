@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.Deref
-  ( expr, deref
+  ( M, expr, deref
   , toInferError
   , DerefedSTV(..), dValue, dType, dScope
   , Error(..)

@@ -1,5 +1,5 @@
 module Lamdu.Data.Infer
-  ( infer, unify, unifyRefs, Context.freshHole
+  ( M, infer, unify, unifyRefs, Context.freshHole
   -- Re-export:
   , Error(..)
   , Load.LoadedDef
@@ -34,23 +34,24 @@ import qualified System.Random as Random
 emptyContext :: Random.StdGen -> Context def
 emptyContext = Context.empty
 
+type M def = StateT (Context def) (Either (Error def))
+
 unify ::
   Ord def =>
   TypedValue def ->
   TypedValue def ->
-  StateT (Context def) (Either (Error def)) (TypedValue def)
+  M def (TypedValue def)
 unify (TypedValue xv xt) (TypedValue yv yt) =
   TypedValue <$> unifyRefs xv yv <*> unifyRefs xt yt
 
 unifyRefs ::
   Ord def => ExprRef def -> ExprRef def ->
-  StateT (Context def) (Either (Error def)) (ExprRef def)
+  M def (ExprRef def)
 unifyRefs x y = InferMRun.run $ Unify.unify x y
 
 infer ::
   Ord def => Scope def -> Expr.Expression (Load.LoadedDef def) a ->
-  StateT (Context def) (Either (Error def))
-  (Expr.Expression (Load.LoadedDef def) (ScopedTypedValue def, a))
+  M def (Expr.Expression (Load.LoadedDef def) (ScopedTypedValue def, a))
 infer scope expr = InferMRun.run $ exprIntoSTV scope expr
 
 -- With hole apply vals and hole types

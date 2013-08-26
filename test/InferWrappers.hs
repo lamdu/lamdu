@@ -63,9 +63,7 @@ inferScope scope expr =
 infer :: Expr.Expression (LoadedDef Def) a -> M (InferredLoadedExpr a)
 infer = inferScope $ Infer.emptyScope recursiveDefI
 
-mapDerefError ::
-  StateT s (Either (InferDeref.Error Def)) a ->
-  StateT s (Either Error) a
+mapDerefError :: InferDeref.M Def a -> M a
 mapDerefError = mapStateT (Lens._Left %~ InferError . InferDeref.toInferError)
 
 derefWithPL :: InferredLoadedExpr a -> M (Expr.Expression Def (DerefedSTV Def, a))
@@ -108,8 +106,7 @@ addImplicitVariables =
 
 addStructure ::
   Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def, a) ->
-  StateT (Infer.Context Def) (Either Error)
-  (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def, a))
+  M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def, a))
 addStructure expr =
   expr <$ mapDerefError (Structure.add expr)
 
