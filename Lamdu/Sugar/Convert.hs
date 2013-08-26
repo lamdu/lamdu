@@ -959,7 +959,7 @@ convertDefIExpression cp exprLoaded defI defType = do
       , _deTypeInfo = typeInfo
       }
   where
-    (initialContext, rootNode) = initialInferContext $ Just defI
+    (initialContext, rootNode) = initialInferContext defI
     defGuid = IRef.guid defI
     recordParamsInfo = ConvertM.RecordParamsInfo defGuid $ jumpToDefI cp defI
     inferLoadedGen = ConvertExpr.mkGen 0 3 defGuid

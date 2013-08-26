@@ -40,9 +40,9 @@ data InferContext m = InferContext
   }
 Lens.makeLenses ''InferContext
 
-initialInferContext :: Typeable1 m => Maybe (DefIM m) -> (InferContext m, Infer.Node (DefIM m))
-initialInferContext mDefI =
-  Infer.initial mDefI & Lens._1 %~ wrapContext
+initialInferContext :: Typeable1 m => DefIM m -> (InferContext m, Infer.Node (DefIM m))
+initialInferContext defI =
+  Infer.initial (Just defI) & Lens._1 %~ wrapContext
   where
     wrapContext inferContext =
-      InferContext inferContext $ Cache.bsOfKey mDefI
+      InferContext inferContext $ Cache.bsOfKey defI
