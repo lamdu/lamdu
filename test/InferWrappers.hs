@@ -85,11 +85,11 @@ deref expr =
 -- Run this function only once per M
 inferDef :: M (InferredLoadedExpr a) -> M (InferredLoadedExpr a)
 inferDef act = do
-  recursiveDefRef <- InferLoad.newDefinition recursiveDefI
+  recursiveDefSTV <- InferLoad.newDefinition recursiveDefI
   expr <- act
   _ <-
     expr ^. Expr.ePayload . Lens._1 . Infer.stvTV
-    & unify recursiveDefRef
+    & unify (recursiveDefSTV ^. Infer.stvTV)
   return expr
 
 unify :: Infer.TypedValue Def -> Infer.TypedValue Def -> M ()

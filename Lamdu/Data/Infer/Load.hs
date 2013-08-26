@@ -19,7 +19,7 @@ import Data.Monoid (Monoid(..))
 import Data.Traversable (sequenceA)
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.TypedValue (TypedValue(..), tvType)
+import Lamdu.Data.Infer.TypedValue (ScopedTypedValue(..), TypedValue(..), tvType, stvTV)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Either as Either
 import qualified Data.Map as Map
@@ -68,15 +68,16 @@ loadDefTypeIntoRef (Loader loader) def = do
     lift . Either.left $ LoadUntypedDef def
   exprIntoContext (RefData.Scope mempty Nothing) loadedDefType
 
-newDefinition :: (MonadA m, Ord def) => def -> StateT (Context def) m (TypedValue def)
+newDefinition :: (MonadA m, Ord def) => def -> StateT (Context def) m (ScopedTypedValue def)
 newDefinition def = do
-  tv <-
-    TypedValue
-    <$> Context.freshHole (RefData.Scope mempty (Just def))
-    <*> Context.freshHole (RefData.Scope mempty (Just def))
-  Context.defTVs . Lens.at def %= setRef tv
-  return tv
+  stv <-
+    (`ScopedTypedValue` scope)
+    <$> (TypedValue <$> mkHole <*> mkHole)
+  Context.defTVs . Lens.at def %= setRef (stv ^. stvTV)
+  return stv
   where
+    mkHole = Context.freshHole scope
+    scope = RefData.emptyScope def
     setRef tv Nothing = Just tv
     setRef _ (Just _) = error "newDefinition overrides existing def type"
 
