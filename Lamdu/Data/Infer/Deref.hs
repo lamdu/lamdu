@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.Deref
-  ( M, expr, deref
+  ( M, expr, entireExpr, deref
   , toInferError
   , DerefedSTV(..), dValue, dType, dScope
   , Error(..)
@@ -97,6 +97,10 @@ expr =
         & Lens.traverse %%~ go newStoredGuids
         <&> (`Expr.Expression` (derefTV, pl))
 
+entireExpr ::
+  Expr.Expression ldef (ScopedTypedValue def, a) ->
+  M def (Expr.Expression ldef (DerefedSTV def, a))
+entireExpr = (>>= Lens.sequenceOf (Lens.traverse . Lens._1)) . expr
 ------- Lifted errors:
 
 toInferError :: Error def -> InferM.Error def

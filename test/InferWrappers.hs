@@ -69,8 +69,7 @@ mapDerefError = mapStateT (Lens._Left %~ InferError . InferDeref.toInferError)
 derefWithPL :: InferredLoadedExpr a -> M (Expr.Expression Def (DerefedSTV Def, a))
 derefWithPL expr = expr
   & ExprLens.exprDef %~ (^. InferLoad.ldDef)
-  & InferDeref.expr
-  >>= Lens.sequenceOf (Lens.traverse . Lens._1)
+  & InferDeref.entireExpr
   & mapDerefError
 
 deref ::
