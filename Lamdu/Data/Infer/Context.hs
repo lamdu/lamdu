@@ -11,7 +11,7 @@ import Control.MonadA (MonadA)
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
-import Lamdu.Data.Infer.RefData (RefData, UFExprs)
+import Lamdu.Data.Infer.RefData (RefData, UFExprs, LoadedDef)
 import Lamdu.Data.Infer.RefTags (TagExpr, ExprRef)
 import Lamdu.Data.Infer.Rule.Types (RuleMap, initialRuleMap)
 import Lamdu.Data.Infer.TypedValue (TypedValue)
@@ -72,7 +72,10 @@ addToVisibility ::
   (Ord def, Monad m) => (ExprRef def, RefData def) -> StateT (Context def) m ()
 addToVisibility (rep, refData) = atVisibility refData . mappend . Just $ OR.refSetSingleton rep
 
-fresh :: (Ord def, MonadA m) => RefData.Scope def -> Expr.Body def (ExprRef def) -> StateT (Context def) m (ExprRef def)
+fresh ::
+  (Ord def, MonadA m) => RefData.Scope def ->
+  Expr.Body (LoadedDef def) (ExprRef def) ->
+  StateT (Context def) m (ExprRef def)
 fresh scop body = do
   rep <- Lens.zoom ufExprs $ UFData.fresh refData
   addToVisibility (rep, refData)

@@ -31,7 +31,7 @@ import qualified Lamdu.Data.Infer.RefData as RefData
 data Error def = InfiniteExpression (ExprRef def)
   deriving (Show, Eq, Ord)
 
-type Expr def = Expr.Expression def (ExprRef def)
+type Expr def = Expr.Expression (LoadedDef def) (ExprRef def)
 
 data DerefedSTV def = DerefedSTV
   { _dValue :: Expr def

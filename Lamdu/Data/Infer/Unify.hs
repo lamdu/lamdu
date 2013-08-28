@@ -18,7 +18,7 @@ import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.RefData (RefData(..), Scope(..), scopeNormalizeParamRefs)
+import Lamdu.Data.Infer.RefData (RefData(..), Scope(..), LoadedDef, scopeNormalizeParamRefs)
 import Lamdu.Data.Infer.RefTags (ExprRef, TagParam, TagRule)
 import Lamdu.Data.Infer.Trigger (Trigger)
 import System.Random (Random, random)
@@ -85,7 +85,7 @@ data HoleConstraints def = HoleConstraints
   }
 
 -- You must apply this recursively
-checkHoleConstraints :: HoleConstraints def -> Expr.Body def (ExprRef def) -> Infer def ()
+checkHoleConstraints :: HoleConstraints def -> Expr.Body ldef (ExprRef def) -> Infer def ()
 checkHoleConstraints (HoleConstraints unusableSet _removeDef) body =
   case body of
   Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef paramGuid)) -> do
@@ -120,7 +120,7 @@ noConstraints (HoleConstraints unusableScopeReps removeDef) =
 
 applyHoleConstraints ::
   Eq def => HoleConstraints def ->
-  Expr.Body def (ExprRef def) -> Scope def ->
+  Expr.Body ldef (ExprRef def) -> Scope def ->
   WU def (Scope def)
 applyHoleConstraints holeConstraints body oldScope = do
   wuInfer $ checkHoleConstraints holeConstraints body
@@ -144,8 +144,9 @@ applyHoleConstraints holeConstraints body oldScope = do
     HoleConstraints oldUnusable oldRemoveDef = holeConstraints
 
 unifyWithHole ::
-  Eq def => Scope def -> Scope def -> Expr.Body def (ExprRef def) ->
-  WU def (Scope def, Expr.Body def (ExprRef def))
+  Eq def => Scope def -> Scope def ->
+  Expr.Body (LoadedDef def) (ExprRef def) ->
+  WU def (Scope def, Expr.Body (LoadedDef def) (ExprRef def))
 unifyWithHole holeScope otherScope nonHoleBody = do
   ( Scope holeScopeMapNorm holeScopeMDef
     , otherScopeNorm@(Scope otherScopeMapNorm otherScopeMDef)
@@ -164,9 +165,9 @@ unifyWithHole holeScope otherScope nonHoleBody = do
 
 mergeScopeBodies ::
   Ord def =>
-  Scope def -> Expr.Body def (ExprRef def) ->
-  Scope def -> Expr.Body def (ExprRef def) ->
-  WU def (Scope def, Expr.Body def (ExprRef def))
+  Scope def -> Expr.Body (LoadedDef def) (ExprRef def) ->
+  Scope def -> Expr.Body (LoadedDef def) (ExprRef def) ->
+  WU def (Scope def, Expr.Body (LoadedDef def) (ExprRef def))
 mergeScopeBodies xScope xBody yScope yBody =
   case (xBody, yBody) of
     (_, Expr.BodyLeaf Expr.Hole) -> unifyWithHole yScope xScope xBody

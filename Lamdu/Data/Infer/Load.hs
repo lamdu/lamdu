@@ -16,6 +16,7 @@ import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Lamdu.Data.Infer.Context (Context)
+import Lamdu.Data.Infer.RefData (LoadedDef(..), ldDef, ldType)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.TypedValue (ScopedTypedValue(..), TypedValue(..), tvType, stvTV)
 import qualified Control.Lens as Lens
@@ -25,12 +26,6 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.RefData as RefData
-
-data LoadedDef def = LoadedDef
-  { _ldDef :: def
-  , _ldType :: ExprRef def
-  }
-Lens.makeLenses ''LoadedDef
 
 newtype Loader def m = Loader
   { loadDefType :: def -> m (Expr.Expression def ())
@@ -43,7 +38,7 @@ newtype Error def = LoadUntypedDef def
 type T def m = StateT (Context def) (EitherT (Error def) m)
 
 exprIntoContext ::
-  (Ord def, MonadA m) => RefData.Scope def -> Expr.Expression def () ->
+  (Ord def, MonadA m) => RefData.Scope def -> Expr.Expression (LoadedDef def) () ->
   StateT (Context def) m (ExprRef def)
 exprIntoContext scope (Expr.Expression body ()) = do
   newBody <-
@@ -59,11 +54,12 @@ exprIntoContext scope (Expr.Expression body ()) = do
 
 -- Error includes untyped def use
 loadDefTypeIntoRef :: (Ord def, MonadA m) => Loader def m -> def -> T def m (ExprRef def)
-loadDefTypeIntoRef (Loader loader) def = do
-  loadedDefType <- lift . lift $ loader def
+loadDefTypeIntoRef loader@(Loader loadType) def = do
+  loadedDefType <- lift . lift $ loadType def
   when (Lens.has ExprLens.holePayloads loadedDefType) .
     lift . Either.left $ LoadUntypedDef def
-  exprIntoContext (RefData.Scope mempty Nothing) loadedDefType
+  exprIntoContext (RefData.Scope mempty Nothing) =<<
+    load loader loadedDefType
 
 newDefinition :: (MonadA m, Ord def) => def -> StateT (Context def) m (ScopedTypedValue def)
 newDefinition def = do

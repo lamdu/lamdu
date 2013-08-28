@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.RefData
   ( Restriction(..)
+  , LoadedDef(..), ldDef, ldType
   , RefData(..), rdScope, rdBody, rdWasNotDirectlyTag, rdRestrictions, rdTriggers
     , defaultRefData
   , Scope(..), scopeMap, scopeMDef
@@ -47,18 +48,24 @@ data Restriction def
     MustBeTypeOf (ExprRef def)
   deriving (Eq, Show)
 
+data LoadedDef def = LoadedDef
+  { _ldDef :: def
+  , _ldType :: ExprRef def
+  }
+Lens.makeLenses ''LoadedDef
+
 data RefData def = RefData
   { _rdScope :: Scope def
   , _rdWasNotDirectlyTag :: Monoid.Any
   , _rdTriggers :: OR.RefMap (TagRule def) (Set (Trigger def))
   , _rdRestrictions :: [Restriction def]
-  , _rdBody :: Expr.Body def (ExprRef def)
+  , _rdBody :: Expr.Body (LoadedDef def) (ExprRef def)
   }
 Lens.makeLenses ''RefData
 
 type UFExprs def = UFData (TagExpr def) (RefData def)
 
-defaultRefData :: Scope def -> Expr.Body def (ExprRef def) -> RefData def
+defaultRefData :: Scope def -> Expr.Body (LoadedDef def) (ExprRef def) -> RefData def
 defaultRefData scop body = RefData
   { _rdScope = scop
   , _rdWasNotDirectlyTag = Monoid.Any False
