@@ -18,6 +18,7 @@ import Control.Monad.Trans.State (StateT, runState)
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
+import Lamdu.Data.Infer.RefData (LoadedDef)
 import Lamdu.Data.Infer.RefTags (ExprRef, TagExpr, RuleRef, TagRule, ParamRef, TagParam)
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
@@ -63,7 +64,7 @@ Lens.makeLenses ''Apply
 data Uncircumsize def = Uncircumsize
   { _uValRef :: ExprRef def
   , _uApplicantValRef :: ExprRef def
-  , _uUncircumsizedBody :: Expr.Body def (ExprRef def)
+  , _uUncircumsizedBody :: Expr.Body (LoadedDef def) (ExprRef def)
   }
 Lens.makeLenses ''Uncircumsize
 

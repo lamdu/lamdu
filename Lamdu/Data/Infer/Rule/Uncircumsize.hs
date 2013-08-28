@@ -37,7 +37,7 @@ execute rule triggers =
 
 make ::
   ExprRef def -> ExprRef def ->
-  Expr.Body def (ExprRef def) ->
+  Expr.Body (RefData.LoadedDef def) (ExprRef def) ->
   Infer def ()
 make valRef applicantValRef uncircumsizedValBody = do
   ruleRef <-

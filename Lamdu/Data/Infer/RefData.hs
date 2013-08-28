@@ -51,8 +51,11 @@ data Restriction def
 data LoadedDef def = LoadedDef
   { _ldDef :: def
   , _ldType :: ExprRef def
-  }
+  } deriving (Show)
 Lens.makeLenses ''LoadedDef
+
+instance Eq def => Eq (LoadedDef def) where
+  LoadedDef a _ == LoadedDef b _ = a == b
 
 data RefData def = RefData
   { _rdScope :: Scope def

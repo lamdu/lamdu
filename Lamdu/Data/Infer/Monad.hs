@@ -19,7 +19,7 @@ import Data.Store.Guid (Guid)
 import Lamdu.Data.Expression.Utils () -- Expr.Body Show instance
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
-import Lamdu.Data.Infer.RefData (UFExprs)
+import Lamdu.Data.Infer.RefData (UFExprs, LoadedDef)
 import Lamdu.Data.Infer.RefTags (ExprRef, TagRule, TagExpr)
 import Lamdu.Data.Infer.Rule.Types (RuleRef, RuleMap)
 import Lamdu.Data.Infer.Trigger.Types (Fired)
@@ -36,7 +36,9 @@ data Error def
   | CompositeTag (ExprRef def)
   | GetMissingField
   | GetFieldRequiresRecord
-  | Mismatch (Expr.Body def (ExprRef def)) (Expr.Body def (ExprRef def))
+  | Mismatch
+    (Expr.Body (LoadedDef def) (ExprRef def))
+    (Expr.Body (LoadedDef def) (ExprRef def))
   deriving (Show)
 
 newtype TriggeredRules def = TriggeredRules

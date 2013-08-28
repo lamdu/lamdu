@@ -50,7 +50,7 @@ fresh ::
   Scope def -> Expr.Body (Load.LoadedDef def) (ExprRef def) ->
   Infer def (ExprRef def)
 fresh scope body =
-  InferM.liftContext $ Context.fresh scope (body & ExprLens.bodyDef %~ (^. Load.ldDef))
+  InferM.liftContext $ Context.fresh scope body
 
 maybeCircumsize ::
   Scope def ->
@@ -66,10 +66,7 @@ maybeCircumsize scope applicant uncircumsizedValBody typeRef = do
     & InferM.liftUFExprs . UFData.fresh
   RuleUncircumsize.make valRef
     (applicant ^. tvVal)
-    ( uncircumsizedValBody
-      & ExprLens.bodyDef %~ (^. Load.ldDef)
-      <&> (^. tvVal)
-    )
+    (uncircumsizedValBody <&> (^. tvVal))
   return $ TypedValue valRef typeRef
 
 makeApplyTV ::
