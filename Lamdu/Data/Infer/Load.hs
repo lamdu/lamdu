@@ -12,17 +12,14 @@ import Control.Lens.Operators
 import Control.Monad (when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
-import Control.Monad.Trans.State (StateT)
+import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
-import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
-import Data.Traversable (sequenceA)
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.TypedValue (ScopedTypedValue(..), TypedValue(..), tvType, stvTV)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Either as Either
-import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Context as Context
@@ -85,23 +82,18 @@ load ::
   (Ord def, MonadA m) =>
   Loader def m -> Expr.Expression def a ->
   T def m (Expr.Expression (LoadedDef def) a)
-load loader expr = do
-  existingDefTVs <- Lens.use Context.defTVs <&> Lens.mapped %~ return
-  -- Left wins in union
-  allDefTVs <- sequenceA $ existingDefTVs `Map.union` defLoaders
-  Context.defTVs .= allDefTVs
-  let
-    getDefRef def =
-      LoadedDef def .
-      unsafeUnjust "We just added all defs!" $
-      allDefTVs ^? Lens.ix def . tvType
-  expr & ExprLens.exprDef %~ getDefRef & return
+load loader expr = expr & ExprLens.exprDef %%~ toLoadedDef
   where
-    defLoaders =
-      Map.fromList
-      [  (def
-        , TypedValue
-          <$> Context.freshHole (RefData.Scope mempty (Just def))
-          <*> loadDefTypeIntoRef loader def)
-      | def <- expr ^.. ExprLens.exprDef
-      ]
+    toLoadedDef def = LoadedDef def . (^. tvType) <$> loadDefTVIfNeeded def
+    loadDefTVIfNeeded def = do
+      mExistingTV <- Lens.use (Context.defTVs . Lens.at def)
+      case mExistingTV of
+        Nothing -> do
+          newTV <- loadDefTV def
+          Context.defTVs . Lens.at def .= Just newTV
+          return newTV
+        Just tv -> return tv
+    loadDefTV def =
+      TypedValue
+      <$> Context.freshHole (RefData.Scope mempty (Just def))
+      <*> loadDefTypeIntoRef loader def
