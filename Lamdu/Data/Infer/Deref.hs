@@ -13,13 +13,17 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
 import Data.Function.Decycle (decycle)
+import Data.Map (Map)
 import Data.Store.Guid (Guid)
+import Data.Traversable (traverse)
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
-import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef)
+import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef, TagParam)
 import Lamdu.Data.Infer.TypedValue (tvVal, tvType, ScopedTypedValue, stvTV, stvScope)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
+import qualified Data.Map as Map
+import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -36,7 +40,7 @@ type Expr def = Expr.Expression (RefData.LoadedDef def) (ExprRef def)
 data DerefedSTV def = DerefedSTV
   { _dValue :: Expr def
   , _dType :: Expr def
-  , _dScope :: RefData.Scope def
+  , _dScope :: Map Guid (Expr def)
   }
 Lens.makeLenses ''DerefedSTV
 
@@ -74,6 +78,19 @@ deref storedGuids =
         >>= ExprLens.bodyParamIds %%~ mGuidAliases . canonizeGuid storedGuids
         <&> (`Expr.Expression` ref)
 
+derefScope ::
+  StoredGuids def ->
+  OR.RefMap (TagParam def) (ExprRef def) ->
+  M def (Map Guid (Expr def))
+derefScope storedGuids =
+  fmap Map.fromList . traverse each . (^@.. Lens.itraversed)
+  where
+    each (paramRef, ref) = do
+      paramRep <- mGuidAliases $ GuidAliases.find paramRef
+      guid <- mGuidAliases . State.gets $ GuidAliases.guidOfRep paramRep
+      typeExpr <- deref storedGuids ref
+      return (guid, typeExpr)
+
 expr ::
   Expr.Expression ldef (ScopedTypedValue def, a) ->
   M def (Expr.Expression ldef (M def (DerefedSTV def), a))
@@ -92,7 +109,7 @@ expr =
           DerefedSTV
           <$> deref newStoredGuids (stv ^. stvTV . tvVal)
           <*> deref newStoredGuids (stv ^. stvTV . tvType)
-          <*> pure (stv ^. stvScope)
+          <*> derefScope storedGuids (stv ^. stvScope . RefData.scopeMap)
       storedBody
         & Lens.traverse %%~ go newStoredGuids
         <&> (`Expr.Expression` (derefTV, pl))
