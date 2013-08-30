@@ -169,4 +169,4 @@ showInferredValType expr =
   , "Inferred type: " ++ showDerefed typ
   ]
   where
-    DerefedSTV val typ _scope = expr ^. Expr.ePayload
+    DerefedSTV val typ _scope _stv = expr ^. Expr.ePayload

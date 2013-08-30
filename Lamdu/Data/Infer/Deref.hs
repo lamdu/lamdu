@@ -2,7 +2,7 @@
 module Lamdu.Data.Infer.Deref
   ( M, expr, entireExpr, deref
   , toInferError
-  , DerefedSTV(..), dValue, dType, dScope
+  , DerefedSTV(..), dValue, dType, dScope, dSTV
   , Error(..)
   , RefData.Restriction(..), ExprRef
   ) where
@@ -41,6 +41,7 @@ data DerefedSTV def = DerefedSTV
   { _dValue :: Expr def
   , _dType :: Expr def
   , _dScope :: Map Guid (Expr def)
+  , _dSTV :: ScopedTypedValue def
   }
 Lens.makeLenses ''DerefedSTV
 
@@ -110,6 +111,7 @@ expr =
           <$> deref newStoredGuids (stv ^. stvTV . tvVal)
           <*> deref newStoredGuids (stv ^. stvTV . tvType)
           <*> derefScope storedGuids (stv ^. stvScope . RefData.scopeMap)
+          <*> pure stv
       storedBody
         & Lens.traverse %%~ go newStoredGuids
         <&> (`Expr.Expression` (derefTV, pl))
