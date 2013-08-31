@@ -12,7 +12,7 @@ module Data.Store.Transaction
   , readGuid, readGuidDef, writeGuid
   , isEmpty
   , guidExists, irefExists
-  , newIRef, newKey, newIRefWithGuid
+  , newIRef, newKey
   , followBy
   , anchorRef, anchorRefDef
   , assocDataRef, assocDataRefDef
@@ -187,16 +187,6 @@ newIRef val = do
   newGuid <- newKey
   insert newGuid val
   return $ IRef.unsafeFromGuid newGuid
-
-newIRefWithGuid ::
-  (Binary a, MonadA m) =>
-  (Guid -> Transaction m (a, b)) -> Transaction m (IRef (Tag m) a, b)
-newIRefWithGuid f = do
-  newGuid <- newKey
-  let iref = IRef.unsafeFromGuid newGuid
-  (val, extra) <- f newGuid
-  writeIRef iref val
-  return (iref, extra)
 
 ---------- Properties:
 

@@ -14,7 +14,7 @@ module Lamdu.Data.Expression.IRef
   , addProperties
   ) where
 
-import Control.Applicative ((<$>), pure)
+import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
@@ -128,17 +128,12 @@ newExpressionFromH ::
 newExpressionFromH expr =
   case mIRef of
   Just iref -> writeExpressionWithStoredSubexpressions iref expr
-  Nothing -> f <$> Transaction.newIRefWithGuid (const mkPair)
+  Nothing -> do
+    body <- expressionBodyFrom expr
+    exprI <- Transaction.newIRef ((^. Expr.ePayload . Lens._1) <$> body)
+    return $ Expr.Expression body (ExpressionI exprI, pl)
   where
-    (mIRef, payloadExtra) = expr ^. Expr.ePayload
-    mkPair = do
-      body <- expressionBodyFrom expr
-      pure ((^. Expr.ePayload . Lens._1) <$> body, body)
-    f (exprI, body) =
-      Expr.Expression body
-      ( ExpressionI exprI
-      , payloadExtra
-      )
+    (mIRef, pl) = expr ^. Expr.ePayload
 
 variableRefGuid :: Expr.VariableRef (DefI t) -> Guid
 variableRefGuid (Expr.ParameterRef i) = i
