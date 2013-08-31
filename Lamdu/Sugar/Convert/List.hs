@@ -23,6 +23,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Infer.Load as InferLoad
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
@@ -53,7 +54,7 @@ nil app@(Expr.Apply funcI _) exprPl = do
       , replaceNil = ExprIRef.exprGuid <$> DataOps.setToHole exprS
       }
   guard $
-    Lens.anyOf ExprLens.exprDefinitionRef
+    Lens.anyOf (ExprLens.exprDefinitionRef . InferLoad.ldDef)
     (== Anchors.sfNil specialFunctions) funcI
   (lift . ConvertExpr.make exprPl . BodyList)
     List
@@ -69,12 +70,14 @@ mkListAddFirstItem specialFunctions =
   fmap (ExprIRef.exprGuid . snd) . DataOps.addListItem specialFunctions
 
 isCons ::
-  Anchors.SpecialFunctions t ->
-  ExprIRef.Expression t a -> Bool
-isCons specialFunctions =
-  Lens.anyOf
-  (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprDefinitionRef)
-  (== Anchors.sfCons specialFunctions)
+  Anchors.SpecialFunctions (Tag m) ->
+  LoadedExpr m a -> Bool
+isCons specialFunctions expr =
+  expr
+  & ExprLens.exprDef %~ (^. InferLoad.ldDef)
+  & Lens.anyOf
+    (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprDefinitionRef)
+    (== Anchors.sfCons specialFunctions)
 
 mkListItem ::
   (MonadA m, Monoid a) =>

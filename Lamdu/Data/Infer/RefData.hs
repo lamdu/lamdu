@@ -1,7 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DeriveDataTypeable #-}
 module Lamdu.Data.Infer.RefData
   ( Restriction(..)
   , LoadedDef(..), ldDef, ldType
+  , LoadedBody, LoadedExpr
   , RefData(..), rdScope, rdBody, rdWasNotDirectlyTag, rdRestrictions, rdTriggers
     , defaultRefData
   , Scope(..), scopeMap, scopeMDef
@@ -14,8 +15,13 @@ module Lamdu.Data.Infer.RefData
 import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
+import Data.Binary (Binary(..), getWord8, putWord8)
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Data.Monoid (Monoid(..))
+import Data.Monoid.Instances () -- Binary Any
 import Data.Set (Set)
+import Data.Typeable (Typeable)
 import Data.UnionFind.WithData (UFData)
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
 import Lamdu.Data.Infer.RefTags (TagExpr, ExprRef, ParamRef, TagRule, TagParam)
@@ -33,6 +39,7 @@ data Scope def = Scope
     _scopeMDef :: Maybe def
   }
 Lens.makeLenses ''Scope
+derive makeBinary ''Scope
 
 emptyScope :: def -> Scope def
 emptyScope def = Scope
@@ -44,18 +51,21 @@ data Restriction def
   = MustMatch (ExprRef def)
   | MustBeRecordType
   | MustBeTag
-  | -- Is the type of a hole, so will surely be restricted when hole is filled:
-    MustBeTypeOf (ExprRef def)
   deriving (Eq, Show)
+derive makeBinary ''Restriction
 
 data LoadedDef def = LoadedDef
   { _ldDef :: def
   , _ldType :: ExprRef def
-  } deriving (Show)
+  } deriving (Show, Typeable)
 Lens.makeLenses ''LoadedDef
+derive makeBinary ''LoadedDef
 
 instance Eq def => Eq (LoadedDef def) where
   LoadedDef a _ == LoadedDef b _ = a == b
+
+type LoadedBody def = Expr.Body (LoadedDef def)
+type LoadedExpr def = Expr.Expression (LoadedDef def)
 
 data RefData def = RefData
   { _rdScope :: Scope def
@@ -65,6 +75,7 @@ data RefData def = RefData
   , _rdBody :: Expr.Body (LoadedDef def) (ExprRef def)
   }
 Lens.makeLenses ''RefData
+derive makeBinary ''RefData
 
 type UFExprs def = UFData (TagExpr def) (RefData def)
 

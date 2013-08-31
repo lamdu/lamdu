@@ -6,27 +6,28 @@ module Lamdu.Sugar.Convert.Expression
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad (zipWithM)
+import Control.Monad (void)
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
+import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
-import Lamdu.Data.Expression.Infer.Conflicts (iwcInferredTypes)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
+import qualified Control.Lens as Lens
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
+import qualified Lamdu.Data.Infer.Deref as Deref
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.InputExpr as InputExpr
 import qualified System.Random as Random
-import qualified System.Random.Utils as RandomUtils
 
 mkGen :: Int -> Int -> Guid -> Random.StdGen
 mkGen select count =
@@ -58,20 +59,16 @@ make ::
   BodyU m a -> ConvertM m (ExpressionU m a)
 make exprPl body = do
   sugarContext <- ConvertM.readContext
-  inferredTypes <-
-    zipWithM
-    ( fmap ConvertM.convertSubexpression
-    . InputExpr.makePure
-    ) seeds types
+  mInferredType <- traverse (ConvertM.convertSubexpression . InputExpr.makePure seed . void) mType
   return $ Expression body Payload
     { _plGuid = exprPl ^. ipGuid
-    , _plInferredTypes = inferredTypes
+    , _plInferredTypes = mInferredType ^.. Lens._Just
     , _plActions = mkActions sugarContext <$> exprPl ^. ipStored
     , _plData = exprPl ^. ipData
     }
   where
-    seeds = RandomUtils.splits . mkGen 0 3 $ exprPl ^. ipGuid
-    types = maybe [] iwcInferredTypes $ exprPl ^. ipInferred
+    seed = mkGen 0 3 $ exprPl ^. ipGuid
+    mType = exprPl ^? ipInferred . Lens._Just . Deref.dType
 
 getStoredName :: MonadA m => Guid -> T m (Maybe String)
 getStoredName guid = do

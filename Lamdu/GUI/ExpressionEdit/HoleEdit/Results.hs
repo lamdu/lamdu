@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell, FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Results
   ( makeAll, HaveHiddenResults(..)
   , Result(..), ResultInfo(..)
@@ -32,6 +32,8 @@ import Lamdu.Config (Config)
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefIM)
 import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..), pureHole)
+import Lamdu.Data.Infer.Deref (DerefedTV)
+import Lamdu.Data.Infer.Load (ldDef)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument, hiActiveId)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.Types (Scope(..))
@@ -46,9 +48,9 @@ import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Infer.Deref as InferDeref
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -121,9 +123,9 @@ sugarNameToGroup (Sugar.Name _ collision varName) expr = Group
       Sugar.NoCollision -> []
       Sugar.Collision suffix -> [show suffix]
 
-resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefIM m)) -> [Int]
+resultComplexityScore :: Sugar.LoadedExpr m (DerefedTV (DefIM m)) -> [Int]
 resultComplexityScore expr =
-  [ length . Foldable.toList . Infer.iType $ expr ^. Expr.ePayload
+  [ length . Foldable.toList $ expr ^. Expr.ePayload . InferDeref.dType
   , length $ Foldable.toList expr
   ]
 
@@ -207,14 +209,17 @@ baseExprWithApplyForms holeInfo baseExpr =
 
 storePointExpr ::
   Monoid a =>
-  Expr.BodyExpr (DefIM m) (Sugar.MStorePoint m a) ->
-  Sugar.ExprStorePoint m a
+  Expr.BodyExpr def (Sugar.MStorePoint m a) ->
+  Expr.Expression def (Sugar.MStorePoint m a)
 storePointExpr = (`Expression` (Nothing, mempty))
 
-storePointHole :: Monoid a => Sugar.ExprStorePoint m a
+storePointHole :: Monoid a => Expr.Expression def (Sugar.MStorePoint m a)
 storePointHole = storePointExpr $ ExprLens.bodyHole # ()
 
-storePointHoleWrap :: Monoid a => Sugar.ExprStorePoint m a -> Sugar.ExprStorePoint m a
+storePointHoleWrap ::
+  Monoid a =>
+  Expr.Expression def (Sugar.MStorePoint m a) ->
+  Expr.Expression def (Sugar.MStorePoint m a)
 storePointHoleWrap expr =
   storePointExpr $ ExprUtil.makeApply storePointHole expr
 
@@ -232,10 +237,11 @@ removeWrappers expr
       (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole)
 
 injectIntoHoles ::
-  MonadA m => HoleInfo m ->
-  Sugar.ExprStorePoint m a ->
+  MonadA m =>
+  HoleInfo m ->
+  ExprIRef.ExpressionM m (Sugar.MStorePoint m a) ->
   ExprIRef.ExpressionM m (ApplyFormAnnotation, a) ->
-  CT m [Sugar.ExprStorePoint m a]
+  CT m [ExprIRef.ExpressionM m (Sugar.MStorePoint m a)]
 injectIntoHoles holeInfo arg =
   fmap catMaybes . mapM injectArg . injectArgPositions .
   ExprUtil.addExpressionContexts (Lens._1 .~ Nothing) .
@@ -262,7 +268,7 @@ injectIntoHoles holeInfo arg =
 maybeInjectArgumentExpr ::
   MonadA m => HoleInfo m ->
   [ExprIRef.ExpressionM m ApplyFormAnnotation] ->
-  CT m [Sugar.ExprStorePoint m SugarExprPl]
+  CT m [ExprIRef.ExpressionM m (Sugar.MStorePoint m SugarExprPl)]
 maybeInjectArgumentExpr holeInfo =
   case hiMArgument holeInfo of
   Nothing -> return . map ((Nothing, mempty) <$)
@@ -275,6 +281,8 @@ maybeInjectArgumentExpr holeInfo =
         holeArg ^. Sugar.haExprPresugared
         <&> Lens._2 .~ pl False
         & Expr.ePayload . Lens._2 .~ pl True
+        -- TODO: Don't wastefully lose the loaded...
+        & ExprLens.exprDef %~ (^. ldDef)
 
 maybeInjectArgumentNewTag ::
   HoleInfo m -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl)]
@@ -405,7 +413,9 @@ makeAllGroups holeInfo = do
       in
         ( inferredGroups & Lens.traverse . groupSearchTerms <>~ dupsGroupNames
         ) ++ others
-    iVal = hiInferred holeInfo ^. Sugar.hiBaseValue
+    iVal =
+      hiInferred holeInfo ^. Sugar.hiBaseValue
+      & ExprLens.exprDef %~ (^. ldDef)
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =

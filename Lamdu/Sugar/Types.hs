@@ -65,7 +65,8 @@ module Lamdu.Sugar.Types
   -- Input types:
   , InputPayloadP(..), ipGuid, ipInferred, ipStored, ipData
   , InputPayload, InputExpr
-  , Stored, InferredWC
+  , Stored, Inferred
+  , LoadedExpr
   ) where
 
 import Data.Binary (Binary)
@@ -78,13 +79,11 @@ import Data.Store.IRef (Tag)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import Lamdu.Data.Expression (Kind(..))
-import Lamdu.Data.Expression.IRef (DefIM)
-import Lamdu.Sugar.Types.Internal (T, CT, Stored, InferredWC)
+import Lamdu.Sugar.Types.Internal (T, CT, Stored, Inferred, LoadedExpr)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Sugar.Types.Internal as TypesInternal
 import qualified System.Random as Random
 
@@ -98,8 +97,8 @@ data InputPayloadP inferred stored a
 Lens.makeLenses ''InputPayloadP
 
 type InputPayload m a =
-  InputPayloadP (Maybe (InferredWC m)) (Maybe (Stored m)) a
-type InputExpr m a = ExprIRef.ExpressionM m (InputPayload m a)
+  InputPayloadP (Maybe (Inferred m)) (Maybe (Stored m)) a
+type InputExpr m a = LoadedExpr m (InputPayload m a)
 
 data WrapAction m
   = WrapperAlready -- I'm an apply-of-hole, no need to wrap
@@ -118,7 +117,7 @@ data Actions m = Actions
   }
 
 data Payload name m a = Payload
-  { _plInferredTypes :: [Expression name m ()]
+  { _plInferredTypes :: [Expression name m ()] -- TODO: Use Maybe, not []
   -- This must be embedded in the expression AST and not as a separate
   -- function so that AddNames can correct the "name" here in the
   -- right context.
@@ -130,8 +129,7 @@ data Payload name m a = Payload
 type MStorePoint m a =
   (Maybe (TypesInternal.StorePoint (Tag m)), a)
 
-type ExprStorePoint m a =
-  ExprIRef.ExpressionM m (MStorePoint m a)
+type ExprStorePoint m a = LoadedExpr m (MStorePoint m a)
 
 data ExpressionP name m pl = Expression
   { _rBody :: Body name m (ExpressionP name m pl)
@@ -179,7 +177,7 @@ data FuncParam name m expr = FuncParam
   , _fpVarKind :: FuncParamType
   , _fpName :: name
   , _fpType :: expr
-  , _fpInferredType :: ExprIRef.ExpressionM m ()
+  , _fpInferredType :: LoadedExpr m ()
   , _fpMActions :: Maybe (FuncParamActions name m)
   } deriving (Functor, Foldable, Traversable)
 
@@ -197,7 +195,7 @@ data PickedResult = PickedResult
   }
 
 data HoleResult name m a = HoleResult
-  { _holeResultInferred :: ExprIRef.ExpressionM m (Infer.Inferred (DefIM m))
+  { _holeResultInferred :: LoadedExpr m (Inferred m)
   , _holeResultConverted :: Expression name m a
   , _holeResultPick :: T m PickedResult
   , _holeResultHasHoles :: Bool
@@ -224,7 +222,9 @@ data HoleActions name m = HoleActions
     -- but with the hole's scope.
     -- If given expression does not type check on its own, returns Nothing.
     -- (used by HoleEdit to suggest variations based on type)
-    _holeInferExprType :: ExprIRef.ExpressionM m () -> CT m (Maybe (ExprIRef.ExpressionM m ()))
+    _holeInferExprType ::
+      -- TODO: Just return   LoadedExpr (DerefedSTV def, a)  ?
+      ExprIRef.ExpressionM m () -> CT m (Maybe (LoadedExpr m ()))
   , holeResult ::
       forall a.
       (Binary a, Typeable a, Ord a, Monoid a) =>
@@ -246,9 +246,9 @@ data HoleArg m expr = HoleArg
 
 data HoleInferred name m = HoleInferred
   { -- hiBaseValue is the inferred value WITHOUT the vars context
-    _hiBaseValue :: ExprIRef.ExpressionM m ()
-  , _hiWithVarsValue :: ExprIRef.ExpressionM m ()
-  , _hiType :: ExprIRef.ExpressionM m ()
+    _hiBaseValue :: LoadedExpr m ()
+  , _hiWithVarsValue :: LoadedExpr m ()
+  , _hiType :: LoadedExpr m ()
   -- The Sugar Expression of the WithVarsValue
   , _hiMakeConverted :: Random.StdGen -> CT m (Expression name m ())
   }
@@ -393,7 +393,7 @@ instance Show expr => Show (Body name m expr) where
 
 data WhereItem name m expr = WhereItem
   { _wiValue :: DefinitionContent name m expr
-  , _wiInferredType :: ExprIRef.ExpressionM m ()
+  , _wiInferredType :: LoadedExpr m ()
   , _wiGuid :: Guid
   , _wiName :: name
   , _wiActions :: Maybe (ListItemActions m)

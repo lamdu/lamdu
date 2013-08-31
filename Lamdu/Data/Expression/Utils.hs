@@ -149,13 +149,34 @@ subst lens to expr
   | Lens.has lens expr = to
   | otherwise = expr & eBody . traverse %~ subst lens to
 
+recordValForm :: Expression a () -> Maybe (Expression b ())
+recordValForm paramType =
+  paramType ^? ExprLens.exprKindedRecordFields KType
+  >>= replaceFieldTypesWithHoles
+  where
+    castTag (BodyLeaf Hole) = Just (BodyLeaf Hole)
+    castTag (BodyLeaf (Tag tag)) = Just (BodyLeaf (Tag tag))
+    castTag _ = Nothing
+    replaceFieldTypesWithHoles fields =
+      fields
+      & Lens.traversed %%~
+        (Lens._1 . eBody %%~ castTag) .
+        (Lens._2 .~ pureHole)
+      <&> (ExprLens.pureExpr . _BodyRecord . ExprLens.kindedRecordFields KVal #)
+
 data ApplyFormAnnotation =
   Untouched | DependentParamAdded | IndependentParamAdded
   deriving Eq
 
+addApply :: ann -> Expression a ann -> Expression b () -> Expression a ann
+addApply ann func paramType =
+  Expression (makeApply func arg) ann
+  where
+    arg = ann <$ fromMaybe pureHole (recordValForm paramType)
+
 -- Transform expression to expression applied with holes,
 -- with all different sensible levels of currying.
-applyForms :: Expression def () -> Expression def () -> [Expression def ApplyFormAnnotation]
+applyForms :: Expression a () -> Expression b () -> [Expression b ApplyFormAnnotation]
 applyForms exprType rawExpr
   | Lens.has (ExprLens.exprLam . lamKind . _KVal) expr = [expr]
   | otherwise = reverse withAllAppliesAdded
@@ -176,20 +197,6 @@ applyForms exprType rawExpr
       , _piWrappersMIndepParam = mNonDepParam
       , _piWrappersResultType = resultType
       } = getPiWrappers exprType
-    addApply ann func paramType =
-      Expression (makeApply func arg) ann
-      where
-        arg = ann <$ fromMaybe pureHole (recordValForm paramType)
-
-recordValForm :: Expression def () -> Maybe (Expression def ())
-recordValForm paramType =
-  replaceFieldTypesWithHoles <$>
-  (paramType ^? ExprLens.exprKindedRecordFields KType)
-  where
-    replaceFieldTypesWithHoles fields =
-      ExprLens.pureExpr . _BodyRecord .
-      ExprLens.kindedRecordFields KVal #
-      (fields & Lens.traversed . Lens._2 .~ pureHole)
 
 structureForType ::
   Expression def () ->

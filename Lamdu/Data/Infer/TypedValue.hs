@@ -1,10 +1,12 @@
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 module Lamdu.Data.Infer.TypedValue
   ( TypedValue(..), tvVal, tvType
-  , ScopedTypedValue(..), stvTV, stvScope
   ) where
 
-import Lamdu.Data.Infer.RefData
+import Data.Binary (Binary(..))
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
+import Data.Typeable (Typeable)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import qualified Control.Lens as Lens
 
@@ -12,15 +14,10 @@ import qualified Control.Lens as Lens
 data TypedValue def = TypedValue
   { _tvVal :: {-# UNPACK #-}! (ExprRef def)
   , _tvType :: {-# UNPACK #-}! (ExprRef def)
-  } deriving (Eq, Ord)
+  } deriving (Eq, Ord, Typeable)
 Lens.makeLenses ''TypedValue
 instance Show (TypedValue def) where
   showsPrec n (TypedValue v t) =
     showParen (n > 0) (unwords [show v, ":", show t] ++)
 
--- ScopedTypedValue
-data ScopedTypedValue def = ScopedTypedValue
-  { _stvTV :: TypedValue def
-  , _stvScope :: Scope def
-  }
-Lens.makeLenses ''ScopedTypedValue
+derive makeBinary ''TypedValue

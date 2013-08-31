@@ -8,10 +8,10 @@ import Control.MonadA (MonadA)
 import Data.Foldable (traverse_)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.Load (LoadedDef)
+import Lamdu.Data.Infer.Load (LoadedExpr)
 import Lamdu.Data.Infer.Monad (Infer)
 import Lamdu.Data.Infer.RefTags (ExprRef, TagParam)
-import Lamdu.Data.Infer.TypedValue (ScopedTypedValue(..), TypedValue(..))
+import Lamdu.Data.Infer.TypedValue (TypedValue(..))
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
@@ -51,10 +51,24 @@ lamWrapRef paramId paramTypeRef scope k defRef = do
 lambdaWrap ::
   Ord def =>
   Guid -> ExprRef def ->
-  Expr.Expression (LoadedDef def) (ScopedTypedValue def, a) ->
+  LoadedExpr def (TypedValue def, a) ->
   StateT (Context def) (Either (InferM.Error def))
-  (Expr.Expression (LoadedDef def) (ScopedTypedValue def, Maybe a))
+  (LoadedExpr def (TypedValue def, Maybe a))
 lambdaWrap paramId paramTypeRef expr = InferMRun.run $ do
+  rootScope <-
+    UFData.read rootValRef
+    & InferM.liftUFExprs
+    <&> (^. RefData.rdScope)
+  let
+    mkRootExpr body tv =
+      Expr.Expression body (tv, Nothing)
+    rootDef =
+      case rootScope of
+        RefData.Scope _ Nothing ->
+          error "Cannot lamWrap: Given a non-root of definition"
+        RefData.Scope scopMap _ | not $ OR.refMapNull scopMap ->
+          error "Cannot lamWrap: Root of definition has elements in scope?!"
+        RefData.Scope _ (Just def) -> def
   paramIdRep <- InferM.liftGuidAliases $ GuidAliases.getRep paramId
   InferM.liftContext . addDefScope rootDef $
     OR.refMapSingleton paramIdRep paramTypeRef
@@ -69,14 +83,5 @@ lambdaWrap paramId paramTypeRef expr = InferMRun.run $ do
     mkRootExpr (ExprUtil.makeLam Expr.KVal paramId paramTypeSTVExpr (expr <&> Lens._2 %~ Just)) $
     TypedValue lambdaRef piRef
   where
-    mkRootExpr body tv =
-      Expr.Expression body (ScopedTypedValue tv rootScope, Nothing)
-    rootDef =
-      case rootScope of
-        RefData.Scope _ Nothing ->
-          error "Cannot lamWrap: Given a non-root of definition"
-        RefData.Scope scopMap _ | not $ OR.refMapNull scopMap ->
-          error "Cannot lamWrap: Root of definition has elements in scope?!"
-        RefData.Scope _ (Just def) -> def
-    ScopedTypedValue (TypedValue rootValRef rootTypRef) rootScope =
+    TypedValue rootValRef rootTypRef =
       expr ^. Expr.ePayload . Lens._1

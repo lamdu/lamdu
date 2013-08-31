@@ -13,7 +13,7 @@ import Lamdu.Data.ExampleDB (createBuiltins)
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Utils (pureHole, pureIntegerType)
-import Lamdu.Data.Infer.Deref (DerefedSTV(..), Restriction(..))
+import Lamdu.Data.Infer.Deref (DerefedTV(..), Restriction(..))
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -162,11 +162,11 @@ canonizeDebug = ExprUtil.randomizeParamIdsG id ExprUtil.debugNameGen Map.empty (
 showDerefed :: Show def => Expression def a -> String
 showDerefed = show . canonizeDebug . void
 
-showInferredValType :: Expression def (DerefedSTV (DefI t)) -> String
+showInferredValType :: Expression def (DerefedTV (DefI t)) -> String
 showInferredValType expr =
   unlines
   [ "Inferred val:  " ++ showDerefed val
   , "Inferred type: " ++ showDerefed typ
   ]
   where
-    DerefedSTV val typ _scope _stv = expr ^. Expr.ePayload
+    DerefedTV val typ _scope _tv = expr ^. Expr.ePayload

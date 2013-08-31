@@ -313,10 +313,22 @@ inferReplicateOfReplicate =
     replicat typ x y =
       getDef "replicate" $$ asHole typ $$: [ x, y ]
 
+fix3Lambdas =
+  testInfer "fix3Lambdas: fix (\\a -> \\b -> \\c -> ?)" $
+  getDef "fix" $$ asHole (hole ~> hole ~> hole) $$
+  ( l "a" (hole ~> hole ~> hole) $
+    l "b" (holeWithInferredType set) $
+    l "c" (holeWithInferredType set) $
+    hole
+  )
+  where
+    l n t = lambda n (asHole t) . const
+
 infiniteTypeTests =
   testGroup "Infinite types"
   [ wrongRecurseMissingArg
   , getFieldWasntAllowed
+  , fix3Lambdas
   ]
 
 getFieldWasntAllowed =

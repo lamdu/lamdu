@@ -3,6 +3,7 @@ module Lamdu.Data.Infer.Load
   ( Loader(..)
   , Error(..)
   , LoadedDef(..), ldDef, ldType
+  , RefData.LoadedBody, LoadedExpr
   , T, load, newDefinition
   , exprIntoContext
   ) where
@@ -16,9 +17,9 @@ import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.RefData (LoadedDef(..), ldDef, ldType)
+import Lamdu.Data.Infer.RefData (LoadedDef(..), ldDef, ldType, LoadedExpr)
 import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.TypedValue (ScopedTypedValue(..), TypedValue(..), tvType, stvTV)
+import Lamdu.Data.Infer.TypedValue (TypedValue(..), tvType)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Either as Either
 import qualified Lamdu.Data.Expression as Expr
@@ -38,7 +39,7 @@ newtype Error def = LoadUntypedDef def
 type T def m = StateT (Context def) (EitherT (Error def) m)
 
 exprIntoContext ::
-  (Ord def, MonadA m) => RefData.Scope def -> Expr.Expression (LoadedDef def) () ->
+  (Ord def, MonadA m) => RefData.Scope def -> LoadedExpr def () ->
   StateT (Context def) m (ExprRef def)
 exprIntoContext scope (Expr.Expression body ()) = do
   newBody <-
@@ -61,23 +62,20 @@ loadDefTypeIntoRef loader@(Loader loadType) def = do
   exprIntoContext (RefData.Scope mempty Nothing) =<<
     load loader loadedDefType
 
-newDefinition :: (MonadA m, Ord def) => def -> StateT (Context def) m (ScopedTypedValue def)
+newDefinition :: (MonadA m, Ord def) => def -> StateT (Context def) m (TypedValue def)
 newDefinition def = do
-  stv <-
-    (`ScopedTypedValue` scope)
-    <$> (TypedValue <$> mkHole <*> mkHole)
-  Context.defTVs . Lens.at def %= setRef (stv ^. stvTV)
-  return stv
+  tv <- TypedValue <$> mkHole <*> mkHole
+  Context.defTVs . Lens.at def %= setRef tv
+  return tv
   where
-    mkHole = Context.freshHole scope
-    scope = RefData.emptyScope def
+    mkHole = Context.freshHole $ RefData.emptyScope def
     setRef tv Nothing = Just tv
     setRef _ (Just _) = error "newDefinition overrides existing def type"
 
 load ::
   (Ord def, MonadA m) =>
   Loader def m -> Expr.Expression def a ->
-  T def m (Expr.Expression (LoadedDef def) a)
+  T def m (LoadedExpr def a)
 load loader expr = expr & ExprLens.exprDef %%~ toLoadedDef
   where
     toLoadedDef def = LoadedDef def . (^. tvType) <$> loadDefTVIfNeeded def

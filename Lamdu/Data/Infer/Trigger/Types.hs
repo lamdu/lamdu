@@ -1,9 +1,13 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.Trigger.Types
   ( Trigger(..)
   , ParameterRefEvent(..)
   , Fired(..)
   ) where
 
+import Data.Binary (Binary(..), getWord8, putWord8)
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Lamdu.Data.Expression.Utils () -- Show instance for Expr.Body
 import Lamdu.Data.Infer.RefTags (ParamRef, ExprRef)
 import qualified Lamdu.Data.Expression as Expr
@@ -17,6 +21,7 @@ data Trigger def
   | OnParameterRef (ParamRef def)
   | OnUnify
   deriving (Eq, Ord, Show)
+derive makeBinary ''Trigger
 
 data ParameterRefEvent
   = ParameterRefOutOfScope

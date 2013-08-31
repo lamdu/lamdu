@@ -11,13 +11,14 @@ module Data.UnionFind.WithData
   , optimize
   ) where
 
-import Control.Applicative ((<$>), (<*))
+import Control.Applicative ((<$>), Applicative(..))
 import Control.Arrow ((***))
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT(..), execStateT, evalState)
 import Control.Monad.Trans.Writer (runWriter)
 import Control.MonadA (MonadA)
+import Data.Binary (Binary(..))
 import Data.Foldable (traverse_)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.OpaqueRef (Ref, RefMap)
@@ -33,6 +34,10 @@ data UFData p a = UFData
   , _ufdData :: RefMap p a
   } deriving (Functor)
 Lens.makeLenses ''UFData
+
+instance Binary a => Binary (UFData p a) where
+  get = UFData <$> get <*> get
+  put (UFData x y) = put x >> put y
 
 empty :: UFData p a
 empty = UFData

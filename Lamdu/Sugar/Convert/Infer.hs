@@ -6,7 +6,6 @@ module Lamdu.Sugar.Convert.Infer
   , inferAddImplicits
   , InferredWithImplicits(..)
 
-  , iwiSuccess
   , iwiBaseInferContext, iwiInferContext
   , iwiStructureInferContext
   , iwiExpr, iwiBaseExpr
@@ -14,7 +13,7 @@ module Lamdu.Sugar.Convert.Infer
   -- TODO: These don't belong here:
   -- Type-check an expression into an ordinary Inferred Expression,
   -- short-circuit on error:
-  , load, memoLoadInfer
+  , load, memoInfer, memoInferAt
 
   , exprInferred
   , exprStored
@@ -32,18 +31,19 @@ import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Monad (void, (<=<))
 import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Either (EitherT(..), mapEitherT)
 import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..), evalStateT)
-import Control.Monad.Trans.State.Utils (toStateT)
+import Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Cache (Cache)
-import Data.Maybe (isJust)
+import Data.Maybe.Utils (unsafeUnjust)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable, Typeable1)
 import Lamdu.Data.Expression.IRef (DefIM)
-import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
+import Lamdu.Data.Infer.Deref (DerefedTV)
+import Lamdu.Data.Infer.Load (Loader(..))
 import Lamdu.Sugar.Types.Internal
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
@@ -54,26 +54,38 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Infer as Infer
-import qualified Lamdu.Data.Expression.Infer.ImplicitVariables as ImplicitVariables
-import qualified Lamdu.Data.Expression.Infer.Structure as Structure
 import qualified Lamdu.Data.Expression.Load as Load
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Infer as Infer
+import qualified Lamdu.Data.Infer.Deref as InferDeref
+import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables
+import qualified Lamdu.Data.Infer.Load as InferLoad
+import qualified Lamdu.Data.Infer.Structure as Structure
 import qualified Lamdu.Sugar.Types as Sugar
 
 type ExpressionSetter def = Expr.Expression def () -> Expr.Expression def ()
 
-loader :: MonadA m => Infer.Loader (DefIM m) (T m)
+loader :: MonadA m => Loader (DefIM m) (T m)
 loader =
-  Infer.Loader
-  (fmap void . ExprIRef.readExpression . (^. Definition.bodyType) <=<
-   Transaction.readIRef)
+  Loader
+  { loadDefType =
+    fmap void . ExprIRef.readExpression . (^. Definition.bodyType) <=<
+    Transaction.readIRef
+  }
 
 load ::
-  MonadA m => Maybe (DefIM m) ->
+  ( Binary a, Typeable a
+  , MonadA m, Typeable1 m
+  ) =>
   ExprIRef.ExpressionM m a ->
-  T m (Infer.Loaded (DefIM m) a)
-load = Infer.load loader
+  StateT (InferContext m) (MaybeT (CT m)) (LoadedExpr m a)
+load expr = do
+  loaded <-
+    InferLoad.load loader expr
+    & Lens.zoom icContext
+    & mapStateT (eitherTToMaybeT . mapEitherT lift)
+  icAugment loaded
+  return loaded
 
 memoBy ::
   (Cache.Key k, Binary v, Typeable v, MonadA m) =>
@@ -85,104 +97,127 @@ pureMemoBy ::
   Cache.FuncId -> k -> v -> StateT Cache m v
 pureMemoBy funcId k = memoBy funcId k . return
 
--- memoLoadInfer does an infer "load" of the given expression (which
--- loads dependent expression types), and then memoizes the inference
--- result of that in a given context. It uses the "loaded" expression
--- (expr+dependent def types) and a given "inferStateKey" as the
--- memoization key. This is done because using the "inferState"
--- directly as a key could potentially be huge and
--- wasteful. Therefore, the caller is in charge of giving us a unique
--- identifier for the inferState that is preferably small.
-memoLoadInfer ::
-  (MonadA m, Typeable1 m, Cache.Key a, Binary a) =>
-  Maybe (DefIM m) ->
-  ExprIRef.ExpressionM m a ->
-  Infer.Node (DefIM m) ->
+eitherToMaybe :: Either l a -> Maybe a
+eitherToMaybe = either (const Nothing) Just
+
+eitherTToMaybeT :: Functor m => EitherT l m a -> MaybeT m a
+eitherTToMaybeT = (MaybeT . fmap eitherToMaybe . runEitherT)
+
+memoInferAt ::
+  (Typeable a, Binary a, Typeable1 m, MonadA m) =>
+  Infer.TypedValue (DefIM m) ->
+  LoadedExpr m a ->
   StateT (InferContext m) (MaybeT (CT m))
-  (ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), a))
-memoLoadInfer mDefI expr node = do
-  loaded <- lift . lift . lift $ load mDefI expr
-  icHashKey %= Cache.bsOfKey . (,,) loaded node
+  (LoadedExpr m (InferDeref.DerefedTV (DefIM m), a))
+memoInferAt tv expr = do
+  -- TV uniquely identifies the position we're inferring to (stvScope
+  -- is redundant to it):
+  icAugment tv
+  memoInferH $ Infer.inferAt tv expr
+
+memoInfer ::
+  (Typeable a, Binary a, Typeable1 m, MonadA m) =>
+  Infer.Scope (DefIM m) -> LoadedExpr m a ->
+  StateT (InferContext m) (MaybeT (CT m))
+  (LoadedExpr m (InferDeref.DerefedTV (DefIM m), a))
+memoInfer scope expr = memoInferH $ Infer.infer scope expr
+
+memoInferH ::
+  ( Typeable1 m, MonadA m
+  , Typeable a, Binary a
+  ) =>
+  Infer.M (DefIM m) (LoadedExpr m (Infer.TypedValue (DefIM m), a)) ->
+  StateT (InferContext m) (MaybeT (CT m))
+  (LoadedExpr m (DerefedTV (DefIM m), a))
+memoInferH infer = do
   k <- Lens.use icHashKey
-  Lens.zoom icContext $
-    StateT . fmap (MaybeT . pureMemoBy "memoLoadInfer" k) . runStateT $
-    Infer.inferLoaded (Infer.InferActions (const Nothing))
-    loaded node
+  Lens.zoom icContext .
+    mapStateT (MaybeT . pureMemoBy "memoInfer" k . eitherToMaybe) $
+    mapStateT (Lens._Left %~ InferDeref.toInferError) . InferDeref.entireExpr =<<
+    infer
 
 inferWithVariables ::
-  (RandomGen g, MonadA m) => g ->
-  Infer.Loaded (DefIM m) a -> Infer.Context (DefIM m) -> Infer.Node (DefIM m) ->
+  ( Show gen
+  , RandomGen gen
+  , MonadA m
+  , Binary a
+  , Typeable1 m
+  , Typeable a
+  ) =>
+  gen -> DefIM m -> LoadedExpr m a ->
+  Infer.Context (DefIM m) ->
+  Infer.TypedValue (DefIM m) ->
   T m
   ( ( Infer.Context (DefIM m)
-    , ExprIRef.ExpressionM m (InferredWithConflicts (DefIM m), a)
+    , LoadedExpr m (DerefedTV (DefIM m), a)
     )
-  , Maybe
-    ( Infer.Context (DefIM m)
+  , ( Infer.Context (DefIM m)
     , Infer.Context (DefIM m)
-    , ExprIRef.ExpressionM m (InferredWithConflicts (DefIM m), ImplicitVariables.Payload a)
+    , LoadedExpr m (DerefedTV (DefIM m), ImplicitVariables.Payload a)
     )
   )
-inferWithVariables gen loaded baseInferContext node =
-  (`evalStateT` baseInferContext) $ do
+inferWithVariables gen def loaded initialContext node =
+  (`evalStateT` initialContext) $ do
+    exprInferred <- assertSuccess $ Infer.inferAt node loaded
+    expr <- assertSuccess $ InferDeref.entireExpr exprInferred
+    -- TV should uniquely identify the scope of that same point
+    -- (Within the context):
+    baseContext <- State.get
 
-    (success, expr) <- toStateT $ inferWithConflicts loaded node
-    intermediateContext <- State.get
+    assertSuccess $ Structure.add exprInferred
+    withStructureContext <- State.get
 
-    mWithVariables <-
-      if not success
-      then return Nothing
-      else Just <$> do
-        -- success checked above, guarantees no conflicts:
-        let asIWC newInferred = InferredWithConflicts newInferred [] []
-
-        withStructureExpr <- Structure.add loader (expr <&> Lens._1 %~ iwcInferred)
-        withStructureContext <- State.get
-
-        wvExpr <- ImplicitVariables.add gen loader withStructureExpr
-        wvContext <- State.get
-
-        return (withStructureContext, wvContext, wvExpr <&> Lens._1 %~ asIWC)
+    wvExpr <-
+      assertSuccess . InferDeref.entireExpr =<<
+      assertSuccess (ImplicitVariables.add gen def exprInferred)
+    wvContext <- State.get
 
     return
-      ( (intermediateContext, expr)
-      , mWithVariables
+      ( (baseContext, expr)
+      , (withStructureContext, wvContext, wvExpr)
       )
 
+assertSuccess :: (Show e, Monad m) => StateT s (Either e) a -> StateT s m a
+assertSuccess x = mapStateT (either (error . show) return) x
+
 data InferredWithImplicits m a = InferredWithImplicits
-  { _iwiSuccess :: Bool
-  , _iwiInferContext :: InferContext m
+  { _iwiInferContext :: InferContext m
   , _iwiStructureInferContext :: InferContext m
-  , _iwiExpr :: ExprIRef.ExpressionM m (Sugar.InputPayloadP (InferredWC m) (Maybe (Stored m)) a)
+  , _iwiExpr :: LoadedExpr m (Sugar.InputPayloadP (Inferred m) (Maybe (Stored m)) a)
   -- Prior to adding variables
   , _iwiBaseInferContext :: InferContext m
-  , _iwiBaseExpr :: ExprIRef.ExpressionM m (Sugar.InputPayloadP (InferredWC m) (Stored m) a)
+  , _iwiBaseExpr :: LoadedExpr m (Sugar.InputPayloadP (Inferred m) (Stored m) a)
   }
 Lens.makeLenses ''InferredWithImplicits
 
 inferAddImplicits ::
-  (RandomGen g, MonadA m, Typeable1 m, Typeable (m ())) => g ->
-  Maybe (DefIM m) ->
+  (Show gen, RandomGen gen, MonadA m, Typeable1 m, Typeable (m ())) =>
+  gen ->
+  DefIM m ->
   ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m)) ->
-  InferContext m -> Infer.Node (DefIM m) -> CT m (InferredWithImplicits m ())
-inferAddImplicits gen mDefI lExpr (InferContext inferContext inferContextKey) node = do
-  loaded <- lift $ load mDefI lExpr
-  let inputKey = Cache.bsOfKey (loaded, inferContextKey, node)
-  ((baseContext, expr), mWithVariables) <-
-    inferWithVariables gen loaded inferContext node
-    & memoBy "inferAddImplicits" inputKey
-    <&> Lens._1 . Lens._1 %~ (InferContext ?? Cache.bsOfKey ("base", inputKey))
-    <&> Lens._2 . Lens._Just . Lens._1 %~ (InferContext ?? Cache.bsOfKey ("withStructure", inputKey))
-    <&> Lens._2 . Lens._Just . Lens._2 %~ (InferContext ?? Cache.bsOfKey ("withVariables", inputKey))
-  let baseExpr = mkStoredPayload <$> expr
+  InferContext m -> Infer.TypedValue (DefIM m) ->
+  CT m (InferredWithImplicits m ())
+inferAddImplicits gen def lExpr inferContext node = do
+  -- TODO: Propagate errors?
+  (loaded, loadedContext) <-
+    fmap (unsafeUnjust "inferAddImplicits load failed") . runMaybeT .
+    (`runStateT` inferContext) $ load lExpr
+  let
+    key =
+      Cache.bsOfKey
+      ( show gen, def, loaded, node
+      , (loadedContext ^. icHashKey)
+      )
+  ((baseContext, expr), (withStructureContext, wvContext, wvExpr)) <-
+    inferWithVariables gen def loaded (loadedContext ^. icContext) node
+    & memoBy "inferAddImplicits" key
+  let newContext x ctx = InferContext ctx $ Cache.bsOfKey (key, x)
   return InferredWithImplicits
-    { _iwiSuccess = isJust mWithVariables
-    , _iwiBaseInferContext = baseContext
-    , _iwiBaseExpr = baseExpr
-    , _iwiStructureInferContext = maybe baseContext (^. Lens._1) mWithVariables
-    , _iwiInferContext = maybe baseContext (^. Lens._2) mWithVariables
-    , _iwiExpr =
-      maybe (baseExpr & Lens.mapped . Sugar.ipStored %~ Just)
-      (fmap mkWVPayload . (^. Lens._3)) mWithVariables
+    { _iwiBaseInferContext = newContext "base" baseContext
+    , _iwiBaseExpr = mkStoredPayload <$> expr
+    , _iwiStructureInferContext = newContext "structure" withStructureContext
+    , _iwiInferContext = newContext "variables" wvContext
+    , _iwiExpr = mkWVPayload <$> wvExpr
     }
   where
     mkStoredPayload (iwc, propClosure) =
@@ -197,9 +232,8 @@ inferAddImplicits gen mDefI lExpr (InferContext inferContext inferContextKey) no
 
 isPolymorphicFunc :: Sugar.InputPayload m a -> Bool
 isPolymorphicFunc funcPl =
-  maybe False
-  (ExprUtil.isDependentPi . Infer.iType . iwcInferred) $
-  funcPl ^. Sugar.ipInferred
+  maybe False ExprUtil.isDependentPi $
+  funcPl ^? Sugar.ipInferred . Lens._Just . InferDeref.dType
 
 exprGuid ::
   Lens' (Expr.Expression def (Sugar.InputPayloadP inferred stored a)) Guid

@@ -17,7 +17,6 @@ import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.Data.Anchors (PresentationMode(..))
 import Lamdu.Data.Expression.IRef (DefIM)
-import Lamdu.Data.Expression.Infer.Conflicts (iwcInferred)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
@@ -29,9 +28,10 @@ import qualified Data.Store.Property as Property
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Infer as Infer
+import qualified Lamdu.Data.Infer.Deref as InferDeref
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
@@ -167,13 +167,14 @@ convertPrefix funcRef funcI argS argI applyPl
 
 typeCheckIdentityAt ::
   (MonadA m, Typeable1 m) =>
-  Infer.Node (DefIM m) -> ConvertM m Bool
+  Infer.TypedValue (DefIM m) -> ConvertM m Bool
 typeCheckIdentityAt point = do
   sugarContext <- ConvertM.readContext
-  ConvertM.liftCTransaction $
-    Lens.has Lens._Just <$>
-    (runMaybeT . (`runStateT` (sugarContext ^. ConvertM.scHoleInferContext)))
-    (SugarInfer.memoLoadInfer Nothing identityFunc point)
+  SugarInfer.load identityFunc
+    >>= SugarInfer.memoInferAt point
+    & runMaybeT . (`runStateT` (sugarContext ^. ConvertM.scHoleInferContext))
+    <&> Lens.has Lens._Just
+    & ConvertM.liftCTransaction
   where
     identityFunc =
       ExprLens.pureExpr #
@@ -197,7 +198,7 @@ unwrap outerP argP argExpr = do
     mArgInferred = Lens.sequenceOf (Lens.traversed . ipInferred) argExpr
     f x =
       ( x ^. ipGuid
-      , iwcInferred $ x ^. ipInferred
+      , x ^. ipInferred
       )
     mOrderedHoles = ConvertHole.orderedInnerHoles . fmap f <$> mArgInferred
 
@@ -209,9 +210,8 @@ convertAppliedHole funcI argS argI exprPl = do
   guard $ Lens.has ExprLens.exprHole funcI
   lift $ do
     isTypeMatch <-
-      maybe (return False)
-      (typeCheckIdentityAt . Infer.iNode . iwcInferred) $
-      funcI ^. SugarInfer.exprInferred
+      maybe (return False) typeCheckIdentityAt $
+      funcI ^? SugarInfer.exprInferred . Lens._Just . InferDeref.dTV
     let
       argWrap =
         maybe WrapNotAllowed

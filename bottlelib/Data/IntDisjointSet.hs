@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, TemplateHaskell #-}
 
 -- The fork at https://github.com/Peaker/disjoint-set was not pulled
 -- into mainline hackage, so we store the fork here:
@@ -61,18 +61,23 @@ module Data.IntDisjointSet (IntDisjointSet,
 import Control.Arrow
 import Control.Monad
 import Control.Monad.Trans.Class
-import Control.Monad.Trans.State.Strict
 import Control.Monad.Trans.Maybe
-import qualified Data.IntMap as IntMap
-import qualified Data.List as List
+import Control.Monad.Trans.State.Strict (state, runState)
+import Data.Binary (Binary(..), getWord8, putWord8)
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Data.Maybe
 import Prelude hiding (lookup, map)
+import qualified Control.Monad.Trans.State.Strict as State
+import qualified Data.IntMap as IntMap
+import qualified Data.List as List
 
 type Rank = Int
 
 data Node
   = NodeRepresentative {-# UNPACK #-}!Rank
   | NodeLink {-# UNPACK #-}!Int -- link to parent Node
+derive makeBinary ''Node
 
 {-| Represents a disjoint set of integers. -}
 data IntDisjointSet = IntDisjointSet
@@ -81,6 +86,7 @@ data IntDisjointSet = IntDisjointSet
     numSets :: {-# UNPACK #-}!Int
   , nodes :: !(IntMap.IntMap Node)
   }
+derive makeBinary ''IntDisjointSet
 
 instance Show IntDisjointSet where
     show = ("fromList " ++) . show . fst . toList
@@ -143,9 +149,9 @@ unionRep !x !y set = flip runState set $ runMaybeT $ do
   if repx == repy
     then return repx
     else do
-      IntDisjointSet count newSet <- lift get
+      IntDisjointSet count newSet <- lift State.get
       let unify low high updateRank = do
-            lift $ put $! IntDisjointSet (count-1) $ updateRank $
+            lift $ State.put $! IntDisjointSet (count-1) $ updateRank $
               IntMap.insert low (NodeLink high) newSet
             return high
       case compare rankx ranky of

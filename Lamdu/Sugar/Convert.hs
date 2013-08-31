@@ -19,7 +19,7 @@ import Data.Store.IRef (Tag)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.Data.Expression.IRef (DefIM)
-import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..))
+import Lamdu.Data.Infer.Load (LoadedDef(..), ldDef)
 import Lamdu.Sugar.Convert.Monad (ConvertM, Context(..))
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
@@ -37,10 +37,11 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Load as Load
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Infer as Infer
+import qualified Lamdu.Data.Infer.Deref as InferDeref
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
@@ -123,10 +124,10 @@ addFuncParamName fp = do
   name <- getStoredNameS $ fp ^. fpGuid
   pure fp { _fpName = name }
 
-getInferredVal :: InputExpr m a -> ExprIRef.ExpressionM m ()
+getInferredVal :: InputExpr m a -> LoadedExpr m ()
 getInferredVal x =
-  x ^. Expr.ePayload . ipInferred
-  <&> void . Infer.iValue . iwcInferred
+  x ^? Expr.ePayload . ipInferred . Lens._Just . InferDeref.dValue
+  <&> void
   & fromMaybe ExprUtil.pureHole
 
 convertPositionalFuncParam ::
@@ -211,14 +212,16 @@ jumpToDefI cp defI = IRef.guid defI <$ DataOps.newPane cp defI
 
 convertGetVariable ::
   (MonadA m, Typeable1 m) =>
-  Expr.VariableRef (DefIM m) ->
+  Expr.VariableRef (Infer.LoadedDef (DefIM m)) ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertGetVariable varRef exprPl = do
   cp <- (^. ConvertM.scCodeAnchors) <$> ConvertM.readContext
   case varRef of
     Expr.ParameterRef parGuid -> convertParameterRef parGuid exprPl
-    Expr.DefinitionRef defI -> do
-      let defGuid = IRef.guid defI
+    Expr.DefinitionRef defL -> do
+      let
+        defI = defL ^. ldDef
+        defGuid = IRef.guid defI
       defName <- getStoredNameS defGuid
       ConvertExpr.make exprPl .
         BodyGetVar $ GetVar
@@ -458,7 +461,7 @@ mkContext cp holeInferContext structureInferContext withVarsInferContext = do
 convertExpressionPure ::
   (MonadA m, Typeable1 m, RandomGen g, Monoid a) =>
   Anchors.CodeProps m -> g ->
-  ExprIRef.ExpressionM m a -> CT m (ExpressionU m a)
+  LoadedExpr m a -> CT m (ExpressionU m a)
 convertExpressionPure cp gen res = do
   context <-
     lift $ mkContext cp
@@ -492,7 +495,7 @@ mkRecordParams ::
   ConvertM.RecordParamsInfo m -> Guid -> [FieldParam m a] ->
   InputExpr m a ->
   Maybe (ExprIRef.ExpressionIM m) ->
-  Maybe (ExprIRef.ExpressionM m (Stored m)) ->
+  Maybe (LoadedExpr m (Stored m)) ->
   ConvertM m (ConventionalParams m a)
 mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mBodyStored = do
   params <- traverse mkParam fieldParams
@@ -574,7 +577,7 @@ addFieldParamAfter lamGuid tagExprGuid paramTypeI =
 
 delFieldParam ::
   MonadA m => Guid -> ExprIRef.ExpressionIM m -> Guid ->
-  Stored m -> ExprIRef.ExpressionM m (Stored m) -> T m Guid
+  Stored m -> LoadedExpr m (Stored m) -> T m Guid
 delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored =
   rereadFieldParamTypes tagExprGuid paramTypeI $
   \prevFields (tagExprI, _) nextFields -> do
@@ -623,7 +626,7 @@ paramTypeExprMM ::
 paramTypeExprMM origParamType
   | Lens.has ExprLens.exprHole origParamType
   , Just inferredParamType <- origParamType ^. SugarInfer.exprInferred
-  = paramTypeOfInferredVal . Infer.iValue $ iwcInferred inferredParamType
+  = paramTypeOfInferredVal $ inferredParamType ^. InferDeref.dValue
   | otherwise = origParamType
   where
     paramTypeGen = genFromHashable $ origParamType ^. SugarInfer.exprGuid
@@ -746,11 +749,11 @@ emptyConventionalParams stored = ConventionalParams
   }
 
 data ExprWhereItem m a = ExprWhereItem
-  { ewiBody :: ExprIRef.ExpressionM m a
+  { ewiBody :: LoadedExpr m a
   , ewiParamGuid :: Guid
-  , ewiArg :: ExprIRef.ExpressionM m a
+  , ewiArg :: LoadedExpr m a
   , ewiHiddenPayloads :: [a]
-  , ewiInferredType :: ExprIRef.ExpressionM m ()
+  , ewiInferredType :: LoadedExpr m ()
   }
 
 mExtractWhere :: InputExpr m a -> Maybe (ExprWhereItem m (InputPayload m a))
@@ -867,12 +870,14 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
 convertDefIBuiltin ::
   (Typeable1 m, MonadA m) => Anchors.CodeProps m ->
   Definition.Builtin -> DefIM m ->
-  ExprIRef.ExpressionM m (Stored m) ->
+  LoadedExpr m (Stored m) ->
   CT m (DefinitionBody MStoredName m (ExpressionU m [Guid]))
 convertDefIBuiltin cp (Definition.Builtin name) defI defType =
   DefinitionBodyBuiltin <$> do
     defTypeS <-
-      convertExpressionPure cp iDefTypeGen (void defType)
+      defType
+      & void
+      & convertExpressionPure cp iDefTypeGen
       <&> Lens.mapped . Lens.mapped .~ mempty
     pure DefinitionBuiltin
       { biName = name
@@ -891,14 +896,14 @@ convertDefIBuiltin cp (Definition.Builtin name) defI defType =
 makeTypeInfo ::
   (Typeable1 m, MonadA m, Monoid a) =>
   Anchors.CodeProps m -> DefIM m ->
-  ExprIRef.ExpressionM m (Stored m, a) ->
-  ExprIRef.ExpressionM m a -> Bool ->
+  LoadedExpr m (Stored m, a) ->
+  LoadedExpr m a ->
   CT m (DefinitionTypeInfo m (ExpressionU m a))
-makeTypeInfo cp defI defType inferredType success = do
+makeTypeInfo cp defI defType inferredType = do
   defTypeS <- conv iDefTypeGen $ snd <$> defType
   case () of
     ()
-      | not success || not (isCompleteType inferredType) ->
+      | not (isCompleteType inferredType) ->
         DefinitionIncompleteType <$> do
           inferredTypeS <- conv iNewTypeGen inferredType
           pure ShowIncompleteType
@@ -913,8 +918,11 @@ makeTypeInfo cp defI defType inferredType success = do
             { antOldType = defTypeS
             , antNewType = inferredTypeS
             , antAccept =
-              Property.set (defType ^. Expr.ePayload . Lens._1) =<<
-              ExprIRef.newExpression (void inferredType)
+              inferredType
+              & ExprLens.exprDef %~ (^. ldDef)
+              & void
+              & ExprIRef.newExpression
+              >>= Property.set (defType ^. Expr.ePayload . Lens._1)
             }
   where
     conv = convertExpressionPure cp
@@ -927,22 +935,21 @@ convertDefIExpression ::
   (MonadA m, Typeable1 m) => Anchors.CodeProps m ->
   ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m)) ->
   DefIM m ->
-  ExprIRef.ExpressionM m (Stored m) ->
+  LoadedExpr m (Stored m) ->
   CT m (DefinitionBody MStoredName m (ExpressionU m [Guid]))
 convertDefIExpression cp exprLoaded defI defType = do
   ilr@SugarInfer.InferredWithImplicits
     { SugarInfer._iwiExpr = iwiExpr
-    , SugarInfer._iwiSuccess = success
     } <-
-    SugarInfer.inferAddImplicits inferLoadedGen (Just defI)
+    SugarInfer.inferAddImplicits inferLoadedGen defI
     exprLoaded initialContext rootNode
   let
     inferredType =
-      void . Infer.iType . iwcInferred $ iwiExpr ^. SugarInfer.exprInferred
+      iwiExpr ^. SugarInfer.exprInferred . InferDeref.dType & void
     addStoredGuids lens x = (x, ExprIRef.exprGuid . Property.value <$> x ^.. lens)
     guidIntoPl (pl, x) = pl & ipData %~ \() -> x
   typeInfo <-
-    makeTypeInfo cp defI (addStoredGuids id <$> defType) (mempty <$ inferredType) success
+    makeTypeInfo cp defI (addStoredGuids id <$> defType) (mempty <$ inferredType)
   context <-
     lift $ mkContext cp
     (ilr ^. SugarInfer.iwiBaseInferContext)
@@ -959,7 +966,7 @@ convertDefIExpression cp exprLoaded defI defType = do
       , _deTypeInfo = typeInfo
       }
   where
-    (initialContext, rootNode) = initialInferContext defI
+    (rootNode, initialContext) = initialInferContext defI
     defGuid = IRef.guid defI
     recordParamsInfo = ConvertM.RecordParamsInfo defGuid $ jumpToDefI cp defI
     inferLoadedGen = ConvertExpr.mkGen 0 3 defGuid
@@ -973,7 +980,12 @@ convertDefI ::
     (ExprIRef.DefIM m) ->
   CT m (Definition (Maybe String) m (ExpressionU m [Guid]))
 convertDefI cp (Definition.Definition (Definition.Body bodyContent typeLoaded) defI) = do
-  bodyS <- convertDefContent bodyContent $ Load.exprPropertyOfClosure <$> typeLoaded
+  let
+    typeLoadedFake =
+      typeLoaded
+      -- TODO: HACK HACK HACK, fix this!!
+      & ExprLens.exprDef %~ (`LoadedDef` error "Tried accessing ref of a def of defType")
+  bodyS <- convertDefContent bodyContent $ Load.exprPropertyOfClosure <$> typeLoadedFake
   name <- lift $ ConvertExpr.getStoredName defGuid
   return Definition
     { _drGuid = defGuid

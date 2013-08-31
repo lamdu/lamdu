@@ -16,6 +16,9 @@ module Lamdu.Data.Infer.Rule.Types
 import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT, runState)
 import Control.MonadA (MonadA)
+import Data.Binary (Binary(..), getWord8, putWord8)
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.RefData (LoadedDef)
@@ -31,6 +34,7 @@ data GetFieldPhase0 def = GetFieldPhase0
   -- trigger on record type, no need for Ref
   }
 Lens.makeLenses ''GetFieldPhase0
+derive makeBinary ''GetFieldPhase0
 
 -- We know of a GetField and the record type, waiting to know the
 -- GetField tag:
@@ -40,6 +44,7 @@ data GetFieldPhase1 def = GetFieldPhase1
   -- trigger on getfield tag, no need for Ref
   }
 Lens.makeLenses ''GetFieldPhase1
+derive makeBinary ''GetFieldPhase1
 
 -- We know of a GetField and the record type, waiting to know the
 -- GetField tag (trigger on getfield tag):
@@ -51,6 +56,7 @@ data GetFieldPhase2 def = GetFieldPhase2
     _gf2MaybeMatchers :: OR.RefMap (TagExpr def) (ExprRef def)
   }
 Lens.makeLenses ''GetFieldPhase2
+derive makeBinary ''GetFieldPhase2
 
 data Apply def = Apply
   { _aPiGuid :: Guid
@@ -60,6 +66,7 @@ data Apply def = Apply
   , _aLinkedNames :: OR.RefMap (TagParam def) (ParamRef def)
   }
 Lens.makeLenses ''Apply
+derive makeBinary ''Apply
 
 data Uncircumsize def = Uncircumsize
   { _uValRef :: ExprRef def
@@ -67,6 +74,7 @@ data Uncircumsize def = Uncircumsize
   , _uUncircumsizedBody :: Expr.Body (LoadedDef def) (ExprRef def)
   }
 Lens.makeLenses ''Uncircumsize
+derive makeBinary ''Uncircumsize
 
 data RuleContent def
   = RuleVerifyTag
@@ -75,18 +83,21 @@ data RuleContent def
   | RuleGetFieldPhase2 (GetFieldPhase2 def)
   | RuleApply (Apply def)
   | RuleUncircumsize (Uncircumsize def)
+derive makeBinary ''RuleContent
 
 data Rule def = Rule
   { _ruleTriggersIn :: OR.RefSet (TagExpr def)
   , _ruleContent :: RuleContent def
   }
 Lens.makeLenses ''Rule
+derive makeBinary ''Rule
 
 data RuleMap def = RuleMap
   { _rmFresh :: OR.Fresh (TagRule def)
   , _rmMap :: OR.RefMap (TagRule def) (Rule def)
   }
 Lens.makeLenses ''RuleMap
+derive makeBinary ''RuleMap
 
 new :: MonadA m => RuleContent def -> StateT (RuleMap def) m (RuleRef def)
 new rule = do

@@ -30,6 +30,9 @@ import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
+import Data.Binary (Binary(..))
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Data.Foldable (Foldable)
 import Data.IntMap (IntMap)
 import Data.IntSet (IntSet)
@@ -41,12 +44,13 @@ import qualified Data.IntMap as IntMap
 import qualified Data.IntSet as IntSet
 
 newtype Ref p = MkRef { unsafeAsInt :: Int }
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Binary)
 
 unsafeFromInt :: Int -> Ref p
 unsafeFromInt = MkRef
 
 newtype Fresh p = MkFresh (Ref p)
+  deriving (Binary)
 
 Lens.makeIso ''Ref
 Lens.makeIso ''Fresh
@@ -59,8 +63,11 @@ freshRef = Lens.use (Lens.from mkFresh) <* (Lens.from (mkRef . mkFresh) += 1)
 
 newtype RefSet p = RefSet IntSet
   deriving (Monoid)
+derive makeBinary ''RefSet
+
 newtype RefMap p v = RefMap (IntMap v)
   deriving (Functor, Foldable, Traversable, Monoid)
+derive makeBinary ''RefMap
 
 instance Show (Ref p) where
   show (MkRef x) = 'R':show x

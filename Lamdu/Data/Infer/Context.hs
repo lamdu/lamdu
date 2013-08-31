@@ -1,15 +1,18 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DeriveDataTypeable #-}
 module Lamdu.Data.Infer.Context
   ( Context(..), ufExprs, defTVs, defVisibility, ruleMap, randomGen, guidAliases, empty
   , addToVisibility, removeFromVisibility
-  , fresh, freshHole
+  , freshData, fresh, freshHole
   ) where
 
+import Control.Applicative ((<$>), (<*>))
 import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
+import Data.Binary (Binary(..))
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
+import Data.Typeable (Typeable)
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
 import Lamdu.Data.Infer.RefData (RefData, UFExprs, LoadedDef)
 import Lamdu.Data.Infer.RefTags (TagExpr, ExprRef)
@@ -25,6 +28,7 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.RefData as RefData
 import qualified System.Random as Random
+import System.Random.Utils () -- Binary StdGen
 
 -- Context
 data Context def = Context
@@ -36,8 +40,12 @@ data Context def = Context
   , _defVisibility :: Map def (OR.RefSet (TagExpr def))
   , _randomGen :: Random.StdGen -- for guids
   , _guidAliases :: GuidAliases def
-  }
+  } deriving (Typeable)
 Lens.makeLenses ''Context
+
+instance (Ord def, Binary def) => Binary (Context def) where
+  get = Context <$> get <*> get <*> get <*> get <*> get <*> get
+  put (Context a b c d e f) = put a >> put b >> put c >> put d >> put e >> put f
 
 empty :: Random.StdGen -> Context def
 empty gen =
@@ -66,22 +74,27 @@ removeFromVisibility ::
   (Ord def, Monad m) => (ExprRef def, RefData def) -> StateT (Context def) m ()
 removeFromVisibility (rep, refData) =
   atVisibility refData $
-  LensUtils._fromJust "removeFromVisibility" . Lens.contains rep .~ False
+  LensUtils._fromJust "removeFromVisibility" . Lens.contains rep %~ uncontain
+  where
+    uncontain False = error "Should have been visible!"
+    uncontain True = False
 
 addToVisibility ::
   (Ord def, Monad m) => (ExprRef def, RefData def) -> StateT (Context def) m ()
-addToVisibility (rep, refData) = atVisibility refData . mappend . Just $ OR.refSetSingleton rep
+addToVisibility (rep, refData) =
+  atVisibility refData . mappend . Just $ OR.refSetSingleton rep
+
+freshData :: (Ord def, MonadA m) => RefData def -> StateT (Context def) m (ExprRef def)
+freshData refData = do
+  rep <- Lens.zoom ufExprs $ UFData.fresh refData
+  addToVisibility (rep, refData)
+  return rep
 
 fresh ::
   (Ord def, MonadA m) => RefData.Scope def ->
   Expr.Body (LoadedDef def) (ExprRef def) ->
   StateT (Context def) m (ExprRef def)
-fresh scop body = do
-  rep <- Lens.zoom ufExprs $ UFData.fresh refData
-  addToVisibility (rep, refData)
-  return rep
-  where
-    refData = RefData.defaultRefData scop body
+fresh scop body = freshData $ RefData.defaultRefData scop body
 
 freshHole :: (Ord def, MonadA m) => RefData.Scope def -> StateT (Context def) m (ExprRef def)
 freshHole scop = fresh scop $ ExprLens.bodyHole # ()

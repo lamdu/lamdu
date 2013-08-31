@@ -1,11 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.GuidAliases (GuidAliases, getRep, unify, empty, guidOfRep, find) where
 
-import Control.Applicative ((<$>), (<$))
+import Control.Applicative ((<$>), Applicative(..), (<$))
 import Control.Lens.Operators
 import Control.Monad (when)
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
+import Data.Binary (Binary(..))
 import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.UnionFind.WithData (UFData)
@@ -20,6 +21,10 @@ data GuidAliases def = GuidAliases
   , _gaGuidRefs :: Map Guid (ParamRef def)
   }
 Lens.makeLenses ''GuidAliases
+
+instance Binary (GuidAliases def) where
+  get = GuidAliases <$> get <*> get
+  put (GuidAliases x y) = put x >> put y
 
 empty :: GuidAliases def
 empty = GuidAliases

@@ -1,13 +1,12 @@
 module Lamdu.Sugar.InputExpr (makePure) where
 
-import Lamdu.Sugar.Types (InputExpr, InputPayloadP(..))
+import Lamdu.Data.Expression (Expression)
+import Lamdu.Sugar.Types (InputPayloadP(..), InputPayload)
 import System.Random (RandomGen)
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
--- Not inferred, not stored
 makePure ::
-  RandomGen g => g -> ExprIRef.ExpressionM m a -> InputExpr m a
+  RandomGen gen => gen -> Expression def a -> Expression def (InputPayload m a)
 makePure gen =
   ExprUtil.randomizeExprAndParams gen . fmap f
   where

@@ -30,6 +30,7 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 type Expression t = Expr.Expression (DefI t)
@@ -87,25 +88,30 @@ writeExprBody = Transaction.writeIRef . unExpression
 newExpression :: MonadA m => ExpressionM m () -> T m (ExpressionIM m)
 newExpression =
   fmap (^. Expr.ePayload . Lens._1) .
-  newExpressionFromH . ((,) Nothing <$>)
+  newExpressionFromH id . ((,) Nothing <$>)
 
 -- Returns expression with new Guids
 writeExpression ::
-  MonadA m => ExpressionIM m -> ExpressionM m a ->
-  T m (ExpressionM m (ExpressionIM m, a))
-writeExpression iref =
-  writeExpressionWithStoredSubexpressions iref .
+  MonadA m =>
+  (def -> DefIM m) ->
+  ExpressionIM m -> Expr.Expression def a ->
+  T m (Expr.Expression def (ExpressionIM m, a))
+writeExpression getDef iref =
+  writeExpressionWithStoredSubexpressions getDef iref .
   fmap ((,) Nothing)
 
 writeExpressionWithStoredSubexpressions ::
   MonadA m =>
+  (def -> DefIM m) ->
   ExpressionIM m ->
-  ExpressionM m (Maybe (ExpressionIM m), a) ->
-  T m (ExpressionM m (ExpressionIM m, a))
-writeExpressionWithStoredSubexpressions iref expr = do
-  exprBodyP <- expressionBodyFrom expr
-  writeExprBody iref $
-    (^. Expr.ePayload . Lens._1) <$> exprBodyP
+  Expr.Expression def (Maybe (ExpressionIM m), a) ->
+  T m (Expr.Expression def (ExpressionIM m, a))
+writeExpressionWithStoredSubexpressions getDef iref expr = do
+  exprBodyP <- expressionBodyFrom getDef expr
+  exprBodyP
+    <&> (^. Expr.ePayload . Lens._1)
+    & ExprLens.bodyDef %~ getDef
+    & writeExprBody iref
   return $ Expr.Expression exprBodyP
     (iref, expr ^. Expr.ePayload . Lens._2)
 
@@ -117,20 +123,26 @@ readExpression exprI =
 
 expressionBodyFrom ::
   MonadA m =>
-  ExpressionM m (Maybe (ExpressionIM m), a) ->
-  T m (Expr.BodyExpr (DefIM m) (ExpressionIM m, a))
-expressionBodyFrom = traverse newExpressionFromH . (^. Expr.eBody)
+  (def -> DefIM m) ->
+  Expr.Expression def (Maybe (ExpressionIM m), a) ->
+  T m (Expr.BodyExpr def (ExpressionIM m, a))
+expressionBodyFrom getDef = traverse (newExpressionFromH getDef) . (^. Expr.eBody)
 
 newExpressionFromH ::
   MonadA m =>
-  ExpressionM m (Maybe (ExpressionIM m), a) ->
-  T m (ExpressionM m (ExpressionIM m, a))
-newExpressionFromH expr =
+  (def -> DefIM m) ->
+  Expr.Expression def (Maybe (ExpressionIM m), a) ->
+  T m (Expr.Expression def (ExpressionIM m, a))
+newExpressionFromH getDef expr =
   case mIRef of
-  Just iref -> writeExpressionWithStoredSubexpressions iref expr
+  Just iref -> writeExpressionWithStoredSubexpressions getDef iref expr
   Nothing -> do
-    body <- expressionBodyFrom expr
-    exprI <- Transaction.newIRef ((^. Expr.ePayload . Lens._1) <$> body)
+    body <- expressionBodyFrom getDef expr
+    exprI <-
+      body
+      <&> (^. Expr.ePayload . Lens._1)
+      & ExprLens.bodyDef %~ getDef
+      & Transaction.newIRef
     return $ Expr.Expression body (ExpressionI exprI, pl)
   where
     (mIRef, pl) = expr ^. Expr.ePayload
@@ -141,15 +153,17 @@ variableRefGuid (Expr.DefinitionRef i) = IRef.guid i
 
 addProperties ::
   MonadA m =>
+  (def -> DefIM m) ->
   (ExpressionIM m -> T m ()) ->
-  ExpressionM m (ExpressionIM m, a) ->
-  ExpressionM m (ExpressionProperty m, a)
-addProperties setIRef (Expr.Expression body (iref, a)) =
+  Expr.Expression def (ExpressionIM m, a) ->
+  Expr.Expression def (ExpressionProperty m, a)
+addProperties getDefI setIRef (Expr.Expression body (iref, a)) =
   Expr.Expression (body & Lens.traversed %@~ f) (Property iref setIRef, a)
   where
     f index =
-      addProperties $ \newIRef ->
+      addProperties getDefI $ \newIRef ->
       body
       <&> (^. Expr.ePayload . Lens._1) -- convert to body of IRefs
       & Lens.element index .~ newIRef
+      & ExprLens.bodyDef %~ getDefI
       & writeExprBody iref

@@ -6,8 +6,8 @@ import Control.Monad (void)
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (StateT, mapStateT, evalStateT)
 import Control.MonadA (MonadA)
-import Lamdu.Data.Infer.Deref (DerefedSTV(..))
-import Lamdu.Data.Infer.Load (LoadedDef, ldDef)
+import Lamdu.Data.Infer.Deref (DerefedTV(..))
+import Lamdu.Data.Infer.Load (LoadedExpr, ldDef)
 import System.Random (RandomGen)
 import Utils
 import qualified Control.Lens as Lens
@@ -43,7 +43,7 @@ data Error
 
 type M = StateT (Infer.Context Def) (Either Error)
 
-load :: Expr.Expression Def a -> M (Expr.Expression (LoadedDef Def) a)
+load :: Expr.Expression Def a -> M (LoadedExpr Def a)
 load expr =
   InferLoad.load loader expr
   & mapStateT ((Lens._Left %~ LoadError) . fromRight . runEitherT)
@@ -54,33 +54,38 @@ fromRightM = mapStateT (return . fromRight)
 fromRightT :: (MonadA m, Show l) => StateT s (EitherT l m) a -> StateT s m a
 fromRightT = mapStateT (fmap fromRight . runEitherT)
 
-type InferredLoadedExpr a = Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def, a)
+type InferredLoadedExpr a = LoadedExpr Def (Infer.TypedValue Def, a)
 
-inferScope :: Infer.Scope Def -> Expr.Expression (LoadedDef Def) a -> M (InferredLoadedExpr a)
+inferScopedBy :: Infer.ExprRef Def -> LoadedExpr Def a -> M (InferredLoadedExpr a)
+inferScopedBy valRef expr = do
+  scope <- Infer.getScope valRef
+  inferScope scope expr
+
+inferScope :: Infer.Scope Def -> LoadedExpr Def a -> M (InferredLoadedExpr a)
 inferScope scope expr =
   Infer.infer scope expr & mapStateT (Lens._Left %~ InferError)
 
-infer :: Expr.Expression (LoadedDef Def) a -> M (InferredLoadedExpr a)
+infer :: LoadedExpr Def a -> M (InferredLoadedExpr a)
 infer = inferScope $ Infer.emptyScope recursiveDefI
 
 mapDerefError :: InferDeref.M Def a -> M a
 mapDerefError = mapStateT (Lens._Left %~ InferError . InferDeref.toInferError)
 
-derefWithPL :: InferredLoadedExpr a -> M (Expr.Expression Def (DerefedSTV Def, a))
+derefWithPL :: InferredLoadedExpr a -> M (Expr.Expression Def (DerefedTV Def, a))
 derefWithPL expr = expr
   & ExprLens.exprDef %~ (^. InferLoad.ldDef)
   & InferDeref.entireExpr
   & mapDerefError
 
 deref ::
-  Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def) ->
+  LoadedExpr Def (Infer.TypedValue Def) ->
   M ExprInferred
 deref expr =
   expr
   <&> flip (,) ()
   & derefWithPL
   <&> fmap
-  (\(DerefedSTV val typ _scope _stv, ()) ->
+  (\(DerefedTV val typ _scope _tv, ()) ->
     ( val & ExprLens.exprDef %~ (^. ldDef) & void
     , typ & ExprLens.exprDef %~ (^. ldDef) & void
     )
@@ -89,11 +94,11 @@ deref expr =
 -- Run this function only once per M
 inferDef :: M (InferredLoadedExpr a) -> M (InferredLoadedExpr a)
 inferDef act = do
-  recursiveDefSTV <- InferLoad.newDefinition recursiveDefI
+  recursiveDefTV <- InferLoad.newDefinition recursiveDefI
   expr <- act
   _ <-
-    expr ^. Expr.ePayload . Lens._1 . Infer.stvTV
-    & unify (recursiveDefSTV ^. Infer.stvTV)
+    expr ^. Expr.ePayload . Lens._1
+    & unify recursiveDefTV
   return expr
 
 unify :: Infer.TypedValue Def -> Infer.TypedValue Def -> M ()
@@ -109,20 +114,20 @@ addImplicitVariables =
     mapStateT (Lens._Left %~ InferError)
 
 addStructure ::
-  Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def, a) ->
-  M (Expr.Expression (LoadedDef Def) (Infer.ScopedTypedValue Def, a))
+  LoadedExpr Def (Infer.TypedValue Def, a) ->
+  M (LoadedExpr Def (Infer.TypedValue Def, a))
 addStructure expr =
   expr <$ mapDerefError (Structure.add expr)
 
 loadInferInContext ::
-  Infer.ScopedTypedValue Def -> Expr.Expression Def a -> M (InferredLoadedExpr a)
-loadInferInContext stv expr = inferScope (stv ^. Infer.stvScope) =<< load expr
+  Infer.TypedValue Def -> Expr.Expression Def a -> M (InferredLoadedExpr a)
+loadInferInContext tv expr = inferScopedBy (tv ^. Infer.tvVal) =<< load expr
 
 loadInferInto ::
-  Infer.ScopedTypedValue Def -> Expr.Expression Def a -> M (InferredLoadedExpr a)
+  Infer.TypedValue Def -> Expr.Expression Def a -> M (InferredLoadedExpr a)
 loadInferInto stv expr = do
   resumptionInferred <- loadInferInContext stv expr
-  unify (resumptionInferred ^. Expr.ePayload . Lens._1 . Infer.stvTV) (stv ^. Infer.stvTV)
+  unify (resumptionInferred ^. Expr.ePayload . Lens._1) stv
   return resumptionInferred
 
 try :: M a -> M (Either Error a)

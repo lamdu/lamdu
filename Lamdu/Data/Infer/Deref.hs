@@ -1,8 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DeriveDataTypeable #-}
 module Lamdu.Data.Infer.Deref
   ( M, expr, entireExpr, deref
   , toInferError
-  , DerefedSTV(..), dValue, dType, dScope, dSTV
+  , DerefedTV(..), dValue, dType, dScope, dTV
   , Error(..)
   , RefData.Restriction(..), ExprRef
   ) where
@@ -12,14 +12,18 @@ import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
+import Data.Binary (Binary(..))
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Data.Function.Decycle (decycle)
 import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.Traversable (traverse)
+import Data.Typeable (Typeable)
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
 import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef, TagParam)
-import Lamdu.Data.Infer.TypedValue (tvVal, tvType, ScopedTypedValue, stvTV, stvScope)
+import Lamdu.Data.Infer.TypedValue (TypedValue, tvVal, tvType)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Map as Map
@@ -37,13 +41,14 @@ data Error def = InfiniteExpression (ExprRef def)
 
 type Expr def = Expr.Expression (RefData.LoadedDef def) (ExprRef def)
 
-data DerefedSTV def = DerefedSTV
+data DerefedTV def = DerefedTV
   { _dValue :: Expr def
   , _dType :: Expr def
-  , _dScope :: Map Guid (Expr def)
-  , _dSTV :: ScopedTypedValue def
-  }
-Lens.makeLenses ''DerefedSTV
+  , _dScope :: Map Guid (Expr def) -- TODO: Make a separate derefScope action instead of this
+  , _dTV :: TypedValue def
+  } deriving (Typeable)
+Lens.makeLenses ''DerefedTV
+derive makeBinary ''DerefedTV
 
 type M def = StateT (Context def) (Either (Error def))
 mError :: Error def -> M def a
@@ -93,12 +98,12 @@ derefScope storedGuids =
       return (guid, typeExpr)
 
 expr ::
-  Expr.Expression ldef (ScopedTypedValue def, a) ->
-  M def (Expr.Expression ldef (M def (DerefedSTV def), a))
+  Expr.Expression ldef (TypedValue def, a) ->
+  M def (Expr.Expression ldef (M def (DerefedTV def), a))
 expr =
   go []
   where
-    go storedGuids (Expr.Expression storedBody (stv, pl)) = do
+    go storedGuids (Expr.Expression storedBody (tv, pl)) = do
       newStoredGuids <-
         case storedBody ^? Expr._BodyLam . Expr.lamParamId of
         Nothing -> return storedGuids
@@ -106,19 +111,20 @@ expr =
           storedParamIdRep <- mGuidAliases $ GuidAliases.getRep storedParamId
           return $ (storedParamIdRep, storedParamId) : storedGuids
       let
-        derefTV =
-          DerefedSTV
-          <$> deref newStoredGuids (stv ^. stvTV . tvVal)
-          <*> deref newStoredGuids (stv ^. stvTV . tvType)
-          <*> derefScope storedGuids (stv ^. stvScope . RefData.scopeMap)
-          <*> pure stv
+        derefTV = do
+          scope <- fmap (^. RefData.rdScope) . Lens.zoom Context.ufExprs . UFData.read $ tv ^. tvVal
+          DerefedTV
+            <$> deref newStoredGuids (tv ^. tvVal)
+            <*> deref newStoredGuids (tv ^. tvType)
+            <*> derefScope storedGuids (scope ^. RefData.scopeMap)
+            <*> pure tv
       storedBody
         & Lens.traverse %%~ go newStoredGuids
         <&> (`Expr.Expression` (derefTV, pl))
 
 entireExpr ::
-  Expr.Expression ldef (ScopedTypedValue def, a) ->
-  M def (Expr.Expression ldef (DerefedSTV def, a))
+  Expr.Expression ldef (TypedValue def, a) ->
+  M def (Expr.Expression ldef (DerefedTV def, a))
 entireExpr = (>>= Lens.sequenceOf (Lens.traverse . Lens._1)) . expr
 ------- Lifted errors:
 

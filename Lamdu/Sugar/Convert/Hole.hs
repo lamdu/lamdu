@@ -9,7 +9,7 @@ import Control.Lens.Operators
 import Control.Monad (guard, void)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..), mapStateT)
+import Control.Monad.Trans.State (StateT(..), evalStateT, mapStateT, runState)
 import Control.Monad.Trans.Writer (execWriter)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
@@ -21,7 +21,8 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA, traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.Data.Expression.IRef (DefIM)
-import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), iwcInferred)
+import Lamdu.Data.Infer.Deref (DerefedTV)
+import Lamdu.Data.Infer.Load (ldDef)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
@@ -40,9 +41,10 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Infer as Infer
+import qualified Lamdu.Data.Infer.Deref as InferDeref
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
@@ -131,7 +133,7 @@ aWhen True x = x
 
 translateIfInferred ::
   (Guid -> Random.StdGen) ->
-  InputPayloadP (Maybe (Infer.Inferred (DefIM m))) stored a ->
+  InputPayloadP (Maybe (Inferred m)) stored a ->
   Guid ->
   [(Guid, Guid)]
 translateIfInferred mkGen aIP bGuid = do
@@ -139,13 +141,12 @@ translateIfInferred mkGen aIP bGuid = do
   translateInferred mkGen inferredVal (aIP ^. ipGuid) bGuid
   where
     inferredVal =
-      aIP ^. ipInferred
-      <&> void . Infer.iValue
-      & fromMaybe ExprUtil.pureHole
+      aIP ^? ipInferred . Lens._Just . InferDeref.dValue
+      <&> void & fromMaybe ExprUtil.pureHole
 
 translateInferred ::
   (Guid -> Random.StdGen) ->
-  ExprIRef.ExpressionM m () -> Guid -> Guid ->
+  LoadedExpr m () -> Guid -> Guid ->
   [(Guid, Guid)]
 translateInferred mkGen inferredVal aGuid bGuid =
   idTranslations mkGen (intoIP <$> aExpr) bExpr
@@ -162,8 +163,8 @@ translateInferred mkGen inferredVal aGuid bGuid =
 
 idTranslations ::
   (Guid -> Random.StdGen) ->
-  ExprIRef.ExpressionM m (InputPayloadP (Maybe (Infer.Inferred (DefIM m))) stored a) ->
-  ExprIRef.ExpressionM m Guid ->
+  LoadedExpr m (InputPayloadP (Maybe (Inferred m)) stored a) ->
+  LoadedExpr m Guid ->
   [(Guid, Guid)]
 idTranslations mkGen convertedExpr writtenExpr =
   execWriter . runApplicativeMonoid . getConst $
@@ -190,7 +191,7 @@ idTranslations mkGen convertedExpr writtenExpr =
 
 mkWritableHoleActions ::
   (MonadA m, Typeable1 m) =>
-  InputPayloadP (InferredWithConflicts (DefIM m)) (Stored m) () ->
+  InputPayloadP (Inferred m) (Stored m) () ->
   ConvertM m (HoleActions MStoredName m)
 mkWritableHoleActions exprPlStored = do
   sugarContext <- ConvertM.readContext
@@ -201,26 +202,29 @@ mkWritableHoleActions exprPlStored = do
   tags <-
     ConvertM.liftTransaction . Transaction.getP . Anchors.tags $
     sugarContext ^. ConvertM.scCodeAnchors
+  let
+    (inferredScope, newSugarContext) =
+      (`runState` sugarContext) .
+      Lens.zoom (ConvertM.scHoleInferContext . icContext) .
+      Infer.getScope $ inferred ^. InferDeref.dTV . Infer.tvVal
   pure HoleActions
     { _holePaste = mPaste
     , _holeScope =
       mconcat . concat <$> sequence
       [ mapM (getScopeElement sugarContext) . Map.toList $
-        Infer.iScope inferred
+        inferred ^. InferDeref.dScope
       , mapM getGlobal globals
       , mapM getTag tags
       ]
-    , _holeInferExprType =
-      inferOnTheSide sugarContext . Infer.nScope $
-      Infer.iNode inferred
+    , _holeInferExprType = inferOnTheSide newSugarContext inferredScope
     , holeResult = mkHoleResult sugarContext exprPlStored
     }
   where
-    inferred = iwcInferred $ exprPlStored ^. ipInferred
+    inferred = exprPlStored ^. ipInferred
 
 mkHole ::
   (MonadA m, Typeable1 m, Monoid a) =>
-  InputPayloadP (InferredWC m) (Maybe (Stored m)) a ->
+  InputPayloadP (Inferred m) (Maybe (Stored m)) a ->
   ConvertM m (Hole MStoredName m (ExpressionU m a))
 mkHole exprPl = do
   mActions <-
@@ -228,8 +232,7 @@ mkHole exprPl = do
     & ipData .~ ()
     & Lens.sequenceOf ipStored
     & traverse mkWritableHoleActions
-  holeInferred <-
-    mkHoleInferred . iwcInferred $ exprPl ^. ipInferred
+  holeInferred <- mkHoleInferred $ exprPl ^. ipInferred
   pure Hole
     { _holeMActions = mActions
     , _holeMInferred = Just holeInferred
@@ -238,16 +241,17 @@ mkHole exprPl = do
 
 mkHoleInferred ::
   (Typeable1 m, MonadA m) =>
-  Infer.Inferred (DefIM m) ->
+  DerefedTV (DefIM m) ->
   ConvertM m (HoleInferred MStoredName m)
 mkHoleInferred inferred = do
   sugarContext <- ConvertM.readContext
   (inferredIVal, newCtx) <-
-    SugarInfer.memoLoadInfer Nothing iVal (Infer.iNode inferred)
+    SugarInfer.memoInferAt (inferred ^. InferDeref.dTV) iVal
     & (`runStateT` (sugarContext ^. ConvertM.scWithVarsInferContext))
     & runMaybeT
     <&> unsafeUnjust "Inference on inferred val must succeed"
     & ConvertM.liftCTransaction
+    <&> Lens._1 . Lens.mapped %~ fst
   let
     mkConverted gen =
       inferredIVal
@@ -256,47 +260,43 @@ mkHoleInferred inferred = do
       & ConvertM.convertSubexpression
       & ConvertM.run (sugarContext & ConvertM.scInferContexts .~ newCtx)
     miValInStructureContext =
-      Infer.iNode inferred
-      & Infer.derefNode (sugarContext ^. ConvertM.scStructureInferContext . icContext)
-      <&> truncatedIValue
+      truncatedIValue .
+      either (error . show) id . -- TODO: Handle errors??
+      (`evalStateT` (sugarContext ^. ConvertM.scStructureInferContext . icContext)) $
+      InferDeref.deref
+      [] -- TODO: <-- BUG BUG BUG (Bad guids here? Need special
+         -- support in Deref for deref-in-differing-context?)
+      (inferred ^. InferDeref.dTV . Infer.tvVal)
   pure HoleInferred
-    { _hiBaseValue = fromMaybe ExprUtil.pureHole miValInStructureContext
+    { _hiBaseValue = miValInStructureContext
     , _hiWithVarsValue = iVal
-    , _hiType = void $ Infer.iType inferred
+    , _hiType = void $ inferred ^. InferDeref.dType
     , _hiMakeConverted = mkConverted
     }
   where
-    mkInputPayload (i, x) guid = InputPayload
+    mkInputPayload i guid = InputPayload
       { _ipGuid = guid
-      , _ipInferred = Just $ InferredWithConflicts i [] []
+      , _ipInferred = Just i
       , _ipStored = Nothing
-      , _ipData = x
+      , _ipData = ()
       }
-    iVal = truncatedIValue inferred
+    iVal = truncatedIValue $ inferred ^. InferDeref.dValue
     truncatedIValue i =
-      i
-      & void . Infer.iValue
-      & ExprLens.lambdaParamTypes .~ ExprUtil.pureHole
+      i & void & ExprLens.lambdaParamTypes .~ ExprUtil.pureHole
 
 inferOnTheSide ::
   (MonadA m, Typeable1 m) =>
   ConvertM.Context m ->
   Infer.Scope (DefIM m) ->
   ExprIRef.ExpressionM m () ->
-  CT m (Maybe (ExprIRef.ExpressionM m ()))
+  CT m (Maybe (LoadedExpr m ()))
 -- token represents the given holeInferContext
 inferOnTheSide sugarContext scope expr =
   (fmap . fmap) fst . runMaybeT .
-  (`runStateT` (sugarContext ^. ConvertM.scHoleInferContext)) $ do
-    node <- mkNewNode scope
-    SugarInfer.memoLoadInfer Nothing expr node
-      <&> void . Infer.iType . (^. Expr.ePayload . Lens._1)
-
-mkNewNode :: (Typeable1 m, MonadA f) => Infer.Scope (DefIM m) -> StateT (InferContext m) f (Infer.Node (DefIM m))
-mkNewNode scope = do
-  newNode <- Lens.zoom icContext $ Infer.newNodeWithScope scope
-  icHashKey %= Cache.bsOfKey . (,,) "new node" scope
-  return newNode
+  (`runStateT` (sugarContext ^. ConvertM.scHoleInferContext)) $
+  SugarInfer.load expr
+  >>= SugarInfer.memoInfer scope
+  <&> void . (^. Expr.ePayload . Lens._1 . InferDeref.dType)
 
 getScopeElement ::
   MonadA m => ConvertM.Context m ->
@@ -352,6 +352,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
           )
         ] }
 
+-- TODO: Put the result in scopeGlobals in the caller, not here?
 getGlobal :: MonadA m => DefIM m -> T m (Scope MStoredName m)
 getGlobal defI = do
   name <- ConvertExpr.getStoredName guid
@@ -411,21 +412,21 @@ cachedFork =
 writeConvertTypeChecked ::
   (MonadA m, Monoid a) => Random.StdGen ->
   ConvertM.Context m -> Stored m ->
-  ( ExprIRef.ExpressionM m (Infer.Inferred (DefIM m), MStorePoint m a)
+  ( LoadedExpr m (DerefedTV (DefIM m), MStorePoint m a)
   , InferContext m
   ) ->
   CT m
   ( ExpressionU m a
-  , ExprIRef.ExpressionM m
-    (InputPayloadP (Infer.Inferred (DefIM m)) (Stored m) a)
-  , ExprIRef.ExpressionM m
-    (InputPayloadP (Infer.Inferred (DefIM m)) (Stored m) a)
+  , LoadedExpr m
+    (InputPayloadP (DerefedTV (DefIM m)) (Stored m) a)
+  , LoadedExpr m
+    (InputPayloadP (DerefedTV (DefIM m)) (Stored m) a)
   )
 writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
   -- With the real stored guids:
   writtenExpr <-
     lift $ fmap toPayload .
-    ExprIRef.addProperties (Property.set holeStored) <$>
+    ExprIRef.addProperties (^. ldDef) (Property.set holeStored) <$>
     writeExprMStored (Property.value holeStored) (intoStorePoint <$> inferredExpr)
   let
     -- Replace the guids with consistently fake ones
@@ -439,14 +440,13 @@ writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
     ConvertM.run newSugarContext . ConvertM.convertSubexpression $
     consistentExpr
     <&> ipStored %~ Just
-    <&> ipInferred %~ Just . toIWC
+    <&> ipInferred %~ Just
   return
     ( converted
     , consistentExpr
     , snd <$> writtenExpr
     )
   where
-    toIWC x = InferredWithConflicts x [] []
     intoStorePoint (inferred, (mStorePoint, a)) =
       (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
     toPayload (stored, (inferred, wasStored, a)) = (,) wasStored InputPayload
@@ -459,16 +459,16 @@ writeConvertTypeChecked gen sugarContext holeStored (inferredExpr, newCtx) = do
 mkHoleResult ::
   (Typeable1 m, MonadA m, Cache.Key a, Binary a, Monoid a) =>
   ConvertM.Context m ->
-  InputPayloadP (InferredWC m) (Stored m) () ->
+  InputPayloadP (Inferred m) (Stored m) () ->
   (Guid -> Random.StdGen) ->
   HoleResultSeed m (MStorePoint m a) ->
   CT m (Maybe (HoleResult MStoredName m a))
-mkHoleResult sugarContext (InputPayload guid iwc stored ()) mkGen seed = do
+mkHoleResult sugarContext (InputPayload guid derefed stored ()) mkGen seed = do
   ((fMJumpTo, mResult), forkedChanges) <- cachedFork $ do
     (fSeedExpr, fMJumpTo) <- lift $ seedExprEnv (Nothing, mempty) cp seed
     fMInferredExprCtx <-
       runMaybeT . (`runStateT` (sugarContext ^. ConvertM.scHoleInferContext)) $
-      SugarInfer.memoLoadInfer Nothing fSeedExpr holePoint
+      SugarInfer.load fSeedExpr >>= SugarInfer.memoInferAt holePoint
     mResult <-
       traverse
       (writeConvertTypeChecked (mkGen guid) sugarContext stored)
@@ -489,7 +489,7 @@ mkHoleResult sugarContext (InputPayload guid iwc stored ()) mkGen seed = do
           not . null . uninferredHoles $ (,) () <$> inferredExpr
         }
     cp = sugarContext ^. ConvertM.scCodeAnchors
-    holePoint = Infer.iNode $ iwcInferred iwc
+    holePoint = derefed ^. InferDeref.dTV
     mkPickedResult mJumpTo consistentExpr writtenExpr = do
       mJumpGuid <- sequenceA mJumpTo
       let
@@ -520,16 +520,16 @@ writeExprMStored ::
   MonadA m =>
   ExprIRef.ExpressionIM m ->
   ExprStorePoint m a ->
-  T m (ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m, a))
+  T m (LoadedExpr m (ExprIRef.ExpressionIM m, a))
 writeExprMStored exprIRef exprMStorePoint = do
   key <- Transaction.newKey
   randomizeNonStoredParamIds (genFromHashable key) exprMStorePoint
     & Lens.mapped . Lens._1 . Lens._Just %~ unStorePoint
-    & ExprIRef.writeExpressionWithStoredSubexpressions exprIRef
+    & ExprIRef.writeExpressionWithStoredSubexpressions (^. ldDef) exprIRef
 
 orderedInnerHoles ::
-  Expr.Expression def (a, Infer.Inferred def) ->
-  [Expr.Expression def (a, Infer.Inferred def)]
+  Expr.Expression ldef (a, DerefedTV def) ->
+  [Expr.Expression ldef (a, DerefedTV def)]
 orderedInnerHoles e =
   case e ^. Expr.eBody of
   Expr.BodyApply (Expr.Apply func arg)
@@ -543,13 +543,13 @@ orderedInnerHoles e =
 -- Also skip param types, those can usually be inferred later, so less
 -- useful to fill immediately
 uninferredHoles ::
-  Expr.Expression def (a, Infer.Inferred def) ->
-  [Expr.Expression def (a, Infer.Inferred def)]
+  Expr.Expression ldef (a, DerefedTV def) ->
+  [Expr.Expression ldef (a, DerefedTV def)]
 uninferredHoles e =
   case e ^. Expr.eBody of
   Expr.BodyLeaf Expr.Hole -> [e]
   Expr.BodyApply (Expr.Apply func _)
-    | (ExprUtil.isDependentPi . Infer.iType . (^. Expr.ePayload . Lens._2)) func ->
+    | (ExprUtil.isDependentPi . (^. Expr.ePayload . Lens._2 . InferDeref.dType)) func ->
       uninferredHoles func
   Expr.BodyLam (Expr.Lam lamKind _ paramType result) ->
     uninferredHoles result ++ do

@@ -6,7 +6,7 @@ import Control.Lens.Operators
 import Control.Monad (when, void)
 import Control.Monad.Trans.State (StateT, mapStateT)
 import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.TypedValue (ScopedTypedValue(..), TypedValue(..))
+import Lamdu.Data.Infer.TypedValue (TypedValue(..))
 import qualified Control.Lens as Lens
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expression as Expr
@@ -20,14 +20,18 @@ import qualified Lamdu.Data.Infer.RefData as RefData
 
 add ::
   (Show def, Ord def) =>
-  Expr.Expression (Load.LoadedDef def) (ScopedTypedValue def, a) ->
+  Expr.Expression (Load.LoadedDef def) (TypedValue def, a) ->
   StateT (Context def) (Either (Deref.Error def)) ()
 add = Lens.traverseOf_ (ExprLens.holePayloads . Lens._1) %%~ addToHole
 
 addToHole ::
   (Show def, Ord def) =>
-  ScopedTypedValue def -> StateT (Context def) (Either (Deref.Error def)) ()
-addToHole (ScopedTypedValue (TypedValue valRef typRef) scope) = do
+  TypedValue def -> StateT (Context def) (Either (Deref.Error def)) ()
+addToHole (TypedValue valRef typRef) = do
+  scope <-
+    UFData.read valRef
+    & Lens.zoom Context.ufExprs
+    <&> (^. RefData.rdScope)
   valData <- Lens.zoom Context.ufExprs $ UFData.read valRef
   when (Lens.has (RefData.rdBody . ExprLens.bodyHole) valData) $ do
     -- Both the "stored" and inferred val are holes, time to fill some structure:

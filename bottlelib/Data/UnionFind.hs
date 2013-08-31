@@ -5,10 +5,11 @@ module Data.UnionFind
   , empty
   ) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), Applicative(..))
 import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT(..), state)
 import Control.MonadA (MonadA)
+import Data.Binary (Binary(..))
 import Data.Function (on)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.OpaqueRef (Ref)
@@ -21,6 +22,10 @@ data UnionFind p = UnionFind
   , _ufFresh :: OpaqueRef.Fresh p
   }
 Lens.makeLenses ''UnionFind
+
+instance Binary (UnionFind p) where
+  get = UnionFind <$> get <*> get
+  put (UnionFind x y) = put x >> put y
 
 empty :: UnionFind p
 empty =
