@@ -1,4 +1,4 @@
-module Graphics.UI.GLFW.Utils(withGLFW, openWindow, getVideoModeSize) where
+module Graphics.UI.GLFW.Utils(withGLFW, createWindow, getVideoModeSize) where
 
 import Control.Exception(bracket_)
 import Control.Monad(unless)
@@ -10,12 +10,23 @@ assert :: MonadA m => String -> Bool -> m ()
 assert msg p = unless p (fail msg)
 
 withGLFW :: IO a -> IO a
-withGLFW = bracket_ (GLFW.initialize >>= assert "initialize failed") GLFW.terminate
+withGLFW = bracket_ (GLFW.init >>= assert "initialize failed") GLFW.terminate
 
-openWindow :: GLFW.DisplayOptions -> IO ()
-openWindow options = GLFW.openWindow options >>= assert "Open window failed"
+createWindow :: Int -> Int -> String -> IO GLFW.Window
+createWindow w h title = do
+  mWin <- GLFW.createWindow w h title Nothing Nothing
+  case mWin of
+    Nothing -> fail "Open window failed"
+    Just win -> do
+      GLFW.makeContextCurrent $ Just win
+      return win
 
 getVideoModeSize :: IO (Vector2 Int)
 getVideoModeSize = do
-  videoMode <- GLFW.getVideoMode
-  return $ Vector2 (GLFW.videoMode_width videoMode) (GLFW.videoMode_height videoMode)
+  monitor <-
+    maybe (fail "GLFW: Can't get primary monitor") return =<<
+    GLFW.getPrimaryMonitor
+  videoMode <-
+    maybe (fail "GLFW: Can't get video mode of monitor") return =<<
+    GLFW.getVideoMode monitor
+  return $ Vector2 (GLFW.videoModeWidth videoMode) (GLFW.videoModeHeight videoMode)

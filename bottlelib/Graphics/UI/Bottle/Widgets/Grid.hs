@@ -92,14 +92,14 @@ mkNavEventmap navDests = (weakMap, strongMap)
       movementk "right"      (keysRight stdDirKeys) rightOfCursor,
       movementk "up"         (keysUp    stdDirKeys) aboveCursor,
       movementk "down"       (keysDown  stdDirKeys) belowCursor,
-      movementk "more left"  [GLFW.KeyHome]         leftMostCursor,
-      movementk "more right" [GLFW.KeyEnd]          rightMostCursor
+      movementk "more left"  [GLFW.Key'Home]         leftMostCursor,
+      movementk "more right" [GLFW.Key'End]          rightMostCursor
       ]
     strongMap = mconcat . catMaybes $ [
-      movementk "top"       [GLFW.KeyPageup]    topCursor,
-      movementk "bottom"    [GLFW.KeyPagedown]  bottomCursor,
-      movement "leftmost"  [ctrlK GLFW.KeyHome] leftMostCursor,
-      movement "rightmost" [ctrlK GLFW.KeyEnd]  rightMostCursor
+      movementk "top"       [GLFW.Key'PageUp]    topCursor,
+      movementk "bottom"    [GLFW.Key'PageDown]  bottomCursor,
+      movement "leftmost"  [ctrlK GLFW.Key'Home] leftMostCursor,
+      movement "rightmost" [ctrlK GLFW.Key'End]  rightMostCursor
       ]
     k = EventMap.ModKey EventMap.noMods
     ctrlK = EventMap.ModKey EventMap.ctrl

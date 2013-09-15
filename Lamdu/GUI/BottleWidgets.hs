@@ -159,7 +159,7 @@ makeLineEdit ::
   Widget.Id ->
   WidgetEnvT m (Widget f)
 makeLineEdit textRef myId =
-  makeTextEditor textRef myId <&> deleteKeyEventHandler (noMods EventMap.KeyEnter)
+  makeTextEditor textRef myId <&> deleteKeyEventHandler (noMods EventMap.Key'Enter)
 
 makeWordEdit ::
   (MonadA m, MonadA f) =>
@@ -167,7 +167,7 @@ makeWordEdit ::
   Widget.Id ->
   WidgetEnvT m (Widget f)
 makeWordEdit textRef myId =
-  makeLineEdit textRef myId <&> deleteKeyEventHandler (noMods EventMap.KeySpace)
+  makeLineEdit textRef myId <&> deleteKeyEventHandler (noMods EventMap.Key'Space)
 
 hspaceWidget :: Widget.R -> Widget f
 hspaceWidget = uncurry Widget.liftView . Spacer.makeHorizontal

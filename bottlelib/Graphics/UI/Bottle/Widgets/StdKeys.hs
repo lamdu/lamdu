@@ -1,6 +1,5 @@
 module Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys) where
 
-import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.GLFW as GLFW
 
 data DirKeys = DirKeys
@@ -9,8 +8,8 @@ data DirKeys = DirKeys
 
 stdDirKeys :: DirKeys
 stdDirKeys = DirKeys
-  { keysLeft  = [GLFW.KeyLeft,  EventMap.charKey 'h']
-  , keysRight = [GLFW.KeyRight, EventMap.charKey 'l']
-  , keysUp    = [GLFW.KeyUp,    EventMap.charKey 'k']
-  , keysDown  = [GLFW.KeyDown,  EventMap.charKey 'j']
+  { keysLeft  = [GLFW.Key'Left,  GLFW.Key'H]
+  , keysRight = [GLFW.Key'Right, GLFW.Key'L]
+  , keysUp    = [GLFW.Key'Up,    GLFW.Key'K]
+  , keysDown  = [GLFW.Key'Down,  GLFW.Key'J]
   }

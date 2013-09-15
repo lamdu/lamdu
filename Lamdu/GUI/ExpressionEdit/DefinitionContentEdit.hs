@@ -34,9 +34,9 @@ type T = Transaction
 
 defFDConfig :: FocusDelegator.Config
 defFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
+  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
   , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Rename definition"]
-  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.KeyEsc]
+  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.Key'Escape]
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Done renaming"]
   }
 
@@ -111,9 +111,9 @@ makeWheres whereItems myId = do
 presentationModeChoiceConfig :: Config -> BWidgets.ChoiceWidgetConfig
 presentationModeChoiceConfig config = BWidgets.ChoiceWidgetConfig
   { BWidgets.cwcFDConfig = FocusDelegator.Config
-    { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
+    { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
     , FocusDelegator.startDelegatingDoc = E.Doc ["Presentation Mode", "Select"]
-    , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
+    , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
     , FocusDelegator.stopDelegatingDoc = E.Doc ["Presentation Mode", "Choose selected"]
     }
   , BWidgets.cwcOrientation = Box.vertical
@@ -146,7 +146,7 @@ make ::
   ExprGuiM m (WidgetT m)
 make hg guid name content = do
   equals <- ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
-  rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs
+  rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods E.Key'Equal] rhs
   let
     jumpToRHSViaEquals n widget
       | nonOperatorName n =

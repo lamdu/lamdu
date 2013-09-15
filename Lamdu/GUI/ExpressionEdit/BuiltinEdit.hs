@@ -19,9 +19,9 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 builtinFDConfig :: FocusDelegator.Config
 builtinFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
+  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
   , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Change imported name"]
-  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.KeyEsc]
+  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.Key'Escape]
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Stop changing name"]
   }
 

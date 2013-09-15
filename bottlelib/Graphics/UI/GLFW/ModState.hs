@@ -33,12 +33,12 @@ allVals :: (Enum a, Bounded a) => [a]
 allVals = [minBound..maxBound]
 
 asModkey :: GLFW.Key -> Maybe Modkey
-asModkey GLFW.KeyRightShift = Just $ Modkey Right Shift
-asModkey GLFW.KeyLeftShift = Just $ Modkey Left Shift
-asModkey GLFW.KeyRightCtrl = Just $ Modkey Right Ctrl
-asModkey GLFW.KeyLeftCtrl = Just $ Modkey Left Ctrl
-asModkey GLFW.KeyRightAlt = Just $ Modkey Right Alt
-asModkey GLFW.KeyLeftAlt = Just $ Modkey Left Alt
+asModkey GLFW.Key'RightShift = Just $ Modkey Right Shift
+asModkey GLFW.Key'LeftShift = Just $ Modkey Left Shift
+asModkey GLFW.Key'RightControl = Just $ Modkey Right Ctrl
+asModkey GLFW.Key'LeftControl = Just $ Modkey Left Ctrl
+asModkey GLFW.Key'RightAlt = Just $ Modkey Right Alt
+asModkey GLFW.Key'LeftAlt = Just $ Modkey Left Alt
 asModkey _ = Nothing
 
 isModifierKey :: GLFW.Key -> Bool

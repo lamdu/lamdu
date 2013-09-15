@@ -59,7 +59,7 @@ make hole pl myId = do
   return (destId, inactive)
   where
     openEventMap =
-      Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.KeyEnter]
+      Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.Key'Enter]
       (E.Doc ["Navigation", "Hole", "Open"]) . pure $
       diveIntoHole myId
 

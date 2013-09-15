@@ -36,13 +36,13 @@ blockDownEvents :: Monad f => Widget f -> Widget f
 blockDownEvents =
   Widget.weakerEvents $
   E.keyPresses
-  [E.ModKey E.noMods E.KeyDown]
+  [E.ModKey E.noMods E.Key'Down]
   (E.Doc ["Navigation", "Move", "down (blocked)"]) $
   return mempty
 
 closeEventMap :: MonadA m => HoleInfo m -> Widget.EventHandlers (T m)
 closeEventMap holeInfo =
-  Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.KeyEsc]
+  Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.Key'Escape]
   (E.Doc ["Navigation", "Hole", "Close"]) . pure $
   Widget.joinId (hiId holeInfo) ["closed"]
 
@@ -62,7 +62,7 @@ adHocTextEditEventMap searchTermProp =
       (E.Doc ["Edit", "Search Term", "Append character"]) $
       changeText . flip (++) . (: [])
     ]
-  , [ E.keyPresses (map (E.ModKey E.noMods) [E.KeyBackspace])
+  , [ E.keyPresses (map (E.ModKey E.noMods) [E.Key'Backspace])
       (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
       changeText init
     | (not . null . Property.value) searchTermProp
@@ -81,8 +81,8 @@ disallowedHoleChars =
 disallowChars :: String -> E.EventMap a -> E.EventMap a
 disallowChars searchTerm =
   E.filterSChars (curry (`notElem` disallowedHoleChars)) .
-  E.deleteKey (keyPress E.KeySpace) .
-  E.deleteKey (keyPress E.KeyEnter) .
+  E.deleteKey (keyPress E.Key'Space) .
+  E.deleteKey (keyPress E.Key'Enter) .
   disallowMix
   where
     disallowMix

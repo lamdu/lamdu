@@ -39,10 +39,10 @@ modifier = EventMap.ctrl `mappend` EventMap.shift
 
 modifierKeys :: [EventMap.Key]
 modifierKeys =
-  [ EventMap.KeyLeftCtrl
-  , EventMap.KeyRightCtrl
-  , EventMap.KeyLeftShift
-  , EventMap.KeyRightShift
+  [ EventMap.Key'LeftControl
+  , EventMap.Key'RightControl
+  , EventMap.Key'LeftShift
+  , EventMap.Key'RightShift
   ]
 
 initState :: State

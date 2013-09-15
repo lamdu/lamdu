@@ -27,13 +27,13 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
 
 mainLoopImage
-  :: (Widget.Size -> KeyEvent -> IO Bool)
+  :: GLFW.Window -> (Widget.Size -> KeyEvent -> IO Bool)
   -> (Bool -> Widget.Size -> IO (Maybe Image)) -> IO a
-mainLoopImage eventHandler makeImage =
-  eventLoop handleEvents
+mainLoopImage win eventHandler makeImage =
+  eventLoop win handleEvents
   where
     windowSize = do
-      (x, y) <- GLFW.getWindowDimensions
+      (x, y) <- GLFW.getWindowSize win
       return $ Vector2 (fromIntegral x) (fromIntegral y)
 
     handleEvent size (GLFWKeyEvent keyEvent) =
@@ -60,12 +60,13 @@ mainLoopImage eventHandler makeImage =
           (Draw.scale (2/winSizeX) (-2/winSizeY) %%) $
           image
 
-mainLoopAnim
-  :: (Widget.Size -> IO (Maybe (Monoid.Endo AnimId)))
-  -> (Widget.Size -> KeyEvent -> IO (Maybe (Monoid.Endo AnimId)))
-  -> (Widget.Size -> IO Anim.Frame)
-  -> IO Anim.R -> IO a
-mainLoopAnim tickHandler eventHandler makeFrame getAnimationHalfLife = do
+mainLoopAnim ::
+  GLFW.Window ->
+  (Widget.Size -> IO (Maybe (Monoid.Endo AnimId))) ->
+  (Widget.Size -> KeyEvent -> IO (Maybe (Monoid.Endo AnimId))) ->
+  (Widget.Size -> IO Anim.Frame) ->
+  IO Anim.R -> IO a
+mainLoopAnim win tickHandler eventHandler makeFrame getAnimationHalfLife = do
   frameStateVar <- newIORef Nothing
   let
     handleResult Nothing = return False
@@ -115,10 +116,10 @@ mainLoopAnim tickHandler eventHandler makeFrame getAnimationHalfLife = do
     stopAtDrawCount = 3
     imgEventHandler size event =
       handleResult =<< eventHandler size event
-  mainLoopImage imgEventHandler makeImage
+  mainLoopImage win imgEventHandler makeImage
 
-mainLoopWidget :: IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO Anim.R -> IO a
-mainLoopWidget widgetTickHandler mkWidgetUnmemod getAnimationHalfLife = do
+mainLoopWidget :: GLFW.Window -> IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO Anim.R -> IO a
+mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationHalfLife = do
   mkWidgetRef <- newIORef =<< memoIO mkWidgetUnmemod
   let
     newWidget = writeIORef mkWidgetRef =<< memoIO mkWidgetUnmemod
@@ -144,4 +145,4 @@ mainLoopWidget widgetTickHandler mkWidgetUnmemod getAnimationHalfLife = do
         Just _ -> newWidget
       return mAnimIdMapping
     mkFrame size = (^. Widget.wFrame) <$> getWidget size
-  mainLoopAnim tickHandler eventHandler mkFrame getAnimationHalfLife
+  mainLoopAnim win tickHandler eventHandler mkFrame getAnimationHalfLife

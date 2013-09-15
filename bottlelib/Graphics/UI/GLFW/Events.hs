@@ -11,12 +11,8 @@ import qualified Graphics.UI.GLFW as GLFW
 data IsPress = Press | Release
   deriving (Show, Read, Eq, Ord)
 
-isPressFromBool :: Bool -> IsPress
-isPressFromBool True = Press
-isPressFromBool False = Release
-
 -- this is the reification of the callback information:
-data GLFWRawEvent = RawCharEvent IsPress Char
+data GLFWRawEvent = RawCharEvent Char
                   | RawKeyEvent IsPress GLFW.Key
                   | RawWindowRefresh
                   | RawWindowClose
@@ -39,49 +35,52 @@ translate :: [(ModState, GLFWRawEvent)] -> [GLFWEvent]
 translate [] = []
 translate ((_, RawWindowClose) : xs) = GLFWWindowClose : translate xs
 translate ((_, RawWindowRefresh) : xs) = GLFWWindowRefresh : translate xs
-translate ((modState1, rk@(RawKeyEvent isPress1 key)) :
-           (modState2, rc@(RawCharEvent isPress2 char)) : xs)
+translate ((modState1, RawKeyEvent isPress1 key) :
+           (modState2, RawCharEvent char) : xs)
   | isModifierKey key =
      -- This happens when you press shift while a key is pressed,
      -- ignore
      GLFWKeyEvent (KeyEvent isPress1 modState1 Nothing key) : translate xs
-  | isPress1 == isPress2 =
-    GLFWKeyEvent (KeyEvent isPress2 modState2 (Just char) key) : translate xs
   | otherwise =
-    error $
-      "RawCharEvent " ++ show rc ++
-      " mismatches the RawKeyEvent: " ++ show rk
+    GLFWKeyEvent (KeyEvent isPress1 modState2 (Just char) key) : translate xs
 translate ((modState, RawKeyEvent isPress key) : xs) =
   GLFWKeyEvent (KeyEvent isPress modState Nothing key) : translate xs
 -- This happens when you press shift while a key is pressed, ignore
-translate ((_, RawCharEvent _ _) : xs) = translate xs
+translate ((_, RawCharEvent _) : xs) = translate xs
 
 atomicModifyIORef_ :: IORef a -> (a -> a) -> IO ()
 atomicModifyIORef_ var f = atomicModifyIORef var ((, ()) . f)
 
-rawEventLoop :: ([GLFWRawEvent] -> IO ()) -> IO a
-rawEventLoop eventsHandler = do
+isPressFromKeyState :: GLFW.KeyState -> IsPress
+isPressFromKeyState GLFW.KeyState'Pressed = Press
+isPressFromKeyState GLFW.KeyState'Repeating = Press
+isPressFromKeyState GLFW.KeyState'Released = Release
+
+rawEventLoop :: GLFW.Window -> ([GLFWRawEvent] -> IO ()) -> IO a
+rawEventLoop win eventsHandler = do
   eventsVar <- newIORef []
 
   let
     addEvent event = atomicModifyIORef_ eventsVar (event:)
-    addKeyEvent key isPress = addEvent $ RawKeyEvent (isPressFromBool isPress) key
-    charEventHandler char isPress
+    -- TODO: Use given mods instead of manual tracking?
+    addKeyEvent key _scanCode isPress _mods =
+      addEvent $ RawKeyEvent (isPressFromKeyState isPress) key
+    charEventHandler char
       | '\57344' <= char && char <= '\63743' = return () -- Range for "key" characters (keys for left key, right key, etc.)
-      | otherwise = addEvent $ RawCharEvent (isPressFromBool isPress) char
-
-  GLFW.setCharCallback charEventHandler
-  GLFW.setKeyCallback addKeyEvent
-  GLFW.setWindowRefreshCallback $ addEvent RawWindowRefresh
-  GLFW.setWindowSizeCallback . const . const $ addEvent RawWindowRefresh
-  GLFW.setWindowCloseCallback $ addEvent RawWindowClose >> return True
+      | otherwise = addEvent $ RawCharEvent char
+    mkCallback = Just . const
+  GLFW.setCharCallback win $ mkCallback charEventHandler
+  GLFW.setKeyCallback win $ mkCallback addKeyEvent
+  GLFW.setWindowRefreshCallback win . mkCallback $ addEvent RawWindowRefresh
+  GLFW.setWindowSizeCallback win . mkCallback . const . const $ addEvent RawWindowRefresh
+  GLFW.setWindowCloseCallback win . mkCallback $ addEvent RawWindowClose
 
   forever $ do
     GLFW.pollEvents
     let handleReversedEvents rEvents = ([], reverse rEvents)
     events <- atomicModifyIORef eventsVar handleReversedEvents
     eventsHandler events
-    GLFW.swapBuffers
+    GLFW.swapBuffers win
 
 modKeyHandlerWrap ::
   ([(ModState, GLFWRawEvent)] -> IO ()) ->
@@ -104,7 +103,7 @@ modKeyHandlerWrap handler = do
     handleEvent e = modState e
   return $ handler <=< traverse handleEvent
 
-eventLoop :: ([GLFWEvent] -> IO ()) -> IO a
-eventLoop handler = do
+eventLoop :: GLFW.Window -> ([GLFWEvent] -> IO ()) -> IO a
+eventLoop win handler = do
   mRawHandler <- modKeyHandlerWrap (handler . translate)
-  rawEventLoop mRawHandler
+  rawEventLoop win mRawHandler

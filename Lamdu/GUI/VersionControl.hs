@@ -31,9 +31,9 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 branchNameFDConfig :: FocusDelegator.Config
 branchNameFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.KeyF2]
+  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.Key'F2]
   , FocusDelegator.startDelegatingDoc = E.Doc ["Branches", "Rename"]
-  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
+  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Done renaming"]
   }
 
@@ -66,9 +66,9 @@ choiceWidgetConfig :: Config -> BWidgets.ChoiceWidgetConfig
 choiceWidgetConfig config = BWidgets.ChoiceWidgetConfig
   { BWidgets.cwcFDConfig =
     FocusDelegator.Config
-    { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
+    { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
     , FocusDelegator.startDelegatingDoc = E.Doc ["Branches", "Select"]
-    , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
+    , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
     , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Choose selected"]
     }
   , BWidgets.cwcExpandMode =

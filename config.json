@@ -7,7 +7,7 @@
                 "modCtrl": false
             },
             {
-                "CharKey": "O"
+                "Key'O": []
             }
         ]
     ],
@@ -25,7 +25,7 @@
                 "modCtrl": false
             },
             {
-                "KeyLeft": []
+                "Key'Left": []
             }
         ]
     ],
@@ -43,7 +43,7 @@
                 "modCtrl": true
             },
             {
-                "CharKey": "Y"
+                "Key'Y": []
             }
         ]
     ],
@@ -62,7 +62,7 @@
                 "modCtrl": false
             },
             {
-                "KeySpace": []
+                "Key'Space": []
             }
         ],
         [
@@ -72,7 +72,7 @@
                 "modCtrl": false
             },
             {
-                "KeyEnter": []
+                "Key'Enter": []
             }
         ]
     ],
@@ -84,7 +84,7 @@
                 "modCtrl": false
             },
             {
-                "CharKey": "`"
+                "Key'GraveAccent": []
             }
         ]
     ],
@@ -105,7 +105,7 @@
                 "modCtrl": false
             },
             {
-                "KeyEnter": []
+                "Key'Enter": []
             }
         ]
     ],
@@ -117,7 +117,7 @@
                 "modCtrl": false
             },
             {
-                "CharKey": "N"
+                "Key'N": []
             }
         ]
     ],
@@ -135,7 +135,7 @@
                 "modCtrl": true
             },
             {
-                "CharKey": "X"
+                "Key'X": []
             }
         ],
         [
@@ -145,7 +145,7 @@
                 "modCtrl": false
             },
             {
-                "CharKey": "X"
+                "Key'X": []
             }
         ]
     ],
@@ -163,7 +163,7 @@
                 "modCtrl": false
             },
             {
-                "KeyEsc": []
+                "Key'Escape": []
             }
         ]
     ],
@@ -175,7 +175,7 @@
                 "modCtrl": false
             },
             {
-                "KeyDel": []
+                "Key'Delete": []
             }
         ],
         [
@@ -185,7 +185,7 @@
                 "modCtrl": false
             },
             {
-                "KeyDel": []
+                "Key'Delete": []
             }
         ]
     ],
@@ -235,7 +235,7 @@
                 "modCtrl": false
             },
             {
-                "CharKey": "`"
+                "Key'GraveAccent": []
             }
         ]
     ],
@@ -270,7 +270,7 @@
                 "modCtrl": true
             },
             {
-                "KeyF10": []
+                "Key'F10": []
             }
         ]
     ],
@@ -301,7 +301,7 @@
                 "modCtrl": true
             },
             {
-                "CharKey": "-"
+                "Key'Minus": []
             }
         ]
     ],
@@ -347,7 +347,7 @@
                 "modCtrl": false
             },
             {
-                "KeySpace": []
+                "Key'Space": []
             }
         ]
     ],
@@ -359,7 +359,7 @@
                 "modCtrl": false
             },
             {
-                "KeyF7": []
+                "Key'F7": []
             }
         ]
     ],
@@ -371,7 +371,7 @@
                 "modCtrl": true
             },
             {
-                "CharKey": "="
+                "Key'Equal": []
             }
         ]
     ],
@@ -388,7 +388,7 @@
                 "modCtrl": false
             },
             {
-                "KeyDown": []
+                "Key'Down": []
             }
         ]
     ],
@@ -448,7 +448,7 @@
                 "modCtrl": false
             },
             {
-                "KeyBackspace": []
+                "Key'Backspace": []
             }
         ]
     ],
@@ -476,7 +476,7 @@
                 "modCtrl": false
             },
             {
-                "CharKey": "A"
+                "Key'A": []
             }
         ],
         [
@@ -486,7 +486,7 @@
                 "modCtrl": false
             },
             {
-                "CharKey": ","
+                "Key'Comma": []
             }
         ]
     ],
@@ -498,7 +498,7 @@
                 "modCtrl": false
             },
             {
-                "CharKey": "W"
+                "Key'W": []
             }
         ]
     ],
@@ -547,7 +547,7 @@
                 "modCtrl": false
             },
             {
-                "KeyRight": []
+                "Key'Right": []
             }
         ]
     ],
@@ -559,7 +559,7 @@
                 "modCtrl": false
             },
             {
-                "KeyLeft": []
+                "Key'Left": []
             }
         ]
     ],
@@ -577,7 +577,7 @@
                 "modCtrl": true
             },
             {
-                "CharKey": "V"
+                "Key'V": []
             }
         ],
         [
@@ -587,7 +587,7 @@
                 "modCtrl": false
             },
             {
-                "CharKey": "V"
+                "Key'V": []
             }
         ]
     ],
@@ -621,7 +621,7 @@
                 "modCtrl": false
             },
             {
-                "KeyEnter": []
+                "Key'Enter": []
             }
         ]
     ],
@@ -633,7 +633,7 @@
                 "modCtrl": true
             },
             {
-                "CharKey": "D"
+                "Key'D": []
             }
         ],
         [
@@ -643,7 +643,7 @@
                 "modCtrl": true
             },
             {
-                "KeyF7": []
+                "Key'F7": []
             }
         ]
     ],
@@ -673,7 +673,7 @@
                 "modCtrl": false
             },
             {
-                "KeyUp": []
+                "Key'Up": []
             }
         ]
     ],
@@ -719,7 +719,7 @@
                 "modCtrl": false
             },
             {
-                "CharKey": "W"
+                "Key'W": []
             }
         ]
     ],
@@ -735,7 +735,7 @@
                 "modCtrl": false
             },
             {
-                "KeySpace": []
+                "Key'Space": []
             }
         ]
     ],
@@ -747,7 +747,7 @@
                 "modCtrl": false
             },
             {
-                "KeySpace": []
+                "Key'Space": []
             }
         ]
     ],
@@ -759,7 +759,7 @@
                 "modCtrl": false
             },
             {
-                "KeyTab": []
+                "Key'Tab": []
             }
         ]
     ],
@@ -771,7 +771,7 @@
                 "modCtrl": false
             },
             {
-                "KeyTab": []
+                "Key'Tab": []
             }
         ]
     ],
@@ -783,7 +783,7 @@
                 "modCtrl": false
             },
             {
-                "KeyEnter": []
+                "Key'Enter": []
             }
         ]
     ],
@@ -801,7 +801,7 @@
                 "modCtrl": true
             },
             {
-                "CharKey": "S"
+                "Key'S": []
             }
         ]
     ],
@@ -813,7 +813,7 @@
                 "modCtrl": false
             },
             {
-                "CharKey": "R"
+                "Key'R": []
             }
         ]
     ],
@@ -825,7 +825,7 @@
                 "modCtrl": false
             },
             {
-                "CharKey": ","
+                "Key'Comma": []
             }
         ]
     ],
@@ -837,7 +837,7 @@
                 "modCtrl": false
             },
             {
-                "KeyF1": []
+                "Key'F1": []
             }
         ],
         [
@@ -847,7 +847,7 @@
                 "modCtrl": false
             },
             {
-                "CharKey": "H"
+                "Key'H": []
             }
         ]
     ],
@@ -865,7 +865,7 @@
                 "modCtrl": true
             },
             {
-                "CharKey": "Q"
+                "Key'Q": []
             }
         ]
     ],
@@ -883,7 +883,7 @@
                 "modCtrl": true
             },
             {
-                "CharKey": "Z"
+                "Key'Z": []
             }
         ]
     ],

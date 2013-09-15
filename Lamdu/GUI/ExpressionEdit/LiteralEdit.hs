@@ -31,7 +31,7 @@ setColor action = do
 mkEditEventMap ::
   MonadA m => Integer -> T m Guid -> Widget.EventHandlers (T m)
 mkEditEventMap integer setToHole =
-  Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.KeyEnter]
+  Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.Key'Enter]
   (E.Doc ["Edit", "Integer"]) $
   setHoleStateAndJump (HoleState (show integer)) =<< setToHole
 

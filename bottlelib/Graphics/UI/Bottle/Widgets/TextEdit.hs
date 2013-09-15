@@ -209,26 +209,26 @@ eventMap ::
   Widget.EventHandlers ((,) String)
 eventMap cursor str displayStr myId =
   mconcat . concat $ [
-    [ keys (moveDoc ["left"]) [specialKey E.KeyLeft] $
+    [ keys (moveDoc ["left"]) [noMods E.Key'Left] $
       moveRelative (-1)
     | cursor > 0 ],
 
-    [ keys (moveDoc ["right"]) [specialKey E.KeyRight] $
+    [ keys (moveDoc ["right"]) [noMods E.Key'Right] $
       moveRelative 1
     | cursor < textLength ],
 
-    [ keys (moveDoc ["word", "left"]) [ctrlSpecialKey E.KeyLeft]
+    [ keys (moveDoc ["word", "left"]) [ctrl E.Key'Left]
       backMoveWord
     | cursor > 0 ],
 
-    [ keys (moveDoc ["word", "right"]) [ctrlSpecialKey E.KeyRight] moveWord
+    [ keys (moveDoc ["word", "right"]) [ctrl E.Key'Right] moveWord
     | cursor < textLength ],
 
-    [ keys (moveDoc ["up"]) [specialKey E.KeyUp] $
+    [ keys (moveDoc ["up"]) [noMods E.Key'Up] $
       moveRelative (- cursorX - 1 - length (drop cursorX prevLine))
     | cursorY > 0 ],
 
-    [ keys (moveDoc ["down"]) [specialKey E.KeyDown] $
+    [ keys (moveDoc ["down"]) [noMods E.Key'Down] $
       moveRelative (length curLineAfter + 1 + min cursorX (length nextLine))
     | cursorY < lineCount - 1 ],
 
@@ -248,11 +248,11 @@ eventMap cursor str displayStr myId =
       moveAbsolute textLength
     | null curLineAfter && cursor < textLength ],
 
-    [ keys (deleteDoc ["backwards"]) [specialKey E.KeyBackspace] $
+    [ keys (deleteDoc ["backwards"]) [noMods E.Key'Backspace] $
       backDelete 1
     | cursor > 0 ],
 
-    [ keys (deleteDoc ["word", "backwards"]) [ctrlCharKey 'w']
+    [ keys (deleteDoc ["word", "backwards"]) [ctrl E.Key'W]
       backDeleteWord
     | cursor > 0 ],
 
@@ -262,27 +262,27 @@ eventMap cursor str displayStr myId =
 
     in
 
-    [ keys (editDoc ["Swap letters"]) [ctrlCharKey 't']
+    [ keys (editDoc ["Swap letters"]) [ctrl E.Key'T]
       swapLetters
     | cursor > 0 && textLength >= 2 ],
 
-    [ keys (deleteDoc ["forward"]) [specialKey E.KeyDel] $
+    [ keys (deleteDoc ["forward"]) [noMods E.Key'Delete] $
       delete 1
     | cursor < textLength ],
 
-    [ keys (deleteDoc ["word", "forward"]) [altCharKey 'd']
+    [ keys (deleteDoc ["word", "forward"]) [alt E.Key'D]
       deleteWord
     | cursor < textLength ],
 
-    [ keys (deleteDoc ["till", "end of line"]) [ctrlCharKey 'k'] $
+    [ keys (deleteDoc ["till", "end of line"]) [ctrl E.Key'K] $
       delete (length curLineAfter)
     | not . null $ curLineAfter ],
 
-    [ keys (deleteDoc ["newline"]) [ctrlCharKey 'k'] $
+    [ keys (deleteDoc ["newline"]) [ctrl E.Key'K] $
       delete 1
     | null curLineAfter && cursor < textLength ],
 
-    [ keys (deleteDoc ["till", "beginning of line"]) [ctrlCharKey 'u'] $
+    [ keys (deleteDoc ["till", "beginning of line"]) [ctrl E.Key'U] $
       backDelete (length curLineBefore)
     | not . null $ curLineBefore ],
 
@@ -291,9 +291,9 @@ eventMap cursor str displayStr myId =
       insert . (: [])
     ],
 
-    [ keys (insertDoc ["Newline"]) [specialKey E.KeyEnter] (insert "\n") ],
+    [ keys (insertDoc ["Newline"]) [noMods E.Key'Enter] (insert "\n") ],
 
-    [ keys (insertDoc ["Space"]) [E.ModKey E.noMods E.KeySpace] (insert " ") ]
+    [ keys (insertDoc ["Space"]) [E.ModKey E.noMods E.Key'Space] (insert " ") ]
 
     ]
   where
@@ -329,12 +329,11 @@ eventMap cursor str displayStr myId =
 
     keys = flip E.keyPresses
 
-    specialKey = E.ModKey E.noMods
-    ctrlSpecialKey = E.ModKey E.ctrl
-    ctrlCharKey = E.ModKey E.ctrl . E.charKey
-    altCharKey = E.ModKey E.alt . E.charKey
-    homeKeys = [specialKey E.KeyHome, ctrlCharKey 'A']
-    endKeys = [specialKey E.KeyEnd, ctrlCharKey 'E']
+    noMods = E.ModKey E.noMods
+    ctrl = E.ModKey E.ctrl
+    alt = E.ModKey E.alt
+    homeKeys = [noMods E.Key'Home, ctrl E.Key'A]
+    endKeys = [noMods E.Key'End, ctrl E.Key'E]
     textLength = length str
     lineCount = length $ splitWhen (== '\n') displayStr
     strWithIds = Lens.mapped . _1 %~ Just $ enumerate str

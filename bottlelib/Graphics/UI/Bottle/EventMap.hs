@@ -13,7 +13,7 @@ module Graphics.UI.Bottle.EventMap
   , IsShifted(..)
   , filterSChars
   , anyShiftedChars
-  , charKey, eventMapDocs
+  , eventMapDocs
   , tickHandler
   , specialCharKey
   ) where
@@ -22,7 +22,6 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Arrow ((***), (&&&))
 import Control.Lens.Operators
 import Control.Monad (guard, mplus, msum)
-import Data.Char (toLower, toUpper)
 import Data.List (isPrefixOf)
 import Data.Map (Map)
 import Data.Maybe (isJust, listToMaybe, maybeToList)
@@ -49,50 +48,72 @@ anyShiftedChars s = (,) <$> s <*> [Shifted, NotShifted]
 specialCharKey :: Char -> Maybe Key
 specialCharKey c =
   case c of
-  ' ' -> Just KeySpace
-  '0' -> Just KeyPad0
-  '1' -> Just KeyPad1
-  '2' -> Just KeyPad2
-  '3' -> Just KeyPad3
-  '4' -> Just KeyPad4
-  '5' -> Just KeyPad5
-  '6' -> Just KeyPad6
-  '7' -> Just KeyPad7
-  '8' -> Just KeyPad8
-  '9' -> Just KeyPad9
-  '/' -> Just KeyPadDivide
-  '*' -> Just KeyPadMultiply
-  '-' -> Just KeyPadSubtract
-  '+' -> Just KeyPadAdd
-  '.' -> Just KeyPadDecimal
-  '=' -> Just KeyPadEqual
+  ' ' -> Just Key'Space
+  '0' -> Just Key'Pad0
+  '1' -> Just Key'Pad1
+  '2' -> Just Key'Pad2
+  '3' -> Just Key'Pad3
+  '4' -> Just Key'Pad4
+  '5' -> Just Key'Pad5
+  '6' -> Just Key'Pad6
+  '7' -> Just Key'Pad7
+  '8' -> Just Key'Pad8
+  '9' -> Just Key'Pad9
+  '/' -> Just Key'PadDivide
+  '*' -> Just Key'PadMultiply
+  '-' -> Just Key'PadSubtract
+  '+' -> Just Key'PadAdd
+  '.' -> Just Key'PadDecimal
+  '=' -> Just Key'PadEqual
   _ -> Nothing
 
 charOfKey :: Key -> Maybe Char
 charOfKey key =
   case key of
-  CharKey c      -> Just c
-  KeySpace       -> Just ' '
-  KeyPad0        -> Just '0'
-  KeyPad1        -> Just '1'
-  KeyPad2        -> Just '2'
-  KeyPad3        -> Just '3'
-  KeyPad4        -> Just '4'
-  KeyPad5        -> Just '5'
-  KeyPad6        -> Just '6'
-  KeyPad7        -> Just '7'
-  KeyPad8        -> Just '8'
-  KeyPad9        -> Just '9'
-  KeyPadDivide   -> Just '/'
-  KeyPadMultiply -> Just '*'
-  KeyPadSubtract -> Just '-'
-  KeyPadAdd      -> Just '+'
-  KeyPadDecimal  -> Just '.'
-  KeyPadEqual    -> Just '='
+  Key'A           -> Just 'A'
+  Key'B           -> Just 'B'
+  Key'C           -> Just 'C'
+  Key'D           -> Just 'D'
+  Key'E           -> Just 'E'
+  Key'F           -> Just 'F'
+  Key'G           -> Just 'G'
+  Key'H           -> Just 'H'
+  Key'I           -> Just 'I'
+  Key'J           -> Just 'J'
+  Key'K           -> Just 'K'
+  Key'L           -> Just 'L'
+  Key'M           -> Just 'M'
+  Key'N           -> Just 'N'
+  Key'O           -> Just 'O'
+  Key'P           -> Just 'P'
+  Key'Q           -> Just 'Q'
+  Key'R           -> Just 'R'
+  Key'S           -> Just 'S'
+  Key'T           -> Just 'T'
+  Key'U           -> Just 'U'
+  Key'V           -> Just 'V'
+  Key'W           -> Just 'W'
+  Key'X           -> Just 'X'
+  Key'Y           -> Just 'Y'
+  Key'Z           -> Just 'Z'
+  Key'Space       -> Just ' '
+  Key'Pad0        -> Just '0'
+  Key'Pad1        -> Just '1'
+  Key'Pad2        -> Just '2'
+  Key'Pad3        -> Just '3'
+  Key'Pad4        -> Just '4'
+  Key'Pad5        -> Just '5'
+  Key'Pad6        -> Just '6'
+  Key'Pad7        -> Just '7'
+  Key'Pad8        -> Just '8'
+  Key'Pad9        -> Just '9'
+  Key'PadDivide   -> Just '/'
+  Key'PadMultiply -> Just '*'
+  Key'PadSubtract -> Just '-'
+  Key'PadAdd      -> Just '+'
+  Key'PadDecimal  -> Just '.'
+  Key'PadEqual    -> Just '='
   _              -> Nothing
-
-charKey :: Char -> Key
-charKey = CharKey . toUpper
 
 type Subtitle = String
 
@@ -186,7 +207,6 @@ filterSChars p =
       handler c isShifted
 
 prettyKey :: Key -> InputDoc
-prettyKey (CharKey x) = [toLower x]
 prettyKey k
   | "Key" `isPrefixOf` show k = drop 3 $ show k
   | otherwise = show k
@@ -213,10 +233,9 @@ shiftedMods :: ModState -> IsShifted
 shiftedMods ModState { modShift = True } = Shifted
 shiftedMods ModState { modShift = False } = NotShifted
 
+-- TODO: Remove this:
 mkModKey :: ModState -> Key -> ModKey
-mkModKey ms k
-  | isCharMods ms && k == CharKey ' ' = ModKey ms KeySpace
-  | otherwise = ModKey ms k
+mkModKey = ModKey
 
 eventMapDocs :: EventMap a -> [(InputDoc, Doc)]
 eventMapDocs (EventMap dict charGroups _ mAllCharsHandler _) =

@@ -135,10 +135,7 @@ runEditor lamduDir mFontPath = do
 
   GLFWUtils.withGLFW $ do
     Vector2 displayWidth displayHeight <- GLFWUtils.getVideoModeSize
-    GLFWUtils.openWindow GLFW.defaultDisplayOptions
-      { GLFW.displayOptions_width = displayWidth
-      , GLFW.displayOptions_height = displayHeight
-      }
+    win <- GLFWUtils.createWindow displayWidth displayHeight "Lamdu"
     -- Fonts must be loaded after the GL context is created..
     let
       getFont path = do
@@ -149,16 +146,17 @@ runEditor lamduDir mFontPath = do
       case mFontPath of
       Nothing -> accessDataFile startDir getFont "fonts/DejaVuSans.ttf"
       Just path -> getFont path
-    Db.withDb (lamduDir </> "codeedit.db") $ runDb getConfig font
+    Db.withDb (lamduDir </> "codeedit.db") $ runDb win getConfig font
 
 mainLoopDebugMode ::
+  GLFW.Window ->
   IO (Version, Config) ->
   ( Config -> Widget.Size ->
     ( IO (Widget IO)
     , Widget IO -> IO (Widget IO)
     )
   ) -> IO a
-mainLoopDebugMode getConfig iteration = do
+mainLoopDebugMode win getConfig iteration = do
   debugModeRef <- newIORef False
   lastVersionNumRef <- newIORef 0
   let
@@ -183,7 +181,7 @@ mainLoopDebugMode getConfig iteration = do
       (curVersionNum, _) <- getConfig
       atomicModifyIORef lastVersionNumRef $ \lastVersionNum ->
         (curVersionNum, lastVersionNum /= curVersionNum)
-  mainLoopWidget tickHandler makeDebugModeWidget getAnimHalfLife
+  mainLoopWidget win tickHandler makeDebugModeWidget getAnimHalfLife
 
 cacheMakeWidget :: Eq a => (a -> IO (Widget IO)) -> IO (a -> IO (Widget IO))
 cacheMakeWidget mkWidget = do
@@ -246,8 +244,8 @@ baseStyle config font = TextEdit.Style
   , TextEdit._sEmptyFocusedString = ""
   }
 
-runDb :: IO (Version, Config) -> Draw.Font -> Db -> IO a
-runDb getConfig font db = do
+runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO a
+runDb win getConfig font db = do
   ExampleDB.initDB (Guid.augment "ExampleDB") db
   (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor
   addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
@@ -270,7 +268,7 @@ runDb getConfig font db = do
       writeIORef cacheRef newCache
       return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
   makeWidgetCached <- cacheMakeWidget makeWidget
-  mainLoopDebugMode getConfig $ \config size ->
+  mainLoopDebugMode win getConfig $ \config size ->
     ( wrapFlyNav =<< makeWidgetCached (config, size)
     , addHelpWithStyle (helpConfig font config) size
     )
