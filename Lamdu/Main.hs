@@ -138,7 +138,8 @@ runEditor lamduDir mFontPath = do
       case mFontPath of
       Nothing -> accessDataFile startDir getFont "fonts/DejaVuSans.ttf"
       Just path -> getFont path
-    Db.withDb (lamduDir </> "codeedit.db") $ runDb win getConfig font
+    Db.withDb (lamduDir </> "codeedit.sophia") $ runDb win getConfig font
+
 
 mainLoopDebugMode ::
   GLFW.Window ->
