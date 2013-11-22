@@ -15,8 +15,7 @@ Library
   -- Modules exported by the library.
   hs-Source-Dirs:      bottlelib
 
-  Exposed-modules:     Data.Aeson.TH.CompatOptions,
-                       Data.Cache,
+  Exposed-modules:     Data.Cache,
                        Data.List.Assoc,
                        Data.List.Utils,
                        Data.Maybe.Utils,

@@ -3,8 +3,7 @@
 module Lamdu.Config (Layers(..), Config(..), delKeys) where
 
 import Data.Aeson (ToJSON(..), FromJSON(..))
-import Data.Aeson.TH (deriveJSON)
-import Data.Aeson.TH.CompatOptions (compatOptions)
+import Data.Aeson.TH (deriveJSON, defaultOptions)
 import Data.Vector.Vector2 (Vector2(..))
 import Foreign.C.Types (CDouble)
 import Graphics.DrawingCombinators.Utils () -- Read instance for Color
@@ -23,7 +22,7 @@ data Layers = Layers
   , layerParensHighlightBG
   , layerActivePane
   , layerMax :: Int
-  } deriving (Eq)
+  } deriving Eq
 
 data Config = Config
   { layers :: Layers
@@ -196,18 +195,18 @@ data Config = Config
   , labeledApplyBGColor :: Draw.Color
   , labeledApplyPadding :: Vector2 Double
   , spaceBetweenAnnotatedArgs :: Double
-  } deriving (Eq)
+  } deriving Eq
 
 delKeys :: Config -> [E.ModKey]
 delKeys config = delForwardKeys config ++ delBackwardKeys config
 
-deriveJSON compatOptions ''Vector2
-deriveJSON compatOptions ''Draw.Color
-deriveJSON compatOptions ''E.ModState
-deriveJSON compatOptions ''E.ModKey
-deriveJSON compatOptions ''E.Key
-deriveJSON compatOptions ''Layers
-deriveJSON compatOptions ''Config
+deriveJSON defaultOptions ''Vector2
+deriveJSON defaultOptions ''Draw.Color
+deriveJSON defaultOptions ''E.ModState
+deriveJSON defaultOptions ''E.ModKey
+deriveJSON defaultOptions ''E.Key
+deriveJSON defaultOptions ''Layers
+deriveJSON defaultOptions ''Config
 
 instance FromJSON CDouble where
   parseJSON = fmap (realToFrac :: Double -> CDouble) . parseJSON
