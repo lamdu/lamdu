@@ -1,3 +1,5 @@
+{-# OPTIONS -fno-warn-orphans #-}
+{-# LANGUAGE StandaloneDeriving #-}
 module Graphics.DrawingCombinators.Utils (
   Image, square,
   textHeight, textSize,
@@ -12,6 +14,8 @@ import Graphics.DrawingCombinators((%%))
 import qualified Graphics.DrawingCombinators as Draw
 
 type Image = Draw.Image ()
+
+deriving instance Read Draw.Color
 
 square :: Image
 square = void $ Draw.convexPoly [ (0, 0), (1, 0), (1, 1), (0, 1) ]
