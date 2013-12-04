@@ -24,9 +24,9 @@ data Trigger def
 derive makeBinary ''Trigger
 
 data ParameterRefEvent
-  = ParameterRefOutOfScope
-  | NotParameterRef
-  | IsParameterRef
+  = TheParameterOutOfScope
+  | NotTheParameterRef
+  | IsTheParameterRef
   deriving (Eq, Ord, Show)
 
 data Fired def

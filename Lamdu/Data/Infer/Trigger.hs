@@ -54,22 +54,22 @@ checkParameterRef :: ParamRef def -> RefData def -> Infer def (Maybe (Fired def)
 checkParameterRef triggerGuidRef refData
   | Lens.nullOf (RefData.rdScope . RefData.scopeParamRefs) refData =
     -- Scope is empty so this cannot be a parameter Ref
-    answer triggerGuidRef ParameterRefOutOfScope
+    answer triggerGuidRef TheParameterOutOfScope
   | otherwise = do
     triggerGuidRep <- InferM.liftGuidAliases $ GuidAliases.find triggerGuidRef
     -- Our caller must hand us a normalized scope
     if triggerGuidRep `notElem` (refData ^.. RefData.rdScope . RefData.scopeParamRefs)
-      then answer triggerGuidRep ParameterRefOutOfScope
+      then answer triggerGuidRep TheParameterOutOfScope
       else
         case refData ^. RefData.rdBody of
         Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) -> do
           guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
           answer triggerGuidRep $
             if triggerGuidRep == guidRep
-            then IsParameterRef
-            else NotParameterRef
+            then IsTheParameterRef
+            else NotTheParameterRef
         Expr.BodyLeaf Expr.Hole -> return Nothing
-        _ -> answer triggerGuidRep NotParameterRef
+        _ -> answer triggerGuidRep NotTheParameterRef
   where
     answer ref = return . Just . FiredParameterRef ref
 

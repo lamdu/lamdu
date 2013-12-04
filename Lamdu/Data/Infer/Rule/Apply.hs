@@ -138,18 +138,18 @@ execute ruleRef =
   RuleMonad.run Rule.RuleApply handleTrigger
   where
     findDestRef =
-      fmap (unsafeUnjust "Trigger.IsParameterRef not on src?!") . mFindDestRef
-    handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.IsParameterRef) = do
+      fmap (unsafeUnjust "Trigger.IsTheParameterRef not on src?!") . mFindDestRef
+    handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.IsTheParameterRef) = do
       destRef <- findDestRef srcRef
       argVal <- Lens.use Rule.aArgVal
       void $ unify argVal destRef
-    handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.NotParameterRef) = do
+    handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.NotTheParameterRef) = do
       -- Triggered when not a hole anymore, so copy:
       mDestRef <- mFindDestRef srcRef
-      -- If mDestRef is Nothing, ParameterRefOutOfScope triggered first
+      -- If mDestRef is Nothing, TheParameterOutOfScope triggered first
       -- and unified instead, so no need to make a copy:
       traverse_ (makePiResultCopy ruleRef srcRef) mDestRef
-    handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.ParameterRefOutOfScope) = do
+    handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.TheParameterOutOfScope) = do
       -- Now we know no subexpr can possibly use the piGuid, so it
       -- must fully equal the dest:
       srcRep <- findRep srcRef
