@@ -318,15 +318,16 @@ inferReplicateOfReplicate =
       getDef "replicate" $$ asHole typ $$: [ x, y ]
 
 fix3Lambdas =
-  testInfer "fix3Lambdas: fix (\\a -> \\b -> \\c -> ?)" $
-  getDef "fix" $$ asHole (hole ~> hole ~> hole) $$
-  ( l "a" (hole ~> hole ~> hole) $
-    l "b" (holeWithInferredType set) $
-    l "c" (holeWithInferredType set) $
-    hole
+  testInfer "fix3Lambdas: fix (\\recu -> \\b -> \\c -> recu ?)" $
+  getDef "fix" $$ holeFixType $$
+  ( lambda "recu" holeFixType $ \recu ->
+    lambda "b" iset $ \_b ->
+    lambda "c" iset $ \_c ->
+    recu $$ hole
   )
   where
-    l n t = lambda n (asHole t) . const
+    holeFixType = asHole (hole ~> hole ~> hole)
+    iset = holeWithInferredType set
 
 infiniteTypeTests =
   testGroup "Infinite types"
