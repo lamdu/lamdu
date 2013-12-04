@@ -91,8 +91,11 @@ verifyInferResult msg exprLInferred = do
   return ()
     & assertInferredEquals msg exprDerefed (exprInferred <&> inferredOfInput . snd)
 
+runSuccessfulM :: M a -> a
+runSuccessfulM = fromRight . runNewContext
+
 runContextAssertion :: M a -> HUnit.Assertion
-runContextAssertion = void . E.evaluate . fromRight . runNewContext
+runContextAssertion = void . E.evaluate . runSuccessfulM
 
 inferAssertion :: InputExpr -> HUnit.Assertion
 inferAssertion = runContextAssertion . inferVerifyExpr

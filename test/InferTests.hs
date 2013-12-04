@@ -9,16 +9,20 @@ import InferCombinators
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Kind(..), Expression(..))
+import Lamdu.Data.Expression.Utils (pureHole)
 import Test.Framework (testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Test.HUnit (assertEqual)
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Property (property, rejected)
 import Utils
 import qualified Control.Lens as Lens
+import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer as Infer
+import qualified Lamdu.Data.Infer.Deref as InferDeref
 
 simpleTests =
   [ testInfer "literal int" $ literalInteger 5
@@ -378,6 +382,20 @@ factorialExpr =
   where
     iInt = asHole integerType
 
+recurseScopeTest =
+  testCase "recurse scope (f x = f ?<verify scope>)" $
+  assertEqual "scope must match" (fmap void scope) (Map.fromList [(xGuid, pureHole)])
+  where
+    scope = runSuccessfulM (derefWithPL =<< loadInferDef expr) ^?! scopeAtPoint
+    iset = holeWithInferredType set
+    -- TODO: Use proper infrastructure
+    expr = lambda "x" iset . const $ recurse (hole ~> hole) $$ hole
+    xGuid = expr ^?! ExprLens.exprKindedLam KVal . Lens._1
+    scopeAtPoint =
+      lamResult KVal .
+      ExprLens.exprApply . Expr.applyArg .
+      Expr.ePayload . Lens._1 . InferDeref.dScope
+
 euler1Expr =
   getDef "sum" $$ iInt $$
   ( getDef "filter" $$ iInt $$:
@@ -633,6 +651,7 @@ hunitTests =
   [ fromQuickCheck1
   , mapIdTest
   , testInfer "factorial" factorialExpr
+  , recurseScopeTest
   , testInfer "euler1" euler1Expr
   , testInfer "solveDepressedQuartic" solveDepressedQuarticExpr
   , applyIntToBoolFuncWithHole
