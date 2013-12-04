@@ -85,7 +85,7 @@ deref expr =
   <&> flip (,) ()
   & derefWithPL
   <&> fmap
-  (\(DerefedTV val typ _scope _tv, ()) ->
+  (\(DerefedTV val typ _scope _tv _ctx, ()) ->
     ( val & ExprLens.exprDef %~ (^. ldDef) & void
     , typ & ExprLens.exprDef %~ (^. ldDef) & void
     )

@@ -13,7 +13,7 @@ import Lamdu.Data.ExampleDB (createBuiltins)
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Utils (pureHole, pureIntegerType)
-import Lamdu.Data.Infer.Deref (DerefedTV(..), Restriction(..))
+import Lamdu.Data.Infer.Deref (DerefedTV(..), Restriction(..), dValue, dType)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -165,8 +165,8 @@ showDerefed = show . canonizeDebug . void
 showInferredValType :: Expression def (DerefedTV (DefI t)) -> String
 showInferredValType expr =
   unlines
-  [ "Inferred val:  " ++ showDerefed val
-  , "Inferred type: " ++ showDerefed typ
+  [ "Inferred val:  " ++ showDerefed (derefed ^. dValue)
+  , "Inferred type: " ++ showDerefed (derefed ^. dType)
   ]
   where
-    DerefedTV val typ _scope _tv = expr ^. Expr.ePayload
+    derefed = expr ^. Expr.ePayload

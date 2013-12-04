@@ -246,6 +246,7 @@ data HoleArg m expr = HoleArg
 
 data HoleInferred name m = HoleInferred
   { -- hiBaseValue is the inferred value WITHOUT the vars context
+    -- TODO: hiBaseValue -> hiWithStructure
     _hiBaseValue :: LoadedExpr m ()
   , _hiWithVarsValue :: LoadedExpr m ()
   , _hiType :: LoadedExpr m ()

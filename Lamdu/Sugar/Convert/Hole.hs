@@ -264,8 +264,7 @@ mkHoleInferred inferred = do
       either (error . show) id . -- TODO: Handle errors??
       (`evalStateT` (sugarContext ^. ConvertM.scStructureInferContext . icContext)) $
       InferDeref.deref
-      [] -- TODO: <-- BUG BUG BUG (Bad guids here? Need special
-         -- support in Deref for deref-in-differing-context?)
+      (inferred ^. InferDeref.dContext)
       (inferred ^. InferDeref.dTV . Infer.tvVal)
   pure HoleInferred
     { _hiBaseValue = miValInStructureContext

@@ -2,7 +2,7 @@
 module Lamdu.Data.Infer.Deref
   ( M, expr, entireExpr, deref
   , toInferError
-  , DerefedTV(..), dValue, dType, dScope, dTV
+  , DerefedTV(..), dValue, dType, dScope, dTV, dContext
   , Error(..)
   , RefData.Restriction(..), ExprRef
   ) where
@@ -41,11 +41,17 @@ data Error def = InfiniteExpression (ExprRef def)
 
 type Expr def = Expr.Expression (RefData.LoadedDef def) (ExprRef def)
 
+-- TODO: Make this a newtype and maybe rename to Context
+-- | The stored guid names we know for paremeter refs (different
+-- mapping in different subexprs)
+type StoredGuids def = [(ParamRef def, Guid)]
+
 data DerefedTV def = DerefedTV
   { _dValue :: Expr def
   , _dType :: Expr def
   , _dScope :: Map Guid (Expr def) -- TODO: Make a separate derefScope action instead of this
   , _dTV :: TypedValue def
+  , _dContext :: StoredGuids def
   } deriving (Typeable)
 Lens.makeLenses ''DerefedTV
 derive makeBinary ''DerefedTV
@@ -55,10 +61,6 @@ mError :: Error def -> M def a
 mError = lift . Left
 mGuidAliases :: StateT (GuidAliases def) (Either (Error def)) a -> M def a
 mGuidAliases = Lens.zoom Context.guidAliases
-
--- | The stored guid names we know for paremeter refs (different
--- mapping in different subexprs)
-type StoredGuids def = [(ParamRef def, Guid)]
 
 canonizeGuid ::
   MonadA m =>
@@ -94,8 +96,9 @@ derefScope storedGuids =
     each (paramRef, ref) = do
       paramRep <- mGuidAliases $ GuidAliases.find paramRef
       guid <- mGuidAliases . State.gets $ GuidAliases.guidOfRep paramRep
+      cGuid <- mGuidAliases $ canonizeGuid storedGuids guid
       typeExpr <- deref storedGuids ref
-      return (guid, typeExpr)
+      return (cGuid, typeExpr)
 
 expr ::
   Expr.Expression ldef (TypedValue def, a) ->
@@ -118,6 +121,7 @@ expr =
             <*> deref newStoredGuids (tv ^. tvType)
             <*> derefScope storedGuids (scope ^. RefData.scopeMap)
             <*> pure tv
+            <*> pure storedGuids
       storedBody
         & Lens.traverse %%~ go newStoredGuids
         <&> (`Expr.Expression` (derefTV, pl))
