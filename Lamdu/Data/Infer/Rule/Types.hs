@@ -32,7 +32,7 @@ data GetFieldPhase0 def = GetFieldPhase0
   { _gf0GetFieldTag :: ExprRef def
   , _gf0GetFieldType :: ExprRef def
   -- trigger on record type, no need for Ref
-  }
+  } deriving Show
 Lens.makeLenses ''GetFieldPhase0
 derive makeBinary ''GetFieldPhase0
 
@@ -42,7 +42,7 @@ data GetFieldPhase1 def = GetFieldPhase1
   { _gf1GetFieldRecordTypeFields :: [(ExprRef def, ExprRef def)]
   , _gf1GetFieldType :: ExprRef def
   -- trigger on getfield tag, no need for Ref
-  }
+  } deriving Show
 Lens.makeLenses ''GetFieldPhase1
 derive makeBinary ''GetFieldPhase1
 
@@ -54,7 +54,7 @@ data GetFieldPhase2 def = GetFieldPhase2
   , _gf2TypeRef :: ExprRef def
   , -- Maps Refs of tags to Refs of their field types
     _gf2MaybeMatchers :: OR.RefMap (TagExpr def) (ExprRef def)
-  }
+  } deriving Show
 Lens.makeLenses ''GetFieldPhase2
 derive makeBinary ''GetFieldPhase2
 
@@ -64,7 +64,7 @@ data Apply def = Apply
   -- unmaintained pi-result to apply type respective/matching subexprs
   , _aLinkedExprs :: OR.RefMap (TagExpr def) (ExprRef def)
   , _aLinkedNames :: OR.RefMap (TagParam def) (ParamRef def)
-  }
+  } deriving Show
 Lens.makeLenses ''Apply
 derive makeBinary ''Apply
 
@@ -73,6 +73,11 @@ data Uncircumsize def = Uncircumsize
   , _uApplicantValRef :: ExprRef def
   , _uUncircumsizedBody :: Expr.Body (LoadedDef def) (ExprRef def)
   }
+
+instance Show (Uncircumsize def) where
+  show (Uncircumsize vr avr _b) =
+    "Uncircumsize " ++ show vr ++ " " ++ show avr ++ " TODO"
+
 Lens.makeLenses ''Uncircumsize
 derive makeBinary ''Uncircumsize
 
@@ -83,12 +88,13 @@ data RuleContent def
   | RuleGetFieldPhase2 (GetFieldPhase2 def)
   | RuleApply (Apply def)
   | RuleUncircumsize (Uncircumsize def)
+  deriving Show
 derive makeBinary ''RuleContent
 
 data Rule def = Rule
   { _ruleTriggersIn :: OR.RefSet (TagExpr def)
   , _ruleContent :: RuleContent def
-  }
+  } deriving Show
 Lens.makeLenses ''Rule
 derive makeBinary ''Rule
 

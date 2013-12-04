@@ -62,11 +62,11 @@ freshRef :: MonadA m => StateT (Fresh p) m (Ref p)
 freshRef = Lens.use (Lens.from mkFresh) <* (Lens.from (mkRef . mkFresh) += 1)
 
 newtype RefSet p = RefSet IntSet
-  deriving (Monoid)
+  deriving (Monoid, Show)
 derive makeBinary ''RefSet
 
 newtype RefMap p v = RefMap (IntMap v)
-  deriving (Functor, Foldable, Traversable, Monoid)
+  deriving (Functor, Foldable, Traversable, Monoid, Show)
 derive makeBinary ''RefMap
 
 instance Show (Ref p) where
