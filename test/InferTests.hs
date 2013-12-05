@@ -317,8 +317,15 @@ inferReplicateOfReplicate =
     replicat typ x y =
       getDef "replicate" $$ asHole typ $$: [ x, y ]
 
+inferFailsDueToInfinite =
+  inferFailsAssertion "InfiniteExpression" isExpectedError
+  where
+    isExpectedError (InferError Infer.InfiniteExpression {}) = True
+    isExpectedError _ = False
+
 fix3Lambdas =
-  testInfer "fix3Lambdas: fix (\\recu -> \\b -> \\c -> recu ?)" $
+  testCase "fix3Lambdas: fix (\\recu -> \\b -> \\c -> recu ?)" .
+  inferFailsDueToInfinite $
   getDef "fix" $$ holeFixType $$
   ( lambda "recu" holeFixType $ \recu ->
     lambda "b" iset $ \_b ->
@@ -352,11 +359,8 @@ getFieldWasntAllowed =
 
 wrongRecurseMissingArg =
   testCase "f x = f" .
-  inferFailsAssertion "InfiniteExpression" isExpectedError $
+  inferFailsDueToInfinite $
   lambda "x" hole . const $ recurse hole
-  where
-    isExpectedError (InferError Infer.InfiniteExpression {}) = True
-    isExpectedError _ = False
 
 mapIdTest =
   testInfer "map id (5:_)" $
@@ -587,13 +591,10 @@ getFieldTests =
 
 fromQuickCheck1 =
   testCase "fromQuickCheck1: \\a -> a (a a)" .
-  inferFailsAssertion "GetFieldRequiresRecord" isExpectedError $
+  inferFailsDueToInfinite $
   -- QuickCheck discovered: ? (\\a:?==>a (25 (a (a (a a)) ?)))
   -- simplified to:
   lambda "a" hole $ \a -> a $$ (a $$ a)
-  where
-    isExpectedError (InferError Infer.InfiniteExpression {}) = True
-    isExpectedError _ = False
 
 testUnificationCarriesOver =
   testGroup "Unification carries over"
