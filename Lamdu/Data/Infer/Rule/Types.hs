@@ -4,6 +4,7 @@ module Lamdu.Data.Infer.Rule.Types
   , GetFieldPhase0(..), gf0GetFieldTag, gf0GetFieldType
   , GetFieldPhase1(..), gf1GetFieldRecordTypeFields, gf1GetFieldType
   , GetFieldPhase2(..), gf2Tag, gf2TagRef, gf2TypeRef, gf2MaybeMatchers
+  , ExprLink(..), dest, destAncestors
   , Apply(..), aPiGuid, aArgVal, aLinkedExprs, aLinkedNames
   , Uncircumsize(..), uValRef, uApplicantValRef, uUncircumsizedBody
   , Rule(..), ruleTriggersIn, ruleContent
@@ -58,11 +59,19 @@ data GetFieldPhase2 def = GetFieldPhase2
 Lens.makeLenses ''GetFieldPhase2
 derive makeBinary ''GetFieldPhase2
 
+-- TODO: Rename these to have Apply prefix (types, constructors and fields)
+data ExprLink def = ExprLink
+  { _dest :: ExprRef def
+  , _destAncestors :: OR.RefSet (TagExpr def)
+  } deriving Show
+Lens.makeLenses ''ExprLink
+derive makeBinary ''ExprLink
+
 data Apply def = Apply
   { _aPiGuid :: Guid
   , _aArgVal :: ExprRef def
   -- unmaintained pi-result to apply type respective/matching subexprs
-  , _aLinkedExprs :: OR.RefMap (TagExpr def) (ExprRef def)
+  , _aLinkedExprs :: OR.RefMap (TagExpr def) (ExprLink def)
   , _aLinkedNames :: OR.RefMap (TagParam def) (ParamRef def)
   } deriving Show
 Lens.makeLenses ''Apply

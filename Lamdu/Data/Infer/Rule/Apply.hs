@@ -2,16 +2,17 @@ module Lamdu.Data.Infer.Rule.Apply
   ( make, execute
   ) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad (void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Data.Foldable (sequenceA_, traverse_)
 import Data.Maybe.Utils (unsafeUnjust)
+import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA, traverse)
 import Lamdu.Data.Infer.Monad (Infer)
-import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef)
+import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef, TagExpr)
 import Lamdu.Data.Infer.Rule.Func (RuleFunc)
 import Lamdu.Data.Infer.Unify (forceLam)
 import qualified Control.Lens as Lens
@@ -47,8 +48,10 @@ remapSubstGuid srcGuid = do
 findRep :: ExprRef def -> RuleMonad.RM rule def (ExprRef def)
 findRep = RuleMonad.liftInfer . InferM.liftUFExprs . UFData.find
 
-mFindDestRef :: Ord def => ExprRef def -> RuleMonad.RM (Rule.Apply def) def (Maybe (ExprRef def))
-mFindDestRef srcRef =
+mFindLinkBySrc ::
+  Ord def => ExprRef def ->
+  RuleMonad.RM (Rule.Apply def) def (Maybe (ExprRef def, Rule.ExprLink def))
+mFindLinkBySrc srcRef =
   try srcRef $ do
     srcRep <- findRep srcRef
     try srcRep $ do
@@ -58,9 +61,9 @@ mFindDestRef srcRef =
       try srcRep $ return Nothing
   where
     try ref orElse = do
-      mDestRef <- Lens.use (Rule.aLinkedExprs . Lens.at ref)
-      case mDestRef of
-        Just destRef -> return (Just destRef)
+      mLinkData <- Lens.use (Rule.aLinkedExprs . Lens.at ref)
+      case mLinkData of
+        Just linkData -> return $ Just (ref, linkData)
         Nothing -> orElse
 
 normalizeSrcLinks :: Ord def => RuleMonad.RM (Rule.Apply def) def ()
@@ -73,7 +76,10 @@ normalizeSrcLinks = do
     <&> OR.refMapFromListWith (++)
   let
     unifyAll [x] = return x
-    unifyAll ~(x:xs) = unify x =<< unifyAll xs
+    unifyAll ~(Rule.ExprLink x xAncestors:xs) = do
+      Rule.ExprLink y yAncestors <- unifyAll xs
+      u <- unify x y
+      pure . Rule.ExprLink u $ mappend xAncestors yAncestors
   combinedPairs <- traverse unifyAll normalizedPairs
   Rule.aLinkedExprs .= combinedPairs
 
@@ -89,24 +95,33 @@ link ::
   Ord def =>
   Rule.RuleRef def ->
   ExprRef def -> ExprRef def ->
+  OR.RefSet (TagExpr def) ->
   RuleMonad.RM (Rule.Apply def) def ()
-link ruleRef srcRef dstRef = do
-  mOldDestRef <- mFindDestRef srcRef
-  case mOldDestRef of
-    Just oldDestRef ->
+link ruleRef srcRef dstRef dstAncestors = do
+  mOldLink <- mFindLinkBySrc srcRef
+  case mOldLink of
+    Just (linkSrcRef, Rule.ExprLink oldDestRef oldDestAncestors) -> do
       -- This src is unified with a src that was already copied somewhere:
+      let
+        newLink =
+          Just . Rule.ExprLink oldDestRef $
+          mappend oldDestAncestors dstAncestors
+      Rule.aLinkedExprs . Lens.at linkSrcRef .= newLink
       void $ unify dstRef oldDestRef
     Nothing -> do
-      Rule.aLinkedExprs <>= OR.refMapSingleton srcRef dstRef
+      Rule.aLinkedExprs <>= OR.refMapSingleton srcRef (Rule.ExprLink dstRef dstAncestors)
       piGuidRep <- RuleMonad.liftInfer . InferM.liftGuidAliases . GuidAliases.getRep =<< Lens.use Rule.aPiGuid
       RuleMonad.liftInfer $ addPiResultTriggers ruleRef piGuidRep srcRef dstRef
 
 makePiResultCopy ::
   Ord def =>
   Rule.RuleRef def ->
-  ExprRef def -> ExprRef def ->
+  ExprRef def -> Rule.ExprLink def ->
   RuleMonad.RM (Rule.Apply def) def ()
-makePiResultCopy ruleRef srcRef destRef = do
+makePiResultCopy ruleRef srcRef (Rule.ExprLink destRef destAncestors)
+  | destAncestors ^. Lens.contains srcRef =
+    RuleMonad.liftInfer . InferM.error $ InferM.InfiniteExpression srcRef
+  | otherwise = do
   srcBody <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. RefData.rdBody) <$> UFData.read srcRef
   destScope <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. RefData.rdScope) <$> UFData.read destRef
   case srcBody of
@@ -125,37 +140,42 @@ makePiResultCopy ruleRef srcRef destRef = do
   destBody <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. RefData.rdBody) <$> UFData.read destRef
   matchRes <-
     sequenceA $ sequenceA_ <$>
-    ExprUtil.matchBodyDeprecated matchLamResult (link ruleRef)
+    ExprUtil.matchBodyDeprecated matchLamResult match
     ((const . const) True) srcBody destBody
   when (Lens.has Lens._Nothing matchRes) $
     error "We just successfully unified src and dest bodies!"
   where
+    destChildAncestors = mappend destAncestors $ OR.refSetSingleton destRef
+    match srcChildRef destChildRef =
+      link ruleRef srcChildRef destChildRef destChildAncestors
     matchLamResult srcGuid _ srcChildRef destChildRef =
-      (srcGuid, link ruleRef srcChildRef destChildRef)
+      (srcGuid, match srcChildRef destChildRef)
 
 execute :: Ord def => Rule.RuleRef def -> Rule.Apply def -> RuleFunc def
 execute ruleRef =
   RuleMonad.run Rule.RuleApply handleTrigger
   where
-    findDestRef =
-      fmap (unsafeUnjust "Trigger.IsTheParameterRef not on src?!") . mFindDestRef
+    findLink =
+      fmap (unsafeUnjust "Trigger.IsTheParameterRef not on src?!") . mFindLinkBySrc
     handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.IsTheParameterRef) = do
-      destRef <- findDestRef srcRef
+      (_, exprLink) <- findLink srcRef
       argVal <- Lens.use Rule.aArgVal
-      void $ unify argVal destRef
+      void . unify argVal $ exprLink ^. Rule.dest
     handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.NotTheParameterRef) = do
       -- Triggered when not a hole anymore, so copy:
-      mDestRef <- mFindDestRef srcRef
+      mLinkPair <- mFindLinkBySrc srcRef
       -- If mDestRef is Nothing, TheParameterOutOfScope triggered first
       -- and unified instead, so no need to make a copy:
-      traverse_ (makePiResultCopy ruleRef srcRef) mDestRef
+      traverse_ (uncurry (makePiResultCopy ruleRef)) mLinkPair
     handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.TheParameterOutOfScope) = do
       -- Now we know no subexpr can possibly use the piGuid, so it
       -- must fully equal the dest:
-      srcRep <- findRep srcRef
-      void $ unify srcRep =<< findDestRef srcRep
-      -- aLinkedExprs now guaranteed to have the rep:
-      Rule.aLinkedExprs . Lens.at srcRep .= Nothing
+      (linkSrc, linkData) <- findLink srcRef
+      let
+        remove Nothing = error "aLinkedExprs should have the rep"
+        remove (Just _) = Nothing
+      Rule.aLinkedExprs . Lens.at linkSrc %= remove
+      void . unify linkSrc $ linkData ^. Rule.dest
     handleTrigger (_, Trigger.FiredUnify _) =
       -- Some of our sources were potentially unified, so
       -- normalizeSrcLinks will find them and unify the dests
@@ -169,7 +189,7 @@ make piGuid argValRef piResultRef applyTypeRef = do
     Rule.RuleApply Rule.Apply
     { Rule._aPiGuid = piGuid
     , Rule._aArgVal = argValRef
-    , Rule._aLinkedExprs = OR.refMapSingleton piResultRef applyTypeRef
+    , Rule._aLinkedExprs = OR.refMapSingleton piResultRef (Rule.ExprLink applyTypeRef mempty)
     , Rule._aLinkedNames = OR.refMapEmpty
     }
   piGuidRep <- InferM.liftGuidAliases $ GuidAliases.getRep piGuid
