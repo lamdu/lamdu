@@ -12,4 +12,4 @@ inferAndEncode :: Expr.Expression Def a -> Int -> Int
 inferAndEncode expr par =
   SBS.length $ encodeS result
   where
-    result = assertSuccess . runLoadInferDerefDef . void $ par <$ expr
+    result = either (error . show) id . runLoadInferDerefDef . void $ par <$ expr
