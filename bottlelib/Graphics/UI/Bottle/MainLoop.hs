@@ -33,8 +33,8 @@ mainLoopImage win eventHandler makeImage =
   eventLoop win handleEvents
   where
     windowSize = do
-      (x, y) <- GLFW.getWindowSize win
-      return $ Vector2 (fromIntegral x) (fromIntegral y)
+      (x, y) <- GLFW.getFramebufferSize win
+      return $ fromIntegral <$> Vector2 x y
 
     handleEvent size (GLFWKeyEvent keyEvent) =
       eventHandler size keyEvent
