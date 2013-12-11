@@ -87,11 +87,11 @@ solveDepressedQuarticExpr =
     x %* y = getDef "*" $$ iInt $$: [x, y]
     x %/ y = getDef "/" $$ iInt $$: [x, y]
 
-factorial :: Int -> Int
-factorial = inferAndEncode factorialExpr
+factorialEncode :: Int -> Int
+factorialEncode = inferAndEncode factorialExpr
 
-euler1 :: Int -> Int
-euler1 = inferAndEncode euler1Expr
+euler1Encode :: Int -> Int
+euler1Encode = inferAndEncode euler1Expr
 
-solveDepressedQuartic :: Int -> Int
-solveDepressedQuartic = inferAndEncode solveDepressedQuarticExpr
+solveDepressedQuarticEncode :: Int -> Int
+solveDepressedQuarticEncode = inferAndEncode solveDepressedQuarticExpr

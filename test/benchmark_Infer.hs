@@ -2,16 +2,22 @@ import Control.Monad
 import Criterion.Main
 import InferExamples
 
+benches :: [(String, Int -> Int)]
+benches =
+  [ ("factorial", factorialEncode)
+  , ("euler1", euler1Encode)
+  , ("solveDepressedQuartic", solveDepressedQuarticEncode)
+  ]
+
 main :: IO ()
 main = do
   putStrLn "============================================="
   putStrLn "Binary encode size:"
-  forM_ [("factorial", factorial 0), ("euler1", euler1 0)] $ \(name, size) ->
-    putStrLn $ unwords ["==", name, "inferred:", show size, "bytes"]
+  forM_ benches $ \(name, encodeSize) ->
+    putStrLn $ unwords ["==", name, "inferred:", show (encodeSize 0), "bytes"]
   putStrLn "============================================="
 
-  defaultMain
-    [ bench "factorial" $ whnf factorial 0
-    , bench "euler1" $ whnf euler1 0
-    , bench "solveDepressedQuartic" $ whnf solveDepressedQuartic 0
-    ]
+  defaultMain $ map makeBench benches
+  where
+    makeBench (name, encodeSize) =
+      bench name $ whnf encodeSize 0
