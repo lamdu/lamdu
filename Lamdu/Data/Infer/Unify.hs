@@ -229,6 +229,8 @@ decycleDefend ref action = do
     Nothing -> uInfer . InferM.error $ InfiniteExpression nodeRep
     Just result -> return result
 
+-- TODO: Currently no test breaks if this function is
+-- neutralized. Need to add test or remove this function
 holeConstraintsRecurse ::
   Eq def => HoleConstraints def -> ExprRef def -> U def (ExprRef def)
 holeConstraintsRecurse holeConstraints rawNode =
