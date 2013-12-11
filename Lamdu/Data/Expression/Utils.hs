@@ -44,7 +44,7 @@ import Control.Lens.Operators
 import Control.Lens.Utils (addListContexts, addTuple2Contexts)
 import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.Monad.Trans.Reader (runReaderT)
 import Control.Monad.Trans.State (evalState, state)
 import Data.Map (Map)
 import Data.Maybe (isJust, fromMaybe)
