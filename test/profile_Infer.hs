@@ -11,5 +11,8 @@ run count name f = do
 
 main :: IO ()
 main = do
-  run 100 "factorial" $ inferAndEncode factorialExpr
-  run 100 "euler1" $ inferAndEncode euler1Expr
+  bench "factorial" factorialExpr
+  bench "euler1" euler1Expr
+  bench "solveDepressedQuarticExpr" solveDepressedQuarticExpr
+  where
+    bench name expr = run 100 name $ inferAndEncode expr
