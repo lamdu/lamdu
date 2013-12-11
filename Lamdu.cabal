@@ -93,7 +93,7 @@ Library
                        TraceUtils,
                        hashable,
                        either,
-                       lens >= 4.0,
+                       lens >= 4.1,
                        binary >= 0.5,
                        bytestring,
                        containers >= 0.4,

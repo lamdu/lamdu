@@ -154,26 +154,29 @@ type instance Lens.Index (RefSet p) = Ref p
 type instance Lens.Index (RefMap p a) = Ref p
 type instance Lens.IxValue (RefMap p a) = a
 
-convertIndex :: Lens.Indexable i p => (i1 -> i) -> p a b -> Lens.Indexed i1 a b
-convertIndex onIndex f = Lens.Indexed (Lens.indexed f . onIndex)
-
-instance Functor f => Lens.Contains f (RefSet p) where
-  contains mk@(MkRef k) f (RefSet x) =
-    RefSet <$> Lens.contains k (convertIndex ((`asTypeOf` mk) . MkRef) f) x
+instance Lens.Contains (RefSet p) where
+  contains (MkRef k) f (RefSet x) =
+    RefSet <$> Lens.contains k f x
+  {-# INLINE contains #-}
 
 instance Lens.At (RefMap p a) where
-  at mk@(MkRef k) f (RefMap x) =
-    RefMap <$> Lens.at k (convertIndex ((`asTypeOf` mk) . MkRef) f) x
+  at (MkRef k) f (RefMap x) =
+    RefMap <$> Lens.at k f x
+  {-# INLINE at #-}
 
-instance Applicative f => Lens.Ixed f (RefMap p a) where
-  ix mk@(MkRef k) f (RefMap x) =
-    RefMap <$> Lens.ix k (convertIndex ((`asTypeOf` mk) . MkRef) f) x
+instance Lens.Ixed (RefMap p a) where
+  ix (MkRef k) f (RefMap x) =
+    RefMap <$> Lens.ix k f x
+  {-# INLINE ix #-}
 
 instance Lens.FunctorWithIndex (Ref p) (RefMap p) where
   imap f (RefMap x) = RefMap $ Lens.imap (f . MkRef) x
+  {-# INLINE imap #-}
 
 instance Lens.FoldableWithIndex (Ref p) (RefMap p) where
   ifoldMap f (RefMap x) = Lens.ifoldMap (f . MkRef) x
+  {-# INLINE ifoldMap #-}
 
 instance Lens.TraversableWithIndex (Ref p) (RefMap p) where
   itraverse f (RefMap x) = RefMap <$> Lens.itraverse (f . MkRef) x
+  {-# INLINE itraverse #-}
