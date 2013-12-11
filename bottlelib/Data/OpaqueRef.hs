@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, GeneralizedNewtypeDeriving, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, GeneralizedNewtypeDeriving, FlexibleInstances, DeriveTraversable #-}
 module Data.OpaqueRef
   ( Ref
     , unsafeAsInt
