@@ -362,6 +362,12 @@ wrongRecurseMissingArg =
   inferFailsDueToInfinite $
   lambda "x" hole . const $ recurse hole
 
+mapWithHolesTest =
+  testInfer "map{_ _}" $
+  getDef "map" $$ iset $$ iset
+  where
+    iset = holeWithInferredType set
+
 mapIdTest =
   testInfer "map id (5:_)" $
   getDef "map" $$ asHole integerType $$ asHole integerType $$:
@@ -651,6 +657,7 @@ hunitTests =
   simpleTests
   ++
   [ fromQuickCheck1
+  , mapWithHolesTest
   , mapIdTest
   , testInfer "factorial" factorialExpr
   , recurseScopeTest
