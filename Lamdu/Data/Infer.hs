@@ -60,44 +60,55 @@ unifyRefs ::
   M def (ExprRef def)
 unifyRefs x y = InferMRun.run $ Unify.unify x y
 
+freshTV :: (Ord def, MonadA m) => Scope def -> StateT (Context def) m (TypedValue def)
+freshTV scope =
+  TypedValue <$> Context.freshHole scope <*> Context.freshHole scope
+
 infer ::
   Ord def =>
   Scope def ->
   Expr.Expr (Load.LoadedDef def) Guid a ->
   M def (Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, a))
-infer scope expr = InferMRun.run $ exprIntoSTV scope expr
+infer scope expr = InferMRun.run $ do
+  tv <- InferM.liftContext $ freshTV scope
+  exprIntoTV tv expr
 
 inferAt ::
   Ord def =>
   TypedValue def -> Expr.Expr (Load.LoadedDef def) Guid a ->
   M def (Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, a))
-inferAt tv expr = do
+inferAt tv expr =
+  InferMRun.run $ exprIntoTV tv expr
+
+exprIntoTV ::
+  Ord def =>
+  TypedValue def -> Expr.Expr (Load.LoadedDef def) Guid a ->
+  Infer def (Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, a))
+exprIntoTV dest (Expr.Expr body pl) = do
   scope <-
-    UFData.read (tv ^. tvVal)
+    InferM.liftContext $
+    UFData.read (dest ^. tvVal)
     & Lens.zoom Context.ufExprs
     <&> (^. RefData.rdScope)
-  tvExpr <- infer scope expr
-  _ <- unify (tvExpr ^. Expr.ePayload . Lens._1) tv
-  return tvExpr
-
--- With hole apply vals and hole types
-exprIntoSTV ::
-  Ord def => Scope def -> Expr.Expr (Load.LoadedDef def) Guid a ->
-  Infer def (Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, a))
-exprIntoSTV scope (Expr.Expr body pl) = do
-  bodySTV <-
+  bodyWithTVs <-
+    InferM.liftContext $
     case body of
-    Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
-      paramTypeS <- exprIntoSTV scope paramType
-      paramIdRef <- InferM.liftGuidAliases $ GuidAliases.getRep paramGuid
-      let
-        newScope =
-          scope
-          & RefData.scopeMap . Lens.at paramIdRef .~ Just
-            (paramTypeS ^. Expr.ePayload . Lens._1 . tvVal)
-      resultS <- exprIntoSTV newScope result
-      pure . Expr.BodyLam $ Expr.Lam k paramGuid paramTypeS resultS
-    _ ->
-      body & Lens.traverse %%~ exprIntoSTV scope
-  tv <- bodySTV <&> (^. Expr.ePayload . Lens._1) & makeTV scope
-  pure $ Expr.Expr bodySTV (tv, pl)
+      Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
+        paramTypeTV <- freshTV scope
+        paramIdRef <- Lens.zoom Context.guidAliases $ GuidAliases.getRep paramGuid
+        let
+          newScope =
+            scope & RefData.scopeMap . Lens.at paramIdRef .~ Just (paramTypeTV ^. tvVal)
+        resultWithTV <- addTV newScope result
+        let paramTypeWithTV = (paramTypeTV, paramType)
+        pure . Expr.BodyLam $ Expr.Lam k paramGuid paramTypeWithTV resultWithTV
+      _ -> body & Lens.traverse %%~ addTV scope
+
+  makeTV scope (bodyWithTVs <&> (^. Lens._1)) dest
+
+  bodyResult <- bodyWithTVs & Lens.traverse %%~ uncurry exprIntoTV
+  pure $ Expr.Expr bodyResult (dest, pl)
+  where
+    addTV scope x = do
+      tv <- freshTV scope
+      return (tv, x)

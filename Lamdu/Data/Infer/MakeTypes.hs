@@ -5,11 +5,11 @@ import Control.Lens.Operators
 import Control.Monad (void, when)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.RefData (Scope, scopeNormalizeParamRefs)
+import Lamdu.Data.Infer.RefData (Scope, LoadedBody, scopeNormalizeParamRefs)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.Rule (verifyTagId)
 import Lamdu.Data.Infer.TypedValue (TypedValue(..), tvVal, tvType)
-import Lamdu.Data.Infer.Unify (unify, forceLam)
+import Lamdu.Data.Infer.Unify (unify, forceLam, unifyBody)
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Data.UnionFind.WithData as UFData
@@ -45,20 +45,13 @@ makePiTypeOfLam paramGuid paramType body =
   -- paramGuid. This means param guids cannot be unique.
   (body ^. tvType)
 
-fresh ::
-  Ord def =>
-  Scope def -> Expr.Body (Load.LoadedDef def) Guid (ExprRef def) ->
-  Infer def (ExprRef def)
-fresh scope body = InferM.liftContext $ Context.fresh scope body
-
 maybeCircumsize ::
   Ord def =>
   Scope def ->
   TypedValue def ->
   Expr.Body (Load.LoadedDef def) Guid (TypedValue def) ->
-  ExprRef def ->
-  Infer def (TypedValue def)
-maybeCircumsize scope applicant uncircumsizedValBody typeRef = do
+  Infer def (ExprRef def)
+maybeCircumsize scope applicant uncircumsizedValBody = do
   -- We only maybeCircumsize non-tags:
   valRef <-
     RefData.defaultRefData scope (ExprLens.bodyHole # ())
@@ -68,107 +61,104 @@ maybeCircumsize scope applicant uncircumsizedValBody typeRef = do
   RuleUncircumsize.make valRef
     (applicant ^. tvVal)
     (uncircumsizedValBody <&> (^. tvVal))
-  return $ TypedValue valRef typeRef
+  return valRef
 
 makeApplyTV ::
-  Ord def => Scope def -> Expr.Apply (TypedValue def) ->
-  Infer def (TypedValue def)
-makeApplyTV applyScope apply@(Expr.Apply func arg) = do
+  Ord def =>
+  Scope def -> Expr.Apply (TypedValue def) -> TypedValue def ->
+  Infer def ()
+makeApplyTV applyScope apply@(Expr.Apply func arg) dest = do
   funcScope <-
     UFData.read (func ^. tvType)
     & InferM.liftUFExprs
     <&> (^. RefData.rdScope)
   (piGuid, piParamType, piResultRef) <- forceLam Expr.KType funcScope $ func ^. tvType
   void $ unify (arg ^. tvType) piParamType
-  applyTypeRef <- InferM.liftContext $ Context.freshHole applyScope
-  RuleApply.make piGuid (arg ^. tvVal) piResultRef applyTypeRef
-  maybeCircumsize applyScope func (Expr.BodyApply apply) applyTypeRef
+  RuleApply.make piGuid (arg ^. tvVal) piResultRef (dest ^. tvType)
+  void . unify (dest ^. tvVal) =<< maybeCircumsize applyScope func (Expr.BodyApply apply)
 
 addTagVerification :: ExprRef def -> Infer def ()
 addTagVerification = Trigger.add [RefData.MustBeTag] Trigger.OnDirectlyTag verifyTagId
 
 makeGetFieldTV ::
   Ord def =>
-  Scope def -> Expr.GetField (TypedValue def) -> Infer def (TypedValue def)
-makeGetFieldTV scope getField@(Expr.GetField record tag) = do
-  tagTypeRef <- fresh scope $ ExprLens.bodyTagType # ()
-  void . unify tagTypeRef $ tag ^. tvType
-  getFieldTypeRef <- InferM.liftContext $ Context.freshHole scope
+  Scope def -> Expr.GetField (TypedValue def) -> TypedValue def ->
+  Infer def ()
+makeGetFieldTV scope getField@(Expr.GetField record tag) dest = do
+  unifyBody (tag ^. tvType) scope (ExprLens.bodyTagType # ())
   addTagVerification $ tag ^. tvVal
-  RuleGetField.make (tag ^. tvVal) getFieldTypeRef (record ^. tvType)
-  maybeCircumsize scope record (Expr.BodyGetField getField) getFieldTypeRef
+  RuleGetField.make (tag ^. tvVal) (dest ^. tvType) (record ^. tvType)
+  void . unify (dest ^. tvVal) =<< maybeCircumsize scope record (Expr.BodyGetField getField)
 
 makeLambdaType ::
-  Ord def => Scope def -> Guid ->
-  TypedValue def -> TypedValue def -> Infer def (ExprRef def)
+  Ord def =>
+  Scope def -> Guid -> TypedValue def -> TypedValue def ->
+  Infer def (LoadedBody def (ExprRef def))
 makeLambdaType scope paramGuid paramType result = do
-  typeRef <- fresh scope $ ExprLens.bodyType # ()
-  void . unify typeRef $ paramType ^. tvType
-  fresh scope $ makePiTypeOfLam paramGuid paramType result
+  unifyBody (paramType ^. tvType) scope (ExprLens.bodyType # ())
+  return $ makePiTypeOfLam paramGuid paramType result
 
 makeRecordType ::
-  Ord def => Expr.Kind -> Scope def ->
-  [(TypedValue def, TypedValue def)] -> Infer def (ExprRef def)
+  Ord def =>
+  Expr.Kind -> Scope def ->
+  [(TypedValue def, TypedValue def)] ->
+  Infer def (LoadedBody def (ExprRef def))
 makeRecordType k scope fields = do
-  tagTypeRef <- mkFresh $ ExprLens.bodyTagType # ()
-  fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvType) (unify tagTypeRef)
+  fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvType) (mkBody (ExprLens.bodyTagType # ()))
   fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvVal) addTagVerification
-  when (k == Expr.KType) $ do
-    typeRef <- mkFresh $ ExprLens.bodyType # ()
-    fields & Lens.traverseOf_ (Lens.traverse . Lens._2 . tvType) (unify typeRef)
-  fresh scope $
+  when (k == Expr.KType) $
+    fields & Lens.traverseOf_ (Lens.traverse . Lens._2 . tvType) (mkBody (ExprLens.bodyType # ()))
+  return $
     case k of
     Expr.KVal -> Expr.BodyRecord . Expr.Record Expr.KType $ onRecVField <$> fields
     Expr.KType -> ExprLens.bodyType # ()
   where
-    mkFresh = fresh scope
+    mkBody body ref = unifyBody ref scope body
     onRecVField (tag, val) = (tag ^. tvVal, val ^. tvType)
 
-makePiType ::
-  Ord def => Scope def ->
-  TypedValue def -> TypedValue def ->
-  Infer def (ExprRef def)
-makePiType scope paramType resultType = do
-  typeRef <- fresh scope $ ExprLens.bodyType # ()
-  void . unify typeRef $ paramType ^. tvType
-  void . unify typeRef $ resultType ^. tvType
-  return typeRef
-
 makeTV ::
-  Ord def => Scope def ->
-  Expr.Body (Load.LoadedDef def) Guid (TypedValue def) ->
-  Infer def (TypedValue def)
-makeTV scope body =
+  Ord def =>
+  Scope def ->
+  LoadedBody def (TypedValue def) ->
+  TypedValue def ->
+  Infer def ()
+makeTV scope body dest =
   case body of
+  Expr.BodyLeaf Expr.Hole -> return ()
   -- Simple types
   Expr.BodyLeaf Expr.Type -> typeIsType
   Expr.BodyLeaf Expr.IntegerType -> typeIsType
   Expr.BodyLeaf Expr.TagType -> typeIsType
-  Expr.BodyLeaf Expr.LiteralInteger {} ->
-    uncircumsized <*> freshBody (ExprLens.bodyIntegerType # ())
-  Expr.BodyLeaf Expr.Tag {} ->
-    uncircumsized <*> freshBody (ExprLens.bodyTagType # ())
-  Expr.BodyLeaf Expr.Hole -> do
-    valRef <- freshVal
-    typRef <- InferM.liftContext $ Context.freshHole scope
-    return $ TypedValue valRef typRef
+  Expr.BodyLeaf Expr.LiteralInteger {} -> do
+    loadGivenVal
+    setType (ExprLens.bodyIntegerType # ())
+  Expr.BodyLeaf Expr.Tag {} -> do
+    loadGivenVal
+    setType (ExprLens.bodyTagType # ())
   -- GetPars
-  Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (Load.LoadedDef _ ref))) ->
-    uncircumsized <*> pure ref
-  Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) ->
-    uncircumsized <*> scopeLookup scope guid
+  Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (Load.LoadedDef _ ref))) -> do
+    loadGivenVal
+    void $ unify (dest ^. tvType) ref
+  Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) -> do
+    loadGivenVal
+    void $ unify (dest ^. tvType) =<< scopeLookup scope guid
   -- Complex:
-  Expr.BodyGetField getField -> makeGetFieldTV scope getField
-  Expr.BodyApply apply -> makeApplyTV scope apply
-  Expr.BodyLam (Expr.Lam Expr.KType _ paramType result) ->
-    uncircumsized <*> makePiType scope paramType result
-  Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) ->
-    uncircumsized <*> makeLambdaType scope paramGuid paramType result
-  Expr.BodyRecord (Expr.Record k fields) ->
-    uncircumsized <*> makeRecordType k scope fields
+  Expr.BodyGetField getField -> makeGetFieldTV scope getField dest
+  Expr.BodyApply apply -> makeApplyTV scope apply dest
+  Expr.BodyLam (Expr.Lam Expr.KType _ paramType result) -> do
+    typeIsType
+    unifyBody (paramType ^. tvType) scope bodyType
+    unifyBody (result ^. tvType) scope bodyType
+  Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) -> do
+    loadGivenVal
+    setType =<< makeLambdaType scope paramGuid paramType result
+  Expr.BodyRecord (Expr.Record k fields) -> do
+    loadGivenVal
+    setType =<< makeRecordType k scope fields
   where
-    freshBody = fresh scope
-    freshVal = fresh scope (body <&> (^. tvVal))
-    uncircumsized = TypedValue <$> freshVal
-    mkRefWithType = freshBody $ ExprLens.bodyType # ()
-    typeIsType = uncircumsized <*> mkRefWithType
+    loadGivenVal = unifyBody (dest ^. tvVal) scope (body <&> (^. tvVal))
+    setType = unifyBody (dest ^. tvType) scope
+    bodyType = ExprLens.bodyType # ()
+    typeIsType = do
+      loadGivenVal
+      setType bodyType
