@@ -155,10 +155,10 @@ execute :: Ord def => Rule.RuleRef def -> Rule.Apply def -> RuleFunc def
 execute ruleRef =
   RuleMonad.run Rule.RuleApply handleTrigger
   where
-    findLink =
-      fmap (unsafeUnjust "Trigger.IsTheParameterRef not on src?!") . mFindLinkBySrc
+    findLink msg =
+      fmap (unsafeUnjust msg) . mFindLinkBySrc
     handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.IsTheParameterRef) = do
-      (_, exprLink) <- findLink srcRef
+      (_, exprLink) <- findLink "Trigger.IsTheParameterRef not on src?!" srcRef
       argVal <- Lens.use Rule.aArgVal
       void . unify argVal $ exprLink ^. Rule.dest
     handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.NotTheParameterRef) = do
@@ -170,7 +170,7 @@ execute ruleRef =
     handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.TheParameterOutOfScope) = do
       -- Now we know no subexpr can possibly use the piGuid, so it
       -- must fully equal the dest:
-      (linkSrc, linkData) <- findLink srcRef
+      (linkSrc, linkData) <- findLink "Trigger.TheParameterOutOfScope can't find link!" srcRef
       let
         remove Nothing = error "aLinkedExprs should have the rep"
         remove (Just _) = Nothing
