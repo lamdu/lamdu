@@ -170,12 +170,18 @@ execute ruleRef =
     handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.TheParameterOutOfScope) = do
       -- Now we know no subexpr can possibly use the piGuid, so it
       -- must fully equal the dest:
-      (linkSrc, linkData) <- findLink "Trigger.TheParameterOutOfScope can't find link!" srcRef
-      let
-        remove Nothing = error "aLinkedExprs should have the rep"
-        remove (Just _) = Nothing
-      Rule.aLinkedExprs . Lens.at linkSrc %= remove
-      void . unify linkSrc $ linkData ^. Rule.dest
+      mLink <- mFindLinkBySrc srcRef
+      case mLink of
+        Nothing ->
+          -- If this triggers fires more than once but a unify merges the source of it,
+          -- we may have already deleted the link
+          return ()
+        Just (linkSrc, linkData) -> do
+          let
+            remove Nothing = error "aLinkedExprs should have the rep"
+            remove (Just _) = Nothing
+          Rule.aLinkedExprs . Lens.at linkSrc %= remove
+          void . unify linkSrc $ linkData ^. Rule.dest
     handleTrigger (_, Trigger.FiredUnify _) =
       -- Some of our sources were potentially unified, so
       -- normalizeSrcLinks will find them and unify the dests
