@@ -7,6 +7,7 @@ import Control.Lens.Operators
 import Control.Monad (void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Data.Foldable (sequenceA_, traverse_)
+import Data.List (partition)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
@@ -153,7 +154,7 @@ makePiResultCopy ruleRef srcRef (Rule.ExprLink destRef destAncestors)
 
 execute :: Ord def => Rule.RuleRef def -> Rule.Apply def -> RuleFunc def
 execute ruleRef =
-  RuleMonad.run Rule.RuleApply (traverse_ handleTrigger)
+  RuleMonad.run Rule.RuleApply (traverse_ handleTrigger . orderTriggers)
   where
     findLink msg =
       fmap (unsafeUnjust msg) . mFindLinkBySrc
@@ -187,6 +188,10 @@ execute ruleRef =
       -- normalizeSrcLinks will find them and unify the dests
       normalizeSrcLinks
     handleTrigger firings = error $ "handleTrigger called with: " ++ show firings
+    orderTriggers triggers =
+      take 1 unifies ++ others
+      where
+        (unifies, others) = partition (Lens.has (Lens._2 . Trigger._FiredUnify)) triggers
 
 make :: Guid -> ExprRef def -> ExprRef def -> ExprRef def -> Infer def ()
 make piGuid argValRef piResultRef applyTypeRef = do

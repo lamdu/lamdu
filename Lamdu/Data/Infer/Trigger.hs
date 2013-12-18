@@ -1,5 +1,5 @@
 module Lamdu.Data.Infer.Trigger
-  ( Trigger(..), Fired(..), ParameterRefEvent(..)
+  ( module Lamdu.Data.Infer.Trigger.Types
   , add, updateRefData
   ) where
 
@@ -15,7 +15,10 @@ import Lamdu.Data.Infer.RefData (RefData)
 import Lamdu.Data.Infer.RefData (scopeNormalizeParamRefs)
 import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef)
 import Lamdu.Data.Infer.Rule.Types (RuleRef)
-import Lamdu.Data.Infer.Trigger.Types (Trigger(..), Fired(..), ParameterRefEvent(..))
+import Lamdu.Data.Infer.Trigger.Types
+  ( Trigger(..), ParameterRefEvent(..)
+  , Fired(..), _FiredDirectlyTag, _FiredKnownBody, _FiredParameterRef, _FiredUnify
+  )
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.OpaqueRef as OR
