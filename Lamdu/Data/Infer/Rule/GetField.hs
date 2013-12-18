@@ -6,6 +6,7 @@ import Control.Lens.Operators
 import Control.Monad (void, unless, when)
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
+import Data.Foldable (traverse_)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Context (Context)
@@ -100,7 +101,7 @@ phase1 rule triggers =
 -- Phase2: Find relevant record fields by triggered tags
 phase2 :: Ord def => Rule.GetFieldPhase2 def -> RuleFunc def
 phase2 =
-  RuleMonad.run Rule.RuleGetFieldPhase2 handleTrigger
+  RuleMonad.run Rule.RuleGetFieldPhase2 (traverse_ handleTrigger)
   where
     handleTrigger (_, Trigger.FiredDirectlyTag False) = return ()
     handleTrigger (rawRef, Trigger.FiredDirectlyTag True) = do

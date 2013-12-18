@@ -153,7 +153,7 @@ makePiResultCopy ruleRef srcRef (Rule.ExprLink destRef destAncestors)
 
 execute :: Ord def => Rule.RuleRef def -> Rule.Apply def -> RuleFunc def
 execute ruleRef =
-  RuleMonad.run Rule.RuleApply handleTrigger
+  RuleMonad.run Rule.RuleApply (traverse_ handleTrigger)
   where
     findLink msg =
       fmap (unsafeUnjust msg) . mFindLinkBySrc
