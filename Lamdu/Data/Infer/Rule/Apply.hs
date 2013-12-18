@@ -159,7 +159,8 @@ execute ruleRef =
     findLink msg =
       fmap (unsafeUnjust msg) . mFindLinkBySrc
     handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.IsTheParameterRef) = do
-      (_, exprLink) <- findLink "Trigger.IsTheParameterRef not on src?!" srcRef
+      (linkSrc, exprLink) <- findLink "Trigger.IsTheParameterRef not on src?!" srcRef
+      removeLink linkSrc
       argVal <- Lens.use Rule.aArgVal
       void . unify argVal $ exprLink ^. Rule.dest
     handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.NotTheParameterRef) = do
@@ -168,6 +169,7 @@ execute ruleRef =
       -- If mDestRef is Nothing, TheParameterOutOfScope triggered first
       -- and unified instead, so no need to make a copy:
       traverse_ (uncurry (makePiResultCopy ruleRef)) mLinkPair
+      -- We do not delete the link, because a Trigger.TheParameterOutOfScope may still trigger
     handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.TheParameterOutOfScope) = do
       -- Now we know no subexpr can possibly use the piGuid, so it
       -- must fully equal the dest:
@@ -178,16 +180,18 @@ execute ruleRef =
           -- we may have already deleted the link
           return ()
         Just (linkSrc, linkData) -> do
-          let
-            remove Nothing = error "aLinkedExprs should have the rep"
-            remove (Just _) = Nothing
-          Rule.aLinkedExprs . Lens.at linkSrc %= remove
+          removeLink linkSrc
           void . unify linkSrc $ linkData ^. Rule.dest
     handleTrigger (_, Trigger.FiredUnify _) =
       -- Some of our sources were potentially unified, so
       -- normalizeSrcLinks will find them and unify the dests
       normalizeSrcLinks
     handleTrigger firings = error $ "handleTrigger called with: " ++ show firings
+    removeLink linkSrc =
+      Rule.aLinkedExprs . Lens.at linkSrc %= remove
+      where
+        remove Nothing = error "aLinkedExprs should have the rep"
+        remove (Just _) = Nothing
     orderTriggers triggers =
       take 1 unifies ++ others
       where
