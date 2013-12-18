@@ -6,7 +6,7 @@ import Control.Monad (void)
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (StateT, mapStateT, evalStateT)
 import Control.MonadA (MonadA)
-import Lamdu.Data.Infer.Deref (DerefedTV(..))
+import Lamdu.Data.Infer.Deref (DerefedTV(..), dValue, dType)
 import Lamdu.Data.Infer.Load (LoadedExpr, ldDef)
 import System.Random (RandomGen)
 import Utils
@@ -85,9 +85,9 @@ deref expr =
   <&> flip (,) ()
   & derefWithPL
   <&> fmap
-  (\(DerefedTV val typ _scope _tv _ctx, ()) ->
-    ( val & ExprLens.exprDef %~ (^. ldDef) & void
-    , typ & ExprLens.exprDef %~ (^. ldDef) & void
+  (\(derefed, ()) ->
+    ( derefed ^. dValue & ExprLens.exprDef %~ (^. ldDef) & void
+    , derefed ^. dType & ExprLens.exprDef %~ (^. ldDef) & void
     )
   )
 
