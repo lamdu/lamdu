@@ -143,7 +143,7 @@ Executable lamdu
                        Lamdu.Data.DbLayout,
                        Lamdu.Data.Definition,
                        Lamdu.Data.ExampleDB,
-                       Lamdu.Data.Expression,
+                       Lamdu.Data.Expr,
                        Lamdu.Data.Expression.IRef,
                        Lamdu.Data.Expression.Lens,
                        Lamdu.Data.Expression.Load,

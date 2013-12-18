@@ -10,13 +10,13 @@ import Data.Map ((!))
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
-import Lamdu.Data.Expression (Kind(..))
+import Lamdu.Data.Expr (Kind(..))
 import Lamdu.Data.Expression.Utils (pureHole, pureLiteralInteger, pureIntegerType, pureTag, pureTagType, pureType)
 import Utils
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Guid as Guid
-import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expr as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 

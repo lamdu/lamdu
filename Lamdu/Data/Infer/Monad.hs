@@ -26,7 +26,7 @@ import Lamdu.Data.Infer.Trigger.Types (Fired)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.OpaqueRef as OR
-import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expr as Expr
 import qualified Lamdu.Data.Infer.Context as Context
 
 data Error def

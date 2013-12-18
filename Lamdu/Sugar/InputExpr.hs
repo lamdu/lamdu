@@ -1,6 +1,6 @@
 module Lamdu.Sugar.InputExpr (makePure) where
 
-import Lamdu.Data.Expression (Expression)
+import Lamdu.Data.Expr (Expression)
 import Lamdu.Sugar.Types (InputPayloadP(..), InputPayload)
 import System.Random (RandomGen)
 import qualified Lamdu.Data.Expression.Utils as ExprUtil

@@ -24,7 +24,7 @@ import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.TypedValue (TypedValue(..), tvVal, tvType)
 import qualified Control.Lens as Lens
 import qualified Data.UnionFind.WithData as UFData
-import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expr as Expr
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Load as Load

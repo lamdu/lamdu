@@ -30,7 +30,7 @@ module Lamdu.Data.Expression.Lens
   ) where
 
 import Prelude hiding (pi)
-import Lamdu.Data.Expression
+import Lamdu.Data.Expr
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators

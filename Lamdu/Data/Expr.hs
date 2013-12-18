@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable, RankNTypes, NoMonomorphismRestriction #-}
-module Lamdu.Data.Expression
+module Lamdu.Data.Expr
   ( VariableRef(..), _ParameterRef, _DefinitionRef
   , Kind(..), _KVal, _KType
   , Lam(..), lamKind, lamParamId, lamParamType, lamResult

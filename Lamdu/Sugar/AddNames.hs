@@ -26,7 +26,7 @@ import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expr as Expr
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Sugar.AddNames.NameGen as NameGen
 

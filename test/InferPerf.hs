@@ -6,7 +6,7 @@ import Data.Binary.Utils (encodeS)
 import Utils
 import InferWrappers
 import qualified Data.ByteString as SBS
-import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expr as Expr
 
 inferAndEncode :: Expr.Expression Def a -> Int -> Int
 inferAndEncode expr par =

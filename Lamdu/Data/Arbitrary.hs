@@ -12,13 +12,13 @@ import Data.Derive.Arbitrary (makeArbitrary)
 import Data.DeriveTH (derive)
 import Data.Maybe (maybeToList)
 import Data.Store.Guid (Guid)
-import Lamdu.Data.Expression (Kind(..))
+import Lamdu.Data.Expr (Kind(..))
 import Test.QuickCheck (Arbitrary(..), Gen, choose)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Store.Guid as Guid
-import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expr as Expr
 import qualified Test.QuickCheck.Gen as Gen
 
 data Env def = Env

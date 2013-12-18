@@ -38,7 +38,7 @@ module Lamdu.Data.Expression.Utils
   ) where
 
 import Prelude hiding (pi)
-import Lamdu.Data.Expression
+import Lamdu.Data.Expr
 
 import Control.Applicative (Applicative(..), liftA2, (<$>), (<$))
 import Control.Arrow ((***))

@@ -22,7 +22,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expr as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 
 type T = Transaction

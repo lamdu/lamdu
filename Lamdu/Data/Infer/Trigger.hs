@@ -24,7 +24,7 @@ import qualified Control.Monad.Trans.State as State
 import qualified Data.OpaqueRef as OR
 import qualified Data.Set as Set
 import qualified Data.UnionFind.WithData as UFData
-import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expr as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases

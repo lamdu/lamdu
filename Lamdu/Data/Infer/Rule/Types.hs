@@ -26,7 +26,7 @@ import Lamdu.Data.Infer.RefData (LoadedDef)
 import Lamdu.Data.Infer.RefTags (ExprRef, TagExpr, RuleRef, TagRule, ParamRef, TagParam)
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
-import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expr as Expr
 
 -- We know of a GetField, waiting to know the record type:
 data GetFieldPhase0 def = GetFieldPhase0

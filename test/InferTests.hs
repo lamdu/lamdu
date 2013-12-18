@@ -8,7 +8,7 @@ import InferAssert
 import InferCombinators
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
-import Lamdu.Data.Expression (Kind(..), Expression(..))
+import Lamdu.Data.Expr (Kind(..), Expression(..))
 import Lamdu.Data.Expression.Utils (pureHole)
 import Test.Framework (testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -19,7 +19,7 @@ import Utils
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
-import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expr as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.Deref as InferDeref

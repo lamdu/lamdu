@@ -29,7 +29,7 @@ import Lamdu.Data.Infer.Trigger.Types (Trigger)
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Data.OpaqueRef as OR
-import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expr as Expr
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 
 data Scope def = Scope

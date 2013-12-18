@@ -6,7 +6,7 @@ import Control.Monad.Trans.State (State, runState)
 import Utils
 import qualified Control.Lens as Lens
 import qualified Data.List as List
-import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expr as Expr
 
 type AnnotationIndex = Int
 type AnnotationM = State (AnnotationIndex, [String])
