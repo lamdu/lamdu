@@ -83,7 +83,7 @@ import Lamdu.Sugar.Types.Internal (T, CT, Stored, Inferred, LoadedExpr)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
+import qualified Lamdu.Data.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Types.Internal as TypesInternal
 import qualified System.Random as Random
 

@@ -20,7 +20,7 @@ import Data.Monoid.Applicative (ApplicativeMonoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA, traverse)
 import Data.Typeable (Typeable1)
-import Lamdu.Data.Expression.IRef (DefIM)
+import Lamdu.Data.Expr.IRef (DefIM)
 import Lamdu.Data.Infer.Deref (DerefedTV)
 import Lamdu.Data.Infer.Load (ldDef)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -40,9 +40,9 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Expr.IRef as ExprIRef
+import qualified Lamdu.Data.Expr.Lens as ExprLens
+import qualified Lamdu.Data.Expr.Utils as ExprUtil
 import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.Deref as InferDeref
 import qualified Lamdu.Data.Ops as DataOps

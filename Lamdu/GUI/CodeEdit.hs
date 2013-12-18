@@ -17,7 +17,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Data.Expression.IRef (DefIM)
+import Lamdu.Data.Expr.IRef (DefIM)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens

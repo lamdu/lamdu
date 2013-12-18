@@ -27,9 +27,9 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.DbLayout as Db
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Expr.IRef as ExprIRef
+import qualified Lamdu.Data.Expr.Lens as ExprLens
+import qualified Lamdu.Data.Expr.Utils as ExprUtil
 import qualified Lamdu.Data.FFI as FFI
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef

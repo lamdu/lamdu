@@ -29,8 +29,8 @@ import qualified Data.List as List
 import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Expr.Lens as ExprLens
+import qualified Lamdu.Data.Expr.Utils as ExprUtil
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM

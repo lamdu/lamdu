@@ -21,8 +21,8 @@ import Lamdu.Sugar.Types.Internal
 import qualified Control.Lens as Lens
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Expr.IRef as ExprIRef
+import qualified Lamdu.Data.Expr.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Load as InferLoad
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr

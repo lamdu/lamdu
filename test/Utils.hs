@@ -11,8 +11,8 @@ import Data.Monoid (mappend)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.ExampleDB (createBuiltins)
 import Lamdu.Data.Expr (Expression(..), Kind(..))
-import Lamdu.Data.Expression.IRef (DefI)
-import Lamdu.Data.Expression.Utils (pureHole, pureIntegerType)
+import Lamdu.Data.Expr.IRef (DefI)
+import Lamdu.Data.Expr.Utils (pureHole, pureIntegerType)
 import Lamdu.Data.Infer.Deref (DerefedTV(..), Restriction(..), dValue, dType)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
@@ -24,9 +24,9 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Expr.IRef as ExprIRef
+import qualified Lamdu.Data.Expr.Lens as ExprLens
+import qualified Lamdu.Data.Expr.Utils as ExprUtil
 
 newtype Def = Def String
   deriving (Eq, Ord, Binary)

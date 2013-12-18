@@ -21,7 +21,7 @@ import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version(Version)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (MkProperty(..))
-import Lamdu.Data.Expression.IRef (DefI)
+import Lamdu.Data.Expr.IRef (DefI)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Data.FFI as FFI

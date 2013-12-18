@@ -9,9 +9,9 @@ import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
-import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
+import qualified Lamdu.Data.Expr.Utils as ExprUtil
+import qualified Lamdu.Data.Expr.Lens as ExprLens
+import qualified Lamdu.Data.Expr.IRef as ExprIRef
 
 data Env t = Env
   { trueDef :: ExprIRef.DefI t

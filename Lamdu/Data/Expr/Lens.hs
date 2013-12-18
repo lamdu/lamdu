@@ -1,5 +1,5 @@
 {-# LANGUAGE RankNTypes, NoMonomorphismRestriction #-}
-module Lamdu.Data.Expression.Lens
+module Lamdu.Data.Expr.Lens
   ( pureExpr
   , parameterRef, definitionRef
   , kindedLam, kindedRecordFields

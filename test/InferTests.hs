@@ -9,7 +9,7 @@ import InferCombinators
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expr (Kind(..), Expression(..))
-import Lamdu.Data.Expression.Utils (pureHole)
+import Lamdu.Data.Expr.Utils (pureHole)
 import Test.Framework (testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.HUnit (assertEqual)
@@ -20,7 +20,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Expr.Lens as ExprLens
 import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.Deref as InferDeref
 

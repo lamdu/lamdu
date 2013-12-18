@@ -1,6 +1,6 @@
 {-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE TemplateHaskell, DeriveDataTypeable, RankNTypes, NoMonomorphismRestriction #-}
-module Lamdu.Data.Expression.Utils
+module Lamdu.Data.Expr.Utils
   ( makeApply
   , makePi, makeLambda, makeLam
   , pureApply
@@ -63,7 +63,7 @@ import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
-import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Expr.Lens as ExprLens
 import qualified System.Random as Random
 
 data PiWrappers def a = PiWrappers

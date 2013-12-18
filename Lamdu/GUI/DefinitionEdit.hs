@@ -13,7 +13,7 @@ import Data.Typeable (Typeable1)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Config (Config)
-import Lamdu.Data.Expression.IRef (DefIM)
+import Lamdu.Data.Expr.IRef (DefIM)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Control.Lens as Lens
@@ -22,7 +22,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Expression.Load as Load
+import qualified Lamdu.Data.Expr.Load as Load
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings

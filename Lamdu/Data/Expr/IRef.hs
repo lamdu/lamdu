@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
-module Lamdu.Data.Expression.IRef
+module Lamdu.Data.Expr.IRef
   ( Expression, ExpressionM
   , ExpressionI(..), ExpressionIM
   , ExpressionBody
@@ -30,8 +30,8 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Expr.Lens as ExprLens
+import qualified Lamdu.Data.Expr.Utils as ExprUtil
 
 type Expression t = Expr.Expression (DefI t)
 type ExpressionM m = Expression (Tag m)

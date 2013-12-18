@@ -16,7 +16,7 @@ import Control.Monad.Trans.State (StateT(..))
 import Control.Monad.Trans.Writer (WriterT(..))
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
-import Lamdu.Data.Expression.Utils () -- Expr.Body Show instance
+import Lamdu.Data.Expr.Utils () -- Expr.Body Show instance
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
 import Lamdu.Data.Infer.RefData (UFExprs, LoadedDef)

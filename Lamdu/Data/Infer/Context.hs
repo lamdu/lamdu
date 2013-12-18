@@ -24,7 +24,7 @@ import qualified Data.Map as Map
 import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Expr.Lens as ExprLens
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.RefData as RefData
 import qualified System.Random as Random

@@ -22,7 +22,7 @@ import qualified Control.Monad.Trans.State as State
 import qualified Data.Store.Guid as Guid
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Expr.Lens as ExprLens
 import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.LamWrap as LamWrap
