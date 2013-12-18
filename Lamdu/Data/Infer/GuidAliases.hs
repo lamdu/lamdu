@@ -1,5 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.Data.Infer.GuidAliases (GuidAliases, getRep, unify, empty, guidOfRep, find) where
+module Lamdu.Data.Infer.GuidAliases
+  ( GuidAliases, getRep, unify, empty, guidOfRep, find, hasGuid
+  ) where
 
 import Control.Applicative ((<$>), Applicative(..), (<$))
 import Control.Lens.Operators
@@ -47,6 +49,9 @@ getRep guid = do
       rep <- Lens.zoom gaUF $ UFData.fresh guid
       gaGuidRefs . Lens.at guid .= Just rep
       return rep
+
+hasGuid :: Guid -> GuidAliases def -> Bool
+hasGuid guid aliases = Map.member guid (aliases ^. gaGuidRefs)
 
 unify :: MonadA m => Guid -> Guid -> StateT (GuidAliases def) m (ParamRef def, Guid)
 unify x y = do

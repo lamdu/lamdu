@@ -67,8 +67,11 @@ canonizeGuid ::
   StoredGuids def -> Guid -> StateT (GuidAliases def) m Guid
 canonizeGuid storedGuidsOfRefs guid = do
   guidRep <- GuidAliases.getRep guid
+  storedExistingGuids <- do
+    aliases <- State.get
+    return $ filter ((`GuidAliases.hasGuid` aliases) . snd) storedGuidsOfRefs
   storedGuidsOfReps <-
-    storedGuidsOfRefs
+    storedExistingGuids
     & Lens.traverse . Lens._1 %%~ GuidAliases.find
   case lookup guidRep storedGuidsOfReps of
     Nothing -> State.gets (GuidAliases.guidOfRep guidRep)
