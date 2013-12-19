@@ -21,46 +21,46 @@ import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expr as Expr
 import qualified Test.QuickCheck.Gen as Gen
 
-data Env def = Env
-  { _envScope :: [Guid]
+data Env def par = Env
+  { _envScope :: [par]
   , __envMakeDef :: Maybe (Gen def)
   }
 Lens.makeLenses ''Env
 
-type GenExpr def = ReaderT (Env def) (StateT [Guid] Gen)
+type GenExpr def par = ReaderT (Env def par) (StateT [par] Gen)
 
-liftGen :: Gen a -> GenExpr def a
+liftGen :: Gen a -> GenExpr def par a
 liftGen = lift . lift
 
-next :: GenExpr def Guid
+next :: GenExpr def par par
 next = lift $ State.gets head <* State.modify tail
 
-arbitraryLambda :: Arbitrary a => GenExpr def (Expr.Lam (Expr.Expr def a))
+arbitraryLambda :: Arbitrary a => GenExpr def Guid (Expr.Lam (Expr.Expr def a))
 arbitraryLambda = do
-  guid <- next
-  flip Expr.Lam guid <$> liftGen arbitrary <*> arbitraryExpr <*>
-    Reader.local (envScope %~ (guid :)) arbitraryExpr
+  par <- next
+  flip Expr.Lam par <$> liftGen arbitrary <*> arbitraryExpr <*>
+    Reader.local (envScope %~ (par :)) arbitraryExpr
 
-listOf :: GenExpr def a -> GenExpr def [a]
+listOf :: GenExpr def par a -> GenExpr def par [a]
 listOf gen = do
   terminate <- liftGen $ Gen.frequency [(1, return True), (2, return False)]
   if terminate
     then return []
     else (:) <$> gen <*> listOf gen
 
-arbitraryRecord :: Arbitrary a => GenExpr def (Expr.Record (Expr.Expr def a))
+arbitraryRecord :: Arbitrary a => GenExpr def Guid (Expr.Record (Expr.Expr def a))
 arbitraryRecord =
   Expr.Record
   <$> liftGen arbitrary
   <*> listOf ((,) <$> arbitraryExpr <*> arbitraryExpr)
 
-arbitraryGetField :: Arbitrary a => GenExpr def (Expr.GetField (Expr.Expr def a))
+arbitraryGetField :: Arbitrary a => GenExpr def Guid (Expr.GetField (Expr.Expr def a))
 arbitraryGetField = Expr.GetField <$> arbitraryExpr <*> arbitraryExpr
 
-arbitraryApply :: Arbitrary a => GenExpr def (Expr.Apply (Expr.Expr def a))
+arbitraryApply :: Arbitrary a => GenExpr def Guid (Expr.Apply (Expr.Expr def a))
 arbitraryApply = Expr.Apply <$> arbitraryExpr <*> arbitraryExpr
 
-arbitraryLeaf :: GenExpr def (Expr.Leaf def)
+arbitraryLeaf :: GenExpr def Guid (Expr.Leaf def Guid)
 arbitraryLeaf = do
   Env scope mGenDefI <- Reader.ask
   join . liftGen . Gen.elements $
@@ -73,7 +73,7 @@ arbitraryLeaf = do
     map (fmap (Expr.GetVariable . Expr.DefinitionRef) . liftGen)
       (maybeToList mGenDefI)
 
-arbitraryBody :: Arbitrary a => GenExpr def (Expr.BodyExpr def a)
+arbitraryBody :: Arbitrary a => GenExpr def Guid (Expr.BodyExpr def a)
 arbitraryBody =
   join . liftGen . Gen.frequency . (Lens.mapped . Lens._2 %~ pure) $
   [ weight 2  $ Expr.BodyLam      <$> arbitraryLambda
@@ -85,18 +85,18 @@ arbitraryBody =
   where
     weight = (,)
 
-arbitraryExpr :: Arbitrary a => GenExpr def (Expr.Expr def a)
+arbitraryExpr :: Arbitrary a => GenExpr def Guid (Expr.Expr def a)
 arbitraryExpr = Expr.Expr <$> arbitraryBody <*> liftGen arbitrary
 
-nameStream :: [Guid]
-nameStream = map Guid.fromString names
+guidStream :: [Guid]
+guidStream = map Guid.fromString names
   where
     alphabet = map (:[]) ['a'..'z']
     names = (alphabet ++) $ (++) <$> names <*> alphabet
 
 exprGen :: Arbitrary a => Maybe (Gen def) -> Gen (Expr.Expr def a)
 exprGen makeDefI =
-  (`evalStateT` nameStream) .
+  (`evalStateT` guidStream) .
   (`runReaderT` Env [] makeDefI) $
   arbitraryExpr
 

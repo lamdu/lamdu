@@ -212,7 +212,7 @@ jumpToDefI cp defI = IRef.guid defI <$ DataOps.newPane cp defI
 
 convertGetVariable ::
   (MonadA m, Typeable1 m) =>
-  Expr.VariableRef (Infer.LoadedDef (DefIM m)) ->
+  Expr.VariableRef (Infer.LoadedDef (DefIM m)) Guid ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertGetVariable varRef exprPl = do
   cp <- (^. ConvertM.scCodeAnchors) <$> ConvertM.readContext

@@ -41,17 +41,17 @@ data Apply expr = Apply
   , _applyArg :: expr
   } deriving (Eq, Ord, Functor, Foldable, Traversable, Show)
 
-data VariableRef def
-  = ParameterRef {-# UNPACK #-} !Guid -- of the lambda/pi
+data VariableRef def par
+  = ParameterRef par -- of the lambda/pi
   | DefinitionRef def
   deriving (Eq, Ord, Functor, Foldable, Traversable, Typeable)
 
-instance Show def => Show (VariableRef def) where
+instance (Show def, Show par) => Show (VariableRef def par) where
   showsPrec _ (ParameterRef paramId) = shows paramId
   showsPrec _ (DefinitionRef defI) = shows defI
 
-data Leaf def
-  = GetVariable !(VariableRef def)
+data Leaf def par
+  = GetVariable !(VariableRef def par)
   | LiteralInteger !Integer
   | Type
   | IntegerType
@@ -60,7 +60,7 @@ data Leaf def
   | Tag Guid
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 
-instance Show def => Show (Leaf def) where
+instance (Show def, Show par) => Show (Leaf def par) where
   showsPrec _ leaf =
     case leaf of
     GetVariable varRef -> shows varRef
@@ -86,7 +86,7 @@ data Body def expr
   | BodyApply {-# UNPACK #-}!(Apply expr)
   | BodyRecord {-# UNPACK #-}!(Record expr)
   | BodyGetField {-# UNPACK #-}!(GetField expr)
-  | BodyLeaf !(Leaf def)
+  | BodyLeaf !(Leaf def Guid)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 type BodyExpr def a = Body def (Expr def a)

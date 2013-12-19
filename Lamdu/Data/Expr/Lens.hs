@@ -51,7 +51,7 @@ exprRecord = eBody . _BodyRecord
 exprGetField :: Lens.Traversal' (Expr def a) (GetField (Expr def a))
 exprGetField = eBody . _BodyGetField
 
-exprLeaf :: Lens.Traversal' (Expr def a) (Leaf def)
+exprLeaf :: Lens.Traversal' (Expr def a) (Leaf def Guid)
 exprLeaf = eBody . _BodyLeaf
 
 exprKindedRecordFields :: Kind -> Lens.Traversal' (Expr def a) [(Expr def a, Expr def a)]
@@ -70,7 +70,7 @@ exprParameterRef :: Lens.Traversal' (Expr def a) Guid
 exprParameterRef = eBody . bodyParameterRef
 
 exprGetVariable ::
-  Lens.Traversal' (Expr def a) (VariableRef def)
+  Lens.Traversal' (Expr def a) (VariableRef def Guid)
 exprGetVariable = eBody . bodyGetVariable
 
 exprLiteralInteger :: Lens.Traversal' (Expr def a) Integer
@@ -92,7 +92,7 @@ exprTagType :: Lens.Traversal' (Expr def a) ()
 exprTagType = eBody . bodyTagType
 
 exprLeaves ::
-  Lens.Traversal (Expr defa a) (Expr defb a) (Leaf defa) (Leaf defb)
+  Lens.Traversal (Expr defa a) (Expr defb a) (Leaf defa Guid) (Leaf defb Guid)
 exprLeaves = eBody . bodyLeaves exprLeaves
 
 bodyBitraverse ::
@@ -105,7 +105,7 @@ bodyBitraverse onDef onExpr body =
   BodyApply x -> BodyApply <$> traverse onExpr x
   BodyRecord x -> BodyRecord <$> traverse onExpr x
   BodyGetField x -> BodyGetField <$> traverse onExpr x
-  BodyLeaf leaf -> BodyLeaf <$> traverse onDef leaf
+  BodyLeaf leaf -> BodyLeaf <$> definitionRef onDef leaf
 
 bodyDef :: Lens.Traversal (Body a expr) (Body b expr) a b
 bodyDef = (`bodyBitraverse` pure)
@@ -124,8 +124,8 @@ exprDef = (`exprBitraverse` pure)
 
 bodyLeaves ::
   Applicative f =>
-  Lens.LensLike f expra exprb (Leaf defa) (Leaf defb) ->
-  Lens.LensLike f (Body defa expra) (Body defb exprb) (Leaf defa) (Leaf defb)
+  Lens.LensLike f expra exprb (Leaf defa Guid) (Leaf defb Guid) ->
+  Lens.LensLike f (Body defa expra) (Body defb exprb) (Leaf defa Guid) (Leaf defb Guid)
 bodyLeaves leaves onLeaves body =
   case body of
   BodyLam x      -> BodyLam      <$> onExprs x
@@ -137,10 +137,10 @@ bodyLeaves leaves onLeaves body =
     onExprs = traverse (leaves onLeaves)
 
 -- Prisms:
-parameterRef :: Lens.Prism' (Leaf def) Guid
+parameterRef :: Lens.Prism' (Leaf def Guid) Guid
 parameterRef = _GetVariable . _ParameterRef
 
-definitionRef :: Lens.Prism (Leaf defa) (Leaf defb) defa defb
+definitionRef :: Lens.Prism (Leaf defa Guid) (Leaf defb Guid) defa defb
 definitionRef = _GetVariable . _DefinitionRef
 
 bodyParameterRef :: Lens.Prism' (Body def expr) Guid
@@ -154,7 +154,7 @@ bodyLiteralInteger = _BodyLeaf . _LiteralInteger
 
 bodyGetVariable ::
   Lens.Prism (Body defa expr) (Body defb expr)
-  (VariableRef defa) (VariableRef defb)
+  (VariableRef defa Guid) (VariableRef defb Guid)
 bodyGetVariable = _BodyLeaf . _GetVariable
 
 bodyHole :: Lens.Prism' (Body def expr) ()

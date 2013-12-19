@@ -147,7 +147,7 @@ newExprFromH getDef expr =
   where
     (mIRef, pl) = expr ^. Expr.ePayload
 
-variableRefGuid :: Expr.VariableRef (DefI t) -> Guid
+variableRefGuid :: Expr.VariableRef (DefI t) Guid -> Guid
 variableRefGuid (Expr.ParameterRef i) = i
 variableRefGuid (Expr.DefinitionRef i) = IRef.guid i
 
