@@ -62,14 +62,14 @@ unifyRefs x y = InferMRun.run $ Unify.unify x y
 infer ::
   Ord def =>
   Scope def ->
-  Expr.Expression (Load.LoadedDef def) a ->
-  M def (Expr.Expression (Load.LoadedDef def) (TypedValue def, a))
+  Expr.Expr (Load.LoadedDef def) a ->
+  M def (Expr.Expr (Load.LoadedDef def) (TypedValue def, a))
 infer scope expr = InferMRun.run $ exprIntoSTV scope expr
 
 inferAt ::
   Ord def =>
-  TypedValue def -> Expr.Expression (Load.LoadedDef def) a ->
-  M def (Expr.Expression (Load.LoadedDef def) (TypedValue def, a))
+  TypedValue def -> Expr.Expr (Load.LoadedDef def) a ->
+  M def (Expr.Expr (Load.LoadedDef def) (TypedValue def, a))
 inferAt tv expr = do
   scope <-
     UFData.read (tv ^. tvVal)
@@ -81,9 +81,9 @@ inferAt tv expr = do
 
 -- With hole apply vals and hole types
 exprIntoSTV ::
-  Ord def => Scope def -> Expr.Expression (Load.LoadedDef def) a ->
-  Infer def (Expr.Expression (Load.LoadedDef def) (TypedValue def, a))
-exprIntoSTV scope (Expr.Expression body pl) = do
+  Ord def => Scope def -> Expr.Expr (Load.LoadedDef def) a ->
+  Infer def (Expr.Expr (Load.LoadedDef def) (TypedValue def, a))
+exprIntoSTV scope (Expr.Expr body pl) = do
   bodySTV <-
     case body of
     Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
@@ -99,4 +99,4 @@ exprIntoSTV scope (Expr.Expression body pl) = do
     _ ->
       body & Lens.traverse %%~ exprIntoSTV scope
   tv <- bodySTV <&> (^. Expr.ePayload . Lens._1) & makeTV scope
-  pure $ Expr.Expression bodySTV (tv, pl)
+  pure $ Expr.Expr bodySTV (tv, pl)

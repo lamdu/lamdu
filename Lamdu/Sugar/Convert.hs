@@ -53,19 +53,19 @@ import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 
 onMatchingSubexprs ::
   MonadA m => (a -> m ()) ->
-  (Expr.Expression def a -> Bool) ->
-  Expr.Expression def a -> m ()
+  (Expr.Expr def a -> Bool) ->
+  Expr.Expr def a -> m ()
 onMatchingSubexprs action predicate =
   traverse_ (action . (^. Expr.ePayload)) .
-  filter predicate . ExprUtil.subExpressions
+  filter predicate . ExprUtil.subExprs
 
 toHole :: MonadA m => Stored m -> T m ()
 toHole = void . DataOps.setToHole
 
-isGetParamOf :: Guid -> Expr.Expression def a -> Bool
+isGetParamOf :: Guid -> Expr.Expr def a -> Bool
 isGetParamOf = Lens.anyOf ExprLens.exprParameterRef . (==)
 
-isGetFieldParam :: Guid -> Guid -> Expr.Expression def a -> Bool
+isGetFieldParam :: Guid -> Guid -> Expr.Expr def a -> Bool
 isGetFieldParam param tagG =
   p . (^? ExprLens.exprGetField)
   where
@@ -75,12 +75,12 @@ isGetFieldParam param tagG =
       Lens.anyOf ExprLens.exprParameterRef (== param) record
 
 deleteParamRef ::
-  MonadA m => Guid -> Expr.Expression def (Stored m) -> T m ()
+  MonadA m => Guid -> Expr.Expr def (Stored m) -> T m ()
 deleteParamRef =
   onMatchingSubexprs toHole . isGetParamOf
 
 deleteFieldParamRef ::
-  MonadA m => Guid -> Guid -> Expr.Expression def (Stored m) -> T m ()
+  MonadA m => Guid -> Guid -> Expr.Expr def (Stored m) -> T m ()
 deleteFieldParamRef param tagG =
   onMatchingSubexprs toHole $ isGetFieldParam param tagG
 
@@ -100,7 +100,7 @@ fakeExample guid =
   }
 
 mkPositionalFuncParamActions ::
-  MonadA m => Guid -> Stored m -> Expr.Expression def (Stored m) ->
+  MonadA m => Guid -> Stored m -> Expr.Expr def (Stored m) ->
   FuncParamActions MStoredName m
 mkPositionalFuncParamActions param lambdaProp body =
   FuncParamActions
@@ -257,11 +257,11 @@ sideChannel lens f s = (`runStateT` s) . Lens.zoom lens $ StateT f
 
 writeRecordFields ::
   MonadA m =>
-  ExprIRef.ExpressionIM m -> result ->
-  ( [(ExprIRef.ExpressionIM m, ExprIRef.ExpressionIM m)] ->
+  ExprIRef.ExprIM m -> result ->
+  ( [(ExprIRef.ExprIM m, ExprIRef.ExprIM m)] ->
     T m
     ( result
-    , [(ExprIRef.ExpressionIM m, ExprIRef.ExpressionIM m)]
+    , [(ExprIRef.ExprIM m, ExprIRef.ExprIM m)]
     )
   ) ->
   T m result
@@ -276,7 +276,7 @@ writeRecordFields iref def f = do
       return res
 
 recordFieldActions ::
-  MonadA m => Guid -> ExprIRef.ExpressionIM m -> ExprIRef.ExpressionIM m ->
+  MonadA m => Guid -> ExprIRef.ExprIM m -> ExprIRef.ExprIM m ->
   ListItemActions m
 recordFieldActions defaultGuid exprIRef iref =
   ListItemActions
@@ -306,7 +306,7 @@ recordFieldActions defaultGuid exprIRef iref =
 
 convertField ::
   (Typeable1 m, MonadA m, Monoid a) =>
-  Maybe (ExprIRef.ExpressionIM m) -> Guid ->
+  Maybe (ExprIRef.ExprIM m) -> Guid ->
   ( InputExpr m a
   , InputExpr m a
   ) ->
@@ -436,9 +436,9 @@ convertExpressionI ee =
   Expr.BodyLeaf Expr.TagType -> convertAtom "Tag"
 
 -- Check no holes
-isCompleteType :: Expr.Expression def a -> Bool
+isCompleteType :: Expr.Expr def a -> Bool
 isCompleteType =
-  Lens.nullOf (Lens.folding ExprUtil.subExpressions . ExprLens.exprHole)
+  Lens.nullOf (Lens.folding ExprUtil.subExprs . ExprLens.exprHole)
 
 mkContext ::
   (MonadA m, Typeable1 m) =>
@@ -494,7 +494,7 @@ mkRecordParams ::
   (MonadA m, Typeable1 m, Monoid a) =>
   ConvertM.RecordParamsInfo m -> Guid -> [FieldParam m a] ->
   InputExpr m a ->
-  Maybe (ExprIRef.ExpressionIM m) ->
+  Maybe (ExprIRef.ExprIM m) ->
   Maybe (LoadedExpr m (Stored m)) ->
   ConvertM m (ConventionalParams m a)
 mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mBodyStored = do
@@ -542,10 +542,10 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
       , _fpGetExample = pure $ fakeExample tagExprGuid
       }
 
-type ExprField m = (ExprIRef.ExpressionIM m, ExprIRef.ExpressionIM m)
+type ExprField m = (ExprIRef.ExprIM m, ExprIRef.ExprIM m)
 rereadFieldParamTypes ::
   MonadA m =>
-  Guid -> ExprIRef.ExpressionIM m ->
+  Guid -> ExprIRef.ExprIM m ->
   ([ExprField m] -> ExprField m -> [ExprField m] -> T m Guid) ->
   T m Guid
 rereadFieldParamTypes tagExprGuid paramTypeI f = do
@@ -559,12 +559,12 @@ rereadFieldParamTypes tagExprGuid paramTypeI f = do
     _ -> return tagExprGuid
 
 rewriteFieldParamTypes ::
-  MonadA m => ExprIRef.ExpressionIM m -> [ExprField m] -> T m ()
+  MonadA m => ExprIRef.ExprIM m -> [ExprField m] -> T m ()
 rewriteFieldParamTypes paramTypeI fields =
   ExprIRef.writeExprBody paramTypeI . Expr.BodyRecord $
   Expr.Record KType fields
 
-addFieldParamAfter :: MonadA m => Guid -> Guid -> ExprIRef.ExpressionIM m -> T m Guid
+addFieldParamAfter :: MonadA m => Guid -> Guid -> ExprIRef.ExprIM m -> T m Guid
 addFieldParamAfter lamGuid tagExprGuid paramTypeI =
   rereadFieldParamTypes tagExprGuid paramTypeI $
   \prevFields theField nextFields -> do
@@ -576,7 +576,7 @@ addFieldParamAfter lamGuid tagExprGuid paramTypeI =
     pure $ Guid.combine lamGuid fieldGuid
 
 delFieldParam ::
-  MonadA m => Guid -> ExprIRef.ExpressionIM m -> Guid ->
+  MonadA m => Guid -> ExprIRef.ExprIM m -> Guid ->
   Stored m -> LoadedExpr m (Stored m) -> T m Guid
 delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored =
   rereadFieldParamTypes tagExprGuid paramTypeI $
@@ -738,7 +738,7 @@ singleConventionalParam lamProp existingParam existingParamGuid existingParamTyp
       let lamGuid = ExprIRef.exprGuid $ Property.value lamProp
       pure $ Guid.combine lamGuid newTagGuid
 
-emptyConventionalParams :: MonadA m => ExprIRef.ExpressionProperty m -> ConventionalParams m a
+emptyConventionalParams :: MonadA m => ExprIRef.ExprProperty m -> ConventionalParams m a
 emptyConventionalParams stored = ConventionalParams
   { cpTags = []
   , cpParamInfos = Map.empty
@@ -813,14 +813,14 @@ convertWhereItems usedTags expr =
     return (item : nextItems, whereBody)
 
 newField ::
-  MonadA m => T m (Guid, (ExprIRef.ExpressionIM m, ExprIRef.ExpressionIM m))
+  MonadA m => T m (Guid, (ExprIRef.ExprIM m, ExprIRef.ExprIM m))
 newField = do
   tag <- Transaction.newKey
   newTagI <- ExprIRef.newExprBody (ExprLens.bodyTag # tag)
   holeI <- DataOps.newHole
   return (tag, (newTagI, holeI))
 
-addFirstFieldParam :: MonadA m => Guid -> ExprIRef.ExpressionIM m -> T m Guid
+addFirstFieldParam :: MonadA m => Guid -> ExprIRef.ExprIM m -> T m Guid
 addFirstFieldParam lamGuid recordI = do
   recordBody <- ExprIRef.readExprBody recordI
   case recordBody ^? Expr._BodyRecord . ExprLens.kindedRecordFields KType of
@@ -833,9 +833,9 @@ addFirstFieldParam lamGuid recordI = do
 
 assertedGetProp ::
   String ->
-  Expr.Expression def (InputPayloadP inferred (Maybe stored) a) -> stored
+  Expr.Expr def (InputPayloadP inferred (Maybe stored) a) -> stored
 assertedGetProp _
-  Expr.Expression
+  Expr.Expr
   { Expr._ePayload =
     InputPayload { _ipStored = Just prop } } = prop
 assertedGetProp msg _ = error msg
@@ -921,7 +921,7 @@ makeTypeInfo cp defI defType inferredType = do
               inferredType
               & ExprLens.exprDef %~ (^. ldDef)
               & void
-              & ExprIRef.newExpression
+              & ExprIRef.newExpr
               >>= Property.set (defType ^. Expr.ePayload . Lens._1)
             }
   where
@@ -931,13 +931,13 @@ makeTypeInfo cp defI defType inferredType = do
     typesMatch = (snd <$> defType) `ExprUtil.alphaEq` inferredType
     defGuid = IRef.guid defI
 
-convertDefIExpression ::
+convertDefIExpr ::
   (MonadA m, Typeable1 m) => Anchors.CodeProps m ->
-  ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m)) ->
+  ExprIRef.ExprM m (Load.ExprPropertyClosure (Tag m)) ->
   DefIM m ->
   LoadedExpr m (Stored m) ->
   CT m (DefinitionBody MStoredName m (ExpressionU m [Guid]))
-convertDefIExpression cp exprLoaded defI defType = do
+convertDefIExpr cp exprLoaded defI defType = do
   ilr@SugarInfer.InferredWithImplicits
     { SugarInfer._iwiExpr = iwiExpr
     } <-
@@ -976,7 +976,7 @@ convertDefI ::
   Anchors.CodeProps m ->
   -- TODO: Use DefinitionClosure?
   Definition.Definition
-    (ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m)))
+    (ExprIRef.ExprM m (Load.ExprPropertyClosure (Tag m)))
     (ExprIRef.DefIM m) ->
   CT m (Definition (Maybe String) m (ExpressionU m [Guid]))
 convertDefI cp (Definition.Definition (Definition.Body bodyContent typeLoaded) defI) = do
@@ -996,5 +996,5 @@ convertDefI cp (Definition.Definition (Definition.Body bodyContent typeLoaded) d
     defGuid = IRef.guid defI
     convertDefContent (Definition.ContentBuiltin builtin) =
       convertDefIBuiltin cp builtin defI
-    convertDefContent (Definition.ContentExpression exprLoaded) =
-      convertDefIExpression cp exprLoaded defI
+    convertDefContent (Definition.ContentExpr exprLoaded) =
+      convertDefIExpr cp exprLoaded defI

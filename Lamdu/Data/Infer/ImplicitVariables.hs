@@ -38,9 +38,9 @@ derive makeBinary ''Payload
 add ::
   (Show def, Ord def, RandomGen gen) =>
   gen -> def ->
-  Expr.Expression (Load.LoadedDef def) (TypedValue def, a) ->
+  Expr.Expr (Load.LoadedDef def) (TypedValue def, a) ->
   StateT (Context def) (Either (InferM.Error def))
-  (Expr.Expression (Load.LoadedDef def) (TypedValue def, Payload a))
+  (Expr.Expr (Load.LoadedDef def) (TypedValue def, Payload a))
 add gen def expr =
   expr ^.. ExprLens.lambdaParamTypes . Lens.traverse . Lens._1
   & traverse_ (onEachParamTypeSubexpr def)
@@ -60,7 +60,7 @@ onEachParamTypeSubexpr ::
   (Ord def, RandomGen gen) =>
   def -> TypedValue def ->
   StateT gen
-  (StateT (Expr.Expression (Load.LoadedDef def) (TypedValue def, Payload a))
+  (StateT (Expr.Expr (Load.LoadedDef def) (TypedValue def, Payload a))
    (StateT (Context def)
     (Either (InferM.Error def)))) ()
 onEachParamTypeSubexpr def tv = do

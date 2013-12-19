@@ -63,13 +63,13 @@ import qualified Lamdu.Data.Infer.Load as InferLoad
 import qualified Lamdu.Data.Infer.Structure as Structure
 import qualified Lamdu.Sugar.Types as Sugar
 
-type ExpressionSetter def = Expr.Expression def () -> Expr.Expression def ()
+type ExpressionSetter def = Expr.Expr def () -> Expr.Expr def ()
 
 loader :: MonadA m => Loader (DefIM m) (T m)
 loader =
   Loader
   { loadDefType =
-    fmap void . ExprIRef.readExpression . (^. Definition.bodyType) <=<
+    fmap void . ExprIRef.readExpr . (^. Definition.bodyType) <=<
     Transaction.readIRef
   }
 
@@ -77,7 +77,7 @@ load ::
   ( Binary a, Typeable a
   , MonadA m, Typeable1 m
   ) =>
-  ExprIRef.ExpressionM m a ->
+  ExprIRef.ExprM m a ->
   StateT (InferContext m) (MaybeT (CT m)) (LoadedExpr m a)
 load expr = do
   loaded <-
@@ -194,7 +194,7 @@ inferAddImplicits ::
   (Show gen, RandomGen gen, MonadA m, Typeable1 m, Typeable (m ())) =>
   gen ->
   DefIM m ->
-  ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m)) ->
+  ExprIRef.ExprM m (Load.ExprPropertyClosure (Tag m)) ->
   InferContext m -> Infer.TypedValue (DefIM m) ->
   CT m (InferredWithImplicits m ())
 inferAddImplicits gen def lExpr inferContext node = do
@@ -236,29 +236,29 @@ isPolymorphicFunc funcPl =
   funcPl ^? Sugar.ipInferred . Lens._Just . InferDeref.dType
 
 exprGuid ::
-  Lens' (Expr.Expression def (Sugar.InputPayloadP inferred stored a)) Guid
+  Lens' (Expr.Expr def (Sugar.InputPayloadP inferred stored a)) Guid
 exprGuid = Expr.ePayload . Sugar.ipGuid
 
 exprStored ::
-  Lens' (Expr.Expression def (Sugar.InputPayloadP inferred stored a)) stored
+  Lens' (Expr.Expr def (Sugar.InputPayloadP inferred stored a)) stored
 exprStored = Expr.ePayload . Sugar.ipStored
 
 exprInferred ::
-  Lens' (Expr.Expression def (Sugar.InputPayloadP inferred stored a)) inferred
+  Lens' (Expr.Expr def (Sugar.InputPayloadP inferred stored a)) inferred
 exprInferred = Expr.ePayload . Sugar.ipInferred
 
 exprData ::
-  Lens' (Expr.Expression def (Sugar.InputPayloadP inferred stored a)) a
+  Lens' (Expr.Expr def (Sugar.InputPayloadP inferred stored a)) a
 exprData = Expr.ePayload . Sugar.ipData
 
 -- TODO: Move to ...?
 plIRef ::
-  Lens.Traversal' (Sugar.InputPayloadP i (Maybe (Stored m)) a) (ExprIRef.ExpressionIM m)
+  Lens.Traversal' (Sugar.InputPayloadP i (Maybe (Stored m)) a) (ExprIRef.ExprIM m)
 plIRef = Sugar.ipStored . Lens._Just . Property.pVal
 
 exprStoredGuid ::
   Lens.Fold
-  (Expr.Expression def (Sugar.InputPayloadP i (Maybe (Stored m)) a)) Guid
+  (Expr.Expr def (Sugar.InputPayloadP i (Maybe (Stored m)) a)) Guid
 exprStoredGuid = exprIRef . Lens.to ExprIRef.exprGuid
 
 replaceWith :: MonadA m => Stored m -> Stored m -> T m Guid
@@ -270,6 +270,6 @@ replaceWith parentP replacerP = do
 
 exprIRef ::
   Lens.Traversal'
-  (Expr.Expression def (Sugar.InputPayloadP i (Maybe (Stored m)) a))
-  (ExprIRef.ExpressionIM m)
+  (Expr.Expr def (Sugar.InputPayloadP i (Maybe (Stored m)) a))
+  (ExprIRef.ExprIM m)
 exprIRef = exprStored . Lens._Just . Property.pVal

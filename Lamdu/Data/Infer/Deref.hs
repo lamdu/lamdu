@@ -36,10 +36,10 @@ import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.Monad as InferM
 import qualified Lamdu.Data.Infer.RefData as RefData
 
-data Error def = InfiniteExpression (ExprRef def)
+data Error def = InfiniteExpr (ExprRef def)
   deriving (Show, Eq, Ord)
 
-type Expr def = Expr.Expression (RefData.LoadedDef def) (ExprRef def)
+type Expr def = Expr.Expr (RefData.LoadedDef def) (ExprRef def)
 
 -- TODO: Make this a newtype and maybe rename to Context
 -- | The stored guid names we know for paremeter refs (different
@@ -81,13 +81,13 @@ deref :: StoredGuids def -> ExprRef def -> M def (Expr def)
 deref storedGuids =
   decycle go
   where
-    go Nothing ref = mError $ InfiniteExpression ref
+    go Nothing ref = mError $ InfiniteExpr ref
     go (Just recurse) ref = do
       refData <- Lens.zoom Context.ufExprs (UFData.read ref)
       refData ^. RefData.rdBody
         & Lens.traverse %%~ recurse
         >>= ExprLens.bodyParamIds %%~ mGuidAliases . canonizeGuid storedGuids
-        <&> (`Expr.Expression` ref)
+        <&> (`Expr.Expr` ref)
 
 derefScope ::
   StoredGuids def ->
@@ -104,12 +104,12 @@ derefScope storedGuids =
       return (cGuid, typeExpr)
 
 expr ::
-  Expr.Expression ldef (TypedValue def, a) ->
-  M def (Expr.Expression ldef (M def (DerefedTV def), a))
+  Expr.Expr ldef (TypedValue def, a) ->
+  M def (Expr.Expr ldef (M def (DerefedTV def), a))
 expr =
   go []
   where
-    go storedGuids (Expr.Expression storedBody (tv, pl)) = do
+    go storedGuids (Expr.Expr storedBody (tv, pl)) = do
       newStoredGuids <-
         case storedBody ^? Expr._BodyLam . Expr.lamParamId of
         Nothing -> return storedGuids
@@ -127,13 +127,13 @@ expr =
             <*> pure storedGuids
       storedBody
         & Lens.traverse %%~ go newStoredGuids
-        <&> (`Expr.Expression` (derefTV, pl))
+        <&> (`Expr.Expr` (derefTV, pl))
 
 entireExpr ::
-  Expr.Expression ldef (TypedValue def, a) ->
-  M def (Expr.Expression ldef (DerefedTV def, a))
+  Expr.Expr ldef (TypedValue def, a) ->
+  M def (Expr.Expr ldef (DerefedTV def, a))
 entireExpr = (>>= Lens.sequenceOf (Lens.traverse . Lens._1)) . expr
 ------- Lifted errors:
 
 toInferError :: Error def -> InferM.Error def
-toInferError (InfiniteExpression ref) = InferM.InfiniteExpression ref
+toInferError (InfiniteExpr ref) = InferM.InfiniteExpr ref

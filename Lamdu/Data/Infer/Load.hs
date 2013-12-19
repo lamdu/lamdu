@@ -29,7 +29,7 @@ import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.RefData as RefData
 
 newtype Loader def m = Loader
-  { loadDefType :: def -> m (Expr.Expression def ())
+  { loadDefType :: def -> m (Expr.Expr def ())
     -- TODO: For synonyms we'll need loadDefVal
   }
 
@@ -41,7 +41,7 @@ type T def m = StateT (Context def) (EitherT (Error def) m)
 exprIntoContext ::
   (Ord def, MonadA m) => RefData.Scope def -> LoadedExpr def () ->
   StateT (Context def) m (ExprRef def)
-exprIntoContext scope (Expr.Expression body ()) = do
+exprIntoContext scope (Expr.Expr body ()) = do
   newBody <-
     case body of
     Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
@@ -74,7 +74,7 @@ newDefinition def = do
 
 load ::
   (Ord def, MonadA m) =>
-  Loader def m -> Expr.Expression def a ->
+  Loader def m -> Expr.Expr def a ->
   T def m (LoadedExpr def a)
 load loader expr = expr & ExprLens.exprDef %%~ toLoadedDef
   where

@@ -33,7 +33,7 @@ mkGen :: Int -> Int -> Guid -> Random.StdGen
 mkGen select count =
   Random.mkStdGen . (+select) . (*count) . BinaryUtils.decodeS . Guid.bs
 
-mkCutter :: MonadA m => Anchors.CodeProps m -> ExprIRef.ExpressionI (Tag m) -> T m Guid -> T m Guid
+mkCutter :: MonadA m => Anchors.CodeProps m -> ExprIRef.ExprI (Tag m) -> T m Guid -> T m Guid
 mkCutter cp expr replaceWithHole = do
   _ <- DataOps.newClipboard cp expr
   replaceWithHole

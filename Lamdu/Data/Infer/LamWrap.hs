@@ -61,7 +61,7 @@ lambdaWrap paramId paramTypeRef expr = InferMRun.run $ do
     <&> (^. RefData.rdScope)
   let
     mkRootExpr body tv =
-      Expr.Expression body (tv, Nothing)
+      Expr.Expr body (tv, Nothing)
     rootDef =
       case rootScope of
         RefData.Scope _ Nothing ->

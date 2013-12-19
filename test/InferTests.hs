@@ -8,7 +8,7 @@ import InferAssert
 import InferCombinators
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
-import Lamdu.Data.Expr (Kind(..), Expression(..))
+import Lamdu.Data.Expr (Kind(..))
 import Lamdu.Data.Expr.Utils (pureHole)
 import Test.Framework (testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -218,9 +218,9 @@ resumptionTests =
     hole `resumeOnSide` recurse (hole ~> hole)
   ]
 
-lamParamType :: Kind -> Lens.Traversal' (Expression def a) (Expression def a)
+lamParamType :: Kind -> Lens.Traversal' (Expr.Expr def a) (Expr.Expr def a)
 lamParamType k = ExprLens.exprKindedLam k . Lens._2
-lamResult :: Kind -> Lens.Traversal' (Expression def a) (Expression def a)
+lamResult :: Kind -> Lens.Traversal' (Expr.Expr def a) (Expr.Expr def a)
 lamResult k = ExprLens.exprKindedLam k . Lens._3
 
 emptyRecordTests =
@@ -326,9 +326,9 @@ inferReplicateOfReplicate =
       getDef "replicate" $$ asHole typ $$: [ x, y ]
 
 inferFailsDueToInfinite =
-  inferFailsAssertion "InfiniteExpression" isExpectedError
+  inferFailsAssertion "InfiniteExpr" isExpectedError
   where
-    isExpectedError (InferError Infer.InfiniteExpression {}) = True
+    isExpectedError (InferError Infer.InfiniteExpr {}) = True
     isExpectedError _ = False
 
 fix3Lambdas =

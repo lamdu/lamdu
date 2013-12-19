@@ -65,7 +65,7 @@ instance Eq def => Eq (LoadedDef def) where
   LoadedDef a _ == LoadedDef b _ = a == b
 
 type LoadedBody def = Expr.Body (LoadedDef def)
-type LoadedExpr def = Expr.Expression (LoadedDef def)
+type LoadedExpr def = Expr.Expr (LoadedDef def)
 
 data RefData def = RefData
   { _rdScope :: Scope def

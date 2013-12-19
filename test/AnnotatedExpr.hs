@@ -20,7 +20,7 @@ addAnnotation msg = do
 
 errorMessage ::
   Show def =>
-  AnnotationM (Expr.Expression def [AnnotationIndex]) ->
+  AnnotationM (Expr.Expr def [AnnotationIndex]) ->
   ([String], String)
 errorMessage mkExpr =
   (resultErrs, fullMsg)

@@ -32,7 +32,7 @@ data Builtin = Builtin
 derive makeBinary ''Builtin
 
 data Content expr
-  = ContentExpression expr
+  = ContentExpr expr
   | ContentBuiltin Builtin
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 

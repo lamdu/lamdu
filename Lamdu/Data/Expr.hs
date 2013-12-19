@@ -9,7 +9,7 @@ module Lamdu.Data.Expr
   , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Type, _IntegerType, _Tag, _TagType
   , Body(..), _BodyLam, _BodyApply, _BodyLeaf, _BodyRecord, _BodyGetField
   , BodyExpr
-  , Expression(..), eBody, ePayload
+  , Expr(..), eBody, ePayload
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -89,20 +89,17 @@ data Body def expr
   | BodyLeaf !(Leaf def)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 
-type BodyExpr def a = Body def (Expression def a)
+type BodyExpr def a = Body def (Expr def a)
 
--- TODO: Expression = Cofree, do we want to use that?
-data Expression def a = Expression
-  { _eBody :: Body def (Expression def a)
+data Expr def a = Expr
+  { _eBody :: Body def (Expr def a)
   , _ePayload :: a
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
 
 fmap concat $ mapM Lens.makePrisms [''Kind, ''VariableRef, ''Leaf, ''Body]
-fmap concat $ mapM Lens.makeLenses [''Expression, ''Record, ''GetField, ''Lam, ''Apply]
+fmap concat $ mapM Lens.makeLenses [''Expr, ''Record, ''GetField, ''Lam, ''Apply]
 
 fmap concat . sequence $
   derive
   <$> [makeBinary, makeNFData]
-  <*> [ ''Kind, ''VariableRef, ''Lam, ''Apply, ''Leaf, ''Body, ''Record, ''GetField
-      , ''Expression
-      ]
+  <*> [ ''Kind, ''VariableRef, ''Lam, ''Apply, ''Leaf, ''Body, ''Record, ''GetField, ''Expr ]

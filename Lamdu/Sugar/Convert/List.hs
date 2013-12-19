@@ -131,8 +131,8 @@ getSugaredHeadTail specialFunctions argS = do
 getExprHeadTail ::
   MonadPlus m =>
   Anchors.SpecialFunctions t ->
-  Expr.Expression def a ->
-  m (Expr.Expression def a, Expr.Expression def a)
+  Expr.Expr def a ->
+  m (Expr.Expr def a, Expr.Expr def a)
 getExprHeadTail specialFunctions argI = do
   [(headTagI, headExprI), (tailTagI, tailExprI)] <-
     maybeToMPlus $ argI ^? ExprLens.exprKindedRecordFields KVal

@@ -32,11 +32,11 @@ data NoInferred = NoInferred
 type Inferred m = DerefedTV (DefIM m)
 
 data NoStored = NoStored
-type Stored m = ExprIRef.ExpressionProperty m
+type Stored m = ExprIRef.ExprProperty m
 
 type LoadedExpr m = Load.LoadedExpr (DefIM m)
 
-newtype StorePoint t = StorePoint { unStorePoint :: ExprIRef.ExpressionI t }
+newtype StorePoint t = StorePoint { unStorePoint :: ExprIRef.ExprI t }
   deriving (Eq, Ord, Binary, Typeable)
 
 data InferContext m = InferContext

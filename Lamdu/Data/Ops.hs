@@ -37,9 +37,9 @@ type T = Transaction
 
 setToWrapper ::
   MonadA m =>
-  ExprIRef.ExpressionI (Tag m) ->
-  ExprIRef.ExpressionProperty m ->
-  T m (ExprIRef.ExpressionI (Tag m))
+  ExprIRef.ExprI (Tag m) ->
+  ExprIRef.ExprProperty m ->
+  T m (ExprIRef.ExprI (Tag m))
 setToWrapper wrappedI destP = do
   newFuncI <- newHole
   destI <$ ExprIRef.writeExprBody destI (ExprUtil.makeApply newFuncI wrappedI)
@@ -48,8 +48,8 @@ setToWrapper wrappedI destP = do
 
 wrap ::
   MonadA m =>
-  ExprIRef.ExpressionProperty m ->
-  T m (ExprIRef.ExpressionI (Tag m))
+  ExprIRef.ExprProperty m ->
+  T m (ExprIRef.ExprI (Tag m))
 wrap exprP = do
   newFuncI <- newHole
   applyI <-
@@ -58,22 +58,22 @@ wrap exprP = do
   Property.set exprP applyI
   return applyI
 
-newHole :: MonadA m => T m (ExprIRef.ExpressionI (Tag m))
+newHole :: MonadA m => T m (ExprIRef.ExprI (Tag m))
 newHole = ExprIRef.newExprBody $ Expr.BodyLeaf Expr.Hole
 
 replace ::
   MonadA m =>
-  ExprIRef.ExpressionProperty m ->
-  ExprIRef.ExpressionI (Tag m) ->
-  T m (ExprIRef.ExpressionI (Tag m))
+  ExprIRef.ExprProperty m ->
+  ExprIRef.ExprI (Tag m) ->
+  T m (ExprIRef.ExprI (Tag m))
 replace exprP newExprI = do
   Property.set exprP newExprI
   return newExprI
 
-replaceWithHole :: MonadA m => ExprIRef.ExpressionProperty m -> T m (ExprIRef.ExpressionI (Tag m))
+replaceWithHole :: MonadA m => ExprIRef.ExprProperty m -> T m (ExprIRef.ExprI (Tag m))
 replaceWithHole exprP = replace exprP =<< newHole
 
-setToHole :: MonadA m => ExprIRef.ExpressionProperty m -> T m (ExprIRef.ExpressionI (Tag m))
+setToHole :: MonadA m => ExprIRef.ExprProperty m -> T m (ExprIRef.ExprI (Tag m))
 setToHole exprP =
   exprI <$ ExprIRef.writeExprBody exprI hole
   where
@@ -82,8 +82,8 @@ setToHole exprP =
 
 lambdaWrap
   :: MonadA m
-  => ExprIRef.ExpressionProperty m
-  -> T m (Guid, ExprIRef.ExpressionI (Tag m))
+  => ExprIRef.ExprProperty m
+  -> T m (Guid, ExprIRef.ExprI (Tag m))
 lambdaWrap exprP = do
   newParamTypeI <- newHole
   (newParam, newExprI) <-
@@ -93,8 +93,8 @@ lambdaWrap exprP = do
 
 redexWrap
   :: MonadA m
-  => ExprIRef.ExpressionProperty m
-  -> T m (Guid, ExprIRef.ExpressionI (Tag m))
+  => ExprIRef.ExprProperty m
+  -> T m (Guid, ExprIRef.ExprI (Tag m))
 redexWrap exprP = do
   newParamTypeI <- newHole
   (newParam, newLambdaI) <-
@@ -108,8 +108,8 @@ redexWrap exprP = do
 addListItem ::
   MonadA m =>
   Anchors.SpecialFunctions (Tag m) ->
-  ExprIRef.ExpressionProperty m ->
-  T m (ExprIRef.ExpressionI (Tag m), ExprIRef.ExpressionI (Tag m))
+  ExprIRef.ExprProperty m ->
+  T m (ExprIRef.ExprI (Tag m), ExprIRef.ExprI (Tag m))
 addListItem specialFunctions exprP = do
   consTempI <-
     ExprIRef.newExprBody $ ExprLens.bodyDefinitionRef # Anchors.sfCons specialFunctions
@@ -157,7 +157,7 @@ presentationModeOfName x
 
 newDefinition ::
   MonadA m => String -> PresentationMode ->
-  Definition.Body (ExprIRef.ExpressionIM m) -> T m (DefIM m)
+  Definition.Body (ExprIRef.ExprIM m) -> T m (DefIM m)
 newDefinition name presentationMode defBody = do
   res <- Transaction.newIRef defBody
   let guid = IRef.guid res
@@ -170,17 +170,17 @@ newPublicDefinition ::
 newPublicDefinition codeProps name = do
   defI <-
     newDefinition name (presentationModeOfName name) =<<
-    (Definition.Body . Definition.ContentExpression <$> newHole <*> newHole)
+    (Definition.Body . Definition.ContentExpr <$> newHole <*> newHole)
   modP (Anchors.globals codeProps) (defI :)
   return defI
 
 newClipboard ::
   MonadA m => Anchors.CodeProps m ->
-  ExprIRef.ExpressionI (Tag m) ->
+  ExprIRef.ExprI (Tag m) ->
   T m (DefIM m)
 newClipboard codeProps expr = do
   len <- length <$> getP (Anchors.clipboards codeProps)
-  def <- Definition.Body (Definition.ContentExpression expr) <$> newHole
+  def <- Definition.Body (Definition.ContentExpr expr) <$> newHole
   defI <- newDefinition ("clipboard" ++ show len) OO def
   modP (Anchors.clipboards codeProps) (defI:)
   return defI

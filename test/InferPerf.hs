@@ -8,7 +8,7 @@ import InferWrappers
 import qualified Data.ByteString as SBS
 import qualified Lamdu.Data.Expr as Expr
 
-inferAndEncode :: Expr.Expression Def a -> Int -> Int
+inferAndEncode :: Expr.Expr Def a -> Int -> Int
 inferAndEncode expr par =
   SBS.length $ encodeS result
   where

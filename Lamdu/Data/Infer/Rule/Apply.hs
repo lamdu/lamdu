@@ -121,7 +121,7 @@ makePiResultCopy ::
   RuleMonad.RM (Rule.Apply def) def ()
 makePiResultCopy ruleRef srcRef (Rule.ExprLink destRef destAncestors)
   | destAncestors ^. Lens.contains srcRef =
-    RuleMonad.liftInfer . InferM.error $ InferM.InfiniteExpression srcRef
+    RuleMonad.liftInfer . InferM.error $ InferM.InfiniteExpr srcRef
   | otherwise = do
   srcBody <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. RefData.rdBody) <$> UFData.read srcRef
   destScope <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. RefData.rdScope) <$> UFData.read destRef

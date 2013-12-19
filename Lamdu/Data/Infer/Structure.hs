@@ -20,7 +20,7 @@ import qualified Lamdu.Data.Infer.RefData as RefData
 
 add ::
   (Show def, Ord def) =>
-  Expr.Expression (Load.LoadedDef def) (TypedValue def, a) ->
+  Expr.Expr (Load.LoadedDef def) (TypedValue def, a) ->
   StateT (Context def) (Either (Deref.Error def)) ()
 add = Lens.traverseOf_ (ExprLens.holePayloads . Lens._1) %%~ addToHole
 

@@ -73,23 +73,23 @@ iType = Expr.ePayload . ipTyp
 
 tag :: Guid -> InputExpr
 tag guid =
-  Expr.Expression (ExprLens.bodyTag # guid) (InputPayload (pureTag guid) pureTagType Same)
+  Expr.Expr (ExprLens.bodyTag # guid) (InputPayload (pureTag guid) pureTagType Same)
 
 set :: InputExpr
 set =
-  Expr.Expression (ExprLens.bodyType # ()) (InputPayload pureType pureType Same)
+  Expr.Expr (ExprLens.bodyType # ()) (InputPayload pureType pureType Same)
 
 tagType :: InputExpr
 tagType =
-  Expr.Expression (ExprLens.bodyTagType # ()) (InputPayload pureTagType pureType Same)
+  Expr.Expr (ExprLens.bodyTagType # ()) (InputPayload pureTagType pureType Same)
 
 integerType :: InputExpr
 integerType =
-  Expr.Expression (ExprLens.bodyIntegerType # ()) (InputPayload pureIntegerType pureType Same)
+  Expr.Expr (ExprLens.bodyIntegerType # ()) (InputPayload pureIntegerType pureType Same)
 
 getDef :: String -> InputExpr
 getDef name =
-  Expr.Expression (ExprLens.bodyDefinitionRef # Def name)
+  Expr.Expr (ExprLens.bodyDefinitionRef # Def name)
   InputPayload
   { _ipVal = ExprLens.pureExpr . ExprLens.bodyDefinitionRef # Def name
   , _ipTyp = void (definitionTypes ! Def name)
@@ -97,7 +97,7 @@ getDef name =
   }
 
 hole :: InputExpr
-hole = Expr.Expression (ExprLens.bodyHole # ()) (InputPayload pureHole pureHole Same)
+hole = Expr.Expr (ExprLens.bodyHole # ()) (InputPayload pureHole pureHole Same)
 
 getRecursiveDef :: Expr ()
 getRecursiveDef =
@@ -105,7 +105,7 @@ getRecursiveDef =
 
 literalInteger :: Integer -> InputExpr
 literalInteger x =
-  Expr.Expression (ExprLens.bodyLiteralInteger # x)
+  Expr.Expr (ExprLens.bodyLiteralInteger # x)
   (InputPayload (pureLiteralInteger x) pureIntegerType Same)
 
 -- R represents a cross-section of the whole expression with a new
@@ -118,16 +118,16 @@ instance Applicative R where
   R f <*> R x = R $ (liftA2 . liftA2) ($) f x
 
 nextResumption :: InputExpr -> (Monoid.Any, InputExpr)
-nextResumption expr@(Expr.Expression body (InputPayload _ _ r)) =
+nextResumption expr@(Expr.Expr body (InputPayload _ _ r)) =
   case r of
   Same ->
     (Monoid.Any False, expr)
   ResumeWith newExpr ->
     (Monoid.Any True, newExpr)
   ResumeOnSide _ ipl  ->
-    (Monoid.Any True, Expr.Expression body ipl)
+    (Monoid.Any True, Expr.Expr body ipl)
   NewInferred ipl ->
-    (Monoid.Any True, Expr.Expression body ipl)
+    (Monoid.Any True, Expr.Expr body ipl)
 
 resumptions :: InputExpr -> R InputExpr
 resumptions expr = R . ZipList $ iterate (nextResumption . snd) (Monoid.Any True, expr)
@@ -143,7 +143,7 @@ makeResumption [] = error "makeResumption called with finite list"
 
 runR :: R (Expr.Body Def InputExpr, Expr (), Expr ()) -> InputExpr
 runR (R (ZipList ~((_, (body, firstVal, firstTyp)):nexts))) =
-  Expr.Expression body . InputPayload firstVal firstTyp .
+  Expr.Expr body . InputPayload firstVal firstTyp .
   makeResumption $ nexts <&> Lens._2 %~ valTyp
   where
     valTyp (_body, val, typ) = (val, typ)

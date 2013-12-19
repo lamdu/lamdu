@@ -32,7 +32,7 @@ import qualified Lamdu.Data.Infer.Context as Context
 data Error def
   = VarEscapesScope Guid
   | VarNotInScope
-  | InfiniteExpression (ExprRef def)
+  | InfiniteExpr (ExprRef def)
   | CompositeTag (ExprRef def)
   | GetMissingField
   | GetFieldRequiresRecord

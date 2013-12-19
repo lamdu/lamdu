@@ -48,7 +48,7 @@ module Lamdu.Sugar.Types
   , HoleInferred(..), hiBaseValue, hiWithVarsValue, hiType, hiMakeConverted
   , Hole(..)
     , holeMActions, holeMArg, holeMInferred
-  , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
+  , HoleResultSeed(..), _ResultSeedExpr, _ResultSeedNewTag, _ResultSeedNewDefinition
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
   , HoleActions(..)
@@ -202,12 +202,12 @@ data HoleResult name m a = HoleResult
   } deriving (Functor, Foldable, Traversable)
 
 data HoleResultSeed m a
-  = ResultSeedExpression (ExprIRef.ExpressionM m a)
+  = ResultSeedExpr (ExprIRef.ExprM m a)
   | ResultSeedNewTag String
   | ResultSeedNewDefinition String
   deriving (Functor, Foldable, Traversable)
 
-type ScopeItem m a = (a, ExprIRef.ExpressionM m ())
+type ScopeItem m a = (a, ExprIRef.ExprM m ())
 
 data Scope name m = Scope
   { _scopeLocals    :: [ScopeItem m (GetVar name m)]
@@ -224,7 +224,7 @@ data HoleActions name m = HoleActions
     -- (used by HoleEdit to suggest variations based on type)
     _holeInferExprType ::
       -- TODO: Just return   LoadedExpr (DerefedSTV def, a)  ?
-      ExprIRef.ExpressionM m () -> CT m (Maybe (LoadedExpr m ()))
+      ExprIRef.ExprM m () -> CT m (Maybe (LoadedExpr m ()))
   , holeResult ::
       forall a.
       (Binary a, Typeable a, Ord a, Monoid a) =>

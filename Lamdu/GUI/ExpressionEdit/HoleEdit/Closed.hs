@@ -148,7 +148,7 @@ makeInferred inferred pl myId = do
       )
   where
     fullyInferred =
-      Lens.nullOf (Lens.folding ExprUtil.subExpressions . ExprLens.exprHole) $
+      Lens.nullOf (Lens.folding ExprUtil.subExprs . ExprLens.exprHole) $
       inferred ^. Sugar.hiWithVarsValue
     -- gen needs to be compatible with the one from Sugar.Convert.Hole
     -- for the hole results, for smooth animation between inferred

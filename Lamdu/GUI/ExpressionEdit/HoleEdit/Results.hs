@@ -29,7 +29,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.Config (Config)
-import Lamdu.Data.Expr (Expression(..))
+import Lamdu.Data.Expr (Expr(..))
 import Lamdu.Data.Expr.IRef (DefIM)
 import Lamdu.Data.Expr.Utils (ApplyFormAnnotation(..), pureHole)
 import Lamdu.Data.Infer.Deref (DerefedTV)
@@ -67,7 +67,7 @@ data SearchTerms = SearchTerms
 data Group def = Group
   { _groupId :: String
   , _groupSearchTerms :: SearchTerms
-  , _groupBaseExpr :: Expression def ()
+  , _groupBaseExpr :: Expr def ()
   }
 type GroupM m = Group (DefIM m)
 
@@ -100,18 +100,18 @@ data ResultsList m = ResultsList
   }
 Lens.makeLenses ''ResultsList
 
-getVarsToGroup :: (Sugar.GetVar Sugar.Name m, Expression def ()) -> Group def
+getVarsToGroup :: (Sugar.GetVar Sugar.Name m, Expr def ()) -> Group def
 getVarsToGroup (getVar, expr) = sugarNameToGroup (getVar ^. Sugar.gvName) expr
 
-tagsToGroup :: (Sugar.TagG Sugar.Name, Expression def ()) -> Group def
+tagsToGroup :: (Sugar.TagG Sugar.Name, Expr def ()) -> Group def
 tagsToGroup (tagG, expr) = sugarNameToGroup (tagG ^. Sugar.tagName) expr
 
-getParamsToGroup :: (Sugar.GetParams Sugar.Name m, Expression def ()) -> Group def
+getParamsToGroup :: (Sugar.GetParams Sugar.Name m, Expr def ()) -> Group def
 getParamsToGroup (getParams, expr) =
   sugarNameToGroup (getParams ^. Sugar.gpDefName) expr
   & groupSearchTerms <>~ SearchTerms ["params"] (Any True)
 
-sugarNameToGroup :: Sugar.Name -> Expression def () -> Group def
+sugarNameToGroup :: Sugar.Name -> Expr def () -> Group def
 sugarNameToGroup (Sugar.Name _ collision varName) expr = Group
   { _groupId = "Var" ++ varName ++ ":" ++ concat collisionStrs
   , _groupSearchTerms = SearchTerms (varName : collisionStrs) (Any True)
@@ -141,9 +141,9 @@ typeCheckHoleResult holeInfo mkGen seed = do
   mGood <- mkHoleResult seed
   case (mGood, seed) of
     (Just good, _) -> pure $ Just (GoodResult, good)
-    (Nothing, Sugar.ResultSeedExpression expr) ->
+    (Nothing, Sugar.ResultSeedExpr expr) ->
       fmap ((,) BadResult) <$>
-      (mkHoleResult . Sugar.ResultSeedExpression . storePointHoleWrap) expr
+      (mkHoleResult . Sugar.ResultSeedExpr . storePointHoleWrap) expr
     _ -> pure Nothing
   where
     mkHoleResult = Sugar.holeResult (hiActions holeInfo) mkGen
@@ -198,8 +198,8 @@ typeCheckToResultsList holeInfo mkGen resultInfo baseId options =
   typeCheckResults holeInfo mkGen options
 
 baseExprWithApplyForms ::
-  MonadA m => HoleInfo m -> ExprIRef.ExpressionM m () ->
-  CT m [ExprIRef.ExpressionM m ApplyFormAnnotation]
+  MonadA m => HoleInfo m -> ExprIRef.ExprM m () ->
+  CT m [ExprIRef.ExprM m ApplyFormAnnotation]
 baseExprWithApplyForms holeInfo baseExpr =
   maybe [] applyForms <$>
   (hiActions holeInfo ^. Sugar.holeInferExprType) baseExpr
@@ -210,20 +210,20 @@ baseExprWithApplyForms holeInfo baseExpr =
 storePointExpr ::
   Monoid a =>
   Expr.BodyExpr def (Sugar.MStorePoint m a) ->
-  Expr.Expression def (Sugar.MStorePoint m a)
-storePointExpr = (`Expression` (Nothing, mempty))
+  Expr.Expr def (Sugar.MStorePoint m a)
+storePointExpr = (`Expr` (Nothing, mempty))
 
-storePointHole :: Monoid a => Expr.Expression def (Sugar.MStorePoint m a)
+storePointHole :: Monoid a => Expr.Expr def (Sugar.MStorePoint m a)
 storePointHole = storePointExpr $ ExprLens.bodyHole # ()
 
 storePointHoleWrap ::
   Monoid a =>
-  Expr.Expression def (Sugar.MStorePoint m a) ->
-  Expr.Expression def (Sugar.MStorePoint m a)
+  Expr.Expr def (Sugar.MStorePoint m a) ->
+  Expr.Expr def (Sugar.MStorePoint m a)
 storePointHoleWrap expr =
   storePointExpr $ ExprUtil.makeApply storePointHole expr
 
-removeWrappers :: Expression def a -> Maybe (Expression def a)
+removeWrappers :: Expr def a -> Maybe (Expr def a)
 removeWrappers expr
   | Lens.has wrappers expr =
     expr
@@ -231,7 +231,7 @@ removeWrappers expr
     & Just
   | otherwise = Nothing
   where
-    wrappers :: Lens.Traversal' (Expression def a) (Expression def a)
+    wrappers :: Lens.Traversal' (Expr def a) (Expr def a)
     wrappers =
       (ExprLens.subTreesThat . Lens.has)
       (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole)
@@ -239,12 +239,12 @@ removeWrappers expr
 injectIntoHoles ::
   MonadA m =>
   HoleInfo m ->
-  ExprIRef.ExpressionM m (Sugar.MStorePoint m a) ->
-  ExprIRef.ExpressionM m (ApplyFormAnnotation, a) ->
-  CT m [ExprIRef.ExpressionM m (Sugar.MStorePoint m a)]
+  ExprIRef.ExprM m (Sugar.MStorePoint m a) ->
+  ExprIRef.ExprM m (ApplyFormAnnotation, a) ->
+  CT m [ExprIRef.ExprM m (Sugar.MStorePoint m a)]
 injectIntoHoles holeInfo arg =
   fmap catMaybes . mapM injectArg . injectArgPositions .
-  ExprUtil.addExpressionContexts (Lens._1 .~ Nothing) .
+  ExprUtil.addExprContexts (Lens._1 .~ Nothing) .
   Lens.Context id
   where
     typeCheckOnSide expr =
@@ -263,12 +263,12 @@ injectIntoHoles holeInfo arg =
       map (^. contextSetter) .
       sortOn (^. contextVal . Lens._1 . Lens.to toOrd) .
       map (^. Expr.ePayload) . filter condition .
-      ExprUtil.subExpressions
+      ExprUtil.subExprs
 
 maybeInjectArgumentExpr ::
   MonadA m => HoleInfo m ->
-  [ExprIRef.ExpressionM m ApplyFormAnnotation] ->
-  CT m [ExprIRef.ExpressionM m (Sugar.MStorePoint m SugarExprPl)]
+  [ExprIRef.ExprM m ApplyFormAnnotation] ->
+  CT m [ExprIRef.ExprM m (Sugar.MStorePoint m SugarExprPl)]
 maybeInjectArgumentExpr holeInfo =
   case hiMArgument holeInfo of
   Nothing -> return . map ((Nothing, mempty) <$)
@@ -299,7 +299,7 @@ makeResultsList ::
 makeResultsList holeInfo resultInfo group =
   (Lens.mapped . Lens.mapped %~ rlPreferred .~ toPreferred) .
   typeCheckToResultsList holeInfo mkGen resultInfo baseId .
-  map Sugar.ResultSeedExpression . filter (not . isHoleWrap) =<<
+  map Sugar.ResultSeedExpr . filter (not . isHoleWrap) =<<
   maybeInjectArgumentExpr holeInfo =<<
   baseExprWithApplyForms holeInfo baseExpr
   where
@@ -439,14 +439,14 @@ primitiveGroups holeInfo =
   where
     searchTerm = hiSearchTerm holeInfo
     record k =
-      ExprUtil.pureExpression . Expr.BodyRecord . Expr.Record k $
+      ExprUtil.pureExpr . Expr.BodyRecord . Expr.Record k $
       case hiMArgument holeInfo of
       Nothing -> []
       Just _ -> [(pureHole, pureHole)]
     mkGroupBody highPrecedence gId terms body = Group
       { _groupId = gId
       , _groupSearchTerms = SearchTerms terms (Any highPrecedence)
-      , _groupBaseExpr = ExprUtil.pureExpression body
+      , _groupBaseExpr = ExprUtil.pureExpr body
       }
 
 preferFor :: String -> SearchTerms -> Bool

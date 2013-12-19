@@ -13,7 +13,7 @@ module Lamdu.Data.Expr.Utils
   , pureTag
   , pureTagType
   , pureType
-  , pureExpression
+  , pureExpr
   , randomizeExpr
   , randomizeParamIds
   , randomizeParamIdsG
@@ -21,8 +21,8 @@ module Lamdu.Data.Expr.Utils
   , NameGen(..), onNgMakeName
   , randomNameGen, debugNameGen
   , matchBody, matchBodyDeprecated
-  , matchExpression, matchExpressionG
-  , subExpressions, subExpressionsWithout
+  , matchExpr, matchExprG
+  , subExprs, subExprsWithout
   , isDependentPi, exprHasGetVar
   , curriedFuncArguments
   , ApplyFormAnnotation(..), applyForms
@@ -31,7 +31,7 @@ module Lamdu.Data.Expr.Utils
   , subst, substGetPar
   , showBodyExpr, showsPrecBodyExpr
   , isTypeConstructorType
-  , addExpressionContexts
+  , addExprContexts
   , addBodyContexts
   , PiWrappers(..), piWrappersDepParams, piWrappersMIndepParam, piWrappersResultType
   , getPiWrappers
@@ -67,9 +67,9 @@ import qualified Lamdu.Data.Expr.Lens as ExprLens
 import qualified System.Random as Random
 
 data PiWrappers def a = PiWrappers
-  { _piWrappersDepParams :: [(Guid, Expression def a)]
-  , _piWrappersMIndepParam :: Maybe (Guid, Expression def a)
-  , _piWrappersResultType :: Expression def a
+  { _piWrappersDepParams :: [(Guid, Expr def a)]
+  , _piWrappersMIndepParam :: Maybe (Guid, Expr def a)
+  , _piWrappersResultType :: Expr def a
   }
 Lens.makeLenses ''PiWrappers
 
@@ -100,7 +100,7 @@ onNgMakeName onMakeName =
             & Lens.both %~ go
           }
 
-getPiWrappers :: Expression def a -> PiWrappers def a
+getPiWrappers :: Expr def a -> PiWrappers def a
 getPiWrappers expr =
   case expr ^? ExprLens.exprLam of
   Just (Lam KType param paramType resultType)
@@ -116,17 +116,17 @@ getPiWrappers expr =
       p = (param, paramType)
   _ -> PiWrappers [] Nothing expr
 
-couldEq :: Eq def => Expression def a -> Expression def a -> Bool
+couldEq :: Eq def => Expr def a -> Expr def a -> Bool
 couldEq x y =
-  isJust $ matchExpression (const . Just) onMismatch x y
+  isJust $ matchExpr (const . Just) onMismatch x y
   where
-    onMismatch (Expression (BodyLeaf Hole) _) e = Just e
-    onMismatch e (Expression (BodyLeaf Hole) _) = Just e
+    onMismatch (Expr (BodyLeaf Hole) _) e = Just e
+    onMismatch e (Expr (BodyLeaf Hole) _) = Just e
     onMismatch _ _ = Nothing
 
-alphaEq :: Eq def => Expression def a -> Expression def a -> Bool
+alphaEq :: Eq def => Expr def a -> Expr def a -> Bool
 alphaEq x y =
-  isJust $ matchExpression
+  isJust $ matchExpr
   ((const . const . Just) ())
   ((const . const) Nothing)
   x y
@@ -134,22 +134,22 @@ alphaEq x y =
 -- Useful functions:
 substGetPar ::
   Guid ->
-  Expression def a ->
-  Expression def a ->
-  Expression def a
+  Expr def a ->
+  Expr def a ->
+  Expr def a
 substGetPar from =
   subst (ExprLens.exprParameterRef . Lens.filtered (== from))
 
 subst ::
-  Lens.Getting Any (Expression def a) b ->
-  Expression def a ->
-  Expression def a ->
-  Expression def a
+  Lens.Getting Any (Expr def a) b ->
+  Expr def a ->
+  Expr def a ->
+  Expr def a
 subst lens to expr
   | Lens.has lens expr = to
   | otherwise = expr & eBody . traverse %~ subst lens to
 
-recordValForm :: Expression a () -> Maybe (Expression b ())
+recordValForm :: Expr a () -> Maybe (Expr b ())
 recordValForm paramType =
   paramType ^? ExprLens.exprKindedRecordFields KType
   >>= replaceFieldTypesWithHoles
@@ -168,15 +168,15 @@ data ApplyFormAnnotation =
   Untouched | DependentParamAdded | IndependentParamAdded
   deriving Eq
 
-addApply :: ann -> Expression a ann -> Expression b () -> Expression a ann
+addApply :: ann -> Expr a ann -> Expr b () -> Expr a ann
 addApply ann func paramType =
-  Expression (makeApply func arg) ann
+  Expr (makeApply func arg) ann
   where
     arg = ann <$ fromMaybe pureHole (recordValForm paramType)
 
 -- Transform expression to expression applied with holes,
 -- with all different sensible levels of currying.
-applyForms :: Expression a () -> Expression b () -> [Expression b ApplyFormAnnotation]
+applyForms :: Expr a () -> Expr b () -> [Expr b ApplyFormAnnotation]
 applyForms exprType rawExpr
   | Lens.has (ExprLens.exprLam . lamKind . _KVal) expr = [expr]
   | otherwise = reverse withAllAppliesAdded
@@ -199,8 +199,8 @@ applyForms exprType rawExpr
       } = getPiWrappers exprType
 
 structureForType ::
-  Expression def () ->
-  Expression def ()
+  Expr def () ->
+  Expr def ()
 structureForType =
   (eBody %~) $
   const (ExprLens.bodyHole # ())
@@ -209,17 +209,17 @@ structureForType =
   & Lens.outside (ExprLens.bodyKindedLam KType) .~
     (ExprLens.bodyKindedLam KVal # ) . (Lens._3 %~ structureForType)
 
-randomizeExprAndParams :: (RandomGen gen, Random r) => gen -> Expression def (r -> a) -> Expression def a
+randomizeExprAndParams :: (RandomGen gen, Random r) => gen -> Expr def (r -> a) -> Expr def a
 randomizeExprAndParams gen = randomizeParamIds paramGen . randomizeExpr exprGen
   where
     (exprGen, paramGen) = Random.split gen
 
-randomizeExpr :: (RandomGen gen, Random r) => gen -> Expression def (r -> a) -> Expression def a
-randomizeExpr gen (Expression body pl) =
+randomizeExpr :: (RandomGen gen, Random r) => gen -> Expr def (r -> a) -> Expr def a
+randomizeExpr gen (Expr body pl) =
   (`evalState` gen) $ do
     r <- state random
     newBody <- body & traverse %%~ randomizeSubexpr
-    return . Expression newBody $ pl r
+    return . Expr newBody $ pl r
   where
     randomizeSubexpr subExpr = do
       localGen <- state Random.split
@@ -242,21 +242,21 @@ debugNameGen = ng names ""
       , ngMakeName = const . const $ (Guid.fromString (l++suffix), ng ls suffix)
       }
 
-randomizeParamIds :: RandomGen g => g -> Expression def a -> Expression def a
+randomizeParamIds :: RandomGen g => g -> Expr def a -> Expr def a
 randomizeParamIds gen = randomizeParamIdsG id (randomNameGen gen) Map.empty $ \_ _ a -> a
 
 randomizeParamIdsG ::
   (a -> n) ->
   NameGen n -> Map Guid Guid ->
   (NameGen n -> Map Guid Guid -> a -> b) ->
-  Expression def a -> Expression def b
+  Expr def a -> Expr def b
 randomizeParamIdsG preNG gen initMap convertPL =
   (`evalState` gen) . (`runReaderT` initMap) . go
   where
-    go (Expression v s) = do
+    go (Expr v s) = do
       guidMap <- Reader.ask
       newGen <- lift $ state ngSplit
-      (`Expression` convertPL newGen guidMap s) <$>
+      (`Expr` convertPL newGen guidMap s) <$>
         case v of
         BodyLam (Lam k oldParamId paramType body) -> do
           newParamId <- lift . state $ makeName oldParamId s
@@ -332,103 +332,103 @@ matchBodyDeprecated matchLamResult matchOther matchGetPar body0 body1 =
 
 -- The returned expression gets the same guids as the left
 -- expression
-{-# INLINE matchExpression #-}
-matchExpression ::
+{-# INLINE matchExpr #-}
+matchExpr ::
   (Eq def, Applicative f) =>
   (a -> b -> f c) ->
-  (Expression def a -> Expression def b -> f (Expression def c)) ->
-  Expression def a -> Expression def b -> f (Expression def c)
-matchExpression = matchExpressionG . const . const $ pure ()
+  (Expr def a -> Expr def b -> f (Expr def c)) ->
+  Expr def a -> Expr def b -> f (Expr def c)
+matchExpr = matchExprG . const . const $ pure ()
 
-{-# INLINE matchExpressionG #-}
-matchExpressionG ::
+{-# INLINE matchExprG #-}
+matchExprG ::
   (Eq def, Applicative f) =>
   (Guid -> Guid -> f ()) -> -- ^ Left expr guid overrides right expr guid
   (a -> b -> f c) ->
-  (Expression def a -> Expression def b -> f (Expression def c)) ->
-  Expression def a -> Expression def b -> f (Expression def c)
-matchExpressionG overrideGuids onMatch onMismatch =
+  (Expr def a -> Expr def b -> f (Expr def c)) ->
+  Expr def a -> Expr def b -> f (Expr def c)
+matchExprG overrideGuids onMatch onMismatch =
   go Map.empty
   where
-    go scope e0@(Expression body0 pl0) e1@(Expression body1 pl1) =
+    go scope e0@(Expr body0 pl0) e1@(Expr body1 pl1) =
       case matchBodyDeprecated matchLamResult matchOther matchGetPar body0 body1 of
       Nothing ->
         onMismatch e0 $
         (ExprLens.exprLeaves . ExprLens.parameterRef %~ lookupGuid) e1
-      Just bodyMatched -> Expression <$> sequenceA bodyMatched <*> onMatch pl0 pl1
+      Just bodyMatched -> Expr <$> sequenceA bodyMatched <*> onMatch pl0 pl1
       where
         matchGetPar p0 p1 = p0 == lookupGuid p1
         matchLamResult p0 p1 r0 r1 = (p0, overrideGuids p0 p1 *> go (Map.insert p1 p0 scope) r0 r1)
         matchOther = go scope
         lookupGuid guid = fromMaybe guid $ Map.lookup guid scope
 
-subExpressions :: Expression def a -> [Expression def a]
-subExpressions x =
-  x : Foldable.concatMap subExpressions (x ^. eBody)
+subExprs :: Expr def a -> [Expr def a]
+subExprs x =
+  x : Foldable.concatMap subExprs (x ^. eBody)
 
-subExpressionsWithout ::
-  Lens.Traversal' (Expression def (Bool, a)) (Expression def (Bool, a)) ->
-  Expression def a -> [Expression def a]
-subExpressionsWithout group =
+subExprsWithout ::
+  Lens.Traversal' (Expr def (Bool, a)) (Expr def (Bool, a)) ->
+  Expr def a -> [Expr def a]
+subExprsWithout group =
   map (fmap snd) .
   filter (fst . (^. ePayload)) .
-  subExpressions .
+  subExprs .
   (group . ePayload . Lens._1 .~ False) .
   fmap ((,) True)
 
-isDependentPi :: Expression def a -> Bool
+isDependentPi :: Expr def a -> Bool
 isDependentPi =
   Lens.has (ExprLens.exprKindedLam KType . Lens.filtered f)
   where
     f (g, _, resultType) = exprHasGetVar g resultType
 
-parameterRefs :: Lens.Fold (Expression def a) Guid
-parameterRefs = Lens.folding subExpressions . ExprLens.exprParameterRef
+parameterRefs :: Lens.Fold (Expr def a) Guid
+parameterRefs = Lens.folding subExprs . ExprLens.exprParameterRef
 
-exprHasGetVar :: Guid -> Expression def a -> Bool
+exprHasGetVar :: Guid -> Expr def a -> Bool
 exprHasGetVar g = Lens.anyOf parameterRefs (== g)
 
-curriedFuncArguments :: Expression def a -> [Expression def a]
+curriedFuncArguments :: Expr def a -> [Expr def a]
 curriedFuncArguments =
   (^.. ExprLens.exprLam . ExprLens.kindedLam KVal . Lens.folding f)
   where
     f (_, paramType, body) = paramType : curriedFuncArguments body
 
-pureIntegerType :: Expression def ()
+pureIntegerType :: Expr def ()
 pureIntegerType = ExprLens.pureExpr . ExprLens.bodyIntegerType # ()
 
-pureTagType :: Expression def ()
+pureTagType :: Expr def ()
 pureTagType = ExprLens.pureExpr . ExprLens.bodyTagType # ()
 
-pureType :: Expression def ()
+pureType :: Expr def ()
 pureType = ExprLens.pureExpr . ExprLens.bodyType # ()
 
-pureTag :: Guid -> Expression def ()
+pureTag :: Guid -> Expr def ()
 pureTag = (ExprLens.pureExpr . ExprLens.bodyTag # )
 
-pureLiteralInteger :: Integer -> Expression def ()
+pureLiteralInteger :: Integer -> Expr def ()
 pureLiteralInteger = (ExprLens.pureExpr . ExprLens.bodyLiteralInteger # )
 
-pureApply :: Expression def () -> Expression def () -> Expression def ()
+pureApply :: Expr def () -> Expr def () -> Expr def ()
 pureApply f x = ExprLens.pureExpr . _BodyApply # Apply f x
 
-pureHole :: Expression def ()
+pureHole :: Expr def ()
 pureHole = ExprLens.pureExpr . ExprLens.bodyHole # ()
 
-pureRecord :: Kind -> [(Expression def (), Expression def ())] -> Expression def ()
+pureRecord :: Kind -> [(Expr def (), Expr def ())] -> Expr def ()
 pureRecord k fields = ExprLens.pureExpr . ExprLens.bodyKindedRecordFields k # fields
 
-pureLam :: Kind -> Guid -> Expression def () -> Expression def () -> Expression def ()
+pureLam :: Kind -> Guid -> Expr def () -> Expr def () -> Expr def ()
 pureLam k paramGuid paramType result =
   ExprLens.pureExpr . ExprLens.bodyKindedLam k # (paramGuid, paramType, result)
 
-pureGetField :: Expression def () -> Expression def () -> Expression def ()
+pureGetField :: Expr def () -> Expr def () -> Expr def ()
 pureGetField record field =
   ExprLens.pureExpr . _BodyGetField # GetField record field
 
 -- TODO: Deprecate below here:
-pureExpression :: Body def (Expression def ()) -> Expression def ()
-pureExpression = (ExprLens.pureExpr # )
+pureExpr :: Body def (Expr def ()) -> Expr def ()
+pureExpr = (ExprLens.pureExpr # )
 
 makeApply :: expr -> expr -> Body def expr
 makeApply func arg = BodyApply $ Apply func arg
@@ -444,7 +444,7 @@ makePi = makeLam KType
 makeLambda :: Guid -> expr -> expr -> Body def expr
 makeLambda = makeLam KVal
 
-isTypeConstructorType :: Expression def a -> Bool
+isTypeConstructorType :: Expr def a -> Bool
 isTypeConstructorType expr =
   case expr ^. eBody of
   BodyLeaf Type -> True
@@ -503,8 +503,8 @@ instance (Show def, Show expr) => Show (Body def expr) where
       -- We are polymorphic on any expr, so we cannot tell...
       mayDepend _ _ = True
 
-instance (Show def, Show a) => Show (Expression def a) where
-  showsPrec prec (Expression body payload) =
+instance (Show def, Show a) => Show (Expr def a) where
+  showsPrec prec (Expr body payload) =
     showsPrecBodyExpr bodyPrec body .
     showString showPayload
     where
@@ -549,15 +549,15 @@ addBodyContexts tob (Context intoContainer body) =
   where
     afterSetter = Lens.mapped . Lens.mapped
 
-addExpressionContexts ::
+addExprContexts ::
   (a -> b) ->
-  Context (Expression def a) (Expression def b) container ->
-  Expression def (Context a (Expression def b) container)
-addExpressionContexts atob (Context intoContainer (Expression body a)) =
-  Expression newBody (Context intoContainer a)
+  Context (Expr def a) (Expr def b) container ->
+  Expr def (Context a (Expr def b) container)
+addExprContexts atob (Context intoContainer (Expr body a)) =
+  Expr newBody (Context intoContainer a)
   where
     newBody =
-      addExpressionContexts atob <$>
+      addExprContexts atob <$>
       addBodyContexts (fmap atob) bodyPtr
     bodyPtr =
-      Context (intoContainer . (`Expression` atob a)) body
+      Context (intoContainer . (`Expr` atob a)) body

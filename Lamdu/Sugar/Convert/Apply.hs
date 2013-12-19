@@ -184,8 +184,8 @@ typeCheckIdentityAt point = do
 
 unwrap ::
   MonadA m =>
-  ExprIRef.ExpressionProperty m ->
-  ExprIRef.ExpressionProperty m ->
+  ExprIRef.ExprProperty m ->
+  ExprIRef.ExprProperty m ->
   InputExpr def stored ->
   T m Guid
 unwrap outerP argP argExpr = do

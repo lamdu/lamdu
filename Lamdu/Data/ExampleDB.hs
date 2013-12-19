@@ -238,7 +238,7 @@ createBuiltins augmentTagGuids =
     endo = join mkPi
     set = ExprIRef.newExprBody $ ExprLens.bodyType # ()
     integer = ExprIRef.newExprBody $ Expr.BodyLeaf Expr.IntegerType
-    forAll name f = fmap ExprIRef.ExpressionI . fixIRef $ \aI -> do
+    forAll name f = fmap ExprIRef.ExprI . fixIRef $ \aI -> do
       let aGuid = IRef.guid aI
       setP (Db.assocNameRef aGuid) name
       s <- set

@@ -90,7 +90,7 @@ mkPaste exprP = do
       let
         clip =
           case clipDef of
-          Definition.Body (Definition.ContentExpression defExpr) _ -> defExpr
+          Definition.Body (Definition.ContentExpr defExpr) _ -> defExpr
           _ -> error "Clipboard contained a non-expression definition!"
       Transaction.deleteIRef clipDefI
       ~() <- popClip
@@ -102,13 +102,13 @@ mkPaste exprP = do
 --
 -- So to be compatible with that in our idTranslations, we want to
 -- change our param Guids to match that:
-combineLamGuids :: (a -> Guid) -> Expr.Expression def a -> Expr.Expression def a
+combineLamGuids :: (a -> Guid) -> Expr.Expr def a -> Expr.Expr def a
 combineLamGuids getGuid =
   go Map.empty
   where
-    go renames (Expr.Expression body a) =
+    go renames (Expr.Expr body a) =
       -- TODO: Lens.outside
-      (`Expr.Expression` a) $
+      (`Expr.Expr` a) $
       case body of
       Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef paramGuid))
         | Just newParamGuid <- Map.lookup paramGuid renames ->
@@ -122,7 +122,7 @@ combineLamGuids getGuid =
           newParamGuid = Guid.combine (getGuid a) paramGuid
       _ -> go renames <$> body
 
-markHoles :: Expr.Expression def a -> Expr.Expression def (Bool, a)
+markHoles :: Expr.Expr def a -> Expr.Expr def (Bool, a)
 markHoles =
   (ExprLens.holePayloads . Lens._1 .~ True) .
   (Lens.mapped %~ (,) False)
@@ -172,7 +172,7 @@ idTranslations mkGen convertedExpr writtenExpr =
   (convertedExpr & combineLamGuids (^. ipGuid) & markHoles)
   (writtenExpr & combineLamGuids id & markHoles)
   where
-    go = ExprUtil.matchExpressionG tell match mismatch
+    go = ExprUtil.matchExprG tell match mismatch
     match (aIsHole, aIP) (bIsHole, bGuid)
       | aIsHole /= bIsHole = error "match between differing bodies?"
       | otherwise =
@@ -287,7 +287,7 @@ inferOnTheSide ::
   (MonadA m, Typeable1 m) =>
   ConvertM.Context m ->
   Infer.Scope (DefIM m) ->
-  ExprIRef.ExpressionM m () ->
+  ExprIRef.ExprM m () ->
   CT m (Maybe (LoadedExpr m ()))
 -- token represents the given holeInferContext
 inferOnTheSide sugarContext scope expr =
@@ -299,7 +299,7 @@ inferOnTheSide sugarContext scope expr =
 
 getScopeElement ::
   MonadA m => ConvertM.Context m ->
-  (Guid, Expr.Expression def a) -> T m (Scope MStoredName m)
+  (Guid, Expr.Expr def a) -> T m (Scope MStoredName m)
 getScopeElement sugarContext (parGuid, typeExpr) = do
   scopePar <- mkGetPar
   mconcat . (scopePar :) <$>
@@ -334,7 +334,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
           ] }
     recordParamsMap = sugarContext ^. ConvertM.scRecordParamsInfos
     errorJumpTo = error "Jump to on scope item??"
-    exprTag = ExprUtil.pureExpression . Expr.BodyLeaf . Expr.Tag
+    exprTag = ExprUtil.pureExpr . Expr.BodyLeaf . Expr.Tag
     getParam = ExprLens.pureExpr . ExprLens.bodyParameterRef # parGuid
     onScopeField tGuid = do
       name <- ConvertExpr.getStoredName tGuid
@@ -346,7 +346,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
             , _gvJumpTo = errorJumpTo
             , _gvVarType = GetFieldParameter
             }
-          , ExprUtil.pureExpression . Expr.BodyGetField $
+          , ExprUtil.pureExpr . Expr.BodyGetField $
             Expr.GetField getParam (exprTag tGuid)
           )
         ] }
@@ -386,8 +386,8 @@ getTag guid = do
 seedExprEnv ::
   MonadA m =>
   a -> Anchors.CodeProps m -> HoleResultSeed m a ->
-  T m (ExprIRef.ExpressionM m a, Maybe (T m Guid))
-seedExprEnv _ _ (ResultSeedExpression expr) = pure (expr, Nothing)
+  T m (ExprIRef.ExprM m a, Maybe (T m Guid))
+seedExprEnv _ _ (ResultSeedExpr expr) = pure (expr, Nothing)
 seedExprEnv emptyPl cp (ResultSeedNewTag name) = do
   tag <- DataOps.makeNewPublicTag cp name
   pure (emptyPl <$ ExprLens.pureExpr . ExprLens.bodyTag # tag, Nothing)
@@ -517,18 +517,18 @@ randomizeNonStoredParamIds gen =
 
 writeExprMStored ::
   MonadA m =>
-  ExprIRef.ExpressionIM m ->
+  ExprIRef.ExprIM m ->
   ExprStorePoint m a ->
-  T m (LoadedExpr m (ExprIRef.ExpressionIM m, a))
+  T m (LoadedExpr m (ExprIRef.ExprIM m, a))
 writeExprMStored exprIRef exprMStorePoint = do
   key <- Transaction.newKey
   randomizeNonStoredParamIds (genFromHashable key) exprMStorePoint
     & Lens.mapped . Lens._1 . Lens._Just %~ unStorePoint
-    & ExprIRef.writeExpressionWithStoredSubexpressions (^. ldDef) exprIRef
+    & ExprIRef.writeExprWithStoredSubexpressions (^. ldDef) exprIRef
 
 orderedInnerHoles ::
-  Expr.Expression ldef (a, DerefedTV def) ->
-  [Expr.Expression ldef (a, DerefedTV def)]
+  Expr.Expr ldef (a, DerefedTV def) ->
+  [Expr.Expr ldef (a, DerefedTV def)]
 orderedInnerHoles e =
   case e ^. Expr.eBody of
   Expr.BodyApply (Expr.Apply func arg)
@@ -542,8 +542,8 @@ orderedInnerHoles e =
 -- Also skip param types, those can usually be inferred later, so less
 -- useful to fill immediately
 uninferredHoles ::
-  Expr.Expression ldef (a, DerefedTV def) ->
-  [Expr.Expression ldef (a, DerefedTV def)]
+  Expr.Expr ldef (a, DerefedTV def) ->
+  [Expr.Expr ldef (a, DerefedTV def)]
 uninferredHoles e =
   case e ^. Expr.eBody of
   Expr.BodyLeaf Expr.Hole -> [e]

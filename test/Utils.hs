@@ -10,7 +10,7 @@ import Data.Map (Map, (!))
 import Data.Monoid (mappend)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.ExampleDB (createBuiltins)
-import Lamdu.Data.Expr (Expression(..), Kind(..))
+import Lamdu.Data.Expr (Kind(..))
 import Lamdu.Data.Expr.IRef (DefI)
 import Lamdu.Data.Expr.Utils (pureHole, pureIntegerType)
 import Lamdu.Data.Infer.Deref (DerefedTV(..), Restriction(..), dValue, dType)
@@ -32,7 +32,7 @@ newtype Def = Def String
   deriving (Eq, Ord, Binary)
 instance Show Def where
   show (Def d) = '#':d
-type Expr = Expr.Expression Def
+type Expr = Expr.Expr Def
 
 (==>) :: k -> v -> Map k v
 (==>) = Map.singleton
@@ -50,7 +50,7 @@ namedLambda = ExprUtil.makeLambda . Guid.fromString
 namedPi :: String -> expr -> expr -> Expr.Body def expr
 namedPi = ExprUtil.makePi . Guid.fromString
 
-pureApply :: [Expr.Expression def ()] -> Expr.Expression def ()
+pureApply :: [Expr.Expr def ()] -> Expr.Expr def ()
 pureApply = foldl1 ExprUtil.pureApply
 
 bodySet :: Expr.Body def expr
@@ -68,26 +68,26 @@ pureApplyPoly1 name xs = pureApply $ pureGetDef name : pureHole : xs
 
 pureLambda ::
   String ->
-  Expr.Expression def () ->
-  Expr.Expression def () ->
-  Expr.Expression def ()
-pureLambda name x y = ExprUtil.pureExpression $ namedLambda name x y
+  Expr.Expr def () ->
+  Expr.Expr def () ->
+  Expr.Expr def ()
+pureLambda name x y = ExprUtil.pureExpr $ namedLambda name x y
 
 purePi ::
   String ->
-  Expr.Expression def () ->
-  Expr.Expression def () ->
-  Expr.Expression def ()
-purePi name x y = ExprUtil.pureExpression $ namedPi name x y
+  Expr.Expr def () ->
+  Expr.Expr def () ->
+  Expr.Expr def ()
+purePi name x y = ExprUtil.pureExpr $ namedPi name x y
 
-pureLiteralInt :: Lens.Prism' (Expr.Expression def ()) Integer
+pureLiteralInt :: Lens.Prism' (Expr.Expr def ()) Integer
 pureLiteralInt = ExprLens.pureExpr . ExprLens.bodyLiteralInteger
 
 pureGetDef :: String -> Expr ()
 pureGetDef name =
   ExprLens.pureExpr . ExprLens.bodyDefinitionRef # Def name
 
-pureGetParam :: String -> Expr.Expression def ()
+pureGetParam :: String -> Expr.Expr def ()
 pureGetParam name =
   ExprLens.pureExpr . ExprLens.bodyParameterRef #
   Guid.fromString name
@@ -96,7 +96,7 @@ pureGetRecursiveDefI :: Expr ()
 pureGetRecursiveDefI =
   ExprLens.pureExpr . ExprLens.bodyDefinitionRef # recursiveDefI
 
-pureParameterRef :: String -> Expr.Expression def ()
+pureParameterRef :: String -> Expr.Expr def ()
 pureParameterRef str =
   ExprLens.pureExpr . ExprLens.bodyParameterRef # Guid.fromString str
 
@@ -125,13 +125,13 @@ definitionTypes =
       (,)
       <$> nameOf defI
       <*>
-      (fmap void . ExprIRef.readExpression . (^. Definition.bodyType) =<<
+      (fmap void . ExprIRef.readExpr . (^. Definition.bodyType) =<<
        Transaction.readIRef defI)
 
 recursiveDefI :: Def
 recursiveDefI = Def "recursiveDefI"
 
-innerMostPi :: Expression def a -> Expression def a
+innerMostPi :: Expr.Expr def a -> Expr.Expr def a
 innerMostPi =
   last . pis
   where
@@ -140,7 +140,7 @@ innerMostPi =
       Just resultType -> expr : pis resultType
       _ -> []
 
-piTags :: Lens.Traversal' (Expression def a) Guid
+piTags :: Lens.Traversal' (Expr.Expr def a) Guid
 piTags =
   ExprLens.exprKindedLam KType . Lens._2 .
   ExprLens.exprKindedRecordFields KType .
@@ -156,13 +156,13 @@ showRestrictions xs =
   List.intercalate "," $
   map (ansiAround ansiYellow . show) xs
 
-canonizeDebug :: Expression def a -> Expression def a
+canonizeDebug :: Expr.Expr def a -> Expr.Expr def a
 canonizeDebug = ExprUtil.randomizeParamIdsG id ExprUtil.debugNameGen Map.empty (\_ _ -> id)
 
-showDerefed :: Show def => Expression def a -> String
+showDerefed :: Show def => Expr.Expr def a -> String
 showDerefed = show . canonizeDebug . void
 
-showInferredValType :: Expression def (DerefedTV (DefI t)) -> String
+showInferredValType :: Expr.Expr def (DerefedTV (DefI t)) -> String
 showInferredValType expr =
   unlines
   [ "Inferred val:  " ++ showDerefed (derefed ^. dValue)

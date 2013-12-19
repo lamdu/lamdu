@@ -35,7 +35,7 @@ liftGen = lift . lift
 next :: GenExpr def Guid
 next = lift $ State.gets head <* State.modify tail
 
-arbitraryLambda :: Arbitrary a => GenExpr def (Expr.Lam (Expr.Expression def a))
+arbitraryLambda :: Arbitrary a => GenExpr def (Expr.Lam (Expr.Expr def a))
 arbitraryLambda = do
   guid <- next
   flip Expr.Lam guid <$> liftGen arbitrary <*> arbitraryExpr <*>
@@ -48,16 +48,16 @@ listOf gen = do
     then return []
     else (:) <$> gen <*> listOf gen
 
-arbitraryRecord :: Arbitrary a => GenExpr def (Expr.Record (Expr.Expression def a))
+arbitraryRecord :: Arbitrary a => GenExpr def (Expr.Record (Expr.Expr def a))
 arbitraryRecord =
   Expr.Record
   <$> liftGen arbitrary
   <*> listOf ((,) <$> arbitraryExpr <*> arbitraryExpr)
 
-arbitraryGetField :: Arbitrary a => GenExpr def (Expr.GetField (Expr.Expression def a))
+arbitraryGetField :: Arbitrary a => GenExpr def (Expr.GetField (Expr.Expr def a))
 arbitraryGetField = Expr.GetField <$> arbitraryExpr <*> arbitraryExpr
 
-arbitraryApply :: Arbitrary a => GenExpr def (Expr.Apply (Expr.Expression def a))
+arbitraryApply :: Arbitrary a => GenExpr def (Expr.Apply (Expr.Expr def a))
 arbitraryApply = Expr.Apply <$> arbitraryExpr <*> arbitraryExpr
 
 arbitraryLeaf :: GenExpr def (Expr.Leaf def)
@@ -85,8 +85,8 @@ arbitraryBody =
   where
     weight = (,)
 
-arbitraryExpr :: Arbitrary a => GenExpr def (Expr.Expression def a)
-arbitraryExpr = Expr.Expression <$> arbitraryBody <*> liftGen arbitrary
+arbitraryExpr :: Arbitrary a => GenExpr def (Expr.Expr def a)
+arbitraryExpr = Expr.Expr <$> arbitraryBody <*> liftGen arbitrary
 
 nameStream :: [Guid]
 nameStream = map Guid.fromString names
@@ -94,7 +94,7 @@ nameStream = map Guid.fromString names
     alphabet = map (:[]) ['a'..'z']
     names = (alphabet ++) $ (++) <$> names <*> alphabet
 
-exprGen :: Arbitrary a => Maybe (Gen def) -> Gen (Expr.Expression def a)
+exprGen :: Arbitrary a => Maybe (Gen def) -> Gen (Expr.Expr def a)
 exprGen makeDefI =
   (`evalStateT` nameStream) .
   (`runReaderT` Env [] makeDefI) $
@@ -103,7 +103,7 @@ exprGen makeDefI =
 -- TODO: This instance doesn't know which Definitions exist in the
 -- world so avoids DefinitionRef and only has valid ParameterRefs to
 -- its own lambdas.
-instance Arbitrary a => Arbitrary (Expr.Expression def a) where
+instance Arbitrary a => Arbitrary (Expr.Expr def a) where
   arbitrary = exprGen Nothing
 
 derive makeArbitrary ''Expr.Kind

@@ -64,7 +64,7 @@ assertInferredEquals errorPrefixStr result expected res
     resultC = canonizeInferred result
     expectedC = canonizeInferred expected
     (resultErrs, errorMsg) =
-      errorMessage $ ExprUtil.matchExpression match mismatch resultC expectedC
+      errorMessage $ ExprUtil.matchExpr match mismatch resultC expectedC
     check s x y
       | ExprUtil.alphaEq x y = pure []
       | otherwise = fmap (: []) . addAnnotation $
@@ -150,20 +150,20 @@ handleResumption ::
 handleResumption verifyInfersOnSide =
   go
   where
-    recurseBody body pl = (`Expr.Expression` pl) <$> Lens.traverse go body
+    recurseBody body pl = (`Expr.Expr` pl) <$> Lens.traverse go body
     go expr =
       case expr of
-      Expr.Expression _ (stv, InputPayload _ _ (ResumeWith newExpr)) -> do
+      Expr.Expr _ (stv, InputPayload _ _ (ResumeWith newExpr)) -> do
         Writer.tell (Monoid.Any True, Monoid.Any True)
         lift $ loadInferInto stv newExpr
-      Expr.Expression body (stv, InputPayload _ _ (ResumeOnSide newExpr ipl)) -> do
+      Expr.Expr body (stv, InputPayload _ _ (ResumeOnSide newExpr ipl)) -> do
         Writer.tell (Monoid.Any True, Monoid.Any True)
         () <- lift $ verifyInfersOnSide =<< loadInferInContext stv newExpr
         recurseBody body (stv, ipl)
-      Expr.Expression body (stv, InputPayload _ _ (NewInferred ipl)) -> do
+      Expr.Expr body (stv, InputPayload _ _ (NewInferred ipl)) -> do
         Writer.tell (Monoid.Any True, Monoid.Any False)
         recurseBody body (stv, ipl)
-      Expr.Expression body (stv, ipl@(InputPayload _ _ Same)) ->
+      Expr.Expr body (stv, ipl@(InputPayload _ _ Same)) ->
         recurseBody body (stv, ipl)
 
 expectLeft ::
@@ -212,5 +212,5 @@ testInferAllowFail msg name expr =
 type ExprPosition def =
   forall a.
   Lens.Traversal'
-  (Expr.Expression def a)
-  (Expr.Expression def a)
+  (Expr.Expr def a)
+  (Expr.Expr def a)

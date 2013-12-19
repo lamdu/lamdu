@@ -226,7 +226,7 @@ decycleDefend ref action = do
   nodeRep <- uInfer . InferM.liftUFExprs $ UFData.find ref
   mResult <- visit nodeRep (action nodeRep)
   case mResult of
-    Nothing -> uInfer . InferM.error $ InfiniteExpression nodeRep
+    Nothing -> uInfer . InferM.error $ InfiniteExpr nodeRep
     Just result -> return result
 
 -- TODO: Currently no test breaks if this function is

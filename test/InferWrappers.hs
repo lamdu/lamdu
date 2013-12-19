@@ -43,7 +43,7 @@ data Error
 
 type M = StateT (Infer.Context Def) (Either Error)
 
-load :: Expr.Expression Def a -> M (LoadedExpr Def a)
+load :: Expr.Expr Def a -> M (LoadedExpr Def a)
 load expr =
   InferLoad.load loader expr
   & mapStateT ((Lens._Left %~ LoadError) . fromRight . runEitherT)
@@ -71,7 +71,7 @@ infer = inferScope $ Infer.emptyScope recursiveDefI
 mapDerefError :: InferDeref.M Def a -> M a
 mapDerefError = mapStateT (Lens._Left %~ InferError . InferDeref.toInferError)
 
-derefWithPL :: InferredLoadedExpr a -> M (Expr.Expression Def (DerefedTV Def, a))
+derefWithPL :: InferredLoadedExpr a -> M (Expr.Expr Def (DerefedTV Def, a))
 derefWithPL expr = expr
   & ExprLens.exprDef %~ (^. InferLoad.ldDef)
   & InferDeref.entireExpr
@@ -120,11 +120,11 @@ addStructure expr =
   expr <$ mapDerefError (Structure.add expr)
 
 loadInferInContext ::
-  Infer.TypedValue Def -> Expr.Expression Def a -> M (InferredLoadedExpr a)
+  Infer.TypedValue Def -> Expr.Expr Def a -> M (InferredLoadedExpr a)
 loadInferInContext tv expr = inferScopedBy (tv ^. Infer.tvVal) =<< load expr
 
 loadInferInto ::
-  Infer.TypedValue Def -> Expr.Expression Def a -> M (InferredLoadedExpr a)
+  Infer.TypedValue Def -> Expr.Expr Def a -> M (InferredLoadedExpr a)
 loadInferInto stv expr = do
   resumptionInferred <- loadInferInContext stv expr
   unify (resumptionInferred ^. Expr.ePayload . Lens._1) stv
