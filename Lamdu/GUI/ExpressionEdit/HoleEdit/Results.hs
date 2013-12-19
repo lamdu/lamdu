@@ -209,7 +209,7 @@ baseExprWithApplyForms holeInfo baseExpr =
 
 storePointExpr ::
   Monoid a =>
-  Expr.BodyExpr def (Sugar.MStorePoint m a) ->
+  Expr.BodyExpr def Guid (Sugar.MStorePoint m a) ->
   Expr.Expr def (Sugar.MStorePoint m a)
 storePointExpr = (`Expr` (Nothing, mempty))
 

@@ -80,7 +80,7 @@ derive makeBinary ''Apply
 data Uncircumsize def = Uncircumsize
   { _uValRef :: ExprRef def
   , _uApplicantValRef :: ExprRef def
-  , _uUncircumsizedBody :: Expr.Body (LoadedDef def) (ExprRef def)
+  , _uUncircumsizedBody :: Expr.Body (LoadedDef def) Guid (ExprRef def)
   }
 
 instance Show (Uncircumsize def) where

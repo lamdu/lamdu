@@ -41,25 +41,25 @@ data UnescapedStr = UnescapedStr String
 instance Show UnescapedStr where
   show (UnescapedStr x) = x
 
-showStructure :: Show def => Expr.Body def a -> String
+showStructure :: (Show def, Show par) => Expr.Body def par a -> String
 showStructure = show . (UnescapedStr "" <$)
 
-namedLambda :: String -> expr -> expr -> Expr.Body def expr
+namedLambda :: String -> expr -> expr -> Expr.Body def Guid expr
 namedLambda = ExprUtil.makeLambda . Guid.fromString
 
-namedPi :: String -> expr -> expr -> Expr.Body def expr
+namedPi :: String -> expr -> expr -> Expr.Body def Guid expr
 namedPi = ExprUtil.makePi . Guid.fromString
 
 pureApply :: [Expr.Expr def ()] -> Expr.Expr def ()
 pureApply = foldl1 ExprUtil.pureApply
 
-bodySet :: Expr.Body def expr
+bodySet :: Expr.Body def par expr
 bodySet = ExprLens.bodyType # ()
 
-bodyHole :: Expr.Body def expr
+bodyHole :: Expr.Body def par expr
 bodyHole = ExprLens.bodyHole # ()
 
-bodyIntegerType :: Expr.Body def expr
+bodyIntegerType :: Expr.Body def par expr
 bodyIntegerType = ExprLens.bodyIntegerType # ()
 
 -- 1 dependent param

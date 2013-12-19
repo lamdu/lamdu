@@ -131,7 +131,7 @@ getInferredVal x =
   & fromMaybe ExprUtil.pureHole
 
 convertPositionalFuncParam ::
-  (Typeable1 m, MonadA m, Monoid a) => Expr.Lam (InputExpr m a) ->
+  (Typeable1 m, MonadA m, Monoid a) => Expr.Lam Guid (InputExpr m a) ->
   InputPayload m a ->
   ConvertM m (FuncParam MStoredName m (ExpressionU m a))
 convertPositionalFuncParam (Expr.Lam _k paramGuid paramType body) lamExprPl = do
@@ -154,7 +154,7 @@ convertPositionalFuncParam (Expr.Lam _k paramGuid paramType body) lamExprPl = do
 
 convertLam ::
   (MonadA m, Typeable1 m, Monoid a) =>
-  Expr.Lam (InputExpr m a) ->
+  Expr.Lam Guid (InputExpr m a) ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertLam lam@(Expr.Lam k paramGuid _paramType result) exprPl = do
   param <- convertPositionalFuncParam lam exprPl

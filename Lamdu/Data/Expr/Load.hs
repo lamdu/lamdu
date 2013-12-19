@@ -11,6 +11,7 @@ import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Function.Decycle (decycleOn)
+import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
@@ -36,7 +37,7 @@ type SubexpressionIndex = Int
 data ExprPropertyClosure t
   = DefinitionTypeProperty (DefI t) (Definition.Body (ExprI t))
   | DefinitionContentExprProperty (DefI t) (ExprI t) (ExprI t)
-  | SubexpressionProperty (ExprI t) (Expr.Body (DefI t) (ExprI t)) SubexpressionIndex
+  | SubexpressionProperty (ExprI t) (Expr.Body (DefI t) Guid (ExprI t)) SubexpressionIndex
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''ExprPropertyClosure
 

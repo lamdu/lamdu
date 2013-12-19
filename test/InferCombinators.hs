@@ -141,7 +141,7 @@ makeResumption ((Monoid.Any True, (val, typ)):nexts) = NewInferred InputPayload
   }
 makeResumption [] = error "makeResumption called with finite list"
 
-runR :: R (Expr.Body Def InputExpr, Expr (), Expr ()) -> InputExpr
+runR :: R (Expr.Body Def Guid InputExpr, Expr (), Expr ()) -> InputExpr
 runR (R (ZipList ~((_, (body, firstVal, firstTyp)):nexts))) =
   Expr.Expr body . InputPayload firstVal firstTyp .
   makeResumption $ nexts <&> Lens._2 %~ valTyp
@@ -229,7 +229,7 @@ getField recordVal tagVal =
   runR $ getFieldR <$> resumptions recordVal <*> resumptions tagVal
 
 -- TODO: Support the infer logic of only-one-potentially-matching-field
-getFieldR :: InputExpr -> InputExpr -> (Expr.Body Def InputExpr, Expr (), Expr ())
+getFieldR :: InputExpr -> InputExpr -> (Expr.Body Def par InputExpr, Expr (), Expr ())
 getFieldR recordVal tagVal =
   ( body
   , circumcizedVal

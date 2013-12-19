@@ -45,7 +45,7 @@ import Control.Arrow ((***))
 import Control.Lens (Context(..))
 import Control.Lens.Operators
 import Control.Lens.Utils (addListContexts, addTuple2Contexts)
-import Control.Monad (guard)
+import Control.Monad (guard, join)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.Monad.Trans.State (evalState, state)
@@ -63,6 +63,7 @@ import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
+import qualified Lamdu.Data.Expr as Expr
 import qualified Lamdu.Data.Expr.Lens as ExprLens
 import qualified System.Random as Random
 
@@ -272,20 +273,46 @@ randomizeParamIdsG preNG gen initMap convertPL =
     makeName oldParamId s nameGen =
       ngMakeName nameGen oldParamId $ preNG s
 
+matchEq :: (Eq b, Applicative f) => a -> b -> Lens.Prism' a b -> f (Maybe a)
+matchEq leaf1 d0 prism = sequenceA $ do
+  d1 <- leaf1 ^? Lens.clonePrism prism
+  pure (Lens.clonePrism prism # d0) <$ guard (d0 == d1)
+
+matchLeaf ::
+  (Eq def, Applicative f) =>
+  (par -> par -> f (Maybe par)) ->
+  Leaf def par ->
+  Leaf def par ->
+  f (Maybe (Leaf def par))
+matchLeaf matchGetPar leaf0 leaf1 =
+  case leaf0 of
+    -- TODO: Clean this up
+  GetVariable (ParameterRef p0) ->
+    fmap join .
+    traverse ((fmap . fmap) (ExprLens.parameterRef # ) . matchGetPar p0) $
+    leaf1 ^? ExprLens.parameterRef
+  GetVariable (DefinitionRef d0) -> matchEq leaf1 d0 ExprLens.definitionRef
+  LiteralInteger x               -> matchEq leaf1 x Expr._LiteralInteger
+  Type                           -> matchEq leaf1 () Expr._Type
+  IntegerType                    -> matchEq leaf1 () Expr._IntegerType
+  Hole                           -> matchEq leaf1 () Expr._Hole
+  TagType                        -> matchEq leaf1 () Expr._TagType
+  Tag x                          -> matchEq leaf1 x Expr._Tag
+
 -- Left-biased on parameter guids
 {-# INLINE matchBody #-}
 matchBody ::
   (Applicative f, Eq def) =>
-  (Guid -> Guid -> a -> b -> f (Guid, c)) -> -- ^ Lam/Pi result match
-  (a -> b -> f c) ->                         -- ^ Ordinary structural match (Apply components, param type)
-  (Guid -> Guid -> f (Maybe Guid)) ->                -- ^ Match ParameterRef's
-  Body def a -> Body def b -> f (Maybe (Body def c))
+  (par -> par -> a -> b -> f (par, c)) ->  -- ^ Lam/Pi result match
+  (a -> b -> f c) ->                        -- ^ Ordinary structural match (Apply components, param type)
+  (par -> par -> f (Maybe par)) ->         -- ^ Match ParameterRef's
+  Body def par a -> Body def par b -> f (Maybe (Body def par c))
 matchBody matchLamResult matchOther matchGetPar body0 body1 =
   case body0 of
   BodyLam (Lam k0 p0 pt0 r0) -> sequenceA $ do
     Lam k1 p1 pt1 r1 <- body1 ^? _BodyLam
     guard $ k0 == k1
-    let buildLam paramType (paramGuid, result) = BodyLam $ Lam k0 paramGuid paramType result
+    let buildLam paramType (param, result) = BodyLam $ Lam k0 param paramType result
     Just $
       buildLam
       <$> matchOther pt0 pt1
@@ -301,14 +328,9 @@ matchBody matchLamResult matchOther matchGetPar body0 body1 =
   BodyGetField (GetField r0 f0) -> sequenceA $ do
     GetField r1 f1 <- body1 ^? _BodyGetField
     Just $ BodyGetField <$> (GetField <$> matchOther r0 r1 <*> matchOther f0 f1)
-  BodyLeaf (GetVariable (ParameterRef p0)) ->
-    case body1 ^? ExprLens.bodyParameterRef of
-    Nothing -> pure Nothing
-    Just p1 -> fmap (ExprLens.bodyParameterRef # ) <$> matchGetPar p0 p1
-  BodyLeaf x -> pure $ do
-    y <- body1 ^? _BodyLeaf
-    guard $ x == y
-    Just $ BodyLeaf x
+  BodyLeaf leaf0 ->
+    fmap join . traverse ((fmap . fmap) BodyLeaf . matchLeaf matchGetPar leaf0) $
+    body1 ^? _BodyLeaf
   where
     matchPair (k0, v0) (k1, v1) =
       (,) <$> matchOther k0 k1 <*> matchOther v0 v1
@@ -316,10 +338,10 @@ matchBody matchLamResult matchOther matchGetPar body0 body1 =
 -- TODO: Delete this
 matchBodyDeprecated ::
   Eq def =>
-  (Guid -> Guid -> a -> b -> (Guid, c)) -> -- ^ Lam/Pi result match
+  (par -> par -> a -> b -> (par, c)) -> -- ^ Lam/Pi result match
   (a -> b -> c) ->                 -- ^ Ordinary structural match (Apply components, param type)
-  (Guid -> Guid -> Bool) ->        -- ^ Match ParameterRef's
-  Body def a -> Body def b -> Maybe (Body def c)
+  (par -> par -> Bool) ->        -- ^ Match ParameterRef's
+  Body def par a -> Body def par b -> Maybe (Body def par c)
 matchBodyDeprecated matchLamResult matchOther matchGetPar body0 body1 =
   runIdentity $
   matchBody
@@ -427,21 +449,21 @@ pureGetField record field =
   ExprLens.pureExpr . _BodyGetField # GetField record field
 
 -- TODO: Deprecate below here:
-pureExpr :: Body def (Expr def ()) -> Expr def ()
+pureExpr :: Body def Guid (Expr def ()) -> Expr def ()
 pureExpr = (ExprLens.pureExpr # )
 
-makeApply :: expr -> expr -> Body def expr
+makeApply :: expr -> expr -> Body def par expr
 makeApply func arg = BodyApply $ Apply func arg
 
-makeLam :: Kind -> Guid -> expr -> expr -> Body def expr
+makeLam :: Kind -> Guid -> expr -> expr -> Body def Guid expr
 makeLam k argId argType resultType =
   BodyLam $ Lam k argId argType resultType
 
 -- TODO: Remove the kind-passing wrappers
-makePi :: Guid -> expr -> expr -> Body def expr
+makePi :: Guid -> expr -> expr -> Body def Guid expr
 makePi = makeLam KType
 
-makeLambda :: Guid -> expr -> expr -> Body def expr
+makeLambda :: Guid -> expr -> expr -> Body def Guid expr
 makeLambda = makeLam KVal
 
 isTypeConstructorType :: Expr def a -> Bool
@@ -453,8 +475,8 @@ isTypeConstructorType expr =
 
 -- Show isntances:
 showsPrecBody ::
-  (Show def, Show expr) => (Guid -> expr -> Bool) ->
-  Int -> Body def expr -> ShowS
+  (Show def, Show par, Show expr) => (par -> expr -> Bool) ->
+  Int -> Body def par expr -> ShowS
 showsPrecBody mayDepend prec body =
   case body of
   BodyLam (Lam KVal paramId paramType result) ->
@@ -491,13 +513,13 @@ showsPrecBody mayDepend prec body =
   where
     paren innerPrec = showParen (prec > innerPrec)
 
-showsPrecBodyExpr :: (Show def, Show a) => Int -> BodyExpr def a -> ShowS
+showsPrecBodyExpr :: (Show def, Show a) => Int -> BodyExpr def Guid a -> ShowS
 showsPrecBodyExpr = showsPrecBody exprHasGetVar
 
-showBodyExpr :: BodyExpr String String -> String
+showBodyExpr :: BodyExpr String Guid String -> String
 showBodyExpr = flip (showsPrecBodyExpr 0) ""
 
-instance (Show def, Show expr) => Show (Body def expr) where
+instance (Show def, Show par, Show expr) => Show (Body def par expr) where
   showsPrec = showsPrecBody mayDepend
     where
       -- We are polymorphic on any expr, so we cannot tell...
@@ -515,8 +537,8 @@ instance (Show def, Show a) => Show (Expr def a) where
         str -> (11, "{" ++ str ++ "}")
 
 addBodyContexts ::
-  (a -> b) -> Context (Body def a) (Body def b) container ->
-  Body def (Context a b container)
+  (a -> b) -> Context (Body def par a) (Body def par b) container ->
+  Body def par (Context a b container)
 addBodyContexts tob (Context intoContainer body) =
   afterSetter %~ intoContainer $
   case body of

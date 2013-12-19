@@ -29,9 +29,9 @@ import qualified Control.Lens as Lens
 data Kind = KVal | KType
   deriving (Eq, Ord, Show, Typeable)
 
-data Lam expr = Lam
+data Lam par expr = Lam
   { _lamKind :: !Kind
-  , _lamParamId :: {-# UNPACK #-}!Guid
+  , _lamParamId :: par
   , _lamParamType :: expr
   , _lamResult :: expr
   } deriving (Eq, Ord, Functor, Foldable, Traversable)
@@ -50,6 +50,7 @@ instance (Show def, Show par) => Show (VariableRef def par) where
   showsPrec _ (ParameterRef paramId) = shows paramId
   showsPrec _ (DefinitionRef defI) = shows defI
 
+-- TODO: Consider extracting all but "GetVariable" to "Primitive"?
 data Leaf def par
   = GetVariable !(VariableRef def par)
   | LiteralInteger !Integer
@@ -81,18 +82,18 @@ data GetField expr = GetField
   , _getFieldTag :: expr
   } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
-data Body def expr
-  = BodyLam {-# UNPACK #-}!(Lam expr)
+data Body def par expr
+  = BodyLam {-# UNPACK #-}!(Lam par expr)
   | BodyApply {-# UNPACK #-}!(Apply expr)
   | BodyRecord {-# UNPACK #-}!(Record expr)
   | BodyGetField {-# UNPACK #-}!(GetField expr)
-  | BodyLeaf !(Leaf def Guid)
+  | BodyLeaf !(Leaf def par)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 
-type BodyExpr def a = Body def (Expr def a)
+type BodyExpr def par a = Body def par (Expr def a)
 
 data Expr def a = Expr
-  { _eBody :: Body def (Expr def a)
+  { _eBody :: Body def Guid (Expr def a)
   , _ePayload :: a
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
 

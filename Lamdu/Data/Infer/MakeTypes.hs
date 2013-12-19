@@ -34,8 +34,8 @@ scopeLookup scope guid = do
     Just ref -> pure ref
 
 makePiTypeOfLam ::
-  Guid -> TypedValue def -> TypedValue def ->
-  Expr.Body (Load.LoadedDef def) (ExprRef def)
+  par -> TypedValue def -> TypedValue def ->
+  Expr.Body (Load.LoadedDef def) par (ExprRef def)
 makePiTypeOfLam paramGuid paramType body =
   Expr.BodyLam $
   Expr.Lam Expr.KType paramGuid
@@ -47,7 +47,7 @@ makePiTypeOfLam paramGuid paramType body =
 
 fresh ::
   Ord def =>
-  Scope def -> Expr.Body (Load.LoadedDef def) (ExprRef def) ->
+  Scope def -> Expr.Body (Load.LoadedDef def) Guid (ExprRef def) ->
   Infer def (ExprRef def)
 fresh scope body = InferM.liftContext $ Context.fresh scope body
 
@@ -55,7 +55,7 @@ maybeCircumsize ::
   Ord def =>
   Scope def ->
   TypedValue def ->
-  Expr.Body (Load.LoadedDef def) (TypedValue def) ->
+  Expr.Body (Load.LoadedDef def) Guid (TypedValue def) ->
   ExprRef def ->
   Infer def (TypedValue def)
 maybeCircumsize scope applicant uncircumsizedValBody typeRef = do
@@ -136,7 +136,7 @@ makePiType scope paramType resultType = do
 
 makeTV ::
   Ord def => Scope def ->
-  Expr.Body (Load.LoadedDef def) (TypedValue def) ->
+  Expr.Body (Load.LoadedDef def) Guid (TypedValue def) ->
   Infer def (TypedValue def)
 makeTV scope body =
   case body of

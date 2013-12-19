@@ -10,7 +10,7 @@ module Lamdu.Data.Expr.Lens
   , exprLeaf
   , bodyKindedRecordFields, exprKindedRecordFields
   , bodyKindedLam, exprKindedLam
-  , bodyBitraverse, exprBitraverse
+  , bodyNTraverse, exprBitraverse
   , bodyDef, exprDef
   , bodyLeaves, exprLeaves
   , bodyParameterRef, exprParameterRef
@@ -39,7 +39,7 @@ import Data.Traversable (traverse)
 import qualified Control.Lens as Lens
 
 -- Traversals:
-exprLam :: Lens.Traversal' (Expr def a) (Lam (Expr def a))
+exprLam :: Lens.Traversal' (Expr def a) (Lam Guid (Expr def a))
 exprLam = eBody . _BodyLam
 
 exprApply :: Lens.Traversal' (Expr def a) (Apply (Expr def a))
@@ -95,20 +95,43 @@ exprLeaves ::
   Lens.Traversal (Expr defa a) (Expr defb a) (Leaf defa Guid) (Leaf defb Guid)
 exprLeaves = eBody . bodyLeaves exprLeaves
 
-bodyBitraverse ::
-  Applicative f => (defa -> f defb) -> (expra -> f exprb) ->
-  Body defa expra ->
-  f (Body defb exprb)
-bodyBitraverse onDef onExpr body =
+variableRefNTraverse ::
+  Applicative f =>
+  (defa -> f defb) -> (para -> f parb) ->
+  VariableRef defa para -> f (VariableRef defb parb)
+variableRefNTraverse onDef onPar varRef =
+  case varRef of
+  ParameterRef par -> ParameterRef <$> onPar par
+  DefinitionRef def -> DefinitionRef <$> onDef def
+
+leafNTraverse ::
+  Applicative f =>
+  (defa -> f defb) -> (para -> f parb) ->
+  Leaf defa para -> f (Leaf defb parb)
+leafNTraverse onDef onPar =
+  _GetVariable (variableRefNTraverse onDef onPar)
+
+lamNTraverse ::
+  Applicative f =>
+  (para -> f parb) -> (expra -> f exprb) ->
+  Lam para expra -> f (Lam parb exprb)
+lamNTraverse onPar onExpr (Lam k par paramType result) =
+  Lam k <$> onPar par <*> onExpr paramType <*> onExpr result
+
+bodyNTraverse ::
+  Applicative f =>
+  (defa -> f defb) -> (para -> f parb) -> (expra -> f exprb) ->
+  Body defa para expra -> f (Body defb parb exprb)
+bodyNTraverse onDef onPar onExpr body =
   case body of
-  BodyLam x -> BodyLam <$> traverse onExpr x
+  BodyLam x -> BodyLam <$> lamNTraverse onPar onExpr x
   BodyApply x -> BodyApply <$> traverse onExpr x
   BodyRecord x -> BodyRecord <$> traverse onExpr x
   BodyGetField x -> BodyGetField <$> traverse onExpr x
-  BodyLeaf leaf -> BodyLeaf <$> definitionRef onDef leaf
+  BodyLeaf leaf -> BodyLeaf <$> leafNTraverse onDef onPar leaf
 
-bodyDef :: Lens.Traversal (Body a expr) (Body b expr) a b
-bodyDef = (`bodyBitraverse` pure)
+bodyDef :: Lens.Traversal (Body defa par expr) (Body defb par expr) defa defb
+bodyDef f = bodyNTraverse f pure pure
 
 exprBitraverse ::
   Applicative f =>
@@ -117,15 +140,18 @@ exprBitraverse ::
 exprBitraverse onDef onPl = f
   where
     f (Expr body payload) =
-      Expr <$> bodyBitraverse onDef f body <*> onPl payload
+      Expr <$> bodyNTraverse onDef pure f body <*> onPl payload
 
 exprDef :: Lens.Traversal (Expr a pl) (Expr b pl) a b
 exprDef = (`exprBitraverse` pure)
 
+-- TODO: Does this function make sense? It has no way of correcting the par's in the Lams
 bodyLeaves ::
   Applicative f =>
-  Lens.LensLike f expra exprb (Leaf defa Guid) (Leaf defb Guid) ->
-  Lens.LensLike f (Body defa expra) (Body defb exprb) (Leaf defa Guid) (Leaf defb Guid)
+  Lens.LensLike f expra exprb (Leaf defa par) (Leaf defb par) ->
+  Lens.LensLike f
+  (Body defa par expra) (Body defb par exprb)
+  (Leaf defa par) (Leaf defb par)
 bodyLeaves leaves onLeaves body =
   case body of
   BodyLam x      -> BodyLam      <$> onExprs x
@@ -137,39 +163,39 @@ bodyLeaves leaves onLeaves body =
     onExprs = traverse (leaves onLeaves)
 
 -- Prisms:
-parameterRef :: Lens.Prism' (Leaf def Guid) Guid
+parameterRef :: Lens.Prism' (Leaf def par) par
 parameterRef = _GetVariable . _ParameterRef
 
-definitionRef :: Lens.Prism (Leaf defa Guid) (Leaf defb Guid) defa defb
+definitionRef :: Lens.Prism (Leaf defa par) (Leaf defb par) defa defb
 definitionRef = _GetVariable . _DefinitionRef
 
-bodyParameterRef :: Lens.Prism' (Body def expr) Guid
+bodyParameterRef :: Lens.Prism' (Body def par expr) par
 bodyParameterRef = _BodyLeaf . parameterRef
 
-bodyDefinitionRef :: Lens.Prism (Body defa expr) (Body defb expr) defa defb
+bodyDefinitionRef :: Lens.Prism (Body defa par expr) (Body defb par expr) defa defb
 bodyDefinitionRef = _BodyLeaf . definitionRef
 
-bodyLiteralInteger :: Lens.Prism' (Body def expr) Integer
+bodyLiteralInteger :: Lens.Prism' (Body def par expr) Integer
 bodyLiteralInteger = _BodyLeaf . _LiteralInteger
 
 bodyGetVariable ::
-  Lens.Prism (Body defa expr) (Body defb expr)
-  (VariableRef defa Guid) (VariableRef defb Guid)
+  Lens.Prism (Body defa par expr) (Body defb par expr)
+  (VariableRef defa par) (VariableRef defb par)
 bodyGetVariable = _BodyLeaf . _GetVariable
 
-bodyHole :: Lens.Prism' (Body def expr) ()
+bodyHole :: Lens.Prism' (Body def par expr) ()
 bodyHole = _BodyLeaf . _Hole
 
-bodyTag :: Lens.Prism' (Body def expr) Guid
+bodyTag :: Lens.Prism' (Body def par expr) Guid
 bodyTag = _BodyLeaf . _Tag
 
-bodyType :: Lens.Prism' (Body def expr) ()
+bodyType :: Lens.Prism' (Body def par expr) ()
 bodyType = _BodyLeaf . _Type
 
-bodyIntegerType :: Lens.Prism' (Body def expr) ()
+bodyIntegerType :: Lens.Prism' (Body def par expr) ()
 bodyIntegerType = _BodyLeaf . _IntegerType
 
-bodyTagType :: Lens.Prism' (Body def expr) ()
+bodyTagType :: Lens.Prism' (Body def par expr) ()
 bodyTagType = _BodyLeaf . _TagType
 
 kindedRecordFields ::
@@ -181,7 +207,7 @@ kindedRecordFields k0 = Lens.prism' to from
       | k0 == k1 = Just fields
       | otherwise = Nothing
 
-kindedLam :: Kind -> Lens.Prism' (Lam expr) (Guid, expr, expr)
+kindedLam :: Kind -> Lens.Prism' (Lam par expr) (par, expr, expr)
 kindedLam k = Lens.prism' toLam fromLam
   where
     toLam (paramGuid, paramType, result) =
@@ -190,14 +216,14 @@ kindedLam k = Lens.prism' toLam fromLam
       | k == k0 = Just (paramGuid, paramType, result)
       | otherwise = Nothing
 
-bodyKindedLam :: Kind -> Lens.Prism' (Body def expr) (Guid, expr, expr)
+bodyKindedLam :: Kind -> Lens.Prism' (Body def par expr) (par, expr, expr)
 bodyKindedLam k = _BodyLam . kindedLam k
 
-bodyKindedRecordFields :: Kind -> Lens.Prism' (Body def expr) [(expr, expr)]
+bodyKindedRecordFields :: Kind -> Lens.Prism' (Body def par expr) [(expr, expr)]
 bodyKindedRecordFields k = _BodyRecord . kindedRecordFields k
 
 -- Pure expressions:
-pureExpr :: Lens.Iso' (Expr def ()) (Body def (Expr def ()))
+pureExpr :: Lens.Iso' (Expr def ()) (Body def Guid (Expr def ()))
 pureExpr = Lens.iso (^. eBody) (`Expr` ())
 
 subTreesThat :: (Expr def a -> Bool) -> Lens.Traversal' (Expr def a) (Expr def a)
@@ -234,11 +260,11 @@ holePayloads f (Expr body pl) =
   (`Expr` pl) <$> traverse (holePayloads f) body
 
 -- Everywhere, including lams:
-bodyParamIds :: Lens.Traversal' (Body def a) Guid
+bodyParamIds :: Lens.Traversal' (Body def par a) par
 bodyParamIds f body =
   case body of
-  BodyLeaf (GetVariable (ParameterRef guid)) ->
-    (bodyParameterRef # ) <$> f guid
+  BodyLeaf (GetVariable (ParameterRef par)) ->
+    (bodyParameterRef # ) <$> f par
   BodyLam lam ->
     BodyLam <$> (lam & lamParamId %%~ f)
   _ -> pure body

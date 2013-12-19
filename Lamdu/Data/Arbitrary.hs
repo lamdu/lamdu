@@ -35,7 +35,7 @@ liftGen = lift . lift
 next :: GenExpr def par par
 next = lift $ State.gets head <* State.modify tail
 
-arbitraryLambda :: Arbitrary a => GenExpr def Guid (Expr.Lam (Expr.Expr def a))
+arbitraryLambda :: Arbitrary a => GenExpr def Guid (Expr.Lam Guid (Expr.Expr def a))
 arbitraryLambda = do
   par <- next
   flip Expr.Lam par <$> liftGen arbitrary <*> arbitraryExpr <*>
@@ -73,7 +73,7 @@ arbitraryLeaf = do
     map (fmap (Expr.GetVariable . Expr.DefinitionRef) . liftGen)
       (maybeToList mGenDefI)
 
-arbitraryBody :: Arbitrary a => GenExpr def Guid (Expr.BodyExpr def a)
+arbitraryBody :: Arbitrary a => GenExpr def Guid (Expr.BodyExpr def Guid a)
 arbitraryBody =
   join . liftGen . Gen.frequency . (Lens.mapped . Lens._2 %~ pure) $
   [ weight 2  $ Expr.BodyLam      <$> arbitraryLambda

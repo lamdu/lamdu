@@ -37,8 +37,8 @@ data Error def
   | GetMissingField
   | GetFieldRequiresRecord
   | Mismatch
-    (Expr.Body (LoadedDef def) (ExprRef def))
-    (Expr.Body (LoadedDef def) (ExprRef def))
+    (Expr.Body (LoadedDef def) Guid (ExprRef def))
+    (Expr.Body (LoadedDef def) Guid (ExprRef def))
   deriving (Show)
 
 newtype TriggeredRules def = TriggeredRules

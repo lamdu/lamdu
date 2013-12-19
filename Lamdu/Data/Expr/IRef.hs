@@ -42,7 +42,7 @@ type DefI t = IRef t (Definition.Body (ExprI t))
 type DefIM m = DefI (Tag m)
 
 newtype ExprI t = ExprI {
-  unExpr :: IRef t (Expr.Body (DefI t) (ExprI t))
+  unExpr :: IRef t (Expr.Body (DefI t) Guid (ExprI t))
   } deriving (Eq, Ord, Show, Typeable, Binary)
 
 type ExprIM m = ExprI (Tag m)
@@ -50,7 +50,7 @@ type ExprIM m = ExprI (Tag m)
 -- TODO: Remove "Expr" prefix from these? We're in a module
 -- called Expr.IRef
 type ExprProperty m = Property (T m) (ExprIM m)
-type ExprBody t = Expr.Body (DefI t) (ExprI t)
+type ExprBody t = Expr.Body (DefI t) Guid (ExprI t)
 type Lam t = Expr.Lam (ExprI t)
 type Apply t = Expr.Apply (ExprI t)
 
@@ -125,7 +125,7 @@ expressionBodyFrom ::
   MonadA m =>
   (def -> DefIM m) ->
   Expr.Expr def (Maybe (ExprIM m), a) ->
-  T m (Expr.BodyExpr def (ExprIM m, a))
+  T m (Expr.BodyExpr def Guid (ExprIM m, a))
 expressionBodyFrom getDef = traverse (newExprFromH getDef) . (^. Expr.eBody)
 
 newExprFromH ::
