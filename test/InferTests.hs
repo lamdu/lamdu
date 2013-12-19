@@ -247,6 +247,13 @@ simplestImplicitTest =
     expr a = lambda "x" (asHole a) $ \_ -> hole
     wvExpr = lambda "a" (asHole set) expr
 
+noImplicitWithRedexTest =
+  testCase "implicitWithRedex: (\\x -> _) _" $
+  inferWVAssertion expr expr
+  where
+    expr = lambda "x" iset (const hole) $$ hole
+    iset = holeWithInferredType set
+
 -- TODO: Test should verify that ImplicitVariables puts the restricted
 -- form (b->c) in the right place.
 addImplicitCurriedApply2Test =
@@ -281,6 +288,7 @@ uncurry2Test =
 implicitVarTests =
   testGroup "add implicit variables"
   [ simplestImplicitTest
+  , noImplicitWithRedexTest
   , addImplicitCurriedApply2Test
   , uncurry2Test
   ]
