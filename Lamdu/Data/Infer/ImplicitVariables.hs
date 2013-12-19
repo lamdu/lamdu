@@ -3,6 +3,7 @@ module Lamdu.Data.Infer.ImplicitVariables
   ( add, Payload(..)
   ) where
 
+import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad (void, when)
 import Control.Monad.Trans.Class (lift)
@@ -13,6 +14,7 @@ import Data.DeriveTH (derive)
 import Data.Foldable (traverse_)
 import Data.Store.Guid (Guid)
 import Data.Typeable (Typeable)
+import Lamdu.Data.Expr (Expr)
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.RefData (RefData)
 import Lamdu.Data.Infer.TypedValue (TypedValue(..))
@@ -35,6 +37,15 @@ data Payload a = Stored a | AutoGen Guid
   deriving (Eq, Ord, Show, Functor, Typeable)
 derive makeBinary ''Payload
 
+outerLambdas :: Lens.Traversal' (Expr def a) (Expr def a)
+outerLambdas f =
+  pure
+  & Lens.outside (ExprLens.bodyKindedLam Expr.KVal) .~ fmap (ExprLens.bodyKindedLam Expr.KVal # ) . onLambda
+  & Expr.eBody
+  where
+    onLambda (paramId, paramType, body) =
+      (,,) paramId <$> f paramType <*> outerLambdas f body
+
 add ::
   (Show def, Ord def, RandomGen gen) =>
   gen -> def ->
@@ -42,7 +53,7 @@ add ::
   StateT (Context def) (Either (InferM.Error def))
   (Expr.Expr (Load.LoadedDef def) (TypedValue def, Payload a))
 add gen def expr =
-  expr ^.. ExprLens.lambdaParamTypes . Lens.traverse . Lens._1
+  expr ^.. outerLambdas . Lens.traverse . Lens._1
   & traverse_ (onEachParamTypeSubexpr def)
   & (`execStateT` gen)
   & (`execStateT` (expr <&> Lens._2 %~ Stored))
