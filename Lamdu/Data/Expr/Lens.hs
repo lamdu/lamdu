@@ -10,7 +10,7 @@ module Lamdu.Data.Expr.Lens
   , exprLeaf
   , bodyKindedRecordFields, exprKindedRecordFields
   , bodyKindedLam, exprKindedLam
-  , bodyNTraverse, exprBitraverse
+  , bodyNTraverse, exprNTraverse
   , bodyDef, exprDef
   , bodyLeaves, exprLeaves
   , bodyParameterRef, exprParameterRef
@@ -39,60 +39,60 @@ import Data.Traversable (traverse)
 import qualified Control.Lens as Lens
 
 -- Traversals:
-exprLam :: Lens.Traversal' (Expr def a) (Lam Guid (Expr def a))
+exprLam :: Lens.Traversal' (Expr def par a) (Lam par (Expr def par a))
 exprLam = eBody . _BodyLam
 
-exprApply :: Lens.Traversal' (Expr def a) (Apply (Expr def a))
+exprApply :: Lens.Traversal' (Expr def par a) (Apply (Expr def par a))
 exprApply = eBody . _BodyApply
 
-exprRecord :: Lens.Traversal' (Expr def a) (Record (Expr def a))
+exprRecord :: Lens.Traversal' (Expr def par a) (Record (Expr def par a))
 exprRecord = eBody . _BodyRecord
 
-exprGetField :: Lens.Traversal' (Expr def a) (GetField (Expr def a))
+exprGetField :: Lens.Traversal' (Expr def par a) (GetField (Expr def par a))
 exprGetField = eBody . _BodyGetField
 
-exprLeaf :: Lens.Traversal' (Expr def a) (Leaf def Guid)
+exprLeaf :: Lens.Traversal' (Expr def par a) (Leaf def par)
 exprLeaf = eBody . _BodyLeaf
 
-exprKindedRecordFields :: Kind -> Lens.Traversal' (Expr def a) [(Expr def a, Expr def a)]
+exprKindedRecordFields :: Kind -> Lens.Traversal' (Expr def par a) [(Expr def par a, Expr def par a)]
 exprKindedRecordFields k = eBody . bodyKindedRecordFields k
 
 exprKindedLam ::
   Kind ->
-  Lens.Traversal' (Expr def a)
-  (Guid, Expr def a, Expr def a)
+  Lens.Traversal' (Expr def par a)
+  (par, Expr def par a, Expr def par a)
 exprKindedLam k = eBody . bodyKindedLam k
 
-exprTag :: Lens.Traversal' (Expr def a) Guid
+exprTag :: Lens.Traversal' (Expr def par a) Guid
 exprTag = eBody . bodyTag
 
-exprParameterRef :: Lens.Traversal' (Expr def a) Guid
+exprParameterRef :: Lens.Traversal' (Expr def par a) par
 exprParameterRef = eBody . bodyParameterRef
 
 exprGetVariable ::
-  Lens.Traversal' (Expr def a) (VariableRef def Guid)
+  Lens.Traversal' (Expr def par a) (VariableRef def par)
 exprGetVariable = eBody . bodyGetVariable
 
-exprLiteralInteger :: Lens.Traversal' (Expr def a) Integer
+exprLiteralInteger :: Lens.Traversal' (Expr def par a) Integer
 exprLiteralInteger = eBody . bodyLiteralInteger
 
-exprDefinitionRef :: Lens.Traversal' (Expr def a) def
+exprDefinitionRef :: Lens.Traversal' (Expr def par a) def
 exprDefinitionRef = eBody . bodyDefinitionRef
 
-exprHole :: Lens.Traversal' (Expr def a) ()
+exprHole :: Lens.Traversal' (Expr def par a) ()
 exprHole = eBody . bodyHole
 
-exprType :: Lens.Traversal' (Expr def a) ()
+exprType :: Lens.Traversal' (Expr def par a) ()
 exprType = eBody . bodyType
 
-exprIntegerType :: Lens.Traversal' (Expr def a) ()
+exprIntegerType :: Lens.Traversal' (Expr def par a) ()
 exprIntegerType = eBody . bodyIntegerType
 
-exprTagType :: Lens.Traversal' (Expr def a) ()
+exprTagType :: Lens.Traversal' (Expr def par a) ()
 exprTagType = eBody . bodyTagType
 
 exprLeaves ::
-  Lens.Traversal (Expr defa a) (Expr defb a) (Leaf defa Guid) (Leaf defb Guid)
+  Lens.Traversal (Expr defa par a) (Expr defb par a) (Leaf defa par) (Leaf defb par)
 exprLeaves = eBody . bodyLeaves exprLeaves
 
 variableRefNTraverse ::
@@ -133,32 +133,30 @@ bodyNTraverse onDef onPar onExpr body =
 bodyDef :: Lens.Traversal (Body defa par expr) (Body defb par expr) defa defb
 bodyDef f = bodyNTraverse f pure pure
 
-exprBitraverse ::
+exprNTraverse ::
   Applicative f =>
-  (defa -> f defb) -> (pla -> f plb) ->
-  Expr defa pla -> f (Expr defb plb)
-exprBitraverse onDef onPl = f
+  (defa -> f defb) -> (para -> f parb) -> (pla -> f plb) ->
+  Expr defa para pla -> f (Expr defb parb plb)
+exprNTraverse onDef onPar onPl = f
   where
     f (Expr body payload) =
-      Expr <$> bodyNTraverse onDef pure f body <*> onPl payload
+      Expr <$> bodyNTraverse onDef onPar f body <*> onPl payload
 
-exprDef :: Lens.Traversal (Expr a pl) (Expr b pl) a b
-exprDef = (`exprBitraverse` pure)
+exprDef :: Lens.Traversal (Expr defa par pl) (Expr defb par pl) defa defb
+exprDef onDef = exprNTraverse onDef pure pure
 
 -- TODO: Does this function make sense? It has no way of correcting the par's in the Lams
 bodyLeaves ::
   Applicative f =>
   Lens.LensLike f expra exprb (Leaf defa par) (Leaf defb par) ->
-  Lens.LensLike f
-  (Body defa par expra) (Body defb par exprb)
-  (Leaf defa par) (Leaf defb par)
+  Lens.LensLike f (Body defa par expra) (Body defb par exprb) (Leaf defa par) (Leaf defb par)
 bodyLeaves leaves onLeaves body =
   case body of
   BodyLam x      -> BodyLam      <$> onExprs x
   BodyApply x    -> BodyApply    <$> onExprs x
   BodyRecord x   -> BodyRecord   <$> onExprs x
   BodyGetField x -> BodyGetField <$> onExprs x
-  BodyLeaf l -> BodyLeaf <$> onLeaves l
+  BodyLeaf l     -> BodyLeaf     <$> onLeaves l
   where
     onExprs = traverse (leaves onLeaves)
 
@@ -210,10 +208,10 @@ kindedRecordFields k0 = Lens.prism' to from
 kindedLam :: Kind -> Lens.Prism' (Lam par expr) (par, expr, expr)
 kindedLam k = Lens.prism' toLam fromLam
   where
-    toLam (paramGuid, paramType, result) =
-      Lam k paramGuid paramType result
-    fromLam (Lam k0 paramGuid paramType result)
-      | k == k0 = Just (paramGuid, paramType, result)
+    toLam (param, paramType, result) =
+      Lam k param paramType result
+    fromLam (Lam k0 param paramType result)
+      | k == k0 = Just (param, paramType, result)
       | otherwise = Nothing
 
 bodyKindedLam :: Kind -> Lens.Prism' (Body def par expr) (par, expr, expr)
@@ -223,17 +221,17 @@ bodyKindedRecordFields :: Kind -> Lens.Prism' (Body def par expr) [(expr, expr)]
 bodyKindedRecordFields k = _BodyRecord . kindedRecordFields k
 
 -- Pure expressions:
-pureExpr :: Lens.Iso' (Expr def ()) (Body def Guid (Expr def ()))
+pureExpr :: Lens.Iso' (Expr def par ()) (Body def par (Expr def par ()))
 pureExpr = Lens.iso (^. eBody) (`Expr` ())
 
-subTreesThat :: (Expr def a -> Bool) -> Lens.Traversal' (Expr def a) (Expr def a)
+subTreesThat :: (Expr def par a -> Bool) -> Lens.Traversal' (Expr def par a) (Expr def par a)
 subTreesThat cond f expr
   | cond expr = f expr
   | otherwise = expr & eBody . Lens.traversed %%~ subTreesThat cond f
 
 -- Exprs in tag positions of Record and GetField.
 -- Not recursive (no tags inside tags), a valid traversal.
-tagPositions :: Lens.Traversal' (Expr def a) (Expr def a)
+tagPositions :: Lens.Traversal' (Expr def par a) (Expr def par a)
 tagPositions f =
   traverse go
   & Lens.outside _BodyGetField .~ fmap BodyGetField . getFieldRecord go
@@ -243,7 +241,7 @@ tagPositions f =
     go = tagPositions f
 
 -- Lambda param types not including param types inside param types (a valid traversal)
-lambdaParamTypes :: Lens.Traversal' (Expr def a) (Expr def a)
+lambdaParamTypes :: Lens.Traversal' (Expr def par a) (Expr def par a)
 lambdaParamTypes f =
   traverse go
   & Lens.outside (bodyKindedLam KVal) .~ fmap (bodyKindedLam KVal # ) . onLambda
@@ -253,7 +251,7 @@ lambdaParamTypes f =
     onLambda (paramId, paramType, body) =
       (,,) paramId <$> f paramType <*> go body
 
-holePayloads :: Lens.Traversal' (Expr def a) a
+holePayloads :: Lens.Traversal' (Expr def par a) a
 holePayloads f (Expr (BodyLeaf Hole) pl) =
   Expr (BodyLeaf Hole) <$> f pl
 holePayloads f (Expr body pl) =

@@ -8,6 +8,7 @@ import Control.Monad (void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Writer (WriterT(..))
 import Data.Monoid (Monoid(..))
+import Data.Store.Guid (Guid)
 import InferCombinators
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
@@ -212,5 +213,5 @@ testInferAllowFail msg name expr =
 type ExprPosition def =
   forall a.
   Lens.Traversal'
-  (Expr.Expr def a)
-  (Expr.Expr def a)
+  (Expr.Expr def Guid a)
+  (Expr.Expr def Guid a)

@@ -16,6 +16,7 @@ import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
+import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.RefData (LoadedDef(..), ldDef, ldType, LoadedExpr)
 import Lamdu.Data.Infer.RefTags (ExprRef)
@@ -29,7 +30,7 @@ import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.RefData as RefData
 
 newtype Loader def m = Loader
-  { loadDefType :: def -> m (Expr.Expr def ())
+  { loadDefType :: def -> m (Expr.Expr def Guid ())
     -- TODO: For synonyms we'll need loadDefVal
   }
 
@@ -74,7 +75,7 @@ newDefinition def = do
 
 load ::
   (Ord def, MonadA m) =>
-  Loader def m -> Expr.Expr def a ->
+  Loader def m -> Expr.Expr def Guid a ->
   T def m (LoadedExpr def a)
 load loader expr = expr & ExprLens.exprDef %%~ toLoadedDef
   where

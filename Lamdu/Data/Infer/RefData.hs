@@ -65,8 +65,8 @@ derive makeBinary ''LoadedDef
 instance Eq def => Eq (LoadedDef def) where
   LoadedDef a _ == LoadedDef b _ = a == b
 
-type LoadedBody def = Expr.Body (LoadedDef def)
-type LoadedExpr def = Expr.Expr (LoadedDef def)
+type LoadedBody def = Expr.Body (LoadedDef def) Guid
+type LoadedExpr def = Expr.Expr (LoadedDef def) Guid
 
 data RefData def = RefData
   { _rdScope :: Scope def

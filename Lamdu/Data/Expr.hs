@@ -58,7 +58,7 @@ data Leaf def par
   | IntegerType
   | Hole
   | TagType
-  | Tag Guid
+  | Tag Guid -- TODO: Guid?
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 instance (Show def, Show par) => Show (Leaf def par) where
@@ -90,10 +90,10 @@ data Body def par expr
   | BodyLeaf !(Leaf def par)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 
-type BodyExpr def par a = Body def par (Expr def a)
+type BodyExpr def par a = Body def par (Expr def par a)
 
-data Expr def a = Expr
-  { _eBody :: Body def Guid (Expr def a)
+data Expr def par a = Expr
+  { _eBody :: Body def par (Expr def par a)
   , _ePayload :: a
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
 

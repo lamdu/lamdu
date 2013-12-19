@@ -32,7 +32,7 @@ newtype Def = Def String
   deriving (Eq, Ord, Binary)
 instance Show Def where
   show (Def d) = '#':d
-type Expr = Expr.Expr Def
+type Expr = Expr.Expr Def Guid
 
 (==>) :: k -> v -> Map k v
 (==>) = Map.singleton
@@ -50,7 +50,7 @@ namedLambda = ExprUtil.makeLambda . Guid.fromString
 namedPi :: String -> expr -> expr -> Expr.Body def Guid expr
 namedPi = ExprUtil.makePi . Guid.fromString
 
-pureApply :: [Expr.Expr def ()] -> Expr.Expr def ()
+pureApply :: [Expr.Expr def par ()] -> Expr.Expr def par ()
 pureApply = foldl1 ExprUtil.pureApply
 
 bodySet :: Expr.Body def par expr
@@ -68,26 +68,26 @@ pureApplyPoly1 name xs = pureApply $ pureGetDef name : pureHole : xs
 
 pureLambda ::
   String ->
-  Expr.Expr def () ->
-  Expr.Expr def () ->
-  Expr.Expr def ()
+  Expr.Expr def Guid () ->
+  Expr.Expr def Guid () ->
+  Expr.Expr def Guid ()
 pureLambda name x y = ExprUtil.pureExpr $ namedLambda name x y
 
 purePi ::
   String ->
-  Expr.Expr def () ->
-  Expr.Expr def () ->
-  Expr.Expr def ()
+  Expr.Expr def Guid () ->
+  Expr.Expr def Guid () ->
+  Expr.Expr def Guid ()
 purePi name x y = ExprUtil.pureExpr $ namedPi name x y
 
-pureLiteralInt :: Lens.Prism' (Expr.Expr def ()) Integer
+pureLiteralInt :: Lens.Prism' (Expr.Expr def par ()) Integer
 pureLiteralInt = ExprLens.pureExpr . ExprLens.bodyLiteralInteger
 
 pureGetDef :: String -> Expr ()
 pureGetDef name =
   ExprLens.pureExpr . ExprLens.bodyDefinitionRef # Def name
 
-pureGetParam :: String -> Expr.Expr def ()
+pureGetParam :: String -> Expr.Expr def Guid ()
 pureGetParam name =
   ExprLens.pureExpr . ExprLens.bodyParameterRef #
   Guid.fromString name
@@ -96,7 +96,7 @@ pureGetRecursiveDefI :: Expr ()
 pureGetRecursiveDefI =
   ExprLens.pureExpr . ExprLens.bodyDefinitionRef # recursiveDefI
 
-pureParameterRef :: String -> Expr.Expr def ()
+pureParameterRef :: String -> Expr.Expr def Guid ()
 pureParameterRef str =
   ExprLens.pureExpr . ExprLens.bodyParameterRef # Guid.fromString str
 
@@ -131,7 +131,7 @@ definitionTypes =
 recursiveDefI :: Def
 recursiveDefI = Def "recursiveDefI"
 
-innerMostPi :: Expr.Expr def a -> Expr.Expr def a
+innerMostPi :: Expr.Expr def par a -> Expr.Expr def par a
 innerMostPi =
   last . pis
   where
@@ -140,7 +140,7 @@ innerMostPi =
       Just resultType -> expr : pis resultType
       _ -> []
 
-piTags :: Lens.Traversal' (Expr.Expr def a) Guid
+piTags :: Lens.Traversal' (Expr.Expr def par a) Guid
 piTags =
   ExprLens.exprKindedLam KType . Lens._2 .
   ExprLens.exprKindedRecordFields KType .
@@ -156,13 +156,13 @@ showRestrictions xs =
   List.intercalate "," $
   map (ansiAround ansiYellow . show) xs
 
-canonizeDebug :: Expr.Expr def a -> Expr.Expr def a
+canonizeDebug :: Expr.Expr def Guid a -> Expr.Expr def Guid a
 canonizeDebug = ExprUtil.randomizeParamIdsG id ExprUtil.debugNameGen Map.empty (\_ _ -> id)
 
-showDerefed :: Show def => Expr.Expr def a -> String
+showDerefed :: Show def => Expr.Expr def Guid a -> String
 showDerefed = show . canonizeDebug . void
 
-showInferredValType :: Expr.Expr def (DerefedTV (DefI t)) -> String
+showInferredValType :: Expr.Expr def par (DerefedTV (DefI t)) -> String
 showInferredValType expr =
   unlines
   [ "Inferred val:  " ++ showDerefed (derefed ^. dValue)

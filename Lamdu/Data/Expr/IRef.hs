@@ -33,7 +33,7 @@ import qualified Lamdu.Data.Expr as Expr
 import qualified Lamdu.Data.Expr.Lens as ExprLens
 import qualified Lamdu.Data.Expr.Utils as ExprUtil
 
-type Expr t = Expr.Expr (DefI t)
+type Expr t = Expr.Expr (DefI t) Guid
 type ExprM m = Expr (Tag m)
 
 type T = Transaction
@@ -94,8 +94,8 @@ newExpr =
 writeExpr ::
   MonadA m =>
   (def -> DefIM m) ->
-  ExprIM m -> Expr.Expr def a ->
-  T m (Expr.Expr def (ExprIM m, a))
+  ExprIM m -> Expr.Expr def Guid a ->
+  T m (Expr.Expr def Guid (ExprIM m, a))
 writeExpr getDef iref =
   writeExprWithStoredSubexpressions getDef iref .
   fmap ((,) Nothing)
@@ -104,8 +104,8 @@ writeExprWithStoredSubexpressions ::
   MonadA m =>
   (def -> DefIM m) ->
   ExprIM m ->
-  Expr.Expr def (Maybe (ExprIM m), a) ->
-  T m (Expr.Expr def (ExprIM m, a))
+  Expr.Expr def Guid (Maybe (ExprIM m), a) ->
+  T m (Expr.Expr def Guid (ExprIM m, a))
 writeExprWithStoredSubexpressions getDef iref expr = do
   exprBodyP <- expressionBodyFrom getDef expr
   exprBodyP
@@ -124,15 +124,15 @@ readExpr exprI =
 expressionBodyFrom ::
   MonadA m =>
   (def -> DefIM m) ->
-  Expr.Expr def (Maybe (ExprIM m), a) ->
+  Expr.Expr def Guid (Maybe (ExprIM m), a) ->
   T m (Expr.BodyExpr def Guid (ExprIM m, a))
 expressionBodyFrom getDef = traverse (newExprFromH getDef) . (^. Expr.eBody)
 
 newExprFromH ::
   MonadA m =>
   (def -> DefIM m) ->
-  Expr.Expr def (Maybe (ExprIM m), a) ->
-  T m (Expr.Expr def (ExprIM m, a))
+  Expr.Expr def Guid (Maybe (ExprIM m), a) ->
+  T m (Expr.Expr def Guid (ExprIM m, a))
 newExprFromH getDef expr =
   case mIRef of
   Just iref -> writeExprWithStoredSubexpressions getDef iref expr
@@ -155,8 +155,8 @@ addProperties ::
   MonadA m =>
   (def -> DefIM m) ->
   (ExprIM m -> T m ()) ->
-  Expr.Expr def (ExprIM m, a) ->
-  Expr.Expr def (ExprProperty m, a)
+  Expr.Expr def Guid (ExprIM m, a) ->
+  Expr.Expr def Guid (ExprProperty m, a)
 addProperties getDefI setIRef (Expr.Expr body (iref, a)) =
   Expr.Expr (body & Lens.traversed %@~ f) (Property iref setIRef, a)
   where

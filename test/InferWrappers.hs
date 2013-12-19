@@ -6,6 +6,7 @@ import Control.Monad (void)
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (StateT, mapStateT, evalStateT)
 import Control.MonadA (MonadA)
+import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Deref (DerefedTV(..), dValue, dType)
 import Lamdu.Data.Infer.Load (LoadedExpr, ldDef)
 import System.Random (RandomGen)
@@ -18,8 +19,8 @@ import qualified Lamdu.Data.Expr.Lens as ExprLens
 import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.Deref as InferDeref
 import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables
-import qualified Lamdu.Data.Infer.Structure as Structure
 import qualified Lamdu.Data.Infer.Load as InferLoad
+import qualified Lamdu.Data.Infer.Structure as Structure
 import qualified System.Random as Random
 
 type ExprInferred = Expr (Expr (), Expr ())
@@ -43,7 +44,7 @@ data Error
 
 type M = StateT (Infer.Context Def) (Either Error)
 
-load :: Expr.Expr Def a -> M (LoadedExpr Def a)
+load :: Expr.Expr Def Guid a -> M (LoadedExpr Def a)
 load expr =
   InferLoad.load loader expr
   & mapStateT ((Lens._Left %~ LoadError) . fromRight . runEitherT)
@@ -71,7 +72,7 @@ infer = inferScope $ Infer.emptyScope recursiveDefI
 mapDerefError :: InferDeref.M Def a -> M a
 mapDerefError = mapStateT (Lens._Left %~ InferError . InferDeref.toInferError)
 
-derefWithPL :: InferredLoadedExpr a -> M (Expr.Expr Def (DerefedTV Def, a))
+derefWithPL :: InferredLoadedExpr a -> M (Expr.Expr Def Guid (DerefedTV Def, a))
 derefWithPL expr = expr
   & ExprLens.exprDef %~ (^. InferLoad.ldDef)
   & InferDeref.entireExpr
@@ -120,11 +121,11 @@ addStructure expr =
   expr <$ mapDerefError (Structure.add expr)
 
 loadInferInContext ::
-  Infer.TypedValue Def -> Expr.Expr Def a -> M (InferredLoadedExpr a)
+  Infer.TypedValue Def -> Expr.Expr Def Guid a -> M (InferredLoadedExpr a)
 loadInferInContext tv expr = inferScopedBy (tv ^. Infer.tvVal) =<< load expr
 
 loadInferInto ::
-  Infer.TypedValue Def -> Expr.Expr Def a -> M (InferredLoadedExpr a)
+  Infer.TypedValue Def -> Expr.Expr Def Guid a -> M (InferredLoadedExpr a)
 loadInferInto stv expr = do
   resumptionInferred <- loadInferInContext stv expr
   unify (resumptionInferred ^. Expr.ePayload . Lens._1) stv

@@ -1,6 +1,6 @@
 {-# OPTIONS -fno-warn-orphans #-} -- Arbitrary Data.Expression
 {-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
-module Lamdu.Data.Arbitrary () where
+module Lamdu.Data.Arbitrary (Name(..)) where
 
 import Control.Applicative (Applicative(..), (<$>), (<*))
 import Control.Lens ((%~))
@@ -35,7 +35,7 @@ liftGen = lift . lift
 next :: GenExpr def par par
 next = lift $ State.gets head <* State.modify tail
 
-arbitraryLambda :: Arbitrary a => GenExpr def Guid (Expr.Lam Guid (Expr.Expr def a))
+arbitraryLambda :: Arbitrary a => GenExpr def par (Expr.Lam par (Expr.Expr def par a))
 arbitraryLambda = do
   par <- next
   flip Expr.Lam par <$> liftGen arbitrary <*> arbitraryExpr <*>
@@ -48,19 +48,19 @@ listOf gen = do
     then return []
     else (:) <$> gen <*> listOf gen
 
-arbitraryRecord :: Arbitrary a => GenExpr def Guid (Expr.Record (Expr.Expr def a))
+arbitraryRecord :: Arbitrary a => GenExpr def par (Expr.Record (Expr.Expr def par a))
 arbitraryRecord =
   Expr.Record
   <$> liftGen arbitrary
   <*> listOf ((,) <$> arbitraryExpr <*> arbitraryExpr)
 
-arbitraryGetField :: Arbitrary a => GenExpr def Guid (Expr.GetField (Expr.Expr def a))
+arbitraryGetField :: Arbitrary a => GenExpr def par (Expr.GetField (Expr.Expr def par a))
 arbitraryGetField = Expr.GetField <$> arbitraryExpr <*> arbitraryExpr
 
-arbitraryApply :: Arbitrary a => GenExpr def Guid (Expr.Apply (Expr.Expr def a))
+arbitraryApply :: Arbitrary a => GenExpr def par (Expr.Apply (Expr.Expr def par a))
 arbitraryApply = Expr.Apply <$> arbitraryExpr <*> arbitraryExpr
 
-arbitraryLeaf :: GenExpr def Guid (Expr.Leaf def Guid)
+arbitraryLeaf :: GenExpr def par (Expr.Leaf def par)
 arbitraryLeaf = do
   Env scope mGenDefI <- Reader.ask
   join . liftGen . Gen.elements $
@@ -73,7 +73,7 @@ arbitraryLeaf = do
     map (fmap (Expr.GetVariable . Expr.DefinitionRef) . liftGen)
       (maybeToList mGenDefI)
 
-arbitraryBody :: Arbitrary a => GenExpr def Guid (Expr.BodyExpr def Guid a)
+arbitraryBody :: Arbitrary a => GenExpr def par (Expr.BodyExpr def par a)
 arbitraryBody =
   join . liftGen . Gen.frequency . (Lens.mapped . Lens._2 %~ pure) $
   [ weight 2  $ Expr.BodyLam      <$> arbitraryLambda
@@ -85,25 +85,25 @@ arbitraryBody =
   where
     weight = (,)
 
-arbitraryExpr :: Arbitrary a => GenExpr def Guid (Expr.Expr def a)
+arbitraryExpr :: Arbitrary a => GenExpr def par (Expr.Expr def par a)
 arbitraryExpr = Expr.Expr <$> arbitraryBody <*> liftGen arbitrary
 
-guidStream :: [Guid]
-guidStream = map Guid.fromString names
-  where
-    alphabet = map (:[]) ['a'..'z']
-    names = (alphabet ++) $ (++) <$> names <*> alphabet
+class Name n where
+  names :: [n]
 
-exprGen :: Arbitrary a => Maybe (Gen def) -> Gen (Expr.Expr def a)
-exprGen makeDefI =
-  (`evalStateT` guidStream) .
-  (`runReaderT` Env [] makeDefI) $
-  arbitraryExpr
+exprGen :: (Arbitrary a, Name par) => Maybe (Gen def) -> Gen (Expr.Expr def par a)
+exprGen makeDefI = do
+  (`evalStateT` names) .
+    (`runReaderT` Env [] makeDefI) $
+    arbitraryExpr
+
+instance Name Guid where
+  names = fmap (Guid.fromString . (: [])) ['a'..]
 
 -- TODO: This instance doesn't know which Definitions exist in the
 -- world so avoids DefinitionRef and only has valid ParameterRefs to
 -- its own lambdas.
-instance Arbitrary a => Arbitrary (Expr.Expr def a) where
+instance (Name par, Arbitrary a) => Arbitrary (Expr.Expr def par a) where
   arbitrary = exprGen Nothing
 
 derive makeArbitrary ''Expr.Kind

@@ -53,8 +53,8 @@ import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 
 onMatchingSubexprs ::
   MonadA m => (a -> m ()) ->
-  (Expr.Expr def a -> Bool) ->
-  Expr.Expr def a -> m ()
+  (Expr.Expr def par a -> Bool) ->
+  Expr.Expr def par a -> m ()
 onMatchingSubexprs action predicate =
   traverse_ (action . (^. Expr.ePayload)) .
   filter predicate . ExprUtil.subExprs
@@ -62,10 +62,10 @@ onMatchingSubexprs action predicate =
 toHole :: MonadA m => Stored m -> T m ()
 toHole = void . DataOps.setToHole
 
-isGetParamOf :: Guid -> Expr.Expr def a -> Bool
+isGetParamOf :: Eq par => par -> Expr.Expr def par a -> Bool
 isGetParamOf = Lens.anyOf ExprLens.exprParameterRef . (==)
 
-isGetFieldParam :: Guid -> Guid -> Expr.Expr def a -> Bool
+isGetFieldParam :: Eq par => par -> Guid -> Expr.Expr def par a -> Bool
 isGetFieldParam param tagG =
   p . (^? ExprLens.exprGetField)
   where
@@ -75,12 +75,12 @@ isGetFieldParam param tagG =
       Lens.anyOf ExprLens.exprParameterRef (== param) record
 
 deleteParamRef ::
-  MonadA m => Guid -> Expr.Expr def (Stored m) -> T m ()
+  (Eq par, MonadA m) => par -> Expr.Expr def par (Stored m) -> T m ()
 deleteParamRef =
   onMatchingSubexprs toHole . isGetParamOf
 
 deleteFieldParamRef ::
-  MonadA m => Guid -> Guid -> Expr.Expr def (Stored m) -> T m ()
+  (Eq par, MonadA m) => par -> Guid -> Expr.Expr def par (Stored m) -> T m ()
 deleteFieldParamRef param tagG =
   onMatchingSubexprs toHole $ isGetFieldParam param tagG
 
@@ -100,7 +100,7 @@ fakeExample guid =
   }
 
 mkPositionalFuncParamActions ::
-  MonadA m => Guid -> Stored m -> Expr.Expr def (Stored m) ->
+  MonadA m => Guid -> Stored m -> Expr.Expr def Guid (Stored m) ->
   FuncParamActions MStoredName m
 mkPositionalFuncParamActions param lambdaProp body =
   FuncParamActions
@@ -436,7 +436,7 @@ convertExpressionI ee =
   Expr.BodyLeaf Expr.TagType -> convertAtom "Tag"
 
 -- Check no holes
-isCompleteType :: Expr.Expr def a -> Bool
+isCompleteType :: Expr.Expr def par a -> Bool
 isCompleteType =
   Lens.nullOf (Lens.folding ExprUtil.subExprs . ExprLens.exprHole)
 
@@ -833,7 +833,7 @@ addFirstFieldParam lamGuid recordI = do
 
 assertedGetProp ::
   String ->
-  Expr.Expr def (InputPayloadP inferred (Maybe stored) a) -> stored
+  Expr.Expr def par (InputPayloadP inferred (Maybe stored) a) -> stored
 assertedGetProp _
   Expr.Expr
   { Expr._ePayload =

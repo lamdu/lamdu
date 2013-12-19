@@ -5,6 +5,7 @@ module Lamdu.Data.Infer.Structure
 import Control.Lens.Operators
 import Control.Monad (when, void)
 import Control.Monad.Trans.State (StateT, mapStateT)
+import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.TypedValue (TypedValue(..))
 import qualified Control.Lens as Lens
@@ -20,7 +21,7 @@ import qualified Lamdu.Data.Infer.RefData as RefData
 
 add ::
   (Show def, Ord def) =>
-  Expr.Expr (Load.LoadedDef def) (TypedValue def, a) ->
+  Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, a) ->
   StateT (Context def) (Either (Deref.Error def)) ()
 add = Lens.traverseOf_ (ExprLens.holePayloads . Lens._1) %%~ addToHole
 

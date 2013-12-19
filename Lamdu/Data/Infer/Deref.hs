@@ -39,7 +39,7 @@ import qualified Lamdu.Data.Infer.RefData as RefData
 data Error def = InfiniteExpr (ExprRef def)
   deriving (Show, Eq, Ord)
 
-type Expr def = Expr.Expr (RefData.LoadedDef def) (ExprRef def)
+type Expr def = Expr.Expr (RefData.LoadedDef def) Guid (ExprRef def)
 
 -- TODO: Make this a newtype and maybe rename to Context
 -- | The stored guid names we know for paremeter refs (different
@@ -104,8 +104,8 @@ derefScope storedGuids =
       return (cGuid, typeExpr)
 
 expr ::
-  Expr.Expr ldef (TypedValue def, a) ->
-  M def (Expr.Expr ldef (M def (DerefedTV def), a))
+  Expr.Expr ldef Guid (TypedValue def, a) ->
+  M def (Expr.Expr ldef Guid (M def (DerefedTV def), a))
 expr =
   go []
   where
@@ -130,8 +130,8 @@ expr =
         <&> (`Expr.Expr` (derefTV, pl))
 
 entireExpr ::
-  Expr.Expr ldef (TypedValue def, a) ->
-  M def (Expr.Expr ldef (DerefedTV def, a))
+  Expr.Expr ldef Guid (TypedValue def, a) ->
+  M def (Expr.Expr ldef Guid (DerefedTV def, a))
 entireExpr = (>>= Lens.sequenceOf (Lens.traverse . Lens._1)) . expr
 ------- Lifted errors:
 

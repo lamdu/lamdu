@@ -67,7 +67,7 @@ data SearchTerms = SearchTerms
 data Group def = Group
   { _groupId :: String
   , _groupSearchTerms :: SearchTerms
-  , _groupBaseExpr :: Expr def ()
+  , _groupBaseExpr :: Expr def Guid ()
   }
 type GroupM m = Group (DefIM m)
 
@@ -100,18 +100,18 @@ data ResultsList m = ResultsList
   }
 Lens.makeLenses ''ResultsList
 
-getVarsToGroup :: (Sugar.GetVar Sugar.Name m, Expr def ()) -> Group def
+getVarsToGroup :: (Sugar.GetVar Sugar.Name m, Expr def Guid ()) -> Group def
 getVarsToGroup (getVar, expr) = sugarNameToGroup (getVar ^. Sugar.gvName) expr
 
-tagsToGroup :: (Sugar.TagG Sugar.Name, Expr def ()) -> Group def
+tagsToGroup :: (Sugar.TagG Sugar.Name, Expr def Guid ()) -> Group def
 tagsToGroup (tagG, expr) = sugarNameToGroup (tagG ^. Sugar.tagName) expr
 
-getParamsToGroup :: (Sugar.GetParams Sugar.Name m, Expr def ()) -> Group def
+getParamsToGroup :: (Sugar.GetParams Sugar.Name m, Expr def Guid ()) -> Group def
 getParamsToGroup (getParams, expr) =
   sugarNameToGroup (getParams ^. Sugar.gpDefName) expr
   & groupSearchTerms <>~ SearchTerms ["params"] (Any True)
 
-sugarNameToGroup :: Sugar.Name -> Expr def () -> Group def
+sugarNameToGroup :: Sugar.Name -> Expr def Guid () -> Group def
 sugarNameToGroup (Sugar.Name _ collision varName) expr = Group
   { _groupId = "Var" ++ varName ++ ":" ++ concat collisionStrs
   , _groupSearchTerms = SearchTerms (varName : collisionStrs) (Any True)
@@ -209,21 +209,21 @@ baseExprWithApplyForms holeInfo baseExpr =
 
 storePointExpr ::
   Monoid a =>
-  Expr.BodyExpr def Guid (Sugar.MStorePoint m a) ->
-  Expr.Expr def (Sugar.MStorePoint m a)
+  Expr.BodyExpr def par (Sugar.MStorePoint m a) ->
+  Expr.Expr def par (Sugar.MStorePoint m a)
 storePointExpr = (`Expr` (Nothing, mempty))
 
-storePointHole :: Monoid a => Expr.Expr def (Sugar.MStorePoint m a)
+storePointHole :: Monoid a => Expr.Expr def par (Sugar.MStorePoint m a)
 storePointHole = storePointExpr $ ExprLens.bodyHole # ()
 
 storePointHoleWrap ::
   Monoid a =>
-  Expr.Expr def (Sugar.MStorePoint m a) ->
-  Expr.Expr def (Sugar.MStorePoint m a)
+  Expr.Expr def par (Sugar.MStorePoint m a) ->
+  Expr.Expr def par (Sugar.MStorePoint m a)
 storePointHoleWrap expr =
   storePointExpr $ ExprUtil.makeApply storePointHole expr
 
-removeWrappers :: Expr def a -> Maybe (Expr def a)
+removeWrappers :: Expr def par a -> Maybe (Expr def par a)
 removeWrappers expr
   | Lens.has wrappers expr =
     expr
@@ -231,7 +231,7 @@ removeWrappers expr
     & Just
   | otherwise = Nothing
   where
-    wrappers :: Lens.Traversal' (Expr def a) (Expr def a)
+    wrappers :: Lens.Traversal' (Expr def par a) (Expr def par a)
     wrappers =
       (ExprLens.subTreesThat . Lens.has)
       (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole)

@@ -16,6 +16,7 @@ import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
+import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.MakeTypes (makeTV)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
@@ -62,14 +63,14 @@ unifyRefs x y = InferMRun.run $ Unify.unify x y
 infer ::
   Ord def =>
   Scope def ->
-  Expr.Expr (Load.LoadedDef def) a ->
-  M def (Expr.Expr (Load.LoadedDef def) (TypedValue def, a))
+  Expr.Expr (Load.LoadedDef def) Guid a ->
+  M def (Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, a))
 infer scope expr = InferMRun.run $ exprIntoSTV scope expr
 
 inferAt ::
   Ord def =>
-  TypedValue def -> Expr.Expr (Load.LoadedDef def) a ->
-  M def (Expr.Expr (Load.LoadedDef def) (TypedValue def, a))
+  TypedValue def -> Expr.Expr (Load.LoadedDef def) Guid a ->
+  M def (Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, a))
 inferAt tv expr = do
   scope <-
     UFData.read (tv ^. tvVal)
@@ -81,8 +82,8 @@ inferAt tv expr = do
 
 -- With hole apply vals and hole types
 exprIntoSTV ::
-  Ord def => Scope def -> Expr.Expr (Load.LoadedDef def) a ->
-  Infer def (Expr.Expr (Load.LoadedDef def) (TypedValue def, a))
+  Ord def => Scope def -> Expr.Expr (Load.LoadedDef def) Guid a ->
+  Infer def (Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, a))
 exprIntoSTV scope (Expr.Expr body pl) = do
   bodySTV <-
     case body of

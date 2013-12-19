@@ -19,8 +19,8 @@ addAnnotation msg = do
   pure count
 
 errorMessage ::
-  Show def =>
-  AnnotationM (Expr.Expr def [AnnotationIndex]) ->
+  (Eq par, Show par, Show def) =>
+  AnnotationM (Expr.Expr def par [AnnotationIndex]) ->
   ([String], String)
 errorMessage mkExpr =
   (resultErrs, fullMsg)

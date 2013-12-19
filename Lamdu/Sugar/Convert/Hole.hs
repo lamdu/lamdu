@@ -102,7 +102,7 @@ mkPaste exprP = do
 --
 -- So to be compatible with that in our idTranslations, we want to
 -- change our param Guids to match that:
-combineLamGuids :: (a -> Guid) -> Expr.Expr def a -> Expr.Expr def a
+combineLamGuids :: (a -> Guid) -> Expr.Expr def Guid a -> Expr.Expr def Guid a
 combineLamGuids getGuid =
   go Map.empty
   where
@@ -122,7 +122,7 @@ combineLamGuids getGuid =
           newParamGuid = Guid.combine (getGuid a) paramGuid
       _ -> go renames <$> body
 
-markHoles :: Expr.Expr def a -> Expr.Expr def (Bool, a)
+markHoles :: Expr.Expr def Guid a -> Expr.Expr def Guid (Bool, a)
 markHoles =
   (ExprLens.holePayloads . Lens._1 .~ True) .
   (Lens.mapped %~ (,) False)
@@ -299,7 +299,7 @@ inferOnTheSide sugarContext scope expr =
 
 getScopeElement ::
   MonadA m => ConvertM.Context m ->
-  (Guid, Expr.Expr def a) -> T m (Scope MStoredName m)
+  (Guid, Expr.Expr def Guid a) -> T m (Scope MStoredName m)
 getScopeElement sugarContext (parGuid, typeExpr) = do
   scopePar <- mkGetPar
   mconcat . (scopePar :) <$>
@@ -527,8 +527,8 @@ writeExprMStored exprIRef exprMStorePoint = do
     & ExprIRef.writeExprWithStoredSubexpressions (^. ldDef) exprIRef
 
 orderedInnerHoles ::
-  Expr.Expr ldef (a, DerefedTV def) ->
-  [Expr.Expr ldef (a, DerefedTV def)]
+  Expr.Expr ldef par (a, DerefedTV def) ->
+  [Expr.Expr ldef par (a, DerefedTV def)]
 orderedInnerHoles e =
   case e ^. Expr.eBody of
   Expr.BodyApply (Expr.Apply func arg)
@@ -542,8 +542,8 @@ orderedInnerHoles e =
 -- Also skip param types, those can usually be inferred later, so less
 -- useful to fill immediately
 uninferredHoles ::
-  Expr.Expr ldef (a, DerefedTV def) ->
-  [Expr.Expr ldef (a, DerefedTV def)]
+  Expr.Expr ldef par (a, DerefedTV def) ->
+  [Expr.Expr ldef par (a, DerefedTV def)]
 uninferredHoles e =
   case e ^. Expr.eBody of
   Expr.BodyLeaf Expr.Hole -> [e]

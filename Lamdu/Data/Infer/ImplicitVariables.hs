@@ -37,7 +37,7 @@ data Payload a = Stored a | AutoGen Guid
   deriving (Eq, Ord, Show, Functor, Typeable)
 derive makeBinary ''Payload
 
-outerLambdas :: Lens.Traversal' (Expr def a) (Expr def a)
+outerLambdas :: Lens.Traversal' (Expr def par a) (Expr def par a)
 outerLambdas f =
   pure
   & Lens.outside (ExprLens.bodyKindedLam Expr.KVal) .~ fmap (ExprLens.bodyKindedLam Expr.KVal # ) . onLambda
@@ -49,9 +49,9 @@ outerLambdas f =
 add ::
   (Show def, Ord def, RandomGen gen) =>
   gen -> def ->
-  Expr.Expr (Load.LoadedDef def) (TypedValue def, a) ->
+  Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, a) ->
   StateT (Context def) (Either (InferM.Error def))
-  (Expr.Expr (Load.LoadedDef def) (TypedValue def, Payload a))
+  (Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, Payload a))
 add gen def expr =
   expr ^.. outerLambdas . Lens.traverse . Lens._1
   & traverse_ (onEachParamTypeSubexpr def)
@@ -71,7 +71,7 @@ onEachParamTypeSubexpr ::
   (Ord def, RandomGen gen) =>
   def -> TypedValue def ->
   StateT gen
-  (StateT (Expr.Expr (Load.LoadedDef def) (TypedValue def, Payload a))
+  (StateT (Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, Payload a))
    (StateT (Context def)
     (Either (InferM.Error def)))) ()
 onEachParamTypeSubexpr def tv = do

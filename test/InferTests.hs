@@ -7,7 +7,6 @@ import Control.Monad (void)
 import InferAssert
 import InferCombinators
 import InferWrappers
-import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expr (Kind(..))
 import Lamdu.Data.Expr.Utils (pureHole)
 import Test.Framework (testGroup)
@@ -218,9 +217,9 @@ resumptionTests =
     hole `resumeOnSide` recurse (hole ~> hole)
   ]
 
-lamParamType :: Kind -> Lens.Traversal' (Expr.Expr def a) (Expr.Expr def a)
+lamParamType :: Kind -> Lens.Traversal' (Expr.Expr def par a) (Expr.Expr def par a)
 lamParamType k = ExprLens.exprKindedLam k . Lens._2
-lamResult :: Kind -> Lens.Traversal' (Expr.Expr def a) (Expr.Expr def a)
+lamResult :: Kind -> Lens.Traversal' (Expr.Expr def par a) (Expr.Expr def par a)
 lamResult k = ExprLens.exprKindedLam k . Lens._3
 
 emptyRecordTests =
