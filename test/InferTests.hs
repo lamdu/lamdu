@@ -265,6 +265,15 @@ addImplicitCurriedApply2Test =
       (f $$ holeWithInferredType a) `setInferredType` (hole ~> hole) $$ hole
     wvExpr = lambda "a" (asHole set) expr
 
+listOfIdImplicitsTest =
+  testCase "listOfId: f = [\\x -> x]" $
+  allowFailAssertion "Outer-most implicits do not work correctly with some inner lambdas" $
+  inferWVAssertion (expr iset) wvExpr
+  where
+    iset = holeWithInferredType set
+    expr a = list [lambda "x" a id]
+    wvExpr = lambda "a" (asHole set) expr
+
 uncurry2Test =
   testCase "uncurry2: \\params:{?->?->?, x:?, y:?} -> f x y   WV: \\a b c params:{f:?{a->b->c} x:?a y:?b} -> f x y : c" $
   allowFailAssertion "Missing rigidity check" $
@@ -289,6 +298,7 @@ implicitVarTests =
   [ simplestImplicitTest
   , noImplicitWithRedexTest
   , addImplicitCurriedApply2Test
+  , listOfIdImplicitsTest
   , uncurry2Test
   ]
 
