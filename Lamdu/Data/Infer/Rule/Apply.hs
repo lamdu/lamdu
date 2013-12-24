@@ -162,7 +162,7 @@ execute ruleRef =
       (linkSrc, exprLink) <- findLink "Trigger.IsTheParameterRef not on src?!" srcRef
       removeLink linkSrc
       argVal <- Lens.use Rule.aArgVal
-      void . unify argVal $ exprLink ^. Rule.dest
+      void . unify argVal $ exprLink ^. Rule.applyExprLinkDest
     handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.NotTheParameterRef) = do
       -- Triggered when not a hole anymore, so copy:
       mLinkPair <- mFindLinkBySrc srcRef
@@ -181,7 +181,7 @@ execute ruleRef =
           return ()
         Just (linkSrc, linkData) -> do
           removeLink linkSrc
-          void . unify linkSrc $ linkData ^. Rule.dest
+          void . unify linkSrc $ linkData ^. Rule.applyExprLinkDest
     handleTrigger (_, Trigger.FiredUnify _) =
       -- Some of our sources were potentially unified, so
       -- normalizeSrcLinks will find them and unify the dests
