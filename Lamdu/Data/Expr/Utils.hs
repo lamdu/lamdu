@@ -281,35 +281,45 @@ matchEq leaf1 d0 prism = sequenceA $ do
   d1 <- leaf1 ^? Lens.clonePrism prism
   pure (Lens.clonePrism prism # d0) <$ guard (d0 == d1)
 
+transLeafParam :: Leaf def p -> Either p (Leaf def q)
+transLeafParam (GetVariable (ParameterRef p)) = Left p
+transLeafParam (GetVariable (DefinitionRef d)) = Right $ ExprLens.definitionRef # d
+transLeafParam (LiteralInteger x) = Right $ LiteralInteger x
+transLeafParam Type = Right Type
+transLeafParam IntegerType = Right IntegerType
+transLeafParam Hole = Right Hole
+transLeafParam TagType = Right TagType
+transLeafParam (Tag x) = Right $ Tag x
+
 matchLeaf ::
   (Eq def, Applicative f) =>
-  (par -> par -> f (Maybe par)) ->
-  Leaf def par ->
-  Leaf def par ->
-  f (Maybe (Leaf def par))
+  (p -> q -> f (Maybe r)) ->
+  Leaf def p ->
+  Leaf def q ->
+  f (Maybe (Leaf def r))
 matchLeaf matchGetPar leaf0 leaf1 =
-  case leaf0 of
-    -- TODO: Clean this up
-  GetVariable (ParameterRef p0) ->
-    fmap join .
-    traverse ((fmap . fmap) (ExprLens.parameterRef # ) . matchGetPar p0) $
-    leaf1 ^? ExprLens.parameterRef
-  GetVariable (DefinitionRef d0) -> matchEq leaf1 d0 ExprLens.definitionRef
-  LiteralInteger x               -> matchEq leaf1 x Expr._LiteralInteger
-  Type                           -> matchEq leaf1 () Expr._Type
-  IntegerType                    -> matchEq leaf1 () Expr._IntegerType
-  Hole                           -> matchEq leaf1 () Expr._Hole
-  TagType                        -> matchEq leaf1 () Expr._TagType
-  Tag x                          -> matchEq leaf1 x Expr._Tag
+  case (transLeafParam leaf0, transLeafParam leaf1) of
+  (Left p0, Left p1) -> fmap (ExprLens.parameterRef # ) <$> matchGetPar p0 p1
+  (Right x, Right y) ->
+    case x of
+    GetVariable ParameterRef {}    -> error "cant be ParameterRef after transLeafParam!"
+    GetVariable (DefinitionRef d0) -> matchEq y d0 ExprLens.definitionRef
+    LiteralInteger i               -> matchEq y i Expr._LiteralInteger
+    Type                           -> matchEq y () Expr._Type
+    IntegerType                    -> matchEq y () Expr._IntegerType
+    Hole                           -> matchEq y () Expr._Hole
+    TagType                        -> matchEq y () Expr._TagType
+    Tag t                          -> matchEq y t Expr._Tag
+  _ -> pure Nothing
 
 -- Left-biased on parameter guids
 {-# INLINE matchBody #-}
 matchBody ::
   (Applicative f, Eq def) =>
-  (par -> par -> a -> b -> f (par, c)) ->  -- ^ Lam/Pi result match
-  (a -> b -> f c) ->                        -- ^ Ordinary structural match (Apply components, param type)
-  (par -> par -> f (Maybe par)) ->         -- ^ Match ParameterRef's
-  Body def par a -> Body def par b -> f (Maybe (Body def par c))
+  (p -> q -> a -> b -> f (r, c)) ->  -- ^ Lam/Pi result match
+  (a -> b -> f c) ->                 -- ^ Ordinary structural match (Apply components, param type)
+  (p -> q -> f (Maybe r)) ->         -- ^ Match ParameterRef's
+  Body def p a -> Body def q b -> f (Maybe (Body def r c))
 matchBody matchLamResult matchOther matchGetPar body0 body1 =
   case body0 of
   BodyLam (Lam k0 p0 pt0 r0) -> sequenceA $ do
