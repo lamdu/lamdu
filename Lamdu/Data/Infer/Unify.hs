@@ -176,7 +176,7 @@ mergeScopeBodies xScope xBody yScope yBody =
       intersectedScope <- wuInfer $ intersectScopes xScope yScope
       wuLater $
         handleMatchResult =<<
-        ExprUtil.matchBody matchLamResult unifyRecurse matchGetPars xBody yBody
+        ExprUtil.matchBodyDeprecated2 matchLamResult unifyRecurse matchGetPars xBody yBody
       return (intersectedScope, yBody)
   where
     zoomGuidAliases = uInfer . InferM.liftGuidAliases

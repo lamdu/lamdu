@@ -20,7 +20,7 @@ module Lamdu.Data.Expr.Utils
   , randomizeExprAndParams
   , NameGen(..), onNgMakeName
   , randomNameGen, debugNameGen
-  , matchBody, matchBodyDeprecated
+  , matchBodyDeprecated2, matchBodyDeprecated
   , matchExpr, matchExprG
   , subExprs, subExprsWithout
   , isDependentPi, exprHasGetVar
@@ -312,15 +312,17 @@ matchLeaf matchGetPar leaf0 leaf1 =
     Tag t                          -> matchEq y t Expr._Tag
   _ -> pure Nothing
 
+-- matchBody will not have an Applicative f, that could be parameterized into it.
+
 -- Left-biased on parameter guids
-{-# INLINE matchBody #-}
-matchBody ::
+{-# INLINE matchBodyDeprecated2 #-}
+matchBodyDeprecated2 ::
   (Applicative f, Eq def) =>
   (p -> q -> a -> b -> f (r, c)) ->  -- ^ Lam/Pi result match
   (a -> b -> f c) ->                 -- ^ Ordinary structural match (Apply components, param type)
   (p -> q -> f (Maybe r)) ->         -- ^ Match ParameterRef's
   Body def p a -> Body def q b -> f (Maybe (Body def r c))
-matchBody matchLamResult matchOther matchGetPar body0 body1 =
+matchBodyDeprecated2 matchLamResult matchOther matchGetPar body0 body1 =
   case body0 of
   BodyLam (Lam k0 p0 pt0 r0) -> sequenceA $ do
     Lam k1 p1 pt1 r1 <- body1 ^? _BodyLam
@@ -357,7 +359,7 @@ matchBodyDeprecated ::
   Body def par a -> Body def par b -> Maybe (Body def par c)
 matchBodyDeprecated matchLamResult matchOther matchGetPar body0 body1 =
   runIdentity $
-  matchBody
+  matchBodyDeprecated2
   (matchLamResult & Lens.mapped . Lens.mapped . Lens.mapped . Lens.mapped %~ Identity)
   (matchOther & Lens.mapped . Lens.mapped %~ Identity)
   (matchGetPar & Lens.imapped <. Lens.mapped %@~ matchGetParMaybe)
