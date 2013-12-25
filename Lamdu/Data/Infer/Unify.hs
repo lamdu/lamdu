@@ -182,9 +182,10 @@ mergeScopeBodies xScope xBody yScope yBody =
     zoomGuidAliases = uInfer . InferM.liftGuidAliases
     handleMatchResult Nothing = uInfer . InferM.error $ Mismatch xBody yBody
     handleMatchResult (Just _) = return ()
-    matchLamResult xGuid yGuid xRef yRef = do
-      (_guidRep, resGuid) <- zoomGuidAliases $ GuidAliases.unify xGuid yGuid
-      (,) resGuid <$> unifyRecurse xRef yRef
+    matchLamResult xGuid yGuid xRef yRef =
+      ( snd <$> zoomGuidAliases (GuidAliases.unify xGuid yGuid)
+      , unifyRecurse xRef yRef
+      )
     matchGetPars xGuid yGuid = zoomGuidAliases $ do
       xRep <- GuidAliases.getRep xGuid
       yRep <- GuidAliases.getRep yGuid

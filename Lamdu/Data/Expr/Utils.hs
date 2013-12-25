@@ -45,11 +45,10 @@ import Control.Arrow ((***))
 import Control.Lens (Context(..))
 import Control.Lens.Operators
 import Control.Lens.Utils (addListContexts, addTuple2Contexts)
-import Control.Monad (guard, join)
+import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.Monad.Trans.State (evalState, state)
-import Data.Functor.Identity (Identity(..))
 import Data.Map (Map)
 import Data.Maybe (isJust, fromMaybe)
 import Data.Monoid (Any)
@@ -276,10 +275,11 @@ randomizeParamIdsG preNG gen initMap convertPL =
     makeName oldParamId s nameGen =
       ngMakeName nameGen oldParamId $ preNG s
 
-matchEq :: (Eq b, Applicative f) => a -> b -> Lens.Prism' a b -> f (Maybe a)
-matchEq leaf1 d0 prism = sequenceA $ do
+matchEq :: Eq b => a -> b -> Lens.Prism' a b -> Maybe a
+matchEq leaf1 d0 prism = do
   d1 <- leaf1 ^? Lens.clonePrism prism
-  pure (Lens.clonePrism prism # d0) <$ guard (d0 == d1)
+  guard $ d0 == d1
+  Just $ Lens.clonePrism prism # d0
 
 transLeafParam :: Leaf def p -> Either p (Leaf def q)
 transLeafParam (GetVariable (ParameterRef p)) = Left p
@@ -292,14 +292,14 @@ transLeafParam TagType = Right TagType
 transLeafParam (Tag x) = Right $ Tag x
 
 matchLeaf ::
-  (Eq def, Applicative f) =>
-  (p -> q -> f (Maybe r)) ->
+  Eq def =>
+  (p -> q -> r) ->
   Leaf def p ->
   Leaf def q ->
-  f (Maybe (Leaf def r))
+  Maybe (Leaf def r)
 matchLeaf matchGetPar leaf0 leaf1 =
   case (transLeafParam leaf0, transLeafParam leaf1) of
-  (Left p0, Left p1) -> fmap (ExprLens.parameterRef # ) <$> matchGetPar p0 p1
+  (Left p0, Left p1) -> Just $ ExprLens.parameterRef # matchGetPar p0 p1
   (Right x, Right y) ->
     case x of
     GetVariable ParameterRef {}    -> error "cant be ParameterRef after transLeafParam!"
@@ -310,45 +310,60 @@ matchLeaf matchGetPar leaf0 leaf1 =
     Hole                           -> matchEq y () Expr._Hole
     TagType                        -> matchEq y () Expr._TagType
     Tag t                          -> matchEq y t Expr._Tag
-  _ -> pure Nothing
+  _ -> Nothing
 
--- matchBody will not have an Applicative f, that could be parameterized into it.
+{-# INLINE matchBody #-}
+matchBody ::
+  Eq def =>
+  (p -> q -> a -> b -> (r, c)) ->  -- ^ Match lam param ids and results
+  (a -> b -> c) ->                 -- ^ Match same-scoped subexpressions
+  (p -> q -> r) ->                 -- ^ Match get-params
+  Body def p a ->
+  Body def q b ->
+  Maybe (Body def r c)
+matchBody matchLam matchSubexpr matchGetPar body0 body1 =
+  case body0 of
+  BodyLam (Lam k0 p0 pt0 r0) -> do
+    Lam k1 p1 pt1 r1 <- body1 ^? _BodyLam
+    guard $ k0 == k1
+    let (p, r) = matchLam p0 p1 r0 r1
+    Just . BodyLam $ Lam k0 p (matchSubexpr pt0 pt1) r
+  BodyApply (Apply f0 a0) -> do
+    Apply f1 a1 <- body1 ^? _BodyApply
+    Just . BodyApply $ Apply (matchSubexpr f0 f1) (matchSubexpr a0 a1)
+  BodyRecord (Record k0 fs0) -> do
+    Record k1 fs1 <- body1 ^? _BodyRecord
+    guard $ k0 == k1
+    matchedPairs <- ListUtils.match matchPair fs0 fs1
+    Just . BodyRecord $ Record k0 matchedPairs
+    where
+      matchPair (t0, v0) (t1, v1) =
+        (matchSubexpr t0 t1, matchSubexpr v0 v1)
+  BodyGetField (GetField r0 f0) -> do
+    GetField r1 f1 <- body1 ^? _BodyGetField
+    Just . BodyGetField $ GetField (matchSubexpr r0 r1) (matchSubexpr f0 f1)
+  BodyLeaf leaf0 -> do
+    leaf1 <- body1 ^? _BodyLeaf
+    BodyLeaf <$> matchLeaf matchGetPar leaf0 leaf1
 
 -- Left-biased on parameter guids
 {-# INLINE matchBodyDeprecated2 #-}
 matchBodyDeprecated2 ::
   (Applicative f, Eq def) =>
-  (p -> q -> a -> b -> f (r, c)) ->  -- ^ Lam/Pi result match
-  (a -> b -> f c) ->                 -- ^ Ordinary structural match (Apply components, param type)
-  (p -> q -> f (Maybe r)) ->         -- ^ Match ParameterRef's
+  (p -> q -> a -> b -> (f r, f c)) ->  -- ^ Lam/Pi result match
+  (a -> b -> f c) ->                   -- ^ Ordinary structural match (Apply components, param type)
+  (p -> q -> f (Maybe r)) ->           -- ^ Match ParameterRef's
   Body def p a -> Body def q b -> f (Maybe (Body def r c))
 matchBodyDeprecated2 matchLamResult matchOther matchGetPar body0 body1 =
-  case body0 of
-  BodyLam (Lam k0 p0 pt0 r0) -> sequenceA $ do
-    Lam k1 p1 pt1 r1 <- body1 ^? _BodyLam
-    guard $ k0 == k1
-    let buildLam paramType (param, result) = BodyLam $ Lam k0 param paramType result
-    Just $
-      buildLam
-      <$> matchOther pt0 pt1
-      <*> matchLamResult p0 p1 r0 r1
-  BodyApply (Apply f0 a0) -> sequenceA $ do
-    Apply f1 a1 <- body1 ^? _BodyApply
-    Just $ BodyApply <$> (Apply <$> matchOther f0 f1 <*> matchOther a0 a1)
-  BodyRecord (Record k0 fs0) -> sequenceA $ do
-    Record k1 fs1 <- body1 ^? _BodyRecord
-    guard $ k0 == k1
-    matchedPairs <- ListUtils.match matchPair fs0 fs1
-    Just $ BodyRecord . Record k0 <$> sequenceA matchedPairs
-  BodyGetField (GetField r0 f0) -> sequenceA $ do
-    GetField r1 f1 <- body1 ^? _BodyGetField
-    Just $ BodyGetField <$> (GetField <$> matchOther r0 r1 <*> matchOther f0 f1)
-  BodyLeaf leaf0 ->
-    fmap join . traverse ((fmap . fmap) BodyLeaf . matchLeaf matchGetPar leaf0) $
-    body1 ^? _BodyLeaf
+  matchBody matchLam' matchOther matchGetPar body0 body1
+  <&> ExprLens.bodyNTraverse pure id id
+  & Lens.sequenceAOf Lens._Just
+  <&> (>>= Lens.sequenceAOf ExprLens.bodyPar)
   where
-    matchPair (k0, v0) (k1, v1) =
-      (,) <$> matchOther k0 k1 <*> matchOther v0 v1
+    matchLam' =
+      matchLamResult
+      & Lens.mapped . Lens.mapped . Lens.mapped . Lens.mapped .
+        Lens._1 . Lens.mapped %~ Just
 
 -- TODO: Delete this
 matchBodyDeprecated ::
@@ -357,15 +372,15 @@ matchBodyDeprecated ::
   (a -> b -> c) ->                 -- ^ Ordinary structural match (Apply components, param type)
   (par -> par -> Bool) ->        -- ^ Match ParameterRef's
   Body def par a -> Body def par b -> Maybe (Body def par c)
-matchBodyDeprecated matchLamResult matchOther matchGetPar body0 body1 =
-  runIdentity $
-  matchBodyDeprecated2
-  (matchLamResult & Lens.mapped . Lens.mapped . Lens.mapped . Lens.mapped %~ Identity)
-  (matchOther & Lens.mapped . Lens.mapped %~ Identity)
-  (matchGetPar & Lens.imapped <. Lens.mapped %@~ matchGetParMaybe)
-  body0 body1
+matchBodyDeprecated matchLamResult matchOther checkGetPar body0 body1 =
+  matchBody matchLam' matchOther matchGetPar body0 body1
+  >>= Lens.sequenceAOf ExprLens.bodyPar
   where
-    matchGetParMaybe apar isMatch = Identity $ apar <$ guard isMatch
+    matchGetPar x y = x <$ guard (checkGetPar x y)
+    matchLam' =
+      matchLamResult
+      & Lens.mapped . Lens.mapped . Lens.mapped . Lens.mapped .
+        Lens._1 %~ Just
 
 -- The returned expression gets the same guids as the left
 -- expression
