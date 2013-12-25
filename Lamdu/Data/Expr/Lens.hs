@@ -12,6 +12,7 @@ module Lamdu.Data.Expr.Lens
   , bodyKindedLam, exprKindedLam
   , bodyNTraverse, exprNTraverse
   , bodyDef, exprDef
+  , bodyPar, exprPar
   , bodyLeaves, exprLeaves
   , bodyParameterRef, exprParameterRef
   , bodyDefinitionRef, exprDefinitionRef
@@ -133,6 +134,9 @@ bodyNTraverse onDef onPar onExpr body =
 bodyDef :: Lens.Traversal (Body defa par expr) (Body defb par expr) defa defb
 bodyDef f = bodyNTraverse f pure pure
 
+bodyPar :: Lens.Traversal (Body def para expr) (Body def parb expr) para parb
+bodyPar f = bodyNTraverse pure f pure
+
 exprNTraverse ::
   Applicative f =>
   (defa -> f defb) -> (para -> f parb) -> (pla -> f plb) ->
@@ -144,6 +148,9 @@ exprNTraverse onDef onPar onPl = f
 
 exprDef :: Lens.Traversal (Expr defa par pl) (Expr defb par pl) defa defb
 exprDef onDef = exprNTraverse onDef pure pure
+
+exprPar :: Lens.Traversal (Expr def para pl) (Expr def parb pl) para parb
+exprPar onPar = exprNTraverse pure onPar pure
 
 -- TODO: Does this function make sense? It has no way of correcting the par's in the Lams
 bodyLeaves ::
