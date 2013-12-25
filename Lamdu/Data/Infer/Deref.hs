@@ -86,7 +86,7 @@ deref storedGuids =
       refData <- Lens.zoom Context.ufExprs (UFData.read ref)
       refData ^. RefData.rdBody
         & Lens.traverse %%~ recurse
-        >>= ExprLens.bodyParamIds %%~ mGuidAliases . canonizeGuid storedGuids
+        >>= ExprLens.bodyPar %%~ mGuidAliases . canonizeGuid storedGuids
         <&> (`Expr.Expr` ref)
 
 derefScope ::

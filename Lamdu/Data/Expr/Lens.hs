@@ -27,7 +27,6 @@ module Lamdu.Data.Expr.Lens
   , tagPositions
   , lambdaParamTypes
   , holePayloads
-  , bodyParamIds
   ) where
 
 import Prelude hiding (pi)
@@ -131,10 +130,10 @@ bodyNTraverse onDef onPar onExpr body =
   BodyGetField x -> BodyGetField <$> traverse onExpr x
   BodyLeaf leaf -> BodyLeaf <$> leafNTraverse onDef onPar leaf
 
-bodyDef :: Lens.Traversal (Body defa par expr) (Body defb par expr) defa defb
+bodyDef :: Lens.Traversal (Body defa par a) (Body defb par a) defa defb
 bodyDef f = bodyNTraverse f pure pure
 
-bodyPar :: Lens.Traversal (Body def para expr) (Body def parb expr) para parb
+bodyPar :: Lens.Traversal (Body def para a) (Body def parb a) para parb
 bodyPar f = bodyNTraverse pure f pure
 
 exprNTraverse ::
@@ -263,13 +262,3 @@ holePayloads f (Expr (BodyLeaf Hole) pl) =
   Expr (BodyLeaf Hole) <$> f pl
 holePayloads f (Expr body pl) =
   (`Expr` pl) <$> traverse (holePayloads f) body
-
--- Everywhere, including lams:
-bodyParamIds :: Lens.Traversal' (Body def par a) par
-bodyParamIds f body =
-  case body of
-  BodyLeaf (GetVariable (ParameterRef par)) ->
-    (bodyParameterRef # ) <$> f par
-  BodyLam lam ->
-    BodyLam <$> (lam & lamParamId %%~ f)
-  _ -> pure body
