@@ -193,17 +193,19 @@ mergeScopeBodies xScope xBody yScope yBody =
 mergeRefData ::
   Ord def => RefData def -> RefData def ->
   WU def (RefData def)
-mergeRefData
-  (RefData aScope aWasNotDirectlyTag aTriggers aRestrictions aBody)
-  (RefData bScope bWasNotDirectlyTag bTriggers bRestrictions bBody) =
-  mkRefData <$> mergeScopeBodies aScope aBody bScope bBody
+mergeRefData x y =
+  mkRefData <$>
+  mergeScopeBodies
+  (x ^. RefData.rdScope) (x ^. RefData.rdBody)
+  (y ^. RefData.rdScope) (y ^. RefData.rdBody)
   where
     mkRefData (scope, mergedBody) =
       RefData
       { _rdScope = scope
-      , _rdWasNotDirectlyTag = mappend aWasNotDirectlyTag bWasNotDirectlyTag
-      , _rdTriggers = OR.refMapUnionWith mappend aTriggers bTriggers
-      , _rdRestrictions = aRestrictions ++ bRestrictions
+      , _rdWasNotDirectlyTag =
+        mappend (x ^. RefData.rdWasNotDirectlyTag) (y ^. RefData.rdWasNotDirectlyTag)
+      , _rdTriggers = OR.refMapUnionWith mappend (x ^. RefData.rdTriggers) (y ^. RefData.rdTriggers)
+      , _rdRestrictions = (x ^. RefData.rdRestrictions) ++ (y ^. RefData.rdRestrictions)
       , _rdBody = mergedBody
       }
 
