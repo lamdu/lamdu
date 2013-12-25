@@ -66,20 +66,25 @@ ruleTrigger ruleRef ref fired =
 liftContext ::
   StateT (Context def) (Either (Error def)) a -> Infer def a
 liftContext = Infer . lift
+{-# INLINE liftContext #-}
 
 liftUFExprs ::
   StateT (UFExprs def) (Either (Error def)) a ->
   Infer def a
 liftUFExprs = liftContext . Lens.zoom Context.ufExprs
+{-# INLINE liftUFExprs #-}
 
 liftGuidAliases :: StateT (GuidAliases def) (Either (Error def)) a -> Infer def a
 liftGuidAliases = liftContext . Lens.zoom Context.guidAliases
+{-# INLINE liftGuidAliases #-}
 
 liftRuleMap :: StateT (RuleMap def) (Either (Error def)) a -> Infer def a
 liftRuleMap = liftContext . Lens.zoom Context.ruleMap
+{-# INLINE liftRuleMap #-}
 
 liftError :: Either (Error def) a -> Infer def a
 liftError = Infer . lift . lift
+{-# INLINE liftError #-}
 
 error :: Error def -> Infer def a
 error = liftError . Left

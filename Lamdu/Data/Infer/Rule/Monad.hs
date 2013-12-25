@@ -28,6 +28,7 @@ run mkContent handleFires initialRule =
 
 liftInfer :: Infer def a -> RM rule def a
 liftInfer = lift . lift
+{-# INLINE liftInfer #-}
 
 ruleDelete :: RM rule def ()
 ruleDelete = lift mzero
