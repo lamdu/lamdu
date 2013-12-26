@@ -151,6 +151,7 @@ makePiResultCopy ruleRef srcRef (Rule.ExprLink destRef destAncestors)
     matchLamResult srcGuid _ srcChildRef destChildRef =
       (srcGuid, match srcChildRef destChildRef)
 
+{-# INLINE removeLink #-}
 removeLink :: ExprRef def -> RuleMonad.RM (Rule.Apply def) def () 
 removeLink linkSrc =
   Rule.aLinkedExprs . Lens.at linkSrc %= remove
@@ -158,6 +159,7 @@ removeLink linkSrc =
     remove Nothing = error "aLinkedExprs should have the rep"
     remove (Just _) = Nothing
 
+{-# INLINE handleTrigger #-}
 handleTrigger ::
   Ord def =>
   RuleRef def ->

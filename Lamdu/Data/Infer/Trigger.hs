@@ -76,6 +76,7 @@ checkParameterRef triggerGuidRef refData
   where
     answer ref = return . Just . FiredParameterRef ref
 
+{-# INLINE checkKnownBody #-}
 checkKnownBody :: RefData def -> Maybe (Fired def)
 checkKnownBody refData
   | Lens.has ExprLens.bodyHole body = Nothing
@@ -84,6 +85,7 @@ checkKnownBody refData
     body = refData ^. RefData.rdBody
 
 -- | Must be called with RefData with normalized scope
+{-# INLINE checkTrigger #-}
 checkTrigger :: RefData def -> Trigger def -> Infer def (Maybe (Fired def))
 checkTrigger refData trigger =
   case trigger of
@@ -113,6 +115,7 @@ updateRefData rep refData =
       filterM (handleTrigger rep refData ruleId) .
       Set.toList
 
+{-# INLINE checkOrAdd #-}
 checkOrAdd ::
   [RefData.Restriction def] -> Trigger def -> RuleRef def -> ExprRef def ->
   Infer def (Maybe (Fired def))
@@ -128,6 +131,7 @@ checkOrAdd restrictions trigger ruleId ref = do
     InferM.liftContext $ remember rep restrictions refData trigger ruleId
   return mFired
 
+{-# INLINE add #-}
 add ::
   [RefData.Restriction def] -> Trigger def -> RuleRef def -> ExprRef def ->
   Infer def ()
