@@ -1,6 +1,6 @@
 module Lamdu.Data.Infer.Trigger
   ( module Lamdu.Data.Infer.Trigger.Types
-  , add, updateRefData
+  , add, checkOrAdd, updateRefData
   ) where
 
 import Control.Applicative ((<$))
@@ -113,13 +113,27 @@ updateRefData rep refData =
       filterM (handleTrigger rep refData ruleId) .
       Set.toList
 
-add :: [RefData.Restriction def] -> Trigger def -> RuleRef def -> ExprRef def -> Infer def ()
-add restrictions trigger ruleId ref = do
+checkOrAdd ::
+  [RefData.Restriction def] -> Trigger def -> RuleRef def -> ExprRef def ->
+  Infer def (Maybe (Fired def))
+checkOrAdd restrictions trigger ruleId ref = do
   rep <- InferM.liftUFExprs $ UFData.find ref
   refData <- InferM.liftUFExprs . State.gets $ UFData.readRep rep
   -- TODO: The tests pass even with the un-normalized Scope. Is there
   -- some guarantee that when we're called here, scope is always
   -- already normalized?
   refDataNorm <- refData & RefData.rdScope %%~ InferM.liftGuidAliases . scopeNormalizeParamRefs
-  keep <- handleTrigger rep refDataNorm ruleId trigger
-  when keep . InferM.liftContext $ remember rep restrictions refData trigger ruleId
+  mFired <- checkTrigger refDataNorm trigger
+  when (Lens.has Lens._Nothing mFired) .
+    InferM.liftContext $ remember rep restrictions refData trigger ruleId
+  return mFired
+
+add ::
+  [RefData.Restriction def] -> Trigger def -> RuleRef def -> ExprRef def ->
+  Infer def ()
+add restrictions trigger ruleId ref = do
+  rep <- InferM.liftUFExprs $ UFData.find ref
+  mFired <- checkOrAdd restrictions trigger ruleId rep
+  case mFired of
+    Nothing -> return ()
+    Just fired -> InferM.ruleTrigger ruleId rep fired
