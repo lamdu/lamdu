@@ -167,7 +167,7 @@ bodyLeaves leaves onLeaves body =
     onExprs = traverse (leaves onLeaves)
 
 -- Prisms:
-parameterRef :: Lens.Prism' (Leaf def par) par
+parameterRef :: Lens.Prism (Leaf def p) (Leaf def q) p q
 parameterRef = _GetVariable . _ParameterRef
 
 definitionRef :: Lens.Prism (Leaf defa par) (Leaf defb par) defa defb

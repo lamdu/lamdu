@@ -5,6 +5,7 @@ module Control.Lens.Utils
   , _fromJust
   , addListContexts
   , addTuple2Contexts
+  , getPrism
   ) where
 
 import Control.Applicative ((<$>))
@@ -39,3 +40,6 @@ addTuple2Contexts tob (Lens.Context fromBTuple (a0, a1)) =
   where
     chg0 b0 = fromBTuple (b0, tob a1)
     chg1 b1 = fromBTuple (tob a0, b1)
+
+getPrism :: Lens.Prism s t a b -> s -> Either a t
+getPrism p = p Left

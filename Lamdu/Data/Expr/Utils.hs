@@ -45,6 +45,7 @@ import Control.Arrow ((***))
 import Control.Lens (Context(..))
 import Control.Lens.Operators
 import Control.Lens.Utils (addListContexts, addTuple2Contexts)
+import Control.Lens.Utils (getPrism)
 import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (runReaderT)
@@ -281,16 +282,6 @@ matchEq leaf1 d0 prism = do
   guard $ d0 == d1
   Just $ Lens.clonePrism prism # d0
 
-transLeafParam :: Leaf def p -> Either p (Leaf def q)
-transLeafParam (GetVariable (ParameterRef p)) = Left p
-transLeafParam (GetVariable (DefinitionRef d)) = Right $ ExprLens.definitionRef # d
-transLeafParam (LiteralInteger x) = Right $ LiteralInteger x
-transLeafParam Type = Right Type
-transLeafParam IntegerType = Right IntegerType
-transLeafParam Hole = Right Hole
-transLeafParam TagType = Right TagType
-transLeafParam (Tag x) = Right $ Tag x
-
 matchLeaf ::
   Eq def =>
   (p -> q -> r) ->
@@ -298,7 +289,7 @@ matchLeaf ::
   Leaf def q ->
   Maybe (Leaf def r)
 matchLeaf matchGetPar leaf0 leaf1 =
-  case (transLeafParam leaf0, transLeafParam leaf1) of
+  case (getPrism ExprLens.parameterRef leaf0, getPrism ExprLens.parameterRef leaf1) of
   (Left p0, Left p1) -> Just $ ExprLens.parameterRef # matchGetPar p0 p1
   (Right x, Right y) ->
     case x of
