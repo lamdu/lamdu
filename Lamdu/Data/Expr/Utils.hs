@@ -20,7 +20,7 @@ module Lamdu.Data.Expr.Utils
   , randomizeExprAndParams
   , NameGen(..), onNgMakeName
   , randomNameGen, debugNameGen
-  , matchBodyDeprecated2, matchBodyDeprecated
+  , matchBody, matchBodyA
   , matchExpr, matchExprG
   , subExprs, subExprsWithout
   , isDependentPi, exprHasGetVar
@@ -347,14 +347,14 @@ matchBody matchLam matchSubexpr matchGetPar body0 body1 =
     BodyLeaf <$> matchLeaf matchGetPar leaf0 leaf1
 
 -- Left-biased on parameter guids
-{-# INLINE matchBodyDeprecated2 #-}
-matchBodyDeprecated2 ::
+{-# INLINE matchBodyA #-}
+matchBodyA ::
   (Applicative f, Eq def) =>
   (p -> q -> a -> b -> (f r, f c)) ->  -- ^ Lam/Pi result match
   (a -> b -> f c) ->                   -- ^ Ordinary structural match (Apply components, param type)
   (p -> q -> f (Maybe r)) ->           -- ^ Match ParameterRef's
   Body def p a -> Body def q b -> f (Maybe (Body def r c))
-matchBodyDeprecated2 matchLamResult matchOther matchGetPar body0 body1 =
+matchBodyA matchLamResult matchOther matchGetPar body0 body1 =
   matchBody matchLam' matchOther matchGetPar body0 body1
   <&> ExprLens.bodyNTraverse pure id id
   & Lens.sequenceAOf Lens._Just
@@ -364,23 +364,6 @@ matchBodyDeprecated2 matchLamResult matchOther matchGetPar body0 body1 =
       matchLamResult
       & Lens.mapped . Lens.mapped . Lens.mapped . Lens.mapped .
         Lens._1 . Lens.mapped %~ Just
-
--- TODO: Delete this
-matchBodyDeprecated ::
-  Eq def =>
-  (par -> par -> a -> b -> (par, c)) -> -- ^ Lam/Pi result match
-  (a -> b -> c) ->                 -- ^ Ordinary structural match (Apply components, param type)
-  (par -> par -> Bool) ->        -- ^ Match ParameterRef's
-  Body def par a -> Body def par b -> Maybe (Body def par c)
-matchBodyDeprecated matchLamResult matchOther checkGetPar body0 body1 =
-  matchBody matchLam' matchOther matchGetPar body0 body1
-  >>= Lens.sequenceAOf ExprLens.bodyPar
-  where
-    matchGetPar x y = x <$ guard (checkGetPar x y)
-    matchLam' =
-      matchLamResult
-      & Lens.mapped . Lens.mapped . Lens.mapped . Lens.mapped .
-        Lens._1 %~ Just
 
 -- The returned expression gets the same guids as the left
 -- expression
@@ -403,14 +386,20 @@ matchExprG overridePars onMatch onMismatch =
   go Map.empty
   where
     go scope e0@(Expr body0 pl0) e1@(Expr body1 pl1) =
-      case matchBodyDeprecated matchLamResult matchOther matchGetPar body0 body1 of
+      case
+        matchBody matchLamResult matchOther matchGetPar body0 body1
+        >>= Lens.sequenceAOf ExprLens.bodyPar
+      of
       Nothing ->
         onMismatch e0 $
         (ExprLens.exprLeaves . ExprLens.parameterRef %~ lookupPar) e1
       Just bodyMatched -> Expr <$> sequenceA bodyMatched <*> onMatch pl0 pl1
       where
-        matchGetPar p0 p1 = p0 == lookupPar p1
-        matchLamResult p0 p1 r0 r1 = (p0, overridePars p0 p1 *> go (Map.insert p1 p0 scope) r0 r1)
+        matchGetPar p0 p1 = p0 <$ guard (p0 == lookupPar p1)
+        matchLamResult p0 p1 r0 r1 =
+          ( Just p0
+          , overridePars p0 p1 *> go (Map.insert p1 p0 scope) r0 r1
+          )
         matchOther = go scope
         lookupPar par = fromMaybe par $ Map.lookup par scope
 

@@ -141,8 +141,7 @@ makePiResultCopy ruleRef srcRef (Rule.ExprLink destRef destAncestors)
   destBody <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. RefData.rdBody) <$> UFData.read destRef
   matchRes <-
     sequenceA $ sequenceA_ <$>
-    ExprUtil.matchBodyDeprecated matchLamResult match
-    ((const . const) True) srcBody destBody
+    ExprUtil.matchBody matchLamResult match const srcBody destBody
   when (Lens.has Lens._Nothing matchRes) $
     error "We just successfully unified src and dest bodies!"
   where
