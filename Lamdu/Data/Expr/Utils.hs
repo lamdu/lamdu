@@ -27,7 +27,7 @@ module Lamdu.Data.Expr.Utils
   , curriedFuncArguments
   , ApplyFormAnnotation(..), applyForms
   , recordValForm, structureForType
-  , alphaEq, couldEq
+  , alphaEq
   , subst, substGetPar
   , showBodyExpr, showsPrecBodyExpr
   , isTypeConstructorType
@@ -116,14 +116,6 @@ getPiWrappers expr =
     where
       p = (param, paramType)
   _ -> PiWrappers [] Nothing expr
-
-couldEq :: (Ord par, Eq def) => Expr def par a -> Expr def par a -> Bool
-couldEq x y =
-  isJust $ matchExpr (const . Just) onMismatch x y
-  where
-    onMismatch (Expr (BodyLeaf Hole) _) e = Just e
-    onMismatch e (Expr (BodyLeaf Hole) _) = Just e
-    onMismatch _ _ = Nothing
 
 alphaEq :: (Ord par, Eq def) => Expr def par a -> Expr def par a -> Bool
 alphaEq x y =
