@@ -323,7 +323,6 @@ matchBody matchLam matchSubexpr matchGetPar body0 body1 =
     leaf1 <- body1 ^? _BodyLeaf
     BodyLeaf <$> matchLeaf matchGetPar leaf0 leaf1
 
--- Left-biased on parameter guids
 {-# INLINE matchBodyA #-}
 matchBodyA ::
   (Applicative f, Eq def) =>
