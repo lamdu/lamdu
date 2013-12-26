@@ -128,7 +128,7 @@ refMapUnmaintainedLookup doLookup ref =
     tryNow r notFound = do
       mFound <- State.gets (^. Lens.at r)
       case mFound of
-        Just found -> return $ (r, Just found)
+        Just found -> return (r, Just found)
         Nothing -> notFound
 
 refSetEmpty :: RefSet p

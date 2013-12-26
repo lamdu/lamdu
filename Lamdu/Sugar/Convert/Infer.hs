@@ -101,7 +101,7 @@ eitherToMaybe :: Either l a -> Maybe a
 eitherToMaybe = either (const Nothing) Just
 
 eitherTToMaybeT :: Functor m => EitherT l m a -> MaybeT m a
-eitherTToMaybeT = (MaybeT . fmap eitherToMaybe . runEitherT)
+eitherTToMaybeT = MaybeT . fmap eitherToMaybe . runEitherT
 
 memoInferAt ::
   (Typeable a, Binary a, Typeable1 m, MonadA m) =>
@@ -178,7 +178,7 @@ inferWithVariables gen def loaded initialContext node =
       )
 
 assertSuccess :: (Show e, Monad m) => StateT s (Either e) a -> StateT s m a
-assertSuccess x = mapStateT (either (error . show) return) x
+assertSuccess = mapStateT (either (error . show) return)
 
 data InferredWithImplicits m a = InferredWithImplicits
   { _iwiInferContext :: InferContext m
@@ -206,7 +206,7 @@ inferAddImplicits gen def lExpr inferContext node = do
     key =
       Cache.bsOfKey
       ( show gen, def, loaded, node
-      , (loadedContext ^. icHashKey)
+      , loadedContext ^. icHashKey
       )
   ((baseContext, expr), (withStructureContext, wvContext, wvExpr)) <-
     inferWithVariables gen def loaded (loadedContext ^. icContext) node

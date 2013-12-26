@@ -21,8 +21,8 @@ lookup :: Db -> Guid -> IO (Maybe ByteString)
 lookup db = Sophia.getValue db . Guid.bs
 
 transaction :: Db -> [(Guid, Maybe ByteString)] -> IO ()
-transaction db changes =
-  traverse_ applyChange changes
+transaction db =
+  traverse_ applyChange
   where
     applyChange (key, Nothing) = Sophia.delValue db (Guid.bs key)
     applyChange (key, Just value) = Sophia.setValue db (Guid.bs key) value

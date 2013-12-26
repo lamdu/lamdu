@@ -92,10 +92,10 @@ class Name n where
   names :: [n]
 
 exprGen :: (Arbitrary a, Name par) => Maybe (Gen def) -> Gen (Expr.Expr def par a)
-exprGen makeDefI = do
+exprGen makeDefI =
   (`evalStateT` names) .
-    (`runReaderT` Env [] makeDefI) $
-    arbitraryExpr
+  (`runReaderT` Env [] makeDefI) $
+  arbitraryExpr
 
 instance Name Guid where
   names = fmap (Guid.fromString . (: [])) ['a'..]

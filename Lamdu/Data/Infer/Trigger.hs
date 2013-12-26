@@ -11,8 +11,7 @@ import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.Monad (Infer)
-import Lamdu.Data.Infer.RefData (RefData)
-import Lamdu.Data.Infer.RefData (scopeNormalizeParamRefs)
+import Lamdu.Data.Infer.RefData (RefData, scopeNormalizeParamRefs)
 import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef)
 import Lamdu.Data.Infer.Rule.Types (RuleRef)
 import Lamdu.Data.Infer.Trigger.Types
@@ -138,6 +137,4 @@ add ::
 add restrictions trigger ruleId ref = do
   rep <- InferM.liftUFExprs $ UFData.find ref
   mFired <- checkOrAdd restrictions trigger ruleId rep
-  case mFired of
-    Nothing -> return ()
-    Just fired -> InferM.ruleTrigger ruleId rep fired
+  mFired & Lens.traverseOf_ Lens._Just (InferM.ruleTrigger ruleId rep)

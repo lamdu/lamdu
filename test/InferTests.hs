@@ -243,7 +243,7 @@ simplestImplicitTest =
   testCase "simplestImplicitTest: \\(x:?) -> ?" $
   inferWVAssertion (expr (holeWithInferredType set)) wvExpr
   where
-    expr a = lambda "x" (asHole a) $ \_ -> hole
+    expr a = lambda "x" (asHole a) $ const hole
     wvExpr = lambda "a" (asHole set) expr
 
 noImplicitWithRedexTest =

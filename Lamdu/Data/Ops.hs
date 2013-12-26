@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveFunctor #-}
 module Lamdu.Data.Ops
   ( newHole, wrap, setToWrapper
   , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap

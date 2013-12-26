@@ -1,4 +1,3 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Data.Store.Rev.Branch
     (Branch, guid, new, move, curVersion, newVersion)
 where

@@ -44,8 +44,7 @@ import Control.Applicative (Applicative(..), liftA2, (<$>), (<$))
 import Control.Arrow ((***))
 import Control.Lens (Context(..))
 import Control.Lens.Operators
-import Control.Lens.Utils (addListContexts, addTuple2Contexts)
-import Control.Lens.Utils (getPrism)
+import Control.Lens.Utils (addListContexts, addTuple2Contexts, getPrism)
 import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (runReaderT)
@@ -156,7 +155,7 @@ recordValForm paramType =
       & Lens.traversed %%~
         (Lens._1 . eBody %%~ castTag) .
         (Lens._2 .~ pureHole)
-      <&> (ExprLens.pureExpr . _BodyRecord . ExprLens.kindedRecordFields KVal #)
+      <&> (ExprLens.pureExpr . _BodyRecord . ExprLens.kindedRecordFields KVal # )
 
 data ApplyFormAnnotation =
   Untouched | DependentParamAdded | IndependentParamAdded

@@ -1,4 +1,3 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Graphics.UI.Bottle.Widgets.Spacer
   ( make
   , makeWidget

@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Infer.Load
   ( Loader(..)
   , Error(..)

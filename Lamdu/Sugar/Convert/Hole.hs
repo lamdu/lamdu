@@ -1,4 +1,4 @@
-{-# LANGUAGE ConstraintKinds, DeriveFunctor, PatternGuards #-}
+{-# LANGUAGE ConstraintKinds, PatternGuards #-}
 
 module Lamdu.Sugar.Convert.Hole
   ( convert, convertPlain, orderedInnerHoles

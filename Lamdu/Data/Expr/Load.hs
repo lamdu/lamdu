@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts, DeriveFunctor, TemplateHaskell, DeriveDataTypeable #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts, TemplateHaskell, DeriveDataTypeable #-}
 module Lamdu.Data.Expr.Load
   ( loadDefinitionClosure
   , ExprPropertyClosure, exprPropertyOfClosure
