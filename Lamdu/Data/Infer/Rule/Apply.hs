@@ -13,7 +13,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA, traverse)
 import Lamdu.Data.Infer.Monad (Infer)
-import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef, TagExpr)
+import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef, TagExpr, RuleRef)
 import Lamdu.Data.Infer.Rule.Func (RuleFunc)
 import Lamdu.Data.Infer.Unify (forceLam)
 import qualified Control.Lens as Lens
@@ -151,46 +151,55 @@ makePiResultCopy ruleRef srcRef (Rule.ExprLink destRef destAncestors)
     matchLamResult srcGuid _ srcChildRef destChildRef =
       (srcGuid, match srcChildRef destChildRef)
 
-execute :: Ord def => Rule.RuleRef def -> Rule.Apply def -> RuleFunc def
-execute ruleRef =
-  RuleMonad.run Rule.RuleApply (traverse_ handleTrigger . orderTriggers)
+removeLink :: ExprRef def -> RuleMonad.RM (Rule.Apply def) def () 
+removeLink linkSrc =
+  Rule.aLinkedExprs . Lens.at linkSrc %= remove
+  where
+    remove Nothing = error "aLinkedExprs should have the rep"
+    remove (Just _) = Nothing
+
+handleTrigger ::
+  Ord def =>
+  RuleRef def ->
+  (ExprRef def, Trigger.Fired def) ->
+  RuleMonad.RM (Rule.Apply def) def () 
+handleTrigger _ (srcRef, Trigger.FiredParameterRef _ Trigger.IsTheParameterRef) = do
+  (linkSrc, exprLink) <- findLink "Trigger.IsTheParameterRef not on src?!" srcRef
+  removeLink linkSrc
+  argVal <- Lens.use Rule.aArgVal
+  void . unify argVal $ exprLink ^. Rule.applyExprLinkDest
   where
     findLink msg =
       fmap (unsafeUnjust msg) . mFindLinkBySrc
-    handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.IsTheParameterRef) = do
-      (linkSrc, exprLink) <- findLink "Trigger.IsTheParameterRef not on src?!" srcRef
+handleTrigger ruleRef (srcRef, Trigger.FiredParameterRef _ Trigger.NotTheParameterRef) = do
+  -- Triggered when not a hole anymore, so copy:
+  mLinkPair <- mFindLinkBySrc srcRef
+  -- If mDestRef is Nothing, TheParameterOutOfScope triggered first
+  -- and unified instead, so no need to make a copy:
+  traverse_ (uncurry (makePiResultCopy ruleRef)) mLinkPair
+  -- We do not delete the link, because a Trigger.TheParameterOutOfScope may still trigger
+handleTrigger _ (srcRef, Trigger.FiredParameterRef _ Trigger.TheParameterOutOfScope) = do
+  -- Now we know no subexpr can possibly use the piGuid, so it
+  -- must fully equal the dest:
+  mLink <- mFindLinkBySrc srcRef
+  case mLink of
+    Nothing ->
+      -- If this triggers fires more than once but a unify merges the source of it,
+      -- we may have already deleted the link
+      return ()
+    Just (linkSrc, linkData) -> do
       removeLink linkSrc
-      argVal <- Lens.use Rule.aArgVal
-      void . unify argVal $ exprLink ^. Rule.applyExprLinkDest
-    handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.NotTheParameterRef) = do
-      -- Triggered when not a hole anymore, so copy:
-      mLinkPair <- mFindLinkBySrc srcRef
-      -- If mDestRef is Nothing, TheParameterOutOfScope triggered first
-      -- and unified instead, so no need to make a copy:
-      traverse_ (uncurry (makePiResultCopy ruleRef)) mLinkPair
-      -- We do not delete the link, because a Trigger.TheParameterOutOfScope may still trigger
-    handleTrigger (srcRef, Trigger.FiredParameterRef _ Trigger.TheParameterOutOfScope) = do
-      -- Now we know no subexpr can possibly use the piGuid, so it
-      -- must fully equal the dest:
-      mLink <- mFindLinkBySrc srcRef
-      case mLink of
-        Nothing ->
-          -- If this triggers fires more than once but a unify merges the source of it,
-          -- we may have already deleted the link
-          return ()
-        Just (linkSrc, linkData) -> do
-          removeLink linkSrc
-          void . unify linkSrc $ linkData ^. Rule.applyExprLinkDest
-    handleTrigger (_, Trigger.FiredUnify _) =
-      -- Some of our sources were potentially unified, so
-      -- normalizeSrcLinks will find them and unify the dests
-      normalizeSrcLinks
-    handleTrigger firings = error $ "handleTrigger called with: " ++ show firings
-    removeLink linkSrc =
-      Rule.aLinkedExprs . Lens.at linkSrc %= remove
-      where
-        remove Nothing = error "aLinkedExprs should have the rep"
-        remove (Just _) = Nothing
+      void . unify linkSrc $ linkData ^. Rule.applyExprLinkDest
+handleTrigger _ (_, Trigger.FiredUnify _) =
+  -- Some of our sources were potentially unified, so
+  -- normalizeSrcLinks will find them and unify the dests
+  normalizeSrcLinks
+handleTrigger _ firings = error $ "handleTrigger called with: " ++ show firings
+
+execute :: Ord def => Rule.RuleRef def -> Rule.Apply def -> RuleFunc def
+execute ruleRef =
+  RuleMonad.run Rule.RuleApply (traverse_ (handleTrigger ruleRef) . orderTriggers)
+  where
     orderTriggers triggers =
       take 1 unifies ++ others
       where
