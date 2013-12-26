@@ -332,8 +332,7 @@ matchBodyA ::
   Body def p a -> Body def q b -> f (Maybe (Body def r c))
 matchBodyA matchLamResult matchOther matchGetPar body0 body1 =
   matchBody matchLam' matchOther matchGetPar body0 body1
-  <&> ExprLens.bodyNTraverse pure id id
-  & Lens.sequenceAOf Lens._Just
+  <&> ExprLens.bodyNTraverse pure id id & sequenceA
   <&> (>>= Lens.sequenceAOf ExprLens.bodyPar)
   where
     matchLam' =
