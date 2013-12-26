@@ -122,6 +122,7 @@ Executable lamdu
                        filepath,
                        deepseq,
                        lens,
+                       void >= 0.6.1,
                        graphics-drawingcombinators >= 1.4,
                        binary >= 0.5,
                        transformers,

@@ -55,6 +55,7 @@ import Data.Maybe (isJust, fromMaybe)
 import Data.Monoid (Any)
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable(..), sequenceA)
+import Data.Void (absurd)
 import System.Random (Random, RandomGen, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
@@ -63,7 +64,6 @@ import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
-import qualified Lamdu.Data.Expr as Expr
 import qualified Lamdu.Data.Expr.Lens as ExprLens
 import qualified System.Random as Random
 
@@ -276,12 +276,6 @@ randomizeParamIdsG preNG gen initMap convertPL =
     makeName oldParamId s nameGen =
       ngMakeName nameGen oldParamId $ preNG s
 
-matchEq :: Eq b => a -> b -> Lens.Prism' a b -> Maybe a
-matchEq leaf1 d0 prism = do
-  d1 <- leaf1 ^? Lens.clonePrism prism
-  guard $ d0 == d1
-  Just $ Lens.clonePrism prism # d0
-
 matchLeaf ::
   Eq def =>
   (p -> q -> r) ->
@@ -291,16 +285,8 @@ matchLeaf ::
 matchLeaf matchGetPar leaf0 leaf1 =
   case (getPrism ExprLens.parameterRef leaf0, getPrism ExprLens.parameterRef leaf1) of
   (Left p0, Left p1) -> Just $ ExprLens.parameterRef # matchGetPar p0 p1
-  (Right x, Right y) ->
-    case x of
-    GetVariable ParameterRef {}    -> error "cant be ParameterRef after transLeafParam!"
-    GetVariable (DefinitionRef d0) -> matchEq y d0 ExprLens.definitionRef
-    LiteralInteger i               -> matchEq y i Expr._LiteralInteger
-    Type                           -> matchEq y () Expr._Type
-    IntegerType                    -> matchEq y () Expr._IntegerType
-    Hole                           -> matchEq y () Expr._Hole
-    TagType                        -> matchEq y () Expr._TagType
-    Tag t                          -> matchEq y t Expr._Tag
+  (Right x, Right y)
+    | x == y -> Just $ fmap absurd x
   _ -> Nothing
 
 {-# INLINE matchBody #-}
