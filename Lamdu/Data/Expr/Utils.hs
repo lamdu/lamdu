@@ -35,6 +35,8 @@ module Lamdu.Data.Expr.Utils
   , addBodyContexts
   , PiWrappers(..), piWrappersDepParams, piWrappersMIndepParam, piWrappersResultType
   , getPiWrappers
+  , TypePosition(..), _Negative, _Positive
+  , annotateTypePositions
   ) where
 
 import Prelude hiding (pi)
@@ -568,3 +570,25 @@ addExprContexts atob (Context intoContainer (Expr body a)) =
       addBodyContexts (fmap atob) bodyPtr
     bodyPtr =
       Context (intoContainer . (`Expr` atob a)) body
+
+data TypePosition = Negative | Positive
+Lens.makePrisms ''TypePosition
+
+negPos :: TypePosition -> TypePosition
+negPos Positive = Negative
+negPos Negative = Positive
+
+annotateTypePositions :: Expr def par a -> Expr def par (TypePosition, a)
+annotateTypePositions = annotateTypePositionsH Positive
+
+annotateTypePositionsH :: TypePosition -> Expr def par a -> Expr def par (TypePosition, a)
+annotateTypePositionsH pos (Expr body pl) =
+  (`Expr` (pos, pl)) $
+  case body of
+  BodyLam (Lam k paramId paramType result) ->
+    BodyLam $
+    Lam k paramId
+    (annotateTypePositionsH (negPos pos) paramType)
+    (annotateTypePositionsH pos result)
+  x ->
+    x & Lens.traverse %~ annotateTypePositionsH pos
