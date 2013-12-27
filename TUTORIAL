@@ -1,8 +1,8 @@
 Some instructions to get you started with this preliminary[toy] code editor:
 
-1. Install the ftgl C bindings. If you're on Ubuntu, use:
+1. Install the ftgl C bindings and other dependencies. If you're on Ubuntu, use:
 
-   sudo apt-get install libftgl-dev libftgl2
+   sudo apt-get install libftgl-dev libftgl2 libxi-dev libxrandr-dev happy
 
 2. OPTIONAL: Install fork of FTGL bindings which more gracefully handles missing font files:
 
