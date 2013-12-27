@@ -267,7 +267,6 @@ addImplicitCurriedApply2Test =
 
 listOfIdImplicitsTest =
   testCase "listOfId: f = [\\x -> x]" $
-  allowFailAssertion "Outer-most implicits do not work correctly with some inner lambdas" $
   inferWVAssertion (expr iset) wvExpr
   where
     iset = holeWithInferredType set
