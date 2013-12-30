@@ -442,7 +442,7 @@ exprIntoContext ::
   InferT def m (Expr.Expression def (Node def, a))
 exprIntoContext rootScope (Loaded rootExpr defTypes) = do
   defTypesRefs <-
-    Map.traverseWithKey defTypeIntoContext defTypes
+    Lens.itraverse defTypeIntoContext defTypes
     <&> Map.mapKeys Expr.DefinitionRef
   -- mappend prefers left, so it is critical we put rootScope
   -- first. defTypesRefs may contain the loaded recursive defI because
