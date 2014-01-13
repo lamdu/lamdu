@@ -79,7 +79,6 @@ onEachParamTypeSubexpr def tv = do
   iValData <-
     lift . lift . Lens.zoom Context.ufExprs . UFData.read $
     tv ^. TypedValue.tvVal
-  let varScope = iValData ^. RefData.rdScope
   when (isUnrestrictedHole iValData) $ do
     paramId <- state random
     -- Make a new type ref for the implicit (we can't just re-use the
@@ -96,6 +95,9 @@ onEachParamTypeSubexpr def tv = do
       -- new ParamType in here?
       <&> Lens.mapped . Lens._2 %~ joinPayload . toPayload paramId
       >>= lift . State.put
+    varScope <-
+      lift . lift . Lens.zoom Context.ufExprs .
+      fmap (^. RefData.rdScope) . UFData.read $ tv ^. TypedValue.tvVal
     -- implicitValRef <= getVar paramId
     implicitValRef <-
       lift . lift . Load.exprIntoContext varScope $
