@@ -271,7 +271,7 @@ listOfIdImplicitsTest =
   inferWVAssertion (expr iset) wvExpr
   where
     iset = holeWithInferredType set
-    expr a = list [lambda "x" a id]
+    expr a = list [lambda "x" (asHole a) id]
     wvExpr = lambda "a" (asHole set) expr
 
 uncurry2Test =
