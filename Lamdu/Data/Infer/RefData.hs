@@ -73,14 +73,14 @@ data RefData def = RefData
   , _rdWasNotDirectlyTag :: Monoid.Any
   , _rdTriggers :: OR.RefMap (TagRule def) (Set (Trigger def))
   , _rdRestrictions :: [Restriction def]
-  , _rdBody :: Expr.Body (LoadedDef def) Guid (ExprRef def)
+  , _rdBody :: LoadedBody def (ExprRef def)
   }
 Lens.makeLenses ''RefData
 derive makeBinary ''RefData
 
 type UFExprs def = UFData (TagExpr def) (RefData def)
 
-defaultRefData :: Scope def -> Expr.Body (LoadedDef def) Guid (ExprRef def) -> RefData def
+defaultRefData :: Scope def -> LoadedBody def (ExprRef def) -> RefData def
 defaultRefData scop body = RefData
   { _rdScope = scop
   , _rdWasNotDirectlyTag = Monoid.Any False

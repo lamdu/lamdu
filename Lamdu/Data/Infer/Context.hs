@@ -12,10 +12,9 @@ import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Data.Typeable (Typeable)
 import Lamdu.Data.Infer.GuidAliases (GuidAliases)
-import Lamdu.Data.Infer.RefData (RefData, UFExprs, LoadedDef)
+import Lamdu.Data.Infer.RefData (RefData, UFExprs, LoadedBody)
 import Lamdu.Data.Infer.RefTags (TagExpr, ExprRef)
 import Lamdu.Data.Infer.Rule.Types (RuleMap, initialRuleMap)
 import Lamdu.Data.Infer.TypedValue (TypedValue)
@@ -25,7 +24,6 @@ import qualified Control.Lens.Utils as LensUtils
 import qualified Data.Map as Map
 import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
-import qualified Lamdu.Data.Expr as Expr
 import qualified Lamdu.Data.Expr.Lens as ExprLens
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.RefData as RefData
@@ -93,7 +91,7 @@ freshData refData = do
 
 fresh ::
   (Ord def, MonadA m) => RefData.Scope def ->
-  Expr.Body (LoadedDef def) Guid (ExprRef def) ->
+  LoadedBody def (ExprRef def) ->
   StateT (Context def) m (ExprRef def)
 fresh scop body = freshData $ RefData.defaultRefData scop body
 
