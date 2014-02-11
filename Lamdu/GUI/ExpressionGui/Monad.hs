@@ -188,7 +188,7 @@ run ::
   StateT Cache (WidgetEnvT (T m)) a
 run makeSubexpr codeAnchors settings (ExprGuiM action) =
   StateT $ \cache ->
-  fmap f $ runRWST action
+  f <$> runRWST action
   Askable
   { _aSettings = settings
   , _aMakeSubexpression = makeSubexpr

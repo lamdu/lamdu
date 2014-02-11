@@ -32,7 +32,7 @@ lookupBS view = Transaction.lookupBS . makeViewKey view
 setBranch :: MonadA m => View (Tag m) -> Branch (Tag m) -> Transaction m ()
 setBranch view@(View viewDataIRef) newBranch@(Branch newBranchDataIRef) = do
   branchRef <-
-    fmap (Property.composeLens vdBranch) $
+    Property.composeLens vdBranch <$>
     Transaction.fromIRef viewDataIRef
   let oldBranch@(Branch oldBranchDataIRef) = Property.value branchRef
   oldVersion <- Branch.curVersion oldBranch

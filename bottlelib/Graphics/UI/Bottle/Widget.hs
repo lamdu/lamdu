@@ -75,7 +75,7 @@ atEvents func w = w
   { _wMaybeEnter =
        (Lens.mapped . Lens.mapped . enterResultEvent %~ func) $
        _wMaybeEnter w
-  , _wEventMap = fmap func $ _wEventMap w
+  , _wEventMap = func <$> _wEventMap w
   }
 
 liftView :: Anim.Size -> Anim.Frame -> Widget f
@@ -123,14 +123,14 @@ keysEventMap ::
   Functor f => [EventMap.ModKey] -> EventMap.Doc ->
   f () -> EventHandlers f
 keysEventMap keys doc act =
-  (fmap . fmap . const) mempty $
+  (fmap . const) mempty <$>
   EventMap.keyPresses keys doc act
 
 keysEventMapMovesCursor ::
   Functor f => [EventMap.ModKey] -> EventMap.Doc ->
   f Id -> EventHandlers f
 keysEventMapMovesCursor keys doc act =
-  (fmap . fmap) eventResultFromCursor $
+  fmap eventResultFromCursor <$>
   EventMap.keyPresses keys doc act
 
 -- TODO: This actually makes an incorrect widget because its size

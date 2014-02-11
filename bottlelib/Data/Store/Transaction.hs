@@ -23,7 +23,7 @@ module Data.Store.Transaction
   )
 where
 
-import Control.Applicative (Applicative, (<|>))
+import Control.Applicative (Applicative, (<$>), (<|>))
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -193,10 +193,10 @@ newIRef val = do
 type Property m = Property.Property (Transaction m)
 
 fromIRef :: (MonadA m, Binary a) => IRef (Tag m) a -> Transaction m (Property m a)
-fromIRef iref = fmap (flip Property.Property (writeIRef iref)) $ readIRef iref
+fromIRef iref = flip Property.Property (writeIRef iref) <$> readIRef iref
 
 fromIRefDef :: (MonadA m, Binary a) => IRef (Tag m) a -> a -> Transaction m (Property m a)
-fromIRefDef iref def = fmap (flip Property.Property (writeIRef iref)) $ readIRefDef def iref
+fromIRefDef iref def = flip Property.Property (writeIRef iref) <$> readIRefDef def iref
 
 -- Dereference the *current* value of the IRef (Will not track new
 -- values of IRef, by-value and not by-name)

@@ -98,7 +98,7 @@ exprGen makeDefI =
   arbitraryExpr
 
 instance Name Guid where
-  names = fmap (Guid.fromString . (: [])) ['a'..]
+  names = Guid.fromString . (: []) <$> ['a'..]
 
 -- TODO: This instance doesn't know which Definitions exist in the
 -- world so avoids DefinitionRef and only has valid ParameterRefs to

@@ -1,5 +1,6 @@
 module Lamdu.VersionControl (makeActions, runAction, runEvent) where
 
+import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.Monad (unless)
 import Data.List (elemIndex)
@@ -98,6 +99,6 @@ makeActions = do
     , Actions.setCurrentBranch = setCurrentBranch view
     , Actions.deleteBranch = deleteBranch view branches
     , Actions.makeBranch = makeBranch view
-    , Actions.mUndo = fmap undo $ Version.parent curVersionData
+    , Actions.mUndo = undo <$> Version.parent curVersionData
     , Actions.mRedo = mkRedo allRedos
     }

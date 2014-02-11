@@ -14,6 +14,7 @@ module Data.List.Utils
   , isLengthAtLeast
   ) where
 
+import Control.Applicative ((<$>))
 import Data.Function (on)
 import Data.List (groupBy, sortBy)
 import Data.Maybe (listToMaybe)
@@ -66,6 +67,6 @@ nonEmptyAll f xs = all f xs
 
 match :: (a -> b -> c) -> [a] -> [b] -> Maybe [c]
 match f (x:xs) (y:ys) =
-  fmap (f x y :) $ match f xs ys
+  (f x y :) <$> match f xs ys
 match _ [] [] = Just []
 match _ _ _ = Nothing

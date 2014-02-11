@@ -792,7 +792,7 @@ convertWhereItems usedTags expr =
         { _itemDelete = do
              deleteParamRef defGuid bodyStored
              SugarInfer.replaceWith topLevelProp $ bodyStored ^. Expr.ePayload
-        , _itemAddNext = fmap fst $ DataOps.redexWrap topLevelProp
+        , _itemAddNext = fst <$> DataOps.redexWrap topLevelProp
         }
     name <- getStoredNameS defGuid
     let

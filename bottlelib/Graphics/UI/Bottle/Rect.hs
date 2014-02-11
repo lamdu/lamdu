@@ -7,7 +7,7 @@ module Graphics.UI.Bottle.Rect
   , bottomRight, center, distance
   ) where
 
-import Control.Applicative (liftA2)
+import Control.Applicative ((<$>), liftA2)
 import Control.Lens (Traversal', Lens', (^.), _1, _2)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R)
@@ -25,14 +25,14 @@ topLeftAndSize f (Rect tl s) = liftA2 Rect (f tl) (f s)
 
 bottomRight :: Lens' Rect (Vector2 R)
 bottomRight f (Rect tl s) =
-  fmap withNew $ f (tl + s)
+  withNew <$> f (tl + s)
   where
     withNew newBottomRight =
       Rect tl (newBottomRight - tl)
 
 center :: Lens' Rect (Vector2 R)
 center f (Rect tl s) =
-  fmap withNew $ f centerVal
+  withNew <$> f centerVal
   where
     centerVal = tl + s / 2
     withNew newCenter =

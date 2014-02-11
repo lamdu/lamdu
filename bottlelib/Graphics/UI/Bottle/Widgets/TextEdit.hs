@@ -11,6 +11,7 @@ module Graphics.UI.Bottle.Widgets.TextEdit(
   sTextViewStyle
   ) where
 
+import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.Lens.Tuple
 import Data.Char (isSpace)
@@ -343,6 +344,6 @@ make :: Style -> Widget.Id -> String -> Widget.Id -> Widget ((,) String)
 make style cursor str myId =
   maybe makeUnfocused makeFocused mCursor style str myId
   where
-    mCursor = fmap extractTextEditCursor $ Widget.subId myId cursor
+    mCursor = extractTextEditCursor <$> Widget.subId myId cursor
     extractTextEditCursor [x] = min (length str) $ BinUtils.decodeS x
     extractTextEditCursor _ = length str

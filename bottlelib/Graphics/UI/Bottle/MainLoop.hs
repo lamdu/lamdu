@@ -44,7 +44,7 @@ mainLoopImage win eventHandler makeImage =
 
     handleEvents events = do
       winSize@(Vector2 winSizeX winSizeY) <- windowSize
-      anyChange <- fmap or $ traverse (handleEvent winSize) events
+      anyChange <- or <$> traverse (handleEvent winSize) events
       GL.viewport $=
         (GL.Position 0 0,
          GL.Size (round winSizeX) (round winSizeY))
@@ -102,7 +102,7 @@ mainLoopAnim win tickHandler eventHandler makeFrame getAnimationHalfLife = do
       curTime <- getCurrentTime
       writeIORef frameStateVar =<<
         nextFrameState curTime size =<< readIORef frameStateVar
-      fmap frameStateResult $ readIORef frameStateVar
+      frameStateResult <$> readIORef frameStateVar
 
     frameStateResult Nothing = error "No frame to draw at start??"
     frameStateResult (Just (drawCount, (_, frame)))
