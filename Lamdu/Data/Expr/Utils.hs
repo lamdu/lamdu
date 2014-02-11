@@ -39,7 +39,6 @@ module Lamdu.Data.Expr.Utils
   , annotateTypePositions
   ) where
 
-import Prelude hiding (pi)
 import Lamdu.Data.Expr
 
 import Control.Applicative (Applicative(..), liftA2, (<$>), (<$))

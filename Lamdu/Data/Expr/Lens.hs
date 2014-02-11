@@ -29,7 +29,6 @@ module Lamdu.Data.Expr.Lens
   , holePayloads
   ) where
 
-import Prelude hiding (pi)
 import Lamdu.Data.Expr
 
 import Control.Applicative (Applicative(..), (<$>))
