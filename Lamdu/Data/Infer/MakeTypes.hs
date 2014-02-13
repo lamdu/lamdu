@@ -49,7 +49,7 @@ maybeCircumsize ::
   Ord def =>
   Scope def ->
   TypedValue def ->
-  Expr.Body (Load.LoadedDef def) Guid (TypedValue def) ->
+  LoadedBody def (TypedValue def) ->
   Infer def (ExprRef def)
 maybeCircumsize scope applicant uncircumsizedValBody = do
   -- We only maybeCircumsize non-tags:

@@ -13,7 +13,7 @@ import Data.DeriveTH (derive)
 import Data.Store.Guid (Guid)
 import Data.Typeable (Typeable)
 import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.RefData (RefData)
+import Lamdu.Data.Infer.RefData (RefData, LoadedExpr)
 import Lamdu.Data.Infer.TypedValue (TypedValue(..))
 import System.Random (RandomGen, random)
 import qualified Control.Lens as Lens
@@ -40,9 +40,9 @@ derive makeBinary ''Payload
 add ::
   (Show def, Ord def, RandomGen gen) =>
   gen -> def ->
-  Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, a) ->
+  LoadedExpr def (TypedValue def, a) ->
   StateT (Context def) (Either (InferM.Error def))
-  (Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, Payload a))
+  (LoadedExpr def (TypedValue def, Payload a))
 add gen def expr = do
   derefedType <-
     State.mapStateT (Lens._Left .~ error "ImplicitVariable.add: deref should succeed!") $
@@ -79,7 +79,7 @@ onEachHole ::
   def ->
   TypedValue def ->
   StateT gen
-  (StateT (Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, Payload a))
+  (StateT (LoadedExpr def (TypedValue def, Payload a))
    (StateT (Context def)
     (Either (InferM.Error def)))) ()
 onEachHole def tv@(TypedValue valRef _) = do

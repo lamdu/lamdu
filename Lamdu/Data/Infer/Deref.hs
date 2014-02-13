@@ -39,7 +39,7 @@ import qualified Lamdu.Data.Infer.RefData as RefData
 data Error def = InfiniteExpr (ExprRef def)
   deriving (Show, Eq, Ord)
 
-type Expr def = Expr.Expr (RefData.LoadedDef def) Guid (ExprRef def)
+type Expr def = RefData.LoadedExpr def (ExprRef def)
 
 -- TODO: Make this a newtype and maybe rename to Context
 -- | The stored guid names we know for paremeter refs (different

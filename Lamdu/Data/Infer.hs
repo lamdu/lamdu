@@ -16,11 +16,10 @@ import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
-import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Context (Context)
 import Lamdu.Data.Infer.MakeTypes (makeTV)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.RefData (Scope(..))
+import Lamdu.Data.Infer.RefData (Scope(..), LoadedExpr)
 import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.TypedValue (TypedValue(..), tvVal, tvType)
 import qualified Control.Lens as Lens
@@ -67,23 +66,23 @@ freshTV scope =
 infer ::
   Ord def =>
   Scope def ->
-  Expr.Expr (Load.LoadedDef def) Guid a ->
-  M def (Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, a))
+  LoadedExpr def a ->
+  M def (LoadedExpr def (TypedValue def, a))
 infer scope expr = InferMRun.run $ do
   tv <- InferM.liftContext $ freshTV scope
   exprIntoTV tv expr
 
 inferAt ::
   Ord def =>
-  TypedValue def -> Expr.Expr (Load.LoadedDef def) Guid a ->
-  M def (Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, a))
+  TypedValue def -> LoadedExpr def a ->
+  M def (LoadedExpr def (TypedValue def, a))
 inferAt tv expr =
   InferMRun.run $ exprIntoTV tv expr
 
 exprIntoTV ::
   Ord def =>
-  TypedValue def -> Expr.Expr (Load.LoadedDef def) Guid a ->
-  Infer def (Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, a))
+  TypedValue def -> LoadedExpr def a ->
+  Infer def (LoadedExpr def (TypedValue def, a))
 exprIntoTV dest (Expr.Expr body pl) = do
   scope <-
     InferM.liftContext $

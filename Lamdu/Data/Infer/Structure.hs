@@ -5,12 +5,11 @@ module Lamdu.Data.Infer.Structure
 import Control.Lens.Operators
 import Control.Monad (when, void)
 import Control.Monad.Trans.State (StateT, mapStateT)
-import Data.Store.Guid (Guid)
 import Lamdu.Data.Infer.Context (Context)
+import Lamdu.Data.Infer.RefData (LoadedExpr)
 import Lamdu.Data.Infer.TypedValue (TypedValue(..))
 import qualified Control.Lens as Lens
 import qualified Data.UnionFind.WithData as UFData
-import qualified Lamdu.Data.Expr as Expr
 import qualified Lamdu.Data.Expr.Lens as ExprLens
 import qualified Lamdu.Data.Expr.Utils as ExprUtil
 import qualified Lamdu.Data.Infer as Infer
@@ -21,7 +20,7 @@ import qualified Lamdu.Data.Infer.RefData as RefData
 
 add ::
   (Show def, Ord def) =>
-  Expr.Expr (Load.LoadedDef def) Guid (TypedValue def, a) ->
+  LoadedExpr def (TypedValue def, a) ->
   StateT (Context def) (Either (Deref.Error def)) ()
 add = Lens.traverseOf_ (ExprLens.holePayloads . Lens._1) %%~ addToHole
 

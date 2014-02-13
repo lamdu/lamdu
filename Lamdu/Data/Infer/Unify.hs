@@ -18,7 +18,7 @@ import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
 import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.RefData (RefData(..), Scope(..), LoadedDef, LoadedBody, scopeNormalizeParamRefs)
+import Lamdu.Data.Infer.RefData (RefData(..), Scope(..), LoadedBody, scopeNormalizeParamRefs)
 import Lamdu.Data.Infer.RefTags (ExprRef, TagParam, TagRule)
 import Lamdu.Data.Infer.Trigger (Trigger)
 import System.Random (Random, random)
@@ -147,8 +147,8 @@ applyHoleConstraints holeConstraints body oldScope = do
 
 unifyWithHole ::
   Eq def => Scope def -> Scope def ->
-  Expr.Body (LoadedDef def) Guid (ExprRef def) ->
-  WU def (Scope def, Expr.Body (LoadedDef def) Guid (ExprRef def))
+  LoadedBody def (ExprRef def) ->
+  WU def (Scope def, LoadedBody def (ExprRef def))
 unifyWithHole holeScope otherScope nonHoleBody = do
   ( Scope holeScopeMapNorm holeScopeMDef
     , otherScopeNorm@(Scope otherScopeMapNorm otherScopeMDef)
@@ -167,9 +167,9 @@ unifyWithHole holeScope otherScope nonHoleBody = do
 
 mergeScopeBodies ::
   Ord def =>
-  Scope def -> Expr.Body (LoadedDef def) Guid (ExprRef def) ->
-  Scope def -> Expr.Body (LoadedDef def) Guid (ExprRef def) ->
-  WU def (Scope def, Expr.Body (LoadedDef def) Guid (ExprRef def))
+  Scope def -> LoadedBody def (ExprRef def) ->
+  Scope def -> LoadedBody def (ExprRef def) ->
+  WU def (Scope def, LoadedBody def (ExprRef def))
 mergeScopeBodies xScope xBody yScope yBody =
   case (xBody, yBody) of
     (_, Expr.BodyLeaf Expr.Hole) -> unifyWithHole yScope xScope xBody
