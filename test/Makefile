@@ -1,4 +1,5 @@
 GHC=ghc
+RUNGHC=run${GHC}
 GHC_FLAGS=-O2 -Wall -Werror -XScopedTypeVariables
 
 all: run_test_infer
@@ -8,7 +9,7 @@ build: build_cabal build_test_stuff
 build_test_stuff: build_test_infer build_benchmark_infer build_profile_infer
 
 run_test_infer:
-	runghc -i.. -i../bottlelib test_Infer.hs
+	${RUNGHC} -i.. -i../bottlelib test_Infer.hs
 
 run_optimized_test_infer: build_test_infer
 	./test_Infer
