@@ -110,14 +110,8 @@ createBuiltins augmentTagGuids =
     publicBuiltin_ "Data.List.length" . forAll "a" $ \a ->
       mkPi (listOf a) integer
 
-    publicBuiltin_ "Prelude.product" . forAll "a" $ \a ->
-      mkPi (listOf a) a
-    publicBuiltin_ "Prelude.sum" . forAll "a" $ \a ->
-      mkPi (listOf a) a
-    publicBuiltin_ "Prelude.maximum" . forAll "a" $ \a ->
-      mkPi (listOf a) a
-    publicBuiltin_ "Prelude.minimum" . forAll "a" $ \a ->
-      mkPi (listOf a) a
+    traverse_ ((`publicBuiltin_` mkPi (listOf integer) integer) . ("Prelude."++))
+      ["product", "sum", "maximum", "minimum"]
 
     let
       filterType predName =
@@ -195,13 +189,12 @@ createBuiltins augmentTagGuids =
       , ( "ys", listOf b )
       ] $ listOf c
 
-    let aToAToA = forAll "a" $ \a -> mkInfixType a a a
-    traverse_ ((`publicBuiltin_` aToAToA) . ("Prelude." ++))
-      ["+", "-", "*", "/", "^", "++", "div"]
-    publicDef_ "%" Infix ["Prelude"] "mod" aToAToA
-    publicBuiltin_ "Prelude.negate" $ forAll "a" endo
-    publicBuiltin_ "Prelude.sqrt" $ forAll "a" endo
-    publicBuiltin_ "Prelude.floor" $ forAll "a" $ \a -> forAll "b" $ \b -> mkPi a b
+    traverse_ ((`publicBuiltin_` mkInfixType integer integer integer) . ("Prelude." ++))
+      ["+", "-", "*", "/", "^", "div"]
+    publicBuiltin_ "Prelude.++" $ forAll "a" $ \a -> mkInfixType (listOf a) (listOf a) (listOf a)
+    publicDef_ "%" Infix ["Prelude"] "mod" $ mkInfixType integer integer integer
+    publicBuiltin_ "Prelude.negate" $ endo integer
+    publicBuiltin_ "Prelude.sqrt" $ endo integer
 
     let aToAToBool = forAll "a" $ \a -> mkInfixType a a bool
     traverse_ ((`publicBuiltin_` aToAToBool) . ("Prelude." ++))
