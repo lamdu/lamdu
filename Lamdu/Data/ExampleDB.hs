@@ -71,7 +71,7 @@ createBuiltins augmentTagGuids =
     let maybeOf = mkApply mybe
     publicBuiltin_ "Prelude.Just" $ forAll "a" $ \a -> mkPi a $ maybeOf a
     publicBuiltin_ "Prelude.Nothing" $ forAll "a" $ \a -> maybeOf a
-    publicBuiltin_ "Data.List.caseMaybe" . forAll "a" $ \a -> forAll "b" $ \b ->
+    publicBuiltin_ "Data.List.case" . forAll "a" $ \a -> forAll "b" $ \b ->
       mkPiRecord
       [ ( "maybe", maybeOf a )
       , ( "nothing", b )
@@ -176,7 +176,7 @@ createBuiltins augmentTagGuids =
         )
       ] b
 
-    publicBuiltin_ "Data.List.caseList" . forAll "a" $ \a -> forAll "b" $ \b ->
+    publicBuiltin_ "Data.List.case" . forAll "a" $ \a -> forAll "b" $ \b ->
       mkPiRecord
       [ ( "list", listOf a )
       , ( "empty", b )
