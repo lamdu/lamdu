@@ -76,7 +76,7 @@ Library
                        Data.Cache.Types
 
   Build-depends:       base >= 4,
-                       aeson >= 0.6.2.1 && < 0.6.3,
+                       aeson,
                        sophia >= 0.1,
                        cryptohash >= 0.7,
                        GLFW-b >= 1.2.1 && < 1.5,
@@ -86,7 +86,7 @@ Library
                        TraceUtils,
                        hashable,
                        either,
-                       lens >= 3.9,
+                       lens >= 4.0,
                        binary >= 0.5,
                        bytestring,
                        containers >= 0.4,
@@ -108,7 +108,7 @@ Library
 
 Executable lamdu
   Build-Depends:       base >= 4,
-                       aeson >= 0.6.2.1 && < 0.6.3,
+                       aeson,
                        hashable,
                        containers,
                        directory,

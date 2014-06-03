@@ -257,7 +257,7 @@ runGetFieldTypeToRecordFieldType recordTypeRef (recordTypeExpr, fieldTag, getFie
     makeError = [(recordTypeRef, recordTypeExample)]
     recordTypeIsHole =
       [ ( recordTypeRef
-        , recordTypeExpr & Expr.ePayload . rplRestrictedPoly . Lens.unwrapped .~ True
+        , recordTypeExpr & Expr.ePayload . rplRestrictedPoly . Lens._Wrapped .~ True
         )
       ]
     verifyRecordWithField =
@@ -333,7 +333,7 @@ mergeToPiResult =
       | not (IntSet.null substs) =
         (rplSubstitutedArgs .~ substs) <$> src
       | notAHole src =
-        (rplRestrictedPoly . Lens.unwrapped .~ True) <$> dest
+        (rplRestrictedPoly . Lens._Wrapped .~ True) <$> dest
       | otherwise = dest
       where
         substs = dest ^. Expr.ePayload . rplSubstitutedArgs
@@ -385,7 +385,7 @@ runIntoApplyResult (k, applyRef, arg) (funcExpr, argExpr) = do
     , ExprUtil.substGetPar param
       (argExpr & Lens.traversed . rplSubstitutedArgs %~ IntSet.insert (unExprRef arg)) .
       -- TODO: Is this correct?
-      (Lens.traversed . rplRestrictedPoly . Lens.unwrapped .~ False) $
+      (Lens.traversed . rplRestrictedPoly . Lens._Wrapped .~ False) $
       result
     )
 
@@ -429,7 +429,7 @@ mergeToArg param arg =
          , post
            & Lens.traversed . rplSubstitutedArgs %~ IntSet.delete (unExprRef arg)
            -- TODO: Is this correct?
-           & Lens.traversed . rplRestrictedPoly . Lens.unwrapped .~ False
+           & Lens.traversed . rplRestrictedPoly . Lens._Wrapped .~ False
          )]
       | otherwise = unit
 

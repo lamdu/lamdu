@@ -266,7 +266,7 @@ derefNode context inferNode =
     deref ref =
       context ^? exprMap . refsAt (unExprRef ref) . Lens._Just . rExpression
       <&> Lens.mapped %~
-          toIsRestrictedPoly . (^. rplRestrictedPoly . Lens.unwrapped)
+          toIsRestrictedPoly . (^. rplRestrictedPoly . Lens._Wrapped)
 {-# INLINE derefNode #-}
 
 derefExpr ::
