@@ -54,7 +54,7 @@ createBuiltins augmentTagGuids =
     let listOf = mkApply list
     headTag <- lift $ namedTag "head" headTagGuid
     tailTag <- lift $ namedTag "tail" tailTagGuid
-    cons <-
+    nonEmpty <-
       publicBuiltin "Prelude.:" $ forAll "a" $ \a ->
       mkPi (mkRecordType pure [(headTag, a), (tailTag, listOf a)]) $ listOf a
     nil <- publicBuiltin "Prelude.[]" $ forAll "a" listOf
@@ -174,7 +174,7 @@ createBuiltins augmentTagGuids =
       mkPiRecord
       [ ( "list", listOf a )
       , ( "empty", b )
-      , ( "cons"
+      , ( "non-empty"
         , mkPiRecord
           [ ("item", a)
           , ("rest", listOf a)
@@ -210,7 +210,7 @@ createBuiltins augmentTagGuids =
     let
       specialFunctions = Db.SpecialFunctions
         { Db.sfNil = nil
-        , Db.sfCons = cons
+        , Db.sfCons = nonEmpty
         , Db.sfHeadTag = headTagGuid
         , Db.sfTailTag = tailTagGuid
         }
