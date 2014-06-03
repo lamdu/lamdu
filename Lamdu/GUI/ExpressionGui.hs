@@ -188,11 +188,10 @@ makeNameEdit (Sugar.Name nameSrc nameCollision name) ident myId = do
   nameEdit <-
     fmap (nameSrcTint config nameSrc) .
     ExprGuiM.widgetEnv .
-    WE.localEnv (WE.envTextStyle . TextEdit.sEmptyFocusedString .~ bracketedName) $
+    WE.localEnv (WE.envTextStyle . TextEdit.sEmptyFocusedString .~ "") $
     makeEditor nameProp
   return . Box.hboxCentered $ nameEdit : collisionSuffixes
   where
-    bracketedName = concat ["<", name, ">"]
     makeEditor property =
       makeBridge (makeWordEdit property) (BWidgets.makeFocusableTextView name) myId
     makeWordEdit =
