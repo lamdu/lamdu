@@ -379,7 +379,10 @@ convertGetField (Expr.GetField recExpr tagExpr) exprPl = do
       { _gfRecord = recExpr
       , _gfTag = tagExpr
       }
-      <&> gfTag . rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed -- Tag cannot be wrapped
+      <&> gfTag %~
+          ( (rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed) -- Tag cannot be wrapped
+          . SugarRemoveTypes.successfulType
+          )
       <&> BodyGetField
 
 removeRedundantSubExprTypes :: Expression n m a -> Expression n m a
