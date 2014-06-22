@@ -395,18 +395,22 @@ mapIdTest =
   ]
 
 factorialExpr =
-  lambda "x" iInt $ \x ->
-  getDef "if" $$ iInt $$:
-  [ getDef "==" $$ iInt $$:
-    [x, literalInteger 0]
-  , literalInteger 1
-  , getDef "*" $$ iInt $$:
-    [ x
-    , recurse (integerType ~> integerType) $$
-      (getDef "-" $$ iInt $$: [x, literalInteger 1])
+  getDef "fix" $$ facType $$
+  lambda "loop" facType
+  ( \loop ->
+    lambda "x" iInt $ \x ->
+    getDef "if" $$ iInt $$:
+    [ getDef "==" $$ iInt $$:
+      [x, literalInteger 0]
+    , literalInteger 1
+    , getDef "*" $$ iInt $$:
+      [ x
+      , loop $$ (getDef "-" $$ iInt $$: [x, literalInteger 1])
+      ]
     ]
-  ]
+  )
   where
+    facType = asHole (integerType ~> integerType)
     iInt = asHole integerType
 
 recurseScopeTest =
