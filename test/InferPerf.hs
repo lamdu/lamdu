@@ -7,7 +7,7 @@ import Data.Store.Guid (Guid)
 import InferWrappers
 import Utils
 import qualified Data.ByteString as SBS
-import qualified Lamdu.Data.Expr as Expr
+import qualified Lamdu.Expr as Expr
 
 inferAndEncode :: Expr.Expr Def Guid a -> Int -> Int
 inferAndEncode expr par =

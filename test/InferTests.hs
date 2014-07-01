@@ -7,8 +7,8 @@ import Control.Monad (void)
 import InferAssert
 import InferCombinators
 import InferWrappers
-import Lamdu.Data.Expr (Kind(..))
-import Lamdu.Data.Expr.Utils (pureHole)
+import Lamdu.Expr (Kind(..))
+import Lamdu.Expr.Utils (pureHole)
 import Test.Framework (testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.HUnit (assertEqual)
@@ -18,8 +18,8 @@ import Utils
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
-import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expr.Lens as ExprLens
+import qualified Lamdu.Expr as Expr
+import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.Deref as InferDeref
 

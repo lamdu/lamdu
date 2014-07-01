@@ -1,5 +1,5 @@
 {-# LANGUAGE RankNTypes, NoMonomorphismRestriction #-}
-module Lamdu.Data.Expr.Lens
+module Lamdu.Expr.Lens
   ( pureExpr
   , parameterRef, definitionRef
   , kindedLam, kindedRecordFields
@@ -29,7 +29,7 @@ module Lamdu.Data.Expr.Lens
   , holePayloads
   ) where
 
-import Lamdu.Data.Expr
+import Lamdu.Expr
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators

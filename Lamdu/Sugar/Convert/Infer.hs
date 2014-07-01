@@ -41,7 +41,7 @@ import Data.Maybe.Utils (unsafeUnjust)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable, Typeable1)
-import Lamdu.Data.Expr.IRef (DefIM)
+import Lamdu.Expr.IRef (DefIM)
 import Lamdu.Data.Infer.Deref (DerefedTV)
 import Lamdu.Data.Infer.Load (Loader(..))
 import Lamdu.Sugar.Types.Internal
@@ -52,10 +52,10 @@ import qualified Data.Cache as Cache
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expr.IRef as ExprIRef
-import qualified Lamdu.Data.Expr.Load as Load
-import qualified Lamdu.Data.Expr.Utils as ExprUtil
+import qualified Lamdu.Expr as Expr
+import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Load as Load
+import qualified Lamdu.Expr.Utils as ExprUtil
 import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.Deref as InferDeref
 import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables

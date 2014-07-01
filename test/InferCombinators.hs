@@ -10,15 +10,15 @@ import Data.Map ((!))
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
-import Lamdu.Data.Expr (Kind(..))
-import Lamdu.Data.Expr.Utils (pureHole, pureLiteralInteger, pureIntegerType, pureTag, pureTagType, pureType)
+import Lamdu.Expr (Kind(..))
+import Lamdu.Expr.Utils (pureHole, pureLiteralInteger, pureIntegerType, pureTag, pureTagType, pureType)
 import Utils
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Guid as Guid
-import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expr.Lens as ExprLens
-import qualified Lamdu.Data.Expr.Utils as ExprUtil
+import qualified Lamdu.Expr as Expr
+import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Utils as ExprUtil
 
 type InputExpr = Expr InputPayload
 
@@ -317,7 +317,7 @@ tagStr :: String -> InputExpr
 tagStr = tag . Guid.fromString
 
 infixl 4 $$
-infixl 3 $$:
+infixl 4 $$:
 
 ($$:) :: InputExpr -> [InputExpr] -> InputExpr
 ($$:) f args =

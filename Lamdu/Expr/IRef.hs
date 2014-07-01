@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
-module Lamdu.Data.Expr.IRef
+module Lamdu.Expr.IRef
   ( Expr, ExprM
   , ExprI(..), ExprIM
   , ExprBody
@@ -29,9 +29,9 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expr.Lens as ExprLens
-import qualified Lamdu.Data.Expr.Utils as ExprUtil
+import qualified Lamdu.Expr as Expr
+import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Utils as ExprUtil
 
 type Expr t = Expr.Expr (DefI t) Guid
 type ExprM m = Expr (Tag m)

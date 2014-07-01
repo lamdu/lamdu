@@ -26,10 +26,10 @@ import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.DbLayout as Db
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expr.IRef as ExprIRef
-import qualified Lamdu.Data.Expr.Lens as ExprLens
-import qualified Lamdu.Data.Expr.Utils as ExprUtil
+import qualified Lamdu.Expr as Expr
+import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Utils as ExprUtil
 import qualified Lamdu.Data.FFI as FFI
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
@@ -71,7 +71,7 @@ createBuiltins augmentTagGuids =
     let maybeOf = mkApply mybe
     publicBuiltin_ "Prelude.Just" $ forAll "a" $ \a -> mkPi a $ maybeOf a
     publicBuiltin_ "Prelude.Nothing" $ forAll "a" $ \a -> maybeOf a
-    publicBuiltin_ "Data.List.case" . forAll "a" $ \a -> forAll "b" $ \b ->
+    publicBuiltin_ "Data.Maybe.caseMaybe" . forAll "a" $ \a -> forAll "b" $ \b ->
       mkPiRecord
       [ ( "maybe", maybeOf a )
       , ( "nothing", b )
@@ -170,7 +170,7 @@ createBuiltins augmentTagGuids =
         )
       ] b
 
-    publicBuiltin_ "Data.List.case" . forAll "a" $ \a -> forAll "b" $ \b ->
+    publicBuiltin_ "Data.List.caseList" . forAll "a" $ \a -> forAll "b" $ \b ->
       mkPiRecord
       [ ( "list", listOf a )
       , ( "empty", b )

@@ -16,7 +16,7 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.Data.Anchors (PresentationMode(..))
-import Lamdu.Data.Expr.IRef (DefIM)
+import Lamdu.Expr.IRef (DefIM)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
@@ -26,10 +26,10 @@ import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expr.IRef as ExprIRef
-import qualified Lamdu.Data.Expr.Lens as ExprLens
-import qualified Lamdu.Data.Expr.Utils as ExprUtil
+import qualified Lamdu.Expr as Expr
+import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Utils as ExprUtil
 import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.Deref as InferDeref
 import qualified Lamdu.Data.Ops as DataOps

@@ -10,9 +10,9 @@ import Data.Map (Map, (!))
 import Data.Monoid (mappend)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.ExampleDB (createBuiltins)
-import Lamdu.Data.Expr (Kind(..))
-import Lamdu.Data.Expr.IRef (DefI)
-import Lamdu.Data.Expr.Utils (pureHole, pureIntegerType)
+import Lamdu.Expr (Kind(..))
+import Lamdu.Expr.IRef (DefI)
+import Lamdu.Expr.Utils (pureHole, pureIntegerType)
 import Lamdu.Data.Infer.Deref (DerefedTV(..), Restriction(..), dValue, dType)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
@@ -23,10 +23,10 @@ import qualified Data.Store.Map as MapStore
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expr.IRef as ExprIRef
-import qualified Lamdu.Data.Expr.Lens as ExprLens
-import qualified Lamdu.Data.Expr.Utils as ExprUtil
+import qualified Lamdu.Expr as Expr
+import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Utils as ExprUtil
 
 newtype Def = Def String
   deriving (Eq, Ord, Binary)

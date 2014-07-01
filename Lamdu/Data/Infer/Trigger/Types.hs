@@ -9,10 +9,10 @@ import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Store.Guid (Guid)
-import Lamdu.Data.Expr.Utils () -- Show instance for Expr.Body
+import Lamdu.Expr.Utils () -- Show instance for Expr.Body
 import Lamdu.Data.Infer.RefTags (ParamRef, ExprRef)
 import qualified Control.Lens as Lens
-import qualified Lamdu.Data.Expr as Expr
+import qualified Lamdu.Expr as Expr
 
 -- Triggers are alive as long as their truthfulness is yet
 -- unknown. When they become known, they fire (see Fired) below and

@@ -22,8 +22,8 @@ import Lamdu.Data.Infer.RefTags (ExprRef)
 import Lamdu.Data.Infer.TypedValue (TypedValue(..), tvType)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Either as Either
-import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expr.Lens as ExprLens
+import qualified Lamdu.Expr as Expr
+import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Data.Infer.Context as Context
 import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
 import qualified Lamdu.Data.Infer.RefData as RefData

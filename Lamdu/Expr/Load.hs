@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts, TemplateHaskell, DeriveDataTypeable #-}
-module Lamdu.Data.Expr.Load
+module Lamdu.Expr.Load
   ( loadDefinitionClosure
   , ExprPropertyClosure, exprPropertyOfClosure
   ) where
@@ -18,13 +18,13 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import Lamdu.Data.Definition (Definition(..))
-import Lamdu.Data.Expr.IRef (DefI, DefIM)
+import Lamdu.Expr.IRef (DefI, DefIM)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expr as Expr
-import qualified Lamdu.Data.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr as Expr
+import qualified Lamdu.Expr.IRef as ExprIRef
 
 type T = Transaction
 
