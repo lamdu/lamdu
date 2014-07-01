@@ -6,8 +6,8 @@ module Lamdu.Expr
   , Apply(..), applyFunc, applyArg
   , GetField(..), getFieldRecord, getFieldTag
   , Record(..), recordKind, recordFields
-  , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Type, _IntegerType, _Tag, _TagType
-  , Body(..), _BodyLam, _BodyApply, _BodyLeaf, _BodyRecord, _BodyGetField
+  , Leaf(..), _VVar, _VLiteralInteger, _VHole, _Type, _IntegerType, _Tag, _TagType
+  , Body(..), _VAbs, _VApp, _VLeaf, _VRec, _VGetField
   , BodyExpr
   , Expr(..), eBody, ePayload
   ) where
@@ -50,13 +50,13 @@ instance (Show def, Show par) => Show (VariableRef def par) where
   showsPrec _ (ParameterRef paramId) = shows paramId
   showsPrec _ (DefinitionRef defI) = shows defI
 
--- TODO: Consider extracting all but "GetVariable" to "Primitive"?
+-- TODO: Consider extracting all but "VVar" to "Primitive"?
 data Leaf def par
-  = GetVariable !(VariableRef def par)
-  | LiteralInteger !Integer
+  = VVar !(VariableRef def par)
+  | VLiteralInteger !Integer
   | Type
   | IntegerType
-  | Hole
+  | VHole
   | TagType
   | Tag Guid -- TODO: Guid?
   deriving (Eq, Ord, Functor, Foldable, Traversable)
@@ -64,12 +64,12 @@ data Leaf def par
 instance (Show def, Show par) => Show (Leaf def par) where
   showsPrec _ leaf =
     case leaf of
-    GetVariable varRef -> shows varRef
-    LiteralInteger int -> shows int
+    VVar varRef -> shows varRef
+    VLiteralInteger int -> shows int
     Tag guid -> showString "Tag<" . shows guid . showChar '>'
     Type -> showString "Type"
     IntegerType -> showString "Int"
-    Hole -> showString "?"
+    VHole -> showString "?"
     TagType -> showString "Tag"
 
 data Record expr = Record
@@ -83,11 +83,11 @@ data GetField expr = GetField
   } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 data Body def par expr
-  = BodyLam {-# UNPACK #-}!(Lam par expr)
-  | BodyApply {-# UNPACK #-}!(Apply expr)
-  | BodyRecord {-# UNPACK #-}!(Record expr)
-  | BodyGetField {-# UNPACK #-}!(GetField expr)
-  | BodyLeaf !(Leaf def par)
+  = VAbs {-# UNPACK #-}!(Lam par expr)
+  | VApp {-# UNPACK #-}!(Apply expr)
+  | VRec {-# UNPACK #-}!(Record expr)
+  | VGetField {-# UNPACK #-}!(GetField expr)
+  | VLeaf !(Leaf def par)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 type BodyExpr def par a = Body def par (Expr def par a)

@@ -8,7 +8,7 @@ module Lamdu.Expr.Utils
   , pureRecord
   , pureLam
   , pureGetField
-  , pureLiteralInteger
+  , pureVLiteralInteger
   , pureIntegerType
   , pureTag
   , pureTagType
@@ -148,15 +148,15 @@ recordValForm paramType =
   paramType ^? ExprLens.exprKindedRecordFields KType
   >>= replaceFieldTypesWithHoles
   where
-    castTag (BodyLeaf Hole) = Just (BodyLeaf Hole)
-    castTag (BodyLeaf (Tag tag)) = Just (BodyLeaf (Tag tag))
+    castTag (VLeaf VHole) = Just (VLeaf VHole)
+    castTag (VLeaf (Tag tag)) = Just (VLeaf (Tag tag))
     castTag _ = Nothing
     replaceFieldTypesWithHoles fields =
       fields
       & Lens.traversed %%~
         (Lens._1 . eBody %%~ castTag) .
         (Lens._2 .~ pureHole)
-      <&> (ExprLens.pureExpr . _BodyRecord . ExprLens.kindedRecordFields KVal # )
+      <&> (ExprLens.pureExpr . _VRec . ExprLens.kindedRecordFields KVal # )
 
 data ApplyFormAnnotation =
   Untouched | DependentParamAdded | IndependentParamAdded
@@ -254,17 +254,17 @@ randomizeParamIdsG preNG gen initMap convertPL =
       newGen <- lift $ state ngSplit
       (`Expr` convertPL newGen parMap s) <$>
         case v of
-        BodyLam (Lam k oldParamId paramType body) -> do
+        VAbs (Lam k oldParamId paramType body) -> do
           newParamId <- lift . state $ makeName oldParamId s
-          fmap BodyLam $ liftA2 (Lam k newParamId) (go paramType) .
+          fmap VAbs $ liftA2 (Lam k newParamId) (go paramType) .
             Reader.local (Map.insert oldParamId newParamId) $ go body
-        BodyLeaf (GetVariable (ParameterRef par)) ->
+        VLeaf (VVar (ParameterRef par)) ->
           pure $ ExprLens.bodyParameterRef #
           fromMaybe par (Map.lookup par parMap)
-        x@BodyLeaf {}     -> traverse go x
-        x@BodyApply {}    -> traverse go x
-        x@BodyGetField {} -> traverse go x
-        x@BodyRecord {}   -> traverse go x
+        x@VLeaf {}     -> traverse go x
+        x@VApp {}      -> traverse go x
+        x@VGetField {} -> traverse go x
+        x@VRec {}      -> traverse go x
     makeName oldParamId s nameGen =
       ngMakeName nameGen oldParamId $ preNG s
 
@@ -292,28 +292,28 @@ matchBody ::
   Maybe (Body def r c)
 matchBody matchLam matchSubexpr matchGetPar body0 body1 =
   case body0 of
-  BodyLam (Lam k0 p0 pt0 r0) -> do
-    Lam k1 p1 pt1 r1 <- body1 ^? _BodyLam
+  VAbs (Lam k0 p0 pt0 r0) -> do
+    Lam k1 p1 pt1 r1 <- body1 ^? _VAbs
     guard $ k0 == k1
     let (p, r) = matchLam p0 p1 r0 r1
-    Just . BodyLam $ Lam k0 p (matchSubexpr pt0 pt1) r
-  BodyApply (Apply f0 a0) -> do
-    Apply f1 a1 <- body1 ^? _BodyApply
-    Just . BodyApply $ Apply (matchSubexpr f0 f1) (matchSubexpr a0 a1)
-  BodyRecord (Record k0 fs0) -> do
-    Record k1 fs1 <- body1 ^? _BodyRecord
+    Just . VAbs $ Lam k0 p (matchSubexpr pt0 pt1) r
+  VApp (Apply f0 a0) -> do
+    Apply f1 a1 <- body1 ^? _VApp
+    Just . VApp $ Apply (matchSubexpr f0 f1) (matchSubexpr a0 a1)
+  VRec (Record k0 fs0) -> do
+    Record k1 fs1 <- body1 ^? _VRec
     guard $ k0 == k1
     matchedPairs <- ListUtils.match matchPair fs0 fs1
-    Just . BodyRecord $ Record k0 matchedPairs
+    Just . VRec $ Record k0 matchedPairs
     where
       matchPair (t0, v0) (t1, v1) =
         (matchSubexpr t0 t1, matchSubexpr v0 v1)
-  BodyGetField (GetField r0 f0) -> do
-    GetField r1 f1 <- body1 ^? _BodyGetField
-    Just . BodyGetField $ GetField (matchSubexpr r0 r1) (matchSubexpr f0 f1)
-  BodyLeaf leaf0 -> do
-    leaf1 <- body1 ^? _BodyLeaf
-    BodyLeaf <$> matchLeaf matchGetPar leaf0 leaf1
+  VGetField (GetField r0 f0) -> do
+    GetField r1 f1 <- body1 ^? _VGetField
+    Just . VGetField $ GetField (matchSubexpr r0 r1) (matchSubexpr f0 f1)
+  VLeaf leaf0 -> do
+    leaf1 <- body1 ^? _VLeaf
+    VLeaf <$> matchLeaf matchGetPar leaf0 leaf1
 
 {-# INLINE matchBodyA #-}
 matchBodyA ::
@@ -414,11 +414,11 @@ pureType = ExprLens.pureExpr . ExprLens.bodyType # ()
 pureTag :: Guid -> Expr def par ()
 pureTag = (ExprLens.pureExpr . ExprLens.bodyTag # )
 
-pureLiteralInteger :: Integer -> Expr def par ()
-pureLiteralInteger = (ExprLens.pureExpr . ExprLens.bodyLiteralInteger # )
+pureVLiteralInteger :: Integer -> Expr def par ()
+pureVLiteralInteger = (ExprLens.pureExpr . ExprLens.bodyVLiteralInteger # )
 
 pureApply :: Expr def par () -> Expr def par () -> Expr def par ()
-pureApply f x = ExprLens.pureExpr . _BodyApply # Apply f x
+pureApply f x = ExprLens.pureExpr . _VApp # Apply f x
 
 pureHole :: Expr def par ()
 pureHole = ExprLens.pureExpr . ExprLens.bodyHole # ()
@@ -432,18 +432,18 @@ pureLam k param paramType result =
 
 pureGetField :: Expr def par () -> Expr def par () -> Expr def par ()
 pureGetField record field =
-  ExprLens.pureExpr . _BodyGetField # GetField record field
+  ExprLens.pureExpr . _VGetField # GetField record field
 
 -- TODO: Deprecate below here:
 pureExpr :: Body def par (Expr def par ()) -> Expr def par ()
 pureExpr = (ExprLens.pureExpr # )
 
 makeApply :: expr -> expr -> Body def par expr
-makeApply func arg = BodyApply $ Apply func arg
+makeApply func arg = VApp $ Apply func arg
 
 makeLam :: Kind -> par -> expr -> expr -> Body def par expr
 makeLam k argId argType resultType =
-  BodyLam $ Lam k argId argType resultType
+  VAbs $ Lam k argId argType resultType
 
 -- TODO: Remove the kind-passing wrappers
 makePi :: par -> expr -> expr -> Body def par expr
@@ -455,8 +455,8 @@ makeLambda = makeLam KVal
 isTypeConstructorType :: Expr def par a -> Bool
 isTypeConstructorType expr =
   case expr ^. eBody of
-  BodyLeaf Type -> True
-  BodyLam (Lam KType _ _ res) -> isTypeConstructorType res
+  VLeaf Type -> True
+  VAbs (Lam KType _ _ res) -> isTypeConstructorType res
   _ -> False
 
 -- Show isntances:
@@ -465,12 +465,12 @@ showsPrecBody ::
   Int -> Body def par expr -> ShowS
 showsPrecBody mayDepend prec body =
   case body of
-  BodyLam (Lam KVal paramId paramType result) ->
+  VAbs (Lam KVal paramId paramType result) ->
     paren 0 $
     showChar '\\' . shows paramId . showChar ':' .
     showsPrec 11 paramType . showString "==>" .
     shows result
-  BodyLam (Lam KType paramId paramType resultType) ->
+  VAbs (Lam KType paramId paramType resultType) ->
     paren 0 $
     paramStr . showString "->" . shows resultType
     where
@@ -479,10 +479,10 @@ showsPrecBody mayDepend prec body =
           showString "(" . shows paramId . showString ":" . showsPrec 11 paramType . showString ")"
         | otherwise = showsPrec 1 paramType
       dependent = mayDepend paramId resultType
-  BodyApply (Apply func arg) ->
+  VApp (Apply func arg) ->
     paren 10 $
     showsPrec 10 func . showChar ' ' . showsPrec 11 arg
-  BodyRecord (Record k fields) ->
+  VRec (Record k fields) ->
     paren 11 $ showString recStr
     where
       recStr =
@@ -493,9 +493,9 @@ showsPrecBody mayDepend prec body =
       sep KType = ":"
       recType KVal = "V"
       recType KType = "T"
-  BodyGetField (GetField r tag) ->
+  VGetField (GetField r tag) ->
     paren 8 $ showsPrec 8 r . showChar '.' . showsPrec 9 tag
-  BodyLeaf leaf -> showsPrec prec leaf
+  VLeaf leaf -> showsPrec prec leaf
   where
     paren innerPrec = showParen (prec > innerPrec)
 
@@ -528,32 +528,32 @@ addBodyContexts ::
 addBodyContexts tob (Context intoContainer body) =
   afterSetter %~ intoContainer $
   case body of
-  BodyLam (Lam k paramId func arg) ->
+  VAbs (Lam k paramId func arg) ->
     Lam k paramId
     (Context (flip (Lam k paramId) (tob arg)) func)
     (Context (Lam k paramId (tob func)) arg)
-    & BodyLam
-    & afterSetter %~ BodyLam
-  BodyApply (Apply func arg) ->
+    & VAbs
+    & afterSetter %~ VAbs
+  VApp (Apply func arg) ->
     Apply
     (Context (`Apply` tob arg) func)
     (Context (tob func `Apply`) arg)
-    & BodyApply
-    & afterSetter %~ BodyApply
-  BodyRecord (Record k fields) ->
+    & VApp
+    & afterSetter %~ VApp
+  VRec (Record k fields) ->
     (Record k .
      map (addTuple2Contexts tob) .
      addListContexts (tob *** tob))
     (Context (Record k) fields)
-    & BodyRecord
-    & afterSetter %~ BodyRecord
-  BodyGetField (GetField record tag) ->
+    & VRec
+    & afterSetter %~ VRec
+  VGetField (GetField record tag) ->
     GetField
     (Context (`GetField` tob tag) record)
     (Context (tob record `GetField`) tag)
-    & BodyGetField
-    & afterSetter %~ BodyGetField
-  BodyLeaf leaf -> BodyLeaf leaf
+    & VGetField
+    & afterSetter %~ VGetField
+  VLeaf leaf -> VLeaf leaf
   where
     afterSetter = Lens.mapped . Lens.mapped
 
@@ -584,8 +584,8 @@ annotateTypePositionsH :: TypePosition -> Expr def par a -> Expr def par (TypePo
 annotateTypePositionsH pos (Expr body pl) =
   (`Expr` (pos, pl)) $
   case body of
-  BodyLam (Lam k paramId paramType result) ->
-    BodyLam $
+  VAbs (Lam k paramId paramType result) ->
+    VAbs $
     Lam k paramId
     (annotateTypePositionsH (negPos pos) paramType)
     (annotateTypePositionsH pos result)

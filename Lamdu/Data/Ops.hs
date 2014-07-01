@@ -58,7 +58,7 @@ wrap exprP = do
   return applyI
 
 newHole :: MonadA m => T m (ExprIRef.ExprI (Tag m))
-newHole = ExprIRef.newExprBody $ Expr.BodyLeaf Expr.Hole
+newHole = ExprIRef.newExprBody $ Expr.VLeaf Expr.VHole
 
 replace ::
   MonadA m =>
@@ -76,7 +76,7 @@ setToHole :: MonadA m => ExprIRef.ExprProperty m -> T m (ExprIRef.ExprI (Tag m))
 setToHole exprP =
   exprI <$ ExprIRef.writeExprBody exprI hole
   where
-    hole = Expr.BodyLeaf Expr.Hole
+    hole = Expr.VLeaf Expr.VHole
     exprI = Property.value exprP
 
 lambdaWrap

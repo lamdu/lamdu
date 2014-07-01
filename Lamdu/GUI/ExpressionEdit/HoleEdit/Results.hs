@@ -419,17 +419,17 @@ makeAllGroups holeInfo = do
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
-  [ mkGroupBody True "LiteralInt" [searchTerm] $ ExprLens.bodyLiteralInteger # read searchTerm
+  [ mkGroupBody True "LiteralInt" [searchTerm] $ ExprLens.bodyVLiteralInteger # read searchTerm
   | nonEmptyAll Char.isDigit searchTerm
   ] ++
   [ mkGroupBody False "Pi" ["->", "Pi", "→", "→", "Π", "π"] $
     ExprUtil.makePi (Guid.fromString "NewPi") pureHole pureHole
   , mkGroupBody False "Lambda" ["\\", "Lambda", "Λ", "λ"] $
     ExprUtil.makeLambda (Guid.fromString "NewLambda") pureHole pureHole
-  , mkGroupBody False "GetField" [".", "Get Field"] . Expr.BodyGetField $
+  , mkGroupBody False "GetField" [".", "Get Field"] . Expr.VGetField $
     Expr.GetField pureHole pureHole
-  , mkGroupBody True "Type" ["Type"] $ Expr.BodyLeaf Expr.Type
-  , mkGroupBody True "Integer" ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
+  , mkGroupBody True "Type" ["Type"] $ Expr.VLeaf Expr.Type
+  , mkGroupBody True "Integer" ["Integer", "ℤ", "Z"] $ Expr.VLeaf Expr.IntegerType
   , Group "RecValue" (SearchTerms ["Record Value", "{"] (Any False)) .
     fromMaybe (record Expr.KVal) . ExprUtil.recordValForm .
     void $ hiInferred holeInfo ^. Sugar.hiType
@@ -439,7 +439,7 @@ primitiveGroups holeInfo =
   where
     searchTerm = hiSearchTerm holeInfo
     record k =
-      ExprUtil.pureExpr . Expr.BodyRecord . Expr.Record k $
+      ExprUtil.pureExpr . Expr.VRec . Expr.Record k $
       case hiMArgument holeInfo of
       Nothing -> []
       Just _ -> [(pureHole, pureHole)]

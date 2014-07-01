@@ -92,7 +92,7 @@ exprIntoTV dest (Expr.Expr body pl) = do
   bodyWithTVs <-
     InferM.liftContext $
     case body of
-      Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
+      Expr.VAbs (Expr.Lam k paramGuid paramType result) -> do
         paramTypeTV <- freshTV scope
         paramIdRef <- Lens.zoom Context.guidAliases $ GuidAliases.getRep paramGuid
         let
@@ -100,7 +100,7 @@ exprIntoTV dest (Expr.Expr body pl) = do
             scope & RefData.scopeMap . Lens.at paramIdRef .~ Just (paramTypeTV ^. tvVal)
         resultWithTV <- addTV newScope result
         let paramTypeWithTV = (paramTypeTV, paramType)
-        pure . Expr.BodyLam $ Expr.Lam k paramGuid paramTypeWithTV resultWithTV
+        pure . Expr.VAbs $ Expr.Lam k paramGuid paramTypeWithTV resultWithTV
       _ -> body & Lens.traverse %%~ addTV scope
 
   makeTV scope (bodyWithTVs <&> (^. Lens._1)) dest

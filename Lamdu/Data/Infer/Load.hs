@@ -44,10 +44,10 @@ exprIntoContext ::
 exprIntoContext scope (Expr.Expr body ()) = do
   newBody <-
     case body of
-    Expr.BodyLam (Expr.Lam k paramGuid paramType result) -> do
+    Expr.VAbs (Expr.Lam k paramGuid paramType result) -> do
       paramTypeRef <- exprIntoContext scope paramType
       paramIdRep <- Lens.zoom Context.guidAliases $ GuidAliases.getRep paramGuid
-      Expr.BodyLam . Expr.Lam k paramGuid paramTypeRef <$>
+      Expr.VAbs . Expr.Lam k paramGuid paramTypeRef <$>
         exprIntoContext (scope & RefData.scopeMap . Lens.at paramIdRep .~ Just paramTypeRef) result
     -- TODO: Assert parameterRefs are not out of scope here
     _ -> body & Lens.traverse %%~ exprIntoContext scope

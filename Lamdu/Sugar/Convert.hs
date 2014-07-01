@@ -210,11 +210,11 @@ jumpToDefI ::
   MonadA m => Anchors.CodeProps m -> DefIM m -> T m Guid
 jumpToDefI cp defI = IRef.guid defI <$ DataOps.newPane cp defI
 
-convertGetVariable ::
+convertVVar ::
   (MonadA m, Typeable1 m) =>
   Expr.VariableRef (Infer.LoadedDef (DefIM m)) Guid ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
-convertGetVariable varRef exprPl = do
+convertVVar varRef exprPl = do
   cp <- (^. ConvertM.scCodeAnchors) <$> ConvertM.readContext
   case varRef of
     Expr.ParameterRef parGuid -> convertParameterRef parGuid exprPl
@@ -231,10 +231,10 @@ convertGetVariable varRef exprPl = do
         , _gvVarType = GetDefinition
         }
 
-convertLiteralInteger ::
+convertVLiteralInteger ::
   (MonadA m, Typeable1 m) => Integer ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
-convertLiteralInteger i exprPl = ConvertExpr.make exprPl $ BodyLiteralInteger i
+convertVLiteralInteger i exprPl = ConvertExpr.make exprPl $ BodyLiteralInteger i
 
 convertTag ::
   (MonadA m, Typeable1 m) => Guid ->
@@ -267,12 +267,12 @@ writeRecordFields ::
   T m result
 writeRecordFields iref def f = do
   oldBody <- ExprIRef.readExprBody iref
-  case oldBody ^? Expr._BodyRecord of
+  case oldBody ^? Expr._VRec of
     Nothing -> return def
     Just oldRecord -> do
       (res, newRecord) <-
         sideChannel Expr.recordFields f oldRecord
-      ExprIRef.writeExprBody iref $ Expr.BodyRecord newRecord
+      ExprIRef.writeExprBody iref $ Expr.VRec newRecord
       return res
 
 recordFieldActions ::
@@ -423,17 +423,17 @@ convertExpressionI ::
 convertExpressionI ee =
   ($ ee ^. Expr.ePayload) $
   case ee ^. Expr.eBody of
-  Expr.BodyLam x -> convertLam x
-  Expr.BodyApply x -> ConvertApply.convert x
-  Expr.BodyRecord x -> convertRecord x
-  Expr.BodyGetField x -> convertGetField x
-  Expr.BodyLeaf (Expr.GetVariable x) -> convertGetVariable x
-  Expr.BodyLeaf (Expr.LiteralInteger x) -> convertLiteralInteger x
-  Expr.BodyLeaf (Expr.Tag x) -> convertTag x
-  Expr.BodyLeaf Expr.Hole -> ConvertHole.convert
-  Expr.BodyLeaf Expr.Type -> convertAtom "Type"
-  Expr.BodyLeaf Expr.IntegerType -> convertAtom "Int"
-  Expr.BodyLeaf Expr.TagType -> convertAtom "Tag"
+  Expr.VAbs x -> convertLam x
+  Expr.VApp x -> ConvertApply.convert x
+  Expr.VRec x -> convertRecord x
+  Expr.VGetField x -> convertGetField x
+  Expr.VLeaf (Expr.VVar x) -> convertVVar x
+  Expr.VLeaf (Expr.VLiteralInteger x) -> convertVLiteralInteger x
+  Expr.VLeaf (Expr.Tag x) -> convertTag x
+  Expr.VLeaf Expr.VHole -> ConvertHole.convert
+  Expr.VLeaf Expr.Type -> convertAtom "Type"
+  Expr.VLeaf Expr.IntegerType -> convertAtom "Int"
+  Expr.VLeaf Expr.TagType -> convertAtom "Tag"
 
 -- Check no holes
 isCompleteType :: Expr.Expr def par a -> Bool
@@ -552,7 +552,7 @@ rereadFieldParamTypes tagExprGuid paramTypeI f = do
   paramType <- ExprIRef.readExprBody paramTypeI
   let
     mBrokenFields =
-      paramType ^? Expr._BodyRecord . ExprLens.kindedRecordFields KType .
+      paramType ^? Expr._VRec . ExprLens.kindedRecordFields KType .
       (Lens.to . break) ((tagExprGuid ==) . ExprIRef.exprGuid . fst)
   case mBrokenFields of
     Just (prevFields, theField : nextFields) -> f prevFields theField nextFields
@@ -561,7 +561,7 @@ rereadFieldParamTypes tagExprGuid paramTypeI f = do
 rewriteFieldParamTypes ::
   MonadA m => ExprIRef.ExprIM m -> [ExprField m] -> T m ()
 rewriteFieldParamTypes paramTypeI fields =
-  ExprIRef.writeExprBody paramTypeI . Expr.BodyRecord $
+  ExprIRef.writeExprBody paramTypeI . Expr.VRec $
   Expr.Record KType fields
 
 addFieldParamAfter :: MonadA m => Guid -> Guid -> ExprIRef.ExprIM m -> T m Guid
@@ -648,7 +648,7 @@ convertDefinitionParams ::
   )
 convertDefinitionParams recordParamsInfo usedTags expr =
   case expr ^. Expr.eBody of
-  Expr.BodyLam lambda@(Expr.Lam KVal paramGuid origParamType body) -> do
+  Expr.VAbs lambda@(Expr.Lam KVal paramGuid origParamType body) -> do
     param <-
       convertPositionalFuncParam lambda (expr ^. Expr.ePayload)
       -- Slightly strange but we mappend the hidden lambda's
@@ -661,7 +661,7 @@ convertDefinitionParams recordParamsInfo usedTags expr =
         return (param : depParams, convParams, deepBody)
       else -- Independent:
       case paramType ^. Expr.eBody of
-      Expr.BodyRecord (Expr.Record KType fields)
+      Expr.VRec (Expr.Record KType fields)
         | ListUtils.isLengthAtLeast 2 fields
         , Just fieldParams <- traverse makeFieldParam fields
         , all ((`notElem` usedTags) . fpTagGuid) fieldParams -> do
@@ -718,7 +718,7 @@ singleConventionalParam lamProp existingParam existingParamGuid existingParamTyp
       let existingParamField = (existingParamTagI, existingParamTypeIRef)
       (newTagGuid, newParamField) <- newField
       newParamTypeI <-
-        ExprIRef.newExprBody . Expr.BodyRecord . Expr.Record KType $
+        ExprIRef.newExprBody . Expr.VRec . Expr.Record KType $
         mkFields existingParamField newParamField
       newParamsGuid <- Transaction.newKey
       ExprIRef.writeExprBody (Property.value lamProp) $
@@ -729,7 +729,7 @@ singleConventionalParam lamProp existingParam existingParamGuid existingParamTyp
           recordRef <- ExprIRef.newExprBody $ ExprLens.bodyParameterRef # newParamsGuid
           tagRef <- ExprIRef.newExprBody existingParamTag
           ExprIRef.writeExprBody iref $
-            Expr.BodyGetField Expr.GetField
+            Expr.VGetField Expr.GetField
             { Expr._getFieldRecord = recordRef
             , Expr._getFieldTag = tagRef
             }
@@ -823,11 +823,11 @@ newField = do
 addFirstFieldParam :: MonadA m => Guid -> ExprIRef.ExprIM m -> T m Guid
 addFirstFieldParam lamGuid recordI = do
   recordBody <- ExprIRef.readExprBody recordI
-  case recordBody ^? Expr._BodyRecord . ExprLens.kindedRecordFields KType of
+  case recordBody ^? Expr._VRec . ExprLens.kindedRecordFields KType of
     Just fields -> do
       (newTagGuid, field) <- newField
       ExprIRef.writeExprBody recordI $
-        Expr.BodyRecord . Expr.Record KType $ field : fields
+        Expr.VRec . Expr.Record KType $ field : fields
       pure $ Guid.combine lamGuid newTagGuid
     _ -> pure $ ExprIRef.exprGuid recordI
 

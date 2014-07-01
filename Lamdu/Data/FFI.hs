@@ -28,10 +28,10 @@ class ToExpr a where
 instance FromExpr Integer where
   fromExpr _ e =
     fromMaybe (error "Expecting normalized Integer expression!") $
-    e ^? ExprLens.exprLiteralInteger
+    e ^? ExprLens.exprVLiteralInteger
 
 instance ToExpr Integer where
-  toExpr _ x [] = ExprUtil.pureLiteralInteger x
+  toExpr _ x [] = ExprUtil.pureVLiteralInteger x
   toExpr _ _ _ = error "Integer applied as a function"
 
 instance (FromExpr a, ToExpr b) => ToExpr (a -> b) where

@@ -237,7 +237,7 @@ createBuiltins augmentTagGuids =
       void $ publicBuiltin builtinName typeMaker
     endo = join mkPi
     set = ExprIRef.newExprBody $ ExprLens.bodyType # ()
-    integer = ExprIRef.newExprBody $ Expr.BodyLeaf Expr.IntegerType
+    integer = ExprIRef.newExprBody $ Expr.VLeaf Expr.IntegerType
     forAll name f = fmap ExprIRef.ExprI . fixIRef $ \aI -> do
       let aGuid = IRef.guid aI
       setP (Db.assocNameRef aGuid) name
@@ -254,7 +254,7 @@ createBuiltins augmentTagGuids =
       ExprIRef.newExprBody $ ExprLens.bodyTag # tagGuid
     mkRecordType mkTag fields = do
       tagFields <- traverse (Lens._1 mkTag <=< Lens.sequenceOf Lens._2) fields
-      ExprIRef.newExprBody $ Expr.BodyRecord Expr.Record
+      ExprIRef.newExprBody $ Expr.VRec Expr.Record
         { Expr._recordKind = Expr.KType
         , Expr._recordFields = tagFields
         }

@@ -90,12 +90,12 @@ data HoleConstraints def = HoleConstraints
 checkHoleConstraints :: HoleConstraints def -> Expr.Body ldef Guid (ExprRef def) -> Infer def ()
 checkHoleConstraints (HoleConstraints unusableSet _removeDef) body =
   case body of
-  Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef paramGuid)) -> do
+  Expr.VLeaf (Expr.VVar (Expr.ParameterRef paramGuid)) -> do
     paramIdRep <- getRep paramGuid
     when (unusableSet ^. Lens.contains paramIdRep) $
       InferM.error $ VarEscapesScope paramGuid
   -- Expensive assertion
-  Expr.BodyLam lam -> do
+  Expr.VAbs lam -> do
     paramIdRep <- getRep (lam ^. Expr.lamParamId)
     when (unusableSet ^. Lens.contains paramIdRep) $
       error "checkHoleConstraints: Shadowing detected"
@@ -172,8 +172,8 @@ mergeScopeBodies ::
   WU def (Scope def, LoadedBody def (ExprRef def))
 mergeScopeBodies xScope xBody yScope yBody =
   case (xBody, yBody) of
-    (_, Expr.BodyLeaf Expr.Hole) -> unifyWithHole yScope xScope xBody
-    (Expr.BodyLeaf Expr.Hole, _) -> unifyWithHole xScope yScope yBody
+    (_, Expr.VLeaf Expr.VHole) -> unifyWithHole yScope xScope xBody
+    (Expr.VLeaf Expr.VHole, _) -> unifyWithHole xScope yScope yBody
     _ -> do
       intersectedScope <- wuInfer $ intersectScopes xScope yScope
       wuLater $

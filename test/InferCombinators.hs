@@ -11,7 +11,7 @@ import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Expr (Kind(..))
-import Lamdu.Expr.Utils (pureHole, pureLiteralInteger, pureIntegerType, pureTag, pureTagType, pureType)
+import Lamdu.Expr.Utils (pureHole, pureVLiteralInteger, pureIntegerType, pureTag, pureTagType, pureType)
 import Utils
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
@@ -105,8 +105,8 @@ getRecursiveDef =
 
 literalInteger :: Integer -> InputExpr
 literalInteger x =
-  Expr.Expr (ExprLens.bodyLiteralInteger # x)
-  (InputPayload (pureLiteralInteger x) pureIntegerType Same)
+  Expr.Expr (ExprLens.bodyVLiteralInteger # x)
+  (InputPayload (pureVLiteralInteger x) pureIntegerType Same)
 
 -- R represents a cross-section of the whole expression with a new
 -- resume level, where the Monoid.Any represents whether any change
@@ -236,7 +236,7 @@ getFieldR recordVal tagVal =
   , fieldType
   )
   where
-    body = Expr._BodyGetField # Expr.GetField recordVal tagVal
+    body = Expr._VGetField # Expr.GetField recordVal tagVal
     circumcizedVal
       | Lens.nullOf ExprLens.exprDefinitionRef recordVal = pureHole
       | otherwise = ExprLens.pureExpr # fmap (^. iVal) body
@@ -343,12 +343,12 @@ infixl 4 $$:
     piErr = error "Apply of non-Pi type!"
     substLam doSubst k e argVal caseHole caseOther =
       case e ^. Expr.eBody of
-      Expr.BodyLam (Expr.Lam k1 paramGuid _ result)
+      Expr.VAbs (Expr.Lam k1 paramGuid _ result)
         | k == k1 ->
           if doSubst
           then ExprUtil.substGetPar paramGuid argVal result
           else caseOther
-      Expr.BodyLeaf Expr.Hole -> caseHole
+      Expr.VLeaf Expr.VHole -> caseHole
       _ -> caseOther
     circumcizedApplyVal funcVal argVal
       | Lens.nullOf ExprLens.exprDefinitionRef funcVal = pureHole

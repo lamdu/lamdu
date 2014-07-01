@@ -46,7 +46,7 @@ lamWrapRef ::
 lamWrapRef paramId paramTypeRef scope k defRef = do
   defRep <- InferM.liftUFExprs $ UFData.find defRef
   let lam = Expr.Lam k paramId paramTypeRef defRep
-  InferM.liftContext . Context.fresh scope $ Expr.BodyLam lam
+  InferM.liftContext . Context.fresh scope $ Expr.VAbs lam
 
 lambdaWrap ::
   Ord def =>

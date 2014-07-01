@@ -58,7 +58,7 @@ phase0 rule triggers =
   case triggers ^@.. Lens.itraversed <. Lens.folded of
   [(recordTypeRef, Trigger.FiredKnownBody knownBody)] ->
     case knownBody of
-    Expr.BodyRecord (Expr.Record Expr.KType _) -> do
+    Expr.VRec (Expr.Record Expr.KType _) -> do
       recordFields <- InferM.liftContext $ assertRecordTypeFields recordTypeRef
       isFinished <-
         handlePotentialMatches recordFields

@@ -30,7 +30,7 @@ execute rule triggers =
   [(_, Trigger.FiredKnownBody knownBody)] ->
     RuleDelete <$
     case knownBody of
-    Expr.BodyLeaf (Expr.GetVariable Expr.DefinitionRef {}) ->
+    Expr.VLeaf (Expr.VVar Expr.DefinitionRef {}) ->
       uncircumsize rule
     _ -> return () -- Keep circumsized
   list -> error $ "Uncircumsize.execute: Unexpected firings: " ++ show list

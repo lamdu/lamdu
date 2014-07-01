@@ -64,23 +64,23 @@ arbitraryLeaf :: GenExpr def par (Expr.Leaf def par)
 arbitraryLeaf = do
   Env scope mGenDefI <- Reader.ask
   join . liftGen . Gen.elements $
-    [ Expr.LiteralInteger <$> liftGen arbitrary
+    [ Expr.VLiteralInteger <$> liftGen arbitrary
     , pure Expr.Type
     , pure Expr.IntegerType
-    , pure Expr.Hole
+    , pure Expr.VHole
     ] ++
-    map (pure . Expr.GetVariable . Expr.ParameterRef) scope ++
-    map (fmap (Expr.GetVariable . Expr.DefinitionRef) . liftGen)
+    map (pure . Expr.VVar . Expr.ParameterRef) scope ++
+    map (fmap (Expr.VVar . Expr.DefinitionRef) . liftGen)
       (maybeToList mGenDefI)
 
 arbitraryBody :: Arbitrary a => GenExpr def par (Expr.BodyExpr def par a)
 arbitraryBody =
   join . liftGen . Gen.frequency . (Lens.mapped . Lens._2 %~ pure) $
-  [ weight 2  $ Expr.BodyLam      <$> arbitraryLambda
-  , weight 2  $ Expr.BodyRecord   <$> arbitraryRecord
-  , weight 2  $ Expr.BodyGetField <$> arbitraryGetField
-  , weight 5  $ Expr.BodyApply    <$> arbitraryApply
-  , weight 17 $ Expr.BodyLeaf     <$> arbitraryLeaf
+  [ weight 2  $ Expr.VAbs         <$> arbitraryLambda
+  , weight 2  $ Expr.VRec         <$> arbitraryRecord
+  , weight 2  $ Expr.VGetField    <$> arbitraryGetField
+  , weight 5  $ Expr.VApp         <$> arbitraryApply
+  , weight 17 $ Expr.VLeaf        <$> arbitraryLeaf
   ]
   where
     weight = (,)

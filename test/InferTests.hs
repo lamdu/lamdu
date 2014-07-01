@@ -541,8 +541,8 @@ getFieldTests =
         isExpectedError
           (InferError
            (Infer.Mismatch
-            (Expr.BodyLeaf Expr.Tag{})
-            (Expr.BodyLeaf Expr.Tag{}))) = True
+            (Expr.VLeaf Expr.Tag{})
+            (Expr.VLeaf Expr.Tag{}))) = True
         isExpectedError _ = False
       in
         testCase name .

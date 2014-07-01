@@ -126,7 +126,7 @@ makePiResultCopy ruleRef srcRef (Rule.ExprLink destRef destAncestors)
   srcBody <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. RefData.rdBody) <$> UFData.read srcRef
   destScope <- RuleMonad.liftInfer . InferM.liftUFExprs $ (^. RefData.rdScope) <$> UFData.read destRef
   case srcBody of
-    Expr.BodyLam (Expr.Lam k srcGuid _ _) -> do
+    Expr.VAbs (Expr.Lam k srcGuid _ _) -> do
       (destGuid, _, _) <- RuleMonad.liftInfer $ forceLam k destScope destRef
       srcNameRep <- RuleMonad.liftInfer . InferM.liftGuidAliases $ GuidAliases.getRep srcGuid
       destNameRep <- RuleMonad.liftInfer . InferM.liftGuidAliases $ GuidAliases.getRep destGuid

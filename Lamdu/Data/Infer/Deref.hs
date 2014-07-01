@@ -111,7 +111,7 @@ expr =
   where
     go storedGuids (Expr.Expr storedBody (tv, pl)) = do
       newStoredGuids <-
-        case storedBody ^? Expr._BodyLam . Expr.lamParamId of
+        case storedBody ^? Expr._VAbs . Expr.lamParamId of
         Nothing -> return storedGuids
         Just storedParamId -> do
           storedParamIdRep <- mGuidAliases $ GuidAliases.getRep storedParamId

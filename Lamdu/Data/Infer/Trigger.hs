@@ -64,13 +64,13 @@ checkParameterRef triggerGuidRef refData
       then answer triggerGuidRep TheParameterOutOfScope
       else
         case refData ^. RefData.rdBody of
-        Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) -> do
+        Expr.VLeaf (Expr.VVar (Expr.ParameterRef guid)) -> do
           guidRep <- InferM.liftGuidAliases $ GuidAliases.getRep guid
           answer triggerGuidRep $
             if triggerGuidRep == guidRep
             then IsTheParameterRef
             else NotTheParameterRef
-        Expr.BodyLeaf Expr.Hole -> return Nothing
+        Expr.VLeaf Expr.VHole -> return Nothing
         _ -> answer triggerGuidRep NotTheParameterRef
   where
     answer ref = return . Just . FiredParameterRef ref

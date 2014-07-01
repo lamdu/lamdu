@@ -110,7 +110,7 @@ convertLabeled funcS argS argI exprPl = do
       ) .
       ( plActions . Lens._Just . mSetToInnerExpr .~ do
         stored <- exprPl ^. ipStored
-        fieldsI <- argI ^? Expr.eBody . Expr._BodyRecord . Expr.recordFields
+        fieldsI <- argI ^? Expr.eBody . Expr._VRec . Expr.recordFields
         val <-
           case filter (Lens.nullOf ExprLens.exprHole) (map snd fieldsI) of
           [x] -> Just x

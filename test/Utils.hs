@@ -81,7 +81,7 @@ purePi ::
 purePi name x y = ExprUtil.pureExpr $ namedPi name x y
 
 pureLiteralInt :: Lens.Prism' (Expr.Expr def par ()) Integer
-pureLiteralInt = ExprLens.pureExpr . ExprLens.bodyLiteralInteger
+pureLiteralInt = ExprLens.pureExpr . ExprLens.bodyVLiteralInteger
 
 pureGetDef :: String -> Expr ()
 pureGetDef name =

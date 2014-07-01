@@ -110,11 +110,11 @@ combineLamGuids getGuid =
       -- TODO: Lens.outside
       (`Expr.Expr` a) $
       case body of
-      Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef paramGuid))
+      Expr.VLeaf (Expr.VVar (Expr.ParameterRef paramGuid))
         | Just newParamGuid <- Map.lookup paramGuid renames ->
           ExprLens.bodyParameterRef # newParamGuid
-      Expr.BodyLam (Expr.Lam k paramGuid paramType result) ->
-        Expr.BodyLam
+      Expr.VAbs (Expr.Lam k paramGuid paramType result) ->
+        Expr.VAbs
         (Expr.Lam k newParamGuid
          (go renames paramType)
          (go (Map.insert paramGuid newParamGuid renames) result))
@@ -334,7 +334,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
           ] }
     recordParamsMap = sugarContext ^. ConvertM.scRecordParamsInfos
     errorJumpTo = error "Jump to on scope item??"
-    exprTag = ExprUtil.pureExpr . Expr.BodyLeaf . Expr.Tag
+    exprTag = ExprUtil.pureExpr . Expr.VLeaf . Expr.Tag
     getParam = ExprLens.pureExpr . ExprLens.bodyParameterRef # parGuid
     onScopeField tGuid = do
       name <- ConvertExpr.getStoredName tGuid
@@ -346,7 +346,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
             , _gvJumpTo = errorJumpTo
             , _gvVarType = GetFieldParameter
             }
-          , ExprUtil.pureExpr . Expr.BodyGetField $
+          , ExprUtil.pureExpr . Expr.VGetField $
             Expr.GetField getParam (exprTag tGuid)
           )
         ] }
@@ -531,7 +531,7 @@ orderedInnerHoles ::
   [Expr.Expr ldef par (a, DerefedTV def)]
 orderedInnerHoles e =
   case e ^. Expr.eBody of
-  Expr.BodyApply (Expr.Apply func arg)
+  Expr.VApp (Expr.Apply func arg)
     | Lens.has ExprLens.exprHole func ->
       -- This is a "type-error wrapper".
       -- Skip the conversion hole
@@ -546,11 +546,11 @@ uninferredHoles ::
   [Expr.Expr ldef par (a, DerefedTV def)]
 uninferredHoles e =
   case e ^. Expr.eBody of
-  Expr.BodyLeaf Expr.Hole -> [e]
-  Expr.BodyApply (Expr.Apply func _)
+  Expr.VLeaf Expr.VHole -> [e]
+  Expr.VApp (Expr.Apply func _)
     | (ExprUtil.isDependentPi . (^. Expr.ePayload . Lens._2 . InferDeref.dType)) func ->
       uninferredHoles func
-  Expr.BodyLam (Expr.Lam lamKind _ paramType result) ->
+  Expr.VAbs (Expr.Lam lamKind _ paramType result) ->
     uninferredHoles result ++ do
       guard $ lamKind == KType
       uninferredHoles paramType

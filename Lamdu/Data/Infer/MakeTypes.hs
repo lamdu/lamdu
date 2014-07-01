@@ -37,7 +37,7 @@ makePiTypeOfLam ::
   par -> TypedValue def -> TypedValue def ->
   Expr.Body (Load.LoadedDef def) par (ExprRef def)
 makePiTypeOfLam paramGuid paramType body =
-  Expr.BodyLam $
+  Expr.VAbs $
   Expr.Lam Expr.KType paramGuid
   (paramType ^. tvVal)
   -- We rely on the scope of the Lam KVal body being equal to the
@@ -75,7 +75,7 @@ makeApplyTV applyScope apply@(Expr.Apply func arg) dest = do
   (piGuid, piParamType, piResultRef) <- forceLam Expr.KType funcScope $ func ^. tvType
   void $ unify (arg ^. tvType) piParamType
   RuleApply.make piGuid (arg ^. tvVal) piResultRef (dest ^. tvType)
-  void . unify (dest ^. tvVal) =<< maybeCircumsize applyScope func (Expr.BodyApply apply)
+  void . unify (dest ^. tvVal) =<< maybeCircumsize applyScope func (Expr.VApp apply)
 
 addTagVerification :: ExprRef def -> Infer def ()
 addTagVerification = Trigger.add [RefData.MustBeTag] Trigger.OnDirectlyTag verifyTagId
@@ -88,7 +88,7 @@ makeGetFieldTV scope getField@(Expr.GetField record tag) dest = do
   unifyBody (tag ^. tvType) scope (ExprLens.bodyTagType # ())
   addTagVerification $ tag ^. tvVal
   RuleGetField.make (tag ^. tvVal) (dest ^. tvType) (record ^. tvType)
-  void . unify (dest ^. tvVal) =<< maybeCircumsize scope record (Expr.BodyGetField getField)
+  void . unify (dest ^. tvVal) =<< maybeCircumsize scope record (Expr.VGetField getField)
 
 makeLambdaType ::
   Ord def =>
@@ -110,7 +110,7 @@ makeRecordType k scope fields = do
     fields & Lens.traverseOf_ (Lens.traverse . Lens._2 . tvType) (mkBody (ExprLens.bodyType # ()))
   return $
     case k of
-    Expr.KVal -> Expr.BodyRecord . Expr.Record Expr.KType $ onRecVField <$> fields
+    Expr.KVal -> Expr.VRec . Expr.Record Expr.KType $ onRecVField <$> fields
     Expr.KType -> ExprLens.bodyType # ()
   where
     mkBody body ref = unifyBody ref scope body
@@ -124,35 +124,35 @@ makeTV ::
   Infer def ()
 makeTV scope body dest =
   case body of
-  Expr.BodyLeaf Expr.Hole -> return ()
+  Expr.VLeaf Expr.VHole -> return ()
   -- Simple types
-  Expr.BodyLeaf Expr.Type -> typeIsType
-  Expr.BodyLeaf Expr.IntegerType -> typeIsType
-  Expr.BodyLeaf Expr.TagType -> typeIsType
-  Expr.BodyLeaf Expr.LiteralInteger {} -> do
+  Expr.VLeaf Expr.Type -> typeIsType
+  Expr.VLeaf Expr.IntegerType -> typeIsType
+  Expr.VLeaf Expr.TagType -> typeIsType
+  Expr.VLeaf Expr.VLiteralInteger {} -> do
     loadGivenVal
     setType (ExprLens.bodyIntegerType # ())
-  Expr.BodyLeaf Expr.Tag {} -> do
+  Expr.VLeaf Expr.Tag {} -> do
     loadGivenVal
     setType (ExprLens.bodyTagType # ())
   -- GetPars
-  Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef (Load.LoadedDef _ ref))) -> do
+  Expr.VLeaf (Expr.VVar (Expr.DefinitionRef (Load.LoadedDef _ ref))) -> do
     loadGivenVal
     void $ unify (dest ^. tvType) ref
-  Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef guid)) -> do
+  Expr.VLeaf (Expr.VVar (Expr.ParameterRef guid)) -> do
     loadGivenVal
     void $ unify (dest ^. tvType) =<< scopeLookup scope guid
   -- Complex:
-  Expr.BodyGetField getField -> makeGetFieldTV scope getField dest
-  Expr.BodyApply apply -> makeApplyTV scope apply dest
-  Expr.BodyLam (Expr.Lam Expr.KType _ paramType result) -> do
+  Expr.VGetField getField -> makeGetFieldTV scope getField dest
+  Expr.VApp apply -> makeApplyTV scope apply dest
+  Expr.VAbs (Expr.Lam Expr.KType _ paramType result) -> do
     typeIsType
     unifyBody (paramType ^. tvType) scope bodyType
     unifyBody (result ^. tvType) scope bodyType
-  Expr.BodyLam (Expr.Lam Expr.KVal paramGuid paramType result) -> do
+  Expr.VAbs (Expr.Lam Expr.KVal paramGuid paramType result) -> do
     loadGivenVal
     setType =<< makeLambdaType scope paramGuid paramType result
-  Expr.BodyRecord (Expr.Record k fields) -> do
+  Expr.VRec (Expr.Record k fields) -> do
     loadGivenVal
     setType =<< makeRecordType k scope fields
   where
