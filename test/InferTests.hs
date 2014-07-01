@@ -68,7 +68,7 @@ monomorphRedex =
 idPreservesDependency =
   testInfer "5 + f _ where f x = id _{no inferred type}" $
   whereItem "f" (lambda "x" iset (const (getDef "id" $$ iset $$ hole))) $ \f ->
-  getDef "+" $$ asHole integerType $$:
+  getDef "+" $$:
   [literalInteger 5, (f $$ hole) `setInferredType` integerType]
   where
     iset = holeWithInferredType set
@@ -403,9 +403,9 @@ factorialExpr =
     [ getDef "==" $$ iInt $$:
       [x, literalInteger 0]
     , literalInteger 1
-    , getDef "*" $$ iInt $$:
+    , getDef "*" $$:
       [ x
-      , loop $$ (getDef "-" $$ iInt $$: [x, literalInteger 1])
+      , loop $$ (getDef "-" $$: [x, literalInteger 1])
       ]
     ]
   )
@@ -428,15 +428,15 @@ recurseScopeTest =
       Expr.ePayload . Lens._1 . InferDeref.dScope
 
 euler1Expr =
-  getDef "sum" $$ iInt $$
+  getDef "sum" $$
   ( getDef "filter" $$ iInt $$:
     [ getDef ".." $$: [literalInteger 1, literalInteger 1000]
     , lambda "x" iInt $ \x ->
       getDef "||" $$:
       [ getDef "==" $$ iInt $$:
-        [ literalInteger 0, getDef "%" $$ iInt $$: [x, literalInteger 3] ]
+        [ literalInteger 0, getDef "%" $$: [x, literalInteger 3] ]
       , getDef "==" $$ iInt $$:
-        [ literalInteger 0, getDef "%" $$ iInt $$: [x, literalInteger 5] ]
+        [ literalInteger 0, getDef "%" $$: [x, literalInteger 5] ]
       ]
     ]
   )
@@ -455,9 +455,9 @@ solveDepressedQuarticExpr =
   whereItem "sqrts"
   ( lambda "x" iInt $ \x ->
     whereItem "r"
-    ( getDef "sqrt" $$ iInt $$ x
+    ( getDef "sqrt" $$ x
     ) $ \r ->
-    list [r, getDef "negate" $$ iInt $$ r]
+    list [r, getDef "negate" $$ r]
   )
   $ \sqrts ->
   getDef "if" $$ iListInt $$:
@@ -471,7 +471,7 @@ solveDepressedQuarticExpr =
   , getDef "concat" $$ iInt $$
     ( getDef "map" $$ iInt $$ iListInt $$:
       [ sqrts $$ (getDef "head" $$ iInt $$ (solvePoly $$ list
-        [ getDef "negate" $$ iInt $$ (d %* d)
+        [ getDef "negate" $$ (d %* d)
         , (c %* c) %- (literalInteger 4 %* e)
         , literalInteger 2 %* c
         , literalInteger 1
@@ -488,10 +488,10 @@ solveDepressedQuarticExpr =
   where
     iInt = asHole integerType
     iListInt = asHole $ listOf integerType
-    x %+ y = getDef "+" $$ iInt $$: [x, y]
-    x %- y = getDef "-" $$ iInt $$: [x, y]
-    x %* y = getDef "*" $$ iInt $$: [x, y]
-    x %/ y = getDef "/" $$ iInt $$: [x, y]
+    x %+ y = getDef "+" $$: [x, y]
+    x %- y = getDef "-" $$: [x, y]
+    x %* y = getDef "*" $$: [x, y]
+    x %/ y = getDef "/" $$: [x, y]
 
 joinMaybe =
   testInfer "\\x:_ -> caseMaybe x (empty=Nothing, just=\\x->x)" $
@@ -624,21 +624,22 @@ fromQuickCheck1 =
 
 testUnificationCarriesOver =
   testGroup "Unification carries over"
-  [ testInfer "(\\(a:Set) -> (+) _) _ :: ({l:IntegerType, r:_}->_)" $
+  [ testInfer "(\\(a:Set) -> (+)) _ :: ({l:IntegerType, r:_}->_)" $
     typeAnnotate
     (recType integerType (asHole integerType) ~> asHole integerType) $
-    lambda "a" set (\_ -> getDef "+" $$ holeWithInferredType set) $$
+    lambda "a" set (\_ -> getDef "+") $$
     holeWithInferredType set
 
-  , testInfer "(\\(a:Set) -> ?{(+)} ?) ? :: ({l:IntegerType, r:?}->?)" $
-    typeAnnotate
-    (recType integerType (holeWithInferredType set `resumedTo` integerType)
-     ~> (holeWithInferredType set `resumedTo` integerType)) $
-    lambda "a" set
-    ( \_ ->
-      (holeWithInferredType (hole ~> hole) `resumeHere` getDef "+") $$ hole `resumedToType` set
-    ) $$ holeWithInferredType set
-
+  -- TODO: revive this test now. (+) was polymorphic, need a different poly func
+  -- , testInfer "(\\(a:Set) -> ?{(+)} ?) ? :: ({l:IntegerType, r:?}->?)" $
+  --   typeAnnotate
+  --   (recType integerType (holeWithInferredType set `resumedTo` integerType)
+  --    ~> (holeWithInferredType set `resumedTo` integerType)) $
+  --   lambda "a" set
+  --   ( \_ ->
+  --     (holeWithInferredType (hole ~> hole) `resumeHere` getDef "+") $$ hole `resumedToType` set
+  --   ) $$ holeWithInferredType set
+  --
   , testInfer
     "(\\(_1:Set) -> (? :: (a:?{Type}) -> {l:?{a}, r:?{a}} -> ?{a}) ?) ? :: {l:IntegerType, r:?} -> ?" $
     typeAnnotate
