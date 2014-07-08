@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, DeriveDataTypeable #-}
-module Lamdu.Data.Infer.RefData
+module Lamdu.Infer.RefData
   ( Restriction(..)
   , LoadedDef(..), ldDef, ldType
   , LoadedBody, LoadedExpr
@@ -24,14 +24,14 @@ import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Typeable (Typeable)
 import Data.UnionFind.WithData (UFData)
-import Lamdu.Data.Infer.GuidAliases (GuidAliases)
-import Lamdu.Data.Infer.RefTags (TagExpr, ExprRef, ParamRef, TagRule, TagParam)
-import Lamdu.Data.Infer.Trigger.Types (Trigger)
+import Lamdu.Infer.GuidAliases (GuidAliases)
+import Lamdu.Infer.RefTags (TagExpr, ExprRef, ParamRef, TagRule, TagParam)
+import Lamdu.Infer.Trigger.Types (Trigger)
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Data.OpaqueRef as OR
 import qualified Lamdu.Expr as Expr
-import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Infer.GuidAliases as GuidAliases
 
 data Scope def = Scope
   { _scopeMap :: OR.RefMap (TagParam def) (ExprRef def)

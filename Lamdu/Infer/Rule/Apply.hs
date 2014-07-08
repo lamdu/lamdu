@@ -1,4 +1,4 @@
-module Lamdu.Data.Infer.Rule.Apply
+module Lamdu.Infer.Rule.Apply
   ( make, execute
   ) where
 
@@ -12,10 +12,10 @@ import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA, traverse)
-import Lamdu.Data.Infer.Monad (Infer)
-import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef, TagExpr, RuleRef)
-import Lamdu.Data.Infer.Rule.Func (RuleFunc)
-import Lamdu.Data.Infer.Unify (forceLam)
+import Lamdu.Infer.Monad (Infer)
+import Lamdu.Infer.RefTags (ExprRef, ParamRef, TagExpr, RuleRef)
+import Lamdu.Infer.Rule.Func (RuleFunc)
+import Lamdu.Infer.Unify (forceLam)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.OpaqueRef as OR
@@ -23,14 +23,14 @@ import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Utils as ExprUtil
-import qualified Lamdu.Data.Infer.Context as Context
-import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
-import qualified Lamdu.Data.Infer.Monad as InferM
-import qualified Lamdu.Data.Infer.RefData as RefData
-import qualified Lamdu.Data.Infer.Rule.Monad as RuleMonad
-import qualified Lamdu.Data.Infer.Rule.Types as Rule
-import qualified Lamdu.Data.Infer.Trigger as Trigger
-import qualified Lamdu.Data.Infer.Unify as Unify
+import qualified Lamdu.Infer.Context as Context
+import qualified Lamdu.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Infer.Monad as InferM
+import qualified Lamdu.Infer.RefData as RefData
+import qualified Lamdu.Infer.Rule.Monad as RuleMonad
+import qualified Lamdu.Infer.Rule.Types as Rule
+import qualified Lamdu.Infer.Trigger as Trigger
+import qualified Lamdu.Infer.Unify as Unify
 
 unify :: Ord def => ExprRef def -> ExprRef def -> RuleMonad.RM rule def (ExprRef def)
 unify x y = RuleMonad.liftInfer $ Unify.unify x y

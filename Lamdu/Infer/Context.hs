@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, DeriveDataTypeable #-}
-module Lamdu.Data.Infer.Context
+module Lamdu.Infer.Context
   ( Context(..), ufExprs, defTVs, defVisibility, ruleMap, randomGen, guidAliases, empty
   , addToVisibility, removeFromVisibility
   , freshData, fresh, freshHole
@@ -13,11 +13,11 @@ import Data.Binary (Binary(..))
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Typeable (Typeable)
-import Lamdu.Data.Infer.GuidAliases (GuidAliases)
-import Lamdu.Data.Infer.RefData (RefData, UFExprs, LoadedBody)
-import Lamdu.Data.Infer.RefTags (TagExpr, ExprRef)
-import Lamdu.Data.Infer.Rule.Types (RuleMap, initialRuleMap)
-import Lamdu.Data.Infer.TypedValue (TypedValue)
+import Lamdu.Infer.GuidAliases (GuidAliases)
+import Lamdu.Infer.RefData (RefData, UFExprs, LoadedBody)
+import Lamdu.Infer.RefTags (TagExpr, ExprRef)
+import Lamdu.Infer.Rule.Types (RuleMap, initialRuleMap)
+import Lamdu.Infer.TypedValue (TypedValue)
 import System.Random.Utils () -- Binary StdGen
 import qualified Control.Lens as Lens
 import qualified Control.Lens.Utils as LensUtils
@@ -25,8 +25,8 @@ import qualified Data.Map as Map
 import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
-import qualified Lamdu.Data.Infer.RefData as RefData
+import qualified Lamdu.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Infer.RefData as RefData
 import qualified System.Random as Random
 
 -- Context

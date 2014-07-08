@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, DeriveDataTypeable #-}
-module Lamdu.Data.Infer.Deref
+module Lamdu.Infer.Deref
   ( M, expr, entireExpr, deref
   , toInferError
   , DerefedTV(..), dValue, dType, dScope, dTV, dContext
@@ -20,10 +20,10 @@ import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable)
-import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.GuidAliases (GuidAliases)
-import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef, TagParam)
-import Lamdu.Data.Infer.TypedValue (TypedValue, tvVal, tvType)
+import Lamdu.Infer.Context (Context)
+import Lamdu.Infer.GuidAliases (GuidAliases)
+import Lamdu.Infer.RefTags (ExprRef, ParamRef, TagParam)
+import Lamdu.Infer.TypedValue (TypedValue, tvVal, tvType)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Map as Map
@@ -31,10 +31,10 @@ import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Data.Infer.Context as Context
-import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
-import qualified Lamdu.Data.Infer.Monad as InferM
-import qualified Lamdu.Data.Infer.RefData as RefData
+import qualified Lamdu.Infer.Context as Context
+import qualified Lamdu.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Infer.Monad as InferM
+import qualified Lamdu.Infer.RefData as RefData
 
 data Error def = InfiniteExpr (ExprRef def)
   deriving (Show, Eq, Ord)

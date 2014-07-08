@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
-module Lamdu.Data.Infer.TypedValue
+module Lamdu.Infer.TypedValue
   ( TypedValue(..), tvVal, tvType
   ) where
 
@@ -7,7 +7,7 @@ import Data.Binary (Binary(..))
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Typeable (Typeable)
-import Lamdu.Data.Infer.RefTags (ExprRef)
+import Lamdu.Infer.RefTags (ExprRef)
 import qualified Control.Lens as Lens
 
 -- TypedValue:

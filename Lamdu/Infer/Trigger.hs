@@ -1,5 +1,5 @@
-module Lamdu.Data.Infer.Trigger
-  ( module Lamdu.Data.Infer.Trigger.Types
+module Lamdu.Infer.Trigger
+  ( module Lamdu.Infer.Trigger.Types
   , add, checkOrAdd, updateRefData
   ) where
 
@@ -9,12 +9,12 @@ import Control.Lens.Utils (_fromJust)
 import Control.Monad (filterM, when)
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
-import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.Monad (Infer)
-import Lamdu.Data.Infer.RefData (RefData, scopeNormalizeParamRefs)
-import Lamdu.Data.Infer.RefTags (ExprRef, ParamRef)
-import Lamdu.Data.Infer.Rule.Types (RuleRef)
-import Lamdu.Data.Infer.Trigger.Types
+import Lamdu.Infer.Context (Context)
+import Lamdu.Infer.Monad (Infer)
+import Lamdu.Infer.RefData (RefData, scopeNormalizeParamRefs)
+import Lamdu.Infer.RefTags (ExprRef, ParamRef)
+import Lamdu.Infer.Rule.Types (RuleRef)
+import Lamdu.Infer.Trigger.Types
   ( Trigger(..), ParameterRefEvent(..)
   , Fired(..), _FiredDirectlyTag, _FiredKnownBody, _FiredParameterRef, _FiredUnify
   )
@@ -25,11 +25,11 @@ import qualified Data.Set as Set
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Data.Infer.Context as Context
-import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
-import qualified Lamdu.Data.Infer.Monad as InferM
-import qualified Lamdu.Data.Infer.RefData as RefData
-import qualified Lamdu.Data.Infer.Rule.Types as Rule
+import qualified Lamdu.Infer.Context as Context
+import qualified Lamdu.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Infer.Monad as InferM
+import qualified Lamdu.Infer.RefData as RefData
+import qualified Lamdu.Infer.Rule.Types as Rule
 
 remember ::
   MonadA m =>

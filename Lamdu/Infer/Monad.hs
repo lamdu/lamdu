@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
-module Lamdu.Data.Infer.Monad
+module Lamdu.Infer.Monad
   ( Error(..)
   , TriggeredRules(..)
   , Infer, infer
@@ -17,16 +17,16 @@ import Control.Monad.Trans.Writer (WriterT(..))
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Lamdu.Expr.Utils () -- Expr.Body Show instance
-import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.GuidAliases (GuidAliases)
-import Lamdu.Data.Infer.RefData (UFExprs, LoadedBody)
-import Lamdu.Data.Infer.RefTags (ExprRef, TagRule, TagExpr)
-import Lamdu.Data.Infer.Rule.Types (RuleRef, RuleMap)
-import Lamdu.Data.Infer.Trigger.Types (Fired)
+import Lamdu.Infer.Context (Context)
+import Lamdu.Infer.GuidAliases (GuidAliases)
+import Lamdu.Infer.RefData (UFExprs, LoadedBody)
+import Lamdu.Infer.RefTags (ExprRef, TagRule, TagExpr)
+import Lamdu.Infer.Rule.Types (RuleRef, RuleMap)
+import Lamdu.Infer.Trigger.Types (Fired)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.OpaqueRef as OR
-import qualified Lamdu.Data.Infer.Context as Context
+import qualified Lamdu.Infer.Context as Context
 
 data Error def
   = VarEscapesScope Guid

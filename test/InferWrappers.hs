@@ -7,8 +7,8 @@ import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (StateT, mapStateT, evalStateT)
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
-import Lamdu.Data.Infer.Deref (DerefedTV(..), dValue, dType)
-import Lamdu.Data.Infer.Load (LoadedExpr, ldDef)
+import Lamdu.Infer.Deref (DerefedTV(..), dValue, dType)
+import Lamdu.Infer.Load (LoadedExpr, ldDef)
 import System.Random (RandomGen)
 import Utils
 import qualified Control.Lens as Lens
@@ -16,11 +16,11 @@ import qualified Control.Monad.Trans.State as State
 import qualified Data.Map as Map
 import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Data.Infer as Infer
-import qualified Lamdu.Data.Infer.Deref as InferDeref
-import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables
-import qualified Lamdu.Data.Infer.Load as InferLoad
-import qualified Lamdu.Data.Infer.Structure as Structure
+import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Deref as InferDeref
+import qualified Lamdu.Infer.ImplicitVariables as ImplicitVariables
+import qualified Lamdu.Infer.Load as InferLoad
+import qualified Lamdu.Infer.Structure as Structure
 import qualified System.Random as Random
 
 type ExprInferred = Expr (Expr (), Expr ())

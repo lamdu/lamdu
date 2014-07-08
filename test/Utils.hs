@@ -13,7 +13,7 @@ import Lamdu.Data.ExampleDB (createBuiltins)
 import Lamdu.Expr (Kind(..))
 import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Utils (pureHole, pureIntegerType)
-import Lamdu.Data.Infer.Deref (DerefedTV(..), Restriction(..), dValue, dType)
+import Lamdu.Infer.Deref (DerefedTV(..), Restriction(..), dValue, dType)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Data.Map as Map

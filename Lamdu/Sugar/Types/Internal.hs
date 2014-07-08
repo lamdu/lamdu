@@ -16,13 +16,13 @@ import Data.Cache (Cache)
 import Data.Store.Transaction (Transaction)
 import Data.Typeable (Typeable, Typeable1)
 import Lamdu.Expr.IRef (DefIM)
-import Lamdu.Data.Infer.Deref (DerefedTV)
+import Lamdu.Infer.Deref (DerefedTV)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Cache as Cache
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Data.Infer as Infer
-import qualified Lamdu.Data.Infer.Load as Load
+import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Load as Load
 import qualified System.Random as Random
 
 type T = Transaction

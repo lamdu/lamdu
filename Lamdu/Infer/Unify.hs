@@ -1,4 +1,4 @@
-module Lamdu.Data.Infer.Unify
+module Lamdu.Infer.Unify
   ( unify, forceLam
   , unifyBody
   , U, uInfer, decycleDefend
@@ -17,10 +17,10 @@ import Data.Monoid.Applicative (ApplicativeMonoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
-import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.RefData (RefData(..), Scope(..), LoadedBody, scopeNormalizeParamRefs)
-import Lamdu.Data.Infer.RefTags (ExprRef, TagParam, TagRule)
-import Lamdu.Data.Infer.Trigger (Trigger)
+import Lamdu.Infer.Monad (Infer, Error(..))
+import Lamdu.Infer.RefData (RefData(..), Scope(..), LoadedBody, scopeNormalizeParamRefs)
+import Lamdu.Infer.RefTags (ExprRef, TagParam, TagRule)
+import Lamdu.Infer.Trigger (Trigger)
 import System.Random (Random, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
@@ -31,11 +31,11 @@ import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Utils as ExprUtil
-import qualified Lamdu.Data.Infer.Context as Context
-import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
-import qualified Lamdu.Data.Infer.Monad as InferM
-import qualified Lamdu.Data.Infer.RefData as RefData
-import qualified Lamdu.Data.Infer.Trigger as Trigger
+import qualified Lamdu.Infer.Context as Context
+import qualified Lamdu.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Infer.Monad as InferM
+import qualified Lamdu.Infer.RefData as RefData
+import qualified Lamdu.Infer.Trigger as Trigger
 
 newRandom :: Random r => Infer def r
 newRandom = InferM.liftContext . Lens.zoom Context.randomGen $ state random

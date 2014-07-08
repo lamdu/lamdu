@@ -19,7 +19,7 @@ import Data.Store.IRef (Tag)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.Expr.IRef (DefIM)
-import Lamdu.Data.Infer.Load (LoadedDef(..), ldDef)
+import Lamdu.Infer.Load (LoadedDef(..), ldDef)
 import Lamdu.Sugar.Convert.Monad (ConvertM, Context(..))
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
@@ -40,8 +40,8 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Utils as ExprUtil
-import qualified Lamdu.Data.Infer as Infer
-import qualified Lamdu.Data.Infer.Deref as InferDeref
+import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Deref as InferDeref
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr

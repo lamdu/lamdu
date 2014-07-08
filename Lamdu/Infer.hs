@@ -1,4 +1,4 @@
-module Lamdu.Data.Infer
+module Lamdu.Infer
   ( M
   , infer, inferAt
   , unify, unifyRefs
@@ -16,22 +16,22 @@ import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
-import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.MakeTypes (makeTV)
-import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.RefData (Scope(..), LoadedExpr)
-import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.TypedValue (TypedValue(..), tvVal, tvType)
+import Lamdu.Infer.Context (Context)
+import Lamdu.Infer.MakeTypes (makeTV)
+import Lamdu.Infer.Monad (Infer, Error(..))
+import Lamdu.Infer.RefData (Scope(..), LoadedExpr)
+import Lamdu.Infer.RefTags (ExprRef)
+import Lamdu.Infer.TypedValue (TypedValue(..), tvVal, tvType)
 import qualified Control.Lens as Lens
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Expr as Expr
-import qualified Lamdu.Data.Infer.Context as Context
-import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
-import qualified Lamdu.Data.Infer.Load as Load
-import qualified Lamdu.Data.Infer.Monad as InferM
-import qualified Lamdu.Data.Infer.Monad.Run as InferMRun
-import qualified Lamdu.Data.Infer.RefData as RefData
-import qualified Lamdu.Data.Infer.Unify as Unify
+import qualified Lamdu.Infer.Context as Context
+import qualified Lamdu.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Infer.Load as Load
+import qualified Lamdu.Infer.Monad as InferM
+import qualified Lamdu.Infer.Monad.Run as InferMRun
+import qualified Lamdu.Infer.RefData as RefData
+import qualified Lamdu.Infer.Unify as Unify
 import qualified System.Random as Random
 
 -- Renamed for export purposes

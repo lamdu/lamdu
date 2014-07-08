@@ -1,4 +1,4 @@
-module Lamdu.Data.Infer.LamWrap
+module Lamdu.Infer.LamWrap
   ( lambdaWrap
   ) where
 
@@ -7,22 +7,22 @@ import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
 import Data.Foldable (traverse_)
 import Data.Store.Guid (Guid)
-import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.Load (LoadedExpr)
-import Lamdu.Data.Infer.Monad (Infer)
-import Lamdu.Data.Infer.RefTags (ExprRef, TagParam)
-import Lamdu.Data.Infer.TypedValue (TypedValue(..))
+import Lamdu.Infer.Context (Context)
+import Lamdu.Infer.Load (LoadedExpr)
+import Lamdu.Infer.Monad (Infer)
+import Lamdu.Infer.RefTags (ExprRef, TagParam)
+import Lamdu.Infer.TypedValue (TypedValue(..))
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Utils as ExprUtil
-import qualified Lamdu.Data.Infer.Context as Context
-import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
-import qualified Lamdu.Data.Infer.Monad as InferM
-import qualified Lamdu.Data.Infer.Monad.Run as InferMRun
-import qualified Lamdu.Data.Infer.RefData as RefData
+import qualified Lamdu.Infer.Context as Context
+import qualified Lamdu.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Infer.Monad as InferM
+import qualified Lamdu.Infer.Monad.Run as InferMRun
+import qualified Lamdu.Infer.RefData as RefData
 
 addDefScope ::
   (MonadA m, Ord def) =>

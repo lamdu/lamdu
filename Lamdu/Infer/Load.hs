@@ -1,4 +1,4 @@
-module Lamdu.Data.Infer.Load
+module Lamdu.Infer.Load
   ( Loader(..)
   , Error(..)
   , LoadedDef(..), ldDef, ldType
@@ -16,17 +16,17 @@ import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
-import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.RefData (LoadedDef(..), ldDef, ldType, LoadedExpr)
-import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.TypedValue (TypedValue(..), tvType)
+import Lamdu.Infer.Context (Context)
+import Lamdu.Infer.RefData (LoadedDef(..), ldDef, ldType, LoadedExpr)
+import Lamdu.Infer.RefTags (ExprRef)
+import Lamdu.Infer.TypedValue (TypedValue(..), tvType)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Either as Either
 import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Data.Infer.Context as Context
-import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
-import qualified Lamdu.Data.Infer.RefData as RefData
+import qualified Lamdu.Infer.Context as Context
+import qualified Lamdu.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Infer.RefData as RefData
 
 newtype Loader def m = Loader
   { loadDefType :: def -> m (Expr.Expr def Guid ())

@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.Data.Infer.GuidAliases
+module Lamdu.Infer.GuidAliases
   ( GuidAliases, getRep, unify, empty, guidOfRep, find, hasGuid
   ) where
 
@@ -12,7 +12,7 @@ import Data.Binary (Binary(..))
 import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.UnionFind.WithData (UFData)
-import Lamdu.Data.Infer.RefTags (ParamRef, TagParam)
+import Lamdu.Infer.RefTags (ParamRef, TagParam)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Map as Map

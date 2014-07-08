@@ -1,11 +1,11 @@
-module Lamdu.Data.Infer.Rule.Func
+module Lamdu.Infer.Rule.Func
   ( RuleResult(..), RuleFunc
   ) where
 
-import Lamdu.Data.Infer.Monad (Infer)
-import Lamdu.Data.Infer.RefTags (TagExpr)
-import Lamdu.Data.Infer.Rule.Types
-import Lamdu.Data.Infer.Trigger.Types (Fired)
+import Lamdu.Infer.Monad (Infer)
+import Lamdu.Infer.RefTags (TagExpr)
+import Lamdu.Infer.Rule.Types
+import Lamdu.Infer.Trigger.Types (Fired)
 import qualified Data.OpaqueRef as OR
 
 data RuleResult def

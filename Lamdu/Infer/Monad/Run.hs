@@ -1,14 +1,14 @@
-module Lamdu.Data.Infer.Monad.Run (run) where
+module Lamdu.Infer.Monad.Run (run) where
 
 import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Writer (WriterT(..), runWriterT)
-import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.Monad (Infer, Error(..))
+import Lamdu.Infer.Context (Context)
+import Lamdu.Infer.Monad (Infer, Error(..))
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
-import qualified Lamdu.Data.Infer.Monad as InferM
-import qualified Lamdu.Data.Infer.Rule as Rule
+import qualified Lamdu.Infer.Monad as InferM
+import qualified Lamdu.Infer.Rule as Rule
 
 run :: Ord def => Infer def a -> StateT (Context def) (Either (Error def)) a
 run act = do

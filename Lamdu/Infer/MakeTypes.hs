@@ -1,29 +1,29 @@
-module Lamdu.Data.Infer.MakeTypes (makeTV) where
+module Lamdu.Infer.MakeTypes (makeTV) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad (void, when)
 import Data.Store.Guid (Guid)
-import Lamdu.Data.Infer.Monad (Infer, Error(..))
-import Lamdu.Data.Infer.RefData (Scope, LoadedBody, scopeNormalizeParamRefs)
-import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.Rule (verifyTagId)
-import Lamdu.Data.Infer.TypedValue (TypedValue(..), tvVal, tvType)
-import Lamdu.Data.Infer.Unify (unify, forceLam, unifyBody)
+import Lamdu.Infer.Monad (Infer, Error(..))
+import Lamdu.Infer.RefData (Scope, LoadedBody, scopeNormalizeParamRefs)
+import Lamdu.Infer.RefTags (ExprRef)
+import Lamdu.Infer.Rule (verifyTagId)
+import Lamdu.Infer.TypedValue (TypedValue(..), tvVal, tvType)
+import Lamdu.Infer.Unify (unify, forceLam, unifyBody)
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Data.Infer.Context as Context
-import qualified Lamdu.Data.Infer.GuidAliases as GuidAliases
-import qualified Lamdu.Data.Infer.Load as Load
-import qualified Lamdu.Data.Infer.Monad as InferM
-import qualified Lamdu.Data.Infer.RefData as RefData
-import qualified Lamdu.Data.Infer.Rule.Apply as RuleApply
-import qualified Lamdu.Data.Infer.Rule.GetField as RuleGetField
-import qualified Lamdu.Data.Infer.Rule.Uncircumsize as RuleUncircumsize
-import qualified Lamdu.Data.Infer.Trigger as Trigger
+import qualified Lamdu.Infer.Context as Context
+import qualified Lamdu.Infer.GuidAliases as GuidAliases
+import qualified Lamdu.Infer.Load as Load
+import qualified Lamdu.Infer.Monad as InferM
+import qualified Lamdu.Infer.RefData as RefData
+import qualified Lamdu.Infer.Rule.Apply as RuleApply
+import qualified Lamdu.Infer.Rule.GetField as RuleGetField
+import qualified Lamdu.Infer.Rule.Uncircumsize as RuleUncircumsize
+import qualified Lamdu.Infer.Trigger as Trigger
 
 scopeLookup :: Scope def -> Guid -> Infer def (ExprRef def)
 scopeLookup scope guid = do

@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.Data.Infer.Trigger.Types
+module Lamdu.Infer.Trigger.Types
   ( Trigger(..)
   , ParameterRefEvent(..)
   , Fired(..), _FiredDirectlyTag, _FiredKnownBody, _FiredParameterRef, _FiredUnify
@@ -10,7 +10,7 @@ import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Store.Guid (Guid)
 import Lamdu.Expr.Utils () -- Show instance for Expr.Body
-import Lamdu.Data.Infer.RefTags (ParamRef, ExprRef)
+import Lamdu.Infer.RefTags (ParamRef, ExprRef)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Expr as Expr
 

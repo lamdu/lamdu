@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveFunctor, DeriveDataTypeable, TemplateHaskell #-}
-module Lamdu.Data.Infer.ImplicitVariables
+module Lamdu.Infer.ImplicitVariables
   ( add, Payload(..)
   ) where
 
@@ -12,9 +12,9 @@ import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Store.Guid (Guid)
 import Data.Typeable (Typeable)
-import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.RefData (RefData, LoadedExpr)
-import Lamdu.Data.Infer.TypedValue (TypedValue(..))
+import Lamdu.Infer.Context (Context)
+import Lamdu.Infer.RefData (RefData, LoadedExpr)
+import Lamdu.Infer.TypedValue (TypedValue(..))
 import System.Random (RandomGen, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
@@ -24,14 +24,14 @@ import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Utils as ExprUtils
-import qualified Lamdu.Data.Infer as Infer
-import qualified Lamdu.Data.Infer.Context as Context
-import qualified Lamdu.Data.Infer.Deref as Deref
-import qualified Lamdu.Data.Infer.LamWrap as LamWrap
-import qualified Lamdu.Data.Infer.Load as Load
-import qualified Lamdu.Data.Infer.Monad as InferM
-import qualified Lamdu.Data.Infer.RefData as RefData
-import qualified Lamdu.Data.Infer.TypedValue as TypedValue
+import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Context as Context
+import qualified Lamdu.Infer.Deref as Deref
+import qualified Lamdu.Infer.LamWrap as LamWrap
+import qualified Lamdu.Infer.Load as Load
+import qualified Lamdu.Infer.Monad as InferM
+import qualified Lamdu.Infer.RefData as RefData
+import qualified Lamdu.Infer.TypedValue as TypedValue
 
 data Payload a = Stored a | AutoGen Guid
   deriving (Eq, Ord, Show, Functor, Typeable)

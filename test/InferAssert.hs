@@ -25,7 +25,7 @@ import qualified Data.Monoid as Monoid
 import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Utils as ExprUtil
-import qualified Lamdu.Data.Infer.Load as InferLoad
+import qualified Lamdu.Infer.Load as InferLoad
 import qualified System.Random as Random
 import qualified Test.Framework as TestFramework
 import qualified Test.Framework.Providers.HUnit as HUnitProvider

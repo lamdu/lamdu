@@ -1,22 +1,22 @@
-module Lamdu.Data.Infer.Rule.Uncircumsize
+module Lamdu.Infer.Rule.Uncircumsize
   ( make, execute
   ) where
 
 import Control.Applicative ((<$))
 import Control.Lens.Operators
 import Control.Monad (void)
-import Lamdu.Data.Infer.Monad (Infer)
-import Lamdu.Data.Infer.RefTags (ExprRef)
-import Lamdu.Data.Infer.Rule.Func (RuleResult(..), RuleFunc)
-import Lamdu.Data.Infer.Unify (unify)
+import Lamdu.Infer.Monad (Infer)
+import Lamdu.Infer.RefTags (ExprRef)
+import Lamdu.Infer.Rule.Func (RuleResult(..), RuleFunc)
+import Lamdu.Infer.Unify (unify)
 import qualified Control.Lens as Lens
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Expr as Expr
-import qualified Lamdu.Data.Infer.Context as Context
-import qualified Lamdu.Data.Infer.Monad as InferM
-import qualified Lamdu.Data.Infer.RefData as RefData
-import qualified Lamdu.Data.Infer.Rule.Types as Rule
-import qualified Lamdu.Data.Infer.Trigger as Trigger
+import qualified Lamdu.Infer.Context as Context
+import qualified Lamdu.Infer.Monad as InferM
+import qualified Lamdu.Infer.RefData as RefData
+import qualified Lamdu.Infer.Rule.Types as Rule
+import qualified Lamdu.Infer.Trigger as Trigger
 
 uncircumsize :: Ord def => Rule.Uncircumsize def -> Infer def ()
 uncircumsize rule = do

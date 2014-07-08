@@ -20,8 +20,8 @@ import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Data.Infer as Infer
-import qualified Lamdu.Data.Infer.Deref as InferDeref
+import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Deref as InferDeref
 
 simpleTests =
   [ testInfer "literal int" $ literalInteger 5

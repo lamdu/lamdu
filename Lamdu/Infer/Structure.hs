@@ -1,22 +1,22 @@
-module Lamdu.Data.Infer.Structure
+module Lamdu.Infer.Structure
   ( add
   ) where
 
 import Control.Lens.Operators
 import Control.Monad (when, void)
 import Control.Monad.Trans.State (StateT, mapStateT)
-import Lamdu.Data.Infer.Context (Context)
-import Lamdu.Data.Infer.RefData (LoadedExpr)
-import Lamdu.Data.Infer.TypedValue (TypedValue(..))
+import Lamdu.Infer.Context (Context)
+import Lamdu.Infer.RefData (LoadedExpr)
+import Lamdu.Infer.TypedValue (TypedValue(..))
 import qualified Control.Lens as Lens
 import qualified Data.UnionFind.WithData as UFData
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Utils as ExprUtil
-import qualified Lamdu.Data.Infer as Infer
-import qualified Lamdu.Data.Infer.Context as Context
-import qualified Lamdu.Data.Infer.Deref as Deref
-import qualified Lamdu.Data.Infer.Load as Load
-import qualified Lamdu.Data.Infer.RefData as RefData
+import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Context as Context
+import qualified Lamdu.Infer.Deref as Deref
+import qualified Lamdu.Infer.Load as Load
+import qualified Lamdu.Infer.RefData as RefData
 
 add ::
   (Show def, Ord def) =>

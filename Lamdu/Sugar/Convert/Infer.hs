@@ -42,8 +42,8 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable, Typeable1)
 import Lamdu.Expr.IRef (DefIM)
-import Lamdu.Data.Infer.Deref (DerefedTV)
-import Lamdu.Data.Infer.Load (Loader(..))
+import Lamdu.Infer.Deref (DerefedTV)
+import Lamdu.Infer.Load (Loader(..))
 import Lamdu.Sugar.Types.Internal
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
@@ -56,11 +56,11 @@ import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Utils as ExprUtil
-import qualified Lamdu.Data.Infer as Infer
-import qualified Lamdu.Data.Infer.Deref as InferDeref
-import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables
-import qualified Lamdu.Data.Infer.Load as InferLoad
-import qualified Lamdu.Data.Infer.Structure as Structure
+import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Deref as InferDeref
+import qualified Lamdu.Infer.ImplicitVariables as ImplicitVariables
+import qualified Lamdu.Infer.Load as InferLoad
+import qualified Lamdu.Infer.Structure as Structure
 import qualified Lamdu.Sugar.Types as Sugar
 
 type ExpressionSetter def = Expr.Expr def Guid () -> Expr.Expr def Guid ()

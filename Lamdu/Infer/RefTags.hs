@@ -1,5 +1,5 @@
 {-# LANGUAGE EmptyDataDecls #-}
-module Lamdu.Data.Infer.RefTags
+module Lamdu.Infer.RefTags
   ( TagExpr, ExprRef
   , TagRule, RuleRef
   , TagParam, ParamRef

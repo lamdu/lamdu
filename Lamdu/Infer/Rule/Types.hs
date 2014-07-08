@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.Data.Infer.Rule.Types
+module Lamdu.Infer.Rule.Types
   ( RuleRef
   , GetFieldPhase0(..), gf0GetFieldTag, gf0GetFieldType
   , GetFieldPhase1(..), gf1GetFieldRecordTypeFields, gf1GetFieldType
@@ -22,8 +22,8 @@ import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
-import Lamdu.Data.Infer.RefData (LoadedBody)
-import Lamdu.Data.Infer.RefTags (ExprRef, TagExpr, RuleRef, TagRule, ParamRef, TagParam)
+import Lamdu.Infer.RefData (LoadedBody)
+import Lamdu.Infer.RefTags (ExprRef, TagExpr, RuleRef, TagRule, ParamRef, TagParam)
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
 

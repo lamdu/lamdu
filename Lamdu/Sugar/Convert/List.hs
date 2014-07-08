@@ -23,7 +23,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Data.Infer.Load as InferLoad
+import qualified Lamdu.Infer.Load as InferLoad
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
