@@ -417,7 +417,6 @@ convertExpressionI ee =
   Expr.VLeaf Expr.VHole -> ConvertHole.convert
   Expr.VLeaf Expr.Type -> convertAtom "Type"
   Expr.VLeaf Expr.IntegerType -> convertAtom "Int"
-  Expr.VLeaf Expr.TagType -> convertAtom "Tag"
 
 -- Check no holes
 isCompleteType :: Expr.Expr def par a -> Bool

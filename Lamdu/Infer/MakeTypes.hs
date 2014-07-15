@@ -117,7 +117,6 @@ makeTV scope body dest =
   -- Simple types
   Expr.VLeaf Expr.Type -> typeIsType
   Expr.VLeaf Expr.IntegerType -> typeIsType
-  Expr.VLeaf Expr.TagType -> typeIsType
   Expr.VLeaf Expr.VLiteralInteger {} -> do
     loadGivenVal
     setType (ExprLens.bodyIntegerType # ())

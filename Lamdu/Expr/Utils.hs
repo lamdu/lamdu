@@ -10,7 +10,6 @@ module Lamdu.Expr.Utils
   , pureGetField
   , pureVLiteralInteger
   , pureIntegerType
-  , pureTagType
   , pureType
   , pureExpr
   , randomizeExpr
@@ -400,9 +399,6 @@ curriedFuncArguments =
 
 pureIntegerType :: Expr def par ()
 pureIntegerType = ExprLens.pureExpr . ExprLens.bodyIntegerType # ()
-
-pureTagType :: Expr def par ()
-pureTagType = ExprLens.pureExpr . ExprLens.bodyTagType # ()
 
 pureType :: Expr def par ()
 pureType = ExprLens.pureExpr . ExprLens.bodyType # ()

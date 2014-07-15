@@ -7,7 +7,7 @@ module Lamdu.Expr
   , Tag(..), tag
   , GetField(..), getFieldRecord, getFieldTag
   , Record(..), recordKind, recordFields
-  , Leaf(..), _VVar, _VLiteralInteger, _VHole, _Type, _IntegerType, _TagType
+  , Leaf(..), _VVar, _VLiteralInteger, _VHole, _Type, _IntegerType
   , Body(..), _VAbs, _VApp, _VLeaf, _VRec, _VGetField
   , BodyExpr
   , Expr(..), eBody, ePayload
@@ -58,7 +58,6 @@ data Leaf def par
   | Type
   | IntegerType
   | VHole
-  | TagType -- TODO: DELETE
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 instance (Show def, Show par) => Show (Leaf def par) where
@@ -69,7 +68,6 @@ instance (Show def, Show par) => Show (Leaf def par) where
     Type -> showString "Type"
     IntegerType -> showString "Int"
     VHole -> showString "?"
-    TagType -> showString "Tag"
 
 newtype Tag = Tag Guid
   deriving (Eq, Ord, Show)

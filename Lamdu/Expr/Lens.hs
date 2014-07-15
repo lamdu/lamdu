@@ -20,7 +20,6 @@ module Lamdu.Expr.Lens
   , bodyHole, exprHole
   , bodyType, exprType
   , bodyIntegerType, exprIntegerType
-  , bodyTagType, exprTagType
   , bodyVVar, exprVVar
   , subTreesThat
   , tagPositions
@@ -81,9 +80,6 @@ exprType = eBody . bodyType
 
 exprIntegerType :: Lens.Traversal' (Expr def par a) ()
 exprIntegerType = eBody . bodyIntegerType
-
-exprTagType :: Lens.Traversal' (Expr def par a) ()
-exprTagType = eBody . bodyTagType
 
 exprLeaves ::
   Lens.Traversal (Expr defa par a) (Expr defb par a) (Leaf defa par) (Leaf defb par)
@@ -189,9 +185,6 @@ bodyType = _VLeaf . _Type
 
 bodyIntegerType :: Lens.Prism' (Body def par expr) ()
 bodyIntegerType = _VLeaf . _IntegerType
-
-bodyTagType :: Lens.Prism' (Body def par expr) ()
-bodyTagType = _VLeaf . _TagType
 
 kindedRecordFields ::
   Kind -> Lens.Prism' (Record a) [(Tag, a)]
