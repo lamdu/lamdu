@@ -251,7 +251,7 @@ createBuiltins augmentTagGuids =
     newTag name = namedTag name . augmentTagGuids $ Guid.fromString name
     namedTag name tagGuid = do
       setP (Db.assocNameRef tagGuid) name
-      ExprIRef.newExprBody $ ExprLens.bodyTag # tagGuid
+      return $ Expr.Tag tagGuid
     mkRecordType mkTag fields = do
       tagFields <- traverse (Lens._1 mkTag <=< Lens.sequenceOf Lens._2) fields
       ExprIRef.newExprBody $ Expr.VRec Expr.Record

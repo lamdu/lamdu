@@ -4,9 +4,10 @@ module Lamdu.Expr
   , Kind(..), _KVal, _KType
   , Lam(..), lamKind, lamParamId, lamParamType, lamResult
   , Apply(..), applyFunc, applyArg
+  , Tag(..), tag
   , GetField(..), getFieldRecord, getFieldTag
   , Record(..), recordKind, recordFields
-  , Leaf(..), _VVar, _VLiteralInteger, _VHole, _Type, _IntegerType, _Tag, _TagType
+  , Leaf(..), _VVar, _VLiteralInteger, _VHole, _Type, _IntegerType, _TagType
   , Body(..), _VAbs, _VApp, _VLeaf, _VRec, _VGetField
   , BodyExpr
   , Expr(..), eBody, ePayload
@@ -57,8 +58,7 @@ data Leaf def par
   | Type
   | IntegerType
   | VHole
-  | TagType
-  | Tag Guid -- TODO: Guid?
+  | TagType -- TODO: DELETE
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 instance (Show def, Show par) => Show (Leaf def par) where
@@ -66,20 +66,22 @@ instance (Show def, Show par) => Show (Leaf def par) where
     case leaf of
     VVar varRef -> shows varRef
     VLiteralInteger int -> shows int
-    Tag guid -> showString "Tag<" . shows guid . showChar '>'
     Type -> showString "Type"
     IntegerType -> showString "Int"
     VHole -> showString "?"
     TagType -> showString "Tag"
 
+newtype Tag = Tag Guid
+  deriving (Eq, Ord, Show)
+
 data Record expr = Record
   { _recordKind :: !Kind
-  , _recordFields :: [(expr, expr)]
+  , _recordFields :: [(Tag, expr)]
   } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 data GetField expr = GetField
   { _getFieldRecord :: expr
-  , _getFieldTag :: expr
+  , _getFieldTag :: Tag
   } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 data Body def par expr
@@ -99,8 +101,11 @@ data Expr def par a = Expr
 
 fmap concat $ mapM Lens.makePrisms [''Kind, ''VariableRef, ''Leaf, ''Body]
 fmap concat $ mapM Lens.makeLenses [''Expr, ''Record, ''GetField, ''Lam, ''Apply]
+Lens.makeIso ''Tag
 
 fmap concat . sequence $
   derive
   <$> [makeBinary, makeNFData]
-  <*> [ ''Kind, ''VariableRef, ''Lam, ''Apply, ''Leaf, ''Body, ''Record, ''GetField, ''Expr ]
+  <*> [ ''Kind, ''VariableRef, ''Lam, ''Apply, ''Leaf, ''Body
+      , ''Record, ''GetField, ''Expr , ''Tag
+      ]

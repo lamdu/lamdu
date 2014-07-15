@@ -27,7 +27,6 @@ import qualified Lamdu.GUI.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.GUI.ExpressionEdit.PiEdit as PiEdit
 import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
-import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -86,6 +85,5 @@ makeEditor parentPrecedence body =
   Sugar.BodyList list -> ListEdit.make list
   Sugar.BodyRecord record -> RecordEdit.make record
   Sugar.BodyGetField getField -> GetFieldEdit.make getField
-  Sugar.BodyTag tag -> TagEdit.make tag
   Sugar.BodyGetVar gv -> GetVarEdit.make gv
   Sugar.BodyGetParams gp -> GetParamsEdit.make gp

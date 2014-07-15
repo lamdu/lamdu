@@ -10,7 +10,6 @@ module Lamdu.Expr.Utils
   , pureGetField
   , pureVLiteralInteger
   , pureIntegerType
-  , pureTag
   , pureTagType
   , pureType
   , pureExpr
@@ -42,9 +41,9 @@ module Lamdu.Expr.Utils
 import Lamdu.Expr
 
 import Control.Applicative (Applicative(..), liftA2, (<$>), (<$))
-import Control.Arrow ((***))
 import Control.Lens (Context(..))
 import Control.Lens.Operators
+import Control.Lens.Tuple
 import Control.Lens.Utils (addListContexts, addTuple2Contexts, getPrism)
 import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
@@ -146,17 +145,12 @@ subst lens to expr
 recordValForm :: Expr a par () -> Maybe (Expr b par ())
 recordValForm paramType =
   paramType ^? ExprLens.exprKindedRecordFields KType
-  >>= replaceFieldTypesWithHoles
+  <&> replaceFieldTypesWithHoles
   where
-    castTag (VLeaf VHole) = Just (VLeaf VHole)
-    castTag (VLeaf (Tag tag)) = Just (VLeaf (Tag tag))
-    castTag _ = Nothing
     replaceFieldTypesWithHoles fields =
       fields
-      & Lens.traversed %%~
-        (Lens._1 . eBody %%~ castTag) .
-        (Lens._2 .~ pureHole)
-      <&> (ExprLens.pureExpr . _VRec . ExprLens.kindedRecordFields KVal # )
+      & Lens.traversed . Lens._2 .~ pureHole
+      & (ExprLens.pureExpr . _VRec . ExprLens.kindedRecordFields KVal # )
 
 data ApplyFormAnnotation =
   Untouched | DependentParamAdded | IndependentParamAdded
@@ -303,14 +297,16 @@ matchBody matchLam matchSubexpr matchGetPar body0 body1 =
   VRec (Record k0 fs0) -> do
     Record k1 fs1 <- body1 ^? _VRec
     guard $ k0 == k1
-    matchedPairs <- ListUtils.match matchPair fs0 fs1
+    matchedPairs <- sequenceA =<< ListUtils.match matchPair fs0 fs1
     Just . VRec $ Record k0 matchedPairs
     where
-      matchPair (t0, v0) (t1, v1) =
-        (matchSubexpr t0 t1, matchSubexpr v0 v1)
-  VGetField (GetField r0 f0) -> do
-    GetField r1 f1 <- body1 ^? _VGetField
-    Just . VGetField $ GetField (matchSubexpr r0 r1) (matchSubexpr f0 f1)
+      matchPair (t0, v0) (t1, v1)
+        | t0 == t1 = Just (t0, matchSubexpr v0 v1)
+        | otherwise = Nothing
+  VGetField (GetField r0 t0) -> do
+    GetField r1 t1 <- body1 ^? _VGetField
+    guard $ t0 == t1
+    Just . VGetField $ GetField (matchSubexpr r0 r1) t0
   VLeaf leaf0 -> do
     leaf1 <- body1 ^? _VLeaf
     VLeaf <$> matchLeaf matchGetPar leaf0 leaf1
@@ -411,9 +407,6 @@ pureTagType = ExprLens.pureExpr . ExprLens.bodyTagType # ()
 pureType :: Expr def par ()
 pureType = ExprLens.pureExpr . ExprLens.bodyType # ()
 
-pureTag :: Guid -> Expr def par ()
-pureTag = (ExprLens.pureExpr . ExprLens.bodyTag # )
-
 pureVLiteralInteger :: Integer -> Expr def par ()
 pureVLiteralInteger = (ExprLens.pureExpr . ExprLens.bodyVLiteralInteger # )
 
@@ -423,14 +416,14 @@ pureApply f x = ExprLens.pureExpr . _VApp # Apply f x
 pureHole :: Expr def par ()
 pureHole = ExprLens.pureExpr . ExprLens.bodyHole # ()
 
-pureRecord :: Kind -> [(Expr def par (), Expr def par ())] -> Expr def par ()
+pureRecord :: Kind -> [(Tag, Expr def par ())] -> Expr def par ()
 pureRecord k fields = ExprLens.pureExpr . ExprLens.bodyKindedRecordFields k # fields
 
 pureLam :: Kind -> par -> Expr def par () -> Expr def par () -> Expr def par ()
 pureLam k param paramType result =
   ExprLens.pureExpr . ExprLens.bodyKindedLam k # (param, paramType, result)
 
-pureGetField :: Expr def par () -> Expr def par () -> Expr def par ()
+pureGetField :: Expr def par () -> Tag -> Expr def par ()
 pureGetField record field =
   ExprLens.pureExpr . _VGetField # GetField record field
 
@@ -493,8 +486,8 @@ showsPrecBody mayDepend prec body =
       sep KType = ":"
       recType KVal = "V"
       recType KType = "T"
-  VGetField (GetField r tag) ->
-    paren 8 $ showsPrec 8 r . showChar '.' . showsPrec 9 tag
+  VGetField (GetField r t) ->
+    paren 8 $ showsPrec 8 r . showChar '.' . showsPrec 9 t
   VLeaf leaf -> showsPrec prec leaf
   where
     paren innerPrec = showParen (prec > innerPrec)
@@ -542,15 +535,15 @@ addBodyContexts tob (Context intoContainer body) =
     & afterSetter %~ VApp
   VRec (Record k fields) ->
     (Record k .
-     map (addTuple2Contexts tob) .
-     addListContexts (tob *** tob))
+     map addTuple2Contexts .
+     addListContexts (_2 %~ tob))
     (Context (Record k) fields)
     & VRec
     & afterSetter %~ VRec
-  VGetField (GetField record tag) ->
+  VGetField (GetField record t) ->
     GetField
-    (Context (`GetField` tob tag) record)
-    (Context (tob record `GetField`) tag)
+    (Context (`GetField` t) record)
+    t
     & VGetField
     & afterSetter %~ VGetField
   VLeaf leaf -> VLeaf leaf

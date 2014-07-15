@@ -19,7 +19,7 @@ module Lamdu.Sugar.Types
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyCollapsed, _BodyLiteralInteger
-    , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
+    , _BodyAtom, _BodyList, _BodyRecord
   , Payload(..), plGuid, plInferredTypes, plActions, plData
   , ExpressionP(..), rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..), MStoredName
@@ -48,7 +48,7 @@ module Lamdu.Sugar.Types
   , HoleInferred(..), hiBaseValue, hiWithVarsValue, hiType, hiMakeConverted
   , Hole(..)
     , holeMActions, holeMArg, holeMInferred
-  , HoleResultSeed(..), _ResultSeedExpr, _ResultSeedNewTag, _ResultSeedNewDefinition
+  , HoleResultSeed(..), _ResultSeedExpr, _ResultSeedNewDefinition
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
   , HoleActions(..)
@@ -83,6 +83,7 @@ import Lamdu.Sugar.Types.Internal (T, CT, Stored, Inferred, LoadedExpr)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Types.Internal as TypesInternal
 import qualified System.Random as Random
@@ -203,7 +204,6 @@ data HoleResult name m a = HoleResult
 
 data HoleResultSeed m a
   = ResultSeedExpr (ExprIRef.ExprM m a)
-  | ResultSeedNewTag String
   | ResultSeedNewDefinition String
   deriving (Functor, Foldable, Traversable)
 
@@ -212,7 +212,7 @@ type ScopeItem m a = (a, ExprIRef.ExprM m ())
 data Scope name m = Scope
   { _scopeLocals    :: [ScopeItem m (GetVar name m)]
   , _scopeGlobals   :: [ScopeItem m (GetVar name m)]
-  , _scopeTags      :: [ScopeItem m (TagG name)]
+  , _scopeTags      :: [(TagG name, Expr.Tag)]
   , _scopeGetParams :: [ScopeItem m (GetParams name m)]
   }
 
@@ -288,25 +288,25 @@ data List m expr = List
     lNilGuid :: Guid
   } deriving (Functor, Foldable, Traversable)
 
-data RecordField m expr = RecordField
+data RecordField name m expr = RecordField
   { _rfMItemActions :: Maybe (ListItemActions m)
-  , _rfTag :: expr
+  , _rfTag :: TagG name
   , _rfExpr :: expr -- field type or val
   } deriving (Functor, Foldable, Traversable)
 
-data FieldList m expr = FieldList
-  { _flItems :: [RecordField m expr]
+data FieldList name m expr = FieldList
+  { _flItems :: [RecordField name m expr]
   , _flMAddFirstItem :: Maybe (T m Guid)
   } deriving (Functor, Foldable, Traversable)
 
-data Record m expr = Record
+data Record name m expr = Record
   { _rKind :: Kind -- record type or val
-  , _rFields :: FieldList m expr
+  , _rFields :: FieldList name m expr
   } deriving (Functor, Foldable, Traversable)
 
-data GetField expr = GetField
+data GetField name expr = GetField
   { _gfRecord :: expr
-  , _gfTag :: expr
+  , _gfTag :: TagG name
   } deriving (Functor, Foldable, Traversable)
 
 data GetVarType = GetDefinition | GetFieldParameter | GetParameter
@@ -357,9 +357,8 @@ data Body name m expr
   | BodyLiteralInteger Integer
   | BodyAtom String
   | BodyList (List m expr)
-  | BodyRecord (Record m expr)
-  | BodyGetField (GetField expr)
-  | BodyTag (TagG name)
+  | BodyRecord (Record name m expr)
+  | BodyGetField (GetField name expr)
   | BodyGetVar (GetVar name m)
   | BodyGetParams (GetParams name m)
   deriving (Functor, Foldable, Traversable)
@@ -388,7 +387,6 @@ instance Show expr => Show (Body name m expr) where
   show BodyApply {} = "LabelledApply:TODO"
   show BodyRecord {} = "Record:TODO"
   show BodyGetField {} = "GetField:TODO"
-  show BodyTag {} = "Tag:TODO"
   show BodyGetVar {} = "GetVar:TODO"
   show BodyGetParams {} = "GetParams:TODO"
 

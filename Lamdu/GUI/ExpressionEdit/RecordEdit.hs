@@ -7,6 +7,7 @@ import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
+import Graphics.UI.Bottle.WidgetId (augmentId)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers, holePickersAction)
@@ -17,6 +18,7 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -27,23 +29,23 @@ type T = Transaction
 
 make ::
   MonadA m =>
-  Sugar.Record m (ExprGuiM.SugarExpr m) ->
+  Sugar.Record Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make rec pl = ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped rec
 
 makeUnwrapped ::
   MonadA m =>
-  Sugar.Record m (ExprGuiM.SugarExpr m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+  Sugar.Record Sugar.Name m (ExprGuiM.SugarExpr m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
   ExprGuiM.assignCursor myId bracketId $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
-      makeFieldRow (Sugar.RecordField mItemActions tagExpr fieldExpr) = do
+      makeFieldRow (Sugar.RecordField mItemActions tag fieldExpr) = do
         ((fieldRefGui, fieldExprGui), resultPickers) <-
           ExprGuiM.listenResultPickers $
           (,)
-          <$> ExprGuiM.makeSubexpression 0 tagExpr
+          <$> TagEdit.make tag (augmentId (tag ^. Sugar.tagGuid) myId)
           <*> ExprGuiM.makeSubexpression 0 fieldExpr
         let
           itemEventMap = maybe mempty (recordItemEventMap config resultPickers) mItemActions

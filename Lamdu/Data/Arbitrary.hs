@@ -4,7 +4,7 @@ module Lamdu.Data.Arbitrary (Name(..)) where
 
 import Control.Applicative (Applicative(..), (<$>), (<*))
 import Control.Lens ((%~))
-import Control.Monad (join)
+import Control.Monad (replicateM, join)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT, evalStateT)
@@ -17,6 +17,7 @@ import Test.QuickCheck (Arbitrary(..), Gen, choose)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.State as State
+import qualified Data.ByteString as BS
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Expr as Expr
 import qualified Test.QuickCheck.Gen as Gen
@@ -52,10 +53,10 @@ arbitraryRecord :: Arbitrary a => GenExpr def par (Expr.Record (Expr.Expr def pa
 arbitraryRecord =
   Expr.Record
   <$> liftGen arbitrary
-  <*> listOf ((,) <$> arbitraryExpr <*> arbitraryExpr)
+  <*> listOf ((,) <$> liftGen arbitrary <*> arbitraryExpr)
 
 arbitraryGetField :: Arbitrary a => GenExpr def par (Expr.GetField (Expr.Expr def par a))
-arbitraryGetField = Expr.GetField <$> arbitraryExpr <*> arbitraryExpr
+arbitraryGetField = Expr.GetField <$> arbitraryExpr <*> liftGen arbitrary
 
 arbitraryApply :: Arbitrary a => GenExpr def par (Expr.Apply (Expr.Expr def par a))
 arbitraryApply = Expr.Apply <$> arbitraryExpr <*> arbitraryExpr
@@ -99,6 +100,12 @@ exprGen makeDefI =
 
 instance Name Guid where
   names = Guid.fromString . (: []) <$> ['a'..]
+
+instance Arbitrary Guid where
+  arbitrary = Guid.make . BS.pack <$> replicateM Guid.length arbitrary
+
+instance Arbitrary Expr.Tag where
+  arbitrary = Expr.Tag <$> arbitrary
 
 -- TODO: This instance doesn't know which Definitions exist in the
 -- world so avoids DefinitionRef and only has valid ParameterRefs to

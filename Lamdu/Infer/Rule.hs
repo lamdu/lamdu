@@ -19,7 +19,6 @@ import qualified Lamdu.Infer.Context as Context
 import qualified Lamdu.Infer.Monad as InferM
 import qualified Lamdu.Infer.RefData as RefData
 import qualified Lamdu.Infer.Rule.Apply as RuleApply
-import qualified Lamdu.Infer.Rule.GetField as RuleGetField
 import qualified Lamdu.Infer.Rule.Uncircumsize as RuleUncircumsize
 import qualified Lamdu.Infer.Trigger as Trigger
 
@@ -42,9 +41,6 @@ verifyTag triggers =
 
 ruleRunner :: Ord def => RuleContent def -> RuleRef def -> RuleFunc def
 ruleRunner RuleVerifyTag _ = verifyTag
-ruleRunner (RuleGetFieldPhase0 x) _ = RuleGetField.phase0 x
-ruleRunner (RuleGetFieldPhase1 x) _ = RuleGetField.phase1 x
-ruleRunner (RuleGetFieldPhase2 x) _ = RuleGetField.phase2 x
 ruleRunner (RuleApply x) ruleRef = RuleApply.execute ruleRef x
 ruleRunner (RuleUncircumsize x) _ = RuleUncircumsize.execute x
 

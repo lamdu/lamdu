@@ -18,8 +18,7 @@ import qualified Lamdu.Expr as Expr
 -- unknown. When they become known, they fire (see Fired) below and
 -- disappear.
 data Trigger def
-  = OnDirectlyTag
-  | OnKnownBody
+  = OnKnownBody
   | OnParameterRef (ParamRef def)
   | OnUnify
   deriving (Eq, Ord, Show)

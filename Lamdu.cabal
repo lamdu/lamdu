@@ -204,7 +204,6 @@ Executable lamdu
                        Lamdu.Infer.Rule,
                        Lamdu.Infer.Rule.Apply,
                        Lamdu.Infer.Rule.Func,
-                       Lamdu.Infer.Rule.GetField,
                        Lamdu.Infer.Rule.Monad,
                        Lamdu.Infer.Rule.Types,
                        Lamdu.Infer.Rule.Uncircumsize,

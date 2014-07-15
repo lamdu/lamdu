@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell, FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Results
   ( makeAll, HaveHiddenResults(..)
-  , Result(..), ResultInfo(..)
+  , Result(..)
   , ResultsList(..), rlExtraResultsPrefixId, rlMain, rlExtra
   , prefixId
   , SugarExprPl
@@ -22,7 +22,7 @@ import Data.DeriveTH (derive)
 import Data.Function (on)
 import Data.List (isInfixOf, isPrefixOf, partition)
 import Data.List.Utils (sortOn, nonEmptyAll)
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes)
 import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..), Any(..))
 import Data.Store.Guid (Guid)
@@ -78,14 +78,11 @@ Lens.makeLenses ''Group
 data ResultType = GoodResult | BadResult
   deriving (Eq, Ord)
 
-data ResultInfo = ResultInfoNewTag | ResultInfoNormal
-
 type SugarExprPl = (ExprGuiM.StoredGuids, ExprGuiM.Injected)
 
 data Result m = Result
   { rType :: ResultType
   , rHoleResult :: Sugar.HoleResult Sugar.Name m SugarExprPl
-  , rInfo :: ResultInfo
   , rId :: WidgetId.Id
   }
 
@@ -103,8 +100,8 @@ Lens.makeLenses ''ResultsList
 getVarsToGroup :: (Sugar.GetVar Sugar.Name m, Expr def Guid ()) -> Group def
 getVarsToGroup (getVar, expr) = sugarNameToGroup (getVar ^. Sugar.gvName) expr
 
-tagsToGroup :: (Sugar.TagG Sugar.Name, Expr def Guid ()) -> Group def
-tagsToGroup (tagG, expr) = sugarNameToGroup (tagG ^. Sugar.tagName) expr
+-- tagsToGroup :: (Sugar.TagG Sugar.Name, Expr def Guid ()) -> Group def
+-- tagsToGroup (tagG, expr) = sugarNameToGroup (tagG ^. Sugar.tagName) expr
 
 getParamsToGroup :: (Sugar.GetParams Sugar.Name m, Expr def Guid ()) -> Group def
 getParamsToGroup (getParams, expr) =
@@ -165,11 +162,11 @@ typeCheckResults holeInfo mkGen options = do
     score = resultComplexityScore . (^. Sugar.holeResultInferred)
 
 mResultsListOf ::
-  HoleInfo m -> ResultInfo -> WidgetId.Id ->
+  HoleInfo m -> WidgetId.Id ->
   [(ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl)] ->
   Maybe (ResultsList m)
-mResultsListOf _ _ _ [] = Nothing
-mResultsListOf holeInfo resultInfo baseId (x:xs) = Just
+mResultsListOf _ _ [] = Nothing
+mResultsListOf holeInfo baseId (x:xs) = Just
   ResultsList
   { _rlPreferred = NotPreferred
   , _rlExtraResultsPrefixId = extraResultsPrefixId
@@ -185,16 +182,15 @@ mResultsListOf holeInfo resultInfo baseId (x:xs) = Just
       Result
       { rType = typ
       , rHoleResult = holeResult
-      , rInfo = resultInfo
       , rId = resultId
       }
 
 typeCheckToResultsList ::
-  MonadA m => HoleInfo m -> (Int -> Guid -> Random.StdGen) -> ResultInfo ->
+  MonadA m => HoleInfo m -> (Int -> Guid -> Random.StdGen) ->
   WidgetId.Id -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl)] ->
   CT m (Maybe (ResultsList m))
-typeCheckToResultsList holeInfo mkGen resultInfo baseId options =
-  mResultsListOf holeInfo resultInfo baseId <$>
+typeCheckToResultsList holeInfo mkGen baseId options =
+  mResultsListOf holeInfo baseId <$>
   typeCheckResults holeInfo mkGen options
 
 baseExprWithApplyForms ::
@@ -284,21 +280,12 @@ maybeInjectArgumentExpr holeInfo =
         -- TODO: Don't wastefully lose the loaded...
         & ExprLens.exprDef %~ (^. ldDef)
 
-maybeInjectArgumentNewTag ::
-  HoleInfo m -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl)]
-maybeInjectArgumentNewTag holeInfo =
-  case hiMArgument holeInfo of
-  Nothing -> [makeNewTag]
-  Just _ -> []
-  where
-    makeNewTag = Sugar.ResultSeedNewTag $ hiSearchTerm holeInfo
-
 makeResultsList ::
-  MonadA m => HoleInfo m -> ResultInfo -> GroupM m ->
+  MonadA m => HoleInfo m -> GroupM m ->
   CT m (Maybe (ResultsList m))
-makeResultsList holeInfo resultInfo group =
+makeResultsList holeInfo group =
   (Lens.mapped . Lens.mapped %~ rlPreferred .~ toPreferred) .
-  typeCheckToResultsList holeInfo mkGen resultInfo baseId .
+  typeCheckToResultsList holeInfo mkGen baseId .
   map Sugar.ResultSeedExpr . filter (not . isHoleWrap) =<<
   maybeInjectArgumentExpr holeInfo =<<
   baseExprWithApplyForms holeInfo baseExpr
@@ -311,17 +298,6 @@ makeResultsList holeInfo resultInfo group =
     searchTerm = hiSearchTerm holeInfo
     baseExpr = group ^. groupBaseExpr
     baseId = WidgetIds.hash baseExpr
-
-makeNewTagResultList ::
-  MonadA m => HoleInfo m ->
-  CT m (Maybe (ResultsList m))
-makeNewTagResultList holeInfo
-  | null (hiSearchTerm holeInfo) = pure Nothing
-  | otherwise =
-      typeCheckToResultsList holeInfo mkGen ResultInfoNewTag (WidgetId.Id ["NewTag"]) $
-      maybeInjectArgumentNewTag holeInfo
-  where
-    mkGen i guid = genFromHashable (guid, "New tag" :: String, i)
 
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
 
@@ -359,25 +335,21 @@ makeAll config holeInfo = do
   allGroups <- ExprGuiM.transaction $ makeAllGroups holeInfo
   let
     allGroupsList =
-      ListClass.mapL (makeResultsList holeInfo ResultInfoNormal) $
+      ListClass.mapL (makeResultsList holeInfo) $
       ListClass.fromList allGroups
-    newTagList
-      | isTagType =
-        ListClass.joinM . return $ makeNewTagResultList holeInfo
-      | otherwise = mempty
-    resultList = ListClass.catMaybes $ mappend allGroupsList newTagList
+    resultList = ListClass.catMaybes allGroupsList
   ExprGuiM.liftMemoT $ collectResults config resultList
-  where
-    isTagType =
-      Lens.has ExprLens.exprTagType $
-      hiInferred holeInfo ^. Sugar.hiType
+  -- where
+  --   isTagType =
+  --     Lens.has ExprLens.exprTagType $
+  --     hiInferred holeInfo ^. Sugar.hiType
 
 makeAllGroups :: MonadA m => HoleInfo m -> T m [GroupM m]
 makeAllGroups holeInfo = do
   Scope
     { _scopeLocals = locals
     , _scopeGlobals = globals
-    , _scopeTags = tags
+    -- , _scopeTags = tags
     , _scopeGetParams = getParams
     } <- hiActions holeInfo ^. Sugar.holeScope
   let
@@ -387,13 +359,11 @@ makeAllGroups holeInfo = do
       [ primitiveGroups holeInfo
       , localsGroups
       , globalsGroups
-      , tagsGroups
       , getParamsGroups
       ]
     sortedGroups f  = sortOn (^. groupSearchTerms . searchTerms) . map f
     localsGroups    = sortedGroups getVarsToGroup locals
     globalsGroups   = sortedGroups getVarsToGroup globals
-    tagsGroups      = sortedGroups tagsToGroup tags
     getParamsGroups = sortedGroups getParamsToGroup getParams
   pure $ holeMatches (^. groupSearchTerms) (hiSearchTerm holeInfo) allGroups
   where
@@ -426,23 +396,23 @@ primitiveGroups holeInfo =
     ExprUtil.makePi (Guid.fromString "NewPi") pureHole pureHole
   , mkGroupBody False "Lambda" ["\\", "Lambda", "Λ", "λ"] $
     ExprUtil.makeLambda (Guid.fromString "NewLambda") pureHole pureHole
-  , mkGroupBody False "GetField" [".", "Get Field"] . Expr.VGetField $
-    Expr.GetField pureHole pureHole
+  -- , mkGroupBody False "GetField" [".", "Get Field"] . Expr.VGetField $
+  --   Expr.GetField pureHole pureHole
   , mkGroupBody True "Type" ["Type"] $ Expr.VLeaf Expr.Type
   , mkGroupBody True "Integer" ["Integer", "ℤ", "Z"] $ Expr.VLeaf Expr.IntegerType
-  , Group "RecValue" (SearchTerms ["Record Value", "{"] (Any False)) .
-    fromMaybe (record Expr.KVal) . ExprUtil.recordValForm .
-    void $ hiInferred holeInfo ^. Sugar.hiType
-  , Group "RecType" (SearchTerms ["Record Type", "{"] (Any False)) $
-    record Expr.KType
+  -- , Group "RecValue" (SearchTerms ["Record Value", "{"] (Any False)) .
+  --   fromMaybe (record Expr.KVal) . ExprUtil.recordValForm .
+  --   void $ hiInferred holeInfo ^. Sugar.hiType
+  -- , Group "RecType" (SearchTerms ["Record Type", "{"] (Any False)) $
+  --   record Expr.KType
   ]
   where
     searchTerm = hiSearchTerm holeInfo
-    record k =
-      ExprUtil.pureExpr . Expr.VRec . Expr.Record k $
-      case hiMArgument holeInfo of
-      Nothing -> []
-      Just _ -> [(pureHole, pureHole)]
+    -- record k =
+    --   ExprUtil.pureExpr . Expr.VRec . Expr.Record k $
+    --   case hiMArgument holeInfo of
+    --   Nothing -> []
+    --   Just _ -> [(pureHole, pureHole)]
     mkGroupBody highPrecedence gId terms body = Group
       { _groupId = gId
       , _groupSearchTerms = SearchTerms terms (Any highPrecedence)

@@ -1,9 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Infer.Rule.Types
   ( RuleRef
-  , GetFieldPhase0(..), gf0GetFieldTag, gf0GetFieldType
-  , GetFieldPhase1(..), gf1GetFieldRecordTypeFields, gf1GetFieldType
-  , GetFieldPhase2(..), gf2Tag, gf2TagRef, gf2TypeRef, gf2MaybeMatchers
   , ExprLink(..), applyExprLinkDest, applyExprLinkDestAncestors
   , Apply(..), aPiGuid, aArgVal, aLinkedExprs, aLinkedNames
   , Uncircumsize(..), uValRef, uApplicantValRef, uUncircumsizedBody
@@ -26,37 +23,6 @@ import Lamdu.Infer.RefData (LoadedBody)
 import Lamdu.Infer.RefTags (ExprRef, TagExpr, RuleRef, TagRule, ParamRef, TagParam)
 import qualified Control.Lens as Lens
 import qualified Data.OpaqueRef as OR
-
--- We know of a GetField, waiting to know the record type:
-data GetFieldPhase0 def = GetFieldPhase0
-  { _gf0GetFieldTag :: ExprRef def
-  , _gf0GetFieldType :: ExprRef def
-  -- trigger on record type, no need for Ref
-  } deriving Show
-Lens.makeLenses ''GetFieldPhase0
-derive makeBinary ''GetFieldPhase0
-
--- We know of a GetField and the record type, waiting to know the
--- GetField tag:
-data GetFieldPhase1 def = GetFieldPhase1
-  { _gf1GetFieldRecordTypeFields :: [(ExprRef def, ExprRef def)]
-  , _gf1GetFieldType :: ExprRef def
-  -- trigger on getfield tag, no need for Ref
-  } deriving Show
-Lens.makeLenses ''GetFieldPhase1
-derive makeBinary ''GetFieldPhase1
-
--- We know of a GetField and the record type, waiting to know the
--- GetField tag (trigger on getfield tag):
-data GetFieldPhase2 def = GetFieldPhase2
-  { _gf2Tag :: Guid
-  , _gf2TagRef :: ExprRef def
-  , _gf2TypeRef :: ExprRef def
-  , -- Maps Refs of tags to Refs of their field types
-    _gf2MaybeMatchers :: OR.RefMap (TagExpr def) (ExprRef def)
-  } deriving Show
-Lens.makeLenses ''GetFieldPhase2
-derive makeBinary ''GetFieldPhase2
 
 data ExprLink def = ExprLink
   { _applyExprLinkDest :: ExprRef def
@@ -90,9 +56,6 @@ derive makeBinary ''Uncircumsize
 
 data RuleContent def
   = RuleVerifyTag
-  | RuleGetFieldPhase0 (GetFieldPhase0 def)
-  | RuleGetFieldPhase1 (GetFieldPhase1 def)
-  | RuleGetFieldPhase2 (GetFieldPhase2 def)
   | RuleApply (Apply def)
   | RuleUncircumsize (Uncircumsize def)
   deriving Show

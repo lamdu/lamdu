@@ -2,7 +2,7 @@ module Lamdu.Sugar.Convert.Apply
   ( convert
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
+import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
@@ -77,15 +77,14 @@ convertLabeled ::
 convertLabeled funcS argS argI exprPl = do
   Record KVal fields <- maybeToMPlus $ argS ^? rBody . _BodyRecord
   let
-    getArg field = do
-      tagG <- maybeToMPlus $ field ^? rfTag . rBody . _BodyTag
-      pure AnnotatedArg
-        { _aaTag = tagG
-        , _aaTagExprGuid = field ^. rfTag . rPayload . plGuid
+    getArg field =
+      AnnotatedArg
+        { _aaTag = field ^. rfTag
+        , _aaTagExprGuid =
+          Guid.combine (argS ^. rPayload . plGuid) (field ^. rfTag . tagGuid)
         , _aaExpr = field ^. rfExpr
         }
-  args@(arg0 : args1toN@(arg1 : args2toN)) <-
-    traverse getArg $ fields ^. flItems
+  let args@(arg0 : args1toN@(arg1 : args2toN)) = map getArg $ fields ^. flItems
   let
     tagGuids = args ^.. Lens.traversed . aaTag . tagGuid
   guard $ noRepetitions tagGuids
@@ -103,11 +102,7 @@ convertLabeled funcS argS argI exprPl = do
     }
     & lift . ConvertExpr.make exprPl
     <&> rPayload %~
-      ( plData <>~
-        mappend
-        (argS ^. rPayload . plData)
-        (fields ^. flItems . Lens.traversed . rfTag . rPayload . plData)
-      ) .
+      ( plData <>~ (argS ^. rPayload . plData) ) .
       ( plActions . Lens._Just . mSetToInnerExpr .~ do
         stored <- exprPl ^. ipStored
         fieldsI <- argI ^? Expr.eBody . Expr._VRec . Expr.recordFields

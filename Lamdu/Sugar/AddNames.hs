@@ -294,6 +294,48 @@ toLam lam@Lam {..} = do
       KVal | not _lIsDep -> NameGen.Independent
       _ -> NameGen.Dependent
 
+toTagG :: MonadNaming m => TagG (OldName m) -> m (TagG (NewName m))
+toTagG tagG@TagG {..} = do
+  name <- opGetTagName _tagGuid _tagName
+  pure tagG { _tagName = name }
+
+toRecordField ::
+  (MonadA tm, MonadNaming m) =>
+  RecordField (OldName m) tm (Expression (OldName m) tm a) ->
+  m (RecordField (NewName m) tm (Expression (NewName m) tm a))
+toRecordField recordField@RecordField {..} = do
+  tag <- toTagG _rfTag
+  expr <- toExpression _rfExpr
+  pure recordField
+    { _rfTag = tag
+    , _rfExpr = expr
+    }
+
+toFieldList ::
+  (MonadA tm, MonadNaming m) =>
+  FieldList (OldName m) tm (Expression (OldName m) tm a) ->
+  m (FieldList (NewName m) tm (Expression (NewName m) tm a))
+toFieldList fieldList@FieldList {..} = do
+  items <- traverse toRecordField _flItems
+  pure fieldList { _flItems = items }
+
+toRecord ::
+  (MonadA tm, MonadNaming m) =>
+  Record (OldName m) tm (Expression (OldName m) tm a) ->
+  m (Record (NewName m) tm (Expression (NewName m) tm a))
+toRecord record@Record {..} = do
+  fields <- toFieldList _rFields
+  pure record { _rFields = fields }
+
+toGetField ::
+  (MonadA tm, MonadNaming m) =>
+  GetField (OldName m) (Expression (OldName m) tm a) ->
+  m (GetField (NewName m) (Expression (NewName m) tm a))
+toGetField getField@GetField {..} = do
+  record <- toExpression _gfRecord
+  tag <- toTagG _gfTag
+  pure getField { _gfRecord = record, _gfTag = tag }
+
 toScope :: MonadNaming m => Scope (OldName m) tm -> m (Scope (NewName m) tm)
 toScope (Scope l g t p) =
   Scope
@@ -398,16 +440,15 @@ toBody ::
   Body (OldName m) tm (Expression (OldName m) tm a) ->
   m (Body (NewName m) tm (Expression (NewName m) tm a))
 toBody (BodyList x)           = traverseToExpr BodyList x
-toBody (BodyRecord x)         = traverseToExpr BodyRecord x
-toBody (BodyGetField x)       = traverseToExpr BodyGetField x
 toBody (BodyLiteralInteger x) = pure $ BodyLiteralInteger x
 toBody (BodyAtom x)           = pure $ BodyAtom x
 --
+toBody (BodyGetField x) = BodyGetField <$> toGetField x
+toBody (BodyRecord x) = BodyRecord <$> toRecord x
 toBody (BodyLam x) = BodyLam <$> toLam x
 toBody (BodyApply x) = BodyApply <$> toApply x
 toBody (BodyHole x) = BodyHole <$> toHole x
 toBody (BodyCollapsed x) = BodyCollapsed <$> toCollapsed x
-toBody (BodyTag x) = BodyTag <$> toTag x
 toBody (BodyGetVar x) = BodyGetVar <$> toGetVar x
 toBody (BodyGetParams x) = BodyGetParams <$> toGetParams x
 

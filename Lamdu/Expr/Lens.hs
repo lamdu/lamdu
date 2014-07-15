@@ -18,7 +18,6 @@ module Lamdu.Expr.Lens
   , bodyDefinitionRef, exprDefinitionRef
   , bodyVLiteralInteger, exprVLiteralInteger
   , bodyHole, exprHole
-  , bodyTag, exprTag
   , bodyType, exprType
   , bodyIntegerType, exprIntegerType
   , bodyTagType, exprTagType
@@ -33,7 +32,6 @@ import Lamdu.Expr
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Data.Store.Guid (Guid)
 import Data.Traversable (traverse)
 import qualified Control.Lens as Lens
 
@@ -53,7 +51,7 @@ exprGetField = eBody . _VGetField
 exprLeaf :: Lens.Traversal' (Expr def par a) (Leaf def par)
 exprLeaf = eBody . _VLeaf
 
-exprKindedRecordFields :: Kind -> Lens.Traversal' (Expr def par a) [(Expr def par a, Expr def par a)]
+exprKindedRecordFields :: Kind -> Lens.Traversal' (Expr def par a) [(Tag, Expr def par a)]
 exprKindedRecordFields k = eBody . bodyKindedRecordFields k
 
 exprKindedLam ::
@@ -61,9 +59,6 @@ exprKindedLam ::
   Lens.Traversal' (Expr def par a)
   (par, Expr def par a, Expr def par a)
 exprKindedLam k = eBody . bodyKindedLam k
-
-exprTag :: Lens.Traversal' (Expr def par a) Guid
-exprTag = eBody . bodyTag
 
 exprParameterRef :: Lens.Traversal' (Expr def par a) par
 exprParameterRef = eBody . bodyParameterRef
@@ -189,9 +184,6 @@ bodyVVar = _VLeaf . _VVar
 bodyHole :: Lens.Prism' (Body def par expr) ()
 bodyHole = _VLeaf . _VHole
 
-bodyTag :: Lens.Prism' (Body def par expr) Guid
-bodyTag = _VLeaf . _Tag
-
 bodyType :: Lens.Prism' (Body def par expr) ()
 bodyType = _VLeaf . _Type
 
@@ -202,7 +194,7 @@ bodyTagType :: Lens.Prism' (Body def par expr) ()
 bodyTagType = _VLeaf . _TagType
 
 kindedRecordFields ::
-  Kind -> Lens.Prism' (Record a) [(a, a)]
+  Kind -> Lens.Prism' (Record a) [(Tag, a)]
 kindedRecordFields k0 = Lens.prism' to from
   where
     to = Record k0
@@ -222,7 +214,7 @@ kindedLam k = Lens.prism' toLam fromLam
 bodyKindedLam :: Kind -> Lens.Prism' (Body def par expr) (par, expr, expr)
 bodyKindedLam k = _VAbs . kindedLam k
 
-bodyKindedRecordFields :: Kind -> Lens.Prism' (Body def par expr) [(expr, expr)]
+bodyKindedRecordFields :: Kind -> Lens.Prism' (Body def par expr) [(Tag, expr)]
 bodyKindedRecordFields k = _VRec . kindedRecordFields k
 
 -- Pure expressions:

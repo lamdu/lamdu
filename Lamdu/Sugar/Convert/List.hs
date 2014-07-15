@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 module Lamdu.Sugar.Convert.List
   ( convert
   ) where
@@ -10,7 +11,7 @@ import Control.Monad.Trans.Either.Utils (justToLeft, leftToJust)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.MonadA (MonadA)
 import Data.Maybe.Utils (maybeToMPlus)
-import Data.Monoid (First(..), Monoid(..), (<>))
+import Data.Monoid (Monoid(..), (<>))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable1)
@@ -102,29 +103,24 @@ mkListItem listItemExpr recordArgS exprPl tailI mAddNextItem =
 guardHeadTailTags ::
   MonadPlus m =>
   Anchors.SpecialFunctions t ->
-  Lens.Getting (First Guid) s Guid ->
-  s -> s -> m ()
-guardHeadTailTags specialFunctions tagLens hd tl = do
-  guardTag Anchors.sfHeadTag hd
-  guardTag Anchors.sfTailTag tl
-  where
-    guardTag tag x =
-      guard . (== tag specialFunctions) =<<
-      maybeToMPlus (x ^? tagLens)
+  Guid -> Guid -> m ()
+guardHeadTailTags Anchors.SpecialFunctions{..} hd tl = do
+  guard $ sfHeadTag == hd
+  guard $ sfTailTag == tl
 
 getSugaredHeadTail ::
   (MonadPlus m, Monoid a) =>
   Anchors.SpecialFunctions t ->
   ExpressionU f a ->
-  m (a, ExpressionU f a, ExpressionU f a)
+  m (ExpressionU f a, ExpressionU f a)
 getSugaredHeadTail specialFunctions argS = do
   Record KVal (FieldList [headField, tailField] _) <-
     maybeToMPlus $ argS ^? rBody . _BodyRecord
   guardHeadTailTags specialFunctions
-    (rfTag . rBody . _BodyTag . tagGuid) headField tailField
+    (headField ^. rfTag . tagGuid)
+    (tailField ^. rfTag . tagGuid)
   return
-    ( [headField, tailField] ^. Lens.traversed . rfTag . rPayload . plData
-    , headField ^. rfExpr
+    ( headField ^. rfExpr
     , tailField ^. rfExpr
     )
 
@@ -136,7 +132,9 @@ getExprHeadTail ::
 getExprHeadTail specialFunctions argI = do
   [(headTagI, headExprI), (tailTagI, tailExprI)] <-
     maybeToMPlus $ argI ^? ExprLens.exprKindedRecordFields KVal
-  guardHeadTailTags specialFunctions ExprLens.exprTag headTagI tailTagI
+  guardHeadTailTags specialFunctions
+    (headTagI ^. Lens.from Expr.tag)
+    (tailTagI ^. Lens.from Expr.tag)
   return (headExprI, tailExprI)
 
 cons ::
@@ -145,7 +143,7 @@ cons ::
   MaybeT (ConvertM m) (ExpressionU m a)
 cons (Expr.Apply funcI argI) argS exprPl = do
   specialFunctions <- lift $ (^. ConvertM.scSpecialFunctions) <$> ConvertM.readContext
-  (hidden, headS, tailS) <- getSugaredHeadTail specialFunctions argS
+  (headS, tailS) <- getSugaredHeadTail specialFunctions argS
   (_headI, tailI) <- getExprHeadTail specialFunctions argI
   List innerValues innerListMActions nilGuid <- maybeToMPlus $ tailS ^? rBody . _BodyList
   guard $ isCons specialFunctions funcI
@@ -155,8 +153,7 @@ cons (Expr.Apply funcI argI) argS exprPl = do
       (addFirstItem <$> innerListMActions)
       & liExpr . rPayload . plData <>~
         (funcI ^. Lens.traversed . ipData <>
-         tailS ^. rPayload . plData <>
-         hidden)
+         tailS ^. rPayload . plData)
     mListActions = do
       exprS <- exprPl ^. ipStored
       innerListActions <- innerListMActions

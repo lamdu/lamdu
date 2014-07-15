@@ -95,13 +95,8 @@ afterPick holeInfo resultId pr = do
 makePaddedResult :: MonadA m => Result m -> ExprGuiM m (WidgetT m)
 makePaddedResult res = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  mkWidget (rId res) (rHoleResult res)
+  makeHoleResultWidget (rId res) (rHoleResult res)
     <&> (Widget.pad . fmap realToFrac . Config.holeResultPadding) config
-  where
-    mkWidget =
-      case rInfo res of
-      HoleResults.ResultInfoNewTag -> makeNewTagResultWidget
-      HoleResults.ResultInfoNormal -> makeHoleResultWidget
 
 makeShownResult ::
   MonadA m => HoleInfo m -> Result m -> ExprGuiM m (Widget (T m), ShownResult m)
@@ -238,20 +233,20 @@ toPayload (ExprGuiM.StoredGuids guids, ExprGuiM.Injected injected) =
   , ExprGuiM._plHoleGuids = ExprGuiM.emptyHoleGuids
   }
 
-asNewLabelScaleFactor :: Fractional a => a
-asNewLabelScaleFactor = 0.5
+-- asNewLabelScaleFactor :: Fractional a => a
+-- asNewLabelScaleFactor = 0.5
 
-makeNewTagResultWidget ::
-  MonadA m =>
-  Widget.Id -> Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl ->
-  ExprGuiM m (WidgetT m)
-makeNewTagResultWidget resultId holeResult = do
-  widget <- makeHoleResultWidget resultId holeResult
-  ExprGuiM.widgetEnv $ do
-    label <-
-      fmap (Widget.scale asNewLabelScaleFactor) .
-      BWidgets.makeLabel " (as new tag)" $ Widget.toAnimId resultId
-    return $ Box.hboxAlign 0.5 [widget, label]
+-- makeNewTagResultWidget ::
+--   MonadA m =>
+--   Widget.Id -> Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl ->
+--   ExprGuiM m (WidgetT m)
+-- makeNewTagResultWidget resultId holeResult = do
+--   widget <- makeHoleResultWidget resultId holeResult
+--   ExprGuiM.widgetEnv $ do
+--     label <-
+--       fmap (Widget.scale asNewLabelScaleFactor) .
+--       BWidgets.makeLabel " (as new tag)" $ Widget.toAnimId resultId
+--     return $ Box.hboxAlign 0.5 [widget, label]
 
 makeNoResults :: MonadA m => HoleInfo m -> AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults holeInfo myId =

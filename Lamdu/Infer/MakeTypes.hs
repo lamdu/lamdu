@@ -7,7 +7,6 @@ import Data.Store.Guid (Guid)
 import Lamdu.Infer.Monad (Infer, Error(..))
 import Lamdu.Infer.RefData (Scope, LoadedBody, scopeNormalizeParamRefs)
 import Lamdu.Infer.RefTags (ExprRef)
-import Lamdu.Infer.Rule (verifyTagId)
 import Lamdu.Infer.TypedValue (TypedValue(..), tvVal, tvType)
 import Lamdu.Infer.Unify (unify, forceLam, unifyBody)
 import qualified Control.Lens as Lens
@@ -21,9 +20,7 @@ import qualified Lamdu.Infer.Load as Load
 import qualified Lamdu.Infer.Monad as InferM
 import qualified Lamdu.Infer.RefData as RefData
 import qualified Lamdu.Infer.Rule.Apply as RuleApply
-import qualified Lamdu.Infer.Rule.GetField as RuleGetField
 import qualified Lamdu.Infer.Rule.Uncircumsize as RuleUncircumsize
-import qualified Lamdu.Infer.Trigger as Trigger
 
 scopeLookup :: Scope def -> Guid -> Infer def (ExprRef def)
 scopeLookup scope guid = do
@@ -77,17 +74,11 @@ makeApplyTV applyScope apply@(Expr.Apply func arg) dest = do
   RuleApply.make piGuid (arg ^. tvVal) piResultRef (dest ^. tvType)
   void . unify (dest ^. tvVal) =<< maybeCircumsize applyScope func (Expr.VApp apply)
 
-addTagVerification :: ExprRef def -> Infer def ()
-addTagVerification = Trigger.add [RefData.MustBeTag] Trigger.OnDirectlyTag verifyTagId
-
 makeGetFieldTV ::
   Ord def =>
   Scope def -> Expr.GetField (TypedValue def) -> TypedValue def ->
   Infer def ()
-makeGetFieldTV scope getField@(Expr.GetField record tag) dest = do
-  unifyBody (tag ^. tvType) scope (ExprLens.bodyTagType # ())
-  addTagVerification $ tag ^. tvVal
-  RuleGetField.make (tag ^. tvVal) (dest ^. tvType) (record ^. tvType)
+makeGetFieldTV scope getField@(Expr.GetField record _tag) dest = do
   void . unify (dest ^. tvVal) =<< maybeCircumsize scope record (Expr.VGetField getField)
 
 makeLambdaType ::
@@ -101,11 +92,9 @@ makeLambdaType scope paramGuid paramType result = do
 makeRecordType ::
   Ord def =>
   Expr.Kind -> Scope def ->
-  [(TypedValue def, TypedValue def)] ->
+  [(Expr.Tag, TypedValue def)] ->
   Infer def (LoadedBody def (ExprRef def))
 makeRecordType k scope fields = do
-  fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvType) (mkBody (ExprLens.bodyTagType # ()))
-  fields & Lens.traverseOf_ (Lens.traverse . Lens._1 . tvVal) addTagVerification
   when (k == Expr.KType) $
     fields & Lens.traverseOf_ (Lens.traverse . Lens._2 . tvType) (mkBody (ExprLens.bodyType # ()))
   return $
@@ -114,7 +103,7 @@ makeRecordType k scope fields = do
     Expr.KType -> ExprLens.bodyType # ()
   where
     mkBody body ref = unifyBody ref scope body
-    onRecVField (tag, val) = (tag ^. tvVal, val ^. tvType)
+    onRecVField (tag, val) = (tag, val ^. tvType)
 
 makeTV ::
   Ord def =>
@@ -132,9 +121,6 @@ makeTV scope body dest =
   Expr.VLeaf Expr.VLiteralInteger {} -> do
     loadGivenVal
     setType (ExprLens.bodyIntegerType # ())
-  Expr.VLeaf Expr.Tag {} -> do
-    loadGivenVal
-    setType (ExprLens.bodyTagType # ())
   -- GetPars
   Expr.VLeaf (Expr.VVar (Expr.DefinitionRef (Load.LoadedDef _ ref))) -> do
     loadGivenVal

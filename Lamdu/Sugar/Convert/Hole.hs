@@ -305,7 +305,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
   mconcat . (scopePar :) <$>
     mapM onScopeField
     (typeExpr ^..
-     ExprLens.exprKindedRecordFields KType . traverse . Lens._1 . ExprLens.exprTag)
+     ExprLens.exprKindedRecordFields KType . traverse . Lens._1 . Lens.from Expr.tag)
   where
     mkGetPar =
       case Map.lookup parGuid recordParamsMap of
@@ -334,7 +334,6 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
           ] }
     recordParamsMap = sugarContext ^. ConvertM.scRecordParamsInfos
     errorJumpTo = error "Jump to on scope item??"
-    exprTag = ExprUtil.pureExpr . Expr.VLeaf . Expr.Tag
     getParam = ExprLens.pureExpr . ExprLens.bodyParameterRef # parGuid
     onScopeField tGuid = do
       name <- ConvertExpr.getStoredName tGuid
@@ -347,7 +346,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
             , _gvVarType = GetFieldParameter
             }
           , ExprUtil.pureExpr . Expr.VGetField $
-            Expr.GetField getParam (exprTag tGuid)
+            Expr.GetField getParam (Expr.Tag tGuid)
           )
         ] }
 
@@ -378,19 +377,16 @@ getTag guid = do
       ( TagG
         { _tagGuid = guid
         , _tagName = name
-        }
-      , ExprLens.pureExpr . ExprLens.bodyTag # guid
-      )
+        }, Expr.Tag guid )
     ] }
+
+type JumpToDefAction m = T m Guid
 
 seedExprEnv ::
   MonadA m =>
   a -> Anchors.CodeProps m -> HoleResultSeed m a ->
-  T m (ExprIRef.ExprM m a, Maybe (T m Guid))
+  T m (ExprIRef.ExprM m a, Maybe (JumpToDefAction m))
 seedExprEnv _ _ (ResultSeedExpr expr) = pure (expr, Nothing)
-seedExprEnv emptyPl cp (ResultSeedNewTag name) = do
-  tag <- DataOps.makeNewPublicTag cp name
-  pure (emptyPl <$ ExprLens.pureExpr . ExprLens.bodyTag # tag, Nothing)
 seedExprEnv emptyPl cp (ResultSeedNewDefinition name) = do
   defI <- DataOps.newPublicDefinition cp name
   let jumpToDef =

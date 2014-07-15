@@ -115,12 +115,10 @@ addListItem specialFunctions exprP = do
   consI <-
     ExprIRef.newExprBody . ExprUtil.makeApply consTempI =<< newHole
   newItemI <- newHole
-  headTag <- ExprIRef.newExprBody $ ExprLens.bodyTag # Anchors.sfHeadTag specialFunctions
-  tailTag <- ExprIRef.newExprBody $ ExprLens.bodyTag # Anchors.sfTailTag specialFunctions
   argsI <-
     ExprIRef.newExprBody $ ExprLens.bodyKindedRecordFields Expr.KVal #
-      [ (headTag, newItemI)
-      , (tailTag, Property.value exprP)
+      [ (Expr.Tag (Anchors.sfHeadTag specialFunctions), newItemI)
+      , (Expr.Tag (Anchors.sfTailTag specialFunctions), Property.value exprP)
       ]
   newListI <- ExprIRef.newExprBody $ ExprUtil.makeApply consI argsI
   Property.set exprP newListI

@@ -45,13 +45,6 @@ remember rep restrictions refData trigger ruleId = do
     _fromJust "Trigger.remember to missing rule" .
     Rule.ruleTriggersIn <>= OR.refSetSingleton rep
 
-checkDirectlyTag :: RefData def -> Maybe (Fired def)
-checkDirectlyTag refData
-  | Lens.has (RefData.rdBody . ExprLens.bodyTag) refData = Just $ FiredDirectlyTag True
-  | refData ^. RefData.rdWasNotDirectlyTag . Lens._Wrapped'
-  || Lens.nullOf (RefData.rdBody . ExprLens.bodyHole) refData = Just $ FiredDirectlyTag False
-  | otherwise = Nothing
-
 checkParameterRef :: ParamRef def -> RefData def -> Infer def (Maybe (Fired def))
 checkParameterRef triggerGuidRef refData
   | Lens.nullOf (RefData.rdScope . RefData.scopeParamRefs) refData =
@@ -88,7 +81,6 @@ checkKnownBody refData
 checkTrigger :: RefData def -> Trigger def -> Infer def (Maybe (Fired def))
 checkTrigger refData trigger =
   case trigger of
-  OnDirectlyTag -> return $ checkDirectlyTag refData
   OnKnownBody -> return $ checkKnownBody refData
   OnParameterRef triggerGuidRef -> checkParameterRef triggerGuidRef refData
   OnUnify -> return Nothing -- unification trigger is handled in unify

@@ -4,11 +4,11 @@ module Lamdu.Sugar.Convert
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
-import Control.Lens (LensLike, Lens')
+-- import Control.Lens (LensLike, Lens')
 import Control.Lens.Operators
 import Control.Monad (guard, void)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (StateT(..))
+-- import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Foldable (traverse_)
 import Data.Map (Map)
@@ -70,8 +70,8 @@ isGetFieldParam param tagG =
   p . (^? ExprLens.exprGetField)
   where
     p Nothing = False
-    p (Just (Expr.GetField record tag)) =
-      Lens.anyOf ExprLens.exprTag (== tagG) tag &&
+    p (Just (Expr.GetField record (Expr.Tag tGuid))) =
+      tGuid == tagG &&
       Lens.anyOf ExprLens.exprParameterRef (== param) record
 
 deleteParamRef ::
@@ -114,7 +114,7 @@ mkPositionalFuncParamActions param lambdaProp body =
   , _fpGetExample = pure $ fakeExample param
   }
 
-getStoredNameS :: MonadA m => Guid -> ConvertM m (Maybe String)
+getStoredNameS :: MonadA m => Guid -> ConvertM m MStoredName
 getStoredNameS = ConvertM.liftTransaction . ConvertExpr.getStoredName
 
 addFuncParamName ::
@@ -236,12 +236,8 @@ convertVLiteralInteger ::
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertVLiteralInteger i exprPl = ConvertExpr.make exprPl $ BodyLiteralInteger i
 
-convertTag ::
-  (MonadA m, Typeable1 m) => Guid ->
-  InputPayload m a -> ConvertM m (ExpressionU m a)
-convertTag tag exprPl = do
-  name <- getStoredNameS tag
-  ConvertExpr.make exprPl . BodyTag $ TagG tag name
+convertTag :: (MonadA m, Typeable1 m) => Expr.Tag -> ConvertM m (TagG MStoredName)
+convertTag (Expr.Tag tGuid) = TagG tGuid <$> getStoredNameS tGuid
 
 convertAtom ::
   (MonadA m, Typeable1 m) => String ->
@@ -249,75 +245,69 @@ convertAtom ::
 convertAtom str exprPl =
   ConvertExpr.make exprPl $ BodyAtom str
 
-sideChannel ::
-  Monad m =>
-  Lens' s a ->
-  LensLike m s (side, s) a (side, a)
-sideChannel lens f s = (`runStateT` s) . Lens.zoom lens $ StateT f
+-- sideChannel :: Monad m => Lens' s a -> LensLike m s (side, s) a (side, a)
+-- sideChannel lens f s = (`runStateT` s) . Lens.zoom lens $ StateT f
 
-writeRecordFields ::
-  MonadA m =>
-  ExprIRef.ExprIM m -> result ->
-  ( [(ExprIRef.ExprIM m, ExprIRef.ExprIM m)] ->
-    T m
-    ( result
-    , [(ExprIRef.ExprIM m, ExprIRef.ExprIM m)]
-    )
-  ) ->
-  T m result
-writeRecordFields iref def f = do
-  oldBody <- ExprIRef.readExprBody iref
-  case oldBody ^? Expr._VRec of
-    Nothing -> return def
-    Just oldRecord -> do
-      (res, newRecord) <-
-        sideChannel Expr.recordFields f oldRecord
-      ExprIRef.writeExprBody iref $ Expr.VRec newRecord
-      return res
+-- writeRecordFields ::
+--   MonadA m =>
+--   ExprIRef.ExprIM m -> result ->
+--   ( [(Expr.Tag, ExprIRef.ExprIM m)] ->
+--     T m
+--     ( result
+--     , [(Expr.Tag, ExprIRef.ExprIM m)]
+--     )
+--   ) ->
+--   T m result
+-- writeRecordFields iref def f = do
+--   oldBody <- ExprIRef.readExprBody iref
+--   case oldBody ^? Expr._VRec of
+--     Nothing -> return def
+--     Just oldRecord -> do
+--       (res, newRecord) <- sideChannel Expr.recordFields f oldRecord
+--       ExprIRef.writeExprBody iref $ Expr.VRec newRecord
+--       return res
 
-recordFieldActions ::
-  MonadA m => Guid -> ExprIRef.ExprIM m -> ExprIRef.ExprIM m ->
-  ListItemActions m
-recordFieldActions defaultGuid exprIRef iref =
-  ListItemActions
-  { _itemDelete = action delete
-  , _itemAddNext = action addNext
-  }
-  where
-    action f = writeRecordFields iref defaultGuid $ splitFields f
-    addNext (prevFields, field, nextFields) = do
-      tagHole <- DataOps.newHole
-      exprHole <- DataOps.newHole
-      return
-        ( ExprIRef.exprGuid tagHole
-        , prevFields ++ field : (tagHole, exprHole) : nextFields
-        )
-    delete (prevFields, _, nextFields) =
-      return
-      ( case nextFields ++ reverse prevFields of
-        [] -> defaultGuid
-        ((nextTagExpr, _) : _) -> ExprIRef.exprGuid nextTagExpr
-      , prevFields ++ nextFields
-      )
-    splitFields f oldFields =
-      case break ((== exprIRef) . fst) oldFields of
-      (prevFields, field : nextFields) -> f (prevFields, field, nextFields)
-      _ -> return (defaultGuid, oldFields)
+-- recordFieldActions ::
+--   MonadA m => Guid -> ExprIRef.ExprIM m -> ExprIRef.ExprIM m ->
+--   ListItemActions m
+-- recordFieldActions defaultGuid exprIRef iref =
+--   ListItemActions
+--   { _itemDelete = action delete
+--   , _itemAddNext = action addNext
+--   }
+--   where
+--     action f = writeRecordFields iref defaultGuid $ splitFields f
+--     addNext (prevFields, field, nextFields) = do
+--       tagHole <- DataOps.newHole
+--       exprHole <- DataOps.newHole
+--       return
+--         ( ExprIRef.exprGuid tagHole
+--         , prevFields ++ field : (tagHole, exprHole) : nextFields
+--         )
+--     delete (prevFields, _, nextFields) =
+--       return
+--       ( case nextFields ++ reverse prevFields of
+--         [] -> defaultGuid
+--         ((nextTagExpr, _) : _) -> ExprIRef.exprGuid nextTagExpr
+--       , prevFields ++ nextFields
+--       )
+--     splitFields f oldFields =
+--       case break ((== exprIRef) . fst) oldFields of
+--       (prevFields, field : nextFields) -> f (prevFields, field, nextFields)
+--       _ -> return (defaultGuid, oldFields)
 
 convertField ::
   (Typeable1 m, MonadA m, Monoid a) =>
   Maybe (ExprIRef.ExprIM m) -> Guid ->
-  ( InputExpr m a
-  , InputExpr m a
-  ) ->
-  ConvertM m (RecordField m (ExpressionU m a))
-convertField mIRef defaultGuid (tagExpr, expr) = do
-  tagExprS <- ConvertM.convertSubexpression tagExpr
+  (Expr.Tag, InputExpr m a) ->
+  ConvertM m (RecordField MStoredName m (ExpressionU m a))
+convertField _mIRef _defaultGuid (tag, expr) = do
+  tagS <- convertTag tag
   exprS <- ConvertM.convertSubexpression expr
   return RecordField
-    { _rfMItemActions =
-      recordFieldActions defaultGuid <$> tagExpr ^? SugarInfer.exprIRef <*> mIRef
-    , _rfTag = tagExprS
+    { _rfMItemActions = error "TODO: rfMItemActions"
+ --      recordFieldActions defaultGuid <$> tagExpr ^? SugarInfer.exprIRef <*> mIRef
+    , _rfTag = tagS
     , _rfExpr = exprS
     }
 
@@ -332,30 +322,27 @@ convertRecord (Expr.Record k fields) exprPl = do
     { _rKind = k
     , _rFields =
         FieldList
-        { _flItems =
-            sFields
-            <&> rfTag . rPayload .
-                plActions . Lens._Just . wrap .~ WrapNotAllowed -- Tag cannot be wrapped
-        , _flMAddFirstItem = addField <$> exprPl ^? SugarInfer.plIRef
+        { _flItems = sFields
+        , _flMAddFirstItem = error "TODO: _flMAddFirstItem" -- addField <$> exprPl ^? SugarInfer.plIRef
         }
     }
   where
     defaultGuid = exprPl ^. ipGuid
-    addField iref =
-      writeRecordFields iref defaultGuid $ \recordFields -> do
-        holeTagExpr <- DataOps.newHole
-        holeExpr <- DataOps.newHole
-        return
-          ( ExprIRef.exprGuid holeTagExpr
-          , (holeTagExpr, holeExpr) : recordFields
-          )
+    -- addField iref =
+    --   writeRecordFields iref defaultGuid $ \recordFields -> do
+    --     tag <- Expr.Tag <$> Transaction.newKey
+    --     holeExpr <- DataOps.newHole
+    --     return
+    --       ( ExprIRef.exprGuid holeTagExpr
+    --       , (tag, holeExpr) : recordFields
+    --       )
 
 convertGetField ::
   (MonadA m, Typeable1 m, Monoid a) =>
   Expr.GetField (InputExpr m a) ->
   InputPayload m a ->
   ConvertM m (ExpressionU m a)
-convertGetField (Expr.GetField recExpr tagExpr) exprPl = do
+convertGetField (Expr.GetField recExpr (Expr.Tag tGuid)) exprPl = do
   tagParamInfos <- (^. ConvertM.scTagParamInfos) <$> ConvertM.readContext
   let
     mkGetVar (tag, jumpTo) = do
@@ -367,26 +354,26 @@ convertGetField (Expr.GetField recExpr tagExpr) exprPl = do
         , _gvVarType = GetFieldParameter
         }
   mVar <- traverse mkGetVar $ do
-    tag <- tagExpr ^? ExprLens.exprTag
-    paramInfo <- Map.lookup tag tagParamInfos
+    paramInfo <- Map.lookup tGuid tagParamInfos
     param <- recExpr ^? ExprLens.exprParameterRef
     guard $ param == ConvertM.tpiFromParameters paramInfo
-    return (tag, ConvertM.tpiJumpTo paramInfo)
+    return (tGuid, ConvertM.tpiJumpTo paramInfo)
   ConvertExpr.make exprPl =<<
     case mVar of
     Just var ->
       return $ BodyGetVar var
-    Nothing ->
+    Nothing -> do
+      tName <- getStoredNameS tGuid
       traverse ConvertM.convertSubexpression
-      GetField
-      { _gfRecord = recExpr
-      , _gfTag = tagExpr
-      }
-      <&> gfTag %~
-          ( (rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed) -- Tag cannot be wrapped
-          . SugarRemoveTypes.successfulType
-          )
-      <&> BodyGetField
+        GetField
+        { _gfRecord = recExpr
+        , _gfTag =
+            TagG
+            { _tagGuid = tGuid
+            , _tagName = tName
+            }
+        }
+        <&> BodyGetField
 
 removeRedundantSubExprTypes :: Expression n m a -> Expression n m a
 removeRedundantSubExprTypes =
@@ -398,10 +385,8 @@ removeRedundantSubExprTypes =
   (_BodyApply . aFunc %~ remSuc) .
   (_BodyGetField . gfRecord %~ remSuc) .
   (_BodyLam . lResultType %~ remSuc) .
-  (_BodyRecord %~
-    (fields . rfTag %~ remSuc) .
-    (Lens.filtered ((== KType) . (^. rKind)) . fields . rfExpr %~ remSuc)
-  )
+  (_BodyRecord . Lens.filtered ((== KType) . (^. rKind)) . fields . rfExpr
+    %~ remSuc)
   where
     fields = rFields . flItems . Lens.traversed
     remSuc =
@@ -429,7 +414,6 @@ convertExpressionI ee =
   Expr.VGetField x -> convertGetField x
   Expr.VLeaf (Expr.VVar x) -> convertVVar x
   Expr.VLeaf (Expr.VLiteralInteger x) -> convertVLiteralInteger x
-  Expr.VLeaf (Expr.Tag x) -> convertTag x
   Expr.VLeaf Expr.VHole -> ConvertHole.convert
   Expr.VLeaf Expr.Type -> convertAtom "Type"
   Expr.VLeaf Expr.IntegerType -> convertAtom "Int"
@@ -486,7 +470,6 @@ data ConventionalParams m a = ConventionalParams
 
 data FieldParam m a = FieldParam
   { fpTagGuid :: Guid
-  , fpTagExpr :: InputExpr m a
   , fpFieldType :: InputExpr m a
   }
 
@@ -512,24 +495,24 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
   where
     lamGuid = lambdaExprI ^. SugarInfer.exprGuid
     mLambdaP = lambdaExprI ^. Expr.ePayload . ipStored
+    fpIdGuid = Guid.combine lamGuid . fpTagGuid
     mkParamInfo fp =
-      Map.singleton (fpTagGuid fp) . ConvertM.TagParamInfo paramGuid .
-      Guid.combine lamGuid $ fpTagGuid fp
+      Map.singleton (fpTagGuid fp) . ConvertM.TagParamInfo paramGuid $ fpIdGuid fp
     mkParam fp = do
       typeS <- ConvertM.convertSubexpression $ fpFieldType fp
-      let
-        guid = fpTagGuid fp
-        tagExprGuid = fpTagExpr fp ^. Expr.ePayload . ipGuid
+      let guid = fpTagGuid fp
       addFuncParamName FuncParam
         { _fpName = Nothing
         , _fpGuid = guid
-        , _fpId = Guid.combine lamGuid guid
-        , _fpAltIds = [tagExprGuid]
+        , _fpId = -- TOOD: Is this supposed to be the same?
+                  -- It used to be different: "Guid.combine lamGuid guid"
+                  fpIdGuid fp
+        , _fpAltIds = [] -- TODO: fpAltIds still needed?
         , _fpVarKind = FuncFieldParameter
         , _fpType = SugarRemoveTypes.successfulType typeS
         , _fpInferredType = getInferredVal $ fpFieldType fp
         , _fpMActions =
-          fpActions tagExprGuid
+          fpActions (fpIdGuid fp)
           <$> mLambdaP <*> mParamTypeI <*> mBodyStored
         }
     fpActions tagExprGuid lambdaP paramTypeI bodyStored =
@@ -542,7 +525,7 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
       , _fpGetExample = pure $ fakeExample tagExprGuid
       }
 
-type ExprField m = (ExprIRef.ExprIM m, ExprIRef.ExprIM m)
+type ExprField m = (Expr.Tag, ExprIRef.ExprIM m)
 rereadFieldParamTypes ::
   MonadA m =>
   Guid -> ExprIRef.ExprIM m ->
@@ -553,7 +536,7 @@ rereadFieldParamTypes tagExprGuid paramTypeI f = do
   let
     mBrokenFields =
       paramType ^? Expr._VRec . ExprLens.kindedRecordFields KType .
-      (Lens.to . break) ((tagExprGuid ==) . ExprIRef.exprGuid . fst)
+      (Lens.to . break) ((Expr.Tag tagExprGuid ==) . fst)
   case mBrokenFields of
     Just (prevFields, theField : nextFields) -> f prevFields theField nextFields
     _ -> return tagExprGuid
@@ -569,10 +552,9 @@ addFieldParamAfter lamGuid tagExprGuid paramTypeI =
   rereadFieldParamTypes tagExprGuid paramTypeI $
   \prevFields theField nextFields -> do
     fieldGuid <- Transaction.newKey
-    tagExprI <- ExprIRef.newExprBody $ ExprLens.bodyTag # fieldGuid
     holeTypeI <- DataOps.newHole
     rewriteFieldParamTypes paramTypeI $
-      prevFields ++ theField : (tagExprI, holeTypeI) : nextFields
+      prevFields ++ theField : (Expr.Tag fieldGuid, holeTypeI) : nextFields
     pure $ Guid.combine lamGuid fieldGuid
 
 delFieldParam ::
@@ -580,19 +562,11 @@ delFieldParam ::
   Stored m -> LoadedExpr m (Stored m) -> T m Guid
 delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored =
   rereadFieldParamTypes tagExprGuid paramTypeI $
-  \prevFields (tagExprI, _) nextFields -> do
-    tagExpr <- ExprIRef.readExprBody tagExprI
-    case tagExpr ^? ExprLens.bodyTag of
-      Just tagG -> deleteFieldParamRef paramGuid tagG bodyStored
-      Nothing -> return ()
+  \prevFields ((Expr.Tag tagG), _) nextFields -> do
+    deleteFieldParamRef paramGuid tagG bodyStored
     case prevFields ++ nextFields of
       [] -> error "We were given fewer than 2 field params, which should never happen"
-      [(fieldTagI, fieldTypeI)] -> do
-        fieldTag <- ExprIRef.readExprBody fieldTagI
-        let
-          fieldTagGuid =
-            fromMaybe (error "field params always have proper Tag expr") $
-            fieldTag ^? ExprLens.bodyTag
+      [(Expr.Tag fieldTagGuid, fieldTypeI)] -> do
         ExprIRef.writeExprBody (Property.value lambdaP) $
           ExprUtil.makeLambda fieldTagGuid fieldTypeI bodyI
         deleteParamRef paramGuid bodyStored
@@ -605,19 +579,14 @@ delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored =
         pure $ Guid.combine lamGuid fieldTagGuid
       newFields -> do
         rewriteFieldParamTypes paramTypeI newFields
-        dest prevFields nextFields
+        pure $ dest prevFields nextFields
   where
     lamGuid = ExprIRef.exprGuid $ Property.value lambdaP
     bodyI = bodyStored ^. Expr.ePayload . Property.pVal
     dest prevFields nextFields =
-      fromMaybe (ExprIRef.exprGuid bodyI) . listToMaybe <$>
-      traverse (getParamGuidFromTagExprI . fst)
-      (nextFields ++ reverse prevFields)
-    getParamGuidFromTagExprI tagExprI = do
-      tagExpr <- ExprIRef.readExprBody tagExprI
-      pure . Guid.combine lamGuid .
-        fromMaybe (error "field param must have tags") $
-        tagExpr ^? ExprLens.bodyTag
+      fromMaybe (ExprIRef.exprGuid bodyI) . listToMaybe $
+      map (getParamGuidFromTagExprI . fst) $ nextFields ++ reverse prevFields
+    getParamGuidFromTagExprI (Expr.Tag tGuid) = Guid.combine lamGuid tGuid
 
 -- | Convert a (potentially stored) param type hole with inferred val
 -- to the unstored inferred val
@@ -663,13 +632,14 @@ convertDefinitionParams recordParamsInfo usedTags expr =
       case paramType ^. Expr.eBody of
       Expr.VRec (Expr.Record KType fields)
         | ListUtils.isLengthAtLeast 2 fields
-        , Just fieldParams <- traverse makeFieldParam fields
         , all ((`notElem` usedTags) . fpTagGuid) fieldParams -> do
           convParams <-
             mkRecordParams recordParamsInfo paramGuid fieldParams
             expr (origParamType ^? SugarInfer.exprIRef)
             (traverse (^. ipStored) body)
           return ([], convParams, body)
+        where
+          fieldParams = map makeFieldParam fields
       _ ->
         pure
         ( []
@@ -681,19 +651,17 @@ convertDefinitionParams recordParamsInfo usedTags expr =
     stored =
       fromMaybe (error "Definition body is always stored!") $
       expr ^. SugarInfer.exprStored
-    makeFieldParam (tagExpr, typeExpr) = do
-      fieldTagGuid <- tagExpr ^? ExprLens.exprTag
-      pure FieldParam
-        { fpTagGuid = fieldTagGuid
-        , fpTagExpr = tagExpr
-        , fpFieldType = typeExpr
-        }
+    makeFieldParam (Expr.Tag fieldTagGuid, typeExpr) =
+      FieldParam
+      { fpTagGuid = fieldTagGuid
+      , fpFieldType = typeExpr
+      }
 
 singleConventionalParam ::
   MonadA m =>
   Stored m -> FuncParam MStoredName m (ExpressionU m a) ->
   Guid -> InputExpr m a -> InputExpr m a -> ConventionalParams m a
-singleConventionalParam lamProp existingParam existingParamGuid existingParamType body =
+singleConventionalParam _lamProp existingParam existingParamGuid existingParamType body =
   ConventionalParams
   { cpTags = []
   , cpParamInfos = Map.empty
@@ -706,37 +674,37 @@ singleConventionalParam lamProp existingParam existingParamGuid existingParamTyp
   , cpHiddenPayloads = []
   }
   where
-    existingParamTag = ExprLens.bodyTag # existingParamGuid
-    existingParamTypeIRef =
+    _existingParamTag = Expr.Tag existingParamGuid
+    _existingParamTypeIRef =
       fromMaybe (error "Only stored record param type is converted as record") $
       existingParamType ^? SugarInfer.exprIRef
-    bodyWithStored =
+    _bodyWithStored =
       fromMaybe (error "Definition body should be stored") $
       traverse (^. ipStored) body
-    addSecondParam mkFields = do
-      existingParamTagI <- ExprIRef.newExprBody existingParamTag
-      let existingParamField = (existingParamTagI, existingParamTypeIRef)
-      (newTagGuid, newParamField) <- newField
-      newParamTypeI <-
-        ExprIRef.newExprBody . Expr.VRec . Expr.Record KType $
-        mkFields existingParamField newParamField
-      newParamsGuid <- Transaction.newKey
-      ExprIRef.writeExprBody (Property.value lamProp) $
-        ExprUtil.makeLambda newParamsGuid newParamTypeI .
-        Property.value $ bodyWithStored ^. Expr.ePayload
-      let
-        toGetField iref = do
-          recordRef <- ExprIRef.newExprBody $ ExprLens.bodyParameterRef # newParamsGuid
-          tagRef <- ExprIRef.newExprBody existingParamTag
-          ExprIRef.writeExprBody iref $
-            Expr.VGetField Expr.GetField
-            { Expr._getFieldRecord = recordRef
-            , Expr._getFieldTag = tagRef
-            }
-      onMatchingSubexprs (toGetField . Property.value)
-        (isGetParamOf existingParamGuid) bodyWithStored
-      let lamGuid = ExprIRef.exprGuid $ Property.value lamProp
-      pure $ Guid.combine lamGuid newTagGuid
+    addSecondParam _mkFields = error "TODO: addSecondParam"
+--     addSecondParam mkFields = do
+--       let existingParamField = (existingParamTag, existingParamTypeIRef)
+--       (newTag, newParamField) <- newField
+--       newParamTypeI <-
+--         ExprIRef.newExprBody . Expr.VRec . Expr.Record KType $
+--         mkFields existingParamField newParamField
+--       newParamsGuid <- Transaction.newKey
+--       ExprIRef.writeExprBody (Property.value lamProp) $
+--         ExprUtil.makeLambda newParamsGuid newParamTypeI .
+--         Property.value $ bodyWithStored ^. Expr.ePayload
+--       let
+--         toGetField iref = do
+--           recordRef <- ExprIRef.newExprBody $ ExprLens.bodyParameterRef # newParamsGuid
+--           tagRef <- ExprIRef.newExprBody existingParamTag
+--           ExprIRef.writeExprBody iref $
+--             Expr.VGetField Expr.GetField
+--             { Expr._getFieldRecord = recordRef
+--             , Expr._getFieldTag = tagRef
+--             }
+--       onMatchingSubexprs (toGetField . Property.value)
+--         (isGetParamOf existingParamGuid) bodyWithStored
+--       let lamGuid = ExprIRef.exprGuid $ Property.value lamProp
+--       pure $ Guid.combine lamGuid $ newTag ^. Lens.from Expr.tag
 
 emptyConventionalParams :: MonadA m => ExprIRef.ExprProperty m -> ConventionalParams m a
 emptyConventionalParams stored = ConventionalParams
@@ -812,23 +780,18 @@ convertWhereItems usedTags expr =
     (nextItems, whereBody) <- convertWhereItems usedTags $ ewiBody ewi
     return (item : nextItems, whereBody)
 
-newField ::
-  MonadA m => T m (Guid, (ExprIRef.ExprIM m, ExprIRef.ExprIM m))
-newField = do
-  tag <- Transaction.newKey
-  newTagI <- ExprIRef.newExprBody (ExprLens.bodyTag # tag)
-  holeI <- DataOps.newHole
-  return (tag, (newTagI, holeI))
+newField :: MonadA m => T m (Expr.Tag, ExprIRef.ExprIM m)
+newField = (,) <$> (Expr.Tag <$> Transaction.newKey) <*> DataOps.newHole
 
 addFirstFieldParam :: MonadA m => Guid -> ExprIRef.ExprIM m -> T m Guid
 addFirstFieldParam lamGuid recordI = do
   recordBody <- ExprIRef.readExprBody recordI
   case recordBody ^? Expr._VRec . ExprLens.kindedRecordFields KType of
     Just fields -> do
-      (newTagGuid, field) <- newField
+      (newTag, field) <- newField
       ExprIRef.writeExprBody recordI $
-        Expr.VRec . Expr.Record KType $ field : fields
-      pure $ Guid.combine lamGuid newTagGuid
+        Expr.VRec . Expr.Record KType $ (newTag, field) : fields
+      pure $ Guid.combine lamGuid $ newTag ^. Lens.from Expr.tag
     _ -> pure $ ExprIRef.exprGuid recordI
 
 assertedGetProp ::
