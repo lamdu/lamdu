@@ -127,6 +127,9 @@ makeTV scope body dest =
   Expr.VLeaf (Expr.VVar (Expr.ParameterRef guid)) -> do
     loadGivenVal
     void $ unify (dest ^. tvType) =<< scopeLookup scope guid
+  Expr.VLeaf Expr.VRecEmpty -> do
+    loadGivenVal
+    setType =<< makeRecordType Expr.KVal scope []
   -- Complex:
   Expr.VGetField getField -> makeGetFieldTV scope getField dest
   Expr.VApp apply -> makeApplyTV scope apply dest

@@ -311,6 +311,19 @@ convertField _mIRef _defaultGuid (tag, expr) = do
     , _rfExpr = exprS
     }
 
+convertEmptyRecord ::
+  (Typeable1 m, MonadA m) => InputPayload m a -> ConvertM m (ExpressionU m a)
+convertEmptyRecord exprPl =
+  ConvertExpr.make exprPl $ BodyRecord
+    Record
+    { _rKind = KVal
+    , _rFields =
+        FieldList
+        { _flItems = []
+        , _flMAddFirstItem = error "TODO: _flMAddFirstItem" -- addField <$> exprPl ^? SugarInfer.plIRef
+        }
+    }
+
 convertRecord ::
   (Typeable1 m, MonadA m, Monoid a) =>
   Expr.Record (InputExpr m a) ->
@@ -417,6 +430,7 @@ convertExpressionI ee =
   Expr.VLeaf Expr.VHole -> ConvertHole.convert
   Expr.VLeaf Expr.Type -> convertAtom "Type"
   Expr.VLeaf Expr.IntegerType -> convertAtom "Int"
+  Expr.VLeaf Expr.VRecEmpty -> convertEmptyRecord
 
 -- Check no holes
 isCompleteType :: Expr.Expr def par a -> Bool

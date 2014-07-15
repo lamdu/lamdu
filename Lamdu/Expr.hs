@@ -58,6 +58,7 @@ data Leaf def par
   | Type
   | IntegerType
   | VHole
+  | VRecEmpty
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 instance (Show def, Show par) => Show (Leaf def par) where
@@ -68,6 +69,7 @@ instance (Show def, Show par) => Show (Leaf def par) where
     Type -> showString "Type"
     IntegerType -> showString "Int"
     VHole -> showString "?"
+    VRecEmpty -> showString "{}"
 
 newtype Tag = Tag Guid
   deriving (Eq, Ord, Show)
