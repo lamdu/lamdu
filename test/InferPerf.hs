@@ -5,7 +5,8 @@ import Control.Monad
 import Data.Binary.Utils (encodeS)
 import Data.Store.Guid (Guid)
 import InferWrappers
-import Utils
+import Formatting
+import DefinitionTypes
 import qualified Data.ByteString as SBS
 import qualified Lamdu.Expr as Expr
 

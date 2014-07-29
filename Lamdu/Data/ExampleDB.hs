@@ -1,231 +1,273 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.Data.ExampleDB(initDB, createBuiltins) where
 
-import Control.Applicative (Applicative(..), liftA2, (<$>))
-import Control.Lens.Operators
-import Control.Monad (join, unless, void, (<=<))
+import Control.Monad (unless, void)
 import Control.Monad.Trans.Class (lift)
 import Control.MonadA (MonadA)
-import Data.Binary (Binary(..))
 import Data.Foldable (traverse_)
 import Data.List.Split (splitOn)
+import Data.Monoid (Monoid(..))
 import Data.Store.Db (Db)
-import Data.Store.Guid (Guid)
-import Data.Store.IRef (IRef, Tag)
+import Data.Store.IRef (Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction, setP)
-import Data.Traversable (traverse)
+import Data.String (IsString(..))
 import Lamdu.Data.Anchors (PresentationMode(..))
-import qualified Control.Lens as Lens
+import Lamdu.Expr ((~>))
+import Lamdu.Expr.Scheme (Scheme(..))
 import qualified Control.Monad.Trans.Writer as Writer
+import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
-import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.DbLayout as Db
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Expr as Expr
-import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.Utils as ExprUtil
-import qualified Lamdu.Data.FFI as FFI
 import qualified Lamdu.Data.Ops as DataOps
+import qualified Lamdu.Expr as E
+import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Scheme as Scheme
+import qualified Lamdu.Expr.TypeVars as TypeVars
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 
-newTodoIRef :: MonadA m => Transaction m (IRef (Tag m) a)
-newTodoIRef = fmap IRef.unsafeFromGuid Transaction.newKey
+type T = Transaction
 
-fixIRef ::
-  (Binary a, MonadA m) =>
-  (IRef (Tag m) a -> Transaction m a) ->
-  Transaction m (IRef (Tag m) a)
-fixIRef createOuter = do
-  x <- newTodoIRef
-  Transaction.writeIRef x =<< createOuter x
-  return x
+namedId :: (MonadA m, IsString a) => String -> T m a
+namedId name = do
+  setP (Db.assocNameRef tagGuid) name
+  return $ fromString name
+  where
+    -- TODO: E.Identifier -> E.Guid.  Remove Guid or keep it only for
+    -- GUI ids?
+    tagGuid = Guid.fromString name
+
+forAll :: TypeVars.HasVar a => Int -> ([a] -> E.Type) -> Scheme
+forAll count f =
+  Scheme
+  { schemeForAll = TypeVars.newVars $ Set.fromList typeVars
+  , schemeConstraints = mempty
+  , schemeType = f $ map TypeVars.liftVar typeVars
+  }
+  where
+    typeVars = take count $ map (fromString . (:[])) ['a'..'z']
+
+recordType :: [(E.Tag, E.Type)] -> E.Type
+recordType = E.TRecord . foldr (uncurry E.CExtend) E.CEmpty
 
 createBuiltins ::
-  MonadA m => (Guid -> Guid) -> Transaction m ((FFI.Env (Tag m), Db.SpecialFunctions (Tag m)), [ExprIRef.DefIM m])
-createBuiltins augmentTagGuids =
+  MonadA m => T m (Db.SpecialFunctions (Tag m), [ExprIRef.DefIM m])
+createBuiltins =
   Writer.runWriterT $ do
-    list <- mkDefinitionRef $ publicBuiltin "Data.List.List" setToSet
-    let listOf = mkApply list
-    headTag <- lift $ namedTag "head" headTagGuid
-    tailTag <- lift $ namedTag "tail" tailTagGuid
+    let newTag x = lift $ namedId x
+
+    listTag <- newTag "List"
+    valTag <- newTag "val"
+    let list x = E.TInst listTag $ Map.singleton valTag x
+
+    headTag <- newTag "head"
+    tailTag <- newTag "tail"
     nonEmpty <-
-      publicBuiltin "Prelude.:" $ forAll "a" $ \a ->
-      mkPi (mkRecordType pure [(headTag, a), (tailTag, listOf a)]) $ listOf a
-    nil <- publicBuiltin "Prelude.[]" $ forAll "a" listOf
-    publicBuiltin_ "Data.List.tail" $ forAll "a" (endo . listOf)
-    publicBuiltin_ "Data.List.head" . forAll "a" $ join (mkPi . listOf)
+      publicBuiltin "Prelude.:" $ forAll 1 $ \[a] ->
+      recordType [(headTag, a), (tailTag, list a)] ~> list a
+    nil <- publicBuiltin "Prelude.[]" $ forAll 1 $ \[a] -> list a
+    publicBuiltin_ "Data.List.tail" $ forAll 1 $ \[a] -> list a ~> list a
+    publicBuiltin_ "Data.List.head" . forAll 1 $ \[a] -> list a ~> a
 
-    _ <-
-      publicBuiltin "Data.Map.Map" $ mkPiRecord
-      [ ("Key", set)
-      , ("Value", set)
-      ] set
+    maybeTag <- newTag "Maybe"
+    let maybe_ x = E.TInst maybeTag $ Map.singleton valTag x
+    publicBuiltin_ "Prelude.Just" $ forAll 1 $ \[a] -> a ~> maybe_ a
+    publicBuiltin_ "Prelude.Nothing" $ forAll 1 $ \[a] -> maybe_ a
 
-    mybe <- mkDefinitionRef $ publicBuiltin "Data.Maybe.Maybe" setToSet
-    let maybeOf = mkApply mybe
-    publicBuiltin_ "Prelude.Just" $ forAll "a" $ \a -> mkPi a $ maybeOf a
-    publicBuiltin_ "Prelude.Nothing" $ forAll "a" $ \a -> maybeOf a
-    publicBuiltin_ "Data.Maybe.caseMaybe" . forAll "a" $ \a -> forAll "b" $ \b ->
-      mkPiRecord
-      [ ( "maybe", maybeOf a )
-      , ( "nothing", b )
-      , ( "just", mkPi a b )
-      ] b
+    objTag <- newTag "object" -- OO hides this
 
-    bool <- mkDefinitionRef $ publicBuiltin "Prelude.Bool" set
-    true <- publicBuiltin "Prelude.True" bool
-    false <- publicBuiltin "Prelude.False" bool
+    nothingTag <- newTag "Nothing"
+    justTag <- newTag "Just"
+    publicBuiltin_ "Data.Maybe.caseMaybe" . forAll 2 $ \[a, b] ->
+      recordType
+      [ ( objTag, maybe_ a )
+      , ( nothingTag, b )
+      , ( justTag, a ~> b )
+      ] ~> b
 
-    publicBuiltin_ "Prelude.not" $ mkPi bool bool
+    intTag <- newTag "Int"
+    let integer = E.TInst intTag Map.empty
 
-    traverse_ ((`publicBuiltin_` mkInfixType bool bool bool) . ("Prelude."++))
+    boolTag <- newTag "Bool"
+    let bool = E.TInst boolTag Map.empty
+
+    true <- publicBuiltin "Prelude.True" $ Scheme.mono bool
+    false <- publicBuiltin "Prelude.False" $ Scheme.mono bool
+
+    publicBuiltin_ "Prelude.not" $ Scheme.mono $ bool ~> bool
+
+    infixlTag <- newTag "infixl"
+    infixrTag <- newTag "infixr"
+    let
+      infixType lType rType resType =
+        recordType [(infixlTag, lType), (infixrTag, rType)] ~> resType
+
+    traverse_ ((`publicBuiltin_` Scheme.mono (infixType bool bool bool)) . ("Prelude."++))
       ["&&", "||"]
 
-    publicBuiltin_ "Prelude.if" . forAll "a" $ \a ->
-      mkPiRecord
-      [ ("condition", bool)
-      , ("then", a)
-      , ("else", a)
-      ] a
+    trueTag <- newTag "True"
+    falseTag <- newTag "False"
+    publicBuiltin_ "Prelude.if" . forAll 1 $ \[a] ->
+      recordType
+      [ (objTag, bool)
+      , (trueTag, a)
+      , (falseTag, a)
+      ] ~> a
 
-    publicBuiltin_ "Prelude.id" $ forAll "a" endo
+    publicBuiltin_ "Prelude.id" $ forAll 1 $ \[a] -> a ~> a
 
     publicBuiltin_ "Prelude.const" .
-      forAll "a" $ \a ->
-      forAll "b" $ \b ->
-      mkPi a $ mkPi b a
+      forAll 2 $ \[a, b] ->
+      a ~> b ~> a
 
-    publicBuiltin_ "Data.Function.fix" . forAll "a" $ \a -> mkPi (mkPi a a) a
+    publicBuiltin_ "Data.Function.fix" . forAll 1 $ \[a] ->
+      (a ~> a) ~> a
 
-    publicBuiltin_ "Data.List.reverse" $ forAll "a" (endo . listOf)
-    publicBuiltin_ "Data.List.last" . forAll "a" $ join (mkPi . listOf)
-    publicBuiltin_ "Data.List.null" . forAll "a" $ \a -> mkPi (listOf a) bool
+    publicBuiltin_ "Data.List.reverse" $ forAll 1 $ \[a] -> list a ~> list a
+    publicBuiltin_ "Data.List.last" $ forAll 1 $ \[a] -> list a ~> a
+    publicBuiltin_ "Data.List.null" $ forAll 1 $ \[a] -> list a ~> bool
 
-    publicBuiltin_ "Data.List.length" . forAll "a" $ \a ->
-      mkPi (listOf a) integer
+    publicBuiltin_ "Data.List.length" . forAll 1 $ \[a] -> list a ~> integer
 
-    traverse_ ((`publicBuiltin_` mkPi (listOf integer) integer) . ("Prelude."++))
+    traverse_ ((`publicBuiltin_` Scheme.mono (list integer ~> integer)) . ("Prelude."++))
       ["product", "sum", "maximum", "minimum"]
 
-    let
-      filterType predName =
-        forAll "a" $ \a ->
-        mkPiRecord
-        [ ("from", listOf a)
-        , (predName, mkPi a bool)
-        ] $ listOf a
-    publicDef_ "filter" Verbose ["Data", "List"] "filter" $ filterType "predicate"
-    publicDef_ "take" Verbose ["Data", "List"] "takeWhile" $ filterType "while"
+    fromTag <- newTag "from"
 
-    publicDef_ "take" Verbose ["Data", "List"] "take" . forAll "a" $ \a ->
-      mkPiRecord
-      [ ("from", listOf a)
-      , ("count", integer)
-      ] $ listOf a
+    predicateTag <- newTag "predicate"
+    publicDef_ "filter" Verbose ["Data", "List"] "filter" $
+      forAll 1 $ \[a] ->
+      recordType
+      [ (fromTag, list a)
+      , (predicateTag, a ~> bool)
+      ] ~> list a
 
+    whileTag <- newTag "while"
+    publicDef_ "take" Verbose ["Data", "List"] "takeWhile" $
+      forAll 1 $ \[a] ->
+      recordType
+      [ (fromTag, list a)
+      , (whileTag, a ~> bool)
+      ] ~> list a
+
+    countTag <- newTag "count"
+    publicDef_ "take" Verbose ["Data", "List"] "take" . forAll 1 $ \[a] ->
+      recordType
+      [ (fromTag, list a)
+      , (countTag, integer)
+      ] ~> list a
+
+    mappingTag <- newTag "mapping"
     publicBuiltin_ "Data.List.map" .
-      forAll "a" $ \a ->
-      forAll "b" $ \b ->
-      mkPiRecord
-      [ ("list", listOf a)
-      , ("mapping", mkPi a b)
-      ] $ listOf b
+      forAll 2 $ \[a, b] ->
+      recordType
+      [ (objTag, list a)
+      , (mappingTag, a ~> b)
+      ] ~> list b
 
-    publicBuiltin_ "Data.List.concat" . forAll "a" $ \a ->
-      mkPi (listOf (listOf a)) (listOf a)
+    publicBuiltin_ "Data.List.concat" . forAll 1 $ \[a] -> list (list a) ~> list a
 
-    publicBuiltin_ "Data.List.replicate" . forAll "a" $ \a ->
-      mkPiRecord
-      [ ("item", a)
-      , ("count", integer)
-      ] $ listOf a
+    publicBuiltin_ "Data.List.replicate" . forAll 1 $ \[a] ->
+      recordType
+      [ (objTag, a)
+      , (countTag, integer)
+      ] ~> list a
 
-    publicBuiltin_ "Data.List.foldl" . forAll "a" $ \a -> forAll "b" $ \b ->
-      mkPiRecord
-      [ ( "list", listOf b )
-      , ( "initial", a )
-      , ( "next"
-        , mkPiRecord
-          [ ("accumulator", a)
-          , ("item", b)
-          ] a
+    initialTag     <- newTag "initial"
+    stepTag        <- newTag "step"
+    accumulatorTag <- newTag "accumulator"
+    itemTag        <- newTag "item"
+    publicBuiltin_ "Data.List.foldl" . forAll 2 $ \[a, b] ->
+      recordType
+      [ ( objTag, list b )
+      , ( initialTag, a )
+      , ( stepTag
+        , recordType
+          [ (accumulatorTag, a)
+          , (itemTag, b)
+          ] ~> a
         )
-      ] a
+      ] ~> a
 
-    publicBuiltin_ "Data.List.foldr" . forAll "a" $ \a -> forAll "b" $ \b ->
-      mkPiRecord
-      [ ( "list", listOf a )
-      , ( "initial", b )
-      , ( "next"
-        , mkPiRecord
-          [ ("item", a)
-          , ("rest", b)
-          ] b
+    emptyTag <- newTag "empty"
+    prependTag <- newTag "prepend"
+    publicBuiltin_ "Data.List.foldr" . forAll 2 $ \[a, b] ->
+      recordType
+      [ ( objTag, list a )
+      , ( emptyTag, b )
+      , ( prependTag
+        , recordType
+          [ (headTag, a)
+          , (tailTag, b)
+          ] ~> b
         )
-      ] b
+      ] ~> b
 
-    publicBuiltin_ "Data.List.caseList" . forAll "a" $ \a -> forAll "b" $ \b ->
-      mkPiRecord
-      [ ( "list", listOf a )
-      , ( "empty", b )
-      , ( "non-empty"
-        , mkPiRecord
-          [ ("item", a)
-          , ("rest", listOf a)
-          ] b
+    publicBuiltin_ "Data.List.caseList" . forAll 2 $ \[a, b] ->
+      recordType
+      [ ( objTag, list a )
+      , ( emptyTag, b )
+      , ( prependTag
+        , recordType
+          [ (headTag, a)
+          , (tailTag, list a)
+          ] ~> b
         )
-      ] b
+      ] ~> b
 
-    publicBuiltin_ "Data.List.zipWith" . forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
-      mkPiRecord
-      [ ( "func", mkPiRecord [("x", a), ("y", b)] c)
-      , ( "xs", listOf a )
-      , ( "ys", listOf b )
-      ] $ listOf c
+    funcTag <- newTag "func"
+    xTag <- newTag "x"
+    yTag <- newTag "y"
+    publicBuiltin_ "Data.List.zipWith" . forAll 3 $ \[a, b, c] ->
+      recordType
+      [ ( funcTag, recordType [(xTag, a), (yTag, b)] ~> c)
+      , ( xTag, list a )
+      , ( yTag, list b )
+      ] ~> list c
 
-    traverse_ ((`publicBuiltin_` mkInfixType integer integer integer) . ("Prelude." ++))
+    traverse_
+      ((`publicBuiltin_` Scheme.mono (infixType integer integer integer)) .
+       ("Prelude." ++))
       ["+", "-", "*", "/", "^", "div"]
-    publicBuiltin_ "Prelude.++" $ forAll "a" $ \a -> mkInfixType (listOf a) (listOf a) (listOf a)
-    publicDef_ "%" Infix ["Prelude"] "mod" $ mkInfixType integer integer integer
-    publicBuiltin_ "Prelude.negate" $ endo integer
-    publicBuiltin_ "Prelude.sqrt" $ endo integer
+    publicBuiltin_ "Prelude.++" $ forAll 1 $ \[a] -> infixType (list a) (list a) (list a)
+    publicDef_ "%" Infix ["Prelude"] "mod" $ Scheme.mono $ infixType integer integer integer
+    publicBuiltin_ "Prelude.negate" $ Scheme.mono $ integer ~> integer
+    publicBuiltin_ "Prelude.sqrt" $ Scheme.mono $ integer ~> integer
 
-    let aToAToBool = forAll "a" $ \a -> mkInfixType a a bool
+    let aToAToBool = forAll 1 $ \[a] -> infixType a a bool
     traverse_ ((`publicBuiltin_` aToAToBool) . ("Prelude." ++))
       ["==", "/=", "<=", ">=", "<", ">"]
 
-    publicDef_ ".." Infix ["Prelude"] "enumFromTo" . mkInfixType integer integer $ listOf integer
-    publicBuiltin_ "Prelude.enumFrom" . mkPi integer $ listOf integer
+    publicDef_ ".." Infix ["Prelude"] "enumFromTo" .
+      Scheme.mono . infixType integer integer $ list integer
+    publicBuiltin_ "Prelude.enumFrom" $ Scheme.mono $ integer ~> list integer
 
     publicDef_ "iterate" Verbose ["Data", "List"] "iterate" .
-      forAll "a" $ \a ->
-      mkPiRecord [("initial", a), ("step", endo a)] $ listOf a
+      forAll 1 $ \[a] ->
+      recordType [(initialTag, a), (stepTag, a ~> a)] ~> list a
 
-    let
-      specialFunctions = Db.SpecialFunctions
+    return
+      Db.SpecialFunctions
         { Db.sfNil = nil
         , Db.sfCons = nonEmpty
-        , Db.sfHeadTag = headTagGuid
-        , Db.sfTailTag = tailTagGuid
+        , Db.sfHeadTag = headTag
+        , Db.sfTailTag = tailTag
+        , Db.sfFalse = false
+        , Db.sfTrue = true
         }
-      ffiEnv = FFI.Env
-        { FFI.trueDef = true
-        , FFI.falseDef = false
-        }
-    return (ffiEnv, specialFunctions)
   where
-    publicDef_ name presentationMode ffiPath ffiName mkType =
-      void $ publicDef name presentationMode ffiPath ffiName mkType
-    publicDef name presentationMode ffiPath ffiName mkType = publicize $ do
-      typeI <- mkType
+    publicDef_ name presentationMode ffiPath ffiName typ =
+      void $ publicDef name presentationMode ffiPath ffiName typ
+    publicDef name presentationMode ffiPath ffiName typ = publicize $ do
       DataOps.newDefinition name presentationMode .
-        (`Definition.Body` typeI) . Definition.ContentBuiltin .
+        (`Definition.Body` Definition.ExportedType typ) . Definition.ContentBuiltin .
         Definition.Builtin $ Definition.FFIName ffiPath ffiName
     publicBuiltin fullyQualifiedName =
       publicDef name (DataOps.presentationModeOfName name) path name
@@ -233,55 +275,21 @@ createBuiltins augmentTagGuids =
         path = init fqPath
         name = last fqPath
         fqPath = splitOn "." fullyQualifiedName
-    publicBuiltin_ builtinName typeMaker =
-      void $ publicBuiltin builtinName typeMaker
-    endo = join mkPi
-    set = ExprIRef.newExprBody $ ExprLens.bodyType # ()
-    integer = ExprIRef.newExprBody $ Expr.VLeaf Expr.IntegerType
-    forAll name f = fmap ExprIRef.ExprI . fixIRef $ \aI -> do
-      let aGuid = IRef.guid aI
-      setP (Db.assocNameRef aGuid) name
-      s <- set
-      return . ExprUtil.makePi aGuid s =<<
-        f ((ExprIRef.newExprBody . Lens.review ExprLens.bodyParameterRef) aGuid)
-    setToSet = mkPi set set
-    mkPi mkArgType mkResType = fmap snd . join $ liftA2 ExprIRef.newPi mkArgType mkResType
-    mkApply mkFunc mkArg =
-      ExprIRef.newExprBody =<< liftA2 ExprUtil.makeApply mkFunc mkArg
-    newTag name = namedTag name . augmentTagGuids $ Guid.fromString name
-    namedTag name tagGuid = do
-      setP (Db.assocNameRef tagGuid) name
-      return $ Expr.Tag tagGuid
-    mkRecordType mkTag fields = do
-      tagFields <- traverse (Lens._1 mkTag <=< Lens.sequenceOf Lens._2) fields
-      ExprIRef.newExprBody $ Expr.VRec Expr.Record
-        { Expr._recordKind = Expr.KType
-        , Expr._recordFields = tagFields
-        }
+    publicBuiltin_ builtinName typ =
+      void $ publicBuiltin builtinName typ
     publicize f = do
       x <- lift f
       Writer.tell [x]
       return x
-    mkPiRecord = mkPi . mkRecordType newTag
-    mkInfixRecordType lType rType = do
-      l <- namedTag "l" $ Guid.fromString "infixlarg"
-      r <- namedTag "r" $ Guid.fromString "infixrarg"
-      mkRecordType pure [(l, lType), (r, rType)]
-    mkInfixType lType rType =
-      mkPi $ mkInfixRecordType lType rType
-    mkDefinitionRef f =
-      ExprIRef.newExprBody . (ExprLens.bodyDefinitionRef # ) <$> f
-    headTagGuid = Guid.fromString "headTag"
-    tailTagGuid = Guid.fromString "tailTag"
 
-newBranch :: MonadA m => String -> Version (Tag m) -> Transaction m (Branch (Tag m))
+newBranch :: MonadA m => String -> Version (Tag m) -> T m (Branch (Tag m))
 newBranch name ver = do
   branch <- Branch.new ver
   setP (Db.assocNameRef (Branch.guid branch)) name
   return branch
 
-initDB :: (Guid -> Guid) -> Db -> IO ()
-initDB augmentTagGuids db =
+initDB :: Db -> IO ()
+initDB db =
   Db.runDbTransaction db $ do
     exists <- Transaction.irefExists $ Db.branches Db.revisionIRefs
     unless exists $ do
@@ -296,11 +304,10 @@ initDB augmentTagGuids db =
       let paneWId = WidgetIdIRef.fromIRef $ Db.panes Db.codeIRefs
       writeRevAnchor Db.cursor paneWId
       Db.runViewTransaction view $ do
-        ((ffiEnv, specialFunctions), builtins) <- createBuiltins augmentTagGuids
+        (specialFunctions, builtins) <- createBuiltins
         let writeCodeAnchor f = Transaction.writeIRef (f Db.codeIRefs)
         writeCodeAnchor Db.clipboards []
         writeCodeAnchor Db.specialFunctions specialFunctions
-        writeCodeAnchor Db.ffiEnv ffiEnv
         writeCodeAnchor Db.globals builtins
         writeCodeAnchor Db.panes []
         writeCodeAnchor Db.preJumps []

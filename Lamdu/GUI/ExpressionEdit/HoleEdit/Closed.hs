@@ -21,7 +21,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.Utils as ExprUtil
+--import qualified Lamdu.Expr.Utils as ExprUtil
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui

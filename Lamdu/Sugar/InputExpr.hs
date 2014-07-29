@@ -3,7 +3,7 @@ module Lamdu.Sugar.InputExpr (makePure) where
 import Lamdu.Expr (Expr)
 import Lamdu.Sugar.Types (InputPayloadP(..), InputPayload)
 import System.Random (Random, RandomGen)
-import qualified Lamdu.Expr.Utils as ExprUtil
+--import qualified Lamdu.Expr.Utils as ExprUtil
 
 makePure ::
   (Ord par, Random par, RandomGen gen) => gen -> Expr def par a -> Expr def par (InputPayload m a)

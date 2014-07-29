@@ -1,53 +1,68 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable #-}
 module Lamdu.Data.Definition
   ( FFIName(..)
   , Builtin(..)
   , Content(..)
+  , ExportedType(..)
   , Body(..), bodyContent, bodyType
   , Definition(..), defBody, defPayload
   ) where
 
+import Control.Applicative ((<$>))
+import Control.Lens (Lens, Lens')
 import Data.Binary (Binary(..))
-import Data.Binary.Get (getWord8)
-import Data.Binary.Put (putWord8)
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
 import Data.Traversable (Traversable(..))
 import Data.Typeable (Typeable)
-import qualified Control.Lens as Lens
+import GHC.Generics (Generic)
+import Lamdu.Expr.Scheme (Scheme)
 
 data FFIName = FFIName
   { fModule :: [String]
   , fName :: String
-  } deriving (Eq, Ord)
-derive makeBinary ''FFIName
+  } deriving (Generic, Eq, Ord)
 
 instance Show FFIName where
   show (FFIName path name) = concatMap (++".") path ++ name
 
 data Builtin = Builtin
   { bName :: FFIName
-  } deriving (Eq, Ord, Show)
-derive makeBinary ''Builtin
+  } deriving (Generic, Eq, Ord, Show)
 
-data Content expr
-  = ContentExpr expr
+-- TODO: Perhaps parameterize over Expr payload instead?
+data Content valExpr
+  = ContentExpr valExpr
   | ContentBuiltin Builtin
-  deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+  deriving (Generic, Eq, Ord, Show, Functor, Foldable, Traversable)
 
-data Body expr = Body
-  { _bodyContent :: Content expr
-  , _bodyType :: expr
-  } deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Typeable)
+data ExportedType = NoExportedType | ExportedType Scheme
+  deriving (Generic, Show)
 
-data Definition expr a = Definition
-  { _defBody :: Body expr
+data Body valExpr = Body
+  { _bodyContent :: Content valExpr
+  , _bodyType :: ExportedType
+  } deriving (Generic, Show, Functor, Foldable, Traversable, Typeable)
+
+data Definition valExpr a = Definition
+  { _defBody :: Body valExpr
   , _defPayload :: a
-  }
+  } deriving (Generic, Functor, Foldable, Traversable, Typeable)
 
-Lens.makeLenses ''Body
-Lens.makeLenses ''Definition
-derive makeBinary ''Body
-derive makeBinary ''Content
-derive makeBinary ''Definition
+instance Binary FFIName
+instance Binary Builtin
+instance Binary valExpr => Binary (Content valExpr)
+instance Binary ExportedType
+instance Binary valExpr => Binary (Body valExpr)
+instance (Binary valExpr, Binary a) => Binary (Definition valExpr a)
+
+bodyContent :: Lens (Body a) (Body b) (Content a) (Content b)
+bodyContent f (Body c t) = (`Body` t) <$> f c
+
+bodyType :: Lens' (Body a) ExportedType
+bodyType f (Body c t) = Body c <$> f t
+
+defBody :: Lens (Definition s a) (Definition t a) (Body s) (Body t)
+defBody f (Definition b p) = (`Definition` p) <$> f b
+
+defPayload :: Lens (Definition expr a) (Definition expr b) a b
+defPayload f (Definition b p) = Definition b <$> f p

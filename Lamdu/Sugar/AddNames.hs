@@ -27,7 +27,7 @@ import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Lamdu.Expr as Expr
-import qualified Lamdu.Expr.Utils as ExprUtil
+--import qualified Lamdu.Expr.Utils as ExprUtil
 import qualified Lamdu.Sugar.AddNames.NameGen as NameGen
 
 type CPSNameConvertor m = Guid -> OldName m -> CPS m (NewName m)

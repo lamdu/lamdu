@@ -31,7 +31,7 @@ import Data.Traversable (traverse)
 import Lamdu.Config (Config)
 import Lamdu.Expr (Expr(..))
 import Lamdu.Expr.IRef (DefIM)
-import Lamdu.Expr.Utils (ApplyFormAnnotation(..), pureHole)
+--import Lamdu.Expr.Utils (ApplyFormAnnotation(..), pureHole)
 import Lamdu.Infer.Deref (DerefedTV)
 import Lamdu.Infer.Load (ldDef)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument, hiActiveId)
@@ -49,7 +49,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.Utils as ExprUtil
+--import qualified Lamdu.Expr.Utils as ExprUtil
 import qualified Lamdu.Infer.Deref as InferDeref
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds

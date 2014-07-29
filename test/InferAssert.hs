@@ -1,175 +1,176 @@
 {-# LANGUAGE RankNTypes #-}
 module InferAssert where
 
+--import qualified Lamdu.Expr.Utils as ExprUtil
 import AnnotatedExpr
-import Control.Applicative ((<$>), Applicative(..))
+import Control.Applicative ((<$>))
+import Control.Lens (Lens')
 import Control.Lens.Operators
-import Control.Monad (void, when)
+import Control.Lens.Tuple
+import Control.Monad ((<=<))
 import Control.Monad.Trans.Class (MonadTrans(..))
+import Control.Monad.Trans.State (State, evalState, mapStateT)
 import Control.Monad.Trans.Writer (WriterT(..))
+import Data.Map (Map)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
+import Data.String (IsString(..))
+import Formatting
 import InferCombinators
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
+import Lamdu.Infer (Infer(..))
+import Lamdu.Infer.Error (Error)
+import Lamdu.Infer.Update (updateInferredVal)
 import System.IO (hPutStrLn, stderr)
 import Test.Framework (plusTestOptions)
 import Test.Framework.Options (TestOptions'(..))
-import Utils
+import Text.PrettyPrint.HughesPJClass (pPrint)
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.State as State
 import qualified Control.Monad.Trans.Writer as Writer
-import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
-import qualified Lamdu.Expr as Expr
-import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.Utils as ExprUtil
-import qualified Lamdu.Infer.Load as InferLoad
-import qualified System.Random as Random
+import qualified Lamdu.Expr as E
+import qualified Lamdu.Infer as Infer
 import qualified Test.Framework as TestFramework
 import qualified Test.Framework.Providers.HUnit as HUnitProvider
 import qualified Test.HUnit as HUnit
 
-canonizeInferred :: ExprInferred -> ExprInferred
-canonizeInferred =
-  ExprUtil.randomizeParamIdsG (const ()) ExprUtil.debugNameGen Map.empty canonizePayload
-  where
-    canonizePayload gen guidMap (ival, ityp) =
-      ( randomizeInferred gen1 ival
-      , randomizeInferred gen2 ityp
-      )
-      where
-        randomizeInferred g =
-          ExprUtil.randomizeParamIdsG (const ()) g guidMap (\_ _ x -> x)
-        (gen1, gen2) = ExprUtil.ngSplit gen
-
-annotateTypes :: ExprInferred -> String
+annotateTypes :: E.Val E.Type -> String
 annotateTypes expr =
   expr
-  & Lens.traverse %%~ annotate
+  & Lens.traverse %%~ fmap (:[]) . annotate
   & errorMessage
   & snd
   where
-    annotate (val, typ) =
-      sequence
-      [ addAnnotation ("Val:  " ++ show val)
-      , addAnnotation ("Type: " ++ show typ)
-      ]
+    annotate typ = addAnnotation ("Type: " ++ show typ)
 
-assertInferredEquals :: String -> ExprInferred -> ExprInferred -> a -> a
-assertInferredEquals errorPrefixStr result expected res
-  | null resultErrs = res
-  | otherwise = error $ errorPrefixStr ++ errorMsg
+type Canonizer = State (Map (E.TypeVar E.Type) (E.TypeVar E.Type), [E.TypeVar E.Type])
+runCanonizer :: Canonizer a -> a
+runCanonizer = flip evalState (Map.empty, map (fromString . (:[])) ['a'..])
+
+canonizeType :: E.Type -> Canonizer E.Type
+canonizeType (E.TVar tv) =
+  do  mtv <- Lens.use (_1 . Lens.at tv)
+      E.TVar <$>
+        case mtv of
+        Just tv' -> return tv'
+        Nothing ->
+          do  tv' <- fresh
+              _1 . Lens.at tv .= Just tv'
+              return tv'
   where
-    resultC = canonizeInferred result
-    expectedC = canonizeInferred expected
-    (resultErrs, errorMsg) =
-      errorMessage $ ExprUtil.matchExpr match mismatch resultC expectedC
-    check s x y
-      | ExprUtil.alphaEq x y = pure []
-      | otherwise = fmap (: []) . addAnnotation $
-        List.intercalate "\n"
-        [ "  expected " ++ s ++ ":" ++ show y
-        , "  result   " ++ s ++ ":" ++ show x
-        ]
-    match (v0, t0) (v1, t1) =
-      (++) <$> check " type" t0 t1 <*> check "value" v0 v1
-    mismatch e0 e1 =
-      error $ concat
-      [ "Result must have same expression shape:"
-      , "\n Result:       ", redShow e0
-      , "\n vs. Expected: ", redShow e1
-      , "\n whole result:   ", redShow resultC
-      , "\n whole expected: ", redShow expectedC
-      ]
-    redShow = ansiAround ansiRed . show . void
+    fresh =
+      Lens.zoom _2 $
+      do  (x:xs) <- State.get
+          State.put xs
+          return x
+canonizeType t = t & E.typeNextLayer %%~ canonizeType
 
-verifyInferResult :: String -> InferredLoadedExpr InputPayload -> M ()
-verifyInferResult msg exprLInferred = do
-  exprDerefed <- deref (fst <$> exprLInferred)
-  let exprInferred = exprLInferred & ExprLens.exprDef %~ (^. InferLoad.ldDef)
-  return ()
-    & assertInferredEquals msg exprDerefed (exprInferred <&> inferredOfInput . snd)
+onInferError :: (Error -> Error) -> Infer a -> Infer a
+onInferError f (Infer act) = Infer $ mapStateT (Lens._Left %~ f) act
 
-runSuccessfulM :: M a -> a
-runSuccessfulM = fromRight . runNewContext
+-- An expr with both the actual infer result, and the expected result
+data ExprTestPayload = ExprTestPayload
+  { _etpExpectedType :: E.Type
+  , _etpInferredType :: E.Type
+  }
 
-runContextAssertion :: M a -> HUnit.Assertion
-runContextAssertion = void . E.evaluate . runSuccessfulM
+etpExpectedType :: Lens' ExprTestPayload E.Type
+etpExpectedType f e =
+  mk <$> f (_etpExpectedType e)
+  where
+    mk x = e { _etpExpectedType = x}
 
-inferAssertion :: InputExpr -> HUnit.Assertion
-inferAssertion = runContextAssertion . inferVerifyExpr
+etpInferredType :: Lens' ExprTestPayload E.Type
+etpInferredType f e =
+  mk <$> f (_etpInferredType e)
+  where
+    mk x = e { _etpInferredType = x}
 
-inferVerifyExpr :: InputExpr -> M (InferredLoadedExpr InputPayload)
-inferVerifyExpr origExpr =
-  go (0 :: Int) =<< annotateErrors "initial infer: " (loadInferDef origExpr)
+type ExprTest = E.Val ExprTestPayload
+type ExprComplete = E.Val (Infer.Payload Resumptions)
+
+exprTestPayload :: Infer.Payload Resumptions -> ExprTestPayload
+exprTestPayload pl = ExprTestPayload
+  { _etpExpectedType = pl ^. Infer.plData . rTyp
+  , _etpInferredType = pl ^. Infer.plType
+  }
+
+canonizedExprTest :: ExprComplete -> ExprTest
+canonizedExprTest =
+  canonize etpExpectedType . canonize etpInferredType . fmap exprTestPayload
+  where
+    canonize t expr =
+      expr
+      & Lens.traversed . t %%~ canonizeType
+      & runCanonizer
+
+inferThrow :: Error -> Infer a
+inferThrow = Infer . lift . Left
+
+verifyExprComplete :: String -> ExprComplete -> Infer ()
+verifyExprComplete msg expr
+  | null errors = return ()
+  | otherwise = inferThrow $ error $ msg ++ ": " ++ fullMsg
+  where
+    (errors, fullMsg) =
+      errorMessage $ Lens.traverse verifyExprTestPayload $
+      canonizedExprTest expr
+
+verifyExprTestPayload :: ExprTestPayload -> AnnotationM [AnnotationIndex]
+verifyExprTestPayload pl
+  | i == e = return []
+  | otherwise =
+    fmap (:[]) . addAnnotation $ "Type mismatch: " ++ show i ++ " vs. " ++ show e
+  where
+    i = pl ^. etpInferredType
+    e = pl ^. etpExpectedType
+
+inferVerifyExpr :: ExprWithResumptions -> Infer ExprComplete
+inferVerifyExpr exprExpected =
+  go (0 :: Int) =<< annotateErrors "initial infer: " (loadInferDef exprExpected)
   where
     msg count = "Resumption phase " ++ show count ++ " failed:\n"
-    annotateErrors prefix action =
-      either (error . (prefix ++) . show) return =<< try action
-    go count exprLInferred = do
-      verifyInferResult (msg count) exprLInferred
+    annotateErrors prefix = onInferError (error . (prefix ++) . show . pPrint)
+    go count exprComplete = do
+      verifyExprComplete (msg count) exprComplete
       (exprNextInput, (resumptionsExpected, resumptionsHappened)) <-
         annotateErrors (msg count) . runWriterT $
-        handleResumption (verifyInferResult (msg (count+1))) exprLInferred
+        handleResumption (verifyExprComplete (msg (count+1))) exprComplete
       case (resumptionsExpected, resumptionsHappened) of
         (Monoid.Any False, Monoid.Any False) -> return exprNextInput
         (Monoid.Any True, Monoid.Any False) ->
           error "NewInferred specified, but no subexpr has ResumeWith/ResumeOnSide"
         (_, _) -> go (count+1) exprNextInput
 
-haveAnyResumptions :: InputExpr -> Bool
-haveAnyResumptions =
-  Lens.anyOf (Lens.traverse . ipResumption) (not . isSame)
-  where
-    isSame Same = True
-    isSame _ = False
-
-withImplicitAssertion ::
-  String -> (InferredLoadedExpr InputPayload -> M (InferredLoadedExpr a)) ->
-  InputExpr -> InputExpr -> HUnit.Assertion
-withImplicitAssertion opName f expr expected = runContextAssertion $ do
-  finalExpr <- inferVerifyExpr expr
-  withImplicitsExpr <- f finalExpr
-  withImplicitsDerefed <- deref (fst <$> withImplicitsExpr)
-  when (haveAnyResumptions expected) $ error "Resumptions not supported"
-  return ()
-    & assertInferredEquals (opName ++ " result mismatch")
-      withImplicitsDerefed (expected <&> inferredOfInput)
-
-inferWVAssertion :: InputExpr -> InputExpr -> HUnit.Assertion
-inferWVAssertion = withImplicitAssertion "AddVariables" (addImplicitVariables (Random.mkStdGen 0) recursiveDefI)
-
-inferWSAssertion :: InputExpr -> InputExpr -> HUnit.Assertion
-inferWSAssertion = withImplicitAssertion "AddStructure" addStructure
-
 handleResumption ::
-  (InferredLoadedExpr InputPayload -> M ()) ->
-  InferredLoadedExpr InputPayload ->
-  WriterT (Monoid.Any, Monoid.Any) M (InferredLoadedExpr InputPayload)
+  (ExprComplete -> Infer ()) -> ExprComplete ->
+  WriterT (Monoid.Any, Monoid.Any) Infer ExprComplete
 handleResumption verifyInfersOnSide =
-  go
+  lift . updateInferredVal <=< go
   where
-    recurseBody body pl = (`Expr.Expr` pl) <$> Lens.traverse go body
-    go expr =
-      case expr of
-      Expr.Expr _ (stv, InputPayload _ _ (ResumeWith newExpr)) -> do
+    recurseBody body pl = E.Val pl <$> Lens.traverse go body
+    go (E.Val pl body) =
+      case pl ^. Infer.plData . rStep of
+      ResumeWith newExpr -> do
         Writer.tell (Monoid.Any True, Monoid.Any True)
-        lift $ loadInferInto stv newExpr
-      Expr.Expr body (stv, InputPayload _ _ (ResumeOnSide newExpr ipl)) -> do
+        lift $ loadInferInto pl newExpr
+      ResumeOnSide newExpr resumptions -> do
         Writer.tell (Monoid.Any True, Monoid.Any True)
-        () <- lift $ verifyInfersOnSide =<< loadInferInContext stv newExpr
-        recurseBody body (stv, ipl)
-      Expr.Expr body (stv, InputPayload _ _ (NewInferred ipl)) -> do
+        lift $ verifyInfersOnSide =<< updateInferredVal =<<
+          loadInferScope (pl ^. Infer.plScope) newExpr
+        recurseBody body $ pl & Infer.plData .~ resumptions
+      NewInferred resumptions -> do
         Writer.tell (Monoid.Any True, Monoid.Any False)
-        recurseBody body (stv, ipl)
-      Expr.Expr body (stv, ipl@(InputPayload _ _ Same)) ->
-        recurseBody body (stv, ipl)
+        recurseBody body $ pl & Infer.plData .~ resumptions
+      Final ->
+        recurseBody body pl
 
 expectLeft ::
   String -> (l -> HUnit.Assertion) ->
-  Either l ExprInferred -> HUnit.Assertion
+  Either l (E.Val E.Type) -> HUnit.Assertion
 expectLeft _ handleLeft (Left x) = handleLeft x
 expectLeft msg _ (Right x) =
   error $ unwords
@@ -177,14 +178,16 @@ expectLeft msg _ (Right x) =
   , "\n", x & UnescapedStr . annotateTypes & show
   ]
 
-inferFailsAssertion :: String -> (Error -> Bool) -> InputExpr -> HUnit.Assertion
-inferFailsAssertion errorName isExpectedError expr =
-  expectLeft errorName verifyError $
-  runLoadInferDerefDef (void expr)
+inferFailsAssertion ::
+  String -> (Error -> Bool) -> E.Val () -> HUnit.Assertion
+inferFailsAssertion errorName isExpectedError val =
+  expectLeft errorName verifyError $ (fmap . fmap) (^. Infer.plType) $
+  runNewContext $ loadInferDef val
   where
     verifyError err
       | isExpectedError err = return ()
-      | otherwise = error $ errorName ++ " error expected, but got: " ++ show err
+      | otherwise =
+        error $ errorName ++ " error expected, but got: " ++ show (pPrint err)
 
 allowFailAssertion :: String -> HUnit.Assertion -> HUnit.Assertion
 allowFailAssertion msg assertion =
@@ -203,15 +206,14 @@ defaultTestOptions = mempty { topt_timeout = Just (Just 4000000) }
 testCase :: TestFramework.TestName -> HUnit.Assertion -> TestFramework.Test
 testCase name = plusTestOptions defaultTestOptions . HUnitProvider.testCase name
 
-testInfer :: String -> InputExpr -> TestFramework.Test
+inferAssertion :: ExprWithResumptions -> HUnit.Assertion
+inferAssertion =
+  either (error . show . pPrint) (const (return ())) .
+  runNewContext . inferVerifyExpr
+
+testInfer :: String -> ExprWithResumptions -> TestFramework.Test
 testInfer name = testCase name . inferAssertion
 
-testInferAllowFail :: String -> String -> InputExpr -> TestFramework.Test
+testInferAllowFail :: String -> String -> ExprWithResumptions -> TestFramework.Test
 testInferAllowFail msg name expr =
   testCase name . allowFailAssertion msg $ inferAssertion expr
-
-type ExprPosition def =
-  forall a.
-  Lens.Traversal'
-  (Expr.Expr def Guid a)
-  (Expr.Expr def Guid a)

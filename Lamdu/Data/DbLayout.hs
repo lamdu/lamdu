@@ -43,7 +43,6 @@ codeIRefs = Code
   , clipboards = IRef.anchor "clipboards"
   , globals = IRef.anchor "globals"
   , specialFunctions = IRef.anchor "specialFuncs"
-  , ffiEnv = IRef.anchor "ffiEnv"
   , preJumps = IRef.anchor "prejumps"
   , preCursor = IRef.anchor "precursor"
   , postCursor = IRef.anchor "postcursor"

@@ -1,154 +1,37 @@
 module InferWrappers where
 
-import Control.Applicative ((<$))
 import Control.Lens.Operators
-import Control.Monad (void)
-import Control.Monad.Trans.Either (EitherT(..))
-import Control.Monad.Trans.State (StateT, mapStateT, evalStateT)
-import Control.MonadA (MonadA)
-import Data.Store.Guid (Guid)
-import Lamdu.Infer.Deref (DerefedTV(..), dValue, dType)
-import Lamdu.Infer.Load (LoadedExpr, ldDef)
-import System.Random (RandomGen)
-import Utils
-import qualified Control.Lens as Lens
-import qualified Control.Monad.Trans.State as State
+import Control.Monad.Trans.State (evalStateT)
+import Data.Functor.Identity (Identity(..))
+import DefinitionTypes
+import Lamdu.Infer (Infer)
+import Lamdu.Infer.Load (loadInfer, Loader(..))
+import Lamdu.Infer.Unify (unify)
 import qualified Data.Map as Map
-import qualified Lamdu.Expr as Expr
-import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr as E
 import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Infer.Deref as InferDeref
-import qualified Lamdu.Infer.ImplicitVariables as ImplicitVariables
-import qualified Lamdu.Infer.Load as InferLoad
-import qualified Lamdu.Infer.Structure as Structure
-import qualified System.Random as Random
+import qualified Lamdu.Infer.Error as InferErr
 
-type ExprInferred = Expr (Expr (), Expr ())
+infer :: Infer.Scope -> E.Val a -> Infer (E.Val (Infer.Payload a))
+infer = Infer.infer definitionTypes
 
-loader :: InferLoad.Loader Def (Either String)
-loader =
-  InferLoad.Loader loadDefType
-  where
-    loadDefType key =
-      case Map.lookup key definitionTypes of
-      Nothing -> Left ("Could not find" ++ show key)
-      Just x -> Right x
+runNewContext :: Infer a -> Either InferErr.Error a
+runNewContext = (`evalStateT` Infer.initialContext) . Infer.run
 
-fromRight :: Show err => Either err a -> a
-fromRight = either (error . show) id
+{-# INLINE loader #-}
+loader :: Monad m => Loader m
+loader = Loader { loadTypeOf = return . (definitionTypes Map.!) }
 
-data Error
-  = LoadError (InferLoad.Error Def)
-  | InferError (Infer.Error Def)
-  deriving (Show)
+loadInferScope :: Infer.Scope -> E.Val a -> Infer (E.Val (Infer.Payload a))
+loadInferScope scope = runIdentity . loadInfer loader scope
 
-type M = StateT (Infer.Context Def) (Either Error)
+-- WARNING: Returned inferred val requires update
+loadInferInto :: Infer.Payload dummy -> E.Val a -> Infer (E.Val (Infer.Payload a))
+loadInferInto pl val = do
+  inferredVal <- loadInferScope (pl ^. Infer.plScope) val
+  let inferredType = inferredVal ^. E.valPayload . Infer.plType
+  unify inferredType (pl ^. Infer.plType)
+  return inferredVal
 
-load :: Expr.Expr Def Guid a -> M (LoadedExpr Def a)
-load expr =
-  InferLoad.load loader expr
-  & mapStateT ((Lens._Left %~ LoadError) . fromRight . runEitherT)
-
-fromRightM :: (Monad m, Show l) => StateT s (Either l) a -> StateT s m a
-fromRightM = mapStateT (return . fromRight)
-
-fromRightT :: (MonadA m, Show l) => StateT s (EitherT l m) a -> StateT s m a
-fromRightT = mapStateT (fmap fromRight . runEitherT)
-
-type InferredLoadedExpr a = LoadedExpr Def (Infer.TypedValue Def, a)
-
-inferScopedBy :: Infer.ExprRef Def -> LoadedExpr Def a -> M (InferredLoadedExpr a)
-inferScopedBy valRef expr = do
-  scope <- Infer.getScope valRef
-  inferScope scope expr
-
-inferScope :: Infer.Scope Def -> LoadedExpr Def a -> M (InferredLoadedExpr a)
-inferScope scope expr =
-  Infer.infer scope expr & mapStateT (Lens._Left %~ InferError)
-
-infer :: LoadedExpr Def a -> M (InferredLoadedExpr a)
-infer = inferScope $ Infer.emptyScope recursiveDefI
-
-mapDerefError :: InferDeref.M Def a -> M a
-mapDerefError = mapStateT (Lens._Left %~ InferError . InferDeref.toInferError)
-
-derefWithPL :: InferredLoadedExpr a -> M (Expr.Expr Def Guid (DerefedTV Def, a))
-derefWithPL expr = expr
-  & ExprLens.exprDef %~ (^. InferLoad.ldDef)
-  & InferDeref.entireExpr
-  & mapDerefError
-
-deref ::
-  LoadedExpr Def (Infer.TypedValue Def) ->
-  M ExprInferred
-deref expr =
-  expr
-  <&> flip (,) ()
-  & derefWithPL
-  <&> fmap
-  (\(derefed, ()) ->
-    ( derefed ^. dValue & ExprLens.exprDef %~ (^. ldDef) & void
-    , derefed ^. dType & ExprLens.exprDef %~ (^. ldDef) & void
-    )
-  )
-
--- Run this function only once per M
-inferDef :: M (InferredLoadedExpr a) -> M (InferredLoadedExpr a)
-inferDef act = do
-  recursiveDefTV <- InferLoad.newDefinition recursiveDefI
-  expr <- act
-  _ <-
-    expr ^. Expr.ePayload . Lens._1
-    & unify recursiveDefTV
-  return expr
-
-unify :: Infer.TypedValue Def -> Infer.TypedValue Def -> M ()
-unify e1 e2 = Infer.unify e1 e2 & mapStateT (Lens._Left %~ InferError) & void
-
-addImplicitVariables ::
-  RandomGen gen =>
-  gen -> Def -> InferredLoadedExpr c ->
-  M (InferredLoadedExpr (ImplicitVariables.Payload c))
-addImplicitVariables =
-  ImplicitVariables.add
-  & Lens.mapped . Lens.mapped . Lens.mapped %~
-    mapStateT (Lens._Left %~ InferError)
-
-addStructure ::
-  LoadedExpr Def (Infer.TypedValue Def, a) ->
-  M (LoadedExpr Def (Infer.TypedValue Def, a))
-addStructure expr =
-  expr <$ mapDerefError (Structure.add expr)
-
-loadInferInContext ::
-  Infer.TypedValue Def -> Expr.Expr Def Guid a -> M (InferredLoadedExpr a)
-loadInferInContext tv expr = inferScopedBy (tv ^. Infer.tvVal) =<< load expr
-
-loadInferInto ::
-  Infer.TypedValue Def -> Expr.Expr Def Guid a -> M (InferredLoadedExpr a)
-loadInferInto stv expr = do
-  resumptionInferred <- loadInferInContext stv expr
-  unify (resumptionInferred ^. Expr.ePayload . Lens._1) stv
-  return resumptionInferred
-
-try :: M a -> M (Either Error a)
-try act = do
-  oldState <- State.get
-  let
-    f (Left err) = Right (Left err, oldState)
-    f (Right (res, newState)) = Right (Right res, newState)
-  mapStateT f act
-
-runNewContext :: M a -> Either Error a
-runNewContext = (`evalStateT` Infer.emptyContext (Random.mkStdGen 0x1337))
-
-loadInferDef :: Expr a -> M (InferredLoadedExpr a)
-loadInferDef expr = inferDef (infer =<< load expr)
-
--- Weaker and more convenient wrapper around runNewContext, deref,
--- inferDef, infer, load
-loadInferDerefDef :: Expr () -> M ExprInferred
-loadInferDerefDef expr = deref . fmap fst =<< loadInferDef expr
-
-runLoadInferDerefDef :: Expr () -> Either Error ExprInferred
-runLoadInferDerefDef = runNewContext . loadInferDerefDef
+loadInferDef :: E.Val a -> Infer (E.Val (Infer.Payload a))
+loadInferDef = loadInferScope Infer.emptyScope

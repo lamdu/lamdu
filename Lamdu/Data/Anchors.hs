@@ -24,13 +24,16 @@ import Data.Store.Transaction (MkProperty(..))
 import Lamdu.Expr.IRef (DefI)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
-import qualified Lamdu.Data.FFI as FFI
+import qualified Lamdu.Expr as E
+import qualified Lamdu.Expr.IRef as ExprIRef
 
 data SpecialFunctions t = SpecialFunctions
   { sfNil :: DefI t
   , sfCons :: DefI t
-  , sfHeadTag :: Guid
-  , sfTailTag :: Guid
+  , sfHeadTag :: E.Tag
+  , sfTailTag :: E.Tag
+  , sfTrue :: ExprIRef.DefI t
+  , sfFalse :: ExprIRef.DefI t
   }
 
 type Pane t = DefI t
@@ -40,15 +43,14 @@ data Code f t = Code
   , clipboards :: f [DefI t]
   , globals :: f [DefI t]
   , specialFunctions :: f (SpecialFunctions t)
-  , ffiEnv :: f (FFI.Env t)
   , preJumps :: f [WidgetId.Id]
   , preCursor :: f WidgetId.Id
   , postCursor :: f WidgetId.Id
   , tags :: f [Guid]
   }
 onCode :: Binary t => (forall a. Binary a => f a -> g a) -> Code f t -> Code g t
-onCode f (Code x0 x1 x2 x3 x4 x5 x6 x7 x8) =
-  Code (f x0) (f x1) (f x2) (f x3) (f x4) (f x5) (f x6) (f x7) (f x8)
+onCode f (Code x0 x1 x2 x3 x4 x5 x6 x7) =
+  Code (f x0) (f x1) (f x2) (f x3) (f x4) (f x5) (f x6) (f x7)
 
 data Revision f t = Revision
   { branches :: f [Branch t]

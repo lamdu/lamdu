@@ -55,7 +55,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr as Expr
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
-import qualified Lamdu.Expr.Utils as ExprUtil
+--import qualified Lamdu.Expr.Utils as ExprUtil
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Deref as InferDeref
 import qualified Lamdu.Infer.ImplicitVariables as ImplicitVariables

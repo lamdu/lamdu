@@ -1,17 +1,19 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 module Lamdu.Expr.IRef
-  ( Expr, ExprM
-  , ExprI(..), ExprIM
-  , ExprBody
-  , ExprProperty, epGuid
+  ( ValI(..), ValIM
+  , ValBody
+  , ValIProperty, epGuid
   , Lam, Apply
-  , newExprBody, readExprBody, writeExprBody, exprGuid
-  , newLambda, newPi
-  , newExpr, writeExpr, readExpr
-  , writeExprWithStoredSubexpressions
+  , newValBody, readValBody, writeValBody, valIGuid
+  , newLambda
+  , newVal, writeVal, readVal
+  , writeValWithStoredSubexpressions
   , DefI, DefIM
-  , variableRefGuid
   , addProperties
+
+  , globalId, defI
+
+  , ValTree(..), ValTreeM, writeValTree
   ) where
 
 import Control.Applicative ((<$>))
@@ -25,145 +27,129 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable)
 import qualified Control.Lens as Lens
+import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Expr as Expr
-import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.Utils as ExprUtil
-
-type Expr t = Expr.Expr (DefI t) Guid
-type ExprM m = Expr (Tag m)
+import qualified Lamdu.Expr as E
 
 type T = Transaction
 
-type DefI t = IRef t (Definition.Body (ExprI t))
+type DefI t = IRef t (Definition.Body (ValI t))
 type DefIM m = DefI (Tag m)
 
-newtype ExprI t = ExprI {
-  unExpr :: IRef t (Expr.Body (DefI t) Guid (ExprI t))
+globalId :: DefI t -> E.GlobalId
+globalId = E.GlobalId . E.Identifier . Guid.bs . IRef.guid
+
+defI :: E.GlobalId -> DefI t
+defI (E.GlobalId (E.Identifier bs)) = IRef.unsafeFromGuid $ Guid.make bs
+
+newtype ValI t = ValI {
+  unValI :: IRef t (E.ValBody (ValI t))
   } deriving (Eq, Ord, Show, Typeable, Binary)
 
-type ExprIM m = ExprI (Tag m)
+type ValIM m = ValI (Tag m)
 
--- TODO: Remove "Expr" prefix from these? We're in a module
--- called Expr.IRef
-type ExprProperty m = Property (T m) (ExprIM m)
-type ExprBody t = Expr.Body (DefI t) Guid (ExprI t)
-type Lam t = Expr.Lam (ExprI t)
-type Apply t = Expr.Apply (ExprI t)
+type ValIProperty m = Property (T m) (ValIM m)
+type ValBody t = E.ValBody (ValI t)
+type Lam t = E.Lam (ValI t)
+type Apply t = E.Apply (ValI t)
 
-epGuid :: ExprProperty m -> Guid
-epGuid = IRef.guid . unExpr . Property.value
+epGuid :: ValIProperty m -> Guid
+epGuid = IRef.guid . unValI . Property.value
 
-exprGuid :: ExprI t -> Guid
-exprGuid = IRef.guid . unExpr
+valIGuid :: ValI t -> Guid
+valIGuid = IRef.guid . unValI
 
-newExprBody :: MonadA m => ExprBody (Tag m) -> T m (ExprIM m)
-newExprBody = fmap ExprI . Transaction.newIRef
+newValBody :: MonadA m => ValBody (Tag m) -> T m (ValIM m)
+newValBody = fmap ValI . Transaction.newIRef
 
-newLambdaCons ::
-  MonadA m =>
-  (Guid -> expr -> expr -> ExprBody (Tag m)) ->
-  expr -> expr -> T m (Guid, ExprIM m)
-newLambdaCons cons paramType result = do
-  key <- Transaction.newKey
-  expr <- newExprBody $ cons key paramType result
-  return (key, expr)
+-- TODO: Remove this
+newLambda :: MonadA m => ValIM m -> T m (E.ValVar, ValIM m)
+newLambda body = do
+  paramId <- E.ValVar . E.Identifier . Guid.bs <$> Transaction.newKey
+  expr <- newValBody $ E.VAbs $ E.Lam paramId body
+  return (paramId, expr)
 
-newPi :: MonadA m => ExprIM m -> ExprIM m -> T m (Guid, ExprIM m)
-newPi = newLambdaCons ExprUtil.makePi
+readValBody :: MonadA m => ValIM m -> T m (ValBody (Tag m))
+readValBody = Transaction.readIRef . unValI
 
-newLambda :: MonadA m => ExprIM m -> ExprIM m -> T m (Guid, ExprIM m)
-newLambda = newLambdaCons ExprUtil.makeLambda
+writeValBody ::
+  MonadA m => ValIM m -> ValBody (Tag m) -> T m ()
+writeValBody = Transaction.writeIRef . unValI
 
-readExprBody :: MonadA m => ExprIM m -> T m (ExprBody (Tag m))
-readExprBody = Transaction.readIRef . unExpr
-
-writeExprBody ::
-  MonadA m => ExprIM m -> ExprBody (Tag m) -> T m ()
-writeExprBody = Transaction.writeIRef . unExpr
-
-newExpr :: MonadA m => ExprM m () -> T m (ExprIM m)
-newExpr =
-  fmap (^. Expr.ePayload . Lens._1) .
-  newExprFromH id . ((,) Nothing <$>)
+newVal :: MonadA m => E.Val () -> T m (ValIM m)
+newVal = fmap (^. E.valPayload . Lens._1) . newValFromH . ((,) Nothing <$>)
 
 -- Returns expression with new Guids
-writeExpr ::
+writeVal ::
   MonadA m =>
-  (def -> DefIM m) ->
-  ExprIM m -> Expr.Expr def Guid a ->
-  T m (Expr.Expr def Guid (ExprIM m, a))
-writeExpr getDef iref =
-  writeExprWithStoredSubexpressions getDef iref .
+  ValIM m -> E.Val a ->
+  T m (E.Val (ValIM m, a))
+writeVal iref =
+  writeValWithStoredSubexpressions iref .
   fmap ((,) Nothing)
 
-writeExprWithStoredSubexpressions ::
-  MonadA m =>
-  (def -> DefIM m) ->
-  ExprIM m ->
-  Expr.Expr def Guid (Maybe (ExprIM m), a) ->
-  T m (Expr.Expr def Guid (ExprIM m, a))
-writeExprWithStoredSubexpressions getDef iref expr = do
-  exprBodyP <- expressionBodyFrom getDef expr
+writeValWithStoredSubexpressions ::
+  MonadA m => ValIM m -> E.Val (Maybe (ValIM m), a) -> T m (E.Val (ValIM m, a))
+writeValWithStoredSubexpressions iref expr = do
+  exprBodyP <- expressionBodyFrom expr
   exprBodyP
-    <&> (^. Expr.ePayload . Lens._1)
-    & ExprLens.bodyDef %~ getDef
-    & writeExprBody iref
-  return $ Expr.Expr exprBodyP
-    (iref, expr ^. Expr.ePayload . Lens._2)
+    <&> (^. E.valPayload . Lens._1)
+    & writeValBody iref
+  return $ E.Val (iref, expr ^. E.valPayload . Lens._2) exprBodyP
 
-readExpr ::
-  MonadA m => ExprIM m -> T m (ExprM m (ExprIM m))
-readExpr exprI =
-  fmap (`Expr.Expr` exprI) .
-  traverse readExpr =<< readExprBody exprI
+readVal ::
+  MonadA m => ValIM m -> T m (E.Val (ValIM m))
+readVal exprI =
+  fmap (E.Val exprI) .
+  traverse readVal =<< readValBody exprI
 
 expressionBodyFrom ::
   MonadA m =>
-  (def -> DefIM m) ->
-  Expr.Expr def Guid (Maybe (ExprIM m), a) ->
-  T m (Expr.BodyExpr def Guid (ExprIM m, a))
-expressionBodyFrom getDef = traverse (newExprFromH getDef) . (^. Expr.eBody)
+  E.Val (Maybe (ValIM m), a) ->
+  T m (E.ValBody (E.Val (ValIM m, a)))
+expressionBodyFrom = traverse newValFromH . (^. E.valBody)
 
-newExprFromH ::
+newValFromH ::
   MonadA m =>
-  (def -> DefIM m) ->
-  Expr.Expr def Guid (Maybe (ExprIM m), a) ->
-  T m (Expr.Expr def Guid (ExprIM m, a))
-newExprFromH getDef expr =
+  E.Val (Maybe (ValIM m), a) ->
+  T m (E.Val (ValIM m, a))
+newValFromH expr =
   case mIRef of
-  Just iref -> writeExprWithStoredSubexpressions getDef iref expr
+  Just iref -> writeValWithStoredSubexpressions iref expr
   Nothing -> do
-    body <- expressionBodyFrom getDef expr
+    body <- expressionBodyFrom expr
     exprI <-
       body
-      <&> (^. Expr.ePayload . Lens._1)
-      & ExprLens.bodyDef %~ getDef
+      <&> (^. E.valPayload . Lens._1)
       & Transaction.newIRef
-    return $ Expr.Expr body (ExprI exprI, pl)
+    return $ E.Val (ValI exprI, pl) body
   where
-    (mIRef, pl) = expr ^. Expr.ePayload
-
-variableRefGuid :: Expr.VariableRef (DefI t) Guid -> Guid
-variableRefGuid (Expr.ParameterRef i) = i
-variableRefGuid (Expr.DefinitionRef i) = IRef.guid i
+    (mIRef, pl) = expr ^. E.valPayload
 
 addProperties ::
   MonadA m =>
-  (def -> DefIM m) ->
-  (ExprIM m -> T m ()) ->
-  Expr.Expr def Guid (ExprIM m, a) ->
-  Expr.Expr def Guid (ExprProperty m, a)
-addProperties getDefI setIRef (Expr.Expr body (iref, a)) =
-  Expr.Expr (body & Lens.traversed %@~ f) (Property iref setIRef, a)
+  (ValIM m -> T m ()) ->
+  E.Val (ValIM m, a) ->
+  E.Val (ValIProperty m, a)
+addProperties setIRef (E.Val (iref, a) body) =
+  E.Val (Property iref setIRef, a) (body & Lens.traversed %@~ f)
   where
     f index =
-      addProperties getDefI $ \newIRef ->
+      addProperties $ \newIRef ->
       body
-      <&> (^. Expr.ePayload . Lens._1) -- convert to body of IRefs
+      <&> (^. E.valPayload . Lens._1) -- convert to body of IRefs
       & Lens.element index .~ newIRef
-      & ExprLens.bodyDef %~ getDefI
-      & writeExprBody iref
+      & writeValBody iref
+
+data ValTree t
+  = ValTreeLeaf (ValI t)
+  | ValTreeNode (E.ValBody (ValTree t))
+  deriving (Show, Typeable)
+type ValTreeM m = ValTree (Tag m)
+
+writeValTree :: MonadA m => ValTreeM m -> T m (ValIM m)
+writeValTree (ValTreeLeaf valI) = return valI
+writeValTree (ValTreeNode body) = newValBody =<< traverse writeValTree body

@@ -103,7 +103,7 @@ mkListItem listItemExpr recordArgS exprPl tailI mAddNextItem =
 guardHeadTailTags ::
   MonadPlus m =>
   Anchors.SpecialFunctions t ->
-  Guid -> Guid -> m ()
+  Tag -> Tag -> m ()
 guardHeadTailTags Anchors.SpecialFunctions{..} hd tl = do
   guard $ sfHeadTag == hd
   guard $ sfTailTag == tl
@@ -132,9 +132,7 @@ getExprHeadTail ::
 getExprHeadTail specialFunctions argI = do
   [(headTagI, headExprI), (tailTagI, tailExprI)] <-
     maybeToMPlus $ argI ^? ExprLens.exprKindedRecordFields KVal
-  guardHeadTailTags specialFunctions
-    (headTagI ^. Lens.from Expr.tag)
-    (tailTagI ^. Lens.from Expr.tag)
+  guardHeadTailTags specialFunctions headTagI tailTagI
   return (headExprI, tailExprI)
 
 cons ::

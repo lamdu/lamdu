@@ -244,7 +244,7 @@ baseStyle config font = TextEdit.Style
 
 runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO a
 runDb win getConfig font db = do
-  ExampleDB.initDB (Guid.augment "ExampleDB") db
+  ExampleDB.initDB db
   (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor
   addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
   settingsRef <- newIORef Settings

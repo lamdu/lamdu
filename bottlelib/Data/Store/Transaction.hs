@@ -82,10 +82,10 @@ liftInner :: MonadA m => m a -> Transaction m a
 liftInner = Transaction . lift . lift
 
 getStore :: Monad m => Transaction m (Store m)
-getStore = liftAskable $ Lens.view aStore
+getStore = liftAskable $ Reader.asks (Lens.view aStore)
 
 getBase :: Monad m => Transaction m ChangesMap
-getBase = liftAskable $ Lens.view aBase
+getBase = liftAskable $ Reader.asks (Lens.view aBase)
 
 run :: MonadA m => Store m -> Transaction m a -> m a
 run store (Transaction transaction) = do
