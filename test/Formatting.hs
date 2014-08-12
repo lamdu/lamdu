@@ -5,7 +5,7 @@ import qualified Text.PrettyPrint as PP
 
 data UnescapedStr = UnescapedStr String
 instance Show UnescapedStr where show (UnescapedStr x) = x
-instance Pretty UnescapedStr where pPrint (UnescapedStr x) = PP.text x
+instance Pretty UnescapedStr where pPrint (UnescapedStr x) = if null x then PP.empty else PP.text x
 
 ansiRed :: String
 ansiRed = "\ESC[31m"
