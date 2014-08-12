@@ -48,10 +48,10 @@ applyOnVar =
 
 monomorphRedex =
   testInfer "foo = f (\\b (x:{b}) -> (\\_1 -> x) ?) where f (_2:(a:Type -> ? -> a)) = ?" $
-  whereItem "f" (lambda "_2" fArgType (\_ -> holeWithInferredType b)) $ \f ->
+  whereItem "f" (lambda "_2" fArgType $ \_ -> holeWithInferredType b) $ \f ->
   f $$
   ( lambda "x" b $ \x ->
-    lambda "_1" c (const x) $$ holeWithInferredType d )
+    lambda "_1" c (const x) $$ holeWithInferredType c )
   where
     -- (a:Type -> _[=a] -> a)
     fArgType = a ~> a
