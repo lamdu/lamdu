@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE OverloadedStrings, RankNTypes #-}
 module InferAssert where
 
 --import qualified Lamdu.Expr.Utils as ExprUtil
@@ -24,6 +24,7 @@ import Lamdu.Infer.Update (updateInferredVal)
 import System.IO (hPutStrLn, stderr)
 import Test.Framework (plusTestOptions)
 import Test.Framework.Options (TestOptions'(..))
+import Text.PrettyPrint.HughesPJ ((<+>))
 import Text.PrettyPrint.HughesPJClass (pPrint)
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
@@ -123,7 +124,8 @@ verifyExprTestPayload :: ExprTestPayload -> AnnotationM [AnnotationIndex]
 verifyExprTestPayload pl
   | i == e = return []
   | otherwise =
-    fmap (:[]) . addAnnotation $ "Type mismatch: " ++ show i ++ " vs. " ++ show e
+    fmap (:[]) . addAnnotation $ show $
+    "Type mismatch:" <+> pPrint i <+> "vs." <+> pPrint e
   where
     i = pl ^. etpInferredType
     e = pl ^. etpExpectedType
