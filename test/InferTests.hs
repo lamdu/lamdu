@@ -2,7 +2,7 @@
 {-# OPTIONS -fno-warn-missing-signatures #-}
 module InferTests (allTests, factorialExpr, euler1Expr, solveDepressedQuarticExpr) where
 
-import Control.Applicative (Applicative(..), (<$>))
+import Control.Applicative ((<$>))
 import Control.Monad (void)
 import Data.String (IsString(..))
 import InferAssert
@@ -89,8 +89,8 @@ inferFromOneArgToOtherList =
 
 -- fOfXIsFOf5 =
 --   testInfer "f x = f 5" $
---   lambda "" (asHole E.intType) $ \_ ->
---   recurse (E.intType ~> hole) $$ literalInteger 5
+--   lambda "" intType $ \_ ->
+--   recurse (intType ~> hole) $$ literalInteger 5
 
 argTypeGoesToPi =
   testInfer "arg type goes to func type" $
@@ -239,9 +239,9 @@ factorialExpr =
   glob [facType] "fix" $$
   lambda "loop" (facType)
   ( \loop ->
-    lambda "x" iInt $ \x ->
-    glob [iInt] "if" $$:
-    [ glob [iInt] "==" $$:
+    lambda "x" intType $ \x ->
+    glob [intType] "if" $$:
+    [ glob [intType] "==" $$:
       [x, literalInteger 0]
     , literalInteger 1
     , glob [] "*" $$:
@@ -252,7 +252,6 @@ factorialExpr =
   )
   where
     facType = intType ~> intType
-    iInt = intType
 
 -- recurseScopeTest =
 --   testCase "recurse scope (f x = f ?<verify scope>)" $
@@ -270,31 +269,29 @@ factorialExpr =
 
 euler1Expr =
   glob [] "sum" $$
-  ( glob [iInt] "filter" $$:
+  ( glob [intType] "filter" $$:
     [ glob [] ".." $$: [literalInteger 1, literalInteger 1000]
-    , lambda "x" iInt $ \x ->
+    , lambda "x" intType $ \x ->
       glob [] "||" $$:
-      [ glob [iInt] "==" $$:
+      [ glob [intType] "==" $$:
         [ literalInteger 0, glob [] "%" $$: [x, literalInteger 3] ]
-      , glob [iInt] "==" $$:
+      , glob [intType] "==" $$:
         [ literalInteger 0, glob [] "%" $$: [x, literalInteger 5] ]
       ]
     ]
   )
-  where
-    iInt = pure E.intType
 
 -- Solve depressed quartic polynomial
 solveDepressedQuarticExpr =
   lambdaRecord "params"
-  [ ("e0", iInt)
-  , ("d0", iInt)
-  , ("c0", iInt)
+  [ ("e0", intType)
+  , ("d0", intType)
+  , ("c0", intType)
   ] $ \[e0, d0, c0] ->
   whereItem "solvePoly" ( glob [iListInt] "id" )
   $ \solvePoly ->
   whereItem "sqrts"
-  ( lambda "x" iInt $ \x ->
+  ( lambda "x" intType $ \x ->
     whereItem "r"
     ( glob [] "sqrt" $$ x
     ) $ \r ->
@@ -302,22 +299,22 @@ solveDepressedQuarticExpr =
   )
   $ \sqrts ->
   glob [iListInt] "if" $$:
-  [ glob [iInt] "==" $$: [d0, literalInteger 0]
-  , glob [iInt] "concat" $$
-    ( glob [iInt, iListInt] "map" $$:
+  [ glob [intType] "==" $$: [d0, literalInteger 0]
+  , glob [intType] "concat" $$
+    ( glob [intType, iListInt] "map" $$:
       [ solvePoly $$ nonEmptyList [e0, c0, literalInteger 1]
       , sqrts
       ]
     )
-  , glob [iInt] "concat" $$
-    ( glob [iInt, iListInt] "map" $$:
-      [ sqrts $$ (glob [iInt] "head" $$ (solvePoly $$ nonEmptyList
+  , glob [intType] "concat" $$
+    ( glob [intType, iListInt] "map" $$:
+      [ sqrts $$ (glob [intType] "head" $$ (solvePoly $$ nonEmptyList
         [ glob [] "negate" $$ (d0 %* d0)
         , (c0 %* c0) %- (literalInteger 4 %* e0)
         , literalInteger 2 %* c0
         , literalInteger 1
         ]))
-      , lambda "x" iInt $ \x ->
+      , lambda "x" intType $ \x ->
         solvePoly $$ nonEmptyList
         [ (c0 %+ (x %* x)) %- (d0 %/ x)
         , literalInteger 2 %* x
@@ -327,7 +324,6 @@ solveDepressedQuarticExpr =
     )
   ]
   where
-    iInt = intType
     iListInt = listOf intType
     x %+ y = glob [] "+" $$: [x, y]
     x %- y = glob [] "-" $$: [x, y]
