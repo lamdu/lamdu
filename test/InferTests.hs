@@ -60,11 +60,11 @@ monomorphRedex =
 idPreservesDependency =
   testInfer "5 + f _ where f x = id _{no inferred type}" $
   whereItem "f"
-  ( lambda "x" (pure E.intType) (const (glob [intType] "id" $$
+  ( lambda "x" a (const (glob [intType] "id" $$
     holeWithInferredType intType))
   ) $ \f ->
   glob [] "+" $$:
-  [literalInteger 5, f $$ holeWithInferredType intType]
+  [literalInteger 5, f $$ holeWithInferredType a]
 
 idTest = testInfer "id test" $ glob [intType] "id" $$ literalInteger 5
 
