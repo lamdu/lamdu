@@ -11,6 +11,7 @@ import Data.Traversable (Traversable)
 import DefinitionTypes
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Expr.Scheme (Scheme(..))
+import Text.PrettyPrint.HughesPJClass (Pretty(..))
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -239,7 +240,9 @@ infixl 4 $.
   where
     mkType (E.TFun p r) a
       | p == a = r
-      | otherwise = error "Incompatible types in $$"
+      | otherwise =
+        error $ "Incompatible types in $$ param is " ++
+        show (pPrint p) ++ " and arg is " ++ show (pPrint a)
     mkType _ _ = error "Apply of non-func type!"
 
 ($$:) :: ExprWithResumptions -> [ExprWithResumptions] -> ExprWithResumptions
