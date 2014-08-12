@@ -125,7 +125,7 @@ verifyExprTestPayload pl
   | i == e = return []
   | otherwise =
     fmap (:[]) . addAnnotation $ show $
-    "Type mismatch:" <+> pPrint i <+> "vs." <+> pPrint e
+    "Type mismatch:" <+> pPrint i <+> " (expected:" <+> pPrint e <+> ")"
   where
     i = pl ^. etpInferredType
     e = pl ^. etpExpectedType
