@@ -10,13 +10,16 @@ import Data.Maybe (fromMaybe)
 import Data.Traversable (Traversable)
 import DefinitionTypes
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
+import Lamdu.Expr.Pretty (pPrintValUnannotated)
 import Lamdu.Expr.Scheme (Scheme(..))
+import Text.PrettyPrint ((<+>))
 import Text.PrettyPrint.HughesPJClass (Pretty(..))
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Lamdu.Expr as E
 import qualified Lamdu.Expr.TypeVars as TypeVars
+import qualified Text.PrettyPrint as PP
 
 data ResumptionStep
   -- Any resumptions will have no effect:
@@ -241,7 +244,10 @@ infixl 4 $.
     mkType (E.TFun p r) a
       | p == a = r
       | otherwise =
-        error $ "Incompatible types in $$ param is " ++
+        error $
+        "Incompatible types in '" ++
+        show (pPrintValUnannotated func <+> PP.text "$$" <+> pPrintValUnannotated arg) ++
+        "' param is " ++
         show (pPrint p) ++ " and arg is " ++ show (pPrint a)
     mkType _ _ = error "Apply of non-func type!"
 
