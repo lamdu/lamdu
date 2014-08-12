@@ -377,10 +377,10 @@ getFieldTests =
       ( eRecExtend "field1" (holeWithInferredType a) $
         eRecExtend "field2" (holeWithInferredType b) $
         holeWithInferredType (E.TRecord <$> (compositeTypeVar "r1"))
-      ) $. "foo"
+      ) $. "field1"
     ]
   , testInfer "GetField verified against (resumed record)" $
-    ( holeWithInferredType (E.TRecord <$> (compositeTypeVar "r1"))
+    ( holeWithInferredType (E.TRecord <$> (compositeTypeExtend "x" a (compositeTypeVar "r1")))
       `resumeHere`
       record
       [ ("x", literalInteger 5)
