@@ -8,12 +8,13 @@ import Data.String (IsString(..))
 import InferAssert
 import InferCombinators
 import InferWrappers
+import Lamdu.Expr.Val (Val(..))
 import Test.Framework (testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Property (property, rejected)
-import qualified Lamdu.Expr as E
 import qualified Lamdu.Expr.Pure as P
+import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Infer.Error as InferErr
 
 a, b, c, d :: TypeStream
@@ -47,14 +48,11 @@ applyOnVar =
   (holeWithInferredType (a ~> intType) $$ x)
 
 monomorphRedex =
-  testInfer "foo = f (\\b (x:{b}) -> (\\_1 -> x) ?) where f (_2:(a:Type -> ? -> a)) = ?" $
-  whereItem "f" (lambda "_2" fArgType $ \_ -> holeWithInferredType b) $ \f ->
+  testInfer "monomorphRedex: f (\\x -> \\_1 -> x ?) where f = \\2 -> ?" $
+  whereItem "f" (lambda "_2" ((a ~> b) ~> c ~> b) $ \_ -> holeWithInferredType b) $ \f ->
   f $$
   ( lambda "x" b $ \x ->
-    lambda "_1" c (const x) $$ holeWithInferredType c )
-  where
-    -- (a:Type -> _[=a] -> a)
-    fArgType = a ~> a
+    lambda "_1" c (const x) $$ holeWithInferredType a )
 
 -- TODO: not sure what this used to test but I think I changed it..
 idPreservesDependency =
@@ -121,19 +119,19 @@ idOnHole = testInfer "id hole" $ glob [a] "id" $$ holeWithInferredType a
 --     resumptionValue = glob "Bool" -- <- anything but Pi
 --     resumptionPoint =
 --       lamParamType KVal . lamResult KType .
---       E.ePayload . Lens._1
--- lamParamType :: Kind -> Lens.Traversal' (E.Expr def par a) (E.Expr def par a)
+--       V.ePayload . Lens._1
+-- lamParamType :: Kind -> Lens.Traversal' (V.Expr def par a) (V.Expr def par a)
 -- lamParamType k = ExprLens.exprKindedLam k . Lens._2
--- lamResult :: Kind -> Lens.Traversal' (E.Expr def par a) (E.Expr def par a)
+-- lamResult :: Kind -> Lens.Traversal' (V.Expr def par a) (V.Expr def par a)
 -- lamResult k = ExprLens.exprKindedLam k . Lens._3
 
 -- testRecurseResumption =
 --   testInfer "Resumption with recursion" $
 --   lambda "a" (asHole oldFuncType `resumeHere` newFuncType) $ \a ->
---   a $$ (recurse (((hole ~> hole) `resumedTo` newFuncType) ~> (hole `resumedTo` E.intType)) $$ a)
+--   a $$ (recurse (((hole ~> hole) `resumedTo` newFuncType) ~> (hole `resumedTo` T.int)) $$ a)
 --   where
 --     oldFuncType = holeWithInferredType set ~> holeWithInferredType set
---     newFuncType = asHole E.intType ~> E.intType
+--     newFuncType = asHole T.int ~> T.int
 
 resumptionTests =
   testGroup "type infer resume" $
@@ -143,7 +141,7 @@ resumptionTests =
     holeWithInferredType (a ~> b) $$
     (holeWithInferredType a `resumeHere` glob [c] "id")
   , testInfer "\\_ -> {hole->id}" $
-    lambda "" (a `resumedToType` c ~> c) $
+    lambda "" a $
     \_ -> holeWithInferredType b `resumeHere` glob [c] "id"
   -- , failResumptionAddsRules
   -- , testRecurseResumption
@@ -151,9 +149,9 @@ resumptionTests =
     nonEmptyList [holeWithInferredType a `resumeHere` literalInteger 1]
   , testInfer "Resumption with getfield" $
     ( holeWithInferredType
-      (E.TRecord <$>
+      (T.TRecord <$>
        compositeTypeExtend "x"
-       (a `resumedToType` intType)
+       (a `resumedType` intType)
        (compositeTypeVar "r1"))
       `resumeHere` record [("x", literalInteger 5)]
     ) $. "x"
@@ -218,7 +216,7 @@ getFieldWasntAllowed =
   , lambda "x" recType $ \x -> holeWithInferredType a `resumeHere` x
   ]
   where
-    recType = E.TRecord <$> emptyCompositeType
+    recType = T.TRecord <$> emptyCompositeType
 
 -- wrongRecurseMissingArg =
 --   testCase "f x = f" .
@@ -264,8 +262,8 @@ factorialExpr =
 --     xGuid = expr ^?! ExprLens.exprKindedLam KVal . Lens._1
 --     scopeAtPoint =
 --       lamResult KVal .
---       ExprLens.exprApply . E.applyArg .
---       E.ePayload . Lens._1 . InferDeref.dScope
+--       ExprLens.exprApply . V.applyArg .
+--       V.ePayload . Lens._1 . InferDeref.dScope
 
 euler1Expr =
   glob [] "sum" $$
@@ -372,11 +370,11 @@ getFieldTests =
     [ testInfer "GetField tag of record of 2" $
       ( eRecExtend "field1" (holeWithInferredType a) $
         eRecExtend "field2" (holeWithInferredType b) $
-        holeWithInferredType (E.TRecord <$> (compositeTypeVar "r1"))
+        holeWithInferredType (T.TRecord <$> (compositeTypeVar "r1"))
       ) $. "field1"
     ]
   , testInfer "GetField verified against (resumed record)" $
-    ( holeWithInferredType (E.TRecord <$> (compositeTypeExtend "x" a (compositeTypeVar "r1")))
+    ( holeWithInferredType (T.TRecord <$> (compositeTypeExtend "x" a (compositeTypeVar "r1")))
       `resumeHere`
       record
       [ ("x", literalInteger 5)
@@ -396,27 +394,27 @@ fromQuickCheck1 =
 
 -- testUnificationCarriesOver =
 --   testGroup "Unification carries over"
---   [ testInfer "(\\(a:Set) -> (+)) _ :: ({l:E.intType, r:_}->_)" $
+--   [ testInfer "(\\(a:Set) -> (+)) _ :: ({l:T.int, r:_}->_)" $
 --     typeAnnotate
---     (recType E.intType (asHole E.intType) ~> asHole E.intType) $
+--     (recType T.int (asHole T.int) ~> asHole T.int) $
 --     lambda "a" set (\_ -> glob "+") $$
 --     holeWithInferredType set
 
   -- TODO: revive this test now. (+) was polymorphic, need a different poly func
-  -- , testInfer "(\\(a:Set) -> ?{(+)} ?) ? :: ({l:E.intType, r:?}->?)" $
+  -- , testInfer "(\\(a:Set) -> ?{(+)} ?) ? :: ({l:T.int, r:?}->?)" $
   --   typeAnnotate
-  --   (recType E.intType (holeWithInferredType set `resumedTo` E.intType)
-  --    ~> (holeWithInferredType set `resumedTo` E.intType)) $
+  --   (recType T.int (holeWithInferredType set `resumedTo` T.int)
+  --    ~> (holeWithInferredType set `resumedTo` T.int)) $
   --   lambda "a" set
   --   ( \_ ->
-  --     (holeWithInferredType (hole ~> hole) `resumeHere` glob "+") $$ hole `resumedToType` set
+  --     (holeWithInferredType (hole ~> hole) `resumeHere` glob "+") $$ hole `resumedType` set
   --   ) $$ holeWithInferredType set
   --
   -- , testInfer
-  --   "(\\(_1:Set) -> (? :: (a:?{Type}) -> {l:?{a}, r:?{a}} -> ?{a}) ?) ? :: {l:E.intType, r:?} -> ?" $
+  --   "(\\(_1:Set) -> (? :: (a:?{Type}) -> {l:?{a}, r:?{a}} -> ?{a}) ?) ? :: {l:T.int, r:?} -> ?" $
   --   typeAnnotate
-  --   (recType E.intType (holeWithInferredType set `resumedTo` E.intType)
-  --    ~> (holeWithInferredType set `resumedTo` E.intType)) $
+  --   (recType T.int (holeWithInferredType set `resumedTo` T.int)
+  --    ~> (holeWithInferredType set `resumedTo` T.int)) $
   --   lambda "_1" set
   --   ( \_ ->
   --     typeAnnotate
@@ -465,7 +463,7 @@ hunitTests =
   -- , testUnificationCarriesOver
   ]
 
-inferPreservesShapeProp :: E.Val () -> Property
+inferPreservesShapeProp :: Val () -> Property
 inferPreservesShapeProp expr =
   case runNewContext $ loadInferDef expr of
     Left _ -> property rejected

@@ -4,10 +4,10 @@ import Control.Applicative (pure, (<$>))
 import Control.Lens.Operators
 import Control.Monad.Trans.State (State, runState)
 import Formatting
+import Lamdu.Expr.Val (Val)
 import Text.PrettyPrint.HughesPJClass (pPrint)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
-import qualified Lamdu.Expr as E
 
 type AnnotationIndex = Int
 type AnnotationM = State (AnnotationIndex, [String])
@@ -20,7 +20,7 @@ addAnnotation msg = do
   pure count
 
 errorMessage ::
-  AnnotationM (E.Val [AnnotationIndex]) ->
+  AnnotationM (Val [AnnotationIndex]) ->
   ([String], String)
 errorMessage mkExpr =
   (resultErrs, fullMsg)

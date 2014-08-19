@@ -26,7 +26,7 @@ import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Expr as Expr
+import qualified Lamdu.Expr.Val as Vxpr
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 --import qualified Lamdu.Expr.Utils as ExprUtil

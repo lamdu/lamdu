@@ -8,7 +8,7 @@ import InferWrappers
 import Formatting
 import DefinitionTypes
 import qualified Data.ByteString as SBS
-import qualified Lamdu.Expr as Expr
+import qualified Lamdu.Expr.Val as Vxpr
 
 inferAndEncode :: Expr.Expr Def Guid a -> Int -> Int
 inferAndEncode expr par =

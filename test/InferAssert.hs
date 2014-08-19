@@ -18,6 +18,8 @@ import Formatting
 import InferCombinators
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
+import Lamdu.Expr.Type (Type)
+import Lamdu.Expr.Val (Val(..))
 import Lamdu.Infer (Infer(..))
 import Lamdu.Infer.Error (Error)
 import Lamdu.Infer.Update (updateInferredVal)
@@ -32,13 +34,13 @@ import qualified Control.Monad.Trans.State as State
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
-import qualified Lamdu.Expr as E
+import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Infer as Infer
 import qualified Test.Framework as TestFramework
 import qualified Test.Framework.Providers.HUnit as HUnitProvider
 import qualified Test.HUnit as HUnit
 
-annotateTypes :: E.Val E.Type -> String
+annotateTypes :: Val Type -> String
 annotateTypes expr =
   expr
   & Lens.traverse %%~ fmap (:[]) . annotate
@@ -47,14 +49,14 @@ annotateTypes expr =
   where
     annotate typ = addAnnotation ("Type: " ++ show typ)
 
-type Canonizer = State (Map (E.TypeVar E.Type) (E.TypeVar E.Type), [E.TypeVar E.Type])
+type Canonizer = State (Map (T.Var Type) (T.Var Type), [T.Var Type])
 runCanonizer :: Canonizer a -> a
 runCanonizer = flip evalState (Map.empty, map (fromString . (:[])) ['a'..])
 
-canonizeType :: E.Type -> Canonizer E.Type
-canonizeType (E.TVar tv) =
+canonizeType :: Type -> Canonizer Type
+canonizeType (T.TVar tv) =
   do  mtv <- Lens.use (_1 . Lens.at tv)
-      E.TVar <$>
+      T.TVar <$>
         case mtv of
         Just tv' -> return tv'
         Nothing ->
@@ -67,31 +69,31 @@ canonizeType (E.TVar tv) =
       do  (x:xs) <- State.get
           State.put xs
           return x
-canonizeType t = t & E.typeNextLayer %%~ canonizeType
+canonizeType t = t & T.nextLayer %%~ canonizeType
 
 onInferError :: (Error -> Error) -> Infer a -> Infer a
 onInferError f (Infer act) = Infer $ mapStateT (Lens._Left %~ f) act
 
 -- An expr with both the actual infer result, and the expected result
 data ExprTestPayload = ExprTestPayload
-  { _etpExpectedType :: E.Type
-  , _etpInferredType :: E.Type
+  { _etpExpectedType :: Type
+  , _etpInferredType :: Type
   }
 
-etpExpectedType :: Lens' ExprTestPayload E.Type
+etpExpectedType :: Lens' ExprTestPayload Type
 etpExpectedType f e =
   mk <$> f (_etpExpectedType e)
   where
     mk x = e { _etpExpectedType = x}
 
-etpInferredType :: Lens' ExprTestPayload E.Type
+etpInferredType :: Lens' ExprTestPayload Type
 etpInferredType f e =
   mk <$> f (_etpInferredType e)
   where
     mk x = e { _etpInferredType = x}
 
-type ExprTest = E.Val ExprTestPayload
-type ExprComplete = E.Val (Infer.Payload Resumptions)
+type ExprTest = Val ExprTestPayload
+type ExprComplete = Val (Infer.Payload Resumptions)
 
 exprTestPayload :: Infer.Payload Resumptions -> ExprTestPayload
 exprTestPayload pl = ExprTestPayload
@@ -153,8 +155,8 @@ handleResumption ::
 handleResumption verifyInfersOnSide =
   lift . updateInferredVal <=< go
   where
-    recurseBody body pl = E.Val pl <$> Lens.traverse go body
-    go (E.Val pl body) =
+    recurseBody body pl = Val pl <$> Lens.traverse go body
+    go (Val pl body) =
       case pl ^. Infer.plData . rStep of
       ResumeWith newExpr -> do
         Writer.tell (Monoid.Any True, Monoid.Any True)
@@ -172,7 +174,7 @@ handleResumption verifyInfersOnSide =
 
 expectLeft ::
   String -> (l -> HUnit.Assertion) ->
-  Either l (E.Val E.Type) -> HUnit.Assertion
+  Either l (Val Type) -> HUnit.Assertion
 expectLeft _ handleLeft (Left x) = handleLeft x
 expectLeft msg _ (Right x) =
   error $ unwords
@@ -181,7 +183,7 @@ expectLeft msg _ (Right x) =
   ]
 
 inferFailsAssertion ::
-  String -> (Error -> Bool) -> E.Val () -> HUnit.Assertion
+  String -> (Error -> Bool) -> Val () -> HUnit.Assertion
 inferFailsAssertion errorName isExpectedError val =
   expectLeft errorName verifyError $ (fmap . fmap) (^. Infer.plType) $
   runNewContext $ loadInferDef val

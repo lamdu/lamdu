@@ -6,8 +6,8 @@ import Control.Lens.Operators
 import Data.Map (Map)
 import Data.Monoid (mappend)
 import Data.String (IsString(..))
-import Lamdu.Expr ((~>))
 import Lamdu.Expr.Scheme (Scheme)
+import Lamdu.Expr.Type (Type, (~>))
 import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Map as MapStore
@@ -15,17 +15,18 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.ExampleDB as ExampleDB
-import qualified Lamdu.Expr as E
 import qualified Lamdu.Expr.Scheme as Scheme
+import qualified Lamdu.Expr.Type as T
+import qualified Lamdu.Expr.Val as V
 
-boolType :: E.Type
-boolType = E.TInst "Bool" Map.empty
+boolType :: Type
+boolType = T.TInst "Bool" Map.empty
 
-definitionTypes :: Map E.GlobalId Scheme
+definitionTypes :: Map V.GlobalId Scheme
 definitionTypes =
   exampleDBDefs `mappend` extras
   where
-    extras = Map.singleton "IntToBoolFunc" $ Scheme.mono $ E.intType ~> boolType
+    extras = Map.singleton "IntToBoolFunc" $ Scheme.mono $ T.int ~> boolType
     exampleDBDefs =
       fst . MapStore.runEmpty . Transaction.run MapStore.mapStore $
         do  (_, defIs) <- ExampleDB.createBuiltins

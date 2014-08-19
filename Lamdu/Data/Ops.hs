@@ -29,7 +29,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Expr as E
+import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 --import qualified Lamdu.Expr.Utils as ExprUtil
@@ -43,7 +43,7 @@ setToWrapper ::
   T m (ExprIRef.ValI (Tag m))
 setToWrapper wrappedI destP = do
   newFuncI <- newHole
-  destI <$ ExprIRef.writeValBody destI (E.VApp (E.Apply newFuncI wrappedI))
+  destI <$ ExprIRef.writeValBody destI (V.BApp (V.Apply newFuncI wrappedI))
   where
     destI = Property.value destP
 
@@ -53,12 +53,12 @@ wrap ::
   T m (ExprIRef.ValI (Tag m))
 wrap exprP = do
   newFuncI <- newHole
-  applyI <- ExprIRef.newValBody . E.VApp . E.Apply newFuncI $ Property.value exprP
+  applyI <- ExprIRef.newValBody . V.BApp . V.Apply newFuncI $ Property.value exprP
   Property.set exprP applyI
   return applyI
 
 newHole :: MonadA m => T m (ExprIRef.ValI (Tag m))
-newHole = ExprIRef.newValBody $ E.VLeaf E.VHole
+newHole = ExprIRef.newValBody $ V.BLeaf V.LHole
 
 replace ::
   MonadA m =>
@@ -76,13 +76,13 @@ setToHole :: MonadA m => ExprIRef.ValIProperty m -> T m (ExprIRef.ValI (Tag m))
 setToHole exprP =
   exprI <$ ExprIRef.writeValBody exprI hole
   where
-    hole = E.VLeaf E.VHole
+    hole = V.BLeaf V.LHole
     exprI = Property.value exprP
 
 lambdaWrap
   :: MonadA m
   => ExprIRef.ValIProperty m
-  -> T m (E.ValVar, ExprIRef.ValI (Tag m))
+  -> T m (V.Var, ExprIRef.ValI (Tag m))
 lambdaWrap exprP = do
   (newParam, newExprI) <- ExprIRef.newLambda $ Property.value exprP
   Property.set exprP newExprI
@@ -91,11 +91,11 @@ lambdaWrap exprP = do
 redexWrap
   :: MonadA m
   => ExprIRef.ValIProperty m
-  -> T m (E.ValVar, ExprIRef.ValI (Tag m))
+  -> T m (V.Var, ExprIRef.ValI (Tag m))
 redexWrap exprP = do
   (newParam, newLambdaI) <- ExprIRef.newLambda $ Property.value exprP
   newValueI <- newHole
-  newApplyI <- ExprIRef.newValBody . E.VApp $ E.Apply newLambdaI newValueI
+  newApplyI <- ExprIRef.newValBody . V.BApp $ V.Apply newLambdaI newValueI
   Property.set exprP newApplyI
   return (newParam, newLambdaI)
 
@@ -115,9 +115,9 @@ addListItem Anchors.SpecialFunctions {..} exprP = do
   return (newListI, newItemI)
   where
     v = ValTreeNode
-    app f x            = v $ E.VApp $ E.Apply f x
-    recEx tag val rest = v $ E.VRecExtend $ E.RecExtend tag val rest
-    recEmpty           = v $ E.VLeaf E.VRecEmpty
+    app f x            = v $ V.BApp $ V.Apply f x
+    recEx tag val rest = v $ V.BRecExtend $ V.RecExtend tag val rest
+    recEmpty           = v $ V.BLeaf V.LRecEmpty
     cons               = v $ ExprLens.valBodyGlobal # ExprIRef.globalId sfCons
 
 newPane :: MonadA m => Anchors.CodeProps m -> DefIM m -> T m ()

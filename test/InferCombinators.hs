@@ -10,15 +10,17 @@ import Data.Maybe (fromMaybe)
 import Data.Traversable (Traversable)
 import DefinitionTypes
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
-import Lamdu.Expr.Pretty (pPrintValUnannotated)
 import Lamdu.Expr.Scheme (Scheme(..))
+import Lamdu.Expr.Type (Type)
+import Lamdu.Expr.Val (Val(..))
 import Text.PrettyPrint ((<+>))
 import Text.PrettyPrint.HughesPJClass (Pretty(..))
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Lamdu.Expr as E
+import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.TypeVars as TypeVars
+import qualified Lamdu.Expr.Val as V
 import qualified Text.PrettyPrint as PP
 
 data ResumptionStep
@@ -34,11 +36,11 @@ data ResumptionStep
   | NewInferred Resumptions
 
 data Resumptions = Resumptions
-  { _rTyp :: E.Type
+  { _rTyp :: Type
   , _rStep :: ResumptionStep
   }
 
-rTyp :: Lens' Resumptions E.Type
+rTyp :: Lens' Resumptions Type
 rTyp f ipl = mk <$> f (_rTyp ipl)
   where
     mk x = ipl { _rTyp = x }
@@ -60,7 +62,7 @@ instance Applicative RepeatList where
   RCons f fs <*> RRepeat x = RCons (f x) (fs <*> RRepeat x)
   RCons f fs <*> RCons x xs = RCons (f x) (fs <*> xs)
 
-type TypeStream = RepeatList E.Type
+type TypeStream = RepeatList Type
 
 typeStream :: Resumptions -> TypeStream
 typeStream (Resumptions typ step) =
@@ -71,43 +73,45 @@ typeStream (Resumptions typ step) =
     NewInferred rs -> RCons typ $ typeStream rs
 
 exprTypeStream :: ExprWithResumptions -> TypeStream
-exprTypeStream = typeStream . (^. E.valPayload)
+exprTypeStream = typeStream . (^. V.payload)
 
 mkExprWithResumptions ::
-  E.ValBody ExprWithResumptions -> TypeStream -> ExprWithResumptions
+  V.Body ExprWithResumptions -> TypeStream -> ExprWithResumptions
 mkExprWithResumptions body types =
-  E.Val (go types) body
+  Val (go types) body
   where
     go (RRepeat t) = Resumptions t Final
     go (RCons t ts) = Resumptions t $ NewInferred $ go ts
 
-type ExprWithResumptions = E.Val Resumptions
+type ExprWithResumptions = Val Resumptions
 
-iType :: Lens' ExprWithResumptions E.Type
-iType = E.valPayload . rTyp
+iType :: Lens' ExprWithResumptions Type
+iType = V.payload . rTyp
 
 resumeHere :: ExprWithResumptions -> ExprWithResumptions -> ExprWithResumptions
-resumeHere (E.Val (Resumptions typ Final) body) newExpr =
-  E.Val (Resumptions typ (ResumeWith newExpr)) body
-resumeHere (E.Val (Resumptions _ _) _) _ = error "Contradicting resumptions"
+resumeHere (Val (Resumptions typ Final) body) newExpr =
+  Val (Resumptions typ (ResumeWith newExpr)) body
+resumeHere (Val (Resumptions _ _) _) _ = error "Contradicting resumptions"
 
-resumedToType :: TypeStream -> TypeStream -> TypeStream
-resumedToType (RRepeat t) newTyp = RCons t newTyp
-resumedToType _ _ = error "Contradicting type resumptions"
+resumedType :: TypeStream -> TypeStream -> TypeStream
+resumedType (RRepeat t) newTyp = RCons t newTyp
+resumedType _ _ = error "Contradicting type resumptions"
 
-compositeTypeVar :: E.TypeVar (E.CompositeType p) -> RepeatList (E.CompositeType p)
-compositeTypeVar ctv = pure $ E.CVar ctv
+compositeTypeVar :: T.Var (T.Composite p) -> RepeatList (T.Composite p)
+compositeTypeVar ctv = pure $ T.CVar ctv
 
-emptyCompositeType :: RepeatList (E.CompositeType p)
-emptyCompositeType = pure $ E.CEmpty
+emptyCompositeType :: RepeatList (T.Composite p)
+emptyCompositeType = pure $ T.CEmpty
 
 compositeTypeExtend ::
-  E.Tag -> TypeStream -> RepeatList E.ProductType -> RepeatList E.ProductType
+  T.Tag -> TypeStream ->
+  RepeatList (T.Composite T.Product) ->
+  RepeatList (T.Composite T.Product)
 compositeTypeExtend tag typ base =
-  E.CExtend tag <$> typ <*> base
+  T.CExtend tag <$> typ <*> base
 
 -- TODO: Re-use Subst and re-expose??
-instantiate :: Scheme -> [(E.TypeVar E.Type, E.Type)] -> E.Type
+instantiate :: Scheme -> [(T.Var Type, Type)] -> Type
 instantiate scheme typeVarAssignments =
   onTVars subst (schemeType scheme)
   where
@@ -115,13 +119,13 @@ instantiate scheme typeVarAssignments =
       fromMaybe (error "Missing type var assignment") .
       (`lookup` typeVarAssignments)
 
-onTVars :: (E.TypeVar E.Type -> E.Type) -> E.Type -> E.Type
-onTVars f (E.TVar v) = f v
-onTVars f t = t & E.typeNextLayer %~ onTVars f
+onTVars :: (T.Var Type -> Type) -> Type -> Type
+onTVars f (T.TVar v) = f v
+onTVars f t = t & T.nextLayer %~ onTVars f
 
-glob :: [TypeStream] -> E.GlobalId -> ExprWithResumptions
+glob :: [TypeStream] -> V.GlobalId -> ExprWithResumptions
 glob typeVarAssignments globalId =
-  mkExprWithResumptions (E.VLeaf (E.VGlobal globalId)) $
+  mkExprWithResumptions (V.BLeaf (V.LGlobal globalId)) $
   instantiate scheme <$>
   Lens.sequenceAOf (Lens.traversed . _2) typeVarAssignments'
   where
@@ -132,64 +136,64 @@ glob typeVarAssignments globalId =
     typeVarAssignments' = zip schemeVars typeVarAssignments
 
 intType :: TypeStream
-intType = pure E.intType
+intType = pure T.int
 
 literalInteger :: Integer -> ExprWithResumptions
 literalInteger x =
-  mkExprWithResumptions (E.VLeaf (E.VLiteralInteger x)) intType
+  mkExprWithResumptions (V.BLeaf (V.LLiteralInteger x)) intType
 
 -- TODO: Make this take a (TypeStream) (WHICH SHOULD BE NAMED TypeStream)
 -- and then make combinators to build type streams?
 holeWithInferredType :: TypeStream -> ExprWithResumptions
-holeWithInferredType = mkExprWithResumptions (E.VLeaf E.VHole)
+holeWithInferredType = mkExprWithResumptions (V.BLeaf V.LHole)
 
-typeVar :: E.TypeVar E.Type -> TypeStream
+typeVar :: T.Var Type -> TypeStream
 typeVar = pure . TypeVars.liftVar
 
 (~>) :: TypeStream -> TypeStream -> TypeStream
-a ~> r = E.TFun <$> a <*> r
+a ~> r = T.TFun <$> a <*> r
 
 lambda ::
-  E.ValVar -> TypeStream ->
+  V.Var -> TypeStream ->
   (ExprWithResumptions -> ExprWithResumptions) -> ExprWithResumptions
 lambda name paramType mkResult =
-  mkExprWithResumptions (E.VAbs (E.Lam name result))
-  (E.TFun <$> paramType <*> exprTypeStream result)
+  mkExprWithResumptions (V.BAbs (V.Lam name result))
+  (T.TFun <$> paramType <*> exprTypeStream result)
   where
-    result = mkResult $ mkExprWithResumptions (E.VLeaf (E.VVar name)) paramType
+    result = mkResult $ mkExprWithResumptions (V.BLeaf (V.LVar name)) paramType
 
-getField :: ExprWithResumptions -> E.Tag -> ExprWithResumptions
+getField :: ExprWithResumptions -> T.Tag -> ExprWithResumptions
 getField recordVal tag =
   mkExprWithResumptions
-  (E.VGetField (E.GetField recordVal tag))
+  (V.BGetField (V.GetField recordVal tag))
   (findTypeOfField tag <$> exprTypeStream recordVal)
 
-findTypeOfField :: E.Tag -> E.Type -> E.Type
-findTypeOfField tag (E.TRecord p) = findTypeOfTagInComposite tag p
+findTypeOfField :: T.Tag -> Type -> Type
+findTypeOfField tag (T.TRecord p) = findTypeOfTagInComposite tag p
 findTypeOfField _ _ = error "Test combinators type checking failed in findTypeOfField"
 
-findTypeOfTagInComposite :: E.Tag -> E.CompositeType t -> E.Type
-findTypeOfTagInComposite expectedTag (E.CExtend tag typ rest)
+findTypeOfTagInComposite :: T.Tag -> T.Composite t -> Type
+findTypeOfTagInComposite expectedTag (T.CExtend tag typ rest)
   | expectedTag == tag = typ
   | otherwise = findTypeOfTagInComposite expectedTag rest
 findTypeOfTagInComposite _ _ = error "Test combinators type checking failed in findTypeOfTagInComposite"
 
 -- TODO: Reuse FlatComposite if it gets exposed:
-compositeOfList :: [(E.Tag, E.Type)] -> E.CompositeType t
-compositeOfList [] = E.CEmpty
-compositeOfList ((tag, typ):rest) = E.CExtend tag typ $ compositeOfList rest
+compositeOfList :: [(T.Tag, Type)] -> T.Composite t
+compositeOfList [] = T.CEmpty
+compositeOfList ((tag, typ):rest) = T.CExtend tag typ $ compositeOfList rest
 
 lambdaRecord ::
-  E.ValVar -> [(E.Tag, TypeStream)] ->
+  V.Var -> [(T.Tag, TypeStream)] ->
   ([ExprWithResumptions] -> ExprWithResumptions) -> ExprWithResumptions
 lambdaRecord paramsName fields mkResult =
   lambda paramsName recordType $ \params ->
   mkResult $ map (getField params . fst) fields
   where
-    recordType = E.TRecord . compositeOfList <$> Lens.sequenceAOf (Lens.traversed . _2) fields
+    recordType = T.TRecord . compositeOfList <$> Lens.sequenceAOf (Lens.traversed . _2) fields
 
 whereItem ::
-  E.ValVar -> ExprWithResumptions -> (ExprWithResumptions -> ExprWithResumptions) -> ExprWithResumptions
+  V.Var -> ExprWithResumptions -> (ExprWithResumptions -> ExprWithResumptions) -> ExprWithResumptions
 whereItem name val mkBody = lambda name (exprTypeStream val) mkBody $$ val
 
 -- Uses inferred holes for cons type
@@ -202,9 +206,9 @@ nonEmptyList items@(x:_) =
     cons h t = glob [typ] ":" $$: [h, t]
     nil = glob [typ] "[]"
 
-tInst :: E.TypeId -> [(E.TypeParamId, TypeStream)] -> TypeStream
+tInst :: T.Id -> [(T.ParamId, TypeStream)] -> TypeStream
 tInst name =
-  fmap (E.TInst name . Map.fromList) . Lens.sequenceAOf (Lens.traversed . _2)
+  fmap (T.TInst name . Map.fromList) . Lens.sequenceAOf (Lens.traversed . _2)
 
 boolType :: TypeStream
 boolType = tInst "Bool" []
@@ -216,37 +220,37 @@ maybeOf :: TypeStream -> TypeStream
 maybeOf t = tInst "Maybe" [("val", t)]
 
 eRecEmpty :: ExprWithResumptions
-eRecEmpty = mkExprWithResumptions (E.VLeaf E.VRecEmpty) $ pure $ E.TRecord E.CEmpty
+eRecEmpty = mkExprWithResumptions (V.BLeaf V.LRecEmpty) $ pure $ T.TRecord T.CEmpty
 
-eRecExtend :: E.Tag -> ExprWithResumptions -> ExprWithResumptions -> ExprWithResumptions
+eRecExtend :: T.Tag -> ExprWithResumptions -> ExprWithResumptions -> ExprWithResumptions
 eRecExtend tag v rest =
-  mkExprWithResumptions (E.VRecExtend (E.RecExtend tag v rest)) $
+  mkExprWithResumptions (V.BRecExtend (V.RecExtend tag v rest)) $
   f <$> exprTypeStream v <*> exprTypeStream rest
   where
-    f tv (E.TRecord txs) = E.TRecord $ E.CExtend tag tv txs
+    f tv (T.TRecord txs) = T.TRecord $ T.CExtend tag tv txs
     f _ _ = error "eRecExtend with non record type"
 
-record :: [(E.Tag, ExprWithResumptions)] -> ExprWithResumptions
+record :: [(T.Tag, ExprWithResumptions)] -> ExprWithResumptions
 record = foldr (uncurry eRecExtend) eRecEmpty
 
 infixl 4 $$
 infixl 4 $$:
 infixl 4 $.
 
-($.) :: ExprWithResumptions -> E.Tag -> ExprWithResumptions
+($.) :: ExprWithResumptions -> T.Tag -> ExprWithResumptions
 ($.) = getField
 
 ($$) :: ExprWithResumptions -> ExprWithResumptions -> ExprWithResumptions
 ($$) func arg =
-  mkExprWithResumptions (E.VApp (E.Apply func arg)) $
+  mkExprWithResumptions (V.BApp (V.Apply func arg)) $
   mkType <$> exprTypeStream func <*> exprTypeStream arg
   where
-    mkType (E.TFun p r) a
+    mkType (T.TFun p r) a
       | p == a = r
       | otherwise =
         error $
         "Incompatible types in '" ++
-        show (pPrintValUnannotated func <+> PP.text "$$" <+> pPrintValUnannotated arg) ++
+        show (V.pPrintUnannotated func <+> PP.text "$$" <+> V.pPrintUnannotated arg) ++
         "' param is " ++
         show (pPrint p) ++ " and arg is " ++ show (pPrint a)
     mkType _ _ = error "Apply of non-func type!"
@@ -257,10 +261,10 @@ infixl 4 $.
   where
     tags =
       case f ^. iType of
-      E.TFun (E.TRecord p) _ -> compositeTags p
+      T.TFun (T.TRecord p) _ -> compositeTags p
       _ -> error "not a record func in ($$:)"
 
-compositeTags :: E.CompositeType p -> [E.Tag]
-compositeTags E.CEmpty = []
-compositeTags E.CVar {} = error "unknown tags in compositeTags"
-compositeTags (E.CExtend t _ r) = t : compositeTags r
+compositeTags :: T.Composite p -> [T.Tag]
+compositeTags T.CEmpty = []
+compositeTags T.CVar {} = error "unknown tags in compositeTags"
+compositeTags (T.CExtend t _ r) = t : compositeTags r

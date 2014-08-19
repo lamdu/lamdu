@@ -14,8 +14,8 @@ import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction, setP)
 import Data.String (IsString(..))
 import Lamdu.Data.Anchors (PresentationMode(..))
-import Lamdu.Expr ((~>))
 import Lamdu.Expr.Scheme (Scheme(..))
+import Lamdu.Expr.Type (Type, (~>))
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -27,9 +27,9 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.DbLayout as Db
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Expr as E
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Scheme as Scheme
+import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.TypeVars as TypeVars
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 
@@ -40,11 +40,11 @@ namedId name = do
   setP (Db.assocNameRef tagGuid) name
   return $ fromString name
   where
-    -- TODO: E.Identifier -> E.Guid.  Remove Guid or keep it only for
+    -- TODO: Identifier -> V.Guid.  Remove Guid or keep it only for
     -- GUI ids?
     tagGuid = Guid.fromString name
 
-forAll :: TypeVars.HasVar a => Int -> ([a] -> E.Type) -> Scheme
+forAll :: TypeVars.HasVar a => Int -> ([a] -> Type) -> Scheme
 forAll count f =
   Scheme
   { schemeForAll = TypeVars.newVars $ Set.fromList typeVars
@@ -54,8 +54,8 @@ forAll count f =
   where
     typeVars = take count $ map (fromString . (:[])) ['a'..'z']
 
-recordType :: [(E.Tag, E.Type)] -> E.Type
-recordType = E.TRecord . foldr (uncurry E.CExtend) E.CEmpty
+recordType :: [(T.Tag, Type)] -> Type
+recordType = T.TRecord . foldr (uncurry T.CExtend) T.CEmpty
 
 createBuiltins ::
   MonadA m => T m (Db.SpecialFunctions (Tag m), [ExprIRef.DefIM m])
@@ -65,7 +65,7 @@ createBuiltins =
 
     listTag <- newTag "List"
     valTag <- newTag "val"
-    let list x = E.TInst listTag $ Map.singleton valTag x
+    let list x = T.TInst listTag $ Map.singleton valTag x
 
     headTag <- newTag "head"
     tailTag <- newTag "tail"
@@ -77,7 +77,7 @@ createBuiltins =
     publicBuiltin_ "Data.List.head" . forAll 1 $ \[a] -> list a ~> a
 
     maybeTag <- newTag "Maybe"
-    let maybe_ x = E.TInst maybeTag $ Map.singleton valTag x
+    let maybe_ x = T.TInst maybeTag $ Map.singleton valTag x
     publicBuiltin_ "Prelude.Just" $ forAll 1 $ \[a] -> a ~> maybe_ a
     publicBuiltin_ "Prelude.Nothing" $ forAll 1 $ \[a] -> maybe_ a
 
@@ -93,10 +93,10 @@ createBuiltins =
       ] ~> b
 
     intTag <- newTag "Int"
-    let integer = E.TInst intTag Map.empty
+    let integer = T.TInst intTag Map.empty
 
     boolTag <- newTag "Bool"
-    let bool = E.TInst boolTag Map.empty
+    let bool = T.TInst boolTag Map.empty
 
     true <- publicBuiltin "Prelude.True" $ Scheme.mono bool
     false <- publicBuiltin "Prelude.False" $ Scheme.mono bool

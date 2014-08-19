@@ -15,7 +15,8 @@ module Lamdu.Expr.Lens
   , pureValApply
   ) where
 
-import qualified Lamdu.Expr as E
+import qualified Lamdu.Expr.Val as V
+import Lamdu.Expr.Val (Val(..))
 
 import Control.Lens (Traversal', Prism', prism', Iso', iso)
 
@@ -23,13 +24,13 @@ import Control.Lens (Traversal', Prism', prism', Iso', iso)
 -- exprLam :: Traversal' (Expr def par a) (Lam par (Expr def par a))
 -- exprLam = eBody . _VAbs
 
-valApply :: Traversal' (E.Val a) (E.Apply (E.Val a))
-valApply = E.valBody . _VApp
+valApply :: Traversal' (Val a) (V.Apply (Val a))
+valApply = V.body . _VApp
 
-pureValBody :: Iso' (E.Val ()) (E.ValBody (E.Val ()))
-pureValBody = iso E._valBody (E.Val ())
+pureValBody :: Iso' (Val ()) (V.Body (Val ()))
+pureValBody = iso V._valBody (Val ())
 
-pureValApply :: Prism' (E.Val ()) (E.Apply (E.Val ()))
+pureValApply :: Prism' (Val ()) (V.Apply (Val ()))
 pureValApply = pureValBody . _VApp
 
 -- exprRecord :: Traversal' (Expr def par a) (Record (Expr def par a))
@@ -60,11 +61,11 @@ pureValApply = pureValBody . _VApp
 -- exprVLiteralInteger :: Traversal' (Expr def par a) Integer
 -- exprVLiteralInteger = eBody . bodyVLiteralInteger
 
-valGlobal :: Traversal' (E.Val a) E.GlobalId
-valGlobal = E.valBody . valBodyGlobal
+valGlobal :: Traversal' (Val a) V.GlobalId
+valGlobal = V.body . valBodyGlobal
 
-valHole :: Traversal' (E.Val a) ()
-valHole = E.valBody . valBodyHole
+valHole :: Traversal' (Val a) ()
+valHole = V.body . valBodyHole
 
 -- exprType :: Traversal' (Expr def par a) ()
 -- exprType = eBody . bodyType
@@ -157,35 +158,35 @@ valHole = E.valBody . valBodyHole
 -- bodyParameterRef :: Lens.Prism' (Body def par expr) par
 -- bodyParameterRef = _VLeaf . parameterRef
 
-_VGlobal :: Prism' E.ValLeaf E.GlobalId
-_VGlobal = prism' E.VGlobal getGlobal
+_VGlobal :: Prism' V.Leaf V.GlobalId
+_VGlobal = prism' V.LGlobal getGlobal
   where
-    getGlobal (E.VGlobal gid) = Just gid
+    getGlobal (V.LGlobal gid) = Just gid
     getGlobal _ = Nothing
 
-_VHole :: Prism' E.ValLeaf ()
-_VHole = prism' (\() -> E.VHole) getHole
+_VHole :: Prism' V.Leaf ()
+_VHole = prism' (\() -> V.LHole) getHole
   where
-    getHole E.VHole = Just ()
+    getHole V.LHole = Just ()
     getHole _ = Nothing
 
-_VLeaf :: Prism' (E.ValBody a) E.ValLeaf
-_VLeaf = prism' E.VLeaf getLeaf
+_VLeaf :: Prism' (V.Body a) V.Leaf
+_VLeaf = prism' V.BLeaf getLeaf
   where
-    getLeaf (E.VLeaf x) = Just x
+    getLeaf (V.BLeaf x) = Just x
     getLeaf _ = Nothing
 
-_VApp :: Prism' (E.ValBody a) (E.Apply a)
-_VApp = prism' E.VApp getVApp
+_VApp :: Prism' (V.Body a) (V.Apply a)
+_VApp = prism' V.BApp getVApp
   where
-    getVApp (E.VApp x) = Just x
+    getVApp (V.BApp x) = Just x
     getVApp _ = Nothing
 
 -- _VAbs          (Lam exp)
 -- -VGetField     (GetField exp)
 -- _VRecExtend    (RecExtend exp)
 
-valBodyGlobal :: Prism' (E.ValBody e) E.GlobalId
+valBodyGlobal :: Prism' (V.Body e) V.GlobalId
 valBodyGlobal = _VLeaf . _VGlobal
 
 -- bodyVLiteralInteger :: Lens.Prism' (Body def par expr) Integer
@@ -196,7 +197,7 @@ valBodyGlobal = _VLeaf . _VGlobal
 --   (VariableRef defa par) (VariableRef defb par)
 -- bodyVVar = _VLeaf . _VVar
 
-valBodyHole :: Prism' (E.ValBody expr) ()
+valBodyHole :: Prism' (V.Body expr) ()
 valBodyHole = _VLeaf . _VHole
 
 -- bodyType :: Lens.Prism' (Body def par expr) ()
