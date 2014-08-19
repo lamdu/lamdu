@@ -11,7 +11,6 @@ import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Function.Decycle (decycleOn)
-import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
@@ -25,26 +24,23 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Val as Val
+import qualified Lamdu.Expr.Val as V
 
 type T = Transaction
 
 type ExprI = ExprIRef.ValI
 
--- | SubexpressionIndex is a Foldable-index into Val.Body (i.e:
+-- | SubexpressionIndex is a Foldable-index into V.Body (i.e:
 -- 0 or 1 for BodyApply func/arg)
 type SubexpressionIndex = Int
 
 data ExprPropertyClosure t
-  = DefinitionTypeProperty (DefI t) (Definition.Body (ExprI t))
-  | DefinitionContentExprProperty (DefI t) (ExprI t) (ExprI t)
-  | SubexpressionProperty (ExprI t) (Val.Body (ExprI t)) SubexpressionIndex
+  = DefinitionContentExprProperty (DefI t) (ExprI t) Definition.ExportedType
+  | SubexpressionProperty (ExprI t) (V.Body (ExprI t)) SubexpressionIndex
   deriving (Show, Typeable)
 derive makeBinary ''ExprPropertyClosure
 
 exprPropertyOfClosure :: MonadA m => ExprPropertyClosure (Tag m) -> ExprIRef.ValIProperty m
-exprPropertyOfClosure (DefinitionTypeProperty defI (Definition.Body bodyContent bodyType)) =
-  Property bodyType (Transaction.writeIRef defI . Definition.Body bodyContent)
 exprPropertyOfClosure (DefinitionContentExprProperty defI bodyExpr bodyType) =
   Property bodyExpr
   (Transaction.writeIRef defI . (`Definition.Body` bodyType) . Definition.ContentExpr)
@@ -68,7 +64,7 @@ loadExprClosure =
     loop (Just recurse) closure =
       ExprIRef.readValBody iref
       >>= onBody
-      <&> (`Val` closure)
+      <&> (Val closure)
       where
         onBody body = body & Lens.traversed %%@~ loadElement body
         iref = irefOfClosure closure
@@ -78,12 +74,11 @@ loadExprClosure =
 loadDefinitionClosure ::
   MonadA m => DefIM m -> T m (Definition (Val (ExprPropertyClosure (Tag m))) (DefIM m))
 loadDefinitionClosure defI = do
-  def <- Transaction.readIRef defI
-  bodyType <- loadExprClosure $ DefinitionTypeProperty defI def
+  Definition.Body bodyContent bodyType <- Transaction.readIRef defI
   (`Definition` defI) . (`Definition.Body` bodyType) <$>
-    case def ^. Definition.bodyContent of
+    case bodyContent of
     Definition.ContentExpr bodyI ->
       fmap Definition.ContentExpr . loadExprClosure $
-      DefinitionContentExprProperty defI bodyI $ def ^. Definition.bodyType
+      DefinitionContentExprProperty defI bodyI bodyType
     Definition.ContentBuiltin (Definition.Builtin name) ->
       return . Definition.ContentBuiltin $ Definition.Builtin name
