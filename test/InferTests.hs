@@ -41,20 +41,19 @@ inferPart =
 -- Depend on Rigidity:
 
 applyOnVar =
-  testInferAllowFail "No support for rigidity yet"
-    "apply on var" $
+  testInfer "apply on var" $
   lambda "x" a $ \x ->
   glob [] "IntToBoolFunc" $$
   (holeWithInferredType (a ~> intType) $$ x)
 
 monomorphRedex =
-  testInfer "monomorphRedex: f (\\x -> \\_1 -> x ?) where f = \\2 -> ?" $
-  whereItem "f" (lambda "_2" ((a ~> b) ~> c ~> b) $ \_ -> holeWithInferredType b) $ \f ->
+  testInfer "monomorphRedex: f (\\x -> \\_1 -> x ?) where f = \\_2 -> ?" $
+  whereItem "f" (lambda "_2" ((a ~> b) ~> c ~> b) $ \_ -> holeWithInferredType d) $ \f ->
   f $$
-  ( lambda "x" b $ \x ->
-    lambda "_1" c (const x) $$ holeWithInferredType a )
+  ( lambda "x" (a ~> b) $ \x ->
+    lambda "_1" c $ const $ x $$ holeWithInferredType a
+  )
 
--- TODO: not sure what this used to test but I think I changed it..
 idPreservesDependency =
   testInfer "5 + f _ where f x = id _{no inferred type}" $
   whereItem "f"
@@ -138,7 +137,7 @@ resumptionTests =
   [ testInfer "{hole->5}" $
     holeWithInferredType a `resumeHere` literalInteger 5
   , testInfer "hole {hole->id}" $
-    holeWithInferredType (a ~> b) $$
+    holeWithInferredType ((a ~> b) `resumedType` ((c ~> c) ~> b)) $$
     (holeWithInferredType a `resumeHere` glob [c] "id")
   , testInfer "\\_ -> {hole->id}" $
     lambda "" a $
@@ -149,10 +148,7 @@ resumptionTests =
     nonEmptyList [holeWithInferredType a `resumeHere` literalInteger 1]
   , testInfer "Resumption with getfield" $
     ( holeWithInferredType
-      (T.TRecord <$>
-       compositeTypeExtend "x"
-       (a `resumedType` intType)
-       (compositeTypeVar "r1"))
+      (T.TRecord <$> compositeTypeExtend "x" a (compositeTypeVar "r1"))
       `resumeHere` record [("x", literalInteger 5)]
     ) $. "x"
   , testInfer "apply of resumed-glob" $
@@ -160,7 +156,7 @@ resumptionTests =
     glob [] "True"
   , testInfer "apply of resumed-lam" $
     holeWithInferredType (a ~> b)
-    `resumeHere` lambda "x" c (const (holeWithInferredType d))
+    `resumeHere` lambda "x" a (const (holeWithInferredType c))
     $$ holeWithInferredType a
   ] ++
   [ testInfer ("\\x:_ -> \\y:_ -> {_->" ++ name ++ "}") $
@@ -208,7 +204,7 @@ infiniteTypeTests =
 
 getFieldWasntAllowed =
   testInfer "map (\\x. {_ => x}) ({}:_)" $
-  glob [recType, a] "map" $$:
+  glob [recType, a `resumedType` recType] "map" $$:
   [ glob [recType] ":" $$:
     [ eRecEmpty
     , holeWithInferredType $ listOf recType

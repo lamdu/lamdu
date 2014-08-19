@@ -155,6 +155,7 @@ holeWithInferredType = mkExprWithResumptions (V.BLeaf V.LHole)
 typeVar :: T.Var Type -> TypeStream
 typeVar = pure . T.liftVar
 
+infixr 1 ~>
 (~>) :: TypeStream -> TypeStream -> TypeStream
 a ~> r = T.TFun <$> a <*> r
 
