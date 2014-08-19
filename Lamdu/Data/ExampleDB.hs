@@ -18,7 +18,6 @@ import Lamdu.Expr.Scheme (Scheme(..))
 import Lamdu.Expr.Type (Type, (~>))
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
@@ -44,12 +43,12 @@ namedId name = do
     -- GUI ids?
     tagGuid = Guid.fromString name
 
-forAll :: TypeVars.HasVar a => Int -> ([a] -> Type) -> Scheme
+forAll :: TypeVars.VarKind a => Int -> ([a] -> Type) -> Scheme
 forAll count f =
   Scheme
-  { schemeForAll = TypeVars.newVars $ Set.fromList typeVars
+  { schemeForAll = mconcat $ map TypeVars.singleton typeVars
   , schemeConstraints = mempty
-  , schemeType = f $ map TypeVars.liftVar typeVars
+  , schemeType = f $ map T.liftVar typeVars
   }
   where
     typeVars = take count $ map (fromString . (:[])) ['a'..'z']

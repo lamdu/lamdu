@@ -12,6 +12,7 @@ import DefinitionTypes
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Expr.Scheme (Scheme(..))
 import Lamdu.Expr.Type (Type)
+import Lamdu.Expr.TypeVars (TypeVars(..))
 import Lamdu.Expr.Val (Val(..))
 import Text.PrettyPrint ((<+>))
 import Text.PrettyPrint.HughesPJClass (Pretty(..))
@@ -20,7 +21,6 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Lamdu.Expr.Scheme as S
 import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.TypeVars as TypeVars
 import qualified Lamdu.Expr.Val as V
 import qualified Text.PrettyPrint as PP
 
@@ -125,16 +125,18 @@ onTVars f (T.TVar v) = f v
 onTVars f t = t & T.nextLayer %~ onTVars f
 
 glob :: [TypeStream] -> V.GlobalId -> ExprWithResumptions
-glob typeVarAssignments globalId =
-  mkExprWithResumptions (V.BLeaf (V.LGlobal globalId)) $
-  instantiate scheme <$>
-  Lens.sequenceAOf (Lens.traversed . _2) typeVarAssignments'
+glob typeVarAssignments globalId
+  | Set.null rtvs =
+    mkExprWithResumptions (V.BLeaf (V.LGlobal globalId)) $
+    instantiate scheme <$>
+    Lens.sequenceAOf (Lens.traversed . _2) typeVarAssignments'
+  | otherwise = error "TODO: Handle record type vars in globals"
   where
     scheme =
       fromMaybe (error ("global " ++ show globalId ++ " does not exist")) $
       Map.lookup globalId definitionTypes
-    schemeVars = Set.toList $ TypeVars.getVars $ schemeForAll scheme
-    typeVarAssignments' = zip schemeVars typeVarAssignments
+    TypeVars tvs rtvs = schemeForAll scheme
+    typeVarAssignments' = zip (Set.toList tvs) typeVarAssignments
 
 intType :: TypeStream
 intType = pure T.int
@@ -149,7 +151,7 @@ holeWithInferredType :: TypeStream -> ExprWithResumptions
 holeWithInferredType = mkExprWithResumptions (V.BLeaf V.LHole)
 
 typeVar :: T.Var Type -> TypeStream
-typeVar = pure . TypeVars.liftVar
+typeVar = pure . T.liftVar
 
 (~>) :: TypeStream -> TypeStream -> TypeStream
 a ~> r = T.TFun <$> a <*> r
