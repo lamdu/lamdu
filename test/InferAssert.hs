@@ -49,15 +49,21 @@ annotateTypes expr =
   where
     annotate typ = addAnnotation ("Type: " ++ show typ)
 
-type Canonizer = State (Map (T.Var Type) (T.Var Type), [T.Var Type])
-runCanonizer :: Canonizer a -> a
-runCanonizer = flip evalState (Map.empty, map (fromString . (:[])) ['a'..])
+type VarMap t = Map (T.Var t) (T.Var t)
+type FreshSupply t = [T.Var t]
+type VarState t = (VarMap t, FreshSupply t)
 
-canonizeType :: Type -> Canonizer Type
-canonizeType (T.TVar tv) =
+emptyVarState :: VarState t
+emptyVarState = (Map.empty, map (fromString . (:[])) ['a'..])
+
+type Canonizer = State (VarState Type, VarState (T.Composite T.Product))
+runCanonizer :: Canonizer a -> a
+runCanonizer = flip evalState (emptyVarState, emptyVarState)
+
+canonizeTV :: T.Var t -> State (VarState t) (T.Var t)
+canonizeTV tv =
   do  mtv <- Lens.use (_1 . Lens.at tv)
-      T.TVar <$>
-        case mtv of
+      case mtv of
         Just tv' -> return tv'
         Nothing ->
           do  tv' <- fresh
@@ -69,17 +75,29 @@ canonizeType (T.TVar tv) =
       do  (x:xs) <- State.get
           State.put xs
           return x
-canonizeType (T.TRecord c) =
-  canonizeCompositeTypeOrder c & T.TRecord & T.nextLayer %%~ canonizeType
-canonizeType t = t & T.nextLayer %%~ canonizeType
 
-canonizeCompositeTypeOrder :: T.Composite p -> T.Composite p
-canonizeCompositeTypeOrder c =
-  foldr (uncurry T.CExtend) end (Map.toList fields)
+canonizeCompositeType ::
+  T.Composite p -> State (VarState (T.Composite p)) (T.Composite p)
+canonizeCompositeType =
+  fmap f . go
   where
-    (fields, end) = go c
-    go (T.CExtend tag typ rest) = go rest & _1 %~ Map.insert tag typ
-    go e = (mempty, e)
+    f (fields, end) = foldr (uncurry T.CExtend) end (Map.toList fields)
+    go (T.CExtend tag typ rest) = go rest <&> _1 %~ Map.insert tag typ
+    go T.CEmpty = return (mempty, T.CEmpty)
+    go (T.CVar ctv) =
+      do  ctv' <- canonizeTV ctv
+          return (mempty, T.CVar ctv')
+
+canonizeType :: Type -> Canonizer Type
+canonizeType (T.TVar tv) =
+  T.TVar <$> Lens.zoom _1 (canonizeTV tv)
+canonizeType (T.TRecord c) =
+  Lens.zoom _2 (canonizeCompositeType c)
+  <&> T.TRecord
+  >>= T.nextLayer %%~ canonizeType
+canonizeType t =
+  t
+  & T.nextLayer %%~ canonizeType
 
 onInferError :: (Error -> Error) -> Infer a -> Infer a
 onInferError f (Infer act) = Infer $ mapStateT (Lens._Left %~ f) act
