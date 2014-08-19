@@ -69,7 +69,17 @@ canonizeType (T.TVar tv) =
       do  (x:xs) <- State.get
           State.put xs
           return x
+canonizeType (T.TRecord c) =
+  canonizeCompositeTypeOrder c & T.TRecord & T.nextLayer %%~ canonizeType
 canonizeType t = t & T.nextLayer %%~ canonizeType
+
+canonizeCompositeTypeOrder :: T.Composite p -> T.Composite p
+canonizeCompositeTypeOrder c =
+  foldr (uncurry T.CExtend) end (Map.toList fields)
+  where
+    (fields, end) = go c
+    go (T.CExtend tag typ rest) = go rest & _1 %~ Map.insert tag typ
+    go e = (mempty, e)
 
 onInferError :: (Error -> Error) -> Infer a -> Infer a
 onInferError f (Infer act) = Infer $ mapStateT (Lens._Left %~ f) act
