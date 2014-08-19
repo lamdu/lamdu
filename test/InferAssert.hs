@@ -121,11 +121,11 @@ etpInferredType f e =
     mk x = e { _etpInferredType = x}
 
 type ExprTest = Val ExprTestPayload
-type ExprComplete = Val (Infer.Payload Resumptions)
+type ExprComplete = Val (Infer.Payload, Resumptions)
 
-exprTestPayload :: Infer.Payload Resumptions -> ExprTestPayload
-exprTestPayload pl = ExprTestPayload
-  { _etpExpectedType = pl ^. Infer.plData . rTyp
+exprTestPayload :: (Infer.Payload, Resumptions) -> ExprTestPayload
+exprTestPayload (pl, resumptions) = ExprTestPayload
+  { _etpExpectedType = resumptions ^. rTyp
   , _etpInferredType = pl ^. Infer.plType
   }
 
@@ -185,18 +185,18 @@ handleResumption verifyInfersOnSide =
   where
     recurseBody body pl = Val pl <$> Lens.traverse go body
     go (Val pl body) =
-      case pl ^. Infer.plData . rStep of
+      case pl ^. _2 . rStep of
       ResumeWith newExpr -> do
         Writer.tell (Monoid.Any True, Monoid.Any True)
-        lift $ loadInferInto pl newExpr
+        lift $ loadInferInto (pl ^. _1) newExpr
       ResumeOnSide newExpr resumptions -> do
         Writer.tell (Monoid.Any True, Monoid.Any True)
         lift $ verifyInfersOnSide =<< updateInferredVal =<<
-          loadInferScope (pl ^. Infer.plScope) newExpr
-        recurseBody body $ pl & Infer.plData .~ resumptions
+          loadInferScope (pl ^. _1 . Infer.plScope) newExpr
+        recurseBody body $ pl & _2 .~ resumptions
       NewInferred resumptions -> do
         Writer.tell (Monoid.Any True, Monoid.Any False)
-        recurseBody body $ pl & Infer.plData .~ resumptions
+        recurseBody body $ pl & _2 .~ resumptions
       Final ->
         recurseBody body pl
 
@@ -213,7 +213,7 @@ expectLeft msg _ (Right x) =
 inferFailsAssertion ::
   String -> (Error -> Bool) -> Val () -> HUnit.Assertion
 inferFailsAssertion errorName isExpectedError val =
-  expectLeft errorName verifyError $ (fmap . fmap) (^. Infer.plType) $
+  expectLeft errorName verifyError $ (fmap . fmap) (^. _1 . Infer.plType) $
   runNewContext $ loadInferDef val
   where
     verifyError err
