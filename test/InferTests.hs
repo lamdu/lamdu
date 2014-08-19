@@ -3,7 +3,6 @@
 module InferTests (allTests, factorialExpr, euler1Expr, solveDepressedQuarticExpr) where
 
 import Control.Applicative ((<$>))
-import Control.Monad (void)
 import Data.String (IsString(..))
 import InferAssert
 import InferCombinators
@@ -14,6 +13,7 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Property (property, rejected)
 import qualified Lamdu.Expr.Pure as P
+import qualified Lamdu.Expr.Scheme as S
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Infer.Error as InferErr
 
@@ -195,7 +195,7 @@ fix3Lambdas =
   testCase "fix3Lambdas: fix (\\recu -> \\x -> \\y -> recu ?)" .
   inferFailsDueToOccurs $
   P.global "fix" `P.app`
-  ( P.abs "recu" $ P.abs "x" $ P.abs "y" $
+  ( P.abs "recu" S.any $ P.abs "x" S.any $ P.abs "y" S.any $
     P.var "recu" `P.app` P.hole
   )
 
@@ -388,7 +388,7 @@ fromQuickCheck1 =
   inferFailsDueToOccurs $
   -- QuickCheck discovered: ? (\\a:?==>a (25 (a (a (a a)) ?)))
   -- simplified to:
-  P.abs "x" $ x `P.app` (x `P.app` x)
+  P.abs "x" S.any $ x `P.app` (x `P.app` x)
   where
     x = P.var "x"
 
@@ -463,14 +463,14 @@ hunitTests =
   -- , testUnificationCarriesOver
   ]
 
-inferPreservesShapeProp :: Val () -> Property
-inferPreservesShapeProp expr =
+inferDoesn'tCrashProp :: Val () -> Property
+inferDoesn'tCrashProp expr =
   case runNewContext $ loadInferDef expr of
     Left _ -> property rejected
-    Right inferred -> property (void inferred == expr)
+    Right _ -> property True
 
 qcProps =
-  [ testProperty "infer preserves shape" inferPreservesShapeProp
+  [ testProperty "infer doesn't crash" inferDoesn'tCrashProp
   ]
 
 allTests = hunitTests ++ qcProps

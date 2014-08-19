@@ -34,6 +34,7 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Expr.Scheme as S
 import qualified Lamdu.Expr.Val as V
 
 type T = Transaction
@@ -71,7 +72,7 @@ newValBody = fmap ValI . Transaction.newIRef
 newLambda :: MonadA m => ValIM m -> T m (V.Var, ValIM m)
 newLambda body = do
   paramId <- V.Var . Identifier . Guid.bs <$> Transaction.newKey
-  expr <- newValBody $ V.BAbs $ V.Lam paramId body
+  expr <- newValBody $ V.BAbs $ V.Lam paramId S.any body
   return (paramId, expr)
 
 readValBody :: MonadA m => ValIM m -> T m (ValBody (Tag m))

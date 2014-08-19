@@ -19,6 +19,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.State as State
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
+import qualified Lamdu.Expr.Scheme as S
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Test.QuickCheck.Gen as Gen
@@ -43,7 +44,8 @@ next = lift $ State.gets head <* State.modify tail
 arbitraryLam :: Arbitrary a => GenExpr (V.Lam (Val a))
 arbitraryLam = do
   par <- next
-  V.Lam par <$> Reader.local (envScope %~ (par :)) arbitraryExpr
+  V.Lam par {-TODO: Arbitrary constraints on param types??-}
+    S.any <$> Reader.local (envScope %~ (par :)) arbitraryExpr
 
 arbitraryRecExtend :: Arbitrary a => GenExpr (V.RecExtend (Val a))
 arbitraryRecExtend =

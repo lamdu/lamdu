@@ -18,6 +18,7 @@ import Text.PrettyPrint.HughesPJClass (Pretty(..))
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Lamdu.Expr.Scheme as S
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.TypeVars as TypeVars
 import qualified Lamdu.Expr.Val as V
@@ -157,7 +158,7 @@ lambda ::
   V.Var -> TypeStream ->
   (ExprWithResumptions -> ExprWithResumptions) -> ExprWithResumptions
 lambda name paramType mkResult =
-  mkExprWithResumptions (V.BAbs (V.Lam name result))
+  mkExprWithResumptions (V.BAbs (V.Lam name S.any result))
   (T.TFun <$> paramType <*> exprTypeStream result)
   where
     result = mkResult $ mkExprWithResumptions (V.BLeaf (V.LVar name)) paramType
