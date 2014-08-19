@@ -281,7 +281,7 @@ euler1Expr =
 
 -- Solve depressed quartic polynomial
 solveDepressedQuarticExpr =
-  lambdaRecord "params"
+  lambdaRecordConstrainedTags "params"
   [ ("e0", intType)
   , ("d0", intType)
   , ("c0", intType)

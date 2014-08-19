@@ -6,7 +6,9 @@ import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Lens.Tuple
 import Data.Foldable (Foldable)
+import Data.Monoid (Monoid(..))
 import Data.Maybe (fromMaybe)
+import Data.String (IsString(..))
 import Data.Traversable (Traversable)
 import DefinitionTypes
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
@@ -156,14 +158,19 @@ typeVar = pure . T.liftVar
 (~>) :: TypeStream -> TypeStream -> TypeStream
 a ~> r = T.TFun <$> a <*> r
 
-lambda ::
-  V.Var -> TypeStream ->
+lambdaConstrained ::
+  V.Var -> Scheme -> TypeStream ->
   (ExprWithResumptions -> ExprWithResumptions) -> ExprWithResumptions
-lambda name paramType mkResult =
-  mkExprWithResumptions (V.BAbs (V.Lam name S.any result))
+lambdaConstrained name paramTypeConstraint paramType mkResult =
+  mkExprWithResumptions (V.BAbs (V.Lam name paramTypeConstraint result))
   (T.TFun <$> paramType <*> exprTypeStream result)
   where
     result = mkResult $ mkExprWithResumptions (V.BLeaf (V.LVar name)) paramType
+
+lambda ::
+  V.Var -> TypeStream ->
+  (ExprWithResumptions -> ExprWithResumptions) -> ExprWithResumptions
+lambda name = lambdaConstrained name S.any
 
 getField :: ExprWithResumptions -> T.Tag -> ExprWithResumptions
 getField recordVal tag =
@@ -186,14 +193,30 @@ compositeOfList :: [(T.Tag, Type)] -> T.Composite t
 compositeOfList [] = T.CEmpty
 compositeOfList ((tag, typ):rest) = T.CExtend tag typ $ compositeOfList rest
 
-lambdaRecord ::
-  V.Var -> [(T.Tag, TypeStream)] ->
+lambdaRecordConstrained ::
+  V.Var -> Scheme -> [(T.Tag, TypeStream)] ->
   ([ExprWithResumptions] -> ExprWithResumptions) -> ExprWithResumptions
-lambdaRecord paramsName fields mkResult =
-  lambda paramsName recordType $ \params ->
+lambdaRecordConstrained paramsName paramTypeConstraint fields mkResult =
+  lambdaConstrained paramsName paramTypeConstraint recordType $ \params ->
   mkResult $ map (getField params . fst) fields
   where
     recordType = T.TRecord . compositeOfList <$> Lens.sequenceAOf (Lens.traversed . _2) fields
+
+lambdaRecord ::
+  V.Var -> [(T.Tag, TypeStream)] ->
+  ([ExprWithResumptions] -> ExprWithResumptions) -> ExprWithResumptions
+lambdaRecord paramsName = lambdaRecordConstrained paramsName S.any
+
+lambdaRecordConstrainedTags ::
+  V.Var -> [(T.Tag, TypeStream)] ->
+  ([ExprWithResumptions] -> ExprWithResumptions) -> ExprWithResumptions
+lambdaRecordConstrainedTags paramsName fields mkResult =
+  lambdaRecordConstrained paramsName s fields mkResult
+  where
+    s = S.make mempty recType
+    recType = T.TRecord . foldr (uncurry T.CExtend) T.CEmpty $ zip fieldNames infiniteVars
+    fieldNames = map fst fields
+    infiniteVars = map (T.liftVar . fromString . (:[])) ['a'..]
 
 whereItem ::
   V.Var -> ExprWithResumptions -> (ExprWithResumptions -> ExprWithResumptions) -> ExprWithResumptions
