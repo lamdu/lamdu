@@ -42,7 +42,6 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable, Typeable1)
 import Lamdu.Expr.IRef (DefIM)
-import Lamdu.Infer.Deref (DerefedTV)
 import Lamdu.Infer.Load (Loader(..))
 import Lamdu.Sugar.Types.Internal
 import System.Random (RandomGen)
@@ -52,15 +51,11 @@ import qualified Data.Cache as Cache
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Expr.Val as Vxpr
+import qualified Lamdu.Expr.Val as Val
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
---import qualified Lamdu.Expr.Utils as ExprUtil
 import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Infer.Deref as InferDeref
-import qualified Lamdu.Infer.ImplicitVariables as ImplicitVariables
 import qualified Lamdu.Infer.Load as InferLoad
-import qualified Lamdu.Infer.Structure as Structure
 import qualified Lamdu.Sugar.Types as Sugar
 
 type ExpressionSetter def = Expr.Expr def Guid () -> Expr.Expr def Guid ()

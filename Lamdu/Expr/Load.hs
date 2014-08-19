@@ -19,29 +19,30 @@ import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Expr.IRef (DefI, DefIM)
+import Lamdu.Expr.Val (Val(..))
 import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Expr.Val as Vxpr
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Val as Val
 
 type T = Transaction
 
-type ExprI = ExprIRef.ExprI
+type ExprI = ExprIRef.ValI
 
--- | SubexpressionIndex is a Foldable-index into Expr.Body (i.e:
+-- | SubexpressionIndex is a Foldable-index into Val.Body (i.e:
 -- 0 or 1 for BodyApply func/arg)
 type SubexpressionIndex = Int
 
 data ExprPropertyClosure t
   = DefinitionTypeProperty (DefI t) (Definition.Body (ExprI t))
   | DefinitionContentExprProperty (DefI t) (ExprI t) (ExprI t)
-  | SubexpressionProperty (ExprI t) (Expr.Body (DefI t) Guid (ExprI t)) SubexpressionIndex
-  deriving (Eq, Ord, Show, Typeable)
+  | SubexpressionProperty (ExprI t) (Val.Body (ExprI t)) SubexpressionIndex
+  deriving (Show, Typeable)
 derive makeBinary ''ExprPropertyClosure
 
-exprPropertyOfClosure :: MonadA m => ExprPropertyClosure (Tag m) -> ExprIRef.ExprProperty m
+exprPropertyOfClosure :: MonadA m => ExprPropertyClosure (Tag m) -> ExprIRef.ValIProperty m
 exprPropertyOfClosure (DefinitionTypeProperty defI (Definition.Body bodyContent bodyType)) =
   Property bodyType (Transaction.writeIRef defI . Definition.Body bodyContent)
 exprPropertyOfClosure (DefinitionContentExprProperty defI bodyExpr bodyType) =
@@ -49,7 +50,7 @@ exprPropertyOfClosure (DefinitionContentExprProperty defI bodyExpr bodyType) =
   (Transaction.writeIRef defI . (`Definition.Body` bodyType) . Definition.ContentExpr)
 exprPropertyOfClosure (SubexpressionProperty exprI body index) =
   Property (body ^?! lens)
-  (ExprIRef.writeExprBody exprI . flip (lens .~) body)
+  (ExprIRef.writeValBody exprI . flip (lens .~) body)
   where
     lens :: Traversable t => Lens.IndexedTraversal' SubexpressionIndex (t a) a
     lens = Lens.element index
@@ -58,17 +59,16 @@ irefOfClosure :: MonadA m => ExprPropertyClosure (Tag m) -> ExprI (Tag m)
 irefOfClosure = Property.value . exprPropertyOfClosure
 
 loadExprClosure ::
-  MonadA m => ExprPropertyClosure (Tag m) ->
-  T m (ExprIRef.ExprM m (ExprPropertyClosure (Tag m)))
+  MonadA m => ExprPropertyClosure (Tag m) -> T m (Val (ExprPropertyClosure (Tag m)))
 loadExprClosure =
   decycleOn irefOfClosure loop
   where
     loop Nothing closure =
       error $ "Recursive IRef structure: " ++ show (irefOfClosure closure)
     loop (Just recurse) closure =
-      ExprIRef.readExprBody iref
+      ExprIRef.readValBody iref
       >>= onBody
-      <&> (`Expr.Expr` closure)
+      <&> (`Val` closure)
       where
         onBody body = body & Lens.traversed %%@~ loadElement body
         iref = irefOfClosure closure
@@ -76,8 +76,7 @@ loadExprClosure =
 
 -- TODO: Return DefinitionClosure
 loadDefinitionClosure ::
-  MonadA m => DefIM m ->
-  T m (Definition (ExprIRef.ExprM m (ExprPropertyClosure (Tag m))) (DefIM m))
+  MonadA m => DefIM m -> T m (Definition (Val (ExprPropertyClosure (Tag m))) (DefIM m))
 loadDefinitionClosure defI = do
   def <- Transaction.readIRef defI
   bodyType <- loadExprClosure $ DefinitionTypeProperty defI def

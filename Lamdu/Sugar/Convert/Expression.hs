@@ -23,7 +23,6 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Infer.Deref as Deref
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.InputExpr as InputExpr

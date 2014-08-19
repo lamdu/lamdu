@@ -29,10 +29,8 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.Config (Config)
-import Lamdu.Expr (Expr(..))
 import Lamdu.Expr.IRef (DefIM)
 --import Lamdu.Expr.Utils (ApplyFormAnnotation(..), pureHole)
-import Lamdu.Infer.Deref (DerefedTV)
 import Lamdu.Infer.Load (ldDef)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument, hiActiveId)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -46,11 +44,10 @@ import qualified Data.List.Class as ListClass
 import qualified Data.Store.Guid as Guid
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Expr.Val as Vxpr
+import qualified Lamdu.Expr.Val as Val
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 --import qualified Lamdu.Expr.Utils as ExprUtil
-import qualified Lamdu.Infer.Deref as InferDeref
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar

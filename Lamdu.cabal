@@ -140,89 +140,94 @@ Executable lamdu
                        either,
                        utf8-string,
                        TypeCompose
-  Other-Modules:       Lamdu.CharClassification,
-                       Lamdu.Config,
-                       Lamdu.Data.Anchors,
-                       Lamdu.Data.Arbitrary,
-                       Lamdu.Data.DbLayout,
-                       Lamdu.Data.Definition,
-                       Lamdu.Data.ExampleDB,
-                       Lamdu.Data.Ops,
-                       Lamdu.Expr,
-                       Lamdu.Expr.Constraints,
-                       Lamdu.Expr.Globals,
-                       Lamdu.Expr.IRef,
-                       Lamdu.Expr.Lens,
-                       Lamdu.Expr.Load,
-                       Lamdu.Expr.Pretty,
-                       Lamdu.Expr.Pure,
-                       Lamdu.Expr.Scheme,
-                       Lamdu.Expr.TypeVars,
-                       Lamdu.GUI.BottleWidgets,
-                       Lamdu.GUI.CodeEdit,
-                       Lamdu.GUI.CodeEdit.Settings,
-                       Lamdu.GUI.DefinitionEdit,
-                       Lamdu.GUI.ExpressionEdit,
-                       Lamdu.GUI.ExpressionEdit.ApplyEdit,
-                       Lamdu.GUI.ExpressionEdit.AtomEdit,
-                       Lamdu.GUI.ExpressionEdit.BuiltinEdit,
-                       Lamdu.GUI.ExpressionEdit.CollapsedEdit,
-                       Lamdu.GUI.ExpressionEdit.DefinitionContentEdit,
-                       Lamdu.GUI.ExpressionEdit.EventMap,
-                       Lamdu.GUI.ExpressionEdit.GetFieldEdit,
-                       Lamdu.GUI.ExpressionEdit.GetParamsEdit,
-                       Lamdu.GUI.ExpressionEdit.GetVarEdit,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.Closed,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.Common,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.Info,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.Open,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.Results,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.State,
-                       Lamdu.GUI.ExpressionEdit.LambdaEdit,
-                       Lamdu.GUI.ExpressionEdit.ListEdit,
-                       Lamdu.GUI.ExpressionEdit.LiteralEdit,
-                       Lamdu.GUI.ExpressionEdit.Parens,
-                       Lamdu.GUI.ExpressionEdit.PiEdit,
-                       Lamdu.GUI.ExpressionEdit.RecordEdit,
-                       Lamdu.GUI.ExpressionEdit.TagEdit,
-                       Lamdu.GUI.ExpressionGui,
-                       Lamdu.GUI.ExpressionGui.AddNextHoles,
-                       Lamdu.GUI.ExpressionGui.Monad,
-                       Lamdu.GUI.ExpressionGui.Types,
-                       Lamdu.GUI.VersionControl,
-                       Lamdu.GUI.WidgetEnvT,
-                       Lamdu.GUI.WidgetIdIRef,
-                       Lamdu.GUI.WidgetIds,
-                       Lamdu.Infer,
-                       Lamdu.Infer.Error,
-                       Lamdu.Infer.Internal.Constraints,
-                       Lamdu.Infer.Internal.FlatComposite,
-                       Lamdu.Infer.Internal.Monad,
-                       Lamdu.Infer.Internal.Scope,
-                       Lamdu.Infer.Internal.Subst,
-                       Lamdu.Infer.Internal.Unify,
-                       Lamdu.Main,
-                       Lamdu.Sugar.AddNames,
-                       Lamdu.Sugar.AddNames.CPS,
-                       Lamdu.Sugar.AddNames.NameGen,
-                       Lamdu.Sugar.Convert,
-                       Lamdu.Sugar.Convert.Apply,
-                       Lamdu.Sugar.Convert.Expression,
-                       Lamdu.Sugar.Convert.Hole,
-                       Lamdu.Sugar.Convert.List,
-                       Lamdu.Sugar.Convert.Monad,
-                       Lamdu.Sugar.Expression,
-                       Lamdu.Sugar.InputExpr,
-                       Lamdu.Sugar.Internal,
-                       Lamdu.Sugar.RemoveTypes,
-                       Lamdu.Sugar.Types,
-                       Lamdu.Sugar.Types.Internal,
-                       Lamdu.VersionControl,
-                       Lamdu.VersionControl.Actions,
-                       Paths_lamdu
+  Other-Modules:       Lamdu.CharClassification
+               ,       Lamdu.Config
+               ,       Lamdu.Data.Anchors
+               ,       Lamdu.Data.Arbitrary
+               ,       Lamdu.Data.DbLayout
+               ,       Lamdu.Data.Definition
+               ,       Lamdu.Data.ExampleDB
+               ,       Lamdu.Data.Ops
+               ,       Lamdu.Expr.Constraints
+               ,       Lamdu.Expr.Globals
+               ,       Lamdu.Expr.IRef
+               ,       Lamdu.Expr.Identifier
+               ,       Lamdu.Expr.Lens
+               ,       Lamdu.Expr.Load
+               ,       Lamdu.Expr.Pure
+               ,       Lamdu.Expr.Scheme
+               ,       Lamdu.Expr.Type
+               ,       Lamdu.Expr.TypeVars
+               ,       Lamdu.Expr.Val
+               ,       Lamdu.GUI.BottleWidgets
+               ,       Lamdu.GUI.CodeEdit
+               ,       Lamdu.GUI.CodeEdit.Settings
+               ,       Lamdu.GUI.DefinitionEdit
+               ,       Lamdu.GUI.ExpressionEdit
+               ,       Lamdu.GUI.ExpressionEdit.ApplyEdit
+               ,       Lamdu.GUI.ExpressionEdit.AtomEdit
+               ,       Lamdu.GUI.ExpressionEdit.BuiltinEdit
+               ,       Lamdu.GUI.ExpressionEdit.CollapsedEdit
+               ,       Lamdu.GUI.ExpressionEdit.DefinitionContentEdit
+               ,       Lamdu.GUI.ExpressionEdit.EventMap
+               ,       Lamdu.GUI.ExpressionEdit.GetFieldEdit
+               ,       Lamdu.GUI.ExpressionEdit.GetParamsEdit
+               ,       Lamdu.GUI.ExpressionEdit.GetVarEdit
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.Closed
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.Common
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.Info
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.Open
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.Results
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.State
+               ,       Lamdu.GUI.ExpressionEdit.LambdaEdit
+               ,       Lamdu.GUI.ExpressionEdit.ListEdit
+               ,       Lamdu.GUI.ExpressionEdit.LiteralEdit
+               ,       Lamdu.GUI.ExpressionEdit.Parens
+               ,       Lamdu.GUI.ExpressionEdit.PiEdit
+               ,       Lamdu.GUI.ExpressionEdit.RecordEdit
+               ,       Lamdu.GUI.ExpressionEdit.TagEdit
+               ,       Lamdu.GUI.ExpressionGui
+               ,       Lamdu.GUI.ExpressionGui.AddNextHoles
+               ,       Lamdu.GUI.ExpressionGui.Monad
+               ,       Lamdu.GUI.ExpressionGui.Types
+               ,       Lamdu.GUI.VersionControl
+               ,       Lamdu.GUI.WidgetEnvT
+               ,       Lamdu.GUI.WidgetIdIRef
+               ,       Lamdu.GUI.WidgetIds
+               ,       Lamdu.Infer
+               ,       Lamdu.Infer.Error
+               ,       Lamdu.Infer.Internal.Constraints
+               ,       Lamdu.Infer.Internal.FlatComposite
+               ,       Lamdu.Infer.Internal.Monad
+               ,       Lamdu.Infer.Internal.Scheme
+               ,       Lamdu.Infer.Internal.Scope
+               ,       Lamdu.Infer.Internal.Subst
+               ,       Lamdu.Infer.Load
+               ,       Lamdu.Infer.Unify
+               ,       Lamdu.Infer.Update
+               ,       Lamdu.Main
+               ,       Lamdu.Sugar.AddNames
+               ,       Lamdu.Sugar.AddNames.CPS
+               ,       Lamdu.Sugar.AddNames.NameGen
+               ,       Lamdu.Sugar.Convert
+               ,       Lamdu.Sugar.Convert.Apply
+               ,       Lamdu.Sugar.Convert.Expression
+               ,       Lamdu.Sugar.Convert.Hole
+               ,       Lamdu.Sugar.Convert.Infer
+               ,       Lamdu.Sugar.Convert.List
+               ,       Lamdu.Sugar.Convert.Monad
+               ,       Lamdu.Sugar.Expression
+               ,       Lamdu.Sugar.InputExpr
+               ,       Lamdu.Sugar.Internal
+               ,       Lamdu.Sugar.RemoveTypes
+               ,       Lamdu.Sugar.Types
+               ,       Lamdu.Sugar.Types.Internal
+               ,       Lamdu.VersionControl
+               ,       Lamdu.VersionControl.Actions
+               ,       Paths_lamdu
   ghc-options:         -O -Wall
   -- ghc-options is prepended to ghc-prof-options
   ghc-prof-options:    -auto-all -caf-all -rtsopts

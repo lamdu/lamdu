@@ -16,7 +16,6 @@ import Data.Cache (Cache)
 import Data.Store.Transaction (Transaction)
 import Data.Typeable (Typeable, Typeable1)
 import Lamdu.Expr.IRef (DefIM)
-import Lamdu.Infer.Deref (DerefedTV)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Cache as Cache

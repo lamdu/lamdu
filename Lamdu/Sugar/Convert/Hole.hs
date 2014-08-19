@@ -21,7 +21,6 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA, traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.Expr.IRef (DefIM)
-import Lamdu.Infer.Deref (DerefedTV)
 import Lamdu.Infer.Load (ldDef)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
@@ -39,12 +38,11 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Expr.Val as Vxpr
+import qualified Lamdu.Expr.Val as Val
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 --import qualified Lamdu.Expr.Utils as ExprUtil
 import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Infer.Deref as InferDeref
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer

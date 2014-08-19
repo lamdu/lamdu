@@ -26,12 +26,11 @@ import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Expr.Val as Vxpr
+import qualified Lamdu.Expr.Val as Val
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 --import qualified Lamdu.Expr.Utils as ExprUtil
 import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Infer.Deref as InferDeref
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole

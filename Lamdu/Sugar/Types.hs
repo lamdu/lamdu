@@ -78,12 +78,11 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
-import Lamdu.Expr (Kind(..))
 import Lamdu.Sugar.Types.Internal (T, CT, Stored, Inferred, LoadedExpr)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Expr.Val as Vxpr
+import qualified Lamdu.Expr.Val as Val
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Types.Internal as TypesInternal
 import qualified System.Random as Random
