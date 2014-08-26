@@ -30,8 +30,7 @@ module Lamdu.Sugar.Types
   , ListItem(..), liMActions, liExpr
   , ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
-  , Kind(..)
-  , Record(..), rFields, rKind
+  , Record(..), rFields
   , FieldList(..), flItems, flMAddFirstItem
   , GetField(..), gfRecord, gfTag
   , GetVarType(..)
@@ -40,12 +39,12 @@ module Lamdu.Sugar.Types
   , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
   , AnnotatedArg(..), aaTag, aaTagExprGuid, aaExpr
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
-  , Lam(..), lKind, lParam, lIsDep, lResultType
+  , Lam(..), lParam, lResultType
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpType, fpInferredType, fpMActions
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
   , HoleArg(..), haExpr, haExprPresugared, haUnwrap
-  , HoleInferred(..), hiBaseValue, hiWithVarsValue, hiType, hiMakeConverted
+  , HoleInferred(..), hiValue, hiType, hiMakeConverted
   , Hole(..)
     , holeMActions, holeMArg, holeMInferred
   , HoleResultSeed(..), _ResultSeedExpr, _ResultSeedNewDefinition
@@ -66,7 +65,6 @@ module Lamdu.Sugar.Types
   , InputPayloadP(..), ipGuid, ipInferred, ipStored, ipData
   , InputPayload, InputExpr
   , Stored, Inferred
-  , LoadedExpr
   ) where
 
 import Data.Binary (Binary)
@@ -78,12 +76,13 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
-import Lamdu.Sugar.Types.Internal (T, CT, Stored, Inferred, LoadedExpr)
+import Lamdu.Expr.Val (Val)
+import Lamdu.Expr.Type (Type)
+import Lamdu.Sugar.Types.Internal (T, CT, Stored, Inferred)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Expr.Val as Val
-import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Type as Type
 import qualified Lamdu.Sugar.Types.Internal as TypesInternal
 import qualified System.Random as Random
 
@@ -97,8 +96,8 @@ data InputPayloadP inferred stored a
 Lens.makeLenses ''InputPayloadP
 
 type InputPayload m a =
-  InputPayloadP (Maybe (Inferred m)) (Maybe (Stored m)) a
-type InputExpr m a = LoadedExpr m (InputPayload m a)
+  InputPayloadP (Maybe Inferred) (Maybe (Stored m)) a
+type InputExpr m a = Val (InputPayload m a)
 
 data WrapAction m
   = WrapperAlready -- I'm an apply-of-hole, no need to wrap
@@ -126,10 +125,9 @@ data Payload name m a = Payload
   , _plData :: a
   } deriving (Functor, Foldable, Traversable)
 
-type MStorePoint m a =
-  (Maybe (TypesInternal.StorePoint (Tag m)), a)
+type MStorePoint m a = (Maybe (TypesInternal.StorePoint (Tag m)), a)
 
-type ExprStorePoint m a = LoadedExpr m (MStorePoint m a)
+type ExprStorePoint m a = Val (MStorePoint m a)
 
 data ExpressionP name m pl = Expression
   { _rBody :: Body name m (ExpressionP name m pl)
@@ -177,14 +175,12 @@ data FuncParam name m expr = FuncParam
   , _fpVarKind :: FuncParamType
   , _fpName :: name
   , _fpType :: expr
-  , _fpInferredType :: LoadedExpr m ()
+  , _fpInferredType :: Type
   , _fpMActions :: Maybe (FuncParamActions name m)
   } deriving (Functor, Foldable, Traversable)
 
 data Lam name m expr = Lam
-  { _lKind :: Kind
-  , _lParam :: FuncParam name m expr
-  , _lIsDep :: Bool
+  { _lParam :: FuncParam name m expr
   , _lResultType :: expr
   } deriving (Functor, Foldable, Traversable)
 
@@ -195,24 +191,24 @@ data PickedResult = PickedResult
   }
 
 data HoleResult name m a = HoleResult
-  { _holeResultInferred :: LoadedExpr m (Inferred m)
+  { _holeResultInferred :: Val Inferred
   , _holeResultConverted :: Expression name m a
   , _holeResultPick :: T m PickedResult
   , _holeResultHasHoles :: Bool
   } deriving (Functor, Foldable, Traversable)
 
-data HoleResultSeed m a
-  = ResultSeedExpr (ExprIRef.ExprM m a)
+data HoleResultSeed a
+  = ResultSeedExpr (Val a)
   | ResultSeedNewDefinition String
   deriving (Functor, Foldable, Traversable)
 
-type ScopeItem m a = (a, ExprIRef.ExprM m ())
+type ScopeItem a = (a, Val ())
 
 data Scope name m = Scope
-  { _scopeLocals    :: [ScopeItem m (GetVar name m)]
-  , _scopeGlobals   :: [ScopeItem m (GetVar name m)]
-  , _scopeTags      :: [(TagG name, Expr.Tag)]
-  , _scopeGetParams :: [ScopeItem m (GetParams name m)]
+  { _scopeLocals    :: [ScopeItem (GetVar name m)]
+  , _scopeGlobals   :: [ScopeItem (GetVar name m)]
+  , _scopeTags      :: [(TagG name, Type.Tag)]
+  , _scopeGetParams :: [ScopeItem (GetParams name m)]
   }
 
 data HoleActions name m = HoleActions
@@ -222,13 +218,12 @@ data HoleActions name m = HoleActions
     -- If given expression does not type check on its own, returns Nothing.
     -- (used by HoleEdit to suggest variations based on type)
     _holeInferExprType ::
-      -- TODO: Just return   LoadedExpr (DerefedSTV def, a)  ?
-      ExprIRef.ExprM m () -> CT m (Maybe (LoadedExpr m ()))
+      Val () -> CT m (Maybe (Val Inferred))
   , holeResult ::
       forall a.
       (Binary a, Typeable a, Ord a, Monoid a) =>
       (Guid -> Random.StdGen) -> -- for consistent guids
-      HoleResultSeed m (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
+      HoleResultSeed (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
       CT m (Maybe (HoleResult name m a))
   , _holePaste :: Maybe (T m Guid)
   }
@@ -244,11 +239,8 @@ data HoleArg m expr = HoleArg
   } deriving (Functor, Foldable, Traversable)
 
 data HoleInferred name m = HoleInferred
-  { -- hiBaseValue is the inferred value WITHOUT the vars context
-    -- TODO: hiBaseValue -> hiWithStructure
-    _hiBaseValue :: LoadedExpr m ()
-  , _hiWithVarsValue :: LoadedExpr m ()
-  , _hiType :: LoadedExpr m ()
+  { _hiValue :: Val ()
+  , _hiType :: Type
   -- The Sugar Expression of the WithVarsValue
   , _hiMakeConverted :: Random.StdGen -> CT m (Expression name m ())
   }
@@ -299,8 +291,7 @@ data FieldList name m expr = FieldList
   } deriving (Functor, Foldable, Traversable)
 
 data Record name m expr = Record
-  { _rKind :: Kind -- record type or val
-  , _rFields :: FieldList name m expr
+  { _rFields :: FieldList name m expr
   } deriving (Functor, Foldable, Traversable)
 
 data GetField name expr = GetField
@@ -367,12 +358,8 @@ instance Show expr => Show (FuncParam name m expr) where
     concat ["(", show (_fpGuid fp), ":", show (_fpType fp), ")"]
 
 instance Show expr => Show (Body name m expr) where
-  show (BodyLam (Lam KVal _paramType _isDep _body)) = "TODO:Lam"
-  show (BodyLam (Lam KType paramType isDep resultType)) =
-    paramName ++ show paramType ++ " -> " ++ show resultType
-    where
-      paramName | isDep = "_:"
-                | otherwise = ""
+  show (BodyLam (Lam paramType resultType)) =
+    "_:" ++ show paramType ++ " -> " ++ show resultType
   show BodyHole {} = "Hole"
   show BodyCollapsed {} = "Collapsed"
   show (BodyLiteralInteger i) = show i
@@ -391,7 +378,7 @@ instance Show expr => Show (Body name m expr) where
 
 data WhereItem name m expr = WhereItem
   { _wiValue :: DefinitionContent name m expr
-  , _wiInferredType :: LoadedExpr m ()
+  , _wiInferredType :: Type
   , _wiGuid :: Guid
   , _wiName :: name
   , _wiActions :: Maybe (ListItemActions m)
