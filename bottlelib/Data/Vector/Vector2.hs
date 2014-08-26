@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies, DeriveGeneric #-}
 module Data.Vector.Vector2
     ( Vector2(Vector2)
     , (***),both,zip
@@ -10,21 +10,19 @@ where
 import Control.Applicative (Applicative(..), (<$>), liftA2)
 import Control.Monad (join)
 import Data.Binary (Binary(..))
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
 import Data.Monoid
+import GHC.Generics (Generic)
 import Prelude hiding (curry, uncurry, zip)
 import qualified Control.Lens as Lens
 
 data Vector2 a = Vector2
   { _first :: !a
   , _second :: !a
-  }
+  } deriving (Generic, Eq, Ord, Show, Read)
   -- Note the Ord instance is obviously not a mathematical one
   -- (Vectors aren't ordinals!). Useful to have in a binary search
   -- tree though.
-  deriving (Eq, Ord, Show, Read)
-derive makeBinary ''Vector2
+instance Binary a => Binary (Vector2 a)
 
 instance a ~ b => Lens.Field1 (Vector2 a) (Vector2 b) a b where
   _1 f (Vector2 x y) = (`Vector2` y) <$> Lens.indexed f (0 :: Int) x

@@ -1,5 +1,5 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, DeriveFunctor #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable, DeriveFunctor, DeriveGeneric, StandaloneDeriving, RecordWildCards #-}
 module Graphics.UI.Bottle.EventMap
   ( KeyEvent(..), IsPress(..), ModKey(..)
   , prettyModKey
@@ -20,6 +20,7 @@ module Graphics.UI.Bottle.EventMap
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Arrow ((***), (&&&))
+import Control.Lens (Lens, Lens')
 import Control.Lens.Operators
 import Control.Monad (guard, mplus, msum)
 import Data.List (isPrefixOf)
@@ -27,6 +28,7 @@ import Data.Map (Map)
 import Data.Maybe (isJust, listToMaybe, maybeToList)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
+import GHC.Generics (Generic)
 import Graphics.UI.GLFW (Key(..))
 import Graphics.UI.GLFW.Events (IsPress(..))
 import Graphics.UI.GLFW.ModState (ModState(..), noMods, shift, ctrl, alt)
@@ -36,11 +38,13 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Graphics.UI.GLFW.Events as Events
 
+deriving instance Generic Key
+
 data ModKey = ModKey ModState Key
-  deriving (Show, Eq, Ord)
+  deriving (Generic, Show, Eq, Ord)
 
 data KeyEvent = KeyEvent Events.IsPress ModKey
-  deriving (Show, Eq, Ord)
+  deriving (Generic, Show, Eq, Ord)
 
 anyShiftedChars :: String -> [(Char, IsShifted)]
 anyShiftedChars s = (,) <$> s <*> [Shifted, NotShifted]
@@ -119,15 +123,21 @@ type Subtitle = String
 
 newtype Doc = Doc
   { docStrs :: [Subtitle]
-  } deriving (Eq, Ord)
+  } deriving (Generic, Eq, Ord)
 
-data DocHandler a = DocHandler {
-  _dhDoc :: Doc,
-  _dhHandler :: a
-  } deriving (Functor)
+data DocHandler a = DocHandler
+  { _dhDoc :: Doc
+  , _dhHandler :: a
+  } deriving (Generic, Functor)
+
+dhDoc :: Lens' (DocHandler a) Doc
+dhDoc f DocHandler{..} = (\_dhDoc -> DocHandler{..}) <$> f _dhDoc
+
+dhHandler :: Lens (DocHandler a) (DocHandler b) a b
+dhHandler f DocHandler{..} = (\_dhHandler -> DocHandler{..}) <$> f _dhHandler
 
 data IsShifted = Shifted | NotShifted
-  deriving (Eq, Ord, Show, Read)
+  deriving (Generic, Eq, Ord, Show, Read)
 
 type InputDoc = String
 
@@ -137,13 +147,36 @@ type InputDoc = String
 data AllCharsHandler a = AllCharsHandler
   { _chInputDoc :: InputDoc
   , _chDocHandler :: DocHandler (Char -> IsShifted -> Maybe a)
-  } deriving (Functor)
+  } deriving (Generic, Functor)
+
+chInputDoc :: Lens' (AllCharsHandler a) InputDoc
+chInputDoc f AllCharsHandler{..} = (\_chInputDoc -> AllCharsHandler{..}) <$> f _chInputDoc
+
+chDocHandler ::
+  Lens
+  (AllCharsHandler a) (AllCharsHandler b)
+  (DocHandler (Char -> IsShifted -> Maybe a)) (DocHandler (Char -> IsShifted -> Maybe b))
+chDocHandler f AllCharsHandler{..} = (\_chDocHandler -> AllCharsHandler{..}) <$> f _chDocHandler
 
 data CharGroupHandler a = CharGroupHandler
   { _cgInputDoc :: InputDoc
   , _cgChars :: Set (Char, IsShifted)
   , _cgDocHandler :: DocHandler (Char -> IsShifted -> a)
-  } deriving (Functor)
+  } deriving (Generic, Functor)
+
+cgInputDoc :: Lens' (CharGroupHandler a) InputDoc
+cgInputDoc f CharGroupHandler{..} = (\_cgInputDoc -> CharGroupHandler{..}) <$> f _cgInputDoc
+
+cgChars :: Lens' (CharGroupHandler a) (Set (Char, IsShifted))
+cgChars f CharGroupHandler{..} = (\_cgChars -> CharGroupHandler{..}) <$> f _cgChars
+
+cgDocHandler ::
+  Lens
+  (CharGroupHandler a)
+  (CharGroupHandler b)
+  (DocHandler (Char -> IsShifted -> a))
+  (DocHandler (Char -> IsShifted -> b))
+cgDocHandler f CharGroupHandler{..} = (\_cgDocHandler -> CharGroupHandler{..}) <$> f _cgDocHandler
 
 data EventMap a = EventMap
   { _emKeyMap :: Map KeyEvent (DocHandler a)
@@ -151,12 +184,22 @@ data EventMap a = EventMap
   , _emCharGroupChars :: Set (Char, IsShifted)
   , _emAllCharsHandler :: Maybe (AllCharsHandler a)
   , _emTickHandlers :: [a]
-  } deriving (Functor)
+  } deriving (Generic, Functor)
 
-Lens.makeLenses ''DocHandler
-Lens.makeLenses ''CharGroupHandler
-Lens.makeLenses ''AllCharsHandler
-Lens.makeLenses ''EventMap
+emKeyMap :: Lens' (EventMap a) (Map KeyEvent (DocHandler a))
+emKeyMap f EventMap{..} = (\_emKeyMap -> EventMap{..}) <$> f _emKeyMap
+
+emCharGroupHandlers :: Lens' (EventMap a) [CharGroupHandler a]
+emCharGroupHandlers f EventMap{..} = (\_emCharGroupHandlers -> EventMap{..}) <$> f _emCharGroupHandlers
+
+emCharGroupChars :: Lens' (EventMap a) (Set (Char, IsShifted))
+emCharGroupChars f EventMap{..} = (\_emCharGroupChars -> EventMap{..}) <$> f _emCharGroupChars
+
+emAllCharsHandler :: Lens' (EventMap a) (Maybe (AllCharsHandler a))
+emAllCharsHandler f EventMap{..} = (\_emAllCharsHandler -> EventMap{..}) <$> f _emAllCharsHandler
+
+emTickHandlers :: Lens' (EventMap a) [a]
+emTickHandlers f EventMap{..} = (\_emTickHandlers -> EventMap{..}) <$> f _emTickHandlers
 
 instance Monoid (EventMap a) where
   mempty = EventMap Map.empty [] Set.empty Nothing []

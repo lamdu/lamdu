@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 module Graphics.UI.GLFW.ModState (
   ModState(..), noMods, shift, ctrl, alt,
   Pos(..), ModType(..), Modkey(..),
@@ -6,6 +7,7 @@ module Graphics.UI.GLFW.ModState (
 import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
 import Data.Set(Set)
+import GHC.Generics (Generic)
 import Prelude hiding (Left, Right)
 import qualified Data.Set as Set
 import qualified Graphics.UI.GLFW as GLFW
@@ -14,8 +16,7 @@ data ModState = ModState {
   modCtrl :: Bool,
   modAlt :: Bool,
   modShift :: Bool
-  }
-  deriving (Show, Read, Eq, Ord)
+  } deriving (Generic, Show, Read, Eq, Ord)
 
 instance Monoid ModState where
   mempty = noMods
@@ -23,11 +24,11 @@ instance Monoid ModState where
     ModState (c0 || c1) (a0 || a1) (s0 || s1)
 
 data Pos = Left | Right
-  deriving (Enum, Bounded, Show, Read, Eq, Ord)
+  deriving (Generic, Enum, Bounded, Show, Read, Eq, Ord)
 data ModType = Ctrl | Alt | Shift
-  deriving (Enum, Bounded, Show, Read, Eq, Ord)
+  deriving (Generic, Enum, Bounded, Show, Read, Eq, Ord)
 data Modkey = Modkey Pos ModType
-  deriving (Show, Read, Eq, Ord)
+  deriving (Generic, Show, Read, Eq, Ord)
 
 allVals :: (Enum a, Bounded a) => [a]
 allVals = [minBound..maxBound]

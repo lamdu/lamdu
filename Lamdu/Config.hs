@@ -1,11 +1,11 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE StandaloneDeriving, DeriveGeneric #-}
 module Lamdu.Config (Layers(..), Config(..), delKeys) where
 
 import Data.Aeson (ToJSON(..), FromJSON(..))
-import Data.Aeson.TH (deriveJSON, defaultOptions)
 import Data.Vector.Vector2 (Vector2(..))
 import Foreign.C.Types (CDouble)
+import GHC.Generics (Generic)
 import Graphics.DrawingCombinators.Utils () -- Read instance for Color
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -22,7 +22,7 @@ data Layers = Layers
   , layerParensHighlightBG
   , layerActivePane
   , layerMax :: Int
-  } deriving Eq
+  } deriving (Eq, Generic)
 
 data Config = Config
   { layers :: Layers
@@ -195,21 +195,35 @@ data Config = Config
   , labeledApplyBGColor :: Draw.Color
   , labeledApplyPadding :: Vector2 Double
   , spaceBetweenAnnotatedArgs :: Double
-  } deriving Eq
+  } deriving (Eq, Generic)
 
 delKeys :: Config -> [E.ModKey]
 delKeys config = delForwardKeys config ++ delBackwardKeys config
 
-deriveJSON defaultOptions ''Vector2
-deriveJSON defaultOptions ''Draw.Color
-deriveJSON defaultOptions ''E.ModState
-deriveJSON defaultOptions ''E.ModKey
-deriveJSON defaultOptions ''E.Key
-deriveJSON defaultOptions ''Layers
-deriveJSON defaultOptions ''Config
+instance ToJSON a => ToJSON (Vector2 a)
+instance FromJSON a => FromJSON (Vector2 a)
+
+deriving instance Generic Draw.Color
+
+instance ToJSON Draw.Color
+instance FromJSON Draw.Color
+
+instance ToJSON E.ModState
+instance FromJSON E.ModState
+
+instance ToJSON E.ModKey
+instance FromJSON E.ModKey
+
+instance ToJSON E.Key
+instance FromJSON E.Key
+
+instance ToJSON Layers
+instance FromJSON Layers
+
+instance ToJSON Config
+instance FromJSON Config
 
 instance FromJSON CDouble where
   parseJSON = fmap (realToFrac :: Double -> CDouble) . parseJSON
-
 instance ToJSON CDouble where
   toJSON = toJSON . (realToFrac :: CDouble -> Double)
