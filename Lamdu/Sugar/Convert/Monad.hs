@@ -1,11 +1,10 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Monad
   ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
-  , scHoleInferContext, scStructureInferContext, scWithVarsInferContext
+  , scInferContext
   , scCodeAnchors, scSpecialFunctions, scTagParamInfos, scRecordParamsInfos
-  , scInferContexts
   , ConvertM(..), run
-  , readContext, liftCTransaction, liftTransaction, local
+  , readContext, liftTransaction, local
   , codeAnchor
   , getP
   , convertSubexpression
@@ -26,6 +25,9 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Expr.Type as T
+import qualified Lamdu.Expr.Val as V
+import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Types as Sugar
 
 data TagParamInfo = TagParamInfo
@@ -38,37 +40,22 @@ data RecordParamsInfo m = RecordParamsInfo
   , rpiJumpTo :: T m Guid
   }
 
-data Context m = Context
-  { _scHoleInferContext :: InferContext m
-  , _scStructureInferContext :: InferContext m
-  , _scWithVarsInferContext :: InferContext m
-  , _scCodeAnchors :: Anchors.CodeProps m
-  , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
-  , _scTagParamInfos :: Map Guid TagParamInfo -- tag guids
-  , _scRecordParamsInfos :: Map Guid (RecordParamsInfo m) -- param guids
-  , scConvertSubexpression :: forall a. Monoid a => Sugar.InputExpr m a -> ConvertM m (ExpressionU m a)
-  }
-
-scInferContexts :: Lens.Traversal' (Context m) (InferContext m)
-scInferContexts f ctx@Context{..} =
-  newCtx
-  <$> f _scHoleInferContext
-  <*> f _scStructureInferContext
-  <*> f _scWithVarsInferContext
-  where
-    newCtx holeInferContext structureInferContext withVarsInferContext =
-      ctx
-      { _scHoleInferContext = holeInferContext
-      , _scStructureInferContext = structureInferContext
-      , _scWithVarsInferContext = withVarsInferContext
-      }
-
-newtype ConvertM m a = ConvertM (ReaderT (Context m) (CT m) a)
+newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
   deriving (Functor, Applicative, Monad)
 
+data Context m = Context
+  { _scInferContext :: Infer.Context
+  , _scCodeAnchors :: Anchors.CodeProps m
+  , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
+  , _scTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
+  , _scRecordParamsInfos :: Map V.Var (RecordParamsInfo m) -- param guids
+  , scConvertSubexpression ::
+       forall a. Monoid a => Sugar.InputExpr m a -> ConvertM m (ExpressionU m a)
+  }
 Lens.makeLenses ''Context
 
-run :: MonadA m => Context m -> ConvertM m a -> CT m a
+
+run :: MonadA m => Context m -> ConvertM m a -> T m a
 run ctx (ConvertM action) = runReaderT action ctx
 
 readContext :: MonadA m => ConvertM m (Context m)
@@ -77,11 +64,8 @@ readContext = ConvertM Reader.ask
 local :: Monad m => (Context m -> Context m) -> ConvertM m a -> ConvertM m a
 local f (ConvertM act) = ConvertM $ Reader.local f act
 
-liftCTransaction :: MonadA m => CT m a -> ConvertM m a
-liftCTransaction = ConvertM . lift
-
 liftTransaction :: MonadA m => T m a -> ConvertM m a
-liftTransaction = liftCTransaction . lift
+liftTransaction = ConvertM . lift
 
 codeAnchor :: MonadA m => (Anchors.CodeProps m -> a) -> ConvertM m a
 codeAnchor f = f . (^. scCodeAnchors) <$> readContext

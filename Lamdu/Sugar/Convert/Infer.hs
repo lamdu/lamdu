@@ -2,18 +2,8 @@
 module Lamdu.Sugar.Convert.Infer
   ( ExpressionSetter
 
-  , isPolymorphicFunc
-  , inferAddImplicits
-  , InferredWithImplicits(..)
-
-  , iwiBaseInferContext, iwiInferContext
-  , iwiStructureInferContext
-  , iwiExpr, iwiBaseExpr
-
-  -- TODO: These don't belong here:
-  -- Type-check an expression into an ordinary Inferred Expression,
-  -- short-circuit on error:
-  , load, memoInfer, memoInferAt
+  , loadInferScope -- TODO: is this sensible to export here?
+  , loadInferInto
 
   , exprInferred
   , exprStored
@@ -26,245 +16,101 @@ module Lamdu.Sugar.Convert.Infer
   , replaceWith
   ) where
 
-import Control.Applicative ((<$>))
 import Control.Lens (Lens')
 import Control.Lens.Operators
-import Control.Monad (void, (<=<))
+import Control.Lens.Tuple
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Either (EitherT(..), mapEitherT)
 import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
+import Control.Monad.Trans.State (StateT(..), mapStateT)
 import Control.MonadA (MonadA)
-import Data.Binary (Binary)
-import Data.Cache (Cache)
-import Data.Maybe.Utils (unsafeUnjust)
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag)
-import Data.Typeable (Typeable, Typeable1)
-import Lamdu.Expr.IRef (DefIM)
+import Lamdu.Expr.Val (Val(..))
+import Lamdu.Infer (Infer)
 import Lamdu.Infer.Load (Loader(..))
+import Lamdu.Infer.Unify (unify)
 import Lamdu.Sugar.Types.Internal
-import System.Random (RandomGen)
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Trans.State as State
-import qualified Data.Cache as Cache
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Expr.Val as Val
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Load as Load
+import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Load as InferLoad
 import qualified Lamdu.Sugar.Types as Sugar
 
-type ExpressionSetter def = Expr.Expr def Guid () -> Expr.Expr def Guid ()
+type ExpressionSetter def = Val () -> Val ()
 
-loader :: MonadA m => Loader (DefIM m) (T m)
+loader :: MonadA m => Loader (T m)
 loader =
-  Loader
-  { loadDefType =
-    fmap void . ExprIRef.readExpr . (^. Definition.bodyType) <=<
-    Transaction.readIRef
-  }
-
-load ::
-  ( Binary a, Typeable a
-  , MonadA m, Typeable1 m
-  ) =>
-  ExprIRef.ExprM m a ->
-  StateT (InferContext m) (MaybeT (CT m)) (LoadedExpr m a)
-load expr = do
-  loaded <-
-    InferLoad.load loader expr
-    & Lens.zoom icContext
-    & mapStateT (eitherTToMaybeT . mapEitherT lift)
-  icAugment loaded
-  return loaded
-
-memoBy ::
-  (Cache.Key k, Binary v, Typeable v, MonadA m) =>
-  Cache.FuncId -> k -> m v -> StateT Cache m v
-memoBy funcId k act = Cache.memoS funcId (const act) k
-
-pureMemoBy ::
-  (Cache.Key k, Binary v, Typeable v, MonadA m) =>
-  Cache.FuncId -> k -> v -> StateT Cache m v
-pureMemoBy funcId k = memoBy funcId k . return
-
-eitherToMaybe :: Either l a -> Maybe a
-eitherToMaybe = either (const Nothing) Just
-
-eitherTToMaybeT :: Functor m => EitherT l m a -> MaybeT m a
-eitherTToMaybeT = MaybeT . fmap eitherToMaybe . runEitherT
-
-memoInferAt ::
-  (Typeable a, Binary a, Typeable1 m, MonadA m) =>
-  Infer.TypedValue (DefIM m) ->
-  LoadedExpr m a ->
-  StateT (InferContext m) (MaybeT (CT m))
-  (LoadedExpr m (InferDeref.DerefedTV (DefIM m), a))
-memoInferAt tv expr = do
-  -- TV uniquely identifies the position we're inferring to (stvScope
-  -- is redundant to it):
-  icAugment tv
-  memoInferH $ Infer.inferAt tv expr
-
-memoInfer ::
-  (Typeable a, Binary a, Typeable1 m, MonadA m) =>
-  Infer.Scope (DefIM m) -> LoadedExpr m a ->
-  StateT (InferContext m) (MaybeT (CT m))
-  (LoadedExpr m (InferDeref.DerefedTV (DefIM m), a))
-memoInfer scope expr = memoInferH $ Infer.infer scope expr
-
-memoInferH ::
-  ( Typeable1 m, MonadA m
-  , Typeable a, Binary a
-  ) =>
-  Infer.M (DefIM m) (LoadedExpr m (Infer.TypedValue (DefIM m), a)) ->
-  StateT (InferContext m) (MaybeT (CT m))
-  (LoadedExpr m (DerefedTV (DefIM m), a))
-memoInferH infer = do
-  k <- Lens.use icHashKey
-  Lens.zoom icContext .
-    mapStateT (MaybeT . pureMemoBy "memoInfer" k . eitherToMaybe) $
-    mapStateT (Lens._Left %~ InferDeref.toInferError) . InferDeref.entireExpr =<<
-    infer
-
-inferWithVariables ::
-  ( Show gen
-  , RandomGen gen
-  , MonadA m
-  , Binary a
-  , Typeable1 m
-  , Typeable a
-  ) =>
-  gen -> DefIM m -> LoadedExpr m a ->
-  Infer.Context (DefIM m) ->
-  Infer.TypedValue (DefIM m) ->
-  T m
-  ( ( Infer.Context (DefIM m)
-    , LoadedExpr m (DerefedTV (DefIM m), a)
-    )
-  , ( Infer.Context (DefIM m)
-    , Infer.Context (DefIM m)
-    , LoadedExpr m (DerefedTV (DefIM m), ImplicitVariables.Payload a)
-    )
-  )
-inferWithVariables gen def loaded initialContext node =
-  (`evalStateT` initialContext) $ do
-    exprInferred <- assertSuccess $ Infer.inferAt node loaded
-    expr <- assertSuccess $ InferDeref.entireExpr exprInferred
-    -- TV should uniquely identify the scope of that same point
-    -- (Within the context):
-    baseContext <- State.get
-
-    assertSuccess $ Structure.add exprInferred
-    withStructureContext <- State.get
-
-    wvExpr <-
-      assertSuccess . InferDeref.entireExpr =<<
-      assertSuccess (ImplicitVariables.add gen def exprInferred)
-    wvContext <- State.get
-
-    return
-      ( (baseContext, expr)
-      , (withStructureContext, wvContext, wvExpr)
-      )
-
-assertSuccess :: (Show e, Monad m) => StateT s (Either e) a -> StateT s m a
-assertSuccess = mapStateT (either (error . show) return)
-
-data InferredWithImplicits m a = InferredWithImplicits
-  { _iwiInferContext :: InferContext m
-  , _iwiStructureInferContext :: InferContext m
-  , _iwiExpr :: LoadedExpr m (Sugar.InputPayloadP (Inferred m) (Maybe (Stored m)) a)
-  -- Prior to adding variables
-  , _iwiBaseInferContext :: InferContext m
-  , _iwiBaseExpr :: LoadedExpr m (Sugar.InputPayloadP (Inferred m) (Stored m) a)
-  }
-Lens.makeLenses ''InferredWithImplicits
-
-inferAddImplicits ::
-  (Show gen, RandomGen gen, MonadA m, Typeable1 m, Typeable (m ())) =>
-  gen ->
-  DefIM m ->
-  ExprIRef.ExprM m (Load.ExprPropertyClosure (Tag m)) ->
-  InferContext m -> Infer.TypedValue (DefIM m) ->
-  CT m (InferredWithImplicits m ())
-inferAddImplicits gen def lExpr inferContext node = do
-  -- TODO: Propagate errors?
-  (loaded, loadedContext) <-
-    fmap (unsafeUnjust "inferAddImplicits load failed") . runMaybeT .
-    (`runStateT` inferContext) $ load lExpr
-  let
-    key =
-      Cache.bsOfKey
-      ( show gen, def, loaded, node
-      , loadedContext ^. icHashKey
-      )
-  ((baseContext, expr), (withStructureContext, wvContext, wvExpr)) <-
-    inferWithVariables gen def loaded (loadedContext ^. icContext) node
-    & memoBy "inferAddImplicits" key
-  let newContext x ctx = InferContext ctx $ Cache.bsOfKey (key, x)
-  return InferredWithImplicits
-    { _iwiBaseInferContext = newContext "base" baseContext
-    , _iwiBaseExpr = mkStoredPayload <$> expr
-    , _iwiStructureInferContext = newContext "structure" withStructureContext
-    , _iwiInferContext = newContext "variables" wvContext
-    , _iwiExpr = mkWVPayload <$> wvExpr
-    }
+  Loader loadType
   where
-    mkStoredPayload (iwc, propClosure) =
-      Sugar.InputPayload (ExprIRef.epGuid prop) iwc prop ()
-      where
-        prop = Load.exprPropertyOfClosure propClosure
-    mkWVPayload (iwc, ImplicitVariables.AutoGen guid) =
-      Sugar.InputPayload guid iwc Nothing ()
-    mkWVPayload (iwc, ImplicitVariables.Stored propClosure) =
-      mkStoredPayload (iwc, propClosure)
-      & Sugar.ipStored %~ Just
+    loadType globalId = do
+      defBody <- Transaction.readIRef $ ExprIRef.defI globalId
+      case defBody ^. Definition.bodyType of
+        Definition.NoExportedType -> fail "Reference to global with non-exported type!"
+        Definition.ExportedType scheme -> return scheme
 
-isPolymorphicFunc :: Sugar.InputPayload m a -> Bool
-isPolymorphicFunc funcPl =
-  maybe False ExprUtil.isDependentPi $
-  funcPl ^? Sugar.ipInferred . Lens._Just . InferDeref.dType
+eitherToMaybeT :: Monad m => Either l a -> MaybeT m a
+eitherToMaybeT (Left _) = MaybeT $ return Nothing
+eitherToMaybeT (Right x) = MaybeT $ return $ Just x
+
+type M m = StateT Infer.Context (MaybeT (T m))
+
+liftInfer :: Monad m => Infer a -> M m a
+liftInfer = mapStateT eitherToMaybeT . Infer.run
+
+loadInferScope ::
+  MonadA m => Infer.Scope -> Val a -> M m (Val (Infer.Payload, a))
+loadInferScope scope val = do
+  inferAction <- lift $ lift $ InferLoad.loadInfer loader scope val
+  liftInfer inferAction
+
+loadInferInto :: MonadA m => Infer.Payload -> Val a -> M m (Val (Infer.Payload, a))
+loadInferInto pl val = do
+  inferredVal <- loadInferScope (pl ^. Infer.plScope) val
+  let inferredType = inferredVal ^. V.payload . _1 . Infer.plType
+  liftInfer $ unify inferredType (pl ^. Infer.plType)
+  return inferredVal
+
+-- TODO: InferredWithImplicits m a had this in it:
+-- Val (Sugar.InputPayloadP (Inferred m) (Maybe (Stored m)) a)
 
 exprGuid ::
-  Lens' (Expr.Expr def Guid (Sugar.InputPayloadP inferred stored a)) Guid
-exprGuid = Expr.ePayload . Sugar.ipGuid
+  Lens' (Val (Sugar.InputPayloadP inferred stored a)) Guid
+exprGuid = V.payload . Sugar.ipGuid
 
 exprStored ::
-  Lens' (Expr.Expr def Guid (Sugar.InputPayloadP inferred stored a)) stored
-exprStored = Expr.ePayload . Sugar.ipStored
+  Lens' (Val (Sugar.InputPayloadP inferred stored a)) stored
+exprStored = V.payload . Sugar.ipStored
 
 exprInferred ::
-  Lens' (Expr.Expr def Guid (Sugar.InputPayloadP inferred stored a)) inferred
-exprInferred = Expr.ePayload . Sugar.ipInferred
+  Lens' (Val (Sugar.InputPayloadP inferred stored a)) inferred
+exprInferred = V.payload . Sugar.ipInferred
 
 exprData ::
-  Lens' (Expr.Expr def Guid (Sugar.InputPayloadP inferred stored a)) a
-exprData = Expr.ePayload . Sugar.ipData
+  Lens' (Val (Sugar.InputPayloadP inferred stored a)) a
+exprData = V.payload . Sugar.ipData
 
 -- TODO: Move to ...?
 plIRef ::
-  Lens.Traversal' (Sugar.InputPayloadP i (Maybe (Stored m)) a) (ExprIRef.ExprIM m)
+  Lens.Traversal' (Sugar.InputPayloadP i (Maybe (Stored m)) a) (ExprIRef.ValIM m)
 plIRef = Sugar.ipStored . Lens._Just . Property.pVal
 
 exprStoredGuid ::
   Lens.Fold
-  (Expr.Expr def Guid (Sugar.InputPayloadP i (Maybe (Stored m)) a)) Guid
-exprStoredGuid = exprIRef . Lens.to ExprIRef.exprGuid
+  (Val (Sugar.InputPayloadP i (Maybe (Stored m)) a)) Guid
+exprStoredGuid = exprIRef . Lens.to ExprIRef.valIGuid
 
 replaceWith :: MonadA m => Stored m -> Stored m -> T m Guid
 replaceWith parentP replacerP = do
   Property.set parentP replacerI
-  return $ ExprIRef.exprGuid replacerI
+  return $ ExprIRef.valIGuid replacerI
   where
     replacerI = Property.value replacerP
 
 exprIRef ::
   Lens.Traversal'
-  (Expr.Expr def Guid (Sugar.InputPayloadP i (Maybe (Stored m)) a))
-  (ExprIRef.ExprIM m)
+  (Val (Sugar.InputPayloadP i (Maybe (Stored m)) a))
+  (ExprIRef.ValIM m)
 exprIRef = exprStored . Lens._Just . Property.pVal

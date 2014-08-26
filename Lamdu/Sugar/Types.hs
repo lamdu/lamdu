@@ -47,7 +47,6 @@ module Lamdu.Sugar.Types
   , HoleInferred(..), hiValue, hiType, hiMakeConverted
   , Hole(..)
     , holeMActions, holeMArg, holeMInferred
-  , HoleResultSeed(..), _ResultSeedExpr, _ResultSeedNewDefinition
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
   , HoleActions(..)
@@ -58,7 +57,7 @@ module Lamdu.Sugar.Types
     , holeResultPick
     , holeResultHasHoles
   , PickedResult(..), prMJumpTo, prIdTranslation
-  , TagG(..), tagName, tagGuid
+  , TagG(..), tagGName, tagGGuid
   , Collapsed(..), cFuncGuid, cCompact, cFullExpression, cFullExprHasInfo
   , MStorePoint, ExprStorePoint
   -- Input types:
@@ -78,7 +77,7 @@ import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import Lamdu.Expr.Val (Val)
 import Lamdu.Expr.Type (Type)
-import Lamdu.Sugar.Types.Internal (T, CT, Stored, Inferred)
+import Lamdu.Sugar.Types.Internal (T, Stored, Inferred)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
@@ -115,8 +114,8 @@ data Actions m = Actions
   , _cut :: T m Guid
   }
 
-data Payload name m a = Payload
-  { _plInferredTypes :: [Expression name m ()] -- TODO: Use Maybe, not []
+data Payload m a = Payload
+  { _plInferredTypes :: [Type] -- TODO: Use Maybe, not []
   -- This must be embedded in the expression AST and not as a separate
   -- function so that AddNames can correct the "name" here in the
   -- right context.
@@ -145,7 +144,7 @@ data Name = Name
   } deriving (Show)
 type MStoredName = Maybe String
 
-type Expression name m a = ExpressionP name m (Payload name m a)
+type Expression name m a = ExpressionP name m (Payload m a)
 type ExpressionN m a = Expression Name m a
 
 type BodyN m a = Body Name m (ExpressionN m a)
@@ -157,7 +156,7 @@ data ListItemActions m = ListItemActions
 
 data FuncParamActions name m = FuncParamActions
   { _fpListItemActions :: ListItemActions m
-  , _fpGetExample :: CT m (Expression name m ())
+  , _fpGetExample :: T m (Expression name m ())
   }
 
 data FuncParamType = FuncParameter | FuncFieldParameter
@@ -197,11 +196,6 @@ data HoleResult name m a = HoleResult
   , _holeResultHasHoles :: Bool
   } deriving (Functor, Foldable, Traversable)
 
-data HoleResultSeed a
-  = ResultSeedExpr (Val a)
-  | ResultSeedNewDefinition String
-  deriving (Functor, Foldable, Traversable)
-
 type ScopeItem a = (a, Val ())
 
 data Scope name m = Scope
@@ -217,14 +211,13 @@ data HoleActions name m = HoleActions
     -- but with the hole's scope.
     -- If given expression does not type check on its own, returns Nothing.
     -- (used by HoleEdit to suggest variations based on type)
-    _holeInferExprType ::
-      Val () -> CT m (Maybe (Val Inferred))
+    _holeInferExprType :: Val () -> T m (Maybe Type)
   , holeResult ::
       forall a.
       (Binary a, Typeable a, Ord a, Monoid a) =>
       (Guid -> Random.StdGen) -> -- for consistent guids
-      HoleResultSeed (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
-      CT m (Maybe (HoleResult name m a))
+      Val (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
+      T m (Maybe (HoleResult name m a))
   , _holePaste :: Maybe (T m Guid)
   }
 
@@ -242,7 +235,7 @@ data HoleInferred name m = HoleInferred
   { _hiValue :: Val ()
   , _hiType :: Type
   -- The Sugar Expression of the WithVarsValue
-  , _hiMakeConverted :: Random.StdGen -> CT m (Expression name m ())
+  , _hiMakeConverted :: Random.StdGen -> T m (Expression name m ())
   }
 
 data Hole name m expr = Hole
@@ -316,8 +309,8 @@ data GetParams name m = GetParams
   }
 
 data TagG name = TagG
-  { _tagGuid :: Guid
-  , _tagName :: name
+  { _tagGGuid :: Guid
+  , _tagGName :: name
   } deriving (Functor, Foldable, Traversable)
 
 data SpecialArgs expr
@@ -470,7 +463,6 @@ Lens.makeLenses ''WhereItem
 Lens.makePrisms ''Body
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo
-Lens.makePrisms ''HoleResultSeed
 Lens.makePrisms ''SpecialArgs
 Lens.makePrisms ''Unwrap
 derive makeMonoid ''Scope

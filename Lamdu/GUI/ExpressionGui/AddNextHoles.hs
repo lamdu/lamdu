@@ -94,8 +94,8 @@ jumpToExprPayloads f expr =
 
 setGuid ::
   Lens' ExprGuiM.HoleGuids (Maybe Guid) ->
-  Sugar.Payload name m (Bool, ExprGuiM.Payload) ->
-  State (Maybe Guid) (Sugar.Payload name m (Bool, ExprGuiM.Payload))
+  Sugar.Payload m (Bool, ExprGuiM.Payload) ->
+  State (Maybe Guid) (Sugar.Payload m (Bool, ExprGuiM.Payload))
 setGuid lens pl =
   setIt <$>
   State.get <*

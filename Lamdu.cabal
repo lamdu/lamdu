@@ -140,7 +140,8 @@ Executable lamdu
                        either,
                        utf8-string,
                        TypeCompose
-  Other-Modules:       Lamdu.CharClassification
+  Other-Modules:       Trash
+               ,       Lamdu.CharClassification
                ,       Lamdu.Config
                ,       Lamdu.Data.Anchors
                ,       Lamdu.Data.Arbitrary

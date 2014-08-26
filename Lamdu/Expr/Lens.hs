@@ -13,12 +13,18 @@ module Lamdu.Expr.Lens
   -- Pure vals:
   , pureValBody
   , pureValApply
+  -- Types:
+  , _TRecord
+  -- Composites:
+  , compositeTags
   ) where
 
-import qualified Lamdu.Expr.Val as V
-import Lamdu.Expr.Val (Val(..))
-
+import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens (Traversal', Prism', prism', Iso', iso)
+import Lamdu.Expr.Type (Type)
+import Lamdu.Expr.Val (Val(..))
+import qualified Lamdu.Expr.Type as T
+import qualified Lamdu.Expr.Val as V
 
 -- -- Traversals:
 -- exprLam :: Traversal' (Expr def par a) (Lam par (Expr def par a))
@@ -266,3 +272,16 @@ valBodyHole = _VLeaf . _VHole
 --   Expr (VLeaf VHole) <$> f pl
 -- holePayloads f (Expr body pl) =
 --   (`Expr` pl) <$> traverse (holePayloads f) body
+
+_TRecord :: Prism' Type (T.Composite T.Product)
+_TRecord = prism' T.TRecord get
+  where
+    get (T.TRecord x) = Just x
+    get _ = Nothing
+
+compositeTags :: Traversal' (T.Composite p) T.Tag
+compositeTags f (T.CExtend tag typ rest) =
+  mkCExtend <$> f tag <*> compositeTags f rest
+  where
+    mkCExtend tag' rest' = T.CExtend tag' typ rest'
+compositeTags _ r = pure r

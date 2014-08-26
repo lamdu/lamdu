@@ -129,7 +129,7 @@ prefixId holeInfo = mconcat [hiActiveId holeInfo, WidgetId.Id ["results"]]
 typeCheckHoleResult ::
   MonadA m => HoleInfo m ->
   (Guid -> Random.StdGen) ->
-  Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl) ->
+  Val (Sugar.MStorePoint m SugarExprPl) ->
   CT m (Maybe (ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl))
 typeCheckHoleResult holeInfo mkGen seed = do
   mGood <- mkHoleResult seed
@@ -145,7 +145,7 @@ typeCheckHoleResult holeInfo mkGen seed = do
 typeCheckResults ::
   MonadA m => HoleInfo m ->
   (Int -> Guid -> Random.StdGen) ->
-  [Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl)] ->
+  [Val (Sugar.MStorePoint m SugarExprPl)] ->
   CT m [(ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl)]
 typeCheckResults holeInfo mkGen options = do
   rs <-
@@ -184,7 +184,7 @@ mResultsListOf holeInfo baseId (x:xs) = Just
 
 typeCheckToResultsList ::
   MonadA m => HoleInfo m -> (Int -> Guid -> Random.StdGen) ->
-  WidgetId.Id -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m SugarExprPl)] ->
+  WidgetId.Id -> [Val (Sugar.MStorePoint m SugarExprPl)] ->
   CT m (Maybe (ResultsList m))
 typeCheckToResultsList holeInfo mkGen baseId options =
   mResultsListOf holeInfo baseId <$>
@@ -203,16 +203,16 @@ baseExprWithApplyForms holeInfo baseExpr =
 storePointExpr ::
   Monoid a =>
   Expr.BodyExpr def par (Sugar.MStorePoint m a) ->
-  Expr.Expr def par (Sugar.MStorePoint m a)
+  Val (Sugar.MStorePoint m a)
 storePointExpr = (`Expr` (Nothing, mempty))
 
-storePointHole :: Monoid a => Expr.Expr def par (Sugar.MStorePoint m a)
+storePointHole :: Monoid a => Val (Sugar.MStorePoint m a)
 storePointHole = storePointExpr $ ExprLens.bodyHole # ()
 
 storePointHoleWrap ::
   Monoid a =>
-  Expr.Expr def par (Sugar.MStorePoint m a) ->
-  Expr.Expr def par (Sugar.MStorePoint m a)
+  Val (Sugar.MStorePoint m a) ->
+  Val (Sugar.MStorePoint m a)
 storePointHoleWrap expr =
   storePointExpr $ ExprUtil.makeApply storePointHole expr
 

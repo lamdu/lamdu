@@ -16,7 +16,6 @@ import Control.Applicative ((<$>), (<$))
 import Control.Lens.Operators
 import Control.Monad (when)
 import Control.MonadA (MonadA)
-import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction, getP, setP, modP)
 import Lamdu.CharClassification (operatorChars)
@@ -29,10 +28,11 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
---import qualified Lamdu.Expr.Utils as ExprUtil
+import qualified Lamdu.Expr.Type as T
+import qualified Lamdu.Expr.Val as V
+import Trash
 
 type T = Transaction
 
@@ -178,12 +178,12 @@ newClipboard codeProps expr = do
   modP (Anchors.clipboards codeProps) (defI:)
   return defI
 
-makeNewTag :: MonadA m => String -> T m Guid
+makeNewTag :: MonadA m => String -> T m T.Tag
 makeNewTag name = do
-  tag <- Transaction.newKey
-  tag <$ setP (Anchors.assocNameRef tag) name
+  tagGuid <- Transaction.newKey
+  T.Tag (identifierOfGuid tagGuid) <$ setP (Anchors.assocNameRef tagGuid) name
 
-makeNewPublicTag :: MonadA m => Anchors.CodeProps m -> String -> T m Guid
+makeNewPublicTag :: MonadA m => Anchors.CodeProps m -> String -> T m T.Tag
 makeNewPublicTag codeProps name = do
   tag <- makeNewTag name
   modP (Anchors.tags codeProps) (tag :)

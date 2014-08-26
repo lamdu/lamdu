@@ -52,8 +52,8 @@ import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 
 onMatchingSubexprs ::
   MonadA m => (a -> m ()) ->
-  (Expr.Expr def par a -> Bool) ->
-  Expr.Expr def par a -> m ()
+  (Val a -> Bool) ->
+  Val a -> m ()
 onMatchingSubexprs action predicate =
   traverse_ (action . (^. Expr.ePayload)) .
   filter predicate . ExprUtil.subExprs
@@ -61,10 +61,10 @@ onMatchingSubexprs action predicate =
 toHole :: MonadA m => Stored m -> T m ()
 toHole = void . DataOps.setToHole
 
-isGetParamOf :: Eq par => par -> Expr.Expr def par a -> Bool
+isGetParamOf :: Eq par => par -> Val a -> Bool
 isGetParamOf = Lens.anyOf ExprLens.exprParameterRef . (==)
 
-isGetFieldParam :: Eq par => par -> Guid -> Expr.Expr def par a -> Bool
+isGetFieldParam :: Eq par => par -> Guid -> Val a -> Bool
 isGetFieldParam param tagG =
   p . (^? ExprLens.exprGetField)
   where
@@ -74,12 +74,12 @@ isGetFieldParam param tagG =
       Lens.anyOf ExprLens.exprParameterRef (== param) record
 
 deleteParamRef ::
-  (Eq par, MonadA m) => par -> Expr.Expr def par (Stored m) -> T m ()
+  (Eq par, MonadA m) => par -> Val (Stored m) -> T m ()
 deleteParamRef =
   onMatchingSubexprs toHole . isGetParamOf
 
 deleteFieldParamRef ::
-  (Eq par, MonadA m) => par -> Guid -> Expr.Expr def par (Stored m) -> T m ()
+  (Eq par, MonadA m) => par -> Guid -> Val (Stored m) -> T m ()
 deleteFieldParamRef param tagG =
   onMatchingSubexprs toHole $ isGetFieldParam param tagG
 
@@ -89,7 +89,7 @@ lambdaWrap stored =
   where
     f (newParam, newLamI) = Guid.combine (ExprIRef.exprGuid newLamI) newParam
 
-fakeExample :: Guid -> ExpressionP name0 m0 (Payload name1 m1 ())
+fakeExample :: Guid -> ExpressionP name0 m0 (Payload m1 ())
 fakeExample guid =
   Expression (BodyAtom "NotImplemented") Payload
   { _plGuid = Guid.augment "EXAMPLE" guid
@@ -432,14 +432,14 @@ convertExpressionI ee =
   Expr.VLeaf Expr.VRecEmpty -> convertEmptyRecord
 
 -- Check no holes
-isCompleteType :: Expr.Expr def par a -> Bool
+isCompleteType :: Val a -> Bool
 isCompleteType =
   Lens.nullOf (Lens.folding ExprUtil.subExprs . ExprLens.exprHole)
 
 mkContext ::
   (MonadA m, Typeable1 m) =>
   Anchors.Code (Transaction.MkProperty m) (Tag m) ->
-  InferContext m -> InferContext m -> InferContext m ->
+  Infer.Context -> Infer.Context -> Infer.Context ->
   T m (Context m)
 mkContext cp holeInferContext structureInferContext withVarsInferContext = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
@@ -808,7 +808,7 @@ addFirstFieldParam lamGuid recordI = do
 
 assertedGetProp ::
   String ->
-  Expr.Expr def par (InputPayloadP inferred (Maybe stored) a) -> stored
+  Val (InputPayloadP inferred (Maybe stored) a) -> stored
 assertedGetProp _
   Expr.Expr
   { Expr._ePayload =

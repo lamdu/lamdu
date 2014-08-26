@@ -62,7 +62,7 @@ mkEventMapWithPickers holePickers keys doc f =
   fmap Widget.eventResultFromCursor . f .
   fmap WidgetIds.fromGuid
 
-isExprSelected :: MonadA m => Sugar.Payload name f a -> ExprGuiM m Bool
+isExprSelected :: MonadA m => Sugar.Payload f a -> ExprGuiM m Bool
 isExprSelected pl =
   ExprGuiM.widgetEnv . WE.isSubCursor . WidgetIds.fromGuid $
   pl ^. Sugar.plGuid
@@ -90,7 +90,7 @@ jumpHolesEventMap holePickers hg = do
 
 jumpHolesEventMapIfSelected ::
   MonadA m => HolePickers m ->
-  Sugar.Payload name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (EventHandlers (T m))
 jumpHolesEventMapIfSelected holePickers pl = do
   isSelected <- isExprSelected pl

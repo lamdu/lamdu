@@ -31,7 +31,7 @@ holeResultTypes =
 successfulType :: Expression name m a -> Expression name m a
 successfulType = rPayload %~ plRemoveSuccessfulType
 
-plRemoveSuccessfulType :: Payload name m a -> Payload name m a
+plRemoveSuccessfulType :: Payload m a -> Payload m a
 plRemoveSuccessfulType =
   plInferredTypes . Lens.filtered (null . drop 1) .~ []
 
