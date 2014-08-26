@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, GeneralizedNewtypeDeriving, FlexibleInstances, DeriveTraversable #-}
+{-# LANGUAGE TypeFamilies, MultiParamTypeClasses, GeneralizedNewtypeDeriving, FlexibleInstances, DeriveTraversable, RecordWildCards, DeriveGeneric #-}
 module Data.OpaqueRef
   ( Ref
     , unsafeAsInt
@@ -26,18 +26,18 @@ module Data.OpaqueRef
 import Prelude hiding (lookup)
 
 import Control.Applicative (Applicative(..), (<$>))
+import Control.Lens (Lens)
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
 import Data.Foldable (Foldable)
 import Data.IntMap (IntMap)
 import Data.IntSet (IntSet)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (Traversable(..))
+import GHC.Generics (Generic)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.IntMap as IntMap
@@ -45,29 +45,30 @@ import qualified Data.IntSet as IntSet
 
 newtype Ref p = MkRef { unsafeAsInt :: Int }
   deriving (Eq, Ord, Binary)
+mkRef :: Lens.Iso' (Ref p) Int
+mkRef = Lens.iso unsafeAsInt MkRef
 
 unsafeFromInt :: Int -> Ref p
 unsafeFromInt = MkRef
 
-newtype Fresh p = MkFresh (Ref p)
+newtype Fresh p = MkFresh { _fresh :: Ref p }
   deriving (Binary)
-
-Lens.makeIso ''Ref
-Lens.makeIso ''Fresh
+fresh :: Lens (Fresh p) (Fresh q) (Ref p) (Ref q)
+fresh f MkFresh{..} = (\_fresh -> MkFresh{..}) <$> f _fresh
 
 initialFresh :: Fresh p
 initialFresh = MkFresh (MkRef 0)
 
 freshRef :: MonadA m => StateT (Fresh p) m (Ref p)
-freshRef = Lens.use (Lens.from mkFresh) <* (Lens.from (mkRef . mkFresh) += 1)
+freshRef = State.gets _fresh <* (fresh.mkRef += 1)
 
 newtype RefSet p = RefSet IntSet
-  deriving (Monoid, Show)
-derive makeBinary ''RefSet
+  deriving (Generic, Monoid, Show)
+instance Binary (RefSet p)
 
 newtype RefMap p v = RefMap (IntMap v)
-  deriving (Functor, Foldable, Traversable, Monoid, Show)
-derive makeBinary ''RefMap
+  deriving (Generic, Functor, Foldable, Traversable, Monoid, Show)
+instance Binary v => Binary (RefMap p v)
 
 instance Show (Ref p) where
   show (MkRef x) = 'R':show x
@@ -109,10 +110,10 @@ refMapToList :: RefMap p a -> [(Ref p, a)]
 refMapToList (RefMap x) = x & IntMap.toList <&> Lens._1 %~ MkRef
 
 refMapFromList :: [(Ref p, a)] -> RefMap p a
-refMapFromList = RefMap . IntMap.fromList . (Lens.mapped . Lens._1 %~ (^. Lens.from mkRef))
+refMapFromList = RefMap . IntMap.fromList . (Lens.mapped . Lens._1 %~ unsafeAsInt)
 
 refMapFromListWith :: (a -> a -> a) -> [(Ref p, a)] -> RefMap p a
-refMapFromListWith combine = RefMap . IntMap.fromListWith combine . (Lens.mapped . Lens._1 %~ (^. Lens.from mkRef))
+refMapFromListWith combine = RefMap . IntMap.fromListWith combine . (Lens.mapped . Lens._1 %~ unsafeAsInt)
 
 refMapUnmaintainedLookup ::
   MonadA m => (Ref p -> m (Ref p)) -> Ref p -> StateT (RefMap p a) m (Ref p, Maybe a)
@@ -135,7 +136,7 @@ refSetEmpty :: RefSet p
 refSetEmpty = RefSet IntSet.empty
 
 refSetFromList :: [Ref p] -> RefSet p
-refSetFromList = RefSet . IntSet.fromList . map (^. Lens.from mkRef)
+refSetFromList = RefSet . IntSet.fromList . map unsafeAsInt
 
 refSetToList :: RefSet p -> [Ref p]
 refSetToList (RefSet x) = x & IntSet.toList <&> MkRef
