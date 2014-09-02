@@ -1,13 +1,14 @@
 {-# LANGUAGE RankNTypes, NoMonomorphismRestriction #-}
 module Lamdu.Expr.Lens
   -- ValLeaf prisms:
-  ( _VGlobal, _VHole
+  ( _VGlobal, _VHole, _VRecEmpty
   -- ValBody prisms:
   , _VLeaf
   , _VApp
   -- Leafs
-  , valGlobal, valBodyGlobal
-  , valHole  , valBodyHole
+  , valGlobal   , valBodyGlobal
+  , valHole     , valBodyHole
+  , valRecEmpty , valBodyRecEmpty
   -- Non-leafs
   , valApply
   -- Pure vals:
@@ -72,6 +73,9 @@ valGlobal = V.body . valBodyGlobal
 
 valHole :: Traversal' (Val a) ()
 valHole = V.body . valBodyHole
+
+valRecEmpty :: Traversal' (Val a) ()
+valRecEmpty = V.body . valBodyRecEmpty
 
 -- exprType :: Traversal' (Expr def par a) ()
 -- exprType = eBody . bodyType
@@ -176,6 +180,13 @@ _VHole = prism' (\() -> V.LHole) getHole
     getHole V.LHole = Just ()
     getHole _ = Nothing
 
+_VRecEmpty :: Prism' V.Leaf ()
+_VRecEmpty = prism' (\() -> V.LRecEmpty) getHole
+  where
+    getHole V.LRecEmpty = Just ()
+    getHole _ = Nothing
+
+-- TODO: _V* -> _B*
 _VLeaf :: Prism' (V.Body a) V.Leaf
 _VLeaf = prism' V.BLeaf getLeaf
   where
@@ -205,6 +216,9 @@ valBodyGlobal = _VLeaf . _VGlobal
 
 valBodyHole :: Prism' (V.Body expr) ()
 valBodyHole = _VLeaf . _VHole
+
+valBodyRecEmpty :: Prism' (V.Body expr) ()
+valBodyRecEmpty = _VLeaf . _VRecEmpty
 
 -- bodyType :: Lens.Prism' (Body def par expr) ()
 -- bodyType = _VLeaf . _Type

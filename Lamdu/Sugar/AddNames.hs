@@ -21,6 +21,7 @@ import Lamdu.Expr.Type (Type)
 import Lamdu.Sugar.AddNames.CPS (CPS(..))
 import Lamdu.Sugar.AddNames.NameGen (NameGen)
 import Lamdu.Sugar.Types
+import Trash (guidOfTag)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
@@ -283,7 +284,7 @@ toLam lam@Lam {..} = do
   pure lam { _lParam = param, _lResultType = resultType }
 
 toTagG :: MonadNaming m => TagG (OldName m) -> m (TagG (NewName m))
-toTagG tagG@TagG {..} = tagGName (opGetTagName _tagGGuid) tagG
+toTagG tagG@TagG {..} = tagGName (opGetTagName (guidOfTag _tagGId)) tagG
 
 toRecordField ::
   (MonadA tm, MonadNaming m) =>
@@ -379,9 +380,9 @@ toCollapsed Collapsed {..} = do
 toTag ::
   MonadNaming m => TagG (OldName m) ->
   m (TagG (NewName m))
-toTag (TagG guid oldName) = do
-  name <- opGetTagName guid oldName
-  pure $ TagG guid name
+toTag (TagG tag oldName) = do
+  name <- opGetTagName (guidOfTag tag) oldName
+  pure $ TagG tag name
 
 toGetVar ::
   MonadNaming m => GetVar (OldName m) tm ->

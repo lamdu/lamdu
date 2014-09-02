@@ -424,6 +424,8 @@ convertExpressionI ee =
   Expr.VApp x -> ConvertApply.convert x
   Expr.VRec x -> convertRecord x
   Expr.VGetField x -> convertGetField x
+  -- XXX: import qualified Lamdu.Sugar.Convert.List as ConvertList
+  -- ConvertList.nil on global id
   Expr.VLeaf (Expr.VVar x) -> convertVVar x
   Expr.VLeaf (Expr.VLiteralInteger x) -> convertVLiteralInteger x
   Expr.VLeaf Expr.VHole -> ConvertHole.convert

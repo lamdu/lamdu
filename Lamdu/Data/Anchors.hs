@@ -25,15 +25,14 @@ import Lamdu.Expr.IRef (DefI)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.IRef as ExprIRef
 
 data SpecialFunctions t = SpecialFunctions
   { sfNil :: DefI t
   , sfCons :: DefI t
   , sfHeadTag :: T.Tag
   , sfTailTag :: T.Tag
-  , sfTrue :: ExprIRef.DefI t
-  , sfFalse :: ExprIRef.DefI t
+  , sfTrue :: DefI t
+  , sfFalse :: DefI t
   }
 
 type Pane t = DefI t

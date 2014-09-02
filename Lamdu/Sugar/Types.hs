@@ -57,7 +57,7 @@ module Lamdu.Sugar.Types
     , holeResultPick
     , holeResultHasHoles
   , PickedResult(..), prMJumpTo, prIdTranslation
-  , TagG(..), tagGName, tagGGuid
+  , TagG(..), tagGName, tagGId
   , Collapsed(..), cFuncGuid, cCompact, cFullExpression, cFullExprHasInfo
   , MStorePoint, ExprStorePoint
   -- Input types:
@@ -75,13 +75,13 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
-import Lamdu.Expr.Val (Val)
 import Lamdu.Expr.Type (Type)
+import Lamdu.Expr.Val (Val)
 import Lamdu.Sugar.Types.Internal (T, Stored, Inferred)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Expr.Type as Type
+import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Sugar.Types.Internal as TypesInternal
 import qualified System.Random as Random
 
@@ -201,7 +201,7 @@ type ScopeItem a = (a, Val ())
 data Scope name m = Scope
   { _scopeLocals    :: [ScopeItem (GetVar name m)]
   , _scopeGlobals   :: [ScopeItem (GetVar name m)]
-  , _scopeTags      :: [(TagG name, Type.Tag)]
+  , _scopeTags      :: [(TagG name, T.Tag)]
   , _scopeGetParams :: [ScopeItem (GetParams name m)]
   }
 
@@ -283,7 +283,8 @@ data FieldList name m expr = FieldList
   , _flMAddFirstItem :: Maybe (T m Guid)
   } deriving (Functor, Foldable, Traversable)
 
-data Record name m expr = Record
+-- TODO: Remove this?
+newtype Record name m expr = Record
   { _rFields :: FieldList name m expr
   } deriving (Functor, Foldable, Traversable)
 
@@ -309,7 +310,7 @@ data GetParams name m = GetParams
   }
 
 data TagG name = TagG
-  { _tagGGuid :: Guid
+  { _tagGId :: T.Tag
   , _tagGName :: name
   } deriving (Functor, Foldable, Traversable)
 
