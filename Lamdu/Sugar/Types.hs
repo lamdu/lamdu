@@ -174,7 +174,7 @@ data FuncParam name m expr = FuncParam
   , _fpVarKind :: FuncParamType
   , _fpName :: name
   , _fpType :: expr
-  , _fpInferredType :: Type
+  , _fpInferredType :: Maybe Type
   , _fpMActions :: Maybe (FuncParamActions name m)
   } deriving (Functor, Foldable, Traversable)
 
