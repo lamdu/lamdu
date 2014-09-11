@@ -31,7 +31,7 @@ import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Types as Sugar
 
 data TagParamInfo = TagParamInfo
-  { tpiFromParameters :: Guid
+  { tpiFromParameters :: V.Var -- TODO: Rename "From" to something else
   , tpiJumpTo :: Guid
   }
 

@@ -5,6 +5,7 @@ module Lamdu.Expr.Lens
   -- ValBody prisms:
   , _VLeaf
   , _VApp
+  , _VAbs
   , _VGetField
   -- Leafs
   , valGlobal   , valBodyGlobal
@@ -95,6 +96,12 @@ _VApp :: Prism' (V.Body a) (V.Apply a)
 _VApp = prism' V.BApp get
   where
     get (V.BApp x) = Just x
+    get _ = Nothing
+
+_VAbs :: Prism' (V.Body a) (V.Lam a)
+_VAbs = prism' V.BAbs get
+  where
+    get (V.BAbs x) = Just x
     get _ = Nothing
 
 _VGetField :: Prism' (V.Body a) (V.GetField a)

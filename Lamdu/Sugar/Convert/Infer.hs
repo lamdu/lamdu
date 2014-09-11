@@ -1,9 +1,10 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor, ConstraintKinds #-}
+{-# LANGUAGE ConstraintKinds #-}
 module Lamdu.Sugar.Convert.Infer
   ( ExpressionSetter
 
   , loadInferScope -- TODO: is this sensible to export here?
   , loadInferInto
+  , loadInfer
 
   , exprInferred
   , exprStored
@@ -23,6 +24,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.State (StateT(..), mapStateT)
 import Control.MonadA (MonadA)
+import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Infer (Infer)
@@ -66,28 +68,50 @@ loadInferScope scope val = do
   inferAction <- lift $ lift $ InferLoad.loadInfer loader scope val
   liftInfer inferAction
 
-loadInferInto :: MonadA m => Infer.Payload -> Val a -> M m (Val (Infer.Payload, a))
+loadInferInto ::
+  MonadA m => Infer.Payload -> Val a -> M m (Val (Infer.Payload, a))
 loadInferInto pl val = do
   inferredVal <- loadInferScope (pl ^. Infer.plScope) val
   let inferredType = inferredVal ^. V.payload . _1 . Infer.plType
   liftInfer $ unify inferredType (pl ^. Infer.plType)
   return inferredVal
 
+loadInfer ::
+  MonadA m => Val (Stored m) ->
+  T m (Val (Sugar.InputPayloadP Inferred (Stored m) ()), Infer.Context)
+loadInfer val =
+  loadInferScope Infer.emptyScope val
+  & (`runStateT` Infer.initialContext)
+  & runMaybeT
+  <&> fromMaybe (error "Type inference failed")
+  <&> _1 . Lens.mapped %~ mkInputPayload
+  where
+    mkInputPayload (inferPl, stored) = Sugar.InputPayload
+      { Sugar._ipGuid = ExprIRef.epGuid stored
+      , Sugar._ipInferred = inferPl
+      , Sugar._ipStored = stored
+      , Sugar._ipData = ()
+      }
+
 -- TODO: InferredWithImplicits m a had this in it:
 -- Val (Sugar.InputPayloadP (Inferred m) (Maybe (Stored m)) a)
 
+-- TODO: Remove
 exprGuid ::
   Lens' (Val (Sugar.InputPayloadP inferred stored a)) Guid
 exprGuid = V.payload . Sugar.ipGuid
 
+-- TODO: Remove
 exprStored ::
   Lens' (Val (Sugar.InputPayloadP inferred stored a)) stored
 exprStored = V.payload . Sugar.ipStored
 
+-- TODO: Remove
 exprInferred ::
   Lens' (Val (Sugar.InputPayloadP inferred stored a)) inferred
 exprInferred = V.payload . Sugar.ipInferred
 
+-- TODO: Remove
 exprData ::
   Lens' (Val (Sugar.InputPayloadP inferred stored a)) a
 exprData = V.payload . Sugar.ipData

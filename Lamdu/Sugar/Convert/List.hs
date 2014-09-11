@@ -37,7 +37,7 @@ import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 
 nil ::
-  (Typeable1 m, MonadA m, Monoid a) =>
+  (Typeable1 m, MonadA m) =>
   V.GlobalId ->
   InputPayload m a ->
   MaybeT (ConvertM m) (ExpressionU m a)

@@ -158,6 +158,7 @@ Executable lamdu
                ,       Lamdu.Expr.Pure
                ,       Lamdu.Expr.RecordVal
                ,       Lamdu.Expr.Scheme
+               ,       Lamdu.Expr.FlatComposite
                ,       Lamdu.Expr.Type
                ,       Lamdu.Expr.TypeVars
                ,       Lamdu.Expr.Val
@@ -202,7 +203,6 @@ Executable lamdu
                ,       Lamdu.Infer
                ,       Lamdu.Infer.Error
                ,       Lamdu.Infer.Internal.Constraints
-               ,       Lamdu.Infer.Internal.FlatComposite
                ,       Lamdu.Infer.Internal.Monad
                ,       Lamdu.Infer.Internal.Scheme
                ,       Lamdu.Infer.Internal.Scope

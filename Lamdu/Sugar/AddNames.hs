@@ -255,22 +255,21 @@ isFunctionType _ = NameGen.NotFunction
 
 withFuncParam ::
   (MonadA tm, MonadNaming m) =>
-  FuncParam (OldName m) tm (Expression (OldName m) tm a) ->
-  CPS m (FuncParam (NewName m) tm (Expression (NewName m) tm a))
+  FuncParam (OldName m) tm -> CPS m (FuncParam (NewName m) tm)
 withFuncParam fp@FuncParam{..} = CPS $ \k -> do
   mActions <- traverse toFuncParamActions _fpMActions
-  typ <- toExpression _fpType
   (name, res) <-
     case _fpVarKind of
     FuncParameter ->
-      runCPS (opWithParamName (maybe NameGen.NotFunction isFunctionType _fpInferredType) _fpGuid _fpName) k
+      runCPS
+      (opWithParamName
+       (maybe NameGen.NotFunction isFunctionType _fpInferredType) _fpGuid _fpName) k
     FuncFieldParameter ->
       runCPS (opWithTagName _fpGuid _fpName) k
   pure
     ( fp
       { _fpName = name
       , _fpMActions = mActions
-      , _fpType = typ
       }
     , res
     )
@@ -280,8 +279,8 @@ toLam ::
   Lam (OldName m) tm (Expression (OldName m) tm a) ->
   m (Lam (NewName m) tm (Expression (NewName m) tm a))
 toLam lam@Lam {..} = do
-  (param, resultType) <- runCPS (withFuncParam _lParam) $ toExpression _lResultType
-  pure lam { _lParam = param, _lResultType = resultType }
+  (param, result) <- runCPS (withFuncParam _lParam) $ toExpression _lResult
+  pure lam { _lParam = param, _lResult = result }
 
 toTagG :: MonadNaming m => TagG (OldName m) -> m (TagG (NewName m))
 toTagG tagG@TagG {..} = tagGName (opGetTagName (guidOfTag _tagGId)) tagG
@@ -483,13 +482,11 @@ toDefinitionBody ::
   DefinitionBody (OldName m) tm (Expression (OldName m) tm a) ->
   m (DefinitionBody (NewName m) tm (Expression (NewName m) tm a))
 toDefinitionBody (DefinitionBodyBuiltin bi) =
-  DefinitionBodyBuiltin <$> traverse toExpression bi
+  pure (DefinitionBodyBuiltin bi)
 toDefinitionBody
   (DefinitionBodyExpression (DefinitionExpression typeInfo content)) =
     DefinitionBodyExpression <$>
-    (DefinitionExpression <$>
-     traverse toExpression typeInfo <*>
-     toDefinitionContent content)
+    (DefinitionExpression typeInfo <$> toDefinitionContent content)
 
 toDef ::
   (MonadA tm, MonadNaming m) =>

@@ -5,10 +5,9 @@ module Lamdu.Sugar.Types
   , ListItemActions(..), itemAddNext, itemDelete
   , FuncParamActions(..), fpListItemActions, fpGetExample
   , DefinitionExpression(..), deContent, deTypeInfo
-  , ShowIncompleteType(..), AcceptNewType(..)
+  , AcceptNewType(..)
   , DefinitionTypeInfo(..)
     , _DefinitionExportedTypeInfo
-    , _DefinitionIncompleteType
     , _DefinitionNewType
   , DefinitionContent(..)
     , dDepParams, dParams, dBody, dWhereItems, dAddFirstParam, dAddInnermostWhereItem
@@ -39,9 +38,10 @@ module Lamdu.Sugar.Types
   , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
   , AnnotatedArg(..), aaTag, aaTagExprGuid, aaExpr
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
-  , Lam(..), lParam, lResultType
+  , Lam(..), lParam, lResult
   , FuncParamType(..)
-  , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpType, fpInferredType, fpMActions
+  , FuncParam(..)
+    , fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpInferredType, fpMActions
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
   , HoleArg(..), haExpr, haExprPresugared, haUnwrap
   , HoleInferred(..), hiValue, hiType, hiMakeConverted
@@ -76,6 +76,7 @@ import Data.Store.IRef (Tag)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import Lamdu.Expr.Type (Type)
+import Lamdu.Expr.Scheme (Scheme)
 import Lamdu.Expr.Val (Val)
 import Lamdu.Sugar.Types.Internal (T, Stored, Inferred)
 import qualified Control.Lens as Lens
@@ -90,7 +91,7 @@ data InputPayloadP inferred stored a
     { _ipGuid :: Guid
     , _ipInferred :: inferred
     , _ipStored :: stored
-    , _ipData :: a
+    , _ipData :: a -- TODO: Extract to tuple
     }
 Lens.makeLenses ''InputPayloadP
 
@@ -166,21 +167,20 @@ data FuncParamType = FuncParameter | FuncFieldParameter
 -- FuncParam for pi needs neither
 -- FuncParam for definition needs both
 -- So separate the types properly
-data FuncParam name m expr = FuncParam
+data FuncParam name m = FuncParam
   { -- non-unique (e.g: tag guid). Name attached here:
     _fpGuid :: Guid
   , _fpId :: Guid
   , _fpAltIds :: [Guid]
   , _fpVarKind :: FuncParamType
   , _fpName :: name
-  , _fpType :: expr
   , _fpInferredType :: Maybe Type
   , _fpMActions :: Maybe (FuncParamActions name m)
-  } deriving (Functor, Foldable, Traversable)
+  }
 
 data Lam name m expr = Lam
-  { _lParam :: FuncParam name m expr
-  , _lResultType :: expr
+  { _lParam :: FuncParam name m
+  , _lResult :: expr
   } deriving (Functor, Foldable, Traversable)
 
 data PickedResult = PickedResult
@@ -347,9 +347,9 @@ data Body name m expr
   | BodyGetParams (GetParams name m)
   deriving (Functor, Foldable, Traversable)
 
-instance Show expr => Show (FuncParam name m expr) where
+instance Show (FuncParam name m) where
   show fp =
-    concat ["(", show (_fpGuid fp), ":", show (_fpType fp), ")"]
+    concat ["(", show (_fpGuid fp), ":", show (_fpInferredType fp), ")"]
 
 instance Show expr => Show (Body name m expr) where
   show (BodyLam (Lam paramType resultType)) =
@@ -380,46 +380,39 @@ data WhereItem name m expr = WhereItem
 
 -- Common data for definitions and where-items
 data DefinitionContent name m expr = DefinitionContent
-  { _dDepParams :: [FuncParam name m expr]
-  , _dParams :: [FuncParam name m expr]
+  { _dDepParams :: [FuncParam name m]
+  , _dParams :: [FuncParam name m]
   , _dBody :: expr
   , _dWhereItems :: [WhereItem name m expr]
   , _dAddFirstParam :: T m Guid
   , _dAddInnermostWhereItem :: T m Guid
   } deriving (Functor, Foldable, Traversable)
 
-data AcceptNewType m expr = AcceptNewType
-  { antOldType :: expr
-  , antNewType :: expr
+data AcceptNewType m = AcceptNewType
+  { antOldType :: Type
+  , antNewType :: Type
   , antAccept :: T m ()
-  } deriving (Functor, Foldable, Traversable)
+  }
 
-data ShowIncompleteType expr = ShowIncompleteType
-  { sitOldType :: expr
-  , sitNewIncompleteType :: expr
-  } deriving (Functor, Foldable, Traversable)
-
-data DefinitionTypeInfo m expr
-  = DefinitionExportedTypeInfo expr
-  | DefinitionIncompleteType (ShowIncompleteType expr)
-  | DefinitionNewType (AcceptNewType m expr)
-  deriving (Functor, Foldable, Traversable)
+data DefinitionTypeInfo m
+  = DefinitionExportedTypeInfo Type
+  | DefinitionNewType (AcceptNewType m)
 
 data DefinitionExpression name m expr = DefinitionExpression
-  { _deTypeInfo :: DefinitionTypeInfo m expr
+  { _deTypeInfo :: DefinitionTypeInfo m
   , _deContent :: DefinitionContent name m expr
   } deriving (Functor, Foldable, Traversable)
 
-data DefinitionBuiltin m expr = DefinitionBuiltin
+data DefinitionBuiltin m = DefinitionBuiltin
   { biName :: Definition.FFIName
   -- Consider removing Maybe'ness here
   , biMSetName :: Maybe (Definition.FFIName -> T m ())
-  , biType :: expr
-  } deriving (Functor, Foldable, Traversable)
+  , biType :: Scheme
+  }
 
 data DefinitionBody name m expr
   = DefinitionBodyExpression (DefinitionExpression name m expr)
-  | DefinitionBodyBuiltin (DefinitionBuiltin m expr)
+  | DefinitionBodyBuiltin (DefinitionBuiltin m)
   deriving (Functor, Foldable, Traversable)
 
 data Definition name m expr = Definition
