@@ -1,12 +1,12 @@
 {-# LANGUAGE RankNTypes, NoMonomorphismRestriction, FlexibleContexts #-}
 module Lamdu.Expr.Lens
   -- ValLeaf prisms:
-  ( _VGlobal, _VHole, _VRecEmpty, _VVar
+  ( _LGlobal, _LHole, _LRecEmpty, _LVar
   -- ValBody prisms:
-  , _VLeaf
-  , _VApp
-  , _VAbs
-  , _VGetField
+  , _BLeaf
+  , _BApp
+  , _BAbs
+  , _BGetField
   -- Leafs
   , valGlobal   , valBodyGlobal
   , valHole     , valBodyHole
@@ -38,13 +38,13 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 
 valApply :: Traversal' (Val a) (V.Apply (Val a))
-valApply = V.body . _VApp
+valApply = V.body . _BApp
 
 pureValBody :: Iso' (Val ()) (V.Body (Val ()))
 pureValBody = iso V._valBody (Val ())
 
 pureValApply :: Prism' (Val ()) (V.Apply (Val ()))
-pureValApply = pureValBody . _VApp
+pureValApply = pureValBody . _BApp
 
 valGlobal :: Traversal' (Val a) V.GlobalId
 valGlobal = V.body . valBodyGlobal
@@ -59,68 +59,68 @@ valRecEmpty :: Traversal' (Val a) ()
 valRecEmpty = V.body . valBodyRecEmpty
 
 valGetField  :: Traversal' (Val a) (V.GetField (Val a))
-valGetField = V.body . _VGetField
+valGetField = V.body . _BGetField
 
-_VGlobal :: Prism' V.Leaf V.GlobalId
-_VGlobal = prism' V.LGlobal get
+_LGlobal :: Prism' V.Leaf V.GlobalId
+_LGlobal = prism' V.LGlobal get
   where
     get (V.LGlobal gid) = Just gid
     get _ = Nothing
 
-_VHole :: Prism' V.Leaf ()
-_VHole = prism' (\() -> V.LHole) get
+_LHole :: Prism' V.Leaf ()
+_LHole = prism' (\() -> V.LHole) get
   where
     get V.LHole = Just ()
     get _ = Nothing
 
-_VRecEmpty :: Prism' V.Leaf ()
-_VRecEmpty = prism' (\() -> V.LRecEmpty) get
+_LRecEmpty :: Prism' V.Leaf ()
+_LRecEmpty = prism' (\() -> V.LRecEmpty) get
   where
     get V.LRecEmpty = Just ()
     get _ = Nothing
 
-_VVar :: Prism' V.Leaf V.Var
-_VVar = prism' V.LVar get
+_LVar :: Prism' V.Leaf V.Var
+_LVar = prism' V.LVar get
   where
     get (V.LVar gid) = Just gid
     get _ = Nothing
 
 -- TODO: _V* -> _B*
-_VLeaf :: Prism' (V.Body a) V.Leaf
-_VLeaf = prism' V.BLeaf get
+_BLeaf :: Prism' (V.Body a) V.Leaf
+_BLeaf = prism' V.BLeaf get
   where
     get (V.BLeaf x) = Just x
     get _ = Nothing
 
-_VApp :: Prism' (V.Body a) (V.Apply a)
-_VApp = prism' V.BApp get
+_BApp :: Prism' (V.Body a) (V.Apply a)
+_BApp = prism' V.BApp get
   where
     get (V.BApp x) = Just x
     get _ = Nothing
 
-_VAbs :: Prism' (V.Body a) (V.Lam a)
-_VAbs = prism' V.BAbs get
+_BAbs :: Prism' (V.Body a) (V.Lam a)
+_BAbs = prism' V.BAbs get
   where
     get (V.BAbs x) = Just x
     get _ = Nothing
 
-_VGetField :: Prism' (V.Body a) (V.GetField a)
-_VGetField = prism' V.BGetField get
+_BGetField :: Prism' (V.Body a) (V.GetField a)
+_BGetField = prism' V.BGetField get
   where
     get (V.BGetField x) = Just x
     get _ = Nothing
 
 valBodyGlobal :: Prism' (V.Body e) V.GlobalId
-valBodyGlobal = _VLeaf . _VGlobal
+valBodyGlobal = _BLeaf . _LGlobal
 
 valBodyHole :: Prism' (V.Body expr) ()
-valBodyHole = _VLeaf . _VHole
+valBodyHole = _BLeaf . _LHole
 
 valBodyVar :: Prism' (V.Body expr) V.Var
-valBodyVar = _VLeaf . _VVar
+valBodyVar = _BLeaf . _LVar
 
 valBodyRecEmpty :: Prism' (V.Body expr) ()
-valBodyRecEmpty = _VLeaf . _VRecEmpty
+valBodyRecEmpty = _BLeaf . _LRecEmpty
 
 _TRecord :: Prism' Type (T.Composite T.Product)
 _TRecord = prism' T.TRecord get

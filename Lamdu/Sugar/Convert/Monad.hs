@@ -36,7 +36,7 @@ data TagParamInfo = TagParamInfo
   }
 
 data RecordParamsInfo m = RecordParamsInfo
-  { rpiFromDefinition :: Guid
+  { rpiFromDefinition :: Guid -- TODO: Sum-type for definitions and where items
   , rpiJumpTo :: T m Guid
   }
 

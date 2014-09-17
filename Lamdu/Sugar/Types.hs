@@ -389,13 +389,13 @@ data DefinitionContent name m expr = DefinitionContent
   } deriving (Functor, Foldable, Traversable)
 
 data AcceptNewType m = AcceptNewType
-  { antOldType :: Type
-  , antNewType :: Type
+  { antOldType :: Definition.ExportedType
+  , antNewType :: Scheme
   , antAccept :: T m ()
   }
 
 data DefinitionTypeInfo m
-  = DefinitionExportedTypeInfo Type
+  = DefinitionExportedTypeInfo Scheme
   | DefinitionNewType (AcceptNewType m)
 
 data DefinitionExpression name m expr = DefinitionExpression
@@ -407,7 +407,7 @@ data DefinitionBuiltin m = DefinitionBuiltin
   { biName :: Definition.FFIName
   -- Consider removing Maybe'ness here
   , biMSetName :: Maybe (Definition.FFIName -> T m ())
-  , biType :: Scheme
+  , biType :: Definition.ExportedType
   }
 
 data DefinitionBody name m expr

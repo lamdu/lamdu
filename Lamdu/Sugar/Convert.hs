@@ -8,14 +8,12 @@ import Control.Lens.Operators
 import Control.Lens.Tuple
 import Control.Monad (guard, void)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..))
 import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import Control.MonadA (MonadA)
-import Data.Foldable (traverse_)
 import Data.Map (Map)
-import Data.Maybe (fromMaybe, listToMaybe)
-import Data.Monoid (Monoid(..))
+import Data.Maybe (fromMaybe)
+import Data.Monoid (Monoid(..), (<>))
+import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (traverse)
@@ -29,11 +27,9 @@ import Lamdu.Sugar.Convert.Monad (ConvertM, Context(..))
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
-import System.Random (RandomGen)
-import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
-import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -56,7 +52,6 @@ import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import qualified Lamdu.Sugar.InputExpr as InputExpr
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Trash
 
@@ -85,9 +80,9 @@ deleteParamRef ::
   MonadA m => V.Var -> Val (Stored m) -> T m ()
 deleteParamRef = onMatchingSubexprs toHole . const . isGetParamOf
 
-deleteFieldParamRef ::
+_deleteFieldParamRef ::
   MonadA m => V.Var -> T.Tag -> Val (Stored m) -> T m ()
-deleteFieldParamRef param tag =
+_deleteFieldParamRef param tag =
   onMatchingSubexprs toHole . const $ isGetFieldParam param tag
 
 lambdaWrap :: MonadA m => Stored m -> T m Guid
@@ -214,12 +209,6 @@ convertVLiteralInteger i exprPl = ConvertExpr.make exprPl $ BodyLiteralInteger i
 
 convertTag :: (MonadA m, Typeable1 m) => T.Tag -> ConvertM m (TagG MStoredName)
 convertTag tag = TagG tag <$> getStoredNameS (Trash.guidOfTag tag)
-
-convertAtom ::
-  (MonadA m, Typeable1 m) => String ->
-  InputPayload m a -> ConvertM m (ExpressionU m a)
-convertAtom str exprPl =
-  ConvertExpr.make exprPl $ BodyAtom str
 
 -- sideChannel :: Monad m => Lens' s a -> LensLike m s (side, s) a (side, a)
 -- sideChannel lens f s = (`runStateT` s) . Lens.zoom lens $ StateT f
@@ -438,22 +427,9 @@ mkContext cp inferContext = do
     , scConvertSubexpression = convertExpressionI
     }
 
-convertExpressionPure ::
-  (MonadA m, Typeable1 m, RandomGen g, Monoid a) =>
-  Anchors.CodeProps m -> g ->
-  Val a -> T m (ExpressionU m a)
-convertExpressionPure cp gen res = do
-  context <- mkContext cp (err "InferContext")
-  fmap removeRedundantTypes .
-    ConvertM.run context .
-    ConvertM.convertSubexpression $
-    InputExpr.makePure gen res
-  where
-    err x = error $ "convertExpressionPure: " ++ x
-
 data ConventionalParams m a = ConventionalParams
-  { cpTags :: [Guid]
-  , cpParamInfos :: Map Guid ConvertM.TagParamInfo
+  { cpTags :: Set T.Tag
+  , cpParamInfos :: Map T.Tag ConvertM.TagParamInfo
   , cpRecordParamsInfos :: Map V.Var (ConvertM.RecordParamsInfo m)
   , cpParams :: [FuncParam MStoredName m]
   , cpAddFirstParam :: T m Guid
@@ -461,7 +437,7 @@ data ConventionalParams m a = ConventionalParams
   }
 
 data FieldParam = FieldParam
-  { fpTagGuid :: Guid
+  { fpTag :: T.Tag
   , fpFieldType :: Type
   }
 
@@ -471,10 +447,10 @@ mkRecordParams ::
   InputExpr m a ->
   Maybe (Val (Stored m)) ->
   ConvertM m (ConventionalParams m a)
-mkRecordParams recordParamsInfo param fieldParams lambdaExprI mBodyStored = do
+mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
   params <- traverse mkParam fieldParams
   pure ConventionalParams
-    { cpTags = fpTagGuid <$> fieldParams
+    { cpTags = Set.fromList $ fpTag <$> fieldParams
     , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
     , cpRecordParamsInfos = Map.singleton param recordParamsInfo
     , cpParams = params
@@ -485,15 +461,14 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI mBodyStored = do
     }
   where
     lamGuid = lambdaExprI ^. SugarInfer.exprGuid
-    mLambdaP = lambdaExprI ^. V.payload . ipStored
-    fpIdGuid = Guid.combine lamGuid . fpTagGuid
+    _mLambdaP = lambdaExprI ^. V.payload . ipStored
+    fpIdGuid = Guid.combine lamGuid . Trash.guidOfTag . fpTag
     mkParamInfo fp =
-      Map.singleton (fpTagGuid fp) . ConvertM.TagParamInfo param $ fpIdGuid fp
-    mkParam fp = do
-      let guid = fpTagGuid fp
+      Map.singleton (fpTag fp) . ConvertM.TagParamInfo param $ fpIdGuid fp
+    mkParam fp =
       addFuncParamName FuncParam
         { _fpName = Nothing
-        , _fpGuid = guid
+        , _fpGuid = Trash.guidOfTag $ fpTag fp
         , _fpId = -- TOOD: Is this supposed to be the same?
                   -- It used to be different: "Guid.combine lamGuid guid"
                   fpIdGuid fp
@@ -515,7 +490,7 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI mBodyStored = do
 --       , _fpGetExample = pure $ fakeExample tagExprGuid
 --       }
 
-type ExprField m = (T.Tag, ExprIRef.ValIM m)
+-- type ExprField m = (T.Tag, ExprIRef.ValIM m)
 -- rereadFieldParamTypes ::
 --   MonadA m =>
 --   Guid -> ExprIRef.ValIM m ->
@@ -580,7 +555,7 @@ type ExprField m = (T.Tag, ExprIRef.ValIM m)
 
 convertDefinitionParams ::
   (MonadA m, Typeable1 m, Monoid a) =>
-  ConvertM.RecordParamsInfo m -> [Guid] -> InputExpr m a ->
+  ConvertM.RecordParamsInfo m -> Set T.Tag -> InputExpr m a ->
   ConvertM m
   ( [FuncParam MStoredName m]
   , ConventionalParams m a
@@ -588,24 +563,24 @@ convertDefinitionParams ::
   )
 convertDefinitionParams recordParamsInfo usedTags expr =
   case expr ^. V.body of
-  V.BAbs lambda@(V.Lam paramGuid paramType body) -> do
+  V.BAbs lambda@(V.Lam paramVar paramTypeConstraint body) -> do
     param <- convertPositionalFuncParam lambda (expr ^. V.payload)
-    case schemeType paramType of
+    case schemeType paramTypeConstraint of
       T.TRecord composite
         | Nothing <- extension
-        , ListUtils.isLengthAtLeast 2 fields
-        , all ((`notElem` usedTags) . fpTagGuid) fieldParams -> do
+        , Map.size fields >= 2
+        , Set.null (usedTags `Set.intersection` Map.keysSet fields) -> do
           convParams <-
-            mkRecordParams recordParamsInfo paramGuid fieldParams
+            mkRecordParams recordParamsInfo paramVar fieldParams
             expr (traverse (^. ipStored) body)
           return ([], convParams, body)
         where
           FlatComposite fields extension = FlatComposite.fromComposite composite
-          fieldParams = map makeFieldParam fields
+          fieldParams = map makeFieldParam $ Map.toList fields
       _ ->
         pure
         ( []
-        , singleConventionalParam stored param paramGuid paramType body
+        , singleConventionalParam stored param paramVar paramTypeConstraint body
         , body
         )
   _ -> return ([], emptyConventionalParams stored, expr)
@@ -613,19 +588,19 @@ convertDefinitionParams recordParamsInfo usedTags expr =
     stored =
       fromMaybe (error "Definition body is always stored!") $
       expr ^. SugarInfer.exprStored
-    makeFieldParam (T.Tag fieldTagGuid, typeExpr) =
+    makeFieldParam (tag, typeExpr) =
       FieldParam
-      { fpTagGuid = fieldTagGuid
+      { fpTag = tag
       , fpFieldType = typeExpr
       }
 
 singleConventionalParam ::
   MonadA m =>
   Stored m -> FuncParam MStoredName m ->
-  Guid -> InputExpr m a -> InputExpr m a -> ConventionalParams m a
-singleConventionalParam _lamProp existingParam existingParamGuid existingParamType body =
+  V.Var -> Scheme -> InputExpr m a -> ConventionalParams m a
+singleConventionalParam _lamProp existingParam _existingParamVar _existingParamTypeConstraint body =
   ConventionalParams
-  { cpTags = []
+  { cpTags = mempty
   , cpParamInfos = Map.empty
   , cpRecordParamsInfos = Map.empty
   , cpParams =
@@ -636,16 +611,16 @@ singleConventionalParam _lamProp existingParam existingParamGuid existingParamTy
   , cpHiddenPayloads = []
   }
   where
-    _existingParamTag = T.Tag existingParamGuid
-    _existingParamTypeIRef =
-      fromMaybe (error "Only stored record param type is converted as record") $
-      existingParamType ^? SugarInfer.exprIRef
+    -- _existingParamTypeIRef =
+    --   fromMaybe (error "Only stored record param type is converted as record") $
+    --   existingParamType ^? SugarInfer.exprIRef
     _bodyWithStored =
       fromMaybe (error "Definition body should be stored") $
       traverse (^. ipStored) body
     addSecondParam _mkFields = error "TODO: addSecondParam"
+--     _existingParamAsTag = T.Tag existingParamVar
 --     addSecondParam mkFields = do
---       let existingParamField = (existingParamTag, existingParamTypeIRef)
+--       let existingParamField = (existingParamAsTag, existingParamTypeIRef)
 --       (newTag, newParamField) <- newField
 --       newParamTypeI <-
 --         ExprIRef.newExprBody . V.VRec . V.Record KType $
@@ -657,20 +632,20 @@ singleConventionalParam _lamProp existingParam existingParamGuid existingParamTy
 --       let
 --         toGetField iref = do
 --           recordRef <- ExprIRef.newExprBody $ ExprLens.bodyParameterRef # newParamsGuid
---           tagRef <- ExprIRef.newExprBody existingParamTag
+--           tagRef <- ExprIRef.newExprBody existingParamAsTag
 --           ExprIRef.writeExprBody iref $
 --             V.VGetField V.GetField
 --             { V._getFieldRecord = recordRef
 --             , V._getFieldTag = tagRef
 --             }
 --       onMatchingSubexprs (toGetField . Property.value)
---         (isGetParamOf existingParamGuid) bodyWithStored
+--         (isGetParamOf existingParamVar) bodyWithStored
 --       let lamGuid = ExprIRef.valIGuid $ Property.value lamProp
 --       pure $ Guid.combine lamGuid $ newTag ^. Lens.from V.tag
 
 emptyConventionalParams :: MonadA m => ExprIRef.ValIProperty m -> ConventionalParams m a
 emptyConventionalParams stored = ConventionalParams
-  { cpTags = []
+  { cpTags = mempty
   , cpParamInfos = Map.empty
   , cpRecordParamsInfos = Map.empty
   , cpParams = []
@@ -680,7 +655,7 @@ emptyConventionalParams stored = ConventionalParams
 
 data ExprWhereItem a = ExprWhereItem
   { ewiBody :: Val a
-  , ewiParamGuid :: Guid
+  , ewiParam :: V.Var
   , ewiArg :: Val a
   , ewiHiddenPayloads :: [a]
   , ewiInferredType :: Maybe Type
@@ -690,7 +665,7 @@ isUnconstrained :: Scheme -> Bool
 isUnconstrained (Scheme tvs constraints (T.TVar tv))
   | constraints == mempty
   , tv `TypeVars.member` tvs = True
-  | otherwise = False
+isUnconstrained _ = False
 
 mExtractWhere :: InputExpr m a -> Maybe (ExprWhereItem (InputPayload m a))
 mExtractWhere expr = do
@@ -700,15 +675,15 @@ mExtractWhere expr = do
   guard $ isUnconstrained paramTypeConstraint
   Just ExprWhereItem
     { ewiBody = body
-    , ewiParamGuid = paramGuid
+    , ewiParam = paramGuid
     , ewiArg = arg
-    , ewiHiddenPayloads = (^. V.payload) <$> [expr, func, paramTypeConstraint]
+    , ewiHiddenPayloads = (^. V.payload) <$> [expr, func]
     , ewiInferredType = arg ^? V.payload . ipInferred . Lens._Just . Infer.plType
     }
 
 convertWhereItems ::
   (MonadA m, Typeable1 m, Monoid a) =>
-  [Guid] ->
+  Set T.Tag ->
   InputExpr m a ->
   ConvertM m ([WhereItem MStoredName m (ExpressionU m a)], InputExpr m a)
 convertWhereItems usedTags expr =
@@ -716,7 +691,7 @@ convertWhereItems usedTags expr =
   Nothing -> return ([], expr)
   Just ewi -> do
     let
-      defGuid = ewiParamGuid ewi
+      defGuid = Trash.guidOfVar $ ewiParam ewi
       recordParamsInfo =
         ConvertM.RecordParamsInfo defGuid $ pure defGuid
     value <-
@@ -726,9 +701,9 @@ convertWhereItems usedTags expr =
       mkWIActions topLevelProp bodyStored =
         ListItemActions
         { _itemDelete = do
-             deleteParamRef defGuid bodyStored
+             deleteParamRef (ewiParam ewi) bodyStored
              SugarInfer.replaceWith topLevelProp $ bodyStored ^. V.payload
-        , _itemAddNext = fst <$> DataOps.redexWrap topLevelProp
+        , _itemAddNext = Trash.guidOfVar . fst <$> DataOps.redexWrap topLevelProp
         }
     name <- getStoredNameS defGuid
     let
@@ -743,13 +718,15 @@ convertWhereItems usedTags expr =
             expr ^. SugarInfer.exprStored <*>
             traverse (^. ipStored) (ewiBody ewi)
         , _wiName = name
-        , _wiInferredType = ewiInferredType ewi
+        , _wiInferredType =
+          fromMaybe (error "We always have a type (TODO: Remove Maybe wrapper)") $
+          ewiInferredType ewi
         }
     (nextItems, whereBody) <- convertWhereItems usedTags $ ewiBody ewi
     return (item : nextItems, whereBody)
 
-newField :: MonadA m => T m (T.Tag, ExprIRef.ValIM m)
-newField = (,) <$> (T.Tag <$> Transaction.newKey) <*> DataOps.newHole
+_newField :: MonadA m => T m (T.Tag, ExprIRef.ValIM m)
+_newField = (,) <$> (T.Tag . Trash.identifierOfGuid <$> Transaction.newKey) <*> DataOps.newHole
 
 -- addFirstFieldParam :: MonadA m => Guid -> ExprIRef.ValIM m -> T m Guid
 -- addFirstFieldParam lamGuid recordI = do
@@ -762,13 +739,9 @@ newField = (,) <$> (T.Tag <$> Transaction.newKey) <*> DataOps.newHole
 --       pure $ Guid.combine lamGuid $ newTag ^. Lens.from V.tag
 --     _ -> pure $ ExprIRef.valIGuid recordI
 
-assertedGetProp :: String -> Val (InputPayloadP inferred (Maybe stored) a) -> stored
-assertedGetProp _ Val (InputPayload { _ipStored = Just prop }) _ = prop
-assertedGetProp msg _ = error msg
-
 convertDefinitionContent ::
   (MonadA m, Typeable1 m, Monoid a) =>
-  ConvertM.RecordParamsInfo m -> [Guid] -> InputExpr m a ->
+  ConvertM.RecordParamsInfo m -> Set T.Tag -> InputExpr m a ->
   ConvertM m (DefinitionContent MStoredName m (ExpressionU m a))
 convertDefinitionContent recordParamsInfo usedTags expr = do
   (depParams, convParams, funcBody) <-
@@ -777,7 +750,7 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
     ((ConvertM.scTagParamInfos <>~ cpParamInfos convParams) .
      (ConvertM.scRecordParamsInfos <>~ cpRecordParamsInfos convParams)) $ do
       (whereItems, whereBody) <-
-        convertWhereItems (usedTags ++ cpTags convParams) funcBody
+        convertWhereItems (usedTags <> cpTags convParams) funcBody
       bodyS <- ConvertM.convertSubexpression whereBody
       return DefinitionContent
         { _dDepParams = depParams
@@ -789,76 +762,68 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
         , _dWhereItems = whereItems
         , _dAddFirstParam = cpAddFirstParam convParams
         , _dAddInnermostWhereItem =
-          fmap fst . DataOps.redexWrap $
-          assertedGetProp "Where must be stored" whereBody
+          fmap (Trash.guidOfVar . fst) . DataOps.redexWrap $
+          fromMaybe (error "Where must be stored") $
+          whereBody ^. V.payload . ipStored
         }
 
 convertDefIBuiltin ::
-  (Typeable1 m, MonadA m) => Anchors.CodeProps m ->
-  Definition.Builtin -> DefIM m ->
-  Val (Stored m) ->
-  T m (DefinitionBody MStoredName m (ExpressionU m [Guid]))
-convertDefIBuiltin cp (Definition.Builtin name) defI defType =
-  DefinitionBodyBuiltin <$> do
-    defTypeS <-
-      defType
-      & void
-      & convertExpressionPure cp iDefTypeGen
-      <&> Lens.mapped . Lens.mapped .~ mempty
-    pure DefinitionBuiltin
-      { biName = name
-      , biMSetName = Just setName
-      , biType = defTypeS
-      }
+  (Typeable1 m, MonadA m) =>
+  Definition.Builtin -> DefIM m -> Definition.ExportedType ->
+  DefinitionBody MStoredName m (ExpressionU m [Guid])
+convertDefIBuiltin (Definition.Builtin name) defI defType =
+  DefinitionBodyBuiltin DefinitionBuiltin
+    { biName = name
+    , biMSetName = Just setName
+    , biType = defType
+    }
   where
-    defGuid = IRef.guid defI
-    iDefTypeGen = ConvertExpr.mkGen 1 3 defGuid
-    typeIRef = Property.value (defType ^. V.payload)
     setName =
-      Transaction.writeIRef defI .
-      (`Definition.Body` typeIRef) .
+      Transaction.writeIRef defI . (`Definition.Body` defType) .
       Definition.ContentBuiltin . Definition.Builtin
 
-makeTypeInfo :: MonadA m => Type -> Type -> DefinitionTypeInfo m
-makeTypeInfo defType inferredType
+makeExprDefTypeInfo ::
+  MonadA m => ExprIRef.ValIM m -> DefIM m -> Definition.ExportedType -> Scheme -> DefinitionTypeInfo m
+makeExprDefTypeInfo _ _ (Definition.ExportedType defType) inferredType
   | defType `Scheme.alphaEq` inferredType = DefinitionExportedTypeInfo defType
-  | otherwise =
-      DefinitionNewType AcceptNewType
-        { antOldType = defType
-        , antNewType = inferredType
-        , antAccept =
-          inferredType
-          & void
-          & ExprIRef.newVal
-          >>= Property.set (defType ^. V.payload . _1)
-        }
+makeExprDefTypeInfo defValI defI defType inferredType =
+  DefinitionNewType AcceptNewType
+    { antOldType = defType
+    , antNewType = inferredType
+    , antAccept =
+      Transaction.writeIRef defI $
+      Definition.Body (Definition.ContentExpr defValI) $
+      Definition.ExportedType inferredType
+    }
 
 convertDefIExpr ::
   (MonadA m, Typeable1 m) => Anchors.CodeProps m ->
   Val (Load.ExprPropertyClosure (Tag m)) ->
-  DefIM m ->
-  Val (Stored m) ->
+  DefIM m -> Definition.ExportedType ->
   T m (DefinitionBody MStoredName m (ExpressionU m [Guid]))
-convertDefIExpr cp exprLoaded defI defType = do
-  (valInferred, newInferContext) <-
-    SugarInfer.loadInfer $
-    exprLoaded <&> Load.exprPropertyOfClosure
+convertDefIExpr cp valLoaded defI defType = do
+  (valInferred, newInferContext) <- SugarInfer.loadInfer valIRefs
   let
     addStoredGuids lens x = (x, ExprIRef.valIGuid . Property.value <$> x ^.. lens)
     guidIntoPl (pl, x) = pl & ipData %~ \() -> x
-  context <- lift $ mkContext cp newInferContext
+  context <- mkContext cp newInferContext
   ConvertM.run context $ do
     content <-
       valInferred
-      <&> guidIntoPl . addStoredGuids (ipStored . Lens._Just)
+      <&> guidIntoPl . addStoredGuids ipStored
       & traverse . ipInferred %~ Just
-      & convertDefinitionContent recordParamsInfo []
+      & traverse . ipStored %~ Just
+      & convertDefinitionContent recordParamsInfo mempty
     return $ DefinitionBodyExpression DefinitionExpression
       { _deContent = removeRedundantTypes <$> content
       , _deTypeInfo =
-        makeTypeInfo defType $ valInferred ^. V.payload . _1 . Infer.plType
+        makeExprDefTypeInfo exprI defI defType $
+        Infer.makeScheme newInferContext $
+        valInferred ^. V.payload . ipInferred . Infer.plType
       }
   where
+    valIRefs = valLoaded <&> Load.exprPropertyOfClosure
+    exprI = valIRefs ^. V.payload . Property.pVal
     defGuid = IRef.guid defI
     recordParamsInfo = ConvertM.RecordParamsInfo defGuid $ jumpToDefI cp defI
 
@@ -867,12 +832,11 @@ convertDefI ::
   Anchors.CodeProps m ->
   -- TODO: Use DefinitionClosure?
   Definition.Definition
-    (Val (Load.ExprPropertyClosure (Tag m)))
-    (ExprIRef.DefIM m) ->
+  (Val (Load.ExprPropertyClosure (Tag m))) (DefIM m) ->
   T m (Definition (Maybe String) m (ExpressionU m [Guid]))
-convertDefI cp (Definition.Definition (Definition.Body bodyContent typeLoaded) defI) = do
-  bodyS <- convertDefContent bodyContent $ Load.exprPropertyOfClosure <$> typeLoaded
-  name <- lift $ ConvertExpr.getStoredName defGuid
+convertDefI cp (Definition.Definition (Definition.Body bodyContent exportedType) defI) = do
+  bodyS <- convertDefContent bodyContent exportedType
+  name <- ConvertExpr.getStoredName defGuid
   return Definition
     { _drGuid = defGuid
     , _drName = name
@@ -881,6 +845,6 @@ convertDefI cp (Definition.Definition (Definition.Body bodyContent typeLoaded) d
   where
     defGuid = IRef.guid defI
     convertDefContent (Definition.ContentBuiltin builtin) =
-      convertDefIBuiltin cp builtin defI
-    convertDefContent (Definition.ContentExpr exprLoaded) =
-      convertDefIExpr cp exprLoaded defI
+      return . convertDefIBuiltin builtin defI
+    convertDefContent (Definition.ContentExpr valLoaded) =
+      convertDefIExpr cp valLoaded defI
