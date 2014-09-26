@@ -1,17 +1,22 @@
 {-# LANGUAGE RankNTypes, NoMonomorphismRestriction, FlexibleContexts #-}
 module Lamdu.Expr.Lens
   -- ValLeaf prisms:
-  ( _LGlobal, _LHole, _LRecEmpty, _LVar
+  ( _LGlobal
+  , _LHole
+  , _LRecEmpty
+  , _LVar
+  , _LLiteralInteger
   -- ValBody prisms:
   , _BLeaf
   , _BApp
   , _BAbs
   , _BGetField
   -- Leafs
-  , valGlobal   , valBodyGlobal
-  , valHole     , valBodyHole
-  , valVar      , valBodyVar
-  , valRecEmpty , valBodyRecEmpty
+  , valGlobal        , valBodyGlobal
+  , valHole          , valBodyHole
+  , valVar           , valBodyVar
+  , valRecEmpty      , valBodyRecEmpty
+  , valLiteralInteger, valBodyLiteralInteger
   -- Non-leafs
   , valGetField
   , valApply
@@ -59,6 +64,9 @@ valVar = V.body . valBodyVar
 valRecEmpty :: Traversal' (Val a) ()
 valRecEmpty = V.body . valBodyRecEmpty
 
+valLiteralInteger :: Traversal' (Val a) Integer
+valLiteralInteger = V.body . valBodyLiteralInteger
+
 valGetField  :: Traversal' (Val a) (V.GetField (Val a))
 valGetField = V.body . _BGetField
 
@@ -84,6 +92,12 @@ _LVar :: Prism' V.Leaf V.Var
 _LVar = prism' V.LVar get
   where
     get (V.LVar gid) = Just gid
+    get _ = Nothing
+
+_LLiteralInteger :: Prism' V.Leaf Integer
+_LLiteralInteger = prism' V.LLiteralInteger get
+  where
+    get (V.LLiteralInteger i) = Just i
     get _ = Nothing
 
 -- TODO: _V* -> _B*
@@ -122,6 +136,9 @@ valBodyVar = _BLeaf . _LVar
 
 valBodyRecEmpty :: Prism' (V.Body expr) ()
 valBodyRecEmpty = _BLeaf . _LRecEmpty
+
+valBodyLiteralInteger :: Prism' (V.Body expr) Integer
+valBodyLiteralInteger = _BLeaf . _LLiteralInteger
 
 _TRecord :: Prism' Type (T.Composite T.Product)
 _TRecord = prism' T.TRecord get

@@ -9,8 +9,9 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Results
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens.Operators
+import Control.Lens.Tuple
 import Control.Lens.Utils (contextSetter, contextVal)
-import Control.Monad (void, join)
+import Control.Monad (void, join, guard)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either.Utils (leftToJust, justToLeft)
@@ -48,6 +49,7 @@ import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Scheme as S
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -121,7 +123,7 @@ sugarNameToGroup (Sugar.Name _ collision varName) expr = Group
 
 resultComplexityScore :: Val Sugar.Inferred -> [Int]
 resultComplexityScore expr =
-  [ length . Foldable.toList $ expr ^. V.payload . Infer.plType
+  [ length . show $ expr ^. V.payload . Infer.plType
   , length $ Foldable.toList expr
   ]
 
@@ -136,7 +138,9 @@ storePointHoleWrap ::
   Val (Sugar.MStorePoint m a) ->
   Val (Sugar.MStorePoint m a)
 storePointHoleWrap expr =
-  Val mempty $ V.BApp $ V.Apply (Val mempty hole) expr
+  noStorePoint $ V.BApp $ V.Apply (noStorePoint (V.BLeaf V.LHole)) expr
+  where
+    noStorePoint = Val (Nothing, mempty)
 
 typeCheckHoleResult ::
   MonadA m => HoleInfo m ->
@@ -202,13 +206,13 @@ typeCheckToResultsList holeInfo mkGen baseId options =
   mResultsListOf holeInfo baseId <$>
   typeCheckResults holeInfo mkGen options
 
-applyForms :: Type -> Val () -> [Val ()]
+applyForms :: Monoid a => Type -> Val a -> [Val a]
 applyForms typ base =
   base : case typ of
          T.TFun _ res -> applyForms res (addApply base)
          _ -> []
   where
-    addApply x = Val () $ V.BApp x hole
+    addApply x = Val mempty $ V.BApp $ V.Apply x hole
 
 baseExprWithApplyForms :: MonadA m => HoleInfo m -> Val () -> T m [Val ()]
 baseExprWithApplyForms holeInfo baseExpr =
@@ -218,9 +222,9 @@ baseExprWithApplyForms holeInfo baseExpr =
 removeWrappers :: Val a -> Maybe (Val a)
 removeWrappers (Val pl body) =
   case body of
-  V.BApp (Val _ (V.BLeaf V.LHole)) arg -> Just arg
+  V.BApp (V.Apply (Val _ (V.BLeaf V.LHole)) arg) -> Just arg
   _ -> do
-    _removedHole <- removedFromChildren ^? Lens.traversed . _1 . Lens._True
+    _removedHole <- guard $ Just True == removedFromChildren ^? Lens.traversed . _1
     Just $ Val pl $ snd <$> removedFromChildren
   where
     removedFromChildren = body & Lens.traversed %~ f
@@ -256,7 +260,7 @@ replaceEachHole replaceHole =
 --   T m [Val (Sugar.MStorePoint m a)]
 injectIntoHoles actions arg =
   fmap catMaybes . mapM firstToTypeCheck .
-  replaceEachHole (const (maybeToMPlus (removeWrappers arg) ++ arg))
+  replaceEachHole (const (maybeToMPlus (removeWrappers arg) ++ [arg]))
   where
     typeCheckOnSide val = do
       mType <- actions ^. Sugar.holeInferExprType $ void val
@@ -279,8 +283,8 @@ maybeInjectArgumentExpr holeInfo =
       pl isInjected = (ExprGuiM.StoredGuids [], ExprGuiM.Injected [isInjected])
       arg =
         holeArg ^. Sugar.haExprPresugared
-        <&> Lens._2 .~ pl False
-        & V.payload . Lens._2 .~ pl True
+        <&> _2 .~ pl False
+        & V.payload . _2 .~ pl True
 
 makeResultsList ::
   MonadA m => HoleInfo m -> GroupM m ->
@@ -314,10 +318,10 @@ collectResults config resultsM = do
       last (collectedResults ++ remainingResults)
       & Lens.both %~ reverse
   results
-    & Lens._1 %~ sortOn resultsListScore
+    & _1 %~ sortOn resultsListScore
     & uncurry (++)
     & splitAt (Config.holeResultCount config)
-    & Lens._2 %~ haveHiddenResults
+    & _2 %~ haveHiddenResults
     & return
   where
     haveHiddenResults [] = NoHiddenResults
@@ -326,8 +330,8 @@ collectResults config resultsM = do
     step results x =
       results
       & case resultsListScore x of
-        (NotPreferred, BadResult) -> Lens._2
-        _ -> Lens._1
+        (NotPreferred, BadResult) -> _2
+        _ -> _1
         %~ (x :)
 
 makeAll ::
@@ -380,28 +384,23 @@ makeAllGroups holeInfo = do
     addInferredGroups groups =
       let
         (dupsOfInferred, others) =
-          List.partition (ExprUtil.alphaEq iVal . (^. groupBaseExpr)) groups
+          List.partition (V.alphaEq iVal . (^. groupBaseExpr)) groups
         dupsGroupNames = dupsOfInferred ^. Lens.traverse . groupSearchTerms
       in
         ( inferredGroups & Lens.traverse . groupSearchTerms <>~ dupsGroupNames
         ) ++ others
-    iVal =
-      hiInferred holeInfo ^. Sugar.hiBaseValue
-      & ExprLens.valDef %~ (^. ldDef)
+    iVal = hiInferred holeInfo ^. Sugar.hiSuggestedValue
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
-  [ mkGroupBody True "LiteralInt" [searchTerm] $ ExprLens.bodyVLiteralInteger # read searchTerm
+  [ mkGroupBody True "LiteralInt" [searchTerm] $
+    V.BLeaf $ V.LLiteralInteger $ read searchTerm
   | nonEmptyAll Char.isDigit searchTerm
   ] ++
-  [ mkGroupBody False "Pi" ["->", "Pi", "→", "→", "Π", "π"] $
-    ExprUtil.makePi (Guid.fromString "NewPi") pureHole pureHole
-  , mkGroupBody False "Lambda" ["\\", "Lambda", "Λ", "λ"] $
-    ExprUtil.makeLambda (Guid.fromString "NewLambda") pureHole pureHole
+  [ mkGroupBody False "Lambda" ["\\", "Lambda", "Λ", "λ"] $
+    V.BAbs "NewLambda" S.any hole
   -- , mkGroupBody False "GetField" [".", "Get Field"] . V.VGetField $
   --   V.GetField pureHole pureHole
-  , mkGroupBody True "Type" ["Type"] $ V.VLeaf V.Type
-  , mkGroupBody True "Integer" ["Integer", "ℤ", "Z"] $ V.VLeaf V.IntegerType
   -- , Group "RecValue" (SearchTerms ["Record Value", "{"] (Any False)) .
   --   fromMaybe (record V.KVal) . ExprUtil.recordValForm .
   --   void $ hiInferred holeInfo ^. Sugar.hiType
@@ -418,7 +417,7 @@ primitiveGroups holeInfo =
     mkGroupBody highPrecedence gId terms body = Group
       { _groupId = gId
       , _groupSearchTerms = SearchTerms terms (Any highPrecedence)
-      , _groupBaseExpr = ExprUtil.pureExpr body
+      , _groupBaseExpr = Val () body
       }
 
 preferFor :: String -> SearchTerms -> Bool
