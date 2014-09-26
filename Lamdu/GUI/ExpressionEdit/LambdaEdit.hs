@@ -13,7 +13,6 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.Parens as Parens
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -30,33 +29,26 @@ paramFDConfig = FocusDelegator.Config
   }
 
 makeParamNameEdit ::
-  MonadA m =>
-  ExprGuiM.HoleGuids -> Sugar.Name -> Guid -> Widget.Id ->
+  MonadA m => Sugar.Name -> Guid -> Widget.Id ->
   ExprGuiM m (WidgetT m)
-makeParamNameEdit hg name ident myId = do
+makeParamNameEdit name ident myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor myId
-  jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] hg
   ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
     (ExprGuiM.withFgColor (Config.paramOriginColor config) .
      ExpressionGui.makeNameEdit name ident) myId
-    <&> if isSelected
-        then Widget.weakerEvents jumpHolesEventMap
-        else id
 
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id
 
 -- exported for use in definition sugaring.
 makeParamEdit ::
-  MonadA m =>
-  ExprGuiM.HoleGuids -> Widget.Id ->
-  Sugar.FuncParam Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  MonadA m => Widget.Id ->
+  Sugar.FuncParam Sugar.Name m ->
   ExprGuiM m (ExpressionGui m)
-makeParamEdit hg prevId param =
+makeParamEdit prevId param =
   assignCursor $ do
-    paramTypeEdit <- ExprGuiM.makeSubexpression 0 $ param ^. Sugar.fpType
-    paramNameEdit <- makeParamNameEdit hg name (param ^. Sugar.fpGuid) myId
+    -- paramTypeEdit <- ExprGuiM.makeSubexpression 0 $ param ^. Sugar.fpType
+    paramNameEdit <- makeParamNameEdit name (param ^. Sugar.fpGuid) myId
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
       paramAddNextEventMap =
@@ -72,9 +64,9 @@ makeParamEdit hg prevId param =
         , paramAddNextEventMap
         ]
     return .
-      (ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap) .
+      (ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap) {- .
       ExpressionGui.addType config ExpressionGui.HorizLine myId
-      [paramTypeEdit ^. ExpressionGui.egWidget] $
+      [paramTypeEdit ^. ExpressionGui.egWidget] -} $
       ExpressionGui.fromValueWidget paramNameEdit
   where
     name = param ^. Sugar.fpName
@@ -93,9 +85,9 @@ make ::
   MonadA m =>
   ExpressionGui.ParentPrecedence ->
   Sugar.Lam Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make parentPrecedence (Sugar.Lam _ param _ body) pl =
+make parentPrecedence (Sugar.Lam param body) pl =
   ExpressionGui.stdWrapParenify pl parentPrecedence (ExpressionGui.MyPrecedence 0)
   Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId bodyId $ do
@@ -104,7 +96,7 @@ make parentPrecedence (Sugar.Lam _ param _ body) pl =
       ExpressionGui.makeColoredLabel
       (Config.lambdaTextSize config)
       (Config.lambdaColor config) "λ" myId
-    paramEdit <- makeParamEdit (param ^. Sugar.fpType . Sugar.rPayload . Sugar.plData . ExprGuiM.plHoleGuids) bodyId param
+    paramEdit <- makeParamEdit bodyId param
     dotLabel <-
       ExpressionGui.makeColoredLabel
       (Config.rightArrowTextSize config)

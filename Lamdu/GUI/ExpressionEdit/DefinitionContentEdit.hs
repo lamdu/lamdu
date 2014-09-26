@@ -141,10 +141,10 @@ mkPresentationEdits guid myId = do
     mkProp = Anchors.assocPresentationMode guid
 
 make ::
-  MonadA m => ExprGuiM.HoleGuids -> Guid -> Sugar.Name ->
+  MonadA m => Guid -> Sugar.Name ->
   Sugar.DefinitionContent Sugar.Name m (ExprGuiM.SugarExpr m) ->
   ExprGuiM m (WidgetT m)
-make hg guid name content = do
+make guid name content = do
   equals <- ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
   rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods E.Key'Equal] rhs
   let
@@ -155,7 +155,7 @@ make hg guid name content = do
         & Widget.weakerEvents rhsJumperEquals
       | otherwise = widget
   (depParamsEdits, paramsEdits) <-
-    makeNestedParams hg jumpToRHSViaEquals rhs myId depParams params
+    makeNestedParams jumpToRHSViaEquals rhs myId depParams params
   config <- ExprGuiM.widgetEnv WE.readConfig
   bodyEdit <- makeResultEdit lhs body
   rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
@@ -222,7 +222,7 @@ makeWhereItemEdit item = do
         ]
       | otherwise = mempty
   Widget.weakerEvents eventMap <$>
-    make ExprGuiM.emptyHoleGuids
+    make
     (item ^. Sugar.wiGuid)
     (item ^. Sugar.wiName)
     (item ^. Sugar.wiValue)
@@ -262,10 +262,10 @@ makeResultEdit lhs result = do
 
 addPrevIds ::
   Widget.Id ->
-  [Sugar.FuncParam name m expr] ->
-  [Sugar.FuncParam name m expr] ->
-  ( [(Widget.Id, Sugar.FuncParam name m expr)]
-  , [(Widget.Id, Sugar.FuncParam name m expr)]
+  [Sugar.FuncParam name m] ->
+  [Sugar.FuncParam name m] ->
+  ( [(Widget.Id, Sugar.FuncParam name m)]
+  , [(Widget.Id, Sugar.FuncParam name m)]
   )
 addPrevIds lhsId depParams params =
   (depParamIds, paramIds)
@@ -278,14 +278,13 @@ addPrevIds lhsId depParams params =
 
 makeNestedParams ::
   MonadA m =>
-  ExprGuiM.HoleGuids ->
   (Sugar.Name -> Widget (T m) -> Widget (T m)) ->
   (String, ExprGuiM.SugarExpr m) ->
   Widget.Id ->
-  [Sugar.FuncParam Sugar.Name m (ExprGuiM.SugarExpr m)] ->
-  [Sugar.FuncParam Sugar.Name m (ExprGuiM.SugarExpr m)] ->
+  [Sugar.FuncParam Sugar.Name m] ->
+  [Sugar.FuncParam Sugar.Name m] ->
   ExprGuiM m ([ExpressionGui m], [ExpressionGui m])
-makeNestedParams hg atParamWidgets rhs lhsId depParams params = do
+makeNestedParams atParamWidgets rhs lhsId depParams params = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
   let
@@ -294,7 +293,7 @@ makeNestedParams hg atParamWidgets rhs lhsId depParams params = do
       (ExpressionGui.egWidget %~
        (atParamWidgets (param ^. Sugar.fpName) .
         Widget.weakerEvents rhsJumper)) <$>
-      LambdaEdit.makeParamEdit hg prevId param
+      LambdaEdit.makeParamEdit prevId param
   (,)
     <$> traverse mkParam depParamIds
     <*> traverse mkParam paramIds

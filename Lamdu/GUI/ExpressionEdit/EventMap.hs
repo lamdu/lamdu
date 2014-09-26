@@ -31,7 +31,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction.Transaction
 
 make ::
-  MonadA m => Bool -> HolePickers m -> Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  MonadA m => Bool -> HolePickers m -> Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (EventHandlers (T m))
 make isFocused holePickers pl =
   mconcat <$> sequenceA
@@ -106,7 +106,7 @@ cutEventMap config actions =
 replaceOrComeToParentEventMap ::
   MonadA m =>
   Bool ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (EventHandlers (T m))
 replaceOrComeToParentEventMap isFocused pl =
   case pl ^. Sugar.plActions of

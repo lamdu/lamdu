@@ -249,7 +249,7 @@ mkHoleInferred inferred = do
       & ConvertM.convertSubexpression
       & ConvertM.run (sugarContext & ConvertM.scInferContext .~ newCtx)
   pure HoleInferred
-    { _hiValue = iVal
+    { _hiSuggestedValue = iVal
     , _hiType = inferred ^. Infer.plType
     , _hiMakeConverted = mkConverted
     }

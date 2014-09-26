@@ -27,7 +27,7 @@ builtinFDConfig = FocusDelegator.Config
 
 make
   :: MonadA m
-  => Sugar.DefinitionBuiltin m (ExprGuiM.SugarExpr m)
+  => Sugar.DefinitionBuiltin m
   -> Widget.Id
   -> ExprGuiM m (WidgetT m)
 make (Sugar.DefinitionBuiltin (Definition.FFIName modulePath name) setFFIName _) myId =

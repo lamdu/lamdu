@@ -29,7 +29,7 @@ collapsedFDConfig config = FocusDelegator.Config
 make ::
   MonadA m => ParentPrecedence ->
   Sugar.Collapsed Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make (ParentPrecedence parentPrecedence) collapsed pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig

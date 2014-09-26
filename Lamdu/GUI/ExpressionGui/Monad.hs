@@ -23,9 +23,6 @@ module Lamdu.GUI.ExpressionGui.Monad
 
   , AccessedVars, markVariablesAsUsed, listenUsedVariables
 
-  , memo, memoT
-  , liftMemo, liftMemoT
-
   , run
   ) where
 
@@ -33,10 +30,8 @@ import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.RWS (RWST, runRWST)
-import Control.Monad.Trans.State (StateT(..), mapStateT)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
-import Data.Cache (Cache)
 import Data.Derive.Monoid (makeMonoid)
 import Data.DeriveTH (derive)
 import Data.Monoid (Monoid(..))
@@ -49,7 +44,6 @@ import Lamdu.GUI.ExpressionGui.Types (ExpressionGui, WidgetT, ParentPrecedence(.
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.RWS as RWS
-import qualified Data.Cache as Cache
 import qualified Data.Char as Char
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
@@ -123,18 +117,13 @@ data Askable m = Askable
   , _aCodeAnchors :: Anchors.CodeProps m
   }
 
-newtype GuiState = GuiState
-  { _gsCache :: Cache
-  }
-
 newtype ExprGuiM m a = ExprGuiM
-  { _exprGuiM :: RWST (Askable m) (Output m) GuiState (WidgetEnvT (T m)) a
+  { _exprGuiM :: RWST (Askable m) (Output m) () (WidgetEnvT (T m)) a
   }
   deriving (Functor, Applicative, Monad)
 
 Lens.makeLenses ''Askable
 Lens.makeLenses ''ExprGuiM
-Lens.makeLenses ''GuiState
 
 -- TODO: To lens
 localEnv :: MonadA m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
@@ -160,43 +149,21 @@ makeSubexpression parentPrecedence expr = do
   maker <- ExprGuiM $ Lens.view aMakeSubexpression
   maker (ParentPrecedence parentPrecedence) expr
 
-liftMemo :: MonadA m => StateT Cache (WidgetEnvT (T m)) a -> ExprGuiM m a
-liftMemo act = ExprGuiM . Lens.zoom gsCache $ do
-  cache <- RWS.get
-  (val, newCache) <- lift $ runStateT act cache
-  RWS.put newCache
-  return val
-
-liftMemoT :: MonadA m => StateT Cache (T m) a -> ExprGuiM m a
-liftMemoT = liftMemo . mapStateT lift
-
-memo ::
-  (Cache.Key k, Binary v, Typeable v, MonadA m) =>
-  Cache.FuncId ->
-  (k -> WidgetEnvT (T m) v) -> k -> ExprGuiM m v
-memo funcId f key = liftMemo $ Cache.memoS funcId f key
-
-memoT ::
-  (Cache.Key k, Binary v, Typeable v, MonadA m) =>
-  Cache.FuncId -> (k -> T m v) -> k -> ExprGuiM m v
-memoT funcId f = memo funcId (lift . f)
-
 run ::
   MonadA m =>
   (ParentPrecedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
   Anchors.CodeProps m -> Settings -> ExprGuiM m a ->
-  StateT Cache (WidgetEnvT (T m)) a
+  WidgetEnvT (T m) a
 run makeSubexpr codeAnchors settings (ExprGuiM action) =
-  StateT $ \cache ->
   f <$> runRWST action
   Askable
   { _aSettings = settings
   , _aMakeSubexpression = makeSubexpr
   , _aCodeAnchors = codeAnchors
   }
-  (GuiState cache)
+  ()
   where
-    f (x, GuiState newCache, _output) = (x, newCache)
+    f (x, (), _output) = x
 
 widgetEnv :: MonadA m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv = ExprGuiM . lift

@@ -272,12 +272,6 @@
         "_first": 0.7,
         "_second": 0.7
     },
-    "recordTypeParensColor": [
-        1.0,
-        0.2,
-        0.2,
-        1.0
-    ],
     "jumpLHStoRHSKeys": [
         [
             {

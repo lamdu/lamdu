@@ -79,15 +79,13 @@ addJumpToExprMarkers expr =
       Nothing -> pl & Sugar.plData . Lens._1 .~ False
       Just _ -> pl
 
-jumpToExprPayloads ::
-  Lens.Traversal' (Sugar.Expression name m a) a
+jumpToExprPayloads :: Lens.Traversal' (Sugar.Expression name m a) a
 jumpToExprPayloads f expr =
   case expr ^. Sugar.rBody of
   Sugar.BodyHole _ -> mark
   Sugar.BodyCollapsed _ -> pure expr
-  Sugar.BodyLam lam
-    | lam ^. Sugar.lKind == Sugar.KVal
-    -> (Sugar.rBody . Sugar._BodyLam . Sugar.lResultType) (jumpToExprPayloads f) expr
+  Sugar.BodyLam _
+    -> (Sugar.rBody . Sugar._BodyLam . Sugar.lResult) (jumpToExprPayloads f) expr
   _ -> (Sugar.rBody . Lens.traverse) (jumpToExprPayloads f) expr
   where
     mark = (Sugar.rPayload . Sugar.plData) f expr

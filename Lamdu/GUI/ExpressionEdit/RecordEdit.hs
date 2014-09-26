@@ -24,20 +24,21 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
+import qualified Trash
 
 type T = Transaction
 
 make ::
   MonadA m =>
   Sugar.Record Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make rec pl = ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped rec
 
 makeUnwrapped ::
   MonadA m =>
   Sugar.Record Sugar.Name m (ExprGuiM.SugarExpr m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
+makeUnwrapped (Sugar.Record (Sugar.FieldList fields mAddField)) myId =
   ExprGuiM.assignCursor myId bracketId $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
@@ -45,7 +46,8 @@ makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
         ((fieldRefGui, fieldExprGui), resultPickers) <-
           ExprGuiM.listenResultPickers $
           (,)
-          <$> TagEdit.make tag (augmentId (tag ^. Sugar.tagGuid) myId)
+          <$> TagEdit.make tag
+              (augmentId (Trash.guidOfTag (tag ^. Sugar.tagGId)) myId)
           <*> ExprGuiM.makeSubexpression 0 fieldExpr
         let
           itemEventMap = maybe mempty (recordItemEventMap config resultPickers) mItemActions
@@ -61,7 +63,7 @@ makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
     let
       fieldsWidget = Grid.toWidget $ Grid.make fieldRows
       mkBracketView text =
-        ExprGuiM.withFgColor (parensColor k config) . ExprGuiM.widgetEnv .
+        ExprGuiM.withFgColor (parensColor config) . ExprGuiM.widgetEnv .
         BWidgets.makeLabel text $ Widget.toAnimId myId
     openBracketWidget <-
       ExprGuiM.widgetEnv . BWidgets.makeFocusableView bracketId =<<
@@ -86,8 +88,7 @@ makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
       , resizedBracket closeBracketWidget
       ]
   where
-    parensColor Sugar.KType = Config.recordTypeParensColor
-    parensColor Sugar.KVal = Config.recordValParensColor
+    parensColor = Config.recordValParensColor
     bracketId = Widget.joinId myId ["{"]
     mkEventMap f mAction keys doc =
       maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction

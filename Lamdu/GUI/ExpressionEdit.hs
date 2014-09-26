@@ -25,7 +25,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
-import qualified Lamdu.GUI.ExpressionEdit.PiEdit as PiEdit
 import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -71,7 +70,7 @@ make parentPrecedence sExpr = assignCursor $ do
 makeEditor ::
   MonadA m => ParentPrecedence ->
   Sugar.Body Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeEditor parentPrecedence body =
   case body of

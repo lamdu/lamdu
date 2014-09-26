@@ -22,7 +22,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 make ::
   MonadA m =>
   Sugar.GetParams Sugar.Name m ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make getParams pl myId = do

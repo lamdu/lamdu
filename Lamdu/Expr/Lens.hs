@@ -25,6 +25,7 @@ module Lamdu.Expr.Lens
   , compositeTags
   -- Subexpressions:
   , subExprPayloads
+  , subExprs
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -146,3 +147,9 @@ subExprPayloads f val@(Val pl body) =
   Val
   <$> Lens.indexed f (void val) pl
   <*> (body & Lens.traversed .> subExprPayloads %%~ f)
+
+subExprs :: Lens.Fold (Val a) (Val a)
+subExprs =
+  Lens.folding f
+  where
+    f x = x : x ^.. V.body . Lens.traversed . subExprs

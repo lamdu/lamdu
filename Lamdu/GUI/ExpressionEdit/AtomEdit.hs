@@ -14,7 +14,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
   MonadA m =>
-  String -> Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  String -> Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make name pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig

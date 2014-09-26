@@ -21,7 +21,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 make ::
   MonadA m =>
   Sugar.List m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make list pl =
@@ -41,7 +41,7 @@ lastLens = Lens.taking 1 . Lens.backwards $ Lens.traversed
 
 makeUnwrapped ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   Sugar.List m (ExprGuiM.SugarExpr m) -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeUnwrapped pl list myId =

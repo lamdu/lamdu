@@ -139,7 +139,7 @@ alphaNumericAfterOperator holeInfo shownResult
 
 make ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   HoleInfo m -> Maybe (ShownResult m) ->
   ExprGuiM m
   ( Widget.EventHandlers (T m)

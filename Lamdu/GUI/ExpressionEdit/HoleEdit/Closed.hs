@@ -36,7 +36,7 @@ type T = Transaction.Transaction
 make ::
   MonadA m =>
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id ->
   ExprGuiM m (Widget.Id, ExpressionGui m)
 make hole pl myId = do
@@ -46,7 +46,7 @@ make hole pl myId = do
       lift $ (,) myId <$> makeWrapper arg myId
     justToLeft $ do
       inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
-      guard . Lens.nullOf ExprLens.exprHole $ inferred ^. Sugar.hiWithVarsValue
+      guard . Lens.nullOf ExprLens.valHole $ inferred ^. Sugar.hiSuggestedValue
       lift $ makeInferred inferred pl myId
     lift $ (,) (diveIntoHole myId) <$> makeSimple myId
   exprEventMap <-
@@ -121,13 +121,13 @@ makeWrapper arg myId = do
 
 makeInferred ::
   MonadA m =>
-  Sugar.HoleInferred Sugar.Name m -> Sugar.Payload Sugar.Name m a ->
+  Sugar.HoleInferred Sugar.Name m -> Sugar.Payload m a ->
   Widget.Id -> ExprGuiM m (Widget.Id, ExpressionGui m)
 makeInferred inferred pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   gui <-
     (inferred ^. Sugar.hiMakeConverted) gen
-    & ExprGuiM.liftMemoT
+    & ExprGuiM.transaction
     <&> Lens.mapped . Lens.mapped .~ emptyPl
     <&> SugarRemoveTypes.holeResultTypes
     >>= ExprGuiM.makeSubexpression 0
@@ -148,8 +148,8 @@ makeInferred inferred pl myId = do
       )
   where
     fullyInferred =
-      Lens.nullOf (Lens.folding ExprUtil.subExprs . ExprLens.exprHole) $
-      inferred ^. Sugar.hiWithVarsValue
+      Lens.nullOf (ExprLens.subExprs . ExprLens.valHole) $
+      inferred ^. Sugar.hiSuggestedValue
     -- gen needs to be compatible with the one from Sugar.Convert.Hole
     -- for the hole results, for smooth animation between inferred
     -- pure val and the hole result:

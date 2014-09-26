@@ -28,7 +28,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 make ::
   MonadA m =>
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole pl myId = do
   (delegateDestId, closed) <- HoleClosed.make hole pl myId
@@ -47,7 +47,7 @@ make hole pl myId = do
 tryOpenHole ::
   MonadA m =>
   Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id ->
   MaybeT (ExprGuiM m) (ExpressionGui m)
 tryOpenHole hole pl myId = do

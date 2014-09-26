@@ -44,7 +44,7 @@ module Lamdu.Sugar.Types
     , fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpInferredType, fpMActions
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
   , HoleArg(..), haExpr, haExprPresugared, haUnwrap
-  , HoleInferred(..), hiValue, hiType, hiMakeConverted
+  , HoleInferred(..), hiSuggestedValue, hiType, hiMakeConverted
   , Hole(..)
     , holeMActions, holeMArg, holeMInferred
   , ScopeItem
@@ -232,7 +232,7 @@ data HoleArg m expr = HoleArg
   } deriving (Functor, Foldable, Traversable)
 
 data HoleInferred name m = HoleInferred
-  { _hiValue :: Val ()
+  { _hiSuggestedValue :: Val ()
   , _hiType :: Type
   -- The Sugar Expression of the WithVarsValue
   , _hiMakeConverted :: Random.StdGen -> T m (Expression name m ())

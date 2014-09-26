@@ -185,7 +185,6 @@ data Config = Config
 
   , nextInfoModeKeys :: [E.ModKey]
 
-  , recordTypeParensColor :: Draw.Color
   , recordValParensColor :: Draw.Color
   , recordAddFieldKeys :: [E.ModKey]
 

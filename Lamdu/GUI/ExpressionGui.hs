@@ -200,14 +200,14 @@ makeNameEdit (Sugar.Name nameSrc nameCollision name) ident myId = do
       EventMap.filterSChars (curry (`notElem` disallowedNameChars))
 
 stdWrap ::
-  MonadA m => Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  MonadA m => Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m) ->
   ExprGuiM m (ExpressionGui m)
 stdWrap pl mkGui = wrapExprEventMap pl $ addInferredTypes pl =<< mkGui
 
 stdWrapDelegated ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   FocusDelegator.Config -> FocusDelegator.IsDelegating ->
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
@@ -216,7 +216,7 @@ stdWrapDelegated pl fdConfig isDelegating f =
 
 stdWrapParentExpr ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 stdWrapParentExpr pl f myId = do
@@ -251,7 +251,7 @@ parenify (ParentPrecedence parent) (MyPrecedence prec) addParens mkWidget myId
 
 stdWrapParenify ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   ParentPrecedence -> MyPrecedence ->
   (Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)) ->
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
@@ -319,7 +319,7 @@ makeCollisionSuffixLabels (Sugar.Collision suffix) animId = do
 
 wrapExprEventMap ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m) -> ExprGuiM m (ExpressionGui m)
 wrapExprEventMap pl action = do
   (res, resultPickers) <- ExprGuiM.listenResultPickers action
@@ -327,7 +327,7 @@ wrapExprEventMap pl action = do
 
 addExprEventMap ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload -> HolePickers m ->
+  Sugar.Payload m ExprGuiM.Payload -> HolePickers m ->
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addExprEventMap pl resultPickers gui = do
   exprEventMap <-
@@ -337,22 +337,22 @@ addExprEventMap pl resultPickers gui = do
 
 addInferredTypes ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m a ->
+  Sugar.Payload m a ->
   ExpressionGui m ->
   ExprGuiM m (ExpressionGui m)
-addInferredTypes exprPl eg = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  typeEdits <-
-    exprPl ^. Sugar.plInferredTypes
-    & Lens.traversed . Lens.mapped . Lens.mapped .~
-      ExprGuiM.emptyPayload
-    & Lens.traversed (ExprGuiM.makeSubexpression 0)
-    <&>
-      map
-      ( Widget.tint (Config.inferredTypeTint config)
-      . Widget.scale (realToFrac <$> Config.typeScaleFactor config)
-      . (^. egWidget)
-      )
-  return $ addType config Background exprId typeEdits eg
-  where
-    exprId = WidgetIds.fromGuid $ exprPl ^. Sugar.plGuid
+addInferredTypes _exprPl = return -- eg = do
+  -- config <- ExprGuiM.widgetEnv WE.readConfig
+  -- typeEdits <-
+  --   exprPl ^. Sugar.plInferredTypes
+  --   & Lens.traversed . Lens.mapped . Lens.mapped .~
+  --     ExprGuiM.emptyPayload
+  --   & Lens.traversed (ExprGuiM.makeSubexpression 0)
+  --   <&>
+  --     map
+  --     ( Widget.tint (Config.inferredTypeTint config)
+  --     . Widget.scale (realToFrac <$> Config.typeScaleFactor config)
+  --     . (^. egWidget)
+  --     )
+  -- return $ addType config Background exprId typeEdits eg
+  -- where
+  --   exprId = WidgetIds.fromGuid $ exprPl ^. Sugar.plGuid

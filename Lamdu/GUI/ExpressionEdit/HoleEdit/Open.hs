@@ -327,7 +327,7 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
 
 make ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload -> HoleInfo m ->
+  Sugar.Payload m ExprGuiM.Payload -> HoleInfo m ->
   ExprGuiM m (ExpressionGui m)
 make pl holeInfo = do
   config <- ExprGuiM.widgetEnv WE.readConfig

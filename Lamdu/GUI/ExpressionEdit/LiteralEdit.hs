@@ -37,7 +37,7 @@ mkEditEventMap integer setToHole =
 
 makeInt ::
   MonadA m =>
-  Integer -> Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Integer -> Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeInt integer pl myId =

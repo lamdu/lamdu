@@ -49,7 +49,7 @@ makeView getParam myId = do
 make ::
   MonadA m =>
   Sugar.GetVar Sugar.Name m ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make getVar pl myId = do

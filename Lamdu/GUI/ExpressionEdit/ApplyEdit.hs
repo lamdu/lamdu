@@ -34,7 +34,7 @@ prefixPrecedence = 10
 make ::
   MonadA m => ParentPrecedence ->
   Sugar.Apply Sugar.Name (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotatedArgs) pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -110,7 +110,7 @@ makeArgRows arg = do
 
 mkBoxed ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   Guid -> ExprGuiM m (ExpressionGui m) ->
   [Sugar.AnnotatedArg Sugar.Name (ExprGuiM.SugarExpr m)] ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
@@ -127,7 +127,7 @@ mkBoxed pl destGuid mkFuncRow annotatedArgs =
 
 mkMParened ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   ParentPrecedence ->
   Maybe ExpressionGui.MyPrecedence ->
   Guid -> ExprGuiM m  (ExpressionGui m) ->

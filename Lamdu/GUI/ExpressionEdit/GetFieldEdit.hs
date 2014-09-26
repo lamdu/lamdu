@@ -15,7 +15,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 make ::
   MonadA m =>
   Sugar.GetField Sugar.Name (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make (Sugar.GetField recExpr tagG) pl =
   ExpressionGui.stdWrapParentExpr pl $ \myId ->

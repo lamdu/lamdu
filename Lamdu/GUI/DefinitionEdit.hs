@@ -6,7 +6,6 @@ import Control.Lens.Operators
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
-import Data.Cache (Cache)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (sequenceA)
 import Data.Typeable (Typeable1)
@@ -131,7 +130,7 @@ makeExprDefinition def bodyExpr = do
       , mkTypeRow "Inferred type:" id $ Sugar.antNewType x
       ]
   bodyWidget <-
-    DefinitionContentEdit.make ExprGuiM.emptyHoleGuids guid name $ bodyExpr ^. Sugar.deContent
+    DefinitionContentEdit.make guid name $ bodyExpr ^. Sugar.deContent
   return . Box.vboxAlign 0 $ typeWidgets ++ [bodyWidget]
   where
     right = Vector2 1 0.5
