@@ -6,9 +6,6 @@ import Control.Concurrent (threadDelay, forkIO, ThreadId)
 import Control.Concurrent.MVar
 import Control.Lens.Operators
 import Control.Monad (unless, forever)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (StateT, runStateT, mapStateT)
-import Data.Cache (Cache)
 import Data.IORef
 import Data.MRUMemo(memoIO)
 import Data.Monoid(Monoid(..))
@@ -27,10 +24,8 @@ import System.FilePath ((</>))
 import qualified Control.Exception as E
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Cache as Cache
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Db as Db
-import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
@@ -249,7 +244,6 @@ runDb win getConfig font db = do
   settingsRef <- newIORef Settings
     { _sInfoMode = Settings.defaultInfoMode
     }
-  cacheRef <- newIORef $ Cache.new 0x10000000
   wrapFlyNav <- makeFlyNav
   let
     makeWidget (config, size) = do
@@ -257,12 +251,9 @@ runDb win getConfig font db = do
       sizeFactor <- readIORef sizeFactorRef
       globalEventMap <- mkGlobalEventMap config settingsRef
       let eventMap = globalEventMap `mappend` sizeFactorEvents config
-      prevCache <- readIORef cacheRef
-      (widget, newCache) <-
-        (`runStateT` prevCache) $
+      widget <-
         mkWidgetWithFallback config settingsRef (baseStyle config font) dbToIO
         (size / sizeFactor, cursor)
-      writeIORef cacheRef newCache
       return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
   makeWidgetCached <- cacheMakeWidget makeWidget
   mainLoopDebugMode win getConfig $ \config size ->
@@ -293,18 +284,18 @@ mkWidgetWithFallback ::
   TextEdit.Style ->
   (forall a. Transaction DbLayout.DbM a -> IO a) ->
   (Widget.Size, Widget.Id) ->
-  StateT Cache IO (Widget IO)
+  IO (Widget IO)
 mkWidgetWithFallback config settingsRef style dbToIO (size, cursor) = do
-  settings <- lift $ readIORef settingsRef
+  settings <- readIORef settingsRef
   (isValid, widget) <-
-    mapStateT dbToIO $ do
+    dbToIO $ do
       candidateWidget <- fromCursor settings cursor
       (isValid, widget) <-
         if candidateWidget ^. Widget.wIsFocused
         then return (True, candidateWidget)
         else do
           finalWidget <- fromCursor settings rootCursor
-          lift $ Transaction.setP (DbLayout.cursor DbLayout.revisionProps) rootCursor
+          Transaction.setP (DbLayout.cursor DbLayout.revisionProps) rootCursor
           return (False, finalWidget)
       unless (widget ^. Widget.wIsFocused) $
         fail "Root cursor did not match"
@@ -312,7 +303,7 @@ mkWidgetWithFallback config settingsRef style dbToIO (size, cursor) = do
   if isValid
     then return widget
     else do
-      lift . putStrLn $ "Invalid cursor: " ++ show cursor
+      putStrLn $ "Invalid cursor: " ++ show cursor
       widget
         & Widget.backgroundColor (Config.layerMax (Config.layers config))
           ["invalid cursor bg"] (Config.invalidCursorBGColor config)
@@ -328,15 +319,15 @@ makeRootWidget ::
   Config -> Settings -> TextEdit.Style ->
   (forall a. Transaction DbLayout.DbM a -> IO a) ->
   Widget.Size -> Widget.Id ->
-  StateT Cache (Transaction DbLayout.DbM) (Widget IO)
+  Transaction DbLayout.DbM (Widget IO)
 makeRootWidget config settings style dbToIO size cursor = do
-  actions <- lift VersionControl.makeActions
-  mapStateT (runWidgetEnvT cursor style config) $ do
+  actions <- VersionControl.makeActions
+  runWidgetEnvT cursor style config $ do
     codeEdit <-
       (fmap . Widget.atEvents) (VersionControl.runEvent cursor) .
-      (mapStateT . WE.mapWidgetEnvT) VersionControl.runAction $
+      WE.mapWidgetEnvT VersionControl.runAction $
       CodeEdit.make env rootGuid
-    branchGui <- lift $ VersionControlGUI.make id size actions codeEdit
+    branchGui <- VersionControlGUI.make id size actions codeEdit
     let
       quitEventMap =
         Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
