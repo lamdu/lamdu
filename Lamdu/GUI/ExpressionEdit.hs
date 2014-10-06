@@ -77,8 +77,7 @@ makeEditor parentPrecedence body =
   Sugar.BodyHole hole -> HoleEdit.make hole
   Sugar.BodyCollapsed poly -> CollapsedEdit.make parentPrecedence poly
   Sugar.BodyApply apply -> ApplyEdit.make parentPrecedence apply
-  Sugar.BodyLam lam@(Sugar.Lam Sugar.KType _ _ _) -> PiEdit.make parentPrecedence lam
-  Sugar.BodyLam lam@(Sugar.Lam Sugar.KVal _ _ _) -> LambdaEdit.make parentPrecedence lam
+  Sugar.BodyLam lam -> LambdaEdit.make parentPrecedence lam
   Sugar.BodyLiteralInteger integer -> LiteralEdit.makeInt integer
   Sugar.BodyAtom atom -> AtomEdit.make atom
   Sugar.BodyList list -> ListEdit.make list
