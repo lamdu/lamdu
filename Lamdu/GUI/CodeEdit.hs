@@ -4,9 +4,7 @@ module Lamdu.GUI.CodeEdit (make, Env(..)) where
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (StateT, mapStateT)
 import Control.MonadA (MonadA)
-import Data.Cache (Cache)
 import Data.List (intersperse)
 import Data.List.Utils (enumerate, insertAt, removeAt)
 import Data.Maybe (listToMaybe)
@@ -38,7 +36,6 @@ import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 type T = Transaction
-type CT m = StateT Cache (WidgetEnvT (T m))
 
 data Pane m = Pane
   { paneDefI :: DefIM m
@@ -88,13 +85,13 @@ makePanes (Property panes setPanes) rootGuid =
       }
 
 makeClipboardsEdit ::
-  (Typeable1 m, MonadA m) => Env m -> [DefIM m] -> CT m (Widget (T m))
+  (Typeable1 m, MonadA m) => Env m -> [DefIM m] -> WidgetEnvT (T m) (Widget (T m))
 makeClipboardsEdit env clipboards = do
   clipboardsEdits <- traverse (makePaneWidget env) clipboards
   clipboardTitle <-
     if null clipboardsEdits
     then return Spacer.empty
-    else lift $ BWidgets.makeTextViewWidget "Clipboards:" ["clipboards title"]
+    else BWidgets.makeTextViewWidget "Clipboards:" ["clipboards title"]
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
 getClipboards :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> T m [DefIM m]
@@ -102,11 +99,11 @@ getClipboards = Transaction.getP . Anchors.clipboards
 
 make ::
   (MonadA m, Typeable1 m) =>
-  Env m -> Guid -> CT m (Widget (T m))
+  Env m -> Guid -> WidgetEnvT (T m) (Widget (T m))
 make env rootGuid = do
-  prop <- lift . lift $ Anchors.panes (codeProps env) ^. Transaction.mkProperty
+  prop <- lift $ Anchors.panes (codeProps env) ^. Transaction.mkProperty
   (sugarPanes, sugarClipboards) <-
-    (,) (makePanes prop rootGuid) <$> (lift . lift . getClipboards) (codeProps env)
+    (,) (makePanes prop rootGuid) <$> (lift . getClipboards) (codeProps env)
   panesEdit <- makePanesEdit env sugarPanes $ WidgetIds.fromGuid rootGuid
   clipboardsEdit <- makeClipboardsEdit env sugarClipboards
   return $
@@ -117,9 +114,9 @@ make env rootGuid = do
 
 makePanesEdit ::
   (Typeable1 m, MonadA m) =>
-  Env m -> [Pane m] -> Widget.Id -> CT m (Widget (T m))
+  Env m -> [Pane m] -> Widget.Id -> WidgetEnvT (T m) (Widget (T m))
 makePanesEdit env panes myId = do
-  config <- lift WE.readConfig
+  config <- WE.readConfig
   let
     paneEventMap pane = mconcat
       [ maybe mempty
@@ -137,13 +134,13 @@ makePanesEdit env panes myId = do
       makePaneWidget env . paneDefI $ pane
   panesWidget <-
     case panes of
-    [] -> lift $ BWidgets.makeFocusableTextView "<No panes>" myId
+    [] -> BWidgets.makeFocusableTextView "<No panes>" myId
     (firstPane:_) ->
-      (mapStateT . WE.assignCursor myId . WidgetIds.fromIRef . paneDefI) firstPane $ do
+      (WE.assignCursor myId . WidgetIds.fromIRef . paneDefI) firstPane $ do
         definitionEdits <- traverse makePaneEdit panes
         return . Box.vboxAlign 0 $ intersperse (Spacer.makeWidget 50) definitionEdits
 
-  mJumpBack <- lift . lift . DataOps.jumpBack $ codeProps env
+  mJumpBack <- lift . DataOps.jumpBack $ codeProps env
   newDefinition <- DefinitionEdit.makeNewDefinition $ codeProps env
   let
     panesEventMap =
@@ -158,9 +155,9 @@ makePanesEdit env panes myId = do
 
 makePaneWidget ::
   (Typeable1 m, MonadA m) =>
-  Env m -> DefIM m -> CT m (Widget (T m))
+  Env m -> DefIM m -> WidgetEnvT (T m) (Widget (T m))
 makePaneWidget env defI = do
-  config <- lift WE.readConfig
+  config <- WE.readConfig
   let
     colorize widget
       | widget ^. Widget.wIsFocused = colorizeActivePane widget
