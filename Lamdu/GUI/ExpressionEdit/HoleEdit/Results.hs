@@ -10,15 +10,13 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Results
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens.Operators
 import Control.Lens.Tuple
-import Control.Lens.Utils (contextSetter, contextVal)
 import Control.Monad (void, join, guard)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either.Utils (leftToJust, justToLeft)
 import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT, evalStateT)
+import Control.Monad.Trans.State (evalStateT)
 import Control.MonadA (MonadA)
-import Data.Cache (Cache)
 import Data.Derive.Monoid (makeMonoid)
 import Data.DeriveTH (derive)
 import Data.Function (on)
@@ -44,10 +42,8 @@ import qualified Data.Char as Char
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.List.Class as ListClass
-import qualified Data.Store.Guid as Guid
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Scheme as S
 import qualified Lamdu.Expr.Type as T
@@ -154,7 +150,6 @@ typeCheckHoleResult holeInfo mkGen val = do
     Nothing ->
       fmap ((,) BadResult) <$>
       (mkHoleResult . storePointHoleWrap) val
-    _ -> pure Nothing
   where
     mkHoleResult = Sugar.holeResult (hiActions holeInfo) mkGen
 
@@ -252,15 +247,16 @@ replaceEachHole replaceHole =
               ]
           _ -> fmap (Val x) . sequenceA <$> traverse go body
 
--- injectIntoHoles ::
---   MonadA m =>
---   HoleInfo m ->
---   Val (Sugar.MStorePoint m a) ->
---   Val a ->
---   T m [Val (Sugar.MStorePoint m a)]
+injectIntoHoles ::
+  MonadA m =>
+  Sugar.HoleActions name m ->
+  Val (Sugar.MStorePoint m a) ->
+  Val a ->
+  T m [Val (Sugar.MStorePoint m a)]
 injectIntoHoles actions arg =
   fmap catMaybes . mapM firstToTypeCheck .
-  replaceEachHole (const (maybeToMPlus (removeWrappers arg) ++ [arg]))
+  replaceEachHole (const (maybeToMPlus (removeWrappers arg) ++ [arg])) .
+  fmap ((,) Nothing)
   where
     typeCheckOnSide val = do
       mType <- actions ^. Sugar.holeInferExprType $ void val
@@ -278,7 +274,7 @@ maybeInjectArgumentExpr holeInfo =
     fmap concat .
     traverse
     (injectIntoHoles (hiActions holeInfo) arg .
-     fmap (flip (,) (pl False)))
+     (pl False <$))
     where
       pl isInjected = (ExprGuiM.StoredGuids [], ExprGuiM.Injected [isInjected])
       arg =
@@ -398,7 +394,7 @@ primitiveGroups holeInfo =
   | nonEmptyAll Char.isDigit searchTerm
   ] ++
   [ mkGroupBody False "Lambda" ["\\", "Lambda", "Λ", "λ"] $
-    V.BAbs "NewLambda" S.any hole
+    V.BAbs $ V.Lam "NewLambda" S.any hole
   -- , mkGroupBody False "GetField" [".", "Get Field"] . V.VGetField $
   --   V.GetField pureHole pureHole
   -- , Group "RecValue" (SearchTerms ["Record Value", "{"] (Any False)) .
