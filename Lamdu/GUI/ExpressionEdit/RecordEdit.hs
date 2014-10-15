@@ -38,7 +38,7 @@ make rec pl = ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped rec
 makeUnwrapped ::
   MonadA m =>
   Sugar.Record Sugar.Name m (ExprGuiM.SugarExpr m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeUnwrapped (Sugar.Record (Sugar.FieldList fields mAddField)) myId =
+makeUnwrapped (Sugar.Record fields mAddField) myId =
   ExprGuiM.assignCursor myId bracketId $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     let

@@ -77,8 +77,8 @@ convertLabeled ::
   ExpressionU m a -> ExpressionU m a -> InputExpr m a -> InputPayload m a ->
   MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled funcS argS argI exprPl = do
-  Record fields <- maybeToMPlus $ argS ^? rBody . _BodyRecord
-  guard $ length (fields ^. flItems) >= 2
+  record <- maybeToMPlus $ argS ^? rBody . _BodyRecord
+  guard $ length (record ^. flItems) >= 2
   let
     getArg field =
       AnnotatedArg
@@ -87,7 +87,7 @@ convertLabeled funcS argS argI exprPl = do
           Guid.combine (argS ^. rPayload . plGuid) (guidOfTag (field ^. rfTag . tagGId))
         , _aaExpr = field ^. rfExpr
         }
-  let args@(arg0 : args1toN@(arg1 : args2toN)) = map getArg $ fields ^. flItems
+  let args@(arg0 : args1toN@(arg1 : args2toN)) = map getArg $ record ^. flItems
   let tags = args ^.. Lens.traversed . aaTag . tagGId
   unless (noRepetitions tags) $ error "Repetitions should not type-check"
   presentationMode <- MaybeT $ indirectDefinitionPresentationMode funcS

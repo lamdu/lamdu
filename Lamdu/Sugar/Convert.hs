@@ -279,14 +279,11 @@ convertField _mIRef _defaultGuid tag expr = do
 convertEmptyRecord ::
   (Typeable1 m, MonadA m) => InputPayload m a -> ConvertM m (ExpressionU m a)
 convertEmptyRecord exprPl =
-  ConvertExpr.make exprPl $ BodyRecord
-    Record
-    { _rFields =
-        FieldList
-        { _flItems = []
-        , _flMAddFirstItem = error "TODO: _flMAddFirstItem" -- addField <$> exprPl ^? SugarInfer.plIRef
-        }
-    }
+  ConvertExpr.make exprPl $
+  BodyRecord $ Record
+  { _flItems = []
+  , _flMAddFirstItem = error "TODO: _flMAddFirstItem" -- addField <$> exprPl ^? SugarInfer.plIRef
+  }
 
 convertRecExtend ::
   (Typeable1 m, MonadA m, Monoid a) =>
@@ -296,9 +293,9 @@ convertRecExtend (V.RecExtend tag val rest) exprPl = do
   restS <- ConvertM.convertSubexpression rest
   fieldS <- convertField (exprPl ^? SugarInfer.plIRef) defaultGuid tag val
   case restS ^. rBody of
-    BodyRecord (Record (FieldList restFields _mAddFirstAddItem)) ->
-      ConvertExpr.make exprPl $ BodyRecord $ Record $
-        FieldList (fieldS : restFields) $
+    BodyRecord (Record restFields _mAddFirstAddItem) ->
+      ConvertExpr.make exprPl $ BodyRecord $
+        Record (fieldS : restFields) $
         error "TODO: Support add first item on records"
     _ -> error "TODO: Support record extend of non-record"
   where

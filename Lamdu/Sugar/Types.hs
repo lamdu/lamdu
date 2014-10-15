@@ -29,8 +29,7 @@ module Lamdu.Sugar.Types
   , ListItem(..), liMActions, liExpr
   , ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
-  , Record(..), rFields
-  , FieldList(..), flItems, flMAddFirstItem
+  , Record(..), flItems, flMAddFirstItem
   , GetField(..), gfRecord, gfTag
   , GetVarType(..)
   , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
@@ -278,14 +277,9 @@ data RecordField name m expr = RecordField
   , _rfExpr :: expr -- field type or val
   } deriving (Functor, Foldable, Traversable)
 
-data FieldList name m expr = FieldList
+data Record name m expr = Record
   { _flItems :: [RecordField name m expr]
   , _flMAddFirstItem :: Maybe (T m Guid)
-  } deriving (Functor, Foldable, Traversable)
-
--- TODO: Remove this?
-newtype Record name m expr = Record
-  { _rFields :: FieldList name m expr
   } deriving (Functor, Foldable, Traversable)
 
 data GetField name expr = GetField
@@ -433,7 +427,6 @@ Lens.makeLenses ''Definition
 Lens.makeLenses ''DefinitionContent
 Lens.makeLenses ''DefinitionExpression
 Lens.makeLenses ''ExpressionP
-Lens.makeLenses ''FieldList
 Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''GetField

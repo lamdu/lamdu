@@ -94,7 +94,7 @@ getSugaredHeadTail ::
   ExpressionU f a ->
   m (ConsParams (ExpressionU f a))
 getSugaredHeadTail Anchors.SpecialFunctions{..} argS = do
-  Record (FieldList [headField, tailField] _) <-
+  Record [headField, tailField] _ <-
     maybeToMPlus $ argS ^? rBody . _BodyRecord
   guard $ sfHeadTag == headField ^. rfTag . tagGId
   guard $ sfTailTag == tailField ^. rfTag . tagGId

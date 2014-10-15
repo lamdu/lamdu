@@ -297,21 +297,13 @@ toRecordField recordField@RecordField {..} = do
     , _rfExpr = expr
     }
 
-toFieldList ::
-  (MonadA tm, MonadNaming m) =>
-  FieldList (OldName m) tm (Expression (OldName m) tm a) ->
-  m (FieldList (NewName m) tm (Expression (NewName m) tm a))
-toFieldList fieldList@FieldList {..} = do
-  items <- traverse toRecordField _flItems
-  pure fieldList { _flItems = items }
-
 toRecord ::
   (MonadA tm, MonadNaming m) =>
   Record (OldName m) tm (Expression (OldName m) tm a) ->
   m (Record (NewName m) tm (Expression (NewName m) tm a))
 toRecord record@Record {..} = do
-  fields <- toFieldList _rFields
-  pure record { _rFields = fields }
+  items <- traverse toRecordField _flItems
+  pure record { _flItems = items }
 
 toGetField ::
   (MonadA tm, MonadNaming m) =>
