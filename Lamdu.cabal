@@ -226,6 +226,7 @@ Executable lamdu
                ,       Lamdu.Sugar.RemoveTypes
                ,       Lamdu.Sugar.Types
                ,       Lamdu.Sugar.Types.Internal
+               ,       Lamdu.Suggest
                ,       Lamdu.VersionControl
                ,       Lamdu.VersionControl.Actions
                ,       Paths_lamdu
