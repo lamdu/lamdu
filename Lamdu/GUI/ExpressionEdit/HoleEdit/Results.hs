@@ -15,7 +15,7 @@ import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either.Utils (leftToJust, justToLeft)
 import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (evalStateT)
+import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Derive.Monoid (makeMonoid)
 import Data.DeriveTH (derive)
@@ -237,7 +237,7 @@ removeWrappers (Val pl body) =
 
 replaceEachHole :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
 replaceEachHole replaceHole =
-  (`evalStateT` False) . go
+  map fst . filter snd . (`runStateT` False) . go
   where
     go oldVal@(Val x body) = do
       alreadyReplaced <- State.get
@@ -247,10 +247,10 @@ replaceEachHole replaceHole =
           case body of
           V.BLeaf V.LHole ->
             join $ lift
-              [ return (pure oldVal)
-              , do
+              [ do
                   State.put True
                   return $ replaceHole x
+              , return (pure oldVal)
               ]
           _ -> fmap (Val x) . sequenceA <$> traverse go body
 
@@ -279,9 +279,7 @@ maybeInjectArgumentExpr holeInfo =
   Nothing -> return . map ((Nothing, mempty) <$)
   Just holeArg ->
     fmap concat .
-    traverse
-    (injectIntoHoles (hiActions holeInfo) arg .
-     (pl False <$))
+    traverse (injectIntoHoles (hiActions holeInfo) arg . (pl False <$))
     where
       pl isInjected = (ExprGuiM.StoredGuids [], ExprGuiM.Injected [isInjected])
       arg =
