@@ -29,7 +29,7 @@ module Lamdu.Sugar.Types
   , ListItem(..), liMActions, liExpr
   , ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
-  , Record(..), flItems, flMAddFirstItem
+  , Record(..), rItems, rMAddFirstItem
   , GetField(..), gfRecord, gfTag
   , GetVarType(..)
   , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
@@ -278,8 +278,8 @@ data RecordField name m expr = RecordField
   } deriving (Functor, Foldable, Traversable)
 
 data Record name m expr = Record
-  { _flItems :: [RecordField name m expr]
-  , _flMAddFirstItem :: Maybe (T m Guid)
+  { _rItems :: [RecordField name m expr]
+  , _rMAddFirstItem :: Maybe (T m Guid)
   } deriving (Functor, Foldable, Traversable)
 
 data GetField name expr = GetField

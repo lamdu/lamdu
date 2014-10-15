@@ -281,8 +281,8 @@ convertEmptyRecord ::
 convertEmptyRecord exprPl =
   ConvertExpr.make exprPl $
   BodyRecord $ Record
-  { _flItems = []
-  , _flMAddFirstItem = error "TODO: _flMAddFirstItem" -- addField <$> exprPl ^? SugarInfer.plIRef
+  { _rItems = []
+  , _rMAddFirstItem = error "TODO: _rMAddFirstItem" -- addField <$> exprPl ^? SugarInfer.plIRef
   }
 
 convertRecExtend ::
