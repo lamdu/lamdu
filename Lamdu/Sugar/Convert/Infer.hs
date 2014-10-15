@@ -20,6 +20,7 @@ module Lamdu.Sugar.Convert.Infer
 import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Lens.Tuple
+import Control.Monad (mzero)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.State (StateT(..), mapStateT)
@@ -43,14 +44,14 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type ExpressionSetter def = Val () -> Val ()
 
-loader :: MonadA m => Loader (T m)
+loader :: MonadA m => Loader (MaybeT (T m))
 loader =
   Loader loadType
   where
     loadType globalId = do
-      defBody <- Transaction.readIRef $ ExprIRef.defI globalId
+      defBody <- lift $ Transaction.readIRef $ ExprIRef.defI globalId
       case defBody ^. Definition.bodyType of
-        Definition.NoExportedType -> fail "Reference to global with non-exported type!"
+        Definition.NoExportedType -> mzero -- Reference to global with non-exported type!
         Definition.ExportedType scheme -> return scheme
 
 eitherToMaybeT :: Monad m => Either l a -> MaybeT m a
@@ -65,7 +66,7 @@ liftInfer = mapStateT eitherToMaybeT . Infer.run
 loadInferScope ::
   MonadA m => Infer.Scope -> Val a -> M m (Val (Infer.Payload, a))
 loadInferScope scope val = do
-  inferAction <- lift $ lift $ InferLoad.loadInfer loader scope val
+  inferAction <- lift $ InferLoad.loadInfer loader scope val
   liftInfer inferAction
 
 loadInferInto ::
