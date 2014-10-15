@@ -37,6 +37,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
@@ -260,7 +261,7 @@ mkHoleInferred inferred = do
       , _ipStored = Nothing
       , _ipData = ()
       }
-    iVal = Val () $ V.BLeaf V.LHole -- TODO
+    iVal = P.hole -- TODO
 
 mkHole ::
   (MonadA m, Typeable1 m, Monoid a) =>
@@ -316,7 +317,7 @@ getScopeElement sugarContext (par, typeExpr) = do
           ] }
     recordParamsMap = sugarContext ^. ConvertM.scRecordParamsInfos
     errorJumpTo = error "Jump to on scope item??"
-    getParam = Val () $ V.BLeaf $ V.LVar par
+    getParam = P.var par
     onScopeField tag = do
       name <- ConvertExpr.getStoredName tagGuid
       pure mempty
@@ -327,8 +328,7 @@ getScopeElement sugarContext (par, typeExpr) = do
             , _gvJumpTo = errorJumpTo
             , _gvVarType = GetFieldParameter
             }
-          , Val () . V.BGetField $
-            V.GetField getParam tag
+          , P.getField getParam tag
           )
         ] }
       where
@@ -346,7 +346,7 @@ getGlobal defI = do
         , _gvJumpTo = errorJumpTo
         , _gvVarType = GetDefinition
         }
-      , Val () $ V.BLeaf $ V.LGlobal $ ExprIRef.globalId defI
+      , P.global $ ExprIRef.globalId defI
       )
       ] }
   where

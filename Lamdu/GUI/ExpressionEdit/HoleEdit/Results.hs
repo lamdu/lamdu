@@ -45,6 +45,7 @@ import qualified Data.List.Class as ListClass
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.Scheme as S
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
@@ -126,9 +127,6 @@ resultComplexityScore expr =
 prefixId :: HoleInfo m -> WidgetId.Id
 prefixId holeInfo = mconcat [hiActiveId holeInfo, WidgetId.Id ["results"]]
 
-hole :: Monoid a => Val a
-hole = Val mempty $ V.BLeaf V.LHole
-
 storePointHoleWrap ::
   Monoid a =>
   Val (Sugar.MStorePoint m a) ->
@@ -201,13 +199,22 @@ typeCheckToResultsList holeInfo mkGen baseId options =
   mResultsListOf holeInfo baseId <$>
   typeCheckResults holeInfo mkGen options
 
+-- Modified from Lamdu.Suggest to be non-recursive on the field
+-- values. TODO: Is code sharing possible?
+suggestRecord :: Monoid a => T.Composite T.Product -> Val a
+suggestRecord T.CVar{}          = P.hole
+suggestRecord T.CEmpty          = P.recEmpty
+suggestRecord (T.CExtend f _ r) = P.recExtend f P.hole $ suggestRecord r
+
 applyForms :: Monoid a => Type -> Val a -> [Val a]
 applyForms typ base =
   base : case typ of
-         T.TFun _ res -> applyForms res (addApply base)
+         T.TFun paramTyp res -> applyForms res (addApply paramTyp base)
          _ -> []
   where
-    addApply x = Val mempty $ V.BApp $ V.Apply x hole
+    suggestArg (T.TRecord prod) = suggestRecord prod
+    suggestArg _ = P.hole
+    addApply paramTyp x = P.app x $ suggestArg paramTyp
 
 baseExprWithApplyForms :: MonadA m => HoleInfo m -> Val () -> T m [Val ()]
 baseExprWithApplyForms holeInfo baseExpr =
@@ -394,7 +401,7 @@ primitiveGroups holeInfo =
   | nonEmptyAll Char.isDigit searchTerm
   ] ++
   [ mkGroupBody False "Lambda" ["\\", "Lambda", "Λ", "λ"] $
-    V.BAbs $ V.Lam "NewLambda" S.any hole
+    V.BAbs $ V.Lam "NewLambda" S.any P.hole
   -- , mkGroupBody False "GetField" [".", "Get Field"] . V.VGetField $
   --   V.GetField pureHole pureHole
   -- , Group "RecValue" (SearchTerms ["Record Value", "{"] (Any False)) .
