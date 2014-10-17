@@ -3,7 +3,7 @@ module Lamdu.Sugar.Types
   ( Definition(..), drName, drGuid, drBody
   , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
   , ListItemActions(..), itemAddNext, itemDelete
-  , FuncParamActions(..), fpListItemActions, fpGetExample
+  , FuncParamActions(..), fpListItemActions
   , DefinitionExpression(..), deContent, deTypeInfo
   , AcceptNewType(..)
   , DefinitionTypeInfo(..)
@@ -18,7 +18,7 @@ module Lamdu.Sugar.Types
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyCollapsed, _BodyLiteralInteger
-    , _BodyAtom, _BodyList, _BodyRecord
+    , _BodyList, _BodyRecord
   , Payload(..), plGuid, plInferredTypes, plActions, plData
   , ExpressionP(..), rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..), MStoredName
@@ -153,9 +153,8 @@ data ListItemActions m = ListItemActions
   , _itemDelete :: T m Guid
   }
 
-data FuncParamActions name m = FuncParamActions
+newtype FuncParamActions m = FuncParamActions
   { _fpListItemActions :: ListItemActions m
-  , _fpGetExample :: T m (Expression name m ())
   }
 
 data FuncParamType = FuncParameter | FuncFieldParameter
@@ -173,7 +172,7 @@ data FuncParam name m = FuncParam
   , _fpVarKind :: FuncParamType
   , _fpName :: name
   , _fpInferredType :: Maybe Type
-  , _fpMActions :: Maybe (FuncParamActions name m)
+  , _fpMActions :: Maybe (FuncParamActions m)
   }
 
 data Lam name m expr = Lam
@@ -332,7 +331,6 @@ data Body name m expr
   | BodyHole (Hole name m expr)
   | BodyCollapsed (Collapsed name m expr)
   | BodyLiteralInteger Integer
-  | BodyAtom String
   | BodyList (List m expr)
   | BodyRecord (Record name m expr)
   | BodyGetField (GetField name expr)
@@ -350,7 +348,6 @@ instance Show expr => Show (Body name m expr) where
   show BodyHole {} = "Hole"
   show BodyCollapsed {} = "Collapsed"
   show (BodyLiteralInteger i) = show i
-  show (BodyAtom atom) = atom
   show (BodyList (List items _ _)) =
     concat
     [ "["

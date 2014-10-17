@@ -92,18 +92,8 @@ lambdaWrap stored =
       Guid.combine (ExprIRef.valIGuid newLamI) $
       Trash.guidOfVar newParam
 
-fakeExample :: V.Var -> ExpressionP name0 m0 (Payload m1 ())
-fakeExample var =
-  Expression (BodyAtom "NotImplemented") Payload
-  { _plGuid = Guid.augment "EXAMPLE" $ Trash.guidOfVar var
-  , _plInferredTypes = []
-  , _plActions = Nothing
-  , _plData = ()
-  }
-
 mkPositionalFuncParamActions ::
-  MonadA m => V.Var -> Stored m -> Val (Stored m) ->
-  FuncParamActions MStoredName m
+  MonadA m => V.Var -> Stored m -> Val (Stored m) -> FuncParamActions m
 mkPositionalFuncParamActions param lambdaProp body =
   FuncParamActions
   { _fpListItemActions =
@@ -113,7 +103,6 @@ mkPositionalFuncParamActions param lambdaProp body =
         SugarInfer.replaceWith lambdaProp $ body ^. V.payload
     , _itemAddNext = lambdaWrap $ body ^. V.payload
     }
-  , _fpGetExample = pure $ fakeExample param
   }
 
 getStoredNameS :: MonadA m => Guid -> ConvertM m MStoredName
@@ -477,7 +466,6 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
 --           error "TODO:del"
 -- --          delFieldParam tagExprGuid paramTypeI param lambdaP bodyStored
 --         }
---       , _fpGetExample = pure $ fakeExample tagExprGuid
 --       }
 
 -- type ExprField m = (T.Tag, ExprIRef.ValIM m)

@@ -70,7 +70,6 @@ data Config = Config
   , newDefinitionKeys :: [E.ModKey]
 
   , definitionColor :: Draw.Color
-  , atomColor :: Draw.Color
   , parameterColor :: Draw.Color
   , paramOriginColor :: Draw.Color
 

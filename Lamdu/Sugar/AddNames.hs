@@ -257,7 +257,6 @@ withFuncParam ::
   (MonadA tm, MonadNaming m) =>
   FuncParam (OldName m) tm -> CPS m (FuncParam (NewName m) tm)
 withFuncParam fp@FuncParam{..} = CPS $ \k -> do
-  mActions <- traverse toFuncParamActions _fpMActions
   (name, res) <-
     case _fpVarKind of
     FuncParameter ->
@@ -267,10 +266,7 @@ withFuncParam fp@FuncParam{..} = CPS $ \k -> do
     FuncFieldParameter ->
       runCPS (opWithTagName _fpGuid _fpName) k
   pure
-    ( fp
-      { _fpName = name
-      , _fpMActions = mActions
-      }
+    ( fp { _fpName = name }
     , res
     )
 
@@ -419,7 +415,6 @@ toBody ::
   m (Body (NewName m) tm (Expression (NewName m) tm a))
 toBody (BodyList x)           = traverseToExpr BodyList x
 toBody (BodyLiteralInteger x) = pure $ BodyLiteralInteger x
-toBody (BodyAtom x)           = pure $ BodyAtom x
 --
 toBody (BodyGetField x) = BodyGetField <$> toGetField x
 toBody (BodyRecord x) = BodyRecord <$> toRecord x
@@ -434,13 +429,6 @@ toExpression ::
   (MonadA tm, MonadNaming m) => Expression (OldName m) tm a ->
   m (Expression (NewName m) tm a)
 toExpression = rBody toBody
-
-toFuncParamActions ::
-  (MonadNaming m, MonadA tm) => FuncParamActions (OldName m) tm ->
-  m (FuncParamActions (NewName m) tm)
-toFuncParamActions fpa = do
-  RunMonad run <- opRun
-  pure $ fpa & fpGetExample . Lens.mapped %~ run . toExpression
 
 withWhereItem ::
   (MonadA tm, MonadNaming m) =>
