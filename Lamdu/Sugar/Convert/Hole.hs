@@ -23,6 +23,7 @@ import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
+import Lamdu.Suggest (suggestValueWith)
 import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Data.Foldable as Foldable
@@ -231,6 +232,7 @@ mkWritableHoleActions exprPlStored = do
 mkHoleInferred :: MonadA m => Infer.Payload -> ConvertM m (HoleInferred MStoredName m)
 mkHoleInferred inferred = do
   sugarContext <- ConvertM.readContext
+  iVal <- suggestValueWith newVar (inferred ^. Infer.plType)
   (inferredIVal, newCtx) <-
     SugarInfer.loadInferScope (inferred ^. Infer.plScope) iVal
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
@@ -250,13 +252,13 @@ mkHoleInferred inferred = do
     , _hiMakeConverted = mkConverted
     }
   where
+    newVar = varOfGuid <$> ConvertM.liftTransaction Transaction.newKey
     mkInputPayload i guid = InputPayload
       { _ipGuid = guid
       , _ipInferred = Just i
       , _ipStored = Nothing
       , _ipData = ()
       }
-    iVal = P.hole -- TODO
 
 mkHole ::
   (MonadA m, Monoid a) =>
