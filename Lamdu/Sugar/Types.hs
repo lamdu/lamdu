@@ -1,4 +1,4 @@
-{-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, DeriveDataTypeable, RankNTypes #-}
+{-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes #-}
 module Lamdu.Sugar.Types
   ( Definition(..), drName, drGuid, drBody
   , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
@@ -73,7 +73,6 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (Traversable)
-import Data.Typeable (Typeable)
 import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Scheme (Scheme)
 import Lamdu.Expr.Val (Val)
@@ -213,7 +212,7 @@ data HoleActions name m = HoleActions
     _holeInferExprType :: Val () -> T m (Maybe Type)
   , holeResult ::
       forall a.
-      (Binary a, Typeable a, Ord a, Monoid a) =>
+      (Binary a, Ord a, Monoid a) =>
       (Guid -> Random.StdGen) -> -- for consistent guids
       Val (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
       T m (Maybe (HoleResult name m a))

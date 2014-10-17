@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 
 module Data.Store.IRef
   ( IRef, guid, unsafeFromGuid
@@ -12,11 +12,10 @@ import Data.Binary (Binary(..))
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Store.Guid (Guid)
-import Data.Typeable (Typeable)
 import qualified Data.Store.Guid as Guid
 
 data Tagged t = Tagged
-  deriving (Eq, Ord, Read, Show, Typeable)
+  deriving (Eq, Ord, Read, Show)
 
 instance Binary (Tagged t) where
   get = pure Tagged
@@ -29,7 +28,7 @@ type Tag m = Tagged (m ())
 
 newtype IRef t a = IRef {
   guid :: Guid
-  } deriving (Eq, Ord, Read, Show, Typeable, NFData)
+  } deriving (Eq, Ord, Read, Show, NFData)
 
 -- derive makeNFData ''IRef
 derive makeBinary ''IRef

@@ -6,7 +6,6 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (sequenceA)
-import Data.Typeable (Typeable1)
 import Lamdu.Expr.IRef (DefIM)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
@@ -35,8 +34,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction
 
 make ::
-  (Typeable1 m, MonadA m) =>
-  Anchors.CodeProps m -> Settings ->
+  MonadA m => Anchors.CodeProps m -> Settings ->
   DefIM m -> WidgetEnvT (T m) (WidgetT m)
 make cp settings defI = ExprGuiM.run ExpressionEdit.make cp settings $ do
   infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
@@ -128,8 +126,7 @@ makeExprDefinition def bodyExpr = do
     -- myId = WidgetIds.fromGuid guid
 
 loadConvertDefI ::
-  (MonadA m, Typeable1 m) =>
-  Anchors.CodeProps m -> DefIM m ->
+  MonadA m => Anchors.CodeProps m -> DefIM m ->
   T m (Sugar.DefinitionN m ExprGuiM.Payload)
 loadConvertDefI cp defI =
   Load.loadDefinitionClosure defI >>=

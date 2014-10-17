@@ -16,7 +16,6 @@ import Data.Maybe.Utils(unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (traverse)
-import Data.Typeable (Typeable1)
 import Lamdu.Expr.IRef (DefIM)
 import Lamdu.Expr.Type (Type(..))
 import Lamdu.Expr.Val (Val(..))
@@ -26,7 +25,6 @@ import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
 import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
-import qualified Data.Cache as Cache
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
@@ -49,14 +47,14 @@ import qualified System.Random as Random
 import Trash
 
 convert ::
-  (MonadA m, Typeable1 m, Monoid a) =>
+  (MonadA m, Monoid a) =>
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convert exprPl =
   convertPlain exprPl
   <&> rPayload . plActions . Lens._Just . mSetToHole .~ Nothing
 
 convertPlain ::
-  (MonadA m, Typeable1 m, Monoid a) =>
+  (MonadA m, Monoid a) =>
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertPlain exprPl =
   maybe convertUntypedHole convertPlainTyped (Lens.sequenceOf ipInferred exprPl)
@@ -193,7 +191,7 @@ idTranslations _mkGen _convertedExpr _writtenExpr = []
   --   tell src dst = tells [(src, dst)]
 
 inferOnTheSide ::
-  (MonadA m, Typeable1 m) =>
+  (MonadA m) =>
   ConvertM.Context m -> Infer.Scope -> Val () ->
   T m (Maybe Type)
 -- token represents the given holeInferContext
@@ -203,7 +201,7 @@ inferOnTheSide sugarContext scope val =
   <&> (^. V.payload . Lens._1 . Infer.plType)
 
 mkWritableHoleActions ::
-  (MonadA m, Typeable1 m) =>
+  (MonadA m) =>
   InputPayloadP Inferred (Stored m) () ->
   ConvertM m (HoleActions MStoredName m)
 mkWritableHoleActions exprPlStored = do
@@ -230,10 +228,7 @@ mkWritableHoleActions exprPlStored = do
   where
     inferred = exprPlStored ^. ipInferred
 
-mkHoleInferred ::
-  (Typeable1 m, MonadA m) =>
-  Infer.Payload ->
-  ConvertM m (HoleInferred MStoredName m)
+mkHoleInferred :: MonadA m => Infer.Payload -> ConvertM m (HoleInferred MStoredName m)
 mkHoleInferred inferred = do
   sugarContext <- ConvertM.readContext
   (inferredIVal, newCtx) <-
@@ -264,7 +259,7 @@ mkHoleInferred inferred = do
     iVal = P.hole -- TODO
 
 mkHole ::
-  (MonadA m, Typeable1 m, Monoid a) =>
+  (MonadA m, Monoid a) =>
   InputPayloadP Inferred (Maybe (Stored m)) a ->
   ConvertM m (Hole MStoredName m (ExpressionU m a))
 mkHole exprPl = do
@@ -410,7 +405,7 @@ writeConvertTypeChecked gen sugarContext holeStored inferredVal newCtx = do
       }
 
 mkHoleResult ::
-  (Typeable1 m, MonadA m, Cache.Key a, Binary a, Monoid a) =>
+  (MonadA m, Binary a, Monoid a) =>
   ConvertM.Context m ->
   InputPayloadP Inferred (Stored m) () ->
   (Guid -> Random.StdGen) ->

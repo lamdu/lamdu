@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Lamdu.Sugar.Types.Internal
   ( StorePoint(..), T
   , NoInferred(..), Inferred
@@ -7,7 +7,6 @@ module Lamdu.Sugar.Types.Internal
 
 import Data.Binary (Binary)
 import Data.Store.Transaction (Transaction)
-import Data.Typeable (Typeable)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
 
@@ -20,4 +19,4 @@ data NoStored = NoStored
 type Stored m = ExprIRef.ValIProperty m
 
 newtype StorePoint t = StorePoint { unStorePoint :: ExprIRef.ValI t }
-  deriving (Eq, Ord, Binary, Typeable)
+  deriving (Eq, Ord, Binary)

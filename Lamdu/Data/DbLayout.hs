@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
 
 module Lamdu.Data.DbLayout
   ( DbM, runDbTransaction
@@ -15,7 +15,6 @@ import Data.Store.Db (Db)
 import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
-import Data.Typeable (Typeable)
 import Lamdu.Data.Anchors (Code(..), Revision(..), assocNameRef, SpecialFunctions(..))
 import qualified Data.Store.Db as Db
 import qualified Data.Store.IRef as IRef
@@ -26,10 +25,10 @@ import qualified Lamdu.Data.Anchors as Anchors
 type T = Transaction
 
 newtype DbM a = DbM { dbM :: IO a }
-  deriving (Functor, Applicative, Monad, MonadIO, Typeable)
+  deriving (Functor, Applicative, Monad, MonadIO)
 
 newtype ViewM a = ViewM { viewM :: T DbM a }
-  deriving (Functor, Applicative, Monad, Typeable)
+  deriving (Functor, Applicative, Monad)
 
 runDbTransaction :: Db -> T DbM a -> IO a
 runDbTransaction db = dbM . Transaction.run (Transaction.onStoreM DbM (Db.store db))

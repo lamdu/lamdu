@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Lamdu.Expr.IRef
   ( ValI(..), ValIM
   , ValBody
@@ -25,7 +25,6 @@ import Data.Store.IRef (IRef, Tag)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
-import Data.Typeable (Typeable)
 import Lamdu.Expr.Identifier (Identifier(..))
 import Lamdu.Expr.Val (Val(..))
 import qualified Control.Lens as Lens
@@ -50,7 +49,7 @@ defI (V.GlobalId (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make bs
 
 newtype ValI t = ValI {
   unValI :: IRef t (V.Body (ValI t))
-  } deriving (Eq, Ord, Show, Typeable, Binary)
+  } deriving (Eq, Ord, Show, Binary)
 
 type ValIM m = ValI (Tag m)
 
@@ -150,7 +149,7 @@ addProperties setIRef (Val (iref, a) body) =
 data ValTree t
   = ValTreeLeaf (ValI t)
   | ValTreeNode (V.Body (ValTree t))
-  deriving (Show, Typeable)
+  deriving (Show)
 type ValTreeM m = ValTree (Tag m)
 
 writeValTree :: MonadA m => ValTreeM m -> T m (ValIM m)

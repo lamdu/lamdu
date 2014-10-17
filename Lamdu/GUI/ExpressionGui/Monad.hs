@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies, DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies #-}
 module Lamdu.GUI.ExpressionGui.Monad
   ( ExprGuiM, WidgetT
   , widgetEnv
@@ -37,7 +37,6 @@ import Data.DeriveTH (derive)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Data.Typeable (Typeable)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.ExpressionGui.Types (ExpressionGui, WidgetT, ParentPrecedence(..), Precedence)
@@ -78,10 +77,10 @@ data Output m = Output
 derive makeMonoid ''Output
 
 newtype StoredGuids = StoredGuids [Guid]
-  deriving (Monoid, Binary, Typeable, Eq, Ord)
+  deriving (Monoid, Binary, Eq, Ord)
 
 newtype Injected = Injected [Bool]
-  deriving (Monoid, Binary, Typeable, Eq, Ord)
+  deriving (Monoid, Binary, Eq, Ord)
 
 data HoleGuids = HoleGuids
   { _hgMNextHole :: Maybe Guid

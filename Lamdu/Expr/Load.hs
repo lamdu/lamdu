@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts, TemplateHaskell, DeriveDataTypeable #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts, TemplateHaskell #-}
 module Lamdu.Expr.Load
   ( loadDefinitionClosure
   , ExprPropertyClosure, exprPropertyOfClosure
@@ -15,7 +15,6 @@ import Data.Store.IRef (Tag)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable)
-import Data.Typeable (Typeable)
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Expr.IRef (DefI, DefIM)
 import Lamdu.Expr.Val (Val(..))
@@ -37,7 +36,7 @@ type SubexpressionIndex = Int
 data ExprPropertyClosure t
   = DefinitionContentExprProperty (DefI t) (ExprI t) Definition.ExportedType
   | SubexpressionProperty (ExprI t) (V.Body (ExprI t)) SubexpressionIndex
-  deriving (Show, Typeable)
+  deriving (Show)
 derive makeBinary ''ExprPropertyClosure
 
 exprPropertyOfClosure :: MonadA m => ExprPropertyClosure (Tag m) -> ExprIRef.ValIProperty m

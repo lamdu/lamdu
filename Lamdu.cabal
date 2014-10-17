@@ -16,7 +16,6 @@ Library
   hs-Source-Dirs:      bottlelib
 
   Exposed-modules:     Control.Monad.Trans.Decycle,
-                       Data.Cache,
                        Data.Function.Decycle,
                        Data.List.Assoc,
                        Data.List.Utils,
@@ -79,8 +78,7 @@ Library
                        Control.MonadA,
                        System.Random.Utils
 
-  Other-Modules:       Data.Store.Rev.ViewBranchInternal,
-                       Data.Cache.Types
+  Other-Modules:       Data.Store.Rev.ViewBranchInternal
 
   Build-depends:       base >= 4,
                        aeson >= 0.6.2.1 && < 0.7.1,

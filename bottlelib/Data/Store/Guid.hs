@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Data.Store.Guid
   (Guid, make, bs, length, new, combine, augment, fromString, asHex) where
 
@@ -14,7 +14,6 @@ import Data.ByteString.Utils (randomBS, xorBS)
 import Data.Hashable (Hashable, hashWithSalt)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mappend)
-import Data.Typeable (Typeable)
 import Numeric.Utils (encodeHex)
 import Prelude hiding (length)
 import System.Random (Random(..), split)
@@ -23,7 +22,7 @@ import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.Char as Char
 
 newtype Guid = Guid { bs :: SBS.ByteString }
-  deriving (Eq, Ord, Read, Typeable, NFData, Hashable)
+  deriving (Eq, Ord, Read, NFData, Hashable)
 
 instance Show Guid where
   show g =

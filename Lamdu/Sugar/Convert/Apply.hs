@@ -14,7 +14,6 @@ import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (traverse)
-import Data.Typeable (Typeable1)
 import Lamdu.Data.Anchors (PresentationMode(..))
 import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val(..))
@@ -43,8 +42,7 @@ import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 
 convert ::
-  (Typeable1 m, MonadA m, Monoid a) =>
-  V.Apply (InputExpr m a) ->
+  (MonadA m, Monoid a) => V.Apply (InputExpr m a) ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convert app@(V.Apply funcI argI) exprPl =
   runMatcherT $ do
@@ -73,7 +71,7 @@ noRepetitions :: Ord a => [a] -> Bool
 noRepetitions x = length x == Set.size (Set.fromList x)
 
 convertLabeled ::
-  (MonadA m, Typeable1 m, Monoid a) =>
+  (MonadA m, Monoid a) =>
   ExpressionU m a -> ExpressionU m a -> InputExpr m a -> InputPayload m a ->
   MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled funcS argS argI exprPl = do
@@ -120,7 +118,7 @@ convertLabeled funcS argS argI exprPl = do
     (fieldsI, Val _ (V.BLeaf V.LRecEmpty)) = RecordVal.unpack argI
 
 convertPrefix ::
-  (MonadA m, Typeable1 m, Monoid a) =>
+  (MonadA m, Monoid a) =>
   ExpressionU m a -> ExpressionU m a ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertPrefix funcS argS applyPl =
@@ -159,7 +157,7 @@ ipType :: Lens.Traversal' (InputPayload m a) Type
 ipType = ipInferred . Lens._Just . Infer.plType
 
 convertAppliedHole ::
-  (MonadA m, Typeable1 m, Monoid a) =>
+  (MonadA m, Monoid a) =>
   InputExpr m a -> ExpressionU m a -> InputExpr m a -> InputPayload m a ->
   MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedHole funcI argS argI exprPl = do

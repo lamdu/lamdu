@@ -17,7 +17,6 @@ import Data.Monoid (Monoid(..), (<>))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (Traversable(..))
-import Data.Typeable (Typeable1)
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
@@ -37,10 +36,7 @@ import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 
 nil ::
-  (Typeable1 m, MonadA m) =>
-  V.GlobalId ->
-  InputPayload m a ->
-  MaybeT (ConvertM m) (ExpressionU m a)
+  MonadA m => V.GlobalId -> InputPayload m a -> MaybeT (ConvertM m) (ExpressionU m a)
 nil globId exprPl = do
   specialFunctions <-
     lift $ (^. ConvertM.scSpecialFunctions) <$> ConvertM.readContext
@@ -117,7 +113,7 @@ valConsParams specialFunctions val = do
     (fields, recTail) = RecordVal.unpack val
 
 cons ::
-  (Typeable1 m, MonadA m, Monoid a) =>
+  (MonadA m, Monoid a) =>
   V.Apply (InputExpr m a) -> ExpressionU m a -> InputPayload m a ->
   MaybeT (ConvertM m) (ExpressionU m a)
 cons (V.Apply funcI argI) argS exprPl = do

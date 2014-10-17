@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Data.Definition
   ( FFIName(..)
   , Builtin(..)
@@ -13,7 +13,6 @@ import Control.Lens (Lens, Lens')
 import Data.Binary (Binary(..))
 import Data.Foldable (Foldable(..))
 import Data.Traversable (Traversable(..))
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lamdu.Expr.Scheme (Scheme)
 
@@ -41,12 +40,12 @@ data ExportedType = NoExportedType | ExportedType Scheme
 data Body valExpr = Body
   { _bodyContent :: Content valExpr
   , _bodyType :: ExportedType
-  } deriving (Generic, Show, Functor, Foldable, Traversable, Typeable)
+  } deriving (Generic, Show, Functor, Foldable, Traversable)
 
 data Definition valExpr a = Definition
   { _defBody :: Body valExpr
   , _defPayload :: a
-  } deriving (Generic, Functor, Foldable, Traversable, Typeable)
+  } deriving (Generic, Functor, Foldable, Traversable)
 
 instance Binary FFIName
 instance Binary Builtin
