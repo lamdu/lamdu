@@ -20,3 +20,6 @@ guidOfVar = guidOfIdentifier . V.vvName
 
 guidOfTag :: T.Tag -> Guid
 guidOfTag = guidOfIdentifier . T.tagName
+
+tagOfGuid :: Guid -> T.Tag
+tagOfGuid = T.Tag . identifierOfGuid

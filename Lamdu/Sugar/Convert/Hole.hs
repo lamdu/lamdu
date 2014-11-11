@@ -329,7 +329,7 @@ getScopeElement sugarContext (par, typeExpr) = do
           )
         ] }
       where
-        tagGuid = guidOfIdentifier $ T.tagName tag
+        tagGuid = guidOfTag tag
 
 -- TODO: Put the result in scopeGlobals in the caller, not here?
 getGlobal :: MonadA m => DefIM m -> T m (Scope MStoredName m)
@@ -360,7 +360,7 @@ getTag tag = do
       }
   pure mempty { _scopeTags = [(tagG, tag)] }
   where
-    tagGuid = guidOfIdentifier $ T.tagName tag
+    tagGuid = guidOfTag tag
 
 writeConvertTypeChecked ::
   (MonadA m, Monoid a) => Random.StdGen ->

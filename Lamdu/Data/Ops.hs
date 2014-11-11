@@ -181,7 +181,7 @@ newClipboard codeProps expr = do
 makeNewTag :: MonadA m => String -> T m T.Tag
 makeNewTag name = do
   tagGuid <- Transaction.newKey
-  T.Tag (identifierOfGuid tagGuid) <$ setP (Anchors.assocNameRef tagGuid) name
+  tagOfGuid tagGuid <$ setP (Anchors.assocNameRef tagGuid) name
 
 makeNewPublicTag :: MonadA m => Anchors.CodeProps m -> String -> T m T.Tag
 makeNewPublicTag codeProps name = do

@@ -704,7 +704,7 @@ convertWhereItems usedTags expr =
     return (item : nextItems, whereBody)
 
 _newField :: MonadA m => T m (T.Tag, ExprIRef.ValIM m)
-_newField = (,) <$> (T.Tag . Trash.identifierOfGuid <$> Transaction.newKey) <*> DataOps.newHole
+_newField = (,) <$> (Trash.tagOfGuid <$> Transaction.newKey) <*> DataOps.newHole
 
 -- addFirstFieldParam :: MonadA m => Guid -> ExprIRef.ValIM m -> T m Guid
 -- addFirstFieldParam lamGuid recordI = do
