@@ -5,9 +5,11 @@ module Lamdu.Expr.UniqueId
 import Control.Applicative ((<$>))
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
+import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Lamdu.Expr.Identifier (Identifier(..))
 import qualified Data.Store.Guid as Guid
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
@@ -18,9 +20,10 @@ guidOfIdentifier (Identifier bs) = Guid.make bs
 identifierOfGuid :: Guid -> Identifier
 identifierOfGuid = Identifier . Guid.bs
 
-class    ToGuid a     where toGuid :: a -> Guid
-instance ToGuid V.Var where toGuid = guidOfIdentifier . V.vvName
-instance ToGuid T.Tag where toGuid = guidOfIdentifier . T.tagName
+class    ToGuid a          where toGuid :: a -> Guid
+instance ToGuid V.Var      where toGuid = guidOfIdentifier . V.vvName
+instance ToGuid T.Tag      where toGuid = guidOfIdentifier . T.tagName
+instance ToGuid (IRef t a) where toGuid = IRef.guid
 
 -- TODO: Remove this when all code uses more descritive types than Guid
 instance ToGuid Guid  where toGuid = id

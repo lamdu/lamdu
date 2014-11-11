@@ -20,6 +20,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified System.Random as Random
@@ -64,8 +65,8 @@ make exprPl body = do
   -- TODO: Use to generate Sugared-Type with ids
   --   seed = mkGen 0 3 $ exprPl ^. ipGuid
 
-getStoredName :: MonadA m => Guid -> T m (Maybe String)
-getStoredName guid = do
-  name <- Transaction.getP $ Anchors.assocNameRef guid
+getStoredName :: (UniqueId.ToGuid a, MonadA m) => a -> T m (Maybe String)
+getStoredName uid = do
+  name <- Transaction.getP $ Anchors.assocNameRef uid
   pure $
     if null name then Nothing else Just name

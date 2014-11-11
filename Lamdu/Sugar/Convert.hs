@@ -43,6 +43,7 @@ import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Scheme as Scheme
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.TypeVars as TypeVars
+import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
@@ -105,7 +106,7 @@ mkPositionalFuncParamActions param lambdaProp body =
     }
   }
 
-getStoredNameS :: MonadA m => Guid -> ConvertM m MStoredName
+getStoredNameS :: (UniqueId.ToGuid a, MonadA m) => a -> ConvertM m MStoredName
 getStoredNameS = ConvertM.liftTransaction . ConvertExpr.getStoredName
 
 addFuncParamName ::
@@ -175,7 +176,7 @@ convertVar param exprPl = do
         , _gpJumpTo = jumpTo
         }
     Nothing -> do
-      parName <- getStoredNameS parGuid
+      parName <- getStoredNameS param
       ConvertExpr.make exprPl .
         BodyGetVar $ GetVar
         { _gvName = parName
@@ -196,10 +197,7 @@ convertVLiteralInteger ::
 convertVLiteralInteger i exprPl = ConvertExpr.make exprPl $ BodyLiteralInteger i
 
 convertTag :: MonadA m => Guid -> T.Tag -> ConvertM m (TagG MStoredName)
-convertTag inst tag =
-  TagG inst tag <$> getStoredNameS tagGuid
-  where
-    tagGuid = Trash.guidOfTag tag
+convertTag inst tag = TagG inst tag <$> getStoredNameS tag
 
 -- sideChannel :: Monad m => Lens' s a -> LensLike m s (side, s) a (side, a)
 -- sideChannel lens f s = (`runStateT` s) . Lens.zoom lens $ StateT f
@@ -307,7 +305,7 @@ convertGetField (V.GetField recExpr tag) exprPl = do
   tagParamInfos <- (^. ConvertM.scTagParamInfos) <$> ConvertM.readContext
   let
     mkGetVar jumpTo = do
-      name <- getStoredNameS tagGuid
+      name <- getStoredNameS tag
       pure GetVar
         { _gvName = name
         , _gvIdentifier = tagGuid
@@ -324,7 +322,7 @@ convertGetField (V.GetField recExpr tag) exprPl = do
     Just var ->
       return $ BodyGetVar var
     Nothing -> do
-      tName <- getStoredNameS $ Trash.guidOfTag tag
+      tName <- getStoredNameS tag
       traverse ConvertM.convertSubexpression
         GetField
         { _gfRecord = recExpr
@@ -370,17 +368,16 @@ convertGlobal globalId exprPl =
     justToLeft $ ConvertList.nil globalId exprPl
     lift $ do
       cp <- (^. ConvertM.scCodeAnchors) <$> ConvertM.readContext
-      defName <- getStoredNameS defGuid
+      defName <- getStoredNameS defI
       ConvertExpr.make exprPl .
         BodyGetVar $ GetVar
         { _gvName = defName
-        , _gvIdentifier = defGuid
+        , _gvIdentifier = IRef.guid defI
         , _gvJumpTo = jumpToDefI cp defI
         , _gvVarType = GetDefinition
         }
     where
       defI = ExprIRef.defI globalId
-      defGuid = IRef.guid defI
 
 convertExpressionI :: (MonadA m, Monoid a) => InputExpr m a -> ConvertM m (ExpressionU m a)
 convertExpressionI ee =
@@ -674,7 +671,8 @@ convertWhereItems usedTags expr =
   Nothing -> return ([], expr)
   Just ewi -> do
     let
-      defGuid = Trash.guidOfVar $ ewiParam ewi
+      param = ewiParam ewi
+      defGuid = Trash.guidOfVar param
       recordParamsInfo =
         ConvertM.RecordParamsInfo defGuid $ pure defGuid
     value <-
@@ -684,11 +682,11 @@ convertWhereItems usedTags expr =
       mkWIActions topLevelProp bodyStored =
         ListItemActions
         { _itemDelete = do
-             deleteParamRef (ewiParam ewi) bodyStored
+             deleteParamRef param bodyStored
              SugarInfer.replaceWith topLevelProp $ bodyStored ^. V.payload
         , _itemAddNext = Trash.guidOfVar . fst <$> DataOps.redexWrap topLevelProp
         }
-    name <- getStoredNameS defGuid
+    name <- getStoredNameS param
     let
       hiddenData = ewiHiddenPayloads ewi ^. Lens.traversed . ipData
       item = WhereItem
@@ -806,8 +804,8 @@ convertDefIExpr cp valLoaded defI defType = do
   where
     valIRefs = valLoaded <&> Load.exprPropertyOfClosure
     exprI = valIRefs ^. V.payload . Property.pVal
-    defGuid = IRef.guid defI
-    recordParamsInfo = ConvertM.RecordParamsInfo defGuid $ jumpToDefI cp defI
+    recordParamsInfo =
+        ConvertM.RecordParamsInfo (IRef.guid defI) $ jumpToDefI cp defI
 
 convertDefI ::
   MonadA m =>
@@ -818,14 +816,13 @@ convertDefI ::
   T m (Definition (Maybe String) m (ExpressionU m [Guid]))
 convertDefI cp (Definition.Definition (Definition.Body bodyContent exportedType) defI) = do
   bodyS <- convertDefContent bodyContent exportedType
-  name <- ConvertExpr.getStoredName defGuid
+  name <- ConvertExpr.getStoredName defI
   return Definition
-    { _drGuid = defGuid
+    { _drGuid = IRef.guid defI
     , _drName = name
     , _drBody = bodyS
     }
   where
-    defGuid = IRef.guid defI
     convertDefContent (Definition.ContentBuiltin builtin) =
       return . convertDefIBuiltin builtin defI
     convertDefContent (Definition.ContentExpr valLoaded) =

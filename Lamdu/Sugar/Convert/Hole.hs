@@ -296,7 +296,7 @@ getScopeElement sugarContext (par, typeExpr) = do
             , getParam )
           ] }
       Nothing -> do
-        parName <- ConvertExpr.getStoredName $ guidOfVar par
+        parName <- ConvertExpr.getStoredName par
         pure mempty
           { _scopeLocals = [
             ( GetVar
@@ -311,11 +311,11 @@ getScopeElement sugarContext (par, typeExpr) = do
     errorJumpTo = error "Jump to on scope item??"
     getParam = P.var par
     onScopeField tag = do
-      name <- ConvertExpr.getStoredName tagGuid
+      name <- ConvertExpr.getStoredName tag
       pure mempty
         { _scopeLocals = [
           ( GetVar
-            { _gvIdentifier = tagGuid
+            { _gvIdentifier = guidOfTag tag
             , _gvName = name
             , _gvJumpTo = errorJumpTo
             , _gvVarType = GetFieldParameter
@@ -323,17 +323,15 @@ getScopeElement sugarContext (par, typeExpr) = do
           , P.getField getParam tag
           )
         ] }
-      where
-        tagGuid = guidOfTag tag
 
 -- TODO: Put the result in scopeGlobals in the caller, not here?
 getGlobal :: MonadA m => DefIM m -> T m (Scope MStoredName m)
 getGlobal defI = do
-  name <- ConvertExpr.getStoredName guid
+  name <- ConvertExpr.getStoredName defI
   pure mempty
     { _scopeGlobals = [
       ( GetVar
-        { _gvIdentifier = guid
+        { _gvIdentifier = IRef.guid defI
         , _gvName = name
         , _gvJumpTo = errorJumpTo
         , _gvVarType = GetDefinition
@@ -342,21 +340,18 @@ getGlobal defI = do
       )
       ] }
   where
-    guid = IRef.guid defI
     errorJumpTo = error "Jump to on scope item??"
 
 getTag :: MonadA m => Guid -> T.Tag -> T m (Scope MStoredName m)
 getTag ctxGuid tag = do
-  name <- ConvertExpr.getStoredName tagGuid
+  name <- ConvertExpr.getStoredName tag
   let
     tagG = TagG
-      { _tagInstance = Guid.combine ctxGuid tagGuid
+      { _tagInstance = Guid.combine ctxGuid (guidOfTag tag)
       , _tagVal = tag
       , _tagGName = name
       }
   pure mempty { _scopeTags = [(tagG, tag)] }
-  where
-    tagGuid = guidOfTag tag
 
 writeConvertTypeChecked ::
   (MonadA m, Monoid a) => Random.StdGen ->
