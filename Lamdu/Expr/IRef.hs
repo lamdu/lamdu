@@ -41,6 +41,7 @@ type T = Transaction
 type DefI t = IRef t (Definition.Body (ValI t))
 type DefIM m = DefI (Tag m)
 
+-- NOTE: Nobody else should generate Lamdu-visible Global Id's
 globalId :: DefI t -> V.GlobalId
 globalId = V.GlobalId . Identifier . Guid.bs . IRef.guid
 

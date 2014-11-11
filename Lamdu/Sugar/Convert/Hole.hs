@@ -28,7 +28,6 @@ import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
-import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -93,35 +92,30 @@ mkPaste exprP = do
       ~() <- replacer clip
       return $ ExprIRef.valIGuid clip
 
--- TODO: This is a backwards compatibility hack: Fix this:
-_combineVarsAsGuids :: Guid -> V.Var -> V.Var
-_combineVarsAsGuids guid =
-  varOfGuid . Guid.combine guid . guidOfVar
+-- -- Sugar exports fpId of Lambda params as:
+-- --   Guid.combine lamGuid paramGuid
+-- --
+-- -- So to be compatible with that in our idTranslations, we want to
+-- -- change our param Guids to match that:
+-- _combineLamGuids :: (a -> Guid) -> Val a -> Val a
+-- _combineLamGuids getGuid =
+--   go Map.empty
+--   where
+--     go renames (Val a body) =
+--       -- TODO: Lens.outside
+--       Val a $
+--       case body of
+--       V.BLeaf (V.LVar var)
+--         | Just newParamVar <- Map.lookup var renames ->
+--           V.BLeaf $ V.LVar newParamVar
+--       V.BAbs (V.Lam var paramType result) ->
+--         V.BAbs $
+--         V.Lam newParamVar paramType $
+--         go (Map.insert var newParamVar renames) result
+--         where
+--           newParamVar = _combineVarsAsGuids (getGuid a) var
 
--- Sugar exports fpId of Lambda params as:
---   Guid.combine lamGuid paramGuid
---
--- So to be compatible with that in our idTranslations, we want to
--- change our param Guids to match that:
-_combineLamGuids :: (a -> Guid) -> Val a -> Val a
-_combineLamGuids getGuid =
-  go Map.empty
-  where
-    go renames (Val a body) =
-      -- TODO: Lens.outside
-      Val a $
-      case body of
-      V.BLeaf (V.LVar var)
-        | Just newParamVar <- Map.lookup var renames ->
-          V.BLeaf $ V.LVar newParamVar
-      V.BAbs (V.Lam var paramType result) ->
-        V.BAbs $
-        V.Lam newParamVar paramType $
-        go (Map.insert var newParamVar renames) result
-        where
-          newParamVar = _combineVarsAsGuids (getGuid a) var
-
-      _ -> go renames <$> body
+--       _ -> go renames <$> body
 
 -- markHoles :: Val a -> Val (Bool, a)
 -- markHoles =
