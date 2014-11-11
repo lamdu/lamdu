@@ -54,4 +54,4 @@ make getParams pl myId = do
   where
     animId = Widget.toAnimId myId
     label = ExprGuiM.widgetEnv . flip BWidgets.makeLabel animId
-    defName = getParams ^. Sugar.gpDefName
+    defName = getParams ^. Sugar.gpDefName . Sugar.npName

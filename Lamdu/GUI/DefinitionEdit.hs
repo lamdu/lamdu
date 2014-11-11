@@ -62,7 +62,7 @@ makeBuiltinDefinition def builtin = do
     -- ,
       BWidgets.hboxCenteredSpaced <$> sequenceA
       [ ExprGuiM.withFgColor (Config.builtinOriginNameColor config) $
-        DefinitionContentEdit.makeNameEdit name (Widget.joinId myId ["name"]) guid
+        DefinitionContentEdit.makeNameEdit name (Widget.joinId myId ["name"])
       , ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
       , BuiltinEdit.make builtin myId
       ]

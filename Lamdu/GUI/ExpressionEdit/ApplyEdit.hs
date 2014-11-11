@@ -33,7 +33,7 @@ prefixPrecedence = 10
 
 make ::
   MonadA m => ParentPrecedence ->
-  Sugar.Apply Sugar.Name (ExprGuiM.SugarExpr m) ->
+  Sugar.Apply Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotatedArgs) pl myId = do
@@ -75,14 +75,14 @@ make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotated
 assignCursorGuid :: MonadA m => Widget.Id -> Guid -> ExprGuiM m a -> ExprGuiM m a
 assignCursorGuid myId = ExprGuiM.assignCursor myId . WidgetIds.fromGuid
 
-makeTagView :: MonadA m => Guid -> Sugar.TagG Sugar.Name -> ExprGuiM m (ExpressionGui m)
+makeTagView :: MonadA m => Guid -> Sugar.TagG Sugar.Name m -> ExprGuiM m (ExpressionGui m)
 makeTagView tagExprGuid tagG =
   TagEdit.makeView tagG . Widget.toAnimId $
   WidgetIds.fromGuid tagExprGuid
 
 makeArgRows ::
   MonadA m =>
-  Sugar.AnnotatedArg Sugar.Name (ExprGuiM.SugarExpr m) ->
+  Sugar.AnnotatedArg Sugar.Name m (ExprGuiM.SugarExpr m) ->
   ExprGuiM m [[(Grid.Alignment, ExprGuiM.WidgetT m)]]
 makeArgRows arg = do
   argTagEdit <- makeTagView (arg ^. Sugar.aaTagExprGuid) (arg ^. Sugar.aaTag)
@@ -112,7 +112,7 @@ mkBoxed ::
   MonadA m =>
   Sugar.Payload m ExprGuiM.Payload ->
   Guid -> ExprGuiM m (ExpressionGui m) ->
-  [Sugar.AnnotatedArg Sugar.Name (ExprGuiM.SugarExpr m)] ->
+  [Sugar.AnnotatedArg Sugar.Name m (ExprGuiM.SugarExpr m)] ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 mkBoxed pl destGuid mkFuncRow annotatedArgs =
   ExpressionGui.stdWrapParentExpr pl $ \myId ->

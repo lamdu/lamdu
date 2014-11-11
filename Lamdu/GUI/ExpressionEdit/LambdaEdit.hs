@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -29,13 +28,13 @@ paramFDConfig = FocusDelegator.Config
   }
 
 makeParamNameEdit ::
-  MonadA m => Sugar.Name -> Guid -> Widget.Id ->
+  MonadA m => Sugar.NameProperty Sugar.Name m -> Widget.Id ->
   ExprGuiM m (WidgetT m)
-makeParamNameEdit name ident myId = do
+makeParamNameEdit nameProp myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
     (ExprGuiM.withFgColor (Config.paramOriginColor config) .
-     ExpressionGui.makeNameEdit name ident) myId
+     ExpressionGui.makeNameEdit nameProp) myId
 
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id
@@ -48,7 +47,7 @@ makeParamEdit ::
 makeParamEdit prevId param =
   assignCursor $ do
     -- paramTypeEdit <- ExprGuiM.makeSubexpression 0 $ param ^. Sugar.fpType
-    paramNameEdit <- makeParamNameEdit name (param ^. Sugar.fpGuid) myId
+    paramNameEdit <- makeParamNameEdit (param ^. Sugar.fpName) myId
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
       paramAddNextEventMap =
@@ -69,7 +68,6 @@ makeParamEdit prevId param =
       [paramTypeEdit ^. ExpressionGui.egWidget] -} $
       ExpressionGui.fromValueWidget paramNameEdit
   where
-    name = param ^. Sugar.fpName
     assignGuidToMe = (`ExprGuiM.assignCursor` myId) . WidgetIds.fromGuid
     assignCursor = compose . map assignGuidToMe $ param ^. Sugar.fpAltIds
     myId = WidgetIds.fromGuid $ param ^. Sugar.fpId

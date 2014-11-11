@@ -41,11 +41,11 @@ defFDConfig = FocusDelegator.Config
   }
 
 makeNameEdit ::
-  MonadA m => Sugar.Name ->
-  Widget.Id -> Guid -> ExprGuiM m (WidgetT m)
-makeNameEdit name myId ident =
+  MonadA m => Sugar.NameProperty Sugar.Name m ->
+  Widget.Id -> ExprGuiM m (WidgetT m)
+makeNameEdit nameProperty myId =
   ExprGuiM.wrapDelegated defFDConfig FocusDelegator.NotDelegating id
-  (ExpressionGui.makeNameEdit name ident)
+  (ExpressionGui.makeNameEdit nameProperty)
   myId
 
 nonOperatorName :: Sugar.Name -> Bool
@@ -63,9 +63,9 @@ polyNameFDConfig config = FocusDelegator.Config
 
 makePolyNameEdit ::
   MonadA m =>
-  Sugar.Name -> Guid -> [ExpressionGui m] -> Widget.Id ->
+  Sugar.NameProperty Sugar.Name m -> [ExpressionGui m] -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makePolyNameEdit name guid depParamsEdits myId = do
+makePolyNameEdit nameProp depParamsEdits myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     f wId =
@@ -88,7 +88,7 @@ makePolyNameEdit name guid depParamsEdits myId = do
   where
     makeNameGui color wId =
       ExprGuiM.withFgColor color $
-      ExpressionGui.fromValueWidget <$> makeNameEdit name wId guid
+      ExpressionGui.fromValueWidget <$> makeNameEdit nameProp wId
 
 makeWheres ::
   MonadA m =>
@@ -141,15 +141,15 @@ mkPresentationEdits guid myId = do
     mkProp = Anchors.assocPresentationMode guid
 
 make ::
-  MonadA m => Guid -> Sugar.Name ->
+  MonadA m => Guid -> Sugar.NameProperty Sugar.Name m ->
   Sugar.DefinitionContent Sugar.Name m (ExprGuiM.SugarExpr m) ->
   ExprGuiM m (WidgetT m)
-make guid name content = do
+make guid nameProp content = do
   equals <- ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
   rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods E.Key'Equal] rhs
   let
     jumpToRHSViaEquals n widget
-      | nonOperatorName n =
+      | nonOperatorName (n ^. Sugar.npName) =
         widget
         & Widget.wEventMap %~ E.filterSChars (curry (/= ('=', E.NotShifted)))
         & Widget.weakerEvents rhsJumperEquals
@@ -166,9 +166,9 @@ make guid name content = do
       toEventMapAction $ content ^. Sugar.dAddFirstParam
     nameEditEventMap = mappend addFirstParamEventMap rhsJumper
   polyNameEdit <-
-    makePolyNameEdit name guid depParamsEdits myId
+    makePolyNameEdit nameProp depParamsEdits myId
     & Lens.mapped . ExpressionGui.egWidget %~
-      Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals name
+      Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals nameProp
   savePos <- ExprGuiM.mkPrejumpPosSaver
   presentationEdits <-
     if isLengthAtLeast 2 params
@@ -278,7 +278,7 @@ addPrevIds lhsId depParams params =
 
 makeNestedParams ::
   MonadA m =>
-  (Sugar.Name -> Widget (T m) -> Widget (T m)) ->
+  (Sugar.NameProperty Sugar.Name m -> Widget (T m) -> Widget (T m)) ->
   (String, ExprGuiM.SugarExpr m) ->
   Widget.Id ->
   [Sugar.FuncParam Sugar.Name m] ->

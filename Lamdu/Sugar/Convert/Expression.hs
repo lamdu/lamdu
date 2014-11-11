@@ -1,7 +1,7 @@
 module Lamdu.Sugar.Convert.Expression
   ( make, mkGen
   , mkReplaceWithNewHole
-  , getStoredName
+  , makeStoredNameProperty
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -65,8 +65,13 @@ make exprPl body = do
   -- TODO: Use to generate Sugared-Type with ids
   --   seed = mkGen 0 3 $ exprPl ^. ipGuid
 
-getStoredName :: (UniqueId.ToGuid a, MonadA m) => a -> T m (Maybe String)
-getStoredName uid = do
-  name <- Transaction.getP $ Anchors.assocNameRef uid
-  pure $
-    if null name then Nothing else Just name
+makeStoredNameProperty :: (UniqueId.ToGuid a, MonadA m) => a -> T m (NameProperty (Maybe String) m)
+makeStoredNameProperty uid = do
+  name <- Transaction.getP nameRef
+  pure
+    NameProperty
+    { _npName = if null name then Nothing else Just name
+    , _npSetName = Transaction.setP nameRef
+    }
+  where
+    nameRef = Anchors.assocNameRef uid

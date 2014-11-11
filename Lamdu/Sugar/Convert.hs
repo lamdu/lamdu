@@ -103,23 +103,19 @@ mkPositionalFuncParamActions param lambdaProp body =
     }
   }
 
-getStoredNameS :: (UniqueId.ToGuid a, MonadA m) => a -> ConvertM m MStoredName
-getStoredNameS = ConvertM.liftTransaction . ConvertExpr.getStoredName
-
-addFuncParamName ::
-  MonadA m => FuncParam MStoredName f ->
-  ConvertM m (FuncParam MStoredName f)
-addFuncParamName fp = do
-  name <- getStoredNameS $ fp ^. fpGuid
-  pure fp { _fpName = name }
+makeStoredNamePropertyS ::
+  (UniqueId.ToGuid s, MonadA m) =>
+  s -> ConvertM m (NameProperty (Maybe String) m)
+makeStoredNamePropertyS x = ConvertM.liftTransaction . ConvertExpr.makeStoredNameProperty $ x
 
 convertPositionalFuncParam ::
   (MonadA m, Monoid a) => V.Lam (InputExpr m a) ->
   InputPayload m a ->
   ConvertM m (FuncParam MStoredName m)
 convertPositionalFuncParam (V.Lam param _paramTypeConstraint body) lamExprPl = do
-  addFuncParamName FuncParam
-    { _fpName = Nothing
+  name <- makeStoredNamePropertyS param
+  pure FuncParam
+    { _fpName = name
     , _fpGuid = paramGuid
     , _fpVarKind = FuncParameter
     , _fpId = paramGuid
@@ -165,14 +161,14 @@ convertVar param exprPl = do
   recordParamsMap <- (^. ConvertM.scRecordParamsInfos) <$> ConvertM.readContext
   case Map.lookup param recordParamsMap of
     Just (ConvertM.RecordParamsInfo defGuid jumpTo) -> do
-      defName <- getStoredNameS defGuid
+      defName <- makeStoredNamePropertyS defGuid
       ConvertExpr.make exprPl $ BodyGetParams GetParams
         { _gpDefGuid = defGuid
         , _gpDefName = defName
         , _gpJumpTo = jumpTo
         }
     Nothing -> do
-      parName <- getStoredNameS param
+      parName <- makeStoredNamePropertyS param
       ConvertExpr.make exprPl .
         BodyGetVar $ GetVar
         { _gvName = parName
@@ -192,8 +188,8 @@ convertVLiteralInteger ::
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertVLiteralInteger i exprPl = ConvertExpr.make exprPl $ BodyLiteralInteger i
 
-convertTag :: MonadA m => Guid -> T.Tag -> ConvertM m (TagG MStoredName)
-convertTag inst tag = TagG inst tag <$> getStoredNameS tag
+convertTag :: MonadA m => Guid -> T.Tag -> ConvertM m (TagG MStoredName m)
+convertTag inst tag = TagG inst tag <$> makeStoredNamePropertyS tag
 
 -- sideChannel :: Monad m => Lens' s a -> LensLike m s (side, s) a (side, a)
 -- sideChannel lens f s = (`runStateT` s) . Lens.zoom lens $ StateT f
@@ -301,7 +297,7 @@ convertGetField (V.GetField recExpr tag) exprPl = do
   tagParamInfos <- (^. ConvertM.scTagParamInfos) <$> ConvertM.readContext
   let
     mkGetVar jumpTo = do
-      name <- getStoredNameS tag
+      name <- makeStoredNamePropertyS tag
       pure GetVar
         { _gvName = name
         , _gvIdentifier = UniqueId.toGuid tag
@@ -318,7 +314,7 @@ convertGetField (V.GetField recExpr tag) exprPl = do
     Just var ->
       return $ BodyGetVar var
     Nothing -> do
-      tName <- getStoredNameS tag
+      tName <- makeStoredNamePropertyS tag
       traverse ConvertM.convertSubexpression
         GetField
         { _gfRecord = recExpr
@@ -362,7 +358,7 @@ convertGlobal globalId exprPl =
     justToLeft $ ConvertList.nil globalId exprPl
     lift $ do
       cp <- (^. ConvertM.scCodeAnchors) <$> ConvertM.readContext
-      defName <- getStoredNameS defI
+      defName <- makeStoredNamePropertyS defI
       ConvertExpr.make exprPl .
         BodyGetVar $ GetVar
         { _gvName = defName
@@ -440,9 +436,10 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
     fpIdGuid = Guid.combine lamGuid . UniqueId.toGuid . fpTag
     mkParamInfo fp =
       Map.singleton (fpTag fp) . ConvertM.TagParamInfo param $ fpIdGuid fp
-    mkParam fp =
-      addFuncParamName FuncParam
-        { _fpName = Nothing
+    mkParam fp = do
+      name <- makeStoredNamePropertyS $ fpTag fp
+      pure FuncParam
+        { _fpName = name
         , _fpGuid = UniqueId.toGuid $ fpTag fp
         , _fpId = -- TOOD: Is this supposed to be the same?
                   -- It used to be different: "Guid.combine lamGuid guid"
@@ -680,7 +677,7 @@ convertWhereItems usedTags expr =
              SugarInfer.replaceWith topLevelProp $ bodyStored ^. V.payload
         , _itemAddNext = UniqueId.toGuid . fst <$> DataOps.redexWrap topLevelProp
         }
-    name <- getStoredNameS param
+    name <- makeStoredNamePropertyS param
     let
       hiddenData = ewiHiddenPayloads ewi ^. Lens.traversed . ipData
       item = WhereItem
@@ -810,7 +807,7 @@ convertDefI ::
   T m (Definition (Maybe String) m (ExpressionU m [Guid]))
 convertDefI cp (Definition.Definition (Definition.Body bodyContent exportedType) defI) = do
   bodyS <- convertDefContent bodyContent exportedType
-  name <- ConvertExpr.getStoredName defI
+  name <- ConvertExpr.makeStoredNameProperty defI
   return Definition
     { _drGuid = IRef.guid defI
     , _drName = name

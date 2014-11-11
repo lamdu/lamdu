@@ -2,6 +2,7 @@
 module Lamdu.GUI.ExpressionEdit.TagEdit(make, makeView) where
 
 import Control.Applicative ((<$>))
+import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Lamdu.Config (Config)
@@ -31,19 +32,19 @@ onTagWidget config =
   Widget.tint (Config.fieldTint config)
 
 make ::
-  MonadA m => Sugar.TagG Sugar.Name -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-make (Sugar.TagG _inst tag name) myId = do
+  MonadA m => Sugar.TagG Sugar.Name m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+make t myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.fromValueWidget <$>
     ExprGuiM.wrapDelegated fdConfig FocusDelegator.NotDelegating id
     ( fmap (onTagWidget config)
-    . ExpressionGui.makeNameEdit name tag
+    . ExpressionGui.makeNameEdit (t ^. Sugar.tagGName)
     ) myId
 
 makeView ::
-  MonadA m => Sugar.TagG Sugar.Name -> AnimId -> ExprGuiM m (ExpressionGui m)
-makeView (Sugar.TagG _inst _ name) animId = do
+  MonadA m => Sugar.TagG Sugar.Name m -> AnimId -> ExprGuiM m (ExpressionGui m)
+makeView t animId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   fmap ExpressionGui.fromValueWidget .
     ExprGuiM.widgetEnv . fmap (onTagWidget config) $
-    ExpressionGui.makeNameView name animId
+    ExpressionGui.makeNameView (t ^. Sugar.tagGName . Sugar.npName) animId

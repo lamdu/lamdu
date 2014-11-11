@@ -96,14 +96,14 @@ data ResultsList m = ResultsList
 Lens.makeLenses ''ResultsList
 
 getVarsToGroup :: (Sugar.GetVar Sugar.Name m, Val ()) -> Group def
-getVarsToGroup (getVar, expr) = sugarNameToGroup (getVar ^. Sugar.gvName) expr
+getVarsToGroup (getVar, expr) = sugarNameToGroup (getVar ^. Sugar.gvName . Sugar.npName) expr
 
 -- tagsToGroup :: (Sugar.TagG Sugar.Name, Val ()) -> Group def
 -- tagsToGroup (tagG, expr) = sugarNameToGroup (tagG ^. Sugar.tagName) expr
 
 getParamsToGroup :: (Sugar.GetParams Sugar.Name m, Val ()) -> Group def
 getParamsToGroup (getParams, expr) =
-  sugarNameToGroup (getParams ^. Sugar.gpDefName) expr
+  sugarNameToGroup (getParams ^. Sugar.gpDefName . Sugar.npName) expr
   & groupSearchTerms <>~ SearchTerms ["params"] (Any True)
 
 sugarNameToGroup :: Sugar.Name -> Val () -> Group def

@@ -63,6 +63,8 @@ module Lamdu.Sugar.Types
   , InputPayloadP(..), ipGuid, ipInferred, ipStored, ipData
   , InputPayload, InputExpr
   , Stored, Inferred
+  , NameProperty(..)
+    , npName, npSetName
   ) where
 
 import Data.Binary (Binary)
@@ -159,6 +161,11 @@ newtype FuncParamActions m = FuncParamActions
 
 data FuncParamType = FuncParameter | FuncFieldParameter
 
+data NameProperty name m = NameProperty
+  { _npName :: name
+  , _npSetName :: String -> T m ()
+  }
+
 -- TODO:
 -- FuncParam for lambda needs GetExample, but not ListItemActions
 -- FuncParam for pi needs neither
@@ -170,7 +177,7 @@ data FuncParam name m = FuncParam
   , _fpId :: Guid
   , _fpAltIds :: [Guid]
   , _fpVarKind :: FuncParamType
-  , _fpName :: name
+  , _fpName :: NameProperty name m
   , _fpInferredType :: Maybe Type
   , _fpMActions :: Maybe (FuncParamActions m)
   }
@@ -198,7 +205,7 @@ type ScopeItem a = (a, Val ())
 data Scope name m = Scope
   { _scopeLocals    :: [ScopeItem (GetVar name m)]
   , _scopeGlobals   :: [ScopeItem (GetVar name m)]
-  , _scopeTags      :: [(TagG name, T.Tag)]
+  , _scopeTags      :: [(TagG name m, T.Tag)]
   , _scopeGetParams :: [ScopeItem (GetParams name m)]
   }
 
@@ -271,7 +278,7 @@ data List m expr = List
 
 data RecordField name m expr = RecordField
   { _rfMItemActions :: Maybe (ListItemActions m)
-  , _rfTag :: TagG name
+  , _rfTag :: TagG name m
   , _rfExpr :: expr -- field type or val
   } deriving (Functor, Foldable, Traversable)
 
@@ -280,9 +287,9 @@ data Record name m expr = Record
   , _rMAddFirstItem :: Maybe (T m Guid)
   } deriving (Functor, Foldable, Traversable)
 
-data GetField name expr = GetField
+data GetField name m expr = GetField
   { _gfRecord :: expr
-  , _gfTag :: TagG name
+  , _gfTag :: TagG name m
   } deriving (Functor, Foldable, Traversable)
 
 data GetVarType = GetDefinition | GetFieldParameter | GetParameter
@@ -290,22 +297,22 @@ data GetVarType = GetDefinition | GetFieldParameter | GetParameter
 
 data GetVar name m = GetVar
   { _gvIdentifier :: Guid
-  , _gvName :: name
+  , _gvName :: NameProperty name m
   , _gvJumpTo :: T m Guid
   , _gvVarType :: GetVarType
   }
 
 data GetParams name m = GetParams
   { _gpDefGuid :: Guid
-  , _gpDefName :: name
+  , _gpDefName :: NameProperty name m
   , _gpJumpTo :: T m Guid
   }
 
-data TagG name = TagG
+data TagG name m = TagG
   { _tagInstance :: Guid -- Unique across different uses of a tag
   , _tagVal :: T.Tag
-  , _tagGName :: name
-  } deriving (Functor, Foldable, Traversable)
+  , _tagGName :: NameProperty name m
+  }
 
 data SpecialArgs expr
   = NoSpecialArgs
@@ -313,28 +320,28 @@ data SpecialArgs expr
   | InfixArgs expr expr
   deriving (Functor, Foldable, Traversable)
 
-data AnnotatedArg name expr = AnnotatedArg
-  { _aaTag :: TagG name
+data AnnotatedArg name m expr = AnnotatedArg
+  { _aaTag :: TagG name m
   , -- Used for animation ids consistent with record.
     _aaTagExprGuid :: Guid
   , _aaExpr :: expr
   } deriving (Functor, Foldable, Traversable)
 
-data Apply name expr = Apply
+data Apply name m expr = Apply
   { _aFunc :: expr
   , _aSpecialArgs :: SpecialArgs expr
-  , _aAnnotatedArgs :: [AnnotatedArg name expr]
+  , _aAnnotatedArgs :: [AnnotatedArg name m expr]
   } deriving (Functor, Foldable, Traversable)
 
 data Body name m expr
   = BodyLam (Lam name m expr)
-  | BodyApply (Apply name expr)
+  | BodyApply (Apply name m expr)
   | BodyHole (Hole name m expr)
   | BodyCollapsed (Collapsed name m expr)
   | BodyLiteralInteger Integer
   | BodyList (List m expr)
   | BodyRecord (Record name m expr)
-  | BodyGetField (GetField name expr)
+  | BodyGetField (GetField name m expr)
   | BodyGetVar (GetVar name m)
   | BodyGetParams (GetParams name m)
   deriving (Functor, Foldable, Traversable)
@@ -365,7 +372,7 @@ data WhereItem name m expr = WhereItem
   { _wiValue :: DefinitionContent name m expr
   , _wiInferredType :: Type
   , _wiGuid :: Guid
-  , _wiName :: name
+  , _wiName :: NameProperty name m
   , _wiActions :: Maybe (ListItemActions m)
   } deriving (Functor, Foldable, Traversable)
 
@@ -408,7 +415,7 @@ data DefinitionBody name m expr
 
 data Definition name m expr = Definition
   { _drGuid :: Guid
-  , _drName :: name
+  , _drName :: NameProperty name m
   , _drBody :: DefinitionBody name m expr
   } deriving (Functor, Foldable, Traversable)
 
@@ -444,6 +451,7 @@ Lens.makeLenses ''RecordField
 Lens.makeLenses ''Scope
 Lens.makeLenses ''TagG
 Lens.makeLenses ''WhereItem
+Lens.makeLenses ''NameProperty
 Lens.makePrisms ''Body
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo

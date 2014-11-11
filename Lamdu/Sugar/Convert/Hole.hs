@@ -286,7 +286,7 @@ getScopeElement sugarContext (par, typeExpr) = do
     mkGetPar =
       case Map.lookup par recordParamsMap of
       Just (ConvertM.RecordParamsInfo defGuid jumpTo) -> do
-        defName <- ConvertExpr.getStoredName defGuid
+        defName <- ConvertExpr.makeStoredNameProperty defGuid
         pure mempty
           { _scopeGetParams = [
             ( GetParams
@@ -297,7 +297,7 @@ getScopeElement sugarContext (par, typeExpr) = do
             , getParam )
           ] }
       Nothing -> do
-        parName <- ConvertExpr.getStoredName par
+        parName <- ConvertExpr.makeStoredNameProperty par
         pure mempty
           { _scopeLocals = [
             ( GetVar
@@ -312,7 +312,7 @@ getScopeElement sugarContext (par, typeExpr) = do
     errorJumpTo = error "Jump to on scope item??"
     getParam = P.var par
     onScopeField tag = do
-      name <- ConvertExpr.getStoredName tag
+      name <- ConvertExpr.makeStoredNameProperty tag
       pure mempty
         { _scopeLocals = [
           ( GetVar
@@ -328,7 +328,7 @@ getScopeElement sugarContext (par, typeExpr) = do
 -- TODO: Put the result in scopeGlobals in the caller, not here?
 getGlobal :: MonadA m => DefIM m -> T m (Scope MStoredName m)
 getGlobal defI = do
-  name <- ConvertExpr.getStoredName defI
+  name <- ConvertExpr.makeStoredNameProperty defI
   pure mempty
     { _scopeGlobals = [
       ( GetVar
@@ -345,7 +345,7 @@ getGlobal defI = do
 
 getTag :: MonadA m => Guid -> T.Tag -> T m (Scope MStoredName m)
 getTag ctxGuid tag = do
-  name <- ConvertExpr.getStoredName tag
+  name <- ConvertExpr.makeStoredNameProperty tag
   let
     tagG = TagG
       { _tagInstance = Guid.combine ctxGuid $ UniqueId.toGuid tag
