@@ -16,7 +16,6 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.Sugar.Types as Sugar
-import qualified Trash
 
 fdConfig :: FocusDelegator.Config
 fdConfig = FocusDelegator.Config
@@ -38,7 +37,7 @@ make (Sugar.TagG _inst tag name) myId = do
   ExpressionGui.fromValueWidget <$>
     ExprGuiM.wrapDelegated fdConfig FocusDelegator.NotDelegating id
     ( fmap (onTagWidget config)
-    . ExpressionGui.makeNameEdit name (Trash.guidOfTag tag)
+    . ExpressionGui.makeNameEdit name tag
     ) myId
 
 makeView ::

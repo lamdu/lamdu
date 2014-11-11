@@ -21,7 +21,6 @@ import Lamdu.Expr.Type (Type)
 import Lamdu.Sugar.AddNames.CPS (CPS(..))
 import Lamdu.Sugar.AddNames.NameGen (NameGen)
 import Lamdu.Sugar.Types
-import Trash (guidOfTag)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
@@ -29,6 +28,7 @@ import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Lamdu.Expr.Type as T
+import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Sugar.AddNames.NameGen as NameGen
 
 type CPSNameConvertor m = Guid -> OldName m -> CPS m (NewName m)
@@ -279,7 +279,7 @@ toLam lam@Lam {..} = do
   pure lam { _lParam = param, _lResult = result }
 
 toTagG :: MonadNaming m => TagG (OldName m) -> m (TagG (NewName m))
-toTagG tagG@TagG {..} = tagGName (opGetTagName (guidOfTag _tagVal)) tagG
+toTagG tagG@TagG {..} = tagGName (opGetTagName (UniqueId.toGuid _tagVal)) tagG
 
 toRecordField ::
   (MonadA tm, MonadNaming m) =>
@@ -368,7 +368,7 @@ toTag ::
   MonadNaming m => TagG (OldName m) ->
   m (TagG (NewName m))
 toTag (TagG inst tag oldName) = do
-  name <- opGetTagName (guidOfTag tag) oldName
+  name <- opGetTagName (UniqueId.toGuid tag) oldName
   pure $ TagG inst tag name
 
 toGetVar ::
