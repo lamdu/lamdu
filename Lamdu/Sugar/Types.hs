@@ -56,7 +56,7 @@ module Lamdu.Sugar.Types
     , holeResultPick
     , holeResultHasHoles
   , PickedResult(..), prMJumpTo, prIdTranslation
-  , TagG(..), tagGName, tagGId
+  , TagG(..), tagGName, tagVal
   , Collapsed(..), cFuncGuid, cCompact, cFullExpression, cFullExprHasInfo
   , MStorePoint, ExprStorePoint
   -- Input types:
@@ -302,7 +302,7 @@ data GetParams name m = GetParams
   }
 
 data TagG name = TagG
-  { _tagGId :: T.Tag
+  { _tagVal :: T.Tag
     -- TODO: Add a sugar-entity-id here
   , _tagGName :: name
   } deriving (Functor, Foldable, Traversable)

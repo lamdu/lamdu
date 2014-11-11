@@ -82,11 +82,11 @@ convertLabeled funcS argS argI exprPl = do
       AnnotatedArg
         { _aaTag = field ^. rfTag
         , _aaTagExprGuid =
-          Guid.combine (argS ^. rPayload . plGuid) (guidOfTag (field ^. rfTag . tagGId))
+          Guid.combine (argS ^. rPayload . plGuid) (guidOfTag (field ^. rfTag . tagVal))
         , _aaExpr = field ^. rfExpr
         }
   let args@(arg0 : args1toN@(arg1 : args2toN)) = map getArg $ record ^. rItems
-  let tags = args ^.. Lens.traversed . aaTag . tagGId
+  let tags = args ^.. Lens.traversed . aaTag . tagVal
   unless (noRepetitions tags) $ error "Repetitions should not type-check"
   presentationMode <- MaybeT $ indirectDefinitionPresentationMode funcS
   let

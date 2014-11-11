@@ -92,8 +92,8 @@ getSugaredHeadTail ::
 getSugaredHeadTail Anchors.SpecialFunctions{..} argS = do
   Record [headField, tailField] _ <-
     maybeToMPlus $ argS ^? rBody . _BodyRecord
-  guard $ sfHeadTag == headField ^. rfTag . tagGId
-  guard $ sfTailTag == tailField ^. rfTag . tagGId
+  guard $ sfHeadTag == headField ^. rfTag . tagVal
+  guard $ sfTailTag == tailField ^. rfTag . tagVal
   return ConsParams
     { cpHead = headField ^. rfExpr
     , cpTail = tailField ^. rfExpr

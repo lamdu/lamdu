@@ -279,7 +279,7 @@ toLam lam@Lam {..} = do
   pure lam { _lParam = param, _lResult = result }
 
 toTagG :: MonadNaming m => TagG (OldName m) -> m (TagG (NewName m))
-toTagG tagG@TagG {..} = tagGName (opGetTagName (guidOfTag _tagGId)) tagG
+toTagG tagG@TagG {..} = tagGName (opGetTagName (guidOfTag _tagVal)) tagG
 
 toRecordField ::
   (MonadA tm, MonadNaming m) =>

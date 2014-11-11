@@ -326,7 +326,7 @@ convertGetField (V.GetField recExpr tag) exprPl = do
         { _gfRecord = recExpr
         , _gfTag =
             TagG
-            { _tagGId = tag
+            { _tagVal = tag
             , _tagGName = tName
             }
         }

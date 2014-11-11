@@ -349,7 +349,7 @@ getTag tag = do
   name <- ConvertExpr.getStoredName tagGuid
   let
     tagG = TagG
-      { _tagGId = tag
+      { _tagVal = tag
       , _tagGName = name
       }
   pure mempty { _scopeTags = [(tagG, tag)] }
