@@ -38,6 +38,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.Type as T
+import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
@@ -45,7 +46,6 @@ import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.InputExpr as InputExpr
 import qualified System.Random as Random
-import Trash
 
 convert ::
   (MonadA m, Monoid a) =>
@@ -227,7 +227,9 @@ mkWritableHoleActions exprPlStored = do
 mkHoleInferred :: MonadA m => Infer.Payload -> ConvertM m (HoleInferred MStoredName m)
 mkHoleInferred inferred = do
   sugarContext <- ConvertM.readContext
-  iVal <- suggestValueWith newVar (inferred ^. Infer.plType)
+  iVal <-
+      suggestValueWith (ConvertM.liftTransaction UniqueId.new)
+      (inferred ^. Infer.plType)
   (inferredIVal, newCtx) <-
     SugarInfer.loadInferScope (inferred ^. Infer.plScope) iVal
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
@@ -247,7 +249,6 @@ mkHoleInferred inferred = do
     , _hiMakeConverted = mkConverted
     }
   where
-    newVar = varOfGuid <$> ConvertM.liftTransaction Transaction.newKey
     mkInputPayload i guid = InputPayload
       { _ipGuid = guid
       , _ipInferred = Just i
@@ -300,7 +301,7 @@ getScopeElement sugarContext (par, typeExpr) = do
         pure mempty
           { _scopeLocals = [
             ( GetVar
-              { _gvIdentifier = guidOfVar par
+              { _gvIdentifier = UniqueId.toGuid par
               , _gvName = parName
               , _gvJumpTo = errorJumpTo
               , _gvVarType = GetParameter
@@ -315,7 +316,7 @@ getScopeElement sugarContext (par, typeExpr) = do
       pure mempty
         { _scopeLocals = [
           ( GetVar
-            { _gvIdentifier = guidOfTag tag
+            { _gvIdentifier = UniqueId.toGuid tag
             , _gvName = name
             , _gvJumpTo = errorJumpTo
             , _gvVarType = GetFieldParameter
@@ -347,7 +348,7 @@ getTag ctxGuid tag = do
   name <- ConvertExpr.getStoredName tag
   let
     tagG = TagG
-      { _tagInstance = Guid.combine ctxGuid (guidOfTag tag)
+      { _tagInstance = Guid.combine ctxGuid $ UniqueId.toGuid tag
       , _tagVal = tag
       , _tagGName = name
       }

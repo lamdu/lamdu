@@ -22,11 +22,9 @@ import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
-import Trash (guidOfTag)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
@@ -81,8 +79,7 @@ convertLabeled funcS argS argI exprPl = do
     getArg field =
       AnnotatedArg
         { _aaTag = field ^. rfTag
-        , _aaTagExprGuid =
-          Guid.combine (argS ^. rPayload . plGuid) (guidOfTag (field ^. rfTag . tagVal))
+        , _aaTagExprGuid = field ^. rfTag . tagInstance
         , _aaExpr = field ^. rfExpr
         }
   let args@(arg0 : args1toN@(arg1 : args2toN)) = map getArg $ record ^. rItems
