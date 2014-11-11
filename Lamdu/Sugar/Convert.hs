@@ -53,7 +53,6 @@ import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
-import qualified Trash
 
 onMatchingSubexprs ::
   MonadA m => (a -> m ()) -> (a -> Val () -> Bool) -> Val a -> m ()
@@ -91,7 +90,7 @@ lambdaWrap stored =
   where
     f (newParam, newLamI) =
       Guid.combine (ExprIRef.valIGuid newLamI) $
-      Trash.guidOfVar newParam
+      UniqueId.toGuid newParam
 
 mkPositionalFuncParamActions ::
   MonadA m => V.Var -> Stored m -> Val (Stored m) -> FuncParamActions m
@@ -134,7 +133,7 @@ convertPositionalFuncParam (V.Lam param _paramTypeConstraint body) lamExprPl = d
       <*> traverse (^. ipStored) body
     }
   where
-    paramGuid = Trash.guidOfVar param
+    paramGuid = UniqueId.toGuid param
     mParamType = lamExprPl ^? ipInferred . Lens._Just . Infer.plType . ExprLens._TFun . _1
     lamGuid = lamExprPl ^. ipGuid
 
@@ -185,7 +184,7 @@ convertVar param exprPl = do
         , _gvVarType = GetParameter
         }
   where
-    parGuid = Trash.guidOfVar param
+    parGuid = UniqueId.toGuid param
 
 jumpToDefI ::
   MonadA m => Anchors.CodeProps m -> DefIM m -> T m Guid
@@ -308,7 +307,7 @@ convertGetField (V.GetField recExpr tag) exprPl = do
       name <- getStoredNameS tag
       pure GetVar
         { _gvName = name
-        , _gvIdentifier = tagGuid
+        , _gvIdentifier = UniqueId.toGuid tag
         , _gvJumpTo = pure jumpTo
         , _gvVarType = GetFieldParameter
         }
@@ -334,8 +333,6 @@ convertGetField (V.GetField recExpr tag) exprPl = do
             }
         }
         <&> BodyGetField
-  where
-    tagGuid = Trash.guidOfTag tag
 
 removeRedundantSubExprTypes :: Expression n m a -> Expression n m a
 removeRedundantSubExprTypes =
@@ -443,13 +440,13 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
   where
     lamGuid = lambdaExprI ^. SugarInfer.exprGuid
     _mLambdaP = lambdaExprI ^. V.payload . ipStored
-    fpIdGuid = Guid.combine lamGuid . Trash.guidOfTag . fpTag
+    fpIdGuid = Guid.combine lamGuid . UniqueId.toGuid . fpTag
     mkParamInfo fp =
       Map.singleton (fpTag fp) . ConvertM.TagParamInfo param $ fpIdGuid fp
     mkParam fp =
       addFuncParamName FuncParam
         { _fpName = Nothing
-        , _fpGuid = Trash.guidOfTag $ fpTag fp
+        , _fpGuid = UniqueId.toGuid $ fpTag fp
         , _fpId = -- TOOD: Is this supposed to be the same?
                   -- It used to be different: "Guid.combine lamGuid guid"
                   fpIdGuid fp
@@ -672,7 +669,7 @@ convertWhereItems usedTags expr =
   Just ewi -> do
     let
       param = ewiParam ewi
-      defGuid = Trash.guidOfVar param
+      defGuid = UniqueId.toGuid param
       recordParamsInfo =
         ConvertM.RecordParamsInfo defGuid $ pure defGuid
     value <-
@@ -684,7 +681,7 @@ convertWhereItems usedTags expr =
         { _itemDelete = do
              deleteParamRef param bodyStored
              SugarInfer.replaceWith topLevelProp $ bodyStored ^. V.payload
-        , _itemAddNext = Trash.guidOfVar . fst <$> DataOps.redexWrap topLevelProp
+        , _itemAddNext = UniqueId.toGuid . fst <$> DataOps.redexWrap topLevelProp
         }
     name <- getStoredNameS param
     let
@@ -707,7 +704,7 @@ convertWhereItems usedTags expr =
     return (item : nextItems, whereBody)
 
 _newField :: MonadA m => T m (T.Tag, ExprIRef.ValIM m)
-_newField = (,) <$> (Trash.tagOfGuid <$> Transaction.newKey) <*> DataOps.newHole
+_newField = (,) <$> UniqueId.new <*> DataOps.newHole
 
 -- addFirstFieldParam :: MonadA m => Guid -> ExprIRef.ValIM m -> T m Guid
 -- addFirstFieldParam lamGuid recordI = do
@@ -743,7 +740,7 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
         , _dWhereItems = whereItems
         , _dAddFirstParam = cpAddFirstParam convParams
         , _dAddInnermostWhereItem =
-          fmap (Trash.guidOfVar . fst) . DataOps.redexWrap $
+          fmap (UniqueId.toGuid . fst) . DataOps.redexWrap $
           fromMaybe (error "Where must be stored") $
           whereBody ^. V.payload . ipStored
         }
