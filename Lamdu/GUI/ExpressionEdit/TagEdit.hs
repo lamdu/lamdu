@@ -33,7 +33,7 @@ onTagWidget config =
 
 make ::
   MonadA m => Sugar.TagG Sugar.Name -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-make (Sugar.TagG tag name) myId = do
+make (Sugar.TagG _inst tag name) myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.fromValueWidget <$>
     ExprGuiM.wrapDelegated fdConfig FocusDelegator.NotDelegating id
@@ -43,7 +43,7 @@ make (Sugar.TagG tag name) myId = do
 
 makeView ::
   MonadA m => Sugar.TagG Sugar.Name -> AnimId -> ExprGuiM m (ExpressionGui m)
-makeView (Sugar.TagG _ name) animId = do
+makeView (Sugar.TagG _inst _ name) animId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   fmap ExpressionGui.fromValueWidget .
     ExprGuiM.widgetEnv . fmap (onTagWidget config) $

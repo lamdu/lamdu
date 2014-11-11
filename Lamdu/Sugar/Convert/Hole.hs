@@ -28,6 +28,7 @@ import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
+import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -215,7 +216,7 @@ mkWritableHoleActions exprPlStored = do
       mconcat . concat <$> sequence
       [ mapM (getScopeElement sugarContext) $ Map.toList $ Infer.scopeToTypeMap inferredScope
       , mapM getGlobal globals
-      , mapM getTag tags
+      , mapM (getTag (exprPlStored ^. ipGuid)) tags
       ]
     , _holeInferExprType = inferOnTheSide sugarContext inferredScope
     , holeResult = mkHoleResult sugarContext exprPlStored
@@ -344,12 +345,13 @@ getGlobal defI = do
     guid = IRef.guid defI
     errorJumpTo = error "Jump to on scope item??"
 
-getTag :: MonadA m => T.Tag -> T m (Scope MStoredName m)
-getTag tag = do
+getTag :: MonadA m => Guid -> T.Tag -> T m (Scope MStoredName m)
+getTag ctxGuid tag = do
   name <- ConvertExpr.getStoredName tagGuid
   let
     tagG = TagG
-      { _tagVal = tag
+      { _tagInstance = Guid.combine ctxGuid tagGuid
+      , _tagVal = tag
       , _tagGName = name
       }
   pure mempty { _scopeTags = [(tagG, tag)] }

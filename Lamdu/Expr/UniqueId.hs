@@ -25,6 +25,7 @@ instance ToGuid T.Tag where toGuid = guidOfIdentifier . T.tagName
 -- TODO: Remove this when all code uses more descritive types than Guid
 instance ToGuid Guid  where toGuid = id
 
+-- NOTE: No other code in Lamdu should be creating var or tag ids!
 class ToGuid a => UniqueId a     where new :: MonadA m => Transaction m a
 instance          UniqueId V.Var where new = V.Var . identifierOfGuid <$> Transaction.newKey
 instance          UniqueId T.Tag where new = T.Tag . identifierOfGuid <$> Transaction.newKey

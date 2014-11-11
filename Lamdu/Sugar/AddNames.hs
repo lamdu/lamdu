@@ -367,9 +367,9 @@ toCollapsed Collapsed {..} = do
 toTag ::
   MonadNaming m => TagG (OldName m) ->
   m (TagG (NewName m))
-toTag (TagG tag oldName) = do
+toTag (TagG inst tag oldName) = do
   name <- opGetTagName (guidOfTag tag) oldName
-  pure $ TagG tag name
+  pure $ TagG inst tag name
 
 toGetVar ::
   MonadNaming m => GetVar (OldName m) tm ->

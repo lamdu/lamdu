@@ -195,8 +195,11 @@ convertVLiteralInteger ::
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertVLiteralInteger i exprPl = ConvertExpr.make exprPl $ BodyLiteralInteger i
 
-convertTag :: MonadA m => T.Tag -> ConvertM m (TagG MStoredName)
-convertTag tag = TagG tag <$> getStoredNameS (Trash.guidOfTag tag)
+convertTag :: MonadA m => Guid -> T.Tag -> ConvertM m (TagG MStoredName)
+convertTag inst tag =
+  TagG inst tag <$> getStoredNameS tagGuid
+  where
+    tagGuid = Trash.guidOfTag tag
 
 -- sideChannel :: Monad m => Lens' s a -> LensLike m s (side, s) a (side, a)
 -- sideChannel lens f s = (`runStateT` s) . Lens.zoom lens $ StateT f
@@ -250,11 +253,11 @@ convertTag tag = TagG tag <$> getStoredNameS (Trash.guidOfTag tag)
 --       _ -> return (defaultGuid, oldFields)
 
 convertField ::
-  (MonadA m, Monoid a) => Maybe (ExprIRef.ValIM m) -> Guid ->
-  T.Tag -> InputExpr m a ->
+  (MonadA m, Monoid a) => Maybe (ExprIRef.ValIM m) ->
+  Guid -> T.Tag -> InputExpr m a ->
   ConvertM m (RecordField MStoredName m (ExpressionU m a))
-convertField _mIRef _defaultGuid tag expr = do
-  tagS <- convertTag tag
+convertField _mIRef inst tag expr = do
+  tagS <- convertTag inst tag
   exprS <- ConvertM.convertSubexpression expr
   return RecordField
     { _rfMItemActions = error "TODO: rfMItemActions"
@@ -276,7 +279,9 @@ convertRecExtend ::
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertRecExtend (V.RecExtend tag val rest) exprPl = do
   restS <- ConvertM.convertSubexpression rest
-  fieldS <- convertField (exprPl ^? SugarInfer.plIRef) defaultGuid tag val
+  fieldS <-
+      convertField (exprPl ^? SugarInfer.plIRef)
+      (Guid.augment "tag" (exprPl ^. ipGuid)) tag val
   case restS ^. rBody of
     BodyRecord (Record restFields _mAddFirstAddItem) ->
       ConvertExpr.make exprPl $ BodyRecord $
@@ -284,7 +289,6 @@ convertRecExtend (V.RecExtend tag val rest) exprPl = do
         error "TODO: Support add first item on records"
     _ -> error "TODO: Support record extend of non-record"
   where
-    defaultGuid = exprPl ^. ipGuid
     -- addField iref =
     --   writeRecordFields iref defaultGuid $ \recordFields -> do
     --     tag <- T.Tag <$> Transaction.newKey
@@ -326,7 +330,8 @@ convertGetField (V.GetField recExpr tag) exprPl = do
         { _gfRecord = recExpr
         , _gfTag =
             TagG
-            { _tagVal = tag
+            { _tagInstance = Guid.augment "tag" (exprPl ^. ipGuid)
+            , _tagVal = tag
             , _tagGName = tName
             }
         }
