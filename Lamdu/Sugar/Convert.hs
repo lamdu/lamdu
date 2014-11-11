@@ -88,9 +88,7 @@ lambdaWrap :: MonadA m => Stored m -> T m Guid
 lambdaWrap stored =
   f <$> DataOps.lambdaWrap stored
   where
-    f (newParam, newLamI) =
-      Guid.combine (ExprIRef.valIGuid newLamI) $
-      UniqueId.toGuid newParam
+    f (newParam, _) = UniqueId.toGuid newParam
 
 mkPositionalFuncParamActions ::
   MonadA m => V.Var -> Stored m -> Val (Stored m) -> FuncParamActions m
@@ -124,7 +122,7 @@ convertPositionalFuncParam (V.Lam param _paramTypeConstraint body) lamExprPl = d
     { _fpName = Nothing
     , _fpGuid = paramGuid
     , _fpVarKind = FuncParameter
-    , _fpId = Guid.combine lamGuid paramGuid
+    , _fpId = paramGuid
     , _fpAltIds = [paramGuid] -- For easy jumpTo
     , _fpInferredType = mParamType
     , _fpMActions =
@@ -135,7 +133,6 @@ convertPositionalFuncParam (V.Lam param _paramTypeConstraint body) lamExprPl = d
   where
     paramGuid = UniqueId.toGuid param
     mParamType = lamExprPl ^? ipInferred . Lens._Just . Infer.plType . ExprLens._TFun . _1
-    lamGuid = lamExprPl ^. ipGuid
 
 convertLam ::
   (MonadA m, Monoid a) =>
