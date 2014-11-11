@@ -31,8 +31,8 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Type as T
+import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
-import Trash
 
 type T = Transaction
 
@@ -180,8 +180,9 @@ newClipboard codeProps expr = do
 
 makeNewTag :: MonadA m => String -> T m T.Tag
 makeNewTag name = do
-  tagGuid <- Transaction.newKey
-  tagOfGuid tagGuid <$ setP (Anchors.assocNameRef tagGuid) name
+  tag <- UniqueId.new
+  setP (Anchors.assocNameRef tag) name
+  return tag
 
 makeNewPublicTag :: MonadA m => Anchors.CodeProps m -> String -> T m T.Tag
 makeNewPublicTag codeProps name = do

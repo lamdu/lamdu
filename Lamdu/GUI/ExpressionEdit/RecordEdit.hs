@@ -47,6 +47,8 @@ makeUnwrapped (Sugar.Record fields mAddField) myId =
           ExprGuiM.listenResultPickers $
           (,)
           <$> TagEdit.make tag
+              -- TODO: Use sugar's entity id (which should contain
+              -- this augment) instead of the underlying Tag
               (augmentId (Trash.guidOfTag (tag ^. Sugar.tagGId)) myId)
           <*> ExprGuiM.makeSubexpression 0 fieldExpr
         let

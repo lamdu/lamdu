@@ -25,6 +25,7 @@ import Lamdu.Expr.IRef (DefI)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Expr.Type as T
+import qualified Lamdu.Expr.UniqueId as UniqueId
 
 data SpecialFunctions t = SpecialFunctions
   { sfNil :: DefI t
@@ -68,8 +69,8 @@ type RevisionProps m = Revision (MkProperty m) (Tag m)
 makePane :: DefI t -> Pane t
 makePane = id
 
-assocNameRef :: MonadA m => Guid -> MkProperty m String
-assocNameRef = Transaction.assocDataRefDef "" "Name"
+assocNameRef :: (UniqueId.ToGuid a, MonadA m) => a -> MkProperty m String
+assocNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toGuid
 
 data PresentationMode = OO | Verbose | Infix
   deriving (Eq, Ord, Enum, Bounded, Show)

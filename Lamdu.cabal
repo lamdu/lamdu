@@ -138,8 +138,7 @@ Executable lamdu
                        either,
                        utf8-string,
                        TypeCompose
-  Other-Modules:       Trash
-               ,       Lamdu.CharClassification
+  Other-Modules:       Lamdu.CharClassification
                ,       Lamdu.Config
                ,       Lamdu.Data.Anchors
                ,       Lamdu.Data.Arbitrary
@@ -159,6 +158,7 @@ Executable lamdu
                ,       Lamdu.Expr.FlatComposite
                ,       Lamdu.Expr.Type
                ,       Lamdu.Expr.TypeVars
+               ,       Lamdu.Expr.UniqueId
                ,       Lamdu.Expr.Val
                ,       Lamdu.GUI.BottleWidgets
                ,       Lamdu.GUI.CodeEdit

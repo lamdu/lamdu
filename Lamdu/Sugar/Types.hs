@@ -303,6 +303,7 @@ data GetParams name m = GetParams
 
 data TagG name = TagG
   { _tagGId :: T.Tag
+    -- TODO: Add a sugar-entity-id here
   , _tagGName :: name
   } deriving (Functor, Foldable, Traversable)
 
