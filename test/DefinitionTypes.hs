@@ -32,7 +32,7 @@ definitionTypes =
         do  (_, defIs) <- ExampleDB.createBuiltins
             Map.fromList <$> mapM readDef defIs
 
-    nameOf = fmap fromString . Transaction.getP . Anchors.assocNameRef . IRef.guid
+    nameOf = fmap fromString . Transaction.getP . Anchors.assocNameRef
     readDef defI =
       do  defBody <- Transaction.readIRef defI
           case defBody ^. Definition.bodyType of

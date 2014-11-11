@@ -22,7 +22,6 @@ import Lamdu.CharClassification (operatorChars)
 import Lamdu.Data.Anchors (PresentationMode(..))
 import Lamdu.Expr.IRef (DefIM)
 import Lamdu.Expr.IRef (ValTree(..))
-import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
@@ -152,11 +151,10 @@ newDefinition ::
   MonadA m => String -> PresentationMode ->
   Definition.Body (ExprIRef.ValIM m) -> T m (DefIM m)
 newDefinition name presentationMode defBody = do
-  res <- Transaction.newIRef defBody
-  let guid = IRef.guid res
-  setP (Anchors.assocNameRef guid) name
-  setP (Anchors.assocPresentationMode guid) presentationMode
-  return res
+  newDef <- Transaction.newIRef defBody
+  setP (Anchors.assocNameRef newDef) name
+  setP (Anchors.assocPresentationMode newDef) presentationMode
+  return newDef
 
 newPublicDefinition ::
   MonadA m => Anchors.CodeProps m -> String -> T m (DefIM m)

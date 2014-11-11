@@ -15,7 +15,6 @@ import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.ByteString.Char8 ()
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
-import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version(Version)
@@ -76,8 +75,10 @@ data PresentationMode = OO | Verbose | Infix
   deriving (Eq, Ord, Enum, Bounded, Show)
 
 assocPresentationMode ::
-  MonadA m => Guid -> Transaction.MkProperty m PresentationMode
-assocPresentationMode = Transaction.assocDataRefDef OO "PresentationMode"
+  (UniqueId.ToGuid a, MonadA m) =>
+  a -> Transaction.MkProperty m PresentationMode
+assocPresentationMode =
+    Transaction.assocDataRefDef OO "PresentationMode" . UniqueId.toGuid
 
 derive makeBinary ''SpecialFunctions
 derive makeBinary ''PresentationMode

@@ -18,7 +18,6 @@ import Lamdu.Expr.Scheme (Scheme(..))
 import Lamdu.Expr.Type (Type, (~>))
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
-import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
@@ -30,18 +29,17 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Scheme as Scheme
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.TypeVars as TypeVars
+import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 
 type T = Transaction
 
-namedId :: (MonadA m, IsString a) => String -> T m a
+namedId :: (MonadA m, IsString a, UniqueId.ToGuid a) => String -> T m a
 namedId name = do
-  setP (Db.assocNameRef tagGuid) name
-  return $ fromString name
+  setP (Db.assocNameRef tag) name
+  return tag
   where
-    -- TODO: Identifier -> V.Guid.  Remove Guid or keep it only for
-    -- GUI ids?
-    tagGuid = Guid.fromString name
+    tag = fromString name
 
 forAll :: TypeVars.VarKind a => Int -> ([a] -> Type) -> Scheme
 forAll count f =
