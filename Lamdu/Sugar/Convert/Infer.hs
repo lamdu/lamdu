@@ -12,7 +12,6 @@ module Lamdu.Sugar.Convert.Infer
   , exprData
 
   , plIRef
-  , exprIRef
   , replaceWith
   ) where
 
@@ -127,9 +126,3 @@ replaceWith parentP replacerP = do
   return $ ExprIRef.valIGuid replacerI
   where
     replacerI = Property.value replacerP
-
-exprIRef ::
-  Lens.Traversal'
-  (Val (Sugar.InputPayloadP i (Maybe (Stored m)) a))
-  (ExprIRef.ValIM m)
-exprIRef = exprStored . Lens._Just . Property.pVal
