@@ -80,6 +80,3 @@ loadInfer val =
       , Sugar._ipStored = stored
       , Sugar._ipData = ()
       }
-
--- TODO: InferredWithImplicits m a had this in it:
--- Val (Sugar.InputPayloadP (Inferred m) (Maybe (Stored m)) a)
