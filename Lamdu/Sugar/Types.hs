@@ -95,6 +95,9 @@ data InputPayloadP inferred stored a
     }
 Lens.makeLenses ''InputPayloadP
 
+-- "Maybe (Stored m)" is used because holes have suggested results
+-- which are sugar-converted into ordinary sugar expressions, but are
+-- not actually stored and do not have actions (they're read-only).
 type InputPayload m a =
   InputPayloadP Inferred (Maybe (Stored m)) a
 type InputExpr m a = Val (InputPayload m a)
