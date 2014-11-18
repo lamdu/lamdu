@@ -28,7 +28,6 @@ data Builtin = Builtin
   { bName :: FFIName
   } deriving (Generic, Eq, Ord, Show)
 
--- TODO: Perhaps parameterize over Expr payload instead?
 data Content valExpr
   = ContentExpr valExpr
   | ContentBuiltin Builtin
