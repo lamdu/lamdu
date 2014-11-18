@@ -75,7 +75,7 @@ mkListItem listItemExpr recordArgS exprPl tailI mAddNextItem =
       argProp <- tailI ^. SugarInfer.exprStored
       return ListItemActions
         { _itemAddNext = addNext
-        , _itemDelete = SugarInfer.replaceWith exprProp argProp
+        , _itemDelete = replaceWith exprProp argProp
         }
   }
 

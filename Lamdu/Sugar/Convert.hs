@@ -98,7 +98,7 @@ mkPositionalFuncParamActions param lambdaProp body =
     ListItemActions
     { _itemDelete = do
         deleteParamRef param body
-        SugarInfer.replaceWith lambdaProp $ body ^. V.payload
+        replaceWith lambdaProp $ body ^. V.payload
     , _itemAddNext = lambdaWrap $ body ^. V.payload
     }
   }
@@ -674,7 +674,7 @@ convertWhereItems usedTags expr =
         ListItemActions
         { _itemDelete = do
              deleteParamRef param bodyStored
-             SugarInfer.replaceWith topLevelProp $ bodyStored ^. V.payload
+             replaceWith topLevelProp $ bodyStored ^. V.payload
         , _itemAddNext = UniqueId.toGuid . fst <$> DataOps.redexWrap topLevelProp
         }
     name <- makeStoredNamePropertyS param
