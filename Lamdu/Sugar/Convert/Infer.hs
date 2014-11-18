@@ -9,7 +9,6 @@ module Lamdu.Sugar.Convert.Infer
   , exprInferred
   , exprStored
   , exprGuid
-  , exprStoredGuid
   , exprData
 
   , plIRef
@@ -121,11 +120,6 @@ exprData = V.payload . Sugar.ipData
 plIRef ::
   Lens.Traversal' (Sugar.InputPayloadP i (Maybe (Stored m)) a) (ExprIRef.ValIM m)
 plIRef = Sugar.ipStored . Lens._Just . Property.pVal
-
-exprStoredGuid ::
-  Lens.Fold
-  (Val (Sugar.InputPayloadP i (Maybe (Stored m)) a)) Guid
-exprStoredGuid = exprIRef . Lens.to ExprIRef.valIGuid
 
 replaceWith :: MonadA m => Stored m -> Stored m -> T m Guid
 replaceWith parentP replacerP = do
