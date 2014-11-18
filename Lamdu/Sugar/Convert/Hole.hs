@@ -273,8 +273,7 @@ getScopeElement sugarContext (par, typeExpr) = do
   scopePar <- mkGetPar
   mconcat . (scopePar :) <$>
     mapM onScopeField
-    (typeExpr ^..
-     ExprLens._TRecord . ExprLens.compositeTags)
+    (typeExpr ^.. ExprLens._TRecord . ExprLens.compositeTags)
   where
     mkGetPar =
       case Map.lookup par recordParamsMap of

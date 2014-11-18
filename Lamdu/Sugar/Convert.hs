@@ -744,13 +744,13 @@ convertDefIExpr ::
 convertDefIExpr cp valLoaded defI defType = do
   (valInferred, newInferContext) <- SugarInfer.loadInfer valIRefs
   let
-    addStoredGuids lens x = (x, ExprIRef.valIGuid . Property.value <$> x ^.. lens)
+    addStoredGuids x = (x, ExprIRef.valIGuid . Property.value <$> x ^.. ipStored)
     guidIntoPl (pl, x) = pl & ipData %~ \() -> x
   context <- mkContext cp newInferContext
   ConvertM.run context $ do
     content <-
       valInferred
-      <&> guidIntoPl . addStoredGuids ipStored
+      <&> guidIntoPl . addStoredGuids
       & traverse . ipStored %~ Just
       & convertDefinitionContent recordParamsInfo mempty
     return $ DefinitionBodyExpression DefinitionExpression
