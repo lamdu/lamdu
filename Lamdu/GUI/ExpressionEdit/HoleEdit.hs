@@ -54,12 +54,11 @@ tryOpenHole hole pl myId = do
   isSelected <-
     lift . ExprGuiM.widgetEnv . WE.isSubCursor $ diveIntoHole myId
   guard isSelected
-  storedGuid <- maybeToMPlus $ pl ^? Sugar.plActions . Lens._Just . Sugar.storedGuid
   actions <- maybeToMPlus $ hole ^. Sugar.holeMActions
   inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
-  stateProp <- lift . ExprGuiM.transaction $ HoleState.assocStateRef storedGuid ^. Transaction.mkProperty
+  stateProp <- lift . ExprGuiM.transaction $ HoleState.assocStateRef guid ^. Transaction.mkProperty
   lift $ HoleOpen.make pl HoleInfo
-    { hiStoredGuid = storedGuid
+    { hiGuid = guid
     , hiActions = actions
     , hiInferred = inferred
     , hiId = myId
@@ -67,3 +66,5 @@ tryOpenHole hole pl myId = do
     , hiHoleGuids = pl ^. Sugar.plData . ExprGuiM.plHoleGuids
     , hiMArgument = hole ^. Sugar.holeMArg
     }
+  where
+    guid = pl ^. Sugar.plGuid

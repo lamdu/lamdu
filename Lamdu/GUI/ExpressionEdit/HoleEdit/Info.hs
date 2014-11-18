@@ -20,7 +20,7 @@ type T = Transaction.Transaction
 
 -- | Active hole info
 data HoleInfo m = HoleInfo
-  { hiStoredGuid :: Guid
+  { hiGuid :: Guid
   , hiId :: Widget.Id
   , hiState :: Property (T m) HoleState
   , hiActions :: Sugar.HoleActions Sugar.Name m

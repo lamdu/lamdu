@@ -85,11 +85,10 @@ makeWrapperEventMap argIsFocused arg myId = do
         (E.Doc ["Navigation", "Go to parent wrapper"]) $
         pure myId
       | otherwise =
-        maybe mempty
-        (Widget.keysEventMapMovesCursor (Config.enterSubexpressionKeys config)
-         (E.Doc ["Navigation", "Go to wrapped expr"]) .
-         pure . WidgetIds.fromGuid) $
-        arg ^? Sugar.haExpr . Sugar.rPayload . Sugar.plActions . Lens._Just . Sugar.storedGuid
+        Widget.keysEventMapMovesCursor (Config.enterSubexpressionKeys config)
+        (E.Doc ["Navigation", "Go to wrapped expr"]) .
+        pure . WidgetIds.fromGuid $
+        arg ^. Sugar.haExpr . Sugar.rPayload . Sugar.plGuid
   pure $
     mappend tryUnwrapEventMap navigateEventMap
 

@@ -14,7 +14,7 @@ module Lamdu.Sugar.Types
   , DefinitionBuiltin(..)
   , WrapAction(..)
   , Actions(..)
-    , storedGuid, wrap, mSetToHole, mSetToInnerExpr, cut
+    , wrap, mSetToHole, mSetToInnerExpr, cut
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyCollapsed, _BodyLiteralInteger
@@ -106,9 +106,7 @@ data WrapAction m
   | WrapAction (T m Guid) -- Wrap me!
 
 data Actions m = Actions
-  { _storedGuid :: Guid
-  , -- wrap not available for wrapped exprs or wrapper exprs
-    _wrap :: WrapAction m
+  { _wrap :: WrapAction m
   , -- mSetToHole not available for holes.
     _mSetToHole :: Maybe (T m Guid)
   , _mSetToInnerExpr :: Maybe (T m Guid)

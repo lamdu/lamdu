@@ -80,7 +80,7 @@ afterPick holeInfo resultId pr = do
   eventResultOfPickedResult pr
     & Lens._2 . Widget.eCursor %~
       (mappend . Monoid.Last . Just .
-       WidgetIds.fromGuid . hiStoredGuid) holeInfo
+       WidgetIds.fromGuid . hiGuid) holeInfo
     & Lens._2 . Widget.eAnimIdMapping %~
       (mappend . Monoid.Endo) obliterateOtherResults
     & return

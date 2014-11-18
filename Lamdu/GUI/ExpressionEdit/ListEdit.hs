@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.ListEdit(make) where
 
-import Control.Applicative ((<$>), (<|>), Applicative(..))
+import Control.Applicative ((<$>), Applicative(..))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
@@ -59,11 +59,9 @@ makeUnwrapped pl list myId =
           & case mItem of
             Just item
               | Lens.has (Sugar.liExpr . Sugar.rBody . Sugar._BodyHole) item
-              -> ExprGuiM.hgMNextHole %~ (storedGuid <|>)
+              -> ExprGuiM.hgMNextHole .~ Just itemGuid
               where
-                storedGuid =
-                  item ^? Sugar.liExpr . Sugar.rPayload .
-                  Sugar.plActions . Lens._Just . Sugar.storedGuid
+                itemGuid = item ^. Sugar.liExpr . Sugar.rPayload . Sugar.plGuid
             _ -> id
           & ExprEventMap.jumpHolesEventMap []
         ExpressionGui.makeFocusableView firstBracketId label

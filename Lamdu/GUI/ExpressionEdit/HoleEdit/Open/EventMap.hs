@@ -150,7 +150,9 @@ make pl holeInfo mShownResult = do
   jumpHoles <- ExprEventMap.jumpHolesEventMapIfSelected [] pl
   replace <- ExprEventMap.replaceOrComeToParentEventMap True pl
   let
-    applyOp = actionsEventMap $ ExprEventMap.applyOperatorEventMap []
+    applyOp =
+      actionsEventMap $
+      ExprEventMap.applyOperatorEventMap [] $ pl ^. Sugar.plGuid
     close = closeEventMap holeInfo
     cut = actionsEventMap $ ExprEventMap.cutEventMap config
     paste = pasteEventMap config holeInfo

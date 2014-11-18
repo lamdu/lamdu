@@ -35,8 +35,9 @@ make ::
   ExprGuiM m (EventHandlers (T m))
 make isFocused holePickers pl =
   mconcat <$> sequenceA
-  [ maybe (return mempty) (actionsEventMap holePickers) $
-    pl ^. Sugar.plActions
+  [ maybe (return mempty)
+    (actionsEventMap holePickers (pl ^. Sugar.plGuid))
+    (pl ^. Sugar.plActions)
   , jumpHolesEventMapIfSelected holePickers pl
   , replaceOrComeToParentEventMap isFocused pl
   ]
@@ -109,41 +110,39 @@ replaceOrComeToParentEventMap ::
   Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (EventHandlers (T m))
 replaceOrComeToParentEventMap isFocused pl =
-  case pl ^. Sugar.plActions of
-  Nothing -> return mempty
-  Just actions -> do
+  do
     isSelected <- isExprSelected pl
     config <- ExprGuiM.widgetEnv WE.readConfig
     let delKeys = Config.replaceKeys config ++ Config.delKeys config
     return $ if isSelected
-      then replaceEventMap config actions
+      then maybe mempty (replaceEventMap config) $ pl ^. Sugar.plActions
       else
         if isFocused
         then
           mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
           (fmap FocusDelegator.notDelegatingId) . return $
-          actions ^. Sugar.storedGuid
+          pl ^. Sugar.plGuid
         else mempty
 
 actionsEventMap ::
   MonadA m =>
-  HolePickers m ->
+  HolePickers m -> Guid ->
   Sugar.Actions m ->
   ExprGuiM m (EventHandlers (T m))
-actionsEventMap holePickers actions = do
+actionsEventMap holePickers guid actions = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   return $ mconcat
     [ wrapEventMap holePickers config
-    , applyOperatorEventMap holePickers
+    , applyOperatorEventMap holePickers guid
     , cutEventMap config
     ] actions
 
 applyOperatorEventMap ::
-  MonadA m => HolePickers m -> Sugar.Actions m -> EventHandlers (T m)
-applyOperatorEventMap holePickers actions =
+  MonadA m => HolePickers m -> Guid -> Sugar.Actions m -> EventHandlers (T m)
+applyOperatorEventMap holePickers guid actions =
   case actions ^. Sugar.wrap of
   Sugar.WrapAction wrap -> action wrap
-  Sugar.WrapperAlready -> action . return $ actions ^. Sugar.storedGuid
+  Sugar.WrapperAlready -> action $ return guid
   Sugar.WrappedAlready applyGuid -> action $ return applyGuid
   Sugar.WrapNotAllowed -> mempty
   where
@@ -186,11 +185,11 @@ replaceEventMap config actions =
     delKeys = Config.replaceKeys config ++ Config.delKeys config
 
 modifyEventMap ::
-  MonadA m => HolePickers m ->
-  Config -> Sugar.Actions m -> EventHandlers (T m)
-modifyEventMap holePickers config =
+  MonadA m => HolePickers m -> Config ->
+  Guid -> Sugar.Actions m -> EventHandlers (T m)
+modifyEventMap holePickers config guid =
   mconcat
   [ wrapEventMap holePickers config
-  , applyOperatorEventMap holePickers
+  , applyOperatorEventMap holePickers guid
   , replaceEventMap config
   ]
