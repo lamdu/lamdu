@@ -14,6 +14,7 @@ Data-files:          fonts/DejaVuSans.ttf, config.json
 Library
   -- Modules exported by the library.
   hs-Source-Dirs:      bottlelib
+                     , submodules/AlgoW
 
   Exposed-modules:     Control.Monad.Trans.Decycle,
                        Data.Function.Decycle,
@@ -112,6 +113,8 @@ Library
   ghc-prof-options:    -auto-all -caf-all -rtsopts
 
 Executable lamdu
+  hs-Source-Dirs:      .
+                ,      submodules/AlgoW
   Build-Depends:       base >= 4,
                        aeson,
                        hashable,

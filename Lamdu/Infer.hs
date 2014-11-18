@@ -1,1 +1,0 @@
-../../AlgoW/Lamdu/Infer.hs
