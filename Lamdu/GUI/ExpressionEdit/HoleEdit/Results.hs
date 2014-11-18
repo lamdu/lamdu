@@ -290,11 +290,11 @@ makeResultsList ::
   MonadA m => HoleInfo m -> GroupM m ->
   T m (Maybe (ResultsList m))
 makeResultsList holeInfo group =
-  (Lens.mapped . Lens.mapped %~ rlPreferred .~ toPreferred) .
-  typeCheckToResultsList holeInfo mkGen baseId .
-  filter (not . isHoleWrap) =<<
-  maybeInjectArgumentExpr holeInfo =<<
   baseExprWithApplyForms holeInfo baseExpr
+  >>= maybeInjectArgumentExpr holeInfo
+  <&> filter (not . isHoleWrap)
+  >>= typeCheckToResultsList holeInfo mkGen baseId
+  <&> Lens.mapped %~ rlPreferred .~ toPreferred
   where
     mkGen i guid = genFromHashable (guid, group ^. groupId, i)
     isHoleWrap = Lens.has (ExprLens.valApply . V.applyFunc . ExprLens.valHole)
