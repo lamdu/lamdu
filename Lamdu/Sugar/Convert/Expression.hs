@@ -12,7 +12,6 @@ import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import Lamdu.Sugar.Types.Internal
-import qualified Control.Lens as Lens
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
@@ -56,7 +55,7 @@ make exprPl body = do
   sugarContext <- ConvertM.readContext
   return $ Expression body Payload
     { _plGuid = exprPl ^. ipGuid
-    , _plInferredTypes = exprPl ^.. ipInferred . Lens._Just . Infer.plType
+    , _plInferredTypes = exprPl ^.. ipInferred . Infer.plType
     , _plActions = mkActions sugarContext <$> exprPl ^. ipStored
     , _plData = exprPl ^. ipData
     }

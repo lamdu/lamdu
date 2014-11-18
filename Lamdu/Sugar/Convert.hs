@@ -127,7 +127,7 @@ convertPositionalFuncParam (V.Lam param body) lamExprPl = do
     }
   where
     paramGuid = UniqueId.toGuid param
-    mParamType = lamExprPl ^? ipInferred . Lens._Just . Infer.plType . ExprLens._TFun . _1
+    mParamType = lamExprPl ^? ipInferred . Infer.plType . ExprLens._TFun . _1
 
 convertLam ::
   (MonadA m, Monoid a) =>
@@ -633,7 +633,7 @@ data ExprWhereItem a = ExprWhereItem
   , ewiParam :: V.Var
   , ewiArg :: Val a
   , ewiHiddenPayloads :: [a]
-  , ewiInferredType :: Maybe Type
+  , ewiInferredType :: Type
   }
 
 mExtractWhere :: InputExpr m a -> Maybe (ExprWhereItem (InputPayload m a))
@@ -645,7 +645,7 @@ mExtractWhere expr = do
     , ewiParam = paramGuid
     , ewiArg = arg
     , ewiHiddenPayloads = (^. V.payload) <$> [expr, func]
-    , ewiInferredType = arg ^? V.payload . ipInferred . Lens._Just . Infer.plType
+    , ewiInferredType = arg ^. V.payload . ipInferred . Infer.plType
     }
 
 convertWhereItems ::
@@ -686,9 +686,7 @@ convertWhereItems usedTags expr =
             expr ^. V.payload . ipStored <*>
             traverse (^. ipStored) (ewiBody ewi)
         , _wiName = name
-        , _wiInferredType =
-          fromMaybe (error "We always have a type (TODO: Remove Maybe wrapper)") $
-          ewiInferredType ewi
+        , _wiInferredType = ewiInferredType ewi
         }
     (nextItems, whereBody) <- convertWhereItems usedTags $ ewiBody ewi
     return (item : nextItems, whereBody)
@@ -778,7 +776,6 @@ convertDefIExpr cp valLoaded defI defType = do
     content <-
       valInferred
       <&> guidIntoPl . addStoredGuids ipStored
-      & traverse . ipInferred %~ Just
       & traverse . ipStored %~ Just
       & convertDefinitionContent recordParamsInfo mempty
     return $ DefinitionBodyExpression DefinitionExpression

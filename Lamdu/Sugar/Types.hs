@@ -96,7 +96,7 @@ data InputPayloadP inferred stored a
 Lens.makeLenses ''InputPayloadP
 
 type InputPayload m a =
-  InputPayloadP (Maybe Inferred) (Maybe (Stored m)) a
+  InputPayloadP Inferred (Maybe (Stored m)) a
 type InputExpr m a = Val (InputPayload m a)
 
 data WrapAction m

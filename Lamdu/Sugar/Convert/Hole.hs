@@ -58,17 +58,10 @@ convertPlain ::
   (MonadA m, Monoid a) =>
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertPlain exprPl =
-  maybe convertUntypedHole convertPlainTyped (Lens.sequenceOf ipInferred exprPl)
+  mkHole exprPl
+  <&> BodyHole
+  >>= ConvertExpr.make exprPl
   <&> rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
-  where
-    convertUntypedHole =
-      ConvertExpr.make exprPl $ BodyHole Hole
-      { _holeMActions = Nothing
-      , _holeMInferred = Nothing
-      , _holeMArg = Nothing
-      }
-    convertPlainTyped plInferred =
-      ConvertExpr.make exprPl . BodyHole =<< mkHole plInferred
 
 mkPaste :: MonadA m => Stored m -> ConvertM m (Maybe (T m Guid))
 mkPaste exprP = do
@@ -129,7 +122,7 @@ _aWhen True x = x
 
 _translateIfInferred ::
   (Guid -> Random.StdGen) ->
-  InputPayloadP (Maybe Inferred) stored a ->
+  InputPayloadP Inferred stored a ->
   Guid ->
   [(Guid, Guid)]
 _translateIfInferred _mkGen _aIP _bGuid = [] -- do
@@ -137,8 +130,8 @@ _translateIfInferred _mkGen _aIP _bGuid = [] -- do
   -- translateInferred mkGen inferredVal (aIP ^. ipGuid) bGuid
   -- where
   --   inferredVal =
-  --     aIP ^? ipInferred . Lens._Just . InferDeref.dValue
-  --     <&> void & fromMaybe ExprUtil.pureHole
+  --     aIP ^. ipInferred . InferDeref.dValue
+  --     & void & fromMaybe ExprUtil.pureHole
 
 _translateInferred ::
   (Guid -> Random.StdGen) ->
@@ -159,7 +152,7 @@ _translateInferred _mkGen _inferredVal _aGuid _bGuid = []
 
 idTranslations ::
   (Guid -> Random.StdGen) ->
-  Val (InputPayloadP (Maybe Inferred) stored a) ->
+  Val (InputPayloadP Inferred stored a) ->
   Val Guid ->
   [(Guid, Guid)]
 idTranslations _mkGen _convertedExpr _writtenExpr = []
@@ -251,7 +244,7 @@ mkHoleInferred inferred = do
   where
     mkInputPayload i guid = InputPayload
       { _ipGuid = guid
-      , _ipInferred = Just i
+      , _ipInferred = i
       , _ipStored = Nothing
       , _ipData = ()
       }
@@ -379,10 +372,10 @@ writeConvertTypeChecked gen sugarContext holeStored inferredVal newCtx = do
       makeConsistentPayload <$> writtenExpr
     newSugarContext = sugarContext & ConvertM.scInferContext .~ newCtx
   converted <-
-    ConvertM.run newSugarContext . ConvertM.convertSubexpression $
     consistentExpr
     <&> ipStored %~ Just
-    <&> ipInferred %~ Just
+    & ConvertM.convertSubexpression
+    & ConvertM.run newSugarContext
   return
     ( converted
     , consistentExpr
@@ -434,8 +427,7 @@ mkHoleResult sugarContext (InputPayload guid inferPayload stored ()) mkGen val =
         PickedResult
         { _prMJumpTo = (^. V.payload . Lens._1) <$> mNextHole
         , _prIdTranslation =
-          idTranslations mkGen
-          (consistentExpr <&> ipInferred %~ Just)
+          idTranslations mkGen consistentExpr
           (ExprIRef.valIGuid . Property.value . (^. ipStored) <$> writtenExpr)
         }
 

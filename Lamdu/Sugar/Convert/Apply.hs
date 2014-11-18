@@ -2,9 +2,9 @@ module Lamdu.Sugar.Convert.Apply
   ( convert
   ) where
 
-import Control.Applicative ((<$>), Applicative(..))
+import Control.Applicative ((<$>))
 import Control.Lens.Operators
-import Control.Monad (join, guard, unless)
+import Control.Monad (guard, unless)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import Control.Monad.Trans.Maybe (MaybeT(..))
@@ -133,24 +133,23 @@ unwrap ::
 unwrap outerP argP argExpr = do
   res <- DataOps.replace outerP (Property.value argP)
   return $
-    case mOrderedHoles of
-    Just (x:_) -> x ^. V.payload . Lens._1
+    case orderedHoles of
+    (x:_) -> x ^. V.payload . Lens._1
     _ -> ExprIRef.valIGuid res
   where
-    mArgInferred = Lens.sequenceOf (Lens.traversed . ipInferred) argExpr
     f x =
       ( x ^. ipGuid
       , x ^. ipInferred
       )
-    mOrderedHoles = ConvertHole.orderedInnerHoles . fmap f <$> mArgInferred
+    orderedHoles = ConvertHole.orderedInnerHoles $ f <$> argExpr
 
 checkTypeMatch :: MonadA m => Type -> Type -> ConvertM m Bool
 checkTypeMatch x y = do
   inferContext <- (^. ConvertM.scInferContext) <$> ConvertM.readContext
   return $ Lens.has Lens._Right $ evalStateT (Infer.run (unify x y)) inferContext
 
-ipType :: Lens.Traversal' (InputPayload m a) Type
-ipType = ipInferred . Lens._Just . Infer.plType
+ipType :: Lens.Lens' (InputPayload m a) Type
+ipType = ipInferred . Infer.plType
 
 convertAppliedHole ::
   (MonadA m, Monoid a) =>
@@ -158,7 +157,7 @@ convertAppliedHole ::
   MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedHole funcI argS argI exprPl = do
   guard $ Lens.has ExprLens.valHole funcI
-  isTypeMatch <- join $ maybeToMPlus $ fmap lift $ checkTypeMatch <$> (argI ^? V.payload . ipType) <*> (exprPl ^? ipType)
+  isTypeMatch <- lift $ checkTypeMatch (argI ^. V.payload . ipType) (exprPl ^. ipType)
   let
     argWrap =
       maybe WrapNotAllowed

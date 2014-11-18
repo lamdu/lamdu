@@ -1,6 +1,5 @@
 module Lamdu.Sugar.InputExpr
-  ( makePure
-  , randomizeExprAndParams
+  ( randomizeExprAndParams
   , randomizeParamIdsG
 
     -- TODO: To its own module?
@@ -20,7 +19,6 @@ import Data.Maybe (fromMaybe)
 import Data.Traversable (traverse)
 import Lamdu.Expr.Identifier (Identifier(..))
 import Lamdu.Expr.Val (Val(..))
-import Lamdu.Sugar.Types (InputPayloadP(..), InputPayload)
 import System.Random (Random, RandomGen, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
@@ -117,9 +115,3 @@ randomizeExprAndParams ::
 randomizeExprAndParams gen = randomizeParamIds paramGen . randomizeExpr exprGen
   where
     (exprGen, paramGen) = Random.split gen
-
-makePure :: RandomGen gen => gen -> Val a -> Val (InputPayload m a)
-makePure gen =
-  randomizeExprAndParams gen . fmap f
-  where
-    f a par = InputPayload par Nothing Nothing a
