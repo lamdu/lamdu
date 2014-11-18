@@ -32,7 +32,6 @@ import qualified Lamdu.Expr.RecordVal as RecordVal
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
-import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 
 nil ::
@@ -72,7 +71,7 @@ mkListItem listItemExpr recordArgS exprPl tailI mAddNextItem =
   , _liMActions = do
       addNext <- mAddNextItem
       exprProp <- exprPl ^. ipStored
-      argProp <- tailI ^. SugarInfer.exprStored
+      argProp <- tailI ^. V.payload . ipStored
       return ListItemActions
         { _itemAddNext = addNext
         , _itemDelete = replaceWith exprProp argProp

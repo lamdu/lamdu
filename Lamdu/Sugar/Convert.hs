@@ -562,7 +562,7 @@ convertDefinitionParams recordParamsInfo usedTags expr =
   where
     stored =
       fromMaybe (error "Definition body is always stored!") $
-      expr ^. SugarInfer.exprStored
+      expr ^. V.payload . ipStored
     makeFieldParam (tag, typeExpr) =
       FieldParam
       { fpTag = tag
@@ -691,7 +691,7 @@ convertWhereItems usedTags expr =
         , _wiGuid = defGuid
         , _wiActions =
             mkWIActions <$>
-            expr ^. SugarInfer.exprStored <*>
+            expr ^. V.payload . ipStored <*>
             traverse (^. ipStored) (ewiBody ewi)
         , _wiName = name
         , _wiInferredType =

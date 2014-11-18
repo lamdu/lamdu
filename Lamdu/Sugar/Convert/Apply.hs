@@ -35,7 +35,6 @@ import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
-import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 
@@ -181,7 +180,7 @@ convertAppliedHole funcI argS argI exprPl = do
       }
     mUnwrap = do
       stored <- exprPl ^. ipStored
-      argP <- argI ^. SugarInfer.exprStored
+      argP <- argI ^. V.payload . ipStored
       return $ unwrap stored argP argI
   lift $ ConvertHole.convertPlain exprPl
     <&> rBody . _BodyHole . holeMArg .~ Just holeArg
