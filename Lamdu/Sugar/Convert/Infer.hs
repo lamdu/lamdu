@@ -19,6 +19,7 @@ import Lamdu.Expr.Val (Val(..))
 import Lamdu.Infer (Infer)
 import Lamdu.Infer.Load (Loader(..))
 import Lamdu.Infer.Unify (unify)
+import Lamdu.Infer.Update (updateInferredVal)
 import Lamdu.Sugar.Types.Internal
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
@@ -61,8 +62,9 @@ loadInferInto ::
 loadInferInto pl val = do
   inferredVal <- loadInferScope (pl ^. Infer.plScope) val
   let inferredType = inferredVal ^. V.payload . _1 . Infer.plType
-  liftInfer $ unify inferredType (pl ^. Infer.plType)
-  return inferredVal
+  liftInfer $ do
+    unify inferredType (pl ^. Infer.plType)
+    updateInferredVal inferredVal
 
 loadInfer ::
   MonadA m => Val (Stored m) ->
