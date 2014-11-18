@@ -350,13 +350,12 @@ writeConvertTypeChecked ::
   (MonadA m, Monoid a) => Random.StdGen ->
   ConvertM.Context m -> Stored m ->
   Val (Infer.Payload, MStorePoint m a) ->
-  Infer.Context ->
   T m
   ( ExpressionU m a
   , Val (InputPayloadP Infer.Payload (Stored m) a)
   , Val (InputPayloadP Infer.Payload (Stored m) a)
   )
-writeConvertTypeChecked gen sugarContext holeStored inferredVal newCtx = do
+writeConvertTypeChecked gen sugarContext holeStored inferredVal = do
   -- With the real stored guids:
   writtenExpr <-
     fmap toPayload .
@@ -369,12 +368,11 @@ writeConvertTypeChecked gen sugarContext holeStored inferredVal newCtx = do
     consistentExpr =
       InputExpr.randomizeExprAndParams gen $
       makeConsistentPayload <$> writtenExpr
-    newSugarContext = sugarContext & ConvertM.scInferContext .~ newCtx
   converted <-
     consistentExpr
     <&> ipStored %~ Just
     & ConvertM.convertSubexpression
-    & ConvertM.run newSugarContext
+    & ConvertM.run sugarContext
   return
     ( converted
     , consistentExpr
@@ -403,21 +401,20 @@ mkHoleResult sugarContext (InputPayload guid inferPayload stored ()) mkGen val =
       (inferredVal, ctx) <-
         (`runStateT` (sugarContext ^. ConvertM.scInferContext)) $
         SugarInfer.loadInferInto inferPayload val
-      lift $ writeConvertTypeChecked (mkGen guid) sugarContext stored inferredVal ctx
+      lift $ writeConvertTypeChecked (mkGen guid) (sugarContext & ConvertM.scInferContext .~ ctx) stored inferredVal
 
-  traverse (mkResult (Transaction.merge forkedChanges)) mResult
+  return $ mkResult (Transaction.merge forkedChanges) <$> mResult
   where
-    mkResult unfork (fConverted, fConsistentExpr, fWrittenExpr) = do
-      let
-        pick = unfork *> mkPickedResult fConsistentExpr fWrittenExpr
-        inferredExpr = (^. ipInferred) <$> fWrittenExpr
-      pure HoleResult
+    mkResult unfork (fConverted, fConsistentExpr, fWrittenExpr) =
+      HoleResult
         { _holeResultInferred = inferredExpr
         , _holeResultConverted = fConverted
-        , _holeResultPick = pick
+        , _holeResultPick = unfork *> mkPickedResult fConsistentExpr fWrittenExpr
         , _holeResultHasHoles =
           not . null . uninferredHoles $ (,) () <$> inferredExpr
         }
+        where
+          inferredExpr = (^. ipInferred) <$> fWrittenExpr
     mkPickedResult consistentExpr writtenExpr = do
       let
         f payload = (payload ^. ipGuid, payload ^. ipInferred)
