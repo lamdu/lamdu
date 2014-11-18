@@ -42,7 +42,6 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Scheme as Scheme
 import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.TypeVars as TypeVars
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
@@ -112,7 +111,7 @@ convertPositionalFuncParam ::
   (MonadA m, Monoid a) => V.Lam (InputExpr m a) ->
   InputPayload m a ->
   ConvertM m (FuncParam MStoredName m)
-convertPositionalFuncParam (V.Lam param _paramTypeConstraint body) lamExprPl = do
+convertPositionalFuncParam (V.Lam param body) lamExprPl = do
   name <- makeStoredNamePropertyS param
   pure FuncParam
     { _fpName = name
@@ -134,7 +133,7 @@ convertLam ::
   (MonadA m, Monoid a) =>
   V.Lam (InputExpr m a) ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
-convertLam lam@(V.Lam paramVar _paramTypeConstraint result) exprPl = do
+convertLam lam@(V.Lam paramVar result) exprPl = do
   param <- convertPositionalFuncParam lam exprPl
   resultS <- ConvertM.convertSubexpression result
   BodyLam
@@ -539,9 +538,9 @@ convertDefinitionParams ::
   )
 convertDefinitionParams recordParamsInfo usedTags expr =
   case expr ^. V.body of
-  V.BAbs lambda@(V.Lam paramVar paramTypeConstraint body) -> do
+  V.BAbs lambda@(V.Lam paramVar body) -> do
     param <- convertPositionalFuncParam lambda (expr ^. V.payload)
-    case schemeType paramTypeConstraint of
+    case T.TVar undefined of -- TODO: we should read associated data for param list
       T.TRecord composite
         | Nothing <- extension
         , Map.size fields >= 2
@@ -556,7 +555,7 @@ convertDefinitionParams recordParamsInfo usedTags expr =
       _ ->
         pure
         ( []
-        , singleConventionalParam stored param paramVar paramTypeConstraint body
+        , singleConventionalParam stored param paramVar body
         , body
         )
   _ -> return ([], emptyConventionalParams stored, expr)
@@ -573,8 +572,8 @@ convertDefinitionParams recordParamsInfo usedTags expr =
 singleConventionalParam ::
   MonadA m =>
   Stored m -> FuncParam MStoredName m ->
-  V.Var -> Scheme -> InputExpr m a -> ConventionalParams m a
-singleConventionalParam _lamProp existingParam _existingParamVar _existingParamTypeConstraint body =
+  V.Var ->InputExpr m a -> ConventionalParams m a
+singleConventionalParam _lamProp existingParam _existingParamVar body =
   ConventionalParams
   { cpTags = mempty
   , cpParamInfos = Map.empty
@@ -637,18 +636,10 @@ data ExprWhereItem a = ExprWhereItem
   , ewiInferredType :: Maybe Type
   }
 
-isUnconstrained :: Scheme -> Bool
-isUnconstrained (Scheme tvs constraints (T.TVar tv))
-  | constraints == mempty
-  , tv `TypeVars.member` tvs = True
-isUnconstrained _ = False
-
 mExtractWhere :: InputExpr m a -> Maybe (ExprWhereItem (InputPayload m a))
 mExtractWhere expr = do
   V.Apply func arg <- expr ^? ExprLens.valApply
-  V.Lam paramGuid paramTypeConstraint body <- func ^? V.body . ExprLens._BAbs
-  -- paramType has to be Hole for this to be sugarred to Where
-  guard $ isUnconstrained paramTypeConstraint
+  V.Lam paramGuid body <- func ^? V.body . ExprLens._BAbs
   Just ExprWhereItem
     { ewiBody = body
     , ewiParam = paramGuid

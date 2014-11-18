@@ -46,7 +46,6 @@ import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
-import qualified Lamdu.Expr.Scheme as S
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -399,7 +398,7 @@ primitiveGroups holeInfo =
   | nonEmptyAll Char.isDigit searchTerm
   ] ++
   [ mkGroupBody False "Lambda" ["\\", "Lambda", "Λ", "λ"] $
-    V.BAbs $ V.Lam "NewLambda" S.any P.hole
+    V.BAbs $ V.Lam "NewLambda" P.hole
   -- , mkGroupBody False "GetField" [".", "Get Field"] . V.VGetField $
   --   V.GetField pureHole pureHole
   -- , Group "RecValue" (SearchTerms ["Record Value", "{"] (Any False)) .
