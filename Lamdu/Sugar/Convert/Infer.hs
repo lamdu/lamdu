@@ -6,7 +6,6 @@ module Lamdu.Sugar.Convert.Infer
   , loadInferInto
   , loadInfer
 
-  , exprInferred
   , exprStored
   , exprGuid
   ) where
@@ -99,8 +98,3 @@ exprGuid = V.payload . Sugar.ipGuid
 exprStored ::
   Lens' (Val (Sugar.InputPayloadP inferred stored a)) stored
 exprStored = V.payload . Sugar.ipStored
-
--- TODO: Remove
-exprInferred ::
-  Lens' (Val (Sugar.InputPayloadP inferred stored a)) inferred
-exprInferred = V.payload . Sugar.ipInferred
