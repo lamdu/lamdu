@@ -55,7 +55,7 @@ make exprPl body = do
   sugarContext <- ConvertM.readContext
   return $ Expression body Payload
     { _plGuid = exprPl ^. ipGuid
-    , _plInferredTypes = exprPl ^.. ipInferred . Infer.plType
+    , _plInferredType = exprPl ^. ipInferred . Infer.plType
     , _plActions = mkActions sugarContext <$> exprPl ^. ipStored
     , _plData = exprPl ^. ipData
     }

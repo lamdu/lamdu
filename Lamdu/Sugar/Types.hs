@@ -19,7 +19,7 @@ module Lamdu.Sugar.Types
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyCollapsed, _BodyLiteralInteger
     , _BodyList, _BodyRecord
-  , Payload(..), plGuid, plInferredTypes, plActions, plData
+  , Payload(..), plGuid, plInferredType, plActions, plData
   , ExpressionP(..), rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..), MStoredName
   , DefinitionN, DefinitionU
@@ -114,7 +114,7 @@ data Actions m = Actions
   }
 
 data Payload m a = Payload
-  { _plInferredTypes :: [Type] -- TODO: Use Maybe, not []
+  { _plInferredType :: Type
   -- This must be embedded in the expression AST and not as a separate
   -- function so that AddNames can correct the "name" here in the
   -- right context.

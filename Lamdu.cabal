@@ -223,7 +223,6 @@ Executable lamdu
                ,       Lamdu.Sugar.Expression
                ,       Lamdu.Sugar.InputExpr
                ,       Lamdu.Sugar.Internal
-               ,       Lamdu.Sugar.RemoveTypes
                ,       Lamdu.Sugar.Types
                ,       Lamdu.Sugar.Types.Internal
                ,       Lamdu.Suggest

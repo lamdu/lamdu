@@ -18,7 +18,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionEdit.DefinitionContentEdit as DefinitionContentEdit
@@ -28,7 +27,6 @@ import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.AddNames as AddNames
 import qualified Lamdu.Sugar.Convert as SugarConvert
-import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -37,13 +35,8 @@ make ::
   MonadA m => Anchors.CodeProps m -> Settings ->
   DefIM m -> WidgetEnvT (T m) (WidgetT m)
 make cp settings defI = ExprGuiM.run ExpressionEdit.make cp settings $ do
-  infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
-  let
-    maybeRemoveTypes =
-      case infoMode of
-      Settings.Types -> id
-      _ -> fmap SugarRemoveTypes.nonHoleTypes
-  defS <- ExprGuiM.transaction $ maybeRemoveTypes <$> loadConvertDefI cp defI
+  -- infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
+  defS <- ExprGuiM.transaction $ loadConvertDefI cp defI
   case defS ^. Sugar.drBody of
     Sugar.DefinitionBodyExpression bodyExpr ->
       makeExprDefinition defS bodyExpr

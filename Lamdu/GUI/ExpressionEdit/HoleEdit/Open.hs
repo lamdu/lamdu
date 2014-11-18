@@ -41,7 +41,6 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
@@ -204,7 +203,6 @@ makeHoleResultWidget resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   resultGui <-
     ExprGuiM.makeSubexpression 0 .
-    SugarRemoveTypes.holeResultTypes .
     postProcessSugar $ holeResult ^. Sugar.holeResultConverted
   resultGui ^. ExpressionGui.egWidget
     & Widget.wFrame %~ Anim.mapIdentities (`mappend` (resultSuffix # Widget.toAnimId resultId))

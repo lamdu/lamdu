@@ -51,7 +51,6 @@ import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
 
 onMatchingSubexprs ::
   MonadA m => (a -> m ()) -> (a -> Val () -> Bool) -> Val a -> m ()
@@ -329,30 +328,6 @@ convertGetField (V.GetField recExpr tag) exprPl = do
             }
         }
         <&> BodyGetField
-
-removeRedundantSubExprTypes :: Expression n m a -> Expression n m a
-removeRedundantSubExprTypes =
-  rBody %~
-  ( Lens.traversed %~ removeRedundantTypes
-    & Lens.outside _BodyHole .~
-      BodyHole . (Lens.traversed %~ removeRedundantSubExprTypes)
-  ) .
-  (_BodyApply . aFunc %~ remSuc) .
-  (_BodyGetField . gfRecord %~ remSuc) .
-  (_BodyLam . lResult %~ remSuc)
-  where
-    remSuc =
-      Lens.filtered (Lens.nullOf (rBody . _BodyHole)) %~
-      SugarRemoveTypes.successfulType
-
-removeRedundantTypes :: Expression name m a -> Expression name m a
-removeRedundantTypes =
-  removeRedundantSubExprTypes .
-  (Lens.filtered cond %~ SugarRemoveTypes.successfulType)
-  where
-    cond e =
-      Lens.anyOf (rBody . _BodyGetVar) ((/= GetDefinition) . (^. gvVarType)) e ||
-      Lens.has (rBody . _BodyRecord) e
 
 convertGlobal ::
   MonadA m => V.GlobalId -> InputPayload m a -> ConvertM m (ExpressionU m a)
@@ -779,7 +754,7 @@ convertDefIExpr cp valLoaded defI defType = do
       & traverse . ipStored %~ Just
       & convertDefinitionContent recordParamsInfo mempty
     return $ DefinitionBodyExpression DefinitionExpression
-      { _deContent = removeRedundantTypes <$> content
+      { _deContent = content
       , _deTypeInfo =
         makeExprDefTypeInfo exprI defI defType $
         Infer.makeScheme newInferContext $
