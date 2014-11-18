@@ -56,20 +56,27 @@ import qualified System.Random as Random
 
 type T = Transaction
 
-data SearchTerms = SearchTerms
+data GroupPrecedence = LowPrecedence | HighPrecedence
+  deriving Eq
+instance Monoid GroupPrecedence where
+  mempty = LowPrecedence
+  mappend LowPrecedence LowPrecedence = LowPrecedence
+  mappend _ _ = HighPrecedence
+
+data GroupAttributes = GroupAttributes
   { _searchTerms :: [String]
-  , __searchTermsHighPrecedence :: Any
+  , __precedence :: GroupPrecedence
   }
 
 data Group def = Group
   { _groupId :: String
-  , _groupSearchTerms :: SearchTerms
+  , _groupSearchTerms :: GroupAttributes
   , _groupBaseExpr :: Val ()
   }
 type GroupM m = Group (DefIM m)
 
-derive makeMonoid ''SearchTerms
-Lens.makeLenses ''SearchTerms
+derive makeMonoid ''GroupAttributes
+Lens.makeLenses ''GroupAttributes
 Lens.makeLenses ''Group
 
 data ResultType = GoodResult | BadResult
@@ -103,12 +110,12 @@ getVarsToGroup (getVar, expr) = sugarNameToGroup (getVar ^. Sugar.gvName . Sugar
 getParamsToGroup :: (Sugar.GetParams Sugar.Name m, Val ()) -> Group def
 getParamsToGroup (getParams, expr) =
   sugarNameToGroup (getParams ^. Sugar.gpDefName . Sugar.npName) expr
-  & groupSearchTerms <>~ SearchTerms ["params"] (Any True)
+  & groupSearchTerms <>~ GroupAttributes ["params"] HighPrecedence
 
 sugarNameToGroup :: Sugar.Name -> Val () -> Group def
 sugarNameToGroup (Sugar.Name _ collision varName) expr = Group
   { _groupId = "Var" ++ varName ++ ":" ++ concat collisionStrs
-  , _groupSearchTerms = SearchTerms (varName : collisionStrs) (Any True)
+  , _groupSearchTerms = GroupAttributes (varName : collisionStrs) HighPrecedence
   , _groupBaseExpr = expr
   }
   where
@@ -374,7 +381,7 @@ makeAllGroups holeInfo = do
     inferredGroups =
       [ Group
         { _groupId = "inferred"
-        , _groupSearchTerms = SearchTerms ["inferred"] (Any True)
+        , _groupSearchTerms = GroupAttributes ["inferred"] HighPrecedence
         , _groupBaseExpr = iVal
         }
       | Lens.nullOf ExprLens.valHole iVal
@@ -391,18 +398,18 @@ makeAllGroups holeInfo = do
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
-  [ mkGroupBody True "LiteralInt" [searchTerm] $
+  [ mkGroupBody HighPrecedence "LiteralInt" [searchTerm] $
     V.BLeaf $ V.LLiteralInteger $ read searchTerm
   | nonEmptyAll Char.isDigit searchTerm
   ] ++
-  [ mkGroupBody False "Lambda" ["\\", "Lambda", "Λ", "λ"] $
+  [ mkGroupBody LowPrecedence "Lambda" ["\\", "Lambda", "Λ", "λ"] $
     V.BAbs $ V.Lam "NewLambda" P.hole
-  -- , mkGroupBody False "GetField" [".", "Get Field"] . V.VGetField $
+  -- , mkGroupBody LowPrecedence "GetField" [".", "Get Field"] . V.VGetField $
   --   V.GetField pureHole pureHole
-  -- , Group "RecValue" (SearchTerms ["Record Value", "{"] (Any False)) .
+  -- , Group "RecValue" (GroupAttributes ["Record Value", "{"] LowPrecedence) .
   --   fromMaybe (record V.KVal) . ExprUtil.recordValForm .
   --   void $ hiInferred holeInfo ^. Sugar.hiType
-  -- , Group "RecType" (SearchTerms ["Record Type", "{"] (Any False)) $
+  -- , Group "RecType" (GroupAttributes ["Record Type", "{"] LowPrecedence) $
   --   record V.KType
   ]
   where
@@ -412,20 +419,20 @@ primitiveGroups holeInfo =
     --   case hiMArgument holeInfo of
     --   Nothing -> []
     --   Just _ -> [(pureHole, pureHole)]
-    mkGroupBody highPrecedence gId terms body = Group
+    mkGroupBody prec gId terms body = Group
       { _groupId = gId
-      , _groupSearchTerms = SearchTerms terms (Any highPrecedence)
+      , _groupSearchTerms = GroupAttributes terms prec
       , _groupBaseExpr = Val () body
       }
 
-preferFor :: String -> SearchTerms -> Bool
-preferFor searchTerm (SearchTerms terms (Any True)) = searchTerm `elem` terms
+preferFor :: String -> GroupAttributes -> Bool
+preferFor searchTerm (GroupAttributes terms HighPrecedence) = searchTerm `elem` terms
 preferFor _ _ = False
 
-groupOrdering :: String -> SearchTerms -> [Bool]
-groupOrdering searchTerm (SearchTerms terms (Any highPrecedence)) =
+groupOrdering :: String -> GroupAttributes -> [Bool]
+groupOrdering searchTerm (GroupAttributes terms precedence) =
   map not
-  [ highPrecedence
+  [ precedence == HighPrecedence
   , match (==)
   , match isPrefixOf
   , match insensitivePrefixOf
@@ -435,13 +442,13 @@ groupOrdering searchTerm (SearchTerms terms (Any highPrecedence)) =
     insensitivePrefixOf = isPrefixOf `on` map Char.toLower
     match f = any (f searchTerm) terms
 
-holeMatches :: (a -> SearchTerms) -> String -> [a] -> [a]
+holeMatches :: (a -> GroupAttributes) -> String -> [a] -> [a]
 holeMatches getSearchTerms searchTerm =
   sortOn (groupOrdering searchTerm . getSearchTerms) .
   filter (nameMatch . getSearchTerms)
   where
-    nameMatch (SearchTerms _ (Any False))
+    nameMatch (GroupAttributes _ LowPrecedence)
       | null searchTerm = False
-    nameMatch (SearchTerms terms _) =
+    nameMatch (GroupAttributes terms _) =
       any (insensitiveInfixOf searchTerm) terms
     insensitiveInfixOf = isInfixOf `on` map Char.toLower
