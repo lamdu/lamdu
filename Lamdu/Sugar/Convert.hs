@@ -432,11 +432,12 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
     , cpAddFirstParam =
       error "TODO cpAddFirstParam"--  addFirstFieldParam lamGuid $
       -- fromMaybe (error "Record param type must be stored!") mParamTypeI
-    , cpHiddenPayloads = [lambdaExprI ^. V.payload]
+    , cpHiddenPayloads = [pl]
     }
   where
-    lamGuid = lambdaExprI ^. SugarInfer.exprGuid
-    _mLambdaP = lambdaExprI ^. V.payload . ipStored
+    pl = lambdaExprI ^. V.payload
+    lamGuid = pl ^. ipGuid
+    _mLambdaP = pl ^. ipStored
     fpIdGuid = Guid.combine lamGuid . UniqueId.toGuid . fpTag
     mkParamInfo fp =
       Map.singleton (fpTag fp) . ConvertM.TagParamInfo param $ fpIdGuid fp

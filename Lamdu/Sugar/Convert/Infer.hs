@@ -5,11 +5,8 @@ module Lamdu.Sugar.Convert.Infer
   , loadInferScope -- TODO: is this sensible to export here?
   , loadInferInto
   , loadInfer
-
-  , exprGuid
   ) where
 
-import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Lens.Tuple
 import Control.Monad (mzero)
@@ -18,7 +15,6 @@ import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.State (StateT(..), mapStateT)
 import Control.MonadA (MonadA)
 import Data.Maybe (fromMaybe)
-import Data.Store.Guid (Guid)
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Infer (Infer)
 import Lamdu.Infer.Load (Loader(..))
@@ -87,8 +83,3 @@ loadInfer val =
 
 -- TODO: InferredWithImplicits m a had this in it:
 -- Val (Sugar.InputPayloadP (Inferred m) (Maybe (Stored m)) a)
-
--- TODO: Remove
-exprGuid ::
-  Lens' (Val (Sugar.InputPayloadP inferred stored a)) Guid
-exprGuid = V.payload . Sugar.ipGuid
