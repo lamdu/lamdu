@@ -256,12 +256,16 @@ convertField _mIRef inst tag expr = do
     , _rfExpr = exprS
     }
 
+plIRef ::
+  Lens.Traversal' (InputPayloadP i (Maybe (Stored m)) a) (ExprIRef.ValIM m)
+plIRef = ipStored . Lens._Just . Property.pVal
+
 convertEmptyRecord :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m a)
 convertEmptyRecord exprPl =
   ConvertExpr.make exprPl $
   BodyRecord $ Record
   { _rItems = []
-  , _rMAddFirstItem = error "TODO: _rMAddFirstItem" -- addField <$> exprPl ^? SugarInfer.plIRef
+  , _rMAddFirstItem = error "TODO: _rMAddFirstItem" -- addField <$> exprPl ^? plIRef
   }
 
 convertRecExtend ::
@@ -270,7 +274,7 @@ convertRecExtend ::
 convertRecExtend (V.RecExtend tag val rest) exprPl = do
   restS <- ConvertM.convertSubexpression rest
   fieldS <-
-      convertField (exprPl ^? SugarInfer.plIRef)
+      convertField (exprPl ^? plIRef)
       (Guid.augment "tag" (exprPl ^. ipGuid)) tag val
   case restS ^. rBody of
     BodyRecord (Record restFields _mAddFirstAddItem) ->

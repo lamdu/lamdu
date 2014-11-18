@@ -10,8 +10,6 @@ module Lamdu.Sugar.Convert.Infer
   , exprStored
   , exprGuid
   , exprData
-
-  , plIRef
   ) where
 
 import Control.Lens (Lens')
@@ -30,7 +28,6 @@ import Lamdu.Infer.Load (Loader(..))
 import Lamdu.Infer.Unify (unify)
 import Lamdu.Sugar.Types.Internal
 import qualified Control.Lens as Lens
-import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -113,8 +110,3 @@ exprInferred = V.payload . Sugar.ipInferred
 exprData ::
   Lens' (Val (Sugar.InputPayloadP inferred stored a)) a
 exprData = V.payload . Sugar.ipData
-
--- TODO: Move to ...?
-plIRef ::
-  Lens.Traversal' (Sugar.InputPayloadP i (Maybe (Stored m)) a) (ExprIRef.ValIM m)
-plIRef = Sugar.ipStored . Lens._Just . Property.pVal
