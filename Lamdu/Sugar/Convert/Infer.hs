@@ -9,7 +9,6 @@ module Lamdu.Sugar.Convert.Infer
   , exprInferred
   , exprStored
   , exprGuid
-  , exprData
   ) where
 
 import Control.Lens (Lens')
@@ -105,8 +104,3 @@ exprStored = V.payload . Sugar.ipStored
 exprInferred ::
   Lens' (Val (Sugar.InputPayloadP inferred stored a)) inferred
 exprInferred = V.payload . Sugar.ipInferred
-
--- TODO: Remove
-exprData ::
-  Lens' (Val (Sugar.InputPayloadP inferred stored a)) a
-exprData = V.payload . Sugar.ipData

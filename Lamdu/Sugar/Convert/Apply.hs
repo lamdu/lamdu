@@ -185,5 +185,5 @@ convertAppliedHole funcI argS argI exprPl = do
       return $ unwrap stored argP argI
   lift $ ConvertHole.convertPlain exprPl
     <&> rBody . _BodyHole . holeMArg .~ Just holeArg
-    <&> rPayload . plData <>~ funcI ^. SugarInfer.exprData
+    <&> rPayload . plData <>~ funcI ^. V.payload . ipData
     <&> rPayload . plActions . Lens._Just . wrap .~ WrapperAlready
