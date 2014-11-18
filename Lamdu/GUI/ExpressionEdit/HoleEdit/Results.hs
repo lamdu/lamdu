@@ -292,12 +292,10 @@ makeResultsList ::
 makeResultsList holeInfo group =
   baseExprWithApplyForms holeInfo baseExpr
   >>= maybeInjectArgumentExpr holeInfo
-  <&> filter (not . isHoleWrap)
   >>= typeCheckToResultsList holeInfo mkGen baseId
   <&> Lens.mapped %~ rlPreferred .~ toPreferred
   where
     mkGen i guid = genFromHashable (guid, group ^. groupId, i)
-    isHoleWrap = Lens.has (ExprLens.valApply . V.applyFunc . ExprLens.valHole)
     toPreferred
       | Lens.anyOf groupSearchTerms (preferFor searchTerm) group = Preferred
       | otherwise = NotPreferred
