@@ -75,12 +75,13 @@ import Data.Monoid (Monoid(..))
 import Data.Monoid.Generic (def_mempty, def_mappend)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
+import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable)
 import GHC.Generics (Generic)
 import Lamdu.Expr.Scheme (Scheme)
 import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val)
-import Lamdu.Sugar.Types.Internal (T, Stored)
+import Lamdu.Sugar.Types.Internal (Stored)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
@@ -88,6 +89,8 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Types.Internal as TypesInternal
 import qualified System.Random as Random
+
+type T = Transaction
 
 data InputPayloadP stored a
   = InputPayload

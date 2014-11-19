@@ -13,6 +13,7 @@ import Control.MonadA (MonadA)
 import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
+import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.Data.Anchors (PresentationMode(..))
 import Lamdu.Expr.Type (Type)
@@ -37,6 +38,8 @@ import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+
+type T = Transaction
 
 convert ::
   (MonadA m, Monoid a) => V.Apply (InputExpr m a) ->

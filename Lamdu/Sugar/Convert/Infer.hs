@@ -15,6 +15,7 @@ import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.State (StateT(..), mapStateT)
 import Control.MonadA (MonadA)
 import Data.Maybe (fromMaybe)
+import Data.Store.Transaction (Transaction)
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Infer (Infer)
 import Lamdu.Infer.Load (Loader(..))
@@ -29,6 +30,8 @@ import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Load as InferLoad
 import qualified Lamdu.Sugar.Types as Sugar
+
+type T = Transaction
 
 type ExpressionSetter def = Val () -> Val ()
 

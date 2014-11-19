@@ -16,12 +16,12 @@ import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..), (<>))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
+import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable(..))
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
-import Lamdu.Sugar.Types.Internal
 import qualified Control.Lens as Lens
 import qualified Data.Map.Utils as MapUtils
 import qualified Lamdu.Data.Anchors as Anchors
@@ -33,6 +33,8 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+
+type T = Transaction
 
 nil ::
   MonadA m => V.GlobalId -> InputPayload m a -> MaybeT (ConvertM m) (ExpressionU m a)

@@ -15,6 +15,7 @@ import Data.Maybe (listToMaybe)
 import Data.Maybe.Utils(unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
+import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.Expr.IRef (DefIM)
 import Lamdu.Expr.Type (Type(..))
@@ -46,6 +47,8 @@ import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.InputExpr as InputExpr
 import qualified System.Random as Random
+
+type T = Transaction
 
 convert ::
   (MonadA m, Monoid a) =>

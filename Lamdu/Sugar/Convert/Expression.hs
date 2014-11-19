@@ -8,10 +8,10 @@ import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
+import Data.Store.Transaction (Transaction)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
-import Lamdu.Sugar.Types.Internal
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
@@ -23,6 +23,8 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified System.Random as Random
+
+type T = Transaction
 
 mkGen :: Int -> Int -> Guid -> Random.StdGen
 mkGen select count =

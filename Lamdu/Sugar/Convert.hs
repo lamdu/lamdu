@@ -16,6 +16,7 @@ import Data.Monoid (Monoid(..), (<>))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
+import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.Expr.FlatComposite (FlatComposite(..))
 import Lamdu.Expr.IRef (DefIM)
@@ -25,7 +26,6 @@ import Lamdu.Expr.Val (Val(..))
 import Lamdu.Sugar.Convert.Monad (ConvertM, Context(..))
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
-import Lamdu.Sugar.Types.Internal
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -51,6 +51,8 @@ import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+
+type T = Transaction
 
 onMatchingSubexprs ::
   MonadA m => (a -> m ()) -> (a -> Val () -> Bool) -> Val a -> m ()

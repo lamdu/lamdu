@@ -19,8 +19,8 @@ import Data.Map (Map)
 import Data.Monoid (Monoid)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
+import Data.Store.Transaction (Transaction)
 import Lamdu.Sugar.Internal
-import Lamdu.Sugar.Types.Internal
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Store.Transaction as Transaction
@@ -29,6 +29,8 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Types as Sugar
+
+type T = Transaction
 
 data TagParamInfo = TagParamInfo
   { tpiFromParameters :: V.Var -- TODO: Rename "From" to something else
