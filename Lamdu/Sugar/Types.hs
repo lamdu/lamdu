@@ -134,6 +134,8 @@ data Payload m a = Payload
   , _plData :: a
   } deriving (Functor, Foldable, Traversable)
 
+-- When fabricating a new hole result involving a stored argument,
+-- this Maybe varies between Nothing and Just in the same expression
 type MStorePoint m a = (Maybe (TypesInternal.StorePoint (Tag m)), a)
 
 type ExprStorePoint m a = Val (MStorePoint m a)
@@ -152,6 +154,10 @@ data Name = Name
   , nNameCollisionSuffix :: NameCollision
   , nName :: String
   } deriving (Show)
+
+-- This funny type-alias exists because MStoredName is an extremely
+-- common type parameter of virtually all sugar types. Using (Maybe
+-- StoredName) or (Maybe String) directly adds a lot of noise.
 type MStoredName = Maybe String
 
 type Expression name m a = ExpressionP name m (Payload m a)
