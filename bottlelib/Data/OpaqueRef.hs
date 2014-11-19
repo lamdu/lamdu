@@ -55,6 +55,7 @@ newtype Fresh p = MkFresh { _fresh :: Ref p }
   deriving (Binary)
 fresh :: Lens (Fresh p) (Fresh q) (Ref p) (Ref q)
 fresh f MkFresh{..} = (\_fresh -> MkFresh{..}) <$> f _fresh
+{-# ANN fresh "HLint: ignore Use const" #-}
 
 initialFresh :: Fresh p
 initialFresh = MkFresh (MkRef 0)

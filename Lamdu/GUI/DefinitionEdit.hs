@@ -74,7 +74,7 @@ makeExprDefinition ::
   ExprGuiM m (WidgetT m)
 makeExprDefinition def bodyExpr = do
   -- config <- ExprGuiM.widgetEnv WE.readConfig
-  let
+  -- let
     -- makeGrid = (:[]) . defTypeScale config . BWidgets.gridHSpaced
     -- addAcceptanceArrow acceptInferredType label = do
     --   acceptanceLabel <-
@@ -115,8 +115,8 @@ makeExprDefinition def bodyExpr = do
   where
     -- right = Vector2 1 0.5
     -- center = 0.5
-    Sugar.Definition guid name _ = def
     -- myId = WidgetIds.fromGuid guid
+    Sugar.Definition guid name _ = def
 
 loadConvertDefI ::
   MonadA m => Anchors.CodeProps m -> DefIM m ->

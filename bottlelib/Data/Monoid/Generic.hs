@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric, TypeOperators, FlexibleContexts #-}
+{-# LANGUAGE TypeOperators, FlexibleContexts #-}
 module Data.Monoid.Generic (GMonoid, def_mempty, def_mappend) where
 
 -- Use GHC 7.4's Generic class for creating Monoid instances
@@ -39,6 +39,8 @@ instance GMonoid a => GMonoid (M1 i c a) where
 instance Monoid a => GMonoid (K1 i a) where
     gmempty = K1 mempty
     gmappend (K1 x) (K1 y) = K1 $ mappend x y
+
+{-# ANN module "HLint: ignore Use camelCase" #-}
 
 -- Default implementations of mempty and mappend using gmempty and gmappend.
 -- All we do is use @to@ and @from@ to wrap and unwrap.

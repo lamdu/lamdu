@@ -20,8 +20,7 @@ import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction, getP, setP, modP)
 import Lamdu.CharClassification (operatorChars)
 import Lamdu.Data.Anchors (PresentationMode(..))
-import Lamdu.Expr.IRef (DefIM)
-import Lamdu.Expr.IRef (ValTree(..))
+import Lamdu.Expr.IRef (DefIM, ValTree(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
@@ -108,7 +107,7 @@ addListItem Anchors.SpecialFunctions {..} exprP = do
   newListI <- ExprIRef.writeValTree $
     app cons $
     recEx sfHeadTag (ValTreeLeaf newItemI) $
-    recEx sfTailTag (ValTreeLeaf (Property.value exprP)) $
+    recEx sfTailTag (ValTreeLeaf (Property.value exprP))
     recEmpty
   Property.set exprP newListI
   return (newListI, newItemI)

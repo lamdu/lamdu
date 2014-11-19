@@ -104,7 +104,7 @@ compositeTypeVar :: T.Var (T.Composite p) -> RepeatList (T.Composite p)
 compositeTypeVar ctv = pure $ T.CVar ctv
 
 emptyCompositeType :: RepeatList (T.Composite p)
-emptyCompositeType = pure $ T.CEmpty
+emptyCompositeType = pure T.CEmpty
 
 compositeTypeExtend ::
   T.Tag -> TypeStream ->

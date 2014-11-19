@@ -46,6 +46,8 @@ applyOnVar =
   glob [] "IntToBoolFunc" $$
   (holeWithInferredType (a ~> intType) $$ x)
 
+{-# ANN module "HLint: ignore Redundant $" #-}
+
 monomorphRedex =
   testInfer "monomorphRedex: f (\\x -> \\_1 -> x ?) where f = \\_2 -> ?" $
   whereItem "f" (lambda "_2" ((a ~> b) ~> c ~> b) $ \_ -> holeWithInferredType d) $ \f ->
@@ -231,7 +233,7 @@ mapIdTest =
 
 factorialExpr =
   glob [facType] "fix" $$
-  lambda "loop" (facType)
+  lambda "loop" facType
   ( \loop ->
     lambda "x" intType $ \x ->
     glob [intType] "if" $$:
@@ -366,11 +368,11 @@ getFieldTests =
     [ testInfer "GetField tag of record of 2" $
       ( eRecExtend "field1" (holeWithInferredType a) $
         eRecExtend "field2" (holeWithInferredType b) $
-        holeWithInferredType (T.TRecord <$> (compositeTypeVar "r1"))
+        holeWithInferredType (T.TRecord <$> compositeTypeVar "r1")
       ) $. "field1"
     ]
   , testInfer "GetField verified against (resumed record)" $
-    ( holeWithInferredType (T.TRecord <$> (compositeTypeExtend "x" a (compositeTypeVar "r1")))
+    ( holeWithInferredType (T.TRecord <$> compositeTypeExtend "x" a (compositeTypeVar "r1"))
       `resumeHere`
       record
       [ ("x", literalInteger 5)
@@ -459,6 +461,7 @@ hunitTests =
   -- , testUnificationCarriesOver
   ]
 
+{-# ANN inferDoesn'tCrashProp "HLint: ignore Use camelCase" #-}
 inferDoesn'tCrashProp :: Val () -> Property
 inferDoesn'tCrashProp expr =
   case runNewContext $ loadInferDef expr of

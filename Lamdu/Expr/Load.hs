@@ -62,7 +62,7 @@ loadExprClosure =
     loop (Just recurse) closure =
       ExprIRef.readValBody iref
       >>= onBody
-      <&> (Val closure)
+      <&> Val closure
       where
         onBody body = body & Lens.traversed %%@~ loadElement body
         iref = irefOfClosure closure

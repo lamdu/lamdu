@@ -268,7 +268,7 @@ plIRef = ipStored . Lens._Just . Property.pVal
 convertEmptyRecord :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m a)
 convertEmptyRecord exprPl =
   ConvertExpr.make exprPl $
-  BodyRecord $ Record
+  BodyRecord Record
   { _rItems = []
   , _rMAddFirstItem = error "TODO: _rMAddFirstItem" -- addField <$> exprPl ^? plIRef
   }

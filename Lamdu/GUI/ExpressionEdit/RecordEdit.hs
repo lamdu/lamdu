@@ -31,7 +31,7 @@ make ::
   Sugar.Record Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make rec pl = ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped rec
+make reco pl = ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped reco
 
 makeUnwrapped ::
   MonadA m =>

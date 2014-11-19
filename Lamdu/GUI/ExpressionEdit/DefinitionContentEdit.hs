@@ -43,10 +43,9 @@ defFDConfig = FocusDelegator.Config
 makeNameEdit ::
   MonadA m => Sugar.NameProperty Sugar.Name m ->
   Widget.Id -> ExprGuiM m (WidgetT m)
-makeNameEdit nameProperty myId =
+makeNameEdit nameProperty =
   ExprGuiM.wrapDelegated defFDConfig FocusDelegator.NotDelegating id
   (ExpressionGui.makeNameEdit nameProperty)
-  myId
 
 nonOperatorName :: Sugar.Name -> Bool
 nonOperatorName (Sugar.Name Sugar.NameSourceStored _ x) =

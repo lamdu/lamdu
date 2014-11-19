@@ -33,7 +33,7 @@ envScope f e = mkEnv <$> f (_envScope e)
   where
     mkEnv x = e { _envScope = x }
 
-type GenExpr = ReaderT (Env) (StateT [V.Var] Gen)
+type GenExpr = ReaderT Env (StateT [V.Var] Gen)
 
 liftGen :: Gen a -> GenExpr a
 liftGen = lift . lift

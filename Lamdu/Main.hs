@@ -64,7 +64,7 @@ parseArgs =
     go args [] = return args
     go (ParsedOpts _ mPath) ("-deletedb" : args) =
       go (ParsedOpts True mPath) args
-    go _ ("-font" : []) = failUsage "-font must be followed by a font name"
+    go _ ["-font"] = failUsage "-font must be followed by a font name"
     go (ParsedOpts delDB mPath) ("-font" : fn : args) =
       case mPath of
       Nothing -> go (ParsedOpts delDB (Just fn)) args
