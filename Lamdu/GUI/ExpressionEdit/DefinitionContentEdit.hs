@@ -49,7 +49,7 @@ makeNameEdit nameProperty myId =
   myId
 
 nonOperatorName :: Sugar.Name -> Bool
-nonOperatorName (Sugar.Name Sugar.StoredName _ x) =
+nonOperatorName (Sugar.Name Sugar.NameSourceStored _ x) =
   nonEmptyAll (`notElem` operatorChars) x
 nonOperatorName _ = False
 
