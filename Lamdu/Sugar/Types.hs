@@ -421,8 +421,7 @@ data DefinitionExpression name m expr = DefinitionExpression
 
 data DefinitionBuiltin m = DefinitionBuiltin
   { biName :: Definition.FFIName
-  -- Consider removing Maybe'ness here
-  , biMSetName :: Maybe (Definition.FFIName -> T m ())
+  , biSetName :: Definition.FFIName -> T m ()
   , biType :: Definition.ExportedType
   }
 

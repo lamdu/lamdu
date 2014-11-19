@@ -719,7 +719,7 @@ convertDefIBuiltin ::
 convertDefIBuiltin (Definition.Builtin name) defI defType =
   DefinitionBodyBuiltin DefinitionBuiltin
     { biName = name
-    , biMSetName = Just setName
+    , biSetName = setName
     , biType = defType
     }
   where

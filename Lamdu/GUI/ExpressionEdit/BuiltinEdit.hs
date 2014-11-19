@@ -42,15 +42,12 @@ make (Sugar.DefinitionBuiltin (Definition.FFIName modulePath name) setFFIName _)
     dot <- ExprGuiM.widgetEnv . BWidgets.makeLabel "." $ Widget.toAnimId myId
     return $ Box.hboxCentered [moduleName, dot, varName]
   where
-    makeNamePartEditor color namePartStr mSetter makeWidgetId =
+    makeNamePartEditor color namePartStr setter makeWidgetId =
       ExprGuiM.withFgColor color .
       ExprGuiM.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
-      (ExprGuiM.widgetEnv . maybe
-       (BWidgets.makeTextViewWidget namePartStr . Widget.toAnimId)
-       (BWidgets.makeWordEdit . Property namePartStr) mSetter) $
+      (ExprGuiM.widgetEnv .
+       (BWidgets.makeWordEdit . Property namePartStr) setter) $
       makeWidgetId myId
-    maybeSetter = (`fmap` setFFIName)
     modulePathStr = List.intercalate "." modulePath
-    modulePathSetter = maybeSetter $ \ffiNameSetter ->
-      ffiNameSetter . (`Definition.FFIName` name) . splitOn "."
-    nameSetter = maybeSetter $ \ffiNameSetter -> ffiNameSetter . Definition.FFIName modulePath
+    modulePathSetter = setFFIName . (`Definition.FFIName` name) . splitOn "."
+    nameSetter = setFFIName . Definition.FFIName modulePath
