@@ -45,7 +45,7 @@ module Lamdu.Sugar.Types
   , HoleArg(..), haExpr, haExprPresugared, haUnwrap
   , HoleInferred(..), hiSuggestedValue, hiType, hiMakeConverted
   , Hole(..)
-    , holeMActions, holeMArg, holeMInferred
+    , holeMActions, holeMArg, holeInferred
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
   , HoleActions(..)
@@ -245,7 +245,7 @@ data HoleInferred name m = HoleInferred
 
 data Hole name m expr = Hole
   { _holeMActions :: Maybe (HoleActions name m)
-  , _holeMInferred :: Maybe (HoleInferred name m)
+  , _holeInferred :: HoleInferred name m
   , _holeMArg :: Maybe (HoleArg m expr)
   } deriving (Functor, Foldable, Traversable)
 

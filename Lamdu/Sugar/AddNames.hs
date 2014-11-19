@@ -365,12 +365,12 @@ toHole ::
   m (Hole (NewName m) tm (Expression (NewName m) tm a))
 toHole hole@Hole {..} = do
   mActions <- _holeMActions & Lens._Just %%~ toHoleActions
-  mInferred <- _holeMInferred & Lens._Just %%~ toInferred
+  inferred <- toInferred _holeInferred
   mArg <- _holeMArg & Lens._Just . Lens.traversed %%~ toExpression
   pure hole
     { _holeMActions = mActions
     , _holeMArg = mArg
-    , _holeMInferred = mInferred
+    , _holeInferred = inferred
     }
 
 toCollapsed ::

@@ -259,10 +259,10 @@ mkHole exprPl = do
     & ipData .~ ()
     & Lens.sequenceOf ipStored
     & traverse mkWritableHoleActions
-  holeInferred <- mkHoleInferred $ exprPl ^. ipInferred
+  inferred <- mkHoleInferred $ exprPl ^. ipInferred
   pure Hole
     { _holeMActions = mActions
-    , _holeMInferred = Just holeInferred
+    , _holeInferred = inferred
     , _holeMArg = Nothing
     }
 

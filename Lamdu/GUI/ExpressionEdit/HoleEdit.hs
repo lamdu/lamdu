@@ -55,12 +55,11 @@ tryOpenHole hole pl myId = do
     lift . ExprGuiM.widgetEnv . WE.isSubCursor $ diveIntoHole myId
   guard isSelected
   actions <- maybeToMPlus $ hole ^. Sugar.holeMActions
-  inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
   stateProp <- lift . ExprGuiM.transaction $ HoleState.assocStateRef guid ^. Transaction.mkProperty
   lift $ HoleOpen.make pl HoleInfo
     { hiGuid = guid
     , hiActions = actions
-    , hiInferred = inferred
+    , hiInferred = hole ^. Sugar.holeInferred
     , hiId = myId
     , hiState = stateProp
     , hiHoleGuids = pl ^. Sugar.plData . ExprGuiM.plHoleGuids

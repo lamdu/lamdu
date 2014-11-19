@@ -44,7 +44,6 @@ make hole pl myId = do
       arg <- maybeToMPlus $ hole ^. Sugar.holeMArg
       lift $ (,) myId <$> makeWrapper arg myId
     justToLeft $ do
-      inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
       guard . Lens.nullOf ExprLens.valHole $ inferred ^. Sugar.hiSuggestedValue
       lift $ makeInferred inferred pl myId
     lift $ (,) (diveIntoHole myId) <$> makeSimple myId
@@ -57,6 +56,7 @@ make hole pl myId = do
         Widget.weakerEvents (mappend openEventMap exprEventMap)
   return (destId, inactive)
   where
+    inferred = hole ^. Sugar.holeInferred
     openEventMap =
       Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.Key'Enter]
       (E.Doc ["Navigation", "Hole", "Open"]) . pure $
