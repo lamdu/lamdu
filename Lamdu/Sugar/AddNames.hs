@@ -281,8 +281,7 @@ withFuncParam fp@FuncParam{..} = CPS $ \k -> do
     case _fpVarKind of
     FuncParameter ->
       runCPS
-      (opWithParamName
-       (maybe NameGen.NotFunction isFunctionType _fpInferredType) _fpGuid _fpName) k
+      (opWithParamName (isFunctionType _fpInferredType) _fpGuid _fpName) k
     FuncFieldParameter ->
       runCPS (opWithTagName _fpGuid _fpName) k
   pure

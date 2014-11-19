@@ -193,7 +193,7 @@ data FuncParam name m = FuncParam
   , _fpAltIds :: [Guid]
   , _fpVarKind :: FuncParamType
   , _fpName :: NameProperty name m
-  , _fpInferredType :: Maybe Type
+  , _fpInferredType :: Type
   , _fpMActions :: Maybe (FuncParamActions m)
   }
 

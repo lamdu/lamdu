@@ -118,7 +118,7 @@ convertPositionalFuncParam (V.Lam param body) lamExprPl = do
     , _fpVarKind = FuncParameter
     , _fpId = paramGuid
     , _fpAltIds = [paramGuid] -- For easy jumpTo
-    , _fpInferredType = mParamType
+    , _fpInferredType = paramType
     , _fpMActions =
       mkPositionalFuncParamActions param
       <$> lamExprPl ^. ipStored
@@ -126,7 +126,9 @@ convertPositionalFuncParam (V.Lam param body) lamExprPl = do
     }
   where
     paramGuid = UniqueId.toGuid param
-    mParamType = lamExprPl ^? ipInferred . Infer.plType . ExprLens._TFun . _1
+    paramType =
+      fromMaybe (error "Lambda value not inferred to a function type?!") $
+      lamExprPl ^? ipInferred . Infer.plType . ExprLens._TFun . _1
 
 convertLam ::
   (MonadA m, Monoid a) =>
@@ -428,7 +430,7 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
                   fpIdGuid fp
         , _fpAltIds = [] -- TODO: fpAltIds still needed?
         , _fpVarKind = FuncFieldParameter
-        , _fpInferredType = Just $ fpFieldType fp
+        , _fpInferredType = fpFieldType fp
         , _fpMActions = error "TODO: _fpMActions"
           -- fpActions (fpIdGuid fp)
           -- <$> mLambdaP <*> mParamTypeI <*> mBodyStored
