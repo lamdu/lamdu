@@ -70,10 +70,8 @@ module Lamdu.Sugar.Types
   ) where
 
 import Data.Binary (Binary)
-import Data.Derive.Monoid (makeMonoid)
-import Data.DeriveTH (derive)
 import Data.Foldable (Foldable)
-import Data.Monoid (Monoid(..))
+import Data.Monoid (Monoid(..), (<>))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (Traversable)
@@ -114,10 +112,8 @@ data WrapAction m
 data SetToHole m
   = SetToHole (T m Guid)
   | AlreadyAHole -- or already an arg of one
-Lens.makePrisms ''SetToHole
 
 data SetToInnerExpr m = SetToInnerExpr (T m Guid) | NoInnerExpr
-Lens.makePrisms ''SetToInnerExpr
 
 data Actions m = Actions
   { _wrap :: WrapAction m
@@ -219,6 +215,10 @@ data Scope name m = Scope
   , _scopeTags      :: [(TagG name m, T.Tag)]
   , _scopeGetParams :: [ScopeItem (GetParams name m)]
   }
+instance Monoid (Scope name m) where
+  mempty = Scope [] [] [] []
+  mappend (Scope x0 x1 x2 x3) (Scope y0 y1 y2 y3) =
+    Scope (x0<>y0) (x1<>y1) (x2<>y2) (x3<>y3)
 
 data HoleActions name m = HoleActions
   { _holeScope :: T m (Scope name m)
@@ -468,4 +468,5 @@ Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo
 Lens.makePrisms ''SpecialArgs
 Lens.makePrisms ''Unwrap
-derive makeMonoid ''Scope
+Lens.makePrisms ''SetToHole
+Lens.makePrisms ''SetToInnerExpr
