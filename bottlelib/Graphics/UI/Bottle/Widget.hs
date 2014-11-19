@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric #-}
 module Graphics.UI.Bottle.Widget
   ( module Graphics.UI.Bottle.WidgetId
   , Widget(..), MEnter, R, Size
@@ -19,10 +19,10 @@ module Graphics.UI.Bottle.Widget
 
 import Control.Applicative ((<$>), liftA2)
 import Control.Lens.Operators
-import Data.Derive.Monoid (makeMonoid)
-import Data.DeriveTH (derive)
 import Data.Monoid (Monoid(..))
+import Data.Monoid.Generic (def_mempty, def_mappend)
 import Data.Vector.Vector2 (Vector2)
+import GHC.Generics (Generic)
 import Graphics.UI.Bottle.Animation (AnimId, R, Size)
 import Graphics.UI.Bottle.Direction (Direction)
 import Graphics.UI.Bottle.EventMap (EventMap)
@@ -37,15 +37,17 @@ import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Rect as Rect
 
-data EventResult = EventResult {
-  _eCursor :: Monoid.Last Id,
-  _eAnimIdMapping :: Monoid.Endo AnimId
-  }
-derive makeMonoid ''EventResult
+data EventResult = EventResult
+  { _eCursor :: Monoid.Last Id
+  , _eAnimIdMapping :: Monoid.Endo AnimId
+  } deriving (Generic)
+instance Monoid EventResult where
+  mempty = def_mempty
+  mappend = def_mappend
 
-data EnterResult f = EnterResult {
-  _enterResultRect :: Rect,
-  _enterResultEvent :: f EventResult
+data EnterResult f = EnterResult
+  { _enterResultRect :: Rect
+  , _enterResultEvent :: f EventResult
   }
 
 type MEnter f = Maybe (Direction -> EnterResult f)

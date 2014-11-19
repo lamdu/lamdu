@@ -9,8 +9,6 @@ module Data.Store.IRef
 import Control.DeepSeq (NFData(..))
 import Control.Applicative (pure)
 import Data.Binary (Binary(..))
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
 import Data.Store.Guid (Guid)
 import qualified Data.Store.Guid as Guid
 
@@ -28,10 +26,7 @@ type Tag m = Tagged (m ())
 
 newtype IRef t a = IRef {
   guid :: Guid
-  } deriving (Eq, Ord, Read, Show, NFData)
-
--- derive makeNFData ''IRef
-derive makeBinary ''IRef
+  } deriving (Eq, Ord, Read, Show, NFData, Binary)
 
 -- Wrapper modules need to create an IRef
 unsafeFromGuid :: Guid -> IRef t a

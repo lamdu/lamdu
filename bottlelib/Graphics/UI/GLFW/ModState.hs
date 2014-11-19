@@ -12,10 +12,10 @@ import Prelude hiding (Left, Right)
 import qualified Data.Set as Set
 import qualified Graphics.UI.GLFW as GLFW
 
-data ModState = ModState {
-  modCtrl :: Bool,
-  modAlt :: Bool,
-  modShift :: Bool
+data ModState = ModState
+  { modCtrl :: Bool
+  , modAlt :: Bool
+  , modShift :: Bool
   } deriving (Generic, Show, Read, Eq, Ord)
 
 instance Monoid ModState where

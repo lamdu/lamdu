@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts, TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts, DeriveGeneric #-}
 module Lamdu.Expr.Load
   ( loadDefinitionClosure
   , ExprPropertyClosure, exprPropertyOfClosure
@@ -7,14 +7,13 @@ module Lamdu.Expr.Load
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Data.Binary (Binary(..), getWord8, putWord8)
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
+import Data.Binary (Binary)
 import Data.Function.Decycle (decycleOn)
 import Data.Store.IRef (Tag)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable)
+import GHC.Generics (Generic)
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Expr.IRef (DefI, DefIM)
 import Lamdu.Expr.Val (Val(..))
@@ -36,8 +35,8 @@ type SubexpressionIndex = Int
 data ExprPropertyClosure t
   = DefinitionContentExprProperty (DefI t) (ExprI t) Definition.ExportedType
   | SubexpressionProperty (ExprI t) (V.Body (ExprI t)) SubexpressionIndex
-  deriving (Show)
-derive makeBinary ''ExprPropertyClosure
+  deriving (Show, Generic)
+instance Binary (ExprPropertyClosure t)
 
 exprPropertyOfClosure :: MonadA m => ExprPropertyClosure (Tag m) -> ExprIRef.ValIProperty m
 exprPropertyOfClosure (DefinitionContentExprProperty defI bodyExpr bodyType) =

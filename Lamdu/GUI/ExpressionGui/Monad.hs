@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies, DeriveGeneric #-}
 module Lamdu.GUI.ExpressionGui.Monad
   ( ExprGuiM, WidgetT
   , widgetEnv
@@ -32,11 +32,11 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.RWS (RWST, runRWST)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
-import Data.Derive.Monoid (makeMonoid)
-import Data.DeriveTH (derive)
 import Data.Monoid (Monoid(..))
+import Data.Monoid.Generic (def_mempty, def_mappend)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import GHC.Generics (Generic)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.ExpressionGui.Types (ExpressionGui, WidgetT, ParentPrecedence(..), Precedence)
@@ -73,8 +73,10 @@ holePickersAction = fmap mconcat . sequence
 data Output m = Output
   { oAccessedVars :: AccessedVars
   , oHolePickers :: HolePickers m
-  }
-derive makeMonoid ''Output
+  } deriving (Generic)
+instance Monoid (Output m) where
+  mempty = def_mempty
+  mappend = def_mappend
 
 newtype StoredGuids = StoredGuids [Guid]
   deriving (Monoid, Binary, Eq, Ord)

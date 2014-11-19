@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveGeneric #-}
 module Data.Store.Rev.Version
   ( VersionData, depth, parent, changes
   , preventUndo
@@ -11,24 +11,22 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Monad (join)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
 import Data.Foldable (traverse_)
 import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Change (Change(..), Key, Value)
 import Data.Store.Transaction (Transaction)
+import GHC.Generics (Generic)
 import qualified Data.Store.Transaction as Transaction
 
 newtype Version t = Version { versionIRef :: IRef t (VersionData t) }
   deriving (Eq, Ord, Read, Show, Binary)
 
-data VersionData t = VersionData {
-  depth :: Int,
-  parent :: Maybe (Version t),
-  changes :: [Change]
-  }
-  deriving (Eq, Ord, Read, Show)
-derive makeBinary ''VersionData
+data VersionData t = VersionData
+  { depth :: Int
+  , parent :: Maybe (Version t)
+  , changes :: [Change]
+  } deriving (Eq, Ord, Read, Show, Generic)
+instance Binary (VersionData t)
 
 makeInitialVersion :: MonadA m => [(Key, Value)] -> Transaction m (Version (Tag m))
 makeInitialVersion initialValues = fmap Version . Transaction.newIRef . VersionData 0 Nothing $ map makeChange initialValues

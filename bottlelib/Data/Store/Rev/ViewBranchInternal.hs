@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveGeneric, TemplateHaskell #-}
 
 -- | View and Branch have a cyclic dependency. This module
 -- | contains the parts of both that both may depend on, to avoid the
@@ -15,14 +15,13 @@ where
 import Control.Monad (when)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
 import Data.Foldable (traverse_)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Change (Change)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction)
+import GHC.Generics (Generic)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -35,10 +34,11 @@ import qualified Data.Store.Transaction as Transaction
 newtype View t = View (IRef t (ViewData t))
   deriving (Eq, Ord, Binary, Show, Read)
 
-data BranchData t = BranchData {
-  _brVersion :: Version t,
-  _brViews :: [View t]
-  } deriving (Eq, Ord, Read, Show)
+data BranchData t = BranchData
+  { _brVersion :: Version t
+  , _brViews :: [View t]
+  } deriving (Eq, Ord, Read, Show, Generic)
+instance Binary (BranchData t)
 
 newtype Branch t = Branch { unBranch :: IRef t (BranchData t) }
   deriving (Eq, Ord, Read, Show, Binary)
@@ -46,7 +46,6 @@ newtype Branch t = Branch { unBranch :: IRef t (BranchData t) }
 newtype ViewData t = ViewData { _vdBranch :: Branch t }
   deriving (Eq, Ord, Show, Read, Binary)
 
-derive makeBinary ''BranchData
 Lens.makeLenses ''BranchData
 Lens.makeLenses ''ViewData
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes #-}
+{-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes, DeriveGeneric #-}
 module Lamdu.Sugar.Types
   ( Definition(..), drName, drGuid, drBody
   , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
@@ -71,10 +71,12 @@ module Lamdu.Sugar.Types
 
 import Data.Binary (Binary)
 import Data.Foldable (Foldable)
-import Data.Monoid (Monoid(..), (<>))
+import Data.Monoid (Monoid(..))
+import Data.Monoid.Generic (def_mempty, def_mappend)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (Traversable)
+import GHC.Generics (Generic)
 import Lamdu.Expr.Scheme (Scheme)
 import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val)
@@ -214,11 +216,10 @@ data Scope name m = Scope
   , _scopeGlobals   :: [ScopeItem (GetVar name m)]
   , _scopeTags      :: [(TagG name m, T.Tag)]
   , _scopeGetParams :: [ScopeItem (GetParams name m)]
-  }
+  } deriving (Generic)
 instance Monoid (Scope name m) where
-  mempty = Scope [] [] [] []
-  mappend (Scope x0 x1 x2 x3) (Scope y0 y1 y2 y3) =
-    Scope (x0<>y0) (x1<>y1) (x2<>y2) (x3<>y3)
+  mempty = def_mempty
+  mappend = def_mappend
 
 data HoleActions name m = HoleActions
   { _holeScope :: T m (Scope name m)

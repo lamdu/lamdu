@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, RankNTypes #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, RankNTypes, DeriveGeneric #-}
 module Lamdu.Sugar.AddNames
   ( addToDef
   ) where
@@ -10,13 +10,13 @@ import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.Monad.Trans.State (runState, evalState)
 import Control.Monad.Trans.Writer (Writer, runWriter)
 import Control.MonadA (MonadA)
-import Data.Derive.Monoid (makeMonoid)
-import Data.DeriveTH (derive)
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
+import Data.Monoid.Generic (def_mempty, def_mappend)
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable, traverse)
+import GHC.Generics (Generic)
 import Lamdu.Expr.Type (Type)
 import Lamdu.Sugar.AddNames.CPS (CPS(..))
 import Lamdu.Sugar.AddNames.NameGen (NameGen)
@@ -84,9 +84,11 @@ data StoredNamesWithin = StoredNamesWithin
   -- Names of tags and defs: considered conflicted if used in two
   -- different meanings anywhere in the whole definition:
   , _snwGlobalNames :: NameGuidMap
-  }
+  } deriving (Generic)
 Lens.makeLenses ''StoredNamesWithin
-derive makeMonoid ''StoredNamesWithin
+instance Monoid StoredNamesWithin where
+  mempty = def_mempty
+  mappend = def_mappend
 
 -- Pass 0:
 data StoredNames = StoredNames

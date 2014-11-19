@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell, FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell, FlexibleContexts, DeriveGeneric #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Results
   ( makeAll, HaveHiddenResults(..)
   , Result(..)
@@ -17,17 +17,17 @@ import Control.Monad.Trans.Either.Utils (leftToJust, justToLeft)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
-import Data.Derive.Monoid (makeMonoid)
-import Data.DeriveTH (derive)
 import Data.Function (on)
 import Data.List (isInfixOf, isPrefixOf, partition)
 import Data.List.Utils (sortOn, nonEmptyAll)
 import Data.Maybe (catMaybes)
 import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
+import Data.Monoid.Generic (def_mempty, def_mappend)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse, sequenceA)
+import GHC.Generics (Generic)
 import Lamdu.Config (Config)
 import Lamdu.Expr.IRef (DefIM)
 import Lamdu.Expr.Type (Type)
@@ -66,7 +66,10 @@ instance Monoid GroupPrecedence where
 data GroupAttributes = GroupAttributes
   { _searchTerms :: [String]
   , __precedence :: GroupPrecedence
-  }
+  } deriving (Generic)
+instance Monoid GroupAttributes where
+  mempty = def_mempty
+  mappend = def_mappend
 
 data Group def = Group
   { _groupId :: String
@@ -75,7 +78,6 @@ data Group def = Group
   }
 type GroupM m = Group (DefIM m)
 
-derive makeMonoid ''GroupAttributes
 Lens.makeLenses ''GroupAttributes
 Lens.makeLenses ''Group
 

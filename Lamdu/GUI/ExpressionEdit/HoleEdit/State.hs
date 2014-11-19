@@ -1,14 +1,13 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell, DeriveGeneric #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.State
   ( HoleState(..), hsSearchTerm
   , emptyState, setHoleStateAndJump, assocStateRef
   ) where
 
 import Control.MonadA (MonadA)
-import Data.Binary (Binary(..))
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
+import Data.Binary (Binary)
 import Data.Store.Guid (Guid)
+import GHC.Generics (Generic)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (searchTermWIdOfHoleGuid)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
@@ -18,9 +17,9 @@ type T = Transaction.Transaction
 
 newtype HoleState = HoleState
   { _hsSearchTerm :: String
-  } deriving Eq
+  } deriving (Eq, Generic)
 Lens.makeLenses ''HoleState
-derive makeBinary ''HoleState
+instance Binary HoleState
 
 emptyState :: HoleState
 emptyState =

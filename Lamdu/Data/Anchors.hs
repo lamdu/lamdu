@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE Rank2Types, OverloadedStrings, DeriveGeneric #-}
 module Lamdu.Data.Anchors
   ( Code(..), onCode
   , Revision(..), onRevision
@@ -11,15 +11,14 @@ module Lamdu.Data.Anchors
   ) where
 
 import Control.MonadA (MonadA)
-import Data.Binary (Binary(..), getWord8, putWord8)
+import Data.Binary (Binary)
 import Data.ByteString.Char8 ()
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
 import Data.Store.IRef (Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version(Version)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (MkProperty(..))
+import GHC.Generics (Generic)
 import Lamdu.Expr.IRef (DefI)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
@@ -33,7 +32,8 @@ data SpecialFunctions t = SpecialFunctions
   , sfTailTag :: T.Tag
   , sfTrue :: DefI t
   , sfFalse :: DefI t
-  }
+  } deriving (Generic)
+instance Binary (SpecialFunctions t)
 
 type Pane t = DefI t
 
@@ -72,13 +72,11 @@ assocNameRef :: (UniqueId.ToGuid a, MonadA m) => a -> MkProperty m String
 assocNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toGuid
 
 data PresentationMode = OO | Verbose | Infix
-  deriving (Eq, Ord, Enum, Bounded, Show)
+  deriving (Eq, Ord, Enum, Bounded, Show, Generic)
+instance Binary PresentationMode
 
 assocPresentationMode ::
   (UniqueId.ToGuid a, MonadA m) =>
   a -> Transaction.MkProperty m PresentationMode
 assocPresentationMode =
     Transaction.assocDataRefDef OO "PresentationMode" . UniqueId.toGuid
-
-derive makeBinary ''SpecialFunctions
-derive makeBinary ''PresentationMode
