@@ -191,7 +191,7 @@ fix3Lambdas =
   testCase "fix3Lambdas: fix (\\recu -> \\x -> \\y -> recu ?)" .
   inferFailsDueToOccurs $
   P.global "fix" `P.app`
-  ( P.abs "recu" S.any $ P.abs "x" S.any $ P.abs "y" S.any $
+  ( P.abs "recu" $ P.abs "x" $ P.abs "y" $
     P.var "recu" `P.app` P.hole
   )
 
@@ -277,7 +277,7 @@ euler1Expr =
 
 -- Solve depressed quartic polynomial
 solveDepressedQuarticExpr =
-  lambdaRecordConstrainedTags "params"
+  lambdaRecord "params"
   [ ("e0", intType)
   , ("d0", intType)
   , ("c0", intType)
@@ -384,7 +384,7 @@ fromQuickCheck1 =
   inferFailsDueToOccurs $
   -- QuickCheck discovered: ? (\\a:?==>a (25 (a (a (a a)) ?)))
   -- simplified to:
-  P.abs "x" S.any $ x `P.app` (x `P.app` x)
+  P.abs "x" $ x `P.app` (x `P.app` x)
   where
     x = P.var "x"
 

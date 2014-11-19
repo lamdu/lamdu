@@ -45,7 +45,7 @@ arbitraryLam :: Arbitrary a => GenExpr (V.Lam (Val a))
 arbitraryLam = do
   par <- next
   V.Lam par {-TODO: Arbitrary constraints on param types??-}
-    S.any <$> Reader.local (envScope %~ (par :)) arbitraryExpr
+    <$> Reader.local (envScope %~ (par :)) arbitraryExpr
 
 arbitraryRecExtend :: Arbitrary a => GenExpr (V.RecExtend (Val a))
 arbitraryRecExtend =
