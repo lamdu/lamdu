@@ -91,15 +91,9 @@ convertLabeled funcS argS argI exprPl = do
       Verbose -> (NoSpecialArgs, args)
       OO -> (ObjectArg (arg0 ^. aaExpr), args1toN)
       Infix -> (InfixArgs (arg0 ^. aaExpr) (arg1 ^. aaExpr), args2toN)
-  BodyApply Apply
-    { _aFunc = funcS
-    , _aSpecialArgs = specialArgs
-    , _aAnnotatedArgs = annotatedArgs
-    }
-    & lift . ConvertExpr.make exprPl
-    <&> rPayload %~
-      ( plData <>~ (argS ^. rPayload . plData) ) .
-      ( plActions . Lens._Just . mSetToInnerExpr .~ do
+    setToInnerExprAction =
+      maybe NoInnerExpr SetToInnerExpr $
+      do
         stored <- exprPl ^. ipStored
         val <-
           case (filter (Lens.nullOf ExprLens.valHole) . map snd . Map.elems) fieldsI of
@@ -109,6 +103,15 @@ convertLabeled funcS argS argI exprPl = do
         return $
           ExprIRef.valIGuid <$>
           DataOps.setToWrapper (Property.value (valStored ^. V.payload)) stored
+  BodyApply Apply
+    { _aFunc = funcS
+    , _aSpecialArgs = specialArgs
+    , _aAnnotatedArgs = annotatedArgs
+    }
+    & lift . ConvertExpr.make exprPl
+    <&> rPayload %~
+      ( plData <>~ (argS ^. rPayload . plData) ) .
+      ( plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
       )
   where
     (fieldsI, Val _ (V.BLeaf V.LRecEmpty)) = RecordVal.unpack argI
@@ -168,7 +171,7 @@ convertAppliedHole funcI argS argI exprPl = do
         argS
         & rPayload . plActions . Lens._Just %~
           (wrap .~ argWrap) .
-          (mSetToHole .~ Nothing)
+          (setToHole .~ AlreadyAHole)
       , _haExprPresugared =
         flip (,) () . fmap (StorePoint . Property.value) .
         (^. ipStored) <$> argI

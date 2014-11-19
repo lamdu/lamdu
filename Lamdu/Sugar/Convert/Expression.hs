@@ -42,8 +42,8 @@ mkActions :: MonadA m => ConvertM.Context m -> Stored m -> Actions m
 mkActions sugarContext stored =
   Actions
   { _wrap = WrapAction $ ExprIRef.valIGuid <$> DataOps.wrap stored
-  , _mSetToHole = Just $ ExprIRef.valIGuid <$> DataOps.setToHole stored
-  , _mSetToInnerExpr = Nothing
+  , _setToHole = SetToHole $ ExprIRef.valIGuid <$> DataOps.setToHole stored
+  , _setToInnerExpr = NoInnerExpr
   , _cut =
     mkCutter (sugarContext ^. ConvertM.scCodeAnchors)
     (Property.value stored) $ mkReplaceWithNewHole stored

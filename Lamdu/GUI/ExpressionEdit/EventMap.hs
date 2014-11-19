@@ -173,15 +173,15 @@ wrapEventMap holePickers config actions =
 replaceEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (T m)
 replaceEventMap config actions =
   mconcat
-  [ actionEventMap Sugar.mSetToInnerExpr
+  [ actionEventMap (Sugar.setToInnerExpr . Sugar._SetToInnerExpr)
     "Replace with inner expression" $ Config.delKeys config
-  , actionEventMap Sugar.mSetToHole
+  , actionEventMap (Sugar.setToHole . Sugar._SetToHole)
     "Replace expression" delKeys
   ]
   where
-    actionEventMap lens doc keys =
+    actionEventMap l doc keys =
       maybe mempty (mkEventMap keys (E.Doc ["Edit", doc]) id) $
-      actions ^. lens
+      actions ^? l
     delKeys = Config.replaceKeys config ++ Config.delKeys config
 
 modifyEventMap ::

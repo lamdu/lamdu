@@ -13,8 +13,10 @@ module Lamdu.Sugar.Types
     , dDepParams, dParams, dBody, dWhereItems, dAddFirstParam, dAddInnermostWhereItem
   , DefinitionBuiltin(..)
   , WrapAction(..)
+  , SetToHole(..), _SetToHole, _AlreadyAHole
+  , SetToInnerExpr(..), _SetToInnerExpr, _NoInnerExpr
   , Actions(..)
-    , wrap, mSetToHole, mSetToInnerExpr, cut
+    , wrap, setToHole, setToInnerExpr, cut
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyCollapsed, _BodyLiteralInteger
@@ -109,11 +111,18 @@ data WrapAction m
   | WrapNotAllowed -- I'm already wrapped or a tag or a hole
   | WrapAction (T m Guid) -- Wrap me!
 
+data SetToHole m
+  = SetToHole (T m Guid)
+  | AlreadyAHole -- or already an arg of one
+Lens.makePrisms ''SetToHole
+
+data SetToInnerExpr m = SetToInnerExpr (T m Guid) | NoInnerExpr
+Lens.makePrisms ''SetToInnerExpr
+
 data Actions m = Actions
   { _wrap :: WrapAction m
-  , -- mSetToHole not available for holes.
-    _mSetToHole :: Maybe (T m Guid)
-  , _mSetToInnerExpr :: Maybe (T m Guid)
+  , _setToHole :: SetToHole m
+  , _setToInnerExpr :: SetToInnerExpr m
   , _cut :: T m Guid
   }
 

@@ -49,4 +49,4 @@ makeInt integer pl myId =
   where
     editEventMap =
       maybe mempty (mkEditEventMap integer) $
-      pl ^? Sugar.plActions . Lens._Just . Sugar.mSetToHole . Lens._Just
+      pl ^? Sugar.plActions . Lens._Just . Sugar.setToHole . Sugar._SetToHole

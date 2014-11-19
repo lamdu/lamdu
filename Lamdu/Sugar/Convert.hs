@@ -135,6 +135,16 @@ convertLam ::
 convertLam lam@(V.Lam paramVar result) exprPl = do
   param <- convertPositionalFuncParam lam exprPl
   resultS <- ConvertM.convertSubexpression result
+  let
+    setToInnerExprAction =
+      maybe NoInnerExpr SetToInnerExpr $ do
+        guard $ Lens.nullOf ExprLens.valHole result
+        bodyStored <- traverse (^. ipStored) result
+        stored <- exprPl ^. ipStored
+        return $ do
+          deleteParamRef paramVar bodyStored
+          ExprIRef.valIGuid <$>
+            DataOps.setToWrapper (Property.value (bodyStored ^. V.payload)) stored
   BodyLam
     Lam
     { _lParam =
@@ -143,14 +153,7 @@ convertLam lam@(V.Lam paramVar result) exprPl = do
     , _lResult = resultS
     }
     & ConvertExpr.make exprPl
-    <&> rPayload . plActions . Lens._Just . mSetToInnerExpr .~ do
-      guard $ Lens.nullOf ExprLens.valHole result
-      bodyStored <- traverse (^. ipStored) result
-      stored <- exprPl ^. ipStored
-      return $ do
-        deleteParamRef paramVar bodyStored
-        ExprIRef.valIGuid <$>
-          DataOps.setToWrapper (Property.value (bodyStored ^. V.payload)) stored
+    <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
 
 convertVar ::
   MonadA m => V.Var ->

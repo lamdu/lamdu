@@ -52,7 +52,7 @@ convert ::
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convert exprPl =
   convertPlain exprPl
-  <&> rPayload . plActions . Lens._Just . mSetToHole .~ Nothing
+  <&> rPayload . plActions . Lens._Just . setToHole .~ AlreadyAHole
 
 convertPlain ::
   (MonadA m, Monoid a) =>
