@@ -1,4 +1,4 @@
-{-# LANGUAGE ConstraintKinds, PatternGuards #-}
+{-# LANGUAGE ConstraintKinds, PatternGuards, OverloadedStrings #-}
 
 module Lamdu.Sugar.Convert.Hole
   ( convert, convertPlain, orderedInnerHoles
@@ -221,7 +221,7 @@ mkHoleInferred :: MonadA m => Infer.Payload -> ConvertM m (HoleInferred MStoredN
 mkHoleInferred inferred = do
   sugarContext <- ConvertM.readContext
   iVal <-
-      suggestValueWith (ConvertM.liftTransaction UniqueId.new)
+      suggestValueWith (return "suggestVar")
       (inferred ^. Infer.plType)
   (inferredIVal, newCtx) <-
     SugarInfer.loadInferScope (inferred ^. Infer.plScope) iVal
