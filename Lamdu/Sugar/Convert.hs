@@ -255,7 +255,7 @@ convertField _mIRef inst tag expr = do
     }
 
 plIRef ::
-  Lens.Traversal' (InputPayloadP i (Maybe (Stored m)) a) (ExprIRef.ValIM m)
+  Lens.Traversal' (InputPayloadP (Maybe (Stored m)) a) (ExprIRef.ValIM m)
 plIRef = ipStored . Lens._Just . Property.pVal
 
 convertEmptyRecord :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m a)

@@ -124,7 +124,7 @@ sugarNameToGroup (Sugar.Name _ collision varName) expr = Group
       Sugar.NoCollision -> []
       Sugar.Collision suffix -> [show suffix]
 
-resultComplexityScore :: Val Sugar.Inferred -> [Int]
+resultComplexityScore :: Val Infer.Payload -> [Int]
 resultComplexityScore expr =
   [ length . show $ expr ^. V.payload . Infer.plType
   , length $ Foldable.toList expr

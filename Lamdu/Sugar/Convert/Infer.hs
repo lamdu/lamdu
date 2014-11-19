@@ -68,7 +68,7 @@ loadInferInto pl val = do
 
 loadInfer ::
   MonadA m => Val (Stored m) ->
-  T m (Val (Sugar.InputPayloadP Inferred (Stored m) ()), Infer.Context)
+  T m (Val (Sugar.InputPayloadP (Stored m) ()), Infer.Context)
 loadInfer val =
   loadInferScope Infer.emptyScope val
   & (`runStateT` Infer.initialContext)

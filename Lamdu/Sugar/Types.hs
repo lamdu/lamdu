@@ -62,7 +62,7 @@ module Lamdu.Sugar.Types
   -- Input types:
   , InputPayloadP(..), ipGuid, ipInferred, ipStored, ipData
   , InputPayload, InputExpr
-  , Stored, Inferred
+  , Stored
   , NameProperty(..)
     , npName, npSetName
   ) where
@@ -75,21 +75,22 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (Traversable)
-import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Scheme (Scheme)
+import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val)
-import Lamdu.Sugar.Types.Internal (T, Stored, Inferred)
+import Lamdu.Sugar.Types.Internal (T, Stored)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.Type as T
+import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Types.Internal as TypesInternal
 import qualified System.Random as Random
 
-data InputPayloadP inferred stored a
+data InputPayloadP stored a
   = InputPayload
     { _ipGuid :: Guid
-    , _ipInferred :: inferred
+    , _ipInferred :: Infer.Payload
     , _ipStored :: stored
     , _ipData :: a -- TODO: Extract to tuple
     }
@@ -99,7 +100,7 @@ Lens.makeLenses ''InputPayloadP
 -- which are sugar-converted into ordinary sugar expressions, but are
 -- not actually stored and do not have actions (they're read-only).
 type InputPayload m a =
-  InputPayloadP Inferred (Maybe (Stored m)) a
+  InputPayloadP (Maybe (Stored m)) a
 type InputExpr m a = Val (InputPayload m a)
 
 data WrapAction m
@@ -195,7 +196,7 @@ data PickedResult = PickedResult
   }
 
 data HoleResult name m a = HoleResult
-  { _holeResultInferred :: Val Inferred
+  { _holeResultInferred :: Val Infer.Payload
   , _holeResultConverted :: Expression name m a
   , _holeResultPick :: T m PickedResult
   , _holeResultHasHoles :: Bool
