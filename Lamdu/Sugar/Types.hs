@@ -97,7 +97,7 @@ data InputPayloadP stored a
     { _ipGuid :: Guid
     , _ipInferred :: Infer.Payload
     , _ipStored :: stored
-    , _ipData :: a -- TODO: Extract to tuple
+    , _ipData :: a
     }
 Lens.makeLenses ''InputPayloadP
 
@@ -185,10 +185,6 @@ data NameProperty name m = NameProperty
   }
 
 -- TODO:
--- FuncParam for lambda needs GetExample, but not ListItemActions
--- FuncParam for pi needs neither
--- FuncParam for definition needs both
--- So separate the types properly
 data FuncParam name m = FuncParam
   { -- non-unique (e.g: tag guid). Name attached here:
     _fpGuid :: Guid
