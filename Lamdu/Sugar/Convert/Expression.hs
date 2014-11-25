@@ -71,6 +71,7 @@ makeStoredNameProperty uid = do
   pure
     NameProperty
     { _npName = if null name then Nothing else Just name
+    , _npGuid = UniqueId.toGuid uid
     , _npSetName = Transaction.setP nameRef
     }
   where

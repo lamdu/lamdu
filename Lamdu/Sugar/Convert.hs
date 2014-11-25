@@ -116,7 +116,6 @@ convertPositionalFuncParam (V.Lam param body) lamExprPl = do
   name <- makeStoredNamePropertyS param
   pure FuncParam
     { _fpName = name
-    , _fpGuid = paramGuid
     , _fpVarKind = FuncParameter
     , _fpId = paramGuid
     , _fpAltIds = [paramGuid] -- For easy jumpTo
@@ -168,8 +167,7 @@ convertVar param exprPl = do
     Just (ConvertM.RecordParamsInfo defGuid jumpTo) -> do
       defName <- makeStoredNamePropertyS defGuid
       ConvertExpr.make exprPl $ BodyGetParams GetParams
-        { _gpDefGuid = defGuid
-        , _gpDefName = defName
+        { _gpDefName = defName
         , _gpJumpTo = jumpTo
         }
     Nothing -> do
@@ -177,7 +175,6 @@ convertVar param exprPl = do
       ConvertExpr.make exprPl .
         BodyGetVar $ GetVar
         { _gvName = parName
-        , _gvIdentifier = parGuid
         , _gvJumpTo = pure parGuid
         , _gvVarType = GetParameter
         }
@@ -309,7 +306,6 @@ convertGetField (V.GetField recExpr tag) exprPl = do
       name <- makeStoredNamePropertyS tag
       pure GetVar
         { _gvName = name
-        , _gvIdentifier = UniqueId.toGuid tag
         , _gvJumpTo = pure jumpTo
         , _gvVarType = GetFieldParameter
         }
@@ -347,7 +343,6 @@ convertGlobal globalId exprPl =
       ConvertExpr.make exprPl .
         BodyGetVar $ GetVar
         { _gvName = defName
-        , _gvIdentifier = IRef.guid defI
         , _gvJumpTo = jumpToDefI cp defI
         , _gvVarType = GetDefinition
         }
@@ -426,7 +421,6 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
       name <- makeStoredNamePropertyS $ fpTag fp
       pure FuncParam
         { _fpName = name
-        , _fpGuid = UniqueId.toGuid $ fpTag fp
         , _fpId = -- TOOD: Is this supposed to be the same?
                   -- It used to be different: "Guid.combine lamGuid guid"
                   fpIdGuid fp
@@ -660,7 +654,6 @@ convertWhereItems usedTags expr =
         { _wiValue =
             value
             & dBody . rPayload . plData <>~ hiddenData
-        , _wiGuid = defGuid
         , _wiActions =
             mkWIActions <$>
             expr ^. V.payload . ipStored <*>
@@ -781,8 +774,7 @@ convertDefI cp (Definition.Definition (Definition.Body bodyContent exportedType)
   bodyS <- convertDefContent bodyContent exportedType
   name <- ConvertExpr.makeStoredNameProperty defI
   return Definition
-    { _drGuid = IRef.guid defI
-    , _drName = name
+    { _drName = name
     , _drBody = bodyS
     }
   where

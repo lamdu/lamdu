@@ -80,6 +80,7 @@ makeWheres whereItems myId = do
       ]
     ]
 
+-- TODO: Move to sugar
 presentationModeChoiceConfig :: Config -> BWidgets.ChoiceWidgetConfig
 presentationModeChoiceConfig config = BWidgets.ChoiceWidgetConfig
   { BWidgets.cwcFDConfig = FocusDelegator.Config
@@ -113,10 +114,10 @@ mkPresentationEdits guid myId = do
     mkProp = Anchors.assocPresentationMode guid
 
 make ::
-  MonadA m => Guid -> Sugar.NameProperty Sugar.Name m ->
+  MonadA m => Sugar.NameProperty Sugar.Name m ->
   Sugar.DefinitionContent Sugar.Name m (ExprGuiM.SugarExpr m) ->
   ExprGuiM m (WidgetT m)
-make guid nameProp content = do
+make nameProp content = do
   equals <- ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
   rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods E.Key'Equal] rhs
   let
@@ -163,6 +164,7 @@ make guid nameProp content = do
   wheres <- makeWheres (content ^. Sugar.dWhereItems) myId
   return . Box.vboxAlign 0 $ assignment ^. ExpressionGui.egWidget : wheres
   where
+    guid = nameProp ^. Sugar.npGuid
     presentationChoiceId = Widget.joinId myId ["presentation"]
     lhs = myId : map (WidgetIds.fromGuid . (^. Sugar.fpId)) params
     rhs = ("Def Body", body)
@@ -192,7 +194,6 @@ makeWhereItemEdit item = do
       | otherwise = mempty
   Widget.weakerEvents eventMap <$>
     make
-    (item ^. Sugar.wiGuid)
     (item ^. Sugar.wiName)
     (item ^. Sugar.wiValue)
 

@@ -30,7 +30,6 @@ import qualified Control.Lens as Lens
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
-import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
@@ -285,8 +284,7 @@ getScopeElement sugarContext (par, typeExpr) = do
         pure mempty
           { _scopeGetParams = [
             ( GetParams
-              { _gpDefGuid = defGuid
-              , _gpDefName = defName
+              { _gpDefName = defName
               , _gpJumpTo = jumpTo
               }
             , getParam )
@@ -296,8 +294,7 @@ getScopeElement sugarContext (par, typeExpr) = do
         pure mempty
           { _scopeLocals = [
             ( GetVar
-              { _gvIdentifier = UniqueId.toGuid par
-              , _gvName = parName
+              { _gvName = parName
               , _gvJumpTo = errorJumpTo
               , _gvVarType = GetParameter
               }
@@ -311,8 +308,7 @@ getScopeElement sugarContext (par, typeExpr) = do
       pure mempty
         { _scopeLocals = [
           ( GetVar
-            { _gvIdentifier = UniqueId.toGuid tag
-            , _gvName = name
+            { _gvName = name
             , _gvJumpTo = errorJumpTo
             , _gvVarType = GetFieldParameter
             }
@@ -327,8 +323,7 @@ getGlobal defI = do
   pure mempty
     { _scopeGlobals = [
       ( GetVar
-        { _gvIdentifier = IRef.guid defI
-        , _gvName = name
+        { _gvName = name
         , _gvJumpTo = errorJumpTo
         , _gvVarType = GetDefinition
         }

@@ -1,6 +1,6 @@
 {-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes, DeriveGeneric #-}
 module Lamdu.Sugar.Types
-  ( Definition(..), drName, drGuid, drBody
+  ( Definition(..), drName, drBody
   , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
   , ListItemActions(..), itemAddNext, itemDelete
   , FuncParamActions(..), fpListItemActions
@@ -26,22 +26,22 @@ module Lamdu.Sugar.Types
   , DefinitionN, DefinitionU
   , Expression, ExpressionN
   , BodyN
-  , WhereItem(..), wiValue, wiGuid, wiName, wiActions, wiInferredType
+  , WhereItem(..), wiValue, wiName, wiActions, wiInferredType
   , ListItem(..), liMActions, liExpr
   , ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
   , Record(..), rItems, rMAddFirstItem
   , GetField(..), gfRecord, gfTag
   , GetVarType(..)
-  , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
-  , GetParams(..), gpDefGuid, gpDefName, gpJumpTo
+  , GetVar(..), gvName, gvJumpTo, gvVarType
+  , GetParams(..), gpDefName, gpJumpTo
   , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
   , AnnotatedArg(..), aaTag, aaTagExprGuid, aaExpr
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
   , Lam(..), lParam, lResult
   , FuncParamType(..)
   , FuncParam(..)
-    , fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpInferredType, fpMActions
+    , fpName, fpId, fpAltIds, fpVarKind, fpInferredType, fpMActions
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
   , HoleArg(..), haExpr, haExprPresugared, haUnwrap
   , HoleInferred(..), hiSuggestedValue, hiType, hiMakeConverted
@@ -64,7 +64,7 @@ module Lamdu.Sugar.Types
   , InputPayload, InputExpr
   , Stored
   , NameProperty(..)
-    , npName, npSetName
+    , npName, npGuid, npSetName
   ) where
 
 import Data.Binary (Binary)
@@ -179,14 +179,14 @@ data FuncParamType = FuncParameter | FuncFieldParameter
 
 data NameProperty name m = NameProperty
   { _npName :: name
+  , _npGuid :: Guid
   , _npSetName :: String -> T m ()
   }
 
 -- TODO:
 data FuncParam name m = FuncParam
   { -- non-unique (e.g: tag guid). Name attached here:
-    _fpGuid :: Guid
-  , _fpId :: Guid
+    _fpId :: Guid
   , _fpAltIds :: [Guid]
   , _fpVarKind :: FuncParamType
   , _fpName :: NameProperty name m
@@ -198,6 +198,12 @@ data Lam name m expr = Lam
   { _lParam :: FuncParam name m
   , _lResult :: expr
   } deriving (Functor, Foldable, Traversable)
+
+data TagG name m = TagG
+  { _tagInstance :: Guid -- Unique across different uses of a tag
+  , _tagVal :: T.Tag
+  , _tagGName :: NameProperty name m
+  }
 
 data PickedResult = PickedResult
   { _prMJumpTo :: Maybe Guid
@@ -301,22 +307,14 @@ data GetVarType = GetDefinition | GetFieldParameter | GetParameter
   deriving (Eq, Ord)
 
 data GetVar name m = GetVar
-  { _gvIdentifier :: Guid
-  , _gvName :: NameProperty name m
+  { _gvName :: NameProperty name m
   , _gvJumpTo :: T m Guid
   , _gvVarType :: GetVarType
   }
 
 data GetParams name m = GetParams
-  { _gpDefGuid :: Guid
-  , _gpDefName :: NameProperty name m
+  { _gpDefName :: NameProperty name m
   , _gpJumpTo :: T m Guid
-  }
-
-data TagG name m = TagG
-  { _tagInstance :: Guid -- Unique across different uses of a tag
-  , _tagVal :: T.Tag
-  , _tagGName :: NameProperty name m
   }
 
 data SpecialArgs expr
@@ -351,8 +349,7 @@ data Body name m expr
   deriving (Functor, Foldable, Traversable)
 
 instance Show (FuncParam name m) where
-  show fp =
-    concat ["(", show (_fpGuid fp), ":", show (_fpInferredType fp), ")"]
+  show _fp = "TODO:FuncParam"
 
 instance Show expr => Show (Body name m expr) where
   show (BodyLam (Lam paramType resultType)) =
@@ -374,7 +371,6 @@ instance Show expr => Show (Body name m expr) where
 data WhereItem name m expr = WhereItem
   { _wiValue :: DefinitionContent name m expr
   , _wiInferredType :: Type
-  , _wiGuid :: Guid
   , _wiName :: NameProperty name m
   , _wiActions :: Maybe (ListItemActions m)
   } deriving (Functor, Foldable, Traversable)
@@ -415,8 +411,7 @@ data DefinitionBody name m expr
   deriving (Functor, Foldable, Traversable)
 
 data Definition name m expr = Definition
-  { _drGuid :: Guid
-  , _drName :: NameProperty name m
+  { _drName :: NameProperty name m
   , _drBody :: DefinitionBody name m expr
   } deriving (Functor, Foldable, Traversable)
 
