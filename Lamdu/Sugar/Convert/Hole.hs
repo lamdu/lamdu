@@ -88,13 +88,6 @@ mkPaste exprP = do
       ~() <- replacer clip
       return $ ExprIRef.valIGuid clip
 
-idTranslations ::
-  (Guid -> Random.StdGen) ->
-  Val (InputPayloadP stored a) ->
-  Val Guid ->
-  [(Guid, Guid)]
-idTranslations _mkGen _convertedExpr _writtenExpr = []
-
 inferOnTheSide ::
   (MonadA m) =>
   ConvertM.Context m -> Infer.Scope -> Val () ->
@@ -327,16 +320,14 @@ mkHoleResult sugarContext (InputPayload guid inferPayload stored ()) mkGen val =
         }
         where
           inferredExpr = (^. ipInferred) <$> fWrittenExpr
-    mkPickedResult consistentExpr writtenExpr = do
+    mkPickedResult _consistentExpr writtenExpr = do
       let
         f payload = (payload ^. ipGuid, payload ^. ipInferred)
         mNextHole = listToMaybe . orderedInnerHoles $ f <$> writtenExpr
       pure
         PickedResult
         { _prMJumpTo = (^. V.payload . Lens._1) <$> mNextHole
-        , _prIdTranslation =
-          idTranslations mkGen consistentExpr
-          (ExprIRef.valIGuid . Property.value . (^. ipStored) <$> writtenExpr)
+        , _prIdTranslation = []
         }
 
 randomizeNonStoredParamIds ::
