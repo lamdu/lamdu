@@ -4,9 +4,8 @@ module Lamdu.GUI.ExpressionEdit.DefinitionContentEdit (make, diveToNameEdit, mak
 import Control.Applicative ((<$>), (<$))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Data.List.Utils (nonEmptyAll, isLengthAtLeast)
+import Data.List.Utils (nonEmptyAll)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -21,7 +20,6 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -80,7 +78,6 @@ makeWheres whereItems myId = do
       ]
     ]
 
--- TODO: Move to sugar
 presentationModeChoiceConfig :: Config -> BWidgets.ChoiceWidgetConfig
 presentationModeChoiceConfig config = BWidgets.ChoiceWidgetConfig
   { BWidgets.cwcFDConfig = FocusDelegator.Config
@@ -94,9 +91,11 @@ presentationModeChoiceConfig config = BWidgets.ChoiceWidgetConfig
   , BWidgets.cwcBgLayer = Config.layerChoiceBG $ Config.layers config
   }
 
-mkPresentationEdits :: MonadA m => Guid -> Widget.Id -> ExprGuiM m (Widget (T m))
-mkPresentationEdits guid myId = do
-  cur <- ExprGuiM.transaction $ Transaction.getP mkProp
+mkPresentationModeEdit ::
+    MonadA m => (Transaction.MkProperty m Sugar.PresentationMode) ->
+    Widget.Id -> ExprGuiM m (Widget (T m))
+mkPresentationModeEdit prop myId = do
+  cur <- ExprGuiM.transaction $ Transaction.getP prop
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     mkPair presentationMode = do
@@ -108,13 +107,12 @@ mkPresentationEdits guid myId = do
   pairs <- traverse mkPair [minBound..maxBound]
   fmap (Widget.scale (realToFrac <$> Config.presentationChoiceScaleFactor config)) .
     ExprGuiM.widgetEnv $
-    BWidgets.makeChoiceWidget (Transaction.setP mkProp) pairs cur
+    BWidgets.makeChoiceWidget (Transaction.setP prop) pairs cur
     (presentationModeChoiceConfig config) myId
-  where
-    mkProp = Anchors.assocPresentationMode guid
 
 make ::
-  MonadA m => Sugar.NameProperty Sugar.Name m ->
+  MonadA m =>
+  Sugar.NameProperty Sugar.Name m ->
   Sugar.DefinitionContent Sugar.Name m (ExprGuiM.SugarExpr m) ->
   ExprGuiM m (WidgetT m)
 make nameProp content = do
@@ -143,9 +141,11 @@ make nameProp content = do
       Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals nameProp
   savePos <- ExprGuiM.mkPrejumpPosSaver
   presentationEdits <-
-    if isLengthAtLeast 2 params
-    then (: []) <$> mkPresentationEdits guid presentationChoiceId
-    else return []
+      case content ^. Sugar.dSetPresentationMode of
+      Nothing -> return []
+      Just setPresentationMode ->
+        (: []) <$>
+        mkPresentationModeEdit setPresentationMode presentationChoiceId
   let
     addWhereItemEventMap =
       Widget.keysEventMapMovesCursor (Config.addWhereItemKeys config)
@@ -164,7 +164,6 @@ make nameProp content = do
   wheres <- makeWheres (content ^. Sugar.dWhereItems) myId
   return . Box.vboxAlign 0 $ assignment ^. ExpressionGui.egWidget : wheres
   where
-    guid = nameProp ^. Sugar.npGuid
     presentationChoiceId = Widget.joinId myId ["presentation"]
     lhs = myId : map (WidgetIds.fromGuid . (^. Sugar.fpId)) params
     rhs = ("Def Body", body)
@@ -172,7 +171,7 @@ make nameProp content = do
     body = content ^. Sugar.dBody
     toEventMapAction =
       fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid)
-    myId = WidgetIds.fromGuid guid
+    myId = WidgetIds.fromGuid $ nameProp ^. Sugar.npGuid
 
 makeWhereItemEdit ::
   MonadA m =>

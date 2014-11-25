@@ -9,8 +9,10 @@ module Lamdu.Sugar.Types
   , DefinitionTypeInfo(..)
     , _DefinitionExportedTypeInfo
     , _DefinitionNewType
+  , Anchors.PresentationMode(..)
   , DefinitionContent(..)
-    , dParams, dBody, dWhereItems, dAddFirstParam, dAddInnermostWhereItem
+    , dSetPresentationMode, dParams, dBody, dWhereItems
+    , dAddFirstParam, dAddInnermostWhereItem
   , DefinitionBuiltin(..)
   , WrapAction(..)
   , SetToHole(..), _SetToHole, _AlreadyAHole
@@ -73,7 +75,7 @@ import Data.Monoid (Monoid(..))
 import Data.Monoid.Generic (def_mempty, def_mappend)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
-import Data.Store.Transaction (Transaction)
+import Data.Store.Transaction (Transaction, MkProperty)
 import Data.Traversable (Traversable)
 import GHC.Generics (Generic)
 import Lamdu.Expr.Scheme (Scheme)
@@ -82,6 +84,7 @@ import Lamdu.Expr.Val (Val)
 import Lamdu.Sugar.Types.Internal (Stored)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Infer as Infer
@@ -377,7 +380,8 @@ data WhereItem name m expr = WhereItem
 
 -- Common data for definitions and where-items
 data DefinitionContent name m expr = DefinitionContent
-  { _dParams :: [FuncParam name m]
+  { _dSetPresentationMode :: Maybe (MkProperty m Anchors.PresentationMode)
+  , _dParams :: [FuncParam name m]
   , _dBody :: expr
   , _dWhereItems :: [WhereItem name m expr]
   , _dAddFirstParam :: T m Guid

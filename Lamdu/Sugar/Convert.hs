@@ -10,6 +10,7 @@ import Control.Monad (guard, void)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import Control.MonadA (MonadA)
+import Data.List.Utils (isLengthAtLeast)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..), (<>))
@@ -691,8 +692,14 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
       (whereItems, whereBody) <-
         convertWhereItems (usedTags <> cpTags convParams) funcBody
       bodyS <- ConvertM.convertSubexpression whereBody
+      let
+        setPresentationMode
+          | isLengthAtLeast 2 (cpParams convParams) =
+            Just $ Anchors.assocPresentationMode guid
+          | otherwise = Nothing
       return DefinitionContent
         { _dParams = cpParams convParams
+        , _dSetPresentationMode = setPresentationMode
         , _dBody =
           bodyS
           & rPayload . plData <>~
@@ -704,6 +711,8 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
           fromMaybe (error "Where must be stored") $
           whereBody ^. V.payload . ipStored
         }
+  where
+    guid = ConvertM.rpiFromDefinition recordParamsInfo
 
 convertDefIBuiltin ::
   MonadA m => Definition.Builtin -> DefIM m -> Definition.ExportedType ->

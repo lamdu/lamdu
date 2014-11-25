@@ -486,7 +486,7 @@ addToDef =
       , _p1StoredNameSuffixes =
         mconcat .
         map Map.fromList . filter (ListUtils.isLengthAtLeast 2) .
-        map ((`zip` [0..]) . getSetList) . Map.elems $ globalNamesMap
+        map ((`zip` [0..]) . getSetList) $ Map.elems globalNamesMap
       }
     pass1 (def, storedNamesBelow) =
       runPass1M (emptyP1Env (storedNamesBelow ^. snwGlobalNames)) $ toDef def
