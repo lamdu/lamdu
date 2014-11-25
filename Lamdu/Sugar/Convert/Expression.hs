@@ -55,7 +55,8 @@ make exprPl body = do
     , _plData = exprPl ^. ipData
     }
 
-makeStoredNameProperty :: (UniqueId.ToGuid a, MonadA m) => a -> T m (NameProperty (Maybe String) m)
+makeStoredNameProperty ::
+  (UniqueId.ToGuid a, MonadA m) => a -> T m (NameProperty MStoredName m)
 makeStoredNameProperty uid = do
   name <- Transaction.getP nameRef
   pure

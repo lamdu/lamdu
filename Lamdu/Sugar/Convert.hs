@@ -164,20 +164,20 @@ convertVar ::
 convertVar param exprPl = do
   recordParamsMap <- (^. ConvertM.scRecordParamsInfos) <$> ConvertM.readContext
   case Map.lookup param recordParamsMap of
-    Just (ConvertM.RecordParamsInfo defGuid jumpTo) -> do
-      defName <- makeStoredNamePropertyS defGuid
+    Just (ConvertM.RecordParamsInfo defName jumpTo) ->
       ConvertExpr.make exprPl $ BodyGetParams GetParams
-        { _gpDefName = defName
-        , _gpJumpTo = jumpTo
-        }
-    Nothing -> do
-      parName <- makeStoredNamePropertyS param
-      ConvertExpr.make exprPl .
-        BodyGetVar $ GetVar
-        { _gvName = parName
-        , _gvJumpTo = pure parGuid
-        , _gvVarType = GetParameter
-        }
+      { _gpDefName = defName
+      , _gpJumpTo = jumpTo
+      }
+    Nothing ->
+      do
+        parName <- makeStoredNamePropertyS param
+        ConvertExpr.make exprPl .
+          BodyGetVar $ GetVar
+          { _gvName = parName
+          , _gvJumpTo = pure parGuid
+          , _gvVarType = GetParameter
+          }
   where
     parGuid = UniqueId.toGuid param
 
@@ -633,10 +633,8 @@ convertWhereItems usedTags expr =
     let
       param = ewiParam ewi
       defGuid = UniqueId.toGuid param
-      recordParamsInfo =
-        ConvertM.RecordParamsInfo defGuid $ pure defGuid
     value <-
-      convertDefinitionContent recordParamsInfo usedTags $
+      convertDefinitionContent defGuid (pure defGuid) usedTags $
       ewiArg ewi
     let
       mkWIActions topLevelProp bodyStored =
@@ -679,38 +677,40 @@ _newField = (,) <$> UniqueId.new <*> DataOps.newHole
 
 convertDefinitionContent ::
   (MonadA m, Monoid a) =>
-  ConvertM.RecordParamsInfo m -> Set T.Tag -> InputExpr m a ->
+  Guid -> T m Guid -> Set T.Tag -> InputExpr m a ->
   ConvertM m (DefinitionContent MStoredName m (ExpressionU m a))
-convertDefinitionContent recordParamsInfo usedTags expr = do
-  (convParams, funcBody) <-
-    convertDefinitionParams recordParamsInfo usedTags expr
-  ConvertM.local
-    ((ConvertM.scTagParamInfos <>~ cpParamInfos convParams) .
-     (ConvertM.scRecordParamsInfos <>~ cpRecordParamsInfos convParams)) $ do
-      (whereItems, whereBody) <-
-        convertWhereItems (usedTags <> cpTags convParams) funcBody
-      bodyS <- ConvertM.convertSubexpression whereBody
-      let
-        setPresentationMode
-          | isLengthAtLeast 2 (cpParams convParams) =
-            Just $ Anchors.assocPresentationMode guid
-          | otherwise = Nothing
-      return DefinitionContent
-        { _dParams = cpParams convParams
-        , _dSetPresentationMode = setPresentationMode
-        , _dBody =
-          bodyS
-          & rPayload . plData <>~
-            cpHiddenPayloads convParams ^. Lens.traversed . ipData
-        , _dWhereItems = whereItems
-        , _dAddFirstParam = cpAddFirstParam convParams
-        , _dAddInnermostWhereItem =
-          fmap (UniqueId.toGuid . fst) . DataOps.redexWrap $
-          fromMaybe (error "Where must be stored") $
-          whereBody ^. V.payload . ipStored
-        }
-  where
-    guid = ConvertM.rpiFromDefinition recordParamsInfo
+convertDefinitionContent defGuid jumpToDef usedTags expr =
+  do
+    defName <- makeStoredNamePropertyS defGuid
+    (convParams, funcBody) <-
+      convertDefinitionParams
+      (ConvertM.RecordParamsInfo defName jumpToDef)
+      usedTags expr
+    ConvertM.local
+      ((ConvertM.scTagParamInfos <>~ cpParamInfos convParams) .
+       (ConvertM.scRecordParamsInfos <>~ cpRecordParamsInfos convParams)) $ do
+        (whereItems, whereBody) <-
+          convertWhereItems (usedTags <> cpTags convParams) funcBody
+        bodyS <- ConvertM.convertSubexpression whereBody
+        let
+          setPresentationMode
+            | isLengthAtLeast 2 (cpParams convParams) =
+              Just $ Anchors.assocPresentationMode defGuid
+            | otherwise = Nothing
+        return DefinitionContent
+          { _dParams = cpParams convParams
+          , _dSetPresentationMode = setPresentationMode
+          , _dBody =
+            bodyS
+            & rPayload . plData <>~
+              cpHiddenPayloads convParams ^. Lens.traversed . ipData
+          , _dWhereItems = whereItems
+          , _dAddFirstParam = cpAddFirstParam convParams
+          , _dAddInnermostWhereItem =
+            fmap (UniqueId.toGuid . fst) . DataOps.redexWrap $
+            fromMaybe (error "Where must be stored") $
+            whereBody ^. V.payload . ipStored
+          }
 
 convertDefIBuiltin ::
   MonadA m => Definition.Builtin -> DefIM m -> Definition.ExportedType ->
@@ -756,7 +756,7 @@ convertDefIExpr cp valLoaded defI defType = do
       valInferred
       <&> guidIntoPl . addStoredGuids
       & traverse . ipStored %~ Just
-      & convertDefinitionContent recordParamsInfo mempty
+      & convertDefinitionContent defGuid (jumpToDefI cp defI) mempty
     return $ DefinitionBodyExpression DefinitionExpression
       { _deContent = content
       , _deTypeInfo =
@@ -767,8 +767,7 @@ convertDefIExpr cp valLoaded defI defType = do
   where
     valIRefs = valLoaded <&> Load.exprPropertyOfClosure
     exprI = valIRefs ^. V.payload . Property.pVal
-    recordParamsInfo =
-        ConvertM.RecordParamsInfo (IRef.guid defI) $ jumpToDefI cp defI
+    defGuid = IRef.guid defI
 
 convertDefI ::
   MonadA m =>

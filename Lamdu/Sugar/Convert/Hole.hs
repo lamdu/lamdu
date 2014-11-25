@@ -186,8 +186,7 @@ getScopeElement sugarContext (par, typeExpr) = do
   where
     mkGetPar =
       case Map.lookup par recordParamsMap of
-      Just (ConvertM.RecordParamsInfo defGuid jumpTo) -> do
-        defName <- ConvertExpr.makeStoredNameProperty defGuid
+      Just (ConvertM.RecordParamsInfo defName jumpTo) -> do
         pure mempty
           { _scopeGetParams = [
             ( GetParams

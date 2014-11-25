@@ -38,7 +38,8 @@ data TagParamInfo = TagParamInfo
   }
 
 data RecordParamsInfo m = RecordParamsInfo
-  { rpiFromDefinition :: Guid -- TODO: Sum-type for definitions and where items
+  { -- The name of the definition from which this params record is of:
+    rpiDefName :: Sugar.NameProperty Sugar.MStoredName m
   , rpiJumpTo :: T m Guid
   }
 
