@@ -88,98 +88,12 @@ mkPaste exprP = do
       ~() <- replacer clip
       return $ ExprIRef.valIGuid clip
 
--- -- Sugar exports fpId of Lambda params as:
--- --   Guid.combine lamGuid paramGuid
--- --
--- -- So to be compatible with that in our idTranslations, we want to
--- -- change our param Guids to match that:
--- _combineLamGuids :: (a -> Guid) -> Val a -> Val a
--- _combineLamGuids getGuid =
---   go Map.empty
---   where
---     go renames (Val a body) =
---       -- TODO: Lens.outside
---       Val a $
---       case body of
---       V.BLeaf (V.LVar var)
---         | Just newParamVar <- Map.lookup var renames ->
---           V.BLeaf $ V.LVar newParamVar
---       V.BAbs (V.Lam var paramType result) ->
---         V.BAbs $
---         V.Lam newParamVar paramType $
---         go (Map.insert var newParamVar renames) result
---         where
---           newParamVar = _combineVarsAsGuids (getGuid a) var
-
---       _ -> go renames <$> body
-
--- markHoles :: Val a -> Val (Bool, a)
--- markHoles =
---   (ExprLens.holePayloads . Lens._1 .~ True) .
---   (Lens.mapped %~ (,) False)
-
-_aWhen :: Applicative f => Bool -> f () -> f ()
-_aWhen False _ = pure ()
-_aWhen True x = x
-
-_translateIfInferred ::
-  (Guid -> Random.StdGen) ->
-  InputPayloadP stored a ->
-  Guid ->
-  [(Guid, Guid)]
-_translateIfInferred _mkGen _aIP _bGuid = [] -- do
-  -- guard $ Lens.nullOf ExprLens.exprHole inferredVal
-  -- translateInferred mkGen inferredVal (aIP ^. ipGuid) bGuid
-  -- where
-  --   inferredVal =
-  --     aIP ^. ipInferred . InferDeref.dValue
-  --     & void & fromMaybe ExprUtil.pureHole
-
-_translateInferred ::
-  (Guid -> Random.StdGen) ->
-  Val () -> Guid -> Guid ->
-  [(Guid, Guid)]
-_translateInferred _mkGen _inferredVal _aGuid _bGuid = []
-  -- idTranslations mkGen (intoIP <$> aExpr) bExpr
-  -- where
-  --   mkExpr guid = ExprUtil.randomizeExprAndParams (mkGen guid) (id <$ inferredVal)
-  --   intoIP guid = InputPayload
-  --     { _ipGuid = guid
-  --     , _ipInferred = Nothing
-  --     , _ipStored = Nothing
-  --     , _ipData = ()
-  --     }
-  --   aExpr = mkExpr aGuid
-  --   bExpr = mkExpr bGuid
-
 idTranslations ::
   (Guid -> Random.StdGen) ->
   Val (InputPayloadP stored a) ->
   Val Guid ->
   [(Guid, Guid)]
 idTranslations _mkGen _convertedExpr _writtenExpr = []
-  -- TODO:
-  -- execWriter . runApplicativeMonoid . getConst $
-  -- go
-  -- (convertedExpr & combineLamGuids (^. ipGuid) & markHoles)
-  -- (writtenExpr & combineLamGuids id & markHoles)
-  -- where
-  --   go = ExprUtil.matchExprG tell match mismatch
-  --   match (aIsHole, aIP) (bIsHole, bGuid)
-  --     | aIsHole /= bIsHole = error "match between differing bodies?"
-  --     | otherwise =
-  --       tell (aIP ^. ipGuid) bGuid *>
-  --       aWhen aIsHole (tells $ translateIfInferred mkGen aIP bGuid)
-  --   mismatch x y =
-  --     error $
-  --     unlines
-  --     [ "Mismatch idTranslations: " ++ show (void x) ++ ", " ++ show (void y)
-  --     , showExpr convertedExpr
-  --     , showExpr writtenExpr
-  --     ]
-  --   showExpr expr = expr & ExprLens.exprDef .~ () & void & show
-  --   tells = Const . ApplicativeMonoid . Writer.tell
-  --   tell src dst = tells [(src, dst)]
 
 inferOnTheSide ::
   (MonadA m) =>
