@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
 module Lamdu.GUI.ExpressionEdit.DefinitionContentEdit (make, diveToNameEdit, makeNameEdit) where
 
-import Control.Applicative ((<$>), (<*>), (<$))
+import Control.Applicative ((<$>), (<$))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll, isLengthAtLeast)
@@ -12,7 +12,7 @@ import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CharClassification (operatorChars)
 import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionGui (ExpressionGui, Collapser(..))
+import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
@@ -52,42 +52,15 @@ nonOperatorName (Sugar.Name Sugar.NameSourceStored _ x) =
   nonEmptyAll (`notElem` operatorChars) x
 nonOperatorName _ = False
 
-polyNameFDConfig :: Config -> FocusDelegator.Config
-polyNameFDConfig config = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = Config.collapsedExpandKeys config
-  , FocusDelegator.startDelegatingDoc = E.Doc ["View", "Expand polymorphic"]
-  , FocusDelegator.stopDelegatingKeys = Config.collapsedCollapseKeys config
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["View", "Collapse polymorphic"]
-  }
-
-makePolyNameEdit ::
+makeDefNameEdit ::
   MonadA m =>
-  Sugar.NameProperty Sugar.Name m -> [ExpressionGui m] -> Widget.Id ->
+  Sugar.NameProperty Sugar.Name m -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makePolyNameEdit nameProp depParamsEdits myId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    f wId =
-      Collapser
-      { cMakeExpanded =
-        ExpressionGui.withBgColor
-        (Config.layerCollapsedExpandedBG (Config.layers config))
-        (Config.collapsedExpandedBGColor config) bgId .
-        ExpressionGui.hboxSpaced . (: depParamsEdits) <$>
-        nameGui (Config.monomorphicDefOriginForegroundColor config)
-      , cMakeFocusedCompact =
-        nameGui $ Config.polymorphicDefOriginForegroundColor config
-      }
-      where
-        nameGui color = makeNameGui color wId
-        bgId = Widget.toAnimId wId ++ ["bg"]
-  case depParamsEdits of
-    [] -> makeNameGui (Config.monomorphicDefOriginForegroundColor config) myId
-    _ -> ExpressionGui.makeCollapser (polyNameFDConfig config) f myId
-  where
-    makeNameGui color wId =
-      ExprGuiM.withFgColor color $
-      ExpressionGui.fromValueWidget <$> makeNameEdit nameProp wId
+makeDefNameEdit nameProp myId =
+  do
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    ExprGuiM.withFgColor (Config.defOriginForegroundColor config) $
+      ExpressionGui.fromValueWidget <$> makeNameEdit nameProp myId
 
 makeWheres ::
   MonadA m =>
@@ -153,8 +126,7 @@ make guid nameProp content = do
         & Widget.wEventMap %~ E.filterSChars (curry (/= ('=', E.NotShifted)))
         & Widget.weakerEvents rhsJumperEquals
       | otherwise = widget
-  (depParamsEdits, paramsEdits) <-
-    makeNestedParams jumpToRHSViaEquals rhs myId depParams params
+  paramsEdits <- makeNestedParams jumpToRHSViaEquals rhs myId params
   config <- ExprGuiM.widgetEnv WE.readConfig
   bodyEdit <- makeResultEdit lhs body
   rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
@@ -164,8 +136,8 @@ make guid nameProp content = do
       (E.Doc ["Edit", "Add parameter"]) .
       toEventMapAction $ content ^. Sugar.dAddFirstParam
     nameEditEventMap = mappend addFirstParamEventMap rhsJumper
-  polyNameEdit <-
-    makePolyNameEdit nameProp depParamsEdits myId
+  defNameEdit <-
+    makeDefNameEdit nameProp myId
     & Lens.mapped . ExpressionGui.egWidget %~
       Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals nameProp
   savePos <- ExprGuiM.mkPrejumpPosSaver
@@ -181,7 +153,7 @@ make guid nameProp content = do
     assignment =
       ExpressionGui.hboxSpaced $
       ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
-      polyNameEdit :
+      defNameEdit :
       paramsEdits ++
       [ ExpressionGui.fromValueWidget equals
       , bodyEdit
@@ -192,10 +164,8 @@ make guid nameProp content = do
   return . Box.vboxAlign 0 $ assignment ^. ExpressionGui.egWidget : wheres
   where
     presentationChoiceId = Widget.joinId myId ["presentation"]
-    lhs = myId : map (WidgetIds.fromGuid . (^. Sugar.fpId)) allParams
+    lhs = myId : map (WidgetIds.fromGuid . (^. Sugar.fpId)) params
     rhs = ("Def Body", body)
-    allParams = depParams ++ params
-    depParams = content ^. Sugar.dDepParams
     params = content ^. Sugar.dParams
     body = content ^. Sugar.dBody
     toEventMapAction =
@@ -262,18 +232,13 @@ makeResultEdit lhs result = do
 addPrevIds ::
   Widget.Id ->
   [Sugar.FuncParam name m] ->
-  [Sugar.FuncParam name m] ->
-  ( [(Widget.Id, Sugar.FuncParam name m)]
-  , [(Widget.Id, Sugar.FuncParam name m)]
-  )
-addPrevIds lhsId depParams params =
-  (depParamIds, paramIds)
+  [(Widget.Id, Sugar.FuncParam name m)]
+addPrevIds lhsId params =
+  go lhsId params
   where
-    depParamIds = go lhsId depParams
-    paramIds = go lhsId params
     fpId param = WidgetIds.fromGuid $ param ^. Sugar.fpId
-    go _ [] = []
-    go i (fp:fps) = (i, fp) : go (fpId fp) fps
+    go _      [] = []
+    go prevId (fp:fps) = (prevId, fp) : go (fpId fp) fps
 
 makeNestedParams ::
   MonadA m =>
@@ -281,26 +246,17 @@ makeNestedParams ::
   (String, ExprGuiM.SugarExpr m) ->
   Widget.Id ->
   [Sugar.FuncParam Sugar.Name m] ->
-  [Sugar.FuncParam Sugar.Name m] ->
-  ExprGuiM m ([ExpressionGui m], [ExpressionGui m])
-makeNestedParams atParamWidgets rhs lhsId depParams params = do
+  ExprGuiM m [ExpressionGui m]
+makeNestedParams atParamWidgets rhs lhsId params = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
   let
-    (depParamIds, paramIds) = addPrevIds lhsId depParams params
     mkParam (prevId, param) =
       (ExpressionGui.egWidget %~
        (atParamWidgets (param ^. Sugar.fpName) .
         Widget.weakerEvents rhsJumper)) <$>
       LambdaEdit.makeParamEdit prevId param
-  (,)
-    <$> traverse mkParam depParamIds
-    <*> traverse mkParam paramIds
+  traverse mkParam $ addPrevIds lhsId params
 
 diveToNameEdit :: Widget.Id -> Widget.Id
-diveToNameEdit =
-  -- If we delegate too deep (e.g: No polymorphic params) that's
-  -- handled OK. So we may as well assume we're always wrapped by a
-  -- polymorphic wrapper:
-  FocusDelegator.delegatingId . -- Collapsed wrapper
-  FocusDelegator.delegatingId -- Name editor
+diveToNameEdit = FocusDelegator.delegatingId -- Name editor

@@ -514,8 +514,7 @@ convertDefinitionParams ::
   (MonadA m, Monoid a) =>
   ConvertM.RecordParamsInfo m -> Set T.Tag -> InputExpr m a ->
   ConvertM m
-  ( [FuncParam MStoredName m]
-  , ConventionalParams m a
+  ( ConventionalParams m a
   , InputExpr m a
   )
 convertDefinitionParams recordParamsInfo usedTags expr =
@@ -530,17 +529,16 @@ convertDefinitionParams recordParamsInfo usedTags expr =
           convParams <-
             mkRecordParams recordParamsInfo paramVar fieldParams
             expr (traverse (^. ipStored) body)
-          return ([], convParams, body)
+          return (convParams, body)
         where
           FlatComposite fields extension = FlatComposite.fromComposite composite
           fieldParams = map makeFieldParam $ Map.toList fields
       _ ->
         pure
-        ( []
-        , singleConventionalParam stored param paramVar body
+        ( singleConventionalParam stored param paramVar body
         , body
         )
-  _ -> return ([], emptyConventionalParams stored, expr)
+  _ -> return (emptyConventionalParams stored, expr)
   where
     stored =
       fromMaybe (error "Definition body is always stored!") $
@@ -692,7 +690,7 @@ convertDefinitionContent ::
   ConvertM.RecordParamsInfo m -> Set T.Tag -> InputExpr m a ->
   ConvertM m (DefinitionContent MStoredName m (ExpressionU m a))
 convertDefinitionContent recordParamsInfo usedTags expr = do
-  (depParams, convParams, funcBody) <-
+  (convParams, funcBody) <-
     convertDefinitionParams recordParamsInfo usedTags expr
   ConvertM.local
     ((ConvertM.scTagParamInfos <>~ cpParamInfos convParams) .
@@ -701,8 +699,7 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
         convertWhereItems (usedTags <> cpTags convParams) funcBody
       bodyS <- ConvertM.convertSubexpression whereBody
       return DefinitionContent
-        { _dDepParams = depParams
-        , _dParams = cpParams convParams
+        { _dParams = cpParams convParams
         , _dBody =
           bodyS
           & rPayload . plData <>~

@@ -13,7 +13,6 @@ module Lamdu.GUI.ExpressionGui
   , makeNameView
   , makeNameEdit
   , withBgColor
-  , Collapser(..), makeCollapser
   -- Info adding
   , TypeStyle(..), addType -- TODO: s/type/info
   -- Expression wrapping
@@ -265,30 +264,6 @@ stdWrapParenify pl parentPrec prec addParens =
 withBgColor :: Layer -> Draw.Color -> AnimId -> ExpressionGui m -> ExpressionGui m
 withBgColor layer color animId =
   egWidget %~ Widget.backgroundColor layer animId color
-
-data Collapser m = Collapser
-  { cMakeExpanded :: ExprGuiM m (ExpressionGui m)
-  , cMakeFocusedCompact :: ExprGuiM m (ExpressionGui m)
-  }
-
-makeCollapser ::
-  MonadA m =>
-  FocusDelegator.Config ->
-  (Widget.Id -> Collapser m) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeCollapser fdConfig f =
-  ExprGuiM.wrapDelegated fdConfig FocusDelegator.NotDelegating (egWidget %~) $
-  \myId -> do
-    let Collapser makeExpanded makeFocusedCompact = f myId
-    -- TODO: This is just to detect whether cursor is in the full
-    -- expression.  Even when it's not displayed, which may be wasteful
-    -- (even with laziness, at least the names are going to be read).
-    expandedEdit <- makeExpanded
-    -- We are inside a focus delegator, so if the cursor is on us it
-    -- means user entered our widget.
-    if expandedEdit ^. egWidget . Widget.wIsFocused
-      then return expandedEdit
-      else makeFocusedCompact
 
 makeRow :: [(Widget.R, ExpressionGui m)] -> [(Vector2 Widget.R, WidgetT m)]
 makeRow =

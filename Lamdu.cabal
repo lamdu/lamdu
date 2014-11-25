@@ -166,7 +166,6 @@ Executable lamdu
                ,       Lamdu.GUI.ExpressionEdit
                ,       Lamdu.GUI.ExpressionEdit.ApplyEdit
                ,       Lamdu.GUI.ExpressionEdit.BuiltinEdit
-               ,       Lamdu.GUI.ExpressionEdit.CollapsedEdit
                ,       Lamdu.GUI.ExpressionEdit.DefinitionContentEdit
                ,       Lamdu.GUI.ExpressionEdit.EventMap
                ,       Lamdu.GUI.ExpressionEdit.GetFieldEdit

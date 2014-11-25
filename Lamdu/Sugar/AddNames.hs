@@ -374,15 +374,6 @@ toHole hole@Hole {..} = do
     , _holeInferred = inferred
     }
 
-toCollapsed ::
-  (MonadA tm, MonadNaming m) =>
-  Collapsed (OldName m) tm (Expression (OldName m) tm a) ->
-  m (Collapsed (NewName m) tm (Expression (NewName m) tm a))
-toCollapsed Collapsed {..} = do
-  compact <- toGetVar _cCompact
-  fullExpression <- toExpression _cFullExpression
-  pure Collapsed { _cCompact = compact, _cFullExpression = fullExpression, .. }
-
 toTag ::
   MonadNaming m => TagG (OldName m) tm ->
   m (TagG (NewName m) tm)
@@ -440,7 +431,6 @@ toBody (BodyRecord x) = BodyRecord <$> toRecord x
 toBody (BodyLam x) = BodyLam <$> toLam x
 toBody (BodyApply x) = BodyApply <$> toApply x
 toBody (BodyHole x) = BodyHole <$> toHole x
-toBody (BodyCollapsed x) = BodyCollapsed <$> toCollapsed x
 toBody (BodyGetVar x) = BodyGetVar <$> toGetVar x
 toBody (BodyGetParams x) = BodyGetParams <$> toGetParams x
 
@@ -464,14 +454,12 @@ toDefinitionContent ::
   DefinitionContent (OldName m) tm (Expression (OldName m) tm a) ->
   m (DefinitionContent (NewName m) tm (Expression (NewName m) tm a))
 toDefinitionContent def@DefinitionContent{..} = do
-  (depParams, (params, (whereItems, body))) <-
-    runCPS (traverse withFuncParam _dDepParams) .
+  (params, (whereItems, body)) <-
     runCPS (traverse withFuncParam _dParams) .
     runCPS (traverse withWhereItem _dWhereItems) $
     toExpression _dBody
   pure def
-    { _dDepParams = depParams
-    , _dParams = params
+    { _dParams = params
     , _dBody = body
     , _dWhereItems = whereItems
     }

@@ -13,8 +13,6 @@ import qualified Graphics.UI.Bottle.EventMap as E
 data Layers = Layers
   { layerCursorBG
   , layerTypes
-  , layerCollapsedCompactBG
-  , layerCollapsedExpandedBG
   , layerChoiceBG
   , layerHoleBG
   , layerNameCollisionBG
@@ -133,15 +131,7 @@ data Config = Config
   , inferredTypeBGColor :: Draw.Color
 
 -- For definitions
-  , collapsedForegroundColor :: Draw.Color
--- For parameters
-  , collapsedCompactBGColor :: Draw.Color
-  , collapsedExpandedBGColor :: Draw.Color
-  , collapsedExpandKeys :: [E.ModKey]
-  , collapsedCollapseKeys :: [E.ModKey]
-
-  , monomorphicDefOriginForegroundColor :: Draw.Color
-  , polymorphicDefOriginForegroundColor :: Draw.Color
+  , defOriginForegroundColor :: Draw.Color
 
   , builtinOriginNameColor :: Draw.Color
 

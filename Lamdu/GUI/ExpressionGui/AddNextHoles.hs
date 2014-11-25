@@ -83,7 +83,6 @@ jumpToExprPayloads :: Lens.Traversal' (Sugar.Expression name m a) a
 jumpToExprPayloads f expr =
   case expr ^. Sugar.rBody of
   Sugar.BodyHole _ -> mark
-  Sugar.BodyCollapsed _ -> pure expr
   Sugar.BodyLam _
     -> (Sugar.rBody . Sugar._BodyLam . Sugar.lResult) (jumpToExprPayloads f) expr
   _ -> (Sugar.rBody . Lens.traverse) (jumpToExprPayloads f) expr

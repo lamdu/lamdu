@@ -10,7 +10,7 @@ module Lamdu.Sugar.Types
     , _DefinitionExportedTypeInfo
     , _DefinitionNewType
   , DefinitionContent(..)
-    , dDepParams, dParams, dBody, dWhereItems, dAddFirstParam, dAddInnermostWhereItem
+    , dParams, dBody, dWhereItems, dAddFirstParam, dAddInnermostWhereItem
   , DefinitionBuiltin(..)
   , WrapAction(..)
   , SetToHole(..), _SetToHole, _AlreadyAHole
@@ -19,8 +19,7 @@ module Lamdu.Sugar.Types
     , wrap, setToHole, setToInnerExpr, cut
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
-    , _BodyCollapsed, _BodyLiteralInteger
-    , _BodyList, _BodyRecord
+    , _BodyLiteralInteger, _BodyList, _BodyRecord
   , Payload(..), plGuid, plInferredType, plActions, plData
   , ExpressionP(..), rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..), MStoredName
@@ -59,7 +58,6 @@ module Lamdu.Sugar.Types
     , holeResultHasHoles
   , PickedResult(..), prMJumpTo, prIdTranslation
   , TagG(..), tagGName, tagVal, tagInstance
-  , Collapsed(..), cFuncGuid, cCompact, cFullExpression, cFullExprHasInfo
   , MStorePoint, ExprStorePoint
   -- Input types:
   , InputPayloadP(..), ipGuid, ipInferred, ipStored, ipData
@@ -265,15 +263,6 @@ data Hole name m expr = Hole
   , _holeMArg :: Maybe (HoleArg m expr)
   } deriving (Functor, Foldable, Traversable)
 
-data Collapsed name m expr = Collapsed
-  { _cFuncGuid :: Guid
-  , _cCompact :: GetVar name m
-  , _cFullExpression :: expr
-    -- If the full expr has info (non-hole args) we want to leave it
-    -- expanded:
-  , _cFullExprHasInfo :: Bool
-  } deriving (Functor, Foldable, Traversable)
-
 -- TODO: Do we want to store/allow-access to the implicit type params (nil's type, each cons type?)
 data ListItem m expr = ListItem
   { _liMActions :: Maybe (ListItemActions m)
@@ -354,7 +343,6 @@ data Body name m expr
   = BodyLam (Lam name m expr)
   | BodyApply (Apply name m expr)
   | BodyHole (Hole name m expr)
-  | BodyCollapsed (Collapsed name m expr)
   | BodyLiteralInteger Integer
   | BodyList (List m expr)
   | BodyRecord (Record name m expr)
@@ -371,7 +359,6 @@ instance Show expr => Show (Body name m expr) where
   show (BodyLam (Lam paramType resultType)) =
     "_:" ++ show paramType ++ " -> " ++ show resultType
   show BodyHole {} = "Hole"
-  show BodyCollapsed {} = "Collapsed"
   show (BodyLiteralInteger i) = show i
   show (BodyList (List items _ _)) =
     concat
@@ -395,8 +382,7 @@ data WhereItem name m expr = WhereItem
 
 -- Common data for definitions and where-items
 data DefinitionContent name m expr = DefinitionContent
-  { _dDepParams :: [FuncParam name m]
-  , _dParams :: [FuncParam name m]
+  { _dParams :: [FuncParam name m]
   , _dBody :: expr
   , _dWhereItems :: [WhereItem name m expr]
   , _dAddFirstParam :: T m Guid
@@ -442,7 +428,6 @@ Lens.makeLenses ''Actions
 Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''Apply
 Lens.makeLenses ''Body
-Lens.makeLenses ''Collapsed
 Lens.makeLenses ''Definition
 Lens.makeLenses ''DefinitionContent
 Lens.makeLenses ''DefinitionExpression

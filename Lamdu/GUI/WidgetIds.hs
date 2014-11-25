@@ -19,9 +19,6 @@ backgroundCursorId = ["background cursor"]
 textCursorId :: AnimId
 textCursorId = ["text cursor"]
 
-collapserId :: Widget.Id -> Widget.Id
-collapserId = flip Widget.joinId ["collapser"]
-
 branchSelection :: Widget.Id
 branchSelection = Widget.Id ["selected branch"]
 

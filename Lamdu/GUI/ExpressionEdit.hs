@@ -14,7 +14,6 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
-import qualified Lamdu.GUI.ExpressionEdit.CollapsedEdit as CollapsedEdit
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionEdit.GetFieldEdit as GetFieldEdit
@@ -74,7 +73,6 @@ makeEditor ::
 makeEditor parentPrecedence body =
   case body of
   Sugar.BodyHole hole -> HoleEdit.make hole
-  Sugar.BodyCollapsed poly -> CollapsedEdit.make parentPrecedence poly
   Sugar.BodyApply apply -> ApplyEdit.make parentPrecedence apply
   Sugar.BodyLam lam -> LambdaEdit.make parentPrecedence lam
   Sugar.BodyLiteralInteger integer -> LiteralEdit.makeInt integer
