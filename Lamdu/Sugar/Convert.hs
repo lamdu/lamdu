@@ -119,7 +119,6 @@ convertPositionalFuncParam (V.Lam param body) lamExprPl = do
     { _fpName = name
     , _fpVarKind = FuncParameter
     , _fpId = paramGuid
-    , _fpAltIds = [paramGuid] -- For easy jumpTo
     , _fpInferredType = paramType
     , _fpMActions =
       mkPositionalFuncParamActions param
@@ -425,7 +424,6 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
         , _fpId = -- TOOD: Is this supposed to be the same?
                   -- It used to be different: "Guid.combine lamGuid guid"
                   fpIdGuid fp
-        , _fpAltIds = [] -- TODO: fpAltIds still needed?
         , _fpVarKind = FuncFieldParameter
         , _fpInferredType = fpFieldType fp
         , _fpMActions = error "TODO: _fpMActions"

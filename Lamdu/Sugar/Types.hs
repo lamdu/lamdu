@@ -43,7 +43,7 @@ module Lamdu.Sugar.Types
   , Lam(..), lParam, lResult
   , FuncParamType(..)
   , FuncParam(..)
-    , fpName, fpId, fpAltIds, fpVarKind, fpInferredType, fpMActions
+    , fpName, fpId, fpVarKind, fpInferredType, fpMActions
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
   , HoleArg(..), haExpr, haExprPresugared, haUnwrap
   , HoleInferred(..), hiSuggestedValue, hiType, hiMakeConverted
@@ -190,7 +190,6 @@ data NameProperty name m = NameProperty
 data FuncParam name m = FuncParam
   { -- non-unique (e.g: tag guid). Name attached here:
     _fpId :: Guid
-  , _fpAltIds :: [Guid]
   , _fpVarKind :: FuncParamType
   , _fpName :: NameProperty name m
   , _fpInferredType :: Type

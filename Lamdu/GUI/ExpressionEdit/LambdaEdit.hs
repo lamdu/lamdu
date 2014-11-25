@@ -36,16 +36,13 @@ makeParamNameEdit nameProp myId = do
     (ExprGuiM.withFgColor (Config.paramOriginColor config) .
      ExpressionGui.makeNameEdit nameProp) myId
 
-compose :: [a -> a] -> a -> a
-compose = foldr (.) id
-
 -- exported for use in definition sugaring.
 makeParamEdit ::
   MonadA m => Widget.Id ->
   Sugar.FuncParam Sugar.Name m ->
   ExprGuiM m (ExpressionGui m)
 makeParamEdit prevId param =
-  assignCursor $ do
+  do
     -- paramTypeEdit <- ExprGuiM.makeSubexpression 0 $ param ^. Sugar.fpType
     paramNameEdit <- makeParamNameEdit (param ^. Sugar.fpName) myId
     config <- ExprGuiM.widgetEnv WE.readConfig
@@ -68,8 +65,6 @@ makeParamEdit prevId param =
       [paramTypeEdit ^. ExpressionGui.egWidget] -} $
       ExpressionGui.fromValueWidget paramNameEdit
   where
-    assignGuidToMe = (`ExprGuiM.assignCursor` myId) . WidgetIds.fromGuid
-    assignCursor = compose . map assignGuidToMe $ param ^. Sugar.fpAltIds
     myId = WidgetIds.fromGuid $ param ^. Sugar.fpId
     mActions = param ^. Sugar.fpMActions
     paramDeleteEventMap keys docSuffix onId =
