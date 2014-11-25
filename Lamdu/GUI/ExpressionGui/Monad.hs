@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies, DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies #-}
 module Lamdu.GUI.ExpressionGui.Monad
   ( ExprGuiM, WidgetT
   , widgetEnv
@@ -21,8 +21,6 @@ module Lamdu.GUI.ExpressionGui.Monad
   , HolePickers, holePickersAddDocPrefix, holePickersAction
   , addResultPicker, listenResultPickers
 
-  , AccessedVars, markVariablesAsUsed, listenUsedVariables
-
   , run
   ) where
 
@@ -33,10 +31,8 @@ import Control.Monad.Trans.RWS (RWST, runRWST)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Monoid (Monoid(..))
-import Data.Monoid.Generic (def_mempty, def_mappend)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import GHC.Generics (Generic)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.ExpressionGui.Types (ExpressionGui, WidgetT, ParentPrecedence(..), Precedence)
@@ -56,7 +52,6 @@ import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
-type AccessedVars = [Guid]
 
 type HolePickers m = [T m Widget.EventResult]
 
@@ -70,13 +65,9 @@ holePickersAddDocPrefix (_:_) doc =
 holePickersAction :: MonadA m => HolePickers m -> T m Widget.EventResult
 holePickersAction = fmap mconcat . sequence
 
-data Output m = Output
-  { oAccessedVars :: AccessedVars
-  , oHolePickers :: HolePickers m
-  } deriving (Generic)
-instance Monoid (Output m) where
-  mempty = def_mempty
-  mappend = def_mappend
+newtype Output m = Output
+  { oHolePickers :: HolePickers m
+  } deriving (Monoid)
 
 newtype StoredGuids = StoredGuids [Guid]
   deriving (Monoid, Binary, Eq, Ord)
@@ -202,14 +193,8 @@ listener f =
   exprGuiM %~ RWS.listen
   & Lens.mapped . Lens.mapped . Lens._2 %~ f
 
-listenUsedVariables :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, [Guid])
-listenUsedVariables = listener oAccessedVars
-
 listenResultPickers :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, HolePickers m)
 listenResultPickers = listener oHolePickers
-
-markVariablesAsUsed :: MonadA m => AccessedVars -> ExprGuiM m ()
-markVariablesAsUsed vars = ExprGuiM $ RWS.tell mempty { oAccessedVars = vars }
 
 addResultPicker :: MonadA m => T m Widget.EventResult -> ExprGuiM m ()
 addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }

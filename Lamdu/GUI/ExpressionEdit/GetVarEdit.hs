@@ -53,7 +53,6 @@ make ::
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make getVar pl myId = do
-  ExprGuiM.markVariablesAsUsed [getVar ^. Sugar.gvIdentifier]
   cp <- ExprGuiM.readCodeAnchors
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
