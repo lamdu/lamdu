@@ -56,7 +56,7 @@ nil globId exprPl = do
     }
 
 mkListAddFirstItem ::
-  MonadA m => Anchors.SpecialFunctions (Tag m) -> Stored m -> T m Guid
+  MonadA m => Anchors.SpecialFunctions (Tag m) -> ExprIRef.ValIProperty m -> T m Guid
 mkListAddFirstItem specialFunctions =
   fmap (ExprIRef.valIGuid . snd) . DataOps.addListItem specialFunctions
 

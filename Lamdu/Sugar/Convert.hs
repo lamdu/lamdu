@@ -61,7 +61,7 @@ onMatchingSubexprs action predicate =
   Lens.itraverseOf_ (ExprLens.subExprPayloads . Lens.ifiltered (flip predicate))
   (const action)
 
-toHole :: MonadA m => Stored m -> T m ()
+toHole :: MonadA m => ExprIRef.ValIProperty m -> T m ()
 toHole = void . DataOps.setToHole
 
 isGetParamOf :: V.Var -> Val a -> Bool
@@ -77,22 +77,22 @@ isGetFieldParam expectedRecordVar expectedTag =
       Lens.anyOf ExprLens.valVar (== expectedRecordVar) record
 
 deleteParamRef ::
-  MonadA m => V.Var -> Val (Stored m) -> T m ()
+  MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
 deleteParamRef = onMatchingSubexprs toHole . const . isGetParamOf
 
 _deleteFieldParamRef ::
-  MonadA m => V.Var -> T.Tag -> Val (Stored m) -> T m ()
+  MonadA m => V.Var -> T.Tag -> Val (ExprIRef.ValIProperty m) -> T m ()
 _deleteFieldParamRef param tag =
   onMatchingSubexprs toHole . const $ isGetFieldParam param tag
 
-lambdaWrap :: MonadA m => Stored m -> T m Guid
+lambdaWrap :: MonadA m => ExprIRef.ValIProperty m -> T m Guid
 lambdaWrap stored =
   f <$> DataOps.lambdaWrap stored
   where
     f (newParam, _) = UniqueId.toGuid newParam
 
 mkPositionalFuncParamActions ::
-  MonadA m => V.Var -> Stored m -> Val (Stored m) -> FuncParamActions m
+  MonadA m => V.Var -> ExprIRef.ValIProperty m -> Val (ExprIRef.ValIProperty m) -> FuncParamActions m
 mkPositionalFuncParamActions param lambdaProp body =
   FuncParamActions
   { _fpListItemActions =
@@ -259,7 +259,7 @@ convertField _mIRef inst tag expr = do
     }
 
 plIRef ::
-  Lens.Traversal' (InputPayloadP (Maybe (Stored m)) a) (ExprIRef.ValIM m)
+  Lens.Traversal' (InputPayloadP (Maybe (ExprIRef.ValIProperty m)) a) (ExprIRef.ValIM m)
 plIRef = ipStored . Lens._Just . Property.pVal
 
 convertEmptyRecord :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m a)
@@ -396,7 +396,7 @@ mkRecordParams ::
   (MonadA m, Monoid a) =>
   ConvertM.RecordParamsInfo m -> V.Var -> [FieldParam] ->
   InputExpr m a ->
-  Maybe (Val (Stored m)) ->
+  Maybe (Val (ExprIRef.ValIProperty m)) ->
   ConvertM m (ConventionalParams m a)
 mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
   params <- traverse mkParam fieldParams
@@ -474,7 +474,7 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
 
 -- delFieldParam ::
 --   MonadA m => Guid -> ExprIRef.ValIM m -> Guid ->
---   Stored m -> Val (Stored m) -> T m Guid
+--   ExprIRef.ValIProperty m -> Val (ExprIRef.ValIProperty m) -> T m Guid
 -- delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored =
 --   rereadFieldParamTypes tagExprGuid paramTypeI $
 --   \prevFields ((T.Tag tagG), _) nextFields -> do
@@ -544,7 +544,7 @@ convertDefinitionParams recordParamsInfo usedTags expr =
 
 singleConventionalParam ::
   MonadA m =>
-  Stored m -> FuncParam MStoredName m ->
+  ExprIRef.ValIProperty m -> FuncParam MStoredName m ->
   V.Var ->InputExpr m a -> ConventionalParams m a
 singleConventionalParam _lamProp existingParam _existingParamVar body =
   ConventionalParams

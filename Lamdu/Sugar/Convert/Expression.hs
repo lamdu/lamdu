@@ -29,11 +29,11 @@ mkCutter cp expr replaceWithHole = do
   _ <- DataOps.newClipboard cp expr
   replaceWithHole
 
-mkReplaceWithNewHole :: MonadA m => Stored m -> T m Guid
+mkReplaceWithNewHole :: MonadA m => ExprIRef.ValIProperty m -> T m Guid
 mkReplaceWithNewHole stored =
   ExprIRef.valIGuid <$> DataOps.replaceWithHole stored
 
-mkActions :: MonadA m => ConvertM.Context m -> Stored m -> Actions m
+mkActions :: MonadA m => ConvertM.Context m -> ExprIRef.ValIProperty m -> Actions m
 mkActions sugarContext stored =
   Actions
   { _wrap = WrapAction $ ExprIRef.valIGuid <$> DataOps.wrap stored

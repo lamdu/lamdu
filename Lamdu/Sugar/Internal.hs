@@ -15,7 +15,8 @@ type T = Transaction
 type BodyU m a = Body MStoredName m (ExpressionU m a)
 type ExpressionU m a = Expression MStoredName m a
 
-replaceWith :: MonadA m => Stored m -> Stored m -> T m Guid
+replaceWith ::
+    MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m Guid
 replaceWith parentP replacerP = do
   Property.set parentP replacerI
   return $ ExprIRef.valIGuid replacerI

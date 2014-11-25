@@ -64,7 +64,6 @@ module Lamdu.Sugar.Types
   -- Input types:
   , InputPayloadP(..), ipGuid, ipInferred, ipStored, ipData
   , InputPayload, InputExpr
-  , Stored
   , NameProperty(..)
     , npName, npGuid, npSetName
   ) where
@@ -81,11 +80,11 @@ import GHC.Generics (Generic)
 import Lamdu.Expr.Scheme (Scheme)
 import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val)
-import Lamdu.Sugar.Types.Internal (Stored)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Types.Internal as TypesInternal
@@ -102,11 +101,11 @@ data InputPayloadP stored a
     }
 Lens.makeLenses ''InputPayloadP
 
--- "Maybe (Stored m)" is used because holes have suggested results
+-- "Maybe (ExprIRef.ValIProperty m)" is used because holes have suggested results
 -- which are sugar-converted into ordinary sugar expressions, but are
 -- not actually stored and do not have actions (they're read-only).
 type InputPayload m a =
-  InputPayloadP (Maybe (Stored m)) a
+  InputPayloadP (Maybe (ExprIRef.ValIProperty m)) a
 type InputExpr m a = Val (InputPayload m a)
 
 data WrapAction m

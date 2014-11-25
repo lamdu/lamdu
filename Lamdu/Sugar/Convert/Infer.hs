@@ -21,7 +21,6 @@ import Lamdu.Infer (Infer)
 import Lamdu.Infer.Load (Loader(..))
 import Lamdu.Infer.Unify (unify)
 import Lamdu.Infer.Update (updateInferredVal)
-import Lamdu.Sugar.Types.Internal
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
@@ -70,8 +69,8 @@ loadInferInto pl val = do
     updateInferredVal inferredVal
 
 loadInfer ::
-  MonadA m => Val (Stored m) ->
-  T m (Val (Sugar.InputPayloadP (Stored m) ()), Infer.Context)
+  MonadA m => Val (ExprIRef.ValIProperty m) ->
+  T m (Val (Sugar.InputPayloadP (ExprIRef.ValIProperty m) ()), Infer.Context)
 loadInfer val =
   loadInferScope Infer.emptyScope val
   & (`runStateT` Infer.initialContext)

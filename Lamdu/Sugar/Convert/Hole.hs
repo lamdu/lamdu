@@ -65,7 +65,7 @@ convertPlain exprPl =
   >>= ConvertExpr.make exprPl
   <&> rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
 
-mkPaste :: MonadA m => Stored m -> ConvertM m (Maybe (T m Guid))
+mkPaste :: MonadA m => ExprIRef.ValIProperty m -> ConvertM m (Maybe (T m Guid))
 mkPaste exprP = do
   clipboardsP <- ConvertM.codeAnchor Anchors.clipboards
   clipboards <- ConvertM.getP clipboardsP
@@ -100,7 +100,7 @@ inferOnTheSide sugarContext scope val =
 
 mkWritableHoleActions ::
   (MonadA m) =>
-  InputPayloadP (Stored m) () ->
+  InputPayloadP (ExprIRef.ValIProperty m) () ->
   ConvertM m (HoleActions MStoredName m)
 mkWritableHoleActions exprPlStored = do
   sugarContext <- ConvertM.readContext
@@ -160,7 +160,7 @@ mkHoleInferred inferred = do
 
 mkHole ::
   (MonadA m, Monoid a) =>
-  InputPayloadP (Maybe (Stored m)) a ->
+  InputPayloadP (Maybe (ExprIRef.ValIProperty m)) a ->
   ConvertM m (Hole MStoredName m (ExpressionU m a))
 mkHole exprPl = do
   mActions <-
@@ -253,12 +253,12 @@ getTag ctxGuid tag = do
 
 writeConvertTypeChecked ::
   (MonadA m, Monoid a) => Random.StdGen ->
-  ConvertM.Context m -> Stored m ->
+  ConvertM.Context m -> ExprIRef.ValIProperty m ->
   Val (Infer.Payload, MStorePoint m a) ->
   T m
   ( ExpressionU m a
-  , Val (InputPayloadP (Stored m) a)
-  , Val (InputPayloadP (Stored m) a)
+  , Val (InputPayloadP (ExprIRef.ValIProperty m) a)
+  , Val (InputPayloadP (ExprIRef.ValIProperty m) a)
   )
 writeConvertTypeChecked gen sugarContext holeStored inferredVal = do
   -- With the real stored guids:
@@ -296,7 +296,7 @@ writeConvertTypeChecked gen sugarContext holeStored inferredVal = do
 mkHoleResult ::
   (MonadA m, Binary a, Monoid a) =>
   ConvertM.Context m ->
-  InputPayloadP (Stored m) () ->
+  InputPayloadP (ExprIRef.ValIProperty m) () ->
   (Guid -> Random.StdGen) ->
   Val (MStorePoint m a) ->
   T m (Maybe (HoleResult MStoredName m a))
