@@ -263,7 +263,6 @@ data Hole name m expr = Hole
   , _holeMArg :: Maybe (HoleArg m expr)
   } deriving (Functor, Foldable, Traversable)
 
--- TODO: Do we want to store/allow-access to the implicit type params (nil's type, each cons type?)
 data ListItem m expr = ListItem
   { _liMActions :: Maybe (ListItemActions m)
   , _liExpr :: expr
