@@ -14,7 +14,6 @@ import Control.MonadA (MonadA)
 import Data.Foldable (Foldable)
 import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..), (<>))
-import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable(..))
@@ -33,6 +32,7 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
 type T = Transaction
 
@@ -46,24 +46,25 @@ nil globId exprPl = do
     mkListActions exprS =
       ListActions
       { addFirstItem = mkListAddFirstItem specialFunctions exprS
-      , replaceNil = ExprIRef.valIGuid <$> DataOps.setToHole exprS
+      , replaceNil = EntityId.ofValI <$> DataOps.setToHole exprS
       }
   (lift . ConvertExpr.make exprPl . BodyList)
     List
     { lValues = []
     , lMActions = mkListActions <$> exprPl ^. ipStored
-    , lNilGuid = exprPl ^. ipGuid
+    , lNilEntityId = exprPl ^. ipEntityId
     }
 
 mkListAddFirstItem ::
-  MonadA m => Anchors.SpecialFunctions (Tag m) -> ExprIRef.ValIProperty m -> T m Guid
+  MonadA m => Anchors.SpecialFunctions (Tag m) -> ExprIRef.ValIProperty m ->
+  T m EntityId
 mkListAddFirstItem specialFunctions =
-  fmap (ExprIRef.valIGuid . snd) . DataOps.addListItem specialFunctions
+  fmap (EntityId.ofValI . snd) . DataOps.addListItem specialFunctions
 
 mkListItem ::
   (MonadA m, Monoid a) =>
   ExpressionU m a -> ExpressionU m a ->
-  InputPayload m a -> InputExpr m a -> Maybe (T m Guid) ->
+  InputPayload m a -> InputExpr m a -> Maybe (T m EntityId) ->
   ListItem m (ExpressionU m a)
 mkListItem listItemExpr recordArgS exprPl tailI mAddNextItem =
   ListItem

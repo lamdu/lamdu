@@ -53,9 +53,11 @@ extraSymbolScaleFactor = 0.5
 
 eventResultOfPickedResult :: Sugar.PickedResult -> (Maybe Guid, Widget.EventResult)
 eventResultOfPickedResult pr =
-  ( pr ^. Sugar.prMJumpTo
+  ( pr ^? Sugar.prMJumpTo . Lens._Just . Lens._1
   , Widget.EventResult
-    { Widget._eCursor = Monoid.Last $ WidgetIds.fromGuid <$> pr ^. Sugar.prMJumpTo
+    { Widget._eCursor =
+      Monoid.Last $
+      WidgetIds.fromEntityId <$> pr ^? Sugar.prMJumpTo . Lens._Just . Lens._2
     , Widget._eAnimIdMapping =
       Monoid.Endo $ pickedResultAnimIdTranslation (pr ^. Sugar.prIdTranslation)
     }
@@ -67,19 +69,21 @@ eventResultOfPickedResult pr =
       where
         idMap =
           idTranslations
-          & Lens.traversed . Lens.both %~ head . Widget.toAnimId . WidgetIds.fromGuid
+          & Lens.traversed . Lens.both %~ head . Widget.toAnimId . WidgetIds.fromEntityId
           & Map.fromList
 
 resultSuffix :: Lens.Prism' AnimId AnimId
 resultSuffix = suffixed ["result suffix"]
 
-afterPick :: Monad m => HoleInfo m -> Widget.Id -> Sugar.PickedResult -> T m (Maybe Guid, Widget.EventResult)
+afterPick ::
+  Monad m => HoleInfo m -> Widget.Id -> Sugar.PickedResult ->
+  T m (Maybe Guid, Widget.EventResult)
 afterPick holeInfo resultId pr = do
   Property.set (hiState holeInfo) HoleState.emptyState
   eventResultOfPickedResult pr
     & Lens._2 . Widget.eCursor %~
       (mappend . Monoid.Last . Just .
-       WidgetIds.fromGuid . hiGuid) holeInfo
+       WidgetIds.fromEntityId . hiEntityId) holeInfo
     & Lens._2 . Widget.eAnimIdMapping %~
       (mappend . Monoid.Endo) obliterateOtherResults
     & return
@@ -219,16 +223,16 @@ postProcessSugar expr =
   -- Remove the top-level result's actions so that we can safely use
   -- the special events from the result's event map (e.g: add list
   -- item) without also getting unwanted handlers like "delete".
-  & Sugar.rPayload . Sugar.plData . ExprGuiM.plHoleGuids .~ ExprGuiM.emptyHoleGuids
+  & Sugar.rPayload . Sugar.plData . ExprGuiM.plHoleEntityIds .~ ExprGuiM.emptyHoleEntityIds
   & Sugar.rPayload . Sugar.plActions .~ Nothing
 
 toPayload :: HoleResults.SugarExprPl -> ExprGuiM.Payload
-toPayload (ExprGuiM.StoredGuids guids, ExprGuiM.Injected injected) =
+toPayload (ExprGuiM.StoredEntityIds entityIds, ExprGuiM.Injected injected) =
   ExprGuiM.Payload
-  { ExprGuiM._plStoredGuids = guids
+  { ExprGuiM._plStoredEntityIds = entityIds
   , ExprGuiM._plInjected = injected
   -- filled by AddNextHoles above
-  , ExprGuiM._plHoleGuids = ExprGuiM.emptyHoleGuids
+  , ExprGuiM._plHoleEntityIds = ExprGuiM.emptyHoleEntityIds
   }
 
 -- asNewLabelScaleFactor :: Fractional a => a

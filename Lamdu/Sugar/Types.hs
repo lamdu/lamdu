@@ -1,6 +1,7 @@
 {-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes, DeriveGeneric #-}
 module Lamdu.Sugar.Types
-  ( Definition(..), drName, drBody
+  ( EntityId
+  , Definition(..), drName, drBody
   , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
   , ListItemActions(..), itemAddNext, itemDelete
   , FuncParamActions(..), fpListItemActions
@@ -12,7 +13,7 @@ module Lamdu.Sugar.Types
   , Anchors.PresentationMode(..)
   , DefinitionContent(..)
     , dSetPresentationMode, dParams, dBody, dWhereItems
-    , dAddFirstParam, dAddInnermostWhereItem
+    , dAddFirstParam, dAddInnermostWhereItem, dEntityId
   , DefinitionBuiltin(..)
   , WrapAction(..)
   , SetToHole(..), _SetToHole, _AlreadyAHole
@@ -22,7 +23,7 @@ module Lamdu.Sugar.Types
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyLiteralInteger, _BodyList, _BodyRecord
-  , Payload(..), plGuid, plInferredType, plActions, plData
+  , Payload(..), plEntityId, plInferredType, plActions, plData
   , ExpressionP(..), rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..), MStoredName
   , DefinitionN, DefinitionU
@@ -38,7 +39,7 @@ module Lamdu.Sugar.Types
   , GetVar(..), gvName, gvJumpTo, gvVarType
   , GetParams(..), gpDefName, gpJumpTo
   , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
-  , AnnotatedArg(..), aaTag, aaTagExprGuid, aaExpr
+  , AnnotatedArg(..), aaTag, aaTagExprEntityId, aaExpr
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
   , Lam(..), lParam, lResult
   , FuncParamType(..)
@@ -48,7 +49,7 @@ module Lamdu.Sugar.Types
   , HoleArg(..), haExpr, haExprPresugared, haUnwrap
   , HoleInferred(..), hiSuggestedValue, hiType, hiMakeConverted
   , Hole(..)
-    , holeMActions, holeMArg, holeInferred
+    , holeMActions, holeMArg, holeInferred, holeGuid
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
   , HoleActions(..)
@@ -62,13 +63,12 @@ module Lamdu.Sugar.Types
   , TagG(..), tagGName, tagVal, tagInstance
   , MStorePoint, ExprStorePoint
   -- Input types:
-  , InputPayloadP(..), ipGuid, ipInferred, ipStored, ipData
+  , InputPayloadP(..), ipGuid, ipEntityId, ipInferred, ipStored, ipData
   , InputPayload, InputExpr
   , NameProperty(..)
     , npName, npGuid, npSetName
   ) where
 
-import Data.Binary (Binary)
 import Data.Foldable (Foldable)
 import Data.Monoid (Monoid(..))
 import Data.Monoid.Generic (def_mempty, def_mappend)
@@ -80,6 +80,7 @@ import GHC.Generics (Generic)
 import Lamdu.Expr.Scheme (Scheme)
 import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val)
+import Lamdu.Sugar.Internal.EntityId (EntityId)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Anchors as Anchors
@@ -92,9 +93,14 @@ import qualified System.Random as Random
 
 type T = Transaction
 
+
 data InputPayloadP stored a
   = InputPayload
-    { _ipGuid :: Guid
+    { _ipEntityId :: EntityId
+    , -- Used as a hole id that later GUI uses to associate data with
+      -- Need to replace this with some mechanism that avoids exposing
+      -- Guids to GUI
+      _ipGuid :: Guid
     , _ipInferred :: Infer.Payload
     , _ipStored :: stored
     , _ipData :: a
@@ -109,22 +115,22 @@ type InputPayload m a =
 type InputExpr m a = Val (InputPayload m a)
 
 data WrapAction m
-  = WrapperAlready -- I'm an apply-of-hole, no need to wrap
-  | WrappedAlready Guid -- I'm an arg of apply-of-hole (Guid of apply), no need to wrap
+  = WrapperAlready (Guid, EntityId) -- I'm an apply-of-hole, (Guid,EntityId of hole), no need to wrap
+  | WrappedAlready (Guid, EntityId) -- I'm an arg of apply-of-hole (Guid,EntityId of hole), no need to wrap
   | WrapNotAllowed -- I'm already wrapped or a tag or a hole
-  | WrapAction (T m Guid) -- Wrap me!
+  | WrapAction (T m (Guid, EntityId)) -- Wrap me!
 
 data SetToHole m
-  = SetToHole (T m Guid)
+  = SetToHole (T m (Guid, EntityId))
   | AlreadyAHole -- or already an arg of one
 
-data SetToInnerExpr m = SetToInnerExpr (T m Guid) | NoInnerExpr
+data SetToInnerExpr m = SetToInnerExpr (T m EntityId) | NoInnerExpr
 
 data Actions m = Actions
   { _wrap :: WrapAction m
   , _setToHole :: SetToHole m
   , _setToInnerExpr :: SetToInnerExpr m
-  , _cut :: T m Guid
+  , _cut :: T m EntityId
   }
 
 data Payload m a = Payload
@@ -133,7 +139,7 @@ data Payload m a = Payload
   -- function so that AddNames can correct the "name" here in the
   -- right context.
   , _plActions :: Maybe (Actions m)
-  , _plGuid :: Guid
+  , _plEntityId :: EntityId
   , _plData :: a
   } deriving (Functor, Foldable, Traversable)
 
@@ -169,8 +175,8 @@ type ExpressionN m a = Expression Name m a
 type BodyN m a = Body Name m (ExpressionN m a)
 
 data ListItemActions m = ListItemActions
-  { _itemAddNext :: T m Guid
-  , _itemDelete :: T m Guid
+  { _itemAddNext :: T m EntityId
+  , _itemDelete :: T m EntityId
   }
 
 newtype FuncParamActions m = FuncParamActions
@@ -187,8 +193,7 @@ data NameProperty name m = NameProperty
 
 -- TODO:
 data FuncParam name m = FuncParam
-  { -- non-unique (e.g: tag guid). Name attached here:
-    _fpId :: Guid
+  { _fpId :: EntityId
   , _fpVarKind :: FuncParamType
   , _fpName :: NameProperty name m
   , _fpInferredType :: Type
@@ -201,15 +206,15 @@ data Lam name m expr = Lam
   } deriving (Functor, Foldable, Traversable)
 
 data TagG name m = TagG
-  { _tagInstance :: Guid -- Unique across different uses of a tag
+  { _tagInstance :: EntityId -- Unique across different uses of a tag
   , _tagVal :: T.Tag
   , _tagGName :: NameProperty name m
   }
 
 data PickedResult = PickedResult
-  { _prMJumpTo :: Maybe Guid
+  { _prMJumpTo :: Maybe (Guid, EntityId) -- Hole identifier within
   , -- pairs of ids from converted expression and written expression.
-    _prIdTranslation :: [(Guid, Guid)]
+    _prIdTranslation :: [(EntityId, EntityId)]
   }
 
 data HoleResult name m a = HoleResult
@@ -240,15 +245,17 @@ data HoleActions name m = HoleActions
     _holeInferExprType :: Val () -> T m (Maybe Type)
   , holeResult ::
       forall a.
-      (Binary a, Ord a, Monoid a) =>
-      (Guid -> Random.StdGen) -> -- for consistent guids
+      Monoid a =>
+      (EntityId -> Random.StdGen) -> -- for consistent EntityId's
       Val (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
       T m (Maybe (HoleResult name m a))
-  , _holePaste :: Maybe (T m Guid)
+  , _holePaste :: Maybe (T m EntityId)
+
+  , _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
   }
 
 data Unwrap m
-  = UnwrapMAction (Maybe (T m Guid))
+  = UnwrapMAction (Maybe (T m EntityId))
   | UnwrapTypeMismatch
 
 data HoleArg m expr = HoleArg
@@ -276,16 +283,16 @@ data ListItem m expr = ListItem
   } deriving (Functor, Foldable, Traversable)
 
 data ListActions m = ListActions
-  { addFirstItem :: T m Guid
-  , replaceNil :: T m Guid
+  { addFirstItem :: T m EntityId
+  , replaceNil :: T m EntityId
   }
 
 data List m expr = List
   { lValues :: [ListItem m expr]
   , lMActions :: Maybe (ListActions m)
-  , -- Nil guid stays consistent when adding items.
+  , -- Nil EntityId stays consistent when adding items.
     -- (Exposed for consistent animations)
-    lNilGuid :: Guid
+    lNilEntityId :: EntityId
   } deriving (Functor, Foldable, Traversable)
 
 data RecordField name m expr = RecordField
@@ -296,7 +303,7 @@ data RecordField name m expr = RecordField
 
 data Record name m expr = Record
   { _rItems :: [RecordField name m expr]
-  , _rMAddFirstItem :: Maybe (T m Guid)
+  , _rMAddFirstItem :: Maybe (T m EntityId)
   } deriving (Functor, Foldable, Traversable)
 
 data GetField name m expr = GetField
@@ -309,13 +316,13 @@ data GetVarType = GetDefinition | GetFieldParameter | GetParameter
 
 data GetVar name m = GetVar
   { _gvName :: NameProperty name m
-  , _gvJumpTo :: T m Guid
+  , _gvJumpTo :: T m EntityId
   , _gvVarType :: GetVarType
   }
 
 data GetParams name m = GetParams
   { _gpDefName :: NameProperty name m
-  , _gpJumpTo :: T m Guid
+  , _gpJumpTo :: T m EntityId
   }
 
 data SpecialArgs expr
@@ -327,7 +334,7 @@ data SpecialArgs expr
 data AnnotatedArg name m expr = AnnotatedArg
   { _aaTag :: TagG name m
   , -- Used for animation ids consistent with record.
-    _aaTagExprGuid :: Guid
+    _aaTagExprEntityId :: EntityId
   , _aaExpr :: expr
   } deriving (Functor, Foldable, Traversable)
 
@@ -378,12 +385,13 @@ data WhereItem name m expr = WhereItem
 
 -- Common data for definitions and where-items
 data DefinitionContent name m expr = DefinitionContent
-  { _dSetPresentationMode :: Maybe (MkProperty m Anchors.PresentationMode)
+  { _dEntityId :: EntityId
+  , _dSetPresentationMode :: Maybe (MkProperty m Anchors.PresentationMode)
   , _dParams :: [FuncParam name m]
   , _dBody :: expr
   , _dWhereItems :: [WhereItem name m expr]
-  , _dAddFirstParam :: T m Guid
-  , _dAddInnermostWhereItem :: T m Guid
+  , _dAddFirstParam :: T m EntityId
+  , _dAddInnermostWhereItem :: T m EntityId
   } deriving (Functor, Foldable, Traversable)
 
 data AcceptNewType m = AcceptNewType

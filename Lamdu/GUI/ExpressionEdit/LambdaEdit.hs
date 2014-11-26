@@ -51,7 +51,7 @@ makeParamEdit prevId param =
         maybe mempty
         (Widget.keysEventMapMovesCursor (Config.addNextParamKeys config)
          (E.Doc ["Edit", "Add next parameter"]) .
-         fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
+         fmap (FocusDelegator.delegatingId . WidgetIds.fromEntityId) .
          (^. Sugar.fpListItemActions . Sugar.itemAddNext))
         mActions
       paramEventMap = mconcat
@@ -65,12 +65,12 @@ makeParamEdit prevId param =
       [paramTypeEdit ^. ExpressionGui.egWidget] -} $
       ExpressionGui.fromValueWidget paramNameEdit
   where
-    myId = WidgetIds.fromGuid $ param ^. Sugar.fpId
+    myId = WidgetIds.fromEntityId $ param ^. Sugar.fpId
     mActions = param ^. Sugar.fpMActions
     paramDeleteEventMap keys docSuffix onId =
       maybe mempty
       (Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "Delete parameter" ++ docSuffix]) .
-       fmap (onId . WidgetIds.fromGuid) .
+       fmap (onId . WidgetIds.fromEntityId) .
        (^. Sugar.fpListItemActions . Sugar.itemDelete))
       mActions
 
@@ -102,4 +102,4 @@ make parentPrecedence (Sugar.Lam param body) pl =
       , bodyEdit
       ]
   where
-    bodyId = WidgetIds.fromGuid $ body ^. Sugar.rPayload . Sugar.plGuid
+    bodyId = WidgetIds.fromEntityId $ body ^. Sugar.rPayload . Sugar.plEntityId

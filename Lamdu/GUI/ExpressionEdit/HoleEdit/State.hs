@@ -8,10 +8,11 @@ import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Store.Guid (Guid)
 import GHC.Generics (Generic)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (searchTermWIdOfHoleGuid)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (searchTermWIdOfHoleEntityId)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
 
@@ -27,10 +28,10 @@ emptyState =
   { _hsSearchTerm = ""
   }
 
-setHoleStateAndJump :: MonadA m => HoleState -> Guid -> T m Widget.Id
-setHoleStateAndJump newHoleState newHoleGuid = do
-  Transaction.setP (assocStateRef newHoleGuid) newHoleState
-  return $ searchTermWIdOfHoleGuid newHoleGuid
+setHoleStateAndJump :: MonadA m => Guid -> HoleState -> Sugar.EntityId -> T m Widget.Id
+setHoleStateAndJump guid state entityId = do
+  Transaction.setP (assocStateRef guid) state
+  return $ searchTermWIdOfHoleEntityId entityId
 
 assocStateRef :: MonadA m => Guid -> Transaction.MkProperty m HoleState
 assocStateRef = Transaction.assocDataRefDef emptyState "searchTerm"

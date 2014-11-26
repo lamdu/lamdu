@@ -7,7 +7,6 @@ import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Data.Traversable (traverse, sequenceA)
 import Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -45,7 +44,7 @@ make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotated
     overrideModifyEventMap =
       ExpressionGui.egWidget %~
       Widget.strongerEvents
-      (maybe mempty (ExprEventMap.modifyEventMap [] config (pl ^. Sugar.plGuid)) (pl ^. Sugar.plActions))
+      (maybe mempty (ExprEventMap.modifyEventMap [] config) (pl ^. Sugar.plActions))
   case specialArgs of
     Sugar.NoSpecialArgs ->
       mk Nothing $
@@ -64,28 +63,28 @@ make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotated
       ]
   where
     isBoxed = not $ null annotatedArgs
-    destGuid = func ^. Sugar.rPayload . Sugar.plGuid
+    destEntityId = func ^. Sugar.rPayload . Sugar.plEntityId
     mk mPrecedence mkFuncRow
-      | isBoxed = mkBoxed pl destGuid mkFuncRow annotatedArgs myId
+      | isBoxed = mkBoxed pl destEntityId mkFuncRow annotatedArgs myId
       | otherwise =
         mkMParened pl
         (ParentPrecedence parentPrecedence)
-        (ExpressionGui.MyPrecedence <$> mPrecedence) destGuid mkFuncRow myId
+        (ExpressionGui.MyPrecedence <$> mPrecedence) destEntityId mkFuncRow myId
 
-assignCursorGuid :: MonadA m => Widget.Id -> Guid -> ExprGuiM m a -> ExprGuiM m a
-assignCursorGuid myId = ExprGuiM.assignCursor myId . WidgetIds.fromGuid
+assignCursorEntityId :: MonadA m => Widget.Id -> Sugar.EntityId -> ExprGuiM m a -> ExprGuiM m a
+assignCursorEntityId myId = ExprGuiM.assignCursor myId . WidgetIds.fromEntityId
 
-makeTagView :: MonadA m => Guid -> Sugar.TagG Sugar.Name m -> ExprGuiM m (ExpressionGui m)
-makeTagView tagExprGuid tagG =
+makeTagView :: MonadA m => Sugar.EntityId -> Sugar.TagG Sugar.Name m -> ExprGuiM m (ExpressionGui m)
+makeTagView tagExprEntityId tagG =
   TagEdit.makeView tagG . Widget.toAnimId $
-  WidgetIds.fromGuid tagExprGuid
+  WidgetIds.fromEntityId tagExprEntityId
 
 makeArgRows ::
   MonadA m =>
   Sugar.AnnotatedArg Sugar.Name m (ExprGuiM.SugarExpr m) ->
   ExprGuiM m [[(Grid.Alignment, ExprGuiM.WidgetT m)]]
 makeArgRows arg = do
-  argTagEdit <- makeTagView (arg ^. Sugar.aaTagExprGuid) (arg ^. Sugar.aaTag)
+  argTagEdit <- makeTagView (arg ^. Sugar.aaTagExprEntityId) (arg ^. Sugar.aaTag)
   argValEdit <- ExprGuiM.makeSubexpression 0 $ arg ^. Sugar.aaExpr
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
@@ -111,12 +110,12 @@ makeArgRows arg = do
 mkBoxed ::
   MonadA m =>
   Sugar.Payload m ExprGuiM.Payload ->
-  Guid -> ExprGuiM m (ExpressionGui m) ->
+  Sugar.EntityId -> ExprGuiM m (ExpressionGui m) ->
   [Sugar.AnnotatedArg Sugar.Name m (ExprGuiM.SugarExpr m)] ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-mkBoxed pl destGuid mkFuncRow annotatedArgs =
+mkBoxed pl destEntityId mkFuncRow annotatedArgs =
   ExpressionGui.stdWrapParentExpr pl $ \myId ->
-  assignCursorGuid myId destGuid $ do
+  assignCursorEntityId myId destEntityId $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     grid <-
       Grid.toWidget . Grid.make . concat <$> traverse makeArgRows annotatedArgs
@@ -130,11 +129,11 @@ mkMParened ::
   Sugar.Payload m ExprGuiM.Payload ->
   ParentPrecedence ->
   Maybe ExpressionGui.MyPrecedence ->
-  Guid -> ExprGuiM m  (ExpressionGui m) ->
+  Sugar.EntityId -> ExprGuiM m  (ExpressionGui m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-mkMParened pl parentPrecedence mPrecedence destGuid mkFuncRow =
+mkMParened pl parentPrecedence mPrecedence destEntityId mkFuncRow =
   ExpressionGui.stdWrapParentExpr pl . parenify $ \myId ->
-  assignCursorGuid myId destGuid mkFuncRow
+  assignCursorEntityId myId destEntityId mkFuncRow
   where
     parenify = case mPrecedence of
       Nothing -> id

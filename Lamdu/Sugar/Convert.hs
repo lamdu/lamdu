@@ -30,7 +30,6 @@ import Lamdu.Sugar.Types
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -52,6 +51,7 @@ import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
 type T = Transaction
 
@@ -85,11 +85,11 @@ _deleteFieldParamRef ::
 _deleteFieldParamRef param tag =
   onMatchingSubexprs toHole . const $ isGetFieldParam param tag
 
-lambdaWrap :: MonadA m => ExprIRef.ValIProperty m -> T m Guid
+lambdaWrap :: MonadA m => ExprIRef.ValIProperty m -> T m EntityId
 lambdaWrap stored =
   f <$> DataOps.lambdaWrap stored
   where
-    f (newParam, _) = UniqueId.toGuid newParam
+    f (newParam, _) = EntityId.ofLambdaParam newParam
 
 mkPositionalFuncParamActions ::
   MonadA m => V.Var -> ExprIRef.ValIProperty m -> Val (ExprIRef.ValIProperty m) -> FuncParamActions m
@@ -118,7 +118,7 @@ convertPositionalFuncParam (V.Lam param body) lamExprPl = do
   pure FuncParam
     { _fpName = name
     , _fpVarKind = FuncParameter
-    , _fpId = paramGuid
+    , _fpId = paramEntityId
     , _fpInferredType = paramType
     , _fpMActions =
       mkPositionalFuncParamActions param
@@ -126,7 +126,7 @@ convertPositionalFuncParam (V.Lam param body) lamExprPl = do
       <*> traverse (^. ipStored) body
     }
   where
-    paramGuid = UniqueId.toGuid param
+    paramEntityId = EntityId.ofLambdaParam param
     paramType =
       fromMaybe (error "Lambda value not inferred to a function type?!") $
       lamExprPl ^? ipInferred . Infer.plType . ExprLens._TFun . _1
@@ -146,7 +146,7 @@ convertLam lam@(V.Lam paramVar result) exprPl = do
         stored <- exprPl ^. ipStored
         return $ do
           deleteParamRef paramVar bodyStored
-          ExprIRef.valIGuid <$>
+          EntityId.ofValI <$>
             DataOps.setToWrapper (Property.value (bodyStored ^. V.payload)) stored
   BodyLam
     Lam
@@ -175,22 +175,20 @@ convertVar param exprPl = do
         ConvertExpr.make exprPl .
           BodyGetVar $ GetVar
           { _gvName = parName
-          , _gvJumpTo = pure parGuid
+          , _gvJumpTo = pure $ EntityId.ofLambdaParam param
           , _gvVarType = GetParameter
           }
-  where
-    parGuid = UniqueId.toGuid param
 
 jumpToDefI ::
-  MonadA m => Anchors.CodeProps m -> DefIM m -> T m Guid
-jumpToDefI cp defI = IRef.guid defI <$ DataOps.newPane cp defI
+  MonadA m => Anchors.CodeProps m -> DefIM m -> T m EntityId
+jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
 convertVLiteralInteger ::
   MonadA m => Integer ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertVLiteralInteger i exprPl = ConvertExpr.make exprPl $ BodyLiteralInteger i
 
-convertTag :: MonadA m => Guid -> T.Tag -> ConvertM m (TagG MStoredName m)
+convertTag :: MonadA m => EntityId -> T.Tag -> ConvertM m (TagG MStoredName m)
 convertTag inst tag = TagG inst tag <$> makeStoredNamePropertyS tag
 
 -- sideChannel :: Monad m => Lens' s a -> LensLike m s (side, s) a (side, a)
@@ -216,44 +214,44 @@ convertTag inst tag = TagG inst tag <$> makeStoredNamePropertyS tag
 --       return res
 
 -- recordFieldActions ::
---   MonadA m => Guid -> ExprIRef.ValIM m -> ExprIRef.ValIM m ->
+--   MonadA m => EntityId -> ExprIRef.ValIM m -> ExprIRef.ValIM m ->
 --   ListItemActions m
--- recordFieldActions defaultGuid exprIRef iref =
+-- recordFieldActions defaultEntityId exprIRef iref =
 --   ListItemActions
 --   { _itemDelete = action delete
 --   , _itemAddNext = action addNext
 --   }
 --   where
---     action f = writeRecordFields iref defaultGuid $ splitFields f
+--     action f = writeRecordFields iref defaultEntityId $ splitFields f
 --     addNext (prevFields, field, nextFields) = do
 --       tagHole <- DataOps.newHole
 --       exprHole <- DataOps.newHole
 --       return
---         ( ExprIRef.valIGuid tagHole
+--         ( EntityId.ofValI tagHole
 --         , prevFields ++ field : (tagHole, exprHole) : nextFields
 --         )
 --     delete (prevFields, _, nextFields) =
 --       return
 --       ( case nextFields ++ reverse prevFields of
---         [] -> defaultGuid
---         ((nextTagExpr, _) : _) -> ExprIRef.valIGuid nextTagExpr
+--         [] -> defaultEntityId
+--         ((nextTagExpr, _) : _) -> EntityId.ofValI nextTagExpr
 --       , prevFields ++ nextFields
 --       )
 --     splitFields f oldFields =
 --       case break ((== exprIRef) . fst) oldFields of
 --       (prevFields, field : nextFields) -> f (prevFields, field, nextFields)
---       _ -> return (defaultGuid, oldFields)
+--       _ -> return (defaultEntityId, oldFields)
 
 convertField ::
   (MonadA m, Monoid a) => Maybe (ExprIRef.ValIM m) ->
-  Guid -> T.Tag -> InputExpr m a ->
+  EntityId -> T.Tag -> InputExpr m a ->
   ConvertM m (RecordField MStoredName m (ExpressionU m a))
 convertField _mIRef inst tag expr = do
   tagS <- convertTag inst tag
   exprS <- ConvertM.convertSubexpression expr
   return RecordField
     { _rfMItemActions = error "TODO: rfMItemActions"
- --      recordFieldActions defaultGuid <$> tagExpr ^? SugarInfer.exprIRef <*> mIRef
+ --      recordFieldActions defaultEntityId <$> tagExpr ^? SugarInfer.exprIRef <*> mIRef
     , _rfTag = tagS
     , _rfExpr = exprS
     }
@@ -277,7 +275,7 @@ convertRecExtend (V.RecExtend tag val rest) exprPl = do
   restS <- ConvertM.convertSubexpression rest
   fieldS <-
       convertField (exprPl ^? plIRef)
-      (Guid.augment "tag" (exprPl ^. ipGuid)) tag val
+      (EntityId.augment "tag" (exprPl ^. ipEntityId)) tag val
   case restS ^. rBody of
     BodyRecord (Record restFields _mAddFirstAddItem) ->
       ConvertExpr.make exprPl $ BodyRecord $
@@ -286,11 +284,11 @@ convertRecExtend (V.RecExtend tag val rest) exprPl = do
     _ -> error "TODO: Support record extend of non-record"
   where
     -- addField iref =
-    --   writeRecordFields iref defaultGuid $ \recordFields -> do
+    --   writeRecordFields iref defaultEntityId $ \recordFields -> do
     --     tag <- T.Tag <$> Transaction.newKey
     --     holeExpr <- DataOps.newHole
     --     return
-    --       ( ExprIRef.valIGuid holeTagExpr
+    --       ( ExprIRef.valIEntityId holeTagExpr
     --       , (tag, holeExpr) : recordFields
     --       )
 
@@ -325,7 +323,7 @@ convertGetField (V.GetField recExpr tag) exprPl = do
         { _gfRecord = recExpr
         , _gfTag =
             TagG
-            { _tagInstance = Guid.augment "tag" (exprPl ^. ipGuid)
+            { _tagInstance = EntityId.augment "tag" (exprPl ^. ipEntityId)
             , _tagVal = tag
             , _tagGName = tName
             }
@@ -383,7 +381,7 @@ data ConventionalParams m a = ConventionalParams
   , cpParamInfos :: Map T.Tag ConvertM.TagParamInfo
   , cpRecordParamsInfos :: Map V.Var (ConvertM.RecordParamsInfo m)
   , cpParams :: [FuncParam MStoredName m]
-  , cpAddFirstParam :: T m Guid
+  , cpAddFirstParam :: T m EntityId
   , cpHiddenPayloads :: [InputPayload m a]
   }
 
@@ -406,28 +404,23 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
     , cpRecordParamsInfos = Map.singleton param recordParamsInfo
     , cpParams = params
     , cpAddFirstParam =
-      error "TODO cpAddFirstParam"--  addFirstFieldParam lamGuid $
+      error "TODO cpAddFirstParam"--  addFirstFieldParam lamEntityId $
       -- fromMaybe (error "Record param type must be stored!") mParamTypeI
-    , cpHiddenPayloads = [pl]
+    , cpHiddenPayloads = [lambdaExprI ^. V.payload]
     }
   where
-    pl = lambdaExprI ^. V.payload
-    lamGuid = pl ^. ipGuid
-    _mLambdaP = pl ^. ipStored
-    fpIdGuid = Guid.combine lamGuid . UniqueId.toGuid . fpTag
+    fpIdEntityId = EntityId.ofLambdaTagParam param . fpTag
     mkParamInfo fp =
-      Map.singleton (fpTag fp) . ConvertM.TagParamInfo param $ fpIdGuid fp
+      Map.singleton (fpTag fp) . ConvertM.TagParamInfo param $ fpIdEntityId fp
     mkParam fp = do
       name <- makeStoredNamePropertyS $ fpTag fp
       pure FuncParam
         { _fpName = name
-        , _fpId = -- TOOD: Is this supposed to be the same?
-                  -- It used to be different: "Guid.combine lamGuid guid"
-                  fpIdGuid fp
+        , _fpId = fpIdEntityId fp
         , _fpVarKind = FuncFieldParameter
         , _fpInferredType = fpFieldType fp
         , _fpMActions = error "TODO: _fpMActions"
-          -- fpActions (fpIdGuid fp)
+          -- fpActions (fpIdEntityId fp)
           -- <$> mLambdaP <*> mParamTypeI <*> mBodyStored
         }
 --     fpActions tagExprGuid lambdaP paramTypeI bodyStored =
@@ -612,10 +605,10 @@ data ExprWhereItem a = ExprWhereItem
 mExtractWhere :: InputExpr m a -> Maybe (ExprWhereItem (InputPayload m a))
 mExtractWhere expr = do
   V.Apply func arg <- expr ^? ExprLens.valApply
-  V.Lam paramGuid body <- func ^? V.body . ExprLens._BAbs
+  V.Lam param body <- func ^? V.body . ExprLens._BAbs
   Just ExprWhereItem
     { ewiBody = body
-    , ewiParam = paramGuid
+    , ewiParam = param
     , ewiArg = arg
     , ewiHiddenPayloads = (^. V.payload) <$> [expr, func]
     , ewiInferredType = arg ^. V.payload . ipInferred . Infer.plType
@@ -633,16 +626,18 @@ convertWhereItems usedTags expr =
     let
       param = ewiParam ewi
       defGuid = UniqueId.toGuid param
+      defEntityId = EntityId.ofLambdaParam param
     value <-
-      convertDefinitionContent defGuid (pure defGuid) usedTags $
-      ewiArg ewi
+      convertDefinitionContent defEntityId defGuid
+      (pure defEntityId) usedTags
+      (ewiArg ewi)
     let
       mkWIActions topLevelProp bodyStored =
         ListItemActions
         { _itemDelete = do
              deleteParamRef param bodyStored
              replaceWith topLevelProp $ bodyStored ^. V.payload
-        , _itemAddNext = UniqueId.toGuid . fst <$> DataOps.redexWrap topLevelProp
+        , _itemAddNext = EntityId.ofLambdaParam . fst <$> DataOps.redexWrap topLevelProp
         }
     name <- makeStoredNamePropertyS param
     let
@@ -661,9 +656,6 @@ convertWhereItems usedTags expr =
     (nextItems, whereBody) <- convertWhereItems usedTags $ ewiBody ewi
     return (item : nextItems, whereBody)
 
-_newField :: MonadA m => T m (T.Tag, ExprIRef.ValIM m)
-_newField = (,) <$> UniqueId.new <*> DataOps.newHole
-
 -- addFirstFieldParam :: MonadA m => Guid -> ExprIRef.ValIM m -> T m Guid
 -- addFirstFieldParam lamGuid recordI = do
 --   recordBody <- ExprIRef.readValBody recordI
@@ -677,9 +669,9 @@ _newField = (,) <$> UniqueId.new <*> DataOps.newHole
 
 convertDefinitionContent ::
   (MonadA m, Monoid a) =>
-  Guid -> T m Guid -> Set T.Tag -> InputExpr m a ->
+  EntityId -> Guid -> T m EntityId -> Set T.Tag -> InputExpr m a ->
   ConvertM m (DefinitionContent MStoredName m (ExpressionU m a))
-convertDefinitionContent defGuid jumpToDef usedTags expr =
+convertDefinitionContent defEntityId defGuid jumpToDef usedTags expr =
   do
     defName <- makeStoredNamePropertyS defGuid
     (convParams, funcBody) <-
@@ -698,7 +690,8 @@ convertDefinitionContent defGuid jumpToDef usedTags expr =
               Just $ Anchors.assocPresentationMode defGuid
             | otherwise = Nothing
         return DefinitionContent
-          { _dParams = cpParams convParams
+          { _dEntityId = defEntityId
+          , _dParams = cpParams convParams
           , _dSetPresentationMode = setPresentationMode
           , _dBody =
             bodyS
@@ -707,14 +700,14 @@ convertDefinitionContent defGuid jumpToDef usedTags expr =
           , _dWhereItems = whereItems
           , _dAddFirstParam = cpAddFirstParam convParams
           , _dAddInnermostWhereItem =
-            fmap (UniqueId.toGuid . fst) . DataOps.redexWrap $
+            fmap (EntityId.ofLambdaParam . fst) . DataOps.redexWrap $
             fromMaybe (error "Where must be stored") $
             whereBody ^. V.payload . ipStored
           }
 
 convertDefIBuiltin ::
   MonadA m => Definition.Builtin -> DefIM m -> Definition.ExportedType ->
-  DefinitionBody MStoredName m (ExpressionU m [Guid])
+  DefinitionBody MStoredName m (ExpressionU m [EntityId])
 convertDefIBuiltin (Definition.Builtin name) defI defType =
   DefinitionBodyBuiltin DefinitionBuiltin
     { biName = name
@@ -744,19 +737,17 @@ convertDefIExpr ::
   MonadA m => Anchors.CodeProps m ->
   Val (Load.ExprPropertyClosure (Tag m)) ->
   DefIM m -> Definition.ExportedType ->
-  T m (DefinitionBody MStoredName m (ExpressionU m [Guid]))
+  T m (DefinitionBody MStoredName m (ExpressionU m [EntityId]))
 convertDefIExpr cp valLoaded defI defType = do
   (valInferred, newInferContext) <- SugarInfer.loadInfer valIRefs
-  let
-    addStoredGuids x = (x, ExprIRef.valIGuid . Property.value <$> x ^.. ipStored)
-    guidIntoPl (pl, x) = pl & ipData %~ \() -> x
+  let addStoredEntityIds x = x & ipData .~ (EntityId.ofValI . Property.value <$> x ^.. ipStored)
   context <- mkContext cp newInferContext
   ConvertM.run context $ do
     content <-
       valInferred
-      <&> guidIntoPl . addStoredGuids
+      <&> addStoredEntityIds
       & traverse . ipStored %~ Just
-      & convertDefinitionContent defGuid (jumpToDefI cp defI) mempty
+      & convertDefinitionContent defEntityId defGuid (jumpToDefI cp defI) mempty
     return $ DefinitionBodyExpression DefinitionExpression
       { _deContent = content
       , _deTypeInfo =
@@ -767,6 +758,7 @@ convertDefIExpr cp valLoaded defI defType = do
   where
     valIRefs = valLoaded <&> Load.exprPropertyOfClosure
     exprI = valIRefs ^. V.payload . Property.pVal
+    defEntityId = EntityId.ofIRef defI
     defGuid = IRef.guid defI
 
 convertDefI ::
@@ -775,7 +767,7 @@ convertDefI ::
   -- TODO: Use DefinitionClosure?
   Definition.Definition
   (Val (Load.ExprPropertyClosure (Tag m))) (DefIM m) ->
-  T m (Definition (Maybe String) m (ExpressionU m [Guid]))
+  T m (Definition (Maybe String) m (ExpressionU m [EntityId]))
 convertDefI cp (Definition.Definition (Definition.Body bodyContent exportedType) defI) = do
   bodyS <- convertDefContent bodyContent exportedType
   name <- ConvertExpr.makeStoredNameProperty defI

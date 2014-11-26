@@ -44,7 +44,7 @@ makeUnwrapped (Sugar.Record fields mAddField) myId =
         ((fieldRefGui, fieldExprGui), resultPickers) <-
           ExprGuiM.listenResultPickers $
           (,)
-          <$> TagEdit.make tag (WidgetIds.fromGuid (tag ^. Sugar.tagInstance))
+          <$> TagEdit.make tag (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
           <*> ExprGuiM.makeSubexpression 0 fieldExpr
         let
           itemEventMap = maybe mempty (recordItemEventMap config resultPickers) mItemActions
@@ -75,7 +75,7 @@ makeUnwrapped (Sugar.Record fields mAddField) myId =
         | otherwise = widget
     let
       eventMap =
-        mkEventMap (fmap WidgetIds.fromGuid)
+        mkEventMap (fmap WidgetIds.fromEntityId)
         mAddField (Config.recordAddFieldKeys config) $
         E.Doc ["Edit", "Record", "Add First Field"]
     return . ExpressionGui.fromValueWidget . Widget.weakerEvents eventMap $
@@ -98,7 +98,7 @@ recordItemEventMap config resultPickers (Sugar.ListItemActions addNext delete) =
   [ E.keyPresses (Config.recordAddFieldKeys config)
     (E.Doc ["Edit", "Record", "Add Next Field"]) $
     liftA2 mappend (holePickersAction resultPickers)
-    (Widget.eventResultFromCursor . WidgetIds.fromGuid <$> addNext)
+    (Widget.eventResultFromCursor . WidgetIds.fromEntityId <$> addNext)
   , Widget.keysEventMapMovesCursor (Config.delKeys config)
-    (E.Doc ["Edit", "Record", "Delete Field"]) $ WidgetIds.fromGuid <$> delete
+    (E.Doc ["Edit", "Record", "Delete Field"]) $ WidgetIds.fromEntityId <$> delete
   ]

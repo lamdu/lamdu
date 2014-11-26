@@ -53,15 +53,15 @@ makeUnwrapped pl list myId =
       addFirstElemEventMap =
         actionEventMap (Config.listAddItemKeys config) "Add First Item" Sugar.addFirstItem
       onFirstBracket mItem itemPl label = do
-        let hg = itemPl ^. Sugar.plData . ExprGuiM.plHoleGuids
+        let hg = itemPl ^. Sugar.plData . ExprGuiM.plHoleEntityIds
         jumpHolesEventMap <-
           hg
           & case mItem of
             Just item
               | Lens.has (Sugar.liExpr . Sugar.rBody . Sugar._BodyHole) item
-              -> ExprGuiM.hgMNextHole .~ Just itemGuid
+              -> ExprGuiM.hgMNextHole .~ Just itemEntityId
               where
-                itemGuid = item ^. Sugar.liExpr . Sugar.rPayload . Sugar.plGuid
+                itemEntityId = item ^. Sugar.liExpr . Sugar.rPayload . Sugar.plEntityId
             _ -> id
           & ExprEventMap.jumpHolesEventMap []
         ExpressionGui.makeFocusableView firstBracketId label
@@ -81,7 +81,7 @@ makeUnwrapped pl list myId =
             maybe mempty
             ( Widget.keysEventMapMovesCursor (Config.listAddItemKeys config)
               (E.Doc ["Edit", "List", "Add Last Item"])
-            . fmap WidgetIds.fromGuid
+            . fmap WidgetIds.fromEntityId
             ) $ Sugar.lValues list ^? lastLens . Sugar.liMActions . Lens._Just . Sugar.itemAddNext
           closerEventMap = mappend nilDeleteEventMap addLastEventMap
         bracketClose <-
@@ -90,14 +90,14 @@ makeUnwrapped pl list myId =
         return . ExpressionGui.hbox $ concat
           [[bracketOpen, firstEdit], nextEdits >>= pairToList, [bracketClose]]
   where
-    bracketsIdForAnim = WidgetIds.fromGuid $ Sugar.lNilGuid list
+    bracketsIdForAnim = WidgetIds.fromEntityId $ Sugar.lNilEntityId list
     pairToList (x, y) = [x, y]
     closeBracketId = Widget.joinId myId ["close-bracket"]
-    itemId = WidgetIds.fromGuid . (^. Sugar.liExpr . Sugar.rPayload . Sugar.plGuid)
+    itemId = WidgetIds.fromEntityId . (^. Sugar.liExpr . Sugar.rPayload . Sugar.plEntityId)
     actionEventMap keys doc actSelect =
       maybe mempty
       ( Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc])
-      . fmap WidgetIds.fromGuid . actSelect) $
+      . fmap WidgetIds.fromEntityId . actSelect) $
       Sugar.lMActions list
     firstBracketId = Widget.joinId myId ["first-bracket"]
     cursorDest = maybe firstBracketId itemId $ Sugar.lValues list ^? Lens.traversed
@@ -117,10 +117,10 @@ makeItem item = do
       [ E.keyPresses (Config.listAddItemKeys config) (doc resultPickers) $
         mappend
         <$> holePickersAction resultPickers
-        <*> (Widget.eventResultFromCursor . WidgetIds.fromGuid <$> addItem)
+        <*> (Widget.eventResultFromCursor . WidgetIds.fromEntityId <$> addItem)
       , Widget.keysEventMapMovesCursor (Config.delKeys config)
         (E.Doc ["Edit", "List", "Delete Item"]) $
-        WidgetIds.fromGuid <$> delItem
+        WidgetIds.fromEntityId <$> delItem
       ]
   (pair, resultPickers) <-
     ExprGuiM.listenResultPickers $
@@ -136,6 +136,6 @@ makeItem item = do
     (maybe mempty (mkItemEventMap resultPickers) (item ^. Sugar.liMActions))
   where
     itemExpr = item ^. Sugar.liExpr
-    itemWidgetId = WidgetIds.fromGuid $ itemExpr ^. Sugar.rPayload . Sugar.plGuid
+    itemWidgetId = WidgetIds.fromEntityId $ itemExpr ^. Sugar.rPayload . Sugar.plEntityId
     doc [] = E.Doc ["Edit", "List", "Add Next Item"]
     doc _ = E.Doc ["Edit", "List", "Pick Result and Add Next Item"]

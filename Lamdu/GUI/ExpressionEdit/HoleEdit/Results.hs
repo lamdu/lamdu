@@ -24,7 +24,6 @@ import Data.Maybe (catMaybes)
 import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
 import Data.Monoid.Generic (def_mempty, def_mappend)
-import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse, sequenceA)
 import GHC.Generics (Generic)
@@ -84,7 +83,7 @@ Lens.makeLenses ''Group
 data ResultType = GoodResult | BadResult
   deriving (Eq, Ord)
 
-type SugarExprPl = (ExprGuiM.StoredGuids, ExprGuiM.Injected)
+type SugarExprPl = (ExprGuiM.StoredEntityIds, ExprGuiM.Injected)
 
 data Result m = Result
   { rType :: ResultType
@@ -146,7 +145,7 @@ storePointHoleWrap expr =
 
 typeCheckHoleResult ::
   MonadA m => HoleInfo m ->
-  (Guid -> Random.StdGen) ->
+  (Sugar.EntityId -> Random.StdGen) ->
   Val (Sugar.MStorePoint m SugarExprPl) ->
   T m (Maybe (ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl))
 typeCheckHoleResult holeInfo mkGen val = do
@@ -161,7 +160,7 @@ typeCheckHoleResult holeInfo mkGen val = do
 
 typeCheckResults ::
   MonadA m => HoleInfo m ->
-  (Int -> Guid -> Random.StdGen) ->
+  (Int -> Sugar.EntityId -> Random.StdGen) ->
   [Val (Sugar.MStorePoint m SugarExprPl)] ->
   T m [(ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl)]
 typeCheckResults holeInfo mkGen options = do
@@ -200,7 +199,7 @@ mResultsListOf holeInfo baseId (x:xs) = Just
       }
 
 typeCheckToResultsList ::
-  MonadA m => HoleInfo m -> (Int -> Guid -> Random.StdGen) ->
+  MonadA m => HoleInfo m -> (Int -> Sugar.EntityId -> Random.StdGen) ->
   WidgetId.Id -> [Val (Sugar.MStorePoint m SugarExprPl)] ->
   T m (Maybe (ResultsList m))
 typeCheckToResultsList holeInfo mkGen baseId options =
@@ -289,7 +288,7 @@ maybeInjectArgumentExpr holeInfo =
     fmap concat .
     traverse (injectIntoHoles (hiActions holeInfo) arg . (pl False <$))
     where
-      pl isInjected = (ExprGuiM.StoredGuids [], ExprGuiM.Injected [isInjected])
+      pl isInjected = (ExprGuiM.StoredEntityIds [], ExprGuiM.Injected [isInjected])
       arg =
         holeArg ^. Sugar.haExprPresugared
         <&> _2 .~ pl False

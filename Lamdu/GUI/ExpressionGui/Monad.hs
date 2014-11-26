@@ -2,10 +2,10 @@
 module Lamdu.GUI.ExpressionGui.Monad
   ( ExprGuiM, WidgetT
   , widgetEnv
-  , StoredGuids(..), Injected(..)
-  , HoleGuids(..), hgMNextHole, hgMPrevHole
-  , emptyHoleGuids
-  , Payload(..), plStoredGuids, plInjected, plHoleGuids
+  , StoredEntityIds(..), Injected(..)
+  , HoleEntityIds(..), hgMNextHole, hgMPrevHole
+  , emptyHoleEntityIds
+  , Payload(..), plStoredEntityIds, plInjected, plHoleEntityIds
   , emptyPayload
   , SugarExpr
 
@@ -31,7 +31,6 @@ import Control.Monad.Trans.RWS (RWST, runRWST)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
@@ -69,34 +68,34 @@ newtype Output m = Output
   { oHolePickers :: HolePickers m
   } deriving (Monoid)
 
-newtype StoredGuids = StoredGuids [Guid]
-  deriving (Monoid, Binary, Eq, Ord)
+newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
+  deriving (Monoid)
 
 newtype Injected = Injected [Bool]
   deriving (Monoid, Binary, Eq, Ord)
 
-data HoleGuids = HoleGuids
-  { _hgMNextHole :: Maybe Guid
-  , _hgMPrevHole :: Maybe Guid
-  } deriving Show
-Lens.makeLenses ''HoleGuids
+data HoleEntityIds = HoleEntityIds
+  { _hgMNextHole :: Maybe Sugar.EntityId
+  , _hgMPrevHole :: Maybe Sugar.EntityId
+  }
+Lens.makeLenses ''HoleEntityIds
 
-emptyHoleGuids :: HoleGuids
-emptyHoleGuids = HoleGuids Nothing Nothing
+emptyHoleEntityIds :: HoleEntityIds
+emptyHoleEntityIds = HoleEntityIds Nothing Nothing
 
 -- GUI input payload on sugar exprs
 data Payload = Payload
-  { _plStoredGuids :: [Guid]
+  { _plStoredEntityIds :: [Sugar.EntityId]
   , _plInjected :: [Bool]
-  , _plHoleGuids :: HoleGuids
+  , _plHoleEntityIds :: HoleEntityIds
   }
 Lens.makeLenses ''Payload
 
 emptyPayload :: Payload
 emptyPayload = Payload
-  { _plStoredGuids = []
+  { _plStoredEntityIds = []
   , _plInjected = []
-  , _plHoleGuids = emptyHoleGuids
+  , _plHoleEntityIds = emptyHoleEntityIds
   }
 
 type SugarExpr m = Sugar.ExpressionN m Payload

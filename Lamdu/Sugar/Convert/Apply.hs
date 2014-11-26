@@ -31,12 +31,14 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.RecordVal as RecordVal
+import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
 type T = Transaction
 
@@ -55,6 +57,10 @@ convert app@(V.Apply funcI argI) exprPl =
 indirectDefinitionGuid :: ExpressionP name m pl -> Maybe Guid
 indirectDefinitionGuid funcS =
   case funcS ^. rBody of
+  -- TODO: This is incorrect because BodyGetVar is used even when it's
+  -- a GetField behind the scenes, and we probably don't want to
+  -- associate the Guid of the tag here? Need to throw this Guid or
+  -- associated data into the GetVar/GetField itself anyway!
   BodyGetVar gv -> Just $ gv ^. gvName . npGuid
   BodyGetField _ -> Nothing -- TODO: <-- do we want to make something up here?
   _ -> Nothing
@@ -79,7 +85,7 @@ convertLabeled funcS argS argI exprPl = do
     getArg field =
       AnnotatedArg
         { _aaTag = field ^. rfTag
-        , _aaTagExprGuid = field ^. rfTag . tagInstance
+        , _aaTagExprEntityId = field ^. rfTag . tagInstance
         , _aaExpr = field ^. rfExpr
         }
   let args@(arg0 : args1toN@(arg1 : args2toN)) = map getArg $ record ^. rItems
@@ -102,7 +108,7 @@ convertLabeled funcS argS argI exprPl = do
           _ -> Nothing
         valStored <- traverse (^. ipStored) val
         return $
-          ExprIRef.valIGuid <$>
+          EntityId.ofValI <$>
           DataOps.setToWrapper (Property.value (valStored ^. V.payload)) stored
   BodyApply Apply
     { _aFunc = funcS
@@ -133,16 +139,16 @@ unwrap ::
   ExprIRef.ValIProperty m ->
   ExprIRef.ValIProperty m ->
   InputExpr def stored ->
-  T m Guid
+  T m EntityId
 unwrap outerP argP argExpr = do
   res <- DataOps.replace outerP (Property.value argP)
   return $
     case orderedHoles of
     (x:_) -> x ^. V.payload . Lens._1
-    _ -> ExprIRef.valIGuid res
+    _ -> EntityId.ofValI res
   where
     f x =
-      ( x ^. ipGuid
+      ( x ^. ipEntityId
       , x ^. ipInferred
       )
     orderedHoles = ConvertHole.orderedInnerHoles $ f <$> argExpr
@@ -165,7 +171,7 @@ convertAppliedHole funcI argS argI exprPl = do
   let
     argWrap =
       maybe WrapNotAllowed
-      (WrappedAlready . ExprIRef.valIGuid . Property.value) $
+      (WrappedAlready . addEntityId) $
       exprPl ^. ipStored
     holeArg = HoleArg
       { _haExpr =
@@ -188,4 +194,8 @@ convertAppliedHole funcI argS argI exprPl = do
   lift $ ConvertHole.convertPlain exprPl
     <&> rBody . _BodyHole . holeMArg .~ Just holeArg
     <&> rPayload . plData <>~ funcI ^. V.payload . ipData
-    <&> rPayload . plActions . Lens._Just . wrap .~ WrapperAlready
+    <&> rPayload . plActions . Lens._Just . wrap .~
+        maybe WrapNotAllowed (WrapperAlready . addEntityId) (exprPl ^. ipStored)
+  where
+    addEntityId = guidEntityId . Property.value
+    guidEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)

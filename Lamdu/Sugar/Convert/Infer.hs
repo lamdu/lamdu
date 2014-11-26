@@ -22,12 +22,15 @@ import Lamdu.Infer.Load (Loader(..))
 import Lamdu.Infer.Unify (unify)
 import Lamdu.Infer.Update (updateInferredVal)
 import qualified Control.Lens as Lens
+import qualified Data.Store.IRef as IRef
+import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Load as InferLoad
+import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -79,8 +82,9 @@ loadInfer val =
   <&> _1 . Lens.mapped %~ mkInputPayload
   where
     mkInputPayload (inferPl, stored) = Sugar.InputPayload
-      { Sugar._ipGuid = ExprIRef.epGuid stored
+      { Sugar._ipEntityId = EntityId.ofValI $ Property.value stored
       , Sugar._ipInferred = inferPl
       , Sugar._ipStored = stored
       , Sugar._ipData = ()
+      , Sugar._ipGuid = IRef.guid $ ExprIRef.unValI $ Property.value stored
       }

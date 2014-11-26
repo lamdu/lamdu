@@ -333,4 +333,4 @@ addInferredTypes _exprPl = return -- eg = do
   --     )
   -- return $ addType config Background exprId typeEdits eg
   -- where
-  --   exprId = WidgetIds.fromGuid $ exprPl ^. Sugar.plGuid
+  --   exprId = WidgetIds.fromGuid $ exprPl ^. Sugar.plEntityId

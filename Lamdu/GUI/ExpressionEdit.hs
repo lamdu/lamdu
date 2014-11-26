@@ -55,15 +55,15 @@ make parentPrecedence sExpr = assignCursor $ do
       | Lens.has Lens._Nothing (pl ^. Sugar.plActions) = Widget.doesntTakeFocus
       | otherwise = id
     Sugar.Expression body pl = sExpr
-    ExprGuiM.Payload guids isInjecteds _holeGuids = pl ^. Sugar.plData
-    exprHiddenGuids = List.delete (pl ^. Sugar.plGuid) guids
-    myId = WidgetIds.fromGuid $ pl ^. Sugar.plGuid
+    ExprGuiM.Payload entityIds isInjecteds _holeEntityIds = pl ^. Sugar.plData
+    exprHiddenEntityIds = List.delete (pl ^. Sugar.plEntityId) entityIds
+    myId = WidgetIds.fromEntityId $ pl ^. Sugar.plEntityId
     maybeShrink
       | or isInjecteds = shrinkIfHigherThanLine
       | otherwise = return
     assignCursor f =
       foldr (`ExprGuiM.assignCursorPrefix` myId) f $
-      WidgetIds.fromGuid <$> exprHiddenGuids
+      WidgetIds.fromEntityId <$> exprHiddenEntityIds
 
 makeEditor ::
   MonadA m => ParentPrecedence ->

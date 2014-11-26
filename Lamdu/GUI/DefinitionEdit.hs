@@ -128,11 +128,11 @@ loadConvertDefI cp defI =
   <&> Lens.mapped . Lens.mapped . Lens.mapped %~ mkPayload
   <&> AddNextHoles.addToDef
   where
-    mkPayload guids = ExprGuiM.Payload
-      { ExprGuiM._plStoredGuids = guids
+    mkPayload entityIds = ExprGuiM.Payload
+      { ExprGuiM._plStoredEntityIds = entityIds
       , ExprGuiM._plInjected = [False]
       -- Filled by AddNextHoles above:
-      , ExprGuiM._plHoleGuids = ExprGuiM.emptyHoleGuids
+      , ExprGuiM._plHoleEntityIds = ExprGuiM.emptyHoleEntityIds
       }
 
 makeNewDefinition ::

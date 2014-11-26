@@ -2,9 +2,9 @@
 module Lamdu.Expr.IRef
   ( ValI(..), ValIM
   , ValBody
-  , ValIProperty, epGuid
+  , ValIProperty
   , Lam, Apply
-  , newValBody, readValBody, writeValBody, valIGuid
+  , newValBody, readValBody, writeValBody
   , newLambda
   , newVal, writeVal, readVal
   , writeValWithStoredSubexpressions
@@ -20,7 +20,6 @@ import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
-import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef, Tag)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
@@ -30,7 +29,6 @@ import Lamdu.Expr.Val (Val(..))
 import qualified Control.Lens as Lens
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.Val as V
@@ -57,12 +55,6 @@ type ValIProperty m = Property (T m) (ValIM m)
 type ValBody t = V.Body (ValI t)
 type Lam t = V.Lam (ValI t)
 type Apply t = V.Apply (ValI t)
-
-epGuid :: ValIProperty m -> Guid
-epGuid = IRef.guid . unValI . Property.value
-
-valIGuid :: ValI t -> Guid
-valIGuid = IRef.guid . unValI
 
 newValBody :: MonadA m => ValBody (Tag m) -> T m (ValIM m)
 newValBody = fmap ValI . Transaction.newIRef

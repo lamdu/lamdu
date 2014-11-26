@@ -60,7 +60,7 @@ make getVar pl myId = do
       Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
       (E.Doc ["Navigation", "Jump to definition"]) $ do
         DataOps.savePreJumpPosition cp myId
-        WidgetIds.fromGuid <$> getVar ^. Sugar.gvJumpTo
+        WidgetIds.fromEntityId <$> getVar ^. Sugar.gvJumpTo
   ExpressionGui.stdWrap pl (makeView getVar myId)
     <&>
     ExpressionGui.egWidget %~

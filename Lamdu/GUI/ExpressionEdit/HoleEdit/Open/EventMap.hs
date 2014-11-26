@@ -52,7 +52,7 @@ pasteEventMap config holeInfo =
   maybe mempty
   (Widget.keysEventMapMovesCursor
    (Config.pasteKeys config) (E.Doc ["Edit", "Paste"]) .
-   fmap WidgetIds.fromGuid) $ hiActions holeInfo ^. Sugar.holePaste
+   fmap WidgetIds.fromEntityId) $ hiActions holeInfo ^. Sugar.holePaste
 
 adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap searchTermProp =
@@ -99,22 +99,22 @@ pickPlaceholderEventMap ::
   MonadA m => Config -> HoleInfo m -> ShownResult m ->
   Widget.EventHandlers (T m)
 pickPlaceholderEventMap config holeInfo shownResult =
-  -- TODO: Does this guid business make sense?
-  case hiHoleGuids holeInfo ^. ExprGuiM.hgMNextHole of
-  Just nextHoleGuid | holeResultHasHoles ->
+  -- TODO: Does this entityId business make sense?
+  case hiHoleEntityIds holeInfo ^. ExprGuiM.hgMNextHole of
+  Just nextHoleEntityId | holeResultHasHoles ->
     mappend
     (simplePickRes (Config.pickResultKeys config))
-    (pickAndMoveToNextHole nextHoleGuid)
+    (pickAndMoveToNextHole nextHoleEntityId)
   _ ->
     simplePickRes $
     Config.pickResultKeys config ++
     Config.pickAndMoveToNextHoleKeys config
   where
-    pickAndMoveToNextHole nextHoleGuid =
+    pickAndMoveToNextHole nextHoleEntityId =
       Widget.keysEventMapMovesCursor
       (Config.pickAndMoveToNextHoleKeys config)
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
-      return $ WidgetIds.fromGuid nextHoleGuid
+      return $ WidgetIds.fromEntityId nextHoleEntityId
     holeResultHasHoles = not $ srHoleResult shownResult ^. Sugar.holeResultHasHoles
     simplePickRes keys = Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) $ return ()
 
@@ -150,9 +150,7 @@ make pl holeInfo mShownResult = do
   jumpHoles <- ExprEventMap.jumpHolesEventMapIfSelected [] pl
   replace <- ExprEventMap.replaceOrComeToParentEventMap True pl
   let
-    applyOp =
-      actionsEventMap $
-      ExprEventMap.applyOperatorEventMap [] $ pl ^. Sugar.plGuid
+    applyOp = actionsEventMap $ ExprEventMap.applyOperatorEventMap []
     close = closeEventMap holeInfo
     cut = actionsEventMap $ ExprEventMap.cutEventMap config
     paste = pasteEventMap config holeInfo

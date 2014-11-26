@@ -165,13 +165,13 @@ make nameProp content = do
   return . Box.vboxAlign 0 $ assignment ^. ExpressionGui.egWidget : wheres
   where
     presentationChoiceId = Widget.joinId myId ["presentation"]
-    lhs = myId : map (WidgetIds.fromGuid . (^. Sugar.fpId)) params
+    lhs = myId : map (WidgetIds.fromEntityId . (^. Sugar.fpId)) params
     rhs = ("Def Body", body)
     params = content ^. Sugar.dParams
     body = content ^. Sugar.dBody
     toEventMapAction =
-      fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid)
-    myId = WidgetIds.fromGuid $ nameProp ^. Sugar.npGuid
+      fmap (FocusDelegator.delegatingId . WidgetIds.fromEntityId)
+    myId = WidgetIds.fromEntityId $ content ^. Sugar.dEntityId
 
 makeWhereItemEdit ::
   MonadA m =>
@@ -185,10 +185,10 @@ makeWhereItemEdit item = do
         mconcat
         [ Widget.keysEventMapMovesCursor (Config.delKeys config)
           (E.Doc ["Edit", "Where item", "Delete"]) .
-          fmap WidgetIds.fromGuid $ wiActions ^. Sugar.itemDelete
+          fmap WidgetIds.fromEntityId $ wiActions ^. Sugar.itemDelete
         , Widget.keysEventMapMovesCursor (Config.addWhereItemKeys config)
           (E.Doc ["Edit", "Where item", "Add"]) .
-          fmap WidgetIds.fromGuid $ wiActions ^. Sugar.itemAddNext
+          fmap WidgetIds.fromEntityId $ wiActions ^. Sugar.itemAddNext
         ]
       | otherwise = mempty
   Widget.weakerEvents eventMap <$>
@@ -206,7 +206,7 @@ jumpToRHS keys (rhsDoc, rhs) = do
     Widget.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Jump to " ++ rhsDoc]) $
       rhsId <$ savePos
   where
-    rhsId = WidgetIds.fromGuid $ rhs ^. Sugar.rPayload . Sugar.plGuid
+    rhsId = WidgetIds.fromEntityId $ rhs ^. Sugar.rPayload . Sugar.plEntityId
 
 makeResultEdit
   :: MonadA m
@@ -236,7 +236,7 @@ addPrevIds ::
 addPrevIds lhsId params =
   go lhsId params
   where
-    fpId param = WidgetIds.fromGuid $ param ^. Sugar.fpId
+    fpId param = WidgetIds.fromEntityId $ param ^. Sugar.fpId
     go _      [] = []
     go prevId (fp:fps) = (prevId, fp) : go (fpId fp) fps
 

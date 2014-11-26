@@ -29,11 +29,13 @@ setColor action = do
   ExprGuiM.withFgColor (Config.literalIntColor config) action
 
 mkEditEventMap ::
-  MonadA m => Integer -> T m Guid -> Widget.EventHandlers (T m)
+  MonadA m => Integer -> T m (Guid, Sugar.EntityId) -> Widget.EventHandlers (T m)
 mkEditEventMap integer setToHole =
   Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.Key'Enter]
   (E.Doc ["Edit", "Integer"]) $
-  setHoleStateAndJump (HoleState (show integer)) =<< setToHole
+  do
+    (guid, entityId) <- setToHole
+    setHoleStateAndJump guid (HoleState (show integer)) entityId
 
 makeInt ::
   MonadA m =>

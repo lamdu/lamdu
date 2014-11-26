@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Info
   ) where
 
 import Control.Lens.Operators
-import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (diveIntoHole)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState, hsSearchTerm)
@@ -20,13 +19,13 @@ type T = Transaction.Transaction
 
 -- | Active hole info
 data HoleInfo m = HoleInfo
-  { hiGuid :: Guid
+  { hiEntityId :: Sugar.EntityId
   , hiId :: Widget.Id
   , hiState :: Property (T m) HoleState
   , hiActions :: Sugar.HoleActions Sugar.Name m
   , hiInferred :: Sugar.HoleInferred Sugar.Name m
   , hiMArgument :: Maybe (Sugar.HoleArg m (ExprGuiM.SugarExpr m))
-  , hiHoleGuids :: ExprGuiM.HoleGuids
+  , hiHoleEntityIds :: ExprGuiM.HoleEntityIds
   }
 
 hiSearchTermProperty :: HoleInfo m -> Property (T m) String

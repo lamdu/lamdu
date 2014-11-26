@@ -11,13 +11,13 @@ import Control.Applicative ((<$>), Applicative(..), liftA2)
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Data.Traversable (sequenceA)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import Lamdu.CharClassification (operatorChars)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers, holePickersAddDocPrefix, holePickersAction)
+import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -36,7 +36,7 @@ make ::
 make isFocused holePickers pl =
   mconcat <$> sequenceA
   [ maybe (return mempty)
-    (actionsEventMap holePickers (pl ^. Sugar.plGuid))
+    (actionsEventMap holePickers)
     (pl ^. Sugar.plActions)
   , jumpHolesEventMapIfSelected holePickers pl
   , replaceOrComeToParentEventMap isFocused pl
@@ -46,31 +46,31 @@ mkEventMap ::
   (Functor f, Functor g) =>
   [E.ModKey] -> E.Doc ->
   (f Widget.Id -> g Widget.Id) ->
-  f Guid -> EventHandlers g
+  f Sugar.EntityId -> EventHandlers g
 mkEventMap keys doc f =
   Widget.keysEventMapMovesCursor keys doc .
-  f . fmap WidgetIds.fromGuid
+  f . fmap WidgetIds.fromEntityId
 
 mkEventMapWithPickers ::
   (Functor f, MonadA m) =>
   HolePickers m ->
   [E.ModKey] -> E.Doc ->
   (f Widget.Id -> T m Widget.Id) ->
-  f Guid -> EventHandlers (T m)
+  f Sugar.EntityId -> EventHandlers (T m)
 mkEventMapWithPickers holePickers keys doc f =
   E.keyPresses keys doc .
   liftA2 mappend (holePickersAction holePickers) .
   fmap Widget.eventResultFromCursor . f .
-  fmap WidgetIds.fromGuid
+  fmap WidgetIds.fromEntityId
 
 isExprSelected :: MonadA m => Sugar.Payload f a -> ExprGuiM m Bool
 isExprSelected pl =
-  ExprGuiM.widgetEnv . WE.isSubCursor . WidgetIds.fromGuid $
-  pl ^. Sugar.plGuid
+  ExprGuiM.widgetEnv . WE.isSubCursor . WidgetIds.fromEntityId $
+  pl ^. Sugar.plEntityId
 
 jumpHolesEventMap ::
   MonadA m => HolePickers m ->
-  ExprGuiM.HoleGuids ->
+  ExprGuiM.HoleEntityIds ->
   ExprGuiM m (EventHandlers (T m))
 jumpHolesEventMap holePickers hg = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -96,7 +96,9 @@ jumpHolesEventMapIfSelected ::
 jumpHolesEventMapIfSelected holePickers pl = do
   isSelected <- isExprSelected pl
   if isSelected
-    then jumpHolesEventMap holePickers $ pl ^. Sugar.plData . ExprGuiM.plHoleGuids
+    then
+    jumpHolesEventMap holePickers $
+    pl ^. Sugar.plData . ExprGuiM.plHoleEntityIds
     else pure mempty
 
 cutEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)
@@ -121,29 +123,29 @@ replaceOrComeToParentEventMap isFocused pl =
         then
           mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
           (fmap FocusDelegator.notDelegatingId) . return $
-          pl ^. Sugar.plGuid
+          pl ^. Sugar.plEntityId
         else mempty
 
 actionsEventMap ::
   MonadA m =>
-  HolePickers m -> Guid ->
+  HolePickers m ->
   Sugar.Actions m ->
   ExprGuiM m (EventHandlers (T m))
-actionsEventMap holePickers guid actions = do
+actionsEventMap holePickers actions = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   return $ mconcat
     [ wrapEventMap holePickers config
-    , applyOperatorEventMap holePickers guid
+    , applyOperatorEventMap holePickers
     , cutEventMap config
     ] actions
 
 applyOperatorEventMap ::
-  MonadA m => HolePickers m -> Guid -> Sugar.Actions m -> EventHandlers (T m)
-applyOperatorEventMap holePickers guid actions =
+  MonadA m => HolePickers m -> Sugar.Actions m -> EventHandlers (T m)
+applyOperatorEventMap holePickers actions =
   case actions ^. Sugar.wrap of
   Sugar.WrapAction wrap -> action wrap
-  Sugar.WrapperAlready -> action $ return guid
-  Sugar.WrappedAlready applyGuid -> action $ return applyGuid
+  Sugar.WrapperAlready holeId -> action $ return holeId
+  Sugar.WrappedAlready holeId -> action $ return holeId
   Sugar.WrapNotAllowed -> mempty
   where
     doc = E.Doc ["Edit", holePickersAddDocPrefix holePickers "Apply operator"]
@@ -151,9 +153,10 @@ applyOperatorEventMap holePickers guid actions =
       E.charGroup "Operator" doc operatorChars $ \c _isShifted ->
         mappend
         <$> holePickersAction holePickers
-        <*>
-          (Widget.eventResultFromCursor <$>
-           (setHoleStateAndJump (HoleState [c]) =<< wrap))
+        <*> do
+          (guid, entityId) <- wrap
+          cursor <- setHoleStateAndJump guid (HoleState [c]) entityId
+          return $ Widget.eventResultFromCursor cursor
 
 wrapEventMap ::
   MonadA m =>
@@ -165,8 +168,8 @@ wrapEventMap holePickers config actions =
     mkEventMapWithPickers holePickers
     (Config.wrapKeys config)
     (E.Doc ["Edit", holePickersAddDocPrefix holePickers "Wrap"])
-    (fmap FocusDelegator.delegatingId) wrap
-  Sugar.WrapperAlready -> mempty
+    (fmap FocusDelegator.delegatingId) (snd <$> wrap)
+  Sugar.WrapperAlready _ -> mempty
   Sugar.WrappedAlready _ -> mempty
   Sugar.WrapNotAllowed -> mempty
 
@@ -175,7 +178,7 @@ replaceEventMap config actions =
   mconcat
   [ actionEventMap (Sugar.setToInnerExpr . Sugar._SetToInnerExpr)
     "Replace with inner expression" $ Config.delKeys config
-  , actionEventMap (Sugar.setToHole . Sugar._SetToHole)
+  , actionEventMap (Sugar.setToHole . Sugar._SetToHole . Lens.to (fmap snd))
     "Replace expression" delKeys
   ]
   where
@@ -186,10 +189,10 @@ replaceEventMap config actions =
 
 modifyEventMap ::
   MonadA m => HolePickers m -> Config ->
-  Guid -> Sugar.Actions m -> EventHandlers (T m)
-modifyEventMap holePickers config guid =
+  Sugar.Actions m -> EventHandlers (T m)
+modifyEventMap holePickers config =
   mconcat
   [ wrapEventMap holePickers config
-  , applyOperatorEventMap holePickers guid
+  , applyOperatorEventMap holePickers
   , replaceEventMap config
   ]

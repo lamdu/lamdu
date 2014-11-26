@@ -33,7 +33,7 @@ make getParams pl myId = do
       Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
       (E.Doc ["Navigation", "Jump to definition"]) $ do
         DataOps.savePreJumpPosition cp myId
-        WidgetIds.fromGuid <$> getParams ^. Sugar.gpJumpTo
+        WidgetIds.fromEntityId <$> getParams ^. Sugar.gpJumpTo
   paramsLabel <-
     ExprGuiM.withFgColor (Config.parameterColor config) $ label "params"
   prefixLabel <- label "(of "

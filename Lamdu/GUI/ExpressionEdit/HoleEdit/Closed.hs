@@ -73,7 +73,7 @@ makeWrapperEventMap argIsFocused arg myId = do
       case arg ^? Sugar.haUnwrap . Sugar._UnwrapMAction . Lens._Just of
       Just unwrap ->
         Widget.keysEventMapMovesCursor (Config.acceptKeys config ++ Config.delKeys config)
-        (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromGuid <$> unwrap
+        (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
       Nothing ->
         Widget.keysEventMapMovesCursor (Config.wrapKeys config)
         (E.Doc ["Navigation", "Hole", "Open"]) .
@@ -86,8 +86,8 @@ makeWrapperEventMap argIsFocused arg myId = do
       | otherwise =
         Widget.keysEventMapMovesCursor (Config.enterSubexpressionKeys config)
         (E.Doc ["Navigation", "Go to wrapped expr"]) .
-        pure . WidgetIds.fromGuid $
-        arg ^. Sugar.haExpr . Sugar.rPayload . Sugar.plGuid
+        pure . WidgetIds.fromEntityId $
+        arg ^. Sugar.haExpr . Sugar.rPayload . Sugar.plEntityId
   pure $
     mappend tryUnwrapEventMap navigateEventMap
 
@@ -150,13 +150,13 @@ makeInferred inferred pl myId = do
     -- gen needs to be compatible with the one from Sugar.Convert.Hole
     -- for the hole results, for smooth animation between inferred
     -- pure val and the hole result:
-    gen = genFromHashable (pl ^. Sugar.plGuid, "inferred", 0 :: Int)
+    gen = genFromHashable (pl ^. Sugar.plEntityId, "inferred", 0 :: Int)
     emptyPl =
       ExprGuiM.Payload
-      { ExprGuiM._plStoredGuids = []
+      { ExprGuiM._plStoredEntityIds = []
       , ExprGuiM._plInjected = []
       -- filled by AddNextHoles above
-      , ExprGuiM._plHoleGuids = ExprGuiM.emptyHoleGuids
+      , ExprGuiM._plHoleEntityIds = ExprGuiM.emptyHoleEntityIds
       }
 
 makeSimple :: MonadA m => Widget.Id -> ExprGuiM m (ExpressionGui m)

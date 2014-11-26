@@ -9,7 +9,6 @@ import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Monad.Trans.State (State, evalState)
 import Control.MonadA (MonadA)
-import Data.Store.Guid (Guid)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -57,13 +56,13 @@ addToExpr expr =
 
 addNextHoles ::
   Sugar.Expression name m (Bool, ExprGuiM.Payload) ->
-  State (Maybe Guid) (Sugar.Expression name m (Bool, ExprGuiM.Payload))
-addNextHoles = Lens.backwards Lens.traverse %%~ setGuid ExprGuiM.hgMNextHole
+  State (Maybe Sugar.EntityId) (Sugar.Expression name m (Bool, ExprGuiM.Payload))
+addNextHoles = Lens.backwards Lens.traverse %%~ setEntityId ExprGuiM.hgMNextHole
 
 addPrevHoles ::
   Sugar.Expression name m (Bool, ExprGuiM.Payload) ->
-  State (Maybe Guid) (Sugar.Expression name m (Bool, ExprGuiM.Payload))
-addPrevHoles = Lens.traverse %%~ setGuid ExprGuiM.hgMPrevHole
+  State (Maybe Sugar.EntityId) (Sugar.Expression name m (Bool, ExprGuiM.Payload))
+addPrevHoles = Lens.traverse %%~ setEntityId ExprGuiM.hgMPrevHole
 
 addJumpToExprMarkers ::
   Sugar.Expression name m ExprGuiM.Payload ->
@@ -89,14 +88,14 @@ jumpToExprPayloads f expr =
   where
     mark = (Sugar.rPayload . Sugar.plData) f expr
 
-setGuid ::
-  Lens' ExprGuiM.HoleGuids (Maybe Guid) ->
+setEntityId ::
+  Lens' ExprGuiM.HoleEntityIds (Maybe Sugar.EntityId) ->
   Sugar.Payload m (Bool, ExprGuiM.Payload) ->
-  State (Maybe Guid) (Sugar.Payload m (Bool, ExprGuiM.Payload))
-setGuid lens pl =
+  State (Maybe Sugar.EntityId) (Sugar.Payload m (Bool, ExprGuiM.Payload))
+setEntityId lens pl =
   setIt <$>
   State.get <*
   when (Lens.anyOf Sugar.plData fst pl)
-    (State.put (Just (pl ^. Sugar.plGuid)))
+    (State.put (Just (pl ^. Sugar.plEntityId)))
   where
-    setIt x = pl & Sugar.plData . Lens._2 . ExprGuiM.plHoleGuids . lens .~ x
+    setIt x = pl & Sugar.plData . Lens._2 . ExprGuiM.plHoleEntityIds . lens .~ x
