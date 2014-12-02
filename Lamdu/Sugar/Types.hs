@@ -235,10 +235,8 @@ data HoleActions name m = HoleActions
     -- (used by HoleEdit to suggest variations based on type)
     _holeInferExprType :: Val () -> T m (Maybe Type)
   , holeResult ::
-      forall a.
-      Monoid a =>
-      Val (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
-      T m (Maybe (HoleResult name m a))
+      forall a. Monoid a =>
+      Val (MStorePoint m a) -> T m (Maybe (HoleResult name m a))
   , _holePaste :: Maybe (T m EntityId)
 
   , _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
