@@ -328,13 +328,11 @@ mkHoleResult sugarContext exprPl stored val =
     ((fConverted, fConsistentExpr, fWrittenExpr), forkedChanges) <-
       lift $ Transaction.fork $
         writeConvertTypeChecked newSugarContext stored inferredVal
-    let inferredExpr = (^. ipInferred) <$> fWrittenExpr
     return $ HoleResult
-      { _holeResultComplexityScore = resultComplexityScore inferredExpr
+      { _holeResultComplexityScore = resultComplexityScore $ fst <$> inferredVal
       , _holeResultConverted = fConverted
       , _holeResultPick = mkPickedResult fConsistentExpr fWrittenExpr <$ Transaction.merge forkedChanges
-      , _holeResultHasHoles =
-        not . null . orderedInnerHoles $ (,) () <$> inferredExpr
+      , _holeResultHasHoles = not . null $ orderedInnerHoles val
       }
   where
     mkPickedResult _consistentExpr writtenExpr =
