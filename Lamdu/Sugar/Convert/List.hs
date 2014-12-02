@@ -64,7 +64,7 @@ mkListAddFirstItem specialFunctions =
 mkListItem ::
   (MonadA m, Monoid a) =>
   ExpressionU m a -> ExpressionU m a ->
-  InputPayload m a -> InputExpr m a -> Maybe (T m EntityId) ->
+  InputPayload m a -> Val (InputPayload m a) -> Maybe (T m EntityId) ->
   ListItem m (ExpressionU m a)
 mkListItem listItemExpr recordArgS exprPl tailI mAddNextItem =
   ListItem
@@ -116,7 +116,8 @@ valConsParams specialFunctions val = do
 
 cons ::
   (MonadA m, Monoid a) =>
-  V.Apply (InputExpr m a) -> ExpressionU m a -> InputPayload m a ->
+  V.Apply (Val (InputPayload m a)) ->
+  ExpressionU m a -> InputPayload m a ->
   MaybeT (ConvertM m) (ExpressionU m a)
 cons (V.Apply funcI argI) argS exprPl = do
   specialFunctions <-

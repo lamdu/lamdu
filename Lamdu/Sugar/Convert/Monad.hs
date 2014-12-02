@@ -19,6 +19,7 @@ import Data.Map (Map)
 import Data.Monoid (Monoid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
+import Lamdu.Expr.Val (Val)
 import Lamdu.Sugar.Internal
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
@@ -52,7 +53,7 @@ data Context m = Context
   , _scTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
   , _scRecordParamsInfos :: Map V.Var (RecordParamsInfo m) -- param guids
   , scConvertSubexpression ::
-       forall a. Monoid a => Sugar.InputExpr m a -> ConvertM m (ExpressionU m a)
+       forall a. Monoid a => Val (Sugar.InputPayload m a) -> ConvertM m (ExpressionU m a)
   }
 Lens.makeLenses ''Context
 
@@ -75,7 +76,7 @@ codeAnchor f = f . (^. scCodeAnchors) <$> readContext
 getP :: MonadA m => Transaction.MkProperty m a -> ConvertM m a
 getP = liftTransaction . Transaction.getP
 
-convertSubexpression :: (MonadA m, Monoid a) => Sugar.InputExpr m a -> ConvertM m (ExpressionU m a)
+convertSubexpression :: (MonadA m, Monoid a) => Val (Sugar.InputPayload m a) -> ConvertM m (ExpressionU m a)
 convertSubexpression exprI = do
   convertSub <- scConvertSubexpression <$> readContext
   convertSub exprI

@@ -110,7 +110,7 @@ makeStoredNamePropertyS ::
 makeStoredNamePropertyS x = ConvertM.liftTransaction . ConvertExpr.makeStoredNameProperty $ x
 
 convertPositionalFuncParam ::
-  (MonadA m, Monoid a) => V.Lam (InputExpr m a) ->
+  (MonadA m, Monoid a) => V.Lam (Val (InputPayload m a)) ->
   InputPayload m a ->
   ConvertM m (FuncParam MStoredName m)
 convertPositionalFuncParam (V.Lam param body) lamExprPl = do
@@ -133,7 +133,7 @@ convertPositionalFuncParam (V.Lam param body) lamExprPl = do
 
 convertLam ::
   (MonadA m, Monoid a) =>
-  V.Lam (InputExpr m a) ->
+  V.Lam (Val (InputPayload m a)) ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertLam lam@(V.Lam paramVar result) exprPl = do
   param <- convertPositionalFuncParam lam exprPl
@@ -244,7 +244,7 @@ convertTag inst tag = TagG inst tag <$> makeStoredNamePropertyS tag
 
 convertField ::
   (MonadA m, Monoid a) => Maybe (ExprIRef.ValIM m) ->
-  EntityId -> T.Tag -> InputExpr m a ->
+  EntityId -> T.Tag -> Val (InputPayload m a) ->
   ConvertM m (RecordField MStoredName m (ExpressionU m a))
 convertField _mIRef inst tag expr = do
   tagS <- convertTag inst tag
@@ -268,7 +268,7 @@ convertEmptyRecord exprPl =
   }
 
 convertRecExtend ::
-  (MonadA m, Monoid a) => V.RecExtend (InputExpr m a) ->
+  (MonadA m, Monoid a) => V.RecExtend (Val (InputPayload m a)) ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertRecExtend (V.RecExtend tag val rest) exprPl = do
   restS <- ConvertM.convertSubexpression rest
@@ -293,7 +293,7 @@ convertRecExtend (V.RecExtend tag val rest) exprPl = do
 
 convertGetField ::
   (MonadA m, Monoid a) =>
-  V.GetField (InputExpr m a) ->
+  V.GetField (Val (InputPayload m a)) ->
   InputPayload m a ->
   ConvertM m (ExpressionU m a)
 convertGetField (V.GetField recExpr tag) exprPl = do
@@ -346,7 +346,7 @@ convertGlobal globalId exprPl =
     where
       defI = ExprIRef.defI globalId
 
-convertExpressionI :: (MonadA m, Monoid a) => InputExpr m a -> ConvertM m (ExpressionU m a)
+convertExpressionI :: (MonadA m, Monoid a) => Val (InputPayload m a) -> ConvertM m (ExpressionU m a)
 convertExpressionI ee =
   ($ ee ^. V.payload) $
   case ee ^. V.body of
@@ -392,7 +392,7 @@ data FieldParam = FieldParam
 mkRecordParams ::
   (MonadA m, Monoid a) =>
   ConvertM.RecordParamsInfo m -> V.Var -> [FieldParam] ->
-  InputExpr m a ->
+  Val (InputPayload m a) ->
   Maybe (Val (ExprIRef.ValIProperty m)) ->
   ConvertM m (ConventionalParams m a)
 mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
@@ -497,10 +497,10 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
 
 convertDefinitionParams ::
   (MonadA m, Monoid a) =>
-  ConvertM.RecordParamsInfo m -> Set T.Tag -> InputExpr m a ->
+  ConvertM.RecordParamsInfo m -> Set T.Tag -> Val (InputPayload m a) ->
   ConvertM m
   ( ConventionalParams m a
-  , InputExpr m a
+  , Val (InputPayload m a)
   )
 convertDefinitionParams recordParamsInfo usedTags expr =
   case expr ^. V.body of
@@ -537,7 +537,7 @@ convertDefinitionParams recordParamsInfo usedTags expr =
 singleConventionalParam ::
   MonadA m =>
   ExprIRef.ValIProperty m -> FuncParam MStoredName m ->
-  V.Var ->InputExpr m a -> ConventionalParams m a
+  V.Var -> Val (InputPayload m a) -> ConventionalParams m a
 singleConventionalParam _lamProp existingParam _existingParamVar body =
   ConventionalParams
   { cpTags = mempty
@@ -601,7 +601,7 @@ data ExprWhereItem a = ExprWhereItem
   , ewiInferredType :: Type
   }
 
-mExtractWhere :: InputExpr m a -> Maybe (ExprWhereItem (InputPayload m a))
+mExtractWhere :: Val (InputPayload m a) -> Maybe (ExprWhereItem (InputPayload m a))
 mExtractWhere expr = do
   V.Apply func arg <- expr ^? ExprLens.valApply
   V.Lam param body <- func ^? V.body . ExprLens._BAbs
@@ -616,8 +616,8 @@ mExtractWhere expr = do
 convertWhereItems ::
   (MonadA m, Monoid a) =>
   Set T.Tag ->
-  InputExpr m a ->
-  ConvertM m ([WhereItem MStoredName m (ExpressionU m a)], InputExpr m a)
+  Val (InputPayload m a) ->
+  ConvertM m ([WhereItem MStoredName m (ExpressionU m a)], Val (InputPayload m a))
 convertWhereItems usedTags expr =
   case mExtractWhere expr of
   Nothing -> return ([], expr)
@@ -668,7 +668,7 @@ convertWhereItems usedTags expr =
 
 convertDefinitionContent ::
   (MonadA m, Monoid a) =>
-  EntityId -> Guid -> T m EntityId -> Set T.Tag -> InputExpr m a ->
+  EntityId -> Guid -> T m EntityId -> Set T.Tag -> Val (InputPayload m a) ->
   ConvertM m (DefinitionContent MStoredName m (ExpressionU m a))
 convertDefinitionContent defEntityId defGuid jumpToDef usedTags expr =
   do

@@ -43,7 +43,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 type T = Transaction
 
 convert ::
-  (MonadA m, Monoid a) => V.Apply (InputExpr m a) ->
+  (MonadA m, Monoid a) => V.Apply (Val (InputPayload m a)) ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convert app@(V.Apply funcI argI) exprPl =
   runMatcherT $ do
@@ -76,7 +76,7 @@ noRepetitions x = length x == Set.size (Set.fromList x)
 
 convertLabeled ::
   (MonadA m, Monoid a) =>
-  ExpressionU m a -> ExpressionU m a -> InputExpr m a -> InputPayload m a ->
+  ExpressionU m a -> ExpressionU m a -> Val (InputPayload m a) -> InputPayload m a ->
   MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled funcS argS argI exprPl = do
   record <- maybeToMPlus $ argS ^? rBody . _BodyRecord
@@ -138,7 +138,7 @@ unwrap ::
   MonadA m =>
   ExprIRef.ValIProperty m ->
   ExprIRef.ValIProperty m ->
-  InputExpr def stored ->
+  Val (InputPayload n a) ->
   T m EntityId
 unwrap outerP argP argExpr = do
   res <- DataOps.replace outerP (Property.value argP)
@@ -157,7 +157,7 @@ ipType = ipInferred . Infer.plType
 
 convertAppliedHole ::
   (MonadA m, Monoid a) =>
-  InputExpr m a -> ExpressionU m a -> InputExpr m a -> InputPayload m a ->
+  Val (InputPayload m a) -> ExpressionU m a -> Val (InputPayload m a) -> InputPayload m a ->
   MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedHole funcI argS argI exprPl = do
   guard $ Lens.has ExprLens.valHole funcI

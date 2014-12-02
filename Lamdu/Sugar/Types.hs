@@ -64,7 +64,6 @@ module Lamdu.Sugar.Types
   , MStorePoint, ExprStorePoint
   -- Input types:
   , InputPayload(..), ipGuid, ipEntityId, ipInferred, ipStored, ipData
-  , InputExpr
   , NameProperty(..)
     , npName, npGuid, npSetName
   ) where
@@ -105,12 +104,6 @@ data InputPayload m a
     , _ipData :: a
     }
 Lens.makeLenses ''InputPayload
-
--- "Maybe (ExprIRef.ValIProperty m)" is used because holes have suggested results
--- which are sugar-converted into ordinary sugar expressions, but are
--- not actually stored and do not have actions (they're read-only).
--- TODO: Inline this type alias
-type InputExpr m a = Val (InputPayload m a)
 
 data WrapAction m
   = WrapperAlready (Guid, EntityId) -- I'm an apply-of-hole, (Guid,EntityId of hole), no need to wrap
