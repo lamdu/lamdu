@@ -37,7 +37,6 @@ import Lamdu.Sugar.Types (Scope(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Char as Char
-import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.List.Class as ListClass
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
@@ -48,7 +47,6 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -121,12 +119,6 @@ sugarNameToGroup (Sugar.Name _ collision varName) expr = Group
       Sugar.NoCollision -> []
       Sugar.Collision suffix -> [show suffix]
 
-resultComplexityScore :: Val Infer.Payload -> [Int]
-resultComplexityScore expr =
-  [ length . show $ expr ^. V.payload . Infer.plType
-  , length $ Foldable.toList expr
-  ]
-
 prefixId :: HoleInfo m -> WidgetId.Id
 prefixId holeInfo = mconcat [hiActiveId holeInfo, WidgetId.Id ["results"]]
 
@@ -165,8 +157,7 @@ typeCheckResults holeInfo options = do
   let (goodResults, badResults) = partition ((== GoodResult) . fst) rs
   return $ sorted goodResults ++ sorted badResults
   where
-    sorted = sortOn (score . snd)
-    score = resultComplexityScore . (^. Sugar.holeResultInferred)
+    sorted = sortOn (^. _2 . Sugar.holeResultComplexityScore)
 
 mResultsListOf ::
   HoleInfo m -> WidgetId.Id ->

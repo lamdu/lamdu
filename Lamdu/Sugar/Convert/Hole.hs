@@ -297,6 +297,12 @@ writeConvertTypeChecked sugarContext holeStored inferredVal = do
       , _ipData = a
       }
 
+resultComplexityScore :: Val Infer.Payload -> [Int]
+resultComplexityScore expr =
+  [ length . show $ expr ^. V.payload . Infer.plType
+  , length $ Foldable.toList expr
+  ]
+
 mkHoleResult ::
   (MonadA m, Monoid a) =>
   ConvertM.Context m ->
@@ -317,7 +323,7 @@ mkHoleResult sugarContext exprPl stored val = do
   where
     mkResult unfork (fConverted, fConsistentExpr, fWrittenExpr) =
       HoleResult
-        { _holeResultInferred = inferredExpr
+        { _holeResultComplexityScore = resultComplexityScore inferredExpr
         , _holeResultConverted = fConverted
         , _holeResultPick = mkPickedResult fConsistentExpr fWrittenExpr <$ unfork
         , _holeResultHasHoles =

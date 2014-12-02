@@ -55,7 +55,7 @@ module Lamdu.Sugar.Types
   , HoleActions(..)
     , holeScope, holePaste, holeInferExprType
   , HoleResult(..)
-    , holeResultInferred
+    , holeResultComplexityScore
     , holeResultConverted
     , holeResultPick
     , holeResultHasHoles
@@ -209,10 +209,7 @@ data PickedResult = PickedResult
   }
 
 data HoleResult name m a = HoleResult
-  { _holeResultInferred :: Val Infer.Payload
-    -- holeResultInferred should probably not be exported, currently
-    -- used by GUI to compute complexity score and "remember" the val
-    -- given to generate this result.
+  { _holeResultComplexityScore :: [Int]
   , _holeResultConverted :: Expression name m a
   , _holeResultPick :: T m PickedResult
   , _holeResultHasHoles :: Bool
