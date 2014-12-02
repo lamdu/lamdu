@@ -178,12 +178,13 @@ mResultsListOf holeInfo baseId (x:xs) = Just
   { _rlPreferred = NotPreferred
   , _rlExtraResultsPrefixId = extraResultsPrefixId
   , _rlMain = mkResult (mconcat [prefixId holeInfo, baseId]) x
-  , _rlExtra = map (\res -> mkResult (extraResultId (snd res)) res) xs
+  , _rlExtra = map mkExtra xs
   }
   where
-    extraResultId =
-      mappend extraResultsPrefixId . WidgetIds.hash . void .
-      (^. Sugar.holeResultInferred)
+    mkExtra res@(_resultType, holeRes) = mkResult (extraResultId holeRes) res
+    extraResultId holeRes =
+      mappend extraResultsPrefixId $ WidgetIds.fromEntityId $
+      holeRes ^. Sugar.holeResultConverted . Sugar.rPayload . Sugar.plEntityId
     extraResultsPrefixId = mconcat [prefixId holeInfo, WidgetId.Id ["extra results"], baseId]
     mkResult resultId (typ, holeResult) =
       Result
