@@ -319,28 +319,24 @@ mkHoleResult ::
   InputPayload m dummy -> ExprIRef.ValIProperty m ->
   Val (MStorePoint m a) ->
   T m (Maybe (HoleResult MStoredName m a))
-mkHoleResult sugarContext exprPl stored val = do
-  (mResult, forkedChanges) <-
-    Transaction.fork $ runMaybeT $ do
-      (inferredVal, ctx) <-
-        (`runStateT` (sugarContext ^. ConvertM.scInferContext)) $
-        SugarInfer.loadInferInto (exprPl ^. ipInferred) val
-      let newSugarContext = sugarContext & ConvertM.scInferContext .~ ctx
-      lift $
+mkHoleResult sugarContext exprPl stored val =
+  runMaybeT $ do
+    (inferredVal, ctx) <-
+      (`runStateT` (sugarContext ^. ConvertM.scInferContext))
+      (SugarInfer.loadInferInto (exprPl ^. ipInferred) val)
+    let newSugarContext = sugarContext & ConvertM.scInferContext .~ ctx
+    ((fConverted, fConsistentExpr, fWrittenExpr), forkedChanges) <-
+      lift $ Transaction.fork $
         writeConvertTypeChecked newSugarContext stored inferredVal
-
-  return $ mkResult (Transaction.merge forkedChanges) <$> mResult
+    let inferredExpr = (^. ipInferred) <$> fWrittenExpr
+    return $ HoleResult
+      { _holeResultComplexityScore = resultComplexityScore inferredExpr
+      , _holeResultConverted = fConverted
+      , _holeResultPick = mkPickedResult fConsistentExpr fWrittenExpr <$ Transaction.merge forkedChanges
+      , _holeResultHasHoles =
+        not . null . orderedInnerHoles $ (,) () <$> inferredExpr
+      }
   where
-    mkResult unfork (fConverted, fConsistentExpr, fWrittenExpr) =
-      HoleResult
-        { _holeResultComplexityScore = resultComplexityScore inferredExpr
-        , _holeResultConverted = fConverted
-        , _holeResultPick = mkPickedResult fConsistentExpr fWrittenExpr <$ unfork
-        , _holeResultHasHoles =
-          not . null . orderedInnerHoles $ (,) () <$> inferredExpr
-        }
-        where
-          inferredExpr = (^. ipInferred) <$> fWrittenExpr
     mkPickedResult _consistentExpr writtenExpr =
       PickedResult
       { _prMJumpTo =
