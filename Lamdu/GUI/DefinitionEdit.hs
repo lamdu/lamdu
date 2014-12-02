@@ -62,7 +62,7 @@ makeBuiltinDefinition def builtin = do
     ]
   where
     name = def ^. Sugar.drName
-    myId = WidgetIds.fromGuid $ name ^. Sugar.npGuid
+    myId = WidgetIds.fromEntityId $ def ^. Sugar.drEntityId
 
 -- defTypeScale :: Config -> Widget f -> Widget f
 -- defTypeScale config = Widget.scale $ realToFrac <$> Config.defTypeBoxScaleFactor config
@@ -109,7 +109,8 @@ makeExprDefinition def bodyExpr = do
   --     , mkTypeRow "Inferred type:" id $ Sugar.antNewType x
   --     ]
   bodyWidget <-
-    DefinitionContentEdit.make name $ bodyExpr ^. Sugar.deContent
+    DefinitionContentEdit.make name (bodyExpr ^. Sugar.deContent) $
+    WidgetIds.fromEntityId (def ^. Sugar.drEntityId)
   return . Box.vboxAlign 0 $ -- typeWidgets ++
     [bodyWidget]
   where

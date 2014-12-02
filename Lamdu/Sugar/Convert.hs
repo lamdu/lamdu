@@ -627,7 +627,7 @@ convertWhereItems usedTags expr =
       defGuid = UniqueId.toGuid param
       defEntityId = EntityId.ofLambdaParam param
     value <-
-      convertDefinitionContent defEntityId defGuid
+      convertDefinitionContent defGuid
       (pure defEntityId) usedTags
       (ewiArg ewi)
     let
@@ -642,7 +642,8 @@ convertWhereItems usedTags expr =
     let
       hiddenData = ewiHiddenPayloads ewi ^. Lens.traversed . ipData
       item = WhereItem
-        { _wiValue =
+        { _wiEntityId = defEntityId
+        , _wiValue =
             value
             & dBody . rPayload . plData <>~ hiddenData
         , _wiActions =
@@ -668,9 +669,9 @@ convertWhereItems usedTags expr =
 
 convertDefinitionContent ::
   (MonadA m, Monoid a) =>
-  EntityId -> Guid -> T m EntityId -> Set T.Tag -> Val (InputPayload m a) ->
+  Guid -> T m EntityId -> Set T.Tag -> Val (InputPayload m a) ->
   ConvertM m (DefinitionContent MStoredName m (ExpressionU m a))
-convertDefinitionContent defEntityId defGuid jumpToDef usedTags expr =
+convertDefinitionContent defGuid jumpToDef usedTags expr =
   do
     defName <- makeStoredNamePropertyS defGuid
     (convParams, funcBody) <-
@@ -689,8 +690,7 @@ convertDefinitionContent defEntityId defGuid jumpToDef usedTags expr =
               Just $ Anchors.assocPresentationMode defGuid
             | otherwise = Nothing
         return DefinitionContent
-          { _dEntityId = defEntityId
-          , _dParams = cpParams convParams
+          { _dParams = cpParams convParams
           , _dSetPresentationMode = setPresentationMode
           , _dBody =
             bodyS
@@ -745,7 +745,7 @@ convertDefIExpr cp valLoaded defI defType = do
     content <-
       valInferred
       <&> addStoredEntityIds
-      & convertDefinitionContent defEntityId defGuid (jumpToDefI cp defI) mempty
+      & convertDefinitionContent defGuid (jumpToDefI cp defI) mempty
     return $ DefinitionBodyExpression DefinitionExpression
       { _deContent = content
       , _deTypeInfo =
@@ -756,7 +756,6 @@ convertDefIExpr cp valLoaded defI defType = do
   where
     valIRefs = valLoaded <&> Load.exprPropertyOfClosure
     exprI = valIRefs ^. V.payload . Property.pVal
-    defEntityId = EntityId.ofIRef defI
     defGuid = IRef.guid defI
 
 convertDefI ::
@@ -770,7 +769,8 @@ convertDefI cp (Definition.Definition (Definition.Body bodyContent exportedType)
   bodyS <- convertDefContent bodyContent exportedType
   name <- ConvertExpr.makeStoredNameProperty defI
   return Definition
-    { _drName = name
+    { _drEntityId = EntityId.ofIRef defI
+    , _drName = name
     , _drBody = bodyS
     }
   where

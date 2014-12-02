@@ -114,8 +114,9 @@ make ::
   MonadA m =>
   Sugar.NameProperty Sugar.Name m ->
   Sugar.DefinitionContent Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Widget.Id ->
   ExprGuiM m (WidgetT m)
-make nameProp content = do
+make nameProp content myId = do
   equals <- ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
   rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods E.Key'Equal] rhs
   let
@@ -171,7 +172,6 @@ make nameProp content = do
     body = content ^. Sugar.dBody
     toEventMapAction =
       fmap (FocusDelegator.delegatingId . WidgetIds.fromEntityId)
-    myId = WidgetIds.fromEntityId $ content ^. Sugar.dEntityId
 
 makeWhereItemEdit ::
   MonadA m =>
@@ -195,6 +195,7 @@ makeWhereItemEdit item = do
     make
     (item ^. Sugar.wiName)
     (item ^. Sugar.wiValue)
+    (WidgetIds.fromEntityId (item ^. Sugar.wiEntityId))
 
 jumpToRHS ::
   (MonadA m, MonadA f) =>

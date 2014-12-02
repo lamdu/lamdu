@@ -1,7 +1,7 @@
 {-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes, DeriveGeneric #-}
 module Lamdu.Sugar.Types
   ( EntityId
-  , Definition(..), drName, drBody
+  , Definition(..), drEntityId, drName, drBody
   , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
   , ListItemActions(..), itemAddNext, itemDelete
   , FuncParamActions(..), fpListItemActions
@@ -13,7 +13,7 @@ module Lamdu.Sugar.Types
   , Anchors.PresentationMode(..)
   , DefinitionContent(..)
     , dSetPresentationMode, dParams, dBody, dWhereItems
-    , dAddFirstParam, dAddInnermostWhereItem, dEntityId
+    , dAddFirstParam, dAddInnermostWhereItem
   , DefinitionBuiltin(..)
   , WrapAction(..)
   , SetToHole(..), _SetToHole, _AlreadyAHole
@@ -29,7 +29,7 @@ module Lamdu.Sugar.Types
   , DefinitionN, DefinitionU
   , Expression, ExpressionN
   , BodyN
-  , WhereItem(..), wiValue, wiName, wiActions, wiInferredType
+  , WhereItem(..), wiEntityId, wiValue, wiName, wiActions, wiInferredType
   , ListItem(..), liMActions, liExpr
   , ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
@@ -366,6 +366,7 @@ instance Show expr => Show (Body name m expr) where
 
 data WhereItem name m expr = WhereItem
   { _wiValue :: DefinitionContent name m expr
+  , _wiEntityId :: EntityId
   , _wiInferredType :: Type
   , _wiName :: NameProperty name m
   , _wiActions :: Maybe (ListItemActions m)
@@ -373,8 +374,7 @@ data WhereItem name m expr = WhereItem
 
 -- Common data for definitions and where-items
 data DefinitionContent name m expr = DefinitionContent
-  { _dEntityId :: EntityId
-  , _dSetPresentationMode :: Maybe (MkProperty m Anchors.PresentationMode)
+  { _dSetPresentationMode :: Maybe (MkProperty m Anchors.PresentationMode)
   , _dParams :: [FuncParam name m]
   , _dBody :: expr
   , _dWhereItems :: [WhereItem name m expr]
@@ -410,6 +410,7 @@ data DefinitionBody name m expr
 
 data Definition name m expr = Definition
   { _drName :: NameProperty name m
+  , _drEntityId :: EntityId
   , _drBody :: DefinitionBody name m expr
   } deriving (Functor, Foldable, Traversable)
 
