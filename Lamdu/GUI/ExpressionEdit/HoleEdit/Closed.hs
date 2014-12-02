@@ -56,7 +56,7 @@ make hole pl myId = do
         Widget.weakerEvents (mappend openEventMap exprEventMap)
   return (destId, inactive)
   where
-    inferred = hole ^. Sugar.holeInferred
+    inferred = hole ^. Sugar.holeSuggested
     openEventMap =
       Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.Key'Enter]
       (E.Doc ["Navigation", "Hole", "Open"]) . pure $
@@ -119,7 +119,7 @@ makeWrapper arg myId = do
 
 makeInferred ::
   MonadA m =>
-  Sugar.HoleInferred Sugar.Name m -> Sugar.Payload m a ->
+  Sugar.HoleSuggested Sugar.Name m -> Sugar.Payload m a ->
   Widget.Id -> ExprGuiM m (Widget.Id, ExpressionGui m)
 makeInferred inferred pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig

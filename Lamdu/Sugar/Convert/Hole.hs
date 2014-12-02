@@ -128,8 +128,8 @@ mkWritableHoleActions exprPl stored = do
   where
     inferred = exprPl ^. ipInferred
 
-mkHoleInferred :: MonadA m => Infer.Payload -> ConvertM m (HoleInferred MStoredName m)
-mkHoleInferred inferred = do
+mkHoleSuggested :: MonadA m => Infer.Payload -> ConvertM m (HoleSuggested MStoredName m)
+mkHoleSuggested inferred = do
   sugarContext <- ConvertM.readContext
   iVal <-
       suggestValueWith (ConvertM.liftTransaction UniqueId.new)
@@ -147,7 +147,7 @@ mkHoleInferred inferred = do
       & EntityId.randomizeExprAndParams gen
       & ConvertM.convertSubexpression
       & ConvertM.run (sugarContext & ConvertM.scInferContext .~ newCtx)
-  pure HoleInferred
+  pure HoleSuggested
     { _hiSuggestedValue = iVal
     , _hiType = inferred ^. Infer.plType
     , _hiMakeConverted = mkConverted
@@ -166,10 +166,10 @@ mkHole ::
   InputPayload m a -> ConvertM m (Hole MStoredName m (ExpressionU m a))
 mkHole exprPl = do
   mActions <- traverse (mkWritableHoleActions exprPl) (exprPl ^. ipStored)
-  inferred <- mkHoleInferred $ exprPl ^. ipInferred
+  inferred <- mkHoleSuggested $ exprPl ^. ipInferred
   pure Hole
     { _holeMActions = mActions
-    , _holeInferred = inferred
+    , _holeSuggested = inferred
     , _holeMArg = Nothing
     }
 

@@ -47,9 +47,9 @@ module Lamdu.Sugar.Types
     , fpName, fpId, fpVarKind, fpInferredType, fpMActions
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
   , HoleArg(..), haExpr, haExprPresugared, haUnwrap
-  , HoleInferred(..), hiSuggestedValue, hiType, hiMakeConverted
+  , HoleSuggested(..), hiSuggestedValue, hiType, hiMakeConverted
   , Hole(..)
-    , holeMActions, holeMArg, holeInferred, holeGuid
+    , holeMActions, holeMArg, holeSuggested, holeGuid
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
   , HoleActions(..)
@@ -252,16 +252,15 @@ data HoleArg m expr = HoleArg
   , _haUnwrap :: Unwrap m
   } deriving (Functor, Foldable, Traversable)
 
-data HoleInferred name m = HoleInferred
+data HoleSuggested name m = HoleSuggested
   { _hiSuggestedValue :: Val ()
   , _hiType :: Type
-  -- The Sugar Expression of the WithVarsValue
   , _hiMakeConverted :: Random.StdGen -> T m (Expression name m ())
   }
 
 data Hole name m expr = Hole
   { _holeMActions :: Maybe (HoleActions name m)
-  , _holeInferred :: HoleInferred name m
+  , _holeSuggested :: HoleSuggested name m
   , _holeMArg :: Maybe (HoleArg m expr)
   } deriving (Functor, Foldable, Traversable)
 
@@ -433,7 +432,7 @@ Lens.makeLenses ''GetVar
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg
-Lens.makeLenses ''HoleInferred
+Lens.makeLenses ''HoleSuggested
 Lens.makeLenses ''HoleResult
 Lens.makeLenses ''Lam
 Lens.makeLenses ''ListItem

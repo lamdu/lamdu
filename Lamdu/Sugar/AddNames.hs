@@ -353,8 +353,8 @@ toHoleActions ha@HoleActions {..} = do
 
 toInferred ::
   (MonadA tm, MonadNaming m) =>
-  HoleInferred (OldName m) tm ->
-  m (HoleInferred (NewName m) tm)
+  HoleSuggested (OldName m) tm ->
+  m (HoleSuggested (NewName m) tm)
 toInferred inferred = do
   RunMonad run <- opRun
   inferred
@@ -367,12 +367,12 @@ toHole ::
   m (Hole (NewName m) tm (Expression (NewName m) tm a))
 toHole hole@Hole {..} = do
   mActions <- _holeMActions & Lens._Just %%~ toHoleActions
-  inferred <- toInferred _holeInferred
+  inferred <- toInferred _holeSuggested
   mArg <- _holeMArg & Lens._Just . Lens.traversed %%~ toExpression
   pure hole
     { _holeMActions = mActions
     , _holeMArg = mArg
-    , _holeInferred = inferred
+    , _holeSuggested = inferred
     }
 
 toGetVar ::
