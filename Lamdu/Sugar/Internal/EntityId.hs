@@ -23,7 +23,7 @@ import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Sugar.InputExpr as InputExpr
 
 newtype EntityId = EntityId Guid
-  deriving (Eq, Hashable)
+  deriving (Eq, Hashable, Show)
 
 bs :: EntityId -> ByteString
 bs (EntityId guid) = Guid.bs guid
