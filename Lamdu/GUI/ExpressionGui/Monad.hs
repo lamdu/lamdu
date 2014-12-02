@@ -33,8 +33,9 @@ import Data.Binary (Binary)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widget (Widget)
+import Graphics.UI.Bottle.WidgetId (toAnimId)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
-import Lamdu.GUI.ExpressionGui.Types (ExpressionGui, WidgetT, ParentPrecedence(..), Precedence)
+import Lamdu.GUI.ExpressionGui.Types (ExpressionGui(..), WidgetT, ParentPrecedence(..), Precedence)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.RWS as RWS
@@ -48,6 +49,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -106,6 +108,7 @@ data Askable m = Askable
     ParentPrecedence -> SugarExpr m ->
     ExprGuiM m (ExpressionGui m)
   , _aCodeAnchors :: Anchors.CodeProps m
+  , _aSubexpressionDepth :: Int
   }
 
 newtype ExprGuiM m a = ExprGuiM
@@ -137,8 +140,17 @@ mkPrejumpPosSaver =
 makeSubexpression ::
   MonadA m => Precedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeSubexpression parentPrecedence expr = do
-  maker <- ExprGuiM $ Lens.view aMakeSubexpression
-  maker (ParentPrecedence parentPrecedence) expr
+  depth <- ExprGuiM $ Lens.view aSubexpressionDepth
+  if depth >= 15
+    then widgetEnv $ (`ExpressionGui` 0.5) <$> mkErrorWidget
+    else do
+      maker <- ExprGuiM $ Lens.view aMakeSubexpression
+      maker (ParentPrecedence parentPrecedence) expr
+        & exprGuiM %~ RWS.local (aSubexpressionDepth +~ 1)
+  where
+    widgetId = WidgetIds.fromEntityId $ expr ^. Sugar.rPayload . Sugar.plEntityId
+    mkErrorWidget =
+      BWidgets.makeTextViewWidget "ERROR: Subexpr too deep" (toAnimId widgetId)
 
 run ::
   MonadA m =>
@@ -151,6 +163,7 @@ run makeSubexpr codeAnchors settings (ExprGuiM action) =
   { _aSettings = settings
   , _aMakeSubexpression = makeSubexpr
   , _aCodeAnchors = codeAnchors
+  , _aSubexpressionDepth = 0
   }
   ()
   where
