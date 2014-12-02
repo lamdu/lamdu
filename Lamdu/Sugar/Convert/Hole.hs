@@ -7,6 +7,7 @@ module Lamdu.Sugar.Convert.Hole
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Arrow ((&&&))
 import Control.Lens.Operators
+import Control.Monad (void)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.State (StateT(..), evalStateT)
@@ -248,7 +249,7 @@ getTag ctxEntityId tag = do
   pure mempty { _scopeTags = [(tagG, tag)] }
 
 writeConvertTypeChecked ::
-  (MonadA m, Monoid a) => Random.StdGen ->
+  (MonadA m, Monoid a) =>
   ConvertM.Context m -> ExprIRef.ValIProperty m ->
   Val (Infer.Payload, MStorePoint m a) ->
   T m
@@ -256,7 +257,7 @@ writeConvertTypeChecked ::
   , Val (InputPayload m a)
   , Val (InputPayload m a)
   )
-writeConvertTypeChecked gen sugarContext holeStored inferredVal = do
+writeConvertTypeChecked sugarContext holeStored inferredVal = do
   -- With the real stored guids:
   writtenExpr <-
     fmap toPayload .
@@ -285,6 +286,7 @@ writeConvertTypeChecked gen sugarContext holeStored inferredVal = do
     , snd <$> writtenExpr
     )
   where
+    gen = genFromHashable (void inferredVal)
     intoStorePoint (inferred, (mStorePoint, a)) =
       (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
     toPayload (stored, (inferred, wasStored, a)) = (,) wasStored InputPayload
@@ -299,10 +301,9 @@ mkHoleResult ::
   (MonadA m, Monoid a) =>
   ConvertM.Context m ->
   InputPayload m dummy -> ExprIRef.ValIProperty m ->
-  (EntityId -> Random.StdGen) ->
   Val (MStorePoint m a) ->
   T m (Maybe (HoleResult MStoredName m a))
-mkHoleResult sugarContext exprPl stored mkGen val = do
+mkHoleResult sugarContext exprPl stored val = do
   (mResult, forkedChanges) <-
     Transaction.fork $ runMaybeT $ do
       (inferredVal, ctx) <-
@@ -310,8 +311,7 @@ mkHoleResult sugarContext exprPl stored mkGen val = do
         SugarInfer.loadInferInto (exprPl ^. ipInferred) val
       let newSugarContext = sugarContext & ConvertM.scInferContext .~ ctx
       lift $
-        writeConvertTypeChecked (mkGen (exprPl ^. ipEntityId))
-        newSugarContext stored inferredVal
+        writeConvertTypeChecked newSugarContext stored inferredVal
 
   return $ mkResult (Transaction.merge forkedChanges) <$> mResult
   where

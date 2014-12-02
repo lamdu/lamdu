@@ -237,7 +237,6 @@ data HoleActions name m = HoleActions
   , holeResult ::
       forall a.
       Monoid a =>
-      (EntityId -> Random.StdGen) -> -- for consistent EntityId's
       Val (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
       T m (Maybe (HoleResult name m a))
   , _holePaste :: Maybe (T m EntityId)

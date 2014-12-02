@@ -34,7 +34,6 @@ import Lamdu.Expr.Val (Val(..))
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument, hiActiveId)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.Types (Scope(..))
-import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Char as Char
@@ -51,7 +50,6 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Types as Sugar
-import qualified System.Random as Random
 
 type T = Transaction
 
@@ -71,8 +69,7 @@ instance Monoid GroupAttributes where
   mappend = def_mappend
 
 data Group def = Group
-  { _groupId :: String
-  , _groupSearchTerms :: GroupAttributes
+  { _groupSearchTerms :: GroupAttributes
   , _groupBaseExpr :: Val ()
   }
 type GroupM m = Group (DefIM m)
@@ -115,8 +112,7 @@ getParamsToGroup (getParams, expr) =
 
 sugarNameToGroup :: Sugar.Name -> Val () -> Group def
 sugarNameToGroup (Sugar.Name _ collision varName) expr = Group
-  { _groupId = "Var" ++ varName ++ ":" ++ concat collisionStrs
-  , _groupSearchTerms = GroupAttributes (varName : collisionStrs) HighPrecedence
+  { _groupSearchTerms = GroupAttributes (varName : collisionStrs) HighPrecedence
   , _groupBaseExpr = expr
   }
   where
@@ -145,10 +141,9 @@ storePointHoleWrap expr =
 
 typeCheckHoleResult ::
   MonadA m => HoleInfo m ->
-  (Sugar.EntityId -> Random.StdGen) ->
   Val (Sugar.MStorePoint m SugarExprPl) ->
   T m (Maybe (ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl))
-typeCheckHoleResult holeInfo mkGen val = do
+typeCheckHoleResult holeInfo val = do
   mGood <- mkHoleResult val
   case mGood of
     Just good -> pure $ Just (GoodResult, good)
@@ -156,17 +151,16 @@ typeCheckHoleResult holeInfo mkGen val = do
       fmap ((,) BadResult) <$>
       (mkHoleResult . storePointHoleWrap) val
   where
-    mkHoleResult = Sugar.holeResult (hiActions holeInfo) mkGen
+    mkHoleResult = Sugar.holeResult (hiActions holeInfo)
 
 typeCheckResults ::
   MonadA m => HoleInfo m ->
-  (Int -> Sugar.EntityId -> Random.StdGen) ->
   [Val (Sugar.MStorePoint m SugarExprPl)] ->
   T m [(ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl)]
-typeCheckResults holeInfo mkGen options = do
+typeCheckResults holeInfo options = do
   rs <-
     options
-    & Lens.traversed %%@~ typeCheckHoleResult holeInfo . mkGen
+    & traverse (typeCheckHoleResult holeInfo)
     <&> catMaybes
   let (goodResults, badResults) = partition ((== GoodResult) . fst) rs
   return $ sorted goodResults ++ sorted badResults
@@ -199,12 +193,12 @@ mResultsListOf holeInfo baseId (x:xs) = Just
       }
 
 typeCheckToResultsList ::
-  MonadA m => HoleInfo m -> (Int -> Sugar.EntityId -> Random.StdGen) ->
+  MonadA m => HoleInfo m ->
   WidgetId.Id -> [Val (Sugar.MStorePoint m SugarExprPl)] ->
   T m (Maybe (ResultsList m))
-typeCheckToResultsList holeInfo mkGen baseId options =
+typeCheckToResultsList holeInfo baseId options =
   mResultsListOf holeInfo baseId <$>
-  typeCheckResults holeInfo mkGen options
+  typeCheckResults holeInfo options
 
 -- Modified from Lamdu.Suggest to be non-recursive on the field
 -- values. TODO: Is code sharing possible?
@@ -300,10 +294,9 @@ makeResultsList ::
 makeResultsList holeInfo group =
   baseExprWithApplyForms holeInfo baseExpr
   >>= maybeInjectArgumentExpr holeInfo
-  >>= typeCheckToResultsList holeInfo mkGen baseId
+  >>= typeCheckToResultsList holeInfo baseId
   <&> Lens.mapped %~ rlPreferred .~ toPreferred
   where
-    mkGen i guid = genFromHashable (guid, group ^. groupId, i)
     toPreferred
       | Lens.anyOf groupSearchTerms (preferFor searchTerm) group = Preferred
       | otherwise = NotPreferred
@@ -381,8 +374,7 @@ makeAllGroups holeInfo = do
   where
     inferredGroups =
       [ Group
-        { _groupId = "inferred"
-        , _groupSearchTerms = GroupAttributes ["inferred"] HighPrecedence
+        { _groupSearchTerms = GroupAttributes ["inferred"] HighPrecedence
         , _groupBaseExpr = iVal
         }
       | Lens.nullOf ExprLens.valHole iVal
@@ -399,13 +391,13 @@ makeAllGroups holeInfo = do
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
-  [ mkGroupBody HighPrecedence "LiteralInt" [searchTerm] $
+  [ mkGroupBody HighPrecedence [searchTerm] $
     V.BLeaf $ V.LLiteralInteger $ read searchTerm
   | nonEmptyAll Char.isDigit searchTerm
   ] ++
-  [ mkGroupBody LowPrecedence "Lambda" ["\\", "Lambda", "Λ", "λ"] $
+  [ mkGroupBody LowPrecedence ["\\", "Lambda", "Λ", "λ"] $
     V.BAbs $ V.Lam "NewLambda" P.hole
-  -- , mkGroupBody LowPrecedence "GetField" [".", "Get Field"] . V.VGetField $
+  -- , mkGroupBody LowPrecedence [".", "Get Field"] . V.VGetField $
   --   V.GetField pureHole pureHole
   -- , Group "RecValue" (GroupAttributes ["Record Value", "{"] LowPrecedence) .
   --   fromMaybe (record V.KVal) . ExprUtil.recordValForm .
@@ -420,9 +412,8 @@ primitiveGroups holeInfo =
     --   case hiMArgument holeInfo of
     --   Nothing -> []
     --   Just _ -> [(pureHole, pureHole)]
-    mkGroupBody prec gId terms body = Group
-      { _groupId = gId
-      , _groupSearchTerms = GroupAttributes terms prec
+    mkGroupBody prec terms body = Group
+      { _groupSearchTerms = GroupAttributes terms prec
       , _groupBaseExpr = Val () body
       }
 

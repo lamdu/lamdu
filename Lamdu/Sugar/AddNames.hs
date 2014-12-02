@@ -348,7 +348,7 @@ toHoleActions ha@HoleActions {..} = do
     { _holeScope =
       fmap (run . toScope) _holeScope
     , holeResult =
-      (fmap . fmap . fmap . fmap) (run . holeResultConverted toExpression) holeResult
+      (fmap . fmap . fmap) (run . holeResultConverted toExpression) holeResult
     }
 
 toInferred ::
