@@ -143,15 +143,9 @@ unwrap ::
 unwrap outerP argP argExpr = do
   res <- DataOps.replace outerP (Property.value argP)
   return $
-    case orderedHoles of
-    (x:_) -> x ^. V.payload . Lens._1
+    case ConvertHole.orderedInnerHoles argExpr of
+    (x:_) -> x ^. V.payload . ipEntityId
     _ -> EntityId.ofValI res
-  where
-    f x =
-      ( x ^. ipEntityId
-      , x ^. ipInferred
-      )
-    orderedHoles = ConvertHole.orderedInnerHoles $ f <$> argExpr
 
 checkTypeMatch :: MonadA m => Type -> Type -> ConvertM m Bool
 checkTypeMatch x y = do

@@ -321,7 +321,7 @@ mkHoleResult sugarContext exprPl stored mkGen val = do
         , _holeResultConverted = fConverted
         , _holeResultPick = mkPickedResult fConsistentExpr fWrittenExpr <$ unfork
         , _holeResultHasHoles =
-          not . null . holeSubexpressions $ (,) () <$> inferredExpr
+          not . null . orderedInnerHoles $ (,) () <$> inferredExpr
         }
         where
           inferredExpr = (^. ipInferred) <$> fWrittenExpr
@@ -356,23 +356,7 @@ writeExprMStored exprIRef exprMStorePoint = do
 orderedInnerHoles :: Val a -> [Val a]
 orderedInnerHoles e =
   case e ^. V.body of
-  V.BApp (V.Apply func arg)
-    | isHole func ->
-      -- TODO: BUG: Should recurse into orderedInnerHoles and not use
-      -- holeSubexpressions since there may be more "type-error wrappers"
-      -- inside and we want to jump to the wrapper, not the hole-func.
-
-      -- This is a "type-error wrapper".
-      -- Skip the conversion hole
-      -- and go to inner holes in the expression first.
-      holeSubexpressions arg ++ [func]
-  _ -> holeSubexpressions e
-  where
-    isHole (V.Val _ (V.BLeaf V.LHole)) = True
-    isHole _ = False
-
-holeSubexpressions :: Val a -> [Val a]
-holeSubexpressions e =
-  case e ^. V.body of
   V.BLeaf V.LHole -> [e]
-  body -> Foldable.concatMap holeSubexpressions body
+  V.BApp (V.Apply func@(V.Val _ (V.BLeaf V.LHole)) arg) ->
+      orderedInnerHoles arg ++ [func]
+  body -> Foldable.concatMap orderedInnerHoles body
