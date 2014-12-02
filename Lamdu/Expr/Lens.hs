@@ -11,6 +11,7 @@ module Lamdu.Expr.Lens
   , _BApp
   , _BAbs
   , _BGetField
+  , _BRecExtend
   -- Leafs
   , valGlobal        , valBodyGlobal
   , valHole          , valBodyHole
@@ -123,6 +124,12 @@ _BGetField :: Prism' (V.Body a) (V.GetField a)
 _BGetField = prism' V.BGetField get
   where
     get (V.BGetField x) = Just x
+    get _ = Nothing
+
+_BRecExtend :: Prism' (V.Body a) (V.RecExtend a)
+_BRecExtend = prism' V.BRecExtend get
+  where
+    get (V.BRecExtend x) = Just x
     get _ = Nothing
 
 valBodyGlobal :: Prism' (V.Body e) V.GlobalId
