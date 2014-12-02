@@ -256,8 +256,7 @@ convertField _mIRef inst tag expr = do
     , _rfExpr = exprS
     }
 
-plIRef ::
-  Lens.Traversal' (InputPayloadP (Maybe (ExprIRef.ValIProperty m)) a) (ExprIRef.ValIM m)
+plIRef :: Lens.Traversal' (InputPayload m a) (ExprIRef.ValIM m)
 plIRef = ipStored . Lens._Just . Property.pVal
 
 convertEmptyRecord :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m a)
@@ -740,13 +739,12 @@ convertDefIExpr ::
   T m (DefinitionBody MStoredName m (ExpressionU m [EntityId]))
 convertDefIExpr cp valLoaded defI defType = do
   (valInferred, newInferContext) <- SugarInfer.loadInfer valIRefs
-  let addStoredEntityIds x = x & ipData .~ (EntityId.ofValI . Property.value <$> x ^.. ipStored)
+  let addStoredEntityIds x = x & ipData .~ (EntityId.ofValI . Property.value <$> x ^.. ipStored . Lens._Just)
   context <- mkContext cp newInferContext
   ConvertM.run context $ do
     content <-
       valInferred
       <&> addStoredEntityIds
-      & traverse . ipStored %~ Just
       & convertDefinitionContent defEntityId defGuid (jumpToDefI cp defI) mempty
     return $ DefinitionBodyExpression DefinitionExpression
       { _deContent = content

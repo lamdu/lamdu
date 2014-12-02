@@ -63,8 +63,8 @@ module Lamdu.Sugar.Types
   , TagG(..), tagGName, tagVal, tagInstance
   , MStorePoint, ExprStorePoint
   -- Input types:
-  , InputPayloadP(..), ipGuid, ipEntityId, ipInferred, ipStored, ipData
-  , InputPayload, InputExpr
+  , InputPayload(..), ipGuid, ipEntityId, ipInferred, ipStored, ipData
+  , InputExpr
   , NameProperty(..)
     , npName, npGuid, npSetName
   ) where
@@ -93,8 +93,7 @@ import qualified System.Random as Random
 
 type T = Transaction
 
-
-data InputPayloadP stored a
+data InputPayload m a
   = InputPayload
     { _ipEntityId :: EntityId
     , -- Used as a hole id that later GUI uses to associate data with
@@ -102,16 +101,15 @@ data InputPayloadP stored a
       -- Guids to GUI
       _ipGuid :: Guid
     , _ipInferred :: Infer.Payload
-    , _ipStored :: stored
+    , _ipStored :: Maybe (ExprIRef.ValIProperty m)
     , _ipData :: a
     }
-Lens.makeLenses ''InputPayloadP
+Lens.makeLenses ''InputPayload
 
 -- "Maybe (ExprIRef.ValIProperty m)" is used because holes have suggested results
 -- which are sugar-converted into ordinary sugar expressions, but are
 -- not actually stored and do not have actions (they're read-only).
-type InputPayload m a =
-  InputPayloadP (Maybe (ExprIRef.ValIProperty m)) a
+-- TODO: Inline this type alias
 type InputExpr m a = Val (InputPayload m a)
 
 data WrapAction m

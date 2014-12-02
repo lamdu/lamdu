@@ -100,11 +100,11 @@ inferOnTheSide sugarContext scope val =
 
 mkWritableHoleActions ::
   (MonadA m) =>
-  InputPayloadP (ExprIRef.ValIProperty m) () ->
+  InputPayload m dummy -> ExprIRef.ValIProperty m ->
   ConvertM m (HoleActions MStoredName m)
-mkWritableHoleActions exprPlStored = do
+mkWritableHoleActions exprPl stored = do
   sugarContext <- ConvertM.readContext
-  mPaste <- mkPaste $ exprPlStored ^. ipStored
+  mPaste <- mkPaste stored
   globals <-
     ConvertM.liftTransaction . Transaction.getP . Anchors.globals $
     sugarContext ^. ConvertM.scCodeAnchors
@@ -118,14 +118,14 @@ mkWritableHoleActions exprPlStored = do
       mconcat . concat <$> sequence
       [ mapM (getScopeElement sugarContext) $ Map.toList $ Infer.scopeToTypeMap inferredScope
       , mapM getGlobal globals
-      , mapM (getTag (exprPlStored ^. ipEntityId)) tags
+      , mapM (getTag (exprPl ^. ipEntityId)) tags
       ]
     , _holeInferExprType = inferOnTheSide sugarContext inferredScope
-    , holeResult = mkHoleResult sugarContext exprPlStored
-    , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value $ exprPlStored ^. ipStored
+    , holeResult = mkHoleResult sugarContext exprPl stored
+    , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
     }
   where
-    inferred = exprPlStored ^. ipInferred
+    inferred = exprPl ^. ipInferred
 
 mkHoleInferred :: MonadA m => Infer.Payload -> ConvertM m (HoleInferred MStoredName m)
 mkHoleInferred inferred = do
@@ -162,14 +162,9 @@ mkHoleInferred inferred = do
 
 mkHole ::
   (MonadA m, Monoid a) =>
-  InputPayloadP (Maybe (ExprIRef.ValIProperty m)) a ->
-  ConvertM m (Hole MStoredName m (ExpressionU m a))
+  InputPayload m a -> ConvertM m (Hole MStoredName m (ExpressionU m a))
 mkHole exprPl = do
-  mActions <-
-    exprPl
-    & ipData .~ ()
-    & Lens.sequenceOf ipStored
-    & traverse mkWritableHoleActions
+  mActions <- traverse (mkWritableHoleActions exprPl) (exprPl ^. ipStored)
   inferred <- mkHoleInferred $ exprPl ^. ipInferred
   pure Hole
     { _holeMActions = mActions
@@ -258,8 +253,8 @@ writeConvertTypeChecked ::
   Val (Infer.Payload, MStorePoint m a) ->
   T m
   ( ExpressionU m a
-  , Val (InputPayloadP (ExprIRef.ValIProperty m) a)
-  , Val (InputPayloadP (ExprIRef.ValIProperty m) a)
+  , Val (InputPayload m a)
+  , Val (InputPayload m a)
   )
 writeConvertTypeChecked gen sugarContext holeStored inferredVal = do
   -- With the real stored guids:
@@ -282,7 +277,6 @@ writeConvertTypeChecked gen sugarContext holeStored inferredVal = do
       & EntityId.randomizeExprAndParams gen
   converted <-
     consistentExpr
-    <&> ipStored %~ Just
     & ConvertM.convertSubexpression
     & ConvertM.run sugarContext
   return
@@ -297,24 +291,27 @@ writeConvertTypeChecked gen sugarContext holeStored inferredVal = do
       { _ipEntityId = EntityId.ofValI $ Property.value stored
       , _ipGuid = IRef.guid $ ExprIRef.unValI $ Property.value stored
       , _ipInferred = inferred
-      , _ipStored = stored
+      , _ipStored = Just stored
       , _ipData = a
       }
 
 mkHoleResult ::
   (MonadA m, Monoid a) =>
   ConvertM.Context m ->
-  InputPayloadP (ExprIRef.ValIProperty m) () ->
+  InputPayload m dummy -> ExprIRef.ValIProperty m ->
   (EntityId -> Random.StdGen) ->
   Val (MStorePoint m a) ->
   T m (Maybe (HoleResult MStoredName m a))
-mkHoleResult sugarContext (InputPayload entityId _guid inferPayload stored ()) mkGen val = do
+mkHoleResult sugarContext exprPl stored mkGen val = do
   (mResult, forkedChanges) <-
     Transaction.fork $ runMaybeT $ do
       (inferredVal, ctx) <-
         (`runStateT` (sugarContext ^. ConvertM.scInferContext)) $
-        SugarInfer.loadInferInto inferPayload val
-      lift $ writeConvertTypeChecked (mkGen entityId) (sugarContext & ConvertM.scInferContext .~ ctx) stored inferredVal
+        SugarInfer.loadInferInto (exprPl ^. ipInferred) val
+      let newSugarContext = sugarContext & ConvertM.scInferContext .~ ctx
+      lift $
+        writeConvertTypeChecked (mkGen (exprPl ^. ipEntityId))
+        newSugarContext stored inferredVal
 
   return $ mkResult (Transaction.merge forkedChanges) <$> mResult
   where
