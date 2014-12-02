@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes, NoMonomorphismRestriction, FlexibleContexts #-}
+{-# LANGUAGE RankNTypes, NoMonomorphismRestriction, FlexibleContexts, RecordWildCards #-}
 module Lamdu.Expr.Lens
   -- ValLeaf prisms:
   ( _LGlobal
@@ -27,6 +27,7 @@ module Lamdu.Expr.Lens
   -- Types:
   , _TRecord
   , _TFun
+  , bodyTags
   -- Composites:
   , compositeTags
   -- Subexpressions:
@@ -177,3 +178,10 @@ subExprs =
   Lens.folding f
   where
     f x = x : x ^.. V.body . Lens.traversed . subExprs
+
+bodyTags :: Lens.Traversal' (V.Body a) T.Tag
+bodyTags f (V.BGetField V.GetField {..}) =
+    f _getFieldTag <&> \_getFieldTag -> V.BGetField V.GetField {..}
+bodyTags f (V.BRecExtend V.RecExtend {..}) =
+    f _recTag <&> \_recTag -> V.BRecExtend V.RecExtend {..}
+bodyTags _ x = pure x
