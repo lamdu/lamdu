@@ -25,7 +25,8 @@ module Lamdu.Sugar.Types
     , _BodyLiteralInteger, _BodyList, _BodyRecord
   , Payload(..), plEntityId, plInferredType, plActions, plData
   , ExpressionP(..), rBody, rPayload
-  , NameSource(..), NameCollision(..), Name(..), MStoredName
+  , NameSource(..), NameCollision(..), Name(..)
+  , MStoredName(..), mStoredName
   , DefinitionN, DefinitionU
   , Expression, ExpressionN
   , BodyN
@@ -157,7 +158,9 @@ data Name = Name
 -- This funny type-alias exists because MStoredName is an extremely
 -- common type parameter of virtually all sugar types. Using (Maybe
 -- StoredName) or (Maybe String) directly adds a lot of noise.
-type MStoredName = Maybe String
+newtype MStoredName = MStoredName
+  { _mStoredName :: Maybe String
+  }
 
 type Expression name m a = ExpressionP name m (Payload m a)
 type ExpressionN m a = Expression Name m a
@@ -415,6 +418,7 @@ data Definition name m expr = Definition
 type DefinitionN m a = Definition Name m (Expression Name m a)
 type DefinitionU m a = Definition MStoredName m (Expression MStoredName m a)
 
+Lens.makeLenses ''MStoredName
 Lens.makeLenses ''Actions
 Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''Apply

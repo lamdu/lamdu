@@ -106,7 +106,7 @@ mkPositionalFuncParamActions param lambdaProp body =
 
 makeStoredNamePropertyS ::
   (UniqueId.ToGuid s, MonadA m) =>
-  s -> ConvertM m (NameProperty (Maybe String) m)
+  s -> ConvertM m (NameProperty MStoredName m)
 makeStoredNamePropertyS x = ConvertM.liftTransaction . ConvertExpr.makeStoredNameProperty $ x
 
 convertPositionalFuncParam ::
@@ -764,7 +764,7 @@ convertDefI ::
   -- TODO: Use DefinitionClosure?
   Definition.Definition
   (Val (Load.ExprPropertyClosure (Tag m))) (DefIM m) ->
-  T m (Definition (Maybe String) m (ExpressionU m [EntityId]))
+  T m (Definition MStoredName m (ExpressionU m [EntityId]))
 convertDefI cp (Definition.Definition (Definition.Body bodyContent exportedType) defI) = do
   bodyS <- convertDefContent bodyContent exportedType
   name <- ConvertExpr.makeStoredNameProperty defI

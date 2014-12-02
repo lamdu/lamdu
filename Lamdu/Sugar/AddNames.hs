@@ -126,7 +126,7 @@ pass0Result scope nameProp =
   & npName %%~ go
   <&> Lens.sequenceAOf npName
   where
-    go mName = do
+    go (MStoredName mName) = do
       p0TellStoredNames myStoredNamesWithin
       pure $ \storedNamesUnder -> StoredNames
         { storedName = mName
