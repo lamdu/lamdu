@@ -88,7 +88,6 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Types.Internal as TypesInternal
-import qualified System.Random as Random
 
 type T = Transaction
 
@@ -255,7 +254,7 @@ data HoleArg m expr = HoleArg
 data HoleSuggested name m = HoleSuggested
   { _hsSuggestedValue :: Val ()
   , _hsType :: Type
-  , _hsMakeConverted :: Random.StdGen -> T m (Expression name m ())
+  , _hsMakeConverted :: T m (Expression name m ())
   }
 
 data Hole name m expr = Hole

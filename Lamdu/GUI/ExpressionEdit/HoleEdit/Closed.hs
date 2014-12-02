@@ -14,7 +14,6 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (makeBackground, diveIntoHole)
 import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -45,7 +44,7 @@ make hole pl myId = do
       lift $ (,) myId <$> makeWrapper arg myId
     justToLeft $ do
       guard . Lens.nullOf ExprLens.valHole $ inferred ^. Sugar.hsSuggestedValue
-      lift $ makeInferred inferred pl myId
+      lift $ makeInferred inferred myId
     lift $ (,) (diveIntoHole myId) <$> makeSimple myId
   exprEventMap <-
     ExprEventMap.make
@@ -119,12 +118,12 @@ makeWrapper arg myId = do
 
 makeInferred ::
   MonadA m =>
-  Sugar.HoleSuggested Sugar.Name m -> Sugar.Payload m a ->
+  Sugar.HoleSuggested Sugar.Name m ->
   Widget.Id -> ExprGuiM m (Widget.Id, ExpressionGui m)
-makeInferred inferred pl myId = do
+makeInferred inferred myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   gui <-
-    (inferred ^. Sugar.hsMakeConverted) gen
+    (inferred ^. Sugar.hsMakeConverted)
     & ExprGuiM.transaction
     <&> Lens.mapped . Lens.mapped .~ emptyPl
     >>= ExprGuiM.makeSubexpression 0
@@ -147,10 +146,6 @@ makeInferred inferred pl myId = do
     fullyInferred =
       Lens.nullOf (ExprLens.subExprs . ExprLens.valHole) $
       inferred ^. Sugar.hsSuggestedValue
-    -- gen needs to be compatible with the one from Sugar.Convert.Hole
-    -- for the hole results, for smooth animation between inferred
-    -- pure val and the hole result:
-    gen = genFromHashable (pl ^. Sugar.plEntityId, "inferred", 0 :: Int)
     emptyPl =
       ExprGuiM.Payload
       { ExprGuiM._plStoredEntityIds = []
