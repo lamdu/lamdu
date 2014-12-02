@@ -1,3 +1,4 @@
+-- TODO: Split/rename to more generic (non-sugar) modules
 module Lamdu.Sugar.InputExpr
   ( randomizeExprAndParams
   , randomizeParamIdsG
