@@ -10,12 +10,13 @@ import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..), evalStateT)
+import Control.Monad.Trans.State (StateT(..), evalStateT, evalState)
 import Control.MonadA (MonadA)
 import Data.Maybe.Utils(unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Data.String (IsString(..))
 import Data.Traversable (traverse)
 import Lamdu.Expr.IRef (DefIM)
 import Lamdu.Expr.Type (Type(..))
@@ -27,6 +28,7 @@ import Lamdu.Sugar.Types.Internal
 import Lamdu.Suggest (suggestValueWith)
 import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.State as State
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
@@ -135,11 +137,8 @@ consistentExprIds val = EntityId.randomizeExprAndParams (genFromHashable (void v
 mkHoleSuggested :: MonadA m => Infer.Payload -> ConvertM m (HoleSuggested MStoredName m)
 mkHoleSuggested inferred = do
   sugarContext <- ConvertM.readContext
-  iVal <-
-      suggestValueWith (ConvertM.liftTransaction UniqueId.new)
-      (inferred ^. Infer.plType)
   (inferredIVal, newCtx) <-
-    SugarInfer.loadInferScope (inferred ^. Infer.plScope) iVal
+    SugarInfer.loadInferScope (inferred ^. Infer.plScope) suggestedVal
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     & runMaybeT
     <&> unsafeUnjust "Inference on inferred val must succeed"
@@ -152,11 +151,19 @@ mkHoleSuggested inferred = do
       & ConvertM.convertSubexpression
       & ConvertM.run (sugarContext & ConvertM.scInferContext .~ newCtx)
   pure HoleSuggested
-    { _hsSuggestedValue = iVal
+    { _hsSuggestedValue = suggestedVal
     , _hsType = inferred ^. Infer.plType
     , _hsMakeConverted = mkConverted
     }
   where
+    suggestedVal =
+      (`evalState` (0 :: Int)) $
+      suggestValueWith mkVar
+      (inferred ^. Infer.plType)
+    mkVar = do
+      i <- State.get
+      State.modify (+1)
+      return . fromString $ "var" ++ show i
     mkInputPayload i guid entityId = InputPayload
       { _ipEntityId = entityId
       , _ipGuid = guid
@@ -188,7 +195,7 @@ getScopeElement sugarContext (par, typeExpr) = do
   where
     mkGetPar =
       case Map.lookup par recordParamsMap of
-      Just (ConvertM.RecordParamsInfo defName jumpTo) -> do
+      Just (ConvertM.RecordParamsInfo defName jumpTo) ->
         pure mempty
           { _scopeGetParams = [
             ( GetParams
