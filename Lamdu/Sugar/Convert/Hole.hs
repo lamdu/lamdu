@@ -39,7 +39,6 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
-import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
@@ -112,9 +111,6 @@ mkWritableHoleActions exprPl stored = do
   globals <-
     ConvertM.liftTransaction . Transaction.getP . Anchors.globals $
     sugarContext ^. ConvertM.scCodeAnchors
-  tags <-
-    ConvertM.liftTransaction . Transaction.getP . Anchors.tags $
-    sugarContext ^. ConvertM.scCodeAnchors
   let inferredScope = inferred ^. Infer.plScope
   pure HoleActions
     { _holePaste = mPaste
@@ -122,7 +118,6 @@ mkWritableHoleActions exprPl stored = do
       mconcat . concat <$> sequence
       [ mapM (getScopeElement sugarContext) $ Map.toList $ Infer.scopeToTypeMap inferredScope
       , mapM getGlobal globals
-      , mapM (getTag (exprPl ^. ipEntityId)) tags
       ]
     , _holeInferExprType = inferOnTheSide sugarContext inferredScope
     , holeResult = mkHoleResult sugarContext exprPl stored
@@ -245,17 +240,6 @@ getGlobal defI = do
       ] }
   where
     errorJumpTo = error "Jump to on scope item??"
-
-getTag :: MonadA m => EntityId -> T.Tag -> T m (Scope MStoredName m)
-getTag ctxEntityId tag = do
-  name <- ConvertExpr.makeStoredNameProperty tag
-  let
-    tagG = TagG
-      { _tagInstance = EntityId.augment (show (UniqueId.toGuid tag)) ctxEntityId
-      , _tagVal = tag
-      , _tagGName = name
-      }
-  pure mempty { _scopeTags = [(tagG, tag)] }
 
 writeConvertTypeChecked ::
   (MonadA m, Monoid a) =>

@@ -336,11 +336,10 @@ toGetField getField@GetField {..} = do
   pure getField { _gfRecord = record, _gfTag = tag }
 
 toScope :: MonadNaming m => Scope (OldName m) tm -> m (Scope (NewName m) tm)
-toScope (Scope l g t p) =
+toScope (Scope l g p) =
   Scope
   <$> (traverse . Lens._1) toGetVar l
   <*> (traverse . Lens._1) toGetVar g
-  <*> (traverse . Lens._1) toTagG t
   <*> (traverse . Lens._1) toGetParams p
 
 toHoleActions ::

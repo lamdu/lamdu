@@ -52,7 +52,7 @@ module Lamdu.Sugar.Types
   , Hole(..)
     , holeMActions, holeMArg, holeSuggested, holeGuid
   , ScopeItem
-  , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
+  , Scope(..), scopeLocals, scopeGlobals, scopeGetParams
   , HoleActions(..)
     , holeScope, holePaste, holeInferExprType
   , HoleResult(..)
@@ -222,7 +222,6 @@ type ScopeItem a = (a, Val ())
 data Scope name m = Scope
   { _scopeLocals    :: [ScopeItem (GetVar name m)]
   , _scopeGlobals   :: [ScopeItem (GetVar name m)]
-  , _scopeTags      :: [(TagG name m, T.Tag)]
   , _scopeGetParams :: [ScopeItem (GetParams name m)]
   } deriving (Generic)
 instance Monoid (Scope name m) where

@@ -274,7 +274,7 @@ convertRecExtend (V.RecExtend tag val rest) exprPl = do
   restS <- ConvertM.convertSubexpression rest
   fieldS <-
       convertField (exprPl ^? plIRef)
-      (EntityId.augment "tag" (exprPl ^. ipEntityId)) tag val
+      (EntityId.ofRecExtendTag (exprPl ^. ipEntityId)) tag val
   case restS ^. rBody of
     BodyRecord (Record restFields _mAddFirstAddItem) ->
       ConvertExpr.make exprPl $ BodyRecord $
@@ -322,7 +322,7 @@ convertGetField (V.GetField recExpr tag) exprPl = do
         { _gfRecord = recExpr
         , _gfTag =
             TagG
-            { _tagInstance = EntityId.augment "tag" (exprPl ^. ipEntityId)
+            { _tagInstance = EntityId.ofGetFieldTag (exprPl ^. ipEntityId)
             , _tagVal = tag
             , _tagGName = tName
             }
