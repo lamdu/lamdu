@@ -94,6 +94,7 @@ data StoredNames = StoredNames
   { storedName :: MStoredName
   , storedNamesWithin :: StoredNamesWithin
   }
+Lens.makeLenses ''StoredNames
 newtype Pass0M a = Pass0M (Writer StoredNamesWithin a)
   deriving (Functor, Applicative, Monad)
 p0TellStoredNames :: StoredNamesWithin -> Pass0M ()
@@ -199,16 +200,16 @@ instance MonadNaming Pass1M where
   opGetDefName = p1nameConvertor "def_"
 
 makeStoredName :: StoredName -> StoredNamesWithin -> Guid -> P1Env -> Name
-makeStoredName storedName storedNamesBelow guid env =
-  fst $ makeStoredNameEnv storedName storedNamesBelow guid env
+makeStoredName name storedNamesBelow guid env =
+  fst $ makeStoredNameEnv name storedNamesBelow guid env
 
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id
 
 makeStoredNameEnv ::
   StoredName -> StoredNamesWithin -> Guid -> P1Env -> (Name, P1Env)
-makeStoredNameEnv storedName storedNamesBelow guid env =
-  (Name NameSourceStored collision storedName, newEnv)
+makeStoredNameEnv name storedNamesBelow guid env =
+  (Name NameSourceStored collision name, newEnv)
   where
     (collision, newEnv) =
       case (mSuffixFromAbove, collidingGuids) of
@@ -216,14 +217,14 @@ makeStoredNameEnv storedName storedNamesBelow guid env =
         (Nothing, []) -> (NoCollision, envWithName [])
         (Nothing, otherGuids) -> (Collision 0, envWithName (guid:otherGuids))
     envWithName guids = env
-      & p1StoredNames %~ Set.insert storedName
+      & p1StoredNames %~ Set.insert name
       -- This name is first occurence, so we get suffix 0
       & p1StoredNameSuffixes %~ compose ((Lens.itraversed %@~ flip Map.insert) guids)
     mSuffixFromAbove =
       Map.lookup guid $ env ^. p1StoredNameSuffixes
     collidingGuids =
       maybe [] (filter (/= guid) . getSetList) $
-      storedNamesBelow ^. snwGuidMap . Lens.at storedName
+      storedNamesBelow ^. snwGuidMap . Lens.at name
 
 p1cpsNameConvertor ::
   NameProperty StoredNames tm ->
@@ -233,12 +234,12 @@ p1cpsNameConvertor nameProp nameMaker =
   CPS $ \k -> do
     oldEnv <- p1GetEnv
     let
-      (name, newEnv) =
+      (newName, newEnv) =
         case mName of
-        Just storedName -> makeStoredNameEnv storedName storedNamesBelow guid oldEnv
+        Just name -> makeStoredNameEnv name storedNamesBelow guid oldEnv
         Nothing -> nameMaker storedNamesBelow oldEnv
     res <- p1WithEnv (const newEnv) k
-    return (NameProperty name guid setName, res)
+    return (NameProperty newName guid setName, res)
   where
     StoredNames (MStoredName mName) storedNamesBelow = storedNames
     NameProperty storedNames guid setName = nameProp
