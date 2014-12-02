@@ -358,7 +358,7 @@ toInferred ::
 toInferred inferred = do
   RunMonad run <- opRun
   inferred
-    & hiMakeConverted . Lens.mapped . Lens.mapped %~ run . toExpression
+    & hsMakeConverted . Lens.mapped . Lens.mapped %~ run . toExpression
     & pure
 
 toHole ::

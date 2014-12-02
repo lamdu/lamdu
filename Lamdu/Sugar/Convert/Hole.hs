@@ -148,9 +148,9 @@ mkHoleSuggested inferred = do
       & ConvertM.convertSubexpression
       & ConvertM.run (sugarContext & ConvertM.scInferContext .~ newCtx)
   pure HoleSuggested
-    { _hiSuggestedValue = iVal
-    , _hiType = inferred ^. Infer.plType
-    , _hiMakeConverted = mkConverted
+    { _hsSuggestedValue = iVal
+    , _hsType = inferred ^. Infer.plType
+    , _hsMakeConverted = mkConverted
     }
   where
     mkInputPayload i guid entityId = InputPayload
@@ -166,10 +166,10 @@ mkHole ::
   InputPayload m a -> ConvertM m (Hole MStoredName m (ExpressionU m a))
 mkHole exprPl = do
   mActions <- traverse (mkWritableHoleActions exprPl) (exprPl ^. ipStored)
-  inferred <- mkHoleSuggested $ exprPl ^. ipInferred
+  suggested <- mkHoleSuggested $ exprPl ^. ipInferred
   pure Hole
     { _holeMActions = mActions
-    , _holeSuggested = inferred
+    , _holeSuggested = suggested
     , _holeMArg = Nothing
     }
 

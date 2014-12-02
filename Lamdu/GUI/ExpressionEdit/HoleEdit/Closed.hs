@@ -44,7 +44,7 @@ make hole pl myId = do
       arg <- maybeToMPlus $ hole ^. Sugar.holeMArg
       lift $ (,) myId <$> makeWrapper arg myId
     justToLeft $ do
-      guard . Lens.nullOf ExprLens.valHole $ inferred ^. Sugar.hiSuggestedValue
+      guard . Lens.nullOf ExprLens.valHole $ inferred ^. Sugar.hsSuggestedValue
       lift $ makeInferred inferred pl myId
     lift $ (,) (diveIntoHole myId) <$> makeSimple myId
   exprEventMap <-
@@ -124,7 +124,7 @@ makeInferred ::
 makeInferred inferred pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   gui <-
-    (inferred ^. Sugar.hiMakeConverted) gen
+    (inferred ^. Sugar.hsMakeConverted) gen
     & ExprGuiM.transaction
     <&> Lens.mapped . Lens.mapped .~ emptyPl
     >>= ExprGuiM.makeSubexpression 0
@@ -146,7 +146,7 @@ makeInferred inferred pl myId = do
   where
     fullyInferred =
       Lens.nullOf (ExprLens.subExprs . ExprLens.valHole) $
-      inferred ^. Sugar.hiSuggestedValue
+      inferred ^. Sugar.hsSuggestedValue
     -- gen needs to be compatible with the one from Sugar.Convert.Hole
     -- for the hole results, for smooth animation between inferred
     -- pure val and the hole result:

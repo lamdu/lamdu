@@ -339,7 +339,7 @@ makeAll config holeInfo = do
   -- where
   --   isTagType =
   --     Lens.has ExprLens.valTagType $
-  --     hiInferred holeInfo ^. Sugar.hiType
+  --     hiInferred holeInfo ^. Sugar.hsType
 
 makeAllGroups :: MonadA m => HoleInfo m -> T m [GroupM m]
 makeAllGroups holeInfo = do
@@ -379,7 +379,7 @@ makeAllGroups holeInfo = do
       in
         ( inferredGroups & Lens.traverse . groupSearchTerms <>~ dupsGroupNames
         ) ++ others
-    iVal = hiInferred holeInfo ^. Sugar.hiSuggestedValue
+    iVal = hiInferred holeInfo ^. Sugar.hsSuggestedValue
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
@@ -393,7 +393,7 @@ primitiveGroups holeInfo =
   --   V.GetField pureHole pureHole
   -- , Group "RecValue" (GroupAttributes ["Record Value", "{"] LowPrecedence) .
   --   fromMaybe (record V.KVal) . ExprUtil.recordValForm .
-  --   void $ hiInferred holeInfo ^. Sugar.hiType
+  --   void $ hiInferred holeInfo ^. Sugar.hsType
   -- , Group "RecType" (GroupAttributes ["Record Type", "{"] LowPrecedence) $
   --   record V.KType
   ]
