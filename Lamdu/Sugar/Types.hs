@@ -26,7 +26,7 @@ module Lamdu.Sugar.Types
   , Payload(..), plEntityId, plInferredType, plActions, plData
   , ExpressionP(..), rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..)
-  , MStoredName(..), mStoredName
+  , MStoredName(..), mStoredName, mStoredNameGuid
   , DefinitionN, DefinitionU
   , Expression, ExpressionN
   , BodyN
@@ -66,7 +66,7 @@ module Lamdu.Sugar.Types
   -- Input types:
   , InputPayload(..), ipGuid, ipEntityId, ipInferred, ipStored, ipData
   , NameProperty(..)
-    , npName, npGuid, npSetName
+    , npName, npSetName
   ) where
 
 import Data.Foldable (Foldable)
@@ -158,8 +158,9 @@ data Name = Name
 -- This funny type-alias exists because MStoredName is an extremely
 -- common type parameter of virtually all sugar types. Using (Maybe
 -- StoredName) or (Maybe String) directly adds a lot of noise.
-newtype MStoredName = MStoredName
+data MStoredName = MStoredName
   { _mStoredName :: Maybe String
+  , _mStoredNameGuid :: Guid
   }
 
 type Expression name m a = ExpressionP name m (Payload m a)
@@ -180,7 +181,6 @@ data FuncParamType = FuncParameter | FuncFieldParameter
 
 data NameProperty name m = NameProperty
   { _npName :: name
-  , _npGuid :: Guid
   , _npSetName :: String -> T m ()
   }
 

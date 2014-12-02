@@ -177,7 +177,7 @@ nameSrcTint _ Sugar.NameSourceStored = id
 makeNameEdit ::
   MonadA m =>
   Sugar.NameProperty Sugar.Name m -> Widget.Id -> ExprGuiM m (WidgetT m)
-makeNameEdit (Sugar.NameProperty (Sugar.Name nameSrc nameCollision name) _ setName) myId = do
+makeNameEdit (Sugar.NameProperty (Sugar.Name nameSrc nameCollision name) setName) myId = do
   collisionSuffixes <-
     ExprGuiM.widgetEnv . makeCollisionSuffixLabels nameCollision $
     Widget.toAnimId myId

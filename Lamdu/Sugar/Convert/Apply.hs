@@ -54,19 +54,19 @@ convert app@(V.Apply funcI argI) exprPl =
     justToLeft $ convertLabeled funcS argS argI exprPl
     lift $ convertPrefix funcS argS exprPl
 
-indirectDefinitionGuid :: ExpressionP name m pl -> Maybe Guid
+indirectDefinitionGuid :: ExpressionU m pl -> Maybe Guid
 indirectDefinitionGuid funcS =
   case funcS ^. rBody of
   -- TODO: This is incorrect because BodyGetVar is used even when it's
   -- a GetField behind the scenes, and we probably don't want to
   -- associate the Guid of the tag here? Need to throw this Guid or
   -- associated data into the GetVar/GetField itself anyway!
-  BodyGetVar gv -> Just $ gv ^. gvName . npGuid
+  BodyGetVar gv -> Just $ gv ^. gvName . npName . mStoredNameGuid
   BodyGetField _ -> Nothing -- TODO: <-- do we want to make something up here?
   _ -> Nothing
 
 indirectDefinitionPresentationMode ::
-  MonadA m => ExpressionP name m pl -> ConvertM m (Maybe PresentationMode)
+  MonadA m => ExpressionU m pl -> ConvertM m (Maybe PresentationMode)
 indirectDefinitionPresentationMode =
   traverse (ConvertM.getP . Anchors.assocPresentationMode) .
   indirectDefinitionGuid

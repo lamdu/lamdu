@@ -63,8 +63,11 @@ makeStoredNameProperty uid = do
   name <- Transaction.getP nameRef
   pure
     NameProperty
-    { _npName = MStoredName $ if null name then Nothing else Just name
-    , _npGuid = UniqueId.toGuid uid
+    { _npName =
+      MStoredName
+      { _mStoredName = if null name then Nothing else Just name
+      , _mStoredNameGuid = UniqueId.toGuid uid
+      }
     , _npSetName = Transaction.setP nameRef
     }
   where
