@@ -21,6 +21,7 @@ Library
                        Data.List.Assoc,
                        Data.List.Utils,
                        Data.Map.Utils,
+                       Data.Hashable.Generic,
                        Data.Maybe.Utils,
                        Data.Monoid.Applicative,
                        Data.Monoid.Generic,
