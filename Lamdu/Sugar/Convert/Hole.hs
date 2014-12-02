@@ -275,10 +275,19 @@ writeConvertTypeChecked sugarContext holeStored inferredVal = do
     ExprIRef.addProperties (Property.set holeStored) <$>
     writeExprMStored (Property.value holeStored) (intoStorePoint <$> inferredVal)
   let
-    -- Replace the guids with consistently fake ones
-    -- TODO: Do we want to make fake guids that cannot be used to
-    -- associate data with reliably? Maybe better to put ipGuid in
-    -- Maybe?
+    -- Replace the guids with consistent ones:
+
+    -- The sugar convert must apply *inside* the forked transaction
+    -- upon the *written* expr because we actually make use of the
+    -- resulting actions (e.g: press ',' on a list hole result).
+    -- However, the written expr goes crazy with new guids every time.
+    --
+    -- So, we do something a bit odd: Take the written expr with its
+    -- in-tact stored allowing actions to be built correctly but
+    -- replace the ipGuid/ipEntityId with determinstic/consistent
+    -- pseudo-random generated ones that preserve proper animations
+    -- and cursor navigation.
+
     makeConsistentPayload (False, pl) guid entityId = pl
       & ipEntityId .~ entityId
       & ipGuid .~ guid
