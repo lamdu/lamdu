@@ -7,6 +7,7 @@ module Lamdu.Sugar.Convert.Hole
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Arrow ((&&&))
 import Control.Lens.Operators
+import Control.Lens.Tuple
 import Control.Monad (void)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
@@ -263,7 +264,7 @@ writeConvertTypeChecked ::
   T m
   ( ExpressionU m a
   , Val (InputPayload m a)
-  , Val (InputPayload m a)
+  , Val (ExprIRef.ValIProperty m, InputPayload m a)
   )
 writeConvertTypeChecked sugarContext holeStored inferredVal = do
   -- With the real stored guids:
@@ -285,10 +286,10 @@ writeConvertTypeChecked sugarContext holeStored inferredVal = do
     -- pseudo-random generated ones that preserve proper animations
     -- and cursor navigation.
 
-    makeConsistentPayload (False, pl) guid entityId = pl
+    makeConsistentPayload (False, (_, pl)) guid entityId = pl
       & ipEntityId .~ entityId
       & ipGuid .~ guid
-    makeConsistentPayload (True, pl) _ _ = pl
+    makeConsistentPayload (True, (_, pl)) _ _ = pl
     consistentExpr =
       writtenExpr
       <&> makeConsistentPayload
@@ -300,12 +301,12 @@ writeConvertTypeChecked sugarContext holeStored inferredVal = do
   return
     ( converted
     , consistentExpr
-    , snd <$> writtenExpr
+    , writtenExpr <&> snd
     )
   where
     intoStorePoint (inferred, (mStorePoint, a)) =
       (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
-    toPayload (stored, (inferred, wasStored, a)) = (,) wasStored InputPayload
+    toPayload (stored, (inferred, wasStored, a)) = (,) wasStored $ (,) stored InputPayload
       { _ipEntityId = EntityId.ofValI $ Property.value stored
       , _ipGuid = IRef.guid $ ExprIRef.unValI $ Property.value stored
       , _ipInferred = inferred
@@ -318,6 +319,29 @@ resultComplexityScore expr =
   [ length . show $ expr ^. V.payload . Infer.plType
   , length $ Foldable.toList expr
   ]
+
+lambdas :: Val a -> [V.Lam (Val a)]
+lambdas v =
+  selfLams ++ recurse
+  where
+    selfLams =
+      case v ^. V.body of
+      V.BAbs lam -> [lam]
+      _ -> []
+    recurse = Foldable.concatMap lambdas (v ^. V.body)
+
+idTranslations ::
+  Val EntityId ->
+  Val EntityId ->
+  [(EntityId, EntityId)]
+idTranslations src dest
+  | V.alphaEq (void src) (void dest)
+    = zip (Foldable.toList src) (Foldable.toList dest) ++
+      zip (paramEntityIds src) (paramEntityIds dest)
+  | otherwise = error "idTranslations of mismatching expressions"
+  where
+    lambdaParamEntityId (V.Lam paramId _) = EntityId.ofLambdaParam paramId
+    paramEntityIds = map lambdaParamEntityId . lambdas
 
 mkHoleResult ::
   (MonadA m, Monoid a) =>
@@ -341,12 +365,15 @@ mkHoleResult sugarContext exprPl stored val =
       , _holeResultHasHoles = not . null $ orderedInnerHoles val
       }
   where
-    mkPickedResult _consistentExpr writtenExpr =
+    mkPickedResult consistentExpr writtenExpr =
       PickedResult
       { _prMJumpTo =
-        (orderedInnerHoles writtenExpr ^? Lens.traverse . V.payload)
+        (orderedInnerHoles writtenExpr ^? Lens.traverse . V.payload . _2)
         <&> (^. ipGuid) &&& (^. ipEntityId)
-      , _prIdTranslation = []
+      , _prIdTranslation =
+        idTranslations
+        (consistentExpr <&> (^. ipEntityId))
+        (writtenExpr <&> EntityId.ofValI . Property.value . fst)
       }
 
 randomizeNonStoredParamIds ::
