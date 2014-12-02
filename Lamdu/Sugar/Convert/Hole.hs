@@ -14,7 +14,6 @@ import Control.Monad.Trans.State (StateT(..), evalStateT, evalState)
 import Control.MonadA (MonadA)
 import Data.Maybe.Utils(unsafeUnjust)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.String (IsString(..))
 import Data.Traversable (traverse)
@@ -131,9 +130,6 @@ mkWritableHoleActions exprPl stored = do
   where
     inferred = exprPl ^. ipInferred
 
-consistentExprIds :: Val (Guid -> EntityId -> a) -> Val a
-consistentExprIds val = EntityId.randomizeExprAndParams (genFromHashable (void val)) val
-
 mkHoleSuggested :: MonadA m => Infer.Payload -> ConvertM m (HoleSuggested MStoredName m)
 mkHoleSuggested inferred = do
   sugarContext <- ConvertM.readContext
@@ -156,6 +152,7 @@ mkHoleSuggested inferred = do
     , _hsMakeConverted = mkConverted
     }
   where
+    consistentExprIds val = EntityId.randomizeExprAndParams (genFromHashable (void val)) val
     suggestedVal =
       (`evalState` (0 :: Int)) $
       suggestValueWith mkVar
@@ -295,7 +292,7 @@ writeConvertTypeChecked sugarContext holeStored inferredVal = do
     consistentExpr =
       writtenExpr
       <&> makeConsistentPayload
-      & consistentExprIds
+      & EntityId.randomizeExprAndParams (genFromHashable (void inferredVal))
   converted <-
     consistentExpr
     & ConvertM.convertSubexpression
