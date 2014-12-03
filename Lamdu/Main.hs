@@ -265,8 +265,7 @@ runDb win getConfig font db = do
 
 nextInfoMode :: Settings.InfoMode -> Settings.InfoMode
 nextInfoMode Settings.None = Settings.Types
-nextInfoMode Settings.Types = Settings.None -- Settings.Examples
-nextInfoMode Settings.Examples = Settings.None
+nextInfoMode Settings.Types = Settings.None
 
 mkGlobalEventMap :: Config -> IORef Settings -> IO (Widget.EventHandlers IO)
 mkGlobalEventMap config settingsRef = do

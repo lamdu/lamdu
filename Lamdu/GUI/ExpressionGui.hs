@@ -23,7 +23,7 @@ module Lamdu.GUI.ExpressionGui
   , stdWrapDelegated
   , stdWrapParentExpr
   , stdWrapParenify
-  , addInferredTypes
+  , addInferredTypes, maybeAddInferredTypes
   , wrapExprEventMap
   ) where
 
@@ -39,6 +39,7 @@ import Graphics.UI.Bottle.Animation (AnimId, Layer)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Box (KBox)
 import Lamdu.Config (Config)
+import Lamdu.GUI.CodeEdit.Settings (InfoMode(..), sInfoMode)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import Lamdu.GUI.ExpressionGui.Types (WidgetT, ExpressionGui(..), egWidget, egAlignment)
 import Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
@@ -199,7 +200,7 @@ stdWrap ::
   MonadA m => Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m) ->
   ExprGuiM m (ExpressionGui m)
-stdWrap pl mkGui = wrapExprEventMap pl $ addInferredTypes pl =<< mkGui
+stdWrap pl mkGui = wrapExprEventMap pl $ maybeAddInferredTypes pl =<< mkGui
 
 stdWrapDelegated ::
   MonadA m =>
@@ -312,19 +313,31 @@ addInferredTypes ::
   Sugar.Payload m a ->
   ExpressionGui m ->
   ExprGuiM m (ExpressionGui m)
-addInferredTypes exprPl eg
-  | exprPl ^. Sugar.plIsRedundantType = return eg
-  | otherwise =
-    do
-      config <- ExprGuiM.widgetEnv WE.readConfig
-      typeView <-
-        exprPl ^. Sugar.plInferredType
-        & TypeView.make gen
-        & ExprGuiM.widgetEnv
-        <&> uncurry Widget.liftView
-        <&> Widget.scale (realToFrac <$> Config.typeScaleFactor config)
-        <&> Widget.tint (Config.inferredTypeTint config)
-      return $ addType config Background exprId typeView eg
+addInferredTypes exprPl eg =
+  do
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    typeView <-
+      exprPl ^. Sugar.plInferredType
+      & TypeView.make gen
+      & ExprGuiM.widgetEnv
+      <&> uncurry Widget.liftView
+      <&> Widget.scale (realToFrac <$> Config.typeScaleFactor config)
+      <&> Widget.tint (Config.inferredTypeTint config)
+    return $ addType config Background exprId typeView eg
   where
     gen = genFromHashable $ exprPl ^. Sugar.plEntityId
     exprId = WidgetIds.fromEntityId $ exprPl ^. Sugar.plEntityId
+
+maybeAddInferredTypes ::
+  MonadA m =>
+  Sugar.Payload m a ->
+  ExpressionGui m ->
+  ExprGuiM m (ExpressionGui m)
+maybeAddInferredTypes exprPl eg
+  | exprPl ^. Sugar.plIsRedundantType = return eg
+  | otherwise =
+    do
+      infoMode <- (^. sInfoMode) <$> ExprGuiM.readSettings
+      case infoMode of
+        None -> return eg
+        Types -> addInferredTypes exprPl eg

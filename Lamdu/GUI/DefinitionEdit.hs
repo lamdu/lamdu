@@ -35,7 +35,6 @@ make ::
   MonadA m => Anchors.CodeProps m -> Settings ->
   DefIM m -> WidgetEnvT (T m) (WidgetT m)
 make cp settings defI = ExprGuiM.run ExpressionEdit.make cp settings $ do
-  -- infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
   defS <- ExprGuiM.transaction $ loadConvertDefI cp defI
   case defS ^. Sugar.drBody of
     Sugar.DefinitionBodyExpression bodyExpr ->
