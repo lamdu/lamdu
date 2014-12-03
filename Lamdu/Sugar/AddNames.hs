@@ -18,6 +18,7 @@ import Data.Monoid.Generic (def_mempty, def_mappend)
 import Data.Set (Set)
 import Data.Set.Ordered (OrderedSet)
 import Data.Store.Guid (Guid)
+import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable, traverse)
 import GHC.Generics (Generic)
 import Lamdu.Expr.Type (Type)
@@ -34,15 +35,17 @@ import qualified Data.Set.Ordered as OrderedSet
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Sugar.AddNames.NameGen as NameGen
 
+type T = Transaction
+
 type CPSNameConvertor m tm = NameProperty (OldName m) tm -> CPS m (NameProperty (NewName m) tm)
 type NameConvertor m tm = NameProperty (OldName m) tm -> m (NameProperty (NewName m) tm)
 
-newtype RunMonad m = RunMonad (forall a. m a -> a)
+newtype InTransaction m n = InTransaction (forall a. m a -> T n a)
 
 class MonadA m => MonadNaming m where
   type OldName m
   type NewName m
-  opRun :: m (RunMonad m)
+  opRun :: Monad n => m (InTransaction m n)
 
   opWithParamName :: NameGen.IsFunction -> CPSNameConvertor m tm
   opWithWhereItemName :: NameGen.IsFunction -> CPSNameConvertor m tm
@@ -109,7 +112,7 @@ data NameScope = Local | Global
 instance MonadNaming Pass0M where
   type OldName Pass0M = MStoredName
   type NewName Pass0M = StoredNames
-  opRun = pure $ RunMonad $ fst . runPass0M
+  opRun = pure $ InTransaction $ return . fst . runPass0M
   opWithParamName _ = p0cpsNameConvertor Local
   opWithWhereItemName _ = p0cpsNameConvertor Local
   opWithDefName = p0cpsNameConvertor Local
@@ -175,7 +178,7 @@ p1WithEnv f (Pass1M act) = Pass1M $ Reader.local f act
 instance MonadNaming Pass1M where
   type OldName Pass1M = StoredNames
   type NewName Pass1M = Name
-  opRun = (\x -> RunMonad (runPass1M x)) <$> p1GetEnv
+  opRun = (\env -> InTransaction (return . runPass1M env)) <$> p1GetEnv
   opWithDefName = p1cpsNameConvertorGlobal "def_"
   opWithTagName = p1cpsNameConvertorGlobal "tag_"
   opWithParamName = p1cpsNameConvertorLocal
@@ -348,12 +351,14 @@ toHoleActions ::
   HoleActions (OldName m) tm ->
   m (HoleActions (NewName m) tm)
 toHoleActions ha@HoleActions {..} = do
-  RunMonad run <- opRun
+  InTransaction run <- opRun
   pure ha
     { _holeScope =
-      fmap (run . toScope) _holeScope
+      run . toScope =<< _holeScope
     , holeResult =
-      (fmap . fmap . fmap) (run . holeResultConverted toExpression) holeResult
+      holeResult
+      & Lens.mapped %~
+        (run . (Lens.traversed . holeResultConverted %%~ toExpression) =<<)
     }
 
 toHoleSuggested ::
@@ -361,10 +366,10 @@ toHoleSuggested ::
   HoleSuggested (OldName m) tm ->
   m (HoleSuggested (NewName m) tm)
 toHoleSuggested inferred = do
-  RunMonad run <- opRun
+  InTransaction run <- opRun
   inferred
-    & hsMakeConverted . Lens.mapped %~ run . toExpression
-    & pure
+    & hsMakeConverted %~ (run . toExpression =<<)
+    & return
 
 toHole ::
   (MonadA tm, MonadNaming m) =>
