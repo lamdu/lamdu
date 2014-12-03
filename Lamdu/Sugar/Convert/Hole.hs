@@ -272,7 +272,7 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
   writtenExpr <-
     inferredVal
     <&> intoStorePoint
-    & writeExprMStored (Property.value holeStored)
+    & writeExprMStored holeEntityId (Property.value holeStored)
     <&> ExprIRef.addProperties (Property.set holeStored)
     <&> fmap toPayload
   let
@@ -396,16 +396,16 @@ randomizeNonStoredParamIds gen =
 
 writeExprMStored ::
   MonadA m =>
+  EntityId ->
   ExprIRef.ValIM m ->
   ExprStorePoint m a ->
   T m (Val (ExprIRef.ValIM m, a))
-writeExprMStored exprIRef exprMStorePoint = do
+writeExprMStored holeEntityId exprIRef exprMStorePoint = do
   key <- Transaction.newKey
-  let (genParams, genTags) = Random.split $ genFromHashable key
   exprMStorePoint
-    & randomizeNonStoredParamIds genParams
+    & randomizeNonStoredParamIds (genFromHashable key)
     & newTags %%~ const (state InputExpr.randomTag)
-    & (`evalState` genTags)
+    & (`evalState` genFromHashable holeEntityId)
     & Lens.mapped . Lens._1 . Lens._Just %~ unStorePoint
     & ExprIRef.writeValWithStoredSubexpressions exprIRef
   where
