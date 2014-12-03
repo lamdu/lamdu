@@ -25,7 +25,10 @@ make ::
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make list pl =
-  ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped pl list
+  makeUnwrapped list
+  & if null (Sugar.lValues list)
+    then id
+    else ExpressionGui.stdWrapParentExpr pl
 
 makeBracketLabel :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui f)
 makeBracketLabel label myId = do
@@ -41,39 +44,42 @@ lastLens = Lens.taking 1 . Lens.backwards $ Lens.traversed
 
 makeUnwrapped ::
   MonadA m =>
-  Sugar.Payload m ExprGuiM.Payload ->
   Sugar.List m (ExprGuiM.SugarExpr m) -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makeUnwrapped pl list myId =
+makeUnwrapped list myId =
   ExprGuiM.assignCursor myId cursorDest $ do
     bracketOpenLabel <- makeBracketLabel "[" bracketsIdForAnim
     bracketCloseLabel <- makeBracketLabel "]" bracketsIdForAnim
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
-      addFirstElemEventMap =
-        actionEventMap (Config.listAddItemKeys config) "Add First Item" Sugar.addFirstItem
-      onFirstBracket mItem itemPl label = do
-        let hg = itemPl ^. Sugar.plData . ExprGuiM.plHoleEntityIds
-        jumpHolesEventMap <-
-          hg
-          & case mItem of
-            Just item
-              | Lens.has (Sugar.liExpr . Sugar.rBody . Sugar._BodyHole) item
-              -> ExprGuiM.hgMNextHole .~ Just itemEntityId
-              where
-                itemEntityId = item ^. Sugar.liExpr . Sugar.rPayload . Sugar.plEntityId
-            _ -> id
-          & ExprEventMap.jumpHolesEventMap []
-        ExpressionGui.makeFocusableView firstBracketId label
-          <&> ExpressionGui.egWidget %~
-              Widget.weakerEvents (mappend addFirstElemEventMap jumpHolesEventMap)
+      onFirstElem x =
+        x
+        & ExpressionGui.makeFocusableView firstBracketId
+        <&>
+          ExpressionGui.egWidget %~
+          Widget.weakerEvents
+          (actionEventMap (Config.listAddItemKeys config) "Add First Item" Sugar.addFirstItem)
     case Sugar.lValues list of
-      [] -> onFirstBracket Nothing pl $ ExpressionGui.hbox [bracketOpenLabel, bracketCloseLabel]
+      [] ->
+        ExpressionGui.hbox [bracketOpenLabel, bracketCloseLabel]
+        & onFirstElem
       firstValue : nextValues -> do
         (_, firstEdit) <- makeItem firstValue
         nextEdits <- mapM makeItem nextValues
+
+        jumpHolesEventMap <-
+          firstValue ^. Sugar.liExpr . Sugar.rPayload . Sugar.plData . ExprGuiM.plHoleEntityIds
+          & ( if Lens.has (Sugar.liExpr . Sugar.rBody . Sugar._BodyHole) firstValue
+              then
+                ExprGuiM.hgMNextHole .~
+                Just (firstValue ^. Sugar.liExpr . Sugar.rPayload . Sugar.plEntityId)
+              else id
+            )
+          & ExprEventMap.jumpHolesEventMap []
         bracketOpen <-
-          onFirstBracket (Just firstValue) (firstValue ^. Sugar.liExpr . Sugar.rPayload) bracketOpenLabel
+          bracketOpenLabel
+          & onFirstElem
+          <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
         let
           nilDeleteEventMap =
             actionEventMap (Config.delKeys config) "Replace nil with hole" Sugar.replaceNil
