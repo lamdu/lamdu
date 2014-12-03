@@ -23,7 +23,7 @@ module Lamdu.Sugar.Types
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyLiteralInteger, _BodyList, _BodyRecord
-  , Payload(..), plEntityId, plInferredType, plActions, plData
+  , Payload(..), plEntityId, plInferredType, plIsRedundantType, plActions, plData
   , ExpressionP(..), rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..)
   , MStoredName(..), mStoredName, mStoredNameGuid

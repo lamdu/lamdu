@@ -50,7 +50,10 @@ convert app@(V.Apply funcI argI) exprPl =
     argS <- lift $ ConvertM.convertSubexpression argI
     justToLeft $ convertAppliedHole funcI argS argI exprPl
     justToLeft $ ConvertList.cons app argS exprPl
-    funcS <- lift $ ConvertM.convertSubexpression funcI
+    funcS <-
+      ConvertM.convertSubexpression funcI
+      <&> rPayload . plIsRedundantType .~ True
+      & lift
     justToLeft $ convertLabeled funcS argS argI exprPl
     lift $ convertPrefix funcS argS exprPl
 
