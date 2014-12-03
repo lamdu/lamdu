@@ -35,7 +35,8 @@ import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.WidgetId (toAnimId)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
-import Lamdu.GUI.ExpressionGui.Types (ExpressionGui(..), WidgetT, ParentPrecedence(..), Precedence)
+import Lamdu.GUI.ExpressionGui.Types (ExpressionGui(..), WidgetT)
+import Lamdu.GUI.Precedence (ParentPrecedence(..), Precedence)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.RWS as RWS

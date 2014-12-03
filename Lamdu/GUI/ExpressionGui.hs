@@ -40,7 +40,8 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Box (KBox)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
-import Lamdu.GUI.ExpressionGui.Types (WidgetT, MyPrecedence(..), ParentPrecedence(..), Precedence, ExpressionGui(..), egWidget, egAlignment)
+import Lamdu.GUI.ExpressionGui.Types (WidgetT, ExpressionGui(..), egWidget, egAlignment)
+import Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Graphics.DrawingCombinators as Draw
