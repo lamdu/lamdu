@@ -371,7 +371,7 @@ makeAllGroups holeInfo = do
       in
         ( suggestedGroups & Lens.traverse . groupSearchTerms <>~ dupsGroupNames
         ) ++ others
-    suggestedVal = hiInferred holeInfo ^. Sugar.hsSuggestedValue
+    suggestedVal = hiInferred holeInfo ^. Sugar.hsValue
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =

@@ -43,7 +43,7 @@ make hole pl myId = do
       arg <- maybeToMPlus $ hole ^. Sugar.holeMArg
       lift $ (,) myId <$> makeWrapper arg myId
     justToLeft $ do
-      guard . Lens.nullOf ExprLens.valHole $ suggested ^. Sugar.hsSuggestedValue
+      guard . Lens.nullOf ExprLens.valHole $ suggested ^. Sugar.hsValue
       lift $ makeSuggested suggested myId
     lift $ (,) (diveIntoHole myId) <$> makeSimple myId
   exprEventMap <-
@@ -145,7 +145,7 @@ makeSuggested suggested myId = do
   where
     fullySuggested =
       Lens.nullOf (ExprLens.subExprs . ExprLens.valHole) $
-      suggested ^. Sugar.hsSuggestedValue
+      suggested ^. Sugar.hsValue
     emptyPl =
       ExprGuiM.Payload
       { ExprGuiM._plStoredEntityIds = []

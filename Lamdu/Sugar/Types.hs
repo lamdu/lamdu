@@ -49,7 +49,7 @@ module Lamdu.Sugar.Types
     , fpName, fpId, fpVarKind, fpInferredType, fpMActions
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
   , HoleArg(..), haExpr, haExprPresugared, haUnwrap
-  , HoleSuggested(..), hsSuggestedValue, hsType, hsMakeConverted
+  , HoleSuggested(..), hsValue, hsMakeConverted
   , Hole(..)
     , holeMActions, holeMArg, holeSuggested, holeGuid
   , ScopeItem
@@ -257,8 +257,7 @@ data HoleArg m expr = HoleArg
   } deriving (Functor, Foldable, Traversable)
 
 data HoleSuggested name m = HoleSuggested
-  { _hsSuggestedValue :: Val ()
-  , _hsType :: Type
+  { _hsValue :: Val ()
   , _hsMakeConverted :: T m (Expression name m ())
   }
 

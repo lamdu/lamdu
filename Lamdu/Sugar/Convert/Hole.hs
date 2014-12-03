@@ -161,8 +161,7 @@ mkHoleSuggested holeEntityId inferred = do
       & ConvertM.convertSubexpression
       & ConvertM.run (sugarContext & ConvertM.scInferContext .~ newCtx)
   pure HoleSuggested
-    { _hsSuggestedValue = suggestedVal
-    , _hsType = inferred ^. Infer.plType
+    { _hsValue = suggestedVal
     , _hsMakeConverted = mkConverted
     }
   where
