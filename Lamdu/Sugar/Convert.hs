@@ -192,20 +192,19 @@ convertTag :: MonadA m => EntityId -> T.Tag -> ConvertM m (TagG MStoredName m)
 convertTag inst tag = TagG inst tag <$> makeStoredNamePropertyS tag
 
 convertField ::
-  (MonadA m, Monoid a) => Maybe (ExprIRef.ValIM m) ->
+  (MonadA m, Monoid a) =>
+  Maybe (ExprIRef.ValIProperty m) ->
+  Maybe (ExprIRef.ValIM m) ->
   EntityId -> T.Tag -> Val (InputPayload m a) ->
   ConvertM m (RecordField MStoredName m (ExpressionU m a))
-convertField _mIRef inst tag expr = do
+convertField mStored mRestI inst tag expr = do
   tagS <- convertTag inst tag
   exprS <- ConvertM.convertSubexpression expr
   return RecordField
-    { _rfMDelete = return $ error "TODO: _rfMDelete"
-    , _rfTag = tagS
+    { _rfTag = tagS
     , _rfExpr = exprS
+    , _rfMDelete = fmap EntityId.ofValI <$> (DataOps.replace <$> mStored <*> mRestI)
     }
-
-plIRef :: Lens.Traversal' (InputPayload m a) (ExprIRef.ValIM m)
-plIRef = ipStored . Lens._Just . Property.pVal
 
 convertEmptyRecord :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m a)
 convertEmptyRecord exprPl =
@@ -216,13 +215,17 @@ convertEmptyRecord exprPl =
   , _rMAddField = return $ error "TODO: _rMAddField" -- addField <$> exprPl ^? plIRef
   }
 
+plValI :: Lens.Traversal' (InputPayload m a) (ExprIRef.ValIM m)
+plValI = ipStored . Lens._Just . Property.pVal
+
 convertRecExtend ::
   (MonadA m, Monoid a) => V.RecExtend (Val (InputPayload m a)) ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertRecExtend (V.RecExtend tag val rest) exprPl = do
   restS <- ConvertM.convertSubexpression rest
   fieldS <-
-      convertField (exprPl ^? plIRef)
+      convertField
+      (exprPl ^. ipStored) (rest ^? V.payload . plValI)
       (EntityId.ofRecExtendTag (exprPl ^. ipEntityId)) tag val
   let
     (innerRecord, hiddenEntities) =
