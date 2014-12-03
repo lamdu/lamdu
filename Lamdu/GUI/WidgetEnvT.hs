@@ -12,7 +12,6 @@ module Lamdu.GUI.WidgetEnvT
 
   , readConfig, readTextStyle
   , setTextSizeColor, setTextColor
-  , getP
   ) where
 
 import Control.Applicative (Applicative)
@@ -21,12 +20,10 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.MonadA (MonadA)
 import Data.Maybe (isJust)
-import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Lamdu.Config (Config)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
-import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -44,10 +41,6 @@ newtype WidgetEnvT m a = WidgetEnvT
   }
   deriving (Functor, Applicative, Monad, MonadTrans)
 Lens.makeLenses ''WidgetEnvT
-
--- TODO: Remove this
-getP :: MonadA m => Transaction.MkProperty m a -> WidgetEnvT (Transaction m) a
-getP = lift . Transaction.getP
 
 runWidgetEnvT :: MonadA m => Widget.Id -> TextEdit.Style -> Config -> WidgetEnvT m a -> m a
 runWidgetEnvT cursor style config (WidgetEnvT action) = runReaderT action (Env cursor style config)
