@@ -312,16 +312,19 @@ addInferredTypes ::
   Sugar.Payload m a ->
   ExpressionGui m ->
   ExprGuiM m (ExpressionGui m)
-addInferredTypes exprPl eg = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  typeView <-
-    exprPl ^. Sugar.plInferredType
-    & TypeView.make gen
-    & ExprGuiM.widgetEnv
-    <&> uncurry Widget.liftView
-    <&> Widget.scale (realToFrac <$> Config.typeScaleFactor config)
-    <&> Widget.tint (Config.inferredTypeTint config)
-  return $ addType config Background exprId typeView eg
+addInferredTypes exprPl eg
+  | exprPl ^. Sugar.plIsRedundantType = return eg
+  | otherwise =
+    do
+      config <- ExprGuiM.widgetEnv WE.readConfig
+      typeView <-
+        exprPl ^. Sugar.plInferredType
+        & TypeView.make gen
+        & ExprGuiM.widgetEnv
+        <&> uncurry Widget.liftView
+        <&> Widget.scale (realToFrac <$> Config.typeScaleFactor config)
+        <&> Widget.tint (Config.inferredTypeTint config)
+      return $ addType config Background exprId typeView eg
   where
     gen = genFromHashable $ exprPl ^. Sugar.plEntityId
     exprId = WidgetIds.fromEntityId $ exprPl ^. Sugar.plEntityId
