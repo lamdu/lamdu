@@ -17,6 +17,7 @@ import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.MonadA (MonadA)
 import Data.Map (Map)
 import Data.Monoid (Monoid)
+import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Lamdu.Expr.Val (Val)
@@ -39,7 +40,7 @@ data TagParamInfo = TagParamInfo
 
 data RecordParamsInfo m = RecordParamsInfo
   { -- The name of the definition from which this params record is of:
-    rpiDefName :: Sugar.NameProperty Sugar.MStoredName m
+    rpiDefName :: Sugar.NameProperty Guid m
   , rpiJumpTo :: T m Sugar.EntityId
   }
 

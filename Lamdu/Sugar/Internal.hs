@@ -4,6 +4,7 @@ module Lamdu.Sugar.Internal
   ) where
 
 import Control.MonadA (MonadA)
+import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Lamdu.Sugar.Types
 import qualified Data.Store.Property as Property
@@ -12,8 +13,8 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
 type T = Transaction
 
-type BodyU m a = Body MStoredName m (ExpressionU m a)
-type ExpressionU m a = Expression MStoredName m a
+type BodyU m a = Body Guid m (ExpressionU m a)
+type ExpressionU m a = Expression Guid m a
 
 replaceWith ::
     MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m ->

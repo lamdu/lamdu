@@ -124,7 +124,7 @@ loadConvertDefI ::
 loadConvertDefI cp defI =
   Load.loadDefinitionClosure defI >>=
   SugarConvert.convertDefI cp
-  <&> AddNames.addToDef
+  >>= AddNames.addToDef
   <&> Lens.mapped . Lens.mapped . Lens.mapped %~ mkPayload
   <&> AddNextHoles.addToDef
   where

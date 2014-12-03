@@ -110,7 +110,7 @@ newTag = "newTag"
 mkWritableHoleActions ::
   (MonadA m) =>
   InputPayload m dummy -> ExprIRef.ValIProperty m ->
-  ConvertM m (HoleActions MStoredName m)
+  ConvertM m (HoleActions Guid m)
 mkWritableHoleActions exprPl stored = do
   sugarContext <- ConvertM.readContext
   mPaste <- mkPaste stored
@@ -144,7 +144,7 @@ consistentExprIds holeEntityId val =
         , void $ InputExpr.randomizeParamIds (genFromHashable holeEntityId) val
         )
 
-mkHoleSuggested :: MonadA m => EntityId -> Infer.Payload -> ConvertM m (HoleSuggested MStoredName m)
+mkHoleSuggested :: MonadA m => EntityId -> Infer.Payload -> ConvertM m (HoleSuggested Guid m)
 mkHoleSuggested holeEntityId inferred = do
   sugarContext <- ConvertM.readContext
   (inferredIVal, newCtx) <-
@@ -183,7 +183,7 @@ mkHoleSuggested holeEntityId inferred = do
 
 mkHole ::
   (MonadA m, Monoid a) =>
-  InputPayload m a -> ConvertM m (Hole MStoredName m (ExpressionU m a))
+  InputPayload m a -> ConvertM m (Hole Guid m (ExpressionU m a))
 mkHole exprPl = do
   mActions <- traverse (mkWritableHoleActions exprPl) (exprPl ^. ipStored)
   suggested <- mkHoleSuggested (exprPl ^. ipEntityId) $ exprPl ^. ipInferred
@@ -195,7 +195,7 @@ mkHole exprPl = do
 
 getScopeElement ::
   MonadA m => ConvertM.Context m ->
-  (V.Var, Type) -> T m (Scope MStoredName m)
+  (V.Var, Type) -> T m (Scope Guid m)
 getScopeElement sugarContext (par, typeExpr) = do
   scopePar <- mkGetPar
   mconcat . (scopePar :) <$>
@@ -214,11 +214,10 @@ getScopeElement sugarContext (par, typeExpr) = do
             , getParam )
           ] }
       Nothing -> do
-        parName <- ConvertExpr.makeStoredNameProperty par
         pure mempty
           { _scopeLocals = [
             ( GetVar
-              { _gvName = parName
+              { _gvName = ConvertExpr.makeNameProperty par
               , _gvJumpTo = errorJumpTo
               , _gvVarType = GetParameter
               }
@@ -228,11 +227,10 @@ getScopeElement sugarContext (par, typeExpr) = do
     errorJumpTo = error "Jump to on scope item??"
     getParam = P.var par
     onScopeField tag = do
-      name <- ConvertExpr.makeStoredNameProperty tag
       pure mempty
         { _scopeLocals = [
           ( GetVar
-            { _gvName = name
+            { _gvName = ConvertExpr.makeNameProperty tag
             , _gvJumpTo = errorJumpTo
             , _gvVarType = GetFieldParameter
             }
@@ -241,13 +239,12 @@ getScopeElement sugarContext (par, typeExpr) = do
         ] }
 
 -- TODO: Put the result in scopeGlobals in the caller, not here?
-getGlobal :: MonadA m => DefIM m -> T m (Scope MStoredName m)
+getGlobal :: MonadA m => DefIM m -> T m (Scope Guid m)
 getGlobal defI = do
-  name <- ConvertExpr.makeStoredNameProperty defI
   pure mempty
     { _scopeGlobals = [
       ( GetVar
-        { _gvName = name
+        { _gvName = ConvertExpr.makeNameProperty defI
         , _gvJumpTo = errorJumpTo
         , _gvVarType = GetDefinition
         }
@@ -355,7 +352,7 @@ mkHoleResult ::
   ConvertM.Context m ->
   InputPayload m dummy -> ExprIRef.ValIProperty m ->
   Val (MStorePoint m a) ->
-  T m (Maybe (HoleResult MStoredName m a))
+  T m (Maybe (HoleResult Guid m a))
 mkHoleResult sugarContext exprPl stored val =
   runMaybeT $ do
     (inferredVal, ctx) <-

@@ -1,12 +1,13 @@
 module Lamdu.Sugar.Convert.Expression
   ( make
   , mkReplaceWithNewHole
-  , makeStoredNameProperty
+  , makeNameProperty
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
+import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
+import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
@@ -58,18 +59,10 @@ make exprPl body = do
     , _plData = exprPl ^. ipData
     }
 
-makeStoredNameProperty ::
-  (UniqueId.ToGuid a, MonadA m) => a -> T m (NameProperty MStoredName m)
-makeStoredNameProperty uid = do
-  name <- Transaction.getP nameRef
-  pure
-    NameProperty
-    { _npName =
-      MStoredName
-      { _mStoredName = if null name then Nothing else Just name
-      , _mStoredNameGuid = UniqueId.toGuid uid
-      }
-    , _npSetName = Transaction.setP nameRef
-    }
-  where
-    nameRef = Anchors.assocNameRef uid
+makeNameProperty ::
+  (UniqueId.ToGuid a, MonadA m) => a -> NameProperty Guid m
+makeNameProperty uid =
+  NameProperty
+  { _npName = UniqueId.toGuid uid
+  , _npSetName = Transaction.setP $ Anchors.assocNameRef uid
+  }
