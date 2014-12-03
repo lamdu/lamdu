@@ -6,6 +6,7 @@
  (haskell-mode . ((eval .
    (progn
      (setq flycheck-ghc-search-path (list (concat dir-local-curdir "/submodules/AlgoW")
-                                          (concat dir-local-curdir "/bottlelib")))
+                                          (concat dir-local-curdir "/bottlelib")
+                                          (concat dir-local-curdir)))
      (setq flycheck-idle-change-delay 1.0)))))
 )
