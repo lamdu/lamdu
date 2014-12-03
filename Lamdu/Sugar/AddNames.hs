@@ -5,6 +5,7 @@ module Lamdu.Sugar.AddNames
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
+import Control.Lens.Tuple
 import Control.Monad ((<=<))
 import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.Monad.Trans.State (runState, evalState)
@@ -338,9 +339,9 @@ toGetField getField@GetField {..} = do
 toScope :: MonadNaming m => Scope (OldName m) tm -> m (Scope (NewName m) tm)
 toScope (Scope l g p) =
   Scope
-  <$> (traverse . Lens._1) toGetVar l
-  <*> (traverse . Lens._1) toGetVar g
-  <*> (traverse . Lens._1) toGetParams p
+  <$> (traverse . _1) toGetVar l
+  <*> (traverse . _1) toGetVar g
+  <*> (traverse . _1) toGetParams p
 
 toHoleActions ::
   (MonadA tm, MonadNaming m) =>
