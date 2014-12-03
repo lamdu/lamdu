@@ -32,7 +32,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -395,21 +394,6 @@ randomizeNonStoredParamIds gen =
     f n _        prevEntityId (Just _, _) = (prevEntityId, n)
     f _ prevFunc prevEntityId pl@(Nothing, _) = prevFunc prevEntityId pl
 
-newTagsLocationsTraversal :: Val a -> Lens.Traversal' (Val b) T.Tag
-newTagsLocationsTraversal val =
-  result
-  where
-    result f newVal
-      | void val == (void newVal & resultUnchecked .~ newTag) =
-        resultUnchecked f newVal
-      | otherwise = error "given a value of wrong shape"
-    resultUnchecked :: Lens.Traversal' (Val a) T.Tag
-    resultUnchecked = Lens.elementsOf ExprLens.valTags (`Set.member` indices)
-    indices =
-      Set.fromList $
-      map fst $ filter ((== newTag) . snd) $
-      zip [0..] $ val ^.. ExprLens.valTags
-
 writeExprMStored ::
   MonadA m =>
   ExprIRef.ValIM m ->
@@ -417,19 +401,15 @@ writeExprMStored ::
   T m (Val (ExprIRef.ValIM m, a))
 writeExprMStored exprIRef exprMStorePoint = do
   key <- Transaction.newKey
-  let
-    (genParams, genTags) = Random.split $ genFromHashable key
-    exprRandomizedParams = randomizeNonStoredParamIds genParams exprMStorePoint
-    newTagsTraversal :: Lens.Traversal' (Val a) T.Tag
-    newTagsTraversal = newTagsLocationsTraversal exprRandomizedParams
-    exprWithNewTags =
-      exprRandomizedParams
-      & newTagsTraversal %%~ const (state InputExpr.randomTag)
-      & (`evalState` genTags)
-  exprWithNewTags
+  let (genParams, genTags) = Random.split $ genFromHashable key
+  exprMStorePoint
+    & randomizeNonStoredParamIds genParams
+    & newTags %%~ const (state InputExpr.randomTag)
+    & (`evalState` genTags)
     & Lens.mapped . Lens._1 . Lens._Just %~ unStorePoint
     & ExprIRef.writeValWithStoredSubexpressions exprIRef
-    <&> newTagsTraversal .~ newTag
+  where
+    newTags = ExprLens.valTags . Lens.filtered (== newTag)
 
 orderedInnerHoles :: Val a -> [Val a]
 orderedInnerHoles e =
