@@ -58,7 +58,10 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
     fieldRows <- mapM makeFieldRow fields
     let
       fieldsWidget = Grid.toWidget $ Grid.make fieldRows
-      targetWidth = max 250 $ fieldsWidget ^. Widget.wSize . Lens._1
+      targetWidth =
+        case fieldRows of
+        [] -> 250
+        _ -> fieldsWidget ^. Widget.wSize . Lens._1
       colorScaleRect f =
         f (Widget.toAnimId tailId)
         & Anim.onImages (Draw.tint (Config.recordTailColor config))
