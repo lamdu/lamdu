@@ -1,3 +1,4 @@
+
 {-# LANGUAGE OverloadedStrings, RankNTypes #-}
 module Graphics.UI.Bottle.View
   ( View, augmentAnimId, backgroundColor, scaled

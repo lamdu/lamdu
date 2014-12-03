@@ -127,7 +127,6 @@ data Config = Config
   , activeDefBGColor :: Draw.Color
 
   , inferredTypeTint :: Draw.Color
-  , inferredTypeErrorBGColor :: Draw.Color
   , inferredTypeBGColor :: Draw.Color
 
 -- For definitions
