@@ -47,7 +47,7 @@ data Code f t = Code
   , postCursor :: f WidgetId.Id
   , tags :: f [T.Tag]
   }
-onCode :: Binary t => (forall a. Binary a => f a -> g a) -> Code f t -> Code g t
+onCode :: (forall a. Binary a => f a -> g a) -> Code f t -> Code g t
 onCode f (Code x0 x1 x2 x3 x4 x5 x6 x7) =
   Code (f x0) (f x1) (f x2) (f x3) (f x4) (f x5) (f x6) (f x7)
 
