@@ -386,8 +386,7 @@ primitiveGroups holeInfo =
   , mkGroupBody LowPrecedence ["Empty", "Record", "{"] $
     V.BLeaf V.LRecEmpty
   , mkGroupBody LowPrecedence ["Extend", "Record", "{"] $
-    V.BRecExtend $ V.RecExtend newTag P.hole $
-    Val () $ V.BLeaf V.LRecEmpty
+    V.BRecExtend $ V.RecExtend newTag P.hole P.hole
   ]
   where
     newTag = hiActions holeInfo ^. Sugar.holeResultNewTag

@@ -224,12 +224,14 @@ convertRecExtend (V.RecExtend tag val rest) exprPl = do
   fieldS <-
       convertField (exprPl ^? plIRef)
       (EntityId.ofRecExtendTag (exprPl ^. ipEntityId)) tag val
-  case restS ^. rBody of
+  ConvertExpr.make exprPl . BodyRecord $
+    case restS ^. rBody of
     BodyRecord (Record restFields t _mAddFirstAddItem) ->
-      ConvertExpr.make exprPl $ BodyRecord $
-        Record (fieldS : restFields) t $
-        return $ error "TODO: Support add first item on records"
-    _ -> return $ error "TODO: Support record extend of non-record"
+      Record (fieldS : restFields) t $
+      return $ error "TODO: Support add first item on records"
+    _ ->
+      Record [fieldS] (RecordExtending restS) $
+      return $ error "TODO: Support add first item on records"
   where
     -- addField iref =
     --   writeRecordFields iref defaultEntityId $ \recordFields -> do

@@ -293,7 +293,7 @@ data RecordField name m expr = RecordField
   } deriving (Functor, Foldable, Traversable)
 
 data RecordTail expr =
-  ClosedRecord | Extending expr
+  ClosedRecord | RecordExtending expr
   deriving (Functor, Foldable, Traversable)
 
 data Record name m expr = Record
