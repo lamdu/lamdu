@@ -20,6 +20,7 @@ import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Map as Map
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -51,6 +52,9 @@ text str = wenv . BWidgets.makeTextView str =<< randAnimId
 hbox :: [View] -> View
 hbox = GridView.horizontalAlign 0.5
 
+space :: View
+space = Spacer.makeHorizontal 20
+
 parensAround :: MonadA m => View -> M m View
 parensAround view =
   do
@@ -77,12 +81,19 @@ makeTFun parentPrecedence a b =
   ]
 
 makeTInst :: MonadA m => ParentPrecedence -> T.Id -> Map T.ParamId Type -> M m View
-makeTInst parentPrecedence (T.Id name) typeParams =
-  fmap hbox $ sequence $
-  [ text (showIdentifier name) ] ++
-  [ text " [TODO]"
-  | not $ Map.null typeParams
-  ]
+makeTInst _parentPrecedence (T.Id name) typeParams =
+  do
+    nameView <- text (showIdentifier name)
+    case Map.toList typeParams of
+      [] -> pure nameView
+      ((_, arg) : []) ->
+        do
+          argView <- makeInternal (ParentPrecedence 0) arg
+          pure $ hbox [nameView, space, argView]
+      _ ->
+        do
+          t <- text " [TODO multiple args]"
+          pure $ hbox [nameView, t]
 
 makeRecord :: MonadA m => T.Composite T.Product -> M m View
 makeRecord composite = text "TODO"
