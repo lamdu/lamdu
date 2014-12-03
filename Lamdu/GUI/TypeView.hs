@@ -17,6 +17,7 @@ import Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..))
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import System.Random (Random, random)
 import qualified Data.ByteString.Char8 as BS8
+import qualified Data.Map as Map
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Lamdu.Expr.Type as T
@@ -69,14 +70,19 @@ makeTVar (T.Var name) = text (showIdentifier name)
 makeTFun :: MonadA m => ParentPrecedence -> Type -> Type -> M m View
 makeTFun parentPrecedence a b =
   parens parentPrecedence (MyPrecedence 0) =<<
-  do
-    aView <- splitMake (ParentPrecedence 1) a
-    arrow <- text " -> "
-    bView <- splitMake (ParentPrecedence 0) b
-    return $ hbox [aView, arrow, bView]
+  hbox <$> sequence
+  [ splitMake (ParentPrecedence 1) a
+  , text " -> "
+  , splitMake (ParentPrecedence 0) b
+  ]
 
 makeTInst :: MonadA m => ParentPrecedence -> T.Id -> Map T.ParamId Type -> M m View
-makeTInst parentPrecedence typeId typeParams = text "TODO"
+makeTInst parentPrecedence (T.Id name) typeParams =
+  fmap hbox $ sequence $
+  [ text (showIdentifier name) ] ++
+  [ text " [TODO]"
+  | not $ Map.null typeParams
+  ]
 
 makeRecord :: MonadA m => T.Composite T.Product -> M m View
 makeRecord composite = text "TODO"
