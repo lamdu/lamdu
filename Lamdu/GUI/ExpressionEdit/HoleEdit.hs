@@ -62,7 +62,7 @@ tryOpenHole hole pl myId = do
   lift $ HoleOpen.make pl HoleInfo
     { hiEntityId = pl ^. Sugar.plEntityId
     , hiActions = actions
-    , hiInferred = hole ^. Sugar.holeSuggested
+    , hiSuggested = hole ^. Sugar.holeSuggested
     , hiId = myId
     , hiState = stateProp
     , hiHoleEntityIds = pl ^. Sugar.plData . ExprGuiM.plHoleEntityIds
