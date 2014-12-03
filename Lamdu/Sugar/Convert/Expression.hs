@@ -53,6 +53,7 @@ make exprPl body = do
   return $ Expression body Payload
     { _plEntityId = exprPl ^. ipEntityId
     , _plInferredType = exprPl ^. ipInferred . Infer.plType
+    , _plIsRedundantType = False
     , _plActions = mkActions sugarContext <$> exprPl ^. ipStored
     , _plData = exprPl ^. ipData
     }

@@ -127,9 +127,7 @@ data Actions m = Actions
 
 data Payload m a = Payload
   { _plInferredType :: Type
-  -- This must be embedded in the expression AST and not as a separate
-  -- function so that AddNames can correct the "name" here in the
-  -- right context.
+  , _plIsRedundantType :: Bool
   , _plActions :: Maybe (Actions m)
   , _plEntityId :: EntityId
   , _plData :: a
