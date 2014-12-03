@@ -271,9 +271,11 @@ writeConvertTypeChecked ::
 writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
   -- With the real stored guids:
   writtenExpr <-
-    fmap toPayload .
-    ExprIRef.addProperties (Property.set holeStored) <$>
-    writeExprMStored (Property.value holeStored) (intoStorePoint <$> inferredVal)
+    inferredVal
+    <&> intoStorePoint
+    & writeExprMStored (Property.value holeStored)
+    <&> ExprIRef.addProperties (Property.set holeStored)
+    <&> fmap toPayload
   let
     -- Replace the guids with consistent ones:
 
