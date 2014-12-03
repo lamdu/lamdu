@@ -343,7 +343,7 @@ makeAllGroups holeInfo = do
     } <- hiActions holeInfo ^. Sugar.holeScope
   let
     allGroups =
-      addInferredGroups $
+      addSuggestedGroups $
       concat
       [ primitiveGroups holeInfo
       , localsGroups
@@ -356,22 +356,22 @@ makeAllGroups holeInfo = do
     getParamsGroups = sortedGroups getParamsToGroup getParams
   pure $ holeMatches (^. groupSearchTerms) (hiSearchTerm holeInfo) allGroups
   where
-    inferredGroups =
+    suggestedGroups =
       [ Group
-        { _groupSearchTerms = GroupAttributes ["inferred"] HighPrecedence
-        , _groupBaseExpr = iVal
+        { _groupSearchTerms = GroupAttributes ["suggested"] HighPrecedence
+        , _groupBaseExpr = suggestedVal
         }
-      | Lens.nullOf ExprLens.valHole iVal
+      | Lens.nullOf ExprLens.valHole suggestedVal
       ]
-    addInferredGroups groups =
+    addSuggestedGroups groups =
       let
-        (dupsOfInferred, others) =
-          List.partition (V.alphaEq iVal . (^. groupBaseExpr)) groups
-        dupsGroupNames = dupsOfInferred ^. Lens.traverse . groupSearchTerms
+        (dupsOfSuggested, others) =
+          List.partition (V.alphaEq suggestedVal . (^. groupBaseExpr)) groups
+        dupsGroupNames = dupsOfSuggested ^. Lens.traverse . groupSearchTerms
       in
-        ( inferredGroups & Lens.traverse . groupSearchTerms <>~ dupsGroupNames
+        ( suggestedGroups & Lens.traverse . groupSearchTerms <>~ dupsGroupNames
         ) ++ others
-    iVal = hiInferred holeInfo ^. Sugar.hsSuggestedValue
+    suggestedVal = hiInferred holeInfo ^. Sugar.hsSuggestedValue
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
