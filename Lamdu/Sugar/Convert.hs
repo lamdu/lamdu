@@ -163,21 +163,24 @@ convertVar ::
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertVar param exprPl = do
   recordParamsMap <- (^. ConvertM.scRecordParamsInfos) <$> ConvertM.readContext
-  case Map.lookup param recordParamsMap of
+  body <-
+    case Map.lookup param recordParamsMap of
     Just (ConvertM.RecordParamsInfo defName jumpTo) ->
-      ConvertExpr.make exprPl $ BodyGetParams GetParams
+      return $ BodyGetParams GetParams
       { _gpDefName = defName
       , _gpJumpTo = jumpTo
       }
     Nothing ->
       do
         parName <- makeStoredNamePropertyS param
-        ConvertExpr.make exprPl .
+        return .
           BodyGetVar $ GetVar
           { _gvName = parName
           , _gvJumpTo = pure $ EntityId.ofLambdaParam param
           , _gvVarType = GetParameter
           }
+  ConvertExpr.make exprPl body
+    <&> rPayload . plIsRedundantType .~ True
 
 jumpToDefI ::
   MonadA m => Anchors.CodeProps m -> DefIM m -> T m EntityId
