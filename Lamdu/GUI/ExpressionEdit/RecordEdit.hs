@@ -59,17 +59,22 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
     let
       fieldsWidget = Grid.toWidget $ Grid.make fieldRows
       targetWidth = max 250 $ fieldsWidget ^. Widget.wSize . Lens._1
-    tailWidget <-
-      case recordTail of
-      Sugar.ClosedRecord ->
-        Anim.unitSquare (Widget.toAnimId tailId)
+      colorScaleRect f =
+        f (Widget.toAnimId tailId)
         & Anim.onImages (Draw.tint (Config.recordTailColor config))
         & Widget.liftView 1
         & Widget.scale (Vector2 targetWidth 10)
+    tailWidget <-
+      case recordTail of
+      Sugar.ClosedRecord ->
+        colorScaleRect Anim.unitSquare
         & ExprGuiM.widgetEnv . BWidgets.makeFocusableView tailId
-      Sugar.RecordExtending rest ->
-        ExprGuiM.makeSubexpression 0 rest
-        <&> (^. ExpressionGui.egWidget)
+      Sugar.RecordExtending rest -> do
+        restExpr <-
+          ExprGuiM.makeSubexpression 0 rest
+          <&> (^. ExpressionGui.egWidget)
+        return $ Box.vboxCentered
+          [colorScaleRect (Anim.unitHStripedSquare 20), restExpr]
     let
       eventMap =
         mkEventMap (fmap WidgetIds.fromEntityId)
