@@ -264,7 +264,7 @@ convertEmptyRecord exprPl =
   ConvertExpr.make exprPl $
   BodyRecord Record
   { _rItems = []
-  , _rMAddFirstItem = error "TODO: _rMAddFirstItem" -- addField <$> exprPl ^? plIRef
+  , _rMAddFirstItem = return $ error "TODO: _rMAddFirstItem" -- addField <$> exprPl ^? plIRef
   }
 
 convertRecExtend ::

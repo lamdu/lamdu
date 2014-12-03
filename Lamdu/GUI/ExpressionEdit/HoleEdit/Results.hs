@@ -383,11 +383,9 @@ primitiveGroups holeInfo =
     V.BAbs $ V.Lam "NewLambda" P.hole
   -- , mkGroupBody LowPrecedence [".", "Get Field"] . V.VGetField $
   --   V.GetField pureHole pureHole
-  -- , Group "RecValue" (GroupAttributes ["Record Value", "{"] LowPrecedence) .
-  --   fromMaybe (record V.KVal) . ExprUtil.recordValForm .
+  , mkGroupBody LowPrecedence ["Record", "{"] $
+    V.BLeaf V.LRecEmpty
   --   void $ hiInferred holeInfo ^. Sugar.hsType
-  -- , Group "RecType" (GroupAttributes ["Record Type", "{"] LowPrecedence) $
-  --   record V.KType
   ]
   where
     searchTerm = hiSearchTerm holeInfo
