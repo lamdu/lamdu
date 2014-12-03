@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.RecordEdit(make) where
 
-import Control.Applicative ((<$>), Applicative(..), liftA2)
+import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
@@ -9,7 +9,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers, holePickersAction)
+import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -40,14 +40,11 @@ makeUnwrapped (Sugar.Record fields mAddField) myId =
   ExprGuiM.assignCursor myId bracketId $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
-      makeFieldRow (Sugar.RecordField mItemActions tag fieldExpr) = do
-        ((fieldRefGui, fieldExprGui), resultPickers) <-
-          ExprGuiM.listenResultPickers $
-          (,)
-          <$> TagEdit.make tag (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
-          <*> ExprGuiM.makeSubexpression 0 fieldExpr
+      makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) = do
+        fieldRefGui <- TagEdit.make tag (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
+        fieldExprGui <- ExprGuiM.makeSubexpression 0 fieldExpr
         let
-          itemEventMap = maybe mempty (recordItemEventMap config resultPickers) mItemActions
+          itemEventMap = maybe mempty (recordItemEventMap config) mDelete
           space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
         return . ExpressionGui.makeRow $
           [(1, scaleTag fieldRefGui), (0.5, space), (0, fieldExprGui)]
@@ -91,14 +88,8 @@ makeUnwrapped (Sugar.Record fields mAddField) myId =
       maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction
 
 recordItemEventMap ::
-  MonadA m => Config -> HolePickers m ->
-  Sugar.ListItemActions m -> Widget.EventHandlers (T m)
-recordItemEventMap config resultPickers (Sugar.ListItemActions addNext delete) =
-  mconcat
-  [ E.keyPresses (Config.recordAddFieldKeys config)
-    (E.Doc ["Edit", "Record", "Add Next Field"]) $
-    liftA2 mappend (holePickersAction resultPickers)
-    (Widget.eventResultFromCursor . WidgetIds.fromEntityId <$> addNext)
-  , Widget.keysEventMapMovesCursor (Config.delKeys config)
-    (E.Doc ["Edit", "Record", "Delete Field"]) $ WidgetIds.fromEntityId <$> delete
-  ]
+  MonadA m => Config ->
+  T m Sugar.EntityId -> Widget.EventHandlers (T m)
+recordItemEventMap config delete =
+  Widget.keysEventMapMovesCursor (Config.delKeys config)
+  (E.Doc ["Edit", "Record", "Delete Field"]) $ WidgetIds.fromEntityId <$> delete

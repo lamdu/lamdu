@@ -33,8 +33,8 @@ module Lamdu.Sugar.Types
   , WhereItem(..), wiEntityId, wiValue, wiName, wiActions, wiInferredType
   , ListItem(..), liMActions, liExpr
   , ListActions(..), List(..)
-  , RecordField(..), rfMItemActions, rfTag, rfExpr
-  , Record(..), rItems, rMAddFirstItem
+  , RecordField(..), rfMDelete, rfTag, rfExpr
+  , Record(..), rItems, rMAddField
   , GetField(..), gfRecord, gfTag
   , GetVarType(..)
   , GetVar(..), gvName, gvJumpTo, gvVarType
@@ -286,14 +286,14 @@ data List m expr = List
   } deriving (Functor, Foldable, Traversable)
 
 data RecordField name m expr = RecordField
-  { _rfMItemActions :: Maybe (ListItemActions m)
+  { _rfMDelete :: Maybe (T m EntityId)
   , _rfTag :: TagG name m
   , _rfExpr :: expr -- field type or val
   } deriving (Functor, Foldable, Traversable)
 
 data Record name m expr = Record
   { _rItems :: [RecordField name m expr]
-  , _rMAddFirstItem :: Maybe (T m EntityId)
+  , _rMAddField :: Maybe (T m EntityId)
   } deriving (Functor, Foldable, Traversable)
 
 data GetField name m expr = GetField

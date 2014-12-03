@@ -191,57 +191,6 @@ convertVLiteralInteger i exprPl = ConvertExpr.make exprPl $ BodyLiteralInteger i
 convertTag :: MonadA m => EntityId -> T.Tag -> ConvertM m (TagG MStoredName m)
 convertTag inst tag = TagG inst tag <$> makeStoredNamePropertyS tag
 
--- sideChannel :: Monad m => Lens' s a -> LensLike m s (side, s) a (side, a)
--- sideChannel lens f s = (`runStateT` s) . Lens.zoom lens $ StateT f
-
--- writeRecordFields ::
---   MonadA m =>
---   ExprIRef.ValIM m -> result ->
---   ( [(T.Tag, ExprIRef.ValIM m)] ->
---     T m
---     ( result
---     , [(T.Tag, ExprIRef.ValIM m)]
---     )
---   ) ->
---   T m result
--- writeRecordFields iref def f = do
---   oldBody <- ExprIRef.readValBody iref
---   case oldBody ^? V._VRec of
---     Nothing -> return def
---     Just oldRecord -> do
---       (res, newRecord) <- sideChannel V.recordFields f oldRecord
---       ExprIRef.writeExprBody iref $ V.VRec newRecord
---       return res
-
--- recordFieldActions ::
---   MonadA m => EntityId -> ExprIRef.ValIM m -> ExprIRef.ValIM m ->
---   ListItemActions m
--- recordFieldActions defaultEntityId exprIRef iref =
---   ListItemActions
---   { _itemDelete = action delete
---   , _itemAddNext = action addNext
---   }
---   where
---     action f = writeRecordFields iref defaultEntityId $ splitFields f
---     addNext (prevFields, field, nextFields) = do
---       tagHole <- DataOps.newHole
---       exprHole <- DataOps.newHole
---       return
---         ( EntityId.ofValI tagHole
---         , prevFields ++ field : (tagHole, exprHole) : nextFields
---         )
---     delete (prevFields, _, nextFields) =
---       return
---       ( case nextFields ++ reverse prevFields of
---         [] -> defaultEntityId
---         ((nextTagExpr, _) : _) -> EntityId.ofValI nextTagExpr
---       , prevFields ++ nextFields
---       )
---     splitFields f oldFields =
---       case break ((== exprIRef) . fst) oldFields of
---       (prevFields, field : nextFields) -> f (prevFields, field, nextFields)
---       _ -> return (defaultEntityId, oldFields)
-
 convertField ::
   (MonadA m, Monoid a) => Maybe (ExprIRef.ValIM m) ->
   EntityId -> T.Tag -> Val (InputPayload m a) ->
@@ -250,8 +199,7 @@ convertField _mIRef inst tag expr = do
   tagS <- convertTag inst tag
   exprS <- ConvertM.convertSubexpression expr
   return RecordField
-    { _rfMItemActions = Nothing -- error "TODO: rfMItemActions"
- --      recordFieldActions defaultEntityId <$> tagExpr ^? SugarInfer.exprIRef <*> mIRef
+    { _rfMDelete = return $ error "TODO: _rfMDelete"
     , _rfTag = tagS
     , _rfExpr = exprS
     }
@@ -264,7 +212,7 @@ convertEmptyRecord exprPl =
   ConvertExpr.make exprPl $
   BodyRecord Record
   { _rItems = []
-  , _rMAddFirstItem = return $ error "TODO: _rMAddFirstItem" -- addField <$> exprPl ^? plIRef
+  , _rMAddField = return $ error "TODO: _rMAddField" -- addField <$> exprPl ^? plIRef
   }
 
 convertRecExtend ::
