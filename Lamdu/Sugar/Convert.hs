@@ -211,12 +211,13 @@ convertField mStored mRestI inst tag expr = do
 
 convertEmptyRecord :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m a)
 convertEmptyRecord exprPl =
-  ConvertExpr.make exprPl $
   BodyRecord Record
   { _rItems = []
   , _rTail = ClosedRecord
   , _rMAddField = return $ error "TODO: _rMAddField" -- addField <$> exprPl ^? plIRef
   }
+  & ConvertExpr.make exprPl
+  <&> rPayload . plIsRedundantType .~ True
 
 plValI :: Lens.Traversal' (InputPayload m a) (ExprIRef.ValIM m)
 plValI = ipStored . Lens._Just . Property.pVal
@@ -244,6 +245,7 @@ convertRecExtend (V.RecExtend tag val rest) exprPl = do
   BodyRecord innerRecord
     & ConvertExpr.make exprPl
     <&> rPayload . plData <>~ hiddenEntities
+    <&> rPayload . plIsRedundantType .~ True
   where
     addField = return $ error "TODO: Support add field on records"
     -- addField iref =
