@@ -97,8 +97,8 @@ data Config = Config
   , fieldTagScaleFactor :: Vector2 Double
   , fieldTint :: Draw.Color
 
-  , inferredValueScaleFactor :: Vector2 Double
-  , inferredValueTint :: Draw.Color
+  , suggestedValueScaleFactor :: Vector2 Double
+  , suggestedValueTint :: Draw.Color
 
   , parenHighlightColor :: Draw.Color
 

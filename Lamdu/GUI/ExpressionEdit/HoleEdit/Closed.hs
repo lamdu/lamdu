@@ -43,8 +43,8 @@ make hole pl myId = do
       arg <- maybeToMPlus $ hole ^. Sugar.holeMArg
       lift $ (,) myId <$> makeWrapper arg myId
     justToLeft $ do
-      guard . Lens.nullOf ExprLens.valHole $ inferred ^. Sugar.hsSuggestedValue
-      lift $ makeInferred inferred myId
+      guard . Lens.nullOf ExprLens.valHole $ suggested ^. Sugar.hsSuggestedValue
+      lift $ makeSuggested suggested myId
     lift $ (,) (diveIntoHole myId) <$> makeSimple myId
   exprEventMap <-
     ExprEventMap.make
@@ -55,7 +55,7 @@ make hole pl myId = do
         Widget.weakerEvents (mappend openEventMap exprEventMap)
   return (destId, inactive)
   where
-    inferred = hole ^. Sugar.holeSuggested
+    suggested = hole ^. Sugar.holeSuggested
     openEventMap =
       Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.Key'Enter]
       (E.Doc ["Navigation", "Hole", "Open"]) . pure $
@@ -116,24 +116,24 @@ makeWrapper arg myId = do
         makeBackground myId
         (Config.layerHoleBG (Config.layers config)) bgColor
 
-makeInferred ::
+makeSuggested ::
   MonadA m =>
   Sugar.HoleSuggested Sugar.Name m ->
   Widget.Id -> ExprGuiM m (Widget.Id, ExpressionGui m)
-makeInferred inferred myId = do
+makeSuggested suggested myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   gui <-
-    (inferred ^. Sugar.hsMakeConverted)
+    (suggested ^. Sugar.hsMakeConverted)
     & ExprGuiM.transaction
     <&> Lens.mapped . Lens.mapped .~ emptyPl
     >>= ExprGuiM.makeSubexpression 0
     >>= ExpressionGui.egWidget %%~
         makeFocusable myId .
-        Widget.tint (Config.inferredValueTint config) .
-        Widget.scale (realToFrac <$> Config.inferredValueScaleFactor config) .
+        Widget.tint (Config.suggestedValueTint config) .
+        Widget.scale (realToFrac <$> Config.suggestedValueScaleFactor config) .
         (Widget.wEventMap .~ mempty)
   return $
-    if fullyInferred
+    if fullySuggested
     then (myId, gui)
     else
       ( diveIntoHole myId
@@ -143,9 +143,9 @@ makeInferred inferred myId = do
           (Config.inactiveHoleBackgroundColor config)
       )
   where
-    fullyInferred =
+    fullySuggested =
       Lens.nullOf (ExprLens.subExprs . ExprLens.valHole) $
-      inferred ^. Sugar.hsSuggestedValue
+      suggested ^. Sugar.hsSuggestedValue
     emptyPl =
       ExprGuiM.Payload
       { ExprGuiM._plStoredEntityIds = []

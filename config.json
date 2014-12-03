@@ -256,7 +256,7 @@
         0.0,
         1.0
     ],
-    "inferredValueScaleFactor": {
+    "suggestedValueScaleFactor": {
         "_first": 0.7,
         "_second": 0.7
     },
@@ -376,7 +376,7 @@
         1.0,
         1.0
     ],
-    "inferredValueTint": [
+    "suggestedValueTint": [
         1.0,
         1.0,
         1.0,
