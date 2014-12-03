@@ -71,6 +71,7 @@ mkListItem listItemExpr recordArgS exprPl tailI mAddNextItem =
   { _liExpr =
     listItemExpr
     & rPayload . plData <>~ recordArgS ^. rPayload . plData
+    & rPayload . plIsRedundantType .~ True
   , _liMActions = do
       addNext <- mAddNextItem
       exprProp <- exprPl ^. ipStored
