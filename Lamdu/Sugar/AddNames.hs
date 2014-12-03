@@ -10,10 +10,12 @@ import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.Monad.Trans.State (runState, evalState)
 import Control.Monad.Trans.Writer (Writer, runWriter)
 import Control.MonadA (MonadA)
+import Data.Foldable (toList)
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Monoid.Generic (def_mempty, def_mappend)
 import Data.Set (Set)
+import Data.Set.Ordered (OrderedSet)
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable, traverse)
 import GHC.Generics (Generic)
@@ -27,6 +29,7 @@ import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Data.Set.Ordered as OrderedSet
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Sugar.AddNames.NameGen as NameGen
 
@@ -49,18 +52,14 @@ class MonadA m => MonadNaming m where
   opGetParamName :: NameConvertor m tm
   opGetHiddenParamsName :: NameConvertor m tm
 
-newtype SetList a = SetList { getSetList :: [a] }
-  deriving (Show)
-instance Eq a => Monoid (SetList a) where
-  mempty = SetList []
-  SetList xs `mappend` SetList ys = SetList $ xs ++ filter (`notElem` xs) ys
-
 type StoredName = String
-newtype NameGuidMap = NameGuidMap (Map StoredName (SetList Guid))
+
+-- Wrap the Map for a more sensible (recursive) Monoid instance
+newtype NameGuidMap = NameGuidMap (Map StoredName (OrderedSet Guid))
   deriving Show
 
 type instance Lens.Index NameGuidMap = StoredName
-type instance Lens.IxValue NameGuidMap = SetList Guid
+type instance Lens.IxValue NameGuidMap = OrderedSet Guid
 
 -- ghc-7.7.20131205 fails deriving these instances on its own.
 instance Lens.Ixed NameGuidMap where
@@ -76,7 +75,7 @@ instance Monoid NameGuidMap where
     NameGuidMap $ Map.unionWith mappend x y
 
 nameGuidMapSingleton :: StoredName -> Guid -> NameGuidMap
-nameGuidMapSingleton name guid = NameGuidMap . Map.singleton name $ SetList [guid]
+nameGuidMapSingleton name guid = NameGuidMap . Map.singleton name $ OrderedSet.singleton guid
 
 data StoredNamesWithin = StoredNamesWithin
   { _snwGuidMap :: NameGuidMap
@@ -225,7 +224,7 @@ makeStoredNameEnv name storedNamesBelow guid env =
     mSuffixFromAbove =
       Map.lookup guid $ env ^. p1StoredNameSuffixes
     collidingGuids =
-      maybe [] (filter (/= guid) . getSetList) $
+      maybe [] (filter (/= guid) . toList) $
       storedNamesBelow ^. snwGuidMap . Lens.at name
 
 p1cpsNameConvertor ::
@@ -490,7 +489,7 @@ addToDef =
       , _p1StoredNameSuffixes =
         mconcat .
         map Map.fromList . filter (ListUtils.isLengthAtLeast 2) .
-        map ((`zip` [0..]) . getSetList) $ Map.elems globalNamesMap
+        map ((`zip` [0..]) . toList) $ Map.elems globalNamesMap
       }
     pass1 (def, storedNamesBelow) =
       runPass1M (emptyP1Env (storedNamesBelow ^. snwGlobalNames)) $ toDef def
