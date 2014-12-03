@@ -1,4 +1,4 @@
-{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE ConstraintKinds, OverloadedStrings, RankNTypes #-}
 
 module Lamdu.Sugar.Convert.Hole
   ( convert, convertPlain, orderedInnerHoles
@@ -11,7 +11,7 @@ import Control.Lens.Tuple
 import Control.Monad (void)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..), evalStateT, evalState)
+import Control.Monad.Trans.State (StateT(..), evalStateT, evalState, state)
 import Control.MonadA (MonadA)
 import Data.Maybe.Utils(unsafeUnjust)
 import Data.Monoid (Monoid(..))
@@ -32,6 +32,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -41,6 +42,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
@@ -102,6 +104,10 @@ inferOnTheSide sugarContext scope val =
   SugarInfer.loadInferScope scope val
   <&> (^. V.payload . Lens._1 . Infer.plType)
 
+-- Value for holeResultNewTag
+newTag :: T.Tag
+newTag = "newTag"
+
 mkWritableHoleActions ::
   (MonadA m) =>
   InputPayload m dummy -> ExprIRef.ValIProperty m ->
@@ -122,6 +128,7 @@ mkWritableHoleActions exprPl stored = do
       ]
     , _holeInferExprType = inferOnTheSide sugarContext inferredScope
     , holeResult = mkHoleResult sugarContext exprPl stored
+    , _holeResultNewTag = newTag
     , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
     }
   where
@@ -386,6 +393,21 @@ randomizeNonStoredParamIds gen =
     f n _        prevEntityId (Just _, _) = (prevEntityId, n)
     f _ prevFunc prevEntityId pl@(Nothing, _) = prevFunc prevEntityId pl
 
+newTagsLocationsTraversal :: Val a -> Lens.Traversal' (Val b) T.Tag
+newTagsLocationsTraversal val =
+  result
+  where
+    result f newVal
+      | void val == (void newVal & resultUnchecked .~ newTag) =
+        resultUnchecked f newVal
+      | otherwise = error "given a value of wrong shape"
+    resultUnchecked :: Lens.Traversal' (Val a) T.Tag
+    resultUnchecked = Lens.elementsOf ExprLens.valTags (`Set.member` indices)
+    indices =
+      Set.fromList $
+      map fst $ filter ((== newTag) . snd) $
+      zip [0..] $ val ^.. ExprLens.valTags
+
 writeExprMStored ::
   MonadA m =>
   ExprIRef.ValIM m ->
@@ -393,9 +415,19 @@ writeExprMStored ::
   T m (Val (ExprIRef.ValIM m, a))
 writeExprMStored exprIRef exprMStorePoint = do
   key <- Transaction.newKey
-  randomizeNonStoredParamIds (genFromHashable key) exprMStorePoint
+  let
+    (genParams, genTags) = Random.split $ genFromHashable key
+    exprRandomizedParams = randomizeNonStoredParamIds genParams exprMStorePoint
+    newTagsTraversal :: Lens.Traversal' (Val a) T.Tag
+    newTagsTraversal = newTagsLocationsTraversal exprRandomizedParams
+    exprWithNewTags =
+      exprRandomizedParams
+      & newTagsTraversal %%~ const (state InputExpr.randomTag)
+      & (`evalState` genTags)
+  exprWithNewTags
     & Lens.mapped . Lens._1 . Lens._Just %~ unStorePoint
     & ExprIRef.writeValWithStoredSubexpressions exprIRef
+    <&> newTagsTraversal .~ newTag
 
 orderedInnerHoles :: Val a -> [Val a]
 orderedInnerHoles e =

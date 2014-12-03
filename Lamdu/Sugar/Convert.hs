@@ -250,7 +250,7 @@ convertField _mIRef inst tag expr = do
   tagS <- convertTag inst tag
   exprS <- ConvertM.convertSubexpression expr
   return RecordField
-    { _rfMItemActions = error "TODO: rfMItemActions"
+    { _rfMItemActions = Nothing -- error "TODO: rfMItemActions"
  --      recordFieldActions defaultEntityId <$> tagExpr ^? SugarInfer.exprIRef <*> mIRef
     , _rfTag = tagS
     , _rfExpr = exprS
@@ -279,8 +279,8 @@ convertRecExtend (V.RecExtend tag val rest) exprPl = do
     BodyRecord (Record restFields _mAddFirstAddItem) ->
       ConvertExpr.make exprPl $ BodyRecord $
         Record (fieldS : restFields) $
-        error "TODO: Support add first item on records"
-    _ -> error "TODO: Support record extend of non-record"
+        return $ error "TODO: Support add first item on records"
+    _ -> return $ error "TODO: Support record extend of non-record"
   where
     -- addField iref =
     --   writeRecordFields iref defaultEntityId $ \recordFields -> do

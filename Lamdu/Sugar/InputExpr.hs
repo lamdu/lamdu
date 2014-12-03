@@ -3,6 +3,7 @@ module Lamdu.Sugar.InputExpr
   ( randomizeExprAndParams
   , randomizeParamIdsG
   , randomizeParamIds
+  , randomTag
 
     -- TODO: To its own module?
   , onNgMakeName
@@ -26,6 +27,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
+import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified System.Random as Random
 
@@ -37,6 +39,9 @@ randomIdentifier =
 
 randomVar :: RandomGen g => g -> (V.Var, g)
 randomVar g = randomIdentifier g & _1 %~ V.Var
+
+randomTag :: RandomGen g => g -> (T.Tag, g)
+randomTag g = randomIdentifier g & _1 %~ T.Tag
 
 randomizeExpr :: (RandomGen gen, Random r) => gen -> Val (r -> a) -> Val a
 randomizeExpr gen (Val pl body) =

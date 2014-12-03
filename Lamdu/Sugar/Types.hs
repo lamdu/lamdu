@@ -54,7 +54,7 @@ module Lamdu.Sugar.Types
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeGetParams
   , HoleActions(..)
-    , holeScope, holePaste, holeInferExprType
+    , holeScope, holePaste, holeInferExprType, holeResultNewTag
   , HoleResult(..)
     , holeResultComplexityScore
     , holeResultConverted
@@ -238,6 +238,8 @@ data HoleActions name m = HoleActions
   , holeResult ::
       forall a. Monoid a =>
       Val (MStorePoint m a) -> T m (Maybe (HoleResult name m a))
+  , -- Used for cerating a new tag inside an expression given to holeResult
+    _holeResultNewTag :: T.Tag
   , _holePaste :: Maybe (T m EntityId)
 
   , _holeGuid :: Guid -- TODO: Replace this with a way to associate data?

@@ -383,11 +383,14 @@ primitiveGroups holeInfo =
     V.BAbs $ V.Lam "NewLambda" P.hole
   -- , mkGroupBody LowPrecedence [".", "Get Field"] . V.VGetField $
   --   V.GetField pureHole pureHole
-  , mkGroupBody LowPrecedence ["Record", "{"] $
+  , mkGroupBody LowPrecedence ["Empty", "Record", "{"] $
     V.BLeaf V.LRecEmpty
-  --   void $ hiInferred holeInfo ^. Sugar.hsType
+  , mkGroupBody LowPrecedence ["Extend", "Record", "{"] $
+    V.BRecExtend $ V.RecExtend newTag P.hole $
+    Val () $ V.BLeaf V.LRecEmpty
   ]
   where
+    newTag = hiActions holeInfo ^. Sugar.holeResultNewTag
     searchTerm = hiSearchTerm holeInfo
     -- record k =
     --   ExprUtil.pureExpr . V.VRec . V.Record k $
