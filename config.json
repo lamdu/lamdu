@@ -234,10 +234,10 @@
             "Key'Space"
         ]
     ],
-    "recordValParensColor": [
-        0.2,
-        1.0,
-        0.2,
+    "recordTailColor": [
+        0.4,
+        0.4,
+        0.4,
         1.0
     ],
     "closePaneKeys": [

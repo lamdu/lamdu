@@ -11,6 +11,8 @@ import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -37,7 +39,7 @@ makeUnwrapped ::
   MonadA m =>
   Sugar.Record Sugar.Name m (ExprGuiM.SugarExpr m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped (Sugar.Record fields _tail mAddField) myId =
-  ExprGuiM.assignCursor myId bracketId $ do
+  ExprGuiM.assignCursor myId tailId $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
       makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) = do
@@ -56,34 +58,25 @@ makeUnwrapped (Sugar.Record fields _tail mAddField) myId =
     fieldRows <- mapM makeFieldRow fields
     let
       fieldsWidget = Grid.toWidget $ Grid.make fieldRows
-      mkBracketView text =
-        ExprGuiM.withFgColor (parensColor config) . ExprGuiM.widgetEnv .
-        BWidgets.makeLabel text $ Widget.toAnimId myId
-    openBracketWidget <-
-      ExprGuiM.widgetEnv . BWidgets.makeFocusableView bracketId =<<
-      mkBracketView "{"
-    closeBracketWidget <- mkBracketView "}"
-    let
-      height = Widget.wSize . Lens._2
-      fieldsHeight = fieldsWidget ^. height
-      resizedBracket widget
-        | fieldsHeight > 0 =
-          Widget.scale (Vector2 1 (fieldsHeight / widget ^. height)) widget
-        | otherwise = widget
+      targetWidth = max 250 $ fieldsWidget ^. Widget.wSize . Lens._1
+    tailWidget <-
+      Anim.unitSquare (Widget.toAnimId tailId)
+      & Anim.onImages (Draw.tint (Config.recordTailColor config))
+      & Widget.liftView 1
+      & Widget.scale (Vector2 targetWidth 10)
+      & ExprGuiM.widgetEnv . BWidgets.makeFocusableView tailId
     let
       eventMap =
         mkEventMap (fmap WidgetIds.fromEntityId)
         mAddField (Config.recordAddFieldKeys config) $
         E.Doc ["Edit", "Record", "Add First Field"]
     return . ExpressionGui.fromValueWidget . Widget.weakerEvents eventMap $
-      Box.hboxCentered
-      [ resizedBracket openBracketWidget
-      , fieldsWidget
-      , resizedBracket closeBracketWidget
+      Box.vboxCentered
+      [ fieldsWidget
+      , tailWidget
       ]
   where
-    parensColor = Config.recordValParensColor
-    bracketId = Widget.joinId myId ["{"]
+    tailId = Widget.joinId myId ["tail"]
     mkEventMap f mAction keys doc =
       maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction
 

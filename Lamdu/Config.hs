@@ -174,7 +174,7 @@ data Config = Config
 
   , nextInfoModeKeys :: [E.ModKey]
 
-  , recordValParensColor :: Draw.Color
+  , recordTailColor :: Draw.Color
   , recordAddFieldKeys :: [E.ModKey]
 
   , presentationChoiceScaleFactor :: Vector2 Double
