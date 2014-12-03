@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes, NoMonomorphismRestriction, FlexibleContexts, RecordWildCards #-}
+{-# LANGUAGE RankNTypes, NoMonomorphismRestriction, FlexibleContexts #-}
 module Lamdu.Expr.Lens
   -- ValLeaf prisms:
   ( _LGlobal
@@ -27,7 +27,8 @@ module Lamdu.Expr.Lens
   -- Types:
   , _TRecord
   , _TFun
-  , bodyTags
+  -- Tags:
+  , bodyTags, biTraverseBodyTags
   -- Composites:
   , compositeTags
   -- Subexpressions:
@@ -179,9 +180,17 @@ subExprs =
   where
     f x = x : x ^.. V.body . Lens.traversed . subExprs
 
+biTraverseBodyTags ::
+  Applicative f =>
+  (T.Tag -> f T.Tag) -> (a -> f b) ->
+  V.Body a -> f (V.Body b)
+biTraverseBodyTags onTag onChild body =
+  case body of
+  V.BGetField (V.GetField r t) ->
+    V.BGetField <$> (V.GetField <$> onChild r <*> onTag t)
+  V.BRecExtend (V.RecExtend t v r) ->
+    V.BRecExtend <$> (V.RecExtend <$> onTag t <*> onChild v <*> onChild r)
+  _ -> Lens.traverse onChild body
+
 bodyTags :: Lens.Traversal' (V.Body a) T.Tag
-bodyTags f (V.BGetField V.GetField {..}) =
-    f _getFieldTag <&> \_getFieldTag -> V.BGetField V.GetField {..}
-bodyTags f (V.BRecExtend V.RecExtend {..}) =
-    f _recTag <&> \_recTag -> V.BRecExtend V.RecExtend {..}
-bodyTags _ x = pure x
+bodyTags f = biTraverseBodyTags f pure
