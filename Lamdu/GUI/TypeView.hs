@@ -4,23 +4,31 @@ module Lamdu.GUI.TypeView
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
+import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT, state, evalStateT)
 import Control.MonadA (MonadA)
 import Data.Map (Map)
+import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
+import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.View (View)
+import Lamdu.Expr.FlatComposite (FlatComposite(..))
 import Lamdu.Expr.Identifier (Identifier(..))
 import Lamdu.Expr.Type (Type)
 import Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..))
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import System.Random (Random, random)
+import qualified Control.Lens as Lens
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Map as Map
+import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
+import qualified Lamdu.Expr.FlatComposite as FlatComposite
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -96,7 +104,40 @@ makeTInst _parentPrecedence (T.Id name) typeParams =
           pure $ hbox [nameView, t]
 
 makeRecord :: MonadA m => T.Composite T.Product -> M m View
-makeRecord composite = text "TODO"
+makeRecord composite =
+  do
+    rows <-
+      sequence $ do
+        (tag, fieldType) <- Map.toList fields
+        return $ do
+          tagView <- text "TAG"
+          typeView <- makeInternal (ParentPrecedence 0) fieldType
+          return
+            [ (Vector2 1 0.5, tagView)
+            , (0.5, space)
+            , (Vector2 0 0.5, typeView)
+            ]
+    let
+      fieldsView = GridView.make rows
+      barWidth =
+        case rows of
+        [] -> 150
+        _ -> fieldsView ^. Lens._1 . Lens._1
+    sqr <-
+      randAnimId
+      <&>
+        case extension of
+        Nothing -> Anim.unitSquare
+        Just _ -> Anim.unitHStripedSquare 20
+      <&> (,) 1
+      <&> (^. View.scaled (Vector2 barWidth 10))
+    varView <-
+      case extension of
+      Nothing -> pure (0, mempty)
+      Just var -> makeTVar var
+    return $ GridView.verticalAlign 0.5 [fieldsView, sqr, varView]
+  where
+    FlatComposite fields extension = FlatComposite.fromComposite composite
 
 splitMake :: MonadA m => ParentPrecedence -> Type -> M m View
 splitMake parentPrecedence typ = split $ makeInternal parentPrecedence typ
