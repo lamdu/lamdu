@@ -362,6 +362,17 @@ makeAllGroups holeInfo = do
         , _groupBaseExpr = suggestedVal
         }
       | Lens.nullOf ExprLens.valHole suggestedVal
+      ] ++
+      [ Group
+        { _groupSearchTerms = GroupAttributes ["get field", "."] HighPrecedence
+        , _groupBaseExpr =
+            Val () $ V.BGetField $ V.GetField P.hole tag
+        }
+      | tag <-
+          hiMArgument holeInfo
+          ^.. Lens._Just
+          . Sugar.haExpr . Sugar.rPayload . Sugar.plInferredType
+          . ExprLens._TRecord . ExprLens.compositeTags
       ]
     addSuggestedGroups groups =
       let
@@ -381,8 +392,6 @@ primitiveGroups holeInfo =
   ] ++
   [ mkGroupBody LowPrecedence ["\\", "Lambda", "Λ", "λ"] $
     V.BAbs $ V.Lam "NewLambda" P.hole
-  -- , mkGroupBody LowPrecedence [".", "Get Field"] . V.VGetField $
-  --   V.GetField pureHole pureHole
   , mkGroupBody LowPrecedence ["Empty", "Record", "{"] $
     V.BLeaf V.LRecEmpty
   , mkGroupBody LowPrecedence ["Extend", "Record", "{"] $
@@ -391,11 +400,6 @@ primitiveGroups holeInfo =
   where
     newTag = hiActions holeInfo ^. Sugar.holeResultNewTag
     searchTerm = hiSearchTerm holeInfo
-    -- record k =
-    --   ExprUtil.pureExpr . V.VRec . V.Record k $
-    --   case hiMArgument holeInfo of
-    --   Nothing -> []
-    --   Just _ -> [(pureHole, pureHole)]
     mkGroupBody prec terms body = Group
       { _groupSearchTerms = GroupAttributes terms prec
       , _groupBaseExpr = Val () body
