@@ -128,14 +128,18 @@ mkWritableHoleActions exprPl stored = do
     inferred = exprPl ^. ipInferred
 
 -- Ignoring alpha-renames:
-consistentExprIds :: Val (Guid -> EntityId -> a) -> Val a
-consistentExprIds val =
-  EntityId.randomizeExprAndParams (genFromVal val) val
+consistentExprIds :: EntityId -> Val (Guid -> EntityId -> a) -> Val a
+consistentExprIds holeEntityId val =
+  EntityId.randomizeExprAndParams gen val
   where
-    genFromVal = genFromHashable . void . InputExpr.randomizeParamIds (Random.mkStdGen 0)
+    gen =
+      genFromHashable
+        ( holeEntityId
+        , void $ InputExpr.randomizeParamIds (genFromHashable holeEntityId) val
+        )
 
-mkHoleSuggested :: MonadA m => Infer.Payload -> ConvertM m (HoleSuggested MStoredName m)
-mkHoleSuggested inferred = do
+mkHoleSuggested :: MonadA m => EntityId -> Infer.Payload -> ConvertM m (HoleSuggested MStoredName m)
+mkHoleSuggested holeEntityId inferred = do
   sugarContext <- ConvertM.readContext
   (inferredIVal, newCtx) <-
     SugarInfer.loadInferScope (inferred ^. Infer.plScope) suggestedVal
@@ -147,7 +151,7 @@ mkHoleSuggested inferred = do
     mkConverted =
       inferredIVal
       <&> mkInputPayload . fst
-      & consistentExprIds
+      & consistentExprIds holeEntityId
       & ConvertM.convertSubexpression
       & ConvertM.run (sugarContext & ConvertM.scInferContext .~ newCtx)
   pure HoleSuggested
@@ -177,7 +181,7 @@ mkHole ::
   InputPayload m a -> ConvertM m (Hole MStoredName m (ExpressionU m a))
 mkHole exprPl = do
   mActions <- traverse (mkWritableHoleActions exprPl) (exprPl ^. ipStored)
-  suggested <- mkHoleSuggested $ exprPl ^. ipInferred
+  suggested <- mkHoleSuggested (exprPl ^. ipEntityId) $ exprPl ^. ipInferred
   pure Hole
     { _holeMActions = mActions
     , _holeSuggested = suggested
@@ -250,14 +254,14 @@ getGlobal defI = do
 
 writeConvertTypeChecked ::
   (MonadA m, Monoid a) =>
-  ConvertM.Context m -> ExprIRef.ValIProperty m ->
+  EntityId -> ConvertM.Context m -> ExprIRef.ValIProperty m ->
   Val (Infer.Payload, MStorePoint m a) ->
   T m
   ( ExpressionU m a
   , Val (InputPayload m a)
   , Val (ExprIRef.ValIProperty m, InputPayload m a)
   )
-writeConvertTypeChecked sugarContext holeStored inferredVal = do
+writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
   -- With the real stored guids:
   writtenExpr <-
     fmap toPayload .
@@ -284,7 +288,7 @@ writeConvertTypeChecked sugarContext holeStored inferredVal = do
     consistentExpr =
       writtenExpr
       <&> makeConsistentPayload
-      & consistentExprIds
+      & consistentExprIds holeEntityId
   converted <-
     consistentExpr
     & ConvertM.convertSubexpression
@@ -353,7 +357,8 @@ mkHoleResult sugarContext exprPl stored val =
     let newSugarContext = sugarContext & ConvertM.scInferContext .~ ctx
     ((fConverted, fConsistentExpr, fWrittenExpr), forkedChanges) <-
       lift $ Transaction.fork $
-        writeConvertTypeChecked newSugarContext stored inferredVal
+        writeConvertTypeChecked (exprPl ^. ipEntityId)
+        newSugarContext stored inferredVal
     return $ HoleResult
       { _holeResultComplexityScore = resultComplexityScore $ fst <$> inferredVal
       , _holeResultConverted = fConverted
