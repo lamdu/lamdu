@@ -304,28 +304,33 @@ resultComplexityScore expr =
   , length $ Foldable.toList expr
   ]
 
-lambdas :: Val a -> [V.Lam (Val a)]
-lambdas v =
-  selfLams ++ recurse
-  where
-    selfLams =
-      case v ^. V.body of
-      V.BAbs lam -> [lam]
-      _ -> []
-    recurse = Foldable.concatMap lambdas (v ^. V.body)
-
 idTranslations ::
   Val EntityId ->
   Val EntityId ->
   [(EntityId, EntityId)]
 idTranslations src dest
   | V.alphaEq (void src) (void dest)
-    = zip (Foldable.toList src) (Foldable.toList dest) ++
-      zip (paramEntityIds src) (paramEntityIds dest)
+    = concat
+      [ pairUp V.payload
+      , pairUp params
+      , pairUpTags ExprLens._BRecExtend EntityId.ofRecExtendTag
+      , pairUpTags ExprLens._BGetField EntityId.ofGetFieldTag
+      , pairUp getLambdaTagParams
+      ]
   | otherwise = error "idTranslations of mismatching expressions"
   where
-    lambdaParamEntityId (V.Lam paramId _) = EntityId.ofLambdaParam paramId
-    paramEntityIds = map lambdaParamEntityId . lambdas
+    pairUp l = zip (src ^.. ExprLens.subExprs . l) (dest ^.. ExprLens.subExprs . l)
+    pairUpTags prism toEntityId =
+      pairUp $
+      Lens.filtered (Lens.has (V.body . prism)) . V.payload . Lens.to toEntityId
+    getLambdaTagEntityIds (V.GetField (V.Val _ (V.BLeaf (V.LVar var))) tag) =
+      [EntityId.ofLambdaTagParam var tag]
+    getLambdaTagEntityIds _ = []
+    getLambdaTagParams =
+      V.body . ExprLens._BGetField . Lens.folding getLambdaTagEntityIds
+    params =
+      V.body . ExprLens._BAbs . V.lamParamId .
+      Lens.to EntityId.ofLambdaParam
 
 mkHoleResult ::
   (MonadA m, Monoid a) =>
