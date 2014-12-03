@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, Rank2Types#-}
-module Main(main) where
+module Main (main) where
 
 import Control.Applicative ((<$>), (<*))
 import Control.Concurrent (threadDelay, forkIO, ThreadId)
@@ -7,14 +7,14 @@ import Control.Concurrent.MVar
 import Control.Lens.Operators
 import Control.Monad (unless, forever)
 import Data.IORef
-import Data.MRUMemo(memoIO)
-import Data.Monoid(Monoid(..))
+import Data.MRUMemo (memoIO)
+import Data.Monoid (Monoid(..))
 import Data.Store.Db (Db)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
-import Graphics.UI.Bottle.Widget(Widget)
+import Graphics.UI.Bottle.MainLoop (mainLoopWidget)
+import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Config (Config)
 import Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import Lamdu.GUI.WidgetEnvT (runWidgetEnvT)
