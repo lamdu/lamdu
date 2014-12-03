@@ -27,7 +27,7 @@ make ::
 make list pl =
   makeUnwrapped list
   & if null (Sugar.lValues list)
-    then id
+    then fmap (ExpressionGui.stdWrap pl)
     else ExpressionGui.stdWrapParentExpr pl
 
 makeBracketLabel :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui f)
