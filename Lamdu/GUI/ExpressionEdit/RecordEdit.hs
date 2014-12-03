@@ -38,7 +38,7 @@ make reco pl = ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped reco
 makeUnwrapped ::
   MonadA m =>
   Sugar.Record Sugar.Name m (ExprGuiM.SugarExpr m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeUnwrapped (Sugar.Record fields _tail mAddField) myId =
+makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
   ExprGuiM.assignCursor myId tailId $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
@@ -60,11 +60,16 @@ makeUnwrapped (Sugar.Record fields _tail mAddField) myId =
       fieldsWidget = Grid.toWidget $ Grid.make fieldRows
       targetWidth = max 250 $ fieldsWidget ^. Widget.wSize . Lens._1
     tailWidget <-
-      Anim.unitSquare (Widget.toAnimId tailId)
-      & Anim.onImages (Draw.tint (Config.recordTailColor config))
-      & Widget.liftView 1
-      & Widget.scale (Vector2 targetWidth 10)
-      & ExprGuiM.widgetEnv . BWidgets.makeFocusableView tailId
+      case recordTail of
+      Sugar.ClosedRecord ->
+        Anim.unitSquare (Widget.toAnimId tailId)
+        & Anim.onImages (Draw.tint (Config.recordTailColor config))
+        & Widget.liftView 1
+        & Widget.scale (Vector2 targetWidth 10)
+        & ExprGuiM.widgetEnv . BWidgets.makeFocusableView tailId
+      Sugar.RecordExtending rest ->
+        ExprGuiM.makeSubexpression 0 rest
+        <&> (^. ExpressionGui.egWidget)
     let
       eventMap =
         mkEventMap (fmap WidgetIds.fromEntityId)
