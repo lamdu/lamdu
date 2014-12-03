@@ -28,7 +28,7 @@ module Lamdu.Expr.Lens
   , _TRecord
   , _TFun
   -- Tags:
-  , bodyTags, biTraverseBodyTags
+  , valTags, bodyTags, biTraverseBodyTags
   -- Composites:
   , compositeTags
   -- Subexpressions:
@@ -194,3 +194,6 @@ biTraverseBodyTags onTag onChild body =
 
 bodyTags :: Lens.Traversal' (V.Body a) T.Tag
 bodyTags f = biTraverseBodyTags f pure
+
+valTags :: Lens.Traversal' (Val a) T.Tag
+valTags f = V.body $ biTraverseBodyTags f (valTags f)
