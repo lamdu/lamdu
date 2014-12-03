@@ -212,6 +212,7 @@ convertEmptyRecord exprPl =
   ConvertExpr.make exprPl $
   BodyRecord Record
   { _rItems = []
+  , _rTail = ClosedRecord
   , _rMAddField = return $ error "TODO: _rMAddField" -- addField <$> exprPl ^? plIRef
   }
 
@@ -224,9 +225,9 @@ convertRecExtend (V.RecExtend tag val rest) exprPl = do
       convertField (exprPl ^? plIRef)
       (EntityId.ofRecExtendTag (exprPl ^. ipEntityId)) tag val
   case restS ^. rBody of
-    BodyRecord (Record restFields _mAddFirstAddItem) ->
+    BodyRecord (Record restFields t _mAddFirstAddItem) ->
       ConvertExpr.make exprPl $ BodyRecord $
-        Record (fieldS : restFields) $
+        Record (fieldS : restFields) t $
         return $ error "TODO: Support add first item on records"
     _ -> return $ error "TODO: Support record extend of non-record"
   where

@@ -323,7 +323,8 @@ toRecord ::
   m (Record (NewName m) tm (Expression (NewName m) tm a))
 toRecord record@Record {..} = do
   items <- traverse toRecordField _rItems
-  pure record { _rItems = items }
+  t <- traverse toExpression _rTail
+  pure record { _rItems = items, _rTail = t }
 
 toGetField ::
   (MonadA tm, MonadNaming m) =>
