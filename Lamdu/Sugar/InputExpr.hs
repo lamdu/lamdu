@@ -2,6 +2,7 @@
 module Lamdu.Sugar.InputExpr
   ( randomizeExprAndParams
   , randomizeParamIdsG
+  , randomizeParamIds
 
     -- TODO: To its own module?
   , onNgMakeName
