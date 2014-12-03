@@ -5,7 +5,8 @@ module Graphics.UI.Bottle.Animation
   , PositionedImage(..), piImage, piRect
   , Frame(..), fSubImages, onImages
   , draw, nextFrame, mapIdentities
-  , unitSquare, backgroundColor
+  , unitSquare, unitHStripedSquare
+  , backgroundColor
   , translate, scale, onDepth
   , unitIntoRect
   , simpleFrame, simpleFrameDownscale
@@ -27,6 +28,7 @@ import Graphics.DrawingCombinators(R, (%%))
 import Graphics.UI.Bottle.Animation.Id (AnimId)
 import Graphics.UI.Bottle.Rect(Rect(Rect))
 import qualified Control.Lens as Lens
+import qualified Data.ByteString.Char8 as SBS
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Vector.Vector2 as Vector2
@@ -211,6 +213,19 @@ makeNextFrame movement (Frame dests) (Frame curs) =
 
 unitSquare :: AnimId -> Frame
 unitSquare animId = simpleFrame animId DrawUtils.square
+
+-- Size is 1. Built from multiple vertical rectangles
+unitHStripedSquare :: Int -> AnimId -> Frame
+unitHStripedSquare n animId =
+  mconcat
+  [ scale (Vector2 (1/hunits) 1) $
+    translate (Vector2 pos 0) $
+    square i
+  | (i, pos) <- zip [0..] [0,2..hunits-1]
+  ]
+  where
+    hunits = fromIntegral n * 2 - 1 -- light/dark unit count
+    square i = unitSquare $ animId ++ [SBS.pack (show (i :: Int))]
 
 backgroundColor :: AnimId -> Layer -> Draw.Color -> Vector2 R -> Frame -> Frame
 backgroundColor animId layer color size =
