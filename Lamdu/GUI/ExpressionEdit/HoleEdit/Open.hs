@@ -203,7 +203,7 @@ makeFocusable wId = ExprGuiM.widgetEnv . BWidgets.makeFocusableView wId
 
 makeHoleResultWidget ::
   MonadA m => Widget.Id ->
-  Sugar.HoleResult Name m HoleResults.SugarExprPl -> ExprGuiM m (WidgetT m)
+  Sugar.HoleResult (Name m) m HoleResults.SugarExprPl -> ExprGuiM m (WidgetT m)
 makeHoleResultWidget resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   resultGui <-
@@ -235,21 +235,6 @@ toPayload (ExprGuiM.StoredEntityIds entityIds, ExprGuiM.Injected injected) =
   -- filled by AddNextHoles above
   , ExprGuiM._plHoleEntityIds = ExprGuiM.emptyHoleEntityIds
   }
-
--- asNewLabelScaleFactor :: Fractional a => a
--- asNewLabelScaleFactor = 0.5
-
--- makeNewTagResultWidget ::
---   MonadA m =>
---   Widget.Id -> Sugar.HoleResult Name m HoleResults.SugarExprPl ->
---   ExprGuiM m (WidgetT m)
--- makeNewTagResultWidget resultId holeResult = do
---   widget <- makeHoleResultWidget resultId holeResult
---   ExprGuiM.widgetEnv $ do
---     label <-
---       fmap (Widget.scale asNewLabelScaleFactor) .
---       BWidgets.makeLabel " (as new tag)" $ Widget.toAnimId resultId
---     return $ Box.hboxAlign 0.5 [widget, label]
 
 makeNoResults :: MonadA m => HoleInfo m -> AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults holeInfo myId =

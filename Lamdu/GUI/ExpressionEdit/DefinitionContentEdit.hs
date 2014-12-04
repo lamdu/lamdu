@@ -40,20 +40,20 @@ defFDConfig = FocusDelegator.Config
   }
 
 makeNameEdit ::
-  MonadA m => Sugar.NameProperty Name m ->
+  MonadA m => Name m ->
   Widget.Id -> ExprGuiM m (WidgetT m)
 makeNameEdit nameProperty =
   ExprGuiM.wrapDelegated defFDConfig FocusDelegator.NotDelegating id
   (ExpressionGui.makeNameEdit nameProperty)
 
-nonOperatorName :: Name -> Bool
-nonOperatorName (Name NameSourceStored _ x) =
+nonOperatorName :: Name m -> Bool
+nonOperatorName (Name NameSourceStored _ _ x) =
   nonEmptyAll (`notElem` operatorChars) x
 nonOperatorName _ = False
 
 makeDefNameEdit ::
   MonadA m =>
-  Sugar.NameProperty Name m -> Widget.Id ->
+  Name m -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeDefNameEdit nameProp myId =
   do
@@ -63,7 +63,7 @@ makeDefNameEdit nameProp myId =
 
 makeWheres ::
   MonadA m =>
-  [Sugar.WhereItem Name m (ExprGuiM.SugarExpr m)] -> Widget.Id ->
+  [Sugar.WhereItem (Name m) m (ExprGuiM.SugarExpr m)] -> Widget.Id ->
   ExprGuiM m [Widget (T m)]
 makeWheres [] _ = return []
 makeWheres whereItems myId = do
@@ -113,8 +113,8 @@ mkPresentationModeEdit prop myId = do
 
 make ::
   MonadA m =>
-  Sugar.NameProperty Name m ->
-  Sugar.DefinitionContent Name m (ExprGuiM.SugarExpr m) ->
+  Name m ->
+  Sugar.DefinitionContent (Name m) m (ExprGuiM.SugarExpr m) ->
   Widget.Id ->
   ExprGuiM m (WidgetT m)
 make nameProp content myId = do
@@ -122,7 +122,7 @@ make nameProp content myId = do
   rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods E.Key'Equal] rhs
   let
     jumpToRHSViaEquals n widget
-      | nonOperatorName (n ^. Sugar.npName) =
+      | nonOperatorName n =
         widget
         & Widget.wEventMap %~ E.filterSChars (curry (/= ('=', E.NotShifted)))
         & Widget.weakerEvents rhsJumperEquals
@@ -176,7 +176,7 @@ make nameProp content myId = do
 
 makeWhereItemEdit ::
   MonadA m =>
-  Sugar.WhereItem Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.WhereItem (Name m) m (ExprGuiM.SugarExpr m) ->
   ExprGuiM m (WidgetT m)
 makeWhereItemEdit item = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -244,10 +244,10 @@ addPrevIds lhsId params =
 
 makeNestedParams ::
   MonadA m =>
-  (Sugar.NameProperty Name m -> Widget (T m) -> Widget (T m)) ->
+  (Name m -> Widget (T m) -> Widget (T m)) ->
   (String, ExprGuiM.SugarExpr m) ->
   Widget.Id ->
-  [Sugar.FuncParam Name m] ->
+  [Sugar.FuncParam (Name m) m] ->
   ExprGuiM m [ExpressionGui m]
 makeNestedParams atParamWidgets rhs lhsId params = do
   config <- ExprGuiM.widgetEnv WE.readConfig

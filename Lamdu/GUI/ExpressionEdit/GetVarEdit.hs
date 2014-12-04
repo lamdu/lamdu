@@ -23,14 +23,14 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 makeUncoloredView ::
   MonadA m =>
-  Sugar.GetVar Name m ->
+  Sugar.GetVar (Name m) m ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeUncoloredView getVar myId =
   ExprGuiM.widgetEnv $
   fmap ExpressionGui.fromValueWidget .
   BWidgets.makeFocusableView myId =<<
-  ExpressionGui.makeNameView (getVar ^. Sugar.gvName . Sugar.npName) (Widget.toAnimId myId)
+  ExpressionGui.makeNameView (getVar ^. Sugar.gvName) (Widget.toAnimId myId)
 
 colorOf :: Config -> Sugar.GetVarType -> Draw.Color
 colorOf config Sugar.GetDefinition = Config.definitionColor config
@@ -39,7 +39,7 @@ colorOf config Sugar.GetFieldParameter = Config.parameterColor config
 
 makeView ::
   MonadA m =>
-  Sugar.GetVar Name m ->
+  Sugar.GetVar (Name m) m ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeView getParam myId = do
@@ -49,7 +49,7 @@ makeView getParam myId = do
 
 make ::
   MonadA m =>
-  Sugar.GetVar Name m ->
+  Sugar.GetVar (Name m) m ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)

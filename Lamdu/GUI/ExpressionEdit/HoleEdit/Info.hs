@@ -23,8 +23,8 @@ data HoleInfo m = HoleInfo
   { hiEntityId :: Sugar.EntityId
   , hiId :: Widget.Id
   , hiState :: Property (T m) HoleState
-  , hiActions :: Sugar.HoleActions Name m
-  , hiSuggested :: Sugar.HoleSuggested Name m
+  , hiActions :: Sugar.HoleActions (Name m) m
+  , hiSuggested :: Sugar.HoleSuggested (Name m) m
   , hiMArgument :: Maybe (Sugar.HoleArg m (ExprGuiM.SugarExpr m))
   , hiHoleEntityIds :: ExprGuiM.HoleEntityIds
   }

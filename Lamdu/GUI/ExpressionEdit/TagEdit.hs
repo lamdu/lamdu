@@ -33,7 +33,7 @@ onTagWidget config =
   Widget.tint (Config.fieldTint config)
 
 make ::
-  MonadA m => Sugar.TagG Name m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+  MonadA m => Sugar.TagG (Name m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 make t myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.fromValueWidget <$>
@@ -43,9 +43,9 @@ make t myId = do
     ) myId
 
 makeView ::
-  MonadA m => Sugar.TagG Name m -> AnimId -> ExprGuiM m (ExpressionGui m)
+  MonadA m => Sugar.TagG (Name m) -> AnimId -> ExprGuiM m (ExpressionGui m)
 makeView t animId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   fmap ExpressionGui.fromValueWidget .
     ExprGuiM.widgetEnv . fmap (onTagWidget config) $
-    ExpressionGui.makeNameView (t ^. Sugar.tagGName . Sugar.npName) animId
+    ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId

@@ -40,7 +40,7 @@ data TagParamInfo = TagParamInfo
 
 data RecordParamsInfo m = RecordParamsInfo
   { -- The name of the definition from which this params record is of:
-    rpiDefName :: Sugar.NameProperty Guid m
+    rpiDefName :: Guid
   , rpiJumpTo :: T m Sugar.EntityId
   }
 

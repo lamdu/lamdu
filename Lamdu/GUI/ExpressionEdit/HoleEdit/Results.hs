@@ -83,7 +83,7 @@ type SugarExprPl = (ExprGuiM.StoredEntityIds, ExprGuiM.Injected)
 
 data Result m = Result
   { rType :: ResultType
-  , rHoleResult :: Sugar.HoleResult Name m SugarExprPl
+  , rHoleResult :: Sugar.HoleResult (Name m) m SugarExprPl
   , rId :: WidgetId.Id
   }
 
@@ -98,16 +98,16 @@ data ResultsList m = ResultsList
   }
 Lens.makeLenses ''ResultsList
 
-getVarsToGroup :: (Sugar.GetVar Name m, Val ()) -> Group def
-getVarsToGroup (getVar, expr) = sugarNameToGroup (getVar ^. Sugar.gvName . Sugar.npName) expr
+getVarsToGroup :: (Sugar.GetVar (Name m) m, Val ()) -> Group def
+getVarsToGroup (getVar, expr) = sugarNameToGroup (getVar ^. Sugar.gvName) expr
 
-getParamsToGroup :: (Sugar.GetParams Name m, Val ()) -> Group def
+getParamsToGroup :: (Sugar.GetParams (Name m) m, Val ()) -> Group def
 getParamsToGroup (getParams, expr) =
-  sugarNameToGroup (getParams ^. Sugar.gpDefName . Sugar.npName) expr
+  sugarNameToGroup (getParams ^. Sugar.gpDefName) expr
   & groupSearchTerms <>~ GroupAttributes ["params"] HighPrecedence
 
-sugarNameToGroup :: Name -> Val () -> Group def
-sugarNameToGroup (Name _ collision varName) expr = Group
+sugarNameToGroup :: Name m -> Val () -> Group def
+sugarNameToGroup (Name _ collision _ varName) expr = Group
   { _groupSearchTerms = GroupAttributes (varName : collisionStrs) HighPrecedence
   , _groupBaseExpr = expr
   }
@@ -132,7 +132,7 @@ storePointHoleWrap expr =
 typeCheckHoleResult ::
   MonadA m => HoleInfo m ->
   Val (Sugar.MStorePoint m SugarExprPl) ->
-  T m (Maybe (ResultType, Sugar.HoleResult Name m SugarExprPl))
+  T m (Maybe (ResultType, Sugar.HoleResult (Name m) m SugarExprPl))
 typeCheckHoleResult holeInfo val = do
   mGood <- mkHoleResult val
   case mGood of
@@ -146,7 +146,7 @@ typeCheckHoleResult holeInfo val = do
 typeCheckResults ::
   MonadA m => HoleInfo m ->
   [Val (Sugar.MStorePoint m SugarExprPl)] ->
-  T m [(ResultType, Sugar.HoleResult Name m SugarExprPl)]
+  T m [(ResultType, Sugar.HoleResult (Name m) m SugarExprPl)]
 typeCheckResults holeInfo options = do
   rs <-
     options
@@ -159,7 +159,7 @@ typeCheckResults holeInfo options = do
 
 mResultsListOf ::
   HoleInfo m -> WidgetId.Id ->
-  [(ResultType, Sugar.HoleResult Name m SugarExprPl)] ->
+  [(ResultType, Sugar.HoleResult (Name m) m SugarExprPl)] ->
   Maybe (ResultsList m)
 mResultsListOf _ _ [] = Nothing
 mResultsListOf holeInfo baseId (x:xs) = Just

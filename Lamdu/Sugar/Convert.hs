@@ -110,7 +110,7 @@ convertPositionalFuncParam ::
   ConvertM m (FuncParam Guid m)
 convertPositionalFuncParam (V.Lam param body) lamExprPl = do
   pure FuncParam
-    { _fpName = ConvertExpr.makeNameProperty param
+    { _fpName = UniqueId.toGuid param
     , _fpVarKind = FuncParameter
     , _fpId = paramEntityId
     , _fpInferredType = paramType
@@ -167,7 +167,7 @@ convertVar param exprPl = do
         }
       Nothing ->
         BodyGetVar $ GetVar
-        { _gvName = ConvertExpr.makeNameProperty param
+        { _gvName = UniqueId.toGuid param
         , _gvJumpTo = pure $ EntityId.ofLambdaParam param
         , _gvVarType = GetParameter
         }
@@ -183,8 +183,8 @@ convertVLiteralInteger ::
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertVLiteralInteger i exprPl = ConvertExpr.make exprPl $ BodyLiteralInteger i
 
-convertTag :: MonadA m => EntityId -> T.Tag -> TagG Guid m
-convertTag inst tag = TagG inst tag $ ConvertExpr.makeNameProperty tag
+convertTag :: EntityId -> T.Tag -> TagG Guid
+convertTag inst tag = TagG inst tag $ UniqueId.toGuid tag
 
 convertField ::
   (MonadA m, Monoid a) =>
@@ -258,7 +258,7 @@ convertGetField (V.GetField recExpr tag) exprPl = do
   let
     mkGetVar jumpTo = do
       pure GetVar
-        { _gvName = ConvertExpr.makeNameProperty tag
+        { _gvName = UniqueId.toGuid tag
         , _gvJumpTo = pure jumpTo
         , _gvVarType = GetFieldParameter
         }
@@ -279,7 +279,7 @@ convertGetField (V.GetField recExpr tag) exprPl = do
             TagG
             { _tagInstance = EntityId.ofGetFieldTag (exprPl ^. ipEntityId)
             , _tagVal = tag
-            , _tagGName = ConvertExpr.makeNameProperty tag
+            , _tagGName = UniqueId.toGuid tag
             }
         }
         <&> BodyGetField
@@ -293,7 +293,7 @@ convertGlobal globalId exprPl =
       cp <- (^. ConvertM.scCodeAnchors) <$> ConvertM.readContext
       ConvertExpr.make exprPl .
         BodyGetVar $ GetVar
-        { _gvName = ConvertExpr.makeNameProperty defI
+        { _gvName = UniqueId.toGuid defI
         , _gvJumpTo = jumpToDefI cp defI
         , _gvVarType = GetDefinition
         }
@@ -367,7 +367,7 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
       Map.singleton (fpTag fp) . ConvertM.TagParamInfo param $ fpIdEntityId fp
     mkParam fp = do
       pure FuncParam
-        { _fpName = ConvertExpr.makeNameProperty $ fpTag fp
+        { _fpName = UniqueId.toGuid $ fpTag fp
         , _fpId = fpIdEntityId fp
         , _fpVarKind = FuncFieldParameter
         , _fpInferredType = fpFieldType fp
@@ -602,7 +602,7 @@ convertWhereItems usedTags expr =
             mkWIActions <$>
             expr ^. V.payload . ipStored <*>
             traverse (^. ipStored) (ewiBody ewi)
-        , _wiName = ConvertExpr.makeNameProperty param
+        , _wiName = UniqueId.toGuid param
         , _wiInferredType = ewiInferredType ewi
         }
     (nextItems, whereBody) <- convertWhereItems usedTags $ ewiBody ewi
@@ -627,7 +627,7 @@ convertDefinitionContent defGuid jumpToDef usedTags expr =
   do
     (convParams, funcBody) <-
       convertDefinitionParams
-      (ConvertM.RecordParamsInfo (ConvertExpr.makeNameProperty defGuid) jumpToDef)
+      (ConvertM.RecordParamsInfo (UniqueId.toGuid defGuid) jumpToDef)
       usedTags expr
     ConvertM.local
       ((ConvertM.scTagParamInfos <>~ cpParamInfos convParams) .
@@ -720,7 +720,7 @@ convertDefI cp (Definition.Definition (Definition.Body bodyContent exportedType)
   bodyS <- convertDefContent bodyContent exportedType
   return Definition
     { _drEntityId = EntityId.ofIRef defI
-    , _drName = ConvertExpr.makeNameProperty defI
+    , _drName = UniqueId.toGuid defI
     , _drBody = bodyS
     }
   where

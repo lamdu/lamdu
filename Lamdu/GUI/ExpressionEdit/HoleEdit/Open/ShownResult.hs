@@ -14,7 +14,7 @@ type T = Transaction.Transaction
 
 data ShownResult m = ShownResult
   { srEventMap :: Widget.EventHandlers (T m)
-  , srHoleResult :: Sugar.HoleResult Name m HoleResults.SugarExprPl
+  , srHoleResult :: Sugar.HoleResult (Name m) m HoleResults.SugarExprPl
   , srPickTo ::
     T m
     ( Maybe Guid -- Hole target guid

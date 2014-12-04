@@ -22,7 +22,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
   MonadA m =>
-  Sugar.GetParams Name m ->
+  Sugar.GetParams (Name m) m ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
@@ -55,4 +55,4 @@ make getParams pl myId = do
   where
     animId = Widget.toAnimId myId
     label = ExprGuiM.widgetEnv . flip BWidgets.makeLabel animId
-    defName = getParams ^. Sugar.gpDefName . Sugar.npName
+    defName = getParams ^. Sugar.gpDefName

@@ -68,7 +68,7 @@ make parentPrecedence sExpr = assignCursor $ do
 
 makeEditor ::
   MonadA m => ParentPrecedence ->
-  Sugar.Body Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Body (Name m) m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeEditor parentPrecedence body =

@@ -34,7 +34,7 @@ type T = Transaction.Transaction
 
 make ::
   MonadA m =>
-  Sugar.Hole Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Hole (Name m) m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id ->
   ExprGuiM m (Widget.Id, ExpressionGui m)
@@ -119,7 +119,7 @@ makeWrapper arg myId = do
 
 makeSuggested ::
   MonadA m =>
-  Sugar.HoleSuggested Name m ->
+  Sugar.HoleSuggested (Name m) m ->
   Widget.Id -> ExprGuiM m (Widget.Id, ExpressionGui m)
 makeSuggested suggested myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig

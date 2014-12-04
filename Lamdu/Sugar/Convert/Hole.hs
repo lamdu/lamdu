@@ -217,7 +217,7 @@ getScopeElement sugarContext (par, typeExpr) = do
         pure mempty
           { _scopeLocals = [
             ( GetVar
-              { _gvName = ConvertExpr.makeNameProperty par
+              { _gvName = UniqueId.toGuid par
               , _gvJumpTo = errorJumpTo
               , _gvVarType = GetParameter
               }
@@ -230,7 +230,7 @@ getScopeElement sugarContext (par, typeExpr) = do
       pure mempty
         { _scopeLocals = [
           ( GetVar
-            { _gvName = ConvertExpr.makeNameProperty tag
+            { _gvName = UniqueId.toGuid tag
             , _gvJumpTo = errorJumpTo
             , _gvVarType = GetFieldParameter
             }
@@ -244,7 +244,7 @@ getGlobal defI = do
   pure mempty
     { _scopeGlobals = [
       ( GetVar
-        { _gvName = ConvertExpr.makeNameProperty defI
+        { _gvName = UniqueId.toGuid defI
         , _gvJumpTo = errorJumpTo
         , _gvVarType = GetDefinition
         }

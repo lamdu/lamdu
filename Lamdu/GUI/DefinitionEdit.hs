@@ -45,7 +45,7 @@ make cp settings defI = ExprGuiM.run ExpressionEdit.make cp settings $ do
 
 makeBuiltinDefinition ::
   MonadA m =>
-  Sugar.Definition Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Definition (Name m) m (ExprGuiM.SugarExpr m) ->
   Sugar.DefinitionBuiltin m -> ExprGuiM m (WidgetT m)
 makeBuiltinDefinition def builtin = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -69,8 +69,8 @@ makeBuiltinDefinition def builtin = do
 
 makeExprDefinition ::
   MonadA m =>
-  Sugar.Definition Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.DefinitionExpression Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Definition (Name m) m (ExprGuiM.SugarExpr m) ->
+  Sugar.DefinitionExpression (Name m) m (ExprGuiM.SugarExpr m) ->
   ExprGuiM m (WidgetT m)
 makeExprDefinition def bodyExpr = do
   -- config <- ExprGuiM.widgetEnv WE.readConfig

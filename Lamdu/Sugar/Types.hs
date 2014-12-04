@@ -63,8 +63,6 @@ module Lamdu.Sugar.Types
   , MStorePoint, ExprStorePoint
   -- Input types:
   , InputPayload(..), ipGuid, ipEntityId, ipInferred, ipStored, ipData
-  , NameProperty(..)
-    , npName, npSetName
   ) where
 
 import Data.Foldable (Foldable)
@@ -154,16 +152,11 @@ newtype FuncParamActions m = FuncParamActions
 
 data FuncParamType = FuncParameter | FuncFieldParameter
 
-data NameProperty name m = NameProperty
-  { _npName :: name
-  , _npSetName :: String -> T m ()
-  }
-
 -- TODO:
 data FuncParam name m = FuncParam
   { _fpId :: EntityId
   , _fpVarKind :: FuncParamType
-  , _fpName :: NameProperty name m
+  , _fpName :: name
   , _fpInferredType :: Type
   , _fpMActions :: Maybe (FuncParamActions m)
   }
@@ -173,10 +166,10 @@ data Lam name m expr = Lam
   , _lResult :: expr
   } deriving (Functor, Foldable, Traversable)
 
-data TagG name m = TagG
+data TagG name = TagG
   { _tagInstance :: EntityId -- Unique across different uses of a tag
   , _tagVal :: T.Tag
-  , _tagGName :: NameProperty name m
+  , _tagGName :: name
   }
 
 data PickedResult = PickedResult
@@ -261,7 +254,7 @@ data List m expr = List
 
 data RecordField name m expr = RecordField
   { _rfMDelete :: Maybe (T m EntityId)
-  , _rfTag :: TagG name m
+  , _rfTag :: TagG name
   , _rfExpr :: expr -- field type or val
   } deriving (Functor, Foldable, Traversable)
 
@@ -275,22 +268,22 @@ data Record name m expr = Record
   , _rMAddField :: Maybe (T m EntityId)
   } deriving (Functor, Foldable, Traversable)
 
-data GetField name m expr = GetField
+data GetField name expr = GetField
   { _gfRecord :: expr
-  , _gfTag :: TagG name m
+  , _gfTag :: TagG name
   } deriving (Functor, Foldable, Traversable)
 
 data GetVarType = GetDefinition | GetFieldParameter | GetParameter
   deriving (Eq, Ord)
 
 data GetVar name m = GetVar
-  { _gvName :: NameProperty name m
+  { _gvName :: name
   , _gvJumpTo :: T m EntityId
   , _gvVarType :: GetVarType
   }
 
 data GetParams name m = GetParams
-  { _gpDefName :: NameProperty name m
+  { _gpDefName :: name
   , _gpJumpTo :: T m EntityId
   }
 
@@ -300,27 +293,27 @@ data SpecialArgs expr
   | InfixArgs expr expr
   deriving (Functor, Foldable, Traversable)
 
-data AnnotatedArg name m expr = AnnotatedArg
-  { _aaTag :: TagG name m
+data AnnotatedArg name expr = AnnotatedArg
+  { _aaTag :: TagG name
   , -- Used for animation ids consistent with record.
     _aaTagExprEntityId :: EntityId
   , _aaExpr :: expr
   } deriving (Functor, Foldable, Traversable)
 
-data Apply name m expr = Apply
+data Apply name expr = Apply
   { _aFunc :: expr
   , _aSpecialArgs :: SpecialArgs expr
-  , _aAnnotatedArgs :: [AnnotatedArg name m expr]
+  , _aAnnotatedArgs :: [AnnotatedArg name expr]
   } deriving (Functor, Foldable, Traversable)
 
 data Body name m expr
   = BodyLam (Lam name m expr)
-  | BodyApply (Apply name m expr)
+  | BodyApply (Apply name expr)
   | BodyHole (Hole name m expr)
   | BodyLiteralInteger Integer
   | BodyList (List m expr)
   | BodyRecord (Record name m expr)
-  | BodyGetField (GetField name m expr)
+  | BodyGetField (GetField name expr)
   | BodyGetVar (GetVar name m)
   | BodyGetParams (GetParams name m)
   deriving (Functor, Foldable, Traversable)
@@ -349,7 +342,7 @@ data WhereItem name m expr = WhereItem
   { _wiValue :: DefinitionContent name m expr
   , _wiEntityId :: EntityId
   , _wiInferredType :: Type
-  , _wiName :: NameProperty name m
+  , _wiName :: name
   , _wiActions :: Maybe (ListItemActions m)
   } deriving (Functor, Foldable, Traversable)
 
@@ -390,7 +383,7 @@ data DefinitionBody name m expr
   deriving (Functor, Foldable, Traversable)
 
 data Definition name m expr = Definition
-  { _drName :: NameProperty name m
+  { _drName :: name
   , _drEntityId :: EntityId
   , _drBody :: DefinitionBody name m expr
   } deriving (Functor, Foldable, Traversable)
@@ -425,7 +418,6 @@ Lens.makeLenses ''RecordField
 Lens.makeLenses ''Scope
 Lens.makeLenses ''TagG
 Lens.makeLenses ''WhereItem
-Lens.makeLenses ''NameProperty
 Lens.makePrisms ''Body
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo

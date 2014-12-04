@@ -64,7 +64,7 @@ indirectDefinitionGuid funcS =
   -- a GetField behind the scenes, and we probably don't want to
   -- associate the Guid of the tag here? Need to throw this Guid or
   -- associated data into the GetVar/GetField itself anyway!
-  BodyGetVar gv -> Just $ gv ^. gvName . npName
+  BodyGetVar gv -> Just (gv ^. gvName)
   BodyGetField _ -> Nothing -- TODO: <-- do we want to make something up here?
   _ -> Nothing
 
