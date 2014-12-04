@@ -9,6 +9,7 @@ import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.GUI.ExpressionGui.Types (WidgetT)
+import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -32,7 +33,7 @@ onTagWidget config =
   Widget.tint (Config.fieldTint config)
 
 make ::
-  MonadA m => Sugar.TagG Sugar.Name m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+  MonadA m => Sugar.TagG Name m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 make t myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.fromValueWidget <$>
@@ -42,7 +43,7 @@ make t myId = do
     ) myId
 
 makeView ::
-  MonadA m => Sugar.TagG Sugar.Name m -> AnimId -> ExprGuiM m (ExpressionGui m)
+  MonadA m => Sugar.TagG Name m -> AnimId -> ExprGuiM m (ExpressionGui m)
 makeView t animId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   fmap ExpressionGui.fromValueWidget .

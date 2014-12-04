@@ -8,6 +8,7 @@ import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -28,7 +29,7 @@ paramFDConfig = FocusDelegator.Config
   }
 
 makeParamNameEdit ::
-  MonadA m => Sugar.NameProperty Sugar.Name m -> Widget.Id ->
+  MonadA m => Sugar.NameProperty Name m -> Widget.Id ->
   ExprGuiM m (WidgetT m)
 makeParamNameEdit nameProp myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -39,7 +40,7 @@ makeParamNameEdit nameProp myId = do
 -- exported for use in definition sugaring.
 makeParamEdit ::
   MonadA m => Widget.Id ->
-  Sugar.FuncParam Sugar.Name m ->
+  Sugar.FuncParam Name m ->
   ExprGuiM m (ExpressionGui m)
 makeParamEdit prevId param =
   do
@@ -77,7 +78,7 @@ makeParamEdit prevId param =
 make ::
   MonadA m =>
   ExpressionGui.ParentPrecedence ->
-  Sugar.Lam Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Lam Name m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence (Sugar.Lam param body) pl =

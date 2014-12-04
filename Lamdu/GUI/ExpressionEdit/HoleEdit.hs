@@ -14,6 +14,7 @@ import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (diveIntoHole)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -27,7 +28,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
   MonadA m =>
-  Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Hole Name m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole pl myId = do
@@ -46,7 +47,7 @@ make hole pl myId = do
 
 tryOpenHole ::
   MonadA m =>
-  Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Hole Name m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id ->
   MaybeT (ExprGuiM m) (ExpressionGui m)

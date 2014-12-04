@@ -5,6 +5,7 @@ import Control.MonadA (MonadA)
 import Graphics.UI.Bottle.WidgetId (augmentId)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -14,7 +15,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
   MonadA m =>
-  Sugar.GetField Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.GetField Name m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make (Sugar.GetField recExpr tagG) pl =

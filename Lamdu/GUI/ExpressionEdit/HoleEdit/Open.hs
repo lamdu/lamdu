@@ -21,6 +21,7 @@ import Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (ShownResult(..), srPi
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Lamdu.Sugar.AddNames.Types (Name(..), ExpressionN)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
@@ -202,7 +203,7 @@ makeFocusable wId = ExprGuiM.widgetEnv . BWidgets.makeFocusableView wId
 
 makeHoleResultWidget ::
   MonadA m => Widget.Id ->
-  Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl -> ExprGuiM m (WidgetT m)
+  Sugar.HoleResult Name m HoleResults.SugarExprPl -> ExprGuiM m (WidgetT m)
 makeHoleResultWidget resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   resultGui <-
@@ -215,8 +216,8 @@ makeHoleResultWidget resultId holeResult = do
 
 postProcessSugar ::
   MonadA m =>
-  Sugar.ExpressionN m HoleResults.SugarExprPl ->
-  Sugar.ExpressionN m ExprGuiM.Payload
+  ExpressionN m HoleResults.SugarExprPl ->
+  ExpressionN m ExprGuiM.Payload
 postProcessSugar expr =
   expr
   & Lens.mapped . Lens.mapped %~ toPayload
@@ -240,7 +241,7 @@ toPayload (ExprGuiM.StoredEntityIds entityIds, ExprGuiM.Injected injected) =
 
 -- makeNewTagResultWidget ::
 --   MonadA m =>
---   Widget.Id -> Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl ->
+--   Widget.Id -> Sugar.HoleResult Name m HoleResults.SugarExprPl ->
 --   ExprGuiM m (WidgetT m)
 -- makeNewTagResultWidget resultId holeResult = do
 --   widget <- makeHoleResultWidget resultId holeResult

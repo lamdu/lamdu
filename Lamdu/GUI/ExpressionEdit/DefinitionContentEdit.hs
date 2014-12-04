@@ -13,6 +13,7 @@ import Lamdu.CharClassification (operatorChars)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..))
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -21,9 +22,9 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -39,20 +40,20 @@ defFDConfig = FocusDelegator.Config
   }
 
 makeNameEdit ::
-  MonadA m => Sugar.NameProperty Sugar.Name m ->
+  MonadA m => Sugar.NameProperty Name m ->
   Widget.Id -> ExprGuiM m (WidgetT m)
 makeNameEdit nameProperty =
   ExprGuiM.wrapDelegated defFDConfig FocusDelegator.NotDelegating id
   (ExpressionGui.makeNameEdit nameProperty)
 
-nonOperatorName :: Sugar.Name -> Bool
-nonOperatorName (Sugar.Name Sugar.NameSourceStored _ x) =
+nonOperatorName :: Name -> Bool
+nonOperatorName (Name NameSourceStored _ x) =
   nonEmptyAll (`notElem` operatorChars) x
 nonOperatorName _ = False
 
 makeDefNameEdit ::
   MonadA m =>
-  Sugar.NameProperty Sugar.Name m -> Widget.Id ->
+  Sugar.NameProperty Name m -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeDefNameEdit nameProp myId =
   do
@@ -62,7 +63,7 @@ makeDefNameEdit nameProp myId =
 
 makeWheres ::
   MonadA m =>
-  [Sugar.WhereItem Sugar.Name m (ExprGuiM.SugarExpr m)] -> Widget.Id ->
+  [Sugar.WhereItem Name m (ExprGuiM.SugarExpr m)] -> Widget.Id ->
   ExprGuiM m [Widget (T m)]
 makeWheres [] _ = return []
 makeWheres whereItems myId = do
@@ -112,8 +113,8 @@ mkPresentationModeEdit prop myId = do
 
 make ::
   MonadA m =>
-  Sugar.NameProperty Sugar.Name m ->
-  Sugar.DefinitionContent Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.NameProperty Name m ->
+  Sugar.DefinitionContent Name m (ExprGuiM.SugarExpr m) ->
   Widget.Id ->
   ExprGuiM m (WidgetT m)
 make nameProp content myId = do
@@ -175,7 +176,7 @@ make nameProp content myId = do
 
 makeWhereItemEdit ::
   MonadA m =>
-  Sugar.WhereItem Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.WhereItem Name m (ExprGuiM.SugarExpr m) ->
   ExprGuiM m (WidgetT m)
 makeWhereItemEdit item = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -243,10 +244,10 @@ addPrevIds lhsId params =
 
 makeNestedParams ::
   MonadA m =>
-  (Sugar.NameProperty Sugar.Name m -> Widget (T m) -> Widget (T m)) ->
+  (Sugar.NameProperty Name m -> Widget (T m) -> Widget (T m)) ->
   (String, ExprGuiM.SugarExpr m) ->
   Widget.Id ->
-  [Sugar.FuncParam Sugar.Name m] ->
+  [Sugar.FuncParam Name m] ->
   ExprGuiM m [ExpressionGui m]
 makeNestedParams atParamWidgets rhs lhsId params = do
   config <- ExprGuiM.widgetEnv WE.readConfig

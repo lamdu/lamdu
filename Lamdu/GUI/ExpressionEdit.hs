@@ -6,6 +6,7 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
@@ -14,8 +15,6 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
-import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionEdit.GetFieldEdit as GetFieldEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetParamsEdit as GetParamsEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
@@ -24,6 +23,8 @@ import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
+import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -67,7 +68,7 @@ make parentPrecedence sExpr = assignCursor $ do
 
 makeEditor ::
   MonadA m => ParentPrecedence ->
-  Sugar.Body Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Body Name m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeEditor parentPrecedence body =

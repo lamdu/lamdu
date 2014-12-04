@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult
   ) where
 
 import Data.Store.Guid (Guid)
+import Lamdu.Sugar.AddNames.Types (Name)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
@@ -13,7 +14,7 @@ type T = Transaction.Transaction
 
 data ShownResult m = ShownResult
   { srEventMap :: Widget.EventHandlers (T m)
-  , srHoleResult :: Sugar.HoleResult Sugar.Name m HoleResults.SugarExprPl
+  , srHoleResult :: Sugar.HoleResult Name m HoleResults.SugarExprPl
   , srPickTo ::
     T m
     ( Maybe Guid -- Hole target guid

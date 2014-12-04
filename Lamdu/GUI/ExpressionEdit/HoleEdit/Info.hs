@@ -9,6 +9,7 @@ import Control.Lens.Operators
 import Data.Store.Property (Property(..))
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (diveIntoHole)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState, hsSearchTerm)
+import Lamdu.Sugar.AddNames.Types (Name)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -22,8 +23,8 @@ data HoleInfo m = HoleInfo
   { hiEntityId :: Sugar.EntityId
   , hiId :: Widget.Id
   , hiState :: Property (T m) HoleState
-  , hiActions :: Sugar.HoleActions Sugar.Name m
-  , hiSuggested :: Sugar.HoleSuggested Sugar.Name m
+  , hiActions :: Sugar.HoleActions Name m
+  , hiSuggested :: Sugar.HoleSuggested Name m
   , hiMArgument :: Maybe (Sugar.HoleArg m (ExprGuiM.SugarExpr m))
   , hiHoleEntityIds :: ExprGuiM.HoleEntityIds
   }

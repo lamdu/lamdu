@@ -10,6 +10,7 @@ import Data.Vector.Vector2 (Vector2(..))
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Control.Lens as Lens
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -30,14 +31,14 @@ type T = Transaction
 
 make ::
   MonadA m =>
-  Sugar.Record Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Record Name m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make reco pl = ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped reco
 
 makeUnwrapped ::
   MonadA m =>
-  Sugar.Record Sugar.Name m (ExprGuiM.SugarExpr m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+  Sugar.Record Name m (ExprGuiM.SugarExpr m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
   ExprGuiM.assignCursor myId tailId $ do
     config <- ExprGuiM.widgetEnv WE.readConfig

@@ -38,6 +38,7 @@ import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.ExpressionGui.Types (ExpressionGui(..), WidgetT)
 import Lamdu.GUI.Precedence (ParentPrecedence(..), Precedence)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
+import Lamdu.Sugar.AddNames.Types (ExpressionN)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.RWS as RWS
 import qualified Data.Char as Char
@@ -101,7 +102,7 @@ emptyPayload = Payload
   , _plHoleEntityIds = emptyHoleEntityIds
   }
 
-type SugarExpr m = Sugar.ExpressionN m Payload
+type SugarExpr m = ExpressionN m Payload
 
 data Askable m = Askable
   { _aSettings :: Settings

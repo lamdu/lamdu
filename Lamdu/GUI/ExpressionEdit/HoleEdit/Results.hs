@@ -33,6 +33,7 @@ import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument, hiActiveId)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Sugar.AddNames.Types (Name(..), NameCollision(..))
 import Lamdu.Sugar.Types (Scope(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
@@ -82,7 +83,7 @@ type SugarExprPl = (ExprGuiM.StoredEntityIds, ExprGuiM.Injected)
 
 data Result m = Result
   { rType :: ResultType
-  , rHoleResult :: Sugar.HoleResult Sugar.Name m SugarExprPl
+  , rHoleResult :: Sugar.HoleResult Name m SugarExprPl
   , rId :: WidgetId.Id
   }
 
@@ -97,24 +98,24 @@ data ResultsList m = ResultsList
   }
 Lens.makeLenses ''ResultsList
 
-getVarsToGroup :: (Sugar.GetVar Sugar.Name m, Val ()) -> Group def
+getVarsToGroup :: (Sugar.GetVar Name m, Val ()) -> Group def
 getVarsToGroup (getVar, expr) = sugarNameToGroup (getVar ^. Sugar.gvName . Sugar.npName) expr
 
-getParamsToGroup :: (Sugar.GetParams Sugar.Name m, Val ()) -> Group def
+getParamsToGroup :: (Sugar.GetParams Name m, Val ()) -> Group def
 getParamsToGroup (getParams, expr) =
   sugarNameToGroup (getParams ^. Sugar.gpDefName . Sugar.npName) expr
   & groupSearchTerms <>~ GroupAttributes ["params"] HighPrecedence
 
-sugarNameToGroup :: Sugar.Name -> Val () -> Group def
-sugarNameToGroup (Sugar.Name _ collision varName) expr = Group
+sugarNameToGroup :: Name -> Val () -> Group def
+sugarNameToGroup (Name _ collision varName) expr = Group
   { _groupSearchTerms = GroupAttributes (varName : collisionStrs) HighPrecedence
   , _groupBaseExpr = expr
   }
   where
     collisionStrs =
       case collision of
-      Sugar.NoCollision -> []
-      Sugar.Collision suffix -> [show suffix]
+      NoCollision -> []
+      Collision suffix -> [show suffix]
 
 prefixId :: HoleInfo m -> WidgetId.Id
 prefixId holeInfo = mconcat [hiActiveId holeInfo, WidgetId.Id ["results"]]
@@ -131,7 +132,7 @@ storePointHoleWrap expr =
 typeCheckHoleResult ::
   MonadA m => HoleInfo m ->
   Val (Sugar.MStorePoint m SugarExprPl) ->
-  T m (Maybe (ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl))
+  T m (Maybe (ResultType, Sugar.HoleResult Name m SugarExprPl))
 typeCheckHoleResult holeInfo val = do
   mGood <- mkHoleResult val
   case mGood of
@@ -145,7 +146,7 @@ typeCheckHoleResult holeInfo val = do
 typeCheckResults ::
   MonadA m => HoleInfo m ->
   [Val (Sugar.MStorePoint m SugarExprPl)] ->
-  T m [(ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl)]
+  T m [(ResultType, Sugar.HoleResult Name m SugarExprPl)]
 typeCheckResults holeInfo options = do
   rs <-
     options
@@ -158,7 +159,7 @@ typeCheckResults holeInfo options = do
 
 mResultsListOf ::
   HoleInfo m -> WidgetId.Id ->
-  [(ResultType, Sugar.HoleResult Sugar.Name m SugarExprPl)] ->
+  [(ResultType, Sugar.HoleResult Name m SugarExprPl)] ->
   Maybe (ResultsList m)
 mResultsListOf _ _ [] = Nothing
 mResultsListOf holeInfo baseId (x:xs) = Just

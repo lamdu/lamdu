@@ -2,6 +2,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Closed
   ( make
   ) where
 
+--import qualified Lamdu.Expr.Utils as ExprUtil
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad (guard)
@@ -14,13 +15,13 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (makeBackground, diveIntoHole)
 import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Sugar.AddNames.Types (Name(..), ExpressionN)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
---import qualified Lamdu.Expr.Utils as ExprUtil
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -33,7 +34,7 @@ type T = Transaction.Transaction
 
 make ::
   MonadA m =>
-  Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Hole Name m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id ->
   ExprGuiM m (Widget.Id, ExpressionGui m)
@@ -63,7 +64,7 @@ make hole pl myId = do
 
 makeWrapperEventMap ::
   (MonadA m, MonadA f) =>
-  Bool -> Sugar.HoleArg f (Sugar.ExpressionN f a) -> Widget.Id ->
+  Bool -> Sugar.HoleArg f (ExpressionN f a) -> Widget.Id ->
   ExprGuiM m (Widget.EventHandlers (T f))
 makeWrapperEventMap argIsFocused arg myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -92,7 +93,7 @@ makeWrapperEventMap argIsFocused arg myId = do
 
 makeWrapper ::
   MonadA m =>
-  Sugar.HoleArg m (Sugar.ExpressionN m ExprGuiM.Payload) ->
+  Sugar.HoleArg m (ExpressionN m ExprGuiM.Payload) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeWrapper arg myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -118,7 +119,7 @@ makeWrapper arg myId = do
 
 makeSuggested ::
   MonadA m =>
-  Sugar.HoleSuggested Sugar.Name m ->
+  Sugar.HoleSuggested Name m ->
   Widget.Id -> ExprGuiM m (Widget.Id, ExpressionGui m)
 makeSuggested suggested myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig

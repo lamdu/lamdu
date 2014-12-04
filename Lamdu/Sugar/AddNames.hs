@@ -25,6 +25,7 @@ import Lamdu.Data.Anchors (assocNameRef)
 import Lamdu.Expr.Type (Type)
 import Lamdu.Sugar.AddNames.CPS (CPS(..))
 import Lamdu.Sugar.AddNames.NameGen (NameGen)
+import Lamdu.Sugar.AddNames.Types
 import Lamdu.Sugar.Types
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader

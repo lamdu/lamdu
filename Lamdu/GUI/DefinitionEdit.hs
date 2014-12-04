@@ -10,6 +10,7 @@ import Lamdu.Expr.IRef (DefIM)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
+import Lamdu.Sugar.AddNames.Types (Name(..), DefinitionN)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -44,7 +45,7 @@ make cp settings defI = ExprGuiM.run ExpressionEdit.make cp settings $ do
 
 makeBuiltinDefinition ::
   MonadA m =>
-  Sugar.Definition Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Definition Name m (ExprGuiM.SugarExpr m) ->
   Sugar.DefinitionBuiltin m -> ExprGuiM m (WidgetT m)
 makeBuiltinDefinition def builtin = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -68,8 +69,8 @@ makeBuiltinDefinition def builtin = do
 
 makeExprDefinition ::
   MonadA m =>
-  Sugar.Definition Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.DefinitionExpression Sugar.Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.Definition Name m (ExprGuiM.SugarExpr m) ->
+  Sugar.DefinitionExpression Name m (ExprGuiM.SugarExpr m) ->
   ExprGuiM m (WidgetT m)
 makeExprDefinition def bodyExpr = do
   -- config <- ExprGuiM.widgetEnv WE.readConfig
@@ -120,7 +121,7 @@ makeExprDefinition def bodyExpr = do
 
 loadConvertDefI ::
   MonadA m => Anchors.CodeProps m -> DefIM m ->
-  T m (Sugar.DefinitionN m ExprGuiM.Payload)
+  T m (DefinitionN m ExprGuiM.Payload)
 loadConvertDefI cp defI =
   Load.loadDefinitionClosure defI >>=
   SugarConvert.convertDefI cp

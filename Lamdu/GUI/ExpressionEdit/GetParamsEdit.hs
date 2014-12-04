@@ -7,6 +7,7 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -21,7 +22,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
   MonadA m =>
-  Sugar.GetParams Sugar.Name m ->
+  Sugar.GetParams Name m ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)

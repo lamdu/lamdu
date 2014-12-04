@@ -8,6 +8,7 @@ import Control.MonadA (MonadA)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -22,7 +23,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 makeUncoloredView ::
   MonadA m =>
-  Sugar.GetVar Sugar.Name m ->
+  Sugar.GetVar Name m ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeUncoloredView getVar myId =
@@ -38,7 +39,7 @@ colorOf config Sugar.GetFieldParameter = Config.parameterColor config
 
 makeView ::
   MonadA m =>
-  Sugar.GetVar Sugar.Name m ->
+  Sugar.GetVar Name m ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeView getParam myId = do
@@ -48,7 +49,7 @@ makeView getParam myId = do
 
 make ::
   MonadA m =>
-  Sugar.GetVar Sugar.Name m ->
+  Sugar.GetVar Name m ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
