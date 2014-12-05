@@ -315,7 +315,7 @@ convertExpressionI ee =
 
 mkContext ::
   MonadA m =>
-  Anchors.Code (Transaction.MkProperty m) (m) ->
+  Anchors.Code (Transaction.MkProperty m) m ->
   Infer.Context -> T m (Context m)
 mkContext cp inferContext = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
@@ -684,7 +684,7 @@ makeExprDefTypeInfo defValI defI defType inferredType =
 
 convertDefIExpr ::
   MonadA m => Anchors.CodeProps m ->
-  Val (Load.ExprPropertyClosure (m)) ->
+  Val (Load.ExprPropertyClosure m) ->
   DefI m -> Definition.ExportedType ->
   T m (DefinitionBody Guid m (ExpressionU m [EntityId]))
 convertDefIExpr cp valLoaded defI defType = do
@@ -713,7 +713,7 @@ convertDefI ::
   Anchors.CodeProps m ->
   -- TODO: Use DefinitionClosure?
   Definition.Definition
-  (Val (Load.ExprPropertyClosure (m))) (DefI m) ->
+  (Val (Load.ExprPropertyClosure m)) (DefI m) ->
   T m (DefinitionU m [EntityId])
 convertDefI cp (Definition.Definition (Definition.Body bodyContent exportedType) defI) = do
   bodyS <- convertDefContent bodyContent exportedType

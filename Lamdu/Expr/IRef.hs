@@ -48,14 +48,14 @@ newtype ValI m = ValI {
   unValI :: IRef m (V.Body (ValI m))
   } deriving (Eq, Ord, Show, Binary)
 
-type ValIM m = ValI (m)
+type ValIM m = ValI m
 
 type ValIProperty m = Property (T m) (ValIM m)
 type ValBody m = V.Body (ValI m)
 type Lam m = V.Lam (ValI m)
 type Apply m = V.Apply (ValI m)
 
-newValBody :: MonadA m => ValBody (m) -> T m (ValIM m)
+newValBody :: MonadA m => ValBody m -> T m (ValIM m)
 newValBody = fmap ValI . Transaction.newIRef
 
 -- TODO: Remove this
@@ -65,11 +65,11 @@ newLambda body = do
   expr <- newValBody $ V.BAbs $ V.Lam paramId body
   return (paramId, expr)
 
-readValBody :: MonadA m => ValIM m -> T m (ValBody (m))
+readValBody :: MonadA m => ValIM m -> T m (ValBody m)
 readValBody = Transaction.readIRef . unValI
 
 writeValBody ::
-  MonadA m => ValIM m -> ValBody (m) -> T m ()
+  MonadA m => ValIM m -> ValBody m -> T m ()
 writeValBody = Transaction.writeIRef . unValI
 
 newVal :: MonadA m => Val () -> T m (ValIM m)
@@ -141,7 +141,7 @@ data ValTree m
   = ValTreeLeaf (ValI m)
   | ValTreeNode (V.Body (ValTree m))
   deriving (Show)
-type ValTreeM m = ValTree (m)
+type ValTreeM m = ValTree m
 
 writeValTree :: MonadA m => ValTreeM m -> T m (ValIM m)
 writeValTree (ValTreeLeaf valI) = return valI

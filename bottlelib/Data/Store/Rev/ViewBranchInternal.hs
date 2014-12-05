@@ -51,7 +51,7 @@ Lens.makeLenses ''ViewData
 
 -- | moveView must be given the correct source of the movement
 -- | or it will result in undefined results!
-moveView :: MonadA m => View (m) -> Version (m) -> Version (m) -> Transaction m ()
+moveView :: MonadA m => View m -> Version m -> Version m -> Transaction m ()
 moveView vm srcVersion destVersion =
   when (srcVersion /= destVersion) $ do
     mraIRef <- Version.mostRecentAncestor srcVersion destVersion
@@ -66,7 +66,7 @@ makeViewKey :: View m -> Change.Key -> Guid
 makeViewKey (View iref) = Guid.combine . IRef.guid $ iref
 
 applyChangesToView ::
-  MonadA m => View (m) -> (Change -> Maybe Change.Value) ->
+  MonadA m => View m -> (Change -> Maybe Change.Value) ->
   [Change] -> Transaction m ()
 applyChangesToView vm changeDir = traverse_ applyChange
   where

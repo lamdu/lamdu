@@ -35,9 +35,9 @@ type T = Transaction
 
 setToWrapper ::
   MonadA m =>
-  ExprIRef.ValI (m) ->
+  ExprIRef.ValI m ->
   ExprIRef.ValIProperty m ->
-  T m (ExprIRef.ValI (m))
+  T m (ExprIRef.ValI m)
 setToWrapper wrappedI destP = do
   newFuncI <- newHole
   destI <$ ExprIRef.writeValBody destI (V.BApp (V.Apply newFuncI wrappedI))
@@ -47,29 +47,29 @@ setToWrapper wrappedI destP = do
 wrap ::
   MonadA m =>
   ExprIRef.ValIProperty m ->
-  T m (ExprIRef.ValI (m))
+  T m (ExprIRef.ValI m)
 wrap exprP = do
   newFuncI <- newHole
   applyI <- ExprIRef.newValBody . V.BApp . V.Apply newFuncI $ Property.value exprP
   Property.set exprP applyI
   return applyI
 
-newHole :: MonadA m => T m (ExprIRef.ValI (m))
+newHole :: MonadA m => T m (ExprIRef.ValI m)
 newHole = ExprIRef.newValBody $ V.BLeaf V.LHole
 
 replace ::
   MonadA m =>
   ExprIRef.ValIProperty m ->
-  ExprIRef.ValI (m) ->
-  T m (ExprIRef.ValI (m))
+  ExprIRef.ValI m ->
+  T m (ExprIRef.ValI m)
 replace exprP newExprI = do
   Property.set exprP newExprI
   return newExprI
 
-replaceWithHole :: MonadA m => ExprIRef.ValIProperty m -> T m (ExprIRef.ValI (m))
+replaceWithHole :: MonadA m => ExprIRef.ValIProperty m -> T m (ExprIRef.ValI m)
 replaceWithHole exprP = replace exprP =<< newHole
 
-setToHole :: MonadA m => ExprIRef.ValIProperty m -> T m (ExprIRef.ValI (m))
+setToHole :: MonadA m => ExprIRef.ValIProperty m -> T m (ExprIRef.ValI m)
 setToHole exprP =
   exprI <$ ExprIRef.writeValBody exprI hole
   where
@@ -79,7 +79,7 @@ setToHole exprP =
 lambdaWrap
   :: MonadA m
   => ExprIRef.ValIProperty m
-  -> T m (V.Var, ExprIRef.ValI (m))
+  -> T m (V.Var, ExprIRef.ValI m)
 lambdaWrap exprP = do
   (newParam, newExprI) <- ExprIRef.newLambda $ Property.value exprP
   Property.set exprP newExprI
@@ -88,7 +88,7 @@ lambdaWrap exprP = do
 redexWrap
   :: MonadA m
   => ExprIRef.ValIProperty m
-  -> T m (V.Var, ExprIRef.ValI (m))
+  -> T m (V.Var, ExprIRef.ValI m)
 redexWrap exprP = do
   (newParam, newLambdaI) <- ExprIRef.newLambda $ Property.value exprP
   newValueI <- newHole
@@ -98,9 +98,9 @@ redexWrap exprP = do
 
 addListItem ::
   MonadA m =>
-  Anchors.SpecialFunctions (m) ->
+  Anchors.SpecialFunctions m ->
   ExprIRef.ValIProperty m ->
-  T m (ExprIRef.ValI (m), ExprIRef.ValI (m))
+  T m (ExprIRef.ValI m, ExprIRef.ValI m)
 addListItem Anchors.SpecialFunctions {..} exprP = do
   newItemI <- newHole
   newListI <- ExprIRef.writeValTree $
@@ -165,7 +165,7 @@ newPublicDefinition codeProps name = do
 
 newClipboard ::
   MonadA m => Anchors.CodeProps m ->
-  ExprIRef.ValI (m) ->
+  ExprIRef.ValI m ->
   T m (DefI m)
 newClipboard codeProps expr = do
   len <- length <$> getP (Anchors.clipboards codeProps)

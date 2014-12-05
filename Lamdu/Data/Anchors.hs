@@ -61,8 +61,8 @@ onRevision :: (forall a. Binary a => f a -> g a) -> Revision f m -> Revision g m
 onRevision f (Revision x0 x1 x2 x3 x4) =
   Revision (f x0) (f x1) (f x2) (f x3) (f x4)
 
-type CodeProps m = Code (MkProperty m) (m)
-type RevisionProps m = Revision (MkProperty m) (m)
+type CodeProps m = Code (MkProperty m) m
+type RevisionProps m = Revision (MkProperty m) m
 
 makePane :: DefI m -> Pane m
 makePane = id

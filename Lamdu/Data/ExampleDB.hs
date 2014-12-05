@@ -54,7 +54,7 @@ recordType :: [(T.Tag, Type)] -> Type
 recordType = T.TRecord . foldr (uncurry T.CExtend) T.CEmpty
 
 createBuiltins ::
-  MonadA m => T m (Db.SpecialFunctions (m), [ExprIRef.DefI m])
+  MonadA m => T m (Db.SpecialFunctions m, [ExprIRef.DefI m])
 createBuiltins =
   Writer.runWriterT $ do
     let newTag x = lift $ namedId x
@@ -279,7 +279,7 @@ createBuiltins =
       Writer.tell [x]
       return x
 
-newBranch :: MonadA m => String -> Version (m) -> T m (Branch (m))
+newBranch :: MonadA m => String -> Version m -> T m (Branch m)
 newBranch name ver = do
   branch <- Branch.new ver
   setP (Db.assocNameRef (Branch.guid branch)) name
