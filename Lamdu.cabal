@@ -117,6 +117,7 @@ Executable lamdu
   Build-Depends:       base >= 4,
                        aeson,
                        hashable,
+                       uglymemo,
                        containers,
                        directory,
                        filepath,
