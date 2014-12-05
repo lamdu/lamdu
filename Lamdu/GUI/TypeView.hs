@@ -96,6 +96,7 @@ makeTInst _parentPrecedence (T.Id name) typeParams =
       [] -> pure nameView
       ((_, arg) : []) ->
         do
+          -- Don't use makeInternal, use splitMake
           argView <- makeInternal (ParentPrecedence 0) arg
           pure $ hbox [nameView, space, argView]
       _ ->
@@ -111,6 +112,7 @@ makeRecord composite =
         (tag, fieldType) <- Map.toList fields
         return $ do
           tagView <- text "TAG"
+          -- Don't use makeInternal, use splitMake
           typeView <- makeInternal (ParentPrecedence 0) fieldType
           return
             [ (Vector2 1 0.5, tagView)

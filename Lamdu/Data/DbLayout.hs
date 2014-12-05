@@ -12,7 +12,7 @@ import Control.Applicative (Applicative)
 import Control.Monad.IO.Class (MonadIO)
 import Data.ByteString.Char8 ()
 import Data.Store.Db (Db)
-import Data.Store.IRef (IRef, Tag)
+import Data.Store.IRef (IRef)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Lamdu.Data.Anchors (Code(..), Revision(..), assocNameRef, SpecialFunctions(..))
@@ -33,10 +33,10 @@ newtype ViewM a = ViewM { viewM :: T DbM a }
 runDbTransaction :: Db -> T DbM a -> IO a
 runDbTransaction db = dbM . Transaction.run (Transaction.onStoreM DbM (Db.store db))
 
-runViewTransaction :: View (Tag DbM) -> T ViewM a -> T DbM a
+runViewTransaction :: View DbM -> T ViewM a -> T DbM a
 runViewTransaction v = viewM . (Transaction.run . Transaction.onStoreM ViewM . View.store) v
 
-codeIRefs :: Code (IRef (Tag ViewM)) (Tag ViewM)
+codeIRefs :: Code (IRef ViewM) ViewM
 codeIRefs = Code
   { panes = IRef.anchor "panes"
   , clipboards = IRef.anchor "clipboards"
@@ -48,7 +48,7 @@ codeIRefs = Code
   , tags = IRef.anchor "tags"
   }
 
-revisionIRefs :: Revision (IRef t) t
+revisionIRefs :: Revision (IRef m) m
 revisionIRefs = Revision
   { branches = IRef.anchor "branches"
   , currentBranch = IRef.anchor "currentBranch"

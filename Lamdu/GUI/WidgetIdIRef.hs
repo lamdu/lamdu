@@ -14,5 +14,5 @@ import qualified Data.Store.Guid as Guid
 fromGuid :: Guid -> Id
 fromGuid = Id . (: []) . Guid.bs
 
-fromIRef :: IRef t a -> Id
+fromIRef :: IRef m a -> Id
 fromIRef = fromGuid . IRef.guid

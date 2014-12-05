@@ -27,8 +27,8 @@ instance ToGuid V.Var      where toGuid = guidOfIdentifier . V.vvName
 instance ToGuid T.Tag      where toGuid = guidOfIdentifier . T.tagName
 instance ToGuid T.Id       where toGuid = guidOfIdentifier . T.typeId
 instance ToGuid T.ParamId  where toGuid = guidOfIdentifier . T.typeParamId
-instance ToGuid (IRef t a) where toGuid = IRef.guid
-instance ToGuid (ValI t)   where toGuid = toGuid . ExprIRef.unValI
+instance ToGuid (IRef m a) where toGuid = IRef.guid
+instance ToGuid (ValI m)   where toGuid = toGuid . ExprIRef.unValI
 
 -- TODO: Remove this when all code uses more descritive types than Guid
 instance ToGuid Guid  where toGuid = id

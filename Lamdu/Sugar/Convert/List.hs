@@ -14,7 +14,6 @@ import Control.MonadA (MonadA)
 import Data.Foldable (Foldable)
 import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..), (<>))
-import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable(..))
 import Lamdu.Expr.Val (Val(..))
@@ -56,7 +55,7 @@ nil globId exprPl = do
     }
 
 mkListAddFirstItem ::
-  MonadA m => Anchors.SpecialFunctions (Tag m) -> ExprIRef.ValIProperty m ->
+  MonadA m => Anchors.SpecialFunctions (m) -> ExprIRef.ValIProperty m ->
   T m EntityId
 mkListAddFirstItem specialFunctions =
   fmap (EntityId.ofValI . snd) . DataOps.addListItem specialFunctions

@@ -8,7 +8,6 @@ import Data.Foldable (traverse_)
 import Data.List.Split (splitOn)
 import Data.Monoid (Monoid(..))
 import Data.Store.Db (Db)
-import Data.Store.IRef (Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction, setP)
@@ -55,7 +54,7 @@ recordType :: [(T.Tag, Type)] -> Type
 recordType = T.TRecord . foldr (uncurry T.CExtend) T.CEmpty
 
 createBuiltins ::
-  MonadA m => T m (Db.SpecialFunctions (Tag m), [ExprIRef.DefIM m])
+  MonadA m => T m (Db.SpecialFunctions (m), [ExprIRef.DefI m])
 createBuiltins =
   Writer.runWriterT $ do
     let newTag x = lift $ namedId x
@@ -280,7 +279,7 @@ createBuiltins =
       Writer.tell [x]
       return x
 
-newBranch :: MonadA m => String -> Version (Tag m) -> T m (Branch (Tag m))
+newBranch :: MonadA m => String -> Version (m) -> T m (Branch (m))
 newBranch name ver = do
   branch <- Branch.new ver
   setP (Db.assocNameRef (Branch.guid branch)) name

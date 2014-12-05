@@ -14,7 +14,7 @@ import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Expr.IRef (DefIM)
+import Lamdu.Expr.IRef (DefI)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
@@ -37,7 +37,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 type T = Transaction
 
 data Pane m = Pane
-  { paneDefI :: DefIM m
+  { paneDefI :: DefI m
   , paneDel :: Maybe (T m Guid)
   , paneMoveDown :: Maybe (T m ())
   , paneMoveUp :: Maybe (T m ())
@@ -52,7 +52,7 @@ data Env m = Env
 totalWidth :: Env m -> Widget.R
 totalWidth = (^. Lens._1) . totalSize
 
-makePanes :: MonadA m => Transaction.Property m [DefIM m] -> Guid -> [Pane m]
+makePanes :: MonadA m => Transaction.Property m [DefI m] -> Guid -> [Pane m]
 makePanes (Property panes setPanes) rootGuid =
   convertPane <$> enumerate panes
   where
@@ -81,7 +81,7 @@ makePanes (Property panes setPanes) rootGuid =
       , paneMoveUp = mkMMovePaneUp i
       }
 
-makeClipboardsEdit :: MonadA m => Env m -> [DefIM m] -> WidgetEnvT (T m) (Widget (T m))
+makeClipboardsEdit :: MonadA m => Env m -> [DefI m] -> WidgetEnvT (T m) (Widget (T m))
 makeClipboardsEdit env clipboards = do
   clipboardsEdits <- traverse (makePaneWidget env) clipboards
   clipboardTitle <-
@@ -90,7 +90,7 @@ makeClipboardsEdit env clipboards = do
     else BWidgets.makeTextViewWidget "Clipboards:" ["clipboards title"]
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
-getClipboards :: MonadA m => Anchors.CodeProps m -> T m [DefIM m]
+getClipboards :: MonadA m => Anchors.CodeProps m -> T m [DefI m]
 getClipboards = Transaction.getP . Anchors.clipboards
 
 make :: MonadA m => Env m -> Guid -> WidgetEnvT (T m) (Widget (T m))
@@ -145,7 +145,7 @@ makePanesEdit env panes myId = do
       ]
   return $ Widget.weakerEvents panesEventMap panesWidget
 
-makePaneWidget :: MonadA m => Env m -> DefIM m -> WidgetEnvT (T m) (Widget (T m))
+makePaneWidget :: MonadA m => Env m -> DefI m -> WidgetEnvT (T m) (Widget (T m))
 makePaneWidget env defI = do
   config <- WE.readConfig
   let

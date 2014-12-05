@@ -9,13 +9,12 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Function.Decycle (decycleOn)
-import Data.Store.IRef (Tag)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable)
 import GHC.Generics (Generic)
 import Lamdu.Data.Definition (Definition(..))
-import Lamdu.Expr.IRef (DefI, DefIM)
+import Lamdu.Expr.IRef (DefI, DefI)
 import Lamdu.Expr.Val (Val(..))
 import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
@@ -38,7 +37,7 @@ data ExprPropertyClosure t
   deriving (Show, Generic)
 instance Binary (ExprPropertyClosure t)
 
-exprPropertyOfClosure :: MonadA m => ExprPropertyClosure (Tag m) -> ExprIRef.ValIProperty m
+exprPropertyOfClosure :: MonadA m => ExprPropertyClosure (m) -> ExprIRef.ValIProperty m
 exprPropertyOfClosure (DefinitionContentExprProperty defI bodyExpr bodyType) =
   Property bodyExpr
   (Transaction.writeIRef defI . (`Definition.Body` bodyType) . Definition.ContentExpr)
@@ -49,11 +48,11 @@ exprPropertyOfClosure (SubexpressionProperty exprI body index) =
     lens :: Traversable t => Lens.IndexedTraversal' SubexpressionIndex (t a) a
     lens = Lens.element index
 
-irefOfClosure :: MonadA m => ExprPropertyClosure (Tag m) -> ExprI (Tag m)
+irefOfClosure :: MonadA m => ExprPropertyClosure (m) -> ExprI (m)
 irefOfClosure = Property.value . exprPropertyOfClosure
 
 loadExprClosure ::
-  MonadA m => ExprPropertyClosure (Tag m) -> T m (Val (ExprPropertyClosure (Tag m)))
+  MonadA m => ExprPropertyClosure (m) -> T m (Val (ExprPropertyClosure (m)))
 loadExprClosure =
   decycleOn irefOfClosure loop
   where
@@ -70,7 +69,7 @@ loadExprClosure =
 
 -- TODO: Return DefinitionClosure
 loadDefinitionClosure ::
-  MonadA m => DefIM m -> T m (Definition (Val (ExprPropertyClosure (Tag m))) (DefIM m))
+  MonadA m => DefI m -> T m (Definition (Val (ExprPropertyClosure (m))) (DefI m))
 loadDefinitionClosure defI = do
   Definition.Body bodyContent bodyType <- Transaction.readIRef defI
   (`Definition` defI) . (`Definition.Body` bodyType) <$>

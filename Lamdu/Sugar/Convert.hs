@@ -16,11 +16,10 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..), (<>))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.Expr.FlatComposite (FlatComposite(..))
-import Lamdu.Expr.IRef (DefIM)
+import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Scheme (Scheme(..))
 import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val(..))
@@ -175,7 +174,7 @@ convertVar param exprPl = do
     <&> rPayload . plIsRedundantType .~ True
 
 jumpToDefI ::
-  MonadA m => Anchors.CodeProps m -> DefIM m -> T m EntityId
+  MonadA m => Anchors.CodeProps m -> DefI m -> T m EntityId
 jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
 convertVLiteralInteger ::
@@ -316,7 +315,7 @@ convertExpressionI ee =
 
 mkContext ::
   MonadA m =>
-  Anchors.Code (Transaction.MkProperty m) (Tag m) ->
+  Anchors.Code (Transaction.MkProperty m) (m) ->
   Infer.Context -> T m (Context m)
 mkContext cp inferContext = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
@@ -656,7 +655,7 @@ convertDefinitionContent defGuid jumpToDef usedTags expr =
           }
 
 convertDefIBuiltin ::
-  MonadA m => Definition.Builtin -> DefIM m -> Definition.ExportedType ->
+  MonadA m => Definition.Builtin -> DefI m -> Definition.ExportedType ->
   DefinitionBody Guid m (ExpressionU m [EntityId])
 convertDefIBuiltin (Definition.Builtin name) defI defType =
   DefinitionBodyBuiltin DefinitionBuiltin
@@ -670,7 +669,7 @@ convertDefIBuiltin (Definition.Builtin name) defI defType =
       Definition.ContentBuiltin . Definition.Builtin
 
 makeExprDefTypeInfo ::
-  MonadA m => ExprIRef.ValIM m -> DefIM m -> Definition.ExportedType -> Scheme -> DefinitionTypeInfo m
+  MonadA m => ExprIRef.ValIM m -> DefI m -> Definition.ExportedType -> Scheme -> DefinitionTypeInfo m
 makeExprDefTypeInfo _ _ (Definition.ExportedType defType) inferredType
   | defType `Scheme.alphaEq` inferredType = DefinitionExportedTypeInfo defType
 makeExprDefTypeInfo defValI defI defType inferredType =
@@ -685,8 +684,8 @@ makeExprDefTypeInfo defValI defI defType inferredType =
 
 convertDefIExpr ::
   MonadA m => Anchors.CodeProps m ->
-  Val (Load.ExprPropertyClosure (Tag m)) ->
-  DefIM m -> Definition.ExportedType ->
+  Val (Load.ExprPropertyClosure (m)) ->
+  DefI m -> Definition.ExportedType ->
   T m (DefinitionBody Guid m (ExpressionU m [EntityId]))
 convertDefIExpr cp valLoaded defI defType = do
   (valInferred, newInferContext) <- SugarInfer.loadInfer valIRefs
@@ -714,7 +713,7 @@ convertDefI ::
   Anchors.CodeProps m ->
   -- TODO: Use DefinitionClosure?
   Definition.Definition
-  (Val (Load.ExprPropertyClosure (Tag m))) (DefIM m) ->
+  (Val (Load.ExprPropertyClosure (m))) (DefI m) ->
   T m (DefinitionU m [EntityId])
 convertDefI cp (Definition.Definition (Definition.Body bodyContent exportedType) defI) = do
   bodyS <- convertDefContent bodyContent exportedType

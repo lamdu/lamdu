@@ -8,7 +8,7 @@ module Lamdu.Expr.IRef
   , newLambda
   , newVal, writeVal, readVal
   , writeValWithStoredSubexpressions
-  , DefI, DefIM
+  , DefI
   , addProperties
 
   , globalId, defI
@@ -20,7 +20,7 @@ import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
-import Data.Store.IRef (IRef, Tag)
+import Data.Store.IRef (IRef)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
@@ -35,28 +35,27 @@ import qualified Lamdu.Expr.Val as V
 
 type T = Transaction
 
-type DefI t = IRef t (Definition.Body (ValI t))
-type DefIM m = DefI (Tag m)
+type DefI m = IRef m (Definition.Body (ValI m))
 
 -- NOTE: Nobody else should generate Lamdu-visible Global Id's
-globalId :: DefI t -> V.GlobalId
+globalId :: DefI m -> V.GlobalId
 globalId = V.GlobalId . Identifier . Guid.bs . IRef.guid
 
-defI :: V.GlobalId -> DefI t
+defI :: V.GlobalId -> DefI m
 defI (V.GlobalId (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make bs
 
-newtype ValI t = ValI {
-  unValI :: IRef t (V.Body (ValI t))
+newtype ValI m = ValI {
+  unValI :: IRef m (V.Body (ValI m))
   } deriving (Eq, Ord, Show, Binary)
 
-type ValIM m = ValI (Tag m)
+type ValIM m = ValI (m)
 
 type ValIProperty m = Property (T m) (ValIM m)
-type ValBody t = V.Body (ValI t)
-type Lam t = V.Lam (ValI t)
-type Apply t = V.Apply (ValI t)
+type ValBody m = V.Body (ValI m)
+type Lam m = V.Lam (ValI m)
+type Apply m = V.Apply (ValI m)
 
-newValBody :: MonadA m => ValBody (Tag m) -> T m (ValIM m)
+newValBody :: MonadA m => ValBody (m) -> T m (ValIM m)
 newValBody = fmap ValI . Transaction.newIRef
 
 -- TODO: Remove this
@@ -66,11 +65,11 @@ newLambda body = do
   expr <- newValBody $ V.BAbs $ V.Lam paramId body
   return (paramId, expr)
 
-readValBody :: MonadA m => ValIM m -> T m (ValBody (Tag m))
+readValBody :: MonadA m => ValIM m -> T m (ValBody (m))
 readValBody = Transaction.readIRef . unValI
 
 writeValBody ::
-  MonadA m => ValIM m -> ValBody (Tag m) -> T m ()
+  MonadA m => ValIM m -> ValBody (m) -> T m ()
 writeValBody = Transaction.writeIRef . unValI
 
 newVal :: MonadA m => Val () -> T m (ValIM m)
@@ -138,11 +137,11 @@ addProperties setIRef (Val (iref, a) body) =
       & Lens.element index .~ newIRef
       & writeValBody iref
 
-data ValTree t
-  = ValTreeLeaf (ValI t)
-  | ValTreeNode (V.Body (ValTree t))
+data ValTree m
+  = ValTreeLeaf (ValI m)
+  | ValTreeNode (V.Body (ValTree m))
   deriving (Show)
-type ValTreeM m = ValTree (Tag m)
+type ValTreeM m = ValTree (m)
 
 writeValTree :: MonadA m => ValTreeM m -> T m (ValIM m)
 writeValTree (ValTreeLeaf valI) = return valI

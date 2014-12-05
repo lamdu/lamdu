@@ -40,10 +40,10 @@ randomizeExprAndParams gen =
 augment :: String -> EntityId -> EntityId
 augment str (EntityId x) = EntityId $ Guid.augment str x
 
-ofIRef :: IRef t a -> EntityId
+ofIRef :: IRef m a -> EntityId
 ofIRef = EntityId . UniqueId.toGuid
 
-ofValI :: ExprIRef.ValI t -> EntityId
+ofValI :: ExprIRef.ValI m -> EntityId
 ofValI = ofIRef . ExprIRef.unValI
 
 ofLambdaParam :: V.Var -> EntityId

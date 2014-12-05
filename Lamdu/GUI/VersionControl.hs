@@ -6,7 +6,6 @@ import Control.Lens.Operators
 import Control.Monad.Trans.Class (lift)
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
-import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -80,7 +79,7 @@ choiceWidgetConfig config = BWidgets.ChoiceWidgetConfig
 make ::
   (MonadA m, MonadA n) =>
   (forall a. Transaction n a -> m a) ->
-  Widget.Size -> Actions (Tag n) m -> Widget m ->
+  Widget.Size -> Actions n m -> Widget m ->
   WidgetEnvT m (Widget m)
 make transaction size actions widget = do
   config <- WE.readConfig

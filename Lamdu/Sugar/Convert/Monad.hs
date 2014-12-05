@@ -18,7 +18,6 @@ import Control.MonadA (MonadA)
 import Data.Map (Map)
 import Data.Monoid (Monoid)
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Lamdu.Expr.Val (Val)
 import Lamdu.Sugar.Internal
@@ -50,7 +49,7 @@ newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
 data Context m = Context
   { _scInferContext :: Infer.Context
   , _scCodeAnchors :: Anchors.CodeProps m
-  , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
+  , _scSpecialFunctions :: Anchors.SpecialFunctions (m)
   , _scTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
   , _scRecordParamsInfos :: Map V.Var (RecordParamsInfo m) -- param guids
   , scConvertSubexpression ::

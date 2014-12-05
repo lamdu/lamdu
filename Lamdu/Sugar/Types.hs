@@ -69,7 +69,6 @@ import Data.Foldable (Foldable)
 import Data.Monoid (Monoid(..))
 import Data.Monoid.Generic (def_mempty, def_mappend)
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction, MkProperty)
 import Data.Traversable (Traversable)
 import GHC.Generics (Generic)
@@ -130,7 +129,7 @@ data Payload m a = Payload
 
 -- When fabricating a new hole result involving a stored argument,
 -- this Maybe varies between Nothing and Just in the same expression
-type MStorePoint m a = (Maybe (TypesInternal.StorePoint (Tag m)), a)
+type MStorePoint m a = (Maybe (TypesInternal.StorePoint (m)), a)
 
 type ExprStorePoint m a = Val (MStorePoint m a)
 

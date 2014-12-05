@@ -16,11 +16,10 @@ import Control.Applicative ((<$>), (<$))
 import Control.Lens.Operators
 import Control.Monad (when)
 import Control.MonadA (MonadA)
-import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction, getP, setP, modP)
 import Lamdu.CharClassification (operatorChars)
 import Lamdu.Data.Anchors (PresentationMode(..))
-import Lamdu.Expr.IRef (DefIM, ValTree(..))
+import Lamdu.Expr.IRef (DefI, ValTree(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
@@ -36,9 +35,9 @@ type T = Transaction
 
 setToWrapper ::
   MonadA m =>
-  ExprIRef.ValI (Tag m) ->
+  ExprIRef.ValI (m) ->
   ExprIRef.ValIProperty m ->
-  T m (ExprIRef.ValI (Tag m))
+  T m (ExprIRef.ValI (m))
 setToWrapper wrappedI destP = do
   newFuncI <- newHole
   destI <$ ExprIRef.writeValBody destI (V.BApp (V.Apply newFuncI wrappedI))
@@ -48,29 +47,29 @@ setToWrapper wrappedI destP = do
 wrap ::
   MonadA m =>
   ExprIRef.ValIProperty m ->
-  T m (ExprIRef.ValI (Tag m))
+  T m (ExprIRef.ValI (m))
 wrap exprP = do
   newFuncI <- newHole
   applyI <- ExprIRef.newValBody . V.BApp . V.Apply newFuncI $ Property.value exprP
   Property.set exprP applyI
   return applyI
 
-newHole :: MonadA m => T m (ExprIRef.ValI (Tag m))
+newHole :: MonadA m => T m (ExprIRef.ValI (m))
 newHole = ExprIRef.newValBody $ V.BLeaf V.LHole
 
 replace ::
   MonadA m =>
   ExprIRef.ValIProperty m ->
-  ExprIRef.ValI (Tag m) ->
-  T m (ExprIRef.ValI (Tag m))
+  ExprIRef.ValI (m) ->
+  T m (ExprIRef.ValI (m))
 replace exprP newExprI = do
   Property.set exprP newExprI
   return newExprI
 
-replaceWithHole :: MonadA m => ExprIRef.ValIProperty m -> T m (ExprIRef.ValI (Tag m))
+replaceWithHole :: MonadA m => ExprIRef.ValIProperty m -> T m (ExprIRef.ValI (m))
 replaceWithHole exprP = replace exprP =<< newHole
 
-setToHole :: MonadA m => ExprIRef.ValIProperty m -> T m (ExprIRef.ValI (Tag m))
+setToHole :: MonadA m => ExprIRef.ValIProperty m -> T m (ExprIRef.ValI (m))
 setToHole exprP =
   exprI <$ ExprIRef.writeValBody exprI hole
   where
@@ -80,7 +79,7 @@ setToHole exprP =
 lambdaWrap
   :: MonadA m
   => ExprIRef.ValIProperty m
-  -> T m (V.Var, ExprIRef.ValI (Tag m))
+  -> T m (V.Var, ExprIRef.ValI (m))
 lambdaWrap exprP = do
   (newParam, newExprI) <- ExprIRef.newLambda $ Property.value exprP
   Property.set exprP newExprI
@@ -89,7 +88,7 @@ lambdaWrap exprP = do
 redexWrap
   :: MonadA m
   => ExprIRef.ValIProperty m
-  -> T m (V.Var, ExprIRef.ValI (Tag m))
+  -> T m (V.Var, ExprIRef.ValI (m))
 redexWrap exprP = do
   (newParam, newLambdaI) <- ExprIRef.newLambda $ Property.value exprP
   newValueI <- newHole
@@ -99,9 +98,9 @@ redexWrap exprP = do
 
 addListItem ::
   MonadA m =>
-  Anchors.SpecialFunctions (Tag m) ->
+  Anchors.SpecialFunctions (m) ->
   ExprIRef.ValIProperty m ->
-  T m (ExprIRef.ValI (Tag m), ExprIRef.ValI (Tag m))
+  T m (ExprIRef.ValI (m), ExprIRef.ValI (m))
 addListItem Anchors.SpecialFunctions {..} exprP = do
   newItemI <- newHole
   newListI <- ExprIRef.writeValTree $
@@ -118,7 +117,7 @@ addListItem Anchors.SpecialFunctions {..} exprP = do
     recEmpty           = v $ V.BLeaf V.LRecEmpty
     cons               = v $ ExprLens.valBodyGlobal # ExprIRef.globalId sfCons
 
-newPane :: MonadA m => Anchors.CodeProps m -> DefIM m -> T m ()
+newPane :: MonadA m => Anchors.CodeProps m -> DefI m -> T m ()
 newPane codeProps defI = do
   let panesProp = Anchors.panes codeProps
   panes <- getP panesProp
@@ -148,7 +147,7 @@ presentationModeOfName x
 
 newDefinition ::
   MonadA m => String -> PresentationMode ->
-  Definition.Body (ExprIRef.ValIM m) -> T m (DefIM m)
+  Definition.Body (ExprIRef.ValIM m) -> T m (DefI m)
 newDefinition name presentationMode defBody = do
   newDef <- Transaction.newIRef defBody
   setP (Anchors.assocNameRef newDef) name
@@ -156,7 +155,7 @@ newDefinition name presentationMode defBody = do
   return newDef
 
 newPublicDefinition ::
-  MonadA m => Anchors.CodeProps m -> String -> T m (DefIM m)
+  MonadA m => Anchors.CodeProps m -> String -> T m (DefI m)
 newPublicDefinition codeProps name = do
   defI <-
     newDefinition name (presentationModeOfName name) =<<
@@ -166,8 +165,8 @@ newPublicDefinition codeProps name = do
 
 newClipboard ::
   MonadA m => Anchors.CodeProps m ->
-  ExprIRef.ValI (Tag m) ->
-  T m (DefIM m)
+  ExprIRef.ValI (m) ->
+  T m (DefI m)
 newClipboard codeProps expr = do
   len <- length <$> getP (Anchors.clipboards codeProps)
   let def = Definition.Body (Definition.ContentExpr expr) Definition.NoExportedType

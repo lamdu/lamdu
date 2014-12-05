@@ -28,7 +28,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse, sequenceA)
 import GHC.Generics (Generic)
 import Lamdu.Config (Config)
-import Lamdu.Expr.IRef (DefIM)
+import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument, hiActiveId)
@@ -71,7 +71,7 @@ data Group def = Group
   { _groupSearchTerms :: GroupAttributes
   , _groupBaseExpr :: Val ()
   }
-type GroupM m = Group (DefIM m)
+type GroupM m = Group (DefI m)
 
 Lens.makeLenses ''GroupAttributes
 Lens.makeLenses ''Group

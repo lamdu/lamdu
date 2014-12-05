@@ -19,7 +19,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.String (IsString(..))
 import Data.Traversable (traverse)
-import Lamdu.Expr.IRef (DefIM)
+import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Type (Type(..))
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -239,7 +239,7 @@ getScopeElement sugarContext (par, typeExpr) = do
         ] }
 
 -- TODO: Put the result in scopeGlobals in the caller, not here?
-getGlobal :: MonadA m => DefIM m -> T m (Scope Guid m)
+getGlobal :: MonadA m => DefI m -> T m (Scope Guid m)
 getGlobal defI = do
   pure mempty
     { _scopeGlobals = [

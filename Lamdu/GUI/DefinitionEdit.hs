@@ -6,7 +6,7 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (sequenceA)
-import Lamdu.Expr.IRef (DefIM)
+import Lamdu.Expr.IRef (DefI)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
@@ -34,7 +34,7 @@ type T = Transaction
 
 make ::
   MonadA m => Anchors.CodeProps m -> Settings ->
-  DefIM m -> WidgetEnvT (T m) (WidgetT m)
+  DefI m -> WidgetEnvT (T m) (WidgetT m)
 make cp settings defI = ExprGuiM.run ExpressionEdit.make cp settings $ do
   defS <- ExprGuiM.transaction $ loadConvertDefI cp defI
   case defS ^. Sugar.drBody of
@@ -120,7 +120,7 @@ makeExprDefinition def bodyExpr = do
     name = def ^. Sugar.drName
 
 loadConvertDefI ::
-  MonadA m => Anchors.CodeProps m -> DefIM m ->
+  MonadA m => Anchors.CodeProps m -> DefI m ->
   T m (DefinitionN m ExprGuiM.Payload)
 loadConvertDefI cp defI =
   Load.loadDefinitionClosure defI >>=
