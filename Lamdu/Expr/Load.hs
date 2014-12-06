@@ -31,11 +31,11 @@ type ExprI = ExprIRef.ValI
 -- 0 or 1 for BodyApply func/arg)
 type SubexpressionIndex = Int
 
-data ExprPropertyClosure t
-  = DefinitionContentExprProperty (DefI t) (ExprI t) Definition.ExportedType
-  | SubexpressionProperty (ExprI t) (V.Body (ExprI t)) SubexpressionIndex
+data ExprPropertyClosure m
+  = DefinitionContentExprProperty (DefI m) (ExprI m) Definition.ExportedType
+  | SubexpressionProperty (ExprI m) (V.Body (ExprI m)) SubexpressionIndex
   deriving (Show, Generic)
-instance Binary (ExprPropertyClosure t)
+instance Binary (ExprPropertyClosure m)
 
 exprPropertyOfClosure :: MonadA m => ExprPropertyClosure m -> ExprIRef.ValIProperty m
 exprPropertyOfClosure (DefinitionContentExprProperty defI bodyExpr bodyType) =
