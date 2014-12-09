@@ -347,6 +347,32 @@ eitherToListT :: Monad m => Either t a -> ListT m a
 eitherToListT (Left _) = mempty
 eitherToListT (Right x) = return x
 
+applyFormArg :: (Infer.Payload, a) -> Val (Infer.Payload, a)
+applyFormArg pl =
+  Val pl $
+  case pl ^. Lens._1 . Infer.plType of
+  T.TRecord T.CEmpty -> V.BLeaf V.LRecEmpty
+  T.TRecord (T.CExtend f typ rest) ->
+    V.BRecExtend $
+      V.RecExtend f
+      (Val (pl & Lens._1 . Infer.plType .~ typ) (V.BLeaf V.LHole)) $
+      applyFormArg (pl & Lens._1 . Infer.plType .~ T.TRecord rest)
+  _ -> V.BLeaf V.LHole
+
+applyForms :: Val (Infer.Payload, a) -> [Val (Infer.Payload, a)]
+applyForms val =
+  case val ^. V.payload . Lens._1 . Infer.plType of
+  T.TFun arg res ->
+    applyForms $
+    Val (plWithType res) $ V.BApp $ V.Apply val $
+    applyFormArg (plWithType arg)
+  _ -> []
+  & (++ [val])
+  where
+    plWithType t =
+      val ^. V.payload
+      & Lens._1 . Infer.plType .~ t
+
 mkHoleResults ::
   MonadA m =>
   ConvertM.Context m ->
@@ -359,9 +385,10 @@ mkHoleResults sugarContext exprPl stored base =
       SugarInfer.loadInferScope scopeAtHole base
       & (`runStateT` icInitial)
       & maybeTtoListT
-    let baseType = inferredBase ^. V.payload . Lens._1 . Infer.plType
+    form <- ListClass.fromList $ applyForms inferredBase
+    let formType = inferredBase ^. V.payload . Lens._1 . Infer.plType
     ((), icFinal) <-
-      unify holeType baseType
+      unify holeType formType
       & Infer.run
       & (`runStateT` icAfterBase)
       & eitherToListT
@@ -369,7 +396,7 @@ mkHoleResults sugarContext exprPl stored base =
     ((fConverted, fConsistentExpr, fWrittenExpr), forkedChanges) <-
       lift $ Transaction.fork $
         writeConvertTypeChecked (exprPl ^. ipEntityId)
-        newSugarContext stored (inferredBase & Lens.traversed . Lens._2 %~ (,) Nothing)
+        newSugarContext stored (form & Lens.traversed . Lens._2 %~ (,) Nothing)
     return $ HoleResult
       { _holeResultComplexityScore = resultComplexityScore $ fst <$> inferredBase
       , _holeResultConverted = fConverted
