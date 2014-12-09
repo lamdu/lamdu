@@ -420,7 +420,7 @@ mkHoleResults mInjectedArg sugarContext exprPl stored base =
       & maybeTtoListT
       <&> Lens._1 . Lens.traversed . Lens._2 %~ (,) Nothing
     form <- ListClass.fromList $ applyForms inferredBase
-    let formType = inferredBase ^. V.payload . Lens._1 . Infer.plType
+    let formType = form ^. V.payload . Lens._1 . Infer.plType
     (injected, icInjected) <-
       case mInjectedArg of
       Nothing -> return (form, icAfterBase)
