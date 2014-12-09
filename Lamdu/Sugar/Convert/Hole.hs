@@ -8,12 +8,14 @@ import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Arrow ((&&&))
 import Control.Lens.Operators
 import Control.Lens.Tuple
-import Control.Monad (void)
+import Control.Monad (void, liftM)
+import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..), evalStateT, evalState, state)
+import Control.Monad.Trans.State (StateT(..), evalState, state)
 import Control.MonadA (MonadA)
-import Data.Maybe.Utils(unsafeUnjust)
+import Data.Maybe (maybeToList)
+import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -22,6 +24,7 @@ import Data.Traversable (traverse)
 import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Type (Type(..))
 import Lamdu.Expr.Val (Val(..))
+import Lamdu.Infer.Unify (unify)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
@@ -31,6 +34,7 @@ import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Foldable as Foldable
+import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -93,16 +97,6 @@ mkPaste exprP = do
       ~() <- replacer clip
       return $ EntityId.ofValI clip
 
-inferOnTheSide ::
-  (MonadA m) =>
-  ConvertM.Context m -> Infer.Scope -> Val () ->
-  T m (Maybe Type)
--- token represents the given holeInferContext
-inferOnTheSide sugarContext scope val =
-  runMaybeT . (`evalStateT` (sugarContext ^. ConvertM.scInferContext)) $
-  SugarInfer.loadInferScope scope val
-  <&> (^. V.payload . Lens._1 . Infer.plType)
-
 -- Value for holeResultNewTag
 newTag :: T.Tag
 newTag = "newTag"
@@ -125,8 +119,7 @@ mkWritableHoleActions exprPl stored = do
       [ mapM (getScopeElement sugarContext) $ Map.toList $ Infer.scopeToTypeMap inferredScope
       , mapM getGlobal globals
       ]
-    , _holeInferExprType = inferOnTheSide sugarContext inferredScope
-    , holeResult = mkHoleResult sugarContext exprPl stored
+    , _holeResults = mkHoleResults sugarContext exprPl stored
     , _holeResultNewTag = newTag
     , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
     }
@@ -347,29 +340,46 @@ idTranslations src dest
       V.body . ExprLens._BAbs . V.lamParamId .
       Lens.to EntityId.ofLambdaParam
 
-mkHoleResult ::
-  (MonadA m, Monoid a) =>
+maybeTtoListT :: Monad m => MaybeT m a -> ListT m a
+maybeTtoListT = ListClass.joinL . liftM (ListClass.fromList . maybeToList) . runMaybeT
+
+eitherToListT :: Monad m => Either t a -> ListT m a
+eitherToListT (Left _) = mempty
+eitherToListT (Right x) = return x
+
+mkHoleResults ::
+  MonadA m =>
   ConvertM.Context m ->
   InputPayload m dummy -> ExprIRef.ValIProperty m ->
-  Val (MStorePoint m a) ->
-  T m (Maybe (HoleResult Guid m a))
-mkHoleResult sugarContext exprPl stored val =
-  runMaybeT $ do
-    (inferredVal, ctx) <-
-      (`runStateT` (sugarContext ^. ConvertM.scInferContext))
-      (SugarInfer.loadInferInto (exprPl ^. ipInferred) val)
-    let newSugarContext = sugarContext & ConvertM.scInferContext .~ ctx
+  Val () ->
+  ListT (T m) (HoleResult Guid m)
+mkHoleResults sugarContext exprPl stored base =
+  do
+    (inferredBase, icAfterBase) <-
+      SugarInfer.loadInferScope scopeAtHole base
+      & (`runStateT` icInitial)
+      & maybeTtoListT
+    let baseType = inferredBase ^. V.payload . Lens._1 . Infer.plType
+    ((), icFinal) <-
+      unify holeType baseType
+      & Infer.run
+      & (`runStateT` icAfterBase)
+      & eitherToListT
+    let newSugarContext = sugarContext & ConvertM.scInferContext .~ icFinal
     ((fConverted, fConsistentExpr, fWrittenExpr), forkedChanges) <-
       lift $ Transaction.fork $
         writeConvertTypeChecked (exprPl ^. ipEntityId)
-        newSugarContext stored inferredVal
+        newSugarContext stored (inferredBase & Lens.traversed . Lens._2 %~ (,) Nothing)
     return $ HoleResult
-      { _holeResultComplexityScore = resultComplexityScore $ fst <$> inferredVal
+      { _holeResultComplexityScore = resultComplexityScore $ fst <$> inferredBase
       , _holeResultConverted = fConverted
       , _holeResultPick = mkPickedResult fConsistentExpr fWrittenExpr <$ Transaction.merge forkedChanges
-      , _holeResultHasHoles = not . null $ orderedInnerHoles val
+      , _holeResultHasHoles = not . null $ orderedInnerHoles base
       }
   where
+    holeType = exprPl ^. ipInferred . Infer.plType
+    icInitial = sugarContext ^. ConvertM.scInferContext
+    scopeAtHole = exprPl ^. ipInferred . Infer.plScope
     mkPickedResult consistentExpr writtenExpr =
       PickedResult
       { _prMJumpTo =

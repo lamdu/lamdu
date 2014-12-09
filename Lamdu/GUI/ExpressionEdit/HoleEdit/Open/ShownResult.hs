@@ -7,14 +7,13 @@ import Data.Store.Guid (Guid)
 import Lamdu.Sugar.AddNames.Types (Name)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
 
 data ShownResult m = ShownResult
   { srEventMap :: Widget.EventHandlers (T m)
-  , srHoleResult :: Sugar.HoleResult (Name m) m HoleResults.SugarExprPl
+  , srHoleResult :: Sugar.HoleResult (Name m) m
   , srPickTo ::
     T m
     ( Maybe Guid -- Hole target guid

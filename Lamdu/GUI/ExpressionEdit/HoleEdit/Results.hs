@@ -4,39 +4,28 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Results
   , Result(..)
   , ResultsList(..), rlExtraResultsPrefixId, rlMain, rlExtra
   , prefixId
-  , SugarExprPl
   ) where
 
-import Control.Applicative (Applicative(..), (<$>), (<$))
+import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Lens.Tuple
-import Control.Monad (void, join, guard)
 import Control.Monad.ListT (ListT)
-import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.Either.Utils (leftToJust, justToLeft)
-import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Function (on)
 import Data.List (isInfixOf, isPrefixOf, partition)
 import Data.List.Utils (sortOn, nonEmptyAll)
-import Data.Maybe (catMaybes)
-import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
 import Data.Monoid.Generic (def_mempty, def_mappend)
 import Data.Store.Transaction (Transaction)
-import Data.Traversable (traverse, sequenceA)
 import GHC.Generics (Generic)
 import Lamdu.Config (Config)
 import Lamdu.Expr.IRef (DefI)
-import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument, hiActiveId)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.AddNames.Types (Name(..), NameCollision(..))
 import Lamdu.Sugar.Types (Scope(..))
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Trans.State as State
 import qualified Data.Char as Char
 import qualified Data.List as List
 import qualified Data.List.Class as ListClass
@@ -44,7 +33,6 @@ import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
-import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -79,11 +67,9 @@ Lens.makeLenses ''Group
 data ResultType = GoodResult | BadResult
   deriving (Eq, Ord)
 
-type SugarExprPl = (ExprGuiM.StoredEntityIds, ExprGuiM.Injected)
-
 data Result m = Result
   { rType :: ResultType
-  , rHoleResult :: Sugar.HoleResult (Name m) m SugarExprPl
+  , rHoleResult :: Sugar.HoleResult (Name m) m
   , rId :: WidgetId.Id
   }
 
@@ -120,38 +106,15 @@ sugarNameToGroup (Name _ collision _ varName) expr = Group
 prefixId :: HoleInfo m -> WidgetId.Id
 prefixId holeInfo = mconcat [hiActiveId holeInfo, WidgetId.Id ["results"]]
 
-storePointHoleWrap ::
-  Monoid a =>
-  Val (Sugar.MStorePoint m a) ->
-  Val (Sugar.MStorePoint m a)
-storePointHoleWrap expr =
-  noStorePoint $ V.BApp $ V.Apply (noStorePoint (V.BLeaf V.LHole)) expr
-  where
-    noStorePoint = Val (Nothing, mempty)
-
-typeCheckHoleResult ::
-  MonadA m => HoleInfo m ->
-  Val (Sugar.MStorePoint m SugarExprPl) ->
-  T m (Maybe (ResultType, Sugar.HoleResult (Name m) m SugarExprPl))
-typeCheckHoleResult holeInfo val = do
-  mGood <- mkHoleResult val
-  case mGood of
-    Just good -> pure $ Just (GoodResult, good)
-    Nothing ->
-      fmap ((,) BadResult) <$>
-      (mkHoleResult . storePointHoleWrap) val
-  where
-    mkHoleResult = Sugar.holeResult (hiActions holeInfo)
-
 typeCheckResults ::
   MonadA m => HoleInfo m ->
-  [Val (Sugar.MStorePoint m SugarExprPl)] ->
-  T m [(ResultType, Sugar.HoleResult (Name m) m SugarExprPl)]
-typeCheckResults holeInfo options = do
+  Val () ->
+  T m [(ResultType, Sugar.HoleResult (Name m) m)]
+typeCheckResults holeInfo expr = do
   rs <-
-    options
-    & traverse (typeCheckHoleResult holeInfo)
-    <&> catMaybes
+    (hiActions holeInfo ^. Sugar.holeResults) expr
+    <&> (,) GoodResult
+    & ListClass.toList
   let (goodResults, badResults) = partition ((== GoodResult) . fst) rs
   return $ sorted goodResults ++ sorted badResults
   where
@@ -159,7 +122,7 @@ typeCheckResults holeInfo options = do
 
 mResultsListOf ::
   HoleInfo m -> WidgetId.Id ->
-  [(ResultType, Sugar.HoleResult (Name m) m SugarExprPl)] ->
+  [(ResultType, Sugar.HoleResult (Name m) m)] ->
   Maybe (ResultsList m)
 mResultsListOf _ _ [] = Nothing
 mResultsListOf holeInfo baseId (x:xs) = Just
@@ -184,107 +147,17 @@ mResultsListOf holeInfo baseId (x:xs) = Just
 
 typeCheckToResultsList ::
   MonadA m => HoleInfo m ->
-  WidgetId.Id -> [Val (Sugar.MStorePoint m SugarExprPl)] ->
+  WidgetId.Id -> Val () ->
   T m (Maybe (ResultsList m))
-typeCheckToResultsList holeInfo baseId options =
+typeCheckToResultsList holeInfo baseId expr =
   mResultsListOf holeInfo baseId <$>
-  typeCheckResults holeInfo options
-
--- Modified from Lamdu.Suggest to be non-recursive on the field
--- values. TODO: Is code sharing possible?
-suggestRecord :: Monoid a => T.Composite T.Product -> Val a
-suggestRecord T.CVar{}          = P.hole
-suggestRecord T.CEmpty          = P.recEmpty
-suggestRecord (T.CExtend f _ r) = P.recExtend f P.hole $ suggestRecord r
-
-applyForms :: Monoid a => Type -> Val a -> [Val a]
-applyForms typ base =
-  base : case typ of
-         T.TFun paramTyp res -> applyForms res (addApply paramTyp base)
-         _ -> []
-  where
-    suggestArg (T.TRecord prod) = suggestRecord prod
-    suggestArg _ = P.hole
-    addApply paramTyp x = P.app x $ suggestArg paramTyp
-
-baseExprWithApplyForms :: MonadA m => HoleInfo m -> Val () -> T m [Val ()]
-baseExprWithApplyForms holeInfo baseExpr =
-  maybe [] (`applyForms` baseExpr) <$>
-  (hiActions holeInfo ^. Sugar.holeInferExprType) baseExpr
-
-removeWrappers :: Val a -> Maybe (Val a)
-removeWrappers (Val pl body) =
-  case body of
-  V.BApp (V.Apply (Val _ (V.BLeaf V.LHole)) arg) -> Just arg
-  _ -> do
-    _removedHole <- guard $ Just True == removedFromChildren ^? Lens.traversed . _1
-    Just $ Val pl $ snd <$> removedFromChildren
-  where
-    removedFromChildren = body & Lens.traversed %~ f
-    f child =
-      case removeWrappers child of
-      Nothing -> (False, child)
-      Just x -> (True, x)
-
-replaceEachHole :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
-replaceEachHole replaceHole =
-  map fst . filter snd . (`runStateT` False) . go
-  where
-    go oldVal@(Val x body) = do
-      alreadyReplaced <- State.get
-      if alreadyReplaced
-        then return (pure oldVal)
-        else
-          case body of
-          V.BLeaf V.LHole ->
-            join $ lift
-              [ do
-                  State.put True
-                  return $ replaceHole x
-              , return (pure oldVal)
-              ]
-          _ -> fmap (Val x) . sequenceA <$> traverse go body
-
-injectIntoHoles ::
-  MonadA m =>
-  Sugar.HoleActions name m ->
-  Val (Sugar.MStorePoint m a) ->
-  Val a ->
-  T m [Val (Sugar.MStorePoint m a)]
-injectIntoHoles actions arg =
-  fmap catMaybes . mapM firstToTypeCheck .
-  replaceEachHole (const (maybeToMPlus (removeWrappers arg) ++ [arg])) .
-  fmap ((,) Nothing)
-  where
-    typeCheckOnSide val = do
-      mType <- actions ^. Sugar.holeInferExprType $ void val
-      return $ val <$ mType
-    firstToTypeCheck =
-      runMaybeT . leftToJust . mapM_ (justToLeft . MaybeT . typeCheckOnSide)
-
-maybeInjectArgumentExpr ::
-  MonadA m => HoleInfo m ->
-  [Val ()] -> T m [Val (Sugar.MStorePoint m SugarExprPl)]
-maybeInjectArgumentExpr holeInfo =
-  case hiMArgument holeInfo of
-  Nothing -> return . map ((Nothing, mempty) <$)
-  Just holeArg ->
-    fmap concat .
-    traverse (injectIntoHoles (hiActions holeInfo) arg . (pl False <$))
-    where
-      pl isInjected = (ExprGuiM.StoredEntityIds [], ExprGuiM.Injected [isInjected])
-      arg =
-        holeArg ^. Sugar.haExprPresugared
-        <&> _2 .~ pl False
-        & V.payload . _2 .~ pl True
+  typeCheckResults holeInfo expr
 
 makeResultsList ::
   MonadA m => HoleInfo m -> GroupM m ->
   T m (Maybe (ResultsList m))
 makeResultsList holeInfo group =
-  baseExprWithApplyForms holeInfo baseExpr
-  >>= maybeInjectArgumentExpr holeInfo
-  >>= typeCheckToResultsList holeInfo baseId
+  typeCheckToResultsList holeInfo baseId baseExpr
   <&> Lens.mapped %~ rlPreferred .~ toPreferred
   where
     toPreferred

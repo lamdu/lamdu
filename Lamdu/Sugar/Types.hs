@@ -52,7 +52,7 @@ module Lamdu.Sugar.Types
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeGetParams
   , HoleActions(..)
-    , holeScope, holePaste, holeInferExprType, holeResultNewTag
+    , holeScope, holePaste, holeResults, holeResultNewTag
   , HoleResult(..)
     , holeResultComplexityScore
     , holeResultConverted
@@ -65,6 +65,7 @@ module Lamdu.Sugar.Types
   , InputPayload(..), ipGuid, ipEntityId, ipInferred, ipStored, ipData
   ) where
 
+import Control.Monad.ListT (ListT)
 import Data.Foldable (Foldable)
 import Data.Monoid (Monoid(..))
 import Data.Monoid.Generic (def_mempty, def_mappend)
@@ -177,12 +178,12 @@ data PickedResult = PickedResult
     _prIdTranslation :: [(EntityId, EntityId)]
   }
 
-data HoleResult name m a = HoleResult
+data HoleResult name m = HoleResult
   { _holeResultComplexityScore :: [Int]
-  , _holeResultConverted :: Expression name m a
+  , _holeResultConverted :: Expression name m ()
   , _holeResultPick :: T m PickedResult
   , _holeResultHasHoles :: Bool
-  } deriving (Functor, Foldable, Traversable)
+  }
 
 type ScopeItem a = (a, Val ())
 
@@ -197,14 +198,7 @@ instance Monoid (Scope name m) where
 
 data HoleActions name m = HoleActions
   { _holeScope :: T m (Scope name m)
-  , -- Infer expression "on the side" (not in the hole position),
-    -- but with the hole's scope.
-    -- If given expression does not type check on its own, returns Nothing.
-    -- (used by HoleEdit to suggest variations based on type)
-    _holeInferExprType :: Val () -> T m (Maybe Type)
-  , holeResult ::
-      forall a. Monoid a =>
-      Val (MStorePoint m a) -> T m (Maybe (HoleResult name m a))
+  , _holeResults :: Val () -> ListT (T m) (HoleResult name m)
   , -- Used for cerating a new tag inside an expression given to holeResult
     _holeResultNewTag :: T.Tag
   , _holePaste :: Maybe (T m EntityId)

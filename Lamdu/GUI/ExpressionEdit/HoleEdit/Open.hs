@@ -203,7 +203,7 @@ makeFocusable wId = ExprGuiM.widgetEnv . BWidgets.makeFocusableView wId
 
 makeHoleResultWidget ::
   MonadA m => Widget.Id ->
-  Sugar.HoleResult (Name m) m HoleResults.SugarExprPl -> ExprGuiM m (WidgetT m)
+  Sugar.HoleResult (Name m) m -> ExprGuiM m (WidgetT m)
 makeHoleResultWidget resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   resultGui <-
@@ -216,25 +216,15 @@ makeHoleResultWidget resultId holeResult = do
 
 postProcessSugar ::
   MonadA m =>
-  ExpressionN m HoleResults.SugarExprPl ->
+  ExpressionN m () ->
   ExpressionN m ExprGuiM.Payload
 postProcessSugar expr =
   expr
-  & Lens.mapped . Lens.mapped %~ toPayload
+  & Lens.mapped . Lens.mapped .~ ExprGuiM.emptyPayload
   -- Remove the top-level result's actions so that we can safely use
   -- the special events from the result's event map (e.g: add list
   -- item) without also getting unwanted handlers like "delete".
-  & Sugar.rPayload . Sugar.plData . ExprGuiM.plHoleEntityIds .~ ExprGuiM.emptyHoleEntityIds
   & Sugar.rPayload . Sugar.plActions .~ Nothing
-
-toPayload :: HoleResults.SugarExprPl -> ExprGuiM.Payload
-toPayload (ExprGuiM.StoredEntityIds entityIds, ExprGuiM.Injected injected) =
-  ExprGuiM.Payload
-  { ExprGuiM._plStoredEntityIds = entityIds
-  , ExprGuiM._plInjected = injected
-  -- filled by AddNextHoles above
-  , ExprGuiM._plHoleEntityIds = ExprGuiM.emptyHoleEntityIds
-  }
 
 makeNoResults :: MonadA m => HoleInfo m -> AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults holeInfo myId =
