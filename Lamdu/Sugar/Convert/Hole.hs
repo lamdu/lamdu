@@ -8,7 +8,7 @@ import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Arrow ((&&&))
 import Control.Lens.Operators
 import Control.Lens.Tuple
-import Control.Monad (void, liftM)
+import Control.Monad (join, void, liftM)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
@@ -20,7 +20,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.String (IsString(..))
-import Data.Traversable (traverse)
+import Data.Traversable (traverse, sequenceA)
 import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Type (Type(..))
 import Lamdu.Expr.Val (Val(..))
@@ -28,7 +28,6 @@ import Lamdu.Infer.Unify (unify)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
-import Lamdu.Sugar.Types.Internal
 import Lamdu.Suggest (suggestValueWith)
 import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
@@ -36,6 +35,7 @@ import qualified Control.Monad.Trans.State as State
 import qualified Data.Foldable as Foldable
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
+import qualified Data.Monoid as Monoid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -57,18 +57,20 @@ import qualified System.Random as Random
 
 type T = Transaction
 
+type ExprStorePoint m a = Val (Maybe (ExprIRef.ValIM m), a)
+
 convert ::
   (MonadA m, Monoid a) =>
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convert exprPl =
-  convertPlain exprPl
+  convertPlain Nothing exprPl
   <&> rPayload . plActions . Lens._Just . setToHole .~ AlreadyAHole
 
 convertPlain ::
   (MonadA m, Monoid a) =>
-  InputPayload m a -> ConvertM m (ExpressionU m a)
-convertPlain exprPl =
-  mkHole exprPl
+  Maybe (Val (InputPayload m a)) -> InputPayload m a -> ConvertM m (ExpressionU m a)
+convertPlain mInjectedArg exprPl =
+  mkHole mInjectedArg exprPl
   <&> BodyHole
   >>= ConvertExpr.make exprPl
   <&> rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
@@ -103,9 +105,10 @@ newTag = "newTag"
 
 mkWritableHoleActions ::
   (MonadA m) =>
-  InputPayload m dummy -> ExprIRef.ValIProperty m ->
+  Maybe (Val (InputPayload m a)) ->
+  InputPayload m a -> ExprIRef.ValIProperty m ->
   ConvertM m (HoleActions Guid m)
-mkWritableHoleActions exprPl stored = do
+mkWritableHoleActions mInjectedArg exprPl stored = do
   sugarContext <- ConvertM.readContext
   mPaste <- mkPaste stored
   globals <-
@@ -119,7 +122,7 @@ mkWritableHoleActions exprPl stored = do
       [ mapM (getScopeElement sugarContext) $ Map.toList $ Infer.scopeToTypeMap inferredScope
       , mapM getGlobal globals
       ]
-    , _holeResults = mkHoleResults sugarContext exprPl stored
+    , _holeResults = mkHoleResults mInjectedArg sugarContext exprPl stored
     , _holeResultNewTag = newTag
     , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
     }
@@ -176,9 +179,10 @@ mkHoleSuggested holeEntityId inferred = do
 
 mkHole ::
   (MonadA m, Monoid a) =>
+  Maybe (Val (InputPayload m a)) ->
   InputPayload m a -> ConvertM m (Hole Guid m (ExpressionU m a))
-mkHole exprPl = do
-  mActions <- traverse (mkWritableHoleActions exprPl) (exprPl ^. ipStored)
+mkHole mInjectedArg exprPl = do
+  mActions <- traverse (mkWritableHoleActions mInjectedArg exprPl) (exprPl ^. ipStored)
   suggested <- mkHoleSuggested (exprPl ^. ipEntityId) $ exprPl ^. ipInferred
   pure Hole
     { _holeMActions = mActions
@@ -250,7 +254,7 @@ getGlobal defI = do
 writeConvertTypeChecked ::
   (MonadA m, Monoid a) =>
   EntityId -> ConvertM.Context m -> ExprIRef.ValIProperty m ->
-  Val (Infer.Payload, MStorePoint m a) ->
+  Val (Infer.Payload, (Maybe (ExprIRef.ValIM m), a)) ->
   T m
   ( ExpressionU m a
   , Val (InputPayload m a)
@@ -373,30 +377,69 @@ applyForms val =
       val ^. V.payload
       & Lens._1 . Infer.plType .~ t
 
+replaceEachHole :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
+replaceEachHole replaceHole =
+  map fst . filter snd . (`runStateT` False) . go
+  where
+    go oldVal@(Val x body) = do
+      alreadyReplaced <- State.get
+      if alreadyReplaced
+        then return (pure oldVal)
+        else
+          case body of
+          V.BLeaf V.LHole ->
+            join $ lift
+              [ do
+                  State.put True
+                  return $ replaceHole x
+              , return (pure oldVal)
+              ]
+          _ -> fmap (Val x) . sequenceA <$> traverse go body
+
 mkHoleResults ::
   MonadA m =>
+  Maybe (Val (InputPayload m a)) ->
   ConvertM.Context m ->
   InputPayload m dummy -> ExprIRef.ValIProperty m ->
   Val () ->
   ListT (T m) (HoleResult Guid m)
-mkHoleResults sugarContext exprPl stored base =
+mkHoleResults mInjectedArg sugarContext exprPl stored base =
   do
     (inferredBase, icAfterBase) <-
       SugarInfer.loadInferScope scopeAtHole base
       & (`runStateT` icInitial)
       & maybeTtoListT
+      <&> Lens._1 . Lens.traversed . Lens._2 %~ (,) Nothing
     form <- ListClass.fromList $ applyForms inferredBase
     let formType = inferredBase ^. V.payload . Lens._1 . Infer.plType
+    (injected, icInjected) <-
+      case mInjectedArg of
+      Nothing -> return (form, icAfterBase)
+      Just injectedArg -> do
+        let
+          onInjectedPayload pl =
+              ( pl ^. ipInferred
+              , (pl ^? ipStored . Lens._Just . Property.pVal, ())
+              )
+          inject pl = (Monoid.First (Just pl), injectedArg <&> onInjectedPayload)
+          injectedType = injectedArg ^. V.payload . ipInferred . Infer.plType
+        (Monoid.First (Just injectPointPl), expr) <- ListClass.fromList $ replaceEachHole inject form
+        ((), inferContext) <-
+          unify injectedType (injectPointPl ^. Lens._1 . Infer.plType)
+          & Infer.run
+          & (`runStateT` icAfterBase)
+          & eitherToListT
+        return (expr, inferContext)
     ((), icFinal) <-
       unify holeType formType
       & Infer.run
-      & (`runStateT` icAfterBase)
+      & (`runStateT` icInjected)
       & eitherToListT
     let newSugarContext = sugarContext & ConvertM.scInferContext .~ icFinal
     ((fConverted, fConsistentExpr, fWrittenExpr), forkedChanges) <-
       lift $ Transaction.fork $
         writeConvertTypeChecked (exprPl ^. ipEntityId)
-        newSugarContext stored (form & Lens.traversed . Lens._2 %~ (,) Nothing)
+        newSugarContext stored injected
     return $ HoleResult
       { _holeResultComplexityScore = resultComplexityScore $ fst <$> inferredBase
       , _holeResultConverted = fConverted
@@ -439,7 +482,6 @@ writeExprMStored holeEntityId exprIRef exprMStorePoint = do
     & randomizeNonStoredParamIds (genFromHashable key)
     & newTags %%~ const (state InputExpr.randomTag)
     & (`evalState` genFromHashable holeEntityId)
-    & Lens.mapped . Lens._1 . Lens._Just %~ unStorePoint
     & ExprIRef.writeValWithStoredSubexpressions exprIRef
   where
     newTags = ExprLens.valTags . Lens.filtered (== newTag)

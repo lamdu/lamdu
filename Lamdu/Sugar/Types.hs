@@ -45,7 +45,7 @@ module Lamdu.Sugar.Types
   , FuncParam(..)
     , fpName, fpId, fpVarKind, fpInferredType, fpMActions
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
-  , HoleArg(..), haExpr, haExprPresugared, haUnwrap
+  , HoleArg(..), haExpr, haUnwrap
   , HoleSuggested(..), hsValue, hsMakeConverted
   , Hole(..)
     , holeMActions, holeMArg, holeSuggested, holeGuid
@@ -60,7 +60,6 @@ module Lamdu.Sugar.Types
     , holeResultHasHoles
   , PickedResult(..), prMJumpTo, prIdTranslation
   , TagG(..), tagGName, tagVal, tagInstance
-  , MStorePoint, ExprStorePoint
   -- Input types:
   , InputPayload(..), ipGuid, ipEntityId, ipInferred, ipStored, ipData
   ) where
@@ -84,7 +83,6 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Sugar.Types.Internal as TypesInternal
 
 type T = Transaction
 
@@ -127,12 +125,6 @@ data Payload m a = Payload
   , _plEntityId :: EntityId
   , _plData :: a
   } deriving (Functor, Foldable, Traversable)
-
--- When fabricating a new hole result involving a stored argument,
--- this Maybe varies between Nothing and Just in the same expression
-type MStorePoint m a = (Maybe (TypesInternal.StorePoint m), a)
-
-type ExprStorePoint m a = Val (MStorePoint m a)
 
 data ExpressionP name m pl = Expression
   { _rBody :: Body name m (ExpressionP name m pl)
@@ -212,7 +204,6 @@ data Unwrap m
 
 data HoleArg m expr = HoleArg
   { _haExpr :: expr
-  , _haExprPresugared :: ExprStorePoint m ()
   , _haUnwrap :: Unwrap m
   } deriving (Functor, Foldable, Traversable)
 

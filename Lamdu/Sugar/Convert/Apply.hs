@@ -21,7 +21,6 @@ import Lamdu.Infer.Unify (unify)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
-import Lamdu.Sugar.Types.Internal
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -176,9 +175,6 @@ convertAppliedHole funcI argS argI exprPl = do
         & rPayload . plActions . Lens._Just %~
           (wrap .~ argWrap) .
           (setToHole .~ AlreadyAHole)
-      , _haExprPresugared =
-        flip (,) () . fmap (StorePoint . Property.value) .
-        (^. ipStored) <$> argI
       , _haUnwrap =
         if isTypeMatch
         then UnwrapMAction mUnwrap
@@ -188,7 +184,7 @@ convertAppliedHole funcI argS argI exprPl = do
       stored <- exprPl ^. ipStored
       argP <- argI ^. V.payload . ipStored
       return $ unwrap stored argP argI
-  lift $ ConvertHole.convertPlain exprPl
+  lift $ ConvertHole.convertPlain (Just argI) exprPl
     <&> rBody . _BodyHole . holeMArg .~ Just holeArg
     <&> rPayload . plData <>~ funcI ^. V.payload . ipData
     <&> rPayload . plActions . Lens._Just . wrap .~

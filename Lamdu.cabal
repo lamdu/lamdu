@@ -226,7 +226,6 @@ Executable lamdu
                ,       Lamdu.Sugar.Internal
                ,       Lamdu.Sugar.Internal.EntityId
                ,       Lamdu.Sugar.Types
-               ,       Lamdu.Sugar.Types.Internal
                ,       Lamdu.Suggest
                ,       Lamdu.VersionControl
                ,       Lamdu.VersionControl.Actions
