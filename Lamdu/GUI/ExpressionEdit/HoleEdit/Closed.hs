@@ -44,6 +44,10 @@ make hole pl myId = do
       arg <- maybeToMPlus $ hole ^. Sugar.holeMArg
       lift $ (,) myId <$> makeWrapper arg myId
     justToLeft $ do
+      guard . not $
+        Lens.nullOf
+        (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed)
+        pl
       guard . Lens.nullOf ExprLens.valHole $ suggested ^. Sugar.hsValue
       lift $ makeSuggested suggested myId
     lift $ (,) (diveIntoHole myId) <$> makeSimple myId
