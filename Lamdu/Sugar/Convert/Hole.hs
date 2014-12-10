@@ -253,6 +253,10 @@ getGlobal defI =
 
 type HoleResultVal m a = Val (Infer.Payload, (Maybe (ExprIRef.ValIM m), a))
 
+markNotInjected :: HoleResultVal n () -> HoleResultVal n IsInjected
+markNotInjected val =
+  val <&> _2 . _2 .~ NotInjected
+
 writeConvertTypeChecked ::
   (MonadA m, Monoid a) =>
   EntityId -> ConvertM.Context m -> ExprIRef.ValIProperty m ->
@@ -356,18 +360,18 @@ eitherToListT (Right x) = return x
 applyFormArg :: (Infer.Payload, a) -> Val (Infer.Payload, a)
 applyFormArg pl =
   Val pl $
-  case pl ^. Lens._1 . Infer.plType of
+  case pl ^. _1 . Infer.plType of
   T.TRecord T.CEmpty -> V.BLeaf V.LRecEmpty
   T.TRecord (T.CExtend f typ rest) ->
     V.BRecExtend $
       V.RecExtend f
-      (Val (pl & Lens._1 . Infer.plType .~ typ) (V.BLeaf V.LHole)) $
-      applyFormArg (pl & Lens._1 . Infer.plType .~ T.TRecord rest)
+      (Val (pl & _1 . Infer.plType .~ typ) (V.BLeaf V.LHole)) $
+      applyFormArg (pl & _1 . Infer.plType .~ T.TRecord rest)
   _ -> V.BLeaf V.LHole
 
 applyForms :: Val (Infer.Payload, a) -> [Val (Infer.Payload, a)]
 applyForms val =
-  case val ^. V.payload . Lens._1 . Infer.plType of
+  case val ^. V.payload . _1 . Infer.plType of
   T.TFun arg res ->
     applyForms $
     Val (plWithType res) $ V.BApp $ V.Apply val $
@@ -377,16 +381,16 @@ applyForms val =
   where
     plWithType t =
       val ^. V.payload
-      & Lens._1 . Infer.plType .~ t
+      & _1 . Infer.plType .~ t
 
 holeWrap :: Type -> Val (Infer.Payload, a) -> Val (Infer.Payload, a)
 holeWrap resultType val =
-  Val (pl & Lens._1 . Infer.plType .~ resultType) $
+  Val (pl & _1 . Infer.plType .~ resultType) $
   V.BApp $ V.Apply func val
   where
     pl = val ^. V.payload
-    func = Val (pl & Lens._1 . Infer.plType .~ funcType) $ V.BLeaf V.LHole
-    funcType = T.TFun (pl ^. Lens._1 . Infer.plType) resultType
+    func = Val (pl & _1 . Infer.plType .~ funcType) $ V.BLeaf V.LHole
+    funcType = T.TFun (pl ^. _1 . Infer.plType) resultType
 
 replaceEachHole :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
 replaceEachHole replaceHole =
@@ -414,10 +418,6 @@ stateEitherSequence (StateT f) =
   Right (r, s1) -> return (Right r, s1)
   Left l -> return (Left l, s0)
 
-markNotInjected :: HoleResultVal n () -> HoleResultVal n IsInjected
-markNotInjected val =
-  val <&> Lens._2 . Lens._2 .~ NotInjected
-
 holeResultsInject ::
   Monad m =>
   Val (InputPayload n a) -> HoleResultVal n () ->
@@ -430,7 +430,7 @@ holeResultsInject injectedArg val =
       & replaceEachHole inject
       & ListClass.fromList
       & lift
-    unify injectedType (injectPointPl ^. Lens._1 . Infer.plType)
+    unify injectedType (injectPointPl ^. _1 . Infer.plType)
       & Infer.run
       & mapStateT eitherToListT
     return filledVal
@@ -453,9 +453,9 @@ mkHoleResultVals mInjectedArg exprPl base =
     inferredBase <-
       SugarInfer.loadInferScope scopeAtHole base
       & mapStateT maybeTtoListT
-      <&> Lens.traversed . Lens._2 %~ (,) Nothing
+      <&> Lens.traversed . _2 %~ (,) Nothing
     form <- lift $ ListClass.fromList $ applyForms inferredBase
-    let formType = form ^. V.payload . Lens._1 . Infer.plType
+    let formType = form ^. V.payload . _1 . Infer.plType
     injected <- maybe (return . markNotInjected) holeResultsInject mInjectedArg form
     unifyResult <-
       unify holeType formType
