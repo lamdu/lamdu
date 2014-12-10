@@ -113,12 +113,18 @@ typeCheckResults ::
 typeCheckResults holeInfo expr = do
   rs <-
     (hiActions holeInfo ^. Sugar.holeResults) expr
-    <&> (,) GoodResult
+    <&> checkGood
     & ListClass.toList
   let (goodResults, badResults) = partition ((== GoodResult) . fst) rs
   return $ sorted goodResults ++ sorted badResults
   where
     sorted = sortOn (^. _2 . Sugar.holeResultScore)
+    checkGood x =
+      ( if x ^. Sugar.holeResultScore < [5]
+        then GoodResult
+        else BadResult
+      , x
+      )
 
 mResultsListOf ::
   HoleInfo m -> WidgetId.Id ->
