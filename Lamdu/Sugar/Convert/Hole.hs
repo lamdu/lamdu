@@ -314,11 +314,27 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
       , _ipData = a
       }
 
+resultTypeScore :: Type -> [Int]
+resultTypeScore (T.TVar _) = [2]
+resultTypeScore (T.TInst _ p) = 0 : maximum ([] : map resultTypeScore (Map.elems p))
+resultTypeScore (T.TFun a r) = 0 : max (resultTypeScore a) (resultTypeScore r)
+resultTypeScore (T.TRecord c) =
+  compositeScore c
+  where
+    compositeScore (T.CEmpty) = [0]
+    compositeScore (T.CVar _) = [1]
+    compositeScore (T.CExtend _ t r) = 0 : max (resultTypeScore t) (compositeScore r)
+
 resultScore :: Val Infer.Payload -> [Int]
-resultScore expr =
-  [ length . show $ expr ^. V.payload . Infer.plType
-  , length $ Foldable.toList expr
-  ]
+resultScore (Val pl body) =
+  bodyTopLevelScore : resultTypeScore (pl ^. Infer.plType) ++
+  (body & Foldable.toList <&> resultScore & ([]:) & maximum)
+  where
+    bodyTopLevelScore =
+      case body of
+      V.BApp (V.Apply (Val _ (V.BLeaf V.LHole)) _) -> 10
+      V.BLeaf V.LHole -> 1
+      _ -> 0
 
 idTranslations ::
   Val EntityId ->
