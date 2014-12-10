@@ -84,7 +84,7 @@ makeTFun parentPrecedence a b =
   parens parentPrecedence (MyPrecedence 0) =<<
   hbox <$> sequence
   [ splitMake (ParentPrecedence 1) a
-  , text " -> "
+  , text " → "
   , splitMake (ParentPrecedence 0) b
   ]
 
@@ -96,8 +96,7 @@ makeTInst _parentPrecedence (T.Id name) typeParams =
       [] -> pure nameView
       ((_, arg) : []) ->
         do
-          -- Don't use makeInternal, use splitMake
-          argView <- makeInternal (ParentPrecedence 0) arg
+          argView <- splitMake (ParentPrecedence 0) arg
           pure $ hbox [nameView, space, argView]
       _ ->
         do
@@ -112,8 +111,7 @@ makeRecord composite =
         (tag, fieldType) <- Map.toList fields
         return $ do
           tagView <- text "TAG"
-          -- Don't use makeInternal, use splitMake
-          typeView <- makeInternal (ParentPrecedence 0) fieldType
+          typeView <- splitMake (ParentPrecedence 0) fieldType
           return
             [ (Vector2 1 0.5, tagView)
             , (0.5, space)
