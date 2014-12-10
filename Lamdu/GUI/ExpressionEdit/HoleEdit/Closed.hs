@@ -51,11 +51,16 @@ make hole pl myId = do
     ExprEventMap.make
     (rawInactive ^. ExpressionGui.egWidget . Widget.wIsFocused) [] pl
   inactive <-
-    ExpressionGui.addInferredTypes pl rawInactive
+    rawInactive
+    & addInferredTypes
     <&> ExpressionGui.egWidget %~
         Widget.weakerEvents (mappend openEventMap exprEventMap)
   return (destId, inactive)
   where
+    addInferredTypes =
+      if null (pl ^. Sugar.plData . ExprGuiM.plStoredEntityIds)
+      then return
+      else ExpressionGui.addInferredTypes pl
     suggested = hole ^. Sugar.holeSuggested
     openEventMap =
       Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.Key'Enter]
@@ -98,10 +103,16 @@ makeWrapper ::
 makeWrapper arg myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
-    bgColor =
+    (bgColor, addTypes) =
       case arg ^. Sugar.haUnwrap of
-      Sugar.UnwrapMAction {} -> Config.deletableHoleBackgroundColor config
-      Sugar.UnwrapTypeMismatch {} -> Config.typeErrorHoleWrapBackgroundColor config
+      Sugar.UnwrapMAction {} ->
+        ( Config.deletableHoleBackgroundColor config
+        , return
+        )
+      Sugar.UnwrapTypeMismatch {} ->
+        ( Config.typeErrorHoleWrapBackgroundColor config
+        , ExpressionGui.addInferredTypes (arg ^. Sugar.haExpr . Sugar.rPayload)
+        )
   rawArgGui <-
     arg ^. Sugar.haExpr
     & ExprGuiM.makeSubexpression 0
@@ -109,8 +120,8 @@ makeWrapper arg myId = do
     makeWrapperEventMap
     (rawArgGui ^. ExpressionGui.egWidget . Widget.wIsFocused)
     arg myId
-  rawArgGui
-    & ExpressionGui.egWidget %%~
+  addTypes rawArgGui
+    >>= ExpressionGui.egWidget %%~
       makeFocusable myId . Widget.weakerEvents eventMap
     <&> ExpressionGui.pad (realToFrac <$> Config.wrapperHolePadding config)
     <&> ExpressionGui.egWidget %~
