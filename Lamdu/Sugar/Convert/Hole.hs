@@ -414,14 +414,22 @@ stateEitherSequence (StateT f) =
   Right (r, s1) -> return (Right r, s1)
   Left l -> return (Left l, s0)
 
+markNotInjected :: HoleResultVal n () -> HoleResultVal n IsInjected
+markNotInjected val =
+  val <&> Lens._2 . Lens._2 .~ NotInjected
+
 holeResultsInject ::
   Monad m =>
   Val (InputPayload n a) -> HoleResultVal n () ->
-  StateT Infer.Context (ListT m) (HoleResultVal n ())
+  StateT Infer.Context (ListT m) (HoleResultVal n IsInjected)
 holeResultsInject injectedArg val =
   do
     (Monoid.First (Just injectPointPl), filledVal) <-
-      lift $ ListClass.fromList $ replaceEachHole inject val
+      val
+      & markNotInjected
+      & replaceEachHole inject
+      & ListClass.fromList
+      & lift
     unify injectedType (injectPointPl ^. Lens._1 . Infer.plType)
       & Infer.run
       & mapStateT eitherToListT
@@ -429,7 +437,7 @@ holeResultsInject injectedArg val =
   where
     onInjectedPayload pl =
         ( pl ^. ipInferred
-        , (pl ^? ipStored . Lens._Just . Property.pVal, ())
+        , (pl ^? ipStored . Lens._Just . Property.pVal, Injected)
         )
     inject pl = (Monoid.First (Just pl), injectedArg <&> onInjectedPayload)
     injectedType = injectedArg ^. V.payload . ipInferred . Infer.plType
@@ -439,7 +447,7 @@ mkHoleResultVals ::
   Maybe (Val (InputPayload m a)) ->
   InputPayload m dummy ->
   Val () ->
-  StateT Infer.Context (ListT (T m)) (HoleResultVal m ())
+  StateT Infer.Context (ListT (T m)) (HoleResultVal m IsInjected)
 mkHoleResultVals mInjectedArg exprPl base =
   do
     inferredBase <-
@@ -448,7 +456,7 @@ mkHoleResultVals mInjectedArg exprPl base =
       <&> Lens.traversed . Lens._2 %~ (,) Nothing
     form <- lift $ ListClass.fromList $ applyForms inferredBase
     let formType = form ^. V.payload . Lens._1 . Infer.plType
-    injected <- maybe return holeResultsInject mInjectedArg form
+    injected <- maybe (return . markNotInjected) holeResultsInject mInjectedArg form
     unifyResult <-
       unify holeType formType
       & Infer.run

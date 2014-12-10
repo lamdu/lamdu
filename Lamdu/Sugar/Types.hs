@@ -58,6 +58,7 @@ module Lamdu.Sugar.Types
     , holeResultConverted
     , holeResultPick
     , holeResultHasHoles
+  , IsInjected(..)
   , PickedResult(..), prMJumpTo, prIdTranslation
   , TagG(..), tagGName, tagVal, tagInstance
   -- Input types:
@@ -170,9 +171,16 @@ data PickedResult = PickedResult
     _prIdTranslation :: [(EntityId, EntityId)]
   }
 
+data IsInjected = Injected | NotInjected
+
+instance Monoid IsInjected where
+  mempty = NotInjected
+  mappend NotInjected NotInjected = NotInjected
+  mappend _ _ = Injected
+
 data HoleResult name m = HoleResult
   { _holeResultComplexityScore :: [Int]
-  , _holeResultConverted :: Expression name m ()
+  , _holeResultConverted :: Expression name m IsInjected
   , _holeResultPick :: T m PickedResult
   , _holeResultHasHoles :: Bool
   }

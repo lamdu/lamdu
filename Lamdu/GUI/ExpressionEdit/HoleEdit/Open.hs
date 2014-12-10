@@ -216,15 +216,26 @@ makeHoleResultWidget resultId holeResult = do
 
 postProcessSugar ::
   MonadA m =>
-  ExpressionN m () ->
+  ExpressionN m Sugar.IsInjected ->
   ExpressionN m ExprGuiM.Payload
 postProcessSugar expr =
   expr
-  & Lens.mapped . Lens.mapped .~ ExprGuiM.emptyPayload
+  & Lens.mapped . Lens.mapped %~ toPayload
   -- Remove the top-level result's actions so that we can safely use
   -- the special events from the result's event map (e.g: add list
   -- item) without also getting unwanted handlers like "delete".
   & Sugar.rPayload . Sugar.plActions .~ Nothing
+
+toPayload :: Sugar.IsInjected -> ExprGuiM.Payload
+toPayload isInjected =
+  ExprGuiM.Payload
+  { ExprGuiM._plStoredEntityIds = []
+  , ExprGuiM._plInjected =
+    case isInjected of
+    Sugar.NotInjected -> []
+    Sugar.Injected -> [True]
+  , ExprGuiM._plHoleEntityIds = ExprGuiM.emptyHoleEntityIds
+  }
 
 makeNoResults :: MonadA m => HoleInfo m -> AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults holeInfo myId =
