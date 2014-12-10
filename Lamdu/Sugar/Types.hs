@@ -252,13 +252,14 @@ data RecordField name m expr = RecordField
   , _rfExpr :: expr -- field type or val
   } deriving (Functor, Foldable, Traversable)
 
-data RecordTail expr =
-  ClosedRecord | RecordExtending expr
+data RecordTail m expr =
+  RecordExtending expr |
+  ClosedRecord (Maybe (T m EntityId)) -- delete action
   deriving (Functor, Foldable, Traversable)
 
 data Record name m expr = Record
   { _rItems :: [RecordField name m expr]
-  , _rTail :: RecordTail expr
+  , _rTail :: RecordTail m expr
   , _rMAddField :: Maybe (T m EntityId)
   } deriving (Functor, Foldable, Traversable)
 

@@ -203,7 +203,9 @@ convertEmptyRecord :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m 
 convertEmptyRecord exprPl =
   BodyRecord Record
   { _rItems = []
-  , _rTail = ClosedRecord
+  , _rTail =
+      ClosedRecord $
+      fmap EntityId.ofValI . DataOps.replaceWithHole <$> exprPl ^. ipStored
   , _rMAddField = return $ error "TODO: _rMAddField" -- addField <$> exprPl ^? plIRef
   }
   & ConvertExpr.make exprPl

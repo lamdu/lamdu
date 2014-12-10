@@ -47,7 +47,7 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
         fieldRefGui <- TagEdit.make tag (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
         fieldExprGui <- ExprGuiM.makeSubexpression 0 fieldExpr
         let
-          itemEventMap = maybe mempty (recordItemEventMap config) mDelete
+          itemEventMap = maybe mempty (recordDelEventMap "Field" config) mDelete
           space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
         return . ExpressionGui.makeRow $
           [(1, scaleTag fieldRefGui), (0.5, space), (0, fieldExprGui)]
@@ -70,9 +70,11 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
         & Widget.scale (Vector2 targetWidth 10)
     tailWidget <-
       case recordTail of
-      Sugar.ClosedRecord ->
+      Sugar.ClosedRecord mDeleteTail ->
         colorScaleRect Anim.unitSquare
         & ExprGuiM.widgetEnv . BWidgets.makeFocusableView tailId
+        <&> Widget.weakerEvents
+            (maybe mempty (recordDelEventMap "Tail" config) mDeleteTail)
       Sugar.RecordExtending rest -> do
         restExpr <-
           ExprGuiM.makeSubexpression 0 rest
@@ -94,9 +96,9 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
     mkEventMap f mAction keys doc =
       maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction
 
-recordItemEventMap ::
-  MonadA m => Config ->
+recordDelEventMap ::
+  MonadA m => String -> Config ->
   T m Sugar.EntityId -> Widget.EventHandlers (T m)
-recordItemEventMap config delete =
+recordDelEventMap name config delete =
   Widget.keysEventMapMovesCursor (Config.delKeys config)
-  (E.Doc ["Edit", "Record", "Delete Field"]) $ WidgetIds.fromEntityId <$> delete
+  (E.Doc ["Edit", "Record", "Delete " ++ name]) $ WidgetIds.fromEntityId <$> delete
