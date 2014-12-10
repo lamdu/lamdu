@@ -488,28 +488,22 @@ mkHoleResultVals mInjectedArg exprPl base =
     holeType = exprPl ^. ipInferred . Infer.plType
     scopeAtHole = exprPl ^. ipInferred . Infer.plScope
 
-mkHoleResults ::
+mkHoleResult ::
   MonadA m =>
-  Maybe (Val (InputPayload m a)) ->
-  ConvertM.Context m ->
-  InputPayload m dummy -> ExprIRef.ValIProperty m ->
-  Val () ->
-  ListT (T m) (HoleResult Guid m)
-mkHoleResults mInjectedArg sugarContext exprPl stored base =
+  ConvertM.Context m -> EntityId ->
+  ExprIRef.ValIProperty m -> HoleResultVal m IsInjected ->
+  T m (HoleResult Guid m)
+mkHoleResult sugarContext entityId stored val =
   do
-    (val, inferContext) <-
-      mkHoleResultVals mInjectedArg exprPl base
-      & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
-    let newSugarContext = sugarContext & ConvertM.scInferContext .~ inferContext
     ((fConverted, fConsistentExpr, fWrittenExpr), forkedChanges) <-
-      lift $ Transaction.fork $
-      writeConvertTypeChecked (exprPl ^. ipEntityId)
-      newSugarContext stored val
-    return HoleResult
-      { _holeResultScore = resultScore $ fst <$> val
-      , _holeResultConverted = fConverted
+      Transaction.fork $
+      writeConvertTypeChecked entityId
+      sugarContext stored val
+    return
+      HoleResult
+      { _holeResultConverted = fConverted
       , _holeResultPick = mkPickedResult fConsistentExpr fWrittenExpr <$ Transaction.merge forkedChanges
-      , _holeResultHasHoles = not . null $ orderedInnerHoles base
+      , _holeResultHasHoles = not . null $ orderedInnerHoles val
       }
   where
     mkPickedResult consistentExpr writtenExpr =
@@ -522,6 +516,24 @@ mkHoleResults mInjectedArg sugarContext exprPl stored base =
         (consistentExpr <&> (^. ipEntityId))
         (writtenExpr <&> EntityId.ofValI . Property.value . fst)
       }
+
+mkHoleResults ::
+  MonadA m =>
+  Maybe (Val (InputPayload m a)) ->
+  ConvertM.Context m ->
+  InputPayload m dummy -> ExprIRef.ValIProperty m ->
+  Val () ->
+  ListT (T m) (HoleResultScore, T m (HoleResult Guid m))
+mkHoleResults mInjectedArg sugarContext exprPl stored base =
+  do
+    (val, inferContext) <-
+      mkHoleResultVals mInjectedArg exprPl base
+      & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
+    let newSugarContext = sugarContext & ConvertM.scInferContext .~ inferContext
+    return
+      ( resultScore (fst <$> val)
+      , mkHoleResult newSugarContext (exprPl ^. ipEntityId) stored val
+      )
 
 randomizeNonStoredParamIds ::
   Random.StdGen -> ExprStorePoint m a -> ExprStorePoint m a

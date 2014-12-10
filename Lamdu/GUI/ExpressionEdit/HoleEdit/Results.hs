@@ -12,7 +12,7 @@ import Control.Lens.Tuple
 import Control.Monad.ListT (ListT)
 import Control.MonadA (MonadA)
 import Data.Function (on)
-import Data.List (isInfixOf, isPrefixOf, partition)
+import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Utils (sortOn, nonEmptyAll)
 import Data.Monoid (Monoid(..))
 import Data.Monoid.Generic (def_mempty, def_mappend)
@@ -69,7 +69,7 @@ data ResultType = GoodResult | BadResult
 
 data Result m = Result
   { rType :: ResultType
-  , rHoleResult :: Sugar.HoleResult (Name m) m
+  , rHoleResult :: T m (Sugar.HoleResult (Name m) m)
   , rId :: WidgetId.Id
   }
 
@@ -109,26 +109,18 @@ prefixId holeInfo = mconcat [hiActiveId holeInfo, WidgetId.Id ["results"]]
 typeCheckResults ::
   MonadA m => HoleInfo m ->
   Val () ->
-  T m [(ResultType, Sugar.HoleResult (Name m) m)]
-typeCheckResults holeInfo expr = do
-  rs <-
-    (hiActions holeInfo ^. Sugar.holeResults) expr
-    <&> checkGood
-    & ListClass.toList
-  let (goodResults, badResults) = partition ((== GoodResult) . fst) rs
-  return $ sorted goodResults ++ sorted badResults
+  T m [(ResultType, T m (Sugar.HoleResult (Name m) m))]
+typeCheckResults holeInfo expr =
+  (hiActions holeInfo ^. Sugar.holeResults) expr
+  & ListClass.toList
+  <&> sortOn (^. _1)
+  <&> Lens.mapped . _1 %~ checkGood
   where
-    sorted = sortOn (^. _2 . Sugar.holeResultScore)
-    checkGood x =
-      ( if x ^. Sugar.holeResultScore < [5]
-        then GoodResult
-        else BadResult
-      , x
-      )
+    checkGood x = if x < [5] then GoodResult else BadResult
 
 mResultsListOf ::
   HoleInfo m -> WidgetId.Id ->
-  [(ResultType, Sugar.HoleResult (Name m) m)] ->
+  [(ResultType, T m (Sugar.HoleResult (Name m) m))] ->
   Maybe (ResultsList m)
 mResultsListOf _ _ [] = Nothing
 mResultsListOf holeInfo baseId (x:xs) = Just
@@ -136,13 +128,11 @@ mResultsListOf holeInfo baseId (x:xs) = Just
   { _rlPreferred = NotPreferred
   , _rlExtraResultsPrefixId = extraResultsPrefixId
   , _rlMain = mkResult (mconcat [prefixId holeInfo, baseId]) x
-  , _rlExtra = map mkExtra xs
+  , _rlExtra = zipWith mkExtra [(0::Int)..] xs
   }
   where
-    mkExtra res@(_resultType, holeRes) = mkResult (extraResultId holeRes) res
-    extraResultId holeRes =
-      mappend extraResultsPrefixId $ WidgetIds.fromEntityId $
-      holeRes ^. Sugar.holeResultConverted . Sugar.rPayload . Sugar.plEntityId
+    mkExtra i res = mkResult (extraResultId i) res
+    extraResultId i = mappend extraResultsPrefixId $ WidgetIds.hash i
     extraResultsPrefixId = mconcat [prefixId holeInfo, WidgetId.Id ["extra results"], baseId]
     mkResult resultId (typ, holeResult) =
       Result

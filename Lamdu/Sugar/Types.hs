@@ -53,8 +53,8 @@ module Lamdu.Sugar.Types
   , Scope(..), scopeLocals, scopeGlobals, scopeGetParams
   , HoleActions(..)
     , holeScope, holePaste, holeResults, holeResultNewTag
+  , HoleResultScore
   , HoleResult(..)
-    , holeResultScore
     , holeResultConverted
     , holeResultPick
     , holeResultHasHoles
@@ -178,9 +178,10 @@ instance Monoid IsInjected where
   mappend NotInjected NotInjected = NotInjected
   mappend _ _ = Injected
 
+type HoleResultScore = [Int]
+
 data HoleResult name m = HoleResult
-  { _holeResultScore :: [Int]
-  , _holeResultConverted :: Expression name m IsInjected
+  { _holeResultConverted :: Expression name m IsInjected
   , _holeResultPick :: T m PickedResult
   , _holeResultHasHoles :: Bool
   }
@@ -198,7 +199,8 @@ instance Monoid (Scope name m) where
 
 data HoleActions name m = HoleActions
   { _holeScope :: T m (Scope name m)
-  , _holeResults :: Val () -> ListT (T m) (HoleResult name m)
+  , _holeResults ::
+      Val () -> ListT (T m) (HoleResultScore, T m (HoleResult name m))
   , -- Used for cerating a new tag inside an expression given to holeResult
     _holeResultNewTag :: T.Tag
   , _holePaste :: Maybe (T m EntityId)

@@ -30,7 +30,6 @@ import Lamdu.Sugar.Types
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
-import qualified Data.List.Class as ListClass
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -401,8 +400,8 @@ toHoleActions ha@HoleActions {..} = do
       run . toScope =<< _holeScope
     , _holeResults =
       _holeResults
-      & Lens.mapped %~
-        ListClass.mapL (run . (holeResultConverted %%~ toExpression))
+      & Lens.mapped . Lens.mapped . _2 %~
+        (>>= holeResultConverted (run . toExpression))
     }
 
 toHoleSuggested ::

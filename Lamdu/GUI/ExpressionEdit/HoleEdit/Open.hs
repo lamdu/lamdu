@@ -99,20 +99,23 @@ afterPick holeInfo resultId pr = do
 makePaddedResult :: MonadA m => Result m -> ExprGuiM m (WidgetT m)
 makePaddedResult res = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  makeHoleResultWidget (rId res) (rHoleResult res)
+  rHoleResult res
+    & ExprGuiM.transaction
+    >>= makeHoleResultWidget (rId res)
     <&> (Widget.pad . fmap realToFrac . Config.holeResultPadding) config
 
 makeShownResult ::
   MonadA m => HoleInfo m -> Result m -> ExprGuiM m (Widget (T m), ShownResult m)
 makeShownResult holeInfo result = do
   widget <- makePaddedResult result
+  res <- ExprGuiM.transaction $ rHoleResult result
   return
     ( widget & Widget.wEventMap .~ mempty
     , ShownResult
       { srEventMap = widget ^. Widget.wEventMap
-      , srHoleResult = rHoleResult result
+      , srHoleResult = res
       , srPickTo =
-        afterPick holeInfo (rId result) =<< rHoleResult result ^. Sugar.holeResultPick
+        afterPick holeInfo (rId result) =<< res ^. Sugar.holeResultPick
       }
     )
 
