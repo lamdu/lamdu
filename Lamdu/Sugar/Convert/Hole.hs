@@ -384,6 +384,7 @@ applyFormArg pl =
   _ -> V.BLeaf V.LHole
 
 applyForms :: Val (Infer.Payload, a) -> [Val (Infer.Payload, a)]
+applyForms v@(Val _ V.BAbs {}) = [v]
 applyForms val =
   case val ^. V.payload . _1 . Infer.plType of
   T.TFun arg res ->
