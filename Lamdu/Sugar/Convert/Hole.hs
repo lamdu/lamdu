@@ -253,8 +253,7 @@ getGlobal defI =
 type HoleResultVal m a = Val (Infer.Payload, (Maybe (ExprIRef.ValIM m), a))
 
 markNotInjected :: HoleResultVal n () -> HoleResultVal n IsInjected
-markNotInjected val =
-  val <&> _2 . _2 .~ NotInjected
+markNotInjected val = val <&> _2 . _2 .~ NotInjected
 
 writeConvertTypeChecked ::
   (MonadA m, Monoid a) =>
@@ -436,9 +435,14 @@ holeResultsInject injectedArg val =
   where
     onInjectedPayload pl =
         ( pl ^. ipInferred
-        , (pl ^? ipStored . Lens._Just . Property.pVal, Injected)
+        , (pl ^? ipStored . Lens._Just . Property.pVal, NotInjected)
         )
-    inject pl = (Monoid.First (Just pl), injectedArg <&> onInjectedPayload)
+    inject pl =
+        ( Monoid.First (Just pl)
+        , injectedArg
+          <&> onInjectedPayload
+          & V.payload . _2 . _2 .~ Injected
+        )
     injectedType = injectedArg ^. V.payload . ipInferred . Infer.plType
 
 mkHoleResultVals ::
