@@ -12,7 +12,7 @@ import Control.Monad (join, void, liftM)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..), evalState, execStateT, state)
+import Control.Monad.Trans.State (StateT(..), evalState, evalStateT, state, mapStateT)
 import Control.MonadA (MonadA)
 import Data.Maybe (maybeToList)
 import Data.Maybe.Utils (unsafeUnjust)
@@ -405,6 +405,13 @@ replaceEachHole replaceHole =
               ]
           _ -> fmap (Val x) . sequenceA <$> traverse go body
 
+stateEitherSequence :: Monad m => StateT s (Either l) r -> StateT s m (Either l r)
+stateEitherSequence (StateT f) =
+  StateT $ \s0 ->
+  case f s0 of
+  Right (r, s1) -> return (Right r, s1)
+  Left l -> return (Left l, s0)
+
 mkHoleResults ::
   MonadA m =>
   Maybe (Val (InputPayload m a)) ->
@@ -413,17 +420,16 @@ mkHoleResults ::
   Val () ->
   ListT (T m) (HoleResult Guid m)
 mkHoleResults mInjectedArg sugarContext exprPl stored base =
-  do
-    (inferredBase, icAfterBase) <-
+  (`evalStateT` (sugarContext ^. ConvertM.scInferContext)) $ do
+    inferredBase <-
       SugarInfer.loadInferScope scopeAtHole base
-      & (`runStateT` icInitial)
-      & maybeTtoListT
-      <&> Lens._1 . Lens.traversed . Lens._2 %~ (,) Nothing
-    form <- ListClass.fromList $ applyForms inferredBase
+      & mapStateT maybeTtoListT
+      <&> Lens.traversed . Lens._2 %~ (,) Nothing
+    form <- lift $ ListClass.fromList $ applyForms inferredBase
     let formType = form ^. V.payload . Lens._1 . Infer.plType
-    (injected, icInjected) <-
+    injected <-
       case mInjectedArg of
-      Nothing -> return (form, icAfterBase)
+      Nothing -> return form
       Just injectedArg -> do
         let
           onInjectedPayload pl =
@@ -432,28 +438,27 @@ mkHoleResults mInjectedArg sugarContext exprPl stored base =
               )
           inject pl = (Monoid.First (Just pl), injectedArg <&> onInjectedPayload)
           injectedType = injectedArg ^. V.payload . ipInferred . Infer.plType
-        (Monoid.First (Just injectPointPl), expr) <- ListClass.fromList $ replaceEachHole inject form
-        ((), inferContext) <-
-          unify injectedType (injectPointPl ^. Lens._1 . Infer.plType)
+        (Monoid.First (Just injectPointPl), expr) <-
+          lift $ ListClass.fromList $ replaceEachHole inject form
+        unify injectedType (injectPointPl ^. Lens._1 . Infer.plType)
           & Infer.run
-          & (`runStateT` icAfterBase)
-          & eitherToListT
-        return (expr, inferContext)
+          & mapStateT eitherToListT
+        return expr
+    unifyResult <- unify holeType formType
+      & Infer.run
+      & stateEitherSequence
     let
-      eIcFinal =
-        unify holeType formType
-        & Infer.run
-        & (`execStateT` icInjected)
-      (icFinal, finalExpr) =
-        case eIcFinal of
-        Right ctx -> (ctx, injected)
-        Left _ -> (icInjected, holeWrap holeType injected)
+      finalExpr =
+        case unifyResult of
+        Right _ -> injected
+        Left _ -> holeWrap holeType injected
+    icFinal <- State.get
     let newSugarContext = sugarContext & ConvertM.scInferContext .~ icFinal
     ((fConverted, fConsistentExpr, fWrittenExpr), forkedChanges) <-
-      lift $ Transaction.fork $
-        writeConvertTypeChecked (exprPl ^. ipEntityId)
-        newSugarContext stored finalExpr
-    return $ HoleResult
+      lift $ lift $ Transaction.fork $
+      writeConvertTypeChecked (exprPl ^. ipEntityId)
+      newSugarContext stored finalExpr
+    return HoleResult
       { _holeResultComplexityScore = resultComplexityScore $ fst <$> inferredBase
       , _holeResultConverted = fConverted
       , _holeResultPick = mkPickedResult fConsistentExpr fWrittenExpr <$ Transaction.merge forkedChanges
@@ -461,7 +466,6 @@ mkHoleResults mInjectedArg sugarContext exprPl stored base =
       }
   where
     holeType = exprPl ^. ipInferred . Infer.plType
-    icInitial = sugarContext ^. ConvertM.scInferContext
     scopeAtHole = exprPl ^. ipInferred . Infer.plScope
     mkPickedResult consistentExpr writtenExpr =
       PickedResult
