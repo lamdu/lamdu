@@ -210,44 +210,44 @@ getScopeElement sugarContext (par, typeExpr) = do
               }
             , getParam )
           ] }
-      Nothing -> do
+      Nothing ->
         pure mempty
-          { _scopeLocals = [
-            ( GetVar
-              { _gvName = UniqueId.toGuid par
-              , _gvJumpTo = errorJumpTo
-              , _gvVarType = GetParameter
-              }
-            , getParam )
-          ] }
+        { _scopeLocals = [
+          ( GetVar
+            { _gvName = UniqueId.toGuid par
+            , _gvJumpTo = errorJumpTo
+            , _gvVarType = GetParameter
+            }
+          , getParam )
+        ] }
     recordParamsMap = sugarContext ^. ConvertM.scRecordParamsInfos
     errorJumpTo = error "Jump to on scope item??"
     getParam = P.var par
-    onScopeField tag = do
+    onScopeField tag =
       pure mempty
-        { _scopeLocals = [
-          ( GetVar
-            { _gvName = UniqueId.toGuid tag
-            , _gvJumpTo = errorJumpTo
-            , _gvVarType = GetFieldParameter
-            }
-          , P.getField getParam tag
-          )
-        ] }
+      { _scopeLocals = [
+        ( GetVar
+          { _gvName = UniqueId.toGuid tag
+          , _gvJumpTo = errorJumpTo
+          , _gvVarType = GetFieldParameter
+          }
+        , P.getField getParam tag
+        )
+      ] }
 
 -- TODO: Put the result in scopeGlobals in the caller, not here?
 getGlobal :: MonadA m => DefI m -> T m (Scope Guid m)
-getGlobal defI = do
+getGlobal defI =
   pure mempty
-    { _scopeGlobals = [
-      ( GetVar
-        { _gvName = UniqueId.toGuid defI
-        , _gvJumpTo = errorJumpTo
-        , _gvVarType = GetDefinition
-        }
-      , P.global $ ExprIRef.globalId defI
-      )
-      ] }
+  { _scopeGlobals = [
+    ( GetVar
+      { _gvName = UniqueId.toGuid defI
+      , _gvJumpTo = errorJumpTo
+      , _gvVarType = GetDefinition
+      }
+    , P.global $ ExprIRef.globalId defI
+    )
+    ] }
   where
     errorJumpTo = error "Jump to on scope item??"
 
