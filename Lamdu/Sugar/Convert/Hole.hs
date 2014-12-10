@@ -315,15 +315,15 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
       }
 
 resultTypeScore :: Type -> [Int]
-resultTypeScore (T.TVar _) = [2]
-resultTypeScore (T.TInst _ p) = 0 : maximum ([] : map resultTypeScore (Map.elems p))
-resultTypeScore (T.TFun a r) = 0 : max (resultTypeScore a) (resultTypeScore r)
+resultTypeScore (T.TVar _) = [0]
+resultTypeScore (T.TInst _ p) = 2 : maximum ([] : map resultTypeScore (Map.elems p))
+resultTypeScore (T.TFun a r) = 2 : max (resultTypeScore a) (resultTypeScore r)
 resultTypeScore (T.TRecord c) =
   compositeScore c
   where
-    compositeScore (T.CEmpty) = [0]
+    compositeScore (T.CEmpty) = [2]
     compositeScore (T.CVar _) = [1]
-    compositeScore (T.CExtend _ t r) = 0 : max (resultTypeScore t) (compositeScore r)
+    compositeScore (T.CExtend _ t r) = 2 : max (resultTypeScore t) (compositeScore r)
 
 resultScore :: Val Infer.Payload -> [Int]
 resultScore (Val pl body) =
