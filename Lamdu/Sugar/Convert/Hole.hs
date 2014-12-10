@@ -143,19 +143,18 @@ consistentExprIds holeEntityId val =
 mkHoleSuggested :: MonadA m => EntityId -> Infer.Payload -> ConvertM m (HoleSuggested Guid m)
 mkHoleSuggested holeEntityId inferred = do
   sugarContext <- ConvertM.readContext
-  (inferredIVal, newCtx) <-
-    SugarInfer.loadInferScope (inferred ^. Infer.plScope) suggestedVal
-    & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
-    & runMaybeT
-    <&> unsafeUnjust "Inference on inferred val must succeed"
-    & ConvertM.liftTransaction
   let
-    mkConverted =
+    mkConverted = do
+      (inferredIVal, newCtx) <-
+        SugarInfer.loadInferScope (inferred ^. Infer.plScope) suggestedVal
+        & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
+        & runMaybeT
+        <&> unsafeUnjust "Inference on inferred val must succeed"
       inferredIVal
-      <&> mkInputPayload . fst
-      & consistentExprIds holeEntityId
-      & ConvertM.convertSubexpression
-      & ConvertM.run (sugarContext & ConvertM.scInferContext .~ newCtx)
+        <&> mkInputPayload . fst
+        & consistentExprIds holeEntityId
+        & ConvertM.convertSubexpression
+        & ConvertM.run (sugarContext & ConvertM.scInferContext .~ newCtx)
   pure HoleSuggested
     { _hsValue = suggestedVal
     , _hsMakeConverted = mkConverted
