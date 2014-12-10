@@ -133,6 +133,7 @@ convertLam ::
 convertLam lam@(V.Lam paramVar lamBody) exprPl = do
   param <- convertPositionalFuncParam lam exprPl
   lamBodyS <- ConvertM.convertSubexpression lamBody
+  typeProtect <- ConvertM.typeProtectTransaction
   let
     setToInnerExprAction =
       maybe NoInnerExpr SetToInnerExpr $ do
@@ -141,8 +142,11 @@ convertLam lam@(V.Lam paramVar lamBody) exprPl = do
         stored <- exprPl ^. ipStored
         return $ do
           deleteParamRef paramVar lamBodyStored
-          EntityId.ofValI <$>
-            DataOps.setToWrapper (Property.value (lamBodyStored ^. V.payload)) stored
+          let lamBodyI = Property.value (lamBodyStored ^. V.payload)
+          mResult <- typeProtect $ EntityId.ofValI <$> DataOps.replace stored lamBodyI
+          case mResult of
+            Just result -> return result
+            Nothing -> EntityId.ofValI <$> DataOps.setToWrapper lamBodyI stored
   BodyLam
     Lam
     { _lParam =
