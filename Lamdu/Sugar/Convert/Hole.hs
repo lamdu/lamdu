@@ -312,8 +312,8 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
       , _ipData = a
       }
 
-resultComplexityScore :: Val Infer.Payload -> [Int]
-resultComplexityScore expr =
+resultScore :: Val Infer.Payload -> [Int]
+resultScore expr =
   [ length . show $ expr ^. V.payload . Infer.plType
   , length $ Foldable.toList expr
   ]
@@ -487,7 +487,7 @@ mkHoleResults mInjectedArg sugarContext exprPl stored base =
       writeConvertTypeChecked (exprPl ^. ipEntityId)
       newSugarContext stored val
     return HoleResult
-      { _holeResultComplexityScore = resultComplexityScore $ fst <$> val
+      { _holeResultScore = resultScore $ fst <$> val
       , _holeResultConverted = fConverted
       , _holeResultPick = mkPickedResult fConsistentExpr fWrittenExpr <$ Transaction.merge forkedChanges
       , _holeResultHasHoles = not . null $ orderedInnerHoles base

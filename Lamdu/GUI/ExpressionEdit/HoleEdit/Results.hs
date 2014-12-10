@@ -118,7 +118,7 @@ typeCheckResults holeInfo expr = do
   let (goodResults, badResults) = partition ((== GoodResult) . fst) rs
   return $ sorted goodResults ++ sorted badResults
   where
-    sorted = sortOn (^. _2 . Sugar.holeResultComplexityScore)
+    sorted = sortOn (^. _2 . Sugar.holeResultScore)
 
 mResultsListOf ::
   HoleInfo m -> WidgetId.Id ->

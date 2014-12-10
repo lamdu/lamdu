@@ -54,7 +54,7 @@ module Lamdu.Sugar.Types
   , HoleActions(..)
     , holeScope, holePaste, holeResults, holeResultNewTag
   , HoleResult(..)
-    , holeResultComplexityScore
+    , holeResultScore
     , holeResultConverted
     , holeResultPick
     , holeResultHasHoles
@@ -179,7 +179,7 @@ instance Monoid IsInjected where
   mappend _ _ = Injected
 
 data HoleResult name m = HoleResult
-  { _holeResultComplexityScore :: [Int]
+  { _holeResultScore :: [Int]
   , _holeResultConverted :: Expression name m IsInjected
   , _holeResultPick :: T m PickedResult
   , _holeResultHasHoles :: Bool
