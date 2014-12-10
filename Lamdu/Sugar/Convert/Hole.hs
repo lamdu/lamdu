@@ -251,10 +251,12 @@ getGlobal defI = do
   where
     errorJumpTo = error "Jump to on scope item??"
 
+type HoleResultVal m a = Val (Infer.Payload, (Maybe (ExprIRef.ValIM m), a))
+
 writeConvertTypeChecked ::
   (MonadA m, Monoid a) =>
   EntityId -> ConvertM.Context m -> ExprIRef.ValIProperty m ->
-  Val (Infer.Payload, (Maybe (ExprIRef.ValIM m), a)) ->
+  HoleResultVal m a ->
   T m
   ( ExpressionU m a
   , Val (InputPayload m a)
@@ -412,6 +414,26 @@ stateEitherSequence (StateT f) =
   Right (r, s1) -> return (Right r, s1)
   Left l -> return (Left l, s0)
 
+holeResultsInject ::
+  Monad m =>
+  Val (InputPayload n a) -> HoleResultVal n () ->
+  StateT Infer.Context (ListT m) (HoleResultVal n ())
+holeResultsInject injectedArg val =
+  do
+    (Monoid.First (Just injectPointPl), filledVal) <-
+      lift $ ListClass.fromList $ replaceEachHole inject val
+    unify injectedType (injectPointPl ^. Lens._1 . Infer.plType)
+      & Infer.run
+      & mapStateT eitherToListT
+    return filledVal
+  where
+    onInjectedPayload pl =
+        ( pl ^. ipInferred
+        , (pl ^? ipStored . Lens._Just . Property.pVal, ())
+        )
+    inject pl = (Monoid.First (Just pl), injectedArg <&> onInjectedPayload)
+    injectedType = injectedArg ^. V.payload . ipInferred . Infer.plType
+
 mkHoleResults ::
   MonadA m =>
   Maybe (Val (InputPayload m a)) ->
@@ -427,24 +449,9 @@ mkHoleResults mInjectedArg sugarContext exprPl stored base =
       <&> Lens.traversed . Lens._2 %~ (,) Nothing
     form <- lift $ ListClass.fromList $ applyForms inferredBase
     let formType = form ^. V.payload . Lens._1 . Infer.plType
-    injected <-
-      case mInjectedArg of
-      Nothing -> return form
-      Just injectedArg -> do
-        let
-          onInjectedPayload pl =
-              ( pl ^. ipInferred
-              , (pl ^? ipStored . Lens._Just . Property.pVal, ())
-              )
-          inject pl = (Monoid.First (Just pl), injectedArg <&> onInjectedPayload)
-          injectedType = injectedArg ^. V.payload . ipInferred . Infer.plType
-        (Monoid.First (Just injectPointPl), expr) <-
-          lift $ ListClass.fromList $ replaceEachHole inject form
-        unify injectedType (injectPointPl ^. Lens._1 . Infer.plType)
-          & Infer.run
-          & mapStateT eitherToListT
-        return expr
-    unifyResult <- unify holeType formType
+    injected <- maybe return holeResultsInject mInjectedArg form
+    unifyResult <-
+      unify holeType formType
       & Infer.run
       & stateEitherSequence
     let
