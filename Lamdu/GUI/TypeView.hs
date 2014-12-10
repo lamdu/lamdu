@@ -23,11 +23,13 @@ import System.Random (Random, random)
 import qualified Control.Lens as Lens
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Map as Map
+import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
@@ -43,6 +45,8 @@ newtype M m a = M
   } deriving (Functor, Applicative, Monad)
 wenv :: Monad m => WidgetEnvT (T m) a -> M m a
 wenv = M . lift
+transaction :: Monad m => T m a -> M m a
+transaction = wenv . lift
 rand :: (Random r, Monad m) => M m r
 rand = M $ state random
 split :: Monad m => M m a -> M m a
@@ -110,7 +114,8 @@ makeRecord composite =
       sequence $ do
         (tag, fieldType) <- Map.toList fields
         return $ do
-          tagView <- text "TAG"
+          name <- transaction $ Transaction.getP $ Anchors.assocNameRef tag
+          tagView <- text name
           typeView <- splitMake (ParentPrecedence 0) fieldType
           return
             [ (Vector2 1 0.5, tagView)
