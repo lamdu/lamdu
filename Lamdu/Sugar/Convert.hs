@@ -128,25 +128,25 @@ convertLam ::
   (MonadA m, Monoid a) =>
   V.Lam (Val (InputPayload m a)) ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
-convertLam lam@(V.Lam paramVar result) exprPl = do
+convertLam lam@(V.Lam paramVar lamBody) exprPl = do
   param <- convertPositionalFuncParam lam exprPl
-  resultS <- ConvertM.convertSubexpression result
+  lamBodyS <- ConvertM.convertSubexpression lamBody
   let
     setToInnerExprAction =
       maybe NoInnerExpr SetToInnerExpr $ do
-        guard $ Lens.nullOf ExprLens.valHole result
-        bodyStored <- traverse (^. ipStored) result
+        guard $ Lens.nullOf ExprLens.valHole lamBody
+        lamBodyStored <- traverse (^. ipStored) lamBody
         stored <- exprPl ^. ipStored
         return $ do
-          deleteParamRef paramVar bodyStored
+          deleteParamRef paramVar lamBodyStored
           EntityId.ofValI <$>
-            DataOps.setToWrapper (Property.value (bodyStored ^. V.payload)) stored
+            DataOps.setToWrapper (Property.value (lamBodyStored ^. V.payload)) stored
   BodyLam
     Lam
     { _lParam =
         param
         & fpMActions .~ Nothing
-    , _lResult = resultS
+    , _lResult = lamBodyS
     }
     & ConvertExpr.make exprPl
     <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
