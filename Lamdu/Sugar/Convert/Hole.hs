@@ -12,7 +12,7 @@ import Control.Monad (join, void, liftM)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..), evalState, evalStateT, state, mapStateT)
+import Control.Monad.Trans.State (StateT(..), evalState, state, mapStateT)
 import Control.MonadA (MonadA)
 import Data.Maybe (maybeToList)
 import Data.Maybe.Utils (unsafeUnjust)
@@ -434,15 +434,14 @@ holeResultsInject injectedArg val =
     inject pl = (Monoid.First (Just pl), injectedArg <&> onInjectedPayload)
     injectedType = injectedArg ^. V.payload . ipInferred . Infer.plType
 
-mkHoleResults ::
+mkHoleResultVals ::
   MonadA m =>
   Maybe (Val (InputPayload m a)) ->
-  ConvertM.Context m ->
-  InputPayload m dummy -> ExprIRef.ValIProperty m ->
+  InputPayload m dummy ->
   Val () ->
-  ListT (T m) (HoleResult Guid m)
-mkHoleResults mInjectedArg sugarContext exprPl stored base =
-  (`evalStateT` (sugarContext ^. ConvertM.scInferContext)) $ do
+  StateT Infer.Context (ListT (T m)) (HoleResultVal m ())
+mkHoleResultVals mInjectedArg exprPl base =
+  do
     inferredBase <-
       SugarInfer.loadInferScope scopeAtHole base
       & mapStateT maybeTtoListT
@@ -454,26 +453,38 @@ mkHoleResults mInjectedArg sugarContext exprPl stored base =
       unify holeType formType
       & Infer.run
       & stateEitherSequence
-    let
-      finalExpr =
-        case unifyResult of
-        Right _ -> injected
-        Left _ -> holeWrap holeType injected
-    icFinal <- State.get
-    let newSugarContext = sugarContext & ConvertM.scInferContext .~ icFinal
+    return $
+      case unifyResult of
+      Right _ -> injected
+      Left _ -> holeWrap holeType injected
+  where
+    holeType = exprPl ^. ipInferred . Infer.plType
+    scopeAtHole = exprPl ^. ipInferred . Infer.plScope
+
+mkHoleResults ::
+  MonadA m =>
+  Maybe (Val (InputPayload m a)) ->
+  ConvertM.Context m ->
+  InputPayload m dummy -> ExprIRef.ValIProperty m ->
+  Val () ->
+  ListT (T m) (HoleResult Guid m)
+mkHoleResults mInjectedArg sugarContext exprPl stored base =
+  do
+    (val, inferContext) <-
+      mkHoleResultVals mInjectedArg exprPl base
+      & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
+    let newSugarContext = sugarContext & ConvertM.scInferContext .~ inferContext
     ((fConverted, fConsistentExpr, fWrittenExpr), forkedChanges) <-
-      lift $ lift $ Transaction.fork $
+      lift $ Transaction.fork $
       writeConvertTypeChecked (exprPl ^. ipEntityId)
-      newSugarContext stored finalExpr
+      newSugarContext stored val
     return HoleResult
-      { _holeResultComplexityScore = resultComplexityScore $ fst <$> inferredBase
+      { _holeResultComplexityScore = resultComplexityScore $ fst <$> val
       , _holeResultConverted = fConverted
       , _holeResultPick = mkPickedResult fConsistentExpr fWrittenExpr <$ Transaction.merge forkedChanges
       , _holeResultHasHoles = not . null $ orderedInnerHoles base
       }
   where
-    holeType = exprPl ^. ipInferred . Infer.plType
-    scopeAtHole = exprPl ^. ipInferred . Infer.plScope
     mkPickedResult consistentExpr writtenExpr =
       PickedResult
       { _prMJumpTo =
