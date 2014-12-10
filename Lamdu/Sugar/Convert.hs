@@ -8,6 +8,8 @@ import Control.Lens.Operators
 import Control.Lens.Tuple
 import Control.Monad (guard, void)
 import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Maybe (runMaybeT)
+import Control.Monad.Trans.State (evalStateT)
 import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import Control.MonadA (MonadA)
 import Data.List.Utils (isLengthAtLeast)
@@ -193,10 +195,18 @@ convertField ::
   ConvertM m (RecordField Guid m (ExpressionU m a))
 convertField mStored mRestI inst tag expr = do
   exprS <- ConvertM.convertSubexpression expr
+  typeProtect <- ConvertM.typeProtectTransaction
+  let
+    mkDelete stored restI =
+      do
+        mResult <- typeProtect $ EntityId.ofValI <$> DataOps.replace stored restI
+        case mResult of
+          Nothing -> EntityId.ofValI <$> DataOps.setToWrapper restI stored
+          Just result -> return result
   return RecordField
     { _rfTag = convertTag inst tag
     , _rfExpr = exprS
-    , _rfMDelete = fmap EntityId.ofValI <$> (DataOps.replace <$> mStored <*> mRestI)
+    , _rfMDelete = mkDelete <$> mStored <*> mRestI
     }
 
 convertEmptyRecord :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m a)
@@ -317,9 +327,10 @@ convertExpressionI ee =
 
 mkContext ::
   MonadA m =>
+  DefI m ->
   Anchors.Code (Transaction.MkProperty m) m ->
   Infer.Context -> T m (Context m)
-mkContext cp inferContext = do
+mkContext defI cp inferContext = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   return Context
     { _scInferContext = inferContext
@@ -327,6 +338,17 @@ mkContext cp inferContext = do
     , _scSpecialFunctions = specialFunctions
     , _scTagParamInfos = mempty
     , _scRecordParamsInfos = mempty
+    , _scReinferCheckDefinition =
+        do
+          def <- Load.loadDefinitionClosure defI
+          case def ^. Definition.defBody . Definition.bodyContent of
+            Definition.ContentBuiltin {} ->
+              return True
+            Definition.ContentExpr val ->
+              SugarInfer.loadInferScope Infer.emptyScope val
+              & (`evalStateT` Infer.initialContext)
+              & runMaybeT
+              <&> Lens.has Lens._Just
     , scConvertSubexpression = convertExpressionI
     }
 
@@ -692,7 +714,7 @@ convertDefIExpr ::
 convertDefIExpr cp valLoaded defI defType = do
   (valInferred, newInferContext) <- SugarInfer.loadInfer valIRefs
   let addStoredEntityIds x = x & ipData .~ (EntityId.ofValI . Property.value <$> x ^.. ipStored . Lens._Just)
-  context <- mkContext cp newInferContext
+  context <- mkContext defI cp newInferContext
   ConvertM.run context $ do
     content <-
       valInferred

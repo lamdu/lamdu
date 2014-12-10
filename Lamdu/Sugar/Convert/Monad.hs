@@ -1,13 +1,14 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Monad
   ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
-  , scInferContext
+  , scInferContext, scReinferCheckDefinition
   , scCodeAnchors, scSpecialFunctions, scTagParamInfos, scRecordParamsInfos
   , ConvertM(..), run
   , readContext, liftTransaction, local
   , codeAnchor
   , getP
   , convertSubexpression
+  , typeProtectTransaction
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -52,11 +53,31 @@ data Context m = Context
   , _scSpecialFunctions :: Anchors.SpecialFunctions m
   , _scTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
   , _scRecordParamsInfos :: Map V.Var (RecordParamsInfo m) -- param guids
+  , -- Check whether the definition is valid after an edit,
+    -- so that can hole-wrap bad edits.
+    _scReinferCheckDefinition :: T m Bool
   , scConvertSubexpression ::
        forall a. Monoid a => Val (Sugar.InputPayload m a) -> ConvertM m (ExpressionU m a)
   }
 Lens.makeLenses ''Context
 
+typeProtectTransaction :: MonadA m => ConvertM m (T m a -> T m (Maybe a))
+typeProtectTransaction =
+  do
+    checkOk <- (^. scReinferCheckDefinition) <$> readContext
+    let
+      protect act =
+        do
+          (resume, changes) <-
+            Transaction.fork $ do
+              result <- act
+              isOk <- checkOk
+              return $
+                if isOk
+                then (>> return (Just result)) . Transaction.merge
+                else const $ return Nothing
+          resume changes
+    return protect
 
 run :: MonadA m => Context m -> ConvertM m a -> T m a
 run ctx (ConvertM action) = runReaderT action ctx
