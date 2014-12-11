@@ -262,13 +262,10 @@ primitiveGroups holeInfo =
   ] ++
   [ mkGroupBody LowPrecedence ["\\", "Lambda", "Λ", "λ"] $
     V.BAbs $ V.Lam "NewLambda" P.hole
-  , mkGroupBody LowPrecedence ["Empty", "Record", "{"] $
+  , mkGroupBody LowPrecedence ["Empty", "Record", "{", "}"] $
     V.BLeaf V.LRecEmpty
-  , mkGroupBody LowPrecedence ["Extend", "Record", "{"] $
-    V.BRecExtend $ V.RecExtend newTag P.hole P.hole
   ]
   where
-    newTag = hiActions holeInfo ^. Sugar.holeResultNewTag
     searchTerm = hiSearchTerm holeInfo
     mkGroupBody prec terms body = Group
       { _groupSearchTerms = GroupAttributes terms prec

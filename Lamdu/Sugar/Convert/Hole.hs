@@ -12,7 +12,7 @@ import Control.Monad (join, void, liftM)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..), evalState, state, mapStateT)
+import Control.Monad.Trans.State (StateT(..), evalState, mapStateT)
 import Control.MonadA (MonadA)
 import Data.Maybe (maybeToList)
 import Data.Maybe.Utils (unsafeUnjust)
@@ -99,10 +99,6 @@ mkPaste exprP = do
       ~() <- replacer clip
       return $ EntityId.ofValI clip
 
--- Value for holeResultNewTag
-newTag :: T.Tag
-newTag = "newTag"
-
 mkWritableHoleActions ::
   (MonadA m) =>
   Maybe (Val (InputPayload m a)) ->
@@ -123,7 +119,6 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
       , mapM getGlobal globals
       ]
     , _holeResults = mkHoleResults mInjectedArg sugarContext exprPl stored
-    , _holeResultNewTag = newTag
     , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
     }
   where
@@ -269,7 +264,7 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
   writtenExpr <-
     inferredVal
     <&> intoStorePoint
-    & writeExprMStored holeEntityId (Property.value holeStored)
+    & writeExprMStored (Property.value holeStored)
     <&> ExprIRef.addProperties (Property.set holeStored)
     <&> fmap toPayload
   let
@@ -547,19 +542,14 @@ randomizeNonStoredParamIds gen =
 
 writeExprMStored ::
   MonadA m =>
-  EntityId ->
   ExprIRef.ValIM m ->
   ExprStorePoint m a ->
   T m (Val (ExprIRef.ValIM m, a))
-writeExprMStored holeEntityId exprIRef exprMStorePoint = do
+writeExprMStored exprIRef exprMStorePoint = do
   key <- Transaction.newKey
   exprMStorePoint
     & randomizeNonStoredParamIds (genFromHashable key)
-    & newTags %%~ const (state InputExpr.randomTag)
-    & (`evalState` genFromHashable holeEntityId)
     & ExprIRef.writeValWithStoredSubexpressions exprIRef
-  where
-    newTags = ExprLens.valTags . Lens.filtered (== newTag)
 
 orderedInnerHoles :: Val a -> [Val a]
 orderedInnerHoles e =

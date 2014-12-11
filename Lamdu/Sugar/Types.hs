@@ -52,7 +52,7 @@ module Lamdu.Sugar.Types
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeGetParams
   , HoleActions(..)
-    , holeScope, holePaste, holeResults, holeResultNewTag
+    , holeScope, holePaste, holeResults
   , HoleResultScore
   , HoleResult(..)
     , holeResultConverted
@@ -200,8 +200,6 @@ data HoleActions name m = HoleActions
   { _holeScope :: T m (Scope name m)
   , _holeResults ::
       Val () -> ListT (T m) (HoleResultScore, T m (HoleResult name m))
-  , -- Used for cerating a new tag inside an expression given to holeResult
-    _holeResultNewTag :: T.Tag
   , _holePaste :: Maybe (T m EntityId)
 
   , _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
