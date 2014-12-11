@@ -1,6 +1,7 @@
 module Lamdu.GUI.ExpressionEdit.GetFieldEdit(make) where
 
 import Control.Applicative ((<$>))
+import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Graphics.UI.Bottle.WidgetId (augmentId)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -24,7 +25,8 @@ make (Sugar.GetField recExpr tagG) pl =
   in
     ExprGuiM.assignCursor myId tagId $ do
       recExprEdit <- ExprGuiM.makeSubexpression 11 recExpr
-      tagEdit <- TagEdit.make tagG tagId
+      tagEdit <-
+        TagEdit.make (pl ^. Sugar.plData . ExprGuiM.plHoleEntityIds) tagG tagId
       dotLabel <-
         ExpressionGui.fromValueWidget <$>
         (ExprGuiM.widgetEnv . BWidgets.makeLabel "." . Widget.toAnimId) myId

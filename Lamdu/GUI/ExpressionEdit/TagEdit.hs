@@ -14,6 +14,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -33,14 +34,18 @@ onTagWidget config =
   Widget.tint (Config.fieldTint config)
 
 make ::
-  MonadA m => Sugar.TagG (Name m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-make t myId = do
+  MonadA m =>
+  ExprGuiM.HoleEntityIds -> Sugar.TagG (Name m) -> Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
+make holeIds t myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  ExpressionGui.fromValueWidget <$>
-    ExprGuiM.wrapDelegated fdConfig FocusDelegator.NotDelegating id
+  jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] holeIds
+  ExprGuiM.wrapDelegated fdConfig FocusDelegator.NotDelegating id
     ( fmap (onTagWidget config)
     . ExpressionGui.makeNameEdit (t ^. Sugar.tagGName)
     ) myId
+    <&> Widget.weakerEvents jumpHolesEventMap
+    <&> ExpressionGui.fromValueWidget
 
 makeView ::
   MonadA m => Sugar.TagG (Name m) -> AnimId -> ExprGuiM m (ExpressionGui m)
