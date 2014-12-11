@@ -206,7 +206,7 @@ convertField mStored mRestI restS inst tag expr = do
           restI <- mRestI
           exprI <- expr ^? V.payload . plValI
           return $
-            if null (restS ^. rItems)
+            if null (restS ^. rItems) && Lens.has (rTail . _ClosedRecord) restS
             then
               -- When deleting closed one field record
               -- we replace the record with the field value

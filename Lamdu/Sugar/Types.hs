@@ -31,7 +31,7 @@ module Lamdu.Sugar.Types
   , ListItem(..), liMActions, liExpr
   , ListActions(..), List(..)
   , RecordField(..), rfMDelete, rfTag, rfExpr
-  , RecordTail(..)
+  , RecordTail(..), _RecordExtending, _ClosedRecord
   , Record(..), rItems, rMAddField, rTail
   , GetField(..), gfRecord, gfTag
   , GetVarType(..)
@@ -415,6 +415,7 @@ Lens.makeLenses ''WhereItem
 Lens.makePrisms ''Body
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo
+Lens.makePrisms ''RecordTail
 Lens.makePrisms ''SetToHole
 Lens.makePrisms ''SetToInnerExpr
 Lens.makePrisms ''SpecialArgs
