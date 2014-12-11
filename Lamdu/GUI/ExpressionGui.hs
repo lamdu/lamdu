@@ -12,7 +12,6 @@ module Lamdu.GUI.ExpressionGui
   , makeFocusableView
   , makeNameView
   , makeNameEdit
-  , withBgColor
   -- Info adding
   , TypeStyle(..), addType
   -- Expression wrapping
@@ -35,7 +34,7 @@ import Data.Function (on)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Animation (AnimId, Layer)
+import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Box (KBox)
 import Lamdu.Config (Config)
@@ -47,7 +46,6 @@ import Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..), NameCollision(..))
 import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
-import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -253,10 +251,6 @@ stdWrapParenify ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 stdWrapParenify pl parentPrec prec addParens =
   stdWrapParentExpr pl . parenify parentPrec prec addParens
-
-withBgColor :: Layer -> Draw.Color -> AnimId -> ExpressionGui m -> ExpressionGui m
-withBgColor layer color animId =
-  egWidget %~ Widget.backgroundColor layer animId color
 
 makeRow :: [(Widget.R, ExpressionGui m)] -> [(Vector2 Widget.R, WidgetT m)]
 makeRow =

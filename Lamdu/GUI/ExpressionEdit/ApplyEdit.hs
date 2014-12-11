@@ -115,10 +115,11 @@ mkBoxed pl destEntityId mkFuncRow annotatedArgs =
     config <- ExprGuiM.widgetEnv WE.readConfig
     grid <-
       Grid.toWidget . Grid.make . concat <$> traverse makeArgRows annotatedArgs
-    ExpressionGui.withBgColor (Config.layerValFrameBG (Config.layers config))
-      (Config.valFrameBGColor config) (Widget.toAnimId myId ++ ["bg"]) .
-      ExpressionGui.pad (realToFrac <$> Config.valFramePadding config) .
-      ExpressionGui.addBelow 0 [(0, grid)] <$> mkFuncRow
+    mkFuncRow
+      <&> ExpressionGui.addBelow 0 [(0, grid)]
+      <&> ExpressionGui.pad (realToFrac <$> Config.valFramePadding config)
+      >>= ExpressionGui.egWidget
+          %%~ ExprGuiM.widgetEnv . BWidgets.withBgFrame myId
 
 mkMParened ::
   MonadA m =>

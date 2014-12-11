@@ -130,10 +130,8 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
         (Config.recordAddFieldKeys config) $
         E.Doc ["Edit", "Record", "Add Field"]
     Widget.weakerEvents eventMap widget
-      & ExpressionGui.fromValueWidget
-      & ExpressionGui.withBgColor (Config.layerValFrameBG (Config.layers config))
-        (Config.valFrameBGColor config) (Widget.toAnimId myId ++ ["bg"])
-      & return
+      & BWidgets.withBgFrame myId & ExprGuiM.widgetEnv
+      <&> ExpressionGui.fromValueWidget
   where
     defaultPos =
       case fields of

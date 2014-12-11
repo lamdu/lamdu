@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Lamdu.GUI.BottleWidgets
   ( makeTextView, makeTextViewWidget, makeLabel
   , respondToCursorIn, makeFocusableView
@@ -11,6 +11,7 @@ module Lamdu.GUI.BottleWidgets
   , gridHSpaced, gridHSpacedCentered
   , grammarLabel, verticalSpace
   , makeChoiceWidget, ChoiceWidgetConfig(..), ChoiceWidgetExpandMode(..)
+  , withBgFrame
   ) where
 
 import Control.Applicative (Applicative(..), (*>), (<$>))
@@ -68,6 +69,16 @@ grammarLabel text widgetId =
     WE.localEnv
       (WE.setTextSizeColor (Config.baseTextSize config) (Config.grammarColor config)) $
       makeLabel text $ Widget.toAnimId widgetId
+
+withBgFrame :: MonadA m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
+withBgFrame myId gui =
+  do
+    config <- WE.readConfig
+    let layer = Config.layerValFrameBG $ Config.layers config
+    let color = Config.valFrameBGColor config
+    return $ Widget.backgroundColor layer animId color gui
+  where
+    animId = Widget.toAnimId myId ++ ["bg"]
 
 respondToCursorIn ::
   MonadA m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
