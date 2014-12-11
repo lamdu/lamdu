@@ -122,7 +122,7 @@ addType ::
   Config -> TypeStyle -> Widget.Id -> WidgetT m ->
   ExpressionGui m ->
   ExpressionGui m
-addType config style exprId typeWidget eg =
+addType config style exprId rawTypeWidget eg =
   addBelow 0.5 items eg
   where
     items = middleElement : [(0.5, annotatedTypes)]
@@ -136,6 +136,10 @@ addType config style exprId typeWidget eg =
       addBackground . (wWidth .~ width) $
       Widget.translate (Vector2 ((width - typeWidget ^. wWidth)/2) 0) typeWidget
     width = on max (^. wWidth) (eg ^. egWidget) typeWidget
+    typeWidget =
+      rawTypeWidget
+      & Widget.scale (realToFrac <$> Config.typeScaleFactor config)
+      & Widget.tint (Config.inferredTypeTint config)
     bgAnimId = Widget.toAnimId exprId ++ ["type background"]
     addBackground = maybe id (Widget.backgroundColor (Config.layerTypes (Config.layers config)) bgAnimId) mBgColor
     underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
@@ -323,8 +327,6 @@ alwaysAddInferredTypes exprPl eg =
       & TypeView.make gen
       & ExprGuiM.widgetEnv
       <&> uncurry Widget.liftView
-      <&> Widget.scale (realToFrac <$> Config.typeScaleFactor config)
-      <&> Widget.tint (Config.inferredTypeTint config)
     return $ addType config Background exprId typeView eg
   where
     entityId = exprPl ^. Sugar.plEntityId

@@ -8,12 +8,14 @@ import Data.Monoid (Monoid(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.Sugar.AddNames.Types (Name(..))
+import System.Random.Utils (genFromHashable)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -41,7 +43,8 @@ make ::
   ExprGuiM m (ExpressionGui m)
 make prevId param =
   do
-    -- paramTypeEdit <- ExprGuiM.makeSubexpression 0 $ param ^. Sugar.fpType
+    paramTypeView <-
+      ExprGuiM.widgetEnv $ TypeView.make (genFromHashable entityId) $ param ^. Sugar.fpInferredType
     paramNameEdit <- makeParamNameEdit (param ^. Sugar.fpName) myId
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
@@ -58,12 +61,13 @@ make prevId param =
         , paramAddNextEventMap
         ]
     return .
-      (ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap) {- .
-      ExpressionGui.addType config ExpressionGui.HorizLine myId
-      [paramTypeEdit ^. ExpressionGui.egWidget] -} $
+      (ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap) .
+      ExpressionGui.addType config ExpressionGui.Background myId
+      (uncurry Widget.liftView paramTypeView) $
       ExpressionGui.fromValueWidget paramNameEdit
   where
-    myId = WidgetIds.fromEntityId $ param ^. Sugar.fpId
+    entityId = param ^. Sugar.fpId
+    myId = WidgetIds.fromEntityId entityId
     mActions = param ^. Sugar.fpMActions
     paramDeleteEventMap keys docSuffix onId =
       maybe mempty
