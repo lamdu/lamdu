@@ -162,7 +162,7 @@ newPublicDefinition ::
 newPublicDefinition codeProps name = do
   defI <-
     newDefinition name (presentationModeOfName name) =<<
-    ((`Definition.Body` Definition.NoExportedType) . Definition.ContentExpr <$> newHole)
+    (Definition.BodyExpr . (`Definition.Expr` Definition.NoExportedType) <$> newHole)
   modP (Anchors.globals codeProps) (defI :)
   return defI
 
@@ -172,7 +172,7 @@ newClipboard ::
   T m (DefI m)
 newClipboard codeProps expr = do
   len <- length <$> getP (Anchors.clipboards codeProps)
-  let def = Definition.Body (Definition.ContentExpr expr) Definition.NoExportedType
+  let def = Definition.BodyExpr $ Definition.Expr expr Definition.NoExportedType
   defI <- newDefinition ("clipboard" ++ show len) OO def
   modP (Anchors.clipboards codeProps) (defI:)
   return defI

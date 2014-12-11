@@ -44,8 +44,8 @@ globalId = V.GlobalId . Identifier . Guid.bs . IRef.guid
 defI :: V.GlobalId -> DefI m
 defI (V.GlobalId (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make bs
 
-newtype ValI m = ValI {
-  unValI :: IRef m (V.Body (ValI m))
+newtype ValI m = ValI
+  { unValI :: IRef m (V.Body (ValI m))
   } deriving (Eq, Ord, Show, Binary)
 
 type ValIM m = ValI m

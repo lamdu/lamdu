@@ -25,22 +25,20 @@ import qualified Lamdu.Expr.Val as V
 
 type T = Transaction
 
-type ExprI = ExprIRef.ValI
-
 -- | SubexpressionIndex is a Foldable-index into V.Body (i.e:
 -- 0 or 1 for BodyApply func/arg)
 type SubexpressionIndex = Int
 
 data ExprPropertyClosure m
-  = DefinitionContentExprProperty (DefI m) (ExprI m) Definition.ExportedType
-  | SubexpressionProperty (ExprI m) (V.Body (ExprI m)) SubexpressionIndex
+  = DefinitionExprProperty (DefI m) (ExprIRef.ValI m) Definition.ExportedType
+  | SubexpressionProperty (ExprIRef.ValI m) (V.Body (ExprIRef.ValI m)) SubexpressionIndex
   deriving (Show, Generic)
 instance Binary (ExprPropertyClosure m)
 
 exprPropertyOfClosure :: MonadA m => ExprPropertyClosure m -> ExprIRef.ValIProperty m
-exprPropertyOfClosure (DefinitionContentExprProperty defI bodyExpr bodyType) =
-  Property bodyExpr
-  (Transaction.writeIRef defI . (`Definition.Body` bodyType) . Definition.ContentExpr)
+exprPropertyOfClosure (DefinitionExprProperty defI bodyI bodyType) =
+  Property bodyI
+  (Transaction.writeIRef defI . Definition.BodyExpr . (`Definition.Expr` bodyType))
 exprPropertyOfClosure (SubexpressionProperty exprI body index) =
   Property (body ^?! lens)
   (ExprIRef.writeValBody exprI . flip (lens .~) body)
@@ -48,7 +46,7 @@ exprPropertyOfClosure (SubexpressionProperty exprI body index) =
     lens :: Traversable t => Lens.IndexedTraversal' SubexpressionIndex (t a) a
     lens = Lens.element index
 
-irefOfClosure :: MonadA m => ExprPropertyClosure m -> ExprI m
+irefOfClosure :: MonadA m => ExprPropertyClosure m -> ExprIRef.ValI m
 irefOfClosure = Property.value . exprPropertyOfClosure
 
 loadExprClosure ::
@@ -71,11 +69,11 @@ loadExprClosure =
 loadDefinitionClosure ::
   MonadA m => DefI m -> T m (Definition (Val (ExprPropertyClosure m)) (DefI m))
 loadDefinitionClosure defI = do
-  Definition.Body bodyContent bodyType <- Transaction.readIRef defI
-  (`Definition` defI) . (`Definition.Body` bodyType) <$>
-    case bodyContent of
-    Definition.ContentExpr bodyI ->
-      fmap Definition.ContentExpr . loadExprClosure $
-      DefinitionContentExprProperty defI bodyI bodyType
-    Definition.ContentBuiltin (Definition.Builtin name) ->
-      return . Definition.ContentBuiltin $ Definition.Builtin name
+  body <- Transaction.readIRef defI
+  (`Definition` defI) <$>
+    case body of
+    Definition.BodyExpr (Definition.Expr bodyI exportedType) ->
+      fmap (Definition.BodyExpr . (`Definition.Expr` exportedType)) .
+      loadExprClosure $ DefinitionExprProperty defI bodyI exportedType
+    Definition.BodyBuiltin (Definition.Builtin name typ) ->
+      return $ Definition.BodyBuiltin (Definition.Builtin name typ)

@@ -366,7 +366,7 @@ data DefinitionExpression name m expr = DefinitionExpression
 data DefinitionBuiltin m = DefinitionBuiltin
   { biName :: Definition.FFIName
   , biSetName :: Definition.FFIName -> T m ()
-  , biType :: Definition.ExportedType
+  , biType :: Scheme
   }
 
 data DefinitionBody name m expr

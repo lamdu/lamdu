@@ -264,8 +264,7 @@ createBuiltins =
     publicDef name presentationMode ffiPath ffiName typ =
       publicize $
       DataOps.newDefinition name presentationMode .
-      (`Definition.Body` Definition.ExportedType typ) . Definition.ContentBuiltin .
-      Definition.Builtin $ Definition.FFIName ffiPath ffiName
+      Definition.BodyBuiltin $ Definition.Builtin (Definition.FFIName ffiPath ffiName) typ
     publicBuiltin fullyQualifiedName =
       publicDef name (DataOps.presentationModeOfName name) path name
       where

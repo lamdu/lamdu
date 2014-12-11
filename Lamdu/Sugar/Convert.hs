@@ -365,10 +365,9 @@ mkContext defI cp inferContext = do
     , _scReinferCheckDefinition =
         do
           def <- Load.loadDefinitionClosure defI
-          case def ^. Definition.defBody . Definition.bodyContent of
-            Definition.ContentBuiltin {} ->
-              return True
-            Definition.ContentExpr val ->
+          case def ^. Definition.defBody of
+            Definition.BodyBuiltin {} -> return True
+            Definition.BodyExpr (Definition.Expr val _) ->
               SugarInfer.loadInferScope Infer.emptyScope val
               & (`evalStateT` Infer.initialContext)
               & runMaybeT
@@ -703,18 +702,18 @@ convertDefinitionContent defGuid jumpToDef usedTags expr =
           }
 
 convertDefIBuiltin ::
-  MonadA m => Definition.Builtin -> DefI m -> Definition.ExportedType ->
+  MonadA m => Definition.Builtin -> DefI m ->
   DefinitionBody Guid m (ExpressionU m [EntityId])
-convertDefIBuiltin (Definition.Builtin name) defI defType =
+convertDefIBuiltin (Definition.Builtin name scheme) defI =
   DefinitionBodyBuiltin DefinitionBuiltin
     { biName = name
     , biSetName = setName
-    , biType = defType
+    , biType = scheme
     }
   where
     setName =
-      Transaction.writeIRef defI . (`Definition.Body` defType) .
-      Definition.ContentBuiltin . Definition.Builtin
+      Transaction.writeIRef defI .
+      Definition.BodyBuiltin . (`Definition.Builtin` scheme)
 
 makeExprDefTypeInfo ::
   MonadA m => ExprIRef.ValIM m -> DefI m -> Definition.ExportedType -> Scheme -> DefinitionTypeInfo m
@@ -726,16 +725,15 @@ makeExprDefTypeInfo defValI defI defType inferredType =
     , antNewType = inferredType
     , antAccept =
       Transaction.writeIRef defI $
-      Definition.Body (Definition.ContentExpr defValI) $
-      Definition.ExportedType inferredType
+      Definition.BodyExpr $
+      Definition.Expr defValI $ Definition.ExportedType inferredType
     }
 
 convertDefIExpr ::
   MonadA m => Anchors.CodeProps m ->
-  Val (Load.ExprPropertyClosure m) ->
-  DefI m -> Definition.ExportedType ->
-  T m (DefinitionBody Guid m (ExpressionU m [EntityId]))
-convertDefIExpr cp valLoaded defI defType = do
+  Definition.Expr (Val (Load.ExprPropertyClosure m)) ->
+  DefI m -> T m (DefinitionBody Guid m (ExpressionU m [EntityId]))
+convertDefIExpr cp (Definition.Expr valLoaded defType) defI = do
   (valInferred, newInferContext) <- SugarInfer.loadInfer valIRefs
   let addStoredEntityIds x = x & ipData .~ (EntityId.ofValI . Property.value <$> x ^.. ipStored . Lens._Just)
   context <- mkContext defI cp newInferContext
@@ -763,15 +761,15 @@ convertDefI ::
   Definition.Definition
   (Val (Load.ExprPropertyClosure m)) (DefI m) ->
   T m (DefinitionU m [EntityId])
-convertDefI cp (Definition.Definition (Definition.Body bodyContent exportedType) defI) = do
-  bodyS <- convertDefContent bodyContent exportedType
+convertDefI cp (Definition.Definition body defI) = do
+  bodyS <- convertDefBody body
   return Definition
     { _drEntityId = EntityId.ofIRef defI
     , _drName = UniqueId.toGuid defI
     , _drBody = bodyS
     }
   where
-    convertDefContent (Definition.ContentBuiltin builtin) =
-      return . convertDefIBuiltin builtin defI
-    convertDefContent (Definition.ContentExpr valLoaded) =
-      convertDefIExpr cp valLoaded defI
+    convertDefBody (Definition.BodyBuiltin builtin) =
+      return $ convertDefIBuiltin builtin defI
+    convertDefBody (Definition.BodyExpr expr) =
+      convertDefIExpr cp expr defI

@@ -43,9 +43,11 @@ loader =
   where
     loadType globalId = do
       defBody <- lift $ Transaction.readIRef $ ExprIRef.defI globalId
-      case defBody ^. Definition.bodyType of
-        Definition.NoExportedType -> mzero -- Reference to global with non-exported type!
-        Definition.ExportedType scheme -> return scheme
+      case defBody of
+        Definition.BodyExpr (Definition.Expr _ (Definition.ExportedType scheme)) ->
+          return scheme
+        Definition.BodyBuiltin (Definition.Builtin _ scheme) -> return scheme
+        _ -> mzero -- Reference to global with non-exported type!
 
 eitherToMaybeT :: Monad m => Either l a -> MaybeT m a
 eitherToMaybeT (Left _) = MaybeT $ return Nothing

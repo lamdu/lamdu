@@ -2,14 +2,14 @@
 module Lamdu.Data.Definition
   ( FFIName(..)
   , Builtin(..)
-  , Content(..)
   , ExportedType(..)
-  , Body(..), bodyContent, bodyType
+  , Expr(..)
+  , Body(..)
   , Definition(..), defBody, defPayload
   ) where
 
 import Control.Applicative ((<$>))
-import Control.Lens (Lens, Lens')
+import Control.Lens (Lens)
 import Data.Binary (Binary(..))
 import Data.Foldable (Foldable(..))
 import Data.Traversable (Traversable(..))
@@ -26,20 +26,21 @@ instance Show FFIName where
 
 data Builtin = Builtin
   { bName :: FFIName
-  } deriving (Generic, Eq, Ord, Show)
-
-data Content valExpr
-  = ContentExpr valExpr
-  | ContentBuiltin Builtin
-  deriving (Generic, Eq, Ord, Show, Functor, Foldable, Traversable)
+  , bType :: Scheme
+  } deriving (Generic, Show)
 
 data ExportedType = NoExportedType | ExportedType Scheme
   deriving (Generic, Show)
 
-data Body valExpr = Body
-  { _bodyContent :: Content valExpr
-  , _bodyType :: ExportedType
+data Expr valExpr = Expr
+  { _expr :: valExpr
+  , _exprType :: ExportedType
   } deriving (Generic, Show, Functor, Foldable, Traversable)
+
+data Body valExpr
+  = BodyExpr (Expr valExpr)
+  | BodyBuiltin Builtin
+  deriving (Generic, Show, Functor, Foldable, Traversable)
 
 data Definition valExpr a = Definition
   { _defBody :: Body valExpr
@@ -48,16 +49,10 @@ data Definition valExpr a = Definition
 
 instance Binary FFIName
 instance Binary Builtin
-instance Binary valExpr => Binary (Content valExpr)
 instance Binary ExportedType
+instance Binary valExpr => Binary (Expr valExpr)
 instance Binary valExpr => Binary (Body valExpr)
 instance (Binary valExpr, Binary a) => Binary (Definition valExpr a)
-
-bodyContent :: Lens (Body a) (Body b) (Content a) (Content b)
-bodyContent f (Body c t) = (`Body` t) <$> f c
-
-bodyType :: Lens' (Body a) ExportedType
-bodyType f (Body c t) = Body c <$> f t
 
 defBody :: Lens (Definition s a) (Definition t a) (Body s) (Body t)
 defBody f (Definition b p) = (`Definition` p) <$> f b
