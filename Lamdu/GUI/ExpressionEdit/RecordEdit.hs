@@ -70,46 +70,46 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
       scaleTag =
         ExpressionGui.egWidget %~
         Widget.scale (realToFrac <$> Config.fieldTagScaleFactor config)
-    fieldRows <- concat <$> mapM makeFieldRow fields
-    let
-      fieldsWidget = Grid.make fieldRows & Grid.toWidget & padWithoutBot
-      targetWidth =
-        case fieldRows of
-        [] -> 250
-        _ -> fieldsWidget ^. Widget.wSize . Lens._1
-      colorScaleRect minWidth f =
-        f (Widget.toAnimId tailId)
-        & Anim.onImages (Draw.tint (Config.recordTailColor config))
-        & Widget.liftView 1
-        & Widget.scale (Vector2 (max minWidth targetWidth) 10)
-    tailWidget <-
-      case recordTail of
-      Sugar.ClosedRecord mDeleteTail ->
-        colorScaleRect 0 Anim.unitSquare
-        & ExprGuiM.widgetEnv . BWidgets.makeFocusableView tailId
-        <&> Widget.weakerEvents
-            (maybe mempty (recordDelEventMap "Tail" config) mDeleteTail)
-      Sugar.RecordExtending rest -> do
-        restExpr <-
-          ExprGuiM.makeSubexpression 0 rest
-          <&> (^. ExpressionGui.egWidget)
-          <&> padWithoutTop
-        return $ Box.vboxCentered
-          [ colorScaleRect (restExpr ^. Widget.wSize . Lens._1) $
-            Anim.unitHStripedSquare 20
-          , vspace
-          , restExpr
-          ]
+    (widget, resultPickers) <-
+      ExprGuiM.listenResultPickers $ do
+        fieldRows <- concat <$> mapM makeFieldRow fields
+        let
+          fieldsWidget = Grid.make fieldRows & Grid.toWidget & padWithoutBot
+          targetWidth =
+            case fieldRows of
+            [] -> 250
+            _ -> fieldsWidget ^. Widget.wSize . Lens._1
+          colorScaleRect minWidth f =
+            f (Widget.toAnimId tailId)
+            & Anim.onImages (Draw.tint (Config.recordTailColor config))
+            & Widget.liftView 1
+            & Widget.scale (Vector2 (max minWidth targetWidth) 10)
+        tailWidget <-
+          case recordTail of
+          Sugar.ClosedRecord mDeleteTail ->
+            colorScaleRect 0 Anim.unitSquare
+            & ExprGuiM.widgetEnv . BWidgets.makeFocusableView tailId
+            <&> Widget.weakerEvents
+                (maybe mempty (recordDelEventMap "Tail" config) mDeleteTail)
+          Sugar.RecordExtending rest -> do
+            restExpr <-
+              ExprGuiM.makeSubexpression 0 rest
+              <&> (^. ExpressionGui.egWidget)
+              <&> padWithoutTop
+            return $ Box.vboxCentered
+              [ colorScaleRect (restExpr ^. Widget.wSize . Lens._1) $
+                Anim.unitHStripedSquare 20
+              , vspace
+              , restExpr
+              ]
+        return $ Box.vboxCentered [fieldsWidget, tailWidget]
     let
       eventMap =
         mkEventMap (fmap (diveIntoTagEdit . WidgetIds.fromEntityId))
-        mAddField (Config.recordAddFieldKeys config) $
+        ((ExprGuiM.holePickersAction resultPickers >>) <$> mAddField)
+        (Config.recordAddFieldKeys config) $
         E.Doc ["Edit", "Record", "Add Field"]
-    Box.vboxCentered
-      [ fieldsWidget
-      , tailWidget
-      ]
-      & Widget.weakerEvents eventMap
+    Widget.weakerEvents eventMap widget
       & ExpressionGui.fromValueWidget
       & ExpressionGui.withBgColor (Config.layerLabeledApplyBG (Config.layers config))
         (Config.labeledApplyBGColor config) (Widget.toAnimId myId ++ ["bg"])
