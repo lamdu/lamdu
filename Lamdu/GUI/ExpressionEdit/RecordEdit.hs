@@ -75,11 +75,9 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
         fieldsWidget <-
           if null fieldRows
           then
-            ExpressionGui.makeColoredLabel
-            (Config.baseTextSize config)
-            (Config.grammarColor config)
-            "Ø" myId
-            >>= ExprGuiM.widgetEnv . BWidgets.makeFocusableView myId
+            BWidgets.grammarLabel "Ø" myId
+            >>= BWidgets.makeFocusableView myId
+            & ExprGuiM.widgetEnv
           else Grid.make fieldRows & Grid.toWidget & pad & return
         let
           targetWidth =

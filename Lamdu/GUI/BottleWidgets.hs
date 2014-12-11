@@ -9,6 +9,7 @@ module Lamdu.GUI.BottleWidgets
   , stdSpaceWidget, hspaceWidget, vspaceWidget
   , hboxSpaced, hboxCenteredSpaced
   , gridHSpaced, gridHSpacedCentered
+  , grammarLabel
   , makeChoiceWidget, ChoiceWidgetConfig(..), ChoiceWidgetExpandMode(..)
   ) where
 
@@ -54,6 +55,14 @@ makeTextViewWidget text myId =
 makeLabel :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeLabel text prefix =
   makeTextViewWidget text $ mappend prefix [pack text]
+
+grammarLabel :: MonadA m => String -> Widget.Id -> WidgetEnvT m (Widget f)
+grammarLabel text widgetId =
+  do
+    config <- WE.readConfig
+    WE.localEnv
+      (WE.setTextSizeColor (Config.baseTextSize config) (Config.grammarColor config)) $
+      makeLabel text $ Widget.toAnimId widgetId
 
 respondToCursorIn ::
   MonadA m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)

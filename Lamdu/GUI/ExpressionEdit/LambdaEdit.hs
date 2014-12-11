@@ -10,6 +10,7 @@ import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.Parens as Parens
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -28,16 +29,9 @@ make parentPrecedence (Sugar.Lam param body) pl =
   ExpressionGui.stdWrapParenify pl parentPrecedence (ExpressionGui.MyPrecedence 0)
   Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId bodyId $ do
-    config <- ExprGuiM.widgetEnv WE.readConfig
-    lambdaLabel <-
-      ExpressionGui.makeColoredLabel
-      (Config.lambdaTextSize config)
-      (Config.lambdaColor config) "λ" myId
+    lambdaLabel <- ExprGuiM.widgetEnv $ BWidgets.grammarLabel "λ" myId
     paramEdit <- ParamEdit.make bodyId param
-    dotLabel <-
-      ExpressionGui.makeColoredLabel
-      (Config.rightArrowTextSize config)
-      (Config.rightArrowColor config) ". " myId
+    dotLabel <- ExprGuiM.widgetEnv $ BWidgets.grammarLabel ". " myId
     bodyEdit <- ExprGuiM.makeSubexpression 0 body
     return $ ExpressionGui.hbox
       [ ExpressionGui.fromValueWidget lambdaLabel

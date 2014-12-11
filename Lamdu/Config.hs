@@ -105,12 +105,6 @@ data Config = Config
 
   , addWhereItemKeys :: [E.ModKey]
 
-  , lambdaColor :: Draw.Color
-  , lambdaTextSize :: Int
-
-  , rightArrowColor :: Draw.Color
-  , rightArrowTextSize :: Int
-
   , whereColor :: Draw.Color
   , whereScaleFactor :: Vector2 Double
   , whereLabelScaleFactor :: Vector2 Double

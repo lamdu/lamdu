@@ -11,6 +11,7 @@ import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -30,15 +31,6 @@ make list pl =
     then fmap (ExpressionGui.stdWrap pl)
     else ExpressionGui.stdWrapParentExpr pl
 
-makeBracketLabel :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui f)
-makeBracketLabel label myId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  ExpressionGui.fromValueWidget <$>
-    ExpressionGui.makeColoredLabel
-    (Config.baseTextSize config)
-    (Config.grammarColor config)
-    label myId
-
 lastLens :: Lens.Traversal' [a] a
 lastLens = Lens.taking 1 . Lens.backwards $ Lens.traversed
 
@@ -48,8 +40,12 @@ makeUnwrapped ::
   ExprGuiM m (ExpressionGui m)
 makeUnwrapped list myId =
   ExprGuiM.assignCursor myId cursorDest $ do
-    bracketOpenLabel <- makeBracketLabel "[" bracketsIdForAnim
-    bracketCloseLabel <- makeBracketLabel "]" bracketsIdForAnim
+    bracketOpenLabel <-
+      ExprGuiM.widgetEnv $ ExpressionGui.fromValueWidget <$>
+      BWidgets.grammarLabel "[" bracketsIdForAnim
+    bracketCloseLabel <-
+      ExprGuiM.widgetEnv $ ExpressionGui.fromValueWidget <$>
+      BWidgets.grammarLabel "]" bracketsIdForAnim
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
       onFirstElem x =

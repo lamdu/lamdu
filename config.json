@@ -9,12 +9,6 @@
             "Key'Tab"
         ]
     ],
-    "rightArrowColor": [
-        1.0,
-        0.2,
-        0.2,
-        1.0
-    ],
     "enlargeBaseFontKeys": [
         [
             {
@@ -122,12 +116,6 @@
         "_first": 0.4,
         "_second": 0.4
     },
-    "lambdaColor": [
-        1.0,
-        0.2,
-        0.2,
-        1.0
-    ],
     "holeResultScaleFactor": {
         "_first": 0.75,
         "_second": 0.75
@@ -484,7 +472,6 @@
             "Key'F10"
         ]
     ],
-    "lambdaTextSize": 30,
     "recordAddFieldKeys": [
         [
             {
@@ -735,7 +722,6 @@
         0.0,
         0.3
     ],
-    "rightArrowTextSize": 30,
     "collisionSuffixBGColor": [
         0.7,
         0.0,
