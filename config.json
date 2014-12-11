@@ -283,7 +283,7 @@
         0.0,
         1.0,
         0.0,
-        0.1
+        0.2
     ],
     "enlargeFactor": 1.1,
     "holeSearchTermScaleFactor": {
@@ -397,9 +397,9 @@
         0.5,
         1.0
     ],
-    "wrapperHolePadding": {
-        "_first": 8.0,
-        "_second": 8.0
+    "wrapperHoleFrameWidth": {
+        "_first": 15.0,
+        "_second": 15.0
     },
     "acceptKeys": [
         [
@@ -716,7 +716,7 @@
         1.0,
         0.0,
         0.0,
-        0.3
+        0.45
     ],
     "collisionSuffixBGColor": [
         0.7,

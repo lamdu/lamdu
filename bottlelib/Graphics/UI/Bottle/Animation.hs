@@ -1,11 +1,11 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
 
 module Graphics.UI.Bottle.Animation
   ( R, Size, Layer
   , PositionedImage(..), piImage, piRect
   , Frame(..), fSubImages, onImages
   , draw, nextFrame, mapIdentities
-  , unitSquare, unitHStripedSquare
+  , unitSquare, unitHStripedSquare, emptyRectangle
   , backgroundColor
   , translate, scale, onDepth
   , unitIntoRect
@@ -213,6 +213,17 @@ makeNextFrame movement (Frame dests) (Frame curs) =
 
 unitSquare :: AnimId -> Frame
 unitSquare animId = simpleFrame animId DrawUtils.square
+
+emptyRectangle :: Vector2 R -> Vector2 R -> AnimId -> Frame
+emptyRectangle (Vector2 fX fY) (Vector2 sX sY) animId =
+  mconcat
+  [ rect 0                      (Vector2 sX fY)          ["top"]
+  , rect (Vector2 0 (sY - fY))  (Vector2 sX fY)          ["bottom"]
+  , rect (Vector2 0 fY)         (Vector2 fX (sY - fY*2)) ["left"]
+  , rect (Vector2 (sX - fX) fY) (Vector2 fX (sY - fY*2)) ["right"]
+  ]
+  where
+    rect origin size = translate origin . scale size . unitSquare . mappend animId
 
 -- Size is 1. Built from multiple vertical rectangles
 unitHStripedSquare :: Int -> AnimId -> Frame

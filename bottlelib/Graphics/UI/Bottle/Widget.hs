@@ -12,6 +12,7 @@ module Graphics.UI.Bottle.Widget
   , atWFrameWithSize, atEvents
   , takesFocus, doesntTakeFocus
   , backgroundColor, tint, liftView
+  , addInnerFrame
   , strongerEvents, weakerEvents
   , translate, translateBy, scale, scaleDownContent, pad, assymetricPad
   , overlayView
@@ -117,6 +118,15 @@ weakerEvents events = wEventMap %~ (`mappend` events)
 
 backgroundColor :: Int -> AnimId -> Draw.Color -> Widget f -> Widget f
 backgroundColor layer animId = atWFrameWithSize . Anim.backgroundColor animId layer
+
+addInnerFrame :: Int -> AnimId -> Draw.Color -> Vector2 R -> Widget f -> Widget f
+addInnerFrame layer animId color frameWidth =
+  atWFrameWithSize f
+  where
+    f size =
+      mappend $
+      Anim.onDepth (+ layer) $ Anim.onImages (Draw.tint color) $
+      Anim.emptyRectangle frameWidth size animId
 
 tint :: Draw.Color -> Widget f -> Widget f
 tint color = wFrame %~ Anim.onImages (Draw.tint color)

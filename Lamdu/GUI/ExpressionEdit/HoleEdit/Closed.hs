@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Closed
   ( make
   ) where
@@ -18,6 +20,8 @@ import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.AddNames.Types (Name(..), ExpressionN)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
@@ -112,6 +116,8 @@ makeWrapper arg myId = do
       case arg ^. Sugar.haUnwrap of
       Sugar.UnwrapMAction {} -> Config.deletableHoleBGColor
       Sugar.UnwrapTypeMismatch {} -> Config.typeErrorHoleWrapBGColor
+    frameWidth = realToFrac <$> Config.wrapperHoleFrameWidth config
+    padding = realToFrac <$> Config.valFramePadding config
   rawArgGui <-
     arg ^. Sugar.haExpr
     & ExprGuiM.makeSubexpression 0
@@ -122,10 +128,13 @@ makeWrapper arg myId = do
   rawArgGui
     & ExpressionGui.egWidget %%~
       makeFocusable myId . Widget.weakerEvents eventMap
-    <&> ExpressionGui.pad (realToFrac <$> Config.wrapperHolePadding config)
+    <&> ExpressionGui.pad (padding + frameWidth)
     <&> ExpressionGui.egWidget %~
-        makeBackground myId
-        (Config.layerHoleBG (Config.layers config)) bgColor
+        Widget.addInnerFrame
+        (Config.layerHoleBG (Config.layers config))
+        frameId bgColor frameWidth
+  where
+    frameId = mappend (Widget.toAnimId myId) ["hole frame"]
 
 makeSuggested ::
   MonadA m =>

@@ -88,7 +88,7 @@ data Config = Config
   , activeHoleBGColor :: Draw.Color
   , inactiveHoleBGColor :: Draw.Color
 
-  , wrapperHolePadding :: Vector2 Double
+  , wrapperHoleFrameWidth :: Vector2 Double
 
   , tagScaleFactor :: Vector2 Double
 
