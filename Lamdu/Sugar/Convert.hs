@@ -126,6 +126,17 @@ convertPositionalFuncParam (V.Lam param body) lamExprPl = do
       fromMaybe (error "Lambda value not inferred to a function type?!") $
       lamExprPl ^? ipInferred . Infer.plType . ExprLens._TFun . _1
 
+protectedSetToVal ::
+  MonadA m =>
+  (T m (ExprIRef.ValI m) -> T m (Maybe (ExprIRef.ValI m))) ->
+  ExprIRef.ValIProperty m -> ExprIRef.ValI m -> Transaction m EntityId
+protectedSetToVal typeProtect dest valI =
+  EntityId.ofValI <$> do
+    mResult <- typeProtect $ DataOps.replace dest valI
+    case mResult of
+      Just result -> return result
+      Nothing -> DataOps.setToWrapper valI dest
+
 convertLam ::
   (MonadA m, Monoid a) =>
   V.Lam (Val (InputPayload m a)) ->
@@ -143,10 +154,7 @@ convertLam lam@(V.Lam paramVar lamBody) exprPl = do
         return $ do
           deleteParamRef paramVar lamBodyStored
           let lamBodyI = Property.value (lamBodyStored ^. V.payload)
-          mResult <- typeProtect $ EntityId.ofValI <$> DataOps.replace stored lamBodyI
-          case mResult of
-            Just result -> return result
-            Nothing -> EntityId.ofValI <$> DataOps.setToWrapper lamBodyI stored
+          protectedSetToVal typeProtect stored lamBodyI
   BodyLam
     Lam
     { _lParam =
@@ -194,24 +202,44 @@ convertTag inst tag = TagG inst tag $ UniqueId.toGuid tag
 convertField ::
   (MonadA m, Monoid a) =>
   Maybe (ExprIRef.ValIProperty m) ->
-  Maybe (ExprIRef.ValIM m) ->
+  Maybe (ExprIRef.ValIM m) -> Record name m (ExpressionU m a) ->
   EntityId -> T.Tag -> Val (InputPayload m a) ->
   ConvertM m (RecordField Guid m (ExpressionU m a))
-convertField mStored mRestI inst tag expr = do
+convertField mStored mRestI restS inst tag expr = do
   exprS <- ConvertM.convertSubexpression expr
   typeProtect <- ConvertM.typeProtectTransaction
-  let
-    mkDelete stored restI =
-      do
-        mResult <- typeProtect $ EntityId.ofValI <$> DataOps.replace stored restI
-        case mResult of
-          Nothing -> EntityId.ofValI <$> DataOps.setToWrapper restI stored
-          Just result -> return result
   return RecordField
     { _rfTag = convertTag inst tag
     , _rfExpr = exprS
-    , _rfMDelete = mkDelete <$> mStored <*> mRestI
+    , _rfMDelete =
+        do
+          stored <- mStored
+          restI <- mRestI
+          exprI <- expr ^? V.payload . plValI
+          return $
+            if null (restS ^. rItems)
+            then
+              -- When deleting closed one field record
+              -- we replace the record with the field value
+              protectedSetToVal typeProtect stored exprI
+            else do
+              let delete = DataOps.replace stored restI
+              mResult <- fmap EntityId.ofValI <$> typeProtect delete
+              case mResult of
+                Just result -> return result
+                Nothing ->
+                  fromMaybe (error "should have a way to fix type error") $
+                  case restS ^. rTail of
+                  RecordExtending ext -> wrapAction ext
+                  ClosedRecord mOpen ->
+                    do
+                      open <- mOpen
+                      return $ delete >> open
     }
+  where
+    wrapAction s =
+      s ^? rPayload . plActions . Lens._Just . wrap . _WrapAction
+      <&> fmap snd
 
 convertEmptyRecord :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m a)
 convertEmptyRecord exprPl =
@@ -233,22 +261,18 @@ convertRecExtend ::
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertRecExtend (V.RecExtend tag val rest) exprPl = do
   restS <- ConvertM.convertSubexpression rest
-  fieldS <-
-      convertField
-      (exprPl ^. ipStored) (rest ^? V.payload . plValI)
-      (EntityId.ofRecExtendTag (exprPl ^. ipEntityId)) tag val
   let
-    (innerRecord, hiddenEntities) =
+    (restRecord, hiddenEntities) =
       case restS ^. rBody of
-      BodyRecord (Record restFields t _mAddFirstAddItem) ->
-        ( Record (fieldS : restFields) t addField
-        , restS ^. rPayload . plData
-        )
-      _ ->
-        ( Record [fieldS] (RecordExtending restS) addField
-        , mempty
-        )
-  BodyRecord innerRecord
+      BodyRecord rec -> (rec, restS ^. rPayload . plData)
+      _ -> (Record [] (RecordExtending restS) addField, mempty)
+  fieldS <-
+    convertField
+    (exprPl ^. ipStored) (rest ^? V.payload . plValI) restRecord
+    (EntityId.ofRecExtendTag (exprPl ^. ipEntityId)) tag val
+  restRecord
+    & rItems %~ (fieldS:)
+    & BodyRecord
     & ConvertExpr.make exprPl
     <&> rPayload . plData <>~ hiddenEntities
     <&> rPayload . plIsRedundantType .~ True

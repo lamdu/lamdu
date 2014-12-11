@@ -15,7 +15,7 @@ module Lamdu.Sugar.Types
     , dSetPresentationMode, dParams, dBody, dWhereItems
     , dAddFirstParam, dAddInnermostWhereItem
   , DefinitionBuiltin(..)
-  , WrapAction(..)
+  , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
   , SetToHole(..), _SetToHole, _AlreadyAHole
   , SetToInnerExpr(..), _SetToInnerExpr, _NoInnerExpr
   , Actions(..)
@@ -401,8 +401,8 @@ Lens.makeLenses ''GetVar
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg
-Lens.makeLenses ''HoleSuggested
 Lens.makeLenses ''HoleResult
+Lens.makeLenses ''HoleSuggested
 Lens.makeLenses ''Lam
 Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions
@@ -416,7 +416,8 @@ Lens.makeLenses ''WhereItem
 Lens.makePrisms ''Body
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo
-Lens.makePrisms ''SpecialArgs
-Lens.makePrisms ''Unwrap
 Lens.makePrisms ''SetToHole
 Lens.makePrisms ''SetToInnerExpr
+Lens.makePrisms ''SpecialArgs
+Lens.makePrisms ''Unwrap
+Lens.makePrisms ''WrapAction
