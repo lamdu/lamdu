@@ -17,11 +17,11 @@ import Data.Store.IRef (IRef)
 import Lamdu.Expr.Val (Val)
 import System.Random (RandomGen)
 import qualified Data.Store.Guid as Guid
+import qualified Lamdu.Expr.GenIds as InputExpr
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
-import qualified Lamdu.Sugar.InputExpr as InputExpr
 
 newtype EntityId = EntityId Guid
   deriving (Eq, Hashable, Show)

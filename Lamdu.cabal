@@ -148,15 +148,16 @@ Executable lamdu
                ,       Lamdu.Data.ExampleDB
                ,       Lamdu.Data.Ops
                ,       Lamdu.Expr.Constraints
+               ,       Lamdu.Expr.FlatComposite
+               ,       Lamdu.Expr.GenIds
                ,       Lamdu.Expr.Globals
-               ,       Lamdu.Expr.IRef
                ,       Lamdu.Expr.Identifier
+               ,       Lamdu.Expr.IRef
                ,       Lamdu.Expr.Lens
                ,       Lamdu.Expr.Load
                ,       Lamdu.Expr.Pure
                ,       Lamdu.Expr.RecordVal
                ,       Lamdu.Expr.Scheme
-               ,       Lamdu.Expr.FlatComposite
                ,       Lamdu.Expr.Type
                ,       Lamdu.Expr.TypeVars
                ,       Lamdu.Expr.UniqueId
@@ -222,7 +223,6 @@ Executable lamdu
                ,       Lamdu.Sugar.Convert.Monad
                ,       Lamdu.Sugar.EntityId
                ,       Lamdu.Sugar.Expression
-               ,       Lamdu.Sugar.InputExpr
                ,       Lamdu.Sugar.Internal
                ,       Lamdu.Sugar.Internal.EntityId
                ,       Lamdu.Sugar.Lens

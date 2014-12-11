@@ -41,17 +41,17 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Expr.GenIds as InputExpr
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
-import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Type as T
+import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import qualified Lamdu.Sugar.InputExpr as InputExpr
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified System.Random as Random
 
