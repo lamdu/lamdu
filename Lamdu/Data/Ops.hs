@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 module Lamdu.Data.Ops
   ( newHole, wrap, setToWrapper
-  , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
+  , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap, recExtend
   , addListItem
   , newPublicDefinition
   , newDefinition, presentationModeOfName
@@ -25,11 +25,13 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
+import qualified System.Random.Utils as RandomUtils
 
 type T = Transaction
 
@@ -73,25 +75,29 @@ setToHole exprP =
     hole = V.BLeaf V.LHole
     exprI = Property.value exprP
 
-lambdaWrap
-  :: MonadA m
-  => ExprIRef.ValIProperty m
-  -> T m (V.Var, ExprIRef.ValI m)
+lambdaWrap :: MonadA m => ExprIRef.ValIProperty m -> T m (V.Var, ExprIRef.ValI m)
 lambdaWrap exprP = do
   (newParam, newExprI) <- ExprIRef.newLambda $ Property.value exprP
   Property.set exprP newExprI
   return (newParam, newExprI)
 
-redexWrap
-  :: MonadA m
-  => ExprIRef.ValIProperty m
-  -> T m (V.Var, ExprIRef.ValI m)
+redexWrap :: MonadA m => ExprIRef.ValIProperty m -> T m (V.Var, ExprIRef.ValI m)
 redexWrap exprP = do
   (newParam, newLambdaI) <- ExprIRef.newLambda $ Property.value exprP
   newValueI <- newHole
   newApplyI <- ExprIRef.newValBody . V.BApp $ V.Apply newLambdaI newValueI
   Property.set exprP newApplyI
   return (newParam, newLambdaI)
+
+recExtend :: MonadA m => ExprIRef.ValIProperty m -> T m (T.Tag, ExprIRef.ValI m)
+recExtend valP = do
+  tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
+  newValueI <- newHole
+  resultI <-
+    ExprIRef.newValBody . V.BRecExtend $
+    V.RecExtend tag newValueI $ Property.value valP
+  Property.set valP resultI
+  return (tag, resultI)
 
 addListItem ::
   MonadA m =>

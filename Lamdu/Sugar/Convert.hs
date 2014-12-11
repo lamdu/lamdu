@@ -226,15 +226,27 @@ convertField mStored mRestI restS inst tag expr = do
     }
 
 convertEmptyRecord :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m a)
-convertEmptyRecord exprPl =
+convertEmptyRecord exprPl = do
+  typeProtect <- ConvertM.typeProtectTransaction
   BodyRecord Record
-  { _rItems = []
-  , _rTail =
-      ClosedRecord $
-      fmap EntityId.ofValI . DataOps.replaceWithHole <$> exprPl ^. ipStored
-  , _rMAddField = return $ error "TODO: _rMAddField" -- addField <$> exprPl ^? plIRef
-  }
-  & ConvertExpr.make exprPl
+    { _rItems = []
+    , _rTail =
+        ClosedRecord $
+        fmap EntityId.ofValI . DataOps.replaceWithHole <$> exprPl ^. ipStored
+    , _rMAddField =
+        do
+          stored <- exprPl ^. ipStored
+          return . fmap (EntityId.ofRecExtendTag . EntityId.ofValI) $ do
+            let extend = snd <$> DataOps.recExtend stored
+            mResultI <- typeProtect extend
+            case mResultI of
+              Just resultI -> return resultI
+              Nothing -> do
+                resultI <- extend
+                void $ DataOps.setToWrapper resultI stored
+                return resultI
+    }
+    & ConvertExpr.make exprPl
 
 plValI :: Lens.Traversal' (InputPayload m a) (ExprIRef.ValIM m)
 plValI = ipStored . Lens._Just . Property.pVal
