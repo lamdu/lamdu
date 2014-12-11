@@ -13,7 +13,6 @@ import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -92,13 +91,9 @@ makeArgRows arg = do
     scaleTag =
       ExpressionGui.egWidget %~
       Widget.scale (realToFrac <$> Config.fieldTagScaleFactor config)
+  vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
   pure
-    [ [ (0.5, (BWidgets.vspaceWidget . realToFrac . Config.verticalSpacing) config)
-      -- TODO: This is a workaround for GridEdit bug that
-      -- differing-length'd rows break navigation
-      , (0.5, Spacer.empty)
-      , (0.5, Spacer.empty)
-      ]
+    [ replicate 3 (0.5, vspace)
     , ExpressionGui.makeRow
       [ (0, scaleTag argTagEdit)
       , (0.5, space)

@@ -72,11 +72,7 @@ makeFieldsWidget [] myId =
   & ExprGuiM.widgetEnv
 makeFieldsWidget fields _ =
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig
-    let
-      vspace =
-        BWidgets.vspaceWidget . realToFrac $
-        Config.verticalSpacing config
+    vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
     fieldRows <-
       mapM makeFieldRow fields
       <&> List.intersperse (replicate 3 (0.5, vspace))
@@ -88,10 +84,8 @@ makeUnwrapped ::
 makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
   ExprGuiM.assignCursor myId defaultPos $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
+    vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
     let
-      vspace =
-        BWidgets.vspaceWidget . realToFrac $
-        Config.verticalSpacing config
       pad = Widget.pad $ realToFrac <$> Config.valFramePadding config
     (widget, resultPickers) <-
       ExprGuiM.listenResultPickers $ do
