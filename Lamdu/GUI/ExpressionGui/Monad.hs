@@ -7,6 +7,7 @@ module Lamdu.GUI.ExpressionGui.Monad
   , emptyHoleEntityIds
   , Payload(..), plStoredEntityIds, plInjected, plHoleEntityIds, plShowType
   , ShowType(..)
+  , shouldShowType
   , emptyPayload
   , SugarExpr
 
@@ -51,6 +52,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -224,3 +226,13 @@ nextHolesBefore val =
   & if Lens.has (Sugar.rBody . Sugar._BodyHole) val
     then hgMNextHole .~ Just (val ^. Sugar.rPayload . Sugar.plEntityId)
     else id
+
+shouldShowType :: MonadA m => ShowType -> ExprGuiM m Bool
+shouldShowType DoNotShowType = return False
+shouldShowType ShowType = return True
+shouldShowType ShowTypeInVerboseMode = do
+  infoMode <- (^. CESettings.sInfoMode) <$> readSettings
+  return $
+    case infoMode of
+    CESettings.None -> False
+    CESettings.Types -> True

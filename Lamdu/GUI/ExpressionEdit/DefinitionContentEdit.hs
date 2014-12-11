@@ -257,7 +257,7 @@ makeNestedParams atParamWidgets rhs lhsId params = do
       (ExpressionGui.egWidget %~
        (atParamWidgets (param ^. Sugar.fpName) .
         Widget.weakerEvents rhsJumper)) <$>
-      ParamEdit.make prevId param
+      ParamEdit.make ExprGuiM.ShowTypeInVerboseMode prevId param
   traverse mkParam $ addPrevIds lhsId params
 
 diveToNameEdit :: Widget.Id -> Widget.Id

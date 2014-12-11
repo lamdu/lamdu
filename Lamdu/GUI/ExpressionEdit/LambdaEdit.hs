@@ -24,11 +24,11 @@ make ::
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence (Sugar.Lam param body) pl =
-  ExpressionGui.stdWrapParenify pl parentPrecedence (ExpressionGui.MyPrecedence 0)
+  ExpressionGui.stdWrapParenify plNoType parentPrecedence (ExpressionGui.MyPrecedence 0)
   Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId bodyId $ do
     lambdaLabel <- ExprGuiM.widgetEnv $ BWidgets.grammarLabel "λ" myId
-    paramEdit <- ParamEdit.make bodyId param
+    paramEdit <- ParamEdit.make showParamType bodyId param
     dotLabel <- ExprGuiM.widgetEnv $ BWidgets.grammarLabel ". " myId
     bodyEdit <- ExprGuiM.makeSubexpression 0 body
     return $ ExpressionGui.hbox
@@ -38,4 +38,8 @@ make parentPrecedence (Sugar.Lam param body) pl =
       , bodyEdit
       ]
   where
+    -- We show the param type instead of the lambda type
+    showParamType = pl ^. Sugar.plData . ExprGuiM.plShowType
+    plNoType = pl & Sugar.plData . ExprGuiM.plShowType .~ ExprGuiM.DoNotShowType
+
     bodyId = WidgetIds.fromEntityId $ body ^. Sugar.rPayload . Sugar.plEntityId

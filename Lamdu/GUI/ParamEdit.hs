@@ -38,14 +38,11 @@ makeParamNameEdit nameProp myId = do
 
 -- exported for use in definition sugaring.
 make ::
-  MonadA m => Widget.Id ->
+  MonadA m => ExprGuiM.ShowType -> Widget.Id ->
   Sugar.FuncParam (Name m) m ->
   ExprGuiM m (ExpressionGui m)
-make prevId param =
+make showType prevId param =
   assignCursor $ do
-    paramTypeView <-
-      ExprGuiM.widgetEnv $ TypeView.make (genFromHashable entityId) $ param ^. Sugar.fpInferredType
-    paramNameEdit <- makeParamNameEdit (param ^. Sugar.fpName) myId
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
       paramAddNextEventMap =
@@ -60,11 +57,23 @@ make prevId param =
         , paramDeleteEventMap (Config.delBackwardKeys config) " backwards" (const prevId)
         , paramAddNextEventMap
         ]
-    return .
-      (ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap) .
-      ExpressionGui.addType config ExpressionGui.Background myId
-      (uncurry Widget.liftView paramTypeView) $
-      ExpressionGui.fromValueWidget paramNameEdit
+    paramNameEdit <-
+      makeParamNameEdit (param ^. Sugar.fpName) myId
+      <&> Widget.weakerEvents paramEventMap
+      <&> ExpressionGui.fromValueWidget
+    s <- ExprGuiM.shouldShowType showType
+    if s
+      then do
+        paramTypeView <-
+          param ^. Sugar.fpInferredType
+          & TypeView.make (genFromHashable entityId)
+          & ExprGuiM.widgetEnv
+          <&> uncurry Widget.liftView
+        return $
+          ExpressionGui.addType config ExpressionGui.Background myId
+          paramTypeView paramNameEdit
+      else
+        return paramNameEdit
   where
     entityId = param ^. Sugar.fpId
     myId = WidgetIds.fromEntityId entityId

@@ -38,7 +38,6 @@ import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Box (KBox)
 import Lamdu.Config (Config)
-import Lamdu.GUI.CodeEdit.Settings (InfoMode(..), sInfoMode)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import Lamdu.GUI.ExpressionGui.Types (WidgetT, ExpressionGui(..), egWidget, egAlignment)
 import Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
@@ -327,12 +326,8 @@ addInferredTypes ::
   ExpressionGui m ->
   ExprGuiM m (ExpressionGui m)
 addInferredTypes exprPl eg =
-  case exprPl ^. Sugar.plData . ExprGuiM.plShowType of
-  ExprGuiM.DoNotShowType -> return eg
-  ExprGuiM.ShowType -> alwaysAddInferredTypes exprPl eg
-  ExprGuiM.ShowTypeInVerboseMode ->
-    do
-      infoMode <- (^. sInfoMode) <$> ExprGuiM.readSettings
-      case infoMode of
-        None -> return eg
-        Types -> alwaysAddInferredTypes exprPl eg
+  do
+    s <- ExprGuiM.shouldShowType $ exprPl ^. Sugar.plData . ExprGuiM.plShowType
+    if s
+      then alwaysAddInferredTypes exprPl eg
+      else return eg
