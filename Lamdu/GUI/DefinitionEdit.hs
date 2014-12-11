@@ -29,6 +29,7 @@ import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.AddNames as AddNames
 import qualified Lamdu.Sugar.Convert as SugarConvert
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -128,7 +129,12 @@ loadConvertDefI cp defI =
   SugarConvert.convertDefI cp
   >>= AddNames.addToDef
   <&> Lens.mapped . Lens.mapped . Sugar.plData %~ mkPayload
-  <&> Lens.mapped . redundantTypes . Sugar.plData . ExprGuiM.plShowType .~ ExprGuiM.DoNotShowType
+  <&> Lens.mapped . redundantTypes .
+      Sugar.plData . ExprGuiM.plShowType .~ ExprGuiM.DoNotShowType
+  <&> Lens.mapped . SugarLens.holePayloads .
+      Sugar.plData . ExprGuiM.plShowType .~ ExprGuiM.ShowType
+  <&> Lens.mapped . SugarLens.holeArgs .
+      Sugar.plData . ExprGuiM.plShowType .~ ExprGuiM.ShowType
   <&> AddNextHoles.addToDef
   where
     mkPayload entityIds =
