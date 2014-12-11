@@ -51,7 +51,6 @@ convert app@(V.Apply funcI argI) exprPl =
     justToLeft $ ConvertList.cons app argS exprPl
     funcS <-
       ConvertM.convertSubexpression funcI
-      <&> rPayload . plIsRedundantType .~ True
       & lift
     justToLeft $ convertLabeled funcS argS argI exprPl
     lift $ convertPrefix funcS argS exprPl

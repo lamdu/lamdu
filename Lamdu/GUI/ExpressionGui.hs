@@ -336,11 +336,9 @@ maybeAddInferredTypes ::
   Sugar.Payload m a ->
   ExpressionGui m ->
   ExprGuiM m (ExpressionGui m)
-maybeAddInferredTypes exprPl eg
-  | exprPl ^. Sugar.plIsRedundantType = return eg
-  | otherwise =
-    do
-      infoMode <- (^. sInfoMode) <$> ExprGuiM.readSettings
-      case infoMode of
-        None -> return eg
-        Types -> addInferredTypes exprPl eg
+maybeAddInferredTypes exprPl eg =
+  do
+    infoMode <- (^. sInfoMode) <$> ExprGuiM.readSettings
+    case infoMode of
+      None -> return eg
+      Types -> addInferredTypes exprPl eg

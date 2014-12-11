@@ -185,7 +185,6 @@ convertVar param exprPl = do
         , _gvVarType = GetParameter
         }
   ConvertExpr.make exprPl body
-    <&> rPayload . plIsRedundantType .~ True
 
 jumpToDefI ::
   MonadA m => Anchors.CodeProps m -> DefI m -> T m EntityId
@@ -246,7 +245,6 @@ convertEmptyRecord exprPl =
   , _rMAddField = return $ error "TODO: _rMAddField" -- addField <$> exprPl ^? plIRef
   }
   & ConvertExpr.make exprPl
-  <&> rPayload . plIsRedundantType .~ True
 
 plValI :: Lens.Traversal' (InputPayload m a) (ExprIRef.ValIM m)
 plValI = ipStored . Lens._Just . Property.pVal
@@ -270,7 +268,6 @@ convertRecExtend (V.RecExtend tag val rest) exprPl = do
     & BodyRecord
     & ConvertExpr.make exprPl
     <&> rPayload . plData <>~ hiddenEntities
-    <&> rPayload . plIsRedundantType .~ True
   where
     addField = return $ error "TODO: Support add field on records"
     -- addField iref =

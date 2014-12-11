@@ -107,16 +107,11 @@ makeWrapper ::
 makeWrapper arg myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
-    (bgColor, addTypes) =
+    bgColor =
+      config &
       case arg ^. Sugar.haUnwrap of
-      Sugar.UnwrapMAction {} ->
-        ( Config.deletableHoleBackgroundColor config
-        , return
-        )
-      Sugar.UnwrapTypeMismatch {} ->
-        ( Config.typeErrorHoleWrapBackgroundColor config
-        , ExpressionGui.addInferredTypes (arg ^. Sugar.haExpr . Sugar.rPayload)
-        )
+      Sugar.UnwrapMAction {} -> Config.deletableHoleBackgroundColor
+      Sugar.UnwrapTypeMismatch {} -> Config.typeErrorHoleWrapBackgroundColor
   rawArgGui <-
     arg ^. Sugar.haExpr
     & ExprGuiM.makeSubexpression 0
@@ -124,8 +119,8 @@ makeWrapper arg myId = do
     makeWrapperEventMap
     (rawArgGui ^. ExpressionGui.egWidget . Widget.wIsFocused)
     arg myId
-  addTypes rawArgGui
-    >>= ExpressionGui.egWidget %%~
+  rawArgGui
+    & ExpressionGui.egWidget %%~
       makeFocusable myId . Widget.weakerEvents eventMap
     <&> ExpressionGui.pad (realToFrac <$> Config.wrapperHolePadding config)
     <&> ExpressionGui.egWidget %~

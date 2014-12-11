@@ -23,7 +23,7 @@ module Lamdu.Sugar.Types
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyLiteralInteger, _BodyList, _BodyRecord
-  , Payload(..), plEntityId, plInferredType, plIsRedundantType, plActions, plData
+  , Payload(..), plEntityId, plInferredType, plActions, plData
   , ExpressionP(..), rBody, rPayload
   , DefinitionU
   , Expression
@@ -121,7 +121,6 @@ data Actions m = Actions
 
 data Payload m a = Payload
   { _plInferredType :: Type
-  , _plIsRedundantType :: Bool
   , _plActions :: Maybe (Actions m)
   , _plEntityId :: EntityId
   , _plData :: a
