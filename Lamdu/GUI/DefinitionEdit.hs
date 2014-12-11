@@ -11,6 +11,7 @@ import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import Lamdu.Sugar.AddNames.Types (Name(..), DefinitionN)
+import Lamdu.Sugar.RedundantTypes (redundantTypes)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -126,7 +127,8 @@ loadConvertDefI cp defI =
   Load.loadDefinitionClosure defI >>=
   SugarConvert.convertDefI cp
   >>= AddNames.addToDef
-  <&> Lens.mapped . Lens.mapped . Lens.mapped %~ mkPayload
+  <&> Lens.mapped . Lens.mapped . Sugar.plData %~ mkPayload
+  <&> Lens.mapped . redundantTypes . Sugar.plData . ExprGuiM.plShowType .~ ExprGuiM.DoNotShowType
   <&> AddNextHoles.addToDef
   where
     mkPayload entityIds =
