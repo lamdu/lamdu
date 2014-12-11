@@ -230,16 +230,11 @@ convertField mStored mRestI restS inst tag expr = do
                 Nothing ->
                   fromMaybe (error "should have a way to fix type error") $
                   case restS ^. rTail of
-                  RecordExtending ext -> wrapAction ext
-                  ClosedRecord mOpen ->
-                    do
-                      open <- mOpen
-                      return $ delete >> open
+                  RecordExtending ext ->
+                    ext ^? rPayload . plActions . Lens._Just . wrap . _WrapAction
+                    <&> fmap snd
+                  ClosedRecord mOpen -> (delete >>) <$> mOpen
     }
-  where
-    wrapAction s =
-      s ^? rPayload . plActions . Lens._Just . wrap . _WrapAction
-      <&> fmap snd
 
 convertEmptyRecord :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m a)
 convertEmptyRecord exprPl =
