@@ -98,7 +98,7 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
       eventMap =
         mkEventMap (fmap WidgetIds.fromEntityId)
         mAddField (Config.recordAddFieldKeys config) $
-        E.Doc ["Edit", "Record", "Add First Field"]
+        E.Doc ["Edit", "Record", "Add Field"]
     Box.vboxCentered
       [ fieldsWidget
       , tailWidget
