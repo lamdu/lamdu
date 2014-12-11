@@ -225,26 +225,31 @@ convertField mStored mRestI restS inst tag expr = do
                   ClosedRecord mOpen -> (delete >>) <$> mOpen
     }
 
+makeAddField :: MonadA m =>
+  Maybe (ExprIRef.ValIProperty m) -> ConvertM m (Maybe (T m EntityId))
+makeAddField Nothing = return Nothing
+makeAddField (Just stored) =
+  do
+    typeProtect <- ConvertM.typeProtectTransaction
+    return . Just . fmap (EntityId.ofRecExtendTag . EntityId.ofValI) $ do
+      let extend = snd <$> DataOps.recExtend stored
+      mResultI <- typeProtect extend
+      case mResultI of
+        Just resultI -> return resultI
+        Nothing -> do
+          resultI <- extend
+          void $ DataOps.setToWrapper resultI stored
+          return resultI
+
 convertEmptyRecord :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m a)
 convertEmptyRecord exprPl = do
-  typeProtect <- ConvertM.typeProtectTransaction
+  mAddField <- makeAddField (exprPl ^. ipStored)
   BodyRecord Record
     { _rItems = []
     , _rTail =
         ClosedRecord $
         fmap EntityId.ofValI . DataOps.replaceWithHole <$> exprPl ^. ipStored
-    , _rMAddField =
-        do
-          stored <- exprPl ^. ipStored
-          return . fmap (EntityId.ofRecExtendTag . EntityId.ofValI) $ do
-            let extend = snd <$> DataOps.recExtend stored
-            mResultI <- typeProtect extend
-            case mResultI of
-              Just resultI -> return resultI
-              Nothing -> do
-                resultI <- extend
-                void $ DataOps.setToWrapper resultI stored
-                return resultI
+    , _rMAddField = mAddField
     }
     & ConvertExpr.make exprPl
 
@@ -256,11 +261,12 @@ convertRecExtend ::
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertRecExtend (V.RecExtend tag val rest) exprPl = do
   restS <- ConvertM.convertSubexpression rest
+  mAddField <- makeAddField (exprPl ^. ipStored)
   let
     (restRecord, hiddenEntities) =
       case restS ^. rBody of
       BodyRecord rec -> (rec, restS ^. rPayload . plData)
-      _ -> (Record [] (RecordExtending restS) addField, mempty)
+      _ -> (Record [] (RecordExtending restS) mAddField, mempty)
   fieldS <-
     convertField
     (exprPl ^. ipStored) (rest ^? V.payload . plValI) restRecord
@@ -270,16 +276,6 @@ convertRecExtend (V.RecExtend tag val rest) exprPl = do
     & BodyRecord
     & ConvertExpr.make exprPl
     <&> rPayload . plData <>~ hiddenEntities
-  where
-    addField = return $ error "TODO: Support add field on records"
-    -- addField iref =
-    --   writeRecordFields iref defaultEntityId $ \recordFields -> do
-    --     tag <- T.Tag <$> Transaction.newKey
-    --     holeExpr <- DataOps.newHole
-    --     return
-    --       ( ExprIRef.valIEntityId holeTagExpr
-    --       , (tag, holeExpr) : recordFields
-    --       )
 
 convertGetField ::
   (MonadA m, Monoid a) =>
