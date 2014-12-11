@@ -54,6 +54,15 @@ make cp settings defI = ExprGuiM.run ExpressionEdit.make cp settings $ do
     Sugar.DefinitionBodyBuiltin builtin ->
       makeBuiltinDefinition defS builtin
 
+topLevelSchemeTypeView :: MonadA m => (Sugar.EntityId, String) -> Scheme -> ExprGuiM m (Widget f)
+topLevelSchemeTypeView randomGenSrc scheme =
+  -- At the definition-level, Schemes can be shown as ordinary
+  -- types to avoid confusing forall's:
+  schemeType scheme
+  & TypeView.make (genFromHashable randomGenSrc)
+  <&> uncurry Widget.liftView
+  & ExprGuiM.widgetEnv
+
 makeBuiltinDefinition ::
   MonadA m =>
   Sugar.Definition (Name m) m (ExprGuiM.SugarExpr m) ->
@@ -61,10 +70,10 @@ makeBuiltinDefinition ::
 makeBuiltinDefinition def builtin = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   Box.vboxAlign 0 <$> sequenceA
-    [ -- defTypeScale config . (^. ExpressionGui.egWidget) <$>
-    --   ExprGuiM.makeSubexpression 0 (Sugar.biType builtin)
-    -- ,
-      BWidgets.hboxCenteredSpaced <$> sequenceA
+    [ defTypeScale config <$>
+      topLevelSchemeTypeView (entityId, "Actual")
+      (Sugar.biType builtin)
+    , BWidgets.hboxCenteredSpaced <$> sequenceA
       [ ExprGuiM.withFgColor (Config.builtinOriginNameColor config) $
         DefinitionContentEdit.makeNameEdit name (Widget.joinId myId ["name"])
       , ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
@@ -73,7 +82,8 @@ makeBuiltinDefinition def builtin = do
     ]
   where
     name = def ^. Sugar.drName
-    myId = WidgetIds.fromEntityId $ def ^. Sugar.drEntityId
+    entityId = def ^. Sugar.drEntityId
+    myId = WidgetIds.fromEntityId entityId
 
 defTypeScale :: Config -> Widget f -> Widget f
 defTypeScale config = Widget.scale $ realToFrac <$> Config.defTypeBoxScaleFactor config
@@ -107,15 +117,6 @@ mkDefTypeRow config myId labelText onLabel typeView = do
   where
     center = 0.5
     right = Vector2 1 0.5
-
-topLevelSchemeTypeView :: MonadA m => (Sugar.EntityId, String) -> Scheme -> ExprGuiM m (Widget f)
-topLevelSchemeTypeView randomGenSrc scheme =
-  -- At the definition-level, Schemes can be shown as ordinary
-  -- types to avoid confusing forall's:
-  schemeType scheme
-  & TypeView.make (genFromHashable randomGenSrc)
-  <&> uncurry Widget.liftView
-  & ExprGuiM.widgetEnv
 
 makeAcceptLabel ::
   (MonadA m, MonadA f) => Config -> Widget.Id -> f a -> ExprGuiM m (Widget f)
