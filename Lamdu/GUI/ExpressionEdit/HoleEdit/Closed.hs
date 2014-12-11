@@ -161,6 +161,7 @@ makeSuggested suggested myId = do
       ExprGuiM.Payload
       { ExprGuiM._plStoredEntityIds = []
       , ExprGuiM._plInjected = []
+      , ExprGuiM._plShowType = ExprGuiM.DoNotShowType
       -- filled by AddNextHoles above
       , ExprGuiM._plHoleEntityIds = ExprGuiM.emptyHoleEntityIds
       }

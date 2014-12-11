@@ -56,11 +56,12 @@ make parentPrecedence sExpr = assignCursor $ do
       | Lens.has Lens._Nothing (pl ^. Sugar.plActions) = Widget.doesntTakeFocus
       | otherwise = id
     Sugar.Expression body pl = sExpr
-    ExprGuiM.Payload entityIds isInjecteds _holeEntityIds = pl ^. Sugar.plData
-    exprHiddenEntityIds = List.delete (pl ^. Sugar.plEntityId) entityIds
+    exprHiddenEntityIds =
+      List.delete (pl ^. Sugar.plEntityId)
+      (pl ^. Sugar.plData ^. ExprGuiM.plStoredEntityIds)
     myId = WidgetIds.fromEntityId $ pl ^. Sugar.plEntityId
     maybeShrink
-      | or isInjecteds = shrinkIfHigherThanLine
+      | or (pl ^. Sugar.plData ^. ExprGuiM.plInjected) = shrinkIfHigherThanLine
       | otherwise = return
     assignCursor f =
       foldr (`ExprGuiM.assignCursorPrefix` myId) f $

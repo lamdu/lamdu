@@ -5,7 +5,8 @@ module Lamdu.GUI.ExpressionGui.Monad
   , StoredEntityIds(..), Injected(..)
   , HoleEntityIds(..), hgMNextHole, hgMPrevHole
   , emptyHoleEntityIds
-  , Payload(..), plStoredEntityIds, plInjected, plHoleEntityIds
+  , Payload(..), plStoredEntityIds, plInjected, plHoleEntityIds, plShowType
+  , ShowType(..)
   , emptyPayload
   , SugarExpr
 
@@ -87,11 +88,14 @@ Lens.makeLenses ''HoleEntityIds
 emptyHoleEntityIds :: HoleEntityIds
 emptyHoleEntityIds = HoleEntityIds Nothing Nothing
 
+data ShowType = ShowTypeInVerboseMode | DoNotShowType | ShowType
+
 -- GUI input payload on sugar exprs
 data Payload = Payload
   { _plStoredEntityIds :: [Sugar.EntityId]
   , _plInjected :: [Bool]
   , _plHoleEntityIds :: HoleEntityIds
+  , _plShowType :: ShowType
   }
 Lens.makeLenses ''Payload
 
@@ -100,6 +104,7 @@ emptyPayload = Payload
   { _plStoredEntityIds = []
   , _plInjected = []
   , _plHoleEntityIds = emptyHoleEntityIds
+  , _plShowType = ShowTypeInVerboseMode
   }
 
 type SugarExpr m = ExpressionN m Payload

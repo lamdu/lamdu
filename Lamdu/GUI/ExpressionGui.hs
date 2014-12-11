@@ -23,7 +23,7 @@ module Lamdu.GUI.ExpressionGui
   , stdWrapDelegated
   , stdWrapParentExpr
   , stdWrapParenify
-  , addInferredTypes, maybeAddInferredTypes
+  , addInferredTypes
   , wrapExprEventMap
   ) where
 
@@ -200,7 +200,7 @@ stdWrap ::
   MonadA m => Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m) ->
   ExprGuiM m (ExpressionGui m)
-stdWrap pl mkGui = wrapExprEventMap pl $ maybeAddInferredTypes pl =<< mkGui
+stdWrap pl mkGui = wrapExprEventMap pl $ addInferredTypes pl =<< mkGui
 
 stdWrapDelegated ::
   MonadA m =>
@@ -310,12 +310,12 @@ addExprEventMap pl resultPickers gui = do
     resultPickers pl
   gui & egWidget %~ Widget.weakerEvents exprEventMap & return
 
-addInferredTypes ::
+alwaysAddInferredTypes ::
   MonadA m =>
   Sugar.Payload m a ->
   ExpressionGui m ->
   ExprGuiM m (ExpressionGui m)
-addInferredTypes exprPl eg =
+alwaysAddInferredTypes exprPl eg =
   do
     config <- ExprGuiM.widgetEnv WE.readConfig
     typeView <-
@@ -331,14 +331,18 @@ addInferredTypes exprPl eg =
     gen = genFromHashable entityId
     exprId = WidgetIds.fromEntityId entityId
 
-maybeAddInferredTypes ::
+addInferredTypes ::
   MonadA m =>
-  Sugar.Payload m a ->
+  Sugar.Payload m ExprGuiM.Payload ->
   ExpressionGui m ->
   ExprGuiM m (ExpressionGui m)
-maybeAddInferredTypes exprPl eg =
-  do
-    infoMode <- (^. sInfoMode) <$> ExprGuiM.readSettings
-    case infoMode of
-      None -> return eg
-      Types -> addInferredTypes exprPl eg
+addInferredTypes exprPl eg =
+  case exprPl ^. Sugar.plData . ExprGuiM.plShowType of
+  ExprGuiM.DoNotShowType -> return eg
+  ExprGuiM.ShowType -> alwaysAddInferredTypes exprPl eg
+  ExprGuiM.ShowTypeInVerboseMode ->
+    do
+      infoMode <- (^. sInfoMode) <$> ExprGuiM.readSettings
+      case infoMode of
+        None -> return eg
+        Types -> alwaysAddInferredTypes exprPl eg

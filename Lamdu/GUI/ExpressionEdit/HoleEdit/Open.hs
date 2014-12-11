@@ -238,6 +238,7 @@ toPayload isInjected =
     Sugar.NotInjected -> []
     Sugar.Injected -> [True]
   , ExprGuiM._plHoleEntityIds = ExprGuiM.emptyHoleEntityIds
+  , ExprGuiM._plShowType = ExprGuiM.DoNotShowType
   }
 
 makeNoResults :: MonadA m => HoleInfo m -> AnimId -> ExprGuiM m (WidgetT m)

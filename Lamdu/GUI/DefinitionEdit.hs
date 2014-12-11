@@ -129,12 +129,9 @@ loadConvertDefI cp defI =
   <&> Lens.mapped . Lens.mapped . Lens.mapped %~ mkPayload
   <&> AddNextHoles.addToDef
   where
-    mkPayload entityIds = ExprGuiM.Payload
-      { ExprGuiM._plStoredEntityIds = entityIds
-      , ExprGuiM._plInjected = [False]
-      -- Filled by AddNextHoles above:
-      , ExprGuiM._plHoleEntityIds = ExprGuiM.emptyHoleEntityIds
-      }
+    mkPayload entityIds =
+      ExprGuiM.emptyPayload
+      & ExprGuiM.plStoredEntityIds .~ entityIds
 
 makeNewDefinition ::
   MonadA m => Anchors.CodeProps m ->
