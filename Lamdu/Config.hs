@@ -173,6 +173,7 @@ data Config = Config
 
   , valFrameBGColor :: Draw.Color
   , valFramePadding :: Vector2 Double
+  , typeFrameBGColor :: Draw.Color
   , verticalSpacing :: Double
   } deriving (Eq, Generic)
 

@@ -29,10 +29,12 @@ import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
+import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified System.Random as Random
 
@@ -85,6 +87,7 @@ makeTVar (T.Var name) = text (showIdentifier name)
 
 makeTFun :: MonadA m => ParentPrecedence -> Type -> Type -> M m View
 makeTFun parentPrecedence a b =
+  addPadding =<<
   parens parentPrecedence (MyPrecedence 0) =<<
   hbox <$> sequence
   [ splitMake (ParentPrecedence 1) a
@@ -101,11 +104,37 @@ makeTInst _parentPrecedence (T.Id name) typeParams =
       ((_, arg) : []) ->
         do
           argView <- splitMake (ParentPrecedence 0) arg
-          pure $ hbox [nameView, space, argView]
+          addPadding $ hbox [nameView, space, argView]
       _ ->
         do
           t <- text " [TODO multiple args]"
           pure $ hbox [nameView, t]
+
+addPadding :: MonadA m => View -> M m View
+addPadding (sz, frame) =
+  do
+    config <- wenv WE.readConfig
+    let padding = realToFrac <$> Config.valFramePadding config
+    return
+      ( sz + padding * 2
+      , Anim.translate padding frame
+      )
+
+addBackgroundColor :: MonadA m => View -> M m View
+addBackgroundColor (sz, frame) =
+  do
+    config <- wenv WE.readConfig
+    let layer = Config.layerTypes (Config.layers config) - 1
+    let color = Config.typeFrameBGColor config
+    bgId <- randAnimId
+    return
+      ( sz
+      , Anim.backgroundColor bgId layer color sz frame
+      )
+
+addBackgroundFrame :: MonadA m => View -> M m View
+addBackgroundFrame v =
+  v & addPadding >>= addBackgroundColor
 
 makeRecord :: MonadA m => T.Composite T.Product -> M m View
 makeRecord composite =
@@ -140,7 +169,8 @@ makeRecord composite =
               ^. View.scaled (Vector2 barWidth 10)
           v <- makeTVar var
           return $ GridView.verticalAlign 0.5 [sqr, v]
-    return $ GridView.verticalAlign 0.5 [fieldsView, varView]
+    GridView.verticalAlign 0.5 [fieldsView, varView]
+      & addBackgroundFrame
   where
     FlatComposite fields extension = FlatComposite.fromComposite composite
 
