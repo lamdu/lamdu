@@ -17,6 +17,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
@@ -35,6 +36,8 @@ make ::
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make reco pl = ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped reco
+
+diveIntoTagEdit = FocusDelegator.delegatingId
 
 makeUnwrapped ::
   MonadA m =>
@@ -96,7 +99,7 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
           ]
     let
       eventMap =
-        mkEventMap (fmap WidgetIds.fromEntityId)
+        mkEventMap (fmap (diveIntoTagEdit . WidgetIds.fromEntityId))
         mAddField (Config.recordAddFieldKeys config) $
         E.Doc ["Edit", "Record", "Add Field"]
     Box.vboxCentered
