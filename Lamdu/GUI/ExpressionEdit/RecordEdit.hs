@@ -37,6 +37,7 @@ make ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make reco pl = ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped reco
 
+diveIntoTagEdit :: Widget.Id -> Widget.Id
 diveIntoTagEdit = FocusDelegator.delegatingId
 
 makeUnwrapped ::
