@@ -12,6 +12,7 @@ import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Control.Lens as Lens
+import qualified Data.List as List
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -50,59 +51,62 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
       vspace =
         BWidgets.vspaceWidget . realToFrac $
         Config.spaceBetweenAnnotatedArgs config
-      padding = realToFrac <$> Config.labeledApplyPadding config
-      paddingX = padding & Lens._2 .~ 0
-      padWithoutBot = Widget.assymetricPad padding paddingX
-      padWithoutTop = Widget.assymetricPad paddingX padding
+      pad = Widget.pad $ realToFrac <$> Config.valFramePadding config
       makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) = do
         fieldRefGui <-
           TagEdit.make (ExprGuiM.nextHolesBefore fieldExpr)
           tag (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
         fieldExprGui <- ExprGuiM.makeSubexpression 0 fieldExpr
         let
-          itemEventMap = maybe mempty (recordDelEventMap "Field" config) mDelete
+          itemEventMap = maybe mempty (recordDelEventMap config) mDelete
           space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
         [(1, scaleTag fieldRefGui), (0.5, space), (0, fieldExprGui)]
           <&> Lens._2 . ExpressionGui.egWidget %~ Widget.weakerEvents itemEventMap
           & ExpressionGui.makeRow
-          & (: [replicate 3 (0.5, vspace)])
           & return
       scaleTag =
         ExpressionGui.egWidget %~
         Widget.scale (realToFrac <$> Config.fieldTagScaleFactor config)
     (widget, resultPickers) <-
       ExprGuiM.listenResultPickers $ do
-        fieldRows <- concat <$> mapM makeFieldRow fields
+        fieldRows <-
+          mapM makeFieldRow fields
+          <&> List.intersperse (replicate 3 (0.5, vspace))
+        fieldsWidget <-
+          if null fieldRows
+          then
+            ExpressionGui.makeColoredLabel
+            (Config.baseTextSize config)
+            (Config.grammarColor config)
+            "Ø" myId
+            >>= ExprGuiM.widgetEnv . BWidgets.makeFocusableView myId
+          else Grid.make fieldRows & Grid.toWidget & pad & return
         let
-          fieldsWidget = Grid.make fieldRows & Grid.toWidget & padWithoutBot
           targetWidth =
             case fieldRows of
             [] -> 250
             _ -> fieldsWidget ^. Widget.wSize . Lens._1
-          colorScaleRect minWidth f =
-            f (Widget.toAnimId tailId)
-            & Anim.onImages (Draw.tint (Config.recordTailColor config))
-            & Widget.liftView 1
-            & Widget.scale (Vector2 (max minWidth targetWidth) 10)
-        tailWidget <-
-          case recordTail of
+        case recordTail of
           Sugar.ClosedRecord mDeleteTail ->
-            colorScaleRect 0 Anim.unitSquare
-            & ExprGuiM.widgetEnv . BWidgets.makeFocusableView tailId
-            <&> Widget.weakerEvents
-                (maybe mempty (recordDelEventMap "Tail" config) mDeleteTail)
+            fieldsWidget
+            & Widget.weakerEvents
+              (maybe mempty (recordOpenEventMap config) mDeleteTail)
+            & return
           Sugar.RecordExtending rest -> do
             restExpr <-
               ExprGuiM.makeSubexpression 0 rest
               <&> (^. ExpressionGui.egWidget)
-              <&> padWithoutTop
+              <&> pad
+            let minWidth = restExpr ^. Widget.wSize . Lens._1
             return $ Box.vboxCentered
-              [ colorScaleRect (restExpr ^. Widget.wSize . Lens._1) $
-                Anim.unitHStripedSquare 20
+              [ fieldsWidget
+              , Anim.unitSquare (Widget.toAnimId (Widget.joinId myId ["tail"]))
+                & Anim.onImages (Draw.tint (Config.recordTailColor config))
+                & Widget.liftView 1
+                & Widget.scale (Vector2 (max minWidth targetWidth) 10)
               , vspace
               , restExpr
               ]
-        return $ Box.vboxCentered [fieldsWidget, tailWidget]
     let
       eventMap =
         mkEventMap (fmap (diveIntoTagEdit . WidgetIds.fromEntityId))
@@ -111,23 +115,29 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
         E.Doc ["Edit", "Record", "Add Field"]
     Widget.weakerEvents eventMap widget
       & ExpressionGui.fromValueWidget
-      & ExpressionGui.withBgColor (Config.layerLabeledApplyBG (Config.layers config))
-        (Config.labeledApplyBGColor config) (Widget.toAnimId myId ++ ["bg"])
+      & ExpressionGui.withBgColor (Config.layerValFrameBG (Config.layers config))
+        (Config.valFrameBGColor config) (Widget.toAnimId myId ++ ["bg"])
       & return
   where
-    tailId = Widget.joinId myId ["tail"]
     defaultPos =
-      case recordTail of
-      Sugar.ClosedRecord{} -> tailId
-      Sugar.RecordExtending rest ->
-        rest ^. Sugar.rPayload . Sugar.plEntityId
+      case fields of
+      [] -> myId
+      (f : _) ->
+        f ^. Sugar.rfExpr . Sugar.rPayload . Sugar.plEntityId
         & WidgetIds.fromEntityId
     mkEventMap f mAction keys doc =
       maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction
 
+recordOpenEventMap ::
+  MonadA m =>
+  Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
+recordOpenEventMap config open =
+  Widget.keysEventMapMovesCursor (Config.recordOpenKeys config)
+  (E.Doc ["Edit", "Record", "Open"]) $ WidgetIds.fromEntityId <$> open
+
 recordDelEventMap ::
-  MonadA m => String -> Config ->
-  T m Sugar.EntityId -> Widget.EventHandlers (T m)
-recordDelEventMap name config delete =
+  MonadA m =>
+  Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
+recordDelEventMap config delete =
   Widget.keysEventMapMovesCursor (Config.delKeys config)
-  (E.Doc ["Edit", "Record", "Delete " ++ name]) $ WidgetIds.fromEntityId <$> delete
+  (E.Doc ["Edit", "Record", "Delete Field"]) $ WidgetIds.fromEntityId <$> delete

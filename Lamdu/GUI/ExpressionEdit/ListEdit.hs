@@ -35,8 +35,8 @@ makeBracketLabel label myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.fromValueWidget <$>
     ExpressionGui.makeColoredLabel
-    (Config.listBracketTextSize config)
-    (Config.listBracketColor config)
+    (Config.baseTextSize config)
+    (Config.grammarColor config)
     label myId
 
 lastLens :: Lens.Traversal' [a] a
@@ -127,8 +127,8 @@ makeItem item = do
     ExprGuiM.listenResultPickers $
     Lens.sequenceOf Lens.both
     ( fmap ExpressionGui.fromValueWidget .
-      ExpressionGui.makeColoredLabel (Config.listCommaTextSize config)
-      (Config.listCommaColor config) ", " $ Widget.augmentId ',' itemWidgetId
+      ExpressionGui.makeColoredLabel (Config.baseTextSize config)
+      (Config.grammarColor config) ", " $ Widget.augmentId ',' itemWidgetId
     , ExprGuiM.makeSubexpression 0 itemExpr
     )
   return $ pair

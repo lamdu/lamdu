@@ -262,7 +262,7 @@ primitiveGroups holeInfo =
   ] ++
   [ mkGroupBody LowPrecedence ["\\", "Lambda", "Λ", "λ"] $
     V.BAbs $ V.Lam "NewLambda" P.hole
-  , mkGroupBody LowPrecedence ["Empty", "Record", "{", "}"] $
+  , mkGroupBody LowPrecedence ["Empty", "Record", "{}", "0", "Ø"] $
     V.BLeaf V.LRecEmpty
   ]
   where

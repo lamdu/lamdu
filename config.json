@@ -64,7 +64,6 @@
         ]
     ],
     "holeResultCount": 8,
-    "listCommaTextSize": 25,
     "squareParensScaleFactor": {
         "_first": 0.96,
         "_second": 0.96
@@ -228,6 +227,16 @@
             "Key'Space"
         ]
     ],
+    "recordOpenKeys": [
+        [
+            {
+                "modAlt": true,
+                "modShift": false,
+                "modCtrl": false
+            },
+            "Key'O"
+        ]
+    ],
     "recordTailColor": [
         0.4,
         0.4,
@@ -270,7 +279,7 @@
         0.6,
         1.0
     ],
-    "labeledApplyBGColor": [
+    "valFrameBGColor": [
         1.0,
         1.0,
         1.0,
@@ -453,7 +462,7 @@
         "_second": 0.6
     },
     "spaceBetweenAnnotatedArgs": 7.0,
-    "listBracketColor": [
+    "grammarColor": [
         0.8,
         0.8,
         0.9,
@@ -494,7 +503,7 @@
             "Key'Comma"
         ]
     ],
-    "labeledApplyPadding": {
+    "valFramePadding": {
         "_first": 7.0,
         "_second": 7.0
     },
@@ -508,7 +517,6 @@
             "Key'Tab"
         ]
     ],
-    "listBracketTextSize": 25,
     "delForwardKeys": [
         [
             {
@@ -536,12 +544,6 @@
             },
             "Key'S"
         ]
-    ],
-    "listCommaColor": [
-        0.8,
-        0.8,
-        0.9,
-        1.0
     ],
     "parenHighlightColor": [
         0.3,
@@ -639,7 +641,7 @@
         "layerTypes": 27,
         "layerNameCollisionBG": 32,
         "layerChoiceBG": 30,
-        "layerLabeledApplyBG": 33,
+        "layerValFrameBG": 33,
         "layerHoleBG": -2
     },
     "jumpToDefinitionKeys": [

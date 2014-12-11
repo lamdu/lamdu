@@ -16,7 +16,7 @@ data Layers = Layers
   , layerChoiceBG
   , layerHoleBG
   , layerNameCollisionBG
-  , layerLabeledApplyBG
+  , layerValFrameBG
   , layerParensHighlightBG
   , layerActivePane
   , layerMax :: Int
@@ -63,6 +63,7 @@ data Config = Config
   , delForwardKeys :: [E.ModKey]
   , delBackwardKeys :: [E.ModKey]
   , wrapKeys :: [E.ModKey]
+  , recordOpenKeys :: [E.ModKey]
   , debugModeKeys :: [E.ModKey]
 
   , newDefinitionKeys :: [E.ModKey]
@@ -136,10 +137,7 @@ data Config = Config
 
   , cursorBGColor :: Draw.Color
 
-  , listBracketTextSize :: Int
-  , listBracketColor :: Draw.Color
-  , listCommaTextSize :: Int
-  , listCommaColor :: Draw.Color
+  , grammarColor :: Draw.Color
 
   , listAddItemKeys :: [E.ModKey]
 
@@ -179,8 +177,8 @@ data Config = Config
   , presentationChoiceScaleFactor :: Vector2 Double
   , presentationChoiceColor :: Draw.Color
 
-  , labeledApplyBGColor :: Draw.Color
-  , labeledApplyPadding :: Vector2 Double
+  , valFrameBGColor :: Draw.Color
+  , valFramePadding :: Vector2 Double
   , spaceBetweenAnnotatedArgs :: Double
   } deriving (Eq, Generic)
 
