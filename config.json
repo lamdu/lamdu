@@ -261,12 +261,6 @@
             "Key'GraveAccent"
         ]
     ],
-    "holeNumLabelColor": [
-        0.6,
-        0.6,
-        0.6,
-        1.0
-    ],
     "valFrameBGColor": [
         1.0,
         1.0,
@@ -289,10 +283,6 @@
     "holeSearchTermScaleFactor": {
         "_first": 0.6,
         "_second": 0.6
-    },
-    "holeNumLabelScaleFactor": {
-        "_first": 0.3,
-        "_second": 0.3
     },
     "jumpRHStoLHSKeys": [
         [
