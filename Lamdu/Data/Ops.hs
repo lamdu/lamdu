@@ -34,15 +34,12 @@ import qualified Lamdu.Expr.Val as V
 type T = Transaction
 
 setToWrapper ::
-  MonadA m =>
-  ExprIRef.ValI m ->
-  ExprIRef.ValIProperty m ->
-  T m (ExprIRef.ValI m)
+  MonadA m => ExprIRef.ValI m -> ExprIRef.ValIProperty m -> T m (ExprIRef.ValI m)
 setToWrapper wrappedI destP = do
   newFuncI <- newHole
-  destI <$ ExprIRef.writeValBody destI (V.BApp (V.Apply newFuncI wrappedI))
-  where
-    destI = Property.value destP
+  resI <- ExprIRef.newValBody . V.BApp $ V.Apply newFuncI wrappedI
+  Property.set destP resI
+  return resI
 
 wrap ::
   MonadA m =>
