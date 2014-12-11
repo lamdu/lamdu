@@ -34,9 +34,6 @@ definitionTypes =
 
     nameOf = fmap fromString . Transaction.getP . Anchors.assocNameRef
     readDef defI =
-      do  defBody <- Transaction.readIRef defI
-          case defBody ^. Definition.bodyType of
-            Definition.NoExportedType -> fail "Builtins must have exported types"
-            Definition.ExportedType scheme ->
-              do  name <-nameOf defI
-                  return (name, scheme)
+      do  Definition.BodyBuiltin (Definition.Builtin _ scheme) <- Transaction.readIRef defI
+          name <- nameOf defI
+          return (name, scheme)
