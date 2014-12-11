@@ -43,7 +43,7 @@ module Lamdu.Sugar.Types
   , Lam(..), lParam, lResult
   , FuncParamType(..)
   , FuncParam(..)
-    , fpName, fpId, fpVarKind, fpInferredType, fpMActions
+    , fpName, fpId, fpVarKind, fpInferredType, fpMActions, fpHiddenIds
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
   , HoleArg(..), haExpr, haUnwrap
   , HoleSuggested(..), hsValue, hsMakeConverted
@@ -151,6 +151,8 @@ data FuncParam name m = FuncParam
   , _fpName :: name
   , _fpInferredType :: Type
   , _fpMActions :: Maybe (FuncParamActions m)
+  , -- Sometimes the Lambda disappears in Sugar, the Param "swallows" its id
+    _fpHiddenIds :: [EntityId]
   }
 
 data Lam name m expr = Lam

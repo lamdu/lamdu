@@ -42,7 +42,7 @@ make ::
   Sugar.FuncParam (Name m) m ->
   ExprGuiM m (ExpressionGui m)
 make prevId param =
-  do
+  assignCursor $ do
     paramTypeView <-
       ExprGuiM.widgetEnv $ TypeView.make (genFromHashable entityId) $ param ^. Sugar.fpInferredType
     paramNameEdit <- makeParamNameEdit (param ^. Sugar.fpName) myId
@@ -69,6 +69,9 @@ make prevId param =
     entityId = param ^. Sugar.fpId
     myId = WidgetIds.fromEntityId entityId
     mActions = param ^. Sugar.fpMActions
+    hiddenIds = map WidgetIds.fromEntityId $ param ^. Sugar.fpHiddenIds
+    assignCursor x =
+      foldr (`ExprGuiM.assignCursorPrefix` myId) x hiddenIds
     paramDeleteEventMap keys docSuffix onId =
       maybe mempty
       (Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "Delete parameter" ++ docSuffix]) .

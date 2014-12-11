@@ -119,6 +119,7 @@ convertPositionalFuncParam (V.Lam param body) lamExprPl = do
       mkPositionalFuncParamActions param
       <$> lamExprPl ^. ipStored
       <*> traverse (^. ipStored) body
+    , _fpHiddenIds = []
     }
   where
     paramEntityId = EntityId.ofLambdaParam param
@@ -420,6 +421,7 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
         , _fpMActions = error "TODO: _fpMActions"
           -- fpActions (fpIdEntityId fp)
           -- <$> mLambdaP <*> mParamTypeI <*> mBodyStored
+        , _fpHiddenIds = []
         }
 --     fpActions tagExprGuid lambdaP paramTypeI bodyStored =
 --       FuncParamActions
@@ -504,7 +506,10 @@ convertDefinitionParams ::
 convertDefinitionParams recordParamsInfo usedTags expr =
   case expr ^. V.body of
   V.BAbs lambda@(V.Lam paramVar body) -> do
-    param <- convertPositionalFuncParam lambda (expr ^. V.payload)
+    let lambdaPl = expr ^. V.payload
+    param <-
+      convertPositionalFuncParam lambda lambdaPl
+      <&> fpHiddenIds <>~ [lambdaPl ^. ipEntityId]
     case T.TVar undefined of -- TODO: we should read associated data for param list
       T.TRecord composite
         | Nothing <- extension
