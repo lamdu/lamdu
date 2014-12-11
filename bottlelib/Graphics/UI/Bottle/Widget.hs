@@ -13,7 +13,7 @@ module Graphics.UI.Bottle.Widget
   , takesFocus, doesntTakeFocus
   , backgroundColor, tint, liftView
   , strongerEvents, weakerEvents
-  , translate, translateBy, scale, scaleDownContent, pad
+  , translate, translateBy, scale, scaleDownContent, pad, assymetricPad
   , overlayView
   ) where
 
@@ -21,7 +21,7 @@ import Control.Applicative ((<$>), liftA2)
 import Control.Lens.Operators
 import Data.Monoid (Monoid(..))
 import Data.Monoid.Generic (def_mempty, def_mappend)
-import Data.Vector.Vector2 (Vector2)
+import Data.Vector.Vector2 (Vector2(..))
 import GHC.Generics (Generic)
 import Graphics.UI.Bottle.Animation (AnimId, R, Size)
 import Graphics.UI.Bottle.Direction (Direction)
@@ -172,12 +172,14 @@ scaleDownContent factor align w =
 
 -- Surround a widget with padding
 pad :: Vector2 R -> Widget f -> Widget f
-pad p w =
+pad p = assymetricPad p p
+
+assymetricPad :: Vector2 R -> Vector2 R -> Widget f -> Widget f
+assymetricPad leftAndTop rightAndBottom w =
   w
-  & wSize .~ withPadding
-  & translate p
-  where
-    withPadding = w^.wSize + 2*p
+  & wSize %~ (+ (leftAndTop + rightAndBottom))
+  & translate leftAndTop
+
 
 overlayView :: View -> Widget f -> Widget f
 overlayView (size, frame) w =
