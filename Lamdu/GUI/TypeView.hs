@@ -128,19 +128,19 @@ makeRecord composite =
         case rows of
         [] -> 150
         _ -> fieldsView ^. Lens._1 . Lens._1
-    sqr <-
-      randAnimId
-      <&>
-        case extension of
-        Nothing -> Anim.unitSquare
-        Just _ -> Anim.unitHStripedSquare 20
-      <&> (,) 1
-      <&> (^. View.scaled (Vector2 barWidth 10))
     varView <-
       case extension of
       Nothing -> pure (0, mempty)
-      Just var -> makeTVar var
-    return $ GridView.verticalAlign 0.5 [fieldsView, sqr, varView]
+      Just var ->
+        do
+          sqrId <- randAnimId
+          let
+            sqr =
+              (1, Anim.unitSquare sqrId)
+              ^. View.scaled (Vector2 barWidth 10)
+          v <- makeTVar var
+          return $ GridView.verticalAlign 0.5 [sqr, v]
+    return $ GridView.verticalAlign 0.5 [fieldsView, varView]
   where
     FlatComposite fields extension = FlatComposite.fromComposite composite
 
