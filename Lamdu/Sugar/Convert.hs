@@ -265,7 +265,7 @@ convertRecExtend (V.RecExtend tag val rest) exprPl = do
     case restS ^. rBody of
     BodyRecord rec -> return (rec, restS ^. rPayload . plData)
     _ -> do
-      mAddField <- makeAddField (exprPl ^. ipStored)
+      mAddField <- makeAddField (rest ^. V.payload . ipStored)
       return
         ( Record [] (RecordExtending restS) mAddField
         , mempty
