@@ -21,6 +21,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -55,7 +56,12 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
       padWithoutBot = Widget.assymetricPad padding paddingX
       padWithoutTop = Widget.assymetricPad paddingX padding
       makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) = do
-        fieldRefGui <- TagEdit.make tag (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
+        tagJumpHolesEventMap <-
+          ExprGuiM.nextHolesBefore fieldExpr
+          & ExprEventMap.jumpHolesEventMap []
+        fieldRefGui <-
+          TagEdit.make tag (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
+          <&> ExpressionGui.egWidget %~ Widget.weakerEvents tagJumpHolesEventMap
         fieldExprGui <- ExprGuiM.makeSubexpression 0 fieldExpr
         let
           itemEventMap = maybe mempty (recordDelEventMap "Field" config) mDelete

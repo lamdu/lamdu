@@ -68,13 +68,8 @@ makeUnwrapped list myId =
         nextEdits <- mapM makeItem nextValues
 
         jumpHolesEventMap <-
-          firstValue ^. Sugar.liExpr . Sugar.rPayload . Sugar.plData . ExprGuiM.plHoleEntityIds
-          & ( if Lens.has (Sugar.liExpr . Sugar.rBody . Sugar._BodyHole) firstValue
-              then
-                ExprGuiM.hgMNextHole .~
-                Just (firstValue ^. Sugar.liExpr . Sugar.rPayload . Sugar.plEntityId)
-              else id
-            )
+          firstValue ^. Sugar.liExpr
+          & ExprGuiM.nextHolesBefore
           & ExprEventMap.jumpHolesEventMap []
         bracketOpen <-
           bracketOpenLabel

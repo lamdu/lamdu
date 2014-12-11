@@ -21,7 +21,7 @@ module Lamdu.GUI.ExpressionGui.Monad
   --
   , HolePickers, holePickersAddDocPrefix, holePickersAction
   , addResultPicker, listenResultPickers
-
+  , nextHolesBefore
   , run
   ) where
 
@@ -217,3 +217,10 @@ listenResultPickers = listener oHolePickers
 
 addResultPicker :: MonadA m => T m Widget.EventResult -> ExprGuiM m ()
 addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }
+
+nextHolesBefore :: Sugar.Expression name m Payload -> HoleEntityIds
+nextHolesBefore val =
+  val ^. Sugar.rPayload . Sugar.plData . plHoleEntityIds
+  & if Lens.has (Sugar.rBody . Sugar._BodyHole) val
+    then hgMNextHole .~ Just (val ^. Sugar.rPayload . Sugar.plEntityId)
+    else id
