@@ -110,8 +110,8 @@ makeWrapper arg myId = do
     bgColor =
       config &
       case arg ^. Sugar.haUnwrap of
-      Sugar.UnwrapMAction {} -> Config.deletableHoleBackgroundColor
-      Sugar.UnwrapTypeMismatch {} -> Config.typeErrorHoleWrapBackgroundColor
+      Sugar.UnwrapMAction {} -> Config.deletableHoleBGColor
+      Sugar.UnwrapTypeMismatch {} -> Config.typeErrorHoleWrapBGColor
   rawArgGui <-
     arg ^. Sugar.haExpr
     & ExprGuiM.makeSubexpression 0
@@ -151,7 +151,7 @@ makeSuggested suggested myId = do
       , gui
         & ExpressionGui.egWidget %~
           makeBackground myId (Config.layerHoleBG (Config.layers config))
-          (Config.inactiveHoleBackgroundColor config)
+          (Config.inactiveHoleBGColor config)
       )
   where
     fullySuggested =
@@ -174,7 +174,7 @@ makeSimple myId = do
     <&>
       makeBackground myId
       (Config.layerHoleBG (Config.layers config))
-      (Config.inactiveHoleBackgroundColor config)
+      (Config.inactiveHoleBGColor config)
     <&> ExpressionGui.fromValueWidget
     >>= ExpressionGui.egWidget %%~ makeFocusable myId
 

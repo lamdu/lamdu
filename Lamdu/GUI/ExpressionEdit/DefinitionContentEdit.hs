@@ -58,7 +58,7 @@ makeDefNameEdit ::
 makeDefNameEdit nameProp myId =
   do
     config <- ExprGuiM.widgetEnv WE.readConfig
-    ExprGuiM.withFgColor (Config.defOriginForegroundColor config) $
+    ExprGuiM.withFgColor (Config.defOriginFGColor config) $
       ExpressionGui.fromValueWidget <$> makeNameEdit nameProp myId
 
 makeWheres ::

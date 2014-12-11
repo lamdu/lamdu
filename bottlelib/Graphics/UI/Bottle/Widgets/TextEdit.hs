@@ -47,7 +47,7 @@ data Style = Style
   , _sCursorWidth :: Widget.R
   , _sTextCursorId :: Anim.AnimId
   , _sBackgroundCursorId :: Anim.AnimId
-  , _sBackgroundColor :: Draw.Color
+  , _sBGColor :: Draw.Color
   , _sEmptyUnfocusedString :: String
   , _sEmptyFocusedString :: String
   , _sTextViewStyle :: TextView.Style
@@ -165,7 +165,7 @@ eventResult myId strWithIds newText newCursor =
 makeFocused :: Cursor -> Style -> String -> Widget.Id -> Widget ((,) String)
 makeFocused cursor style str myId =
   makeFocusable style str myId .
-  Widget.backgroundColor 10 (style ^. sBackgroundCursorId) (style ^. sBackgroundColor) $
+  Widget.backgroundColor 10 (style ^. sBackgroundCursorId) (style ^. sBGColor) $
   widget
   where
     widget = Widget

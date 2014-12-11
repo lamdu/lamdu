@@ -120,8 +120,8 @@ addPadding (sz, frame) =
       , Anim.translate padding frame
       )
 
-addBackgroundColor :: MonadA m => View -> M m View
-addBackgroundColor (sz, frame) =
+addBGColor :: MonadA m => View -> M m View
+addBGColor (sz, frame) =
   do
     config <- wenv WE.readConfig
     let layer = Config.layerTypes (Config.layers config) - 1
@@ -134,7 +134,7 @@ addBackgroundColor (sz, frame) =
 
 addBackgroundFrame :: MonadA m => View -> M m View
 addBackgroundFrame v =
-  v & addPadding >>= addBackgroundColor
+  v & addPadding >>= addBGColor
 
 makeRecord :: MonadA m => T.Composite T.Product -> M m View
 makeRecord composite =

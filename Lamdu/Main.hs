@@ -231,7 +231,7 @@ baseStyle config font = TextEdit.Style
   , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
   , TextEdit._sTextCursorId = WidgetIds.textCursorId
   , TextEdit._sBackgroundCursorId = WidgetIds.backgroundCursorId
-  , TextEdit._sBackgroundColor = Config.cursorBGColor config
+  , TextEdit._sBGColor = Config.cursorBGColor config
   , TextEdit._sEmptyUnfocusedString = ""
   , TextEdit._sEmptyFocusedString = ""
   }

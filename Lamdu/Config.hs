@@ -85,11 +85,11 @@ data Config = Config
   , holeNumLabelColor :: Draw.Color
   , holeInactiveExtraSymbolColor :: Draw.Color
 
-  , typeErrorHoleWrapBackgroundColor :: Draw.Color
-  , deletableHoleBackgroundColor :: Draw.Color
+  , typeErrorHoleWrapBGColor :: Draw.Color
+  , deletableHoleBGColor :: Draw.Color
 
-  , activeHoleBackgroundColor :: Draw.Color
-  , inactiveHoleBackgroundColor :: Draw.Color
+  , activeHoleBGColor :: Draw.Color
+  , inactiveHoleBGColor :: Draw.Color
 
   , wrapperHolePadding :: Vector2 Double
 
@@ -125,7 +125,7 @@ data Config = Config
   , inferredTypeBGColor :: Draw.Color
 
 -- For definitions
-  , defOriginForegroundColor :: Draw.Color
+  , defOriginFGColor :: Draw.Color
 
   , builtinOriginNameColor :: Draw.Color
 

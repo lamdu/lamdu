@@ -279,7 +279,7 @@
         1.0,
         0.15
     ],
-    "deletableHoleBackgroundColor": [
+    "deletableHoleBGColor": [
         0.0,
         1.0,
         0.0,
@@ -379,7 +379,7 @@
         1.0,
         0.6
     ],
-    "activeHoleBackgroundColor": [
+    "activeHoleBGColor": [
         0.1,
         0.1,
         0.3,
@@ -427,7 +427,7 @@
         "_first": 0.5,
         "_second": 0.5
     },
-    "defOriginForegroundColor": [
+    "defOriginFGColor": [
         1.0,
         0.8,
         0.5,
@@ -709,7 +709,7 @@
             "Key'H"
         ]
     ],
-    "inactiveHoleBackgroundColor": [
+    "inactiveHoleBGColor": [
         0.2,
         0.2,
         0.5,
@@ -722,7 +722,7 @@
         0.35,
         1.0
     ],
-    "typeErrorHoleWrapBackgroundColor": [
+    "typeErrorHoleWrapBGColor": [
         1.0,
         0.0,
         0.0,

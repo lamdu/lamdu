@@ -196,7 +196,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) = 
     , Box.vboxAlign 0 widgets
       & makeBackground (rId firstResult)
         (Config.layerMax (Config.layers config))
-        (Config.activeHoleBackgroundColor config)
+        (Config.activeHoleBGColor config)
       & Widget.wSize .~ Vector2 0 height
       & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
     )
@@ -347,7 +347,7 @@ make pl holeInfo = do
         & ExpressionGui.egWidget %~
           makeBackground (HoleInfo.hiActiveId holeInfo)
             (Config.layerMax (Config.layers config))
-            (Config.activeHoleBackgroundColor config)
+            (Config.activeHoleBGColor config)
         & ExpressionGui.addInferredTypes pl
         <&> ExpressionGui.egWidget . Widget.wFrame %~ Anim.onDepth (+ layerDiff)
 
