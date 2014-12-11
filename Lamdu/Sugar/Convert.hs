@@ -261,12 +261,15 @@ convertRecExtend ::
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertRecExtend (V.RecExtend tag val rest) exprPl = do
   restS <- ConvertM.convertSubexpression rest
-  mAddField <- makeAddField (exprPl ^. ipStored)
-  let
-    (restRecord, hiddenEntities) =
-      case restS ^. rBody of
-      BodyRecord rec -> (rec, restS ^. rPayload . plData)
-      _ -> (Record [] (RecordExtending restS) mAddField, mempty)
+  (restRecord, hiddenEntities) <-
+    case restS ^. rBody of
+    BodyRecord rec -> return (rec, restS ^. rPayload . plData)
+    _ -> do
+      mAddField <- makeAddField (exprPl ^. ipStored)
+      return
+        ( Record [] (RecordExtending restS) mAddField
+        , mempty
+        )
   fieldS <-
     convertField
     (exprPl ^. ipStored) (rest ^? V.payload . plValI) restRecord
