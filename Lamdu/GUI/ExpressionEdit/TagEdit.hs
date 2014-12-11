@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.TagEdit(make, makeView) where
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
+import Data.Monoid (Monoid(..))
 import Graphics.UI.Bottle.Animation (AnimId)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -18,6 +19,7 @@ import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
 fdConfig :: FocusDelegator.Config
@@ -45,7 +47,14 @@ make holeIds t myId = do
     . ExpressionGui.makeNameEdit (t ^. Sugar.tagGName)
     ) myId
     <&> Widget.weakerEvents jumpHolesEventMap
+    <&> (Widget.weakerEvents . maybe mempty jumpNextEventMap)
+        (holeIds ^. ExprGuiM.hgMNextHole)
     <&> ExpressionGui.fromValueWidget
+  where
+    jumpNextEventMap nextHole =
+      Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.Key'Space]
+      (E.Doc ["Navigation", "Jump to next hole"]) $
+      return $ WidgetIds.fromEntityId nextHole
 
 makeView ::
   MonadA m => Sugar.TagG (Name m) -> AnimId -> ExprGuiM m (ExpressionGui m)
