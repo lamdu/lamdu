@@ -41,6 +41,47 @@ make reco pl = ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped reco
 diveIntoTagEdit :: Widget.Id -> Widget.Id
 diveIntoTagEdit = FocusDelegator.delegatingId
 
+makeFieldRow ::
+  MonadA m =>
+  Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiM.Payload) ->
+  ExprGuiM m [(Vector2 Widget.R, ExprGuiM.WidgetT m)]
+makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  fieldRefGui <-
+    TagEdit.make (ExprGuiM.nextHolesBefore fieldExpr)
+    tag (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
+  fieldExprGui <- ExprGuiM.makeSubexpression 0 fieldExpr
+  let
+    itemEventMap = maybe mempty (recordDelEventMap config) mDelete
+    space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
+    scaleTag =
+      ExpressionGui.egWidget %~
+      Widget.scale (realToFrac <$> Config.fieldTagScaleFactor config)
+  [(1, scaleTag fieldRefGui), (0.5, space), (0, fieldExprGui)]
+    <&> Lens._2 . ExpressionGui.egWidget %~ Widget.weakerEvents itemEventMap
+    & ExpressionGui.makeRow
+    & return
+
+makeFieldsWidget ::
+  MonadA m =>
+  [Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiM.Payload)] ->
+  Widget.Id -> ExprGuiM m (ExprGuiM.WidgetT m)
+makeFieldsWidget [] myId =
+  BWidgets.grammarLabel "Ø" myId
+  >>= BWidgets.makeFocusableView myId
+  & ExprGuiM.widgetEnv
+makeFieldsWidget fields _ =
+  do
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    let
+      vspace =
+        BWidgets.vspaceWidget . realToFrac $
+        Config.verticalSpacing config
+    fieldRows <-
+      mapM makeFieldRow fields
+      <&> List.intersperse (replicate 3 (0.5, vspace))
+    Grid.make fieldRows & Grid.toWidget & return
+
 makeUnwrapped ::
   MonadA m =>
   Sugar.Record (Name m) m (ExprGuiM.SugarExpr m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
@@ -50,40 +91,12 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
     let
       vspace =
         BWidgets.vspaceWidget . realToFrac $
-        Config.spaceBetweenAnnotatedArgs config
+        Config.verticalSpacing config
       pad = Widget.pad $ realToFrac <$> Config.valFramePadding config
-      makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) = do
-        fieldRefGui <-
-          TagEdit.make (ExprGuiM.nextHolesBefore fieldExpr)
-          tag (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
-        fieldExprGui <- ExprGuiM.makeSubexpression 0 fieldExpr
-        let
-          itemEventMap = maybe mempty (recordDelEventMap config) mDelete
-          space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
-        [(1, scaleTag fieldRefGui), (0.5, space), (0, fieldExprGui)]
-          <&> Lens._2 . ExpressionGui.egWidget %~ Widget.weakerEvents itemEventMap
-          & ExpressionGui.makeRow
-          & return
-      scaleTag =
-        ExpressionGui.egWidget %~
-        Widget.scale (realToFrac <$> Config.fieldTagScaleFactor config)
     (widget, resultPickers) <-
       ExprGuiM.listenResultPickers $ do
-        fieldRows <-
-          mapM makeFieldRow fields
-          <&> List.intersperse (replicate 3 (0.5, vspace))
-        fieldsWidget <-
-          if null fieldRows
-          then
-            BWidgets.grammarLabel "Ø" myId
-            >>= BWidgets.makeFocusableView myId
-            & ExprGuiM.widgetEnv
-          else Grid.make fieldRows & Grid.toWidget & pad & return
-        let
-          targetWidth =
-            case fieldRows of
-            [] -> 250
-            _ -> fieldsWidget ^. Widget.wSize . Lens._1
+        fieldsWidget <- makeFieldsWidget fields myId <&> pad
+        let targetWidth = fieldsWidget ^. Widget.wSize . Lens._1
         case recordTail of
           Sugar.ClosedRecord mDeleteTail ->
             fieldsWidget

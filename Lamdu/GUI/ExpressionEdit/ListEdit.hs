@@ -122,9 +122,9 @@ makeItem item = do
   (pair, resultPickers) <-
     ExprGuiM.listenResultPickers $
     Lens.sequenceOf Lens.both
-    ( fmap ExpressionGui.fromValueWidget .
-      ExpressionGui.makeColoredLabel (Config.baseTextSize config)
-      (Config.grammarColor config) ", " $ Widget.augmentId ',' itemWidgetId
+    ( BWidgets.grammarLabel ", " (Widget.augmentId ',' itemWidgetId)
+      & ExprGuiM.widgetEnv
+      <&> ExpressionGui.fromValueWidget
     , ExprGuiM.makeSubexpression 0 itemExpr
     )
   return $ pair

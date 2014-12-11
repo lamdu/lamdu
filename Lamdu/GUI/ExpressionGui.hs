@@ -8,7 +8,7 @@ module Lamdu.GUI.ExpressionGui
   , hbox, hboxSpaced, addBelow
   , makeRow
   -- Lifted widgets:
-  , makeLabel, makeColoredLabel
+  , makeLabel
   , makeFocusableView
   , makeNameView
   , makeNameEdit
@@ -227,12 +227,6 @@ stdWrapParentExpr pl f myId = do
 makeLabel ::
   MonadA m => String -> Widget.Id -> ExprGuiM m (WidgetT f)
 makeLabel text myId = ExprGuiM.widgetEnv . BWidgets.makeLabel text $ Widget.toAnimId myId
-
-makeColoredLabel ::
-  MonadA m => Int -> Draw.Color -> String -> Widget.Id -> ExprGuiM m (WidgetT f)
-makeColoredLabel textSize color text myId =
-  ExprGuiM.localEnv (WE.setTextSizeColor textSize color) $
-  makeLabel text myId
 
 makeFocusableView ::
   (MonadA m, MonadA n) => Widget.Id -> ExpressionGui n -> ExprGuiM m (ExpressionGui n)

@@ -173,7 +173,7 @@ data Config = Config
 
   , valFrameBGColor :: Draw.Color
   , valFramePadding :: Vector2 Double
-  , spaceBetweenAnnotatedArgs :: Double
+  , verticalSpacing :: Double
   } deriving (Eq, Generic)
 
 delKeys :: Config -> [E.ModKey]

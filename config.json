@@ -449,7 +449,7 @@
         "_first": 0.6,
         "_second": 0.6
     },
-    "spaceBetweenAnnotatedArgs": 7.0,
+    "verticalSpacing": 7.0,
     "grammarColor": [
         0.8,
         0.8,
