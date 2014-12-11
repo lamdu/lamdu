@@ -46,7 +46,7 @@ applyOnVar =
   glob [] "IntToBoolFunc" $$
   (holeWithInferredType (a ~> intType) $$ x)
 
-{-# ANN module "HLint: ignore Redundant $" #-}
+{-# ANN module ("HLint: ignore Redundant $" :: String) #-}
 
 monomorphRedex =
   testInfer "monomorphRedex: f (\\x -> \\_1 -> x ?) where f = \\_2 -> ?" $
@@ -461,7 +461,7 @@ hunitTests =
   -- , testUnificationCarriesOver
   ]
 
-{-# ANN inferDoesn'tCrashProp "HLint: ignore Use camelCase" #-}
+{-# ANN inferDoesn'tCrashProp ("HLint: ignore Use camelCase"::String) #-}
 inferDoesn'tCrashProp :: Val () -> Property
 inferDoesn'tCrashProp expr =
   case runNewContext $ loadInferDef expr of
