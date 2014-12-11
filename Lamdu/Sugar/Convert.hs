@@ -206,11 +206,14 @@ convertField mStored mRestI restS inst tag expr = do
           restI <- mRestI
           exprI <- expr ^? V.payload . plValI
           return $
-            if null (restS ^. rItems) && Lens.has (rTail . _ClosedRecord) restS
+            if null (restS ^. rItems)
             then
               -- When deleting closed one field record
               -- we replace the record with the field value
-              protectedSetToVal stored exprI <&> EntityId.ofValI
+              fmap EntityId.ofValI . protectedSetToVal stored $
+              case restS ^. rTail of
+              ClosedRecord{} -> exprI
+              RecordExtending{} -> restI
             else do
               let delete = DataOps.replace stored restI
               mResult <- fmap EntityId.ofValI <$> typeProtect delete
