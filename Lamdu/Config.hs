@@ -1,10 +1,9 @@
-{-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE StandaloneDeriving, DeriveGeneric #-}
+{-# OPTIONS -O0 #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Lamdu.Config (Layers(..), Config(..), delKeys) where
 
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import Data.Vector.Vector2 (Vector2(..))
-import Foreign.C.Types (CDouble)
 import GHC.Generics (Generic)
 import Graphics.DrawingCombinators.Utils () -- Read instance for Color
 import qualified Graphics.DrawingCombinators as Draw
@@ -178,30 +177,8 @@ data Config = Config
 delKeys :: Config -> [E.ModKey]
 delKeys config = delForwardKeys config ++ delBackwardKeys config
 
-instance ToJSON a => ToJSON (Vector2 a)
-instance FromJSON a => FromJSON (Vector2 a)
-
-deriving instance Generic Draw.Color
-
-instance ToJSON Draw.Color
-instance FromJSON Draw.Color
-
-instance ToJSON E.ModState
-instance FromJSON E.ModState
-
-instance ToJSON E.ModKey
-instance FromJSON E.ModKey
-
-instance ToJSON E.Key
-instance FromJSON E.Key
-
 instance ToJSON Layers
 instance FromJSON Layers
 
 instance ToJSON Config
 instance FromJSON Config
-
-instance FromJSON CDouble where
-  parseJSON = fmap (realToFrac :: Double -> CDouble) . parseJSON
-instance ToJSON CDouble where
-  toJSON = toJSON . (realToFrac :: CDouble -> Double)

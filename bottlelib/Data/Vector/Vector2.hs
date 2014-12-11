@@ -9,6 +9,7 @@ where
 
 import Control.Applicative (Applicative(..), (<$>), liftA2)
 import Control.Monad (join)
+import Data.Aeson (ToJSON(..), FromJSON(..))
 import Data.Binary (Binary(..))
 import Data.Monoid
 import Data.Monoid.Generic (def_mempty, def_mappend)
@@ -24,6 +25,9 @@ data Vector2 a = Vector2
   -- (Vectors aren't ordinals!). Useful to have in a binary search
   -- tree though.
 instance Binary a => Binary (Vector2 a)
+
+instance ToJSON a => ToJSON (Vector2 a)
+instance FromJSON a => FromJSON (Vector2 a)
 
 instance a ~ b => Lens.Field1 (Vector2 a) (Vector2 b) a b where
   _1 f (Vector2 x y) = (`Vector2` y) <$> Lens.indexed f (0 :: Int) x

@@ -23,6 +23,7 @@ import Control.Arrow ((***), (&&&))
 import Control.Lens (Lens, Lens')
 import Control.Lens.Operators
 import Control.Monad (guard, mplus, msum)
+import Data.Aeson (ToJSON(..), FromJSON(..))
 import Data.List (isPrefixOf)
 import Data.Map (Map)
 import Data.Maybe (isJust, listToMaybe, maybeToList)
@@ -31,6 +32,7 @@ import Data.Set (Set)
 import GHC.Generics (Generic)
 import Graphics.UI.GLFW (Key(..))
 import Graphics.UI.GLFW.Events (IsPress(..))
+import Graphics.UI.GLFW.Instances ()
 import Graphics.UI.GLFW.ModState (ModState(..), noMods, shift, ctrl, alt)
 import Prelude hiding (lookup)
 import qualified Control.Lens as Lens
@@ -38,10 +40,11 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Graphics.UI.GLFW.Events as Events
 
-deriving instance Generic Key
-
 data ModKey = ModKey ModState Key
   deriving (Generic, Show, Eq, Ord)
+
+instance ToJSON ModKey
+instance FromJSON ModKey
 
 data KeyEvent = KeyEvent Events.IsPress ModKey
   deriving (Generic, Show, Eq, Ord)

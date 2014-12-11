@@ -1,5 +1,5 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneDeriving, DeriveGeneric #-}
 module Graphics.DrawingCombinators.Utils (
   Image, square,
   textHeight, textSize,
@@ -7,15 +7,22 @@ module Graphics.DrawingCombinators.Utils (
   drawText, drawTextLines, backgroundColor) where
 
 import Control.Monad(void)
+import Data.Aeson (ToJSON(..), FromJSON(..))
 import Data.List(genericLength)
 import Data.Monoid(Monoid(..))
 import Data.Vector.Vector2(Vector2(..))
+import Foreign.C.Types.Instances ()
+import GHC.Generics (Generic)
 import Graphics.DrawingCombinators((%%))
 import qualified Graphics.DrawingCombinators as Draw
 
 type Image = Draw.Image ()
 
 deriving instance Read Draw.Color
+deriving instance Generic Draw.Color
+
+instance ToJSON Draw.Color
+instance FromJSON Draw.Color
 
 square :: Image
 square = void $ Draw.convexPoly [ (0, 0), (1, 0), (1, 1), (0, 1) ]

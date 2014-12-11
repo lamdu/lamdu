@@ -31,6 +31,7 @@ Library
                        Data.Set.Ordered,
                        Data.Vector.Vector2,
                        Numeric.Utils,
+                       Foreign.C.Types.Instances,
                        Graphics.DrawingCombinators.Utils,
                        Graphics.UI.Bottle.Animation,
                        Graphics.UI.Bottle.Animation.Id,
@@ -53,6 +54,7 @@ Library
                        Graphics.UI.Bottle.Widgets.TextEdit,
                        Graphics.UI.Bottle.Widgets.TextView,
                        Graphics.UI.GLFW.Events,
+                       Graphics.UI.GLFW.Instances,
                        Graphics.UI.GLFW.ModState,
                        Graphics.UI.GLFW.Utils,
 

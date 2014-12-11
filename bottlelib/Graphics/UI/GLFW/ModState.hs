@@ -4,6 +4,7 @@ module Graphics.UI.GLFW.ModState (
   Pos(..), ModType(..), Modkey(..),
   modStateFromModkeySet, asModkey, isModifierKey) where
 
+import Data.Aeson (ToJSON(..), FromJSON(..))
 import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
 import Data.Set(Set)
@@ -17,6 +18,9 @@ data ModState = ModState
   , modAlt :: Bool
   , modShift :: Bool
   } deriving (Generic, Show, Read, Eq, Ord)
+
+instance ToJSON ModState
+instance FromJSON ModState
 
 instance Monoid ModState where
   mempty = noMods
