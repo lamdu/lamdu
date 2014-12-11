@@ -22,9 +22,9 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -257,7 +257,7 @@ makeNestedParams atParamWidgets rhs lhsId params = do
       (ExpressionGui.egWidget %~
        (atParamWidgets (param ^. Sugar.fpName) .
         Widget.weakerEvents rhsJumper)) <$>
-      LambdaEdit.makeParamEdit prevId param
+      ParamEdit.make prevId param
   traverse mkParam $ addPrevIds lhsId params
 
 diveToNameEdit :: Widget.Id -> Widget.Id

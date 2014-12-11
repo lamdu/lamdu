@@ -193,6 +193,7 @@ Executable lamdu
                ,       Lamdu.GUI.ExpressionGui.AddNextHoles
                ,       Lamdu.GUI.ExpressionGui.Monad
                ,       Lamdu.GUI.ExpressionGui.Types
+               ,       Lamdu.GUI.ParamEdit
                ,       Lamdu.GUI.Precedence
                ,       Lamdu.GUI.TypeView
                ,       Lamdu.GUI.VersionControl
