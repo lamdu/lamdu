@@ -44,7 +44,7 @@ makeUnwrapped ::
   MonadA m =>
   Sugar.Record (Name m) m (ExprGuiM.SugarExpr m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
-  ExprGuiM.assignCursor myId tailId $ do
+  ExprGuiM.assignCursor myId defaultPos $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
       vspace =
@@ -116,6 +116,12 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
       & return
   where
     tailId = Widget.joinId myId ["tail"]
+    defaultPos =
+      case recordTail of
+      Sugar.ClosedRecord{} -> tailId
+      Sugar.RecordExtending rest ->
+        rest ^. Sugar.rPayload . Sugar.plEntityId
+        & WidgetIds.fromEntityId
     mkEventMap f mAction keys doc =
       maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction
 
