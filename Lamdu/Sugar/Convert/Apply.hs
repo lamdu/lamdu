@@ -93,6 +93,7 @@ convertLabeled funcS argS argI exprPl = do
   let tags = args ^.. Lens.traversed . aaTag . tagVal
   unless (noRepetitions tags) $ error "Repetitions should not type-check"
   presentationMode <- MaybeT $ indirectDefinitionPresentationMode funcS
+  protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
   let
     (specialArgs, annotatedArgs) =
       case presentationMode of
@@ -110,7 +111,7 @@ convertLabeled funcS argS argI exprPl = do
         valStored <- traverse (^. ipStored) val
         return $
           EntityId.ofValI <$>
-          DataOps.setToWrapper (Property.value (valStored ^. V.payload)) stored
+          protectedSetToVal stored (Property.value (valStored ^. V.payload))
   BodyApply Apply
     { _aFunc = funcS
     , _aSpecialArgs = specialArgs

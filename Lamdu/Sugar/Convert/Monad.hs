@@ -8,7 +8,7 @@ module Lamdu.Sugar.Convert.Monad
   , codeAnchor
   , getP
   , convertSubexpression
-  , typeProtectTransaction
+  , typeProtectTransaction, typeProtectedSetToVal
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -26,6 +26,8 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Ops as DataOps
+import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
@@ -78,6 +80,21 @@ typeProtectTransaction =
                 else const $ return Nothing
           resume changes
     return protect
+
+typeProtectedSetToVal ::
+  MonadA m =>
+  ConvertM m
+  (ExprIRef.ValIProperty m -> ExprIRef.ValI m -> T m (ExprIRef.ValI m))
+typeProtectedSetToVal = do
+  typeProtect <- typeProtectTransaction
+  let
+    setToVal dest valI =
+      do
+        mResult <- typeProtect $ DataOps.replace dest valI
+        case mResult of
+          Just result -> return result
+          Nothing -> DataOps.setToWrapper valI dest
+  return setToVal
 
 run :: MonadA m => Context m -> ConvertM m a -> T m a
 run ctx (ConvertM action) = runReaderT action ctx

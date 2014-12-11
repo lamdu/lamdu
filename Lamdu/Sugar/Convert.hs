@@ -126,17 +126,6 @@ convertPositionalFuncParam (V.Lam param body) lamExprPl = do
       fromMaybe (error "Lambda value not inferred to a function type?!") $
       lamExprPl ^? ipInferred . Infer.plType . ExprLens._TFun . _1
 
-protectedSetToVal ::
-  MonadA m =>
-  (T m (ExprIRef.ValI m) -> T m (Maybe (ExprIRef.ValI m))) ->
-  ExprIRef.ValIProperty m -> ExprIRef.ValI m -> Transaction m EntityId
-protectedSetToVal typeProtect dest valI =
-  EntityId.ofValI <$> do
-    mResult <- typeProtect $ DataOps.replace dest valI
-    case mResult of
-      Just result -> return result
-      Nothing -> DataOps.setToWrapper valI dest
-
 convertLam ::
   (MonadA m, Monoid a) =>
   V.Lam (Val (InputPayload m a)) ->
@@ -144,7 +133,7 @@ convertLam ::
 convertLam lam@(V.Lam paramVar lamBody) exprPl = do
   param <- convertPositionalFuncParam lam exprPl
   lamBodyS <- ConvertM.convertSubexpression lamBody
-  typeProtect <- ConvertM.typeProtectTransaction
+  protectedSetToVal <- ConvertM.typeProtectedSetToVal
   let
     setToInnerExprAction =
       maybe NoInnerExpr SetToInnerExpr $ do
@@ -154,7 +143,7 @@ convertLam lam@(V.Lam paramVar lamBody) exprPl = do
         return $ do
           deleteParamRef paramVar lamBodyStored
           let lamBodyI = Property.value (lamBodyStored ^. V.payload)
-          protectedSetToVal typeProtect stored lamBodyI
+          protectedSetToVal stored lamBodyI <&> EntityId.ofValI
   BodyLam
     Lam
     { _lParam =
@@ -207,6 +196,7 @@ convertField ::
 convertField mStored mRestI restS inst tag expr = do
   exprS <- ConvertM.convertSubexpression expr
   typeProtect <- ConvertM.typeProtectTransaction
+  protectedSetToVal <- ConvertM.typeProtectedSetToVal
   return RecordField
     { _rfTag = convertTag inst tag
     , _rfExpr = exprS
@@ -220,7 +210,7 @@ convertField mStored mRestI restS inst tag expr = do
             then
               -- When deleting closed one field record
               -- we replace the record with the field value
-              protectedSetToVal typeProtect stored exprI
+              protectedSetToVal stored exprI <&> EntityId.ofValI
             else do
               let delete = DataOps.replace stored restI
               mResult <- fmap EntityId.ofValI <$> typeProtect delete
