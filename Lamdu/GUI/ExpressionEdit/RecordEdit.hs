@@ -7,6 +7,7 @@ import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
+import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -78,40 +79,50 @@ makeFieldsWidget fields _ =
       <&> List.intersperse (replicate 3 (0.5, vspace))
     Grid.make fieldRows & Grid.toWidget & return
 
+makeOpenRecord :: MonadA m =>
+  ExprGuiM.WidgetT m -> ExprGuiM.SugarExpr m -> Widget.Id ->
+  ExprGuiM m (ExprGuiM.WidgetT m)
+makeOpenRecord fieldsWidget rest myId =
+  do
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
+    restExpr <-
+      ExprGuiM.makeSubexpression 0 rest
+      <&> (^. ExpressionGui.egWidget)
+      <&> pad config
+    let minWidth = restExpr ^. Widget.wSize . Lens._1
+    return $ Box.vboxCentered
+      [ fieldsWidget
+      , Anim.unitSquare (Widget.toAnimId (Widget.joinId myId ["tail"]))
+        & Anim.onImages (Draw.tint (Config.recordTailColor config))
+        & Widget.liftView 1
+        & Widget.scale (Vector2 (max minWidth targetWidth) 10)
+      , vspace
+      , restExpr
+      ]
+  where
+    targetWidth = fieldsWidget ^. Widget.wSize . Lens._1
+
+pad :: Config -> Widget f -> Widget f
+pad config = Widget.pad $ realToFrac <$> Config.valFramePadding config
+
 makeUnwrapped ::
   MonadA m =>
   Sugar.Record (Name m) m (ExprGuiM.SugarExpr m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
   ExprGuiM.assignCursor myId defaultPos $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
-    vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
-    let
-      pad = Widget.pad $ realToFrac <$> Config.valFramePadding config
     (widget, resultPickers) <-
       ExprGuiM.listenResultPickers $ do
-        fieldsWidget <- makeFieldsWidget fields myId <&> pad
-        let targetWidth = fieldsWidget ^. Widget.wSize . Lens._1
+        fieldsWidget <- makeFieldsWidget fields myId <&> pad config
         case recordTail of
           Sugar.ClosedRecord mDeleteTail ->
             fieldsWidget
             & Widget.weakerEvents
               (maybe mempty (recordOpenEventMap config) mDeleteTail)
             & return
-          Sugar.RecordExtending rest -> do
-            restExpr <-
-              ExprGuiM.makeSubexpression 0 rest
-              <&> (^. ExpressionGui.egWidget)
-              <&> pad
-            let minWidth = restExpr ^. Widget.wSize . Lens._1
-            return $ Box.vboxCentered
-              [ fieldsWidget
-              , Anim.unitSquare (Widget.toAnimId (Widget.joinId myId ["tail"]))
-                & Anim.onImages (Draw.tint (Config.recordTailColor config))
-                & Widget.liftView 1
-                & Widget.scale (Vector2 (max minWidth targetWidth) 10)
-              , vspace
-              , restExpr
-              ]
+          Sugar.RecordExtending rest ->
+            makeOpenRecord fieldsWidget rest myId
     let
       eventMap =
         mkEventMap (fmap (diveIntoTagEdit . WidgetIds.fromEntityId))
