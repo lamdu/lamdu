@@ -141,7 +141,7 @@ mkHoleSuggested holeEntityId inferred = do
   let
     mkConverted = do
       (inferredIVal, newCtx) <-
-        SugarInfer.loadInferScope (inferred ^. Infer.plScope) suggestedVal
+        SugarInfer.loadInferInto inferred suggestedVal
         & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
         & runMaybeT
         <&> unsafeUnjust "Inference on inferred val must succeed"
