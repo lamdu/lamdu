@@ -31,6 +31,7 @@ import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Function (on)
+import Data.Monoid (Monoid(..))
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
@@ -42,7 +43,6 @@ import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import Lamdu.GUI.ExpressionGui.Types (WidgetT, ExpressionGui(..), egWidget, egAlignment)
 import Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
 import Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..), NameCollision(..))
-import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Graphics.UI.Bottle.EventMap as EventMap
@@ -311,13 +311,12 @@ alwaysAddInferredTypes exprPl eg =
     config <- ExprGuiM.widgetEnv WE.readConfig
     typeView <-
       exprPl ^. Sugar.plInferredType
-      & TypeView.make gen
+      & TypeView.make (mappend (Widget.toAnimId exprId) ["type"])
       & ExprGuiM.widgetEnv
       <&> uncurry Widget.liftView
     return $ addType config Background exprId typeView eg
   where
     entityId = exprPl ^. Sugar.plEntityId
-    gen = genFromHashable entityId
     exprId = WidgetIds.fromEntityId entityId
 
 addInferredTypes ::

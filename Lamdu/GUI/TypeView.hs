@@ -185,5 +185,9 @@ makeInternal parentPrecedence typ =
   T.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
   T.TRecord composite -> makeRecord composite
 
-make :: MonadA m => Random.StdGen -> Type -> WidgetEnvT (T m) View
-make gen = (`evalStateT` gen) . runM . makeInternal (ParentPrecedence 0)
+make :: MonadA m => AnimId -> Type -> WidgetEnvT (T m) View
+make prefix t =
+  makeInternal (ParentPrecedence 0) t
+  & runM
+  & (`evalStateT` Random.mkStdGen 0)
+  <&> Lens._2 %~ Anim.mapIdentities (mappend prefix)

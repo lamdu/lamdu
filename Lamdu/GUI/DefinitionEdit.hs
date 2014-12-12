@@ -4,9 +4,11 @@ module Lamdu.GUI.DefinitionEdit (make, makeNewDefinition) where
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
+import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
+import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Config (Config)
 import Lamdu.Expr.IRef (DefI)
@@ -16,7 +18,6 @@ import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import Lamdu.Sugar.AddNames.Types (Name(..), DefinitionN)
 import Lamdu.Sugar.RedundantTypes (redundantTypes)
-import System.Random.Utils (genFromHashable)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -54,12 +55,12 @@ make cp settings defI = ExprGuiM.run ExpressionEdit.make cp settings $ do
     Sugar.DefinitionBodyBuiltin builtin ->
       makeBuiltinDefinition defS builtin
 
-topLevelSchemeTypeView :: MonadA m => (Sugar.EntityId, String) -> Scheme -> ExprGuiM m (Widget f)
-topLevelSchemeTypeView randomGenSrc scheme =
+topLevelSchemeTypeView :: MonadA m => AnimId -> Scheme -> ExprGuiM m (Widget f)
+topLevelSchemeTypeView animId scheme =
   -- At the definition-level, Schemes can be shown as ordinary
   -- types to avoid confusing forall's:
   schemeType scheme
-  & TypeView.make (genFromHashable randomGenSrc)
+  & TypeView.make animId
   <&> uncurry Widget.liftView
   & ExprGuiM.widgetEnv
 
@@ -71,7 +72,7 @@ makeBuiltinDefinition def builtin = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   Box.vboxAlign 0 <$> sequenceA
     [ defTypeScale config <$>
-      topLevelSchemeTypeView (entityId, "Actual")
+      topLevelSchemeTypeView (mappend (Widget.toAnimId myId) ["Actual"])
       (Sugar.biType builtin)
     , BWidgets.hboxCenteredSpaced <$> sequenceA
       [ ExprGuiM.withFgColor (Config.builtinOriginNameColor config) $
@@ -143,7 +144,7 @@ makeExprDefinition def bodyExpr = do
     Sugar.DefinitionExportedTypeInfo scheme ->
       makeDefTypeGrid config <$> sequenceA
       [ mkDefTypeRow config myId "Exported type:" id =<<
-        topLevelSchemeTypeView (entityId, "Actual") scheme ]
+        topLevelSchemeTypeView (animId "Actual") scheme ]
     Sugar.DefinitionNewType (Sugar.AcceptNewType oldScheme newScheme accept) ->
       makeDefTypeGrid config <$> sequenceA
       [ mkDefTypeRow config myId "Exported type:"
@@ -151,9 +152,9 @@ makeExprDefinition def bodyExpr = do
         case oldScheme of
         Definition.NoExportedType -> makeDefTypeLabel config myId "None"
         Definition.ExportedType scheme ->
-          topLevelSchemeTypeView (entityId, "Old") scheme
+          topLevelSchemeTypeView (animId "Old") scheme
       , mkDefTypeRow config myId "Inferred type:" id =<<
-        topLevelSchemeTypeView (entityId, "Actual") newScheme
+        topLevelSchemeTypeView (animId "Actual") newScheme
       ]
   bodyWidget <-
     DefinitionContentEdit.make (def ^. Sugar.drName)
@@ -162,6 +163,7 @@ makeExprDefinition def bodyExpr = do
   where
     entityId = def ^. Sugar.drEntityId
     myId = WidgetIds.fromEntityId entityId
+    animId s = mappend (Widget.toAnimId myId) [s]
 
 loadConvertDefI ::
   MonadA m => Anchors.CodeProps m -> DefI m ->

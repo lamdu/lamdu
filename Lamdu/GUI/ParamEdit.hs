@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ParamEdit
   ( make
   ) where
@@ -8,7 +9,6 @@ import Data.Monoid (Monoid(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.Sugar.AddNames.Types (Name(..))
-import System.Random.Utils (genFromHashable)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -66,7 +66,7 @@ make showType prevId param =
       then do
         paramTypeView <-
           param ^. Sugar.fpInferredType
-          & TypeView.make (genFromHashable entityId)
+          & TypeView.make (mappend (Widget.toAnimId myId) ["type"])
           & ExprGuiM.widgetEnv
           <&> uncurry Widget.liftView
         return $
