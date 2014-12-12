@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Convert.Infer
   ( ExpressionSetter
 
-  , loadInferScope -- TODO: is this sensible to export here?
+  , loadInferScope
   , loadInferInto
   , loadInfer
   ) where
@@ -14,7 +14,6 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.State (StateT(..), mapStateT)
 import Control.MonadA (MonadA)
-import Data.Maybe (fromMaybe)
 import Data.Store.Transaction (Transaction)
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Infer (Infer)
@@ -75,12 +74,10 @@ loadInferInto pl val = do
 
 loadInfer ::
   MonadA m => Val (ExprIRef.ValIProperty m) ->
-  T m (Val (Sugar.InputPayload m ()), Infer.Context)
+  MaybeT (T m) (Val (Sugar.InputPayload m ()), Infer.Context)
 loadInfer val =
   loadInferScope Infer.emptyScope val
   & (`runStateT` Infer.initialContext)
-  & runMaybeT
-  <&> fromMaybe (error "Type inference failed")
   <&> _1 . Lens.mapped %~ mkInputPayload
   where
     mkInputPayload (inferPl, stored) = Sugar.InputPayload

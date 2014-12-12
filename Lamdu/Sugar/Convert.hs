@@ -9,7 +9,6 @@ import Control.Lens.Tuple
 import Control.Monad (guard, void)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (runMaybeT)
-import Control.Monad.Trans.State (evalStateT)
 import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import Control.MonadA (MonadA)
 import Data.List.Utils (isLengthAtLeast)
@@ -369,8 +368,7 @@ mkContext defI cp inferContext = do
           case def ^. Definition.defBody of
             Definition.BodyBuiltin {} -> return True
             Definition.BodyExpr (Definition.Expr val _) ->
-              SugarInfer.loadInferScope Infer.emptyScope val
-              & (`evalStateT` Infer.initialContext)
+              SugarInfer.loadInfer (val <&> Load.exprPropertyOfClosure)
               & runMaybeT
               <&> Lens.has Lens._Just
     , scConvertSubexpression = convertExpressionI
@@ -739,7 +737,10 @@ convertDefIExpr ::
   Definition.Expr (Val (Load.ExprPropertyClosure m)) ->
   DefI m -> T m (DefinitionBody Guid m (ExpressionU m [EntityId]))
 convertDefIExpr cp (Definition.Expr valLoaded defType) defI = do
-  (valInferred, newInferContext) <- SugarInfer.loadInfer valIRefs
+  (valInferred, newInferContext) <-
+    SugarInfer.loadInfer valIRefs
+    & runMaybeT
+    <&> fromMaybe (error "Type inference failed")
   let addStoredEntityIds x = x & ipData .~ (EntityId.ofValI . Property.value <$> x ^.. ipStored . Lens._Just)
   context <- mkContext defI cp newInferContext
   ConvertM.run context $ do
