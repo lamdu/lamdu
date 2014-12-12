@@ -107,9 +107,16 @@ mkWritableHoleActions ::
 mkWritableHoleActions mInjectedArg exprPl stored = do
   sugarContext <- ConvertM.readContext
   mPaste <- mkPaste stored
+  let defI = SugarInfer.reDefI (sugarContext ^. ConvertM.scRecursionEnv)
+  let
+    maybeAddRecursiveGlobal globals
+      | defI `elem` globals = globals
+      | otherwise = defI : globals
   globals <-
-    ConvertM.liftTransaction . Transaction.getP . Anchors.globals $
-    sugarContext ^. ConvertM.scCodeAnchors
+    Anchors.globals (sugarContext ^. ConvertM.scCodeAnchors)
+    & Transaction.getP
+    & ConvertM.liftTransaction
+    <&> maybeAddRecursiveGlobal
   let inferredScope = inferred ^. Infer.plScope
   pure HoleActions
     { _holePaste = mPaste
@@ -141,7 +148,7 @@ mkHoleSuggested holeEntityId inferred = do
   let
     mkConverted = do
       (inferredIVal, newCtx) <-
-        SugarInfer.loadInferInto inferred suggestedVal
+        SugarInfer.loadInferInto (sugarContext ^. ConvertM.scRecursionEnv) inferred suggestedVal
         & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
         & runMaybeT
         <&> unsafeUnjust "Inference on inferred val must succeed"
@@ -459,14 +466,15 @@ holeResultsInject injectedArg val =
 
 mkHoleResultVals ::
   MonadA m =>
+  SugarInfer.RecursionEnv m ->
   Maybe (Val (InputPayload m a)) ->
   InputPayload m dummy ->
   Val () ->
   StateT Infer.Context (ListT (T m)) (HoleResultVal m IsInjected)
-mkHoleResultVals mInjectedArg exprPl base =
+mkHoleResultVals recursionEnv mInjectedArg exprPl base =
   do
     inferredBase <-
-      SugarInfer.loadInferScope scopeAtHole base
+      SugarInfer.loadInferScope recursionEnv scopeAtHole base
       & mapStateT maybeTtoListT
       <&> Lens.traversed . _2 %~ (,) Nothing
     form <- lift $ ListClass.fromList $ applyForms inferredBase
@@ -523,7 +531,7 @@ mkHoleResults ::
 mkHoleResults mInjectedArg sugarContext exprPl stored base =
   do
     (val, inferContext) <-
-      mkHoleResultVals mInjectedArg exprPl base
+      mkHoleResultVals (sugarContext ^. ConvertM.scRecursionEnv) mInjectedArg exprPl base
       & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     let newSugarContext = sugarContext & ConvertM.scInferContext .~ inferContext
     return

@@ -351,10 +351,10 @@ convertExpressionI ee =
 
 mkContext ::
   MonadA m =>
-  DefI m ->
+  SugarInfer.RecursionEnv m -> DefI m ->
   Anchors.Code (Transaction.MkProperty m) m ->
   Infer.Context -> T m (Context m)
-mkContext defI cp inferContext = do
+mkContext recursionEnv defI cp inferContext = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   return Context
     { _scInferContext = inferContext
@@ -362,13 +362,14 @@ mkContext defI cp inferContext = do
     , _scSpecialFunctions = specialFunctions
     , _scTagParamInfos = mempty
     , _scRecordParamsInfos = mempty
+    , _scRecursionEnv = recursionEnv
     , _scReinferCheckDefinition =
         do
           def <- Load.loadDefinitionClosure defI
           case def ^. Definition.defBody of
             Definition.BodyBuiltin {} -> return True
             Definition.BodyExpr (Definition.Expr val _) ->
-              SugarInfer.loadInfer (val <&> Load.exprPropertyOfClosure)
+              SugarInfer.loadInfer defI (val <&> Load.exprPropertyOfClosure)
               & runMaybeT
               <&> Lens.has Lens._Just
     , scConvertSubexpression = convertExpressionI
@@ -737,12 +738,12 @@ convertDefIExpr ::
   Definition.Expr (Val (Load.ExprPropertyClosure m)) ->
   DefI m -> T m (DefinitionBody Guid m (ExpressionU m [EntityId]))
 convertDefIExpr cp (Definition.Expr valLoaded defType) defI = do
-  (valInferred, newInferContext) <-
-    SugarInfer.loadInfer valIRefs
+  ((valInferred, recursionEnv), newInferContext) <-
+    SugarInfer.loadInfer defI valIRefs
     & runMaybeT
     <&> fromMaybe (error "Type inference failed")
+  context <- mkContext recursionEnv defI cp newInferContext
   let addStoredEntityIds x = x & ipData .~ (EntityId.ofValI . Property.value <$> x ^.. ipStored . Lens._Just)
-  context <- mkContext defI cp newInferContext
   ConvertM.run context $ do
     content <-
       valInferred
