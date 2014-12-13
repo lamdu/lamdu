@@ -447,10 +447,6 @@
             "Key'V"
         ]
     ],
-    "defTypeBoxScaleFactor": {
-        "_first": 0.6,
-        "_second": 0.6
-    },
     "verticalSpacing": 7.0,
     "grammarColor": [
         0.8,

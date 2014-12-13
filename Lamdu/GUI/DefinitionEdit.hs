@@ -71,23 +71,19 @@ makeBuiltinDefinition ::
 makeBuiltinDefinition def builtin = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   Box.vboxAlign 0 <$> sequenceA
-    [ defTypeScale config <$>
-      topLevelSchemeTypeView (mappend (Widget.toAnimId myId) ["Actual"])
-      (Sugar.biType builtin)
-    , BWidgets.hboxCenteredSpaced <$> sequenceA
+    [ BWidgets.hboxCenteredSpaced <$> sequenceA
       [ ExprGuiM.withFgColor (Config.builtinOriginNameColor config) $
         DefinitionContentEdit.makeNameEdit name (Widget.joinId myId ["name"])
       , ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
       , BuiltinEdit.make builtin myId
       ]
+    , topLevelSchemeTypeView (mappend (Widget.toAnimId myId) ["type"])
+      (Sugar.biType builtin)
     ]
   where
     name = def ^. Sugar.drName
     entityId = def ^. Sugar.drEntityId
     myId = WidgetIds.fromEntityId entityId
-
-defTypeScale :: Config -> Widget f -> Widget f
-defTypeScale config = Widget.scale $ realToFrac <$> Config.defTypeBoxScaleFactor config
 
 defTypeLabelStyle :: MonadA m => Config -> ExprGuiM m a -> ExprGuiM m a
 defTypeLabelStyle config =
@@ -99,10 +95,6 @@ makeDefTypeLabel :: MonadA m => Config -> Widget.Id -> String -> ExprGuiM m (Wid
 makeDefTypeLabel config myId labelText =
   defTypeLabelStyle config . ExprGuiM.widgetEnv .
   BWidgets.makeLabel labelText $ Widget.toAnimId myId
-
-makeDefTypeGrid ::
-  Config -> [[(Grid.Alignment, Widget f)]] -> [Widget f]
-makeDefTypeGrid config = (:[]) . defTypeScale config . BWidgets.gridHSpaced
 
 mkDefTypeRow ::
   (MonadA m, MonadA n) =>
@@ -126,7 +118,7 @@ makeAcceptLabel config myId accept =
   (Widget.keysEventMapMovesCursor (Config.acceptKeys config)
    (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)) .
   ExprGuiM.widgetEnv .
-  BWidgets.makeFocusableTextView "↱" $ Widget.joinId myId ["accept type"]
+  BWidgets.makeFocusableTextView "↳" $ Widget.joinId myId ["accept type"]
 
 makeExprDefinition ::
   MonadA m =>
@@ -139,31 +131,27 @@ makeExprDefinition def bodyExpr = do
     addAcceptanceArrow accept label = do
       acceptanceLabel <- makeAcceptLabel config myId accept
       return $ BWidgets.hboxCenteredSpaced [acceptanceLabel, label]
-  typeWidgets <-
+  typeWidget <-
+    fmap (BWidgets.gridHSpaced. (:[])) $
     case bodyExpr ^. Sugar.deTypeInfo of
     Sugar.DefinitionExportedTypeInfo scheme ->
-      makeDefTypeGrid config <$> sequenceA
-      [ mkDefTypeRow config myId "Exported type:" id =<<
-        topLevelSchemeTypeView (animId "Actual") scheme ]
-    Sugar.DefinitionNewType (Sugar.AcceptNewType oldScheme newScheme accept) ->
-      makeDefTypeGrid config <$> sequenceA
-      [ mkDefTypeRow config myId "Exported type:"
-        (>>= addAcceptanceArrow accept) =<<
-        case oldScheme of
+      topLevelSchemeTypeView exportedTypeAnimId scheme
+      >>= mkDefTypeRow config myId "Exported type:" id
+    Sugar.DefinitionNewType (Sugar.AcceptNewType oldScheme _ accept) ->
+      ( case oldScheme of
         Definition.NoExportedType -> makeDefTypeLabel config myId "None"
         Definition.ExportedType scheme ->
-          topLevelSchemeTypeView (animId "Old") scheme
-      , mkDefTypeRow config myId "Inferred type:" id =<<
-        topLevelSchemeTypeView (animId "Actual") newScheme
-      ]
+          topLevelSchemeTypeView exportedTypeAnimId scheme
+      )
+      >>= mkDefTypeRow config myId "Exported type:" (>>= addAcceptanceArrow accept)
   bodyWidget <-
     DefinitionContentEdit.make (def ^. Sugar.drName)
     (bodyExpr ^. Sugar.deContent) myId
-  return . Box.vboxAlign 0 $ typeWidgets ++ [bodyWidget]
+  return $ Box.vboxAlign 0 [bodyWidget, typeWidget]
   where
     entityId = def ^. Sugar.drEntityId
     myId = WidgetIds.fromEntityId entityId
-    animId s = mappend (Widget.toAnimId myId) [s]
+    exportedTypeAnimId = mappend (Widget.toAnimId myId) ["Exported"]
 
 loadConvertDefI ::
   MonadA m => Anchors.CodeProps m -> DefI m ->
@@ -172,15 +160,17 @@ loadConvertDefI cp defI =
   Load.loadDefinitionClosure defI >>=
   SugarConvert.convertDefI cp
   >>= AddNames.addToDef
-  <&> Lens.mapped . Lens.mapped . Sugar.plData %~ mkPayload
-  <&> Lens.mapped . redundantTypes .
-      Sugar.plData . ExprGuiM.plShowType .~ ExprGuiM.DoNotShowType
-  <&> Lens.mapped . SugarLens.holePayloads .
-      Sugar.plData . ExprGuiM.plShowType .~ ExprGuiM.ShowType
-  <&> Lens.mapped . SugarLens.holeArgs .
-      Sugar.plData . ExprGuiM.plShowType .~ ExprGuiM.ShowType
+  <&> fmap onVal
   <&> AddNextHoles.addToDef
   where
+    onVal v =
+      v
+      & Lens.mapped . Sugar.plData %~ mkPayload
+      & redundantTypes . showType .~ ExprGuiM.DoNotShowType
+      & SugarLens.holePayloads . showType .~ ExprGuiM.ShowType
+      & SugarLens.holeArgs . showType .~ ExprGuiM.ShowType
+      & Sugar.rPayload . showType .~ ExprGuiM.ShowType
+    showType = Sugar.plData . ExprGuiM.plShowType
     mkPayload entityIds =
       ExprGuiM.emptyPayload
       & ExprGuiM.plStoredEntityIds .~ entityIds
