@@ -68,10 +68,8 @@ make showType prevId param =
           param ^. Sugar.fpInferredType
           & TypeView.make (mappend (Widget.toAnimId myId) ["type"])
           & ExprGuiM.widgetEnv
-          <&> uncurry Widget.liftView
         return $
-          ExpressionGui.addType config ExpressionGui.Background myId
-          paramTypeView paramNameEdit
+          ExpressionGui.addType config myId paramTypeView paramNameEdit
       else
         return paramNameEdit
   where

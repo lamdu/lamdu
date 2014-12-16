@@ -25,12 +25,6 @@
         1.0,
         0.3
     ],
-    "defTypeLabelColor": [
-        0.6,
-        0.7,
-        1.0,
-        1.0
-    ],
     "parameterColor": [
         0.2,
         0.8,
@@ -86,7 +80,7 @@
             "Key'Left"
         ]
     ],
-    "inferredTypeTint": [
+    "typeTint": [
         1.0,
         1.0,
         1.0,
@@ -273,17 +267,29 @@
         0.8,
         0.16
     ],
-    "inferredTypeBGColor": [
+    "typeBoxBGColor": [
         0.05,
         0.15,
         0.2,
         1.0
     ],
-    "deletableHoleBGColor": [
+    "typeErrorColor": [
+        1.0,
+        0.0,
+        0.0,
+        0.65
+    ],
+    "typeMatchColor": [
         0.0,
         1.0,
         0.0,
-        0.2
+        0.4
+    ],
+    "acceptFirstTypeColor": [
+        1.0,
+        1.0,
+        0.0,
+        0.75
     ],
     "enlargeFactor": 1.1,
     "holeSearchTermScaleFactor": {
@@ -701,18 +707,11 @@
         0.5,
         0.35
     ],
-    "defTypeLabelTextSize": 16,
     "foreignModuleColor": [
         1.0,
         0.3,
         0.35,
         1.0
-    ],
-    "typeErrorHoleWrapBGColor": [
-        1.0,
-        0.0,
-        0.0,
-        0.45
     ],
     "collisionSuffixBGColor": [
         0.7,

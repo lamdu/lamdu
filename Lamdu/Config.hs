@@ -82,8 +82,9 @@ data Config = Config
   , holeSearchTermScaleFactor :: Vector2 Double
   , holeInactiveExtraSymbolColor :: Draw.Color
 
-  , typeErrorHoleWrapBGColor :: Draw.Color
-  , deletableHoleBGColor :: Draw.Color
+  , typeErrorColor :: Draw.Color
+  , typeMatchColor :: Draw.Color
+  , acceptFirstTypeColor :: Draw.Color
 
   , activeHoleBGColor :: Draw.Color
   , inactiveHoleBGColor :: Draw.Color
@@ -118,8 +119,8 @@ data Config = Config
   , inactiveTintColor :: Draw.Color
   , activeDefBGColor :: Draw.Color
 
-  , inferredTypeTint :: Draw.Color
-  , inferredTypeBGColor :: Draw.Color
+  , typeTint :: Draw.Color
+  , typeBoxBGColor :: Draw.Color
 
 -- For definitions
   , defOriginFGColor :: Draw.Color
@@ -142,9 +143,6 @@ data Config = Config
 
   , enlargeFactor :: Double
   , shrinkFactor :: Double
-
-  , defTypeLabelTextSize :: Int
-  , defTypeLabelColor :: Draw.Color
 
   , acceptKeys :: [E.ModKey]
 

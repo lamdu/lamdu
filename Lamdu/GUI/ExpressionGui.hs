@@ -13,7 +13,7 @@ module Lamdu.GUI.ExpressionGui
   , makeNameView
   , makeNameEdit
   -- Info adding
-  , TypeStyle(..), addType
+  , addType
   -- Expression wrapping
   , MyPrecedence(..), ParentPrecedence(..), Precedence
   , parenify
@@ -22,7 +22,7 @@ module Lamdu.GUI.ExpressionGui
   , stdWrapDelegated
   , stdWrapParentExpr
   , stdWrapParenify
-  , addInferredTypes
+  , addInferredTypes, addTypeBackground
   , wrapExprEventMap
   ) where
 
@@ -30,12 +30,12 @@ import Control.Applicative ((<$>))
 import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Data.Function (on)
 import Data.Monoid (Monoid(..))
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId)
+import Graphics.UI.Bottle.View (View)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Box (KBox)
 import Lamdu.Config (Config)
@@ -45,6 +45,7 @@ import Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
 import Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..), NameCollision(..))
 import qualified Control.Lens as Lens
 import qualified Data.List as List
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -110,36 +111,35 @@ addBelow egHAlign ws eg =
   (True, (Vector2 egHAlign (eg ^. egAlignment), eg ^. egWidget)) :
   map ((,) False) ws
 
-data TypeStyle = HorizLine | Background
-
 wWidth :: Lens' (Widget f) Widget.R
 wWidth = Widget.wSize . Lens._1
 
-addType ::
-  Config -> TypeStyle -> Widget.Id -> WidgetT m ->
-  ExpressionGui m ->
-  ExpressionGui m
-addType config style exprId rawTypeWidget eg =
+addTypeBackground :: Config -> AnimId -> Widget.R -> View -> View
+addTypeBackground config animId minWidth typeView =
+  typeView
+  & Lens._1 .~ newSize
+  & Lens._2 %~ Anim.translate (Vector2 ((width - typeWidth) / 2) 0)
+  & Lens._2 %~ Anim.backgroundColor bgAnimId bgLayer bgColor newSize
+  where
+    typeWidth = typeView ^. Lens._1 . Lens._1
+    width = max typeWidth minWidth
+    newSize = typeView ^. Lens._1 & Lens._1 .~ width
+    bgAnimId = animId ++ ["type background"]
+    bgLayer = Config.layerTypes $ Config.layers config
+    bgColor = Config.typeBoxBGColor config
+
+addType :: Config -> Widget.Id -> View -> ExpressionGui m -> ExpressionGui m
+addType config exprId typeView eg =
   addBelow 0.5 items eg
   where
-    items = middleElement : [(0.5, annotatedTypes)]
-    (mBgColor, middleElement) =
-      case style of
-      HorizLine ->
-        (Nothing, (0.5, Spacer.makeHorizLine underlineId (Vector2 width 1)))
-      Background ->
-        (Just (Config.inferredTypeBGColor config), (0.5, Spacer.makeWidget 5))
+    items =
+      [ (0.5, Spacer.makeWidget 5)
+      , (0.5, annotatedTypes)
+      ]
     annotatedTypes =
-      addBackground . (wWidth .~ width) $
-      Widget.translate (Vector2 ((width - typeWidget ^. wWidth)/2) 0) typeWidget
-    width = on max (^. wWidth) (eg ^. egWidget) typeWidget
-    typeWidget =
-      rawTypeWidget
-      & Widget.scale (realToFrac <$> Config.typeScaleFactor config)
-      & Widget.tint (Config.inferredTypeTint config)
-    bgAnimId = Widget.toAnimId exprId ++ ["type background"]
-    addBackground = maybe id (Widget.backgroundColor (Config.layerTypes (Config.layers config)) bgAnimId) mBgColor
-    underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
+      typeView
+      & addTypeBackground config (Widget.toAnimId exprId) (eg ^. egWidget . wWidth)
+      & uncurry Widget.liftView
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
@@ -313,8 +313,7 @@ alwaysAddInferredTypes exprPl eg =
       exprPl ^. Sugar.plInferredType
       & TypeView.make (mappend (Widget.toAnimId exprId) ["type"])
       & ExprGuiM.widgetEnv
-      <&> uncurry Widget.liftView
-    return $ addType config Background exprId typeView eg
+    return $ addType config exprId typeView eg
   where
     entityId = exprPl ^. Sugar.plEntityId
     exprId = WidgetIds.fromEntityId entityId

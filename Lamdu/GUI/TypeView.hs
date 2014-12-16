@@ -24,6 +24,7 @@ import qualified Control.Lens as Lens
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Map as Map
 import qualified Data.Store.Transaction as Transaction
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
@@ -187,7 +188,11 @@ makeInternal parentPrecedence typ =
 
 make :: MonadA m => AnimId -> Type -> WidgetEnvT (T m) View
 make prefix t =
-  makeInternal (ParentPrecedence 0) t
-  & runM
-  & (`evalStateT` Random.mkStdGen 0)
-  <&> Lens._2 %~ Anim.mapIdentities (mappend prefix)
+  do
+    config <- WE.readConfig
+    makeInternal (ParentPrecedence 0) t
+      & runM
+      & (`evalStateT` Random.mkStdGen 0)
+      <&> Lens._2 %~ Anim.mapIdentities (mappend prefix)
+      <&> Lens._2 %~ (Anim.onImages . Draw.tint) (Config.typeTint config)
+      <&> (^. View.scaled (realToFrac <$> Config.typeScaleFactor config))

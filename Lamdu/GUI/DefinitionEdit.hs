@@ -10,7 +10,6 @@ import Data.Traversable (sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Config (Config)
 import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Scheme (Scheme(..))
 import Lamdu.GUI.CodeEdit.Settings (Settings)
@@ -19,6 +18,7 @@ import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import Lamdu.Sugar.AddNames.Types (Name(..), DefinitionN)
 import Lamdu.Sugar.RedundantTypes (redundantTypes)
 import qualified Control.Lens as Lens
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -33,6 +33,7 @@ import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionEdit.DefinitionContentEdit as DefinitionContentEdit
 import qualified Lamdu.GUI.ExpressionGui.AddNextHoles as AddNextHoles
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -55,14 +56,17 @@ make cp settings defI = ExprGuiM.run ExpressionEdit.make cp settings $ do
     Sugar.DefinitionBodyBuiltin builtin ->
       makeBuiltinDefinition defS builtin
 
-topLevelSchemeTypeView :: MonadA m => AnimId -> Scheme -> ExprGuiM m (Widget f)
-topLevelSchemeTypeView animId scheme =
-  -- At the definition-level, Schemes can be shown as ordinary
-  -- types to avoid confusing forall's:
-  schemeType scheme
-  & TypeView.make animId
-  <&> uncurry Widget.liftView
-  & ExprGuiM.widgetEnv
+topLevelSchemeTypeView :: MonadA m => Widget.R -> AnimId -> Scheme -> ExprGuiM m (Widget f)
+topLevelSchemeTypeView minWidth animId scheme =
+  do
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    -- At the definition-level, Schemes can be shown as ordinary
+    -- types to avoid confusing forall's:
+    schemeType scheme
+      & TypeView.make animId
+      <&> ExprGui.addTypeBackground config animId minWidth
+      <&> uncurry Widget.liftView
+      & ExprGuiM.widgetEnv
 
 makeBuiltinDefinition ::
   MonadA m =>
@@ -77,48 +81,13 @@ makeBuiltinDefinition def builtin = do
       , ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
       , BuiltinEdit.make builtin myId
       ]
-    , topLevelSchemeTypeView (mappend (Widget.toAnimId myId) ["type"])
+    , topLevelSchemeTypeView 0 (mappend (Widget.toAnimId myId) ["type"])
       (Sugar.biType builtin)
     ]
   where
     name = def ^. Sugar.drName
     entityId = def ^. Sugar.drEntityId
     myId = WidgetIds.fromEntityId entityId
-
-defTypeLabelStyle :: MonadA m => Config -> ExprGuiM m a -> ExprGuiM m a
-defTypeLabelStyle config =
-  ExprGuiM.localEnv $ WE.setTextSizeColor
-  (Config.defTypeLabelTextSize config)
-  (Config.defTypeLabelColor config)
-
-makeDefTypeLabel :: MonadA m => Config -> Widget.Id -> String -> ExprGuiM m (Widget f)
-makeDefTypeLabel config myId labelText =
-  defTypeLabelStyle config . ExprGuiM.widgetEnv .
-  BWidgets.makeLabel labelText $ Widget.toAnimId myId
-
-mkDefTypeRow ::
-  (MonadA m, MonadA n) =>
-  Config -> Widget.Id -> String ->
-  (ExprGuiM m (Widget f) -> n (Widget g)) ->
-  Widget g -> n [(Grid.Alignment, Widget g)]
-mkDefTypeRow config myId labelText onLabel typeView = do
-  label <- onLabel $ makeDefTypeLabel config myId labelText
-  return
-    [ (right, label)
-    , (center, Widget.doesntTakeFocus typeView)
-    ]
-  where
-    center = 0.5
-    right = Vector2 1 0.5
-
-makeAcceptLabel ::
-  (MonadA m, MonadA f) => Config -> Widget.Id -> f a -> ExprGuiM m (Widget f)
-makeAcceptLabel config myId accept =
-  (fmap . Widget.weakerEvents)
-  (Widget.keysEventMapMovesCursor (Config.acceptKeys config)
-   (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)) .
-  ExprGuiM.widgetEnv .
-  BWidgets.makeFocusableTextView "↳" $ Widget.joinId myId ["accept type"]
 
 makeExprDefinition ::
   MonadA m =>
@@ -127,26 +96,52 @@ makeExprDefinition ::
   ExprGuiM m (WidgetT m)
 makeExprDefinition def bodyExpr = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    addAcceptanceArrow accept label = do
-      acceptanceLabel <- makeAcceptLabel config myId accept
-      return $ BWidgets.hboxCenteredSpaced [acceptanceLabel, label]
-  typeWidget <-
-    fmap (BWidgets.gridHSpaced. (:[])) $
-    case bodyExpr ^. Sugar.deTypeInfo of
-    Sugar.DefinitionExportedTypeInfo scheme ->
-      topLevelSchemeTypeView exportedTypeAnimId scheme
-      >>= mkDefTypeRow config myId "Exported type:" id
-    Sugar.DefinitionNewType (Sugar.AcceptNewType oldScheme _ accept) ->
-      ( case oldScheme of
-        Definition.NoExportedType -> makeDefTypeLabel config myId "None"
-        Definition.ExportedType scheme ->
-          topLevelSchemeTypeView exportedTypeAnimId scheme
-      )
-      >>= mkDefTypeRow config myId "Exported type:" (>>= addAcceptanceArrow accept)
   bodyWidget <-
     DefinitionContentEdit.make (def ^. Sugar.drName)
     (bodyExpr ^. Sugar.deContent) myId
+  let width = bodyWidget ^. Widget.wSize . Lens._1
+  let separatorHeight = realToFrac $ Config.wrapperHoleFrameWidth config ^. Lens._2
+  let vspace = BWidgets.vspaceWidget . realToFrac $ Config.valFramePadding config ^. Lens._2
+  let
+    typeSeparatorId = Widget.joinId myId ["type indicator"]
+    typeSeparator =
+      Anim.unitSquare (Widget.toAnimId typeSeparatorId)
+      & Widget.liftView 1
+      & Widget.scale (Vector2 width separatorHeight)
+  typeWidget <-
+    fmap (Grid.toWidget . Grid.make . map ((:[]) . (,) 0.5)) $
+    case bodyExpr ^. Sugar.deTypeInfo of
+    Sugar.DefinitionExportedTypeInfo scheme ->
+      sequence
+      [ return vspace
+      , return $ Widget.tint (Config.typeMatchColor config) typeSeparator
+      , return vspace
+      , topLevelSchemeTypeView width exportedTypeAnimId scheme
+      ]
+    Sugar.DefinitionNewType (Sugar.AcceptNewType oldScheme _ accept) ->
+      sequence $
+      return vspace :
+      case oldScheme of
+      Definition.NoExportedType ->
+        [ return vspace
+        , typeSeparator
+          & Widget.tint (Config.acceptFirstTypeColor config)
+          & Widget.weakerEvents acceptKeyMap
+          & BWidgets.makeFocusableView typeSeparatorId & ExprGuiM.widgetEnv
+        ]
+      Definition.ExportedType scheme ->
+        [ return vspace
+        , typeSeparator
+          & Widget.tint (Config.typeErrorColor config)
+          & Widget.weakerEvents acceptKeyMap
+          & BWidgets.makeFocusableView typeSeparatorId & ExprGuiM.widgetEnv
+        , return vspace
+        , topLevelSchemeTypeView width exportedTypeAnimId scheme
+        ]
+      where
+        acceptKeyMap =
+          Widget.keysEventMapMovesCursor (Config.acceptKeys config)
+          (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)
   return $ Box.vboxAlign 0 [bodyWidget, typeWidget]
   where
     entityId = def ^. Sugar.drEntityId
