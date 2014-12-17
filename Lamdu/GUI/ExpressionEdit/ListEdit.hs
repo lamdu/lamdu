@@ -26,10 +26,7 @@ make ::
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make list pl =
-  makeUnwrapped list
-  & if null (Sugar.lValues list)
-    then fmap (ExpressionGui.stdWrap pl)
-    else ExpressionGui.stdWrapParentExpr pl
+  ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped list
 
 lastLens :: Lens.Traversal' [a] a
 lastLens = Lens.taking 1 . Lens.backwards $ Lens.traversed
@@ -40,25 +37,22 @@ makeUnwrapped ::
   ExprGuiM m (ExpressionGui m)
 makeUnwrapped list myId =
   ExprGuiM.assignCursor myId cursorDest $ do
+    config <- ExprGuiM.widgetEnv WE.readConfig
     bracketOpenLabel <-
-      ExprGuiM.widgetEnv $ ExpressionGui.fromValueWidget <$>
       BWidgets.grammarLabel "[" bracketsIdForAnim
+      <&> ExpressionGui.fromValueWidget
+      & ExprGuiM.widgetEnv
+      >>= ExpressionGui.makeFocusableView firstBracketId
+      <&>
+        ExpressionGui.egWidget %~
+        Widget.weakerEvents
+        (actionEventMap (Config.listAddItemKeys config) "Add First Item" Sugar.addFirstItem)
     bracketCloseLabel <-
       ExprGuiM.widgetEnv $ ExpressionGui.fromValueWidget <$>
       BWidgets.grammarLabel "]" bracketsIdForAnim
-    config <- ExprGuiM.widgetEnv WE.readConfig
-    let
-      onFirstElem x =
-        x
-        & ExpressionGui.makeFocusableView firstBracketId
-        <&>
-          ExpressionGui.egWidget %~
-          Widget.weakerEvents
-          (actionEventMap (Config.listAddItemKeys config) "Add First Item" Sugar.addFirstItem)
     case Sugar.lValues list of
       [] ->
-        ExpressionGui.hbox [bracketOpenLabel, bracketCloseLabel]
-        & onFirstElem
+        return $ ExpressionGui.hbox [bracketOpenLabel, bracketCloseLabel]
       firstValue : nextValues -> do
         (_, firstEdit) <- makeItem firstValue
         nextEdits <- mapM makeItem nextValues
@@ -67,10 +61,6 @@ makeUnwrapped list myId =
           firstValue ^. Sugar.liExpr
           & ExprGuiM.nextHolesBefore
           & ExprEventMap.jumpHolesEventMap []
-        bracketOpen <-
-          bracketOpenLabel
-          & onFirstElem
-          <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
         let
           nilDeleteEventMap =
             actionEventMap (Config.delKeys config) "Replace nil with hole" Sugar.replaceNil
@@ -85,7 +75,13 @@ makeUnwrapped list myId =
           ExpressionGui.makeFocusableView closeBracketId bracketCloseLabel
           <&> ExpressionGui.egWidget %~ Widget.weakerEvents closerEventMap
         return . ExpressionGui.hbox $ concat
-          [[bracketOpen, firstEdit], nextEdits >>= pairToList, [bracketClose]]
+          [ [ bracketOpenLabel
+              & ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
+            , firstEdit
+            ]
+          , nextEdits >>= pairToList
+          , [ bracketClose ]
+          ]
   where
     bracketsIdForAnim = WidgetIds.fromEntityId $ Sugar.lNilEntityId list
     pairToList (x, y) = [x, y]
