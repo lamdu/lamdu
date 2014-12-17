@@ -1,5 +1,4 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE DeriveGeneric #-}
 module Foreign.C.Types.Instances () where
 
 import Foreign.C.Types (CDouble)

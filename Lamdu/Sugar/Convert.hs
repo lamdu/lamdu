@@ -108,18 +108,18 @@ convertPositionalFuncParam ::
   (MonadA m, Monoid a) => V.Lam (Val (InputPayload m a)) ->
   InputPayload m a ->
   ConvertM m (FuncParam Guid m)
-convertPositionalFuncParam (V.Lam param body) lamExprPl = do
+convertPositionalFuncParam (V.Lam param body) lamExprPl =
   pure FuncParam
-    { _fpName = UniqueId.toGuid param
-    , _fpVarKind = FuncParameter
-    , _fpId = paramEntityId
-    , _fpInferredType = paramType
-    , _fpMActions =
-      mkPositionalFuncParamActions param
-      <$> lamExprPl ^. ipStored
-      <*> traverse (^. ipStored) body
-    , _fpHiddenIds = []
-    }
+  { _fpName = UniqueId.toGuid param
+  , _fpVarKind = FuncParameter
+  , _fpId = paramEntityId
+  , _fpInferredType = paramType
+  , _fpMActions =
+    mkPositionalFuncParamActions param
+    <$> lamExprPl ^. ipStored
+    <*> traverse (^. ipStored) body
+  , _fpHiddenIds = []
+  }
   where
     paramEntityId = EntityId.ofLambdaParam param
     paramType =
@@ -192,12 +192,12 @@ convertGetField ::
 convertGetField (V.GetField recExpr tag) exprPl = do
   tagParamInfos <- (^. ConvertM.scTagParamInfos) <$> ConvertM.readContext
   let
-    mkGetVar jumpTo = do
+    mkGetVar jumpTo =
       pure GetVar
-        { _gvName = UniqueId.toGuid tag
-        , _gvJumpTo = pure jumpTo
-        , _gvVarType = GetFieldParameter
-        }
+      { _gvName = UniqueId.toGuid tag
+      , _gvJumpTo = pure jumpTo
+      , _gvVarType = GetFieldParameter
+      }
   mVar <- traverse mkGetVar $ do
     paramInfo <- Map.lookup tag tagParamInfos
     param <- recExpr ^? ExprLens.valVar
@@ -207,18 +207,18 @@ convertGetField (V.GetField recExpr tag) exprPl = do
     case mVar of
     Just var ->
       return $ BodyGetVar var
-    Nothing -> do
+    Nothing ->
       traverse ConvertM.convertSubexpression
-        GetField
-        { _gfRecord = recExpr
-        , _gfTag =
-            TagG
-            { _tagInstance = EntityId.ofGetFieldTag (exprPl ^. ipEntityId)
-            , _tagVal = tag
-            , _tagGName = UniqueId.toGuid tag
-            }
-        }
-        <&> BodyGetField
+      GetField
+      { _gfRecord = recExpr
+      , _gfTag =
+          TagG
+          { _tagInstance = EntityId.ofGetFieldTag (exprPl ^. ipEntityId)
+          , _tagVal = tag
+          , _tagGName = UniqueId.toGuid tag
+          }
+      }
+      <&> BodyGetField
 
 convertGlobal ::
   MonadA m => V.GlobalId -> InputPayload m a -> ConvertM m (ExpressionU m a)
@@ -311,17 +311,17 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
     fpIdEntityId = EntityId.ofLambdaTagParam param . fpTag
     mkParamInfo fp =
       Map.singleton (fpTag fp) . ConvertM.TagParamInfo param $ fpIdEntityId fp
-    mkParam fp = do
+    mkParam fp =
       pure FuncParam
-        { _fpName = UniqueId.toGuid $ fpTag fp
-        , _fpId = fpIdEntityId fp
-        , _fpVarKind = FuncFieldParameter
-        , _fpInferredType = fpFieldType fp
-        , _fpMActions = error "TODO: _fpMActions"
-          -- fpActions (fpIdEntityId fp)
-          -- <$> mLambdaP <*> mParamTypeI <*> mBodyStored
-        , _fpHiddenIds = []
-        }
+      { _fpName = UniqueId.toGuid $ fpTag fp
+      , _fpId = fpIdEntityId fp
+      , _fpVarKind = FuncFieldParameter
+      , _fpInferredType = fpFieldType fp
+      , _fpMActions = error "TODO: _fpMActions"
+        -- fpActions (fpIdEntityId fp)
+        -- <$> mLambdaP <*> mParamTypeI <*> mBodyStored
+      , _fpHiddenIds = []
+      }
 --     fpActions tagExprGuid lambdaP paramTypeI bodyStored =
 --       FuncParamActions
 --       { _fpListItemActions = ListItemActions

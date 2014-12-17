@@ -1,5 +1,5 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveFunctor, DeriveGeneric, StandaloneDeriving, RecordWildCards #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveFunctor, DeriveGeneric, RecordWildCards #-}
 module Graphics.UI.Bottle.EventMap
   ( KeyEvent(..), IsPress(..), ModKey(..)
   , prettyModKey

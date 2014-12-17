@@ -93,7 +93,7 @@ presentationModeChoiceConfig config = BWidgets.ChoiceWidgetConfig
   }
 
 mkPresentationModeEdit ::
-    MonadA m => (Transaction.MkProperty m Sugar.PresentationMode) ->
+    MonadA m => Transaction.MkProperty m Sugar.PresentationMode ->
     Widget.Id -> ExprGuiM m (Widget (T m))
 mkPresentationModeEdit prop myId = do
   cur <- ExprGuiM.transaction $ Transaction.getP prop
@@ -235,8 +235,7 @@ addPrevIds ::
   Widget.Id ->
   [Sugar.FuncParam name m] ->
   [(Widget.Id, Sugar.FuncParam name m)]
-addPrevIds lhsId params =
-  go lhsId params
+addPrevIds = go
   where
     fpId param = WidgetIds.fromEntityId $ param ^. Sugar.fpId
     go _      [] = []

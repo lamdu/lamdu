@@ -131,7 +131,7 @@ mResultsListOf holeInfo baseId (x:xs) = Just
   , _rlExtra = zipWith mkExtra [(0::Int)..] xs
   }
   where
-    mkExtra i res = mkResult (extraResultId i) res
+    mkExtra = mkResult . extraResultId
     extraResultId i = mappend extraResultsPrefixId $ WidgetIds.hash i
     extraResultsPrefixId = mconcat [prefixId holeInfo, WidgetId.Id ["extra results"], baseId]
     mkResult resultId (typ, holeResult) =

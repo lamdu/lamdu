@@ -54,7 +54,8 @@ ofLambdaTagParam v p =
   EntityId $ Guid.combine (UniqueId.toGuid v) (UniqueId.toGuid p)
 
 ofGetFieldTag :: EntityId -> EntityId
-ofGetFieldTag getFieldEntityId = augment "tag" getFieldEntityId
+ofGetFieldTag = augment "tag"
 
 ofRecExtendTag :: EntityId -> EntityId
-ofRecExtendTag recExtendEntityId = augment "tag" recExtendEntityId
+ofRecExtendTag = augment "tag"
+                 
