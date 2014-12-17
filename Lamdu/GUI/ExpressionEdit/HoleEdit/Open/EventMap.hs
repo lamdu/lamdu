@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap
   ( make, blockDownEvents, disallowChars
   ) where
 
-import Control.Applicative (Applicative(..), (<$), liftA2)
+import Control.Applicative (Applicative(..), (<$), (<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
@@ -180,8 +180,8 @@ make pl holeInfo mShownResult = do
   where
     searchTerm = HoleInfo.hiSearchTerm holeInfo
     onShownResult f = maybe mempty f mShownResult
-    shownResultEventMapH f shownResult = pickBefore shownResult $ f shownResult
-    pickBefore shownResult = fmap . liftA2 mappend $ srPick shownResult
+    shownResultEventMapH f shownResult = pickBefore shownResult <$> f shownResult
+    pickBefore shownResult action = mappend <$> srPick shownResult <*> action
     shownResultEventMap = onShownResult . shownResultEventMapH
     actionsEventMap f =
       shownResultEventMap $ \shownResult ->
