@@ -69,7 +69,9 @@ data ResultType = GoodResult | BadResult
 
 data Result m = Result
   { rType :: ResultType
-  , rHoleResult :: T m (Sugar.HoleResult (Name m) m)
+  , -- Warning: This transaction should be ran at most once!
+    -- Running it more than once will cause inconsistencies.
+    rHoleResult :: T m (Sugar.HoleResult (Name m) m)
   , rId :: WidgetId.Id
   }
 

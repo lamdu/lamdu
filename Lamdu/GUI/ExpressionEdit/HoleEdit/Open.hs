@@ -99,21 +99,24 @@ afterPick holeInfo resultId pr = do
 
 makeShownResult ::
   MonadA m => HoleInfo m -> Result m -> ExprGuiM m (Widget (T m), ShownResult m)
-makeShownResult holeInfo result = do
-  res <- ExprGuiM.transaction $ rHoleResult result
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  widget <-
-    makeHoleResultWidget (rId result) res
-    <&> (Widget.pad . fmap realToFrac . Config.holeResultPadding) config
-  return
-    ( widget & Widget.wEventMap .~ mempty
-    , ShownResult
-      { srEventMap = widget ^. Widget.wEventMap
-      , srHoleResult = res
-      , srPickTo =
-        afterPick holeInfo (rId result) =<< res ^. Sugar.holeResultPick
-      }
-    )
+makeShownResult holeInfo result =
+  do
+    -- Warning: rHoleResult should be ran at most once!
+    -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
+    res <- ExprGuiM.transaction $ rHoleResult result
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    widget <-
+      makeHoleResultWidget (rId result) res
+      <&> (Widget.pad . fmap realToFrac . Config.holeResultPadding) config
+    return
+      ( widget & Widget.wEventMap .~ mempty
+      , ShownResult
+        { srEventMap = widget ^. Widget.wEventMap
+        , srHoleResult = res
+        , srPickTo =
+          afterPick holeInfo (rId result) =<< res ^. Sugar.holeResultPick
+        }
+      )
 
 makeResultGroup ::
   MonadA m =>
