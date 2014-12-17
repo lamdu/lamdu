@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Monad
   ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
-  , scInferContext, scReinferCheckDefinition, scRecursionEnv
+  , scInferContext, scReinferCheckDefinition
   , scCodeAnchors, scSpecialFunctions, scTagParamInfos, scRecordParamsInfos
   , ConvertM(..), run
   , readContext, liftTransaction, local
@@ -31,7 +31,6 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -59,7 +58,6 @@ data Context m = Context
   , -- Check whether the definition is valid after an edit,
     -- so that can hole-wrap bad edits.
     _scReinferCheckDefinition :: T m Bool
-  , _scRecursionEnv :: SugarInfer.RecursionEnv m
   , scConvertSubexpression ::
        forall a. Monoid a => Val (Sugar.InputPayload m a) -> ConvertM m (ExpressionU m a)
   }
