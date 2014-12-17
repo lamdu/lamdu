@@ -333,10 +333,10 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
 --         }
 --       }
 
--- type ExprField m = (T.Tag, ExprIRef.ValIM m)
+-- type ExprField m = (T.Tag, ExprIRef.ValI m)
 -- rereadFieldParamTypes ::
 --   MonadA m =>
---   Guid -> ExprIRef.ValIM m ->
+--   Guid -> ExprIRef.ValI m ->
 --   ([ExprField m] -> ExprField m -> [ExprField m] -> T m Guid) ->
 --   T m Guid
 -- rereadFieldParamTypes tagExprGuid paramTypeI f = do
@@ -350,12 +350,12 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
 --     _ -> return tagExprGuid
 
 -- rewriteFieldParamTypes ::
---   MonadA m => ExprIRef.ValIM m -> [ExprField m] -> T m ()
+--   MonadA m => ExprIRef.ValI m -> [ExprField m] -> T m ()
 -- rewriteFieldParamTypes paramTypeI fields =
 --   ExprIRef.writeExprBody paramTypeI . V.VRec $
 --   V.Record KType fields
 
--- addFieldParamAfter :: MonadA m => Guid -> Guid -> ExprIRef.ValIM m -> T m Guid
+-- addFieldParamAfter :: MonadA m => Guid -> Guid -> ExprIRef.ValI m -> T m Guid
 -- addFieldParamAfter lamGuid tagExprGuid paramTypeI =
 --   rereadFieldParamTypes tagExprGuid paramTypeI $
 --   \prevFields theField nextFields -> do
@@ -366,7 +366,7 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
 --     pure $ Guid.combine lamGuid fieldGuid
 
 -- delFieldParam ::
---   MonadA m => Guid -> ExprIRef.ValIM m -> Guid ->
+--   MonadA m => Guid -> ExprIRef.ValI m -> Guid ->
 --   ExprIRef.ValIProperty m -> Val (ExprIRef.ValIProperty m) -> T m Guid
 -- delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored =
 --   rereadFieldParamTypes tagExprGuid paramTypeI $
@@ -559,7 +559,7 @@ convertWhereItems usedTags expr =
     (nextItems, whereBody) <- convertWhereItems usedTags $ ewiBody ewi
     return (item : nextItems, whereBody)
 
--- addFirstFieldParam :: MonadA m => Guid -> ExprIRef.ValIM m -> T m Guid
+-- addFirstFieldParam :: MonadA m => Guid -> ExprIRef.ValI m -> T m Guid
 -- addFirstFieldParam lamGuid recordI = do
 --   recordBody <- ExprIRef.readValBody recordI
 --   case recordBody ^? V._VRec . ExprLens.kindedRecordFields KType of
@@ -621,7 +621,7 @@ convertDefIBuiltin (Definition.Builtin name scheme) defI =
       Definition.BodyBuiltin . (`Definition.Builtin` scheme)
 
 makeExprDefTypeInfo ::
-  MonadA m => ExprIRef.ValIM m -> DefI m -> Definition.ExportedType -> Scheme -> DefinitionTypeInfo m
+  MonadA m => ExprIRef.ValI m -> DefI m -> Definition.ExportedType -> Scheme -> DefinitionTypeInfo m
 makeExprDefTypeInfo _ _ (Definition.ExportedType defType) inferredType
   | defType `Scheme.alphaEq` inferredType = DefinitionExportedTypeInfo defType
 makeExprDefTypeInfo defValI defI defType inferredType =

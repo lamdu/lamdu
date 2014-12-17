@@ -25,7 +25,7 @@ import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
-plValI :: Lens.Traversal' (InputPayload m a) (ExprIRef.ValIM m)
+plValI :: Lens.Traversal' (InputPayload m a) (ExprIRef.ValI m)
 plValI = ipStored . Lens._Just . Property.pVal
 
 convertTag :: EntityId -> T.Tag -> TagG Guid
@@ -34,7 +34,7 @@ convertTag inst tag = TagG inst tag $ UniqueId.toGuid tag
 convertField ::
   (MonadA m, Monoid a) =>
   Maybe (ExprIRef.ValIProperty m) ->
-  Maybe (ExprIRef.ValIM m) -> Record name m (ExpressionU m a) ->
+  Maybe (ExprIRef.ValI m) -> Record name m (ExpressionU m a) ->
   EntityId -> T.Tag -> Val (InputPayload m a) ->
   ConvertM m (RecordField Guid m (ExpressionU m a))
 convertField mStored mRestI restS inst tag expr = do

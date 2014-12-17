@@ -22,7 +22,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 type T = Transaction
 
 mkCutter ::
-  MonadA m => Anchors.CodeProps m -> ExprIRef.ValIM m -> T m EntityId -> T m EntityId
+  MonadA m => Anchors.CodeProps m -> ExprIRef.ValI m -> T m EntityId -> T m EntityId
 mkCutter cp expr replaceWithHole = do
   _ <- DataOps.newClipboard cp expr
   replaceWithHole

@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Lamdu.Expr.IRef
-  ( ValI(..), ValIM
+  ( ValI(..)
   , ValBody
   , ValIProperty
   , Lam, Apply
@@ -48,44 +48,42 @@ newtype ValI m = ValI
   { unValI :: IRef m (V.Body (ValI m))
   } deriving (Eq, Ord, Show, Binary)
 
-type ValIM m = ValI m
-
-type ValIProperty m = Property (T m) (ValIM m)
+type ValIProperty m = Property (T m) (ValI m)
 type ValBody m = V.Body (ValI m)
 type Lam m = V.Lam (ValI m)
 type Apply m = V.Apply (ValI m)
 
-newValBody :: MonadA m => ValBody m -> T m (ValIM m)
+newValBody :: MonadA m => ValBody m -> T m (ValI m)
 newValBody = fmap ValI . Transaction.newIRef
 
 -- TODO: Remove this
-newLambda :: MonadA m => ValIM m -> T m (V.Var, ValIM m)
+newLambda :: MonadA m => ValI m -> T m (V.Var, ValI m)
 newLambda body = do
   paramId <- V.Var . Identifier . Guid.bs <$> Transaction.newKey
   expr <- newValBody $ V.BAbs $ V.Lam paramId body
   return (paramId, expr)
 
-readValBody :: MonadA m => ValIM m -> T m (ValBody m)
+readValBody :: MonadA m => ValI m -> T m (ValBody m)
 readValBody = Transaction.readIRef . unValI
 
 writeValBody ::
-  MonadA m => ValIM m -> ValBody m -> T m ()
+  MonadA m => ValI m -> ValBody m -> T m ()
 writeValBody = Transaction.writeIRef . unValI
 
-newVal :: MonadA m => Val () -> T m (ValIM m)
+newVal :: MonadA m => Val () -> T m (ValI m)
 newVal = fmap (^. V.payload . Lens._1) . newValFromH . ((,) Nothing <$>)
 
 -- Returns expression with new Guids
 writeVal ::
   MonadA m =>
-  ValIM m -> Val a ->
-  T m (Val (ValIM m, a))
+  ValI m -> Val a ->
+  T m (Val (ValI m, a))
 writeVal iref =
   writeValWithStoredSubexpressions iref .
   fmap ((,) Nothing)
 
 writeValWithStoredSubexpressions ::
-  MonadA m => ValIM m -> Val (Maybe (ValIM m), a) -> T m (Val (ValIM m, a))
+  MonadA m => ValI m -> Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
 writeValWithStoredSubexpressions iref expr = do
   exprBodyP <- expressionBodyFrom expr
   exprBodyP
@@ -94,21 +92,21 @@ writeValWithStoredSubexpressions iref expr = do
   return $ Val (iref, expr ^. V.payload . Lens._2) exprBodyP
 
 readVal ::
-  MonadA m => ValIM m -> T m (Val (ValIM m))
+  MonadA m => ValI m -> T m (Val (ValI m))
 readVal exprI =
   fmap (Val exprI) .
   traverse readVal =<< readValBody exprI
 
 expressionBodyFrom ::
   MonadA m =>
-  Val (Maybe (ValIM m), a) ->
-  T m (V.Body (Val (ValIM m, a)))
+  Val (Maybe (ValI m), a) ->
+  T m (V.Body (Val (ValI m, a)))
 expressionBodyFrom = traverse newValFromH . (^. V.body)
 
 newValFromH ::
   MonadA m =>
-  Val (Maybe (ValIM m), a) ->
-  T m (Val (ValIM m, a))
+  Val (Maybe (ValI m), a) ->
+  T m (Val (ValI m, a))
 newValFromH expr =
   case mIRef of
   Just iref -> writeValWithStoredSubexpressions iref expr
@@ -124,8 +122,8 @@ newValFromH expr =
 
 addProperties ::
   MonadA m =>
-  (ValIM m -> T m ()) ->
-  Val (ValIM m, a) ->
+  (ValI m -> T m ()) ->
+  Val (ValI m, a) ->
   Val (ValIProperty m, a)
 addProperties setIRef (Val (iref, a) body) =
   Val (Property iref setIRef, a) (body & Lens.traversed %@~ f)
@@ -143,6 +141,6 @@ data ValTree m
   deriving (Show)
 type ValTreeM m = ValTree m
 
-writeValTree :: MonadA m => ValTreeM m -> T m (ValIM m)
+writeValTree :: MonadA m => ValTreeM m -> T m (ValI m)
 writeValTree (ValTreeLeaf valI) = return valI
 writeValTree (ValTreeNode body) = newValBody =<< traverse writeValTree body

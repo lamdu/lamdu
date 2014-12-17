@@ -57,7 +57,7 @@ import qualified System.Random as Random
 
 type T = Transaction
 
-type ExprStorePoint m a = Val (Maybe (ExprIRef.ValIM m), a)
+type ExprStorePoint m a = Val (Maybe (ExprIRef.ValI m), a)
 
 convert ::
   (MonadA m, Monoid a) =>
@@ -245,7 +245,7 @@ getGlobal defI =
   where
     errorJumpTo = error "Jump to on scope item??"
 
-type HoleResultVal m a = Val (Infer.Payload, (Maybe (ExprIRef.ValIM m), a))
+type HoleResultVal m a = Val (Infer.Payload, (Maybe (ExprIRef.ValI m), a))
 
 markNotInjected :: HoleResultVal n () -> HoleResultVal n IsInjected
 markNotInjected val = val <&> _2 . _2 .~ NotInjected
@@ -542,9 +542,9 @@ randomizeNonStoredParamIds gen =
 
 writeExprMStored ::
   MonadA m =>
-  ExprIRef.ValIM m ->
+  ExprIRef.ValI m ->
   ExprStorePoint m a ->
-  T m (Val (ExprIRef.ValIM m, a))
+  T m (Val (ExprIRef.ValI m, a))
 writeExprMStored exprIRef exprMStorePoint = do
   key <- Transaction.newKey
   exprMStorePoint

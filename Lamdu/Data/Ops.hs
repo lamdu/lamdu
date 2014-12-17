@@ -150,7 +150,7 @@ presentationModeOfName x
 
 newDefinition ::
   MonadA m => String -> PresentationMode ->
-  Definition.Body (ExprIRef.ValIM m) -> T m (DefI m)
+  Definition.Body (ExprIRef.ValI m) -> T m (DefI m)
 newDefinition name presentationMode defBody = do
   newDef <- Transaction.newIRef defBody
   setP (Anchors.assocNameRef newDef) name
