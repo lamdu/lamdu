@@ -641,6 +641,7 @@ convertDefIExpr ::
 convertDefIExpr cp (Definition.Expr valLoaded defType) defI = do
   (valInferred, newInferContext) <-
     SugarInfer.loadInfer valIRefs
+    <&> _1 . Lens.mapped %~ mkInputPayload
     & runMaybeT
     <&> fromMaybe (error "Type inference failed")
   let addStoredEntityIds x = x & ipData .~ (EntityId.ofValI . Property.value <$> x ^.. ipStored . Lens._Just)
@@ -658,6 +659,14 @@ convertDefIExpr cp (Definition.Expr valLoaded defType) defI = do
         valInferred ^. V.payload . ipInferred . Infer.plType
       }
   where
+    mkInputPayload (inferPl, stored) =
+      InputPayload
+      { _ipEntityId = EntityId.ofValI $ Property.value stored
+      , _ipInferred = inferPl
+      , _ipStored = Just stored
+      , _ipData = ()
+      , _ipGuid = IRef.guid $ ExprIRef.unValI $ Property.value stored
+      }
     valIRefs = valLoaded <&> Load.exprPropertyOfClosure
     exprI = valIRefs ^. V.payload . Property.pVal
     defGuid = IRef.guid defI
