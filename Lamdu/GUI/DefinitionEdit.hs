@@ -112,12 +112,16 @@ makeExprDefinition def bodyExpr = do
     fmap (Grid.toWidget . Grid.make . map ((:[]) . (,) 0.5)) $
     case bodyExpr ^. Sugar.deTypeInfo of
     Sugar.DefinitionExportedTypeInfo scheme ->
-      sequence
+      sequence $
       [ return vspace
       , return $ Widget.tint (Config.typeMatchColor config) typeSeparator
-      , return vspace
-      , topLevelSchemeTypeView width exportedTypeAnimId scheme
-      ]
+      ] ++
+      case bodyExpr ^. Sugar.deContent . Sugar.dParams of
+      [] -> []
+      _ ->
+        [ return vspace
+        , topLevelSchemeTypeView width exportedTypeAnimId scheme
+        ]
     Sugar.DefinitionNewType (Sugar.AcceptNewType oldScheme _ accept) ->
       sequence $
       return vspace :
