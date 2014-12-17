@@ -51,6 +51,7 @@ import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
 type T = Transaction
@@ -168,7 +169,7 @@ convertVar param exprPl = do
         , _gpJumpTo = jumpTo
         }
       Nothing ->
-        BodyGetVar $ GetVar
+        BodyGetVar GetVar
         { _gvName = UniqueId.toGuid param
         , _gvJumpTo = pure $ EntityId.ofLambdaParam param
         , _gvVarType = GetParameter
@@ -183,105 +184,6 @@ convertVLiteralInteger ::
   MonadA m => Integer ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertVLiteralInteger i exprPl = ConvertExpr.make exprPl $ BodyLiteralInteger i
-
-convertTag :: EntityId -> T.Tag -> TagG Guid
-convertTag inst tag = TagG inst tag $ UniqueId.toGuid tag
-
-convertField ::
-  (MonadA m, Monoid a) =>
-  Maybe (ExprIRef.ValIProperty m) ->
-  Maybe (ExprIRef.ValIM m) -> Record name m (ExpressionU m a) ->
-  EntityId -> T.Tag -> Val (InputPayload m a) ->
-  ConvertM m (RecordField Guid m (ExpressionU m a))
-convertField mStored mRestI restS inst tag expr = do
-  exprS <- ConvertM.convertSubexpression expr
-  typeProtect <- ConvertM.typeProtectTransaction
-  protectedSetToVal <- ConvertM.typeProtectedSetToVal
-  return RecordField
-    { _rfTag = convertTag inst tag
-    , _rfExpr = exprS
-    , _rfMDelete =
-        do
-          stored <- mStored
-          restI <- mRestI
-          exprI <- expr ^? V.payload . plValI
-          return $
-            if null (restS ^. rItems)
-            then
-              -- When deleting closed one field record
-              -- we replace the record with the field value
-              fmap EntityId.ofValI . protectedSetToVal stored $
-              case restS ^. rTail of
-              ClosedRecord{} -> exprI
-              RecordExtending{} -> restI
-            else do
-              let delete = DataOps.replace stored restI
-              mResult <- fmap EntityId.ofValI <$> typeProtect delete
-              case mResult of
-                Just result -> return result
-                Nothing ->
-                  fromMaybe (error "should have a way to fix type error") $
-                  case restS ^. rTail of
-                  RecordExtending ext ->
-                    ext ^? rPayload . plActions . Lens._Just . wrap . _WrapAction
-                    <&> fmap snd
-                  ClosedRecord mOpen -> (delete >>) <$> mOpen
-    }
-
-makeAddField :: MonadA m =>
-  Maybe (ExprIRef.ValIProperty m) -> ConvertM m (Maybe (T m EntityId))
-makeAddField Nothing = return Nothing
-makeAddField (Just stored) =
-  do
-    typeProtect <- ConvertM.typeProtectTransaction
-    return . Just . fmap (EntityId.ofRecExtendTag . EntityId.ofValI) $ do
-      let extend = snd <$> DataOps.recExtend stored
-      mResultI <- typeProtect extend
-      case mResultI of
-        Just resultI -> return resultI
-        Nothing -> do
-          resultI <- extend
-          void $ DataOps.setToWrapper resultI stored
-          return resultI
-
-convertEmptyRecord :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m a)
-convertEmptyRecord exprPl = do
-  mAddField <- makeAddField (exprPl ^. ipStored)
-  BodyRecord Record
-    { _rItems = []
-    , _rTail =
-        ClosedRecord $
-        fmap EntityId.ofValI . DataOps.replaceWithHole <$> exprPl ^. ipStored
-    , _rMAddField = mAddField
-    }
-    & ConvertExpr.make exprPl
-
-plValI :: Lens.Traversal' (InputPayload m a) (ExprIRef.ValIM m)
-plValI = ipStored . Lens._Just . Property.pVal
-
-convertRecExtend ::
-  (MonadA m, Monoid a) => V.RecExtend (Val (InputPayload m a)) ->
-  InputPayload m a -> ConvertM m (ExpressionU m a)
-convertRecExtend (V.RecExtend tag val rest) exprPl = do
-  restS <- ConvertM.convertSubexpression rest
-  (restRecord, hiddenEntities) <-
-    case restS ^. rBody of
-    BodyRecord rec -> return (rec, restS ^. rPayload . plData)
-    _ -> do
-      mAddField <- makeAddField (rest ^. V.payload . ipStored)
-      return
-        ( Record [] (RecordExtending restS) mAddField
-        , mempty
-        )
-  fieldS <-
-    convertField
-    (exprPl ^. ipStored) (rest ^? V.payload . plValI) restRecord
-    (EntityId.ofRecExtendTag (exprPl ^. ipEntityId)) tag val
-  restRecord
-    & rItems %~ (fieldS:)
-    & BodyRecord
-    & ConvertExpr.make exprPl
-    <&> rPayload . plData <>~ hiddenEntities
 
 convertGetField ::
   (MonadA m, Monoid a) =>
@@ -341,13 +243,13 @@ convertExpressionI ee =
   case ee ^. V.body of
   V.BAbs x -> convertLam x
   V.BApp x -> ConvertApply.convert x
-  V.BRecExtend x -> convertRecExtend x
+  V.BRecExtend x -> ConvertRecord.convertExtend x
   V.BGetField x -> convertGetField x
   V.BLeaf (V.LVar x) -> convertVar x
   V.BLeaf (V.LGlobal x) -> convertGlobal x
   V.BLeaf (V.LLiteralInteger x) -> convertVLiteralInteger x
   V.BLeaf V.LHole -> ConvertHole.convert
-  V.BLeaf V.LRecEmpty -> convertEmptyRecord
+  V.BLeaf V.LRecEmpty -> ConvertRecord.convertEmpty
 
 mkContext ::
   MonadA m =>

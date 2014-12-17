@@ -225,6 +225,7 @@ Executable lamdu
                ,       Lamdu.Sugar.Convert.Infer
                ,       Lamdu.Sugar.Convert.List
                ,       Lamdu.Sugar.Convert.Monad
+               ,       Lamdu.Sugar.Convert.Record
                ,       Lamdu.Sugar.EntityId
                ,       Lamdu.Sugar.Expression
                ,       Lamdu.Sugar.Internal
