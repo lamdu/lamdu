@@ -102,7 +102,7 @@ makeTInst _parentPrecedence (T.Id name) typeParams =
     nameView <- text (showIdentifier name)
     case Map.toList typeParams of
       [] -> pure nameView
-      ((_, arg) : []) ->
+      [(_, arg)] ->
         do
           argView <- splitMake (ParentPrecedence 0) arg
           addPadding $ hbox [nameView, space, argView]
@@ -137,27 +137,28 @@ addBackgroundFrame :: MonadA m => View -> M m View
 addBackgroundFrame v =
   v & addPadding >>= addBGColor
 
+makeEmptyRecord :: MonadA m => M m View
+makeEmptyRecord = text "Ø"
+
+makeField :: (MonadA m, Fractional a) => (T.Tag, Type) -> M m [(Vector2 a, View)]
+makeField (tag, fieldType) = do
+  name <- transaction $ Transaction.getP $ Anchors.assocNameRef tag
+  tagView <- text name
+  typeView <- splitMake (ParentPrecedence 0) fieldType
+  return
+    [ (Vector2 1 0.5, tagView)
+    , (0.5, space)
+    , (Vector2 0 0.5, typeView)
+    ]
+
 makeRecord :: MonadA m => T.Composite T.Product -> M m View
+makeRecord T.CEmpty = makeEmptyRecord
 makeRecord composite =
   do
-    rows <-
-      sequence $ do
-        (tag, fieldType) <- Map.toList fields
-        return $ do
-          name <- transaction $ Transaction.getP $ Anchors.assocNameRef tag
-          tagView <- text name
-          typeView <- splitMake (ParentPrecedence 0) fieldType
-          return
-            [ (Vector2 1 0.5, tagView)
-            , (0.5, space)
-            , (Vector2 0 0.5, typeView)
-            ]
+    fieldsView <- GridView.make <$> mapM makeField (Map.toList fields)
     let
-      fieldsView = GridView.make rows
-      barWidth =
-        case rows of
-        [] -> 150
-        _ -> fieldsView ^. Lens._1 . Lens._1
+      barWidth | Map.null fields = 150
+               | otherwise = fieldsView ^. Lens._1 . Lens._1
     varView <-
       case extension of
       Nothing -> pure (0, mempty)
