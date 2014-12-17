@@ -20,6 +20,7 @@ import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
+import Data.Function.Decycle (decycle)
 import Data.Store.IRef (IRef)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
@@ -93,9 +94,13 @@ writeValWithStoredSubexpressions iref expr = do
 
 readVal ::
   MonadA m => ValI m -> T m (Val (ValI m))
-readVal exprI =
-  fmap (Val exprI) .
-  traverse readVal =<< readValBody exprI
+readVal =
+  decycle loop
+  where
+    loop Nothing valI = error $ "Recursive reference: " ++ show valI
+    loop (Just go) valI =
+      fmap (Val valI) .
+      traverse go =<< readValBody valI
 
 expressionBodyFrom ::
   MonadA m =>
