@@ -97,19 +97,14 @@ afterPick holeInfo resultId pr = do
         | Lens.has (suffixed (Widget.toAnimId resultId)) unsuffixed -> animId
         | otherwise -> "obliterated" : animId
 
-makePaddedResult :: MonadA m => Result m -> ExprGuiM m (WidgetT m)
-makePaddedResult res = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  rHoleResult res
-    & ExprGuiM.transaction
-    >>= makeHoleResultWidget (rId res)
-    <&> (Widget.pad . fmap realToFrac . Config.holeResultPadding) config
-
 makeShownResult ::
   MonadA m => HoleInfo m -> Result m -> ExprGuiM m (Widget (T m), ShownResult m)
 makeShownResult holeInfo result = do
-  widget <- makePaddedResult result
   res <- ExprGuiM.transaction $ rHoleResult result
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  widget <-
+    makeHoleResultWidget (rId result) res
+    <&> (Widget.pad . fmap realToFrac . Config.holeResultPadding) config
   return
     ( widget & Widget.wEventMap .~ mempty
     , ShownResult
