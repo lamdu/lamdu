@@ -39,7 +39,6 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Scheme as Scheme
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -266,12 +265,12 @@ mkContext defI cp inferContext = do
     , _scRecordParamsInfos = mempty
     , _scReinferCheckDefinition =
         do
-          def <- Load.loadDefinitionClosure defI
-          case def ^. Definition.defBody of
+          defBody <- Transaction.readIRef defI
+          case defBody of
             Definition.BodyBuiltin {} -> return True
-            Definition.BodyExpr (Definition.Expr val _) ->
-              SugarInfer.loadInfer (val <&> Load.exprPropertyOfClosure)
-              & runMaybeT
+            Definition.BodyExpr (Definition.Expr valI _) ->
+              ExprIRef.readVal valI
+              >>= runMaybeT . SugarInfer.loadInfer
               <&> Lens.has Lens._Just
     , scConvertSubexpression = convertExpressionI
     }
@@ -636,11 +635,11 @@ makeExprDefTypeInfo defValI defI defType inferredType =
 
 convertDefIExpr ::
   MonadA m => Anchors.CodeProps m ->
-  Definition.Expr (Val (Load.ExprPropertyClosure m)) ->
+  Definition.Expr (Val (ExprIRef.ValIProperty m)) ->
   DefI m -> T m (DefinitionBody Guid m (ExpressionU m [EntityId]))
-convertDefIExpr cp (Definition.Expr valLoaded defType) defI = do
+convertDefIExpr cp (Definition.Expr val defType) defI = do
   (valInferred, newInferContext) <-
-    SugarInfer.loadInfer valIRefs
+    SugarInfer.loadInfer val
     <&> _1 . Lens.mapped %~ mkInputPayload
     & runMaybeT
     <&> fromMaybe (error "Type inference failed")
@@ -667,16 +666,13 @@ convertDefIExpr cp (Definition.Expr valLoaded defType) defI = do
       , _ipData = ()
       , _ipGuid = IRef.guid $ ExprIRef.unValI $ Property.value stored
       }
-    valIRefs = valLoaded <&> Load.exprPropertyOfClosure
-    exprI = valIRefs ^. V.payload . Property.pVal
+    exprI = val ^. V.payload . Property.pVal
     defGuid = IRef.guid defI
 
 convertDefI ::
   MonadA m =>
   Anchors.CodeProps m ->
-  -- TODO: Use DefinitionClosure?
-  Definition.Definition
-  (Val (Load.ExprPropertyClosure m)) (DefI m) ->
+  Definition.Definition (Val (ExprIRef.ValIProperty m)) (DefI m) ->
   T m (DefinitionU m [EntityId])
 convertDefI cp (Definition.Definition body defI) = do
   bodyS <- convertDefBody body

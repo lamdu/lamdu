@@ -11,6 +11,7 @@ import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Expr.IRef (DefI)
+import Lamdu.Expr.Load (loadDef)
 import Lamdu.Expr.Scheme (Scheme(..))
 import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
@@ -27,13 +28,12 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionEdit.DefinitionContentEdit as DefinitionContentEdit
-import qualified Lamdu.GUI.ExpressionGui.AddNextHoles as AddNextHoles
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
+import qualified Lamdu.GUI.ExpressionGui.AddNextHoles as AddNextHoles
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -156,8 +156,8 @@ loadConvertDefI ::
   MonadA m => Anchors.CodeProps m -> DefI m ->
   T m (DefinitionN m ExprGuiM.Payload)
 loadConvertDefI cp defI =
-  Load.loadDefinitionClosure defI >>=
-  SugarConvert.convertDefI cp
+  loadDef defI
+  >>= SugarConvert.convertDefI cp
   >>= AddNames.addToDef
   <&> fmap onVal
   <&> AddNextHoles.addToDef
