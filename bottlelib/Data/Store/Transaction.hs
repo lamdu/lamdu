@@ -4,7 +4,6 @@ module Data.Store.Transaction
   ( Transaction, run
   , Store(..), onStoreM
   , Changes, fork, merge
-  , forkScratch
   , lookupBS, lookup
   , insertBS, insert
   , delete, deleteIRef
@@ -95,11 +94,6 @@ run store (Transaction transaction) = do
     & (`runStateT` mempty)
   storeAtomicWrite store $ Map.toList changes
   return res
-
--- | Run the given transaction in a new "scratch" space forked from
--- the current transaction.
-forkScratch :: MonadA m => Transaction m a -> Transaction m a
-forkScratch = fmap fst . fork
 
 newtype Changes = Changes ChangesMap
 
