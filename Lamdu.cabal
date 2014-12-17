@@ -161,6 +161,7 @@ Executable lamdu
                ,       Lamdu.Expr.RecordVal
                ,       Lamdu.Expr.Scheme
                ,       Lamdu.Expr.Type
+               ,       Lamdu.Expr.Type.Match
                ,       Lamdu.Expr.TypeVars
                ,       Lamdu.Expr.UniqueId
                ,       Lamdu.Expr.Val
