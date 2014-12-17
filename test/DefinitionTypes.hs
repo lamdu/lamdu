@@ -2,14 +2,12 @@
 module DefinitionTypes (definitionTypes) where
 
 import Control.Applicative ((<$>))
-import Control.Lens.Operators
 import Data.Map (Map)
 import Data.Monoid (mappend)
 import Data.String (IsString(..))
 import Lamdu.Expr.Scheme (Scheme)
 import Lamdu.Expr.Type (Type, (~>))
 import qualified Data.Map as Map
-import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Map as MapStore
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors

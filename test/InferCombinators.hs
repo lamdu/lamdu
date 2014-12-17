@@ -6,9 +6,7 @@ import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Lens.Tuple
 import Data.Foldable (Foldable)
-import Data.Monoid (Monoid(..))
 import Data.Maybe (fromMaybe)
-import Data.String (IsString(..))
 import Data.Traversable (Traversable)
 import DefinitionTypes
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
@@ -21,7 +19,6 @@ import Text.PrettyPrint.HughesPJClass (Pretty(..))
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Lamdu.Expr.Scheme as S
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Text.PrettyPrint as PP

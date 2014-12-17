@@ -13,7 +13,6 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Property (property, rejected)
 import qualified Lamdu.Expr.Pure as P
-import qualified Lamdu.Expr.Scheme as S
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Infer.Error as InferErr
 
