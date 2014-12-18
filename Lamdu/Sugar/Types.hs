@@ -11,9 +11,10 @@ module Lamdu.Sugar.Types
     , _DefinitionExportedTypeInfo
     , _DefinitionNewType
   , Anchors.PresentationMode(..)
+  , BinderActions(..)
+    , baAddFirstParam, baAddInnermostWhereItem
   , Binder(..)
-    , dSetPresentationMode, dParams, dBody, dWhereItems
-    , dAddFirstParam, dAddInnermostWhereItem
+    , dSetPresentationMode, dParams, dBody, dWhereItems, dMActions
   , DefinitionBuiltin(..)
   , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
   , SetToHole(..), _SetToHole, _AlreadyAHole
@@ -316,13 +317,17 @@ data WhereItem name m expr = WhereItem
   , _wiActions :: Maybe (ListItemActions m)
   } deriving (Functor, Foldable, Traversable)
 
+data BinderActions m = BinderActions
+  { _baAddFirstParam :: T m EntityId
+  , _baAddInnermostWhereItem :: T m EntityId
+  }
+
 data Binder name m expr = Binder
   { _dSetPresentationMode :: Maybe (MkProperty m Anchors.PresentationMode)
   , _dParams :: [FuncParam name m]
   , _dBody :: expr
   , _dWhereItems :: [WhereItem name m expr]
-  , _dAddFirstParam :: T m EntityId
-  , _dAddInnermostWhereItem :: T m EntityId
+  , _dMActions :: Maybe (BinderActions m)
   } deriving (Functor, Foldable, Traversable)
 
 data AcceptNewType m = AcceptNewType
@@ -362,9 +367,10 @@ type DefinitionU m a = Definition Guid m (Expression Guid m a)
 Lens.makeLenses ''Actions
 Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''Apply
+Lens.makeLenses ''Binder
+Lens.makeLenses ''BinderActions
 Lens.makeLenses ''Body
 Lens.makeLenses ''Definition
-Lens.makeLenses ''Binder
 Lens.makeLenses ''DefinitionExpression
 Lens.makeLenses ''ExpressionP
 Lens.makeLenses ''FuncParam

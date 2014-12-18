@@ -138,9 +138,10 @@ make nameProp content myId = do
   rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
   let
     addFirstParamEventMap =
-      Widget.keysEventMapMovesCursor (Config.addNextParamKeys config)
-      (E.Doc ["Edit", "Add parameter"]) .
-      toEventMapAction $ content ^. Sugar.dAddFirstParam
+      maybe mempty
+      ( Widget.keysEventMapMovesCursor (Config.addNextParamKeys config)
+        (E.Doc ["Edit", "Add parameter"]) .
+        toEventMapAction ) $ mActions ^? Lens._Just . Sugar.baAddFirstParam
     nameEditEventMap = mappend addFirstParamEventMap rhsJumper
   defNameEdit <-
     makeDefNameEdit nameProp myId
@@ -154,10 +155,10 @@ make nameProp content myId = do
         (: []) <$>
         mkPresentationModeEdit setPresentationMode presentationChoiceId
   let
-    addWhereItemEventMap =
+    addWhereItemEventMap actions =
       Widget.keysEventMapMovesCursor (Config.addWhereItemKeys config)
       (E.Doc ["Edit", "Add where item"]) .
-      toEventMapAction $ savePos >> content ^. Sugar.dAddInnermostWhereItem
+      toEventMapAction $ savePos >> actions ^. Sugar.baAddInnermostWhereItem
     assignment =
       ExpressionGui.hboxSpaced $
       ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
@@ -166,11 +167,13 @@ make nameProp content myId = do
       [ ExpressionGui.fromValueWidget equals
       , bodyEdit
         & ExpressionGui.egWidget %~
-          Widget.weakerEvents addWhereItemEventMap
+          Widget.weakerEvents
+          (maybe mempty addWhereItemEventMap mActions)
       ]
   wheres <- makeWheres (content ^. Sugar.dWhereItems) myId
   return $ Box.vboxAlign 0 $ assignment ^. ExpressionGui.egWidget : wheres
   where
+    mActions = content ^. Sugar.dMActions
     presentationChoiceId = Widget.joinId myId ["presentation"]
     lhs = myId : map (WidgetIds.fromEntityId . (^. Sugar.fpId)) params
     rhs = ("Def Body", body)

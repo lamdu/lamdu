@@ -419,12 +419,15 @@ makeBinder setPresentationMode convParams funcBody =
           & rPayload . plData <>~
             cpHiddenPayloads convParams ^. Lens.traversed . ipData
         , _dWhereItems = whereItems
-        , _dAddFirstParam = cpAddFirstParam convParams
-        , _dAddInnermostWhereItem =
-          fmap (EntityId.ofLambdaParam . fst) . DataOps.redexWrap $
-          fromMaybe (error "Where must be stored") $
-          whereBody ^. V.payload . ipStored
+        , _dMActions = mkActions <$> whereBody ^. V.payload . ipStored
         }
+  where
+    mkActions whereStored =
+      BinderActions
+      { _baAddFirstParam = cpAddFirstParam convParams
+      , _baAddInnermostWhereItem =
+          EntityId.ofLambdaParam . fst <$> DataOps.redexWrap whereStored
+      }
 
 convertLam ::
   (MonadA m, Monoid a) =>
