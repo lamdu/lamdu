@@ -402,8 +402,8 @@ holeWrap resultType val =
     func = Val (pl & _1 . Infer.plType .~ funcType) $ V.BLeaf V.LHole
     funcType = T.TFun (pl ^. _1 . Infer.plType) resultType
 
-replaceEachHole :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
-replaceEachHole replaceHole =
+replaceEachUnwrappedHole :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
+replaceEachUnwrappedHole replaceHole =
   map fst . filter snd . (`runStateT` False) . go
   where
     go oldVal@(Val x body) = do
@@ -414,12 +414,20 @@ replaceEachHole replaceHole =
           case body of
           V.BLeaf V.LHole ->
             join $ lift
-              [ do
-                  State.put True
-                  return $ replaceHole x
-              , return (pure oldVal)
+              [ replace x
+              , return $ pure oldVal
               ]
-          _ -> fmap (Val x) . sequenceA <$> traverse go body
+          V.BApp (V.Apply (Val f (V.BLeaf V.LHole)) arg@(Val _ (V.BLeaf V.LHole))) ->
+            join $ lift
+              [ replace f
+                <&> fmap (Val x . V.BApp . (`V.Apply` arg))
+              , return $ pure oldVal
+              ]
+          _ -> traverse go body <&> fmap (Val x) . sequenceA
+    replace x =
+      do
+        State.put True
+        return $ replaceHole x
 
 stateEitherSequence :: Monad m => StateT s (Either l) r -> StateT s m (Either l r)
 stateEitherSequence (StateT f) =
@@ -437,7 +445,7 @@ holeResultsInject injectedArg val =
     (Monoid.First (Just injectPointPl), filledVal) <-
       val
       & markNotInjected
-      & replaceEachHole inject
+      & replaceEachUnwrappedHole inject
       & ListClass.fromList
       & lift
     unify injectedType (injectPointPl ^. _1 . Infer.plType)

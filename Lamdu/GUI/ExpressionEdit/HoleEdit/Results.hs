@@ -245,6 +245,13 @@ makeAllGroups holeInfo = do
           ^.. Lens._Just
           . Sugar.haExpr . Sugar.rPayload . Sugar.plInferredType
           . ExprLens._TRecord . ExprLens.compositeTags
+      ] ++
+      [ Group
+        { _groupSearchTerms = GroupAttributes ["apply"] HighPrecedence
+        , _groupBaseExpr =
+            Val () $ V.BApp $ V.Apply P.hole P.hole
+        }
+      | _ <- hiMArgument holeInfo ^.. Lens._Just
       ]
     addSuggestedGroups groups =
       let
