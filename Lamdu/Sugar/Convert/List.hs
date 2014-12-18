@@ -17,6 +17,7 @@ import Data.Monoid (Monoid(..), (<>))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable(..))
 import Lamdu.Expr.Val (Val(..))
+import Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
@@ -29,7 +30,6 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.RecordVal as RecordVal
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
-import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
@@ -47,7 +47,7 @@ nil globId exprPl = do
       { addFirstItem = mkListAddFirstItem specialFunctions exprS
       , replaceNil = EntityId.ofValI <$> DataOps.setToHole exprS
       }
-  (lift . ConvertExpr.make exprPl . BodyList)
+  (lift . addActions exprPl . BodyList)
     List
     { lValues = []
     , lMActions = mkListActions <$> exprPl ^. ipStored
@@ -141,6 +141,6 @@ cons (V.Apply funcI argI) argS exprPl = do
         { addFirstItem = mkListAddFirstItem specialFunctions exprS
         , replaceNil = replaceNil innerListActions
         }
-  lift . ConvertExpr.make exprPl . BodyList $
+  lift . addActions exprPl . BodyList $
     List (listItem : innerValues) mListActions nilGuid
     <&> rPayload . plData <>~ (pls ^. traverse . ipData)

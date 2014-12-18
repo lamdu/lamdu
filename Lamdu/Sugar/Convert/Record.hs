@@ -11,6 +11,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Lamdu.Expr.Val (Val(..))
+import Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
@@ -21,7 +22,6 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
-import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
@@ -99,7 +99,7 @@ convertEmpty exprPl = do
         fmap EntityId.ofValI . DataOps.replaceWithHole <$> exprPl ^. ipStored
     , _rMAddField = mAddField
     }
-    & ConvertExpr.make exprPl
+    & addActions exprPl
 
 convertExtend ::
   (MonadA m, Monoid a) => V.RecExtend (Val (InputPayload m a)) ->
@@ -122,5 +122,5 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
   restRecord
     & rItems %~ (fieldS:)
     & BodyRecord
-    & ConvertExpr.make exprPl
+    & addActions exprPl
     <&> rPayload . plData <>~ hiddenEntities

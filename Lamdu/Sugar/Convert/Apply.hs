@@ -18,6 +18,7 @@ import Data.Traversable (traverse)
 import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Infer.Unify (unify)
+import Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
@@ -33,7 +34,6 @@ import qualified Lamdu.Expr.RecordVal as RecordVal
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -117,7 +117,7 @@ convertLabeled funcS argS argI exprPl = do
     , _aSpecialArgs = specialArgs
     , _aAnnotatedArgs = annotatedArgs
     }
-    & lift . ConvertExpr.make exprPl
+    & lift . addActions exprPl
     <&> rPayload %~
       ( plData <>~ (argS ^. rPayload . plData) ) .
       ( plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
@@ -130,7 +130,7 @@ convertPrefix ::
   ExpressionU m a -> ExpressionU m a ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertPrefix funcS argS applyPl =
-  ConvertExpr.make applyPl $ BodyApply Apply
+  addActions applyPl $ BodyApply Apply
   { _aFunc = funcS
   , _aSpecialArgs = ObjectArg argS
   , _aAnnotatedArgs = []
