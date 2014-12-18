@@ -42,7 +42,7 @@ make parentPrecedence binder pl =
         [ ExpressionGui.fromValueWidget dotLabel
         , bodyEdit
         ]
-        & ExpressionGui.hbox
+        & ExpressionGui.hboxSpaced
         & ExpressionGui.addBelow 0 [(0, wheres)]
         & return
   where
