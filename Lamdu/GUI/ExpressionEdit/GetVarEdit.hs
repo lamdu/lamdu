@@ -1,5 +1,5 @@
 module Lamdu.GUI.ExpressionEdit.GetVarEdit
-  ( make, makeUncoloredView, makeView
+  ( make
   ) where
 
 import Control.Applicative ((<$>))
