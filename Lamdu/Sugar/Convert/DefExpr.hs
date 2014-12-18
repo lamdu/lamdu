@@ -44,6 +44,7 @@ mkContext defI cp inferContext = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   return Context
     { _scInferContext = inferContext
+    , _scDefI = defI
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
     , _scTagParamInfos = mempty

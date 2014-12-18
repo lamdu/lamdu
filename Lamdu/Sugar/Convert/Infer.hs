@@ -20,12 +20,14 @@ import Lamdu.Infer (Infer)
 import Lamdu.Infer.Load (Loader(..))
 import Lamdu.Infer.Unify (unify)
 import Lamdu.Infer.Update (updateInferredVal)
+import Lamdu.Sugar.Internal
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Load as InferLoad
+import qualified Lamdu.Infer.Recursive as Recursive
 
 type T = Transaction
 
@@ -71,5 +73,6 @@ loadInfer ::
   MonadA m => Val a ->
   MaybeT (T m) (Val (Infer.Payload, a), Infer.Context)
 loadInfer val =
-  loadInferScope Infer.emptyScope val
+  liftInfer (Recursive.inferEnv recurseGetVar Infer.emptyScope)
+  >>= (`loadInferInto` val)
   & (`runStateT` Infer.initialContext)

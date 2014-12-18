@@ -50,6 +50,7 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -114,12 +115,12 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
   pure HoleActions
     { _holePaste = mPaste
     , _holeScope =
-      -- We wrap this in a (T m) so that AddNames can place the
+      return $
+      -- ^ We wrap this in a (T m) so that AddNames can place the
       -- name-getting penalty under a transaction that the GUI may
       -- avoid using
-      pure $
       (concatMap (getLocalScopeItems sugarContext) . Map.toList . Infer.scopeToTypeMap) inferredScope ++
-      map getGlobalScopeItem globals
+      map getGlobalScopeItem (filter (/= sugarContext ^. ConvertM.scDefI) globals)
     , _holeResults = mkHoleResults mInjectedArg sugarContext exprPl stored
     , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
     }
@@ -187,40 +188,22 @@ mkHole mInjectedArg exprPl = do
     }
 
 getLocalScopeItems ::
-  MonadA m => ConvertM.Context m ->
-  (V.Var, Type) -> [ScopeItem Guid m]
+  MonadA m => ConvertM.Context m -> (V.Var, Type) -> [ScopeItem Guid m]
 getLocalScopeItems sugarContext (par, typeExpr) =
-  getPar :
+  ScopeItem
+  { _siGetVar = ConvertGetVar.convertVar sugarContext par
+  , _siVal = getParam
+  } :
   map onScopeField
   (typeExpr ^.. ExprLens._TRecord . ExprLens.compositeTags)
   where
-    getPar =
-      ScopeItem
-      { _siGetVar =
-        case Map.lookup par recordParamsMap of
-        Just (ConvertM.RecordParamsInfo defName jumpTo) ->
-          GetVar
-          { _gvName = defName
-          , _gvJumpTo = jumpTo
-          , _gvVarType = GetParamsRecord
-          }
-        Nothing ->
-          GetVar
-          { _gvName = UniqueId.toGuid par
-          , _gvJumpTo = errorJumpTo
-          , _gvVarType = GetParameter
-          }
-      , _siVal = getParam
-      }
-    recordParamsMap = sugarContext ^. ConvertM.scRecordParamsInfos
-    errorJumpTo = error "Jump to on scope item??"
     getParam = P.var par
     onScopeField tag =
       ScopeItem
       { _siGetVar =
         GetVar
         { _gvName = UniqueId.toGuid tag
-        , _gvJumpTo = errorJumpTo
+        , _gvJumpTo = error "Jump to on scope item??"
         , _gvVarType = GetFieldParameter
         }
       , _siVal = P.getField getParam tag

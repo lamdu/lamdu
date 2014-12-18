@@ -210,6 +210,7 @@ Executable lamdu
                ,       Lamdu.Infer.Internal.Scope
                ,       Lamdu.Infer.Internal.Subst
                ,       Lamdu.Infer.Load
+               ,       Lamdu.Infer.Recursive
                ,       Lamdu.Infer.Unify
                ,       Lamdu.Infer.Update
                ,       Lamdu.Main
@@ -223,6 +224,7 @@ Executable lamdu
                ,       Lamdu.Sugar.Convert.DefExpr
                ,       Lamdu.Sugar.Convert.Expression
                ,       Lamdu.Sugar.Convert.Expression.Actions
+               ,       Lamdu.Sugar.Convert.GetVar
                ,       Lamdu.Sugar.Convert.Hole
                ,       Lamdu.Sugar.Convert.Infer
                ,       Lamdu.Sugar.Convert.List

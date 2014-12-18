@@ -36,6 +36,7 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
+import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -129,29 +130,6 @@ convertLam lam@(V.Lam paramVar lamBody) exprPl = do
     & addActions exprPl
     <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
 
-convertVar ::
-  MonadA m => V.Var ->
-  InputPayload m a -> ConvertM m (ExpressionU m a)
-convertVar param exprPl = do
-  recordParamsMap <- (^. ConvertM.scRecordParamsInfos) <$> ConvertM.readContext
-  let
-    body =
-      BodyGetVar $
-      case Map.lookup param recordParamsMap of
-      Just (ConvertM.RecordParamsInfo defName jumpTo) ->
-        GetVar
-        { _gvName = defName
-        , _gvJumpTo = jumpTo
-        , _gvVarType = GetParamsRecord
-        }
-      Nothing ->
-        GetVar
-        { _gvName = UniqueId.toGuid param
-        , _gvJumpTo = pure $ EntityId.ofLambdaParam param
-        , _gvVarType = GetParameter
-        }
-  addActions exprPl body
-
 jumpToDefI ::
   MonadA m => Anchors.CodeProps m -> DefI m -> T m EntityId
 jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
@@ -213,6 +191,13 @@ convertGlobal globalId exprPl =
     where
       defI = ExprIRef.defI globalId
 
+convertGetVar ::
+  MonadA m =>
+  V.Var -> InputPayload m a -> ConvertM m (ExpressionU m a)
+convertGetVar param exprPl = do
+  sugarContext <- ConvertM.readContext
+  addActions exprPl $ BodyGetVar $ ConvertGetVar.convertVar sugarContext param
+
 convert :: (MonadA m, Monoid a) => Val (InputPayload m a) -> ConvertM m (ExpressionU m a)
 convert v =
   ($ v ^. V.payload) $
@@ -221,7 +206,7 @@ convert v =
   V.BApp x -> ConvertApply.convert x
   V.BRecExtend x -> ConvertRecord.convertExtend x
   V.BGetField x -> convertGetField x
-  V.BLeaf (V.LVar x) -> convertVar x
+  V.BLeaf (V.LVar x) -> convertGetVar x
   V.BLeaf (V.LGlobal x) -> convertGlobal x
   V.BLeaf (V.LLiteralInteger x) -> convertVLiteralInteger x
   V.BLeaf V.LHole -> ConvertHole.convert
