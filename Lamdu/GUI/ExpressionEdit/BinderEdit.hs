@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
-  ( make, diveToNameEdit, makeNameEdit, makeParamsEdit, makeWheres
+  ( make, diveToNameEdit, makeNameEdit, makeParamsEdit, makeResultEdit, makeWheres
   ) where
 
 import Control.Applicative ((<$>), (<$))

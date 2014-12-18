@@ -31,9 +31,9 @@ make parentPrecedence binder pl =
     do
       lambdaLabel <- ExprGuiM.widgetEnv $ BWidgets.grammarLabel "λ" myId
       paramEdits <-
-        BinderEdit.makeParamsEdit showParamType bodyId (binder ^. Sugar.dParams)
+        BinderEdit.makeParamsEdit showParamType bodyId params
       dotLabel <- ExprGuiM.widgetEnv $ BWidgets.grammarLabel ". " myId
-      bodyEdit <- ExprGuiM.makeSubexpression 0 body
+      bodyEdit <- BinderEdit.makeResultEdit (binder ^. Sugar.dMActions) params body myId
       wheres <-
         BinderEdit.makeWheres (binder ^. Sugar.dWhereItems) myId
         <&> Box.vboxAlign 0
@@ -46,6 +46,7 @@ make parentPrecedence binder pl =
         & ExpressionGui.addBelow 0 [(0, wheres)]
         & return
   where
+    params = binder ^. Sugar.dParams
     body = binder ^. Sugar.dBody
     -- We show the param type instead of the lambda type
     showParamType = pl ^. Sugar.plData . ExprGuiM.plShowType
