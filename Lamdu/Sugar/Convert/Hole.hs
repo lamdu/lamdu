@@ -81,24 +81,15 @@ mkPaste ::
 mkPaste exprP = do
   clipboardsP <- ConvertM.codeAnchor Anchors.clipboards
   clipboards <- ConvertM.getP clipboardsP
-  let
-    mClipPop =
-      case clipboards of
-      [] -> Nothing
-      (clip : clips) -> Just (clip, Transaction.setP clipboardsP clips)
-  return $ doPaste (Property.set exprP) <$> mClipPop
-  where
-    doPaste replacer (clipDefI, popClip) = do
-      clipDef <- Transaction.readIRef clipDefI
-      let
-        clip =
-          case clipDef of
-          Definition.BodyExpr (Definition.Expr defExpr _) -> defExpr
-          _ -> error "Clipboard contained a non-expression definition!"
-      Transaction.deleteIRef clipDefI
-      ~() <- popClip
-      ~() <- replacer clip
-      return $ EntityId.ofValI clip
+  typeProtectedSetToVal <- ConvertM.typeProtectedSetToVal
+  case clipboards of
+    [] -> return Nothing
+    (clipDefI : clips) ->
+      return $ Just $ do
+        Definition.BodyExpr (Definition.Expr pasteExpr _) <- Transaction.readIRef clipDefI
+        Transaction.deleteIRef clipDefI
+        Transaction.setP clipboardsP clips
+        EntityId.ofValI <$> typeProtectedSetToVal exprP pasteExpr
 
 mkWritableHoleActions ::
   (MonadA m) =>
