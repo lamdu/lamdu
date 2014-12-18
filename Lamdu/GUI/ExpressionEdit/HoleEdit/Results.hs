@@ -56,7 +56,7 @@ instance Monoid GroupAttributes where
   mappend = def_mappend
 
 data Group def = Group
-  { _groupSearchTerms :: GroupAttributes
+  { _groupAttributes :: GroupAttributes
   , _groupBaseExpr :: Val ()
   }
 type GroupM m = Group (DefI m)
@@ -92,11 +92,11 @@ getVarsToGroup (getVar, expr) = sugarNameToGroup (getVar ^. Sugar.gvName) expr
 getParamsToGroup :: (Sugar.GetParams (Name m) m, Val ()) -> Group def
 getParamsToGroup (getParams, expr) =
   sugarNameToGroup (getParams ^. Sugar.gpDefName) expr
-  & groupSearchTerms <>~ GroupAttributes ["params"] HighPrecedence
+  & groupAttributes <>~ GroupAttributes ["params"] HighPrecedence
 
 sugarNameToGroup :: Name m -> Val () -> Group def
 sugarNameToGroup (Name _ collision _ varName) expr = Group
-  { _groupSearchTerms = GroupAttributes (varName : collisionStrs) HighPrecedence
+  { _groupAttributes = GroupAttributes (varName : collisionStrs) HighPrecedence
   , _groupBaseExpr = expr
   }
   where
@@ -159,7 +159,7 @@ makeResultsList holeInfo group =
   <&> Lens.mapped %~ rlPreferred .~ toPreferred
   where
     toPreferred
-      | Lens.anyOf groupSearchTerms (preferFor searchTerm) group = Preferred
+      | Lens.anyOf groupAttributes (preferFor searchTerm) group = Preferred
       | otherwise = NotPreferred
     searchTerm = hiSearchTerm holeInfo
     baseExpr = group ^. groupBaseExpr
@@ -222,21 +222,21 @@ makeAllGroups holeInfo = do
       , globalsGroups
       , getParamsGroups
       ]
-    sortedGroups f  = sortOn (^. groupSearchTerms . searchTerms) . map f
+    sortedGroups f  = sortOn (^. groupAttributes . searchTerms) . map f
     localsGroups    = sortedGroups getVarsToGroup locals
     globalsGroups   = sortedGroups getVarsToGroup globals
     getParamsGroups = sortedGroups getParamsToGroup getParams
-  pure $ holeMatches (^. groupSearchTerms) (hiSearchTerm holeInfo) allGroups
+  pure $ holeMatches (^. groupAttributes) (hiSearchTerm holeInfo) allGroups
   where
     suggestedGroups =
       [ Group
-        { _groupSearchTerms = GroupAttributes ["suggested"] HighPrecedence
+        { _groupAttributes = GroupAttributes ["suggested"] HighPrecedence
         , _groupBaseExpr = suggestedVal
         }
       | Lens.nullOf ExprLens.valHole suggestedVal
       ] ++
       [ Group
-        { _groupSearchTerms = GroupAttributes ["get field", "."] HighPrecedence
+        { _groupAttributes = GroupAttributes ["get field", "."] HighPrecedence
         , _groupBaseExpr =
             Val () $ V.BGetField $ V.GetField P.hole tag
         }
@@ -247,7 +247,7 @@ makeAllGroups holeInfo = do
           . ExprLens._TRecord . ExprLens.compositeTags
       ] ++
       [ Group
-        { _groupSearchTerms = GroupAttributes ["apply"] HighPrecedence
+        { _groupAttributes = GroupAttributes ["apply"] HighPrecedence
         , _groupBaseExpr =
             Val () $ V.BApp $ V.Apply P.hole P.hole
         }
@@ -257,9 +257,9 @@ makeAllGroups holeInfo = do
       let
         (dupsOfSuggested, others) =
           List.partition (V.alphaEq suggestedVal . (^. groupBaseExpr)) groups
-        dupsGroupNames = dupsOfSuggested ^. Lens.traverse . groupSearchTerms
+        dupsGroupNames = dupsOfSuggested ^. Lens.traverse . groupAttributes
       in
-        ( suggestedGroups & Lens.traverse . groupSearchTerms <>~ dupsGroupNames
+        ( suggestedGroups & Lens.traverse . groupAttributes <>~ dupsGroupNames
         ) ++ others
     suggestedVal = hiSuggested holeInfo ^. Sugar.hsValue
 
@@ -277,7 +277,7 @@ primitiveGroups holeInfo =
   where
     searchTerm = hiSearchTerm holeInfo
     mkGroupBody prec terms body = Group
-      { _groupSearchTerms = GroupAttributes terms prec
+      { _groupAttributes = GroupAttributes terms prec
       , _groupBaseExpr = Val () body
       }
 
