@@ -95,7 +95,7 @@ convert cp (Definition.Expr val defType) defI = do
     content <-
       valInferred
       <&> addStoredEntityIds
-      & ConvertBinder.convertBinder defGuid (ConvertExpr.jumpToDefI cp defI) mempty
+      & ConvertBinder.convertBinder defGuid (ConvertExpr.jumpToDefI cp defI)
     return $ DefinitionBodyExpression DefinitionExpression
       { _deContent = content
       , _deTypeInfo =

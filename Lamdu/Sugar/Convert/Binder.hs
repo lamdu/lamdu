@@ -12,7 +12,7 @@ import Control.MonadA (MonadA)
 import Data.List.Utils (isLengthAtLeast)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
-import Data.Monoid (Monoid(..), (<>))
+import Data.Monoid (Monoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction, MkProperty)
@@ -209,14 +209,15 @@ convertPositionalFuncParam (V.Lam param body) lamExprPl =
 
 convertLamParams ::
   (MonadA m, Monoid a) =>
-  ConvertM.RecordParamsInfo m -> Set T.Tag ->
+  ConvertM.RecordParamsInfo m ->
   V.Lam (Val (InputPayload m a)) -> InputPayload m a ->
   ConvertM m (ConventionalParams m a)
-convertLamParams recordParamsInfo usedTags lambda@(V.Lam paramVar body) lambdaPl =
+convertLamParams recordParamsInfo lambda@(V.Lam paramVar body) lambdaPl =
   do
     param <-
       convertPositionalFuncParam lambda lambdaPl
       <&> fpHiddenIds <>~ [lambdaPl ^. ipEntityId]
+    usedTags <- ConvertM.readContext <&> Map.keysSet . (^. ConvertM.scTagParamInfos)
     case T.TVar undefined of -- TODO: we should read associated data for param list
       T.TRecord composite
         | Nothing <- extension
@@ -240,17 +241,17 @@ convertLamParams recordParamsInfo usedTags lambda@(V.Lam paramVar body) lambdaPl
 
 convertParams ::
   (MonadA m, Monoid a) =>
-  ConvertM.RecordParamsInfo m -> Set T.Tag -> Val (InputPayload m a) ->
+  ConvertM.RecordParamsInfo m -> Val (InputPayload m a) ->
   ConvertM m
   ( ConventionalParams m a
   , Val (InputPayload m a)
   )
-convertParams recordParamsInfo usedTags expr =
+convertParams recordParamsInfo expr =
   case expr ^. V.body of
   V.BAbs lambda ->
     do
       params <-
-        convertLamParams recordParamsInfo usedTags lambda (expr ^. V.payload)
+        convertLamParams recordParamsInfo lambda (expr ^. V.payload)
       return (params, lambda ^. V.lamResult)
   _ -> return (emptyConventionalParams stored, expr)
   where
@@ -349,10 +350,9 @@ deleteParamRef = onMatchingSubexprs toHole . const . isGetParamOf
 
 convertWhereItems ::
   (MonadA m, Monoid a) =>
-  Set T.Tag ->
   Val (InputPayload m a) ->
   ConvertM m ([WhereItem Guid m (ExpressionU m a)], Val (InputPayload m a))
-convertWhereItems usedTags expr =
+convertWhereItems expr =
   case mExtractWhere expr of
   Nothing -> return ([], expr)
   Just ewi -> do
@@ -362,7 +362,7 @@ convertWhereItems usedTags expr =
       defEntityId = EntityId.ofLambdaParam param
     value <-
       convertBinder defGuid
-      (pure defEntityId) usedTags
+      (pure defEntityId)
       (ewiArg ewi)
     let
       mkWIActions topLevelProp bodyStored =
@@ -386,7 +386,7 @@ convertWhereItems usedTags expr =
         , _wiName = UniqueId.toGuid param
         , _wiInferredType = ewiInferredType ewi
         }
-    (nextItems, whereBody) <- convertWhereItems usedTags $ ewiBody ewi
+    (nextItems, whereBody) <- convertWhereItems $ ewiBody ewi
     return (item : nextItems, whereBody)
 
 -- addFirstFieldParam :: MonadA m => Guid -> ExprIRef.ValI m -> T m Guid
@@ -401,16 +401,15 @@ convertWhereItems usedTags expr =
 --     _ -> pure $ ExprIRef.valIGuid recordI
 
 makeBinder :: (MonadA m, Monoid a) =>
-  Set T.Tag -> Maybe (MkProperty m PresentationMode) ->
+  Maybe (MkProperty m PresentationMode) ->
   ConventionalParams m a -> Val (InputPayload m a) ->
   ConvertM m (Binder Guid m (ExpressionU m a))
-makeBinder usedTags setPresentationMode convParams funcBody =
+makeBinder setPresentationMode convParams funcBody =
   ConvertM.local
   ((ConvertM.scTagParamInfos <>~ cpParamInfos convParams) .
   (ConvertM.scRecordParamsInfos <>~ cpRecordParamsInfos convParams)) $
     do
-      (whereItems, whereBody) <-
-        convertWhereItems (usedTags <> cpTags convParams) funcBody
+      (whereItems, whereBody) <- convertWhereItems funcBody
       bodyS <- ConvertM.convertSubexpression whereBody
       return Binder
         { _dParams = cpParams convParams
@@ -429,27 +428,26 @@ makeBinder usedTags setPresentationMode convParams funcBody =
 
 convertLam ::
   (MonadA m, Monoid a) =>
-  Set T.Tag ->
   V.Lam (Val (InputPayload m a)) -> InputPayload m a ->
   ConvertM m (Binder Guid m (ExpressionU m a))
-convertLam usedTags lam pl =
+convertLam lam pl =
   do
-    convParams <- convertLamParams (error "no RecordParamsInfo") usedTags lam pl
-    makeBinder usedTags Nothing convParams $ lam ^. V.lamResult
+    convParams <- convertLamParams (error "no RecordParamsInfo") lam pl
+    makeBinder Nothing convParams $ lam ^. V.lamResult
 
 convertBinder ::
   (MonadA m, Monoid a) =>
-  Guid -> T m EntityId -> Set T.Tag -> Val (InputPayload m a) ->
+  Guid -> T m EntityId -> Val (InputPayload m a) ->
   ConvertM m (Binder Guid m (ExpressionU m a))
-convertBinder defGuid jumpToDef usedTags expr =
+convertBinder defGuid jumpToDef expr =
   do
     (convParams, funcBody) <-
       convertParams
       (ConvertM.RecordParamsInfo (UniqueId.toGuid defGuid) jumpToDef)
-      usedTags expr
+      expr
     let
       setPresentationMode
         | isLengthAtLeast 2 (cpParams convParams) =
           Just $ Anchors.assocPresentationMode defGuid
         | otherwise = Nothing
-    makeBinder usedTags setPresentationMode convParams funcBody
+    makeBinder setPresentationMode convParams funcBody

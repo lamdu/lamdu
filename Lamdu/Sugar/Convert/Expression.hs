@@ -45,7 +45,7 @@ convertLam ::
   InputPayload m a -> ConvertM m (ExpressionU m a)
 convertLam lam@(V.Lam paramVar lamBody) exprPl =
   do
-    binder <- ConvertBinder.convertLam mempty lam exprPl
+    binder <- ConvertBinder.convertLam lam exprPl
     protectedSetToVal <- ConvertM.typeProtectedSetToVal
     let
       setToInnerExprAction =
