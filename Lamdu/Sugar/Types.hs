@@ -1,4 +1,4 @@
-{-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes, DeriveGeneric #-}
+{-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes #-}
 module Lamdu.Sugar.Types
   ( EntityId
   , Definition(..), drEntityId, drName, drBody
@@ -48,8 +48,7 @@ module Lamdu.Sugar.Types
   , HoleSuggested(..), hsValue, hsMakeConverted
   , Hole(..)
     , holeMActions, holeMArg, holeSuggested, holeGuid
-  , ScopeItem
-  , Scope(..), scopeLocals, scopeGlobals, scopeGetParams
+  , ScopeItem(..), siGetVar, siVal
   , HoleActions(..)
     , holeScope, holePaste, holeResults
   , HoleResultScore
@@ -67,11 +66,9 @@ module Lamdu.Sugar.Types
 import Control.Monad.ListT (ListT)
 import Data.Foldable (Foldable)
 import Data.Monoid (Monoid(..))
-import Data.Monoid.Generic (def_mempty, def_mappend)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction, MkProperty)
 import Data.Traversable (Traversable)
-import GHC.Generics (Generic)
 import Lamdu.Expr.Scheme (Scheme)
 import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val)
@@ -186,19 +183,13 @@ data HoleResult name m = HoleResult
   , _holeResultHasHoles :: Bool
   }
 
-type ScopeItem a = (a, Val ())
-
-data Scope name m = Scope
-  { _scopeLocals    :: [ScopeItem (GetVar name m)]
-  , _scopeGlobals   :: [ScopeItem (GetVar name m)]
-  , _scopeGetParams :: [ScopeItem (GetVar name m)]
-  } deriving (Generic)
-instance Monoid (Scope name m) where
-  mempty = def_mempty
-  mappend = def_mappend
+data ScopeItem name m = ScopeItem
+  { _siGetVar :: GetVar name m
+  , _siVal :: Val ()
+  }
 
 data HoleActions name m = HoleActions
-  { _holeScope :: T m (Scope name m)
+  { _holeScope :: T m [ScopeItem name m]
   , _holeResults ::
       Val () -> ListT (T m) (HoleResultScore, T m (HoleResult name m))
   , _holePaste :: Maybe (T m EntityId)
@@ -399,7 +390,7 @@ Lens.makeLenses ''Payload
 Lens.makeLenses ''PickedResult
 Lens.makeLenses ''Record
 Lens.makeLenses ''RecordField
-Lens.makeLenses ''Scope
+Lens.makeLenses ''ScopeItem
 Lens.makeLenses ''TagG
 Lens.makeLenses ''WhereItem
 Lens.makePrisms ''Body

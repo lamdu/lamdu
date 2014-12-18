@@ -24,7 +24,6 @@ import Lamdu.Expr.Val (Val(..))
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument, hiActiveId)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.AddNames.Types (Name(..), NameCollision(..))
-import Lamdu.Sugar.Types (Scope(..))
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.List as List
@@ -86,8 +85,8 @@ data ResultsList m = ResultsList
   }
 Lens.makeLenses ''ResultsList
 
-getVarsToGroup :: (Sugar.GetVar (Name m) m, Val ()) -> Group def
-getVarsToGroup (getVar, expr) =
+getVarToGroup :: Sugar.ScopeItem (Name n) m -> Group def
+getVarToGroup (Sugar.ScopeItem getVar expr) =
   sugarNameToGroup (getVar ^. Sugar.gvName) expr
   & groupAttributes <>~ extraGroupAttributes
   where
@@ -208,26 +207,28 @@ makeAll config holeInfo = do
     resultList = ListClass.catMaybes allGroupsList
   ExprGuiM.transaction $ collectResults config resultList
 
+getVarTypesOrder :: [Sugar.GetVarType]
+getVarTypesOrder =
+  [ Sugar.GetParameter
+  , Sugar.GetFieldParameter
+  , Sugar.GetDefinition
+  , Sugar.GetParamsRecord
+  ]
+
 makeAllGroups :: MonadA m => HoleInfo m -> T m [GroupM m]
 makeAllGroups holeInfo = do
-  Scope
-    { _scopeLocals = locals
-    , _scopeGlobals = globals
-    , _scopeGetParams = getParams
-    } <- hiActions holeInfo ^. Sugar.holeScope
+  scopeItems <- hiActions holeInfo ^. Sugar.holeScope
   let
     allGroups =
       addSuggestedGroups $
+      primitiveGroups holeInfo ++
       concat
-      [ primitiveGroups holeInfo
-      , localsGroups
-      , globalsGroups
-      , getParamsGroups
+      [ scopeItems
+        & filter ((gvType ==) . (^. Sugar.siGetVar . Sugar.gvVarType))
+        & map getVarToGroup
+        & sortOn (^. groupAttributes . searchTerms)
+      | gvType <- getVarTypesOrder
       ]
-    sortedGroups f  = sortOn (^. groupAttributes . searchTerms) . map f
-    localsGroups    = sortedGroups getVarsToGroup locals
-    globalsGroups   = sortedGroups getVarsToGroup globals
-    getParamsGroups = sortedGroups getVarsToGroup getParams
   pure $ holeMatches (^. groupAttributes) (hiSearchTerm holeInfo) allGroups
   where
     suggestedGroups =

@@ -114,10 +114,12 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
   pure HoleActions
     { _holePaste = mPaste
     , _holeScope =
-      mconcat . concat <$> sequence
-      [ mapM (getScopeElement sugarContext) $ Map.toList $ Infer.scopeToTypeMap inferredScope
-      , mapM getGlobal globals
-      ]
+      -- We wrap this in a (T m) so that AddNames can place the
+      -- name-getting penalty under a transaction that the GUI may
+      -- avoid using
+      pure $
+      (concatMap (getLocalScopeItems sugarContext) . Map.toList . Infer.scopeToTypeMap) inferredScope ++
+      map getGlobalScopeItem globals
     , _holeResults = mkHoleResults mInjectedArg sugarContext exprPl stored
     , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
     }
@@ -184,65 +186,58 @@ mkHole mInjectedArg exprPl = do
     , _holeMArg = Nothing
     }
 
-getScopeElement ::
+getLocalScopeItems ::
   MonadA m => ConvertM.Context m ->
-  (V.Var, Type) -> T m (Scope Guid m)
-getScopeElement sugarContext (par, typeExpr) = do
-  scopePar <- mkGetPar
-  mconcat . (scopePar :) <$>
-    mapM onScopeField
-    (typeExpr ^.. ExprLens._TRecord . ExprLens.compositeTags)
+  (V.Var, Type) -> [ScopeItem Guid m]
+getLocalScopeItems sugarContext (par, typeExpr) =
+  getPar :
+  map onScopeField
+  (typeExpr ^.. ExprLens._TRecord . ExprLens.compositeTags)
   where
-    mkGetPar =
-      case Map.lookup par recordParamsMap of
-      Just (ConvertM.RecordParamsInfo defName jumpTo) ->
-        pure mempty
-          { _scopeGetParams = [
-            ( GetVar
-              { _gvName = defName
-              , _gvJumpTo = jumpTo
-              , _gvVarType = GetParamsRecord
-              }
-            , getParam )
-          ] }
-      Nothing ->
-        pure mempty
-        { _scopeLocals = [
-          ( GetVar
-            { _gvName = UniqueId.toGuid par
-            , _gvJumpTo = errorJumpTo
-            , _gvVarType = GetParameter
-            }
-          , getParam )
-        ] }
+    getPar =
+      ScopeItem
+      { _siGetVar =
+        case Map.lookup par recordParamsMap of
+        Just (ConvertM.RecordParamsInfo defName jumpTo) ->
+          GetVar
+          { _gvName = defName
+          , _gvJumpTo = jumpTo
+          , _gvVarType = GetParamsRecord
+          }
+        Nothing ->
+          GetVar
+          { _gvName = UniqueId.toGuid par
+          , _gvJumpTo = errorJumpTo
+          , _gvVarType = GetParameter
+          }
+      , _siVal = getParam
+      }
     recordParamsMap = sugarContext ^. ConvertM.scRecordParamsInfos
     errorJumpTo = error "Jump to on scope item??"
     getParam = P.var par
     onScopeField tag =
-      pure mempty
-      { _scopeLocals = [
-        ( GetVar
-          { _gvName = UniqueId.toGuid tag
-          , _gvJumpTo = errorJumpTo
-          , _gvVarType = GetFieldParameter
-          }
-        , P.getField getParam tag
-        )
-      ] }
+      ScopeItem
+      { _siGetVar =
+        GetVar
+        { _gvName = UniqueId.toGuid tag
+        , _gvJumpTo = errorJumpTo
+        , _gvVarType = GetFieldParameter
+        }
+      , _siVal = P.getField getParam tag
+      }
 
 -- TODO: Put the result in scopeGlobals in the caller, not here?
-getGlobal :: MonadA m => DefI m -> T m (Scope Guid m)
-getGlobal defI =
-  pure mempty
-  { _scopeGlobals = [
-    ( GetVar
+getGlobalScopeItem :: MonadA m => DefI m -> ScopeItem Guid m
+getGlobalScopeItem defI =
+    ScopeItem
+    { _siGetVar =
+      GetVar
       { _gvName = UniqueId.toGuid defI
       , _gvJumpTo = errorJumpTo
       , _gvVarType = GetDefinition
       }
-    , P.global $ ExprIRef.globalId defI
-    )
-    ] }
+    , _siVal = P.global $ ExprIRef.globalId defI
+    }
   where
     errorJumpTo = error "Jump to on scope item??"
 
