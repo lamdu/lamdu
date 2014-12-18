@@ -172,7 +172,7 @@ Executable lamdu
                ,       Lamdu.GUI.ExpressionEdit
                ,       Lamdu.GUI.ExpressionEdit.ApplyEdit
                ,       Lamdu.GUI.ExpressionEdit.BuiltinEdit
-               ,       Lamdu.GUI.ExpressionEdit.DefinitionContentEdit
+               ,       Lamdu.GUI.ExpressionEdit.BinderEdit
                ,       Lamdu.GUI.ExpressionEdit.EventMap
                ,       Lamdu.GUI.ExpressionEdit.GetFieldEdit
                ,       Lamdu.GUI.ExpressionEdit.GetParamsEdit
@@ -220,6 +220,7 @@ Executable lamdu
                ,       Lamdu.Sugar.AddNames.Types
                ,       Lamdu.Sugar.Convert
                ,       Lamdu.Sugar.Convert.Apply
+               ,       Lamdu.Sugar.Convert.Binder
                ,       Lamdu.Sugar.Convert.DefExpr
                ,       Lamdu.Sugar.Convert.Expression
                ,       Lamdu.Sugar.Convert.Expression.Actions

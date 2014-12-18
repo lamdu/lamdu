@@ -11,7 +11,7 @@ module Lamdu.Sugar.Types
     , _DefinitionExportedTypeInfo
     , _DefinitionNewType
   , Anchors.PresentationMode(..)
-  , DefinitionContent(..)
+  , Binder(..)
     , dSetPresentationMode, dParams, dBody, dWhereItems
     , dAddFirstParam, dAddInnermostWhereItem
   , DefinitionBuiltin(..)
@@ -333,15 +333,14 @@ instance Show expr => Show (Body name m expr) where
   show BodyGetParams {} = "GetParams:TODO"
 
 data WhereItem name m expr = WhereItem
-  { _wiValue :: DefinitionContent name m expr
+  { _wiValue :: Binder name m expr
   , _wiEntityId :: EntityId
   , _wiInferredType :: Type
   , _wiName :: name
   , _wiActions :: Maybe (ListItemActions m)
   } deriving (Functor, Foldable, Traversable)
 
--- Common data for definitions and where-items
-data DefinitionContent name m expr = DefinitionContent
+data Binder name m expr = Binder
   { _dSetPresentationMode :: Maybe (MkProperty m Anchors.PresentationMode)
   , _dParams :: [FuncParam name m]
   , _dBody :: expr
@@ -362,7 +361,7 @@ data DefinitionTypeInfo m
 
 data DefinitionExpression name m expr = DefinitionExpression
   { _deTypeInfo :: DefinitionTypeInfo m
-  , _deContent :: DefinitionContent name m expr
+  , _deContent :: Binder name m expr
   } deriving (Functor, Foldable, Traversable)
 
 data DefinitionBuiltin m = DefinitionBuiltin
@@ -389,7 +388,7 @@ Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''Apply
 Lens.makeLenses ''Body
 Lens.makeLenses ''Definition
-Lens.makeLenses ''DefinitionContent
+Lens.makeLenses ''Binder
 Lens.makeLenses ''DefinitionExpression
 Lens.makeLenses ''ExpressionP
 Lens.makeLenses ''FuncParam

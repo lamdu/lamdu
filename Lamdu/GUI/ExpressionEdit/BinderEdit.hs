@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
-module Lamdu.GUI.ExpressionEdit.DefinitionContentEdit (make, diveToNameEdit, makeNameEdit) where
+module Lamdu.GUI.ExpressionEdit.BinderEdit (make, diveToNameEdit, makeNameEdit) where
 
 import Control.Applicative ((<$>), (<$))
 import Control.Lens.Operators
@@ -114,7 +114,7 @@ mkPresentationModeEdit prop myId = do
 make ::
   MonadA m =>
   Name m ->
-  Sugar.DefinitionContent (Name m) m (ExprGuiM.SugarExpr m) ->
+  Sugar.Binder (Name m) m (ExprGuiM.SugarExpr m) ->
   Widget.Id ->
   ExprGuiM m (WidgetT m)
 make nameProp content myId = do

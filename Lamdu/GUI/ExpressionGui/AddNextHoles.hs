@@ -32,7 +32,7 @@ defExprs =
   Sugar.drBody . Sugar._DefinitionBodyExpression .
   Sugar.deContent . defContentExprs
 
-defContentExprs :: Lens.Traversal' (Sugar.DefinitionContent name m expr) expr
+defContentExprs :: Lens.Traversal' (Sugar.Binder name m expr) expr
 defContentExprs f defContent =
   mkDefContent
   <$> f (defContent ^. Sugar.dBody)

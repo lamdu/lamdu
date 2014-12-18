@@ -492,14 +492,14 @@ withWhereItem ::
 withWhereItem item@WhereItem{..} = CPS $ \k -> do
   (name, (value, res)) <-
     runCPS (opWithWhereItemName (isFunctionType _wiInferredType) _wiName) $
-    (,) <$> toDefinitionContent _wiValue <*> k
+    (,) <$> toBinder _wiValue <*> k
   pure (item { _wiValue = value, _wiName = name }, res)
 
-toDefinitionContent ::
+toBinder ::
   MonadNaming m =>
-  DefinitionContent (OldName m) (TM m) (Expression (OldName m) (TM m) a) ->
-  m (DefinitionContent (NewName m) (TM m) (Expression (NewName m) (TM m) a))
-toDefinitionContent def@DefinitionContent{..} = do
+  Binder (OldName m) (TM m) (Expression (OldName m) (TM m) a) ->
+  m (Binder (NewName m) (TM m) (Expression (NewName m) (TM m) a))
+toBinder def@Binder{..} = do
   (params, (whereItems, body)) <-
     runCPS (traverse withFuncParam _dParams) .
     runCPS (traverse withWhereItem _dWhereItems) $
@@ -519,7 +519,7 @@ toDefinitionBody (DefinitionBodyBuiltin bi) =
 toDefinitionBody
   (DefinitionBodyExpression (DefinitionExpression typeInfo content)) =
     DefinitionBodyExpression <$>
-    (DefinitionExpression typeInfo <$> toDefinitionContent content)
+    (DefinitionExpression typeInfo <$> toBinder content)
 
 toDef ::
   MonadNaming m =>

@@ -31,7 +31,7 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
-import qualified Lamdu.GUI.ExpressionEdit.DefinitionContentEdit as DefinitionContentEdit
+import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.AddNextHoles as AddNextHoles
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -77,7 +77,7 @@ makeBuiltinDefinition def builtin = do
   Box.vboxAlign 0 <$> sequenceA
     [ BWidgets.hboxCenteredSpaced <$> sequenceA
       [ ExprGuiM.withFgColor (Config.builtinOriginNameColor config) $
-        DefinitionContentEdit.makeNameEdit name (Widget.joinId myId ["name"])
+        BinderEdit.makeNameEdit name (Widget.joinId myId ["name"])
       , ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
       , BuiltinEdit.make builtin myId
       ]
@@ -97,7 +97,7 @@ makeExprDefinition ::
 makeExprDefinition def bodyExpr = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   bodyWidget <-
-    DefinitionContentEdit.make (def ^. Sugar.drName)
+    BinderEdit.make (def ^. Sugar.drName)
     (bodyExpr ^. Sugar.deContent) myId
   let width = bodyWidget ^. Widget.wSize . Lens._1
   let separatorHeight = realToFrac $ Config.wrapperHoleFrameWidth config ^. Lens._2
@@ -183,4 +183,4 @@ makeNewDefinition cp = do
     newDefI <- DataOps.newPublicDefinition cp ""
     DataOps.newPane cp newDefI
     DataOps.savePreJumpPosition cp curCursor
-    return . DefinitionContentEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
+    return . BinderEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
