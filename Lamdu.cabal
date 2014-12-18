@@ -1,4 +1,4 @@
-Name:                lamdu
+Name:                lamdu-ide
 Version:             0.1
 Synopsis:            A next generation IDE
 Description:         Lamdu functional programming editor
@@ -27,7 +27,6 @@ Library
                        Data.Monoid.Generic,
                        Data.Monoid.Instances,
                        Data.MRUMemo,
-                       Data.OpaqueRef,
                        Data.Set.Ordered,
                        Data.Vector.Vector2,
                        Numeric.Utils,
@@ -135,7 +134,7 @@ Executable lamdu
                        split,
                        TraceUtils,
                        bytestring,
-                       lamdu,
+                       lamdu-ide,
                        random,
                        List >= 0.5.1,
                        either,
