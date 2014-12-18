@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
-module Lamdu.GUI.ExpressionEdit.BinderEdit (make, diveToNameEdit, makeNameEdit) where
+module Lamdu.GUI.ExpressionEdit.BinderEdit
+  ( make, diveToNameEdit, makeNameEdit, makeParamsEdit, makeWheres
+  ) where
 
 import Control.Applicative ((<$>), (<$))
 import Control.Lens.Operators
@@ -127,7 +129,10 @@ make nameProp content myId = do
         & Widget.wEventMap %~ E.filterSChars (curry (/= ('=', E.NotShifted)))
         & Widget.weakerEvents rhsJumperEquals
       | otherwise = widget
-  paramsEdits <- makeNestedParams jumpToRHSViaEquals rhs myId params
+  paramEdits <-
+    makeParamsEdit ExprGuiM.ShowType myId params
+    <&> Lens.mapped . ExpressionGui.egWidget
+        %~ Widget.weakerEvents rhsJumperEquals
   config <- ExprGuiM.widgetEnv WE.readConfig
   bodyEdit <- makeResultEdit lhs body
   rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
@@ -157,14 +162,14 @@ make nameProp content myId = do
       ExpressionGui.hboxSpaced $
       ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
       defNameEdit :
-      paramsEdits ++
+      paramEdits ++
       [ ExpressionGui.fromValueWidget equals
       , bodyEdit
         & ExpressionGui.egWidget %~
           Widget.weakerEvents addWhereItemEventMap
       ]
   wheres <- makeWheres (content ^. Sugar.dWhereItems) myId
-  return . Box.vboxAlign 0 $ assignment ^. ExpressionGui.egWidget : wheres
+  return $ Box.vboxAlign 0 $ assignment ^. ExpressionGui.egWidget : wheres
   where
     presentationChoiceId = Widget.joinId myId ["presentation"]
     lhs = myId : map (WidgetIds.fromEntityId . (^. Sugar.fpId)) params
@@ -241,23 +246,17 @@ addPrevIds = go
     go _      [] = []
     go prevId (fp:fps) = (prevId, fp) : go (fpId fp) fps
 
-makeNestedParams ::
+makeParamsEdit ::
   MonadA m =>
-  (Name m -> Widget (T m) -> Widget (T m)) ->
-  (String, ExprGuiM.SugarExpr m) ->
+  ExprGuiM.ShowType ->
   Widget.Id ->
   [Sugar.FuncParam (Name m) m] ->
   ExprGuiM m [ExpressionGui m]
-makeNestedParams atParamWidgets rhs lhsId params = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
-  let
-    mkParam (prevId, param) =
-      (ExpressionGui.egWidget %~
-       (atParamWidgets (param ^. Sugar.fpName) .
-        Widget.weakerEvents rhsJumper)) <$>
-      ParamEdit.make ExprGuiM.ShowType prevId param
-  traverse mkParam $ addPrevIds lhsId params
+makeParamsEdit showType lhsId params =
+  addPrevIds lhsId params
+  & traverse mkParam
+  where
+    mkParam (prevId, param) = ParamEdit.make showType prevId param
 
 diveToNameEdit :: Widget.Id -> Widget.Id
 diveToNameEdit = FocusDelegator.delegatingId -- Name editor

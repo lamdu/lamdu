@@ -1,10 +1,13 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types, PatternGuards #-}
 module Lamdu.Sugar.Convert.Binder
-  ( convertBinder
+  ( convertBinder, convertLam
+  , convertPositionalFuncParam
+  , deleteParamRef
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
+import Control.Monad (void)
 import Control.MonadA (MonadA)
 import Data.List.Utils (isLengthAtLeast)
 import Data.Map (Map)
@@ -12,7 +15,7 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..), (<>))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
-import Data.Store.Transaction (Transaction)
+import Data.Store.Transaction (Transaction, MkProperty)
 import Data.Traversable (traverse)
 import Lamdu.Expr.FlatComposite (FlatComposite(..))
 import Lamdu.Expr.Type (Type)
@@ -32,7 +35,6 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
@@ -52,13 +54,38 @@ data FieldParam = FieldParam
   , fpFieldType :: Type
   }
 
+onMatchingSubexprs ::
+  MonadA m => (a -> m ()) -> (a -> Val () -> Bool) -> Val a -> m ()
+onMatchingSubexprs action predicate =
+  Lens.itraverseOf_ (ExprLens.subExprPayloads . Lens.ifiltered (flip predicate))
+  (const action)
+
+toHole :: MonadA m => ExprIRef.ValIProperty m -> T m ()
+toHole = void . DataOps.setToHole
+
+isGetParamOf :: V.Var -> Val a -> Bool
+isGetParamOf = Lens.anyOf ExprLens.valVar . (==)
+
+mkPositionalFuncParamActions ::
+  MonadA m => V.Var -> ExprIRef.ValIProperty m -> Val (ExprIRef.ValIProperty m) -> FuncParamActions m
+mkPositionalFuncParamActions param lambdaProp body =
+  FuncParamActions
+  { _fpListItemActions =
+    ListItemActions
+    { _itemDelete = do
+        deleteParamRef param body
+        replaceWith lambdaProp $ body ^. V.payload
+    , _itemAddNext = lambdaWrap $ body ^. V.payload
+    }
+  }
+
 mkRecordParams ::
   (MonadA m, Monoid a) =>
   ConvertM.RecordParamsInfo m -> V.Var -> [FieldParam] ->
-  Val (InputPayload m a) ->
+  InputPayload m a ->
   Maybe (Val (ExprIRef.ValIProperty m)) ->
   ConvertM m (ConventionalParams m a)
-mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
+mkRecordParams recordParamsInfo param fieldParams lambdaPl _mBodyStored = do
   params <- traverse mkParam fieldParams
   pure ConventionalParams
     { cpTags = Set.fromList $ fpTag <$> fieldParams
@@ -68,7 +95,7 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
     , cpAddFirstParam =
       error "TODO cpAddFirstParam"--  addFirstFieldParam lamEntityId $
       -- fromMaybe (error "Record param type must be stored!") mParamTypeI
-    , cpHiddenPayloads = [lambdaExprI ^. V.payload]
+    , cpHiddenPayloads = [lambdaPl]
     }
   where
     fpIdEntityId = EntityId.ofLambdaTagParam param . fpTag
@@ -158,47 +185,78 @@ mkRecordParams recordParamsInfo param fieldParams lambdaExprI _mBodyStored = do
 --       map (getParamGuidFromTagExprI . fst) $ nextFields ++ reverse prevFields
 --     getParamGuidFromTagExprI (T.Tag tGuid) = Guid.combine lamGuid tGuid
 
-convertDefinitionParams ::
+convertPositionalFuncParam ::
+  (MonadA m, Monoid a) => V.Lam (Val (InputPayload m a)) ->
+  InputPayload m a ->
+  ConvertM m (FuncParam Guid m)
+convertPositionalFuncParam (V.Lam param body) lamExprPl =
+  pure FuncParam
+  { _fpName = UniqueId.toGuid param
+  , _fpVarKind = FuncParameter
+  , _fpId = paramEntityId
+  , _fpInferredType = paramType
+  , _fpMActions =
+    mkPositionalFuncParamActions param
+    <$> lamExprPl ^. ipStored
+    <*> traverse (^. ipStored) body
+  , _fpHiddenIds = []
+  }
+  where
+    paramEntityId = EntityId.ofLambdaParam param
+    paramType =
+      fromMaybe (error "Lambda value not inferred to a function type?!") $
+      lamExprPl ^? ipInferred . Infer.plType . ExprLens._TFun . Lens._1
+
+convertLamParams ::
+  (MonadA m, Monoid a) =>
+  ConvertM.RecordParamsInfo m -> Set T.Tag ->
+  V.Lam (Val (InputPayload m a)) -> InputPayload m a ->
+  ConvertM m (ConventionalParams m a)
+convertLamParams recordParamsInfo usedTags lambda@(V.Lam paramVar body) lambdaPl =
+  do
+    param <-
+      convertPositionalFuncParam lambda lambdaPl
+      <&> fpHiddenIds <>~ [lambdaPl ^. ipEntityId]
+    case T.TVar undefined of -- TODO: we should read associated data for param list
+      T.TRecord composite
+        | Nothing <- extension
+        , Map.size fields >= 2
+        , Set.null (usedTags `Set.intersection` Map.keysSet fields) ->
+          mkRecordParams recordParamsInfo paramVar fieldParams
+          lambdaPl (traverse (^. ipStored) body)
+        where
+          FlatComposite fields extension = FlatComposite.fromComposite composite
+          fieldParams = map makeFieldParam $ Map.toList fields
+      _ -> pure $ singleConventionalParam stored param paramVar body
+  where
+    stored =
+      fromMaybe (error "Definition body is always stored!") $
+      lambdaPl ^. ipStored
+    makeFieldParam (tag, typeExpr) =
+      FieldParam
+      { fpTag = tag
+      , fpFieldType = typeExpr
+      }
+
+convertParams ::
   (MonadA m, Monoid a) =>
   ConvertM.RecordParamsInfo m -> Set T.Tag -> Val (InputPayload m a) ->
   ConvertM m
   ( ConventionalParams m a
   , Val (InputPayload m a)
   )
-convertDefinitionParams recordParamsInfo usedTags expr =
+convertParams recordParamsInfo usedTags expr =
   case expr ^. V.body of
-  V.BAbs lambda@(V.Lam paramVar body) -> do
-    let lambdaPl = expr ^. V.payload
-    param <-
-      ConvertExpr.convertPositionalFuncParam lambda lambdaPl
-      <&> fpHiddenIds <>~ [lambdaPl ^. ipEntityId]
-    case T.TVar undefined of -- TODO: we should read associated data for param list
-      T.TRecord composite
-        | Nothing <- extension
-        , Map.size fields >= 2
-        , Set.null (usedTags `Set.intersection` Map.keysSet fields) -> do
-          convParams <-
-            mkRecordParams recordParamsInfo paramVar fieldParams
-            expr (traverse (^. ipStored) body)
-          return (convParams, body)
-        where
-          FlatComposite fields extension = FlatComposite.fromComposite composite
-          fieldParams = map makeFieldParam $ Map.toList fields
-      _ ->
-        pure
-        ( singleConventionalParam stored param paramVar body
-        , body
-        )
+  V.BAbs lambda ->
+    do
+      params <-
+        convertLamParams recordParamsInfo usedTags lambda (expr ^. V.payload)
+      return (params, lambda ^. V.lamResult)
   _ -> return (emptyConventionalParams stored, expr)
   where
     stored =
       fromMaybe (error "Definition body is always stored!") $
       expr ^. V.payload . ipStored
-    makeFieldParam (tag, typeExpr) =
-      FieldParam
-      { fpTag = tag
-      , fpFieldType = typeExpr
-      }
 
 singleConventionalParam ::
   MonadA m =>
@@ -255,7 +313,7 @@ emptyConventionalParams stored = ConventionalParams
   , cpParamInfos = Map.empty
   , cpRecordParamsInfos = Map.empty
   , cpParams = []
-  , cpAddFirstParam = ConvertExpr.lambdaWrap stored
+  , cpAddFirstParam = lambdaWrap stored
   , cpHiddenPayloads = []
   }
 
@@ -279,6 +337,16 @@ mExtractWhere expr = do
     , ewiInferredType = arg ^. V.payload . ipInferred . Infer.plType
     }
 
+lambdaWrap :: MonadA m => ExprIRef.ValIProperty m -> T m EntityId
+lambdaWrap stored =
+  f <$> DataOps.lambdaWrap stored
+  where
+    f (newParam, _) = EntityId.ofLambdaParam newParam
+
+deleteParamRef ::
+  MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
+deleteParamRef = onMatchingSubexprs toHole . const . isGetParamOf
+
 convertWhereItems ::
   (MonadA m, Monoid a) =>
   Set T.Tag ->
@@ -300,7 +368,7 @@ convertWhereItems usedTags expr =
       mkWIActions topLevelProp bodyStored =
         ListItemActions
         { _itemDelete = do
-             ConvertExpr.deleteParamRef param bodyStored
+             deleteParamRef param bodyStored
              replaceWith topLevelProp $ bodyStored ^. V.payload
         , _itemAddNext = EntityId.ofLambdaParam . fst <$> DataOps.redexWrap topLevelProp
         }
@@ -332,6 +400,43 @@ convertWhereItems usedTags expr =
 --       pure $ Guid.combine lamGuid $ newTag ^. Lens.from V.tag
 --     _ -> pure $ ExprIRef.valIGuid recordI
 
+makeBinder :: (MonadA m, Monoid a) =>
+  Set T.Tag -> Maybe (MkProperty m PresentationMode) ->
+  ConventionalParams m a -> Val (InputPayload m a) ->
+  ConvertM m (Binder Guid m (ExpressionU m a))
+makeBinder usedTags setPresentationMode convParams funcBody =
+  ConvertM.local
+  ((ConvertM.scTagParamInfos <>~ cpParamInfos convParams) .
+  (ConvertM.scRecordParamsInfos <>~ cpRecordParamsInfos convParams)) $
+    do
+      (whereItems, whereBody) <-
+        convertWhereItems (usedTags <> cpTags convParams) funcBody
+      bodyS <- ConvertM.convertSubexpression whereBody
+      return Binder
+        { _dParams = cpParams convParams
+        , _dSetPresentationMode = setPresentationMode
+        , _dBody =
+          bodyS
+          & rPayload . plData <>~
+            cpHiddenPayloads convParams ^. Lens.traversed . ipData
+        , _dWhereItems = whereItems
+        , _dAddFirstParam = cpAddFirstParam convParams
+        , _dAddInnermostWhereItem =
+          fmap (EntityId.ofLambdaParam . fst) . DataOps.redexWrap $
+          fromMaybe (error "Where must be stored") $
+          whereBody ^. V.payload . ipStored
+        }
+
+convertLam ::
+  (MonadA m, Monoid a) =>
+  Set T.Tag ->
+  V.Lam (Val (InputPayload m a)) -> InputPayload m a ->
+  ConvertM m (Binder Guid m (ExpressionU m a))
+convertLam usedTags lam pl =
+  do
+    convParams <- convertLamParams (error "no RecordParamsInfo") usedTags lam pl
+    makeBinder usedTags Nothing convParams $ lam ^. V.lamResult
+
 convertBinder ::
   (MonadA m, Monoid a) =>
   Guid -> T m EntityId -> Set T.Tag -> Val (InputPayload m a) ->
@@ -339,31 +444,12 @@ convertBinder ::
 convertBinder defGuid jumpToDef usedTags expr =
   do
     (convParams, funcBody) <-
-      convertDefinitionParams
+      convertParams
       (ConvertM.RecordParamsInfo (UniqueId.toGuid defGuid) jumpToDef)
       usedTags expr
-    ConvertM.local
-      ((ConvertM.scTagParamInfos <>~ cpParamInfos convParams) .
-       (ConvertM.scRecordParamsInfos <>~ cpRecordParamsInfos convParams)) $ do
-        (whereItems, whereBody) <-
-          convertWhereItems (usedTags <> cpTags convParams) funcBody
-        bodyS <- ConvertM.convertSubexpression whereBody
-        let
-          setPresentationMode
-            | isLengthAtLeast 2 (cpParams convParams) =
-              Just $ Anchors.assocPresentationMode defGuid
-            | otherwise = Nothing
-        return Binder
-          { _dParams = cpParams convParams
-          , _dSetPresentationMode = setPresentationMode
-          , _dBody =
-            bodyS
-            & rPayload . plData <>~
-              cpHiddenPayloads convParams ^. Lens.traversed . ipData
-          , _dWhereItems = whereItems
-          , _dAddFirstParam = cpAddFirstParam convParams
-          , _dAddInnermostWhereItem =
-            fmap (EntityId.ofLambdaParam . fst) . DataOps.redexWrap $
-            fromMaybe (error "Where must be stored") $
-            whereBody ^. V.payload . ipStored
-          }
+    let
+      setPresentationMode
+        | isLengthAtLeast 2 (cpParams convParams) =
+          Just $ Anchors.assocPresentationMode defGuid
+        | otherwise = Nothing
+    makeBinder usedTags setPresentationMode convParams funcBody

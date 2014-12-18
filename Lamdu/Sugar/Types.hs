@@ -39,7 +39,6 @@ module Lamdu.Sugar.Types
   , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
   , AnnotatedArg(..), aaTag, aaTagExprEntityId, aaExpr
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
-  , Lam(..), lParam, lResult
   , FuncParamType(..)
   , FuncParam(..)
     , fpName, fpId, fpVarKind, fpInferredType, fpMActions, fpHiddenIds
@@ -150,11 +149,6 @@ data FuncParam name m = FuncParam
   , -- Sometimes the Lambda disappears in Sugar, the Param "swallows" its id
     _fpHiddenIds :: [EntityId]
   }
-
-data Lam name m expr = Lam
-  { _lParam :: FuncParam name m
-  , _lResult :: expr
-  } deriving (Functor, Foldable, Traversable)
 
 data TagG name = TagG
   { _tagInstance :: EntityId -- Unique across different uses of a tag
@@ -286,7 +280,7 @@ data Apply name expr = Apply
   } deriving (Functor, Foldable, Traversable)
 
 data Body name m expr
-  = BodyLam (Lam name m expr)
+  = BodyLam (Binder name m expr)
   | BodyApply (Apply name expr)
   | BodyHole (Hole name m expr)
   | BodyLiteralInteger Integer
@@ -300,8 +294,7 @@ instance Show (FuncParam name m) where
   show _fp = "TODO:FuncParam"
 
 instance Show expr => Show (Body name m expr) where
-  show (BodyLam (Lam paramType resultType)) =
-    "_:" ++ show paramType ++ " -> " ++ show resultType
+  show (BodyLam _) = "TODO show lam"
   show BodyHole {} = "Hole"
   show (BodyLiteralInteger i) = show i
   show (BodyList (List items _ _)) =
@@ -383,7 +376,6 @@ Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg
 Lens.makeLenses ''HoleResult
 Lens.makeLenses ''HoleSuggested
-Lens.makeLenses ''Lam
 Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions
 Lens.makeLenses ''Payload

@@ -1,22 +1,16 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types #-}
 module Lamdu.Sugar.Convert.Expression
   ( convert
-  , convertPositionalFuncParam
-  , deleteParamRef
-  , lambdaWrap
   , jumpToDefI
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens.Operators
-import Control.Lens.Tuple
-import Control.Monad (guard, void)
+import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import Control.MonadA (MonadA)
-import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.Expr.IRef (DefI)
@@ -34,9 +28,9 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
-import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
 import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
+import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -45,90 +39,27 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
 type T = Transaction
 
-onMatchingSubexprs ::
-  MonadA m => (a -> m ()) -> (a -> Val () -> Bool) -> Val a -> m ()
-onMatchingSubexprs action predicate =
-  Lens.itraverseOf_ (ExprLens.subExprPayloads . Lens.ifiltered (flip predicate))
-  (const action)
-
-toHole :: MonadA m => ExprIRef.ValIProperty m -> T m ()
-toHole = void . DataOps.setToHole
-
-isGetParamOf :: V.Var -> Val a -> Bool
-isGetParamOf = Lens.anyOf ExprLens.valVar . (==)
-
-deleteParamRef ::
-  MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
-deleteParamRef = onMatchingSubexprs toHole . const . isGetParamOf
-
-lambdaWrap :: MonadA m => ExprIRef.ValIProperty m -> T m EntityId
-lambdaWrap stored =
-  f <$> DataOps.lambdaWrap stored
-  where
-    f (newParam, _) = EntityId.ofLambdaParam newParam
-
-mkPositionalFuncParamActions ::
-  MonadA m => V.Var -> ExprIRef.ValIProperty m -> Val (ExprIRef.ValIProperty m) -> FuncParamActions m
-mkPositionalFuncParamActions param lambdaProp body =
-  FuncParamActions
-  { _fpListItemActions =
-    ListItemActions
-    { _itemDelete = do
-        deleteParamRef param body
-        replaceWith lambdaProp $ body ^. V.payload
-    , _itemAddNext = lambdaWrap $ body ^. V.payload
-    }
-  }
-
-convertPositionalFuncParam ::
-  (MonadA m, Monoid a) => V.Lam (Val (InputPayload m a)) ->
-  InputPayload m a ->
-  ConvertM m (FuncParam Guid m)
-convertPositionalFuncParam (V.Lam param body) lamExprPl =
-  pure FuncParam
-  { _fpName = UniqueId.toGuid param
-  , _fpVarKind = FuncParameter
-  , _fpId = paramEntityId
-  , _fpInferredType = paramType
-  , _fpMActions =
-    mkPositionalFuncParamActions param
-    <$> lamExprPl ^. ipStored
-    <*> traverse (^. ipStored) body
-  , _fpHiddenIds = []
-  }
-  where
-    paramEntityId = EntityId.ofLambdaParam param
-    paramType =
-      fromMaybe (error "Lambda value not inferred to a function type?!") $
-      lamExprPl ^? ipInferred . Infer.plType . ExprLens._TFun . _1
-
 convertLam ::
   (MonadA m, Monoid a) =>
   V.Lam (Val (InputPayload m a)) ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
-convertLam lam@(V.Lam paramVar lamBody) exprPl = do
-  param <- convertPositionalFuncParam lam exprPl
-  lamBodyS <- ConvertM.convertSubexpression lamBody
-  protectedSetToVal <- ConvertM.typeProtectedSetToVal
-  let
-    setToInnerExprAction =
-      maybe NoInnerExpr SetToInnerExpr $ do
-        guard $ Lens.nullOf ExprLens.valHole lamBody
-        lamBodyStored <- traverse (^. ipStored) lamBody
-        stored <- exprPl ^. ipStored
-        return $ do
-          deleteParamRef paramVar lamBodyStored
-          let lamBodyI = Property.value (lamBodyStored ^. V.payload)
-          protectedSetToVal stored lamBodyI <&> EntityId.ofValI
-  BodyLam
-    Lam
-    { _lParam =
-        param
-        & fpMActions .~ Nothing
-    , _lResult = lamBodyS
-    }
-    & addActions exprPl
-    <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
+convertLam lam@(V.Lam paramVar lamBody) exprPl =
+  do
+    binder <- ConvertBinder.convertLam mempty lam exprPl
+    protectedSetToVal <- ConvertM.typeProtectedSetToVal
+    let
+      setToInnerExprAction =
+        maybe NoInnerExpr SetToInnerExpr $ do
+          guard $ Lens.nullOf ExprLens.valHole lamBody
+          lamBodyStored <- traverse (^. ipStored) lamBody
+          stored <- exprPl ^. ipStored
+          return $ do
+            ConvertBinder.deleteParamRef paramVar lamBodyStored
+            let lamBodyI = Property.value (lamBodyStored ^. V.payload)
+            protectedSetToVal stored lamBodyI <&> EntityId.ofValI
+    BodyLam binder
+      & addActions exprPl
+      <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
 
 jumpToDefI ::
   MonadA m => Anchors.CodeProps m -> DefI m -> T m EntityId

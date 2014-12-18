@@ -341,14 +341,6 @@ withFuncParam fp@FuncParam{..} = CPS $ \k -> do
     , res
     )
 
-toLam ::
-  MonadNaming m =>
-  Lam (OldName m) (TM m) (Expression (OldName m) (TM m) a) ->
-  m (Lam (NewName m) (TM m) (Expression (NewName m) (TM m) a))
-toLam lam@Lam {..} = do
-  (param, result) <- runCPS (withFuncParam _lParam) $ toExpression _lResult
-  pure lam { _lParam = param, _lResult = result }
-
 toTagG :: MonadNaming m => TagG (OldName m) -> m (TagG (NewName m))
 toTagG = tagGName opGetTagName
 
@@ -469,7 +461,7 @@ toBody (BodyLiteralInteger x) = pure $ BodyLiteralInteger x
 --
 toBody (BodyGetField x) = BodyGetField <$> toGetField x
 toBody (BodyRecord x) = BodyRecord <$> toRecord x
-toBody (BodyLam x) = BodyLam <$> toLam x
+toBody (BodyLam x) = BodyLam <$> toBinder x
 toBody (BodyApply x) = BodyApply <$> toApply x
 toBody (BodyHole x) = BodyHole <$> toHole x
 toBody (BodyGetVar x) = BodyGetVar <$> toGetVar x

@@ -83,7 +83,7 @@ jumpToExprPayloads f expr =
   case expr ^. Sugar.rBody of
   Sugar.BodyHole _ -> mark
   Sugar.BodyLam _
-    -> (Sugar.rBody . Sugar._BodyLam . Sugar.lResult) (jumpToExprPayloads f) expr
+    -> (Sugar.rBody . Sugar._BodyLam . Sugar.dBody) (jumpToExprPayloads f) expr
   _ -> (Sugar.rBody . Lens.traverse) (jumpToExprPayloads f) expr
   where
     mark = (Sugar.rPayload . Sugar.plData) f expr
