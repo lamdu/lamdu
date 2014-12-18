@@ -36,7 +36,6 @@ module Lamdu.Sugar.Types
   , GetField(..), gfRecord, gfTag
   , GetVarType(..)
   , GetVar(..), gvName, gvJumpTo, gvVarType
-  , GetParams(..), gpDefName, gpJumpTo
   , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
   , AnnotatedArg(..), aaTag, aaTagExprEntityId, aaExpr
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
@@ -192,7 +191,7 @@ type ScopeItem a = (a, Val ())
 data Scope name m = Scope
   { _scopeLocals    :: [ScopeItem (GetVar name m)]
   , _scopeGlobals   :: [ScopeItem (GetVar name m)]
-  , _scopeGetParams :: [ScopeItem (GetParams name m)]
+  , _scopeGetParams :: [ScopeItem (GetVar name m)]
   } deriving (Generic)
 instance Monoid (Scope name m) where
   mempty = def_mempty
@@ -267,18 +266,13 @@ data GetField name expr = GetField
   , _gfTag :: TagG name
   } deriving (Functor, Foldable, Traversable)
 
-data GetVarType = GetDefinition | GetFieldParameter | GetParameter
+data GetVarType = GetDefinition | GetFieldParameter | GetParameter | GetParamsRecord
   deriving (Eq, Ord)
 
 data GetVar name m = GetVar
   { _gvName :: name
   , _gvJumpTo :: T m EntityId
   , _gvVarType :: GetVarType
-  }
-
-data GetParams name m = GetParams
-  { _gpDefName :: name
-  , _gpJumpTo :: T m EntityId
   }
 
 data SpecialArgs expr
@@ -309,7 +303,6 @@ data Body name m expr
   | BodyRecord (Record name m expr)
   | BodyGetField (GetField name expr)
   | BodyGetVar (GetVar name m)
-  | BodyGetParams (GetParams name m)
   deriving (Functor, Foldable, Traversable)
 
 instance Show (FuncParam name m) where
@@ -330,7 +323,6 @@ instance Show expr => Show (Body name m expr) where
   show BodyRecord {} = "Record:TODO"
   show BodyGetField {} = "GetField:TODO"
   show BodyGetVar {} = "GetVar:TODO"
-  show BodyGetParams {} = "GetParams:TODO"
 
 data WhereItem name m expr = WhereItem
   { _wiValue :: Binder name m expr
@@ -394,7 +386,6 @@ Lens.makeLenses ''ExpressionP
 Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''GetField
-Lens.makeLenses ''GetParams
 Lens.makeLenses ''GetVar
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions

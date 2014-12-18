@@ -198,9 +198,10 @@ getScopeElement sugarContext (par, typeExpr) = do
       Just (ConvertM.RecordParamsInfo defName jumpTo) ->
         pure mempty
           { _scopeGetParams = [
-            ( GetParams
-              { _gpDefName = defName
-              , _gpJumpTo = jumpTo
+            ( GetVar
+              { _gvName = defName
+              , _gvJumpTo = jumpTo
+              , _gvVarType = GetParamsRecord
               }
             , getParam )
           ] }

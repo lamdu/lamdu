@@ -136,14 +136,16 @@ convertVar param exprPl = do
   recordParamsMap <- (^. ConvertM.scRecordParamsInfos) <$> ConvertM.readContext
   let
     body =
+      BodyGetVar $
       case Map.lookup param recordParamsMap of
       Just (ConvertM.RecordParamsInfo defName jumpTo) ->
-        BodyGetParams GetParams
-        { _gpDefName = defName
-        , _gpJumpTo = jumpTo
+        GetVar
+        { _gvName = defName
+        , _gvJumpTo = jumpTo
+        , _gvVarType = GetParamsRecord
         }
       Nothing ->
-        BodyGetVar GetVar
+        GetVar
         { _gvName = UniqueId.toGuid param
         , _gvJumpTo = pure $ EntityId.ofLambdaParam param
         , _gvVarType = GetParameter

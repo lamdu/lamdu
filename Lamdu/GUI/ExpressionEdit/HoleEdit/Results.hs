@@ -87,12 +87,14 @@ data ResultsList m = ResultsList
 Lens.makeLenses ''ResultsList
 
 getVarsToGroup :: (Sugar.GetVar (Name m) m, Val ()) -> Group def
-getVarsToGroup (getVar, expr) = sugarNameToGroup (getVar ^. Sugar.gvName) expr
-
-getParamsToGroup :: (Sugar.GetParams (Name m) m, Val ()) -> Group def
-getParamsToGroup (getParams, expr) =
-  sugarNameToGroup (getParams ^. Sugar.gpDefName) expr
-  & groupAttributes <>~ GroupAttributes ["params"] HighPrecedence
+getVarsToGroup (getVar, expr) =
+  sugarNameToGroup (getVar ^. Sugar.gvName) expr
+  & groupAttributes <>~ extraGroupAttributes
+  where
+    extraGroupAttributes =
+      case getVar ^. Sugar.gvVarType of
+      Sugar.GetParamsRecord -> GroupAttributes ["params"] HighPrecedence
+      _ -> mempty
 
 sugarNameToGroup :: Name m -> Val () -> Group def
 sugarNameToGroup (Name _ collision _ varName) expr = Group
@@ -225,7 +227,7 @@ makeAllGroups holeInfo = do
     sortedGroups f  = sortOn (^. groupAttributes . searchTerms) . map f
     localsGroups    = sortedGroups getVarsToGroup locals
     globalsGroups   = sortedGroups getVarsToGroup globals
-    getParamsGroups = sortedGroups getParamsToGroup getParams
+    getParamsGroups = sortedGroups getVarsToGroup getParams
   pure $ holeMatches (^. groupAttributes) (hiSearchTerm holeInfo) allGroups
   where
     suggestedGroups =

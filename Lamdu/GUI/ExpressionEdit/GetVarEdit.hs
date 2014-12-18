@@ -5,13 +5,13 @@ module Lamdu.GUI.ExpressionEdit.GetVarEdit
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
@@ -21,31 +21,47 @@ import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
-makeUncoloredView ::
+makeSimpleView ::
   MonadA m =>
+  Draw.Color ->
   Sugar.GetVar (Name m) m ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makeUncoloredView getVar myId =
-  ExprGuiM.widgetEnv $
-  fmap ExpressionGui.fromValueWidget .
-  BWidgets.makeFocusableView myId =<<
+makeSimpleView color getVar myId =
   ExpressionGui.makeNameView (getVar ^. Sugar.gvName) (Widget.toAnimId myId)
+  >>= BWidgets.makeFocusableView myId
+  <&> ExpressionGui.fromValueWidget
+  & ExprGuiM.widgetEnv
+  & ExprGuiM.withFgColor color
 
-colorOf :: Config -> Sugar.GetVarType -> Draw.Color
-colorOf config Sugar.GetDefinition = Config.definitionColor config
-colorOf config Sugar.GetParameter = Config.parameterColor config
-colorOf config Sugar.GetFieldParameter = Config.parameterColor config
-
-makeView ::
+makeGetParamsView ::
   MonadA m =>
-  Sugar.GetVar (Name m) m ->
-  Widget.Id ->
+  Sugar.GetVar (Name m) m -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makeView getParam myId = do
+makeGetParamsView getParams myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  (ExprGuiM.withFgColor . colorOf config) (getParam ^. Sugar.gvVarType) $
-    makeUncoloredView getParam myId
+  paramsLabel <-
+    ExprGuiM.withFgColor (Config.parameterColor config) $ label "params"
+  prefixLabel <- label "(of "
+  defNameLabel <-
+    ExprGuiM.withFgColor (Config.definitionColor config) .
+    ExprGuiM.widgetEnv $ ExpressionGui.makeNameView defName animId
+  suffixLabel <- label ")"
+  let
+    hbox =
+      BWidgets.hboxCenteredSpaced
+      [ paramsLabel
+      , Widget.scale (realToFrac <$> Config.paramDefSuffixScaleFactor config) $
+        Box.hboxCentered [prefixLabel, defNameLabel, suffixLabel]
+      ]
+  hbox
+    & BWidgets.makeFocusableView myId
+    <&> ExpressionGui.fromValueWidget
+    & ExprGuiM.widgetEnv
+  where
+    animId = Widget.toAnimId myId
+    label = ExprGuiM.widgetEnv . flip BWidgets.makeLabel animId
+    defName = getParams ^. Sugar.gvName
 
 make ::
   MonadA m =>
@@ -62,7 +78,12 @@ make getVar pl myId = do
       (E.Doc ["Navigation", "Jump to definition"]) $ do
         DataOps.savePreJumpPosition cp myId
         WidgetIds.fromEntityId <$> getVar ^. Sugar.gvJumpTo
-  ExpressionGui.stdWrap pl (makeView getVar myId)
-    <&>
-    ExpressionGui.egWidget %~
-    Widget.weakerEvents jumpToDefinitionEventMap
+    makeView =
+      case getVar ^. Sugar.gvVarType of
+      Sugar.GetDefinition -> makeSimpleView (Config.definitionColor config)
+      Sugar.GetParameter -> makeSimpleView (Config.parameterColor config)
+      Sugar.GetFieldParameter -> makeSimpleView (Config.parameterColor config)
+      Sugar.GetParamsRecord -> makeGetParamsView
+  makeView getVar myId
+    & ExpressionGui.stdWrap pl
+    <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap

@@ -16,7 +16,6 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetFieldEdit as GetFieldEdit
-import qualified Lamdu.GUI.ExpressionEdit.GetParamsEdit as GetParamsEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
@@ -82,4 +81,3 @@ makeEditor parentPrecedence body =
   Sugar.BodyRecord record -> RecordEdit.make record
   Sugar.BodyGetField getField -> GetFieldEdit.make getField
   Sugar.BodyGetVar gv -> GetVarEdit.make gv
-  Sugar.BodyGetParams gp -> GetParamsEdit.make gp

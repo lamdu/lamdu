@@ -387,7 +387,7 @@ toScope (Scope l g p) =
   Scope
   <$> (traverse . _1) toGetVar l
   <*> (traverse . _1) toGetVar g
-  <*> (traverse . _1) toGetParams p
+  <*> (traverse . _1) toGetVar p
 
 toHoleActions ::
   MonadNaming m =>
@@ -436,14 +436,10 @@ toGetVar getVar =
   where
     f =
       case getVar ^. gvVarType of
-      GetParameter -> opGetParamName
+      GetParameter      -> opGetParamName
       GetFieldParameter -> opGetTagName
-      GetDefinition -> opGetDefName
-
-toGetParams ::
-  MonadNaming m => GetParams (OldName m) tm ->
-  m (GetParams (NewName m) tm)
-toGetParams = gpDefName opGetDefName
+      GetDefinition     -> opGetDefName
+      GetParamsRecord   -> opGetDefName
 
 toApply ::
   MonadNaming m =>
@@ -478,7 +474,6 @@ toBody (BodyLam x) = BodyLam <$> toLam x
 toBody (BodyApply x) = BodyApply <$> toApply x
 toBody (BodyHole x) = BodyHole <$> toHole x
 toBody (BodyGetVar x) = BodyGetVar <$> toGetVar x
-toBody (BodyGetParams x) = BodyGetParams <$> toGetParams x
 
 toExpression ::
   MonadNaming m => Expression (OldName m) (TM m) a ->

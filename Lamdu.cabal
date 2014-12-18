@@ -175,7 +175,6 @@ Executable lamdu
                ,       Lamdu.GUI.ExpressionEdit.BinderEdit
                ,       Lamdu.GUI.ExpressionEdit.EventMap
                ,       Lamdu.GUI.ExpressionEdit.GetFieldEdit
-               ,       Lamdu.GUI.ExpressionEdit.GetParamsEdit
                ,       Lamdu.GUI.ExpressionEdit.GetVarEdit
                ,       Lamdu.GUI.ExpressionEdit.HoleEdit
                ,       Lamdu.GUI.ExpressionEdit.HoleEdit.Closed
