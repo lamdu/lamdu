@@ -239,7 +239,7 @@ Executable lamdu
                ,       Lamdu.Suggest
                ,       Lamdu.VersionControl
                ,       Lamdu.VersionControl.Actions
-               ,       Paths_lamdu
+               ,       Paths_lamdu_ide
   ghc-options:         -O -Wall
   -- ghc-options is prepended to ghc-prof-options
   ghc-prof-options:    -auto-all -caf-all -rtsopts

@@ -18,7 +18,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Config (Config)
 import Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import Lamdu.GUI.WidgetEnvT (runWidgetEnvT)
-import Paths_lamdu (getDataFileName)
+import Paths_lamdu_ide (getDataFileName)
 import System.Environment (getArgs)
 import System.FilePath ((</>))
 import qualified Control.Exception as E
