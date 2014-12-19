@@ -39,9 +39,6 @@ import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified System.Random as Random
 
-showIdentifier :: Identifier -> String
-showIdentifier (Identifier bs) = BS8.unpack bs
-
 type T = Transaction
 newtype M m a = M
   { runM :: StateT Random.StdGen (WidgetEnvT (T m)) a
@@ -64,6 +61,9 @@ randAnimId = WidgetId.toAnimId . WidgetIds.fromGuid <$> rand
 text :: MonadA m => String -> M m View
 text str = wenv . BWidgets.makeTextView str =<< randAnimId
 
+showIdentifier :: MonadA m => Identifier -> M m View
+showIdentifier (Identifier bs) = text (BS8.unpack bs)
+
 hbox :: [View] -> View
 hbox = GridView.horizontalAlign 0.5
 
@@ -84,7 +84,7 @@ parens (ParentPrecedence parent) (MyPrecedence my) view
   | otherwise = return view
 
 makeTVar :: MonadA m => T.Var p -> M m View
-makeTVar (T.Var name) = text (showIdentifier name)
+makeTVar (T.Var name) = showIdentifier name
 
 makeTFun :: MonadA m => ParentPrecedence -> Type -> Type -> M m View
 makeTFun parentPrecedence a b =
@@ -99,17 +99,28 @@ makeTFun parentPrecedence a b =
 makeTInst :: MonadA m => ParentPrecedence -> T.Id -> Map T.ParamId Type -> M m View
 makeTInst _parentPrecedence (T.Id name) typeParams =
   do
-    nameView <- text (showIdentifier name)
+    nameView <- showIdentifier name
+    let afterName paramsView = addPadding $ hbox [nameView, space, paramsView]
     case Map.toList typeParams of
       [] -> pure nameView
       [(_, arg)] ->
-        do
-          argView <- splitMake (ParentPrecedence 0) arg
-          addPadding $ hbox [nameView, space, argView]
-      _ ->
-        do
-          t <- text " [TODO multiple args]"
-          pure $ hbox [nameView, t]
+        splitMake (ParentPrecedence 0) arg
+        >>= afterName
+      params ->
+        mapM makeTypeParam params
+        <&> GridView.make
+        >>= addBackgroundFrame
+        >>= afterName
+  where
+    makeTypeParam (T.ParamId tParamId, arg) =
+      do
+        paramIdView <- showIdentifier tParamId
+        typeView <- splitMake (ParentPrecedence 0) arg
+        return
+          [ (Vector2 1 0.5, paramIdView)
+          , (0.5, space)
+          , (Vector2 0 0.5, typeView)
+          ]
 
 addPadding :: MonadA m => View -> M m View
 addPadding (sz, frame) =
