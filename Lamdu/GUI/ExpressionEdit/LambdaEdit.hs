@@ -38,11 +38,11 @@ make parentPrecedence binder pl =
         BinderEdit.makeWheres (binder ^. Sugar.dWhereItems) myId
         <&> Box.vboxAlign 0
       ExpressionGui.fromValueWidget lambdaLabel :
-        paramEdits ++
-        [ ExpressionGui.fromValueWidget dotLabel
+        [ ExpressionGui.hboxSpaced paramEdits
+        , ExpressionGui.fromValueWidget dotLabel
         , bodyEdit
         ]
-        & ExpressionGui.hboxSpaced
+        & ExpressionGui.hbox
         & ExpressionGui.addBelow 0 [(0, wheres)]
         & return
   where
