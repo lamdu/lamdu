@@ -13,22 +13,24 @@ import qualified Control.Lens as Lens
 redundantTypesDefaultTop :: Bool -> Traversal' (Expression name m a) (Payload m a)
 redundantTypesDefaultTop topRedundant f (Expression body pl) =
   case body of
-  BodyGetVar{} -> redundant
+  BodyGetVar GetVar { _gvVarType = GetFieldParameter } -> redundant
+  BodyGetVar GetVar { _gvVarType = GetParameter } -> redundant
+  BodyLiteralInteger {} -> redundant
   BodyRecord{} -> redundant
   BodyList{} -> redundantChildren
   BodyApply (Apply func specialArgs annotatedArgs) ->
     ( Apply
       <$> ( func & redundantTypesDefaultTop True %%~ f )
-      <*> ( specialArgs & Lens.traversed r )
-      <*> ( annotatedArgs & Lens.traversed . Lens.traversed %%~ r )
+      <*> ( specialArgs & Lens.traversed recurse )
+      <*> ( annotatedArgs & Lens.traversed . Lens.traversed %%~ recurse )
     )
     <&> BodyApply & mk
   _ -> mk recBody
   where
-    r = redundantTypes f
+    recurse = redundantTypes f
     mk newBody =
       Expression <$> newBody <*> (if topRedundant then f else pure) pl
-    recBody = body & Lens.traversed r
+    recBody = body & Lens.traversed recurse
     redundant = Expression <$> recBody <*> f pl
     redundantChildren =
       body & Lens.traversed . redundantTypesDefaultTop True %%~ f & mk
