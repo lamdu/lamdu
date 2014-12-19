@@ -1,7 +1,6 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types, PatternGuards #-}
 module Lamdu.Sugar.Convert.Binder
   ( convertBinder, convertLam
-  , convertPositionalFuncParam
   , deleteParamRef
   , makeDeleteLambda
   ) where
@@ -204,11 +203,11 @@ mkRecordParams recordParamsInfo param fieldParams lambdaPl _mBodyStored = do
 --       map (getParamGuidFromTagExprI . fst) $ nextFields ++ reverse prevFields
 --     getParamGuidFromTagExprI (T.Tag tGuid) = Guid.combine lamGuid tGuid
 
-convertPositionalFuncParam ::
+convertLamParam ::
   (MonadA m, Monoid a) => V.Lam (Val (InputPayload m a)) ->
   InputPayload m a ->
   ConvertM m (FuncParam Guid m)
-convertPositionalFuncParam lam@(V.Lam param _) lamExprPl =
+convertLamParam lam@(V.Lam param _) lamExprPl =
   do
     mActions <-
       sequenceA $ mkPositionalFuncParamActions
@@ -236,17 +235,18 @@ convertLamParams ::
 convertLamParams recordParamsInfo lambda@(V.Lam paramVar body) lambdaPl =
   do
     param <-
-      convertPositionalFuncParam lambda lambdaPl
+      convertLamParam lambda lambdaPl
       <&> fpHiddenIds <>~ [lambdaPl ^. ipEntityId]
-    usedTags <- ConvertM.readContext <&> Map.keysSet . (^. ConvertM.scTagParamInfos)
+    tagsInOuterScope <- ConvertM.readContext <&> Map.keysSet . (^. ConvertM.scTagParamInfos)
     case T.TVar undefined of -- TODO: we should read associated data for param list
       T.TRecord composite
         | Nothing <- extension
         , Map.size fields >= 2
-        , Set.null (usedTags `Set.intersection` Map.keysSet fields) ->
+        , Set.null (tagsInOuterScope `Set.intersection` tagsInInnerScope) ->
           mkRecordParams recordParamsInfo paramVar fieldParams
           lambdaPl (traverse (^. ipStored) body)
         where
+          tagsInInnerScope = Map.keysSet fields
           FlatComposite fields extension = FlatComposite.fromComposite composite
           fieldParams = map makeFieldParam $ Map.toList fields
       _ -> pure $ singleConventionalParam stored param paramVar body
