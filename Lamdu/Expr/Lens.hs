@@ -34,6 +34,7 @@ module Lamdu.Expr.Lens
   -- Subexpressions:
   , subExprPayloads
   , subExprs
+  , payloadsIndexedByPath
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -179,6 +180,22 @@ subExprs =
   Lens.folding f
   where
     f x = x : x ^.. V.body . Lens.traversed . subExprs
+
+payloadsIndexedByPath ::
+  Lens.IndexedTraversal
+  [Val ()]
+  (Val a)
+  (Val b)
+  a b
+payloadsIndexedByPath f =
+  go []
+  where
+    go path val@(Val pl body) =
+      Val
+      <$> Lens.indexed f newPath pl
+      <*> Lens.traversed (go newPath) body
+      where
+        newPath = void val : path
 
 biTraverseBodyTags ::
   Applicative f =>

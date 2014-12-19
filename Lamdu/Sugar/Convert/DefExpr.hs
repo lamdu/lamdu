@@ -48,7 +48,6 @@ mkContext defI cp inferContext = do
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
     , _scTagParamInfos = mempty
-    , _scRecordParamsInfos = mempty
     , _scReinferCheckDefinition =
         do
           defBody <- Transaction.readIRef defI
@@ -95,7 +94,7 @@ convert cp (Definition.Expr val defType) defI = do
     content <-
       valInferred
       <&> addStoredEntityIds
-      & ConvertBinder.convertBinder defGuid (ConvertExpr.jumpToDefI cp defI)
+      & ConvertBinder.convertBinder defGuid
     return $ DefinitionBodyExpression DefinitionExpression
       { _deContent = content
       , _deTypeInfo =

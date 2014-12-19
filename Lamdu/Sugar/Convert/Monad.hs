@@ -1,8 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Monad
-  ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
+  ( Context(..), TagParamInfo(..)
   , scInferContext, scReinferCheckDefinition, scDefI
-  , scCodeAnchors, scSpecialFunctions, scTagParamInfos, scRecordParamsInfos
+  , scCodeAnchors, scSpecialFunctions, scTagParamInfos
   , ConvertM(..), run
   , readContext, liftTransaction, local
   , codeAnchor
@@ -18,7 +18,6 @@ import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.MonadA (MonadA)
 import Data.Map (Map)
 import Data.Monoid (Monoid)
-import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Lamdu.Expr.Val (Val)
 import Lamdu.Sugar.Internal
@@ -40,12 +39,6 @@ data TagParamInfo = TagParamInfo
   , tpiJumpTo :: Sugar.EntityId
   }
 
-data RecordParamsInfo m = RecordParamsInfo
-  { -- The name of the definition from which this params record is of:
-    rpiDefName :: Guid
-  , rpiJumpTo :: T m Sugar.EntityId
-  }
-
 newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
   deriving (Functor, Applicative, Monad)
 
@@ -55,7 +48,6 @@ data Context m = Context
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions m
   , _scTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
-  , _scRecordParamsInfos :: Map V.Var (RecordParamsInfo m) -- param guids
   , -- Check whether the definition is valid after an edit,
     -- so that can hole-wrap bad edits.
     _scReinferCheckDefinition :: T m Bool

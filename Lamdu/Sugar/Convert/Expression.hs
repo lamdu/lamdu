@@ -1,7 +1,6 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types #-}
 module Lamdu.Sugar.Convert.Expression
   ( convert
-  , jumpToDefI
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
