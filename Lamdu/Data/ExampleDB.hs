@@ -57,14 +57,19 @@ createBuiltins ::
   MonadA m => T m (Db.SpecialFunctions m, [ExprIRef.DefI m])
 createBuiltins =
   Writer.runWriterT $ do
-    let newTag x = lift $ namedId x
+    let newIdent x = lift $ namedId x
 
-    listTag <- newTag "List"
-    valTag <- newTag "val"
-    let list x = T.TInst listTag $ Map.singleton valTag x
+    valTParamId <- newIdent "val"
 
-    headTag <- newTag "head"
-    tailTag <- newTag "tail"
+    mapTId <- newIdent "Map"
+    keyTParamId <- newIdent "key"
+    let mapType k v = T.TInst mapTId $ Map.fromList [(keyTParamId, k), (valTParamId, v)]
+
+    listTId <- newIdent "List"
+    let list x = T.TInst listTId $ Map.singleton valTParamId x
+
+    headTag <- newIdent "head"
+    tailTag <- newIdent "tail"
     nonEmpty <-
       publicBuiltin "Prelude.:" $ forAll 1 $ \[a] ->
       recordType [(headTag, a), (tailTag, list a)] ~> list a
@@ -72,15 +77,15 @@ createBuiltins =
     publicBuiltin_ "Data.List.tail" $ forAll 1 $ \[a] -> list a ~> list a
     publicBuiltin_ "Data.List.head" . forAll 1 $ \[a] -> list a ~> a
 
-    maybeTag <- newTag "Maybe"
-    let maybe_ x = T.TInst maybeTag $ Map.singleton valTag x
+    maybeTag <- newIdent "Maybe"
+    let maybe_ x = T.TInst maybeTag $ Map.singleton valTParamId x
     publicBuiltin_ "Prelude.Just" $ forAll 1 $ \[a] -> a ~> maybe_ a
     publicBuiltin_ "Prelude.Nothing" $ forAll 1 $ \[a] -> maybe_ a
 
-    objTag <- newTag "object" -- OO hides this
+    objTag <- newIdent "object" -- OO hides this
 
-    nothingTag <- newTag "Nothing"
-    justTag <- newTag "Just"
+    nothingTag <- newIdent "Nothing"
+    justTag <- newIdent "Just"
     publicBuiltin_ "Data.Maybe.caseMaybe" . forAll 2 $ \[a, b] ->
       recordType
       [ ( objTag, maybe_ a )
@@ -88,10 +93,10 @@ createBuiltins =
       , ( justTag, a ~> b )
       ] ~> b
 
-    intTag <- newTag "Int"
+    intTag <- newIdent "Int"
     let integer = T.TInst intTag Map.empty
 
-    boolTag <- newTag "Bool"
+    boolTag <- newIdent "Bool"
     let bool = T.TInst boolTag Map.empty
 
     true <- publicBuiltin "Prelude.True" $ Scheme.mono bool
@@ -99,8 +104,8 @@ createBuiltins =
 
     publicBuiltin_ "Prelude.not" $ Scheme.mono $ bool ~> bool
 
-    infixlTag <- newTag "infixl"
-    infixrTag <- newTag "infixr"
+    infixlTag <- newIdent "infixl"
+    infixrTag <- newIdent "infixr"
     let
       infixType lType rType resType =
         recordType [(infixlTag, lType), (infixrTag, rType)] ~> resType
@@ -108,8 +113,8 @@ createBuiltins =
     traverse_ ((`publicBuiltin_` Scheme.mono (infixType bool bool bool)) . ("Prelude."++))
       ["&&", "||"]
 
-    trueTag <- newTag "True"
-    falseTag <- newTag "False"
+    trueTag <- newIdent "True"
+    falseTag <- newIdent "False"
     publicBuiltin_ "Prelude.if" . forAll 1 $ \[a] ->
       recordType
       [ (objTag, bool)
@@ -135,9 +140,21 @@ createBuiltins =
     traverse_ ((`publicBuiltin_` Scheme.mono (list integer ~> integer)) . ("Prelude."++))
       ["product", "sum", "maximum", "minimum"]
 
-    fromTag <- newTag "from"
+    fromTag <- newIdent "from"
+    toTag <- newIdent "to"
+    keyTag <- newIdent "key"
+    valTag <- newIdent "val"
 
-    predicateTag <- newTag "predicate"
+    publicBuiltin_ "Data.Map.empty" . forAll 2 $ \[k, v] -> mapType k v
+    publicDef_ "insert" Verbose ["Data", "Map"] "insert" . forAll 2 $
+      \[k, v] ->
+      recordType
+      [ ( keyTag, k )
+      , ( valTag, v )
+      , ( toTag, mapType k v )
+      ] ~> mapType k v
+
+    predicateTag <- newIdent "predicate"
     publicDef_ "filter" Verbose ["Data", "List"] "filter" $
       forAll 1 $ \[a] ->
       recordType
@@ -145,7 +162,7 @@ createBuiltins =
       , (predicateTag, a ~> bool)
       ] ~> list a
 
-    whileTag <- newTag "while"
+    whileTag <- newIdent "while"
     publicDef_ "take" Verbose ["Data", "List"] "takeWhile" $
       forAll 1 $ \[a] ->
       recordType
@@ -153,14 +170,14 @@ createBuiltins =
       , (whileTag, a ~> bool)
       ] ~> list a
 
-    countTag <- newTag "count"
+    countTag <- newIdent "count"
     publicDef_ "take" Verbose ["Data", "List"] "take" . forAll 1 $ \[a] ->
       recordType
       [ (fromTag, list a)
       , (countTag, integer)
       ] ~> list a
 
-    mappingTag <- newTag "mapping"
+    mappingTag <- newIdent "mapping"
     publicBuiltin_ "Data.List.map" .
       forAll 2 $ \[a, b] ->
       recordType
@@ -176,10 +193,10 @@ createBuiltins =
       , (countTag, integer)
       ] ~> list a
 
-    initialTag     <- newTag "initial"
-    stepTag        <- newTag "step"
-    accumulatorTag <- newTag "accumulator"
-    itemTag        <- newTag "item"
+    initialTag     <- newIdent "initial"
+    stepTag        <- newIdent "step"
+    accumulatorTag <- newIdent "accumulator"
+    itemTag        <- newIdent "item"
     publicBuiltin_ "Data.List.foldl" . forAll 2 $ \[a, b] ->
       recordType
       [ ( objTag, list b )
@@ -192,8 +209,8 @@ createBuiltins =
         )
       ] ~> a
 
-    emptyTag <- newTag "empty"
-    prependTag <- newTag "prepend"
+    emptyTag <- newIdent "empty"
+    prependTag <- newIdent "prepend"
     publicBuiltin_ "Data.List.foldr" . forAll 2 $ \[a, b] ->
       recordType
       [ ( objTag, list a )
@@ -218,9 +235,9 @@ createBuiltins =
         )
       ] ~> b
 
-    funcTag <- newTag "func"
-    xTag <- newTag "x"
-    yTag <- newTag "y"
+    funcTag <- newIdent "func"
+    xTag <- newIdent "x"
+    yTag <- newIdent "y"
     publicBuiltin_ "Data.List.zipWith" . forAll 3 $ \[a, b, c] ->
       recordType
       [ ( funcTag, recordType [(xTag, a), (yTag, b)] ~> c)
