@@ -3,6 +3,7 @@ module Lamdu.Sugar.Convert.Binder
   ( convertBinder, convertLam
   , convertPositionalFuncParam
   , deleteParamRef
+  , makeDeleteLambda
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -16,7 +17,7 @@ import Data.Monoid (Monoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction, MkProperty)
-import Data.Traversable (traverse)
+import Data.Traversable (traverse, sequenceA)
 import Lamdu.Expr.FlatComposite (FlatComposite(..))
 import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val(..))
@@ -26,6 +27,7 @@ import Lamdu.Sugar.Types
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Data.Store.Property as Property
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
@@ -66,18 +68,35 @@ toHole = void . DataOps.setToHole
 isGetParamOf :: V.Var -> Val a -> Bool
 isGetParamOf = Lens.anyOf ExprLens.valVar . (==)
 
+makeDeleteLambda ::
+  MonadA m =>
+  V.Lam (Val (ExprIRef.ValIProperty m)) -> ExprIRef.ValIProperty m ->
+  ConvertM m (T m EntityId)
+makeDeleteLambda (V.Lam paramVar lamBodyStored) stored =
+  do
+    protectedSetToVal <- ConvertM.typeProtectedSetToVal
+    return $
+      do
+        deleteParamRef paramVar lamBodyStored
+        let lamBodyI = Property.value (lamBodyStored ^. V.payload)
+        protectedSetToVal stored lamBodyI <&> EntityId.ofValI
+
+
 mkPositionalFuncParamActions ::
-  MonadA m => V.Var -> ExprIRef.ValIProperty m -> Val (ExprIRef.ValIProperty m) -> FuncParamActions m
-mkPositionalFuncParamActions param lambdaProp body =
-  FuncParamActions
-  { _fpListItemActions =
-    ListItemActions
-    { _itemDelete = do
-        deleteParamRef param body
-        replaceWith lambdaProp $ body ^. V.payload
-    , _itemAddNext = lambdaWrap $ body ^. V.payload
-    }
-  }
+  MonadA m =>
+  V.Lam (Val (ExprIRef.ValIProperty m)) -> ExprIRef.ValIProperty m ->
+  ConvertM m (FuncParamActions m)
+mkPositionalFuncParamActions lam@(V.Lam _ body) lambdaProp =
+  do
+    delete <- makeDeleteLambda lam lambdaProp
+    return
+      FuncParamActions
+      { _fpListItemActions =
+        ListItemActions
+        { _itemDelete = delete
+        , _itemAddNext = lambdaWrap $ body ^. V.payload
+        }
+      }
 
 mkRecordParams ::
   (MonadA m, Monoid a) =>
@@ -189,18 +208,20 @@ convertPositionalFuncParam ::
   (MonadA m, Monoid a) => V.Lam (Val (InputPayload m a)) ->
   InputPayload m a ->
   ConvertM m (FuncParam Guid m)
-convertPositionalFuncParam (V.Lam param body) lamExprPl =
-  pure FuncParam
-  { _fpName = UniqueId.toGuid param
-  , _fpVarKind = FuncParameter
-  , _fpId = paramEntityId
-  , _fpInferredType = paramType
-  , _fpMActions =
-    mkPositionalFuncParamActions param
-    <$> lamExprPl ^. ipStored
-    <*> traverse (^. ipStored) body
-  , _fpHiddenIds = []
-  }
+convertPositionalFuncParam lam@(V.Lam param _) lamExprPl =
+  do
+    mActions <-
+      sequenceA $ mkPositionalFuncParamActions
+      <$> (lam & (traverse . traverse) (^. ipStored))
+      <*> lamExprPl ^. ipStored
+    pure FuncParam
+      { _fpName = UniqueId.toGuid param
+      , _fpVarKind = FuncParameter
+      , _fpId = paramEntityId
+      , _fpInferredType = paramType
+      , _fpMActions = mActions
+      , _fpHiddenIds = []
+      }
   where
     paramEntityId = EntityId.ofLambdaParam param
     paramType =

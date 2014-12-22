@@ -12,7 +12,7 @@ import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
-import Data.Traversable (traverse)
+import Data.Traversable (traverse, sequenceA)
 import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Sugar.Convert.Expression.Actions (addActions)
@@ -21,7 +21,6 @@ import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
-import qualified Data.Store.Property as Property
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -43,20 +42,18 @@ convertLam ::
   (MonadA m, Monoid a) =>
   V.Lam (Val (InputPayload m a)) ->
   InputPayload m a -> ConvertM m (ExpressionU m a)
-convertLam lam@(V.Lam paramVar lamBody) exprPl =
+convertLam lam@(V.Lam _ lamBody) exprPl =
   do
     binder <- ConvertBinder.convertLam lam exprPl
-    protectedSetToVal <- ConvertM.typeProtectedSetToVal
+    mDeleteLam <-
+      sequenceA $ ConvertBinder.makeDeleteLambda
+      <$> (lam & (traverse . traverse) (^. ipStored))
+      <*> exprPl ^. ipStored
     let
       setToInnerExprAction =
         maybe NoInnerExpr SetToInnerExpr $ do
           guard $ Lens.nullOf ExprLens.valHole lamBody
-          lamBodyStored <- traverse (^. ipStored) lamBody
-          stored <- exprPl ^. ipStored
-          return $ do
-            ConvertBinder.deleteParamRef paramVar lamBodyStored
-            let lamBodyI = Property.value (lamBodyStored ^. V.payload)
-            protectedSetToVal stored lamBodyI <&> EntityId.ofValI
+          mDeleteLam
     BodyLam binder
       & addActions exprPl
       <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
