@@ -30,13 +30,14 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.RecordVal as RecordVal
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
+import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
 type T = Transaction
 
 nil ::
-  MonadA m => V.GlobalId -> InputPayload m a -> MaybeT (ConvertM m) (ExpressionU m a)
+  MonadA m => V.GlobalId -> Input.Payload m a -> MaybeT (ConvertM m) (ExpressionU m a)
 nil globId exprPl = do
   specialFunctions <-
     lift $ (^. ConvertM.scSpecialFunctions) <$> ConvertM.readContext
@@ -50,8 +51,8 @@ nil globId exprPl = do
   (lift . addActions exprPl . BodyList)
     List
     { lValues = []
-    , lMActions = mkListActions <$> exprPl ^. ipStored
-    , lNilEntityId = exprPl ^. ipEntityId
+    , lMActions = mkListActions <$> exprPl ^. Input.mStored
+    , lNilEntityId = exprPl ^. Input.entityId
     }
 
 mkListAddFirstItem ::
@@ -63,7 +64,7 @@ mkListAddFirstItem specialFunctions =
 mkListItem ::
   (MonadA m, Monoid a) =>
   ExpressionU m a -> ExpressionU m a ->
-  InputPayload m a -> Val (InputPayload m a) -> Maybe (T m EntityId) ->
+  Input.Payload m a -> Val (Input.Payload m a) -> Maybe (T m EntityId) ->
   ListItem m (ExpressionU m a)
 mkListItem listItemExpr recordArgS exprPl tailI mAddNextItem =
   ListItem
@@ -72,8 +73,8 @@ mkListItem listItemExpr recordArgS exprPl tailI mAddNextItem =
     & rPayload . plData <>~ recordArgS ^. rPayload . plData
   , _liMActions = do
       addNext <- mAddNextItem
-      exprProp <- exprPl ^. ipStored
-      argProp <- tailI ^. V.payload . ipStored
+      exprProp <- exprPl ^. Input.mStored
+      argProp <- tailI ^. V.payload . Input.mStored
       return ListItemActions
         { _itemAddNext = addNext
         , _itemDelete = replaceWith exprProp argProp
@@ -115,8 +116,8 @@ valConsParams specialFunctions val = do
 
 cons ::
   (MonadA m, Monoid a) =>
-  V.Apply (Val (InputPayload m a)) ->
-  ExpressionU m a -> InputPayload m a ->
+  V.Apply (Val (Input.Payload m a)) ->
+  ExpressionU m a -> Input.Payload m a ->
   MaybeT (ConvertM m) (ExpressionU m a)
 cons (V.Apply funcI argI) argS exprPl = do
   specialFunctions <-
@@ -132,10 +133,10 @@ cons (V.Apply funcI argI) argS exprPl = do
       mkListItem headS argS exprPl tailI
       (addFirstItem <$> innerListMActions)
       & liExpr . rPayload . plData <>~
-        (funcI ^. Lens.traversed . ipData <>
+        (funcI ^. Lens.traversed . Input.userData <>
          tailS ^. rPayload . plData)
     mListActions = do
-      exprS <- exprPl ^. ipStored
+      exprS <- exprPl ^. Input.mStored
       innerListActions <- innerListMActions
       pure ListActions
         { addFirstItem = mkListAddFirstItem specialFunctions exprS
@@ -143,4 +144,4 @@ cons (V.Apply funcI argI) argS exprPl = do
         }
   lift . addActions exprPl . BodyList $
     List (listItem : innerValues) mListActions nilGuid
-    <&> rPayload . plData <>~ (pls ^. traverse . ipData)
+    <&> rPayload . plData <>~ (pls ^. traverse . Input.userData)

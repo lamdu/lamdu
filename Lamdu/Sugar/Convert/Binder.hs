@@ -35,6 +35,7 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
@@ -45,7 +46,7 @@ data ConventionalParams m a = ConventionalParams
   , cpParamInfos :: Map T.Tag ConvertM.TagParamInfo
   , cpParams :: [FuncParam Guid m]
   , cpAddFirstParam :: T m EntityId
-  , cpHiddenPayloads :: [InputPayload m a]
+  , cpHiddenPayloads :: [Input.Payload m a]
   }
 
 data FieldParam = FieldParam
@@ -82,7 +83,7 @@ mkRecordParams ::
   (MonadA m, Monoid a) =>
   [FieldParam] ->
   V.Lam (Maybe (Val (ExprIRef.ValIProperty m))) ->
-  InputPayload m a ->
+  Input.Payload m a ->
   ConvertM m (ConventionalParams m a)
 mkRecordParams fieldParams lam@(V.Lam param _) lambdaPl = do
   params <- traverse mkParam fieldParams
@@ -149,14 +150,14 @@ makeLamParamActions lam lambdaProp =
       }
 
 convertLamParam :: MonadA m =>
-  V.Lam (Val (InputPayload m a)) -> InputPayload m a ->
+  V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
   ConvertM m (ConventionalParams m a)
 convertLamParam lam@(V.Lam param _) lamExprPl =
   do
     mActions <-
       sequenceA $ makeLamParamActions
-      <$> (lam & (traverse . traverse) (^. ipStored))
-      <*> lamExprPl ^. ipStored
+      <$> (lam & (traverse . traverse) (^. Input.mStored))
+      <*> lamExprPl ^. Input.mStored
     let
       funcParam =
         FuncParam
@@ -165,7 +166,7 @@ convertLamParam lam@(V.Lam param _) lamExprPl =
         , _fpId = paramEntityId
         , _fpInferredType = paramType
         , _fpMActions = mActions
-        , _fpHiddenIds = [lamExprPl ^. ipEntityId]
+        , _fpHiddenIds = [lamExprPl ^. Input.entityId]
         }
     pure ConventionalParams
       { cpTags = mempty
@@ -178,7 +179,7 @@ convertLamParam lam@(V.Lam param _) lamExprPl =
     paramEntityId = EntityId.ofLambdaParam param
     paramType =
       fromMaybe (error "Lambda value not inferred to a function type?!") $
-      lamExprPl ^? ipInferred . Infer.plType . ExprLens._TFun . Lens._1
+      lamExprPl ^? Input.inferred . Infer.plType . ExprLens._TFun . Lens._1
     -- _existingParamTypeIRef =
     --   fromMaybe (error "Only stored record param type is converted as record") $
     --   existingParamType ^? SugarInfer.exprIRef
@@ -217,18 +218,18 @@ isParamAlwaysUsedWithGetField (V.Lam param body) =
 
 convertLamParams ::
   (MonadA m, Monoid a) =>
-  V.Lam (Val (InputPayload m a)) -> InputPayload m a ->
+  V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
   ConvertM m (ConventionalParams m a)
 convertLamParams lambda lambdaPl =
   do
     tagsInOuterScope <- ConvertM.readContext <&> Map.keysSet . (^. ConvertM.scTagParamInfos)
-    case lambdaPl ^. ipInferred . Infer.plType of
+    case lambdaPl ^. Input.inferred . Infer.plType of
       T.TFun (T.TRecord composite) _
         | Nothing <- extension
         , Map.size fields >= 2
         , Set.null (tagsInOuterScope `Set.intersection` tagsInInnerScope)
         , isParamAlwaysUsedWithGetField lambda ->
-          mkRecordParams fieldParams (lambda <&> traverse %%~ (^. ipStored)) lambdaPl
+          mkRecordParams fieldParams (lambda <&> traverse %%~ (^. Input.mStored)) lambdaPl
         where
           tagsInInnerScope = Map.keysSet fields
           FlatComposite fields extension = FlatComposite.fromComposite composite
@@ -243,10 +244,10 @@ convertLamParams lambda lambdaPl =
 
 convertParams ::
   (MonadA m, Monoid a) =>
-  Val (InputPayload m a) ->
+  Val (Input.Payload m a) ->
   ConvertM m
   ( ConventionalParams m a
-  , Val (InputPayload m a)
+  , Val (Input.Payload m a)
   )
 convertParams expr =
   case expr ^. V.body of
@@ -258,7 +259,7 @@ convertParams expr =
   where
     stored =
       fromMaybe (error "Definition body is always stored!") $
-      expr ^. V.payload . ipStored
+      expr ^. V.payload . Input.mStored
 
 emptyConventionalParams :: MonadA m => ExprIRef.ValIProperty m -> ConventionalParams m a
 emptyConventionalParams stored = ConventionalParams
@@ -277,7 +278,7 @@ data ExprWhereItem a = ExprWhereItem
   , ewiInferredType :: Type
   }
 
-mExtractWhere :: Val (InputPayload m a) -> Maybe (ExprWhereItem (InputPayload m a))
+mExtractWhere :: Val (Input.Payload m a) -> Maybe (ExprWhereItem (Input.Payload m a))
 mExtractWhere expr = do
   V.Apply func arg <- expr ^? ExprLens.valApply
   V.Lam param body <- func ^? V.body . ExprLens._BAbs
@@ -286,7 +287,7 @@ mExtractWhere expr = do
     , ewiParam = param
     , ewiArg = arg
     , ewiHiddenPayloads = (^. V.payload) <$> [expr, func]
-    , ewiInferredType = arg ^. V.payload . ipInferred . Infer.plType
+    , ewiInferredType = arg ^. V.payload . Input.inferred . Infer.plType
     }
 
 lambdaWrap :: MonadA m => ExprIRef.ValIProperty m -> T m EntityId
@@ -312,8 +313,8 @@ getFieldParamsToHole tag (V.Lam param lamBody) =
 
 convertWhereItems ::
   (MonadA m, Monoid a) =>
-  Val (InputPayload m a) ->
-  ConvertM m ([WhereItem Guid m (ExpressionU m a)], Val (InputPayload m a))
+  Val (Input.Payload m a) ->
+  ConvertM m ([WhereItem Guid m (ExpressionU m a)], Val (Input.Payload m a))
 convertWhereItems expr =
   case mExtractWhere expr of
   Nothing -> return ([], expr)
@@ -332,7 +333,7 @@ convertWhereItems expr =
         , _itemAddNext = EntityId.ofLambdaParam . fst <$> DataOps.redexWrap topLevelProp
         }
     let
-      hiddenData = ewiHiddenPayloads ewi ^. Lens.traversed . ipData
+      hiddenData = ewiHiddenPayloads ewi ^. Lens.traversed . Input.userData
       item = WhereItem
         { _wiEntityId = defEntityId
         , _wiValue =
@@ -340,8 +341,8 @@ convertWhereItems expr =
             & dBody . rPayload . plData <>~ hiddenData
         , _wiActions =
             mkWIActions <$>
-            expr ^. V.payload . ipStored <*>
-            traverse (^. ipStored) (ewiBody ewi)
+            expr ^. V.payload . Input.mStored <*>
+            traverse (^. Input.mStored) (ewiBody ewi)
         , _wiName = UniqueId.toGuid param
         , _wiInferredType = ewiInferredType ewi
         }
@@ -361,7 +362,7 @@ convertWhereItems expr =
 
 makeBinder :: (MonadA m, Monoid a) =>
   Maybe (MkProperty m PresentationMode) ->
-  ConventionalParams m a -> Val (InputPayload m a) ->
+  ConventionalParams m a -> Val (Input.Payload m a) ->
   ConvertM m (Binder Guid m (ExpressionU m a))
 makeBinder setPresentationMode convParams funcBody =
   ConvertM.local (ConvertM.scTagParamInfos <>~ cpParamInfos convParams) $
@@ -374,9 +375,9 @@ makeBinder setPresentationMode convParams funcBody =
         , _dBody =
           bodyS
           & rPayload . plData <>~
-            cpHiddenPayloads convParams ^. Lens.traversed . ipData
+            cpHiddenPayloads convParams ^. Lens.traversed . Input.userData
         , _dWhereItems = whereItems
-        , _dMActions = mkActions <$> whereBody ^. V.payload . ipStored
+        , _dMActions = mkActions <$> whereBody ^. V.payload . Input.mStored
         }
   where
     mkActions whereStored =
@@ -388,7 +389,7 @@ makeBinder setPresentationMode convParams funcBody =
 
 convertLam ::
   (MonadA m, Monoid a) =>
-  V.Lam (Val (InputPayload m a)) -> InputPayload m a ->
+  V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
   ConvertM m (Binder Guid m (ExpressionU m a))
 convertLam lam pl =
   do
@@ -397,7 +398,7 @@ convertLam lam pl =
 
 convertBinder ::
   (MonadA m, Monoid a) =>
-  Guid -> Val (InputPayload m a) -> ConvertM m (Binder Guid m (ExpressionU m a))
+  Guid -> Val (Input.Payload m a) -> ConvertM m (Binder Guid m (ExpressionU m a))
 convertBinder defGuid expr =
   do
     (convParams, funcBody) <- convertParams expr

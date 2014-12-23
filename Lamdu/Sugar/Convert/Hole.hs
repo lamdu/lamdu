@@ -37,13 +37,13 @@ import qualified Data.Foldable as Foldable
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
-import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.GenIds as InputExpr
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.Type as T
@@ -51,7 +51,7 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
-import qualified Lamdu.Expr.IRef.Infer as IRefInfer
+import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified System.Random as Random
@@ -62,14 +62,14 @@ type ExprStorePoint m a = Val (Maybe (ExprIRef.ValI m), a)
 
 convert ::
   (MonadA m, Monoid a) =>
-  InputPayload m a -> ConvertM m (ExpressionU m a)
+  Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert exprPl =
   convertPlain Nothing exprPl
   <&> rPayload . plActions . Lens._Just . setToHole .~ AlreadyAHole
 
 convertPlain ::
   (MonadA m, Monoid a) =>
-  Maybe (Val (InputPayload m a)) -> InputPayload m a -> ConvertM m (ExpressionU m a)
+  Maybe (Val (Input.Payload m a)) -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertPlain mInjectedArg exprPl =
   mkHole mInjectedArg exprPl
   <&> BodyHole
@@ -93,8 +93,8 @@ mkPaste exprP = do
 
 mkWritableHoleActions ::
   (MonadA m) =>
-  Maybe (Val (InputPayload m a)) ->
-  InputPayload m a -> ExprIRef.ValIProperty m ->
+  Maybe (Val (Input.Payload m a)) ->
+  Input.Payload m a -> ExprIRef.ValIProperty m ->
   ConvertM m (HoleActions Guid m)
 mkWritableHoleActions mInjectedArg exprPl stored = do
   sugarContext <- ConvertM.readContext
@@ -116,7 +116,7 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
     , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
     }
   where
-    inferred = exprPl ^. ipInferred
+    inferred = exprPl ^. Input.inferred
 
 -- Ignoring alpha-renames:
 consistentExprIds :: EntityId -> Val (Guid -> EntityId -> a) -> Val a
@@ -140,7 +140,7 @@ mkHoleSuggested holeEntityId inferred = do
         & runMaybeT
         <&> unsafeUnjust "Inference on inferred val must succeed"
       inferredIVal
-        <&> mkInputPayload . fst
+        <&> Input.mkUnstoredPayload () . fst
         & consistentExprIds holeEntityId
         & ConvertM.convertSubexpression
         & ConvertM.run (sugarContext & ConvertM.scInferContext .~ newCtx)
@@ -157,21 +157,14 @@ mkHoleSuggested holeEntityId inferred = do
       i <- State.get
       State.modify (+1)
       return . fromString $ "var" ++ show i
-    mkInputPayload i guid entityId = InputPayload
-      { _ipEntityId = entityId
-      , _ipGuid = guid
-      , _ipInferred = i
-      , _ipStored = Nothing
-      , _ipData = ()
-      }
 
 mkHole ::
   (MonadA m, Monoid a) =>
-  Maybe (Val (InputPayload m a)) ->
-  InputPayload m a -> ConvertM m (Hole Guid m (ExpressionU m a))
+  Maybe (Val (Input.Payload m a)) ->
+  Input.Payload m a -> ConvertM m (Hole Guid m (ExpressionU m a))
 mkHole mInjectedArg exprPl = do
-  mActions <- traverse (mkWritableHoleActions mInjectedArg exprPl) (exprPl ^. ipStored)
-  suggested <- mkHoleSuggested (exprPl ^. ipEntityId) $ exprPl ^. ipInferred
+  mActions <- traverse (mkWritableHoleActions mInjectedArg exprPl) (exprPl ^. Input.mStored)
+  suggested <- mkHoleSuggested (exprPl ^. Input.entityId) $ exprPl ^. Input.inferred
   pure Hole
     { _holeMActions = mActions
     , _holeSuggested = suggested
@@ -226,8 +219,8 @@ writeConvertTypeChecked ::
   HoleResultVal m a ->
   T m
   ( ExpressionU m a
-  , Val (InputPayload m a)
-  , Val (ExprIRef.ValIProperty m, InputPayload m a)
+  , Val (Input.Payload m a)
+  , Val (ExprIRef.ValIProperty m, Input.Payload m a)
   )
 writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
   -- With the real stored guids:
@@ -247,13 +240,13 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
     --
     -- So, we do something a bit odd: Take the written expr with its
     -- in-tact stored allowing actions to be built correctly but
-    -- replace the ipGuid/ipEntityId with determinstic/consistent
+    -- replace the Input.guid/Input.entityId with determinstic/consistent
     -- pseudo-random generated ones that preserve proper animations
     -- and cursor navigation.
 
     makeConsistentPayload (False, (_, pl)) guid entityId = pl
-      & ipEntityId .~ entityId
-      & ipGuid .~ guid
+      & Input.entityId .~ entityId
+      & Input.guid .~ guid
     makeConsistentPayload (True, (_, pl)) _ _ = pl
     consistentExpr =
       writtenExpr
@@ -271,13 +264,8 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
   where
     intoStorePoint (inferred, (mStorePoint, a)) =
       (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
-    toPayload (stored, (inferred, wasStored, a)) = (,) wasStored $ (,) stored InputPayload
-      { _ipEntityId = EntityId.ofValI $ Property.value stored
-      , _ipGuid = IRef.guid $ ExprIRef.unValI $ Property.value stored
-      , _ipInferred = inferred
-      , _ipStored = Just stored
-      , _ipData = a
-      }
+    toPayload (stored, (inferred, wasStored, a)) =
+      (,) wasStored $ (,) stored $ Input.mkPayload a (inferred, stored)
 
 resultTypeScore :: Type -> [Int]
 resultTypeScore (T.TVar _) = [0]
@@ -408,7 +396,7 @@ stateEitherSequence (StateT f) =
 
 holeResultsInject ::
   Monad m =>
-  Val (InputPayload n a) -> HoleResultVal n () ->
+  Val (Input.Payload n a) -> HoleResultVal n () ->
   StateT Infer.Context (ListT m) (HoleResultVal n IsInjected)
 holeResultsInject injectedArg val =
   do
@@ -424,8 +412,8 @@ holeResultsInject injectedArg val =
     return filledVal
   where
     onInjectedPayload pl =
-        ( pl ^. ipInferred
-        , (pl ^? ipStored . Lens._Just . Property.pVal, NotInjected)
+        ( pl ^. Input.inferred
+        , (pl ^? Input.mStored . Lens._Just . Property.pVal, NotInjected)
         )
     inject pl =
         ( Monoid.First (Just pl)
@@ -433,12 +421,12 @@ holeResultsInject injectedArg val =
           <&> onInjectedPayload
           & V.payload . _2 . _2 .~ Injected
         )
-    injectedType = injectedArg ^. V.payload . ipInferred . Infer.plType
+    injectedType = injectedArg ^. V.payload . Input.inferred . Infer.plType
 
 mkHoleResultVals ::
   MonadA m =>
-  Maybe (Val (InputPayload m a)) ->
-  InputPayload m dummy ->
+  Maybe (Val (Input.Payload m a)) ->
+  Input.Payload m dummy ->
   Val () ->
   StateT Infer.Context (ListT (T m)) (HoleResultVal m IsInjected)
 mkHoleResultVals mInjectedArg exprPl base =
@@ -459,8 +447,8 @@ mkHoleResultVals mInjectedArg exprPl base =
       Right _ -> injected
       Left _ -> holeWrap holeType injected
   where
-    holeType = exprPl ^. ipInferred . Infer.plType
-    scopeAtHole = exprPl ^. ipInferred . Infer.plScope
+    holeType = exprPl ^. Input.inferred . Infer.plType
+    scopeAtHole = exprPl ^. Input.inferred . Infer.plScope
 
 mkHoleResult ::
   MonadA m =>
@@ -484,18 +472,18 @@ mkHoleResult sugarContext entityId stored val =
       PickedResult
       { _prMJumpTo =
         (orderedInnerHoles writtenExpr ^? Lens.traverse . V.payload . _2)
-        <&> (^. ipGuid) &&& (^. ipEntityId)
+        <&> (^. Input.guid) &&& (^. Input.entityId)
       , _prIdTranslation =
         idTranslations
-        (consistentExpr <&> (^. ipEntityId))
+        (consistentExpr <&> (^. Input.entityId))
         (writtenExpr <&> EntityId.ofValI . Property.value . fst)
       }
 
 mkHoleResults ::
   MonadA m =>
-  Maybe (Val (InputPayload m a)) ->
+  Maybe (Val (Input.Payload m a)) ->
   ConvertM.Context m ->
-  InputPayload m dummy -> ExprIRef.ValIProperty m ->
+  Input.Payload m dummy -> ExprIRef.ValIProperty m ->
   Val () ->
   ListT (T m) (HoleResultScore, T m (HoleResult Guid m))
 mkHoleResults mInjectedArg sugarContext exprPl stored base =
@@ -506,7 +494,7 @@ mkHoleResults mInjectedArg sugarContext exprPl stored base =
     let newSugarContext = sugarContext & ConvertM.scInferContext .~ inferContext
     return
       ( resultScore (fst <$> val)
-      , mkHoleResult newSugarContext (exprPl ^. ipEntityId) stored val
+      , mkHoleResult newSugarContext (exprPl ^. Input.entityId) stored val
       )
 
 randomizeNonStoredParamIds ::

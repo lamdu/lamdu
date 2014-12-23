@@ -22,11 +22,12 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
+import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
-plValI :: Lens.Traversal' (InputPayload m a) (ExprIRef.ValI m)
-plValI = ipStored . Lens._Just . Property.pVal
+plValI :: Lens.Traversal' (Input.Payload m a) (ExprIRef.ValI m)
+plValI = Input.mStored . Lens._Just . Property.pVal
 
 convertTag :: EntityId -> T.Tag -> TagG Guid
 convertTag inst tag = TagG inst tag $ UniqueId.toGuid tag
@@ -35,7 +36,7 @@ convertField ::
   (MonadA m, Monoid a) =>
   Maybe (ExprIRef.ValIProperty m) ->
   Maybe (ExprIRef.ValI m) -> Record name m (ExpressionU m a) ->
-  EntityId -> T.Tag -> Val (InputPayload m a) ->
+  EntityId -> T.Tag -> Val (Input.Payload m a) ->
   ConvertM m (RecordField Guid m (ExpressionU m a))
 convertField mStored mRestI restS inst tag expr = do
   exprS <- ConvertM.convertSubexpression expr
@@ -89,36 +90,36 @@ makeAddField (Just stored) =
           void $ DataOps.setToWrapper resultI stored
           return resultI
 
-convertEmpty :: MonadA m => InputPayload m a -> ConvertM m (ExpressionU m a)
+convertEmpty :: MonadA m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertEmpty exprPl = do
-  mAddField <- makeAddField (exprPl ^. ipStored)
+  mAddField <- makeAddField (exprPl ^. Input.mStored)
   BodyRecord Record
     { _rItems = []
     , _rTail =
         ClosedRecord $
-        fmap EntityId.ofValI . DataOps.replaceWithHole <$> exprPl ^. ipStored
+        fmap EntityId.ofValI . DataOps.replaceWithHole <$> exprPl ^. Input.mStored
     , _rMAddField = mAddField
     }
     & addActions exprPl
 
 convertExtend ::
-  (MonadA m, Monoid a) => V.RecExtend (Val (InputPayload m a)) ->
-  InputPayload m a -> ConvertM m (ExpressionU m a)
+  (MonadA m, Monoid a) => V.RecExtend (Val (Input.Payload m a)) ->
+  Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertExtend (V.RecExtend tag val rest) exprPl = do
   restS <- ConvertM.convertSubexpression rest
   (restRecord, hiddenEntities) <-
     case restS ^. rBody of
     BodyRecord r -> return (r, restS ^. rPayload . plData)
     _ -> do
-      mAddField <- makeAddField (rest ^. V.payload . ipStored)
+      mAddField <- makeAddField (rest ^. V.payload . Input.mStored)
       return
         ( Record [] (RecordExtending restS) mAddField
         , mempty
         )
   fieldS <-
     convertField
-    (exprPl ^. ipStored) (rest ^? V.payload . plValI) restRecord
-    (EntityId.ofRecExtendTag (exprPl ^. ipEntityId)) tag val
+    (exprPl ^. Input.mStored) (rest ^? V.payload . plValI) restRecord
+    (EntityId.ofRecExtendTag (exprPl ^. Input.entityId)) tag val
   restRecord
     & rItems %~ (fieldS:)
     & BodyRecord

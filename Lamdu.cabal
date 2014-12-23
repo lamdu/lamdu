@@ -226,6 +226,7 @@ Executable lamdu
                ,       Lamdu.Sugar.Convert.Expression.Actions
                ,       Lamdu.Sugar.Convert.GetVar
                ,       Lamdu.Sugar.Convert.Hole
+               ,       Lamdu.Sugar.Convert.Input
                ,       Lamdu.Sugar.Convert.List
                ,       Lamdu.Sugar.Convert.Monad
                ,       Lamdu.Sugar.Convert.Record

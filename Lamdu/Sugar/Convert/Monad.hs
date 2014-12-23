@@ -30,6 +30,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -52,7 +53,7 @@ data Context m = Context
     -- so that can hole-wrap bad edits.
     _scReinferCheckDefinition :: T m Bool
   , scConvertSubexpression ::
-       forall a. Monoid a => Val (Sugar.InputPayload m a) -> ConvertM m (ExpressionU m a)
+       forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
   }
 Lens.makeLenses ''Context
 
@@ -107,7 +108,7 @@ codeAnchor f = f . (^. scCodeAnchors) <$> readContext
 getP :: MonadA m => Transaction.MkProperty m a -> ConvertM m a
 getP = liftTransaction . Transaction.getP
 
-convertSubexpression :: (MonadA m, Monoid a) => Val (Sugar.InputPayload m a) -> ConvertM m (ExpressionU m a)
+convertSubexpression :: (MonadA m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convertSubexpression exprI = do
   convertSub <- scConvertSubexpression <$> readContext
   convertSub exprI

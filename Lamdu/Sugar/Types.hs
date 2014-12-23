@@ -59,8 +59,6 @@ module Lamdu.Sugar.Types
   , IsInjected(..)
   , PickedResult(..), prMJumpTo, prIdTranslation
   , TagG(..), tagGName, tagVal, tagInstance
-  -- Input types:
-  , InputPayload(..), ipGuid, ipEntityId, ipInferred, ipStored, ipData
   ) where
 
 import Control.Monad.ListT (ListT)
@@ -77,24 +75,9 @@ import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Infer as Infer
 
 type T = Transaction
-
-data InputPayload m a
-  = InputPayload
-    { _ipEntityId :: EntityId
-    , -- Used as a hole id that later GUI uses to associate data with
-      -- Need to replace this with some mechanism that avoids exposing
-      -- Guids to GUI
-      _ipGuid :: Guid
-    , _ipInferred :: Infer.Payload
-    , _ipStored :: Maybe (ExprIRef.ValIProperty m)
-    , _ipData :: a
-    }
-Lens.makeLenses ''InputPayload
 
 data WrapAction m
   = WrapperAlready (Guid, EntityId) -- I'm an apply-of-hole, (Guid,EntityId of hole), no need to wrap

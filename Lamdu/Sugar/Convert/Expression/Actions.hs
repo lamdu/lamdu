@@ -15,6 +15,7 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
@@ -44,12 +45,12 @@ mkActions sugarContext stored =
     addEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
 
 addActions ::
-  MonadA m => InputPayload m a -> BodyU m a -> ConvertM m (ExpressionU m a)
+  MonadA m => Input.Payload m a -> BodyU m a -> ConvertM m (ExpressionU m a)
 addActions exprPl body = do
   sugarContext <- ConvertM.readContext
   return $ Expression body Payload
-    { _plEntityId = exprPl ^. ipEntityId
-    , _plInferredType = exprPl ^. ipInferred . Infer.plType
-    , _plActions = mkActions sugarContext <$> exprPl ^. ipStored
-    , _plData = exprPl ^. ipData
+    { _plEntityId = exprPl ^. Input.entityId
+    , _plInferredType = exprPl ^. Input.inferred . Infer.plType
+    , _plActions = mkActions sugarContext <$> exprPl ^. Input.mStored
+    , _plData = exprPl ^. Input.userData
     }

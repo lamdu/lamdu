@@ -27,9 +27,10 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
-import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
+import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
+import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
@@ -39,15 +40,15 @@ type T = Transaction
 
 convertLam ::
   (MonadA m, Monoid a) =>
-  V.Lam (Val (InputPayload m a)) ->
-  InputPayload m a -> ConvertM m (ExpressionU m a)
+  V.Lam (Val (Input.Payload m a)) ->
+  Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLam lam@(V.Lam _ lamBody) exprPl =
   do
     binder <- ConvertBinder.convertLam lam exprPl
     mDeleteLam <-
       sequenceA $ ConvertBinder.makeDeleteLambda
-      <$> (lam & (traverse . traverse) (^. ipStored))
-      <*> exprPl ^. ipStored
+      <$> (lam & (traverse . traverse) (^. Input.mStored))
+      <*> exprPl ^. Input.mStored
     let
       setToInnerExprAction =
         maybe NoInnerExpr SetToInnerExpr $ do
@@ -63,13 +64,13 @@ jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
 convertVLiteralInteger ::
   MonadA m => Integer ->
-  InputPayload m a -> ConvertM m (ExpressionU m a)
+  Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertVLiteralInteger i exprPl = addActions exprPl $ BodyLiteralInteger i
 
 convertGetField ::
   (MonadA m, Monoid a) =>
-  V.GetField (Val (InputPayload m a)) ->
-  InputPayload m a ->
+  V.GetField (Val (Input.Payload m a)) ->
+  Input.Payload m a ->
   ConvertM m (ExpressionU m a)
 convertGetField (V.GetField recExpr tag) exprPl = do
   tagParamInfos <- (^. ConvertM.scTagParamInfos) <$> ConvertM.readContext
@@ -95,7 +96,7 @@ convertGetField (V.GetField recExpr tag) exprPl = do
       { _gfRecord = recExpr
       , _gfTag =
           TagG
-          { _tagInstance = EntityId.ofGetFieldTag (exprPl ^. ipEntityId)
+          { _tagInstance = EntityId.ofGetFieldTag (exprPl ^. Input.entityId)
           , _tagVal = tag
           , _tagGName = UniqueId.toGuid tag
           }
@@ -103,7 +104,7 @@ convertGetField (V.GetField recExpr tag) exprPl = do
       <&> BodyGetField
 
 convertGlobal ::
-  MonadA m => V.GlobalId -> InputPayload m a -> ConvertM m (ExpressionU m a)
+  MonadA m => V.GlobalId -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertGlobal globalId exprPl =
   runMatcherT $ do
     justToLeft $ ConvertList.nil globalId exprPl
@@ -120,12 +121,12 @@ convertGlobal globalId exprPl =
 
 convertGetVar ::
   MonadA m =>
-  V.Var -> InputPayload m a -> ConvertM m (ExpressionU m a)
+  V.Var -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertGetVar param exprPl = do
   sugarContext <- ConvertM.readContext
   addActions exprPl $ BodyGetVar $ ConvertGetVar.convertVar sugarContext param
 
-convert :: (MonadA m, Monoid a) => Val (InputPayload m a) -> ConvertM m (ExpressionU m a)
+convert :: (MonadA m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert v =
   ($ v ^. V.payload) $
   case v ^. V.body of

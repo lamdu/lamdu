@@ -30,6 +30,7 @@ import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
+import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
@@ -81,14 +82,14 @@ convert ::
 convert cp (Definition.Expr val defType) defI = do
   (valInferred, newInferContext) <-
     IRefInfer.loadInfer recurseGetVar val
-    <&> _1 . Lens.mapped %~ mkInputPayload
+    <&> _1 . Lens.mapped %~ Input.mkPayload ()
     & runMaybeT
     <&> fromMaybe (error "Type inference failed")
   let
     addStoredEntityIds x =
       x
-      & ipData .~
-        (x ^.. ipStored . Lens._Just <&> EntityId.ofValI . Property.value)
+      & Input.userData .~
+        (x ^.. Input.mStored . Lens._Just <&> EntityId.ofValI . Property.value)
   context <- mkContext defI cp newInferContext
   ConvertM.run context $ do
     content <-
@@ -100,16 +101,8 @@ convert cp (Definition.Expr val defType) defI = do
       , _deTypeInfo =
         makeExprDefTypeInfo exprI defI defType $
         Infer.makeScheme newInferContext $
-        valInferred ^. V.payload . ipInferred . Infer.plType
+        valInferred ^. V.payload . Input.inferred . Infer.plType
       }
   where
-    mkInputPayload (inferPl, stored) =
-      InputPayload
-      { _ipEntityId = EntityId.ofValI $ Property.value stored
-      , _ipInferred = inferPl
-      , _ipStored = Just stored
-      , _ipData = ()
-      , _ipGuid = IRef.guid $ ExprIRef.unValI $ Property.value stored
-      }
     exprI = val ^. V.payload . Property.pVal
     defGuid = IRef.guid defI
