@@ -52,11 +52,9 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.VersionControl as VersionControl
 import qualified System.Directory as Directory
 
--- TODO: Remove this
-import Lamdu.Infer ()
-import Lamdu.Infer.Load ()
-
--- This is an unfortunate workaround to hlint bug with RecordWildCards, because it adds ~1.2 sec to this module's compile-time!
+-- This is an unfortunate workaround to hlint bug with
+-- RecordWildCards, because it adds ~1.2 sec to this module's
+-- compile-time!
 {-# ANN module ("HLint: ignore Use const" :: String) #-}
 
 data ParsedOpts = ParsedOpts
