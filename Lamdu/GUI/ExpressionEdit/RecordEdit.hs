@@ -125,10 +125,11 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
             makeOpenRecord fieldsWidget rest myId
     let
       eventMap =
-        mkEventMap (fmap (diveIntoTagEdit . WidgetIds.fromEntityId))
-        ((ExprGuiM.holePickersAction resultPickers >>) <$> mAddField)
-        (Config.recordAddFieldKeys config) $
-        E.Doc ["Edit", "Record", "Add Field"]
+        maybe mempty
+        (Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
+         (E.Doc ["Edit", "Record", "Add Field"]) .
+         fmap (diveIntoTagEdit . WidgetIds.fromEntityId) .
+         (ExprGuiM.holePickersAction resultPickers >>)) mAddField
     Widget.weakerEvents eventMap widget
       & BWidgets.withBgFrame myId & ExprGuiM.widgetEnv
       <&> ExpressionGui.fromValueWidget
@@ -139,8 +140,6 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
       (f : _) ->
         f ^. Sugar.rfExpr . Sugar.rPayload . Sugar.plEntityId
         & WidgetIds.fromEntityId
-    mkEventMap f mAction keys doc =
-      maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction
 
 recordOpenEventMap ::
   MonadA m =>

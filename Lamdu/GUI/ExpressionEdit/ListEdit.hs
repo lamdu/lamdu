@@ -90,7 +90,7 @@ makeUnwrapped list myId =
     actionEventMap keys doc actSelect =
       maybe mempty
       ( Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc])
-      . fmap WidgetIds.fromEntityId . actSelect) $
+      . fmap WidgetIds.fromEntityId . actSelect ) $
       Sugar.lMActions list
     firstBracketId = Widget.joinId myId ["first-bracket"]
     cursorDest = maybe firstBracketId itemId $ Sugar.lValues list ^? Lens.traversed
