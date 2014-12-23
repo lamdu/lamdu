@@ -23,11 +23,13 @@ import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.Sugar.AddNames.Types (Name(..), ExpressionN)
 import qualified Control.Lens as Lens
+import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
@@ -209,12 +211,21 @@ makeHoleResultWidget ::
 makeHoleResultWidget resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   resultGui <-
-    ExprGuiM.makeSubexpression 0 .
-    postProcessSugar $ holeResult ^. Sugar.holeResultConverted
+    holeResultConverted
+    & postProcessSugar
+    & ExprGuiM.makeSubexpression 0
+    & ExprGuiM.assignCursor resultId resultWidgetId
   resultGui ^. ExpressionGui.egWidget
     & Widget.wFrame %~ Anim.mapIdentities (`mappend` (resultSuffix # Widget.toAnimId resultId))
     & Widget.scale (realToFrac <$> Config.holeResultScaleFactor config)
-    & makeFocusable resultId
+    & Widget.takesFocus (const (pure resultId))
+    & Widget.wEventMap %~ EventMap.deleteKeys gridKeyEvents
+    & return
+  where
+    gridKeyEvents = EventMap.KeyEvent EventMap.Press <$> Foldable.toList Grid.stdKeys
+    resultWidgetId =
+      WidgetIds.fromEntityId $ holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
+    holeResultConverted = holeResult ^. Sugar.holeResultConverted
 
 postProcessSugar ::
   MonadA m =>
