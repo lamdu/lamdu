@@ -1,11 +1,13 @@
-{-# LANGUAGE OverloadedStrings, Rank2Types#-}
+{-# LANGUAGE OverloadedStrings, Rank2Types, RecordWildCards #-}
 module Main (main) where
 
 import Control.Applicative ((<$>), (<*))
 import Control.Concurrent (threadDelay, forkIO, ThreadId)
 import Control.Concurrent.MVar
+import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Monad (unless, forever)
+import Control.Monad.Trans.State (execStateT)
 import Data.IORef
 import Data.MRUMemo (memoIO)
 import Data.Monoid (Monoid(..))
@@ -53,23 +55,26 @@ import Lamdu.Infer ()
 import Lamdu.Infer.Load ()
 
 data ParsedOpts = ParsedOpts
-  { poShouldDeleteDB :: Bool
-  , poMFontPath :: Maybe FilePath
+  { _poShouldDeleteDB :: Bool
+  , _poMFontPath :: Maybe FilePath
   }
+poShouldDeleteDB :: Lens' ParsedOpts Bool
+poShouldDeleteDB f ParsedOpts{..} = f _poShouldDeleteDB <&> \_poShouldDeleteDB -> ParsedOpts{..}
+poMFontPath :: Lens' ParsedOpts (Maybe FilePath)
+poMFontPath f ParsedOpts{..} = f _poMFontPath <&> \_poMFontPath -> ParsedOpts{..}
 
 parseArgs :: [String] -> Either String ParsedOpts
 parseArgs =
-  go (ParsedOpts False Nothing)
+  (`execStateT` ParsedOpts False Nothing) . go
   where
-    go args [] = return args
-    go (ParsedOpts _ mPath) ("-deletedb" : args) =
-      go (ParsedOpts True mPath) args
-    go _ ["-font"] = failUsage "-font must be followed by a font name"
-    go (ParsedOpts delDB mPath) ("-font" : fn : args) =
-      case mPath of
-      Nothing -> go (ParsedOpts delDB (Just fn)) args
-      Just _ -> failUsage "Duplicate -font arguments"
-    go _ (arg : _) = failUsage $ "Unexpected arg: " ++ show arg
+    go [] = return ()
+    go ("-deletedb" : args) = poShouldDeleteDB .= True >> go args
+    go ["-font"] = failUsage "-font must be followed by a font name"
+    go ("-font" : fn : args) = poMFontPath %= setPath >> go args
+      where
+        setPath Nothing = Just fn
+        setPath Just {} = failUsage "Duplicate -font arguments"
+    go (arg : _) = failUsage $ "Unexpected arg: " ++ show arg
     failUsage msg = fail $ unlines [ msg, usage ]
     usage = "Usage: lamdu [-deletedb] [-font <filename>]"
 
@@ -78,12 +83,12 @@ main = do
   args <- getArgs
   home <- Directory.getHomeDirectory
   let lamduDir = home </> ".lamdu"
-  opts <- either fail return $ parseArgs args
-  if poShouldDeleteDB opts
+  ParsedOpts{..} <- either fail return $ parseArgs args
+  if _poShouldDeleteDB
     then do
       putStrLn "Deleting DB..."
       Directory.removeDirectoryRecursive lamduDir
-    else runEditor lamduDir $ poMFontPath opts
+    else runEditor lamduDir _poMFontPath
 
 loadConfig :: FilePath -> IO Config
 loadConfig configPath = do
