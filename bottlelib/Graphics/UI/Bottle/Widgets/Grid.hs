@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widgets.Grid
   ( Grid, KGrid(..)
   , make, makeKeyed, makeAlign, makeCentered
@@ -7,12 +7,16 @@ module Graphics.UI.Bottle.Widgets.Grid
   , gridMCursor, gridSize, gridContent
   , Element(..)
   , elementAlign, elementRect, elementW
-  , Cursor, toWidget, toWidgetBiased
+  , Cursor
+  , Keys(..), stdKeys
+  , toWidget, toWidgetWithKeys
+  , toWidgetBiased, toWidgetBiasedWithKeys
   ) where
 
 import Control.Applicative (liftA2, (<$>))
 import Control.Lens ((^.), (%~))
 import Control.Monad (join, msum)
+import Data.Foldable (Foldable)
 import Data.Function (on)
 import Data.List (foldl', transpose, find, minimumBy, sortBy, groupBy)
 import Data.List.Utils (index, enumerate2d)
@@ -20,6 +24,7 @@ import Data.MRUMemo (memo)
 import Data.Maybe (isJust, fromMaybe, catMaybes, mapMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Ord (comparing)
+import Data.Traversable (Traversable)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Widget (Widget(..), R)
@@ -82,28 +87,48 @@ mkNavDests widgetSize prevFocalArea mEnterss cursor@(Vector2 cursorX cursorY) = 
           (fmap . fmap) (const 0) edge
       }
 
+data Keys key = Keys
+  { keysDir :: DirKeys key
+  , keysMoreLeft :: [key]
+  , keysMoreRight :: [key]
+  , keysLeftMost :: [key]
+  , keysRightMost :: [key]
+  , keysTop :: [key]
+  , keysBottom :: [key]
+  } deriving (Functor, Foldable, Traversable)
 
-mkNavEventmap
-  :: NavDests f -> (Widget.EventHandlers f, Widget.EventHandlers f)
-mkNavEventmap navDests = (weakMap, strongMap)
+stdKeys :: Keys EventMap.ModKey
+stdKeys = Keys
+  { keysDir = k <$> stdDirKeys
+  , keysMoreLeft = [k GLFW.Key'Home]
+  , keysMoreRight = [k GLFW.Key'End]
+  , keysLeftMost = [ctrlK GLFW.Key'Home]
+  , keysRightMost = [ctrlK GLFW.Key'End]
+  , keysTop = [k GLFW.Key'PageUp]
+  , keysBottom = [k GLFW.Key'PageDown]
+  }
   where
-    weakMap = mconcat . catMaybes $ [
-      movementk "left"       (keysLeft  stdDirKeys) leftOfCursor,
-      movementk "right"      (keysRight stdDirKeys) rightOfCursor,
-      movementk "up"         (keysUp    stdDirKeys) aboveCursor,
-      movementk "down"       (keysDown  stdDirKeys) belowCursor,
-      movementk "more left"  [GLFW.Key'Home]         leftMostCursor,
-      movementk "more right" [GLFW.Key'End]          rightMostCursor
-      ]
-    strongMap = mconcat . catMaybes $ [
-      movementk "top"       [GLFW.Key'PageUp]    topCursor,
-      movementk "bottom"    [GLFW.Key'PageDown]  bottomCursor,
-      movement "leftmost"  [ctrlK GLFW.Key'Home] leftMostCursor,
-      movement "rightmost" [ctrlK GLFW.Key'End]  rightMostCursor
-      ]
     k = EventMap.ModKey EventMap.noMods
     ctrlK = EventMap.ModKey EventMap.ctrl
-    movementk dirName = movement dirName . map k
+
+mkNavEventmap ::
+  Keys EventMap.ModKey -> NavDests f -> (Widget.EventHandlers f, Widget.EventHandlers f)
+mkNavEventmap Keys{..} navDests = (weakMap, strongMap)
+  where
+    weakMap = mconcat $ catMaybes
+      [ movement "left"       (keysLeft  keysDir) leftOfCursor
+      , movement "right"      (keysRight keysDir) rightOfCursor
+      , movement "up"         (keysUp    keysDir) aboveCursor
+      , movement "down"       (keysDown  keysDir) belowCursor
+      , movement "more left"  keysMoreLeft        leftMostCursor
+      , movement "more right" keysMoreRight       rightMostCursor
+      ]
+    strongMap = mconcat $ catMaybes
+      [ movement "top"       keysTop       topCursor
+      , movement "bottom"    keysBottom    bottomCursor
+      , movement "leftmost"  keysLeftMost  leftMostCursor
+      , movement "rightmost" keysRightMost rightMostCursor
+      ]
     movement dirName events f =
       (EventMap.keyPresses
        events
@@ -163,9 +188,9 @@ makeCentered :: [[Widget f]] -> Grid f
 makeCentered = makeAlign 0.5
 
 helper ::
-  (Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
+  Keys EventMap.ModKey -> (Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
   KGrid key f -> Widget f
-helper combineEnters (KGrid mCursor size sChildren) =
+helper keys combineEnters (KGrid mCursor size sChildren) =
   combineWs $ (map . map) (^. Lens._2 . elementW) sChildren
   where
     combineWs wss =
@@ -200,7 +225,7 @@ helper combineEnters (KGrid mCursor size sChildren) =
         makeEventMap w navDests =
           mconcat [strongMap, _wEventMap w, weakMap]
           where
-            (weakMap, strongMap) = mkNavEventmap navDests
+            (weakMap, strongMap) = mkNavEventmap keys navDests
 
 tupleToVector2 :: (a, a) -> Vector2 a
 tupleToVector2 (y, x) = Vector2 x y
@@ -218,9 +243,9 @@ groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
 
 -- ^ If unfocused, will enters the given child when entered
-toWidgetBiased :: Cursor -> KGrid key f -> Widget f
-toWidgetBiased (Vector2 x y) =
-  helper $ \size children ->
+toWidgetBiasedWithKeys :: Keys EventMap.ModKey -> Cursor -> KGrid key f -> Widget f
+toWidgetBiasedWithKeys keys (Vector2 x y) =
+  helper keys $ \size children ->
   maybeOverride children <$> combineMEnters size children
   where
     maybeOverride children enter dir =
@@ -232,9 +257,14 @@ toWidgetBiased (Vector2 x y) =
         unbiased = enter dir
         biased = maybe unbiased ($ dir) . join $ index y children >>= index x
 
+toWidgetBiased :: Cursor -> KGrid key f -> Widget f
+toWidgetBiased = toWidgetBiasedWithKeys stdKeys
+
+toWidgetWithKeys :: Keys EventMap.ModKey -> KGrid key f -> Widget f
+toWidgetWithKeys keys = helper keys combineMEnters
 
 toWidget :: KGrid key f -> Widget f
-toWidget = helper combineMEnters
+toWidget = toWidgetWithKeys stdKeys
 
 combineMEnters :: Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f
 combineMEnters size children = chooseClosest childEnters
