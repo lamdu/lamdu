@@ -107,13 +107,11 @@ makeShownResult holeInfo result =
     -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
     res <- ExprGuiM.transaction $ rHoleResult result
     config <- ExprGuiM.widgetEnv WE.readConfig
-    widget <-
-      makeHoleResultWidget (rId result) res
-      <&> (Widget.pad . fmap realToFrac . Config.holeResultPadding) config
+    (widget, eventMap) <- makeHoleResultWidget (rId result) res
     return
-      ( widget & Widget.wEventMap .~ mempty
+      ( widget & (Widget.pad . fmap realToFrac . Config.holeResultPadding) config
       , ShownResult
-        { srEventMap = widget ^. Widget.wEventMap
+        { srEventMap = eventMap
         , srHoleResult = res
         , srPickTo =
           afterPick holeInfo (rId result) =<< res ^. Sugar.holeResultPick
@@ -207,21 +205,32 @@ makeFocusable wId = ExprGuiM.widgetEnv . BWidgets.makeFocusableView wId
 
 makeHoleResultWidget ::
   MonadA m => Widget.Id ->
-  Sugar.HoleResult (Name m) m -> ExprGuiM m (WidgetT m)
+  Sugar.HoleResult (Name m) m -> ExprGuiM m (WidgetT m, Widget.EventHandlers (T m))
 makeHoleResultWidget resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  resultGui <-
-    holeResultConverted
-    & postProcessSugar
-    & ExprGuiM.makeSubexpression 0
-    & ExprGuiM.assignCursor resultId resultWidgetId
-  resultGui ^. ExpressionGui.egWidget
+  selectedResult <- ExprGuiM.widgetEnv $ WE.isSubCursor resultId
+  eventMap <-
+    if selectedResult
+    then do
+      -- Create a hidden result widget that we never display, but only
+      -- keep the event map from
+      hiddenResultWidget <- ExprGuiM.assignCursor resultId resultWidgetId mkWidget
+      return $ EventMap.deleteKeys gridKeyEvents $ hiddenResultWidget ^. Widget.wEventMap
+    else return mempty
+  resultWidget <- mkWidget
+  widget <-
+    resultWidget
     & Widget.wFrame %~ Anim.mapIdentities (`mappend` (resultSuffix # Widget.toAnimId resultId))
     & Widget.scale (realToFrac <$> Config.holeResultScaleFactor config)
-    & Widget.takesFocus (const (pure resultId))
-    & Widget.wEventMap %~ EventMap.deleteKeys gridKeyEvents
-    & return
+    & Widget.wEventMap .~ mempty
+    & makeFocusable resultId
+  return (widget, eventMap)
   where
+    mkWidget =
+      holeResultConverted
+      & postProcessSugar
+      & ExprGuiM.makeSubexpression 0
+      <&> (^. ExpressionGui.egWidget)
     gridKeyEvents = EventMap.KeyEvent EventMap.Press <$> Foldable.toList Grid.stdKeys
     resultWidgetId =
       WidgetIds.fromEntityId $ holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
