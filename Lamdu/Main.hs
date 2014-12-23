@@ -6,10 +6,11 @@ import Control.Concurrent (threadDelay, forkIO, ThreadId)
 import Control.Concurrent.MVar
 import Control.Lens (Lens')
 import Control.Lens.Operators
-import Control.Monad (unless, forever)
+import Control.Monad (unless, forever, replicateM_)
 import Control.Monad.Trans.State (execStateT)
 import Data.IORef
 import Data.MRUMemo (memoIO)
+import Data.Maybe
 import Data.Monoid (Monoid(..))
 import Data.Store.Db (Db)
 import Data.Store.Guid (Guid)
@@ -20,6 +21,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Config (Config)
 import Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import Lamdu.GUI.WidgetEnvT (runWidgetEnvT)
+import Lamdu.VersionControl.Actions (mUndo)
 import Paths_lamdu_ide (getDataFileName)
 import System.Environment (getArgs)
 import System.FilePath ((</>))
@@ -54,18 +56,24 @@ import qualified System.Directory as Directory
 import Lamdu.Infer ()
 import Lamdu.Infer.Load ()
 
+-- This is an unfortunate workaround to hlint bug with RecordWildCards, because it adds ~1.2 sec to this module's compile-time!
+{-# ANN module ("HLint: ignore Use const" :: String) #-}
+
 data ParsedOpts = ParsedOpts
   { _poShouldDeleteDB :: Bool
+  , _poUndoCount :: Int
   , _poMFontPath :: Maybe FilePath
   }
 poShouldDeleteDB :: Lens' ParsedOpts Bool
 poShouldDeleteDB f ParsedOpts{..} = f _poShouldDeleteDB <&> \_poShouldDeleteDB -> ParsedOpts{..}
 poMFontPath :: Lens' ParsedOpts (Maybe FilePath)
 poMFontPath f ParsedOpts{..} = f _poMFontPath <&> \_poMFontPath -> ParsedOpts{..}
+poUndoCount :: Lens' ParsedOpts Int
+poUndoCount f ParsedOpts{..} = f _poUndoCount <&> \_poUndoCount -> ParsedOpts{..}
 
 parseArgs :: [String] -> Either String ParsedOpts
 parseArgs =
-  (`execStateT` ParsedOpts False Nothing) . go
+  (`execStateT` ParsedOpts False 0 Nothing) . go
   where
     go [] = return ()
     go ("-deletedb" : args) = poShouldDeleteDB .= True >> go args
@@ -74,9 +82,29 @@ parseArgs =
       where
         setPath Nothing = Just fn
         setPath Just {} = failUsage "Duplicate -font arguments"
+    go ["-undo"] = failUsage "-undo must be followed by an undo count"
+    go ("-undo" : countStr : args) =
+      case reads countStr of
+        [(count, "")] -> poUndoCount += count >> go args
+        _ -> failUsage $ "Invalid undo count: " ++ countStr
     go (arg : _) = failUsage $ "Unexpected arg: " ++ show arg
     failUsage msg = fail $ unlines [ msg, usage ]
     usage = "Usage: lamdu [-deletedb] [-font <filename>]"
+
+undo :: Transaction DbLayout.DbM Widget.Id
+undo =
+  do
+    actions <- VersionControl.makeActions
+    fromMaybe (fail "Cannot undo any further") $ mUndo actions
+
+withDb :: FilePath -> (Db -> IO a) -> IO a
+withDb lamduDir body =
+  do
+    Directory.createDirectoryIfMissing False lamduDir
+    Db.withDb (lamduDir </> "codeedit.sophia") $ \db ->
+      do
+        ExampleDB.initDB db
+        body db
 
 main :: IO ()
 main = do
@@ -88,7 +116,13 @@ main = do
     then do
       putStrLn "Deleting DB..."
       Directory.removeDirectoryRecursive lamduDir
-    else runEditor lamduDir _poMFontPath
+    else
+      if _poUndoCount > 0
+      then do
+        putStrLn $ "Undoing " ++ show _poUndoCount ++ " times"
+        withDb lamduDir $ \db ->
+          DbLayout.runDbTransaction db $ replicateM_ _poUndoCount undo
+      else runEditor lamduDir _poMFontPath
 
 loadConfig :: FilePath -> IO Config
 loadConfig configPath = do
@@ -122,7 +156,6 @@ sampler sample = do
 
 runEditor :: FilePath -> Maybe FilePath -> IO ()
 runEditor lamduDir mFontPath = do
-  Directory.createDirectoryIfMissing False lamduDir
   -- GLFW changes the directory from start directory, at least on macs.
   startDir <- Directory.getCurrentDirectory
 
@@ -142,7 +175,7 @@ runEditor lamduDir mFontPath = do
       case mFontPath of
       Nothing -> accessDataFile startDir getFont "fonts/DejaVuSans.ttf"
       Just path -> getFont path
-    Db.withDb (lamduDir </> "codeedit.sophia") $ runDb win getConfig font
+    withDb lamduDir $ runDb win getConfig font
 
 
 mainLoopDebugMode ::
@@ -243,7 +276,6 @@ baseStyle config font = TextEdit.Style
 
 runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO a
 runDb win getConfig font db = do
-  ExampleDB.initDB db
   (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor
   addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
   settingsRef <- newIORef Settings
