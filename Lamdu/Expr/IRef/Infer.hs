@@ -1,5 +1,5 @@
-{-# LANGUAGE ConstraintKinds #-}
-module Lamdu.Sugar.Convert.Infer
+-- | Infer expressions where GlobalId's are known to be DefI's
+module Lamdu.Expr.IRef.Infer
   ( ExpressionSetter
 
   , loadInferScope
@@ -20,7 +20,6 @@ import Lamdu.Infer (Infer)
 import Lamdu.Infer.Load (Loader(..))
 import Lamdu.Infer.Unify (unify)
 import Lamdu.Infer.Update (updateInferredVal)
-import Lamdu.Sugar.Internal
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -70,9 +69,10 @@ loadInferInto pl val = do
     updateInferredVal inferredVal
 
 loadInfer ::
-  MonadA m => Val a ->
+  MonadA m => V.Var -> Val a ->
   MaybeT (T m) (Val (Infer.Payload, a), Infer.Context)
-loadInfer val =
+loadInfer recurseGetVar val =
   liftInfer (Recursive.inferEnv recurseGetVar Infer.emptyScope)
   >>= (`loadInferInto` val)
   & (`runStateT` Infer.initialContext)
+

@@ -24,12 +24,12 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Scheme as Scheme
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
-import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
@@ -55,7 +55,7 @@ mkContext defI cp inferContext = do
             Definition.BodyBuiltin {} -> return True
             Definition.BodyExpr (Definition.Expr valI _) ->
               ExprIRef.readVal valI
-              >>= runMaybeT . SugarInfer.loadInfer
+              >>= runMaybeT . IRefInfer.loadInfer recurseGetVar
               <&> Lens.has Lens._Just
     , scConvertSubexpression = ConvertExpr.convert
     }
@@ -80,7 +80,7 @@ convert ::
   DefI m -> T m (DefinitionBody Guid m (ExpressionU m [EntityId]))
 convert cp (Definition.Expr val defType) defI = do
   (valInferred, newInferContext) <-
-    SugarInfer.loadInfer val
+    IRefInfer.loadInfer recurseGetVar val
     <&> _1 . Lens.mapped %~ mkInputPayload
     & runMaybeT
     <&> fromMaybe (error "Type inference failed")

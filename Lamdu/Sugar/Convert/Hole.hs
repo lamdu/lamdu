@@ -51,7 +51,7 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
-import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
+import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified System.Random as Random
@@ -135,7 +135,7 @@ mkHoleSuggested holeEntityId inferred = do
   let
     mkConverted = do
       (inferredIVal, newCtx) <-
-        SugarInfer.loadInferInto inferred suggestedVal
+        IRefInfer.loadInferInto inferred suggestedVal
         & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
         & runMaybeT
         <&> unsafeUnjust "Inference on inferred val must succeed"
@@ -444,7 +444,7 @@ mkHoleResultVals ::
 mkHoleResultVals mInjectedArg exprPl base =
   do
     inferredBase <-
-      SugarInfer.loadInferScope scopeAtHole base
+      IRefInfer.loadInferScope scopeAtHole base
       & mapStateT maybeTtoListT
       <&> Lens.traversed . _2 %~ (,) Nothing
     form <- lift $ ListClass.fromList $ applyForms inferredBase

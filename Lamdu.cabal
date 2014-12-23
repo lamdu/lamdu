@@ -154,6 +154,7 @@ Executable lamdu
                ,       Lamdu.Expr.Globals
                ,       Lamdu.Expr.Identifier
                ,       Lamdu.Expr.IRef
+               ,       Lamdu.Expr.IRef.Infer
                ,       Lamdu.Expr.Lens
                ,       Lamdu.Expr.Load
                ,       Lamdu.Expr.Pure
@@ -225,7 +226,6 @@ Executable lamdu
                ,       Lamdu.Sugar.Convert.Expression.Actions
                ,       Lamdu.Sugar.Convert.GetVar
                ,       Lamdu.Sugar.Convert.Hole
-               ,       Lamdu.Sugar.Convert.Infer
                ,       Lamdu.Sugar.Convert.List
                ,       Lamdu.Sugar.Convert.Monad
                ,       Lamdu.Sugar.Convert.Record
