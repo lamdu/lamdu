@@ -19,6 +19,9 @@ import qualified Lamdu.Infer.Error as InferErr
 a, b, c, d :: TypeStream
 a:b:c:d:_ = map (typeVar . fromString . (:[])) ['a'..]
 
+r :: RepeatList (T.Composite T.Product)
+r = typeVar $ fromString "r"
+
 simpleTests =
   [ testInfer "literal int" $ literalInteger 5
   , testInfer "simple apply" $
@@ -278,7 +281,7 @@ euler1Expr =
 
 -- Solve depressed quartic polynomial
 solveDepressedQuarticExpr =
-  lambdaRecord "params"
+  lambdaRecord r "params"
   [ ("e0", intType)
   , ("d0", intType)
   , ("c0", intType)

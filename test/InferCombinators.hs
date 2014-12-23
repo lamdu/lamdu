@@ -149,8 +149,8 @@ literalInteger x =
 holeWithInferredType :: TypeStream -> ExprWithResumptions
 holeWithInferredType = mkExprWithResumptions (V.BLeaf V.LHole)
 
-typeVar :: T.Var Type -> TypeStream
-typeVar = pure . T.liftVar
+typeVar :: T.LiftVar b => T.Var b -> RepeatList b
+typeVar x = pure . T.liftVar $ x
 
 infixr 1 ~>
 (~>) :: TypeStream -> TypeStream -> TypeStream
@@ -182,18 +182,20 @@ findTypeOfTagInComposite expectedTag (T.CExtend tag typ rest)
 findTypeOfTagInComposite _ _ = error "Test combinators type checking failed in findTypeOfTagInComposite"
 
 -- TODO: Reuse FlatComposite if it gets exposed:
-compositeOfList :: [(T.Tag, Type)] -> T.Composite t
-compositeOfList [] = T.CEmpty
-compositeOfList ((tag, typ):rest) = T.CExtend tag typ $ compositeOfList rest
+compositeOfList :: T.Composite t -> [(T.Tag, Type)] -> T.Composite t
+compositeOfList base [] = base
+compositeOfList base ((tag, typ):rest) = T.CExtend tag typ $ compositeOfList base rest
 
 lambdaRecord ::
-  V.Var -> [(T.Tag, TypeStream)] ->
+  RepeatList (T.Composite T.Product) -> V.Var -> [(T.Tag, TypeStream)] ->
   ([ExprWithResumptions] -> ExprWithResumptions) -> ExprWithResumptions
-lambdaRecord paramsName fields mkResult =
+lambdaRecord baseRecord paramsName fields mkResult =
   lambda paramsName recordType $ \params ->
   mkResult $ map (getField params . fst) fields
   where
-    recordType = T.TRecord . compositeOfList <$> Lens.sequenceAOf (Lens.traversed . _2) fields
+    recordType =
+      T.TRecord <$>
+      (compositeOfList <$> baseRecord <*> Lens.sequenceAOf (Lens.traversed . _2) fields)
 
 whereItem ::
   V.Var -> ExprWithResumptions -> (ExprWithResumptions -> ExprWithResumptions) -> ExprWithResumptions
