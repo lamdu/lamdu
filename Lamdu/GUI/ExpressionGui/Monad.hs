@@ -145,7 +145,6 @@ mkPrejumpPosSaver :: MonadA m => ExprGuiM m (T m ())
 mkPrejumpPosSaver =
   DataOps.savePreJumpPosition <$> readCodeAnchors <*> widgetEnv WE.readCursor
 
--- TODO: makeSubexpresSion
 makeSubexpression ::
   MonadA m => Precedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeSubexpression parentPrecedence expr = do
