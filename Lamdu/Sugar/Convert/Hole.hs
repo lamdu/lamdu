@@ -41,7 +41,7 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Expr.GenIds as InputExpr
+import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -126,7 +126,7 @@ consistentExprIds holeEntityId val =
     gen =
       genFromHashable
         ( holeEntityId
-        , void $ InputExpr.randomizeParamIds (genFromHashable holeEntityId) val
+        , void $ GenIds.randomizeParamIds (genFromHashable holeEntityId) val
         )
 
 mkHoleSuggested :: MonadA m => EntityId -> Infer.Payload -> ConvertM m (HoleSuggested Guid m)
@@ -500,9 +500,9 @@ mkHoleResults mInjectedArg sugarContext exprPl stored base =
 randomizeNonStoredParamIds ::
   Random.StdGen -> ExprStorePoint m a -> ExprStorePoint m a
 randomizeNonStoredParamIds gen =
-  InputExpr.randomizeParamIdsG id nameGen Map.empty $ \_ _ pl -> pl
+  GenIds.randomizeParamIdsG id nameGen Map.empty $ \_ _ pl -> pl
   where
-    nameGen = InputExpr.onNgMakeName f $ InputExpr.randomNameGen gen
+    nameGen = GenIds.onNgMakeName f $ GenIds.randomNameGen gen
     f n _        prevEntityId (Just _, _) = (prevEntityId, n)
     f _ prevFunc prevEntityId pl@(Nothing, _) = prevFunc prevEntityId pl
 

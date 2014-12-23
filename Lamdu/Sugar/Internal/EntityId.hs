@@ -17,7 +17,7 @@ import Data.Store.IRef (IRef)
 import Lamdu.Expr.Val (Val)
 import System.Random (RandomGen)
 import qualified Data.Store.Guid as Guid
-import qualified Lamdu.Expr.GenIds as InputExpr
+import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -33,7 +33,7 @@ randomizeExprAndParams ::
   RandomGen gen =>
   gen -> Val (Guid -> EntityId -> a) -> Val a
 randomizeExprAndParams gen =
-  InputExpr.randomizeExprAndParams gen . fmap addEntityId
+  GenIds.randomizeExprAndParams gen . fmap addEntityId
   where
     addEntityId f guid = f guid (EntityId guid)
 
