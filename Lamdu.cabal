@@ -230,7 +230,6 @@ Executable lamdu
                ,       Lamdu.Sugar.Convert.Monad
                ,       Lamdu.Sugar.Convert.Record
                ,       Lamdu.Sugar.EntityId
-               ,       Lamdu.Sugar.Expression
                ,       Lamdu.Sugar.Internal
                ,       Lamdu.Sugar.Internal.EntityId
                ,       Lamdu.Sugar.Lens
