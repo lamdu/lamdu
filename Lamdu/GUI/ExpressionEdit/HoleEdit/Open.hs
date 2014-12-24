@@ -216,13 +216,13 @@ makeHoleResultWidget ::
   Sugar.HoleResult (Name m) m -> ExprGuiM m (WidgetT m, Widget.EventHandlers (T m))
 makeHoleResultWidget resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  selectedResult <- ExprGuiM.widgetEnv $ WE.isSubCursor resultId
+  isSelectedResult <- ExprGuiM.widgetEnv $ WE.isSubCursor resultId
   eventMap <-
-    if selectedResult
+    if isSelectedResult
     then do
       -- Create a hidden result widget that we never display, but only
       -- keep the event map from
-      hiddenResultWidget <- ExprGuiM.assignCursor resultId resultWidgetId mkWidget
+      hiddenResultWidget <- ExprGuiM.assignCursor resultId idWithinResultWidget mkWidget
       return $ hiddenResultWidget ^. Widget.wEventMap
     else return mempty
   widget <-
@@ -239,7 +239,7 @@ makeHoleResultWidget resultId holeResult = do
       & ExprGuiM.makeSubexpression 0
       <&> (^. ExpressionGui.egWidget)
     holeResultEntityId = holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
-    resultWidgetId =
+    idWithinResultWidget =
       WidgetIds.fromEntityId $ fromMaybe holeResultEntityId $
       holeResult ^. Sugar.holeResultHoleTarget
     holeResultConverted = holeResult ^. Sugar.holeResultConverted
