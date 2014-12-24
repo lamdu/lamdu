@@ -46,10 +46,7 @@ make hole pl myId = do
       arg <- maybeToMPlus $ hole ^. Sugar.holeMArg
       lift $ (,) myId <$> makeWrapper arg myId
     justToLeft $ do
-      guard . not $
-        Lens.nullOf
-        (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed)
-        pl
+      guard $ not isHoleResult -- Avoid suggesting inside hole results
       guard . Lens.nullOf ExprLens.valHole $ suggested ^. Sugar.hsValue
       lift $ makeSuggested suggested myId
     lift $ (,) (diveIntoHole myId) <$> makeSimple myId
@@ -63,6 +60,8 @@ make hole pl myId = do
         Widget.weakerEvents (mappend openEventMap exprEventMap)
   return (destId, inactive)
   where
+    isHoleResult =
+      Lens.nullOf (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl
     addInferredTypes =
       if null (pl ^. Sugar.plData . ExprGuiM.plStoredEntityIds)
       then return
