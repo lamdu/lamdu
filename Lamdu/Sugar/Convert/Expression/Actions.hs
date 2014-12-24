@@ -40,7 +40,6 @@ mkActions sugarContext stored =
   , _cut =
     mkCutter (sugarContext ^. ConvertM.scCodeAnchors)
     (Property.value stored) $ mkReplaceWithNewHole stored
-  , _storedEntityId = EntityId.ofValI $ Property.value stored
   }
   where
     addEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)

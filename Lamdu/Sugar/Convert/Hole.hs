@@ -244,8 +244,9 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
     -- pseudo-random generated ones that preserve proper animations
     -- and cursor navigation.
 
-    makeConsistentPayload (False, (_, pl)) _guid entityId = pl
+    makeConsistentPayload (False, (_, pl)) guid entityId = pl
       & Input.entityId .~ entityId
+      & Input.guid .~ guid
     makeConsistentPayload (True, (_, pl)) _ _ = pl
     consistentExpr =
       writtenExpr

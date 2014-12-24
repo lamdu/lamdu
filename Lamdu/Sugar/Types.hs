@@ -20,7 +20,7 @@ module Lamdu.Sugar.Types
   , SetToHole(..), _SetToHole, _AlreadyAHole
   , SetToInnerExpr(..), _SetToInnerExpr, _NoInnerExpr
   , Actions(..)
-    , wrap, setToHole, setToInnerExpr, cut, storedEntityId
+    , wrap, setToHole, setToInnerExpr, cut
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyLiteralInteger, _BodyList, _BodyRecord
@@ -96,18 +96,12 @@ data Actions m = Actions
   , _setToHole :: SetToHole m
   , _setToInnerExpr :: SetToInnerExpr m
   , _cut :: T m EntityId
-  , -- Not consistent for animation purposes (hole results re-make
-    -- this every time) but consistent w.r.t pick action and truly a
-    -- stored identifier.
-    _storedEntityId :: EntityId
   }
 
 data Payload m a = Payload
   { _plInferredType :: Type
   , _plActions :: Maybe (Actions m)
-  , _plEntityId :: EntityId -- may be a fake/unstored id (may
-                            -- disappear). To jump, use
-                            -- plActions.storedEntityId
+  , _plEntityId :: EntityId
   , _plData :: a
   } deriving (Functor, Foldable, Traversable)
 
