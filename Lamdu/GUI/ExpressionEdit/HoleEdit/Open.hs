@@ -225,13 +225,12 @@ makeHoleResultWidget resultId holeResult = do
       hiddenResultWidget <- ExprGuiM.assignCursor resultId resultWidgetId mkWidget
       return $ hiddenResultWidget ^. Widget.wEventMap
     else return mempty
-  resultWidget <- mkWidget
   widget <-
-    resultWidget
-    & Widget.wFrame %~ Anim.mapIdentities (`mappend` (resultSuffix # Widget.toAnimId resultId))
-    & Widget.scale (realToFrac <$> Config.holeResultScaleFactor config)
-    & Widget.wEventMap .~ mempty
-    & makeFocusable resultId
+    mkWidget
+    <&> Widget.wFrame %~ Anim.mapIdentities (`mappend` (resultSuffix # Widget.toAnimId resultId))
+    <&> Widget.scale (realToFrac <$> Config.holeResultScaleFactor config)
+    <&> Widget.wEventMap .~ mempty
+    >>= makeFocusable resultId
   return (widget, eventMap)
   where
     mkWidget =
