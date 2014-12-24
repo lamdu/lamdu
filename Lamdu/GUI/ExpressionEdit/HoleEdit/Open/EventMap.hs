@@ -13,9 +13,10 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CharClassification (operatorChars, alphaNumericChars)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..), srPick)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..))
 import Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -132,10 +133,19 @@ alphaNumericAfterOperator holeInfo shownResult
   | nonEmptyAll (`elem` operatorChars) searchTerm =
     E.charGroup "Letter/digit"
     (E.Doc ["Edit", "Result", "Pick and resume"]) alphaNumericChars $
-    \c _ -> setNextHoleState [c] =<< srPickTo shownResult
+    \c _ -> setNextHoleState [c] =<< srPick shownResult
   | otherwise = mempty
   where
     searchTerm = HoleInfo.hiSearchTerm holeInfo
+
+pickBefore :: MonadA m => ShownResult m -> T m Widget.EventResult -> T m Widget.EventResult
+pickBefore shownResult action =
+  do
+    PickedResult{..} <- srPick shownResult
+    actionResult <-
+      action
+      <&> Widget.eCursor . Lens._Wrapped' . Lens.mapped %~ _pickedIdTranslations
+    return $ _pickedEventResult `mappend` actionResult
 
 make ::
   MonadA m =>
@@ -180,7 +190,6 @@ make pl holeInfo mShownResult = do
     searchTerm = HoleInfo.hiSearchTerm holeInfo
     onShownResult f = maybe mempty f mShownResult
     shownResultEventMapH f shownResult = pickBefore shownResult <$> f shownResult
-    pickBefore shownResult action = mappend <$> srPick shownResult <*> action
     shownResultEventMap = onShownResult . shownResultEventMapH
     actionsEventMap f =
       shownResultEventMap $ \shownResult ->

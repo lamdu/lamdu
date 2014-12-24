@@ -16,7 +16,7 @@ import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (makeBackground)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..), srPick, pickedEventResult)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
@@ -30,6 +30,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -54,6 +55,9 @@ extraSymbol = "▷"
 extraSymbolScaleFactor :: Fractional a => a
 extraSymbolScaleFactor = 0.5
 
+compose :: [a -> a] -> a -> a
+compose = foldr (.) id
+
 eventResultOfPickedResult :: Sugar.PickedResult -> PickedResult
 eventResultOfPickedResult pr =
   PickedResult
@@ -64,10 +68,17 @@ eventResultOfPickedResult pr =
       Monoid.Last $
       WidgetIds.fromEntityId <$> pr ^? Sugar.prMJumpTo . Lens._Just . Lens._2
     , Widget._eAnimIdMapping =
-      Monoid.Endo $ pickedResultAnimIdTranslation (pr ^. Sugar.prIdTranslation)
+      Monoid.Endo $ pickedResultAnimIdTranslation $ pr ^. Sugar.prIdTranslation
     }
+  , _pickedIdTranslations =
+    pr ^. Sugar.prIdTranslation
+    & Lens.mapped . Lens.both %~ WidgetIds.fromEntityId
+    & mapPrefix
   }
   where
+    mapPrefix = compose . map reprefix
+    reprefix (old, new) ident =
+      maybe ident (WidgetId.joinId new) $ WidgetId.subId old ident
     pickedResultAnimIdTranslation idTranslations =
       -- Map only the first anim id component
       Lens.ix 0 %~ \x -> fromMaybe x $ Map.lookup x idMap
@@ -113,7 +124,7 @@ makeShownResult holeInfo result =
       , ShownResult
         { srEventMap = eventMap
         , srHoleResult = res
-        , srPickTo = afterPick holeInfo (rId result) =<< res ^. Sugar.holeResultPick
+        , srPick = afterPick holeInfo (rId result) =<< res ^. Sugar.holeResultPick
         }
       )
 
@@ -289,7 +300,7 @@ addMResultPicker :: MonadA m => Maybe (ShownResult m) -> ExprGuiM m ()
 addMResultPicker mSelectedResult =
   case mSelectedResult of
     Nothing -> return ()
-    Just res -> ExprGuiM.addResultPicker $ srPick res
+    Just res -> ExprGuiM.addResultPicker $ (^. pickedEventResult) <$> srPick res
 
 makeResultsWidget ::
   MonadA m => HoleInfo m ->
