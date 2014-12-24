@@ -25,7 +25,7 @@ import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Type (Type(..))
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Infer.Unify (unify)
-import Lamdu.Infer.Update (update)
+import Lamdu.Infer.Update (update, updateInferredVal)
 import Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
@@ -432,25 +432,28 @@ mkHoleResultVals ::
   StateT Infer.Context (ListT (T m)) (HoleResultVal m IsInjected)
 mkHoleResultVals mInjectedArg exprPl base =
   do
+    inferredPl <- assertSuccessInfer $ update $ exprPl ^. Input.inferred
     inferredBase <-
-      IRefInfer.loadInferScope scopeAtHole base
-      & mapStateT maybeTtoListT
+      IRefInfer.loadInferScope (inferredPl ^. Infer.plScope) base
+      & mapStateT maybeTtoListT -- base fail -> cut
       <&> Lens.traversed . _2 %~ (,) Nothing
+    -- forks here:
     form <- lift $ ListClass.fromList $ applyForms inferredBase
     let formType = form ^. V.payload . _1 . Infer.plType
+    -- more forks here:
     injected <- maybe (return . markNotInjected) holeResultsInject mInjectedArg form
-    unifyResult <-
-      update holeType
-      >>= unify formType
-      & Infer.run
-      & stateEitherSequence
+    unifyRes <-
+      liftInfer $
+      do  unify formType (inferredPl ^. Infer.plType)
+          updateInferredVal injected
+    holeTypeUpdated <- assertSuccessInfer $ update (inferredPl ^. Infer.plType)
     return $
-      case unifyResult of
-      Right _ -> injected
-      Left _ -> holeWrap holeType injected
+      case unifyRes of
+      Right injectedUpdated -> injectedUpdated
+      Left _ -> holeWrap holeTypeUpdated injected
   where
-    holeType = exprPl ^. Input.inferred . Infer.plType
-    scopeAtHole = exprPl ^. Input.inferred . Infer.plScope
+    assertSuccessInfer = fmap (either (error "Update failed?!") id) . liftInfer
+    liftInfer = stateEitherSequence . Infer.run
 
 mkHoleResult ::
   MonadA m =>
