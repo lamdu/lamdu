@@ -87,7 +87,7 @@ parseArgs =
         _ -> failUsage $ "Invalid undo count: " ++ countStr
     go (arg : _) = failUsage $ "Unexpected arg: " ++ show arg
     failUsage msg = fail $ unlines [ msg, usage ]
-    usage = "Usage: lamdu [-deletedb] [-font <filename>]"
+    usage = "Usage: lamdu [-deletedb] [-font <filename>] [-undo <N>]"
 
 undo :: Transaction DbLayout.DbM Widget.Id
 undo =
