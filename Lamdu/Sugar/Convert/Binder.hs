@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Binder
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad (void, when)
+import Control.Monad (void)
 import Control.MonadA (MonadA)
 import Data.List.Utils (isLengthAtLeast)
 import Data.Map (Map)
@@ -89,18 +89,32 @@ makeDeleteLambda (V.Lam paramVar lamBodyStored) stored =
 newTag :: MonadA m => T m T.Tag
 newTag = GenIds.transaction GenIds.randomTag
 
-isRecursiveCallArg :: [Val ()] -> Bool
-isRecursiveCallArg (cur : parent : _) =
-  Lens.allOf (ExprLens.valVar) (/= recurseGetVar) cur &&
+isRecursiveCallArg :: V.Var -> [Val ()] -> Bool
+isRecursiveCallArg recursiveVar (cur : parent : _) =
+  Lens.allOf ExprLens.valVar (/= recursiveVar) cur &&
   Lens.anyOf (ExprLens.valApply . V.applyFunc . ExprLens.valVar)
-  (== recurseGetVar) parent
-isRecursiveCallArg _ = False
+  (== recursiveVar) parent
+isRecursiveCallArg _ _ = False
+
+fixRecursiveCalls :: MonadA m =>
+  T.Tag -> T.Tag -> V.Var -> Val (ExprIRef.ValIProperty m) -> Transaction m ()
+fixRecursiveCalls tagForVar tagForNewVar =
+  onMatchingSubexprsWithPath fixRecurseArg . const . isRecursiveCallArg
+  where
+    fixRecurseArg prop =
+      do
+        hole <- DataOps.newHole
+        ExprIRef.newValBody (V.BLeaf V.LRecEmpty)
+          >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tagForNewVar hole
+          >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tagForVar (Property.value prop)
+          >>= Property.set prop
 
 makeConvertToRecordParams ::
   MonadA m =>
+  Maybe V.Var ->
   V.Lam (Val (ExprIRef.ValIProperty m)) -> ExprIRef.ValIProperty m ->
   ConvertM m (T m EntityId)
-makeConvertToRecordParams (V.Lam paramVar lamBody) stored =
+makeConvertToRecordParams mRecursiveVar (V.Lam paramVar lamBody) stored =
   do
     protectedSetToVal <- ConvertM.typeProtectedSetToVal
     return $
@@ -112,16 +126,11 @@ makeConvertToRecordParams (V.Lam paramVar lamBody) stored =
             Property.value prop & (`V.GetField` tagForVar) & V.BGetField
             & ExprIRef.newValBody
             >>= Property.set prop
-          fixRecurseArg prop =
-            do
-              hole <- DataOps.newHole
-              ExprIRef.newValBody (V.BLeaf V.LRecEmpty)
-                >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tagForNewVar hole
-                >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tagForVar (Property.value prop)
-                >>= Property.set prop
         onMatchingSubexprs convertVar (const (isGetVarOf paramVar)) lamBody
-        when True $ -- TODO: Somehow check whether this is the outer-most lambda
-          onMatchingSubexprsWithPath fixRecurseArg (const isRecursiveCallArg) lamBody
+        case mRecursiveVar of
+          Nothing -> return ()
+          Just recursiveVar ->
+            fixRecursiveCalls tagForVar tagForNewVar recursiveVar lamBody
         protectedSetToVal stored (Property.value stored) <&> EntityId.ofValI
 
 mkRecordParams ::
@@ -180,12 +189,13 @@ delFieldParam fp lamStored =
      return $ error "TODO: cursor"
 
 makeLamParamActions :: MonadA m =>
+  Maybe V.Var ->
   V.Lam (Val (ExprIRef.ValIProperty m)) -> ExprIRef.ValIProperty m ->
   ConvertM m (FuncParamActions m)
-makeLamParamActions lam lambdaProp =
+makeLamParamActions mRecursiveVar lam lambdaProp =
   do
     delete <- makeDeleteLambda lam lambdaProp
-    addParam <- makeConvertToRecordParams lam lambdaProp
+    addParam <- makeConvertToRecordParams mRecursiveVar lam lambdaProp
     return
       FuncParamActions
       { _fpListItemActions =
@@ -196,12 +206,13 @@ makeLamParamActions lam lambdaProp =
       }
 
 convertLamParam :: MonadA m =>
+  Maybe V.Var ->
   V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
   ConvertM m (ConventionalParams m a)
-convertLamParam lam@(V.Lam param _) lamExprPl =
+convertLamParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
   do
     mActions <-
-      sequenceA $ makeLamParamActions
+      sequenceA $ makeLamParamActions mRecursiveVar
       <$> (lam & (traverse . traverse) (^. Input.mStored))
       <*> lamExprPl ^. Input.mStored
     let
@@ -264,9 +275,10 @@ isParamAlwaysUsedWithGetField (V.Lam param body) =
 
 convertLamParams ::
   (MonadA m, Monoid a) =>
+  Maybe V.Var ->
   V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
   ConvertM m (ConventionalParams m a)
-convertLamParams lambda lambdaPl =
+convertLamParams mRecursiveVar lambda lambdaPl =
   do
     tagsInOuterScope <- ConvertM.readContext <&> Map.keysSet . (^. ConvertM.scTagParamInfos)
     case lambdaPl ^. Input.inferred . Infer.plType of
@@ -280,7 +292,7 @@ convertLamParams lambda lambdaPl =
           tagsInInnerScope = Map.keysSet fields
           FlatComposite fields extension = FlatComposite.fromComposite composite
           fieldParams = map makeFieldParam $ Map.toList fields
-      _ -> convertLamParam lambda lambdaPl
+      _ -> convertLamParam mRecursiveVar lambda lambdaPl
   where
     makeFieldParam (tag, typeExpr) =
       FieldParam
@@ -290,16 +302,16 @@ convertLamParams lambda lambdaPl =
 
 convertParams ::
   (MonadA m, Monoid a) =>
-  Val (Input.Payload m a) ->
+  Maybe V.Var -> Val (Input.Payload m a) ->
   ConvertM m
   ( ConventionalParams m a
   , Val (Input.Payload m a)
   )
-convertParams expr =
+convertParams mRecursiveVar expr =
   case expr ^. V.body of
   V.BAbs lambda ->
     do
-      params <- convertLamParams lambda (expr ^. V.payload)
+      params <- convertLamParams mRecursiveVar lambda (expr ^. V.payload)
       return (params, lambda ^. V.lamResult)
   _ -> return (emptyConventionalParams stored, expr)
   where
@@ -369,7 +381,7 @@ convertWhereItems expr =
       param = ewiParam ewi
       defGuid = UniqueId.toGuid param
       defEntityId = EntityId.ofLambdaParam param
-    value <- convertBinder defGuid (ewiArg ewi)
+    value <- convertBinder Nothing defGuid (ewiArg ewi)
     let
       mkWIActions topLevelProp bodyStored =
         ListItemActions
@@ -439,15 +451,16 @@ convertLam ::
   ConvertM m (Binder Guid m (ExpressionU m a))
 convertLam lam pl =
   do
-    convParams <- convertLamParams lam pl
+    convParams <- convertLamParams Nothing lam pl
     makeBinder Nothing convParams $ lam ^. V.lamResult
 
 convertBinder ::
   (MonadA m, Monoid a) =>
-  Guid -> Val (Input.Payload m a) -> ConvertM m (Binder Guid m (ExpressionU m a))
-convertBinder defGuid expr =
+  Maybe V.Var -> Guid ->
+  Val (Input.Payload m a) -> ConvertM m (Binder Guid m (ExpressionU m a))
+convertBinder mRecursiveVar defGuid expr =
   do
-    (convParams, funcBody) <- convertParams expr
+    (convParams, funcBody) <- convertParams mRecursiveVar expr
     let
       setPresentationMode
         | isLengthAtLeast 2 (cpParams convParams) =
