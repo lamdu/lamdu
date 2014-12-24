@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Binder
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Control.MonadA (MonadA)
 import Data.List.Utils (isLengthAtLeast)
 import Data.Map (Map)
@@ -30,6 +30,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -60,11 +61,17 @@ onMatchingSubexprs action predicate =
   Lens.itraverseOf_ (ExprLens.subExprPayloads . Lens.ifiltered (flip predicate))
   (const action)
 
+onMatchingSubexprsWithPath ::
+  MonadA m => (a -> m ()) -> (a -> [Val ()] -> Bool) -> Val a -> m ()
+onMatchingSubexprsWithPath action predicate =
+  Lens.itraverseOf_ (ExprLens.payloadsIndexedByPath . Lens.ifiltered (flip predicate))
+  (const action)
+
 toHole :: MonadA m => ExprIRef.ValIProperty m -> T m ()
 toHole = void . DataOps.setToHole
 
-isGetParamOf :: V.Var -> Val a -> Bool
-isGetParamOf = Lens.anyOf ExprLens.valVar . (==)
+isGetVarOf :: V.Var -> Val a -> Bool
+isGetVarOf = Lens.anyOf ExprLens.valVar . (==)
 
 makeDeleteLambda ::
   MonadA m =>
@@ -78,6 +85,44 @@ makeDeleteLambda (V.Lam paramVar lamBodyStored) stored =
         getParamsToHole paramVar lamBodyStored
         let lamBodyI = Property.value (lamBodyStored ^. V.payload)
         protectedSetToVal stored lamBodyI <&> EntityId.ofValI
+
+newTag :: MonadA m => T m T.Tag
+newTag = GenIds.transaction GenIds.randomTag
+
+isRecursiveCallArg :: [Val ()] -> Bool
+isRecursiveCallArg (cur : parent : _) =
+  Lens.allOf (ExprLens.valVar) (/= recurseGetVar) cur &&
+  Lens.anyOf (ExprLens.valApply . V.applyFunc . ExprLens.valVar)
+  (== recurseGetVar) parent
+isRecursiveCallArg _ = False
+
+makeConvertToRecordParams ::
+  MonadA m =>
+  V.Lam (Val (ExprIRef.ValIProperty m)) -> ExprIRef.ValIProperty m ->
+  ConvertM m (T m EntityId)
+makeConvertToRecordParams (V.Lam paramVar lamBody) stored =
+  do
+    protectedSetToVal <- ConvertM.typeProtectedSetToVal
+    return $
+      do
+        tagForVar <- newTag
+        tagForNewVar <- newTag
+        let
+          convertVar prop =
+            Property.value prop & (`V.GetField` tagForVar) & V.BGetField
+            & ExprIRef.newValBody
+            >>= Property.set prop
+          fixRecurseArg prop =
+            do
+              hole <- DataOps.newHole
+              ExprIRef.newValBody (V.BLeaf V.LRecEmpty)
+                >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tagForNewVar hole
+                >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tagForVar (Property.value prop)
+                >>= Property.set prop
+        onMatchingSubexprs convertVar (const (isGetVarOf paramVar)) lamBody
+        when True $ -- TODO: Somehow check whether this is the outer-most lambda
+          onMatchingSubexprsWithPath fixRecurseArg (const isRecursiveCallArg) lamBody
+        protectedSetToVal stored (Property.value stored) <&> EntityId.ofValI
 
 mkRecordParams ::
   (MonadA m, Monoid a) =>
@@ -140,12 +185,13 @@ makeLamParamActions :: MonadA m =>
 makeLamParamActions lam lambdaProp =
   do
     delete <- makeDeleteLambda lam lambdaProp
+    addParam <- makeConvertToRecordParams lam lambdaProp
     return
       FuncParamActions
       { _fpListItemActions =
         ListItemActions
         { _itemDelete = delete
-        , _itemAddNext = error "TODO: addSecondParam"
+        , _itemAddNext = addParam
         }
       }
 
@@ -204,7 +250,7 @@ convertLamParam lam@(V.Lam param _) lamExprPl =
 --             , V._getFieldTag = tagRef
 --             }
 --       onMatchingSubexprs (toGetField . Property.value)
---         (isGetParamOf existingParamVar) bodyWithStored
+--         (isGetVarOf existingParamVar) bodyWithStored
 --       let lamGuid = ExprIRef.valIGuid $ Property.value lamProp
 --       pure $ Guid.combine lamGuid $ newTag ^. Lens.from V.tag
 
@@ -298,7 +344,7 @@ lambdaWrap stored =
 
 getParamsToHole :: MonadA m =>
   V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
-getParamsToHole = onMatchingSubexprs toHole . const . isGetParamOf
+getParamsToHole = onMatchingSubexprs toHole . const . isGetVarOf
 
 getFieldParamsToHole :: MonadA m =>
   T.Tag -> V.Lam (Val (ExprIRef.ValIProperty m)) -> T m ()

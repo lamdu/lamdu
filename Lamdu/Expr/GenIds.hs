@@ -5,6 +5,7 @@ module Lamdu.Expr.GenIds
   , randomizeParamIds
   , randomTag
 
+  , transaction
     -- TODO: To its own module?
   , onNgMakeName
   , NameGen(..), randomNameGen
@@ -14,11 +15,13 @@ import Control.Applicative ((<$>), Applicative(..))
 import Control.Lens.Operators
 import Control.Lens.Tuple
 import Control.Monad
+import Control.MonadA (MonadA)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT(..))
 import Control.Monad.Trans.State (evalState, state, runState)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
+import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.Expr.Identifier (Identifier(..))
 import Lamdu.Expr.Val (Val(..))
@@ -27,9 +30,15 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
+import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import qualified System.Random as Random
+import qualified System.Random.Utils as RandomUtils
+
+transaction :: MonadA m =>
+  (Random.StdGen -> (a, Random.StdGen)) -> Transaction m a
+transaction f = Transaction.newKey <&> fst . f . RandomUtils.genFromHashable
 
 randomIdentifier :: RandomGen g => g -> (Identifier, g)
 randomIdentifier =
