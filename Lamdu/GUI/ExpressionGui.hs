@@ -28,6 +28,7 @@ module Lamdu.GUI.ExpressionGui
 import Control.Applicative ((<$>))
 import Control.Lens (Lens')
 import Control.Lens.Operators
+import Control.Lens.Tuple
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Property (Property(..))
@@ -68,21 +69,21 @@ fromValueWidget widget = ExpressionGui widget 0.5
 -- point:
 scaleFromTop :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
 scaleFromTop ratio (ExpressionGui widget alignment) =
-  ExpressionGui (Widget.scale ratio widget) (alignment / (ratio ^. Lens._2))
+  ExpressionGui (Widget.scale ratio widget) (alignment / (ratio ^. _2))
 
 pad :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
 pad padding (ExpressionGui widget alignment) =
   ExpressionGui newWidget $
-  (padding ^. Lens._2 + alignment * widget ^. height) / newWidget ^. height
+  (padding ^. _2 + alignment * widget ^. height) / newWidget ^. height
   where
-    height = Widget.wSize . Lens._2
+    height = Widget.wSize . _2
     newWidget = Widget.pad padding widget
 
 hbox :: [ExpressionGui m] -> ExpressionGui m
 hbox guis =
   ExpressionGui (Box.toWidget box) $
   case box ^. Box.boxContent of
-  ((_, x) : _) -> x ^. Grid.elementAlign . Lens._2
+  ((_, x) : _) -> x ^. Grid.elementAlign . _2
   _ -> error "hbox must not get empty list :("
   where
     box = Box.make Box.horizontal $ map f guis
@@ -97,7 +98,7 @@ fromBox box =
   where
     alignment =
       maybe (error "True disappeared from box list?!")
-        (^. Grid.elementAlign . Lens._2) .
+        (^. Grid.elementAlign . _2) .
       lookup True $ box ^. Box.boxContent
 
 addBelow ::
@@ -111,18 +112,18 @@ addBelow egHAlign ws eg =
   map ((,) False) ws
 
 wWidth :: Lens' (Widget f) Widget.R
-wWidth = Widget.wSize . Lens._1
+wWidth = Widget.wSize . _1
 
 addTypeBackground :: Config -> AnimId -> Widget.R -> View -> View
 addTypeBackground config animId minWidth typeView =
   typeView
-  & Lens._1 .~ newSize
-  & Lens._2 %~ Anim.translate (Vector2 ((width - typeWidth) / 2) 0)
-  & Lens._2 %~ Anim.backgroundColor bgAnimId bgLayer bgColor newSize
+  & _1 .~ newSize
+  & _2 %~ Anim.translate (Vector2 ((width - typeWidth) / 2) 0)
+  & _2 %~ Anim.backgroundColor bgAnimId bgLayer bgColor newSize
   where
-    typeWidth = typeView ^. Lens._1 . Lens._1
+    typeWidth = typeView ^. _1 . _1
     width = max typeWidth minWidth
-    newSize = typeView ^. Lens._1 & Lens._1 .~ width
+    newSize = typeView ^. _1 & _1 .~ width
     bgAnimId = animId ++ ["type background"]
     bgLayer = Config.layerTypes $ Config.layers config
     bgColor = Config.typeBoxBGColor config
