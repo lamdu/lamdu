@@ -25,6 +25,7 @@ import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Type (Type(..))
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Infer.Unify (unify)
+import Lamdu.Infer.Update (update)
 import Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
@@ -439,7 +440,8 @@ mkHoleResultVals mInjectedArg exprPl base =
     let formType = form ^. V.payload . _1 . Infer.plType
     injected <- maybe (return . markNotInjected) holeResultsInject mInjectedArg form
     unifyResult <-
-      unify holeType formType
+      update holeType
+      >>= unify formType
       & Infer.run
       & stateEitherSequence
     return $
