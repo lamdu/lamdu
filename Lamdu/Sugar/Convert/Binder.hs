@@ -237,33 +237,6 @@ convertLamParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
     paramType =
       fromMaybe (error "Lambda value not inferred to a function type?!") $
       lamExprPl ^? Input.inferred . Infer.plType . ExprLens._TFun . Lens._1
-    -- _existingParamTypeIRef =
-    --   fromMaybe (error "Only stored record param type is converted as record") $
-    --   existingParamType ^? SugarInfer.exprIRef
---     _existingParamAsTag = T.Tag existingParamVar
---     addSecondParam mkFields = do
---       let existingParamField = (existingParamAsTag, existingParamTypeIRef)
---       (newTag, newParamField) <- newField
---       newParamTypeI <-
---         ExprIRef.newExprBody . V.VRec . V.Record KType $
---         mkFields existingParamField newParamField
---       newParamsGuid <- Transaction.newKey
---       ExprIRef.writeExprBody (Property.value lamProp) $
---         ExprUtil.makeLambda newParamsGuid newParamTypeI .
---         Property.value $ bodyWithStored ^. V.payload
---       let
---         toGetField iref = do
---           recordRef <- ExprIRef.newExprBody $ ExprLens.bodyParameterRef # newParamsGuid
---           tagRef <- ExprIRef.newExprBody existingParamAsTag
---           ExprIRef.writeExprBody iref $
---             V.VGetField V.GetField
---             { V._getFieldRecord = recordRef
---             , V._getFieldTag = tagRef
---             }
---       onMatchingSubexprs (toGetField . Property.value)
---         (isGetVarOf existingParamVar) bodyWithStored
---       let lamGuid = ExprIRef.valIGuid $ Property.value lamProp
---       pure $ Guid.combine lamGuid $ newTag ^. Lens.from V.tag
 
 isParamAlwaysUsedWithGetField :: V.Lam (Val a) -> Bool
 isParamAlwaysUsedWithGetField (V.Lam param body) =
@@ -406,17 +379,6 @@ convertWhereItems expr =
         }
     (nextItems, whereBody) <- convertWhereItems $ ewiBody ewi
     return (item : nextItems, whereBody)
-
--- addFirstFieldParam :: MonadA m => Guid -> ExprIRef.ValI m -> T m Guid
--- addFirstFieldParam lamGuid recordI = do
---   recordBody <- ExprIRef.readValBody recordI
---   case recordBody ^? V._VRec . ExprLens.kindedRecordFields KType of
---     Just fields -> do
---       (newTag, field) <- newField
---       ExprIRef.writeExprBody recordI $
---         V.VRec . V.Record KType $ (newTag, field) : fields
---       pure $ Guid.combine lamGuid $ newTag ^. Lens.from V.tag
---     _ -> pure $ ExprIRef.valIGuid recordI
 
 makeBinder :: (MonadA m, Monoid a) =>
   Maybe (MkProperty m PresentationMode) ->
