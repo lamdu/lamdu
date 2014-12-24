@@ -123,13 +123,13 @@ makeWrapper arg myId = do
     (rawArgGui ^. ExpressionGui.egWidget . Widget.wIsFocused)
     arg myId
   rawArgGui
+    & ExpressionGui.pad (padding + frameWidth)
+    & ExpressionGui.egWidget %~
+      Widget.addInnerFrame
+      (Config.layerHoleBG (Config.layers config))
+      frameId bgColor frameWidth
     & ExpressionGui.egWidget %%~
       makeFocusable myId . Widget.weakerEvents eventMap
-    <&> ExpressionGui.pad (padding + frameWidth)
-    <&> ExpressionGui.egWidget %~
-        Widget.addInnerFrame
-        (Config.layerHoleBG (Config.layers config))
-        frameId bgColor frameWidth
   where
     frameId = mappend (Widget.toAnimId myId) ["hole frame"]
 
