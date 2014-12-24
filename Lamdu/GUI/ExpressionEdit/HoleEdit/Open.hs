@@ -10,14 +10,13 @@ import Control.MonadA (MonadA)
 import Data.List.Lens (suffixed)
 import Data.Maybe (isJust, maybeToList, fromMaybe)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Data.Traversable (traverse, sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (makeBackground)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (ShownResult(..), srPick)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..), srPick, pickedEventResult)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
@@ -55,17 +54,19 @@ extraSymbol = "▷"
 extraSymbolScaleFactor :: Fractional a => a
 extraSymbolScaleFactor = 0.5
 
-eventResultOfPickedResult :: Sugar.PickedResult -> (Maybe Guid, Widget.EventResult)
+eventResultOfPickedResult :: Sugar.PickedResult -> PickedResult
 eventResultOfPickedResult pr =
-  ( pr ^? Sugar.prMJumpTo . Lens._Just . Lens._1
-  , Widget.EventResult
+  PickedResult
+  { _pickedInnerHoleGuid = pr ^? Sugar.prMJumpTo . Lens._Just . Lens._1
+  , _pickedEventResult =
+    Widget.EventResult
     { Widget._eCursor =
       Monoid.Last $
       WidgetIds.fromEntityId <$> pr ^? Sugar.prMJumpTo . Lens._Just . Lens._2
     , Widget._eAnimIdMapping =
       Monoid.Endo $ pickedResultAnimIdTranslation (pr ^. Sugar.prIdTranslation)
     }
-  )
+  }
   where
     pickedResultAnimIdTranslation idTranslations =
       -- Map only the first anim id component
@@ -80,18 +81,17 @@ resultSuffix :: Lens.Prism' AnimId AnimId
 resultSuffix = suffixed ["result suffix"]
 
 afterPick ::
-  Monad m => HoleInfo m -> Widget.Id -> Sugar.PickedResult ->
-  T m (Maybe Guid, Widget.EventResult)
+  Monad m => HoleInfo m -> Widget.Id -> Sugar.PickedResult -> T m PickedResult
 afterPick holeInfo resultId pr = do
   Property.set (hiState holeInfo) HoleState.emptyState
   eventResultOfPickedResult pr
-    & Lens._2 . Widget.eCursor %~
-      (mappend . Monoid.Last . Just .
-       WidgetIds.fromEntityId . hiEntityId) holeInfo
-    & Lens._2 . Widget.eAnimIdMapping %~
-      (mappend . Monoid.Endo) obliterateOtherResults
+    & pickedEventResult . Widget.eCursor %~
+      mappend (Monoid.Last (Just myHoleId))
+    & pickedEventResult . Widget.eAnimIdMapping %~
+      mappend (Monoid.Endo obliterateOtherResults)
     & return
   where
+    myHoleId = WidgetIds.fromEntityId $ hiEntityId holeInfo
     obliterateOtherResults animId =
       case animId ^? resultSuffix of
       Nothing -> animId
@@ -113,8 +113,7 @@ makeShownResult holeInfo result =
       , ShownResult
         { srEventMap = eventMap
         , srHoleResult = res
-        , srPickTo =
-          afterPick holeInfo (rId result) =<< res ^. Sugar.holeResultPick
+        , srPickTo = afterPick holeInfo (rId result) =<< res ^. Sugar.holeResultPick
         }
       )
 

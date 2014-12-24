@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap
   ( make, blockDownEvents, disallowChars
   ) where
@@ -8,13 +8,12 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CharClassification (operatorChars, alphaNumericChars)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (ShownResult(..), srPick)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..), srPick)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Data.Store.Property as Property
@@ -119,13 +118,14 @@ pickPlaceholderEventMap config holeInfo shownResult =
     simplePickRes keys = Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) $ return ()
 
 setNextHoleState ::
-  MonadA m =>
-  String -> (Maybe Guid, Widget.EventResult) -> T m Widget.EventResult
-setNextHoleState _ (Nothing, eventResult) = return eventResult
-setNextHoleState searchTerm (Just newHoleGuid, eventResult) =
-  eventResult <$
-  Transaction.setP (HoleState.assocStateRef newHoleGuid)
-  (HoleState searchTerm)
+  MonadA m => String -> PickedResult -> T m Widget.EventResult
+setNextHoleState searchTerm PickedResult{..} =
+  do
+    case _pickedInnerHoleGuid of
+      Nothing -> return ()
+      Just newHoleGuid ->
+        Transaction.setP (HoleState.assocStateRef newHoleGuid) (HoleState searchTerm)
+    return _pickedEventResult
 
 alphaNumericAfterOperator :: MonadA m => HoleInfo m -> ShownResult m -> Widget.EventHandlers (T m)
 alphaNumericAfterOperator holeInfo shownResult
