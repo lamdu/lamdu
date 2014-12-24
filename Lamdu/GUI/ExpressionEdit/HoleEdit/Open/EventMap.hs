@@ -105,7 +105,7 @@ pickPlaceholderEventMap ::
 pickPlaceholderEventMap config holeInfo shownResult =
   -- TODO: Does this entityId business make sense?
   case hiHoleEntityIds holeInfo ^. ExprGuiM.hgMNextHole of
-  Just nextHoleEntityId | holeResultHasHoles ->
+  Just nextHoleEntityId | not holeResultHasHoles ->
     mappend
     (simplePickRes (Config.pickResultKeys config))
     (pickAndMoveToNextHole nextHoleEntityId)
@@ -119,7 +119,7 @@ pickPlaceholderEventMap config holeInfo shownResult =
       (Config.pickAndMoveToNextHoleKeys config)
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
       return $ WidgetIds.fromEntityId nextHoleEntityId
-    holeResultHasHoles = not $ srHoleResult shownResult ^. Sugar.holeResultHasHoles
+    holeResultHasHoles = srHoleResult shownResult ^. Sugar.holeResultHasHoles
     simplePickRes keys = Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) $ return ()
 
 setNextHoleState ::
