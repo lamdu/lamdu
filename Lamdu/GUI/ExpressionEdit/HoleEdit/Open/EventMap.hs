@@ -156,7 +156,6 @@ make pl holeInfo mShownResult = do
     paste = pasteEventMap config holeInfo
     pick = shownResultEventMap $ pickPlaceholderEventMap config holeInfo
     alphaAfterOp = onShownResult $ alphaNumericAfterOperator holeInfo
-    fromResult = shownResultEventMap srEventMap
     adHocEdit = adHocTextEditEventMap $ HoleInfo.hiSearchTermProperty holeInfo
     strongEventMap =
       mconcat $
@@ -169,7 +168,7 @@ make pl holeInfo mShownResult = do
       -- includes overlapping events like "cut" of sub-expressions
       -- (since top-level expression gets its actions cut), so put
       -- at lowest precedence:
-      , fromResult
+      , shownResultEventMap srEventMap
       ]
     -- Used with weaker events, TextEdit events above:
     searchTermEventMap = mappend strongEventMap weakEventMap
