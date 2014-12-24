@@ -17,10 +17,12 @@ import Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), Sho
 import Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
+import qualified Data.Foldable as Foldable
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
@@ -152,8 +154,9 @@ pickBefore shownResult action =
 -- | Remove unwanted event handlers from a hole result
 removeUnwanted :: Config -> Widget.EventHandlers f -> Widget.EventHandlers f
 removeUnwanted config =
-  deleteKeys delKeys
+  deleteKeys (delKeys ++ gridKeyEvents)
   where
+    gridKeyEvents = Foldable.toList Grid.stdKeys
     delKeys = Config.delKeys config
 
 make ::

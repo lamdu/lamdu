@@ -22,13 +22,11 @@ import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.Sugar.AddNames.Types (Name(..), ExpressionN)
 import qualified Control.Lens as Lens
-import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -225,7 +223,7 @@ makeHoleResultWidget resultId holeResult = do
       -- Create a hidden result widget that we never display, but only
       -- keep the event map from
       hiddenResultWidget <- ExprGuiM.assignCursor resultId resultWidgetId mkWidget
-      return $ EventMap.deleteKeys gridKeyEvents $ hiddenResultWidget ^. Widget.wEventMap
+      return $ hiddenResultWidget ^. Widget.wEventMap
     else return mempty
   resultWidget <- mkWidget
   widget <-
@@ -241,7 +239,6 @@ makeHoleResultWidget resultId holeResult = do
       & postProcessSugar
       & ExprGuiM.makeSubexpression 0
       <&> (^. ExpressionGui.egWidget)
-    gridKeyEvents = EventMap.KeyEvent EventMap.Press <$> Foldable.toList Grid.stdKeys
     resultWidgetId =
       WidgetIds.fromEntityId $ holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
     holeResultConverted = holeResult ^. Sugar.holeResultConverted
