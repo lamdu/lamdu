@@ -465,7 +465,8 @@ mkHoleResult sugarContext entityId stored val =
       HoleResult
       { _holeResultConverted = fConverted
       , _holeResultPick = mkPickedResult fConsistentExpr fWrittenExpr <$ Transaction.merge forkedChanges
-      , _holeResultHasHoles = not . null $ orderedInnerHoles val
+      , _holeResultHoleTarget =
+        orderedInnerHoles fConsistentExpr ^? Lens.traversed . V.payload . Input.entityId
       }
   where
     mkPickedResult consistentExpr writtenExpr =

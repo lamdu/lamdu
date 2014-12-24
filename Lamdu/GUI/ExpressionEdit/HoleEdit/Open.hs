@@ -239,8 +239,10 @@ makeHoleResultWidget resultId holeResult = do
       & postProcessSugar
       & ExprGuiM.makeSubexpression 0
       <&> (^. ExpressionGui.egWidget)
+    holeResultEntityId = holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
     resultWidgetId =
-      WidgetIds.fromEntityId $ holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
+      WidgetIds.fromEntityId $ fromMaybe holeResultEntityId $
+      holeResult ^. Sugar.holeResultHoleTarget
     holeResultConverted = holeResult ^. Sugar.holeResultConverted
 
 postProcessSugar ::

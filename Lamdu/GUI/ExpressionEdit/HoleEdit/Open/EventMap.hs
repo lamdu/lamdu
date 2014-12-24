@@ -119,7 +119,8 @@ pickPlaceholderEventMap config holeInfo shownResult =
       (Config.pickAndMoveToNextHoleKeys config)
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
       return $ WidgetIds.fromEntityId nextHoleEntityId
-    holeResultHasHoles = srHoleResult shownResult ^. Sugar.holeResultHasHoles
+    holeResultHasHoles =
+      Lens.has (Sugar.holeResultHoleTarget . Lens._Just) $ srHoleResult shownResult
     simplePickRes keys = Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) $ return ()
 
 setNextHoleState ::
