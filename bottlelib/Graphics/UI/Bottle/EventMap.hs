@@ -18,27 +18,27 @@ module Graphics.UI.Bottle.EventMap
   , specialCharKey
   ) where
 
-import Control.Applicative ((<$>), (<*>))
-import Control.Arrow ((***), (&&&))
-import Control.Lens (Lens, Lens')
-import Control.Lens.Operators
-import Control.Monad (guard, mplus, msum)
-import Data.Aeson (ToJSON(..), FromJSON(..))
-import Data.List (isPrefixOf)
-import Data.Map (Map)
-import Data.Maybe (isJust, listToMaybe, maybeToList)
-import Data.Monoid (Monoid(..))
-import Data.Set (Set)
-import GHC.Generics (Generic)
-import Graphics.UI.GLFW (Key(..))
-import Graphics.UI.GLFW.Events (IsPress(..))
-import Graphics.UI.GLFW.Instances ()
-import Graphics.UI.GLFW.ModState (ModState(..), noMods, shift, ctrl, alt)
-import Prelude hiding (lookup)
+import           Control.Applicative ((<$>), (<*>))
+import           Control.Arrow ((***), (&&&))
+import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad (guard, mplus, msum)
+import           Data.Aeson (ToJSON(..), FromJSON(..))
+import           Data.List (isPrefixOf)
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Maybe (catMaybes, listToMaybe, maybeToList)
+import           Data.Monoid (Monoid(..))
+import           Data.Set (Set)
 import qualified Data.Set as Set
+import           GHC.Generics (Generic)
+import           Graphics.UI.GLFW (Key(..))
+import           Graphics.UI.GLFW.Events (IsPress(..))
 import qualified Graphics.UI.GLFW.Events as Events
+import           Graphics.UI.GLFW.Instances ()
+import           Graphics.UI.GLFW.ModState (ModState(..), noMods, shift, ctrl, alt)
+import           Prelude hiding (lookup)
 
 data ModKey = ModKey ModState Key
   deriving (Generic, Show, Eq, Ord)
@@ -186,7 +186,7 @@ data EventMap a = EventMap
   { _emKeyMap :: Map KeyEvent (DocHandler a)
   , _emCharGroupHandlers :: [CharGroupHandler a]
   , _emCharGroupChars :: Set (Char, IsShifted)
-  , _emAllCharsHandler :: Maybe (AllCharsHandler a)
+  , _emAllCharsHandler :: [AllCharsHandler a]
   , _emTickHandlers :: [a]
   } deriving (Generic, Functor)
 
@@ -199,14 +199,14 @@ emCharGroupHandlers f EventMap{..} = (\_emCharGroupHandlers -> EventMap{..}) <$>
 emCharGroupChars :: Lens' (EventMap a) (Set (Char, IsShifted))
 emCharGroupChars f EventMap{..} = (\_emCharGroupChars -> EventMap{..}) <$> f _emCharGroupChars
 
-emAllCharsHandler :: Lens' (EventMap a) (Maybe (AllCharsHandler a))
+emAllCharsHandler :: Lens' (EventMap a) [AllCharsHandler a]
 emAllCharsHandler f EventMap{..} = (\_emAllCharsHandler -> EventMap{..}) <$> f _emAllCharsHandler
 
 emTickHandlers :: Lens' (EventMap a) [a]
 emTickHandlers f EventMap{..} = (\_emTickHandlers -> EventMap{..}) <$> f _emTickHandlers
 
 instance Monoid (EventMap a) where
-  mempty = EventMap Map.empty [] Set.empty Nothing []
+  mempty = EventMap Map.empty [] Set.empty [] []
   mappend = overrides
 
 overrides :: EventMap a -> EventMap a -> EventMap a
@@ -239,8 +239,8 @@ filterCharGroups f =
 isCharConflict :: EventMap a -> Char -> IsShifted -> Bool
 isCharConflict eventMap char isShifted =
   Set.member (char, isShifted) (eventMap ^. emCharGroupChars) ||
-  isJust
-  (($ isShifted) . ($ char) . (^. chDocHandler . dhHandler) =<<
+  (not . null . catMaybes)
+  (($ isShifted) . ($ char) . (^. chDocHandler . dhHandler) <$>
    eventMap ^. emAllCharsHandler)
 
 filterSChars
@@ -287,7 +287,7 @@ mkModKey = ModKey
 eventMapDocs :: EventMap a -> [(InputDoc, Doc)]
 eventMapDocs (EventMap dict charGroups _ mAllCharsHandler _) =
   concat
-  [ map ((^. chInputDoc) &&& (^. chDocHandler . dhDoc)) $ maybeToList mAllCharsHandler
+  [ map ((^. chInputDoc) &&& (^. chDocHandler . dhDoc)) mAllCharsHandler
   , map ((^. cgInputDoc) &&& (^. cgDocHandler . dhDoc)) charGroups
   , map (prettyKeyEvent *** (^. dhDoc)) $ Map.toList dict
   ]
@@ -302,7 +302,7 @@ deleteKeys :: [KeyEvent] -> EventMap a -> EventMap a
 deleteKeys = foldr ((.) . deleteKey) id
 
 lookup :: Events.KeyEvent -> EventMap a -> Maybe a
-lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict charGroups _ mAllCharHandlers _) =
+lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict charGroups _ allCharHandlers _) =
   msum
   [ (^. dhHandler) <$>
     KeyEvent isPress modKey `Map.lookup` dict
@@ -312,10 +312,11 @@ lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict charGroups _ mAllChar
       CharGroupHandler _ chars handler <- charGroups
       guard $ Set.member (char, isShifted) chars
       return $ (handler ^. dhHandler) char isShifted
-  , do
+  , listToMaybe $ do
       Press <- return isPress
-      AllCharsHandler _ handler <- mAllCharHandlers
-      flip (handler ^. dhHandler) isShifted =<< mchar
+      char <- maybeToList mchar
+      AllCharsHandler _ handler <- allCharHandlers
+      maybeToList $ (handler ^. dhHandler) char isShifted
   ]
   where
     isShifted = shiftedMods ms
@@ -341,7 +342,7 @@ charEventMap
 charEventMap iDoc oDoc handler =
   mempty
   { _emAllCharsHandler =
-    Just $ AllCharsHandler iDoc (DocHandler oDoc handler)
+    [AllCharsHandler iDoc (DocHandler oDoc handler)]
   }
 
 allChars :: InputDoc -> Doc -> (Char -> IsShifted -> a) -> EventMap a
