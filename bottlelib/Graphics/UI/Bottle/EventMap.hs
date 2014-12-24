@@ -139,7 +139,6 @@ dhDoc f DocHandler{..} = (\_dhDoc -> DocHandler{..}) <$> f _dhDoc
 dhHandler :: Lens (DocHandler a) (DocHandler b) a b
 dhHandler f DocHandler{..} = (\_dhHandler -> DocHandler{..}) <$> f _dhHandler
 
-{-# ANN module "HLint: ignore Use const" #-}
 
 data IsShifted = Shifted | NotShifted
   deriving (Generic, Eq, Ord, Show, Read)

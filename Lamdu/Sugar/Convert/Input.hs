@@ -29,7 +29,6 @@ data Payload m a
     , _userData :: a
     } deriving (Functor, Foldable, Traversable)
 
-{-# ANN module "HLint: ignore Use const" #-}
 
 entityId :: Lens' (Payload m a) EntityId
 entityId f Payload{..} = f _entityId <&> \_entityId -> Payload{..}

@@ -55,7 +55,6 @@ import qualified System.Directory as Directory
 -- This is an unfortunate workaround to hlint bug with
 -- RecordWildCards, because it adds ~1.2 sec to this module's
 -- compile-time!
-{-# ANN module ("HLint: ignore Use const" :: String) #-}
 
 data ParsedOpts = ParsedOpts
   { _poShouldDeleteDB :: Bool
