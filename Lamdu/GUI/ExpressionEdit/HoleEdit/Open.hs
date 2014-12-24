@@ -376,8 +376,8 @@ make pl holeInfo = do
           makeBackground (HoleInfo.hiActiveId holeInfo)
             (Config.layerMax (Config.layers config))
             (Config.activeHoleBGColor config)
-        & ExpressionGui.addInferredTypes pl
-        <&> ExpressionGui.egWidget . Widget.wFrame %~ Anim.onDepth (+ layerDiff)
+        & ExpressionGui.egWidget . Widget.wFrame %~ Anim.onDepth (+ layerDiff)
+        & return
 
 makeSearchTermGui ::
   MonadA m => HoleInfo m ->

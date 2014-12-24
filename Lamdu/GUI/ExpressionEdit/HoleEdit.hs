@@ -32,17 +32,18 @@ make ::
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole pl myId = do
-  (delegateDestId, closed) <- HoleClosed.make hole pl myId
+  (delegateDestId, closedGui) <-
+    ExpressionGui.stdWrapPair pl $ HoleClosed.make hole pl myId
   let
-    closedSize = closed ^. ExpressionGui.egWidget . Widget.wSize
+    closedSize = closedGui ^. ExpressionGui.egWidget . Widget.wSize
     resize =
       ( ExpressionGui.egWidget . Widget.wSize %~
         (Lens._1 %~ max (closedSize ^. Lens._1)) .
         (Lens._2 .~ closedSize ^. Lens._2)
       ) .
-      (ExpressionGui.egAlignment .~ closed ^. ExpressionGui.egAlignment)
+      (ExpressionGui.egAlignment .~ closedGui ^. ExpressionGui.egAlignment)
   ExprGuiM.assignCursor myId delegateDestId $
-    fromMaybe closed <$>
+    fromMaybe closedGui <$>
     runMaybeT (resize <$> tryOpenHole hole pl myId)
 
 tryOpenHole ::
