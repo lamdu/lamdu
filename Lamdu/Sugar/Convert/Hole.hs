@@ -439,15 +439,15 @@ mkHoleResultVals mInjectedArg exprPl base =
     form <- lift $ ListClass.fromList $ applyForms inferredBase
     let formType = form ^. V.payload . _1 . Infer.plType
     injected <- maybe (return . markNotInjected) holeResultsInject mInjectedArg form
-    updatedHoleType <-
-      update holeType & Infer.run & stateEitherSequence
-      <&> either (error "update should always work") id
     unifyResult <-
-      unify formType updatedHoleType
-      & Infer.run & stateEitherSequence
-    return $ case unifyResult of
+      update holeType
+      >>= unify formType
+      & Infer.run
+      & stateEitherSequence
+    return $
+      case unifyResult of
       Right _ -> injected
-      Left _ -> holeWrap updatedHoleType injected
+      Left _ -> holeWrap holeType injected
   where
     holeType = exprPl ^. Input.inferred . Infer.plType
     scopeAtHole = exprPl ^. Input.inferred . Infer.plScope
