@@ -268,13 +268,10 @@ makeRow =
 makeNameView ::
   MonadA m =>
   Name m -> AnimId -> WE.WidgetEnvT (Transaction m) (Widget f)
-makeNameView (Name nameSrc collision _ name) animId = do
+makeNameView (Name _ collision _ name) animId = do
   label <- BWidgets.makeLabel name animId
   suffixLabels <- makeCollisionSuffixLabels collision $ animId ++ ["suffix"]
-  config <- WE.readConfig
-  return .
-    nameSrcTint config nameSrc .
-    Box.hboxCentered $ label : suffixLabels
+  return . Box.hboxCentered $ label : suffixLabels
 
 makeCollisionSuffixLabels ::
   MonadA m => NameCollision -> AnimId -> WE.WidgetEnvT m [Widget f]
