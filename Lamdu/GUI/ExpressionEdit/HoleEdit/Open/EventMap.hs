@@ -81,17 +81,19 @@ disallowedHoleChars =
 disallowChars :: String -> E.EventMap a -> E.EventMap a
 disallowChars searchTerm =
   E.filterSChars (curry (`notElem` disallowedHoleChars)) .
-  E.deleteKey (keyPress E.Key'Space) .
-  E.deleteKey (keyPress E.Key'Enter) .
+  deleteKeys [k E.Key'Space, k E.Key'Enter] .
   disallowMix
   where
+    k = E.ModKey E.noMods
     disallowMix
       | nonEmptyAll (`notElem` operatorChars) searchTerm =
         E.filterSChars (curry (`notElem` E.anyShiftedChars operatorChars))
       | nonEmptyAll (`elem` operatorChars) searchTerm =
         E.filterSChars (curry (`notElem` E.anyShiftedChars alphaNumericChars))
       | otherwise = id
-    keyPress = E.KeyEvent E.Press . E.ModKey E.noMods
+
+deleteKeys :: [E.ModKey] -> E.EventMap a -> E.EventMap a
+deleteKeys = E.deleteKeys . map (E.KeyEvent E.Press)
 
 -- This relies on pickBefore being applied to it in the event map
 -- buildup to do the actual picking
@@ -147,6 +149,13 @@ pickBefore shownResult action =
       <&> Widget.eCursor . Lens._Wrapped' . Lens.mapped %~ _pickedIdTranslations
     return $ _pickedEventResult `mappend` actionResult
 
+-- | Remove unwanted event handlers from a hole result
+removeUnwanted :: Config -> Widget.EventHandlers f -> Widget.EventHandlers f
+removeUnwanted config =
+  deleteKeys delKeys
+  where
+    delKeys = Config.delKeys config
+
 make ::
   MonadA m =>
   Sugar.Payload m ExprGuiM.Payload ->
@@ -178,7 +187,7 @@ make pl holeInfo mShownResult = do
       -- includes overlapping events like "cut" of sub-expressions
       -- (since top-level expression gets its actions cut), so put
       -- at lowest precedence:
-      , shownResultEventMap srEventMap
+      , removeUnwanted config $ shownResultEventMap srEventMap
       ]
     -- Used with weaker events, TextEdit events above:
     searchTermEventMap = mappend strongEventMap weakEventMap
