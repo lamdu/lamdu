@@ -19,7 +19,6 @@ module Lamdu.GUI.ExpressionGui
   , parenify
   -- | stdWrap/stdPostProcess means addTypes
   , stdWrap
-  , stdWrapDelegated
   , stdWrapParentExpr
   , stdWrapParenify
   , addInferredTypes, addTypeBackground
