@@ -96,9 +96,9 @@ isRecursiveCallArg recursiveVar (cur : parent : _) =
   (== recursiveVar) parent
 isRecursiveCallArg _ _ = False
 
-fixRecursiveCalls :: MonadA m =>
+fixRecursiveCallsToUseRecords :: MonadA m =>
   T.Tag -> T.Tag -> V.Var -> Val (ExprIRef.ValIProperty m) -> Transaction m ()
-fixRecursiveCalls tagForVar tagForNewVar =
+fixRecursiveCallsToUseRecords tagForVar tagForNewVar =
   onMatchingSubexprsWithPath fixRecurseArg . const . isRecursiveCallArg
   where
     fixRecurseArg prop =
@@ -130,7 +130,7 @@ makeConvertToRecordParams mRecursiveVar (V.Lam paramVar lamBody) stored =
         case mRecursiveVar of
           Nothing -> return ()
           Just recursiveVar ->
-            fixRecursiveCalls tagForVar tagForNewVar recursiveVar lamBody
+            fixRecursiveCallsToUseRecords tagForVar tagForNewVar recursiveVar lamBody
         protectedSetToVal stored (Property.value stored) <&> EntityId.ofValI
 
 mkRecordParams ::
@@ -286,20 +286,53 @@ convertParams mRecursiveVar expr =
     do
       params <- convertLamParams mRecursiveVar lambda (expr ^. V.payload)
       return (params, lambda ^. V.lamResult)
-  _ -> return (emptyConventionalParams stored, expr)
-  where
-    stored =
-      fromMaybe (error "Definition body is always stored!") $
-      expr ^. V.payload . Input.mStored
+  _ ->
+    do
+      params <-
+        emptyConventionalParams mRecursiveVar $
+        fromMaybe (error "Definition body is always stored!") $ -- TODO: use maybes rather than error
+        traverse (^. Input.mStored) expr
+      return (params, expr)
 
-emptyConventionalParams :: MonadA m => ExprIRef.ValIProperty m -> ConventionalParams m a
-emptyConventionalParams stored = ConventionalParams
-  { cpTags = mempty
-  , cpParamInfos = Map.empty
-  , cpParams = []
-  , cpAddFirstParam = lambdaWrap stored
-  , cpHiddenPayloads = []
-  }
+fixRecursionsToCalls :: MonadA m =>
+  V.Var -> Val (ExprIRef.ValIProperty m) -> Transaction m ()
+fixRecursionsToCalls =
+  onMatchingSubexprs fixRecursion . const . isGetVarOf
+  where
+    fixRecursion prop =
+      DataOps.newHole
+      >>= ExprIRef.newValBody . V.BApp . V.Apply (Property.value prop)
+      >>= Property.set prop
+
+makeAddFirstParam :: MonadA m =>
+  Maybe V.Var -> Val (ExprIRef.ValIProperty m) -> ConvertM m (T m EntityId)
+makeAddFirstParam mRecursiveVar val =
+  do
+    protectedSetToVal <- ConvertM.typeProtectedSetToVal
+    return $
+      do
+        (newParam, dst) <- DataOps.lambdaWrap stored
+        case mRecursiveVar of
+          Nothing -> return ()
+          Just recursiveVar -> fixRecursionsToCalls recursiveVar val
+        void $ protectedSetToVal stored dst
+        return $ EntityId.ofLambdaParam newParam
+  where
+    stored = val ^. V.payload
+
+emptyConventionalParams :: MonadA m =>
+  Maybe V.Var -> Val (ExprIRef.ValIProperty m) -> ConvertM m (ConventionalParams m a)
+emptyConventionalParams mRecursiveVar val =
+  do
+    addFirstParam <- makeAddFirstParam mRecursiveVar val
+    pure
+      ConventionalParams
+      { cpTags = mempty
+      , cpParamInfos = Map.empty
+      , cpParams = []
+      , cpAddFirstParam = addFirstParam
+      , cpHiddenPayloads = []
+      }
 
 data ExprWhereItem a = ExprWhereItem
   { ewiBody :: Val a
@@ -320,12 +353,6 @@ mExtractWhere expr = do
     , ewiHiddenPayloads = (^. V.payload) <$> [expr, func]
     , ewiInferredType = arg ^. V.payload . Input.inferred . Infer.plType
     }
-
-lambdaWrap :: MonadA m => ExprIRef.ValIProperty m -> T m EntityId
-lambdaWrap stored =
-  f <$> DataOps.lambdaWrap stored
-  where
-    f (newParam, _) = EntityId.ofLambdaParam newParam
 
 getParamsToHole :: MonadA m =>
   V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
