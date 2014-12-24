@@ -17,13 +17,12 @@ module Lamdu.GUI.ExpressionGui
   -- Expression wrapping
   , MyPrecedence(..), ParentPrecedence(..), Precedence
   , parenify
-  -- | stdWrap/stdPostProcess means addTypes and wrapExprEventMap
+  -- | stdWrap/stdPostProcess means addTypes
   , stdWrap
   , stdWrapDelegated
   , stdWrapParentExpr
   , stdWrapParenify
   , addInferredTypes, addTypeBackground
-  , wrapExprEventMap
   ) where
 
 import Control.Applicative ((<$>))
