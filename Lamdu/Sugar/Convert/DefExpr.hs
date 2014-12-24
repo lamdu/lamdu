@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types, PatternGuards #-}
 module Lamdu.Sugar.Convert.DefExpr
   ( convert
   ) where
