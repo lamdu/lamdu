@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 module Lamdu.Config
   ( Layers(..)
-  , Help(..), Zoom(..)
+  , Help(..), Zoom(..), Pane(..)
   , Config(..)
   , delKeys
   ) where
@@ -41,10 +41,19 @@ data Zoom = Zoom
   , shrinkFactor :: Double
   } deriving (Eq, Generic, Show)
 
+data Pane = Pane
+  { paneInactiveTintColor :: Draw.Color
+  , paneActiveBGColor :: Draw.Color
+  , paneCloseKeys :: [E.ModKey]
+  , paneMoveDownKeys :: [E.ModKey]
+  , paneMoveUpKeys :: [E.ModKey]
+  } deriving (Eq, Generic, Show)
+
 data Config = Config
   { layers :: Layers
   , help :: Help
   , zoom :: Zoom
+  , pane :: Pane
 
   , baseColor :: Draw.Color
   , baseTextSize :: Int
@@ -61,10 +70,6 @@ data Config = Config
   , addNextParamKeys :: [E.ModKey]
 
   , delBranchKeys :: [E.ModKey]
-
-  , closePaneKeys :: [E.ModKey]
-  , movePaneDownKeys :: [E.ModKey]
-  , movePaneUpKeys :: [E.ModKey]
 
   , replaceKeys :: [E.ModKey]
 
@@ -127,9 +132,6 @@ data Config = Config
   , cutKeys :: [E.ModKey]
   , pasteKeys :: [E.ModKey]
 
-  , inactiveTintColor :: Draw.Color
-  , activeDefBGColor :: Draw.Color
-
   , typeTint :: Draw.Color
   , typeBoxBGColor :: Draw.Color
 
@@ -185,6 +187,9 @@ instance FromJSON Help
 
 instance ToJSON Zoom
 instance FromJSON Zoom
+
+instance ToJSON Pane
+instance FromJSON Pane
 
 instance ToJSON Config
 instance FromJSON Config

@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings, TypeFamilies #-}
 module Lamdu.GUI.CodeEdit (make, Env(..)) where
 
 import Control.Applicative ((<$>))
@@ -110,15 +110,16 @@ makePanesEdit :: MonadA m => Env m -> [Pane m] -> Widget.Id -> WidgetEnvT (T m) 
 makePanesEdit env panes myId = do
   config <- WE.readConfig
   let
+    Config.Pane{..} = Config.pane config
     paneEventMap pane = mconcat
       [ maybe mempty
-        (Widget.keysEventMapMovesCursor (Config.closePaneKeys config)
+        (Widget.keysEventMapMovesCursor paneCloseKeys
          (E.Doc ["View", "Pane", "Close"]) . fmap WidgetIds.fromGuid) $ paneDel pane
       , maybe mempty
-        (Widget.keysEventMap (Config.movePaneDownKeys config)
+        (Widget.keysEventMap paneMoveDownKeys
          (E.Doc ["View", "Pane", "Move down"])) $ paneMoveDown pane
       , maybe mempty
-        (Widget.keysEventMap (Config.movePaneUpKeys config)
+        (Widget.keysEventMap paneMoveUpKeys
          (E.Doc ["View", "Pane", "Move up"])) $ paneMoveUp pane
       ]
     makePaneEdit pane =
@@ -149,16 +150,16 @@ makePaneWidget :: MonadA m => Env m -> DefI m -> WidgetEnvT (T m) (Widget (T m))
 makePaneWidget env defI = do
   config <- WE.readConfig
   let
+    Config.Pane{..} = Config.pane config
     colorize widget
       | widget ^. Widget.wIsFocused = colorizeActivePane widget
       | otherwise = colorizeInactivePane widget
     colorizeActivePane =
       Widget.backgroundColor
       (Config.layerActivePane (Config.layers config))
-      WidgetIds.activeDefBackground $ Config.activeDefBGColor config
+      WidgetIds.activeDefBackground paneActiveBGColor
     colorizeInactivePane =
-      Widget.wFrame %~
-      Anim.onImages (Draw.tint (Config.inactiveTintColor config))
+      Widget.wFrame %~ Anim.onImages (Draw.tint paneInactiveTintColor)
   fitToWidth (totalWidth env) . colorize <$>
     DefinitionEdit.make (codeProps env) (settings env) defI
 

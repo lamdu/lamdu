@@ -62,6 +62,50 @@
         "shrinkFactor": 1.1,
         "enlargeFactor": 1.1
     },
+    "pane": {
+        "paneActiveBGColor": [
+            0.12,
+            0.12,
+            0.12,
+            0.3
+        ],
+        "paneInactiveTintColor": [
+            1.0,
+            1.0,
+            1.0,
+            0.8
+        ],
+        "paneCloseKeys": [
+            [
+                {
+                    "modAlt": true,
+                    "modShift": false,
+                    "modCtrl": false
+                },
+                "Key'W"
+            ]
+        ],
+        "paneMoveUpKeys": [
+            [
+                {
+                    "modAlt": true,
+                    "modShift": false,
+                    "modCtrl": false
+                },
+                "Key'Up"
+            ]
+        ],
+        "paneMoveDownKeys": [
+            [
+                {
+                    "modAlt": true,
+                    "modShift": false,
+                    "modCtrl": false
+                },
+                "Key'Down"
+            ]
+        ]
+    },
     "jumpToNextHoleKeys": [
         [
             {
@@ -135,16 +179,6 @@
             "Key'Right"
         ]
     ],
-    "movePaneUpKeys": [
-        [
-            {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'Up"
-        ]
-    ],
     "paramDefSuffixScaleFactor": {
         "_first": 0.4,
         "_second": 0.4
@@ -204,16 +238,6 @@
         "_first": 0.8,
         "_second": 0.8
     },
-    "movePaneDownKeys": [
-        [
-            {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'Down"
-        ]
-    ],
     "baseTextSize": 25,
     "fieldTint": [
         1.0,
@@ -256,16 +280,6 @@
         0.4,
         0.4,
         1.0
-    ],
-    "closePaneKeys": [
-        [
-            {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'W"
-        ]
     ],
     "selectedBranchColor": [
         0.0,
@@ -392,12 +406,6 @@
             },
             "Key'F7"
         ]
-    ],
-    "inactiveTintColor": [
-        1.0,
-        1.0,
-        1.0,
-        0.8
     ],
     "suggestedValueTint": [
         1.0,
@@ -670,12 +678,6 @@
         0.0,
         0.0,
         1.0
-    ],
-    "activeDefBGColor": [
-        0.12,
-        0.12,
-        0.12,
-        0.3
     ],
     "whereLabelScaleFactor": {
         "_first": 0.85,
