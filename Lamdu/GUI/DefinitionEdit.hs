@@ -19,19 +19,19 @@ import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import Lamdu.Sugar.AddNames.Types (Name(..), DefinitionN)
 import Lamdu.Sugar.RedundantTypes (redundantTypes)
 import qualified Control.Lens as Lens
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
-import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
+import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.AddNextHoles as AddNextHoles
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -72,20 +72,50 @@ makeBuiltinDefinition ::
   MonadA m =>
   Sugar.Definition (Name m) m (ExprGuiM.SugarExpr m) ->
   Sugar.DefinitionBuiltin m -> ExprGuiM m (WidgetT m)
-makeBuiltinDefinition def builtin = do
+makeBuiltinDefinition def builtin =
   Box.vboxAlign 0 <$> sequenceA
-    [ BWidgets.hboxCenteredSpaced <$> sequenceA
-      [ ExprGui.makeNameOriginEdit name (Widget.joinId myId ["name"])
-      , ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
-      , BuiltinEdit.make builtin myId
-      ]
-    , topLevelSchemeTypeView 0 (mappend (Widget.toAnimId myId) ["type"])
-      (Sugar.biType builtin)
+  [ BWidgets.hboxCenteredSpaced <$> sequenceA
+    [ ExprGui.makeNameOriginEdit name (Widget.joinId myId ["name"])
+    , ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
+    , BuiltinEdit.make builtin myId
     ]
+  , topLevelSchemeTypeView 0 (mappend (Widget.toAnimId myId) ["type"])
+    (Sugar.biType builtin)
+  ]
   where
     name = def ^. Sugar.drName
     entityId = def ^. Sugar.drEntityId
     myId = WidgetIds.fromEntityId entityId
+
+typeIndicatorId :: Widget.Id -> Widget.Id
+typeIndicatorId myId = Widget.joinId myId ["type indicator"]
+
+typeIndicator
+  :: MonadA m => Widget.R -> Draw.Color -> Widget.Id -> ExprGuiM m (Widget f)
+typeIndicator width color myId =
+  do
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    let
+      typeIndicatorHeight =
+        realToFrac $ Config.typeIndicatorFrameWidth config ^. Lens._2
+    Anim.unitSquare (Widget.toAnimId (typeIndicatorId myId))
+      & Widget.liftView 1
+      & Widget.scale (Vector2 width typeIndicatorHeight)
+      & Widget.tint color
+      & return
+
+acceptableTypeIndicator
+  :: (MonadA m, MonadA f) => Widget.R -> f a -> Draw.Color -> Widget.Id -> ExprGuiM m (Widget f)
+acceptableTypeIndicator width accept color myId =
+  do
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    let
+      acceptKeyMap =
+        Widget.keysEventMapMovesCursor (Config.acceptTypeKeys config)
+        (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)
+    typeIndicator width color myId
+      <&> Widget.weakerEvents acceptKeyMap
+      >>= ExprGuiM.widgetEnv . BWidgets.makeFocusableView (typeIndicatorId myId)
 
 makeExprDefinition ::
   MonadA m =>
@@ -98,53 +128,26 @@ makeExprDefinition def bodyExpr = do
     BinderEdit.make (def ^. Sugar.drName)
     (bodyExpr ^. Sugar.deContent) myId
   let width = bodyWidget ^. Widget.wSize . Lens._1
-  let typeIndicatorHeight =
-        realToFrac $ Config.typeIndicatorFrameWidth config ^. Lens._2
-  let vspace = BWidgets.vspaceWidget . realToFrac $ Config.valFramePadding config ^. Lens._2
-  let
-    typeIndicatorId = Widget.joinId myId ["type indicator"]
-    typeIndicator =
-      Anim.unitSquare (Widget.toAnimId typeIndicatorId)
-      & Widget.liftView 1
-      & Widget.scale (Vector2 width typeIndicatorHeight)
+  vspace <- BWidgets.verticalSpace & ExprGuiM.widgetEnv
   typeWidget <-
-    fmap (Grid.toWidget . Grid.make . map ((:[]) . (,) 0.5)) $
+    fmap (Box.vboxAlign 0.5 . concatMap (\w -> [vspace, w])) $
     case bodyExpr ^. Sugar.deTypeInfo of
     Sugar.DefinitionExportedTypeInfo scheme ->
       sequence $
-      [ return vspace
-      , return $ Widget.tint (Config.typeIndicatorMatchColor config) typeIndicator
-      ] ++
-      case bodyExpr ^. Sugar.deContent . Sugar.dParams of
-      [] -> []
-      _ ->
-        [ return vspace
-        , topLevelSchemeTypeView width exportedTypeAnimId scheme
-        ]
+      typeIndicator width (Config.typeIndicatorMatchColor config) myId :
+      [ topLevelSchemeTypeView width exportedTypeAnimId scheme
+      | not $ null $ bodyExpr ^. Sugar.deContent . Sugar.dParams
+      ]
     Sugar.DefinitionNewType (Sugar.AcceptNewType oldScheme _ accept) ->
       sequence $
-      return vspace :
       case oldScheme of
       Definition.NoExportedType ->
-        [ return vspace
-        , typeIndicator
-          & Widget.tint (Config.acceptTypeForFirstTimeColor config)
-          & Widget.weakerEvents acceptKeyMap
-          & BWidgets.makeFocusableView typeIndicatorId & ExprGuiM.widgetEnv
+        [ acceptableTypeIndicator width accept (Config.acceptTypeForFirstTimeColor config) myId
         ]
       Definition.ExportedType scheme ->
-        [ return vspace
-        , typeIndicator
-          & Widget.tint (Config.typeIndicatorErrorColor config)
-          & Widget.weakerEvents acceptKeyMap
-          & BWidgets.makeFocusableView typeIndicatorId & ExprGuiM.widgetEnv
-        , return vspace
+        [ acceptableTypeIndicator width accept (Config.typeIndicatorErrorColor config) myId
         , topLevelSchemeTypeView width exportedTypeAnimId scheme
         ]
-      where
-        acceptKeyMap =
-          Widget.keysEventMapMovesCursor (Config.acceptTypeKeys config)
-          (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)
   return $ Box.vboxAlign 0 [bodyWidget, typeWidget]
   where
     entityId = def ^. Sugar.drEntityId
