@@ -192,7 +192,7 @@ makeWhereItemEdit (_prevId, nextId, item) = do
         [ Widget.keysEventMapMovesCursor (Config.delKeys config)
           (E.Doc ["Edit", "Where clause", "Delete"]) $
           nextId <$ wiActions ^. Sugar.itemDelete
-        , Widget.keysEventMapMovesCursor (Config.addWhereItemKeys config)
+        , Widget.keysEventMapMovesCursor (Config.whereAddItemKeys config)
           (E.Doc ["Edit", "Where clause", "Add next"]) .
           fmap WidgetIds.fromEntityId $ wiActions ^. Sugar.itemAddNext
         ]
@@ -231,7 +231,7 @@ makeResultEdit mActions params result myId = do
       (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to last param"]) $
       lastParam <$ savePos
     addWhereItemEventMap actions =
-      Widget.keysEventMapMovesCursor (Config.addWhereItemKeys config)
+      Widget.keysEventMapMovesCursor (Config.whereAddItemKeys config)
       (E.Doc ["Edit", "Where clause", "Add first"]) .
       fmap toEventMapAction $ savePos >> actions ^. Sugar.baAddInnermostWhereItem
   ExprGuiM.makeSubexpression 0 result

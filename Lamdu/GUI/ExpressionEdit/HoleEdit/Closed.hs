@@ -74,7 +74,7 @@ makeUnwrapEventMap arg myId = do
   pure $
     case arg ^? Sugar.haUnwrap . Sugar._UnwrapMAction . Lens._Just of
     Just unwrap ->
-      Widget.keysEventMapMovesCursor (Config.acceptKeys config ++ Config.delKeys config)
+      Widget.keysEventMapMovesCursor (Config.acceptTypeKeys config ++ Config.delKeys config)
       (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
     Nothing ->
       Widget.keysEventMapMovesCursor (Config.wrapKeys config)

@@ -144,7 +144,7 @@ makeExprDefinition def bodyExpr = do
         ]
       where
         acceptKeyMap =
-          Widget.keysEventMapMovesCursor (Config.acceptKeys config)
+          Widget.keysEventMapMovesCursor (Config.acceptTypeKeys config)
           (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)
   return $ Box.vboxAlign 0 [bodyWidget, typeWidget]
   where

@@ -546,7 +546,7 @@
             "Key'Left"
         ]
     ],
-    "acceptKeys": [
+    "acceptTypeKeys": [
         [
             {
                 "modAlt": false,
@@ -631,7 +631,7 @@
         "_first": 0.6,
         "_second": 0.6
     },
-    "addWhereItemKeys": [
+    "whereAddItemKeys": [
         [
             {
                 "modAlt": false,

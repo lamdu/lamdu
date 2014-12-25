@@ -97,29 +97,29 @@ data Config = Config
   , baseColor :: Draw.Color
   , baseTextSize :: Int
 
+  , quitKeys :: [E.ModKey]
+  , debugModeKeys :: [E.ModKey]
+  , nextInfoModeKeys :: [E.ModKey]
+  , previousCursorKeys :: [E.ModKey]
+
   , invalidCursorBGColor :: Draw.Color
 
-  , quitKeys :: [E.ModKey]
-
   , addNextParamKeys :: [E.ModKey]
-
-  , replaceKeys :: [E.ModKey]
-
   , jumpToDefinitionKeys :: [E.ModKey]
-
+  , replaceKeys :: [E.ModKey]
   , delForwardKeys :: [E.ModKey]
   , delBackwardKeys :: [E.ModKey]
   , wrapKeys :: [E.ModKey]
-  , recordOpenKeys :: [E.ModKey]
-  , debugModeKeys :: [E.ModKey]
 
+  , parenHighlightColor :: Draw.Color
   , literalIntColor :: Draw.Color
-
-  , previousCursorKeys :: [E.ModKey]
-
   , typeErrorColor :: Draw.Color
   , typeMatchColor :: Draw.Color
+  , foreignModuleColor :: Draw.Color
+  , foreignVarColor :: Draw.Color
+
   , acceptTypeForFirstTimeColor :: Draw.Color
+  , acceptTypeKeys :: [E.ModKey]
 
   , tagScaleFactor :: Vector2 Double
   , fieldTagScaleFactor :: Vector2 Double
@@ -128,26 +128,22 @@ data Config = Config
   , suggestedValueScaleFactor :: Vector2 Double
   , suggestedValueTint :: Draw.Color
 
-  , parenHighlightColor :: Draw.Color
-
-  , addWhereItemKeys :: [E.ModKey]
-
+  , whereAddItemKeys :: [E.ModKey]
   , whereScaleFactor :: Vector2 Double
   , whereLabelScaleFactor :: Vector2 Double
 
   , typeScaleFactor :: Vector2 Double
-
-  , foreignModuleColor :: Draw.Color
-  , foreignVarColor :: Draw.Color
 
   , cutKeys :: [E.ModKey]
   , pasteKeys :: [E.ModKey]
 
   , typeTint :: Draw.Color
   , typeBoxBGColor :: Draw.Color
-
+  , valFrameBGColor :: Draw.Color
+  , valFramePadding :: Vector2 Double
+  , typeFrameBGColor :: Draw.Color
+  , verticalSpacing :: Double
   , cursorBGColor :: Draw.Color
-
   , grammarColor :: Draw.Color
 
   , listAddItemKeys :: [E.ModKey]
@@ -155,23 +151,15 @@ data Config = Config
   , jumpLHStoRHSKeys :: [E.ModKey]
   , jumpRHStoLHSKeys :: [E.ModKey]
 
-  , acceptKeys :: [E.ModKey]
-
   , enterSubexpressionKeys :: [E.ModKey]
   , leaveSubexpressionKeys :: [E.ModKey]
 
-  , nextInfoModeKeys :: [E.ModKey]
-
+  , recordOpenKeys :: [E.ModKey]
   , recordTailColor :: Draw.Color
   , recordAddFieldKeys :: [E.ModKey]
 
   , presentationChoiceScaleFactor :: Vector2 Double
   , presentationChoiceColor :: Draw.Color
-
-  , valFrameBGColor :: Draw.Color
-  , valFramePadding :: Vector2 Double
-  , typeFrameBGColor :: Draw.Color
-  , verticalSpacing :: Double
   } deriving (Eq, Generic, Show)
 
 delKeys :: Config -> [E.ModKey]
