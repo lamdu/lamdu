@@ -19,7 +19,7 @@ import Lamdu.Expr.Val (Val(..))
 import Lamdu.Infer (Infer)
 import Lamdu.Infer.Load (Loader(..))
 import Lamdu.Infer.Unify (unify)
-import Lamdu.Infer.Update (update, updateInferredVal)
+import Lamdu.Infer.Update (updateInferredVal)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -65,8 +65,7 @@ loadInferInto pl val = do
   inferredVal <- loadInferScope (pl ^. Infer.plScope) val
   let inferredType = inferredVal ^. V.payload . _1 . Infer.plType
   liftInfer $ do
-    update (pl ^. Infer.plType)
-      >>= unify inferredType
+    unify inferredType (pl ^. Infer.plType)
     updateInferredVal inferredVal
 
 loadInfer ::
