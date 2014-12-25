@@ -432,28 +432,27 @@ mkHoleResultVals ::
   StateT Infer.Context (ListT (T m)) (HoleResultVal m IsInjected)
 mkHoleResultVals mInjectedArg exprPl base =
   do
-    inferredPl <- assertSuccessInfer $ update $ exprPl ^. Input.inferred
     inferredBase <-
-      IRefInfer.loadInferScope (inferredPl ^. Infer.plScope) base
-      & mapStateT maybeTtoListT -- base fail -> cut
+      IRefInfer.loadInferScope scopeAtHole base
+      & mapStateT maybeTtoListT
       <&> Lens.traversed . _2 %~ (,) Nothing
-    -- forks here:
     form <- lift $ ListClass.fromList $ applyForms inferredBase
     let formType = form ^. V.payload . _1 . Infer.plType
-    -- more forks here:
     injected <- maybe (return . markNotInjected) holeResultsInject mInjectedArg form
-    unifyRes <-
+    updatedHoleType <-
+      update holeType & liftInfer
+      <&> either (error "update should always work") id
+    unifyResult <-
       liftInfer $
-      do  unify formType (inferredPl ^. Infer.plType)
+      do  unify formType updatedHoleType
           updateInferredVal injected
-    holeTypeUpdated <- assertSuccessInfer $ update (inferredPl ^. Infer.plType)
-    return $
-      case unifyRes of
+    return $ case unifyResult of
       Right injectedUpdated -> injectedUpdated
-      Left _ -> holeWrap holeTypeUpdated injected
+      Left _ -> holeWrap updatedHoleType injected
   where
-    assertSuccessInfer = fmap (either (error "Update failed?!") id) . liftInfer
     liftInfer = stateEitherSequence . Infer.run
+    holeType = exprPl ^. Input.inferred . Infer.plType
+    scopeAtHole = exprPl ^. Input.inferred . Infer.plScope
 
 mkHoleResult ::
   MonadA m =>
