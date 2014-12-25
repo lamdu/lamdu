@@ -10,8 +10,6 @@ import Data.Traversable (sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Expr.IRef (DefI)
-import Lamdu.Expr.Load (loadDef)
 import Lamdu.Expr.Scheme (Scheme(..))
 import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
@@ -39,17 +37,39 @@ import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.AddNames as AddNames
-import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
+postProcessDefS
+  :: MonadA tm =>
+     Sugar.DefinitionU tm [Sugar.EntityId] ->
+     T tm (DefinitionN tm ExprGuiM.Payload)
+postProcessDefS defS =
+  defS
+  & AddNames.addToDef
+  <&> fmap onVal
+  <&> AddNextHoles.addToDef
+  where
+    onVal v =
+      v
+      & Lens.mapped . Sugar.plData %~ mkPayload
+      & redundantTypes . showType .~ ExprGuiM.DoNotShowType
+      & SugarLens.holePayloads . showType .~ ExprGuiM.ShowType
+      & SugarLens.holeArgs . showType .~ ExprGuiM.ShowType
+      & Sugar.rPayload . showType .~ ExprGuiM.ShowType
+    showType = Sugar.plData . ExprGuiM.plShowType
+    mkPayload entityIds =
+      ExprGuiM.emptyPayload
+      & ExprGuiM.plStoredEntityIds .~ entityIds
+
 make ::
   MonadA m => Anchors.CodeProps m -> Settings ->
-  DefI m -> WidgetEnvT (T m) (WidgetT m)
+  Sugar.DefinitionU m [Sugar.EntityId] ->
+  WidgetEnvT (T m) (WidgetT m)
 make cp settings defI = ExprGuiM.run ExpressionEdit.make cp settings $ do
-  defS <- ExprGuiM.transaction $ loadConvertDefI cp defI
+  defS <- ExprGuiM.transaction $ postProcessDefS defI
   case defS ^. Sugar.drBody of
     Sugar.DefinitionBodyExpression bodyExpr ->
       makeExprDefinition defS bodyExpr
@@ -153,28 +173,6 @@ makeExprDefinition def bodyExpr = do
     entityId = def ^. Sugar.drEntityId
     myId = WidgetIds.fromEntityId entityId
     exportedTypeAnimId = mappend (Widget.toAnimId myId) ["Exported"]
-
-loadConvertDefI ::
-  MonadA m => Anchors.CodeProps m -> DefI m ->
-  T m (DefinitionN m ExprGuiM.Payload)
-loadConvertDefI cp defI =
-  loadDef defI
-  >>= SugarConvert.convertDefI cp
-  >>= AddNames.addToDef
-  <&> fmap onVal
-  <&> AddNextHoles.addToDef
-  where
-    onVal v =
-      v
-      & Lens.mapped . Sugar.plData %~ mkPayload
-      & redundantTypes . showType .~ ExprGuiM.DoNotShowType
-      & SugarLens.holePayloads . showType .~ ExprGuiM.ShowType
-      & SugarLens.holeArgs . showType .~ ExprGuiM.ShowType
-      & Sugar.rPayload . showType .~ ExprGuiM.ShowType
-    showType = Sugar.plData . ExprGuiM.plShowType
-    mkPayload entityIds =
-      ExprGuiM.emptyPayload
-      & ExprGuiM.plStoredEntityIds .~ entityIds
 
 makeNewDefinition ::
   MonadA m => Anchors.CodeProps m ->

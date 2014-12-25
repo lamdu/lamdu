@@ -15,6 +15,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Expr.IRef (DefI)
+import Lamdu.Expr.Load (loadDef)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
@@ -33,6 +34,7 @@ import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.Convert as SugarConvert
 
 type T = Transaction
 
@@ -160,8 +162,11 @@ makePaneWidget env defI = do
       WidgetIds.activeDefBackground paneActiveBGColor
     colorizeInactivePane =
       Widget.wFrame %~ Anim.onImages (Draw.tint paneInactiveTintColor)
-  fitToWidth (totalWidth env) . colorize <$>
-    DefinitionEdit.make (codeProps env) (settings env) defI
+  loadDef defI
+    >>= SugarConvert.convertDefI (codeProps env)
+    & lift
+    >>= DefinitionEdit.make (codeProps env) (settings env)
+    <&> fitToWidth (totalWidth env) . colorize
 
 fitToWidth :: Widget.R -> Widget f -> Widget f
 fitToWidth width w
