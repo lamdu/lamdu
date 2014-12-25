@@ -430,7 +430,6 @@ toGetVar getVar =
       GetParameter      -> opGetParamName
       GetFieldParameter -> opGetTagName
       GetDefinition     -> opGetDefName
-      GetParamsRecord   -> opGetDefName
 
 toApply ::
   MonadNaming m =>

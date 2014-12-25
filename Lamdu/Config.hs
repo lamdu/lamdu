@@ -157,8 +157,6 @@ data Config = Config
   , collisionSuffixBGColor :: Draw.Color
   , collisionSuffixScaleFactor :: Vector2 Double
 
-  , paramDefSuffixScaleFactor :: Vector2 Double
-
   , enterSubexpressionKeys :: [E.ModKey]
   , leaveSubexpressionKeys :: [E.ModKey]
 

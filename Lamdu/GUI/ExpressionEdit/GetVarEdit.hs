@@ -11,7 +11,6 @@ import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
@@ -34,35 +33,6 @@ makeSimpleView color getVar myId =
   & ExprGuiM.widgetEnv
   & ExprGuiM.withFgColor color
 
-makeGetParamsView ::
-  MonadA m =>
-  Sugar.GetVar (Name m) m -> Widget.Id ->
-  ExprGuiM m (ExpressionGui m)
-makeGetParamsView getParams myId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  paramsLabel <-
-    ExprGuiM.withFgColor (Config.parameterColor config) $ label "params"
-  prefixLabel <- label "(of "
-  defNameLabel <-
-    ExprGuiM.withFgColor (Config.definitionColor config) .
-    ExprGuiM.widgetEnv $ ExpressionGui.makeNameView defName animId
-  suffixLabel <- label ")"
-  let
-    hbox =
-      BWidgets.hboxCenteredSpaced
-      [ paramsLabel
-      , Widget.scale (realToFrac <$> Config.paramDefSuffixScaleFactor config) $
-        Box.hboxCentered [prefixLabel, defNameLabel, suffixLabel]
-      ]
-  hbox
-    & BWidgets.makeFocusableView myId
-    <&> ExpressionGui.fromValueWidget
-    & ExprGuiM.widgetEnv
-  where
-    animId = Widget.toAnimId myId
-    label = ExprGuiM.widgetEnv . flip BWidgets.makeLabel animId
-    defName = getParams ^. Sugar.gvName
-
 make ::
   MonadA m =>
   Sugar.GetVar (Name m) m ->
@@ -83,7 +53,6 @@ make getVar pl myId = do
       Sugar.GetDefinition -> makeSimpleView (Config.definitionColor config)
       Sugar.GetParameter -> makeSimpleView (Config.parameterColor config)
       Sugar.GetFieldParameter -> makeSimpleView (Config.parameterColor config)
-      Sugar.GetParamsRecord -> makeGetParamsView
   makeView getVar myId
     & ExpressionGui.stdWrap pl
     <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap

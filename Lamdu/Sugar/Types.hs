@@ -235,7 +235,7 @@ data GetField name expr = GetField
   , _gfTag :: TagG name
   } deriving (Functor, Foldable, Traversable)
 
-data GetVarType = GetDefinition | GetFieldParameter | GetParameter | GetParamsRecord
+data GetVarType = GetDefinition | GetFieldParameter | GetParameter
   deriving (Eq, Ord)
 
 data GetVar name m = GetVar

@@ -87,12 +87,6 @@ Lens.makeLenses ''ResultsList
 getVarToGroup :: Sugar.ScopeItem (Name n) m -> Group def
 getVarToGroup (Sugar.ScopeItem getVar expr) =
   sugarNameToGroup (getVar ^. Sugar.gvName) expr
-  & groupAttributes <>~ extraGroupAttributes
-  where
-    extraGroupAttributes =
-      case getVar ^. Sugar.gvVarType of
-      Sugar.GetParamsRecord -> GroupAttributes ["params"] HighPrecedence
-      _ -> mempty
 
 sugarNameToGroup :: Name m -> Val () -> Group def
 sugarNameToGroup (Name _ collision _ varName) expr = Group
@@ -211,7 +205,6 @@ getVarTypesOrder =
   [ Sugar.GetParameter
   , Sugar.GetFieldParameter
   , Sugar.GetDefinition
-  , Sugar.GetParamsRecord
   ]
 
 makeAllGroups :: MonadA m => HoleInfo m -> T m [GroupM m]
