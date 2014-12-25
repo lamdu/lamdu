@@ -7,7 +7,7 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -19,22 +19,6 @@ import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
-
-paramFDConfig :: FocusDelegator.Config
-paramFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
-  , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Rename parameter"]
-  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.Key'Escape]
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Done renaming"]
-  }
-
-makeParamNameEdit ::
-  MonadA m => Name m -> Widget.Id -> ExprGuiM m (WidgetT m)
-makeParamNameEdit nameProp myId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
-    (ExprGuiM.withFgColor (Config.paramOriginFGColor config) .
-     ExpressionGui.makeNameEdit nameProp) myId
 
 -- exported for use in definition sugaring.
 make ::
@@ -58,7 +42,7 @@ make showType prevId param =
         , paramAddNextEventMap
         ]
     paramNameEdit <-
-      makeParamNameEdit (param ^. Sugar.fpName) myId
+      ExpressionGui.makeNameOriginEdit (param ^. Sugar.fpName) myId
       <&> Widget.weakerEvents paramEventMap
       <&> ExpressionGui.fromValueWidget
     s <- ExprGuiM.shouldShowType showType

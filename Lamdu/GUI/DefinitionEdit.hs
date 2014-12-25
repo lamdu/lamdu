@@ -73,11 +73,9 @@ makeBuiltinDefinition ::
   Sugar.Definition (Name m) m (ExprGuiM.SugarExpr m) ->
   Sugar.DefinitionBuiltin m -> ExprGuiM m (WidgetT m)
 makeBuiltinDefinition def builtin = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
   Box.vboxAlign 0 <$> sequenceA
     [ BWidgets.hboxCenteredSpaced <$> sequenceA
-      [ ExprGuiM.withFgColor (Config.builtinOriginFGColor config) $
-        BinderEdit.makeNameEdit name (Widget.joinId myId ["name"])
+      [ ExprGui.makeNameOriginEdit name (Widget.joinId myId ["name"])
       , ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
       , BuiltinEdit.make builtin myId
       ]

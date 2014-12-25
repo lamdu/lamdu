@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
-  ( make, diveToNameEdit, makeNameEdit, makeParamsEdit, makeResultEdit, makeWheres
+  ( make, diveToNameEdit, makeParamsEdit, makeResultEdit, makeWheres
   ) where
 
 import Control.Applicative ((<$>), (<$))
@@ -34,21 +34,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
-defFDConfig :: FocusDelegator.Config
-defFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
-  , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Rename definition"]
-  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.Key'Escape]
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Done renaming"]
-  }
-
-makeNameEdit ::
-  MonadA m => Name m ->
-  Widget.Id -> ExprGuiM m (WidgetT m)
-makeNameEdit nameProperty =
-  ExprGuiM.wrapDelegated defFDConfig FocusDelegator.NotDelegating id
-  (ExpressionGui.makeNameEdit nameProperty)
-
 nonOperatorName :: Name m -> Bool
 nonOperatorName (Name NameSourceStored _ _ x) =
   nonEmptyAll (`notElem` operatorChars) x
@@ -61,7 +46,7 @@ makeBinderNameEdit ::
   (String, ExprGuiM.SugarExpr m) ->
   Name m -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makeBinderNameEdit mBinderActions rhsJumperEquals rhs nameProp myId =
+makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
   do
     config <- ExprGuiM.widgetEnv WE.readConfig
     rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
@@ -72,10 +57,9 @@ makeBinderNameEdit mBinderActions rhsJumperEquals rhs nameProp myId =
             (E.Doc ["Edit", "Add parameter"]) .
             fmap toEventMapAction ) $
           mBinderActions ^? Lens._Just . Sugar.baAddFirstParam
-    makeNameEdit nameProp myId
-      <&> Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals nameProp
+    ExpressionGui.makeNameOriginEdit name myId
+      <&> Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals name
       <&> ExpressionGui.fromValueWidget
-      & ExprGuiM.withFgColor (Config.defOriginFGColor config)
   where
     jumpToRHSViaEquals n widget
       | nonOperatorName n =
@@ -165,14 +149,14 @@ make ::
   Sugar.Binder (Name m) m (ExprGuiM.SugarExpr m) ->
   Widget.Id ->
   ExprGuiM m (WidgetT m)
-make nameProp binder myId = do
+make name binder myId = do
   rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods E.Key'Equal] rhs
   bodyEdit <- makeResultEdit (binder ^. Sugar.dMActions) params body myId
   presentationEdits <-
     traverse (mkPresentationModeEdit presentationChoiceId) $
     binder ^.. Sugar.dSetPresentationMode . Lens._Just
   defNameEdit <-
-    makeBinderNameEdit (binder ^. Sugar.dMActions) rhsJumperEquals rhs nameProp myId
+    makeBinderNameEdit (binder ^. Sugar.dMActions) rhsJumperEquals rhs name myId
     <&> ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
   paramEdits <-
     makeParamsEdit ExprGuiM.ShowType myId params
