@@ -106,6 +106,64 @@
             ]
         ]
     },
+    "versionControl": {
+        "undoKeys": [
+            [
+                {
+                    "modAlt": false,
+                    "modShift": false,
+                    "modCtrl": true
+                },
+                "Key'Z"
+            ]
+        ],
+        "redoKeys": [
+            [
+                {
+                    "modAlt": false,
+                    "modShift": false,
+                    "modCtrl": true
+                },
+                "Key'Y"
+            ]
+        ],
+        "selectedBranchColor": [
+            0.0,
+            0.5,
+            0.0,
+            1.0
+        ],
+        "makeBranchKeys": [
+            [
+                {
+                    "modAlt": false,
+                    "modShift": false,
+                    "modCtrl": true
+                },
+                "Key'S"
+            ]
+        ],
+        "delBranchKeys": [
+            [
+                {
+                    "modAlt": true,
+                    "modShift": false,
+                    "modCtrl": false
+                },
+                "Key'O"
+            ]
+        ],
+        "jumpToBranchesKeys": [
+            [
+                {
+                    "modAlt": false,
+                    "modShift": false,
+                    "modCtrl": true
+                },
+                "Key'F10"
+            ]
+        ]
+    },
     "jumpToNextHoleKeys": [
         [
             {
@@ -136,16 +194,6 @@
                 "modCtrl": false
             },
             "Key'Enter"
-        ]
-    ],
-    "undoKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
-            },
-            "Key'Z"
         ]
     ],
     "holeResultCount": 8,
@@ -279,12 +327,6 @@
         0.4,
         0.4,
         0.4,
-        1.0
-    ],
-    "selectedBranchColor": [
-        0.0,
-        0.5,
-        0.0,
         1.0
     ],
     "suggestedValueScaleFactor": {
@@ -490,16 +532,6 @@
         0.25,
         1.0
     ],
-    "jumpToBranchesKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
-            },
-            "Key'F10"
-        ]
-    ],
     "recordAddFieldKeys": [
         [
             {
@@ -550,31 +582,11 @@
             "Key'Delete"
         ]
     ],
-    "makeBranchKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
-            },
-            "Key'S"
-        ]
-    ],
     "parenHighlightColor": [
         0.3,
         0.0,
         1.0,
         0.25
-    ],
-    "delBranchKeys": [
-        [
-            {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'O"
-        ]
     ],
     "typeScaleFactor": {
         "_first": 0.6,
@@ -621,16 +633,6 @@
         0.4,
         0.4,
         1.0
-    ],
-    "redoKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
-            },
-            "Key'Y"
-        ]
     ],
     "baseColor": [
         1.0,

@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 module Lamdu.Config
   ( Layers(..)
-  , Help(..), Zoom(..), Pane(..)
+  , Help(..), Zoom(..), Pane(..), VersionControl(..)
   , Config(..)
   , delKeys
   ) where
@@ -49,11 +49,21 @@ data Pane = Pane
   , paneMoveUpKeys :: [E.ModKey]
   } deriving (Eq, Generic, Show)
 
+data VersionControl = VersionControl
+  { undoKeys :: [E.ModKey]
+  , redoKeys :: [E.ModKey]
+  , makeBranchKeys :: [E.ModKey]
+  , jumpToBranchesKeys :: [E.ModKey]
+  , delBranchKeys :: [E.ModKey]
+  , selectedBranchColor :: Draw.Color
+  } deriving (Eq, Generic, Show)
+
 data Config = Config
   { layers :: Layers
   , help :: Help
   , zoom :: Zoom
   , pane :: Pane
+  , versionControl :: VersionControl
 
   , baseColor :: Draw.Color
   , baseTextSize :: Int
@@ -61,15 +71,8 @@ data Config = Config
   , invalidCursorBGColor :: Draw.Color
 
   , quitKeys :: [E.ModKey]
-  , undoKeys :: [E.ModKey]
-  , redoKeys :: [E.ModKey]
-  , makeBranchKeys :: [E.ModKey]
-
-  , jumpToBranchesKeys :: [E.ModKey]
 
   , addNextParamKeys :: [E.ModKey]
-
-  , delBranchKeys :: [E.ModKey]
 
   , replaceKeys :: [E.ModKey]
 
@@ -146,8 +149,6 @@ data Config = Config
 
   , listAddItemKeys :: [E.ModKey]
 
-  , selectedBranchColor :: Draw.Color
-
   , jumpLHStoRHSKeys :: [E.ModKey]
   , jumpRHStoLHSKeys :: [E.ModKey]
 
@@ -190,6 +191,9 @@ instance FromJSON Zoom
 
 instance ToJSON Pane
 instance FromJSON Pane
+
+instance ToJSON VersionControl
+instance FromJSON VersionControl
 
 instance ToJSON Config
 instance FromJSON Config
