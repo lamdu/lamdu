@@ -1,4 +1,15 @@
 {
+    "layers": {
+        "layerCursorBG": -1,
+        "layerMax": 100,
+        "layerParensHighlightBG": 34,
+        "layerActivePane": 40,
+        "layerTypes": 27,
+        "layerNameCollisionBG": 32,
+        "layerChoiceBG": 30,
+        "layerValFrameBG": 33,
+        "layerHoleBG": -2
+    },
     "help": {
         "helpInputDocColor": [
             0.1,
@@ -63,6 +74,16 @@
         "enlargeFactor": 1.1
     },
     "pane": {
+        "newDefinitionKeys": [
+            [
+                {
+                    "modAlt": true,
+                    "modShift": false,
+                    "modCtrl": false
+                },
+                "Key'N"
+            ]
+        ],
         "paneActiveBGColor": [
             0.12,
             0.12,
@@ -371,16 +392,6 @@
         1.0,
         0.6
     ],
-    "newDefinitionKeys": [
-        [
-            {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'N"
-        ]
-    ],
     "wrapKeys": [
         [
             {
@@ -661,17 +672,6 @@
     "presentationChoiceScaleFactor": {
         "_first": 0.4,
         "_second": 0.4
-    },
-    "layers": {
-        "layerCursorBG": -1,
-        "layerMax": 100,
-        "layerParensHighlightBG": 34,
-        "layerActivePane": 40,
-        "layerTypes": 27,
-        "layerNameCollisionBG": 32,
-        "layerChoiceBG": 30,
-        "layerValFrameBG": 33,
-        "layerHoleBG": -2
     },
     "jumpToDefinitionKeys": [
         [

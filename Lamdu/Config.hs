@@ -47,6 +47,7 @@ data Pane = Pane
   , paneCloseKeys :: [E.ModKey]
   , paneMoveDownKeys :: [E.ModKey]
   , paneMoveUpKeys :: [E.ModKey]
+  , newDefinitionKeys :: [E.ModKey]
   } deriving (Eq, Generic, Show)
 
 data VersionControl = VersionControl
@@ -111,8 +112,6 @@ data Config = Config
   , wrapKeys :: [E.ModKey]
   , recordOpenKeys :: [E.ModKey]
   , debugModeKeys :: [E.ModKey]
-
-  , newDefinitionKeys :: [E.ModKey]
 
   , literalIntColor :: Draw.Color
 

@@ -138,7 +138,7 @@ makePanesEdit env panes myId = do
   let
     panesEventMap =
       mconcat
-      [ Widget.keysEventMapMovesCursor (Config.newDefinitionKeys config)
+      [ Widget.keysEventMapMovesCursor newDefinitionKeys
         (E.Doc ["Edit", "New definition"]) newDefinition
       , maybe mempty
         (Widget.keysEventMapMovesCursor (Config.previousCursorKeys config)
