@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, RankNTypes #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings, RankNTypes #-}
 module Lamdu.GUI.ExpressionGui
   ( ExpressionGui(..), egWidget, egAlignment
   -- General:
@@ -209,7 +209,7 @@ nameEditFDConfig = FocusDelegator.Config
 makeNameOriginEdit :: MonadA m => Name m -> Widget.Id -> ExprGuiM m (WidgetT m)
 makeNameOriginEdit name myId =
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig
+    config <- Config.name <$> ExprGuiM.widgetEnv WE.readConfig
     ExprGuiM.withFgColor (color config) $
       ExprGuiM.wrapDelegated nameEditFDConfig FocusDelegator.NotDelegating id
       (makeNameEdit name) myId
@@ -325,12 +325,13 @@ makeCollisionSuffixLabels NoCollision _ = return []
 makeCollisionSuffixLabels (Collision suffix) animId = do
   config <- WE.readConfig
   let
+    Config.Name{..} = Config.name config
     onSuffixWidget =
       Widget.backgroundColor (Config.layerNameCollisionBG (Config.layers config))
-        (animId ++ ["bg"]) (Config.collisionSuffixBGColor config) .
-      Widget.scale (realToFrac <$> Config.collisionSuffixScaleFactor config)
+        (animId ++ ["bg"]) collisionSuffixBGColor .
+      Widget.scale (realToFrac <$> collisionSuffixScaleFactor)
   BWidgets.makeLabel (show suffix) animId
-    & (WE.localEnv . WE.setTextColor . Config.collisionSuffixTextColor) config
+    & WE.localEnv (WE.setTextColor collisionSuffixTextColor)
     <&> (:[]) . onSuffixWidget
 
 wrapExprEventMap ::

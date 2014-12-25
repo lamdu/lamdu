@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 module Lamdu.Config
   ( Layers(..)
-  , Help(..), Zoom(..), Pane(..), VersionControl(..), Hole(..)
+  , Help(..), Zoom(..), Pane(..), VersionControl(..), Hole(..), Name(..)
   , Config(..)
   , delKeys
   ) where
@@ -74,6 +74,16 @@ data Hole = Hole
   , holePickResultKeys :: [E.ModKey]
   } deriving (Eq, Generic, Show)
 
+data Name = Name
+  { collisionSuffixTextColor :: Draw.Color
+  , collisionSuffixBGColor :: Draw.Color
+  , collisionSuffixScaleFactor :: Vector2 Double
+  , autoNameOriginFGColor :: Draw.Color
+  , nameOriginFGColor :: Draw.Color
+  , definitionColor :: Draw.Color
+  , parameterColor :: Draw.Color
+  } deriving (Eq, Generic, Show)
+
 data Config = Config
   { layers :: Layers
   , help :: Help
@@ -81,6 +91,7 @@ data Config = Config
   , pane :: Pane
   , versionControl :: VersionControl
   , hole :: Hole
+  , name :: Name
 
   , baseColor :: Draw.Color
   , baseTextSize :: Int
@@ -112,7 +123,6 @@ data Config = Config
   , acceptTypeForFirstTimeColor :: Draw.Color
 
   , tagScaleFactor :: Vector2 Double
-
   , fieldTagScaleFactor :: Vector2 Double
   , fieldTint :: Draw.Color
 
@@ -137,11 +147,6 @@ data Config = Config
   , typeTint :: Draw.Color
   , typeBoxBGColor :: Draw.Color
 
-  , autoNameOriginFGColor :: Draw.Color
-  , nameOriginFGColor :: Draw.Color
-  , definitionColor :: Draw.Color
-  , parameterColor :: Draw.Color
-
   , cursorBGColor :: Draw.Color
 
   , grammarColor :: Draw.Color
@@ -152,10 +157,6 @@ data Config = Config
   , jumpRHStoLHSKeys :: [E.ModKey]
 
   , acceptKeys :: [E.ModKey]
-
-  , collisionSuffixTextColor :: Draw.Color
-  , collisionSuffixBGColor :: Draw.Color
-  , collisionSuffixScaleFactor :: Vector2 Double
 
   , enterSubexpressionKeys :: [E.ModKey]
   , leaveSubexpressionKeys :: [E.ModKey]
@@ -194,6 +195,9 @@ instance FromJSON VersionControl
 
 instance ToJSON Hole
 instance FromJSON Hole
+
+instance ToJSON Name
+instance FromJSON Name
 
 instance ToJSON Config
 instance FromJSON Config

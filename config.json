@@ -242,12 +242,48 @@
             ]
         ]
     },
-    "parameterColor": [
-        0.2,
-        0.8,
-        0.9,
-        1.0
-    ],
+    "name": {
+        "nameOriginFGColor": [
+            1.0,
+            0.8,
+            0.5,
+            1.0
+        ],
+        "autoNameOriginFGColor": [
+            1.0,
+            0.5,
+            0.25,
+            1.0
+        ],
+        "parameterColor": [
+            0.2,
+            0.8,
+            0.9,
+            1.0
+        ],
+        "definitionColor": [
+            0.8,
+            0.5,
+            1.0,
+            1.0
+        ],
+        "collisionSuffixTextColor": [
+            1.0,
+            0.8,
+            0.5,
+            1.0
+        ],
+        "collisionSuffixScaleFactor": {
+            "_first": 0.5,
+            "_second": 0.5
+        },
+        "collisionSuffixBGColor": [
+            0.7,
+            0.0,
+            0.0,
+            1.0
+        ]
+    },
     "tagScaleFactor": {
         "_first": 0.9,
         "_second": 0.9
@@ -499,12 +535,6 @@
             "Key'Left"
         ]
     ],
-    "collisionSuffixTextColor": [
-        1.0,
-        0.8,
-        0.5,
-        1.0
-    ],
     "acceptKeys": [
         [
             {
@@ -515,10 +545,6 @@
             "Key'Space"
         ]
     ],
-    "collisionSuffixScaleFactor": {
-        "_first": 0.5,
-        "_second": 0.5
-    },
     "pasteKeys": [
         [
             {
@@ -542,18 +568,6 @@
         0.8,
         0.8,
         0.9,
-        1.0
-    ],
-    "nameOriginFGColor": [
-        1.0,
-        0.8,
-        0.5,
-        1.0
-    ],
-    "autoNameOriginFGColor": [
-        1.0,
-        0.5,
-        0.25,
         1.0
     ],
     "recordAddFieldKeys": [
@@ -673,12 +687,6 @@
         "_first": 0.85,
         "_second": 0.85
     },
-    "definitionColor": [
-        0.8,
-        0.5,
-        1.0,
-        1.0
-    ],
     "invalidCursorBGColor": [
         0.4,
         0.0,
@@ -693,12 +701,6 @@
         1.0,
         0.3,
         0.35,
-        1.0
-    ],
-    "collisionSuffixBGColor": [
-        0.7,
-        0.0,
-        0.0,
         1.0
     ]
 }

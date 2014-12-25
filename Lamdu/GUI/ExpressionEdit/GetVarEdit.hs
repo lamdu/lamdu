@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 module Lamdu.GUI.ExpressionEdit.GetVarEdit
   ( make
   ) where
@@ -48,11 +49,12 @@ make getVar pl myId = do
       (E.Doc ["Navigation", "Jump to definition"]) $ do
         DataOps.savePreJumpPosition cp myId
         WidgetIds.fromEntityId <$> getVar ^. Sugar.gvJumpTo
+    Config.Name{..} = Config.name config
     makeView =
       case getVar ^. Sugar.gvVarType of
-      Sugar.GetDefinition -> makeSimpleView (Config.definitionColor config)
-      Sugar.GetParameter -> makeSimpleView (Config.parameterColor config)
-      Sugar.GetFieldParameter -> makeSimpleView (Config.parameterColor config)
+      Sugar.GetDefinition -> makeSimpleView definitionColor
+      Sugar.GetParameter -> makeSimpleView parameterColor
+      Sugar.GetFieldParameter -> makeSimpleView parameterColor
   makeView getVar myId
     & ExpressionGui.stdWrap pl
     <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
