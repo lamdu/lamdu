@@ -33,7 +33,7 @@ shrinkIfHigherThanLine w = do
   fontSize <-
     (^. TextEdit.sTextViewStyle . TextView.styleFontSize) <$>
     ExprGuiM.widgetEnv WE.readTextStyle
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
   let
     textHeight = fromIntegral fontSize * DrawUtils.textHeight
     ratio =

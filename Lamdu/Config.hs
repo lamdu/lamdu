@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 module Lamdu.Config
   ( Layers(..)
-  , Help(..), Zoom(..), Pane(..), VersionControl(..)
+  , Help(..), Zoom(..), Pane(..), VersionControl(..), Hole(..)
   , Config(..)
   , delKeys
   ) where
@@ -58,12 +58,29 @@ data VersionControl = VersionControl
   , selectedBranchColor :: Draw.Color
   } deriving (Eq, Generic, Show)
 
+data Hole = Hole
+  { holePickAndMoveToNextHoleKeys :: [E.ModKey]
+  , holeJumpToNextKeys :: [E.ModKey]
+  , holeJumpToPrevKeys :: [E.ModKey]
+  , holeResultCount :: Int
+  , holeResultScaleFactor :: Vector2 Double
+  , holeResultPadding :: Vector2 Double
+  , holeResultInjectedScaleExponent :: Double
+  , holeSearchTermScaleFactor :: Vector2 Double
+  , holeInactiveExtraSymbolColor :: Draw.Color
+  , holeActiveBGColor :: Draw.Color
+  , holeInactiveBGColor :: Draw.Color
+  , holeWrapperFrameWidth :: Vector2 Double
+  , holePickResultKeys :: [E.ModKey]
+  } deriving (Eq, Generic, Show)
+
 data Config = Config
   { layers :: Layers
   , help :: Help
   , zoom :: Zoom
   , pane :: Pane
   , versionControl :: VersionControl
+  , hole :: Hole
 
   , baseColor :: Draw.Color
   , baseTextSize :: Int
@@ -75,12 +92,6 @@ data Config = Config
   , addNextParamKeys :: [E.ModKey]
 
   , replaceKeys :: [E.ModKey]
-
-  , pickResultKeys :: [E.ModKey]
-  , pickAndMoveToNextHoleKeys :: [E.ModKey]
-
-  , jumpToNextHoleKeys :: [E.ModKey]
-  , jumpToPrevHoleKeys :: [E.ModKey]
 
   , jumpToDefinitionKeys :: [E.ModKey]
 
@@ -96,21 +107,9 @@ data Config = Config
 
   , previousCursorKeys :: [E.ModKey]
 
-  , holeResultCount :: Int
-  , holeResultScaleFactor :: Vector2 Double
-  , holeResultPadding :: Vector2 Double
-  , holeResultInjectedScaleExponent :: Double
-  , holeSearchTermScaleFactor :: Vector2 Double
-  , holeInactiveExtraSymbolColor :: Draw.Color
-
   , typeErrorColor :: Draw.Color
   , typeMatchColor :: Draw.Color
-  , acceptFirstTypeColor :: Draw.Color
-
-  , activeHoleBGColor :: Draw.Color
-  , inactiveHoleBGColor :: Draw.Color
-
-  , wrapperHoleFrameWidth :: Vector2 Double
+  , acceptTypeForFirstTimeColor :: Draw.Color
 
   , tagScaleFactor :: Vector2 Double
 
@@ -194,6 +193,9 @@ instance FromJSON Pane
 
 instance ToJSON VersionControl
 instance FromJSON VersionControl
+
+instance ToJSON Hole
+instance FromJSON Hole
 
 instance ToJSON Config
 instance FromJSON Config

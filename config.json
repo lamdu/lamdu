@@ -164,39 +164,90 @@
             ]
         ]
     },
-    "jumpToNextHoleKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'Tab"
+    "hole": {
+        "holeJumpToNextKeys": [
+            [
+                {
+                    "modAlt": false,
+                    "modShift": false,
+                    "modCtrl": false
+                },
+                "Key'Tab"
+            ]
+        ],
+        "holeInactiveExtraSymbolColor": [
+            1.0,
+            1.0,
+            1.0,
+            0.3
+        ],
+        "holeResultCount": 8,
+        "holeResultScaleFactor": {
+            "_first": 0.75,
+            "_second": 0.75
+        },
+        "holeResultInjectedScaleExponent": 0.65,
+        "holeSearchTermScaleFactor": {
+            "_first": 0.6,
+            "_second": 0.6
+        },
+        "holeResultPadding": {
+            "_first": 3.0,
+            "_second": 3.0
+        },
+        "holeActiveBGColor": [
+            0.1,
+            0.1,
+            0.3,
+            0.9
+        ],
+        "holeWrapperFrameWidth": {
+            "_first": 15.0,
+            "_second": 15.0
+        },
+        "holePickAndMoveToNextHoleKeys": [
+            [
+                {
+                    "modAlt": false,
+                    "modShift": false,
+                    "modCtrl": false
+                },
+                "Key'Space"
+            ]
+        ],
+        "holeInactiveBGColor": [
+            0.2,
+            0.2,
+            0.5,
+            0.35
+        ],
+        "holeJumpToPrevKeys": [
+            [
+                {
+                    "modAlt": false,
+                    "modShift": true,
+                    "modCtrl": false
+                },
+                "Key'Tab"
+            ]
+        ],
+        "holePickResultKeys": [
+            [
+                {
+                    "modAlt": false,
+                    "modShift": false,
+                    "modCtrl": false
+                },
+                "Key'Enter"
+            ]
         ]
-    ],
-    "holeInactiveExtraSymbolColor": [
-        1.0,
-        1.0,
-        1.0,
-        0.3
-    ],
+    },
     "parameterColor": [
         0.2,
         0.8,
         0.9,
         1.0
     ],
-    "pickResultKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'Enter"
-        ]
-    ],
-    "holeResultCount": 8,
     "tagScaleFactor": {
         "_first": 0.9,
         "_second": 0.9
@@ -231,10 +282,6 @@
         "_first": 0.4,
         "_second": 0.4
     },
-    "holeResultScaleFactor": {
-        "_first": 0.75,
-        "_second": 0.75
-    },
     "listAddItemKeys": [
         [
             {
@@ -261,7 +308,6 @@
         1.0,
         0.45
     ],
-    "holeResultInjectedScaleExponent": 0.65,
     "quitKeys": [
         [
             {
@@ -373,16 +419,12 @@
         0.0,
         0.4
     ],
-    "acceptFirstTypeColor": [
+    "acceptTypeForFirstTimeColor": [
         1.0,
         1.0,
         0.0,
         0.75
     ],
-    "holeSearchTermScaleFactor": {
-        "_first": 0.6,
-        "_second": 0.6
-    },
     "jumpRHStoLHSKeys": [
         [
             {
@@ -393,10 +435,6 @@
             "Key'GraveAccent"
         ]
     ],
-    "holeResultPadding": {
-        "_first": 3.0,
-        "_second": 3.0
-    },
     "debugModeKeys": [
         [
             {
@@ -455,12 +493,6 @@
         1.0,
         0.6
     ],
-    "activeHoleBGColor": [
-        0.1,
-        0.1,
-        0.3,
-        0.9
-    ],
     "leaveSubexpressionKeys": [
         [
             {
@@ -477,10 +509,6 @@
         0.5,
         1.0
     ],
-    "wrapperHoleFrameWidth": {
-        "_first": 15.0,
-        "_second": 15.0
-    },
     "acceptKeys": [
         [
             {
@@ -554,16 +582,6 @@
         "_first": 7.0,
         "_second": 7.0
     },
-    "jumpToPrevHoleKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": true,
-                "modCtrl": false
-            },
-            "Key'Tab"
-        ]
-    ],
     "delForwardKeys": [
         [
             {
@@ -592,16 +610,6 @@
         "_first": 0.6,
         "_second": 0.6
     },
-    "pickAndMoveToNextHoleKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'Space"
-        ]
-    ],
     "addWhereItemKeys": [
         [
             {
@@ -685,12 +693,6 @@
         "_first": 0.85,
         "_second": 0.85
     },
-    "inactiveHoleBGColor": [
-        0.2,
-        0.2,
-        0.5,
-        0.35
-    ],
     "foreignModuleColor": [
         1.0,
         0.3,

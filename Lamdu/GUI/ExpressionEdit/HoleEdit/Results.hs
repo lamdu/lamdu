@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell, FlexibleContexts, DeriveGeneric #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings, TemplateHaskell, FlexibleContexts, DeriveGeneric #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Results
   ( makeAll, HaveHiddenResults(..)
   , Result(..)
@@ -18,7 +18,6 @@ import Data.Monoid (Monoid(..))
 import Data.Monoid.Generic (def_mempty, def_mappend)
 import Data.Store.Transaction (Transaction)
 import GHC.Generics (Generic)
-import Lamdu.Config (Config)
 import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument, hiActiveId)
@@ -168,10 +167,10 @@ makeResultsList holeInfo group =
 
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
 
-collectResults :: MonadA m => Config -> ListT m (ResultsList f) -> m ([ResultsList f], HaveHiddenResults)
-collectResults config resultsM = do
+collectResults :: MonadA m => Config.Hole -> ListT m (ResultsList f) -> m ([ResultsList f], HaveHiddenResults)
+collectResults Config.Hole{..} resultsM = do
   (collectedResults, remainingResultsM) <-
-    ListClass.splitWhenM (return . (>= Config.holeResultCount config) . length . fst) $
+    ListClass.splitWhenM (return . (>= holeResultCount) . length . fst) $
     ListClass.scanl step ([], []) resultsM
   remainingResults <- ListClass.toList $ ListClass.take 2 remainingResultsM
   let
@@ -181,7 +180,7 @@ collectResults config resultsM = do
   results
     & _1 %~ sortOn resultsListScore
     & uncurry (++)
-    & splitAt (Config.holeResultCount config)
+    & splitAt holeResultCount
     & _2 %~ haveHiddenResults
     & return
   where
@@ -196,7 +195,7 @@ collectResults config resultsM = do
         %~ (x :)
 
 makeAll ::
-  MonadA m => Config -> HoleInfo m ->
+  MonadA m => Config.Hole -> HoleInfo m ->
   ExprGuiM m ([ResultsList m], HaveHiddenResults)
 makeAll config holeInfo = do
   allGroups <- ExprGuiM.transaction $ makeAllGroups holeInfo

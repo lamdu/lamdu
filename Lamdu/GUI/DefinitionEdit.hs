@@ -98,7 +98,9 @@ makeExprDefinition def bodyExpr = do
     BinderEdit.make (def ^. Sugar.drName)
     (bodyExpr ^. Sugar.deContent) myId
   let width = bodyWidget ^. Widget.wSize . Lens._1
-  let separatorHeight = realToFrac $ Config.wrapperHoleFrameWidth config ^. Lens._2
+  -- TODO: Why is this holeWrapperFrameWidth?
+  let separatorHeight =
+        realToFrac $ Config.holeWrapperFrameWidth (Config.hole config) ^. Lens._2
   let vspace = BWidgets.vspaceWidget . realToFrac $ Config.valFramePadding config ^. Lens._2
   let
     typeSeparatorId = Widget.joinId myId ["type indicator"]
@@ -127,7 +129,7 @@ makeExprDefinition def bodyExpr = do
       Definition.NoExportedType ->
         [ return vspace
         , typeSeparator
-          & Widget.tint (Config.acceptFirstTypeColor config)
+          & Widget.tint (Config.acceptTypeForFirstTimeColor config)
           & Widget.weakerEvents acceptKeyMap
           & BWidgets.makeFocusableView typeSeparatorId & ExprGuiM.widgetEnv
         ]

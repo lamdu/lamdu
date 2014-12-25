@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Closed
@@ -103,12 +104,13 @@ makeWrapper ::
 makeWrapper arg myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
+    Config.Hole{..} = Config.hole config
     bgColor =
       config &
       case arg ^. Sugar.haUnwrap of
       Sugar.UnwrapMAction {} -> Config.typeMatchColor
       Sugar.UnwrapTypeMismatch {} -> Config.typeErrorColor
-    frameWidth = realToFrac <$> Config.wrapperHoleFrameWidth config
+    frameWidth = realToFrac <$> holeWrapperFrameWidth
     padding = realToFrac <$> Config.valFramePadding config
   argGui <-
     arg ^. Sugar.haExpr
@@ -135,6 +137,7 @@ makeSuggested ::
   Widget.Id -> ExprGuiM m (Widget.Id, ExpressionGui m)
 makeSuggested suggested myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
+  let Config.Hole{..} = Config.hole config
   gui <-
     (suggested ^. Sugar.hsMakeConverted)
     & ExprGuiM.transaction
@@ -153,7 +156,7 @@ makeSuggested suggested myId = do
       , gui
         & ExpressionGui.egWidget %~
           makeBackground myId (Config.layerHoleBG (Config.layers config))
-          (Config.inactiveHoleBGColor config)
+          holeInactiveBGColor
       )
   where
     fullySuggested =
@@ -171,12 +174,12 @@ makeSuggested suggested myId = do
 makeSimple :: MonadA m => Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeSimple myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
+  let Config.Hole{..} = Config.hole config
   ExprGuiM.widgetEnv
     (BWidgets.makeTextViewWidget "  " (Widget.toAnimId myId))
     <&>
       makeBackground myId
-      (Config.layerHoleBG (Config.layers config))
-      (Config.inactiveHoleBGColor config)
+      (Config.layerHoleBG (Config.layers config)) holeInactiveBGColor
     <&> ExpressionGui.fromValueWidget
     >>= ExpressionGui.egWidget %%~ makeFocusable myId
 

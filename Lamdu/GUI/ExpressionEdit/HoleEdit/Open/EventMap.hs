@@ -100,23 +100,22 @@ deleteKeys = E.deleteKeys . map (E.KeyEvent E.Press)
 -- This relies on pickBefore being applied to it in the event map
 -- buildup to do the actual picking
 pickPlaceholderEventMap ::
-  MonadA m => Config -> HoleInfo m -> ShownResult m ->
+  MonadA m => Config.Hole -> HoleInfo m -> ShownResult m ->
   Widget.EventHandlers (T m)
-pickPlaceholderEventMap config holeInfo shownResult =
+pickPlaceholderEventMap Config.Hole{..} holeInfo shownResult =
   -- TODO: Does this entityId business make sense?
   case hiHoleEntityIds holeInfo ^. ExprGuiM.hgMNextHole of
   Just nextHoleEntityId | not holeResultHasHoles ->
     mappend
-    (simplePickRes (Config.pickResultKeys config))
+    (simplePickRes holePickResultKeys)
     (pickAndMoveToNextHole nextHoleEntityId)
   _ ->
     simplePickRes $
-    Config.pickResultKeys config ++
-    Config.pickAndMoveToNextHoleKeys config
+    holePickResultKeys ++
+    holePickAndMoveToNextHoleKeys
   where
     pickAndMoveToNextHole nextHoleEntityId =
-      Widget.keysEventMapMovesCursor
-      (Config.pickAndMoveToNextHoleKeys config)
+      Widget.keysEventMapMovesCursor holePickAndMoveToNextHoleKeys
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
       return $ WidgetIds.fromEntityId nextHoleEntityId
     holeResultHasHoles =
@@ -177,7 +176,7 @@ make pl holeInfo mShownResult = do
     close = closeEventMap holeInfo
     cut = actionsEventMap $ ExprEventMap.cutEventMap config
     paste = pasteEventMap config holeInfo
-    pick = shownResultEventMap $ pickPlaceholderEventMap config holeInfo
+    pick = shownResultEventMap $ pickPlaceholderEventMap (Config.hole config) holeInfo
     alphaAfterOp = onShownResult $ alphaNumericAfterOperator holeInfo
     adHocEdit = adHocTextEditEventMap $ HoleInfo.hiSearchTermProperty holeInfo
     strongEventMap =

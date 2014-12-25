@@ -73,7 +73,7 @@ jumpHolesEventMap ::
   ExprGuiM.HoleEntityIds ->
   ExprGuiM m (EventHandlers (T m))
 jumpHolesEventMap holePickers hg = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
   let
     jumpEventMap keys dirStr lens =
       maybe mempty
@@ -82,8 +82,8 @@ jumpHolesEventMap holePickers hg = do
       hg ^. lens
   pure $
     mconcat
-    [ jumpEventMap Config.jumpToNextHoleKeys "next" ExprGuiM.hgMNextHole
-    , jumpEventMap Config.jumpToPrevHoleKeys "previous" ExprGuiM.hgMPrevHole
+    [ jumpEventMap Config.holeJumpToNextKeys "next" ExprGuiM.hgMNextHole
+    , jumpEventMap Config.holeJumpToPrevKeys "previous" ExprGuiM.hgMPrevHole
     ]
   where
     jumpDoc dirStr =

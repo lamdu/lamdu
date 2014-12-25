@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
   ( make
@@ -115,7 +116,7 @@ makeShownResult holeInfo result =
     -- Warning: rHoleResult should be ran at most once!
     -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
     res <- ExprGuiM.transaction $ rHoleResult result
-    config <- ExprGuiM.widgetEnv WE.readConfig
+    config <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
     (widget, eventMap) <- makeHoleResultWidget (rId result) res
     return
       ( widget & (Widget.pad . fmap realToFrac . Config.holeResultPadding) config
@@ -136,7 +137,7 @@ makeResultGroup ::
   , Maybe (ShownResult m)
   )
 makeResultGroup holeInfo results = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  Config.Hole{..} <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
   (mainResultWidget, shownMainResult) <- makeShownResult holeInfo mainResult
   extraSymbolWidget <-
     if Lens.has (HoleResults.rlExtra . traverse) results
@@ -167,7 +168,7 @@ makeResultGroup holeInfo results = do
   let
     onExtraSymbol =
       case mResult of
-      Nothing -> Widget.tint $ Config.holeInactiveExtraSymbolColor config
+      Nothing -> Widget.tint holeInactiveExtraSymbolColor
       Just _ -> id
   return (shownMainResult, [mainResultWidget, onExtraSymbol extraSymbolWidget, extraResWidget], mResult)
   where
@@ -186,6 +187,7 @@ makeExtraResultsWidget _ _ [] = return (Nothing, Spacer.empty)
 makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
+    Config.Hole{..} = Config.hole config
     mkResWidget result = do
       isOnResult <- ExprGuiM.widgetEnv $ WE.isSubCursor (rId result)
       (widget, shownResult) <- makeShownResult holeInfo result
@@ -202,8 +204,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) = 
     ( msum mResults
     , Box.vboxAlign 0 widgets
       & makeBackground (rId firstResult)
-        (Config.layerMax (Config.layers config))
-        (Config.activeHoleBGColor config)
+        (Config.layerMax (Config.layers config)) holeActiveBGColor
       & Widget.wSize .~ Vector2 0 height
       & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
     )
@@ -215,7 +216,7 @@ makeHoleResultWidget ::
   MonadA m => Widget.Id ->
   Sugar.HoleResult (Name m) m -> ExprGuiM m (WidgetT m, Widget.EventHandlers (T m))
 makeHoleResultWidget resultId holeResult = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  Config.Hole{..} <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
   isSelectedResult <- ExprGuiM.widgetEnv $ WE.isSubCursor resultId
   eventMap <-
     if isSelectedResult
@@ -228,7 +229,7 @@ makeHoleResultWidget resultId holeResult = do
   widget <-
     mkWidget
     <&> Widget.wFrame %~ Anim.mapIdentities (`mappend` (resultSuffix # Widget.toAnimId resultId))
-    <&> Widget.scale (realToFrac <$> Config.holeResultScaleFactor config)
+    <&> Widget.scale (realToFrac <$> holeResultScaleFactor)
     <&> Widget.wEventMap .~ mempty
     >>= makeFocusable resultId
   return (widget, eventMap)
@@ -352,7 +353,9 @@ make ::
   ExprGuiM m (ExpressionGui m)
 make pl holeInfo = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  (shownResultsLists, hasHiddenResults) <- HoleResults.makeAll config holeInfo
+  let Config.Hole{..} = Config.hole config
+  (shownResultsLists, hasHiddenResults) <-
+    HoleResults.makeAll (Config.hole config) holeInfo
   let
     shownMainResultsIds = rId . (^. HoleResults.rlMain) <$> shownResultsLists
     allShownResultIds = [rId . (^. HoleResults.rlMain), (^. HoleResults.rlExtraResultsPrefixId)] <*> shownResultsLists
@@ -374,8 +377,7 @@ make pl holeInfo = do
           [(0.5, Widget.strongerEvents resultsEventMap resultsWidget)]
         & ExpressionGui.egWidget %~
           makeBackground (HoleInfo.hiActiveId holeInfo)
-            (Config.layerMax (Config.layers config))
-            (Config.activeHoleBGColor config)
+            (Config.layerMax (Config.layers config)) holeActiveBGColor
         & ExpressionGui.egWidget . Widget.wFrame %~ Anim.onDepth (+ layerDiff)
         & return
 
@@ -383,9 +385,9 @@ makeSearchTermGui ::
   MonadA m => HoleInfo m ->
   ExprGuiM m (ExpressionGui m)
 makeSearchTermGui holeInfo = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  Config.Hole{..} <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
   ExprGuiM.widgetEnv $
-    (ExpressionGui.scaleFromTop (realToFrac <$> Config.holeSearchTermScaleFactor config) .
+    (ExpressionGui.scaleFromTop (realToFrac <$> holeSearchTermScaleFactor) .
      ExpressionGui.fromValueWidget .
      (Widget.wEventMap %~ OpenEventMap.disallowChars searchTerm) .
      Widget.atEvents setter) <$>
