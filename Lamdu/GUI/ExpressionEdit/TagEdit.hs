@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit(make, makeView) where
 
@@ -42,8 +43,10 @@ make ::
 make holeIds t myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] holeIds
+  let Config.Name{..} = Config.name config
   ExprGuiM.wrapDelegated fdConfig FocusDelegator.NotDelegating id
     ( fmap (onTagWidget config)
+    . ExprGuiM.withFgColor tagColor
     . ExpressionGui.makeNameEdit (t ^. Sugar.tagGName)
     ) myId
     <&> Widget.weakerEvents jumpHolesEventMap

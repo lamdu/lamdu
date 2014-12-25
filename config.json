@@ -288,6 +288,12 @@
             1.0,
             1.0
         ],
+        "tagColor": [
+            0.7,
+            0.7,
+            0.7,
+            1.0
+        ],
         "collisionSuffixTextColor": [
             1.0,
             0.8,

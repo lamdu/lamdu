@@ -83,6 +83,7 @@ data Name = Name
   , nameOriginFGColor :: Draw.Color
   , definitionColor :: Draw.Color
   , parameterColor :: Draw.Color
+  , tagColor :: Draw.Color
   } deriving (Eq, Generic, Show)
 
 data Config = Config
