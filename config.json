@@ -421,12 +421,6 @@
         "_first": 0.5,
         "_second": 0.5
     },
-    "defOriginFGColor": [
-        1.0,
-        0.8,
-        0.5,
-        1.0
-    ],
     "pasteKeys": [
         [
             {
@@ -452,7 +446,19 @@
         0.9,
         1.0
     ],
+    "defOriginFGColor": [
+        1.0,
+        0.8,
+        0.5,
+        1.0
+    ],
     "builtinOriginFGColor": [
+        1.0,
+        0.8,
+        0.5,
+        1.0
+    ],
+    "paramOriginFGColor": [
         1.0,
         0.8,
         0.5,
@@ -669,12 +675,6 @@
         "_first": 0.85,
         "_second": 0.85
     },
-    "paramOriginFGColor": [
-        1.0,
-        0.8,
-        0.5,
-        1.0
-    ],
     "overlayDocKeys": [
         [
             {
