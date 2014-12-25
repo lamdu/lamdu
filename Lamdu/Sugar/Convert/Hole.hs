@@ -443,9 +443,10 @@ mkHoleResultVals mInjectedArg exprPl base =
       update holeType & liftInfer
       <&> either (error "update should always work") id
     unifyResult <-
-      liftInfer $
-      do  unify formType updatedHoleType
-          updateInferredVal injected
+      do
+        unify updatedHoleType =<< update formType
+        updateInferredVal injected
+      & liftInfer
     return $ case unifyResult of
       Right injectedUpdated -> injectedUpdated
       Left _ -> holeWrap updatedHoleType injected
