@@ -98,24 +98,22 @@ makeExprDefinition def bodyExpr = do
     BinderEdit.make (def ^. Sugar.drName)
     (bodyExpr ^. Sugar.deContent) myId
   let width = bodyWidget ^. Widget.wSize . Lens._1
-  -- separatorHeight is the same as a hole frame height, because it
-  -- emulate the green/red hole frames
-  let separatorHeight =
+  let typeIndicatorHeight =
         realToFrac $ Config.typeIndicatorFrameWidth config ^. Lens._2
   let vspace = BWidgets.vspaceWidget . realToFrac $ Config.valFramePadding config ^. Lens._2
   let
-    typeSeparatorId = Widget.joinId myId ["type indicator"]
-    typeSeparator =
-      Anim.unitSquare (Widget.toAnimId typeSeparatorId)
+    typeIndicatorId = Widget.joinId myId ["type indicator"]
+    typeIndicator =
+      Anim.unitSquare (Widget.toAnimId typeIndicatorId)
       & Widget.liftView 1
-      & Widget.scale (Vector2 width separatorHeight)
+      & Widget.scale (Vector2 width typeIndicatorHeight)
   typeWidget <-
     fmap (Grid.toWidget . Grid.make . map ((:[]) . (,) 0.5)) $
     case bodyExpr ^. Sugar.deTypeInfo of
     Sugar.DefinitionExportedTypeInfo scheme ->
       sequence $
       [ return vspace
-      , return $ Widget.tint (Config.typeIndicatorMatchColor config) typeSeparator
+      , return $ Widget.tint (Config.typeIndicatorMatchColor config) typeIndicator
       ] ++
       case bodyExpr ^. Sugar.deContent . Sugar.dParams of
       [] -> []
@@ -129,17 +127,17 @@ makeExprDefinition def bodyExpr = do
       case oldScheme of
       Definition.NoExportedType ->
         [ return vspace
-        , typeSeparator
+        , typeIndicator
           & Widget.tint (Config.acceptTypeForFirstTimeColor config)
           & Widget.weakerEvents acceptKeyMap
-          & BWidgets.makeFocusableView typeSeparatorId & ExprGuiM.widgetEnv
+          & BWidgets.makeFocusableView typeIndicatorId & ExprGuiM.widgetEnv
         ]
       Definition.ExportedType scheme ->
         [ return vspace
-        , typeSeparator
+        , typeIndicator
           & Widget.tint (Config.typeIndicatorErrorColor config)
           & Widget.weakerEvents acceptKeyMap
-          & BWidgets.makeFocusableView typeSeparatorId & ExprGuiM.widgetEnv
+          & BWidgets.makeFocusableView typeIndicatorId & ExprGuiM.widgetEnv
         , return vspace
         , topLevelSchemeTypeView width exportedTypeAnimId scheme
         ]
