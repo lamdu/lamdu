@@ -1,4 +1,67 @@
 {
+    "help": {
+        "helpInputDocColor": [
+            0.1,
+            0.7,
+            0.7,
+            1.0
+        ],
+        "helpTextSize": 12,
+        "helpKeys": [
+            [
+                {
+                    "modAlt": false,
+                    "modShift": false,
+                    "modCtrl": false
+                },
+                "Key'F1"
+            ],
+            [
+                {
+                    "modAlt": true,
+                    "modShift": false,
+                    "modCtrl": false
+                },
+                "Key'H"
+            ]
+        ],
+        "helpTextColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        ],
+        "helpBGColor": [
+            0.2,
+            0.15,
+            0.1,
+            0.5
+        ]
+    },
+    "zoom": {
+        "shrinkKeys": [
+            [
+                {
+                    "modAlt": false,
+                    "modShift": false,
+                    "modCtrl": true
+                },
+                "Key'Minus"
+            ]
+        ],
+        "enlargeKeys": [
+            [
+                {
+                    "modAlt": false,
+                    "modShift": false,
+                    "modCtrl": true
+                },
+                "Key'Equal"
+            ]
+        ],
+        "shrinkFactor": 1.1,
+        "enlargeFactor": 1.1
+    },
     "jumpToNextHoleKeys": [
         [
             {
@@ -7,16 +70,6 @@
                 "modCtrl": false
             },
             "Key'Tab"
-        ]
-    ],
-    "enlargeKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
-            },
-            "Key'Equal"
         ]
     ],
     "holeInactiveExtraSymbolColor": [
@@ -56,16 +109,6 @@
         "_first": 0.9,
         "_second": 0.9
     },
-    "shrinkKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
-            },
-            "Key'Minus"
-        ]
-    ],
     "previousCursorKeys": [
         [
             {
@@ -188,7 +231,6 @@
             "Key'N"
         ]
     ],
-    "shrinkFactor": 1.1,
     "wrapKeys": [
         [
             {
@@ -281,7 +323,6 @@
         0.0,
         0.75
     ],
-    "enlargeFactor": 1.1,
     "holeSearchTermScaleFactor": {
         "_first": 0.6,
         "_second": 0.6
@@ -352,45 +393,6 @@
             "Key'F7"
         ]
     ],
-    "help": {
-        "helpInputDocColor": [
-            0.1,
-            0.7,
-            0.7,
-            1.0
-        ],
-        "helpTextSize": 12,
-        "helpKeys": [
-            [
-                {
-                    "modAlt": false,
-                    "modShift": false,
-                    "modCtrl": false
-                },
-                "Key'F1"
-            ],
-            [
-                {
-                    "modAlt": true,
-                    "modShift": false,
-                    "modCtrl": false
-                },
-                "Key'H"
-            ]
-        ],
-        "helpTextColor": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-        ],
-        "helpBGColor": [
-            0.2,
-            0.15,
-            0.1,
-            0.5
-        ]
-    },
     "inactiveTintColor": [
         1.0,
         1.0,

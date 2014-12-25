@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 module Lamdu.Config
   ( Layers(..)
-  , Help(..)
+  , Help(..), Zoom(..)
   , Config(..)
   , delKeys
   ) where
@@ -34,17 +34,20 @@ data Help = Help
   , helpKeys :: [E.ModKey]
   } deriving (Eq, Generic, Show)
 
-data Config = Config
-  { layers :: Layers
-  , help :: Help
-
-  , baseColor :: Draw.Color
-  , baseTextSize :: Int
-  , shrinkKeys :: [E.ModKey]
+data Zoom = Zoom
+  { shrinkKeys :: [E.ModKey]
   , enlargeKeys :: [E.ModKey]
   , enlargeFactor :: Double
   , shrinkFactor :: Double
+  } deriving (Eq, Generic, Show)
 
+data Config = Config
+  { layers :: Layers
+  , help :: Help
+  , zoom :: Zoom
+
+  , baseColor :: Draw.Color
+  , baseTextSize :: Int
 
   , invalidCursorBGColor :: Draw.Color
 
@@ -179,6 +182,9 @@ instance FromJSON Layers
 
 instance ToJSON Help
 instance FromJSON Help
+
+instance ToJSON Zoom
+instance FromJSON Zoom
 
 instance ToJSON Config
 instance FromJSON Config

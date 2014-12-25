@@ -222,17 +222,17 @@ makeFlyNav = do
     fnState <- readIORef flyNavState
     return $ FlyNav.make WidgetIds.flyNav fnState (writeIORef flyNavState) widget
 
-makeScaleFactor :: IO (IORef (Vector2 Widget.R), Config -> Widget.EventHandlers IO)
+makeScaleFactor :: IO (IORef (Vector2 Widget.R), Config.Zoom -> Widget.EventHandlers IO)
 makeScaleFactor = do
   factor <- newIORef 1
   let
-    eventMap config = mconcat
-      [ Widget.keysEventMap (Config.enlargeKeys config)
+    eventMap Config.Zoom{..} = mconcat
+      [ Widget.keysEventMap enlargeKeys
         (EventMap.Doc ["View", "Zoom", "Enlarge"]) $
-        modifyIORef factor (* realToFrac (Config.enlargeFactor config))
-      , Widget.keysEventMap (Config.shrinkKeys config)
+        modifyIORef factor (* realToFrac enlargeFactor)
+      , Widget.keysEventMap shrinkKeys
         (EventMap.Doc ["View", "Zoom", "Shrink"]) $
-        modifyIORef factor (/ realToFrac (Config.shrinkFactor config))
+        modifyIORef factor (/ realToFrac shrinkFactor)
       ]
   return (factor, eventMap)
 
@@ -280,7 +280,7 @@ runDb win getConfig font db = do
       cursor <- dbToIO . Transaction.getP $ DbLayout.cursor DbLayout.revisionProps
       sizeFactor <- readIORef sizeFactorRef
       globalEventMap <- mkGlobalEventMap config settingsRef
-      let eventMap = globalEventMap `mappend` sizeFactorEvents config
+      let eventMap = globalEventMap `mappend` sizeFactorEvents (Config.zoom config)
       widget <-
         mkWidgetWithFallback config settingsRef (baseStyle config font) dbToIO
         (size / sizeFactor, cursor)
