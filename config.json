@@ -9,7 +9,7 @@
             "Key'Tab"
         ]
     ],
-    "enlargeBaseFontKeys": [
+    "enlargeKeys": [
         [
             {
                 "modAlt": false,
@@ -56,7 +56,7 @@
         "_first": 0.9,
         "_second": 0.9
     },
-    "shrinkBaseFontKeys": [
+    "shrinkKeys": [
         [
             {
                 "modAlt": false,
@@ -137,12 +137,6 @@
         0.45
     ],
     "holeResultInjectedScaleExponent": 0.65,
-    "helpInputDocColor": [
-        0.1,
-        0.7,
-        0.7,
-        1.0
-    ],
     "quitKeys": [
         [
             {
@@ -358,18 +352,50 @@
             "Key'F7"
         ]
     ],
-    "helpTextSize": 12,
+    "help": {
+        "helpInputDocColor": [
+            0.1,
+            0.7,
+            0.7,
+            1.0
+        ],
+        "helpTextSize": 12,
+        "helpKeys": [
+            [
+                {
+                    "modAlt": false,
+                    "modShift": false,
+                    "modCtrl": false
+                },
+                "Key'F1"
+            ],
+            [
+                {
+                    "modAlt": true,
+                    "modShift": false,
+                    "modCtrl": false
+                },
+                "Key'H"
+            ]
+        ],
+        "helpTextColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        ],
+        "helpBGColor": [
+            0.2,
+            0.15,
+            0.1,
+            0.5
+        ]
+    },
     "inactiveTintColor": [
         1.0,
         1.0,
         1.0,
         0.8
-    ],
-    "helpTextColor": [
-        1.0,
-        1.0,
-        1.0,
-        1.0
     ],
     "suggestedValueTint": [
         1.0,
@@ -653,24 +679,6 @@
         "_first": 0.85,
         "_second": 0.85
     },
-    "overlayDocKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'F1"
-        ],
-        [
-            {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'H"
-        ]
-    ],
     "inactiveHoleBGColor": [
         0.2,
         0.2,
@@ -688,11 +696,5 @@
         0.0,
         0.0,
         1.0
-    ],
-    "helpBGColor": [
-        0.2,
-        0.15,
-        0.1,
-        0.5
     ]
 }

@@ -112,13 +112,13 @@ makeView size eventMap config animId =
   map ((Lens._1 %~ E.docStrs) . Tuple.swap) $ E.eventMapDocs eventMap
 
 makeTooltip :: Config -> [E.ModKey] -> AnimId -> View
-makeTooltip config overlayDocKeys animId =
+makeTooltip config helpKeys animId =
   addHelpBG config animId $
   GridView.horizontalAlign 0
   [ TextView.label (configStyle config) animId "Show help"
   , Spacer.makeHorizontal 10
   , makeShortcutKeyView config
-    (animId ++ ["HelpKeys"], map E.prettyModKey overlayDocKeys)
+    (animId ++ ["HelpKeys"], map E.prettyModKey helpKeys)
   ]
 
 indent :: R -> View -> View

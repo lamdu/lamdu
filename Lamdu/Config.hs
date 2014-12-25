@@ -1,6 +1,11 @@
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE DeriveGeneric #-}
-module Lamdu.Config (Layers(..), Config(..), delKeys) where
+module Lamdu.Config
+  ( Layers(..)
+  , Help(..)
+  , Config(..)
+  , delKeys
+  ) where
 
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import Data.Vector.Vector2 (Vector2(..))
@@ -19,16 +24,27 @@ data Layers = Layers
   , layerParensHighlightBG
   , layerActivePane
   , layerMax :: Int
-  } deriving (Eq, Generic)
+  } deriving (Eq, Generic, Show)
 
-data Config = Config
-  { layers :: Layers
-  , baseColor :: Draw.Color
-  , baseTextSize :: Int
-  , helpTextColor :: Draw.Color
+data Help = Help
+  { helpTextColor :: Draw.Color
   , helpTextSize :: Int
   , helpInputDocColor :: Draw.Color
   , helpBGColor :: Draw.Color
+  , helpKeys :: [E.ModKey]
+  } deriving (Eq, Generic, Show)
+
+data Config = Config
+  { layers :: Layers
+  , help :: Help
+
+  , baseColor :: Draw.Color
+  , baseTextSize :: Int
+  , shrinkKeys :: [E.ModKey]
+  , enlargeKeys :: [E.ModKey]
+  , enlargeFactor :: Double
+  , shrinkFactor :: Double
+
 
   , invalidCursorBGColor :: Draw.Color
 
@@ -38,8 +54,6 @@ data Config = Config
   , makeBranchKeys :: [E.ModKey]
 
   , jumpToBranchesKeys :: [E.ModKey]
-
-  , overlayDocKeys :: [E.ModKey]
 
   , addNextParamKeys :: [E.ModKey]
 
@@ -132,12 +146,6 @@ data Config = Config
   , jumpLHStoRHSKeys :: [E.ModKey]
   , jumpRHStoLHSKeys :: [E.ModKey]
 
-  , shrinkBaseFontKeys :: [E.ModKey]
-  , enlargeBaseFontKeys :: [E.ModKey]
-
-  , enlargeFactor :: Double
-  , shrinkFactor :: Double
-
   , acceptKeys :: [E.ModKey]
 
   , collisionSuffixTextColor :: Draw.Color
@@ -161,13 +169,16 @@ data Config = Config
   , valFramePadding :: Vector2 Double
   , typeFrameBGColor :: Draw.Color
   , verticalSpacing :: Double
-  } deriving (Eq, Generic)
+  } deriving (Eq, Generic, Show)
 
 delKeys :: Config -> [E.ModKey]
 delKeys config = delForwardKeys config ++ delBackwardKeys config
 
 instance ToJSON Layers
 instance FromJSON Layers
+
+instance ToJSON Help
+instance FromJSON Help
 
 instance ToJSON Config
 instance FromJSON Config

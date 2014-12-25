@@ -227,27 +227,27 @@ makeScaleFactor = do
   factor <- newIORef 1
   let
     eventMap config = mconcat
-      [ Widget.keysEventMap (Config.enlargeBaseFontKeys config)
+      [ Widget.keysEventMap (Config.enlargeKeys config)
         (EventMap.Doc ["View", "Zoom", "Enlarge"]) $
         modifyIORef factor (* realToFrac (Config.enlargeFactor config))
-      , Widget.keysEventMap (Config.shrinkBaseFontKeys config)
+      , Widget.keysEventMap (Config.shrinkKeys config)
         (EventMap.Doc ["View", "Zoom", "Shrink"]) $
         modifyIORef factor (/ realToFrac (Config.shrinkFactor config))
       ]
   return (factor, eventMap)
 
-helpConfig :: Draw.Font -> Config -> EventMapDoc.Config
-helpConfig font config =
+helpConfig :: Draw.Font -> Config.Help -> EventMapDoc.Config
+helpConfig font Config.Help{..} =
   EventMapDoc.Config
   { EventMapDoc.configStyle =
     TextView.Style
-    { TextView._styleColor = Config.helpTextColor config
+    { TextView._styleColor = helpTextColor
     , TextView._styleFont = font
-    , TextView._styleFontSize = Config.helpTextSize config
+    , TextView._styleFontSize = helpTextSize
     }
-  , EventMapDoc.configInputDocColor = Config.helpInputDocColor config
-  , EventMapDoc.configBGColor = Config.helpBGColor config
-  , EventMapDoc.configOverlayDocKeys = Config.overlayDocKeys config
+  , EventMapDoc.configInputDocColor = helpInputDocColor
+  , EventMapDoc.configBGColor = helpBGColor
+  , EventMapDoc.configOverlayDocKeys = helpKeys
   }
 
 baseStyle :: Config -> Draw.Font -> TextEdit.Style
@@ -288,7 +288,7 @@ runDb win getConfig font db = do
   makeWidgetCached <- cacheMakeWidget makeWidget
   mainLoopDebugMode win getConfig $ \config size ->
     ( wrapFlyNav =<< makeWidgetCached (config, size)
-    , addHelpWithStyle (helpConfig font config) size
+    , addHelpWithStyle (helpConfig font (Config.help config)) size
     )
   where
     dbToIO = DbLayout.runDbTransaction db
