@@ -6,6 +6,8 @@ module Lamdu.GUI.ExpressionGui
   , scaleFromTop
   , pad
   , hbox, hboxSpaced, addBelow
+  , gridDownwards
+  , vboxDownwards, vboxDownwardsSpaced
   , makeRow
   -- Lifted widgets:
   , makeLabel
@@ -91,6 +93,32 @@ hbox guis =
 
 hboxSpaced :: [ExpressionGui m] -> ExpressionGui m
 hboxSpaced = hbox . List.intersperse (fromValueWidget BWidgets.stdSpaceWidget)
+
+vboxDownwards :: [(Widget.R, ExpressionGui m)] -> ExpressionGui m
+vboxDownwards = gridDownwards . map (:[])
+
+vboxDownwardsSpaced ::
+  MonadA m => [(Widget.R, ExpressionGui m)] -> ExprGuiM m (ExpressionGui m)
+vboxDownwardsSpaced guis =
+  do
+    space <- ExprGuiM.widgetEnv BWidgets.verticalSpace
+    guis & List.intersperse (0, fromValueWidget space)
+      & vboxDownwards & return
+
+gridDownwards :: [[(Widget.R, ExpressionGui m)]] -> ExpressionGui m
+gridDownwards [] = fromValueWidget BWidgets.stdSpaceWidget
+gridDownwards ([]:rs) = gridDownwards rs
+gridDownwards rows =
+  ExpressionGui
+  { _egWidget = Grid.toWidget grid
+  , _egAlignment = grid ^. Grid.gridContent & head & head & (^. _2 . Grid.elementAlign . _2)
+  }
+  where
+    grid =
+      rows
+      & Lens.traversed . Lens.traversed %~ cell
+      & Grid.make
+    cell (hAlign, ExpressionGui widget vAlign) = (Vector2 hAlign vAlign, widget)
 
 fromBox :: KBox Bool (Transaction m) -> ExpressionGui m
 fromBox box =

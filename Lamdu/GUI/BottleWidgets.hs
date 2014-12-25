@@ -201,7 +201,7 @@ vspaceWidget :: Widget.R -> Widget f
 vspaceWidget = uncurry Widget.liftView . Spacer.makeVertical
 
 stdSpaceWidget :: Widget f
-stdSpaceWidget = uncurry Widget.liftView $ Spacer.makeHorizontal 20
+stdSpaceWidget = uncurry Widget.liftView $ Spacer.make 20
 
 hboxSpaced :: [(Box.Alignment, Widget f)] -> Widget f
 hboxSpaced = Box.hbox . intersperse (0.5, stdSpaceWidget)

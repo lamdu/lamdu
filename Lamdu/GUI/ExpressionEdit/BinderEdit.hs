@@ -144,11 +144,15 @@ layout ::
 layout defNameEdit paramEdits bodyEdit wheres myId =
   do
     equals <- ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
+    paramsEdit <-
+      case paramEdits of
+      [] -> return []
+      xs -> xs <&> (,) 0 & ExpressionGui.vboxDownwardsSpaced <&> (:[])
     let
       topRow =
         ExpressionGui.hboxSpaced
         ( defNameEdit :
-          paramEdits ++
+          paramsEdit ++
           [ ExpressionGui.fromValueWidget equals
           , bodyEdit
           ]

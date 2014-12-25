@@ -30,15 +30,17 @@ make parentPrecedence binder pl =
   ExprGuiM.assignCursor myId bodyId $
     do
       lambdaLabel <- ExprGuiM.widgetEnv $ BWidgets.grammarLabel "λ" myId
-      paramEdits <-
+      paramsEdit <-
         BinderEdit.makeParamsEdit showParamType bodyId params
+        <&> map ((,) 0)
+        >>= ExpressionGui.vboxDownwardsSpaced
       dotLabel <- ExprGuiM.widgetEnv $ BWidgets.grammarLabel ". " myId
       bodyEdit <- BinderEdit.makeResultEdit (binder ^. Sugar.dMActions) params body myId
       wheres <-
         BinderEdit.makeWheres (binder ^. Sugar.dWhereItems) myId
         <&> Box.vboxAlign 0
       ExpressionGui.fromValueWidget lambdaLabel :
-        [ ExpressionGui.hboxSpaced paramEdits
+        [ paramsEdit
         , ExpressionGui.fromValueWidget dotLabel
         , bodyEdit
         ]
