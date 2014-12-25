@@ -73,18 +73,24 @@ makeWheres ::
   [Sugar.WhereItem (Name m) m (ExprGuiM.SugarExpr m)] -> Widget.Id ->
   ExprGuiM m [Widget (T m)]
 makeWheres [] _ = return []
-makeWheres whereItems myId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  whereLabel <-
-    (fmap . Widget.scale) (realToFrac <$> Config.whereLabelScaleFactor config) .
-    ExprGuiM.widgetEnv . BWidgets.makeLabel "where" $ Widget.toAnimId myId
-  itemEdits <- traverse makeWhereItemEdit $ reverse whereItems
-  return
-    [ BWidgets.hboxSpaced
-      [ (0, whereLabel)
-      , (0, Widget.scale (realToFrac <$> Config.whereScaleFactor config) $ Box.vboxAlign 0 itemEdits)
+makeWheres whereItems myId =
+  do
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    whereLabel <-
+      (fmap . Widget.scale) (realToFrac <$> Config.whereLabelScaleFactor config) .
+      ExprGuiM.widgetEnv . BWidgets.makeLabel "where" $ Widget.toAnimId myId
+    itemEdits <-
+      whereItems & reverse
+      & ExpressionGui.listWithDelDests myId myId wiCursor
+      & traverse makeWhereItemEdit
+    return
+      [ BWidgets.hboxSpaced
+        [ (0, whereLabel)
+        , (0, Widget.scale (realToFrac <$> Config.whereScaleFactor config) $ Box.vboxAlign 0 itemEdits)
+        ]
       ]
-    ]
+  where
+    wiCursor = WidgetIds.fromEntityId . (^. Sugar.wiEntityId)
 
 presentationModeChoiceConfig :: Config -> BWidgets.ChoiceWidgetConfig
 presentationModeChoiceConfig config = BWidgets.ChoiceWidgetConfig
@@ -175,17 +181,17 @@ toEventMapAction = FocusDelegator.delegatingId . WidgetIds.fromEntityId
 
 makeWhereItemEdit ::
   MonadA m =>
-  Sugar.WhereItem (Name m) m (ExprGuiM.SugarExpr m) ->
+  (Widget.Id, Widget.Id, Sugar.WhereItem (Name m) m (ExprGuiM.SugarExpr m)) ->
   ExprGuiM m (WidgetT m)
-makeWhereItemEdit item = do
+makeWhereItemEdit (_prevId, nextId, item) = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     eventMap
       | Just wiActions <- item ^. Sugar.wiActions =
         mconcat
         [ Widget.keysEventMapMovesCursor (Config.delKeys config)
-          (E.Doc ["Edit", "Where clause", "Delete"]) .
-          fmap WidgetIds.fromEntityId $ wiActions ^. Sugar.itemDelete
+          (E.Doc ["Edit", "Where clause", "Delete"]) $
+          nextId <$ wiActions ^. Sugar.itemDelete
         , Widget.keysEventMapMovesCursor (Config.addWhereItemKeys config)
           (E.Doc ["Edit", "Where clause", "Add next"]) .
           fmap WidgetIds.fromEntityId $ wiActions ^. Sugar.itemAddNext
@@ -240,16 +246,6 @@ makeResultEdit mActions params result myId = do
       & (^? traverse)
       & fromMaybe myId
 
-addPrevIds ::
-  Widget.Id ->
-  [Sugar.FuncParam name m] ->
-  [(Widget.Id, Sugar.FuncParam name m)]
-addPrevIds = go
-  where
-    fpId param = WidgetIds.fromEntityId $ param ^. Sugar.fpId
-    go _      [] = []
-    go prevId (fp:fps) = (prevId, fp) : go (fpId fp) fps
-
 makeParamsEdit ::
   MonadA m =>
   ExprGuiM.ShowType ->
@@ -257,10 +253,10 @@ makeParamsEdit ::
   [Sugar.FuncParam (Name m) m] ->
   ExprGuiM m [ExpressionGui m]
 makeParamsEdit showType lhsId params =
-  addPrevIds lhsId params
+  ExpressionGui.listWithDelDests lhsId lhsId (WidgetIds.fromEntityId . (^. Sugar.fpId)) params
   & traverse mkParam
   where
-    mkParam (prevId, param) = ParamEdit.make showType prevId param
+    mkParam (prevId, nextId, param) = ParamEdit.make showType prevId nextId param
 
 diveToNameEdit :: Widget.Id -> Widget.Id
 diveToNameEdit = FocusDelegator.delegatingId -- Name editor

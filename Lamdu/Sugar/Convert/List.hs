@@ -7,7 +7,7 @@ module Lamdu.Sugar.Convert.List
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Lens.Tuple
-import Control.Monad (guard, MonadPlus(..))
+import Control.Monad (guard, void, MonadPlus(..))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.MonadA (MonadA)
@@ -63,21 +63,20 @@ mkListAddFirstItem specialFunctions =
 
 mkListItem ::
   (MonadA m, Monoid a) =>
-  ExpressionU m a -> ExpressionU m a ->
+  ExpressionU m a ->
   Input.Payload m a -> Val (Input.Payload m a) -> Maybe (T m EntityId) ->
   ListItem m (ExpressionU m a)
-mkListItem listItemExpr recordArgS exprPl tailI mAddNextItem =
+mkListItem listItemExpr exprPl tailI mAddNextItem =
   ListItem
   { _liExpr =
     listItemExpr
-    & rPayload . plData <>~ recordArgS ^. rPayload . plData
   , _liMActions = do
       addNext <- mAddNextItem
       exprProp <- exprPl ^. Input.mStored
       argProp <- tailI ^. V.payload . Input.mStored
       return ListItemActions
         { _itemAddNext = addNext
-        , _itemDelete = replaceWith exprProp argProp
+        , _itemDelete = void $ replaceWith exprProp argProp
         }
   }
 
@@ -130,7 +129,7 @@ cons (V.Apply funcI argI) argS exprPl = do
   List innerValues innerListMActions nilGuid <- maybeToMPlus $ tailS ^? rBody . _BodyList
   let
     listItem =
-      mkListItem headS argS exprPl tailI
+      mkListItem headS exprPl tailI
       (addFirstItem <$> innerListMActions)
       & liExpr . rPayload . plData <>~
         (funcI ^. Lens.traversed . Input.userData <>

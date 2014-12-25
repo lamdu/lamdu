@@ -9,6 +9,7 @@ module Lamdu.GUI.ExpressionGui
   , gridDownwards
   , vboxDownwards, vboxDownwardsSpaced
   , makeRow
+  , listWithDelDests
   -- Lifted widgets:
   , makeLabel
   , makeFocusableView
@@ -48,6 +49,7 @@ import Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
 import Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..), NameCollision(..))
 import qualified Control.Lens as Lens
 import qualified Data.List as List
+import qualified Data.List.Utils as ListUtils
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -378,3 +380,10 @@ addInferredTypes exprPl eg =
     if s
       then alwaysAddInferredTypes exprPl eg
       else return eg
+
+listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
+listWithDelDests before after dest list =
+  ListUtils.withPrevNext
+  (maybe before dest (list ^? Lens.ix 1))
+  (maybe after dest (reverse list ^? Lens.ix 1))
+  dest list

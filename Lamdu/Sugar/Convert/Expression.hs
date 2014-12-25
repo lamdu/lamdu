@@ -54,6 +54,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
         maybe NoInnerExpr SetToInnerExpr $ do
           guard $ Lens.nullOf ExprLens.valHole lamBody
           mDeleteLam
+            <&> Lens.mapped .~ binder ^. dBody . rPayload . plEntityId
     BodyLam binder
       & addActions exprPl
       <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction

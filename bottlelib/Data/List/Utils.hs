@@ -12,6 +12,7 @@ module Data.List.Utils
   , nonEmptyAll
   , match
   , isLengthAtLeast
+  , withPrevNext
   ) where
 
 import Control.Applicative ((<$>))
@@ -70,3 +71,9 @@ match f (x:xs) (y:ys) =
   (f x y :) <$> match f xs ys
 match _ [] [] = Just []
 match _ _ _ = Nothing
+
+withPrevNext :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
+withPrevNext before after f list =
+  zip3 (before : keys) (tail (keys ++ [after])) list
+  where
+    keys = map f list

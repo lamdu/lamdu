@@ -76,7 +76,7 @@ isGetVarOf = Lens.anyOf ExprLens.valVar . (==)
 makeDeleteLambda ::
   MonadA m =>
   V.Lam (Val (ExprIRef.ValIProperty m)) -> ExprIRef.ValIProperty m ->
-  ConvertM m (T m EntityId)
+  ConvertM m (T m ())
 makeDeleteLambda (V.Lam paramVar lamBodyStored) stored =
   do
     protectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -84,7 +84,7 @@ makeDeleteLambda (V.Lam paramVar lamBodyStored) stored =
       do
         getParamsToHole paramVar lamBodyStored
         let lamBodyI = Property.value (lamBodyStored ^. V.payload)
-        protectedSetToVal stored lamBodyI <&> EntityId.ofValI
+        void $ protectedSetToVal stored lamBodyI <&> EntityId.ofValI
 
 newTag :: MonadA m => T m T.Tag
 newTag = GenIds.transaction GenIds.randomTag
@@ -182,11 +182,8 @@ mkRecordParams fieldParams lam@(V.Lam param _) lambdaPl = do
 --     pure $ Guid.combine lamGuid fieldGuid
 
 delFieldParam :: MonadA m =>
-  FieldParam -> V.Lam (Val (ExprIRef.ValIProperty m)) -> T m EntityId
-delFieldParam fp lamStored =
-   do
-     getFieldParamsToHole (fpTag fp) lamStored
-     return $ error "TODO: cursor"
+  FieldParam -> V.Lam (Val (ExprIRef.ValIProperty m)) -> T m ()
+delFieldParam fp = getFieldParamsToHole (fpTag fp)
 
 makeLamParamActions :: MonadA m =>
   Maybe V.Var ->
@@ -387,7 +384,7 @@ convertWhereItems expr =
         ListItemActions
         { _itemDelete = do
              getParamsToHole param bodyStored
-             replaceWith topLevelProp $ bodyStored ^. V.payload
+             void $ replaceWith topLevelProp $ bodyStored ^. V.payload
         , _itemAddNext = EntityId.ofLambdaParam . fst <$> DataOps.redexWrap topLevelProp
         }
     let

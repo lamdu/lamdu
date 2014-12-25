@@ -114,7 +114,7 @@ type Expression name m a = ExpressionP name m (Payload m a)
 
 data ListItemActions m = ListItemActions
   { _itemAddNext :: T m EntityId
-  , _itemDelete :: T m EntityId
+  , _itemDelete :: T m ()
   }
 
 newtype FuncParamActions m = FuncParamActions

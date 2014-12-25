@@ -22,10 +22,10 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 -- exported for use in definition sugaring.
 make ::
-  MonadA m => ExprGuiM.ShowType -> Widget.Id ->
+  MonadA m => ExprGuiM.ShowType -> Widget.Id -> Widget.Id ->
   Sugar.FuncParam (Name m) m ->
   ExprGuiM m (ExpressionGui m)
-make showType prevId param =
+make showType prevId nextId param =
   assignCursor $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
@@ -37,8 +37,8 @@ make showType prevId param =
          (^. Sugar.fpListItemActions . Sugar.itemAddNext))
         mActions
       paramEventMap = mconcat
-        [ paramDeleteEventMap (Config.delForwardKeys config) "" id
-        , paramDeleteEventMap (Config.delBackwardKeys config) " backwards" (const prevId)
+        [ paramDeleteEventMap (Config.delForwardKeys config) "" nextId
+        , paramDeleteEventMap (Config.delBackwardKeys config) " backwards" prevId
         , paramAddNextEventMap
         ]
     paramNameEdit <-
@@ -63,9 +63,9 @@ make showType prevId param =
     hiddenIds = map WidgetIds.fromEntityId $ param ^. Sugar.fpHiddenIds
     assignCursor x =
       foldr (`ExprGuiM.assignCursorPrefix` myId) x hiddenIds
-    paramDeleteEventMap keys docSuffix onId =
+    paramDeleteEventMap keys docSuffix dstPos =
       maybe mempty
       (Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "Delete parameter" ++ docSuffix]) .
-       fmap (onId . WidgetIds.fromEntityId) .
+       (>> return dstPos) .
        (^. Sugar.fpListItemActions . Sugar.itemDelete))
       mActions
