@@ -71,7 +71,6 @@ data Hole = Hole
   , holeInactiveExtraSymbolColor :: Draw.Color
   , holeActiveBGColor :: Draw.Color
   , holeInactiveBGColor :: Draw.Color
-  , holeWrapperFrameWidth :: Vector2 Double
   , holePickResultKeys :: [E.ModKey]
   } deriving (Eq, Generic, Show)
 
@@ -114,8 +113,9 @@ data Config = Config
 
   , parenHighlightColor :: Draw.Color
   , literalIntColor :: Draw.Color
-  , typeErrorColor :: Draw.Color
-  , typeMatchColor :: Draw.Color
+  , typeIndicatorErrorColor :: Draw.Color
+  , typeIndicatorMatchColor :: Draw.Color
+  , typeIndicatorFrameWidth :: Vector2 Double
   , foreignModuleColor :: Draw.Color
   , foreignVarColor :: Draw.Color
 

@@ -222,10 +222,6 @@
             0.3,
             0.9
         ],
-        "holeWrapperFrameWidth": {
-            "_first": 15.0,
-            "_second": 15.0
-        },
         "holePickAndMoveToNextHoleKeys": [
             [
                 {
@@ -456,13 +452,17 @@
         0.2,
         1.0
     ],
-    "typeErrorColor": [
+    "typeIndicatorFrameWidth": {
+        "_first": 15.0,
+        "_second": 15.0
+    },
+    "typeIndicatorErrorColor": [
         1.0,
         0.0,
         0.0,
         0.65
     ],
-    "typeMatchColor": [
+    "typeIndicatorMatchColor": [
         0.0,
         1.0,
         0.0,

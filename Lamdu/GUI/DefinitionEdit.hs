@@ -98,9 +98,10 @@ makeExprDefinition def bodyExpr = do
     BinderEdit.make (def ^. Sugar.drName)
     (bodyExpr ^. Sugar.deContent) myId
   let width = bodyWidget ^. Widget.wSize . Lens._1
-  -- TODO: Why is this holeWrapperFrameWidth?
+  -- separatorHeight is the same as a hole frame height, because it
+  -- emulate the green/red hole frames
   let separatorHeight =
-        realToFrac $ Config.holeWrapperFrameWidth (Config.hole config) ^. Lens._2
+        realToFrac $ Config.typeIndicatorFrameWidth config ^. Lens._2
   let vspace = BWidgets.vspaceWidget . realToFrac $ Config.valFramePadding config ^. Lens._2
   let
     typeSeparatorId = Widget.joinId myId ["type indicator"]
@@ -114,7 +115,7 @@ makeExprDefinition def bodyExpr = do
     Sugar.DefinitionExportedTypeInfo scheme ->
       sequence $
       [ return vspace
-      , return $ Widget.tint (Config.typeMatchColor config) typeSeparator
+      , return $ Widget.tint (Config.typeIndicatorMatchColor config) typeSeparator
       ] ++
       case bodyExpr ^. Sugar.deContent . Sugar.dParams of
       [] -> []
@@ -136,7 +137,7 @@ makeExprDefinition def bodyExpr = do
       Definition.ExportedType scheme ->
         [ return vspace
         , typeSeparator
-          & Widget.tint (Config.typeErrorColor config)
+          & Widget.tint (Config.typeIndicatorErrorColor config)
           & Widget.weakerEvents acceptKeyMap
           & BWidgets.makeFocusableView typeSeparatorId & ExprGuiM.widgetEnv
         , return vspace

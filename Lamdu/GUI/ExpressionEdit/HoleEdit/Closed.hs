@@ -108,9 +108,9 @@ makeWrapper arg myId = do
     bgColor =
       config &
       case arg ^. Sugar.haUnwrap of
-      Sugar.UnwrapMAction {} -> Config.typeMatchColor
-      Sugar.UnwrapTypeMismatch {} -> Config.typeErrorColor
-    frameWidth = realToFrac <$> holeWrapperFrameWidth
+      Sugar.UnwrapMAction {} -> Config.typeIndicatorMatchColor
+      Sugar.UnwrapTypeMismatch {} -> Config.typeIndicatorErrorColor
+    frameWidth = realToFrac <$> Config.typeIndicatorFrameWidth config
     padding = realToFrac <$> Config.valFramePadding config
   argGui <-
     arg ^. Sugar.haExpr
