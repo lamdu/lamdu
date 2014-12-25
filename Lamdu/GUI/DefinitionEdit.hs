@@ -76,7 +76,7 @@ makeBuiltinDefinition def builtin = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   Box.vboxAlign 0 <$> sequenceA
     [ BWidgets.hboxCenteredSpaced <$> sequenceA
-      [ ExprGuiM.withFgColor (Config.builtinOriginNameColor config) $
+      [ ExprGuiM.withFgColor (Config.builtinOriginFGColor config) $
         BinderEdit.makeNameEdit name (Widget.joinId myId ["name"])
       , ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
       , BuiltinEdit.make builtin myId

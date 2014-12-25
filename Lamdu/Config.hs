@@ -69,7 +69,7 @@ data Config = Config
 
   , definitionColor :: Draw.Color
   , parameterColor :: Draw.Color
-  , paramOriginColor :: Draw.Color
+  , paramOriginFGColor :: Draw.Color
 
   , literalIntColor :: Draw.Color
 
@@ -125,7 +125,7 @@ data Config = Config
 -- For definitions
   , defOriginFGColor :: Draw.Color
 
-  , builtinOriginNameColor :: Draw.Color
+  , builtinOriginFGColor :: Draw.Color
 
   , cursorBGColor :: Draw.Color
 

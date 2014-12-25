@@ -33,7 +33,7 @@ makeParamNameEdit ::
 makeParamNameEdit nameProp myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
-    (ExprGuiM.withFgColor (Config.paramOriginColor config) .
+    (ExprGuiM.withFgColor (Config.paramOriginFGColor config) .
      ExpressionGui.makeNameEdit nameProp) myId
 
 -- exported for use in definition sugaring.

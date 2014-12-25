@@ -452,7 +452,7 @@
         0.9,
         1.0
     ],
-    "builtinOriginNameColor": [
+    "builtinOriginFGColor": [
         1.0,
         0.8,
         0.5,
@@ -669,7 +669,7 @@
         "_first": 0.85,
         "_second": 0.85
     },
-    "paramOriginColor": [
+    "paramOriginFGColor": [
         1.0,
         0.8,
         0.5,
