@@ -99,12 +99,10 @@ data Config = Config
 
   , addWhereItemKeys :: [E.ModKey]
 
-  , whereColor :: Draw.Color
   , whereScaleFactor :: Vector2 Double
   , whereLabelScaleFactor :: Vector2 Double
 
   , typeScaleFactor :: Vector2 Double
-  , squareParensScaleFactor :: Vector2 Double
 
   , foreignModuleColor :: Draw.Color
   , foreignVarColor :: Draw.Color

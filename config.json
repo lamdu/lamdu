@@ -52,10 +52,6 @@
         ]
     ],
     "holeResultCount": 8,
-    "squareParensScaleFactor": {
-        "_first": 0.96,
-        "_second": 0.96
-    },
     "tagScaleFactor": {
         "_first": 0.9,
         "_second": 0.9
@@ -635,12 +631,6 @@
         "_first": 0.85,
         "_second": 0.85
     },
-    "whereColor": [
-        0.8,
-        0.6,
-        0.1,
-        1.0
-    ],
     "definitionColor": [
         0.8,
         0.5,
