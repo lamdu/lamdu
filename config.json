@@ -560,6 +560,14 @@
                 "modCtrl": false
             },
             "Key'Space"
+        ],
+        [
+            {
+                "modAlt": false,
+                "modShift": false,
+                "modCtrl": false
+            },
+            "Key'Enter"
         ]
     ],
     "pasteKeys": [
