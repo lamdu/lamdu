@@ -1,6 +1,7 @@
 {
     "layers": {
         "layerCursorBG": -1,
+        "layerMin": -100,
         "layerMax": 100,
         "layerParensHighlightBG": 34,
         "layerActivePane": 40,
@@ -8,7 +9,7 @@
         "layerNameCollisionBG": 32,
         "layerChoiceBG": 30,
         "layerValFrameBG": 33,
-        "layerHoleBG": -2
+        "layerHoleBG": 29
     },
     "help": {
         "helpInputDocColor": [

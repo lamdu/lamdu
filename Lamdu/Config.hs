@@ -15,7 +15,8 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 
 data Layers = Layers
-  { layerCursorBG
+  { layerMin
+  , layerCursorBG
   , layerTypes
   , layerChoiceBG
   , layerHoleBG

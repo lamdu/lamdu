@@ -371,7 +371,7 @@ make pl holeInfo = do
             Widget.weakerEvents searchTermEventMap
       let
         layers = Config.layers config
-        layerDiff = Config.layerHoleBG layers - Config.layerMax layers
+        layerDiff = Config.layerMin layers - Config.layerMax layers
       searchTermGui
         & ExpressionGui.addBelow 0.5
           [(0.5, Widget.strongerEvents resultsEventMap resultsWidget)]
