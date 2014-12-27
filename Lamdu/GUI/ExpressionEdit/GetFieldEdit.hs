@@ -26,7 +26,7 @@ make (Sugar.GetField recExpr tagG) pl =
     ExprGuiM.assignCursor myId tagId $ do
       recExprEdit <- ExprGuiM.makeSubexpression 11 recExpr
       tagEdit <-
-        TagEdit.make (pl ^. Sugar.plData . ExprGuiM.plHoleEntityIds) tagG tagId
+        TagEdit.makeRecordTag (pl ^. Sugar.plData . ExprGuiM.plHoleEntityIds) tagG tagId
       dotLabel <-
         ExpressionGui.fromValueWidget <$>
         (ExprGuiM.widgetEnv . BWidgets.makeLabel "." . Widget.toAnimId) myId

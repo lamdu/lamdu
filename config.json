@@ -284,12 +284,6 @@
             1.0,
             1.0
         ],
-        "tagColor": [
-            0.7,
-            0.7,
-            0.7,
-            1.0
-        ],
         "collisionSuffixTextColor": [
             1.0,
             0.8,
@@ -305,11 +299,27 @@
             0.0,
             0.0,
             1.0
-        ]
-    },
-    "tagScaleFactor": {
-        "_first": 0.9,
-        "_second": 0.9
+        ],
+        "recordTagColor": [
+            0.75,
+            0.75,
+            0.75,
+            1.0
+        ],
+        "recordTagScaleFactor": {
+            "_first": 1.0,
+            "_second": 1.0
+        },
+        "paramTagColor": [
+            0.5,
+            0.5,
+            0.5,
+            1.0
+        ],
+        "paramTagScaleFactor": {
+            "_first": 0.75,
+            "_second": 0.75
+        }
     },
     "previousCursorKeys": [
         [
@@ -383,17 +393,7 @@
             "Key'Space"
         ]
     ],
-    "fieldTagScaleFactor": {
-        "_first": 0.8,
-        "_second": 0.8
-    },
     "baseTextSize": 25,
-    "fieldTint": [
-        1.0,
-        1.0,
-        1.0,
-        0.6
-    ],
     "wrapKeys": [
         [
             {

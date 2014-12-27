@@ -74,9 +74,9 @@ make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotated
 assignCursorEntityId :: MonadA m => Widget.Id -> Sugar.EntityId -> ExprGuiM m a -> ExprGuiM m a
 assignCursorEntityId myId = ExprGuiM.assignCursor myId . WidgetIds.fromEntityId
 
-makeTagView :: MonadA m => Sugar.EntityId -> Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
-makeTagView tagExprEntityId tagG =
-  TagEdit.makeView tagG . Widget.toAnimId $
+makeParamTag :: MonadA m => Sugar.EntityId -> Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
+makeParamTag tagExprEntityId tagG =
+  TagEdit.makeParamTag tagG $ Widget.toAnimId $
   WidgetIds.fromEntityId tagExprEntityId
 
 makeArgRows ::
@@ -84,18 +84,13 @@ makeArgRows ::
   Sugar.AnnotatedArg (Name m) (ExprGuiM.SugarExpr m) ->
   ExprGuiM m [[(Grid.Alignment, ExprGuiM.WidgetT m)]]
 makeArgRows arg = do
-  argTagEdit <- makeTagView (arg ^. Sugar.aaTagExprEntityId) (arg ^. Sugar.aaTag)
+  argTagEdit <- makeParamTag (arg ^. Sugar.aaTagExprEntityId) (arg ^. Sugar.aaTag)
   argValEdit <- ExprGuiM.makeSubexpression 0 $ arg ^. Sugar.aaExpr
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    scaleTag =
-      ExpressionGui.egWidget %~
-      Widget.scale (realToFrac <$> Config.fieldTagScaleFactor config)
   vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
   pure
     [ replicate 3 (0.5, vspace)
     , ExpressionGui.makeRow
-      [ (0, scaleTag argTagEdit)
+      [ (0, argTagEdit)
       , (0.5, space)
       , (0, argValEdit)
       ]

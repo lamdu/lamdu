@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.GUI.ExpressionEdit.RecordEdit(make) where
+module Lamdu.GUI.ExpressionEdit.RecordEdit
+  ( make
+  ) where
 
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
@@ -17,7 +19,6 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -36,9 +37,6 @@ make ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make reco pl = ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped reco
 
-diveIntoTagEdit :: Widget.Id -> Widget.Id
-diveIntoTagEdit = FocusDelegator.delegatingId
-
 makeFieldRow ::
   MonadA m =>
   Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiM.Payload) ->
@@ -46,16 +44,13 @@ makeFieldRow ::
 makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   fieldRefGui <-
-    TagEdit.make (ExprGuiM.nextHolesBefore fieldExpr)
+    TagEdit.makeRecordTag (ExprGuiM.nextHolesBefore fieldExpr)
     tag (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
   fieldExprGui <- ExprGuiM.makeSubexpression 0 fieldExpr
   let
     itemEventMap = maybe mempty (recordDelEventMap config) mDelete
     space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
-    scaleTag =
-      ExpressionGui.egWidget %~
-      Widget.scale (realToFrac <$> Config.fieldTagScaleFactor config)
-  [(1, scaleTag fieldRefGui), (0.5, space), (0, fieldExprGui)]
+  [(1, fieldRefGui), (0.5, space), (0, fieldExprGui)]
     <&> Lens._2 . ExpressionGui.egWidget %~ Widget.weakerEvents itemEventMap
     & return
 
@@ -124,7 +119,7 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
         maybe mempty
         (Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
          (E.Doc ["Edit", "Record", "Add Field"]) .
-         fmap (diveIntoTagEdit . WidgetIds.fromEntityId) .
+         fmap (TagEdit.diveIntoRecordTag . WidgetIds.fromEntityId) .
          (ExprGuiM.holePickersAction resultPickers >>)) mAddField
     gui
       & ExpressionGui.egWidget %~ Widget.weakerEvents eventMap

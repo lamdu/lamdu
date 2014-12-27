@@ -82,7 +82,10 @@ data Name = Name
   , nameOriginFGColor :: Draw.Color
   , definitionColor :: Draw.Color
   , parameterColor :: Draw.Color
-  , tagColor :: Draw.Color
+  , recordTagColor :: Draw.Color
+  , recordTagScaleFactor :: Vector2 Double
+  , paramTagColor :: Draw.Color
+  , paramTagScaleFactor :: Vector2 Double
   } deriving (Eq, Generic, Show)
 
 data Config = Config
@@ -121,10 +124,6 @@ data Config = Config
 
   , acceptTypeForFirstTimeColor :: Draw.Color
   , acceptTypeKeys :: [E.ModKey]
-
-  , tagScaleFactor :: Vector2 Double
-  , fieldTagScaleFactor :: Vector2 Double
-  , fieldTint :: Draw.Color
 
   , suggestedValueScaleFactor :: Vector2 Double
   , suggestedValueTint :: Draw.Color
