@@ -206,13 +206,13 @@
         ],
         "holeResultCount": 8,
         "holeResultScaleFactor": {
-            "_first": 0.75,
-            "_second": 0.75
+            "_first": 1.0,
+            "_second": 1.0
         },
         "holeResultInjectedScaleExponent": 0.65,
         "holeSearchTermScaleFactor": {
-            "_first": 0.6,
-            "_second": 0.6
+            "_first": 1.0,
+            "_second": 1.0
         },
         "holeResultPadding": {
             "_first": 3.0,
@@ -425,7 +425,7 @@
             "Key'Space"
         ]
     ],
-    "baseTextSize": 25,
+    "baseTextSize": 18,
     "wrapKeys": [
         [
             {
@@ -453,8 +453,8 @@
         1.0
     ],
     "suggestedValueScaleFactor": {
-        "_first": 0.7,
-        "_second": 0.7
+        "_first": 0.75,
+        "_second": 0.75
     },
     "jumpLHStoRHSKeys": [
         [
@@ -675,16 +675,16 @@
         0.25
     ],
     "typeScaleFactor": {
-        "_first": 0.6,
-        "_second": 0.6
+        "_first": 0.75,
+        "_second": 0.75
     },
     "whereLabelScaleFactor": {
-        "_first": 0.85,
-        "_second": 0.85
+        "_first": 1.0,
+        "_second": 1.0
     },
     "whereScaleFactor": {
-        "_first": 0.85,
-        "_second": 0.85
+        "_first": 1.0,
+        "_second": 1.0
     },
     "whereItemPadding": {
         "_first": 5,
@@ -729,8 +729,8 @@
         1.0
     ],
     "presentationChoiceScaleFactor": {
-        "_first": 0.4,
-        "_second": 0.4
+        "_first": 0.5,
+        "_second": 0.5
     },
     "jumpToDefinitionKeys": [
         [
