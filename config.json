@@ -470,10 +470,10 @@
         1.0
     ],
     "acceptTypeForFirstTimeColor": [
-        1.0,
-        1.0,
+        0.75,
+        0.75,
         0.0,
-        0.75
+        1.0
     ],
     "jumpRHStoLHSKeys": [
         [
