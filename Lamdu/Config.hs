@@ -16,7 +16,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 
 data Layers = Layers
   { layerMin
-  , layerCursorBG
+  , layerCursor
   , layerTypes
   , layerChoiceBG
   , layerHoleBG

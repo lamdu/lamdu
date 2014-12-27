@@ -90,7 +90,7 @@ respondToCursorIn myIdPrefix widget = do
     then
       widget
       & Widget.backgroundColor
-        (Config.layerCursorBG (Config.layers config))
+        (Config.layerCursor (Config.layers config))
         WidgetIds.backgroundCursorId (Config.cursorBGColor config)
       & Widget.wIsFocused .~ True
     else widget
@@ -120,7 +120,7 @@ makeFocusableLabel text myIdPrefix = do
 fdStyle :: Config -> FocusDelegator.Style
 fdStyle config = FocusDelegator.Style
   { FocusDelegator.color = Config.cursorBGColor config
-  , FocusDelegator.layer = Config.layerCursorBG $ Config.layers config
+  , FocusDelegator.layer = Config.layerCursor $ Config.layers config
   , FocusDelegator.cursorBGAnimId = WidgetIds.backgroundCursorId
   }
 
