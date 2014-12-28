@@ -133,13 +133,13 @@ makeConvertToRecordParams mRecursiveVar (V.Lam paramVar lamBody) stored =
             fixRecursiveCallsToUseRecords tagForVar tagForNewVar recursiveVar lamBody
         protectedSetToVal stored (Property.value stored) <&> EntityId.ofValI
 
-mkRecordParams ::
+convertRecordParams ::
   (MonadA m, Monoid a) =>
   [FieldParam] ->
   V.Lam (Maybe (Val (ExprIRef.ValIProperty m))) ->
   Input.Payload m a ->
   ConvertM m (ConventionalParams m a)
-mkRecordParams fieldParams lam@(V.Lam param _) lambdaPl = do
+convertRecordParams fieldParams lam@(V.Lam param _) lambdaPl = do
   params <- traverse mkParam fieldParams
   pure ConventionalParams
     { cpTags = Set.fromList $ fpTag <$> fieldParams
@@ -202,11 +202,11 @@ makeLamParamActions mRecursiveVar lam lambdaProp =
         }
       }
 
-convertLamParam :: MonadA m =>
+convertNonRecordParam :: MonadA m =>
   Maybe V.Var ->
   V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
   ConvertM m (ConventionalParams m a)
-convertLamParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
+convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
   do
     mActions <-
       sequenceA $ makeLamParamActions mRecursiveVar
@@ -257,17 +257,31 @@ convertLamParams mRecursiveVar lambda lambdaPl =
         , Map.size fields >= 2
         , Set.null (tagsInOuterScope `Set.intersection` tagsInInnerScope)
         , isParamAlwaysUsedWithGetField lambda ->
-          mkRecordParams fieldParams (lambda <&> traverse %%~ (^. Input.mStored)) lambdaPl
+          convertRecordParams fieldParams (lambda <&> traverse %%~ (^. Input.mStored)) lambdaPl
         where
           tagsInInnerScope = Map.keysSet fields
           FlatComposite fields extension = FlatComposite.fromComposite composite
           fieldParams = map makeFieldParam $ Map.toList fields
-      _ -> convertLamParam mRecursiveVar lambda lambdaPl
+      _ -> convertNonRecordParam mRecursiveVar lambda lambdaPl
   where
     makeFieldParam (tag, typeExpr) =
       FieldParam
       { fpTag = tag
       , fpFieldType = typeExpr
+      }
+
+convertEmptyParams :: MonadA m =>
+  Maybe V.Var -> Val (ExprIRef.ValIProperty m) -> ConvertM m (ConventionalParams m a)
+convertEmptyParams mRecursiveVar val =
+  do
+    addFirstParam <- makeAddFirstParam mRecursiveVar val
+    pure
+      ConventionalParams
+      { cpTags = mempty
+      , cpParamInfos = Map.empty
+      , cpParams = []
+      , cpAddFirstParam = addFirstParam
+      , cpHiddenPayloads = []
       }
 
 convertParams ::
@@ -286,7 +300,7 @@ convertParams mRecursiveVar expr =
   _ ->
     do
       params <-
-        emptyConventionalParams mRecursiveVar $
+        convertEmptyParams mRecursiveVar $
         fromMaybe (error "Definition body is always stored!") $ -- TODO: use maybes rather than error
         traverse (^. Input.mStored) expr
       return (params, expr)
@@ -316,20 +330,6 @@ makeAddFirstParam mRecursiveVar val =
         return $ EntityId.ofLambdaParam newParam
   where
     stored = val ^. V.payload
-
-emptyConventionalParams :: MonadA m =>
-  Maybe V.Var -> Val (ExprIRef.ValIProperty m) -> ConvertM m (ConventionalParams m a)
-emptyConventionalParams mRecursiveVar val =
-  do
-    addFirstParam <- makeAddFirstParam mRecursiveVar val
-    pure
-      ConventionalParams
-      { cpTags = mempty
-      , cpParamInfos = Map.empty
-      , cpParams = []
-      , cpAddFirstParam = addFirstParam
-      , cpHiddenPayloads = []
-      }
 
 data ExprWhereItem a = ExprWhereItem
   { ewiBody :: Val a

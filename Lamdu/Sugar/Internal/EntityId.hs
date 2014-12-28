@@ -58,4 +58,3 @@ ofGetFieldTag = augment "tag"
 
 ofRecExtendTag :: EntityId -> EntityId
 ofRecExtendTag = augment "tag"
-                 
