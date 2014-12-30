@@ -291,29 +291,45 @@ resultScore (Val pl body) =
       _ -> 0
 
 idTranslations ::
-  Val EntityId ->
+  Val (EntityId, Type) ->
   Val EntityId ->
   [(EntityId, EntityId)]
-idTranslations src dest
+idTranslations consistentExpr dest
   | V.alphaEq (void src) (void dest)
     = concat
       [ pairUp V.payload
       , pairUp params
       , pairUpTags ExprLens._BRecExtend EntityId.ofRecExtendTag
       , pairUpTags ExprLens._BGetField EntityId.ofGetFieldTag
-      , pairUp getLambdaTagParams
+      , pairUpLambdaRecordParams (consistentExpr <&> snd) dest
       ]
   | otherwise = error "idTranslations of mismatching expressions"
   where
+    pairUpLambdaRecordParams aVal bVal =
+      case (aVal, bVal) of
+      (V.Val srcType (V.BAbs (V.Lam avar _)),
+       V.Val _ (V.BAbs (V.Lam bvar _)))
+        -- TODO: Use a _TRecord prism alternative that verifies the
+        -- record is closed
+        -> [ ( EntityId.ofLambdaTagParam avar tag
+             , EntityId.ofLambdaTagParam bvar tag
+             )
+           | tag <-
+               srcType ^..
+               ExprLens._TFun . _1 . ExprLens._TRecord . ExprLens.compositeTags
+           ] ++ recurse
+      _ -> recurse
+      where
+        recurse =
+          zipWith pairUpLambdaRecordParams
+          (aVal ^.. V.body . Lens.folded)
+          (bVal ^.. V.body . Lens.folded)
+          & concat
+    src = consistentExpr <&> fst
     pairUp l = zip (src ^.. ExprLens.subExprs . l) (dest ^.. ExprLens.subExprs . l)
     pairUpTags prism toEntityId =
       pairUp $
       Lens.filtered (Lens.has (V.body . prism)) . V.payload . Lens.to toEntityId
-    getLambdaTagEntityIds (V.GetField (V.Val _ (V.BLeaf (V.LVar var))) tag) =
-      [EntityId.ofLambdaTagParam var tag]
-    getLambdaTagEntityIds _ = []
-    getLambdaTagParams =
-      V.body . ExprLens._BGetField . Lens.folding getLambdaTagEntityIds
     params =
       V.body . ExprLens._BAbs . V.lamParamId .
       Lens.to EntityId.ofLambdaParam
@@ -483,7 +499,11 @@ mkHoleResult sugarContext entityId stored val =
         <&> (^. Input.guid) &&& (^. Input.entityId)
       , _prIdTranslation =
         idTranslations
-        (consistentExpr <&> (^. Input.entityId))
+        ( consistentExpr <&>
+          \input ->
+          ( input ^. Input.entityId
+          , input ^. Input.inferred . Infer.plType
+          ) )
         (writtenExpr <&> EntityId.ofValI . Property.value . fst)
       }
 
