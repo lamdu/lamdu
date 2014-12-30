@@ -23,48 +23,49 @@ module Lamdu.GUI.ExpressionGui
   , parenify
   -- | stdWrap/stdPostProcess means addTypes
   , stdWrap
-  , stdWrapPair
+  , stdWrapIn
   , stdWrapParentExpr
   , stdWrapParenify
   , addTypeBackground
   ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens (Lens')
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Control.MonadA (MonadA)
-import Data.Monoid (Monoid(..))
-import Data.Store.Property (Property(..))
-import Data.Store.Transaction (Transaction)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Animation (AnimId)
-import Graphics.UI.Bottle.View (View)
-import Graphics.UI.Bottle.Widget (Widget)
-import Graphics.UI.Bottle.Widgets.Box (KBox)
-import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
-import Lamdu.GUI.ExpressionGui.Types (WidgetT, ExpressionGui(..), egWidget, egAlignment)
-import Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
-import Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..), NameCollision(..))
+import           Control.Applicative ((<$>))
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.MonadA (MonadA)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Property (Property(..))
+import           Data.Store.Transaction (Transaction)
+import           Data.Traversable (Traversable(..))
+import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.View (View)
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widgets.Box (KBox)
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Types (WidgetT, ExpressionGui(..), egWidget, egAlignment)
+import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 fromValueWidget :: WidgetT m -> ExpressionGui m
@@ -243,18 +244,19 @@ makeNameEdit (Name nameSrc nameCollision setName name) myId = do
       Lens.mapped . Lens.mapped . Widget.wEventMap %~
       E.filterSChars (curry (`notElem` disallowedNameChars))
 
-stdWrapPair ::
-  MonadA m => Sugar.Payload m ExprGuiM.Payload ->
-  ExprGuiM m (a, ExpressionGui m) ->
-  ExprGuiM m (a, ExpressionGui m)
-stdWrapPair pl mkGui = wrapExprEventMap pl $ _2 %%~ maybeAddInferredTypes pl =<< mkGui
+stdWrapIn ::
+  (Traversable t, MonadA m) =>
+  Sugar.Payload m ExprGuiM.Payload ->
+  ExprGuiM m (t (ExpressionGui m)) ->
+  ExprGuiM m (t (ExpressionGui m))
+stdWrapIn pl mkGui = wrapExprEventMap pl $ traverse (maybeAddInferredTypes pl) =<< mkGui
 
 stdWrap ::
   MonadA m => Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m) ->
   ExprGuiM m (ExpressionGui m)
 stdWrap pl mkGui =
-  snd <$> stdWrapPair pl ((,) () <$> mkGui)
+  snd <$> stdWrapIn pl ((,) () <$> mkGui)
 
 stdWrapDelegated ::
   MonadA m =>
@@ -335,13 +337,13 @@ makeCollisionSuffixLabels (Collision suffix) animId = do
     <&> (:[]) . onSuffixWidget
 
 wrapExprEventMap ::
-  MonadA m =>
+  (MonadA m, Traversable t) =>
   Sugar.Payload m ExprGuiM.Payload ->
-  ExprGuiM m (a, ExpressionGui m) ->
-  ExprGuiM m (a, ExpressionGui m)
+  ExprGuiM m (t (ExpressionGui m)) ->
+  ExprGuiM m (t (ExpressionGui m))
 wrapExprEventMap pl action = do
   (res, resultPickers) <- ExprGuiM.listenResultPickers action
-  res & _2 %%~ addExprEventMap pl resultPickers
+  res & traverse (addExprEventMap pl resultPickers)
 
 addExprEventMap ::
   MonadA m =>

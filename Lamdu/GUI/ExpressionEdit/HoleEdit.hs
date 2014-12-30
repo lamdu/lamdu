@@ -33,7 +33,7 @@ make ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole pl myId = do
   (delegateDestId, closedGui) <-
-    ExpressionGui.stdWrapPair pl $ HoleClosed.make hole pl myId
+    ExpressionGui.stdWrapIn pl $ HoleClosed.make hole pl myId
   let
     closedSize = closedGui ^. ExpressionGui.egWidget . Widget.wSize
     resize =
