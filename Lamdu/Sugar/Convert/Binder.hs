@@ -193,13 +193,13 @@ makeLamParamActions :: MonadA m =>
 makeLamParamActions mRecursiveVar lam lambdaProp =
   do
     delete <- makeDeleteLambda lam lambdaProp
-    addParam <- makeConvertToRecordParams mRecursiveVar lam lambdaProp
+    convertToRecordParams <- makeConvertToRecordParams mRecursiveVar lam lambdaProp
     return
       FuncParamActions
       { _fpListItemActions =
         ListItemActions
         { _itemDelete = delete
-        , _itemAddNext = addParam
+        , _itemAddNext = convertToRecordParams
         }
       }
 
