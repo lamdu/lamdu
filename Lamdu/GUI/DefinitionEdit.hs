@@ -42,6 +42,18 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
+-- Need this newtype so that we can provide a proper 'f' variable to
+-- AddNextHoles.add
+newtype DefF name m a = DefF { unDefF :: Sugar.Definition name m (Sugar.Expression name m a) }
+
+defFExprs ::
+  Lens.Traversal (DefF name m a) (DefF name m b)
+  (Sugar.Expression name m a)
+  (Sugar.Expression name m b)
+defFExprs f (DefF x) = DefF <$> Lens.traverse f x
+
+-- TODO: Do this and the conversion outside where the entire def list
+-- is known, so AddNextHoles can traverse the list instead of each def
 postProcessDefS
   :: MonadA tm =>
      Sugar.DefinitionU tm [Sugar.EntityId] ->
@@ -50,7 +62,9 @@ postProcessDefS defS =
   defS
   & AddNames.addToDef
   <&> fmap onVal
-  <&> AddNextHoles.addToDef
+  <&> DefF
+  <&> AddNextHoles.add defFExprs
+  <&> unDefF
   where
     onVal v =
       v

@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, RankNTypes #-}
 module Lamdu.GUI.ExpressionGui.AddNextHoles
-  ( addToDef, addToExpr
+  ( add
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -30,27 +30,19 @@ markStoredHoles expr =
       Nothing -> pl & Sugar.plData . _1 .~ False
       Just _ -> pl
 
-addToDef ::
+add ::
   MonadA m =>
-  Sugar.Definition name m (Sugar.Expression name m ExprGuiM.Payload) ->
-  Sugar.Definition name m (Sugar.Expression name m ExprGuiM.Payload)
-addToDef def =
-  def
-  <&> markStoredHoles
-  & addPrevHoles (Lens.traverse . Lens.traverse)
-  & addNextHoles (Lens.traverse . Lens.traverse)
-  <&> Lens.mapped . Sugar.plData %~ snd
-
-addToExpr ::
-  MonadA m =>
-  Sugar.Expression name m ExprGuiM.Payload ->
-  Sugar.Expression name m ExprGuiM.Payload
-addToExpr expr =
-  expr
-  & markStoredHoles
-  & addPrevHoles Lens.traverse
-  & addNextHoles Lens.traverse
-  <&> Sugar.plData %~ snd
+  (forall a b.
+   Lens.Traversal (f a) (f b)
+   (Sugar.Expression name m a)
+   (Sugar.Expression name m b)) ->
+  f ExprGuiM.Payload -> f ExprGuiM.Payload
+add traversal s =
+  s
+  & traversal %~ markStoredHoles
+  & addPrevHoles (traversal . Lens.traverse)
+  & addNextHoles (traversal . Lens.traverse)
+  & traversal . Lens.mapped . Sugar.plData %~ snd
 
 addNextHoles :: Lens.Traversal' s (Sugar.Payload m (Bool, ExprGuiM.Payload)) -> s -> s
 addNextHoles traversal s =
