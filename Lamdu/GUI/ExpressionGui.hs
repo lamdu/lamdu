@@ -26,7 +26,7 @@ module Lamdu.GUI.ExpressionGui
   , stdWrapPair
   , stdWrapParentExpr
   , stdWrapParenify
-  , addInferredTypes, addTypeBackground
+  , addTypeBackground
   ) where
 
 import Control.Applicative ((<$>))
@@ -165,9 +165,9 @@ addType config exprId typeView eg =
   where
     items =
       [ (0.5, Spacer.makeWidget 5)
-      , (0.5, annotatedTypes)
+      , (0.5, annotatedType)
       ]
-    annotatedTypes =
+    annotatedType =
       typeView
       & addTypeBackground config (Widget.toAnimId exprId) (eg ^. egWidget . wWidth)
       & uncurry Widget.liftView
@@ -247,7 +247,7 @@ stdWrapPair ::
   MonadA m => Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (a, ExpressionGui m) ->
   ExprGuiM m (a, ExpressionGui m)
-stdWrapPair pl mkGui = wrapExprEventMap pl $ _2 %%~ addInferredTypes pl =<< mkGui
+stdWrapPair pl mkGui = wrapExprEventMap pl $ _2 %%~ maybeAddInferredTypes pl =<< mkGui
 
 stdWrap ::
   MonadA m => Sugar.Payload m ExprGuiM.Payload ->
@@ -353,12 +353,12 @@ addExprEventMap pl resultPickers gui = do
     resultPickers pl
   gui & egWidget %~ Widget.weakerEvents exprEventMap & return
 
-alwaysAddInferredTypes ::
+addInferredTypes ::
   MonadA m =>
   Sugar.Payload m a ->
   ExpressionGui m ->
   ExprGuiM m (ExpressionGui m)
-alwaysAddInferredTypes exprPl eg =
+addInferredTypes exprPl eg =
   do
     config <- ExprGuiM.widgetEnv WE.readConfig
     typeView <-
@@ -370,16 +370,16 @@ alwaysAddInferredTypes exprPl eg =
     entityId = exprPl ^. Sugar.plEntityId
     exprId = WidgetIds.fromEntityId entityId
 
-addInferredTypes ::
+maybeAddInferredTypes ::
   MonadA m =>
   Sugar.Payload m ExprGuiM.Payload ->
   ExpressionGui m ->
   ExprGuiM m (ExpressionGui m)
-addInferredTypes exprPl eg =
+maybeAddInferredTypes exprPl eg =
   do
     s <- ExprGuiM.shouldShowType $ exprPl ^. Sugar.plData . ExprGuiM.plShowType
     if s
-      then alwaysAddInferredTypes exprPl eg
+      then addInferredTypes exprPl eg
       else return eg
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
