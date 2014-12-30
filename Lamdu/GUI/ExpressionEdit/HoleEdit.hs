@@ -1,29 +1,29 @@
+{-# LANGUAGE NoMonomorphismRestriction #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit
   ( make
   ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens.Operators
-import Control.Monad (guard)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.MonadA (MonadA)
-import Data.Maybe (fromMaybe)
-import Data.Maybe.Utils (maybeToMPlus)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (diveIntoHole)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
-import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad (guard)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Maybe (MaybeT(..), mapMaybeT)
+import           Control.MonadA (MonadA)
+import           Data.Maybe (fromMaybe)
+import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Closed as HoleClosed
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (diveIntoHole)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as HoleOpen
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
+import           Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
+import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
@@ -33,7 +33,8 @@ make ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole pl myId = do
   (delegateDestId, closedGui) <-
-    ExpressionGui.stdWrapIn pl $ HoleClosed.make hole pl myId
+    HoleClosed.make hole pl myId
+    & wrap
   let
     closedSize = closedGui ^. ExpressionGui.egWidget . Widget.wSize
     resize =
@@ -42,9 +43,14 @@ make hole pl myId = do
         (Lens._2 .~ closedSize ^. Lens._2)
       ) .
       (ExpressionGui.egAlignment .~ closedGui ^. ExpressionGui.egAlignment)
-  ExprGuiM.assignCursor myId delegateDestId $
-    fromMaybe closedGui <$>
-    runMaybeT (resize <$> tryOpenHole hole pl myId)
+  tryOpenHole hole pl myId
+    & mapMaybeT wrap
+    <&> resize
+    & runMaybeT
+    <&> fromMaybe closedGui
+    & ExprGuiM.assignCursor myId delegateDestId
+  where
+    wrap = ExpressionGui.stdWrapIn pl
 
 tryOpenHole ::
   MonadA m =>
