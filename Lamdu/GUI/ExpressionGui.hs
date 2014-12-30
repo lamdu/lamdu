@@ -99,7 +99,11 @@ hboxSpaced :: [ExpressionGui m] -> ExpressionGui m
 hboxSpaced = hbox . List.intersperse (fromValueWidget BWidgets.stdSpaceWidget)
 
 vboxDownwards :: [(Widget.R, ExpressionGui m)] -> ExpressionGui m
-vboxDownwards = gridDownwards . map (:[])
+vboxDownwards [] = error "Empty vboxDownwards"
+vboxDownwards ((hAlign, x) : xs) =
+  addBelow hAlign (xs <&> toAlignedWidget) x
+  where
+    toAlignedWidget (align, gui) = (Vector2 align 0, gui ^. egWidget)
 
 vboxDownwardsSpaced ::
   MonadA m => [(Widget.R, ExpressionGui m)] -> ExprGuiM m (ExpressionGui m)

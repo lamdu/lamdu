@@ -71,24 +71,29 @@ makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
 makeWheres ::
   MonadA m =>
   [Sugar.WhereItem (Name m) m (ExprGuiM.SugarExpr m)] -> Widget.Id ->
-  ExprGuiM m [Widget (T m)]
-makeWheres [] _ = return []
+  ExprGuiM m (Maybe (WidgetT m))
+makeWheres [] _ = return Nothing
 makeWheres whereItems myId =
   do
     config <- ExprGuiM.widgetEnv WE.readConfig
     whereLabel <-
-      (fmap . Widget.scale) (realToFrac <$> Config.whereLabelScaleFactor config) .
-      ExprGuiM.widgetEnv . BWidgets.makeLabel "where" $ Widget.toAnimId myId
+      BWidgets.makeLabel "where" (Widget.toAnimId myId)
+      & ExprGuiM.widgetEnv
+      <&> ExpressionGui.fromValueWidget
+      <&> ExpressionGui.scaleFromTop (realToFrac <$> Config.whereLabelScaleFactor config)
     itemEdits <-
       whereItems & reverse
       & ExpressionGui.listWithDelDests myId myId wiCursor
       & traverse makeWhereItemEdit
-    return
-      [ BWidgets.hboxSpaced
-        [ (0, whereLabel)
-        , (0, Widget.scale (realToFrac <$> Config.whereScaleFactor config) $ Box.vboxAlign 0 itemEdits)
-        ]
+    ExpressionGui.hboxSpaced
+      [ whereLabel
+      , itemEdits
+        <&> (,) 0
+        & ExpressionGui.vboxDownwards
+        & ExpressionGui.scaleFromTop (realToFrac <$> Config.whereScaleFactor config)
       ]
+      ^. ExpressionGui.egWidget
+      & Just & return
   where
     wiCursor = WidgetIds.fromEntityId . (^. Sugar.wiEntityId)
 
@@ -128,33 +133,32 @@ mkPresentationModeEdit myId prop = do
 layout ::
   MonadA m =>
   ExpressionGui m -> [ExpressionGui m] ->
-  ExpressionGui m -> [Widget (Transaction m)] ->
+  ExpressionGui m -> Maybe (WidgetT m) ->
   Widget.Id ->
-  ExprGuiM m (Widget (Transaction m))
-layout defNameEdit paramEdits bodyEdit wheres myId =
+  ExprGuiM m (ExpressionGui m)
+layout defNameEdit paramEdits bodyEdit mWheresEdit myId =
   do
-    equals <- ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
+    equals <-
+      BWidgets.makeLabel "=" (Widget.toAnimId myId)
+      & ExprGuiM.widgetEnv <&> ExpressionGui.fromValueWidget
     paramsEdit <-
       case paramEdits of
       [] -> return []
       xs -> xs <&> (,) 0 & ExpressionGui.vboxDownwardsSpaced <&> (:[])
     let
       topRow =
-        ExpressionGui.hboxSpaced
-        ( defNameEdit :
-          paramsEdit ++
-          [ ExpressionGui.fromValueWidget equals
-          , bodyEdit
-          ]
-        ) ^. ExpressionGui.egWidget
-    return $ Box.vboxAlign 0 $ topRow : wheres
+        ExpressionGui.hboxSpaced $
+        defNameEdit : paramsEdit ++ [ equals, bodyEdit ]
+    topRow
+      & ExpressionGui.addBelow 0 (mWheresEdit ^.. Lens._Just <&> (,) 0)
+      & return
 
 make ::
   MonadA m =>
   Name m ->
   Sugar.Binder (Name m) m (ExprGuiM.SugarExpr m) ->
   Widget.Id ->
-  ExprGuiM m (WidgetT m)
+  ExprGuiM m (ExpressionGui m)
 make name binder myId = do
   rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods E.Key'Equal] rhs
   bodyEdit <- makeResultEdit (binder ^. Sugar.dMActions) params body myId
@@ -168,8 +172,8 @@ make name binder myId = do
     makeParamsEdit ExprGuiM.ShowType myId params
     <&> Lens.mapped . ExpressionGui.egWidget
         %~ Widget.weakerEvents rhsJumperEquals
-  wheres <- makeWheres (binder ^. Sugar.dWhereItems) myId
-  layout defNameEdit paramEdits bodyEdit wheres myId
+  mWheresEdit <- makeWheres (binder ^. Sugar.dWhereItems) myId
+  layout defNameEdit paramEdits bodyEdit mWheresEdit myId
   where
     presentationChoiceId = Widget.joinId myId ["presentation"]
     rhs = ("Def Body", body)
@@ -182,7 +186,7 @@ toEventMapAction = FocusDelegator.delegatingId . WidgetIds.fromEntityId
 makeWhereItemEdit ::
   MonadA m =>
   (Widget.Id, Widget.Id, Sugar.WhereItem (Name m) m (ExprGuiM.SugarExpr m)) ->
-  ExprGuiM m (WidgetT m)
+  ExprGuiM m (ExpressionGui m)
 makeWhereItemEdit (_prevId, nextId, item) = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
@@ -197,11 +201,11 @@ makeWhereItemEdit (_prevId, nextId, item) = do
           fmap WidgetIds.fromEntityId $ wiActions ^. Sugar.itemAddNext
         ]
       | otherwise = mempty
-  Widget.weakerEvents eventMap <$>
-    make
+  make
     (item ^. Sugar.wiName)
     (item ^. Sugar.wiValue)
     (WidgetIds.fromEntityId (item ^. Sugar.wiEntityId))
+    <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
 
 jumpToRHS ::
   (MonadA m, MonadA f) =>

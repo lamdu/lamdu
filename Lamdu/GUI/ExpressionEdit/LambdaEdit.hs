@@ -9,7 +9,6 @@ import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.Parens as Parens
@@ -36,16 +35,15 @@ make parentPrecedence binder pl =
         >>= ExpressionGui.vboxDownwardsSpaced
       dotLabel <- ExprGuiM.widgetEnv $ BWidgets.grammarLabel ". " myId
       bodyEdit <- BinderEdit.makeResultEdit (binder ^. Sugar.dMActions) params body myId
-      wheres <-
+      mWheresEdit <-
         BinderEdit.makeWheres (binder ^. Sugar.dWhereItems) myId
-        <&> Box.vboxAlign 0
       ExpressionGui.fromValueWidget lambdaLabel :
         [ paramsEdit
         , ExpressionGui.fromValueWidget dotLabel
         , bodyEdit
         ]
         & ExpressionGui.hbox
-        & ExpressionGui.addBelow 0 [(0, wheres)]
+        & maybe id (ExpressionGui.addBelow 0 . (:[]) . (,) 0) mWheresEdit
         & return
   where
     params = binder ^. Sugar.dParams

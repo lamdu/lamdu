@@ -147,6 +147,7 @@ makeExprDefinition def bodyExpr = do
   bodyWidget <-
     BinderEdit.make (def ^. Sugar.drName)
     (bodyExpr ^. Sugar.deContent) myId
+    <&> (^. ExprGui.egWidget)
   let width = bodyWidget ^. Widget.wSize . Lens._1
   vspace <- BWidgets.verticalSpace & ExprGuiM.widgetEnv
   typeWidget <-
