@@ -60,6 +60,9 @@ class (MonadA m, MonadA (TM m)) => MonadNaming m where
   opGetParamName :: NameConvertor m
   opGetHiddenParamsName :: NameConvertor m
 
+type OldExpression m a = Expression (OldName m) (TM m) a
+type NewExpression m a = Expression (NewName m) (TM m) a
+
 type StoredName = String
 
 -- pass 0
@@ -346,8 +349,8 @@ toTagG = tagGName opGetTagName
 
 toRecordField ::
   MonadNaming m =>
-  RecordField (OldName m) (TM m) (Expression (OldName m) (TM m) a) ->
-  m (RecordField (NewName m) (TM m) (Expression (NewName m) (TM m) a))
+  RecordField (OldName m) (TM m) (OldExpression m a) ->
+  m (RecordField (NewName m) (TM m) (NewExpression m a))
 toRecordField recordField@RecordField {..} = do
   tag <- toTagG _rfTag
   expr <- toExpression _rfExpr
@@ -358,8 +361,8 @@ toRecordField recordField@RecordField {..} = do
 
 toRecord ::
   MonadNaming m =>
-  Record (OldName m) (TM m) (Expression (OldName m) (TM m) a) ->
-  m (Record (NewName m) (TM m) (Expression (NewName m) (TM m) a))
+  Record (OldName m) (TM m) (OldExpression m a) ->
+  m (Record (NewName m) (TM m) (NewExpression m a))
 toRecord record@Record {..} = do
   items <- traverse toRecordField _rItems
   t <- traverse toExpression _rTail
@@ -367,8 +370,8 @@ toRecord record@Record {..} = do
 
 toGetField ::
   MonadNaming m =>
-  GetField (OldName m) (Expression (OldName m) (TM m) a) ->
-  m (GetField (NewName m) (Expression (NewName m) (TM m) a))
+  GetField (OldName m) (OldExpression m a) ->
+  m (GetField (NewName m) (NewExpression m a))
 toGetField getField@GetField {..} = do
   record <- toExpression _gfRecord
   tag <- toTagG _gfTag
@@ -407,8 +410,8 @@ toHoleSuggested inferred = do
 
 toHole ::
   MonadNaming m =>
-  Hole (OldName m) (TM m) (Expression (OldName m) (TM m) a) ->
-  m (Hole (NewName m) (TM m) (Expression (NewName m) (TM m) a))
+  Hole (OldName m) (TM m) (OldExpression m a) ->
+  m (Hole (NewName m) (TM m) (NewExpression m a))
 toHole hole@Hole {..} = do
   mActions <- _holeMActions & Lens._Just %%~ toHoleActions
   inferred <- toHoleSuggested _holeSuggested
@@ -433,8 +436,8 @@ toGetVar getVar =
 
 toApply ::
   MonadNaming m =>
-  Apply (OldName m) (Expression (OldName m) (TM m) a) ->
-  m (Apply (NewName m) (Expression (NewName m) (TM m) a))
+  Apply (OldName m) (OldExpression m a) ->
+  m (Apply (NewName m) (NewExpression m a))
 toApply la@Apply{..} = do
   func <- toExpression _aFunc
   specialArgs <- traverse toExpression _aSpecialArgs
@@ -447,14 +450,14 @@ toApply la@Apply{..} = do
 
 traverseToExpr ::
   (MonadNaming m, Traversable t) =>
-  (t (Expression (NewName m) (TM m) a) -> b) -> t (Expression (OldName m) (TM m) a) ->
+  (t (NewExpression m a) -> b) -> t (OldExpression m a) ->
   m b
 traverseToExpr cons body = cons <$> traverse toExpression body
 
 toBody ::
   MonadNaming m =>
-  Body (OldName m) (TM m) (Expression (OldName m) (TM m) a) ->
-  m (Body (NewName m) (TM m) (Expression (NewName m) (TM m) a))
+  Body (OldName m) (TM m) (OldExpression m a) ->
+  m (Body (NewName m) (TM m) (NewExpression m a))
 toBody (BodyList x)           = traverseToExpr BodyList x
 toBody (BodyLiteralInteger x) = pure $ BodyLiteralInteger x
 --
@@ -466,14 +469,14 @@ toBody (BodyHole x) = BodyHole <$> toHole x
 toBody (BodyGetVar x) = BodyGetVar <$> toGetVar x
 
 toExpression ::
-  MonadNaming m => Expression (OldName m) (TM m) a ->
-  m (Expression (NewName m) (TM m) a)
+  MonadNaming m => OldExpression m a ->
+  m (NewExpression m a)
 toExpression = rBody toBody
 
 withWhereItem ::
   MonadNaming m =>
-  WhereItem (OldName m) (TM m) (Expression (OldName m) (TM m) a) ->
-  CPS m (WhereItem (NewName m) (TM m) (Expression (NewName m) (TM m) a))
+  WhereItem (OldName m) (TM m) (OldExpression m a) ->
+  CPS m (WhereItem (NewName m) (TM m) (NewExpression m a))
 withWhereItem item@WhereItem{..} = CPS $ \k -> do
   (name, (value, res)) <-
     runCPS (opWithWhereItemName (isFunctionType _wiInferredType) _wiName) $
@@ -482,8 +485,8 @@ withWhereItem item@WhereItem{..} = CPS $ \k -> do
 
 toBinder ::
   MonadNaming m =>
-  Binder (OldName m) (TM m) (Expression (OldName m) (TM m) a) ->
-  m (Binder (NewName m) (TM m) (Expression (NewName m) (TM m) a))
+  Binder (OldName m) (TM m) (OldExpression m a) ->
+  m (Binder (NewName m) (TM m) (NewExpression m a))
 toBinder def@Binder{..} = do
   (params, (whereItems, body)) <-
     runCPS (traverse withFuncParam _dParams) .
@@ -497,8 +500,8 @@ toBinder def@Binder{..} = do
 
 toDefinitionBody ::
   MonadNaming m =>
-  DefinitionBody (OldName m) (TM m) (Expression (OldName m) (TM m) a) ->
-  m (DefinitionBody (NewName m) (TM m) (Expression (NewName m) (TM m) a))
+  DefinitionBody (OldName m) (TM m) (OldExpression m a) ->
+  m (DefinitionBody (NewName m) (TM m) (NewExpression m a))
 toDefinitionBody (DefinitionBodyBuiltin bi) =
   pure (DefinitionBodyBuiltin bi)
 toDefinitionBody
@@ -508,8 +511,8 @@ toDefinitionBody
 
 toDef ::
   MonadNaming m =>
-  Definition (OldName m) (TM m) (Expression (OldName m) (TM m) a) ->
-  m (Definition (NewName m) (TM m) (Expression (NewName m) (TM m) a))
+  Definition (OldName m) (TM m) (OldExpression m a) ->
+  m (Definition (NewName m) (TM m) (NewExpression m a))
 toDef def@Definition {..} = do
   (name, body) <- runCPS (opWithDefName _drName) $ toDefinitionBody _drBody
   pure def { _drName = name, _drBody = body }
