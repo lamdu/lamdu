@@ -84,8 +84,8 @@ data ResultsList m = ResultsList
   }
 Lens.makeLenses ''ResultsList
 
-getVarToGroup :: Sugar.ScopeItem (Name n) m -> Group def
-getVarToGroup (Sugar.ScopeItem getVar expr) =
+getVarToGroup :: Sugar.ScopeGetVar (Name n) m -> Group def
+getVarToGroup (Sugar.ScopeGetVar getVar expr) =
   sugarNameToGroup (getVar ^. Sugar.gvName) expr
 
 sugarNameToGroup :: Name m -> Val () -> Group def
@@ -209,14 +209,14 @@ getVarTypesOrder =
 
 makeAllGroups :: MonadA m => HoleInfo m -> T m [GroupM m]
 makeAllGroups holeInfo = do
-  scopeItems <- hiActions holeInfo ^. Sugar.holeScope
+  scopeGetVars <- hiActions holeInfo ^. Sugar.holeScope
   let
     allGroups =
       addSuggestedGroups $
       primitiveGroups holeInfo ++
       concat
-      [ scopeItems
-        & filter ((gvType ==) . (^. Sugar.siGetVar . Sugar.gvVarType))
+      [ scopeGetVars
+        & filter ((gvType ==) . (^. Sugar.sgvGetVar . Sugar.gvVarType))
         & map getVarToGroup
         & sortOn (^. groupAttributes . searchTerms)
       | gvType <- getVarTypesOrder

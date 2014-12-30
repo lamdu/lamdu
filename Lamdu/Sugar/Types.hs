@@ -48,7 +48,7 @@ module Lamdu.Sugar.Types
   , HoleSuggested(..), hsValue, hsMakeConverted
   , Hole(..)
     , holeMActions, holeMArg, holeSuggested, holeGuid
-  , ScopeItem(..), siGetVar, siVal
+  , ScopeGetVar(..), sgvGetVar, sgvVal
   , HoleActions(..)
     , holeScope, holePaste, holeResults
   , HoleResultScore
@@ -161,13 +161,13 @@ data HoleResult name m = HoleResult
   , _holeResultHoleTarget :: Maybe EntityId -- hole inside picked result
   }
 
-data ScopeItem name m = ScopeItem
-  { _siGetVar :: GetVar name m
-  , _siVal :: Val ()
+data ScopeGetVar name m = ScopeGetVar
+  { _sgvGetVar :: GetVar name m
+  , _sgvVal :: Val ()
   }
 
 data HoleActions name m = HoleActions
-  { _holeScope :: T m [ScopeItem name m]
+  { _holeScope :: T m [ScopeGetVar name m]
   , _holeResults ::
       Val () -> ListT (T m) (HoleResultScore, T m (HoleResult name m))
   , _holePaste :: Maybe (T m EntityId)
@@ -371,7 +371,7 @@ Lens.makeLenses ''Payload
 Lens.makeLenses ''PickedResult
 Lens.makeLenses ''Record
 Lens.makeLenses ''RecordField
-Lens.makeLenses ''ScopeItem
+Lens.makeLenses ''ScopeGetVar
 Lens.makeLenses ''TagG
 Lens.makeLenses ''WhereItem
 Lens.makePrisms ''Body

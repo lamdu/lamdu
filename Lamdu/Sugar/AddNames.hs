@@ -377,11 +377,11 @@ toGetField getField@GetField {..} = do
   tag <- toTagG _gfTag
   pure getField { _gfRecord = record, _gfTag = tag }
 
-toScopeItem ::
+toScopeGetVar ::
   MonadNaming m =>
-  ScopeItem (OldName m) (TM m) ->
-  m (ScopeItem (NewName m) (TM m))
-toScopeItem (ScopeItem gv val) = (`ScopeItem` val) <$> toGetVar gv
+  ScopeGetVar (OldName m) (TM m) ->
+  m (ScopeGetVar (NewName m) (TM m))
+toScopeGetVar (ScopeGetVar gv val) = (`ScopeGetVar` val) <$> toGetVar gv
 
 toHoleActions ::
   MonadNaming m =>
@@ -391,7 +391,7 @@ toHoleActions ha@HoleActions {..} = do
   InTransaction run <- opRun
   pure ha
     { _holeScope =
-      run . traverse toScopeItem =<< _holeScope
+      run . traverse toScopeGetVar =<< _holeScope
     , _holeResults =
       _holeResults
       & Lens.mapped . Lens.mapped . _2 %~

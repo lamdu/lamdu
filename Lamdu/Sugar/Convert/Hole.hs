@@ -111,8 +111,8 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
       -- ^ We wrap this in a (T m) so that AddNames can place the
       -- name-getting penalty under a transaction that the GUI may
       -- avoid using
-      (concatMap (getLocalScopeItems sugarContext) . Map.toList . Infer.scopeToTypeMap) inferredScope ++
-      map getGlobalScopeItem (filter (/= sugarContext ^. ConvertM.scDefI) globals)
+      (concatMap (getLocalScopeGetVars sugarContext) . Map.toList . Infer.scopeToTypeMap) inferredScope ++
+      map getGlobalScopeGetVar (filter (/= sugarContext ^. ConvertM.scDefI) globals)
     , _holeResults = mkHoleResults mInjectedArg sugarContext exprPl stored
     , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
     }
@@ -172,39 +172,39 @@ mkHole mInjectedArg exprPl = do
     , _holeMArg = Nothing
     }
 
-getLocalScopeItems ::
-  MonadA m => ConvertM.Context m -> (V.Var, Type) -> [ScopeItem Guid m]
-getLocalScopeItems sugarContext (par, typeExpr) =
-  ScopeItem
-  { _siGetVar = ConvertGetVar.convertVar sugarContext par
-  , _siVal = getParam
+getLocalScopeGetVars ::
+  MonadA m => ConvertM.Context m -> (V.Var, Type) -> [ScopeGetVar Guid m]
+getLocalScopeGetVars sugarContext (par, typeExpr) =
+  ScopeGetVar
+  { _sgvGetVar = ConvertGetVar.convertVar sugarContext par
+  , _sgvVal = getParam
   } :
   map onScopeField
   (typeExpr ^.. ExprLens._TRecord . ExprLens.compositeTags)
   where
     getParam = P.var par
     onScopeField tag =
-      ScopeItem
-      { _siGetVar =
+      ScopeGetVar
+      { _sgvGetVar =
         GetVar
         { _gvName = UniqueId.toGuid tag
         , _gvJumpTo = error "Jump to on scope item??"
         , _gvVarType = GetFieldParameter
         }
-      , _siVal = P.getField getParam tag
+      , _sgvVal = P.getField getParam tag
       }
 
 -- TODO: Put the result in scopeGlobals in the caller, not here?
-getGlobalScopeItem :: MonadA m => DefI m -> ScopeItem Guid m
-getGlobalScopeItem defI =
-    ScopeItem
-    { _siGetVar =
+getGlobalScopeGetVar :: MonadA m => DefI m -> ScopeGetVar Guid m
+getGlobalScopeGetVar defI =
+    ScopeGetVar
+    { _sgvGetVar =
       GetVar
       { _gvName = UniqueId.toGuid defI
       , _gvJumpTo = errorJumpTo
       , _gvVarType = GetDefinition
       }
-    , _siVal = P.global $ ExprIRef.globalId defI
+    , _sgvVal = P.global $ ExprIRef.globalId defI
     }
   where
     errorJumpTo = error "Jump to on scope item??"
