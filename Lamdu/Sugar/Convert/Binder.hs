@@ -1,10 +1,11 @@
-{-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types, PatternGuards #-}
+{-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types, PatternGuards, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Binder
   ( convertBinder, convertLam
   , makeDeleteLambda
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
+import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Monad (void)
 import Control.MonadA (MonadA)
@@ -29,8 +30,8 @@ import qualified Data.Store.Property as Property
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
-import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.GenIds as GenIds
+import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -45,10 +46,12 @@ type T = Transaction
 data ConventionalParams m a = ConventionalParams
   { cpTags :: Set T.Tag
   , cpParamInfos :: Map T.Tag ConvertM.TagParamInfo
-  , cpParams :: [FuncParam Guid m]
+  , _cpParams :: [FuncParam Guid m]
   , cpAddFirstParam :: T m EntityId
-  , cpHiddenPayloads :: [Input.Payload m a]
   }
+
+cpParams :: Lens' (ConventionalParams m a) [FuncParam Guid m]
+cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalParams{..}
 
 data FieldParam = FieldParam
   { fpTag :: T.Tag
@@ -137,18 +140,16 @@ convertRecordParams ::
   (MonadA m, Monoid a) =>
   [FieldParam] ->
   V.Lam (Maybe (Val (ExprIRef.ValIProperty m))) ->
-  Input.Payload m a ->
   ConvertM m (ConventionalParams m a)
-convertRecordParams fieldParams lam@(V.Lam param _) lambdaPl = do
+convertRecordParams fieldParams lam@(V.Lam param _) = do
   params <- traverse mkParam fieldParams
   pure ConventionalParams
     { cpTags = Set.fromList $ fpTag <$> fieldParams
     , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
-    , cpParams = params
+    , _cpParams = params
     , cpAddFirstParam =
       error "TODO cpAddFirstParam"--  addFirstFieldParam lamEntityId $
       -- fromMaybe (error "Record param type must be stored!") mParamTypeI
-    , cpHiddenPayloads = [lambdaPl]
     }
   where
     fpIdEntityId = EntityId.ofLambdaTagParam param . fpTag
@@ -220,14 +221,13 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
         , _fpId = paramEntityId
         , _fpInferredType = paramType
         , _fpMActions = mActions
-        , _fpHiddenIds = [lamExprPl ^. Input.entityId]
+        , _fpHiddenIds = []
         }
     pure ConventionalParams
       { cpTags = mempty
       , cpParamInfos = Map.empty
-      , cpParams = [funcParam]
+      , _cpParams = [funcParam]
       , cpAddFirstParam = error "TODO: addFirstParam"
-      , cpHiddenPayloads = []
       }
   where
     paramEntityId = EntityId.ofLambdaParam param
@@ -257,7 +257,7 @@ convertLamParams mRecursiveVar lambda lambdaPl =
         , Map.size fields >= 2
         , Set.null (tagsInOuterScope `Set.intersection` tagsInInnerScope)
         , isParamAlwaysUsedWithGetField lambda ->
-          convertRecordParams fieldParams (lambda <&> traverse %%~ (^. Input.mStored)) lambdaPl
+          convertRecordParams fieldParams (lambda <&> traverse %%~ (^. Input.mStored))
         where
           tagsInInnerScope = Map.keysSet fields
           FlatComposite fields extension = FlatComposite.fromComposite composite
@@ -279,9 +279,8 @@ convertEmptyParams mRecursiveVar val =
       ConventionalParams
       { cpTags = mempty
       , cpParamInfos = Map.empty
-      , cpParams = []
+      , _cpParams = []
       , cpAddFirstParam = addFirstParam
-      , cpHiddenPayloads = []
       }
 
 convertParams ::
@@ -295,7 +294,11 @@ convertParams mRecursiveVar expr =
   case expr ^. V.body of
   V.BAbs lambda ->
     do
-      params <- convertLamParams mRecursiveVar lambda (expr ^. V.payload)
+      params <-
+        convertLamParams mRecursiveVar lambda (expr ^. V.payload)
+        -- The lambda disappears here, so add its id to the first
+        -- param's hidden ids:
+        <&> cpParams . Lens.ix 0 . fpHiddenIds <>~ [expr ^. V.payload . Input.entityId]
       return (params, lambda ^. V.lamResult)
   _ ->
     do
@@ -414,12 +417,9 @@ makeBinder setPresentationMode convParams funcBody =
       (whereItems, whereBody) <- convertWhereItems funcBody
       bodyS <- ConvertM.convertSubexpression whereBody
       return Binder
-        { _dParams = cpParams convParams
+        { _dParams = convParams ^. cpParams
         , _dSetPresentationMode = setPresentationMode
-        , _dBody =
-          bodyS
-          & rPayload . plData <>~
-            cpHiddenPayloads convParams ^. Lens.traversed . Input.userData
+        , _dBody = bodyS
         , _dWhereItems = whereItems
         , _dMActions = mkActions <$> whereBody ^. V.payload . Input.mStored
         }
@@ -449,7 +449,7 @@ convertBinder mRecursiveVar defGuid expr =
     (convParams, funcBody) <- convertParams mRecursiveVar expr
     let
       setPresentationMode
-        | isLengthAtLeast 2 (cpParams convParams) =
+        | isLengthAtLeast 2 (convParams ^. cpParams) =
           Just $ Anchors.assocPresentationMode defGuid
         | otherwise = Nothing
     makeBinder setPresentationMode convParams funcBody
