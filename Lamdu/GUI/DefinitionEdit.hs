@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.DefinitionEdit
   ( make
-  , makeNewDefinition
   , diveToNameEdit
   ) where
 
@@ -29,7 +28,6 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
@@ -195,14 +193,3 @@ makeExprDefinition def bodyExpr = do
 
 diveToNameEdit :: Widget.Id -> Widget.Id
 diveToNameEdit = BinderEdit.diveToNameEdit
-
-makeNewDefinition ::
-  MonadA m => Anchors.CodeProps m ->
-  WidgetEnvT (T m) (T m Widget.Id)
-makeNewDefinition cp = do
-  curCursor <- WE.readCursor
-  return $ do
-    newDefI <- DataOps.newPublicDefinition cp ""
-    DataOps.newPane cp newDefI
-    DataOps.savePreJumpPosition cp curCursor
-    return . diveToNameEdit $ WidgetIds.fromIRef newDefI

@@ -108,6 +108,17 @@ make env rootGuid = do
     , clipboardsEdit
     ]
 
+makeNewDefinition ::
+  MonadA m => Anchors.CodeProps m ->
+  WidgetEnvT (T m) (T m Widget.Id)
+makeNewDefinition cp = do
+  curCursor <- WE.readCursor
+  return $ do
+    newDefI <- DataOps.newPublicDefinition cp ""
+    DataOps.newPane cp newDefI
+    DataOps.savePreJumpPosition cp curCursor
+    return . DefinitionEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
+
 makePanesEdit :: MonadA m => Env m -> [Pane m] -> Widget.Id -> WidgetEnvT (T m) (Widget (T m))
 makePanesEdit env panes myId = do
   config <- WE.readConfig
@@ -136,7 +147,7 @@ makePanesEdit env panes myId = do
         return . Box.vboxAlign 0 $ intersperse (Spacer.makeWidget 50) definitionEdits
 
   mJumpBack <- lift . DataOps.jumpBack $ codeProps env
-  newDefinition <- DefinitionEdit.makeNewDefinition $ codeProps env
+  newDefinition <- makeNewDefinition $ codeProps env
   let
     panesEventMap =
       mconcat
