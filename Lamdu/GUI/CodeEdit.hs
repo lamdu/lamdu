@@ -18,6 +18,7 @@ import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Load (loadDef)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
+import Lamdu.Sugar.AddNames.Types (DefinitionN)
 import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
@@ -34,7 +35,10 @@ import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.AddNames as AddNames
 import qualified Lamdu.Sugar.Convert as SugarConvert
+import qualified Lamdu.Sugar.NearestHoles as NearestHoles
+import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
@@ -83,7 +87,12 @@ makePanes (Property panes setPanes) rootGuid =
       , paneMoveUp = mkMMovePaneUp i
       }
 
-makeClipboardsEdit :: MonadA m => Env m -> [DefI m] -> WidgetEnvT (T m) (Widget (T m))
+type ProcessedDef m = DefinitionN m ([Sugar.EntityId], NearestHoles.NearestHoles)
+
+makeClipboardsEdit ::
+  MonadA m => Env m ->
+  [ProcessedDef m] ->
+  WidgetEnvT (T m) (Widget (T m))
 makeClipboardsEdit env clipboards = do
   clipboardsEdits <- traverse (makePaneWidget env) clipboards
   clipboardTitle <-
@@ -95,13 +104,34 @@ makeClipboardsEdit env clipboards = do
 getClipboards :: MonadA m => Anchors.CodeProps m -> T m [DefI m]
 getClipboards = Transaction.getP . Anchors.clipboards
 
+processDefI ::
+  MonadA m =>
+  Env m -> DefI m -> T m (ProcessedDef m)
+processDefI env defI =
+  loadDef defI
+  >>= SugarConvert.convertDefI (codeProps env)
+  >>= AddNames.addToDef
+  <&> Lens.mapped . Lens.mapped . Sugar.plData %~ (,)
+  <&> DefF <&> NearestHoles.add defFExprs <&> unDefF
+
+processPane :: MonadA m => Env m -> Pane m -> T m (Pane m, ProcessedDef m)
+processPane env pane =
+  processDefI env (paneDefI pane)
+  <&> (,) pane
+
 make :: MonadA m => Env m -> Guid -> WidgetEnvT (T m) (Widget (T m))
 make env rootGuid = do
   prop <- lift $ Anchors.panes (codeProps env) ^. Transaction.mkProperty
+
   (sugarPanes, sugarClipboards) <-
     (,) (makePanes prop rootGuid) <$> (lift . getClipboards) (codeProps env)
-  panesEdit <- makePanesEdit env sugarPanes $ WidgetIds.fromGuid rootGuid
-  clipboardsEdit <- makeClipboardsEdit env sugarClipboards
+
+  loadedPanes <- traverse (processPane env) sugarPanes & lift
+  loadedClipboards <- traverse (processDefI env) sugarClipboards & lift
+
+  panesEdit <- makePanesEdit env loadedPanes $ WidgetIds.fromGuid rootGuid
+  clipboardsEdit <- makeClipboardsEdit env loadedClipboards
+
   return $
     Box.vboxAlign 0
     [ panesEdit
@@ -119,8 +149,20 @@ makeNewDefinition cp = do
     DataOps.savePreJumpPosition cp curCursor
     return . DefinitionEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
 
-makePanesEdit :: MonadA m => Env m -> [Pane m] -> Widget.Id -> WidgetEnvT (T m) (Widget (T m))
-makePanesEdit env panes myId = do
+-- Need this newtype so that we can provide a proper 'f' variable to
+-- NearestHoles.add
+newtype DefF name m a = DefF { unDefF :: Sugar.Definition name m (Sugar.Expression name m a) }
+
+defFExprs ::
+  Lens.Traversal (DefF name m a) (DefF name m b)
+  (Sugar.Expression name m a)
+  (Sugar.Expression name m b)
+defFExprs f (DefF x) = DefF <$> Lens.traverse f x
+
+makePanesEdit ::
+  MonadA m => Env m -> [(Pane m, ProcessedDef m)] ->
+  Widget.Id -> WidgetEnvT (T m) (Widget (T m))
+makePanesEdit env loadedPanes myId = do
   config <- WE.readConfig
   let
     Config.Pane{..} = Config.pane config
@@ -135,32 +177,41 @@ makePanesEdit env panes myId = do
         (Widget.keysEventMap paneMoveUpKeys
          (E.Doc ["View", "Pane", "Move up"])) $ paneMoveUp pane
       ]
-    makePaneEdit pane =
-      (fmap . Widget.weakerEvents) (paneEventMap pane) .
-      makePaneWidget env . paneDefI $ pane
+    makePaneEdit (pane, defS) =
+      makePaneWidget env defS
+      <&> Widget.weakerEvents (paneEventMap pane)
   panesWidget <-
-    case panes of
+    case loadedPanes of
     [] -> BWidgets.makeFocusableTextView "<No panes>" myId
-    (firstPane:_) ->
-      (WE.assignCursor myId . WidgetIds.fromIRef . paneDefI) firstPane $ do
-        definitionEdits <- traverse makePaneEdit panes
+    ((firstPane, _):_) ->
+      do
+        definitionEdits <- traverse makePaneEdit loadedPanes
         return . Box.vboxAlign 0 $ intersperse (Spacer.makeWidget 50) definitionEdits
+      & (WE.assignCursor myId . WidgetIds.fromIRef . paneDefI) firstPane
+  eventMap <- panesEventMap env
+  panesWidget
+    & Widget.weakerEvents eventMap
+    & return
 
-  mJumpBack <- lift . DataOps.jumpBack $ codeProps env
-  newDefinition <- makeNewDefinition $ codeProps env
-  let
-    panesEventMap =
-      mconcat
+panesEventMap ::
+  MonadA m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (T m))
+panesEventMap env =
+  do
+    config <- WE.readConfig
+    let Config.Pane{..} = Config.pane config
+    mJumpBack <- lift . DataOps.jumpBack $ codeProps env
+    newDefinition <- makeNewDefinition $ codeProps env
+    return $ mconcat
       [ Widget.keysEventMapMovesCursor newDefinitionKeys
         (E.Doc ["Edit", "New definition"]) newDefinition
       , maybe mempty
         (Widget.keysEventMapMovesCursor (Config.previousCursorKeys config)
          (E.Doc ["Navigation", "Go back"])) mJumpBack
       ]
-  return $ Widget.weakerEvents panesEventMap panesWidget
 
-makePaneWidget :: MonadA m => Env m -> DefI m -> WidgetEnvT (T m) (Widget (T m))
-makePaneWidget env defI = do
+makePaneWidget ::
+  MonadA m => Env m -> ProcessedDef m -> WidgetEnvT (T m) (Widget (T m))
+makePaneWidget env defS = do
   config <- WE.readConfig
   let
     Config.Pane{..} = Config.pane config
@@ -173,10 +224,7 @@ makePaneWidget env defI = do
       WidgetIds.activeDefBackground paneActiveBGColor
     colorizeInactivePane =
       Widget.wFrame %~ Anim.onImages (Draw.tint paneInactiveTintColor)
-  loadDef defI
-    >>= SugarConvert.convertDefI (codeProps env)
-    & lift
-    >>= DefinitionEdit.make (codeProps env) (settings env)
+  DefinitionEdit.make (codeProps env) (settings env) defS
     <&> fitToWidth (totalWidth env) . colorize
 
 fitToWidth :: Widget.R -> Widget f -> Widget f

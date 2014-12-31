@@ -18,6 +18,7 @@ import Lamdu.GUI.CodeEdit.Settings (Settings)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import Lamdu.Sugar.AddNames.Types (Name(..), DefinitionN)
+import Lamdu.Sugar.NearestHoles (NearestHoles)
 import Lamdu.Sugar.RedundantTypes (redundantTypes)
 import qualified Control.Lens as Lens
 import qualified Graphics.DrawingCombinators as Draw
@@ -33,62 +34,48 @@ import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import qualified Lamdu.Sugar.NearestHoles as AddNearestHoles
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.AddNames as AddNames
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
--- Need this newtype so that we can provide a proper 'f' variable to
--- AddNearestHoles.add
-newtype DefF name m a = DefF { unDefF :: Sugar.Definition name m (Sugar.Expression name m a) }
-
-defFExprs ::
-  Lens.Traversal (DefF name m a) (DefF name m b)
-  (Sugar.Expression name m a)
-  (Sugar.Expression name m b)
-defFExprs f (DefF x) = DefF <$> Lens.traverse f x
-
 -- TODO: Do this and the conversion outside where the entire def list
--- is known, so AddNearestHoles can traverse the list instead of each def
-postProcessDefS
-  :: MonadA tm =>
-     Sugar.DefinitionU tm [Sugar.EntityId] ->
-     T tm (DefinitionN tm ExprGuiM.Payload)
-postProcessDefS defS =
-  defS
-  & AddNames.addToDef
-  <&> Lens.mapped . Lens.mapped . Sugar.plData %~ mkPayload
-  <&> DefF <&> AddNearestHoles.add defFExprs <&> unDefF
-  <&> fmap onVal
+-- is known, so NearestHoles can traverse the list instead of each def
+markRedundantTypes :: MonadA m => ExprGuiM.SugarExpr m -> ExprGuiM.SugarExpr m
+markRedundantTypes v =
+  v
+  & redundantTypes         . showType .~ ExprGuiM.DoNotShowType
+  & SugarLens.holePayloads . showType .~ ExprGuiM.ShowType
+  & SugarLens.holeArgs     . showType .~ ExprGuiM.ShowType
+  & Sugar.rPayload         . showType .~ ExprGuiM.ShowType
   where
-    onVal v =
-      v
-      & redundantTypes . showType .~ ExprGuiM.DoNotShowType
-      & SugarLens.holePayloads . showType .~ ExprGuiM.ShowType
-      & SugarLens.holeArgs . showType .~ ExprGuiM.ShowType
-      & Sugar.rPayload . showType .~ ExprGuiM.ShowType
     showType = Sugar.plData . ExprGuiM.plShowType
-    mkPayload entityIds nearestHoles =
-      ExprGuiM.emptyPayload nearestHoles
-      & ExprGuiM.plStoredEntityIds .~ entityIds
+
+toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiM.Payload
+toExprGuiMPayload (entityIds, nearestHoles) =
+  ExprGuiM.emptyPayload nearestHoles
+  & ExprGuiM.plStoredEntityIds .~ entityIds
 
 make ::
   MonadA m => Anchors.CodeProps m -> Settings ->
-  Sugar.DefinitionU m [Sugar.EntityId] ->
+  DefinitionN m ([Sugar.EntityId], NearestHoles) ->
   WidgetEnvT (T m) (WidgetT m)
-make cp settings defI = ExprGuiM.run ExpressionEdit.make cp settings $ do
-  defS <- ExprGuiM.transaction $ postProcessDefS defI
-  case defS ^. Sugar.drBody of
+make cp settings defS =
+  ExprGuiM.run ExpressionEdit.make cp settings $
+  case exprGuiDefS ^. Sugar.drBody of
     Sugar.DefinitionBodyExpression bodyExpr ->
-      makeExprDefinition defS bodyExpr
+      makeExprDefinition exprGuiDefS bodyExpr
     Sugar.DefinitionBodyBuiltin builtin ->
-      makeBuiltinDefinition defS builtin
+      makeBuiltinDefinition exprGuiDefS builtin
+  where
+    exprGuiDefS =
+      defS
+      <&> Lens.mapped . Sugar.plData %~ toExprGuiMPayload
+      <&> markRedundantTypes
 
 topLevelSchemeTypeView :: MonadA m => Widget.R -> AnimId -> Scheme -> ExprGuiM m (Widget f)
 topLevelSchemeTypeView minWidth animId scheme =
@@ -124,8 +111,8 @@ makeBuiltinDefinition def builtin =
 typeIndicatorId :: Widget.Id -> Widget.Id
 typeIndicatorId myId = Widget.joinId myId ["type indicator"]
 
-typeIndicator
-  :: MonadA m => Widget.R -> Draw.Color -> Widget.Id -> ExprGuiM m (Widget f)
+typeIndicator ::
+  MonadA m => Widget.R -> Draw.Color -> Widget.Id -> ExprGuiM m (Widget f)
 typeIndicator width color myId =
   do
     config <- ExprGuiM.widgetEnv WE.readConfig
@@ -138,8 +125,10 @@ typeIndicator width color myId =
       & Widget.tint color
       & return
 
-acceptableTypeIndicator
-  :: (MonadA m, MonadA f) => Widget.R -> f a -> Draw.Color -> Widget.Id -> ExprGuiM m (Widget f)
+acceptableTypeIndicator ::
+  (MonadA m, MonadA f) =>
+  Widget.R -> f a -> Draw.Color -> Widget.Id ->
+  ExprGuiM m (Widget f)
 acceptableTypeIndicator width accept color myId =
   do
     config <- ExprGuiM.widgetEnv WE.readConfig
