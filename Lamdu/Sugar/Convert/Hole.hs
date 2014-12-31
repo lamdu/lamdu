@@ -176,22 +176,27 @@ getLocalScopeGetVars ::
   MonadA m => ConvertM.Context m -> (V.Var, Type) -> [ScopeGetVar Guid m]
 getLocalScopeGetVars sugarContext (par, typeExpr) =
   ScopeGetVar
-  { _sgvGetVar = ConvertGetVar.convertVar sugarContext par
-  , _sgvVal = getParam
+  { _sgvGetVar = ConvertGetVar.convertVar sugarContext par typeExpr
+  , _sgvVal = P.var par
   } :
-  map onScopeField
-  (typeExpr ^.. ExprLens._TRecord . ExprLens.compositeTags)
+  map mkFieldParam fieldTags
   where
-    getParam = P.var par
-    onScopeField tag =
+    fieldTags =
+      ( sugarContext ^@..
+        ConvertM.scTagParamInfos .>
+        ( Lens.itraversed <.
+          Lens.to ConvertM.tpiFromParameters ) <.
+          Lens.filtered (== par)
+      ) <&> fst
+    mkFieldParam tag =
       ScopeGetVar
       { _sgvGetVar =
-        GetVar
-        { _gvName = UniqueId.toGuid tag
-        , _gvJumpTo = error "Jump to on scope item??"
-        , _gvVarType = GetFieldParameter
+        GetVarNamed NamedVar
+        { _nvName = UniqueId.toGuid tag
+        , _nvJumpTo = error "Jump to on scope item??"
+        , _nvVarType = GetFieldParameter
         }
-      , _sgvVal = P.getField getParam tag
+      , _sgvVal = P.getField (P.var par) tag
       }
 
 -- TODO: Put the result in scopeGlobals in the caller, not here?
@@ -199,10 +204,10 @@ getGlobalScopeGetVar :: MonadA m => DefI m -> ScopeGetVar Guid m
 getGlobalScopeGetVar defI =
     ScopeGetVar
     { _sgvGetVar =
-      GetVar
-      { _gvName = UniqueId.toGuid defI
-      , _gvJumpTo = errorJumpTo
-      , _gvVarType = GetDefinition
+      GetVarNamed NamedVar
+      { _nvName = UniqueId.toGuid defI
+      , _nvJumpTo = errorJumpTo
+      , _nvVarType = GetDefinition
       }
     , _sgvVal = P.global $ ExprIRef.globalId defI
     }

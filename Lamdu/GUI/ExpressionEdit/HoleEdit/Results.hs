@@ -85,19 +85,23 @@ data ResultsList m = ResultsList
 Lens.makeLenses ''ResultsList
 
 getVarToGroup :: Sugar.ScopeGetVar (Name n) m -> Group def
-getVarToGroup (Sugar.ScopeGetVar getVar expr) =
-  sugarNameToGroup (getVar ^. Sugar.gvName) expr
+getVarToGroup (Sugar.ScopeGetVar (Sugar.GetVarNamed namedVar) expr) =
+  sugarNameToGroup (namedVar ^. Sugar.nvName) expr
+getVarToGroup (Sugar.ScopeGetVar (Sugar.GetVarParamsRecord paramsRecord) expr) =
+  sugarNamesToGroup (paramsRecord ^. Sugar.prvFieldNames) expr
+  & groupAttributes . searchTerms <>~ ["params", "record"]
 
 sugarNameToGroup :: Name m -> Val () -> Group def
-sugarNameToGroup (Name _ collision _ varName) expr = Group
-  { _groupAttributes = GroupAttributes (varName : collisionStrs) HighPrecedence
+sugarNameToGroup name = sugarNamesToGroup [name]
+
+sugarNamesToGroup :: [Name m] -> Val () -> Group def
+sugarNamesToGroup names expr = Group
+  { _groupAttributes = GroupAttributes (concatMap mkSearchTerms names)  HighPrecedence
   , _groupBaseExpr = expr
   }
   where
-    collisionStrs =
-      case collision of
-      NoCollision -> []
-      Collision suffix -> [show suffix]
+    mkSearchTerms (Name _ NoCollision _ varName) = [varName]
+    mkSearchTerms (Name _ (Collision suffix) _ varName) = [varName ++ show suffix]
 
 prefixId :: HoleInfo m -> WidgetId.Id
 prefixId holeInfo = mconcat [hiActiveId holeInfo, WidgetId.Id ["results"]]
@@ -200,7 +204,7 @@ makeAll config holeInfo = do
     resultList = ListClass.catMaybes allGroupsList
   ExprGuiM.transaction $ collectResults config resultList
 
-getVarTypesOrder :: [Sugar.GetVarType]
+getVarTypesOrder :: [Sugar.NamedVarType]
 getVarTypesOrder =
   [ Sugar.GetParameter
   , Sugar.GetFieldParameter
@@ -216,13 +220,20 @@ makeAllGroups holeInfo = do
       primitiveGroups holeInfo ++
       concat
       [ scopeGetVars
-        & filter ((gvType ==) . (^. Sugar.sgvGetVar . Sugar.gvVarType))
-        & map getVarToGroup
-        & sortOn (^. groupAttributes . searchTerms)
-      | gvType <- getVarTypesOrder
-      ]
+        & filter ((Just nvType ==) . (^? Sugar.sgvGetVar . Sugar._GetVarNamed . Sugar.nvVarType))
+        & sortedGetVarGroups
+      | nvType <- getVarTypesOrder
+      ] ++
+      ( scopeGetVars
+        & filter (Lens.has (Sugar.sgvGetVar . Sugar._GetVarParamsRecord))
+        & sortedGetVarGroups
+      )
   pure $ holeMatches (^. groupAttributes) (hiSearchTerm holeInfo) allGroups
   where
+    sortedGetVarGroups getVars =
+      getVars
+      & map getVarToGroup
+      & sortOn (^. groupAttributes . searchTerms)
     suggestedGroups =
       [ Group
         { _groupAttributes = GroupAttributes ["suggested"] HighPrecedence

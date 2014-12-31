@@ -49,6 +49,7 @@ data Context m = Context
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions m
   , _scTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
+    -- TODO: scTagParamInfos needs a reverse-lookup map too
   , -- Check whether the definition is valid after an edit,
     -- so that can hole-wrap bad edits.
     _scReinferCheckDefinition :: T m Bool

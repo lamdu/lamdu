@@ -35,8 +35,10 @@ module Lamdu.Sugar.Types
   , RecordTail(..), _RecordExtending, _ClosedRecord
   , Record(..), rItems, rMAddField, rTail
   , GetField(..), gfRecord, gfTag
-  , GetVarType(..)
-  , GetVar(..), gvName, gvJumpTo, gvVarType
+  , NamedVarType(..)
+  , NamedVar(..), nvName, nvJumpTo, nvVarType
+  , GetVar(..), _GetVarNamed, _GetVarParamsRecord
+  , ParamsRecordVar(..), prvFieldNames
   , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
   , AnnotatedArg(..), aaTag, aaTagExprEntityId, aaExpr
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
@@ -235,14 +237,22 @@ data GetField name expr = GetField
   , _gfTag :: TagG name
   } deriving (Functor, Foldable, Traversable)
 
-data GetVarType = GetDefinition | GetFieldParameter | GetParameter
+data NamedVarType = GetDefinition | GetFieldParameter | GetParameter
   deriving (Eq, Ord)
 
-data GetVar name m = GetVar
-  { _gvName :: name
-  , _gvJumpTo :: T m EntityId
-  , _gvVarType :: GetVarType
+data NamedVar name m = NamedVar
+  { _nvName :: name
+  , _nvJumpTo :: T m EntityId
+  , _nvVarType :: NamedVarType
   }
+
+newtype ParamsRecordVar name = ParamsRecordVar
+  { _prvFieldNames :: [name]
+  } deriving (Eq, Ord, Functor, Foldable, Traversable)
+
+data GetVar name m
+  = GetVarNamed (NamedVar name m)
+  | GetVarParamsRecord (ParamsRecordVar name)
 
 data SpecialArgs expr
   = NoSpecialArgs
@@ -359,7 +369,6 @@ Lens.makeLenses ''ExpressionP
 Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''GetField
-Lens.makeLenses ''GetVar
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg
@@ -367,6 +376,8 @@ Lens.makeLenses ''HoleResult
 Lens.makeLenses ''HoleSuggested
 Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions
+Lens.makeLenses ''NamedVar
+Lens.makeLenses ''ParamsRecordVar
 Lens.makeLenses ''Payload
 Lens.makeLenses ''PickedResult
 Lens.makeLenses ''Record
@@ -377,6 +388,7 @@ Lens.makeLenses ''WhereItem
 Lens.makePrisms ''Body
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo
+Lens.makePrisms ''GetVar
 Lens.makePrisms ''RecordTail
 Lens.makePrisms ''SetToHole
 Lens.makePrisms ''SetToInnerExpr

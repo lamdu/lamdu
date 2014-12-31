@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.GetVarEdit
   ( make
   ) where
@@ -6,9 +6,11 @@ module Lamdu.GUI.ExpressionEdit.GetVarEdit
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
+import Data.Monoid ((<>))
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.AddNames.Types (Name(..))
+import qualified Data.ByteString.Char8 as SBS8
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -22,13 +24,10 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
 makeSimpleView ::
-  MonadA m =>
-  Draw.Color ->
-  Sugar.GetVar (Name m) m ->
-  Widget.Id ->
+  MonadA m => Draw.Color -> Name m -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makeSimpleView color getVar myId =
-  ExpressionGui.makeNameView (getVar ^. Sugar.gvName) (Widget.toAnimId myId)
+makeSimpleView color name myId =
+  ExpressionGui.makeNameView name (Widget.toAnimId myId)
   >>= BWidgets.makeFocusableView myId
   <&> ExpressionGui.fromValueWidget
   & ExprGuiM.widgetEnv
@@ -43,18 +42,34 @@ make ::
 make getVar pl myId = do
   cp <- ExprGuiM.readCodeAnchors
   config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    jumpToDefinitionEventMap =
-      Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
-      (E.Doc ["Navigation", "Jump to definition"]) $ do
-        DataOps.savePreJumpPosition cp myId
-        WidgetIds.fromEntityId <$> getVar ^. Sugar.gvJumpTo
-    Config.Name{..} = Config.name config
-    makeView =
-      case getVar ^. Sugar.gvVarType of
-      Sugar.GetDefinition -> makeSimpleView definitionColor
-      Sugar.GetParameter -> makeSimpleView parameterColor
-      Sugar.GetFieldParameter -> makeSimpleView parameterColor
-  makeView getVar myId
-    & ExpressionGui.stdWrap pl
-    <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
+  let Config.Name{..} = Config.name config
+  case getVar of
+    Sugar.GetVarNamed namedVar ->
+      makeView (namedVar ^. Sugar.nvName) myId
+        & ExpressionGui.stdWrap pl
+        <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
+      where
+        jumpToDefinitionEventMap =
+          Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
+          (E.Doc ["Navigation", "Jump to definition"]) $ do
+            DataOps.savePreJumpPosition cp myId
+            WidgetIds.fromEntityId <$> namedVar ^. Sugar.nvJumpTo
+        makeView =
+          case namedVar ^. Sugar.nvVarType of
+          Sugar.GetDefinition -> makeSimpleView definitionColor
+          Sugar.GetParameter -> makeSimpleView parameterColor
+          Sugar.GetFieldParameter -> makeSimpleView parameterColor
+    Sugar.GetVarParamsRecord paramsRecordVar ->
+      sequence
+      [ ExpressionGui.makeLabel "Params {" (Widget.toAnimId myId <> ["prefix"])
+      , zip [0..] fieldNames
+        & mapM
+          (\(i, fieldName) ->
+           makeSimpleView parameterColor fieldName $
+           Widget.joinId myId ["params", SBS8.pack (show (i::Int))])
+        <&> ExpressionGui.hboxSpaced
+      , ExpressionGui.makeLabel "}" (Widget.toAnimId myId <> ["suffix"])
+      ] <&> ExpressionGui.hbox
+      & ExpressionGui.stdWrap pl
+      where
+        Sugar.ParamsRecordVar fieldNames = paramsRecordVar

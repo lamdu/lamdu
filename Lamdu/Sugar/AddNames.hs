@@ -422,17 +422,33 @@ toHole hole@Hole {..} = do
     , _holeSuggested = inferred
     }
 
-toGetVar ::
-  MonadNaming m => GetVar (OldName m) tm ->
-  m (GetVar (NewName m) tm)
-toGetVar getVar =
-  gvName f getVar
+toNamedVar ::
+  MonadNaming m =>
+  NamedVar (OldName m) (TM m) ->
+  m (NamedVar (NewName m) (TM m))
+toNamedVar namedVar =
+  nvName f namedVar
   where
     f =
-      case getVar ^. gvVarType of
+      case namedVar ^. nvVarType of
       GetParameter      -> opGetParamName
       GetFieldParameter -> opGetTagName
       GetDefinition     -> opGetDefName
+
+toParamsRecordVar ::
+  MonadNaming m => ParamsRecordVar (OldName m) ->
+  m (ParamsRecordVar (NewName m))
+toParamsRecordVar (ParamsRecordVar names) =
+  ParamsRecordVar <$> traverse opGetTagName names
+
+toGetVar ::
+  MonadNaming m =>
+  GetVar (OldName m) (TM m) ->
+  m (GetVar (NewName m) (TM m))
+toGetVar (GetVarNamed x) =
+  GetVarNamed <$> toNamedVar x
+toGetVar (GetVarParamsRecord x) =
+  GetVarParamsRecord <$> toParamsRecordVar x
 
 toApply ::
   MonadNaming m =>

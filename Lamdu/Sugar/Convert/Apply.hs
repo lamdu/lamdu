@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 module Lamdu.Sugar.Convert.Apply
   ( convert
   ) where
@@ -63,8 +64,8 @@ indirectDefinitionGuid funcS =
   -- a GetField behind the scenes, and we probably don't want to
   -- associate the Guid of the tag here? Need to throw this Guid or
   -- associated data into the GetVar/GetField itself anyway!
-  BodyGetVar gv -> Just (gv ^. gvName)
-  BodyGetField _ -> Nothing -- TODO: <-- do we want to make something up here?
+  BodyGetVar (GetVarNamed NamedVar { _nvName }) -> Just _nvName
+  -- TODO: <-- do we want to make something up for get-fields, etc?
   _ -> Nothing
 
 indirectDefinitionPresentationMode ::

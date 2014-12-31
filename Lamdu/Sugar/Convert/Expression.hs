@@ -26,6 +26,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
+import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
@@ -77,10 +78,10 @@ convertGetField (V.GetField recExpr tag) exprPl = do
   tagParamInfos <- (^. ConvertM.scTagParamInfos) <$> ConvertM.readContext
   let
     mkGetVar jumpTo =
-      pure GetVar
-      { _gvName = UniqueId.toGuid tag
-      , _gvJumpTo = pure jumpTo
-      , _gvVarType = GetFieldParameter
+      pure $ GetVarNamed NamedVar
+      { _nvName = UniqueId.toGuid tag
+      , _nvJumpTo = pure jumpTo
+      , _nvVarType = GetFieldParameter
       }
   mVar <- traverse mkGetVar $ do
     paramInfo <- Map.lookup tag tagParamInfos
@@ -112,10 +113,10 @@ convertGlobal globalId exprPl =
     lift $ do
       cp <- (^. ConvertM.scCodeAnchors) <$> ConvertM.readContext
       addActions exprPl .
-        BodyGetVar $ GetVar
-        { _gvName = UniqueId.toGuid defI
-        , _gvJumpTo = jumpToDefI cp defI
-        , _gvVarType = GetDefinition
+        BodyGetVar $ GetVarNamed NamedVar
+        { _nvName = UniqueId.toGuid defI
+        , _nvJumpTo = jumpToDefI cp defI
+        , _nvVarType = GetDefinition
         }
     where
       defI = ExprIRef.defI globalId
@@ -125,7 +126,10 @@ convertGetVar ::
   V.Var -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertGetVar param exprPl = do
   sugarContext <- ConvertM.readContext
-  addActions exprPl $ BodyGetVar $ ConvertGetVar.convertVar sugarContext param
+  ConvertGetVar.convertVar sugarContext param
+    (exprPl ^. Input.inferred . Infer.plType)
+    & BodyGetVar
+    & addActions exprPl
 
 convert :: (MonadA m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert v =

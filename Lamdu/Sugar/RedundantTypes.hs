@@ -13,8 +13,8 @@ import qualified Control.Lens as Lens
 redundantTypesDefaultTop :: Bool -> Traversal' (Expression name m a) (Payload m a)
 redundantTypesDefaultTop topRedundant f (Expression body pl) =
   case body of
-  BodyGetVar GetVar { _gvVarType = GetFieldParameter } -> redundant
-  BodyGetVar GetVar { _gvVarType = GetParameter } -> redundant
+  BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetFieldParameter }) -> redundant
+  BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetParameter }) -> redundant
   BodyLiteralInteger {} -> redundant
   BodyRecord{} -> redundant
   BodyList{} -> redundantChildren
