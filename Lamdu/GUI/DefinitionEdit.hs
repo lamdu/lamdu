@@ -33,7 +33,7 @@ import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import qualified Lamdu.GUI.ExpressionGui.AddNextHoles as AddNextHoles
+import qualified Lamdu.Sugar.NearestHoles as AddNearestHoles
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -45,7 +45,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction
 
 -- Need this newtype so that we can provide a proper 'f' variable to
--- AddNextHoles.add
+-- AddNearestHoles.add
 newtype DefF name m a = DefF { unDefF :: Sugar.Definition name m (Sugar.Expression name m a) }
 
 defFExprs ::
@@ -55,7 +55,7 @@ defFExprs ::
 defFExprs f (DefF x) = DefF <$> Lens.traverse f x
 
 -- TODO: Do this and the conversion outside where the entire def list
--- is known, so AddNextHoles can traverse the list instead of each def
+-- is known, so AddNearestHoles can traverse the list instead of each def
 postProcessDefS
   :: MonadA tm =>
      Sugar.DefinitionU tm [Sugar.EntityId] ->
@@ -63,21 +63,19 @@ postProcessDefS
 postProcessDefS defS =
   defS
   & AddNames.addToDef
+  <&> Lens.mapped . Lens.mapped . Sugar.plData %~ mkPayload
+  <&> DefF <&> AddNearestHoles.add defFExprs <&> unDefF
   <&> fmap onVal
-  <&> DefF
-  <&> AddNextHoles.add defFExprs
-  <&> unDefF
   where
     onVal v =
       v
-      & Lens.mapped . Sugar.plData %~ mkPayload
       & redundantTypes . showType .~ ExprGuiM.DoNotShowType
       & SugarLens.holePayloads . showType .~ ExprGuiM.ShowType
       & SugarLens.holeArgs . showType .~ ExprGuiM.ShowType
       & Sugar.rPayload . showType .~ ExprGuiM.ShowType
     showType = Sugar.plData . ExprGuiM.plShowType
-    mkPayload entityIds =
-      ExprGuiM.emptyPayload
+    mkPayload entityIds nearestHoles =
+      ExprGuiM.emptyPayload nearestHoles
       & ExprGuiM.plStoredEntityIds .~ entityIds
 
 make ::

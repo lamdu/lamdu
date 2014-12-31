@@ -30,6 +30,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
@@ -104,7 +105,7 @@ pickPlaceholderEventMap ::
   Widget.EventHandlers (T m)
 pickPlaceholderEventMap Config.Hole{..} holeInfo shownResult =
   -- TODO: Does this entityId business make sense?
-  case hiHoleEntityIds holeInfo ^. ExprGuiM.hgMNextHole of
+  case hiNearestHoles holeInfo ^. NearestHoles.next of
   Just nextHoleEntityId | not holeResultHasHoles ->
     mappend
     (simplePickRes holePickResultKeys)

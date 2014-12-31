@@ -192,7 +192,7 @@ Executable lamdu
                ,       Lamdu.GUI.ExpressionEdit.RecordEdit
                ,       Lamdu.GUI.ExpressionEdit.TagEdit
                ,       Lamdu.GUI.ExpressionGui
-               ,       Lamdu.GUI.ExpressionGui.AddNextHoles
+               ,       Lamdu.Sugar.NearestHoles
                ,       Lamdu.GUI.ExpressionGui.Monad
                ,       Lamdu.GUI.ExpressionGui.Types
                ,       Lamdu.GUI.ParamEdit

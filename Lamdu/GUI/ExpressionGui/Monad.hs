@@ -4,9 +4,7 @@ module Lamdu.GUI.ExpressionGui.Monad
   , widgetEnv
   , makeLabel
   , StoredEntityIds(..), Injected(..)
-  , HoleEntityIds(..), hgMNextHole, hgMPrevHole
-  , emptyHoleEntityIds
-  , Payload(..), plStoredEntityIds, plInjected, plHoleEntityIds, plShowType
+  , Payload(..), plStoredEntityIds, plInjected, plNearestHoles, plShowType
   , ShowType(..)
   , shouldShowType
   , emptyPayload
@@ -43,6 +41,7 @@ import Lamdu.GUI.ExpressionGui.Types (ExpressionGui(..), WidgetT)
 import Lamdu.GUI.Precedence (ParentPrecedence(..), Precedence)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import Lamdu.Sugar.AddNames.Types (ExpressionN)
+import Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.RWS as RWS
 import qualified Data.Char as Char
@@ -57,6 +56,7 @@ import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -83,31 +83,22 @@ newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
 newtype Injected = Injected [Bool]
   deriving (Monoid, Binary, Eq, Ord)
 
-data HoleEntityIds = HoleEntityIds
-  { _hgMNextHole :: Maybe Sugar.EntityId
-  , _hgMPrevHole :: Maybe Sugar.EntityId
-  }
-Lens.makeLenses ''HoleEntityIds
-
-emptyHoleEntityIds :: HoleEntityIds
-emptyHoleEntityIds = HoleEntityIds Nothing Nothing
-
 data ShowType = ShowTypeInVerboseMode | DoNotShowType | ShowType
 
 -- GUI input payload on sugar exprs
 data Payload = Payload
   { _plStoredEntityIds :: [Sugar.EntityId]
   , _plInjected :: [Bool]
-  , _plHoleEntityIds :: HoleEntityIds
+  , _plNearestHoles :: NearestHoles
   , _plShowType :: ShowType
   }
 Lens.makeLenses ''Payload
 
-emptyPayload :: Payload
-emptyPayload = Payload
+emptyPayload :: NearestHoles -> Payload
+emptyPayload nearestHoles = Payload
   { _plStoredEntityIds = []
   , _plInjected = []
-  , _plHoleEntityIds = emptyHoleEntityIds
+  , _plNearestHoles = nearestHoles
   , _plShowType = ShowTypeInVerboseMode
   }
 
@@ -225,11 +216,11 @@ listenResultPickers = listener oHolePickers
 addResultPicker :: MonadA m => T m Widget.EventResult -> ExprGuiM m ()
 addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }
 
-nextHolesBefore :: Sugar.Expression name m Payload -> HoleEntityIds
+nextHolesBefore :: Sugar.Expression name m Payload -> NearestHoles
 nextHolesBefore val =
-  val ^. Sugar.rPayload . Sugar.plData . plHoleEntityIds
+  val ^. Sugar.rPayload . Sugar.plData . plNearestHoles
   & if Lens.has (Sugar.rBody . Sugar._BodyHole) val
-    then hgMNextHole .~ Just (val ^. Sugar.rPayload . Sugar.plEntityId)
+    then NearestHoles.next .~ Just (val ^. Sugar.rPayload . Sugar.plEntityId)
     else id
 
 shouldShowType :: MonadA m => ShowType -> ExprGuiM m Bool

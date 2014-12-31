@@ -44,6 +44,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
+import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
@@ -259,15 +260,11 @@ postProcessSugar expr =
 
 toPayload :: Sugar.IsInjected -> ExprGuiM.Payload
 toPayload isInjected =
-  ExprGuiM.Payload
-  { ExprGuiM._plStoredEntityIds = []
-  , ExprGuiM._plInjected =
+  ExprGuiM.emptyPayload NearestHoles.none
+  & ExprGuiM.plInjected .~
     case isInjected of
     Sugar.NotInjected -> []
     Sugar.Injected -> [True]
-  , ExprGuiM._plHoleEntityIds = ExprGuiM.emptyHoleEntityIds
-  , ExprGuiM._plShowType = ExprGuiM.DoNotShowType
-  }
 
 makeNoResults :: MonadA m => HoleInfo m -> AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults holeInfo animId =

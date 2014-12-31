@@ -32,6 +32,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
@@ -141,7 +142,8 @@ makeSuggested suggested myId = do
   gui <-
     (suggested ^. Sugar.hsMakeConverted)
     & ExprGuiM.transaction
-    <&> Lens.mapped . Lens.mapped .~ emptyPl
+    <&> Lens.mapped . Lens.mapped .~ ExprGuiM.emptyPayload NearestHoles.none
+    <&> Lens.mapped . Lens.mapped . ExprGuiM.plShowType .~ ExprGuiM.DoNotShowType
     >>= ExprGuiM.makeSubexpression 0
     >>= ExpressionGui.egWidget %%~
         makeFocusable myId .
@@ -162,14 +164,6 @@ makeSuggested suggested myId = do
     fullySuggested =
       Lens.nullOf (ExprLens.subExprs . ExprLens.valHole) $
       suggested ^. Sugar.hsValue
-    emptyPl =
-      ExprGuiM.Payload
-      { ExprGuiM._plStoredEntityIds = []
-      , ExprGuiM._plInjected = []
-      , ExprGuiM._plShowType = ExprGuiM.DoNotShowType
-      -- filled by AddNextHoles above
-      , ExprGuiM._plHoleEntityIds = ExprGuiM.emptyHoleEntityIds
-      }
 
 makeSimple :: MonadA m => Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeSimple myId = do

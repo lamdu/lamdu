@@ -73,6 +73,6 @@ tryOpenHole hole pl myId = do
     , hiSuggested = hole ^. Sugar.holeSuggested
     , hiId = myId
     , hiState = stateProp
-    , hiHoleEntityIds = pl ^. Sugar.plData . ExprGuiM.plHoleEntityIds
+    , hiNearestHoles = pl ^. Sugar.plData . ExprGuiM.plNearestHoles
     , hiMArgument = hole ^. Sugar.holeMArg
     }

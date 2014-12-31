@@ -10,6 +10,7 @@ import Data.Store.Property (Property(..))
 import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (diveIntoHole)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState, hsSearchTerm)
 import Lamdu.Sugar.AddNames.Types (Name)
+import Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -26,7 +27,7 @@ data HoleInfo m = HoleInfo
   , hiActions :: Sugar.HoleActions (Name m) m
   , hiSuggested :: Sugar.HoleSuggested (Name m) m
   , hiMArgument :: Maybe (Sugar.HoleArg m (ExprGuiM.SugarExpr m))
-  , hiHoleEntityIds :: ExprGuiM.HoleEntityIds
+  , hiNearestHoles :: NearestHoles
   }
 
 hiSearchTermProperty :: HoleInfo m -> Property (T m) String

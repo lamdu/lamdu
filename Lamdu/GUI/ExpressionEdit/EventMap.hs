@@ -17,6 +17,7 @@ import Lamdu.CharClassification (operatorChars)
 import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers, holePickersAddDocPrefix, holePickersAction)
+import Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -26,6 +27,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
@@ -70,7 +72,7 @@ isExprSelected pl =
 
 jumpHolesEventMap ::
   MonadA m => HolePickers m ->
-  ExprGuiM.HoleEntityIds ->
+  NearestHoles ->
   ExprGuiM m (EventHandlers (T m))
 jumpHolesEventMap holePickers hg = do
   config <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
@@ -82,8 +84,8 @@ jumpHolesEventMap holePickers hg = do
       hg ^. lens
   pure $
     mconcat
-    [ jumpEventMap Config.holeJumpToNextKeys "next" ExprGuiM.hgMNextHole
-    , jumpEventMap Config.holeJumpToPrevKeys "previous" ExprGuiM.hgMPrevHole
+    [ jumpEventMap Config.holeJumpToNextKeys "next" NearestHoles.next
+    , jumpEventMap Config.holeJumpToPrevKeys "previous" NearestHoles.prev
     ]
   where
     jumpDoc dirStr =
@@ -98,7 +100,7 @@ jumpHolesEventMapIfSelected holePickers pl = do
   if isSelected
     then
     jumpHolesEventMap holePickers $
-    pl ^. Sugar.plData . ExprGuiM.plHoleEntityIds
+    pl ^. Sugar.plData . ExprGuiM.plNearestHoles
     else pure mempty
 
 cutEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)
