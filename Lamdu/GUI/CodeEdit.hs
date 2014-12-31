@@ -1,10 +1,12 @@
+{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 {-# LANGUAGE RecordWildCards, OverloadedStrings, TypeFamilies #-}
 module Lamdu.GUI.CodeEdit (make, Env(..)) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<*>))
 import Control.Lens.Operators
 import Control.Monad.Trans.Class (lift)
 import Control.MonadA (MonadA)
+import Data.Foldable (Foldable)
 import Data.List (intersperse)
 import Data.List.Utils (enumerate, insertAt, removeAt)
 import Data.Maybe (listToMaybe)
@@ -12,7 +14,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
-import Data.Traversable (traverse)
+import Data.Traversable (Traversable, traverse)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Load (loadDef)
@@ -105,29 +107,49 @@ getClipboards :: MonadA m => Anchors.CodeProps m -> T m [DefI m]
 getClipboards = Transaction.getP . Anchors.clipboards
 
 processDefI ::
-  MonadA m =>
-  Env m -> DefI m -> T m (ProcessedDef m)
+  MonadA m => Env m -> DefI m -> T m (DefinitionN m [Sugar.EntityId])
 processDefI env defI =
   loadDef defI
   >>= SugarConvert.convertDefI (codeProps env)
   >>= AddNames.addToDef
-  <&> Lens.mapped . Lens.mapped . Sugar.plData %~ (,)
-  <&> DefF <&> NearestHoles.add defFExprs <&> unDefF
 
-processPane :: MonadA m => Env m -> Pane m -> T m (Pane m, ProcessedDef m)
+processPane ::
+  MonadA m => Env m -> Pane m ->
+  T m (Pane m, (DefinitionN m [Sugar.EntityId]))
 processPane env pane =
   processDefI env (paneDefI pane)
   <&> (,) pane
+
+type PanesAndClipboards name m a =
+    PanesAndClipboardsP name m (Sugar.Expression name m a)
+data PanesAndClipboardsP name m expr =
+  PanesAndClipboards
+  { _panes :: [(Pane m, Sugar.Definition name m expr)]
+  , _clipboards :: [Sugar.Definition name m expr]
+  } deriving (Functor, Foldable, Traversable)
+
+addNearestHoles ::
+  MonadA m =>
+  PanesAndClipboards name m [Sugar.EntityId] ->
+  PanesAndClipboards name m ([Sugar.EntityId], NearestHoles.NearestHoles)
+addNearestHoles pcs =
+  pcs
+  <&> Lens.mapped . Sugar.plData %~ (,)
+  & NearestHoles.add traverse
 
 make :: MonadA m => Env m -> Guid -> WidgetEnvT (T m) (Widget (T m))
 make env rootGuid = do
   prop <- lift $ Anchors.panes (codeProps env) ^. Transaction.mkProperty
 
-  (sugarPanes, sugarClipboards) <-
-    (,) (makePanes prop rootGuid) <$> (lift . getClipboards) (codeProps env)
+  let sugarPanes = makePanes prop rootGuid
+  sugarClipboards <- lift $ getClipboards $ codeProps env
 
-  loadedPanes <- traverse (processPane env) sugarPanes & lift
-  loadedClipboards <- traverse (processDefI env) sugarClipboards & lift
+  PanesAndClipboards loadedPanes loadedClipboards <-
+    PanesAndClipboards
+    <$> traverse (processPane env) sugarPanes
+    <*> traverse (processDefI env) sugarClipboards
+    & lift
+    <&> addNearestHoles
 
   panesEdit <- makePanesEdit env loadedPanes $ WidgetIds.fromGuid rootGuid
   clipboardsEdit <- makeClipboardsEdit env loadedClipboards
@@ -148,16 +170,6 @@ makeNewDefinition cp = do
     DataOps.newPane cp newDefI
     DataOps.savePreJumpPosition cp curCursor
     return . DefinitionEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
-
--- Need this newtype so that we can provide a proper 'f' variable to
--- NearestHoles.add
-newtype DefF name m a = DefF { unDefF :: Sugar.Definition name m (Sugar.Expression name m a) }
-
-defFExprs ::
-  Lens.Traversal (DefF name m a) (DefF name m b)
-  (Sugar.Expression name m a)
-  (Sugar.Expression name m b)
-defFExprs f (DefF x) = DefF <$> Lens.traverse f x
 
 makePanesEdit ::
   MonadA m => Env m -> [(Pane m, ProcessedDef m)] ->

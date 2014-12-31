@@ -42,10 +42,13 @@ none = NearestHoles Nothing Nothing
 add ::
   MonadA m =>
   (forall a b.
-   Lens.Traversal (f a) (f b)
+   Lens.Traversal
+   (f (Sugar.Expression name m a))
+   (f (Sugar.Expression name m b))
    (Sugar.Expression name m a)
    (Sugar.Expression name m b)) ->
-  f (NearestHoles -> r) -> f r
+  f (Sugar.Expression name m (NearestHoles -> r)) ->
+  f (Sugar.Expression name m r)
 add exprs s =
   s
   & exprs . Lens.mapped . Sugar.plData %~ toNearestHoles
