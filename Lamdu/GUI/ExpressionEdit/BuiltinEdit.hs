@@ -39,7 +39,7 @@ make (Sugar.DefinitionBuiltin (Definition.FFIName modulePath name) setFFIName _)
     varName <-
       makeNamePartEditor (Config.foreignVarColor config) name nameSetter
       WidgetIds.builtinFFIName
-    dot <- ExprGuiM.widgetEnv . BWidgets.makeLabel "." $ Widget.toAnimId myId
+    dot <- ExprGuiM.makeLabel "." $ Widget.toAnimId myId
     return $ Box.hboxCentered [moduleName, dot, varName]
   where
     makeNamePartEditor color namePartStr setter makeWidgetId =

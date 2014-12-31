@@ -37,8 +37,7 @@ addTextParensI onLParen onRParen parenId widget = do
     , ExpressionGui.fromValueWidget afterParen
     ]
   where
-    label str =
-      ExprGuiM.widgetEnv . BWidgets.makeLabel str $ parensPrefix parenId
+    label str = ExprGuiM.makeLabel str $ parensPrefix parenId
 
 highlightExpression :: Config -> Widget.Widget f -> Widget.Widget f
 highlightExpression config =

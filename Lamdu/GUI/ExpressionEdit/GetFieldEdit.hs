@@ -8,7 +8,6 @@ import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -29,5 +28,5 @@ make (Sugar.GetField recExpr tagG) pl =
         TagEdit.makeRecordTag (pl ^. Sugar.plData . ExprGuiM.plHoleEntityIds) tagG tagId
       dotLabel <-
         ExpressionGui.fromValueWidget <$>
-        (ExprGuiM.widgetEnv . BWidgets.makeLabel "." . Widget.toAnimId) myId
+        (ExprGuiM.makeLabel "." . Widget.toAnimId) myId
       return $ ExpressionGui.hbox [recExprEdit, dotLabel, tagEdit]

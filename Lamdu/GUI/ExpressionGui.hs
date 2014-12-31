@@ -11,7 +11,6 @@ module Lamdu.GUI.ExpressionGui
   , makeRow
   , listWithDelDests
   -- Lifted widgets:
-  , makeLabel
   , makeFocusableView
   , makeNameView
   , makeNameEdit
@@ -279,10 +278,6 @@ stdWrapParentExpr ::
 stdWrapParentExpr pl f myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   stdWrapDelegated pl (parentExprFDConfig config) FocusDelegator.Delegating f myId
-
-makeLabel ::
-  MonadA m => String -> Widget.Id -> ExprGuiM m (WidgetT f)
-makeLabel text myId = ExprGuiM.widgetEnv . BWidgets.makeLabel text $ Widget.toAnimId myId
 
 makeFocusableView ::
   (MonadA m, MonadA n) => Widget.Id -> ExpressionGui n -> ExprGuiM m (ExpressionGui n)

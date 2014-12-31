@@ -2,6 +2,7 @@
 module Lamdu.GUI.ExpressionGui.Monad
   ( ExprGuiM, WidgetT
   , widgetEnv
+  , makeLabel
   , StoredEntityIds(..), Injected(..)
   , HoleEntityIds(..), hgMNextHole, hgMPrevHole
   , emptyHoleEntityIds
@@ -34,6 +35,7 @@ import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
+import Graphics.UI.Bottle.Animation.Id (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.WidgetId (toAnimId)
 import Lamdu.GUI.CodeEdit.Settings (Settings)
@@ -179,6 +181,10 @@ run makeSubexpr codeAnchors settings (ExprGuiM action) =
 
 widgetEnv :: MonadA m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv = ExprGuiM . lift
+
+makeLabel ::
+  MonadA m => String -> AnimId -> ExprGuiM m (Widget f)
+makeLabel text animId = widgetEnv $ BWidgets.makeLabel text animId
 
 transaction :: MonadA m => T m a -> ExprGuiM m a
 transaction = widgetEnv . lift

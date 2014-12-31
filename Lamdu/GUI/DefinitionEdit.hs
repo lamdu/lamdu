@@ -110,7 +110,7 @@ makeBuiltinDefinition def builtin =
   Box.vboxAlign 0 <$> sequenceA
   [ BWidgets.hboxCenteredSpaced <$> sequenceA
     [ ExprGui.makeNameOriginEdit name (Widget.joinId myId ["name"])
-    , ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
+    , ExprGuiM.makeLabel "=" $ Widget.toAnimId myId
     , BuiltinEdit.make builtin myId
     ]
   , topLevelSchemeTypeView 0 (mappend (Widget.toAnimId myId) ["type"])

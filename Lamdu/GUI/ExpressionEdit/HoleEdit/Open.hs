@@ -142,10 +142,9 @@ makeResultGroup holeInfo results = do
   extraSymbolWidget <-
     if Lens.has (HoleResults.rlExtra . traverse) results
     then
-      BWidgets.hboxCenteredSpaced . (Spacer.empty :) . (: []) .
-      Widget.scale extraSymbolScaleFactor <$>
-      ExprGuiM.widgetEnv
-      (BWidgets.makeLabel extraSymbol (Widget.toAnimId (rId mainResult)))
+      ExprGuiM.makeLabel extraSymbol (Widget.toAnimId (rId mainResult))
+      <&> Widget.scale extraSymbolScaleFactor
+      <&> BWidgets.hboxCenteredSpaced . (Spacer.empty :) . (: [])
     else pure Spacer.empty
   let
     makeExtra =
@@ -271,7 +270,7 @@ toPayload isInjected =
   }
 
 makeNoResults :: MonadA m => HoleInfo m -> AnimId -> ExprGuiM m (WidgetT m)
-makeNoResults holeInfo myId =
+makeNoResults holeInfo animId =
   (^. ExpressionGui.egWidget) <$>
   case hiMArgument holeInfo ^? Lens._Just . Sugar.haExpr of
   Nothing -> label "(No results)"
@@ -284,15 +283,15 @@ makeNoResults holeInfo myId =
     ]
   where
     label str =
-      ExpressionGui.fromValueWidget <$> ExprGuiM.widgetEnv (BWidgets.makeLabel str myId)
+      ExprGuiM.makeLabel str animId
+      <&> ExpressionGui.fromValueWidget
 
 hiSearchTermId :: HoleInfo m -> Widget.Id
 hiSearchTermId holeInfo = WidgetIds.searchTermId $ HoleInfo.hiActiveId holeInfo
 
 makeHiddenResultsMWidget :: MonadA m => HaveHiddenResults -> Widget.Id -> ExprGuiM m (Maybe (Widget f))
 makeHiddenResultsMWidget HaveHiddenResults myId =
-  fmap Just . ExprGuiM.widgetEnv . BWidgets.makeLabel "..." $
-  Widget.toAnimId myId
+  Just <$> ExprGuiM.makeLabel "..." (Widget.toAnimId myId)
 makeHiddenResultsMWidget NoHiddenResults _ = return Nothing
 
 addMResultPicker :: MonadA m => Maybe (ShownResult m) -> ExprGuiM m ()
