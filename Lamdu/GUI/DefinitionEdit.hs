@@ -1,5 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.GUI.DefinitionEdit (make, makeNewDefinition) where
+module Lamdu.GUI.DefinitionEdit
+  ( make
+  , makeNewDefinition
+  , diveToNameEdit
+  ) where
 
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
@@ -189,6 +193,9 @@ makeExprDefinition def bodyExpr = do
     myId = WidgetIds.fromEntityId entityId
     exportedTypeAnimId = mappend (Widget.toAnimId myId) ["Exported"]
 
+diveToNameEdit :: Widget.Id -> Widget.Id
+diveToNameEdit = BinderEdit.diveToNameEdit
+
 makeNewDefinition ::
   MonadA m => Anchors.CodeProps m ->
   WidgetEnvT (T m) (T m Widget.Id)
@@ -198,4 +205,4 @@ makeNewDefinition cp = do
     newDefI <- DataOps.newPublicDefinition cp ""
     DataOps.newPane cp newDefI
     DataOps.savePreJumpPosition cp curCursor
-    return . BinderEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
+    return . diveToNameEdit $ WidgetIds.fromIRef newDefI
