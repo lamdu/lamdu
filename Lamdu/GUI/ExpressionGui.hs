@@ -10,6 +10,7 @@ module Lamdu.GUI.ExpressionGui
   , vboxDownwards, vboxDownwardsSpaced
   , makeRow
   , listWithDelDests
+  , makeLabel
   -- Lifted widgets:
   , makeFocusableView
   , makeNameView
@@ -193,6 +194,7 @@ disallowedNameChars =
   , ('9', E.Shifted)
   ]
 
+-- TODO: Move to BWidgets
 makeBridge ::
   MonadA m =>
   (Widget.Id -> WE.WidgetEnvT m (Widget f)) ->
@@ -295,6 +297,9 @@ parenify (ParentPrecedence parent) (MyPrecedence prec) addParens mkWidget myId
   | parent > prec = addParens myId =<< mkWidget myId
   | otherwise = mkWidget myId
 
+makeLabel :: MonadA m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
+makeLabel text animId = ExprGuiM.makeLabel text animId <&> fromValueWidget
+
 stdWrapParenify ::
   MonadA m =>
   Sugar.Payload m ExprGuiM.Payload ->
@@ -305,6 +310,7 @@ stdWrapParenify ::
 stdWrapParenify pl parentPrec prec addParens =
   stdWrapParentExpr pl . parenify parentPrec prec addParens
 
+-- TODO: This doesn't belong here
 makeRow :: [(Widget.R, ExpressionGui m)] -> [(Vector2 Widget.R, WidgetT m)]
 makeRow =
   map item
@@ -312,6 +318,7 @@ makeRow =
     item (halign, ExpressionGui widget alignment) =
       (Vector2 halign alignment, widget)
 
+-- TODO: This doesn't belong here
 makeNameView ::
   MonadA m =>
   Name m -> AnimId -> WE.WidgetEnvT (Transaction m) (Widget f)
@@ -320,6 +327,7 @@ makeNameView (Name _ collision _ name) animId = do
   suffixLabels <- makeCollisionSuffixLabels collision $ animId ++ ["suffix"]
   return . Box.hboxCentered $ label : suffixLabels
 
+-- TODO: This doesn't belong here
 makeCollisionSuffixLabels ::
   MonadA m => NameCollision -> AnimId -> WE.WidgetEnvT m [Widget f]
 makeCollisionSuffixLabels NoCollision _ = return []

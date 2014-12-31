@@ -1,6 +1,5 @@
 module Lamdu.GUI.ExpressionEdit.GetFieldEdit(make) where
 
-import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Graphics.UI.Bottle.WidgetId (augmentId)
@@ -26,7 +25,5 @@ make (Sugar.GetField recExpr tagG) pl =
       recExprEdit <- ExprGuiM.makeSubexpression 11 recExpr
       tagEdit <-
         TagEdit.makeRecordTag (pl ^. Sugar.plData . ExprGuiM.plHoleEntityIds) tagG tagId
-      dotLabel <-
-        ExpressionGui.fromValueWidget <$>
-        (ExprGuiM.makeLabel "." . Widget.toAnimId) myId
+      dotLabel <- ExpressionGui.makeLabel "." (Widget.toAnimId myId)
       return $ ExpressionGui.hbox [recExprEdit, dotLabel, tagEdit]

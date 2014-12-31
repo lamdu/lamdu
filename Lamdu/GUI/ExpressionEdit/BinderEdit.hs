@@ -77,8 +77,7 @@ makeWheres whereItems myId =
   do
     config <- ExprGuiM.widgetEnv WE.readConfig
     whereLabel <-
-      ExprGuiM.makeLabel "where" (Widget.toAnimId myId)
-      <&> ExpressionGui.fromValueWidget
+      ExpressionGui.makeLabel "where" (Widget.toAnimId myId)
       <&> ExpressionGui.scaleFromTop (realToFrac <$> Config.whereLabelScaleFactor config)
     itemEdits <-
       whereItems & reverse
@@ -137,9 +136,7 @@ layout ::
   ExprGuiM m (ExpressionGui m)
 layout defNameEdit paramEdits bodyEdit mWheresEdit myId =
   do
-    equals <-
-      ExprGuiM.makeLabel "=" (Widget.toAnimId myId)
-      <&> ExpressionGui.fromValueWidget
+    equals <- ExpressionGui.makeLabel "=" (Widget.toAnimId myId)
     paramsEdit <-
       case paramEdits of
       [] -> return []

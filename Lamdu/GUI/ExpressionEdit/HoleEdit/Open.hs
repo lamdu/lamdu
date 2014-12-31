@@ -282,9 +282,7 @@ makeNoResults holeInfo animId =
     , label ")"
     ]
   where
-    label str =
-      ExprGuiM.makeLabel str animId
-      <&> ExpressionGui.fromValueWidget
+    label = (`ExpressionGui.makeLabel` animId)
 
 hiSearchTermId :: HoleInfo m -> Widget.Id
 hiSearchTermId holeInfo = WidgetIds.searchTermId $ HoleInfo.hiActiveId holeInfo
