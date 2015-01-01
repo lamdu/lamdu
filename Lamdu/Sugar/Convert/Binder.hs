@@ -47,7 +47,7 @@ data ConventionalParams m a = ConventionalParams
   { cpTags :: Set T.Tag
   , cpParamInfos :: Map T.Tag ConvertM.TagParamInfo
   , _cpParams :: [FuncParam Guid m]
-  , cpAddFirstParam :: T m EntityId
+  , cpMAddFirstParam :: Maybe (T m EntityId)
   }
 
 cpParams :: Lens' (ConventionalParams m a) [FuncParam Guid m]
@@ -147,8 +147,8 @@ convertRecordParams fieldParams lam@(V.Lam param _) = do
     { cpTags = Set.fromList $ fpTag <$> fieldParams
     , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
     , _cpParams = params
-    , cpAddFirstParam =
-      error "TODO cpAddFirstParam"--  addFirstFieldParam lamEntityId $
+    , cpMAddFirstParam =
+      Just $ error "TODO cpMAddFirstParam"--  addFirstFieldParam lamEntityId $
       -- fromMaybe (error "Record param type must be stored!") mParamTypeI
     }
   where
@@ -227,7 +227,7 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
       { cpTags = mempty
       , cpParamInfos = Map.empty
       , _cpParams = [funcParam]
-      , cpAddFirstParam = error "TODO: addFirstParam"
+      , cpMAddFirstParam = Just $ error "TODO: addFirstParam"
       }
   where
     paramEntityId = EntityId.ofLambdaParam param
@@ -271,16 +271,19 @@ convertLamParams mRecursiveVar lambda lambdaPl =
       }
 
 convertEmptyParams :: MonadA m =>
-  Maybe V.Var -> Val (ExprIRef.ValIProperty m) -> ConvertM m (ConventionalParams m a)
+  Maybe V.Var -> Val (Maybe (ExprIRef.ValIProperty m)) -> ConvertM m (ConventionalParams m a)
 convertEmptyParams mRecursiveVar val =
   do
-    addFirstParam <- makeAddFirstParam mRecursiveVar val
+    mAddFirstParam <-
+      val
+      & sequenceA
+      & traverse (makeAddFirstParam mRecursiveVar)
     pure
       ConventionalParams
       { cpTags = mempty
       , cpParamInfos = Map.empty
       , _cpParams = []
-      , cpAddFirstParam = addFirstParam
+      , cpMAddFirstParam = mAddFirstParam
       }
 
 convertParams ::
@@ -303,9 +306,9 @@ convertParams mRecursiveVar expr =
   _ ->
     do
       params <-
-        convertEmptyParams mRecursiveVar $
-        fromMaybe (error "Definition body is always stored!") $ -- TODO: use maybes rather than error
-        traverse (^. Input.mStored) expr
+        expr
+        <&> (^. Input.mStored)
+        & convertEmptyParams mRecursiveVar
       return (params, expr)
 
 fixRecursionsToCalls :: MonadA m =>
@@ -421,12 +424,15 @@ makeBinder setPresentationMode convParams funcBody =
         , _dSetPresentationMode = setPresentationMode
         , _dBody = bodyS
         , _dWhereItems = whereItems
-        , _dMActions = mkActions <$> whereBody ^. V.payload . Input.mStored
+        , _dMActions =
+          mkActions
+          <$> cpMAddFirstParam convParams
+          <*> whereBody ^. V.payload . Input.mStored
         }
   where
-    mkActions whereStored =
+    mkActions addFirstParam whereStored =
       BinderActions
-      { _baAddFirstParam = cpAddFirstParam convParams
+      { _baAddFirstParam = addFirstParam
       , _baAddInnermostWhereItem =
           EntityId.ofLambdaParam . fst <$> DataOps.redexWrap whereStored
       }
