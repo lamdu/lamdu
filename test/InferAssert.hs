@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings, RankNTypes #-}
 module InferAssert where
 
---import qualified Lamdu.Expr.Utils as ExprUtil
 import AnnotatedExpr
 import Control.Applicative ((<$>))
 import Control.Lens (Lens')
@@ -22,7 +21,6 @@ import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Infer (Infer(..))
 import Lamdu.Infer.Error (Error)
-import Lamdu.Infer.Update (updateInferredVal)
 import System.IO (hPutStrLn, stderr)
 import Test.Framework (plusTestOptions)
 import Test.Framework.Options (TestOptions'(..))
@@ -36,6 +34,7 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Update as Update
 import qualified Test.Framework as TestFramework
 import qualified Test.Framework.Providers.HUnit as HUnitProvider
 import qualified Test.HUnit as HUnit
@@ -181,7 +180,7 @@ handleResumption ::
   (ExprComplete -> Infer ()) -> ExprComplete ->
   WriterT (Monoid.Any, Monoid.Any) Infer ExprComplete
 handleResumption verifyInfersOnSide =
-  lift . updateInferredVal <=< go
+  lift . Update.inferredVal <=< go
   where
     recurseBody body pl = Val pl <$> Lens.traverse go body
     go (Val pl body) =
@@ -191,7 +190,7 @@ handleResumption verifyInfersOnSide =
         lift $ loadInferInto (pl ^. _1) newExpr
       ResumeOnSide newExpr resumptions -> do
         Writer.tell (Monoid.Any True, Monoid.Any True)
-        lift $ verifyInfersOnSide =<< updateInferredVal =<<
+        lift $ verifyInfersOnSide =<< Update.inferredVal =<<
           loadInferScope (pl ^. _1 . Infer.plScope) newExpr
         recurseBody body $ pl & _2 .~ resumptions
       NewInferred resumptions -> do

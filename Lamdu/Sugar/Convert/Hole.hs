@@ -25,7 +25,7 @@ import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Type (Type(..))
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Infer.Unify (unify)
-import Lamdu.Infer.Update (update, updateInferredVal)
+import Lamdu.Infer.Update (update)
 import Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
@@ -51,6 +51,7 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Update as Update
 import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -461,16 +462,15 @@ mkHoleResultVals mInjectedArg exprPl base =
     let formType = form ^. V.payload . _1 . Infer.plType
     injected <- maybe (return . markNotInjected) holeResultsInject mInjectedArg form
     unifyResult <- unify holeType formType & liftInfer
-    injectedUpdated <- updateInferredVal injected & assertSuccessInfer
+    injectedUpdated <- Update.inferredVal injected & liftUpdate
     case unifyResult of
       Right {} -> return injectedUpdated
       Left {} ->
         do
-          updatedHoleType <- update holeType & assertSuccessInfer
+          updatedHoleType <- update holeType & liftUpdate
           return $ holeWrap updatedHoleType injectedUpdated
   where
-    assertSuccessInfer action =
-      action & liftInfer <&> either (error "update should always work") id
+    liftUpdate = State.gets . Update.run
     liftInfer = stateEitherSequence . Infer.run
     holeType = exprPl ^. Input.inferred . Infer.plType
     scopeAtHole = exprPl ^. Input.inferred . Infer.plScope

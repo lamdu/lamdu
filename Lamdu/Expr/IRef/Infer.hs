@@ -19,7 +19,6 @@ import Lamdu.Expr.Val (Val(..))
 import Lamdu.Infer (Infer)
 import Lamdu.Infer.Load (Loader(..))
 import Lamdu.Infer.Unify (unify)
-import Lamdu.Infer.Update (updateInferredVal)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -27,6 +26,7 @@ import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Load as InferLoad
 import qualified Lamdu.Infer.Recursive as Recursive
+import qualified Lamdu.Infer.Update as Update
 
 type T = Transaction
 
@@ -66,7 +66,7 @@ loadInferInto pl val = do
   let inferredType = inferredVal ^. V.payload . _1 . Infer.plType
   liftInfer $ do
     unify inferredType (pl ^. Infer.plType)
-    updateInferredVal inferredVal
+    Update.inferredVal inferredVal & Update.liftInfer
 
 loadInfer ::
   MonadA m => V.Var -> Val a ->
