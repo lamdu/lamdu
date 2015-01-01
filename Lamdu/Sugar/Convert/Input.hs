@@ -1,4 +1,4 @@
--- | Preprocess of input to sugar 
+-- | Preprocess of input to sugar
 {-# LANGUAGE RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Sugar.Convert.Input
   ( Payload(..), entityId, guid, inferred, mStored, userData

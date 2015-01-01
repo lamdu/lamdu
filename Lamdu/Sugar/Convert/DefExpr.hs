@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 module Lamdu.Sugar.Convert.DefExpr
   ( convert
   ) where
@@ -31,6 +32,7 @@ import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
 type T = Transaction
@@ -84,16 +86,11 @@ convert cp (Definition.Expr val defType) defI = do
     <&> _1 . Lens.mapped %~ Input.mkPayload ()
     & runMaybeT
     <&> fromMaybe (error "Type inference failed")
-  let
-    addStoredEntityIds x =
-      x
-      & Input.userData .~
-        (x ^.. Input.mStored . Lens._Just <&> EntityId.ofValI . Property.value)
+    >>= ParamList.loadForLambdas
   context <- mkContext defI cp newInferContext
   ConvertM.run context $ do
     content <-
-      valInferred
-      <&> addStoredEntityIds
+      valInferred <&> addStoredEntityIds
       & ConvertBinder.convertBinder (Just recurseGetVar) defGuid
     return $ DefinitionBodyExpression DefinitionExpression
       { _deContent = content
@@ -103,5 +100,10 @@ convert cp (Definition.Expr val defType) defI = do
         valInferred ^. V.payload . Input.inferred . Infer.plType
       }
   where
+    addStoredEntityIds x =
+      x
+      & Input.userData .~
+        (x ^.. Input.mStored . Lens._Just
+         <&> EntityId.ofValI . Property.value)
     exprI = val ^. V.payload . Property.pVal
     defGuid = IRef.guid defI
