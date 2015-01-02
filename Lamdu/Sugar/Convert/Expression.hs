@@ -11,14 +11,13 @@ import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
-import Data.Traversable (traverse, sequenceA)
+import Data.Traversable (traverse)
 import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
-import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
@@ -38,27 +37,6 @@ import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
 type T = Transaction
-
-convertLam ::
-  (MonadA m, Monoid a) =>
-  V.Lam (Val (Input.Payload m a)) ->
-  Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertLam lam@(V.Lam _ lamBody) exprPl =
-  do
-    binder <- ConvertBinder.convertLam lam exprPl
-    mDeleteLam <-
-      sequenceA $ ConvertBinder.makeDeleteLambda
-      <$> (lam & (traverse . traverse) (^. Input.mStored))
-      <*> exprPl ^. Input.mStored
-    let
-      setToInnerExprAction =
-        maybe NoInnerExpr SetToInnerExpr $ do
-          guard $ Lens.nullOf ExprLens.valHole lamBody
-          mDeleteLam
-            <&> Lens.mapped .~ binder ^. dBody . rPayload . plEntityId
-    BodyLam binder
-      & addActions exprPl
-      <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
 
 jumpToDefI ::
   MonadA m => Anchors.CodeProps m -> DefI m -> T m EntityId
@@ -135,7 +113,7 @@ convert :: (MonadA m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (Expres
 convert v =
   ($ v ^. V.payload) $
   case v ^. V.body of
-  V.BAbs x -> convertLam x
+  V.BAbs x -> ConvertBinder.convertLam x
   V.BApp x -> ConvertApply.convert x
   V.BRecExtend x -> ConvertRecord.convertExtend x
   V.BGetField x -> convertGetField x
