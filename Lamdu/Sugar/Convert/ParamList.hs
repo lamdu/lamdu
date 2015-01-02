@@ -48,11 +48,12 @@ loadStored :: MonadA m => ExprIRef.ValIProperty m -> T m (Maybe ParamList)
 loadStored = Transaction.getP . mkProp . Property.value
 
 funcType :: ParamList -> Infer Type
-funcType =
-  fmap T.TRecord . go
+funcType paramList =
+  T.TFun
+  <$> (T.TRecord <$> foldr step (pure T.CEmpty) paramList)
+  <*> Infer.freshInferredVar "lamres"
   where
-    go [] = pure T.CEmpty
-    go (tag:xs) = T.CExtend tag <$> Infer.freshInferredVar "tagpar" <*> go xs
+    step tag rest = T.CExtend tag <$> Infer.freshInferredVar "tagpar" <*> rest
 
 loadForLambdas ::
   MonadA m =>
