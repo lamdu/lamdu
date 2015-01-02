@@ -133,7 +133,14 @@ makeConvertToRecordParams mRecursiveVar (V.Lam paramVar lamBody) stored =
         case mRecursiveVar of
           Nothing -> return ()
           Just recursiveVar ->
-            fixRecursiveCallsToUseRecords tagForVar tagForNewVar recursiveVar lamBody
+            -- Reread body before fixing it,
+            -- to avoid re-writing old data (without converted vars)
+            -- TODO: find nicer way to do it than using properties and rereading data?
+            ExprIRef.readVal (lamBody ^. V.payload . Property.pVal)
+            <&> fmap (flip (,) ())
+            <&> ExprIRef.addProperties (lamBody ^. V.payload . Property.pSet)
+            <&> fmap fst
+            >>= fixRecursiveCallsToUseRecords tagForVar tagForNewVar recursiveVar
         protectedSetToVal stored (Property.value stored) <&> EntityId.ofValI
 
 convertRecordParams ::
