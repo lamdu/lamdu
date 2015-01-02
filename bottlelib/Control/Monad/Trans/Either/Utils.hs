@@ -1,6 +1,7 @@
 module Control.Monad.Trans.Either.Utils
   ( leftToJust, justToLeft
   , Matcher, runMatcher, runMatcherT
+  , eitherToMaybeT
   ) where
 
 import Control.Monad (mzero, (<=<))
@@ -27,3 +28,6 @@ leftToJust = either return (const mzero) <=< lift . runEitherT
 
 uneither :: Either a a -> a
 uneither = either id id
+
+eitherToMaybeT :: Monad m => Either l a -> MaybeT m a
+eitherToMaybeT = MaybeT . return . either (const Nothing) Just

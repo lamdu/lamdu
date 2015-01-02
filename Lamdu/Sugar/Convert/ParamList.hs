@@ -9,8 +9,10 @@ module Lamdu.Sugar.Convert.ParamList
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad (join, (<=<))
+import Control.Monad ((<=<))
 import Control.Monad.Trans.Class (MonadTrans(..))
+import Control.Monad.Trans.Either.Utils (eitherToMaybeT)
+import Control.Monad.Trans.Maybe (MaybeT)
 import Control.Monad.Trans.State (StateT(..), mapStateT)
 import Control.MonadA (MonadA)
 import Data.Foldable (traverse_)
@@ -58,7 +60,7 @@ funcType paramList =
 loadForLambdas ::
   MonadA m =>
   (Val (Input.Payload m a), Infer.Context) ->
-  T m (Val (Input.Payload m a), Infer.Context)
+  MaybeT (T m) (Val (Input.Payload m a), Infer.Context)
 loadForLambdas (val, ctx) =
   do
     Lens.itraverseOf_ ExprLens.subExprPayloads loadLambdaParamList val
@@ -68,16 +70,13 @@ loadForLambdas (val, ctx) =
     loadLambdaParamList (V.Val _ V.BAbs {}) pl = loadUnifyParamList pl
     loadLambdaParamList _ _ = return ()
 
-    assertSuccess msg = either (error msg) id
-
     loadUnifyParamList pl =
-      do
-        mParamList <-
-          pl ^. Input.mStored
-          & Lens._Just %%~ loadStored
-          <&> join
-          & lift
-        let typ = pl ^. Input.inferred . Infer.plType
-        traverse_ (unify typ <=< funcType) mParamList
-          & Infer.run
-          & mapStateT (return . assertSuccess "Unification of param list failed")
+      case pl ^. Input.mStored of
+      Nothing -> return ()
+      Just stored ->
+        do
+          mParamList <- loadStored stored & lift & lift
+          let typ = pl ^. Input.inferred . Infer.plType
+          traverse_ (unify typ <=< funcType) mParamList
+            & Infer.run
+            & mapStateT eitherToMaybeT

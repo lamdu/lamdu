@@ -11,6 +11,7 @@ import Control.Lens.Operators
 import Control.Lens.Tuple
 import Control.Monad (mzero)
 import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Either.Utils (eitherToMaybeT)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.State (StateT(..), mapStateT)
 import Control.MonadA (MonadA)
@@ -43,10 +44,6 @@ loader =
           return scheme
         Definition.BodyBuiltin (Definition.Builtin _ scheme) -> return scheme
         _ -> mzero -- Reference to global with non-exported type!
-
-eitherToMaybeT :: Monad m => Either l a -> MaybeT m a
-eitherToMaybeT (Left _) = MaybeT $ return Nothing
-eitherToMaybeT (Right x) = MaybeT $ return $ Just x
 
 type M m = StateT Infer.Context (MaybeT (T m))
 

@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.DefExpr
 import Control.Lens.Operators
 import Control.Lens.Tuple
 import Control.Monad.Trans.Maybe (runMaybeT)
+
 import Control.MonadA (MonadA)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
@@ -57,7 +58,10 @@ mkContext defI cp inferContext = do
             Definition.BodyBuiltin {} -> return True
             Definition.BodyExpr (Definition.Expr valI _) ->
               ExprIRef.readVal valI
-              >>= runMaybeT . IRefInfer.loadInfer recurseGetVar
+              <&> fmap (flip (,) ())
+              <&> ExprIRef.addProperties undefined
+              <&> fmap fst
+              >>= loadInfer
               <&> Lens.has Lens._Just
     , scConvertSubexpression = ConvertExpr.convert
     }
@@ -76,17 +80,22 @@ makeExprDefTypeInfo defValI defI defType inferredType =
       Definition.Expr defValI $ Definition.ExportedType inferredType
     }
 
+loadInfer :: MonadA m =>
+  Val (ExprIRef.ValIProperty m) ->
+  T m (Maybe (Val (Input.Payload m ()), Infer.Context))
+loadInfer val =
+  IRefInfer.loadInfer recurseGetVar val
+  <&> _1 . Lens.mapped %~ Input.mkPayload ()
+  >>= ParamList.loadForLambdas
+  & runMaybeT
+
 convert ::
   MonadA m => Anchors.CodeProps m ->
   Definition.Expr (Val (ExprIRef.ValIProperty m)) ->
   DefI m -> T m (DefinitionBody Guid m (ExpressionU m [EntityId]))
 convert cp (Definition.Expr val defType) defI = do
   (valInferred, newInferContext) <-
-    IRefInfer.loadInfer recurseGetVar val
-    <&> _1 . Lens.mapped %~ Input.mkPayload ()
-    & runMaybeT
-    <&> fromMaybe (error "Type inference failed")
-    >>= ParamList.loadForLambdas
+    loadInfer val <&> fromMaybe (error "Type inference failed")
   context <- mkContext defI cp newInferContext
   ConvertM.run context $ do
     content <-
