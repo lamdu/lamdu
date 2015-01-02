@@ -27,6 +27,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
+import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
@@ -39,6 +40,7 @@ import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
 type T = Transaction
@@ -124,6 +126,7 @@ makeConvertToRecordParams mRecursiveVar (V.Lam paramVar lamBody) stored =
       do
         tagForVar <- newTag
         tagForNewVar <- newTag
+        Transaction.setP paramList $ Just [tagForVar, tagForNewVar]
         let
           convertVar prop =
             Property.value prop & (`V.GetField` tagForVar) & V.BGetField
@@ -142,6 +145,8 @@ makeConvertToRecordParams mRecursiveVar (V.Lam paramVar lamBody) stored =
             <&> fmap fst
             >>= fixRecursiveCallsToUseRecords tagForVar tagForNewVar recursiveVar
         protectedSetToVal stored (Property.value stored) <&> EntityId.ofValI
+  where
+    paramList = ParamList.mkProp (Property.value stored)
 
 convertRecordParams ::
   (MonadA m, Monoid a) =>
