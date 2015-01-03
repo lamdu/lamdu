@@ -168,8 +168,11 @@ addType :: Config -> Widget.Id -> View -> ExpressionGui m -> ExpressionGui m
 addType config exprId typeView eg =
   addBelow 0.5 items eg
   where
+    vspacer =
+      uncurry Widget.liftView $ Spacer.makeVertical $
+      realToFrac $ Config.valInferredSpacing config
     items =
-      [ (0.5, Spacer.makeWidget 5)
+      [ (0.5, vspacer)
       , (0.5, annotatedType)
       ]
     annotatedType =

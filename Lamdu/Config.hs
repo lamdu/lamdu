@@ -146,6 +146,7 @@ data Config = Config
   , typeBoxBGColor :: Draw.Color
   , valFrameBGColor :: Draw.Color
   , valFramePadding :: Vector2 Double
+  , valInferredSpacing :: Double
   , typeFrameBGColor :: Draw.Color
   , verticalSpacing :: Double
   , cursorBGColor :: Draw.Color
