@@ -47,7 +47,7 @@ make hole pl myId = do
       ) .
       (ExpressionGui.egAlignment .~ closedGui ^. ExpressionGui.egAlignment)
     layers = Config.layers config
-    layerDiff = Config.layerMin layers - Config.layerMax layers
+    layerDiff = - Config.layerInterval layers
     bringToFront = ExpressionGui.egWidget . Widget.wFrame %~ Anim.onDepth (+ layerDiff)
   tryOpenHole hole pl myId
     & mapMaybeT wrap

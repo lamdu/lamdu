@@ -1,10 +1,11 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric, RecordWildCards #-}
 module Lamdu.Config
   ( Layers(..)
   , Help(..), Zoom(..), Pane(..), VersionControl(..), Hole(..), Name(..)
   , Config(..)
   , delKeys
+  , layerInterval
   ) where
 
 import Data.Aeson (ToJSON(..), FromJSON(..))
@@ -26,6 +27,9 @@ data Layers = Layers
   , layerActivePane
   , layerMax :: Int
   } deriving (Eq, Generic, Show)
+
+layerInterval :: Layers -> Int
+layerInterval Layers{..} = layerMax - layerMin
 
 data Help = Help
   { helpTextColor :: Draw.Color
