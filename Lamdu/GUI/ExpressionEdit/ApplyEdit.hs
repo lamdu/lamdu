@@ -113,8 +113,7 @@ mkBoxed pl destEntityId mkFuncRow annotatedArgs =
     mkFuncRow
       <&> ExpressionGui.addBelow 0 [(0, grid)]
       <&> ExpressionGui.pad (realToFrac <$> Config.valFramePadding config)
-      >>= ExpressionGui.egWidget
-          %%~ ExprGuiM.widgetEnv . BWidgets.withBgFrame myId
+      >>= ExpressionGui.egWidget %%~ ExpressionGui.addValBG myId
 
 mkMParened ::
   MonadA m =>

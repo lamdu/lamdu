@@ -121,7 +121,7 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
          (ExprGuiM.holePickersAction resultPickers >>)) mAddField
     gui
       & ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
-      & ExpressionGui.egWidget %%~ BWidgets.withBgFrame myId & ExprGuiM.widgetEnv
+      & ExpressionGui.egWidget %%~ ExpressionGui.addValBG myId
   where
     defaultPos =
       case fields of

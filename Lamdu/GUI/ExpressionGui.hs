@@ -12,6 +12,7 @@ module Lamdu.GUI.ExpressionGui
   , listWithDelDests
   , makeLabel
   , grammarLabel
+  , addValBG
   -- Lifted widgets:
   , makeFocusableView
   , makeNameView
@@ -311,6 +312,16 @@ grammarLabel text animId =
     makeLabel text animId
       & ExprGuiM.localEnv
         (WE.setTextSizeColor (Config.baseTextSize config) (Config.grammarColor config))
+
+addValBG :: MonadA m => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
+addValBG myId gui =
+  do
+    config <- WE.readConfig & ExprGuiM.widgetEnv
+    let layer = Config.layerValFrameBG $ Config.layers config
+    let color = Config.valFrameBGColor config
+    return $ Widget.backgroundColor layer animId color gui
+  where
+    animId = Widget.toAnimId myId ++ ["bg"]
 
 stdWrapParenify ::
   MonadA m =>

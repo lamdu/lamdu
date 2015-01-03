@@ -11,7 +11,6 @@ module Lamdu.GUI.BottleWidgets
   , gridHSpaced, gridHSpacedCentered
   , verticalSpace
   , makeChoiceWidget, ChoiceWidgetConfig(..), ChoiceWidgetExpandMode(..)
-  , withBgFrame
   , liftLayerInterval
   ) where
 
@@ -70,16 +69,6 @@ liftLayerInterval config =
   where
     layers = Config.layers config
     layerDiff = - Config.layerInterval layers
-
-withBgFrame :: MonadA m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
-withBgFrame myId gui =
-  do
-    config <- WE.readConfig
-    let layer = Config.layerValFrameBG $ Config.layers config
-    let color = Config.valFrameBGColor config
-    return $ Widget.backgroundColor layer animId color gui
-  where
-    animId = Widget.toAnimId myId ++ ["bg"]
 
 respondToCursorIn ::
   MonadA m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
