@@ -12,7 +12,9 @@ import           Control.MonadA (MonadA)
 import           Data.Maybe (fromMaybe)
 import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Store.Transaction as Transaction
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Closed as HoleClosed
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (diveIntoHole)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
@@ -35,6 +37,7 @@ make hole pl myId = do
   (delegateDestId, closedGui) <-
     HoleClosed.make hole pl myId
     & wrap
+  config <- ExprGuiM.widgetEnv WE.readConfig
   let
     closedSize = closedGui ^. ExpressionGui.egWidget . Widget.wSize
     resize =
@@ -43,9 +46,13 @@ make hole pl myId = do
         (Lens._2 .~ closedSize ^. Lens._2)
       ) .
       (ExpressionGui.egAlignment .~ closedGui ^. ExpressionGui.egAlignment)
+    layers = Config.layers config
+    layerDiff = Config.layerMin layers - Config.layerMax layers
+    bringToFront = ExpressionGui.egWidget . Widget.wFrame %~ Anim.onDepth (+ layerDiff)
   tryOpenHole hole pl myId
     & mapMaybeT wrap
     <&> resize
+    <&> bringToFront
     & runMaybeT
     <&> fromMaybe closedGui
     & ExprGuiM.assignCursor myId delegateDestId

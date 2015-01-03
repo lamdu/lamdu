@@ -363,16 +363,12 @@ make pl holeInfo = do
         makeSearchTermGui holeInfo
         <&> ExpressionGui.egWidget %~
             Widget.weakerEvents searchTermEventMap
-      let
-        layers = Config.layers config
-        layerDiff = Config.layerMin layers - Config.layerMax layers
       searchTermGui
         & ExpressionGui.addBelow 0.5
           [(0.5, Widget.strongerEvents resultsEventMap resultsWidget)]
         & ExpressionGui.egWidget %~
           makeBackground (HoleInfo.hiActiveId holeInfo)
             (Config.layerMax (Config.layers config)) holeActiveBGColor
-        & ExpressionGui.egWidget . Widget.wFrame %~ Anim.onDepth (+ layerDiff)
         & return
 
 makeSearchTermGui ::
