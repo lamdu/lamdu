@@ -64,13 +64,13 @@ verticalSpace = do
   config <- WE.readConfig
   return $ vspaceWidget $ realToFrac $ Config.verticalSpacing config
 
-grammarLabel :: MonadA m => String -> Widget.Id -> WidgetEnvT m (Widget f)
-grammarLabel text widgetId =
+grammarLabel :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
+grammarLabel text animId =
   do
     config <- WE.readConfig
     WE.localEnv
       (WE.setTextSizeColor (Config.baseTextSize config) (Config.grammarColor config)) $
-      makeLabel text $ Widget.toAnimId widgetId
+      makeLabel text animId
 
 liftLayerInterval :: Config -> Widget f -> Widget f
 liftLayerInterval config =

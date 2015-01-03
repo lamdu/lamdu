@@ -59,7 +59,7 @@ makeFieldsWidget ::
   [Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiM.Payload)] ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
-  BWidgets.grammarLabel "Ø" myId
+  BWidgets.grammarLabel "Ø" (Widget.toAnimId myId)
   >>= BWidgets.makeFocusableView myId
   & ExprGuiM.widgetEnv
   <&> ExpressionGui.fromValueWidget

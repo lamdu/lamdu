@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionEdit.ListEdit(make) where
 import Control.Applicative ((<$>), (<$), Applicative(..))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Data.Monoid (Monoid(..))
+import Data.Monoid (Monoid(..), (<>))
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, holePickersAction)
 import qualified Control.Lens as Lens
@@ -39,7 +39,7 @@ makeUnwrapped list myId =
   ExprGuiM.assignCursor myId cursorDest $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     bracketOpenLabel <-
-      BWidgets.grammarLabel "[" bracketsId
+      BWidgets.grammarLabel "[" (Widget.toAnimId bracketsId)
       <&> ExpressionGui.fromValueWidget
       & ExprGuiM.widgetEnv
       >>= ExpressionGui.makeFocusableView firstBracketId
@@ -49,7 +49,7 @@ makeUnwrapped list myId =
         (actionEventMap (Config.listAddItemKeys config) "Add First Item" Sugar.addFirstItem)
     bracketCloseLabel <-
       ExprGuiM.widgetEnv $ ExpressionGui.fromValueWidget <$>
-      BWidgets.grammarLabel "]" bracketsId
+      BWidgets.grammarLabel "]" (Widget.toAnimId bracketsId)
     case ExpressionGui.listWithDelDests firstBracketId firstBracketId itemId (Sugar.lValues list) of
       [] ->
         return $ ExpressionGui.hbox [bracketOpenLabel, bracketCloseLabel]
@@ -118,7 +118,7 @@ makeItem (_, nextId, item) = do
   (pair, resultPickers) <-
     ExprGuiM.listenResultPickers $
     Lens.sequenceOf Lens.both
-    ( BWidgets.grammarLabel ", " (Widget.augmentId ',' itemWidgetId)
+    ( BWidgets.grammarLabel ", " (Widget.toAnimId itemWidgetId <> [","])
       & ExprGuiM.widgetEnv
       <&> ExpressionGui.fromValueWidget
     , ExprGuiM.makeSubexpression 0 itemExpr

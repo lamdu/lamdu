@@ -75,7 +75,9 @@ makeWheres ::
 makeWheres [] _ = return Nothing
 makeWheres whereItems myId =
   do
-    whereLabel <- ExpressionGui.makeLabel "where" (Widget.toAnimId myId)
+    whereLabel <-
+      BWidgets.grammarLabel "where" (Widget.toAnimId myId)
+      <&> ExpressionGui.fromValueWidget & ExprGuiM.widgetEnv
     itemEdits <-
       whereItems & reverse
       & ExpressionGui.listWithDelDests myId myId wiCursor
