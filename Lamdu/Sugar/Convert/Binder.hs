@@ -115,6 +115,16 @@ isRecursiveCallArg recursiveVar (cur : parent : _) =
   (== recursiveVar) parent
 isRecursiveCallArg _ _ = False
 
+-- TODO: find nicer way to do it than using properties and rereading
+-- data?  Perhaps keep track of the up-to-date pure val as it is being
+-- mutated?
+rereadVal :: MonadA m => ExprIRef.ValIProperty m -> T m (Val (ExprIRef.ValIProperty m))
+rereadVal valProp =
+  ExprIRef.readVal (Property.value valProp)
+  <&> fmap (flip (,) ())
+  <&> ExprIRef.addProperties (Property.set valProp)
+  <&> fmap fst
+
 changeRecursiveCallArgs ::
   MonadA m =>
   (ExprIRef.ValI m -> T m (ExprIRef.ValI m)) ->
@@ -122,11 +132,7 @@ changeRecursiveCallArgs ::
 changeRecursiveCallArgs change valProp var =
   -- Reread body before fixing it,
   -- to avoid re-writing old data (without converted vars)
-  -- TODO: find nicer way to do it than using properties and rereading data?
-  ExprIRef.readVal (Property.value valProp)
-  <&> fmap (flip (,) ())
-  <&> ExprIRef.addProperties (Property.set valProp)
-  <&> fmap fst
+  rereadVal valProp
   >>= onMatchingSubexprsWithPath changeRecurseArg (const (isRecursiveCallArg var))
   where
     changeRecurseArg prop =
