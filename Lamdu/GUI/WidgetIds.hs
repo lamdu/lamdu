@@ -58,8 +58,8 @@ parensPrefix = flip mappend ["parens"]
 underlineId :: AnimId -> AnimId
 underlineId = flip mappend ["underline"]
 
-activeDefBackground :: AnimId
-activeDefBackground = ["active def bg"]
+activePaneBackground :: AnimId
+activePaneBackground = ["active def bg"]
 
 flyNav :: AnimId
 flyNav = ["flyNav"]

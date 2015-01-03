@@ -2,7 +2,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Info
   ( HoleInfo(..)
   , hiSearchTermProperty
   , hiSearchTerm
-  , hiActiveId
+  , hiOpenId
   ) where
 
 import Control.Lens.Operators
@@ -19,7 +19,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
 
--- | Active hole info
+-- | Open hole info
 data HoleInfo m = HoleInfo
   { hiEntityId :: Sugar.EntityId
   , hiId :: Widget.Id
@@ -34,8 +34,8 @@ hiSearchTermProperty :: HoleInfo m -> Property (T m) String
 hiSearchTermProperty holeInfo =
   Property.composeLens hsSearchTerm $ hiState holeInfo
 
-hiActiveId :: HoleInfo m -> Widget.Id
-hiActiveId = diveIntoHole . hiId
+hiOpenId :: HoleInfo m -> Widget.Id
+hiOpenId = diveIntoHole . hiId
 
 hiSearchTerm :: HoleInfo m -> String
 hiSearchTerm holeInfo = Property.value (hiState holeInfo) ^. hsSearchTerm

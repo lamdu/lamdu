@@ -233,7 +233,7 @@ makePaneWidget env defS = do
     colorizeActivePane =
       Widget.backgroundColor
       (Config.layerActivePane (Config.layers config))
-      WidgetIds.activeDefBackground paneActiveBGColor
+      WidgetIds.activePaneBackground paneActiveBGColor
     colorizeInactivePane =
       Widget.wFrame %~ Anim.onImages (Draw.tint paneInactiveTintColor)
   DefinitionEdit.make (codeProps env) (settings env) defS

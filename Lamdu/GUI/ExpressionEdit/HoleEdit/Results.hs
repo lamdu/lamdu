@@ -20,7 +20,7 @@ import Data.Store.Transaction (Transaction)
 import GHC.Generics (Generic)
 import Lamdu.Expr.IRef (DefI)
 import Lamdu.Expr.Val (Val(..))
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument, hiActiveId)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument, hiOpenId)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.AddNames.Types (Name(..), NameCollision(..))
 import qualified Control.Lens as Lens
@@ -104,7 +104,7 @@ sugarNamesToGroup names expr = Group
     mkSearchTerms (Name _ (Collision suffix) _ varName) = [varName ++ show suffix]
 
 prefixId :: HoleInfo m -> WidgetId.Id
-prefixId holeInfo = mconcat [hiActiveId holeInfo, WidgetId.Id ["results"]]
+prefixId holeInfo = mconcat [hiOpenId holeInfo, WidgetId.Id ["results"]]
 
 typeCheckResults ::
   MonadA m => HoleInfo m ->

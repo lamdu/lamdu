@@ -21,7 +21,7 @@ data Layers = Layers
   , layerTypes
   , layerChoiceBG
   , layerHoleBG
-  , layerDarkActiveHoleBG
+  , layerDarkOpenHoleBG
   , layerNameCollisionBG
   , layerValFrameBG
   , layerParensHighlightBG
@@ -74,12 +74,13 @@ data Hole = Hole
   , holeResultPadding :: Vector2 Double
   , holeResultInjectedScaleExponent :: Double
   , holeSearchTermScaleFactor :: Vector2 Double
-  , holeInactiveExtraSymbolColor :: Draw.Color
-  , holeActiveBGColor :: Draw.Color
-  , holeInactiveBGColor :: Draw.Color
+  , holeExtraSymbolColorUnselected :: Draw.Color
+  , holeExtraSymbolColorSelected :: Draw.Color
+  , holeOpenBGColor :: Draw.Color
+  , holeClosedBGColor :: Draw.Color
   , holePickResultKeys :: [E.ModKey]
-  , holeActiveDarkPadding :: Vector2 Double
-  , holeActiveDarkBGColor :: Draw.Color
+  , holeOpenDarkPadding :: Vector2 Double
+  , holeOpenDarkBGColor :: Draw.Color
   , holeUnwrapKeys :: [E.ModKey]
   , holeOpenKeys :: [E.ModKey]
   } deriving (Eq, Generic, Show)

@@ -6,7 +6,7 @@
         "layerParensHighlightBG": 34,
         "layerActivePane": 40,
         "layerHoleBG": 38,
-        "layerDarkActiveHoleBG": 39,
+        "layerDarkOpenHoleBG": 39,
         "layerTypes": 27,
         "layerNameCollisionBG": 32,
         "layerChoiceBG": 30,
@@ -198,11 +198,17 @@
                 "Key'Tab"
             ]
         ],
-        "holeInactiveExtraSymbolColor": [
+        "holeExtraSymbolColorUnselected": [
             1.0,
             1.0,
             1.0,
             0.3
+        ],
+        "holeExtraSymbolColorSelected": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
         ],
         "holeResultCount": 8,
         "holeResultScaleFactor": {
@@ -218,12 +224,6 @@
             "_first": 3.0,
             "_second": 3.0
         },
-        "holeActiveBGColor": [
-            0.1,
-            0.1,
-            0.3,
-            0.9
-        ],
         "holePickAndMoveToNextHoleKeys": [
             [
                 {
@@ -234,7 +234,13 @@
                 "Key'Space"
             ]
         ],
-        "holeInactiveBGColor": [
+        "holeOpenBGColor": [
+            0.1,
+            0.1,
+            0.3,
+            0.9
+        ],
+        "holeClosedBGColor": [
             0.2,
             0.2,
             0.5,
@@ -260,13 +266,13 @@
                 "Key'Enter"
             ]
         ],
-        "holeActiveDarkBGColor": [
+        "holeOpenDarkBGColor": [
             0.05,
             0.05,
             0.05,
             0.6
         ],
-        "holeActiveDarkPadding": {
+        "holeOpenDarkPadding": {
             "_first": 1,
             "_second": 1
         },

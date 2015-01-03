@@ -38,13 +38,14 @@ make hole pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     Config.Hole{..} = Config.hole config
-    addDarkBackground widget =
-      widget
-      & Widget.pad (holeActiveDarkPadding <&> realToFrac)
+    addDarkBackground =
+      Lens.mapped . Lens.mapped . ExpressionGui.egWidget %~
+      \widget -> widget
+      & Widget.pad (holeOpenDarkPadding <&> realToFrac)
       & Widget.backgroundColor
-        (Config.layerDarkActiveHoleBG (Config.layers config))
+        (Config.layerDarkOpenHoleBG (Config.layers config))
         (Widget.toAnimId myId <> ["hole dark background"])
-        holeActiveDarkBGColor
+        holeOpenDarkBGColor
   (delegateDestId, closedGui) <-
     HoleClosed.make hole pl myId
     & wrap
@@ -56,10 +57,8 @@ make hole pl myId = do
         (Lens._2 .~ closedSize ^. Lens._2)
       ) .
       (ExpressionGui.egAlignment .~ closedGui ^. ExpressionGui.egAlignment)
-    addActiveBG =
-      Lens.mapped . ExpressionGui.egWidget %~ addDarkBackground
   tryOpenHole hole pl myId
-    & mapMaybeT (fmap addActiveBG . wrap)
+    & mapMaybeT (addDarkBackground . wrap)
     <&> resize
     <&> ExpressionGui.egWidget %~ BWidgets.liftLayerInterval config
     & runMaybeT

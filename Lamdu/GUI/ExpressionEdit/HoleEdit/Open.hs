@@ -165,12 +165,16 @@ makeResultGroup holeInfo results = do
         else
           (,) Nothing <$>
           makeExtraResultsPlaceholderWidget (results ^. HoleResults.rlExtra)
-  let
-    onExtraSymbol =
-      case mResult of
-      Nothing -> Widget.tint holeInactiveExtraSymbolColor
-      Just _ -> id
-  return (shownMainResult, [mainResultWidget, onExtraSymbol extraSymbolWidget, extraResWidget], mResult)
+  let extraSymbolColor =
+        maybe holeExtraSymbolColorUnselected (const holeExtraSymbolColorSelected) mResult
+  return
+    ( shownMainResult
+    , [ mainResultWidget
+      , Widget.tint extraSymbolColor extraSymbolWidget
+      , extraResWidget
+      ]
+    , mResult
+    )
   where
     mainResult = results ^. HoleResults.rlMain
 
@@ -203,7 +207,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) = 
   return
     ( msum mResults
     , Box.vboxAlign 0 widgets
-      & makeBackground (rId firstResult) (Config.layers config) holeActiveBGColor
+      & makeBackground (rId firstResult) (Config.layers config) holeOpenBGColor
       & Widget.wSize .~ Vector2 0 height
       & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
     )
@@ -283,7 +287,7 @@ makeNoResults holeInfo animId =
     label = (`ExpressionGui.makeLabel` animId)
 
 hiSearchTermId :: HoleInfo m -> Widget.Id
-hiSearchTermId holeInfo = WidgetIds.searchTermId $ HoleInfo.hiActiveId holeInfo
+hiSearchTermId holeInfo = WidgetIds.searchTermId $ HoleInfo.hiOpenId holeInfo
 
 makeHiddenResultsMWidget :: MonadA m => HaveHiddenResults -> Widget.Id -> ExprGuiM m (Maybe (Widget f))
 makeHiddenResultsMWidget HaveHiddenResults myId =
@@ -321,7 +325,7 @@ makeResultsWidget holeInfo shownResultsLists hiddenResults = do
       hiddenResultsWidgets
   return (mResult, widget)
   where
-    myId = HoleInfo.hiActiveId holeInfo
+    myId = HoleInfo.hiOpenId holeInfo
 
 assignHoleEditCursor ::
   MonadA m =>
@@ -336,7 +340,7 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
     isOnResult = any sub allShownResultIds
     assignSource
       | shouldBeOnResult && not isOnResult = cursor
-      | otherwise = HoleInfo.hiActiveId holeInfo
+      | otherwise = HoleInfo.hiOpenId holeInfo
     destId
       | null (HoleInfo.hiSearchTerm holeInfo) = searchTermId
       | otherwise = head (shownMainResultsIds ++ [searchTermId])
@@ -368,9 +372,9 @@ make pl holeInfo = do
         & ExpressionGui.addBelow 0.5
           [(0.5, Widget.strongerEvents resultsEventMap resultsWidget)]
         & ExpressionGui.egWidget %~
-          makeBackground (HoleInfo.hiActiveId holeInfo)
-          (Config.layers config) holeActiveBGColor .
-          -- Before adding the active hole bg, lift all the results to
+          makeBackground (HoleInfo.hiOpenId holeInfo)
+          (Config.layers config) holeOpenBGColor .
+          -- Before adding the open hole bg, lift all the results to
           -- be on top of it:
           BWidgets.liftLayerInterval config
         & return
