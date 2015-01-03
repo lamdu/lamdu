@@ -3,7 +3,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
   ( make
   ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (guard)
 import           Control.Monad.Trans.Class (lift)
@@ -12,21 +11,22 @@ import           Control.MonadA (MonadA)
 import           Data.Maybe (fromMaybe)
 import           Data.Maybe.Utils (maybeToMPlus)
 import           Data.Monoid ((<>))
-import qualified Data.Store.Transaction as Transaction
-import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Closed as HoleClosed
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (diveIntoHole)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
+import           Lamdu.GUI.ExpressionGui (ExpressionGui(..))
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.Sugar.AddNames.Types (Name(..))
+import qualified Control.Lens as Lens
+import qualified Data.Store.Transaction as Transaction
+import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Closed as HoleClosed
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as HoleOpen
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
-import           Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
-import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
@@ -37,9 +37,6 @@ make ::
 make hole pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
-    layers = Config.layers config
-    layerDiff = - Config.layerInterval layers
-    bringToFront = ExpressionGui.egWidget . Widget.wFrame %~ Anim.onDepth (+ layerDiff)
     Config.Hole{..} = Config.hole config
     addDarkBackground widget =
       widget
@@ -64,7 +61,7 @@ make hole pl myId = do
   tryOpenHole hole pl myId
     & mapMaybeT (fmap addActiveBG . wrap)
     <&> resize
-    <&> bringToFront
+    <&> ExpressionGui.egWidget %~ BWidgets.liftLayerInterval config
     & runMaybeT
     <&> fromMaybe closedGui
     & ExprGuiM.assignCursor myId delegateDestId

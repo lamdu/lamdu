@@ -367,7 +367,10 @@ make pl holeInfo = do
           [(0.5, Widget.strongerEvents resultsEventMap resultsWidget)]
         & ExpressionGui.egWidget %~
           makeBackground (HoleInfo.hiActiveId holeInfo)
-          (Config.layers config) holeActiveBGColor
+          (Config.layers config) holeActiveBGColor .
+          -- Before adding the active hole bg, lift all the results to
+          -- be on top of it:
+          BWidgets.liftLayerInterval config
         & return
 
 makeSearchTermGui ::

@@ -12,6 +12,7 @@ module Lamdu.GUI.BottleWidgets
   , grammarLabel, verticalSpace
   , makeChoiceWidget, ChoiceWidgetConfig(..), ChoiceWidgetExpandMode(..)
   , withBgFrame
+  , liftLayerInterval
   ) where
 
 import Control.Applicative (Applicative(..), (*>), (<$>))
@@ -30,6 +31,7 @@ import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -39,8 +41,8 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 makeTextView ::
   MonadA m => String -> AnimId -> WidgetEnvT m View
@@ -69,6 +71,13 @@ grammarLabel text widgetId =
     WE.localEnv
       (WE.setTextSizeColor (Config.baseTextSize config) (Config.grammarColor config)) $
       makeLabel text $ Widget.toAnimId widgetId
+
+liftLayerInterval :: Config -> Widget f -> Widget f
+liftLayerInterval config =
+  Widget.wFrame %~ Anim.onDepth (+ layerDiff)
+  where
+    layers = Config.layers config
+    layerDiff = - Config.layerInterval layers
 
 withBgFrame :: MonadA m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
 withBgFrame myId gui =
