@@ -11,6 +11,7 @@ module Lamdu.GUI.ExpressionGui
   , makeRow
   , listWithDelDests
   , makeLabel
+  , grammarLabel
   -- Lifted widgets:
   , makeFocusableView
   , makeNameView
@@ -302,6 +303,14 @@ parenify (ParentPrecedence parent) (MyPrecedence prec) addParens mkWidget myId
 
 makeLabel :: MonadA m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
 makeLabel text animId = ExprGuiM.makeLabel text animId <&> fromValueWidget
+
+grammarLabel :: MonadA m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
+grammarLabel text animId =
+  do
+    config <- WE.readConfig & ExprGuiM.widgetEnv
+    makeLabel text animId
+      & ExprGuiM.localEnv
+        (WE.setTextSizeColor (Config.baseTextSize config) (Config.grammarColor config))
 
 stdWrapParenify ::
   MonadA m =>

@@ -28,18 +28,18 @@ make parentPrecedence binder pl =
   Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId bodyId $
     do
-      lambdaLabel <- ExprGuiM.widgetEnv $ BWidgets.grammarLabel "λ" $ Widget.toAnimId myId
+      lambdaLabel <- ExpressionGui.grammarLabel "λ" $ Widget.toAnimId myId
       paramsEdit <-
         BinderEdit.makeParamsEdit showParamType bodyId params
         <&> map ((,) 0)
         >>= ExpressionGui.vboxDownwardsSpaced
-      dotLabel <- ExprGuiM.widgetEnv $ BWidgets.grammarLabel ". " $ Widget.toAnimId myId
+      dotLabel <- ExpressionGui.grammarLabel ". " $ Widget.toAnimId myId
       bodyEdit <- BinderEdit.makeResultEdit (binder ^. Sugar.dMActions) params body myId
       mWheresEdit <-
         BinderEdit.makeWheres (binder ^. Sugar.dWhereItems) myId
-      ExpressionGui.fromValueWidget lambdaLabel :
+      lambdaLabel :
         [ paramsEdit
-        , ExpressionGui.fromValueWidget dotLabel
+        , dotLabel
         , bodyEdit
         ]
         & ExpressionGui.hbox

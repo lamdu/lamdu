@@ -11,7 +11,6 @@ import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -39,17 +38,13 @@ makeUnwrapped list myId =
   ExprGuiM.assignCursor myId cursorDest $ do
     config <- ExprGuiM.widgetEnv WE.readConfig
     bracketOpenLabel <-
-      BWidgets.grammarLabel "[" (Widget.toAnimId bracketsId)
-      <&> ExpressionGui.fromValueWidget
-      & ExprGuiM.widgetEnv
+      ExpressionGui.grammarLabel "[" (Widget.toAnimId bracketsId)
       >>= ExpressionGui.makeFocusableView firstBracketId
       <&>
         ExpressionGui.egWidget %~
         Widget.weakerEvents
         (actionEventMap (Config.listAddItemKeys config) "Add First Item" Sugar.addFirstItem)
-    bracketCloseLabel <-
-      ExprGuiM.widgetEnv $ ExpressionGui.fromValueWidget <$>
-      BWidgets.grammarLabel "]" (Widget.toAnimId bracketsId)
+    bracketCloseLabel <- ExpressionGui.grammarLabel "]" (Widget.toAnimId bracketsId)
     case ExpressionGui.listWithDelDests firstBracketId firstBracketId itemId (Sugar.lValues list) of
       [] ->
         return $ ExpressionGui.hbox [bracketOpenLabel, bracketCloseLabel]
@@ -118,9 +113,7 @@ makeItem (_, nextId, item) = do
   (pair, resultPickers) <-
     ExprGuiM.listenResultPickers $
     Lens.sequenceOf Lens.both
-    ( BWidgets.grammarLabel ", " (Widget.toAnimId itemWidgetId <> [","])
-      & ExprGuiM.widgetEnv
-      <&> ExpressionGui.fromValueWidget
+    ( ExpressionGui.grammarLabel ", " (Widget.toAnimId itemWidgetId <> [","])
     , ExprGuiM.makeSubexpression 0 itemExpr
     )
   return $ pair

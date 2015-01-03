@@ -59,10 +59,8 @@ makeFieldsWidget ::
   [Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiM.Payload)] ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
-  BWidgets.grammarLabel "Ø" (Widget.toAnimId myId)
-  >>= BWidgets.makeFocusableView myId
-  & ExprGuiM.widgetEnv
-  <&> ExpressionGui.fromValueWidget
+  ExpressionGui.grammarLabel "Ø" (Widget.toAnimId myId)
+  >>= ExpressionGui.egWidget %%~ ExprGuiM.widgetEnv . BWidgets.makeFocusableView myId
 makeFieldsWidget fields _ =
   do
     vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
