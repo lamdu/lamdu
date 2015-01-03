@@ -202,6 +202,7 @@ makeWhereItemEdit (_prevId, nextId, item) = do
     (item ^. Sugar.wiValue)
     (WidgetIds.fromEntityId (item ^. Sugar.wiEntityId))
     <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
+    <&> ExpressionGui.pad (Config.whereItemPadding config <&> realToFrac)
 
 jumpToRHS ::
   (MonadA m, MonadA f) =>

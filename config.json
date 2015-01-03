@@ -678,6 +678,18 @@
         "_first": 0.6,
         "_second": 0.6
     },
+    "whereLabelScaleFactor": {
+        "_first": 0.85,
+        "_second": 0.85
+    },
+    "whereScaleFactor": {
+        "_first": 0.85,
+        "_second": 0.85
+    },
+    "whereItemPadding": {
+        "_first": 5,
+        "_second": 5
+    },
     "whereAddItemKeys": [
         [
             {
@@ -730,20 +742,12 @@
             "Key'Enter"
         ]
     ],
-    "whereScaleFactor": {
-        "_first": 0.85,
-        "_second": 0.85
-    },
     "invalidCursorBGColor": [
         0.4,
         0.0,
         0.0,
         1.0
     ],
-    "whereLabelScaleFactor": {
-        "_first": 0.85,
-        "_second": 0.85
-    },
     "foreignModuleColor": [
         1.0,
         0.3,

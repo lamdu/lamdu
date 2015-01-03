@@ -141,6 +141,7 @@ data Config = Config
   , whereAddItemKeys :: [E.ModKey]
   , whereScaleFactor :: Vector2 Double
   , whereLabelScaleFactor :: Vector2 Double
+  , whereItemPadding :: Vector2 Double
 
   , typeScaleFactor :: Vector2 Double
 
