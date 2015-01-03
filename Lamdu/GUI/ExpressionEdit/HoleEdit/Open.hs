@@ -203,8 +203,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) = 
   return
     ( msum mResults
     , Box.vboxAlign 0 widgets
-      & makeBackground (rId firstResult)
-        (Config.layerHoleBG (Config.layers config)) holeActiveBGColor
+      & makeBackground (rId firstResult) (Config.layers config) holeActiveBGColor
       & Widget.wSize .~ Vector2 0 height
       & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
     )
@@ -368,7 +367,7 @@ make pl holeInfo = do
           [(0.5, Widget.strongerEvents resultsEventMap resultsWidget)]
         & ExpressionGui.egWidget %~
           makeBackground (HoleInfo.hiActiveId holeInfo)
-            (Config.layerHoleBG (Config.layers config)) holeActiveBGColor
+          (Config.layers config) holeActiveBGColor
         & return
 
 makeSearchTermGui ::

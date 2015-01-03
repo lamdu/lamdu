@@ -21,6 +21,7 @@ data Layers = Layers
   , layerTypes
   , layerChoiceBG
   , layerHoleBG
+  , layerDarkActiveHoleBG
   , layerNameCollisionBG
   , layerValFrameBG
   , layerParensHighlightBG
@@ -77,6 +78,8 @@ data Hole = Hole
   , holeActiveBGColor :: Draw.Color
   , holeInactiveBGColor :: Draw.Color
   , holePickResultKeys :: [E.ModKey]
+  , holeActiveDarkPadding :: Vector2 Double
+  , holeActiveDarkBGColor :: Draw.Color
   } deriving (Eq, Generic, Show)
 
 data Name = Name

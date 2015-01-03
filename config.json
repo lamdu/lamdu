@@ -5,11 +5,12 @@
         "layerCursor": -1,
         "layerParensHighlightBG": 34,
         "layerActivePane": 40,
+        "layerHoleBG": 38,
+        "layerDarkActiveHoleBG": 39,
         "layerTypes": 27,
         "layerNameCollisionBG": 32,
         "layerChoiceBG": 30,
-        "layerValFrameBG": 33,
-        "layerHoleBG": 29
+        "layerValFrameBG": 33
     },
     "help": {
         "helpInputDocColor": [
@@ -258,7 +259,17 @@
                 },
                 "Key'Enter"
             ]
-        ]
+        ],
+        "holeActiveDarkBGColor": [
+            0.05,
+            0.05,
+            0.05,
+            0.6
+        ],
+        "holeActiveDarkPadding": {
+            "_first": 1,
+            "_second": 1
+        }
     },
     "name": {
         "nameOriginFGColor": [

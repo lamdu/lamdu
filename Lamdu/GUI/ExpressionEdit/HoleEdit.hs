@@ -1,4 +1,4 @@
-{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE NoMonomorphismRestriction, RecordWildCards, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit
   ( make
   ) where
@@ -11,6 +11,7 @@ import           Control.Monad.Trans.Maybe (MaybeT(..), mapMaybeT)
 import           Control.MonadA (MonadA)
 import           Data.Maybe (fromMaybe)
 import           Data.Maybe.Utils (maybeToMPlus)
+import           Data.Monoid ((<>))
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -34,10 +35,22 @@ make ::
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole pl myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    layers = Config.layers config
+    layerDiff = - Config.layerInterval layers
+    bringToFront = ExpressionGui.egWidget . Widget.wFrame %~ Anim.onDepth (+ layerDiff)
+    Config.Hole{..} = Config.hole config
+    addDarkBackground widget =
+      widget
+      & Widget.pad (holeActiveDarkPadding <&> realToFrac)
+      & Widget.backgroundColor
+        (Config.layerDarkActiveHoleBG (Config.layers config))
+        (Widget.toAnimId myId <> ["hole dark background"])
+        holeActiveDarkBGColor
   (delegateDestId, closedGui) <-
     HoleClosed.make hole pl myId
     & wrap
-  config <- ExprGuiM.widgetEnv WE.readConfig
   let
     closedSize = closedGui ^. ExpressionGui.egWidget . Widget.wSize
     resize =
@@ -46,11 +59,10 @@ make hole pl myId = do
         (Lens._2 .~ closedSize ^. Lens._2)
       ) .
       (ExpressionGui.egAlignment .~ closedGui ^. ExpressionGui.egAlignment)
-    layers = Config.layers config
-    layerDiff = - Config.layerInterval layers
-    bringToFront = ExpressionGui.egWidget . Widget.wFrame %~ Anim.onDepth (+ layerDiff)
+    addActiveBG =
+      Lens.mapped . ExpressionGui.egWidget %~ addDarkBackground
   tryOpenHole hole pl myId
-    & mapMaybeT wrap
+    & mapMaybeT (fmap addActiveBG . wrap)
     <&> resize
     <&> bringToFront
     & runMaybeT

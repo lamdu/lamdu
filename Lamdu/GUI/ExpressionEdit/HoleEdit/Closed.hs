@@ -157,8 +157,7 @@ makeSuggested suggested myId = do
       ( diveIntoHole myId
       , gui
         & ExpressionGui.egWidget %~
-          makeBackground myId (Config.layerHoleBG (Config.layers config))
-          holeInactiveBGColor
+          makeBackground myId (Config.layers config) holeInactiveBGColor
       )
   where
     fullySuggested =
@@ -171,9 +170,7 @@ makeSimple myId = do
   let Config.Hole{..} = Config.hole config
   ExprGuiM.widgetEnv
     (BWidgets.makeTextViewWidget "  " (Widget.toAnimId myId))
-    <&>
-      makeBackground myId
-      (Config.layerHoleBG (Config.layers config)) holeInactiveBGColor
+    <&> makeBackground myId (Config.layers config) holeInactiveBGColor
     <&> ExpressionGui.fromValueWidget
     >>= ExpressionGui.egWidget %%~ makeFocusable myId
 
