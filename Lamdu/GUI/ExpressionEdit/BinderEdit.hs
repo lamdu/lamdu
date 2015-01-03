@@ -75,20 +75,14 @@ makeWheres ::
 makeWheres [] _ = return Nothing
 makeWheres whereItems myId =
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig
-    whereLabel <-
-      ExpressionGui.makeLabel "where" (Widget.toAnimId myId)
-      <&> ExpressionGui.scaleFromTop (realToFrac <$> Config.whereLabelScaleFactor config)
+    whereLabel <- ExpressionGui.makeLabel "where" (Widget.toAnimId myId)
     itemEdits <-
       whereItems & reverse
       & ExpressionGui.listWithDelDests myId myId wiCursor
       & traverse makeWhereItemEdit
     ExpressionGui.hboxSpaced
       [ whereLabel
-      , itemEdits
-        <&> (,) 0
-        & ExpressionGui.vboxDownwards
-        & ExpressionGui.scaleFromTop (realToFrac <$> Config.whereScaleFactor config)
+      , itemEdits <&> (,) 0 & ExpressionGui.vboxDownwards
       ]
       ^. ExpressionGui.egWidget
       & Just & return

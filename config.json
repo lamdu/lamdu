@@ -678,14 +678,6 @@
         "_first": 0.75,
         "_second": 0.75
     },
-    "whereLabelScaleFactor": {
-        "_first": 1.0,
-        "_second": 1.0
-    },
-    "whereScaleFactor": {
-        "_first": 1.0,
-        "_second": 1.0
-    },
     "whereItemPadding": {
         "_first": 5,
         "_second": 5
