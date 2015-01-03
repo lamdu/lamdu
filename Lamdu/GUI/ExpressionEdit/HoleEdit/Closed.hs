@@ -44,27 +44,34 @@ make ::
   Widget.Id ->
   ExprGuiM m (Widget.Id, ExpressionGui m)
 make hole pl myId =
-  (Lens.mapped . _2 . ExpressionGui.egWidget %~ Widget.weakerEvents openEventMap) $
-  runMatcherT $ do
-    justToLeft $ do
-      arg <- maybeToMPlus $ hole ^. Sugar.holeMArg
-      gui <- lift $ makeWrapper arg myId
-      return (myId, gui)
-    justToLeft $ do
-      guard $ not isHoleResult -- Avoid suggesting inside hole results
-      guard . Lens.nullOf ExprLens.valHole $ suggested ^. Sugar.hsValue
-      (destId, gui) <- lift $ makeSuggested suggested myId
-      return (destId, gui)
-    gui <- makeSimple myId & lift
-    return (diveIntoHole myId, gui)
+  do
+    Config.Hole{..} <- ExprGuiM.widgetEnv WE.readConfig <&> Config.hole
+    let
+      addEventMap =
+        _2 . ExpressionGui.egWidget %~
+        Widget.weakerEvents (openHoleEventMap holeOpenKeys myId)
+    fmap addEventMap $ runMatcherT $ do
+      justToLeft $ do
+        arg <- maybeToMPlus $ hole ^. Sugar.holeMArg
+        gui <- lift $ makeWrapper arg myId
+        return (myId, gui)
+      justToLeft $ do
+        guard $ not isHoleResult -- Avoid suggesting inside hole results
+        guard . Lens.nullOf ExprLens.valHole $ suggested ^. Sugar.hsValue
+        (destId, gui) <- lift $ makeSuggested suggested myId
+        return (destId, gui)
+      gui <- makeSimple myId & lift
+      return (diveIntoHole myId, gui)
   where
     isHoleResult =
       Lens.nullOf (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl
     suggested = hole ^. Sugar.holeSuggested
-    openEventMap =
-      Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.Key'Enter]
-      (E.Doc ["Navigation", "Hole", "Open"]) . pure $
-      diveIntoHole myId
+
+openHoleEventMap ::
+  Applicative f => [E.ModKey] -> Widget.Id -> Widget.EventHandlers f
+openHoleEventMap keys myId =
+  Widget.keysEventMapMovesCursor keys
+  (E.Doc ["Navigation", "Hole", "Open"]) . pure $ diveIntoHole myId
 
 makeUnwrapEventMap ::
   (MonadA m, MonadA f) =>
@@ -72,15 +79,14 @@ makeUnwrapEventMap ::
   ExprGuiM m (Widget.EventHandlers (T f))
 makeUnwrapEventMap arg myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
+  let Config.Hole{..} = Config.hole config
   pure $
     case arg ^? Sugar.haUnwrap . Sugar._UnwrapMAction . Lens._Just of
     Just unwrap ->
-      Widget.keysEventMapMovesCursor (Config.acceptTypeKeys config ++ Config.delKeys config)
+      Widget.keysEventMapMovesCursor
+      (holeUnwrapKeys ++ Config.delKeys config)
       (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
-    Nothing ->
-      Widget.keysEventMapMovesCursor (Config.wrapKeys config)
-      (E.Doc ["Navigation", "Hole", "Open"]) .
-      pure $ diveIntoHole myId
+    Nothing -> openHoleEventMap (Config.wrapKeys config) myId
 
 modifyWrappedEventMap ::
   (MonadA m, Applicative f) =>

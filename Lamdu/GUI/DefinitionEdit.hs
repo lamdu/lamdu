@@ -134,7 +134,7 @@ acceptableTypeIndicator width accept color myId =
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
       acceptKeyMap =
-        Widget.keysEventMapMovesCursor (Config.acceptTypeKeys config)
+        Widget.keysEventMapMovesCursor (Config.acceptDefinitionTypeKeys config)
         (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)
     typeIndicator width color myId
       <&> Widget.weakerEvents acceptKeyMap
@@ -166,7 +166,7 @@ makeExprDefinition def bodyExpr = do
       sequence $
       case oldScheme of
       Definition.NoExportedType ->
-        [ acceptableTypeIndicator width accept (Config.acceptTypeForFirstTimeColor config) myId
+        [ acceptableTypeIndicator width accept (Config.acceptDefinitionTypeForFirstTimeColor config) myId
         ]
       Definition.ExportedType scheme ->
         [ acceptableTypeIndicator width accept (Config.typeIndicatorErrorColor config) myId

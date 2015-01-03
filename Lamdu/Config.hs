@@ -80,6 +80,8 @@ data Hole = Hole
   , holePickResultKeys :: [E.ModKey]
   , holeActiveDarkPadding :: Vector2 Double
   , holeActiveDarkBGColor :: Draw.Color
+  , holeUnwrapKeys :: [E.ModKey]
+  , holeOpenKeys :: [E.ModKey]
   } deriving (Eq, Generic, Show)
 
 data Name = Name
@@ -130,8 +132,8 @@ data Config = Config
   , foreignModuleColor :: Draw.Color
   , foreignVarColor :: Draw.Color
 
-  , acceptTypeForFirstTimeColor :: Draw.Color
-  , acceptTypeKeys :: [E.ModKey]
+  , acceptDefinitionTypeForFirstTimeColor :: Draw.Color
+  , acceptDefinitionTypeKeys :: [E.ModKey]
 
   , suggestedValueScaleFactor :: Vector2 Double
   , suggestedValueTint :: Draw.Color

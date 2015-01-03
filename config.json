@@ -269,7 +269,27 @@
         "holeActiveDarkPadding": {
             "_first": 1,
             "_second": 1
-        }
+        },
+        "holeOpenKeys": [
+            [
+                {
+                    "modAlt": false,
+                    "modShift": false,
+                    "modCtrl": false
+                },
+                "Key'Enter"
+            ]
+        ],
+        "holeUnwrapKeys": [
+            [
+                {
+                    "modAlt": false,
+                    "modShift": false,
+                    "modCtrl": false
+                },
+                "Key'Space"
+            ]
+        ]
     },
     "name": {
         "nameOriginFGColor": [
@@ -480,7 +500,7 @@
         0.0,
         1.0
     ],
-    "acceptTypeForFirstTimeColor": [
+    "acceptDefinitionTypeForFirstTimeColor": [
         0.75,
         0.75,
         0.0,
@@ -564,7 +584,7 @@
             "Key'Left"
         ]
     ],
-    "acceptTypeKeys": [
+    "acceptDefinitionTypeKeys": [
         [
             {
                 "modAlt": false,
