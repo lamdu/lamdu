@@ -252,8 +252,9 @@ postProcessSugar expr =
   expr
   <&> Lens.mapped %~ toPayload
   & SugarLens.holeArgs . Sugar.plData . ExprGuiM.plShowType .~ ExprGuiM.ShowType
-  -- Remove the top-level result's actions so that we can safely use
-  -- the special events from the result's event map (e.g: add list
+  -- Remove the top-level result's actions (which have roughly the
+  -- same meaning as those of the hole itself) so that we can safely
+  -- use the special events from the result's event map (e.g: add list
   -- item) without also getting unwanted handlers like "delete".
   & Sugar.rPayload . Sugar.plActions .~ Nothing
 

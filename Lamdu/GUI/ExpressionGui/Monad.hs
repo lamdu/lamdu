@@ -6,6 +6,7 @@ module Lamdu.GUI.ExpressionGui.Monad
   , StoredEntityIds(..), Injected(..)
   , Payload(..), plStoredEntityIds, plInjected, plNearestHoles, plShowType
   , ShowType(..)
+  , markRedundantTypes
   , shouldShowType
   , emptyPayload
   , SugarExpr
@@ -42,6 +43,7 @@ import Lamdu.GUI.Precedence (ParentPrecedence(..), Precedence)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import Lamdu.Sugar.AddNames.Types (ExpressionN)
 import Lamdu.Sugar.NearestHoles (NearestHoles)
+import Lamdu.Sugar.RedundantTypes (redundantTypes)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.RWS as RWS
 import qualified Data.Char as Char
@@ -56,6 +58,7 @@ import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -232,3 +235,13 @@ shouldShowType ShowTypeInVerboseMode = do
     case infoMode of
     CESettings.None -> False
     CESettings.Types -> True
+
+markRedundantTypes :: MonadA m => SugarExpr m -> SugarExpr m
+markRedundantTypes v =
+  v
+  & redundantTypes         . showType .~ DoNotShowType
+  & SugarLens.holePayloads . showType .~ ShowType
+  & SugarLens.holeArgs     . showType .~ ShowType
+  & Sugar.rPayload         . showType .~ ShowType
+  where
+    showType = Sugar.plData . plShowType

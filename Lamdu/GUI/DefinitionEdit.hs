@@ -19,7 +19,6 @@ import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import Lamdu.Sugar.AddNames.Types (Name(..), DefinitionN)
 import Lamdu.Sugar.NearestHoles (NearestHoles)
-import Lamdu.Sugar.RedundantTypes (redundantTypes)
 import qualified Control.Lens as Lens
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -38,27 +37,13 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
--- TODO: Do this and the conversion outside where the entire def list
--- is known, so NearestHoles can traverse the list instead of each def
-markRedundantTypes :: MonadA m => ExprGuiM.SugarExpr m -> ExprGuiM.SugarExpr m
-markRedundantTypes v =
-  v
-  & redundantTypes         . showType .~ ExprGuiM.DoNotShowType
-  & SugarLens.holePayloads . showType .~ ExprGuiM.ShowType
-  & SugarLens.holeArgs     . showType .~ ExprGuiM.ShowType
-  & Sugar.rPayload         . showType .~ ExprGuiM.ShowType
-  where
-    showType = Sugar.plData . ExprGuiM.plShowType
-
 toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiM.Payload
 toExprGuiMPayload (entityIds, nearestHoles) =
-  ExprGuiM.emptyPayload nearestHoles
-  & ExprGuiM.plStoredEntityIds .~ entityIds
+  ExprGuiM.emptyPayload nearestHoles & ExprGuiM.plStoredEntityIds .~ entityIds
 
 make ::
   MonadA m => Anchors.CodeProps m -> Settings ->
@@ -75,7 +60,7 @@ make cp settings defS =
     exprGuiDefS =
       defS
       <&> Lens.mapped . Sugar.plData %~ toExprGuiMPayload
-      <&> markRedundantTypes
+      <&> ExprGuiM.markRedundantTypes
 
 topLevelSchemeTypeView :: MonadA m => Widget.R -> AnimId -> Scheme -> ExprGuiM m (Widget f)
 topLevelSchemeTypeView minWidth animId scheme =
