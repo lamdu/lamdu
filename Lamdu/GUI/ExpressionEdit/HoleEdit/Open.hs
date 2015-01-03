@@ -261,6 +261,7 @@ postProcessSugar expr =
 toPayload :: Sugar.IsInjected -> ExprGuiM.Payload
 toPayload isInjected =
   ExprGuiM.emptyPayload NearestHoles.none
+  & ExprGuiM.plShowType .~ ExprGuiM.DoNotShowType
   & ExprGuiM.plInjected .~
     case isInjected of
     Sugar.NotInjected -> []
