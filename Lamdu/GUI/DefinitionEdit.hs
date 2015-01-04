@@ -4,39 +4,36 @@ module Lamdu.GUI.DefinitionEdit
   , diveToNameEdit
   ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.Monoid (Monoid(..))
-import Data.Store.Transaction (Transaction)
-import Data.Traversable (sequenceA)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Animation (AnimId)
-import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Expr.Scheme (Scheme(..))
-import Lamdu.GUI.CodeEdit.Settings (Settings)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
-import Lamdu.Sugar.AddNames.Types (Name(..), DefinitionN)
-import Lamdu.Sugar.NearestHoles (NearestHoles)
+import           Control.Applicative ((<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
+import           Data.Store.Transaction (Transaction)
+import           Data.Traversable (sequenceA)
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
+import           Lamdu.Expr.Scheme (Scheme(..))
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
-import qualified Lamdu.GUI.ExpressionGui as ExprGui
+import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.TypeView as TypeView
+import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.AddNames.Types (Name(..), DefinitionN)
+import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -62,17 +59,11 @@ make cp settings defS =
       <&> Lens.mapped . Sugar.plData %~ toExprGuiMPayload
       <&> ExprGuiM.markRedundantTypes
 
-topLevelSchemeTypeView :: MonadA m => Widget.R -> AnimId -> Scheme -> ExprGuiM m (Widget f)
-topLevelSchemeTypeView minWidth animId scheme =
-  do
-    config <- ExprGuiM.widgetEnv WE.readConfig
-    -- At the definition-level, Schemes can be shown as ordinary
-    -- types to avoid confusing forall's:
-    schemeType scheme
-      & TypeView.make animId
-      <&> ExprGui.addTypeBackground config animId minWidth
-      <&> uncurry Widget.liftView
-      & ExprGuiM.widgetEnv
+topLevelSchemeTypeView :: MonadA m => Widget.R -> Sugar.EntityId -> Scheme -> ExprGuiM m (Widget f)
+topLevelSchemeTypeView minWidth entityId scheme =
+  -- At the definition-level, Schemes can be shown as ordinary
+  -- types to avoid confusing forall's:
+  ExpressionGui.makeTypeView minWidth entityId (schemeType scheme)
 
 makeBuiltinDefinition ::
   MonadA m =>
@@ -81,11 +72,11 @@ makeBuiltinDefinition ::
 makeBuiltinDefinition def builtin =
   Box.vboxAlign 0 <$> sequenceA
   [ BWidgets.hboxCenteredSpaced <$> sequenceA
-    [ ExprGui.makeNameOriginEdit name (Widget.joinId myId ["name"])
+    [ ExpressionGui.makeNameOriginEdit name (Widget.joinId myId ["name"])
     , ExprGuiM.makeLabel "=" $ Widget.toAnimId myId
     , BuiltinEdit.make builtin myId
     ]
-  , topLevelSchemeTypeView 0 (mappend (Widget.toAnimId myId) ["type"])
+  , topLevelSchemeTypeView 0 entityId
     (Sugar.biType builtin)
   ]
   where
@@ -135,7 +126,7 @@ makeExprDefinition def bodyExpr = do
   bodyWidget <-
     BinderEdit.make (def ^. Sugar.drName)
     (bodyExpr ^. Sugar.deContent) myId
-    <&> (^. ExprGui.egWidget)
+    <&> (^. ExpressionGui.egWidget)
   let width = bodyWidget ^. Widget.wSize . Lens._1
   vspace <- BWidgets.verticalSpace & ExprGuiM.widgetEnv
   typeWidget <-
@@ -144,7 +135,7 @@ makeExprDefinition def bodyExpr = do
     Sugar.DefinitionExportedTypeInfo scheme ->
       sequence $
       typeIndicator width (Config.typeIndicatorMatchColor config) myId :
-      [ topLevelSchemeTypeView width exportedTypeAnimId scheme
+      [ topLevelSchemeTypeView width entityId scheme
       | not $ null $ bodyExpr ^. Sugar.deContent . Sugar.dParams
       ]
     Sugar.DefinitionNewType (Sugar.AcceptNewType oldScheme _ accept) ->
@@ -155,13 +146,12 @@ makeExprDefinition def bodyExpr = do
         ]
       Definition.ExportedType scheme ->
         [ acceptableTypeIndicator width accept (Config.typeIndicatorErrorColor config) myId
-        , topLevelSchemeTypeView width exportedTypeAnimId scheme
+        , topLevelSchemeTypeView width entityId scheme
         ]
   return $ Box.vboxAlign 0 [bodyWidget, typeWidget]
   where
     entityId = def ^. Sugar.drEntityId
     myId = WidgetIds.fromEntityId entityId
-    exportedTypeAnimId = mappend (Widget.toAnimId myId) ["Exported"]
 
 diveToNameEdit :: Widget.Id -> Widget.Id
 diveToNameEdit = BinderEdit.diveToNameEdit

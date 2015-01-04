@@ -15,7 +15,6 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -45,17 +44,10 @@ make showType prevId nextId param =
       ExpressionGui.makeNameOriginEdit (param ^. Sugar.fpName) myId
       <&> Widget.weakerEvents paramEventMap
       <&> ExpressionGui.fromValueWidget
-    s <- ExprGuiM.shouldShowType showType
-    if s
-      then do
-        paramTypeView <-
-          param ^. Sugar.fpInferredType
-          & TypeView.make (mappend (Widget.toAnimId myId) ["type"])
-          & ExprGuiM.widgetEnv
-        return $
-          ExpressionGui.addType config myId paramTypeView paramNameEdit
-      else
-        return paramNameEdit
+    paramNameEdit
+      & ExpressionGui.maybeAddInferredType showType
+        (param ^. Sugar.fpInferredType)
+        (param ^. Sugar.fpId)
   where
     entityId = param ^. Sugar.fpId
     myId = WidgetIds.fromEntityId entityId

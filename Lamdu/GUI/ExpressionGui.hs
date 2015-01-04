@@ -19,16 +19,15 @@ module Lamdu.GUI.ExpressionGui
   , makeNameEdit
   , makeNameOriginEdit
   -- Info adding
-  , addType
+  , maybeAddInferredType
   -- Expression wrapping
   , MyPrecedence(..), ParentPrecedence(..), Precedence
   , parenify
-  -- | stdWrap/stdPostProcess means addTypes
   , stdWrap
   , stdWrapIn
   , stdWrapParentExpr
   , stdWrapParenify
-  , addTypeBackground
+  , makeTypeView
   ) where
 
 import           Control.Applicative ((<$>))
@@ -39,7 +38,6 @@ import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.Traversable (Traversable(..))
@@ -58,6 +56,7 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
@@ -166,21 +165,31 @@ addTypeBackground config animId minWidth typeView =
     bgLayer = Config.layerTypes $ Config.layers config
     bgColor = Config.typeBoxBGColor config
 
-addType :: Config -> Widget.Id -> View -> ExpressionGui m -> ExpressionGui m
-addType config exprId typeView eg =
-  addBelow 0.5 items eg
+makeTypeView :: MonadA m => Widget.R -> Sugar.EntityId -> Type -> ExprGuiM m (Widget f)
+makeTypeView minWidth entityId typ =
+  do
+    config <- WE.readConfig
+    TypeView.make animId typ
+      <&> addTypeBackground config animId minWidth
+      <&> uncurry Widget.liftView
+    & ExprGuiM.widgetEnv
   where
-    vspacer =
-      uncurry Widget.liftView $ Spacer.makeVertical $
-      realToFrac $ Config.valInferredSpacing config
-    items =
-      [ (0.5, vspacer)
-      , (0.5, annotatedType)
-      ]
-    annotatedType =
-      typeView
-      & addTypeBackground config (Widget.toAnimId exprId) (eg ^. egWidget . wWidth)
-      & uncurry Widget.liftView
+    animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
+
+addInferredType :: MonadA m => Sugar.EntityId -> Type -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+addInferredType entityId inferredType eg =
+  do
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    typeView <- makeTypeView (eg ^. egWidget . wWidth) entityId inferredType
+    let
+      vspacer =
+        uncurry Widget.liftView $ Spacer.makeVertical $
+        realToFrac $ Config.valInferredSpacing config
+      items =
+        [ (0.5, vspacer)
+        , (0.5, typeView)
+        ]
+    return $ addBelow 0.5 items eg
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
@@ -259,7 +268,14 @@ stdWrapIn ::
   Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (t (ExpressionGui m)) ->
   ExprGuiM m (t (ExpressionGui m))
-stdWrapIn pl mkGui = wrapExprEventMap pl $ traverse (maybeAddInferredTypes pl) =<< mkGui
+stdWrapIn pl mkGui =
+  mkGui
+  >>= traverse %%~
+      maybeAddInferredType
+      (pl ^. Sugar.plData . ExprGuiM.plShowType)
+      (pl ^. Sugar.plInferredType)
+      (pl ^. Sugar.plEntityId)
+  & wrapExprEventMap pl
 
 stdWrap ::
   MonadA m => Sugar.Payload m ExprGuiM.Payload ->
@@ -385,34 +401,17 @@ addExprEventMap pl resultPickers gui = do
     resultPickers pl
   gui & egWidget %~ Widget.weakerEvents exprEventMap & return
 
-addInferredTypes ::
+maybeAddInferredType ::
   MonadA m =>
-  Sugar.Payload m a ->
-  ExpressionGui m ->
-  ExprGuiM m (ExpressionGui m)
-addInferredTypes exprPl eg =
+  ExprGuiM.ShowType -> Type -> Sugar.EntityId ->
+  ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+maybeAddInferredType showType inferredType entityId eg =
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig
-    typeView <-
-      exprPl ^. Sugar.plInferredType
-      & TypeView.make (mappend (Widget.toAnimId exprId) ["type"])
-      & ExprGuiM.widgetEnv
-    return $ addType config exprId typeView eg
-  where
-    entityId = exprPl ^. Sugar.plEntityId
-    exprId = WidgetIds.fromEntityId entityId
-
-maybeAddInferredTypes ::
-  MonadA m =>
-  Sugar.Payload m ExprGuiM.Payload ->
-  ExpressionGui m ->
-  ExprGuiM m (ExpressionGui m)
-maybeAddInferredTypes exprPl eg =
-  do
-    s <- ExprGuiM.shouldShowType $ exprPl ^. Sugar.plData . ExprGuiM.plShowType
-    if s
-      then addInferredTypes exprPl eg
-      else return eg
+    shouldShow <- ExprGuiM.shouldShowType showType
+    eg
+      & if shouldShow
+        then addInferredType entityId inferredType
+        else return
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests before after dest list =
