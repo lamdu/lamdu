@@ -16,7 +16,7 @@ import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..), (<>))
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (makeBackground, diveIntoHole)
+import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground, diveIntoHole)
 import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.AddNames.Types (Name(..), ExpressionN)
@@ -62,6 +62,7 @@ make hole pl myId =
         return (destId, gui)
       gui <- makeSimple myId & lift
       return (diveIntoHole myId, gui)
+  & ExpressionGui.stdWrapIn pl
   where
     isHoleResult =
       Lens.nullOf (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl
@@ -163,7 +164,7 @@ makeSuggested suggested myId = do
       ( diveIntoHole myId
       , gui
         & ExpressionGui.egWidget %~
-          makeBackground myId (Config.layers config) holeClosedBGColor
+          addBackground myId (Config.layers config) holeClosedBGColor
       )
   where
     fullySuggested =
@@ -176,7 +177,7 @@ makeSimple myId = do
   let Config.Hole{..} = Config.hole config
   ExprGuiM.widgetEnv
     (BWidgets.makeTextViewWidget "  " (Widget.toAnimId myId))
-    <&> makeBackground myId (Config.layers config) holeClosedBGColor
+    <&> addBackground myId (Config.layers config) holeClosedBGColor
     <&> ExpressionGui.fromValueWidget
     >>= ExpressionGui.egWidget %%~ makeFocusable myId
 

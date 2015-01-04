@@ -4,30 +4,25 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
   ( make
   ) where
 
-import Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
-import Control.Lens.Operators
-import Control.Monad (guard, msum, when)
-import Control.MonadA (MonadA)
-import Data.List.Lens (suffixed)
-import Data.Maybe (isJust, maybeToList, fromMaybe)
-import Data.Monoid (Monoid(..))
-import Data.Traversable (traverse, sequenceA)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Animation (AnimId)
-import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (makeBackground)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
-import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Lamdu.Sugar.AddNames.Types (Name(..), ExpressionN)
+import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad (guard, msum, when)
+import           Control.MonadA (MonadA)
+import           Data.List.Lens (suffixed)
 import qualified Data.Map as Map
+import           Data.Maybe (isJust, maybeToList, fromMaybe)
+import           Data.Monoid (Monoid(..), (<>))
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import           Data.Traversable (traverse, sequenceA)
+import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -35,14 +30,21 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap as OpenEventMap
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
+import           Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.AddNames.Types (Name(..), ExpressionN)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
@@ -207,7 +209,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) = 
   return
     ( msum mResults
     , Box.vboxAlign 0 widgets
-      & makeBackground (rId firstResult) (Config.layers config) holeOpenBGColor
+      & addBackground (rId firstResult) (Config.layers config) holeOpenBGColor
       & Widget.wSize .~ Vector2 0 height
       & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
     )
@@ -231,7 +233,7 @@ makeHoleResultWidget resultId holeResult = do
     else return mempty
   widget <-
     mkWidget
-    <&> Widget.wFrame %~ Anim.mapIdentities (`mappend` (resultSuffix # Widget.toAnimId resultId))
+    <&> Widget.wFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
     <&> Widget.scale (realToFrac <$> holeResultScaleFactor)
     <&> Widget.wEventMap .~ mempty
     >>= makeFocusable resultId
@@ -364,20 +366,46 @@ make pl holeInfo = do
         makeResultsWidget holeInfo shownResultsLists hasHiddenResults
       (searchTermEventMap, resultsEventMap) <-
         OpenEventMap.make pl holeInfo mShownResult
-      searchTermGui <-
+      rawOpenHole <-
         makeSearchTermGui holeInfo
         <&> ExpressionGui.egWidget %~
             Widget.weakerEvents searchTermEventMap
-      searchTermGui
-        & ExpressionGui.addBelow 0.5
-          [(0.5, Widget.strongerEvents resultsEventMap resultsWidget)]
+        <&> ExpressionGui.addBelow 0.5
+            [(0.5, Widget.strongerEvents resultsEventMap resultsWidget)]
+      -- We make our own type view here instead of
+      -- ExpressionGui.stdWrap, because we want to synchronize the
+      -- active BG width with the inferred type width
+      typeView <-
+        ExpressionGui.makeTypeView (rawOpenHole ^. guiWidth)
+        (pl ^. Sugar.plEntityId) (pl ^. Sugar.plInferredType)
+      rawOpenHole
+        & guiWidth %~ max (typeView ^. Widget.wSize . _1)
         & ExpressionGui.egWidget %~
-          makeBackground (HoleInfo.hiOpenId holeInfo)
+          addBackground (HoleInfo.hiOpenId holeInfo)
           (Config.layers config) holeOpenBGColor .
           -- Before adding the open hole bg, lift all the results to
           -- be on top of it:
           BWidgets.liftLayerInterval config
-        & return
+        & ExpressionGui.addBelowInferredSpacing typeView
+        >>= ExpressionGui.egWidget %%~
+            addDarkBackground (HoleInfo.hiOpenId holeInfo)
+        & ExpressionGui.wrapExprEventMap pl
+
+guiWidth :: Lens' (ExpressionGui m) Widget.R
+guiWidth = ExpressionGui.egWidget . Widget.wSize . _1
+
+addDarkBackground :: MonadA m => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
+addDarkBackground myId widget =
+  do
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    let Config.Hole{..} = Config.hole config
+    widget
+      & Widget.pad (holeOpenDarkPadding <&> realToFrac)
+      & Widget.backgroundColor
+        (Config.layerDarkOpenHoleBG (Config.layers config))
+        (Widget.toAnimId myId <> ["hole dark background"])
+        holeOpenDarkBGColor
+      & return
 
 makeSearchTermGui ::
   MonadA m => HoleInfo m ->

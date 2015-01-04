@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Common
-  ( makeBackground, diveIntoHole
+  ( addBackground, diveIntoHole
   , searchTermWIdOfHoleEntityId
   ) where
 
@@ -18,8 +18,8 @@ searchTermWIdOfHoleEntityId =
     WidgetIds.searchTermId . FocusDelegator.delegatingId .
     WidgetIds.fromEntityId
 
-makeBackground :: Widget.Id -> Config.Layers -> Draw.Color -> Widget f -> Widget f
-makeBackground myId layers =
+addBackground :: Widget.Id -> Config.Layers -> Draw.Color -> Widget f -> Widget f
+addBackground myId layers =
   Widget.backgroundColor (Config.layerHoleBG layers)
   (Widget.toAnimId myId <> ["hole background"])
 

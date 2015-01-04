@@ -19,15 +19,18 @@ module Lamdu.GUI.ExpressionGui
   , makeNameEdit
   , makeNameOriginEdit
   -- Info adding
+  , addBelowInferredSpacing
   , maybeAddInferredType
+  , makeTypeView
   -- Expression wrapping
   , MyPrecedence(..), ParentPrecedence(..), Precedence
   , parenify
+  , wrapExprEventMapIn
+  , wrapExprEventMap
   , stdWrap
   , stdWrapIn
   , stdWrapParentExpr
   , stdWrapParenify
-  , makeTypeView
   ) where
 
 import           Control.Applicative ((<$>))
@@ -36,6 +39,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
+import           Data.Functor.Identity (Identity(..))
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import           Data.Store.Property (Property(..))
@@ -176,11 +180,12 @@ makeTypeView minWidth entityId typ =
   where
     animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
 
-addInferredType :: MonadA m => Sugar.EntityId -> Type -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addInferredType entityId inferredType eg =
+addBelowInferredSpacing ::
+  MonadA m => WidgetT m ->
+  ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+addBelowInferredSpacing typeView eg =
   do
     config <- ExprGuiM.widgetEnv WE.readConfig
-    typeView <- makeTypeView (eg ^. egWidget . wWidth) entityId inferredType
     let
       vspacer =
         uncurry Widget.liftView $ Spacer.makeVertical $
@@ -190,6 +195,12 @@ addInferredType entityId inferredType eg =
         , (0.5, typeView)
         ]
     return $ addBelow 0.5 items eg
+
+addInferredType :: MonadA m => Sugar.EntityId -> Type -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+addInferredType entityId inferredType eg =
+  do
+    typeView <- makeTypeView (eg ^. egWidget . wWidth) entityId inferredType
+    addBelowInferredSpacing typeView eg
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
@@ -275,14 +286,16 @@ stdWrapIn pl mkGui =
       (pl ^. Sugar.plData . ExprGuiM.plShowType)
       (pl ^. Sugar.plInferredType)
       (pl ^. Sugar.plEntityId)
-  & wrapExprEventMap pl
+  & wrapExprEventMapIn pl
 
 stdWrap ::
   MonadA m => Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m) ->
   ExprGuiM m (ExpressionGui m)
 stdWrap pl mkGui =
-  snd <$> stdWrapIn pl ((,) () <$> mkGui)
+  mkGui <&> Identity
+  & stdWrapIn pl
+  <&> runIdentity
 
 stdWrapDelegated ::
   MonadA m =>
@@ -383,11 +396,21 @@ makeCollisionSuffixLabels (Collision suffix) animId = do
     <&> (:[]) . onSuffixWidget
 
 wrapExprEventMap ::
+  MonadA m =>
+  Sugar.Payload m ExprGuiM.Payload ->
+  ExprGuiM m (ExpressionGui m) ->
+  ExprGuiM m (ExpressionGui m)
+wrapExprEventMap pl action =
+  action <&> Identity
+  & wrapExprEventMapIn pl
+  <&> runIdentity
+
+wrapExprEventMapIn ::
   (MonadA m, Traversable t) =>
   Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (t (ExpressionGui m)) ->
   ExprGuiM m (t (ExpressionGui m))
-wrapExprEventMap pl action = do
+wrapExprEventMapIn pl action = do
   (res, resultPickers) <- ExprGuiM.listenResultPickers action
   res & traverse (addExprEventMap pl resultPickers)
 
