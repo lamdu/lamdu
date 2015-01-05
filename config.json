@@ -431,7 +431,7 @@
             "Key'Space"
         ]
     ],
-    "baseTextSize": 18,
+    "baseTextSize": 13,
     "wrapKeys": [
         [
             {
@@ -491,8 +491,8 @@
         0.2
     ],
     "typeIndicatorFrameWidth": {
-        "_first": 10.0,
-        "_second": 10.0
+        "_first": 7.0,
+        "_second": 7.0
     },
     "typeIndicatorErrorColor": [
         1.0,
@@ -681,8 +681,8 @@
         0.25
     ],
     "typeScaleFactor": {
-        "_first": 0.75,
-        "_second": 0.75
+        "_first": 1.0,
+        "_second": 1.0
     },
     "whereItemPadding": {
         "_first": 5,
