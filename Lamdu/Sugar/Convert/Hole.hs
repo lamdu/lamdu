@@ -347,32 +347,33 @@ eitherToListT :: Monad m => Either t a -> ListT m a
 eitherToListT (Left _) = mempty
 eitherToListT (Right x) = return x
 
-applyFormArg :: (Infer.Payload, a) -> Val (Infer.Payload, a)
-applyFormArg pl =
-  Val pl $
-  case pl ^. _1 . Infer.plType of
+applyFormArg :: a -> Infer.Payload -> Val (Infer.Payload, a)
+applyFormArg empty inferPl =
+  Val (inferPl, empty) $
+  case inferPl ^. Infer.plType of
   T.TRecord T.CEmpty -> V.BLeaf V.LRecEmpty
   T.TRecord (T.CExtend f typ rest) ->
     V.BRecExtend $
       V.RecExtend f
-      (Val (pl & _1 . Infer.plType .~ typ) (V.BLeaf V.LHole)) $
-      applyFormArg (pl & _1 . Infer.plType .~ T.TRecord rest)
+      (Val (plSameScope typ, empty) (V.BLeaf V.LHole)) $
+      applyFormArg empty (plSameScope (T.TRecord rest))
   _ -> V.BLeaf V.LHole
+  where
+    plSameScope typ = inferPl & Infer.plType .~ typ
 
-applyForms :: Val (Infer.Payload, a) -> [Val (Infer.Payload, a)]
-applyForms v@(Val _ V.BAbs {}) = [v]
-applyForms val =
+applyForms :: a -> Val (Infer.Payload, a) -> [Val (Infer.Payload, a)]
+applyForms _ v@(Val _ V.BAbs {}) = [v]
+applyForms empty val =
   case val ^. V.payload . _1 . Infer.plType of
   T.TFun arg res ->
-    applyForms $
-    Val (plWithType res) $ V.BApp $ V.Apply val $
-    applyFormArg (plWithType arg)
+    applyForms empty $
+    Val (plSameScope res, empty) $ V.BApp $ V.Apply val $
+    applyFormArg empty (plSameScope arg)
   _ -> []
   & (++ [val])
   where
-    plWithType t =
-      val ^. V.payload
-      & _1 . Infer.plType .~ t
+    plSameScope t =
+      val ^. V.payload . _1 & Infer.plType .~ t
 
 holeWrap :: Type -> Val (Infer.Payload, a) -> Val (Infer.Payload, a)
 holeWrap resultType val =
@@ -458,7 +459,7 @@ mkHoleResultVals mInjectedArg exprPl base =
       IRefInfer.loadInferScope scopeAtHole base
       & mapStateT maybeTtoListT
       <&> Lens.traversed . _2 %~ (,) Nothing
-    form <- lift $ ListClass.fromList $ applyForms inferredBase
+    form <- lift $ ListClass.fromList $ applyForms (Nothing, ()) inferredBase
     let formType = form ^. V.payload . _1 . Infer.plType
     injected <- maybe (return . markNotInjected) holeResultsInject mInjectedArg form
     unifyResult <- unify holeType formType & liftInfer
