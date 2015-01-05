@@ -141,12 +141,12 @@ changeRecursiveCallArgs change valProp var =
       >>= Property.set prop
 
 wrapArgWithRecord :: MonadA m => T.Tag -> T.Tag -> ExprIRef.ValI m -> T m (ExprIRef.ValI m)
-wrapArgWithRecord tag0 tag1 oldArg =
+wrapArgWithRecord tagForExistingArg tagForNewArg oldArg =
   do
     hole <- DataOps.newHole
     ExprIRef.newValBody (V.BLeaf V.LRecEmpty)
-      >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tag0 hole
-      >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tag1 oldArg
+      >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tagForNewArg hole
+      >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tagForExistingArg oldArg
 
 convertVarToGetField ::
   MonadA m => T.Tag -> V.Var -> Val (Property (T m) (ExprIRef.ValI m)) -> T m ()
