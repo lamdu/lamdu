@@ -108,6 +108,7 @@ data Config = Config
   , hole :: Hole
   , name :: Name
 
+  , backgroundColor :: Draw.Color
   , baseColor :: Draw.Color
   , baseTextSize :: Int
 
