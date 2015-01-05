@@ -375,14 +375,15 @@ applyForms empty val =
     plSameScope t =
       val ^. V.payload . _1 & Infer.plType .~ t
 
-holeWrap :: Type -> Val (Infer.Payload, a) -> Val (Infer.Payload, a)
-holeWrap resultType val =
-  Val (pl & _1 . Infer.plType .~ resultType) $
+holeWrap :: a -> Type -> Val (Infer.Payload, a) -> Val (Infer.Payload, a)
+holeWrap empty resultType val =
+  Val (plSameScope resultType, empty) $
   V.BApp $ V.Apply func val
   where
-    pl = val ^. V.payload
-    func = Val (pl & _1 . Infer.plType .~ funcType) $ V.BLeaf V.LHole
-    funcType = T.TFun (pl ^. _1 . Infer.plType) resultType
+    plSameScope typ = inferPl & Infer.plType .~ typ
+    inferPl = val ^. V.payload . _1
+    func = Val (plSameScope funcType, empty) $ V.BLeaf V.LHole
+    funcType = T.TFun (inferPl ^. Infer.plType) resultType
 
 replaceEachUnwrappedHole :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
 replaceEachUnwrappedHole replaceHole =
@@ -469,7 +470,7 @@ mkHoleResultVals mInjectedArg exprPl base =
       Left {} ->
         do
           updatedHoleType <- update holeType & liftUpdate
-          return $ holeWrap updatedHoleType injectedUpdated
+          return $ holeWrap (Nothing, NotInjected) updatedHoleType injectedUpdated
   where
     liftUpdate = State.gets . Update.run
     liftInfer = stateEitherSequence . Infer.run
