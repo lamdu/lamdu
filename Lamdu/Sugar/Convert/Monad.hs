@@ -8,7 +8,7 @@ module Lamdu.Sugar.Convert.Monad
   , codeAnchor
   , getP
   , convertSubexpression
-  , typeProtectTransaction, typeProtectedSetToVal
+  , typeProtectTransaction, typeProtectedSetToVal, wrapOnTypeError
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -23,6 +23,7 @@ import Lamdu.Expr.Val (Val)
 import Lamdu.Sugar.Internal
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
+import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
@@ -90,6 +91,15 @@ typeProtectedSetToVal = do
           Just result -> return result
           Nothing -> DataOps.setToWrapper valI dest
   return setToVal
+
+wrapOnTypeError ::
+  MonadA m =>
+  ConvertM m (ExprIRef.ValIProperty m -> T m (ExprIRef.ValI m))
+wrapOnTypeError =
+  do
+    protectedSetToVal <- typeProtectedSetToVal
+    let wrap prop = protectedSetToVal prop (Property.value prop)
+    return wrap
 
 run :: MonadA m => Context m -> ConvertM m a -> T m a
 run ctx (ConvertM action) = runReaderT action ctx

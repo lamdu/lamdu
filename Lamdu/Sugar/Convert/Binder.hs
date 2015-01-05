@@ -158,17 +158,11 @@ convertVarToGetField tagForVar paramVar =
       & ExprIRef.newValBody
       >>= Property.set prop
 
-wrapOnError ::
-  Functor f =>
-  (Property (T m) a -> a -> f (ExprIRef.ValI m)) ->
-  Property (T m) a -> f EntityId
-wrapOnError protectedSetToVal prop = protectedSetToVal prop (Property.value prop) <&> EntityId.ofValI
-
 makeConvertToRecordParams ::
   MonadA m => Maybe V.Var -> StoredLam m -> ConvertM m (T m EntityId)
 makeConvertToRecordParams mRecursiveVar (StoredLam (V.Lam paramVar lamBody) lamProp) =
   do
-    protectedSetToVal <- ConvertM.typeProtectedSetToVal
+    wrapOnError <- ConvertM.wrapOnTypeError
     return $
       do
         tagForVar <- newTag
@@ -180,7 +174,7 @@ makeConvertToRecordParams mRecursiveVar (StoredLam (V.Lam paramVar lamBody) lamP
             (changeRecursiveCallArgs
              (wrapArgWithRecord tagForVar tagForNewVar)
              (lamBody ^. V.payload))
-        wrapOnError protectedSetToVal lamProp
+        wrapOnError lamProp <&> EntityId.ofValI
   where
     paramList = ParamList.mkProp (Property.value lamProp)
 
@@ -190,49 +184,74 @@ convertRecordParams ::
   ConvertM m (ConventionalParams m a)
 convertRecordParams fieldParams lam@(V.Lam param _) pl = do
   params <- traverse mkParam fieldParams
+  mAddFirstParam <- mStoredLam & Lens.traverse %%~ makeAddFieldParam param (:tags)
   pure ConventionalParams
     { cpTags = Set.fromList tags
     , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
     , _cpParams = params
-    , cpMAddFirstParam = addParam (:tags) . slParamList <$> mStoredLam
+    , cpMAddFirstParam = mAddFirstParam
     }
   where
-    addParam insert paramListProp =
-      do
-        tag <- newTag
-        Transaction.setP paramListProp $ Just $ insert tag
-        return $ EntityId.ofLambdaTagParam param tag
     tags = fpTag <$> fieldParams
     fpIdEntityId = EntityId.ofLambdaTagParam param . fpTag
     mkParamInfo fp =
       Map.singleton (fpTag fp) . ConvertM.TagParamInfo param $ fpIdEntityId fp
     mStoredLam = mkStoredLam lam pl
     mkParam fp =
-      pure FuncParam
-      { _fpName = UniqueId.toGuid $ fpTag fp
-      , _fpId = fpIdEntityId fp
-      , _fpVarKind = FuncFieldParameter
-      , _fpInferredType = fpFieldType fp
-      , _fpMActions = fpActions fp <$> mStoredLam
-      , _fpHiddenIds = []
-      }
-    insertAfter pos tag =
-      break (== pos) tags & \(pre, post) -> pre ++ [tag] ++ post
-    fpActions fp storedLam =
-      FuncParamActions
+      do
+        actions <- mStoredLam & Lens.traverse %%~ makeFieldParamActions param tags fp
+        pure FuncParam
+          { _fpName = UniqueId.toGuid $ fpTag fp
+          , _fpId = fpIdEntityId fp
+          , _fpVarKind = FuncFieldParameter
+          , _fpInferredType = fpFieldType fp
+          , _fpMActions = actions
+          , _fpHiddenIds = []
+          }
+
+makeAddFieldParam :: MonadA m =>
+  V.Var -> (T.Tag -> ParamList) -> StoredLam m -> ConvertM m (T m EntityId)
+makeAddFieldParam param mkNewTags storedLam =
+  do
+    wrapOnError <- ConvertM.wrapOnTypeError
+    return $
+      do
+        tag <- newTag
+        Transaction.setP (slParamList storedLam) $ Just $ mkNewTags tag
+        void $ wrapOnError $ slLambdaProp storedLam
+        return $ EntityId.ofLambdaTagParam param tag
+
+makeFieldParamActions :: MonadA m =>
+  V.Var -> [T.Tag] -> FieldParam -> StoredLam m -> ConvertM m (FuncParamActions m)
+makeFieldParamActions param tags fp storedLam =
+  do
+    addParam <- makeAddFieldParam param mkNewTags storedLam
+    delParam <- makeDelFieldParam tags fp storedLam
+    pure FuncParamActions
       { _fpListItemActions = ListItemActions
-        { _itemAddNext = addParam (insertAfter (fpTag fp)) $ slParamList storedLam
-        , _itemDelete = delFieldParam tags fp storedLam
+        { _itemAddNext = addParam
+        , _itemDelete = delParam
         }
       }
-
-delFieldParam :: MonadA m => [T.Tag] -> FieldParam -> StoredLam m -> T m ()
-delFieldParam tags fp storedLam =
-  do
-    Transaction.setP (slParamList storedLam) $ Just $ newTags
-    getFieldParamsToHole (fpTag fp) storedLam
   where
-    newTags = List.delete (fpTag fp) tags
+    mkNewTags = insertAfter (fpTag fp)
+    insertAfter pos tag =
+      break (== pos) tags & \(pre, post) -> pre ++ [tag] ++ post
+
+makeDelFieldParam :: MonadA m => [T.Tag] -> FieldParam -> StoredLam m -> ConvertM m (T m ())
+makeDelFieldParam tags fp storedLam =
+  do
+    wrapOnError <- ConvertM.wrapOnTypeError
+    return $
+      do
+        Transaction.setP (slParamList storedLam) newTags
+        getFieldParamsToHole (fpTag fp) storedLam
+        void $ wrapOnError $ slLambdaProp storedLam
+  where
+    newTags =
+      case List.delete (fpTag fp) tags of
+      [_] -> Nothing
+      xs -> Just xs
 
 slParamList :: MonadA m => StoredLam m -> Transaction.MkProperty m (Maybe ParamList)
 slParamList = ParamList.mkProp . Property.value . slLambdaProp
