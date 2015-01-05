@@ -17,6 +17,7 @@ import Lamdu.Config (Config)
 import Lamdu.GUI.ExpressionGui (ExpressionGui)
 import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..))
+import Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -25,6 +26,7 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
@@ -159,7 +161,7 @@ make name binder myId = do
     makeBinderNameEdit (binder ^. Sugar.dMActions) rhsJumperEquals rhs name myId
     <&> ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
   paramEdits <-
-    makeParamsEdit ExprGuiM.ShowType myId params
+    makeParamsEdit ExprGuiM.ShowType (ExprGuiM.nextHolesBefore body) myId params
     <&> Lens.mapped . ExpressionGui.egWidget
         %~ Widget.weakerEvents rhsJumperEquals
   mWheresEdit <- makeWheres (binder ^. Sugar.dWhereItems) myId
@@ -244,14 +246,19 @@ makeResultEdit mActions params result myId = do
 makeParamsEdit ::
   MonadA m =>
   ExprGuiM.ShowType ->
+  NearestHoles ->
   Widget.Id ->
   [Sugar.FuncParam (Name m) m] ->
   ExprGuiM m [ExpressionGui m]
-makeParamsEdit showType lhsId params =
-  ExpressionGui.listWithDelDests lhsId lhsId (WidgetIds.fromEntityId . (^. Sugar.fpId)) params
-  & traverse mkParam
-  where
-    mkParam (prevId, nextId, param) = ParamEdit.make showType prevId nextId param
+makeParamsEdit showType nearestHoles lhsId params =
+  do
+    jumpHolesEventMap <-ExprEventMap.jumpHolesEventMap [] nearestHoles
+    let
+      mkParam (prevId, nextId, param) =
+        ParamEdit.make showType prevId nextId param
+        <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
+    ExpressionGui.listWithDelDests lhsId lhsId (WidgetIds.fromEntityId . (^. Sugar.fpId)) params
+      & traverse mkParam
 
 diveToNameEdit :: Widget.Id -> Widget.Id
 diveToNameEdit = FocusDelegator.delegatingId -- Name editor

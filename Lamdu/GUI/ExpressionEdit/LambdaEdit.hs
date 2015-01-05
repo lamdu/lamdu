@@ -29,7 +29,7 @@ make parentPrecedence binder pl =
     do
       lambdaLabel <- ExpressionGui.grammarLabel "λ" $ Widget.toAnimId myId
       paramsEdit <-
-        BinderEdit.makeParamsEdit showParamType bodyId params
+        BinderEdit.makeParamsEdit showParamType (ExprGuiM.nextHolesBefore body) bodyId params
         <&> map ((,) 0)
         >>= ExpressionGui.vboxDownwardsSpaced
       dotLabel <- ExpressionGui.grammarLabel ". " $ Widget.toAnimId myId
