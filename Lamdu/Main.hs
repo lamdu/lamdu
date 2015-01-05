@@ -222,19 +222,28 @@ makeFlyNav = do
     fnState <- readIORef flyNavState
     return $ FlyNav.make WidgetIds.flyNav fnState (writeIORef flyNavState) widget
 
-makeScaleFactor :: IO (IORef (Vector2 Widget.R), Config.Zoom -> Widget.EventHandlers IO)
-makeScaleFactor = do
-  factor <- newIORef 1
-  let
-    eventMap Config.Zoom{..} = mconcat
-      [ Widget.keysEventMap enlargeKeys
-        (EventMap.Doc ["View", "Zoom", "Enlarge"]) $
-        modifyIORef factor (* realToFrac enlargeFactor)
-      , Widget.keysEventMap shrinkKeys
-        (EventMap.Doc ["View", "Zoom", "Shrink"]) $
-        modifyIORef factor (/ realToFrac shrinkFactor)
-      ]
-  return (factor, eventMap)
+getDisplayScale :: GLFW.Window -> IO Widget.R
+getDisplayScale window =
+  do
+    (fbWidth, _) <- GLFW.getFramebufferSize window
+    (winWidth, _) <- GLFW.getWindowSize window
+    return $ fromIntegral fbWidth / fromIntegral winWidth
+
+makeScaleFactor ::
+  GLFW.Window -> IO (IORef (Vector2 Widget.R), Config.Zoom -> Widget.EventHandlers IO)
+makeScaleFactor window =
+  do
+    factor <- newIORef . realToFrac =<< getDisplayScale window
+    let
+      eventMap Config.Zoom{..} = mconcat
+        [ Widget.keysEventMap enlargeKeys
+          (EventMap.Doc ["View", "Zoom", "Enlarge"]) $
+          modifyIORef factor (* realToFrac enlargeFactor)
+        , Widget.keysEventMap shrinkKeys
+          (EventMap.Doc ["View", "Zoom", "Shrink"]) $
+          modifyIORef factor (/ realToFrac shrinkFactor)
+        ]
+    return (factor, eventMap)
 
 helpConfig :: Draw.Font -> Config.Help -> EventMapDoc.Config
 helpConfig font Config.Help{..} =
@@ -269,7 +278,7 @@ baseStyle config font = TextEdit.Style
 
 runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO a
 runDb win getConfig font db = do
-  (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor
+  (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor win
   addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
   settingsRef <- newIORef Settings
     { _sInfoMode = Settings.defaultInfoMode
