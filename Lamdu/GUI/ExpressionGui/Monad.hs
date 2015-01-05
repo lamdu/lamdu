@@ -219,12 +219,20 @@ listenResultPickers = listener oHolePickers
 addResultPicker :: MonadA m => T m Widget.EventResult -> ExprGuiM m ()
 addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }
 
+leftMostLeaf :: Sugar.Expression name m a -> Sugar.Expression name m a
+leftMostLeaf val =
+  case val ^.. Sugar.rBody . Lens.traversed of
+  [] -> val
+  (x:_) -> leftMostLeaf x
+
 nextHolesBefore :: Sugar.Expression name m Payload -> NearestHoles
 nextHolesBefore val =
-  val ^. Sugar.rPayload . Sugar.plData . plNearestHoles
-  & if Lens.has (Sugar.rBody . Sugar._BodyHole) val
-    then NearestHoles.next .~ Just (val ^. Sugar.rPayload . Sugar.plEntityId)
+  node ^. Sugar.rPayload . Sugar.plData . plNearestHoles
+  & if Lens.has (Sugar.rBody . Sugar._BodyHole) node
+    then NearestHoles.next .~ Just (node ^. Sugar.rPayload . Sugar.plEntityId)
     else id
+  where
+    node = leftMostLeaf val
 
 shouldShowType :: MonadA m => ShowType -> ExprGuiM m Bool
 shouldShowType DoNotShowType = return False
