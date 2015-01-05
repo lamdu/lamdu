@@ -87,6 +87,9 @@ data StoredLam m = StoredLam
   , slLambdaProp :: ExprIRef.ValIProperty m
   }
 
+slLam :: Lens' (StoredLam m) (V.Lam (Val (ExprIRef.ValIProperty m)))
+slLam f StoredLam{..} = f _slLam <&> \_slLam -> StoredLam{..}
+
 mkStoredLam ::
   V.Lam (Val (Input.Payload m a)) ->
   Input.Payload m a -> Maybe (StoredLam m)
@@ -179,18 +182,22 @@ makeConvertToRecordParams mRecursiveVar (StoredLam (V.Lam paramVar lamBody) lamP
     paramList = ParamList.mkProp (Property.value lamProp)
 
 convertRecordParams ::
-  (MonadA m, Monoid a) => [FieldParam] ->
+  (MonadA m, Monoid a) =>
+  Maybe V.Var -> [FieldParam] ->
   V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
   ConvertM m (ConventionalParams m a)
-convertRecordParams fieldParams lam@(V.Lam param _) pl = do
-  params <- traverse mkParam fieldParams
-  mAddFirstParam <- mStoredLam & Lens.traverse %%~ makeAddFieldParam param (:tags)
-  pure ConventionalParams
-    { cpTags = Set.fromList tags
-    , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
-    , _cpParams = params
-    , cpMAddFirstParam = mAddFirstParam
-    }
+convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
+  do
+    params <- traverse mkParam fieldParams
+    mAddFirstParam <-
+      mStoredLam
+      & Lens.traverse %%~ makeAddFieldParam mRecursiveVar param (:tags)
+    pure ConventionalParams
+      { cpTags = Set.fromList tags
+      , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
+      , _cpParams = params
+      , cpMAddFirstParam = mAddFirstParam
+      }
   where
     tags = fpTag <$> fieldParams
     fpIdEntityId = EntityId.ofLambdaTagParam param . fpTag
@@ -199,7 +206,9 @@ convertRecordParams fieldParams lam@(V.Lam param _) pl = do
     mStoredLam = mkStoredLam lam pl
     mkParam fp =
       do
-        actions <- mStoredLam & Lens.traverse %%~ makeFieldParamActions param tags fp
+        actions <-
+          mStoredLam
+          & Lens.traverse %%~ makeFieldParamActions mRecursiveVar param tags fp
         pure FuncParam
           { _fpName = UniqueId.toGuid $ fpTag fp
           , _fpId = fpIdEntityId fp
@@ -209,23 +218,37 @@ convertRecordParams fieldParams lam@(V.Lam param _) pl = do
           , _fpHiddenIds = []
           }
 
-makeAddFieldParam :: MonadA m =>
-  V.Var -> (T.Tag -> ParamList) -> StoredLam m -> ConvertM m (T m EntityId)
-makeAddFieldParam param mkNewTags storedLam =
+makeAddFieldParam ::
+  MonadA m =>
+  Maybe V.Var -> V.Var -> (T.Tag -> ParamList) -> StoredLam m ->
+  ConvertM m (T m EntityId)
+makeAddFieldParam mRecursiveVar param mkNewTags storedLam =
   do
     wrapOnError <- ConvertM.wrapOnTypeError
     return $
       do
         tag <- newTag
         Transaction.setP (slParamList storedLam) $ Just $ mkNewTags tag
+        let
+          addFieldToCall argI =
+            do
+              hole <- DataOps.newHole
+              ExprIRef.newValBody $ V.BRecExtend $ V.RecExtend tag hole argI
+        mRecursiveVar
+          & traverse_
+            (changeRecursiveCallArgs
+             addFieldToCall
+             (storedLam ^. slLam . V.lamResult . V.payload))
         void $ wrapOnError $ slLambdaProp storedLam
         return $ EntityId.ofLambdaTagParam param tag
 
-makeFieldParamActions :: MonadA m =>
-  V.Var -> [T.Tag] -> FieldParam -> StoredLam m -> ConvertM m (FuncParamActions m)
-makeFieldParamActions param tags fp storedLam =
+makeFieldParamActions ::
+  MonadA m =>
+  Maybe V.Var -> V.Var -> [T.Tag] -> FieldParam -> StoredLam m ->
+  ConvertM m (FuncParamActions m)
+makeFieldParamActions mRecursiveVar param tags fp storedLam =
   do
-    addParam <- makeAddFieldParam param mkNewTags storedLam
+    addParam <- makeAddFieldParam mRecursiveVar param mkNewTags storedLam
     delParam <- makeDelFieldParam tags fp storedLam
     pure FuncParamActions
       { _fpListItemActions = ListItemActions
@@ -234,11 +257,11 @@ makeFieldParamActions param tags fp storedLam =
         }
       }
   where
-    mkNewTags = insertAfter (fpTag fp)
-    insertAfter pos tag =
-      break (== pos) tags & \(pre, post) -> pre ++ [tag] ++ post
+    mkNewTags tag=
+      break (== fpTag fp) tags & \(pre, post) -> pre ++ [tag] ++ post
 
-makeDelFieldParam :: MonadA m => [T.Tag] -> FieldParam -> StoredLam m -> ConvertM m (T m ())
+makeDelFieldParam ::
+  MonadA m => [T.Tag] -> FieldParam -> StoredLam m -> ConvertM m (T m ())
 makeDelFieldParam tags fp storedLam =
   do
     wrapOnError <- ConvertM.wrapOnTypeError
@@ -326,7 +349,7 @@ convertLamParams mRecursiveVar lambda lambdaPl =
         , Map.size fields >= 2
         , Set.null (tagsInOuterScope `Set.intersection` tagsInInnerScope)
         , isParamAlwaysUsedWithGetField lambda ->
-          convertRecordParams fieldParams lambda lambdaPl
+          convertRecordParams mRecursiveVar fieldParams lambda lambdaPl
         where
           tagsInInnerScope = Map.keysSet fields
           FlatComposite fields extension = FlatComposite.fromComposite composite
