@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Binder
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens (Lens')
 import Control.Lens.Operators
-import Control.Monad (guard, void)
+import Control.Monad (guard, void, when)
 import Control.MonadA (MonadA)
 import Data.Foldable (traverse_)
 import Data.List.Utils (isLengthAtLeast)
@@ -235,10 +235,10 @@ makeAddFieldParam mRecursiveVar param mkNewTags storedLam =
               hole <- DataOps.newHole
               ExprIRef.newValBody $ V.BRecExtend $ V.RecExtend tag hole argI
         mRecursiveVar
-          & traverse_
-            (changeRecursiveCallArgs
-             addFieldToCall
-             (storedLam ^. slLam . V.lamResult . V.payload))
+          & Lens.traverse %%~
+            changeRecursiveCallArgs addFieldToCall
+            (storedLam ^. slLam . V.lamResult . V.payload)
+          & void
         void $ wrapOnError $ slLambdaProp storedLam
         return $ EntityId.ofLambdaTagParam param tag
 
@@ -249,7 +249,7 @@ makeFieldParamActions ::
 makeFieldParamActions mRecursiveVar param tags fp storedLam =
   do
     addParam <- makeAddFieldParam mRecursiveVar param mkNewTags storedLam
-    delParam <- makeDelFieldParam tags fp storedLam
+    delParam <- makeDelFieldParam mRecursiveVar tags fp storedLam
     pure FuncParamActions
       { _fpListItemActions = ListItemActions
         { _itemAddNext = addParam
@@ -260,21 +260,57 @@ makeFieldParamActions mRecursiveVar param tags fp storedLam =
     mkNewTags tag=
       break (== fpTag fp) tags & \(pre, post) -> pre ++ [tag] ++ post
 
+fixRecursiveCallRemoveField ::
+  MonadA m =>
+  T.Tag -> ExprIRef.ValI m -> T m (ExprIRef.ValI m)
+fixRecursiveCallRemoveField tag argI =
+  do
+    body <- ExprIRef.readValBody argI
+    case body of
+      V.BRecExtend (V.RecExtend t v restI)
+        | t == tag -> return restI
+        | otherwise ->
+          do
+            newRestI <- fixRecursiveCallRemoveField tag restI
+            when (newRestI /= restI) $
+              ExprIRef.writeValBody argI $
+              V.BRecExtend $ V.RecExtend t v newRestI
+            return argI
+      _ -> return argI
+
+fixRecursiveCallToSingleArg ::
+  MonadA m => T.Tag -> ExprIRef.ValI m -> T m (ExprIRef.ValI m)
+fixRecursiveCallToSingleArg tag argI =
+  do
+    body <- ExprIRef.readValBody argI
+    case body of
+      V.BRecExtend (V.RecExtend t v restI)
+        | t == tag -> return v
+        | otherwise -> fixRecursiveCallToSingleArg tag restI
+      _ -> return argI
+
 makeDelFieldParam ::
-  MonadA m => [T.Tag] -> FieldParam -> StoredLam m -> ConvertM m (T m ())
-makeDelFieldParam tags fp storedLam =
+  MonadA m =>
+  Maybe V.Var -> [T.Tag] -> FieldParam -> StoredLam m -> ConvertM m (T m ())
+makeDelFieldParam mRecursiveVar tags fp storedLam =
   do
     wrapOnError <- ConvertM.wrapOnTypeError
     return $
       do
         Transaction.setP (slParamList storedLam) newTags
-        getFieldParamsToHole (fpTag fp) storedLam
+        getFieldParamsToHole tag storedLam
+        mRecursiveVar
+          & Lens.traverse %%~
+            changeRecursiveCallArgs removeFields
+            (storedLam ^. slLam . V.lamResult . V.payload)
+          & void
         void $ wrapOnError $ slLambdaProp storedLam
   where
-    newTags =
-      case List.delete (fpTag fp) tags of
-      [_] -> Nothing
-      xs -> Just xs
+    tag = fpTag fp
+    (newTags, removeFields) =
+      case List.delete tag tags of
+      [x] -> (Nothing, fixRecursiveCallToSingleArg x)
+      xs -> (Just xs, fixRecursiveCallRemoveField tag)
 
 slParamList :: MonadA m => StoredLam m -> Transaction.MkProperty m (Maybe ParamList)
 slParamList = ParamList.mkProp . Property.value . slLambdaProp
