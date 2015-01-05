@@ -3,7 +3,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
   ( make
   ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (guard)
