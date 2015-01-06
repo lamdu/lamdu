@@ -289,6 +289,17 @@ fixRecursiveCallToSingleArg tag argI =
         | otherwise -> fixRecursiveCallToSingleArg tag restI
       _ -> return argI
 
+getFieldParamsToParams :: MonadA m => StoredLam m -> T.Tag -> T m ()
+getFieldParamsToParams (StoredLam (V.Lam param lamBody) _) tag =
+  onMatchingSubexprs toParam (const (isGetFieldParam param tag)) lamBody
+  where
+    toParam prop =
+      do
+        body <- ExprIRef.readValBody (Property.value prop)
+        case body of
+          V.BGetField (V.GetField v _) -> Property.set prop v
+          _ -> error "assertion: this was a get field"
+
 makeDelFieldParam ::
   MonadA m =>
   Maybe V.Var -> [T.Tag] -> FieldParam -> StoredLam m -> ConvertM m (T m ())
@@ -299,18 +310,24 @@ makeDelFieldParam mRecursiveVar tags fp storedLam =
       do
         Transaction.setP (slParamList storedLam) newTags
         getFieldParamsToHole tag storedLam
+        mLastTag
+          & Lens.traverse %%~ getFieldParamsToParams storedLam
+          & void
         mRecursiveVar
           & Lens.traverse %%~
-            changeRecursiveCallArgs removeFields
+            changeRecursiveCallArgs fixRecurseArg
             (storedLam ^. slLam . V.lamResult . V.payload)
           & void
         void $ wrapOnError $ slLambdaProp storedLam
   where
     tag = fpTag fp
-    (newTags, removeFields) =
+    fixRecurseArg =
+      maybe (fixRecursiveCallRemoveField tag)
+      fixRecursiveCallToSingleArg mLastTag
+    (newTags, mLastTag) =
       case List.delete tag tags of
-      [x] -> (Nothing, fixRecursiveCallToSingleArg x)
-      xs -> (Just xs, fixRecursiveCallRemoveField tag)
+      [x] -> (Nothing, Just x)
+      xs -> (Just xs, Nothing)
 
 slParamList :: MonadA m => StoredLam m -> Transaction.MkProperty m (Maybe ParamList)
 slParamList = ParamList.mkProp . Property.value . slLambdaProp
@@ -480,15 +497,15 @@ mExtractWhere expr = do
 getParamsToHole :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
 getParamsToHole = onMatchingSubexprs toHole . const . isGetVarOf
 
+isGetFieldParam :: V.Var -> T.Tag -> Val t -> Bool
+isGetFieldParam param tag
+  (Val _ (V.BGetField (V.GetField (Val _ (V.BLeaf (V.LVar v))) t)))
+  = t == tag && v == param
+isGetFieldParam _ _ _ = False
+
 getFieldParamsToHole :: MonadA m => T.Tag -> StoredLam m -> T m ()
 getFieldParamsToHole tag (StoredLam (V.Lam param lamBody) _) =
-  onMatchingSubexprs toHole cond lamBody
-  where
-    cond _
-      (Val _ (V.BGetField
-        (V.GetField (Val _ (V.BLeaf (V.LVar v))) t)
-      )) = t == tag && v == param
-    cond _ _ = False
+  onMatchingSubexprs toHole (const (isGetFieldParam param tag)) lamBody
 
 convertWhereItems ::
   (MonadA m, Monoid a) =>
