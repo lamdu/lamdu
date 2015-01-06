@@ -67,8 +67,10 @@ showIdentifier (Identifier bs) = text (BS8.unpack bs)
 hbox :: [View] -> View
 hbox = GridView.horizontalAlign 0.5
 
-space :: View
-space = Spacer.makeHorizontal 20
+mkSpace :: MonadA m => M m View
+mkSpace =
+  wenv WE.readConfig
+  <&> Spacer.makeHorizontal . realToFrac . Config.spaceWidth
 
 parensAround :: MonadA m => View -> M m View
 parensAround view =
@@ -100,7 +102,18 @@ makeTInst :: MonadA m => ParentPrecedence -> T.Id -> Map T.ParamId Type -> M m V
 makeTInst _parentPrecedence (T.Id name) typeParams =
   do
     nameView <- showIdentifier name
-    let afterName paramsView = addPadding $ hbox [nameView, space, paramsView]
+    space <- mkSpace
+    let
+      afterName paramsView = addPadding $ hbox [nameView, space, paramsView]
+      makeTypeParam (T.ParamId tParamId, arg) =
+        do
+          paramIdView <- showIdentifier tParamId
+          typeView <- splitMake (ParentPrecedence 0) arg
+          return
+            [ (Vector2 1 0.5, paramIdView)
+            , (0.5, space)
+            , (Vector2 0 0.5, typeView)
+            ]
     case Map.toList typeParams of
       [] -> pure nameView
       [(_, arg)] ->
@@ -111,16 +124,6 @@ makeTInst _parentPrecedence (T.Id name) typeParams =
         <&> GridView.make
         >>= addBackgroundFrame
         >>= afterName
-  where
-    makeTypeParam (T.ParamId tParamId, arg) =
-      do
-        paramIdView <- showIdentifier tParamId
-        typeView <- splitMake (ParentPrecedence 0) arg
-        return
-          [ (Vector2 1 0.5, paramIdView)
-          , (0.5, space)
-          , (Vector2 0 0.5, typeView)
-          ]
 
 addPadding :: MonadA m => View -> M m View
 addPadding (sz, frame) =
@@ -154,12 +157,10 @@ makeEmptyRecord = text "Ø"
 makeField :: (MonadA m, Fractional a) => (T.Tag, Type) -> M m [(Vector2 a, View)]
 makeField (tag, fieldType) = do
   name <- transaction $ Transaction.getP $ Anchors.assocNameRef tag
-  tagView <- text name
-  typeView <- splitMake (ParentPrecedence 0) fieldType
-  return
-    [ (Vector2 1 0.5, tagView)
-    , (0.5, space)
-    , (Vector2 0 0.5, typeView)
+  Lens.sequenceOf (Lens.traversed . Lens._2)
+    [ (Vector2 1 0.5, text name)
+    , (0.5, mkSpace)
+    , (Vector2 0 0.5, splitMake (ParentPrecedence 0) fieldType)
     ]
 
 makeRecord :: MonadA m => T.Composite T.Product -> M m View
