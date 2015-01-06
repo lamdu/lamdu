@@ -98,13 +98,29 @@ mkStoredLam lam pl =
   <$> (lam & (traverse . traverse) (^. Input.mStored))
   <*> pl ^. Input.mStored
 
-makeDeleteLambda :: MonadA m => StoredLam m -> ConvertM m (T m ())
-makeDeleteLambda (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp) =
+changeRecursionsFromCalls :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
+changeRecursionsFromCalls var =
+  onMatchingSubexprs changeRecursion (const isCall)
+  where
+    isCall (Val _ (V.BApp (V.Apply f _))) = isGetVarOf var f
+    isCall _ = False
+    changeRecursion prop =
+      do
+        body <- ExprIRef.readValBody (Property.value prop)
+        case body of
+          V.BApp (V.Apply f _) -> Property.set prop f
+          _ -> error "assertion: expected BApp"
+
+makeDeleteLambda :: MonadA m => Maybe V.Var -> StoredLam m -> ConvertM m (T m ())
+makeDeleteLambda mRecursiveVar (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp) =
   do
     protectedSetToVal <- ConvertM.typeProtectedSetToVal
     return $
       do
         getParamsToHole paramVar lamBodyStored
+        mRecursiveVar
+          & Lens._Just %%~ (`changeRecursionsFromCalls` lamBodyStored)
+          & void
         let lamBodyI = Property.value (lamBodyStored ^. V.payload)
         void $ protectedSetToVal lambdaProp lamBodyI <&> EntityId.ofValI
 
@@ -336,7 +352,7 @@ makeNonRecordParamActions ::
   MonadA m => Maybe V.Var -> StoredLam m -> ConvertM m (FuncParamActions m, T m EntityId)
 makeNonRecordParamActions mRecursiveVar storedLam =
   do
-    delete <- makeDeleteLambda storedLam
+    delete <- makeDeleteLambda mRecursiveVar storedLam
     convertToRecordParams <- makeConvertToRecordParams mRecursiveVar storedLam
     return
       ( FuncParamActions
@@ -578,7 +594,7 @@ convertLam ::
   Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLam lam@(V.Lam _ lamBody) exprPl =
   do
-    mDeleteLam <- mkStoredLam lam exprPl & Lens._Just %%~ makeDeleteLambda
+    mDeleteLam <- mkStoredLam lam exprPl & Lens._Just %%~ makeDeleteLambda Nothing
     convParams <- convertLamParams Nothing lam exprPl
     binder <- makeBinder Nothing convParams $ lam ^. V.lamResult
     let
