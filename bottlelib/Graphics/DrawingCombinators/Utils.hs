@@ -39,7 +39,7 @@ drawText font =
   -- moved to 0..2
   (Draw.scale 1 (-1) %%) .
   -- Text is normally at height -1.5..0.5.  We move it to be -2..0
-  (Draw.translate (0, -1.5) %%) .
+  (Draw.translate (0, -textHeight * 0.75) %%) .
   void . Draw.text font
 
 textLinesHeight :: [String] -> Draw.R
