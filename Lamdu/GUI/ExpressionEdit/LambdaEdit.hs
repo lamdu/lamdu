@@ -27,7 +27,6 @@ make parentPrecedence binder pl =
   Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId bodyId $
     do
-      lambdaLabel <- ExpressionGui.grammarLabel "λ" $ Widget.toAnimId myId
       paramsEdit <-
         BinderEdit.makeParamsEdit showParamType (ExprGuiM.nextHolesBefore body) bodyId params
         <&> map ((,) 0)
@@ -36,18 +35,12 @@ make parentPrecedence binder pl =
           case params of
           (_:_:_) -> ExpressionGui.addValFrame myId
           _ -> return
-      dotLabel <- ExpressionGui.grammarLabel ". " $ Widget.toAnimId myId
+      arrowLabel <- ExpressionGui.grammarLabel "→" $ Widget.toAnimId myId
       bodyEdit <- BinderEdit.makeResultEdit (binder ^. Sugar.dMActions) params body myId
       mWheresEdit <-
         BinderEdit.makeWheres (binder ^. Sugar.dWhereItems) myId
-      lambdaLabel :
-        [ paramsEdit
-        , dotLabel
-        , bodyEdit
-        ]
-        & ExpressionGui.hbox
-        & maybe id (ExpressionGui.addBelow 0 . (:[]) . (,) 0) mWheresEdit
-        & return
+      ExpressionGui.hboxSpaced [paramsEdit, arrowLabel, bodyEdit]
+        <&> maybe id (ExpressionGui.addBelow 0 . (:[]) . (,) 0) mWheresEdit
   where
     params = binder ^. Sugar.dParams
     body = binder ^. Sugar.dBody
