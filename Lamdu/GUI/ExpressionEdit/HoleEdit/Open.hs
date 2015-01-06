@@ -221,7 +221,8 @@ makeHoleResultWidget ::
   MonadA m => Widget.Id ->
   Sugar.HoleResult (Name m) m -> ExprGuiM m (WidgetT m, Widget.EventHandlers (T m))
 makeHoleResultWidget resultId holeResult = do
-  Config.Hole{..} <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let Config.Hole{..} = Config.hole config
   isSelectedResult <- ExprGuiM.widgetEnv $ WE.isSubCursor resultId
   eventMap <-
     if isSelectedResult
@@ -237,6 +238,7 @@ makeHoleResultWidget resultId holeResult = do
     <&> Widget.scale (realToFrac <$> holeResultScaleFactor)
     <&> Widget.wEventMap .~ mempty
     >>= makeFocusable resultId
+    <&> BWidgets.liftLayerInterval config
   return (widget, eventMap)
   where
     mkWidget =
@@ -382,10 +384,7 @@ make pl holeInfo = do
         & guiWidth %~ max (typeView ^. Widget.wSize . _1)
         & ExpressionGui.egWidget %~
           addBackground (HoleInfo.hiOpenId holeInfo)
-          (Config.layers config) holeOpenBGColor .
-          -- Before adding the open hole bg, lift all the results to
-          -- be on top of it:
-          BWidgets.liftLayerInterval config
+          (Config.layers config) holeOpenBGColor
         & ExpressionGui.addBelowInferredSpacing typeView
         >>= ExpressionGui.egWidget %%~
             addDarkBackground (HoleInfo.hiOpenId holeInfo)
