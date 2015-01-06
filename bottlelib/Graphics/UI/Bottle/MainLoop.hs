@@ -1,4 +1,8 @@
-module Graphics.UI.Bottle.MainLoop (mainLoopAnim, mainLoopImage, mainLoopWidget) where
+module Graphics.UI.Bottle.MainLoop
+  ( mainLoopAnim
+  , mainLoopImage
+  , mainLoopWidget
+  ) where
 
 import Control.Applicative ((<$>))
 import Control.Concurrent (threadDelay)
@@ -7,7 +11,7 @@ import Control.Lens.Tuple
 import Control.Monad (when, unless)
 import Data.IORef
 import Data.MRUMemo (memoIO)
-import Data.Monoid (Monoid(..))
+import Data.Monoid (Monoid(..), (<>))
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Data.Traversable (traverse, sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
@@ -45,6 +49,7 @@ mainLoopImage win eventHandler makeImage =
     handleEvents events = do
       winSize@(Vector2 winSizeX winSizeY) <- windowSize
       anyChange <- or <$> traverse (handleEvent winSize) events
+      -- TODO: Don't do this *EVERY* frame but on frame-buffer size update events?
       GL.viewport $=
         (GL.Position 0 0,
          GL.Size (round winSizeX) (round winSizeY))
@@ -55,10 +60,9 @@ mainLoopImage win eventHandler makeImage =
           -- need no sleep here
           threadDelay 10000
         Just image ->
-          Draw.clearRender .
-          (Draw.translate (-1, 1) %%) .
-          (Draw.scale (2/winSizeX) (-2/winSizeY) %%) $
           image
+          & (Draw.translate (-1, 1) <> Draw.scale (2/winSizeX) (-2/winSizeY) %%)
+          & Draw.clearRender
 
 mainLoopAnim ::
   GLFW.Window ->
