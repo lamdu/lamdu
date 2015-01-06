@@ -86,8 +86,7 @@ makeWheres whereItems myId =
       [ whereLabel
       , itemEdits <&> (,) 0 & ExpressionGui.vboxDownwards
       ]
-      ^. ExpressionGui.egWidget
-      & Just & return
+      <&> Just . (^. ExpressionGui.egWidget)
   where
     wiCursor = WidgetIds.fromEntityId . (^. Sugar.wiEntityId)
 
@@ -137,13 +136,9 @@ layout defNameEdit paramEdits bodyEdit mWheresEdit myId =
       case paramEdits of
       [] -> return []
       xs -> xs <&> (,) 0 & ExpressionGui.vboxDownwardsSpaced <&> (:[])
-    let
-      topRow =
-        ExpressionGui.hboxSpaced $
-        defNameEdit : paramsEdit ++ [ equals, bodyEdit ]
-    topRow
-      & ExpressionGui.addBelow 0 (mWheresEdit ^.. Lens._Just <&> (,) 0)
-      & return
+    defNameEdit : paramsEdit ++ [ equals, bodyEdit ]
+      & ExpressionGui.hboxSpaced
+      <&> ExpressionGui.addBelow 0 (mWheresEdit ^.. Lens._Just <&> (,) 0)
 
 make ::
   MonadA m =>

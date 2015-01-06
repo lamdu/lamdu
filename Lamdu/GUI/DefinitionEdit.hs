@@ -71,11 +71,12 @@ makeBuiltinDefinition ::
   Sugar.DefinitionBuiltin m -> ExprGuiM m (WidgetT m)
 makeBuiltinDefinition def builtin =
   Box.vboxAlign 0 <$> sequenceA
-  [ BWidgets.hboxCenteredSpaced <$> sequenceA
+  [ sequenceA
     [ ExpressionGui.makeNameOriginEdit name (Widget.joinId myId ["name"])
     , ExprGuiM.makeLabel "=" $ Widget.toAnimId myId
     , BuiltinEdit.make builtin myId
     ]
+    >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced
   , topLevelSchemeTypeView 0 entityId
     (Sugar.biType builtin)
   ]

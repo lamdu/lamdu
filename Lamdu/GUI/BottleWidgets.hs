@@ -190,19 +190,27 @@ hspaceWidget = uncurry Widget.liftView . Spacer.makeHorizontal
 vspaceWidget :: Widget.R -> Widget f
 vspaceWidget = uncurry Widget.liftView . Spacer.makeVertical
 
-stdSpaceWidget :: Widget f
-stdSpaceWidget = uncurry Widget.liftView $ Spacer.make 20
+stdSpaceWidget :: MonadA m => WidgetEnvT m (Widget f)
+stdSpaceWidget =
+  WE.readConfig
+  <&> uncurry Widget.liftView . Spacer.make . realToFrac . Config.spaceWidth
 
-hboxSpaced :: [(Box.Alignment, Widget f)] -> Widget f
-hboxSpaced = Box.hbox . intersperse (0.5, stdSpaceWidget)
+hboxSpaced :: MonadA m => [(Box.Alignment, Widget f)] -> WidgetEnvT m (Widget f)
+hboxSpaced widgets =
+  stdSpaceWidget
+  <&> Box.hbox . (`intersperse` widgets) . (,) 0.5
 
-hboxCenteredSpaced :: [Widget f] -> Widget f
-hboxCenteredSpaced = Box.hboxAlign 0.5 . intersperse stdSpaceWidget
+hboxCenteredSpaced :: MonadA m => [Widget f] -> WidgetEnvT m (Widget f)
+hboxCenteredSpaced widgets =
+  stdSpaceWidget
+  <&> Box.hboxAlign 0.5 . (`intersperse` widgets)
 
-gridHSpaced :: [[(Grid.Alignment, Widget f)]] -> Widget f
-gridHSpaced = Grid.toWidget . Grid.make . map (intersperse (0, stdSpaceWidget))
+gridHSpaced :: MonadA m => [[(Grid.Alignment, Widget f)]] -> WidgetEnvT m (Widget f)
+gridHSpaced xs =
+  stdSpaceWidget
+  <&> Grid.toWidget . Grid.make . (`map` xs) . intersperse . (,) 0
 
-gridHSpacedCentered :: [[Widget f]] -> Widget f
+gridHSpacedCentered :: MonadA m => [[Widget f]] -> WidgetEnvT m (Widget f)
 gridHSpacedCentered = gridHSpaced . (map . map) ((,) 0.5)
 
 data ChoiceWidgetExpandMode

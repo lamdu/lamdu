@@ -50,17 +50,21 @@ make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotated
       mk Nothing $
       overrideModifyEventMap <$> ExprGuiM.makeSubexpression (if isBoxed then 0 else parentPrecedence) func
     Sugar.ObjectArg arg ->
-      mk (Just prefixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
+      sequenceA
       [ maybeOverrideHoleWrap <$> ExprGuiM.makeSubexpression (prefixPrecedence+1) func
       , ExprGuiM.makeSubexpression prefixPrecedence arg
       ]
+      >>= ExpressionGui.hboxSpaced
+      & mk (Just prefixPrecedence)
     Sugar.InfixArgs l r ->
-      mk (Just infixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
+      sequenceA
       [ ExprGuiM.makeSubexpression (infixPrecedence+1) l
       , -- TODO: What precedence to give when it must be atomic?:
         overrideModifyEventMap <$> ExprGuiM.makeSubexpression 20 func
       , ExprGuiM.makeSubexpression (infixPrecedence+1) r
       ]
+      >>= ExpressionGui.hboxSpaced
+      & mk (Just infixPrecedence)
   where
     isBoxed = not $ null annotatedArgs
     destEntityId = func ^. Sugar.rPayload . Sugar.plEntityId
@@ -87,6 +91,7 @@ makeArgRows arg = do
   argTagEdit <- makeParamTag (arg ^. Sugar.aaTagExprEntityId) (arg ^. Sugar.aaTag)
   argValEdit <- ExprGuiM.makeSubexpression 0 $ arg ^. Sugar.aaExpr
   vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
+  space <- BWidgets.stdSpaceWidget & ExprGuiM.widgetEnv <&> ExpressionGui.fromValueWidget
   pure
     [ replicate 3 (0.5, vspace)
     , ExpressionGui.makeRow
@@ -95,8 +100,6 @@ makeArgRows arg = do
       , (0, argValEdit)
       ]
     ]
-  where
-    space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
 
 mkBoxed ::
   MonadA m =>

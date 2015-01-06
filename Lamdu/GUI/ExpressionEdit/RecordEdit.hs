@@ -49,7 +49,8 @@ makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) = do
   fieldExprGui <- ExprGuiM.makeSubexpression 0 fieldExpr
   let
     itemEventMap = maybe mempty (recordDelEventMap config) mDelete
-    space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
+  space <-
+    BWidgets.stdSpaceWidget & ExprGuiM.widgetEnv <&> ExpressionGui.fromValueWidget
   [(1, fieldRefGui), (0.5, space), (0, fieldExprGui)]
     <&> Lens._2 . ExpressionGui.egWidget %~ Widget.weakerEvents itemEventMap
     & return

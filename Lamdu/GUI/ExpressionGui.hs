@@ -100,8 +100,10 @@ hbox guis =
     box = Box.make Box.horizontal $ map f guis
     f (ExpressionGui widget alignment) = (Vector2 0.5 alignment, widget)
 
-hboxSpaced :: [ExpressionGui m] -> ExpressionGui m
-hboxSpaced = hbox . List.intersperse (fromValueWidget BWidgets.stdSpaceWidget)
+hboxSpaced :: MonadA m => [ExpressionGui f] -> ExprGuiM m (ExpressionGui f)
+hboxSpaced guis =
+  ExprGuiM.widgetEnv BWidgets.stdSpaceWidget
+  <&> hbox . (`List.intersperse` guis) . fromValueWidget
 
 vboxDownwards :: [(Widget.R, ExpressionGui m)] -> ExpressionGui m
 vboxDownwards [] = error "Empty vboxDownwards"
@@ -119,7 +121,7 @@ vboxDownwardsSpaced guis =
       & vboxDownwards & return
 
 gridDownwards :: [[(Widget.R, ExpressionGui m)]] -> ExpressionGui m
-gridDownwards [] = fromValueWidget BWidgets.stdSpaceWidget
+gridDownwards [] = fromValueWidget $ uncurry Widget.liftView $ Spacer.make 0
 gridDownwards ([]:rs) = gridDownwards rs
 gridDownwards rows =
   ExpressionGui

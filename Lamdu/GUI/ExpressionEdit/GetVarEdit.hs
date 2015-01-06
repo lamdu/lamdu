@@ -67,7 +67,7 @@ make getVar pl myId = do
           (\(i, fieldName) ->
            makeSimpleView parameterColor fieldName $
            Widget.joinId myId ["params", SBS8.pack (show (i::Int))])
-        <&> ExpressionGui.hboxSpaced
+        >>= ExpressionGui.hboxSpaced
       , ExpressionGui.makeLabel "}" (Widget.toAnimId myId <> ["suffix"])
       ] <&> ExpressionGui.hbox
       & ExpressionGui.stdWrap pl

@@ -111,6 +111,7 @@ data Config = Config
   , backgroundColor :: Draw.Color
   , baseColor :: Draw.Color
   , baseTextSize :: Int
+  , spaceWidth :: Double
 
   , quitKeys :: [E.ModKey]
   , debugModeKeys :: [E.ModKey]

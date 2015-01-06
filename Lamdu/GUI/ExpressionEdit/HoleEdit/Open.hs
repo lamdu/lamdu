@@ -147,7 +147,7 @@ makeResultGroup holeInfo results = do
     then
       ExprGuiM.makeLabel extraSymbol (Widget.toAnimId (rId mainResult))
       <&> Widget.scale extraSymbolScaleFactor
-      <&> BWidgets.hboxCenteredSpaced . (Spacer.empty :) . (: [])
+      >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced . (Spacer.empty :) . (: [])
     else pure Spacer.empty
   let
     makeExtra =
