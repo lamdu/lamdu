@@ -32,6 +32,10 @@ make parentPrecedence binder pl =
         BinderEdit.makeParamsEdit showParamType (ExprGuiM.nextHolesBefore body) bodyId params
         <&> map ((,) 0)
         >>= ExpressionGui.vboxDownwardsSpaced
+        >>=
+          case params of
+          (_:_:_) -> ExpressionGui.addValFrame myId
+          _ -> return
       dotLabel <- ExpressionGui.grammarLabel ". " $ Widget.toAnimId myId
       bodyEdit <- BinderEdit.makeResultEdit (binder ^. Sugar.dMActions) params body myId
       mWheresEdit <-

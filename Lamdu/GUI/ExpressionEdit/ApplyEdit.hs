@@ -13,7 +13,6 @@ import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
-import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.Parens as Parens
@@ -110,13 +109,11 @@ mkBoxed ::
 mkBoxed pl destEntityId mkFuncRow annotatedArgs =
   ExpressionGui.stdWrapParentExpr pl $ \myId ->
   assignCursorEntityId myId destEntityId $ do
-    config <- ExprGuiM.widgetEnv WE.readConfig
     grid <-
       Grid.toWidget . Grid.make . concat <$> traverse makeArgRows annotatedArgs
     mkFuncRow
       <&> ExpressionGui.addBelow 0 [(0, grid)]
-      <&> ExpressionGui.pad (realToFrac <$> Config.valFramePadding config)
-      >>= ExpressionGui.egWidget %%~ ExpressionGui.addValBG myId
+      >>= ExpressionGui.addValFrame myId
 
 mkMParened ::
   MonadA m =>

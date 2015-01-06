@@ -135,7 +135,12 @@ layout defNameEdit paramEdits bodyEdit mWheresEdit myId =
     paramsEdit <-
       case paramEdits of
       [] -> return []
-      xs -> xs <&> (,) 0 & ExpressionGui.vboxDownwardsSpaced <&> (:[])
+      [x] -> return [x]
+      xs ->
+        xs <&> (,) 0
+        & ExpressionGui.vboxDownwardsSpaced
+        >>= ExpressionGui.addValFrame myId
+        <&> (:[])
     defNameEdit : paramsEdit ++ [ equals, bodyEdit ]
       & ExpressionGui.hboxSpaced
       <&> ExpressionGui.addBelow 0 (mWheresEdit ^.. Lens._Just <&> (,) 0)
