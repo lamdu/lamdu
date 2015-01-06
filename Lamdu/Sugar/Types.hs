@@ -15,7 +15,7 @@ module Lamdu.Sugar.Types
     , baAddFirstParam, baAddInnermostWhereItem
   , Binder(..)
     , dSetPresentationMode, dParams, dBody, dWhereItems, dMActions
-  , DefinitionBuiltin(..)
+  , DefinitionBuiltin(..), biType, biName, biSetName
   , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
   , SetToHole(..), _SetToHole, _AlreadyAHole
   , SetToInnerExpr(..), _SetToInnerExpr, _NoInnerExpr
@@ -339,9 +339,9 @@ data DefinitionExpression name m expr = DefinitionExpression
   } deriving (Functor, Foldable, Traversable)
 
 data DefinitionBuiltin m = DefinitionBuiltin
-  { biName :: Definition.FFIName
-  , biSetName :: Definition.FFIName -> T m ()
-  , biType :: Scheme
+  { _biName :: Definition.FFIName
+  , _biSetName :: Definition.FFIName -> T m ()
+  , _biType :: Scheme
   }
 
 data DefinitionBody name m expr
@@ -364,6 +364,7 @@ Lens.makeLenses ''Binder
 Lens.makeLenses ''BinderActions
 Lens.makeLenses ''Body
 Lens.makeLenses ''Definition
+Lens.makeLenses ''DefinitionBuiltin
 Lens.makeLenses ''DefinitionExpression
 Lens.makeLenses ''ExpressionP
 Lens.makeLenses ''FuncParam

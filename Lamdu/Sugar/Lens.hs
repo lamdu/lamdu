@@ -3,12 +3,15 @@
 module Lamdu.Sugar.Lens
   ( subExprPayloads, payloadsIndexedByPath
   , holePayloads, holeArgs
+  , defSchemes
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad (void)
+import Lamdu.Expr.Scheme (Scheme)
 import Lamdu.Sugar.Types
+import qualified Lamdu.Data.Definition as Def
 import qualified Control.Lens as Lens
 
 subExprPayloads ::
@@ -52,3 +55,25 @@ holeArgs =
   where
     predicate (_:parent:_) _ = Lens.has (rBody . _BodyHole) parent
     predicate _ _ = False
+
+defTypeInfoSchemes :: Lens.Traversal' (DefinitionTypeInfo m) Scheme
+defTypeInfoSchemes f (DefinitionExportedTypeInfo s) =
+    f s <&> DefinitionExportedTypeInfo
+defTypeInfoSchemes f (DefinitionNewType (AcceptNewType ot nt a)) =
+    DefinitionNewType <$>
+    ( AcceptNewType
+      <$> (ot & Def._ExportedType %%~ f)
+      <*> f nt
+      <*> pure a
+    )
+
+defBodySchemes :: Lens.Traversal' (DefinitionBody name m expr) Scheme
+defBodySchemes f (DefinitionBodyBuiltin b) =
+    b & biType %%~ f
+    <&> DefinitionBodyBuiltin
+defBodySchemes f (DefinitionBodyExpression de) =
+    de & deTypeInfo . defTypeInfoSchemes %%~ f
+    <&> DefinitionBodyExpression
+
+defSchemes :: Lens.Traversal' (Definition name m expr) Scheme
+defSchemes = drBody . defBodySchemes

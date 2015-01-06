@@ -78,7 +78,7 @@ makeBuiltinDefinition def builtin =
     ]
     >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced
   , topLevelSchemeTypeView 0 entityId
-    (Sugar.biType builtin)
+    (builtin ^. Sugar.biType)
   ]
   where
     name = def ^. Sugar.drName

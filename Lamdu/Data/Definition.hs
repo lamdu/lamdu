@@ -2,7 +2,7 @@
 module Lamdu.Data.Definition
   ( FFIName(..)
   , Builtin(..)
-  , ExportedType(..)
+  , ExportedType(..), _ExportedType
   , Expr(..)
   , Body(..)
   , Definition(..), defBody, defPayload
@@ -15,6 +15,7 @@ import Data.Foldable (Foldable(..))
 import Data.Traversable (Traversable(..))
 import GHC.Generics (Generic)
 import Lamdu.Expr.Scheme (Scheme)
+import qualified Control.Lens as Lens
 
 data FFIName = FFIName
   { fModule :: [String]
@@ -59,3 +60,10 @@ defBody f (Definition b p) = (`Definition` p) <$> f b
 
 defPayload :: Lens (Definition expr a) (Definition expr b) a b
 defPayload f (Definition b p) = Definition b <$> f p
+
+_ExportedType :: Lens.Prism' ExportedType Scheme
+_ExportedType =
+  Lens.prism' ExportedType f
+  where
+    f (ExportedType t) = Just t
+    f _ = Nothing

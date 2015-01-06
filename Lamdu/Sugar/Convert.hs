@@ -23,9 +23,9 @@ convertDefIBuiltin ::
   DefinitionBody Guid m (ExpressionU m [EntityId])
 convertDefIBuiltin (Definition.Builtin name scheme) defI =
   DefinitionBodyBuiltin DefinitionBuiltin
-    { biName = name
-    , biSetName = setName
-    , biType = scheme
+    { _biName = name
+    , _biSetName = setName
+    , _biType = scheme
     }
   where
     setName =
