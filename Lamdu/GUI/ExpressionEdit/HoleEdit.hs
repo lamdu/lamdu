@@ -12,6 +12,7 @@ import           Control.MonadA (MonadA)
 import           Data.Maybe (fromMaybe)
 import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
@@ -28,6 +29,22 @@ import qualified Lamdu.GUI.WidgetEnvT as WE
 import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
+-- Resize a gui to be the same size as another gui, but also keep the
+-- same alignment point
+resizeAs :: ExpressionGui m -> ExpressionGui m -> ExpressionGui m
+resizeAs copyFrom gui =
+  gui
+  & ExpressionGui.egWidget %~
+    Widget.translate (Vector2 0 (alignmentHeight copyFrom - alignmentHeight gui))
+  -- Copy size and alignment
+  & ExpressionGui.egWidget . Widget.wSize .~ destSize
+  & ExpressionGui.egAlignment .~ (copyFrom ^. ExpressionGui.egAlignment)
+  where
+    destSize = copyFrom ^. ExpressionGui.egWidget . Widget.wSize
+    alignmentHeight eg =
+      eg ^. ExpressionGui.egAlignment *
+      eg ^. ExpressionGui.egWidget . Widget.wSize . _2
+
 make ::
   MonadA m =>
   Sugar.Hole (Name m) m (ExprGuiM.SugarExpr m) ->
@@ -37,16 +54,8 @@ make hole pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let Config.Hole{..} = Config.hole config
   (delegateDestId, closedGui) <- HoleClosed.make hole pl myId
-  let
-    closedSize = closedGui ^. ExpressionGui.egWidget . Widget.wSize
-    resize =
-      ( ExpressionGui.egWidget . Widget.wSize %~
-        (_1 %~ max (closedSize ^. _1)) .
-        (_2 .~ closedSize ^. _2)
-      ) .
-      (ExpressionGui.egAlignment .~ closedGui ^. ExpressionGui.egAlignment)
   tryOpenHole hole pl myId
-    <&> resize
+    <&> resizeAs closedGui
     <&> ExpressionGui.egWidget %~ BWidgets.liftLayerInterval config
     & runMaybeT
     <&> fromMaybe closedGui
