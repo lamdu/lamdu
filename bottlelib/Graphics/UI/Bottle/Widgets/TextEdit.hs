@@ -61,7 +61,7 @@ defaultCursorColor :: Draw.Color
 defaultCursorColor = Draw.Color 0 1 0 1
 
 defaultCursorWidth :: Widget.R
-defaultCursorWidth = 8
+defaultCursorWidth = 4
 
 tillEndOfWord :: String -> String
 tillEndOfWord xs = spaces ++ nonSpaces
