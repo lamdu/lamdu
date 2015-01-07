@@ -23,17 +23,19 @@
         "helpKeys": [
             [
                 {
-                    "modAlt": false,
-                    "modShift": false,
-                    "modCtrl": false
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
                 },
                 "Key'F1"
             ],
             [
                 {
-                    "modAlt": true,
-                    "modShift": false,
-                    "modCtrl": false
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
                 },
                 "Key'H"
             ]
@@ -55,9 +57,10 @@
         "shrinkKeys": [
             [
                 {
-                    "modAlt": false,
-                    "modShift": false,
-                    "modCtrl": true
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
                 },
                 "Key'Minus"
             ]
@@ -65,9 +68,10 @@
         "enlargeKeys": [
             [
                 {
-                    "modAlt": false,
-                    "modShift": false,
-                    "modCtrl": true
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
                 },
                 "Key'Equal"
             ]
@@ -79,9 +83,10 @@
         "newDefinitionKeys": [
             [
                 {
-                    "modAlt": true,
-                    "modShift": false,
-                    "modCtrl": false
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
                 },
                 "Key'N"
             ]
@@ -101,9 +106,10 @@
         "paneCloseKeys": [
             [
                 {
-                    "modAlt": true,
-                    "modShift": false,
-                    "modCtrl": false
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
                 },
                 "Key'W"
             ]
@@ -111,9 +117,10 @@
         "paneMoveUpKeys": [
             [
                 {
-                    "modAlt": true,
-                    "modShift": false,
-                    "modCtrl": false
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
                 },
                 "Key'Up"
             ]
@@ -121,9 +128,10 @@
         "paneMoveDownKeys": [
             [
                 {
-                    "modAlt": true,
-                    "modShift": false,
-                    "modCtrl": false
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
                 },
                 "Key'Down"
             ]
@@ -133,9 +141,10 @@
         "undoKeys": [
             [
                 {
-                    "modAlt": false,
-                    "modShift": false,
-                    "modCtrl": true
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
                 },
                 "Key'Z"
             ]
@@ -143,9 +152,10 @@
         "redoKeys": [
             [
                 {
-                    "modAlt": false,
-                    "modShift": false,
-                    "modCtrl": true
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
                 },
                 "Key'Y"
             ]
@@ -159,9 +169,10 @@
         "makeBranchKeys": [
             [
                 {
-                    "modAlt": false,
-                    "modShift": false,
-                    "modCtrl": true
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
                 },
                 "Key'S"
             ]
@@ -169,9 +180,10 @@
         "delBranchKeys": [
             [
                 {
-                    "modAlt": true,
-                    "modShift": false,
-                    "modCtrl": false
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
                 },
                 "Key'O"
             ]
@@ -179,9 +191,10 @@
         "jumpToBranchesKeys": [
             [
                 {
-                    "modAlt": false,
-                    "modShift": false,
-                    "modCtrl": true
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
                 },
                 "Key'F10"
             ]
@@ -191,9 +204,10 @@
         "holeJumpToNextKeys": [
             [
                 {
-                    "modAlt": false,
-                    "modShift": false,
-                    "modCtrl": false
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
                 },
                 "Key'Tab"
             ]
@@ -227,9 +241,10 @@
         "holePickAndMoveToNextHoleKeys": [
             [
                 {
-                    "modAlt": false,
-                    "modShift": false,
-                    "modCtrl": false
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
                 },
                 "Key'Space"
             ]
@@ -249,9 +264,10 @@
         "holeJumpToPrevKeys": [
             [
                 {
-                    "modAlt": false,
-                    "modShift": true,
-                    "modCtrl": false
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": true,
+                    "modifierKeysControl": false
                 },
                 "Key'Tab"
             ]
@@ -259,9 +275,10 @@
         "holePickResultKeys": [
             [
                 {
-                    "modAlt": false,
-                    "modShift": false,
-                    "modCtrl": false
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
                 },
                 "Key'Enter"
             ]
@@ -279,9 +296,10 @@
         "holeOpenKeys": [
             [
                 {
-                    "modAlt": false,
-                    "modShift": false,
-                    "modCtrl": false
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
                 },
                 "Key'Enter"
             ]
@@ -289,9 +307,10 @@
         "holeUnwrapKeys": [
             [
                 {
-                    "modAlt": false,
-                    "modShift": false,
-                    "modCtrl": false
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
                 },
                 "Key'Space"
             ]
@@ -362,9 +381,10 @@
     "previousCursorKeys": [
         [
             {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": true,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Left"
         ]
@@ -378,9 +398,10 @@
     "enterSubexpressionKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": true,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": true,
+                "modifierKeysControl": false
             },
             "Key'Right"
         ]
@@ -388,9 +409,10 @@
     "listAddItemKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Comma"
         ]
@@ -398,9 +420,10 @@
     "delBackwardKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Backspace"
         ]
@@ -414,9 +437,10 @@
     "quitKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": true
             },
             "Key'Q"
         ]
@@ -424,9 +448,10 @@
     "addNextParamKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Space"
         ]
@@ -436,9 +461,10 @@
     "wrapKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Space"
         ]
@@ -446,9 +472,10 @@
     "recordOpenKeys": [
         [
             {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": true,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'O"
         ]
@@ -466,9 +493,10 @@
     "jumpLHStoRHSKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'GraveAccent"
         ]
@@ -516,9 +544,10 @@
     "jumpRHStoLHSKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'GraveAccent"
         ]
@@ -526,17 +555,19 @@
     "debugModeKeys": [
         [
             {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": true
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": true,
+                "modifierKeysShift": false,
+                "modifierKeysControl": true
             },
             "Key'D"
         ],
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": true
             },
             "Key'F7"
         ]
@@ -550,17 +581,19 @@
     "cutKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": true
             },
             "Key'X"
         ],
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'X"
         ]
@@ -568,9 +601,10 @@
     "nextInfoModeKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'F7"
         ]
@@ -584,9 +618,10 @@
     "leaveSubexpressionKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": true,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": true,
+                "modifierKeysControl": false
             },
             "Key'Left"
         ]
@@ -594,17 +629,19 @@
     "acceptDefinitionTypeKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Space"
         ],
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Enter"
         ]
@@ -612,17 +649,19 @@
     "pasteKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": true
             },
             "Key'V"
         ],
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'V"
         ]
@@ -637,17 +676,19 @@
     "recordAddFieldKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'A"
         ],
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Comma"
         ]
@@ -660,17 +701,19 @@
     "delForwardKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Delete"
         ],
         [
             {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": true,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Delete"
         ]
@@ -692,9 +735,10 @@
     "whereAddItemKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'W"
         ]
@@ -708,9 +752,10 @@
     "replaceKeys": [
         [
             {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": true,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'R"
         ]
@@ -740,9 +785,10 @@
     "jumpToDefinitionKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Enter"
         ]

@@ -1,17 +1,20 @@
 module Lamdu.GUI.ExpressionEdit.BuiltinEdit(make) where
 
-import Control.MonadA (MonadA)
-import Data.List.Split (splitOn)
-import Data.Store.Property (Property(..))
-import Lamdu.GUI.ExpressionGui.Monad (WidgetT, ExprGuiM)
+import           Control.MonadA (MonadA)
 import qualified Data.List as List
+import           Data.List.Split (splitOn)
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Property (Property(..))
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import           Lamdu.GUI.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -19,9 +22,9 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 builtinFDConfig :: FocusDelegator.Config
 builtinFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
+  { FocusDelegator.startDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
   , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Change imported name"]
-  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.Key'Escape]
+  , FocusDelegator.stopDelegatingKeys = [ModKey mempty GLFW.Key'Escape]
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Stop changing name"]
   }
 

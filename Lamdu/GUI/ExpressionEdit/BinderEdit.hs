@@ -3,35 +3,37 @@ module Lamdu.GUI.ExpressionEdit.BinderEdit
   ( make, diveToNameEdit, makeParamsEdit, makeResultEdit, makeWheres
   ) where
 
-import Control.Applicative ((<$>), (<$))
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.List.Utils (nonEmptyAll)
-import Data.Maybe (fromMaybe)
-import Data.Monoid (Monoid(..), (<>))
-import Data.Store.Transaction (Transaction)
-import Data.Traversable (traverse)
-import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.CharClassification (operatorChars)
-import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionGui (ExpressionGui)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..))
-import Lamdu.Sugar.NearestHoles (NearestHoles)
+import           Control.Applicative ((<$>), (<$))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
+import           Data.List.Utils (nonEmptyAll)
+import           Data.Maybe (fromMaybe)
+import           Data.Monoid (Monoid(..), (<>))
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Traversable (traverse)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.GLFW as GLFW
+import           Lamdu.CharClassification (operatorChars)
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..))
+import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -93,9 +95,9 @@ makeWheres whereItems myId =
 presentationModeChoiceConfig :: Config -> BWidgets.ChoiceWidgetConfig
 presentationModeChoiceConfig config = BWidgets.ChoiceWidgetConfig
   { BWidgets.cwcFDConfig = FocusDelegator.Config
-    { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
+    { FocusDelegator.startDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
     , FocusDelegator.startDelegatingDoc = E.Doc ["Presentation Mode", "Select"]
-    , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
+    , FocusDelegator.stopDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
     , FocusDelegator.stopDelegatingDoc = E.Doc ["Presentation Mode", "Choose selected"]
     }
   , BWidgets.cwcOrientation = Box.vertical
@@ -152,7 +154,7 @@ make ::
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make name binder myId = do
-  rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods E.Key'Equal] rhs
+  rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
   bodyEdit <- makeResultEdit (binder ^. Sugar.dMActions) params body myId
   presentationEdits <-
     traverse (mkPresentationModeEdit presentationChoiceId) $
@@ -202,7 +204,7 @@ makeWhereItemEdit (_prevId, nextId, item) = do
 
 jumpToRHS ::
   (MonadA m, MonadA f) =>
-  [E.ModKey] -> (String, ExprGuiM.SugarExpr m) ->
+  [ModKey] -> (String, ExprGuiM.SugarExpr m) ->
   ExprGuiM f (Widget.EventHandlers (T f))
 jumpToRHS keys (rhsDoc, rhs) = do
   savePos <- ExprGuiM.mkPrejumpPosSaver

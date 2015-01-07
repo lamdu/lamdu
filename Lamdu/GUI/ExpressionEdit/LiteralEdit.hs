@@ -3,20 +3,22 @@ module Lamdu.GUI.ExpressionEdit.LiteralEdit
   ( makeInt
   ) where
 
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
-import Lamdu.GUI.ExpressionGui (ExpressionGui)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.Sugar.Types as Sugar
@@ -31,7 +33,7 @@ setColor action = do
 mkEditEventMap ::
   MonadA m => Integer -> T m (Guid, Sugar.EntityId) -> Widget.EventHandlers (T m)
 mkEditEventMap integer setToHole =
-  Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.Key'Enter]
+  Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Enter]
   (E.Doc ["Edit", "Integer"]) $
   do
     (guid, entityId) <- setToHole

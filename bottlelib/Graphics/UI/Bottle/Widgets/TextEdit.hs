@@ -11,33 +11,36 @@ module Graphics.UI.Bottle.Widgets.TextEdit(
   sTextViewStyle
   ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Data.Char (isSpace)
-import Data.List (genericLength, minimumBy)
-import Data.List.Split (splitWhen)
-import Data.List.Utils (enumerate)
-import Data.Maybe (mapMaybe)
-import Data.Monoid (Monoid(..))
-import Data.Ord (comparing)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.DrawingCombinators.Utils (square, textHeight)
-import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Widget (Widget(..))
+import           Control.Applicative ((<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.Char8 as SBS8
+import           Data.Char (isSpace)
+import           Data.List (genericLength, minimumBy)
+import           Data.List.Split (splitWhen)
+import           Data.List.Utils (enumerate)
 import qualified Data.Map as Map
+import           Data.Maybe (mapMaybe)
+import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
+import           Data.Ord (comparing)
 import qualified Data.Set as Set
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.DrawingCombinators.Utils (square, textHeight)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import qualified Graphics.UI.Bottle.ModKey as ModKey
+import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import           Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified Graphics.UI.GLFW as GLFW
 import qualified Safe
 
 type Cursor = Int
@@ -210,26 +213,26 @@ eventMap ::
   Widget.EventHandlers ((,) String)
 eventMap cursor str displayStr myId =
   mconcat . concat $ [
-    [ keys (moveDoc ["left"]) [noMods E.Key'Left] $
+    [ keys (moveDoc ["left"]) [noMods GLFW.Key'Left] $
       moveRelative (-1)
     | cursor > 0 ],
 
-    [ keys (moveDoc ["right"]) [noMods E.Key'Right] $
+    [ keys (moveDoc ["right"]) [noMods GLFW.Key'Right] $
       moveRelative 1
     | cursor < textLength ],
 
-    [ keys (moveDoc ["word", "left"]) [ctrl E.Key'Left]
+    [ keys (moveDoc ["word", "left"]) [ctrl GLFW.Key'Left]
       backMoveWord
     | cursor > 0 ],
 
-    [ keys (moveDoc ["word", "right"]) [ctrl E.Key'Right] moveWord
+    [ keys (moveDoc ["word", "right"]) [ctrl GLFW.Key'Right] moveWord
     | cursor < textLength ],
 
-    [ keys (moveDoc ["up"]) [noMods E.Key'Up] $
+    [ keys (moveDoc ["up"]) [noMods GLFW.Key'Up] $
       moveRelative (- cursorX - 1 - length (drop cursorX prevLine))
     | cursorY > 0 ],
 
-    [ keys (moveDoc ["down"]) [noMods E.Key'Down] $
+    [ keys (moveDoc ["down"]) [noMods GLFW.Key'Down] $
       moveRelative (length curLineAfter + 1 + min cursorX (length nextLine))
     | cursorY < lineCount - 1 ],
 
@@ -249,11 +252,11 @@ eventMap cursor str displayStr myId =
       moveAbsolute textLength
     | null curLineAfter && cursor < textLength ],
 
-    [ keys (deleteDoc ["backwards"]) [noMods E.Key'Backspace] $
+    [ keys (deleteDoc ["backwards"]) [noMods GLFW.Key'Backspace] $
       backDelete 1
     | cursor > 0 ],
 
-    [ keys (deleteDoc ["word", "backwards"]) [ctrl E.Key'W]
+    [ keys (deleteDoc ["word", "backwards"]) [ctrl GLFW.Key'W]
       backDeleteWord
     | cursor > 0 ],
 
@@ -263,27 +266,27 @@ eventMap cursor str displayStr myId =
 
     in
 
-    [ keys (editDoc ["Swap letters"]) [ctrl E.Key'T]
+    [ keys (editDoc ["Swap letters"]) [ctrl GLFW.Key'T]
       swapLetters
     | cursor > 0 && textLength >= 2 ],
 
-    [ keys (deleteDoc ["forward"]) [noMods E.Key'Delete] $
+    [ keys (deleteDoc ["forward"]) [noMods GLFW.Key'Delete] $
       delete 1
     | cursor < textLength ],
 
-    [ keys (deleteDoc ["word", "forward"]) [alt E.Key'D]
+    [ keys (deleteDoc ["word", "forward"]) [alt GLFW.Key'D]
       deleteWord
     | cursor < textLength ],
 
-    [ keys (deleteDoc ["till", "end of line"]) [ctrl E.Key'K] $
+    [ keys (deleteDoc ["till", "end of line"]) [ctrl GLFW.Key'K] $
       delete (length curLineAfter)
     | not . null $ curLineAfter ],
 
-    [ keys (deleteDoc ["newline"]) [ctrl E.Key'K] $
+    [ keys (deleteDoc ["newline"]) [ctrl GLFW.Key'K] $
       delete 1
     | null curLineAfter && cursor < textLength ],
 
-    [ keys (deleteDoc ["till", "beginning of line"]) [ctrl E.Key'U] $
+    [ keys (deleteDoc ["till", "beginning of line"]) [ctrl GLFW.Key'U] $
       backDelete (length curLineBefore)
     | not . null $ curLineBefore ],
 
@@ -292,9 +295,9 @@ eventMap cursor str displayStr myId =
       insert . (: [])
     ],
 
-    [ keys (insertDoc ["Newline"]) [noMods E.Key'Enter] (insert "\n") ],
+    [ keys (insertDoc ["Newline"]) [noMods GLFW.Key'Enter] (insert "\n") ],
 
-    [ keys (insertDoc ["Space"]) [E.ModKey E.noMods E.Key'Space] (insert " ") ]
+    [ keys (insertDoc ["Space"]) [ModKey mempty GLFW.Key'Space] (insert " ") ]
 
     ]
   where
@@ -330,11 +333,11 @@ eventMap cursor str displayStr myId =
 
     keys = flip E.keyPresses
 
-    noMods = E.ModKey E.noMods
-    ctrl = E.ModKey E.ctrl
-    alt = E.ModKey E.alt
-    homeKeys = [noMods E.Key'Home, ctrl E.Key'A]
-    endKeys = [noMods E.Key'End, ctrl E.Key'E]
+    noMods = ModKey mempty
+    ctrl = ModKey.ctrl
+    alt = ModKey.alt
+    homeKeys = [noMods GLFW.Key'Home, ctrl GLFW.Key'A]
+    endKeys = [noMods GLFW.Key'End, ctrl GLFW.Key'E]
     textLength = length str
     lineCount = length $ splitWhen (== '\n') displayStr
     strWithIds = Lens.mapped . _1 %~ Just $ enumerate str

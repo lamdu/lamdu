@@ -42,6 +42,7 @@ import           Control.MonadA (MonadA)
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
+import           Data.Monoid (Monoid(..))
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.Traversable (Traversable(..))
@@ -49,6 +50,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.View (View)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -58,6 +60,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Expr.Type (Type)
@@ -233,9 +236,9 @@ makeBridge mkFocused mkUnfocused myId = do
 
 nameEditFDConfig :: FocusDelegator.Config
 nameEditFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
+  { FocusDelegator.startDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
   , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Rename"]
-  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.Key'Escape]
+  , FocusDelegator.stopDelegatingKeys = [ModKey mempty GLFW.Key'Escape]
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Done renaming"]
   }
 

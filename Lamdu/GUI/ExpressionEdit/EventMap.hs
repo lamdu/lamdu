@@ -7,26 +7,28 @@ module Lamdu.GUI.ExpressionEdit.EventMap
   , replaceOrComeToParentEventMap
   ) where
 
-import Control.Applicative ((<$>), Applicative(..), liftA2)
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.Monoid (Monoid(..))
-import Data.Traversable (sequenceA)
-import Graphics.UI.Bottle.Widget (EventHandlers)
-import Lamdu.CharClassification (operatorChars)
-import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers, holePickersAddDocPrefix, holePickersAction)
-import Lamdu.Sugar.NearestHoles (NearestHoles)
+import           Control.Applicative ((<$>), Applicative(..), liftA2)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
+import           Data.Monoid (Monoid(..))
 import qualified Data.Store.Transaction as Transaction
+import           Data.Traversable (sequenceA)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import           Lamdu.CharClassification (operatorChars)
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -46,7 +48,7 @@ make isFocused holePickers pl =
 
 mkEventMap ::
   (Functor f, Functor g) =>
-  [E.ModKey] -> E.Doc ->
+  [ModKey] -> E.Doc ->
   (f Widget.Id -> g Widget.Id) ->
   f Sugar.EntityId -> EventHandlers g
 mkEventMap keys doc f =
@@ -56,12 +58,12 @@ mkEventMap keys doc f =
 mkEventMapWithPickers ::
   (Functor f, MonadA m) =>
   HolePickers m ->
-  [E.ModKey] -> E.Doc ->
+  [ModKey] -> E.Doc ->
   (f Widget.Id -> T m Widget.Id) ->
   f Sugar.EntityId -> EventHandlers (T m)
 mkEventMapWithPickers holePickers keys doc f =
   E.keyPresses keys doc .
-  liftA2 mappend (holePickersAction holePickers) .
+  liftA2 mappend (ExprGuiM.holePickersAction holePickers) .
   fmap Widget.eventResultFromCursor . f .
   fmap WidgetIds.fromEntityId
 
@@ -89,7 +91,7 @@ jumpHolesEventMap holePickers hg = do
     ]
   where
     jumpDoc dirStr =
-      holePickersAddDocPrefix holePickers $ "Jump to " ++ dirStr ++ " hole"
+      ExprGuiM.holePickersAddDocPrefix holePickers $ "Jump to " ++ dirStr ++ " hole"
 
 jumpHolesEventMapIfSelected ::
   MonadA m => HolePickers m ->
@@ -150,14 +152,14 @@ applyOperatorEventMap holePickers actions =
   Sugar.WrappedAlready holeId -> action $ return holeId
   Sugar.WrapNotAllowed -> mempty
   where
-    doc = E.Doc ["Edit", holePickersAddDocPrefix holePickers "Apply operator"]
+    doc = E.Doc ["Edit", ExprGuiM.holePickersAddDocPrefix holePickers "Apply operator"]
     action wrap =
       E.charGroup "Operator" doc operatorChars $ \c _isShifted ->
         mappend
-        <$> holePickersAction holePickers
+        <$> ExprGuiM.holePickersAction holePickers
         <*> do
           (guid, entityId) <- wrap
-          cursor <- setHoleStateAndJump guid (HoleState [c]) entityId
+          cursor <- HoleEditState.setHoleStateAndJump guid (HoleState [c]) entityId
           return $ Widget.eventResultFromCursor cursor
 
 wrapEventMap ::
@@ -169,7 +171,7 @@ wrapEventMap holePickers config actions =
   Sugar.WrapAction wrap ->
     mkEventMapWithPickers holePickers
     (Config.wrapKeys config)
-    (E.Doc ["Edit", holePickersAddDocPrefix holePickers "Wrap"])
+    (E.Doc ["Edit", ExprGuiM.holePickersAddDocPrefix holePickers "Wrap"])
     (fmap FocusDelegator.delegatingId) (snd <$> wrap)
   Sugar.WrapperAlready _ -> mempty
   Sugar.WrappedAlready _ -> mempty

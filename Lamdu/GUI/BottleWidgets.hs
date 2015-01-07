@@ -14,24 +14,23 @@ module Lamdu.GUI.BottleWidgets
   , liftLayerInterval
   ) where
 
-import Control.Applicative (Applicative(..), (*>), (<$>))
-import Control.Lens.Operators
-import Control.Monad (when)
-import Control.MonadA (MonadA)
-import Data.ByteString.Char8 (pack)
-import Data.List (findIndex, intersperse)
-import Data.Monoid (mappend)
-import Data.Store.Property (Property)
-import Graphics.UI.Bottle.Animation (AnimId)
-import Graphics.UI.Bottle.View (View)
-import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Config (Config)
-import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
+import           Control.Applicative (Applicative(..), (*>), (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad (when)
+import           Control.MonadA (MonadA)
+import           Data.ByteString.Char8 (pack)
+import           Data.List (findIndex, intersperse)
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.View (View)
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -39,7 +38,10 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified Graphics.UI.GLFW as GLFW
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
@@ -162,11 +164,9 @@ makeTextEditor textRef myId =
       when (newText /= Property.value textRef) $ Property.set textRef newText
       return eventRes
 
-deleteKeyEventHandler :: EventMap.ModKey -> Widget f -> Widget f
-deleteKeyEventHandler key = Widget.wEventMap %~ EventMap.deleteKey (EventMap.KeyEvent EventMap.Press key)
-
-noMods :: EventMap.Key -> EventMap.ModKey
-noMods = EventMap.ModKey EventMap.noMods
+deleteKeyEventHandler :: ModKey -> Widget f -> Widget f
+deleteKeyEventHandler key =
+  Widget.wEventMap %~ EventMap.deleteKey (EventMap.KeyEvent GLFW.KeyState'Pressed key)
 
 makeLineEdit ::
   (MonadA m, MonadA f) =>
@@ -174,7 +174,7 @@ makeLineEdit ::
   Widget.Id ->
   WidgetEnvT m (Widget f)
 makeLineEdit textRef myId =
-  makeTextEditor textRef myId <&> deleteKeyEventHandler (noMods EventMap.Key'Enter)
+  makeTextEditor textRef myId <&> deleteKeyEventHandler (ModKey mempty GLFW.Key'Enter)
 
 makeWordEdit ::
   (MonadA m, MonadA f) =>
@@ -182,7 +182,7 @@ makeWordEdit ::
   Widget.Id ->
   WidgetEnvT m (Widget f)
 makeWordEdit textRef myId =
-  makeLineEdit textRef myId <&> deleteKeyEventHandler (noMods EventMap.Key'Space)
+  makeLineEdit textRef myId <&> deleteKeyEventHandler (ModKey mempty GLFW.Key'Space)
 
 hspaceWidget :: Widget.R -> Widget f
 hspaceWidget = uncurry Widget.liftView . Spacer.makeHorizontal

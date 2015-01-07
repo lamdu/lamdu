@@ -4,33 +4,35 @@ module Lamdu.GUI.ExpressionEdit.TagEdit
   ( makeRecordTag, makeParamTag, diveIntoRecordTag
   ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.Monoid (Monoid(..), (<>))
-import Graphics.UI.Bottle.Animation (AnimId)
-import Lamdu.GUI.ExpressionGui (ExpressionGui)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.GUI.ExpressionGui.Types (WidgetT)
-import Lamdu.Sugar.AddNames.Types (Name(..))
-import Lamdu.Sugar.NearestHoles (NearestHoles)
+import           Control.Applicative ((<$>))
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
+import           Data.Monoid (Monoid(..), (<>))
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Types (WidgetT)
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.AddNames.Types (Name(..))
+import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 fdConfig :: FocusDelegator.Config
 fdConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
+  { FocusDelegator.startDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
   , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Rename tag"]
-  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.Key'Escape]
+  , FocusDelegator.stopDelegatingKeys = [ModKey mempty GLFW.Key'Escape]
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Stop renaming tag"]
   }
 
@@ -60,7 +62,7 @@ makeRecordTag nearestHoles tagG myId = do
     <&> ExpressionGui.fromValueWidget
   where
     jumpNextEventMap nextHole =
-      Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.Key'Space]
+      Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Space]
       (E.Doc ["Navigation", "Jump to next hole"]) $
       return $ WidgetIds.fromEntityId nextHole
 

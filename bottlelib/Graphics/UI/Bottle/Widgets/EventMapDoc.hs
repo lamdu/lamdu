@@ -7,24 +7,26 @@ module Graphics.UI.Bottle.Widgets.EventMapDoc
   , Config(..)
   ) where
 
-import Control.Applicative ((<$>), Applicative(..))
-import Control.Lens.Operators
-import Data.Function (on)
-import Data.IORef (newIORef, readIORef, modifyIORef)
-import Data.Monoid (Monoid(..))
-import Data.Traversable (traverse)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Animation (AnimId, R)
-import Graphics.UI.Bottle.EventMap (EventMap)
-import Graphics.UI.Bottle.View (View)
-import Graphics.UI.Bottle.Widget (Widget)
+import           Control.Applicative ((<$>), Applicative(..))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Data.Function (on)
+import           Data.IORef (newIORef, readIORef, modifyIORef)
 import qualified Data.Map as Map
+import           Data.Monoid (Monoid(..))
+import           Data.Traversable (traverse)
 import qualified Data.Tuple as Tuple
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Animation (AnimId, R)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import           Graphics.UI.Bottle.EventMap (EventMap)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import qualified Graphics.UI.Bottle.ModKey as ModKey
+import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -34,7 +36,7 @@ data Config = Config
   { configStyle :: TextView.Style
   , configInputDocColor :: Draw.Color
   , configBGColor :: Draw.Color
-  , configOverlayDocKeys :: [E.ModKey]
+  , configOverlayDocKeys :: [ModKey]
   }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
@@ -111,14 +113,14 @@ makeView size eventMap config animId =
   map (makeTextViews config animId) . groupTree . groupInputDocs .
   map ((Lens._1 %~ E.docStrs) . Tuple.swap) $ E.eventMapDocs eventMap
 
-makeTooltip :: Config -> [E.ModKey] -> AnimId -> View
+makeTooltip :: Config -> [ModKey] -> AnimId -> View
 makeTooltip config helpKeys animId =
   addHelpBG config animId $
   GridView.horizontalAlign 0
   [ TextView.label (configStyle config) animId "Show help"
   , Spacer.makeHorizontal 10
   , makeShortcutKeyView config
-    (animId ++ ["HelpKeys"], map E.prettyModKey helpKeys)
+    (animId ++ ["HelpKeys"], map ModKey.pretty helpKeys)
   ]
 
 indent :: R -> View -> View

@@ -7,17 +7,17 @@ module Graphics.UI.Bottle.Widgets.FocusDelegator
   , delegatingId, notDelegatingId
   ) where
 
-import Control.Applicative (Applicative(..))
-import Control.Lens.Operators
-import Data.ByteString.Char8() -- IsString instance
-import Data.Maybe (isJust)
-import Data.Monoid (mappend, mempty)
-import Graphics.UI.Bottle.Animation (AnimId)
-import Graphics.UI.Bottle.Rect(Rect(..))
-import Graphics.UI.Bottle.Widget(Widget(..))
+import           Control.Applicative (Applicative(..))
+import           Control.Lens.Operators
+import           Data.Maybe (isJust)
+import           Data.Monoid (mappend, mempty)
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.Rect (Rect(..))
+import           Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 data IsDelegating = Delegating | NotDelegating
@@ -29,9 +29,9 @@ data Style = Style
   }
 
 data Config = Config
-  { startDelegatingKeys :: [E.ModKey]
+  { startDelegatingKeys :: [ModKey]
   , startDelegatingDoc :: E.Doc
-  , stopDelegatingKeys :: [E.ModKey]
+  , stopDelegatingKeys :: [ModKey]
   , stopDelegatingDoc :: E.Doc
   }
 

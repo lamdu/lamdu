@@ -1,19 +1,19 @@
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE DeriveGeneric, RecordWildCards #-}
 module Lamdu.Config
-  ( Layers(..)
-  , Help(..), Zoom(..), Pane(..), VersionControl(..), Hole(..), Name(..)
-  , Config(..)
-  , delKeys
-  , layerInterval
-  ) where
+    ( Layers(..)
+    , Help(..), Zoom(..), Pane(..), VersionControl(..), Hole(..), Name(..)
+    , Config(..)
+    , delKeys
+    , layerInterval
+    ) where
 
-import Data.Aeson (ToJSON(..), FromJSON(..))
-import Data.Vector.Vector2 (Vector2(..))
-import GHC.Generics (Generic)
-import Graphics.DrawingCombinators.Utils () -- Read instance for Color
+import           Data.Aeson (ToJSON(..), FromJSON(..))
+import           Data.Vector.Vector2 (Vector2(..))
+import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.DrawingCombinators.Utils ()
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
 
 data Layers = Layers
   { layerMin
@@ -37,12 +37,12 @@ data Help = Help
   , helpTextSize :: Int
   , helpInputDocColor :: Draw.Color
   , helpBGColor :: Draw.Color
-  , helpKeys :: [E.ModKey]
+  , helpKeys :: [ModKey]
   } deriving (Eq, Generic, Show)
 
 data Zoom = Zoom
-  { shrinkKeys :: [E.ModKey]
-  , enlargeKeys :: [E.ModKey]
+  { shrinkKeys :: [ModKey]
+  , enlargeKeys :: [ModKey]
   , enlargeFactor :: Double
   , shrinkFactor :: Double
   } deriving (Eq, Generic, Show)
@@ -50,25 +50,25 @@ data Zoom = Zoom
 data Pane = Pane
   { paneInactiveTintColor :: Draw.Color
   , paneActiveBGColor :: Draw.Color
-  , paneCloseKeys :: [E.ModKey]
-  , paneMoveDownKeys :: [E.ModKey]
-  , paneMoveUpKeys :: [E.ModKey]
-  , newDefinitionKeys :: [E.ModKey]
+  , paneCloseKeys :: [ModKey]
+  , paneMoveDownKeys :: [ModKey]
+  , paneMoveUpKeys :: [ModKey]
+  , newDefinitionKeys :: [ModKey]
   } deriving (Eq, Generic, Show)
 
 data VersionControl = VersionControl
-  { undoKeys :: [E.ModKey]
-  , redoKeys :: [E.ModKey]
-  , makeBranchKeys :: [E.ModKey]
-  , jumpToBranchesKeys :: [E.ModKey]
-  , delBranchKeys :: [E.ModKey]
+  { undoKeys :: [ModKey]
+  , redoKeys :: [ModKey]
+  , makeBranchKeys :: [ModKey]
+  , jumpToBranchesKeys :: [ModKey]
+  , delBranchKeys :: [ModKey]
   , selectedBranchColor :: Draw.Color
   } deriving (Eq, Generic, Show)
 
 data Hole = Hole
-  { holePickAndMoveToNextHoleKeys :: [E.ModKey]
-  , holeJumpToNextKeys :: [E.ModKey]
-  , holeJumpToPrevKeys :: [E.ModKey]
+  { holePickAndMoveToNextHoleKeys :: [ModKey]
+  , holeJumpToNextKeys :: [ModKey]
+  , holeJumpToPrevKeys :: [ModKey]
   , holeResultCount :: Int
   , holeResultScaleFactor :: Vector2 Double
   , holeResultPadding :: Vector2 Double
@@ -78,11 +78,11 @@ data Hole = Hole
   , holeExtraSymbolColorSelected :: Draw.Color
   , holeOpenBGColor :: Draw.Color
   , holeClosedBGColor :: Draw.Color
-  , holePickResultKeys :: [E.ModKey]
+  , holePickResultKeys :: [ModKey]
   , holeOpenDarkPadding :: Vector2 Double
   , holeOpenDarkBGColor :: Draw.Color
-  , holeUnwrapKeys :: [E.ModKey]
-  , holeOpenKeys :: [E.ModKey]
+  , holeUnwrapKeys :: [ModKey]
+  , holeOpenKeys :: [ModKey]
   } deriving (Eq, Generic, Show)
 
 data Name = Name
@@ -113,19 +113,19 @@ data Config = Config
   , baseTextSize :: Int
   , spaceWidth :: Double
 
-  , quitKeys :: [E.ModKey]
-  , debugModeKeys :: [E.ModKey]
-  , nextInfoModeKeys :: [E.ModKey]
-  , previousCursorKeys :: [E.ModKey]
+  , quitKeys :: [ModKey]
+  , debugModeKeys :: [ModKey]
+  , nextInfoModeKeys :: [ModKey]
+  , previousCursorKeys :: [ModKey]
 
   , invalidCursorBGColor :: Draw.Color
 
-  , addNextParamKeys :: [E.ModKey]
-  , jumpToDefinitionKeys :: [E.ModKey]
-  , replaceKeys :: [E.ModKey]
-  , delForwardKeys :: [E.ModKey]
-  , delBackwardKeys :: [E.ModKey]
-  , wrapKeys :: [E.ModKey]
+  , addNextParamKeys :: [ModKey]
+  , jumpToDefinitionKeys :: [ModKey]
+  , replaceKeys :: [ModKey]
+  , delForwardKeys :: [ModKey]
+  , delBackwardKeys :: [ModKey]
+  , wrapKeys :: [ModKey]
 
   , parenHighlightColor :: Draw.Color
   , literalIntColor :: Draw.Color
@@ -136,18 +136,18 @@ data Config = Config
   , foreignVarColor :: Draw.Color
 
   , acceptDefinitionTypeForFirstTimeColor :: Draw.Color
-  , acceptDefinitionTypeKeys :: [E.ModKey]
+  , acceptDefinitionTypeKeys :: [ModKey]
 
   , suggestedValueScaleFactor :: Vector2 Double
   , suggestedValueTint :: Draw.Color
 
-  , whereAddItemKeys :: [E.ModKey]
+  , whereAddItemKeys :: [ModKey]
   , whereItemPadding :: Vector2 Double
 
   , typeScaleFactor :: Vector2 Double
 
-  , cutKeys :: [E.ModKey]
-  , pasteKeys :: [E.ModKey]
+  , cutKeys :: [ModKey]
+  , pasteKeys :: [ModKey]
 
   , typeTint :: Draw.Color
   , typeBoxBGColor :: Draw.Color
@@ -159,23 +159,23 @@ data Config = Config
   , cursorBGColor :: Draw.Color
   , grammarColor :: Draw.Color
 
-  , listAddItemKeys :: [E.ModKey]
+  , listAddItemKeys :: [ModKey]
 
-  , jumpLHStoRHSKeys :: [E.ModKey]
-  , jumpRHStoLHSKeys :: [E.ModKey]
+  , jumpLHStoRHSKeys :: [ModKey]
+  , jumpRHStoLHSKeys :: [ModKey]
 
-  , enterSubexpressionKeys :: [E.ModKey]
-  , leaveSubexpressionKeys :: [E.ModKey]
+  , enterSubexpressionKeys :: [ModKey]
+  , leaveSubexpressionKeys :: [ModKey]
 
-  , recordOpenKeys :: [E.ModKey]
+  , recordOpenKeys :: [ModKey]
   , recordTailColor :: Draw.Color
-  , recordAddFieldKeys :: [E.ModKey]
+  , recordAddFieldKeys :: [ModKey]
 
   , presentationChoiceScaleFactor :: Vector2 Double
   , presentationChoiceColor :: Draw.Color
   } deriving (Eq, Generic, Show)
 
-delKeys :: Config -> [E.ModKey]
+delKeys :: Config -> [ModKey]
 delKeys config = delForwardKeys config ++ delBackwardKeys config
 
 instance ToJSON Layers

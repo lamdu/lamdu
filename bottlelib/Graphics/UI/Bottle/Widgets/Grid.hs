@@ -13,30 +13,32 @@ module Graphics.UI.Bottle.Widgets.Grid
   , toWidgetBiased, toWidgetBiasedWithKeys
   ) where
 
-import Control.Applicative (liftA2, (<$>))
-import Control.Lens ((^.), (%~))
-import Control.Monad (join, msum)
-import Data.Foldable (Foldable)
-import Data.Function (on)
-import Data.List (foldl', transpose, find, minimumBy, sortBy, groupBy)
-import Data.List.Utils (index, enumerate2d)
-import Data.MRUMemo (memo)
-import Data.Maybe (isJust, fromMaybe, catMaybes, mapMaybe)
-import Data.Monoid (Monoid(..))
-import Data.Ord (comparing)
-import Data.Traversable (Traversable)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Widget (Widget(..), R)
-import Graphics.UI.Bottle.Widgets.GridView (Alignment)
-import Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
+import           Control.Applicative (liftA2, (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad (join, msum)
+import           Data.Foldable (Foldable)
+import           Data.Function (on)
+import           Data.List (foldl', transpose, find, minimumBy, sortBy, groupBy)
+import           Data.List.Utils (index, enumerate2d)
+import           Data.MRUMemo (memo)
+import           Data.Maybe (isJust, fromMaybe, catMaybes, mapMaybe)
+import           Data.Monoid (Monoid(..))
+import           Data.Ord (comparing)
+import           Data.Traversable (Traversable)
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import qualified Graphics.UI.Bottle.ModKey as ModKey
+import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import           Graphics.UI.Bottle.Widget (Widget(..), R)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widgets.GridView (Alignment)
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
+import           Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Graphics.UI.GLFW as GLFW
 
 type Cursor = Vector2 Int
@@ -97,7 +99,7 @@ data Keys key = Keys
   , keysBottom :: [key]
   } deriving (Functor, Foldable, Traversable)
 
-stdKeys :: Keys EventMap.ModKey
+stdKeys :: Keys ModKey
 stdKeys = Keys
   { keysDir = k <$> stdDirKeys
   , keysMoreLeft = [k GLFW.Key'Home]
@@ -108,11 +110,11 @@ stdKeys = Keys
   , keysBottom = [k GLFW.Key'PageDown]
   }
   where
-    k = EventMap.ModKey EventMap.noMods
-    ctrlK = EventMap.ModKey EventMap.ctrl
+    k = ModKey mempty
+    ctrlK = ModKey.ctrl
 
 mkNavEventmap ::
-  Keys EventMap.ModKey -> NavDests f -> (Widget.EventHandlers f, Widget.EventHandlers f)
+  Keys ModKey -> NavDests f -> (Widget.EventHandlers f, Widget.EventHandlers f)
 mkNavEventmap Keys{..} navDests = (weakMap, strongMap)
   where
     weakMap = mconcat $ catMaybes
@@ -188,7 +190,7 @@ makeCentered :: [[Widget f]] -> Grid f
 makeCentered = makeAlign 0.5
 
 helper ::
-  Keys EventMap.ModKey -> (Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
+  Keys ModKey -> (Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
   KGrid key f -> Widget f
 helper keys combineEnters (KGrid mCursor size sChildren) =
   combineWs $ (map . map) (^. Lens._2 . elementW) sChildren
@@ -243,7 +245,7 @@ groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
 
 -- ^ If unfocused, will enters the given child when entered
-toWidgetBiasedWithKeys :: Keys EventMap.ModKey -> Cursor -> KGrid key f -> Widget f
+toWidgetBiasedWithKeys :: Keys ModKey -> Cursor -> KGrid key f -> Widget f
 toWidgetBiasedWithKeys keys (Vector2 x y) =
   helper keys $ \size children ->
   maybeOverride children <$> combineMEnters size children
@@ -260,7 +262,7 @@ toWidgetBiasedWithKeys keys (Vector2 x y) =
 toWidgetBiased :: Cursor -> KGrid key f -> Widget f
 toWidgetBiased = toWidgetBiasedWithKeys stdKeys
 
-toWidgetWithKeys :: Keys EventMap.ModKey -> KGrid key f -> Widget f
+toWidgetWithKeys :: Keys ModKey -> KGrid key f -> Widget f
 toWidgetWithKeys keys = helper keys combineMEnters
 
 toWidget :: KGrid key f -> Widget f

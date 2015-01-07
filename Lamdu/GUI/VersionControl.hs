@@ -1,38 +1,40 @@
 {-# LANGUAGE RecordWildCards, TypeOperators, OverloadedStrings, RankNTypes #-}
 module Lamdu.GUI.VersionControl (make) where
 
-import Control.Applicative (Applicative, (<$>), pure)
-import Control.Lens.Operators
-import Control.Monad.Trans.Class (lift)
-import Control.MonadA (MonadA)
-import Data.Monoid (Monoid(..))
-import Data.Store.Transaction (Transaction)
-import Data.Traversable (traverse)
-import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Config (Config)
-import Lamdu.VersionControl.Actions (Actions(..))
-import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
+import           Control.Applicative (Applicative, (<$>), pure)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad.Trans.Class (lift)
+import           Control.MonadA (MonadA)
 import qualified Data.List.Utils as ListUtils
+import           Data.Monoid (Monoid(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Traversable (traverse)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Edges as Edges
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Graphics.UI.GLFW as GLFW
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.VersionControl.Actions (Actions(..))
 
 branchNameFDConfig :: FocusDelegator.Config
 branchNameFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.Key'F2]
+  { FocusDelegator.startDelegatingKeys = [ModKey mempty GLFW.Key'F2]
   , FocusDelegator.startDelegatingDoc = E.Doc ["Branches", "Rename"]
-  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
+  , FocusDelegator.stopDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Done renaming"]
   }
 
@@ -65,9 +67,9 @@ choiceWidgetConfig :: Config -> BWidgets.ChoiceWidgetConfig
 choiceWidgetConfig config = BWidgets.ChoiceWidgetConfig
   { BWidgets.cwcFDConfig =
     FocusDelegator.Config
-    { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
+    { FocusDelegator.startDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
     , FocusDelegator.startDelegatingDoc = E.Doc ["Branches", "Select"]
-    , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
+    , FocusDelegator.stopDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
     , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Choose selected"]
     }
   , BWidgets.cwcExpandMode =

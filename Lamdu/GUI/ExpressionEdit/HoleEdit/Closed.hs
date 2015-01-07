@@ -5,33 +5,34 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Closed
   ( make
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Control.Monad (guard)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
-import Control.MonadA (MonadA)
-import Data.Maybe.Utils (maybeToMPlus)
-import Data.Monoid (Monoid(..), (<>))
-import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground, diveIntoHole)
-import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.Sugar.AddNames.Types (Name(..), ExpressionN)
+import           Control.Applicative (Applicative(..), (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad (guard)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
+import           Control.MonadA (MonadA)
+import           Data.Maybe.Utils (maybeToMPlus)
+import           Data.Monoid (Monoid(..), (<>))
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground, diveIntoHole)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.AddNames.Types (Name(..), ExpressionN)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -69,7 +70,7 @@ make hole pl myId =
     suggested = hole ^. Sugar.holeSuggested
 
 openHoleEventMap ::
-  Applicative f => [E.ModKey] -> Widget.Id -> Widget.EventHandlers f
+  Applicative f => [ModKey] -> Widget.Id -> Widget.EventHandlers f
 openHoleEventMap keys myId =
   Widget.keysEventMapMovesCursor keys
   (E.Doc ["Navigation", "Hole", "Open"]) . pure $ diveIntoHole myId

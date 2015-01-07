@@ -18,25 +18,26 @@ module Graphics.UI.Bottle.Widget
   , overlayView
   ) where
 
-import Control.Applicative ((<$>), liftA2)
-import Control.Lens.Operators
-import Data.Monoid (Monoid(..))
-import Data.Monoid.Generic (def_mempty, def_mappend)
-import Data.Vector.Vector2 (Vector2(..))
-import GHC.Generics (Generic)
-import Graphics.UI.Bottle.Animation (AnimId, R, Size)
-import Graphics.UI.Bottle.Direction (Direction)
-import Graphics.UI.Bottle.EventMap (EventMap)
-import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.View (View)
-import Graphics.UI.Bottle.WidgetId (Id(..), augmentId, toAnimId, joinId, subId)
+import           Control.Applicative ((<$>), liftA2)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
+import           Data.Monoid.Generic (def_mempty, def_mappend)
+import           Data.Vector.Vector2 (Vector2(..))
+import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Animation (AnimId, R, Size)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
+import           Graphics.UI.Bottle.EventMap (EventMap)
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import           Graphics.UI.Bottle.ModKey (ModKey)
+import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import           Graphics.UI.Bottle.View (View)
+import           Graphics.UI.Bottle.WidgetId (Id(..), augmentId, toAnimId, joinId, subId)
 
 data EventResult = EventResult
   { _eCursor :: Monoid.Last Id
@@ -132,14 +133,14 @@ tint :: Draw.Color -> Widget f -> Widget f
 tint color = wFrame %~ Anim.onImages (Draw.tint color)
 
 keysEventMap ::
-  Functor f => [EventMap.ModKey] -> EventMap.Doc ->
+  Functor f => [ModKey] -> EventMap.Doc ->
   f () -> EventHandlers f
 keysEventMap keys doc act =
   (fmap . const) mempty <$>
   EventMap.keyPresses keys doc act
 
 keysEventMapMovesCursor ::
-  Functor f => [EventMap.ModKey] -> EventMap.Doc ->
+  Functor f => [ModKey] -> EventMap.Doc ->
   f Id -> EventHandlers f
 keysEventMapMovesCursor keys doc act =
   fmap eventResultFromCursor <$>

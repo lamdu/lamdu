@@ -3,30 +3,32 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap
   ( make, blockDownEvents, disallowChars
   ) where
 
-import Control.Applicative (Applicative(..), (<$), (<$>))
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.List.Utils (nonEmptyAll)
-import Data.Monoid (Monoid(..))
-import Data.Store.Property (Property(..))
-import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.CharClassification (operatorChars, alphaNumericChars)
-import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..))
-import Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Control.Applicative (Applicative(..), (<$), (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
+import           Data.List.Utils (nonEmptyAll)
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+import qualified Graphics.UI.GLFW as GLFW
+import           Lamdu.CharClassification (operatorChars, alphaNumericChars)
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -39,13 +41,13 @@ blockDownEvents :: Monad f => Widget f -> Widget f
 blockDownEvents =
   Widget.weakerEvents $
   E.keyPresses
-  [E.ModKey E.noMods E.Key'Down]
+  [ModKey mempty GLFW.Key'Down]
   (E.Doc ["Navigation", "Move", "down (blocked)"]) $
   return mempty
 
 closeEventMap :: MonadA m => HoleInfo m -> Widget.EventHandlers (T m)
 closeEventMap holeInfo =
-  Widget.keysEventMapMovesCursor [E.ModKey E.noMods E.Key'Escape]
+  Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Escape]
   (E.Doc ["Navigation", "Hole", "Close"]) . pure $
   Widget.joinId (hiId holeInfo) ["closed"]
 
@@ -65,7 +67,7 @@ adHocTextEditEventMap searchTermProp =
       (E.Doc ["Edit", "Search Term", "Append character"]) $
       changeText . flip (++) . (: [])
     ]
-  , [ E.keyPresses (map (E.ModKey E.noMods) [E.Key'Backspace])
+  , [ E.keyPresses (map (ModKey mempty) [GLFW.Key'Backspace])
       (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
       changeText init
     | (not . null . Property.value) searchTermProp
@@ -84,10 +86,10 @@ disallowedHoleChars =
 disallowChars :: String -> E.EventMap a -> E.EventMap a
 disallowChars searchTerm =
   E.filterSChars (curry (`notElem` disallowedHoleChars)) .
-  deleteKeys [k E.Key'Space, k E.Key'Enter] .
+  deleteKeys [k GLFW.Key'Space, k GLFW.Key'Enter] .
   disallowMix
   where
-    k = E.ModKey E.noMods
+    k = ModKey mempty
     disallowMix
       | nonEmptyAll (`notElem` operatorChars) searchTerm =
         E.filterSChars (curry (`notElem` E.anyShiftedChars operatorChars))
@@ -95,8 +97,8 @@ disallowChars searchTerm =
         E.filterSChars (curry (`notElem` E.anyShiftedChars alphaNumericChars))
       | otherwise = id
 
-deleteKeys :: [E.ModKey] -> E.EventMap a -> E.EventMap a
-deleteKeys = E.deleteKeys . map (E.KeyEvent E.Press)
+deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
+deleteKeys = E.deleteKeys . map (E.KeyEvent GLFW.KeyState'Pressed)
 
 -- This relies on pickBefore being applied to it in the event map
 -- buildup to do the actual picking

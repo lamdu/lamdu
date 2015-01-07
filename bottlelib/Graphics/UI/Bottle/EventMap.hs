@@ -1,10 +1,7 @@
-{-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveFunctor, DeriveGeneric, RecordWildCards #-}
+{-# LANGUAGE DeriveFunctor, DeriveGeneric, RecordWildCards #-}
 module Graphics.UI.Bottle.EventMap
-  ( KeyEvent(..), IsPress(..), ModKey(..)
-  , prettyModKey
-  , ModState(..), noMods, shift, ctrl, alt
-  , Key(..), InputDoc, Subtitle, Doc(..)
+  ( KeyEvent(..)
+  , InputDoc, Subtitle, Doc(..)
   , EventMap, lookup, emTickHandlers
   , charEventMap, allChars, simpleChars
   , charGroup, sCharGroup
@@ -18,14 +15,14 @@ module Graphics.UI.Bottle.EventMap
   , specialCharKey
   ) where
 
+import           Prelude hiding (lookup)
+
 import           Control.Applicative ((<$>), (<*>))
 import           Control.Arrow ((***), (&&&))
 import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (guard, mplus, msum)
-import           Data.Aeson (ToJSON(..), FromJSON(..))
-import           Data.List (isPrefixOf)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (catMaybes, listToMaybe, maybeToList)
@@ -33,93 +30,85 @@ import           Data.Monoid (Monoid(..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
-import           Graphics.UI.GLFW (Key(..))
-import           Graphics.UI.GLFW.Events (IsPress(..))
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import qualified Graphics.UI.Bottle.ModKey as ModKey
+import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Events as Events
-import           Graphics.UI.GLFW.Instances ()
-import           Graphics.UI.GLFW.ModState (ModState(..), noMods, shift, ctrl, alt)
-import           Prelude hiding (lookup)
 
-data ModKey = ModKey ModState Key
-  deriving (Generic, Show, Eq, Ord)
-
-instance ToJSON ModKey
-instance FromJSON ModKey
-
-data KeyEvent = KeyEvent Events.IsPress ModKey
+data KeyEvent = KeyEvent GLFW.KeyState ModKey
   deriving (Generic, Show, Eq, Ord)
 
 anyShiftedChars :: String -> [(Char, IsShifted)]
 anyShiftedChars s = (,) <$> s <*> [Shifted, NotShifted]
 
-specialCharKey :: Char -> Maybe Key
+specialCharKey :: Char -> Maybe GLFW.Key
 specialCharKey c =
   case c of
-  ' ' -> Just Key'Space
-  '0' -> Just Key'Pad0
-  '1' -> Just Key'Pad1
-  '2' -> Just Key'Pad2
-  '3' -> Just Key'Pad3
-  '4' -> Just Key'Pad4
-  '5' -> Just Key'Pad5
-  '6' -> Just Key'Pad6
-  '7' -> Just Key'Pad7
-  '8' -> Just Key'Pad8
-  '9' -> Just Key'Pad9
-  '/' -> Just Key'PadDivide
-  '*' -> Just Key'PadMultiply
-  '-' -> Just Key'PadSubtract
-  '+' -> Just Key'PadAdd
-  '.' -> Just Key'PadDecimal
-  '=' -> Just Key'PadEqual
+  ' ' -> Just GLFW.Key'Space
+  '0' -> Just GLFW.Key'Pad0
+  '1' -> Just GLFW.Key'Pad1
+  '2' -> Just GLFW.Key'Pad2
+  '3' -> Just GLFW.Key'Pad3
+  '4' -> Just GLFW.Key'Pad4
+  '5' -> Just GLFW.Key'Pad5
+  '6' -> Just GLFW.Key'Pad6
+  '7' -> Just GLFW.Key'Pad7
+  '8' -> Just GLFW.Key'Pad8
+  '9' -> Just GLFW.Key'Pad9
+  '/' -> Just GLFW.Key'PadDivide
+  '*' -> Just GLFW.Key'PadMultiply
+  '-' -> Just GLFW.Key'PadSubtract
+  '+' -> Just GLFW.Key'PadAdd
+  '.' -> Just GLFW.Key'PadDecimal
+  '=' -> Just GLFW.Key'PadEqual
   _ -> Nothing
 
-charOfKey :: Key -> Maybe Char
+charOfKey :: GLFW.Key -> Maybe Char
 charOfKey key =
   case key of
-  Key'A           -> Just 'A'
-  Key'B           -> Just 'B'
-  Key'C           -> Just 'C'
-  Key'D           -> Just 'D'
-  Key'E           -> Just 'E'
-  Key'F           -> Just 'F'
-  Key'G           -> Just 'G'
-  Key'H           -> Just 'H'
-  Key'I           -> Just 'I'
-  Key'J           -> Just 'J'
-  Key'K           -> Just 'K'
-  Key'L           -> Just 'L'
-  Key'M           -> Just 'M'
-  Key'N           -> Just 'N'
-  Key'O           -> Just 'O'
-  Key'P           -> Just 'P'
-  Key'Q           -> Just 'Q'
-  Key'R           -> Just 'R'
-  Key'S           -> Just 'S'
-  Key'T           -> Just 'T'
-  Key'U           -> Just 'U'
-  Key'V           -> Just 'V'
-  Key'W           -> Just 'W'
-  Key'X           -> Just 'X'
-  Key'Y           -> Just 'Y'
-  Key'Z           -> Just 'Z'
-  Key'Space       -> Just ' '
-  Key'Pad0        -> Just '0'
-  Key'Pad1        -> Just '1'
-  Key'Pad2        -> Just '2'
-  Key'Pad3        -> Just '3'
-  Key'Pad4        -> Just '4'
-  Key'Pad5        -> Just '5'
-  Key'Pad6        -> Just '6'
-  Key'Pad7        -> Just '7'
-  Key'Pad8        -> Just '8'
-  Key'Pad9        -> Just '9'
-  Key'PadDivide   -> Just '/'
-  Key'PadMultiply -> Just '*'
-  Key'PadSubtract -> Just '-'
-  Key'PadAdd      -> Just '+'
-  Key'PadDecimal  -> Just '.'
-  Key'PadEqual    -> Just '='
+  GLFW.Key'A           -> Just 'A'
+  GLFW.Key'B           -> Just 'B'
+  GLFW.Key'C           -> Just 'C'
+  GLFW.Key'D           -> Just 'D'
+  GLFW.Key'E           -> Just 'E'
+  GLFW.Key'F           -> Just 'F'
+  GLFW.Key'G           -> Just 'G'
+  GLFW.Key'H           -> Just 'H'
+  GLFW.Key'I           -> Just 'I'
+  GLFW.Key'J           -> Just 'J'
+  GLFW.Key'K           -> Just 'K'
+  GLFW.Key'L           -> Just 'L'
+  GLFW.Key'M           -> Just 'M'
+  GLFW.Key'N           -> Just 'N'
+  GLFW.Key'O           -> Just 'O'
+  GLFW.Key'P           -> Just 'P'
+  GLFW.Key'Q           -> Just 'Q'
+  GLFW.Key'R           -> Just 'R'
+  GLFW.Key'S           -> Just 'S'
+  GLFW.Key'T           -> Just 'T'
+  GLFW.Key'U           -> Just 'U'
+  GLFW.Key'V           -> Just 'V'
+  GLFW.Key'W           -> Just 'W'
+  GLFW.Key'X           -> Just 'X'
+  GLFW.Key'Y           -> Just 'Y'
+  GLFW.Key'Z           -> Just 'Z'
+  GLFW.Key'Space       -> Just ' '
+  GLFW.Key'Pad0        -> Just '0'
+  GLFW.Key'Pad1        -> Just '1'
+  GLFW.Key'Pad2        -> Just '2'
+  GLFW.Key'Pad3        -> Just '3'
+  GLFW.Key'Pad4        -> Just '4'
+  GLFW.Key'Pad5        -> Just '5'
+  GLFW.Key'Pad6        -> Just '6'
+  GLFW.Key'Pad7        -> Just '7'
+  GLFW.Key'Pad8        -> Just '8'
+  GLFW.Key'Pad9        -> Just '9'
+  GLFW.Key'PadDivide   -> Just '/'
+  GLFW.Key'PadMultiply -> Just '*'
+  GLFW.Key'PadSubtract -> Just '-'
+  GLFW.Key'PadAdd      -> Just '+'
+  GLFW.Key'PadDecimal  -> Just '.'
+  GLFW.Key'PadEqual    -> Just '='
   _              -> Nothing
 
 type Subtitle = String
@@ -253,35 +242,25 @@ filterSChars p =
       guard $ p c isShifted
       handler c isShifted
 
-prettyKey :: Key -> InputDoc
-prettyKey k
-  | "Key" `isPrefixOf` show k = drop 3 $ show k
-  | otherwise = show k
-
-prettyModKey :: ModKey -> InputDoc
-prettyModKey (ModKey ms key) = prettyModState ms ++ prettyKey key
-
 prettyKeyEvent :: KeyEvent -> InputDoc
-prettyKeyEvent (KeyEvent Press modKey) = prettyModKey modKey
-prettyKeyEvent (KeyEvent Release modKey) =
-  "Depress " ++ prettyModKey modKey
+prettyKeyEvent (KeyEvent GLFW.KeyState'Pressed modKey) = ModKey.pretty modKey
+prettyKeyEvent (KeyEvent GLFW.KeyState'Repeating modKey) = "Repeat " ++ ModKey.pretty modKey
+prettyKeyEvent (KeyEvent GLFW.KeyState'Released modKey) = "Depress " ++ ModKey.pretty modKey
 
-prettyModState :: ModState -> InputDoc
-prettyModState ms = concat $
-  ["Ctrl+" | modCtrl ms] ++
-  ["Alt+" | modAlt ms] ++
-  ["Shift+" | modShift ms]
+isCharMods :: GLFW.ModifierKeys -> Bool
+isCharMods modKeys =
+    not $ any ($ modKeys)
+    [ GLFW.modifierKeysSuper
+    , GLFW.modifierKeysControl
+    , GLFW.modifierKeysAlt
+    ]
 
-isCharMods :: ModState -> Bool
-isCharMods ModState { modCtrl = False, modAlt = False } = True
-isCharMods _ = False
-
-shiftedMods :: ModState -> IsShifted
-shiftedMods ModState { modShift = True } = Shifted
-shiftedMods ModState { modShift = False } = NotShifted
+shiftedMods :: GLFW.ModifierKeys -> IsShifted
+shiftedMods GLFW.ModifierKeys { modifierKeysShift = True } = Shifted
+shiftedMods GLFW.ModifierKeys { modifierKeysShift = False } = NotShifted
 
 -- TODO: Remove this:
-mkModKey :: ModState -> Key -> ModKey
+mkModKey :: GLFW.ModifierKeys -> GLFW.Key -> ModKey
 mkModKey = ModKey
 
 eventMapDocs :: EventMap a -> [(InputDoc, Doc)]
@@ -302,25 +281,25 @@ deleteKeys :: [KeyEvent] -> EventMap a -> EventMap a
 deleteKeys = foldr ((.) . deleteKey) id
 
 lookup :: Events.KeyEvent -> EventMap a -> Maybe a
-lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict charGroups _ allCharHandlers _) =
+lookup (Events.KeyEvent k _scanCode keyState modKeys mchar) (EventMap dict charGroups _ allCharHandlers _) =
   msum
   [ (^. dhHandler) <$>
-    KeyEvent isPress modKey `Map.lookup` dict
+    KeyEvent keyState modKey `Map.lookup` dict
   , listToMaybe $ do
-      Press <- return isPress
+      GLFW.KeyState'Pressed <- return keyState
       char <- maybeToList mchar
       CharGroupHandler _ chars handler <- charGroups
       guard $ Set.member (char, isShifted) chars
       return $ (handler ^. dhHandler) char isShifted
   , listToMaybe $ do
-      Press <- return isPress
+      GLFW.KeyState'Pressed <- return keyState
       char <- maybeToList mchar
       AllCharsHandler _ handler <- allCharHandlers
       maybeToList $ (handler ^. dhHandler) char isShifted
   ]
   where
-    isShifted = shiftedMods ms
-    modKey = mkModKey ms k
+    isShifted = shiftedMods modKeys
+    modKey = mkModKey modKeys k
 
 sCharGroup :: InputDoc -> Doc -> [(Char, IsShifted)] -> (Char -> IsShifted -> a) -> EventMap a
 sCharGroup iDoc oDoc chars handler =
@@ -360,7 +339,7 @@ keyEventMap eventType doc handler =
 
 keyPress :: ModKey -> Doc -> a -> EventMap a
 keyPress =
-  keyEventMap . KeyEvent Press
+  keyEventMap . KeyEvent GLFW.KeyState'Pressed
 
 keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress
