@@ -487,8 +487,8 @@
         1.0
     ],
     "suggestedValueScaleFactor": {
-        "_first": 0.75,
-        "_second": 0.75
+        "_first": 1.0,
+        "_second": 1.0
     },
     "jumpLHStoRHSKeys": [
         [
