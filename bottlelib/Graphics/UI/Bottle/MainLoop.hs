@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Graphics.UI.Bottle.MainLoop
   ( mainLoopAnim
   , mainLoopImage
@@ -62,7 +63,12 @@ mainLoopImage win eventHandler makeImage =
         Just image ->
           image
           & (Draw.translate (-1, 1) <> Draw.scale (2/winSizeX) (-2/winSizeY) %%)
+#ifdef DRAWINGCOMBINATORS__SIZED
+          & let Vector2 glPixelRatioX glPixelRatioY = winSize / 2 -- GL range is -1..1
+            in Draw.clearRenderSized (glPixelRatioX, glPixelRatioY)
+#else
           & Draw.clearRender
+#endif
 
 mainLoopAnim ::
   GLFW.Window ->

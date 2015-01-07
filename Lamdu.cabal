@@ -99,7 +99,6 @@ Library
                        containers >= 0.4,
                        directory >= 1.0.1.1,
                        filepath >= 1.1,
-                       graphics-drawingcombinators >= 1.4,
                        random >= 1.0.0,
                        safe,
                        split >= 0.1,
@@ -107,6 +106,12 @@ Library
                        time >= 1.2,
                        transformers >= 0.2.1,
                        utf8-string >= 0.3
+
+  if flag(SmoothFonts)
+    Build-Depends: graphics-drawingcombinators >= 1.5.0.3
+    CPP-Options: -DDRAWINGCOMBINATORS__SIZED
+  else
+    Build-Depends: graphics-drawingcombinators >= 1.4
 
   ghc-options:         -O2 -Wall
   -- ghc-options is prepended to ghc-prof-options
@@ -249,3 +254,7 @@ Executable lamdu
 source-repository head
   type: git
   location: https://github.com/Peaker/lamdu.git
+
+Flag SmoothFonts
+  Description: Build example programs
+  Default: False
