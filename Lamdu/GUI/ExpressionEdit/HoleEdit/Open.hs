@@ -386,21 +386,21 @@ make pl holeInfo = do
           addBackground (HoleInfo.hiOpenId holeInfo)
           (Config.layers config) holeOpenBGColor
         & ExpressionGui.addBelowInferredSpacing typeView
-        >>= ExpressionGui.egWidget %%~
-            addDarkBackground (HoleInfo.hiOpenId holeInfo)
+        >>= addDarkBackground (HoleInfo.hiOpenId holeInfo)
         & ExpressionGui.wrapExprEventMap pl
 
 guiWidth :: Lens' (ExpressionGui m) Widget.R
 guiWidth = ExpressionGui.egWidget . Widget.wSize . _1
 
-addDarkBackground :: MonadA m => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
+addDarkBackground :: MonadA m => Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
 addDarkBackground myId widget =
   do
     config <- ExprGuiM.widgetEnv WE.readConfig
     let Config.Hole{..} = Config.hole config
     widget
-      & Widget.pad (holeOpenDarkPadding <&> realToFrac)
-      & Widget.backgroundColor
+      & ExpressionGui.pad (holeOpenDarkPadding <&> realToFrac)
+      & ExpressionGui.egWidget %~
+        Widget.backgroundColor
         (Config.layerDarkOpenHoleBG (Config.layers config))
         (Widget.toAnimId myId <> ["hole dark background"])
         holeOpenDarkBGColor
