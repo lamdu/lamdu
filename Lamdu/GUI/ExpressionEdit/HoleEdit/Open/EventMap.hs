@@ -9,7 +9,7 @@ import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
 import           Data.List.Utils (nonEmptyAll)
-import           Data.Monoid (Monoid(..))
+import           Data.Monoid (Monoid(..), (<>))
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -61,10 +61,7 @@ pasteEventMap config holeInfo =
 
 adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap searchTermProp =
-  mconcat
-  [ appendCharEventMap
-  , deleteCharEventMap
-  ]
+  appendCharEventMap <> deleteCharEventMap
   where
     appendCharEventMap =
       E.allChars "Character"
@@ -113,9 +110,8 @@ pickPlaceholderEventMap Config.Hole{..} holeInfo shownResult =
   -- TODO: Does this entityId business make sense?
   case hiNearestHoles holeInfo ^. NearestHoles.next of
   Just nextHoleEntityId | not holeResultHasHoles ->
-    mappend
-    (simplePickRes holePickResultKeys)
-    (pickAndMoveToNextHole nextHoleEntityId)
+    simplePickRes holePickResultKeys <>
+    pickAndMoveToNextHole nextHoleEntityId
   _ ->
     simplePickRes $
     holePickResultKeys ++
@@ -156,7 +152,7 @@ pickBefore shownResult action =
     actionResult <-
       action
       <&> Widget.eCursor . Lens._Wrapped' . Lens.mapped %~ _pickedIdTranslations
-    return $ _pickedEventResult `mappend` actionResult
+    return $ _pickedEventResult <> actionResult
 
 -- | Remove unwanted event handlers from a hole result
 removeUnwanted :: Config -> Widget.EventHandlers f -> Widget.EventHandlers f
@@ -184,30 +180,28 @@ make pl holeInfo mShownResult = do
     cut = actionsEventMap $ ExprEventMap.cutEventMap config
     paste = pasteEventMap config holeInfo
     pick = shownResultEventMap $ pickPlaceholderEventMap (Config.hole config) holeInfo
+    -- TODO: alphaAfterOp to come from inner hole
     alphaAfterOp = onShownResult $ alphaNumericAfterOperator holeInfo
     adHocEdit = adHocTextEditEventMap $ HoleInfo.hiSearchTermProperty holeInfo
     -- above ad-hoc, below search term edit:
-    strongEventMap =
-      mconcat [jumpHoles, close, pick, alphaAfterOp]
+    strongEventMap = jumpHoles <> close <> pick <> alphaAfterOp
     -- below ad-hoc and search term edit:
     weakEventMap =
-      mconcat
-      [ applyOp, cut, paste, replace
+      applyOp <> cut <> paste <> replace <>
       -- includes overlapping events like "cut" of sub-expressions
       -- (since top-level expression gets its actions cut), so put
       -- at lowest precedence:
-      , removeUnwanted config $ shownResultEventMap srEventMap
-      ]
+      removeUnwanted config (shownResultEventMap srEventMap)
     -- Used with weaker events, TextEdit events above:
-    searchTermEventMap = mappend strongEventMap weakEventMap
+    searchTermEventMap = strongEventMap <> weakEventMap
     -- Used with stronger events, Grid events underneath:
-    resultsEventMap =
-      mconcat [ strongEventMap, adHocEdit, weakEventMap ]
+    resultsEventMap = strongEventMap <> adHocEdit <> weakEventMap
   pure (searchTermEventMap, resultsEventMap)
   where
     onShownResult f = maybe mempty f mShownResult
-    shownResultEventMapH f shownResult = pickBefore shownResult <$> f shownResult
-    shownResultEventMap = onShownResult . shownResultEventMapH
+    shownResultEventMap f =
+      onShownResult $ \shownResult ->
+      pickBefore shownResult <$> f shownResult
     actionsEventMap f =
       shownResultEventMap $ \shownResult ->
       let
