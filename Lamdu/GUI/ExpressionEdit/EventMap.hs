@@ -1,7 +1,6 @@
 module Lamdu.GUI.ExpressionEdit.EventMap
   ( make
   , modifyEventMap
-  , cutEventMap
   , jumpHolesEventMap, jumpHolesEventMapIfSelected
   , replaceOrComeToParentEventMap
   ) where

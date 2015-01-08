@@ -176,7 +176,6 @@ make pl holeInfo mShownResult = do
   replace <- ExprEventMap.replaceOrComeToParentEventMap True pl
   let
     close = closeEventMap holeInfo
-    cut = actionsEventMap $ ExprEventMap.cutEventMap config
     paste = pasteEventMap config holeInfo
     pick = shownResultEventMap $ pickPlaceholderEventMap (Config.hole config) holeInfo
     -- TODO: alphaAfterOp to come from inner hole
@@ -184,13 +183,9 @@ make pl holeInfo mShownResult = do
     adHocEdit = adHocTextEditEventMap $ HoleInfo.hiSearchTermProperty holeInfo
     -- above ad-hoc, below search term edit:
     strongEventMap = jumpHoles <> close <> pick <> alphaAfterOp
+    eventsFromSelectedResult = removeUnwanted config $ shownResultEventMap srEventMap
     -- below ad-hoc and search term edit:
-    weakEventMap =
-      cut <> paste <> replace <>
-      -- includes overlapping events like "cut" of sub-expressions
-      -- (since top-level expression gets its actions cut), so put
-      -- at lowest precedence:
-      removeUnwanted config (shownResultEventMap srEventMap)
+    weakEventMap = paste <> replace <> eventsFromSelectedResult
     -- Used with weaker events, TextEdit events above:
     searchTermEventMap = strongEventMap <> weakEventMap
     -- Used with stronger events, Grid events underneath:
@@ -201,12 +196,3 @@ make pl holeInfo mShownResult = do
     shownResultEventMap f =
       onShownResult $ \shownResult ->
       pickBefore shownResult <$> f shownResult
-    actionsEventMap f =
-      shownResultEventMap $ \shownResult ->
-      let
-        mActions =
-          srHoleResult shownResult ^.
-          Sugar.holeResultConverted . Sugar.rPayload . Sugar.plActions
-      in case mActions of
-        Nothing -> mempty
-        Just actions -> f actions
