@@ -21,7 +21,7 @@ import           Control.Arrow ((***), (&&&))
 import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (guard, mplus, msum)
+import           Control.Monad (guard, msum)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (catMaybes, listToMaybe, maybeToList)
@@ -206,9 +206,9 @@ overrides
   (EventMap yMap yCharGroups yChars yMAllChars yTicks) =
   EventMap
   (xMap `mappend` filteredYMap)
-  (xCharGroups `mappend` filteredYCharGroups)
+  (xCharGroups ++ filteredYCharGroups)
   (xChars `mappend` yChars)
-  (xMAllChars `mplus` yMAllChars)
+  (xMAllChars ++ yMAllChars)
   (xTicks ++ yTicks)
   where
     filteredYMap = filterByKey (not . isKeyConflict) yMap
@@ -238,6 +238,7 @@ filterChars
   :: (Char -> Bool) -> EventMap a -> EventMap a
 filterChars p =
   (emCharGroupHandlers %~ filterCharGroups p) .
+  (emCharGroupChars %~ Set.filter p) .
   (emAllCharsHandler . Lens.traversed . chDocHandler . dhHandler %~ f)
   where
     f handler c = do
