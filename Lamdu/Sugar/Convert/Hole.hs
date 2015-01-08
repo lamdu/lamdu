@@ -4,7 +4,8 @@ module Lamdu.Sugar.Convert.Hole
   ( convert, convertPlain, orderedInnerHoles
   ) where
 
-import           Control.Applicative (Applicative(..), (<$>), (<$))
+import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
+import qualified Control.Applicative as Applicative
 import           Control.Arrow ((&&&))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -57,6 +58,7 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Suggest (suggestValueWith)
 import qualified System.Random as Random
 import           System.Random.Utils (genFromHashable)
+import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 type T = Transaction
 
@@ -361,18 +363,42 @@ applyFormArg pl =
   where
     plSameScope typ = pl & _1 . Infer.plType .~ typ
 
-applyForms :: a -> Val (Infer.Payload, a) -> [Val (Infer.Payload, a)]
-applyForms _ v@(Val _ V.BAbs {}) = [v]
+applyForms ::
+  MonadA m =>
+  a -> Val (Infer.Payload, a) ->
+  StateT Infer.Context (ListT m) (Val (Infer.Payload, a))
+applyForms _ v@(Val _ V.BAbs {}) = return v
 applyForms empty val =
-  case val ^. V.payload . _1 . Infer.plType of
+  case inferPl ^. Infer.plType of
   T.TFun arg res ->
     applyForms empty $
     Val (plSameScope res) $ V.BApp $ V.Apply val $
     applyFormArg (plSameScope arg)
-  _ -> []
-  & (++ [val])
+  T.TVar tv
+    | any (`Lens.has` val)
+      [ ExprLens.valVar
+      , ExprLens.valGetField . V.getFieldRecord . ExprLens.valVar
+      ] ->
+      -- a variable that's compatible with a function type
+      do
+        arg <- freshVar "af"
+        res <- freshVar "af"
+        let varTyp = T.TFun arg res
+        unify varTyp (T.TVar tv)
+          & Infer.run & mapStateT assertSuccess
+        return $ Val (plSameScope res) $ V.BApp $ V.Apply val $
+          Val (plSameScope arg) (V.BLeaf V.LHole)
+  _ -> Applicative.empty
+  <|> return val
   where
-    plSameScope t = (val ^. V.payload . _1 & Infer.plType .~ t, empty)
+    assertSuccess (Left err) =
+      fail $
+      "Unify of a tv with function type should always succeed, but failed: " ++
+      prettyShow err
+    assertSuccess (Right x) = return x
+    freshVar = Infer.run . Infer.freshInferredVar
+    inferPl = val ^. V.payload . _1
+    plSameScope t = (inferPl & Infer.plType .~ t, empty)
 
 holeWrap :: a -> Type -> Val (Infer.Payload, a) -> Val (Infer.Payload, a)
 holeWrap empty resultType val =
@@ -459,7 +485,7 @@ mkHoleResultVals mInjectedArg exprPl base =
       IRefInfer.loadInferScope scopeAtHole base
       & mapStateT maybeTtoListT
       <&> Lens.traversed . _2 %~ (,) Nothing
-    form <- lift $ ListClass.fromList $ applyForms (Nothing, ()) inferredBase
+    form <- applyForms (Nothing, ()) inferredBase
     let formType = form ^. V.payload . _1 . Infer.plType
     injected <- maybe (return . markNotInjected) holeResultsInject mInjectedArg form
     unifyResult <- unify holeType formType & liftInfer
