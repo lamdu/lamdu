@@ -106,7 +106,7 @@ jumpHolesEventMapIfSelected holePickers pl = do
 
 cutEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)
 cutEventMap config actions =
-  mkEventMap (Config.cutKeys config) (E.Doc ["Edit", "Cut"]) id $
+  maybe mempty (mkEventMap (Config.cutKeys config) (E.Doc ["Edit", "Cut"]) id) $
   actions ^. Sugar.cut
 
 replaceOrComeToParentEventMap ::

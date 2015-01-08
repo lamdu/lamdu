@@ -97,7 +97,7 @@ data Actions m = Actions
   { _wrap :: WrapAction m
   , _setToHole :: SetToHole m
   , _setToInnerExpr :: SetToInnerExpr m
-  , _cut :: T m EntityId
+  , _cut :: Maybe (T m EntityId) -- Nothing if already hole
   }
 
 data Payload m a = Payload

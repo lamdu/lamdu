@@ -38,6 +38,7 @@ mkActions sugarContext stored =
   , _setToHole = SetToHole $ addEntityId <$> DataOps.setToHole stored
   , _setToInnerExpr = NoInnerExpr
   , _cut =
+    Just $ -- overridden by hole conversion
     mkCutter (sugarContext ^. ConvertM.scCodeAnchors)
     (Property.value stored) $ mkReplaceWithNewHole stored
   }
