@@ -61,19 +61,27 @@ pasteEventMap config holeInfo =
 
 adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap searchTermProp =
-  mconcat . concat $
-  [ [ disallowChars (Property.value searchTermProp) .
-      E.allChars "Character"
-      (E.Doc ["Edit", "Search Term", "Append character"]) $
-      changeText . flip (++) . (: [])
-    ]
-  , [ E.keyPresses (map (ModKey mempty) [GLFW.Key'Backspace])
-      (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
-      changeText init
-    | (not . null . Property.value) searchTermProp
-    ]
+  mconcat
+  [ appendCharEventMap
+  , deleteCharEventMap
   ]
   where
+    appendCharEventMap =
+      E.allChars "Character"
+      (E.Doc ["Edit", "Search Term", "Append character"])
+      (changeText . snoc)
+      & disallowChars searchTerm
+      & if null searchTerm
+        then E.filterChars (`notElem` operatorChars)
+        else id
+    deleteCharEventMap
+      | null searchTerm = mempty
+      | otherwise =
+        E.keyPress (ModKey mempty GLFW.Key'Backspace)
+        (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
+        changeText init
+    snoc x = (++ [x])
+    searchTerm = Property.value searchTermProp
     changeText f = mempty <$ Property.pureModify searchTermProp f
 
 disallowedHoleChars :: String
@@ -178,14 +186,13 @@ make pl holeInfo mShownResult = do
     pick = shownResultEventMap $ pickPlaceholderEventMap (Config.hole config) holeInfo
     alphaAfterOp = onShownResult $ alphaNumericAfterOperator holeInfo
     adHocEdit = adHocTextEditEventMap $ HoleInfo.hiSearchTermProperty holeInfo
+    -- above ad-hoc, below search term edit:
     strongEventMap =
-      mconcat $
-      jumpHoles : close : pick : alphaAfterOp :
-      [ applyOp | null searchTerm ]
+      mconcat [jumpHoles, close, pick, alphaAfterOp]
+    -- below ad-hoc and search term edit:
     weakEventMap =
-      mconcat $
-      [ applyOp | not (null searchTerm) ] ++
-      [ cut, paste, replace
+      mconcat
+      [ applyOp, cut, paste, replace
       -- includes overlapping events like "cut" of sub-expressions
       -- (since top-level expression gets its actions cut), so put
       -- at lowest precedence:
@@ -198,7 +205,6 @@ make pl holeInfo mShownResult = do
       mconcat [ strongEventMap, adHocEdit, weakEventMap ]
   pure (searchTermEventMap, resultsEventMap)
   where
-    searchTerm = HoleInfo.hiSearchTerm holeInfo
     onShownResult f = maybe mempty f mShownResult
     shownResultEventMapH f shownResult = pickBefore shownResult <$> f shownResult
     shownResultEventMap = onShownResult . shownResultEventMapH

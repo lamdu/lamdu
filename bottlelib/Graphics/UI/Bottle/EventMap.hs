@@ -315,8 +315,7 @@ keyEventMap eventType doc handler =
   }
 
 keyPress :: ModKey -> Doc -> a -> EventMap a
-keyPress =
-  keyEventMap . KeyEvent GLFW.KeyState'Pressed
+keyPress = keyEventMap . KeyEvent GLFW.KeyState'Pressed
 
 keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress
