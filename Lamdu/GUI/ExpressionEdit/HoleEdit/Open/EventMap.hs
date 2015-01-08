@@ -175,7 +175,6 @@ make pl holeInfo mShownResult = do
   jumpHoles <- ExprEventMap.jumpHolesEventMapIfSelected [] pl
   replace <- ExprEventMap.replaceOrComeToParentEventMap True pl
   let
-    applyOp = actionsEventMap $ ExprEventMap.applyOperatorEventMap []
     close = closeEventMap holeInfo
     cut = actionsEventMap $ ExprEventMap.cutEventMap config
     paste = pasteEventMap config holeInfo
@@ -187,7 +186,7 @@ make pl holeInfo mShownResult = do
     strongEventMap = jumpHoles <> close <> pick <> alphaAfterOp
     -- below ad-hoc and search term edit:
     weakEventMap =
-      applyOp <> cut <> paste <> replace <>
+      cut <> paste <> replace <>
       -- includes overlapping events like "cut" of sub-expressions
       -- (since top-level expression gets its actions cut), so put
       -- at lowest precedence:
