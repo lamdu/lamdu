@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 module Graphics.UI.GLFW.Events
-  ( KeyEvent(..), GLFWEvent(..)
+  ( KeyEvent(..), Event(..)
   , eventLoop
   ) where
 
@@ -25,10 +25,10 @@ data KeyEvent = KeyEvent
     } deriving (Show, Eq)
 
 -- This is the final representation we expose of events:
-data GLFWEvent
-    = GLFWKeyEvent KeyEvent
-    | GLFWWindowClose
-    | GLFWWindowRefresh
+data Event
+    = EventKey KeyEvent
+    | EventWindowClose
+    | EventWindowRefresh
     deriving (Show, Eq)
 
 fromChar :: Char -> Maybe Char
@@ -37,15 +37,15 @@ fromChar char
     | '\57344' <= char && char <= '\63743' = Nothing
     | otherwise = Just char
 
-translate :: [GLFWRawEvent] -> [GLFWEvent]
+translate :: [GLFWRawEvent] -> [Event]
 translate [] = []
-translate (RawWindowClose : xs) = GLFWWindowClose : translate xs
-translate (RawWindowRefresh : xs) = GLFWWindowRefresh : translate xs
+translate (RawWindowClose : xs) = EventWindowClose : translate xs
+translate (RawWindowRefresh : xs) = EventWindowRefresh : translate xs
 translate (RawKeyEvent key scanCode keyState modKeys : RawCharEvent char : xs) =
-    GLFWKeyEvent (KeyEvent key scanCode keyState modKeys (fromChar char)) :
+    EventKey (KeyEvent key scanCode keyState modKeys (fromChar char)) :
     translate xs
 translate (RawKeyEvent key scanCode keyState modKeys : xs) =
-    GLFWKeyEvent (KeyEvent key scanCode keyState modKeys Nothing) : translate xs
+    EventKey (KeyEvent key scanCode keyState modKeys Nothing) : translate xs
 translate (RawCharEvent _ : xs) = translate xs
 
 atomicModifyIORef_ :: IORef a -> (a -> a) -> IO ()
@@ -74,5 +74,5 @@ rawEventLoop win eventsHandler = do
     eventsHandler events
     GLFW.swapBuffers win
 
-eventLoop :: GLFW.Window -> ([GLFWEvent] -> IO ()) -> IO a
+eventLoop :: GLFW.Window -> ([Event] -> IO ()) -> IO a
 eventLoop win handler = rawEventLoop win (handler . translate)

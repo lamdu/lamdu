@@ -21,7 +21,7 @@ import Graphics.DrawingCombinators.Utils (Image)
 import Graphics.Rendering.OpenGL.GL (($=))
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget(Widget)
-import Graphics.UI.GLFW.Events (KeyEvent, GLFWEvent(..), eventLoop)
+import Graphics.UI.GLFW.Events (KeyEvent, Event(..), eventLoop)
 import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Graphics.DrawingCombinators as Draw
@@ -41,11 +41,11 @@ mainLoopImage win eventHandler makeImage =
       (x, y) <- GLFW.getFramebufferSize win
       return $ fromIntegral <$> Vector2 x y
 
-    handleEvent size (GLFWKeyEvent keyEvent) =
+    handleEvent size (EventKey keyEvent) =
       eventHandler size keyEvent
-    handleEvent _ GLFWWindowClose =
+    handleEvent _ EventWindowClose =
       error "Quit" -- TODO: Make close event
-    handleEvent _ GLFWWindowRefresh = return True
+    handleEvent _ EventWindowRefresh = return True
 
     handleEvents events = do
       winSize@(Vector2 winSizeX winSizeY) <- windowSize
