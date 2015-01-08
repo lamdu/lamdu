@@ -4,59 +4,59 @@ module Lamdu.Sugar.Convert.Hole
   ( convert, convertPlain, orderedInnerHoles
   ) where
 
-import Control.Applicative (Applicative(..), (<$>), (<$))
-import Control.Arrow ((&&&))
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Control.Monad (join, void, liftM)
-import Control.Monad.ListT (ListT)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..), evalState, mapStateT)
-import Control.MonadA (MonadA)
-import Data.Maybe (maybeToList)
-import Data.Maybe.Utils (unsafeUnjust)
-import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
-import Data.Store.Transaction (Transaction)
-import Data.String (IsString(..))
-import Data.Traversable (traverse, sequenceA)
-import Lamdu.Expr.IRef (DefI)
-import Lamdu.Expr.Type (Type(..))
-import Lamdu.Expr.Val (Val(..))
-import Lamdu.Infer.Unify (unify)
-import Lamdu.Infer.Update (update)
-import Lamdu.Sugar.Convert.Expression.Actions (addActions)
-import Lamdu.Sugar.Convert.Monad (ConvertM)
-import Lamdu.Sugar.Internal
-import Lamdu.Sugar.Types
-import Lamdu.Suggest (suggestValueWith)
-import System.Random.Utils (genFromHashable)
+import           Control.Applicative (Applicative(..), (<$>), (<$))
+import           Control.Arrow ((&&&))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad (join, void, liftM)
+import           Control.Monad.ListT (ListT)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Maybe (MaybeT(..))
+import           Control.Monad.Trans.State (StateT(..), evalState, mapStateT)
 import qualified Control.Monad.Trans.State as State
+import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
+import           Data.Maybe (maybeToList)
+import           Data.Maybe.Utils (unsafeUnjust)
+import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.String (IsString(..))
+import           Data.Traversable (traverse, sequenceA)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.GenIds as GenIds
+import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
+import           Lamdu.Expr.Type (Type(..))
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
+import           Lamdu.Infer.Unify (unify)
+import           Lamdu.Infer.Update (update)
 import qualified Lamdu.Infer.Update as Update
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Input as Input
+import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.Types
+import           Lamdu.Suggest (suggestValueWith)
 import qualified System.Random as Random
+import           System.Random.Utils (genFromHashable)
 
 type T = Transaction
 
