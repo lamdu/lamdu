@@ -63,7 +63,7 @@ adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap searchTermProp =
   mconcat . concat $
   [ [ disallowChars (Property.value searchTermProp) .
-      E.simpleChars "Character"
+      E.allChars "Character"
       (E.Doc ["Edit", "Search Term", "Append character"]) $
       changeText . flip (++) . (: [])
     ]
@@ -76,25 +76,21 @@ adHocTextEditEventMap searchTermProp =
   where
     changeText f = mempty <$ Property.pureModify searchTermProp f
 
-disallowedHoleChars :: [(Char, E.IsShifted)]
-disallowedHoleChars =
-  E.anyShiftedChars ",`\n() " ++
-  [ ('0', E.Shifted)
-  , ('9', E.Shifted)
-  ]
+disallowedHoleChars :: String
+disallowedHoleChars = ",`\n() "
 
 disallowChars :: String -> E.EventMap a -> E.EventMap a
 disallowChars searchTerm =
-  E.filterSChars (curry (`notElem` disallowedHoleChars)) .
+  E.filterChars (`notElem` disallowedHoleChars) .
   deleteKeys [k GLFW.Key'Space, k GLFW.Key'Enter] .
   disallowMix
   where
     k = ModKey mempty
     disallowMix
       | nonEmptyAll (`notElem` operatorChars) searchTerm =
-        E.filterSChars (curry (`notElem` E.anyShiftedChars operatorChars))
+        E.filterChars (`notElem` operatorChars)
       | nonEmptyAll (`elem` operatorChars) searchTerm =
-        E.filterSChars (curry (`notElem` E.anyShiftedChars alphaNumericChars))
+        E.filterChars (`notElem` alphaNumericChars)
       | otherwise = id
 
 deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
@@ -140,7 +136,7 @@ alphaNumericAfterOperator holeInfo shownResult
   | nonEmptyAll (`elem` operatorChars) searchTerm =
     E.charGroup "Letter/digit"
     (E.Doc ["Edit", "Result", "Pick and resume"]) alphaNumericChars $
-    \c _ -> setNextHoleState [c] =<< srPick shownResult
+    \c -> setNextHoleState [c] =<< srPick shownResult
   | otherwise = mempty
   where
     searchTerm = HoleInfo.hiSearchTerm holeInfo

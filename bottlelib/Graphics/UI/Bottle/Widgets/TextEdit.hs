@@ -290,8 +290,8 @@ eventMap cursor str displayStr myId =
       backDelete (length curLineBefore)
     | not . null $ curLineBefore ],
 
-    [ E.filterSChars (curry (`notElem` E.anyShiftedChars " \n")) .
-      E.simpleChars "Character" (insertDoc ["character"]) $
+    [ E.filterChars (`notElem` " \n") .
+      E.allChars "Character" (insertDoc ["character"]) $
       insert . (: [])
     ],
 

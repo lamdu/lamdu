@@ -154,7 +154,7 @@ applyOperatorEventMap holePickers actions =
   where
     doc = E.Doc ["Edit", ExprGuiM.holePickersAddDocPrefix holePickers "Apply operator"]
     action wrap =
-      E.charGroup "Operator" doc operatorChars $ \c _isShifted ->
+      E.charGroup "Operator" doc operatorChars $ \c ->
         mappend
         <$> ExprGuiM.holePickersAction holePickers
         <*> do

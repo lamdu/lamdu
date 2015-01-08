@@ -217,12 +217,8 @@ parentExprFDConfig config = FocusDelegator.Config
 
 -- ExprGuiM GUIs (TODO: Move to Monad.hs?)
 
-disallowedNameChars :: [(Char, E.IsShifted)]
-disallowedNameChars =
-  E.anyShiftedChars "[]\\`()" ++
-  [ ('0', E.Shifted)
-  , ('9', E.Shifted)
-  ]
+disallowedNameChars :: String
+disallowedNameChars = "[]\\`()"
 
 -- TODO: Move to BWidgets
 makeBridge ::
@@ -277,7 +273,7 @@ makeNameEdit (Name nameSrc nameCollision setName name) myId = do
     makeWordEdit =
       BWidgets.makeWordEdit <&>
       Lens.mapped . Lens.mapped . Widget.wEventMap %~
-      E.filterSChars (curry (`notElem` disallowedNameChars))
+      E.filterChars (`notElem` disallowedNameChars)
 
 stdWrapIn ::
   (Traversable t, MonadA m) =>

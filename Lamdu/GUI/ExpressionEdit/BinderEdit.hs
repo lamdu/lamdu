@@ -68,7 +68,7 @@ makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
     jumpToRHSViaEquals n widget
       | nonOperatorName n =
         widget
-        & Widget.wEventMap %~ E.filterSChars (curry (/= ('=', E.NotShifted)))
+        & Widget.wEventMap %~ E.filterChars (/= '=')
         & Widget.weakerEvents rhsJumperEquals
       | otherwise = widget
 
