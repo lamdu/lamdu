@@ -347,19 +347,19 @@ eitherToListT :: Monad m => Either t a -> ListT m a
 eitherToListT (Left _) = mempty
 eitherToListT (Right x) = return x
 
-applyFormArg :: a -> Infer.Payload -> Val (Infer.Payload, a)
-applyFormArg empty inferPl =
-  Val (inferPl, empty) $
-  case inferPl ^. Infer.plType of
+applyFormArg :: (Infer.Payload, a) -> Val (Infer.Payload, a)
+applyFormArg pl =
+  Val pl $
+  case pl ^. _1 . Infer.plType of
   T.TRecord T.CEmpty -> V.BLeaf V.LRecEmpty
   T.TRecord (T.CExtend f typ rest) ->
     V.BRecExtend $
       V.RecExtend f
-      (Val (plSameScope typ, empty) (V.BLeaf V.LHole)) $
-      applyFormArg empty (plSameScope (T.TRecord rest))
+      (Val (plSameScope typ) (V.BLeaf V.LHole)) $
+      applyFormArg (plSameScope (T.TRecord rest))
   _ -> V.BLeaf V.LHole
   where
-    plSameScope typ = inferPl & Infer.plType .~ typ
+    plSameScope typ = pl & _1 . Infer.plType .~ typ
 
 applyForms :: a -> Val (Infer.Payload, a) -> [Val (Infer.Payload, a)]
 applyForms _ v@(Val _ V.BAbs {}) = [v]
@@ -367,13 +367,12 @@ applyForms empty val =
   case val ^. V.payload . _1 . Infer.plType of
   T.TFun arg res ->
     applyForms empty $
-    Val (plSameScope res, empty) $ V.BApp $ V.Apply val $
-    applyFormArg empty (plSameScope arg)
+    Val (plSameScope res) $ V.BApp $ V.Apply val $
+    applyFormArg (plSameScope arg)
   _ -> []
   & (++ [val])
   where
-    plSameScope t =
-      val ^. V.payload . _1 & Infer.plType .~ t
+    plSameScope t = (val ^. V.payload . _1 & Infer.plType .~ t, empty)
 
 holeWrap :: a -> Type -> Val (Infer.Payload, a) -> Val (Infer.Payload, a)
 holeWrap empty resultType val =
