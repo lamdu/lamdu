@@ -1,8 +1,9 @@
 {-# LANGUAGE DeriveFunctor, DeriveGeneric, RecordWildCards #-}
 module Graphics.UI.Bottle.EventMap
   ( KeyEvent(..)
-  , InputDoc, Subtitle, Doc(..)
+  , InputDoc, Subtitle, Doc(..), docStrs
   , EventMap, lookup, emTickHandlers
+  , emDocs
   , charEventMap, allChars
   , charGroup
   , keyEventMap, keyPress, keyPresses
@@ -15,7 +16,7 @@ module Graphics.UI.Bottle.EventMap
 
 import           Prelude hiding (lookup)
 
-import           Control.Applicative ((<$>))
+import           Control.Applicative (Applicative(..), (<$>))
 import           Control.Arrow ((***), (&&&))
 import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
@@ -109,8 +110,11 @@ charOfKey key =
 type Subtitle = String
 
 newtype Doc = Doc
-  { docStrs :: [Subtitle]
+  { _docStrs :: [Subtitle]
   } deriving (Generic, Eq, Ord)
+
+docStrs :: Lens.Iso' Doc [Subtitle]
+docStrs = Lens.iso _docStrs Doc
 
 data DocHandler a = DocHandler
   { _dhDoc :: Doc
@@ -167,6 +171,15 @@ data EventMap a = EventMap
   , _emAllCharsHandler :: [AllCharsHandler a]
   , _emTickHandlers :: [a]
   } deriving (Generic, Functor)
+
+emDocs :: Lens.Traversal' (EventMap a) Doc
+emDocs f (EventMap keyMap charGroupHandlers charGroupChars allCharsHandler tickHandlers) =
+  EventMap
+  <$> (Lens.traverse . dhDoc) f keyMap
+  <*> (Lens.traverse . cgDocHandler . dhDoc) f charGroupHandlers
+  <*> pure charGroupChars
+  <*> (Lens.traverse . chDocHandler . dhDoc) f allCharsHandler
+  <*> pure tickHandlers
 
 emKeyMap :: Lens' (EventMap a) (Map KeyEvent (DocHandler a))
 emKeyMap f EventMap{..} = f _emKeyMap <&> \_emKeyMap -> EventMap{..}

@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap
   ( make, blockDownEvents, disallowChars
   ) where
 
-import           Control.Applicative (Applicative(..), (<$), (<$>))
+import           Control.Applicative (Applicative(..), (<$))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
@@ -177,7 +177,10 @@ make pl holeInfo mShownResult = do
   let
     close = closeEventMap holeInfo
     paste = pasteEventMap config holeInfo
-    pick = shownResultEventMap $ pickPlaceholderEventMap (Config.hole config) holeInfo
+    pick =
+      onShownResult $ \shownResult ->
+      pickPlaceholderEventMap (Config.hole config) holeInfo shownResult
+      <&> pickBefore shownResult
     -- TODO: alphaAfterOp to come from inner hole
     alphaAfterOp = onShownResult $ alphaNumericAfterOperator holeInfo
     adHocEdit = adHocTextEditEventMap $ HoleInfo.hiSearchTermProperty holeInfo
@@ -195,4 +198,6 @@ make pl holeInfo mShownResult = do
     onShownResult f = maybe mempty f mShownResult
     shownResultEventMap f =
       onShownResult $ \shownResult ->
-      pickBefore shownResult <$> f shownResult
+      f shownResult
+      & E.emDocs . E.docStrs . Lens._last %~ (++ "(On picked result)")
+      <&> pickBefore shownResult

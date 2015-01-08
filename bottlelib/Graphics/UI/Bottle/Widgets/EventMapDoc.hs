@@ -111,7 +111,7 @@ makeView :: Vector2 R -> EventMap a -> Config -> AnimId -> View
 makeView size eventMap config animId =
   makeTreeView config animId size .
   map (makeTextViews config animId) . groupTree . groupInputDocs .
-  map ((Lens._1 %~ E.docStrs) . Tuple.swap) $ E.eventMapDocs eventMap
+  map ((Lens._1 %~ (^. E.docStrs)) . Tuple.swap) $ E.eventMapDocs eventMap
 
 makeTooltip :: Config -> [ModKey] -> AnimId -> View
 makeTooltip config helpKeys animId =
