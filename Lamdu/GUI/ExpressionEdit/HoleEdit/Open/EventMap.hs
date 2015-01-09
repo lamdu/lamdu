@@ -22,7 +22,6 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars, alphaNumericChars)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..))
@@ -99,12 +98,10 @@ disallowChars searchTerm =
 deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
 deleteKeys = E.deleteKeys . map (E.KeyEvent GLFW.KeyState'Pressed)
 
--- This relies on pickBefore being applied to it in the event map
--- buildup to do the actual picking
-pickPlaceholderEventMap ::
+pickEventMap ::
   MonadA m => Config.Hole -> HoleInfo m -> ShownResult m ->
   Widget.EventHandlers (T m)
-pickPlaceholderEventMap Config.Hole{..} holeInfo shownResult =
+pickEventMap Config.Hole{..} holeInfo shownResult =
   -- TODO: Does this entityId business make sense?
   case hiNearestHoles holeInfo ^. NearestHoles.next of
   Just nextHoleEntityId | not holeResultHasHoles ->
@@ -114,6 +111,7 @@ pickPlaceholderEventMap Config.Hole{..} holeInfo shownResult =
     simplePickRes $
     holePickResultKeys ++
     holePickAndMoveToNextHoleKeys
+  <&> pickBefore shownResult
   where
     pickAndMoveToNextHole nextHoleEntityId =
       Widget.keysEventMapMovesCursor holePickAndMoveToNextHoleKeys
@@ -140,42 +138,35 @@ removeUnwanted config =
     gridKeyEvents = Foldable.toList Grid.stdKeys
     delKeys = Config.delKeys config
 
+eventsOnPickedResult :: MonadA m => Config -> ShownResult m -> Widget.EventHandlers (T m)
+eventsOnPickedResult config shownResult =
+  srEventMap shownResult
+  & E.emDocs . E.docStrs . Lens._last %~ (++ "(On picked result)")
+  <&> pickBefore shownResult
+  & removeUnwanted config
+
 make ::
   MonadA m =>
-  Sugar.Payload m ExprGuiM.Payload ->
   HoleInfo m -> Maybe (ShownResult m) ->
   ExprGuiM m
   ( Widget.EventHandlers (T m)
   , Widget.EventHandlers (T m)
   )
-make pl holeInfo mShownResult = do
+make holeInfo mShownResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  -- TODO: does jumpHoles really need special treatment?
-  jumpHoles <- ExprEventMap.jumpHolesEventMapIfSelected [] pl
-  -- TODO: does replace really need special treatment?
-  replace <- ExprEventMap.replaceOrComeToParentEventMap True pl
   let
-    close = closeEventMap holeInfo
-    paste = pasteEventMap config holeInfo
-    pick =
-      onShownResult $ \shownResult ->
-      pickPlaceholderEventMap (Config.hole config) holeInfo shownResult
-      <&> pickBefore shownResult
-    adHocEdit = adHocTextEditEventMap $ HoleInfo.hiSearchTermProperty holeInfo
-    -- above ad-hoc, below search term edit:
-    strongEventMap = jumpHoles <> close <> pick
-    eventsFromSelectedResult = removeUnwanted config $ shownResultEventMap srEventMap
     -- below ad-hoc and search term edit:
-    weakEventMap = paste <> replace <> eventsFromSelectedResult
-    -- Used with weaker events, TextEdit events above:
-    searchTermEventMap = strongEventMap <> weakEventMap
-    -- Used with stronger events, Grid events underneath:
-    resultsEventMap = strongEventMap <> adHocEdit <> weakEventMap
-  pure (searchTermEventMap, resultsEventMap)
-  where
-    onShownResult f = maybe mempty f mShownResult
-    shownResultEventMap f =
-      onShownResult $ \shownResult ->
-      f shownResult
-      & E.emDocs . E.docStrs . Lens._last %~ (++ "(On picked result)")
-      <&> pickBefore shownResult
+    eventMap =
+      mconcat
+      [ closeEventMap holeInfo
+      , pasteEventMap config holeInfo
+      , case mShownResult of
+        Nothing -> mempty
+        Just shownResult ->
+          mconcat
+          [ pickEventMap (Config.hole config) holeInfo shownResult
+          , eventsOnPickedResult config shownResult
+          ]
+      ]
+    adHocEdit = adHocTextEditEventMap (HoleInfo.hiSearchTermProperty holeInfo)
+  pure (eventMap, adHocEdit <> eventMap)

@@ -1,8 +1,7 @@
 module Lamdu.GUI.ExpressionEdit.EventMap
   ( make
   , modifyEventMap
-  , jumpHolesEventMap, jumpHolesEventMapIfSelected
-  , replaceOrComeToParentEventMap
+  , jumpHolesEventMap
   ) where
 
 import           Control.Applicative ((<$>), Applicative(..), liftA2)

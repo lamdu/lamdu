@@ -364,8 +364,7 @@ make pl holeInfo = do
     holeInfo shownMainResultsIds allShownResultIds (hiSearchTermId holeInfo) $ do
       (mShownResult, resultsWidget) <-
         makeResultsWidget holeInfo shownResultsLists hasHiddenResults
-      (searchTermEventMap, resultsEventMap) <-
-        OpenEventMap.make pl holeInfo mShownResult
+      (searchTermEventMap, resultsEventMap) <- OpenEventMap.make holeInfo mShownResult
       rawOpenHole <-
         makeSearchTermGui holeInfo
         <&> ExpressionGui.egWidget %~
