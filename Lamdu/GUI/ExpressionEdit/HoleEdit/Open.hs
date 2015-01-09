@@ -353,7 +353,10 @@ make pl holeInfo = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let Config.Hole{..} = Config.hole config
   (shownResultsLists, hasHiddenResults) <-
-    HoleResults.makeAll (Config.hole config) holeInfo
+    -- Don't generate results of open holes inside hole results
+    if isHoleResult
+    then return ([], HaveHiddenResults)
+    else HoleResults.makeAll (Config.hole config) holeInfo
   let
     shownMainResultsIds = rId . (^. HoleResults.rlMain) <$> shownResultsLists
     allShownResultIds = [rId . (^. HoleResults.rlMain), (^. HoleResults.rlExtraResultsPrefixId)] <*> shownResultsLists
@@ -383,6 +386,9 @@ make pl holeInfo = do
         & ExpressionGui.addBelowInferredSpacing typeView
         >>= addDarkBackground (HoleInfo.hiOpenId holeInfo)
         & ExpressionGui.wrapExprEventMap pl
+  where
+    isHoleResult =
+      Lens.nullOf (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl
 
 guiWidth :: Lens' (ExpressionGui m) Widget.R
 guiWidth = ExpressionGui.egWidget . Widget.wSize . _1
