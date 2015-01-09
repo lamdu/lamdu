@@ -26,8 +26,6 @@ import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..))
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -125,26 +123,6 @@ pickPlaceholderEventMap Config.Hole{..} holeInfo shownResult =
       Lens.has (Sugar.holeResultHoleTarget . Lens._Just) $ srHoleResult shownResult
     simplePickRes keys = Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) $ return ()
 
-setNextHoleState ::
-  MonadA m => String -> PickedResult -> T m Widget.EventResult
-setNextHoleState searchTerm PickedResult{..} =
-  do
-    case _pickedInnerHoleGuid of
-      Nothing -> return ()
-      Just newHoleGuid ->
-        Transaction.setP (HoleState.assocStateRef newHoleGuid) (HoleState searchTerm)
-    return _pickedEventResult
-
-alphaNumericAfterOperator :: MonadA m => HoleInfo m -> ShownResult m -> Widget.EventHandlers (T m)
-alphaNumericAfterOperator holeInfo shownResult
-  | nonEmptyAll (`elem` operatorChars) searchTerm =
-    E.charGroup "Letter/digit"
-    (E.Doc ["Edit", "Result", "Pick and resume"]) alphaNumericChars $
-    \c -> setNextHoleState [c] =<< srPick shownResult
-  | otherwise = mempty
-  where
-    searchTerm = HoleInfo.hiSearchTerm holeInfo
-
 pickBefore :: MonadA m => ShownResult m -> T m Widget.EventResult -> T m Widget.EventResult
 pickBefore shownResult action =
   do
@@ -172,7 +150,9 @@ make ::
   )
 make pl holeInfo mShownResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
+  -- TODO: does jumpHoles really need special treatment?
   jumpHoles <- ExprEventMap.jumpHolesEventMapIfSelected [] pl
+  -- TODO: does replace really need special treatment?
   replace <- ExprEventMap.replaceOrComeToParentEventMap True pl
   let
     close = closeEventMap holeInfo
@@ -181,11 +161,9 @@ make pl holeInfo mShownResult = do
       onShownResult $ \shownResult ->
       pickPlaceholderEventMap (Config.hole config) holeInfo shownResult
       <&> pickBefore shownResult
-    -- TODO: alphaAfterOp to come from inner hole
-    alphaAfterOp = onShownResult $ alphaNumericAfterOperator holeInfo
     adHocEdit = adHocTextEditEventMap $ HoleInfo.hiSearchTermProperty holeInfo
     -- above ad-hoc, below search term edit:
-    strongEventMap = jumpHoles <> close <> pick <> alphaAfterOp
+    strongEventMap = jumpHoles <> close <> pick
     eventsFromSelectedResult = removeUnwanted config $ shownResultEventMap srEventMap
     -- below ad-hoc and search term edit:
     weakEventMap = paste <> replace <> eventsFromSelectedResult

@@ -223,15 +223,15 @@ makeHoleResultWidget ::
 makeHoleResultWidget resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let Config.Hole{..} = Config.hole config
-  isSelectedResult <- ExprGuiM.widgetEnv $ WE.isSubCursor resultId
   eventMap <-
-    if isSelectedResult
-    then do
+    do
       -- Create a hidden result widget that we never display, but only
-      -- keep the event map from
-      hiddenResultWidget <- ExprGuiM.assignCursor resultId idWithinResultWidget mkWidget
+      -- keep the event map from. We always tell it that it has focus,
+      -- so that even if we're on the search term, we can have valid
+      -- event maps of any result (we actually use the first one's
+      -- event map)
+      hiddenResultWidget <- mkWidget & ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget)
       return $ hiddenResultWidget ^. Widget.wEventMap
-    else return mempty
   widget <-
     mkWidget
     <&> Widget.wFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
