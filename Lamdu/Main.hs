@@ -215,12 +215,18 @@ cacheMakeWidget mkWidget = do
     Widget.atEvents (<* invalidateCache) <$>
       mkWidgetCached x
 
+flyNavConfig :: FlyNav.Config
+flyNavConfig = FlyNav.Config
+  { FlyNav.configLayer = -10000 -- that should cover it :-)
+  }
+
 makeFlyNav :: IO (Widget IO -> IO (Widget IO))
 makeFlyNav = do
   flyNavState <- newIORef FlyNav.initState
   return $ \widget -> do
     fnState <- readIORef flyNavState
-    return $ FlyNav.make WidgetIds.flyNav fnState (writeIORef flyNavState) widget
+    return $
+      FlyNav.make flyNavConfig WidgetIds.flyNav fnState (writeIORef flyNavState) widget
 
 getDisplayScale :: GLFW.Window -> IO Widget.R
 getDisplayScale window =

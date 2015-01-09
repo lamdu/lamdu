@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.FlyNav
     ( make
+    , Config(..)
     , State
     , initState
     ) where
@@ -24,6 +25,10 @@ import           Graphics.UI.Bottle.Widget (Widget, Size)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Graphics.UI.GLFW as GLFW
+
+newtype Config = Config
+  { configLayer :: Anim.Layer
+  }
 
 data Movement = Movement
   { _mName :: String
@@ -82,9 +87,9 @@ targetColor = Draw.Color 0.9 0.9 0 0.7
 highlightColor :: Draw.Color
 highlightColor = Draw.Color 0.4 0.4 1 0.4
 
-target :: AnimId -> Vector2 Widget.R -> Anim.Frame
-target animId pos =
-  Anim.onDepth (subtract 100) .
+target :: Config -> AnimId -> Vector2 Widget.R -> Anim.Frame
+target config animId pos =
+  Anim.onDepth (+ configLayer config) .
   Anim.translate pos .
   Anim.scale targetSize .
   Anim.onImages (Draw.tint targetColor) .
@@ -144,11 +149,11 @@ focalCenter :: Lens' (Widget f) (Vector2 Widget.R)
 focalCenter = Widget.wFocalArea . Rect.center
 
 make
-  :: Applicative f => AnimId -> State -> (State -> f ())
+  :: Applicative f => Config -> AnimId -> State -> (State -> f ())
   -> Widget f -> Widget f
-make _ Nothing setState w =
+make _ _ Nothing setState w =
   w & Widget.wEventMap <>~ addMovements (w ^. focalCenter) [] setState
-make animId (Just (ActiveState pos movements)) setState w =
+make config animId (Just (ActiveState pos movements)) setState w =
   w
   & Widget.wFrame %~ mappend frame
   & Widget.wEventMap .~ eventMap
@@ -158,7 +163,7 @@ make animId (Just (ActiveState pos movements)) setState w =
       maybe mempty
       (highlightRect (animId ++ ["highlight"]) . (^. Widget.enterResultRect))
       mEnteredChild
-    frame = target (animId ++ ["target"]) pos `mappend` highlight
+    frame = target config (animId ++ ["target"]) pos `mappend` highlight
     mEnteredChild = fmap ($ targetPos) $ w ^. Widget.wMaybeEnter
     targetPos = Direction.Point pos
     nextState =
