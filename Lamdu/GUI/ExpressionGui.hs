@@ -281,11 +281,7 @@ stdWrapIn ::
   ExprGuiM m (t (ExpressionGui m))
 stdWrapIn pl mkGui =
   mkGui
-  >>= traverse %%~
-      maybeAddInferredType
-      (pl ^. Sugar.plData . ExprGuiM.plShowType)
-      (pl ^. Sugar.plInferredType)
-      (pl ^. Sugar.plEntityId)
+  >>= traverse %%~ maybeAddInferredTypePl pl
   & wrapExprEventMapIn pl
 
 stdWrap ::
@@ -432,6 +428,16 @@ addExprEventMap pl resultPickers gui = do
     ExprEventMap.make (gui ^. egWidget . Widget.wIsFocused)
     resultPickers pl
   gui & egWidget %~ Widget.weakerEvents exprEventMap & return
+
+maybeAddInferredTypePl ::
+  MonadA m =>
+  Sugar.Payload m0 ExprGuiM.Payload ->
+  ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+maybeAddInferredTypePl pl =
+  maybeAddInferredType
+  (pl ^. Sugar.plData . ExprGuiM.plShowType)
+  (pl ^. Sugar.plInferredType)
+  (pl ^. Sugar.plEntityId)
 
 maybeAddInferredType ::
   MonadA m =>
