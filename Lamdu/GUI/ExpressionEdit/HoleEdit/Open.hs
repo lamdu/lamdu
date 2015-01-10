@@ -335,17 +335,20 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
       | otherwise = head (shownMainResultsIds ++ [searchTermId])
   ExprGuiM.assignCursor assignSource destId action
 
-maybeAddClosedHoleAbove ::
+maybeHoverClosedHoleAbove ::
   MonadA m =>
   HoleInfo n -> ExpressionGui m ->
   ExpressionGui m ->
-  ExpressionGui m
-maybeAddClosedHoleAbove holeInfo closedHoleGui openHoleGui
+  ExprGuiM m (ExpressionGui m)
+maybeHoverClosedHoleAbove holeInfo closedHoleGui openHoleGui
   | Lens.has Lens._Just (hiMArgument holeInfo) =
-    ExpressionGui.addBelow 0
-    [(0, openHoleGui ^. ExpressionGui.egWidget)]
-    closedHoleGui
-  | otherwise = openHoleGui
+    do
+      hoveringClosedHoleGui <-
+        addDarkBackground (hidClosed (hiIds holeInfo)) closedHoleGui
+      ExpressionGui.addAbove 0
+        [(0, hoveringClosedHoleGui ^. ExpressionGui.egWidget)] openHoleGui
+        & return
+  | otherwise = return openHoleGui
 
 make ::
   MonadA m =>
@@ -388,7 +391,7 @@ make closedHoleGui pl holeInfo = do
         & ExpressionGui.addBelowInferredSpacing typeView
         >>= addDarkBackground (hidOpen (hiIds holeInfo))
         & ExpressionGui.wrapExprEventMap pl
-        <&> maybeAddClosedHoleAbove holeInfo closedHoleGui
+        >>= maybeHoverClosedHoleAbove holeInfo closedHoleGui
   where
     isHoleResult =
       Lens.nullOf (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl

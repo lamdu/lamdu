@@ -5,7 +5,7 @@ module Lamdu.GUI.ExpressionGui
   , fromValueWidget
   , scaleFromTop
   , pad
-  , hbox, hboxSpaced, addBelow
+  , hbox, hboxSpaced, addBelow, addAbove
   , gridDownwards
   , vboxDownwards, vboxDownwardsSpaced
   , makeRow
@@ -153,6 +153,15 @@ addBelow egHAlign ws eg =
   fromBox . Box.makeKeyed Box.vertical $
   (True, (Vector2 egHAlign (eg ^. egAlignment), eg ^. egWidget)) :
   map ((,) False) ws
+
+addAbove ::
+  Widget.R ->
+  [(Box.Alignment, WidgetT m)] ->
+  ExpressionGui m ->
+  ExpressionGui m
+addAbove egHAlign ws eg =
+  fromBox . Box.makeKeyed Box.vertical $
+  map ((,) False) ws ++ [(True, (Vector2 egHAlign (eg ^. egAlignment), eg ^. egWidget))]
 
 wWidth :: Lens' (Widget f) Widget.R
 wWidth = Widget.wSize . _1
