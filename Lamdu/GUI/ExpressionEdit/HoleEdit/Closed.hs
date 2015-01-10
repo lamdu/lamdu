@@ -63,7 +63,7 @@ make hole pl myId =
         return (destId, gui)
       gui <- makeSimple myId & lift
       return (diveIntoHole myId, gui)
-  & ExpressionGui.stdWrapIn pl
+  & ExpressionGui.stdWrapIn _2 pl
   where
     isHoleResult =
       Lens.nullOf (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl

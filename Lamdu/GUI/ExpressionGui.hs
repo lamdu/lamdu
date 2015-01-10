@@ -38,13 +38,11 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
-import           Data.Functor.Identity (Identity(..))
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import           Data.Monoid (Monoid(..))
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
-import           Data.Traversable (Traversable(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -275,23 +273,21 @@ makeNameEdit (Name nameSrc nameCollision setName name) myId = do
       E.filterChars (`notElem` disallowedNameChars)
 
 stdWrapIn ::
-  (Traversable t, MonadA m) =>
+  MonadA m =>
+  Lens.Traversal' s (ExpressionGui m) ->
   Sugar.Payload m ExprGuiM.Payload ->
-  ExprGuiM m (t (ExpressionGui m)) ->
-  ExprGuiM m (t (ExpressionGui m))
-stdWrapIn pl mkGui =
+  ExprGuiM m s ->
+  ExprGuiM m s
+stdWrapIn trav pl mkGui =
   mkGui
-  >>= traverse %%~ maybeAddInferredTypePl pl
-  & wrapExprEventMapIn pl
+  >>= trav %%~ maybeAddInferredTypePl pl
+  & wrapExprEventMapIn trav pl
 
 stdWrap ::
   MonadA m => Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m) ->
   ExprGuiM m (ExpressionGui m)
-stdWrap pl mkGui =
-  mkGui <&> Identity
-  & stdWrapIn pl
-  <&> runIdentity
+stdWrap = stdWrapIn id
 
 stdWrapDelegated ::
   MonadA m =>
@@ -405,19 +401,17 @@ wrapExprEventMap ::
   Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m) ->
   ExprGuiM m (ExpressionGui m)
-wrapExprEventMap pl action =
-  action <&> Identity
-  & wrapExprEventMapIn pl
-  <&> runIdentity
+wrapExprEventMap = wrapExprEventMapIn id
 
 wrapExprEventMapIn ::
-  (MonadA m, Traversable t) =>
+  MonadA m =>
+  Lens.Traversal' s (ExpressionGui m) ->
   Sugar.Payload m ExprGuiM.Payload ->
-  ExprGuiM m (t (ExpressionGui m)) ->
-  ExprGuiM m (t (ExpressionGui m))
-wrapExprEventMapIn pl action = do
+  ExprGuiM m s ->
+  ExprGuiM m s
+wrapExprEventMapIn trav pl action = do
   (res, resultPickers) <- ExprGuiM.listenResultPickers action
-  res & traverse (addExprEventMap pl resultPickers)
+  res & trav (addExprEventMap pl resultPickers)
 
 addExprEventMap ::
   MonadA m =>
