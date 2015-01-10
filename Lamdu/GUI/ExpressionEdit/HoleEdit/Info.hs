@@ -20,7 +20,6 @@ type T = Transaction.Transaction
 data HoleIds = HoleIds
   { hidOpen :: Widget.Id
   , hidClosed :: Widget.Id
-  , hid :: Widget.Id
   }
 
 -- | Open hole info

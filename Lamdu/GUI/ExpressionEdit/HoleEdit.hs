@@ -3,9 +3,10 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
   ( make
   ) where
 
+import           Control.Applicative (Applicative(..))
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (guard)
+import           Control.Monad (guard, join)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.MonadA (MonadA)
@@ -16,6 +17,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Closed (ClosedHole(..), chClosedHole)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Closed as HoleClosed
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as HoleOpen
@@ -45,35 +47,67 @@ resizeAs copyFrom gui =
       eg ^. ExpressionGui.egAlignment *
       eg ^. ExpressionGui.egWidget . Widget.wSize . _2
 
+chDestId :: HoleIds -> ClosedHole m -> Widget.Id
+chDestId HoleIds{..} closedHole =
+  case HoleClosed.chDest closedHole of
+  HoleClosed.HoleDestClosed -> hidClosed
+  HoleClosed.HoleDestOpened -> hidOpen
+
+withClosedHole ::
+  MonadA m =>
+  HoleIds ->
+  Sugar.Hole (Name m) m (ExprGuiM.SugarExpr m) ->
+  Sugar.Payload m ExprGuiM.Payload -> Widget.Id ->
+  ((ExpressionGui m, ExpressionGui m) -> ExprGuiM m b) ->
+  ExprGuiM m b
+withClosedHole hids hole pl myId body =
+  do
+    unfocusableClosedHole <- HoleClosed.make hole pl hids
+    -- We must execute the respondToCursorIn action in the
+    -- assigned-cursor context:
+    do
+      unfocusableClosedHole
+        ^. chClosedHole
+        & respondToCursor
+        <&> join (,)
+        & ExpressionGui.stdWrapIn _1 pl
+        >>= body
+      & ExprGuiM.assignCursor myId (chDestId hids unfocusableClosedHole)
+  where
+    respondToCursor =
+      ExpressionGui.egWidget %%~
+      ExprGuiM.widgetEnv . BWidgets.respondToCursorIn (hidClosed hids)
+
 make ::
   MonadA m =>
   Sugar.Hole (Name m) m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload m ExprGuiM.Payload ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-make hole pl myId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  let Config.Hole{..} = Config.hole config
-  let hids =
-        HoleIds
-        { hid = myId
-        , hidOpen = openHoleId myId
-        , hidClosed = Widget.joinId myId ["OpenHole"]
-        }
-  (delegateDestId, closedGui) <- HoleClosed.make hole pl hids
-  tryOpenHole hole pl hids
-    <&> resizeAs closedGui
-    <&> ExpressionGui.egWidget %~ BWidgets.liftLayerInterval config
-    & runMaybeT
-    <&> fromMaybe closedGui
-    & ExprGuiM.assignCursor myId delegateDestId
+  Sugar.Payload m ExprGuiM.Payload -> Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
+make hole pl myId =
+  withClosedHole hids hole pl myId $ \(closedHoleGui, unwrappedClosedHoleGui) ->
+  do
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    let Config.Hole{..} = Config.hole config
+    tryOpenHole unwrappedClosedHoleGui hole pl hids
+      <&> resizeAs closedHoleGui
+      <&> ExpressionGui.egWidget %~ BWidgets.liftLayerInterval config
+      & runMaybeT
+      <&> fromMaybe closedHoleGui
+      <&> ExpressionGui.egWidget %~ Widget.takesFocus (const (pure myId))
+  where
+    hids = HoleIds
+      { hidOpen = openHoleId myId
+      , hidClosed = Widget.joinId myId ["ClosedHole"]
+      }
 
 tryOpenHole ::
   MonadA m =>
+  ExpressionGui m ->
   Sugar.Hole (Name m) m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
   HoleIds ->
   MaybeT (ExprGuiM m) (ExpressionGui m)
-tryOpenHole hole pl hids@HoleIds{..} = do
+tryOpenHole closedHoleGui hole pl hids@HoleIds{..} = do
   isSelected <- lift . ExprGuiM.widgetEnv $ WE.isSubCursor hidOpen
   guard isSelected
   actions <- maybeToMPlus $ hole ^. Sugar.holeMActions
@@ -81,7 +115,7 @@ tryOpenHole hole pl hids@HoleIds{..} = do
     lift . ExprGuiM.transaction $
     HoleState.assocStateRef (actions ^. Sugar.holeGuid) ^.
     Transaction.mkProperty
-  lift $ HoleOpen.make pl HoleInfo
+  lift $ HoleOpen.make closedHoleGui pl HoleInfo
     { hiEntityId = pl ^. Sugar.plEntityId
     , hiActions = actions
     , hiSuggested = hole ^. Sugar.holeSuggested

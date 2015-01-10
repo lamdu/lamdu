@@ -18,7 +18,7 @@ import           Data.Monoid (Monoid(..), (<>))
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import           Data.Traversable (traverse, sequenceA)
+import           Data.Traversable (traverse)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -270,20 +270,10 @@ toPayload isInjected =
     Sugar.NotInjected -> []
     Sugar.Injected -> [True]
 
-makeNoResults :: MonadA m => HoleInfo m -> AnimId -> ExprGuiM m (WidgetT m)
-makeNoResults holeInfo animId =
-  (^. ExpressionGui.egWidget) <$>
-  case hiMArgument holeInfo ^? Lens._Just . Sugar.haExpr of
-  Nothing -> label "(No results)"
-  Just arg ->
-    ExpressionGui.hbox <$> sequenceA
-    [ label "(No results: "
-    , ExprGuiM.makeSubexpression 0 arg <&>
-      ExpressionGui.egWidget %~ Widget.doesntTakeFocus
-    , label ")"
-    ]
-  where
-    label = (`ExpressionGui.makeLabel` animId)
+makeNoResults :: MonadA m => AnimId -> ExprGuiM m (WidgetT m)
+makeNoResults animId =
+  ExpressionGui.makeLabel "(No results)" animId
+  <&> (^. ExpressionGui.egWidget)
 
 hiSearchTermId :: HoleInfo m -> Widget.Id
 hiSearchTermId = WidgetIds.searchTermId . hidOpen . hiIds
@@ -313,7 +303,7 @@ makeResultsWidget holeInfo shownResultsLists hiddenResults = do
   hiddenResultsWidgets <- maybeToList <$> makeHiddenResultsMWidget hiddenResults myId
   widget <-
     if null rows
-    then makeNoResults holeInfo (Widget.toAnimId myId)
+    then makeNoResults (Widget.toAnimId myId)
     else
       return .
       Box.vboxCentered $
@@ -339,17 +329,30 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
     isOnResult = any sub allShownResultIds
     assignSource
       | shouldBeOnResult && not isOnResult = cursor
-      | otherwise = HoleInfo.hidOpen (HoleInfo.hiIds holeInfo)
+      | otherwise = hidOpen (hiIds holeInfo)
     destId
       | null (HoleInfo.hiSearchTerm holeInfo) = searchTermId
       | otherwise = head (shownMainResultsIds ++ [searchTermId])
   ExprGuiM.assignCursor assignSource destId action
 
+maybeAddClosedHoleAbove ::
+  MonadA m =>
+  HoleInfo n -> ExpressionGui m ->
+  ExpressionGui m ->
+  ExpressionGui m
+maybeAddClosedHoleAbove holeInfo closedHoleGui openHoleGui
+  | Lens.has Lens._Just (hiMArgument holeInfo) =
+    ExpressionGui.addBelow 0
+    [(0, openHoleGui ^. ExpressionGui.egWidget)]
+    closedHoleGui
+  | otherwise = openHoleGui
+
 make ::
   MonadA m =>
+  ExpressionGui m ->
   Sugar.Payload m ExprGuiM.Payload -> HoleInfo m ->
   ExprGuiM m (ExpressionGui m)
-make pl holeInfo = do
+make closedHoleGui pl holeInfo = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let Config.Hole{..} = Config.hole config
   (shownResultsLists, hasHiddenResults) <-
@@ -385,6 +388,7 @@ make pl holeInfo = do
         & ExpressionGui.addBelowInferredSpacing typeView
         >>= addDarkBackground (hidOpen (hiIds holeInfo))
         & ExpressionGui.wrapExprEventMap pl
+        <&> maybeAddClosedHoleAbove holeInfo closedHoleGui
   where
     isHoleResult =
       Lens.nullOf (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl
