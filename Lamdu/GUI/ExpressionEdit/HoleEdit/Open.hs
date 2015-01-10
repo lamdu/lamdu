@@ -9,7 +9,7 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (guard, msum, when)
+import           Control.Monad (guard, msum)
 import           Control.MonadA (MonadA)
 import           Data.List.Lens (suffixed)
 import qualified Data.Map as Map
@@ -25,23 +25,26 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground)
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleIds(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (EditableHoleInfo(..), HoleInfo(..), HoleIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap as OpenEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..), ExpressionN)
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -84,20 +87,21 @@ eventResultOfPickedResult pr =
             -- Map only the first anim id component
             Lens.ix 0 %~ \x -> fromMaybe x $ Map.lookup x idMap
             where
-              idMap =
-                  idTranslations
-                  & Lens.traversed . Lens.both %~
-                    head . Widget.toAnimId . WidgetIds.fromEntityId
-                  & Map.fromList
+                idMap =
+                    idTranslations
+                    & Lens.traversed . Lens.both %~
+                      head . Widget.toAnimId . WidgetIds.fromEntityId
+                    & Map.fromList
 
 resultSuffix :: Lens.Prism' AnimId AnimId
 resultSuffix = suffixed ["result suffix"]
 
 afterPick ::
-    Monad m => HoleInfo m -> Widget.Id -> Sugar.PickedResult -> T m PickedResult
-afterPick holeInfo resultId pr =
+    Monad m => EditableHoleInfo m -> Widget.Id -> Sugar.PickedResult ->
+    T m PickedResult
+afterPick editableHoleInfo resultId pr =
     do
-        Property.set (hiState holeInfo) HoleState.emptyState
+        Property.set (ehiState editableHoleInfo) HoleState.emptyState
         eventResultOfPickedResult pr
             & pickedEventResult . Widget.eCursor %~
               mappend (Monoid.Last (Just myHoleId))
@@ -105,7 +109,8 @@ afterPick holeInfo resultId pr =
               mappend (Monoid.Endo obliterateOtherResults)
             & return
     where
-        myHoleId = WidgetIds.fromEntityId $ hiEntityId holeInfo
+        myHoleId =
+            WidgetIds.fromEntityId $ hiEntityId (ehiInfo editableHoleInfo)
         obliterateOtherResults animId =
             case animId ^? resultSuffix of
             Nothing -> animId
@@ -115,8 +120,8 @@ afterPick holeInfo resultId pr =
                 | otherwise -> "obliterated" : animId
 
 makeShownResult ::
-    MonadA m => HoleInfo m -> Result m -> ExprGuiM m (Widget (T m), ShownResult m)
-makeShownResult holeInfo result =
+    MonadA m => EditableHoleInfo m -> Result m -> ExprGuiM m (Widget (T m), ShownResult m)
+makeShownResult editableHoleInfo result =
     do
         -- Warning: rHoleResult should be ran at most once!
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
@@ -131,7 +136,7 @@ makeShownResult holeInfo result =
               , srHoleResult = res
               , srPick =
                 res ^. Sugar.holeResultPick
-                >>= afterPick holeInfo (rId result)
+                >>= afterPick editableHoleInfo (rId result)
               }
             )
 
@@ -167,18 +172,18 @@ rgwRow f ResultGroupWidgets{..} =
 
 makeResultGroup ::
     MonadA m =>
-    HoleInfo m ->
+    EditableHoleInfo m ->
     ResultsList m ->
     ExprGuiM m (ResultGroupWidgets m)
-makeResultGroup holeInfo results =
+makeResultGroup editableHoleInfo results =
     do
         Config.Hole{..} <- Config.hole <$> ExprGuiM.readConfig
         (mainResultWidget, shownMainResult) <-
-            makeShownResult holeInfo mainResult
+            makeShownResult editableHoleInfo mainResult
         let mainResultHeight = mainResultWidget ^. Widget.height
             makeExtra =
                 results ^. HoleResults.rlExtra
-                & makeExtraResultsWidget holeInfo mainResultHeight
+                & makeExtraResultsWidget editableHoleInfo mainResultHeight
         (mSelectedResult, extraResWidget) <-
             if mainResultWidget ^. Widget.isFocused
             then do
@@ -209,10 +214,10 @@ makeResultGroup holeInfo results =
         focusFirstExtraResult (result:_) = makeFocusable (rId result)
 
 makeExtraResultsWidget ::
-    MonadA m => HoleInfo m -> Anim.R -> [Result m] ->
+    MonadA m => EditableHoleInfo m -> Anim.R -> [Result m] ->
     ExprGuiM m (Maybe (ShownResult m), Widget (T m))
 makeExtraResultsWidget _ _ [] = return (Nothing, Widget.empty)
-makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
+makeExtraResultsWidget editableHoleInfo mainResultHeight extraResults@(firstResult:_) =
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
@@ -221,7 +226,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
                     isOnResult <-
                         WE.isSubCursor (rId result)
                         & ExprGuiM.widgetEnv
-                    (widget, shownResult) <- makeShownResult holeInfo result
+                    (widget, shownResult) <- makeShownResult editableHoleInfo result
                     return
                         ( shownResult <$ guard isOnResult
                         , widget
@@ -306,9 +311,6 @@ makeNoResults animId =
     ExpressionGui.makeLabel "(No results)" animId
     <&> (^. ExpressionGui.egWidget)
 
-hiSearchTermId :: HoleInfo m -> Widget.Id
-hiSearchTermId = WidgetIds.searchTermId . hidOpen . hiIds
-
 makeHiddenResultsMWidget :: MonadA m => HaveHiddenResults -> Widget.Id -> ExprGuiM m (Maybe (Widget f))
 makeHiddenResultsMWidget HaveHiddenResults myId =
     Just <$> ExprGuiM.makeLabel "..." (Widget.toAnimId myId)
@@ -336,12 +338,12 @@ layoutResults rows hiddenResults myId
             grid : hiddenResultsWidgets & Box.vboxCentered & return
 
 makeResultsWidget ::
-    MonadA m => HoleInfo m ->
+    MonadA m => EditableHoleInfo m ->
     [ResultsList m] -> HaveHiddenResults ->
     ExprGuiM m (Maybe (ShownResult m), Widget (T m))
-makeResultsWidget holeInfo shownResultsLists hiddenResults =
+makeResultsWidget editableHoleInfo shownResultsLists hiddenResults =
     do
-        groupsWidgets <- traverse (makeResultGroup holeInfo) shownResultsLists
+        groupsWidgets <- traverse (makeResultGroup editableHoleInfo) shownResultsLists
         let
             mSelectedResult = groupsWidgets ^? Lens.traversed . rgwMSelectedResult . Lens._Just
             mFirstResult = groupsWidgets ^? Lens.traversed . rgwMainResult
@@ -351,25 +353,28 @@ makeResultsWidget holeInfo shownResultsLists hiddenResults =
         widget <- layoutResults rows hiddenResults myId
         return (mResult, widget)
     where
-        myId = hidOpen (hiIds holeInfo)
+        myId = editableHoleInfo & ehiInfo & hiIds & hidOpen
 
 assignHoleEditCursor ::
     MonadA m =>
-    HoleInfo m -> [Widget.Id] -> [Widget.Id] -> Widget.Id ->
+    EditableHoleInfo m -> [Widget.Id] -> [Widget.Id] -> Widget.Id ->
     ExprGuiM m a ->
     ExprGuiM m a
-assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId action =
+assignHoleEditCursor editableHoleInfo shownMainResultsIds allShownResultIds searchTermId action =
     do
         cursor <- ExprGuiM.widgetEnv WE.readCursor
         let
             sub = isJust . flip Widget.subId cursor
-            shouldBeOnResult = sub $ HoleResults.prefixId holeInfo
+            holeInfo = ehiInfo editableHoleInfo
+            shouldBeOnResult =
+                holeInfo & hiEntityId
+                & HoleWidgetIds.resultsPrefixId & sub
             isOnResult = any sub allShownResultIds
             assignSource
                 | shouldBeOnResult && not isOnResult = cursor
                 | otherwise = hidOpen (hiIds holeInfo)
             destId
-                | null (HoleInfo.hiSearchTerm holeInfo) = searchTermId
+                | null (HoleInfo.ehiSearchTerm editableHoleInfo) = searchTermId
                 | otherwise = head (shownMainResultsIds ++ [searchTermId])
         ExprGuiM.assignCursor assignSource destId action
 
@@ -383,53 +388,65 @@ maybeHoverClosedHoleAbove holeInfo closedHoleGui openHoleGui
       do
           Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
           hoveringClosedHole <-
-              addDarkBackground (hidClosed (hiIds holeInfo)) closedHoleGui
-              <&> (^. ExpressionGui.egWidget)
-              <&> Widget.scale (holeHoveringWrapperScale <&> realToFrac)
-          ExpressionGui.addAbove 0
-              [(0, hoveringClosedHole)] openHoleGui
+              addDarkBackground closedAnimId closedHoleGui
+              <&> Layout.scale (holeHoveringWrapperScale <&> realToFrac)
+          openHoleGui
+              & Layout.addBefore Layout.Vertical [hoveringClosedHole]
               & return
     | otherwise = return openHoleGui
+    where
+        closedAnimId = holeInfo & hiIds & hidClosed & Widget.toAnimId
 
 makeUnderCursorAssignment ::
     MonadA m =>
     [ResultsList m] -> HaveHiddenResults -> Sugar.Payload m ExprGuiM.Payload ->
-    HoleInfo m -> ExprGuiM m (ExpressionGui m)
-makeUnderCursorAssignment shownResultsLists hasHiddenResults pl holeInfo =
+    EditableHoleInfo m -> ExprGuiM m (ExpressionGui m)
+makeUnderCursorAssignment shownResultsLists hasHiddenResults pl editableHoleInfo =
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
         (mShownResult, resultsWidget) <-
-            makeResultsWidget holeInfo shownResultsLists hasHiddenResults
+            makeResultsWidget editableHoleInfo shownResultsLists hasHiddenResults
         (searchTermEventMap, resultsEventMap) <-
-            OpenEventMap.make holeInfo mShownResult
-        rawOpenHole <-
-            makeSearchTermGui holeInfo
+            OpenEventMap.make editableHoleInfo mShownResult
+        (searchTermAlignment, searchTermWidget) <-
+            SearchTerm.make holeInfo (Just editableHoleInfo)
             <&> ExpressionGui.egWidget %~
                 Widget.weakerEvents searchTermEventMap
-            <&> ExpressionGui.addBelow 0.5
-                [(0.5, Widget.strongerEvents resultsEventMap resultsWidget)]
+            <&> (^. Layout.absAlignedWidget)
         -- We make our own type view here instead of
         -- ExpressionGui.stdWrap, because we want to synchronize the
         -- active BG width with the inferred type width
         typeView <-
-            ExpressionGui.makeTypeView (rawOpenHole ^. guiWidth)
+            ExpressionGui.makeTypeView (resultsWidget ^. Widget.width)
             (hiEntityId holeInfo) (hiInferredType holeInfo)
-        rawOpenHole
-            & guiWidth %~ max (typeView ^. Widget.width)
-            & ExpressionGui.egWidget %~
-              addBackground (Widget.toAnimId (hidOpen (hiIds holeInfo)))
-              (Config.layers config) holeOpenBGColor
-            & ExpressionGui.addBelowInferredSpacing typeView
-            >>= addDarkBackground (hidOpen (hiIds holeInfo))
-            & ExpressionGui.wrapExprEventMap pl
+        vspace <- ExpressionGui.inferredSpacer
+        hoverResults <-
+            resultsWidget
+            & Widget.width %~ max (typeView ^. Widget.width)
+            & Widget.strongerEvents resultsEventMap .
+              addBackground (Widget.toAnimId resultsId) (Config.layers config)
+              holeOpenBGColor
+            & ExpressionGui.fromValueWidget
+            & Layout.addAfter Layout.Vertical [(0.5, vspace), (0.5, typeView)]
+            & addDarkBackground (Widget.toAnimId resultsId)
+        (0, searchTermWidget)
+            ^. Lens.from Layout.absAlignedWidget
+            & Layout.addAfter Layout.Vertical
+              [(0, hoverResults ^. ExpressionGui.egWidget)]
+            & Layout.absAlignedWidget . _1 .~ searchTermAlignment
+            & return
+    & ExpressionGui.wrapExprEventMap pl
+    where
+        resultsId = holeInfo & hiEntityId & HoleWidgetIds.resultsPrefixId
+        holeInfo = ehiInfo editableHoleInfo
 
 make ::
     MonadA m =>
     ExpressionGui m ->
-    Sugar.Payload m ExprGuiM.Payload -> HoleInfo m ->
+    Sugar.Payload m ExprGuiM.Payload -> EditableHoleInfo m ->
     ExprGuiM m (ExpressionGui m)
-make closedHoleGui pl holeInfo =
+make closedHoleGui pl editableHoleInfo =
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
@@ -437,7 +454,7 @@ make closedHoleGui pl holeInfo =
             -- Don't generate results of open holes inside hole results
             if isHoleResult
             then return ([], HaveHiddenResults)
-            else HoleResults.makeAll holeInfo
+            else HoleResults.makeAll editableHoleInfo
         let
             shownMainResultsIds =
                 rId . (^. HoleResults.rlMain) <$> shownResultsLists
@@ -445,20 +462,18 @@ make closedHoleGui pl holeInfo =
                 [ rId . (^. HoleResults.rlMain)
                 , (^. HoleResults.rlExtraResultsPrefixId)
                 ] <*> shownResultsLists
-        makeUnderCursorAssignment shownResultsLists hasHiddenResults pl holeInfo
+        makeUnderCursorAssignment shownResultsLists hasHiddenResults pl editableHoleInfo
             >>= maybeHoverClosedHoleAbove holeInfo closedHoleGui
-            & assignHoleEditCursor holeInfo shownMainResultsIds
-              allShownResultIds (hiSearchTermId holeInfo)
+            & assignHoleEditCursor editableHoleInfo shownMainResultsIds
+              allShownResultIds (SearchTerm.hiOpenSearchTermId holeInfo)
     where
+        holeInfo = ehiInfo editableHoleInfo
         isHoleResult =
             Lens.nullOf
             (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl
 
-guiWidth :: Lens' (ExpressionGui m) Widget.R
-guiWidth = ExpressionGui.egWidget . Widget.width
-
-addDarkBackground :: MonadA m => Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
-addDarkBackground myId widget =
+addDarkBackground :: MonadA m => AnimId -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
+addDarkBackground animId widget =
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
@@ -467,36 +482,6 @@ addDarkBackground myId widget =
             & ExpressionGui.egWidget %~
               Widget.backgroundColor
               (Config.layerDarkOpenHoleBG (Config.layers config))
-              (Widget.toAnimId myId <> ["hole dark background"])
+              (animId <> ["hole dark background"])
               holeOpenDarkBGColor
             & return
-
-makeSearchTermGui ::
-    MonadA m => HoleInfo m ->
-    ExprGuiM m (ExpressionGui m)
-makeSearchTermGui holeInfo =
-    do
-        Config.Hole{..} <- Config.hole <$> ExprGuiM.readConfig
-        BWidgets.makeTextEdit searchTerm (hiSearchTermId holeInfo)
-            <&> Widget.events %~ setter
-            <&> Widget.eventMap %~ OpenEventMap.disallowChars searchTerm
-            <&> ExpressionGui.fromValueWidget
-            <&> ExpressionGui.scaleFromTop
-                (realToFrac <$> holeSearchTermScaleFactor)
-            & ExprGuiM.widgetEnv
-    where
-      searchTermProp = HoleInfo.hiSearchTermProperty holeInfo
-      searchTerm = Property.value searchTermProp
-      setter (newSearchTerm, eventRes) =
-          do
-              when (newSearchTerm /= searchTerm) $
-                  Property.set searchTermProp newSearchTerm
-              eventRes
-                  -- When first letter is typed in search term, jump to the
-                  -- results, which will go to first result:
-                  & ( if null searchTerm && (not . null) newSearchTerm
-                      then Widget.eCursor .~
-                           (Monoid.Last . Just . HoleResults.prefixId) holeInfo
-                      else id
-                    )
-                  & return

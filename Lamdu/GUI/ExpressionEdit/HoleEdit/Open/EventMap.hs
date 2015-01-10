@@ -23,7 +23,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars, alphaNumericChars)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleIds(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), HoleIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -49,12 +49,12 @@ closeEventMap holeInfo =
   hidClosed (hiIds holeInfo)
 
 pasteEventMap ::
-  Functor m => Config -> HoleInfo m -> Widget.EventHandlers (T m)
+  Functor m => Config -> EditableHoleInfo m -> Widget.EventHandlers (T m)
 pasteEventMap config holeInfo =
   maybe mempty
   (Widget.keysEventMapMovesCursor
    (Config.pasteKeys config) (E.Doc ["Edit", "Paste"]) .
-   fmap WidgetIds.fromEntityId) $ hiActions holeInfo ^. Sugar.holePaste
+   fmap WidgetIds.fromEntityId) $ ehiActions holeInfo ^. Sugar.holePaste
 
 adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap searchTermProp =
@@ -149,17 +149,17 @@ mkEventsOnPickedResult shownResult =
 
 make ::
   MonadA m =>
-  HoleInfo m -> Maybe (ShownResult m) ->
+  EditableHoleInfo m -> Maybe (ShownResult m) ->
   ExprGuiM m
   ( Widget.EventHandlers (T m)
   , Widget.EventHandlers (T m)
   )
-make holeInfo mShownResult = do
+make editableHoleInfo mShownResult = do
   config <- ExprGuiM.readConfig
   -- below ad-hoc and search term edit:
   eventMap <-
     [ pure $ closeEventMap holeInfo
-    , pure $ pasteEventMap config holeInfo
+    , pure $ pasteEventMap config editableHoleInfo
     , case mShownResult of
       Nothing -> pure mempty
       Just shownResult ->
@@ -167,5 +167,8 @@ make holeInfo mShownResult = do
         <&> mappend
         (pickEventMap (Config.hole config) holeInfo shownResult)
     ] & sequenceA <&> mconcat
-  let adHocEdit = adHocTextEditEventMap (HoleInfo.hiSearchTermProperty holeInfo)
+  let adHocEdit =
+        adHocTextEditEventMap (HoleInfo.ehiSearchTermProperty editableHoleInfo)
   pure (eventMap, adHocEdit <> eventMap)
+  where
+    holeInfo = ehiInfo editableHoleInfo

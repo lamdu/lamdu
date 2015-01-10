@@ -3,8 +3,8 @@ module Graphics.UI.Bottle.Widgets.Layout
     ( Layout
     , Box.Alignment
     , empty
-    , AlignedWidget
-    , alignedWidget
+    , AlignedWidget, AbsAlignedWidget
+    , alignedWidget, absAlignedWidget
     , fromCenteredWidget
 
     , AddLayout(..)
@@ -31,6 +31,7 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
 type AlignedWidget f = (Box.Alignment, Widget f)
+type AbsAlignedWidget f = (Box.Alignment, Widget f)
 
 data Orientation = Horizontal | Vertical deriving Eq
 
@@ -73,6 +74,15 @@ data Layout f = Layout
 alignedWidget ::
     Lens.Iso (Layout f) (Layout g) (AlignedWidget f) (AlignedWidget g)
 alignedWidget = Lens.iso toAlignedWidget (mkLayout . LayoutSingleton)
+
+{-# INLINE absAlignedWidget #-}
+absAlignedWidget ::
+    Lens.Iso (Layout f) (Layout g) (AbsAlignedWidget f) (AbsAlignedWidget g)
+absAlignedWidget =
+    alignedWidget . Lens.iso toAbs fromAbs
+    where
+        toAbs (relAlign, widget) = (relAlign * widget ^. Widget.size, widget)
+        fromAbs (absAlign, widget) = (absAlign / widget ^. Widget.size, widget)
 
 boxComponentsToWidget ::
     Orientation -> BoxComponents f -> AlignedWidget f
@@ -215,13 +225,12 @@ pad padding =
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf :: Layout f -> Layout f -> Layout f
 layout `hoverInPlaceOf` src =
-  ( srcAbsAlignment / srcSize
+  ( srcAbsAlignment
   , layoutWidget
     & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
     & Widget.size .~ srcSize
-  ) ^. Lens.from alignedWidget
+  ) ^. Lens.from absAlignedWidget
   where
-    toAbs (align, widget) = (align * widget ^. Widget.size, widget)
-    (layoutAbsAlignment, layoutWidget) = layout ^. alignedWidget & toAbs
-    (srcAbsAlignment, srcWidget) = src ^. alignedWidget & toAbs
+    (layoutAbsAlignment, layoutWidget) = layout ^. absAlignedWidget
+    (srcAbsAlignment, srcWidget) = src ^. absAlignedWidget
     srcSize = srcWidget ^. Widget.size

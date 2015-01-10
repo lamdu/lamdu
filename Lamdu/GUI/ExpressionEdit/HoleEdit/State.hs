@@ -11,7 +11,7 @@ import           Data.Store.Guid (Guid)
 import qualified Data.Store.Transaction as Transaction
 import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (searchTermWIdOfHoleEntityId)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (openSearchTermId)
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
@@ -31,7 +31,7 @@ emptyState =
 setHoleStateAndJump :: MonadA m => Guid -> HoleState -> Sugar.EntityId -> T m Widget.Id
 setHoleStateAndJump guid state entityId = do
   Transaction.setP (assocStateRef guid) state
-  return $ searchTermWIdOfHoleEntityId entityId
+  return $ openSearchTermId entityId
 
 assocStateRef :: MonadA m => Guid -> Transaction.MkProperty m HoleState
 assocStateRef = Transaction.assocDataRefDef emptyState "searchTerm"

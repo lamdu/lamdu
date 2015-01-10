@@ -81,7 +81,7 @@ data Hole = Hole
   , holeExtraSymbolColorUnselected :: Draw.Color
   , holeExtraSymbolColorSelected :: Draw.Color
   , holeOpenBGColor :: Draw.Color
-  , holeClosedBGColor :: Draw.Color
+  , holeSearchTermBGColor :: Draw.Color
   , holePickResultKeys :: [ModKey]
   , holeOpenDarkPadding :: Vector2 Double
   , holeOpenDarkBGColor :: Draw.Color

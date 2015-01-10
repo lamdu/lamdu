@@ -19,6 +19,7 @@ module Lamdu.GUI.ExpressionGui
   , makeNameOriginEdit
   , diveToNameEdit
   -- Info adding
+  , inferredSpacer
   , addBelowInferredSpacing
   , maybeAddInferredType
   , makeTypeView
@@ -165,18 +166,23 @@ makeTypeView minWidth entityId typ =
   where
     animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
 
+inferredSpacer :: MonadA m => ExprGuiM m (Widget f)
+inferredSpacer =
+  do
+    config <- ExprGuiM.readConfig
+    Config.valInferredSpacing config
+      & realToFrac
+      & Spacer.makeVertical
+      & Widget.fromView
+      & return
+
 addBelowInferredSpacing ::
   MonadA m => Widget (T m) ->
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addBelowInferredSpacing widget eg =
   do
-    config <- ExprGuiM.readConfig
-    let
-      vspacer =
-        Widget.fromView $
-        Spacer.makeVertical $ realToFrac $
-        Config.valInferredSpacing config
-    addBelow 0.5 [(0, vspacer), (0.5, widget)] eg & return
+    vspace <- inferredSpacer
+    addBelow 0.5 [(0, vspace), (0.5, widget)] eg & return
 
 addInferredType :: MonadA m => Sugar.EntityId -> Type -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addInferredType entityId inferredType eg =

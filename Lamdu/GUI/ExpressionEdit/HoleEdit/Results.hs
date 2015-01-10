@@ -18,7 +18,7 @@ import           Data.List (isInfixOf, isPrefixOf)
 import qualified Data.List as List
 import qualified Data.List.Class as ListClass
 import           Data.List.Utils (sortOn, nonEmptyAll)
-import           Data.Monoid (Monoid(..))
+import           Data.Monoid (Monoid(..), (<>))
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Store.Transaction (Transaction)
 import           GHC.Generics (Generic)
@@ -29,7 +29,8 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleIds(..), hiSearchTerm, hiMArgument)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm, hiMArgument)
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -104,14 +105,14 @@ sugarNamesToGroup names expr = Group
     mkSearchTerms (Name _ (Collision suffix) _ varName) = [varName ++ show suffix]
 
 prefixId :: HoleInfo m -> WidgetId.Id
-prefixId holeInfo = mconcat [hidOpen (hiIds holeInfo), WidgetId.Id ["results"]]
+prefixId = HoleWidgetIds.resultsPrefixId . hiEntityId
 
 typeCheckResults ::
-  MonadA m => HoleInfo m ->
+  MonadA m => EditableHoleInfo m ->
   Val () ->
   T m [(ResultType, T m (Sugar.HoleResult (Name m) m))]
 typeCheckResults holeInfo expr =
-  (hiActions holeInfo ^. Sugar.holeResults) expr
+  (ehiActions holeInfo ^. Sugar.holeResults) expr
   & ListClass.toList
   <&> sortOn (^. _1)
   <&> Lens.mapped . _1 %~ checkGood
@@ -119,7 +120,7 @@ typeCheckResults holeInfo expr =
     checkGood x = if x < [5] then GoodResult else BadResult
 
 mResultsListOf ::
-  HoleInfo m -> WidgetId.Id ->
+  EditableHoleInfo m -> WidgetId.Id ->
   [(ResultType, T m (Sugar.HoleResult (Name m) m))] ->
   Maybe (ResultsList m)
 mResultsListOf _ _ [] = Nothing
@@ -127,13 +128,14 @@ mResultsListOf holeInfo baseId (x:xs) = Just
   ResultsList
   { _rlPreferred = NotPreferred
   , _rlExtraResultsPrefixId = extraResultsPrefixId
-  , _rlMain = mkResult (mconcat [prefixId holeInfo, baseId]) x
+  , _rlMain = mkResult (prefix <> baseId) x
   , _rlExtra = zipWith mkExtra [(0::Int)..] xs
   }
   where
+    prefix = prefixId (ehiInfo holeInfo)
     mkExtra = mkResult . extraResultId
     extraResultId i = mappend extraResultsPrefixId $ WidgetIds.hash i
-    extraResultsPrefixId = mconcat [prefixId holeInfo, WidgetId.Id ["extra results"], baseId]
+    extraResultsPrefixId = prefix <> WidgetId.Id ["extra results"] <> baseId
     mkResult resultId (typ, holeResult) =
       Result
       { rType = typ
@@ -142,7 +144,7 @@ mResultsListOf holeInfo baseId (x:xs) = Just
       }
 
 typeCheckToResultsList ::
-  MonadA m => HoleInfo m ->
+  MonadA m => EditableHoleInfo m ->
   WidgetId.Id -> Val () ->
   T m (Maybe (ResultsList m))
 typeCheckToResultsList holeInfo baseId expr =
@@ -150,7 +152,7 @@ typeCheckToResultsList holeInfo baseId expr =
   typeCheckResults holeInfo expr
 
 makeResultsList ::
-  MonadA m => HoleInfo m -> GroupM m ->
+  MonadA m => EditableHoleInfo m -> GroupM m ->
   T m (Maybe (ResultsList m))
 makeResultsList holeInfo group =
   typeCheckToResultsList holeInfo baseId baseExpr
@@ -159,7 +161,7 @@ makeResultsList holeInfo group =
     toPreferred
       | Lens.anyOf groupAttributes (preferFor searchTerm) group = Preferred
       | otherwise = NotPreferred
-    searchTerm = hiSearchTerm holeInfo
+    searchTerm = ehiSearchTerm holeInfo
     baseExpr = group ^. groupBaseExpr
     baseId = WidgetIds.hash baseExpr
 
@@ -193,7 +195,7 @@ collectResults Config.Hole{..} resultsM = do
         %~ (x :)
 
 makeAll ::
-  MonadA m => HoleInfo m ->
+  MonadA m => EditableHoleInfo m ->
   ExprGuiM m ([ResultsList m], HaveHiddenResults)
 makeAll holeInfo =
   do
@@ -212,13 +214,13 @@ getVarTypesOrder =
   , Sugar.GetDefinition
   ]
 
-makeAllGroups :: MonadA m => HoleInfo m -> T m [GroupM m]
-makeAllGroups holeInfo = do
-  scopeGetVars <- hiActions holeInfo ^. Sugar.holeScope
+makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [GroupM m]
+makeAllGroups editableHoleInfo = do
+  scopeGetVars <- ehiActions editableHoleInfo ^. Sugar.holeScope
   let
     allGroups =
       addSuggestedGroups $
-      primitiveGroups holeInfo ++
+      primitiveGroups editableHoleInfo ++
       concat
       [ scopeGetVars
         & filter ((Just nvType ==) . (^? Sugar.sgvGetVar . Sugar._GetVarNamed . Sugar.nvVarType))
@@ -229,12 +231,13 @@ makeAllGroups holeInfo = do
         & filter (Lens.has (Sugar.sgvGetVar . Sugar._GetVarParamsRecord))
         & sortedGetVarGroups
       )
-  pure $ holeMatches (^. groupAttributes) (hiSearchTerm holeInfo) allGroups
+  pure $ holeMatches (^. groupAttributes) (ehiSearchTerm editableHoleInfo) allGroups
   where
     sortedGetVarGroups getVars =
       getVars
       & map getVarToGroup
       & sortOn (^. groupAttributes . searchTerms)
+    holeInfo = ehiInfo editableHoleInfo
     suggestedVal = hiSuggested holeInfo
     suggestedGroups =
       [ Group
@@ -270,7 +273,7 @@ makeAllGroups holeInfo = do
         ( suggestedGroups & Lens.traverse . groupAttributes <>~ dupsGroupNames
         ) ++ others
 
-primitiveGroups :: HoleInfo m -> [GroupM m]
+primitiveGroups :: EditableHoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
   [ mkGroupBody HighPrecedence [searchTerm] $
     V.BLeaf $ V.LLiteralInteger $ read searchTerm
@@ -282,7 +285,7 @@ primitiveGroups holeInfo =
     V.BLeaf V.LRecEmpty
   ]
   where
-    searchTerm = hiSearchTerm holeInfo
+    searchTerm = ehiSearchTerm holeInfo
     mkGroupBody prec terms body = Group
       { _groupAttributes = GroupAttributes terms prec
       , _groupBaseExpr = Val () body

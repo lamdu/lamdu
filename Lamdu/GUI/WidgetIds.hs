@@ -44,9 +44,6 @@ branchSelection = Widget.Id ["selected branch"]
 goUpId :: Widget.Id
 goUpId = Widget.Id ["go up"]
 
-searchTermId :: Widget.Id -> Widget.Id
-searchTermId = flip Widget.joinId ["search term"]
-
 parenHighlightId :: AnimId
 parenHighlightId = ["paren highlight"]
 
