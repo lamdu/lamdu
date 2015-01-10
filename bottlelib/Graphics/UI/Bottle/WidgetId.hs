@@ -6,14 +6,13 @@ import Data.ByteString.Char8(pack) -- IsString instance
 import Data.List (isPrefixOf, intercalate)
 import Data.Monoid (Monoid(..))
 import Graphics.UI.Bottle.Animation.Id (AnimId)
-import Numeric.Utils (encodeHex)
 
 newtype Id = Id {
   toAnimId :: AnimId
   } deriving (Eq, Ord, Read, Binary, Monoid)
 
 instance Show Id where
-  show = ('W' :) . intercalate ":" . map encodeHex . toAnimId
+  show = ('W' :) . intercalate ":" . map show . toAnimId
 
 joinId :: Id -> AnimId -> Id
 joinId (Id x) y = Id $ x ++ y
