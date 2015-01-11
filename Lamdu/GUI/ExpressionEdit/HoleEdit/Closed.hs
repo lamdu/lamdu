@@ -1,5 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Closed
   ( make
@@ -25,7 +24,8 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground, diveIntoHole)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -42,27 +42,27 @@ make ::
   MonadA m =>
   Sugar.Hole (Name m) m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
-  Widget.Id ->
+  HoleIds ->
   ExprGuiM m (Widget.Id, ExpressionGui m)
-make hole pl myId =
+make hole pl hids@HoleIds{..} =
   do
     Config.Hole{..} <- ExprGuiM.widgetEnv WE.readConfig <&> Config.hole
     let
       addEventMap =
         _2 . ExpressionGui.egWidget %~
-        Widget.weakerEvents (openHoleEventMap holeOpenKeys myId)
+        Widget.weakerEvents (openHoleEventMap holeOpenKeys hids)
     fmap addEventMap $ runMatcherT $ do
       justToLeft $ do
         arg <- maybeToMPlus $ hole ^. Sugar.holeMArg
-        gui <- lift $ makeWrapper arg myId
-        return (myId, gui)
+        gui <- lift $ makeWrapper arg hids
+        return (hid, gui)
       justToLeft $ do
         guard $ not isHoleResult -- Avoid suggesting inside hole results
         guard . Lens.nullOf ExprLens.valHole $ suggested ^. Sugar.hsValue
-        (destId, gui) <- lift $ makeSuggested suggested myId
+        (destId, gui) <- lift $ makeSuggested suggested hids
         return (destId, gui)
-      gui <- makeSimple myId & lift
-      return (diveIntoHole myId, gui)
+      gui <- makeSimple hids & lift
+      return (hidOpen, gui)
   & ExpressionGui.stdWrapIn _2 pl
   where
     isHoleResult =
@@ -70,16 +70,17 @@ make hole pl myId =
     suggested = hole ^. Sugar.holeSuggested
 
 openHoleEventMap ::
-  Applicative f => [ModKey] -> Widget.Id -> Widget.EventHandlers f
-openHoleEventMap keys myId =
-  Widget.keysEventMapMovesCursor keys
-  (E.Doc ["Navigation", "Hole", "Open"]) . pure $ diveIntoHole myId
+  Applicative f => [ModKey] -> HoleIds -> Widget.EventHandlers f
+openHoleEventMap keys HoleIds{..} =
+  Widget.keysEventMapMovesCursor keys doc $ pure hidOpen
+  where
+    doc = E.Doc ["Navigation", "Hole", "Open"]
 
 makeUnwrapEventMap ::
   (MonadA m, MonadA f) =>
-  Sugar.HoleArg f (ExpressionN f a) -> Widget.Id ->
+  Sugar.HoleArg f (ExpressionN f a) -> HoleIds ->
   ExprGuiM m (Widget.EventHandlers (T f))
-makeUnwrapEventMap arg myId = do
+makeUnwrapEventMap arg hids = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let Config.Hole{..} = Config.hole config
   pure $
@@ -88,18 +89,18 @@ makeUnwrapEventMap arg myId = do
       Widget.keysEventMapMovesCursor
       (holeUnwrapKeys ++ Config.delKeys config)
       (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
-    Nothing -> openHoleEventMap (Config.wrapKeys config) myId
+    Nothing -> openHoleEventMap (Config.wrapKeys config) hids
 
 modifyWrappedEventMap ::
   (MonadA m, Applicative f) =>
-  Config -> Bool -> Sugar.HoleArg m (ExpressionN m a) -> Widget.Id ->
+  Config -> Bool -> Sugar.HoleArg m (ExpressionN m a) -> HoleIds ->
   Widget.EventHandlers f ->
   Widget.EventHandlers f
-modifyWrappedEventMap config argIsFocused arg myId eventMap
+modifyWrappedEventMap config argIsFocused arg HoleIds{..} eventMap
   | argIsFocused =
     eventMap <>
     Widget.keysEventMapMovesCursor (Config.leaveSubexpressionKeys config)
-    (E.Doc ["Navigation", "Go to parent wrapper"]) (pure myId)
+    (E.Doc ["Navigation", "Go to parent wrapper"]) (pure hid)
   | otherwise =
     Widget.keysEventMapMovesCursor (Config.enterSubexpressionKeys config)
     (E.Doc ["Navigation", "Go to wrapped expr"]) .
@@ -109,8 +110,8 @@ modifyWrappedEventMap config argIsFocused arg myId eventMap
 makeWrapper ::
   MonadA m =>
   Sugar.HoleArg m (ExpressionN m ExprGuiM.Payload) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeWrapper arg myId = do
+  HoleIds -> ExprGuiM m (ExpressionGui m)
+makeWrapper arg hids@HoleIds{..} = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     Config.Hole{..} = Config.hole config
@@ -128,23 +129,23 @@ makeWrapper arg myId = do
   gui <-
     argGui
     & ExpressionGui.egWidget . Widget.wEventMap %~
-      modifyWrappedEventMap config argIsFocused arg myId
+      modifyWrappedEventMap config argIsFocused arg hids
     & ExpressionGui.pad (padding + frameWidth)
     & ExpressionGui.egWidget %~
       Widget.addInnerFrame
       (Config.layerHoleBG (Config.layers config))
       frameId bgColor frameWidth
-    & ExpressionGui.egWidget %%~ makeFocusable myId
-  unwrapEventMap <- makeUnwrapEventMap arg myId
+    & ExpressionGui.egWidget %%~ makeFocusable hids
+  unwrapEventMap <- makeUnwrapEventMap arg hids
   return (gui & ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap)
   where
-    frameId = Widget.toAnimId myId <> ["hole frame"]
+    frameId = Widget.toAnimId hidClosed <> ["hole frame"]
 
 makeSuggested ::
   MonadA m =>
   Sugar.HoleSuggested (Name m) m ->
-  Widget.Id -> ExprGuiM m (Widget.Id, ExpressionGui m)
-makeSuggested suggested myId = do
+  HoleIds -> ExprGuiM m (Widget.Id, ExpressionGui m)
+makeSuggested suggested hids@HoleIds{..} = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let Config.Hole{..} = Config.hole config
   gui <-
@@ -154,33 +155,33 @@ makeSuggested suggested myId = do
     <&> Lens.mapped . Lens.mapped . ExprGuiM.plShowType .~ ExprGuiM.DoNotShowType
     >>= ExprGuiM.makeSubexpression 0
     >>= ExpressionGui.egWidget %%~
-        makeFocusable myId .
+        makeFocusable hids .
         Widget.tint (Config.suggestedValueTint config) .
         Widget.scale (realToFrac <$> Config.suggestedValueScaleFactor config) .
         (Widget.wEventMap .~ mempty)
   return $
     if fullySuggested
-    then (myId, gui)
+    then (hidClosed, gui)
     else
-      ( diveIntoHole myId
+      ( hidOpen
       , gui
         & ExpressionGui.egWidget %~
-          addBackground myId (Config.layers config) holeClosedBGColor
+          addBackground hidClosed (Config.layers config) holeClosedBGColor
       )
   where
     fullySuggested =
       Lens.nullOf (ExprLens.subExprs . ExprLens.valHole) $
       suggested ^. Sugar.hsValue
 
-makeSimple :: MonadA m => Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeSimple myId = do
+makeSimple :: MonadA m => HoleIds -> ExprGuiM m (ExpressionGui m)
+makeSimple hids@HoleIds{..} = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let Config.Hole{..} = Config.hole config
   ExprGuiM.widgetEnv
-    (BWidgets.makeTextViewWidget "  " (Widget.toAnimId myId))
-    <&> addBackground myId (Config.layers config) holeClosedBGColor
+    (BWidgets.makeTextViewWidget "  " (Widget.toAnimId hidClosed))
+    <&> addBackground hidClosed (Config.layers config) holeClosedBGColor
     <&> ExpressionGui.fromValueWidget
-    >>= ExpressionGui.egWidget %%~ makeFocusable myId
+    >>= ExpressionGui.egWidget %%~ makeFocusable hids
 
-makeFocusable :: (MonadA m, Applicative f) => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
-makeFocusable wId = ExprGuiM.widgetEnv . BWidgets.makeFocusableView wId
+makeFocusable :: (MonadA m, Applicative f) => HoleIds -> Widget f -> ExprGuiM m (Widget f)
+makeFocusable HoleIds{..} = ExprGuiM.widgetEnv . BWidgets.makeFocusableView hid

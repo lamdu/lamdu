@@ -17,10 +17,10 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Closed as HoleClosed
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (diveIntoHole)
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as HoleOpen
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (openHoleId)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -53,8 +53,14 @@ make ::
 make hole pl myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let Config.Hole{..} = Config.hole config
-  (delegateDestId, closedGui) <- HoleClosed.make hole pl myId
-  tryOpenHole hole pl myId
+  let hids =
+        HoleIds
+        { hid = myId
+        , hidOpen = openHoleId myId
+        , hidClosed = Widget.joinId myId ["OpenHole"]
+        }
+  (delegateDestId, closedGui) <- HoleClosed.make hole pl hids
+  tryOpenHole hole pl hids
     <&> resizeAs closedGui
     <&> ExpressionGui.egWidget %~ BWidgets.liftLayerInterval config
     & runMaybeT
@@ -65,11 +71,10 @@ tryOpenHole ::
   MonadA m =>
   Sugar.Hole (Name m) m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
-  Widget.Id ->
+  HoleIds ->
   MaybeT (ExprGuiM m) (ExpressionGui m)
-tryOpenHole hole pl myId = do
-  isSelected <-
-    lift . ExprGuiM.widgetEnv . WE.isSubCursor $ diveIntoHole myId
+tryOpenHole hole pl hids@HoleIds{..} = do
+  isSelected <- lift . ExprGuiM.widgetEnv $ WE.isSubCursor hidOpen
   guard isSelected
   actions <- maybeToMPlus $ hole ^. Sugar.holeMActions
   stateProp <-
@@ -80,7 +85,7 @@ tryOpenHole hole pl myId = do
     { hiEntityId = pl ^. Sugar.plEntityId
     , hiActions = actions
     , hiSuggested = hole ^. Sugar.holeSuggested
-    , hiId = myId
+    , hiIds = hids
     , hiState = stateProp
     , hiNearestHoles = pl ^. Sugar.plData . ExprGuiM.plNearestHoles
     , hiMArgument = hole ^. Sugar.holeMArg

@@ -4,14 +4,14 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.State
   , emptyState, setHoleStateAndJump, assocStateRef
   ) where
 
-import Control.MonadA (MonadA)
-import Data.Binary (Binary)
-import Data.Store.Guid (Guid)
-import GHC.Generics (Generic)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (searchTermWIdOfHoleEntityId)
 import qualified Control.Lens as Lens
+import           Control.MonadA (MonadA)
+import           Data.Binary (Binary)
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.Transaction as Transaction
+import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (searchTermWIdOfHoleEntityId)
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction

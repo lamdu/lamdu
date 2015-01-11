@@ -21,6 +21,7 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -169,7 +170,7 @@ wrapEventMap holePickers config actions =
     mkEventMapWithPickers holePickers
     (Config.wrapKeys config)
     (E.Doc ["Edit", ExprGuiM.holePickersAddDocPrefix holePickers "Wrap"])
-    (fmap FocusDelegator.delegatingId) (snd <$> wrap)
+    (fmap HoleWidgetIds.openHoleId) (snd <$> wrap)
   Sugar.WrapperAlready _ -> mempty
   Sugar.WrappedAlready _ -> mempty
   Sugar.WrapNotAllowed -> mempty

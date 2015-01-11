@@ -22,7 +22,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars, alphaNumericChars)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -46,7 +46,7 @@ closeEventMap :: MonadA m => HoleInfo m -> Widget.EventHandlers (T m)
 closeEventMap holeInfo =
   Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Escape]
   (E.Doc ["Navigation", "Hole", "Close"]) . pure $
-  Widget.joinId (hiId holeInfo) ["closed"]
+  hidClosed (hiIds holeInfo)
 
 pasteEventMap ::
   Functor m => Config -> HoleInfo m -> Widget.EventHandlers (T m)

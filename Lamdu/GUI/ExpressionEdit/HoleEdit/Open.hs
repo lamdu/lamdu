@@ -31,7 +31,7 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground)
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap as OpenEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult)
@@ -286,7 +286,7 @@ makeNoResults holeInfo animId =
     label = (`ExpressionGui.makeLabel` animId)
 
 hiSearchTermId :: HoleInfo m -> Widget.Id
-hiSearchTermId holeInfo = WidgetIds.searchTermId $ HoleInfo.hiOpenId holeInfo
+hiSearchTermId = WidgetIds.searchTermId . hidOpen . hiIds
 
 makeHiddenResultsMWidget :: MonadA m => HaveHiddenResults -> Widget.Id -> ExprGuiM m (Maybe (Widget f))
 makeHiddenResultsMWidget HaveHiddenResults myId =
@@ -324,7 +324,7 @@ makeResultsWidget holeInfo shownResultsLists hiddenResults = do
       hiddenResultsWidgets
   return (mResult, widget)
   where
-    myId = HoleInfo.hiOpenId holeInfo
+    myId = hidOpen (hiIds holeInfo)
 
 assignHoleEditCursor ::
   MonadA m =>
@@ -339,7 +339,7 @@ assignHoleEditCursor holeInfo shownMainResultsIds allShownResultIds searchTermId
     isOnResult = any sub allShownResultIds
     assignSource
       | shouldBeOnResult && not isOnResult = cursor
-      | otherwise = HoleInfo.hiOpenId holeInfo
+      | otherwise = HoleInfo.hidOpen (HoleInfo.hiIds holeInfo)
     destId
       | null (HoleInfo.hiSearchTerm holeInfo) = searchTermId
       | otherwise = head (shownMainResultsIds ++ [searchTermId])
@@ -380,10 +380,10 @@ make pl holeInfo = do
       rawOpenHole
         & guiWidth %~ max (typeView ^. Widget.wSize . _1)
         & ExpressionGui.egWidget %~
-          addBackground (HoleInfo.hiOpenId holeInfo)
+          addBackground (hidOpen (hiIds holeInfo))
           (Config.layers config) holeOpenBGColor
         & ExpressionGui.addBelowInferredSpacing typeView
-        >>= addDarkBackground (HoleInfo.hiOpenId holeInfo)
+        >>= addDarkBackground (hidOpen (hiIds holeInfo))
         & ExpressionGui.wrapExprEventMap pl
   where
     isHoleResult =
