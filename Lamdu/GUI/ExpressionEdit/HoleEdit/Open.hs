@@ -147,7 +147,7 @@ makeExtraSymbolWidget animId isSelected results
 
 data ResultGroupWidgets m = ResultGroupWidgets
   { _rgwMainResult :: ShownResult m
-  , _rgwMSelectedResult :: Maybe (ShownResult m)
+  , _rgwMSelectedResult :: Maybe (ShownResult m) -- Can be an extra result
   , _rgwRow :: [WidgetT m]
   }
 rgwMainResult :: Lens' (ResultGroupWidgets m) (ShownResult m)
@@ -300,6 +300,21 @@ addMResultPicker mSelectedResult =
     Nothing -> return ()
     Just res -> ExprGuiM.addResultPicker $ (^. pickedEventResult) <$> srPick res
 
+layoutResults ::
+  MonadA m =>
+  [[Widget (T m)]] -> HaveHiddenResults -> Widget.Id -> ExprGuiM m (WidgetT m)
+layoutResults rows hiddenResults myId
+  | null rows = makeNoResults (Widget.toAnimId myId)
+  | otherwise =
+    do
+      hiddenResultsWidgets <- maybeToList <$> makeHiddenResultsMWidget hiddenResults myId
+      let grid =
+            rows
+            & Lens.mapped . Lens.mapped %~ (,) (Vector2 0 0.5)
+            & Grid.make & Grid.toWidget
+            & OpenEventMap.blockDownEvents
+      return $ Box.vboxCentered $ grid : hiddenResultsWidgets
+
 makeResultsWidget ::
   MonadA m => HoleInfo m ->
   [ResultsList m] -> HaveHiddenResults ->
@@ -312,18 +327,7 @@ makeResultsWidget holeInfo shownResultsLists hiddenResults = do
     mResult = mSelectedResult <|> mFirstResult
     rows = groupsWidgets ^.. Lens.traversed . rgwRow
   addMResultPicker mResult
-  hiddenResultsWidgets <- maybeToList <$> makeHiddenResultsMWidget hiddenResults myId
-  widget <-
-    if null groupsWidgets
-    then makeNoResults (Widget.toAnimId myId)
-    else
-      return .
-      Box.vboxCentered $
-      ( OpenEventMap.blockDownEvents .
-        Grid.toWidget . Grid.make
-      . (map . map) ((,) (Vector2 0 0.5))
-      ) rows :
-      hiddenResultsWidgets
+  widget <- layoutResults rows hiddenResults myId
   return (mResult, widget)
   where
     myId = hidOpen (hiIds holeInfo)
