@@ -5,31 +5,32 @@ module Graphics.UI.Bottle.MainLoop
   , mainLoopWidget
   ) where
 
-import Control.Applicative ((<$>))
-import Control.Concurrent (threadDelay)
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Control.Monad (when, unless)
-import Data.IORef
-import Data.MRUMemo (memoIO)
-import Data.Monoid (Monoid(..), (<>))
-import Data.Time.Clock (getCurrentTime, diffUTCTime)
-import Data.Traversable (traverse, sequenceA)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.DrawingCombinators ((%%))
-import Graphics.DrawingCombinators.Utils (Image)
-import Graphics.Rendering.OpenGL.GL (($=))
-import Graphics.UI.Bottle.Animation(AnimId)
-import Graphics.UI.Bottle.Widget(Widget)
-import Graphics.UI.GLFW.Events (KeyEvent, Event(..), eventLoop)
+import           Control.Applicative ((<$>))
+import           Control.Concurrent (threadDelay)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad (when, unless)
+import           Data.IORef
+import           Data.MRUMemo (memoIO)
+import           Data.Monoid (Monoid(..), (<>))
 import qualified Data.Monoid as Monoid
+import           Data.Time.Clock (getCurrentTime, diffUTCTime)
+import           Data.Traversable (traverse, sequenceA)
+import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.DrawingCombinators.Utils (Image)
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
+import           Graphics.Rendering.OpenGL.GL (($=))
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.Bottle.Animation as Anim
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.GLFW as GLFW
+import           Graphics.UI.GLFW.Events (KeyEvent, Event(..), eventLoop)
 
 mainLoopImage
   :: GLFW.Window -> (Widget.Size -> KeyEvent -> IO Bool)
@@ -62,7 +63,7 @@ mainLoopImage win eventHandler makeImage =
           threadDelay 10000
         Just image ->
           image
-          & (Draw.translate (-1, 1) <> Draw.scale (2/winSizeX) (-2/winSizeY) %%)
+          & (DrawUtils.translate (Vector2 (-1) 1) <> DrawUtils.scale (Vector2 (2/winSizeX) (-2/winSizeY)) %%)
 #ifdef DRAWINGCOMBINATORS__SIZED
           & let Vector2 glPixelRatioX glPixelRatioY = winSize / 2 -- GL range is -1..1
             in Draw.clearRenderSized (glPixelRatioX, glPixelRatioY)

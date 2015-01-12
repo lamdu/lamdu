@@ -63,10 +63,10 @@ simpleFrame animId image =
   Frame $ Map.singleton animId [(0, PositionedImage image (Rect 0 1))]
 
 simpleFrameDownscale :: AnimId -> Size -> Draw.Image () -> Frame
-simpleFrameDownscale animId size@(Vector2 w h) =
+simpleFrameDownscale animId size =
   scale size .
   simpleFrame animId .
-  (Draw.scale (1 / w) (1 / h) %%)
+  (DrawUtils.scale (1 / size) %%)
 
 inFrame2
   :: (Map AnimId [(Layer, PositionedImage)]
@@ -106,10 +106,10 @@ draw =
     posImage
       (PositionedImage img
        (Rect
-        { Rect._topLeft = Vector2 t l
-        , Rect._size = Vector2 w h
+        { Rect._topLeft = topLeft
+        , Rect._size = size
         })) =
-      Draw.translate (t, l) %% Draw.scale w h %% img
+      DrawUtils.translate topLeft %% DrawUtils.scale size %% img
 
 prefixRects :: Map AnimId (Layer, PositionedImage) -> Map AnimId Rect
 prefixRects src =

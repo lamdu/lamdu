@@ -1,10 +1,14 @@
 {-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE CPP, StandaloneDeriving, DeriveGeneric #-}
-module Graphics.DrawingCombinators.Utils (
-  Image, square,
-  textHeight, textSize,
-  textLinesWidth, textLinesHeight, textLinesSize,
-  drawText, drawTextLines, backgroundColor) where
+module Graphics.DrawingCombinators.Utils
+  ( Image
+  , square
+  , textHeight, textSize
+  , textLinesWidth, textLinesHeight, textLinesSize
+  , drawText, drawTextLines
+  , backgroundColor
+  , scale, translate
+  ) where
 
 import           Control.Lens.Operators
 import           Control.Monad (void)
@@ -24,6 +28,12 @@ deriving instance Generic Draw.Color
 
 instance ToJSON Draw.Color
 instance FromJSON Draw.Color
+
+scale :: Vector2 Draw.R -> Draw.Affine
+scale (Vector2 x y) = Draw.scale x y
+
+translate :: Vector2 Draw.R -> Draw.Affine
+translate (Vector2 x y) = Draw.translate (x, y)
 
 square :: Image
 square = void $ Draw.convexPoly [ (0, 0), (1, 0), (1, 1), (0, 1) ]
@@ -47,10 +57,10 @@ drawText font str =
   & Draw.text font
   & void
   -- Text is normally at height -0.5..1.5.  We move it to be -textHeight..0
-  & (Draw.translate (0, -textHeight - descender font) %%)
+  & (translate (Vector2 0 (-textHeight - descender font)) %%)
   -- We want to reverse it so that higher y is down, and it is also
   -- moved to 0..2
-  & (Draw.scale 1 (-1) %%)
+  & (scale (Vector2 1 (-1)) %%)
 
 textLinesHeight :: [String] -> Draw.R
 textLinesHeight = (textHeight *) . genericLength
@@ -67,9 +77,9 @@ drawTextLines font =
   where
     step lineImage restImage =
       mappend lineImage $
-      Draw.translate (0, textHeight) %% restImage
+      translate (Vector2 0 textHeight) %% restImage
 
 backgroundColor :: Draw.Color -> Vector2 Draw.R -> Image -> Image
-backgroundColor color (Vector2 width height) image =
+backgroundColor color size image =
   mappend image $
-  Draw.tint color $ Draw.scale width height %% square
+  Draw.tint color $ scale size %% square

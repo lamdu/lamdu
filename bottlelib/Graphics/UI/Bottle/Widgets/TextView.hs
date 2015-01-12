@@ -37,10 +37,8 @@ Lens.makeLenses ''Style
 
 fontRender :: Style -> String -> (Draw.Image (), Size)
 fontRender (Style color font ptSize) =
-  ((Draw.scale sz sz %%) . Draw.tint color . DrawUtils.drawText font) &&&
-  (fmap (sz *) . DrawUtils.textSize font)
-  where
-    sz = fromIntegral ptSize
+  ((DrawUtils.scale (fromIntegral ptSize) %%) . Draw.tint color . DrawUtils.drawText font) &&&
+  (fmap (fromIntegral ptSize *) . DrawUtils.textSize font)
 
 drawMany ::
   (Size -> Size) ->
