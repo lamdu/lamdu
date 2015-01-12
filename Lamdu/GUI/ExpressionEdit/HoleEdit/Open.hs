@@ -130,31 +130,45 @@ makeShownResult holeInfo result =
         }
       )
 
+makeExtraSymbolWidget :: MonadA m => AnimId -> Bool -> ResultsList n -> ExprGuiM m (Widget f)
+makeExtraSymbolWidget animId isSelected results
+  | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure Spacer.empty
+  | otherwise =
+    do
+      Config.Hole{..} <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
+      let
+        extraSymbolColor
+          | isSelected = holeExtraSymbolColorSelected
+          | otherwise = holeExtraSymbolColorUnselected
+      ExprGuiM.makeLabel extraSymbol animId
+        <&> Widget.scale extraSymbolScaleFactor
+        <&> Widget.tint extraSymbolColor
+        >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced . (Spacer.empty :) . (: [])
+
+data ResultGroupWidgets m = ResultGroupWidgets
+  { _rgwMainResult :: ShownResult m
+  , _rgwMSelectedResult :: Maybe (ShownResult m)
+  , _rgwRow :: [WidgetT m]
+  }
+rgwMainResult :: Lens' (ResultGroupWidgets m) (ShownResult m)
+rgwMainResult f ResultGroupWidgets{..} = f _rgwMainResult <&> \_rgwMainResult -> ResultGroupWidgets{..}
+rgwMSelectedResult :: Lens' (ResultGroupWidgets m) (Maybe (ShownResult m))
+rgwMSelectedResult f ResultGroupWidgets{..} = f _rgwMSelectedResult <&> \_rgwMSelectedResult -> ResultGroupWidgets{..}
+rgwRow :: Lens' (ResultGroupWidgets m) [WidgetT m]
+rgwRow f ResultGroupWidgets{..} = f _rgwRow <&> \_rgwRow -> ResultGroupWidgets{..}
+
 makeResultGroup ::
   MonadA m =>
   HoleInfo m ->
   ResultsList m ->
-  ExprGuiM m
-  ( ShownResult m
-  , [WidgetT m]
-  , Maybe (ShownResult m)
-  )
+  ExprGuiM m (ResultGroupWidgets m)
 makeResultGroup holeInfo results = do
   Config.Hole{..} <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
   (mainResultWidget, shownMainResult) <- makeShownResult holeInfo mainResult
-  extraSymbolWidget <-
-    if Lens.has (HoleResults.rlExtra . traverse) results
-    then
-      ExprGuiM.makeLabel extraSymbol (Widget.toAnimId (rId mainResult))
-      <&> Widget.scale extraSymbolScaleFactor
-      >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced . (Spacer.empty :) . (: [])
-    else pure Spacer.empty
   let
-    makeExtra =
-      makeExtraResultsWidget holeInfo
-      (mainResultWidget ^. Widget.wSize . Lens._2)
-      (results ^. HoleResults.rlExtra)
-  (mResult, extraResWidget) <-
+    mainResultHeight = mainResultWidget ^. Widget.wSize . Lens._2
+    makeExtra = makeExtraResultsWidget holeInfo mainResultHeight $ results ^. HoleResults.rlExtra
+  (mSelectedResult, extraResWidget) <-
     if mainResultWidget ^. Widget.wIsFocused
     then do
       widget <- snd <$> makeExtra
@@ -167,16 +181,13 @@ makeResultGroup holeInfo results = do
         else
           (,) Nothing <$>
           makeExtraResultsPlaceholderWidget (results ^. HoleResults.rlExtra)
-  let extraSymbolColor =
-        maybe holeExtraSymbolColorUnselected (const holeExtraSymbolColorSelected) mResult
-  return
-    ( shownMainResult
-    , [ mainResultWidget
-      , Widget.tint extraSymbolColor extraSymbolWidget
-      , extraResWidget
-      ]
-    , mResult
-    )
+  let isSelected = Lens.has Lens._Just mSelectedResult
+  extraSymbolWidget <- makeExtraSymbolWidget (Widget.toAnimId (rId mainResult)) isSelected results
+  return ResultGroupWidgets
+    { _rgwMainResult = shownMainResult
+    , _rgwMSelectedResult = mSelectedResult
+    , _rgwRow = [mainResultWidget, extraSymbolWidget, extraResWidget]
+    }
   where
     mainResult = results ^. HoleResults.rlMain
 
@@ -294,15 +305,16 @@ makeResultsWidget ::
   [ResultsList m] -> HaveHiddenResults ->
   ExprGuiM m (Maybe (ShownResult m), WidgetT m)
 makeResultsWidget holeInfo shownResultsLists hiddenResults = do
-  (mainResults, rows, mResults) <- unzip3 <$> traverse (makeResultGroup holeInfo) shownResultsLists
+  groupsWidgets <- traverse (makeResultGroup holeInfo) shownResultsLists
   let
-    mSelectedResult = mResults ^? Lens.traversed . Lens._Just
-    mFirstResult = mainResults ^? Lens.traversed
+    mSelectedResult = groupsWidgets ^? Lens.traversed . rgwMSelectedResult . Lens._Just
+    mFirstResult = groupsWidgets ^? Lens.traversed . rgwMainResult
     mResult = mSelectedResult <|> mFirstResult
+    rows = groupsWidgets ^.. Lens.traversed . rgwRow
   addMResultPicker mResult
   hiddenResultsWidgets <- maybeToList <$> makeHiddenResultsMWidget hiddenResults myId
   widget <-
-    if null rows
+    if null groupsWidgets
     then makeNoResults (Widget.toAnimId myId)
     else
       return .
