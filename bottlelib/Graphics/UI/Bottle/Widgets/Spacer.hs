@@ -36,7 +36,7 @@ makeHorizontalWidget = widget . makeHorizontal
 
 horizLineFrame :: Anim.AnimId -> Widget.Size -> Anim.Frame
 horizLineFrame animId size@(Vector2 w h) =
-  Anim.simpleFrameDownscale animId size . void $ Draw.line (0, h/2) (w, h/2)
+  Anim.sizedFrame animId size . void $ Draw.line (0, h/2) (w, h/2)
 
 makeHorizLine :: Anim.AnimId -> Widget.Size -> Widget f
 makeHorizLine animId size = Widget.liftView size $ horizLineFrame animId size

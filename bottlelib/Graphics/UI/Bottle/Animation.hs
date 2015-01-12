@@ -9,7 +9,7 @@ module Graphics.UI.Bottle.Animation
   , backgroundColor
   , translate, scale, onDepth
   , unitIntoRect
-  , simpleFrame, simpleFrameDownscale
+  , simpleFrame, sizedFrame
   , joinId, subId
   , weaker, stronger
   , module Graphics.UI.Bottle.Animation.Id
@@ -62,8 +62,8 @@ simpleFrame :: AnimId -> Draw.Image () -> Frame
 simpleFrame animId image =
   Frame $ Map.singleton animId [(0, PositionedImage image (Rect 0 1))]
 
-simpleFrameDownscale :: AnimId -> Size -> Draw.Image () -> Frame
-simpleFrameDownscale animId size =
+sizedFrame :: AnimId -> Size -> Draw.Image () -> Frame
+sizedFrame animId size =
   scale size .
   simpleFrame animId .
   (DrawUtils.scale (1 / size) %%)
@@ -215,14 +215,14 @@ unitSquare :: AnimId -> Frame
 unitSquare animId = simpleFrame animId DrawUtils.square
 
 emptyRectangle :: Vector2 R -> Vector2 R -> AnimId -> Frame
-emptyRectangle (Vector2 fX fY) (Vector2 sX sY) animId =
+emptyRectangle (Vector2 fX fY) totalSize@(Vector2 sX sY) animId =
   mconcat
   [ rect 0                      (Vector2 sX fY)
   , rect (Vector2 0 (sY - fY))  (Vector2 sX fY)
   , rect (Vector2 0 fY)         (Vector2 fX (sY - fY*2))
   , rect (Vector2 (sX - fX) fY) (Vector2 fX (sY - fY*2))
   ]
-  & simpleFrame animId
+  & sizedFrame animId totalSize
   where
     rect origin size =
       DrawUtils.square

@@ -67,7 +67,7 @@ nestedFrame (i, (image, size)) =
   (draw, size)
   where
     draw animId =
-      Anim.simpleFrameDownscale (View.augmentAnimId animId i) size image
+      Anim.sizedFrame (View.augmentAnimId animId i) size image
 
 drawTextAsSingleLetters ::
   Style -> String -> (AnimId -> Anim.Frame, Size)
