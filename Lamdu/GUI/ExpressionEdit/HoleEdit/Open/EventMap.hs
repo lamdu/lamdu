@@ -13,6 +13,7 @@ import           Data.Monoid (Monoid(..), (<>))
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import           Data.Traversable (sequenceA)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -138,12 +139,14 @@ removeUnwanted config =
     gridKeyEvents = Foldable.toList Grid.stdKeys
     delKeys = Config.delKeys config
 
-eventsOnPickedResult :: MonadA m => Config -> ShownResult m -> Widget.EventHandlers (T m)
-eventsOnPickedResult config shownResult =
-  srEventMap shownResult
-  & E.emDocs . E.docStrs . Lens._last %~ (++ "(On picked result)")
-  <&> pickBefore shownResult
-  & removeUnwanted config
+mkEventsOnPickedResult :: MonadA m => ShownResult m -> ExprGuiM m (Widget.EventHandlers (T m))
+mkEventsOnPickedResult shownResult =
+  do
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    srMkEventMap shownResult
+      <&> E.emDocs . E.docStrs . Lens._last %~ (++ "(On picked result)")
+      <&> Lens.mapped %~ pickBefore shownResult
+      <&> removeUnwanted config
 
 make ::
   MonadA m =>
@@ -154,19 +157,16 @@ make ::
   )
 make holeInfo mShownResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    -- below ad-hoc and search term edit:
-    eventMap =
-      mconcat
-      [ closeEventMap holeInfo
-      , pasteEventMap config holeInfo
-      , case mShownResult of
-        Nothing -> mempty
-        Just shownResult ->
-          mconcat
-          [ pickEventMap (Config.hole config) holeInfo shownResult
-          , eventsOnPickedResult config shownResult
-          ]
-      ]
-    adHocEdit = adHocTextEditEventMap (HoleInfo.hiSearchTermProperty holeInfo)
+  -- below ad-hoc and search term edit:
+  eventMap <-
+    [ pure $ closeEventMap holeInfo
+    , pure $ pasteEventMap config holeInfo
+    , case mShownResult of
+      Nothing -> pure mempty
+      Just shownResult ->
+        mkEventsOnPickedResult shownResult
+        <&> mappend
+        (pickEventMap (Config.hole config) holeInfo shownResult)
+    ] & sequenceA <&> mconcat
+  let adHocEdit = adHocTextEditEventMap (HoleInfo.hiSearchTermProperty holeInfo)
   pure (eventMap, adHocEdit <> eventMap)

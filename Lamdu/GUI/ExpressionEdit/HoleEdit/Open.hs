@@ -120,11 +120,11 @@ makeShownResult holeInfo result =
     -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
     res <- ExprGuiM.transaction $ rHoleResult result
     config <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
-    (widget, eventMap) <- makeHoleResultWidget (rId result) res
+    (widget, mkEventMap) <- makeHoleResultWidget (rId result) res
     return
       ( widget & (Widget.pad . fmap realToFrac . Config.holeResultPadding) config
       , ShownResult
-        { srEventMap = eventMap
+        { srMkEventMap = mkEventMap
         , srHoleResult = res
         , srPick = afterPick holeInfo (rId result) =<< res ^. Sugar.holeResultPick
         }
@@ -227,19 +227,20 @@ makeFocusable wId = ExprGuiM.widgetEnv . BWidgets.makeFocusableView wId
 
 makeHoleResultWidget ::
   MonadA m => Widget.Id ->
-  Sugar.HoleResult (Name m) m -> ExprGuiM m (WidgetT m, Widget.EventHandlers (T m))
+  Sugar.HoleResult (Name m) m ->
+  ExprGuiM m (WidgetT m, ExprGuiM m (Widget.EventHandlers (T m)))
 makeHoleResultWidget resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let Config.Hole{..} = Config.hole config
-  eventMap <-
-    do
-      -- Create a hidden result widget that we never display, but only
-      -- keep the event map from. We always tell it that it has focus,
-      -- so that even if we're on the search term, we can have valid
-      -- event maps of any result (we actually use the first one's
-      -- event map)
-      hiddenResultWidget <- mkWidget & ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget)
-      return $ hiddenResultWidget ^. Widget.wEventMap
+  let mkEventMap =
+        do
+          -- Create a hidden result widget that we never display, but only
+          -- keep the event map from. We always tell it that it has focus,
+          -- so that even if we're on the search term, we can have valid
+          -- event maps of any result (we actually use the first one's
+          -- event map)
+          hiddenResultWidget <- mkWidget & ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget)
+          return $ hiddenResultWidget ^. Widget.wEventMap
   widget <-
     mkWidget
     <&> Widget.wFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
@@ -247,7 +248,7 @@ makeHoleResultWidget resultId holeResult = do
     <&> Widget.wEventMap .~ mempty
     >>= makeFocusable resultId
     <&> BWidgets.liftLayerInterval config
-  return (widget, eventMap)
+  return (widget, mkEventMap)
   where
     mkWidget =
       holeResultConverted
