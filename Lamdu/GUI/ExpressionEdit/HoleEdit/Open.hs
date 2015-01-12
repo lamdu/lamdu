@@ -179,8 +179,9 @@ makeResultGroup holeInfo results = do
       if cursorOnExtra
         then makeExtra
         else
-          (,) Nothing <$>
-          makeExtraResultsPlaceholderWidget (results ^. HoleResults.rlExtra)
+          Spacer.empty
+          & focusFirstExtraResult (results ^. HoleResults.rlExtra)
+          <&> (,) Nothing
   let isSelected = Lens.has Lens._Just mSelectedResult
   extraSymbolWidget <- makeExtraSymbolWidget (Widget.toAnimId (rId mainResult)) isSelected results
   return ResultGroupWidgets
@@ -190,12 +191,8 @@ makeResultGroup holeInfo results = do
     }
   where
     mainResult = results ^. HoleResults.rlMain
-
-makeExtraResultsPlaceholderWidget ::
-  MonadA m => [Result m] -> ExprGuiM m (WidgetT m)
-makeExtraResultsPlaceholderWidget [] = return Spacer.empty
-makeExtraResultsPlaceholderWidget (result:_) =
-  makeFocusable (rId result) Spacer.empty
+    focusFirstExtraResult [] = return
+    focusFirstExtraResult (result:_) = makeFocusable (rId result)
 
 makeExtraResultsWidget ::
   MonadA m => HoleInfo m -> Anim.R -> [Result m] ->
