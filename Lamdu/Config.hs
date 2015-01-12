@@ -83,6 +83,7 @@ data Hole = Hole
   , holeOpenDarkBGColor :: Draw.Color
   , holeUnwrapKeys :: [ModKey]
   , holeOpenKeys :: [ModKey]
+  , holeHoveringWrapperScale :: Vector2 Double
   } deriving (Eq, Generic, Show)
 
 data Name = Name

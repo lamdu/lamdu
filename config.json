@@ -314,7 +314,11 @@
                 },
                 "Key'Space"
             ]
-        ]
+        ],
+        "holeHoveringWrapperScale": {
+            "_first": 0.5,
+            "_second": 0.5
+        }
     },
     "name": {
         "nameOriginFGColor": [

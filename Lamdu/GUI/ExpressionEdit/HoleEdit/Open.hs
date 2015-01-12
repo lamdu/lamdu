@@ -343,10 +343,13 @@ maybeHoverClosedHoleAbove ::
 maybeHoverClosedHoleAbove holeInfo closedHoleGui openHoleGui
   | Lens.has Lens._Just (hiMArgument holeInfo) =
     do
-      hoveringClosedHoleGui <-
+      Config.Hole{..} <- ExprGuiM.widgetEnv WE.readConfig <&> Config.hole
+      hoveringClosedHole <-
         addDarkBackground (hidClosed (hiIds holeInfo)) closedHoleGui
+        <&> (^. ExpressionGui.egWidget)
+        <&> Widget.scale (holeHoveringWrapperScale <&> realToFrac)
       ExpressionGui.addAbove 0
-        [(0, hoveringClosedHoleGui ^. ExpressionGui.egWidget)] openHoleGui
+        [(0, hoveringClosedHole)] openHoleGui
         & return
   | otherwise = return openHoleGui
 
