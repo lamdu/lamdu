@@ -11,7 +11,6 @@ module Graphics.UI.Bottle.Animation
   , unitIntoRect
   , simpleFrame, sizedFrame
   , joinId, subId
-  , weaker, stronger
   , module Graphics.UI.Bottle.Animation.Id
   ) where
 
@@ -68,22 +67,9 @@ sizedFrame animId size =
   simpleFrame animId .
   (DrawUtils.scale (1 / size) %%)
 
-inFrame2
-  :: (Map AnimId [(Layer, PositionedImage)]
-      -> Map AnimId [(Layer, PositionedImage)]
-      -> Map AnimId [(Layer, PositionedImage)])
-  -> Frame -> Frame -> Frame
-inFrame2 f (Frame x) (Frame y) = Frame (f x y)
-
-stronger :: Frame -> Frame -> Frame
-stronger = inFrame2 Map.union
-
-weaker :: Frame -> Frame -> Frame
-weaker = flip stronger
-
 instance Monoid Frame where
   mempty = Frame mempty
-  mappend = inFrame2 $ Map.unionWith (++)
+  mappend (Frame m0) (Frame m1) = Frame $ Map.unionWith (++) m0 m1
 
 unitX :: Draw.Image ()
 unitX = void $ mconcat
