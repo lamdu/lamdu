@@ -20,12 +20,11 @@ import           Control.Lens.Tuple
 import           Control.Monad (join, msum)
 import           Data.Foldable (Foldable)
 import           Data.Function (on)
-import           Data.List (foldl', transpose, find, minimumBy, sortBy, groupBy)
-import           Data.List.Utils (index, enumerate2d)
+import           Data.List (foldl', transpose, find)
+import           Data.List.Utils (index, groupOn, sortOn, minimumOn)
 import           Data.MRUMemo (memo)
-import           Data.Maybe (isJust, fromMaybe, catMaybes, mapMaybe)
+import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Monoid(..))
-import           Data.Ord (comparing)
 import           Data.Traversable (Traversable)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
@@ -118,20 +117,20 @@ mkNavEventmap ::
   Keys ModKey -> NavDests f -> (Widget.EventHandlers f, Widget.EventHandlers f)
 mkNavEventmap Keys{..} navDests = (weakMap, strongMap)
   where
-    weakMap = mconcat $ catMaybes
+    weakMap =
       [ movement "left"       (keysLeft  keysDir) leftOfCursor
       , movement "right"      (keysRight keysDir) rightOfCursor
       , movement "up"         (keysUp    keysDir) aboveCursor
       , movement "down"       (keysDown  keysDir) belowCursor
       , movement "more left"  keysMoreLeft        leftMostCursor
       , movement "more right" keysMoreRight       rightMostCursor
-      ]
-    strongMap = mconcat $ catMaybes
+      ] ^. Lens.traversed . Lens._Just
+    strongMap =
       [ movement "top"       keysTop       topCursor
       , movement "bottom"    keysBottom    bottomCursor
       , movement "leftmost"  keysLeftMost  leftMostCursor
       , movement "rightmost" keysRightMost rightMostCursor
-      ]
+      ] ^. Lens.traversed . Lens._Just
     movement dirName events f =
       (EventMap.keyPresses
        events
@@ -139,11 +138,17 @@ mkNavEventmap Keys{..} navDests = (weakMap, strongMap)
        (^. Widget.enterResultEvent)) <$>
       f navDests
 
+enumerate2d :: [[a]] -> [(Vector2 Int, a)]
+enumerate2d xss =
+  xss ^@.. Lens.traversed <.> Lens.traversed
+  <&> _1 %~ uncurry (flip Vector2)
+
 getCursor :: [[Widget k]] -> Maybe Cursor
-getCursor =
-  fmap cursorOf . find (_wIsFocused . snd) . concat . enumerate2d
-  where
-    cursorOf ((row, column), _) = Vector2 column row
+getCursor widgets =
+  widgets
+  & enumerate2d
+  & find (_wIsFocused . snd)
+  <&> fst
 
 data Element f = Element
   { _elementAlign :: Alignment
@@ -205,7 +210,7 @@ helper keys combineEnters (KGrid mCursor size sChildren) =
         mEnter = combineEnters size mEnterss
 
         unselectedW = Widget
-          { _wIsFocused = isJust mCursor
+          { _wIsFocused = Lens.has Lens._Just mCursor
           , _wSize = size
           , _wFrame = frame
           , _wMaybeEnter = mEnter
@@ -214,7 +219,7 @@ helper keys combineEnters (KGrid mCursor size sChildren) =
           }
 
         makeW cursor@(Vector2 x y) = Widget
-          { _wIsFocused = isJust mCursor
+          { _wIsFocused = Lens.has Lens._Just mCursor
           , _wSize = size
           , _wFrame = frame
           , _wMaybeEnter = mEnter
@@ -229,18 +234,6 @@ helper keys combineEnters (KGrid mCursor size sChildren) =
           mconcat [strongMap, _wEventMap w, weakMap]
           where
             (weakMap, strongMap) = mkNavEventmap keys navDests
-
-tupleToVector2 :: (a, a) -> Vector2 a
-tupleToVector2 (y, x) = Vector2 x y
-
-minimumOn :: Ord b => (a -> b) -> [a] -> a
-minimumOn = minimumBy . comparing
-
-sortOn :: Ord b => (a -> b) -> [a] -> [a]
-sortOn = sortBy . comparing
-
-groupOn :: Eq b => (a -> b) -> [a] -> [[a]]
-groupOn = groupBy . ((==) `on`)
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
@@ -273,9 +266,8 @@ combineMEnters :: Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f
 combineMEnters size children = chooseClosest childEnters
   where
     childEnters =
-      mapMaybe indexIntoMaybe .
-      concat . (Lens.mapped . Lens.mapped . _1 %~ tupleToVector2) $
-      enumerate2d children
+        (enumerate2d children <&> Lens.sequenceAOf _2)
+        ^.. Lens.traversed . Lens._Just
 
     chooseClosest [] = Nothing
     chooseClosest _ = Just byDirection
@@ -300,7 +292,6 @@ combineMEnters size children = chooseClosest childEnters
       safeHead . groupSortOn ((* (-hEdge)) . (^._1._1)) .
       safeHead . groupSortOn ((* (-vEdge)) . (^._1._2)) $
       childEnters
-    indexIntoMaybe (i, m) = (,) i <$> m
 
 safeHead :: Monoid a => [a] -> a
 safeHead = mconcat . take 1

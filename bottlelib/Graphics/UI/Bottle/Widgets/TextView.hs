@@ -7,25 +7,25 @@ module Graphics.UI.Bottle.Widgets.TextView
   , letterRects
   ) where
 
-import Control.Applicative (liftA2)
-import Control.Arrow ((&&&))
-import Control.Lens.Operators
-import Data.List (foldl')
-import Data.List.Split (splitWhen)
-import Data.List.Utils (enumerate)
-import Data.Monoid (Monoid(..))
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.DrawingCombinators((%%))
-import Graphics.UI.Bottle.Animation(AnimId, Size)
-import Graphics.UI.Bottle.Rect (Rect(Rect))
-import Graphics.UI.Bottle.View (View)
-import Graphics.UI.Bottle.Widget (Widget)
+import           Control.Applicative (liftA2)
+import           Control.Arrow ((&&&))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Data.List (foldl')
+import           Data.List.Split (splitWhen)
+import           Data.Monoid (Monoid(..))
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Graphics.UI.Bottle.Animation as Anim
+import           Graphics.UI.Bottle.Animation (AnimId, Size)
+import           Graphics.UI.Bottle.Rect (Rect(Rect))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 data Style = Style {
@@ -76,20 +76,23 @@ drawTextAsSingleLetters style text =
   map
   ((Lens._2 %~ max minLineSize) . drawMany horizontal .
    map (nestedFrame . (Lens._2 %~ renderLetter))) .
-  splitWhen ((== '\n') . snd) $ enumerate text
+  splitWhen ((== '\n') . snd) $ text ^@.. Lens.traversed
   where
     (_, minLineSize) = fontRender style ""
     horizontal = Lens._2 .~ 0
     renderLetter = fontRender style . (:[])
 
+-- | Returns at least one rect
 letterRects :: Style -> String -> [[Rect]]
 letterRects style text =
   zipWith locateLineHeight (iterate (+ lineHeight) 0) textLines
   where
+    -- splitWhen returns at least one string:
     textLines = map makeLine $ splitWhen (== '\n') text
     locateLineHeight y = Lens.mapped . Rect.top +~ y
     (_, Vector2 _ lineHeight) = fontRender style ""
     makeLine textLine =
+      -- scanl returns at least one element
       zipWith makeLetterRect sizes . scanl (+) 0 .
       map (^. Lens._1) $ sizes
       where
@@ -99,9 +102,11 @@ letterRects style text =
 
 drawTextAsLines :: Style -> String -> (AnimId -> Anim.Frame, Size)
 drawTextAsLines style text =
-  joinLines $
-  map (nestedFrame . (Lens._2 %~ fontRender style) . (Lens._1 %~ (,) "Line")) .
-  enumerate $ splitWhen (== '\n') text
+  splitWhen (== '\n') text ^@.. Lens.traversed
+  <&> _1 %~ (,) "Line"
+  <&> _2 %~ fontRender style
+  <&> nestedFrame
+  & joinLines
 
 make :: Style -> String -> AnimId -> View
 make style text animId = (textSize, frame animId)

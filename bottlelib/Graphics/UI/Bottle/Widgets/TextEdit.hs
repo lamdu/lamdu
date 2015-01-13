@@ -1,14 +1,17 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
-module Graphics.UI.Bottle.Widgets.TextEdit(
-  Cursor, Style(..), make, defaultCursorColor, defaultCursorWidth,
-  makeTextEditCursor,
-  sCursorColor,
-  sCursorWidth,
-  sTextCursorId,
-  sBackgroundCursorId,
-  sEmptyUnfocusedString,
-  sEmptyFocusedString,
-  sTextViewStyle
+module Graphics.UI.Bottle.Widgets.TextEdit
+  ( Cursor, Style(..)
+  , make
+  , defaultCursorColor
+  , defaultCursorWidth
+  , makeTextEditCursor
+  , sCursorColor
+  , sCursorWidth
+  , sTextCursorId
+  , sBackgroundCursorId
+  , sEmptyUnfocusedString
+  , sEmptyFocusedString
+  , sTextViewStyle
   ) where
 
 import           Control.Applicative ((<$>))
@@ -18,14 +21,13 @@ import           Control.Lens.Tuple
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.Char (isSpace)
-import           Data.List (genericLength, minimumBy)
+import           Data.List (genericLength)
 import           Data.List.Split (splitWhen)
-import           Data.List.Utils (enumerate)
+import           Data.List.Utils (minimumOn)
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
-import           Data.Ord (comparing)
 import qualified Data.Set as Set
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -117,10 +119,11 @@ makeFocusable ::
 makeFocusable style str myId =
   Widget.wMaybeEnter .~ Just mEnter
   where
-    minimumOn = minimumBy . comparing
+    rectToCursor :: Rect -> Int
     rectToCursor fromRect =
-      fst . minimumOn snd . enumerate . map (Rect.distance fromRect) $
-      cursorRects style str
+      ((cursorRects style str <&> Rect.distance fromRect) ^@.. Lens.traversed)
+      & minimumOn snd -- cursorRects(TextView.letterRects) should never return an empty list
+      & fst
     mEnter dir =
       Widget.EnterResult cursorRect .
       (,) str . Widget.eventResultFromCursor $
@@ -153,7 +156,11 @@ eventResult myId strWithIds newText newCursor =
     translateId [subId] = (:[]) . maybe subId (SBS8.pack . show) $ (`Map.lookup` dict) =<< Safe.readMay (SBS8.unpack subId)
     translateId x = x
     dict = mappend movedDict deletedDict
-    movedDict = Map.fromList . mapMaybe posMapping . enumerate $ map fst newText
+    movedDict =
+      map fst newText ^@.. Lens.traversed
+      <&> posMapping
+      & (^.. Lens.traversed . Lens._Just)
+      & Map.fromList
     deletedDict = Map.fromList . map (flip (,) (-1)) $ Set.toList deletedKeys
     posMapping (_, Nothing) = Nothing
     posMapping (newPos, Just oldPos) = Just (oldPos, newPos)
@@ -340,7 +347,7 @@ eventMap cursor str displayStr myId =
     endKeys = [noMods GLFW.Key'End, ctrl GLFW.Key'E]
     textLength = length str
     lineCount = length $ splitWhen (== '\n') displayStr
-    strWithIds = Lens.mapped . _1 %~ Just $ enumerate str
+    strWithIds = str ^@.. Lens.traversed <&> _1 %~ Just
     (before, after) = splitAt cursor strWithIds
 
 make :: Style -> Widget.Id -> String -> Widget.Id -> Widget ((,) String)

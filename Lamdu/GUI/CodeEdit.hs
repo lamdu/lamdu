@@ -8,7 +8,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.MonadA (MonadA)
 import Data.Foldable (Foldable)
 import Data.List (intersperse)
-import Data.List.Utils (enumerate, insertAt, removeAt)
+import Data.List.Utils (insertAt, removeAt)
 import Data.Maybe (listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
@@ -63,7 +63,7 @@ totalWidth = (^. Lens._1) . totalSize
 
 makePanes :: MonadA m => Transaction.Property m [DefI m] -> Guid -> [Pane m]
 makePanes (Property panes setPanes) rootGuid =
-  convertPane <$> enumerate panes
+  panes ^@.. Lens.traversed <&> convertPane
   where
     mkMDelPane i
       | not (null panes) = Just $ do

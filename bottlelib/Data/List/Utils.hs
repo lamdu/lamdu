@@ -1,8 +1,7 @@
 module Data.List.Utils
   ( groupOn
   , sortOn
-  , enumerate
-  , enumerate2d
+  , minimumOn
   , nth
   , index
   , insertAt
@@ -17,7 +16,7 @@ module Data.List.Utils
 
 import Control.Applicative ((<$>))
 import Data.Function (on)
-import Data.List (groupBy, sortBy)
+import Data.List (groupBy, sortBy, minimumBy)
 import Data.Maybe (listToMaybe)
 import Data.Ord (comparing)
 
@@ -27,14 +26,8 @@ groupOn = groupBy . on (==)
 sortOn :: Ord b => (a -> b) -> [a] -> [a]
 sortOn = sortBy . comparing
 
-enumerate :: [a] -> [(Int, a)]
-enumerate = zip [0..]
-
-enumerate2d :: [[a]] -> [[((Int, Int), a)]]
-enumerate2d = map f . enumerate . map enumerate
-  where
-    f (rowIndex, row) = map (g rowIndex) row
-    g rowIndex (colIndex, x) = ((rowIndex, colIndex), x)
+minimumOn :: Ord b => (a -> b) -> [a] -> a
+minimumOn = minimumBy . comparing
 
 nth :: Int -> (a -> a) -> [a] -> [a]
 nth _ _ [] = error "Apply out of bounds"

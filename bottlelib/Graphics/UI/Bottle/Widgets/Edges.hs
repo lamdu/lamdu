@@ -5,9 +5,8 @@ module Graphics.UI.Bottle.Widgets.Edges(
 import           Control.Lens ((^.))
 import qualified Control.Lens as Lens
 import           Control.Monad (mplus)
-import           Data.List (minimumBy)
+import           Data.List.Utils (minimumOn)
 import           Data.Monoid (Monoid(..))
-import           Data.Ord (comparing)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
@@ -29,8 +28,6 @@ choose x y (Direction.Point pt) = chooseRect x y $ Rect pt 0
 chooseRect :: Widget.EnterResult f -> Widget.EnterResult f -> Rect -> Widget.EnterResult f
 chooseRect x y rect =
   minimumOn (Rect.distance rect . (^. Widget.enterResultRect)) [x, y]
-  where
-    minimumOn = minimumBy . comparing
 
 makeVertical :: Widget.Size -> Widget f -> Widget f -> Widget f
 makeVertical size top unTranslatedBottom = Widget
