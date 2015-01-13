@@ -40,6 +40,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.AddNames as AddNames
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
+import qualified Lamdu.Sugar.OrderTags as OrderTags
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -111,6 +112,7 @@ processDefI ::
 processDefI env defI =
   loadDef defI
   >>= SugarConvert.convertDefI (codeProps env)
+  >>= OrderTags.orderDef
   >>= AddNames.addToDef
 
 processPane ::

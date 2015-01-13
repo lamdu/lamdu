@@ -241,6 +241,7 @@ Executable lamdu
                ,       Lamdu.Sugar.Internal
                ,       Lamdu.Sugar.Internal.EntityId
                ,       Lamdu.Sugar.Lens
+               ,       Lamdu.Sugar.OrderTags
                ,       Lamdu.Sugar.RedundantTypes
                ,       Lamdu.Sugar.Types
                ,       Lamdu.Suggest
