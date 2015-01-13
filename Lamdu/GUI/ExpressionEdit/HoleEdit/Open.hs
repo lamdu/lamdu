@@ -379,7 +379,7 @@ make closedHoleGui pl holeInfo = do
     -- Don't generate results of open holes inside hole results
     if isHoleResult
     then return ([], HaveHiddenResults)
-    else HoleResults.makeAll (Config.hole config) holeInfo
+    else HoleResults.makeAll holeInfo
   let
     shownMainResultsIds = rId . (^. HoleResults.rlMain) <$> shownResultsLists
     allShownResultIds = [rId . (^. HoleResults.rlMain), (^. HoleResults.rlExtraResultsPrefixId)] <*> shownResultsLists

@@ -6,34 +6,35 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Results
   , prefixId
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Control.Monad.ListT (ListT)
-import Control.MonadA (MonadA)
-import Data.Function (on)
-import Data.List (isInfixOf, isPrefixOf)
-import Data.List.Utils (sortOn, nonEmptyAll)
-import Data.Monoid (Monoid(..))
-import Data.Monoid.Generic (def_mempty, def_mappend)
-import Data.Store.Transaction (Transaction)
-import GHC.Generics (Generic)
-import Lamdu.Expr.IRef (DefI)
-import Lamdu.Expr.Val (Val(..))
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleIds(..), hiSearchTerm, hiMArgument)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.Sugar.AddNames.Types (Name(..), NameCollision(..))
+import           Control.Applicative (Applicative(..), (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad.ListT (ListT)
+import           Control.MonadA (MonadA)
 import qualified Data.Char as Char
+import           Data.Function (on)
+import           Data.List (isInfixOf, isPrefixOf)
 import qualified Data.List as List
 import qualified Data.List.Class as ListClass
+import           Data.List.Utils (sortOn, nonEmptyAll)
+import           Data.Monoid (Monoid(..))
+import           Data.Monoid.Generic (def_mempty, def_mappend)
+import           Data.Store.Transaction (Transaction)
+import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
+import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleIds(..), hiSearchTerm, hiMArgument)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.AddNames.Types (Name(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -193,16 +194,17 @@ collectResults Config.Hole{..} resultsM = do
         %~ (x :)
 
 makeAll ::
-  MonadA m => Config.Hole -> HoleInfo m ->
+  MonadA m => HoleInfo m ->
   ExprGuiM m ([ResultsList m], HaveHiddenResults)
-makeAll config holeInfo = do
-  allGroups <- ExprGuiM.transaction $ makeAllGroups holeInfo
-  let
-    allGroupsList =
-      ListClass.mapL (makeResultsList holeInfo) $
-      ListClass.fromList allGroups
-    resultList = ListClass.catMaybes allGroupsList
-  ExprGuiM.transaction $ collectResults config resultList
+makeAll holeInfo =
+  do
+    config <- ExprGuiM.widgetEnv WE.readConfig <&> Config.hole
+    makeAllGroups holeInfo
+      <&> ListClass.fromList
+      <&> ListClass.mapL (makeResultsList holeInfo)
+      <&> ListClass.catMaybes
+      >>= collectResults config
+      & ExprGuiM.transaction
 
 getVarTypesOrder :: [Sugar.NamedVarType]
 getVarTypesOrder =
