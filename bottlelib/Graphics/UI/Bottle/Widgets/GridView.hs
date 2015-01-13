@@ -46,8 +46,8 @@ makePlacements rows =
       , Rect (Vector2 (alignX - preX) (alignY - preY)) itemSize
       , a
       )
-    colSizes = posRows & transpose <&> groupSize _1 . map (^. Lens._2)
-    rowSizes = posRows <&> groupSize _2 . map (^. Lens._2)
+    colSizes = posRows & transpose <&> groupSize _1 . map (^. _2)
+    rowSizes = posRows <&> groupSize _2 . map (^. _2)
     posRows = (map . map) calcPos rows
     calcPos (alignment, size, x) = (size, (alignment * size, (1 - alignment) * size), x)
 

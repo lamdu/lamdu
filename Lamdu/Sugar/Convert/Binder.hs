@@ -3,49 +3,50 @@ module Lamdu.Sugar.Convert.Binder
   ( convertBinder, convertLam
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens (Lens')
-import Control.Lens.Operators
-import Control.Monad (guard, void, when)
-import Control.MonadA (MonadA)
-import Data.Foldable (traverse_)
-import Data.Map (Map)
-import Data.Maybe (fromMaybe)
-import Data.Monoid (Monoid(..))
-import Data.Set (Set)
-import Data.Store.Guid (Guid)
-import Data.Store.Property (Property)
-import Data.Store.Transaction (Transaction, MkProperty)
-import Data.Traversable (traverse, sequenceA)
-import Lamdu.Data.Anchors (assocTagOrder)
-import Lamdu.Expr.FlatComposite (FlatComposite(..))
-import Lamdu.Expr.Type (Type)
-import Lamdu.Expr.Val (Val(..))
-import Lamdu.Sugar.Convert.Expression.Actions (addActions)
-import Lamdu.Sugar.Convert.Monad (ConvertM)
-import Lamdu.Sugar.Convert.ParamList (ParamList)
-import Lamdu.Sugar.Internal
-import Lamdu.Sugar.Types
+import           Control.Applicative (Applicative(..), (<$>))
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad (guard, void, when)
+import           Control.MonadA (MonadA)
+import           Data.Foldable (traverse_)
 import qualified Data.List as List
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Maybe (fromMaybe)
+import           Data.Monoid (Monoid(..))
+import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Store.Guid (Guid)
+import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
+import           Data.Store.Transaction (Transaction, MkProperty)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Traversable (traverse, sequenceA)
+import           Lamdu.Data.Anchors (assocTagOrder)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
+import           Lamdu.Expr.FlatComposite (FlatComposite(..))
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
 import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
+import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
+import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Convert.ParamList (ParamList)
 import qualified Lamdu.Sugar.Convert.ParamList as ParamList
+import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.Types
 
 type T = Transaction
 
@@ -402,7 +403,7 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
     paramEntityId = EntityId.ofLambdaParam param
     paramType =
       fromMaybe (error "Lambda value not inferred to a function type?!") $
-      lamExprPl ^? Input.inferred . Infer.plType . ExprLens._TFun . Lens._1
+      lamExprPl ^? Input.inferred . Infer.plType . ExprLens._TFun . _1
 
 isParamAlwaysUsedWithGetField :: V.Lam (Val a) -> Bool
 isParamAlwaysUsedWithGetField (V.Lam param body) =

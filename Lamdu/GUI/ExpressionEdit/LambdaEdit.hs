@@ -36,7 +36,7 @@ make parentPrecedence binder pl =
           Sugar.FieldParams _ -> ExpressionGui.addValFrame myId
           _ -> return
       arrowLabel <- ExpressionGui.grammarLabel "→" $ Widget.toAnimId myId
-      bodyEdit <- BinderEdit.makeResultEdit (binder ^. Sugar.dMActions) params body myId
+      bodyEdit <- BinderEdit.makeResultEdit (binder ^. Sugar.dMActions) params body
       mWheresEdit <-
         BinderEdit.makeWheres (binder ^. Sugar.dWhereItems) myId
       ExpressionGui.hboxSpaced [paramsEdit, arrowLabel, bodyEdit]

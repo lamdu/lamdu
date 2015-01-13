@@ -122,11 +122,11 @@ idOnHole = testInfer "id hole" $ glob [a] "id" $$ holeWithInferredType a
 --     resumptionValue = glob "Bool" -- <- anything but Pi
 --     resumptionPoint =
 --       lamParamType KVal . lamResult KType .
---       V.ePayload . Lens._1
+--       V.ePayload . _1
 -- lamParamType :: Kind -> Lens.Traversal' (V.Expr def par a) (V.Expr def par a)
--- lamParamType k = ExprLens.exprKindedLam k . Lens._2
+-- lamParamType k = ExprLens.exprKindedLam k . _2
 -- lamResult :: Kind -> Lens.Traversal' (V.Expr def par a) (V.Expr def par a)
--- lamResult k = ExprLens.exprKindedLam k . Lens._3
+-- lamResult k = ExprLens.exprKindedLam k . _3
 
 -- testRecurseResumption =
 --   testInfer "Resumption with recursion" $
@@ -259,11 +259,11 @@ factorialExpr =
 --     iset = holeWithInferredType set
 --     -- TODO: Use proper infrastructure
 --     expr = lambda "x" iset . const $ recurse (hole ~> hole) $$ hole
---     xGuid = expr ^?! ExprLens.exprKindedLam KVal . Lens._1
+--     xGuid = expr ^?! ExprLens.exprKindedLam KVal . _1
 --     scopeAtPoint =
 --       lamResult KVal .
 --       ExprLens.exprApply . V.applyArg .
---       V.ePayload . Lens._1 . InferDeref.dScope
+--       V.ePayload . _1 . InferDeref.dScope
 
 euler1Expr =
   glob [] "sum" $$
@@ -292,8 +292,8 @@ solveDepressedQuarticExpr =
   ( lambda "x" intType $ \x ->
     whereItem "r"
     ( glob [] "sqrt" $$ x
-    ) $ \r ->
-    nonEmptyList [r, glob [] "negate" $$ r]
+    ) $ \rr ->
+    nonEmptyList [rr, glob [] "negate" $$ rr]
   )
   $ \sqrts ->
   glob [iListInt] "if" $$:

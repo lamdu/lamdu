@@ -22,29 +22,30 @@ module Data.Store.Transaction
   )
 where
 
-import Control.Applicative (Applicative, (<$>), (<|>))
-import Control.Lens.Operators
-import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.State (StateT, runStateT)
-import Control.MonadA (MonadA)
-import Data.Binary (Binary)
-import Data.Binary.Utils (encodeS, decodeS)
-import Data.ByteString (ByteString)
-import Data.Map (Map)
-import Data.Maybe (fromMaybe, isJust)
-import Data.Monoid (mempty)
-import Data.Store.Guid (Guid)
-import Data.Store.IRef (IRef)
-import Data.Store.Rev.Change (Key, Value)
-import Prelude hiding (lookup)
+import           Control.Applicative (Applicative, (<$>), (<|>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad.Trans.Class (MonadTrans(..))
+import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
+import           Control.Monad.Trans.State (StateT, runStateT)
 import qualified Control.Monad.Trans.State as State
+import           Control.MonadA (MonadA)
+import           Data.Binary (Binary)
+import           Data.Binary.Utils (encodeS, decodeS)
+import           Data.ByteString (ByteString)
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Maybe (fromMaybe, isJust)
+import           Data.Monoid (mempty)
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.Guid as Guid
+import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
+import           Data.Store.Rev.Change (Key, Value)
+import           Prelude hiding (lookup)
 
 type ChangesMap = Map Key (Maybe Value)
 
@@ -109,7 +110,7 @@ fork (Transaction discardableTrans) = do
     & (`runReaderT` askable)
     & (`runStateT` mempty)
     & liftInner
-    <&> Lens._2 %~ Changes
+    <&> _2 %~ Changes
 
 merge :: MonadA m => Changes -> Transaction m ()
 merge (Changes changes) =

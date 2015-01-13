@@ -16,22 +16,23 @@ module Lamdu.Expr.IRef
   , ValTree(..), ValTreeM, writeValTree
   ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.Binary (Binary(..))
-import Data.Function.Decycle (decycle)
-import Data.Store.IRef (IRef)
-import Data.Store.Property (Property(..))
-import Data.Store.Transaction (Transaction)
-import Data.Traversable (traverse)
-import Lamdu.Expr.Identifier (Identifier(..))
-import Lamdu.Expr.Val (Val(..))
+import           Control.Applicative ((<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.MonadA (MonadA)
+import           Data.Binary (Binary(..))
+import           Data.Function.Decycle (decycle)
 import qualified Data.Store.Guid as Guid
+import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
+import           Data.Store.Property (Property(..))
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Traversable (traverse)
 import qualified Lamdu.Data.Definition as Definition
+import           Lamdu.Expr.Identifier (Identifier(..))
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 
 type T = Transaction
@@ -72,7 +73,7 @@ writeValBody ::
 writeValBody = Transaction.writeIRef . unValI
 
 newVal :: MonadA m => Val () -> T m (ValI m)
-newVal = fmap (^. V.payload . Lens._1) . newValFromH . ((,) Nothing <$>)
+newVal = fmap (^. V.payload . _1) . newValFromH . ((,) Nothing <$>)
 
 -- Returns expression with new Guids
 writeVal ::
@@ -88,9 +89,9 @@ writeValWithStoredSubexpressions ::
 writeValWithStoredSubexpressions iref expr = do
   exprBodyP <- expressionBodyFrom expr
   exprBodyP
-    <&> (^. V.payload . Lens._1)
+    <&> (^. V.payload . _1)
     & writeValBody iref
-  return $ Val (iref, expr ^. V.payload . Lens._2) exprBodyP
+  return $ Val (iref, expr ^. V.payload . _2) exprBodyP
 
 readVal ::
   MonadA m => ValI m -> T m (Val (ValI m))
@@ -119,7 +120,7 @@ newValFromH expr =
     body <- expressionBodyFrom expr
     exprI <-
       body
-      <&> (^. V.payload . Lens._1)
+      <&> (^. V.payload . _1)
       & Transaction.newIRef
     return $ Val (ValI exprI, pl) body
   where
@@ -136,7 +137,7 @@ addProperties setIRef (Val (iref, a) body) =
     f index =
       addProperties $ \newIRef ->
       body
-      <&> (^. V.payload . Lens._1) -- convert to body of IRefs
+      <&> (^. V.payload . _1) -- convert to body of IRefs
       & Lens.element index .~ newIRef
       & writeValBody iref
 

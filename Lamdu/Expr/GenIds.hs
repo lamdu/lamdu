@@ -83,7 +83,7 @@ onNgMakeName onMakeName =
           nameGen
           { ngMakeName =
             ngMakeName nameGen
-            & Lens.mapped . Lens.mapped . Lens._2 %~ go
+            & Lens.mapped . Lens.mapped . _2 %~ go
             & onMakeName result
           , ngSplit =
             ngSplit nameGen
@@ -93,7 +93,7 @@ onNgMakeName onMakeName =
 randomNameGen :: RandomGen g => g -> NameGen V.Var dummy
 randomNameGen g = NameGen
   { ngSplit = Random.split g & Lens.both %~ randomNameGen
-  , ngMakeName = const . const $ randomVar g & Lens._2 %~ randomNameGen
+  , ngMakeName = const . const $ randomVar g & _2 %~ randomNameGen
   }
 
 randomizeParamIdsG ::

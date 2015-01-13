@@ -17,6 +17,7 @@ module Lamdu.GUI.BottleWidgets
 import           Control.Applicative (Applicative(..), (*>), (<$>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Monad (when)
 import           Control.MonadA (MonadA)
 import           Data.ByteString.Char8 (pack)
@@ -258,7 +259,7 @@ makeChoiceWidget choose children curChild config myId = do
           (Widget.toAnimId myId) color w
       _ -> w
     pairs = map mkPair children
-    childFocused = any (^. Lens._2 . Widget.wIsFocused) children
+    childFocused = any (^. _2 . Widget.wIsFocused) children
     mkPair (item, widget) =
       ( item
       , widget

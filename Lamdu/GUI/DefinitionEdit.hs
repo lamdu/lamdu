@@ -7,6 +7,7 @@ module Lamdu.GUI.DefinitionEdit
 import           Control.Applicative ((<$>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
 import           Data.Traversable (sequenceA)
@@ -96,7 +97,7 @@ typeIndicator width color myId =
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
       typeIndicatorHeight =
-        realToFrac $ Config.typeIndicatorFrameWidth config ^. Lens._2
+        realToFrac $ Config.typeIndicatorFrameWidth config ^. _2
     Anim.unitSquare (Widget.toAnimId (typeIndicatorId myId))
       & View 1
       & Widget.liftView

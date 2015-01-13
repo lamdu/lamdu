@@ -12,12 +12,13 @@ module Graphics.UI.Bottle.Widgets.Box
   , hbox, vbox
   ) where
 
-import Control.Lens (Lens', (^.))
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Widget (Widget, Size)
-import Graphics.UI.Bottle.Widgets.Grid (KGrid(..))
+import           Control.Lens (Lens', (^.))
 import qualified Control.Lens as Lens
+import           Control.Lens.Tuple
+import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.UI.Bottle.Rect (Rect(..))
+import           Graphics.UI.Bottle.Widget (Widget, Size)
+import           Graphics.UI.Bottle.Widgets.Grid (KGrid(..))
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
 type Cursor = Int
@@ -41,7 +42,7 @@ horizontal :: Orientation
 horizontal = Orientation
   { oToGridCursor = (`Vector2` 0)
   , oToGridChildren = (: [])
-  , oFromGridCursor = (^. Lens._1)
+  , oFromGridCursor = (^. _1)
   , oFromGridChildren = eHead
   }
 
@@ -49,7 +50,7 @@ vertical :: Orientation
 vertical = Orientation
   { oToGridCursor = (0 `Vector2`)
   , oToGridChildren = map (: [])
-  , oFromGridCursor = (^. Lens._2)
+  , oFromGridCursor = (^. _2)
   , oFromGridChildren = map eHead
   }
 

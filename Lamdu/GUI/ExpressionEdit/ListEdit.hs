@@ -1,18 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.ListEdit(make) where
 
-import Control.Applicative ((<$>), (<$), Applicative(..))
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.Monoid (Monoid(..), (<>))
-import Lamdu.GUI.ExpressionGui (ExpressionGui)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, holePickersAction)
+import           Control.Applicative ((<$>), (<$), Applicative(..))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.MonadA (MonadA)
+import           Data.Monoid (Monoid(..), (<>))
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, holePickersAction)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -53,7 +54,7 @@ makeUnwrapped list myId =
         nextEdits <- mapM makeItem nextValues
 
         jumpHolesEventMap <-
-          firstValue ^. Lens._3 . Sugar.liExpr
+          firstValue ^. _3 . Sugar.liExpr
           & ExprGuiM.nextHolesBefore
           & ExprEventMap.jumpHolesEventMap []
         let
@@ -117,7 +118,7 @@ makeItem (_, nextId, item) = do
     , ExprGuiM.makeSubexpression 0 itemExpr
     )
   return $ pair
-    & Lens._2 . ExpressionGui.egWidget %~
+    & _2 . ExpressionGui.egWidget %~
     Widget.weakerEvents
     (maybe mempty (mkItemEventMap resultPickers) (item ^. Sugar.liMActions))
   where

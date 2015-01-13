@@ -59,7 +59,7 @@ joinLines ::
 joinLines =
   drawMany vertical
   where
-    vertical = Lens._1 .~ 0
+    vertical = _1 .~ 0
 
 nestedFrame ::
   Show a => (a, (Draw.Image (), Size)) -> (AnimId -> Anim.Frame, Size)
@@ -74,12 +74,12 @@ drawTextAsSingleLetters ::
 drawTextAsSingleLetters style text =
   joinLines $
   map
-  ((Lens._2 %~ max minLineSize) . drawMany horizontal .
-   map (nestedFrame . (Lens._2 %~ renderLetter))) .
+  ((_2 %~ max minLineSize) . drawMany horizontal .
+   map (nestedFrame . (_2 %~ renderLetter))) .
   splitWhen ((== '\n') . snd) $ text ^@.. Lens.traversed
   where
     (_, minLineSize) = fontRender style ""
-    horizontal = Lens._2 .~ 0
+    horizontal = _2 .~ 0
     renderLetter = fontRender style . (:[])
 
 -- | Returns at least one rect
@@ -94,7 +94,7 @@ letterRects style text =
     makeLine textLine =
       -- scanl returns at least one element
       zipWith makeLetterRect sizes . scanl (+) 0 .
-      map (^. Lens._1) $ sizes
+      map (^. _1) $ sizes
       where
         sizes = map toSize textLine
         toSize = snd . fontRender style . (:[])

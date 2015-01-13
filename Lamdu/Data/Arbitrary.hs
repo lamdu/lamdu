@@ -2,25 +2,27 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Lamdu.Data.Arbitrary (Name(..)) where
 
-import Control.Applicative (Applicative(..), (<$>), (<*))
-import Control.Lens (Lens', (%~))
-import Control.Monad (replicateM, join)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.State (StateT, evalStateT)
-import Data.Map (Map)
-import Data.String (IsString(..))
-import Lamdu.Expr.Identifier (Identifier(..))
-import Lamdu.Expr.Scheme (Scheme)
-import Lamdu.Expr.Val (Val(..))
-import Test.QuickCheck (Arbitrary(..), Gen)
+import           Control.Applicative (Applicative(..), (<$>), (<*))
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad (replicateM, join)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
+import           Control.Monad.Trans.State (StateT, evalStateT)
 import qualified Control.Monad.Trans.State as State
 import qualified Data.ByteString as BS
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.String (IsString(..))
+import           Lamdu.Expr.Identifier (Identifier(..))
+import           Lamdu.Expr.Scheme (Scheme)
 import qualified Lamdu.Expr.Type as T
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Test.QuickCheck (Arbitrary(..), Gen)
 import qualified Test.QuickCheck.Gen as Gen
 
 data Env = Env
@@ -69,7 +71,7 @@ arbitraryLeaf = do
 
 arbitraryBody :: Arbitrary a => GenExpr (V.Body (Val a))
 arbitraryBody =
-  join . liftGen . Gen.frequency . (Lens.mapped . Lens._2 %~ pure) $
+  join . liftGen . Gen.frequency . (Lens.mapped . _2 %~ pure) $
   [ weight 2  $ V.BAbs         <$> arbitraryLam
   , weight 2  $ V.BRecExtend   <$> arbitraryRecExtend
   , weight 2  $ V.BGetField    <$> arbitraryGetField

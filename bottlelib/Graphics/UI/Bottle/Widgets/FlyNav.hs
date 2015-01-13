@@ -10,6 +10,7 @@ import           Control.Applicative (Applicative(..), liftA2, (*>))
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Monad (void)
 import           Data.Monoid (Monoid(..), (<>))
 import           Data.Vector.Vector2 (Vector2(..))
@@ -144,7 +145,7 @@ zipped :: [a] -> [(a, [a])]
 zipped [] = []
 zipped (x:xs) =
   (x, xs) :
-  (Lens.mapped . Lens._2 %~ (x:)) (zipped xs)
+  (Lens.mapped . _2 %~ (x:)) (zipped xs)
 
 focalCenter :: Lens' (Widget f) (Vector2 Widget.R)
 focalCenter = Widget.wFocalArea . Rect.center

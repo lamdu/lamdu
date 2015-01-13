@@ -19,7 +19,7 @@ import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val(..))
-import Lamdu.Infer (Infer(..))
+import Lamdu.Infer (Infer, InferCtx(..))
 import Lamdu.Infer.Error (Error)
 import System.IO (hPutStrLn, stderr)
 import Test.Framework (plusTestOptions)
@@ -180,7 +180,7 @@ handleResumption ::
   (ExprComplete -> Infer ()) -> ExprComplete ->
   WriterT (Monoid.Any, Monoid.Any) Infer ExprComplete
 handleResumption verifyInfersOnSide =
-  lift . Update.inferredVal <=< go
+  lift . Update.liftInfer . Update.inferredVal <=< go
   where
     recurseBody body pl = Val pl <$> Lens.traverse go body
     go (Val pl body) =
@@ -190,7 +190,7 @@ handleResumption verifyInfersOnSide =
         lift $ loadInferInto (pl ^. _1) newExpr
       ResumeOnSide newExpr resumptions -> do
         Writer.tell (Monoid.Any True, Monoid.Any True)
-        lift $ verifyInfersOnSide =<< Update.inferredVal =<<
+        lift $ verifyInfersOnSide =<< Update.liftInfer . Update.inferredVal =<<
           loadInferScope (pl ^. _1 . Infer.plScope) newExpr
         recurseBody body $ pl & _2 .~ resumptions
       NewInferred resumptions -> do

@@ -1,27 +1,28 @@
 {-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, OverloadedStrings #-}
 module InferCombinators where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens (Lens')
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Data.Foldable (Foldable)
-import Data.Maybe (fromMaybe)
-import Data.Traversable (Traversable)
-import DefinitionTypes
-import Lamdu.Data.Arbitrary () -- Arbitrary instance
-import Lamdu.Expr.Scheme (Scheme(..))
-import Lamdu.Expr.Type (Type)
-import Lamdu.Expr.TypeVars (TypeVars(..))
-import Lamdu.Expr.Val (Val(..))
-import Text.PrettyPrint ((<+>))
-import Text.PrettyPrint.HughesPJClass (Pretty(..))
+import           Control.Applicative (Applicative(..), (<$>))
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Data.Foldable (Foldable)
 import qualified Data.Map as Map
+import           Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
+import           Data.Traversable (Traversable)
+import           DefinitionTypes
+import           Lamdu.Data.Arbitrary ()
+import           Lamdu.Expr.Scheme (Scheme(..))
+import qualified Lamdu.Expr.Scheme as Scheme
+import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
+import           Lamdu.Expr.TypeVars (TypeVars(..))
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Text.PrettyPrint ((<+>))
 import qualified Text.PrettyPrint as PP
+import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 
 data ResumptionStep
   -- Any resumptions will have no effect:
@@ -113,7 +114,7 @@ compositeTypeExtend tag typ base =
 -- TODO: Re-use Subst and re-expose??
 instantiate :: Scheme -> [(T.Var Type, Type)] -> Type
 instantiate scheme typeVarAssignments =
-  onTVars subst (schemeType scheme)
+  onTVars subst (scheme ^. Scheme.schemeType)
   where
     subst =
       fromMaybe (error "Missing type var assignment") .
@@ -134,7 +135,7 @@ glob typeVarAssignments globalId
     scheme =
       fromMaybe (error ("global " ++ show globalId ++ " does not exist")) $
       Map.lookup globalId definitionTypes
-    TypeVars tvs rtvs = schemeForAll scheme
+    TypeVars tvs rtvs = scheme ^. Scheme.schemeForAll
     typeVarAssignments' = zip (Set.toList tvs) typeVarAssignments
 
 intType :: TypeStream

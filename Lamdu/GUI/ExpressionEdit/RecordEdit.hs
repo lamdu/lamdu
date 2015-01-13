@@ -4,8 +4,8 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
   ) where
 
 import           Control.Applicative ((<$>))
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import qualified Data.List as List
 import           Data.Monoid (Monoid(..), (<>))
@@ -52,7 +52,7 @@ makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) = do
   space <-
     BWidgets.stdSpaceWidget & ExprGuiM.widgetEnv <&> ExpressionGui.fromValueWidget
   [(1, fieldRefGui), (0.5, space), (0, fieldExprGui)]
-    <&> Lens._2 . ExpressionGui.egWidget %~ Widget.weakerEvents itemEventMap
+    <&> _2 . ExpressionGui.egWidget %~ Widget.weakerEvents itemEventMap
     & return
 
 makeFieldsWidget ::

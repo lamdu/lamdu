@@ -154,7 +154,7 @@ make ::
   ExprGuiM m (ExpressionGui m)
 make name binder myId = do
   rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
-  bodyEdit <- makeResultEdit (binder ^. Sugar.dMActions) params body myId
+  bodyEdit <- makeResultEdit (binder ^. Sugar.dMActions) params body
   presentationEdits <-
     traverse (mkPresentationModeEdit presentationChoiceId) $
     binder ^.. Sugar.dSetPresentationMode . Lens._Just
@@ -218,9 +218,8 @@ makeResultEdit ::
   Maybe (Sugar.BinderActions m) ->
   Sugar.BinderParams name m ->
   ExprGuiM.SugarExpr m ->
-  Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makeResultEdit mActions params result myId = do
+makeResultEdit mActions params result = do
   savePos <- ExprGuiM.mkPrejumpPosSaver
   config <- ExprGuiM.widgetEnv WE.readConfig
   let

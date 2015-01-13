@@ -2,40 +2,41 @@
 {-# LANGUAGE RecordWildCards, OverloadedStrings, TypeFamilies #-}
 module Lamdu.GUI.CodeEdit (make, Env(..)) where
 
-import Control.Applicative ((<$>), (<*>))
-import Control.Lens.Operators
-import Control.Monad.Trans.Class (lift)
-import Control.MonadA (MonadA)
-import Data.Foldable (Foldable)
-import Data.List (intersperse)
-import Data.List.Utils (insertAt, removeAt)
-import Data.Maybe (listToMaybe)
-import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
-import Data.Store.Property (Property(..))
-import Data.Store.Transaction (Transaction)
-import Data.Traversable (Traversable, traverse)
-import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Expr.IRef (DefI)
-import Lamdu.Expr.Load (loadDef)
-import Lamdu.GUI.CodeEdit.Settings (Settings)
-import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
-import Lamdu.Sugar.AddNames.Types (DefinitionN)
+import           Control.Applicative ((<$>), (<*>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad.Trans.Class (lift)
+import           Control.MonadA (MonadA)
+import           Data.Foldable (Foldable)
+import           Data.List (intersperse)
+import           Data.List.Utils (insertAt, removeAt)
+import           Data.Maybe (listToMaybe)
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
+import           Data.Store.Property (Property(..))
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Traversable (Traversable, traverse)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
+import           Lamdu.Expr.IRef (DefI)
+import           Lamdu.Expr.Load (loadDef)
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
+import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.AddNames as AddNames
+import           Lamdu.Sugar.AddNames.Types (DefinitionN)
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.OrderTags as OrderTags
@@ -57,7 +58,7 @@ data Env m = Env
   }
 
 totalWidth :: Env m -> Widget.R
-totalWidth = (^. Lens._1) . totalSize
+totalWidth = (^. _1) . totalSize
 
 makePanes :: MonadA m => Transaction.Property m [DefI m] -> Guid -> [Pane m]
 makePanes (Property panes setPanes) rootGuid =

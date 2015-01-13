@@ -26,40 +26,41 @@ module Lamdu.GUI.ExpressionGui.Monad
   , run
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens.Operators
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.RWS (RWST, runRWST)
-import Control.MonadA (MonadA)
-import Data.Binary (Binary)
-import Data.Monoid (Monoid(..))
-import Data.Store.Transaction (Transaction)
-import Graphics.UI.Bottle.Animation.Id (AnimId)
-import Graphics.UI.Bottle.Widget (Widget)
-import Graphics.UI.Bottle.WidgetId (toAnimId)
-import Lamdu.GUI.CodeEdit.Settings (Settings)
-import Lamdu.GUI.ExpressionGui.Types (ExpressionGui(..), WidgetT)
-import Lamdu.GUI.Precedence (ParentPrecedence(..), Precedence)
-import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
-import Lamdu.Sugar.AddNames.Types (ExpressionN)
-import Lamdu.Sugar.NearestHoles (NearestHoles)
-import Lamdu.Sugar.RedundantTypes (redundantTypes)
+import           Control.Applicative (Applicative(..), (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.RWS (RWST, runRWST)
 import qualified Control.Monad.Trans.RWS as RWS
+import           Control.MonadA (MonadA)
+import           Data.Binary (Binary)
 import qualified Data.Char as Char
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Animation.Id (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.WidgetId (toAnimId)
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui(..), WidgetT)
+import           Lamdu.GUI.Precedence (ParentPrecedence(..), Precedence)
+import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.AddNames.Types (ExpressionN)
 import qualified Lamdu.Sugar.Lens as SugarLens
+import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
+import           Lamdu.Sugar.RedundantTypes (redundantTypes)
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -211,7 +212,7 @@ wrapDelegated =
 listener :: MonadA m => (Output m -> b) -> ExprGuiM m a -> ExprGuiM m (a, b)
 listener f =
   exprGuiM %~ RWS.listen
-  & Lens.mapped . Lens.mapped . Lens._2 %~ f
+  & Lens.mapped . Lens.mapped . _2 %~ f
 
 listenResultPickers :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, HolePickers m)
 listenResultPickers = listener oHolePickers

@@ -2,8 +2,8 @@ module Graphics.UI.Bottle.Widgets.Edges(
   makeVertical
   ) where
 
-import           Control.Lens ((^.))
-import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Monad (mplus)
 import           Data.List.Utils (minimumOn)
 import           Data.Monoid (Monoid(..), (<>))
@@ -58,4 +58,4 @@ makeVertical size top unTranslatedBottom = Widget
     bottom = Widget.translate (Vector2 0 (max topHeight bottomsTop)) unTranslatedBottom
     topHeight = top ^. Widget.wHeight
     bottomHeight = unTranslatedBottom ^. Widget.wHeight
-    bottomsTop = size ^. Lens._2 - bottomHeight
+    bottomsTop = size ^. _2 - bottomHeight

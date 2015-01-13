@@ -8,6 +8,7 @@ import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Monad (guard, msum, when)
 import           Control.MonadA (MonadA)
 import           Data.List.Lens (suffixed)
@@ -61,12 +62,12 @@ compose = foldr (.) id
 eventResultOfPickedResult :: Sugar.PickedResult -> PickedResult
 eventResultOfPickedResult pr =
   PickedResult
-  { _pickedInnerHoleGuid = pr ^? Sugar.prMJumpTo . Lens._Just . Lens._1
+  { _pickedInnerHoleGuid = pr ^? Sugar.prMJumpTo . Lens._Just . _1
   , _pickedEventResult =
     Widget.EventResult
     { Widget._eCursor =
       Monoid.Last $
-      WidgetIds.fromEntityId <$> pr ^? Sugar.prMJumpTo . Lens._Just . Lens._2
+      WidgetIds.fromEntityId <$> pr ^? Sugar.prMJumpTo . Lens._Just . _2
     , Widget._eAnimIdMapping =
       Monoid.Endo $ pickedResultAnimIdTranslation $ pr ^. Sugar.prIdTranslation
     }

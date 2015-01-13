@@ -212,7 +212,7 @@ mkCursorRect style cursor str = Rect cursorPos cursorSize
     cursorSize = Vector2 (style ^. sCursorWidth) lineHeight
     cursorPosX =
       textViewDraw style (last beforeCursorLines) ^.
-      Lens._2 . Lens._1
+      _2 . _1
     cursorPosY = lineHeight * (genericLength beforeCursorLines - 1)
 
 eventMap ::
