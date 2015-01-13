@@ -53,6 +53,9 @@ data Pane = Pane
   , paneCloseKeys :: [ModKey]
   , paneMoveDownKeys :: [ModKey]
   , paneMoveUpKeys :: [ModKey]
+  , -- Need some padding on top because of on-top hovers, this decides
+    -- how much:
+    paneHoverPadding :: Draw.R
   , newDefinitionKeys :: [ModKey]
   } deriving (Eq, Generic, Show)
 

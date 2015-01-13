@@ -1,56 +1,58 @@
 {-# LANGUAGE OverloadedStrings, Rank2Types, RecordWildCards #-}
 module Main (main) where
 
-import Control.Applicative ((<$>), (<*))
-import Control.Concurrent (threadDelay, forkIO, ThreadId)
-import Control.Concurrent.MVar
-import Control.Lens (Lens')
-import Control.Lens.Operators
-import Control.Monad (unless, forever, replicateM_)
-import Control.Monad.Trans.State (execStateT)
-import Data.IORef
-import Data.MRUMemo (memoIO)
-import Data.Maybe
-import Data.Monoid (Monoid(..))
-import Data.Store.Db (Db)
-import Data.Store.Guid (Guid)
-import Data.Store.Transaction (Transaction)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.MainLoop (mainLoopWidget)
-import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Config (Config)
-import Lamdu.GUI.CodeEdit.Settings (Settings(..))
-import Lamdu.GUI.WidgetEnvT (runWidgetEnvT)
-import Lamdu.VersionControl.Actions (mUndo)
-import Paths_lamdu_ide (getDataFileName)
-import System.Environment (getArgs)
-import System.FilePath ((</>))
+import           Control.Applicative ((<$>), (<*))
+import           Control.Concurrent (threadDelay, forkIO, ThreadId)
+import           Control.Concurrent.MVar
 import qualified Control.Exception as E
+import           Control.Lens (Lens')
+import           Control.Lens.Operators
+import           Control.Monad (unless, forever, replicateM_)
+import           Control.Monad.Trans.State (execStateT)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
+import           Data.IORef
+import           Data.MRUMemo (memoIO)
+import           Data.Maybe
+import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
+import           Data.Store.Db (Db)
 import qualified Data.Store.Db as Db
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import           Graphics.UI.Bottle.MainLoop (mainLoopWidget)
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.ExampleDB as ExampleDB
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
+import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
+import           Lamdu.GUI.WidgetEnvT (runWidgetEnvT)
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.VersionControl as VersionControl
+import           Lamdu.VersionControl.Actions (mUndo)
+import           Paths_lamdu_ide (getDataFileName)
 import qualified System.Directory as Directory
+import           System.Environment (getArgs)
+import           System.FilePath ((</>))
 
 data ParsedOpts = ParsedOpts
   { _poShouldDeleteDB :: Bool
@@ -366,11 +368,20 @@ makeRootWidget config settings style dbToIO fullSize cursor = do
   actions <- VersionControl.makeActions
   runWidgetEnvT cursor style config $ do
     branchGui <-
-      VersionControlGUI.make id fullSize actions $ \size ->
-        CodeEdit.make (env size) rootGuid
-        & WE.mapWidgetEnvT VersionControl.runAction
-        <&> Widget.wEvents %~ VersionControl.runEvent cursor
-        <&> Widget.padToSizeAlign size (Vector2 0 0)
+      VersionControlGUI.make id actions $ \branchSelector ->
+        do
+          let hoverPadding = Spacer.makeWidget (Vector2 0 (Config.paneHoverPadding (Config.pane config)))
+          let nonCodeHeight =
+                hoverPadding   ^. Widget.wHeight +
+                branchSelector ^. Widget.wHeight
+          let codeSize = fullSize - Vector2 0 nonCodeHeight
+          codeEdit <-
+            CodeEdit.make (env codeSize) rootGuid
+            & WE.mapWidgetEnvT VersionControl.runAction
+            <&> Widget.wEvents %~ VersionControl.runEvent cursor
+            <&> Widget.padToSizeAlign codeSize 0
+          Box.vbox [(0.5, hoverPadding), (0.5, codeEdit), (0.5, branchSelector)]
+            & return
     let
       quitEventMap =
         Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")

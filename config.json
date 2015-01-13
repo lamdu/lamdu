@@ -135,7 +135,8 @@
                 },
                 "Key'Down"
             ]
-        ]
+        ],
+        "paneHoverPadding": 70
     },
     "versionControl": {
         "undoKeys": [
