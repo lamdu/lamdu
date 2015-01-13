@@ -1,25 +1,33 @@
 module Graphics.UI.Bottle.Widgets.GridView
-  ( make, makeAlign, makeCentered
-  , makeGeneric
+  ( make, makePlacements, makeAlign, makeCentered
   , Alignment
   , verticalAlign, vertical
   , horizontalAlign, horizontal
   ) where
 
-import Control.Arrow ((&&&))
-import Control.Lens.Operators
-import Data.List (transpose)
-import Data.Monoid (Monoid(..))
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.View (View)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Data.List (transpose)
+import           Data.Monoid (Monoid(..))
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.Animation as Anim
+import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import           Graphics.UI.Bottle.View (View)
 
 type Alignment = Vector2 Anim.R -- ^ 0..1
 
-makePlacements :: [[(Alignment, Anim.Size)]] -> (Anim.Size, [[(Alignment, Rect)]])
+groupSize :: (Num a, Ord a) => Lens.Getting a b a -> [(b, b)] -> (a, a)
+groupSize dim group =
+  (alignmentPos + maxSize snd, alignmentPos)
+  where
+    alignmentPos = maxSize fst
+    maxSize f = maximum $ map ((^. dim) . f) group
+
+makePlacements ::
+  [[(Alignment, Anim.Size, a)]] ->
+  (Anim.Size, [[(Alignment, Rect, a)]])
 makePlacements rows =
   ( Vector2 width height
   , zipWith rowResult (zipWith alignPos rowPos rowSizes) posRows
@@ -32,39 +40,33 @@ makePlacements rows =
     alignPos pos (_, align) = pos + align
     groupPos = scanl (+) 0 . map fst
     rowResult rowSize = zipWith (itemResult rowSize) (zipWith alignPos colPos colSizes)
-    itemResult alignY alignX (itemSize, (Vector2 preX preY, _)) =
+    itemResult alignY alignX (itemSize, (Vector2 preX preY, _), a) =
       ( Vector2 (alignX / width) (alignY / height)
       , Rect (Vector2 (alignX - preX) (alignY - preY)) itemSize
+      , a
       )
-    colSizes = map (groupSize Lens._1) $ transpose posRows
-    rowSizes = map (groupSize Lens._2) posRows
-    groupSize dim group =
-      (alignmentPos + maxSize snd, alignmentPos)
-      where
-        alignmentPos = maxSize fst
-        maxSize f = maximum $ map ((^. dim) . f . snd) group
+    colSizes = posRows & transpose <&> groupSize _1 . map (^. Lens._2)
+    rowSizes = posRows <&> groupSize _2 . map (^. Lens._2)
     posRows = (map . map) calcPos rows
-    calcPos (alignment, size) = (size, (alignment * size, (1 - alignment) * size))
+    calcPos (alignment, size, x) = (size, (alignment * size, (1 - alignment) * size), x)
 
 --- Displays:
-
--- Used by both make and Grid's make.
-makeGeneric :: (Alignment -> Rect -> a -> b) -> [[(Alignment, (Anim.Size, a))]] -> (Anim.Size, [[b]])
--- Special case to preserve shape to avoid handling it above in
--- "maximum", "transpose", etc
-makeGeneric translate rows =
-  makePlacements szAlignments
-  & Lens._2 %~ place
-  where
-    szAlignments = (map . map) (fst &&& fst . snd) rows
-    items = (map . map) (snd . snd) rows
-    place aRects = (zipWith . zipWith) (uncurry translate) aRects items
 
 make :: [[(Alignment, View)]] -> View
 make views =
   views
-  & makeGeneric (const (Anim.translate . (^. Rect.topLeft)))
-  & Lens._2 %~ mconcat . concat
+  & Lens.mapped . Lens.mapped %~ toTriplet
+  & makePlacements
+  & _2 %~ toView
+  where
+    toTriplet (alignment, (size, frame)) = (alignment, size, frame)
+    translate (_alignment, rect, view) =
+      Anim.translate (rect ^. Rect.topLeft) view
+    toView placements =
+      placements
+      & concat
+      <&> translate
+      & mconcat
 
 makeAlign :: Alignment -> [[View]] -> View
 makeAlign alignment views =

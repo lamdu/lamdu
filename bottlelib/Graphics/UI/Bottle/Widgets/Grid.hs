@@ -175,13 +175,14 @@ makeKeyed children = KGrid
   }
   where
     (size, content) =
-      GridView.makeGeneric translate $
-      (map . map) mkSizedKeyedContent children
-    mkSizedKeyedContent (key, (alignment, widget)) =
-      (alignment, (widget ^. Widget.wSize, (key, widget)))
-    translate align rect =
-      _2 %~
-      Element align rect . Widget.translate (rect ^. Rect.topLeft)
+      children
+      & Lens.mapped . Lens.mapped %~ toTriplet
+      & GridView.makePlacements
+      & _2 . Lens.mapped . Lens.mapped %~ translate
+    toTriplet (key, (alignment, widget)) =
+      (alignment, widget ^. Widget.wSize, (key, widget))
+    translate (alignment, rect, (key, widget)) =
+      (key, Element alignment rect (Widget.translate (rect ^. Rect.topLeft) widget))
 
 unkey :: [[(Alignment, Widget f)]] -> [[((), (Alignment, Widget f))]]
 unkey = (map . map) ((,) ())
