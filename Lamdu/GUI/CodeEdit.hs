@@ -117,7 +117,7 @@ processDefI env defI =
 
 processPane ::
   MonadA m => Env m -> Pane m ->
-  T m (Pane m, (DefinitionN m [Sugar.EntityId]))
+  T m (Pane m, DefinitionN m [Sugar.EntityId])
 processPane env pane =
   processDefI env (paneDefI pane)
   <&> (,) pane

@@ -15,66 +15,60 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
--- TODO: read order of tags
-orderComposite ::
-    MonadA m => T.Composite T.Product -> m (T.Composite T.Product)
+type Order m x = x -> m x
+
+orderByTag :: MonadA m => (a -> T.Tag) -> Order m [a]
+orderByTag = const return -- TODO
+
+orderComposite :: MonadA m => Order m (T.Composite T.Product)
 orderComposite c =
     fields
     & Map.toList
-    & return -- TODO: order fields
+    & orderByTag fst
     <&> foldr (uncurry T.CExtend) (maybe T.CEmpty T.CVar mExt)
     where
         FlatComposite fields mExt = FlatComposite.fromComposite c
 
-orderType :: MonadA m => Type -> m Type
+orderType :: MonadA m => Order m Type
 orderType = ExprLens._TRecord %%~ orderComposite
 
-orderRecordFields :: MonadA m =>
-    [Sugar.RecordField name f (Sugar.Expression name f a)] ->
-    m [Sugar.RecordField name f (Sugar.Expression name f a)]
+orderRecordFields ::
+    MonadA m => Order m [Sugar.RecordField name f (Sugar.Expression name f a)]
 orderRecordFields xs =
     xs
     & Lens.traversed . Sugar.rfExpr %%~ orderExpr
-    -- >>= TODO - order the fields
+    >>= orderByTag (^. Sugar.rfTag . Sugar.tagVal)
 
-orderRecord :: MonadA m =>
-    Sugar.Record name f (Sugar.Expression name f a) ->
-    m (Sugar.Record name f (Sugar.Expression name f a))
+orderRecord ::
+    MonadA m => Order m (Sugar.Record name f (Sugar.Expression name f a))
 orderRecord = Sugar.rItems %%~ orderRecordFields
 
-orderBody :: MonadA m =>
-    Sugar.Body name f (Sugar.Expression name f a) ->
-    m (Sugar.Body name f (Sugar.Expression name f a))
+orderBody :: MonadA m => Order m (Sugar.Body name f (Sugar.Expression name f a))
 orderBody (Sugar.BodyLam b) = orderBinder b <&> Sugar.BodyLam
 orderBody (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
 orderBody b = b & Lens.traversed %%~ orderExpr
 
-orderExpr ::
-    MonadA m => Sugar.Expression name f a -> m (Sugar.Expression name f a)
+orderExpr :: MonadA m => Order m (Sugar.Expression name f a)
 orderExpr e =
     e
     & Sugar.rPayload . Sugar.plInferredType %%~ orderType
     >>= Sugar.rBody %%~ orderBody
 
-orderParams ::
-    MonadA m => [Sugar.FuncParam name f] -> m [Sugar.FuncParam name f]
+orderParams :: MonadA m => Order m [Sugar.FuncParam name f]
 orderParams xs =
     xs
     & Lens.traversed . Sugar.fpInferredType %%~ orderType
     -- >>= TODO: order the params
 
-orderBinder :: MonadA m =>
-  Sugar.Binder name f (Sugar.Expression name f a) ->
-  m (Sugar.Binder name f (Sugar.Expression name f a))
+orderBinder ::
+    MonadA m => Order m (Sugar.Binder name f (Sugar.Expression name f a))
 orderBinder b =
     b
     & Sugar.dParams %%~ orderParams
     >>= Sugar.dBody %%~ orderExpr
 
 orderDef ::
-    MonadA m =>
-    Sugar.Definition name f (Sugar.Expression name f a) ->
-    m (Sugar.Definition name f (Sugar.Expression name f a))
+    MonadA m => Order m (Sugar.Definition name f (Sugar.Expression name f a))
 orderDef def =
     def
     & SugarLens.defSchemes . S.schemeType %%~ orderType
