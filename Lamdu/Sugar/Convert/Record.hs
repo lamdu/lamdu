@@ -53,12 +53,17 @@ convertField mStored mRestI restS inst tag expr = do
           return $
             if null (restS ^. rItems)
             then
-              -- When deleting closed one field record
-              -- we replace the record with the field value
-              fmap EntityId.ofValI . protectedSetToVal stored $
+              fmap EntityId.ofValI $ protectedSetToVal stored =<<
               case restS ^. rTail of
-              ClosedRecord{} -> exprI
-              RecordExtending{} -> restI
+              ClosedRecord{}
+                | Lens.has (rBody . _BodyHole) exprS ->
+                    ExprIRef.newVal $ Val () $ V.BLeaf V.LRecEmpty
+                | otherwise ->
+                    -- When deleting closed one field record
+                    -- we replace the record with the field value
+                    -- (unless it is a hole)
+                    return exprI
+              RecordExtending{} -> return restI
             else do
               let delete = DataOps.replace stored restI
               mResult <- fmap EntityId.ofValI <$> typeProtect delete
