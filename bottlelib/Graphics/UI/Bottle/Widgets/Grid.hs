@@ -6,7 +6,7 @@ module Graphics.UI.Bottle.Widgets.Grid
   , Alignment
   , gridMCursor, gridSize, gridContent
   , Element(..)
-  , elementAlign, elementRect, elementW
+  , elementAlign, elementRect
   , Cursor
   , Keys(..), stdKeys
   , toWidget, toWidgetWithKeys
@@ -153,7 +153,7 @@ getCursor widgets =
 data Element f = Element
   { _elementAlign :: Alignment
   , _elementRect :: Rect
-  , _elementW :: Widget f
+  , __elementOriginalWidget :: Widget f
   }
 
 data KGrid key f = KGrid
@@ -178,11 +178,11 @@ makeKeyed children = KGrid
       children
       & Lens.mapped . Lens.mapped %~ toTriplet
       & GridView.makePlacements
-      & _2 . Lens.mapped . Lens.mapped %~ translate
+      & _2 . Lens.mapped . Lens.mapped %~ toElement
     toTriplet (key, (alignment, widget)) =
       (alignment, widget ^. Widget.wSize, (key, widget))
-    translate (alignment, rect, (key, widget)) =
-      (key, Element alignment rect (Widget.translate (rect ^. Rect.topLeft) widget))
+    toElement (alignment, rect, (key, widget)) =
+      (key, Element alignment rect widget)
 
 unkey :: [[(Alignment, Widget f)]] -> [[((), (Alignment, Widget f))]]
 unkey = (map . map) ((,) ())
@@ -196,12 +196,16 @@ makeAlign alignment = make . (map . map) ((,) alignment)
 makeCentered :: [[Widget f]] -> Grid f
 makeCentered = makeAlign 0.5
 
-helper ::
+toWidgetCommon ::
   Keys ModKey -> (Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
   KGrid key f -> Widget f
-helper keys combineEnters (KGrid mCursor size sChildren) =
-  combineWs $ (map . map) (^. _2 . elementW) sChildren
+toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
+  sChildren
+  & Lens.mapped . Lens.mapped %~ translateChildWidget
+  & combineWs
   where
+    translateChildWidget (_key, Element _align rect widget) =
+      Widget.translate (rect ^. Rect.topLeft) widget
     combineWs wss =
       maybe unselectedW makeW mCursor
       where
@@ -242,7 +246,7 @@ groupSortOn f = groupOn f . sortOn f
 -- ^ If unfocused, will enters the given child when entered
 toWidgetBiasedWithKeys :: Keys ModKey -> Cursor -> KGrid key f -> Widget f
 toWidgetBiasedWithKeys keys (Vector2 x y) =
-  helper keys $ \size children ->
+  toWidgetCommon keys $ \size children ->
   maybeOverride children <$> combineMEnters size children
   where
     maybeOverride children enter dir =
@@ -258,7 +262,7 @@ toWidgetBiased :: Cursor -> KGrid key f -> Widget f
 toWidgetBiased = toWidgetBiasedWithKeys stdKeys
 
 toWidgetWithKeys :: Keys ModKey -> KGrid key f -> Widget f
-toWidgetWithKeys keys = helper keys combineMEnters
+toWidgetWithKeys keys = toWidgetCommon keys combineMEnters
 
 toWidget :: KGrid key f -> Widget f
 toWidget = toWidgetWithKeys stdKeys

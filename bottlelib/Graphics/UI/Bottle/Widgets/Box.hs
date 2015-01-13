@@ -4,7 +4,7 @@ module Graphics.UI.Bottle.Widgets.Box
   , make, makeKeyed, makeAlign, makeCentered
   , unkey
   , boxMCursor, boxSize, boxContent, boxOrientation
-  , Element, elementRect, elementW
+  , Element, elementRect
   , Cursor, toWidget, toWidgetBiased
   , Orientation, horizontal, vertical
   , hboxAlign, vboxAlign
@@ -26,6 +26,8 @@ eHead :: [a] -> a
 eHead (x:_) = x
 eHead [] = error "Grid returned invalid list without any elements, instead of list Box handed it"
 
+-- Want a 2d vector like in Grid, because we may want to preserve the
+-- alignment in the resulting KBox.
 type Alignment = Grid.Alignment
 
 data Orientation = Orientation
@@ -55,9 +57,6 @@ type Element = Grid.Element
 
 elementRect :: Lens' (Element f) Rect
 elementRect = Grid.elementRect
-
-elementW :: Lens' (Element f) (Widget f)
-elementW = Grid.elementW
 
 data KBox key f = KBox
   { _boxOrientation :: Orientation
