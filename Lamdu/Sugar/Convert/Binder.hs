@@ -18,6 +18,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Property (Property)
 import Data.Store.Transaction (Transaction, MkProperty)
 import Data.Traversable (traverse, sequenceA)
+import Lamdu.Data.Anchors (assocTagOrder)
 import Lamdu.Expr.FlatComposite (FlatComposite(..))
 import Lamdu.Expr.Type (Type)
 import Lamdu.Expr.Val (Val(..))
@@ -186,7 +187,7 @@ makeConvertToRecordParams mRecursiveVar (StoredLam (V.Lam paramVar lamBody) lamP
       do
         tagForVar <- newTag
         tagForNewVar <- newTag
-        Transaction.setP paramList $ Just [tagForVar, tagForNewVar]
+        setParamList paramList [tagForVar, tagForNewVar]
         convertVarToGetField tagForVar paramVar lamBody
         mRecursiveVar
           & traverse_
@@ -234,6 +235,14 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
           , _fpHiddenIds = []
           }
 
+setParamList :: MonadA m => MkProperty m (Maybe [T.Tag]) -> [T.Tag] -> T m ()
+setParamList paramListProp newParamList =
+  do
+    zip newParamList [0..] & mapM_ (uncurry setParamOrder)
+    Just newParamList & Transaction.setP paramListProp
+  where
+    setParamOrder = Transaction.setP . assocTagOrder
+
 makeAddFieldParam ::
   MonadA m =>
   Maybe V.Var -> V.Var -> (T.Tag -> ParamList) -> StoredLam m ->
@@ -244,7 +253,7 @@ makeAddFieldParam mRecursiveVar param mkNewTags storedLam =
     return $
       do
         tag <- newTag
-        Transaction.setP (slParamList storedLam) $ Just $ mkNewTags tag
+        mkNewTags tag & setParamList (slParamList storedLam)
         let
           addFieldToCall argI =
             do
