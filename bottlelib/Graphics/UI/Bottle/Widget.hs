@@ -6,7 +6,7 @@ module Graphics.UI.Bottle.Widget
   , wFocalArea , wIsFocused, wAnimLayers
   , wAnimFrame, wSize, wWidth, wHeight, wEvents
   , empty
-  , MEnter, R, Size
+  , Enter, R, Size
   , EnterResult(..), enterResultEvent, enterResultRect
   , EventHandlers
   , EventResult(..), eventResultFromCursor
@@ -57,13 +57,13 @@ data EnterResult f = EnterResult
   , _enterResultEvent :: f EventResult
   }
 
-type MEnter f = Maybe (Direction -> EnterResult f)
+type Enter f = Direction -> EnterResult f
 type EventHandlers f = EventMap (f EventResult)
 
 data Widget f = Widget
   { _wIsFocused :: Bool
   , _wView :: View
-  , _wMaybeEnter :: MEnter f -- Nothing if we're not enterable
+  , _wMaybeEnter :: Maybe (Enter f) -- Nothing if we're not enterable
   , _wEventMap :: EventHandlers f
   , _wFocalArea :: Rect
   }

@@ -61,7 +61,7 @@ data NavDests f = NavDests
   , rightMostCursor :: Maybe (Widget.EnterResult f)
   }
 
-mkNavDests :: Widget.Size -> Rect -> [[Widget.MEnter f]] -> Cursor -> NavDests f
+mkNavDests :: Widget.Size -> Rect -> [[Maybe (Widget.Enter f)]] -> Cursor -> NavDests f
 mkNavDests widgetSize prevFocalArea mEnterss cursor@(Vector2 cursorX cursorY) = NavDests
   { leftOfCursor    = givePrevFocalArea . reverse $ take cursorX curRow
   , aboveCursor     = givePrevFocalArea . reverse $ take cursorY curColumn
@@ -198,7 +198,7 @@ makeCentered :: [[Widget f]] -> Grid f
 makeCentered = makeAlign 0.5
 
 toWidgetCommon ::
-  Keys ModKey -> (Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
+  Keys ModKey -> (Widget.Size -> [[Maybe (Widget.Enter f)]] -> Maybe (Widget.Enter f)) ->
   KGrid key f -> Widget f
 toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
   sChildren
@@ -265,7 +265,7 @@ toWidgetWithKeys keys = toWidgetCommon keys combineMEnters
 toWidget :: KGrid key f -> Widget f
 toWidget = toWidgetWithKeys stdKeys
 
-combineMEnters :: Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f
+combineMEnters :: Widget.Size -> [[Maybe (Widget.Enter f)]] -> Maybe (Widget.Enter f)
 combineMEnters size children = chooseClosest childEnters
   where
     childEnters =
