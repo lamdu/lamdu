@@ -54,9 +54,13 @@ orderRecord ::
     MonadA m => Order m (Sugar.Record name f (Sugar.Expression name f a))
 orderRecord = Sugar.rItems %%~ orderRecordFields
 
+orderApply :: MonadA m => Order m (Sugar.Apply name (Sugar.Expression name f a))
+orderApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag . Sugar.tagVal)
+
 orderBody :: MonadA m => Order m (Sugar.Body name f (Sugar.Expression name f a))
 orderBody (Sugar.BodyLam b) = orderBinder b <&> Sugar.BodyLam
 orderBody (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
+orderBody (Sugar.BodyApply a) = orderApply a <&> Sugar.BodyApply
 orderBody b = b & Lens.traversed %%~ orderExpr
 
 orderExpr :: MonadA m => Order m (Sugar.Expression name f a)
