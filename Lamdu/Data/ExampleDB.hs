@@ -43,9 +43,9 @@ namedId name = do
 forAll :: TypeVars.VarKind a => Int -> ([a] -> Type) -> Scheme
 forAll count f =
   Scheme
-  { schemeForAll = mconcat $ map TypeVars.singleton typeVars
-  , schemeConstraints = mempty
-  , schemeType = f $ map T.liftVar typeVars
+  { _schemeForAll = mconcat $ map TypeVars.singleton typeVars
+  , _schemeConstraints = mempty
+  , _schemeType = f $ map T.liftVar typeVars
   }
   where
     typeVars = take count $ map (fromString . (:[])) ['a'..'z']

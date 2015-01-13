@@ -20,7 +20,7 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Expr.Scheme (Scheme(..))
+import           Lamdu.Expr.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
@@ -63,7 +63,7 @@ topLevelSchemeTypeView :: MonadA m => Widget.R -> Sugar.EntityId -> Scheme -> Ex
 topLevelSchemeTypeView minWidth entityId scheme =
   -- At the definition-level, Schemes can be shown as ordinary
   -- types to avoid confusing forall's:
-  ExpressionGui.makeTypeView minWidth entityId (schemeType scheme)
+  ExpressionGui.makeTypeView minWidth entityId (scheme ^. schemeType)
 
 makeBuiltinDefinition ::
   MonadA m =>
