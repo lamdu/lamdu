@@ -122,7 +122,7 @@ vboxDownwardsSpaced guis =
       & vboxDownwards & return
 
 gridDownwards :: [[(Widget.R, ExpressionGui m)]] -> ExpressionGui m
-gridDownwards [] = fromValueWidget $ Widget.liftView $ Spacer.make 0
+gridDownwards [] = fromValueWidget $ Widget.fromView $ Spacer.make 0
 gridDownwards ([]:rs) = gridDownwards rs
 gridDownwards rows =
   ExpressionGui
@@ -187,7 +187,7 @@ makeTypeView minWidth entityId typ =
     config <- WE.readConfig
     TypeView.make animId typ
       <&> addTypeBackground config animId minWidth
-      <&> Widget.liftView
+      <&> Widget.fromView
     & ExprGuiM.widgetEnv
   where
     animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
@@ -200,7 +200,7 @@ addBelowInferredSpacing typeView eg =
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
       vspacer =
-        Widget.liftView $ Spacer.makeVertical $
+        Widget.fromView $ Spacer.makeVertical $
         realToFrac $ Config.valInferredSpacing config
       items =
         [ (0.5, vspacer)

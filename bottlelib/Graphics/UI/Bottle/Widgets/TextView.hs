@@ -114,7 +114,7 @@ make style text animId = View textSize (frame animId)
     (frame, textSize) = drawTextAsLines style text
 
 makeWidget :: Style -> String -> AnimId -> Widget a
-makeWidget style text = Widget.liftView . make style text
+makeWidget style text = Widget.fromView . make style text
 
 label :: Style -> AnimId -> String -> View
 label style animId text = make style text $ View.augmentAnimId animId text

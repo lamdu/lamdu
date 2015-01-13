@@ -73,7 +73,7 @@ separationBar :: Config -> Widget.R -> Anim.AnimId -> ExpressionGui m
 separationBar config width animId =
   Anim.unitSquare (animId <> ["tailsep"])
   & View 1
-  & Widget.liftView
+  & Widget.fromView
   & Widget.tint (Config.recordTailColor config)
   & Widget.scale (Vector2 width 10)
   & ExpressionGui.fromValueWidget

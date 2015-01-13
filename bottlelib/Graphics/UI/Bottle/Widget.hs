@@ -16,7 +16,7 @@ module Graphics.UI.Bottle.Widget
   , atEvents -- TODO: Lens/traversal
   , takesFocus, doesntTakeFocus
   , backgroundColor, tint
-  , liftView -- TODO: fromView
+  , fromView
   , addInnerFrame
   , strongerEvents, weakerEvents
   , translate, scale, pad, assymetricPad
@@ -110,8 +110,8 @@ atEvents func w = w
   , _wEventMap = func <$> _wEventMap w
   }
 
-liftView :: View -> Widget f
-liftView view =
+fromView :: View -> Widget f
+fromView view =
   Widget
     { _wIsFocused = False
     , _wFocalArea = Rect 0 (view ^. View.size)

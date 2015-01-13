@@ -100,7 +100,7 @@ typeIndicator width color myId =
         realToFrac $ Config.typeIndicatorFrameWidth config ^. _2
     Anim.unitSquare (Widget.toAnimId (typeIndicatorId myId))
       & View 1
-      & Widget.liftView
+      & Widget.fromView
       & Widget.scale (Vector2 width typeIndicatorHeight)
       & Widget.tint color
       & return
