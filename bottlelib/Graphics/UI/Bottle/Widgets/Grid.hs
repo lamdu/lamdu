@@ -16,6 +16,7 @@ module Graphics.UI.Bottle.Widgets.Grid
 import           Control.Applicative (liftA2, (<$>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Monad (join, msum)
 import           Data.Foldable (Foldable)
 import           Data.Function (on)
@@ -174,7 +175,7 @@ makeKeyed children = KGrid
     mkSizedKeyedContent (key, (alignment, widget)) =
       (alignment, (widget ^. Widget.wSize, (key, widget)))
     translate align rect =
-      Lens._2 %~
+      _2 %~
       Element align rect . Widget.translate (rect ^. Rect.topLeft)
 
 unkey :: [[(Alignment, Widget f)]] -> [[((), (Alignment, Widget f))]]
@@ -193,7 +194,7 @@ helper ::
   Keys ModKey -> (Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
   KGrid key f -> Widget f
 helper keys combineEnters (KGrid mCursor size sChildren) =
-  combineWs $ (map . map) (^. Lens._2 . elementW) sChildren
+  combineWs $ (map . map) (^. _2 . elementW) sChildren
   where
     combineWs wss =
       maybe unselectedW makeW mCursor
@@ -273,7 +274,7 @@ combineMEnters size children = chooseClosest childEnters
   where
     childEnters =
       mapMaybe indexIntoMaybe .
-      concat . (Lens.mapped . Lens.mapped . Lens._1 %~ tupleToVector2) $
+      concat . (Lens.mapped . Lens.mapped . _1 %~ tupleToVector2) $
       enumerate2d children
 
     chooseClosest [] = Nothing
@@ -296,8 +297,8 @@ combineMEnters size children = chooseClosest childEnters
 
     filteredByEdge = memo $ \(Vector2 hEdge vEdge) ->
       map snd .
-      safeHead . groupSortOn ((* (-hEdge)) . (^. Lens._1 . Lens._1)) .
-      safeHead . groupSortOn ((* (-vEdge)) . (^. Lens._1 . Lens._2)) $
+      safeHead . groupSortOn ((* (-hEdge)) . (^._1._1)) .
+      safeHead . groupSortOn ((* (-vEdge)) . (^._1._2)) $
       childEnters
     indexIntoMaybe (i, m) = (,) i <$> m
 
