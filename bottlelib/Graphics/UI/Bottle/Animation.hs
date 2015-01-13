@@ -10,21 +10,19 @@ module Graphics.UI.Bottle.Animation
   , translate, scale, onDepth
   , unitIntoRect
   , simpleFrame, sizedFrame
-  , joinId, subId
   , module Graphics.UI.Bottle.Animation.Id
   ) where
 
 import Control.Applicative(Applicative(..), liftA2)
 import Control.Lens.Operators
 import Control.Monad(void)
-import Data.List(isPrefixOf)
 import Data.List.Utils(groupOn, sortOn)
 import Data.Map(Map, (!))
 import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R, (%%))
-import Graphics.UI.Bottle.Animation.Id (AnimId)
+import Graphics.UI.Bottle.Animation.Id
 import Graphics.UI.Bottle.Rect(Rect(Rect))
 import qualified Control.Lens as Lens
 import qualified Data.ByteString.Char8 as SBS
@@ -48,14 +46,6 @@ newtype Frame = Frame {
   _fSubImages :: Map AnimId [(Layer, PositionedImage)]
   }
 Lens.makeLenses ''Frame
-
-joinId :: AnimId -> AnimId -> AnimId
-joinId = (++)
-
-subId :: AnimId -> AnimId -> Maybe AnimId
-subId folder path
-  | folder `isPrefixOf` path = Just $ drop (length folder) path
-  | otherwise = Nothing
 
 simpleFrame :: AnimId -> Draw.Image () -> Frame
 simpleFrame animId image =
