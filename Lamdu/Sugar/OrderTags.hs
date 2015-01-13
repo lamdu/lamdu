@@ -4,10 +4,14 @@ module Lamdu.Sugar.OrderTags
 
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
+import Data.List.Utils (sortOn)
+import Data.Store.Transaction (Transaction)
+import Lamdu.Data.Anchors (assocTagOrder)
 import Lamdu.Expr.FlatComposite (FlatComposite(..))
 import Lamdu.Expr.Type (Type)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
+import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Scheme as S
@@ -15,10 +19,17 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
-type Order m x = x -> m x
+type Order m x = x -> Transaction m x
 
 orderByTag :: MonadA m => (a -> T.Tag) -> Order m [a]
-orderByTag = const return -- TODO
+orderByTag toTag =
+    fmap (map fst . sortOn snd) . mapM loadOrder
+    where
+        loadOrder x =
+            toTag x
+            & assocTagOrder
+            & Transaction.getP
+            <&> (,) x
 
 orderComposite :: MonadA m => Order m (T.Composite T.Product)
 orderComposite c =
