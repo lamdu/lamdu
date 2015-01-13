@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings, RankNTypes #-}
 module Graphics.UI.Bottle.View
   ( View, augmentAnimId, backgroundColor, scaled
+  , fromFrame
   ) where
 
 import Data.Vector.Vector2 (Vector2(..))
@@ -26,3 +27,6 @@ scaled factor =
   where
     scale ratio (size, frame) =
       (size*ratio, Anim.scale ratio frame)
+
+fromFrame :: Anim.Size -> Anim.Frame -> View
+fromFrame = (,)

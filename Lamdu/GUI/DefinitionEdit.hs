@@ -14,6 +14,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -97,7 +98,8 @@ typeIndicator width color myId =
       typeIndicatorHeight =
         realToFrac $ Config.typeIndicatorFrameWidth config ^. Lens._2
     Anim.unitSquare (Widget.toAnimId (typeIndicatorId myId))
-      & Widget.liftView 1
+      & View.fromFrame 1
+      & Widget.liftView
       & Widget.scale (Vector2 width typeIndicatorHeight)
       & Widget.tint color
       & return

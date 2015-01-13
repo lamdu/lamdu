@@ -54,7 +54,7 @@ makeTextView text myId = do
 
 makeTextViewWidget :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeTextViewWidget text myId =
-  uncurry Widget.liftView <$> makeTextView text myId
+  Widget.liftView <$> makeTextView text myId
 
 makeLabel :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeLabel text prefix =
@@ -185,15 +185,15 @@ makeWordEdit textRef myId =
   makeLineEdit textRef myId <&> deleteKeyEventHandler (ModKey mempty GLFW.Key'Space)
 
 hspaceWidget :: Widget.R -> Widget f
-hspaceWidget = uncurry Widget.liftView . Spacer.makeHorizontal
+hspaceWidget = Widget.liftView . Spacer.makeHorizontal
 
 vspaceWidget :: Widget.R -> Widget f
-vspaceWidget = uncurry Widget.liftView . Spacer.makeVertical
+vspaceWidget = Widget.liftView . Spacer.makeVertical
 
 stdSpaceWidget :: MonadA m => WidgetEnvT m (Widget f)
 stdSpaceWidget =
   WE.readConfig
-  <&> uncurry Widget.liftView . Spacer.make . realToFrac . Config.spaceWidth
+  <&> Widget.liftView . Spacer.make . realToFrac . Config.spaceWidth
 
 hboxSpaced :: MonadA m => [(Box.Alignment, Widget f)] -> WidgetEnvT m (Widget f)
 hboxSpaced widgets =

@@ -82,8 +82,8 @@ atEvents func w = w
   , _wEventMap = func <$> _wEventMap w
   }
 
-liftView :: Anim.Size -> Anim.Frame -> Widget f
-liftView sz frame =
+liftView :: View -> Widget f
+liftView (sz, frame) =
   Widget
     { _wIsFocused = False
     , _wSize = sz

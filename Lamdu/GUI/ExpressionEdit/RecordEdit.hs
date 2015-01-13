@@ -3,29 +3,30 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
   ( make
   ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.Monoid (Monoid(..))
-import Data.Store.Transaction (Transaction)
-import Data.Vector.Vector2 (Vector2(..))
-import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionGui (ExpressionGui)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.Sugar.AddNames.Types (Name(..))
+import           Control.Applicative ((<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
 import qualified Data.List as List
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Transaction (Transaction)
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -83,7 +84,8 @@ makeOpenRecord fieldsGui rest myId =
       [ fieldsGui
       , Anim.unitSquare (Widget.toAnimId (Widget.joinId myId ["tail"]))
         & Anim.onImages (Draw.tint (Config.recordTailColor config))
-        & Widget.liftView 1
+        & View.fromFrame 1
+        & Widget.liftView
         & Widget.scale (Vector2 (max minWidth targetWidth) 10)
         & ExpressionGui.fromValueWidget
       , ExpressionGui.fromValueWidget vspace
