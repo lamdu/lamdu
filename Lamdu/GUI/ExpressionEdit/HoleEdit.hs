@@ -17,7 +17,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Closed (ClosedHole(..), chClosedHole)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Closed (ClosedHole(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Closed as HoleClosed
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as HoleOpen
@@ -47,36 +47,9 @@ resizeAs copyFrom gui =
       eg ^. ExpressionGui.egAlignment *
       eg ^. ExpressionGui.egWidget . Widget.wSize . _2
 
-chDestId :: HoleIds -> ClosedHole m -> Widget.Id
-chDestId HoleIds{..} closedHole =
-  case HoleClosed.chDest closedHole of
-  HoleClosed.HoleDestClosed -> hidClosed
-  HoleClosed.HoleDestOpened -> hidOpen
-
-withClosedHole ::
-  MonadA m =>
-  HoleIds ->
-  Sugar.Hole (Name m) m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload m ExprGuiM.Payload -> Widget.Id ->
-  ((ExpressionGui m, ExpressionGui m) -> ExprGuiM m b) ->
-  ExprGuiM m b
-withClosedHole hids hole pl myId body =
-  do
-    unfocusableClosedHole <- HoleClosed.make hole pl hids
-    -- We must execute the respondToCursorIn action in the
-    -- assigned-cursor context:
-    do
-      unfocusableClosedHole
-        ^. chClosedHole
-        & respondToCursor
-        <&> join (,)
-        & ExpressionGui.stdWrapIn _1 pl
-        >>= body
-      & ExprGuiM.assignCursor myId (chDestId hids unfocusableClosedHole)
-  where
-    respondToCursor =
-      ExpressionGui.egWidget %%~
-      ExprGuiM.widgetEnv . BWidgets.respondToCursorIn (hidClosed hids)
+chDestId :: HoleIds -> HoleClosed.HoleDest -> Widget.Id
+chDestId HoleIds{..} HoleClosed.HoleDestClosed = hidClosed
+chDestId HoleIds{..} HoleClosed.HoleDestOpened = hidOpen
 
 make ::
   MonadA m =>
@@ -84,8 +57,11 @@ make ::
   Sugar.Payload m ExprGuiM.Payload -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make hole pl myId =
-  withClosedHole hids hole pl myId $ \(closedHoleGui, unwrappedClosedHoleGui) ->
   do
+    (closedHoleGui, unwrappedClosedHoleGui) <-
+      _chMkGui
+      <&> join (,)
+      & ExpressionGui.stdWrapIn _1 pl
     config <- ExprGuiM.widgetEnv WE.readConfig
     let Config.Hole{..} = Config.hole config
     tryOpenHole unwrappedClosedHoleGui hole pl hids
@@ -94,7 +70,9 @@ make hole pl myId =
       & runMaybeT
       <&> fromMaybe closedHoleGui
       <&> ExpressionGui.egWidget %~ Widget.takesFocus (const (pure myId))
+  & ExprGuiM.assignCursor myId (chDestId hids chDest)
   where
+    ClosedHole{..} = HoleClosed.make hole pl hids
     hids = HoleIds
       { hidOpen = openHoleId myId
       , hidClosed = Widget.joinId myId ["ClosedHole"]

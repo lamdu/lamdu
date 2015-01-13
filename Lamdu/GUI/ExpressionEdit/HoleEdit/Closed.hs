@@ -2,7 +2,7 @@
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Closed
   ( HoleDest(..)
-  , ClosedHole(..), chClosedHole
+  , ClosedHole(..), chMkGui
   , make
   ) where
 
@@ -11,8 +11,7 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (guard)
-import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
+import           Control.Monad.Trans.Either.Utils (runMatcher, justToLeft)
 import           Control.MonadA (MonadA)
 import           Data.Maybe.Utils (maybeToMPlus)
 import           Data.Monoid (Monoid(..), (<>))
@@ -43,45 +42,48 @@ data HoleDest = HoleDestClosed | HoleDestOpened
 
 data ClosedHole m = ClosedHole
   { chDest :: HoleDest
-  , _chClosedHole :: ExpressionGui m
+  , _chMkGui :: ExprGuiM m (ExpressionGui m)
   }
 
-chClosedHole :: Lens' (ClosedHole m) (ExpressionGui m)
-chClosedHole f ClosedHole{..} = f _chClosedHole <&> \_chClosedHole -> ClosedHole{..}
+chMkGui :: Lens' (ClosedHole m) (ExprGuiM m (ExpressionGui m))
+chMkGui f ClosedHole{..} = f _chMkGui <&> \_chMkGui -> ClosedHole{..}
 
 make ::
   MonadA m =>
   Sugar.Hole (Name m) m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload -> HoleIds ->
-  ExprGuiM m (ClosedHole m)
+  ClosedHole m
 make hole pl hids@HoleIds{..} =
   do
-    Config.Hole{..} <- ExprGuiM.widgetEnv WE.readConfig <&> Config.hole
-    do
-      justToLeft $ do
-        arg <- maybeToMPlus $ hole ^. Sugar.holeMArg
-        gui <- lift $ makeWrapper arg hids
-        return ClosedHole
-          { chDest = HoleDestClosed
-          , _chClosedHole = gui
-          }
-      justToLeft $ do
-        guard $ not isHoleResult -- Avoid suggesting inside hole results
-        guard . Lens.nullOf ExprLens.valHole $ suggested ^. Sugar.hsValue
-        (dest, gui) <- lift $ makeSuggested suggested hids
-        return ClosedHole
-          { chDest = dest
-          , _chClosedHole = gui
-          }
-      gui <- makeSimple hids & lift
+    justToLeft $ do
+      arg <- maybeToMPlus $ hole ^. Sugar.holeMArg
       return ClosedHole
-        { chDest = HoleDestOpened
-        , _chClosedHole = gui
+        { chDest = HoleDestClosed
+        , _chMkGui = makeWrapper arg hids
         }
-      & runMatcherT
-      <&> chClosedHole . ExpressionGui.egWidget %~
-          Widget.weakerEvents (openHoleEventMap holeOpenKeys hids)
+    justToLeft $ do
+      guard $ not isHoleResult -- Avoid suggesting inside hole results
+      guard . Lens.nullOf ExprLens.valHole $ suggested ^. Sugar.hsValue
+      let (dest, mkGui) = makeSuggested suggested hids
+      return ClosedHole
+        { chDest = dest
+        , _chMkGui = mkGui
+        }
+    return ClosedHole
+      { chDest = HoleDestOpened
+      , _chMkGui = makeSimple hids
+      }
+    & runMatcher
+    & chMkGui %~ (>>= onGui)
   where
+    onGui gui =
+      do
+        Config.Hole{..} <- ExprGuiM.widgetEnv WE.readConfig <&> Config.hole
+        gui
+          & ExpressionGui.egWidget %~
+            Widget.weakerEvents (openHoleEventMap holeOpenKeys hids)
+          & ExpressionGui.egWidget %%~
+            ExprGuiM.widgetEnv . BWidgets.respondToCursorIn hidClosed
     isHoleResult =
       Lens.nullOf (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl
     suggested = hole ^. Sugar.holeSuggested
@@ -161,33 +163,36 @@ makeWrapper arg hids@HoleIds{..} = do
 makeSuggested ::
   MonadA m =>
   Sugar.HoleSuggested (Name m) m ->
-  HoleIds -> ExprGuiM m (HoleDest, ExpressionGui m)
-makeSuggested suggested HoleIds{..} = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  let Config.Hole{..} = Config.hole config
-  gui <-
-    (suggested ^. Sugar.hsMakeConverted)
-    & ExprGuiM.transaction
-    <&> Lens.mapped . Lens.mapped .~ ExprGuiM.emptyPayload NearestHoles.none
-    <&> Lens.mapped . Lens.mapped . ExprGuiM.plShowType .~ ExprGuiM.DoNotShowType
-    >>= ExprGuiM.makeSubexpression 0
-    <&> ExpressionGui.egWidget %~
-        Widget.tint (Config.suggestedValueTint config) .
-        Widget.scale (realToFrac <$> Config.suggestedValueScaleFactor config) .
-        (Widget.wEventMap .~ mempty)
-  return $
-    if fullySuggested
-    then (HoleDestClosed, gui)
-    else
-      ( HoleDestOpened
-      , gui
-        & ExpressionGui.egWidget %~
-          addBackground hidClosed (Config.layers config) holeClosedBGColor
-      )
+  HoleIds -> (HoleDest, ExprGuiM m (ExpressionGui m))
+makeSuggested suggested HoleIds{..}
+  | fullySuggested =
+    ( HoleDestClosed
+    , mkGui don'tAddBackground
+    )
+  | otherwise =
+    ( HoleDestOpened
+    , mkGui addBackground
+    )
   where
+    don'tAddBackground _ _ _ = id
     fullySuggested =
       Lens.nullOf (ExprLens.subExprs . ExprLens.valHole) $
       suggested ^. Sugar.hsValue
+    mkGui maybeAddBackground =
+      do
+        config <- ExprGuiM.widgetEnv WE.readConfig
+        let Config.Hole{..} = Config.hole config
+        (suggested ^. Sugar.hsMakeConverted)
+          & ExprGuiM.transaction
+          <&> Lens.mapped . Lens.mapped .~ ExprGuiM.emptyPayload NearestHoles.none
+          <&> Lens.mapped . Lens.mapped . ExprGuiM.plShowType .~ ExprGuiM.DoNotShowType
+          >>= ExprGuiM.makeSubexpression 0
+          <&> ExpressionGui.egWidget %~
+              maybeAddBackground hidClosed (Config.layers config) holeClosedBGColor .
+              Widget.tint (Config.suggestedValueTint config) .
+              Widget.scale (realToFrac <$> Config.suggestedValueScaleFactor config) .
+              (Widget.wEventMap .~ mempty)
+
 
 makeSimple :: MonadA m => HoleIds -> ExprGuiM m (ExpressionGui m)
 makeSimple HoleIds{..} = do
