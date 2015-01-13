@@ -18,10 +18,10 @@ module Graphics.UI.Bottle.Widget
   , fromView
   , addInnerFrame
   , strongerEvents, weakerEvents
-  , translate, scale, pad, assymetricPad
+  , translate, scale, pad, assymetricPad, padToSizeAlign
   ) where
 
-import           Control.Applicative ((<$>))
+import           Control.Applicative ((<$>), (<*>))
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -203,3 +203,11 @@ assymetricPad leftAndTop rightAndBottom widget =
   widget
   & wSize +~ leftAndTop + rightAndBottom
   & translate leftAndTop
+
+padToSizeAlign :: Size -> Vector2 R -> Widget f -> Widget f
+padToSizeAlign newSize alignment widget =
+  widget
+  & translate (sizeDiff * alignment)
+  & wSize .~ newSize
+  where
+    sizeDiff = max <$> 0 <*> newSize - widget ^. wSize

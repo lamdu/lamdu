@@ -13,12 +13,12 @@ import qualified Data.Store.Rev.Branch as Branch
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Traversable (traverse)
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.Edges as Edges
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Config (Config)
@@ -82,9 +82,10 @@ choiceWidgetConfig config = BWidgets.ChoiceWidgetConfig
 make ::
   (MonadA m, MonadA n) =>
   (forall a. Transaction n a -> m a) ->
-  Widget.Size -> Actions n m -> Widget m ->
+  Widget.Size -> Actions n m ->
+  (Widget.Size -> WidgetEnvT m (Widget m)) ->
   WidgetEnvT m (Widget m)
-make transaction size actions widget = do
+make transaction size actions mkWidget = do
   config <- WE.readConfig
   let
     Config.VersionControl{..} = Config.versionControl config
@@ -113,6 +114,8 @@ make transaction size actions widget = do
     BWidgets.makeChoiceWidget (setCurrentBranch actions)
     branchNameEdits (currentBranch actions) (choiceWidgetConfig config)
     WidgetIds.branchSelection
-  return .
-    Widget.strongerEvents (globalEventMap (Config.versionControl config) actions) $
-    Edges.makeVertical size widget branchSelector
+  let height = branchSelector ^. Widget.wHeight
+  widget <- mkWidget (size - Vector2 0 height)
+  Box.vbox [(0, widget), (0, branchSelector)]
+    & Widget.strongerEvents (globalEventMap (Config.versionControl config) actions)
+    & return

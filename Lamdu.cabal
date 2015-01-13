@@ -43,7 +43,6 @@ Library
                        Graphics.UI.Bottle.Widget,
                        Graphics.UI.Bottle.WidgetId,
                        Graphics.UI.Bottle.Widgets.Box,
-                       Graphics.UI.Bottle.Widgets.Edges,
                        Graphics.UI.Bottle.Widgets.EventMapDoc,
                        Graphics.UI.Bottle.Widgets.FlyNav,
                        Graphics.UI.Bottle.Widgets.FocusDelegator,

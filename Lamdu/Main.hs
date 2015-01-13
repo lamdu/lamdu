@@ -362,14 +362,15 @@ makeRootWidget ::
   (forall a. Transaction DbLayout.DbM a -> IO a) ->
   Widget.Size -> Widget.Id ->
   Transaction DbLayout.DbM (Widget IO)
-makeRootWidget config settings style dbToIO size cursor = do
+makeRootWidget config settings style dbToIO fullSize cursor = do
   actions <- VersionControl.makeActions
   runWidgetEnvT cursor style config $ do
-    codeEdit <-
-      CodeEdit.make env rootGuid
-      & WE.mapWidgetEnvT VersionControl.runAction
-      <&> Widget.wEvents %~ VersionControl.runEvent cursor
-    branchGui <- VersionControlGUI.make id size actions codeEdit
+    branchGui <-
+      VersionControlGUI.make id fullSize actions $ \size ->
+        CodeEdit.make (env size) rootGuid
+        & WE.mapWidgetEnvT VersionControl.runAction
+        <&> Widget.wEvents %~ VersionControl.runEvent cursor
+        <&> Widget.padToSizeAlign size (Vector2 0 0)
     let
       quitEventMap =
         Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
@@ -378,7 +379,7 @@ makeRootWidget config settings style dbToIO size cursor = do
       & Widget.wEvents %~ dbToIO . (attachCursor =<<)
       & return
   where
-    env = CodeEdit.Env
+    env size = CodeEdit.Env
       { CodeEdit.codeProps = DbLayout.codeProps
       , CodeEdit.totalSize = size
       , CodeEdit.settings = settings

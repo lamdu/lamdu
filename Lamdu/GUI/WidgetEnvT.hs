@@ -38,8 +38,7 @@ Lens.makeLenses ''Env
 
 newtype WidgetEnvT m a = WidgetEnvT
   { _widgetEnvT :: ReaderT Env m a
-  }
-  deriving (Functor, Applicative, Monad, MonadTrans)
+  } deriving (Functor, Applicative, Monad, MonadTrans)
 Lens.makeLenses ''WidgetEnvT
 
 runWidgetEnvT :: MonadA m => Widget.Id -> TextEdit.Style -> Config -> WidgetEnvT m a -> m a
