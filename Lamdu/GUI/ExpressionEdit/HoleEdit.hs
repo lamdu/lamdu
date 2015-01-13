@@ -45,7 +45,7 @@ resizeAs copyFrom gui =
     destSize = copyFrom ^. ExpressionGui.egWidget . Widget.wSize
     alignmentHeight eg =
       eg ^. ExpressionGui.egAlignment *
-      eg ^. ExpressionGui.egWidget . Widget.wSize . _2
+      eg ^. ExpressionGui.egWidget . Widget.wHeight
 
 chDestId :: HoleIds -> HoleClosed.HoleDest -> Widget.Id
 chDestId HoleIds{..} HoleClosed.HoleDestClosed = hidClosed

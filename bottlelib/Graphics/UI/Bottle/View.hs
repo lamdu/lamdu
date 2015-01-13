@@ -6,11 +6,10 @@ module Graphics.UI.Bottle.View
   , width, height
   , Size
   , augmentAnimId, backgroundColor
-  , scaled, scale
+  , scale
   ) where
 
 import           Control.Lens (Lens')
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import qualified Data.ByteString.Char8 as SBS8
@@ -51,10 +50,6 @@ backgroundColor animId layer color view =
     & animFrame %~ Anim.backgroundColor bgAnimId layer color (view ^. size)
     where
         bgAnimId = animId ++ [SBS8.pack "bg"]
-
-scaled :: Vector2 Draw.R -> Lens.Iso' View View
-scaled factor =
-    Lens.iso (scale factor) (scale (1/factor))
 
 scale :: Vector2 Draw.R -> View -> View
 scale ratio (View sz frm) =

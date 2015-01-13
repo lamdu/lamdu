@@ -8,7 +8,6 @@ import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Monad (guard, msum, when)
 import           Control.MonadA (MonadA)
 import           Data.List.Lens (suffixed)
@@ -165,7 +164,7 @@ makeResultGroup holeInfo results = do
   Config.Hole{..} <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
   (mainResultWidget, shownMainResult) <- makeShownResult holeInfo mainResult
   let
-    mainResultHeight = mainResultWidget ^. Widget.wSize . Lens._2
+    mainResultHeight = mainResultWidget ^. Widget.wHeight
     makeExtra = makeExtraResultsWidget holeInfo mainResultHeight $ results ^. HoleResults.rlExtra
   (mSelectedResult, extraResWidget) <-
     if mainResultWidget ^. Widget.wIsFocused
@@ -211,7 +210,7 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) = 
   (mResults, widgets) <-
     unzip <$> traverse mkResWidget extraResults
   let
-    headHeight = head widgets ^. Widget.wSize . Lens._2
+    headHeight = head widgets ^. Widget.wHeight
     height = min mainResultHeight headHeight
   return
     ( msum mResults
@@ -242,7 +241,7 @@ makeHoleResultWidget resultId holeResult = do
           return $ hiddenResultWidget ^. Widget.wEventMap
   widget <-
     mkWidget
-    <&> Widget.wFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
+    <&> Widget.wAnimFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
     <&> Widget.scale (realToFrac <$> holeResultScaleFactor)
     <&> Widget.wEventMap .~ mempty
     >>= makeFocusable resultId
@@ -400,7 +399,7 @@ make closedHoleGui pl holeInfo = do
         ExpressionGui.makeTypeView (rawOpenHole ^. guiWidth)
         (pl ^. Sugar.plEntityId) (pl ^. Sugar.plInferredType)
       rawOpenHole
-        & guiWidth %~ max (typeView ^. Widget.wSize . _1)
+        & guiWidth %~ max (typeView ^. Widget.wWidth)
         & ExpressionGui.egWidget %~
           addBackground (hidOpen (hiIds holeInfo))
           (Config.layers config) holeOpenBGColor
@@ -413,7 +412,7 @@ make closedHoleGui pl holeInfo = do
       Lens.nullOf (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl
 
 guiWidth :: Lens' (ExpressionGui m) Widget.R
-guiWidth = ExpressionGui.egWidget . Widget.wSize . _1
+guiWidth = ExpressionGui.egWidget . Widget.wWidth
 
 addDarkBackground :: MonadA m => Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
 addDarkBackground myId widget =

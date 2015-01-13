@@ -24,11 +24,11 @@ import           Graphics.DrawingCombinators.Utils (Image)
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.Rendering.OpenGL.GL (($=))
 import qualified Graphics.Rendering.OpenGL.GL as GL
-import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Animation (AnimId)
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widget (Widget)
+import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (KeyEvent, Event(..), eventLoop)
 
@@ -155,5 +155,5 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationHalfLife = do
         Nothing -> return ()
         Just _ -> newWidget
       return mAnimIdMapping
-    mkFrame size = (^. Widget.wFrame) <$> getWidget size
+    mkFrame size = getWidget size <&> (^. Widget.wAnimFrame)
   mainLoopAnim win tickHandler eventHandler mkFrame getAnimationHalfLife

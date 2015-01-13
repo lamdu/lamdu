@@ -26,7 +26,6 @@ import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.View (View)
@@ -67,7 +66,7 @@ verticalSpace = do
 
 liftLayerInterval :: Config -> Widget f -> Widget f
 liftLayerInterval config =
-  Widget.wFrame . Anim.layers +~ layerDiff
+  Widget.wAnimLayers +~ layerDiff
   where
     layers = Config.layers config
     layerDiff = - Config.layerInterval layers

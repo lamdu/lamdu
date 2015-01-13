@@ -156,7 +156,7 @@ make _ _ Nothing setState w =
   w & Widget.wEventMap <>~ addMovements (w ^. focalCenter) [] setState
 make config animId (Just (ActiveState pos movements)) setState w =
   w
-  & Widget.wFrame %~ mappend frame
+  & Widget.wAnimFrame %~ mappend frame
   & Widget.wEventMap .~ eventMap
   where
     delta = sum $ map (^. mDir) movements

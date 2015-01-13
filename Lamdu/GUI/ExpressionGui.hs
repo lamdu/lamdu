@@ -88,7 +88,7 @@ pad padding (ExpressionGui widget alignment) =
   ExpressionGui newWidget $
   (padding ^. _2 + alignment * widget ^. height) / newWidget ^. height
   where
-    height = Widget.wSize . _2
+    height = Widget.wHeight
     newWidget = Widget.pad padding widget
 
 hbox :: [ExpressionGui m] -> ExpressionGui m
@@ -165,7 +165,7 @@ addAbove egHAlign ws eg =
   map ((,) False) ws ++ [(True, (Vector2 egHAlign (eg ^. egAlignment), eg ^. egWidget))]
 
 wWidth :: Lens' (Widget f) Widget.R
-wWidth = Widget.wSize . _1
+wWidth = Widget.wWidth
 
 addTypeBackground :: Config -> AnimId -> Widget.R -> View -> View
 addTypeBackground config animId minWidth typeView =

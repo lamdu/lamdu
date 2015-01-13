@@ -37,7 +37,7 @@ shrinkIfHigherThanLine w = do
   let
     textHeight = fromIntegral fontSize * DrawUtils.textHeight
     ratio =
-      (textHeight / w ^. ExpressionGui.egWidget . Widget.wSize . Lens._2)
+      (textHeight / w ^. ExpressionGui.egWidget . Widget.wHeight)
       ** realToFrac (Config.holeResultInjectedScaleExponent config)
   return $
     if ratio < 1

@@ -150,7 +150,7 @@ makeTreeView config animId size =
 
 addHelp :: (AnimId -> View) -> Widget.Size -> Widget f -> Widget f
 addHelp f size =
-  Widget.wFrame <>~ docFrame
+  Widget.wAnimFrame <>~ docFrame
   where
     View eventMapSize eventMapFrame = f ["help box"]
     transparency = Draw.Color 1 1 1

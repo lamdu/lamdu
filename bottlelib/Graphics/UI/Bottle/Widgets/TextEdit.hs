@@ -26,7 +26,7 @@ import           Data.List.Split (splitWhen)
 import           Data.List.Utils (minimumOn)
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
-import           Data.Monoid (Monoid(..))
+import           Data.Monoid (Monoid(..), (<>))
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import           Data.Vector.Vector2 (Vector2(..))
@@ -39,6 +39,7 @@ import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import           Graphics.UI.Bottle.View (View(..))
 import           Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -104,11 +105,10 @@ cursorRects style str =
 
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
-  makeFocusable style str myId .
-  (Widget.wSize . Lens._1 +~ cursorWidth) .
-  (Widget.wFrame %~ cursorTranslate style) .
-  TextView.makeWidget (style ^. sTextViewStyle) displayStr $
-  Widget.toAnimId myId
+  TextView.makeWidget (style ^. sTextViewStyle) displayStr (Widget.toAnimId myId)
+  & Widget.wAnimFrame %~ cursorTranslate style
+  & Widget.wWidth +~ cursorWidth
+  & makeFocusable style str myId
   where
     cursorWidth = style ^. sCursorWidth
     displayStr = makeDisplayStr (style ^. sEmptyUnfocusedString) str
@@ -180,8 +180,7 @@ makeFocused cursor style str myId =
   where
     widget = Widget
       { _wIsFocused = True
-      , _wSize = reqSize
-      , _wFrame = img `mappend` cursorFrame
+      , _wView = View reqSize $ img <> cursorFrame
       , _wEventMap = eventMap cursor str displayStr myId
       , _wMaybeEnter = Nothing
       , _wFocalArea = cursorRect

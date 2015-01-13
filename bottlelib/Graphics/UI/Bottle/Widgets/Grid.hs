@@ -34,6 +34,7 @@ import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import           Graphics.UI.Bottle.View (View(..))
 import           Graphics.UI.Bottle.Widget (Widget(..), R)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.GridView (Alignment)
@@ -209,15 +210,13 @@ toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
     combineWs wss =
       maybe unselectedW makeW mCursor
       where
-        framess = (map . map) _wFrame wss
         mEnterss = (map . map) _wMaybeEnter wss
-        frame = mconcat $ concat framess
+        frame = wss ^. Lens.traversed . Lens.traversed . Widget.wAnimFrame
         mEnter = combineEnters size mEnterss
 
         unselectedW = Widget
           { _wIsFocused = Lens.has Lens._Just mCursor
-          , _wSize = size
-          , _wFrame = frame
+          , _wView = View size frame
           , _wMaybeEnter = mEnter
           , _wEventMap = mempty
           , _wFocalArea = Rect 0 size
@@ -225,8 +224,7 @@ toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
 
         makeW cursor@(Vector2 x y) = Widget
           { _wIsFocused = Lens.has Lens._Just mCursor
-          , _wSize = size
-          , _wFrame = frame
+          , _wView = View size frame
           , _wMaybeEnter = mEnter
           , _wEventMap = makeEventMap w navDests
           , _wFocalArea = _wFocalArea w

@@ -192,7 +192,6 @@ mainLoopDebugMode win getConfig iteration = do
         doc = EventMap.Doc $ "Debug Mode" : if isDebugMode then ["Disable"] else ["Enable"]
         set = writeIORef debugModeRef (not isDebugMode)
       return $
-        -- whenApply isDebugMode (Widget.wFrame %~ addAnnotations font) $
         Widget.strongerEvents
         (Widget.keysEventMap (Config.debugModeKeys config) doc set)
         widget

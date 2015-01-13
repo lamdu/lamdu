@@ -86,7 +86,7 @@ makeOpenRecord fieldsGui rest myId =
     config <- ExprGuiM.widgetEnv WE.readConfig
     vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
     restExpr <- ExprGuiM.makeSubexpression 0 rest <&> pad config
-    let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.wSize . Lens._1
+    let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.wWidth
     return $ ExpressionGui.vboxDownwards $
       [ fieldsGui
       , separationBar config (max minWidth targetWidth) (Widget.toAnimId myId)
@@ -94,7 +94,7 @@ makeOpenRecord fieldsGui rest myId =
       , restExpr
       ] <&> (,) 0.5
   where
-    targetWidth = fieldsGui ^. ExpressionGui.egWidget . Widget.wSize . Lens._1
+    targetWidth = fieldsGui ^. ExpressionGui.egWidget . Widget.wWidth
 
 pad :: Config -> ExpressionGui m -> ExpressionGui m
 pad config = ExpressionGui.pad $ realToFrac <$> Config.valFramePadding config

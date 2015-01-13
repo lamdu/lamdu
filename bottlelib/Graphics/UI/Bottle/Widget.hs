@@ -1,25 +1,29 @@
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric #-}
 module Graphics.UI.Bottle.Widget
   ( module Graphics.UI.Bottle.WidgetId
-  , Widget(..), empty
+  , Widget(..)
+  , wMaybeEnter, wEventMap, wView
+  , wFocalArea , wIsFocused, wAnimLayers
+  , wAnimFrame, wSize, wWidth, wHeight
+  , empty
   , MEnter, R, Size
   , EnterResult(..), enterResultEvent, enterResultRect
   , EventHandlers
   , EventResult(..), eventResultFromCursor
-  , keysEventMap, keysEventMapMovesCursor
+  , keysEventMap
+  , keysEventMapMovesCursor
   , eAnimIdMapping, eCursor
-  , wMaybeEnter, wEventMap, wFrame, wFocalArea
-  , wIsFocused, wSize
-  , atWFrameWithSize, atEvents
+  , atEvents -- TODO: Lens/traversal
   , takesFocus, doesntTakeFocus
-  , backgroundColor, tint, liftView
+  , backgroundColor, tint
+  , liftView -- TODO: fromView
   , addInnerFrame
   , strongerEvents, weakerEvents
-  , translate, translateBy, scale, scaleDownContent, pad, assymetricPad
-  , overlayView
+  , translate, scale, pad, assymetricPad
   ) where
 
-import           Control.Applicative ((<$>), liftA2)
+import           Control.Applicative ((<$>))
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Monoid (Monoid(..))
@@ -38,6 +42,7 @@ import           Graphics.UI.Bottle.ModKey (ModKey)
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.WidgetId (Id(..), augmentId, toAnimId, joinId, subId)
 
 data EventResult = EventResult
@@ -58,8 +63,7 @@ type EventHandlers f = EventMap (f EventResult)
 
 data Widget f = Widget
   { _wIsFocused :: Bool
-  , _wSize :: Size
-  , _wFrame :: Anim.Frame
+  , _wView :: View
   , _wMaybeEnter :: MEnter f -- Nothing if we're not enterable
   , _wEventMap :: EventHandlers f
   , _wFocalArea :: Rect
@@ -70,7 +74,27 @@ Lens.makeLenses ''EventResult
 Lens.makeLenses ''Widget
 
 empty :: Widget f
-empty = Widget False 0 mempty Nothing mempty (Rect 0 0)
+empty = Widget False View.empty Nothing mempty (Rect 0 0)
+
+{-# INLINE wAnimFrame #-}
+wAnimFrame :: Lens' (Widget f) Anim.Frame
+wAnimFrame = wView . View.animFrame
+
+{-# INLINE wAnimLayers #-}
+wAnimLayers :: Lens.Traversal' (Widget f) Anim.Layer
+wAnimLayers = wAnimFrame . Anim.layers
+
+{-# INLINE wSize #-}
+wSize :: Lens' (Widget f) Size
+wSize = wView . View.size
+
+{-# INLINE wWidth #-}
+wWidth :: Lens' (Widget f) R
+wWidth = wView . View.width
+
+{-# INLINE wHeight #-}
+wHeight :: Lens' (Widget f) R
+wHeight = wView . View.height
 
 eventResultFromCursor :: Id -> EventResult
 eventResultFromCursor cursor = EventResult
@@ -87,18 +111,14 @@ atEvents func w = w
   }
 
 liftView :: View -> Widget f
-liftView (View sz frame) =
+liftView view =
   Widget
     { _wIsFocused = False
-    , _wSize = sz
-    , _wFocalArea = Rect 0 sz
-    , _wFrame = frame
+    , _wFocalArea = Rect 0 (view ^. View.size)
+    , _wView = view
     , _wEventMap = mempty
     , _wMaybeEnter = Nothing
     }
-
-atWFrameWithSize :: (Size -> Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
-atWFrameWithSize f w = w & wFrame %~ f (w ^. wSize)
 
 -- TODO: Would be nicer as (Direction -> Id), but then TextEdit's "f" couldn't be ((,) String)..
 takesFocus :: Functor f => (Direction -> f Id) -> Widget f -> Widget f
@@ -122,20 +142,21 @@ weakerEvents :: EventHandlers f -> Widget f -> Widget f
 weakerEvents events = wEventMap %~ (`mappend` events)
 
 backgroundColor :: Int -> AnimId -> Draw.Color -> Widget f -> Widget f
-backgroundColor layer animId = atWFrameWithSize . Anim.backgroundColor animId layer
+backgroundColor layer animId color =
+  wView %~ View.backgroundColor animId layer color
 
 addInnerFrame :: Int -> AnimId -> Draw.Color -> Vector2 R -> Widget f -> Widget f
-addInnerFrame layer animId color frameWidth =
-  atWFrameWithSize f
+addInnerFrame layer animId color frameWidth widget =
+  widget & wAnimFrame %~ mappend emptyRectangle
   where
-    f size frame =
-      Anim.emptyRectangle frameWidth size animId
+    emptyRectangle =
+      Anim.emptyRectangle frameWidth (widget ^. wSize) animId
       & Anim.unitImages %~ Draw.tint color
       & Anim.layers +~ layer
-      & mappend frame
+
 
 tint :: Draw.Color -> Widget f -> Widget f
-tint color = wFrame . Anim.unitImages %~ Draw.tint color
+tint color = wAnimFrame . Anim.unitImages %~ Draw.tint color
 
 keysEventMap ::
   Functor f => [ModKey] -> EventMap.Doc ->
@@ -154,50 +175,29 @@ keysEventMapMovesCursor keys doc act =
 -- TODO: This actually makes an incorrect widget because its size
 -- remains same, but it is now translated away from 0..size
 translate :: Vector2 R -> Widget f -> Widget f
-translate pos =
-  (wFrame %~ Anim.translate pos) .
-  (wFocalArea . Rect.topLeft %~ (+pos)) .
-  (wMaybeEnter . Lens.mapped %~
-    (Lens.mapped . enterResultRect .
-     Rect.topLeft %~ (+ pos)) .
-    (Lens.argument . Direction.coordinates .
-     Rect.topLeft %~ subtract pos))
-
-translateBy :: (Vector2 R -> Vector2 R) -> Widget f -> Widget f
-translateBy mkPos w =
-  (translate . mkPos . (^. wSize)) w w
+translate pos widget =
+  widget
+  & wMaybeEnter . Lens._Just . Lens.argument .
+    Direction.coordinates . Rect.topLeft -~ pos
+  & wMaybeEnter . Lens._Just . Lens.mapped .
+    enterResultRect . Rect.topLeft +~ pos
+  & wFocalArea . Rect.topLeft +~ pos
+  & wAnimFrame %~ Anim.translate pos
 
 scale :: Vector2 R -> Widget f -> Widget f
-scale mult =
-  (wFrame %~ Anim.scale mult) .
-  (wFocalArea . Rect.topLeftAndSize %~ (* mult)) .
-  (wMaybeEnter . Lens.traversed %~
-    (Lens.mapped . enterResultRect .
-     Rect.topLeftAndSize %~ (*mult)) .
-    (Lens.argument . Direction.coordinates .
-     Rect.topLeftAndSize %~ (/mult))) .
-  (wSize %~ (* mult))
-
--- | Scale down a widget without affecting its exported size
-scaleDownContent :: Vector2 R -> Vector2 R -> Widget f -> Widget f
-scaleDownContent factor align w =
-  w
-  & scale factor
-  & translate ((w ^. wSize) * align * (1 - factor))
-  & wSize .~ (w ^. wSize)
+scale mult widget =
+  widget
+  & wView %~ View.scale mult
+  & wFocalArea . Rect.topLeftAndSize *~ mult
+  & wMaybeEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
+  & wMaybeEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
 
 -- Surround a widget with padding
 pad :: Vector2 R -> Widget f -> Widget f
 pad p = assymetricPad p p
 
 assymetricPad :: Vector2 R -> Vector2 R -> Widget f -> Widget f
-assymetricPad leftAndTop rightAndBottom w =
-  w
-  & wSize %~ (+ (leftAndTop + rightAndBottom))
+assymetricPad leftAndTop rightAndBottom widget =
+  widget
+  & wSize +~ leftAndTop + rightAndBottom
   & translate leftAndTop
-
-overlayView :: View -> Widget f -> Widget f
-overlayView (View size frame) w =
-  w
-  & wSize %~ liftA2 max size
-  & wFrame %~ mappend frame

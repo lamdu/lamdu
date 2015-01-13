@@ -6,17 +6,18 @@ import           Control.Lens ((^.))
 import qualified Control.Lens as Lens
 import           Control.Monad (mplus)
 import           Data.List.Utils (minimumOn)
-import           Data.Monoid (Monoid(..))
+import           Data.Monoid (Monoid(..), (<>))
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import           Graphics.UI.Bottle.View (View(..))
 import           Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
 
 choose ::
   Widget.EnterResult f -> Widget.EnterResult f ->
@@ -32,8 +33,7 @@ chooseRect x y rect =
 makeVertical :: Widget.Size -> Widget f -> Widget f -> Widget f
 makeVertical size top unTranslatedBottom = Widget
   { _wIsFocused = _wIsFocused top || _wIsFocused bottom
-  , _wSize = size
-  , _wFrame = _wFrame top `mappend` _wFrame bottom
+  , _wView = View size $ top ^. Widget.wAnimFrame <> bottom ^. Widget.wAnimFrame
   , _wMaybeEnter = mEnter (_wMaybeEnter top) (_wMaybeEnter bottom)
   , _wEventMap = eventMap
   , _wFocalArea = maybe (Rect 0 0) _wFocalArea selectedWidget
@@ -56,6 +56,6 @@ makeVertical size top unTranslatedBottom = Widget
       EventMap.keyPresses keys doc . (^. Widget.enterResultEvent) . enterOther .
       Direction.PrevFocalArea $ _wFocalArea me
     bottom = Widget.translate (Vector2 0 (max topHeight bottomsTop)) unTranslatedBottom
-    topHeight = _wSize top ^. Lens._2
-    bottomHeight = _wSize unTranslatedBottom ^. Lens._2
+    topHeight = top ^. Widget.wHeight
+    bottomHeight = unTranslatedBottom ^. Widget.wHeight
     bottomsTop = size ^. Lens._2 - bottomHeight

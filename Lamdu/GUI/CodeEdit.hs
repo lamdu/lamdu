@@ -24,8 +24,6 @@ import Lamdu.Sugar.AddNames.Types (DefinitionN)
 import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -236,8 +234,7 @@ makePaneWidget env defS = do
       Widget.backgroundColor
       (Config.layerActivePane (Config.layers config))
       WidgetIds.activePaneBackground paneActiveBGColor
-    colorizeInactivePane =
-      Widget.wFrame . Anim.unitImages %~ Draw.tint paneInactiveTintColor
+    colorizeInactivePane = Widget.tint paneInactiveTintColor
   DefinitionEdit.make (codeProps env) (settings env) defS
     <&> fitToWidth (totalWidth env) . colorize
 
@@ -246,4 +243,4 @@ fitToWidth width w
   | ratio < 1 = w & Widget.scale (realToFrac ratio)
   | otherwise = w
   where
-    ratio = width / w ^. Widget.wSize . Lens._1
+    ratio = width / w ^. Widget.wWidth
