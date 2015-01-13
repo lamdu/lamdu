@@ -211,8 +211,8 @@ cacheMakeWidget mkWidget = do
   let invalidateCache = writeIORef widgetCacheRef =<< memoIO mkWidget
   return $ \x -> do
     mkWidgetCached <- readIORef widgetCacheRef
-    Widget.atEvents (<* invalidateCache) <$>
-      mkWidgetCached x
+    mkWidgetCached x
+      <&> Widget.wEvents %~ (<* invalidateCache)
 
 flyNavConfig :: FlyNav.Config
 flyNavConfig = FlyNav.Config
@@ -366,16 +366,17 @@ makeRootWidget config settings style dbToIO size cursor = do
   actions <- VersionControl.makeActions
   runWidgetEnvT cursor style config $ do
     codeEdit <-
-      (fmap . Widget.atEvents) (VersionControl.runEvent cursor) .
-      WE.mapWidgetEnvT VersionControl.runAction $
       CodeEdit.make env rootGuid
+      & WE.mapWidgetEnvT VersionControl.runAction
+      <&> Widget.wEvents %~ VersionControl.runEvent cursor
     branchGui <- VersionControlGUI.make id size actions codeEdit
     let
       quitEventMap =
         Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
-    return .
-      Widget.atEvents (dbToIO . (attachCursor =<<)) $
-      Widget.strongerEvents quitEventMap branchGui
+    branchGui
+      & Widget.strongerEvents quitEventMap
+      & Widget.wEvents %~ dbToIO . (attachCursor =<<)
+      & return
   where
     env = CodeEdit.Env
       { CodeEdit.codeProps = DbLayout.codeProps

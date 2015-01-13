@@ -4,7 +4,7 @@ module Graphics.UI.Bottle.Widget
   , Widget(..)
   , wMaybeEnter, wEventMap, wView
   , wFocalArea , wIsFocused, wAnimLayers
-  , wAnimFrame, wSize, wWidth, wHeight
+  , wAnimFrame, wSize, wWidth, wHeight, wEvents
   , empty
   , MEnter, R, Size
   , EnterResult(..), enterResultEvent, enterResultRect
@@ -13,7 +13,6 @@ module Graphics.UI.Bottle.Widget
   , keysEventMap
   , keysEventMapMovesCursor
   , eAnimIdMapping, eCursor
-  , atEvents -- TODO: Lens/traversal
   , takesFocus, doesntTakeFocus
   , backgroundColor, tint
   , fromView
@@ -102,13 +101,16 @@ eventResultFromCursor cursor = EventResult
   , _eAnimIdMapping = mempty
   }
 
-atEvents :: (f EventResult -> g EventResult) -> Widget f -> Widget g
-atEvents func w = w
-  { _wMaybeEnter =
-       (Lens.mapped . Lens.mapped . enterResultEvent %~ func) $
-       _wMaybeEnter w
-  , _wEventMap = func <$> _wEventMap w
-  }
+wEvents :: Lens.Setter (Widget f) (Widget g) (f EventResult) (g EventResult)
+wEvents =
+  Lens.sets atEvents
+  where
+    atEvents f widget = widget
+      { _wMaybeEnter =
+           (Lens.mapped . Lens.mapped . enterResultEvent %~ f) $
+           _wMaybeEnter widget
+      , _wEventMap = f <$> _wEventMap widget
+      }
 
 fromView :: View -> Widget f
 fromView view =
@@ -120,7 +122,6 @@ fromView view =
     , _wMaybeEnter = Nothing
     }
 
--- TODO: Would be nicer as (Direction -> Id), but then TextEdit's "f" couldn't be ((,) String)..
 takesFocus :: Functor f => (Direction -> f Id) -> Widget f -> Widget f
 takesFocus enter w = w & wMaybeEnter .~ mEnter
   where
@@ -174,6 +175,7 @@ keysEventMapMovesCursor keys doc act =
 
 -- TODO: This actually makes an incorrect widget because its size
 -- remains same, but it is now translated away from 0..size
+-- Should expose higher-level combinators instead?
 translate :: Vector2 R -> Widget f -> Widget f
 translate pos widget =
   widget

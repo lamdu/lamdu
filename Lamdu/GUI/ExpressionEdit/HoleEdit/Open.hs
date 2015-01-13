@@ -434,12 +434,12 @@ makeSearchTermGui ::
   ExprGuiM m (ExpressionGui m)
 makeSearchTermGui holeInfo = do
   Config.Hole{..} <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
-  ExprGuiM.widgetEnv $
-    (ExpressionGui.scaleFromTop (realToFrac <$> holeSearchTermScaleFactor) .
-     ExpressionGui.fromValueWidget .
-     (Widget.wEventMap %~ OpenEventMap.disallowChars searchTerm) .
-     Widget.atEvents setter) <$>
-    BWidgets.makeTextEdit searchTerm (hiSearchTermId holeInfo)
+  BWidgets.makeTextEdit searchTerm (hiSearchTermId holeInfo)
+    <&> Widget.wEvents %~ setter
+    <&> Widget.wEventMap %~ OpenEventMap.disallowChars searchTerm
+    <&> ExpressionGui.fromValueWidget
+    <&> ExpressionGui.scaleFromTop (realToFrac <$> holeSearchTermScaleFactor)
+    & ExprGuiM.widgetEnv
   where
     searchTermProp = HoleInfo.hiSearchTermProperty holeInfo
     searchTerm = Property.value searchTermProp

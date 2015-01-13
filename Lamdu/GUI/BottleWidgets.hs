@@ -157,8 +157,8 @@ makeTextEditor
   -> Widget.Id
   -> WidgetEnvT m (Widget f)
 makeTextEditor textRef myId =
-  Widget.atEvents setter <$>
   makeTextEdit (Property.value textRef) myId
+  <&> Widget.wEvents %~ setter
   where
     setter (newText, eventRes) = do
       when (newText /= Property.value textRef) $ Property.set textRef newText
