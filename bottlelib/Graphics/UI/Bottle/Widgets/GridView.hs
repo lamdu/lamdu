@@ -21,7 +21,9 @@ type Alignment = Vector2 Anim.R -- ^ 0..1
 
 makePlacements :: [[(Alignment, Anim.Size)]] -> (Anim.Size, [[(Alignment, Rect)]])
 makePlacements rows =
-  (Vector2 width height, zipWith rowResult (zipWith alignPos rowPos rowSizes) posRows)
+  ( Vector2 width height
+  , zipWith rowResult (zipWith alignPos rowPos rowSizes) posRows
+  )
   where
     width = last colPos
     height = last rowPos
@@ -51,18 +53,24 @@ makeGeneric :: (Alignment -> Rect -> a -> b) -> [[(Alignment, (Anim.Size, a))]] 
 -- Special case to preserve shape to avoid handling it above in
 -- "maximum", "transpose", etc
 makeGeneric translate rows =
-  Lens._2 %~ place $ makePlacements szAlignments
+  makePlacements szAlignments
+  & Lens._2 %~ place
   where
     szAlignments = (map . map) (fst &&& fst . snd) rows
     items = (map . map) (snd . snd) rows
     place aRects = (zipWith . zipWith) (uncurry translate) aRects items
 
 make :: [[(Alignment, View)]] -> View
-make = (Lens._2 %~ mconcat . concat) . makeGeneric (const (Anim.translate . (^. Rect.topLeft)))
+make views =
+  views
+  & makeGeneric (const (Anim.translate . (^. Rect.topLeft)))
+  & Lens._2 %~ mconcat . concat
 
 makeAlign :: Alignment -> [[View]] -> View
-makeAlign alignment =
-  make . (Lens.traversed . Lens.traversed %~ (,) alignment)
+makeAlign alignment views =
+  views
+  & Lens.mapped . Lens.mapped %~ (,) alignment
+  & make
 
 makeCentered :: [[View]] -> View
 makeCentered = makeAlign 0.5
