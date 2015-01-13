@@ -330,20 +330,6 @@ isFunctionType :: Type -> NameGen.IsFunction
 isFunctionType T.TFun {} = NameGen.Function
 isFunctionType _ = NameGen.NotFunction
 
-withFuncParam ::
-  MonadNaming m =>
-  FuncParam (OldName m) (TM m) -> CPS m (FuncParam (NewName m) (TM m))
-withFuncParam fp@FuncParam{..} = CPS $ \k -> do
-  (name, res) <-
-    (`runCPS` k) $
-    case _fpVarKind of
-    FuncFieldParameter -> opWithTagName _fpName
-    FuncParameter -> opWithParamName (isFunctionType _fpInferredType) _fpName
-  pure
-    ( fp { _fpName = name }
-    , res
-    )
-
 toTagG :: MonadNaming m => TagG (OldName m) -> m (TagG (NewName m))
 toTagG = tagGName opGetTagName
 
@@ -499,13 +485,25 @@ withWhereItem item@WhereItem{..} = CPS $ \k -> do
     (,) <$> toBinder _wiValue <*> k
   pure (item { _wiValue = value, _wiName = name }, res)
 
+withBinderParams ::
+  MonadNaming m =>
+  BinderParams (OldName m) (TM m) -> CPS m (BinderParams (NewName m) (TM m))
+withBinderParams NoParams = pure NoParams
+withBinderParams (VarParam FuncParam{..}) =
+  opWithParamName (isFunctionType _fpInferredType) _fpName
+  <&> VarParam . \_fpName -> FuncParam{..}
+withBinderParams (FieldParams xs) =
+  traverse f xs <&> FieldParams
+  where
+    f FuncParam{..} = opWithTagName _fpName <&> \_fpName -> FuncParam{..}
+
 toBinder ::
   MonadNaming m =>
   Binder (OldName m) (TM m) (OldExpression m a) ->
   m (Binder (NewName m) (TM m) (NewExpression m a))
 toBinder def@Binder{..} = do
   (params, (whereItems, body)) <-
-    runCPS (traverse withFuncParam _dParams) .
+    runCPS (withBinderParams _dParams) .
     runCPS (traverse withWhereItem _dWhereItems) $
     toExpression _dBody
   pure def

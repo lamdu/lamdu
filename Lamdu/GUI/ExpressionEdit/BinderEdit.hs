@@ -8,7 +8,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Data.List.Utils (nonEmptyAll)
-import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Monoid(..), (<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -217,7 +216,7 @@ jumpToRHS keys (rhsDoc, rhs) = do
 makeResultEdit ::
   MonadA m =>
   Maybe (Sugar.BinderActions m) ->
-  [Sugar.FuncParam name m] ->
+  Sugar.BinderParams name m ->
   ExprGuiM.SugarExpr m ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
@@ -226,9 +225,16 @@ makeResultEdit mActions params result myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     jumpToLhsEventMap =
-      Widget.keysEventMapMovesCursor
-      (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to last param"]) $
-      lastParam <$ savePos
+      case params of
+      Sugar.NoParams -> mempty
+      Sugar.VarParam param ->
+        Widget.keysEventMapMovesCursor
+        (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to param"]) $
+        WidgetIds.fromEntityId (param ^. Sugar.fpId) <$ savePos
+      Sugar.FieldParams ps ->
+        Widget.keysEventMapMovesCursor
+        (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to last param"]) $
+        WidgetIds.fromEntityId (last ps ^. Sugar.fpId) <$ savePos
     addWhereItemEventMap actions =
       Widget.keysEventMapMovesCursor (Config.whereAddItemKeys config)
       (E.Doc ["Edit", "Where clause", "Add first"]) .
@@ -237,30 +243,29 @@ makeResultEdit mActions params result myId = do
     <&> ExpressionGui.egWidget %~
         Widget.weakerEvents
         (jumpToLhsEventMap <> maybe mempty addWhereItemEventMap mActions)
-  where
-    lastParam =
-      params
-      <&> WidgetIds.fromEntityId . (^. Sugar.fpId)
-      & reverse
-      & (^? traverse)
-      & fromMaybe myId
 
 makeParamsEdit ::
   MonadA m =>
   ExprGuiM.ShowType ->
   NearestHoles ->
   Widget.Id ->
-  [Sugar.FuncParam (Name m) m] ->
+  Sugar.BinderParams (Name m) m ->
   ExprGuiM m [ExpressionGui m]
 makeParamsEdit showType nearestHoles lhsId params =
   do
-    jumpHolesEventMap <-ExprEventMap.jumpHolesEventMap [] nearestHoles
+    jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] nearestHoles
     let
       mkParam (prevId, nextId, param) =
         ParamEdit.make showType prevId nextId param
         <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
-    ExpressionGui.listWithDelDests lhsId lhsId (WidgetIds.fromEntityId . (^. Sugar.fpId)) params
+    ExpressionGui.listWithDelDests lhsId lhsId (WidgetIds.fromEntityId . (^. Sugar.fpId)) paramList
       & traverse mkParam
+  where
+    paramList =
+      case params of
+      Sugar.NoParams -> []
+      Sugar.VarParam p -> [p]
+      Sugar.FieldParams ps -> ps & Lens.traversed . Sugar.fpVarInfo .~ ()
 
 diveToNameEdit :: Widget.Id -> Widget.Id
 diveToNameEdit = FocusDelegator.delegatingId -- Name editor

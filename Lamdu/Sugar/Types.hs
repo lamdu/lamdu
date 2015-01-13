@@ -13,6 +13,7 @@ module Lamdu.Sugar.Types
   , Anchors.PresentationMode(..)
   , BinderActions(..)
     , baAddFirstParam, baAddInnermostWhereItem
+  , BinderParams(..), _NoParams, _VarParam, _FieldParams
   , Binder(..)
     , dSetPresentationMode, dParams, dBody, dWhereItems, dMActions
   , DefinitionBuiltin(..), biType, biName, biSetName
@@ -42,9 +43,8 @@ module Lamdu.Sugar.Types
   , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
   , AnnotatedArg(..), aaTag, aaTagExprEntityId, aaExpr
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
-  , FuncParamType(..)
   , FuncParam(..)
-    , fpName, fpId, fpVarKind, fpInferredType, fpMActions, fpHiddenIds
+    , fpName, fpId, fpVarInfo, fpInferredType, fpMActions, fpHiddenIds
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
   , HoleArg(..), haExpr, haUnwrap
   , HoleSuggested(..), hsValue, hsMakeConverted
@@ -123,12 +123,9 @@ newtype FuncParamActions m = FuncParamActions
   { _fpListItemActions :: ListItemActions m
   }
 
-data FuncParamType = FuncParameter | FuncFieldParameter
-
--- TODO:
-data FuncParam name m = FuncParam
+data FuncParam varinfo name m = FuncParam
   { _fpId :: EntityId
-  , _fpVarKind :: FuncParamType
+  , _fpVarInfo :: varinfo
   , _fpName :: name
   , _fpInferredType :: Type
   , _fpMActions :: Maybe (FuncParamActions m)
@@ -284,7 +281,7 @@ data Body name m expr
   | BodyGetVar (GetVar name m)
   deriving (Functor, Foldable, Traversable)
 
-instance Show (FuncParam name m) where
+instance Show (FuncParam paraminfo name m) where
   show _fp = "TODO:FuncParam"
 
 instance Show expr => Show (Body name m expr) where
@@ -315,9 +312,14 @@ data BinderActions m = BinderActions
   , _baAddInnermostWhereItem :: T m EntityId
   }
 
+data BinderParams name m
+  = NoParams -- used in definitions and where items
+  | VarParam (FuncParam () name m)
+  | FieldParams [FuncParam T.Tag name m]
+
 data Binder name m expr = Binder
   { _dSetPresentationMode :: Maybe (MkProperty m Anchors.PresentationMode)
-  , _dParams :: [FuncParam name m]
+  , _dParams :: BinderParams name m
   , _dBody :: expr
   , _dWhereItems :: [WhereItem name m expr]
   , _dMActions :: Maybe (BinderActions m)
@@ -396,3 +398,4 @@ Lens.makePrisms ''SetToInnerExpr
 Lens.makePrisms ''SpecialArgs
 Lens.makePrisms ''Unwrap
 Lens.makePrisms ''WrapAction
+Lens.makePrisms ''BinderParams

@@ -33,7 +33,7 @@ make parentPrecedence binder pl =
         >>= ExpressionGui.vboxDownwardsSpaced
         >>=
           case params of
-          (_:_:_) -> ExpressionGui.addValFrame myId
+          Sugar.FieldParams _ -> ExpressionGui.addValFrame myId
           _ -> return
       arrowLabel <- ExpressionGui.grammarLabel "→" $ Widget.toAnimId myId
       bodyEdit <- BinderEdit.makeResultEdit (binder ^. Sugar.dMActions) params body myId

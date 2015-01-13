@@ -22,7 +22,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 -- exported for use in definition sugaring.
 make ::
   MonadA m => ExprGuiM.ShowType -> Widget.Id -> Widget.Id ->
-  Sugar.FuncParam (Name m) m ->
+  Sugar.FuncParam v (Name m) m ->
   ExprGuiM m (ExpressionGui m)
 make showType prevId nextId param =
   assignCursor $ do

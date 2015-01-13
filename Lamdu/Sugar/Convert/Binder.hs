@@ -9,7 +9,6 @@ import Control.Lens.Operators
 import Control.Monad (guard, void, when)
 import Control.MonadA (MonadA)
 import Data.Foldable (traverse_)
-import Data.List.Utils (isLengthAtLeast)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
@@ -53,11 +52,11 @@ type T = Transaction
 data ConventionalParams m a = ConventionalParams
   { cpTags :: Set T.Tag
   , cpParamInfos :: Map T.Tag ConvertM.TagParamInfo
-  , _cpParams :: [FuncParam Guid m]
+  , _cpParams :: BinderParams Guid m
   , cpMAddFirstParam :: Maybe (T m EntityId)
   }
 
-cpParams :: Lens' (ConventionalParams m a) [FuncParam Guid m]
+cpParams :: Lens' (ConventionalParams m a) (BinderParams Guid m)
 cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalParams{..}
 
 data FieldParam = FieldParam
@@ -212,7 +211,7 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
     pure ConventionalParams
       { cpTags = Set.fromList tags
       , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
-      , _cpParams = params
+      , _cpParams = FieldParams params
       , cpMAddFirstParam = mAddFirstParam
       }
   where
@@ -229,7 +228,7 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
         pure FuncParam
           { _fpName = UniqueId.toGuid $ fpTag fp
           , _fpId = fpIdEntityId fp
-          , _fpVarKind = FuncFieldParameter
+          , _fpVarInfo = fpTag fp
           , _fpInferredType = fpFieldType fp
           , _fpMActions = actions
           , _fpHiddenIds = []
@@ -386,7 +385,7 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
       funcParam =
         FuncParam
         { _fpName = UniqueId.toGuid param
-        , _fpVarKind = FuncParameter
+        , _fpVarInfo = ()
         , _fpId = paramEntityId
         , _fpInferredType = paramType
         , _fpMActions = fst <$> mActions
@@ -395,7 +394,7 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
     pure ConventionalParams
       { cpTags = mempty
       , cpParamInfos = Map.empty
-      , _cpParams = [funcParam]
+      , _cpParams = VarParam funcParam
       , cpMAddFirstParam = snd <$> mActions
       }
   where
@@ -458,7 +457,7 @@ convertEmptyParams mRecursiveVar val =
       ConventionalParams
       { cpTags = mempty
       , cpParamInfos = Map.empty
-      , _cpParams = []
+      , _cpParams = NoParams
       , cpMAddFirstParam =
         val
         & sequenceA
@@ -480,8 +479,11 @@ convertParams mRecursiveVar expr =
         convertLamParams mRecursiveVar lambda (expr ^. V.payload)
         -- The lambda disappears here, so add its id to the first
         -- param's hidden ids:
-        <&> cpParams . Lens.ix 0 . fpHiddenIds <>~ [expr ^. V.payload . Input.entityId]
+        <&> cpParams . _VarParam . fpHiddenIds <>~ hiddenIds
+        <&> cpParams . _FieldParams . Lens.ix 0 . fpHiddenIds <>~ hiddenIds
       return (params, lambda ^. V.lamResult)
+    where
+       hiddenIds = [expr ^. V.payload . Input.entityId]
   _ ->
     do
       params <-
@@ -626,7 +628,7 @@ convertBinder mRecursiveVar defGuid expr =
     (convParams, funcBody) <- convertParams mRecursiveVar expr
     let
       setPresentationMode
-        | isLengthAtLeast 2 (convParams ^. cpParams) =
+        | Lens.has (cpParams . _FieldParams) convParams =
           Just $ Anchors.assocPresentationMode defGuid
         | otherwise = Nothing
     makeBinder setPresentationMode convParams funcBody
