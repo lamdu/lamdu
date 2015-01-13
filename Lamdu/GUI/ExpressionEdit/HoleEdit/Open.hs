@@ -27,7 +27,6 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground)
@@ -132,7 +131,7 @@ makeShownResult holeInfo result =
 
 makeExtraSymbolWidget :: MonadA m => AnimId -> Bool -> ResultsList n -> ExprGuiM m (Widget f)
 makeExtraSymbolWidget animId isSelected results
-  | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure Spacer.empty
+  | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure Widget.empty
   | otherwise =
     do
       Config.Hole{..} <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
@@ -143,7 +142,7 @@ makeExtraSymbolWidget animId isSelected results
       ExprGuiM.makeLabel extraSymbol animId
         <&> Widget.scale extraSymbolScaleFactor
         <&> Widget.tint extraSymbolColor
-        >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced . (Spacer.empty :) . (: [])
+        >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced . (Widget.empty :) . (: [])
 
 data ResultGroupWidgets m = ResultGroupWidgets
   { _rgwMainResult :: ShownResult m
@@ -179,7 +178,7 @@ makeResultGroup holeInfo results = do
       if cursorOnExtra
         then makeExtra
         else
-          Spacer.empty
+          Widget.empty
           & focusFirstExtraResult (results ^. HoleResults.rlExtra)
           <&> (,) Nothing
   let isSelected = Lens.has Lens._Just mSelectedResult
@@ -197,7 +196,7 @@ makeResultGroup holeInfo results = do
 makeExtraResultsWidget ::
   MonadA m => HoleInfo m -> Anim.R -> [Result m] ->
   ExprGuiM m (Maybe (ShownResult m), WidgetT m)
-makeExtraResultsWidget _ _ [] = return (Nothing, Spacer.empty)
+makeExtraResultsWidget _ _ [] = return (Nothing, Widget.empty)
 makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let

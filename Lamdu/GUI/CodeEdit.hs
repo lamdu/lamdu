@@ -100,7 +100,7 @@ makeClipboardsEdit env clipboards = do
   clipboardsEdits <- traverse (makePaneWidget env) clipboards
   clipboardTitle <-
     if null clipboardsEdits
-    then return Spacer.empty
+    then return Widget.empty
     else BWidgets.makeTextViewWidget "Clipboards:" ["clipboards title"]
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
