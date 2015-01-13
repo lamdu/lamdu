@@ -207,5 +207,5 @@ make prefix t =
       & runM
       & (`evalStateT` Random.mkStdGen 0)
       <&> Lens._2 %~ Anim.mapIdentities (mappend prefix)
-      <&> Lens._2 %~ (Anim.onImages . Draw.tint) (Config.typeTint config)
+      <&> Lens._2 . Anim.unitImages %~ Draw.tint (Config.typeTint config)
       <&> (^. View.scaled (realToFrac <$> Config.typeScaleFactor config))

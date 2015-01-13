@@ -113,7 +113,7 @@ data Askable m = Askable
     ParentPrecedence -> SugarExpr m ->
     ExprGuiM m (ExpressionGui m)
   , _aCodeAnchors :: Anchors.CodeProps m
-  , _aSubexpressionDepth :: Int
+  , _aSubexpressionLayer :: Int
   }
 
 newtype ExprGuiM m a = ExprGuiM
@@ -144,13 +144,13 @@ mkPrejumpPosSaver =
 makeSubexpression ::
   MonadA m => Precedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeSubexpression parentPrecedence expr = do
-  depth <- ExprGuiM $ Lens.view aSubexpressionDepth
+  depth <- ExprGuiM $ Lens.view aSubexpressionLayer
   if depth >= 15
     then widgetEnv $ (`ExpressionGui` 0.5) <$> mkErrorWidget
     else do
       maker <- ExprGuiM $ Lens.view aMakeSubexpression
       maker (ParentPrecedence parentPrecedence) expr
-        & exprGuiM %~ RWS.local (aSubexpressionDepth +~ 1)
+        & exprGuiM %~ RWS.local (aSubexpressionLayer +~ 1)
   where
     widgetId = WidgetIds.fromEntityId $ expr ^. Sugar.rPayload . Sugar.plEntityId
     mkErrorWidget =
@@ -167,7 +167,7 @@ run makeSubexpr codeAnchors settings (ExprGuiM action) =
   { _aSettings = settings
   , _aMakeSubexpression = makeSubexpr
   , _aCodeAnchors = codeAnchors
-  , _aSubexpressionDepth = 0
+  , _aSubexpressionLayer = 0
   }
   ()
   where

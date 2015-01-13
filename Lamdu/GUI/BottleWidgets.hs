@@ -67,7 +67,7 @@ verticalSpace = do
 
 liftLayerInterval :: Config -> Widget f -> Widget f
 liftLayerInterval config =
-  Widget.wFrame %~ Anim.onDepth (+ layerDiff)
+  Widget.wFrame . Anim.layers +~ layerDiff
   where
     layers = Config.layers config
     layerDiff = - Config.layerInterval layers

@@ -124,13 +124,14 @@ addInnerFrame :: Int -> AnimId -> Draw.Color -> Vector2 R -> Widget f -> Widget 
 addInnerFrame layer animId color frameWidth =
   atWFrameWithSize f
   where
-    f size =
-      mappend $
-      Anim.onDepth (+ layer) $ Anim.onImages (Draw.tint color) $
+    f size frame =
       Anim.emptyRectangle frameWidth size animId
+      & Anim.unitImages %~ Draw.tint color
+      & Anim.layers +~ layer
+      & mappend frame
 
 tint :: Draw.Color -> Widget f -> Widget f
-tint color = wFrame %~ Anim.onImages (Draw.tint color)
+tint color = wFrame . Anim.unitImages %~ Draw.tint color
 
 keysEventMap ::
   Functor f => [ModKey] -> EventMap.Doc ->

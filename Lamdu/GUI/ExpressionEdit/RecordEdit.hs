@@ -83,7 +83,7 @@ makeOpenRecord fieldsGui rest myId =
       (,) 0.5 <$>
       [ fieldsGui
       , Anim.unitSquare (Widget.toAnimId (Widget.joinId myId ["tail"]))
-        & Anim.onImages (Draw.tint (Config.recordTailColor config))
+        & Anim.unitImages %~ Draw.tint (Config.recordTailColor config)
         & View.fromFrame 1
         & Widget.liftView
         & Widget.scale (Vector2 (max minWidth targetWidth) 10)

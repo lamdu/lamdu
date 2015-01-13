@@ -73,12 +73,10 @@ addAnimIds animId (Branch a cs) =
 makeShortcutKeyView ::
   Config -> (AnimId, [E.InputDoc]) -> View
 makeShortcutKeyView config (animId, inputDocs) =
-  GridView.verticalAlign 0 .
-  map
-  ( (images %~ Draw.tint (configInputDocColor config))
-  . TextView.label (configStyle config) animId ) $ inputDocs
-  where
-    images = Lens._2 . Lens.sets Anim.onImages
+  inputDocs
+  <&> TextView.label (configStyle config) animId
+  <&> Lens._2 . Anim.unitImages %~ Draw.tint (configInputDocColor config)
+  & GridView.verticalAlign 0
 
 makeTextViews ::
   Config -> AnimId ->
@@ -156,10 +154,10 @@ addHelp f size =
     (eventMapSize, eventMapDoc) = f ["help box"]
     transparency = Draw.Color 1 1 1
     docFrame =
-      (Anim.onImages . Draw.tint . transparency) 0.8 .
-      Anim.onDepth (subtract 10) .
-      Anim.translate (size - eventMapSize) $
       eventMapDoc
+      & Anim.translate (size - eventMapSize)
+      & Anim.layers -~ 10
+      & Anim.unitImages %~ Draw.tint (transparency 0.8)
 
 data IsHelpShown = HelpShown | HelpNotShown
   deriving (Eq, Ord, Read, Show)

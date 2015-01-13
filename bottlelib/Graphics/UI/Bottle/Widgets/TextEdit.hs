@@ -194,10 +194,11 @@ makeFocused cursor style str myId =
 
     cursorRect = mkCursorRect style cursor str
     cursorFrame =
-      Anim.onDepth (+2) .
-      Anim.unitIntoRect cursorRect .
-      Anim.simpleFrame (style ^. sTextCursorId) $
-      Draw.tint (style ^. sCursorColor) square
+      square
+      & Draw.tint (style ^. sCursorColor)
+      & Anim.simpleFrame (style ^. sTextCursorId)
+      & Anim.unitIntoRect cursorRect
+      & Anim.layers +~ 2
 
 textViewDraw ::
   Style -> String -> (Anim.AnimId -> Anim.Frame, Widget.Size)

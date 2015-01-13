@@ -89,22 +89,23 @@ highlightColor = Draw.Color 0.4 0.4 1 0.4
 
 target :: Config -> AnimId -> Vector2 Widget.R -> Anim.Frame
 target config animId pos =
-  Anim.onDepth (+ configLayer config) .
-  Anim.translate pos .
-  Anim.scale targetSize .
-  Anim.onImages (Draw.tint targetColor) .
-  Anim.simpleFrame animId .
-  void $ Draw.circle
+  void Draw.circle
+  & Anim.simpleFrame animId
+  & Anim.unitImages %~ Draw.tint targetColor
+  & Anim.scale targetSize
+  & Anim.translate pos
+  & Anim.layers +~ configLayer config
 
 cap :: Size -> Vector2 Widget.R -> Vector2 Widget.R
 cap size = liftA2 max 0 . liftA2 min size
 
 highlightRect :: AnimId -> Rect -> Anim.Frame
 highlightRect animId (Rect pos size) =
-  Anim.translate pos . Anim.scale size .
-  Anim.onDepth (subtract 50) .
-  Anim.onImages (Draw.tint highlightColor) $
   Anim.unitSquare animId
+  & Anim.unitImages %~ Draw.tint highlightColor
+  & Anim.layers -~ 50 -- TODO: 50?!
+  & Anim.scale size
+  & Anim.translate pos
 
 addMovements
   :: Functor f
