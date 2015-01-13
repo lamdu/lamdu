@@ -23,7 +23,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Animation (AnimId, Size)
 import           Graphics.UI.Bottle.Rect (Rect(Rect))
 import qualified Graphics.UI.Bottle.Rect as Rect
-import           Graphics.UI.Bottle.View (View)
+import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -109,7 +109,7 @@ drawTextAsLines style text =
   & joinLines
 
 make :: Style -> String -> AnimId -> View
-make style text animId = (textSize, frame animId)
+make style text animId = View textSize (frame animId)
   where
     (frame, textSize) = drawTextAsLines style text
 

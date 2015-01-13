@@ -3,40 +3,41 @@ module Lamdu.GUI.TypeView
   ( make
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens.Operators
-import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.State (StateT, state, evalStateT)
-import Control.MonadA (MonadA)
-import Data.Map (Map)
-import Data.Monoid (Monoid(..))
-import Data.Store.Transaction (Transaction)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Animation (AnimId)
-import Graphics.UI.Bottle.View (View)
-import Lamdu.Expr.FlatComposite (FlatComposite(..))
-import Lamdu.Expr.Identifier (Identifier(..))
-import Lamdu.Expr.Type (Type)
-import Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..))
-import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
-import System.Random (Random, random)
+import           Control.Applicative (Applicative(..), (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad.Trans.Class (MonadTrans(..))
+import           Control.Monad.Trans.State (StateT, state, evalStateT)
+import           Control.MonadA (MonadA)
 import qualified Data.ByteString.Char8 as BS8
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
+import           Lamdu.Expr.FlatComposite (FlatComposite(..))
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
+import           Lamdu.Expr.Identifier (Identifier(..))
+import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import           Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..))
+import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           System.Random (Random, random)
 import qualified System.Random as Random
 
 type T = Transaction
@@ -126,26 +127,25 @@ makeTInst _parentPrecedence (T.Id name) typeParams =
         >>= afterName
 
 addPadding :: MonadA m => View -> M m View
-addPadding (sz, frame) =
+addPadding view =
   do
     config <- wenv WE.readConfig
     let padding = realToFrac <$> Config.valFramePadding config
-    return
-      ( sz + padding * 2
-      , Anim.translate padding frame
-      )
+    view
+      & View.animFrame %~ Anim.translate padding
+      & View.size +~ 2 * padding
+      & return
 
 addBGColor :: MonadA m => View -> M m View
-addBGColor (sz, frame) =
+addBGColor view =
   do
     config <- wenv WE.readConfig
     let layer = Config.layerTypes (Config.layers config) - 1
     let color = Config.typeFrameBGColor config
     bgId <- randAnimId
-    return
-      ( sz
-      , Anim.backgroundColor bgId layer color sz frame
-      )
+    view
+      & View.backgroundColor bgId layer color
+      & return
 
 addBackgroundFrame :: MonadA m => View -> M m View
 addBackgroundFrame v =
@@ -157,7 +157,7 @@ makeEmptyRecord = text "Ø"
 makeField :: (MonadA m, Fractional a) => (T.Tag, Type) -> M m [(Vector2 a, View)]
 makeField (tag, fieldType) = do
   name <- transaction $ Transaction.getP $ Anchors.assocNameRef tag
-  Lens.sequenceOf (Lens.traversed . Lens._2)
+  Lens.sequenceOf (Lens.traversed . _2)
     [ (Vector2 1 0.5, text name)
     , (0.5, mkSpace)
     , (Vector2 0 0.5, splitMake (ParentPrecedence 0) fieldType)
@@ -170,17 +170,17 @@ makeRecord composite =
     fieldsView <- GridView.make <$> mapM makeField (Map.toList fields)
     let
       barWidth | Map.null fields = 150
-               | otherwise = fieldsView ^. Lens._1 . Lens._1
+               | otherwise = fieldsView ^. View.width
     varView <-
       case extension of
-      Nothing -> pure (0, mempty)
+      Nothing -> pure View.empty
       Just var ->
         do
           sqrId <- randAnimId
           let
             sqr =
-              (1, Anim.unitSquare sqrId)
-              ^. View.scaled (Vector2 barWidth 10)
+              View 1 (Anim.unitSquare sqrId)
+              & View.scale (Vector2 barWidth 10)
           v <- makeTVar var
           return $ GridView.verticalAlign 0.5 [sqr, v]
     GridView.verticalAlign 0.5 [fieldsView, varView]
@@ -206,6 +206,6 @@ make prefix t =
     makeInternal (ParentPrecedence 0) t
       & runM
       & (`evalStateT` Random.mkStdGen 0)
-      <&> Lens._2 %~ Anim.mapIdentities (mappend prefix)
-      <&> Lens._2 . Anim.unitImages %~ Draw.tint (Config.typeTint config)
-      <&> (^. View.scaled (realToFrac <$> Config.typeScaleFactor config))
+      <&> View.animFrame %~ Anim.mapIdentities (mappend prefix)
+      <&> View.animFrame . Anim.unitImages %~ Draw.tint (Config.typeTint config)
+      <&> View.scale (realToFrac <$> Config.typeScaleFactor config)

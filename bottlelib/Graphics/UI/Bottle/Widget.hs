@@ -1,7 +1,8 @@
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric #-}
 module Graphics.UI.Bottle.Widget
   ( module Graphics.UI.Bottle.WidgetId
-  , Widget(..), MEnter, R, Size
+  , Widget(..), empty
+  , MEnter, R, Size
   , EnterResult(..), enterResultEvent, enterResultRect
   , EventHandlers
   , EventResult(..), eventResultFromCursor
@@ -36,7 +37,7 @@ import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.ModKey (ModKey)
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
-import           Graphics.UI.Bottle.View (View)
+import           Graphics.UI.Bottle.View (View(..))
 import           Graphics.UI.Bottle.WidgetId (Id(..), augmentId, toAnimId, joinId, subId)
 
 data EventResult = EventResult
@@ -68,6 +69,9 @@ Lens.makeLenses ''EnterResult
 Lens.makeLenses ''EventResult
 Lens.makeLenses ''Widget
 
+empty :: Widget f
+empty = Widget False 0 mempty Nothing mempty (Rect 0 0)
+
 eventResultFromCursor :: Id -> EventResult
 eventResultFromCursor cursor = EventResult
   { _eCursor = Monoid.Last $ Just cursor
@@ -83,7 +87,7 @@ atEvents func w = w
   }
 
 liftView :: View -> Widget f
-liftView (sz, frame) =
+liftView (View sz frame) =
   Widget
     { _wIsFocused = False
     , _wSize = sz
@@ -192,9 +196,8 @@ assymetricPad leftAndTop rightAndBottom w =
   & wSize %~ (+ (leftAndTop + rightAndBottom))
   & translate leftAndTop
 
-
 overlayView :: View -> Widget f -> Widget f
-overlayView (size, frame) w =
+overlayView (View size frame) w =
   w
   & wSize %~ liftA2 max size
   & wFrame %~ mappend frame

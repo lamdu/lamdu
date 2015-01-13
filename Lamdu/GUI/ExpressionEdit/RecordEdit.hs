@@ -8,13 +8,12 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.List as List
-import           Data.Monoid (Monoid(..))
+import           Data.Monoid (Monoid(..), (<>))
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -70,6 +69,15 @@ makeFieldsWidget fields _ =
       <&> List.intersperse (replicate 3 (0.5, ExpressionGui.fromValueWidget vspace))
       <&> ExpressionGui.gridDownwards
 
+separationBar :: Config -> Widget.R -> Anim.AnimId -> ExpressionGui m
+separationBar config width animId =
+  Anim.unitSquare (animId <> ["tailsep"])
+  & View 1
+  & Widget.liftView
+  & Widget.tint (Config.recordTailColor config)
+  & Widget.scale (Vector2 width 10)
+  & ExpressionGui.fromValueWidget
+
 makeOpenRecord :: MonadA m =>
   ExpressionGui m -> ExprGuiM.SugarExpr m -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
@@ -80,17 +88,11 @@ makeOpenRecord fieldsGui rest myId =
     restExpr <- ExprGuiM.makeSubexpression 0 rest <&> pad config
     let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.wSize . Lens._1
     return $ ExpressionGui.vboxDownwards $
-      (,) 0.5 <$>
       [ fieldsGui
-      , Anim.unitSquare (Widget.toAnimId (Widget.joinId myId ["tail"]))
-        & Anim.unitImages %~ Draw.tint (Config.recordTailColor config)
-        & View.fromFrame 1
-        & Widget.liftView
-        & Widget.scale (Vector2 (max minWidth targetWidth) 10)
-        & ExpressionGui.fromValueWidget
+      , separationBar config (max minWidth targetWidth) (Widget.toAnimId myId)
       , ExpressionGui.fromValueWidget vspace
       , restExpr
-      ]
+      ] <&> (,) 0.5
   where
     targetWidth = fieldsGui ^. ExpressionGui.egWidget . Widget.wSize . Lens._1
 

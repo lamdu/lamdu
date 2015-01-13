@@ -10,6 +10,7 @@ module Graphics.UI.Bottle.Widgets.EventMapDoc
 import           Control.Applicative ((<$>), Applicative(..))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Data.Function (on)
 import           Data.IORef (newIORef, readIORef, modifyIORef)
 import qualified Data.Map as Map
@@ -24,7 +25,7 @@ import           Graphics.UI.Bottle.EventMap (EventMap)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.ModKey as ModKey
-import           Graphics.UI.Bottle.View (View)
+import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -61,7 +62,7 @@ groupTree = foldr step []
 
 -- We also rely on Map.toList returning a sorted list
 groupInputDocs :: [([E.Subtitle], E.InputDoc)] -> [([E.Subtitle], [E.InputDoc])]
-groupInputDocs = Map.toList . Map.fromListWith (++) . (Lens.traversed . Lens._2 %~) (:[])
+groupInputDocs = Map.toList . Map.fromListWith (++) . (Lens.traversed . _2 %~) (:[])
 
 addAnimIds :: (Show a, Show b) => AnimId -> Tree a b -> Tree (AnimId, a) (AnimId, b)
 addAnimIds animId (Leaf b) = Leaf (animId ++ ["leaf"], b)
@@ -75,7 +76,7 @@ makeShortcutKeyView ::
 makeShortcutKeyView config (animId, inputDocs) =
   inputDocs
   <&> TextView.label (configStyle config) animId
-  <&> Lens._2 . Anim.unitImages %~ Draw.tint (configInputDocColor config)
+  <&> View.animFrame . Anim.unitImages %~ Draw.tint (configInputDocColor config)
   & GridView.verticalAlign 0
 
 makeTextViews ::
@@ -109,7 +110,7 @@ makeView :: Vector2 R -> EventMap a -> Config -> AnimId -> View
 makeView size eventMap config animId =
   makeTreeView config animId size .
   map (makeTextViews config animId) . groupTree . groupInputDocs .
-  map ((Lens._1 %~ (^. E.docStrs)) . Tuple.swap) $ E.eventMapDocs eventMap
+  map ((_1 %~ (^. E.docStrs)) . Tuple.swap) $ E.eventMapDocs eventMap
 
 makeTooltip :: Config -> [ModKey] -> AnimId -> View
 makeTooltip config helpKeys animId =
@@ -128,21 +129,21 @@ indent width x =
 makeTreeView :: Config -> AnimId -> Vector2 R -> [Tree View View] -> View
 makeTreeView config animId size =
   GridView.horizontalAlign 1 . (Lens.traversed %@~ toGrid) .
-  columns (size ^. Lens._2) pairHeight .
+  columns (size ^. _2) pairHeight .
   handleResult . go
   where
     toGrid i =
       addHelpBG config (View.augmentAnimId animId i) .
       GridView.make . map toRow
     toRow (titleView, docView) = [(0, titleView), (Vector2 1 0, docView)]
-    pairHeight ((titleSize, _), (docSize, _)) = on max (^. Lens._2) titleSize docSize
+    pairHeight (titleView, docView) = (max `on` (^. View.height)) titleView docView
     handleResult (pairs, []) = pairs
     handleResult _ = error "Leafs at root of tree!"
     go = mconcat . map fromTree
     fromTree (Leaf inputDocsView) = ([], [inputDocsView])
     fromTree (Branch titleView trees) =
       ( (titleView, GridView.verticalAlign 1 inputDocs) :
-        (Lens.traversed . Lens._1 %~ indent 10) titles
+        (Lens.traversed . _1 %~ indent 10) titles
       , [] )
       where
         (titles, inputDocs) = go trees
@@ -151,13 +152,13 @@ addHelp :: (AnimId -> View) -> Widget.Size -> Widget f -> Widget f
 addHelp f size =
   Widget.wFrame <>~ docFrame
   where
-    (eventMapSize, eventMapDoc) = f ["help box"]
+    View eventMapSize eventMapFrame = f ["help box"]
     transparency = Draw.Color 1 1 1
     docFrame =
-      eventMapDoc
+      eventMapFrame
       & Anim.translate (size - eventMapSize)
-      & Anim.layers -~ 10
-      & Anim.unitImages %~ Draw.tint (transparency 0.8)
+      & Anim.layers -~ 10 -- TODO: 10?!
+      & Anim.unitImages %~ Draw.tint (transparency 0.8) -- TODO: 0.8?!
 
 data IsHelpShown = HelpShown | HelpNotShown
   deriving (Eq, Ord, Read, Show)

@@ -14,7 +14,8 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
-import           Graphics.UI.Bottle.View (View)
+import           Graphics.UI.Bottle.View (View(..))
+import qualified Graphics.UI.Bottle.View as View
 
 type Alignment = Vector2 Anim.R -- ^ 0..1
 
@@ -26,8 +27,8 @@ groupSize dim group =
     maxSize f = maximum $ map ((^. dim) . f) group
 
 makePlacements ::
-  [[(Alignment, Anim.Size, a)]] ->
-  (Anim.Size, [[(Alignment, Rect, a)]])
+  [[(Alignment, View.Size, a)]] ->
+  (View.Size, [[(Alignment, Rect, a)]])
 makePlacements rows =
   ( Vector2 width height
   , zipWith rowResult (zipWith alignPos rowPos rowSizes) posRows
@@ -57,12 +58,13 @@ make views =
   views
   & Lens.mapped . Lens.mapped %~ toTriplet
   & makePlacements
-  & _2 %~ toView
+  & _2 %~ toFrame
+  & uncurry View
   where
-    toTriplet (alignment, (size, frame)) = (alignment, size, frame)
-    translate (_alignment, rect, view) =
-      Anim.translate (rect ^. Rect.topLeft) view
-    toView placements =
+    toTriplet (alignment, (View size frame)) = (alignment, size, frame)
+    translate (_alignment, rect, frame) =
+      Anim.translate (rect ^. Rect.topLeft) frame
+    toFrame placements =
       placements
       & concat
       <&> translate

@@ -49,6 +49,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.View (View)
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.Box (KBox)
@@ -169,13 +170,13 @@ wWidth = Widget.wSize . _1
 addTypeBackground :: Config -> AnimId -> Widget.R -> View -> View
 addTypeBackground config animId minWidth typeView =
   typeView
-  & _1 .~ newSize
-  & _2 %~ Anim.translate (Vector2 ((width - typeWidth) / 2) 0)
-  & _2 %~ Anim.backgroundColor bgAnimId bgLayer bgColor newSize
+  & View.size .~ newSize
+  & View.animFrame %~ Anim.translate (Vector2 ((width - typeWidth) / 2) 0)
+  & View.backgroundColor bgAnimId bgLayer bgColor
   where
-    typeWidth = typeView ^. _1 . _1
     width = max typeWidth minWidth
-    newSize = typeView ^. _1 & _1 .~ width
+    typeWidth = typeView ^. View.width
+    newSize = typeView ^. View.size & _1 .~ width
     bgAnimId = animId ++ ["type background"]
     bgLayer = Config.layerTypes $ Config.layers config
     bgColor = Config.typeBoxBGColor config
