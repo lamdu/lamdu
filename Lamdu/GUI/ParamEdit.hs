@@ -33,7 +33,7 @@ make showType prevId nextId param =
         (Widget.keysEventMapMovesCursor (Config.addNextParamKeys config)
          (E.Doc ["Edit", "Add next parameter"]) .
          fmap (FocusDelegator.delegatingId . WidgetIds.fromEntityId) .
-         (^. Sugar.fpListItemActions . Sugar.itemAddNext))
+         (^. Sugar.fpAddNext))
         mActions
       paramEventMap = mconcat
         [ paramDeleteEventMap (Config.delForwardKeys config) "" nextId
@@ -59,5 +59,5 @@ make showType prevId nextId param =
       maybe mempty
       (Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "Delete parameter" ++ docSuffix]) .
        (>> return dstPos) .
-       (^. Sugar.fpListItemActions . Sugar.itemDelete))
+       (^. Sugar.fpDelete))
       mActions

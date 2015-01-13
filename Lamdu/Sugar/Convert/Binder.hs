@@ -276,10 +276,8 @@ makeFieldParamActions mRecursiveVar param tags fp storedLam =
     addParam <- makeAddFieldParam mRecursiveVar param mkNewTags storedLam
     delParam <- makeDelFieldParam mRecursiveVar tags fp storedLam
     pure FuncParamActions
-      { _fpListItemActions = ListItemActions
-        { _itemAddNext = addParam
-        , _itemDelete = delParam
-        }
+      { _fpAddNext = addParam
+      , _fpDelete = delParam
       }
   where
     mkNewTags tag=
@@ -365,12 +363,8 @@ makeNonRecordParamActions mRecursiveVar storedLam =
     convertToRecordParams <- makeConvertToRecordParams mRecursiveVar storedLam
     return
       ( FuncParamActions
-        { _fpListItemActions =
-          ListItemActions
-          { _itemDelete = delete
-          , _itemAddNext =
-            convertToRecordParams
-          }
+        { _fpAddNext = convertToRecordParams
+        , _fpDelete = delete
         }
       , convertToRecordParams
       )

@@ -4,7 +4,7 @@ module Lamdu.Sugar.Types
   , Definition(..), drEntityId, drName, drBody
   , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
   , ListItemActions(..), itemAddNext, itemDelete
-  , FuncParamActions(..), fpListItemActions
+  , FuncParamActions(..), fpAddNext, fpDelete
   , DefinitionExpression(..), deContent, deTypeInfo
   , AcceptNewType(..)
   , DefinitionTypeInfo(..)
@@ -119,8 +119,9 @@ data ListItemActions m = ListItemActions
   , _itemDelete :: T m ()
   }
 
-newtype FuncParamActions m = FuncParamActions
-  { _fpListItemActions :: ListItemActions m
+data FuncParamActions m = FuncParamActions
+  { _fpAddNext :: T m EntityId
+  , _fpDelete :: T m ()
   }
 
 data FuncParam varinfo name m = FuncParam
