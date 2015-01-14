@@ -122,7 +122,7 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
         maybe mempty
         (Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
          (E.Doc ["Edit", "Record", "Add Field"]) .
-         fmap (TagEdit.diveIntoRecordTag . WidgetIds.fromEntityId) .
+         fmap (TagEdit.diveIntoRecordTag . WidgetIds.fromEntityId . (^. Sugar.rafrNewTag . Sugar.tagInstance)) .
          (ExprGuiM.holePickersAction resultPickers >>)) mAddField
     gui
       & ExpressionGui.egWidget %~ Widget.weakerEvents eventMap

@@ -80,20 +80,28 @@ convertField mStored mRestI restS inst tag expr = do
 
 makeAddField :: MonadA m =>
   Maybe (ExprIRef.ValIProperty m) ->
-  ConvertM m (Maybe (Transaction m EntityId))
+  ConvertM m (Maybe (Transaction m RecordAddFieldResult))
 makeAddField Nothing = return Nothing
 makeAddField (Just stored) =
   do
     typeProtect <- ConvertM.typeProtectTransaction
-    return . Just . fmap (EntityId.ofRecExtendTag . EntityId.ofValI) $ do
-      let extend = snd <$> DataOps.recExtend stored
-      mResultI <- typeProtect extend
+    return . Just $ do
+      mResultI <- DataOps.recExtend stored & typeProtect
       case mResultI of
-        Just resultI -> return resultI
+        Just extendRes -> res extendRes & return
         Nothing -> do
-          resultI <- extend
-          void $ DataOps.setToWrapper resultI stored
-          return resultI
+          extendRes <- DataOps.recExtend stored
+          void $ DataOps.setToWrapper (DataOps.rerResult extendRes) stored
+          res extendRes & return
+  where
+    res (DataOps.RecExtendResult tag newValI resultI) =
+      RecordAddFieldResult
+      { _rafrNewTag = TagG (EntityId.ofRecExtendTag resultEntity) tag ()
+      , _rafrNewVal = EntityId.ofValI newValI
+      , _rafrRecExtend = resultEntity
+      }
+      where
+        resultEntity = EntityId.ofValI resultI
 
 convertEmpty :: MonadA m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertEmpty exprPl = do

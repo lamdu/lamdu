@@ -1,7 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
 module Lamdu.Data.Ops
   ( newHole, wrap, setToWrapper
-  , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap, recExtend
+  , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
+  , recExtend, RecExtendResult(..)
   , addListItem
   , newPublicDefinition
   , newDefinition, presentationModeOfName
@@ -89,7 +90,13 @@ redexWrap exprP = do
   Property.set exprP newApplyI
   return (newParam, newLambdaI)
 
-recExtend :: MonadA m => ExprIRef.ValIProperty m -> T m (T.Tag, ExprIRef.ValI m)
+data RecExtendResult m = RecExtendResult
+  { rerNewTag :: T.Tag
+  , rerNewVal :: ExprIRef.ValI m
+  , rerResult :: ExprIRef.ValI m
+  }
+
+recExtend :: MonadA m => ExprIRef.ValIProperty m -> T m (RecExtendResult m)
 recExtend valP = do
   tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
   newValueI <- newHole
@@ -97,7 +104,7 @@ recExtend valP = do
     ExprIRef.newValBody . V.BRecExtend $
     V.RecExtend tag newValueI $ Property.value valP
   Property.set valP resultI
-  return (tag, resultI)
+  return $ RecExtendResult tag newValueI resultI
 
 addListItem ::
   MonadA m =>

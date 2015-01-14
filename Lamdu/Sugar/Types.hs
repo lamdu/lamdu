@@ -36,6 +36,7 @@ module Lamdu.Sugar.Types
   , ListActions(..), List(..)
   , RecordField(..), rfMDelete, rfTag, rfExpr
   , RecordTail(..), _RecordExtending, _ClosedRecord
+  , RecordAddFieldResult(..), rafrNewTag, rafrNewVal, rafrRecExtend
   , Record(..), rItems, rMAddField, rTail
   , GetField(..), gfRecord, gfTag
   , NamedVarType(..)
@@ -250,10 +251,16 @@ data RecordTail m expr =
   ClosedRecord (Maybe (T m EntityId)) -- delete action
   deriving (Functor, Foldable, Traversable)
 
+data RecordAddFieldResult = RecordAddFieldResult
+  { _rafrNewTag :: TagG ()
+  , _rafrNewVal :: EntityId
+  , _rafrRecExtend :: EntityId
+  }
+
 data Record name m expr = Record
   { _rItems :: [RecordField name m expr]
   , _rTail :: RecordTail m expr
-  , _rMAddField :: Maybe (T m EntityId)
+  , _rMAddField :: Maybe (T m RecordAddFieldResult)
   } deriving (Functor, Foldable, Traversable)
 
 data GetField name expr = GetField
@@ -412,6 +419,7 @@ Lens.makeLenses ''Payload
 Lens.makeLenses ''PickedResult
 Lens.makeLenses ''Record
 Lens.makeLenses ''RecordField
+Lens.makeLenses ''RecordAddFieldResult
 Lens.makeLenses ''ScopeGetVar
 Lens.makeLenses ''TagG
 Lens.makeLenses ''WhereItem
