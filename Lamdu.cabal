@@ -83,7 +83,7 @@ Library
 
   Build-depends:       base >= 4,
                        aeson >= 0.6.2.1 && < 0.7.1,
-                       sophia >= 0.1,
+                       leveldb-haskell >= 0.6,
                        cryptohash >= 0.7,
                        GLFW-b >= 1.2.1 && < 1.5,
                        deepseq,
