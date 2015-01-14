@@ -36,6 +36,7 @@ import           Lamdu.Sugar.AddNames.CPS (CPS(..))
 import           Lamdu.Sugar.AddNames.NameGen (NameGen)
 import qualified Lamdu.Sugar.AddNames.NameGen as NameGen
 import           Lamdu.Sugar.AddNames.Types
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
 type T = Transaction
@@ -59,7 +60,6 @@ class (MonadA m, MonadA (TM m)) => MonadNaming m where
   opGetTagName :: NameConvertor m
   opGetParamName :: NameConvertor m
   opGetHiddenParamsName :: NameConvertor m
-  opFixBinder :: MonadA n => m (Binder name n expr -> Binder name n expr)
 
 type OldExpression m a = Expression (OldName m) (TM m) a
 type NewExpression m a = Expression (NewName m) (TM m) a
@@ -88,7 +88,6 @@ instance MonadA tm => MonadNaming (Pass0M tm) where
   opGetHiddenParamsName = p0nameConvertor
   opGetTagName = p0nameConvertor
   opGetDefName = p0nameConvertor
-  opFixBinder = return p0FixBinder
 
 getMStoredName :: MonadA tm => Guid -> Pass0M tm MStoredName
 getMStoredName guid =
@@ -105,35 +104,6 @@ p0nameConvertor = getMStoredName
 p0cpsNameConvertor :: MonadA tm => CPSNameConvertor (Pass0M tm)
 p0cpsNameConvertor guid =
   CPS $ \k -> (,) <$> getMStoredName guid <*> k
-
-p0FixBinder :: MonadA m => Binder name m expr -> Binder name m expr
-p0FixBinder binder =
-  binder
-  & dMActions . Lens._Just . baAddFirstParam %~ fixParamAddResult
-  & dParams %~ fixParams
-  where
-    fixParams NoParams = NoParams
-    fixParams (VarParam param) = VarParam (fixFuncParam param)
-    fixParams (FieldParams params) = FieldParams (map fixFuncParam params)
-
-fixFuncParam :: MonadA m => FuncParam varinfo name m -> FuncParam varinfo name m
-fixFuncParam = fpMActions . Lens._Just . fpAddNext %~ fixParamAddResult
-
-fixParamAddResult :: MonadA m => T m ParamAddResult -> T m ParamAddResult
-fixParamAddResult =
-  (>>= onAddResult)
-  where
-    onAddResult res =
-      do
-        moveNames res
-        return res
-    moveNames (ParamAddResultVarToTags (VarToTags var replacedByTag _)) =
-      do
-        let varName = assocNameRef var
-        let tagName = assocNameRef (replacedByTag ^. tagVal)
-        Transaction.setP tagName =<< Transaction.getP varName
-        Transaction.setP varName ""
-    moveNames _ = return ()
 
 -- Wrap the Map for a more sensible (recursive) Monoid instance
 newtype NameGuidMap = NameGuidMap (Map StoredName (OrderedSet Guid))
@@ -199,7 +169,6 @@ instance MonadA tm => MonadNaming (Pass1M tm) where
   opGetHiddenParamsName = p1nameConvertor Local
   opGetTagName = p1nameConvertor Global
   opGetDefName = p1nameConvertor Global
-  opFixBinder = return id
 
 pass1Result ::
   NameScope -> MStoredName ->
@@ -278,7 +247,6 @@ instance MonadA tm => MonadNaming (Pass2M tm) where
     mName
   opGetTagName = p2nameConvertor "tag_"
   opGetDefName = p2nameConvertor "def_"
-  opFixBinder = return id
 
 makeFinalName ::
   MonadA tm => StoredName -> StoredNamesWithin -> Guid -> P2Env -> Name tm
@@ -535,7 +503,6 @@ toBinder ::
   Binder (OldName m) (TM m) (OldExpression m a) ->
   m (Binder (NewName m) (TM m) (NewExpression m a))
 toBinder binder@Binder{..} = do
-  fixBinder <- opFixBinder
   (params, (whereItems, body)) <-
     runCPS (withBinderParams _dParams) .
     runCPS (traverse withWhereItem _dWhereItems) $
@@ -544,7 +511,7 @@ toBinder binder@Binder{..} = do
     { _dParams = params
     , _dBody = body
     , _dWhereItems = whereItems
-    } & fixBinder & pure
+    } & pure
 
 toDefinitionBody ::
   MonadNaming m =>
@@ -565,9 +532,30 @@ toDef def@Definition {..} = do
   (name, body) <- runCPS (opWithDefName _drName) $ toDefinitionBody _drBody
   pure def { _drName = name, _drBody = body }
 
+fixParamAddResult :: MonadA m => T m ParamAddResult -> T m ParamAddResult
+fixParamAddResult =
+  (>>= onAddResult)
+  where
+    onAddResult res =
+      do
+        moveNames res
+        return res
+    moveNames (ParamAddResultVarToTags (VarToTags var replacedByTag _)) =
+      do
+        let varName = assocNameRef var
+        let tagName = assocNameRef (replacedByTag ^. tagVal)
+        Transaction.setP tagName =<< Transaction.getP varName
+        Transaction.setP varName ""
+    moveNames _ = return ()
+
 addToDef :: MonadA tm => DefinitionU tm a -> T tm (DefinitionN tm a)
-addToDef =
-  fmap (pass2 . pass1) . pass0
+addToDef origDef =
+  origDef
+  & drBody . _DefinitionBodyExpression . deContent .
+    SugarLens.binderFuncParamAdds %~ fixParamAddResult
+  & pass0
+  <&> pass1
+  <&> pass2
   where
     emptyP2Env (NameGuidMap globalNamesMap) = P2Env
       { _p2NameGen = NameGen.initial
