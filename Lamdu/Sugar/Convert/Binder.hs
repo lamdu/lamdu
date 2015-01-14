@@ -367,8 +367,9 @@ makeDelFieldParam mRecursiveVar tags fp storedLam =
         ( Nothing
         , Just x
         , ParamDelResultTagsToVar TagsToVar
-          { ttvDeletedTag = tagGForLambdaTagParam paramVar tag
+          { ttvDeletedTag = tagGForLambdaTagParam paramVar x
           , ttvReplacedByVar = paramVar
+          , ttvReplacedByVarEntityId = EntityId.ofLambdaParam paramVar
           }
         )
       xs -> (Just xs, Nothing, ParamDelResultDelTag)

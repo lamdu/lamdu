@@ -63,8 +63,20 @@ eventParamDelEventMap ::
   [ModKey] -> String -> Widget.Id ->
   Widget.EventHandlers (T m)
 eventParamDelEventMap Nothing _ _ _ = mempty
-eventParamDelEventMap (Just actions) keys docSuffix dstPos =
-  actions ^. Sugar.fpDelete >> return dstPos
+eventParamDelEventMap (Just actions) keys docSuffix dstPosId =
+  do
+    res <- actions ^. Sugar.fpDelete
+    case res of
+      Sugar.ParamDelResultDelVar -> dstPosId
+      Sugar.ParamDelResultDelTag -> dstPosId
+      Sugar.ParamDelResultTagsToVar (Sugar.TagsToVar deletedTag _ varEntityId) ->
+        if deletedTagId == dstPosId
+        then replacementVarId
+        else dstPosId
+        where
+          replacementVarId = WidgetIds.fromEntityId varEntityId
+          deletedTagId = WidgetIds.fromEntityId (deletedTag ^. Sugar.tagInstance)
+      & return
   & Widget.keysEventMapMovesCursor keys
     (E.Doc ["Edit", "Delete parameter" ++ docSuffix])
 

@@ -139,6 +139,7 @@ data ParamAddResult
 data TagsToVar = TagsToVar
   { ttvDeletedTag :: TagG ()
   , ttvReplacedByVar :: V.Var
+  , ttvReplacedByVarEntityId :: EntityId
   }
 
 data ParamDelResult
