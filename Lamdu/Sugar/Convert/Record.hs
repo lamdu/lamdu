@@ -10,6 +10,7 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Lamdu.Data.Anchors (assocTagOrder)
 import Lamdu.Expr.Val (Val(..))
 import Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -17,6 +18,7 @@ import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
+import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
@@ -118,6 +120,13 @@ convertEmpty exprPl = do
     }
     & addActions exprPl
 
+setTagOrder ::
+  MonadA m => Int -> RecordAddFieldResult -> Transaction m RecordAddFieldResult
+setTagOrder i r =
+  do
+    Transaction.setP (assocTagOrder (r ^. rafrNewTag . tagVal)) i
+    return r
+
 convertExtend ::
   (MonadA m, Monoid a) => V.RecExtend (Val (Input.Payload m a)) ->
   Input.Payload m a -> ConvertM m (ExpressionU m a)
@@ -138,6 +147,7 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
     (EntityId.ofRecExtendTag (exprPl ^. Input.entityId)) tag val
   restRecord
     & rItems %~ (fieldS:)
+    & rMAddField . Lens._Just %~ (>>= setTagOrder (1 + length (restRecord ^. rItems)))
     & BodyRecord
     & addActions exprPl
     <&> rPayload . plData <>~ hiddenEntities

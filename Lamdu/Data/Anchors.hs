@@ -71,7 +71,7 @@ makePane = id
 assocNameRef :: (UniqueId.ToGuid a, MonadA m) => a -> MkProperty m String
 assocNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toGuid
 
-assocTagOrder :: (UniqueId.ToGuid a, MonadA m) => a -> MkProperty m Int
+assocTagOrder :: MonadA m => T.Tag -> MkProperty m Int
 assocTagOrder = Transaction.assocDataRefDef 0 "Order" . UniqueId.toGuid
 
 data PresentationMode = OO | Verbose | Infix
