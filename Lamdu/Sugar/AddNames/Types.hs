@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 module Lamdu.Sugar.AddNames.Types
   ( NameSource(..), NameCollision(..), Name(..)
   , ExpressionN, BodyN, DefinitionN
@@ -18,6 +19,15 @@ data Name m = Name
   , nSetName :: String -> T m ()
   , nName :: String
   }
+instance Show (Name m) where
+  show Name{..} =
+    concat
+    [ "(Name "
+    , show nNameSource, " "
+    , show nNameCollisionSuffix, " "
+    , show nName
+    , ")"
+    ]
 
 type ExpressionN m a = Expression (Name m) m a
 type BodyN m a = Body (Name m) m (ExpressionN m a)

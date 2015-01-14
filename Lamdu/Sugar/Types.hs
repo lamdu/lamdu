@@ -1,4 +1,4 @@
-{-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes #-}
+{-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes, RecordWildCards #-}
 module Lamdu.Sugar.Types
   ( EntityId
   , Definition(..), drEntityId, drName, drBody
@@ -315,8 +315,10 @@ data Body name m expr
   | BodyGetVar (GetVar name m)
   deriving (Functor, Foldable, Traversable)
 
-instance Show (FuncParam paraminfo name m) where
-  show _fp = "TODO:FuncParam"
+instance (Show paraminfo, Show name) => Show (FuncParam paraminfo name m) where
+  show FuncParam{..} = "(FuncParam " ++ show _fpId ++ " " ++ show _fpVarInfo ++ " " ++ show _fpName ++
+                       " " ++ show _fpInferredType ++ " )"
+
 
 instance Show expr => Show (Body name m expr) where
   show (BodyLam _) = "TODO show lam"
