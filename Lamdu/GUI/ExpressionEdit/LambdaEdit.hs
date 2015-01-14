@@ -29,7 +29,7 @@ make parentPrecedence binder pl =
     do
       paramsEdit <-
         BinderEdit.makeParamsEdit showParamType (ExprGuiM.nextHolesBefore body) bodyId params
-        <&> map ((,) 0)
+        <&> map ((,) 0.5)
         >>= ExpressionGui.vboxDownwardsSpaced
         >>=
           case params of

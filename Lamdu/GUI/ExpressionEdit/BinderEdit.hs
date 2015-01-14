@@ -134,7 +134,7 @@ layout defNameEdit paramEdits bodyEdit mWheresEdit myId =
       [] -> return []
       [x] -> return [x]
       xs ->
-        xs <&> (,) 0
+        xs <&> (,) 0.5
         & ExpressionGui.vboxDownwardsSpaced
         >>= ExpressionGui.addValFrame myId
         <&> (:[])
