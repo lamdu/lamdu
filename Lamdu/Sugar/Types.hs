@@ -4,6 +4,8 @@ module Lamdu.Sugar.Types
   , Definition(..), drEntityId, drName, drBody
   , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
   , ListItemActions(..), itemAddNext, itemDelete
+  , VarToTags(..)
+  , ParamAddResult(..)
   , FuncParamActions(..), fpAddNext, fpDelete
   , DefinitionExpression(..), deContent, deTypeInfo
   , AcceptNewType(..)
@@ -63,21 +65,22 @@ module Lamdu.Sugar.Types
   , TagG(..), tagGName, tagVal, tagInstance
   ) where
 
-import Control.Monad.ListT (ListT)
-import Data.Foldable (Foldable)
-import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
-import Data.Store.Transaction (Transaction, MkProperty)
-import Data.Traversable (Traversable)
-import Lamdu.Expr.Scheme (Scheme)
-import Lamdu.Expr.Type (Type)
-import Lamdu.Expr.Val (Val)
-import Lamdu.Sugar.Internal.EntityId (EntityId)
 import qualified Control.Lens as Lens
+import           Control.Monad.ListT (ListT)
+import           Data.Foldable (Foldable)
 import qualified Data.List as List
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Guid (Guid)
+import           Data.Store.Transaction (Transaction, MkProperty)
+import           Data.Traversable (Traversable)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
+import           Lamdu.Expr.Scheme (Scheme)
+import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
+import           Lamdu.Expr.Val (Val)
+import qualified Lamdu.Expr.Val as V
+import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
 type T = Transaction
 
@@ -119,8 +122,21 @@ data ListItemActions m = ListItemActions
   , _itemDelete :: T m ()
   }
 
+data VarToTags = VarToTags
+  { vttVar :: V.Var
+   -- Since this is just a result of a transaction, no name is
+   -- actually needed in the Tags below
+  , vttReplacedByTag :: TagG ()
+  , vttNewTag :: TagG ()
+  }
+
+data ParamAddResult
+  = ParamAddResultNewVar EntityId V.Var
+  | ParamAddResultVarToTags VarToTags
+  | ParamAddResultNewTag (TagG ())
+
 data FuncParamActions m = FuncParamActions
-  { _fpAddNext :: T m EntityId
+  { _fpAddNext :: T m ParamAddResult
   , _fpDelete :: T m ()
   }
 
@@ -309,7 +325,7 @@ data WhereItem name m expr = WhereItem
   } deriving (Functor, Foldable, Traversable)
 
 data BinderActions m = BinderActions
-  { _baAddFirstParam :: T m EntityId
+  { _baAddFirstParam :: T m ParamAddResult
   , _baAddInnermostWhereItem :: T m EntityId
   }
 

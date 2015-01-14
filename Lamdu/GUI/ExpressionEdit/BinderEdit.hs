@@ -53,17 +53,13 @@ makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
   do
     config <- ExprGuiM.widgetEnv WE.readConfig
     rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
-    let nameEditEventMap = mappend addFirstParamEventMap rhsJumper
-        addFirstParamEventMap =
-          maybe mempty
-          ( Widget.keysEventMapMovesCursor (Config.addNextParamKeys config)
-            (E.Doc ["Edit", "Add parameter"]) .
-            fmap toEventMapAction ) $
-          mBinderActions ^? Lens._Just . Sugar.baAddFirstParam
     ExpressionGui.makeNameOriginEdit name myId
-      <&> Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals name
+      <&> jumpToRHSViaEquals name
+      <&> Widget.weakerEvents
+          (ParamEdit.eventMapAddFirstParam config mAddFirstParam <> rhsJumper)
       <&> ExpressionGui.fromValueWidget
   where
+    mAddFirstParam = mBinderActions ^? Lens._Just . Sugar.baAddFirstParam
     jumpToRHSViaEquals n widget
       | nonOperatorName n =
         widget
@@ -173,9 +169,6 @@ make name binder myId = do
     params = binder ^. Sugar.dParams
     body = binder ^. Sugar.dBody
 
-toEventMapAction :: Sugar.EntityId -> Widget.Id
-toEventMapAction = FocusDelegator.delegatingId . WidgetIds.fromEntityId
-
 makeWhereItemEdit ::
   MonadA m =>
   (Widget.Id, Widget.Id, Sugar.WhereItem (Name m) m (ExprGuiM.SugarExpr m)) ->
@@ -237,7 +230,8 @@ makeResultEdit mActions params result = do
     addWhereItemEventMap actions =
       Widget.keysEventMapMovesCursor (Config.whereAddItemKeys config)
       (E.Doc ["Edit", "Where clause", "Add first"]) .
-      fmap toEventMapAction $ savePos >> actions ^. Sugar.baAddInnermostWhereItem
+      fmap (FocusDelegator.delegatingId . WidgetIds.fromEntityId) $
+      savePos >> actions ^. Sugar.baAddInnermostWhereItem
   ExprGuiM.makeSubexpression 0 result
     <&> ExpressionGui.egWidget %~
         Widget.weakerEvents

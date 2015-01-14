@@ -54,7 +54,7 @@ data ConventionalParams m a = ConventionalParams
   { cpTags :: Set T.Tag
   , cpParamInfos :: Map T.Tag ConvertM.TagParamInfo
   , _cpParams :: BinderParams Guid m
-  , cpMAddFirstParam :: Maybe (T m EntityId)
+  , cpMAddFirstParam :: Maybe (T m ParamAddResult)
   }
 
 cpParams :: Lens' (ConventionalParams m a) (BinderParams Guid m)
@@ -179,7 +179,7 @@ convertVarToGetField tagForVar paramVar =
       >>= Property.set prop
 
 makeConvertToRecordParams ::
-  MonadA m => Maybe V.Var -> StoredLam m -> ConvertM m (T m EntityId)
+  MonadA m => Maybe V.Var -> StoredLam m -> ConvertM m (T m ParamAddResult)
 makeConvertToRecordParams mRecursiveVar (StoredLam (V.Lam paramVar lamBody) lamProp) =
   do
     wrapOnError <- ConvertM.wrapOnTypeError
@@ -194,7 +194,13 @@ makeConvertToRecordParams mRecursiveVar (StoredLam (V.Lam paramVar lamBody) lamP
             (changeRecursiveCallArgs
              (wrapArgWithRecord tagForVar tagForNewVar)
              (lamBody ^. V.payload))
-        wrapOnError lamProp <&> EntityId.ofValI
+        _ <- wrapOnError lamProp
+        let tagG tag = TagG (EntityId.ofLambdaTagParam paramVar tag) tag ()
+        return $ ParamAddResultVarToTags VarToTags
+          { vttVar = paramVar
+          , vttReplacedByTag = tagG tagForVar
+          , vttNewTag = tagG tagForNewVar
+          }
   where
     paramList = ParamList.mkProp (Property.value lamProp)
 
@@ -246,7 +252,7 @@ setParamList paramListProp newParamList =
 makeAddFieldParam ::
   MonadA m =>
   Maybe V.Var -> V.Var -> (T.Tag -> ParamList) -> StoredLam m ->
-  ConvertM m (T m EntityId)
+  ConvertM m (T m ParamAddResult)
 makeAddFieldParam mRecursiveVar param mkNewTags storedLam =
   do
     wrapOnError <- ConvertM.wrapOnTypeError
@@ -265,7 +271,9 @@ makeAddFieldParam mRecursiveVar param mkNewTags storedLam =
             (storedLam ^. slLam . V.lamResult . V.payload)
           & void
         void $ wrapOnError $ slLambdaProp storedLam
-        return $ EntityId.ofLambdaTagParam param tag
+        return $
+          ParamAddResultNewTag $
+          TagG (EntityId.ofLambdaTagParam param tag) tag ()
 
 makeFieldParamActions ::
   MonadA m =>
@@ -356,7 +364,8 @@ slParamList :: MonadA m => StoredLam m -> Transaction.MkProperty m (Maybe ParamL
 slParamList = ParamList.mkProp . Property.value . slLambdaProp
 
 makeNonRecordParamActions ::
-  MonadA m => Maybe V.Var -> StoredLam m -> ConvertM m (FuncParamActions m, T m EntityId)
+  MonadA m => Maybe V.Var -> StoredLam m ->
+  ConvertM m (FuncParamActions m, T m ParamAddResult)
 makeNonRecordParamActions mRecursiveVar storedLam =
   do
     delete <- makeDeleteLambda mRecursiveVar storedLam
@@ -446,7 +455,8 @@ convertEmptyParams mRecursiveVar val =
               Nothing -> return ()
               Just recursiveVar -> changeRecursionsToCalls recursiveVar storedVal
             void $ protectedSetToVal (storedVal ^. V.payload) dst
-            return $ EntityId.ofLambdaParam newParam
+            return $
+              ParamAddResultNewVar (EntityId.ofLambdaParam newParam) newParam
 
     pure
       ConventionalParams
