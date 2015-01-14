@@ -3,40 +3,40 @@ module Lamdu.Sugar.AddNames
   ( addToDef
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Control.Monad ((<=<))
-import Control.Monad.Trans.Reader (Reader, runReader)
-import Control.Monad.Trans.State (runState, evalState)
-import Control.Monad.Trans.Writer (Writer, runWriter)
-import Control.MonadA (MonadA)
-import Data.Foldable (toList)
-import Data.Map (Map)
-import Data.Monoid (Monoid(..))
-import Data.Monoid.Generic (def_mempty, def_mappend)
-import Data.Set (Set)
-import Data.Set.Ordered (OrderedSet)
-import Data.Store.Guid (Guid)
-import Data.Store.Transaction (Transaction)
-import Data.Traversable (Traversable, traverse)
-import GHC.Generics (Generic)
-import Lamdu.Data.Anchors (assocNameRef)
-import Lamdu.Expr.Type (Type)
-import Lamdu.Sugar.AddNames.CPS (CPS(..))
-import Lamdu.Sugar.AddNames.NameGen (NameGen)
-import Lamdu.Sugar.AddNames.Types
-import Lamdu.Sugar.Types
+import           Control.Applicative (Applicative(..), (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad ((<=<))
+import           Control.Monad.Trans.Reader (Reader, runReader)
 import qualified Control.Monad.Trans.Reader as Reader
+import           Control.Monad.Trans.State (runState, evalState)
+import           Control.Monad.Trans.Writer (Writer, runWriter)
 import qualified Control.Monad.Trans.Writer as Writer
+import           Control.MonadA (MonadA)
+import           Data.Foldable (toList)
 import qualified Data.List.Utils as ListUtils
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Monoid (Monoid(..))
+import           Data.Monoid.Generic (def_mempty, def_mappend)
+import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Set.Ordered (OrderedSet)
 import qualified Data.Set.Ordered as OrderedSet
+import           Data.Store.Guid (Guid)
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Traversable (Traversable, traverse)
+import           GHC.Generics (Generic)
+import           Lamdu.Data.Anchors (assocNameRef)
+import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
+import           Lamdu.Sugar.AddNames.CPS (CPS(..))
+import           Lamdu.Sugar.AddNames.NameGen (NameGen)
 import qualified Lamdu.Sugar.AddNames.NameGen as NameGen
+import           Lamdu.Sugar.AddNames.Types
+import           Lamdu.Sugar.Types
 
 type T = Transaction
 
@@ -59,6 +59,7 @@ class (MonadA m, MonadA (TM m)) => MonadNaming m where
   opGetTagName :: NameConvertor m
   opGetParamName :: NameConvertor m
   opGetHiddenParamsName :: NameConvertor m
+  opFixBinder :: MonadA n => m (Binder name n expr -> Binder name n expr)
 
 type OldExpression m a = Expression (OldName m) (TM m) a
 type NewExpression m a = Expression (NewName m) (TM m) a
@@ -87,6 +88,7 @@ instance MonadA tm => MonadNaming (Pass0M tm) where
   opGetHiddenParamsName = p0nameConvertor
   opGetTagName = p0nameConvertor
   opGetDefName = p0nameConvertor
+  opFixBinder = return p0FixBinder
 
 getMStoredName :: MonadA tm => Guid -> Pass0M tm MStoredName
 getMStoredName guid =
@@ -103,6 +105,35 @@ p0nameConvertor = getMStoredName
 p0cpsNameConvertor :: MonadA tm => CPSNameConvertor (Pass0M tm)
 p0cpsNameConvertor guid =
   CPS $ \k -> (,) <$> getMStoredName guid <*> k
+
+p0FixBinder :: MonadA m => Binder name m expr -> Binder name m expr
+p0FixBinder binder =
+  binder
+  & dMActions . Lens._Just . baAddFirstParam %~ fixParamAddResult
+  & dParams %~ fixParams
+  where
+    fixParams NoParams = NoParams
+    fixParams (VarParam param) = VarParam (fixFuncParam param)
+    fixParams (FieldParams params) = FieldParams (map fixFuncParam params)
+
+fixFuncParam :: MonadA m => FuncParam varinfo name m -> FuncParam varinfo name m
+fixFuncParam = fpMActions . Lens._Just . fpAddNext %~ fixParamAddResult
+
+fixParamAddResult :: MonadA m => T m ParamAddResult -> T m ParamAddResult
+fixParamAddResult =
+  (>>= onAddResult)
+  where
+    onAddResult res =
+      do
+        moveNames res
+        return res
+    moveNames (ParamAddResultVarToTags (VarToTags var replacedByTag _)) =
+      do
+        let varName = assocNameRef var
+        let tagName = assocNameRef (replacedByTag ^. tagVal)
+        Transaction.setP tagName =<< Transaction.getP varName
+        Transaction.setP varName ""
+    moveNames _ = return ()
 
 -- Wrap the Map for a more sensible (recursive) Monoid instance
 newtype NameGuidMap = NameGuidMap (Map StoredName (OrderedSet Guid))
@@ -168,6 +199,7 @@ instance MonadA tm => MonadNaming (Pass1M tm) where
   opGetHiddenParamsName = p1nameConvertor Local
   opGetTagName = p1nameConvertor Global
   opGetDefName = p1nameConvertor Global
+  opFixBinder = return id
 
 pass1Result ::
   NameScope -> MStoredName ->
@@ -246,6 +278,7 @@ instance MonadA tm => MonadNaming (Pass2M tm) where
     mName
   opGetTagName = p2nameConvertor "tag_"
   opGetDefName = p2nameConvertor "def_"
+  opFixBinder = return id
 
 makeFinalName ::
   MonadA tm => StoredName -> StoredNamesWithin -> Guid -> P2Env -> Name tm
@@ -501,16 +534,17 @@ toBinder ::
   MonadNaming m =>
   Binder (OldName m) (TM m) (OldExpression m a) ->
   m (Binder (NewName m) (TM m) (NewExpression m a))
-toBinder def@Binder{..} = do
+toBinder binder@Binder{..} = do
+  fixBinder <- opFixBinder
   (params, (whereItems, body)) <-
     runCPS (withBinderParams _dParams) .
     runCPS (traverse withWhereItem _dWhereItems) $
     toExpression _dBody
-  pure def
+  binder
     { _dParams = params
     , _dBody = body
     , _dWhereItems = whereItems
-    }
+    } & fixBinder & pure
 
 toDefinitionBody ::
   MonadNaming m =>
