@@ -33,15 +33,15 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction.Transaction
 
 make ::
-  MonadA m => Bool -> HolePickers m -> Sugar.Payload m ExprGuiM.Payload ->
+  MonadA m => HolePickers m -> Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (EventHandlers (T m))
-make isFocused holePickers pl =
+make holePickers pl =
   mconcat <$> sequenceA
   [ maybe (return mempty)
     (actionsEventMap holePickers)
     (pl ^. Sugar.plActions)
   , jumpHolesEventMapIfSelected holePickers pl
-  , replaceOrComeToParentEventMap isFocused pl
+  , replaceOrComeToParentEventMap pl
   ]
 
 mkEventMap ::
@@ -110,10 +110,9 @@ cutEventMap config actions =
 
 replaceOrComeToParentEventMap ::
   MonadA m =>
-  Bool ->
   Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (EventHandlers (T m))
-replaceOrComeToParentEventMap isFocused pl =
+replaceOrComeToParentEventMap pl =
   do
     isSelected <- isExprSelected pl
     config <- ExprGuiM.widgetEnv WE.readConfig
@@ -121,12 +120,9 @@ replaceOrComeToParentEventMap isFocused pl =
     return $ if isSelected
       then maybe mempty (replaceEventMap config) $ pl ^. Sugar.plActions
       else
-        if isFocused
-        then
-          mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
-          (fmap FocusDelegator.notDelegatingId) . return $
-          pl ^. Sugar.plEntityId
-        else mempty
+        mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
+        (fmap FocusDelegator.notDelegatingId) . return $
+        pl ^. Sugar.plEntityId
 
 actionsEventMap ::
   MonadA m =>
