@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 module Lamdu.GUI.ParamEdit
   ( make
   , eventMapAddFirstParam
@@ -6,6 +6,7 @@ module Lamdu.GUI.ParamEdit
 
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
+import qualified Data.Map as Map
 import           Data.Monoid (Monoid(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -25,15 +26,30 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
-chooseAddResultEntityId :: Sugar.ParamAddResult -> Sugar.EntityId
-chooseAddResultEntityId (Sugar.ParamAddResultNewVar entityId _) = entityId
-chooseAddResultEntityId (Sugar.ParamAddResultVarToTags (Sugar.VarToTags _var _oldParamAsTag newParamTag)) =
-  newParamTag ^. Sugar.tagInstance
-chooseAddResultEntityId (Sugar.ParamAddResultNewTag newParamTag) =
-  newParamTag ^. Sugar.tagInstance
+singletonIdMap ::
+  Sugar.EntityId -> Sugar.EntityId ->
+  Map.Map Widget.Id Widget.Id
+singletonIdMap key val =
+  Map.singleton (WidgetIds.fromEntityId key) (WidgetIds.fromEntityId val)
 
-toEventMapAction :: Sugar.EntityId -> Widget.Id
-toEventMapAction = FocusDelegator.delegatingId . WidgetIds.fromEntityId
+chooseAddResultEntityId :: Sugar.ParamAddResult -> Widget.EventResult
+chooseAddResultEntityId (Sugar.ParamAddResultVarToTags Sugar.VarToTags {..}) =
+  eventResultFromEntityId (vttNewTag ^. Sugar.tagInstance)
+  & Widget.applyIdMapping widgetIdMap
+  where
+    widgetIdMap =
+      singletonIdMap vttReplacedVarEntityId
+      (vttReplacedByTag ^. Sugar.tagInstance)
+chooseAddResultEntityId (Sugar.ParamAddResultNewVar entityId _) =
+  eventResultFromEntityId entityId
+chooseAddResultEntityId (Sugar.ParamAddResultNewTag newParamTag) =
+  eventResultFromEntityId $ newParamTag ^. Sugar.tagInstance
+
+eventResultFromEntityId :: Sugar.EntityId -> Widget.EventResult
+eventResultFromEntityId = Widget.eventResultFromCursor . cursorFromEntityId
+
+cursorFromEntityId :: Sugar.EntityId -> Widget.Id
+cursorFromEntityId = FocusDelegator.delegatingId . WidgetIds.fromEntityId
 
 eventMapAddFirstParam ::
   Functor m => Config -> Maybe (T m Sugar.ParamAddResult) ->
@@ -41,8 +57,8 @@ eventMapAddFirstParam ::
 eventMapAddFirstParam _ Nothing = mempty
 eventMapAddFirstParam config (Just addFirstParam) =
   addFirstParam
-  <&> toEventMapAction . chooseAddResultEntityId
-  & Widget.keysEventMapMovesCursor (Config.addNextParamKeys config)
+  <&> chooseAddResultEntityId
+  & E.keyPresses (Config.addNextParamKeys config)
     (E.Doc ["Edit", "Add parameter"])
 
 eventMapAddNextParam ::
@@ -53,8 +69,8 @@ eventMapAddNextParam ::
 eventMapAddNextParam _ Nothing = mempty
 eventMapAddNextParam config (Just actions) =
   actions ^. Sugar.fpAddNext
-  <&> toEventMapAction . chooseAddResultEntityId
-  & Widget.keysEventMapMovesCursor (Config.addNextParamKeys config)
+  <&> chooseAddResultEntityId
+  & E.keyPresses (Config.addNextParamKeys config)
     (E.Doc ["Edit", "Add next parameter"])
 
 eventParamDelEventMap ::
@@ -66,18 +82,16 @@ eventParamDelEventMap Nothing _ _ _ = mempty
 eventParamDelEventMap (Just actions) keys docSuffix dstPosId =
   do
     res <- actions ^. Sugar.fpDelete
-    case res of
-      Sugar.ParamDelResultDelVar -> dstPosId
-      Sugar.ParamDelResultDelTag -> dstPosId
-      Sugar.ParamDelResultTagsToVar (Sugar.TagsToVar deletedTag _ varEntityId) ->
-        if deletedTagId == dstPosId
-        then replacementVarId
-        else dstPosId
-        where
-          replacementVarId = WidgetIds.fromEntityId varEntityId
-          deletedTagId = WidgetIds.fromEntityId (deletedTag ^. Sugar.tagInstance)
+    let widgetIdMap =
+          case res of
+          Sugar.ParamDelResultTagsToVar Sugar.TagsToVar {..} ->
+            singletonIdMap (ttvReplacedTag ^. Sugar.tagInstance)
+            ttvReplacedByVarEntityId
+          _ -> Map.empty
+    Widget.eventResultFromCursor dstPosId
+      & Widget.applyIdMapping widgetIdMap
       & return
-  & Widget.keysEventMapMovesCursor keys
+  & E.keyPresses keys
     (E.Doc ["Edit", "Delete parameter" ++ docSuffix])
 
 -- exported for use in definition sugaring.

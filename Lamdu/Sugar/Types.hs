@@ -124,7 +124,8 @@ data ListItemActions m = ListItemActions
   }
 
 data VarToTags = VarToTags
-  { vttVar :: V.Var
+  { vttReplacedVar :: V.Var
+  , vttReplacedVarEntityId :: EntityId
    -- Since this is just a result of a transaction, no name is
    -- actually needed in the Tags below
   , vttReplacedByTag :: TagG ()
@@ -137,9 +138,10 @@ data ParamAddResult
   | ParamAddResultNewTag (TagG ())
 
 data TagsToVar = TagsToVar
-  { ttvDeletedTag :: TagG ()
+  { ttvReplacedTag :: TagG ()
   , ttvReplacedByVar :: V.Var
   , ttvReplacedByVarEntityId :: EntityId
+  , ttvDeletedTag :: TagG ()
   }
 
 data ParamDelResult

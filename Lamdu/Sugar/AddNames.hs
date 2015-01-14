@@ -533,23 +533,23 @@ toDef def@Definition {..} = do
   pure def { _drName = name, _drBody = body }
 
 fixParamAddResult :: MonadA m => ParamAddResult -> T m ()
-fixParamAddResult (ParamAddResultVarToTags (VarToTags var replacedByTag _)) =
+fixParamAddResult (ParamAddResultVarToTags VarToTags {..}) =
   do
     Transaction.setP tagName =<< Transaction.getP varName
     Transaction.setP varName ""
   where
-    varName = assocNameRef var
-    tagName = assocNameRef (replacedByTag ^. tagVal)
+    varName = assocNameRef vttReplacedVar
+    tagName = assocNameRef (vttReplacedByTag ^. tagVal)
 fixParamAddResult _ = return ()
 
 fixParamDelResult :: MonadA m => ParamDelResult -> T m ()
-fixParamDelResult (ParamDelResultTagsToVar (TagsToVar tag replacedByVar _)) =
+fixParamDelResult (ParamDelResultTagsToVar TagsToVar {..}) =
   do
     Transaction.setP varName =<< Transaction.getP tagName
     Transaction.setP tagName ""
   where
-    varName = assocNameRef replacedByVar
-    tagName = assocNameRef (tag ^. tagVal)
+    varName = assocNameRef ttvReplacedByVar
+    tagName = assocNameRef (ttvReplacedTag ^. tagVal)
 fixParamDelResult _ = return ()
 
 fixBinder ::

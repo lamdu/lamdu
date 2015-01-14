@@ -13,6 +13,8 @@ module Graphics.UI.Bottle.Widget
   , keysEventMap
   , keysEventMapMovesCursor
   , eAnimIdMapping, eCursor
+  , applyIdMapping
+  , animIdMappingFromPrefixMap
   , takesFocus, doesntTakeFocus
   , backgroundColor, tint
   , fromView
@@ -25,6 +27,8 @@ import           Control.Applicative ((<$>), (<*>))
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Data.Map (Map)
+import qualified Data.Map as Map
 import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
@@ -42,7 +46,7 @@ import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
-import           Graphics.UI.Bottle.WidgetId (Id(..), augmentId, toAnimId, joinId, subId)
+import           Graphics.UI.Bottle.WidgetId
 
 data EventResult = EventResult
   { _eCursor :: Monoid.Last Id
@@ -155,6 +159,20 @@ addInnerFrame layer animId color frameWidth widget =
       & Anim.unitImages %~ Draw.tint color
       & Anim.layers +~ layer
 
+animIdMappingFromPrefixMap :: Map AnimId AnimId -> Monoid.Endo AnimId
+animIdMappingFromPrefixMap = Monoid.Endo . Anim.mappingFromPrefixMap
+
+applyIdMapping :: Map Id Id -> EventResult -> EventResult
+applyIdMapping widgetIdMap eventResult =
+  eventResult
+  & eAnimIdMapping <>~ animIdMappingFromPrefixMap animIdMap
+  & eCursor . Lens._Wrapped' . Lens._Just %~ mapCursor
+  where
+    animIdMap =
+      widgetIdMap
+      & Map.mapKeys toAnimId & Map.map toAnimId
+    mapCursor (Id oldCursor) =
+      Id $ Anim.mappingFromPrefixMap animIdMap oldCursor
 
 tint :: Draw.Color -> Widget f -> Widget f
 tint color = wAnimFrame . Anim.unitImages %~ Draw.tint color

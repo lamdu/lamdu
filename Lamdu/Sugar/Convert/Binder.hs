@@ -199,7 +199,8 @@ makeConvertToRecordParams mRecursiveVar (StoredLam (V.Lam paramVar lamBody) lamP
              (lamBody ^. V.payload))
         _ <- wrapOnError lamProp
         return $ ParamAddResultVarToTags VarToTags
-          { vttVar = paramVar
+          { vttReplacedVar = paramVar
+          , vttReplacedVarEntityId = EntityId.ofLambdaParam paramVar
           , vttReplacedByTag = tagGForLambdaTagParam paramVar tagForVar
           , vttNewTag = tagGForLambdaTagParam paramVar tagForNewVar
           }
@@ -367,9 +368,10 @@ makeDelFieldParam mRecursiveVar tags fp storedLam =
         ( Nothing
         , Just x
         , ParamDelResultTagsToVar TagsToVar
-          { ttvDeletedTag = tagGForLambdaTagParam paramVar x
+          { ttvReplacedTag = tagGForLambdaTagParam paramVar x
           , ttvReplacedByVar = paramVar
           , ttvReplacedByVarEntityId = EntityId.ofLambdaParam paramVar
+          , ttvDeletedTag = tagGForLambdaTagParam paramVar tag
           }
         )
       xs -> (Just xs, Nothing, ParamDelResultDelTag)

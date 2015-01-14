@@ -1,14 +1,19 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Graphics.UI.Bottle.WidgetId (Id(..), joinId, subId, augmentId) where
+module Graphics.UI.Bottle.WidgetId
+  ( Id(..)
+  , joinId, subId, augmentId
+  ) where
 
-import Data.Binary (Binary)
-import Data.ByteString.Char8(pack) -- IsString instance
-import Data.List (isPrefixOf, intercalate)
-import Data.Monoid (Monoid(..))
-import Graphics.UI.Bottle.Animation.Id (AnimId)
+import           Control.Lens.Operators
+import           Data.Binary (Binary)
+import           Data.ByteString.Char8 (pack)
+import           Data.List (intercalate)
+import           Data.List.Lens (prefixed)
+import           Data.Monoid (Monoid(..))
+import           Graphics.UI.Bottle.Animation.Id (AnimId)
 
-newtype Id = Id {
-  toAnimId :: AnimId
+newtype Id = Id
+  { toAnimId :: AnimId
   } deriving (Eq, Ord, Read, Binary, Monoid)
 
 instance Show Id where
@@ -18,9 +23,7 @@ joinId :: Id -> AnimId -> Id
 joinId (Id x) y = Id $ x ++ y
 
 subId :: Id -> Id -> Maybe AnimId
-subId (Id folder) (Id path)
-  | folder `isPrefixOf` path = Just $ drop (length folder) path
-  | otherwise = Nothing
+subId (Id folder) (Id path) = path ^? prefixed folder
 
 augmentId :: Show a => a -> Id -> Id
 augmentId x = (`joinId` [pack (show x)])
