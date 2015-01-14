@@ -1,14 +1,17 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, RecordWildCards #-}
 
 module Lamdu.Sugar.Lens
   ( subExprPayloads, payloadsIndexedByPath
   , holePayloads, holeArgs
   , defSchemes
+  , binderFuncParamAdds
+  , binderFuncParamDeletes
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad (void)
+import Data.Store.Transaction (Transaction)
 import Lamdu.Expr.Scheme (Scheme)
 import Lamdu.Sugar.Types
 import qualified Lamdu.Data.Definition as Def
@@ -77,3 +80,40 @@ defBodySchemes f (DefinitionBodyExpression de) =
 
 defSchemes :: Lens.Traversal' (Definition name m expr) Scheme
 defSchemes = drBody . defBodySchemes
+
+binderParamsActions ::
+    Lens.Traversal' (BinderParams name m) (FuncParamActions m)
+binderParamsActions _ NoParams = pure NoParams
+binderParamsActions f (VarParam p) =
+    p & fpMActions . Lens._Just %%~ f <&> VarParam
+binderParamsActions f (FieldParams ps) =
+    ps & Lens.traversed . fpMActions . Lens._Just %%~ f <&> FieldParams
+
+binderFuncParamAdds ::
+    Lens.Traversal'
+    (Binder name m (Expression name m a))
+    (Transaction m ParamAddResult)
+binderFuncParamAdds f Binder{..} =
+    (\_dParams _dBody _dWhereItems _dMActions -> Binder{..})
+    <$> (_dParams & binderParamsActions . fpAddNext %%~ f)
+    <*> onExpr _dBody
+    <*> (_dWhereItems & Lens.traversed . wiValue . binderFuncParamAdds %%~ f)
+    <*> (_dMActions & Lens._Just . baAddFirstParam %%~ f)
+    where
+        onExpr = rBody %%~ onBody
+        onBody (BodyLam binder) = binder & binderFuncParamAdds %%~ f <&> BodyLam
+        onBody body = body & Lens.traversed %%~ onExpr
+
+binderFuncParamDeletes ::
+    Lens.Traversal'
+    (Binder name m (Expression name m a))
+    (Transaction m ())
+binderFuncParamDeletes f Binder{..} =
+    (\_dParams _dBody _dWhereItems -> Binder{..})
+    <$> (_dParams & binderParamsActions . fpDelete %%~ f)
+    <*> onExpr _dBody
+    <*> (_dWhereItems & Lens.traversed . wiValue . binderFuncParamDeletes %%~ f)
+    where
+        onExpr = rBody %%~ onBody
+        onBody (BodyLam binder) = binder & binderFuncParamDeletes %%~ f <&> BodyLam
+        onBody body = body & Lens.traversed %%~ onExpr
