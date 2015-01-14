@@ -107,7 +107,7 @@ binderFuncParamAdds f Binder{..} =
 binderFuncParamDeletes ::
     Lens.Traversal'
     (Binder name m (Expression name m a))
-    (Transaction m ())
+    (Transaction m ParamDelResult)
 binderFuncParamDeletes f Binder{..} =
     (\_dParams _dBody _dWhereItems -> Binder{..})
     <$> (_dParams & binderParamsActions . fpDelete %%~ f)

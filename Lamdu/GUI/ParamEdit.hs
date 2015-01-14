@@ -9,6 +9,7 @@ import           Control.MonadA (MonadA)
 import           Data.Monoid (Monoid(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import           Lamdu.Config (Config)
@@ -56,6 +57,17 @@ eventMapAddNextParam config (Just actions) =
   & Widget.keysEventMapMovesCursor (Config.addNextParamKeys config)
     (E.Doc ["Edit", "Add next parameter"])
 
+eventParamDelEventMap ::
+  MonadA m =>
+  Maybe (Sugar.FuncParamActions m) ->
+  [ModKey] -> String -> Widget.Id ->
+  Widget.EventHandlers (T m)
+eventParamDelEventMap Nothing _ _ _ = mempty
+eventParamDelEventMap (Just actions) keys docSuffix dstPos =
+  actions ^. Sugar.fpDelete >> return dstPos
+  & Widget.keysEventMapMovesCursor keys
+    (E.Doc ["Edit", "Delete parameter" ++ docSuffix])
+
 -- exported for use in definition sugaring.
 make ::
   MonadA m => ExprGuiM.ShowType -> Widget.Id -> Widget.Id ->
@@ -66,8 +78,8 @@ make showType prevId nextId param =
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
       paramEventMap = mconcat
-        [ paramDeleteEventMap (Config.delForwardKeys config) "" nextId
-        , paramDeleteEventMap (Config.delBackwardKeys config) " backwards" prevId
+        [ eventParamDelEventMap mActions (Config.delForwardKeys config) "" nextId
+        , eventParamDelEventMap mActions (Config.delBackwardKeys config) " backwards" prevId
         , eventMapAddNextParam config mActions
         ]
     paramNameEdit <-
@@ -85,9 +97,3 @@ make showType prevId nextId param =
     hiddenIds = map WidgetIds.fromEntityId $ param ^. Sugar.fpHiddenIds
     assignCursor x =
       foldr (`ExprGuiM.assignCursorPrefix` myId) x hiddenIds
-    paramDeleteEventMap keys docSuffix dstPos =
-      maybe mempty
-      (Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "Delete parameter" ++ docSuffix]) .
-       (>> return dstPos) .
-       (^. Sugar.fpDelete))
-      mActions

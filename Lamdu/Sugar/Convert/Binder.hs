@@ -112,7 +112,9 @@ changeRecursionsFromCalls var =
           V.BApp (V.Apply f _) -> Property.set prop f
           _ -> error "assertion: expected BApp"
 
-makeDeleteLambda :: MonadA m => Maybe V.Var -> StoredLam m -> ConvertM m (T m ())
+makeDeleteLambda ::
+  MonadA m => Maybe V.Var -> StoredLam m ->
+  ConvertM m (T m ParamDelResult)
 makeDeleteLambda mRecursiveVar (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp) =
   do
     protectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -123,7 +125,8 @@ makeDeleteLambda mRecursiveVar (StoredLam (V.Lam paramVar lamBodyStored) lambdaP
           & Lens._Just %%~ (`changeRecursionsFromCalls` lamBodyStored)
           & void
         let lamBodyI = Property.value (lamBodyStored ^. V.payload)
-        void $ protectedSetToVal lambdaProp lamBodyI <&> EntityId.ofValI
+        _ <- protectedSetToVal lambdaProp lamBodyI
+        return ParamDelResultDelVar
 
 newTag :: MonadA m => T m T.Tag
 newTag = GenIds.transaction GenIds.randomTag
@@ -195,14 +198,16 @@ makeConvertToRecordParams mRecursiveVar (StoredLam (V.Lam paramVar lamBody) lamP
              (wrapArgWithRecord tagForVar tagForNewVar)
              (lamBody ^. V.payload))
         _ <- wrapOnError lamProp
-        let tagG tag = TagG (EntityId.ofLambdaTagParam paramVar tag) tag ()
         return $ ParamAddResultVarToTags VarToTags
           { vttVar = paramVar
-          , vttReplacedByTag = tagG tagForVar
-          , vttNewTag = tagG tagForNewVar
+          , vttReplacedByTag = tagGForLambdaTagParam paramVar tagForVar
+          , vttNewTag = tagGForLambdaTagParam paramVar tagForNewVar
           }
   where
     paramList = ParamList.mkProp (Property.value lamProp)
+
+tagGForLambdaTagParam :: V.Var -> T.Tag -> TagG ()
+tagGForLambdaTagParam paramVar tag = TagG (EntityId.ofLambdaTagParam paramVar tag) tag ()
 
 convertRecordParams ::
   (MonadA m, Monoid a) =>
@@ -333,7 +338,8 @@ getFieldParamsToParams (StoredLam (V.Lam param lamBody) _) tag =
 
 makeDelFieldParam ::
   MonadA m =>
-  Maybe V.Var -> [T.Tag] -> FieldParam -> StoredLam m -> ConvertM m (T m ())
+  Maybe V.Var -> [T.Tag] -> FieldParam -> StoredLam m ->
+  ConvertM m (T m ParamDelResult)
 makeDelFieldParam mRecursiveVar tags fp storedLam =
   do
     wrapOnError <- ConvertM.wrapOnTypeError
@@ -342,23 +348,30 @@ makeDelFieldParam mRecursiveVar tags fp storedLam =
         Transaction.setP (slParamList storedLam) newTags
         getFieldParamsToHole tag storedLam
         mLastTag
-          & Lens.traverse %%~ getFieldParamsToParams storedLam
-          & void
+          & traverse_ (getFieldParamsToParams storedLam)
         mRecursiveVar
-          & Lens.traverse %%~
-            changeRecursiveCallArgs fixRecurseArg
-            (storedLam ^. slLam . V.lamResult . V.payload)
-          & void
-        void $ wrapOnError $ slLambdaProp storedLam
+          & traverse_
+            (changeRecursiveCallArgs fixRecurseArg
+             (storedLam ^. slLam . V.lamResult . V.payload))
+        _ <- wrapOnError $ slLambdaProp storedLam
+        return delResult
   where
+    paramVar = storedLam ^. slLam . V.lamParamId
     tag = fpTag fp
     fixRecurseArg =
       maybe (fixRecursiveCallRemoveField tag)
       fixRecursiveCallToSingleArg mLastTag
-    (newTags, mLastTag) =
+    (newTags, mLastTag, delResult) =
       case List.delete tag tags of
-      [x] -> (Nothing, Just x)
-      xs -> (Just xs, Nothing)
+      [x] ->
+        ( Nothing
+        , Just x
+        , ParamDelResultTagsToVar TagsToVar
+          { ttvDeletedTag = tagGForLambdaTagParam paramVar tag
+          , ttvReplacedByVar = paramVar
+          }
+        )
+      xs -> (Just xs, Nothing, ParamDelResultDelTag)
 
 slParamList :: MonadA m => StoredLam m -> Transaction.MkProperty m (Maybe ParamList)
 slParamList = ParamList.mkProp . Property.value . slLambdaProp

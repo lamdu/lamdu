@@ -4,8 +4,8 @@ module Lamdu.Sugar.Types
   , Definition(..), drEntityId, drName, drBody
   , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
   , ListItemActions(..), itemAddNext, itemDelete
-  , VarToTags(..)
-  , ParamAddResult(..)
+  , VarToTags(..), TagsToVar(..)
+  , ParamDelResult(..), ParamAddResult(..)
   , FuncParamActions(..), fpAddNext, fpDelete
   , DefinitionExpression(..), deContent, deTypeInfo
   , AcceptNewType(..)
@@ -135,9 +135,19 @@ data ParamAddResult
   | ParamAddResultVarToTags VarToTags
   | ParamAddResultNewTag (TagG ())
 
+data TagsToVar = TagsToVar
+  { ttvDeletedTag :: TagG ()
+  , ttvReplacedByVar :: V.Var
+  }
+
+data ParamDelResult
+  = ParamDelResultDelVar
+  | ParamDelResultTagsToVar TagsToVar
+  | ParamDelResultDelTag
+
 data FuncParamActions m = FuncParamActions
   { _fpAddNext :: T m ParamAddResult
-  , _fpDelete :: T m ()
+  , _fpDelete :: T m ParamDelResult
   }
 
 data FuncParam varinfo name m = FuncParam
