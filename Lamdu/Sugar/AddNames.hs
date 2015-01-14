@@ -532,27 +532,45 @@ toDef def@Definition {..} = do
   (name, body) <- runCPS (opWithDefName _drName) $ toDefinitionBody _drBody
   pure def { _drName = name, _drBody = body }
 
-fixParamAddResult :: MonadA m => T m ParamAddResult -> T m ParamAddResult
-fixParamAddResult =
-  (>>= onAddResult)
+fixParamAddResult :: MonadA m => ParamAddResult -> T m ()
+fixParamAddResult (ParamAddResultVarToTags (VarToTags var replacedByTag _)) =
+  do
+    Transaction.setP tagName =<< Transaction.getP varName
+    Transaction.setP varName ""
   where
-    onAddResult res =
+    varName = assocNameRef var
+    tagName = assocNameRef (replacedByTag ^. tagVal)
+fixParamAddResult _ = return ()
+
+fixParamDelResult :: MonadA m => ParamDelResult -> T m ()
+fixParamDelResult (ParamDelResultTagsToVar (TagsToVar tag replacedByVar _)) =
+  do
+    Transaction.setP varName =<< Transaction.getP tagName
+    Transaction.setP tagName ""
+  where
+    varName = assocNameRef replacedByVar
+    tagName = assocNameRef (tag ^. tagVal)
+fixParamDelResult _ = return ()
+
+fixBinder ::
+  MonadA m =>
+  Binder name m (Expression name m a) ->
+  Binder name m (Expression name m a)
+fixBinder binder =
+  binder
+  & SugarLens.binderFuncParamAdds %~ postProcess fixParamAddResult
+  & SugarLens.binderFuncParamDeletes %~ postProcess fixParamDelResult
+  where
+    postProcess f action =
       do
-        moveNames res
+        res <- action
+        () <- f res
         return res
-    moveNames (ParamAddResultVarToTags (VarToTags var replacedByTag _)) =
-      do
-        let varName = assocNameRef var
-        let tagName = assocNameRef (replacedByTag ^. tagVal)
-        Transaction.setP tagName =<< Transaction.getP varName
-        Transaction.setP varName ""
-    moveNames _ = return ()
 
 addToDef :: MonadA tm => DefinitionU tm a -> T tm (DefinitionN tm a)
 addToDef origDef =
   origDef
-  & drBody . _DefinitionBodyExpression . deContent .
-    SugarLens.binderFuncParamAdds %~ fixParamAddResult
+  & drBody . _DefinitionBodyExpression . deContent %~ fixBinder
   & pass0
   <&> pass1
   <&> pass2
