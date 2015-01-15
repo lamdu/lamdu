@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 module Graphics.UI.Bottle.Widgets.FocusDelegator
   ( IsDelegating(..)
   , Config(..), Style(..), Env(..)
@@ -10,9 +10,10 @@ module Graphics.UI.Bottle.Widgets.FocusDelegator
 import           Control.Applicative (Applicative(..))
 import           Control.Lens.Operators
 import           Data.Maybe (isJust)
-import           Data.Monoid (mappend, mempty)
+import           Data.Monoid ((<>), mempty)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
@@ -24,7 +25,7 @@ data IsDelegating = Delegating | NotDelegating
 
 data Style = Style
   { color :: Draw.Color
-  , layer :: Int
+  , layer :: Anim.Layer
   , cursorBGAnimId :: AnimId
   }
 
@@ -40,39 +41,41 @@ data Env = Env
   , style :: Style
   }
 
-makeFocused
-  :: Applicative f
-  => IsDelegating -> Widget.Id -> Env
-  -> Widget f -> Widget f
-makeFocused delegating focusSelf env =
-  handleFocus delegating
-  where
-    handleFocus Delegating    = addStopDelegatingEventMap
-    handleFocus NotDelegating = colorize . useStartDelegatingEventMap ourConfig
-    ourConfig = config env
-    ourStyle = style env
-    colorize =
-      Widget.backgroundColor (layer ourStyle)
-      (mappend (cursorBGAnimId ourStyle) (Widget.toAnimId focusSelf)) $
-      color ourStyle
-    addStopDelegatingEventMap =
-      Widget.weakerEvents .
-      E.keyPresses (stopDelegatingKeys ourConfig) (stopDelegatingDoc ourConfig) .
-      pure $ Widget.eventResultFromCursor focusSelf
+addBackground :: Style -> AnimId -> Widget f -> Widget f
+addBackground Style{..} animId =
+  Widget.backgroundColor layer (cursorBGAnimId <> animId) color
 
-useStartDelegatingEventMap :: Config -> Widget f -> Widget f
-useStartDelegatingEventMap ourConfig w =
-  w &
+makeFocused ::
+  Applicative f =>
+  IsDelegating -> Widget.Id -> Env ->
+  Widget f -> Widget f
+makeFocused delegating myId Env{..} widget =
+  widget
+  & case delegating of
+    Delegating -> Widget.weakerEvents stopDelegatingEventMap
+    NotDelegating ->
+      addBackground style (Widget.toAnimId myId) .
+      setStartDelegatingEventMap config
+  where
+    Config{..} = config
+    stopDelegatingEventMap =
+      pure (Widget.eventResultFromCursor myId)
+      & E.keyPresses stopDelegatingKeys stopDelegatingDoc
+
+setStartDelegatingEventMap :: Config -> Widget f -> Widget f
+setStartDelegatingEventMap Config{..} widget =
+  widget
   -- We're not delegating, so replace the child eventmap with an
   -- event map to either delegate to it (if it is enterable) or to
   -- nothing (if it is not):
-  Widget.wEventMap .~
-  maybe mempty startDelegatingEventMap
-  (w ^. Widget.wMaybeEnter)
+  & Widget.wEventMap .~ newEventMap
   where
-    startDelegatingEventMap childEnter =
-      E.keyPresses (startDelegatingKeys ourConfig) (startDelegatingDoc ourConfig) $
-      childEnter Direction.Outside ^. Widget.enterResultEvent
+    newEventMap =
+      case widget ^. Widget.wMaybeEnter of
+      Nothing -> mempty
+      Just childEnter ->
+        E.keyPresses startDelegatingKeys startDelegatingDoc $
+        childEnter Direction.Outside ^. Widget.enterResultEvent
 
 -- | Make a focus delegator
 make
@@ -82,31 +85,38 @@ make
   -> Widget.Id -- ^ Enter/Stop delegating value
   -> Env -- ^ FocusDelegator configuration
   -> Widget f -> Widget f
-make isDelegating Nothing focusSelf env w =
-  w & Widget.wMaybeEnter %~ mEnter isDelegating (w ^. Widget.wSize)
-    & updateEventMap isDelegating
+make _ (Just cursor) focusSelf env widget = makeFocused cursor focusSelf env widget
+make isDelegating Nothing focusSelf env widget =
+  widget
+  & Widget.wMaybeEnter %~ mEnter isDelegating
+  & updateEventMap isDelegating
   where
-    updateEventMap NotDelegating =
-      useStartDelegatingEventMap (config env)
+    wholeSize = widget ^. Widget.wSize
+
+    updateEventMap NotDelegating = setStartDelegatingEventMap (config env)
     updateEventMap Delegating = id
-    mEnter NotDelegating wholeSize _ = Just . const $ takeFocus wholeSize
-    mEnter _ _ Nothing = Nothing
-    mEnter Delegating wholeSize (Just enterChild) = Just $ handleDir enterChild wholeSize
 
-    handleDir _ wholeSize Direction.Outside = takeFocus wholeSize
-    handleDir enterChild _ dir = enterChild dir
+    mEnter NotDelegating _ = Just $ const takeFocus
+    mEnter Delegating    Nothing   = Nothing
+    mEnter Delegating    (Just enterChild) = Just $ handleDir enterChild
 
-    takeFocus wholeSize = Widget.EnterResult (Rect 0 wholeSize) . pure $ Widget.eventResultFromCursor focusSelf
+    handleDir _ Direction.Outside = takeFocus
+    handleDir enterChild dir = enterChild dir
 
-make _ (Just cursor) focusSelf env w =
-  makeFocused cursor focusSelf env w
+    takeFocus =
+      Widget.EnterResult
+      { Widget._enterResultRect = Rect 0 wholeSize
+      , Widget._enterResultEvent = pure $ Widget.eventResultFromCursor focusSelf
+      }
 
+-- TODO: Don't export these?
 delegatingId :: Widget.Id -> Widget.Id
 delegatingId = flip Widget.joinId ["delegating"]
 
 notDelegatingId :: Widget.Id -> Widget.Id
 notDelegatingId = flip Widget.joinId ["not delegating"]
 
+-- TODO: Make this nicer?!
 wrapEnv
   :: Applicative f
   => Env
