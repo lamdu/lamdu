@@ -24,7 +24,7 @@ import           Data.List (foldl', transpose, find)
 import           Data.List.Utils (index, groupOn, sortOn, minimumOn)
 import           Data.MRUMemo (memo)
 import           Data.Maybe (fromMaybe)
-import           Data.Monoid (Monoid(..))
+import           Data.Monoid (Monoid(..), (<>))
 import           Data.Traversable (Traversable)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
@@ -35,7 +35,7 @@ import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
-import           Graphics.UI.Bottle.Widget (Widget(..), R)
+import           Graphics.UI.Bottle.Widget (R, Widget(..), wEventMap, wFocalArea)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.GridView (Alignment)
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
@@ -114,9 +114,12 @@ stdKeys = Keys
     k = ModKey mempty
     ctrlK = ModKey.ctrl
 
-mkNavEventmap ::
-  Keys ModKey -> NavDests f -> (Widget.EventHandlers f, Widget.EventHandlers f)
-mkNavEventmap Keys{..} navDests = (weakMap, strongMap)
+addNavEventmap ::
+  Keys ModKey -> NavDests f ->
+  Widget.EventHandlers f ->
+  Widget.EventHandlers f
+addNavEventmap Keys{..} navDests eventMap =
+  strongMap <> eventMap <> weakMap
   where
     weakMap =
       [ movement "left"       (keysLeft  keysDir) leftOfCursor
@@ -125,13 +128,13 @@ mkNavEventmap Keys{..} navDests = (weakMap, strongMap)
       , movement "down"       (keysDown  keysDir) belowCursor
       , movement "more left"  keysMoreLeft        leftMostCursor
       , movement "more right" keysMoreRight       rightMostCursor
-      ] ^. Lens.traversed . Lens._Just
+      ] ^. Lens.traverse . Lens._Just
     strongMap =
       [ movement "top"       keysTop       topCursor
       , movement "bottom"    keysBottom    bottomCursor
       , movement "leftmost"  keysLeftMost  leftMostCursor
       , movement "rightmost" keysRightMost rightMostCursor
-      ] ^. Lens.traversed . Lens._Just
+      ] ^. Lens.traverse . Lens._Just
     movement dirName events f =
       (EventMap.keyPresses
        events
@@ -143,6 +146,9 @@ enumerate2d :: [[a]] -> [(Vector2 Int, a)]
 enumerate2d xss =
   xss ^@.. Lens.traversed <.> Lens.traversed
   <&> _1 %~ uncurry (flip Vector2)
+
+index2d :: [[a]] -> Vector2 Int -> a
+index2d xss (Vector2 x y) = xss !! y !! x
 
 getCursor :: [[Widget k]] -> Maybe Cursor
 getCursor widgets =
@@ -225,42 +231,30 @@ toWidgetCommon ::
   Keys ModKey -> (Widget.Size -> [[Maybe (Widget.Enter f)]] -> Maybe (Widget.Enter f)) ->
   KGrid key f -> Widget f
 toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
-  sChildren
-  & Lens.mapped . Lens.mapped %~ translateChildWidget
-  & combineWs
+  Widget
+  { _wIsFocused = Lens.has Lens._Just mCursor
+  , _wView = View size frame
+  , _wMaybeEnter = combineEnters size mEnterss
+  , _wEventMap = eventMap
+  , _wFocalArea = focalArea
+  }
   where
+    frame = widgets ^. Lens.traverse . Lens.traverse . Widget.wAnimFrame
     translateChildWidget (_key, Element _align rect widget) =
       Widget.translate (rect ^. Rect.topLeft) widget
-    combineWs wss =
-      maybe unselectedW makeW mCursor
-      where
-        mEnterss = (map . map) _wMaybeEnter wss
-        frame = wss ^. Lens.traversed . Lens.traversed . Widget.wAnimFrame
-        mEnter = combineEnters size mEnterss
-
-        unselectedW = Widget
-          { _wIsFocused = Lens.has Lens._Just mCursor
-          , _wView = View size frame
-          , _wMaybeEnter = mEnter
-          , _wEventMap = mempty
-          , _wFocalArea = Rect 0 size
-          }
-
-        makeW cursor@(Vector2 x y) = Widget
-          { _wIsFocused = Lens.has Lens._Just mCursor
-          , _wView = View size frame
-          , _wMaybeEnter = mEnter
-          , _wEventMap = makeEventMap w navDests
-          , _wFocalArea = _wFocalArea w
-          }
-          where
-            navDests = mkNavDests size (_wFocalArea w) mEnterss cursor
-            w = wss !! y !! x
-
-        makeEventMap w navDests =
-          mconcat [strongMap, _wEventMap w, weakMap]
-          where
-            (weakMap, strongMap) = mkNavEventmap keys navDests
+    widgets =
+      sChildren & Lens.mapped . Lens.mapped %~ translateChildWidget
+    mEnterss = widgets & Lens.mapped . Lens.mapped %~ _wMaybeEnter
+    (eventMap, focalArea) =
+      case mCursor of
+      Nothing -> (mempty, Rect 0 0)
+      Just cursor ->
+        ( selectedWidget ^. wEventMap & addNavEventmap keys navDests
+        , selectedWidget ^. wFocalArea
+        )
+        where
+          selectedWidget = index2d widgets cursor
+          navDests = mkNavDests size (selectedWidget ^. wFocalArea) mEnterss cursor
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
@@ -294,7 +288,7 @@ combineMEnters size children = chooseClosest childEnters
   where
     childEnters =
         (enumerate2d children <&> Lens.sequenceAOf _2)
-        ^.. Lens.traversed . Lens._Just
+        ^.. Lens.traverse . Lens._Just
 
     chooseClosest [] = Nothing
     chooseClosest _ = Just byDirection
