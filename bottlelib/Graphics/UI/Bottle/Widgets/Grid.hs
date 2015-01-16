@@ -6,7 +6,7 @@ module Graphics.UI.Bottle.Widgets.Grid
   , Alignment
   , gridMCursor, gridSize, gridContent
   , Element
-  , elementAlign, elementRect
+  , elementAlign, elementRect, elementOriginalWidget
   , Cursor
   , Keys(..), stdKeys
   , toWidget, toWidgetWithKeys
@@ -173,6 +173,10 @@ elementAlign = _elementAlign
 {-# INLINE elementRect #-}
 elementRect :: Lens.Getter (Element f) Rect
 elementRect = _elementRect
+
+{-# INLINE elementOriginalWidget #-}
+elementOriginalWidget :: Lens.Getter (Element f) (Widget f)
+elementOriginalWidget = _elementOriginalWidget
 
 {-# INLINE gridMCursor #-}
 gridMCursor :: Lens.Getter (KGrid key f) (Maybe Cursor)
