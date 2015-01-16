@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.Widgets.Grid
   , unkey
   , Alignment
   , gridMCursor, gridSize, gridContent
-  , Element(..)
+  , Element
   , elementAlign, elementRect
   , Cursor
   , Keys(..), stdKeys
@@ -152,27 +152,47 @@ getCursor widgets =
   <&> fst
 
 data Element f = Element
-  { _elementAlign :: Alignment
-  , _elementRect :: Rect
+  { __elementAlign :: Alignment
+  , __elementRect :: Rect
   , __elementOriginalWidget :: Widget f
   }
 
 data KGrid key f = KGrid
-  { _gridMCursor :: Maybe Cursor
-  , _gridSize :: Widget.Size
-  , _gridContent :: [[(key, Element f)]]
+  { __gridMCursor :: Maybe Cursor
+  , __gridSize :: Widget.Size
+  , __gridContent :: [[(key, Element f)]]
   }
 
 Lens.makeLenses ''Element
 Lens.makeLenses ''KGrid
 
+{-# INLINE elementAlign #-}
+elementAlign :: Lens.Getter (Element f) Alignment
+elementAlign = _elementAlign
+
+{-# INLINE elementRect #-}
+elementRect :: Lens.Getter (Element f) Rect
+elementRect = _elementRect
+
+{-# INLINE gridMCursor #-}
+gridMCursor :: Lens.Getter (KGrid key f) (Maybe Cursor)
+gridMCursor = _gridMCursor
+
+{-# INLINE gridSize #-}
+gridSize :: Lens.Getter (KGrid key f) Widget.Size
+gridSize = _gridSize
+
+{-# INLINE gridContent #-}
+gridContent :: Lens.Getter (KGrid key f) [[(key, Element f)]]
+gridContent = _gridContent
+
 type Grid = KGrid ()
 
 makeKeyed :: [[(key, (Alignment, Widget f))]] -> KGrid key f
 makeKeyed children = KGrid
-  { _gridMCursor = getCursor $ (map . map) (snd . snd) children
-  , _gridSize = size
-  , _gridContent = content
+  { __gridMCursor = getCursor $ (map . map) (snd . snd) children
+  , __gridSize = size
+  , __gridContent = content
   }
   where
     (size, content) =
