@@ -18,6 +18,7 @@ import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Config (Config)
@@ -62,20 +63,20 @@ globalEventMap config@Config.VersionControl{..} actions = mconcat
   where
     currentBranchWidgetId = WidgetIds.fromGuid . Branch.guid $ currentBranch actions
 
-choiceWidgetConfig :: Config -> BWidgets.ChoiceWidgetConfig
-choiceWidgetConfig config = BWidgets.ChoiceWidgetConfig
-  { BWidgets.cwcFDConfig =
+choiceWidgetConfig :: Config -> Choice.Config
+choiceWidgetConfig config = Choice.Config
+  { Choice.cwcFDConfig =
     FocusDelegator.Config
     { FocusDelegator.startDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
     , FocusDelegator.startDelegatingDoc = E.Doc ["Branches", "Select"]
     , FocusDelegator.stopDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
     , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Choose selected"]
     }
-  , BWidgets.cwcExpandMode =
-      BWidgets.AutoExpand $ Config.selectedBranchColor $
+  , Choice.cwcExpandMode =
+      Choice.AutoExpand $ Config.selectedBranchColor $
       Config.versionControl config
-  , BWidgets.cwcOrientation = Box.vertical
-  , BWidgets.cwcBgLayer = Config.layerChoiceBG $ Config.layers config
+  , Choice.cwcOrientation = Box.vertical
+  , Choice.cwcBgLayer = Config.layerChoiceBG $ Config.layers config
   }
 
 make ::

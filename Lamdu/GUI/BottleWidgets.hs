@@ -6,26 +6,23 @@ module Lamdu.GUI.BottleWidgets
   , wrapDelegatedWith, wrapDelegatedOT
   , makeTextEdit
   , makeTextEditor, makeLineEdit, makeWordEdit
+  , makeChoiceWidget
   , stdSpaceWidget, hspaceWidget, vspaceWidget
   , hboxSpaced, hboxCenteredSpaced
   , gridHSpaced, gridHSpacedCentered
   , verticalSpace
-  , makeChoiceWidget, ChoiceWidgetConfig(..), ChoiceWidgetExpandMode(..)
   , liftLayerInterval
   ) where
 
-import           Control.Applicative (Applicative(..), (*>), (<$>))
-import qualified Control.Lens as Lens
+import           Control.Applicative (Applicative(..), (<$>))
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Monad (when)
 import           Control.MonadA (MonadA)
 import           Data.ByteString.Char8 (pack)
-import           Data.List (findIndex, intersperse)
+import           Data.List (intersperse)
 import           Data.Monoid (Monoid(..))
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
-import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
@@ -33,6 +30,7 @@ import           Graphics.UI.Bottle.View (View)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -213,56 +211,13 @@ gridHSpaced xs =
 gridHSpacedCentered :: MonadA m => [[Widget f]] -> WidgetEnvT m (Widget f)
 gridHSpacedCentered = gridHSpaced . (map . map) ((,) 0.5)
 
-data ChoiceWidgetExpandMode
-  -- Cursor is on expanded widget, need to show selected choice with a
-  -- color:
-  = AutoExpand Draw.Color
-  | ExplicitEntry
-Lens.makePrisms ''ChoiceWidgetExpandMode
-
-data ChoiceWidgetConfig = ChoiceWidgetConfig
-  { cwcFDConfig :: FocusDelegator.Config
-  , cwcOrientation :: Box.Orientation
-  , cwcExpandMode :: ChoiceWidgetExpandMode
-  , cwcBgLayer :: Int
-  }
-
 makeChoiceWidget ::
   (Eq a, MonadA m, Applicative f) =>
   (a -> f ()) -> [(a, Widget f)] -> a ->
-  ChoiceWidgetConfig -> Widget.Id -> WidgetEnvT m (Widget f)
-makeChoiceWidget choose children curChild config myId = do
-  isFocused <- WE.isSubCursor myId
-  let
-    visiblePairs
-      | childFocused || (autoExpand && isFocused) = pairs
-      | otherwise = filter itemIsCurChild pairs
-    mCurChildIndex = findIndex itemIsCurChild visiblePairs
-    colorizedPairs
-      -- focus shows selection already
-      | childFocused = map snd visiblePairs
-      -- need to show selection even as focus is elsewhere
-      | otherwise = map colorize visiblePairs
-    box = Box.makeAlign 0 (cwcOrientation config) colorizedPairs
-    boxWidget =
-      maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
-  wrapDelegatedOT (cwcFDConfig config) FocusDelegator.NotDelegating id
-    ((const . return) boxWidget) myId
-  where
-    autoExpand = Lens.has _AutoExpand $ cwcExpandMode config
-    itemIsCurChild = (curChild ==) . fst
-    colorize (item, w) =
-      case cwcExpandMode config ^? _AutoExpand of
-      Just color
-        | item == curChild ->
-          Widget.backgroundColor (cwcBgLayer config)
-          (Widget.toAnimId myId) color w
-      _ -> w
-    pairs = map mkPair children
-    childFocused = any (^. _2 . Widget.wIsFocused) children
-    mkPair (item, widget) =
-      ( item
-      , widget
-        & Widget.wMaybeEnter . Lens.traversed . Lens.mapped .
-          Widget.enterResultEvent %~ (choose item *>)
-      )
+  Choice.Config -> Widget.Id -> WidgetEnvT m (Widget f)
+makeChoiceWidget choose children curChild choiceConfig myId = do
+  cursor <- WE.readCursor
+  config <- WE.readConfig
+  Choice.make choose children curChild (fdStyle config)
+    choiceConfig myId cursor
+    & return

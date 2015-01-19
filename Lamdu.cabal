@@ -52,6 +52,7 @@ Library
                        Graphics.UI.Bottle.Widgets.StdKeys,
                        Graphics.UI.Bottle.Widgets.TextEdit,
                        Graphics.UI.Bottle.Widgets.TextView,
+                       Graphics.UI.Bottle.Widgets.Choice,
                        Graphics.UI.GLFW.Events,
                        Graphics.UI.GLFW.Instances,
                        Graphics.UI.GLFW.Utils,

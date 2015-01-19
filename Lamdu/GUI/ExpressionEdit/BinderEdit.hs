@@ -17,6 +17,7 @@ import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars)
@@ -87,17 +88,17 @@ makeWheres whereItems myId =
   where
     wiCursor = WidgetIds.fromEntityId . (^. Sugar.wiEntityId)
 
-presentationModeChoiceConfig :: Config -> BWidgets.ChoiceWidgetConfig
-presentationModeChoiceConfig config = BWidgets.ChoiceWidgetConfig
-  { BWidgets.cwcFDConfig = FocusDelegator.Config
+presentationModeChoiceConfig :: Config -> Choice.Config
+presentationModeChoiceConfig config = Choice.Config
+  { Choice.cwcFDConfig = FocusDelegator.Config
     { FocusDelegator.startDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
     , FocusDelegator.startDelegatingDoc = E.Doc ["Presentation Mode", "Select"]
     , FocusDelegator.stopDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
     , FocusDelegator.stopDelegatingDoc = E.Doc ["Presentation Mode", "Choose selected"]
     }
-  , BWidgets.cwcOrientation = Box.vertical
-  , BWidgets.cwcExpandMode = BWidgets.ExplicitEntry
-  , BWidgets.cwcBgLayer = Config.layerChoiceBG $ Config.layers config
+  , Choice.cwcOrientation = Box.vertical
+  , Choice.cwcExpandMode = Choice.ExplicitEntry
+  , Choice.cwcBgLayer = Config.layerChoiceBG $ Config.layers config
   }
 
 mkPresentationModeEdit ::
