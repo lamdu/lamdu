@@ -17,11 +17,11 @@ import           Control.Applicative (liftA2, (<$>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (join, msum)
+import           Control.Monad (msum)
 import           Data.Foldable (Foldable)
 import           Data.Function (on)
 import           Data.List (foldl', transpose, find)
-import           Data.List.Utils (index, groupOn, sortOn, minimumOn)
+import           Data.List.Utils (groupOn, sortOn, minimumOn)
 import           Data.MRUMemo (memo)
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Monoid(..), (<>))
@@ -74,8 +74,8 @@ mkNavDests widgetSize prevFocalArea mEnterss cursor@(Vector2 cursorX cursorY) = 
   , rightMostCursor = giveEdge (Vector2 (Just 1) Nothing) . take 1 . reverse $ drop (cursorX+1) curRow
   }
   where
-    curRow = fromMaybe [] $ index cappedY mEnterss
-    curColumn = fromMaybe [] $ index cappedX (transpose mEnterss)
+    curRow = fromMaybe [] $ mEnterss ^? Lens.ix cappedY
+    curColumn = fromMaybe [] $ transpose mEnterss ^? Lens.ix cappedX
     Vector2 cappedX cappedY = capCursor size cursor
     size = length2d mEnterss
 
@@ -272,7 +272,9 @@ toWidgetBiasedWithKeys keys (Vector2 x y) =
       Direction.Point _ -> unbiased
       where
         unbiased = enter dir
-        biased = maybe unbiased ($ dir) . join $ index y children >>= index x
+        biased =
+          children ^? Lens.ix y . Lens.ix x . Lens._Just
+          & maybe unbiased ($ dir)
 
 toWidgetBiased :: Cursor -> KGrid key f -> Widget f
 toWidgetBiased = toWidgetBiasedWithKeys stdKeys
