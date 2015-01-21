@@ -8,9 +8,11 @@ import           Control.Applicative ((<$>))
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Data.Monoid (Monoid(..), (<>))
+import           Data.Store.Transaction (Transaction)
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.GLFW as GLFW
@@ -20,13 +22,14 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (WidgetT)
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..))
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
+
+type T = Transaction
 
 fdConfig :: FocusDelegator.Config
 fdConfig = FocusDelegator.Config
@@ -37,7 +40,7 @@ fdConfig = FocusDelegator.Config
   }
 
 makeRecordTagInner ::
-  MonadA m => Sugar.TagG (Name m) -> Widget.Id -> ExprGuiM m (WidgetT m)
+  MonadA m => Sugar.TagG (Name m) -> Widget.Id -> ExprGuiM m (Widget (T m))
 makeRecordTagInner tagG myId = do
   Config.Name{..} <- Config.name <$> ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.makeNameEdit (tagG ^. Sugar.tagGName) myId

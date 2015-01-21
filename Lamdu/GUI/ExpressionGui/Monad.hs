@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies #-}
 module Lamdu.GUI.ExpressionGui.Monad
-  ( ExprGuiM, WidgetT
+  ( ExprGuiM
   , widgetEnv
   , makeLabel
   , StoredEntityIds(..), Injected(..)
@@ -51,7 +51,7 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui(..), WidgetT)
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui(..))
 import           Lamdu.GUI.Precedence (ParentPrecedence(..), Precedence)
 import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetEnvT as WE

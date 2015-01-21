@@ -66,7 +66,7 @@ import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (WidgetT, ExpressionGui(..), egWidget, egAlignment)
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui(..), egWidget, egAlignment)
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -74,7 +74,9 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-fromValueWidget :: WidgetT m -> ExpressionGui m
+type T = Transaction
+
+fromValueWidget :: Widget (T m) -> ExpressionGui m
 fromValueWidget widget = ExpressionGui widget 0.5
 
 -- | Scale the given ExpressionGui without moving its top alignment
@@ -147,7 +149,7 @@ fromBox box =
 
 addBelow ::
   Widget.R ->
-  [(Box.Alignment, WidgetT m)] ->
+  [(Box.Alignment, Widget (T m))] ->
   ExpressionGui m ->
   ExpressionGui m
 addBelow egHAlign ws eg =
@@ -157,7 +159,7 @@ addBelow egHAlign ws eg =
 
 addAbove ::
   Widget.R ->
-  [(Box.Alignment, WidgetT m)] ->
+  [(Box.Alignment, Widget (T m))] ->
   ExpressionGui m ->
   ExpressionGui m
 addAbove egHAlign ws eg =
@@ -193,7 +195,7 @@ makeTypeView minWidth entityId typ =
     animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
 
 addBelowInferredSpacing ::
-  MonadA m => WidgetT m ->
+  MonadA m => Widget (T m) ->
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addBelowInferredSpacing typeView eg =
   do
@@ -235,7 +237,7 @@ nameEditFDConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Done renaming"]
   }
 
-makeNameOriginEdit :: MonadA m => Name m -> Widget.Id -> ExprGuiM m (WidgetT m)
+makeNameOriginEdit :: MonadA m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
 makeNameOriginEdit name myId =
   do
     config <- Config.name <$> ExprGuiM.widgetEnv WE.readConfig
@@ -249,7 +251,7 @@ makeNameOriginEdit name myId =
       NameSourceStored -> Config.nameOriginFGColor
 
 makeNameEdit ::
-  MonadA m => Name m -> Widget.Id -> ExprGuiM m (WidgetT m)
+  MonadA m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
 makeNameEdit (Name nameSrc nameCollision setName name) myId = do
   collisionSuffixes <-
     ExprGuiM.widgetEnv . makeCollisionSuffixLabels nameCollision $
@@ -361,7 +363,7 @@ stdWrapParenify pl parentPrec prec addParens =
   stdWrapParentExpr pl . parenify parentPrec prec addParens
 
 -- TODO: This doesn't belong here
-makeRow :: [(Widget.R, ExpressionGui m)] -> [(Vector2 Widget.R, WidgetT m)]
+makeRow :: [(Widget.R, ExpressionGui m)] -> [(Vector2 Widget.R, Widget (T m))]
 makeRow =
   map item
   where

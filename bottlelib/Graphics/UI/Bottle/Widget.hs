@@ -3,7 +3,7 @@ module Graphics.UI.Bottle.Widget
   ( module Graphics.UI.Bottle.WidgetId
   , Widget(..)
   , wMaybeEnter, wEventMap, wView
-  , wFocalArea , wIsFocused, wAnimLayers
+  , wFocalArea, wIsFocused, wAnimLayers
   , wAnimFrame, wSize, wWidth, wHeight, wEvents
   , empty
   , Enter, R, Size

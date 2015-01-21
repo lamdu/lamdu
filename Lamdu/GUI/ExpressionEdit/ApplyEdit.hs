@@ -3,25 +3,29 @@ module Lamdu.GUI.ExpressionEdit.ApplyEdit
   ( make
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.Monoid (Monoid(..))
-import Data.Traversable (traverse, sequenceA)
-import Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.Sugar.AddNames.Types (Name(..))
+import           Control.Applicative (Applicative(..), (<$>))
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Transaction (Transaction)
+import           Data.Traversable (traverse, sequenceA)
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.Parens as Parens
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
+
+type T = Transaction
 
 infixPrecedence :: ExpressionGui.Precedence
 infixPrecedence = 5
@@ -85,7 +89,7 @@ makeParamTag tagExprEntityId tagG =
 makeArgRows ::
   MonadA m =>
   Sugar.AnnotatedArg (Name m) (ExprGuiM.SugarExpr m) ->
-  ExprGuiM m [[(Grid.Alignment, ExprGuiM.WidgetT m)]]
+  ExprGuiM m [[(Grid.Alignment, Widget (T m))]]
 makeArgRows arg = do
   argTagEdit <- makeParamTag (arg ^. Sugar.aaTagExprEntityId) (arg ^. Sugar.aaTag)
   argValEdit <- ExprGuiM.makeSubexpression 0 $ arg ^. Sugar.aaExpr

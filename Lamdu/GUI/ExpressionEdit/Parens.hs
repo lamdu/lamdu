@@ -4,22 +4,25 @@ module Lamdu.GUI.ExpressionEdit.Parens
   , addHighlightedTextParens
   ) where
 
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionGui (ExpressionGui)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Lamdu.GUI.WidgetIds (parensPrefix)
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
+import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
+import           Lamdu.GUI.WidgetIds (parensPrefix)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
-type WidgetMaker m = ExprGuiM m (WidgetT m)
+type T = Transaction
+type WidgetMaker m = ExprGuiM m (Widget (T m))
 
 addTextParensI
   :: MonadA m

@@ -29,7 +29,7 @@ import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -47,7 +47,7 @@ toExprGuiMPayload (entityIds, nearestHoles) =
 make ::
   MonadA m => Anchors.CodeProps m -> Settings ->
   DefinitionN m ([Sugar.EntityId], NearestHoles) ->
-  WidgetEnvT (T m) (WidgetT m)
+  WidgetEnvT (T m) (Widget (T m))
 make cp settings defS =
   ExprGuiM.run ExpressionEdit.make cp settings $
   case exprGuiDefS ^. Sugar.drBody of
@@ -70,7 +70,7 @@ topLevelSchemeTypeView minWidth entityId scheme =
 makeBuiltinDefinition ::
   MonadA m =>
   Sugar.Definition (Name m) m (ExprGuiM.SugarExpr m) ->
-  Sugar.DefinitionBuiltin m -> ExprGuiM m (WidgetT m)
+  Sugar.DefinitionBuiltin m -> ExprGuiM m (Widget (T m))
 makeBuiltinDefinition def builtin =
   Box.vboxAlign 0 <$> sequenceA
   [ sequenceA
@@ -124,7 +124,7 @@ makeExprDefinition ::
   MonadA m =>
   Sugar.Definition (Name m) m (ExprGuiM.SugarExpr m) ->
   Sugar.DefinitionExpression (Name m) m (ExprGuiM.SugarExpr m) ->
-  ExprGuiM m (WidgetT m)
+  ExprGuiM m (Widget (T m))
 makeExprDefinition def bodyExpr = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   bodyWidget <-

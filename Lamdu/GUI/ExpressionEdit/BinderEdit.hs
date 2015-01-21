@@ -27,7 +27,7 @@ import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -71,7 +71,7 @@ makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
 makeWheres ::
   MonadA m =>
   [Sugar.WhereItem (Name m) m (ExprGuiM.SugarExpr m)] -> Widget.Id ->
-  ExprGuiM m (Maybe (WidgetT m))
+  ExprGuiM m (Maybe (Widget (T m)))
 makeWheres [] _ = return Nothing
 makeWheres whereItems myId =
   do
@@ -124,7 +124,7 @@ mkPresentationModeEdit myId prop = do
 layout ::
   MonadA m =>
   ExpressionGui m -> [ExpressionGui m] ->
-  ExpressionGui m -> Maybe (WidgetT m) ->
+  ExpressionGui m -> Maybe (Widget (T m)) ->
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 layout defNameEdit paramEdits bodyEdit mWheresEdit myId =

@@ -17,7 +17,7 @@ import           Data.Maybe (isJust, maybeToList, fromMaybe)
 import           Data.Monoid (Monoid(..), (<>))
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
-import qualified Data.Store.Transaction as Transaction
+import           Data.Store.Transaction (Transaction)
 import           Data.Traversable (traverse)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -39,7 +39,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionGui (ExpressionGui(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -48,7 +48,7 @@ import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
-type T = Transaction.Transaction
+type T = Transaction
 
 extraSymbol :: String
 extraSymbol = "▷"
@@ -147,13 +147,13 @@ makeExtraSymbolWidget animId isSelected results
 data ResultGroupWidgets m = ResultGroupWidgets
   { _rgwMainResult :: ShownResult m
   , _rgwMSelectedResult :: Maybe (ShownResult m) -- Can be an extra result
-  , _rgwRow :: [WidgetT m]
+  , _rgwRow :: [Widget (T m)]
   }
 rgwMainResult :: Lens' (ResultGroupWidgets m) (ShownResult m)
 rgwMainResult f ResultGroupWidgets{..} = f _rgwMainResult <&> \_rgwMainResult -> ResultGroupWidgets{..}
 rgwMSelectedResult :: Lens' (ResultGroupWidgets m) (Maybe (ShownResult m))
 rgwMSelectedResult f ResultGroupWidgets{..} = f _rgwMSelectedResult <&> \_rgwMSelectedResult -> ResultGroupWidgets{..}
-rgwRow :: Lens' (ResultGroupWidgets m) [WidgetT m]
+rgwRow :: Lens' (ResultGroupWidgets m) [Widget (T m)]
 rgwRow f ResultGroupWidgets{..} = f _rgwRow <&> \_rgwRow -> ResultGroupWidgets{..}
 
 makeResultGroup ::
@@ -195,7 +195,7 @@ makeResultGroup holeInfo results = do
 
 makeExtraResultsWidget ::
   MonadA m => HoleInfo m -> Anim.R -> [Result m] ->
-  ExprGuiM m (Maybe (ShownResult m), WidgetT m)
+  ExprGuiM m (Maybe (ShownResult m), Widget (T m))
 makeExtraResultsWidget _ _ [] = return (Nothing, Widget.empty)
 makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -227,7 +227,7 @@ makeFocusable wId = ExprGuiM.widgetEnv . BWidgets.makeFocusableView wId
 makeHoleResultWidget ::
   MonadA m => Widget.Id ->
   Sugar.HoleResult (Name m) m ->
-  ExprGuiM m (WidgetT m, ExprGuiM m (Widget.EventHandlers (T m)))
+  ExprGuiM m (Widget (T m), ExprGuiM m (Widget.EventHandlers (T m)))
 makeHoleResultWidget resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   let Config.Hole{..} = Config.hole config
@@ -278,7 +278,7 @@ toPayload isInjected =
     Sugar.NotInjected -> []
     Sugar.Injected -> [True]
 
-makeNoResults :: MonadA m => AnimId -> ExprGuiM m (WidgetT m)
+makeNoResults :: MonadA m => AnimId -> ExprGuiM m (Widget (T m))
 makeNoResults animId =
   ExpressionGui.makeLabel "(No results)" animId
   <&> (^. ExpressionGui.egWidget)
@@ -299,7 +299,7 @@ addMResultPicker mSelectedResult =
 
 layoutResults ::
   MonadA m =>
-  [[Widget (T m)]] -> HaveHiddenResults -> Widget.Id -> ExprGuiM m (WidgetT m)
+  [[Widget (T m)]] -> HaveHiddenResults -> Widget.Id -> ExprGuiM m (Widget (T m))
 layoutResults rows hiddenResults myId
   | null rows = makeNoResults (Widget.toAnimId myId)
   | otherwise =
@@ -315,7 +315,7 @@ layoutResults rows hiddenResults myId
 makeResultsWidget ::
   MonadA m => HoleInfo m ->
   [ResultsList m] -> HaveHiddenResults ->
-  ExprGuiM m (Maybe (ShownResult m), WidgetT m)
+  ExprGuiM m (Maybe (ShownResult m), Widget (T m))
 makeResultsWidget holeInfo shownResultsLists hiddenResults = do
   groupsWidgets <- traverse (makeResultGroup holeInfo) shownResultsLists
   let
