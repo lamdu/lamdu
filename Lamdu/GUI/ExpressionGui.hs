@@ -129,7 +129,7 @@ gridDownwards ([]:rs) = gridDownwards rs
 gridDownwards rows =
   ExpressionGui
   { _egWidget = Grid.toWidget grid
-  , _egAlignment = grid ^. Grid.gridContent & head & head & (^. _2 . Grid.elementAlign . _2)
+  , _egAlignment = grid ^?! Grid.gridContent . Lens.ix 0 . Lens.ix 0 . _2 . Grid.elementAlign . _2
   }
   where
     grid =
