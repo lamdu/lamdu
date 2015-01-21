@@ -124,7 +124,7 @@ vboxDownwardsSpaced guis =
       & vboxDownwards & return
 
 gridDownwards :: [[(Widget.R, ExpressionGui m)]] -> ExpressionGui m
-gridDownwards [] = fromValueWidget $ Widget.fromView $ Spacer.make 0
+gridDownwards [] = fromValueWidget Widget.empty
 gridDownwards ([]:rs) = gridDownwards rs
 gridDownwards rows =
   ExpressionGui
