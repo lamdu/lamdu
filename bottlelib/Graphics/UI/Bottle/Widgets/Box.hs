@@ -4,7 +4,7 @@ module Graphics.UI.Bottle.Widgets.Box
   , make, makeKeyed, makeAlign, makeCentered
   , unkey
   , boxMCursor, boxSize, boxContent, boxOrientation
-  , Element, elementRect
+  , Element, elementRect, elementAlign, elementOriginalWidget
   , Cursor, toWidget, toWidgetBiased
   , Orientation, horizontal, vertical
   , hboxAlign, vboxAlign
@@ -56,8 +56,17 @@ vertical = Orientation
 
 type Element = Grid.Element
 
+{-# INLINE elementRect #-}
 elementRect :: Lens.Getter (Element f) Rect
 elementRect = Grid.elementRect
+
+{-# INLINE elementAlign #-}
+elementAlign :: Lens.Getter (Element f) Alignment
+elementAlign = Grid.elementAlign
+
+{-# INLINE elementOriginalWidget #-}
+elementOriginalWidget :: Lens.Getter (Element f) (Widget f)
+elementOriginalWidget = Grid.elementOriginalWidget
 
 data KBox key f = KBox
   { __boxOrientation :: Orientation
