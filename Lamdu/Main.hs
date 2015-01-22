@@ -96,7 +96,7 @@ withDb :: FilePath -> (Db -> IO a) -> IO a
 withDb lamduDir body =
   do
     Directory.createDirectoryIfMissing False lamduDir
-    Db.withDb (lamduDir </> "codeedit.sophia") $ \db ->
+    Db.withDb (lamduDir </> "codeedit.db") $ \db ->
       do
         ExampleDB.initDB db
         body db
