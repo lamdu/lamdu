@@ -1,14 +1,13 @@
 {-# LANGUAGE RecordWildCards, OverloadedStrings, RankNTypes #-}
 module Lamdu.GUI.ExpressionGui
-  ( ExpressionGui(..), egWidget, egAlignment
+  ( ExpressionGui, egWidget, egAlignment
   -- General:
-  , fromValueWidget
+  , fromValueWidget, addBelow, addAbove
   , scaleFromTop
   , pad
-  , hbox, hboxSpaced, addBelow, addAbove
-  , gridDownwards
-  , vboxDownwards, vboxDownwardsSpaced
-  , makeRow
+  , hbox, hboxSpaced
+  , vboxTopFocal, vboxTopFocalSpaced
+  , gridTopLeftFocal
   , listWithDelDests
   , makeLabel
   , grammarLabel
@@ -33,7 +32,7 @@ module Lamdu.GUI.ExpressionGui
   ) where
 
 import           Control.Applicative ((<$>))
-import           Control.Lens (Lens')
+import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -52,10 +51,9 @@ import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import           Graphics.UI.Bottle.Widgets.Box (KBox)
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.GLFW as GLFW
@@ -66,7 +64,7 @@ import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui(..), egWidget, egAlignment)
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -76,95 +74,67 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
+{-# INLINE egWidget #-}
+egWidget ::
+  Lens (ExpressionGui m) (ExpressionGui n) (Widget (T m)) (Widget (T n))
+egWidget = Layout.alignedWidget . _2
+
+{-# INLINE egAlignment #-}
+egAlignment :: Lens' (ExpressionGui m) Layout.Alignment
+egAlignment = Layout.alignedWidget . _1
+
 fromValueWidget :: Widget (T m) -> ExpressionGui m
-fromValueWidget widget = ExpressionGui widget 0.5
+fromValueWidget = Layout.fromCenteredWidget
+
+alignAdd ::
+    ([(Widget.R, Widget (T m))] -> ExpressionGui m -> ExpressionGui m) ->
+    Widget.R -> [(Widget.R, Widget (T m))] ->
+    ExpressionGui m -> ExpressionGui m
+alignAdd addFunc hAlign widgets eg =
+  eg & egAlignment . _1 .~ hAlign & addFunc widgets
+
+addAbove ::
+    Widget.R -> [(Widget.R, Widget (T m))] ->
+    ExpressionGui m -> ExpressionGui m
+addAbove = alignAdd (Layout.addBefore Layout.Vertical)
+
+addBelow ::
+    Widget.R -> [(Widget.R, Widget (T m))] ->
+    ExpressionGui m -> ExpressionGui m
+addBelow = alignAdd (Layout.addAfter Layout.Vertical)
 
 -- | Scale the given ExpressionGui without moving its top alignment
 -- point:
 scaleFromTop :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
-scaleFromTop ratio (ExpressionGui widget alignment) =
-  ExpressionGui (Widget.scale ratio widget) (alignment / (ratio ^. _2))
+scaleFromTop = Layout.scaleFromTopLeft
 
 pad :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
-pad padding (ExpressionGui widget alignment) =
-  ExpressionGui newWidget $
-  (padding ^. _2 + alignment * widget ^. height) / newWidget ^. height
-  where
-    height = Widget.wHeight
-    newWidget = Widget.pad padding widget
+pad = Layout.pad
 
 hbox :: [ExpressionGui m] -> ExpressionGui m
-hbox guis =
-  ExpressionGui (Box.toWidget box) $
-  case box ^. Box.boxContent of
-  ((_, x) : _) -> x ^. Grid.elementAlign . _2
-  _ -> error "hbox must not get empty list :("
-  where
-    box = Box.make Box.horizontal $ map f guis
-    f (ExpressionGui widget alignment) = (Vector2 0.5 alignment, widget)
+hbox = Layout.hbox 0.5
 
 hboxSpaced :: MonadA m => [ExpressionGui f] -> ExprGuiM m (ExpressionGui f)
 hboxSpaced guis =
   ExprGuiM.widgetEnv BWidgets.stdSpaceWidget
-  <&> hbox . (`List.intersperse` guis) . fromValueWidget
+  <&> Layout.fromCenteredWidget
+  <&> (`List.intersperse` guis)
+  <&> hbox
 
-vboxDownwards :: [(Widget.R, ExpressionGui m)] -> ExpressionGui m
-vboxDownwards [] = error "Empty vboxDownwards"
-vboxDownwards ((hAlign, x) : xs) =
-  addBelow hAlign (xs <&> toAlignedWidget) x
-  where
-    toAlignedWidget (align, gui) = (Vector2 align 0, gui ^. egWidget)
+vboxTopFocal :: [ExpressionGui m] -> ExpressionGui m
+vboxTopFocal [] = Layout.empty
+vboxTopFocal (gui:guis) = gui & Layout.addAfter Layout.Vertical guis
 
-vboxDownwardsSpaced ::
-  MonadA m => [(Widget.R, ExpressionGui m)] -> ExprGuiM m (ExpressionGui m)
-vboxDownwardsSpaced guis =
+vboxTopFocalSpaced ::
+  MonadA m => [ExpressionGui m] -> ExprGuiM m (ExpressionGui m)
+vboxTopFocalSpaced guis =
   do
     space <- ExprGuiM.widgetEnv BWidgets.verticalSpace
-    guis & List.intersperse (0, fromValueWidget space)
-      & vboxDownwards & return
+    guis & List.intersperse (Layout.fromCenteredWidget space)
+      & vboxTopFocal & return
 
-gridDownwards :: [[(Widget.R, ExpressionGui m)]] -> ExpressionGui m
-gridDownwards [] = fromValueWidget Widget.empty
-gridDownwards ([]:rs) = gridDownwards rs
-gridDownwards rows =
-  ExpressionGui
-  { _egWidget = Grid.toWidget grid
-  , _egAlignment = grid ^?! Grid.gridContent . Lens.ix 0 . Lens.ix 0 . _2 . Grid.elementAlign . _2
-  }
-  where
-    grid =
-      rows
-      & Lens.traversed . Lens.traversed %~ cell
-      & Grid.make
-    cell (hAlign, ExpressionGui widget vAlign) = (Vector2 hAlign vAlign, widget)
-
-fromBox :: KBox Bool (Transaction m) -> ExpressionGui m
-fromBox box =
-  ExpressionGui (Box.toWidget box) alignment
-  where
-    alignment =
-      maybe (error "True disappeared from box list?!")
-        (^. Grid.elementAlign . _2) .
-      lookup True $ box ^. Box.boxContent
-
-addBelow ::
-  Widget.R ->
-  [(Box.Alignment, Widget (T m))] ->
-  ExpressionGui m ->
-  ExpressionGui m
-addBelow egHAlign ws eg =
-  fromBox . Box.makeKeyed Box.vertical $
-  (True, (Vector2 egHAlign (eg ^. egAlignment), eg ^. egWidget)) :
-  map ((,) False) ws
-
-addAbove ::
-  Widget.R ->
-  [(Box.Alignment, Widget (T m))] ->
-  ExpressionGui m ->
-  ExpressionGui m
-addAbove egHAlign ws eg =
-  fromBox . Box.makeKeyed Box.vertical $
-  map ((,) False) ws ++ [(True, (Vector2 egHAlign (eg ^. egAlignment), eg ^. egWidget))]
+gridTopLeftFocal :: [[ExpressionGui m]] -> ExpressionGui m
+gridTopLeftFocal = Layout.gridTopLeftFocal
 
 wWidth :: Lens' (Widget f) Widget.R
 wWidth = Widget.wWidth
@@ -197,18 +167,15 @@ makeTypeView minWidth entityId typ =
 addBelowInferredSpacing ::
   MonadA m => Widget (T m) ->
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addBelowInferredSpacing typeView eg =
+addBelowInferredSpacing widget eg =
   do
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
       vspacer =
-        Widget.fromView $ Spacer.makeVertical $
-        realToFrac $ Config.valInferredSpacing config
-      items =
-        [ (0.5, vspacer)
-        , (0.5, typeView)
-        ]
-    return $ addBelow 0.5 items eg
+        Widget.fromView $
+        Spacer.makeVertical $ realToFrac $
+        Config.valInferredSpacing config
+    addBelow 0.5 [(0, vspacer), (0.5, widget)] eg & return
 
 addInferredType :: MonadA m => Sugar.EntityId -> Type -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addInferredType entityId inferredType eg =
@@ -364,14 +331,6 @@ stdWrapParenify ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 stdWrapParenify pl parentPrec prec addParens =
   stdWrapParentExpr pl . parenify parentPrec prec addParens
-
--- TODO: This doesn't belong here
-makeRow :: [(Widget.R, ExpressionGui m)] -> [(Vector2 Widget.R, Widget (T m))]
-makeRow =
-  map item
-  where
-    item (halign, ExpressionGui widget alignment) =
-      (Vector2 halign alignment, widget)
 
 -- TODO: This doesn't belong here
 makeNameView ::

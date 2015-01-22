@@ -37,7 +37,7 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResul
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
-import           Lamdu.GUI.ExpressionGui (ExpressionGui(..))
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM

@@ -6,6 +6,7 @@ module Lamdu.GUI.ExpressionEdit.BinderEdit
 import           Control.Applicative ((<$>), (<$))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.List.Utils (nonEmptyAll)
 import           Data.Monoid (Monoid(..), (<>))
@@ -82,7 +83,7 @@ makeWheres whereItems myId =
       & traverse makeWhereItemEdit
     ExpressionGui.hboxSpaced
       [ whereLabel
-      , itemEdits <&> (,) 0 & ExpressionGui.vboxDownwards
+      , ExpressionGui.vboxTopFocal itemEdits
       ]
       <&> Just . (^. ExpressionGui.egWidget)
   where
@@ -135,8 +136,8 @@ layout defNameEdit paramEdits bodyEdit mWheresEdit myId =
       [] -> return []
       [x] -> return [x]
       xs ->
-        xs <&> (,) 0.5
-        & ExpressionGui.vboxDownwardsSpaced
+        xs <&> ExpressionGui.egAlignment . _1 .~ 0.5
+        & ExpressionGui.vboxTopFocalSpaced
         >>= ExpressionGui.addValFrame myId
         <&> (:[])
     defNameEdit : paramsEdit ++ [ equals, bodyEdit ]

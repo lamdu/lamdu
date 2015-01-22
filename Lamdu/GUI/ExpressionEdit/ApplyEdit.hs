@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.ApplyEdit
 
 import           Control.Applicative (Applicative(..), (<$>))
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.Monoid (Monoid(..))
 import           Data.Store.Transaction (Transaction)
@@ -12,6 +13,7 @@ import           Data.Traversable (traverse, sequenceA)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.Parens as Parens
@@ -94,13 +96,12 @@ makeArgRows arg = do
   argTagEdit <- makeParamTag (arg ^. Sugar.aaTagExprEntityId) (arg ^. Sugar.aaTag)
   argValEdit <- ExprGuiM.makeSubexpression 0 $ arg ^. Sugar.aaExpr
   vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
-  space <- BWidgets.stdSpaceWidget & ExprGuiM.widgetEnv <&> ExpressionGui.fromValueWidget
+  space <- ExprGuiM.widgetEnv BWidgets.stdSpaceWidget
   pure
     [ replicate 3 (0.5, vspace)
-    , ExpressionGui.makeRow
-      [ (0, argTagEdit)
+    , [ argTagEdit ^. Layout.alignedWidget & _1 . _1 .~ 0
       , (0.5, space)
-      , (0, argValEdit)
+      , argValEdit ^. Layout.alignedWidget & _1 . _1 .~ 0
       ]
     ]
 

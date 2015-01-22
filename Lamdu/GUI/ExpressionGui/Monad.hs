@@ -46,12 +46,13 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.WidgetId (toAnimId)
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui(..))
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import           Lamdu.GUI.Precedence (ParentPrecedence(..), Precedence)
 import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -147,7 +148,7 @@ makeSubexpression ::
 makeSubexpression parentPrecedence expr = do
   depth <- ExprGuiM $ Lens.view aSubexpressionLayer
   if depth >= 15
-    then widgetEnv $ (`ExpressionGui` 0.5) <$> mkErrorWidget
+    then widgetEnv $ Layout.fromCenteredWidget <$> mkErrorWidget
     else do
       maker <- ExprGuiM $ Lens.view aMakeSubexpression
       maker (ParentPrecedence parentPrecedence) expr

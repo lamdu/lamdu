@@ -40,7 +40,7 @@ make reco pl = ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped reco
 makeFieldRow ::
   MonadA m =>
   Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiM.Payload) ->
-  ExprGuiM m [(Widget.R, ExpressionGui m)]
+  ExprGuiM m [ExpressionGui m]
 makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   fieldRefGui <-
@@ -51,8 +51,11 @@ makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) = do
     itemEventMap = maybe mempty (recordDelEventMap config) mDelete
   space <-
     BWidgets.stdSpaceWidget & ExprGuiM.widgetEnv <&> ExpressionGui.fromValueWidget
-  [(1, fieldRefGui), (0.5, space), (0, fieldExprGui)]
-    <&> _2 . ExpressionGui.egWidget %~ Widget.weakerEvents itemEventMap
+  [ fieldRefGui & ExpressionGui.egAlignment . _1 .~ 1
+    , space
+    , fieldExprGui & ExpressionGui.egAlignment . _1 .~ 0
+    ]
+    <&> ExpressionGui.egWidget %~ Widget.weakerEvents itemEventMap
     & return
 
 makeFieldsWidget ::
@@ -66,8 +69,8 @@ makeFieldsWidget fields _ =
   do
     vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
     mapM makeFieldRow fields
-      <&> List.intersperse (replicate 3 (0.5, ExpressionGui.fromValueWidget vspace))
-      <&> ExpressionGui.gridDownwards
+      <&> List.intersperse (replicate 3 (ExpressionGui.fromValueWidget vspace))
+      <&> ExpressionGui.gridTopLeftFocal
 
 separationBar :: Config -> Widget.R -> Anim.AnimId -> ExpressionGui m
 separationBar config width animId =
@@ -87,12 +90,12 @@ makeOpenRecord fieldsGui rest myId =
     vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
     restExpr <- ExprGuiM.makeSubexpression 0 rest <&> pad config
     let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.wWidth
-    return $ ExpressionGui.vboxDownwards $
+    return $ ExpressionGui.vboxTopFocal $
       [ fieldsGui
       , separationBar config (max minWidth targetWidth) (Widget.toAnimId myId)
       , ExpressionGui.fromValueWidget vspace
       , restExpr
-      ] <&> (,) 0.5
+      ]
   where
     targetWidth = fieldsGui ^. ExpressionGui.egWidget . Widget.wWidth
 

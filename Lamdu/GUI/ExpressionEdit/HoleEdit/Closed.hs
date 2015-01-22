@@ -26,7 +26,7 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleIds(..))
-import           Lamdu.GUI.ExpressionGui (ExpressionGui(..))
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM

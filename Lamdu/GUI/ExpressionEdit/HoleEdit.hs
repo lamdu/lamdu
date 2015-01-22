@@ -13,8 +13,8 @@ import           Control.MonadA (MonadA)
 import           Data.Maybe (fromMaybe)
 import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Closed (ClosedHole(..))
@@ -23,29 +23,13 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleIds(.
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as HoleOpen
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (openHoleId)
-import           Lamdu.GUI.ExpressionGui (ExpressionGui(..))
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
-
--- Resize a gui to be the same size as another gui, but also keep the
--- same alignment point
-resizeAs :: ExpressionGui m -> ExpressionGui m -> ExpressionGui m
-resizeAs copyFrom gui =
-  gui
-  & ExpressionGui.egWidget %~
-    Widget.translate (Vector2 0 (alignmentHeight copyFrom - alignmentHeight gui))
-  -- Copy size and alignment
-  & ExpressionGui.egWidget . Widget.wSize .~ destSize
-  & ExpressionGui.egAlignment .~ (copyFrom ^. ExpressionGui.egAlignment)
-  where
-    destSize = copyFrom ^. ExpressionGui.egWidget . Widget.wSize
-    alignmentHeight eg =
-      eg ^. ExpressionGui.egAlignment *
-      eg ^. ExpressionGui.egWidget . Widget.wHeight
 
 chDestId :: HoleIds -> HoleClosed.HoleDest -> Widget.Id
 chDestId HoleIds{..} HoleClosed.HoleDestClosed = hidClosed
@@ -65,13 +49,15 @@ make hole pl myId =
     config <- ExprGuiM.widgetEnv WE.readConfig
     let Config.Hole{..} = Config.hole config
     tryOpenHole unwrappedClosedHoleGui hole pl hids
-      <&> resizeAs closedHoleGui
+      <&> hAlign .~ 0
+      <&> (`Layout.hoverInPlaceOf` (closedHoleGui & hAlign .~ 0))
       <&> ExpressionGui.egWidget %~ BWidgets.liftLayerInterval config
       & runMaybeT
       <&> fromMaybe closedHoleGui
       <&> ExpressionGui.egWidget %~ Widget.takesFocus (const (pure myId))
   & ExprGuiM.assignCursor myId (chDestId hids chDest)
   where
+    hAlign = ExpressionGui.egAlignment . _1
     ClosedHole{..} = HoleClosed.make hole pl hids
     hids = HoleIds
       { hidOpen = openHoleId myId
