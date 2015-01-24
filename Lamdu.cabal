@@ -90,7 +90,9 @@ Library
                        binary >= 0.5,
                        bytestring,
                        containers >= 0.4,
-                       derive >= 2.5,
+                       -- derive 2.5.19 leads to compilation error
+                       -- https://github.com/Peaker/lamdu/issues/27
+                       derive >= 2.5 && < 2.5.19,
                        directory >= 1.0.1.1,
                        filepath >= 1.1,
                        graphics-drawingcombinators >= 1.4,
