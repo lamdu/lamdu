@@ -1,26 +1,41 @@
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric #-}
 module Graphics.UI.Bottle.Widget
   ( module Graphics.UI.Bottle.WidgetId
-  , Widget(..)
-  , wMaybeEnter, wEventMap, wView
-  , wFocalArea, wIsFocused, wAnimLayers
-  , wAnimFrame, wSize, wWidth, wHeight, wEvents
-  , empty
+
+  -- Types:
   , Enter, R, Size
+
   , EnterResult(..), enterResultEvent, enterResultRect
-  , EventHandlers
-  , EventResult(..), eventResultFromCursor
-  , keysEventMap
-  , keysEventMapMovesCursor
-  , eAnimIdMapping, eCursor
+
+  -- Event Result:
+  , EventResult(..), eCursor, eAnimIdMapping
+  , eventResultFromCursor
   , applyIdMapping
   , animIdMappingFromPrefixMap
-  , takesFocus, doesntTakeFocus
-  , backgroundColor, tint
+
+  -- Events:
+  , EventHandlers
+  , keysEventMap
+  , keysEventMapMovesCursor
+
+  -- Widget type and lenses:
+  , Widget(..), wIsFocused, wView, wMaybeEnter, wEventMap, wFocalArea
+  , wAnimLayers, wAnimFrame, wSize, wWidth, wHeight, wEvents
+
+  -- Construct widgets:
+  , empty
   , fromView
-  , addInnerFrame
+
+  -- Focus handlers:
+  , takesFocus, doesntTakeFocus
+
+  -- Operations:
   , strongerEvents, weakerEvents
-  , translate, scale, pad, assymetricPad, padToSizeAlign
+  , translate, scale
+  , pad, assymetricPad, padToSizeAlign
+  , addInnerFrame
+  , backgroundColor
+  , tint
   ) where
 
 import           Control.Applicative ((<$>), (<*>))
@@ -127,13 +142,11 @@ fromView view =
     }
 
 takesFocus :: Functor f => (Direction -> f Id) -> Widget f -> Widget f
-takesFocus enter w = w & wMaybeEnter .~ mEnter
+takesFocus enter widget =
+  widget & wMaybeEnter .~ Just mEnter
   where
-    mEnter =
-      Just $
-      EnterResult focalArea .
-      fmap eventResultFromCursor <$> enter
-    focalArea = w ^. wFocalArea
+    mEnter = EnterResult focalArea . fmap eventResultFromCursor <$> enter
+    focalArea = widget ^. wFocalArea
 
 doesntTakeFocus :: Widget f -> Widget f
 doesntTakeFocus = wMaybeEnter .~ Nothing
