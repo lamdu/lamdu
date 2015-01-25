@@ -176,8 +176,8 @@ Executable lamdu
                ,       Lamdu.GUI.DefinitionEdit
                ,       Lamdu.GUI.ExpressionEdit
                ,       Lamdu.GUI.ExpressionEdit.ApplyEdit
-               ,       Lamdu.GUI.ExpressionEdit.BuiltinEdit
                ,       Lamdu.GUI.ExpressionEdit.BinderEdit
+               ,       Lamdu.GUI.ExpressionEdit.BuiltinEdit
                ,       Lamdu.GUI.ExpressionEdit.EventMap
                ,       Lamdu.GUI.ExpressionEdit.GetFieldEdit
                ,       Lamdu.GUI.ExpressionEdit.GetVarEdit
@@ -194,14 +194,13 @@ Executable lamdu
                ,       Lamdu.GUI.ExpressionEdit.LambdaEdit
                ,       Lamdu.GUI.ExpressionEdit.ListEdit
                ,       Lamdu.GUI.ExpressionEdit.LiteralEdit
-               ,       Lamdu.GUI.ExpressionEdit.Parens
                ,       Lamdu.GUI.ExpressionEdit.RecordEdit
                ,       Lamdu.GUI.ExpressionEdit.TagEdit
                ,       Lamdu.GUI.ExpressionGui
-               ,       Lamdu.Sugar.NearestHoles
                ,       Lamdu.GUI.ExpressionGui.Monad
                ,       Lamdu.GUI.ExpressionGui.Types
                ,       Lamdu.GUI.ParamEdit
+               ,       Lamdu.GUI.Parens
                ,       Lamdu.GUI.Precedence
                ,       Lamdu.GUI.TypeView
                ,       Lamdu.GUI.VersionControl
@@ -241,6 +240,7 @@ Executable lamdu
                ,       Lamdu.Sugar.Internal
                ,       Lamdu.Sugar.Internal.EntityId
                ,       Lamdu.Sugar.Lens
+               ,       Lamdu.Sugar.NearestHoles
                ,       Lamdu.Sugar.OrderTags
                ,       Lamdu.Sugar.RedundantTypes
                ,       Lamdu.Sugar.Types

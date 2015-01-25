@@ -8,7 +8,6 @@ import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
-import qualified Lamdu.GUI.ExpressionEdit.Parens as Parens
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -24,9 +23,8 @@ make ::
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence binder pl =
-  ExpressionGui.stdWrapParenify plNoType parentPrecedence (ExpressionGui.MyPrecedence 0)
-  Parens.addHighlightedTextParens $ \myId ->
-  ExprGuiM.assignCursor myId bodyId $
+  ExpressionGui.stdWrapParenify plNoType parentPrecedence (ExpressionGui.MyPrecedence 0) $
+  \myId -> ExprGuiM.assignCursor myId bodyId $
     do
       paramsEdit <-
         BinderEdit.makeParamsEdit showParamType (ExprGuiM.nextHolesBefore body) bodyId params

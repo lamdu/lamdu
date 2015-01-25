@@ -65,6 +65,7 @@ import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
+import qualified Lamdu.GUI.Parens as Parens
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetEnvT as WE
@@ -283,13 +284,14 @@ makeFocusableView myId gui =
   egWidget (BWidgets.makeFocusableView myId) gui
 
 parenify ::
-  MonadA m =>
+  (MonadA f, MonadA m) =>
   ParentPrecedence -> MyPrecedence ->
-  (Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)) ->
   (Widget.Id -> ExprGuiM m (ExpressionGui f)) ->
   Widget.Id -> ExprGuiM m (ExpressionGui f)
-parenify (ParentPrecedence parent) (MyPrecedence prec) addParens mkWidget myId
-  | parent > prec = addParens myId =<< mkWidget myId
+parenify (ParentPrecedence parent) (MyPrecedence prec) mkWidget myId
+  | parent > prec =
+    mkWidget myId
+    >>= ExprGuiM.widgetEnv . Parens.addHighlightedTextParens myId
   | otherwise = mkWidget myId
 
 makeLabel :: MonadA m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
@@ -326,11 +328,9 @@ stdWrapParenify ::
   MonadA m =>
   Sugar.Payload m ExprGuiM.Payload ->
   ParentPrecedence -> MyPrecedence ->
-  (Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)) ->
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-stdWrapParenify pl parentPrec prec addParens =
-  stdWrapParentExpr pl . parenify parentPrec prec addParens
+stdWrapParenify pl parentPrec prec = stdWrapParentExpr pl . parenify parentPrec prec
 
 -- TODO: This doesn't belong here
 makeNameView ::

@@ -1,15 +1,17 @@
-module Lamdu.GUI.ExpressionEdit.GetFieldEdit(make) where
+{-# LANGUAGE OverloadedStrings #-}
+module Lamdu.GUI.ExpressionEdit.GetFieldEdit
+  ( make
+  ) where
 
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Graphics.UI.Bottle.WidgetId (augmentId)
-import Lamdu.GUI.ExpressionGui (ExpressionGui)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.Sugar.AddNames.Types (Name(..))
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
@@ -19,7 +21,7 @@ make ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make (Sugar.GetField recExpr tagG) pl =
   ExpressionGui.stdWrapParentExpr pl $ \myId ->
-  let tagId = augmentId "getFieldTag" myId
+  let tagId = Widget.joinId myId ["getFieldTag"]
   in
     ExprGuiM.assignCursor myId tagId $ do
       recExprEdit <- ExprGuiM.makeSubexpression 11 recExpr
