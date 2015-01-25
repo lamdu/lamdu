@@ -277,7 +277,6 @@ baseStyle config font = TextEdit.Style
   , TextEdit._sCursorColor = TextEdit.defaultCursorColor
   , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
   , TextEdit._sTextCursorId = WidgetIds.textCursorId
-  , TextEdit._sBackgroundCursorId = WidgetIds.backgroundCursorId
   , TextEdit._sBGColor = Config.cursorBGColor config
   , TextEdit._sEmptyUnfocusedString = ""
   , TextEdit._sEmptyFocusedString = ""

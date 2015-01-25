@@ -101,7 +101,6 @@ Library
                        directory >= 1.0.1.1,
                        filepath >= 1.1,
                        random >= 1.0.0,
-                       safe,
                        split >= 0.1,
                        template-haskell,
                        time >= 1.2,

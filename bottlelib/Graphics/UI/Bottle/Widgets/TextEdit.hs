@@ -1,20 +1,14 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.TextEdit
-  ( Cursor, Style(..)
+  ( Cursor
+  , Style(..)
+    , sCursorColor, sCursorWidth, sTextCursorId, sBGColor, sEmptyUnfocusedString
+    , sEmptyFocusedString, sTextViewStyle
   , make
   , defaultCursorColor
   , defaultCursorWidth
-  , makeTextEditCursor
-  , sCursorColor
-  , sCursorWidth
-  , sTextCursorId
-  , sBackgroundCursorId
-  , sEmptyUnfocusedString
-  , sEmptyFocusedString
-  , sTextViewStyle
   ) where
 
-import           Control.Applicative ((<$>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -31,7 +25,7 @@ import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.DrawingCombinators.Utils (square, textHeight)
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -44,7 +38,6 @@ import           Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
-import qualified Safe
 
 type Cursor = Int
 
@@ -52,7 +45,6 @@ data Style = Style
   { _sCursorColor :: Draw.Color
   , _sCursorWidth :: Widget.R
   , _sTextCursorId :: Anim.AnimId
-  , _sBackgroundCursorId :: Anim.AnimId
   , _sBGColor :: Draw.Color
   , _sEmptyUnfocusedString :: String
   , _sEmptyFocusedString :: String
@@ -60,6 +52,7 @@ data Style = Style
   }
 Lens.makeLenses ''Style
 
+-- TODO: Replace with a defaultStyle :: TextViewStyle -> .. -> Style
 defaultCursorColor :: Draw.Color
 defaultCursorColor = Draw.Color 0 1 0 1
 
@@ -77,10 +70,10 @@ makeDisplayStr empty ""  = empty
 makeDisplayStr _     str = str
 
 cursorTranslate :: Style -> Anim.Frame -> Anim.Frame
-cursorTranslate style = Anim.translate $ Vector2 (style ^. sCursorWidth / 2) 0
+cursorTranslate Style{..} = Anim.translate $ Vector2 (_sCursorWidth / 2) 0
 
-makeTextEditCursor :: Widget.Id -> Int -> Widget.Id
-makeTextEditCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
+encodeCursor :: Widget.Id -> Int -> Widget.Id
+encodeCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
 
 rightSideOfRect :: Rect -> Rect
 rightSideOfRect rect =
@@ -88,7 +81,7 @@ rightSideOfRect rect =
   & Rect.left .~ rect ^. Rect.right
   & Rect.width .~ 0
 
-cursorRects :: Style -> String -> [Rect]
+cursorRects :: TextView.Style -> String -> [Rect]
 cursorRects style str =
   concat .
   -- A bit ugly: letterRects returns rects for all but newlines, and
@@ -98,48 +91,57 @@ cursorRects style str =
   -- original string index-wise.
   zipWith addFirstCursor (iterate (+lineHeight) 0) .
   (map . map) rightSideOfRect $
-  TextView.letterRects (style ^. sTextViewStyle) str
+  TextView.letterRects style str
   where
     addFirstCursor y = (Rect (Vector2 0 y) (Vector2 0 lineHeight) :)
-    lineHeight = lineHeightOfStyle style
+    lineHeight = TextView.lineHeight style
 
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
-makeUnfocused style str myId =
-  TextView.makeWidget (style ^. sTextViewStyle) displayStr (Widget.toAnimId myId)
-  & Widget.wAnimFrame %~ cursorTranslate style
+makeUnfocused Style{..} str myId =
+  TextView.makeWidget _sTextViewStyle displayStr animId
+  & Widget.wAnimFrame %~ cursorTranslate Style{..}
   & Widget.wWidth +~ cursorWidth
-  & makeFocusable style str myId
+  & makeFocusable Style{..} str myId
   where
-    cursorWidth = style ^. sCursorWidth
-    displayStr = makeDisplayStr (style ^. sEmptyUnfocusedString) str
+    animId = Widget.toAnimId myId
+    cursorWidth = _sCursorWidth
+    displayStr = makeDisplayStr _sEmptyUnfocusedString str
+
+minimumIndex :: Ord a => [a] -> Int
+minimumIndex xs =
+  xs ^@.. Lens.traversed & minimumOn snd & fst
+
+cursorNearRect :: TextView.Style -> String -> Rect -> Int
+cursorNearRect style str fromRect =
+  cursorRects style str <&> Rect.distance fromRect
+  & minimumIndex -- cursorRects(TextView.letterRects) should never return an empty list
+
+enterFromDirection ::
+  Style -> String -> Widget.Id ->
+  Direction.Direction -> Widget.EnterResult ((,) String)
+enterFromDirection Style{..} str myId dir =
+  Widget.EnterResult cursorRect .
+  (,) str . Widget.eventResultFromCursor $
+  encodeCursor myId cursor
+  where
+    cursor =
+      case dir of
+      Direction.Outside -> length str
+      Direction.PrevFocalArea rect -> cursorNearRect _sTextViewStyle str rect
+      Direction.Point x -> cursorNearRect _sTextViewStyle str $ Rect x 0
+    cursorRect = mkCursorRect Style{..} cursor str
 
 makeFocusable ::
   Style -> String -> Widget.Id ->
   Widget ((,) String) -> Widget ((,) String)
 makeFocusable style str myId =
-  Widget.wMaybeEnter .~ Just mEnter
-  where
-    rectToCursor :: Rect -> Int
-    rectToCursor fromRect =
-      ((cursorRects style str <&> Rect.distance fromRect) ^@.. Lens.traversed)
-      & minimumOn snd -- cursorRects(TextView.letterRects) should never return an empty list
-      & fst
-    mEnter dir =
-      Widget.EnterResult cursorRect .
-      (,) str . Widget.eventResultFromCursor $
-      makeTextEditCursor myId cursor
-      where
-        cursor =
-          case dir of
-          Direction.Outside -> length str
-          Direction.PrevFocalArea rect -> rectToCursor rect
-          Direction.Point x -> rectToCursor $ Rect x 0
-        cursorRect = mkCursorRect style cursor str
+  Widget.wMaybeEnter .~ Just (enterFromDirection style str myId)
 
-lineHeightOfStyle :: Style -> Widget.R
-lineHeightOfStyle style = sz * textHeight
-  where
-    sz = fromIntegral $ style ^. sTextViewStyle . TextView.styleFontSize
+readM :: Read a => String -> Maybe a
+readM str =
+  case reads str of
+  [(x, "")] -> Just x
+  _ -> Nothing
 
 eventResult ::
   Widget.Id -> [(Maybe Int, Char)] -> [(Maybe Int, Char)] ->
@@ -147,13 +149,13 @@ eventResult ::
 eventResult myId strWithIds newText newCursor =
   (map snd newText,
     Widget.EventResult {
-      Widget._eCursor = Monoid.Last . Just $ makeTextEditCursor myId newCursor,
+      Widget._eCursor = Monoid.Last . Just $ encodeCursor myId newCursor,
       Widget._eAnimIdMapping = Monoid.Endo mapping
     })
   where
     myAnimId = Widget.toAnimId myId
     mapping animId = maybe animId (Anim.joinId myAnimId . translateId) $ Anim.subId myAnimId animId
-    translateId [subId] = (:[]) . maybe subId (SBS8.pack . show) $ (`Map.lookup` dict) =<< Safe.readMay (SBS8.unpack subId)
+    translateId [subId] = (:[]) . maybe subId (SBS8.pack . show) $ (`Map.lookup` dict) =<< readM (SBS8.unpack subId)
     translateId x = x
     dict = mappend movedDict deletedDict
     movedDict =
@@ -168,15 +170,13 @@ eventResult myId strWithIds newText newCursor =
       Set.fromList (mapMaybe fst strWithIds) `Set.difference`
       Set.fromList (mapMaybe fst newText)
 
--- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
--- what "Font" should be)
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
-makeFocused :: Cursor -> Style -> String -> Widget.Id -> Widget ((,) String)
-makeFocused cursor style str myId =
-  makeFocusable style str myId .
-  Widget.backgroundColor 10 (style ^. sBackgroundCursorId) (style ^. sBGColor) $
+makeFocused :: AnimId -> Cursor -> Style -> String -> Widget.Id -> Widget ((,) String)
+makeFocused cursorBGAnimId cursor Style{..} str myId =
   widget
+  & Widget.backgroundColor 10 cursorBGAnimId _sBGColor
+  & makeFocusable Style{..} str myId
   where
     widget = Widget
       { _wIsFocused = True
@@ -185,33 +185,29 @@ makeFocused cursor style str myId =
       , _wMaybeEnter = Nothing
       , _wFocalArea = cursorRect
       }
-    reqSize = Vector2 (style ^. sCursorWidth + tlWidth) tlHeight
+    reqSize = Vector2 (_sCursorWidth + tlWidth) tlHeight
     myAnimId = Widget.toAnimId myId
-    img = cursorTranslate style $ frameGen myAnimId
-    displayStr = makeDisplayStr (style ^. sEmptyFocusedString) str
-    (frameGen, Vector2 tlWidth tlHeight) = textViewDraw style displayStr
+    img = cursorTranslate Style{..} $ frameGen myAnimId
+    displayStr = makeDisplayStr _sEmptyFocusedString str
+    (frameGen, Vector2 tlWidth tlHeight) =
+      TextView.drawTextAsSingleLetters _sTextViewStyle displayStr
 
-    cursorRect = mkCursorRect style cursor str
+    cursorRect = mkCursorRect Style{..} cursor str
     cursorFrame =
-      square
-      & Draw.tint (style ^. sCursorColor)
-      & Anim.simpleFrame (style ^. sTextCursorId)
+      Anim.unitSquare _sTextCursorId
+      & Anim.unitImages %~ Draw.tint _sCursorColor
       & Anim.unitIntoRect cursorRect
-      & Anim.layers +~ 2
-
-textViewDraw ::
-  Style -> String -> (Anim.AnimId -> Anim.Frame, Widget.Size)
-textViewDraw = TextView.drawTextAsSingleLetters . (^. sTextViewStyle)
+      & Anim.layers +~ 2 -- TODO: 2?!
 
 mkCursorRect :: Style -> Int -> String -> Rect
-mkCursorRect style cursor str = Rect cursorPos cursorSize
+mkCursorRect Style{..} cursor str = Rect cursorPos cursorSize
   where
     beforeCursorLines = splitWhen (== '\n') $ take cursor str
-    lineHeight = lineHeightOfStyle style
+    lineHeight = TextView.lineHeight _sTextViewStyle
     cursorPos = Vector2 cursorPosX cursorPosY
-    cursorSize = Vector2 (style ^. sCursorWidth) lineHeight
+    cursorSize = Vector2 _sCursorWidth lineHeight
     cursorPosX =
-      textViewDraw style (last beforeCursorLines) ^.
+      TextView.drawTextAsSingleLetters _sTextViewStyle (last beforeCursorLines) ^.
       _2 . _1
     cursorPosY = lineHeight * (genericLength beforeCursorLines - 1)
 
@@ -350,10 +346,14 @@ eventMap cursor str displayStr myId =
     strWithIds = str ^@.. Lens.traversed <&> _1 %~ Just
     (before, after) = splitAt cursor strWithIds
 
-make :: Style -> Widget.Id -> String -> Widget.Id -> Widget ((,) String)
-make style cursor str myId =
-  maybe makeUnfocused makeFocused mCursor style str myId
+make :: Style -> String -> Widget.Id -> Widget.Env -> Widget ((,) String)
+make style str myId env =
+  makeFunc style str myId
   where
-    mCursor = extractTextEditCursor <$> Widget.subId myId cursor
-    extractTextEditCursor [x] = min (length str) $ BinUtils.decodeS x
-    extractTextEditCursor _ = length str
+    makeFunc =
+      case Widget.subId myId (env ^. Widget.envCursor) of
+      Nothing -> makeUnfocused
+      Just suffix ->
+        makeFocused (env ^. Widget.envCursorAnimId) (decodeCursor suffix)
+    decodeCursor [x] = min (length str) $ BinUtils.decodeS x
+    decodeCursor _ = length str

@@ -147,7 +147,11 @@ makeTextEdit ::
   String -> Widget.Id ->
   WidgetEnvT m (Widget ((,) String))
 makeTextEdit text myId =
-  TextEdit.make <$> WE.readTextStyle <*> WE.readCursor <*> pure text <*> pure myId
+  do
+    style <- WE.readTextStyle
+    cursor <- WE.readCursor
+    let env = Widget.Env cursor WidgetIds.backgroundCursorId
+    TextEdit.make style text myId env & return
 
 makeTextEditor
   :: (MonadA m, MonadA f)

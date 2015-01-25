@@ -36,6 +36,14 @@ module Graphics.UI.Bottle.Widget
   , addInnerFrame
   , backgroundColor
   , tint
+
+  -- Env:
+  , Env(..), envCursor, envCursorAnimId
+
+  , respondToCursorAt
+  , respondToCursorPrefix
+  , respondToCursorBy
+  , respondToCursor
   ) where
 
 import           Control.Applicative ((<$>), (<*>))
@@ -79,6 +87,7 @@ data EnterResult f = EnterResult
 type Enter f = Direction -> EnterResult f
 type EventHandlers f = EventMap (f EventResult)
 
+-- TODO: Remove 'w' prefix (qualified Widget is enough!)
 data Widget f = Widget
   { _wIsFocused :: Bool
   , _wView :: View
@@ -242,3 +251,37 @@ padToSizeAlign newSize alignment widget =
   & wSize .~ newSize
   where
     sizeDiff = max <$> 0 <*> newSize - widget ^. wSize
+
+data Env = Env
+  { -- | Where the cursor is pointing:
+    _envCursor :: Id
+  , -- | What animId to use when drawing a cursor anim frame:
+    _envCursorAnimId :: AnimId
+  } deriving (Show, Eq, Ord)
+Lens.makeLenses ''Env
+
+respondToCursorPrefix ::
+  Id -> Draw.Color -> Anim.Layer -> Env ->
+  Widget f -> Widget f
+respondToCursorPrefix myIdPrefix =
+  respondToCursorBy (Lens.has Lens._Just . subId myIdPrefix)
+
+respondToCursorAt ::
+  Id -> Draw.Color -> Anim.Layer -> Env ->
+  Widget f -> Widget f
+respondToCursorAt wId = respondToCursorBy (== wId)
+
+respondToCursorBy ::
+  (Id -> Bool) -> Draw.Color -> Anim.Layer -> Env ->
+  Widget f -> Widget f
+respondToCursorBy f color layer env widget
+  | f (env ^. envCursor) =
+    widget & respondToCursor color layer (env ^. envCursorAnimId)
+  | otherwise = widget
+
+respondToCursor ::
+  Draw.Color -> Anim.Layer -> AnimId -> Widget f -> Widget f
+respondToCursor color layer animId widget =
+  widget
+  & backgroundColor layer animId color
+  & wIsFocused .~ True
