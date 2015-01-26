@@ -31,17 +31,9 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
-fdConfig :: FocusDelegator.Config
-fdConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
-  , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Rename tag"]
-  , FocusDelegator.stopDelegatingKeys = [ModKey mempty GLFW.Key'Escape]
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Stop renaming tag"]
-  }
-
-makeRecordTagInner ::
+makeRecordTagNameEdit ::
   MonadA m => Sugar.TagG (Name m) -> Widget.Id -> ExprGuiM m (Widget (T m))
-makeRecordTagInner tagG myId = do
+makeRecordTagNameEdit tagG myId = do
   Config.Name{..} <- Config.name <$> ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.makeNameEdit (tagG ^. Sugar.tagGName) myId
     & ExprGuiM.withFgColor recordTagColor
@@ -59,8 +51,7 @@ makeRecordTag nearestHoles tagG myId = do
       jumpHolesEventMap <>
       maybe mempty jumpNextEventMap (nearestHoles ^. NearestHoles.next)
   let Config.Name{..} = Config.name config
-  ExprGuiM.wrapDelegated fdConfig FocusDelegator.NotDelegating id
-    (makeRecordTagInner tagG) myId
+  makeRecordTagNameEdit tagG myId
     <&> Widget.weakerEvents eventMap
     <&> ExpressionGui.fromValueWidget
   where

@@ -209,9 +209,7 @@ makeNameOriginEdit :: MonadA m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m
 makeNameOriginEdit name myId =
   do
     config <- Config.name <$> ExprGuiM.widgetEnv WE.readConfig
-    ExprGuiM.withFgColor (color config) $
-      ExprGuiM.wrapDelegated nameEditFDConfig FocusDelegator.NotDelegating id
-      (makeNameEdit name) myId
+    ExprGuiM.withFgColor (color config) $ makeNameEdit name myId
   where
     color =
       case nNameSource name of
@@ -220,15 +218,17 @@ makeNameOriginEdit name myId =
 
 makeNameEdit ::
   MonadA m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
-makeNameEdit (Name nameSrc nameCollision setName name) myId = do
-  collisionSuffixes <-
-    ExprGuiM.widgetEnv . makeCollisionSuffixLabels nameCollision $
-    Widget.toAnimId myId
-  nameEdit <-
-    makeWordEdit (Property storedName setName) myId
-    & WE.localEnv emptyStringEnv
-    & ExprGuiM.widgetEnv
-  return . Box.hboxCentered $ nameEdit : collisionSuffixes
+makeNameEdit (Name nameSrc nameCollision setName name) =
+  ExprGuiM.wrapDelegated nameEditFDConfig FocusDelegator.NotDelegating id $
+  \myId -> do
+    collisionSuffixes <-
+      ExprGuiM.widgetEnv . makeCollisionSuffixLabels nameCollision $
+      Widget.toAnimId myId
+    nameEdit <-
+      makeWordEdit (Property storedName setName) myId
+      & WE.localEnv emptyStringEnv
+      & ExprGuiM.widgetEnv
+    return . Box.hboxCentered $ nameEdit : collisionSuffixes
   where
     emptyStringEnv env = env
       & WE.envTextStyle . TextEdit.sEmptyFocusedString .~ ""
