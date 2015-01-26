@@ -2,6 +2,7 @@
 module Lamdu.GUI.ParamEdit
   ( make
   , eventMapAddFirstParam
+  , diveToNameEdit
   ) where
 
 import           Control.Lens.Operators
@@ -12,7 +13,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -49,7 +49,10 @@ eventResultFromEntityId :: Sugar.EntityId -> Widget.EventResult
 eventResultFromEntityId = Widget.eventResultFromCursor . cursorFromEntityId
 
 cursorFromEntityId :: Sugar.EntityId -> Widget.Id
-cursorFromEntityId = FocusDelegator.delegatingId . WidgetIds.fromEntityId
+cursorFromEntityId = diveToNameEdit . WidgetIds.fromEntityId
+
+diveToNameEdit :: Widget.Id -> Widget.Id
+diveToNameEdit = ExpressionGui.diveToNameEdit
 
 eventMapAddFirstParam ::
   Functor m => Config -> Maybe (T m Sugar.ParamAddResult) ->

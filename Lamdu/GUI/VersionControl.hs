@@ -52,7 +52,7 @@ globalEventMap :: Applicative f => Config.VersionControl -> Actions t f -> Widge
 globalEventMap config@Config.VersionControl{..} actions = mconcat
   [ Widget.keysEventMapMovesCursor makeBranchKeys
     (E.Doc ["Branches", "New"]) $
-    FocusDelegator.delegatingId . WidgetIds.fromGuid . Branch.guid <$>
+    diveToBranchNameEdit . WidgetIds.fromGuid . Branch.guid <$>
     makeBranch actions
   , Widget.keysEventMapMovesCursor jumpToBranchesKeys
     (E.Doc ["Branches", "Select"]) $
@@ -78,6 +78,9 @@ choiceWidgetConfig config = Choice.Config
   , Choice.cwcOrientation = Box.vertical
   , Choice.cwcBgLayer = Config.layerChoiceBG $ Config.layers config
   }
+
+diveToBranchNameEdit :: Widget.Id -> Widget.Id
+diveToBranchNameEdit = FocusDelegator.delegatingId
 
 make ::
   (MonadA m, MonadA n) =>

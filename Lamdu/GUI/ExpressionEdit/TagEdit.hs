@@ -14,7 +14,6 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -72,4 +71,4 @@ makeParamTag t animId = do
     <&> ExpressionGui.fromValueWidget
 
 diveIntoRecordTag :: Widget.Id -> Widget.Id
-diveIntoRecordTag = FocusDelegator.delegatingId
+diveIntoRecordTag = ExpressionGui.diveToNameEdit

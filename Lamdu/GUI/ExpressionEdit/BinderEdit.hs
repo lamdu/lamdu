@@ -232,7 +232,7 @@ makeResultEdit mActions params result = do
     addWhereItemEventMap actions =
       Widget.keysEventMapMovesCursor (Config.whereAddItemKeys config)
       (E.Doc ["Edit", "Where clause", "Add first"]) .
-      fmap (FocusDelegator.delegatingId . WidgetIds.fromEntityId) $
+      fmap (diveToNameEdit . WidgetIds.fromEntityId) $
       savePos >> actions ^. Sugar.baAddInnermostWhereItem
   ExprGuiM.makeSubexpression 0 result
     <&> ExpressionGui.egWidget %~
@@ -263,4 +263,4 @@ makeParamsEdit showType nearestHoles lhsId params =
       Sugar.FieldParams ps -> ps & Lens.traversed . Sugar.fpVarInfo .~ ()
 
 diveToNameEdit :: Widget.Id -> Widget.Id
-diveToNameEdit = FocusDelegator.delegatingId -- Name editor
+diveToNameEdit = ExpressionGui.diveToNameEdit -- Name editor
