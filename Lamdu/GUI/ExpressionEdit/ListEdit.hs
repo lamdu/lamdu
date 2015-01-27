@@ -57,6 +57,7 @@ makeUnwrapped list myId =
           firstValue ^. _3 . Sugar.liExpr
           & ExprGuiM.nextHolesBefore
           & ExprEventMap.jumpHolesEventMap []
+          & ExprGuiM.widgetEnv
         let
           nilDeleteEventMap =
             actionEventMap (Config.delKeys config) "Replace nil with hole" Sugar.replaceNil

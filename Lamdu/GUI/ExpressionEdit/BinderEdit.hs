@@ -248,7 +248,9 @@ makeParamsEdit ::
   ExprGuiM m [ExpressionGui m]
 makeParamsEdit showType nearestHoles lhsId params =
   do
-    jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] nearestHoles
+    jumpHolesEventMap <-
+      ExprEventMap.jumpHolesEventMap [] nearestHoles
+      & ExprGuiM.widgetEnv
     let
       mkParam (prevId, nextId, param) =
         ParamEdit.make showType prevId nextId param

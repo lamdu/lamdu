@@ -383,7 +383,7 @@ addExprEventMap ::
   Sugar.Payload m ExprGuiM.Payload -> HolePickers m ->
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addExprEventMap pl resultPickers gui = do
-  exprEventMap <- ExprEventMap.make resultPickers pl
+  exprEventMap <- ExprEventMap.make resultPickers pl & ExprGuiM.widgetEnv
   gui & egWidget %~ Widget.weakerEvents exprEventMap & return
 
 maybeAddInferredTypePl ::
