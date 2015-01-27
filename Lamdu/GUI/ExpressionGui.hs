@@ -193,8 +193,6 @@ parentExprFDConfig config = FocusDelegator.Config
   , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Leave subexpression"]
   }
 
--- ExprGuiM GUIs (TODO: Move to Monad.hs?)
-
 disallowedNameChars :: String
 disallowedNameChars = "[]\\`()"
 
@@ -210,7 +208,8 @@ makeNameOriginEdit :: MonadA m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m
 makeNameOriginEdit name myId =
   do
     config <- Config.name <$> ExprGuiM.widgetEnv WE.readConfig
-    ExprGuiM.withFgColor (color config) $ makeNameEdit name myId
+    makeNameEdit name myId -- myId goes directly to name edit
+      & ExprGuiM.withFgColor (color config)
   where
     color =
       case nNameSource name of
