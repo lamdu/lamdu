@@ -136,8 +136,8 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
       case fields of
       [] -> myId
       (f : _) ->
-        f ^. Sugar.rfExpr . Sugar.rPayload . Sugar.plEntityId
-        & WidgetIds.fromEntityId
+        f ^. Sugar.rfExpr . Sugar.rPayload
+        & WidgetIds.fromExprPayload
 
 recordOpenEventMap ::
   MonadA m =>

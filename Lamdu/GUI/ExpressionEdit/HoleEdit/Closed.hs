@@ -124,8 +124,8 @@ modifyWrappedEventMap config argIsFocused arg HoleIds{..} eventMap
     Widget.keysEventMapMovesCursor (Config.enterSubexpressionKeys config)
     (E.Doc ["Navigation", "Go to wrapped expr"]) .
     -- TODO: This is ugly: Who says it's in a FocusDelegator?
-    pure . FocusDelegator.notDelegatingId . WidgetIds.fromEntityId $
-    arg ^. Sugar.haExpr . Sugar.rPayload . Sugar.plEntityId
+    pure . FocusDelegator.notDelegatingId . WidgetIds.fromExprPayload $
+    arg ^. Sugar.haExpr . Sugar.rPayload
 
 makeWrapper ::
   MonadA m =>

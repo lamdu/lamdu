@@ -59,7 +59,7 @@ make parentPrecedence sExpr =
     exprHiddenEntityIds =
       List.delete (pl ^. Sugar.plEntityId)
       (pl ^. Sugar.plData ^. ExprGuiM.plStoredEntityIds)
-    myId = WidgetIds.fromEntityId $ pl ^. Sugar.plEntityId
+    myId = WidgetIds.fromExprPayload pl
     maybeShrink
       | or (pl ^. Sugar.plData ^. ExprGuiM.plInjected) = shrinkIfHigherThanLine
       | otherwise = return

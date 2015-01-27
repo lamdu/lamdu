@@ -154,7 +154,7 @@ makeSubexpression parentPrecedence expr = do
       maker (ParentPrecedence parentPrecedence) expr
         & exprGuiM %~ RWS.local (aSubexpressionLayer +~ 1)
   where
-    widgetId = WidgetIds.fromEntityId $ expr ^. Sugar.rPayload . Sugar.plEntityId
+    widgetId = WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
     mkErrorWidget =
       BWidgets.makeTextViewWidget "ERROR: Subexpr too deep" (toAnimId widgetId)
 

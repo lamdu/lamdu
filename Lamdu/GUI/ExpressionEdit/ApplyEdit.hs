@@ -84,7 +84,7 @@ make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotated
         & mk (Just infixPrecedence)
     & ExprGuiM.assignCursor myId funcId
   where
-    funcId = func ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
+    funcId = func ^. Sugar.rPayload & WidgetIds.fromExprPayload
     isBoxed = not $ null annotatedArgs
 
 makeArgRows ::

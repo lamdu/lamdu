@@ -4,23 +4,27 @@ module Lamdu.GUI.WidgetIds
   , module Lamdu.GUI.WidgetIdIRef
   ) where
 
-import Data.ByteString.Char8 (ByteString) -- IsString instance
-import Data.Monoid (mappend)
-import Data.Store.Guid (Guid)
-import Graphics.UI.Bottle.Animation (AnimId)
-import Graphics.UI.Bottle.WidgetId (Id(..))
-import Lamdu.GUI.WidgetIdIRef
-import Lamdu.Sugar.EntityId (EntityId)
-import System.Random.Utils (randFunc)
+import           Control.Lens.Operators
+import           Data.ByteString.Char8 (ByteString)
+import           Data.Monoid (mappend)
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.Guid as Guid
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.WidgetId (Id(..))
+import           Lamdu.GUI.WidgetIdIRef
 import qualified Lamdu.Sugar.EntityId as EntityId
+import qualified Lamdu.Sugar.Types as Sugar
+import           System.Random.Utils (randFunc)
 
 fromBS :: ByteString -> Id
 fromBS = Id . (: [])
 
-fromEntityId :: EntityId -> Id
+fromEntityId :: Sugar.EntityId -> Id
 fromEntityId = fromBS . EntityId.bs
+
+fromExprPayload :: Sugar.Payload m a -> Id
+fromExprPayload pl = fromEntityId (pl ^. Sugar.plEntityId)
 
 fromGuid :: Guid -> Id
 fromGuid = fromBS . Guid.bs

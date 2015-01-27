@@ -67,8 +67,7 @@ mkEventMapWithPickers holePickers keys doc f =
 
 isExprSelected :: Sugar.Payload f a -> Widget.Id -> Bool
 isExprSelected pl cursor =
-  (pl ^. Sugar.plEntityId)
-  & WidgetIds.fromEntityId
+  WidgetIds.fromExprPayload pl
   & (`Widget.subId` cursor)
   & Lens.has Lens._Just
 
@@ -128,8 +127,7 @@ replaceOrComeToParentEventMap pl =
         (E.Doc ["Navigation", "Select parent"]) selectParent
   where
     selectParent =
-      pl ^. Sugar.plEntityId
-      & WidgetIds.fromEntityId
+      WidgetIds.fromExprPayload pl
       & FocusDelegator.notDelegatingId
       & return
 

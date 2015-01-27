@@ -83,7 +83,7 @@ makeUnwrapped list myId =
     bracketsId = WidgetIds.fromEntityId $ Sugar.lNilEntityId list
     pairToList (x, y) = [x, y]
     closeBracketId = Widget.joinId myId ["close-bracket"]
-    itemId = WidgetIds.fromEntityId . (^. Sugar.liExpr . Sugar.rPayload . Sugar.plEntityId)
+    itemId = WidgetIds.fromExprPayload . (^. Sugar.liExpr . Sugar.rPayload)
     actionEventMap keys doc actSelect =
       maybe mempty
       ( Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc])
@@ -124,6 +124,6 @@ makeItem (_, nextId, item) = do
     (maybe mempty (mkItemEventMap resultPickers) (item ^. Sugar.liMActions))
   where
     itemExpr = item ^. Sugar.liExpr
-    itemWidgetId = WidgetIds.fromEntityId $ itemExpr ^. Sugar.rPayload . Sugar.plEntityId
+    itemWidgetId = WidgetIds.fromExprPayload $ itemExpr ^. Sugar.rPayload
     doc [] = E.Doc ["Edit", "List", "Add Next Item"]
     doc _ = E.Doc ["Edit", "List", "Pick Result and Add Next Item"]
