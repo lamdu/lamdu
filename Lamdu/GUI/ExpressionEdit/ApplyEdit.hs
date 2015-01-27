@@ -1,13 +1,11 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.ApplyEdit
   ( make
   ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Control.Applicative (Applicative(..))
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.Traversable (traverse, sequenceA)
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -34,53 +32,60 @@ infixPrecedence = 5
 prefixPrecedence :: ExpressionGui.Precedence
 prefixPrecedence = 10
 
+mkOverrideModifyEventMap ::
+  MonadA m => Maybe (Sugar.Actions m) ->
+  ExprGuiM m (ExpressionGui m -> ExpressionGui m)
+mkOverrideModifyEventMap Nothing = return id
+mkOverrideModifyEventMap (Just actions) =
+  do
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    ExpressionGui.egWidget %~
+      Widget.strongerEvents (ExprEventMap.modifyEventMap [] config actions)
+      & return
+
 make ::
   MonadA m => ParentPrecedence ->
   Sugar.Apply (Name m) (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotatedArgs) pl myId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    maybeOverrideHoleWrap
-      | null annotatedArgs = id
-      | otherwise = overrideModifyEventMap
-    overrideModifyEventMap =
-      ExpressionGui.egWidget %~
-      Widget.strongerEvents
-      (maybe mempty (ExprEventMap.modifyEventMap [] config) (pl ^. Sugar.plActions))
-  case specialArgs of
-    Sugar.NoSpecialArgs ->
-      mk Nothing $
-      overrideModifyEventMap <$> ExprGuiM.makeSubexpression (if isBoxed then 0 else parentPrecedence) func
-    Sugar.ObjectArg arg ->
-      sequenceA
-      [ maybeOverrideHoleWrap <$> ExprGuiM.makeSubexpression (prefixPrecedence+1) func
-      , ExprGuiM.makeSubexpression prefixPrecedence arg
-      ]
-      >>= ExpressionGui.hboxSpaced
-      & mk (Just prefixPrecedence)
-    Sugar.InfixArgs l r ->
-      sequenceA
-      [ ExprGuiM.makeSubexpression (infixPrecedence+1) l
-      , -- TODO: What precedence to give when it must be atomic?:
-        overrideModifyEventMap <$> ExprGuiM.makeSubexpression 20 func
-      , ExprGuiM.makeSubexpression (infixPrecedence+1) r
-      ]
-      >>= ExpressionGui.hboxSpaced
-      & mk (Just infixPrecedence)
+make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotatedArgs) pl =
+  ExpressionGui.stdWrapParentExpr pl $ \myId -> do
+    let
+      mk mPrecedence mkFuncRow
+        | isBoxed = mkBoxed mkFuncRow annotatedArgs myId
+        | otherwise =
+          mkMParened
+          (parentPrecedence & ParentPrecedence)
+          (mPrecedence <&> ExpressionGui.MyPrecedence) mkFuncRow myId
+    overrideModifyEventMap <- mkOverrideModifyEventMap (pl ^. Sugar.plActions)
+    case specialArgs of
+      Sugar.NoSpecialArgs ->
+        ExprGuiM.makeSubexpression (if isBoxed then 0 else parentPrecedence) func
+        <&> overrideModifyEventMap
+        & mk Nothing
+      Sugar.ObjectArg arg ->
+        sequenceA
+        [ ExprGuiM.makeSubexpression (prefixPrecedence+1) func
+          <&> if null annotatedArgs
+              then id
+              else overrideModifyEventMap
+        , ExprGuiM.makeSubexpression prefixPrecedence arg
+        ]
+        >>= ExpressionGui.hboxSpaced
+        & mk (Just prefixPrecedence)
+      Sugar.InfixArgs l r ->
+        sequenceA
+        [ ExprGuiM.makeSubexpression (infixPrecedence+1) l
+        , -- TODO: What precedence to give when it must be atomic?:
+          ExprGuiM.makeSubexpression 20 func <&> overrideModifyEventMap
+        , ExprGuiM.makeSubexpression (infixPrecedence+1) r
+        ]
+        >>= ExpressionGui.hboxSpaced
+        & mk (Just infixPrecedence)
+    & ExprGuiM.assignCursor myId funcId
   where
+    funcId = func ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
     isBoxed = not $ null annotatedArgs
-    destEntityId = func ^. Sugar.rPayload . Sugar.plEntityId
-    mk mPrecedence mkFuncRow
-      | isBoxed = mkBoxed pl destEntityId mkFuncRow annotatedArgs myId
-      | otherwise =
-        mkMParened pl
-        (ParentPrecedence parentPrecedence)
-        (ExpressionGui.MyPrecedence <$> mPrecedence) destEntityId mkFuncRow myId
-
-assignCursorEntityId :: MonadA m => Widget.Id -> Sugar.EntityId -> ExprGuiM m a -> ExprGuiM m a
-assignCursorEntityId myId = ExprGuiM.assignCursor myId . WidgetIds.fromEntityId
 
 makeArgRows ::
   MonadA m =>
@@ -101,30 +106,28 @@ makeArgRows arg = do
 
 mkBoxed ::
   MonadA m =>
-  Sugar.Payload m ExprGuiM.Payload ->
-  Sugar.EntityId -> ExprGuiM m (ExpressionGui m) ->
+  ExprGuiM m (ExpressionGui m) ->
   [Sugar.AnnotatedArg (Name m) (ExprGuiM.SugarExpr m)] ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-mkBoxed pl destEntityId mkFuncRow annotatedArgs =
-  ExpressionGui.stdWrapParentExpr pl $ \myId ->
-  assignCursorEntityId myId destEntityId $ do
+  Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
+mkBoxed mkFuncRow annotatedArgs myId =
+  do
     grid <-
-      Grid.toWidget . Grid.make . concat <$> traverse makeArgRows annotatedArgs
+      annotatedArgs
+      & traverse makeArgRows
+      <&> Grid.toWidget . Grid.make . concat
     mkFuncRow
       <&> ExpressionGui.addBelow 0 [(0, grid)]
       >>= ExpressionGui.addValFrame myId
 
 mkMParened ::
   MonadA m =>
-  Sugar.Payload m ExprGuiM.Payload ->
   ParentPrecedence ->
   Maybe ExpressionGui.MyPrecedence ->
-  Sugar.EntityId -> ExprGuiM m  (ExpressionGui m) ->
+  ExprGuiM m  (ExpressionGui m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-mkMParened pl parentPrecedence mPrecedence destEntityId mkFuncRow =
-  ExpressionGui.stdWrapParentExpr pl . parenify $ \myId ->
-  assignCursorEntityId myId destEntityId mkFuncRow
-  where
-    parenify = case mPrecedence of
-      Nothing -> id
-      Just precedence -> ExpressionGui.parenify parentPrecedence precedence
+mkMParened parentPrecedence mPrecedence mkFuncRow =
+  const mkFuncRow
+  & case mPrecedence of
+    Nothing -> id
+    Just precedence -> ExpressionGui.parenify parentPrecedence precedence
