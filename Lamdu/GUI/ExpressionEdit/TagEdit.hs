@@ -1,5 +1,4 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
   ( makeRecordTag, makeParamTag, diveIntoRecordTag
   ) where
