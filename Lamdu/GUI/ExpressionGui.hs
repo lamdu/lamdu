@@ -225,7 +225,7 @@ makeNameEdit (Name nameSrc nameCollision setName name) =
   ExprGuiM.wrapDelegated nameEditFDConfig FocusDelegator.NotDelegating id $
   \myId -> do
     collisionSuffixes <-
-      ExprGuiM.widgetEnv . makeCollisionSuffixLabels nameCollision $
+      makeCollisionSuffixLabels nameCollision $
       Widget.toAnimId myId
     nameEdit <-
       makeWordEdit (Property storedName setName) myId
@@ -339,28 +339,30 @@ stdWrapParenify pl parentPrec prec = stdWrapParentExpr pl . parenify parentPrec 
 
 -- TODO: This doesn't belong here
 makeNameView ::
-  MonadA m =>
-  Name m -> AnimId -> WE.WidgetEnvT (Transaction m) (Widget f)
+  (MonadA m, MonadA n) =>
+  Name n -> AnimId -> ExprGuiM m (Widget f)
 makeNameView (Name _ collision _ name) animId = do
-  label <- BWidgets.makeLabel name animId
+  label <- BWidgets.makeLabel name animId & ExprGuiM.widgetEnv
   suffixLabels <- makeCollisionSuffixLabels collision $ animId ++ ["suffix"]
-  return . Box.hboxCentered $ label : suffixLabels
+  Box.hboxCentered (label : suffixLabels) & return
 
 -- TODO: This doesn't belong here
 makeCollisionSuffixLabels ::
-  MonadA m => NameCollision -> AnimId -> WE.WidgetEnvT m [Widget f]
+  MonadA m => NameCollision -> AnimId -> ExprGuiM m [Widget f]
 makeCollisionSuffixLabels NoCollision _ = return []
-makeCollisionSuffixLabels (Collision suffix) animId = do
-  config <- WE.readConfig
-  let
-    Config.Name{..} = Config.name config
-    onSuffixWidget =
-      Widget.backgroundColor (Config.layerNameCollisionBG (Config.layers config))
-        (animId ++ ["bg"]) collisionSuffixBGColor .
-      Widget.scale (realToFrac <$> collisionSuffixScaleFactor)
-  BWidgets.makeLabel (show suffix) animId
-    & WE.localEnv (WE.setTextColor collisionSuffixTextColor)
-    <&> (:[]) . onSuffixWidget
+makeCollisionSuffixLabels (Collision suffix) animId =
+  do
+    config <- WE.readConfig
+    let
+      Config.Name{..} = Config.name config
+      onSuffixWidget =
+        Widget.backgroundColor (Config.layerNameCollisionBG (Config.layers config))
+          (animId ++ ["bg"]) collisionSuffixBGColor .
+        Widget.scale (realToFrac <$> collisionSuffixScaleFactor)
+    BWidgets.makeLabel (show suffix) animId
+      & WE.localEnv (WE.setTextColor collisionSuffixTextColor)
+      <&> (:[]) . onSuffixWidget
+    & ExprGuiM.widgetEnv
 
 wrapExprEventMap ::
   MonadA m =>

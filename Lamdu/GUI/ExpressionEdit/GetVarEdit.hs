@@ -28,9 +28,8 @@ makeSimpleView ::
   ExprGuiM m (ExpressionGui m)
 makeSimpleView color name myId =
   ExpressionGui.makeNameView name (Widget.toAnimId myId)
-  >>= BWidgets.makeFocusableView myId
+  >>= ExprGuiM.widgetEnv . BWidgets.makeFocusableView myId
   <&> ExpressionGui.fromValueWidget
-  & ExprGuiM.widgetEnv
   & ExprGuiM.withFgColor color
 
 make ::

@@ -68,7 +68,6 @@ makeParamTag ::
 makeParamTag t = do
   Config.Name{..} <- Config.name <$> ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
-    & ExprGuiM.widgetEnv
     & ExprGuiM.withFgColor paramTagColor
     <&> Widget.scale (paramTagScaleFactor <&> realToFrac)
     <&> ExpressionGui.fromValueWidget
