@@ -21,7 +21,6 @@ make ::
   Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m)
 make (Sugar.GetField recExpr tagG) pl =
-  ($ WidgetIds.fromExprPayload pl) $
   ExpressionGui.stdWrapParentExpr pl $ \myId ->
   let tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
   in

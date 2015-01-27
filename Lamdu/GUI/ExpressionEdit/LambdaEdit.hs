@@ -23,7 +23,6 @@ make ::
   Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m)
 make parentPrecedence binder pl =
-  ($ WidgetIds.fromExprPayload pl) $
   ExpressionGui.stdWrapParenify plNoType parentPrecedence (ExpressionGui.MyPrecedence 0) $
   \myId -> ExprGuiM.assignCursor myId bodyId $
     do

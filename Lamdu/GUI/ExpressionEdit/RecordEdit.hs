@@ -38,7 +38,6 @@ make ::
   ExprGuiM m (ExpressionGui m)
 make reco pl =
   makeUnwrapped reco & ExpressionGui.stdWrapParentExpr pl
-  $ WidgetIds.fromExprPayload pl
 
 makeFieldRow ::
   MonadA m =>

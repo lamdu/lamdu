@@ -27,9 +27,6 @@ make ::
 make list pl =
   makeUnwrapped list
   & ExpressionGui.stdWrapParentExpr pl
-  $ myId
-  where
-    myId = WidgetIds.fromExprPayload pl
 
 lastLens :: Lens.Traversal' [a] a
 lastLens = Lens.taking 1 . Lens.backwards $ Lens.traversed

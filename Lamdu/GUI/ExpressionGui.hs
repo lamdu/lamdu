@@ -267,18 +267,20 @@ stdWrapDelegated ::
   Sugar.Payload m ExprGuiM.Payload ->
   FocusDelegator.Config -> FocusDelegator.IsDelegating ->
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
+  ExprGuiM m (ExpressionGui m)
 stdWrapDelegated pl fdConfig isDelegating f =
-  stdWrap pl . ExprGuiM.wrapDelegated fdConfig isDelegating (egWidget %~) f
+  stdWrap pl $
+  ExprGuiM.wrapDelegated fdConfig isDelegating (egWidget %~) f $
+  WidgetIds.fromExprPayload pl
 
 stdWrapParentExpr ::
   MonadA m =>
   Sugar.Payload m ExprGuiM.Payload ->
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-stdWrapParentExpr pl f myId = do
+  ExprGuiM m (ExpressionGui m)
+stdWrapParentExpr pl f = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  stdWrapDelegated pl (parentExprFDConfig config) FocusDelegator.Delegating f myId
+  stdWrapDelegated pl (parentExprFDConfig config) FocusDelegator.Delegating f
 
 makeFocusableView ::
   (MonadA m, MonadA n) => Widget.Id -> ExpressionGui n -> ExprGuiM m (ExpressionGui n)
@@ -332,7 +334,7 @@ stdWrapParenify ::
   Sugar.Payload m ExprGuiM.Payload ->
   ParentPrecedence -> MyPrecedence ->
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
+  ExprGuiM m (ExpressionGui m)
 stdWrapParenify pl parentPrec prec = stdWrapParentExpr pl . parenify parentPrec prec
 
 -- TODO: This doesn't belong here

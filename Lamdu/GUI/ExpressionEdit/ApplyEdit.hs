@@ -49,7 +49,6 @@ make ::
   Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m)
 make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotatedArgs) pl =
-  ($ WidgetIds.fromExprPayload pl) $
   ExpressionGui.stdWrapParentExpr pl $ \myId -> do
     let
       mk mPrecedence mkFuncRow
