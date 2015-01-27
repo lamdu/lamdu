@@ -44,12 +44,6 @@ branchSelection = Widget.Id ["selected branch"]
 goUpId :: Widget.Id
 goUpId = Widget.Id ["go up"]
 
-builtinFFIPath :: Widget.Id -> Widget.Id
-builtinFFIPath = flip Widget.joinId ["FFIPath"]
-
-builtinFFIName :: Widget.Id -> Widget.Id
-builtinFFIName = flip Widget.joinId ["FFIName"]
-
 searchTermId :: Widget.Id -> Widget.Id
 searchTermId = flip Widget.joinId ["search term"]
 
