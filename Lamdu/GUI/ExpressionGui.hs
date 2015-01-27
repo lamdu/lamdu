@@ -217,21 +217,20 @@ makeNameOriginEdit name myId =
       NameSourceStored -> Config.nameOriginFGColor
 
 diveToNameEdit :: Widget.Id -> Widget.Id
-diveToNameEdit = FocusDelegator.delegatingId
+diveToNameEdit = WidgetIds.delegatingId
 
-makeNameEdit ::
-  MonadA m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
-makeNameEdit (Name nameSrc nameCollision setName name) =
-  ExprGuiM.wrapDelegated nameEditFDConfig FocusDelegator.NotDelegating id $
-  \myId -> do
+makeNameEdit :: MonadA m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
+makeNameEdit (Name nameSrc nameCollision setName name) myId =
+  do
     collisionSuffixes <-
-      makeCollisionSuffixLabels nameCollision $
-      Widget.toAnimId myId
+      makeCollisionSuffixLabels nameCollision (Widget.toAnimId myId)
     nameEdit <-
-      makeWordEdit (Property storedName setName) myId
+      makeWordEdit (Property storedName setName) (diveToNameEdit myId)
       & WE.localEnv emptyStringEnv
       & ExprGuiM.widgetEnv
     return . Box.hboxCentered $ nameEdit : collisionSuffixes
+  >>= ExprGuiM.makeFocusDelegator nameEditFDConfig
+      FocusDelegator.FocusEntryParent myId
   where
     emptyStringEnv env = env
       & WE.envTextStyle . TextEdit.sEmptyFocusedString .~ ""
@@ -262,25 +261,23 @@ stdWrap ::
   ExprGuiM m (ExpressionGui m)
 stdWrap = stdWrapIn id
 
-stdWrapDelegated ::
-  MonadA m =>
-  Sugar.Payload m ExprGuiM.Payload ->
-  FocusDelegator.Config -> FocusDelegator.IsDelegating ->
-  (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
-  ExprGuiM m (ExpressionGui m)
-stdWrapDelegated pl fdConfig isDelegating f =
-  stdWrap pl $
-  ExprGuiM.wrapDelegated fdConfig isDelegating (egWidget %~) f $
-  WidgetIds.fromExprPayload pl
-
 stdWrapParentExpr ::
   MonadA m =>
   Sugar.Payload m ExprGuiM.Payload ->
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
   ExprGuiM m (ExpressionGui m)
-stdWrapParentExpr pl f = do
+stdWrapParentExpr pl mkGui = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  stdWrapDelegated pl (parentExprFDConfig config) FocusDelegator.Delegating f
+  mkGui innerId
+    >>= egWidget %%~
+        ExprGuiM.makeFocusDelegator (parentExprFDConfig config)
+        FocusDelegator.FocusEntryChild outerId
+    & stdWrap pl
+    & ExprGuiM.assignCursor myId innerId
+  where
+    myId = WidgetIds.fromExprPayload pl
+    outerId = WidgetIds.notDelegatingId myId
+    innerId = WidgetIds.delegatingId myId
 
 makeFocusableView ::
   (MonadA m, MonadA n) => Widget.Id -> ExpressionGui n -> ExprGuiM m (ExpressionGui n)

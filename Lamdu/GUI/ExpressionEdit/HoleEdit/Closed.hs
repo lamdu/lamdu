@@ -19,7 +19,6 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -124,7 +123,7 @@ modifyWrappedEventMap config argIsFocused arg HoleIds{..} eventMap
     Widget.keysEventMapMovesCursor (Config.enterSubexpressionKeys config)
     (E.Doc ["Navigation", "Go to wrapped expr"]) .
     -- TODO: This is ugly: Who says it's in a FocusDelegator?
-    pure . FocusDelegator.notDelegatingId . WidgetIds.fromExprPayload $
+    pure . WidgetIds.notDelegatingId . WidgetIds.fromExprPayload $
     arg ^. Sugar.haExpr . Sugar.rPayload
 
 makeWrapper ::

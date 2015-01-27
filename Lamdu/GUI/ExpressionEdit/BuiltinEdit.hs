@@ -43,23 +43,20 @@ builtinFFIName :: Widget.Id -> Widget.Id
 builtinFFIName = flip Widget.joinId ["FFIName"]
 
 makeNamePartEditor ::
-    (MonadA m, MonadA f) =>
-    Draw.Color -> String -> (String -> f ()) -> Widget.Id -> ExprGuiM m (Widget f)
+    (MonadA f, MonadA m) =>
+    Draw.Color -> String -> (String -> f ()) -> Widget.Id ->
+    ExprGuiM m (Widget f)
 makeNamePartEditor color namePartStr setter myId =
-    mkWordEdit (Property namePartStr setter)
-    & ExprGuiM.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
-    $ myId
-    where
-        mkWordEdit prop wId =
-            BWidgets.makeWordEdit prop wId
-            & ExprGuiM.widgetEnv
-            & ExprGuiM.withFgColor color
+    BWidgets.makeWordEdit (Property namePartStr setter)
+    (myId `Widget.joinId` ["textedit"])
+    & ExprGuiM.widgetEnv
+    >>= ExprGuiM.makeFocusDelegator builtinFDConfig FocusDelegator.FocusEntryParent myId
+    & ExprGuiM.withFgColor color
 
 make ::
     MonadA m =>
     Sugar.DefinitionBuiltin m -> Widget.Id -> ExprGuiM m (Widget (T m))
 make def myId =
-    ExprGuiM.assignCursor myId (builtinFFIName myId) $
     do
         config <- ExprGuiM.widgetEnv WE.readConfig
         moduleName <-
@@ -69,7 +66,10 @@ make def myId =
             makeNamePartEditor (Config.foreignVarColor config) name nameSetter
             (builtinFFIName myId)
         dot <- ExprGuiM.makeLabel "." $ Widget.toAnimId myId
-        Box.hboxCentered [moduleName, dot, varName] & return
+        [moduleName, dot, varName]
+            & Box.hboxCentered
+            & return
+    & ExprGuiM.assignCursor myId (builtinFFIName myId)
     where
         Sugar.DefinitionBuiltin
             (Definition.FFIName modulePath name) setFFIName _ = def

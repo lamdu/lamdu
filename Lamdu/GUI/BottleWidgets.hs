@@ -1,17 +1,18 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Lamdu.GUI.BottleWidgets
   ( makeTextView, makeTextViewWidget, makeLabel
-  , respondToCursorPrefix, makeFocusableView
+  , makeFocusableView
   , makeFocusableTextView, makeFocusableLabel
-  , wrapDelegatedWith, wrapDelegatedOT
   , makeTextEdit
   , makeTextEditor, makeLineEdit, makeWordEdit
+  , makeFocusDelegator
   , makeChoiceWidget
   , stdSpaceWidget, hspaceWidget, vspaceWidget
   , hboxSpaced, hboxCenteredSpaced
   , gridHSpaced, gridHSpacedCentered
   , verticalSpace
   , liftLayerInterval
+  , respondToCursorPrefix
   ) where
 
 import           Control.Applicative (Applicative(..), (<$>))
@@ -87,9 +88,14 @@ respondToCursorPrefix myIdPrefix widget = do
       widgetEnv
     & return
 
-makeFocusableView :: (Applicative f, MonadA m) => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
-makeFocusableView myId widget =
-  respondToCursorPrefix myId $ Widget.takesFocus (const (pure myId)) widget
+makeFocusableView ::
+  (Applicative f, MonadA m) => Widget.Id ->
+  Widget f -> WidgetEnvT m (Widget f)
+makeFocusableView myIdPrefix widget =
+  widget
+  -- TODO: make it non-prefix-related?
+  & Widget.takesFocus (const (pure myIdPrefix))
+  & respondToCursorPrefix myIdPrefix
 
 makeFocusableTextView
   :: (Applicative f, MonadA m)
@@ -113,36 +119,19 @@ fdStyle :: Config -> FocusDelegator.Style
 fdStyle config = FocusDelegator.Style
   { FocusDelegator.color = Config.cursorBGColor config
   , FocusDelegator.layer = Config.layerCursor $ Config.layers config
-  , FocusDelegator.cursorBGAnimId = WidgetIds.backgroundCursorId
   }
 
--- TODO: Clean this hell up:
-wrapDelegatedWith ::
+makeFocusDelegator ::
   (Applicative f, MonadA m) =>
-  m Widget.Id -> m Config ->
-  ((Widget.Id -> Widget.Id) -> m a -> m a) ->
   FocusDelegator.Config ->
-  FocusDelegator.IsDelegating ->
-  ((Widget f -> Widget f) -> a -> b) ->
-  (Widget.Id -> m a) ->
-  Widget.Id -> m b
-wrapDelegatedWith readCursor readConfig atCursor fdConfig entryState aToB mkA myId = do
-  cursor <- readCursor
-  config <- readConfig
-  FocusDelegator.wrapEnv (FocusDelegator.Env fdConfig (fdStyle config)) entryState mk myId cursor
-  where
-    mk f innerId newCursor =
-      fmap (aToB f) . (atCursor . const) newCursor $ mkA innerId
-
--- TODO: This logic belongs in the FocusDelegator itself
-wrapDelegatedOT
-  :: (Applicative f, MonadA m)
-  => FocusDelegator.Config
-  -> FocusDelegator.IsDelegating
-  -> ((Widget f -> Widget f) -> a -> b)
-  -> (Widget.Id -> WidgetEnvT m a)
-  -> Widget.Id -> WidgetEnvT m b
-wrapDelegatedOT = wrapDelegatedWith WE.readCursor WE.readConfig (WE.localEnv . (WE.envCursor %~))
+  FocusDelegator.FocusEntryTarget ->
+  Widget.Id ->
+  Widget f -> WidgetEnvT m (Widget f)
+makeFocusDelegator fdConfig focusEntryTarget myId childWidget =
+  do
+    env <- readEnv
+    fdEnv <- WE.readConfig <&> fdStyle <&> FocusDelegator.Env fdConfig
+    FocusDelegator.make fdEnv focusEntryTarget myId env childWidget & return
 
 makeTextEdit ::
   MonadA m =>
@@ -151,8 +140,7 @@ makeTextEdit ::
 makeTextEdit text myId =
   do
     style <- WE.readTextStyle
-    cursor <- WE.readCursor
-    let env = Widget.Env cursor WidgetIds.backgroundCursorId
+    env <- readEnv
     TextEdit.make style text myId env & return
 
 makeTextEditor
@@ -170,8 +158,10 @@ makeTextEditor textRef myId =
 
 deleteKeyEventHandler :: ModKey -> Widget f -> Widget f
 deleteKeyEventHandler key =
-  Widget.wEventMap %~ EventMap.deleteKey (EventMap.KeyEvent GLFW.KeyState'Pressed key)
+  Widget.wEventMap %~
+  EventMap.deleteKey (EventMap.KeyEvent GLFW.KeyState'Pressed key)
 
+-- TODO: Editor, not Edit (consistent with makeTextEditor vs. makeTextEdit)
 makeLineEdit ::
   (MonadA m, MonadA f) =>
   Property f String ->
@@ -222,8 +212,13 @@ makeChoiceWidget ::
   (a -> f ()) -> [(a, Widget f)] -> a ->
   Choice.Config -> Widget.Id -> WidgetEnvT m (Widget f)
 makeChoiceWidget choose children curChild choiceConfig myId = do
-  cursor <- WE.readCursor
   config <- WE.readConfig
-  Choice.make choose children curChild (fdStyle config)
-    choiceConfig myId cursor
+  env <- readEnv
+  Choice.make (fdStyle config) choiceConfig (children <&> annotate) myId env
     & return
+  where
+    annotate (item, widget) =
+      ( if item == curChild then Choice.Selected else Choice.NotSelected
+      , choose item
+      , widget
+      )

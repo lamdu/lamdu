@@ -61,3 +61,9 @@ activePaneBackground = ["active def bg"]
 
 flyNav :: AnimId
 flyNav = ["flyNav"]
+
+delegatingId :: Widget.Id -> Widget.Id
+delegatingId = flip Widget.joinId ["delegating"]
+
+notDelegatingId :: Widget.Id -> Widget.Id
+notDelegatingId = flip Widget.joinId ["non-delegating"]

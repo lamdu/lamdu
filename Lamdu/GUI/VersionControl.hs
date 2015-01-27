@@ -11,6 +11,7 @@ import           Control.MonadA (MonadA)
 import qualified Data.List.Utils as ListUtils
 import           Data.Monoid (Monoid(..))
 import qualified Data.Store.Property as Property
+import           Data.Store.Rev.Branch (Branch)
 import qualified Data.Store.Rev.Branch as Branch
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -53,17 +54,13 @@ redoEventMap config =
 globalEventMap :: Applicative f => Config.VersionControl -> Actions t f -> Widget.EventHandlers f
 globalEventMap config@Config.VersionControl{..} actions = mconcat
     [ Widget.keysEventMapMovesCursor makeBranchKeys
-      (E.Doc ["Branches", "New"]) $
-      diveToBranchNameEdit . WidgetIds.fromGuid . Branch.guid <$>
-      makeBranch actions
+      (E.Doc ["Branches", "New"]) $ branchTextEditId <$> makeBranch actions
     , Widget.keysEventMapMovesCursor jumpToBranchesKeys
       (E.Doc ["Branches", "Select"]) $
-      pure currentBranchWidgetId
+      (pure . branchDelegatorId . currentBranch) actions
     , undoEventMap config $ mUndo actions
     , redoEventMap config $ mRedo actions
     ]
-    where
-        currentBranchWidgetId = WidgetIds.fromGuid . Branch.guid $ currentBranch actions
 
 choiceWidgetConfig :: Config -> Choice.Config
 choiceWidgetConfig config = Choice.Config
@@ -81,8 +78,11 @@ choiceWidgetConfig config = Choice.Config
     , Choice.cwcBgLayer = Config.layerChoiceBG $ Config.layers config
     }
 
-diveToBranchNameEdit :: Widget.Id -> Widget.Id
-diveToBranchNameEdit = FocusDelegator.delegatingId
+branchDelegatorId :: Branch t -> Widget.Id
+branchDelegatorId = WidgetIds.fromGuid . Branch.guid
+
+branchTextEditId :: Branch t -> Widget.Id
+branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 
 make ::
   (MonadA m, MonadA n) =>
@@ -95,22 +95,19 @@ make transaction actions mkWidget = do
     let
         Config.VersionControl{..} = Config.versionControl config
         makeBranchNameEdit branch = do
-            let branchGuid = Branch.guid branch
-                branchEditId = WidgetIds.fromGuid branchGuid
             nameProp <-
                 lift . transaction . (Lens.mapped . Property.pSet . Lens.mapped %~ transaction) $
-                Anchors.assocNameRef branchGuid ^. Transaction.mkProperty
+                Anchors.assocNameRef (Branch.guid branch) ^. Transaction.mkProperty
             branchNameEdit <-
-                BWidgets.wrapDelegatedOT branchNameFDConfig
-                FocusDelegator.NotDelegating id
-                (BWidgets.makeLineEdit nameProp)
-                branchEditId
-            let delEventMap
+                BWidgets.makeLineEdit nameProp (branchTextEditId branch)
+                >>= BWidgets.makeFocusDelegator branchNameFDConfig
+                    FocusDelegator.FocusEntryParent (branchDelegatorId branch)
+            let
+                delEventMap
                     | ListUtils.isLengthAtLeast 2 (branches actions) =
                         Widget.keysEventMapMovesCursor
                         delBranchKeys (E.Doc ["Branches", "Delete"])
-                        (WidgetIds.fromGuid . Branch.guid <$>
-                         deleteBranch actions branch)
+                        (branchDelegatorId <$> deleteBranch actions branch)
                     | otherwise = mempty
             return (branch, branchNameEdit & Widget.weakerEvents delEventMap)
     branchNameEdits <- traverse makeBranchNameEdit $ branches actions

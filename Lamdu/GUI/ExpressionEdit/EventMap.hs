@@ -15,7 +15,6 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import           Lamdu.CharClassification (operatorChars)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -128,7 +127,7 @@ replaceOrComeToParentEventMap pl =
   where
     selectParent =
       WidgetIds.fromExprPayload pl
-      & FocusDelegator.notDelegatingId
+      & WidgetIds.notDelegatingId
       & return
 
 actionsEventMap ::

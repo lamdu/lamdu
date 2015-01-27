@@ -13,7 +13,7 @@ module Lamdu.GUI.ExpressionGui.Monad
 
   , transaction, localEnv, withFgColor
   , getP, assignCursor, assignCursorPrefix
-  , wrapDelegated
+  , makeFocusDelegator
   --
   , makeSubexpression
   --
@@ -148,7 +148,8 @@ makeSubexpression ::
 makeSubexpression parentPrecedence expr = do
   depth <- ExprGuiM $ Lens.view aSubexpressionLayer
   if depth >= 15
-    then widgetEnv $ Layout.fromCenteredWidget <$> mkErrorWidget
+    then
+      mkErrorWidget <&> Layout.fromCenteredWidget & widgetEnv
     else do
       maker <- ExprGuiM $ Lens.view aMakeSubexpression
       maker (ParentPrecedence parentPrecedence) expr
@@ -202,15 +203,15 @@ assignCursorPrefix ::
   ExprGuiM m a -> ExprGuiM m a
 assignCursorPrefix x y = localEnv $ WE.envAssignCursorPrefix x y
 
-wrapDelegated ::
-  (MonadA f, MonadA m) =>
-  FocusDelegator.Config -> FocusDelegator.IsDelegating ->
-  ((Widget f -> Widget f) -> a -> b) ->
-  (Widget.Id -> ExprGuiM m a) ->
-  Widget.Id -> ExprGuiM m b
-wrapDelegated =
-  BWidgets.wrapDelegatedWith (widgetEnv WE.readCursor) (widgetEnv WE.readConfig)
-  (localEnv . (WE.envCursor %~))
+makeFocusDelegator ::
+  (Applicative f, MonadA m) =>
+  FocusDelegator.Config ->
+  FocusDelegator.FocusEntryTarget ->
+  Widget.Id ->
+  Widget f -> ExprGuiM m (Widget f)
+makeFocusDelegator =
+  BWidgets.makeFocusDelegator
+  & Lens.mapped . Lens.mapped . Lens.mapped . Lens.mapped %~ widgetEnv
 
 -- Used vars:
 

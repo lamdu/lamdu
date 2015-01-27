@@ -1,8 +1,9 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, RecordWildCards #-}
 -- | A vertical-expand (combo-like) choice widget
 
 module Graphics.UI.Bottle.Widgets.Choice
     ( make
+    , IsSelected(..)
     , Config(..)
     , ExpandMode(..)
     ) where
@@ -32,43 +33,58 @@ data Config = Config
   , cwcBgLayer :: Int
   }
 
-make ::
-  (Eq a, Applicative f) =>
-  (a -> f ()) -> [(a, Widget f)] -> a ->
-  FocusDelegator.Style ->
-  Config -> Widget.Id -> Widget.Id -> Widget f
-make choose children curChild fdStyle config myId cursor = do
-  FocusDelegator.wrapEnv (FocusDelegator.Env (cwcFDConfig config) fdStyle)
-    FocusDelegator.NotDelegating mkResult myId cursor
+data IsSelected = Selected | NotSelected
+  deriving Eq
+
+toBox ::
+  Applicative f => Config -> Bool ->
+  Widget.Id -> [(IsSelected, f (), Widget f)] ->
+  Widget f
+toBox Config{..} selfFocused myId childrenRecords =
+  childrenRecords
+  <&> applyAction
+  & filterVisible
+  <&> colorize
+  & Box.makeAlign 0 cwcOrientation
+  & maybe Box.toWidget Box.toWidgetBiased mCurChildIndex
   where
-    visiblePairs
-      | childFocused || (autoExpand && isFocused) = pairs
-      | otherwise = filter itemIsCurChild pairs
-    mCurChildIndex = findIndex itemIsCurChild visiblePairs
-    colorizedPairs
-      -- focus shows selection already
-      | childFocused = map snd visiblePairs
-      -- need to show selection even as focus is elsewhere
-      | otherwise = map colorize visiblePairs
-    box = Box.makeAlign 0 (cwcOrientation config) colorizedPairs
-    boxWidget =
-      maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
-    mkResult f _innerId _newCursor = f boxWidget
-    isFocused = Lens.has Lens._Just (Widget.subId myId cursor)
-    autoExpand = Lens.has _AutoExpand $ cwcExpandMode config
-    itemIsCurChild = (curChild ==) . fst
-    colorize (item, w) =
-      case cwcExpandMode config ^? _AutoExpand of
-      Just color
-        | item == curChild ->
-          Widget.backgroundColor (cwcBgLayer config)
-          (Widget.toAnimId myId) color w
-      _ -> w
-    pairs = map mkPair children
-    childFocused = any (^. _2 . Widget.wIsFocused) children
-    mkPair (item, widget) =
-      ( item
+    mCurChildIndex = childrenRecords & findIndex ((== Selected) . (^. _1))
+    filterVisible
+      | anyChildFocused || (autoExpand && selfFocused) = id
+      | otherwise = filter ((== Selected) . fst)
+    autoExpand = Lens.has _AutoExpand cwcExpandMode
+    colorize (isSelected, widget)
+      | anyChildFocused = widget -- focus shows selection already
+      | otherwise = -- need to show selection even as focus is elsewhere
+        widget
+        & case cwcExpandMode of
+          AutoExpand color
+            | isSelected == Selected ->
+              Widget.backgroundColor cwcBgLayer (Widget.toAnimId myId) color
+          _ -> id
+    applyAction (isSelected, action, widget) =
+      ( isSelected
       , widget
-        & Widget.wMaybeEnter . Lens.traversed . Lens.mapped .
-          Widget.enterResultEvent %~ (choose item *>)
+        & Widget.wMaybeEnter . Lens._Just . Lens.mapped .
+          Widget.enterResultEvent %~ (action *>)
       )
+    anyChildFocused =
+      childrenRecords
+      & Lens.orOf (Lens.traversed . _3 . Widget.wIsFocused)
+
+make ::
+  Applicative f =>
+  FocusDelegator.Style -> Config ->
+  [(IsSelected, f (), Widget f)] ->
+  Widget.Id -> Widget.Env -> Widget f
+make fdStyle Config{..} children myId widgetEnv =
+  FocusDelegator.make FocusDelegator.Env
+  { FocusDelegator.config = cwcFDConfig
+  , FocusDelegator.style = fdStyle
+  } FocusDelegator.FocusEntryParent myId widgetEnv childrenBox
+  where
+    childrenBox = toBox Config{..} selfFocused myId children
+    selfFocused =
+      widgetEnv ^. Widget.envCursor
+      & Widget.subId myId
+      & Lens.has Lens._Just
