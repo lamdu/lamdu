@@ -280,21 +280,21 @@ stdWrapParentExpr pl mkGui = do
     innerId = WidgetIds.delegatingId myId
 
 makeFocusableView ::
-  (MonadA m, MonadA n) => Widget.Id -> ExpressionGui n -> ExprGuiM m (ExpressionGui n)
+  (MonadA m, MonadA n) =>
+  Widget.Id -> ExpressionGui n -> ExprGuiM m (ExpressionGui n)
 makeFocusableView myId gui =
   ExprGuiM.widgetEnv $
   egWidget (BWidgets.makeFocusableView myId) gui
 
 parenify ::
   (MonadA f, MonadA m) =>
-  ParentPrecedence -> MyPrecedence ->
-  (Widget.Id -> ExprGuiM m (ExpressionGui f)) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui f)
-parenify (ParentPrecedence parent) (MyPrecedence prec) mkWidget myId
+  ParentPrecedence -> MyPrecedence -> Widget.Id ->
+  ExpressionGui f -> ExprGuiM m (ExpressionGui f)
+parenify (ParentPrecedence parent) (MyPrecedence prec) myId widget
   | parent > prec =
-    mkWidget myId
-    >>= ExprGuiM.widgetEnv . Parens.addHighlightedTextParens myId
-  | otherwise = mkWidget myId
+    widget & Parens.addHighlightedTextParens myId & ExprGuiM.widgetEnv
+  | otherwise =
+    widget & return
 
 makeLabel :: MonadA m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
 makeLabel text animId = ExprGuiM.makeLabel text animId <&> fromValueWidget
@@ -313,9 +313,9 @@ addValBG myId gui =
     config <- ExprGuiM.widgetEnv WE.readConfig
     let layer = Config.layerValFrameBG $ Config.layers config
     let color = Config.valFrameBGColor config
-    return $ Widget.backgroundColor layer animId color gui
+    Widget.backgroundColor layer animId color gui & return
   where
-    animId = Widget.toAnimId myId
+    animId = Widget.toAnimId myId ++ ["val"]
 
 addValFrame ::
   MonadA m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
@@ -328,20 +328,23 @@ addValFrame myId gui =
 
 stdWrapParenify ::
   MonadA m =>
-  Sugar.Payload m ExprGuiM.Payload ->
-  ParentPrecedence -> MyPrecedence ->
+  Sugar.Payload m ExprGuiM.Payload -> ParentPrecedence -> MyPrecedence ->
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
   ExprGuiM m (ExpressionGui m)
-stdWrapParenify pl parentPrec prec = stdWrapParentExpr pl . parenify parentPrec prec
+stdWrapParenify pl parentPrec prec mkGui =
+  stdWrapParentExpr pl $ \myId ->
+  mkGui myId
+  >>= parenify parentPrec prec myId
 
 -- TODO: This doesn't belong here
 makeNameView ::
   (MonadA m, MonadA n) =>
   Name n -> AnimId -> ExprGuiM m (Widget f)
-makeNameView (Name _ collision _ name) animId = do
-  label <- BWidgets.makeLabel name animId & ExprGuiM.widgetEnv
-  suffixLabels <- makeCollisionSuffixLabels collision $ animId ++ ["suffix"]
-  Box.hboxCentered (label : suffixLabels) & return
+makeNameView (Name _ collision _ name) animId =
+  do
+    label <- BWidgets.makeLabel name animId & ExprGuiM.widgetEnv
+    suffixLabels <- makeCollisionSuffixLabels collision $ animId ++ ["suffix"]
+    Box.hboxCentered (label : suffixLabels) & return
 
 -- TODO: This doesn't belong here
 makeCollisionSuffixLabels ::
@@ -374,17 +377,21 @@ wrapExprEventMapIn ::
   Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m s ->
   ExprGuiM m s
-wrapExprEventMapIn trav pl action = do
-  (res, resultPickers) <- ExprGuiM.listenResultPickers action
-  res & trav (addExprEventMap pl resultPickers)
+wrapExprEventMapIn trav pl action =
+  do
+    (res, resultPickers) <- ExprGuiM.listenResultPickers action
+    res & trav (addExprEventMap pl resultPickers)
 
 addExprEventMap ::
   MonadA m =>
   Sugar.Payload m ExprGuiM.Payload -> HolePickers m ->
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addExprEventMap pl resultPickers gui = do
-  exprEventMap <- ExprEventMap.make resultPickers pl & ExprGuiM.widgetEnv
-  gui & egWidget %~ Widget.weakerEvents exprEventMap & return
+addExprEventMap pl resultPickers gui =
+  do
+    exprEventMap <- ExprEventMap.make resultPickers pl & ExprGuiM.widgetEnv
+    gui
+      & egWidget %~ Widget.weakerEvents exprEventMap
+      & return
 
 maybeAddInferredTypePl ::
   MonadA m =>

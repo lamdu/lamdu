@@ -126,8 +126,8 @@ mkMParened ::
   Maybe ExpressionGui.MyPrecedence ->
   ExprGuiM m  (ExpressionGui m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-mkMParened parentPrecedence mPrecedence mkFuncRow =
-  const mkFuncRow
-  & case mPrecedence of
-    Nothing -> id
-    Just precedence -> ExpressionGui.parenify parentPrecedence precedence
+mkMParened parentPrecedence mPrecedence mkFuncRow myId =
+  mkFuncRow
+  >>= case mPrecedence of
+      Nothing -> return
+      Just precedence -> ExpressionGui.parenify parentPrecedence precedence myId
