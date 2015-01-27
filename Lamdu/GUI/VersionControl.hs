@@ -32,10 +32,10 @@ import           Lamdu.VersionControl.Actions (Actions(..))
 
 branchNameFDConfig :: FocusDelegator.Config
 branchNameFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [ModKey mempty GLFW.Key'F2]
-  , FocusDelegator.startDelegatingDoc = E.Doc ["Branches", "Rename"]
-  , FocusDelegator.stopDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Done renaming"]
+  { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'F2]
+  , FocusDelegator.focusChildDoc = E.Doc ["Branches", "Rename"]
+  , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Enter]
+  , FocusDelegator.focusParentDoc = E.Doc ["Branches", "Done renaming"]
   }
 
 undoEventMap :: Functor m => Config.VersionControl -> Maybe (m Widget.Id) -> Widget.EventHandlers m
@@ -67,10 +67,10 @@ choiceWidgetConfig :: Config -> Choice.Config
 choiceWidgetConfig config = Choice.Config
   { Choice.cwcFDConfig =
     FocusDelegator.Config
-    { FocusDelegator.startDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
-    , FocusDelegator.startDelegatingDoc = E.Doc ["Branches", "Select"]
-    , FocusDelegator.stopDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
-    , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Choose selected"]
+    { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'Enter]
+    , FocusDelegator.focusChildDoc = E.Doc ["Branches", "Select"]
+    , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Enter]
+    , FocusDelegator.focusParentDoc = E.Doc ["Branches", "Choose selected"]
     }
   , Choice.cwcExpandMode =
       Choice.AutoExpand $ Config.selectedBranchColor $

@@ -92,10 +92,10 @@ makeWheres whereItems myId =
 presentationModeChoiceConfig :: Config -> Choice.Config
 presentationModeChoiceConfig config = Choice.Config
   { Choice.cwcFDConfig = FocusDelegator.Config
-    { FocusDelegator.startDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
-    , FocusDelegator.startDelegatingDoc = E.Doc ["Presentation Mode", "Select"]
-    , FocusDelegator.stopDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
-    , FocusDelegator.stopDelegatingDoc = E.Doc ["Presentation Mode", "Choose selected"]
+    { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'Enter]
+    , FocusDelegator.focusChildDoc = E.Doc ["Presentation Mode", "Select"]
+    , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Enter]
+    , FocusDelegator.focusParentDoc = E.Doc ["Presentation Mode", "Choose selected"]
     }
   , Choice.cwcOrientation = Box.vertical
   , Choice.cwcExpandMode = Choice.ExplicitEntry

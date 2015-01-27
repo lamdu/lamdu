@@ -26,10 +26,10 @@ type T = Transaction
 
 builtinFDConfig :: FocusDelegator.Config
 builtinFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
-  , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Change imported name"]
-  , FocusDelegator.stopDelegatingKeys = [ModKey mempty GLFW.Key'Escape]
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Stop changing name"]
+  { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'Enter]
+  , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Change imported name"]
+  , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Escape]
+  , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Stop changing name"]
   }
 
 make

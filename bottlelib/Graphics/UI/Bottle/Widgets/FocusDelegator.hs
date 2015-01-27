@@ -30,10 +30,10 @@ data Style = Style
   }
 
 data Config = Config
-  { startDelegatingKeys :: [ModKey]
-  , startDelegatingDoc :: E.Doc
-  , stopDelegatingKeys :: [ModKey]
-  , stopDelegatingDoc :: E.Doc
+  { focusChildKeys :: [ModKey]
+  , focusChildDoc :: E.Doc
+  , focusParentKeys :: [ModKey]
+  , focusParentDoc :: E.Doc
   }
 
 data Env = Env
@@ -60,7 +60,7 @@ makeFocused delegating myId Env{..} widget =
     Config{..} = config
     stopDelegatingEventMap =
       pure (Widget.eventResultFromCursor myId)
-      & E.keyPresses stopDelegatingKeys stopDelegatingDoc
+      & E.keyPresses focusParentKeys focusParentDoc
 
 setStartDelegatingEventMap :: Config -> Widget f -> Widget f
 setStartDelegatingEventMap Config{..} widget =
@@ -74,7 +74,7 @@ setStartDelegatingEventMap Config{..} widget =
       case widget ^. Widget.wMaybeEnter of
       Nothing -> mempty
       Just childEnter ->
-        E.keyPresses startDelegatingKeys startDelegatingDoc $
+        E.keyPresses focusChildKeys focusChildDoc $
         childEnter Direction.Outside ^. Widget.enterResultEvent
 
 -- | Make a focus delegator

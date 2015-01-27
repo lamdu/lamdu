@@ -187,10 +187,10 @@ addInferredType entityId inferredType eg =
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = Config.enterSubexpressionKeys config
-  , FocusDelegator.startDelegatingDoc = E.Doc ["Navigation", "Enter subexpression"]
-  , FocusDelegator.stopDelegatingKeys = Config.leaveSubexpressionKeys config
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["Navigation", "Leave subexpression"]
+  { FocusDelegator.focusChildKeys = Config.enterSubexpressionKeys config
+  , FocusDelegator.focusChildDoc = E.Doc ["Navigation", "Enter subexpression"]
+  , FocusDelegator.focusParentKeys = Config.leaveSubexpressionKeys config
+  , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Leave subexpression"]
   }
 
 -- ExprGuiM GUIs (TODO: Move to Monad.hs?)
@@ -200,10 +200,10 @@ disallowedNameChars = "[]\\`()"
 
 nameEditFDConfig :: FocusDelegator.Config
 nameEditFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [ModKey mempty GLFW.Key'Enter]
-  , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Rename"]
-  , FocusDelegator.stopDelegatingKeys = [ModKey mempty GLFW.Key'Escape]
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Done renaming"]
+  { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'Enter]
+  , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Rename"]
+  , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Escape]
+  , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
   }
 
 makeNameOriginEdit :: MonadA m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
