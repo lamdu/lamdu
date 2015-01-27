@@ -61,7 +61,7 @@ make views =
   & _2 %~ toFrame
   & uncurry View
   where
-    toTriplet (alignment, (View size frame)) = (alignment, size, frame)
+    toTriplet (alignment, View size frame) = (alignment, size, frame)
     translate (_alignment, rect, frame) =
       Anim.translate (rect ^. Rect.topLeft) frame
     toFrame placements =

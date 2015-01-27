@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.BottleWidgets
   ( makeTextView, makeTextViewWidget, makeLabel
   , makeFocusableView

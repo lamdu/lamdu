@@ -39,7 +39,7 @@ Lens.makeLenses ''Style
 lineHeight :: Style -> Widget.R
 lineHeight Style{..} = sz * DrawUtils.textHeight
     where
-        sz = fromIntegral $ _styleFontSize
+        sz = fromIntegral _styleFontSize
 
 fontRender :: Style -> String -> (Draw.Image (), Size)
 fontRender Style{..} str =

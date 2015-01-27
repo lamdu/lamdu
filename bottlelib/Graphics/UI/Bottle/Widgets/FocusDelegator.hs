@@ -59,8 +59,8 @@ modifyEntry ::
   Maybe (Direction -> Widget.EnterResult f)
 modifyEntry myId fullChildRect = f
   where
-    f FocusEntryParent _ = Just $ const $ focusParent
-    f FocusEntryChild Nothing = Just $ const $ focusParent
+    f FocusEntryParent _ = Just $ const focusParent
+    f FocusEntryChild Nothing = Just $ const focusParent
     f FocusEntryChild (Just childEnter) = Just $ wrapEnter childEnter
     wrapEnter _          Direction.Outside = focusParent
     wrapEnter enterChild dir               = enterChild dir
