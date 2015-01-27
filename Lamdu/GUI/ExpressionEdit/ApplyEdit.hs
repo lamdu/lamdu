@@ -82,17 +82,12 @@ make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotated
 assignCursorEntityId :: MonadA m => Widget.Id -> Sugar.EntityId -> ExprGuiM m a -> ExprGuiM m a
 assignCursorEntityId myId = ExprGuiM.assignCursor myId . WidgetIds.fromEntityId
 
-makeParamTag :: MonadA m => Sugar.EntityId -> Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
-makeParamTag tagExprEntityId tagG =
-  TagEdit.makeParamTag tagG $ Widget.toAnimId $
-  WidgetIds.fromEntityId tagExprEntityId
-
 makeArgRows ::
   MonadA m =>
   Sugar.AnnotatedArg (Name m) (ExprGuiM.SugarExpr m) ->
   ExprGuiM m [[(Grid.Alignment, Widget (T m))]]
 makeArgRows arg = do
-  argTagEdit <- makeParamTag (arg ^. Sugar.aaTagExprEntityId) (arg ^. Sugar.aaTag)
+  argTagEdit <- TagEdit.makeParamTag (arg ^. Sugar.aaTag)
   argValEdit <- ExprGuiM.makeSubexpression 0 $ arg ^. Sugar.aaExpr
   vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
   space <- ExprGuiM.widgetEnv BWidgets.stdSpaceWidget

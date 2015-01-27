@@ -43,9 +43,7 @@ makeFieldRow ::
   ExprGuiM m [ExpressionGui m]
 makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) = do
   config <- ExprGuiM.widgetEnv WE.readConfig
-  fieldRefGui <-
-    TagEdit.makeRecordTag (ExprGuiM.nextHolesBefore fieldExpr)
-    tag (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
+  fieldRefGui <- TagEdit.makeRecordTag (ExprGuiM.nextHolesBefore fieldExpr) tag
   fieldExprGui <- ExprGuiM.makeSubexpression 0 fieldExpr
   let
     itemEventMap = maybe mempty (recordDelEventMap config) mDelete

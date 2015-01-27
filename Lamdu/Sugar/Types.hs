@@ -44,7 +44,7 @@ module Lamdu.Sugar.Types
   , GetVar(..), _GetVarNamed, _GetVarParamsRecord
   , ParamsRecordVar(..), prvFieldNames
   , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
-  , AnnotatedArg(..), aaTag, aaTagExprEntityId, aaExpr
+  , AnnotatedArg(..), aaTag, aaExpr
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
   , FuncParam(..)
     , fpName, fpId, fpVarInfo, fpInferredType, fpMActions, fpHiddenIds
@@ -296,8 +296,6 @@ data SpecialArgs expr
 
 data AnnotatedArg name expr = AnnotatedArg
   { _aaTag :: TagG name
-  , -- Used for animation ids consistent with record.
-    _aaTagExprEntityId :: EntityId
   , _aaExpr :: expr
   } deriving (Functor, Foldable, Traversable)
 

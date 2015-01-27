@@ -9,7 +9,6 @@ import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Data.Monoid (Monoid(..), (<>))
 import           Data.Store.Transaction (Transaction)
-import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -31,18 +30,20 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction
 
 makeRecordTagNameEdit ::
-  MonadA m => Sugar.TagG (Name m) -> Widget.Id -> ExprGuiM m (Widget (T m))
-makeRecordTagNameEdit tagG myId = do
+  MonadA m => Sugar.TagG (Name m) -> ExprGuiM m (Widget (T m))
+makeRecordTagNameEdit tagG = do
   Config.Name{..} <- Config.name <$> ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.makeNameEdit (tagG ^. Sugar.tagGName) myId
     & ExprGuiM.withFgColor recordTagColor
     <&> Widget.scale (recordTagScaleFactor <&> realToFrac)
+  where
+    myId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
 
 makeRecordTag ::
   MonadA m =>
-  NearestHoles -> Sugar.TagG (Name m) -> Widget.Id ->
+  NearestHoles -> Sugar.TagG (Name m) ->
   ExprGuiM m (ExpressionGui m)
-makeRecordTag nearestHoles tagG myId = do
+makeRecordTag nearestHoles tagG = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] nearestHoles
   let
@@ -50,7 +51,7 @@ makeRecordTag nearestHoles tagG myId = do
       jumpHolesEventMap <>
       maybe mempty jumpNextEventMap (nearestHoles ^. NearestHoles.next)
   let Config.Name{..} = Config.name config
-  makeRecordTagNameEdit tagG myId
+  makeRecordTagNameEdit tagG
     <&> Widget.weakerEvents eventMap
     <&> ExpressionGui.fromValueWidget
   where
@@ -61,14 +62,16 @@ makeRecordTag nearestHoles tagG myId = do
 
 -- | Unfocusable tag view (e.g: in apply params)
 makeParamTag ::
-  MonadA m => Sugar.TagG (Name m) -> AnimId -> ExprGuiM m (ExpressionGui m)
-makeParamTag t animId = do
+  MonadA m => Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
+makeParamTag t = do
   Config.Name{..} <- Config.name <$> ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
     & ExprGuiM.widgetEnv
     & ExprGuiM.withFgColor paramTagColor
     <&> Widget.scale (paramTagScaleFactor <&> realToFrac)
     <&> ExpressionGui.fromValueWidget
+  where
+    animId = t ^. Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
 
 diveIntoRecordTag :: Widget.Id -> Widget.Id
 diveIntoRecordTag = ExpressionGui.diveToNameEdit

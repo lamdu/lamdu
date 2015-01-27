@@ -88,7 +88,6 @@ convertLabeled funcS argS argI exprPl = do
     getArg field =
       AnnotatedArg
         { _aaTag = field ^. rfTag
-        , _aaTagExprEntityId = field ^. rfTag . tagInstance
         , _aaExpr = field ^. rfExpr
         }
   let args@(arg0 : args1toN@(arg1 : args2toN)) = map getArg $ record ^. rItems
