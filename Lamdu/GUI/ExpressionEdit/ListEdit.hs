@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.GUI.ExpressionEdit.ListEdit(make) where
+module Lamdu.GUI.ExpressionEdit.ListEdit
+     ( make
+     ) where
 
 import           Control.Applicative ((<$>), (<$), Applicative(..))
 import qualified Control.Lens as Lens
@@ -20,22 +22,12 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
-  MonadA m =>
-  Sugar.List m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload m ExprGuiM.Payload ->
-  ExprGuiM m (ExpressionGui m)
+    MonadA m =>
+    Sugar.List m (ExprGuiM.SugarExpr m) ->
+    Sugar.Payload m ExprGuiM.Payload ->
+    ExprGuiM m (ExpressionGui m)
 make list pl =
-  makeUnwrapped list
-  & ExpressionGui.stdWrapParentExpr pl
-
-lastLens :: Lens.Traversal' [a] a
-lastLens = Lens.taking 1 . Lens.backwards $ Lens.traversed
-
-makeUnwrapped ::
-  MonadA m =>
-  Sugar.List m (ExprGuiM.SugarExpr m) -> Widget.Id ->
-  ExprGuiM m (ExpressionGui m)
-makeUnwrapped list myId =
+  ExpressionGui.stdWrapParentExpr pl $ \myId ->
   ExprGuiM.assignCursor myId cursorDest $
   do
     config <- ExprGuiM.widgetEnv WE.readConfig
@@ -69,6 +61,7 @@ makeUnwrapped list myId =
             . fmap WidgetIds.fromEntityId
             ) $ Sugar.lValues list ^? lastLens . Sugar.liMActions . Lens._Just . Sugar.itemAddNext
           closerEventMap = mappend nilDeleteEventMap addLastEventMap
+          closeBracketId = Widget.joinId myId ["close-bracket"]
         bracketClose <-
           ExpressionGui.makeFocusableView closeBracketId bracketCloseLabel
           <&> ExpressionGui.egWidget %~ Widget.weakerEvents closerEventMap
@@ -83,7 +76,6 @@ makeUnwrapped list myId =
   where
     bracketsId = WidgetIds.fromEntityId $ Sugar.lNilEntityId list
     pairToList (x, y) = [x, y]
-    closeBracketId = Widget.joinId myId ["close-bracket"]
     itemId = WidgetIds.fromExprPayload . (^. Sugar.liExpr . Sugar.rPayload)
     actionEventMap keys doc actSelect =
       maybe mempty
@@ -99,34 +91,36 @@ makeItem ::
   MonadA m =>
   (Widget.Id, Widget.Id, Sugar.ListItem m (ExprGuiM.SugarExpr m)) ->
   ExprGuiM m (ExpressionGui m, ExpressionGui m)
-makeItem (_, nextId, item) = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    mkItemEventMap resultPickers Sugar.ListItemActions
-      { Sugar._itemAddNext = addItem
-      , Sugar._itemDelete = delItem
-      } =
-      mconcat
-      [ E.keyPresses (Config.listAddItemKeys config) (doc resultPickers) $
-        mappend
-        <$> holePickersAction resultPickers
-        <*> (Widget.eventResultFromCursor . WidgetIds.fromEntityId <$> addItem)
-      , Widget.keysEventMapMovesCursor (Config.delKeys config)
-        (E.Doc ["Edit", "List", "Delete Item"]) $
-        nextId <$ delItem
-      ]
-  (pair, resultPickers) <-
-    ExprGuiM.listenResultPickers $
-    Lens.sequenceOf Lens.both
-    ( ExpressionGui.grammarLabel ", " (Widget.toAnimId itemWidgetId <> [","])
-    , ExprGuiM.makeSubexpression 0 itemExpr
-    )
-  return $ pair
-    & _2 . ExpressionGui.egWidget %~
-    Widget.weakerEvents
-    (maybe mempty (mkItemEventMap resultPickers) (item ^. Sugar.liMActions))
-  where
-    itemExpr = item ^. Sugar.liExpr
-    itemWidgetId = WidgetIds.fromExprPayload $ itemExpr ^. Sugar.rPayload
-    doc [] = E.Doc ["Edit", "List", "Add Next Item"]
-    doc _ = E.Doc ["Edit", "List", "Pick Result and Add Next Item"]
+makeItem (_, nextId, item) =
+    do
+        config <- ExprGuiM.widgetEnv WE.readConfig
+        let mkItemEventMap resultPickers Sugar.ListItemActions
+                { Sugar._itemAddNext = addItem
+                , Sugar._itemDelete = delItem
+                } = mconcat
+                    [ E.keyPresses (Config.listAddItemKeys config) (doc resultPickers) $
+                      mappend
+                      <$> holePickersAction resultPickers
+                      <*> (Widget.eventResultFromCursor . WidgetIds.fromEntityId <$> addItem)
+                    , Widget.keysEventMapMovesCursor (Config.delKeys config)
+                      (E.Doc ["Edit", "List", "Delete Item"]) $
+                      nextId <$ delItem
+                    ]
+        (pair, resultPickers) <-
+          ExprGuiM.listenResultPickers $
+          Lens.sequenceOf Lens.both
+          ( ExpressionGui.grammarLabel ", " (Widget.toAnimId itemWidgetId <> [","])
+          , ExprGuiM.makeSubexpression 0 itemExpr
+          )
+        return $ pair
+          & _2 . ExpressionGui.egWidget %~
+          Widget.weakerEvents
+          (maybe mempty (mkItemEventMap resultPickers) (item ^. Sugar.liMActions))
+    where
+        itemExpr = item ^. Sugar.liExpr
+        itemWidgetId = WidgetIds.fromExprPayload $ itemExpr ^. Sugar.rPayload
+        doc [] = E.Doc ["Edit", "List", "Add Next Item"]
+        doc _ = E.Doc ["Edit", "List", "Pick Result and Add Next Item"]
+
+lastLens :: Lens.Traversal' [a] a
+lastLens = Lens.taking 1 . Lens.backwards $ Lens.traversed
