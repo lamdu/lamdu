@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Lamdu.GUI.BottleWidgets
   ( makeTextView, makeTextViewWidget, makeLabel
-  , respondToCursorIn, makeFocusableView
+  , respondToCursorPrefix, makeFocusableView
   , makeFocusableTextView, makeFocusableLabel
   , wrapDelegatedWith, wrapDelegatedOT
   , makeTextEdit
@@ -75,9 +75,9 @@ readEnv =
     cursor <- WE.readCursor
     Widget.Env cursor WidgetIds.backgroundCursorId & return
 
-respondToCursorIn ::
+respondToCursorPrefix ::
   MonadA m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
-respondToCursorIn myIdPrefix widget = do
+respondToCursorPrefix myIdPrefix widget = do
   config <- WE.readConfig
   widgetEnv <- readEnv
   widget
@@ -89,7 +89,7 @@ respondToCursorIn myIdPrefix widget = do
 
 makeFocusableView :: (Applicative f, MonadA m) => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
 makeFocusableView myId widget =
-  respondToCursorIn myId $ Widget.takesFocus (const (pure myId)) widget
+  respondToCursorPrefix myId $ Widget.takesFocus (const (pure myId)) widget
 
 makeFocusableTextView
   :: (Applicative f, MonadA m)

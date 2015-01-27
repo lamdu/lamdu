@@ -83,7 +83,7 @@ make hole pl hids@HoleIds{..} =
           & ExpressionGui.egWidget %~
             Widget.weakerEvents (openHoleEventMap holeOpenKeys hids)
           & ExpressionGui.egWidget %%~
-            ExprGuiM.widgetEnv . BWidgets.respondToCursorIn hidClosed
+            ExprGuiM.widgetEnv . BWidgets.respondToCursorPrefix hidClosed
     isHoleResult =
       Lens.nullOf (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl
     suggested = hole ^. Sugar.holeSuggested
