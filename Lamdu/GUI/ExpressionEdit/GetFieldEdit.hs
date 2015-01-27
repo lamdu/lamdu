@@ -19,8 +19,9 @@ make ::
   MonadA m =>
   Sugar.GetField (Name m) (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
+  ExprGuiM m (ExpressionGui m)
 make (Sugar.GetField recExpr tagG) pl =
+  ($ WidgetIds.fromExprPayload pl) $
   ExpressionGui.stdWrapParentExpr pl $ \myId ->
   let tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
   in

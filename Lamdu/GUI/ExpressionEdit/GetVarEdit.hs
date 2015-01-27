@@ -37,9 +37,8 @@ make ::
   MonadA m =>
   Sugar.GetVar (Name m) m ->
   Sugar.Payload m ExprGuiM.Payload ->
-  Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-make getVar pl myId = do
+make getVar pl = do
   cp <- ExprGuiM.readCodeAnchors
   config <- ExprGuiM.widgetEnv WE.readConfig
   let Config.Name{..} = Config.name config
@@ -73,3 +72,5 @@ make getVar pl myId = do
       & ExpressionGui.stdWrap pl
       where
         Sugar.ParamsRecordVar fieldNames = paramsRecordVar
+  where
+    myId = WidgetIds.fromExprPayload pl

@@ -49,7 +49,7 @@ make ::
 make parentPrecedence sExpr =
   assignCursor $
   do
-    gui <- makeEditor parentPrecedence body pl myId
+    gui <- makeEditor parentPrecedence body pl
     maybeShrink gui <&> ExpressionGui.egWidget %~ maybeDoesntTakeFocus
   where
     maybeDoesntTakeFocus
@@ -71,7 +71,7 @@ makeEditor ::
   MonadA m => ParentPrecedence ->
   Sugar.Body (Name m) m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
+  ExprGuiM m (ExpressionGui m)
 makeEditor parentPrecedence body =
   case body of
   Sugar.BodyHole hole -> HoleEdit.make hole

@@ -28,6 +28,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -38,9 +39,9 @@ chDestId HoleIds{..} HoleClosed.HoleDestOpened = hidOpen
 make ::
   MonadA m =>
   Sugar.Hole (Name m) m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload m ExprGuiM.Payload -> Widget.Id ->
+  Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m)
-make hole pl myId =
+make hole pl =
   do
     (closedHoleGui, unwrappedClosedHoleGui) <-
       _chMkGui
@@ -57,6 +58,7 @@ make hole pl myId =
       <&> ExpressionGui.egWidget %~ Widget.takesFocus (const (pure myId))
   & ExprGuiM.assignCursor myId (chDestId hids chDest)
   where
+    myId = WidgetIds.fromExprPayload pl
     hAlign = ExpressionGui.egAlignment . _1
     ClosedHole{..} = HoleClosed.make hole pl hids
     hids = HoleIds

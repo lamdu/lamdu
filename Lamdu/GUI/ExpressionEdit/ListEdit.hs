@@ -23,11 +23,13 @@ make ::
   MonadA m =>
   Sugar.List m (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
-  Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make list pl =
   makeUnwrapped list
   & ExpressionGui.stdWrapParentExpr pl
+  $ myId
+  where
+    myId = WidgetIds.fromExprPayload pl
 
 lastLens :: Lens.Traversal' [a] a
 lastLens = Lens.taking 1 . Lens.backwards $ Lens.traversed

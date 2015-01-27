@@ -21,6 +21,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
@@ -42,15 +43,15 @@ mkEditEventMap integer setToHole =
 makeInt ::
   MonadA m =>
   Integer -> Sugar.Payload m ExprGuiM.Payload ->
-  Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makeInt integer pl myId =
+makeInt integer pl =
   BWidgets.makeFocusableTextView (show integer) myId
   & setColor . ExprGuiM.widgetEnv
   <&> Widget.weakerEvents editEventMap
   <&> ExpressionGui.fromValueWidget
   & ExpressionGui.stdWrap pl
   where
+    myId = WidgetIds.fromExprPayload pl
     editEventMap =
       maybe mempty (mkEditEventMap integer) $
       pl ^? Sugar.plActions . Lens._Just . Sugar.setToHole . Sugar._SetToHole

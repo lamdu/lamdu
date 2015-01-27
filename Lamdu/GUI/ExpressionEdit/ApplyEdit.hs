@@ -47,8 +47,9 @@ make ::
   MonadA m => ParentPrecedence ->
   Sugar.Apply (Name m) (ExprGuiM.SugarExpr m) ->
   Sugar.Payload m ExprGuiM.Payload ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
+  ExprGuiM m (ExpressionGui m)
 make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotatedArgs) pl =
+  ($ WidgetIds.fromExprPayload pl) $
   ExpressionGui.stdWrapParentExpr pl $ \myId -> do
     let
       mk mPrecedence mkFuncRow
