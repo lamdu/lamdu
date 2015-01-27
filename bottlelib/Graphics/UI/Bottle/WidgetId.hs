@@ -1,12 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Graphics.UI.Bottle.WidgetId
   ( Id(..)
-  , joinId, subId, augmentId
+  , joinId, subId
   ) where
 
 import           Control.Lens.Operators
 import           Data.Binary (Binary)
-import           Data.ByteString.Char8 (pack)
 import           Data.List (intercalate)
 import           Data.List.Lens (prefixed)
 import           Data.Monoid (Monoid(..))
@@ -24,6 +23,3 @@ joinId (Id x) y = Id $ x ++ y
 
 subId :: Id -> Id -> Maybe AnimId
 subId (Id folder) (Id path) = path ^? prefixed folder
-
-augmentId :: Show a => a -> Id -> Id
-augmentId x = (`joinId` [pack (show x)])
