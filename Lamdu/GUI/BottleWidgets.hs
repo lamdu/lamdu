@@ -65,10 +65,9 @@ verticalSpace = do
 
 liftLayerInterval :: Config -> Widget f -> Widget f
 liftLayerInterval config =
-  Widget.wAnimLayers +~ layerDiff
+  Widget.wAnimLayers -~ layerDiff
   where
-    layers = Config.layers config
-    layerDiff = - Config.layerInterval layers
+    layerDiff = Config.layerInterval (Config.layers config)
 
 respondToCursorIn ::
   MonadA m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
