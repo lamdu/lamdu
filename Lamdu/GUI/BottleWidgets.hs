@@ -69,20 +69,23 @@ liftLayerInterval config =
   where
     layerDiff = Config.layerInterval (Config.layers config)
 
+readEnv :: MonadA m => WidgetEnvT m Widget.Env
+readEnv =
+  do
+    cursor <- WE.readCursor
+    Widget.Env cursor WidgetIds.backgroundCursorId & return
+
 respondToCursorIn ::
   MonadA m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
 respondToCursorIn myIdPrefix widget = do
-  hasFocus <- WE.isSubCursor myIdPrefix
   config <- WE.readConfig
-  return $
-    if hasFocus
-    then
-      widget
-      & Widget.backgroundColor
-        (Config.layerCursor (Config.layers config))
-        WidgetIds.backgroundCursorId (Config.cursorBGColor config)
-      & Widget.wIsFocused .~ True
-    else widget
+  widgetEnv <- readEnv
+  widget
+    & Widget.respondToCursorPrefix myIdPrefix
+      (Config.cursorBGColor config)
+      (Config.layerCursor (Config.layers config))
+      widgetEnv
+    & return
 
 makeFocusableView :: (Applicative f, MonadA m) => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
 makeFocusableView myId widget =
