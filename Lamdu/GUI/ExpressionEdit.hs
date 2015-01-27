@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module Lamdu.GUI.ExpressionEdit(make) where
 
-import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
@@ -31,9 +30,9 @@ import qualified Lamdu.Sugar.Types as Sugar
 shrinkIfHigherThanLine :: MonadA m => ExpressionGui f -> ExprGuiM m (ExpressionGui f)
 shrinkIfHigherThanLine w = do
   fontSize <-
-    (^. TextEdit.sTextViewStyle . TextView.styleFontSize) <$>
     ExprGuiM.widgetEnv WE.readTextStyle
-  config <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
+    <&> (^. TextEdit.sTextViewStyle . TextView.styleFontSize)
+  config <- ExprGuiM.widgetEnv WE.readConfig <&> Config.hole
   let
     textHeight = fromIntegral fontSize * DrawUtils.textHeight
     ratio =
@@ -47,9 +46,11 @@ shrinkIfHigherThanLine w = do
 make ::
   MonadA m => ParentPrecedence ->
   ExprGuiM.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-make parentPrecedence sExpr = assignCursor $ do
-  gui <- makeEditor parentPrecedence body pl myId
-  maybeShrink gui <&> ExpressionGui.egWidget %~ maybeDoesntTakeFocus
+make parentPrecedence sExpr =
+  assignCursor $
+  do
+    gui <- makeEditor parentPrecedence body pl myId
+    maybeShrink gui <&> ExpressionGui.egWidget %~ maybeDoesntTakeFocus
   where
     maybeDoesntTakeFocus
       | Lens.has Lens._Nothing (pl ^. Sugar.plActions) = Widget.doesntTakeFocus
@@ -64,7 +65,7 @@ make parentPrecedence sExpr = assignCursor $ do
       | otherwise = return
     assignCursor x =
       foldr (`ExprGuiM.assignCursorPrefix` myId) x $
-      WidgetIds.fromEntityId <$> exprHiddenEntityIds
+      exprHiddenEntityIds <&> WidgetIds.fromEntityId
 
 makeEditor ::
   MonadA m => ParentPrecedence ->

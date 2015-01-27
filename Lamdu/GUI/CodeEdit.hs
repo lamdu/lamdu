@@ -1,6 +1,9 @@
 {-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 {-# LANGUAGE RecordWildCards, OverloadedStrings, TypeFamilies #-}
-module Lamdu.GUI.CodeEdit (make, Env(..)) where
+module Lamdu.GUI.CodeEdit
+  ( make
+  , Env(..)
+  ) where
 
 import           Control.Applicative ((<$>), (<*>))
 import qualified Control.Lens as Lens
