@@ -238,7 +238,8 @@ makeHoleResultWidget resultId holeResult = do
           -- so that even if we're on the search term, we can have valid
           -- event maps of any result (we actually use the first one's
           -- event map)
-          hiddenResultWidget <- mkWidget & ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget)
+          hiddenResultWidget <-
+            mkWidget & ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget)
           return $ hiddenResultWidget ^. Widget.wEventMap
   widget <-
     mkWidget
@@ -256,8 +257,9 @@ makeHoleResultWidget resultId holeResult = do
       <&> (^. ExpressionGui.egWidget)
     holeResultEntityId = holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
     idWithinResultWidget =
-      WidgetIds.fromEntityId $ fromMaybe holeResultEntityId $
       holeResult ^. Sugar.holeResultHoleTarget
+      & fromMaybe holeResultEntityId
+      & WidgetIds.fromEntityId
     holeResultConverted = holeResult ^. Sugar.holeResultConverted
 
 postProcessSugar ::
