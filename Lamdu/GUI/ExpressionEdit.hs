@@ -64,7 +64,7 @@ make parentPrecedence sExpr =
       | or (pl ^. Sugar.plData ^. ExprGuiM.plInjected) = shrinkIfHigherThanLine
       | otherwise = return
     assignCursor x =
-      foldr (`ExprGuiM.assignCursorPrefix` myId) x $
+      foldr (`ExprGuiM.assignCursorPrefix` const myId) x $
       exprHiddenEntityIds <&> WidgetIds.fromEntityId
 
 makeEditor ::

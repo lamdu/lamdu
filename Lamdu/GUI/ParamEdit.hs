@@ -125,4 +125,4 @@ make showType prevId nextId param =
     mActions = param ^. Sugar.fpMActions
     hiddenIds = map WidgetIds.fromEntityId $ param ^. Sugar.fpHiddenIds
     assignCursor x =
-      foldr (`ExprGuiM.assignCursorPrefix` myId) x hiddenIds
+      foldr (`ExprGuiM.assignCursorPrefix` const myId) x hiddenIds

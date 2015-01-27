@@ -76,19 +76,23 @@ envAssignCursor src dest =
       | otherwise = cursor
 
 envAssignCursorPrefix
-  :: Widget.Id -> Widget.Id -> Env -> Env
+  :: Widget.Id -> (AnimId -> Widget.Id) -> Env -> Env
 envAssignCursorPrefix srcFolder dest =
   envCursor %~ replace
   where
     replace cursor =
       case Widget.subId srcFolder cursor of
       Nothing -> cursor
-      Just _ -> dest
+      Just suffix -> dest suffix
 
-assignCursor :: MonadA m => Widget.Id -> Widget.Id -> WidgetEnvT m a -> WidgetEnvT m a
+assignCursor ::
+  MonadA m => Widget.Id -> Widget.Id ->
+  WidgetEnvT m a -> WidgetEnvT m a
 assignCursor x y = localEnv $ envAssignCursor x y
 
-assignCursorPrefix :: MonadA m => Widget.Id -> Widget.Id -> WidgetEnvT m a -> WidgetEnvT m a
+assignCursorPrefix ::
+  MonadA m => Widget.Id -> (AnimId -> Widget.Id) ->
+  WidgetEnvT m a -> WidgetEnvT m a
 assignCursorPrefix x y = localEnv $ envAssignCursorPrefix x y
 
 setTextSizeColor

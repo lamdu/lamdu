@@ -192,10 +192,14 @@ getCodeAnchor ::
   MonadA m => (Anchors.CodeProps m -> Transaction.MkProperty m b) -> ExprGuiM m b
 getCodeAnchor anchor = getP . anchor =<< readCodeAnchors
 
-assignCursor :: MonadA m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
+assignCursor ::
+  MonadA m => Widget.Id -> Widget.Id ->
+  ExprGuiM m a -> ExprGuiM m a
 assignCursor x y = localEnv $ WE.envAssignCursor x y
 
-assignCursorPrefix :: MonadA m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
+assignCursorPrefix ::
+  MonadA m => Widget.Id -> (AnimId -> Widget.Id) ->
+  ExprGuiM m a -> ExprGuiM m a
 assignCursorPrefix x y = localEnv $ WE.envAssignCursorPrefix x y
 
 wrapDelegated ::
