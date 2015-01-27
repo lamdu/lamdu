@@ -11,6 +11,7 @@ import qualified Data.List as List
 import           Data.Monoid (Monoid(..), (<>))
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
@@ -33,9 +34,9 @@ type T = Transaction
 make ::
   MonadA m =>
   Sugar.Record (Name m) m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload m ExprGuiM.Payload ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-make reco pl = ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped reco
+  Sugar.Payload m ExprGuiM.Payload -> Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
+make reco pl = makeUnwrapped reco & ExpressionGui.stdWrapParentExpr pl
 
 makeFieldRow ::
   MonadA m =>
@@ -80,9 +81,9 @@ separationBar config width animId =
   & ExpressionGui.fromValueWidget
 
 makeOpenRecord :: MonadA m =>
-  ExpressionGui m -> ExprGuiM.SugarExpr m -> Widget.Id ->
+  ExpressionGui m -> ExprGuiM.SugarExpr m -> AnimId ->
   ExprGuiM m (ExpressionGui m)
-makeOpenRecord fieldsGui rest myId =
+makeOpenRecord fieldsGui rest animId =
   do
     config <- ExprGuiM.widgetEnv WE.readConfig
     vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
@@ -90,7 +91,7 @@ makeOpenRecord fieldsGui rest myId =
     let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.wWidth
     return $ ExpressionGui.vboxTopFocal $
       [ fieldsGui
-      , separationBar config (max minWidth targetWidth) (Widget.toAnimId myId)
+      , separationBar config (max minWidth targetWidth) animId
       , ExpressionGui.fromValueWidget vspace
       , restExpr
       ]
@@ -117,16 +118,18 @@ makeUnwrapped (Sugar.Record fields recordTail mAddField) myId =
               (maybe mempty (recordOpenEventMap config) mDeleteTail)
             & return
           Sugar.RecordExtending rest ->
-            makeOpenRecord fieldsGui rest myId
+            makeOpenRecord fieldsGui rest (Widget.toAnimId myId)
     let
-      eventMap =
-        maybe mempty
-        (Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
-         (E.Doc ["Edit", "Record", "Add Field"]) .
-         fmap (TagEdit.diveIntoRecordTag . WidgetIds.fromEntityId . (^. Sugar.rafrNewTag . Sugar.tagInstance)) .
-         (ExprGuiM.holePickersAction resultPickers >>)) mAddField
+      addFieldEventMap Nothing = mempty
+      addFieldEventMap (Just addField) =
+        ExprGuiM.holePickersAction resultPickers >> addField
+        <&> (^. Sugar.rafrNewTag . Sugar.tagInstance)
+        <&> WidgetIds.fromEntityId
+        <&> TagEdit.diveIntoRecordTag
+        & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
+          (E.Doc ["Edit", "Record", "Add Field"])
     gui
-      & ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
+      & ExpressionGui.egWidget %~ Widget.weakerEvents (addFieldEventMap mAddField)
       & ExpressionGui.egWidget %%~ ExpressionGui.addValBG myId
   where
     defaultPos =
