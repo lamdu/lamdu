@@ -1,5 +1,6 @@
 module Lamdu.GUI.ExpressionEdit.BuiltinEdit(make) where
 
+import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.List as List
 import           Data.List.Split (splitOn)
@@ -26,35 +27,37 @@ type T = Transaction
 
 builtinFDConfig :: FocusDelegator.Config
 builtinFDConfig = FocusDelegator.Config
-  { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'Enter]
-  , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Change imported name"]
-  , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Escape]
-  , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Stop changing name"]
-  }
+    { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'Enter]
+    , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Change imported name"]
+    , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Escape]
+    , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Stop changing name"]
+    }
 
-make
-  :: MonadA m
-  => Sugar.DefinitionBuiltin m
-  -> Widget.Id
-  -> ExprGuiM m (Widget (T m))
+make ::
+    MonadA m =>
+    Sugar.DefinitionBuiltin m ->
+    Widget.Id ->
+    ExprGuiM m (Widget (T m))
 make (Sugar.DefinitionBuiltin (Definition.FFIName modulePath name) setFFIName _) myId =
-  ExprGuiM.assignCursor myId (WidgetIds.builtinFFIName myId) $ do
-    config <- ExprGuiM.widgetEnv WE.readConfig
-    moduleName <-
-      makeNamePartEditor (Config.foreignModuleColor config)
-      modulePathStr modulePathSetter WidgetIds.builtinFFIPath
-    varName <-
-      makeNamePartEditor (Config.foreignVarColor config) name nameSetter
-      WidgetIds.builtinFFIName
-    dot <- ExprGuiM.makeLabel "." $ Widget.toAnimId myId
-    return $ Box.hboxCentered [moduleName, dot, varName]
-  where
-    makeNamePartEditor color namePartStr setter makeWidgetId =
-      ExprGuiM.withFgColor color .
-      ExprGuiM.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
-      (ExprGuiM.widgetEnv .
-       (BWidgets.makeWordEdit . Property namePartStr) setter) $
-      makeWidgetId myId
-    modulePathStr = List.intercalate "." modulePath
-    modulePathSetter = setFFIName . (`Definition.FFIName` name) . splitOn "."
-    nameSetter = setFFIName . Definition.FFIName modulePath
+    ExprGuiM.assignCursor myId (WidgetIds.builtinFFIName myId) $ do
+        config <- ExprGuiM.widgetEnv WE.readConfig
+        moduleName <-
+            makeNamePartEditor (Config.foreignModuleColor config)
+            modulePathStr modulePathSetter WidgetIds.builtinFFIPath
+        varName <-
+            makeNamePartEditor (Config.foreignVarColor config) name nameSetter
+            WidgetIds.builtinFFIName
+        dot <- ExprGuiM.makeLabel "." $ Widget.toAnimId myId
+        Box.hboxCentered [moduleName, dot, varName] & return
+    where
+        mkWordEdit color prop wId =
+            BWidgets.makeWordEdit prop wId
+            & ExprGuiM.widgetEnv
+            & ExprGuiM.withFgColor color
+        makeNamePartEditor color namePartStr setter makeWidgetId =
+            mkWordEdit color (Property namePartStr setter)
+            & ExprGuiM.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
+            $ makeWidgetId myId
+        modulePathStr = List.intercalate "." modulePath
+        modulePathSetter = setFFIName . (`Definition.FFIName` name) . splitOn "."
+        nameSetter = setFFIName . Definition.FFIName modulePath
