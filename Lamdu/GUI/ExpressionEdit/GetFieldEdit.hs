@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.GetFieldEdit
-  ( make
-  ) where
+    ( make
+    ) where
 
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
@@ -21,12 +21,14 @@ make ::
   Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m)
 make (Sugar.GetField recExpr tagG) pl =
-  ExpressionGui.stdWrapParentExpr pl $ \myId ->
-  let tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
-  in
-    ExprGuiM.assignCursor myId tagId $ do
-      recExprEdit <- ExprGuiM.makeSubexpression 11 recExpr
-      tagEdit <-
-        TagEdit.makeRecordTag (pl ^. Sugar.plData . ExprGuiM.plNearestHoles) tagG
-      dotLabel <- ExpressionGui.makeLabel "." (Widget.toAnimId myId)
-      return $ ExpressionGui.hbox [recExprEdit, dotLabel, tagEdit]
+    ExpressionGui.stdWrapParentExpr pl $ \myId ->
+    do
+        recExprEdit <- ExprGuiM.makeSubexpression 11 recExpr
+        tagEdit <-
+            TagEdit.makeRecordTag
+            (pl ^. Sugar.plData . ExprGuiM.plNearestHoles) tagG
+        dotLabel <- ExpressionGui.makeLabel "." (Widget.toAnimId myId)
+        return $ ExpressionGui.hbox [recExprEdit, dotLabel, tagEdit]
+        & ExprGuiM.assignCursor myId tagId
+    where
+        tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)

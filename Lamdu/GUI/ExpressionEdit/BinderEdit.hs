@@ -212,8 +212,7 @@ makeResultEdit ::
   MonadA m =>
   Maybe (Sugar.BinderActions m) ->
   Sugar.BinderParams name m ->
-  ExprGuiM.SugarExpr m ->
-  ExprGuiM m (ExpressionGui m)
+  ExprGuiM.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeResultEdit mActions params result = do
   savePos <- ExprGuiM.mkPrejumpPosSaver
   config <- ExprGuiM.widgetEnv WE.readConfig
