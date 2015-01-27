@@ -26,7 +26,8 @@ make ::
   Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make list pl =
-  ExpressionGui.stdWrapParentExpr pl $ makeUnwrapped list
+  makeUnwrapped list
+  & ExpressionGui.stdWrapParentExpr pl
 
 lastLens :: Lens.Traversal' [a] a
 lastLens = Lens.taking 1 . Lens.backwards $ Lens.traversed
@@ -36,7 +37,8 @@ makeUnwrapped ::
   Sugar.List m (ExprGuiM.SugarExpr m) -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeUnwrapped list myId =
-  ExprGuiM.assignCursor myId cursorDest $ do
+  ExprGuiM.assignCursor myId cursorDest $
+  do
     config <- ExprGuiM.widgetEnv WE.readConfig
     bracketOpenLabel <-
       ExpressionGui.grammarLabel "[" (Widget.toAnimId bracketsId)
@@ -90,7 +92,9 @@ makeUnwrapped list myId =
       . fmap WidgetIds.fromEntityId . actSelect ) $
       Sugar.lMActions list
     firstBracketId = mappend (Widget.Id ["first bracket"]) bracketsId
-    cursorDest = maybe firstBracketId itemId $ Sugar.lValues list ^? Lens.traversed
+    cursorDest =
+      Sugar.lValues list ^? Lens.traversed
+      & maybe firstBracketId itemId
 
 makeItem ::
   MonadA m =>
