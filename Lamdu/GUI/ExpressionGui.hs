@@ -315,7 +315,7 @@ addValBG myId gui =
     let color = Config.valFrameBGColor config
     return $ Widget.backgroundColor layer animId color gui
   where
-    animId = Widget.toAnimId myId ++ ["bg"]
+    animId = Widget.toAnimId myId
 
 addValFrame ::
   MonadA m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
@@ -354,7 +354,7 @@ makeCollisionSuffixLabels (Collision suffix) animId =
       Config.Name{..} = Config.name config
       onSuffixWidget =
         Widget.backgroundColor (Config.layerNameCollisionBG (Config.layers config))
-          (animId ++ ["bg"]) collisionSuffixBGColor .
+          animId collisionSuffixBGColor .
         Widget.scale (realToFrac <$> collisionSuffixScaleFactor)
     BWidgets.makeLabel (show suffix) animId
       & WE.localEnv (WE.setTextColor collisionSuffixTextColor)
