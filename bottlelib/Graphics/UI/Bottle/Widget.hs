@@ -3,7 +3,7 @@ module Graphics.UI.Bottle.Widget
   ( module Graphics.UI.Bottle.WidgetId
 
   -- Types:
-  , Enter, R, Size
+  , R, Size
 
   , EnterResult(..), enterResultEvent, enterResultRect
 
@@ -84,14 +84,13 @@ data EnterResult f = EnterResult
   , _enterResultEvent :: f EventResult
   }
 
-type Enter f = Direction -> EnterResult f
 type EventHandlers f = EventMap (f EventResult)
 
 -- TODO: Remove 'w' prefix (qualified Widget is enough!)
 data Widget f = Widget
   { _wIsFocused :: Bool
   , _wView :: View
-  , _wMaybeEnter :: Maybe (Enter f) -- Nothing if we're not enterable
+  , _wMaybeEnter :: Maybe (Direction -> EnterResult f) -- Nothing if we're not enterable
   , _wEventMap :: EventHandlers f
   , _wFocalArea :: Rect
   }

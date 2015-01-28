@@ -28,6 +28,7 @@ import           Data.Monoid (Monoid(..), (<>))
 import           Data.Traversable (Traversable)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
+import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
@@ -61,7 +62,10 @@ data NavDests f = NavDests
   , rightMostCursor :: Maybe (Widget.EnterResult f)
   }
 
-mkNavDests :: Widget.Size -> Rect -> [[Maybe (Widget.Enter f)]] -> Cursor -> NavDests f
+mkNavDests ::
+  Widget.Size -> Rect ->
+  [[Maybe (Direction -> Widget.EnterResult f)]] ->
+  Cursor -> NavDests f
 mkNavDests widgetSize prevFocalArea mEnterss cursor@(Vector2 cursorX cursorY) = NavDests
   { leftOfCursor    = givePrevFocalArea . reverse $ take cursorX curRow
   , aboveCursor     = givePrevFocalArea . reverse $ take cursorY curColumn
@@ -227,9 +231,11 @@ makeAlign alignment = make . (map . map) ((,) alignment)
 makeCentered :: [[Widget f]] -> Grid f
 makeCentered = makeAlign 0.5
 
-toWidgetCommon ::
-  Keys ModKey -> (Widget.Size -> [[Maybe (Widget.Enter f)]] -> Maybe (Widget.Enter f)) ->
-  KGrid key f -> Widget f
+type CombineEnters f =
+  Widget.Size -> [[Maybe (Direction -> Widget.EnterResult f)]] ->
+  Maybe (Direction -> Widget.EnterResult f)
+
+toWidgetCommon :: Keys ModKey -> CombineEnters f -> KGrid key f -> Widget f
 toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
   Widget
   { _wIsFocused = Lens.has Lens._Just mCursor
@@ -259,22 +265,26 @@ toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
 
+combineEntersBiased :: Cursor -> CombineEnters f
+combineEntersBiased (Vector2 x y) size children =
+  combineMEnters size children <&> maybeOverride
+  where
+    biased dir =
+      case children ^? Lens.ix y . Lens.ix x . Lens._Just of
+      Nothing -> id
+      Just childEnter -> const (childEnter dir)
+    unbiased = id
+    maybeOverride enter dir =
+      enter dir
+      & case dir of
+        Direction.Outside -> biased dir
+        Direction.PrevFocalArea _ -> biased dir
+        Direction.Point _ -> unbiased
+
 -- ^ If unfocused, will enters the given child when entered
 toWidgetBiasedWithKeys :: Keys ModKey -> Cursor -> KGrid key f -> Widget f
-toWidgetBiasedWithKeys keys (Vector2 x y) =
-  toWidgetCommon keys $ \size children ->
-  maybeOverride children <$> combineMEnters size children
-  where
-    maybeOverride children enter dir =
-      case dir of
-      Direction.Outside -> biased
-      Direction.PrevFocalArea _ -> biased
-      Direction.Point _ -> unbiased
-      where
-        unbiased = enter dir
-        biased =
-          children ^? Lens.ix y . Lens.ix x . Lens._Just
-          & maybe unbiased ($ dir)
+toWidgetBiasedWithKeys keys cursor =
+  toWidgetCommon keys (combineEntersBiased cursor)
 
 toWidgetBiased :: Cursor -> KGrid key f -> Widget f
 toWidgetBiased = toWidgetBiasedWithKeys stdKeys
@@ -285,7 +295,7 @@ toWidgetWithKeys keys = toWidgetCommon keys combineMEnters
 toWidget :: KGrid key f -> Widget f
 toWidget = toWidgetWithKeys stdKeys
 
-combineMEnters :: Widget.Size -> [[Maybe (Widget.Enter f)]] -> Maybe (Widget.Enter f)
+combineMEnters :: CombineEnters f
 combineMEnters size children = chooseClosest childEnters
   where
     childEnters =
