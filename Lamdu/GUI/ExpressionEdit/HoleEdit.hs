@@ -22,7 +22,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Closed as HoleClosed
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as HoleOpen
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (openHoleId)
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -57,13 +57,15 @@ make hole pl =
       <&> fromMaybe closedHoleGui
       <&> ExpressionGui.egWidget %~ Widget.takesFocus (const (pure myId))
   & ExprGuiM.assignCursor myId (chDestId hids chDest)
+  & ExprGuiM.assignCursor (WidgetIds.notDelegatingId myId) closedHoleId
   where
     myId = WidgetIds.fromExprPayload pl
     hAlign = ExpressionGui.egAlignment . _1
     ClosedHole{..} = HoleClosed.make hole pl hids
+    closedHoleId = Widget.joinId myId ["ClosedHole"]
     hids = HoleIds
-      { hidOpen = openHoleId myId
-      , hidClosed = Widget.joinId myId ["ClosedHole"]
+      { hidOpen = HoleWidgetIds.openHoleId myId
+      , hidClosed = closedHoleId
       }
 
 tryOpenHole ::
