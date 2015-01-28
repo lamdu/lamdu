@@ -64,7 +64,7 @@ make (Sugar.Record fields recordTail mAddField) pl =
                 ExprGuiM.holePickersAction resultPickers >> addField
                 <&> (^. Sugar.rafrNewTag . Sugar.tagInstance)
                 <&> WidgetIds.fromEntityId
-                <&> TagEdit.diveIntoRecordTag
+                <&> TagEdit.diveToRecordTag
                 & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
                   (E.Doc ["Edit", "Record", "Add Field"])
         gui

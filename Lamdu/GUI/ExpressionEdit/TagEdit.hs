@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
-  ( makeRecordTag, makeParamTag, diveIntoRecordTag
+  ( makeRecordTag, makeParamTag, diveToRecordTag
   ) where
 
 import           Control.Applicative ((<$>))
@@ -73,5 +73,5 @@ makeParamTag t = do
   where
     animId = t ^. Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
 
-diveIntoRecordTag :: Widget.Id -> Widget.Id
-diveIntoRecordTag = ExpressionGui.diveToNameEdit
+diveToRecordTag :: Widget.Id -> Widget.Id
+diveToRecordTag = ExpressionGui.diveToNameEdit
