@@ -1,14 +1,14 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Lamdu.Sugar.Internal.EntityId
-  ( EntityId
-  , bs
-  , ofValI, ofIRef
-  , ofLambdaParam
-  , ofLambdaTagParam
-  , ofGetFieldTag
-  , ofRecExtendTag
-  , randomizeExprAndParams
-  ) where
+    ( EntityId
+    , bs
+    , ofValI, ofIRef
+    , ofLambdaParam
+    , ofLambdaTagParam
+    , ofGetFieldTag
+    , ofRecExtendTag
+    , randomizeExprAndParams
+    ) where
 
 import Data.ByteString (ByteString)
 import Data.Hashable (Hashable)
@@ -24,18 +24,18 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 
 newtype EntityId = EntityId Guid
-  deriving (Eq, Hashable, Show)
+    deriving (Eq, Hashable, Show)
 
 bs :: EntityId -> ByteString
 bs (EntityId guid) = Guid.bs guid
 
 randomizeExprAndParams ::
-  RandomGen gen =>
-  gen -> Val (Guid -> EntityId -> a) -> Val a
+    RandomGen gen =>
+    gen -> Val (Guid -> EntityId -> a) -> Val a
 randomizeExprAndParams gen =
-  GenIds.randomizeExprAndParams gen . fmap addEntityId
-  where
-    addEntityId f guid = f guid (EntityId guid)
+    GenIds.randomizeExprAndParams gen . fmap addEntityId
+    where
+        addEntityId f guid = f guid (EntityId guid)
 
 augment :: String -> EntityId -> EntityId
 augment str (EntityId x) = EntityId $ Guid.augment str x
@@ -51,7 +51,7 @@ ofLambdaParam = EntityId . UniqueId.toGuid
 
 ofLambdaTagParam :: V.Var -> T.Tag -> EntityId
 ofLambdaTagParam v p =
-  EntityId $ Guid.combine (UniqueId.toGuid v) (UniqueId.toGuid p)
+    EntityId $ Guid.combine (UniqueId.toGuid v) (UniqueId.toGuid p)
 
 ofGetFieldTag :: EntityId -> EntityId
 ofGetFieldTag = augment "tag"
