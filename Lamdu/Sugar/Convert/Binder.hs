@@ -174,12 +174,12 @@ wrapArgWithRecord tagForExistingArg tagForNewArg oldArg =
 convertVarToGetField ::
   MonadA m => T.Tag -> V.Var -> Val (Property (T m) (ExprIRef.ValI m)) -> T m ()
 convertVarToGetField tagForVar paramVar =
-  onMatchingSubexprs convertVar (const (isGetVarOf paramVar))
+  onMatchingSubexprs (convertVar . Property.value) (const (isGetVarOf paramVar))
   where
-    convertVar prop =
-      Property.value prop & (`V.GetField` tagForVar) & V.BGetField
-      & ExprIRef.newValBody
-      >>= Property.set prop
+    convertVar bodyI =
+      ExprIRef.newValBody (V.BLeaf (V.LVar paramVar))
+      <&> (`V.GetField` tagForVar) <&> V.BGetField
+      >>= ExprIRef.writeValBody bodyI
 
 makeConvertToRecordParams ::
   MonadA m => Maybe V.Var -> StoredLam m -> ConvertM m (T m ParamAddResult)
