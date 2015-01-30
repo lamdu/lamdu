@@ -3,38 +3,39 @@ module Lamdu.Sugar.Convert.Expression
   ( convert
   ) where
 
-import Control.Applicative (Applicative(..), (<$>), (<$))
-import Control.Lens.Operators
-import Control.Monad (guard)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
-import Control.MonadA (MonadA)
-import Data.Monoid (Monoid(..))
-import Data.Store.Transaction (Transaction)
-import Data.Traversable (traverse)
-import Lamdu.Expr.IRef (DefI)
-import Lamdu.Expr.Val (Val(..))
-import Lamdu.Sugar.Convert.Expression.Actions (addActions)
-import Lamdu.Sugar.Convert.Monad (ConvertM)
-import Lamdu.Sugar.Internal
-import Lamdu.Sugar.Types
+import           Control.Applicative (Applicative(..), (<$>), (<$))
+import           Control.Lens.Operators
+import           Control.Monad (guard)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
+import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Guid (Guid)
+import           Data.Store.Transaction (Transaction)
+import           Data.Traversable (traverse)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
+import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.List as ConvertList
+import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
+import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.Types
 
 type T = Transaction
 
@@ -47,41 +48,52 @@ convertVLiteralInteger ::
   Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertVLiteralInteger i exprPl = addActions exprPl $ BodyLiteralInteger i
 
+convertGetFieldParam ::
+  (MonadA m, MonadA n) =>
+  V.GetField (Val a) ->
+  ConvertM m (Maybe (GetVar Guid n))
+convertGetFieldParam (V.GetField recExpr tag) =
+  do
+    tagParamInfos <- (^. ConvertM.scTagParamInfos) <$> ConvertM.readContext
+    do
+      paramInfo <- Map.lookup tag tagParamInfos
+      param <- recExpr ^? ExprLens.valVar
+      guard $ param == ConvertM.tpiFromParameters paramInfo
+      Just $ GetVarNamed NamedVar
+        { _nvName = UniqueId.toGuid tag
+        , _nvJumpTo = pure (ConvertM.tpiJumpTo paramInfo)
+        , _nvVarType = GetFieldParameter
+        }
+      & return
+
+convertGetFieldNonParam ::
+  (MonadA m, Monoid a) =>
+  V.GetField (Val (Input.Payload m a)) -> EntityId ->
+  ConvertM m (Body Guid m (ExpressionU m a))
+convertGetFieldNonParam (V.GetField recExpr tag) entityId =
+  GetField
+  { _gfRecord = recExpr
+  , _gfTag =
+      TagG
+      { _tagInstance = EntityId.ofGetFieldTag entityId
+      , _tagVal = tag
+      , _tagGName = UniqueId.toGuid tag
+      }
+  }
+  & traverse ConvertM.convertSubexpression
+  <&> BodyGetField
+
 convertGetField ::
   (MonadA m, Monoid a) =>
   V.GetField (Val (Input.Payload m a)) ->
   Input.Payload m a ->
   ConvertM m (ExpressionU m a)
-convertGetField (V.GetField recExpr tag) exprPl = do
-  tagParamInfos <- (^. ConvertM.scTagParamInfos) <$> ConvertM.readContext
-  let
-    mkGetVar jumpTo =
-      pure $ GetVarNamed NamedVar
-      { _nvName = UniqueId.toGuid tag
-      , _nvJumpTo = pure jumpTo
-      , _nvVarType = GetFieldParameter
-      }
-  mVar <- traverse mkGetVar $ do
-    paramInfo <- Map.lookup tag tagParamInfos
-    param <- recExpr ^? ExprLens.valVar
-    guard $ param == ConvertM.tpiFromParameters paramInfo
-    return $ ConvertM.tpiJumpTo paramInfo
-  addActions exprPl =<<
-    case mVar of
-    Just var ->
-      return $ BodyGetVar var
-    Nothing ->
-      traverse ConvertM.convertSubexpression
-      GetField
-      { _gfRecord = recExpr
-      , _gfTag =
-          TagG
-          { _tagInstance = EntityId.ofGetFieldTag (exprPl ^. Input.entityId)
-          , _tagVal = tag
-          , _tagGName = UniqueId.toGuid tag
-          }
-      }
-      <&> BodyGetField
+convertGetField getField exprPl =
+  convertGetFieldParam getField
+  >>= maybe (convertGetFieldNonParam getField entityId) (return . BodyGetVar)
+  >>= addActions exprPl
+  where
+    entityId = exprPl ^. Input.entityId
 
 convertGlobal ::
   MonadA m => V.GlobalId -> Input.Payload m a -> ConvertM m (ExpressionU m a)
