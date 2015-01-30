@@ -328,14 +328,10 @@ fixRecursiveCallToSingleArg tag argI =
 
 getFieldParamsToParams :: MonadA m => StoredLam m -> T.Tag -> T m ()
 getFieldParamsToParams (StoredLam (V.Lam param lamBody) _) tag =
-  onMatchingSubexprs toParam (const (isGetFieldParam param tag)) lamBody
+  onMatchingSubexprs (toParam . Property.value)
+  (const (isGetFieldParam param tag)) lamBody
   where
-    toParam prop =
-      do
-        body <- ExprIRef.readValBody (Property.value prop)
-        case body of
-          V.BGetField (V.GetField v _) -> Property.set prop v
-          _ -> error "assertion: this was a get field"
+    toParam bodyI = ExprIRef.writeValBody bodyI $ V.BLeaf $ V.LVar param
 
 makeDelFieldParam ::
   MonadA m =>
