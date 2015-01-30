@@ -79,22 +79,23 @@ convertField mStored mRestI restS inst tag expr = do
     }
 
 makeAddField :: MonadA m =>
-  Maybe (ExprIRef.ValIProperty m) ->
-  ConvertM m (Maybe (Transaction m RecordAddFieldResult))
-makeAddField Nothing = return Nothing
-makeAddField (Just stored) =
+  ExprIRef.ValIProperty m ->
+  ConvertM m (Transaction m RecordAddFieldResult)
+makeAddField stored =
   do
     typeProtect <- ConvertM.typeProtectTransaction
-    return . Just $ do
+    do
       mResultI <- DataOps.recExtend stored & typeProtect
       case mResultI of
-        Just extendRes -> res extendRes & return
+        Just extendRes -> return extendRes
         Nothing -> do
           extendRes <- DataOps.recExtend stored
-          void $ DataOps.setToWrapper (DataOps.rerResult extendRes) stored
-          res extendRes & return
+          DataOps.setToWrapper (DataOps.rerResult extendRes) stored & void
+          return extendRes
+        <&> result
+      & return
   where
-    res (DataOps.RecExtendResult tag newValI resultI) =
+    result (DataOps.RecExtendResult tag newValI resultI) =
       RecordAddFieldResult
       { _rafrNewTag = TagG (EntityId.ofRecExtendTag resultEntity) tag ()
       , _rafrNewVal = EntityId.ofValI newValI
@@ -105,12 +106,14 @@ makeAddField (Just stored) =
 
 convertEmpty :: MonadA m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertEmpty exprPl = do
-  mAddField <- makeAddField (exprPl ^. Input.mStored)
+  mAddField <- exprPl ^. Input.mStored & Lens._Just %%~ makeAddField
   BodyRecord Record
     { _rItems = []
     , _rTail =
-        ClosedRecord $
-        fmap EntityId.ofValI . DataOps.replaceWithHole <$> exprPl ^. Input.mStored
+        exprPl ^. Input.mStored
+        <&> DataOps.replaceWithHole
+        <&> Lens.mapped %~ EntityId.ofValI
+        & ClosedRecord
     , _rMAddField = mAddField
     }
     & addActions exprPl
@@ -124,7 +127,7 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
     case restS ^. rBody of
     BodyRecord r -> return (r, restS ^. rPayload . plData)
     _ -> do
-      mAddField <- makeAddField (rest ^. V.payload . Input.mStored)
+      mAddField <- rest ^. V.payload . Input.mStored & Lens._Just %%~ makeAddField
       return
         ( Record [] (RecordExtending restS) mAddField
         , mempty

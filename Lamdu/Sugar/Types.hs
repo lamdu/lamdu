@@ -249,9 +249,9 @@ data RecordField name m expr = RecordField
   , _rfExpr :: expr -- field type or val
   } deriving (Functor, Foldable, Traversable)
 
-data RecordTail m expr =
-  RecordExtending expr |
-  ClosedRecord (Maybe (T m EntityId)) -- delete action
+data RecordTail m expr
+  = RecordExtending expr
+  | ClosedRecord (Maybe (T m EntityId)) -- delete action
   deriving (Functor, Foldable, Traversable)
 
 data RecordAddFieldResult = RecordAddFieldResult

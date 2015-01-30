@@ -128,6 +128,7 @@ randomizeParamIds gen = randomizeParamIdsG id (randomNameGen gen) Map.empty $ \_
 randomizeExprAndParams ::
   (RandomGen gen, Random r) =>
   gen -> Val (r -> a) -> Val a
-randomizeExprAndParams gen = randomizeParamIds paramGen . randomizeExpr exprGen
+randomizeExprAndParams gen =
+  randomizeParamIds paramGen . randomizeExpr exprGen
   where
     (exprGen, paramGen) = Random.split gen
