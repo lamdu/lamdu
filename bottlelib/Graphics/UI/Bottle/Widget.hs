@@ -95,6 +95,12 @@ data Widget f = Widget
   , _wFocalArea :: Rect
   }
 
+-- When focused, wMaybeEnter may still be relevant, e.g: FlyNav in an
+-- active textedit, to move to a different text-edit position.
+
+-- When unfocused, event map is usually irrelevant, but can too be
+-- used
+
 Lens.makeLenses ''EnterResult
 Lens.makeLenses ''EventResult
 Lens.makeLenses ''Widget
