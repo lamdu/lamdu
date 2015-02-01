@@ -139,7 +139,7 @@ gridTopLeftFocal :: [[ExpressionGui m]] -> ExpressionGui m
 gridTopLeftFocal = Layout.gridTopLeftFocal
 
 wWidth :: Lens' (Widget f) Widget.R
-wWidth = Widget.wWidth
+wWidth = Widget.width
 
 addTypeBackground :: Config -> AnimId -> Widget.R -> View -> View
 addTypeBackground config animId minWidth typeView =
@@ -241,7 +241,7 @@ makeNameEdit (Name nameSrc nameCollision setName name) myId =
       NameSourceStored -> name
     makeWordEdit =
       BWidgets.makeWordEdit <&>
-      Lens.mapped . Lens.mapped . Widget.wEventMap %~
+      Lens.mapped . Lens.mapped . Widget.eventMap %~
       E.filterChars (`notElem` disallowedNameChars)
 
 stdWrapIn ::

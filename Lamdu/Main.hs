@@ -214,7 +214,7 @@ cacheMakeWidget mkWidget = do
   return $ \x -> do
     mkWidgetCached <- readIORef widgetCacheRef
     mkWidgetCached x
-      <&> Widget.wEvents %~ (<* invalidateCache)
+      <&> Widget.events %~ (<* invalidateCache)
 
 flyNavConfig :: FlyNav.Config
 flyNavConfig = FlyNav.Config
@@ -335,13 +335,13 @@ mkWidgetWithFallback config settingsRef style dbToIO (size, cursor) = do
     dbToIO $ do
       candidateWidget <- fromCursor settings cursor
       (isValid, widget) <-
-        if candidateWidget ^. Widget.wIsFocused
+        if candidateWidget ^. Widget.isFocused
         then return (True, candidateWidget)
         else do
           finalWidget <- fromCursor settings rootCursor
           Transaction.setP (DbLayout.cursor DbLayout.revisionProps) rootCursor
           return (False, finalWidget)
-      unless (widget ^. Widget.wIsFocused) $
+      unless (widget ^. Widget.isFocused) $
         fail "Root cursor did not match"
       return (isValid, widget)
   unless isValid $ putStrLn $ "Invalid cursor: " ++ show cursor
@@ -371,13 +371,13 @@ makeRootWidget config settings style dbToIO fullSize cursor = do
         do
           let hoverPadding = Spacer.makeWidget (Vector2 0 (Config.paneHoverPadding (Config.pane config)))
           let nonCodeHeight =
-                hoverPadding   ^. Widget.wHeight +
-                branchSelector ^. Widget.wHeight
+                hoverPadding   ^. Widget.height +
+                branchSelector ^. Widget.height
           let codeSize = fullSize - Vector2 0 nonCodeHeight
           codeEdit <-
             CodeEdit.make (env codeSize) rootGuid
             & WE.mapWidgetEnvT VersionControl.runAction
-            <&> Widget.wEvents %~ VersionControl.runEvent cursor
+            <&> Widget.events %~ VersionControl.runEvent cursor
             <&> Widget.padToSizeAlign codeSize 0
           Box.vbox [(0.5, hoverPadding), (0.5, codeEdit), (0.5, branchSelector)]
             & return
@@ -386,7 +386,7 @@ makeRootWidget config settings style dbToIO fullSize cursor = do
         Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
     branchGui
       & Widget.strongerEvents quitEventMap
-      & Widget.wEvents %~ dbToIO . (attachCursor =<<)
+      & Widget.events %~ dbToIO . (attachCursor =<<)
       & return
   where
     env size = CodeEdit.Env

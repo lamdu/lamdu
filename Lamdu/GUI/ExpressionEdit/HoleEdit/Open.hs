@@ -165,10 +165,10 @@ makeResultGroup holeInfo results = do
   Config.Hole{..} <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
   (mainResultWidget, shownMainResult) <- makeShownResult holeInfo mainResult
   let
-    mainResultHeight = mainResultWidget ^. Widget.wHeight
+    mainResultHeight = mainResultWidget ^. Widget.height
     makeExtra = makeExtraResultsWidget holeInfo mainResultHeight $ results ^. HoleResults.rlExtra
   (mSelectedResult, extraResWidget) <-
-    if mainResultWidget ^. Widget.wIsFocused
+    if mainResultWidget ^. Widget.isFocused
     then do
       widget <- snd <$> makeExtra
       return (Just shownMainResult, widget)
@@ -211,13 +211,13 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) = 
   (mResults, widgets) <-
     unzip <$> traverse mkResWidget extraResults
   let
-    headHeight = head widgets ^. Widget.wHeight
+    headHeight = head widgets ^. Widget.height
     height = min mainResultHeight headHeight
   return
     ( msum mResults
     , Box.vboxAlign 0 widgets
       & addBackground (rId firstResult) (Config.layers config) holeOpenBGColor
-      & Widget.wSize .~ Vector2 0 height
+      & Widget.size .~ Vector2 0 height
       & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
     )
 
@@ -240,12 +240,12 @@ makeHoleResultWidget resultId holeResult = do
           -- event map)
           hiddenResultWidget <-
             mkWidget & ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget)
-          return $ hiddenResultWidget ^. Widget.wEventMap
+          return $ hiddenResultWidget ^. Widget.eventMap
   widget <-
     mkWidget
-    <&> Widget.wAnimFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
+    <&> Widget.animFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
     <&> Widget.scale (realToFrac <$> holeResultScaleFactor)
-    <&> Widget.wEventMap .~ mempty
+    <&> Widget.eventMap .~ mempty
     >>= makeFocusable resultId
     <&> BWidgets.liftLayerInterval config
   return (widget, mkEventMap)
@@ -402,7 +402,7 @@ make closedHoleGui pl holeInfo = do
         ExpressionGui.makeTypeView (rawOpenHole ^. guiWidth)
         (pl ^. Sugar.plEntityId) (pl ^. Sugar.plInferredType)
       rawOpenHole
-        & guiWidth %~ max (typeView ^. Widget.wWidth)
+        & guiWidth %~ max (typeView ^. Widget.width)
         & ExpressionGui.egWidget %~
           addBackground (hidOpen (hiIds holeInfo))
           (Config.layers config) holeOpenBGColor
@@ -415,7 +415,7 @@ make closedHoleGui pl holeInfo = do
       Lens.nullOf (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl
 
 guiWidth :: Lens' (ExpressionGui m) Widget.R
-guiWidth = ExpressionGui.egWidget . Widget.wWidth
+guiWidth = ExpressionGui.egWidget . Widget.width
 
 addDarkBackground :: MonadA m => Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
 addDarkBackground myId widget =
@@ -437,8 +437,8 @@ makeSearchTermGui ::
 makeSearchTermGui holeInfo = do
   Config.Hole{..} <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
   BWidgets.makeTextEdit searchTerm (hiSearchTermId holeInfo)
-    <&> Widget.wEvents %~ setter
-    <&> Widget.wEventMap %~ OpenEventMap.disallowChars searchTerm
+    <&> Widget.events %~ setter
+    <&> Widget.eventMap %~ OpenEventMap.disallowChars searchTerm
     <&> ExpressionGui.fromValueWidget
     <&> ExpressionGui.scaleFromTop (realToFrac <$> holeSearchTermScaleFactor)
     & ExprGuiM.widgetEnv

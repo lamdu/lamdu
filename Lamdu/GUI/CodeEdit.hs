@@ -232,7 +232,7 @@ makePaneWidget env defS = do
   let
     Config.Pane{..} = Config.pane config
     colorize widget
-      | widget ^. Widget.wIsFocused = colorizeActivePane widget
+      | widget ^. Widget.isFocused = colorizeActivePane widget
       | otherwise = colorizeInactivePane widget
     colorizeActivePane =
       Widget.backgroundColor
@@ -247,4 +247,4 @@ fitToWidth width w
   | ratio < 1 = w & Widget.scale (realToFrac ratio)
   | otherwise = w
   where
-    ratio = width / w ^. Widget.wWidth
+    ratio = width / w ^. Widget.width

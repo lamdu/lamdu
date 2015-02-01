@@ -65,12 +65,12 @@ toBox Config{..} selfFocused myId childrenRecords =
     applyAction (isSelected, action, widget) =
       ( isSelected
       , widget
-        & Widget.wMaybeEnter . Lens._Just . Lens.mapped .
+        & Widget.mEnter . Lens._Just . Lens.mapped .
           Widget.enterResultEvent %~ (action *>)
       )
     anyChildFocused =
       childrenRecords
-      & Lens.orOf (Lens.traversed . _3 . Widget.wIsFocused)
+      & Lens.orOf (Lens.traversed . _3 . Widget.isFocused)
 
 make ::
   Applicative f =>

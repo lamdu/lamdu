@@ -43,10 +43,10 @@ setFocusChildEventMap Config{..} widgetRecord =
   -- We're not delegating, so replace the child eventmap with an
   -- event map to either delegate to it (if it is enterable) or to
   -- nothing (if it is not):
-  & Widget.wEventMap .~ newEventMap
+  & Widget.eventMap .~ neeventMap
   where
-    newEventMap =
-      case widgetRecord ^. Widget.wMaybeEnter of
+    neeventMap =
+      case widgetRecord ^. Widget.mEnter of
       Nothing -> mempty
       Just childEnter ->
         E.keyPresses focusChildKeys focusChildDoc $
@@ -90,11 +90,11 @@ make Env{..} focusEntryTarget myId env childWidget
 
   | otherwise =
     childWidget
-    & Widget.wFocalArea .~ fullChildRect
-    & Widget.wMaybeEnter %~ modifyEntry myId fullChildRect focusEntryTarget
+    & Widget.focalArea .~ fullChildRect
+    & Widget.mEnter %~ modifyEntry myId fullChildRect focusEntryTarget
   where
-    fullChildRect = Rect 0 (childWidget ^. Widget.wSize)
-    childIsFocused = childWidget ^. Widget.wIsFocused
+    fullChildRect = Rect 0 (childWidget ^. Widget.size)
+    childIsFocused = childWidget ^. Widget.isFocused
     selfIsFocused = myId == env ^. Widget.envCursor
     Config{..} = config
     Style{..} = style

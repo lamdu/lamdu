@@ -148,17 +148,17 @@ zipped (x:xs) =
   (Lens.mapped . _2 %~ (x:)) (zipped xs)
 
 focalCenter :: Lens' (Widget f) (Vector2 Widget.R)
-focalCenter = Widget.wFocalArea . Rect.center
+focalCenter = Widget.focalArea . Rect.center
 
 make
   :: Applicative f => Config -> AnimId -> State -> (State -> f ())
   -> Widget f -> Widget f
 make _ _ Nothing setState w =
-  w & Widget.wEventMap <>~ addMovements (w ^. focalCenter) [] setState
+  w & Widget.eventMap <>~ addMovements (w ^. focalCenter) [] setState
 make config animId (Just (ActiveState pos movements)) setState w =
   w
-  & Widget.wAnimFrame %~ mappend frame
-  & Widget.wEventMap .~ eventMap
+  & Widget.animFrame %~ mappend frame
+  & Widget.eventMap .~ eventMap
   where
     delta = sum $ map (^. mDir) movements
     highlight =
@@ -166,11 +166,11 @@ make config animId (Just (ActiveState pos movements)) setState w =
       (highlightRect (animId ++ ["highlight"]) . (^. Widget.enterResultRect))
       mEnteredChild
     frame = target config (animId ++ ["target"]) pos `mappend` highlight
-    mEnteredChild = fmap ($ targetPos) $ w ^. Widget.wMaybeEnter
+    mEnteredChild = fmap ($ targetPos) $ w ^. Widget.mEnter
     targetPos = Direction.Point pos
     nextState =
       ActiveState
-      (cap (pos + delta*speed) (w ^. Widget.wSize)) $
+      (cap (pos + delta*speed) (w ^. Widget.size)) $
       movements & Lens.mapped . mDir *~ accel
     eventMap = mconcat $
       (mkTickHandler . setState . Just) nextState :

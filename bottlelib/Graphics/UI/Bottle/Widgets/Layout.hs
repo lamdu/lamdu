@@ -205,8 +205,8 @@ pad padding =
             )
             where
                 paddedWidget = Widget.pad padding widget
-                fromRelative = (* widget ^. Widget.wSize)
-                toRelative = (/ paddedWidget ^. Widget.wSize)
+                fromRelative = (* widget ^. Widget.size)
+                toRelative = (/ paddedWidget ^. Widget.size)
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf :: Layout f -> Layout f -> Layout f
@@ -214,10 +214,10 @@ orig `hoverInPlaceOf` copyFrom =
   ( copyFromAbsAlignment / copyFromSize
   , origWidget
     & Widget.translate (copyFromAbsAlignment - origAbsAlignment)
-    & Widget.wSize .~ copyFromSize
+    & Widget.size .~ copyFromSize
   ) ^. Lens.from alignedWidget
   where
-    toAbs (align, widget) = (align * widget ^. Widget.wSize, widget)
+    toAbs (align, widget) = (align * widget ^. Widget.size, widget)
     (origAbsAlignment, origWidget) = orig ^. alignedWidget & toAbs
     (copyFromAbsAlignment, copyFromWidget) = copyFrom ^. alignedWidget & toAbs
-    copyFromSize = copyFromWidget ^. Widget.wSize
+    copyFromSize = copyFromWidget ^. Widget.size

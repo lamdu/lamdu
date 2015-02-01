@@ -66,7 +66,7 @@ verticalSpace = do
 
 liftLayerInterval :: Config -> Widget f -> Widget f
 liftLayerInterval config =
-  Widget.wAnimLayers -~ layerDiff
+  Widget.animLayers -~ layerDiff
   where
     layerDiff = Config.layerInterval (Config.layers config)
 
@@ -150,7 +150,7 @@ makeTextEditor
   -> WidgetEnvT m (Widget f)
 makeTextEditor textRef myId =
   makeTextEdit (Property.value textRef) myId
-  <&> Widget.wEvents %~ setter
+  <&> Widget.events %~ setter
   where
     setter (newText, eventRes) = do
       when (newText /= Property.value textRef) $ Property.set textRef newText
@@ -158,7 +158,7 @@ makeTextEditor textRef myId =
 
 deleteKeyEventHandler :: ModKey -> Widget f -> Widget f
 deleteKeyEventHandler key =
-  Widget.wEventMap %~
+  Widget.eventMap %~
   EventMap.deleteKey (EventMap.KeyEvent GLFW.KeyState'Pressed key)
 
 -- TODO: Editor, not Edit (consistent with makeTextEditor vs. makeTextEdit)

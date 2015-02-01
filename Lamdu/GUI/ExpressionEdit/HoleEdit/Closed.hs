@@ -144,10 +144,10 @@ makeWrapper arg hids@HoleIds{..} = do
   argGui <-
     arg ^. Sugar.haExpr
     & ExprGuiM.makeSubexpression 0
-  let argIsFocused = argGui ^. ExpressionGui.egWidget . Widget.wIsFocused
+  let argIsFocused = argGui ^. ExpressionGui.egWidget . Widget.isFocused
   unwrapEventMap <- makeUnwrapEventMap arg hids
   argGui
-    & ExpressionGui.egWidget . Widget.wEventMap %~
+    & ExpressionGui.egWidget . Widget.eventMap %~
       modifyWrappedEventMap config argIsFocused arg hids
     & ExpressionGui.pad (padding + frameWidth)
     & ExpressionGui.egWidget %~
@@ -190,7 +190,7 @@ makeSuggested suggested HoleIds{..}
               maybeAddBackground hidClosed (Config.layers config) holeClosedBGColor .
               Widget.tint (Config.suggestedValueTint config) .
               Widget.scale (realToFrac <$> Config.suggestedValueScaleFactor config) .
-              (Widget.wEventMap .~ mempty)
+              (Widget.eventMap .~ mempty)
 
 
 makeSimple :: MonadA m => HoleIds -> ExprGuiM m (ExpressionGui m)

@@ -122,8 +122,8 @@ addNavEventmap ::
   Keys ModKey -> NavDests f ->
   Widget.EventHandlers f ->
   Widget.EventHandlers f
-addNavEventmap Keys{..} navDests eventMap =
-  strongMap <> eventMap <> weakMap
+addNavEventmap Keys{..} navDests eMap =
+  strongMap <> eMap <> weakMap
   where
     weakMap =
       [ movement "left"       (keysLeft  keysDir) leftOfCursor
@@ -158,7 +158,7 @@ getCursor :: [[Widget k]] -> Maybe Cursor
 getCursor widgets =
   widgets
   & enumerate2d
-  & find (^. _2 . Widget.wIsFocused)
+  & find (^. _2 . Widget.isFocused)
   <&> fst
 
 data Element f = Element
@@ -215,7 +215,7 @@ makeKeyed children = KGrid
       & GridView.makePlacements
       & _2 . Lens.mapped . Lens.mapped %~ toElement
     toTriplet (key, (alignment, widget)) =
-      (alignment, widget ^. Widget.wSize, (key, widget))
+      (alignment, widget ^. Widget.size, (key, widget))
     toElement (alignment, rect, (key, widget)) =
       (key, Element alignment rect widget)
 
@@ -238,30 +238,30 @@ type CombineEnters f =
 toWidgetCommon :: Keys ModKey -> CombineEnters f -> KGrid key f -> Widget f
 toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
   Widget
-  { _wIsFocused = Lens.has Lens._Just mCursor
-  , _wView = View size frame
-  , _wMaybeEnter = combineEnters size mEnterss
-  , _wEventMap = eventMap
-  , _wFocalArea = focalArea
+  { _isFocused = Lens.has Lens._Just mCursor
+  , _view = View size frame
+  , _mEnter = combineEnters size mEnterss
+  , _eventMap = eMap
+  , _focalArea = focalArea
   }
   where
-    frame = widgets ^. Lens.traverse . Lens.traverse . Widget.wAnimFrame
+    frame = widgets ^. Lens.traverse . Lens.traverse . Widget.animFrame
     translateChildWidget (_key, Element _align rect widget) =
       Widget.translate (rect ^. Rect.topLeft) widget
     widgets =
       sChildren & Lens.mapped . Lens.mapped %~ translateChildWidget
-    mEnterss = widgets & Lens.mapped . Lens.mapped %~ (^. Widget.wMaybeEnter)
-    (eventMap, focalArea) =
+    mEnterss = widgets & Lens.mapped . Lens.mapped %~ (^. Widget.mEnter)
+    (eMap, focalArea) =
       case mCursor of
       Nothing -> (mempty, Rect 0 0)
       Just cursor ->
-        ( selectedWidget ^. Widget.wEventMap & addNavEventmap keys navDests
-        , selectedWidget ^. Widget.wFocalArea
+        ( selectedWidget ^. Widget.eventMap & addNavEventmap keys navDests
+        , selectedWidget ^. Widget.focalArea
         )
         where
           selectedWidget = index2d widgets cursor
           navDests =
-            mkNavDests size (selectedWidget ^. Widget.wFocalArea) mEnterss cursor
+            mkNavDests size (selectedWidget ^. Widget.focalArea) mEnterss cursor
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f

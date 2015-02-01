@@ -125,14 +125,14 @@ makeOpenRecord fieldsGui rest animId =
         config <- ExprGuiM.widgetEnv WE.readConfig
         vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
         restExpr <- ExprGuiM.makeSubexpression 0 rest <&> pad config
-        let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.wWidth
+        let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.width
         [ fieldsGui
             , separationBar config (max minWidth targetWidth) animId
             , ExpressionGui.fromValueWidget vspace
             , restExpr
             ] & ExpressionGui.vboxTopFocal & return
     where
-        targetWidth = fieldsGui ^. ExpressionGui.egWidget . Widget.wWidth
+        targetWidth = fieldsGui ^. ExpressionGui.egWidget . Widget.width
 
 pad :: Config -> ExpressionGui m -> ExpressionGui m
 pad config = ExpressionGui.pad $ realToFrac <$> Config.valFramePadding config

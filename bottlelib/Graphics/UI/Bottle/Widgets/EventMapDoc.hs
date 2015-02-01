@@ -150,7 +150,7 @@ makeTreeView config animId size =
 
 addHelp :: (AnimId -> View) -> Widget.Size -> Widget f -> Widget f
 addHelp f size =
-  Widget.wAnimFrame <>~ docFrame
+  Widget.animFrame <>~ docFrame
   where
     View eventMapSize eventMapFrame = f ["help box"]
     transparency = Draw.Color 1 1 1
@@ -175,7 +175,7 @@ makeToggledHelpAdder startValue = do
     showingHelp <- readIORef showingHelpVar
     let
       (f, docStr) = case showingHelp of
-        HelpShown -> (makeView size (widget ^. Widget.wEventMap) config, "Hide")
+        HelpShown -> (makeView size (widget ^. Widget.eventMap) config, "Hide")
         HelpNotShown -> (makeTooltip config (configOverlayDocKeys config), "Show")
       toggleEventMap =
         Widget.keysEventMap (configOverlayDocKeys config) (E.Doc ["Help", "Key Bindings", docStr]) $

@@ -140,7 +140,7 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationHalfLife = do
       when anyUpdate newWidget
       widget <- getWidget size
       tickResults <-
-        sequenceA (widget ^. Widget.wEventMap . E.emTickHandlers)
+        sequenceA (widget ^. Widget.eventMap . E.emTickHandlers)
       unless (null tickResults) newWidget
       return $
         case (tickResults, anyUpdate) of
@@ -150,10 +150,10 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationHalfLife = do
       widget <- getWidget size
       mAnimIdMapping <-
         (traverse . fmap) (^. Widget.eAnimIdMapping) .
-        E.lookup event $ widget ^. Widget.wEventMap
+        E.lookup event $ widget ^. Widget.eventMap
       case mAnimIdMapping of
         Nothing -> return ()
         Just _ -> newWidget
       return mAnimIdMapping
-    mkFrame size = getWidget size <&> (^. Widget.wAnimFrame)
+    mkFrame size = getWidget size <&> (^. Widget.animFrame)
   mainLoopAnim win tickHandler eventHandler mkFrame getAnimationHalfLife

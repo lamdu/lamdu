@@ -99,8 +99,8 @@ cursorRects style str =
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused Style{..} str myId =
   TextView.makeWidget _sTextViewStyle displayStr animId
-  & Widget.wAnimFrame %~ cursorTranslate Style{..}
-  & Widget.wWidth +~ cursorWidth
+  & Widget.animFrame %~ cursorTranslate Style{..}
+  & Widget.width +~ cursorWidth
   & makeFocusable Style{..} str myId
   where
     animId = Widget.toAnimId myId
@@ -135,7 +135,7 @@ makeFocusable ::
   Style -> String -> Widget.Id ->
   Widget ((,) String) -> Widget ((,) String)
 makeFocusable style str myId =
-  Widget.wMaybeEnter .~ Just (enterFromDirection style str myId)
+  Widget.mEnter .~ Just (enterFromDirection style str myId)
 
 readM :: Read a => String -> Maybe a
 readM str =
@@ -179,11 +179,11 @@ makeFocused cursorBGAnimId cursor Style{..} str myId =
   & makeFocusable Style{..} str myId
   where
     widget = Widget
-      { _wIsFocused = True
-      , _wView = View reqSize $ img <> cursorFrame
-      , _wEventMap = eventMap cursor str displayStr myId
-      , _wMaybeEnter = Nothing
-      , _wFocalArea = cursorRect
+      { _isFocused = True
+      , _view = View reqSize $ img <> cursorFrame
+      , _eventMap = eventMap cursor str displayStr myId
+      , _mEnter = Nothing
+      , _focalArea = cursorRect
       }
     reqSize = Vector2 (_sCursorWidth + tlWidth) tlHeight
     myAnimId = Widget.toAnimId myId

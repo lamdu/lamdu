@@ -131,7 +131,7 @@ makeExprDefinition def bodyExpr = do
     BinderEdit.make (def ^. Sugar.drName)
     (bodyExpr ^. Sugar.deContent) myId
     <&> (^. ExpressionGui.egWidget)
-  let width = bodyWidget ^. Widget.wWidth
+  let width = bodyWidget ^. Widget.width
   vspace <- BWidgets.verticalSpace & ExprGuiM.widgetEnv
   typeWidget <-
     fmap (Box.vboxAlign 0.5 . concatMap (\w -> [vspace, w])) $
