@@ -125,14 +125,7 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
 
 -- Ignoring alpha-renames:
 consistentExprIds :: EntityId -> Val (Guid -> EntityId -> a) -> Val a
-consistentExprIds holeEntityId val =
-  EntityId.randomizeExprAndParams gen val
-  where
-    gen =
-      genFromHashable
-        ( holeEntityId
-        , void $ GenIds.randomizeParamIds (genFromHashable holeEntityId) val
-        )
+consistentExprIds = EntityId.randomizeExprAndParams . genFromHashable
 
 mkHoleSuggested :: MonadA m => EntityId -> Infer.Payload -> ConvertM m (HoleSuggested Guid m)
 mkHoleSuggested holeEntityId inferred = do
