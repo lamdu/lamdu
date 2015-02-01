@@ -36,7 +36,7 @@ import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.View (View(..))
-import           Graphics.UI.Bottle.Widget (R, Widget(..), wEventMap, wFocalArea)
+import           Graphics.UI.Bottle.Widget (R, Widget(Widget))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.GridView (Alignment)
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
@@ -158,7 +158,7 @@ getCursor :: [[Widget k]] -> Maybe Cursor
 getCursor widgets =
   widgets
   & enumerate2d
-  & find (_wIsFocused . snd)
+  & find (^. _2 . Widget.wIsFocused)
   <&> fst
 
 data Element f = Element
@@ -250,17 +250,18 @@ toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
       Widget.translate (rect ^. Rect.topLeft) widget
     widgets =
       sChildren & Lens.mapped . Lens.mapped %~ translateChildWidget
-    mEnterss = widgets & Lens.mapped . Lens.mapped %~ _wMaybeEnter
+    mEnterss = widgets & Lens.mapped . Lens.mapped %~ (^. Widget.wMaybeEnter)
     (eventMap, focalArea) =
       case mCursor of
       Nothing -> (mempty, Rect 0 0)
       Just cursor ->
-        ( selectedWidget ^. wEventMap & addNavEventmap keys navDests
-        , selectedWidget ^. wFocalArea
+        ( selectedWidget ^. Widget.wEventMap & addNavEventmap keys navDests
+        , selectedWidget ^. Widget.wFocalArea
         )
         where
           selectedWidget = index2d widgets cursor
-          navDests = mkNavDests size (selectedWidget ^. wFocalArea) mEnterss cursor
+          navDests =
+            mkNavDests size (selectedWidget ^. Widget.wFocalArea) mEnterss cursor
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
