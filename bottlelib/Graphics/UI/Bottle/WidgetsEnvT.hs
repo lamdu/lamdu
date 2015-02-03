@@ -28,6 +28,7 @@ import           Data.Maybe (isJust)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.SizedFont as SizedFont
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -104,15 +105,11 @@ assignCursorPrefix ::
   WidgetEnvT m a -> WidgetEnvT m a
 assignCursorPrefix x y = localEnv $ envAssignCursorPrefix x y
 
-setTextSizeColor
-  :: Int
-  -> Draw.Color
-  -> Env
-  -> Env
+setTextSizeColor :: Double -> Draw.Color -> Env -> Env
 setTextSizeColor textSize textColor env =
   env
   & envTextStyle . TextEdit.sTextViewStyle %~
-    (TextView.styleFontSize .~ textSize) .
+    (TextView.styleFont . SizedFont.fontSize .~ textSize) .
     (TextView.styleColor .~ textColor)
 
 localEnv :: MonadA m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a

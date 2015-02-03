@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.TextView
-    ( Style(..), styleColor, styleFont, styleFontSize
+    ( Style(..), styleColor, styleFont
     , lineHeight
 
     , make, makeWidget
@@ -18,12 +18,12 @@ import           Data.List.Split (splitWhen)
 import           Data.Monoid (Monoid(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.DrawingCombinators ((%%))
-import qualified Graphics.DrawingCombinators.Utils as DrawUtils
-import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Animation (AnimId, Size)
+import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Rect (Rect(Rect))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import           Graphics.UI.Bottle.SizedFont (SizedFont)
+import qualified Graphics.UI.Bottle.SizedFont as SizedFont
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -31,25 +31,20 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 
 data Style = Style
     { _styleColor :: Draw.Color
-    , _styleFont :: Draw.Font
-    , _styleFontSize :: Int
+    , _styleFont :: SizedFont
     }
 Lens.makeLenses ''Style
 
 lineHeight :: Style -> Widget.R
-lineHeight Style{..} = sz * DrawUtils.textHeight
-    where
-        sz = fromIntegral _styleFontSize
+lineHeight Style{..} = SizedFont.textHeight _styleFont
 
 fontRender :: Style -> String -> (Draw.Image (), Size)
 fontRender Style{..} str =
     ( str
-      & DrawUtils.drawText _styleFont
+      & SizedFont.render _styleFont
       & Draw.tint _styleColor
-      & (DrawUtils.scale (fromIntegral _styleFontSize) %%)
     , str
-      & DrawUtils.textSize _styleFont
-      & (fromIntegral _styleFontSize *)
+      & SizedFont.textSize _styleFont
     )
 
 drawMany ::

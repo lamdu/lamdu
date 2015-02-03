@@ -26,6 +26,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.MainLoop (mainLoopWidget)
+import           Graphics.UI.Bottle.SizedFont (SizedFont(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -34,6 +35,8 @@ import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           Graphics.UI.Bottle.WidgetsEnvT (runWidgetEnvT)
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import           Lamdu.Config (Config)
@@ -44,8 +47,6 @@ import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
-import           Graphics.UI.Bottle.WidgetsEnvT (runWidgetEnvT)
-import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
@@ -258,8 +259,7 @@ helpConfig font Config.Help{..} =
   { EventMapDoc.configStyle =
     TextView.Style
     { TextView._styleColor = helpTextColor
-    , TextView._styleFont = font
-    , TextView._styleFontSize = helpTextSize
+    , TextView._styleFont = SizedFont font helpTextSize
     }
   , EventMapDoc.configInputDocColor = helpInputDocColor
   , EventMapDoc.configBGColor = helpBGColor
@@ -271,8 +271,7 @@ baseStyle config font = TextEdit.Style
  { TextEdit._sTextViewStyle =
    TextView.Style
      { TextView._styleColor = Config.baseColor config
-     , TextView._styleFont = font
-     , TextView._styleFontSize = Config.baseTextSize config
+     , TextView._styleFont = SizedFont font (Config.baseTextSize config)
      }
   , TextEdit._sCursorColor = TextEdit.defaultCursorColor
   , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth

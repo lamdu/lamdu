@@ -36,7 +36,7 @@ layerInterval Layers{..} = layerMax - layerMin
 
 data Help = Help
   { helpTextColor :: Draw.Color
-  , helpTextSize :: Int
+  , helpTextSize :: Double
   , helpInputDocColor :: Draw.Color
   , helpBGColor :: Draw.Color
   , helpKeys :: [ModKey]
@@ -107,7 +107,7 @@ data Config = Config
 
   , backgroundColor :: Draw.Color
   , baseColor :: Draw.Color
-  , baseTextSize :: Int
+  , baseTextSize :: Double
   , spaceWidth :: Double
 
   , quitKeys :: [ModKey]
