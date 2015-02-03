@@ -118,7 +118,7 @@ makeShownResult holeInfo result =
     -- Warning: rHoleResult should be ran at most once!
     -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
     res <- ExprGuiM.transaction $ rHoleResult result
-    config <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
+    config <- Config.hole <$> ExprGuiM.readConfig
     (widget, mkEventMap) <- makeHoleResultWidget (rId result) res
     return
       ( widget & (Widget.pad . fmap realToFrac . Config.holeResultPadding) config
@@ -134,7 +134,7 @@ makeExtraSymbolWidget animId isSelected results
   | Lens.nullOf (HoleResults.rlExtra . traverse) results = pure Widget.empty
   | otherwise =
     do
-      Config.Hole{..} <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
+      Config.Hole{..} <- Config.hole <$> ExprGuiM.readConfig
       let
         extraSymbolColor
           | isSelected = holeExtraSymbolColorSelected
@@ -162,7 +162,7 @@ makeResultGroup ::
   ResultsList m ->
   ExprGuiM m (ResultGroupWidgets m)
 makeResultGroup holeInfo results = do
-  Config.Hole{..} <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
+  Config.Hole{..} <- Config.hole <$> ExprGuiM.readConfig
   (mainResultWidget, shownMainResult) <- makeShownResult holeInfo mainResult
   let
     mainResultHeight = mainResultWidget ^. Widget.height
@@ -198,7 +198,7 @@ makeExtraResultsWidget ::
   ExprGuiM m (Maybe (ShownResult m), Widget (T m))
 makeExtraResultsWidget _ _ [] = return (Nothing, Widget.empty)
 makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- ExprGuiM.readConfig
   let
     Config.Hole{..} = Config.hole config
     mkResWidget result = do
@@ -229,7 +229,7 @@ makeHoleResultWidget ::
   Sugar.HoleResult (Name m) m ->
   ExprGuiM m (Widget (T m), ExprGuiM m (Widget.EventHandlers (T m)))
 makeHoleResultWidget resultId holeResult = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- ExprGuiM.readConfig
   let Config.Hole{..} = Config.hole config
   let mkEventMap =
         do
@@ -358,7 +358,7 @@ maybeHoverClosedHoleAbove ::
 maybeHoverClosedHoleAbove holeInfo closedHoleGui openHoleGui
   | Lens.has Lens._Just (hiMArgument holeInfo) =
     do
-      Config.Hole{..} <- ExprGuiM.widgetEnv WE.readConfig <&> Config.hole
+      Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
       hoveringClosedHole <-
         addDarkBackground (hidClosed (hiIds holeInfo)) closedHoleGui
         <&> (^. ExpressionGui.egWidget)
@@ -374,7 +374,7 @@ make ::
   Sugar.Payload m ExprGuiM.Payload -> HoleInfo m ->
   ExprGuiM m (ExpressionGui m)
 make closedHoleGui pl holeInfo = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- ExprGuiM.readConfig
   let Config.Hole{..} = Config.hole config
   (shownResultsLists, hasHiddenResults) <-
     -- Don't generate results of open holes inside hole results
@@ -420,7 +420,7 @@ guiWidth = ExpressionGui.egWidget . Widget.width
 addDarkBackground :: MonadA m => Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
 addDarkBackground myId widget =
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig
+    config <- ExprGuiM.readConfig
     let Config.Hole{..} = Config.hole config
     widget
       & ExpressionGui.pad (holeOpenDarkPadding <&> realToFrac)
@@ -435,7 +435,7 @@ makeSearchTermGui ::
   MonadA m => HoleInfo m ->
   ExprGuiM m (ExpressionGui m)
 makeSearchTermGui holeInfo = do
-  Config.Hole{..} <- Config.hole <$> ExprGuiM.widgetEnv WE.readConfig
+  Config.Hole{..} <- Config.hole <$> ExprGuiM.readConfig
   BWidgets.makeTextEdit searchTerm (hiSearchTermId holeInfo)
     <&> Widget.events %~ setter
     <&> Widget.eventMap %~ OpenEventMap.disallowChars searchTerm

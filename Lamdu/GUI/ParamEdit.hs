@@ -19,7 +19,6 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -104,7 +103,7 @@ make ::
   ExprGuiM m (ExpressionGui m)
 make showType prevId nextId param =
   assignCursor $ do
-    config <- ExprGuiM.widgetEnv WE.readConfig
+    config <- ExprGuiM.readConfig
     let
       paramEventMap = mconcat
         [ eventParamDelEventMap mActions (Config.delForwardKeys config) "" nextId

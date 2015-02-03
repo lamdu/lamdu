@@ -158,11 +158,10 @@ addTypeBackground config animId minWidth typeView =
 makeTypeView :: MonadA m => Widget.R -> Sugar.EntityId -> Type -> ExprGuiM m (Widget f)
 makeTypeView minWidth entityId typ =
   do
-    config <- WE.readConfig
+    config <- ExprGuiM.readConfig
     TypeView.make animId typ
       <&> addTypeBackground config animId minWidth
       <&> Widget.fromView
-    & ExprGuiM.widgetEnv
   where
     animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
 
@@ -171,7 +170,7 @@ addBelowInferredSpacing ::
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addBelowInferredSpacing widget eg =
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig
+    config <- ExprGuiM.readConfig
     let
       vspacer =
         Widget.fromView $
@@ -207,7 +206,7 @@ nameEditFDConfig = FocusDelegator.Config
 makeNameOriginEdit :: MonadA m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
 makeNameOriginEdit name myId =
   do
-    config <- Config.name <$> ExprGuiM.widgetEnv WE.readConfig
+    config <- Config.name <$> ExprGuiM.readConfig
     makeNameEdit name myId -- myId goes directly to name edit
       & ExprGuiM.withFgColor (color config)
   where
@@ -267,7 +266,7 @@ stdWrapParentExpr ::
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
   ExprGuiM m (ExpressionGui m)
 stdWrapParentExpr pl mkGui = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- ExprGuiM.readConfig
   mkGui innerId
     >>= egWidget %%~
         ExprGuiM.makeFocusDelegator (parentExprFDConfig config)
@@ -292,7 +291,7 @@ parenify ::
   ExpressionGui f -> ExprGuiM m (ExpressionGui f)
 parenify (ParentPrecedence parent) (MyPrecedence prec) myId widget
   | parent > prec =
-    widget & Parens.addHighlightedTextParens myId & ExprGuiM.widgetEnv
+    widget & Parens.addHighlightedTextParens myId
   | otherwise =
     widget & return
 
@@ -302,7 +301,7 @@ makeLabel text animId = ExprGuiM.makeLabel text animId <&> fromValueWidget
 grammarLabel :: MonadA m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
 grammarLabel text animId =
   do
-    config <- WE.readConfig & ExprGuiM.widgetEnv
+    config <- ExprGuiM.readConfig
     makeLabel text animId
       & ExprGuiM.localEnv
         (WE.setTextSizeColor (Config.baseTextSize config) (Config.grammarColor config))
@@ -310,7 +309,7 @@ grammarLabel text animId =
 addValBG :: MonadA m => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
 addValBG myId gui =
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig
+    config <- ExprGuiM.readConfig
     let layer = Config.layerValFrameBG $ Config.layers config
     let color = Config.valFrameBGColor config
     Widget.backgroundColor layer animId color gui & return
@@ -321,7 +320,7 @@ addValFrame ::
   MonadA m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addValFrame myId gui =
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig
+    config <- ExprGuiM.readConfig
     gui
       & pad (realToFrac <$> Config.valFramePadding config)
       & egWidget %%~ addValBG myId
@@ -352,7 +351,7 @@ makeCollisionSuffixLabels ::
 makeCollisionSuffixLabels NoCollision _ = return []
 makeCollisionSuffixLabels (Collision suffix) animId =
   do
-    config <- WE.readConfig
+    config <- ExprGuiM.readConfig
     let
       Config.Name{..} = Config.name config
       onSuffixWidget =
@@ -362,7 +361,7 @@ makeCollisionSuffixLabels (Collision suffix) animId =
     BWidgets.makeLabel (show suffix) animId
       & WE.localEnv (WE.setTextColor collisionSuffixTextColor)
       <&> (:[]) . onSuffixWidget
-    & ExprGuiM.widgetEnv
+      & ExprGuiM.widgetEnv
 
 wrapExprEventMap ::
   MonadA m =>
@@ -388,7 +387,7 @@ addExprEventMap ::
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addExprEventMap pl resultPickers gui =
   do
-    exprEventMap <- ExprEventMap.make resultPickers pl & ExprGuiM.widgetEnv
+    exprEventMap <- ExprEventMap.make resultPickers pl
     gui
       & egWidget %~ Widget.weakerEvents exprEventMap
       & return

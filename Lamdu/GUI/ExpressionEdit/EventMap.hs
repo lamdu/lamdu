@@ -21,9 +21,8 @@ import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.Monad (HolePickers)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -33,8 +32,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction.Transaction
 
 make ::
-  (MonadA m, MonadA n) => HolePickers m -> Sugar.Payload m ExprGuiM.Payload ->
-  WidgetEnvT n (EventHandlers (T m))
+  MonadA m => HolePickers m -> Sugar.Payload m ExprGuiM.Payload ->
+  ExprGuiM m (EventHandlers (T m))
 make holePickers pl =
   mconcat <$> sequenceA
   [ maybe (return mempty)
@@ -71,11 +70,11 @@ isExprSelected pl cursor =
   & Lens.has Lens._Just
 
 jumpHolesEventMap ::
-  (MonadA m, MonadA n) => HolePickers m ->
+  MonadA m => HolePickers m ->
   NearestHoles ->
-  WidgetEnvT n (EventHandlers (T m))
+  ExprGuiM m (EventHandlers (T m))
 jumpHolesEventMap holePickers hg = do
-  config <- WE.readConfig <&> Config.hole
+  config <- ExprGuiM.readConfig <&> Config.hole
   let
     jumpEventMap keys dirStr lens =
       maybe mempty
@@ -92,12 +91,12 @@ jumpHolesEventMap holePickers hg = do
       ExprGuiM.holePickersAddDocPrefix holePickers $ "Jump to " ++ dirStr ++ " hole"
 
 jumpHolesEventMapIfSelected ::
-  (MonadA m, MonadA n) => HolePickers m ->
+  MonadA m => HolePickers m ->
   Sugar.Payload m ExprGuiM.Payload ->
-  WidgetEnvT n (EventHandlers (T m))
+  ExprGuiM m (EventHandlers (T m))
 jumpHolesEventMapIfSelected holePickers pl =
   do
-    cursor <- WE.readCursor
+    cursor <- ExprGuiM.widgetEnv WE.readCursor
     if isExprSelected pl cursor
       then
         jumpHolesEventMap holePickers $
@@ -110,14 +109,14 @@ cutEventMap config actions =
   actions ^. Sugar.cut
 
 replaceOrComeToParentEventMap ::
-  (MonadA m, MonadA n) =>
+  MonadA m =>
   Sugar.Payload m ExprGuiM.Payload ->
-  WidgetEnvT n (EventHandlers (T m))
+  ExprGuiM m (EventHandlers (T m))
 replaceOrComeToParentEventMap pl =
   do
-    config <- WE.readConfig
+    config <- ExprGuiM.readConfig
     let delKeys = Config.replaceKeys config ++ Config.delKeys config
-    cursor <- WE.readCursor
+    cursor <- ExprGuiM.widgetEnv WE.readCursor
     return $
       if isExprSelected pl cursor
       then maybe mempty (replaceEventMap config) $ pl ^. Sugar.plActions
@@ -131,12 +130,12 @@ replaceOrComeToParentEventMap pl =
       & return
 
 actionsEventMap ::
-  (MonadA m, MonadA n) =>
+  MonadA m =>
   HolePickers m ->
   Sugar.Actions m ->
-  WidgetEnvT n (EventHandlers (T m))
+  ExprGuiM m (EventHandlers (T m))
 actionsEventMap holePickers actions = do
-  config <- WE.readConfig
+  config <- ExprGuiM.readConfig
   return $ mconcat
     [ wrapEventMap holePickers config
     , applyOperatorEventMap holePickers

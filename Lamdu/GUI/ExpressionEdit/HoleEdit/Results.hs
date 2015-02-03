@@ -32,7 +32,6 @@ import qualified Lamdu.Expr.Val as V
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleIds(..), hiSearchTerm, hiMArgument)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -198,7 +197,7 @@ makeAll ::
   ExprGuiM m ([ResultsList m], HaveHiddenResults)
 makeAll holeInfo =
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig <&> Config.hole
+    config <- ExprGuiM.readConfig <&> Config.hole
     makeAllGroups holeInfo
       <&> ListClass.fromList
       <&> ListClass.mapL (makeResultsList holeInfo)

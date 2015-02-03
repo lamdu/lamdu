@@ -19,7 +19,6 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -39,7 +38,7 @@ make ::
   ExprGuiM m (ExpressionGui m)
 make getVar pl = do
   cp <- ExprGuiM.readCodeAnchors
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- ExprGuiM.readConfig
   let Config.Name{..} = Config.name config
   case getVar of
     Sugar.GetVarNamed namedVar ->

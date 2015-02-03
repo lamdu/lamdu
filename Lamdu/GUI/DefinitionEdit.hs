@@ -33,7 +33,6 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
-import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..), DefinitionN)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -95,7 +94,7 @@ typeIndicator ::
   MonadA m => Widget.R -> Draw.Color -> Widget.Id -> ExprGuiM m (Widget f)
 typeIndicator width color myId =
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig
+    config <- ExprGuiM.readConfig
     let
       typeIndicatorHeight =
         realToFrac $ Config.typeIndicatorFrameWidth config ^. _2
@@ -112,7 +111,7 @@ acceptableTypeIndicator ::
   ExprGuiM m (Widget f)
 acceptableTypeIndicator width accept color myId =
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig
+    config <- ExprGuiM.readConfig
     let
       acceptKeyMap =
         Widget.keysEventMapMovesCursor (Config.acceptDefinitionTypeKeys config)
@@ -127,7 +126,7 @@ makeExprDefinition ::
   Sugar.DefinitionExpression (Name m) m (ExprGuiM.SugarExpr m) ->
   ExprGuiM m (Widget (T m))
 makeExprDefinition def bodyExpr = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- ExprGuiM.readConfig
   bodyWidget <-
     BinderEdit.make (def ^. Sugar.drName)
     (bodyExpr ^. Sugar.deContent) myId

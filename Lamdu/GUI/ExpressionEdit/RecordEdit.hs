@@ -24,7 +24,6 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -46,7 +45,7 @@ make (Sugar.Record fields recordTail mAddField) pl =
                 & WidgetIds.fromExprPayload
     in
     ExprGuiM.assignCursor myId defaultPos $ do
-        config <- ExprGuiM.widgetEnv WE.readConfig
+        config <- ExprGuiM.readConfig
         (gui, resultPickers) <-
             ExprGuiM.listenResultPickers $ do
                 fieldsGui <- makeFieldsWidget fields myId <&> pad config
@@ -78,7 +77,7 @@ makeFieldRow ::
   ExprGuiM m [ExpressionGui m]
 makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) =
     do
-        config <- ExprGuiM.widgetEnv WE.readConfig
+        config <- ExprGuiM.readConfig
         fieldRefGui <-
             TagEdit.makeRecordTag (ExprGuiM.nextHolesBefore fieldExpr) tag
         fieldExprGui <- ExprGuiM.makeSubexpression 0 fieldExpr
@@ -122,7 +121,7 @@ makeOpenRecord :: MonadA m =>
   ExprGuiM m (ExpressionGui m)
 makeOpenRecord fieldsGui rest animId =
     do
-        config <- ExprGuiM.widgetEnv WE.readConfig
+        config <- ExprGuiM.readConfig
         vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
         restExpr <- ExprGuiM.makeSubexpression 0 rest <&> pad config
         let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.width

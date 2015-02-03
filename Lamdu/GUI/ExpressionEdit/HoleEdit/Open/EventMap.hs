@@ -28,7 +28,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
@@ -142,7 +141,7 @@ removeUnwanted config =
 mkEventsOnPickedResult :: MonadA m => ShownResult m -> ExprGuiM m (Widget.EventHandlers (T m))
 mkEventsOnPickedResult shownResult =
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig
+    config <- ExprGuiM.readConfig
     srMkEventMap shownResult
       <&> E.emDocs . E.docStrs . Lens._last %~ (++ "(On picked result)")
       <&> Lens.mapped %~ pickBefore shownResult
@@ -156,7 +155,7 @@ make ::
   , Widget.EventHandlers (T m)
   )
 make holeInfo mShownResult = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- ExprGuiM.readConfig
   -- below ad-hoc and search term edit:
   eventMap <-
     [ pure $ closeEventMap holeInfo

@@ -19,7 +19,6 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -38,7 +37,7 @@ mkOverrideModifyEventMap ::
 mkOverrideModifyEventMap Nothing = return id
 mkOverrideModifyEventMap (Just actions) =
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig
+    config <- ExprGuiM.readConfig
     ExpressionGui.egWidget %~
       Widget.strongerEvents (ExprEventMap.modifyEventMap [] config actions)
       & return

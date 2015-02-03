@@ -367,7 +367,10 @@ makeRootWidget config settings style dbToIO fullSize cursor = do
   actions <- VersionControl.makeActions
   runWidgetEnvT cursor style config $ do
     branchGui <-
-      VersionControlGUI.make id actions $ \branchSelector ->
+      VersionControlGUI.make (Config.versionControl config)
+      (Config.layerChoiceBG (Config.layers config))
+      id actions $
+      \branchSelector ->
         do
           let hoverPadding = Spacer.makeWidget (Vector2 0 (Config.paneHoverPadding (Config.pane config)))
           let nonCodeHeight =

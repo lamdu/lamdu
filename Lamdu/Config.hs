@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric, RecordWildCards #-}
 module Lamdu.Config
     ( Layers(..)
-    , Help(..), Zoom(..), Pane(..), VersionControl(..), Hole(..), Name(..)
+    , Help(..), Zoom(..), Pane(..), Hole(..), Name(..)
     , Config(..)
     , delKeys
     , layerInterval
@@ -13,7 +13,9 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators.Utils ()
+import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
 data Layers = Layers
   { layerMin
@@ -26,7 +28,7 @@ data Layers = Layers
   , layerValFrameBG
   , layerParensHighlightBG
   , layerActivePane
-  , layerMax :: Int
+  , layerMax :: Anim.Layer
   } deriving (Eq, Generic, Show)
 
 layerInterval :: Layers -> Int
@@ -57,15 +59,6 @@ data Pane = Pane
     -- how much:
     paneHoverPadding :: Draw.R
   , newDefinitionKeys :: [ModKey]
-  } deriving (Eq, Generic, Show)
-
-data VersionControl = VersionControl
-  { undoKeys :: [ModKey]
-  , redoKeys :: [ModKey]
-  , makeBranchKeys :: [ModKey]
-  , jumpToBranchesKeys :: [ModKey]
-  , delBranchKeys :: [ModKey]
-  , selectedBranchColor :: Draw.Color
   } deriving (Eq, Generic, Show)
 
 data Hole = Hole
@@ -108,7 +101,7 @@ data Config = Config
   , help :: Help
   , zoom :: Zoom
   , pane :: Pane
-  , versionControl :: VersionControl
+  , versionControl :: VersionControl.Config
   , hole :: Hole
   , name :: Name
 
@@ -193,9 +186,6 @@ instance FromJSON Zoom
 
 instance ToJSON Pane
 instance FromJSON Pane
-
-instance ToJSON VersionControl
-instance FromJSON VersionControl
 
 instance ToJSON Hole
 instance FromJSON Hole

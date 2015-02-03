@@ -7,26 +7,26 @@ import           Control.Applicative (Applicative(..))
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
-import qualified Graphics.UI.Bottle.Animation as Anim
-import           Graphics.UI.Bottle.Widget (Widget)
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetEnvT as WE
 import           Lamdu.GUI.WidgetIds (parensPrefix)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 addTextParensI ::
-  MonadA m =>
-  (WidgetEnvT m (Widget f) -> WidgetEnvT m (Widget f)) ->
-  Anim.AnimId -> Layout f -> WidgetEnvT m (Layout f)
-addTextParensI onRParen parenId widget = do
+  (MonadA m, Applicative f) =>
+  AnimId -> Widget.Id -> Layout f -> WidgetEnvT m (Layout f)
+addTextParensI parenId rParenId widget = do
   beforeParen <- label "("
-  afterParen <- label ")" & onRParen
+  afterParen <- label ")" >>= BWidgets.makeFocusableView rParenId
   Layout.hbox 0.5
     [ beforeParen & Layout.fromCenteredWidget
     , widget
@@ -42,13 +42,11 @@ highlightExpression config =
   Config.parenHighlightColor config
 
 addHighlightedTextParens ::
-  (MonadA m, Applicative f) => Widget.Id -> Layout f -> WidgetEnvT m (Layout f)
+  (MonadA m, Applicative f) => Widget.Id -> Layout f -> ExprGuiM m (Layout f)
 addHighlightedTextParens myId widget = do
-  mInsideParenId <- WE.subCursor rParenId
-  widgetWithParens <-
-    widget
-    & addTextParensI (BWidgets.makeFocusableView rParenId =<<) animId
-  config <- WE.readConfig
+  mInsideParenId <- WE.subCursor rParenId & ExprGuiM.widgetEnv
+  widgetWithParens <- addTextParensI animId rParenId widget & ExprGuiM.widgetEnv
+  config <- ExprGuiM.readConfig
   return $
     widgetWithParens
     & case mInsideParenId of

@@ -23,7 +23,6 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -58,7 +57,7 @@ make ::
     Sugar.DefinitionBuiltin m -> Widget.Id -> ExprGuiM m (Widget (T m))
 make def myId =
     do
-        config <- ExprGuiM.widgetEnv WE.readConfig
+        config <- ExprGuiM.readConfig
         moduleName <-
             makeNamePartEditor (Config.foreignModuleColor config)
             modulePathStr modulePathSetter (builtinFFIPath myId)

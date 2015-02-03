@@ -17,7 +17,6 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, holePickersAction)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -30,7 +29,7 @@ make list pl =
   ExpressionGui.stdWrapParentExpr pl $ \myId ->
   ExprGuiM.assignCursor myId cursorDest $
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig
+    config <- ExprGuiM.readConfig
     bracketOpenLabel <-
       ExpressionGui.grammarLabel "[" (Widget.toAnimId bracketsId)
       >>= ExpressionGui.makeFocusableView firstBracketId
@@ -50,7 +49,6 @@ make list pl =
           firstValue ^. _3 . Sugar.liExpr
           & ExprGuiM.nextHolesBefore
           & ExprEventMap.jumpHolesEventMap []
-          & ExprGuiM.widgetEnv
         let
           nilDeleteEventMap =
             actionEventMap (Config.delKeys config) "Replace nil with hole" Sugar.replaceNil
@@ -93,7 +91,7 @@ makeItem ::
   ExprGuiM m (ExpressionGui m, ExpressionGui m)
 makeItem (_, nextId, item) =
     do
-        config <- ExprGuiM.widgetEnv WE.readConfig
+        config <- ExprGuiM.readConfig
         let mkItemEventMap resultPickers Sugar.ListItemActions
                 { Sugar._itemAddNext = addItem
                 , Sugar._itemDelete = delItem

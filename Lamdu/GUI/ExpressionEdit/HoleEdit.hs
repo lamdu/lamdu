@@ -47,7 +47,7 @@ make hole pl =
       _chMkGui
       <&> join (,)
       & ExpressionGui.stdWrapIn _1 pl
-    config <- ExprGuiM.widgetEnv WE.readConfig
+    config <- ExprGuiM.readConfig
     let Config.Hole{..} = Config.hole config
     tryOpenHole unwrappedClosedHoleGui hole pl hids
       <&> hAlign .~ 0

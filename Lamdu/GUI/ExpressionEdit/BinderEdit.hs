@@ -31,7 +31,6 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
-import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..))
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -53,7 +52,7 @@ makeBinderNameEdit ::
   ExprGuiM m (ExpressionGui m)
 makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
   do
-    config <- ExprGuiM.widgetEnv WE.readConfig
+    config <- ExprGuiM.readConfig
     rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
     ExpressionGui.makeNameOriginEdit name myId
       <&> jumpToRHSViaEquals name
@@ -108,7 +107,7 @@ mkPresentationModeEdit ::
     ExprGuiM m (Widget (T m))
 mkPresentationModeEdit myId prop = do
   cur <- ExprGuiM.transaction $ Transaction.getP prop
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- ExprGuiM.readConfig
   let
     mkPair presentationMode = do
       widget <-
@@ -176,7 +175,7 @@ makeWhereItemEdit ::
   (Widget.Id, Widget.Id, Sugar.WhereItem (Name m) m (ExprGuiM.SugarExpr m)) ->
   ExprGuiM m (ExpressionGui m)
 makeWhereItemEdit (_prevId, nextId, item) = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- ExprGuiM.readConfig
   let
     eventMap
       | Just wiActions <- item ^. Sugar.wiActions =
@@ -215,7 +214,7 @@ makeResultEdit ::
   ExprGuiM.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeResultEdit mActions params result = do
   savePos <- ExprGuiM.mkPrejumpPosSaver
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- ExprGuiM.readConfig
   let
     jumpToLhsEventMap =
       case params of
@@ -247,9 +246,7 @@ makeParamsEdit ::
   ExprGuiM m [ExpressionGui m]
 makeParamsEdit showType nearestHoles lhsId params =
   do
-    jumpHolesEventMap <-
-      ExprEventMap.jumpHolesEventMap [] nearestHoles
-      & ExprGuiM.widgetEnv
+    jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] nearestHoles
     let
       mkParam (prevId, nextId, param) =
         ParamEdit.make showType prevId nextId param

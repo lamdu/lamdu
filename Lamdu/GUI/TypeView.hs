@@ -33,23 +33,28 @@ import           Lamdu.Expr.Identifier (Identifier(..))
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..))
 import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
-import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           System.Random (Random, random)
 import qualified System.Random as Random
 
 type T = Transaction
 newtype M m a = M
-  { runM :: StateT Random.StdGen (WidgetEnvT (T m)) a
+  { runM :: StateT Random.StdGen (ExprGuiM m) a
   } deriving (Functor, Applicative, Monad)
-wenv :: Monad m => WidgetEnvT (T m) a -> M m a
-wenv = M . lift
-transaction :: Monad m => T m a -> M m a
-transaction = wenv . lift
+egui :: Monad m => ExprGuiM m a -> M m a
+egui = M . lift
+transaction :: MonadA m => T m a -> M m a
+transaction = egui . ExprGuiM.transaction
 rand :: (Random r, Monad m) => M m r
 rand = M $ state random
+
+wenv :: MonadA m => WidgetEnvT (T m) a -> M m a
+wenv = egui . ExprGuiM.widgetEnv
+
 split :: Monad m => M m a -> M m a
 split (M act) =
   do
@@ -70,7 +75,7 @@ hbox = GridView.horizontalAlign 0.5
 
 mkSpace :: MonadA m => M m View
 mkSpace =
-  wenv WE.readConfig
+  egui ExprGuiM.readConfig
   <&> Spacer.makeHorizontal . realToFrac . Config.spaceWidth
 
 parensAround :: MonadA m => View -> M m View
@@ -129,7 +134,7 @@ makeTInst _parentPrecedence (T.Id name) typeParams =
 addPadding :: MonadA m => View -> M m View
 addPadding view =
   do
-    config <- wenv WE.readConfig
+    config <- egui ExprGuiM.readConfig
     let padding = realToFrac <$> Config.valFramePadding config
     view
       & View.animFrame %~ Anim.translate padding
@@ -139,7 +144,7 @@ addPadding view =
 addBGColor :: MonadA m => View -> M m View
 addBGColor view =
   do
-    config <- wenv WE.readConfig
+    config <- egui ExprGuiM.readConfig
     let layer = Config.layerTypes (Config.layers config) - 1
     let color = Config.typeFrameBGColor config
     bgId <- randAnimId
@@ -199,10 +204,10 @@ makeInternal parentPrecedence typ =
   T.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
   T.TRecord composite -> makeRecord composite
 
-make :: MonadA m => AnimId -> Type -> WidgetEnvT (T m) View
+make :: MonadA m => AnimId -> Type -> ExprGuiM m View
 make prefix t =
   do
-    config <- WE.readConfig
+    config <- ExprGuiM.readConfig
     makeInternal (ParentPrecedence 0) t
       & runM
       & (`evalStateT` Random.mkStdGen 0)

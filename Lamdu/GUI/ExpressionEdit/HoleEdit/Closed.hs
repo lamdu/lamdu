@@ -29,7 +29,6 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..), ExpressionN)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
@@ -77,7 +76,7 @@ make hole pl hids@HoleIds{..} =
   where
     onGui gui =
       do
-        Config.Hole{..} <- ExprGuiM.widgetEnv WE.readConfig <&> Config.hole
+        Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
         gui
           & ExpressionGui.egWidget %~
             Widget.weakerEvents (openHoleEventMap holeOpenKeys hids)
@@ -99,7 +98,7 @@ makeUnwrapEventMap ::
   Sugar.HoleArg f (ExpressionN f a) -> HoleIds ->
   ExprGuiM m (Widget.EventHandlers (T f))
 makeUnwrapEventMap arg hids = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- ExprGuiM.readConfig
   let Config.Hole{..} = Config.hole config
   pure $
     case arg ^? Sugar.haUnwrap . Sugar._UnwrapMAction . Lens._Just of
@@ -131,7 +130,7 @@ makeWrapper ::
   Sugar.HoleArg m (ExpressionN m ExprGuiM.Payload) ->
   HoleIds -> ExprGuiM m (ExpressionGui m)
 makeWrapper arg hids@HoleIds{..} = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- ExprGuiM.readConfig
   let
     Config.Hole{..} = Config.hole config
     bgColor =
@@ -179,7 +178,7 @@ makeSuggested suggested HoleIds{..}
       suggested ^. Sugar.hsValue
     mkGui maybeAddBackground =
       do
-        config <- ExprGuiM.widgetEnv WE.readConfig
+        config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
         (suggested ^. Sugar.hsMakeConverted)
           & ExprGuiM.transaction
@@ -195,7 +194,7 @@ makeSuggested suggested HoleIds{..}
 
 makeSimple :: MonadA m => HoleIds -> ExprGuiM m (ExpressionGui m)
 makeSimple HoleIds{..} = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  config <- ExprGuiM.readConfig
   let Config.Hole{..} = Config.hole config
   ExprGuiM.widgetEnv
     (BWidgets.makeTextViewWidget "  " (Widget.toAnimId hidClosed))

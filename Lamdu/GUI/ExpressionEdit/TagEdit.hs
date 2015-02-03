@@ -19,7 +19,6 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..))
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -31,7 +30,7 @@ type T = Transaction
 makeRecordTagNameEdit ::
   MonadA m => Sugar.TagG (Name m) -> ExprGuiM m (Widget (T m))
 makeRecordTagNameEdit tagG = do
-  Config.Name{..} <- Config.name <$> ExprGuiM.widgetEnv WE.readConfig
+  Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
   ExpressionGui.makeNameEdit (tagG ^. Sugar.tagGName) myId
     & ExprGuiM.withFgColor recordTagColor
     <&> Widget.scale (recordTagScaleFactor <&> realToFrac)
@@ -43,10 +42,8 @@ makeRecordTag ::
   NearestHoles -> Sugar.TagG (Name m) ->
   ExprGuiM m (ExpressionGui m)
 makeRecordTag nearestHoles tagG = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  jumpHolesEventMap <-
-    ExprEventMap.jumpHolesEventMap [] nearestHoles
-    & ExprGuiM.widgetEnv
+  config <- ExprGuiM.readConfig
+  jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] nearestHoles
   let
     eventMap =
       jumpHolesEventMap <>
@@ -65,7 +62,7 @@ makeRecordTag nearestHoles tagG = do
 makeParamTag ::
   MonadA m => Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
 makeParamTag t = do
-  Config.Name{..} <- Config.name <$> ExprGuiM.widgetEnv WE.readConfig
+  Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
   ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
     & ExprGuiM.withFgColor paramTagColor
     <&> Widget.scale (paramTagScaleFactor <&> realToFrac)
