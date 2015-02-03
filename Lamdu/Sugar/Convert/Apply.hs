@@ -167,9 +167,8 @@ convertAppliedHole funcI argS argI exprPl = do
   isTypeMatch <- lift $ checkTypeMatch (argI ^. V.payload . ipType) (exprPl ^. ipType)
   let
     argWrap =
-      maybe WrapNotAllowed
-      (WrappedAlready . addEntityId) $
       exprPl ^. Input.mStored
+      & maybe WrapNotAllowed (WrappedAlready . addEntityId)
     holeArg = HoleArg
       { _haExpr =
         argS
