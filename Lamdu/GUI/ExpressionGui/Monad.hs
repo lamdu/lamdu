@@ -17,7 +17,7 @@ module Lamdu.GUI.ExpressionGui.Monad
   --
   , makeSubexpression
   --
-  , readSettings, readCodeAnchors
+  , readConfig, readSettings, readCodeAnchors
   , getCodeAnchor, mkPrejumpPosSaver
   --
   , HolePickers, holePickersAddDocPrefix, holePickersAction
@@ -47,6 +47,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.WidgetId (toAnimId)
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import           Lamdu.Config (Config)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.BottleWidgets as BWidgets
@@ -111,6 +112,7 @@ type SugarExpr m = ExpressionN m Payload
 
 data Askable m = Askable
   { _aSettings :: Settings
+  , _aConfig :: Config
   , _aMakeSubexpression ::
     ParentPrecedence -> SugarExpr m ->
     ExprGuiM m (ExpressionGui m)
@@ -135,6 +137,9 @@ withFgColor = localEnv . WE.setTextColor
 
 readSettings :: MonadA m => ExprGuiM m Settings
 readSettings = ExprGuiM $ Lens.view aSettings
+
+readConfig :: MonadA m => ExprGuiM m Config
+readConfig = ExprGuiM $ Lens.view aConfig
 
 readCodeAnchors :: MonadA m => ExprGuiM m (Anchors.CodeProps m)
 readCodeAnchors = ExprGuiM $ Lens.view aCodeAnchors
@@ -162,12 +167,13 @@ makeSubexpression parentPrecedence expr = do
 run ::
   MonadA m =>
   (ParentPrecedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
-  Anchors.CodeProps m -> Settings -> ExprGuiM m a ->
+  Anchors.CodeProps m -> Config -> Settings -> ExprGuiM m a ->
   WidgetEnvT (T m) a
-run makeSubexpr codeAnchors settings (ExprGuiM action) =
+run makeSubexpr codeAnchors config settings (ExprGuiM action) =
   f <$> runRWST action
   Askable
-  { _aSettings = settings
+  { _aConfig = config
+  , _aSettings = settings
   , _aMakeSubexpression = makeSubexpr
   , _aCodeAnchors = codeAnchors
   , _aSubexpressionLayer = 0

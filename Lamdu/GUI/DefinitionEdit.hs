@@ -19,6 +19,7 @@ import           Graphics.UI.Bottle.View (View(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
@@ -45,11 +46,11 @@ toExprGuiMPayload (entityIds, nearestHoles) =
   ExprGuiM.emptyPayload nearestHoles & ExprGuiM.plStoredEntityIds .~ entityIds
 
 make ::
-  MonadA m => Anchors.CodeProps m -> Settings ->
+  MonadA m => Anchors.CodeProps m -> Config -> Settings ->
   DefinitionN m ([Sugar.EntityId], NearestHoles) ->
   WidgetEnvT (T m) (Widget (T m))
-make cp settings defS =
-  ExprGuiM.run ExpressionEdit.make cp settings $
+make cp config settings defS =
+  ExprGuiM.run ExpressionEdit.make cp config settings $
   case exprGuiDefS ^. Sugar.drBody of
     Sugar.DefinitionBodyExpression bodyExpr ->
       makeExprDefinition exprGuiDefS bodyExpr

@@ -392,6 +392,7 @@ makeRootWidget config settings style dbToIO fullSize cursor = do
     env size = CodeEdit.Env
       { CodeEdit.codeProps = DbLayout.codeProps
       , CodeEdit.totalSize = size
+      , CodeEdit.config = config
       , CodeEdit.settings = settings
       }
     attachCursor eventResult = do

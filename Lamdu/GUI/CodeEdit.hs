@@ -27,6 +27,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
@@ -57,6 +58,7 @@ data Pane m = Pane
 data Env m = Env
   { codeProps :: Anchors.CodeProps m
   , totalSize :: Widget.Size
+  , config :: Config
   , settings :: Settings
   }
 
@@ -179,9 +181,20 @@ makePanesEdit ::
   MonadA m => Env m -> [(Pane m, ProcessedDef m)] ->
   Widget.Id -> WidgetEnvT (T m) (Widget (T m))
 makePanesEdit env loadedPanes myId = do
-  config <- WE.readConfig
-  let
-    Config.Pane{..} = Config.pane config
+  panesWidget <-
+    case loadedPanes of
+    [] -> BWidgets.makeFocusableTextView "<No panes>" myId
+    ((firstPane, _):_) ->
+      do
+        definitionEdits <- traverse makePaneEdit loadedPanes
+        return . Box.vboxAlign 0 $ intersperse (Spacer.makeWidget 50) definitionEdits
+      & (WE.assignCursor myId . WidgetIds.fromIRef . paneDefI) firstPane
+  eventMap <- panesEventMap env
+  panesWidget
+    & Widget.weakerEvents eventMap
+    & return
+  where
+    Config.Pane{..} = Config.pane $ config env
     paneEventMap pane = mconcat
       [ maybe mempty
         (Widget.keysEventMapMovesCursor paneCloseKeys
@@ -196,51 +209,38 @@ makePanesEdit env loadedPanes myId = do
     makePaneEdit (pane, defS) =
       makePaneWidget env defS
       <&> Widget.weakerEvents (paneEventMap pane)
-  panesWidget <-
-    case loadedPanes of
-    [] -> BWidgets.makeFocusableTextView "<No panes>" myId
-    ((firstPane, _):_) ->
-      do
-        definitionEdits <- traverse makePaneEdit loadedPanes
-        return . Box.vboxAlign 0 $ intersperse (Spacer.makeWidget 50) definitionEdits
-      & (WE.assignCursor myId . WidgetIds.fromIRef . paneDefI) firstPane
-  eventMap <- panesEventMap env
-  panesWidget
-    & Widget.weakerEvents eventMap
-    & return
 
 panesEventMap ::
   MonadA m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (T m))
 panesEventMap env =
   do
-    config <- WE.readConfig
-    let Config.Pane{..} = Config.pane config
     mJumpBack <- lift . DataOps.jumpBack $ codeProps env
     newDefinition <- makeNewDefinition $ codeProps env
     return $ mconcat
       [ Widget.keysEventMapMovesCursor newDefinitionKeys
         (E.Doc ["Edit", "New definition"]) newDefinition
       , maybe mempty
-        (Widget.keysEventMapMovesCursor (Config.previousCursorKeys config)
+        (Widget.keysEventMapMovesCursor (Config.previousCursorKeys (config env))
          (E.Doc ["Navigation", "Go back"])) mJumpBack
       ]
+  where
+    Config.Pane{..} = Config.pane $ config env
 
 makePaneWidget ::
   MonadA m => Env m -> ProcessedDef m -> WidgetEnvT (T m) (Widget (T m))
-makePaneWidget env defS = do
-  config <- WE.readConfig
-  let
-    Config.Pane{..} = Config.pane config
+makePaneWidget env defS =
+  DefinitionEdit.make (codeProps env) (config env) (settings env) defS
+    <&> fitToWidth (totalWidth env) . colorize
+  where
+    Config.Pane{..} = Config.pane (config env)
     colorize widget
       | widget ^. Widget.isFocused = colorizeActivePane widget
       | otherwise = colorizeInactivePane widget
     colorizeActivePane =
       Widget.backgroundColor
-      (Config.layerActivePane (Config.layers config))
+      (Config.layerActivePane (Config.layers (config env)))
       WidgetIds.activePaneBackground paneActiveBGColor
     colorizeInactivePane = Widget.tint paneInactiveTintColor
-  DefinitionEdit.make (codeProps env) (settings env) defS
-    <&> fitToWidth (totalWidth env) . colorize
 
 fitToWidth :: Widget.R -> Widget f -> Widget f
 fitToWidth width w
