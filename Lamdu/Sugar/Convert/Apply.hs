@@ -172,9 +172,7 @@ convertAppliedHole funcI argS argI exprPl = do
     holeArg = HoleArg
       { _haExpr =
         argS
-        & rPayload . plActions . Lens._Just %~
-          (wrap .~ argWrap) .
-          (setToHole .~ AlreadyAHole)
+        & rPayload . plActions . Lens._Just . wrap .~ argWrap
       , _haUnwrap =
         if isTypeMatch
         then UnwrapMAction mUnwrap

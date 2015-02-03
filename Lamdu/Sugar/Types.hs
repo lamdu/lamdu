@@ -88,12 +88,12 @@ type T = Transaction
 data WrapAction m
   = WrapperAlready (Guid, EntityId) -- I'm an apply-of-hole, (Guid,EntityId of hole), no need to wrap
   | WrappedAlready (Guid, EntityId) -- I'm an arg of apply-of-hole (Guid,EntityId of hole), no need to wrap
-  | WrapNotAllowed -- I'm already wrapped or a tag or a hole
+  | WrapNotAllowed -- I'm a hole
   | WrapAction (T m (Guid, EntityId)) -- Wrap me!
 
 data SetToHole m
   = SetToHole (T m (Guid, EntityId))
-  | AlreadyAHole -- or already an arg of one
+  | AlreadyAHole
 
 data SetToInnerExpr m = SetToInnerExpr (T m EntityId) | NoInnerExpr
 
