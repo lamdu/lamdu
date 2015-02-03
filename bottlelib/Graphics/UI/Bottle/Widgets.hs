@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.GUI.BottleWidgets
+module Graphics.UI.Bottle.Widgets
   ( makeTextView, makeTextViewWidget, makeLabel
   , makeFocusableView
   , makeFocusableTextView, makeFocusableLabel
@@ -37,9 +37,9 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
-import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
-import qualified Lamdu.GUI.WidgetEnvT as WE
 
 makeTextView ::
   MonadA m => String -> AnimId -> WidgetEnvT m View

@@ -44,8 +44,8 @@ import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
-import           Lamdu.GUI.WidgetEnvT (runWidgetEnvT)
-import qualified Lamdu.GUI.WidgetEnvT as WE
+import           Graphics.UI.Bottle.WidgetsEnvT (runWidgetEnvT)
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)

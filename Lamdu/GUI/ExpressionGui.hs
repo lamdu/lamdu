@@ -61,7 +61,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Expr.Type (Type)
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -69,7 +69,7 @@ import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.Parens as Parens
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
 import qualified Lamdu.GUI.TypeView as TypeView
-import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar

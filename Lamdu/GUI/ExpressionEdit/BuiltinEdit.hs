@@ -20,7 +20,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Sugar.Types as Sugar

@@ -32,11 +32,11 @@ import qualified Lamdu.Expr.FlatComposite as FlatComposite
 import           Lamdu.Expr.Identifier (Identifier(..))
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..))
-import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
+import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           System.Random (Random, random)
 import qualified System.Random as Random

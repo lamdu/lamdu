@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
-module Lamdu.GUI.WidgetEnvT
+module Graphics.UI.Bottle.WidgetsEnvT
   ( WidgetEnvT, runWidgetEnvT
   , mapWidgetEnvT
 

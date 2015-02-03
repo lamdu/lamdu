@@ -33,11 +33,11 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (DefI)
 import           Lamdu.Expr.Load (loadDef)
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
-import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
-import qualified Lamdu.GUI.WidgetEnvT as WE
+import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.AddNames as AddNames
 import           Lamdu.Sugar.AddNames.Types (DefinitionN)

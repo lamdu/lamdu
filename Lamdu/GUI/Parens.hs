@@ -13,11 +13,11 @@ import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
-import qualified Lamdu.GUI.WidgetEnvT as WE
+import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.GUI.WidgetIds (parensPrefix)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 

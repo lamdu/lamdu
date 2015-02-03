@@ -26,9 +26,9 @@ import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
-import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
+import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.VersionControl.Actions (Actions(..))
 

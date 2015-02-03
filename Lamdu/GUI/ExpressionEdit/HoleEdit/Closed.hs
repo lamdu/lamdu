@@ -22,7 +22,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
