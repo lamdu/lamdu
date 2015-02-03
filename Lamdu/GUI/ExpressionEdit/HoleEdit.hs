@@ -47,12 +47,12 @@ make hole pl =
       _chMkGui
       <&> join (,)
       & ExpressionGui.stdWrapIn _1 pl
-    config <- ExprGuiM.readConfig
-    let Config.Hole{..} = Config.hole config
+    Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
     tryOpenHole unwrappedClosedHoleGui hole pl hids
       <&> hAlign .~ 0
       <&> (`Layout.hoverInPlaceOf` (closedHoleGui & hAlign .~ 0))
-      <&> ExpressionGui.egWidget %~ BWidgets.liftLayerInterval config
+      >>= ExpressionGui.egWidget %%~
+          lift . ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
       & runMaybeT
       <&> fromMaybe closedHoleGui
       <&> ExpressionGui.egWidget %~ Widget.takesFocus (const (pure myId))

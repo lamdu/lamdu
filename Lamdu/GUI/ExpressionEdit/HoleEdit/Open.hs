@@ -229,8 +229,7 @@ makeHoleResultWidget ::
   Sugar.HoleResult (Name m) m ->
   ExprGuiM m (Widget (T m), ExprGuiM m (Widget.EventHandlers (T m)))
 makeHoleResultWidget resultId holeResult = do
-  config <- ExprGuiM.readConfig
-  let Config.Hole{..} = Config.hole config
+  Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
   let mkEventMap =
         do
           -- Create a hidden result widget that we never display, but only
@@ -247,7 +246,7 @@ makeHoleResultWidget resultId holeResult = do
     <&> Widget.scale (realToFrac <$> holeResultScaleFactor)
     <&> Widget.eventMap .~ mempty
     >>= makeFocusable resultId
-    <&> BWidgets.liftLayerInterval config
+    >>= ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
   return (widget, mkEventMap)
   where
     mkWidget =

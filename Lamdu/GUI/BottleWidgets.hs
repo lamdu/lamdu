@@ -64,11 +64,12 @@ verticalSpace = do
   config <- WE.readConfig
   return $ vspaceWidget $ realToFrac $ Config.verticalSpacing config
 
-liftLayerInterval :: Config -> Widget f -> Widget f
-liftLayerInterval config =
-  Widget.animLayers -~ layerDiff
-  where
-    layerDiff = Config.layerInterval (Config.layers config)
+liftLayerInterval :: MonadA m => Widget f -> WidgetEnvT m (Widget f)
+liftLayerInterval widget =
+  do
+    config <- WE.readConfig
+    let layerDiff = Config.layerInterval (Config.layers config)
+    widget & Widget.animLayers -~ layerDiff & return
 
 readEnv :: MonadA m => WidgetEnvT m Widget.Env
 readEnv =
