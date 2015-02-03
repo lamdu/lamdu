@@ -365,7 +365,18 @@ makeRootWidget ::
   Transaction DbLayout.DbM (Widget IO)
 makeRootWidget config settings style dbToIO fullSize cursor = do
   actions <- VersionControl.makeActions
-  runWidgetEnvT cursor style config $ do
+  let
+    widgetEnv = WE.Env
+      { _envCursor = cursor
+      , _envTextStyle = style
+      , backgroundCursorId = WidgetIds.backgroundCursorId
+      , cursorBGColor = Config.cursorBGColor config
+      , layerCursor = Config.layerCursor $ Config.layers config
+      , layerInterval = Config.layerInterval $ Config.layers config
+      , verticalSpacing = Config.verticalSpacing config
+      , stdSpaceWidth = Config.spaceWidth config
+      }
+  runWidgetEnvT widgetEnv $ do
     branchGui <-
       VersionControlGUI.make (Config.versionControl config)
       (Config.layerChoiceBG (Config.layers config))

@@ -38,11 +38,8 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
-import           Lamdu.Config (Config)
-import qualified Lamdu.Config as Config
 import           Lamdu.GUI.WidgetEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetEnvT as WE
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 makeTextView ::
   MonadA m => String -> AnimId -> WidgetEnvT m View
@@ -61,31 +58,31 @@ makeLabel text prefix =
 
 verticalSpace :: MonadA m => WidgetEnvT m (Widget f)
 verticalSpace = do
-  config <- WE.readConfig
-  return $ vspaceWidget $ realToFrac $ Config.verticalSpacing config
+  env <- WE.readEnv
+  return $ vspaceWidget $ realToFrac $ WE.verticalSpacing env
 
 liftLayerInterval :: MonadA m => Widget f -> WidgetEnvT m (Widget f)
 liftLayerInterval widget =
   do
-    config <- WE.readConfig
-    let layerDiff = Config.layerInterval (Config.layers config)
+    env <- WE.readEnv
+    let layerDiff = WE.layerInterval env
     widget & Widget.animLayers -~ layerDiff & return
 
 readEnv :: MonadA m => WidgetEnvT m Widget.Env
 readEnv =
   do
-    cursor <- WE.readCursor
-    Widget.Env cursor WidgetIds.backgroundCursorId & return
+    env <- WE.readEnv
+    Widget.Env (env ^. WE.envCursor) (WE.backgroundCursorId env) & return
 
 respondToCursorPrefix ::
   MonadA m => Widget.Id -> Widget f -> WidgetEnvT m (Widget f)
 respondToCursorPrefix myIdPrefix widget = do
-  config <- WE.readConfig
+  env <- WE.readEnv
   widgetEnv <- readEnv
   widget
     & Widget.respondToCursorPrefix myIdPrefix
-      (Config.cursorBGColor config)
-      (Config.layerCursor (Config.layers config))
+      (WE.cursorBGColor env)
+      (WE.layerCursor env)
       widgetEnv
     & return
 
@@ -116,10 +113,10 @@ makeFocusableLabel text myIdPrefix = do
   where
     myId = Widget.joinId myIdPrefix [pack text]
 
-fdStyle :: Config -> FocusDelegator.Style
-fdStyle config = FocusDelegator.Style
-  { FocusDelegator.color = Config.cursorBGColor config
-  , FocusDelegator.layer = Config.layerCursor $ Config.layers config
+fdStyle :: WE.Env -> FocusDelegator.Style
+fdStyle env = FocusDelegator.Style
+  { FocusDelegator.color = WE.cursorBGColor env
+  , FocusDelegator.layer = WE.layerCursor env
   }
 
 makeFocusDelegator ::
@@ -131,7 +128,7 @@ makeFocusDelegator ::
 makeFocusDelegator fdConfig focusEntryTarget myId childWidget =
   do
     env <- readEnv
-    fdEnv <- WE.readConfig <&> fdStyle <&> FocusDelegator.Env fdConfig
+    fdEnv <- WE.readEnv <&> fdStyle <&> FocusDelegator.Env fdConfig
     FocusDelegator.make fdEnv focusEntryTarget myId env childWidget & return
 
 makeTextEdit ::
@@ -187,8 +184,8 @@ vspaceWidget = Widget.fromView . Spacer.makeVertical
 
 stdSpaceWidget :: MonadA m => WidgetEnvT m (Widget f)
 stdSpaceWidget =
-  WE.readConfig
-  <&> Widget.fromView . Spacer.make . realToFrac . Config.spaceWidth
+  WE.readEnv
+  <&> Widget.fromView . Spacer.make . realToFrac . WE.stdSpaceWidth
 
 hboxSpaced :: MonadA m => [(Box.Alignment, Widget f)] -> WidgetEnvT m (Widget f)
 hboxSpaced widgets =
@@ -213,9 +210,9 @@ makeChoiceWidget ::
   (a -> f ()) -> [(a, Widget f)] -> a ->
   Choice.Config -> Widget.Id -> WidgetEnvT m (Widget f)
 makeChoiceWidget choose children curChild choiceConfig myId = do
-  config <- WE.readConfig
-  env <- readEnv
-  Choice.make (fdStyle config) choiceConfig (children <&> annotate) myId env
+  env <- WE.readEnv
+  widgetEnv <- readEnv
+  Choice.make (fdStyle env) choiceConfig (children <&> annotate) myId widgetEnv
     & return
   where
     annotate (item, widget) =

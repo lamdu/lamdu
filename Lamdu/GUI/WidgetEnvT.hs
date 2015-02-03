@@ -2,29 +2,32 @@
 module Lamdu.GUI.WidgetEnvT
   ( WidgetEnvT, runWidgetEnvT
   , mapWidgetEnvT
+
   , readCursor, subCursor, isSubCursor
 
   , Env(..), envCursor, envTextStyle
+
+  , readEnv
 
   , localEnv
   , envAssignCursor, envAssignCursorPrefix
   , assignCursor, assignCursorPrefix
 
-  , readConfig, readTextStyle
+  , readTextStyle
   , setTextSizeColor, setTextColor
   ) where
 
-import Control.Applicative (Applicative)
-import Control.Lens.Operators
-import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.MonadA (MonadA)
-import Data.Maybe (isJust)
-import Graphics.UI.Bottle.Animation (AnimId)
-import Lamdu.Config (Config)
+import           Control.Applicative (Applicative)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad.Trans.Class (MonadTrans(..))
+import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
+import           Control.MonadA (MonadA)
+import           Data.Maybe (isJust)
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Animation (AnimId)
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -32,7 +35,12 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 data Env = Env
   { _envCursor :: Widget.Id
   , _envTextStyle :: TextEdit.Style
-  , _envConfig :: Config
+  , backgroundCursorId :: AnimId
+  , cursorBGColor :: Draw.Color
+  , layerCursor :: Anim.Layer
+  , layerInterval :: Anim.Layer
+  , verticalSpacing :: Double
+  , stdSpaceWidth :: Double
   }
 Lens.makeLenses ''Env
 
@@ -41,8 +49,9 @@ newtype WidgetEnvT m a = WidgetEnvT
   } deriving (Functor, Applicative, Monad, MonadTrans)
 Lens.makeLenses ''WidgetEnvT
 
-runWidgetEnvT :: MonadA m => Widget.Id -> TextEdit.Style -> Config -> WidgetEnvT m a -> m a
-runWidgetEnvT cursor style config (WidgetEnvT action) = runReaderT action (Env cursor style config)
+runWidgetEnvT ::
+  MonadA m => Env -> WidgetEnvT m a -> m a
+runWidgetEnvT env (WidgetEnvT action) = runReaderT action env
 
 mapWidgetEnvT
   :: MonadA m
@@ -51,20 +60,20 @@ mapWidgetEnvT
   -> WidgetEnvT n a
 mapWidgetEnvT = (widgetEnvT %~) . Reader.mapReaderT
 
+readEnv :: MonadA m => WidgetEnvT m Env
+readEnv = WidgetEnvT Reader.ask
+
 readCursor :: MonadA m => WidgetEnvT m Widget.Id
-readCursor = WidgetEnvT $ Reader.asks (^. envCursor)
+readCursor = readEnv <&> (^. envCursor)
 
 subCursor :: MonadA m => Widget.Id -> WidgetEnvT m (Maybe AnimId)
-subCursor folder = fmap (Widget.subId folder) readCursor
+subCursor folder = readCursor <&> Widget.subId folder
 
 isSubCursor :: MonadA m => Widget.Id -> WidgetEnvT m Bool
 isSubCursor = fmap isJust . subCursor
 
-readConfig :: MonadA m => WidgetEnvT m Config
-readConfig = WidgetEnvT $ Lens.view envConfig
-
 readTextStyle :: MonadA m => WidgetEnvT m TextEdit.Style
-readTextStyle = WidgetEnvT $ Lens.view envTextStyle
+readTextStyle = readEnv <&> (^. envTextStyle)
 
 envAssignCursor
   :: Widget.Id -> Widget.Id -> Env -> Env
