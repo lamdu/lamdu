@@ -233,7 +233,8 @@ makeExtraResultsWidget holeInfo mainResultHeight extraResults@(firstResult:_) =
         return
             ( msum mResults
             , Box.vboxAlign 0 widgets
-              & addBackground (rId firstResult) (Config.layers config) holeOpenBGColor
+              & addBackground (Widget.toAnimId (rId firstResult))
+                (Config.layers config) holeOpenBGColor
               & Widget.size .~ Vector2 0 height
               & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
             )
@@ -418,7 +419,7 @@ makeUnderCursorAssignment
         rawOpenHole
             & guiWidth %~ max (typeView ^. Widget.width)
             & ExpressionGui.egWidget %~
-              addBackground (hidOpen (hiIds holeInfo))
+              addBackground (Widget.toAnimId (hidOpen (hiIds holeInfo)))
               (Config.layers config) holeOpenBGColor
             & ExpressionGui.addBelowInferredSpacing typeView
             >>= addDarkBackground (hidOpen (hiIds holeInfo))

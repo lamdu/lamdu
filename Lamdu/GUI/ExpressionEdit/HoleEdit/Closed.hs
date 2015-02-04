@@ -148,6 +148,8 @@ makeSimple HoleIds{..} = do
   config <- ExprGuiM.readConfig
   let Config.Hole{..} = Config.hole config
   ExprGuiM.widgetEnv
-    (BWidgets.makeTextViewWidget "  " (Widget.toAnimId hidClosed))
-    <&> addBackground hidClosed (Config.layers config) holeClosedBGColor
+    (BWidgets.makeTextViewWidget "  " animId)
+    <&> addBackground animId (Config.layers config) holeClosedBGColor
     <&> ExpressionGui.fromValueWidget
+  where
+    animId = Widget.toAnimId hidClosed
