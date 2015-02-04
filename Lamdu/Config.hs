@@ -30,6 +30,8 @@ data Layers = Layers
   , layerActivePane
   , layerMax :: Anim.Layer
   } deriving (Eq, Generic, Show)
+instance ToJSON Layers
+instance FromJSON Layers
 
 layerInterval :: Layers -> Int
 layerInterval Layers{..} = layerMax - layerMin
@@ -41,6 +43,8 @@ data Help = Help
   , helpBGColor :: Draw.Color
   , helpKeys :: [ModKey]
   } deriving (Eq, Generic, Show)
+instance ToJSON Help
+instance FromJSON Help
 
 data Zoom = Zoom
   { shrinkKeys :: [ModKey]
@@ -48,6 +52,8 @@ data Zoom = Zoom
   , enlargeFactor :: Double
   , shrinkFactor :: Double
   } deriving (Eq, Generic, Show)
+instance ToJSON Zoom
+instance FromJSON Zoom
 
 data Pane = Pane
   { paneInactiveTintColor :: Draw.Color
@@ -60,6 +66,8 @@ data Pane = Pane
     paneHoverPadding :: Draw.R
   , newDefinitionKeys :: [ModKey]
   } deriving (Eq, Generic, Show)
+instance ToJSON Pane
+instance FromJSON Pane
 
 data Hole = Hole
   { holePickAndMoveToNextHoleKeys :: [ModKey]
@@ -81,6 +89,8 @@ data Hole = Hole
   , holeOpenKeys :: [ModKey]
   , holeHoveringWrapperScale :: Vector2 Double
   } deriving (Eq, Generic, Show)
+instance ToJSON Hole
+instance FromJSON Hole
 
 data Name = Name
   { collisionSuffixTextColor :: Draw.Color
@@ -95,6 +105,8 @@ data Name = Name
   , paramTagColor :: Draw.Color
   , paramTagScaleFactor :: Vector2 Double
   } deriving (Eq, Generic, Show)
+instance ToJSON Name
+instance FromJSON Name
 
 data Config = Config
   { layers :: Layers
@@ -171,27 +183,8 @@ data Config = Config
   , presentationChoiceScaleFactor :: Vector2 Double
   , presentationChoiceColor :: Draw.Color
   } deriving (Eq, Generic, Show)
+instance ToJSON Config
+instance FromJSON Config
 
 delKeys :: Config -> [ModKey]
 delKeys config = delForwardKeys config ++ delBackwardKeys config
-
-instance ToJSON Layers
-instance FromJSON Layers
-
-instance ToJSON Help
-instance FromJSON Help
-
-instance ToJSON Zoom
-instance FromJSON Zoom
-
-instance ToJSON Pane
-instance FromJSON Pane
-
-instance ToJSON Hole
-instance FromJSON Hole
-
-instance ToJSON Name
-instance FromJSON Name
-
-instance ToJSON Config
-instance FromJSON Config
