@@ -50,7 +50,6 @@ module Lamdu.Sugar.Types
     , fpName, fpId, fpVarInfo, fpInferredType, fpMActions, fpHiddenIds
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
   , HoleArg(..), haExpr, haUnwrap
-  , HoleSuggested(..), hsValue, hsMakeConverted
   , Hole(..)
     , holeMActions, holeMArg, holeSuggested, holeGuid
   , ScopeGetVar(..), sgvGetVar, sgvVal
@@ -214,14 +213,9 @@ data HoleArg m expr = HoleArg
   , _haUnwrap :: Unwrap m
   } deriving (Functor, Foldable, Traversable)
 
-data HoleSuggested name m = HoleSuggested
-  { _hsValue :: Val ()
-  , _hsMakeConverted :: T m (Expression name m ())
-  }
-
 data Hole name m expr = Hole
   { _holeMActions :: Maybe (HoleActions name m)
-  , _holeSuggested :: HoleSuggested name m
+  , _holeSuggested :: Val ()
   , _holeMArg :: Maybe (HoleArg m expr)
   } deriving (Functor, Foldable, Traversable)
 
@@ -413,7 +407,6 @@ Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg
 Lens.makeLenses ''HoleResult
-Lens.makeLenses ''HoleSuggested
 Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions
 Lens.makeLenses ''NamedVar

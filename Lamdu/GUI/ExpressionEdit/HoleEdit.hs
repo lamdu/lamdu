@@ -61,7 +61,7 @@ make hole pl =
   where
     myId = WidgetIds.fromExprPayload pl
     hAlign = ExpressionGui.egAlignment . _1
-    ClosedHole{..} = HoleClosed.make hole pl hids
+    ClosedHole{..} = HoleClosed.make hole hids
     closedHoleId = Widget.joinId myId ["ClosedHole"]
     hids = HoleIds
       { hidOpen = HoleWidgetIds.openHoleId myId

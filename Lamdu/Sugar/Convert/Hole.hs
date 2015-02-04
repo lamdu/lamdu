@@ -21,7 +21,6 @@ import qualified Data.Foldable as Foldable
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import           Data.Maybe (maybeToList)
-import           Data.Maybe.Utils (unsafeUnjust)
 import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
 import           Data.Store.Guid (Guid)
@@ -127,30 +126,12 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
 consistentExprIds :: EntityId -> Val (Guid -> EntityId -> a) -> Val a
 consistentExprIds = EntityId.randomizeExprAndParams . genFromHashable
 
-mkHoleSuggested :: MonadA m => EntityId -> Infer.Payload -> ConvertM m (HoleSuggested Guid m)
-mkHoleSuggested holeEntityId inferred = do
-  sugarContext <- ConvertM.readContext
-  let
-    mkConverted = do
-      (inferredIVal, newCtx) <-
-        IRefInfer.loadInferInto inferred suggestedVal
-        & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
-        & runMaybeT
-        <&> unsafeUnjust "Inference on inferred val must succeed"
-      inferredIVal
-        <&> Input.mkUnstoredPayload () . fst
-        & consistentExprIds holeEntityId
-        & ConvertM.convertSubexpression
-        & ConvertM.run (sugarContext & ConvertM.scInferContext .~ newCtx)
-  pure HoleSuggested
-    { _hsValue = suggestedVal
-    , _hsMakeConverted = mkConverted
-    }
+mkHoleSuggested :: Infer.Payload -> Val ()
+mkHoleSuggested inferred =
+  inferred ^. Infer.plType
+  & suggestValueWith mkVar
+  & (`evalState` (0 :: Int))
   where
-    suggestedVal =
-      (`evalState` (0 :: Int)) $
-      suggestValueWith mkVar
-      (inferred ^. Infer.plType)
     mkVar = do
       i <- State.get
       State.modify (+1)
@@ -162,10 +143,9 @@ mkHole ::
   Input.Payload m a -> ConvertM m (Hole Guid m (ExpressionU m a))
 mkHole mInjectedArg exprPl = do
   mActions <- traverse (mkWritableHoleActions mInjectedArg exprPl) (exprPl ^. Input.mStored)
-  suggested <- mkHoleSuggested (exprPl ^. Input.entityId) $ exprPl ^. Input.inferred
   pure Hole
     { _holeMActions = mActions
-    , _holeSuggested = suggested
+    , _holeSuggested = mkHoleSuggested (exprPl ^. Input.inferred)
     , _holeMArg = Nothing
     }
 

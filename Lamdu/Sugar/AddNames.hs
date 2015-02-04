@@ -385,28 +385,16 @@ toHoleActions ha@HoleActions {..} = do
         (>>= holeResultConverted (run . toExpression))
     }
 
-toHoleSuggested ::
-  MonadNaming m =>
-  HoleSuggested (OldName m) (TM m) ->
-  m (HoleSuggested (NewName m) (TM m))
-toHoleSuggested inferred = do
-  InTransaction run <- opRun
-  inferred
-    & hsMakeConverted %~ (run . toExpression =<<)
-    & return
-
 toHole ::
   MonadNaming m =>
   Hole (OldName m) (TM m) (OldExpression m a) ->
   m (Hole (NewName m) (TM m) (NewExpression m a))
 toHole hole@Hole {..} = do
   mActions <- _holeMActions & Lens._Just %%~ toHoleActions
-  inferred <- toHoleSuggested _holeSuggested
   mArg <- _holeMArg & Lens._Just . Lens.traversed %%~ toExpression
   pure hole
     { _holeMActions = mActions
     , _holeMArg = mArg
-    , _holeSuggested = inferred
     }
 
 toNamedVar ::

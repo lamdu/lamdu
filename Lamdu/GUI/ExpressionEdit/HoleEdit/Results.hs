@@ -235,6 +235,7 @@ makeAllGroups holeInfo = do
       getVars
       & map getVarToGroup
       & sortOn (^. groupAttributes . searchTerms)
+    suggestedVal = hiSuggested holeInfo
     suggestedGroups =
       [ Group
         { _groupAttributes = GroupAttributes ["suggested"] HighPrecedence
@@ -268,7 +269,6 @@ makeAllGroups holeInfo = do
       in
         ( suggestedGroups & Lens.traverse . groupAttributes <>~ dupsGroupNames
         ) ++ others
-    suggestedVal = hiSuggested holeInfo ^. Sugar.hsValue
 
 primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
