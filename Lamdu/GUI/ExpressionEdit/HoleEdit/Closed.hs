@@ -162,21 +162,10 @@ makeSuggested ::
   MonadA m =>
   Sugar.HoleSuggested (Name m) m ->
   HoleIds -> (HoleDest, ExprGuiM m (ExpressionGui m))
-makeSuggested suggested HoleIds{..}
-  | fullySuggested =
-    ( HoleDestClosed
-    , mkGui don'tAddBackground
-    )
-  | otherwise =
-    ( HoleDestOpened
-    , mkGui addBackground
-    )
+makeSuggested suggested HoleIds{..} =
+  (HoleDestOpened, mkGui)
   where
-    don'tAddBackground _ _ _ = id
-    fullySuggested =
-      Lens.nullOf (ExprLens.subExprs . ExprLens.valHole) $
-      suggested ^. Sugar.hsValue
-    mkGui maybeAddBackground =
+    mkGui =
       do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
@@ -186,7 +175,7 @@ makeSuggested suggested HoleIds{..}
           <&> Lens.mapped . Lens.mapped . ExprGuiM.plShowType .~ ExprGuiM.DoNotShowType
           >>= ExprGuiM.makeSubexpression 0
           <&> ExpressionGui.egWidget %~
-              maybeAddBackground hidClosed (Config.layers config) holeClosedBGColor .
+              addBackground hidClosed (Config.layers config) holeClosedBGColor .
               Widget.tint (Config.suggestedValueTint config) .
               Widget.scale (realToFrac <$> Config.suggestedValueScaleFactor config) .
               (Widget.eventMap .~ mempty)
