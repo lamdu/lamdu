@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, RankNTypes #-}
+{-# LANGUAGE RecordWildCards, RankNTypes, OverloadedStrings #-}
 module Graphics.UI.Bottle.View
   ( View(..)
   , empty
@@ -49,7 +49,7 @@ backgroundColor animId layer color view =
     view
     & animFrame %~ Anim.backgroundColor bgAnimId layer color (view ^. size)
     where
-        bgAnimId = animId ++ [SBS8.pack "bg"]
+        bgAnimId = animId ++ ["bg"]
 
 scale :: Vector2 Draw.R -> View -> View
 scale ratio (View sz frm) =
