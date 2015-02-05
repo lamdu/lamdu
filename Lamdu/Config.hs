@@ -99,7 +99,6 @@ data Name = Name
   , definitionColor :: Draw.Color
   , parameterColor :: Draw.Color
   , recordTagColor :: Draw.Color
-  , recordTagScaleFactor :: Vector2 Double
   , paramTagColor :: Draw.Color
   , paramTagScaleFactor :: Vector2 Double
   } deriving (Eq, Generic, Show)

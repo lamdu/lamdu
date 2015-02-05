@@ -33,7 +33,6 @@ makeRecordTagNameEdit tagG = do
   Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
   ExpressionGui.makeNameEdit (tagG ^. Sugar.tagGName) myId
     & ExprGuiM.withFgColor recordTagColor
-    <&> Widget.scale (recordTagScaleFactor <&> realToFrac)
   where
     myId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
 

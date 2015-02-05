@@ -360,10 +360,6 @@
             0.75,
             1.0
         ],
-        "recordTagScaleFactor": {
-            "_first": 1.0,
-            "_second": 1.0
-        },
         "paramTagColor": [
             0.65,
             0.65,
