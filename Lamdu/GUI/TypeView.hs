@@ -213,4 +213,3 @@ make prefix t =
       & (`evalStateT` Random.mkStdGen 0)
       <&> View.animFrame %~ Anim.mapIdentities (mappend prefix)
       <&> View.animFrame . Anim.unitImages %~ Draw.tint (Config.typeTint config)
-      <&> View.scale (realToFrac <$> Config.typeScaleFactor config)

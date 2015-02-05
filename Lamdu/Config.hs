@@ -146,8 +146,6 @@ data Config = Config
   , whereAddItemKeys :: [ModKey]
   , whereItemPadding :: Vector2 Double
 
-  , typeScaleFactor :: Vector2 Double
-
   , cutKeys :: [ModKey]
   , pasteKeys :: [ModKey]
 

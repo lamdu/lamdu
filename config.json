@@ -703,10 +703,6 @@
         1.0,
         0.25
     ],
-    "typeScaleFactor": {
-        "_first": 1.0,
-        "_second": 1.0
-    },
     "whereItemPadding": {
         "_first": 5,
         "_second": 5
