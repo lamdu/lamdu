@@ -39,7 +39,7 @@ make holePickers pl =
   [ maybe (return mempty)
     (actionsEventMap holePickers)
     (pl ^. Sugar.plActions)
-  , jumpHolesEventMapIfSelected holePickers pl
+  , jumpHolesEventMapIfSelected pl
   , replaceOrComeToParentEventMap pl
   ]
 
@@ -70,37 +70,30 @@ isExprSelected pl cursor =
   & Lens.has Lens._Just
 
 jumpHolesEventMap ::
-  MonadA m => HolePickers m ->
-  NearestHoles ->
-  ExprGuiM m (EventHandlers (T m))
-jumpHolesEventMap holePickers hg = do
+  MonadA m => NearestHoles -> ExprGuiM m (EventHandlers (T m))
+jumpHolesEventMap hg = do
   config <- ExprGuiM.readConfig <&> Config.hole
   let
     jumpEventMap keys dirStr lens =
       maybe mempty
-      (mkEventMapWithPickers holePickers (keys config)
-       (E.Doc ["Navigation", jumpDoc dirStr]) id . pure) $
+      (Widget.keysEventMapMovesCursor (keys config)
+       (E.Doc ["Navigation", jumpDoc dirStr]) . pure . WidgetIds.fromEntityId) $
       hg ^. lens
-  pure $
-    mconcat
+  mconcat
     [ jumpEventMap Config.holeJumpToNextKeys "next" NearestHoles.next
     , jumpEventMap Config.holeJumpToPrevKeys "previous" NearestHoles.prev
-    ]
+    ] & return
   where
-    jumpDoc dirStr =
-      ExprGuiM.holePickersAddDocPrefix holePickers $ "Jump to " ++ dirStr ++ " hole"
+    jumpDoc dirStr = "Jump to " ++ dirStr ++ " hole"
 
 jumpHolesEventMapIfSelected ::
-  MonadA m => HolePickers m ->
-  Sugar.Payload m ExprGuiM.Payload ->
+  MonadA m => Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (EventHandlers (T m))
-jumpHolesEventMapIfSelected holePickers pl =
+jumpHolesEventMapIfSelected pl =
   do
     cursor <- ExprGuiM.widgetEnv WE.readCursor
     if isExprSelected pl cursor
-      then
-        jumpHolesEventMap holePickers $
-        pl ^. Sugar.plData . ExprGuiM.plNearestHoles
+      then pl ^. Sugar.plData . ExprGuiM.plNearestHoles & jumpHolesEventMap
       else pure mempty
 
 cutEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)

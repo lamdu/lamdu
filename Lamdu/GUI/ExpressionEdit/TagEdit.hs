@@ -43,7 +43,7 @@ makeRecordTag ::
   ExprGuiM m (ExpressionGui m)
 makeRecordTag nearestHoles tagG = do
   config <- ExprGuiM.readConfig
-  jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap [] nearestHoles
+  jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
   let
     eventMap =
       jumpHolesEventMap <>
