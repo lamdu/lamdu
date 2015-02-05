@@ -143,9 +143,6 @@ data Config = Config
   , acceptDefinitionTypeForFirstTimeColor :: Draw.Color
   , acceptDefinitionTypeKeys :: [ModKey]
 
-  , suggestedValueScaleFactor :: Vector2 Double
-  , suggestedValueTint :: Draw.Color
-
   , whereAddItemKeys :: [ModKey]
   , whereItemPadding :: Vector2 Double
 

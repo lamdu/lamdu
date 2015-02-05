@@ -475,10 +475,6 @@
         0.4,
         1.0
     ],
-    "suggestedValueScaleFactor": {
-        "_first": 1.0,
-        "_second": 1.0
-    },
     "jumpLHStoRHSKeys": [
         [
             {
@@ -597,12 +593,6 @@
             },
             "Key'F7"
         ]
-    ],
-    "suggestedValueTint": [
-        1.0,
-        1.0,
-        1.0,
-        0.6
     ],
     "leaveSubexpressionKeys": [
         [
