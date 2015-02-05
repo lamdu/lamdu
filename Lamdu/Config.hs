@@ -100,7 +100,6 @@ data Name = Name
   , parameterColor :: Draw.Color
   , recordTagColor :: Draw.Color
   , paramTagColor :: Draw.Color
-  , paramTagScaleFactor :: Vector2 Double
   } deriving (Eq, Generic, Show)
 instance ToJSON Name
 instance FromJSON Name
