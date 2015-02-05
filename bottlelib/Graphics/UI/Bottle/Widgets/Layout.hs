@@ -14,6 +14,7 @@ module Graphics.UI.Bottle.Widgets.Layout
     , gridTopLeftFocal
 
     , scaleFromTopLeft
+    , scale
     , pad
     , hoverInPlaceOf
     ) where
@@ -195,6 +196,9 @@ scaleFromTopLeft ratio =
     where
         f (alignment, widget) = (alignment / ratio, Widget.scale ratio widget)
 
+scale :: Vector2 Widget.R -> Layout g -> Layout g
+scale ratio = alignedWidget . _2 %~ Widget.scale ratio
+
 pad :: Vector2 Widget.R -> Layout f -> Layout f
 pad padding =
     alignedWidget %~ f
@@ -210,14 +214,14 @@ pad padding =
 
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf :: Layout f -> Layout f -> Layout f
-orig `hoverInPlaceOf` copyFrom =
-  ( copyFromAbsAlignment / copyFromSize
-  , origWidget
-    & Widget.translate (copyFromAbsAlignment - origAbsAlignment)
-    & Widget.size .~ copyFromSize
+layout `hoverInPlaceOf` src =
+  ( srcAbsAlignment / srcSize
+  , layoutWidget
+    & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
+    & Widget.size .~ srcSize
   ) ^. Lens.from alignedWidget
   where
     toAbs (align, widget) = (align * widget ^. Widget.size, widget)
-    (origAbsAlignment, origWidget) = orig ^. alignedWidget & toAbs
-    (copyFromAbsAlignment, copyFromWidget) = copyFrom ^. alignedWidget & toAbs
-    copyFromSize = copyFromWidget ^. Widget.size
+    (layoutAbsAlignment, layoutWidget) = layout ^. alignedWidget & toAbs
+    (srcAbsAlignment, srcWidget) = src ^. alignedWidget & toAbs
+    srcSize = srcWidget ^. Widget.size
