@@ -2,13 +2,11 @@
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Closed
   ( HoleDest(..)
-  , ClosedHole(..), chMkGui
   , make
   ) where
 
-
-import           Control.Lens (Lens')
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Monad.Trans.Either.Utils (runMatcher, justToLeft)
 import           Control.MonadA (MonadA)
 import           Data.Maybe.Utils (maybeToMPlus)
@@ -26,32 +24,18 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 
 data HoleDest = HoleDestClosed | HoleDestOpened
 
-data ClosedHole m = ClosedHole
-  { chDest :: HoleDest
-  , _chMkGui :: ExprGuiM m (ExpressionGui m)
-  }
-
-chMkGui :: Lens' (ClosedHole m) (ExprGuiM m (ExpressionGui m))
-chMkGui f ClosedHole{..} = f _chMkGui <&> \_chMkGui -> ClosedHole{..}
-
 make ::
     MonadA m =>
     HoleInfo m -> Maybe (EditableHoleInfo m) ->
-    ClosedHole m
+    (HoleDest, ExprGuiM m (ExpressionGui m))
 make holeInfo mEditableHoleInfo =
   do
     justToLeft $ do
       arg <- maybeToMPlus (hiMArgument holeInfo)
-      return ClosedHole
-        { chDest = HoleDestClosed
-        , _chMkGui = Wrapper.make arg holeIds
-        }
-    return ClosedHole
-      { chDest = HoleDestOpened
-      , _chMkGui = SearchTerm.make holeInfo mEditableHoleInfo
-      }
+      return (HoleDestClosed, Wrapper.make arg holeIds)
+    return (HoleDestOpened, SearchTerm.make holeInfo mEditableHoleInfo)
     & runMatcher
-    & chMkGui %~ (>>= onGui)
+    & _2 %~ (>>= onGui)
   where
     holeIds@HoleIds{..} = hiIds holeInfo
     onGui gui =

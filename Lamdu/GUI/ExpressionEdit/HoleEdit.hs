@@ -19,7 +19,6 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Closed (ClosedHole(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Closed as HoleClosed
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), HoleIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as HoleOpen
@@ -63,10 +62,10 @@ make hole pl =
       hole ^. Sugar.holeMActions
       & Lens._Just %%~ mkEditableHoleInfo holeInfo
       & ExprGuiM.transaction
-    let ClosedHole{..} = HoleClosed.make holeInfo mEditableHoleInfo
+    let (chDest, chMkGui) = HoleClosed.make holeInfo mEditableHoleInfo
     do
       (closedHoleGui, unwrappedClosedHoleGui) <-
-        _chMkGui
+        chMkGui
         <&> ExpressionGui.egWidget %~ Widget.takesFocus (const (pure myId))
         <&> join (,)
         & ExpressionGui.stdWrapIn _1 pl
