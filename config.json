@@ -231,10 +231,6 @@
             "_second": 1.0
         },
         "holeResultInjectedScaleExponent": 0.65,
-        "holeSearchTermScaleFactor": {
-            "_first": 1.0,
-            "_second": 1.0
-        },
         "holeResultPadding": {
             "_first": 3.0,
             "_second": 3.0

@@ -77,7 +77,6 @@ data Hole = Hole
   , holeResultScaleFactor :: Vector2 Double
   , holeResultPadding :: Vector2 Double
   , holeResultInjectedScaleExponent :: Double
-  , holeSearchTermScaleFactor :: Vector2 Double
   , holeExtraSymbolColorUnselected :: Draw.Color
   , holeExtraSymbolColorSelected :: Draw.Color
   , holeOpenBGColor :: Draw.Color

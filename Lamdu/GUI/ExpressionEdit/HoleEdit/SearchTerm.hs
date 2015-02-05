@@ -48,8 +48,6 @@ make holeInfo mEditableHoleInfo =
             <&> addBackground (Widget.toAnimId openSearchTermId)
                 (Config.layers config) holeSearchTermBGColor
             <&> ExpressionGui.fromValueWidget
-            <&> ExpressionGui.scaleFromTop
-                (holeSearchTermScaleFactor <&> realToFrac)
             & WE.localEnv (WE.envTextStyle %~ textEditNoEmpty)
             & ExprGuiM.widgetEnv
     where
