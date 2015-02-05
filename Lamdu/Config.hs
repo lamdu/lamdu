@@ -85,7 +85,7 @@ data Hole = Hole
   , holeOpenDarkBGColor :: Draw.Color
   , holeUnwrapKeys :: [ModKey]
   , holeOpenKeys :: [ModKey]
-  , holeHoveringWrapperScale :: Vector2 Double
+  , holeHoveringWrapperScaleFactor :: Vector2 Double
   } deriving (Eq, Generic, Show)
 instance ToJSON Hole
 instance FromJSON Hole

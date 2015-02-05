@@ -388,7 +388,7 @@ maybeHoverClosedHoleAbove holeInfo closedHoleGui openHoleGui
           Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
           hoveringClosedHole <-
               addDarkBackground closedAnimId closedHoleGui
-              <&> Layout.scale (holeHoveringWrapperScale <&> realToFrac)
+              <&> Layout.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
           openHoleGui
               & Layout.addBefore Layout.Vertical [hoveringClosedHole]
               & return

@@ -308,7 +308,7 @@
                 "Key'Space"
             ]
         ],
-        "holeHoveringWrapperScale": {
+        "holeHoveringWrapperScaleFactor": {
             "_first": 0.5,
             "_second": 0.5
         }
