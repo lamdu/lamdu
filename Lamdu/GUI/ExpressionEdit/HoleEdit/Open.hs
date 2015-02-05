@@ -395,8 +395,7 @@ makeUnderCursorAssignment ::
     MonadA m =>
     [ResultsList m] -> HaveHiddenResults -> Sugar.Payload m ExprGuiM.Payload ->
     HoleInfo m -> ExprGuiM m (ExpressionGui m)
-makeUnderCursorAssignment
-    shownResultsLists hasHiddenResults pl holeInfo =
+makeUnderCursorAssignment shownResultsLists hasHiddenResults pl holeInfo =
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
@@ -415,7 +414,7 @@ makeUnderCursorAssignment
         -- active BG width with the inferred type width
         typeView <-
             ExpressionGui.makeTypeView (rawOpenHole ^. guiWidth)
-            (pl ^. Sugar.plEntityId) (pl ^. Sugar.plInferredType)
+            (hiEntityId holeInfo) (hiInferredType holeInfo)
         rawOpenHole
             & guiWidth %~ max (typeView ^. Widget.width)
             & ExpressionGui.egWidget %~

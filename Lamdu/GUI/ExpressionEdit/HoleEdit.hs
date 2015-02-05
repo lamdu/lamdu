@@ -86,6 +86,7 @@ tryOpenHole closedHoleGui hole pl hids@HoleIds{..} = do
     Transaction.mkProperty
   lift $ HoleOpen.make closedHoleGui pl HoleInfo
     { hiEntityId = pl ^. Sugar.plEntityId
+    , hiInferredType = pl ^. Sugar.plInferredType
     , hiActions = actions
     , hiSuggested = hole ^. Sugar.holeSuggested
     , hiIds = hids

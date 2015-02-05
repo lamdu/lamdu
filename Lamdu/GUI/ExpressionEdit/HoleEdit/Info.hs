@@ -9,6 +9,7 @@ import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Lamdu.Expr.Type (Type)
 import           Lamdu.Expr.Val (Val)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState, hsSearchTerm)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -26,6 +27,7 @@ data HoleIds = HoleIds
 -- | Open hole info
 data HoleInfo m = HoleInfo
   { hiEntityId :: Sugar.EntityId
+  , hiInferredType :: Type
   , hiIds :: HoleIds
   , hiState :: Property (T m) HoleState
   , hiActions :: Sugar.HoleActions (Name m) m
