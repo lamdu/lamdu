@@ -269,7 +269,6 @@ makeHoleResultWidget resultId holeResult =
         widget <-
             mkWidget
             <&> Widget.animFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
-            <&> Widget.scale (realToFrac <$> holeResultScaleFactor)
             <&> Widget.eventMap .~ mempty
             >>= makeFocusable resultId
             >>= ExprGuiM.widgetEnv . BWidgets.liftLayerInterval

@@ -74,7 +74,6 @@ data Hole = Hole
   , holeJumpToNextKeys :: [ModKey]
   , holeJumpToPrevKeys :: [ModKey]
   , holeResultCount :: Int
-  , holeResultScaleFactor :: Vector2 Double
   , holeResultPadding :: Vector2 Double
   , holeResultInjectedScaleExponent :: Double
   , holeExtraSymbolColorUnselected :: Draw.Color

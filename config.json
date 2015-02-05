@@ -226,10 +226,6 @@
             1.0
         ],
         "holeResultCount": 8,
-        "holeResultScaleFactor": {
-            "_first": 1.0,
-            "_second": 1.0
-        },
         "holeResultInjectedScaleExponent": 0.65,
         "holeResultPadding": {
             "_first": 3.0,
