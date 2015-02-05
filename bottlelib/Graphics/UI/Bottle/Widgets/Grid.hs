@@ -312,6 +312,7 @@ combineMEnters size children = chooseClosest childEnters
        distance dirRect . (^. Widget.enterResultRect)) .
       map ($ dir) $ filteredByEdge edge
       where
+        removeUninterestingAxis :: Vector2 R -> Vector2 R
         removeUninterestingAxis = ((1 - abs (fromIntegral <$> edge)) *)
         (modifyDistance, dirRect) = case dir of
           Direction.Outside -> (id, Rect 0 0)

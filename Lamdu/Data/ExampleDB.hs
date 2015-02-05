@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 module Lamdu.Data.ExampleDB(initDB, createBuiltins) where
 
 import Control.Monad (unless, void)
@@ -33,14 +33,17 @@ import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 
 type T = Transaction
 
-namedId :: (MonadA m, IsString a, UniqueId.ToGuid a) => String -> T m a
-namedId name = do
-  setP (Db.assocNameRef tag) name
-  return tag
+namedId ::
+  forall a m. (MonadA m, IsString a, UniqueId.ToGuid a) => String -> T m a
+namedId name =
+  do
+    setP (Db.assocNameRef tag) name
+    return tag
   where
+    tag :: a
     tag = fromString name
 
-forAll :: TypeVars.VarKind a => Int -> ([a] -> Type) -> Scheme
+forAll :: forall a. TypeVars.VarKind a => Int -> ([a] -> Type) -> Scheme
 forAll count f =
   Scheme
   { _schemeForAll = mconcat $ map TypeVars.singleton typeVars
@@ -48,6 +51,7 @@ forAll count f =
   , _schemeType = f $ map T.liftVar typeVars
   }
   where
+    typeVars :: [T.Var a]
     typeVars = take count $ map (fromString . (:[])) ['a'..'z']
 
 recordType :: [(T.Tag, Type)] -> Type

@@ -167,16 +167,19 @@ toggle :: IsHelpShown -> IsHelpShown
 toggle HelpShown = HelpNotShown
 toggle HelpNotShown = HelpShown
 
-makeToggledHelpAdder
-  :: IsHelpShown -> IO (Config -> Widget.Size -> Widget IO -> IO (Widget IO))
+makeToggledHelpAdder ::
+  IsHelpShown -> IO (Config -> Widget.Size -> Widget IO -> IO (Widget IO))
 makeToggledHelpAdder startValue = do
   showingHelpVar <- newIORef startValue
   return $ \config size widget -> do
     showingHelp <- readIORef showingHelpVar
     let
-      (f, docStr) = case showingHelp of
-        HelpShown -> (makeView size (widget ^. Widget.eventMap) config, "Hide")
-        HelpNotShown -> (makeTooltip config (configOverlayDocKeys config), "Show")
+      (f, docStr) =
+          case showingHelp of
+          HelpShown ->
+            (makeView size (widget ^. Widget.eventMap) config, "Hide" :: String)
+          HelpNotShown ->
+            (makeTooltip config (configOverlayDocKeys config), "Show")
       toggleEventMap =
         Widget.keysEventMap (configOverlayDocKeys config) (E.Doc ["Help", "Key Bindings", docStr]) $
         modifyIORef showingHelpVar toggle
