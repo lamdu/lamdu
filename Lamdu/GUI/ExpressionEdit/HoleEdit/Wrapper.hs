@@ -60,10 +60,10 @@ makeUnwrapEventMap arg hids = do
     Nothing -> openHoleEventMap (Config.wrapKeys config) hids
 
 make ::
-  MonadA m =>
+  MonadA m => HoleIds ->
   Sugar.HoleArg m (ExpressionN m ExprGuiM.Payload) ->
-  HoleIds -> ExprGuiM m (ExpressionGui m)
-make arg hids@HoleIds{..} = do
+  ExprGuiM m (ExpressionGui m)
+make hids@HoleIds{..} arg = do
   config <- ExprGuiM.readConfig
   let
     Config.Hole{..} = Config.hole config

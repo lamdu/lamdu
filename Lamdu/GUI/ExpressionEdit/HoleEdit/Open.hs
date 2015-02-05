@@ -377,22 +377,21 @@ assignHoleEditCursor editableHoleInfo shownMainResultsIds allShownResultIds sear
                 | otherwise = head (shownMainResultsIds ++ [searchTermId])
         ExprGuiM.assignCursor assignSource destId action
 
-maybeHoverClosedHoleAbove ::
+maybeHoverWrapperAbove ::
     MonadA m =>
-    HoleInfo n -> ExpressionGui m ->
+    HoleInfo n -> Maybe (ExpressionGui m) ->
     ExpressionGui m ->
     ExprGuiM m (ExpressionGui m)
-maybeHoverClosedHoleAbove holeInfo closedHoleGui openHoleGui
-    | Lens.has Lens._Just (hiMArgument holeInfo) =
-      do
-          Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
-          hoveringClosedHole <-
-              addDarkBackground closedAnimId closedHoleGui
-              <&> Layout.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
-          openHoleGui
-              & Layout.addBefore Layout.Vertical [hoveringClosedHole]
-              & return
-    | otherwise = return openHoleGui
+maybeHoverWrapperAbove _ Nothing openHoleGui = return openHoleGui
+maybeHoverWrapperAbove holeInfo (Just wrapperGui) openHoleGui =
+    do
+        Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
+        hoveringWrapper <-
+            addDarkBackground closedAnimId wrapperGui
+            <&> Layout.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
+        openHoleGui
+            & Layout.addBefore Layout.Vertical [hoveringWrapper]
+            & return
     where
         closedAnimId = holeInfo & hiIds & hidClosed & Widget.toAnimId
 
@@ -442,10 +441,10 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults pl editableHoleInfo
 
 make ::
     MonadA m =>
-    ExpressionGui m ->
+    Maybe (ExpressionGui m) ->
     Sugar.Payload m ExprGuiM.Payload -> EditableHoleInfo m ->
     ExprGuiM m (ExpressionGui m)
-make closedHoleGui pl editableHoleInfo =
+make mWrapperGui pl editableHoleInfo =
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
@@ -462,7 +461,7 @@ make closedHoleGui pl editableHoleInfo =
                 , (^. HoleResults.rlExtraResultsPrefixId)
                 ] <*> shownResultsLists
         makeUnderCursorAssignment shownResultsLists hasHiddenResults pl editableHoleInfo
-            >>= maybeHoverClosedHoleAbove holeInfo closedHoleGui
+            >>= maybeHoverWrapperAbove holeInfo mWrapperGui
             & assignHoleEditCursor editableHoleInfo shownMainResultsIds
               allShownResultIds (SearchTerm.hiOpenSearchTermId holeInfo)
     where

@@ -28,7 +28,6 @@ module Lamdu.GUI.ExpressionGui
   , parenify
   , wrapExprEventMap
   , stdWrap
-  , stdWrapIn
   , stdWrapParentExpr
   , stdWrapParenify
   ) where
@@ -249,22 +248,14 @@ makeNameEdit (Name nameSrc nameCollision setName name) myId =
       Lens.mapped . Lens.mapped . Widget.eventMap %~
       E.filterChars (`notElem` disallowedNameChars)
 
-stdWrapIn ::
-  MonadA m =>
-  Lens.Traversal' s (ExpressionGui m) ->
-  Sugar.Payload m ExprGuiM.Payload ->
-  ExprGuiM m s ->
-  ExprGuiM m s
-stdWrapIn trav pl mkGui =
-  mkGui
-  >>= trav %%~ maybeAddInferredTypePl pl
-  & wrapExprEventMapIn trav pl
-
 stdWrap ::
   MonadA m => Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m) ->
   ExprGuiM m (ExpressionGui m)
-stdWrap = stdWrapIn id
+stdWrap pl mkGui =
+  mkGui
+  >>= maybeAddInferredTypePl pl
+  & wrapExprEventMap pl
 
 stdWrapParentExpr ::
   MonadA m =>
@@ -374,18 +365,10 @@ wrapExprEventMap ::
   Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m) ->
   ExprGuiM m (ExpressionGui m)
-wrapExprEventMap = wrapExprEventMapIn id
-
-wrapExprEventMapIn ::
-  MonadA m =>
-  Lens.Traversal' s (ExpressionGui m) ->
-  Sugar.Payload m ExprGuiM.Payload ->
-  ExprGuiM m s ->
-  ExprGuiM m s
-wrapExprEventMapIn trav pl action =
+wrapExprEventMap pl action =
   do
     (res, resultPickers) <- ExprGuiM.listenResultPickers action
-    res & trav (addExprEventMap pl resultPickers)
+    res & addExprEventMap pl resultPickers
 
 addExprEventMap ::
   MonadA m =>
