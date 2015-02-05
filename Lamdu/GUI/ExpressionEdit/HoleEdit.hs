@@ -45,6 +45,7 @@ make hole pl =
   do
     (closedHoleGui, unwrappedClosedHoleGui) <-
       _chMkGui
+      <&> ExpressionGui.egWidget %~ Widget.takesFocus (const (pure myId))
       <&> join (,)
       & ExpressionGui.stdWrapIn _1 pl
     Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
@@ -53,9 +54,9 @@ make hole pl =
       <&> (`Layout.hoverInPlaceOf` (closedHoleGui & hAlign .~ 0))
       >>= ExpressionGui.egWidget %%~
           lift . ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
+      <&> ExpressionGui.egWidget %~ Widget.takesFocus (const (pure myId))
       & runMaybeT
       <&> fromMaybe closedHoleGui
-      <&> ExpressionGui.egWidget %~ Widget.takesFocus (const (pure myId))
   & ExprGuiM.assignCursor myId (chDestId hids chDest)
   & ExprGuiM.assignCursor (WidgetIds.notDelegatingId myId) closedHoleId
   where
