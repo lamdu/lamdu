@@ -18,7 +18,7 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (openHoleEventMap)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (openHoleEventMap, addDarkBackground)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), HoleIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as HoleOpen
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
@@ -61,18 +61,40 @@ destCursor :: HoleIds -> Maybe (Sugar.HoleArg m expr) -> Widget.Id
 destCursor HoleIds{..} Nothing = hidOpen
 destCursor HoleIds{..} (Just _) = hidClosed
 
+hovering ::
+  (ExpressionGui m -> ExpressionGui m) ->
+  ExpressionGui m -> ExpressionGui m
+hovering f x =
+  f x
+  & size .~ x^.size
+  & alignment .~ x^.alignment
+  where
+    alignment = ExpressionGui.egAlignment
+    size = ExpressionGui.egWidget . Widget.size
+
 maybeHoverSearchTermBelow ::
-  MonadA m => HoleIds -> ExpressionGui m -> ExpressionGui m -> ExpressionGui m
+  MonadA m => HoleIds -> ExpressionGui m ->
+  ExpressionGui m ->
+  ExprGuiM m (ExpressionGui m)
 maybeHoverSearchTermBelow HoleIds{..} searchTermGui wrapperGui
   | wrapperGui ^. ExpressionGui.egWidget . Widget.isFocused =
-    wrapperGui
-    & ExpressionGui.addBelow 0.5 [(0.5, searchTermWidget)]
+    do
+      searchTermWidget <-
+        searchTermGui
+        & addDarkBackground (Widget.toAnimId hidClosed ++ ["searchTerm"])
+        >>= liftLayers
+        <&> (^. ExpressionGui.egWidget)
+        <&> Widget.takesFocus (const (pure hidOpen))
+      wrapperGui
+        & hovering (ExpressionGui.addBelow 0.5 [(0.5, searchTermWidget)])
+        & return
   | otherwise =
-    wrapperGui
+    return wrapperGui
   where
-    searchTermWidget =
-      searchTermGui ^. ExpressionGui.egWidget
-      & Widget.takesFocus (const (pure hidOpen))
+
+liftLayers :: MonadA m => ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+liftLayers =
+  ExpressionGui.egWidget %%~ ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
 
 make ::
   MonadA m =>
@@ -92,15 +114,14 @@ make hole pl =
       closedHoleGui <-
         mWrapper
         & maybe (searchTermGui & takesFocus & respondAtClosedId)
-          (return . maybeHoverSearchTermBelow hids searchTermGui)
+          (maybeHoverSearchTermBelow hids searchTermGui)
         <&> ExpressionGui.egWidget %~
             Widget.weakerEvents (openHoleEventMap holeOpenKeys hids)
         & ExpressionGui.stdWrap pl
       mEditableHoleInfo
         & maybe mzero (tryOpenHole mWrapper pl)
         <&> (`Layout.hoverInPlaceOf` closedHoleGui)
-        >>= ExpressionGui.egWidget %%~
-            lift . ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
+        >>= lift . liftLayers
         & runMaybeT
         <&> fromMaybe closedHoleGui
       & ExprGuiM.assignCursor myId (destCursor hids (hole ^. Sugar.holeMArg))

@@ -23,7 +23,7 @@ data Layers = Layers
   , layerTypes
   , layerChoiceBG
   , layerHoleBG
-  , layerDarkOpenHoleBG
+  , layerDarkHoleBG
   , layerNameCollisionBG
   , layerValFrameBG
   , layerParensHighlightBG
@@ -81,8 +81,8 @@ data Hole = Hole
   , holeOpenBGColor :: Draw.Color
   , holeSearchTermBGColor :: Draw.Color
   , holePickResultKeys :: [ModKey]
-  , holeOpenDarkPadding :: Vector2 Double
-  , holeOpenDarkBGColor :: Draw.Color
+  , holeDarkPadding :: Vector2 Double
+  , holeDarkBGColor :: Draw.Color
   , holeUnwrapKeys :: [ModKey]
   , holeOpenKeys :: [ModKey]
   , holeHoveringWrapperScaleFactor :: Vector2 Double

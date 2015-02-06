@@ -31,7 +31,7 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground, addDarkBackground)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (EditableHoleInfo(..), HoleInfo(..), HoleIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap as OpenEventMap
@@ -469,17 +469,3 @@ make mWrapperGui pl editableHoleInfo =
         isHoleResult =
             Lens.nullOf
             (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl
-
-addDarkBackground :: MonadA m => AnimId -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)
-addDarkBackground animId widget =
-    do
-        config <- ExprGuiM.readConfig
-        let Config.Hole{..} = Config.hole config
-        widget
-            & ExpressionGui.pad (holeOpenDarkPadding <&> realToFrac)
-            & ExpressionGui.egWidget %~
-              Widget.backgroundColor
-              (Config.layerDarkOpenHoleBG (Config.layers config))
-              (animId <> ["hole dark background"])
-              holeOpenDarkBGColor
-            & return
