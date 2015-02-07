@@ -48,7 +48,7 @@ makeUnwrapEventMap ::
   (MonadA m, MonadA f) =>
   Sugar.HoleArg f (ExpressionN f a) -> WidgetIds ->
   ExprGuiM m (Widget.EventHandlers (T f))
-makeUnwrapEventMap arg hids = do
+makeUnwrapEventMap arg WidgetIds{..} = do
   config <- ExprGuiM.readConfig
   let Config.Hole{..} = Config.hole config
   pure $
@@ -57,13 +57,13 @@ makeUnwrapEventMap arg hids = do
       Widget.keysEventMapMovesCursor
       (holeUnwrapKeys ++ Config.delKeys config)
       (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
-    Nothing -> HoleEventMap.open (Config.wrapKeys config) hids
+    Nothing -> HoleEventMap.open holeUnwrapKeys WidgetIds{..}
 
 make ::
   MonadA m => WidgetIds ->
   Sugar.HoleArg m (ExpressionN m ExprGuiM.Payload) ->
   ExprGuiM m (ExpressionGui m)
-make hids@WidgetIds{..} arg = do
+make WidgetIds{..} arg = do
   config <- ExprGuiM.readConfig
   let
     Config.Hole{..} = Config.hole config
@@ -78,10 +78,10 @@ make hids@WidgetIds{..} arg = do
     arg ^. Sugar.haExpr
     & ExprGuiM.makeSubexpression 0
   let argIsFocused = argGui ^. ExpressionGui.egWidget . Widget.isFocused
-  unwrapEventMap <- makeUnwrapEventMap arg hids
+  unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
   argGui
     & ExpressionGui.egWidget . Widget.eventMap %~
-      modifyWrappedEventMap config argIsFocused arg hids
+      modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
     & ExpressionGui.pad (padding + frameWidth)
     & ExpressionGui.egWidget %~
       Widget.addInnerFrame
