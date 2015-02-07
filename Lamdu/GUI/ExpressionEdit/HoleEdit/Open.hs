@@ -32,14 +32,15 @@ import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground, addDarkBackground)
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (EditableHoleInfo(..), HoleInfo(..), HoleIds(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (EditableHoleInfo(..), HoleInfo(..))
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -366,8 +367,7 @@ assignHoleEditCursor editableHoleInfo shownMainResultsIds allShownResultIds sear
             sub = isJust . flip Widget.subId cursor
             holeInfo = ehiInfo editableHoleInfo
             shouldBeOnResult =
-                holeInfo & hiEntityId
-                & HoleWidgetIds.resultsPrefixId & sub
+                holeInfo & hiIds & HoleWidgetIds.hidResultsPrefix & sub
             isOnResult = any sub allShownResultIds
             assignSource
                 | shouldBeOnResult && not isOnResult = cursor
@@ -436,7 +436,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults pl editableHoleInfo
             & return
     & ExpressionGui.wrapExprEventMap pl
     where
-        resultsId = holeInfo & hiEntityId & HoleWidgetIds.resultsPrefixId
+        resultsId = holeInfo & hiIds & HoleWidgetIds.hidResultsPrefix
         holeInfo = ehiInfo editableHoleInfo
 
 make ::
@@ -463,7 +463,7 @@ make mWrapperGui pl editableHoleInfo =
         makeUnderCursorAssignment shownResultsLists hasHiddenResults pl editableHoleInfo
             >>= maybeHoverWrapperAbove holeInfo mWrapperGui
             & assignHoleEditCursor editableHoleInfo shownMainResultsIds
-              allShownResultIds (SearchTerm.hiOpenSearchTermId holeInfo)
+              allShownResultIds (holeInfo & hiIds & hidOpenSearchTerm)
     where
         holeInfo = ehiInfo editableHoleInfo
         isHoleResult =

@@ -55,13 +55,12 @@ mkEventMapWithPickers ::
   (Functor f, MonadA m) =>
   HolePickers m ->
   [ModKey] -> E.Doc ->
-  (f Widget.Id -> T m Widget.Id) ->
+  (f Sugar.EntityId -> T m Widget.Id) ->
   f Sugar.EntityId -> EventHandlers (T m)
 mkEventMapWithPickers holePickers keys doc f =
   E.keyPresses keys doc .
   liftA2 mappend (ExprGuiM.holePickersAction holePickers) .
-  fmap Widget.eventResultFromCursor . f .
-  fmap WidgetIds.fromEntityId
+  fmap Widget.eventResultFromCursor . f
 
 isExprSelected :: Sugar.Payload f a -> Widget.Id -> Bool
 isExprSelected pl cursor =
@@ -164,7 +163,7 @@ wrapEventMap holePickers config actions =
     mkEventMapWithPickers holePickers
     (Config.wrapKeys config)
     (E.Doc ["Edit", ExprGuiM.holePickersAddDocPrefix holePickers "Wrap"])
-    (fmap HoleWidgetIds.openHoleId) (snd <$> wrap)
+    (fmap (HoleWidgetIds.hidOpen . HoleWidgetIds.make)) (snd <$> wrap)
   Sugar.WrapperAlready _ -> mempty
   Sugar.WrappedAlready _ -> mempty
   Sugar.WrapNotAllowed -> mempty

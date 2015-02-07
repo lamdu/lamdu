@@ -105,7 +105,7 @@ sugarNamesToGroup names expr = Group
     mkSearchTerms (Name _ (Collision suffix) _ varName) = [varName ++ show suffix]
 
 prefixId :: HoleInfo m -> WidgetId.Id
-prefixId = HoleWidgetIds.resultsPrefixId . hiEntityId
+prefixId = HoleWidgetIds.hidResultsPrefix . hiIds
 
 typeCheckResults ::
   MonadA m => EditableHoleInfo m ->

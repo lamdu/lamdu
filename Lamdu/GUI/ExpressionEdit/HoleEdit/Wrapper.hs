@@ -16,7 +16,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (openHoleEventMap)
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleIds(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -29,10 +29,10 @@ type T = Transaction.Transaction
 
 modifyWrappedEventMap ::
   (MonadA m, Applicative f) =>
-  Config -> Bool -> Sugar.HoleArg m (ExpressionN m a) -> HoleIds ->
+  Config -> Bool -> Sugar.HoleArg m (ExpressionN m a) -> WidgetIds ->
   Widget.EventHandlers f ->
   Widget.EventHandlers f
-modifyWrappedEventMap config argIsFocused arg HoleIds{..} eventMap
+modifyWrappedEventMap config argIsFocused arg WidgetIds{..} eventMap
   | argIsFocused =
     eventMap <>
     Widget.keysEventMapMovesCursor (Config.leaveSubexpressionKeys config)
@@ -46,7 +46,7 @@ modifyWrappedEventMap config argIsFocused arg HoleIds{..} eventMap
 
 makeUnwrapEventMap ::
   (MonadA m, MonadA f) =>
-  Sugar.HoleArg f (ExpressionN f a) -> HoleIds ->
+  Sugar.HoleArg f (ExpressionN f a) -> WidgetIds ->
   ExprGuiM m (Widget.EventHandlers (T f))
 makeUnwrapEventMap arg hids = do
   config <- ExprGuiM.readConfig
@@ -60,10 +60,10 @@ makeUnwrapEventMap arg hids = do
     Nothing -> openHoleEventMap (Config.wrapKeys config) hids
 
 make ::
-  MonadA m => HoleIds ->
+  MonadA m => WidgetIds ->
   Sugar.HoleArg m (ExpressionN m ExprGuiM.Payload) ->
   ExprGuiM m (ExpressionGui m)
-make hids@HoleIds{..} arg = do
+make hids@WidgetIds{..} arg = do
   config <- ExprGuiM.readConfig
   let
     Config.Hole{..} = Config.hole config

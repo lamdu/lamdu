@@ -3,7 +3,6 @@
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
     ( make
-    , hiOpenSearchTermId
     ) where
 
 import           Control.Lens.Operators
@@ -25,9 +24,6 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-
-hiOpenSearchTermId :: HoleInfo m -> Widget.Id
-hiOpenSearchTermId = HoleWidgetIds.openSearchTermId . hiEntityId
 
 textEditNoEmpty :: TextEdit.Style -> TextEdit.Style
 textEditNoEmpty textEditStyle =
@@ -51,12 +47,12 @@ make holeInfo mEditableHoleInfo =
             & WE.localEnv (WE.envTextStyle %~ textEditNoEmpty)
             & ExprGuiM.widgetEnv
     where
-      openSearchTermId = hiOpenSearchTermId holeInfo
+      openSearchTermId = hiIds holeInfo & HoleWidgetIds.hidOpenSearchTerm
       mSearchTermProp = mEditableHoleInfo <&> HoleInfo.ehiSearchTermProperty
       searchTerm = maybe "" Property.value mSearchTermProp
       noEmpty "" = "  "
       noEmpty x = x
-      resultsId = holeInfo & hiEntityId & HoleWidgetIds.resultsPrefixId
+      resultsId = holeInfo & hiIds & HoleWidgetIds.hidResultsPrefix
       makeTextEdit Nothing =
           BWidgets.makeTextViewWidget (noEmpty searchTerm)
           (Widget.toAnimId openSearchTermId)

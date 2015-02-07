@@ -19,10 +19,11 @@ import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (openHoleEventMap, addDarkBackground)
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), HoleIds(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as HoleOpen
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper as Wrapper
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -55,11 +56,11 @@ makeWrapper holeInfo =
   >>= Lens._Just . ExpressionGui.egWidget %%~
       ExprGuiM.widgetEnv . BWidgets.makeFocusableView hidClosed
   where
-    HoleIds{..} = hiIds holeInfo
+    WidgetIds{..} = hiIds holeInfo
 
-destCursor :: HoleIds -> Maybe (Sugar.HoleArg m expr) -> Widget.Id
-destCursor HoleIds{..} Nothing = hidOpen
-destCursor HoleIds{..} (Just _) = hidClosed
+destCursor :: WidgetIds -> Maybe (Sugar.HoleArg m expr) -> Widget.Id
+destCursor WidgetIds{..} Nothing = hidOpen
+destCursor WidgetIds{..} (Just _) = hidClosed
 
 hovering ::
   (ExpressionGui m -> ExpressionGui m) ->
@@ -73,10 +74,10 @@ hovering f x =
     size = ExpressionGui.egWidget . Widget.size
 
 maybeHoverSearchTermBelow ::
-  MonadA m => HoleIds -> ExpressionGui m ->
+  MonadA m => WidgetIds -> ExpressionGui m ->
   ExpressionGui m ->
   ExprGuiM m (ExpressionGui m)
-maybeHoverSearchTermBelow HoleIds{..} searchTermGui wrapperGui
+maybeHoverSearchTermBelow WidgetIds{..} searchTermGui wrapperGui
   | wrapperGui ^. ExpressionGui.egWidget . Widget.isFocused =
     do
       searchTermWidget <-
@@ -124,13 +125,13 @@ make hole pl =
         >>= lift . liftLayers
         & runMaybeT
         <&> fromMaybe closedHoleGui
-      & ExprGuiM.assignCursor myId (destCursor hids (hole ^. Sugar.holeMArg))
-      & ExprGuiM.assignCursor (WidgetIds.notDelegatingId myId) closedHoleId
+      & ExprGuiM.assignCursor hidHole (destCursor hids (hole ^. Sugar.holeMArg))
+      & ExprGuiM.assignCursor (WidgetIds.notDelegatingId hidHole) hidClosed
   where
     respondAtClosedId =
       ExpressionGui.egWidget %%~
-      ExprGuiM.widgetEnv . BWidgets.respondToCursorPrefix closedHoleId
-    takesFocus = ExpressionGui.egWidget %~ Widget.takesFocus (const (pure myId))
+      ExprGuiM.widgetEnv . BWidgets.respondToCursorPrefix hidClosed
+    takesFocus = ExpressionGui.egWidget %~ Widget.takesFocus (const (pure hidHole))
     holeInfo = HoleInfo
       { hiEntityId = pl ^. Sugar.plEntityId
       , hiInferredType = pl ^. Sugar.plInferredType
@@ -139,12 +140,7 @@ make hole pl =
       , hiNearestHoles = pl ^. Sugar.plData . ExprGuiM.plNearestHoles
       , hiMArgument = hole ^. Sugar.holeMArg
       }
-    myId = WidgetIds.fromExprPayload pl
-    closedHoleId = Widget.joinId myId ["ClosedHole"]
-    hids = HoleIds
-      { hidOpen = HoleWidgetIds.openHoleId myId
-      , hidClosed = closedHoleId
-      }
+    hids@WidgetIds{..} = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
 
 tryOpenHole ::
   MonadA m =>
@@ -156,4 +152,4 @@ tryOpenHole mWrapperGui pl editableHoleInfo = do
   guard isSelected
   lift $ HoleOpen.make mWrapperGui pl editableHoleInfo
   where
-    HoleIds{..} = hiIds (ehiInfo editableHoleInfo)
+    WidgetIds{..} = hiIds (ehiInfo editableHoleInfo)
