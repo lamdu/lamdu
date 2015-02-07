@@ -10,10 +10,10 @@ import           Lamdu.Sugar.EntityId (EntityId)
 
 data WidgetIds = WidgetIds
     { hidHole :: Widget.Id
-    , hidOpen :: Widget.Id
     , hidClosed :: Widget.Id
-    , hidOpenSearchTerm :: Widget.Id
     , hidClosedSearchTerm :: Widget.Id
+    , hidOpen :: Widget.Id
+    , hidOpenSearchTerm :: Widget.Id
     , hidResultsPrefix :: Widget.Id
     }
 

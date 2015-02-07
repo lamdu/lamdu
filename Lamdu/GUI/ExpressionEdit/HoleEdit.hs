@@ -112,7 +112,7 @@ make hole pl =
       & ExprGuiM.transaction
     do
       mWrapper <- makeWrapper holeInfo
-      searchTermGui <- SearchTerm.makeOpen holeInfo mEditableHoleInfo
+      searchTermGui <- SearchTerm.make holeInfo mEditableHoleInfo
       closedHoleGui <-
         mWrapper
         & maybe (searchTermGui & takesFocus & respondAtClosedId)

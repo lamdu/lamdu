@@ -2,7 +2,7 @@
 -- | A hole's search term component
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
-    ( makeOpen
+    ( make
     ) where
 
 import           Control.Lens.Operators
@@ -66,11 +66,11 @@ makeSearchTermPropEdit WidgetIds{..} mSearchTermProp =
         where
             searchTerm = Property.value searchTermProp
 
-makeOpen ::
+make ::
     MonadA m =>
     HoleInfo m -> Maybe (EditableHoleInfo m) ->
     ExprGuiM m (ExpressionGui m)
-makeOpen holeInfo mEditableHoleInfo =
+make holeInfo mEditableHoleInfo =
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config

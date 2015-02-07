@@ -408,7 +408,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults pl editableHoleInfo
         (searchTermEventMap, resultsEventMap) <-
             EventMap.makeOpenEventMaps editableHoleInfo mShownResult
         (searchTermAlignment, searchTermWidget) <-
-            SearchTerm.makeOpen holeInfo (Just editableHoleInfo)
+            SearchTerm.make holeInfo (Just editableHoleInfo)
             <&> ExpressionGui.egWidget %~
                 Widget.weakerEvents searchTermEventMap
             <&> (^. Layout.absAlignedWidget)
