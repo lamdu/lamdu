@@ -297,6 +297,37 @@
                 "Key'Enter"
             ]
         ],
+        "holeCloseKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'Escape"
+            ]
+        ],
+        "holePasteKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
+                },
+                "Key'V"
+            ],
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'V"
+            ]
+        ],
         "holeUnwrapKeys": [
             [
                 {
@@ -623,26 +654,6 @@
                 "modifierKeysControl": false
             },
             "Key'Enter"
-        ]
-    ],
-    "pasteKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": true
-            },
-            "Key'V"
-        ],
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'V"
         ]
     ],
     "verticalSpacing": 7.0,

@@ -85,6 +85,8 @@ data Hole = Hole
   , holeDarkBGColor :: Draw.Color
   , holeUnwrapKeys :: [ModKey]
   , holeOpenKeys :: [ModKey]
+  , holeCloseKeys :: [ModKey]
+  , holePasteKeys :: [ModKey]
   , holeHoveringWrapperScaleFactor :: Vector2 Double
   } deriving (Eq, Generic, Show)
 instance ToJSON Hole
@@ -147,7 +149,6 @@ data Config = Config
   , whereItemPadding :: Vector2 Double
 
   , cutKeys :: [ModKey]
-  , pasteKeys :: [ModKey]
 
   , typeTint :: Draw.Color
   , typeBoxBGColor :: Draw.Color

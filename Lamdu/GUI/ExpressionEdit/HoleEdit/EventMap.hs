@@ -45,64 +45,65 @@ open keys WidgetIds{..} =
 
 blockDownEvents :: Monad f => Widget f -> Widget f
 blockDownEvents =
-  Widget.weakerEvents $
-  E.keyPresses
-  [ModKey mempty GLFW.Key'Down]
-  (E.Doc ["Navigation", "Move", "down (blocked)"]) $
-  return mempty
+    Widget.weakerEvents $
+    E.keyPresses
+    [ModKey mempty GLFW.Key'Down]
+    (E.Doc ["Navigation", "Move", "down (blocked)"]) $
+    return mempty
 
-closeEventMap :: MonadA m => HoleInfo m -> Widget.EventHandlers (T m)
-closeEventMap holeInfo =
-  Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Escape]
-  (E.Doc ["Navigation", "Hole", "Close"]) . pure $
-  hidClosed (hiIds holeInfo)
+closeEventMap ::
+    MonadA m => Config.Hole -> HoleInfo m -> Widget.EventHandlers (T m)
+closeEventMap Config.Hole{..} holeInfo =
+    Widget.keysEventMapMovesCursor holeCloseKeys
+    (E.Doc ["Navigation", "Hole", "Close"]) . pure $
+    hidClosed (hiIds holeInfo)
 
 pasteEventMap ::
-  Functor m => Config -> EditableHoleInfo m -> Widget.EventHandlers (T m)
-pasteEventMap config holeInfo =
-  maybe mempty
-  (Widget.keysEventMapMovesCursor
-   (Config.pasteKeys config) (E.Doc ["Edit", "Paste"]) .
-   fmap WidgetIds.fromEntityId) $ ehiActions holeInfo ^. Sugar.holePaste
+    Functor m => Config.Hole -> EditableHoleInfo m -> Widget.EventHandlers (T m)
+pasteEventMap Config.Hole{..} holeInfo =
+    maybe mempty
+    (Widget.keysEventMapMovesCursor
+     holePasteKeys (E.Doc ["Edit", "Paste"]) .
+     fmap WidgetIds.fromEntityId) $ ehiActions holeInfo ^. Sugar.holePaste
 
 adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap searchTermProp =
-  appendCharEventMap <> deleteCharEventMap
-  where
-    appendCharEventMap =
-      E.allChars "Character"
-      (E.Doc ["Edit", "Search Term", "Append character"])
-      (changeText . snoc)
-      & disallowChars searchTerm
-      & if null searchTerm
-        then E.filterChars (`notElem` operatorChars)
-        else id
-    deleteCharEventMap
-      | null searchTerm = mempty
-      | otherwise =
-        E.keyPress (ModKey mempty GLFW.Key'Backspace)
-        (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
-        changeText init
-    snoc x = (++ [x])
-    searchTerm = Property.value searchTermProp
-    changeText f = mempty <$ Property.pureModify searchTermProp f
+    appendCharEventMap <> deleteCharEventMap
+    where
+        appendCharEventMap =
+            E.allChars "Character"
+            (E.Doc ["Edit", "Search Term", "Append character"])
+            (changeText . snoc)
+            & disallowChars searchTerm
+            & if null searchTerm
+              then E.filterChars (`notElem` operatorChars)
+              else id
+        deleteCharEventMap
+            | null searchTerm = mempty
+            | otherwise =
+                  E.keyPress (ModKey mempty GLFW.Key'Backspace)
+                  (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
+                  changeText init
+        snoc x = (++ [x])
+        searchTerm = Property.value searchTermProp
+        changeText f = mempty <$ Property.pureModify searchTermProp f
 
 disallowedHoleChars :: String
 disallowedHoleChars = ",`\n() "
 
 disallowChars :: String -> E.EventMap a -> E.EventMap a
 disallowChars searchTerm =
-  E.filterChars (`notElem` disallowedHoleChars) .
-  deleteKeys [k GLFW.Key'Space, k GLFW.Key'Enter] .
-  disallowMix
-  where
-    k = ModKey mempty
+    E.filterChars (`notElem` disallowedHoleChars) .
+    deleteKeys [k GLFW.Key'Space, k GLFW.Key'Enter] .
     disallowMix
-      | nonEmptyAll (`notElem` operatorChars) searchTerm =
-        E.filterChars (`notElem` operatorChars)
-      | nonEmptyAll (`elem` operatorChars) searchTerm =
-        E.filterChars (`notElem` alphaNumericChars)
-      | otherwise = id
+    where
+        k = ModKey mempty
+        disallowMix
+            | nonEmptyAll (`notElem` operatorChars) searchTerm =
+                  E.filterChars (`notElem` operatorChars)
+            | nonEmptyAll (`elem` operatorChars) searchTerm =
+                  E.filterChars (`notElem` alphaNumericChars)
+            | otherwise = id
 
 deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
 deleteKeys = E.deleteKeys . map (E.KeyEvent GLFW.KeyState'Pressed)
@@ -111,73 +112,77 @@ pickEventMap ::
   MonadA m => Config.Hole -> HoleInfo m -> ShownResult m ->
   Widget.EventHandlers (T m)
 pickEventMap Config.Hole{..} holeInfo shownResult =
-  -- TODO: Does this entityId business make sense?
-  case hiNearestHoles holeInfo ^. NearestHoles.next of
-  Just nextHoleEntityId | not holeResultHasHoles ->
-    simplePickRes holePickResultKeys <>
-    pickAndMoveToNextHole nextHoleEntityId
-  _ ->
-    simplePickRes $
-    holePickResultKeys ++
-    holePickAndMoveToNextHoleKeys
-  <&> pickBefore shownResult
-  where
-    pickAndMoveToNextHole nextHoleEntityId =
-      Widget.keysEventMapMovesCursor holePickAndMoveToNextHoleKeys
-      (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
-      return $ WidgetIds.fromEntityId nextHoleEntityId
-    holeResultHasHoles =
-      Lens.has (Sugar.holeResultHoleTarget . Lens._Just) $ srHoleResult shownResult
-    simplePickRes keys = Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) $ return ()
+    -- TODO: Does this entityId business make sense?
+    case hiNearestHoles holeInfo ^. NearestHoles.next of
+    Just nextHoleEntityId | not holeResultHasHoles ->
+        simplePickRes holePickResultKeys <>
+        pickAndMoveToNextHole nextHoleEntityId
+    _ ->
+        simplePickRes $
+        holePickResultKeys ++
+        holePickAndMoveToNextHoleKeys
+    <&> pickBefore shownResult
+    where
+        pickAndMoveToNextHole nextHoleEntityId =
+            Widget.keysEventMapMovesCursor holePickAndMoveToNextHoleKeys
+            (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
+            return $ WidgetIds.fromEntityId nextHoleEntityId
+        holeResultHasHoles =
+            Lens.has (Sugar.holeResultHoleTarget . Lens._Just) $
+            srHoleResult shownResult
+        simplePickRes keys =
+            Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) $
+            return ()
 
 pickBefore :: MonadA m => ShownResult m -> T m Widget.EventResult -> T m Widget.EventResult
 pickBefore shownResult action =
-  do
-    PickedResult{..} <- srPick shownResult
-    actionResult <-
-      action
-      <&> Widget.eCursor . Lens._Wrapped' . Lens.mapped %~ _pickedIdTranslations
-    return $ _pickedEventResult <> actionResult
+    do
+        PickedResult{..} <- srPick shownResult
+        actionResult <-
+            action
+            <&> Widget.eCursor . Lens._Wrapped' . Lens.mapped %~
+                _pickedIdTranslations
+        return $ _pickedEventResult <> actionResult
 
 -- | Remove unwanted event handlers from a hole result
 removeUnwanted :: Config -> Widget.EventHandlers f -> Widget.EventHandlers f
 removeUnwanted config =
-  deleteKeys (delKeys ++ gridKeyEvents)
-  where
-    gridKeyEvents = Foldable.toList Grid.stdKeys
-    delKeys = Config.delKeys config
+    deleteKeys (delKeys ++ gridKeyEvents)
+    where
+        gridKeyEvents = Foldable.toList Grid.stdKeys
+        delKeys = Config.delKeys config
 
 mkEventsOnPickedResult :: MonadA m => ShownResult m -> ExprGuiM m (Widget.EventHandlers (T m))
 mkEventsOnPickedResult shownResult =
-  do
-    config <- ExprGuiM.readConfig
-    srMkEventMap shownResult
-      <&> E.emDocs . E.docStrs . Lens._last %~ (++ "(On picked result)")
-      <&> Lens.mapped %~ pickBefore shownResult
-      <&> removeUnwanted config
+    do
+        config <- ExprGuiM.readConfig
+        srMkEventMap shownResult
+            <&> E.emDocs . E.docStrs . Lens._last %~ (++ "(On picked result)")
+            <&> Lens.mapped %~ pickBefore shownResult
+            <&> removeUnwanted config
 
 makeOpenEventMaps ::
-  MonadA m =>
-  EditableHoleInfo m -> Maybe (ShownResult m) ->
-  ExprGuiM m
-  ( Widget.EventHandlers (T m)
-  , Widget.EventHandlers (T m)
-  )
+    MonadA m =>
+    EditableHoleInfo m -> Maybe (ShownResult m) ->
+    ExprGuiM m
+    ( Widget.EventHandlers (T m)
+    , Widget.EventHandlers (T m)
+    )
 makeOpenEventMaps editableHoleInfo mShownResult = do
-  config <- ExprGuiM.readConfig
-  -- below ad-hoc and search term edit:
-  eventMap <-
-    [ pure $ closeEventMap holeInfo
-    , pure $ pasteEventMap config editableHoleInfo
-    , case mShownResult of
-      Nothing -> pure mempty
-      Just shownResult ->
-        mkEventsOnPickedResult shownResult
-        <&> mappend
-        (pickEventMap (Config.hole config) holeInfo shownResult)
-    ] & sequenceA <&> mconcat
-  let adHocEdit =
-        adHocTextEditEventMap (HoleInfo.ehiSearchTermProperty editableHoleInfo)
-  pure (eventMap, adHocEdit <> eventMap)
-  where
-    holeInfo = ehiInfo editableHoleInfo
+    holeConfig <- ExprGuiM.readConfig <&> Config.hole
+    -- below ad-hoc and search term edit:
+    eventMap <-
+        [ pure $ closeEventMap holeConfig holeInfo
+        , pure $ pasteEventMap holeConfig editableHoleInfo
+        , case mShownResult of
+          Nothing -> pure mempty
+          Just shownResult ->
+              mkEventsOnPickedResult shownResult
+              <&> mappend
+              (pickEventMap holeConfig holeInfo shownResult)
+        ] & sequenceA <&> mconcat
+    let adHocEdit =
+            adHocTextEditEventMap (HoleInfo.ehiSearchTermProperty editableHoleInfo)
+    pure (eventMap, adHocEdit <> eventMap)
+    where
+        holeInfo = ehiInfo editableHoleInfo
