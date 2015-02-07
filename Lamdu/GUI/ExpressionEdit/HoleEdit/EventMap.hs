@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
-  ( makeOpenEventMaps, blockDownEvents, disallowChars
+  ( open, blockDownEvents, disallowChars
+  , makeOpenEventMaps
   ) where
 
 import           Control.Applicative (Applicative(..), (<$))
@@ -34,6 +35,13 @@ import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
+
+open ::
+    Applicative f => [ModKey] -> WidgetIds -> Widget.EventHandlers f
+open keys WidgetIds{..} =
+    Widget.keysEventMapMovesCursor keys doc $ pure hidOpen
+    where
+        doc = E.Doc ["Navigation", "Hole", "Open"]
 
 blockDownEvents :: Monad f => Widget f -> Widget f
 blockDownEvents =

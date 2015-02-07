@@ -18,7 +18,8 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (openHoleEventMap, addDarkBackground)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addDarkBackground)
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as HoleEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as HoleOpen
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
@@ -117,7 +118,7 @@ make hole pl =
         & maybe (searchTermGui & takesFocus & respondAtClosedId)
           (maybeHoverSearchTermBelow hids searchTermGui)
         <&> ExpressionGui.egWidget %~
-            Widget.weakerEvents (openHoleEventMap holeOpenKeys hids)
+            Widget.weakerEvents (HoleEventMap.open holeOpenKeys hids)
         & ExpressionGui.stdWrap pl
       mEditableHoleInfo
         & maybe mzero (tryOpenHole mWrapper pl)

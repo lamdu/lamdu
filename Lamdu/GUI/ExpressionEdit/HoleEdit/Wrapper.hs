@@ -15,7 +15,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (openHoleEventMap)
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as HoleEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -57,7 +57,7 @@ makeUnwrapEventMap arg hids = do
       Widget.keysEventMapMovesCursor
       (holeUnwrapKeys ++ Config.delKeys config)
       (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
-    Nothing -> openHoleEventMap (Config.wrapKeys config) hids
+    Nothing -> HoleEventMap.open (Config.wrapKeys config) hids
 
 make ::
   MonadA m => WidgetIds ->
