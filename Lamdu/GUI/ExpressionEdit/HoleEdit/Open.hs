@@ -34,7 +34,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground, addDarkBackground)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (EditableHoleInfo(..), HoleInfo(..), HoleIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap as OpenEventMap
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
@@ -333,7 +333,7 @@ layoutResults rows hiddenResults myId
                   rows
                   & Lens.mapped . Lens.mapped %~ (,) (Vector2 0 0.5)
                   & Grid.make & Grid.toWidget
-                  & OpenEventMap.blockDownEvents
+                  & EventMap.blockDownEvents
             grid : hiddenResultsWidgets & Box.vboxCentered & return
 
 makeResultsWidget ::
@@ -406,7 +406,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults pl editableHoleInfo
         (mShownResult, resultsWidget) <-
             makeResultsWidget editableHoleInfo shownResultsLists hasHiddenResults
         (searchTermEventMap, resultsEventMap) <-
-            OpenEventMap.make editableHoleInfo mShownResult
+            EventMap.makeOpenEventMaps editableHoleInfo mShownResult
         (searchTermAlignment, searchTermWidget) <-
             SearchTerm.make holeInfo (Just editableHoleInfo)
             <&> ExpressionGui.egWidget %~

@@ -19,7 +19,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap as OpenEventMap
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -44,7 +44,7 @@ make holeInfo mEditableHoleInfo =
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
         makeTextEdit mSearchTermProp
-            <&> Widget.eventMap %~ OpenEventMap.disallowChars searchTerm
+            <&> Widget.eventMap %~ EventMap.disallowChars searchTerm
             <&> addBackground (Widget.toAnimId openSearchTermId)
                 (Config.layers config) holeSearchTermBGColor
             <&> ExpressionGui.fromValueWidget

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, RecordWildCards #-}
-module Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap
-  ( make, blockDownEvents, disallowChars
+module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
+  ( makeOpenEventMaps, blockDownEvents, disallowChars
   ) where
 
 import           Control.Applicative (Applicative(..), (<$))
@@ -147,14 +147,14 @@ mkEventsOnPickedResult shownResult =
       <&> Lens.mapped %~ pickBefore shownResult
       <&> removeUnwanted config
 
-make ::
+makeOpenEventMaps ::
   MonadA m =>
   EditableHoleInfo m -> Maybe (ShownResult m) ->
   ExprGuiM m
   ( Widget.EventHandlers (T m)
   , Widget.EventHandlers (T m)
   )
-make editableHoleInfo mShownResult = do
+makeOpenEventMaps editableHoleInfo mShownResult = do
   config <- ExprGuiM.readConfig
   -- below ad-hoc and search term edit:
   eventMap <-
