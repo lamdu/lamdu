@@ -63,17 +63,6 @@ destCursor :: WidgetIds -> Maybe (Sugar.HoleArg m expr) -> Widget.Id
 destCursor WidgetIds{..} Nothing = hidOpen
 destCursor WidgetIds{..} (Just _) = hidClosed
 
-hovering ::
-  (ExpressionGui m -> ExpressionGui m) ->
-  ExpressionGui m -> ExpressionGui m
-hovering f x =
-  f x
-  & size .~ x^.size
-  & alignment .~ x^.alignment
-  where
-    alignment = ExpressionGui.egAlignment
-    size = ExpressionGui.egWidget . Widget.size
-
 maybeHoverSearchTermBelow ::
   MonadA m => WidgetIds -> ExpressionGui m ->
   ExpressionGui m ->
@@ -88,11 +77,11 @@ maybeHoverSearchTermBelow WidgetIds{..} searchTermGui wrapperGui
         <&> (^. ExpressionGui.egWidget)
         <&> Widget.takesFocus (const (pure hidOpen))
       wrapperGui
-        & hovering (ExpressionGui.addBelow 0.5 [(0.5, searchTermWidget)])
+        & ExpressionGui.addBelow 0.5 [(0.5, searchTermWidget)]
+        & (`Layout.hoverInPlaceOf` wrapperGui)
         & return
   | otherwise =
     return wrapperGui
-  where
 
 liftLayers :: MonadA m => ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 liftLayers =
