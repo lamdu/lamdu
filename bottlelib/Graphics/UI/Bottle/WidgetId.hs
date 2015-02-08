@@ -4,19 +4,23 @@ module Graphics.UI.Bottle.WidgetId
   , joinId, subId
   ) where
 
-import           Control.Lens.Operators
-import           Data.Binary (Binary)
-import           Data.List (intercalate)
-import           Data.List.Lens (prefixed)
-import           Data.Monoid (Monoid(..))
-import           Graphics.UI.Bottle.Animation.Id (AnimId)
+import Control.Lens.Operators
+import Data.Binary (Binary)
+import Data.List (intercalate)
+import Data.List.Lens (prefixed)
+import Data.Monoid (Monoid(..))
+import Graphics.UI.Bottle.Animation.Id (AnimId)
+import Numeric.Utils (encodeHex)
 
 newtype Id = Id
   { toAnimId :: AnimId
   } deriving (Eq, Ord, Read, Binary, Monoid)
 
 instance Show Id where
-  show = ('W' :) . intercalate ":" . map show . toAnimId
+  show (Id animId) =
+      "W:" ++ (intercalate ":" (map each animId))
+      where
+          each bs = encodeHex bs ++ "(" ++ show bs ++ ")"
 
 joinId :: Id -> AnimId -> Id
 joinId (Id x) y = Id $ x ++ y
