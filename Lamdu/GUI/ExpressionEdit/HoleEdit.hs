@@ -10,7 +10,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
-import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
@@ -67,10 +66,10 @@ liftLayers =
   ExpressionGui.egWidget %%~ ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
 
 addSearchAreaBelow ::
-  MonadA m => WidgetIds -> ExpressionGui m ->
-  ExpressionGui m ->
-  ExprGuiM m (ExpressionGui m)
-addSearchAreaBelow WidgetIds{..} searchAreaGui wrapperGui =
+  MonadA m => WidgetIds ->
+  ExpressionGui f -> ExpressionGui f ->
+  ExprGuiM m (ExpressionGui f)
+addSearchAreaBelow WidgetIds{..} wrapperGui searchAreaGui =
   do
     hoveringSearchArea <- liftLayers searchAreaGui
     wrapperGui
@@ -79,7 +78,8 @@ addSearchAreaBelow WidgetIds{..} searchAreaGui wrapperGui =
 
 addWrapperAbove ::
   MonadA m =>
-  WidgetIds -> ExpressionGui f -> Layout (T f) -> ExprGuiM m (Layout (T f))
+  WidgetIds -> ExpressionGui f -> ExpressionGui f ->
+  ExprGuiM m (ExpressionGui f)
 addWrapperAbove WidgetIds{..} wrapperGui searchAreaGui =
   do
     Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
@@ -111,15 +111,19 @@ make hole pl =
           unfocusedWrapperGui <-
             wrapperGui & ExpressionGui.maybeAddInferredTypePl pl
           isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor hidHole
-          if isSelected
-            then do
-              searchAreaGui <- SearchArea.makeStdWrapped pl holeInfo mEditableHoleInfo
-              if wrapperGui ^. ExpressionGui.egWidget . Widget.isFocused
-                then addSearchAreaBelow WidgetIds{..} searchAreaGui wrapperGui
-                else addWrapperAbove WidgetIds{..} wrapperGui searchAreaGui
-              <&> (`Layout.hoverInPlaceOf` unfocusedWrapperGui)
-            else
-              return unfocusedWrapperGui
+          let
+            layout f = do
+              searchAreaGui <-
+                SearchArea.makeStdWrapped pl holeInfo mEditableHoleInfo
+              f WidgetIds{..} wrapperGui searchAreaGui
+                <&> (`Layout.hoverInPlaceOf` unfocusedWrapperGui)
+          if wrapperGui ^. ExpressionGui.egWidget . Widget.isFocused
+             then
+               layout addSearchAreaBelow
+             else if isSelected then
+               layout addWrapperAbove
+             else
+               return unfocusedWrapperGui
         Nothing -> SearchArea.makeStdWrapped pl holeInfo mEditableHoleInfo
       & assignHoleCursor WidgetIds{..} (hole ^. Sugar.holeMArg)
   where
