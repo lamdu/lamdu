@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards, OverloadedStrings, TemplateHaskell, FlexibleContexts, DeriveGeneric #-}
-module Lamdu.GUI.ExpressionEdit.HoleEdit.Results
+module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
   ( makeAll, HaveHiddenResults(..)
   , Result(..)
   , ResultsList(..), rlExtraResultsPrefixId, rlMain, rlExtra

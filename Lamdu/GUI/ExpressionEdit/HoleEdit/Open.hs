@@ -36,8 +36,8 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (EditableHoleInfo(..), HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult)
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Results as HoleResults
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..), Result(..), HaveHiddenResults(..))
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as HoleResults
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
