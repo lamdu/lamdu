@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
-    ( make
+module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
+    ( makeStdWrapped
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
@@ -22,12 +22,15 @@ import           Data.Traversable (traverse)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
@@ -35,13 +38,12 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground, addDar
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (EditableHoleInfo(..), HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..), Result(..), HaveHiddenResults(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as HoleResults
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.SearchTerm as SearchTerm
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -366,88 +368,74 @@ assignHoleEditCursor editableHoleInfo shownMainResultsIds allShownResultIds sear
         let
             sub = isJust . flip Widget.subId cursor
             holeInfo = ehiInfo editableHoleInfo
-            shouldBeOnResult =
-                holeInfo & hiIds & HoleWidgetIds.hidResultsPrefix & sub
+            WidgetIds{..} = hiIds holeInfo
+            shouldBeOnResult = sub hidResultsPrefix
             isOnResult = any sub allShownResultIds
+            -- TODO: Instead of assignSource, use setCursor
+            -- vs. assignCursor?
             assignSource
                 | shouldBeOnResult && not isOnResult = cursor
-                | otherwise = hidOpen (hiIds holeInfo)
+                | otherwise = hidOpen
             destId
                 | null (HoleInfo.ehiSearchTerm editableHoleInfo) = searchTermId
                 | otherwise = head (shownMainResultsIds ++ [searchTermId])
         ExprGuiM.assignCursor assignSource destId action
 
-maybeHoverWrapperAbove ::
-    MonadA m =>
-    HoleInfo n -> Maybe (ExpressionGui m) ->
-    ExpressionGui m ->
-    ExprGuiM m (ExpressionGui m)
-maybeHoverWrapperAbove _ Nothing openHoleGui = return openHoleGui
-maybeHoverWrapperAbove holeInfo (Just wrapperGui) openHoleGui =
-    do
-        Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
-        hoveringWrapper <-
-            addDarkBackground closedAnimId wrapperGui
-            <&> Layout.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
-        openHoleGui
-            & Layout.addBefore Layout.Vertical [hoveringWrapper]
-            & return
-    where
-        closedAnimId = holeInfo & hiIds & hidClosed & Widget.toAnimId
-
 makeUnderCursorAssignment ::
     MonadA m =>
-    [ResultsList m] -> HaveHiddenResults -> Sugar.Payload m ExprGuiM.Payload ->
+    [ResultsList m] -> HaveHiddenResults ->
     EditableHoleInfo m -> ExprGuiM m (ExpressionGui m)
-makeUnderCursorAssignment shownResultsLists hasHiddenResults pl editableHoleInfo =
+makeUnderCursorAssignment shownResultsLists hasHiddenResults editableHoleInfo =
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
+
         (mShownResult, resultsWidget) <-
             makeResultsWidget editableHoleInfo shownResultsLists hasHiddenResults
+
         (searchTermEventMap, resultsEventMap) <-
             EventMap.makeOpenEventMaps editableHoleInfo mShownResult
-        (searchTermAlignment, searchTermWidget) <-
-            SearchTerm.make holeInfo (Just editableHoleInfo)
-            <&> ExpressionGui.egWidget %~
-                Widget.weakerEvents searchTermEventMap
-            <&> (^. Layout.absAlignedWidget)
+
         -- We make our own type view here instead of
         -- ExpressionGui.stdWrap, because we want to synchronize the
         -- active BG width with the inferred type width
         typeView <-
             ExpressionGui.makeTypeView (resultsWidget ^. Widget.width)
             (hiEntityId holeInfo) (hiInferredType holeInfo)
+
         vspace <- ExpressionGui.inferredSpacer
-        hoverResults <-
+        hoverResultsWidget <-
             resultsWidget
             & Widget.width %~ max (typeView ^. Widget.width)
             & Widget.strongerEvents resultsEventMap .
-              addBackground (Widget.toAnimId resultsId) (Config.layers config)
+              addBackground (Widget.toAnimId hidResultsPrefix) (Config.layers config)
               holeOpenBGColor
             & ExpressionGui.fromValueWidget
             & Layout.addAfter Layout.Vertical [(0.5, vspace), (0.5, typeView)]
-            & addDarkBackground (Widget.toAnimId resultsId)
-        (0, searchTermWidget)
-            ^. Lens.from Layout.absAlignedWidget
+            & addDarkBackground (Widget.toAnimId hidResultsPrefix)
+            <&> (^. ExpressionGui.egWidget)
+            >>= ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
+        searchTermGui <- SearchTerm.make holeInfo (Just editableHoleInfo)
+        searchTermGui
+            & ExpressionGui.egWidget %~ Widget.weakerEvents searchTermEventMap
+            & alignment .~ 0
             & Layout.addAfter Layout.Vertical
-              [(0, hoverResults ^. ExpressionGui.egWidget)]
-            & Layout.absAlignedWidget . _1 .~ searchTermAlignment
+              [(0, hoverResultsWidget)]
+            & alignment .~ searchTermGui ^. alignment
             & return
-    & ExpressionGui.wrapExprEventMap pl
     where
-        resultsId = holeInfo & hiIds & HoleWidgetIds.hidResultsPrefix
+        alignment :: Lens' (Layout f) Box.Alignment
+        alignment = Layout.absAlignedWidget . _1
+        WidgetIds{..} = hiIds holeInfo
         holeInfo = ehiInfo editableHoleInfo
 
-make ::
+makeOpenSearchTermGui ::
     MonadA m =>
-    Maybe (ExpressionGui m) ->
-    Sugar.Payload m ExprGuiM.Payload -> EditableHoleInfo m ->
+    Sugar.Payload m ExprGuiM.Payload ->
+    EditableHoleInfo m ->
     ExprGuiM m (ExpressionGui m)
-make mWrapperGui pl editableHoleInfo =
+makeOpenSearchTermGui pl editableHoleInfo =
     do
-        config <- ExprGuiM.readConfig
-        let Config.Hole{..} = Config.hole config
         (shownResultsLists, hasHiddenResults) <-
             -- Don't generate results of open holes inside hole results
             if isHoleResult
@@ -460,12 +448,54 @@ make mWrapperGui pl editableHoleInfo =
                 [ rId . (^. HoleResults.rlMain)
                 , (^. HoleResults.rlExtraResultsPrefixId)
                 ] <*> shownResultsLists
-        makeUnderCursorAssignment shownResultsLists hasHiddenResults pl editableHoleInfo
-            >>= maybeHoverWrapperAbove holeInfo mWrapperGui
+        makeUnderCursorAssignment shownResultsLists
+            hasHiddenResults editableHoleInfo
             & assignHoleEditCursor editableHoleInfo shownMainResultsIds
               allShownResultIds (holeInfo & hiIds & hidOpenSearchTerm)
+            & ExpressionGui.wrapExprEventMap pl
     where
-        holeInfo = ehiInfo editableHoleInfo
         isHoleResult =
             Lens.nullOf
             (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl
+        holeInfo = ehiInfo editableHoleInfo
+
+fdConfig :: Config.Hole -> FocusDelegator.Config
+fdConfig Config.Hole{..} = FocusDelegator.Config
+    { FocusDelegator.focusChildKeys = holeOpenKeys
+    , FocusDelegator.focusChildDoc = E.Doc ["Navigation", "Hole", "Open"]
+    , FocusDelegator.focusParentKeys = holeCloseKeys
+    , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Hole", "Close"]
+    }
+
+-- Has an ExpressionGui.stdWrap/typeView under the search term
+makeStdWrapped ::
+    MonadA m =>
+    Sugar.Payload m ExprGuiM.Payload ->
+    HoleInfo m -> Maybe (EditableHoleInfo m) ->
+    ExprGuiM m (ExpressionGui m)
+makeStdWrapped pl holeInfo mEditableHoleInfo =
+    do
+        config <- ExprGuiM.readConfig
+        let Config.Hole{..} = Config.hole config
+            WidgetIds{..} = hiIds holeInfo
+            fdWrap =
+                ExpressionGui.egWidget %%~
+                ExprGuiM.widgetEnv .
+                BWidgets.makeFocusDelegator (fdConfig (Config.hole config))
+                FocusDelegator.FocusEntryChild hidClosedSearchArea
+        closedSearchTermGui <-
+            SearchTerm.make holeInfo mEditableHoleInfo
+            >>= fdWrap & ExpressionGui.stdWrap pl
+        isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor hidOpen
+        case mEditableHoleInfo of
+            Just editableHoleInfo
+                | isSelected ->
+                      makeOpenSearchTermGui pl editableHoleInfo
+                      -- ideally the fdWrap would be "inside" the
+                      -- type-view addition and stdWrap, but it's not
+                      -- important in the case the FD is selected, and
+                      -- it is harder to implement, so just wrap it
+                      -- here
+                      >>= fdWrap
+                      <&> (`Layout.hoverInPlaceOf` closedSearchTermGui)
+            _ -> return closedSearchTermGui

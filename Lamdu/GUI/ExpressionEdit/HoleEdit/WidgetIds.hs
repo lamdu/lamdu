@@ -10,8 +10,8 @@ import           Lamdu.Sugar.EntityId (EntityId)
 
 data WidgetIds = WidgetIds
     { hidHole :: Widget.Id
-    , hidClosed :: Widget.Id
-    , hidClosedSearchTerm :: Widget.Id
+    , hidWrapper :: Widget.Id
+    , hidClosedSearchArea :: Widget.Id
     , hidOpen :: Widget.Id
     , hidOpenSearchTerm :: Widget.Id
     , hidResultsPrefix :: Widget.Id
@@ -20,13 +20,11 @@ data WidgetIds = WidgetIds
 make :: EntityId -> WidgetIds
 make entityId = WidgetIds
     { hidHole = holeId
-    , hidOpen = openPrefix
-    , hidClosed = closedPrefix
-    , hidOpenSearchTerm = Widget.joinId openPrefix ["SearchTerm"]
-    , hidClosedSearchTerm = Widget.joinId closedPrefix ["SearchTerm"]
-    , hidResultsPrefix = Widget.joinId openPrefix ["Results"]
+    , hidWrapper          = Widget.joinId holeId ["Wrapper"]
+    , hidClosedSearchArea = Widget.joinId holeId ["SearchArea", "SearchTerm"]
+    , hidOpen             = Widget.joinId holeId ["SearchArea", "Open"]
+    , hidOpenSearchTerm   = Widget.joinId holeId ["SearchArea", "Open", "SearchTerm"]
+    , hidResultsPrefix    = Widget.joinId holeId ["SearchArea", "Open", "Results"]
     }
     where
-        closedPrefix = Widget.joinId holeId ["Closed"]
-        openPrefix = Widget.joinId holeId ["Open"]
         holeId = WidgetIds.fromEntityId entityId

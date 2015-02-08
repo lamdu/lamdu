@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
-  ( open, blockDownEvents, disallowChars
+  ( blockDownEvents, disallowChars
   , makeOpenEventMaps
   ) where
 
@@ -26,8 +26,7 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult (PickedResult(..), ShownResult(..))
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.ShownResult (PickedResult(..), ShownResult(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -36,13 +35,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
 
-open ::
-    Applicative f => [ModKey] -> WidgetIds -> Widget.EventHandlers f
-open keys WidgetIds{..} =
-    Widget.keysEventMapMovesCursor keys doc $ pure hidOpen
-    where
-        doc = E.Doc ["Navigation", "Hole", "Open"]
-
 blockDownEvents :: Monad f => Widget f -> Widget f
 blockDownEvents =
     Widget.weakerEvents $
@@ -50,13 +42,6 @@ blockDownEvents =
     [ModKey mempty GLFW.Key'Down]
     (E.Doc ["Navigation", "Move", "down (blocked)"]) $
     return mempty
-
-closeEventMap ::
-    MonadA m => Config.Hole -> HoleInfo m -> Widget.EventHandlers (T m)
-closeEventMap Config.Hole{..} holeInfo =
-    Widget.keysEventMapMovesCursor holeCloseKeys
-    (E.Doc ["Navigation", "Hole", "Close"]) . pure $
-    hidClosed (hiIds holeInfo)
 
 pasteEventMap ::
     Functor m => Config.Hole -> EditableHoleInfo m -> Widget.EventHandlers (T m)
@@ -147,10 +132,12 @@ pickBefore shownResult action =
 -- | Remove unwanted event handlers from a hole result
 removeUnwanted :: Config -> Widget.EventHandlers f -> Widget.EventHandlers f
 removeUnwanted config =
-    deleteKeys (delKeys ++ gridKeyEvents)
-    where
-        gridKeyEvents = Foldable.toList Grid.stdKeys
-        delKeys = Config.delKeys config
+  deleteKeys (delKeys ++ gridKeyEvents ++ holeNavigationKeys)
+  where
+    Config.Hole{..} = Config.hole config
+    holeNavigationKeys = holeOpenKeys ++ holeCloseKeys
+    gridKeyEvents = Foldable.toList Grid.stdKeys
+    delKeys = Config.delKeys config
 
 mkEventsOnPickedResult :: MonadA m => ShownResult m -> ExprGuiM m (Widget.EventHandlers (T m))
 mkEventsOnPickedResult shownResult =
@@ -172,8 +159,7 @@ makeOpenEventMaps editableHoleInfo mShownResult = do
     holeConfig <- ExprGuiM.readConfig <&> Config.hole
     -- below ad-hoc and search term edit:
     eventMap <-
-        [ pure $ closeEventMap holeConfig holeInfo
-        , pure $ pasteEventMap holeConfig editableHoleInfo
+        [ pure $ pasteEventMap holeConfig editableHoleInfo
         , case mShownResult of
           Nothing -> pure mempty
           Just shownResult ->

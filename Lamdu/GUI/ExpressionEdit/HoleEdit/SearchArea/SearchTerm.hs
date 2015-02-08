@@ -1,7 +1,7 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 -- | A hole's search term component
 
-module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
+module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.SearchTerm
     ( make
     ) where
 
@@ -17,12 +17,11 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground, addDarkBackground)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -74,14 +73,16 @@ make holeInfo mEditableHoleInfo =
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
-        makeSearchTermPropEdit (hiIds holeInfo) mSearchTermProp
+        makeSearchTermPropEdit WidgetIds{..} mSearchTermProp
             <&> Widget.eventMap %~ EventMap.disallowChars searchTerm
-            <&> addBackground (Widget.toAnimId openSearchTermId)
+            <&> addBackground (Widget.toAnimId hidOpenSearchTerm)
                 (Config.layers config) holeSearchTermBGColor
             <&> ExpressionGui.fromValueWidget
             & WE.localEnv (WE.envTextStyle %~ textEditNoEmpty)
             & ExprGuiM.widgetEnv
+            >>= addDarkBackground
+                (Widget.toAnimId hidOpenSearchTerm ++ ["searchTermDarkBg"])
     where
-      openSearchTermId = hiIds holeInfo & HoleWidgetIds.hidOpenSearchTerm
+      WidgetIds{..} = hiIds holeInfo
       mSearchTermProp = mEditableHoleInfo <&> HoleInfo.ehiSearchTermProperty
       searchTerm = maybe "" Property.value mSearchTermProp

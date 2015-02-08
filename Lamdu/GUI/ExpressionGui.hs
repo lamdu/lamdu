@@ -27,6 +27,7 @@ module Lamdu.GUI.ExpressionGui
   , MyPrecedence(..), ParentPrecedence(..), Precedence
   , parenify
   , wrapExprEventMap
+  , maybeAddInferredTypePl
   , stdWrap
   , stdWrapParentExpr
   , stdWrapParenify

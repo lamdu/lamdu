@@ -13,9 +13,9 @@ import           Data.Monoid ((<>))
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as HoleEventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -36,7 +36,7 @@ modifyWrappedEventMap config argIsFocused arg WidgetIds{..} eventMap
   | argIsFocused =
     eventMap <>
     Widget.keysEventMapMovesCursor (Config.leaveSubexpressionKeys config)
-    (E.Doc ["Navigation", "Go to parent wrapper"]) (pure hidClosed)
+    (E.Doc ["Navigation", "Go to parent wrapper"]) (pure hidWrapper)
   | otherwise =
     Widget.keysEventMapMovesCursor (Config.enterSubexpressionKeys config)
     (E.Doc ["Navigation", "Go to wrapped expr"]) .
@@ -57,7 +57,10 @@ makeUnwrapEventMap arg WidgetIds{..} = do
       Widget.keysEventMapMovesCursor
       (holeUnwrapKeys ++ Config.delKeys config)
       (E.Doc ["Edit", "Unwrap"]) $ WidgetIds.fromEntityId <$> unwrap
-    Nothing -> HoleEventMap.open holeUnwrapKeys WidgetIds{..}
+    Nothing ->
+      Widget.keysEventMapMovesCursor holeUnwrapKeys doc $ pure hidOpenSearchTerm
+      where
+          doc = E.Doc ["Navigation", "Hole", "Open"]
 
 make ::
   MonadA m => WidgetIds ->
@@ -88,6 +91,7 @@ make WidgetIds{..} arg = do
       (Config.layerHoleBG (Config.layers config))
       frameId bgColor frameWidth
     & ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap
-    & return
+    & ExpressionGui.egWidget %%~
+      ExprGuiM.widgetEnv . BWidgets.makeFocusableView hidWrapper
   where
-    frameId = Widget.toAnimId hidClosed <> ["hole frame"]
+    frameId = Widget.toAnimId hidWrapper <> ["hole frame"]
