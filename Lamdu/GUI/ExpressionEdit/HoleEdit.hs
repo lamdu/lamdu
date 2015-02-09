@@ -71,7 +71,11 @@ addSearchAreaBelow ::
   ExprGuiM m (ExpressionGui f)
 addSearchAreaBelow WidgetIds{..} wrapperGui searchAreaGui =
   do
-    hoveringSearchArea <- liftLayers searchAreaGui
+    hoveringSearchArea <-
+      searchAreaGui
+      & addDarkBackground
+        (Widget.toAnimId hidOpen ++ ["searchAreaDarkBg"])
+      >>= liftLayers
     wrapperGui
       & Layout.addAfter Layout.Vertical [hoveringSearchArea]
       & return

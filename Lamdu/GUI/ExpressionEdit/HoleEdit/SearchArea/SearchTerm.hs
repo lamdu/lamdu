@@ -17,7 +17,7 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground, addDarkBackground)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
@@ -80,8 +80,6 @@ make holeInfo mEditableHoleInfo =
             <&> ExpressionGui.fromValueWidget
             & WE.localEnv (WE.envTextStyle %~ textEditNoEmpty)
             & ExprGuiM.widgetEnv
-            >>= addDarkBackground
-                (Widget.toAnimId hidOpenSearchTerm ++ ["searchTermDarkBg"])
     where
       WidgetIds{..} = hiIds holeInfo
       mSearchTermProp = mEditableHoleInfo <&> HoleInfo.ehiSearchTermProperty
