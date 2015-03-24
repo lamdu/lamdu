@@ -37,11 +37,15 @@ orderComposite c =
     & Map.toList
     & orderByTag fst
     <&> foldr (uncurry T.CExtend) (maybe T.CEmpty T.CVar mExt)
+    >>= T.compositeTypes orderType
     where
         FlatComposite fields mExt = FlatComposite.fromComposite c
 
 orderType :: MonadA m => Order m Type
-orderType = ExprLens._TRecord %%~ orderComposite
+orderType t =
+    t
+    & ExprLens._TRecord orderComposite
+    >>= T.nextLayer orderType
 
 orderRecordFields ::
     MonadA m => Order m [Sugar.RecordField name f (Sugar.Expression name f a)]
