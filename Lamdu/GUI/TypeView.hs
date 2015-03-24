@@ -27,8 +27,6 @@ import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Expr.FlatComposite (FlatComposite(..))
-import qualified Lamdu.Expr.FlatComposite as FlatComposite
 import           Lamdu.Expr.Identifier (Identifier(..))
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
@@ -168,13 +166,20 @@ makeField (tag, fieldType) = do
     , (Vector2 0 0.5, splitMake (ParentPrecedence 0) fieldType)
     ]
 
+compositeParts :: T.Composite a -> ([(T.Tag, T.Type)], Maybe (T.Var (T.Composite a)))
+compositeParts T.CEmpty = ([], Nothing)
+compositeParts (T.CVar x) = ([], Just x)
+compositeParts (T.CExtend tag typ rest) =
+    compositeParts rest
+    & Lens._1 %~ (:) (tag, typ)
+
 makeRecord :: MonadA m => T.Composite T.Product -> M m View
 makeRecord T.CEmpty = makeEmptyRecord
 makeRecord composite =
   do
-    fieldsView <- GridView.make <$> mapM makeField (Map.toList fields)
+    fieldsView <- GridView.make <$> mapM makeField fields
     let
-      barWidth | Map.null fields = 150
+      barWidth | null fields = 150
                | otherwise = fieldsView ^. View.width
     varView <-
       case extension of
@@ -191,7 +196,7 @@ makeRecord composite =
     GridView.verticalAlign 0.5 [fieldsView, varView]
       & addBackgroundFrame
   where
-    FlatComposite fields extension = FlatComposite.fromComposite composite
+    (fields, extension) = compositeParts composite
 
 splitMake :: MonadA m => ParentPrecedence -> Type -> M m View
 splitMake parentPrecedence typ = split $ makeInternal parentPrecedence typ
