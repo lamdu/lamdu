@@ -4,7 +4,7 @@ module Lamdu.Expr.Eval
     ( EvalT(..)
     , EvalState, EvalActions(..), initialState
     , evalError
-    , ThunkSrc(..), ValHead(..), ThunkId, Closure, ClosureId
+    , ThunkSrc(..), ValHead(..), ThunkId, Closure, ClosureId, outermostClosure
     , whnf, whnfVar
     ) where
 
@@ -38,12 +38,12 @@ data ThunkId
     deriving (Eq, Ord, Show)
 
 data ThunkSrc pl = ThunkSrc
-    { _srcMClosure :: Maybe ClosureId
+    { _srcMClosure :: ClosureId
     , _srcExpr :: Val pl
     } deriving (Functor, Show)
 
 data Closure pl = Closure
-    { _cOuterScope :: Maybe ClosureId
+    { _cOuterScope :: ClosureId
     , _cLam :: V.Lam (Val pl)
     } deriving (Functor, Show)
 
@@ -100,31 +100,28 @@ whnf src =
         return result
 
 calcWhnf :: Monad m => ThunkSrc pl -> EvalT pl m (ValHead pl)
-calcWhnf (ThunkSrc mClosureId expr) =
+calcWhnf (ThunkSrc closureId expr) =
     case expr ^. V.body of
-    V.BAbs lam -> return $ HAbs $ Closure mClosureId lam
+    V.BAbs lam -> return $ HAbs $ Closure closureId lam
     V.BApp (V.Apply funcExpr argExpr) ->
         do
-            func <- whnf $ ThunkSrc mClosureId funcExpr
+            func <- whnf $ ThunkSrc closureId funcExpr
             case func of
-                HAbs closure -> whnfApplyLam closure (ThunkSrc mClosureId argExpr)
+                HAbs closure -> whnfApplyLam closure (ThunkSrc closureId argExpr)
                 HBuiltin ffiname ->
                     do
                         runBuiltin <- use $ esReader . aRunBuiltin
-                        argThunk <- makeThunk mClosureId argExpr
+                        argThunk <- makeThunk closureId argExpr
                         runBuiltin ffiname argThunk
                 _ -> evalError "Apply on non function"
     V.BGetField (V.GetField recordExpr tag) ->
         do
-            record <- whnf $ ThunkSrc mClosureId recordExpr
+            record <- whnf $ ThunkSrc closureId recordExpr
             whnfGetField $ V.GetField record tag
     V.BRecExtend recExtend ->
-        recExtend & traverse %%~ makeThunk mClosureId <&> HRecExtend
+        recExtend & traverse %%~ makeThunk closureId <&> HRecExtend
     V.BLeaf (V.LGlobal global) -> whnfVar $ TGlobal global
-    V.BLeaf (V.LVar var) ->
-        case mClosureId of
-        Nothing -> evalError "LVar in outer scope"
-        Just closureId -> whnfVar $ TLocalVar $ LocalVar closureId var
+    V.BLeaf (V.LVar var) -> whnfVar $ TLocalVar $ LocalVar closureId var
     V.BLeaf V.LRecEmpty -> return HRecEmpty
     V.BLeaf (V.LLiteralInteger i) -> HLiteralInteger i & return
     V.BLeaf V.LHole -> evalError "Hole"
@@ -134,17 +131,17 @@ whnfApplyLam func arg =
     do
         closureId <- use esClosureCounter
         esClosureCounter += 1
-        esClosureParent . at closureId .= func ^. cOuterScope
+        esClosureParent . at closureId .= Just (func ^. cOuterScope)
         let var = LocalVar closureId $ func ^. cLam . V.lamParamId
         esThunks . at (TLocalVar var) .= Just (TSrc arg)
-        whnf $ ThunkSrc (Just closureId) (func ^. cLam . V.lamResult)
+        whnf $ ThunkSrc closureId (func ^. cLam . V.lamResult)
 
-makeThunk :: Monad m => Maybe ClosureId -> Val pl -> EvalT pl m ThunkId
-makeThunk mClosureId expr =
+makeThunk :: Monad m => ClosureId -> Val pl -> EvalT pl m ThunkId
+makeThunk closureId expr =
     do
         thunkId <- use esThunkCounter <&> TAnon
         esThunkCounter += 1
-        esThunks . at thunkId .= Just (TSrc (ThunkSrc mClosureId expr))
+        esThunks . at thunkId .= Just (TSrc (ThunkSrc closureId expr))
         return thunkId
 
 whnfGetField :: Monad m => V.GetField (ValHead pl) -> EvalT pl m (ValHead pl)
@@ -188,7 +185,7 @@ loadGlobal g =
         case res of
             Nothing -> evalError $ "Global not found " ++ show g
             Just (Left name) -> return $ HBuiltin name
-            Just (Right expr) -> whnf $ ThunkSrc Nothing expr
+            Just (Right expr) -> whnf $ ThunkSrc outermostClosure expr
 
 initialState :: EvalActions m srcPayload -> EvalState m srcPayload
 initialState actions =
@@ -196,6 +193,9 @@ initialState actions =
     { _esThunks = Map.empty
     , _esThunkCounter = 0
     , _esClosureParent = Map.empty
-    , _esClosureCounter = 0
+    , _esClosureCounter = 1
     , _esReader = actions
     }
+
+outermostClosure :: ClosureId
+outermostClosure = 0

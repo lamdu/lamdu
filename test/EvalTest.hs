@@ -12,7 +12,7 @@ import qualified Lamdu.Expr.Pure as P
 
 test :: (Either String (ValHead ()), [(ThunkSrc (), ValHead ())])
 test =
-    evalStateT (runEitherT (runEvalT (whnf (ThunkSrc Nothing expr)))) (initialState actions)
+    evalStateT (runEitherT (runEvalT (whnf (ThunkSrc outermostClosure expr)))) (initialState actions)
     & runWriter
     where
         expr = P.app (P.global "f") (P.global "v")
