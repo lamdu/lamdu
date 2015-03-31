@@ -1,5 +1,6 @@
 module Lamdu.Sugar.OrderTags
     ( orderDef
+    , orderedFlatComposite
     ) where
 
 import Control.Lens.Operators
@@ -93,3 +94,11 @@ orderDef def =
     & SugarLens.defSchemes . S.schemeType %%~ orderType
     >>= Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent
         %%~ orderBinder
+
+orderedFlatComposite ::
+    T.Composite a -> ([(T.Tag, T.Type)], Maybe (T.Var (T.Composite a)))
+orderedFlatComposite T.CEmpty = ([], Nothing)
+orderedFlatComposite (T.CVar x) = ([], Just x)
+orderedFlatComposite (T.CExtend tag typ rest) =
+    orderedFlatComposite rest
+    & Lens._1 %~ (:) (tag, typ)

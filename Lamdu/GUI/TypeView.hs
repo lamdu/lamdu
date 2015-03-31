@@ -23,19 +23,20 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
+import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Expr.Identifier (Identifier(..))
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..))
-import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           System.Random (Random, random)
 import qualified System.Random as Random
 
@@ -166,13 +167,6 @@ makeField (tag, fieldType) = do
     , (Vector2 0 0.5, splitMake (ParentPrecedence 0) fieldType)
     ]
 
-compositeParts :: T.Composite a -> ([(T.Tag, T.Type)], Maybe (T.Var (T.Composite a)))
-compositeParts T.CEmpty = ([], Nothing)
-compositeParts (T.CVar x) = ([], Just x)
-compositeParts (T.CExtend tag typ rest) =
-    compositeParts rest
-    & Lens._1 %~ (:) (tag, typ)
-
 makeRecord :: MonadA m => T.Composite T.Product -> M m View
 makeRecord T.CEmpty = makeEmptyRecord
 makeRecord composite =
@@ -196,7 +190,7 @@ makeRecord composite =
     GridView.verticalAlign 0.5 [fieldsView, varView]
       & addBackgroundFrame
   where
-    (fields, extension) = compositeParts composite
+    (fields, extension) = orderedFlatComposite composite
 
 splitMake :: MonadA m => ParentPrecedence -> Type -> M m View
 splitMake parentPrecedence typ = split $ makeInternal parentPrecedence typ

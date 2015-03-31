@@ -12,6 +12,7 @@ import           Control.Monad (guard, void, when)
 import           Control.MonadA (MonadA)
 import           Data.Foldable (traverse_)
 import qualified Data.List as List
+import qualified Data.List.Utils as ListUtils
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
@@ -27,8 +28,6 @@ import           Data.Traversable (traverse, sequenceA)
 import           Lamdu.Data.Anchors (assocTagOrder)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.FlatComposite (FlatComposite(..))
-import qualified Lamdu.Expr.FlatComposite as FlatComposite
 import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -46,6 +45,7 @@ import           Lamdu.Sugar.Convert.ParamList (ParamList)
 import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           Lamdu.Sugar.Types
 
 type T = Transaction
@@ -439,14 +439,14 @@ convertLamParams mRecursiveVar lambda lambdaPl =
     case lambdaPl ^. Input.inferred . Infer.plType of
       T.TFun (T.TRecord composite) _
         | Nothing <- extension
-        , Map.size fields >= 2
+        , ListUtils.isLengthAtLeast 2 fields
         , Set.null (tagsInOuterScope `Set.intersection` tagsInInnerScope)
         , isParamAlwaysUsedWithGetField lambda ->
           convertRecordParams mRecursiveVar fieldParams lambda lambdaPl
         where
-          tagsInInnerScope = Map.keysSet fields
-          FlatComposite fields extension = FlatComposite.fromComposite composite
-          fieldParams = map makeFieldParam $ Map.toList fields
+          tagsInInnerScope = Set.fromList $ fst <$> fields
+          (fields, extension) = orderedFlatComposite composite
+          fieldParams = map makeFieldParam fields
       _ -> convertNonRecordParam mRecursiveVar lambda lambdaPl
   where
     makeFieldParam (tag, typeExpr) =
