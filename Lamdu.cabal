@@ -157,6 +157,7 @@ Executable lamdu
                ,       Lamdu.Data.ExampleDB
                ,       Lamdu.Data.Ops
                ,       Lamdu.Expr.Constraints
+               ,       Lamdu.Expr.Eval
                ,       Lamdu.Expr.FlatComposite
                ,       Lamdu.Expr.GenIds
                ,       Lamdu.Expr.Globals
