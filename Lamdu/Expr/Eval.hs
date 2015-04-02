@@ -25,10 +25,13 @@ import qualified Data.Map as Map
 import qualified Lamdu.Expr.Val as V
 
 type ThunkId = Int
-type Scope = Map V.Var ThunkId
+
+newtype Scope = Scope
+    { _scopeMap :: Map V.Var ThunkId
+    } deriving (Show)
 
 emptyScope :: Scope
-emptyScope = Map.empty
+emptyScope = Scope Map.empty
 
 data Closure pl = Closure
     { _cOuterScope :: Scope
@@ -75,6 +78,7 @@ newtype EvalT pl m a = EvalT
 instance MonadTrans (EvalT pl) where
     lift = EvalT . lift . lift
 
+Lens.makeLenses ''Scope
 Lens.makeLenses ''EvalActions
 Lens.makeLenses ''EvalState
 
@@ -101,7 +105,7 @@ whnfSrc src@(ThunkSrc scope expr) =
                 HFunc (Closure outerScope (V.Lam var body)) ->
                     whnfSrc (ThunkSrc innerScope body)
                     where
-                        innerScope = outerScope & at var .~ Just argThunk
+                        innerScope = outerScope & scopeMap . at var .~ Just argThunk
                 HBuiltin ffiname ->
                     do
                         runBuiltin <- use $ esReader . aRunBuiltin
@@ -115,7 +119,7 @@ whnfSrc src@(ThunkSrc scope expr) =
         recExtend & traverse %%~ makeThunk . ThunkSrc scope <&> HRecExtend
     V.BLeaf (V.LGlobal global) -> loadGlobal global
     V.BLeaf (V.LVar var) ->
-        case scope ^. at var of
+        case scope ^. scopeMap . at var of
         Nothing -> evalError $ "Variable out of scope: " ++ show var
         Just thunkId -> whnfThunk thunkId
     V.BLeaf V.LRecEmpty -> return HRecEmpty
