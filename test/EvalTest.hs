@@ -10,15 +10,20 @@ import Lamdu.Data.Definition
 import qualified Data.Map as Map
 import qualified Lamdu.Expr.Pure as P
 
-test :: (Either String (ValHead ()), [(ScopedVal (), ValHead ())])
+test :: (Either String (ValHead ()), [Event ()])
 test =
-    evalStateT (runEitherT (runEvalT (whnfSrc (ScopedVal emptyScope expr)))) (initialState actions)
+    expr
+    & ScopedVal emptyScope
+    & whnfSrc
+    & runEvalT
+    & runEitherT
+    & (`evalStateT` initialState actions)
     & runWriter
     where
         expr = P.app (P.global "f") (P.global "v")
         actions =
             EvalActions
-            { _aLogProgress = \s r -> tell [(s, r)]
+            { _aReportEvent = tell . (:[])
             , _aRunBuiltin = runBuiltin
             , _aLoadGlobal = return . (`Map.lookup` globals)
             }

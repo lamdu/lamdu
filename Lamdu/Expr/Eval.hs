@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, OverloadedStrings, TemplateHaskell #-}
 
 module Lamdu.Expr.Eval
-    ( EvalT(..)
-    , EvalState, EvalActions(..), initialState
-    , evalError
+    ( EvalT(..), evalError
+    , EvalState, initialState
+    , EvalActions(..), Event(..), EventNewScope(..), EventResultComputed(..)
     , ScopedVal(..), ValHead(..), ThunkId, Closure
     , Scope, emptyScope
     , whnfSrc, whnfThunk
@@ -25,13 +25,15 @@ import qualified Data.Map as Map
 import qualified Lamdu.Expr.Val as V
 
 type ThunkId = Int
+type ScopeId = Int
 
-newtype Scope = Scope
+data Scope = Scope
     { _scopeMap :: Map V.Var ThunkId
+    , _scopeId :: ScopeId
     } deriving (Show)
 
 emptyScope :: Scope
-emptyScope = Scope Map.empty
+emptyScope = Scope Map.empty 0
 
 data Closure pl = Closure
     { _cOuterScope :: Scope
@@ -57,9 +59,24 @@ data ThunkState pl
     | TEvaluating -- BlackHoled in GHC
     deriving (Functor, Show)
 
+data EventNewScope = EventNewScope
+    { ensParentId :: ScopeId
+    , ensId :: ScopeId
+    } deriving (Show)
+
+data EventResultComputed pl = EventResultComputed
+    { ercSource :: pl
+    , ercScope :: ScopeId
+    , ercResult :: ValHead pl
+    } deriving (Show)
+
+data Event pl
+    = ENewScope EventNewScope
+    | EResultComputed (EventResultComputed pl)
+    deriving (Show)
 
 data EvalActions m pl = EvalActions
-    { _aLogProgress :: ScopedVal pl -> ValHead pl -> m ()
+    { _aReportEvent :: Event pl -> m ()
     , _aRunBuiltin :: FFIName -> ThunkId -> EvalT pl m (ValHead pl)
     , _aLoadGlobal :: V.GlobalId -> m (Maybe (Either FFIName (Val pl)))
     }
@@ -67,6 +84,7 @@ data EvalActions m pl = EvalActions
 data EvalState m pl = EvalState
     { _esThunks :: Map ThunkId (ThunkState pl)
     , _esThunkCounter :: ThunkId
+    , _esScopeCounter :: ScopeId
     , _esLoadedGlobals :: Map V.GlobalId (ValHead pl)
     , _esReader :: EvalActions m pl -- This is ReaderT
     }
@@ -82,19 +100,39 @@ Lens.makeLenses ''Scope
 Lens.makeLenses ''EvalActions
 Lens.makeLenses ''EvalState
 
+freshThunkId :: Monad m => EvalT pl m ThunkId
+freshThunkId =
+    do
+        thunkId <- use esThunkCounter
+        esThunkCounter += 1
+        return thunkId
+
+report :: Monad m => Event pl -> EvalT pl m ()
+report event =
+    do
+        rep <- use $ esReader . aReportEvent
+        rep event & lift
+
+bindVar :: Monad m => V.Var -> ThunkId -> Scope -> EvalT pl m Scope
+bindVar var val (Scope parentMap parentId) =
+    do
+        newScopeId <- use esScopeCounter
+        esScopeCounter += 1
+        EventNewScope
+            { ensParentId = parentId
+            , ensId = newScopeId
+            } & ENewScope & report
+        Scope
+            { _scopeId = newScopeId
+            , _scopeMap = parentMap & at var .~ Just val
+            } & return
+
 evalError :: Monad m => String -> EvalT pl m a
 evalError = EvalT . left
 
-logProgress :: Monad m => ScopedVal pl -> ValHead pl -> EvalT pl m (ValHead pl)
-logProgress src result =
-    do
-        lp <- esReader . aLogProgress & use
-        lift $ lp src result
-        return result
-
 whnfSrc :: Monad m => ScopedVal pl -> EvalT pl m (ValHead pl)
-whnfSrc src@(ScopedVal scope expr) =
-    logProgress src =<<
+whnfSrc (ScopedVal scope expr) =
+    logProgress =<<
     case expr ^. V.body of
     V.BAbs lam -> return $ HFunc $ Closure scope lam
     V.BApp (V.Apply funcExpr argExpr) ->
@@ -103,9 +141,9 @@ whnfSrc src@(ScopedVal scope expr) =
             argThunk <- makeThunk (ScopedVal scope argExpr)
             case func of
                 HFunc (Closure outerScope (V.Lam var body)) ->
-                    whnfSrc (ScopedVal innerScope body)
-                    where
-                        innerScope = outerScope & scopeMap . at var .~ Just argThunk
+                    do
+                        innerScope <- bindVar var argThunk outerScope
+                        whnfSrc (ScopedVal innerScope body)
                 HBuiltin ffiname ->
                     do
                         runBuiltin <- use $ esReader . aRunBuiltin
@@ -125,12 +163,17 @@ whnfSrc src@(ScopedVal scope expr) =
     V.BLeaf V.LRecEmpty -> return HRecEmpty
     V.BLeaf (V.LLiteralInteger i) -> HLiteralInteger i & return
     V.BLeaf V.LHole -> evalError "Hole"
+    where
+        logProgress result =
+            do
+                EventResultComputed (expr ^. V.payload) (scope ^. scopeId) result
+                    & EResultComputed & report
+                return result
 
 makeThunk :: Monad m => ScopedVal pl -> EvalT pl m ThunkId
 makeThunk src =
     do
-        thunkId <- use esThunkCounter
-        esThunkCounter += 1
+        thunkId <- freshThunkId
         esThunks . at thunkId .= Just (TSrc src)
         return thunkId
 
@@ -180,6 +223,7 @@ initialState actions =
     EvalState
     { _esThunks = Map.empty
     , _esThunkCounter = 0
+    , _esScopeCounter = 1
     , _esLoadedGlobals = Map.empty
     , _esReader = actions
     }
