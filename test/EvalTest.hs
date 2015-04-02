@@ -10,9 +10,9 @@ import Lamdu.Data.Definition
 import qualified Data.Map as Map
 import qualified Lamdu.Expr.Pure as P
 
-test :: (Either String (ValHead ()), [(ThunkSrc (), ValHead ())])
+test :: (Either String (ValHead ()), [(ScopedVal (), ValHead ())])
 test =
-    evalStateT (runEitherT (runEvalT (whnfSrc (ThunkSrc emptyScope expr)))) (initialState actions)
+    evalStateT (runEitherT (runEvalT (whnfSrc (ScopedVal emptyScope expr)))) (initialState actions)
     & runWriter
     where
         expr = P.app (P.global "f") (P.global "v")

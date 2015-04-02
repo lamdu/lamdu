@@ -4,7 +4,7 @@ module Lamdu.Expr.Eval
     ( EvalT(..)
     , EvalState, EvalActions(..), initialState
     , evalError
-    , ThunkSrc(..), ValHead(..), ThunkId, Closure
+    , ScopedVal(..), ValHead(..), ThunkId, Closure
     , Scope, emptyScope
     , whnfSrc, whnfThunk
     ) where
@@ -46,20 +46,20 @@ data ValHead pl
     | HBuiltin FFIName
     deriving (Functor, Show)
 
-data ThunkSrc pl = ThunkSrc
+data ScopedVal pl = ScopedVal
     { _srcScope :: Scope
     , _srcExpr :: Val pl
     } deriving (Functor, Show)
 
 data ThunkState pl
-    = TSrc (ThunkSrc pl)
+    = TSrc (ScopedVal pl)
     | TResult (ValHead pl)
     | TEvaluating -- BlackHoled in GHC
     deriving (Functor, Show)
 
 
 data EvalActions m pl = EvalActions
-    { _aLogProgress :: ThunkSrc pl -> ValHead pl -> m ()
+    { _aLogProgress :: ScopedVal pl -> ValHead pl -> m ()
     , _aRunBuiltin :: FFIName -> ThunkId -> EvalT pl m (ValHead pl)
     , _aLoadGlobal :: V.GlobalId -> m (Maybe (Either FFIName (Val pl)))
     }
@@ -85,25 +85,25 @@ Lens.makeLenses ''EvalState
 evalError :: Monad m => String -> EvalT pl m a
 evalError = EvalT . left
 
-logProgress :: Monad m => ThunkSrc pl -> ValHead pl -> EvalT pl m (ValHead pl)
+logProgress :: Monad m => ScopedVal pl -> ValHead pl -> EvalT pl m (ValHead pl)
 logProgress src result =
     do
         lp <- esReader . aLogProgress & use
         lift $ lp src result
         return result
 
-whnfSrc :: Monad m => ThunkSrc pl -> EvalT pl m (ValHead pl)
-whnfSrc src@(ThunkSrc scope expr) =
+whnfSrc :: Monad m => ScopedVal pl -> EvalT pl m (ValHead pl)
+whnfSrc src@(ScopedVal scope expr) =
     logProgress src =<<
     case expr ^. V.body of
     V.BAbs lam -> return $ HFunc $ Closure scope lam
     V.BApp (V.Apply funcExpr argExpr) ->
         do
-            func <- whnfSrc $ ThunkSrc scope funcExpr
-            argThunk <- makeThunk (ThunkSrc scope argExpr)
+            func <- whnfSrc $ ScopedVal scope funcExpr
+            argThunk <- makeThunk (ScopedVal scope argExpr)
             case func of
                 HFunc (Closure outerScope (V.Lam var body)) ->
-                    whnfSrc (ThunkSrc innerScope body)
+                    whnfSrc (ScopedVal innerScope body)
                     where
                         innerScope = outerScope & scopeMap . at var .~ Just argThunk
                 HBuiltin ffiname ->
@@ -113,10 +113,10 @@ whnfSrc src@(ThunkSrc scope expr) =
                 _ -> evalError "Apply on non function"
     V.BGetField (V.GetField recordExpr tag) ->
         do
-            record <- whnfSrc $ ThunkSrc scope recordExpr
+            record <- whnfSrc $ ScopedVal scope recordExpr
             whnfGetField $ V.GetField record tag
     V.BRecExtend recExtend ->
-        recExtend & traverse %%~ makeThunk . ThunkSrc scope <&> HRecExtend
+        recExtend & traverse %%~ makeThunk . ScopedVal scope <&> HRecExtend
     V.BLeaf (V.LGlobal global) -> loadGlobal global
     V.BLeaf (V.LVar var) ->
         case scope ^. scopeMap . at var of
@@ -126,7 +126,7 @@ whnfSrc src@(ThunkSrc scope expr) =
     V.BLeaf (V.LLiteralInteger i) -> HLiteralInteger i & return
     V.BLeaf V.LHole -> evalError "Hole"
 
-makeThunk :: Monad m => ThunkSrc pl -> EvalT pl m ThunkId
+makeThunk :: Monad m => ScopedVal pl -> EvalT pl m ThunkId
 makeThunk src =
     do
         thunkId <- use esThunkCounter
@@ -171,7 +171,7 @@ loadGlobal g =
                     case mLoadedGlobal of
                     Nothing -> evalError $ "Global not found " ++ show g
                     Just (Left name) -> return $ HBuiltin name
-                    Just (Right expr) -> whnfSrc $ ThunkSrc emptyScope expr
+                    Just (Right expr) -> whnfSrc $ ScopedVal emptyScope expr
                 esLoadedGlobals . at g .= Just result
                 return result
 
