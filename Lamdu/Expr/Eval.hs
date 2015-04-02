@@ -4,12 +4,13 @@ module Lamdu.Expr.Eval
     ( EvalT(..)
     , EvalState, EvalActions(..), initialState
     , evalError
-    , ThunkSrc(..), ValHead(..), ThunkId, Closure, ScopeId, outermostScope
+    , ThunkSrc(..), ValHead(..), ThunkId, Closure
+    , Scope, emptyScope
     , whnfSrc, whnfThunk
     ) where
 
 import Control.Applicative (Applicative)
-import Control.Lens (at, use, ix, traverse)
+import Control.Lens (at, use, traverse)
 import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.State (MonadState(..))
@@ -23,27 +24,14 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Lamdu.Expr.Val as V
 
-type ScopeId = Int
-type AnonThunkId = Int
+type ThunkId = Int
+type Scope = Map V.Var ThunkId
 
-data LocalVar = LocalVar
-    { _lScope :: ScopeId
-    , _lVar :: V.Var
-    } deriving (Eq, Ord, Show)
-
-data ThunkId
-    = TGlobal V.GlobalId
-    | TLocalVar LocalVar
-    | TAnon AnonThunkId
-    deriving (Eq, Ord, Show)
-
-data ThunkSrc pl = ThunkSrc
-    { _srcScope :: ScopeId
-    , _srcExpr :: Val pl
-    } deriving (Functor, Show)
+emptyScope :: Scope
+emptyScope = Map.empty
 
 data Closure pl = Closure
-    { _cOuterScope :: ScopeId
+    { _cOuterScope :: Scope
     , _cLam :: V.Lam (Val pl)
     } deriving (Functor, Show)
 
@@ -55,11 +43,17 @@ data ValHead pl
     | HBuiltin FFIName
     deriving (Functor, Show)
 
+data ThunkSrc pl = ThunkSrc
+    { _srcScope :: Scope
+    , _srcExpr :: Val pl
+    } deriving (Functor, Show)
+
 data ThunkState pl
     = TSrc (ThunkSrc pl)
     | TResult (ValHead pl)
     | TEvaluating -- BlackHoled in GHC
     deriving (Functor, Show)
+
 
 data EvalActions m pl = EvalActions
     { _aLogProgress :: ThunkSrc pl -> ValHead pl -> m ()
@@ -69,24 +63,20 @@ data EvalActions m pl = EvalActions
 
 data EvalState m pl = EvalState
     { _esThunks :: Map ThunkId (ThunkState pl)
-    , _esThunkCounter :: AnonThunkId
-    , _esScopeParents :: Map ScopeId ScopeId
-    , _esScopeCounter :: ScopeId
-    , -- esReader inside state used instead of adding a ReaderT
-      _esReader :: EvalActions m pl
+    , _esThunkCounter :: ThunkId
+    , _esLoadedGlobals :: Map V.GlobalId (ValHead pl)
+    , _esReader :: EvalActions m pl -- This is ReaderT
     }
 
-newtype EvalT pl m a =
-    EvalT { runEvalT :: EitherT String (StateT (EvalState m pl) m) a }
-    deriving (Functor, Applicative, Monad, MonadState (EvalState m pl))
+newtype EvalT pl m a = EvalT
+    { runEvalT :: EitherT String (StateT (EvalState m pl) m) a
+    } deriving (Functor, Applicative, Monad, MonadState (EvalState m pl))
 
 instance MonadTrans (EvalT pl) where
     lift = EvalT . lift . lift
 
-Lens.makeLenses ''Closure
 Lens.makeLenses ''EvalActions
 Lens.makeLenses ''EvalState
-Lens.makePrisms ''ThunkId
 
 evalError :: Monad m => String -> EvalT pl m a
 evalError = EvalT . left
@@ -99,47 +89,43 @@ logProgress src result =
         return result
 
 whnfSrc :: Monad m => ThunkSrc pl -> EvalT pl m (ValHead pl)
-whnfSrc src@(ThunkSrc scopeId expr) =
+whnfSrc src@(ThunkSrc scope expr) =
     logProgress src =<<
     case expr ^. V.body of
-    V.BAbs lam -> return $ HFunc $ Closure scopeId lam
+    V.BAbs lam -> return $ HFunc $ Closure scope lam
     V.BApp (V.Apply funcExpr argExpr) ->
         do
-            func <- whnfSrc $ ThunkSrc scopeId funcExpr
+            func <- whnfSrc $ ThunkSrc scope funcExpr
+            argThunk <- makeThunk (ThunkSrc scope argExpr)
             case func of
-                HFunc closure -> whnfRedex closure (ThunkSrc scopeId argExpr)
+                HFunc (Closure outerScope (V.Lam var body)) ->
+                    whnfSrc (ThunkSrc innerScope body)
+                    where
+                        innerScope = outerScope & at var .~ Just argThunk
                 HBuiltin ffiname ->
                     do
                         runBuiltin <- use $ esReader . aRunBuiltin
-                        argThunk <- makeThunk (ThunkSrc scopeId argExpr)
                         runBuiltin ffiname argThunk
                 _ -> evalError "Apply on non function"
     V.BGetField (V.GetField recordExpr tag) ->
         do
-            record <- whnfSrc $ ThunkSrc scopeId recordExpr
+            record <- whnfSrc $ ThunkSrc scope recordExpr
             whnfGetField $ V.GetField record tag
     V.BRecExtend recExtend ->
-        recExtend & traverse %%~ makeThunk . ThunkSrc scopeId <&> HRecExtend
-    V.BLeaf (V.LGlobal global) -> whnfThunk $ TGlobal global
-    V.BLeaf (V.LVar var) -> whnfThunk $ TLocalVar $ LocalVar scopeId var
+        recExtend & traverse %%~ makeThunk . ThunkSrc scope <&> HRecExtend
+    V.BLeaf (V.LGlobal global) -> loadGlobal global
+    V.BLeaf (V.LVar var) ->
+        case scope ^. at var of
+        Nothing -> evalError $ "Variable out of scope: " ++ show var
+        Just thunkId -> whnfThunk thunkId
     V.BLeaf V.LRecEmpty -> return HRecEmpty
     V.BLeaf (V.LLiteralInteger i) -> HLiteralInteger i & return
     V.BLeaf V.LHole -> evalError "Hole"
 
-whnfRedex :: Monad m => Closure pl -> ThunkSrc pl -> EvalT pl m (ValHead pl)
-whnfRedex func arg =
-    do
-        scopeId <- use esScopeCounter
-        esScopeCounter += 1
-        esScopeParents . at scopeId .= Just (func ^. cOuterScope)
-        let var = LocalVar scopeId $ func ^. cLam . V.lamParamId
-        esThunks . at (TLocalVar var) .= Just (TSrc arg)
-        whnfSrc $ ThunkSrc scopeId (func ^. cLam . V.lamResult)
-
 makeThunk :: Monad m => ThunkSrc pl -> EvalT pl m ThunkId
 makeThunk src =
     do
-        thunkId <- use esThunkCounter <&> TAnon
+        thunkId <- use esThunkCounter
         esThunkCounter += 1
         esThunks . at thunkId .= Just (TSrc src)
         return thunkId
@@ -155,47 +141,41 @@ whnfGetField (V.GetField val _) =
     evalError $ "GetField of value without the field " ++ show (void val)
 
 whnfThunk :: Monad m => ThunkId -> EvalT pl m (ValHead pl)
-whnfThunk var = do
-    thunkState <- use $ esThunks . at var
+whnfThunk thunkId = do
+    thunkState <- use $ esThunks . at thunkId
     case thunkState of
         Just TEvaluating -> evalError "*INFINITE LOOP*"
         Just (TResult r) -> return r
         Just (TSrc thunkSrc) -> whnfSrc thunkSrc >>= newResult
-        Nothing ->
-            case var of
-            TGlobal g -> loadGlobal g >>= newResult
-            TLocalVar (LocalVar scopeId lvar) ->
-                do
-                    scopeParents <- use $ esScopeParents
-                    case scopeParents ^. at scopeId of
-                        Just scopeParent -> whnfThunk $ TLocalVar (LocalVar scopeParent lvar)
-                        Nothing -> evalError $ "Var not found " ++ show var
-            TAnon i -> evalError $ "BUG: Referenced non-existing thunk " ++ show i
+        Nothing -> evalError $ "BUG: Referenced non-existing thunk " ++ show thunkId
     where
         newResult res =
             do
-                esThunks . ix var .= TResult res
+                esThunks . at thunkId .= Just (TResult res)
                 return res
 
 loadGlobal :: Monad m => V.GlobalId -> EvalT pl m (ValHead pl)
 loadGlobal g =
     do
-        loader <- use $ esReader . aLoadGlobal
-        res <- lift $ loader g
-        case res of
-            Nothing -> evalError $ "Global not found " ++ show g
-            Just (Left name) -> return $ HBuiltin name
-            Just (Right expr) -> whnfSrc $ ThunkSrc outermostScope expr
+        loaded <- use (esLoadedGlobals . at g)
+        case loaded of
+            Just cached -> return cached
+            Nothing -> do
+                loader <- use $ esReader . aLoadGlobal
+                mLoadedGlobal <- lift $ loader g
+                result <-
+                    case mLoadedGlobal of
+                    Nothing -> evalError $ "Global not found " ++ show g
+                    Just (Left name) -> return $ HBuiltin name
+                    Just (Right expr) -> whnfSrc $ ThunkSrc emptyScope expr
+                esLoadedGlobals . at g .= Just result
+                return result
 
 initialState :: EvalActions m pl -> EvalState m pl
 initialState actions =
     EvalState
     { _esThunks = Map.empty
     , _esThunkCounter = 0
-    , _esScopeParents = Map.empty
-    , _esScopeCounter = 1
+    , _esLoadedGlobals = Map.empty
     , _esReader = actions
     }
-
-outermostScope :: ScopeId
-outermostScope = 0
