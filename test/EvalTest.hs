@@ -12,7 +12,7 @@ import qualified Lamdu.Expr.Pure as P
 
 test :: (Either String (ValHead ()), [(ThunkSrc (), ValHead ())])
 test =
-    evalStateT (runEitherT (runEvalT (whnf (ThunkSrc outermostClosure expr)))) (initialState actions)
+    evalStateT (runEitherT (runEvalT (whnfSrc (ThunkSrc outermostScope expr)))) (initialState actions)
     & runWriter
     where
         expr = P.app (P.global "f") (P.global "v")
@@ -36,7 +36,7 @@ test =
         runBuiltin (FFIName _ name) argThunk
             | name == "negate" =
                 do
-                    arg <- whnfVar argThunk
+                    arg <- whnfThunk argThunk
                     case arg of
                         HLiteralInteger i -> return $ HLiteralInteger $ negate i
                         _ -> evalError $ "negate expected integer not " ++ show arg
