@@ -6,7 +6,7 @@ module Lamdu.Expr.Eval
     , EvalActions(..), Event(..), EventNewScope(..), EventResultComputed(..)
     , ScopedVal(..), ValHead(..), ThunkId, Closure
     , Scope, emptyScope
-    , whnfSrc, whnfThunk
+    , whnfScopedVal, whnfThunk
     ) where
 
 import Control.Applicative (Applicative)
@@ -65,7 +65,8 @@ data EventNewScope = EventNewScope
     } deriving (Show)
 
 data EventResultComputed pl = EventResultComputed
-    { ercSource :: pl
+    { ercMThunkId :: Maybe ThunkId
+    , ercSource :: pl
     , ercScope :: ScopeId
     , ercResult :: ValHead pl
     } deriving (Show)
@@ -130,20 +131,20 @@ bindVar var val (Scope parentMap parentId) =
 evalError :: Monad m => String -> EvalT pl m a
 evalError = EvalT . left
 
-whnfSrc :: Monad m => ScopedVal pl -> EvalT pl m (ValHead pl)
-whnfSrc (ScopedVal scope expr) =
-    logProgress =<<
+whnfScopedValInner :: Monad m => Maybe ThunkId -> ScopedVal pl -> EvalT pl m (ValHead pl)
+whnfScopedValInner mThunkId (ScopedVal scope expr) =
+    reportResultComputed =<<
     case expr ^. V.body of
     V.BAbs lam -> return $ HFunc $ Closure scope lam
     V.BApp (V.Apply funcExpr argExpr) ->
         do
-            func <- whnfSrc $ ScopedVal scope funcExpr
+            func <- whnfScopedVal $ ScopedVal scope funcExpr
             argThunk <- makeThunk (ScopedVal scope argExpr)
             case func of
                 HFunc (Closure outerScope (V.Lam var body)) ->
                     do
                         innerScope <- bindVar var argThunk outerScope
-                        whnfSrc (ScopedVal innerScope body)
+                        whnfScopedVal (ScopedVal innerScope body)
                 HBuiltin ffiname ->
                     do
                         runBuiltin <- use $ esReader . aRunBuiltin
@@ -151,7 +152,7 @@ whnfSrc (ScopedVal scope expr) =
                 _ -> evalError "Apply on non function"
     V.BGetField (V.GetField recordExpr tag) ->
         do
-            record <- whnfSrc $ ScopedVal scope recordExpr
+            record <- whnfScopedVal $ ScopedVal scope recordExpr
             whnfGetField $ V.GetField record tag
     V.BRecExtend recExtend ->
         recExtend & traverse %%~ makeThunk . ScopedVal scope <&> HRecExtend
@@ -164,11 +165,14 @@ whnfSrc (ScopedVal scope expr) =
     V.BLeaf (V.LLiteralInteger i) -> HLiteralInteger i & return
     V.BLeaf V.LHole -> evalError "Hole"
     where
-        logProgress result =
+        reportResultComputed result =
             do
-                EventResultComputed (expr ^. V.payload) (scope ^. scopeId) result
+                EventResultComputed mThunkId (expr ^. V.payload) (scope ^. scopeId) result
                     & EResultComputed & report
                 return result
+
+whnfScopedVal :: Monad m => ScopedVal pl -> EvalT pl m (ValHead pl)
+whnfScopedVal = whnfScopedValInner Nothing
 
 makeThunk :: Monad m => ScopedVal pl -> EvalT pl m ThunkId
 makeThunk src =
@@ -193,13 +197,12 @@ whnfThunk thunkId = do
     case thunkState of
         Just TEvaluating -> evalError "*INFINITE LOOP*"
         Just (TResult r) -> return r
-        Just (TSrc thunkSrc) -> whnfSrc thunkSrc >>= newResult
-        Nothing -> evalError $ "BUG: Referenced non-existing thunk " ++ show thunkId
-    where
-        newResult res =
+        Just (TSrc thunkSrc) ->
             do
+                res <- whnfScopedValInner (Just thunkId) thunkSrc
                 esThunks . at thunkId .= Just (TResult res)
                 return res
+        Nothing -> evalError $ "BUG: Referenced non-existing thunk " ++ show thunkId
 
 loadGlobal :: Monad m => V.GlobalId -> EvalT pl m (ValHead pl)
 loadGlobal g =
@@ -214,7 +217,7 @@ loadGlobal g =
                     case mLoadedGlobal of
                     Nothing -> evalError $ "Global not found " ++ show g
                     Just (Left name) -> return $ HBuiltin name
-                    Just (Right expr) -> whnfSrc $ ScopedVal emptyScope expr
+                    Just (Right expr) -> whnfScopedVal $ ScopedVal emptyScope expr
                 esLoadedGlobals . at g .= Just result
                 return result
 

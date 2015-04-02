@@ -14,7 +14,7 @@ test :: (Either String (ValHead ()), [Event ()])
 test =
     expr
     & ScopedVal emptyScope
-    & whnfSrc
+    & whnfScopedVal
     & runEvalT
     & runEitherT
     & (`evalStateT` initialState actions)
