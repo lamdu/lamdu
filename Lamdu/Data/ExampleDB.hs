@@ -117,13 +117,13 @@ createBuiltins =
     traverse_ ((`publicBuiltin_` Scheme.mono (infixType bool bool bool)) . ("Prelude."++))
       ["&&", "||"]
 
-    trueTag <- newIdent "True"
-    falseTag <- newIdent "False"
+    thenTag <- newIdent "then"
+    elseTag <- newIdent "else"
     publicBuiltin_ "Prelude.if" . forAll 1 $ \[a] ->
       recordType
       [ (objTag, bool)
-      , (trueTag, a)
-      , (falseTag, a)
+      , (thenTag, a)
+      , (elseTag, a)
       ] ~> a
 
     publicBuiltin_ "Prelude.id" $ forAll 1 $ \[a] -> a ~> a
