@@ -214,12 +214,12 @@ createBuiltins =
       ] ~> a
 
     emptyTag <- newIdent "empty"
-    prependTag <- newIdent "prepend"
+    listItemTag <- newIdent "listitem"
     publicBuiltin_ "Data.List.foldr" . forAll 2 $ \[a, b] ->
       recordType
       [ ( objTag, list a )
       , ( emptyTag, b )
-      , ( prependTag
+      , ( listItemTag
         , recordType
           [ (headTag, a)
           , (tailTag, b)
@@ -231,7 +231,7 @@ createBuiltins =
       recordType
       [ ( objTag, list a )
       , ( emptyTag, b )
-      , ( prependTag
+      , ( listItemTag
         , recordType
           [ (headTag, a)
           , (tailTag, list a)
