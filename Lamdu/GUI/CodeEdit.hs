@@ -12,7 +12,6 @@ import           Control.Lens.Tuple
 import           Control.Monad.Trans.Class (lift)
 import           Control.MonadA (MonadA)
 import           Data.Foldable (Foldable)
-import           Data.List (intersperse)
 import           Data.List.Utils (insertAt, removeAt)
 import           Data.Maybe (listToMaybe)
 import           Data.Monoid (Monoid(..))
@@ -23,21 +22,23 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Traversable (Traversable, traverse)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
+import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
+import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (DefI)
 import           Lamdu.Expr.Load (loadDef)
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
-import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
-import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.AddNames as AddNames
 import           Lamdu.Sugar.AddNames.Types (DefinitionN)
@@ -166,36 +167,66 @@ make env rootGuid = do
     , clipboardsEdit
     ]
 
-makeNewDefinition ::
+makeNewDefinitionEventMap ::
   MonadA m => Anchors.CodeProps m ->
-  WidgetEnvT (T m) (T m Widget.Id)
-makeNewDefinition cp = do
+  WidgetEnvT (T m) ([ModKey] -> Widget.EventHandlers (T m))
+makeNewDefinitionEventMap cp = do
   curCursor <- WE.readCursor
-  return $ do
-    newDefI <- DataOps.newPublicDefinition cp ""
-    DataOps.newPane cp newDefI
-    DataOps.savePreJumpPosition cp curCursor
-    return . DefinitionEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
+  let
+    newDefinition =
+      do
+        newDefI <- DataOps.newPublicDefinition cp ""
+        DataOps.newPane cp newDefI
+        DataOps.savePreJumpPosition cp curCursor
+        return . DefinitionEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
+  return $ \newDefinitionKeys ->
+    Widget.keysEventMapMovesCursor newDefinitionKeys
+    (E.Doc ["Edit", "New definition"]) newDefinition
 
 makePanesEdit ::
   MonadA m => Env m -> [(Pane m, ProcessedDef m)] ->
   Widget.Id -> WidgetEnvT (T m) (Widget (T m))
-makePanesEdit env loadedPanes myId = do
-  panesWidget <-
-    case loadedPanes of
-    [] -> BWidgets.makeFocusableTextView "<No panes>" myId
-    ((firstPane, _):_) ->
-      do
-        definitionEdits <- traverse makePaneEdit loadedPanes
-        return . Box.vboxAlign 0 $ intersperse (Spacer.makeWidget 50) definitionEdits
-      & (WE.assignCursor myId . WidgetIds.fromIRef . paneDefI) firstPane
-  eventMap <- panesEventMap env
-  panesWidget
-    & Widget.weakerEvents eventMap
-    & return
+makePanesEdit env loadedPanes myId =
+  do
+    panesWidget <-
+      case loadedPanes of
+      [] ->
+        makeNewDefinitionAction
+        & WE.assignCursor myId newDefinitionActionId
+      ((firstPane, _):_) ->
+        do
+          newDefinitionAction <- makeNewDefinitionAction
+          loadedPanes
+            & traverse (makePaneEdit env Config.Pane{..})
+            <&> concatMap addSpacerAfter
+            <&> (++ [newDefinitionAction])
+            <&> Box.vboxAlign 0
+        & (WE.assignCursor myId . WidgetIds.fromIRef . paneDefI) firstPane
+    eventMap <- panesEventMap env
+    panesWidget
+      & Widget.weakerEvents eventMap
+      & return
   where
+    newDefinitionActionId = Widget.joinId myId ["NewDefinition"]
+    makeNewDefinitionAction =
+      do
+        newDefinitionEventMap <- makeNewDefinitionEventMap (codeProps env)
+        BWidgets.makeFocusableTextView "New..." newDefinitionActionId
+          & WE.localEnv (WE.setTextColor newDefinitionActionColor)
+          <&> Widget.weakerEvents
+              (newDefinitionEventMap [ModKey mempty GLFW.Key'Enter])
+    addSpacerAfter x = [x, Spacer.makeWidget 50]
     Config.Pane{..} = Config.pane $ config env
-    paneEventMap pane = mconcat
+
+makePaneEdit ::
+  MonadA m =>
+  Env m -> Config.Pane -> (Pane m, ProcessedDef m) ->
+  WidgetEnvT (T m) (Widget (T m))
+makePaneEdit env Config.Pane{..} (pane, defS) =
+  makePaneWidget env defS
+  <&> Widget.weakerEvents paneEventMap
+  where
+    paneEventMap =
       [ maybe mempty
         (Widget.keysEventMapMovesCursor paneCloseKeys
          (E.Doc ["View", "Pane", "Close"]) . fmap WidgetIds.fromGuid) $ paneDel pane
@@ -205,26 +236,22 @@ makePanesEdit env loadedPanes myId = do
       , maybe mempty
         (Widget.keysEventMap paneMoveUpKeys
          (E.Doc ["View", "Pane", "Move up"])) $ paneMoveUp pane
-      ]
-    makePaneEdit (pane, defS) =
-      makePaneWidget env defS
-      <&> Widget.weakerEvents (paneEventMap pane)
+      ] & mconcat
 
 panesEventMap ::
   MonadA m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (T m))
-panesEventMap env =
+panesEventMap Env{..} =
   do
-    mJumpBack <- lift . DataOps.jumpBack $ codeProps env
-    newDefinition <- makeNewDefinition $ codeProps env
+    mJumpBack <- lift $ DataOps.jumpBack codeProps
+    newDefinitionEventMap <- makeNewDefinitionEventMap codeProps
     return $ mconcat
-      [ Widget.keysEventMapMovesCursor newDefinitionKeys
-        (E.Doc ["Edit", "New definition"]) newDefinition
+      [ newDefinitionEventMap newDefinitionKeys
       , maybe mempty
-        (Widget.keysEventMapMovesCursor (Config.previousCursorKeys (config env))
+        (Widget.keysEventMapMovesCursor (Config.previousCursorKeys config)
          (E.Doc ["Navigation", "Go back"])) mJumpBack
       ]
   where
-    Config.Pane{..} = Config.pane $ config env
+    Config.Pane{..} = Config.pane config
 
 makePaneWidget ::
   MonadA m => Env m -> ProcessedDef m -> WidgetEnvT (T m) (Widget (T m))

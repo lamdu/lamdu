@@ -91,6 +91,12 @@
                 "Key'N"
             ]
         ],
+        "newDefinitionActionColor": [
+            0.3,
+            1.0,
+            0.3,
+            1.0
+        ],
         "paneActiveBGColor": [
             1.0,
             1.0,

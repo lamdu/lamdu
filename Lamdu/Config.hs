@@ -65,6 +65,7 @@ data Pane = Pane
     -- how much:
     paneHoverPadding :: Draw.R
   , newDefinitionKeys :: [ModKey]
+  , newDefinitionActionColor :: Draw.Color
   } deriving (Eq, Generic, Show)
 instance ToJSON Pane
 instance FromJSON Pane
