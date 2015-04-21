@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import Lamdu.Eval
+import Lamdu.Eval.Val
 
 import Control.Lens
 import Control.Monad.Trans.Either (EitherT(..))

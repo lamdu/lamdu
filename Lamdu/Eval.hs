@@ -4,8 +4,7 @@ module Lamdu.Eval
     ( EvalT(..), evalError
     , EvalState, initialState
     , EvalActions(..), Event(..), EventNewScope(..), EventResultComputed(..)
-    , ScopedVal(..), ValHead(..), ThunkId, Closure
-    , Scope, emptyScope
+    , ScopedVal(..)
     , whnfScopedVal, whnfThunk
     ) where
 
@@ -19,45 +18,22 @@ import Control.Monad.Trans.Either (EitherT(..), left)
 import Control.Monad.Trans.State (StateT(..))
 import Data.Map (Map)
 import Lamdu.Data.Definition (FFIName)
+import Lamdu.Eval.Val (ValHead(..), ThunkId, Closure(..), Scope(..), ScopeId, emptyScope)
 import Lamdu.Expr.Val (Val)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Lamdu.Expr.Val as V
-
-type ThunkId = Int
-type ScopeId = Int
-
-data Scope = Scope
-    { _scopeMap :: Map V.Var ThunkId
-    , _scopeId :: ScopeId
-    } deriving (Show)
-
-emptyScope :: Scope
-emptyScope = Scope Map.empty 0
-
-data Closure pl = Closure
-    { _cOuterScope :: Scope
-    , _cLam :: V.Lam (Val pl)
-    } deriving (Functor, Show)
-
-data ValHead pl
-    = HFunc (Closure pl)
-    | HRecExtend (V.RecExtend ThunkId)
-    | HRecEmpty
-    | HLiteralInteger Integer
-    | HBuiltin FFIName
-    deriving (Functor, Show)
-
-data ScopedVal pl = ScopedVal
-    { _srcScope :: Scope
-    , _srcExpr :: Val pl
-    } deriving (Functor, Show)
 
 data ThunkState pl
     = TSrc (ScopedVal pl)
     | TResult (ValHead pl)
     | TEvaluating -- BlackHoled in GHC
     deriving (Functor, Show)
+
+data ScopedVal pl = ScopedVal
+    { _srcScope :: Scope
+    , _srcExpr :: Val pl
+    } deriving (Functor, Show)
 
 data EventNewScope = EventNewScope
     { ensParentId :: ScopeId
