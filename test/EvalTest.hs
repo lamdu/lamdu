@@ -8,14 +8,17 @@ import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (evalStateT)
 import Control.Monad.Writer
 import Lamdu.Data.Definition
+import Lamdu.Expr.Val (Val)
 import qualified Data.Map as Map
+import qualified Lamdu.Eval.ToExpr as ToExpr
 import qualified Lamdu.Expr.Pure as P
 
-test :: (Either String (ValHead ()), [Event ()])
+test :: (Either String (Val ()), [Event ()])
 test =
     expr
     & ScopedVal emptyScope
     & whnfScopedVal
+    >>= ToExpr.fromValHead
     & runEvalT
     & runEitherT
     & (`evalStateT` initialState actions)
