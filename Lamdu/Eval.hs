@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, OverloadedStrings, TemplateHaskell #-}
 
-module Lamdu.Expr.Eval
+module Lamdu.Eval
     ( EvalT(..), evalError
     , EvalState, initialState
     , EvalActions(..), Event(..), EventNewScope(..), EventResultComputed(..)
