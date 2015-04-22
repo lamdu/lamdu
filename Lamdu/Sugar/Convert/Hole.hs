@@ -6,7 +6,6 @@ module Lamdu.Sugar.Convert.Hole
 
 import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 import qualified Control.Applicative as Applicative
-import           Control.Arrow ((&&&))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -123,7 +122,7 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
     inferred = exprPl ^. Input.inferred
 
 -- Ignoring alpha-renames:
-consistentExprIds :: EntityId -> Val (Guid -> EntityId -> a) -> Val a
+consistentExprIds :: EntityId -> Val (EntityId -> a) -> Val a
 consistentExprIds = EntityId.randomizeExprAndParams . genFromHashable
 
 mkHoleSuggested :: Infer.Payload -> Val ()
@@ -227,10 +226,9 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
     -- pseudo-random generated ones that preserve proper animations
     -- and cursor navigation.
 
-    makeConsistentPayload (False, (_, pl)) guid entityId = pl
+    makeConsistentPayload (False, (_, pl)) entityId = pl
       & Input.entityId .~ entityId
-      & Input.guid .~ guid
-    makeConsistentPayload (True, (_, pl)) _ _ = pl
+    makeConsistentPayload (True, (_, pl)) _ = pl
     consistentExpr =
       writtenExpr
       <&> makeConsistentPayload
@@ -499,7 +497,7 @@ mkHoleResult sugarContext entityId stored val =
       PickedResult
       { _prMJumpTo =
         (orderedInnerHoles writtenExpr ^? Lens.traverse . V.payload . _2)
-        <&> (^. Input.guid) &&& (^. Input.entityId)
+        <&> (^. Input.entityId)
       , _prIdTranslation =
         idTranslations
         ( consistentExpr <&>

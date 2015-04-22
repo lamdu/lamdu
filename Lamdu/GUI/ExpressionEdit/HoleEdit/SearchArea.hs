@@ -68,12 +68,11 @@ compose = foldr (.) id
 eventResultOfPickedResult :: Sugar.PickedResult -> PickedResult
 eventResultOfPickedResult pr =
     PickedResult
-    { _pickedInnerHoleGuid = pr ^? Sugar.prMJumpTo . Lens._Just . _1
-    , _pickedEventResult =
+    { _pickedEventResult =
         Widget.EventResult
         { Widget._eCursor =
             Monoid.Last $
-            WidgetIds.fromEntityId <$> pr ^? Sugar.prMJumpTo . Lens._Just . _2
+            WidgetIds.fromEntityId <$> pr ^. Sugar.prMJumpTo
         , Widget._eAnimIdMapping =
             Monoid.Endo $ pickedResultAnimIdTranslation $ pr ^. Sugar.prIdTranslation
         }

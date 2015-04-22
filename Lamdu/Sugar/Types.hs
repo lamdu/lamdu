@@ -170,7 +170,7 @@ data TagG name = TagG
   }
 
 data PickedResult = PickedResult
-  { _prMJumpTo :: Maybe (Guid, EntityId) -- Hole identifier within
+  { _prMJumpTo :: Maybe EntityId -- Hole identifier within
   , -- pairs of ids from converted expression and written expression.
     _prIdTranslation :: [(EntityId, EntityId)]
   }

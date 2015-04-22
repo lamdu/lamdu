@@ -1,11 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.ShownResult
-  ( PickedResult(..), pickedInnerHoleGuid, pickedEventResult, pickedIdTranslations
+  ( PickedResult(..), pickedEventResult, pickedIdTranslations
   , ShownResult(..)
   ) where
 
 import qualified Control.Lens as Lens
-import           Data.Store.Guid (Guid)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -15,8 +14,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction.Transaction
 
 data PickedResult = PickedResult
-  { _pickedInnerHoleGuid :: Maybe Guid
-  , _pickedEventResult :: Widget.EventResult
+  { _pickedEventResult :: Widget.EventResult
   , _pickedIdTranslations :: Widget.Id -> Widget.Id
   }
 Lens.makeLenses ''PickedResult

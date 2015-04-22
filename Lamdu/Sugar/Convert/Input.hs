@@ -1,7 +1,7 @@
 -- | Preprocess of input to sugar
 {-# LANGUAGE RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Sugar.Convert.Input
-  ( Payload(..), entityId, guid, inferred, mStored, userData
+  ( Payload(..), entityId, inferred, mStored, userData
   , mkPayload, mkUnstoredPayload
   ) where
 
@@ -20,10 +20,6 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 data Payload m a
   = Payload
     { _entityId :: EntityId
-    , -- Used as a hole id that later GUI uses to associate data with
-      -- Need to replace this with some mechanism that avoids exposing
-      -- Guids to GUI
-      _guid :: Guid
     , _inferred :: Infer.Payload
     , _mStored :: Maybe (ExprIRef.ValIProperty m)
     , _userData :: a
@@ -32,9 +28,6 @@ data Payload m a
 
 entityId :: Lens' (Payload m a) EntityId
 entityId f Payload{..} = f _entityId <&> \_entityId -> Payload{..}
-
-guid :: Lens' (Payload m a) Guid
-guid f Payload{..} = f _guid <&> \_guid -> Payload{..}
 
 inferred :: Lens' (Payload m a) Infer.Payload
 inferred f Payload{..} = f _inferred <&> \_inferred -> Payload{..}
