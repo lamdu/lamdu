@@ -23,6 +23,7 @@ import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Vector.Vector2 (Vector2(..))
+import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.MainLoop (mainLoopWidget)
@@ -104,6 +105,7 @@ withDb lamduDir body =
 
 main :: IO ()
 main = do
+  setNumCapabilities =<< getNumProcessors
   args <- getArgs
   home <- Directory.getHomeDirectory
   let lamduDir = home </> ".lamdu"
