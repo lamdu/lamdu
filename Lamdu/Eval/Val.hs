@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
-
 module Lamdu.Eval.Val
-    ( ValHead(..), ThunkId, Closure(..), Scope(..), ScopeId, emptyScope
+    ( ValHead, ValBody(..), ThunkId, Closure(..), Scope(..), ScopeId, emptyScope
     ) where
 
 import Data.Map (Map)
@@ -10,13 +9,15 @@ import Lamdu.Expr.Val (Val)
 import qualified Data.Map as Map
 import qualified Lamdu.Expr.Val as V
 
-data ValHead pl
+data ValBody val pl
     = HFunc (Closure pl)
-    | HRecExtend (V.RecExtend ThunkId)
+    | HRecExtend (V.RecExtend val)
     | HRecEmpty
     | HInteger Integer
     | HBuiltin FFIName
     deriving (Functor, Show)
+
+type ValHead = ValBody ThunkId
 
 type ThunkId = Int
 

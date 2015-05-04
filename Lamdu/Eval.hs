@@ -18,7 +18,7 @@ import Control.Monad.Trans.Either (EitherT(..), left)
 import Control.Monad.Trans.State (StateT(..))
 import Data.Map (Map)
 import Lamdu.Data.Definition (FFIName)
-import Lamdu.Eval.Val (ValHead(..), ThunkId, Closure(..), Scope(..), ScopeId, emptyScope)
+import Lamdu.Eval.Val (ValHead, ValBody(..), ThunkId, Closure(..), Scope(..), ScopeId, emptyScope)
 import Lamdu.Expr.Val (Val)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
