@@ -71,13 +71,14 @@ mainLoopImage win eventHandler makeImage =
           & Draw.clearRender
 #endif
 
-mainLoopAnim ::
-  GLFW.Window ->
-  (Widget.Size -> IO (Maybe (Monoid.Endo AnimId))) ->
-  (Widget.Size -> KeyEvent -> IO (Maybe (Monoid.Endo AnimId))) ->
-  (Widget.Size -> IO Anim.Frame) ->
-  IO Anim.R -> IO a
-mainLoopAnim win tickHandler eventHandler makeFrame getAnimationHalfLife = do
+data AnimHandlers = AnimHandlers
+  { animTickHandler :: IO (Maybe (Monoid.Endo AnimId))
+  , animEventHandler :: KeyEvent -> IO (Maybe (Monoid.Endo AnimId))
+  , animMakeFrame :: IO Anim.Frame
+  }
+
+mainLoopAnim :: GLFW.Window -> IO Anim.R -> (Widget.Size -> AnimHandlers) -> IO a
+mainLoopAnim win getAnimationHalfLife animHandlers = do
   frameStateVar <- newIORef Nothing
   let
     handleResult Nothing = return False
@@ -87,13 +88,13 @@ mainLoopAnim win tickHandler eventHandler makeFrame getAnimationHalfLife = do
         (_2 . _2 %~ Anim.mapIdentities (Monoid.appEndo animIdMapping))
       return True
 
-    nextFrameState curTime size Nothing = do
-      dest <- makeFrame size
+    nextFrameState curTime handlers Nothing = do
+      dest <- animMakeFrame handlers
       return $ Just (0, (curTime, dest))
-    nextFrameState curTime size (Just (drawCount, (prevTime, prevFrame))) =
+    nextFrameState curTime handlers (Just (drawCount, (prevTime, prevFrame))) =
       if drawCount == 0
       then do
-        dest <- makeFrame size
+        dest <- animMakeFrame handlers
         animationHalfLife <- getAnimationHalfLife
         let
           elapsed = realToFrac (curTime `diffUTCTime` prevTime)
@@ -106,13 +107,14 @@ mainLoopAnim win tickHandler eventHandler makeFrame getAnimationHalfLife = do
         return $ Just (drawCount + 1, (curTime, prevFrame))
 
     makeImage forceRedraw size = do
+      let handlers = animHandlers size
       when forceRedraw .
         modifyIORef frameStateVar $
         Lens.mapped . _1 .~ 0
-      _ <- handleResult =<< tickHandler size
+      _ <- handleResult =<< animTickHandler handlers
       curTime <- getCurrentTime
       writeIORef frameStateVar =<<
-        nextFrameState curTime size =<< readIORef frameStateVar
+        nextFrameState curTime handlers =<< readIORef frameStateVar
       frameStateResult <$> readIORef frameStateVar
 
     frameStateResult Nothing = error "No frame to draw at start??"
@@ -126,7 +128,7 @@ mainLoopAnim win tickHandler eventHandler makeFrame getAnimationHalfLife = do
     -- And stop drawing it at count 3.
     stopAtDrawCount = 3
     imgEventHandler size event =
-      handleResult =<< eventHandler size event
+      handleResult =<< animEventHandler (animHandlers size) event
   mainLoopImage win imgEventHandler makeImage
 
 mainLoopWidget :: GLFW.Window -> IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO Anim.R -> IO a
@@ -135,25 +137,28 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationHalfLife = do
   let
     newWidget = writeIORef mkWidgetRef =<< memoIO mkWidgetUnmemod
     getWidget size = ($ size) =<< readIORef mkWidgetRef
-    tickHandler size = do
-      anyUpdate <- widgetTickHandler
-      when anyUpdate newWidget
-      widget <- getWidget size
-      tickResults <-
-        sequenceA (widget ^. Widget.eventMap . E.emTickHandlers)
-      unless (null tickResults) newWidget
-      return $
-        case (tickResults, anyUpdate) of
-        ([], False) -> Nothing
-        _ -> Just . mconcat $ map (^. Widget.eAnimIdMapping) tickResults
-    eventHandler size event = do
-      widget <- getWidget size
-      mAnimIdMapping <-
-        (traverse . fmap) (^. Widget.eAnimIdMapping) .
-        E.lookup event $ widget ^. Widget.eventMap
-      case mAnimIdMapping of
-        Nothing -> return ()
-        Just _ -> newWidget
-      return mAnimIdMapping
-    mkFrame size = getWidget size <&> (^. Widget.animFrame)
-  mainLoopAnim win tickHandler eventHandler mkFrame getAnimationHalfLife
+  mainLoopAnim win getAnimationHalfLife $ \size -> AnimHandlers
+    { animTickHandler =
+        do
+          anyUpdate <- widgetTickHandler
+          when anyUpdate newWidget
+          widget <- getWidget size
+          tickResults <-
+            sequenceA (widget ^. Widget.eventMap . E.emTickHandlers)
+          unless (null tickResults) newWidget
+          return $
+            case (tickResults, anyUpdate) of
+            ([], False) -> Nothing
+            _ -> Just . mconcat $ map (^. Widget.eAnimIdMapping) tickResults
+    , animEventHandler = \event ->
+        do
+          widget <- getWidget size
+          mAnimIdMapping <-
+            (traverse . fmap) (^. Widget.eAnimIdMapping) .
+            E.lookup event $ widget ^. Widget.eventMap
+          case mAnimIdMapping of
+            Nothing -> return ()
+            Just _ -> newWidget
+          return mAnimIdMapping
+    , animMakeFrame = getWidget size <&> (^. Widget.animFrame)
+    }
