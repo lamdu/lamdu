@@ -23,6 +23,7 @@ type ThunkId = Int
 data Closure pl = Closure
     { _cOuterScope :: Scope
     , _cLam :: V.Lam (Val pl)
+    , _cLamPayload :: pl
     } deriving (Functor, Show)
 
 data Scope = Scope

@@ -35,8 +35,9 @@ data ScopedVal pl = ScopedVal
     , _srcExpr :: Val pl
     } deriving (Functor, Show)
 
-data EventNewScope = EventNewScope
-    { ensParentId :: ScopeId
+data EventNewScope pl = EventNewScope
+    { ensLam :: pl
+    , ensParentId :: ScopeId
     , ensId :: ScopeId
     } deriving (Show)
 
@@ -48,7 +49,7 @@ data EventResultComputed pl = EventResultComputed
     } deriving (Show)
 
 data Event pl
-    = ENewScope EventNewScope
+    = ENewScope (EventNewScope pl)
     | EResultComputed (EventResultComputed pl)
     deriving (Show)
 
@@ -90,13 +91,14 @@ report event =
         rep <- use $ esReader . aReportEvent
         rep event & lift
 
-bindVar :: Monad m => V.Var -> ThunkId -> Scope -> EvalT pl m Scope
-bindVar var val (Scope parentMap parentId) =
+bindVar :: Monad m => pl -> V.Var -> ThunkId -> Scope -> EvalT pl m Scope
+bindVar lamPl var val (Scope parentMap parentId) =
     do
         newScopeId <- use esScopeCounter
         esScopeCounter += 1
         EventNewScope
-            { ensParentId = parentId
+            { ensLam = lamPl
+            , ensParentId = parentId
             , ensId = newScopeId
             } & ENewScope & report
         Scope
@@ -111,15 +113,15 @@ whnfScopedValInner :: Monad m => Maybe ThunkId -> ScopedVal pl -> EvalT pl m (Va
 whnfScopedValInner mThunkId (ScopedVal scope expr) =
     reportResultComputed =<<
     case expr ^. V.body of
-    V.BAbs lam -> return $ HFunc $ Closure scope lam
+    V.BAbs lam -> return $ HFunc $ Closure scope lam (expr ^. V.payload)
     V.BApp (V.Apply funcExpr argExpr) ->
         do
             func <- whnfScopedVal $ ScopedVal scope funcExpr
             argThunk <- makeThunk (ScopedVal scope argExpr)
             case func of
-                HFunc (Closure outerScope (V.Lam var body)) ->
+                HFunc (Closure outerScope (V.Lam var body) lamPl) ->
                     do
-                        innerScope <- bindVar var argThunk outerScope
+                        innerScope <- bindVar lamPl var argThunk outerScope
                         whnfScopedVal (ScopedVal innerScope body)
                 HBuiltin ffiname ->
                     do
