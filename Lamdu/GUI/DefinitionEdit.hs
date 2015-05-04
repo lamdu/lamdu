@@ -58,7 +58,7 @@ make cp config settings defS =
   where
     exprGuiDefS =
       defS
-      <&> Lens.mapped . Sugar.plData %~ toExprGuiMPayload
+      <&> Lens.mapped %~ toExprGuiMPayload
       <&> ExprGuiM.markRedundantTypes
 
 topLevelSchemeTypeView :: MonadA m => Widget.R -> Sugar.EntityId -> Scheme -> ExprGuiM m (Widget f)

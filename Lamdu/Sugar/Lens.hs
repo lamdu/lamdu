@@ -19,10 +19,10 @@ import qualified Control.Lens as Lens
 
 subExprPayloads ::
   Lens.IndexedTraversal
-  (ExpressionP name m ())
-  (ExpressionP name m a)
-  (ExpressionP name m b)
-  a b
+  (Expression name m ())
+  (Expression name m a)
+  (Expression name m b)
+  (Payload m a) (Payload m b)
 subExprPayloads f val@(Expression body pl) =
   Expression
   <$> (body & Lens.traversed .> subExprPayloads %%~ f)
@@ -30,10 +30,10 @@ subExprPayloads f val@(Expression body pl) =
 
 payloadsIndexedByPath ::
   Lens.IndexedTraversal
-  [ExpressionP name m ()]
-  (ExpressionP name m a)
-  (ExpressionP name m b)
-  a b
+  [Expression name m ()]
+  (Expression name m a)
+  (Expression name m b)
+  (Payload m a) (Payload m b)
 payloadsIndexedByPath f =
   go []
   where
@@ -45,14 +45,20 @@ payloadsIndexedByPath f =
         newPath = void val : path
 
 holePayloads ::
-  Lens.IndexedTraversal' (ExpressionP name m ()) (ExpressionP name m a) a
+  Lens.IndexedTraversal'
+  (Expression name m ())
+  (Expression name m a)
+  (Payload m a)
 holePayloads =
   subExprPayloads . Lens.ifiltered predicate
   where
     predicate idx _ = Lens.has (rBody . _BodyHole) idx
 
 holeArgs ::
-  Lens.IndexedTraversal' [ExpressionP name m ()] (ExpressionP name m a) a
+  Lens.IndexedTraversal'
+  [Expression name m ()]
+  (Expression name m a)
+  (Payload m a)
 holeArgs =
   payloadsIndexedByPath . Lens.ifiltered predicate
   where

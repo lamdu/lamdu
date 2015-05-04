@@ -21,9 +21,9 @@ markStoredHoles ::
   Sugar.Expression name m (Bool, a)
 markStoredHoles expr =
   expr
-  <&> Sugar.plData %~ (,) False
+  <&> (,) False
   & SugarLens.holePayloads . Sugar.plData . _1 .~ True
-  <&> removeNonStoredMarks
+  & SugarLens.subExprPayloads %~ removeNonStoredMarks
   where
     removeNonStoredMarks pl =
       case pl ^. Sugar.plActions of
@@ -51,11 +51,11 @@ add ::
   f (Sugar.Expression name m r)
 add exprs s =
   s
-  & exprs . Lens.mapped . Sugar.plData %~ toNearestHoles
+  & exprs . Lens.mapped %~ toNearestHoles
   & exprs %~ markStoredHoles
-  & passAll (exprs . Lens.traverse)
-  & passAll (Lens.backwards (exprs . Lens.traverse))
-  & exprs . Lens.mapped . Sugar.plData %~ snd
+  & passAll (exprs . SugarLens.subExprPayloads)
+  & passAll (Lens.backwards (exprs . SugarLens.subExprPayloads))
+  & exprs . Lens.mapped %~ snd
   where
     toNearestHoles f prevHole nextHole = f (NearestHoles prevHole nextHole)
 

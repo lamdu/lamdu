@@ -295,7 +295,7 @@ postProcessSugar ::
     ExpressionN m ExprGuiM.Payload
 postProcessSugar expr =
     expr
-    <&> Lens.mapped %~ toPayload
+    <&> toPayload
     & SugarLens.holeArgs . Sugar.plData . ExprGuiM.plShowType .~ ExprGuiM.ShowType
 
 toPayload :: Sugar.IsInjected -> ExprGuiM.Payload

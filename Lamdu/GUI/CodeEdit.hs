@@ -141,7 +141,7 @@ addNearestHoles ::
   PanesAndClipboards name m ([Sugar.EntityId], NearestHoles.NearestHoles)
 addNearestHoles pcs =
   pcs
-  <&> Lens.mapped . Sugar.plData %~ (,)
+  <&> Lens.mapped %~ (,)
   & NearestHoles.add traverse
 
 make :: MonadA m => Env m -> Guid -> WidgetEnvT (T m) (Widget (T m))

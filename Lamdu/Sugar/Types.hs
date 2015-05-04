@@ -28,9 +28,8 @@ module Lamdu.Sugar.Types
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyLiteralInteger, _BodyList, _BodyRecord
   , Payload(..), plEntityId, plInferredType, plActions, plData
-  , ExpressionP(..), rBody, rPayload
+  , Expression(..), rBody, rPayload
   , DefinitionU
-  , Expression
   , WhereItem(..), wiEntityId, wiValue, wiName, wiActions, wiInferredType
   , ListItem(..), liMActions, liExpr
   , ListActions(..), List(..)
@@ -110,12 +109,10 @@ data Payload m a = Payload
   , _plData :: a
   } deriving (Functor, Foldable, Traversable)
 
-data ExpressionP name m pl = Expression
-  { _rBody :: Body name m (ExpressionP name m pl)
-  , _rPayload :: pl
+data Expression name m a = Expression
+  { _rBody :: Body name m (Expression name m a)
+  , _rPayload :: Payload m a
   } deriving (Functor, Foldable, Traversable)
-
-type Expression name m a = ExpressionP name m (Payload m a)
 
 data ListItemActions m = ListItemActions
   { _itemAddNext :: T m EntityId
@@ -399,7 +396,7 @@ Lens.makeLenses ''Body
 Lens.makeLenses ''Definition
 Lens.makeLenses ''DefinitionBuiltin
 Lens.makeLenses ''DefinitionExpression
-Lens.makeLenses ''ExpressionP
+Lens.makeLenses ''Expression
 Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''GetField
