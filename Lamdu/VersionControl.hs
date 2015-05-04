@@ -1,11 +1,11 @@
 module Lamdu.VersionControl (makeActions, runAction, runEvent) where
 
+import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.Monad (unless)
 import Data.List (elemIndex)
 import Data.List.Utils (removeAt)
 import Data.Maybe (fromMaybe)
-import Data.Store.IRef (Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, setP, getP, modP)
@@ -30,12 +30,12 @@ revProp x = x DbLayout.revisionProps
 codeProp :: (DbLayout.CodeProps -> a) -> a
 codeProp x = x DbLayout.codeProps
 
-setCurrentBranch :: View (Tag DbM) -> Branch (Tag DbM) -> TDB ()
+setCurrentBranch :: View DbM -> Branch DbM -> TDB ()
 setCurrentBranch view branch = do
   setP (revProp DbLayout.currentBranch) branch
   View.setBranch view branch
 
-deleteBranch :: View (Tag DbM) -> [Branch (Tag DbM)] -> Branch (Tag DbM) -> TDB (Branch (Tag DbM))
+deleteBranch :: View DbM -> [Branch DbM] -> Branch DbM -> TDB (Branch DbM)
 deleteBranch view branches branch = do
   setP (revProp DbLayout.branches) newBranches
   setCurrentBranch view newBranch
@@ -47,7 +47,7 @@ deleteBranch view branches branch = do
       elemIndex branch branches
     newBranches = removeAt index branches
 
-makeBranch :: View (Tag DbM) -> TDB (Branch (Tag DbM))
+makeBranch :: View DbM -> TDB (Branch DbM)
 makeBranch view = do
   newBranch <- Branch.new =<< View.curVersion view
   modP (revProp DbLayout.branches) (++ [newBranch])
@@ -72,7 +72,7 @@ runEvent preCursor eventHandler = do
   unless isEmpty $ setP (revProp DbLayout.redos) []
   return eventResult
 
-makeActions :: Transaction DbM (Actions (Tag DbM) (Transaction DbM))
+makeActions :: Transaction DbM (Actions DbM (Transaction DbM))
 makeActions = do
   view <- getP $ revProp DbLayout.view
   branches <- getP $ revProp DbLayout.branches
@@ -98,6 +98,6 @@ makeActions = do
     , Actions.setCurrentBranch = setCurrentBranch view
     , Actions.deleteBranch = deleteBranch view branches
     , Actions.makeBranch = makeBranch view
-    , Actions.mUndo = fmap undo $ Version.parent curVersionData
+    , Actions.mUndo = undo <$> Version.parent curVersionData
     , Actions.mRedo = mkRedo allRedos
     }

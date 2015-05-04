@@ -3,6 +3,8 @@
 *.o
 *.p_hi
 *.p_o
+*.dyn_hi
+*.dyn_o
 TAGS
 tags
 GUIWidgets

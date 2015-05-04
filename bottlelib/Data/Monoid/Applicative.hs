@@ -8,5 +8,7 @@ newtype ApplicativeMonoid f a =
 
 instance (Monoid a, Applicative f) => Monoid (ApplicativeMonoid f a) where
   mempty = ApplicativeMonoid $ pure mempty
+  {-# INLINE mempty #-}
   ApplicativeMonoid x `mappend` ApplicativeMonoid y =
     ApplicativeMonoid $ mappend <$> x <*> y
+  {-# INLINE mappend #-}

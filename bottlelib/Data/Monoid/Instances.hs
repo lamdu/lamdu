@@ -1,13 +1,10 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE StandaloneDeriving, GeneralizedNewtypeDeriving #-}
 {-# OPTIONS -fno-warn-orphans #-}
 module Data.Monoid.Instances () where
 
-import Control.DeepSeq (NFData(..))
-import Data.Binary (Binary(..))
-import Data.Derive.Binary (makeBinary)
-import Data.Derive.NFData (makeNFData)
-import Data.DeriveTH (derive)
+import Control.DeepSeq (NFData)
+import Data.Binary (Binary)
 import Data.Monoid (Any(..))
 
-derive makeBinary ''Any
-derive makeNFData ''Any
+deriving instance Binary Any
+deriving instance NFData Any

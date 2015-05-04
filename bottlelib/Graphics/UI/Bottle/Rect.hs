@@ -4,15 +4,19 @@ module Graphics.UI.Bottle.Rect
   , topLeftAndSize
   , left, top, right, bottom
   , width, height
-  , bottomRight, center, distance
+  , bottomRight
+  , center, centeredSize
+  , distance
   ) where
 
-import Control.Applicative (liftA2)
-import Control.Lens (Traversal', Lens', (^.), _1, _2)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.DrawingCombinators(R)
+import           Control.Applicative ((<$>), liftA2)
+import           Control.Lens (Traversal', Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
+import           Graphics.DrawingCombinators (R)
 
 data Rect = Rect {
   _topLeft :: Vector2 R,
@@ -20,39 +24,54 @@ data Rect = Rect {
   } deriving Show
 Lens.makeLenses ''Rect
 
+{-# INLINE topLeftAndSize #-}
 topLeftAndSize :: Traversal' Rect (Vector2 R)
 topLeftAndSize f (Rect tl s) = liftA2 Rect (f tl) (f s)
 
+{-# INLINE bottomRight #-}
 bottomRight :: Lens' Rect (Vector2 R)
 bottomRight f (Rect tl s) =
-  fmap withNew $ f (tl + s)
+  withNew <$> f (tl + s)
   where
     withNew newBottomRight =
       Rect tl (newBottomRight - tl)
 
+{-# INLINE centeredSize #-}
+centeredSize :: Lens' Rect (Vector2 R)
+centeredSize f (Rect tl oldSize) =
+  f oldSize <&> \newSize -> Rect (oldCenter - newSize / 2) newSize
+  where
+    oldCenter = tl + oldSize / 2
+
+{-# INLINE center #-}
 center :: Lens' Rect (Vector2 R)
 center f (Rect tl s) =
-  fmap withNew $ f centerVal
+  f oldCenter
+  <&> \newCenter -> Rect (tl + newCenter - oldCenter) s
   where
-    centerVal = tl + s / 2
-    withNew newCenter =
-      Rect (tl + newCenter - centerVal) s
+    oldCenter = tl + s / 2
 
+{-# INLINE left #-}
 left :: Lens' Rect R
 left = topLeft . _1
 
+{-# INLINE top #-}
 top :: Lens' Rect R
 top = topLeft . _2
 
+{-# INLINE right #-}
 right :: Lens' Rect R
 right = bottomRight . _1
 
+{-# INLINE bottom #-}
 bottom :: Lens' Rect R
 bottom = bottomRight . _2
 
+{-# INLINE width #-}
 width :: Lens' Rect R
 width = size . _1
 
+{-# INLINE height #-}
 height :: Lens' Rect R
 height = size . _2
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveGeneric, TemplateHaskell #-}
 
 -- | View and Branch have a cyclic dependency. This module
 -- | contains the parts of both that both may depend on, to avoid the
@@ -15,14 +15,13 @@ where
 import Control.Monad (when)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
 import Data.Foldable (traverse_)
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (IRef, Tag)
+import Data.Store.IRef (IRef)
 import Data.Store.Rev.Change (Change)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction)
+import GHC.Generics (Generic)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -32,27 +31,27 @@ import qualified Data.Store.Transaction as Transaction
 
 -- This key is XOR'd with object keys to yield the IRef to each
 -- object's current version ref:
-newtype View t = View (IRef t (ViewData t))
+newtype View m = View (IRef m (ViewData m))
   deriving (Eq, Ord, Binary, Show, Read)
 
-data BranchData t = BranchData {
-  _brVersion :: Version t,
-  _brViews :: [View t]
-  } deriving (Eq, Ord, Read, Show)
+data BranchData m = BranchData
+  { _brVersion :: Version m
+  , _brViews :: [View m]
+  } deriving (Eq, Ord, Read, Show, Generic)
+instance Binary (BranchData m)
 
-newtype Branch t = Branch { unBranch :: IRef t (BranchData t) }
+newtype Branch m = Branch { unBranch :: IRef m (BranchData m) }
   deriving (Eq, Ord, Read, Show, Binary)
 
-newtype ViewData t = ViewData { _vdBranch :: Branch t }
+newtype ViewData m = ViewData { _vdBranch :: Branch m }
   deriving (Eq, Ord, Show, Read, Binary)
 
-derive makeBinary ''BranchData
 Lens.makeLenses ''BranchData
 Lens.makeLenses ''ViewData
 
 -- | moveView must be given the correct source of the movement
 -- | or it will result in undefined results!
-moveView :: MonadA m => View (Tag m) -> Version (Tag m) -> Version (Tag m) -> Transaction m ()
+moveView :: MonadA m => View m -> Version m -> Version m -> Transaction m ()
 moveView vm srcVersion destVersion =
   when (srcVersion /= destVersion) $ do
     mraIRef <- Version.mostRecentAncestor srcVersion destVersion
@@ -63,11 +62,11 @@ moveView vm srcVersion destVersion =
     applyBackward = apply Change.oldValue
     apply changeDir version = applyChangesToView vm changeDir . Version.changes $ version
 
-makeViewKey :: View t -> Change.Key -> Guid
+makeViewKey :: View m -> Change.Key -> Guid
 makeViewKey (View iref) = Guid.combine . IRef.guid $ iref
 
 applyChangesToView ::
-  MonadA m => View (Tag m) -> (Change -> Maybe Change.Value) ->
+  MonadA m => View m -> (Change -> Maybe Change.Value) ->
   [Change] -> Transaction m ()
 applyChangesToView vm changeDir = traverse_ applyChange
   where

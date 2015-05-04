@@ -1,99 +1,421 @@
 {
-    "jumpToNextHoleKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'Tab"
-        ]
-    ],
-    "rightArrowColor": [
-        1.0,
-        0.2,
-        0.2,
-        1.0
-    ],
-    "enlargeBaseFontKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
-            },
-            "Key'Equal"
-        ]
-    ],
-    "holeInactiveExtraSymbolColor": [
-        1.0,
-        1.0,
-        1.0,
-        0.3
-    ],
-    "defTypeLabelColor": [
-        0.6,
-        0.7,
-        1.0,
-        1.0
-    ],
-    "parameterColor": [
-        0.2,
-        0.8,
-        0.9,
-        1.0
-    ],
-    "pickResultKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'Enter"
-        ]
-    ],
-    "undoKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
-            },
-            "Key'Z"
-        ]
-    ],
-    "holeResultCount": 8,
-    "listCommaTextSize": 25,
-    "squareParensScaleFactor": {
-        "_first": 0.96,
-        "_second": 0.96
+    "layers": {
+        "layerMin": -100,
+        "layerMax": 100,
+        "layerCursor": -1,
+        "layerParensHighlightBG": 34,
+        "layerActivePane": 40,
+        "layerHoleBG": 38,
+        "layerDarkHoleBG": 39,
+        "layerTypes": 27,
+        "layerNameCollisionBG": 32,
+        "layerChoiceBG": 30,
+        "layerValFrameBG": 33
     },
-    "tagScaleFactor": {
-        "_first": 0.9,
-        "_second": 0.9
-    },
-    "shrinkBaseFontKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
-            },
-            "Key'Minus"
+    "help": {
+        "helpInputDocColor": [
+            0.1,
+            0.7,
+            0.7,
+            1.0
+        ],
+        "helpTextSize": 12,
+        "helpKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'F1"
+            ],
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'H"
+            ]
+        ],
+        "helpTextColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        ],
+        "helpBGColor": [
+            0.2,
+            0.15,
+            0.1,
+            0.5
         ]
-    ],
+    },
+    "zoom": {
+        "shrinkKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
+                },
+                "Key'Minus"
+            ]
+        ],
+        "enlargeKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
+                },
+                "Key'Equal"
+            ]
+        ],
+        "shrinkFactor": 1.1,
+        "enlargeFactor": 1.1
+    },
+    "pane": {
+        "newDefinitionKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'N"
+            ]
+        ],
+        "newDefinitionActionColor": [
+            0.3,
+            1.0,
+            0.3,
+            1.0
+        ],
+        "paneActiveBGColor": [
+            1.0,
+            1.0,
+            1.0,
+            0.0
+        ],
+        "paneInactiveTintColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        ],
+        "paneCloseKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'W"
+            ]
+        ],
+        "paneMoveUpKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'Up"
+            ]
+        ],
+        "paneMoveDownKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'Down"
+            ]
+        ],
+        "paneHoverPadding": 40
+    },
+    "versionControl": {
+        "undoKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
+                },
+                "Key'Z"
+            ]
+        ],
+        "redoKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
+                },
+                "Key'Y"
+            ]
+        ],
+        "selectedBranchColor": [
+            0.25,
+            0.5,
+            0.25,
+            1.0
+        ],
+        "makeBranchKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
+                },
+                "Key'S"
+            ]
+        ],
+        "delBranchKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'O"
+            ]
+        ],
+        "jumpToBranchesKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
+                },
+                "Key'F10"
+            ]
+        ]
+    },
+    "hole": {
+        "holeJumpToNextKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'Tab"
+            ]
+        ],
+        "holeExtraSymbolColorUnselected": [
+            1.0,
+            1.0,
+            1.0,
+            0.3
+        ],
+        "holeExtraSymbolColorSelected": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+        ],
+        "holeResultCount": 8,
+        "holeResultInjectedScaleExponent": 0.65,
+        "holeResultPadding": {
+            "_first": 3.0,
+            "_second": 3.0
+        },
+        "holePickAndMoveToNextHoleKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'Space"
+            ]
+        ],
+        "holeOpenBGColor": [
+            0.05,
+            0.25,
+            0.3,
+            0.9
+        ],
+        "holeSearchTermBGColor": [
+            0.2,
+            0.3,
+            0.5,
+            1.0
+        ],
+        "holeJumpToPrevKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": true,
+                    "modifierKeysControl": false
+                },
+                "Key'Tab"
+            ]
+        ],
+        "holePickResultKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'Enter"
+            ]
+        ],
+        "holeDarkBGColor": [
+            0.05,
+            0.05,
+            0.05,
+            0.85
+        ],
+        "holeDarkPadding": {
+            "_first": 1,
+            "_second": 1
+        },
+        "holeOpenKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'Enter"
+            ]
+        ],
+        "holeCloseKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'Escape"
+            ]
+        ],
+        "holePasteKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
+                },
+                "Key'V"
+            ],
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'V"
+            ]
+        ],
+        "holeUnwrapKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'Space"
+            ]
+        ],
+        "holeHoveringWrapperScaleFactor": {
+            "_first": 0.5,
+            "_second": 0.5
+        }
+    },
+    "name": {
+        "nameOriginFGColor": [
+            1.0,
+            0.8,
+            0.5,
+            1.0
+        ],
+        "autoNameOriginFGColor": [
+            1.0,
+            0.55,
+            0.5,
+            1.0
+        ],
+        "parameterColor": [
+            0.5,
+            0.9,
+            1.0,
+            1.0
+        ],
+        "definitionColor": [
+            0.75,
+            0.5,
+            1.0,
+            1.0
+        ],
+        "collisionSuffixTextColor": [
+            1.0,
+            0.8,
+            0.5,
+            1.0
+        ],
+        "collisionSuffixScaleFactor": {
+            "_first": 0.5,
+            "_second": 0.5
+        },
+        "collisionSuffixBGColor": [
+            0.7,
+            0.0,
+            0.0,
+            1.0
+        ],
+        "recordTagColor": [
+            0.75,
+            0.75,
+            0.75,
+            1.0
+        ],
+        "paramTagColor": [
+            0.65,
+            0.65,
+            0.65,
+            1.0
+        ]
+    },
     "previousCursorKeys": [
         [
             {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": true,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Left"
         ]
     ],
-    "inferredTypeTint": [
+    "typeTint": [
         1.0,
         1.0,
         1.0,
@@ -102,43 +424,21 @@
     "enterSubexpressionKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": true,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": true,
+                "modifierKeysControl": false
             },
             "Key'Right"
         ]
     ],
-    "movePaneUpKeys": [
-        [
-            {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'Up"
-        ]
-    ],
-    "paramDefSuffixScaleFactor": {
-        "_first": 0.4,
-        "_second": 0.4
-    },
-    "lambdaColor": [
-        1.0,
-        0.2,
-        0.2,
-        1.0
-    ],
-    "holeResultScaleFactor": {
-        "_first": 0.75,
-        "_second": 0.75
-    },
     "listAddItemKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Comma"
         ]
@@ -146,32 +446,27 @@
     "delBackwardKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Backspace"
         ]
     ],
     "cursorBGColor": [
-        0.0,
-        0.0,
+        0.5,
+        0.5,
         1.0,
-        0.45
-    ],
-    "holeResultInjectedScaleExponent": 0.65,
-    "helpInputDocColor": [
-        0.1,
-        0.7,
-        0.7,
-        1.0
+        0.5
     ],
     "quitKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": true
             },
             "Key'Q"
         ]
@@ -179,170 +474,122 @@
     "addNextParamKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Space"
         ]
     ],
-    "fieldTagScaleFactor": {
-        "_first": 0.8,
-        "_second": 0.8
-    },
-    "movePaneDownKeys": [
-        [
-            {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'Down"
-        ]
-    ],
-    "baseTextSize": 25,
-    "inferredTypeErrorBGColor": [
-        0.5,
-        0.05,
-        0.05,
-        1.0
-    ],
-    "polymorphicDefOriginForegroundColor": [
-        1.0,
-        0.4,
-        0.3,
-        1.0
-    ],
-    "fieldTint": [
-        1.0,
-        1.0,
-        1.0,
-        0.6
-    ],
-    "newDefinitionKeys": [
-        [
-            {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'N"
-        ]
-    ],
-    "shrinkFactor": 1.1,
-    "collapsedCompactBGColor": [
-        0.1,
-        0.2,
-        0.25,
-        1.0
-    ],
+    "baseTextSize": 13,
+    "spaceWidth": 10,
     "wrapKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Space"
         ]
     ],
-    "recordValParensColor": [
-        0.2,
-        1.0,
-        0.2,
-        1.0
-    ],
-    "closePaneKeys": [
+    "recordOpenKeys": [
         [
             {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": true,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
-            "Key'W"
+            "Key'O"
         ]
     ],
-    "selectedBranchColor": [
-        0.0,
-        0.5,
-        0.0,
-        1.0
-    ],
-    "inferredValueScaleFactor": {
-        "_first": 0.7,
-        "_second": 0.7
-    },
-    "recordTypeParensColor": [
-        1.0,
-        0.2,
-        0.2,
+    "recordTailColor": [
+        0.4,
+        0.4,
+        0.4,
         1.0
     ],
     "jumpLHStoRHSKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'GraveAccent"
         ]
     ],
-    "holeNumLabelColor": [
+    "valFrameBGColor": [
+        1.0,
+        1.0,
+        1.0,
+        0.05
+    ],
+    "typeFrameBGColor": [
+        0.2,
         0.6,
-        0.6,
-        0.6,
+        0.8,
+        0.16
+    ],
+    "typeBoxBGColor": [
+        0.0,
+        0.0,
+        0.0,
+        0.2
+    ],
+    "typeIndicatorFrameWidth": {
+        "_first": 7.0,
+        "_second": 7.0
+    },
+    "typeIndicatorErrorColor": [
+        1.0,
+        0.2,
+        0.2,
         1.0
     ],
-    "labeledApplyBGColor": [
-        1.0,
-        1.0,
-        1.0,
-        0.07
+    "typeIndicatorMatchColor": [
+        0.25,
+        0.5,
+        0.25,
+        1.0
     ],
-    "deletableHoleBackgroundColor": [
-        0.0,
+    "acceptDefinitionTypeForFirstTimeColor": [
         1.0,
-        0.0,
-        0.1
+        1.0,
+        0.5,
+        1.0
     ],
-    "enlargeFactor": 1.1,
-    "holeSearchTermScaleFactor": {
-        "_first": 0.6,
-        "_second": 0.6
-    },
-    "holeNumLabelScaleFactor": {
-        "_first": 0.3,
-        "_second": 0.3
-    },
     "jumpRHStoLHSKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'GraveAccent"
         ]
     ],
-    "holeResultPadding": {
-        "_first": 3.0,
-        "_second": 3.0
-    },
     "debugModeKeys": [
         [
             {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": true
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": true,
+                "modifierKeysShift": false,
+                "modifierKeysControl": true
             },
             "Key'D"
         ],
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": true
             },
             "Key'F7"
         ]
@@ -356,17 +603,19 @@
     "cutKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": true
             },
             "Key'X"
         ],
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'X"
         ]
@@ -374,204 +623,96 @@
     "nextInfoModeKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'F7"
         ]
     ],
-    "helpTextSize": 12,
-    "inactiveTintColor": [
-        1.0,
-        1.0,
-        1.0,
-        0.8
-    ],
-    "helpTextColor": [
-        1.0,
-        1.0,
-        1.0,
-        1.0
-    ],
-    "inferredValueTint": [
-        1.0,
-        1.0,
-        1.0,
-        0.6
-    ],
-    "activeHoleBackgroundColor": [
-        0.1,
-        0.1,
-        0.3,
-        0.9
-    ],
     "leaveSubexpressionKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": true,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": true,
+                "modifierKeysControl": false
             },
             "Key'Left"
         ]
     ],
-    "collisionSuffixTextColor": [
-        1.0,
-        0.8,
-        0.5,
-        1.0
-    ],
-    "wrapperHolePadding": {
-        "_first": 8.0,
-        "_second": 8.0
-    },
-    "acceptKeys": [
+    "acceptDefinitionTypeKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Space"
         ],
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Enter"
         ]
     ],
-    "collisionSuffixScaleFactor": {
-        "_first": 0.5,
-        "_second": 0.5
-    },
-    "monomorphicDefOriginForegroundColor": [
-        1.0,
-        0.8,
-        0.5,
-        1.0
-    ],
-    "pasteKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
-            },
-            "Key'V"
-        ],
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'V"
-        ]
-    ],
-    "defTypeBoxScaleFactor": {
-        "_first": 0.6,
-        "_second": 0.6
-    },
-    "spaceBetweenAnnotatedArgs": 7.0,
-    "listBracketColor": [
+    "verticalSpacing": 7.0,
+    "grammarColor": [
         0.8,
         0.8,
         0.9,
         1.0
     ],
-    "builtinOriginNameColor": [
-        1.0,
-        0.8,
-        0.5,
-        1.0
-    ],
-    "jumpToBranchesKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
-            },
-            "Key'F10"
-        ]
-    ],
-    "lambdaTextSize": 30,
     "recordAddFieldKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'A"
         ],
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Comma"
         ]
     ],
-    "labeledApplyPadding": {
+    "valInferredSpacing": 3,
+    "valFramePadding": {
         "_first": 7.0,
         "_second": 7.0
     },
-    "atomColor": [
-        0.8,
-        0.5,
-        1.0,
-        1.0
-    ],
-    "jumpToPrevHoleKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": true,
-                "modCtrl": false
-            },
-            "Key'Tab"
-        ]
-    ],
-    "listBracketTextSize": 25,
     "delForwardKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Delete"
         ],
         [
             {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": true,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Delete"
         ]
-    ],
-    "makeBranchKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
-            },
-            "Key'S"
-        ]
-    ],
-    "listCommaColor": [
-        0.8,
-        0.8,
-        0.9,
-        1.0
     ],
     "parenHighlightColor": [
         0.3,
@@ -579,78 +720,34 @@
         1.0,
         0.25
     ],
-    "delBranchKeys": [
-        [
-            {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'O"
-        ]
-    ],
-    "typeScaleFactor": {
-        "_first": 0.6,
-        "_second": 0.6
+    "whereItemPadding": {
+        "_first": 5,
+        "_second": 5
     },
-    "pickAndMoveToNextHoleKeys": [
+    "whereAddItemKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'Space"
-        ]
-    ],
-    "addWhereItemKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'W"
         ]
     ],
     "literalIntColor": [
-        0.0,
+        0.5,
         1.0,
-        0.0,
+        0.5,
         1.0
-    ],
-    "inferredTypeBGColor": [
-        0.05,
-        0.15,
-        0.2,
-        1.0
-    ],
-    "collapsedExpandKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'Enter"
-        ]
-    ],
-    "collapsedCollapseKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'Escape"
-        ]
     ],
     "replaceKeys": [
         [
             {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": true,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'R"
         ]
@@ -661,15 +758,11 @@
         0.4,
         1.0
     ],
-    "redoKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": true
-            },
-            "Key'Y"
-        ]
+    "backgroundColor": [
+        0.95,
+        0.98,
+        1.0,
+        0.18
     ],
     "baseColor": [
         1.0,
@@ -678,59 +771,19 @@
         1.0
     ],
     "presentationChoiceScaleFactor": {
-        "_first": 0.4,
-        "_second": 0.4
-    },
-    "layers": {
-        "layerCursorBG": -1,
-        "layerMax": 100,
-        "layerParensHighlightBG": 34,
-        "layerActivePane": 40,
-        "layerTypes": 27,
-        "layerNameCollisionBG": 32,
-        "layerChoiceBG": 30,
-        "layerLabeledApplyBG": 33,
-        "layerHoleBG": -2,
-        "layerCollapsedCompactBG": 28,
-        "layerCollapsedExpandedBG": 29
+        "_first": 0.5,
+        "_second": 0.5
     },
     "jumpToDefinitionKeys": [
         [
             {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": false,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
             },
             "Key'Enter"
         ]
-    ],
-    "collapsedExpandedBGColor": [
-        0.18,
-        0.14,
-        0.05,
-        1.0
-    ],
-    "autoGeneratedNameTint": [
-        0.9,
-        0.8,
-        0.7,
-        1.0
-    ],
-    "whereScaleFactor": {
-        "_first": 0.85,
-        "_second": 0.85
-    },
-    "whereColor": [
-        0.8,
-        0.6,
-        0.1,
-        1.0
-    ],
-    "definitionColor": [
-        0.8,
-        0.5,
-        1.0,
-        1.0
     ],
     "invalidCursorBGColor": [
         0.4,
@@ -738,76 +791,10 @@
         0.0,
         1.0
     ],
-    "activeDefBGColor": [
-        0.12,
-        0.12,
-        0.12,
-        0.3
-    ],
-    "whereLabelScaleFactor": {
-        "_first": 0.85,
-        "_second": 0.85
-    },
-    "paramOriginColor": [
-        1.0,
-        0.8,
-        0.5,
-        1.0
-    ],
-    "overlayDocKeys": [
-        [
-            {
-                "modAlt": false,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'F1"
-        ],
-        [
-            {
-                "modAlt": true,
-                "modShift": false,
-                "modCtrl": false
-            },
-            "Key'H"
-        ]
-    ],
-    "inactiveHoleBackgroundColor": [
-        0.2,
-        0.2,
-        0.5,
-        0.35
-    ],
-    "defTypeLabelTextSize": 16,
     "foreignModuleColor": [
         1.0,
         0.3,
         0.35,
         1.0
-    ],
-    "collapsedForegroundColor": [
-        1.0,
-        0.4,
-        0.3,
-        1.0
-    ],
-    "typeErrorHoleWrapBackgroundColor": [
-        1.0,
-        0.0,
-        0.0,
-        0.3
-    ],
-    "rightArrowTextSize": 30,
-    "collisionSuffixBGColor": [
-        0.7,
-        0.0,
-        0.0,
-        1.0
-    ],
-    "helpBGColor": [
-        0.2,
-        0.15,
-        0.1,
-        0.5
     ]
 }

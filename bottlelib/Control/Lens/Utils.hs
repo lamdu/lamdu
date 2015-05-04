@@ -5,6 +5,7 @@ module Control.Lens.Utils
   , _fromJust
   , addListContexts
   , addTuple2Contexts
+  , getPrism
   ) where
 
 import Control.Applicative ((<$>))
@@ -33,9 +34,12 @@ addListContexts tob (Lens.Context fromBList (a:as)) =
     b = tob a
     bs = map tob as
 
-addTuple2Contexts :: (a -> b) -> Lens.Context (a, a) (b, b) t -> (Lens.Context a b t, Lens.Context a b t)
-addTuple2Contexts tob (Lens.Context fromBTuple (a0, a1)) =
-  (Lens.Context chg0 a0, Lens.Context chg1 a1)
+-- TODO: can use composition with _2 instead ?
+addTuple2Contexts :: Lens.Context (z, a) (z, b) t -> (z, Lens.Context a b t)
+addTuple2Contexts (Lens.Context fromBTuple (z, a)) =
+  (z, Lens.Context chg a)
   where
-    chg0 b0 = fromBTuple (b0, tob a1)
-    chg1 b1 = fromBTuple (tob a0, b1)
+    chg b = fromBTuple (z, b)
+
+getPrism :: Lens.Prism s t a b -> s -> Either a t
+getPrism p = p Left

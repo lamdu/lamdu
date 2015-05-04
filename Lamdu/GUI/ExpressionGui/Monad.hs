@@ -1,69 +1,71 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies, DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies #-}
 module Lamdu.GUI.ExpressionGui.Monad
-  ( ExprGuiM, WidgetT
+  ( ExprGuiM
   , widgetEnv
-  , StoredGuids(..), Injected(..)
-  , HoleGuids(..), hgMNextHole, hgMPrevHole
-  , emptyHoleGuids
-  , Payload(..), plStoredGuids, plInjected, plHoleGuids
+  , makeLabel
+  , StoredEntityIds(..), Injected(..)
+  , Payload(..), plStoredEntityIds, plInjected, plNearestHoles, plShowType
+  , ShowType(..)
+  , markRedundantTypes
+  , shouldShowType
   , emptyPayload
   , SugarExpr
 
   , transaction, localEnv, withFgColor
   , getP, assignCursor, assignCursorPrefix
-  , wrapDelegated
+  , makeFocusDelegator
   --
   , makeSubexpression
   --
-  , readSettings, readCodeAnchors
+  , readConfig, readSettings, readCodeAnchors
   , getCodeAnchor, mkPrejumpPosSaver
   --
   , HolePickers, holePickersAddDocPrefix, holePickersAction
   , addResultPicker, listenResultPickers
-
-  , AccessedVars, markVariablesAsUsed, listenUsedVariables
-
-  , memo, memoT
-  , liftMemo, liftMemoT
-
+  , nextHolesBefore
   , run
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens.Operators
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.RWS (RWST, runRWST)
-import Control.Monad.Trans.State (StateT(..), mapStateT)
-import Control.MonadA (MonadA)
-import Data.Binary (Binary)
-import Data.Cache (Cache)
-import Data.Derive.Monoid (makeMonoid)
-import Data.DeriveTH (derive)
-import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
-import Data.Store.Transaction (Transaction)
-import Data.Typeable (Typeable)
-import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.GUI.CodeEdit.Settings (Settings)
-import Lamdu.GUI.ExpressionGui.Types (ExpressionGui, WidgetT, ParentPrecedence(..), Precedence)
-import Lamdu.GUI.WidgetEnvT (WidgetEnvT)
+import           Control.Applicative (Applicative(..), (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.RWS (RWST, runRWST)
 import qualified Control.Monad.Trans.RWS as RWS
-import qualified Data.Cache as Cache
+import           Control.MonadA (MonadA)
+import           Data.Binary (Binary)
 import qualified Data.Char as Char
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Animation.Id (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.WidgetId (toAnimId)
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import           Lamdu.Config (Config)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import           Lamdu.GUI.CodeEdit.Settings (Settings)
+import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
+import           Lamdu.GUI.Precedence (ParentPrecedence(..), Precedence)
+import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.AddNames.Types (ExpressionN)
+import qualified Lamdu.Sugar.Lens as SugarLens
+import           Lamdu.Sugar.NearestHoles (NearestHoles)
+import qualified Lamdu.Sugar.NearestHoles as NearestHoles
+import           Lamdu.Sugar.RedundantTypes (redundantTypes)
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
-type AccessedVars = [Guid]
 
 type HolePickers m = [T m Widget.EventResult]
 
@@ -77,64 +79,54 @@ holePickersAddDocPrefix (_:_) doc =
 holePickersAction :: MonadA m => HolePickers m -> T m Widget.EventResult
 holePickersAction = fmap mconcat . sequence
 
-data Output m = Output
-  { oAccessedVars :: AccessedVars
-  , oHolePickers :: HolePickers m
-  }
-derive makeMonoid ''Output
+newtype Output m = Output
+  { oHolePickers :: HolePickers m
+  } deriving (Monoid)
 
-newtype StoredGuids = StoredGuids [Guid]
-  deriving (Monoid, Binary, Typeable, Eq, Ord)
+newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
+  deriving (Monoid)
 
 newtype Injected = Injected [Bool]
-  deriving (Monoid, Binary, Typeable, Eq, Ord)
+  deriving (Monoid, Binary, Eq, Ord)
 
-data HoleGuids = HoleGuids
-  { _hgMNextHole :: Maybe Guid
-  , _hgMPrevHole :: Maybe Guid
-  } deriving Show
-Lens.makeLenses ''HoleGuids
-
-emptyHoleGuids :: HoleGuids
-emptyHoleGuids = HoleGuids Nothing Nothing
+data ShowType = ShowTypeInVerboseMode | DoNotShowType | ShowType
 
 -- GUI input payload on sugar exprs
 data Payload = Payload
-  { _plStoredGuids :: [Guid]
+  { _plStoredEntityIds :: [Sugar.EntityId]
   , _plInjected :: [Bool]
-  , _plHoleGuids :: HoleGuids
+  , _plNearestHoles :: NearestHoles
+  , _plShowType :: ShowType
   }
 Lens.makeLenses ''Payload
 
-emptyPayload :: Payload
-emptyPayload = Payload
-  { _plStoredGuids = []
+emptyPayload :: NearestHoles -> Payload
+emptyPayload nearestHoles = Payload
+  { _plStoredEntityIds = []
   , _plInjected = []
-  , _plHoleGuids = emptyHoleGuids
+  , _plNearestHoles = nearestHoles
+  , _plShowType = ShowTypeInVerboseMode
   }
 
-type SugarExpr m = Sugar.ExpressionN m Payload
+type SugarExpr m = ExpressionN m Payload
 
 data Askable m = Askable
   { _aSettings :: Settings
+  , _aConfig :: Config
   , _aMakeSubexpression ::
     ParentPrecedence -> SugarExpr m ->
     ExprGuiM m (ExpressionGui m)
   , _aCodeAnchors :: Anchors.CodeProps m
-  }
-
-newtype GuiState = GuiState
-  { _gsCache :: Cache
+  , _aSubexpressionLayer :: Int
   }
 
 newtype ExprGuiM m a = ExprGuiM
-  { _exprGuiM :: RWST (Askable m) (Output m) GuiState (WidgetEnvT (T m)) a
+  { _exprGuiM :: RWST (Askable m) (Output m) () (WidgetEnvT (T m)) a
   }
   deriving (Functor, Applicative, Monad)
 
 Lens.makeLenses ''Askable
 Lens.makeLenses ''ExprGuiM
-Lens.makeLenses ''GuiState
 
 -- TODO: To lens
 localEnv :: MonadA m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
@@ -146,6 +138,9 @@ withFgColor = localEnv . WE.setTextColor
 readSettings :: MonadA m => ExprGuiM m Settings
 readSettings = ExprGuiM $ Lens.view aSettings
 
+readConfig :: MonadA m => ExprGuiM m Config
+readConfig = ExprGuiM $ Lens.view aConfig
+
 readCodeAnchors :: MonadA m => ExprGuiM m (Anchors.CodeProps m)
 readCodeAnchors = ExprGuiM $ Lens.view aCodeAnchors
 
@@ -153,53 +148,46 @@ mkPrejumpPosSaver :: MonadA m => ExprGuiM m (T m ())
 mkPrejumpPosSaver =
   DataOps.savePreJumpPosition <$> readCodeAnchors <*> widgetEnv WE.readCursor
 
--- TODO: makeSubexpresSion
 makeSubexpression ::
   MonadA m => Precedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeSubexpression parentPrecedence expr = do
-  maker <- ExprGuiM $ Lens.view aMakeSubexpression
-  maker (ParentPrecedence parentPrecedence) expr
-
-liftMemo :: MonadA m => StateT Cache (WidgetEnvT (T m)) a -> ExprGuiM m a
-liftMemo act = ExprGuiM . Lens.zoom gsCache $ do
-  cache <- RWS.get
-  (val, newCache) <- lift $ runStateT act cache
-  RWS.put newCache
-  return val
-
-liftMemoT :: MonadA m => StateT Cache (T m) a -> ExprGuiM m a
-liftMemoT = liftMemo . mapStateT lift
-
-memo ::
-  (Cache.Key k, Binary v, Typeable v, MonadA m) =>
-  Cache.FuncId ->
-  (k -> WidgetEnvT (T m) v) -> k -> ExprGuiM m v
-memo funcId f key = liftMemo $ Cache.memoS funcId f key
-
-memoT ::
-  (Cache.Key k, Binary v, Typeable v, MonadA m) =>
-  Cache.FuncId -> (k -> T m v) -> k -> ExprGuiM m v
-memoT funcId f = memo funcId (lift . f)
+  depth <- ExprGuiM $ Lens.view aSubexpressionLayer
+  if depth >= 15
+    then
+      mkErrorWidget <&> Layout.fromCenteredWidget & widgetEnv
+    else do
+      maker <- ExprGuiM $ Lens.view aMakeSubexpression
+      maker (ParentPrecedence parentPrecedence) expr
+        & exprGuiM %~ RWS.local (aSubexpressionLayer +~ 1)
+  where
+    widgetId = WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
+    mkErrorWidget =
+      BWidgets.makeTextViewWidget "ERROR: Subexpr too deep" (toAnimId widgetId)
 
 run ::
   MonadA m =>
   (ParentPrecedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
-  Anchors.CodeProps m -> Settings -> ExprGuiM m a ->
-  StateT Cache (WidgetEnvT (T m)) a
-run makeSubexpr codeAnchors settings (ExprGuiM action) =
-  StateT $ \cache ->
-  fmap f $ runRWST action
+  Anchors.CodeProps m -> Config -> Settings -> ExprGuiM m a ->
+  WidgetEnvT (T m) a
+run makeSubexpr codeAnchors config settings (ExprGuiM action) =
+  f <$> runRWST action
   Askable
-  { _aSettings = settings
+  { _aConfig = config
+  , _aSettings = settings
   , _aMakeSubexpression = makeSubexpr
   , _aCodeAnchors = codeAnchors
+  , _aSubexpressionLayer = 0
   }
-  (GuiState cache)
+  ()
   where
-    f (x, GuiState newCache, _output) = (x, newCache)
+    f (x, (), _output) = x
 
 widgetEnv :: MonadA m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv = ExprGuiM . lift
+
+makeLabel ::
+  MonadA m => String -> AnimId -> ExprGuiM m (Widget f)
+makeLabel text animId = widgetEnv $ BWidgets.makeLabel text animId
 
 transaction :: MonadA m => T m a -> ExprGuiM m a
 transaction = widgetEnv . lift
@@ -211,37 +199,70 @@ getCodeAnchor ::
   MonadA m => (Anchors.CodeProps m -> Transaction.MkProperty m b) -> ExprGuiM m b
 getCodeAnchor anchor = getP . anchor =<< readCodeAnchors
 
-assignCursor :: MonadA m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
+assignCursor ::
+  MonadA m => Widget.Id -> Widget.Id ->
+  ExprGuiM m a -> ExprGuiM m a
 assignCursor x y = localEnv $ WE.envAssignCursor x y
 
-assignCursorPrefix :: MonadA m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
+assignCursorPrefix ::
+  MonadA m => Widget.Id -> (AnimId -> Widget.Id) ->
+  ExprGuiM m a -> ExprGuiM m a
 assignCursorPrefix x y = localEnv $ WE.envAssignCursorPrefix x y
 
-wrapDelegated ::
-  (MonadA f, MonadA m) =>
-  FocusDelegator.Config -> FocusDelegator.IsDelegating ->
-  ((Widget f -> Widget f) -> a -> b) ->
-  (Widget.Id -> ExprGuiM m a) ->
-  Widget.Id -> ExprGuiM m b
-wrapDelegated =
-  BWidgets.wrapDelegatedWith (widgetEnv WE.readCursor) (widgetEnv WE.readConfig)
-  (localEnv . (WE.envCursor %~))
+makeFocusDelegator ::
+  (Applicative f, MonadA m) =>
+  FocusDelegator.Config ->
+  FocusDelegator.FocusEntryTarget ->
+  Widget.Id ->
+  Widget f -> ExprGuiM m (Widget f)
+makeFocusDelegator =
+  BWidgets.makeFocusDelegator
+  & Lens.mapped . Lens.mapped . Lens.mapped . Lens.mapped %~ widgetEnv
 
 -- Used vars:
 
 listener :: MonadA m => (Output m -> b) -> ExprGuiM m a -> ExprGuiM m (a, b)
 listener f =
   exprGuiM %~ RWS.listen
-  & Lens.mapped . Lens.mapped . Lens._2 %~ f
-
-listenUsedVariables :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, [Guid])
-listenUsedVariables = listener oAccessedVars
+  & Lens.mapped . Lens.mapped . _2 %~ f
 
 listenResultPickers :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, HolePickers m)
 listenResultPickers = listener oHolePickers
 
-markVariablesAsUsed :: MonadA m => AccessedVars -> ExprGuiM m ()
-markVariablesAsUsed vars = ExprGuiM $ RWS.tell mempty { oAccessedVars = vars }
-
 addResultPicker :: MonadA m => T m Widget.EventResult -> ExprGuiM m ()
 addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }
+
+leftMostLeaf :: Sugar.Expression name m a -> Sugar.Expression name m a
+leftMostLeaf val =
+  case val ^.. Sugar.rBody . Lens.traversed of
+  [] -> val
+  (x:_) -> leftMostLeaf x
+
+nextHolesBefore :: Sugar.Expression name m Payload -> NearestHoles
+nextHolesBefore val =
+  node ^. Sugar.rPayload . Sugar.plData . plNearestHoles
+  & if Lens.has (Sugar.rBody . Sugar._BodyHole) node
+    then NearestHoles.next .~ Just (node ^. Sugar.rPayload . Sugar.plEntityId)
+    else id
+  where
+    node = leftMostLeaf val
+
+shouldShowType :: MonadA m => ShowType -> ExprGuiM m Bool
+shouldShowType DoNotShowType = return False
+shouldShowType ShowType = return True
+shouldShowType ShowTypeInVerboseMode = do
+  infoMode <- (^. CESettings.sInfoMode) <$> readSettings
+  return $
+    case infoMode of
+    CESettings.None -> False
+    CESettings.Types -> True
+
+markRedundantTypes :: MonadA m => SugarExpr m -> SugarExpr m
+markRedundantTypes v =
+  v
+  & redundantTypes         . showType .~ DoNotShowType
+  & SugarLens.holePayloads . showType .~ ShowType
+  & SugarLens.holeArgs     . showType .~ ShowType
+  & Sugar.rPayload         . showType .~ ShowType
+  where
+    showType = Sugar.plData . plShowType

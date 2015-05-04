@@ -1,230 +1,276 @@
-{-# OPTIONS -Wall -Werror #-}
+{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, OverloadedStrings #-}
 module InferCombinators where
 
-import Control.Arrow ((***))
-import Control.Lens (Lens')
-import Control.Lens.Operators
-import Control.Monad (void)
-import Data.Map ((!))
-import Data.Maybe (fromMaybe)
-import Data.Store.Guid (Guid)
-import InferWrappers
-import Lamdu.Data.Arbitrary () -- Arbitrary instance
-import Lamdu.Data.Expression (Kind(..))
-import Lamdu.Data.Expression.IRef (DefI)
-import Lamdu.Data.Expression.Utils (pureHole, pureSet, pureIntegerType)
-import Utils
+import           Control.Applicative (Applicative(..), (<$>))
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import qualified Data.Store.Guid as Guid
-import qualified Data.Store.IRef as IRef
-import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Data.Foldable (Foldable)
+import qualified Data.Map as Map
+import           Data.Maybe (fromMaybe)
+import qualified Data.Set as Set
+import           Data.Traversable (Traversable)
+import           DefinitionTypes
+import           Lamdu.Data.Arbitrary ()
+import           Lamdu.Expr.Scheme (Scheme(..))
+import qualified Lamdu.Expr.Scheme as Scheme
+import           Lamdu.Expr.Type (Type)
+import qualified Lamdu.Expr.Type as T
+import           Lamdu.Expr.TypeVars (TypeVars(..))
+import           Lamdu.Expr.Val (Val(..))
+import qualified Lamdu.Expr.Val as V
+import           Text.PrettyPrint ((<+>))
+import qualified Text.PrettyPrint as PP
+import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 
-iexpr ::
-  PureExprDefI t ->
-  PureExprDefI t ->
-  Expr.Body (DefI t) (InferResults t) -> InferResults t
-iexpr val typ body =
-  Expr.Expression body (val, typ)
+data ResumptionStep
+  -- Any resumptions will have no effect:
+  = Final
+  -- Only one ResumeWith allowed for given depth (rest must be Final/NewInferred)
+  | ResumeWith ExprWithResumptions
+  | ResumeOnSide
+    {-New expro load/infer-}ExprWithResumptions
+    {-Our new inferred-}Resumptions
+  -- Some ResumeWith must exist at our level, and it will cause uso
+  -- becomehis forhe next level:
+  | NewInferred Resumptions
 
-five :: PureExprDefI t
-five = pureLiteralInt # 5
+data Resumptions = Resumptions
+  { _rTyp :: Type
+  , _rStep :: ResumptionStep
+  }
 
-iVal :: Lens' (InferResults t) (PureExprDefI t)
-iVal = Expr.ePayload . Lens._1
-
-iType :: Lens' (InferResults t) (PureExprDefI t)
-iType = Expr.ePayload . Lens._2
-
-bodyToPureExpr :: Expr.Body (DefI t) (InferResults t) -> PureExprDefI t
-bodyToPureExpr exprBody = ExprLens.pureExpr # fmap (^. iVal) exprBody
-
--- inferred-val is simply equal to the expr. Type is given
-simple :: Expr.Body (DefI t) (InferResults t) -> PureExprDefI t -> InferResults t
-simple body typ = iexpr (bodyToPureExpr body) typ body
-
-getParamPure :: String -> PureExprDefI t -> InferResults t
-getParamPure name = simple $ ExprLens.bodyParameterRef # Guid.fromString name
-
-getRecursiveDef :: PureExprDefI t
-getRecursiveDef =
-  ExprLens.pureExpr . ExprLens.bodyDefinitionRef # recursiveDefI
-
--- New-style:
-recurse :: InferResults t -> InferResults t
-recurse typ = simple (ExprLens.bodyDefinitionRef # recursiveDefI) $ typ ^. iVal
-
-literalInteger :: Integer -> InferResults t
-literalInteger x = simple (ExprLens.bodyLiteralInteger # x) pureIntegerType
-
-piType ::
-  String -> InferResults t ->
-  (InferResults t -> InferResults t) -> InferResults t
-piType name paramType mkResultType =
-  simple (ExprUtil.makePi (Guid.fromString name) paramType result) pureSet
+rTyp :: Lens' Resumptions Type
+rTyp f ipl = mk <$> f (_rTyp ipl)
   where
-    result = mkResultType $ getParam name paramType
+    mk x = ipl { _rTyp = x }
 
-infixr 4 ~>
-(~>) :: InferResults t -> InferResults t -> InferResults t
-(~>) src dest =
-  simple (ExprUtil.makePi (Guid.fromString "") src dest) pureSet
+rStep :: Lens' Resumptions ResumptionStep
+rStep f ipl = mk <$> f (_rStep ipl)
+  where
+    mk x = ipl { _rStep = x }
+
+-- Like a ZipList but repeats the last elements of all lists infinitely
+-- The digits of 1/3 would be represented as: RepeatList "0.3"
+data RepeatList a = RRepeat a | RCons a (RepeatList a)
+  deriving (Functor, Eq, Ord, Read, Show, Foldable, Traversable)
+
+instance Applicative RepeatList where
+  pure = RRepeat
+  RRepeat f <*> RRepeat x = RRepeat (f x)
+  RRepeat f <*> RCons x xs = RCons (f x) (RRepeat f <*> xs)
+  RCons f fs <*> RRepeat x = RCons (f x) (fs <*> RRepeat x)
+  RCons f fs <*> RCons x xs = RCons (f x) (fs <*> xs)
+
+type TypeStream = RepeatList Type
+
+typeStream :: Resumptions -> TypeStream
+typeStream (Resumptions typ step) =
+  case step of
+    Final -> RRepeat typ
+    ResumeWith expr -> RCons typ $ exprTypeStream expr
+    ResumeOnSide _ rs -> RCons typ $ typeStream rs
+    NewInferred rs -> RCons typ $ typeStream rs
+
+exprTypeStream :: ExprWithResumptions -> TypeStream
+exprTypeStream = typeStream . (^. V.payload)
+
+mkExprWithResumptions ::
+  V.Body ExprWithResumptions -> TypeStream -> ExprWithResumptions
+mkExprWithResumptions body types =
+  Val (go types) body
+  where
+    go (RRepeat t) = Resumptions t Final
+    go (RCons t ts) = Resumptions t $ NewInferred $ go ts
+
+type ExprWithResumptions = Val Resumptions
+
+iType :: Lens' ExprWithResumptions Type
+iType = V.payload . rTyp
+
+resumeHere :: ExprWithResumptions -> ExprWithResumptions -> ExprWithResumptions
+resumeHere (Val (Resumptions typ Final) body) newExpr =
+  Val (Resumptions typ (ResumeWith newExpr)) body
+resumeHere (Val (Resumptions _ _) _) _ = error "Contradicting resumptions"
+
+resumedType :: TypeStream -> TypeStream -> TypeStream
+resumedType (RRepeat t) newTyp = RCons t newTyp
+resumedType _ _ = error "Contradicting type resumptions"
+
+compositeTypeVar :: T.Var (T.Composite p) -> RepeatList (T.Composite p)
+compositeTypeVar ctv = pure $ T.CVar ctv
+
+emptyCompositeType :: RepeatList (T.Composite p)
+emptyCompositeType = pure T.CEmpty
+
+compositeTypeExtend ::
+  T.Tag -> TypeStream ->
+  RepeatList (T.Composite T.Product) ->
+  RepeatList (T.Composite T.Product)
+compositeTypeExtend tag typ base =
+  T.CExtend tag <$> typ <*> base
+
+-- TODO: Re-use Subst and re-expose??
+instantiate :: Scheme -> [(T.Var Type, Type)] -> Type
+instantiate scheme typeVarAssignments =
+  onTVars subst (scheme ^. Scheme.schemeType)
+  where
+    subst =
+      fromMaybe (error "Missing type var assignment") .
+      (`lookup` typeVarAssignments)
+
+onTVars :: (T.Var Type -> Type) -> Type -> Type
+onTVars f (T.TVar v) = f v
+onTVars f t = t & T.nextLayer %~ onTVars f
+
+glob :: [TypeStream] -> V.GlobalId -> ExprWithResumptions
+glob typeVarAssignments globalId
+  | Set.null rtvs =
+    mkExprWithResumptions (V.BLeaf (V.LGlobal globalId)) $
+    instantiate scheme <$>
+    Lens.sequenceAOf (Lens.traversed . _2) typeVarAssignments'
+  | otherwise = error "TODO: Handle record type vars in globals"
+  where
+    scheme =
+      fromMaybe (error ("global " ++ show globalId ++ " does not exist")) $
+      Map.lookup globalId definitionTypes
+    TypeVars tvs rtvs = scheme ^. Scheme.schemeForAll
+    typeVarAssignments' = zip (Set.toList tvs) typeVarAssignments
+
+intType :: TypeStream
+intType = pure T.int
+
+literalInteger :: Integer -> ExprWithResumptions
+literalInteger x =
+  mkExprWithResumptions (V.BLeaf (V.LLiteralInteger x)) intType
+
+-- TODO: Make this take a (TypeStream) (WHICH SHOULD BE NAMED TypeStream)
+-- and then make combinators to build type streams?
+holeWithInferredType :: TypeStream -> ExprWithResumptions
+holeWithInferredType = mkExprWithResumptions (V.BLeaf V.LHole)
+
+typeVar :: T.LiftVar b => T.Var b -> RepeatList b
+typeVar x = pure . T.liftVar $ x
+
+infixr 1 ~>
+(~>) :: TypeStream -> TypeStream -> TypeStream
+a ~> r = T.TFun <$> a <*> r
 
 lambda ::
-  String -> InferResults t ->
-  (InferResults t -> InferResults t) ->
-  InferResults t
+  V.Var -> TypeStream ->
+  (ExprWithResumptions -> ExprWithResumptions) -> ExprWithResumptions
 lambda name paramType mkResult =
-  simple (ExprUtil.makeLambda guid paramType result) $
-  ExprUtil.pureLam KType guid (paramType ^. iVal) (result ^. iType)
+  mkExprWithResumptions (V.BAbs (V.Lam name result))
+  (T.TFun <$> paramType <*> exprTypeStream result)
   where
-    guid = Guid.fromString name
-    result = mkResult $ getParam name paramType
+    result = mkResult $ mkExprWithResumptions (V.BLeaf (V.LVar name)) paramType
 
--- Sometimes we have an inferred type that comes outside-in but cannot
--- be inferred inside-out:
-setInferredType :: InferResults t -> InferResults t -> InferResults t
-setInferredType typ val = val & iType .~ typ ^. iVal
+getField :: ExprWithResumptions -> T.Tag -> ExprWithResumptions
+getField recordVal tag =
+  mkExprWithResumptions
+  (V.BGetField (V.GetField recordVal tag))
+  (findTypeOfField tag <$> exprTypeStream recordVal)
 
-getField :: InferResults t -> InferResults t -> InferResults t
-getField recordVal tagVal
-  | allFieldsMismatch = error "getField on record with only mismatching field tags"
-  | otherwise = simple (Expr._BodyGetField # Expr.GetField recordVal tagVal) pureFieldType
-  where
-    mFields = recordVal ^? iType . ExprLens.exprKindedRecordFields KType
-    allFieldsMismatch =
-      case mFields of
-      Nothing -> False
-      Just fields -> all (tagMismatch . fst) fields
-    tagMismatch fieldTag =
-      Lens.nullOf ExprLens.exprHole fieldTag &&
-      Lens.nullOf ExprLens.exprHole tagVal &&
-      (fieldTag ^?! ExprLens.exprTag /= tagVal ^?! ExprLens.exprTag)
-    mPureFieldType tagGuid =
-      mFields ^?
-      Lens._Just . Lens.traversed .
-      Lens.filtered
-      (Lens.has (Lens._1 . ExprLens.exprTag . Lens.filtered (tagGuid ==))) .
-      Lens._2
-    pureFieldType =
-      fromMaybe pureHole $
-      mPureFieldType =<< tagVal ^? ExprLens.exprTag
+findTypeOfField :: T.Tag -> Type -> Type
+findTypeOfField tag (T.TRecord p) = findTypeOfTagInComposite tag p
+findTypeOfField _ _ = error "Test combinators type checking failed in findTypeOfField"
+
+findTypeOfTagInComposite :: T.Tag -> T.Composite t -> Type
+findTypeOfTagInComposite expectedTag (T.CExtend tag typ rest)
+  | expectedTag == tag = typ
+  | otherwise = findTypeOfTagInComposite expectedTag rest
+findTypeOfTagInComposite _ _ = error "Test combinators type checking failed in findTypeOfTagInComposite"
+
+-- TODO: Reuse FlatComposite if it gets exposed:
+compositeOfList :: T.Composite t -> [(T.Tag, Type)] -> T.Composite t
+compositeOfList base [] = base
+compositeOfList base ((tag, typ):rest) = T.CExtend tag typ $ compositeOfList base rest
 
 lambdaRecord ::
-  String -> [(String, InferResults t)] ->
-  ([InferResults t] -> InferResults t) -> InferResults t
-lambdaRecord paramsName strFields mkResult =
-  lambda paramsName (record KType fields) $ \params ->
-  mkResult $ map (getField params) fieldTags
+  RepeatList (T.Composite T.Product) -> V.Var -> [(T.Tag, TypeStream)] ->
+  ([ExprWithResumptions] -> ExprWithResumptions) -> ExprWithResumptions
+lambdaRecord baseRecord paramsName fields mkResult =
+  lambda paramsName recordType $ \params ->
+  mkResult $ map (getField params . fst) fields
   where
-    fields = strFields & Lens.traversed . Lens._1 %~ tagStr
-    fieldTags = map fst fields
+    recordType =
+      T.TRecord <$>
+      (compositeOfList <$> baseRecord <*> Lens.sequenceAOf (Lens.traversed . _2) fields)
 
 whereItem ::
-  String -> InferResults t -> (InferResults t -> InferResults t) -> InferResults t
-whereItem name val mkBody =
-  lambda name (iexpr (val ^. iType) pureSet bodyHole) mkBody $$ val
-
-holeWithInferredType :: InferResults t -> InferResults t
-holeWithInferredType = simple bodyHole . (^. iVal)
-
-hole :: InferResults t
-hole = simple bodyHole pureHole
-
-getGuidParam :: Guid -> InferResults t -> InferResults t
-getGuidParam guid typ =
-  simple (ExprLens.bodyParameterRef # guid) $
-  typ ^. iVal
-
-getParam :: String -> InferResults t -> InferResults t
-getParam = getGuidParam . Guid.fromString
-
-listOf :: InferResults t -> InferResults t
-listOf = (getDef "List" $$)
+  V.Var -> ExprWithResumptions -> (ExprWithResumptions -> ExprWithResumptions) -> ExprWithResumptions
+whereItem name val mkBody = lambda name (exprTypeStream val) mkBody $$ val
 
 -- Uses inferred holes for cons type
-list :: [InferResults t] -> InferResults t
-list [] = getDef "[]" $$ hole
-list items@(x:_) =
+nonEmptyList :: [ExprWithResumptions] -> ExprWithResumptions
+nonEmptyList [] = error "Given empty list in nonEmptyList"
+nonEmptyList items@(x:_) =
   foldr cons nil items
   where
-    cons h t = getDef ":" $$ typ $$: [h, t]
-    nil = getDef "[]" $$ typ
-    typ = iexpr (x ^. iType) pureSet (ExprLens.bodyHole # ())
+    typ = exprTypeStream x
+    cons h t = glob [typ] ":" $$: [h, t]
+    nil = glob [typ] "[]"
 
-maybeOf :: InferResults t -> InferResults t
-maybeOf = (getDef "Maybe" $$)
+tInst :: T.Id -> [(T.ParamId, TypeStream)] -> TypeStream
+tInst name =
+  fmap (T.TInst name . Map.fromList) . Lens.sequenceAOf (Lens.traversed . _2)
 
-getDef :: String -> InferResults t
-getDef name =
-  simple
-  (ExprLens.bodyDefinitionRef # IRef.unsafeFromGuid g)
-  (void (definitionTypes ! g))
+boolType :: TypeStream
+boolType = tInst "Bool" []
+
+listOf :: TypeStream -> TypeStream
+listOf t = tInst "List" [("val", t)]
+
+maybeOf :: TypeStream -> TypeStream
+maybeOf t = tInst "Maybe" [("val", t)]
+
+eRecEmpty :: ExprWithResumptions
+eRecEmpty = mkExprWithResumptions (V.BLeaf V.LRecEmpty) $ pure $ T.TRecord T.CEmpty
+
+eRecExtend :: T.Tag -> ExprWithResumptions -> ExprWithResumptions -> ExprWithResumptions
+eRecExtend tag v rest =
+  mkExprWithResumptions (V.BRecExtend (V.RecExtend tag v rest)) $
+  f <$> exprTypeStream v <*> exprTypeStream rest
   where
-    g = Guid.fromString name
+    f tv (T.TRecord txs) = T.TRecord $ T.CExtend tag tv txs
+    f _ _ = error "eRecExtend with non record type"
 
-tag :: Guid -> InferResults t
-tag guid =
-  simple (ExprLens.bodyTag # guid) $
-  ExprLens.pureExpr . ExprLens.bodyTagType # ()
-
-tagStr :: String -> InferResults t
-tagStr = tag . Guid.fromString
-
-set :: InferResults t
-set = simple bodySet pureSet
-
-tagType :: InferResults t
-tagType = simple (ExprLens.bodyTagType # ()) pureSet
-
-integerType :: InferResults t
-integerType = simple bodyIntegerType pureSet
+record :: [(T.Tag, ExprWithResumptions)] -> ExprWithResumptions
+record = foldr (uncurry eRecExtend) eRecEmpty
 
 infixl 4 $$
-infixl 3 $$:
+infixl 4 $$:
+infixl 4 $.
 
-($$:) :: InferResults t -> [InferResults t] -> InferResults t
+($.) :: ExprWithResumptions -> T.Tag -> ExprWithResumptions
+($.) = getField
+
+($$) :: ExprWithResumptions -> ExprWithResumptions -> ExprWithResumptions
+($$) func arg =
+  mkExprWithResumptions (V.BApp (V.Apply func arg)) $
+  mkType <$> exprTypeStream func <*> exprTypeStream arg
+  where
+    mkType (T.TFun p r) a
+      | p == a = r
+      | otherwise =
+        error $
+        "Incompatible types in '" ++
+        show (V.pPrintUnannotated func <+> PP.text "$$" <+> V.pPrintUnannotated arg) ++
+        "' param is " ++
+        show (pPrint p) ++ " and arg is " ++ show (pPrint a)
+    mkType _ _ = error "Apply of non-func type!"
+
+($$:) :: ExprWithResumptions -> [ExprWithResumptions] -> ExprWithResumptions
 ($$:) f args =
-  f $$ record KVal (zip tags args)
+  f $$ record (zip tags args)
   where
-    tags = recType ^.. Lens.traversed . Lens._1 . ExprLens.exprTag . Lens.to tag
-    recType =
-      fromMaybe (error msg) $
-      f ^? iType . ExprLens.exprKindedLam KType . Lens._2 . ExprLens.exprKindedRecordFields KType
-    msg = "$$: must be applied on a func of record type, not: " ++ show (f ^. iType)
+    tags =
+      case f ^. iType of
+      T.TFun (T.TRecord p) _ -> compositeTags p
+      _ -> error "not a record func in ($$:)"
 
-($$) :: InferResults t -> InferResults t -> InferResults t
-($$) func@(Expr.Expression _ (funcVal, funcType)) nextArg =
-  iexpr applyVal applyType application
-  where
-    application = ExprUtil.makeApply func nextArg
-    handleLam e k seeHole seeOther =
-      case e ^. Expr.eBody of
-      Expr.BodyLeaf Expr.Hole -> seeHole
-      Expr.BodyLam (Expr.Lam k1 paramGuid _ result)
-        | k == k1 -> ExprUtil.substGetPar paramGuid (nextArg ^. iVal) result
-      _ -> seeOther
-    applyVal =
-      handleLam funcVal KVal pureHole $
-      if ExprUtil.isTypeConstructorType applyType
-      then bodyToPureExpr application
-      else pureHole
-    applyType = handleLam funcType KType piErr piErr
-    piErr = error "Apply of non-Pi type!"
-
-record :: Kind -> [(InferResults t, InferResults t)] -> InferResults t
-record k fields =
-  simple (ExprLens.bodyKindedRecordFields k # fields) typ
-  where
-    typ = case k of
-      KVal ->
-        ExprLens.pureExpr . ExprLens.bodyKindedRecordFields KType #
-        map (void *** (^. iType)) fields
-      KType -> pureSet
-
-asHole :: InferResults t -> InferResults t
-asHole expr =
-  iexpr val typ $ ExprLens.bodyHole # ()
-  where
-    (val, typ) = expr ^. Expr.ePayload
+compositeTags :: T.Composite p -> [T.Tag]
+compositeTags T.CEmpty = []
+compositeTags T.CVar {} = error "unknown tags in compositeTags"
+compositeTags (T.CExtend t _ r) = t : compositeTags r

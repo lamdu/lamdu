@@ -1,26 +1,27 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings, TemplateHaskell, DeriveGeneric #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.State
   ( HoleState(..), hsSearchTerm
   , emptyState, setHoleStateAndJump, assocStateRef
   ) where
 
-import Control.MonadA (MonadA)
-import Data.Binary (Binary(..))
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
-import Data.Store.Guid (Guid)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (searchTermWIdOfHoleGuid)
 import qualified Control.Lens as Lens
+import           Control.MonadA (MonadA)
+import           Data.Binary (Binary)
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.Transaction as Transaction
+import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
 
 newtype HoleState = HoleState
   { _hsSearchTerm :: String
-  } deriving Eq
+  } deriving (Eq, Generic)
 Lens.makeLenses ''HoleState
-derive makeBinary ''HoleState
+instance Binary HoleState
 
 emptyState :: HoleState
 emptyState =
@@ -28,10 +29,11 @@ emptyState =
   { _hsSearchTerm = ""
   }
 
-setHoleStateAndJump :: MonadA m => HoleState -> Guid -> T m Widget.Id
-setHoleStateAndJump newHoleState newHoleGuid = do
-  Transaction.setP (assocStateRef newHoleGuid) newHoleState
-  return $ searchTermWIdOfHoleGuid newHoleGuid
+setHoleStateAndJump :: MonadA m => Guid -> HoleState -> Sugar.EntityId -> T m Widget.Id
+setHoleStateAndJump guid state entityId = do
+  Transaction.setP (assocStateRef guid) state
+  let WidgetIds{..} = WidgetIds.make entityId
+  return hidOpenSearchTerm
 
 assocStateRef :: MonadA m => Guid -> Transaction.MkProperty m HoleState
 assocStateRef = Transaction.assocDataRefDef emptyState "searchTerm"

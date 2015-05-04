@@ -1,63 +1,72 @@
-{-# LANGUAGE OverloadedStrings #-}
-module Lamdu.GUI.ExpressionEdit.TagEdit(make, makeView) where
+{-# LANGUAGE RecordWildCards #-}
+module Lamdu.GUI.ExpressionEdit.TagEdit
+  ( makeRecordTag, makeParamTag, diveToRecordTag
+  ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.Monoid (Monoid(..))
-import Data.Store.Transaction (Transaction)
-import Graphics.UI.Bottle.Animation (AnimId)
-import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionGui (ExpressionGui)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Control.Applicative ((<$>))
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
+import           Data.Monoid (Monoid(..), (<>))
+import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.WidgetEnvT as WE
-import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.AddNames.Types (Name(..))
+import           Lamdu.Sugar.NearestHoles (NearestHoles)
+import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
-fdConfig :: FocusDelegator.Config
-fdConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.Key'Enter]
-  , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Rename tag"]
-  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.Key'Escape]
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Stop renaming tag"]
-  }
+type T = Transaction
 
-onTagWidget :: Config -> Widget (Transaction m) -> ExpressionGui m
-onTagWidget config =
-  ExpressionGui.fromValueWidget .
-  Widget.scale (realToFrac <$> Config.tagScaleFactor config) .
-  Widget.tint (Config.fieldTint config)
+makeRecordTagNameEdit ::
+  MonadA m => Sugar.TagG (Name m) -> ExprGuiM m (Widget (T m))
+makeRecordTagNameEdit tagG = do
+  Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
+  ExpressionGui.makeNameEdit (tagG ^. Sugar.tagGName) myId
+    & ExprGuiM.withFgColor recordTagColor
+  where
+    myId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
 
-make ::
+makeRecordTag ::
   MonadA m =>
-  Sugar.TagG Sugar.Name ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-make (Sugar.TagG tag name) pl myId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  NearestHoles -> Sugar.TagG (Name m) ->
+  ExprGuiM m (ExpressionGui m)
+makeRecordTag nearestHoles tagG = do
+  config <- ExprGuiM.readConfig
+  jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
   let
-    nextHoleEventMap =
-      maybe mempty
-      (Widget.keysEventMapMovesCursor
-       (Config.pickAndMoveToNextHoleKeys config)
-       (E.Doc ["Navigation", "Jump to next hole"]) .
-       return . WidgetIdIRef.fromGuid) $
-      pl ^. Sugar.plData . ExprGuiM.plHoleGuids . ExprGuiM.hgMNextHole
-  ExpressionGui.stdWrapDelegated pl fdConfig FocusDelegator.NotDelegating
-    ( fmap (onTagWidget config . Widget.weakerEvents nextHoleEventMap)
-    . ExpressionGui.makeNameEdit name tag
-    ) myId
+    eventMap =
+      jumpHolesEventMap <>
+      maybe mempty jumpNextEventMap (nearestHoles ^. NearestHoles.next)
+  let Config.Name{..} = Config.name config
+  makeRecordTagNameEdit tagG
+    <&> Widget.weakerEvents eventMap
+    <&> ExpressionGui.fromValueWidget
+  where
+    jumpNextEventMap nextHole =
+      Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Space]
+      (E.Doc ["Navigation", "Jump to next hole"]) $
+      return $ WidgetIds.fromEntityId nextHole
 
-makeView ::
-  MonadA m => Sugar.TagG Sugar.Name -> AnimId -> ExprGuiM m (ExpressionGui m)
-makeView (Sugar.TagG _ name) animId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  ExprGuiM.widgetEnv . fmap (onTagWidget config) $
-    ExpressionGui.makeNameView name animId
+-- | Unfocusable tag view (e.g: in apply params)
+makeParamTag ::
+  MonadA m => Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
+makeParamTag t = do
+  Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
+  ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
+    & ExprGuiM.withFgColor paramTagColor
+    <&> ExpressionGui.fromValueWidget
+  where
+    animId = t ^. Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
+
+diveToRecordTag :: Widget.Id -> Widget.Id
+diveToRecordTag = ExpressionGui.diveToNameEdit

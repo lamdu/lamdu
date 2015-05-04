@@ -1,358 +1,412 @@
-{-# LANGUAGE OverloadedStrings, RankNTypes #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings, RankNTypes #-}
 module Lamdu.GUI.ExpressionGui
-  ( ExpressionGui(..), egWidget, egAlignment
+  ( ExpressionGui, egWidget, egAlignment
   -- General:
-  , fromValueWidget
+  , fromValueWidget, addBelow, addAbove
   , scaleFromTop
   , pad
-  , hbox, hboxSpaced, addBelow
-  , makeRow
+  , hbox, hboxSpaced
+  , vboxTopFocal, vboxTopFocalSpaced
+  , gridTopLeftFocal
+  , listWithDelDests
+  , makeLabel
+  , grammarLabel
+  , addValBG, addValFrame
   -- Lifted widgets:
-  , makeLabel, makeColoredLabel
   , makeFocusableView
   , makeNameView
   , makeNameEdit
-  , withBgColor
-  , Collapser(..), makeCollapser
+  , makeNameOriginEdit
+  , diveToNameEdit
   -- Info adding
-  , TypeStyle(..), addType -- TODO: s/type/info
+  , inferredSpacer
+  , addBelowInferredSpacing
+  , maybeAddInferredType
+  , makeTypeView
   -- Expression wrapping
   , MyPrecedence(..), ParentPrecedence(..), Precedence
   , parenify
-  -- | stdWrap/stdPostProcess means addTypes and wrapExprEventMap
+  , wrapExprEventMap
+  , maybeAddInferredTypePl
   , stdWrap
-  , stdWrapDelegated
   , stdWrapParentExpr
   , stdWrapParenify
-  , addInferredTypes
-  , wrapExprEventMap
   ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens (Lens')
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.Function (on)
-import Data.Store.Guid (Guid)
-import Data.Store.Transaction (Transaction)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Animation (AnimId, Layer)
-import Graphics.UI.Bottle.Widget (Widget)
-import Graphics.UI.Bottle.Widgets.Box (KBox)
-import Lamdu.Config (Config)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
-import Lamdu.GUI.ExpressionGui.Types (WidgetT, MyPrecedence(..), ParentPrecedence(..), Precedence, ExpressionGui(..), egWidget, egAlignment)
+import           Control.Applicative ((<$>))
+import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.MonadA (MonadA)
 import qualified Data.List as List
-import qualified Data.Store.Transaction as Transaction
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.EventMap as EventMap
+import qualified Data.List.Utils as ListUtils
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Property (Property(..))
+import           Data.Store.Transaction (Transaction)
+import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.UI.Bottle.Animation (AnimId)
+import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.View (View)
+import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.GLFW as GLFW
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
+import           Lamdu.Expr.Type (Type)
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.WidgetEnvT as WE
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
+import qualified Lamdu.GUI.Parens as Parens
+import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
+import qualified Lamdu.GUI.TypeView as TypeView
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-fromValueWidget :: WidgetT m -> ExpressionGui m
-fromValueWidget widget = ExpressionGui widget 0.5
+type T = Transaction
+
+{-# INLINE egWidget #-}
+egWidget ::
+  Lens (ExpressionGui m) (ExpressionGui n) (Widget (T m)) (Widget (T n))
+egWidget = Layout.alignedWidget . _2
+
+{-# INLINE egAlignment #-}
+egAlignment :: Lens' (ExpressionGui m) Layout.Alignment
+egAlignment = Layout.alignedWidget . _1
+
+fromValueWidget :: Widget (T m) -> ExpressionGui m
+fromValueWidget = Layout.fromCenteredWidget
+
+alignAdd ::
+    ([(Widget.R, Widget (T m))] -> ExpressionGui m -> ExpressionGui m) ->
+    Widget.R -> [(Widget.R, Widget (T m))] ->
+    ExpressionGui m -> ExpressionGui m
+alignAdd addFunc hAlign widgets eg =
+  eg & egAlignment . _1 .~ hAlign & addFunc widgets
+
+addAbove ::
+    Widget.R -> [(Widget.R, Widget (T m))] ->
+    ExpressionGui m -> ExpressionGui m
+addAbove = alignAdd (Layout.addBefore Layout.Vertical)
+
+addBelow ::
+    Widget.R -> [(Widget.R, Widget (T m))] ->
+    ExpressionGui m -> ExpressionGui m
+addBelow = alignAdd (Layout.addAfter Layout.Vertical)
 
 -- | Scale the given ExpressionGui without moving its top alignment
 -- point:
 scaleFromTop :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
-scaleFromTop ratio (ExpressionGui widget alignment) =
-  ExpressionGui (Widget.scale ratio widget) (alignment / (ratio ^. Lens._2))
+scaleFromTop = Layout.scaleFromTopLeft
 
 pad :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
-pad padding (ExpressionGui widget alignment) =
-  ExpressionGui newWidget $
-  (padding ^. Lens._2 + alignment * widget ^. height) / newWidget ^. height
-  where
-    height = Widget.wSize . Lens._2
-    newWidget = Widget.pad padding widget
+pad = Layout.pad
 
 hbox :: [ExpressionGui m] -> ExpressionGui m
-hbox guis =
-  ExpressionGui (Box.toWidget box) $
-  case box ^. Box.boxContent of
-  ((_, x) : _) -> x ^. Grid.elementAlign . Lens._2
-  _ -> error "hbox must not get empty list :("
-  where
-    box = Box.make Box.horizontal $ map f guis
-    f (ExpressionGui widget alignment) = (Vector2 0.5 alignment, widget)
+hbox = Layout.hbox 0.5
 
-hboxSpaced :: [ExpressionGui m] -> ExpressionGui m
-hboxSpaced = hbox . List.intersperse (fromValueWidget BWidgets.stdSpaceWidget)
+hboxSpaced :: MonadA m => [ExpressionGui f] -> ExprGuiM m (ExpressionGui f)
+hboxSpaced guis =
+  ExprGuiM.widgetEnv BWidgets.stdSpaceWidget
+  <&> Layout.fromCenteredWidget
+  <&> (`List.intersperse` guis)
+  <&> hbox
 
-fromBox :: KBox Bool (Transaction m) -> ExpressionGui m
-fromBox box =
-  ExpressionGui (Box.toWidget box) alignment
-  where
-    alignment =
-      maybe (error "True disappeared from box list?!")
-        (^. Grid.elementAlign . Lens._2) .
-      lookup True $ box ^. Box.boxContent
+vboxTopFocal :: [ExpressionGui m] -> ExpressionGui m
+vboxTopFocal [] = Layout.empty
+vboxTopFocal (gui:guis) = gui & Layout.addAfter Layout.Vertical guis
 
-addBelow ::
-  Widget.R ->
-  [(Box.Alignment, WidgetT m)] ->
-  ExpressionGui m ->
-  ExpressionGui m
-addBelow egHAlign ws eg =
-  fromBox . Box.makeKeyed Box.vertical $
-  (True, (Vector2 egHAlign (eg ^. egAlignment), eg ^. egWidget)) :
-  map ((,) False) ws
+vboxTopFocalSpaced ::
+  MonadA m => [ExpressionGui m] -> ExprGuiM m (ExpressionGui m)
+vboxTopFocalSpaced guis =
+  do
+    space <- ExprGuiM.widgetEnv BWidgets.verticalSpace
+    guis & List.intersperse (Layout.fromCenteredWidget space)
+      & vboxTopFocal & return
 
-data TypeStyle = HorizLine | Background
+gridTopLeftFocal :: [[ExpressionGui m]] -> ExpressionGui m
+gridTopLeftFocal = Layout.gridTopLeftFocal
 
 wWidth :: Lens' (Widget f) Widget.R
-wWidth = Widget.wSize . Lens._1
+wWidth = Widget.width
 
-addType ::
-  Config ->
-  TypeStyle ->
-  Widget.Id ->
-  [WidgetT m] ->
-  ExpressionGui m ->
-  ExpressionGui m
-addType _ _ _ [] eg = eg
-addType config style exprId typeEdits eg =
-  addBelow 0.5 items eg
+addTypeBackground :: Config -> AnimId -> Widget.R -> View -> View
+addTypeBackground config animId minWidth typeView =
+  typeView
+  & View.size .~ newSize
+  & View.animFrame %~ Anim.translate (Vector2 ((width - typeWidth) / 2) 0)
+  & View.backgroundColor bgAnimId bgLayer bgColor
   where
-    items = middleElement : [(0.5, annotatedTypes)]
-    middleElement =
-      case style of
-      HorizLine -> (0.5, Spacer.makeHorizLine underlineId (Vector2 width 1))
-      Background -> (0.5, Spacer.makeWidget 5)
-    annotatedTypes =
-      addBackground . (wWidth .~ width) $
-      Widget.translate (Vector2 ((width - typesBox ^. wWidth)/2) 0) typesBox
-    width = on max (^. wWidth) (eg ^. egWidget) typesBox
-    typesBox = Box.vboxCentered typeEdits
-    isError = length typeEdits >= 2
-    bgAnimId = Widget.toAnimId exprId ++ ["type background"]
-    addBackground = maybe id (Widget.backgroundColor (Config.layerTypes (Config.layers config)) bgAnimId) bgColor
-    bgColor
-      | isError = Just $ Config.inferredTypeErrorBGColor config
-      | otherwise = do
-        Background <- Just style
-        return $ Config.inferredTypeBGColor config
-    underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
+    width = max typeWidth minWidth
+    typeWidth = typeView ^. View.width
+    newSize = typeView ^. View.size & _1 .~ width
+    bgAnimId = animId ++ ["type background"]
+    bgLayer = Config.layerTypes $ Config.layers config
+    bgColor = Config.typeBoxBGColor config
+
+makeTypeView :: MonadA m => Widget.R -> Sugar.EntityId -> Type -> ExprGuiM m (Widget f)
+makeTypeView minWidth entityId typ =
+  do
+    config <- ExprGuiM.readConfig
+    TypeView.make animId typ
+      <&> addTypeBackground config animId minWidth
+      <&> Widget.fromView
+  where
+    animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
+
+inferredSpacer :: MonadA m => ExprGuiM m (Widget f)
+inferredSpacer =
+  do
+    config <- ExprGuiM.readConfig
+    Config.valInferredSpacing config
+      & realToFrac
+      & Spacer.makeVertical
+      & Widget.fromView
+      & return
+
+addBelowInferredSpacing ::
+  MonadA m => Widget (T m) ->
+  ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+addBelowInferredSpacing widget eg =
+  do
+    vspace <- inferredSpacer
+    addBelow 0.5 [(0, vspace), (0.5, widget)] eg & return
+
+addInferredType :: MonadA m => Sugar.EntityId -> Type -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+addInferredType entityId inferredType eg =
+  do
+    typeView <- makeTypeView (eg ^. egWidget . wWidth) entityId inferredType
+    addBelowInferredSpacing typeView eg
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = Config.enterSubexpressionKeys config
-  , FocusDelegator.startDelegatingDoc = EventMap.Doc ["Navigation", "Enter subexpression"]
-  , FocusDelegator.stopDelegatingKeys = Config.leaveSubexpressionKeys config
-  , FocusDelegator.stopDelegatingDoc = EventMap.Doc ["Navigation", "Leave subexpression"]
+  { FocusDelegator.focusChildKeys = Config.enterSubexpressionKeys config
+  , FocusDelegator.focusChildDoc = E.Doc ["Navigation", "Enter subexpression"]
+  , FocusDelegator.focusParentKeys = Config.leaveSubexpressionKeys config
+  , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Leave subexpression"]
   }
 
--- ExprGuiM GUIs (TODO: Move to Monad.hs?)
+disallowedNameChars :: String
+disallowedNameChars = "[]\\`()"
 
-disallowedNameChars :: [(Char, EventMap.IsShifted)]
-disallowedNameChars =
-  EventMap.anyShiftedChars "[]\\`()" ++
-  [ ('0', EventMap.Shifted)
-  , ('9', EventMap.Shifted)
-  ]
+nameEditFDConfig :: FocusDelegator.Config
+nameEditFDConfig = FocusDelegator.Config
+  { FocusDelegator.focusChildKeys = [ModKey mempty GLFW.Key'Enter]
+  , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Rename"]
+  , FocusDelegator.focusParentKeys = [ModKey mempty GLFW.Key'Escape]
+  , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Done renaming"]
+  }
 
-makeBridge ::
-  MonadA m =>
-  (Widget.Id -> WE.WidgetEnvT m (Widget f)) ->
-  (Widget.Id -> WE.WidgetEnvT m (Widget f)) ->
-  Widget.Id -> WE.WidgetEnvT m (Widget f)
-makeBridge mkFocused mkUnfocused myId = do
-  isFocused <- WE.isSubCursor myId
-  (if isFocused then mkFocused else mkUnfocused) myId
-
-nameSrcTint :: Config -> Sugar.NameSource -> Widget f -> Widget f
-nameSrcTint config Sugar.AutoGeneratedName = Widget.tint $ Config.autoGeneratedNameTint config
-nameSrcTint _ Sugar.StoredName = id
-
-makeNameEdit ::
-  MonadA m => Sugar.Name -> Guid -> Widget.Id -> ExprGuiM m (WidgetT m)
-makeNameEdit (Sugar.Name nameSrc nameCollision name) ident myId = do
-  nameProp <- ExprGuiM.transaction . (^. Transaction.mkProperty) $ Anchors.assocNameRef ident
-  collisionSuffixes <-
-    ExprGuiM.widgetEnv . makeCollisionSuffixLabels nameCollision $
-    Widget.toAnimId myId
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  nameEdit <-
-    fmap (nameSrcTint config nameSrc) .
-    ExprGuiM.widgetEnv .
-    WE.localEnv (WE.envTextStyle . TextEdit.sEmptyFocusedString .~ "") $
-    makeEditor nameProp
-  return . Box.hboxCentered $ nameEdit : collisionSuffixes
+makeNameOriginEdit :: MonadA m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
+makeNameOriginEdit name myId =
+  do
+    config <- Config.name <$> ExprGuiM.readConfig
+    makeNameEdit name myId -- myId goes directly to name edit
+      & ExprGuiM.withFgColor (color config)
   where
-    makeEditor property =
-      makeBridge (makeWordEdit property) (BWidgets.makeFocusableTextView name) myId
+    color =
+      case nNameSource name of
+      NameSourceAutoGenerated -> Config.autoNameOriginFGColor
+      NameSourceStored -> Config.nameOriginFGColor
+
+diveToNameEdit :: Widget.Id -> Widget.Id
+diveToNameEdit = WidgetIds.delegatingId
+
+makeNameEdit :: MonadA m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
+makeNameEdit (Name nameSrc nameCollision setName name) myId =
+  do
+    collisionSuffixes <-
+      makeCollisionSuffixLabels nameCollision (Widget.toAnimId myId)
+    nameEdit <-
+      makeWordEdit (Property storedName setName) (diveToNameEdit myId)
+      & WE.localEnv emptyStringEnv
+      & ExprGuiM.widgetEnv
+    return . Box.hboxCentered $ nameEdit : collisionSuffixes
+  >>= ExprGuiM.makeFocusDelegator nameEditFDConfig
+      FocusDelegator.FocusEntryParent myId
+  where
+    emptyStringEnv env = env
+      & WE.envTextStyle . TextEdit.sEmptyFocusedString .~ ""
+      & WE.envTextStyle . TextEdit.sEmptyUnfocusedString .~ name
+    storedName =
+      case nameSrc of
+      NameSourceAutoGenerated -> ""
+      NameSourceStored -> name
     makeWordEdit =
       BWidgets.makeWordEdit <&>
-      Lens.mapped . Lens.mapped . Widget.wEventMap %~
-      EventMap.filterSChars (curry (`notElem` disallowedNameChars))
+      Lens.mapped . Lens.mapped . Widget.eventMap %~
+      E.filterChars (`notElem` disallowedNameChars)
 
 stdWrap ::
-  MonadA m => Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  MonadA m => Sugar.Payload m ExprGuiM.Payload ->
   ExprGuiM m (ExpressionGui m) ->
   ExprGuiM m (ExpressionGui m)
-stdWrap pl mkGui = wrapExprEventMap pl $ addInferredTypes pl =<< mkGui
-
-stdWrapDelegated ::
-  MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
-  FocusDelegator.Config -> FocusDelegator.IsDelegating ->
-  (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-stdWrapDelegated pl fdConfig isDelegating f =
-  stdWrap pl . ExprGuiM.wrapDelegated fdConfig isDelegating (egWidget %~) f
+stdWrap pl mkGui =
+  mkGui
+  >>= maybeAddInferredTypePl pl
+  & wrapExprEventMap pl
 
 stdWrapParentExpr ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
+  Sugar.Payload m ExprGuiM.Payload ->
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-stdWrapParentExpr pl f myId = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  stdWrapDelegated pl (parentExprFDConfig config) FocusDelegator.Delegating f myId
-
-makeLabel ::
-  MonadA m => String -> Widget.Id -> ExprGuiM m (WidgetT f)
-makeLabel text myId = ExprGuiM.widgetEnv . BWidgets.makeLabel text $ Widget.toAnimId myId
-
-makeColoredLabel ::
-  MonadA m => Int -> Draw.Color -> String -> Widget.Id -> ExprGuiM m (WidgetT f)
-makeColoredLabel textSize color text myId =
-  ExprGuiM.localEnv (WE.setTextSizeColor textSize color) $
-  makeLabel text myId
+  ExprGuiM m (ExpressionGui m)
+stdWrapParentExpr pl mkGui = do
+  config <- ExprGuiM.readConfig
+  mkGui innerId
+    >>= egWidget %%~
+        ExprGuiM.makeFocusDelegator (parentExprFDConfig config)
+        FocusDelegator.FocusEntryChild outerId
+    & stdWrap pl
+    & ExprGuiM.assignCursor myId innerId
+  where
+    myId = WidgetIds.fromExprPayload pl
+    outerId = WidgetIds.notDelegatingId myId
+    innerId = WidgetIds.delegatingId myId
 
 makeFocusableView ::
-  (MonadA m, MonadA n) => Widget.Id -> ExpressionGui n -> ExprGuiM m (ExpressionGui n)
+  (MonadA m, MonadA n) =>
+  Widget.Id -> ExpressionGui n -> ExprGuiM m (ExpressionGui n)
 makeFocusableView myId gui =
   ExprGuiM.widgetEnv $
   egWidget (BWidgets.makeFocusableView myId) gui
 
 parenify ::
-  MonadA m =>
-  ParentPrecedence -> MyPrecedence ->
-  (Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)) ->
-  (Widget.Id -> ExprGuiM m (ExpressionGui f)) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui f)
-parenify (ParentPrecedence parent) (MyPrecedence prec) addParens mkWidget myId
-  | parent > prec = addParens myId =<< mkWidget myId
-  | otherwise = mkWidget myId
+  (MonadA f, MonadA m) =>
+  ParentPrecedence -> MyPrecedence -> Widget.Id ->
+  ExpressionGui f -> ExprGuiM m (ExpressionGui f)
+parenify (ParentPrecedence parent) (MyPrecedence prec) myId widget
+  | parent > prec =
+    widget & Parens.addHighlightedTextParens myId
+  | otherwise =
+    widget & return
+
+makeLabel :: MonadA m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
+makeLabel text animId = ExprGuiM.makeLabel text animId <&> fromValueWidget
+
+grammarLabel :: MonadA m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
+grammarLabel text animId =
+  do
+    config <- ExprGuiM.readConfig
+    makeLabel text animId
+      & ExprGuiM.localEnv
+        (WE.setTextSizeColor (Config.baseTextSize config) (Config.grammarColor config))
+
+addValBG :: MonadA m => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
+addValBG myId gui =
+  do
+    config <- ExprGuiM.readConfig
+    let layer = Config.layerValFrameBG $ Config.layers config
+    let color = Config.valFrameBGColor config
+    Widget.backgroundColor layer animId color gui & return
+  where
+    animId = Widget.toAnimId myId ++ ["val"]
+
+addValFrame ::
+  MonadA m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+addValFrame myId gui =
+  do
+    config <- ExprGuiM.readConfig
+    gui
+      & pad (realToFrac <$> Config.valFramePadding config)
+      & egWidget %%~ addValBG myId
 
 stdWrapParenify ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
-  ParentPrecedence -> MyPrecedence ->
-  (Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)) ->
+  Sugar.Payload m ExprGuiM.Payload -> ParentPrecedence -> MyPrecedence ->
   (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-stdWrapParenify pl parentPrec prec addParens =
-  stdWrapParentExpr pl . parenify parentPrec prec addParens
+  ExprGuiM m (ExpressionGui m)
+stdWrapParenify pl parentPrec prec mkGui =
+  stdWrapParentExpr pl $ \myId ->
+  mkGui myId
+  >>= parenify parentPrec prec myId
 
-withBgColor :: Layer -> Draw.Color -> AnimId -> ExpressionGui m -> ExpressionGui m
-withBgColor layer color animId =
-  egWidget %~ Widget.backgroundColor layer animId color
+-- TODO: This doesn't belong here
+makeNameView ::
+  (MonadA m, MonadA n) =>
+  Name n -> AnimId -> ExprGuiM m (Widget f)
+makeNameView (Name _ collision _ name) animId =
+  do
+    label <- BWidgets.makeLabel name animId & ExprGuiM.widgetEnv
+    suffixLabels <- makeCollisionSuffixLabels collision $ animId ++ ["suffix"]
+    Box.hboxCentered (label : suffixLabels) & return
 
-data Collapser m = Collapser
-  { cMakeExpanded :: ExprGuiM m (ExpressionGui m)
-  , cMakeFocusedCompact :: ExprGuiM m (ExpressionGui m)
-  }
-
-makeCollapser ::
-  MonadA m =>
-  FocusDelegator.Config ->
-  (Widget.Id -> Collapser m) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeCollapser fdConfig f =
-  ExprGuiM.wrapDelegated fdConfig FocusDelegator.NotDelegating (egWidget %~) $
-  \myId -> do
-    let Collapser makeExpanded makeFocusedCompact = f myId
-    -- TODO: This is just to detect whether cursor is in the full
-    -- expression.  Even when it's not displayed, which may be wasteful
-    -- (even with laziness, at least the names are going to be read).
-    expandedEdit <- makeExpanded
-    -- We are inside a focus delegator, so if the cursor is on us it
-    -- means user entered our widget.
-    if expandedEdit ^. egWidget . Widget.wIsFocused
-      then return expandedEdit
-      else makeFocusedCompact
-
-makeRow :: [(Widget.R, ExpressionGui m)] -> [(Vector2 Widget.R, WidgetT m)]
-makeRow =
-  map item
-  where
-    item (halign, ExpressionGui widget alignment) =
-      (Vector2 halign alignment, widget)
-
-makeNameView :: MonadA m => Sugar.Name -> AnimId -> WE.WidgetEnvT m (Widget f)
-makeNameView (Sugar.Name nameSrc collision name) animId = do
-  label <- BWidgets.makeLabel name animId
-  suffixLabels <- makeCollisionSuffixLabels collision $ animId ++ ["suffix"]
-  config <- WE.readConfig
-  return .
-    nameSrcTint config nameSrc .
-    Box.hboxCentered $ label : suffixLabels
-
+-- TODO: This doesn't belong here
 makeCollisionSuffixLabels ::
-  MonadA m => Sugar.NameCollision -> AnimId -> WE.WidgetEnvT m [Widget f]
-makeCollisionSuffixLabels Sugar.NoCollision _ = return []
-makeCollisionSuffixLabels (Sugar.Collision suffix) animId = do
-  config <- WE.readConfig
-  let
-    onSuffixWidget =
-      Widget.backgroundColor (Config.layerNameCollisionBG (Config.layers config))
-        (animId ++ ["bg"]) (Config.collisionSuffixBGColor config) .
-      Widget.scale (realToFrac <$> Config.collisionSuffixScaleFactor config)
-  BWidgets.makeLabel (show suffix) animId
-    & (WE.localEnv . WE.setTextColor . Config.collisionSuffixTextColor) config
-    <&> (:[]) . onSuffixWidget
+  MonadA m => NameCollision -> AnimId -> ExprGuiM m [Widget f]
+makeCollisionSuffixLabels NoCollision _ = return []
+makeCollisionSuffixLabels (Collision suffix) animId =
+  do
+    config <- ExprGuiM.readConfig
+    let
+      Config.Name{..} = Config.name config
+      onSuffixWidget =
+        Widget.backgroundColor (Config.layerNameCollisionBG (Config.layers config))
+          animId collisionSuffixBGColor .
+        Widget.scale (realToFrac <$> collisionSuffixScaleFactor)
+    BWidgets.makeLabel (show suffix) animId
+      & WE.localEnv (WE.setTextColor collisionSuffixTextColor)
+      <&> (:[]) . onSuffixWidget
+      & ExprGuiM.widgetEnv
 
 wrapExprEventMap ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
-  ExprGuiM m (ExpressionGui m) -> ExprGuiM m (ExpressionGui m)
-wrapExprEventMap pl action = do
-  (res, resultPickers) <- ExprGuiM.listenResultPickers action
-  addExprEventMap pl resultPickers res
+  Sugar.Payload m ExprGuiM.Payload ->
+  ExprGuiM m (ExpressionGui m) ->
+  ExprGuiM m (ExpressionGui m)
+wrapExprEventMap pl action =
+  do
+    (res, resultPickers) <- ExprGuiM.listenResultPickers action
+    res & addExprEventMap pl resultPickers
 
 addExprEventMap ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload -> HolePickers m ->
+  Sugar.Payload m ExprGuiM.Payload -> HolePickers m ->
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addExprEventMap pl resultPickers gui = do
-  exprEventMap <-
-    ExprEventMap.make (gui ^. egWidget . Widget.wIsFocused)
-    resultPickers pl
-  gui & egWidget %~ Widget.weakerEvents exprEventMap & return
+addExprEventMap pl resultPickers gui =
+  do
+    exprEventMap <- ExprEventMap.make resultPickers pl
+    gui
+      & egWidget %~ Widget.weakerEvents exprEventMap
+      & return
 
-addInferredTypes ::
+maybeAddInferredTypePl ::
   MonadA m =>
-  Sugar.Payload Sugar.Name m a ->
-  ExpressionGui m ->
-  ExprGuiM m (ExpressionGui m)
-addInferredTypes exprPl eg = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  typeEdits <-
-    exprPl ^. Sugar.plInferredTypes
-    & Lens.traversed . Lens.mapped . Lens.mapped .~
-      ExprGuiM.emptyPayload
-    & Lens.traversed (ExprGuiM.makeSubexpression 0)
-    <&>
-      map
-      ( Widget.tint (Config.inferredTypeTint config)
-      . Widget.scale (realToFrac <$> Config.typeScaleFactor config)
-      . (^. egWidget)
-      )
-  return $ addType config Background exprId typeEdits eg
-  where
-    exprId = WidgetIds.fromGuid $ exprPl ^. Sugar.plGuid
+  Sugar.Payload m0 ExprGuiM.Payload ->
+  ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+maybeAddInferredTypePl pl =
+  maybeAddInferredType
+  (pl ^. Sugar.plData . ExprGuiM.plShowType)
+  (pl ^. Sugar.plInferredType)
+  (pl ^. Sugar.plEntityId)
+
+maybeAddInferredType ::
+  MonadA m =>
+  ExprGuiM.ShowType -> Type -> Sugar.EntityId ->
+  ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+maybeAddInferredType showType inferredType entityId eg =
+  do
+    shouldShow <- ExprGuiM.shouldShowType showType
+    eg
+      & if shouldShow
+        then addInferredType entityId inferredType
+        else return
+
+listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
+listWithDelDests before after dest list =
+  ListUtils.withPrevNext
+  (maybe before dest (list ^? Lens.ix 1))
+  (maybe after dest (reverse list ^? Lens.ix 1))
+  dest list

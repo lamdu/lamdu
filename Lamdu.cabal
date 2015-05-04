@@ -1,4 +1,4 @@
-Name:                lamdu
+Name:                lamdu-ide
 Version:             0.1
 Synopsis:            A next generation IDE
 Description:         Lamdu functional programming editor
@@ -14,39 +14,51 @@ Data-files:          fonts/DejaVuSans.ttf, config.json
 Library
   -- Modules exported by the library.
   hs-Source-Dirs:      bottlelib
+                     , submodules/AlgoW
 
-  Exposed-modules:     Data.Cache,
+  Exposed-modules:     Control.Monad.Trans.Decycle,
+                       Data.Function.Decycle,
                        Data.List.Assoc,
                        Data.List.Utils,
+                       Data.Map.Utils,
+                       Data.Hashable.Generic,
                        Data.Maybe.Utils,
                        Data.Monoid.Applicative,
+                       Data.Monoid.Generic,
                        Data.Monoid.Instances,
                        Data.MRUMemo,
+                       Data.Set.Ordered,
                        Data.Vector.Vector2,
                        Numeric.Utils,
+                       Foreign.C.Types.Instances,
                        Graphics.DrawingCombinators.Utils,
                        Graphics.UI.Bottle.Animation,
                        Graphics.UI.Bottle.Animation.Id,
                        Graphics.UI.Bottle.Direction,
                        Graphics.UI.Bottle.EventMap,
                        Graphics.UI.Bottle.MainLoop,
+                       Graphics.UI.Bottle.ModKey,
                        Graphics.UI.Bottle.Rect,
                        Graphics.UI.Bottle.View,
                        Graphics.UI.Bottle.Widget,
                        Graphics.UI.Bottle.WidgetId,
-                       Graphics.UI.Bottle.Widgets.StdKeys,
+                       Graphics.UI.Bottle.Widgets,
+                       Graphics.UI.Bottle.WidgetsEnvT,
                        Graphics.UI.Bottle.Widgets.Box,
+                       Graphics.UI.Bottle.Widgets.Choice,
                        Graphics.UI.Bottle.Widgets.EventMapDoc,
                        Graphics.UI.Bottle.Widgets.FlyNav,
                        Graphics.UI.Bottle.Widgets.FocusDelegator,
-                       Graphics.UI.Bottle.Widgets.Edges,
                        Graphics.UI.Bottle.Widgets.Grid,
                        Graphics.UI.Bottle.Widgets.GridView,
+                       Graphics.UI.Bottle.Widgets.Layout,
                        Graphics.UI.Bottle.Widgets.Spacer,
+                       Graphics.UI.Bottle.Widgets.StdKeys,
                        Graphics.UI.Bottle.Widgets.TextEdit,
                        Graphics.UI.Bottle.Widgets.TextView,
+                       Graphics.UI.Bottle.SizedFont,
                        Graphics.UI.GLFW.Events,
-                       Graphics.UI.GLFW.ModState,
+                       Graphics.UI.GLFW.Instances,
                        Graphics.UI.GLFW.Utils,
 
                        Data.Random.Instances,
@@ -72,12 +84,11 @@ Library
                        Control.MonadA,
                        System.Random.Utils
 
-  Other-Modules:       Data.Store.Rev.ViewBranchInternal,
-                       Data.Cache.Types
+  Other-Modules:       Data.Store.Rev.ViewBranchInternal
 
   Build-depends:       base >= 4,
-                       aeson,
-                       sophia >= 0.1,
+                       aeson >= 0.6.2.1 && < 0.7.1,
+                       leveldb-haskell >= 0.6,
                        cryptohash >= 0.7,
                        GLFW-b >= 1.2.1 && < 1.5,
                        deepseq,
@@ -86,27 +97,32 @@ Library
                        TraceUtils,
                        hashable,
                        either,
-                       lens >= 4.0,
-                       binary >= 0.5,
+                       lens >= 4.1,
+                       binary >= 0.7,
                        bytestring,
                        containers >= 0.4,
-                       derive >= 2.5,
                        directory >= 1.0.1.1,
                        filepath >= 1.1,
-                       graphics-drawingcombinators >= 1.4,
                        random >= 1.0.0,
-                       safe,
                        split >= 0.1,
                        template-haskell,
                        time >= 1.2,
                        transformers >= 0.2.1,
                        utf8-string >= 0.3
 
+  if flag(SmoothFonts)
+    Build-Depends: graphics-drawingcombinators >= 1.5.0.3
+    CPP-Options: -DDRAWINGCOMBINATORS__SIZED -DDRAWINGCOMBINATORS__FONT_APIS
+  else
+    Build-Depends: graphics-drawingcombinators >= 1.4
+
   ghc-options:         -O2 -Wall
   -- ghc-options is prepended to ghc-prof-options
   ghc-prof-options:    -auto-all -caf-all -rtsopts
 
 Executable lamdu
+  hs-Source-Dirs:      .
+                ,      submodules/AlgoW
   Build-Depends:       base >= 4,
                        aeson,
                        hashable,
@@ -114,99 +130,129 @@ Executable lamdu
                        directory,
                        filepath,
                        deepseq,
+                       deepseq-generics >= 0.1,
                        lens,
+                       pretty,
+                       prettyclass,
+                       void >= 0.6.1,
                        graphics-drawingcombinators >= 1.4,
-                       binary >= 0.5,
+                       binary,
                        transformers,
                        GLFW-b,
                        split,
                        TraceUtils,
                        bytestring,
-                       derive,
-                       lamdu,
+                       lamdu-ide,
                        random,
                        List >= 0.5.1,
                        either,
                        utf8-string,
                        TypeCompose
-  Other-Modules:       Lamdu.CharClassification,
-                       Lamdu.Config,
-                       Lamdu.Data.Anchors,
-                       Lamdu.Data.Arbitrary,
-                       Lamdu.Data.DbLayout,
-                       Lamdu.Data.Definition,
-                       Lamdu.Data.ExampleDB,
-                       Lamdu.Data.Expression,
-                       Lamdu.Data.Expression.IRef,
-                       Lamdu.Data.Expression.Infer,
-                       Lamdu.Data.Expression.Infer.Conflicts,
-                       Lamdu.Data.Expression.Infer.ImplicitVariables,
-                       Lamdu.Data.Expression.Infer.Rules,
-                       Lamdu.Data.Expression.Infer.Structure,
-                       Lamdu.Data.Expression.Infer.Types,
-                       Lamdu.Data.Expression.Infer.UntilConflict,
-                       Lamdu.Data.Expression.Lens,
-                       Lamdu.Data.Expression.Load,
-                       Lamdu.Data.Expression.Utils,
-                       Lamdu.Data.FFI,
-                       Lamdu.Data.Ops,
-                       Lamdu.GUI.BottleWidgets,
-                       Lamdu.GUI.CodeEdit,
-                       Lamdu.GUI.CodeEdit.Settings,
-                       Lamdu.GUI.DefinitionEdit,
-                       Lamdu.GUI.ExpressionEdit,
-                       Lamdu.GUI.ExpressionEdit.ApplyEdit,
-                       Lamdu.GUI.ExpressionEdit.AtomEdit,
-                       Lamdu.GUI.ExpressionEdit.BuiltinEdit,
-                       Lamdu.GUI.ExpressionEdit.CollapsedEdit,
-                       Lamdu.GUI.ExpressionEdit.DefinitionContentEdit,
-                       Lamdu.GUI.ExpressionEdit.EventMap,
-                       Lamdu.GUI.ExpressionEdit.GetFieldEdit,
-                       Lamdu.GUI.ExpressionEdit.GetParamsEdit,
-                       Lamdu.GUI.ExpressionEdit.GetVarEdit,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.Closed,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.Common,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.State,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.Info,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.Open,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.Open.EventMap,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.Open.ShownResult,
-                       Lamdu.GUI.ExpressionEdit.HoleEdit.Results,
-                       Lamdu.GUI.ExpressionEdit.LambdaEdit,
-                       Lamdu.GUI.ExpressionEdit.ListEdit,
-                       Lamdu.GUI.ExpressionEdit.LiteralEdit,
-                       Lamdu.GUI.ExpressionEdit.Parens,
-                       Lamdu.GUI.ExpressionEdit.PiEdit,
-                       Lamdu.GUI.ExpressionEdit.RecordEdit,
-                       Lamdu.GUI.ExpressionEdit.TagEdit,
-                       Lamdu.GUI.ExpressionGui,
-                       Lamdu.GUI.ExpressionGui.AddNextHoles,
-                       Lamdu.GUI.ExpressionGui.Monad,
-                       Lamdu.GUI.ExpressionGui.Types,
-                       Lamdu.GUI.VersionControl,
-                       Lamdu.GUI.WidgetEnvT,
-                       Lamdu.GUI.WidgetIdIRef,
-                       Lamdu.GUI.WidgetIds,
-                       Lamdu.Main,
-                       Lamdu.Sugar.AddNames,
-                       Lamdu.Sugar.AddNames.CPS,
-                       Lamdu.Sugar.AddNames.NameGen,
-                       Lamdu.Sugar.Convert,
-                       Lamdu.Sugar.Convert.Apply,
-                       Lamdu.Sugar.Convert.Expression,
-                       Lamdu.Sugar.Convert.Hole,
-                       Lamdu.Sugar.Convert.List,
-                       Lamdu.Sugar.Convert.Monad,
-                       Lamdu.Sugar.Expression,
-                       Lamdu.Sugar.InputExpr,
-                       Lamdu.Sugar.Internal,
-                       Lamdu.Sugar.RemoveTypes,
-                       Lamdu.Sugar.Types,
-                       Lamdu.Sugar.Types.Internal,
-                       Lamdu.VersionControl,
-                       Lamdu.VersionControl.Actions,
-                       Paths_lamdu
+  Other-Modules:       Lamdu.CharClassification
+               ,       Lamdu.Config
+               ,       Lamdu.Data.Anchors
+               ,       Lamdu.Data.Arbitrary
+               ,       Lamdu.Data.DbLayout
+               ,       Lamdu.Data.Definition
+               ,       Lamdu.Data.ExampleDB
+               ,       Lamdu.Data.Ops
+               ,       Lamdu.Eval
+               ,       Lamdu.Eval.Val
+               ,       Lamdu.Expr.Constraints
+               ,       Lamdu.Expr.FlatComposite
+               ,       Lamdu.Expr.GenIds
+               ,       Lamdu.Expr.Globals
+               ,       Lamdu.Expr.Identifier
+               ,       Lamdu.Expr.IRef
+               ,       Lamdu.Expr.IRef.Infer
+               ,       Lamdu.Expr.Lens
+               ,       Lamdu.Expr.Load
+               ,       Lamdu.Expr.Pure
+               ,       Lamdu.Expr.RecordVal
+               ,       Lamdu.Expr.Scheme
+               ,       Lamdu.Expr.Type
+               ,       Lamdu.Expr.Type.Match
+               ,       Lamdu.Expr.TypeVars
+               ,       Lamdu.Expr.UniqueId
+               ,       Lamdu.Expr.Val
+               ,       Lamdu.GUI.CodeEdit
+               ,       Lamdu.GUI.CodeEdit.Settings
+               ,       Lamdu.GUI.DefinitionEdit
+               ,       Lamdu.GUI.ExpressionEdit
+               ,       Lamdu.GUI.ExpressionEdit.ApplyEdit
+               ,       Lamdu.GUI.ExpressionEdit.BinderEdit
+               ,       Lamdu.GUI.ExpressionEdit.BuiltinEdit
+               ,       Lamdu.GUI.ExpressionEdit.EventMap
+               ,       Lamdu.GUI.ExpressionEdit.GetFieldEdit
+               ,       Lamdu.GUI.ExpressionEdit.GetVarEdit
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.Common
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.Info
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.SearchTerm
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.ShownResult
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.State
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds
+               ,       Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
+               ,       Lamdu.GUI.ExpressionEdit.LambdaEdit
+               ,       Lamdu.GUI.ExpressionEdit.ListEdit
+               ,       Lamdu.GUI.ExpressionEdit.LiteralEdit
+               ,       Lamdu.GUI.ExpressionEdit.RecordEdit
+               ,       Lamdu.GUI.ExpressionEdit.TagEdit
+               ,       Lamdu.GUI.ExpressionGui
+               ,       Lamdu.GUI.ExpressionGui.Monad
+               ,       Lamdu.GUI.ExpressionGui.Types
+               ,       Lamdu.GUI.ParamEdit
+               ,       Lamdu.GUI.Parens
+               ,       Lamdu.GUI.Precedence
+               ,       Lamdu.GUI.TypeView
+               ,       Lamdu.GUI.VersionControl.Config
+               ,       Lamdu.GUI.VersionControl
+               ,       Lamdu.GUI.WidgetIdIRef
+               ,       Lamdu.GUI.WidgetIds
+               ,       Lamdu.Infer
+               ,       Lamdu.Infer.Error
+               ,       Lamdu.Infer.Internal.Constraints
+               ,       Lamdu.Infer.Internal.Monad
+               ,       Lamdu.Infer.Internal.Scheme
+               ,       Lamdu.Infer.Internal.Scope
+               ,       Lamdu.Infer.Internal.Subst
+               ,       Lamdu.Infer.Load
+               ,       Lamdu.Infer.Recursive
+               ,       Lamdu.Infer.Unify
+               ,       Lamdu.Infer.Update
+               ,       Lamdu.Main
+               ,       Lamdu.Sugar.AddNames
+               ,       Lamdu.Sugar.AddNames.CPS
+               ,       Lamdu.Sugar.AddNames.NameGen
+               ,       Lamdu.Sugar.AddNames.Types
+               ,       Lamdu.Sugar.Convert
+               ,       Lamdu.Sugar.Convert.Apply
+               ,       Lamdu.Sugar.Convert.Binder
+               ,       Lamdu.Sugar.Convert.DefExpr
+               ,       Lamdu.Sugar.Convert.Expression
+               ,       Lamdu.Sugar.Convert.Expression.Actions
+               ,       Lamdu.Sugar.Convert.GetVar
+               ,       Lamdu.Sugar.Convert.Hole
+               ,       Lamdu.Sugar.Convert.Input
+               ,       Lamdu.Sugar.Convert.List
+               ,       Lamdu.Sugar.Convert.Monad
+               ,       Lamdu.Sugar.Convert.ParamList
+               ,       Lamdu.Sugar.Convert.Record
+               ,       Lamdu.Sugar.EntityId
+               ,       Lamdu.Sugar.Internal
+               ,       Lamdu.Sugar.Internal.EntityId
+               ,       Lamdu.Sugar.Lens
+               ,       Lamdu.Sugar.NearestHoles
+               ,       Lamdu.Sugar.OrderTags
+               ,       Lamdu.Sugar.RedundantTypes
+               ,       Lamdu.Sugar.Types
+               ,       Lamdu.Suggest
+               ,       Lamdu.VersionControl
+               ,       Lamdu.VersionControl.Actions
+               ,       Paths_lamdu_ide
   ghc-options:         -O -Wall
   -- ghc-options is prepended to ghc-prof-options
   ghc-prof-options:    -auto-all -caf-all -rtsopts
@@ -215,3 +261,7 @@ Executable lamdu
 source-repository head
   type: git
   location: https://github.com/Peaker/lamdu.git
+
+Flag SmoothFonts
+  Description: Build example programs
+  Default: False

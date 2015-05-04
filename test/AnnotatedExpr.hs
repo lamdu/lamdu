@@ -1,34 +1,37 @@
 module AnnotatedExpr where
 
-import Control.Applicative (pure, (<$>))
-import Control.Lens.Operators
-import Control.Monad.Trans.State (State, runState)
-import Utils
+import           Control.Applicative (pure, (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad.Trans.State (State, runState)
 import qualified Data.List as List
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
+import           Formatting
+import           Lamdu.Expr.Val (Val)
+import           Text.PrettyPrint.HughesPJClass (pPrint)
 
 type AnnotationIndex = Int
 type AnnotationM = State (AnnotationIndex, [String])
 
-addAnnotation :: String -> AnnotationM Int
+addAnnotation :: String -> AnnotationM AnnotationIndex
 addAnnotation msg = do
-  count <- Lens.use Lens._1
-  Lens._1 += 1
-  Lens._2 %= (msg :)
+  count <- Lens.use _1
+  _1 += 1
+  _2 %= (msg :)
   pure count
 
 errorMessage ::
-  AnnotationM (ExprIRef.Expression t [AnnotationIndex]) ->
+  AnnotationM (Val [AnnotationIndex]) ->
   ([String], String)
 errorMessage mkExpr =
   (resultErrs, fullMsg)
   where
     showErrItem ix err = ansiAround ansiRed ("{" ++ show ix ++ "}:\n") ++ err
     fullMsg =
-      List.intercalate "\n" $ (show . simplifyDef) (ixsStr <$> expr) :
+      List.intercalate "\n" $
+      show (pPrint (ixsStr <$> expr)) :
       "Errors:" :
       (Lens.itraversed %@~ showErrItem) resultErrs
-    (expr, resultErrs) = Lens._2 %~ reverse . snd $ runState mkExpr (0, [])
+    (expr, resultErrs) = _2 %~ reverse . snd $ runState mkExpr (0, [])
     ixsStr [] = UnescapedStr ""
     ixsStr ixs = UnescapedStr . ansiAround ansiRed . List.intercalate ", " $ map show ixs

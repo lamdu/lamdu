@@ -1,80 +1,136 @@
+{-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types #-}
 module Lamdu.Sugar.Convert.Expression
-  ( make, mkGen
-  , mkReplaceWithNewHole
-  , getStoredName
+  ( convert
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens.Operators
-import Control.Monad (zipWithM)
-import Control.MonadA (MonadA)
-import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag)
-import Data.Typeable (Typeable1)
-import Lamdu.Data.Expression.Infer.Conflicts (iwcInferredTypes)
-import Lamdu.Sugar.Convert.Monad (ConvertM)
-import Lamdu.Sugar.Internal
-import Lamdu.Sugar.Types
-import Lamdu.Sugar.Types.Internal
-import qualified Data.Binary.Utils as BinaryUtils
-import qualified Data.Store.Guid as Guid
-import qualified Data.Store.Property as Property
-import qualified Data.Store.Transaction as Transaction
+import           Control.Applicative (Applicative(..), (<$>), (<$))
+import           Control.Lens.Operators
+import           Control.Monad (guard)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
+import           Control.MonadA (MonadA)
+import qualified Data.Map as Map
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Guid (Guid)
+import           Data.Store.Transaction (Transaction)
+import           Data.Traversable (traverse)
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Ops as DataOps
+import           Lamdu.Expr.IRef (DefI)
+import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Lamdu.Expr.Val (Val(..))
+import qualified Lamdu.Expr.Val as V
+import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
+import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
+import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
+import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
+import qualified Lamdu.Sugar.Convert.Input as Input
+import qualified Lamdu.Sugar.Convert.List as ConvertList
+import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import qualified Lamdu.Sugar.InputExpr as InputExpr
-import qualified System.Random as Random
-import qualified System.Random.Utils as RandomUtils
+import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
+import           Lamdu.Sugar.Internal
+import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.Types
 
-mkGen :: Int -> Int -> Guid -> Random.StdGen
-mkGen select count =
-  Random.mkStdGen . (+select) . (*count) . BinaryUtils.decodeS . Guid.bs
+type T = Transaction
 
-mkCutter :: MonadA m => Anchors.CodeProps m -> ExprIRef.ExpressionI (Tag m) -> T m Guid -> T m Guid
-mkCutter cp expr replaceWithHole = do
-  _ <- DataOps.newClipboard cp expr
-  replaceWithHole
+jumpToDefI ::
+  MonadA m => Anchors.CodeProps m -> DefI m -> T m EntityId
+jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
-mkReplaceWithNewHole :: MonadA m => Stored m -> T m Guid
-mkReplaceWithNewHole stored =
-  ExprIRef.exprGuid <$> DataOps.replaceWithHole stored
+convertVLiteralInteger ::
+  MonadA m => Integer ->
+  Input.Payload m a -> ConvertM m (ExpressionU m a)
+convertVLiteralInteger i exprPl = addActions exprPl $ BodyLiteralInteger i
 
-mkActions :: MonadA m => ConvertM.Context m -> Stored m -> Actions m
-mkActions sugarContext stored =
-  Actions
-  { _storedGuid = ExprIRef.exprGuid $ Property.value stored
-  , _wrap = WrapAction $ ExprIRef.exprGuid <$> DataOps.wrap stored
-  , _mSetToHole = Just $ ExprIRef.exprGuid <$> DataOps.setToHole stored
-  , _mSetToInnerExpr = Nothing
-  , _cut =
-    mkCutter (sugarContext ^. ConvertM.scCodeAnchors)
-    (Property.value stored) $ mkReplaceWithNewHole stored
+convertGetFieldParam ::
+  (MonadA m, MonadA n) =>
+  V.GetField (Val a) ->
+  ConvertM m (Maybe (GetVar Guid n))
+convertGetFieldParam (V.GetField recExpr tag) =
+  do
+    tagParamInfos <- (^. ConvertM.scTagParamInfos) <$> ConvertM.readContext
+    do
+      paramInfo <- Map.lookup tag tagParamInfos
+      param <- recExpr ^? ExprLens.valVar
+      guard $ param == ConvertM.tpiFromParameters paramInfo
+      Just $ GetVarNamed NamedVar
+        { _nvName = UniqueId.toGuid tag
+        , _nvJumpTo = pure (ConvertM.tpiJumpTo paramInfo)
+        , _nvVarType = GetFieldParameter
+        }
+      & return
+
+convertGetFieldNonParam ::
+  (MonadA m, Monoid a) =>
+  V.GetField (Val (Input.Payload m a)) -> EntityId ->
+  ConvertM m (Body Guid m (ExpressionU m a))
+convertGetFieldNonParam (V.GetField recExpr tag) entityId =
+  GetField
+  { _gfRecord = recExpr
+  , _gfTag =
+      TagG
+      { _tagInstance = EntityId.ofGetFieldTag entityId
+      , _tagVal = tag
+      , _tagGName = UniqueId.toGuid tag
+      }
   }
+  & traverse ConvertM.convertSubexpression
+  <&> BodyGetField
 
-make ::
-  (Typeable1 m, MonadA m) => InputPayload m a ->
-  BodyU m a -> ConvertM m (ExpressionU m a)
-make exprPl body = do
-  sugarContext <- ConvertM.readContext
-  inferredTypes <-
-    zipWithM
-    ( fmap ConvertM.convertSubexpression
-    . InputExpr.makePure
-    ) seeds types
-  return $ Expression body Payload
-    { _plGuid = exprPl ^. ipGuid
-    , _plInferredTypes = inferredTypes
-    , _plActions = mkActions sugarContext <$> exprPl ^. ipStored
-    , _plData = exprPl ^. ipData
-    }
+convertGetField ::
+  (MonadA m, Monoid a) =>
+  V.GetField (Val (Input.Payload m a)) ->
+  Input.Payload m a ->
+  ConvertM m (ExpressionU m a)
+convertGetField getField exprPl =
+  convertGetFieldParam getField
+  >>= maybe (convertGetFieldNonParam getField entityId) (return . BodyGetVar)
+  >>= addActions exprPl
   where
-    seeds = RandomUtils.splits . mkGen 0 3 $ exprPl ^. ipGuid
-    types = maybe [] iwcInferredTypes $ exprPl ^. ipInferred
+    entityId = exprPl ^. Input.entityId
 
-getStoredName :: MonadA m => Guid -> T m (Maybe String)
-getStoredName guid = do
-  name <- Transaction.getP $ Anchors.assocNameRef guid
-  pure $
-    if null name then Nothing else Just name
+convertGlobal ::
+  MonadA m => V.GlobalId -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+convertGlobal globalId exprPl =
+  runMatcherT $ do
+    justToLeft $ ConvertList.nil globalId exprPl
+    lift $ do
+      cp <- (^. ConvertM.scCodeAnchors) <$> ConvertM.readContext
+      addActions exprPl .
+        BodyGetVar $ GetVarNamed NamedVar
+        { _nvName = UniqueId.toGuid defI
+        , _nvJumpTo = jumpToDefI cp defI
+        , _nvVarType = GetDefinition
+        }
+    where
+      defI = ExprIRef.defI globalId
+
+convertGetVar ::
+  MonadA m =>
+  V.Var -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+convertGetVar param exprPl = do
+  sugarContext <- ConvertM.readContext
+  ConvertGetVar.convertVar sugarContext param
+    (exprPl ^. Input.inferred . Infer.plType)
+    & BodyGetVar
+    & addActions exprPl
+
+convert :: (MonadA m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
+convert v =
+  ($ v ^. V.payload) $
+  case v ^. V.body of
+  V.BAbs x -> ConvertBinder.convertLam x
+  V.BApp x -> ConvertApply.convert x
+  V.BRecExtend x -> ConvertRecord.convertExtend x
+  V.BGetField x -> convertGetField x
+  V.BLeaf (V.LVar x) -> convertGetVar x
+  V.BLeaf (V.LGlobal x) -> convertGlobal x
+  V.BLeaf (V.LLiteralInteger x) -> convertVLiteralInteger x
+  V.BLeaf V.LHole -> ConvertHole.convert
+  V.BLeaf V.LRecEmpty -> ConvertRecord.convertEmpty

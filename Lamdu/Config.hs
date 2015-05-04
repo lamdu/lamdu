@@ -1,215 +1,183 @@
-{-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE TemplateHaskell #-}
-module Lamdu.Config (Layers(..), Config(..), delKeys) where
+{-# OPTIONS -O0 #-}
+{-# LANGUAGE DeriveGeneric, RecordWildCards #-}
+module Lamdu.Config
+    ( Layers(..)
+    , Help(..), Zoom(..), Pane(..), Hole(..), Name(..)
+    , Config(..)
+    , delKeys
+    , layerInterval
+    ) where
 
-import Data.Aeson (ToJSON(..), FromJSON(..))
-import Data.Aeson.TH (deriveJSON, defaultOptions)
-import Data.Vector.Vector2 (Vector2(..))
-import Foreign.C.Types (CDouble)
-import Graphics.DrawingCombinators.Utils () -- Read instance for Color
+import           Data.Aeson (ToJSON(..), FromJSON(..))
+import           Data.Vector.Vector2 (Vector2(..))
+import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.DrawingCombinators.Utils ()
+import qualified Graphics.UI.Bottle.Animation as Anim
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
 data Layers = Layers
-  { layerCursorBG
+  { layerMin
+  , layerCursor
   , layerTypes
-  , layerCollapsedCompactBG
-  , layerCollapsedExpandedBG
   , layerChoiceBG
   , layerHoleBG
+  , layerDarkHoleBG
   , layerNameCollisionBG
-  , layerLabeledApplyBG
+  , layerValFrameBG
   , layerParensHighlightBG
   , layerActivePane
-  , layerMax :: Int
-  } deriving Eq
+  , layerMax :: Anim.Layer
+  } deriving (Eq, Generic, Show)
+instance ToJSON Layers
+instance FromJSON Layers
+
+layerInterval :: Layers -> Int
+layerInterval Layers{..} = layerMax - layerMin
+
+data Help = Help
+  { helpTextColor :: Draw.Color
+  , helpTextSize :: Double
+  , helpInputDocColor :: Draw.Color
+  , helpBGColor :: Draw.Color
+  , helpKeys :: [ModKey]
+  } deriving (Eq, Generic, Show)
+instance ToJSON Help
+instance FromJSON Help
+
+data Zoom = Zoom
+  { shrinkKeys :: [ModKey]
+  , enlargeKeys :: [ModKey]
+  , enlargeFactor :: Double
+  , shrinkFactor :: Double
+  } deriving (Eq, Generic, Show)
+instance ToJSON Zoom
+instance FromJSON Zoom
+
+data Pane = Pane
+  { paneInactiveTintColor :: Draw.Color
+  , paneActiveBGColor :: Draw.Color
+  , paneCloseKeys :: [ModKey]
+  , paneMoveDownKeys :: [ModKey]
+  , paneMoveUpKeys :: [ModKey]
+  , -- Need some padding on top because of on-top hovers, this decides
+    -- how much:
+    paneHoverPadding :: Draw.R
+  , newDefinitionKeys :: [ModKey]
+  , newDefinitionActionColor :: Draw.Color
+  } deriving (Eq, Generic, Show)
+instance ToJSON Pane
+instance FromJSON Pane
+
+data Hole = Hole
+  { holePickAndMoveToNextHoleKeys :: [ModKey]
+  , holeJumpToNextKeys :: [ModKey]
+  , holeJumpToPrevKeys :: [ModKey]
+  , holeResultCount :: Int
+  , holeResultPadding :: Vector2 Double
+  , holeResultInjectedScaleExponent :: Double
+  , holeExtraSymbolColorUnselected :: Draw.Color
+  , holeExtraSymbolColorSelected :: Draw.Color
+  , holeOpenBGColor :: Draw.Color
+  , holeSearchTermBGColor :: Draw.Color
+  , holePickResultKeys :: [ModKey]
+  , holeDarkPadding :: Vector2 Double
+  , holeDarkBGColor :: Draw.Color
+  , holeUnwrapKeys :: [ModKey]
+  , holeOpenKeys :: [ModKey]
+  , holeCloseKeys :: [ModKey]
+  , holePasteKeys :: [ModKey]
+  , holeHoveringWrapperScaleFactor :: Vector2 Double
+  } deriving (Eq, Generic, Show)
+instance ToJSON Hole
+instance FromJSON Hole
+
+data Name = Name
+  { collisionSuffixTextColor :: Draw.Color
+  , collisionSuffixBGColor :: Draw.Color
+  , collisionSuffixScaleFactor :: Vector2 Double
+  , autoNameOriginFGColor :: Draw.Color
+  , nameOriginFGColor :: Draw.Color
+  , definitionColor :: Draw.Color
+  , parameterColor :: Draw.Color
+  , recordTagColor :: Draw.Color
+  , paramTagColor :: Draw.Color
+  } deriving (Eq, Generic, Show)
+instance ToJSON Name
+instance FromJSON Name
 
 data Config = Config
   { layers :: Layers
+  , help :: Help
+  , zoom :: Zoom
+  , pane :: Pane
+  , versionControl :: VersionControl.Config
+  , hole :: Hole
+  , name :: Name
+
+  , backgroundColor :: Draw.Color
   , baseColor :: Draw.Color
-  , baseTextSize :: Int
-  , helpTextColor :: Draw.Color
-  , helpTextSize :: Int
-  , helpInputDocColor :: Draw.Color
-  , helpBGColor :: Draw.Color
+  , baseTextSize :: Double
+  , spaceWidth :: Double
+
+  , quitKeys :: [ModKey]
+  , debugModeKeys :: [ModKey]
+  , nextInfoModeKeys :: [ModKey]
+  , previousCursorKeys :: [ModKey]
 
   , invalidCursorBGColor :: Draw.Color
 
-  , quitKeys :: [E.ModKey]
-  , undoKeys :: [E.ModKey]
-  , redoKeys :: [E.ModKey]
-  , makeBranchKeys :: [E.ModKey]
-
-  , jumpToBranchesKeys :: [E.ModKey]
-
-  , overlayDocKeys :: [E.ModKey]
-
-  , addNextParamKeys :: [E.ModKey]
-
-  , delBranchKeys :: [E.ModKey]
-
-  , closePaneKeys :: [E.ModKey]
-  , movePaneDownKeys :: [E.ModKey]
-  , movePaneUpKeys :: [E.ModKey]
-
-  , replaceKeys :: [E.ModKey]
-
-  , pickResultKeys :: [E.ModKey]
-  , pickAndMoveToNextHoleKeys :: [E.ModKey]
-
-  , jumpToNextHoleKeys :: [E.ModKey]
-  , jumpToPrevHoleKeys :: [E.ModKey]
-
-  , jumpToDefinitionKeys :: [E.ModKey]
-
-  , delForwardKeys :: [E.ModKey]
-  , delBackwardKeys :: [E.ModKey]
-  , wrapKeys :: [E.ModKey]
-  , debugModeKeys :: [E.ModKey]
-
-  , newDefinitionKeys :: [E.ModKey]
-
-  , definitionColor :: Draw.Color
-  , atomColor :: Draw.Color
-  , parameterColor :: Draw.Color
-  , paramOriginColor :: Draw.Color
-
-  , literalIntColor :: Draw.Color
-
-  , previousCursorKeys :: [E.ModKey]
-
-  , holeResultCount :: Int
-  , holeResultScaleFactor :: Vector2 Double
-  , holeResultPadding :: Vector2 Double
-  , holeResultInjectedScaleExponent :: Double
-  , holeSearchTermScaleFactor :: Vector2 Double
-  , holeNumLabelScaleFactor :: Vector2 Double
-  , holeNumLabelColor :: Draw.Color
-  , holeInactiveExtraSymbolColor :: Draw.Color
-
-  , typeErrorHoleWrapBackgroundColor :: Draw.Color
-  , deletableHoleBackgroundColor :: Draw.Color
-
-  , activeHoleBackgroundColor :: Draw.Color
-  , inactiveHoleBackgroundColor :: Draw.Color
-
-  , wrapperHolePadding :: Vector2 Double
-
-  , tagScaleFactor :: Vector2 Double
-
-  , fieldTagScaleFactor :: Vector2 Double
-  , fieldTint :: Draw.Color
-
-  , inferredValueScaleFactor :: Vector2 Double
-  , inferredValueTint :: Draw.Color
+  , addNextParamKeys :: [ModKey]
+  , jumpToDefinitionKeys :: [ModKey]
+  , replaceKeys :: [ModKey]
+  , delForwardKeys :: [ModKey]
+  , delBackwardKeys :: [ModKey]
+  , wrapKeys :: [ModKey]
 
   , parenHighlightColor :: Draw.Color
-
-  , addWhereItemKeys :: [E.ModKey]
-
-  , lambdaColor :: Draw.Color
-  , lambdaTextSize :: Int
-
-  , rightArrowColor :: Draw.Color
-  , rightArrowTextSize :: Int
-
-  , whereColor :: Draw.Color
-  , whereScaleFactor :: Vector2 Double
-  , whereLabelScaleFactor :: Vector2 Double
-
-  , typeScaleFactor :: Vector2 Double
-  , squareParensScaleFactor :: Vector2 Double
-
+  , literalIntColor :: Draw.Color
+  , typeIndicatorErrorColor :: Draw.Color
+  , typeIndicatorMatchColor :: Draw.Color
+  , typeIndicatorFrameWidth :: Vector2 Double
   , foreignModuleColor :: Draw.Color
   , foreignVarColor :: Draw.Color
 
-  , cutKeys :: [E.ModKey]
-  , pasteKeys :: [E.ModKey]
+  , acceptDefinitionTypeForFirstTimeColor :: Draw.Color
+  , acceptDefinitionTypeKeys :: [ModKey]
 
-  , inactiveTintColor :: Draw.Color
-  , activeDefBGColor :: Draw.Color
+  , whereAddItemKeys :: [ModKey]
+  , whereItemPadding :: Vector2 Double
 
-  , inferredTypeTint :: Draw.Color
-  , inferredTypeErrorBGColor :: Draw.Color
-  , inferredTypeBGColor :: Draw.Color
+  , cutKeys :: [ModKey]
 
--- For definitions
-  , collapsedForegroundColor :: Draw.Color
--- For parameters
-  , collapsedCompactBGColor :: Draw.Color
-  , collapsedExpandedBGColor :: Draw.Color
-  , collapsedExpandKeys :: [E.ModKey]
-  , collapsedCollapseKeys :: [E.ModKey]
-
-  , monomorphicDefOriginForegroundColor :: Draw.Color
-  , polymorphicDefOriginForegroundColor :: Draw.Color
-
-  , builtinOriginNameColor :: Draw.Color
-
+  , typeTint :: Draw.Color
+  , typeBoxBGColor :: Draw.Color
+  , valFrameBGColor :: Draw.Color
+  , valFramePadding :: Vector2 Double
+  , valInferredSpacing :: Double
+  , typeFrameBGColor :: Draw.Color
+  , verticalSpacing :: Double
   , cursorBGColor :: Draw.Color
+  , grammarColor :: Draw.Color
 
-  , listBracketTextSize :: Int
-  , listBracketColor :: Draw.Color
-  , listCommaTextSize :: Int
-  , listCommaColor :: Draw.Color
+  , listAddItemKeys :: [ModKey]
 
-  , listAddItemKeys :: [E.ModKey]
+  , jumpLHStoRHSKeys :: [ModKey]
+  , jumpRHStoLHSKeys :: [ModKey]
 
-  , selectedBranchColor :: Draw.Color
+  , enterSubexpressionKeys :: [ModKey]
+  , leaveSubexpressionKeys :: [ModKey]
 
-  , jumpLHStoRHSKeys :: [E.ModKey]
-  , jumpRHStoLHSKeys :: [E.ModKey]
-
-  , shrinkBaseFontKeys :: [E.ModKey]
-  , enlargeBaseFontKeys :: [E.ModKey]
-
-  , enlargeFactor :: Double
-  , shrinkFactor :: Double
-
-  , defTypeLabelTextSize :: Int
-  , defTypeLabelColor :: Draw.Color
-
-  , defTypeBoxScaleFactor :: Vector2 Double
-
-  , acceptKeys :: [E.ModKey]
-
-  , autoGeneratedNameTint :: Draw.Color
-  , collisionSuffixTextColor :: Draw.Color
-  , collisionSuffixBGColor :: Draw.Color
-  , collisionSuffixScaleFactor :: Vector2 Double
-
-  , paramDefSuffixScaleFactor :: Vector2 Double
-
-  , enterSubexpressionKeys :: [E.ModKey]
-  , leaveSubexpressionKeys :: [E.ModKey]
-
-  , nextInfoModeKeys :: [E.ModKey]
-
-  , recordTypeParensColor :: Draw.Color
-  , recordValParensColor :: Draw.Color
-  , recordAddFieldKeys :: [E.ModKey]
+  , recordOpenKeys :: [ModKey]
+  , recordTailColor :: Draw.Color
+  , recordAddFieldKeys :: [ModKey]
 
   , presentationChoiceScaleFactor :: Vector2 Double
   , presentationChoiceColor :: Draw.Color
+  } deriving (Eq, Generic, Show)
+instance ToJSON Config
+instance FromJSON Config
 
-  , labeledApplyBGColor :: Draw.Color
-  , labeledApplyPadding :: Vector2 Double
-  , spaceBetweenAnnotatedArgs :: Double
-  } deriving Eq
-
-delKeys :: Config -> [E.ModKey]
+delKeys :: Config -> [ModKey]
 delKeys config = delForwardKeys config ++ delBackwardKeys config
-
-deriveJSON defaultOptions ''Vector2
-deriveJSON defaultOptions ''Draw.Color
-deriveJSON defaultOptions ''E.ModState
-deriveJSON defaultOptions ''E.ModKey
-deriveJSON defaultOptions ''E.Key
-deriveJSON defaultOptions ''Layers
-deriveJSON defaultOptions ''Config
-
-instance FromJSON CDouble where
-  parseJSON = fmap (realToFrac :: Double -> CDouble) . parseJSON
-
-instance ToJSON CDouble where
-  toJSON = toJSON . (realToFrac :: CDouble -> Double)

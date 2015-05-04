@@ -1,68 +1,131 @@
-{-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric #-}
 module Graphics.UI.Bottle.Widget
   ( module Graphics.UI.Bottle.WidgetId
-  , Widget(..), MEnter, R, Size
+
+  -- Types:
+  , R, Size
+
   , EnterResult(..), enterResultEvent, enterResultRect
+
+  -- Event Result:
+  , EventResult(..), eCursor, eAnimIdMapping
+  , eventResultFromCursor
+  , applyIdMapping
+  , animIdMappingFromPrefixMap
+
+  -- Events:
   , EventHandlers
-  , EventResult(..), eventResultFromCursor
-  , keysEventMap, keysEventMapMovesCursor
-  , eAnimIdMapping, eCursor
-  , wMaybeEnter, wEventMap, wFrame, wFocalArea
-  , wIsFocused, wSize
-  , atWFrameWithSize, atEvents
+  , keysEventMap
+  , keysEventMapMovesCursor
+
+  -- Widget type and lenses:
+  , Widget(..), isFocused, view, mEnter, eventMap, focalArea
+  , animLayers, animFrame, size, width, height, events
+
+  -- Construct widgets:
+  , empty
+  , fromView
+
+  -- Focus handlers:
   , takesFocus, doesntTakeFocus
-  , backgroundColor, tint, liftView
+
+  -- Operations:
   , strongerEvents, weakerEvents
-  , translate, translateBy, scale, scaleDownContent, pad
-  , overlayView
+  , translate, scale
+  , pad, assymetricPad, padToSizeAlign
+  , addInnerFrame
+  , backgroundColor
+  , tint
+
+  -- Env:
+  , Env(..), envCursor, envCursorAnimId
+
+  , respondToCursorAt
+  , respondToCursorPrefix
+  , respondToCursorBy
+  , respondToCursor
   ) where
 
-import Control.Applicative ((<$>), liftA2)
-import Control.Lens.Operators
-import Data.Derive.Monoid (makeMonoid)
-import Data.DeriveTH (derive)
-import Data.Monoid (Monoid(..))
-import Data.Vector.Vector2 (Vector2)
-import Graphics.UI.Bottle.Animation (AnimId, R, Size)
-import Graphics.UI.Bottle.Direction (Direction)
-import Graphics.UI.Bottle.EventMap (EventMap)
-import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.View (View)
-import Graphics.UI.Bottle.WidgetId (Id(..), augmentId, toAnimId, joinId, subId)
+import           Control.Applicative ((<$>), (<*>))
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Data.Map (Map)
+import qualified Data.Map as Map
+import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
+import           Data.Monoid.Generic (def_mempty, def_mappend)
+import           Data.Vector.Vector2 (Vector2(..))
+import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Animation (AnimId, R, Size)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
+import           Graphics.UI.Bottle.EventMap (EventMap)
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import           Graphics.UI.Bottle.ModKey (ModKey)
+import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import           Graphics.UI.Bottle.View (View(..))
+import qualified Graphics.UI.Bottle.View as View
+import           Graphics.UI.Bottle.WidgetId
 
-data EventResult = EventResult {
-  _eCursor :: Monoid.Last Id,
-  _eAnimIdMapping :: Monoid.Endo AnimId
+data EventResult = EventResult
+  { _eCursor :: Monoid.Last Id
+  , _eAnimIdMapping :: Monoid.Endo AnimId
+  } deriving (Generic)
+instance Monoid EventResult where
+  mempty = def_mempty
+  mappend = def_mappend
+
+data EnterResult f = EnterResult
+  { _enterResultRect :: Rect
+  , _enterResultEvent :: f EventResult
   }
-derive makeMonoid ''EventResult
 
-data EnterResult f = EnterResult {
-  _enterResultRect :: Rect,
-  _enterResultEvent :: f EventResult
-  }
-
-type MEnter f = Maybe (Direction -> EnterResult f)
 type EventHandlers f = EventMap (f EventResult)
 
 data Widget f = Widget
-  { _wIsFocused :: Bool
-  , _wSize :: Size
-  , _wFrame :: Anim.Frame
-  , _wMaybeEnter :: MEnter f -- Nothing if we're not enterable
-  , _wEventMap :: EventHandlers f
-  , _wFocalArea :: Rect
+  { _isFocused :: Bool
+  , _view :: View
+  , _mEnter :: Maybe (Direction -> EnterResult f) -- Nothing if we're not enterable
+  , _eventMap :: EventHandlers f
+  , _focalArea :: Rect
   }
+
+-- When focused, mEnter may still be relevant, e.g: FlyNav in an
+-- active textedit, to move to a different text-edit position.
+
+-- When unfocused, event map is usually irrelevant, but can too be
+-- used
 
 Lens.makeLenses ''EnterResult
 Lens.makeLenses ''EventResult
 Lens.makeLenses ''Widget
+
+empty :: Widget f
+empty = Widget False View.empty Nothing mempty (Rect 0 0)
+
+{-# INLINE animFrame #-}
+animFrame :: Lens' (Widget f) Anim.Frame
+animFrame = view . View.animFrame
+
+{-# INLINE animLayers #-}
+animLayers :: Lens.Traversal' (Widget f) Anim.Layer
+animLayers = animFrame . Anim.layers
+
+{-# INLINE size #-}
+size :: Lens' (Widget f) Size
+size = view . View.size
+
+{-# INLINE width #-}
+width :: Lens' (Widget f) R
+width = view . View.width
+
+{-# INLINE height #-}
+height :: Lens' (Widget f) R
+height = view . View.height
 
 eventResultFromCursor :: Id -> EventResult
 eventResultFromCursor cursor = EventResult
@@ -70,115 +133,161 @@ eventResultFromCursor cursor = EventResult
   , _eAnimIdMapping = mempty
   }
 
-atEvents :: (f EventResult -> g EventResult) -> Widget f -> Widget g
-atEvents func w = w
-  { _wMaybeEnter =
-       (Lens.mapped . Lens.mapped . enterResultEvent %~ func) $
-       _wMaybeEnter w
-  , _wEventMap = fmap func $ _wEventMap w
-  }
+events :: Lens.Setter (Widget f) (Widget g) (f EventResult) (g EventResult)
+events =
+  Lens.sets atEvents
+  where
+    atEvents f widget = widget
+      { _mEnter =
+           (Lens.mapped . Lens.mapped . enterResultEvent %~ f) $
+           _mEnter widget
+      , _eventMap = f <$> _eventMap widget
+      }
 
-liftView :: Anim.Size -> Anim.Frame -> Widget f
-liftView sz frame =
+fromView :: View -> Widget f
+fromView v =
   Widget
-    { _wIsFocused = False
-    , _wSize = sz
-    , _wFocalArea = Rect 0 sz
-    , _wFrame = frame
-    , _wEventMap = mempty
-    , _wMaybeEnter = Nothing
+    { _isFocused = False
+    , _focalArea = Rect 0 (v ^. View.size)
+    , _view = v
+    , _eventMap = mempty
+    , _mEnter = Nothing
     }
 
-atWFrameWithSize :: (Size -> Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
-atWFrameWithSize f w = w & wFrame %~ f (w ^. wSize)
-
--- TODO: Would be nicer as (Direction -> Id), but then TextEdit's "f" couldn't be ((,) String)..
 takesFocus :: Functor f => (Direction -> f Id) -> Widget f -> Widget f
-takesFocus enter w = w & wMaybeEnter .~ mEnter
+takesFocus enterFunc widget =
+  widget & mEnter .~ Just enter
   where
-    mEnter =
-      Just $
-      EnterResult focalArea .
-      fmap eventResultFromCursor <$> enter
-    focalArea = w ^. wFocalArea
+    enter =
+      enterFunc
+      <&> Lens.mapped %~ eventResultFromCursor
+      <&> EnterResult (widget ^. focalArea)
 
 doesntTakeFocus :: Widget f -> Widget f
-doesntTakeFocus = wMaybeEnter .~ Nothing
+doesntTakeFocus = mEnter .~ Nothing
 
 -- ^ If doesn't take focus, event map is ignored
 strongerEvents :: EventHandlers f -> Widget f -> Widget f
-strongerEvents events = wEventMap %~ (events `mappend`)
+strongerEvents eMap = eventMap %~ (eMap `mappend`)
 
 -- ^ If doesn't take focus, event map is ignored
 weakerEvents :: EventHandlers f -> Widget f -> Widget f
-weakerEvents events = wEventMap %~ (`mappend` events)
+weakerEvents eMap = eventMap %~ (`mappend` eMap)
 
 backgroundColor :: Int -> AnimId -> Draw.Color -> Widget f -> Widget f
-backgroundColor layer animId = atWFrameWithSize . Anim.backgroundColor animId layer
+backgroundColor layer animId color =
+  view %~ View.backgroundColor animId layer color
+
+addInnerFrame :: Int -> AnimId -> Draw.Color -> Vector2 R -> Widget f -> Widget f
+addInnerFrame layer animId color frameWidth widget =
+  widget & animFrame %~ mappend emptyRectangle
+  where
+    emptyRectangle =
+      Anim.emptyRectangle frameWidth (widget ^. size) animId
+      & Anim.unitImages %~ Draw.tint color
+      & Anim.layers +~ layer
+
+animIdMappingFromPrefixMap :: Map AnimId AnimId -> Monoid.Endo AnimId
+animIdMappingFromPrefixMap = Monoid.Endo . Anim.mappingFromPrefixMap
+
+applyIdMapping :: Map Id Id -> EventResult -> EventResult
+applyIdMapping widgetIdMap eventResult =
+  eventResult
+  & eAnimIdMapping <>~ animIdMappingFromPrefixMap animIdMap
+  & eCursor . Lens._Wrapped' . Lens._Just %~ mapCursor
+  where
+    animIdMap =
+      widgetIdMap
+      & Map.mapKeys toAnimId & Map.map toAnimId
+    mapCursor (Id oldCursor) =
+      Id $ Anim.mappingFromPrefixMap animIdMap oldCursor
 
 tint :: Draw.Color -> Widget f -> Widget f
-tint color = wFrame %~ Anim.onImages (Draw.tint color)
+tint color = animFrame . Anim.unitImages %~ Draw.tint color
 
 keysEventMap ::
-  Functor f => [EventMap.ModKey] -> EventMap.Doc ->
+  Functor f => [ModKey] -> EventMap.Doc ->
   f () -> EventHandlers f
 keysEventMap keys doc act =
-  (fmap . fmap . const) mempty $
+  (fmap . const) mempty <$>
   EventMap.keyPresses keys doc act
 
 keysEventMapMovesCursor ::
-  Functor f => [EventMap.ModKey] -> EventMap.Doc ->
+  Functor f => [ModKey] -> EventMap.Doc ->
   f Id -> EventHandlers f
 keysEventMapMovesCursor keys doc act =
-  (fmap . fmap) eventResultFromCursor $
+  fmap eventResultFromCursor <$>
   EventMap.keyPresses keys doc act
 
 -- TODO: This actually makes an incorrect widget because its size
 -- remains same, but it is now translated away from 0..size
+-- Should expose higher-level combinators instead?
 translate :: Vector2 R -> Widget f -> Widget f
-translate pos =
-  (wFrame %~ Anim.translate pos) .
-  (wFocalArea . Rect.topLeft %~ (+pos)) .
-  (wMaybeEnter . Lens.mapped %~
-    (Lens.mapped . enterResultRect .
-     Rect.topLeft %~ (+ pos)) .
-    (Lens.argument . Direction.coordinates .
-     Rect.topLeft %~ subtract pos))
-
-translateBy :: (Vector2 R -> Vector2 R) -> Widget f -> Widget f
-translateBy mkPos w =
-  (translate . mkPos . (^. wSize)) w w
+translate pos widget =
+  widget
+  & mEnter . Lens._Just . Lens.argument .
+    Direction.coordinates . Rect.topLeft -~ pos
+  & mEnter . Lens._Just . Lens.mapped .
+    enterResultRect . Rect.topLeft +~ pos
+  & focalArea . Rect.topLeft +~ pos
+  & animFrame %~ Anim.translate pos
 
 scale :: Vector2 R -> Widget f -> Widget f
-scale mult =
-  (wFrame %~ Anim.scale mult) .
-  (wFocalArea . Rect.topLeftAndSize %~ (* mult)) .
-  (wMaybeEnter . Lens.traversed %~
-    (Lens.mapped . enterResultRect .
-     Rect.topLeftAndSize %~ (*mult)) .
-    (Lens.argument . Direction.coordinates .
-     Rect.topLeftAndSize %~ (/mult))) .
-  (wSize %~ (* mult))
-
--- | Scale down a widget without affecting its exported size
-scaleDownContent :: Vector2 R -> Vector2 R -> Widget f -> Widget f
-scaleDownContent factor align w =
-  w
-  & scale factor
-  & translate ((w ^. wSize) * align * (1 - factor))
-  & wSize .~ (w ^. wSize)
+scale mult widget =
+  widget
+  & view %~ View.scale mult
+  & focalArea . Rect.topLeftAndSize *~ mult
+  & mEnter . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeftAndSize *~ mult
+  & mEnter . Lens._Just . Lens.argument . Direction.coordinates . Rect.topLeftAndSize //~ mult
 
 -- Surround a widget with padding
 pad :: Vector2 R -> Widget f -> Widget f
-pad p w =
-  w
-  & wSize .~ withPadding
-  & translate p
-  where
-    withPadding = w^.wSize + 2*p
+pad p = assymetricPad p p
 
-overlayView :: View -> Widget f -> Widget f
-overlayView (size, frame) w =
-  w
-  & wSize %~ liftA2 max size
-  & wFrame %~ mappend frame
+assymetricPad :: Vector2 R -> Vector2 R -> Widget f -> Widget f
+assymetricPad leftAndTop rightAndBottom widget =
+  widget
+  & size +~ leftAndTop + rightAndBottom
+  & translate leftAndTop
+
+padToSizeAlign :: Size -> Vector2 R -> Widget f -> Widget f
+padToSizeAlign newSize alignment widget =
+  widget
+  & translate (sizeDiff * alignment)
+  & size .~ newSize
+  where
+    sizeDiff = max <$> 0 <*> newSize - widget ^. size
+
+data Env = Env
+  { -- | Where the cursor is pointing:
+    _envCursor :: Id
+  , -- | What animId to use when drawing a cursor anim frame:
+    _envCursorAnimId :: AnimId
+  } deriving (Show, Eq, Ord)
+Lens.makeLenses ''Env
+
+respondToCursorPrefix ::
+  Id -> Draw.Color -> Anim.Layer -> Env ->
+  Widget f -> Widget f
+respondToCursorPrefix myIdPrefix =
+  respondToCursorBy (Lens.has Lens._Just . subId myIdPrefix)
+
+respondToCursorAt ::
+  Id -> Draw.Color -> Anim.Layer -> Env ->
+  Widget f -> Widget f
+respondToCursorAt wId = respondToCursorBy (== wId)
+
+respondToCursorBy ::
+  (Id -> Bool) -> Draw.Color -> Anim.Layer -> Env ->
+  Widget f -> Widget f
+respondToCursorBy f color layer env widget
+  | f (env ^. envCursor) =
+    widget & respondToCursor color layer (env ^. envCursorAnimId)
+  | otherwise = widget
+
+respondToCursor ::
+  Draw.Color -> Anim.Layer -> AnimId -> Widget f -> Widget f
+respondToCursor color layer animId widget =
+  widget
+  & backgroundColor layer animId color
+  & isFocused .~ True

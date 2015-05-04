@@ -4,7 +4,7 @@ module Graphics.UI.Bottle.Widgets.Box
   , make, makeKeyed, makeAlign, makeCentered
   , unkey
   , boxMCursor, boxSize, boxContent, boxOrientation
-  , Element, elementRect, elementW
+  , Element, elementRect, elementAlign, elementOriginalWidget
   , Cursor, toWidget, toWidgetBiased
   , Orientation, horizontal, vertical
   , hboxAlign, vboxAlign
@@ -12,12 +12,13 @@ module Graphics.UI.Bottle.Widgets.Box
   , hbox, vbox
   ) where
 
-import Control.Lens (Lens', (^.))
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Widget (Widget, Size)
-import Graphics.UI.Bottle.Widgets.Grid (KGrid(..))
+import           Control.Lens ((^.))
 import qualified Control.Lens as Lens
+import           Control.Lens.Tuple
+import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.UI.Bottle.Rect (Rect(..))
+import           Graphics.UI.Bottle.Widget (Widget, Size)
+import           Graphics.UI.Bottle.Widgets.Grid (KGrid(..))
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
 type Cursor = Int
@@ -26,6 +27,8 @@ eHead :: [a] -> a
 eHead (x:_) = x
 eHead [] = error "Grid returned invalid list without any elements, instead of list Box handed it"
 
+-- Want a 2d vector like in Grid, because we may want to preserve the
+-- alignment in the resulting KBox.
 type Alignment = Grid.Alignment
 
 data Orientation = Orientation
@@ -39,7 +42,7 @@ horizontal :: Orientation
 horizontal = Orientation
   { oToGridCursor = (`Vector2` 0)
   , oToGridChildren = (: [])
-  , oFromGridCursor = (^. Lens._1)
+  , oFromGridCursor = (^. _1)
   , oFromGridChildren = eHead
   }
 
@@ -47,34 +50,58 @@ vertical :: Orientation
 vertical = Orientation
   { oToGridCursor = (0 `Vector2`)
   , oToGridChildren = map (: [])
-  , oFromGridCursor = (^. Lens._2)
+  , oFromGridCursor = (^. _2)
   , oFromGridChildren = map eHead
   }
 
 type Element = Grid.Element
 
-elementRect :: Lens' (Element f) Rect
+{-# INLINE elementRect #-}
+elementRect :: Lens.Getter (Element f) Rect
 elementRect = Grid.elementRect
 
-elementW :: Lens' (Element f) (Widget f)
-elementW = Grid.elementW
+{-# INLINE elementAlign #-}
+elementAlign :: Lens.Getter (Element f) Alignment
+elementAlign = Grid.elementAlign
+
+{-# INLINE elementOriginalWidget #-}
+elementOriginalWidget :: Lens.Getter (Element f) (Widget f)
+elementOriginalWidget = Grid.elementOriginalWidget
 
 data KBox key f = KBox
-  { _boxOrientation :: Orientation
-  , _boxMCursor :: Maybe Cursor
-  , _boxSize :: Size
-  , _boxContent :: [(key, Element f)]
+  { __boxOrientation :: Orientation
+  , __boxMCursor :: Maybe Cursor
+  , __boxSize :: Size
+  , __boxContent :: [(key, Element f)]
+  , __boxGrid :: KGrid key f
   }
 Lens.makeLenses ''KBox
+
+{-# INLINE boxOrientation #-}
+boxOrientation :: Lens.Getter (KBox key f) Orientation
+boxOrientation = _boxOrientation
+
+{-# INLINE boxMCursor #-}
+boxMCursor :: Lens.Getter (KBox key f) (Maybe Cursor)
+boxMCursor = _boxMCursor
+
+{-# INLINE boxSize #-}
+boxSize :: Lens.Getter (KBox key f) Size
+boxSize = _boxSize
+
+{-# INLINE boxContent #-}
+boxContent :: Lens.Getter (KBox key f) [(key, Element f)]
+boxContent = _boxContent
 
 type Box = KBox ()
 
 makeKeyed :: Orientation -> [(key, (Alignment, Widget f))] -> KBox key f
 makeKeyed orientation children = KBox
-  { _boxOrientation = orientation
-  , _boxMCursor = fmap (oFromGridCursor orientation) $ grid ^. Grid.gridMCursor
-  , _boxSize = grid ^. Grid.gridSize
-  , _boxContent = oFromGridChildren orientation $ grid ^. Grid.gridContent
+  { __boxOrientation = orientation
+  , __boxMCursor = fmap (oFromGridCursor orientation) $ grid ^. Grid.gridMCursor
+  , __boxSize = grid ^. Grid.gridSize
+  , __boxContent = oFromGridChildren orientation $ grid ^. Grid.gridContent
+  , __boxGrid = grid
   }
   where
     grid = Grid.makeKeyed $ oToGridChildren orientation children
@@ -91,19 +118,12 @@ makeAlign alignment orientation = make orientation . map ((,) alignment)
 makeCentered :: Orientation -> [Widget f] -> Box f
 makeCentered = makeAlign 0.5
 
-toGrid :: KBox key f -> KGrid key f
-toGrid (KBox orientation mCursor size content) = KGrid
-  { _gridMCursor = fmap (oToGridCursor orientation) mCursor
-  , _gridSize = size
-  , _gridContent = oToGridChildren orientation content
-  }
-
 toWidget :: KBox key f -> Widget f
-toWidget = Grid.toWidget . toGrid
+toWidget = Grid.toWidget . __boxGrid
 
 toWidgetBiased :: Cursor -> KBox key f -> Widget f
 toWidgetBiased cursor box =
-  Grid.toWidgetBiased gridCursor $ toGrid box
+  Grid.toWidgetBiased gridCursor $ __boxGrid box
   where
     gridCursor = oToGridCursor (box ^. boxOrientation) cursor
 

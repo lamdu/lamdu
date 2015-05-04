@@ -1,30 +1,36 @@
-module Graphics.UI.Bottle.MainLoop (mainLoopAnim, mainLoopImage, mainLoopWidget) where
+{-# LANGUAGE CPP #-}
+module Graphics.UI.Bottle.MainLoop
+  ( mainLoopAnim
+  , mainLoopImage
+  , mainLoopWidget
+  ) where
 
-import Control.Applicative ((<$>))
-import Control.Concurrent (threadDelay)
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Control.Monad (when, unless)
-import Data.IORef
-import Data.MRUMemo (memoIO)
-import Data.Monoid (Monoid(..))
-import Data.Time.Clock (getCurrentTime, diffUTCTime)
-import Data.Traversable (traverse, sequenceA)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.DrawingCombinators ((%%))
-import Graphics.DrawingCombinators.Utils (Image)
-import Graphics.Rendering.OpenGL.GL (($=))
-import Graphics.UI.Bottle.Animation(AnimId)
-import Graphics.UI.Bottle.Widget(Widget)
-import Graphics.UI.GLFW.Events (KeyEvent, GLFWEvent(..), eventLoop)
+import           Control.Applicative ((<$>))
+import           Control.Concurrent (threadDelay)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad (when, unless)
+import           Data.IORef
+import           Data.MRUMemo (memoIO)
+import           Data.Monoid (Monoid(..), (<>))
 import qualified Data.Monoid as Monoid
+import           Data.Time.Clock (getCurrentTime, diffUTCTime)
+import           Data.Traversable (traverse, sequenceA)
+import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.DrawingCombinators.Utils (Image)
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
+import           Graphics.Rendering.OpenGL.GL (($=))
 import qualified Graphics.Rendering.OpenGL.GL as GL
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
+import           Graphics.UI.GLFW.Events (KeyEvent, Event(..), eventLoop)
 
 mainLoopImage
   :: GLFW.Window -> (Widget.Size -> KeyEvent -> IO Bool)
@@ -36,15 +42,16 @@ mainLoopImage win eventHandler makeImage =
       (x, y) <- GLFW.getFramebufferSize win
       return $ fromIntegral <$> Vector2 x y
 
-    handleEvent size (GLFWKeyEvent keyEvent) =
+    handleEvent size (EventKey keyEvent) =
       eventHandler size keyEvent
-    handleEvent _ GLFWWindowClose =
+    handleEvent _ EventWindowClose =
       error "Quit" -- TODO: Make close event
-    handleEvent _ GLFWWindowRefresh = return True
+    handleEvent _ EventWindowRefresh = return True
 
     handleEvents events = do
       winSize@(Vector2 winSizeX winSizeY) <- windowSize
-      anyChange <- fmap or $ traverse (handleEvent winSize) events
+      anyChange <- or <$> traverse (handleEvent winSize) events
+      -- TODO: Don't do this *EVERY* frame but on frame-buffer size update events?
       GL.viewport $=
         (GL.Position 0 0,
          GL.Size (round winSizeX) (round winSizeY))
@@ -55,10 +62,14 @@ mainLoopImage win eventHandler makeImage =
           -- need no sleep here
           threadDelay 10000
         Just image ->
-          Draw.clearRender .
-          (Draw.translate (-1, 1) %%) .
-          (Draw.scale (2/winSizeX) (-2/winSizeY) %%) $
           image
+          & (DrawUtils.translate (Vector2 (-1) 1) <> DrawUtils.scale (Vector2 (2/winSizeX) (-2/winSizeY)) %%)
+#ifdef DRAWINGCOMBINATORS__SIZED
+          & let Vector2 glPixelRatioX glPixelRatioY = winSize / 2 -- GL range is -1..1
+            in Draw.clearRenderSized (glPixelRatioX, glPixelRatioY)
+#else
+          & Draw.clearRender
+#endif
 
 mainLoopAnim ::
   GLFW.Window ->
@@ -102,7 +113,7 @@ mainLoopAnim win tickHandler eventHandler makeFrame getAnimationHalfLife = do
       curTime <- getCurrentTime
       writeIORef frameStateVar =<<
         nextFrameState curTime size =<< readIORef frameStateVar
-      fmap frameStateResult $ readIORef frameStateVar
+      frameStateResult <$> readIORef frameStateVar
 
     frameStateResult Nothing = error "No frame to draw at start??"
     frameStateResult (Just (drawCount, (_, frame)))
@@ -129,7 +140,7 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationHalfLife = do
       when anyUpdate newWidget
       widget <- getWidget size
       tickResults <-
-        sequenceA (widget ^. Widget.wEventMap . E.emTickHandlers)
+        sequenceA (widget ^. Widget.eventMap . E.emTickHandlers)
       unless (null tickResults) newWidget
       return $
         case (tickResults, anyUpdate) of
@@ -139,10 +150,10 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationHalfLife = do
       widget <- getWidget size
       mAnimIdMapping <-
         (traverse . fmap) (^. Widget.eAnimIdMapping) .
-        E.lookup event $ widget ^. Widget.wEventMap
+        E.lookup event $ widget ^. Widget.eventMap
       case mAnimIdMapping of
         Nothing -> return ()
         Just _ -> newWidget
       return mAnimIdMapping
-    mkFrame size = (^. Widget.wFrame) <$> getWidget size
+    mkFrame size = getWidget size <&> (^. Widget.animFrame)
   mainLoopAnim win tickHandler eventHandler mkFrame getAnimationHalfLife

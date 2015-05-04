@@ -1,37 +1,46 @@
-{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widgets.Grid
   ( Grid, KGrid(..)
   , make, makeKeyed, makeAlign, makeCentered
   , unkey
   , Alignment
   , gridMCursor, gridSize, gridContent
-  , Element(..)
-  , elementAlign, elementRect, elementW
-  , Cursor, toWidget, toWidgetBiased
+  , Element
+  , elementAlign, elementRect, elementOriginalWidget
+  , Cursor
+  , Keys(..), stdKeys
+  , toWidget, toWidgetWithKeys
+  , toWidgetBiased, toWidgetBiasedWithKeys
   ) where
 
-import Control.Applicative (liftA2, (<$>))
-import Control.Lens ((^.), (%~))
-import Control.Monad (join, msum)
-import Data.Function (on)
-import Data.List (foldl', transpose, find, minimumBy, sortBy, groupBy)
-import Data.List.Utils (index, enumerate2d)
-import Data.MRUMemo (memo)
-import Data.Maybe (isJust, fromMaybe, catMaybes, mapMaybe)
-import Data.Monoid (Monoid(..))
-import Data.Ord (comparing)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Widget (Widget(..), R)
-import Graphics.UI.Bottle.Widgets.GridView (Alignment)
-import Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
+import           Control.Applicative (liftA2, (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad (msum)
+import           Data.Foldable (Foldable)
+import           Data.Function (on)
+import           Data.List (foldl', transpose, find)
+import           Data.List.Utils (groupOn, sortOn, minimumOn)
+import           Data.MRUMemo (memo)
+import           Data.Maybe (fromMaybe)
+import           Data.Monoid (Monoid(..), (<>))
+import           Data.Traversable (Traversable)
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
+import           Graphics.UI.Bottle.Direction (Direction)
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import qualified Graphics.UI.Bottle.ModKey as ModKey
+import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import           Graphics.UI.Bottle.View (View(..))
+import           Graphics.UI.Bottle.Widget (R, Widget(Widget))
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widgets.GridView (Alignment)
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
+import           Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Graphics.UI.GLFW as GLFW
 
 type Cursor = Vector2 Int
@@ -53,7 +62,10 @@ data NavDests f = NavDests
   , rightMostCursor :: Maybe (Widget.EnterResult f)
   }
 
-mkNavDests :: Widget.Size -> Rect -> [[Widget.MEnter f]] -> Cursor -> NavDests f
+mkNavDests ::
+  Widget.Size -> Rect ->
+  [[Maybe (Direction -> Widget.EnterResult f)]] ->
+  Cursor -> NavDests f
 mkNavDests widgetSize prevFocalArea mEnterss cursor@(Vector2 cursorX cursorY) = NavDests
   { leftOfCursor    = givePrevFocalArea . reverse $ take cursorX curRow
   , aboveCursor     = givePrevFocalArea . reverse $ take cursorY curColumn
@@ -66,8 +78,8 @@ mkNavDests widgetSize prevFocalArea mEnterss cursor@(Vector2 cursorX cursorY) = 
   , rightMostCursor = giveEdge (Vector2 (Just 1) Nothing) . take 1 . reverse $ drop (cursorX+1) curRow
   }
   where
-    curRow = fromMaybe [] $ index cappedY mEnterss
-    curColumn = fromMaybe [] $ index cappedX (transpose mEnterss)
+    curRow = fromMaybe [] $ mEnterss ^? Lens.ix cappedY
+    curColumn = fromMaybe [] $ transpose mEnterss ^? Lens.ix cappedX
     Vector2 cappedX cappedY = capCursor size cursor
     size = length2d mEnterss
 
@@ -82,28 +94,51 @@ mkNavDests widgetSize prevFocalArea mEnterss cursor@(Vector2 cursorX cursorY) = 
           (fmap . fmap) (const 0) edge
       }
 
+data Keys key = Keys
+  { keysDir :: DirKeys key
+  , keysMoreLeft :: [key]
+  , keysMoreRight :: [key]
+  , keysLeftMost :: [key]
+  , keysRightMost :: [key]
+  , keysTop :: [key]
+  , keysBottom :: [key]
+  } deriving (Functor, Foldable, Traversable)
 
-mkNavEventmap
-  :: NavDests f -> (Widget.EventHandlers f, Widget.EventHandlers f)
-mkNavEventmap navDests = (weakMap, strongMap)
+stdKeys :: Keys ModKey
+stdKeys = Keys
+  { keysDir = k <$> stdDirKeys
+  , keysMoreLeft = [k GLFW.Key'Home]
+  , keysMoreRight = [k GLFW.Key'End]
+  , keysLeftMost = [ctrlK GLFW.Key'Home]
+  , keysRightMost = [ctrlK GLFW.Key'End]
+  , keysTop = [k GLFW.Key'PageUp]
+  , keysBottom = [k GLFW.Key'PageDown]
+  }
   where
-    weakMap = mconcat . catMaybes $ [
-      movementk "left"       (keysLeft  stdDirKeys) leftOfCursor,
-      movementk "right"      (keysRight stdDirKeys) rightOfCursor,
-      movementk "up"         (keysUp    stdDirKeys) aboveCursor,
-      movementk "down"       (keysDown  stdDirKeys) belowCursor,
-      movementk "more left"  [GLFW.Key'Home]         leftMostCursor,
-      movementk "more right" [GLFW.Key'End]          rightMostCursor
-      ]
-    strongMap = mconcat . catMaybes $ [
-      movementk "top"       [GLFW.Key'PageUp]    topCursor,
-      movementk "bottom"    [GLFW.Key'PageDown]  bottomCursor,
-      movement "leftmost"  [ctrlK GLFW.Key'Home] leftMostCursor,
-      movement "rightmost" [ctrlK GLFW.Key'End]  rightMostCursor
-      ]
-    k = EventMap.ModKey EventMap.noMods
-    ctrlK = EventMap.ModKey EventMap.ctrl
-    movementk dirName = movement dirName . map k
+    k = ModKey mempty
+    ctrlK = ModKey.ctrl
+
+addNavEventmap ::
+  Keys ModKey -> NavDests f ->
+  Widget.EventHandlers f ->
+  Widget.EventHandlers f
+addNavEventmap Keys{..} navDests eMap =
+  strongMap <> eMap <> weakMap
+  where
+    weakMap =
+      [ movement "left"       (keysLeft  keysDir) leftOfCursor
+      , movement "right"      (keysRight keysDir) rightOfCursor
+      , movement "up"         (keysUp    keysDir) aboveCursor
+      , movement "down"       (keysDown  keysDir) belowCursor
+      , movement "more left"  keysMoreLeft        leftMostCursor
+      , movement "more right" keysMoreRight       rightMostCursor
+      ] ^. Lens.traverse . Lens._Just
+    strongMap =
+      [ movement "top"       keysTop       topCursor
+      , movement "bottom"    keysBottom    bottomCursor
+      , movement "leftmost"  keysLeftMost  leftMostCursor
+      , movement "rightmost" keysRightMost rightMostCursor
+      ] ^. Lens.traverse . Lens._Just
     movement dirName events f =
       (EventMap.keyPresses
        events
@@ -111,44 +146,78 @@ mkNavEventmap navDests = (weakMap, strongMap)
        (^. Widget.enterResultEvent)) <$>
       f navDests
 
+enumerate2d :: [[a]] -> [(Vector2 Int, a)]
+enumerate2d xss =
+  xss ^@.. Lens.traversed <.> Lens.traversed
+  <&> _1 %~ uncurry (flip Vector2)
+
+index2d :: [[a]] -> Vector2 Int -> a
+index2d xss (Vector2 x y) = xss !! y !! x
+
 getCursor :: [[Widget k]] -> Maybe Cursor
-getCursor =
-  fmap cursorOf . find (_wIsFocused . snd) . concat . enumerate2d
-  where
-    cursorOf ((row, column), _) = Vector2 column row
+getCursor widgets =
+  widgets
+  & enumerate2d
+  & find (^. _2 . Widget.isFocused)
+  <&> fst
 
 data Element f = Element
-  { _elementAlign :: Alignment
-  , _elementRect :: Rect
-  , _elementW :: Widget f
+  { __elementAlign :: Alignment
+  , __elementRect :: Rect
+  , __elementOriginalWidget :: Widget f
   }
 
 data KGrid key f = KGrid
-  { _gridMCursor :: Maybe Cursor
-  , _gridSize :: Widget.Size
-  , _gridContent :: [[(key, Element f)]]
+  { __gridMCursor :: Maybe Cursor
+  , __gridSize :: Widget.Size
+  , __gridContent :: [[(key, Element f)]]
   }
 
 Lens.makeLenses ''Element
 Lens.makeLenses ''KGrid
 
+{-# INLINE elementAlign #-}
+elementAlign :: Lens.Getter (Element f) Alignment
+elementAlign = _elementAlign
+
+{-# INLINE elementRect #-}
+elementRect :: Lens.Getter (Element f) Rect
+elementRect = _elementRect
+
+{-# INLINE elementOriginalWidget #-}
+elementOriginalWidget :: Lens.Getter (Element f) (Widget f)
+elementOriginalWidget = _elementOriginalWidget
+
+{-# INLINE gridMCursor #-}
+gridMCursor :: Lens.Getter (KGrid key f) (Maybe Cursor)
+gridMCursor = _gridMCursor
+
+{-# INLINE gridSize #-}
+gridSize :: Lens.Getter (KGrid key f) Widget.Size
+gridSize = _gridSize
+
+{-# INLINE gridContent #-}
+gridContent :: Lens.Getter (KGrid key f) [[(key, Element f)]]
+gridContent = _gridContent
+
 type Grid = KGrid ()
 
 makeKeyed :: [[(key, (Alignment, Widget f))]] -> KGrid key f
 makeKeyed children = KGrid
-  { _gridMCursor = getCursor $ (map . map) (snd . snd) children
-  , _gridSize = size
-  , _gridContent = content
+  { __gridMCursor = getCursor $ (map . map) (snd . snd) children
+  , __gridSize = size
+  , __gridContent = content
   }
   where
     (size, content) =
-      GridView.makeGeneric translate $
-      (map . map) mkSizedKeyedContent children
-    mkSizedKeyedContent (key, (alignment, widget)) =
-      (alignment, (widget ^. Widget.wSize, (key, widget)))
-    translate align rect =
-      Lens._2 %~
-      Element align rect . Widget.translate (rect ^. Rect.topLeft)
+      children
+      & Lens.mapped . Lens.mapped %~ toTriplet
+      & GridView.makePlacements
+      & _2 . Lens.mapped . Lens.mapped %~ toElement
+    toTriplet (key, (alignment, widget)) =
+      (alignment, widget ^. Widget.size, (key, widget))
+    toElement (alignment, rect, (key, widget)) =
+      (key, Element alignment rect widget)
 
 unkey :: [[(Alignment, Widget f)]] -> [[((), (Alignment, Widget f))]]
 unkey = (map . map) ((,) ())
@@ -162,87 +231,77 @@ makeAlign alignment = make . (map . map) ((,) alignment)
 makeCentered :: [[Widget f]] -> Grid f
 makeCentered = makeAlign 0.5
 
-helper ::
-  (Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
-  KGrid key f -> Widget f
-helper combineEnters (KGrid mCursor size sChildren) =
-  combineWs $ (map . map) (^. Lens._2 . elementW) sChildren
+type CombineEnters f =
+  Widget.Size -> [[Maybe (Direction -> Widget.EnterResult f)]] ->
+  Maybe (Direction -> Widget.EnterResult f)
+
+toWidgetCommon :: Keys ModKey -> CombineEnters f -> KGrid key f -> Widget f
+toWidgetCommon keys combineEnters (KGrid mCursor size sChildren) =
+  Widget
+  { _isFocused = Lens.has Lens._Just mCursor
+  , _view = View size frame
+  , _mEnter = combineEnters size mEnterss
+  , _eventMap = eMap
+  , _focalArea = focalArea
+  }
   where
-    combineWs wss =
-      maybe unselectedW makeW mCursor
-      where
-        framess = (map . map) _wFrame wss
-        mEnterss = (map . map) _wMaybeEnter wss
-        frame = mconcat $ concat framess
-        mEnter = combineEnters size mEnterss
-
-        unselectedW = Widget
-          { _wIsFocused = isJust mCursor
-          , _wSize = size
-          , _wFrame = frame
-          , _wMaybeEnter = mEnter
-          , _wEventMap = mempty
-          , _wFocalArea = Rect 0 size
-          }
-
-        makeW cursor@(Vector2 x y) = Widget
-          { _wIsFocused = isJust mCursor
-          , _wSize = size
-          , _wFrame = frame
-          , _wMaybeEnter = mEnter
-          , _wEventMap = makeEventMap w navDests
-          , _wFocalArea = _wFocalArea w
-          }
-          where
-            navDests = mkNavDests size (_wFocalArea w) mEnterss cursor
-            w = wss !! y !! x
-
-        makeEventMap w navDests =
-          mconcat [strongMap, _wEventMap w, weakMap]
-          where
-            (weakMap, strongMap) = mkNavEventmap navDests
-
-tupleToVector2 :: (a, a) -> Vector2 a
-tupleToVector2 (y, x) = Vector2 x y
-
-minimumOn :: Ord b => (a -> b) -> [a] -> a
-minimumOn = minimumBy . comparing
-
-sortOn :: Ord b => (a -> b) -> [a] -> [a]
-sortOn = sortBy . comparing
-
-groupOn :: Eq b => (a -> b) -> [a] -> [[a]]
-groupOn = groupBy . ((==) `on`)
+    frame = widgets ^. Lens.traverse . Lens.traverse . Widget.animFrame
+    translateChildWidget (_key, Element _align rect widget) =
+      Widget.translate (rect ^. Rect.topLeft) widget
+    widgets =
+      sChildren & Lens.mapped . Lens.mapped %~ translateChildWidget
+    mEnterss = widgets & Lens.mapped . Lens.mapped %~ (^. Widget.mEnter)
+    (eMap, focalArea) =
+      case mCursor of
+      Nothing -> (mempty, Rect 0 0)
+      Just cursor ->
+        ( selectedWidget ^. Widget.eventMap & addNavEventmap keys navDests
+        , selectedWidget ^. Widget.focalArea
+        )
+        where
+          selectedWidget = index2d widgets cursor
+          navDests =
+            mkNavDests size (selectedWidget ^. Widget.focalArea) mEnterss cursor
 
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
 
--- ^ If unfocused, will enters the given child when entered
-toWidgetBiased :: Cursor -> KGrid key f -> Widget f
-toWidgetBiased (Vector2 x y) =
-  helper $ \size children ->
-  maybeOverride children <$> combineMEnters size children
+combineEntersBiased :: Cursor -> CombineEnters f
+combineEntersBiased (Vector2 x y) size children =
+  combineMEnters size children <&> maybeOverride
   where
-    maybeOverride children enter dir =
-      case dir of
-      Direction.Outside -> biased
-      Direction.PrevFocalArea _ -> biased
-      Direction.Point _ -> unbiased
-      where
-        unbiased = enter dir
-        biased = maybe unbiased ($ dir) . join $ index y children >>= index x
+    biased dir =
+      case children ^? Lens.ix y . Lens.ix x . Lens._Just of
+      Nothing -> id
+      Just childEnter -> const (childEnter dir)
+    unbiased = id
+    maybeOverride enter dir =
+      enter dir
+      & case dir of
+        Direction.Outside -> biased dir
+        Direction.PrevFocalArea _ -> biased dir
+        Direction.Point _ -> unbiased
 
+-- ^ If unfocused, will enters the given child when entered
+toWidgetBiasedWithKeys :: Keys ModKey -> Cursor -> KGrid key f -> Widget f
+toWidgetBiasedWithKeys keys cursor =
+  toWidgetCommon keys (combineEntersBiased cursor)
+
+toWidgetBiased :: Cursor -> KGrid key f -> Widget f
+toWidgetBiased = toWidgetBiasedWithKeys stdKeys
+
+toWidgetWithKeys :: Keys ModKey -> KGrid key f -> Widget f
+toWidgetWithKeys keys = toWidgetCommon keys combineMEnters
 
 toWidget :: KGrid key f -> Widget f
-toWidget = helper combineMEnters
+toWidget = toWidgetWithKeys stdKeys
 
-combineMEnters :: Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f
+combineMEnters :: CombineEnters f
 combineMEnters size children = chooseClosest childEnters
   where
     childEnters =
-      mapMaybe indexIntoMaybe .
-      concat . (Lens.mapped . Lens.mapped . Lens._1 %~ tupleToVector2) $
-      enumerate2d children
+        (enumerate2d children <&> Lens.sequenceAOf _2)
+        ^.. Lens.traverse . Lens._Just
 
     chooseClosest [] = Nothing
     chooseClosest _ = Just byDirection
@@ -253,6 +312,7 @@ combineMEnters size children = chooseClosest childEnters
        distance dirRect . (^. Widget.enterResultRect)) .
       map ($ dir) $ filteredByEdge edge
       where
+        removeUninterestingAxis :: Vector2 R -> Vector2 R
         removeUninterestingAxis = ((1 - abs (fromIntegral <$> edge)) *)
         (modifyDistance, dirRect) = case dir of
           Direction.Outside -> (id, Rect 0 0)
@@ -264,10 +324,9 @@ combineMEnters size children = chooseClosest childEnters
 
     filteredByEdge = memo $ \(Vector2 hEdge vEdge) ->
       map snd .
-      safeHead . groupSortOn ((* (-hEdge)) . (^. Lens._1 . Lens._1)) .
-      safeHead . groupSortOn ((* (-vEdge)) . (^. Lens._1 . Lens._2)) $
+      safeHead . groupSortOn ((* (-hEdge)) . (^._1._1)) .
+      safeHead . groupSortOn ((* (-vEdge)) . (^._1._2)) $
       childEnters
-    indexIntoMaybe (i, m) = (,) i <$> m
 
 safeHead :: Monoid a => [a] -> a
 safeHead = mconcat . take 1

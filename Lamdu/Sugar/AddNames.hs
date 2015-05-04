@@ -1,46 +1,58 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, RankNTypes #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, RankNTypes, DeriveGeneric, FlexibleInstances, KindSignatures, FlexibleContexts #-}
 module Lamdu.Sugar.AddNames
   ( addToDef
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens.Operators
-import Control.Monad ((<=<))
-import Control.Monad.Trans.Reader (Reader, runReader)
-import Control.Monad.Trans.State (runState, evalState)
-import Control.Monad.Trans.Writer (Writer, runWriter)
-import Control.MonadA (MonadA)
-import Data.Derive.Monoid (makeMonoid)
-import Data.DeriveTH (derive)
-import Data.Map (Map)
-import Data.Monoid (Monoid(..))
-import Data.Set (Set)
-import Data.Store.Guid (Guid)
-import Data.Traversable (Traversable, traverse)
-import Lamdu.Sugar.AddNames.CPS (CPS(..))
-import Lamdu.Sugar.AddNames.NameGen (NameGen)
-import Lamdu.Sugar.Types
+import           Control.Applicative (Applicative(..), (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad ((<=<))
+import           Control.Monad.Trans.Reader (Reader, runReader)
 import qualified Control.Monad.Trans.Reader as Reader
+import           Control.Monad.Trans.State (runState, evalState)
+import           Control.Monad.Trans.Writer (Writer, runWriter)
 import qualified Control.Monad.Trans.Writer as Writer
+import           Control.MonadA (MonadA)
+import           Data.Foldable (toList)
 import qualified Data.List.Utils as ListUtils
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Monoid (Monoid(..))
+import           Data.Monoid.Generic (def_mempty, def_mappend)
+import           Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import           Data.Set.Ordered (OrderedSet)
+import qualified Data.Set.Ordered as OrderedSet
+import           Data.Store.Guid (Guid)
+import           Data.Store.Transaction (Transaction)
+import qualified Data.Store.Transaction as Transaction
+import           Data.Traversable (Traversable, traverse)
+import           GHC.Generics (Generic)
+import           Lamdu.Data.Anchors (assocNameRef)
+import           Lamdu.Expr.Type (Type)
+import qualified Lamdu.Expr.Type as T
+import           Lamdu.Sugar.AddNames.CPS (CPS(..))
+import           Lamdu.Sugar.AddNames.NameGen (NameGen)
 import qualified Lamdu.Sugar.AddNames.NameGen as NameGen
+import           Lamdu.Sugar.AddNames.Types
+import qualified Lamdu.Sugar.Lens as SugarLens
+import           Lamdu.Sugar.Types
 
-type CPSNameConvertor m = Guid -> OldName m -> CPS m (NewName m)
-type NameConvertor m = Guid -> OldName m -> m (NewName m)
+type T = Transaction
 
-newtype RunMonad m = RunMonad (forall a. m a -> a)
+type CPSNameConvertor m = OldName m -> CPS m (NewName m)
+type NameConvertor m = OldName m -> m (NewName m)
 
-class MonadA m => MonadNaming m where
+newtype InTransaction m tm = InTransaction (forall a. m a -> T tm a)
+
+class (MonadA m, MonadA (TM m)) => MonadNaming m where
   type OldName m
   type NewName m
-  opRun :: m (RunMonad m)
+  type TM m :: * -> *
+  opRun :: m (InTransaction m (TM m))
 
-  opWithParamName :: NameGen.IsDependent -> NameGen.IsFunction -> CPSNameConvertor m
+  opWithParamName :: NameGen.IsFunction -> CPSNameConvertor m
   opWithWhereItemName :: NameGen.IsFunction -> CPSNameConvertor m
   opWithDefName :: CPSNameConvertor m
   opWithTagName :: CPSNameConvertor m
@@ -49,18 +61,56 @@ class MonadA m => MonadNaming m where
   opGetParamName :: NameConvertor m
   opGetHiddenParamsName :: NameConvertor m
 
-newtype SetList a = SetList { getSetList :: [a] }
-  deriving (Show)
-instance Eq a => Monoid (SetList a) where
-  mempty = SetList []
-  SetList xs `mappend` SetList ys = SetList $ xs ++ filter (`notElem` xs) ys
+type OldExpression m a = Expression (OldName m) (TM m) a
+type NewExpression m a = Expression (NewName m) (TM m) a
 
 type StoredName = String
-newtype NameGuidMap = NameGuidMap (Map StoredName (SetList Guid))
+
+-- pass 0
+data MStoredName = MStoredName
+  { _mStoredName :: Maybe StoredName
+  , _mStoredGuid :: Guid
+  }
+
+newtype Pass0M tm a = Pass0M { runPass0M :: T tm a }
+  deriving (Functor, Applicative, Monad)
+
+instance MonadA tm => MonadNaming (Pass0M tm) where
+  type OldName (Pass0M tm) = Guid
+  type NewName (Pass0M tm) = MStoredName
+  type TM (Pass0M tm) = tm
+  opRun = pure $ InTransaction runPass0M
+  opWithParamName _ = p0cpsNameConvertor
+  opWithWhereItemName _ = p0cpsNameConvertor
+  opWithDefName = p0cpsNameConvertor
+  opWithTagName = p0cpsNameConvertor
+  opGetParamName = p0nameConvertor
+  opGetHiddenParamsName = p0nameConvertor
+  opGetTagName = p0nameConvertor
+  opGetDefName = p0nameConvertor
+
+getMStoredName :: MonadA tm => Guid -> Pass0M tm MStoredName
+getMStoredName guid =
+  Pass0M $ do
+    nameStr <- Transaction.getP $ assocNameRef guid
+    pure MStoredName
+      { _mStoredName = if null nameStr then Nothing else Just nameStr
+      , _mStoredGuid = guid
+      }
+
+p0nameConvertor :: MonadA tm => NameConvertor (Pass0M tm)
+p0nameConvertor = getMStoredName
+
+p0cpsNameConvertor :: MonadA tm => CPSNameConvertor (Pass0M tm)
+p0cpsNameConvertor guid =
+  CPS $ \k -> (,) <$> getMStoredName guid <*> k
+
+-- Wrap the Map for a more sensible (recursive) Monoid instance
+newtype NameGuidMap = NameGuidMap (Map StoredName (OrderedSet Guid))
   deriving Show
 
 type instance Lens.Index NameGuidMap = StoredName
-type instance Lens.IxValue NameGuidMap = SetList Guid
+type instance Lens.IxValue NameGuidMap = OrderedSet Guid
 
 -- ghc-7.7.20131205 fails deriving these instances on its own.
 instance Lens.Ixed NameGuidMap where
@@ -76,56 +126,64 @@ instance Monoid NameGuidMap where
     NameGuidMap $ Map.unionWith mappend x y
 
 nameGuidMapSingleton :: StoredName -> Guid -> NameGuidMap
-nameGuidMapSingleton name guid = NameGuidMap . Map.singleton name $ SetList [guid]
+nameGuidMapSingleton name guid = NameGuidMap . Map.singleton name $ OrderedSet.singleton guid
 
 data StoredNamesWithin = StoredNamesWithin
   { _snwGuidMap :: NameGuidMap
   -- Names of tags and defs: considered conflicted if used in two
   -- different meanings anywhere in the whole definition:
   , _snwGlobalNames :: NameGuidMap
-  }
+  } deriving (Generic)
 Lens.makeLenses ''StoredNamesWithin
-derive makeMonoid ''StoredNamesWithin
+instance Monoid StoredNamesWithin where
+  mempty = def_mempty
+  mappend = def_mappend
 
--- Pass 0:
+-- pass 1:
 data StoredNames = StoredNames
-  { storedName :: Maybe StoredName
+  { _storedName :: MStoredName
   , storedNamesWithin :: StoredNamesWithin
   }
-newtype Pass0M a = Pass0M (Writer StoredNamesWithin a)
+Lens.makeLenses ''StoredNames
+newtype Pass1M (tm :: * -> *) a = Pass1M (Writer StoredNamesWithin a)
   deriving (Functor, Applicative, Monad)
-p0TellStoredNames :: StoredNamesWithin -> Pass0M ()
-p0TellStoredNames = Pass0M . Writer.tell
-p0ListenStoredNames :: Pass0M a -> Pass0M (a, StoredNamesWithin)
-p0ListenStoredNames (Pass0M act) = Pass0M $ Writer.listen act
-runPass0M :: Pass0M a -> (a, StoredNamesWithin)
-runPass0M (Pass0M act) = runWriter act
+p1TellStoredNames :: StoredNamesWithin -> Pass1M tm ()
+p1TellStoredNames = Pass1M . Writer.tell
+p1ListenStoredNames :: Pass1M tm a -> Pass1M tm (a, StoredNamesWithin)
+p1ListenStoredNames (Pass1M act) = Pass1M $ Writer.listen act
+runPass1M :: Pass1M tm a -> (a, StoredNamesWithin)
+runPass1M (Pass1M act) = runWriter act
 
 data NameScope = Local | Global
 
-instance MonadNaming Pass0M where
-  type OldName Pass0M = MStoredName
-  type NewName Pass0M = StoredNames
-  opRun = pure $ RunMonad $ fst . runPass0M
-  opWithParamName _ _ = p0cpsNameConvertor Local
-  opWithWhereItemName _ = p0cpsNameConvertor Local
-  opWithDefName = p0cpsNameConvertor Local
-  opWithTagName = p0cpsNameConvertor Local
-  opGetParamName = p0nameConvertor Local
-  opGetHiddenParamsName = p0nameConvertor Local
-  opGetTagName = p0nameConvertor Global
-  opGetDefName = p0nameConvertor Global
+instance MonadA tm => MonadNaming (Pass1M tm) where
+  type OldName (Pass1M tm) = MStoredName
+  type NewName (Pass1M tm) = StoredNames
+  type TM (Pass1M tm) = tm
+  opRun = pure $ InTransaction $ return . fst . runPass1M
+  opWithParamName _ = p1cpsNameConvertor Local
+  opWithWhereItemName _ = p1cpsNameConvertor Local
+  opWithDefName = p1cpsNameConvertor Local
+  opWithTagName = p1cpsNameConvertor Local
+  opGetParamName = p1nameConvertor Local
+  opGetHiddenParamsName = p1nameConvertor Local
+  opGetTagName = p1nameConvertor Global
+  opGetDefName = p1nameConvertor Global
 
-pass0Result :: NameScope -> Guid -> MStoredName -> Pass0M (StoredNamesWithin -> StoredNames)
-pass0Result scope guid mName = do
-  p0TellStoredNames myStoredNamesWithin
+pass1Result ::
+  NameScope -> MStoredName ->
+  Pass1M tm (StoredNamesWithin -> StoredNames)
+pass1Result scope sn@(MStoredName mName guid) = do
+  p1TellStoredNames myStoredNamesWithin
   pure $ \storedNamesUnder -> StoredNames
-    { storedName = mName
+    { _storedName = sn
     , storedNamesWithin = myStoredNamesWithin `mappend` storedNamesUnder
     }
   where
     myStoredNamesWithin =
-      maybe mempty (buildStoredNamesWithin . (`nameGuidMapSingleton` guid)) mName
+      maybe mempty
+      (buildStoredNamesWithin .
+       (`nameGuidMapSingleton` guid)) mName
     buildStoredNamesWithin myNameGuidMap =
       StoredNamesWithin myNameGuidMap $
       globalNames myNameGuidMap
@@ -134,63 +192,76 @@ pass0Result scope guid mName = do
       Local -> mempty
       Global -> myNameGuidMap
 
-p0nameConvertor :: NameScope -> NameConvertor Pass0M
-p0nameConvertor scope guid mName =
-  ($ mempty) <$> pass0Result scope guid mName
+p1nameConvertor :: NameScope -> NameConvertor (Pass1M tm)
+p1nameConvertor scope mStoredName = ($ mempty) <$> pass1Result scope mStoredName
 
-p0cpsNameConvertor :: NameScope -> CPSNameConvertor Pass0M
-p0cpsNameConvertor scope guid mName = CPS $ \k -> do
-  result <- pass0Result scope guid mName
-  (res, storedNamesBelow) <- p0ListenStoredNames k
+p1cpsNameConvertor :: NameScope -> CPSNameConvertor (Pass1M tm)
+p1cpsNameConvertor scope mNameSrc = CPS $ \k -> do
+  result <- pass1Result scope mNameSrc
+  (res, storedNamesBelow) <- p1ListenStoredNames k
   pure (result storedNamesBelow, res)
 
--- Pass 1:
-data P1Env = P1Env
-  { _p1NameGen :: NameGen Guid
-  , _p1StoredNameSuffixes :: Map Guid Int
-  , _p1StoredNames :: Set String
+-- pass 2:
+data P2Env = P2Env
+  { _p2NameGen :: NameGen Guid
+  , _p2StoredNameSuffixes :: Map Guid Int
+  , _p2StoredNames :: Set String
   }
-Lens.makeLenses ''P1Env
+Lens.makeLenses ''P2Env
 
-newtype Pass1M a = Pass1M (Reader P1Env a)
+newtype Pass2M (tm :: * -> *) a = Pass2M (Reader P2Env a)
   deriving (Functor, Applicative, Monad)
-runPass1M :: P1Env -> Pass1M a -> a
-runPass1M initial (Pass1M act) = runReader act initial
-p1GetEnv :: Pass1M P1Env
-p1GetEnv = Pass1M Reader.ask
-p1WithEnv :: (P1Env -> P1Env) -> Pass1M a -> Pass1M a
-p1WithEnv f (Pass1M act) = Pass1M $ Reader.local f act
+runPass2M :: P2Env -> Pass2M tm a -> a
+runPass2M initial (Pass2M act) = runReader act initial
+p2GetEnv :: Pass2M tm P2Env
+p2GetEnv = Pass2M Reader.ask
+p2WithEnv :: (P2Env -> P2Env) -> Pass2M tm a -> Pass2M tm a
+p2WithEnv f (Pass2M act) = Pass2M $ Reader.local f act
 
-instance MonadNaming Pass1M where
-  type OldName Pass1M = StoredNames
-  type NewName Pass1M = Name
-  opRun = (\x -> RunMonad (runPass1M x)) <$> p1GetEnv
-  opWithDefName = p1cpsNameConvertorGlobal "def_"
-  opWithTagName = p1cpsNameConvertorGlobal "tag_"
-  opWithParamName = p1cpsNameConvertorLocal
-  opWithWhereItemName = p1cpsNameConvertorLocal NameGen.Independent
-  opGetParamName guid (StoredNames (Just str) storedNamesUnder) =
-    makeStoredName str storedNamesUnder guid <$> p1GetEnv
-  opGetParamName guid (StoredNames Nothing _) = do
-    nameGen <- (^. p1NameGen) <$> p1GetEnv
-    pure . Name AutoGeneratedName NoCollision $
-      evalState (NameGen.existingName guid) nameGen
-  opGetHiddenParamsName _ (StoredNames mName _) =
-    pure $ maybe (Name AutoGeneratedName NoCollision "params") (Name StoredName NoCollision) mName
-  opGetTagName = p1nameConvertor "tag_"
-  opGetDefName = p1nameConvertor "def_"
+setName :: MonadA tm => Guid -> StoredName -> T tm ()
+setName = Transaction.setP . assocNameRef
 
-makeStoredName :: StoredName -> StoredNamesWithin -> Guid -> P1Env -> Name
-makeStoredName storedName storedNamesBelow guid env =
-  fst $ makeStoredNameEnv storedName storedNamesBelow guid env
+instance MonadA tm => MonadNaming (Pass2M tm) where
+  type OldName (Pass2M tm) = StoredNames
+  type NewName (Pass2M tm) = Name tm
+  type TM (Pass2M tm) = tm
+  opRun = (\env -> InTransaction (return . runPass2M env)) <$> p2GetEnv
+  opWithDefName = p2cpsNameConvertorGlobal "def_"
+  opWithTagName = p2cpsNameConvertorGlobal "tag_"
+  opWithParamName = p2cpsNameConvertorLocal
+  opWithWhereItemName = p2cpsNameConvertorLocal
+  opGetParamName (StoredNames (MStoredName mName guid) storedNamesUnder) =
+    case mName of
+      Just name ->
+        makeFinalName name storedNamesUnder guid <$> p2GetEnv
+      Nothing ->
+        do
+          nameGen <- (^. p2NameGen) <$> p2GetEnv
+          let name = evalState (NameGen.existingName guid) nameGen
+          pure $
+            Name NameSourceAutoGenerated NoCollision (setName guid) name
+  opGetHiddenParamsName (StoredNames (MStoredName mName guid) _) =
+    pure $ maybe
+    (Name NameSourceAutoGenerated NoCollision (setName guid) "params")
+    (Name NameSourceStored NoCollision (setName guid))
+    mName
+  opGetTagName = p2nameConvertor "tag_"
+  opGetDefName = p2nameConvertor "def_"
+
+makeFinalName ::
+  MonadA tm => StoredName -> StoredNamesWithin -> Guid -> P2Env -> Name tm
+makeFinalName name storedNamesBelow guid env =
+  fst $ makeFinalNameEnv name storedNamesBelow guid env
 
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id
 
-makeStoredNameEnv ::
-  StoredName -> StoredNamesWithin -> Guid -> P1Env -> (Name, P1Env)
-makeStoredNameEnv storedName storedNamesBelow guid env =
-  (Name StoredName collision storedName, newEnv)
+makeFinalNameEnv ::
+  MonadA tm =>
+  StoredName ->
+  StoredNamesWithin -> Guid -> P2Env -> (Name tm, P2Env)
+makeFinalNameEnv name storedNamesBelow guid env =
+  (Name NameSourceStored collision (setName guid) name, newEnv)
   where
     (collision, newEnv) =
       case (mSuffixFromAbove, collidingGuids) of
@@ -198,189 +269,170 @@ makeStoredNameEnv storedName storedNamesBelow guid env =
         (Nothing, []) -> (NoCollision, envWithName [])
         (Nothing, otherGuids) -> (Collision 0, envWithName (guid:otherGuids))
     envWithName guids = env
-      & p1StoredNames %~ Set.insert storedName
+      & p2StoredNames %~ Set.insert name
       -- This name is first occurence, so we get suffix 0
-      & p1StoredNameSuffixes %~ compose ((Lens.itraversed %@~ flip Map.insert) guids)
+      & p2StoredNameSuffixes %~ compose ((Lens.itraversed %@~ flip Map.insert) guids)
     mSuffixFromAbove =
-      Map.lookup guid $ env ^. p1StoredNameSuffixes
+      Map.lookup guid $ env ^. p2StoredNameSuffixes
     collidingGuids =
-      maybe [] (filter (/= guid) . getSetList) $
-      storedNamesBelow ^. snwGuidMap . Lens.at storedName
+      maybe [] (filter (/= guid) . toList) $
+      storedNamesBelow ^. snwGuidMap . Lens.at name
 
-p1cpsNameConvertor ::
-  Guid -> StoredNames -> (StoredNamesWithin -> P1Env -> (Name, P1Env)) -> CPS Pass1M Name
-p1cpsNameConvertor guid storedNames nameMaker =
+p2cpsNameConvertor ::
+  MonadA tm =>
+  StoredNames ->
+  (P2Env -> (Name tm, P2Env)) ->
+  CPS (Pass2M tm) (Name tm)
+p2cpsNameConvertor (StoredNames mStoredName storedNamesBelow) nameMaker =
   CPS $ \k -> do
-    oldEnv <- p1GetEnv
+    oldEnv <- p2GetEnv
     let
-      (name, newEnv) =
-        case storedNames of
-        StoredNames (Just storedName) storedNamesBelow ->
-          makeStoredNameEnv storedName storedNamesBelow guid oldEnv
-        StoredNames Nothing storedNamesBelow ->
-          nameMaker storedNamesBelow oldEnv
-    res <- p1WithEnv (const newEnv) k
-    return (name, res)
+      (newName, newEnv) =
+        case mName of
+        Just name -> makeFinalNameEnv name storedNamesBelow guid oldEnv
+        Nothing -> nameMaker oldEnv
+    res <- p2WithEnv (const newEnv) k
+    return (newName, res)
+  where
+    MStoredName mName guid = mStoredName
 
-p1cpsNameConvertorGlobal :: String -> CPSNameConvertor Pass1M
-p1cpsNameConvertorGlobal prefix guid storedNames =
-  p1cpsNameConvertor guid storedNames $
-  \_ p1env -> (makeGuidName prefix guid, p1env)
+makeGuidName :: MonadA tm => String -> MStoredName -> Name tm
+makeGuidName prefix (MStoredName _ guid) =
+  Name NameSourceAutoGenerated NoCollision (setName guid) (prefix ++ show guid)
 
-p1cpsNameConvertorLocal :: NameGen.IsDependent -> NameGen.IsFunction -> CPSNameConvertor Pass1M
-p1cpsNameConvertorLocal isDep isFunction guid storedNames =
-  p1cpsNameConvertor guid storedNames $
-  \storedNamesBelow p1env ->
-  (`runState` p1env) . Lens.zoom p1NameGen $
+p2cpsNameConvertorGlobal :: MonadA tm => String -> CPSNameConvertor (Pass2M tm)
+p2cpsNameConvertorGlobal prefix storedNames =
+  p2cpsNameConvertor storedNames $
+  \p2env -> (makeGuidName prefix (storedNames ^. storedName), p2env)
+
+p2cpsNameConvertorLocal :: MonadA tm => NameGen.IsFunction -> CPSNameConvertor (Pass2M tm)
+p2cpsNameConvertorLocal isFunction storedNames =
+  p2cpsNameConvertor storedNames $ \p2env ->
+  (`runState` p2env) . Lens.zoom p2NameGen $
     let
       conflict name =
         Lens.has (snwGuidMap . Lens.at name . Lens._Just) storedNamesBelow ||
-        (p1env ^. p1StoredNames . Lens.contains name)
+        (p2env ^. p2StoredNames . Lens.contains name)
     in
-      Name AutoGeneratedName NoCollision <$>
-      NameGen.newName (not . conflict)
-      isDep isFunction guid
-
-p1nameConvertor :: String -> NameConvertor Pass1M
-p1nameConvertor _ guid (StoredNames (Just str) storedNamesBelow) =
-  makeStoredName str storedNamesBelow guid <$> p1GetEnv
-p1nameConvertor prefix guid (StoredNames Nothing _) = pure $ makeGuidName prefix guid
-
-makeGuidName :: Show guid => String -> guid -> Name
-makeGuidName prefix guid = Name AutoGeneratedName NoCollision $ prefix ++ show guid
-
-isFunctionType :: Expr.Expression def a -> NameGen.IsFunction
-isFunctionType typ
-  | Lens.has Lens._Just mIndepedentParam = NameGen.Function
-  | otherwise = NameGen.NotFunction
+      Name NameSourceAutoGenerated NoCollision (setName guid) <$>
+      NameGen.newName (not . conflict) isFunction guid
   where
-    mIndepedentParam =
-      ExprUtil.getPiWrappers typ ^.
-      ExprUtil.piWrappersMIndepParam
+    StoredNames (MStoredName _ guid) storedNamesBelow = storedNames
 
-withFuncParam ::
-  (MonadA tm, MonadNaming m) =>
-  NameGen.IsDependent ->
-  FuncParam (OldName m) tm (Expression (OldName m) tm a) ->
-  CPS m (FuncParam (NewName m) tm (Expression (NewName m) tm a))
-withFuncParam isDep fp@FuncParam{..} = CPS $ \k -> do
-  mActions <- traverse toFuncParamActions _fpMActions
-  typ <- toExpression _fpType
-  (name, res) <-
-    case _fpVarKind of
-    FuncParameter ->
-      runCPS (opWithParamName isDep (isFunctionType _fpInferredType) _fpGuid _fpName) k
-    FuncFieldParameter ->
-      runCPS (opWithTagName _fpGuid _fpName) k
-  pure
-    ( fp
-      { _fpName = name
-      , _fpMActions = mActions
-      , _fpType = typ
-      }
-    , res
-    )
-
-toLam ::
-  (MonadA tm, MonadNaming m) =>
-  Lam (OldName m) tm (Expression (OldName m) tm a) ->
-  m (Lam (NewName m) tm (Expression (NewName m) tm a))
-toLam lam@Lam {..} = do
-  (param, resultType) <- runCPS (withFuncParam isDep _lParam) $ toExpression _lResultType
-  pure lam { _lParam = param, _lResultType = resultType }
+p2nameConvertor :: MonadA tm => String -> NameConvertor (Pass2M tm)
+p2nameConvertor prefix (StoredNames mStoredName storedNamesBelow) =
+  case mName of
+  Just str -> makeFinalName str storedNamesBelow guid <$> p2GetEnv
+  Nothing -> pure $ makeGuidName prefix mStoredName
   where
-    isDep =
-      case _lKind of
-      KVal | not _lIsDep -> NameGen.Independent
-      _ -> NameGen.Dependent
+    MStoredName mName guid = mStoredName
 
-toScope :: MonadNaming m => Scope (OldName m) tm -> m (Scope (NewName m) tm)
-toScope (Scope l g t p) =
-  Scope
-  <$> (traverse . Lens._1) toGetVar l
-  <*> (traverse . Lens._1) toGetVar g
-  <*> (traverse . Lens._1) toTag t
-  <*> (traverse . Lens._1) toGetParams p
+isFunctionType :: Type -> NameGen.IsFunction
+isFunctionType T.TFun {} = NameGen.Function
+isFunctionType _ = NameGen.NotFunction
 
-toHoleActions ::
-  (MonadA tm, MonadNaming m) =>
-  HoleActions (OldName m) tm ->
-  m (HoleActions (NewName m) tm)
-toHoleActions ha@HoleActions {..} = do
-  RunMonad run <- opRun
-  pure ha
-    { _holeScope =
-      fmap (run . toScope) _holeScope
-    , holeResult =
-      (fmap . fmap . fmap . fmap) (run . holeResultConverted toExpression) holeResult
+toTagG :: MonadNaming m => TagG (OldName m) -> m (TagG (NewName m))
+toTagG = tagGName opGetTagName
+
+toRecordField ::
+  MonadNaming m =>
+  RecordField (OldName m) (TM m) (OldExpression m a) ->
+  m (RecordField (NewName m) (TM m) (NewExpression m a))
+toRecordField recordField@RecordField {..} = do
+  tag <- toTagG _rfTag
+  expr <- toExpression _rfExpr
+  pure recordField
+    { _rfTag = tag
+    , _rfExpr = expr
     }
 
-toInferred ::
-  (MonadA tm, MonadNaming m) =>
-  HoleInferred (OldName m) tm ->
-  m (HoleInferred (NewName m) tm)
-toInferred inferred = do
-  RunMonad run <- opRun
-  inferred
-    & hiMakeConverted . Lens.mapped . Lens.mapped %~ run . toExpression
-    & pure
+toRecord ::
+  MonadNaming m =>
+  Record (OldName m) (TM m) (OldExpression m a) ->
+  m (Record (NewName m) (TM m) (NewExpression m a))
+toRecord record@Record {..} = do
+  items <- traverse toRecordField _rItems
+  t <- traverse toExpression _rTail
+  pure record { _rItems = items, _rTail = t }
+
+toGetField ::
+  MonadNaming m =>
+  GetField (OldName m) (OldExpression m a) ->
+  m (GetField (NewName m) (NewExpression m a))
+toGetField getField@GetField {..} = do
+  record <- toExpression _gfRecord
+  tag <- toTagG _gfTag
+  pure getField { _gfRecord = record, _gfTag = tag }
+
+toScopeGetVar ::
+  MonadNaming m =>
+  ScopeGetVar (OldName m) (TM m) ->
+  m (ScopeGetVar (NewName m) (TM m))
+toScopeGetVar (ScopeGetVar gv val) = (`ScopeGetVar` val) <$> toGetVar gv
+
+toHoleActions ::
+  MonadNaming m =>
+  HoleActions (OldName m) (TM m) ->
+  m (HoleActions (NewName m) (TM m))
+toHoleActions ha@HoleActions {..} = do
+  InTransaction run <- opRun
+  pure ha
+    { _holeScope =
+      run . traverse toScopeGetVar =<< _holeScope
+    , _holeResults =
+      _holeResults
+      & Lens.mapped . Lens.mapped . _2 %~
+        (>>= holeResultConverted (run . toExpression))
+    }
 
 toHole ::
-  (MonadA tm, MonadNaming m) =>
-  Hole (OldName m) tm (Expression (OldName m) tm a) ->
-  m (Hole (NewName m) tm (Expression (NewName m) tm a))
+  MonadNaming m =>
+  Hole (OldName m) (TM m) (OldExpression m a) ->
+  m (Hole (NewName m) (TM m) (NewExpression m a))
 toHole hole@Hole {..} = do
   mActions <- _holeMActions & Lens._Just %%~ toHoleActions
-  mInferred <- _holeMInferred & Lens._Just %%~ toInferred
   mArg <- _holeMArg & Lens._Just . Lens.traversed %%~ toExpression
   pure hole
     { _holeMActions = mActions
     , _holeMArg = mArg
-    , _holeMInferred = mInferred
     }
 
-toCollapsed ::
-  (MonadA tm, MonadNaming m) =>
-  Collapsed (OldName m) tm (Expression (OldName m) tm a) ->
-  m (Collapsed (NewName m) tm (Expression (NewName m) tm a))
-toCollapsed Collapsed {..} = do
-  compact <- toGetVar _cCompact
-  fullExpression <- toExpression _cFullExpression
-  pure Collapsed { _cCompact = compact, _cFullExpression = fullExpression, .. }
-
-toTag ::
-  MonadNaming m => TagG (OldName m) ->
-  m (TagG (NewName m))
-toTag (TagG guid oldName) = do
-  name <- opGetTagName guid oldName
-  pure $ TagG guid name
-
-toGetVar ::
-  MonadNaming m => GetVar (OldName m) tm ->
-  m (GetVar (NewName m) tm)
-toGetVar getVar@GetVar{..} =
-  gvName (f _gvIdentifier) getVar
+toNamedVar ::
+  MonadNaming m =>
+  NamedVar (OldName m) (TM m) ->
+  m (NamedVar (NewName m) (TM m))
+toNamedVar namedVar =
+  nvName f namedVar
   where
     f =
-      case _gvVarType of
-      GetParameter -> opGetParamName
+      case namedVar ^. nvVarType of
+      GetParameter      -> opGetParamName
       GetFieldParameter -> opGetTagName
-      GetDefinition -> opGetDefName
+      GetDefinition     -> opGetDefName
 
-toGetParams ::
-  MonadNaming m => GetParams (OldName m) tm ->
-  m (GetParams (NewName m) tm)
-toGetParams getParams@GetParams{..} =
-  gpDefName (opGetDefName _gpDefGuid) getParams
+toParamsRecordVar ::
+  MonadNaming m => ParamsRecordVar (OldName m) ->
+  m (ParamsRecordVar (NewName m))
+toParamsRecordVar (ParamsRecordVar names) =
+  ParamsRecordVar <$> traverse opGetTagName names
+
+toGetVar ::
+  MonadNaming m =>
+  GetVar (OldName m) (TM m) ->
+  m (GetVar (NewName m) (TM m))
+toGetVar (GetVarNamed x) =
+  GetVarNamed <$> toNamedVar x
+toGetVar (GetVarParamsRecord x) =
+  GetVarParamsRecord <$> toParamsRecordVar x
 
 toApply ::
-  (MonadNaming m, MonadA tm) =>
-  Apply (OldName m) (Expression (OldName m) tm a) ->
-  m (Apply (NewName m) (Expression (NewName m) tm a))
+  MonadNaming m =>
+  Apply (OldName m) (OldExpression m a) ->
+  m (Apply (NewName m) (NewExpression m a))
 toApply la@Apply{..} = do
   func <- toExpression _aFunc
   specialArgs <- traverse toExpression _aSpecialArgs
-  annotatedArgs <- traverse (aaTag toTag <=< aaExpr toExpression) _aAnnotatedArgs
+  annotatedArgs <- traverse (aaTag toTagG <=< aaExpr toExpression) _aAnnotatedArgs
   pure la
     { _aFunc = func
     , _aSpecialArgs = specialArgs
@@ -388,112 +440,138 @@ toApply la@Apply{..} = do
     }
 
 traverseToExpr ::
-  (MonadA tm, MonadNaming m, Traversable t) =>
-  (t (Expression (NewName m) tm a) -> b) -> t (Expression (OldName m) tm a) ->
+  (MonadNaming m, Traversable t) =>
+  (t (NewExpression m a) -> b) -> t (OldExpression m a) ->
   m b
 traverseToExpr cons body = cons <$> traverse toExpression body
 
 toBody ::
-  (MonadA tm, MonadNaming m) =>
-  Body (OldName m) tm (Expression (OldName m) tm a) ->
-  m (Body (NewName m) tm (Expression (NewName m) tm a))
+  MonadNaming m =>
+  Body (OldName m) (TM m) (OldExpression m a) ->
+  m (Body (NewName m) (TM m) (NewExpression m a))
 toBody (BodyList x)           = traverseToExpr BodyList x
-toBody (BodyRecord x)         = traverseToExpr BodyRecord x
-toBody (BodyGetField x)       = traverseToExpr BodyGetField x
 toBody (BodyLiteralInteger x) = pure $ BodyLiteralInteger x
-toBody (BodyAtom x)           = pure $ BodyAtom x
 --
-toBody (BodyLam x) = BodyLam <$> toLam x
+toBody (BodyGetField x) = BodyGetField <$> toGetField x
+toBody (BodyRecord x) = BodyRecord <$> toRecord x
+toBody (BodyLam x) = BodyLam <$> toBinder x
 toBody (BodyApply x) = BodyApply <$> toApply x
 toBody (BodyHole x) = BodyHole <$> toHole x
-toBody (BodyCollapsed x) = BodyCollapsed <$> toCollapsed x
-toBody (BodyTag x) = BodyTag <$> toTag x
 toBody (BodyGetVar x) = BodyGetVar <$> toGetVar x
-toBody (BodyGetParams x) = BodyGetParams <$> toGetParams x
-
-toPayload ::
-  (MonadA tm, MonadNaming m) =>
-  Payload (OldName m) tm a ->
-  m (Payload (NewName m) tm a)
-toPayload pl@Payload{..} = do
-  inferredTypes <- traverse toExpression _plInferredTypes
-  pure pl { _plInferredTypes = inferredTypes }
 
 toExpression ::
-  (MonadA tm, MonadNaming m) => Expression (OldName m) tm a ->
-  m (Expression (NewName m) tm a)
-toExpression expr@Expression{..} = do
-  body <- toBody _rBody
-  pl <- toPayload _rPayload
-  pure expr { _rBody = body, _rPayload = pl }
-
-toFuncParamActions ::
-  (MonadNaming m, MonadA tm) => FuncParamActions (OldName m) tm ->
-  m (FuncParamActions (NewName m) tm)
-toFuncParamActions fpa = do
-  RunMonad run <- opRun
-  pure $ fpa & fpGetExample . Lens.mapped %~ run . toExpression
+  MonadNaming m => OldExpression m a ->
+  m (NewExpression m a)
+toExpression = rBody toBody
 
 withWhereItem ::
-  (MonadA tm, MonadNaming m) =>
-  WhereItem (OldName m) tm (Expression (OldName m) tm a) ->
-  CPS m (WhereItem (NewName m) tm (Expression (NewName m) tm a))
+  MonadNaming m =>
+  WhereItem (OldName m) (TM m) (OldExpression m a) ->
+  CPS m (WhereItem (NewName m) (TM m) (NewExpression m a))
 withWhereItem item@WhereItem{..} = CPS $ \k -> do
   (name, (value, res)) <-
-    runCPS (opWithWhereItemName (isFunctionType _wiInferredType) _wiGuid _wiName) $
-    (,) <$> toDefinitionContent _wiValue <*> k
+    runCPS (opWithWhereItemName (isFunctionType _wiInferredType) _wiName) $
+    (,) <$> toBinder _wiValue <*> k
   pure (item { _wiValue = value, _wiName = name }, res)
 
-toDefinitionContent ::
-  (MonadA tm, MonadNaming m) =>
-  DefinitionContent (OldName m) tm (Expression (OldName m) tm a) ->
-  m (DefinitionContent (NewName m) tm (Expression (NewName m) tm a))
-toDefinitionContent def@DefinitionContent{..} = do
-  (depParams, (params, (whereItems, body))) <-
-    runCPS (traverse (withFuncParam NameGen.Dependent) _dDepParams) .
-    runCPS (traverse (withFuncParam NameGen.Independent) _dParams) .
+withBinderParams ::
+  MonadNaming m =>
+  BinderParams (OldName m) (TM m) -> CPS m (BinderParams (NewName m) (TM m))
+withBinderParams NoParams = pure NoParams
+withBinderParams (VarParam FuncParam{..}) =
+  opWithParamName (isFunctionType _fpInferredType) _fpName
+  <&> VarParam . \_fpName -> FuncParam{..}
+withBinderParams (FieldParams xs) =
+  traverse f xs <&> FieldParams
+  where
+    f FuncParam{..} = opWithTagName _fpName <&> \_fpName -> FuncParam{..}
+
+toBinder ::
+  MonadNaming m =>
+  Binder (OldName m) (TM m) (OldExpression m a) ->
+  m (Binder (NewName m) (TM m) (NewExpression m a))
+toBinder binder@Binder{..} = do
+  (params, (whereItems, body)) <-
+    runCPS (withBinderParams _dParams) .
     runCPS (traverse withWhereItem _dWhereItems) $
     toExpression _dBody
-  pure def
-    { _dDepParams = depParams
-    , _dParams = params
+  binder
+    { _dParams = params
     , _dBody = body
     , _dWhereItems = whereItems
-    }
+    } & pure
 
 toDefinitionBody ::
-  (MonadA tm, MonadNaming m) =>
-  DefinitionBody (OldName m) tm (Expression (OldName m) tm a) ->
-  m (DefinitionBody (NewName m) tm (Expression (NewName m) tm a))
+  MonadNaming m =>
+  DefinitionBody (OldName m) (TM m) (OldExpression m a) ->
+  m (DefinitionBody (NewName m) (TM m) (NewExpression m a))
 toDefinitionBody (DefinitionBodyBuiltin bi) =
-  DefinitionBodyBuiltin <$> traverse toExpression bi
+  pure (DefinitionBodyBuiltin bi)
 toDefinitionBody
   (DefinitionBodyExpression (DefinitionExpression typeInfo content)) =
     DefinitionBodyExpression <$>
-    (DefinitionExpression <$>
-     traverse toExpression typeInfo <*>
-     toDefinitionContent content)
+    (DefinitionExpression typeInfo <$> toBinder content)
 
 toDef ::
-  (MonadA tm, MonadNaming m) =>
-  Definition (OldName m) tm (Expression (OldName m) tm a) ->
-  m (Definition (NewName m) tm (Expression (NewName m) tm a))
+  MonadNaming m =>
+  Definition (OldName m) (TM m) (OldExpression m a) ->
+  m (Definition (NewName m) (TM m) (NewExpression m a))
 toDef def@Definition {..} = do
-  (name, body) <-
-    runCPS (opWithDefName _drGuid _drName) $ toDefinitionBody _drBody
+  (name, body) <- runCPS (opWithDefName _drName) $ toDefinitionBody _drBody
   pure def { _drName = name, _drBody = body }
 
-addToDef :: MonadA m => DefinitionU m a -> DefinitionN m a
-addToDef =
-  pass1 . runPass0M . toDef
+fixParamAddResult :: MonadA m => ParamAddResult -> T m ()
+fixParamAddResult (ParamAddResultVarToTags VarToTags {..}) =
+  do
+    Transaction.setP tagName =<< Transaction.getP varName
+    Transaction.setP varName ""
   where
-    emptyP1Env (NameGuidMap globalNamesMap) = P1Env
-      { _p1NameGen = NameGen.initial
-      , _p1StoredNames = mempty
-      , _p1StoredNameSuffixes =
+    varName = assocNameRef vttReplacedVar
+    tagName = assocNameRef (vttReplacedByTag ^. tagVal)
+fixParamAddResult _ = return ()
+
+fixParamDelResult :: MonadA m => ParamDelResult -> T m ()
+fixParamDelResult (ParamDelResultTagsToVar TagsToVar {..}) =
+  do
+    Transaction.setP varName =<< Transaction.getP tagName
+    Transaction.setP tagName ""
+  where
+    varName = assocNameRef ttvReplacedByVar
+    tagName = assocNameRef (ttvReplacedTag ^. tagVal)
+fixParamDelResult _ = return ()
+
+fixBinder ::
+  MonadA m =>
+  Binder name m (Expression name m a) ->
+  Binder name m (Expression name m a)
+fixBinder binder =
+  binder
+  & SugarLens.binderFuncParamAdds %~ postProcess fixParamAddResult
+  & SugarLens.binderFuncParamDeletes %~ postProcess fixParamDelResult
+  where
+    postProcess f action =
+      do
+        res <- action
+        () <- f res
+        return res
+
+addToDef :: MonadA tm => DefinitionU tm a -> T tm (DefinitionN tm a)
+addToDef origDef =
+  origDef
+  & drBody . _DefinitionBodyExpression . deContent %~ fixBinder
+  & pass0
+  <&> pass1
+  <&> pass2
+  where
+    emptyP2Env (NameGuidMap globalNamesMap) = P2Env
+      { _p2NameGen = NameGen.initial
+      , _p2StoredNames = mempty
+      , _p2StoredNameSuffixes =
         mconcat .
         map Map.fromList . filter (ListUtils.isLengthAtLeast 2) .
-        map ((`zip` [0..]) . getSetList) . Map.elems $ globalNamesMap
+        map ((`zip` [0..]) . toList) $ Map.elems globalNamesMap
       }
-    pass1 (def, storedNamesBelow) =
-      runPass1M (emptyP1Env (storedNamesBelow ^. snwGlobalNames)) $ toDef def
+    pass0 = runPass0M . toDef
+    pass1 = runPass1M . toDef
+    pass2 (def, storedNamesBelow) =
+      runPass2M (emptyP2Env (storedNamesBelow ^. snwGlobalNames)) $ toDef def

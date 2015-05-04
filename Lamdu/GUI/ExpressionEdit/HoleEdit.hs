@@ -1,69 +1,142 @@
+{-# LANGUAGE NoMonomorphismRestriction, RecordWildCards, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit
   ( make
   ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens.Operators
-import Control.Monad (guard)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.MonadA (MonadA)
-import Data.Maybe (fromMaybe)
-import Data.Maybe.Utils (maybeToMPlus)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Common (diveIntoHole)
-import Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
-import Lamdu.GUI.ExpressionGui (ExpressionGui(..))
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Closed as HoleClosed
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Open as HoleOpen
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
+import qualified Lamdu.Config as Config
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addDarkBackground)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..))
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper as Wrapper
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.WidgetEnvT as WE
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
+
+type T = Transaction
+
+mkEditableHoleInfo ::
+  MonadA m => HoleInfo m -> Sugar.HoleActions (Name m) m -> T m (EditableHoleInfo m)
+mkEditableHoleInfo holeInfo actions =
+  do
+    stateProp <-
+      HoleState.assocStateRef (actions ^. Sugar.holeGuid) ^.
+      Transaction.mkProperty
+    EditableHoleInfo
+      { ehiActions = actions
+      , ehiState = stateProp
+      , ehiInfo = holeInfo
+      } & return
+
+makeWrapper ::
+  MonadA m => Sugar.Payload m ExprGuiM.Payload ->
+  HoleInfo m -> ExprGuiM m (Maybe (ExpressionGui m))
+makeWrapper pl holeInfo =
+  hiMArgument holeInfo
+  & Lens._Just %%~
+    ExpressionGui.wrapExprEventMap pl . Wrapper.make (hiIds holeInfo)
+
+assignHoleCursor ::
+  MonadA m =>
+  WidgetIds -> Maybe (Sugar.HoleArg m expr) -> ExprGuiM m a -> ExprGuiM m a
+assignHoleCursor WidgetIds{..} Nothing =
+  ExprGuiM.assignCursor hidHole hidOpen .
+  ExprGuiM.assignCursor (WidgetIds.notDelegatingId hidHole) hidClosedSearchArea
+assignHoleCursor WidgetIds{..} (Just _) =
+  ExprGuiM.assignCursor hidHole hidWrapper .
+  ExprGuiM.assignCursor (WidgetIds.notDelegatingId hidHole) hidWrapper
+
+liftLayers :: MonadA m => ExpressionGui n -> ExprGuiM m (ExpressionGui n)
+liftLayers =
+  ExpressionGui.egWidget %%~ ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
+
+addSearchAreaBelow ::
+  MonadA m => WidgetIds ->
+  ExpressionGui f -> ExpressionGui f ->
+  ExprGuiM m (ExpressionGui f)
+addSearchAreaBelow WidgetIds{..} wrapperGui searchAreaGui =
+  do
+    hoveringSearchArea <-
+      searchAreaGui
+      & addDarkBackground
+        (Widget.toAnimId hidOpen ++ ["searchAreaDarkBg"])
+      >>= liftLayers
+    wrapperGui
+      & Layout.addAfter Layout.Vertical [hoveringSearchArea]
+      & return
+
+addWrapperAbove ::
+  MonadA m =>
+  WidgetIds -> ExpressionGui f -> ExpressionGui f ->
+  ExprGuiM m (ExpressionGui f)
+addWrapperAbove WidgetIds{..} wrapperGui searchAreaGui =
+  do
+    Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
+    hoveringWrapper <-
+      addDarkBackground (Widget.toAnimId hidWrapper ++ ["wrapperDarkBg"])
+      wrapperGui
+      <&> Layout.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
+      >>= liftLayers
+    searchAreaGui
+      & Layout.addBefore Layout.Vertical [hoveringWrapper]
+      & return
 
 make ::
   MonadA m =>
-  Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-make hole pl myId = do
-  (delegateDestId, closed) <- HoleClosed.make hole pl myId
-  let
-    closedSize = closed ^. ExpressionGui.egWidget . Widget.wSize
-    resize =
-      ( ExpressionGui.egWidget . Widget.wSize %~
-        (Lens._1 %~ max (closedSize ^. Lens._1)) .
-        (Lens._2 .~ closedSize ^. Lens._2)
-      ) .
-      (ExpressionGui.egAlignment .~ closed ^. ExpressionGui.egAlignment)
-  ExprGuiM.assignCursor myId delegateDestId $
-    fromMaybe closed <$>
-    runMaybeT (resize <$> tryOpenHole hole pl myId)
-
-tryOpenHole ::
-  MonadA m =>
-  Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload Sugar.Name m ExprGuiM.Payload ->
-  Widget.Id ->
-  MaybeT (ExprGuiM m) (ExpressionGui m)
-tryOpenHole hole pl myId = do
-  isSelected <-
-    lift . ExprGuiM.widgetEnv . WE.isSubCursor $ diveIntoHole myId
-  guard isSelected
-  storedGuid <- maybeToMPlus $ pl ^? Sugar.plActions . Lens._Just . Sugar.storedGuid
-  actions <- maybeToMPlus $ hole ^. Sugar.holeMActions
-  inferred <- maybeToMPlus $ hole ^. Sugar.holeMInferred
-  stateProp <- lift . ExprGuiM.transaction $ HoleState.assocStateRef storedGuid ^. Transaction.mkProperty
-  lift $ HoleOpen.make pl HoleInfo
-    { hiStoredGuid = storedGuid
-    , hiActions = actions
-    , hiInferred = inferred
-    , hiId = myId
-    , hiState = stateProp
-    , hiHoleGuids = pl ^. Sugar.plData . ExprGuiM.plHoleGuids
-    , hiMArgument = hole ^. Sugar.holeMArg
-    }
+  Sugar.Hole (Name m) m (ExprGuiM.SugarExpr m) ->
+  Sugar.Payload m ExprGuiM.Payload ->
+  ExprGuiM m (ExpressionGui m)
+make hole pl =
+  do
+    Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
+    mEditableHoleInfo <-
+      hole ^. Sugar.holeMActions
+      & Lens._Just %%~ mkEditableHoleInfo holeInfo
+      & ExprGuiM.transaction
+    do
+      mWrapperGui <- makeWrapper pl holeInfo
+      case mWrapperGui of
+        Just wrapperGui -> do
+          unfocusedWrapperGui <-
+            wrapperGui & ExpressionGui.maybeAddInferredTypePl pl
+          isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor hidHole
+          let
+            layout f = do
+              searchAreaGui <-
+                SearchArea.makeStdWrapped pl holeInfo mEditableHoleInfo
+              f WidgetIds{..} wrapperGui searchAreaGui
+                <&> (`Layout.hoverInPlaceOf` unfocusedWrapperGui)
+          if wrapperGui ^. ExpressionGui.egWidget . Widget.isFocused
+             then
+               layout addSearchAreaBelow
+             else if isSelected then
+               layout addWrapperAbove
+             else
+               return unfocusedWrapperGui
+        Nothing -> SearchArea.makeStdWrapped pl holeInfo mEditableHoleInfo
+      & assignHoleCursor WidgetIds{..} (hole ^. Sugar.holeMArg)
+  where
+    holeInfo = HoleInfo
+      { hiEntityId = pl ^. Sugar.plEntityId
+      , hiInferredType = pl ^. Sugar.plInferredType
+      , hiSuggested = hole ^. Sugar.holeSuggested
+      , hiIds = WidgetIds{..}
+      , hiNearestHoles = pl ^. Sugar.plData . ExprGuiM.plNearestHoles
+      , hiMArgument = hole ^. Sugar.holeMArg
+      }
+    WidgetIds{..} = HoleWidgetIds.make (pl ^. Sugar.plEntityId)

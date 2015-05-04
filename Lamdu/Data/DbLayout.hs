@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
 
 module Lamdu.Data.DbLayout
   ( DbM, runDbTransaction
@@ -12,10 +12,9 @@ import Control.Applicative (Applicative)
 import Control.Monad.IO.Class (MonadIO)
 import Data.ByteString.Char8 ()
 import Data.Store.Db (Db)
-import Data.Store.IRef (IRef, Tag)
+import Data.Store.IRef (IRef)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
-import Data.Typeable (Typeable)
 import Lamdu.Data.Anchors (Code(..), Revision(..), assocNameRef, SpecialFunctions(..))
 import qualified Data.Store.Db as Db
 import qualified Data.Store.IRef as IRef
@@ -26,31 +25,30 @@ import qualified Lamdu.Data.Anchors as Anchors
 type T = Transaction
 
 newtype DbM a = DbM { dbM :: IO a }
-  deriving (Functor, Applicative, Monad, MonadIO, Typeable)
+  deriving (Functor, Applicative, Monad, MonadIO)
 
 newtype ViewM a = ViewM { viewM :: T DbM a }
-  deriving (Functor, Applicative, Monad, Typeable)
+  deriving (Functor, Applicative, Monad)
 
 runDbTransaction :: Db -> T DbM a -> IO a
 runDbTransaction db = dbM . Transaction.run (Transaction.onStoreM DbM (Db.store db))
 
-runViewTransaction :: View (Tag DbM) -> T ViewM a -> T DbM a
+runViewTransaction :: View DbM -> T ViewM a -> T DbM a
 runViewTransaction v = viewM . (Transaction.run . Transaction.onStoreM ViewM . View.store) v
 
-codeIRefs :: Code (IRef (Tag ViewM)) (Tag ViewM)
+codeIRefs :: Code (IRef ViewM) ViewM
 codeIRefs = Code
   { panes = IRef.anchor "panes"
   , clipboards = IRef.anchor "clipboards"
   , globals = IRef.anchor "globals"
   , specialFunctions = IRef.anchor "specialFuncs"
-  , ffiEnv = IRef.anchor "ffiEnv"
   , preJumps = IRef.anchor "prejumps"
   , preCursor = IRef.anchor "precursor"
   , postCursor = IRef.anchor "postcursor"
   , tags = IRef.anchor "tags"
   }
 
-revisionIRefs :: Revision (IRef t) t
+revisionIRefs :: Revision (IRef m) m
 revisionIRefs = Revision
   { branches = IRef.anchor "branches"
   , currentBranch = IRef.anchor "currentBranch"

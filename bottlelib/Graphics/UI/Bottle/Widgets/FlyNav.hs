@@ -1,28 +1,39 @@
 {-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
-module Graphics.UI.Bottle.Widgets.FlyNav(make, State, initState) where
+module Graphics.UI.Bottle.Widgets.FlyNav
+    ( make
+    , Config(..)
+    , State
+    , initState
+    ) where
 
-import Control.Applicative (Applicative(..), liftA2, (*>))
-import Control.Lens (Lens')
-import Control.Lens.Operators
-import Control.Monad (void)
-import Data.ByteString.Char8 () -- instance IsString ByteString
-import Data.Monoid (Monoid(..))
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Animation (AnimId)
-import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Widget (Widget, Size)
-import Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
+import           Control.Applicative (Applicative(..), liftA2, (*>))
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad (void)
+import           Data.Monoid (Monoid(..), (<>))
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import           Graphics.UI.Bottle.ModKey (ModKey(..), ctrlMods, shiftMods)
+import           Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
+import           Graphics.UI.Bottle.Widget (Widget, Size)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import           Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
+import qualified Graphics.UI.GLFW as GLFW
+
+newtype Config = Config
+  { configLayer :: Anim.Layer
+  }
 
 data Movement = Movement
   { _mName :: String
-  , __mModKey :: EventMap.ModKey
+  , __mModKey :: ModKey
   , _mDir :: Vector2 Widget.R
   }
 Lens.makeLenses ''Movement
@@ -34,15 +45,15 @@ data ActiveState = ActiveState
 
 type State = Maybe ActiveState
 
-modifier :: EventMap.ModState
-modifier = EventMap.ctrl `mappend` EventMap.shift
+modKey :: GLFW.Key -> ModKey
+modKey = ModKey (ctrlMods <> shiftMods)
 
-modifierKeys :: [EventMap.Key]
+modifierKeys :: [GLFW.Key]
 modifierKeys =
-  [ EventMap.Key'LeftControl
-  , EventMap.Key'RightControl
-  , EventMap.Key'LeftShift
-  , EventMap.Key'RightShift
+  [ GLFW.Key'LeftControl
+  , GLFW.Key'RightControl
+  , GLFW.Key'LeftShift
+  , GLFW.Key'RightShift
   ]
 
 initState :: State
@@ -55,7 +66,7 @@ mkTickHandler :: Functor f => f () -> Widget.EventHandlers f
 mkTickHandler = EventMap.tickHandler . withEmptyResult
 
 mkKeyMap
-  :: Functor f => EventMap.IsPress -> EventMap.ModKey -> EventMap.Doc
+  :: Functor f => GLFW.KeyState -> ModKey -> EventMap.Doc
   -> f () -> Widget.EventHandlers f
 mkKeyMap isPress key doc =
   EventMap.keyEventMap
@@ -77,24 +88,25 @@ targetColor = Draw.Color 0.9 0.9 0 0.7
 highlightColor :: Draw.Color
 highlightColor = Draw.Color 0.4 0.4 1 0.4
 
-target :: AnimId -> Vector2 Widget.R -> Anim.Frame
-target animId pos =
-  Anim.onDepth (subtract 100) .
-  Anim.translate pos .
-  Anim.scale targetSize .
-  Anim.onImages (Draw.tint targetColor) .
-  Anim.simpleFrame animId .
-  void $ Draw.circle
+target :: Config -> AnimId -> Vector2 Widget.R -> Anim.Frame
+target config animId pos =
+  void Draw.circle
+  & Anim.simpleFrame animId
+  & Anim.unitImages %~ Draw.tint targetColor
+  & Anim.scale targetSize
+  & Anim.translate pos
+  & Anim.layers +~ configLayer config
 
 cap :: Size -> Vector2 Widget.R -> Vector2 Widget.R
 cap size = liftA2 max 0 . liftA2 min size
 
 highlightRect :: AnimId -> Rect -> Anim.Frame
 highlightRect animId (Rect pos size) =
-  Anim.translate pos . Anim.scale size .
-  Anim.onDepth (subtract 50) .
-  Anim.onImages (Draw.tint highlightColor) $
   Anim.unitSquare animId
+  & Anim.unitImages %~ Draw.tint highlightColor
+  & Anim.layers -~ 50 -- TODO: 50?!
+  & Anim.scale size
+  & Anim.translate pos
 
 addMovements
   :: Functor f
@@ -112,7 +124,7 @@ addMovements = mconcat
 addMovement
   :: Functor f
   => String
-  -> [EventMap.Key]
+  -> [GLFW.Key]
   -> Vector2 Widget.R
   -> Vector2 Widget.R
   -> [Movement]
@@ -122,10 +134,10 @@ addMovement name keys dir pos movements setState
   | name `elem` map (^. mName) movements = mempty
   | otherwise =
     mconcat
-    [ mkKeyMap EventMap.Press modKey (EventMap.Doc ["Navigation", "FlyNav", name]) .
-      setState . Just $ ActiveState pos (Movement name modKey dir : movements)
+    [ mkKeyMap GLFW.KeyState'Pressed mk (EventMap.Doc ["Navigation", "FlyNav", name]) .
+      setState . Just $ ActiveState pos (Movement name mk dir : movements)
     | key <- keys
-    , let modKey = EventMap.ModKey modifier key
+    , let mk = modKey key
     ]
 
 -- separate out a single element each time
@@ -133,52 +145,52 @@ zipped :: [a] -> [(a, [a])]
 zipped [] = []
 zipped (x:xs) =
   (x, xs) :
-  (Lens.mapped . Lens._2 %~ (x:)) (zipped xs)
+  (Lens.mapped . _2 %~ (x:)) (zipped xs)
 
 focalCenter :: Lens' (Widget f) (Vector2 Widget.R)
-focalCenter = Widget.wFocalArea . Rect.center
+focalCenter = Widget.focalArea . Rect.center
 
 make
-  :: Applicative f => AnimId -> State -> (State -> f ())
+  :: Applicative f => Config -> AnimId -> State -> (State -> f ())
   -> Widget f -> Widget f
-make _ Nothing setState w =
-  w & Widget.wEventMap <>~ addMovements (w ^. focalCenter) [] setState
-make animId (Just (ActiveState pos movements)) setState w =
+make _ _ Nothing setState w =
+  w & Widget.eventMap <>~ addMovements (w ^. focalCenter) [] setState
+make config animId (Just (ActiveState pos movements)) setState w =
   w
-  & Widget.wFrame %~ mappend frame
-  & Widget.wEventMap .~ eventMap
+  & Widget.animFrame %~ mappend frame
+  & Widget.eventMap .~ eventMap
   where
     delta = sum $ map (^. mDir) movements
     highlight =
       maybe mempty
       (highlightRect (animId ++ ["highlight"]) . (^. Widget.enterResultRect))
       mEnteredChild
-    frame = target (animId ++ ["target"]) pos `mappend` highlight
-    mEnteredChild = fmap ($ targetPos) $ w ^. Widget.wMaybeEnter
+    frame = target config (animId ++ ["target"]) pos `mappend` highlight
+    mEnteredChild = fmap ($ targetPos) $ w ^. Widget.mEnter
     targetPos = Direction.Point pos
     nextState =
       ActiveState
-      (cap (pos + delta*speed) (w ^. Widget.wSize)) $
+      (cap (pos + delta*speed) (w ^. Widget.size)) $
       movements & Lens.mapped . mDir *~ accel
     eventMap = mconcat $
       (mkTickHandler . setState . Just) nextState :
       addMovements pos movements setState :
       finishMove :
-      [ stopMovement name modKey lessMovements
-      | (Movement name modKey _, lessMovements) <- zipped movements
+      [ stopMovement name mk lessMovements
+      | (Movement name mk _, lessMovements) <- zipped movements
       ]
     finishMove = mconcat
     -- TODO: This is buggy, need to be able to be informed that the
     -- key combo was released, regardless of which mod/key was
     -- released first:
-      [ finishOn (EventMap.ModKey modifier key)
+      [ finishOn (modKey key)
       | key <- modifierKeys
       ]
-    stopMovement name modKey newMovements =
-      mkKeyMap EventMap.Release modKey (EventMap.Doc ["Navigation", "Stop FlyNav", name]) .
+    stopMovement name mk newMovements =
+      mkKeyMap GLFW.KeyState'Released mk (EventMap.Doc ["Navigation", "Stop FlyNav", name]) .
       setState . Just $ ActiveState pos newMovements
-    finishOn modKey =
-      EventMap.keyEventMap (EventMap.KeyEvent EventMap.Release modKey)
+    finishOn mk =
+      EventMap.keyEventMap (EventMap.KeyEvent GLFW.KeyState'Released mk)
         (EventMap.Doc ["Navigation", "Stop FlyNav"]) $
         setState Nothing *>
         -- TODO: Just cancel FlyNav in any case if the MaybeEnter is

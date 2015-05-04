@@ -5,7 +5,7 @@ module Lamdu.GUI.CodeEdit.Settings
 
 import qualified Control.Lens as Lens
 
-data InfoMode = None | Types | Examples
+data InfoMode = None | Types
   deriving (Show)
 
 defaultInfoMode :: InfoMode

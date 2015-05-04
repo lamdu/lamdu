@@ -1,169 +1,161 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.GUI.DefinitionEdit (make, makeNewDefinition) where
+module Lamdu.GUI.DefinitionEdit
+  ( make
+  , diveToNameEdit
+  ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens.Operators
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (StateT)
-import Control.MonadA (MonadA)
-import Data.Cache (Cache)
-import Data.Store.Transaction (Transaction)
-import Data.Traversable (sequenceA)
-import Data.Typeable (Typeable1)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Config (Config)
-import Lamdu.Data.Expression.IRef (DefIM)
-import Lamdu.GUI.CodeEdit.Settings (Settings)
-import Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import           Control.Applicative ((<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.MonadA (MonadA)
+import           Data.Store.Transaction (Transaction)
+import           Data.Traversable (sequenceA)
+import           Data.Vector.Vector2 (Vector2(..))
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.View (View(..))
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Expression.Load as Load
-import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.GUI.BottleWidgets as BWidgets
-import qualified Lamdu.GUI.CodeEdit.Settings as Settings
+import qualified Lamdu.Data.Definition as Definition
+import           Lamdu.Expr.Scheme (Scheme(..), schemeType)
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
+import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
-import qualified Lamdu.GUI.ExpressionEdit.DefinitionContentEdit as DefinitionContentEdit
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
-import qualified Lamdu.GUI.ExpressionGui.AddNextHoles as AddNextHoles
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.WidgetEnvT as WE
+import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.AddNames as AddNames
-import qualified Lamdu.Sugar.Convert as SugarConvert
-import qualified Lamdu.Sugar.RemoveTypes as SugarRemoveTypes
+import           Lamdu.Sugar.AddNames.Types (Name(..), DefinitionN)
+import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
-type CT m = StateT Cache (WE.WidgetEnvT (T m))
+
+toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiM.Payload
+toExprGuiMPayload (entityIds, nearestHoles) =
+  ExprGuiM.emptyPayload nearestHoles & ExprGuiM.plStoredEntityIds .~ entityIds
 
 make ::
-  (Typeable1 m, MonadA m) =>
-  Anchors.CodeProps m -> Settings ->
-  DefIM m -> CT m (WidgetT m)
-make cp settings defI = ExprGuiM.run ExpressionEdit.make cp settings $ do
-  infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
-  let
-    maybeRemoveTypes =
-      case infoMode of
-      Settings.Types -> id
-      _ -> fmap SugarRemoveTypes.nonHoleTypes
-  defS <- ExprGuiM.liftMemoT $ maybeRemoveTypes <$> loadConvertDefI cp defI
-  case defS ^. Sugar.drBody of
+  MonadA m => Anchors.CodeProps m -> Config -> Settings ->
+  DefinitionN m ([Sugar.EntityId], NearestHoles) ->
+  WidgetEnvT (T m) (Widget (T m))
+make cp config settings defS =
+  ExprGuiM.run ExpressionEdit.make cp config settings $
+  case exprGuiDefS ^. Sugar.drBody of
     Sugar.DefinitionBodyExpression bodyExpr ->
-      makeExprDefinition defS bodyExpr
+      makeExprDefinition exprGuiDefS bodyExpr
     Sugar.DefinitionBodyBuiltin builtin ->
-      makeBuiltinDefinition defS builtin
+      makeBuiltinDefinition exprGuiDefS builtin
+  where
+    exprGuiDefS =
+      defS
+      <&> Lens.mapped . Sugar.plData %~ toExprGuiMPayload
+      <&> ExprGuiM.markRedundantTypes
+
+topLevelSchemeTypeView :: MonadA m => Widget.R -> Sugar.EntityId -> Scheme -> ExprGuiM m (Widget f)
+topLevelSchemeTypeView minWidth entityId scheme =
+  -- At the definition-level, Schemes can be shown as ordinary
+  -- types to avoid confusing forall's:
+  ExpressionGui.makeTypeView minWidth entityId (scheme ^. schemeType)
 
 makeBuiltinDefinition ::
   MonadA m =>
-  Sugar.Definition Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.DefinitionBuiltin m (ExprGuiM.SugarExpr m) ->
-  ExprGuiM m (WidgetT m)
-makeBuiltinDefinition def builtin = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
+  Sugar.Definition (Name m) m (ExprGuiM.SugarExpr m) ->
+  Sugar.DefinitionBuiltin m -> ExprGuiM m (Widget (T m))
+makeBuiltinDefinition def builtin =
   Box.vboxAlign 0 <$> sequenceA
-    [ defTypeScale config . (^. ExpressionGui.egWidget) <$>
-      ExprGuiM.makeSubexpression 0 (Sugar.biType builtin)
-    , BWidgets.hboxCenteredSpaced <$> sequenceA
-      [ ExprGuiM.withFgColor (Config.builtinOriginNameColor config) $
-        DefinitionContentEdit.makeNameEdit name (Widget.joinId myId ["name"]) guid
-      , ExprGuiM.widgetEnv . BWidgets.makeLabel "=" $ Widget.toAnimId myId
-      , BuiltinEdit.make builtin myId
-      ]
+  [ sequenceA
+    [ ExpressionGui.makeNameOriginEdit name (Widget.joinId myId ["name"])
+    , ExprGuiM.makeLabel "=" $ Widget.toAnimId myId
+    , BuiltinEdit.make builtin myId
     ]
+    >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced
+  , topLevelSchemeTypeView 0 entityId
+    (builtin ^. Sugar.biType)
+  ]
   where
-    Sugar.Definition guid name _ = def
-    myId = WidgetIds.fromGuid guid
+    name = def ^. Sugar.drName
+    entityId = def ^. Sugar.drEntityId
+    myId = WidgetIds.fromEntityId entityId
 
-defTypeScale :: Config -> Widget f -> Widget f
-defTypeScale config = Widget.scale $ realToFrac <$> Config.defTypeBoxScaleFactor config
+typeIndicatorId :: Widget.Id -> Widget.Id
+typeIndicatorId myId = Widget.joinId myId ["type indicator"]
+
+typeIndicator ::
+  MonadA m => Widget.R -> Draw.Color -> Widget.Id -> ExprGuiM m (Widget f)
+typeIndicator width color myId =
+  do
+    config <- ExprGuiM.readConfig
+    let
+      typeIndicatorHeight =
+        realToFrac $ Config.typeIndicatorFrameWidth config ^. _2
+    Anim.unitSquare (Widget.toAnimId (typeIndicatorId myId))
+      & View 1
+      & Widget.fromView
+      & Widget.scale (Vector2 width typeIndicatorHeight)
+      & Widget.tint color
+      & return
+
+acceptableTypeIndicator ::
+  (MonadA m, MonadA f) =>
+  Widget.R -> f a -> Draw.Color -> Widget.Id ->
+  ExprGuiM m (Widget f)
+acceptableTypeIndicator width accept color myId =
+  do
+    config <- ExprGuiM.readConfig
+    let
+      acceptKeyMap =
+        Widget.keysEventMapMovesCursor (Config.acceptDefinitionTypeKeys config)
+        (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)
+    typeIndicator width color myId
+      <&> Widget.weakerEvents acceptKeyMap
+      >>= ExprGuiM.widgetEnv . BWidgets.makeFocusableView (typeIndicatorId myId)
 
 makeExprDefinition ::
   MonadA m =>
-  Sugar.Definition Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  Sugar.DefinitionExpression Sugar.Name m (ExprGuiM.SugarExpr m) ->
-  ExprGuiM m (WidgetT m)
+  Sugar.Definition (Name m) m (ExprGuiM.SugarExpr m) ->
+  Sugar.DefinitionExpression (Name m) m (ExprGuiM.SugarExpr m) ->
+  ExprGuiM m (Widget (T m))
 makeExprDefinition def bodyExpr = do
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    makeGrid = (:[]) . defTypeScale config . BWidgets.gridHSpaced
-    addAcceptanceArrow acceptInferredType label = do
-      acceptanceLabel <-
-        (fmap . Widget.weakerEvents)
-        (Widget.keysEventMapMovesCursor (Config.acceptKeys config)
-         (E.Doc ["Edit", "Accept inferred type"]) (acceptInferredType >> return myId)) .
-        ExprGuiM.widgetEnv .
-        BWidgets.makeFocusableTextView "↱" $ Widget.joinId myId ["accept type"]
-      return $ BWidgets.hboxCenteredSpaced [acceptanceLabel, label]
-    labelStyle =
-      ExprGuiM.localEnv $ WE.setTextSizeColor
-      (Config.defTypeLabelTextSize config)
-      (Config.defTypeLabelColor config)
-    mkTypeRow labelText onLabel typeExpr = do
-      label <-
-        onLabel . labelStyle . ExprGuiM.widgetEnv .
-        BWidgets.makeLabel labelText $ Widget.toAnimId myId
-      typeGui <- ExprGuiM.makeSubexpression 0 typeExpr
-      return
-        [ (right, label)
-        , (center, Widget.doesntTakeFocus (typeGui ^. ExpressionGui.egWidget))
-        ]
-  typeWidgets <-
-    case bodyExpr ^. Sugar.deTypeInfo of
-    Sugar.DefinitionExportedTypeInfo x ->
-      makeGrid <$> sequenceA
-      [ mkTypeRow "Exported type:" id x ]
-    Sugar.DefinitionIncompleteType x ->
-      makeGrid <$> sequenceA
-      [ mkTypeRow "Exported type:" id $ Sugar.sitOldType x
-      , mkTypeRow "Inferred type:" id $ Sugar.sitNewIncompleteType x
-      ]
-    Sugar.DefinitionNewType x ->
-      makeGrid <$> sequenceA
-      [ mkTypeRow "Exported type:" (>>= addAcceptanceArrow (Sugar.antAccept x)) $
-        Sugar.antOldType x
-      , mkTypeRow "Inferred type:" id $ Sugar.antNewType x
-      ]
+  config <- ExprGuiM.readConfig
   bodyWidget <-
-    DefinitionContentEdit.make ExprGuiM.emptyHoleGuids guid name $ bodyExpr ^. Sugar.deContent
-  return . Box.vboxAlign 0 $ typeWidgets ++ [bodyWidget]
+    BinderEdit.make (def ^. Sugar.drName)
+    (bodyExpr ^. Sugar.deContent) myId
+    <&> (^. ExpressionGui.egWidget)
+  let width = bodyWidget ^. Widget.width
+  vspace <- BWidgets.verticalSpace & ExprGuiM.widgetEnv
+  typeWidget <-
+    fmap (Box.vboxAlign 0.5 . concatMap (\w -> [vspace, w])) $
+    case bodyExpr ^. Sugar.deTypeInfo of
+    Sugar.DefinitionExportedTypeInfo scheme ->
+      sequence $
+      typeIndicator width (Config.typeIndicatorMatchColor config) myId :
+      [ topLevelSchemeTypeView width entityId scheme
+      | Lens.hasn't (Sugar.deContent . Sugar.dParams . Sugar._NoParams) bodyExpr
+      ]
+    Sugar.DefinitionNewType (Sugar.AcceptNewType oldScheme _ accept) ->
+      sequence $
+      case oldScheme of
+      Definition.NoExportedType ->
+        [ acceptableTypeIndicator width accept (Config.acceptDefinitionTypeForFirstTimeColor config) myId
+        ]
+      Definition.ExportedType scheme ->
+        [ acceptableTypeIndicator width accept (Config.typeIndicatorErrorColor config) myId
+        , topLevelSchemeTypeView width entityId scheme
+        ]
+  return $ Box.vboxAlign 0 [bodyWidget, typeWidget]
   where
-    right = Vector2 1 0.5
-    center = 0.5
-    Sugar.Definition guid name _ = def
-    myId = WidgetIds.fromGuid guid
+    entityId = def ^. Sugar.drEntityId
+    myId = WidgetIds.fromEntityId entityId
 
-loadConvertDefI ::
-  (MonadA m, Typeable1 m) =>
-  Anchors.CodeProps m -> DefIM m ->
-  StateT Cache (T m) (Sugar.DefinitionN m ExprGuiM.Payload)
-loadConvertDefI cp defI =
-  lift (Load.loadDefinitionClosure defI) >>=
-  SugarConvert.convertDefI cp
-  <&> AddNames.addToDef
-  <&> Lens.mapped . Lens.mapped . Lens.mapped %~ mkPayload
-  <&> AddNextHoles.addToDef
-  where
-    mkPayload guids = ExprGuiM.Payload
-      { ExprGuiM._plStoredGuids = guids
-      , ExprGuiM._plInjected = [False]
-      -- Filled by AddNextHoles above:
-      , ExprGuiM._plHoleGuids = ExprGuiM.emptyHoleGuids
-      }
-
-makeNewDefinition ::
-  MonadA m => Anchors.CodeProps m ->
-  CT m (T m Widget.Id)
-makeNewDefinition cp = do
-  curCursor <- lift WE.readCursor
-  return $ do
-    newDefI <- DataOps.newPublicDefinition cp ""
-    DataOps.newPane cp newDefI
-    DataOps.savePreJumpPosition cp curCursor
-    return . DefinitionContentEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
+diveToNameEdit :: Widget.Id -> Widget.Id
+diveToNameEdit = BinderEdit.diveToNameEdit

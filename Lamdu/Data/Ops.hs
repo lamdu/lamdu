@@ -1,7 +1,8 @@
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE RecordWildCards #-}
 module Lamdu.Data.Ops
   ( newHole, wrap, setToWrapper
   , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
+  , recExtend, RecExtendResult(..)
   , addListItem
   , newPublicDefinition
   , newDefinition, presentationModeOfName
@@ -12,122 +13,121 @@ module Lamdu.Data.Ops
   , isInfix
   ) where
 
-import Control.Applicative ((<$>), (<*>), (<$))
+import Control.Applicative ((<$>), (<$))
 import Control.Lens.Operators
 import Control.Monad (when)
 import Control.MonadA (MonadA)
-import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction, getP, setP, modP)
 import Lamdu.CharClassification (operatorChars)
 import Lamdu.Data.Anchors (PresentationMode(..))
-import Lamdu.Data.Expression.IRef (DefIM)
-import qualified Data.Store.IRef as IRef
+import Lamdu.Expr.IRef (DefI, ValTree(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Expr.GenIds as GenIds
+import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Type as T
+import qualified Lamdu.Expr.UniqueId as UniqueId
+import qualified Lamdu.Expr.Val as V
+import qualified System.Random.Utils as RandomUtils
 
 type T = Transaction
 
 setToWrapper ::
-  MonadA m =>
-  ExprIRef.ExpressionI (Tag m) ->
-  ExprIRef.ExpressionProperty m ->
-  T m (ExprIRef.ExpressionI (Tag m))
+  MonadA m => ExprIRef.ValI m -> ExprIRef.ValIProperty m -> T m (ExprIRef.ValI m)
 setToWrapper wrappedI destP = do
   newFuncI <- newHole
-  destI <$ ExprIRef.writeExprBody destI (ExprUtil.makeApply newFuncI wrappedI)
-  where
-    destI = Property.value destP
+  resI <- ExprIRef.newValBody . V.BApp $ V.Apply newFuncI wrappedI
+  Property.set destP resI
+  return resI
 
 wrap ::
   MonadA m =>
-  ExprIRef.ExpressionProperty m ->
-  T m (ExprIRef.ExpressionI (Tag m))
+  ExprIRef.ValIProperty m ->
+  T m (ExprIRef.ValI m)
 wrap exprP = do
   newFuncI <- newHole
-  applyI <-
-    ExprIRef.newExprBody .
-    ExprUtil.makeApply newFuncI $ Property.value exprP
+  applyI <- ExprIRef.newValBody . V.BApp . V.Apply newFuncI $ Property.value exprP
   Property.set exprP applyI
   return applyI
 
-newHole :: MonadA m => T m (ExprIRef.ExpressionI (Tag m))
-newHole = ExprIRef.newExprBody $ Expr.BodyLeaf Expr.Hole
+newHole :: MonadA m => T m (ExprIRef.ValI m)
+newHole = ExprIRef.newValBody $ V.BLeaf V.LHole
 
 replace ::
   MonadA m =>
-  ExprIRef.ExpressionProperty m ->
-  ExprIRef.ExpressionI (Tag m) ->
-  T m (ExprIRef.ExpressionI (Tag m))
+  ExprIRef.ValIProperty m ->
+  ExprIRef.ValI m ->
+  T m (ExprIRef.ValI m)
 replace exprP newExprI = do
   Property.set exprP newExprI
   return newExprI
 
-replaceWithHole :: MonadA m => ExprIRef.ExpressionProperty m -> T m (ExprIRef.ExpressionI (Tag m))
+replaceWithHole :: MonadA m => ExprIRef.ValIProperty m -> T m (ExprIRef.ValI m)
 replaceWithHole exprP = replace exprP =<< newHole
 
-setToHole :: MonadA m => ExprIRef.ExpressionProperty m -> T m (ExprIRef.ExpressionI (Tag m))
+setToHole :: MonadA m => ExprIRef.ValIProperty m -> T m (ExprIRef.ValI m)
 setToHole exprP =
-  exprI <$ ExprIRef.writeExprBody exprI hole
+  exprI <$ ExprIRef.writeValBody exprI hole
   where
-    hole = Expr.BodyLeaf Expr.Hole
+    hole = V.BLeaf V.LHole
     exprI = Property.value exprP
 
-lambdaWrap
-  :: MonadA m
-  => ExprIRef.ExpressionProperty m
-  -> T m (Guid, ExprIRef.ExpressionI (Tag m))
+lambdaWrap :: MonadA m => ExprIRef.ValIProperty m -> T m (V.Var, ExprIRef.ValI m)
 lambdaWrap exprP = do
-  newParamTypeI <- newHole
-  (newParam, newExprI) <-
-    ExprIRef.newLambda newParamTypeI $ Property.value exprP
+  (newParam, newExprI) <- ExprIRef.newLambda $ Property.value exprP
   Property.set exprP newExprI
   return (newParam, newExprI)
 
-redexWrap
-  :: MonadA m
-  => ExprIRef.ExpressionProperty m
-  -> T m (Guid, ExprIRef.ExpressionI (Tag m))
+redexWrap :: MonadA m => ExprIRef.ValIProperty m -> T m (V.Var, ExprIRef.ValI m)
 redexWrap exprP = do
-  newParamTypeI <- newHole
-  (newParam, newLambdaI) <-
-    ExprIRef.newLambda newParamTypeI $ Property.value exprP
+  (newParam, newLambdaI) <- ExprIRef.newLambda $ Property.value exprP
   newValueI <- newHole
-  newApplyI <-
-    ExprIRef.newExprBody $ ExprUtil.makeApply newLambdaI newValueI
+  newApplyI <- ExprIRef.newValBody . V.BApp $ V.Apply newLambdaI newValueI
   Property.set exprP newApplyI
   return (newParam, newLambdaI)
 
+data RecExtendResult m = RecExtendResult
+  { rerNewTag :: T.Tag
+  , rerNewVal :: ExprIRef.ValI m
+  , rerResult :: ExprIRef.ValI m
+  }
+
+recExtend :: MonadA m => ExprIRef.ValIProperty m -> T m (RecExtendResult m)
+recExtend valP = do
+  tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
+  newValueI <- newHole
+  resultI <-
+    ExprIRef.newValBody . V.BRecExtend $
+    V.RecExtend tag newValueI $ Property.value valP
+  Property.set valP resultI
+  return $ RecExtendResult tag newValueI resultI
+
 addListItem ::
   MonadA m =>
-  Anchors.SpecialFunctions (Tag m) ->
-  ExprIRef.ExpressionProperty m ->
-  T m (ExprIRef.ExpressionI (Tag m), ExprIRef.ExpressionI (Tag m))
-addListItem specialFunctions exprP = do
-  consTempI <-
-    ExprIRef.newExprBody $ ExprLens.bodyDefinitionRef # Anchors.sfCons specialFunctions
-  consI <-
-    ExprIRef.newExprBody . ExprUtil.makeApply consTempI =<< newHole
+  Anchors.SpecialFunctions m ->
+  ExprIRef.ValIProperty m ->
+  T m (ExprIRef.ValI m, ExprIRef.ValI m)
+addListItem Anchors.SpecialFunctions {..} exprP = do
   newItemI <- newHole
-  headTag <- ExprIRef.newExprBody $ ExprLens.bodyTag # Anchors.sfHeadTag specialFunctions
-  tailTag <- ExprIRef.newExprBody $ ExprLens.bodyTag # Anchors.sfTailTag specialFunctions
-  argsI <-
-    ExprIRef.newExprBody $ ExprLens.bodyKindedRecordFields Expr.KVal #
-      [ (headTag, newItemI)
-      , (tailTag, Property.value exprP)
-      ]
-  newListI <- ExprIRef.newExprBody $ ExprUtil.makeApply consI argsI
+  newListI <- ExprIRef.writeValTree $
+    app cons $
+    recEx sfHeadTag (ValTreeLeaf newItemI) $
+    recEx sfTailTag (ValTreeLeaf (Property.value exprP))
+    recEmpty
   Property.set exprP newListI
   return (newListI, newItemI)
+  where
+    v = ValTreeNode
+    app f x            = v $ V.BApp $ V.Apply f x
+    recEx tag val rest = v $ V.BRecExtend $ V.RecExtend tag val rest
+    recEmpty           = v $ V.BLeaf V.LRecEmpty
+    cons               = v $ ExprLens.valBodyGlobal # ExprIRef.globalId sfCons
 
-newPane :: MonadA m => Anchors.CodeProps m -> DefIM m -> T m ()
+newPane :: MonadA m => Anchors.CodeProps m -> DefI m -> T m ()
 newPane codeProps defI = do
   let panesProp = Anchors.panes codeProps
   panes <- getP panesProp
@@ -157,40 +157,40 @@ presentationModeOfName x
 
 newDefinition ::
   MonadA m => String -> PresentationMode ->
-  Definition.Body (ExprIRef.ExpressionIM m) -> T m (DefIM m)
+  Definition.Body (ExprIRef.ValI m) -> T m (DefI m)
 newDefinition name presentationMode defBody = do
-  res <- Transaction.newIRef defBody
-  let guid = IRef.guid res
-  setP (Anchors.assocNameRef guid) name
-  setP (Anchors.assocPresentationMode guid) presentationMode
-  return res
+  newDef <- Transaction.newIRef defBody
+  setP (Anchors.assocNameRef newDef) name
+  setP (Anchors.assocPresentationMode newDef) presentationMode
+  return newDef
 
 newPublicDefinition ::
-  MonadA m => Anchors.CodeProps m -> String -> T m (DefIM m)
+  MonadA m => Anchors.CodeProps m -> String -> T m (DefI m)
 newPublicDefinition codeProps name = do
   defI <-
     newDefinition name (presentationModeOfName name) =<<
-    (Definition.Body . Definition.ContentExpression <$> newHole <*> newHole)
+    (Definition.BodyExpr . (`Definition.Expr` Definition.NoExportedType) <$> newHole)
   modP (Anchors.globals codeProps) (defI :)
   return defI
 
 newClipboard ::
   MonadA m => Anchors.CodeProps m ->
-  ExprIRef.ExpressionI (Tag m) ->
-  T m (DefIM m)
+  ExprIRef.ValI m ->
+  T m (DefI m)
 newClipboard codeProps expr = do
   len <- length <$> getP (Anchors.clipboards codeProps)
-  def <- Definition.Body (Definition.ContentExpression expr) <$> newHole
+  let def = Definition.BodyExpr $ Definition.Expr expr Definition.NoExportedType
   defI <- newDefinition ("clipboard" ++ show len) OO def
   modP (Anchors.clipboards codeProps) (defI:)
   return defI
 
-makeNewTag :: MonadA m => String -> T m Guid
+makeNewTag :: MonadA m => String -> T m T.Tag
 makeNewTag name = do
-  tag <- Transaction.newKey
-  tag <$ setP (Anchors.assocNameRef tag) name
+  tag <- UniqueId.new
+  setP (Anchors.assocNameRef tag) name
+  return tag
 
-makeNewPublicTag :: MonadA m => Anchors.CodeProps m -> String -> T m Guid
+makeNewPublicTag :: MonadA m => Anchors.CodeProps m -> String -> T m T.Tag
 makeNewPublicTag codeProps name = do
   tag <- makeNewTag name
   modP (Anchors.tags codeProps) (tag :)

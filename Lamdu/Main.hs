@@ -1,90 +1,124 @@
-{-# LANGUAGE OverloadedStrings, Rank2Types#-}
-module Main(main) where
+{-# LANGUAGE OverloadedStrings, Rank2Types, RecordWildCards #-}
+module Main (main) where
 
-import Control.Applicative ((<$>), (<*))
-import Control.Concurrent (threadDelay, forkIO, ThreadId)
-import Control.Concurrent.MVar
-import Control.Lens.Operators
-import Control.Monad (unless, forever)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (StateT, runStateT, mapStateT)
-import Data.Cache (Cache)
-import Data.IORef
-import Data.MRUMemo(memoIO)
-import Data.Monoid(Monoid(..))
-import Data.Store.Db (Db)
-import Data.Store.Guid (Guid)
-import Data.Store.Transaction (Transaction)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
-import Graphics.UI.Bottle.Widget(Widget)
-import Lamdu.Config (Config)
-import Lamdu.GUI.CodeEdit.Settings (Settings(..))
-import Lamdu.GUI.WidgetEnvT (runWidgetEnvT)
-import Paths_lamdu (getDataFileName)
-import System.Environment (getArgs)
-import System.FilePath ((</>))
+import           Control.Applicative ((<$>), (<*))
+import           Control.Concurrent (threadDelay, forkIO, ThreadId)
+import           Control.Concurrent.MVar
 import qualified Control.Exception as E
+import           Control.Lens (Lens')
+import           Control.Lens.Operators
+import           Control.Monad (unless, forever, replicateM_)
+import           Control.Monad.Trans.State (execStateT)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Cache as Cache
+import           Data.IORef
+import           Data.MRUMemo (memoIO)
+import           Data.Maybe
+import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
+import           Data.Store.Db (Db)
 import qualified Data.Store.Db as Db
-import qualified Data.Store.Guid as Guid
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import           Graphics.UI.Bottle.MainLoop (mainLoopWidget)
+import           Graphics.UI.Bottle.SizedFont (SizedFont(..))
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import           Graphics.UI.Bottle.WidgetsEnvT (runWidgetEnvT)
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.ExampleDB as ExampleDB
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
+import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
-import qualified Lamdu.GUI.WidgetEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.VersionControl as VersionControl
+import           Lamdu.VersionControl.Actions (mUndo)
+import           Paths_lamdu_ide (getDataFileName)
 import qualified System.Directory as Directory
+import           System.Environment (getArgs)
+import           System.FilePath ((</>))
 
 data ParsedOpts = ParsedOpts
-  { poShouldDeleteDB :: Bool
-  , poMFontPath :: Maybe FilePath
+  { _poShouldDeleteDB :: Bool
+  , _poUndoCount :: Int
+  , _poMFontPath :: Maybe FilePath
   }
+poShouldDeleteDB :: Lens' ParsedOpts Bool
+poShouldDeleteDB f ParsedOpts{..} = f _poShouldDeleteDB <&> \_poShouldDeleteDB -> ParsedOpts{..}
+poMFontPath :: Lens' ParsedOpts (Maybe FilePath)
+poMFontPath f ParsedOpts{..} = f _poMFontPath <&> \_poMFontPath -> ParsedOpts{..}
+poUndoCount :: Lens' ParsedOpts Int
+poUndoCount f ParsedOpts{..} = f _poUndoCount <&> \_poUndoCount -> ParsedOpts{..}
 
 parseArgs :: [String] -> Either String ParsedOpts
 parseArgs =
-  go (ParsedOpts False Nothing)
+  (`execStateT` ParsedOpts False 0 Nothing) . go
   where
-    go args [] = return args
-    go (ParsedOpts _ mPath) ("-deletedb" : args) =
-      go (ParsedOpts True mPath) args
-    go _ ("-font" : []) = failUsage "-font must be followed by a font name"
-    go (ParsedOpts delDB mPath) ("-font" : fn : args) =
-      case mPath of
-      Nothing -> go (ParsedOpts delDB (Just fn)) args
-      Just _ -> failUsage "Duplicate -font arguments"
-    go _ (arg : _) = failUsage $ "Unexpected arg: " ++ show arg
+    go [] = return ()
+    go ("-deletedb" : args) = poShouldDeleteDB .= True >> go args
+    go ["-font"] = failUsage "-font must be followed by a font name"
+    go ("-font" : fn : args) = poMFontPath %= setPath >> go args
+      where
+        setPath Nothing = Just fn
+        setPath Just {} = failUsage "Duplicate -font arguments"
+    go ["-undo"] = failUsage "-undo must be followed by an undo count"
+    go ("-undo" : countStr : args) =
+      case reads countStr of
+        [(count, "")] -> poUndoCount += count >> go args
+        _ -> failUsage $ "Invalid undo count: " ++ countStr
+    go (arg : _) = failUsage $ "Unexpected arg: " ++ show arg
     failUsage msg = fail $ unlines [ msg, usage ]
-    usage = "Usage: lamdu [-deletedb] [-font <filename>]"
+    usage = "Usage: lamdu [-deletedb] [-font <filename>] [-undo <N>]"
+
+undo :: Transaction DbLayout.DbM Widget.Id
+undo =
+  do
+    actions <- VersionControl.makeActions
+    fromMaybe (fail "Cannot undo any further") $ mUndo actions
+
+withDb :: FilePath -> (Db -> IO a) -> IO a
+withDb lamduDir body =
+  do
+    Directory.createDirectoryIfMissing False lamduDir
+    Db.withDb (lamduDir </> "codeedit.db") $ \db ->
+      do
+        ExampleDB.initDB db
+        body db
 
 main :: IO ()
 main = do
   args <- getArgs
   home <- Directory.getHomeDirectory
   let lamduDir = home </> ".lamdu"
-  opts <- either fail return $ parseArgs args
-  if poShouldDeleteDB opts
+  ParsedOpts{..} <- either fail return $ parseArgs args
+  if _poShouldDeleteDB
     then do
       putStrLn "Deleting DB..."
       Directory.removeDirectoryRecursive lamduDir
-    else runEditor lamduDir $ poMFontPath opts
+    else
+      if _poUndoCount > 0
+      then do
+        putStrLn $ "Undoing " ++ show _poUndoCount ++ " times"
+        withDb lamduDir $ \db ->
+          DbLayout.runDbTransaction db $ replicateM_ _poUndoCount undo
+      else runEditor lamduDir _poMFontPath
 
 loadConfig :: FilePath -> IO Config
 loadConfig configPath = do
@@ -118,7 +152,6 @@ sampler sample = do
 
 runEditor :: FilePath -> Maybe FilePath -> IO ()
 runEditor lamduDir mFontPath = do
-  Directory.createDirectoryIfMissing False lamduDir
   -- GLFW changes the directory from start directory, at least on macs.
   startDir <- Directory.getCurrentDirectory
 
@@ -138,7 +171,7 @@ runEditor lamduDir mFontPath = do
       case mFontPath of
       Nothing -> accessDataFile startDir getFont "fonts/DejaVuSans.ttf"
       Just path -> getFont path
-    Db.withDb (lamduDir </> "codeedit.sophia") $ runDb win getConfig font
+    withDb lamduDir $ runDb win getConfig font
 
 
 mainLoopDebugMode ::
@@ -162,7 +195,6 @@ mainLoopDebugMode win getConfig iteration = do
         doc = EventMap.Doc $ "Debug Mode" : if isDebugMode then ["Disable"] else ["Enable"]
         set = writeIORef debugModeRef (not isDebugMode)
       return $
-        -- whenApply isDebugMode (Widget.wFrame %~ addAnnotations font) $
         Widget.strongerEvents
         (Widget.keysEventMap (Config.debugModeKeys config) doc set)
         widget
@@ -182,42 +214,56 @@ cacheMakeWidget mkWidget = do
   let invalidateCache = writeIORef widgetCacheRef =<< memoIO mkWidget
   return $ \x -> do
     mkWidgetCached <- readIORef widgetCacheRef
-    Widget.atEvents (<* invalidateCache) <$>
-      mkWidgetCached x
+    mkWidgetCached x
+      <&> Widget.events %~ (<* invalidateCache)
+
+flyNavConfig :: FlyNav.Config
+flyNavConfig = FlyNav.Config
+  { FlyNav.configLayer = -10000 -- that should cover it :-)
+  }
 
 makeFlyNav :: IO (Widget IO -> IO (Widget IO))
 makeFlyNav = do
   flyNavState <- newIORef FlyNav.initState
   return $ \widget -> do
     fnState <- readIORef flyNavState
-    return $ FlyNav.make WidgetIds.flyNav fnState (writeIORef flyNavState) widget
+    return $
+      FlyNav.make flyNavConfig WidgetIds.flyNav fnState (writeIORef flyNavState) widget
 
-makeScaleFactor :: IO (IORef (Vector2 Widget.R), Config -> Widget.EventHandlers IO)
-makeScaleFactor = do
-  factor <- newIORef 1
-  let
-    eventMap config = mconcat
-      [ Widget.keysEventMap (Config.enlargeBaseFontKeys config)
-        (EventMap.Doc ["View", "Zoom", "Enlarge"]) $
-        modifyIORef factor (* realToFrac (Config.enlargeFactor config))
-      , Widget.keysEventMap (Config.shrinkBaseFontKeys config)
-        (EventMap.Doc ["View", "Zoom", "Shrink"]) $
-        modifyIORef factor (/ realToFrac (Config.shrinkFactor config))
-      ]
-  return (factor, eventMap)
+getDisplayScale :: GLFW.Window -> IO Widget.R
+getDisplayScale window =
+  do
+    (fbWidth, _) <- GLFW.getFramebufferSize window
+    (winWidth, _) <- GLFW.getWindowSize window
+    return $ fromIntegral fbWidth / fromIntegral winWidth
 
-helpConfig :: Draw.Font -> Config -> EventMapDoc.Config
-helpConfig font config =
+makeScaleFactor ::
+  GLFW.Window -> IO (IORef (Vector2 Widget.R), Config.Zoom -> Widget.EventHandlers IO)
+makeScaleFactor window =
+  do
+    factor <- newIORef . realToFrac =<< getDisplayScale window
+    let
+      eventMap Config.Zoom{..} = mconcat
+        [ Widget.keysEventMap enlargeKeys
+          (EventMap.Doc ["View", "Zoom", "Enlarge"]) $
+          modifyIORef factor (* realToFrac enlargeFactor)
+        , Widget.keysEventMap shrinkKeys
+          (EventMap.Doc ["View", "Zoom", "Shrink"]) $
+          modifyIORef factor (/ realToFrac shrinkFactor)
+        ]
+    return (factor, eventMap)
+
+helpConfig :: Draw.Font -> Config.Help -> EventMapDoc.Config
+helpConfig font Config.Help{..} =
   EventMapDoc.Config
   { EventMapDoc.configStyle =
     TextView.Style
-    { TextView._styleColor = Config.helpTextColor config
-    , TextView._styleFont = font
-    , TextView._styleFontSize = Config.helpTextSize config
+    { TextView._styleColor = helpTextColor
+    , TextView._styleFont = SizedFont font helpTextSize
     }
-  , EventMapDoc.configInputDocColor = Config.helpInputDocColor config
-  , EventMapDoc.configBGColor = Config.helpBGColor config
-  , EventMapDoc.configOverlayDocKeys = Config.overlayDocKeys config
+  , EventMapDoc.configInputDocColor = helpInputDocColor
+  , EventMapDoc.configBGColor = helpBGColor
+  , EventMapDoc.configOverlayDocKeys = helpKeys
   }
 
 baseStyle :: Config -> Draw.Font -> TextEdit.Style
@@ -225,53 +271,45 @@ baseStyle config font = TextEdit.Style
  { TextEdit._sTextViewStyle =
    TextView.Style
      { TextView._styleColor = Config.baseColor config
-     , TextView._styleFont = font
-     , TextView._styleFontSize = Config.baseTextSize config
+     , TextView._styleFont = SizedFont font (Config.baseTextSize config)
      }
   , TextEdit._sCursorColor = TextEdit.defaultCursorColor
   , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
   , TextEdit._sTextCursorId = WidgetIds.textCursorId
-  , TextEdit._sBackgroundCursorId = WidgetIds.backgroundCursorId
-  , TextEdit._sBackgroundColor = Config.cursorBGColor config
+  , TextEdit._sBGColor = Config.cursorBGColor config
   , TextEdit._sEmptyUnfocusedString = ""
   , TextEdit._sEmptyFocusedString = ""
   }
 
 runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO a
 runDb win getConfig font db = do
-  ExampleDB.initDB (Guid.augment "ExampleDB") db
-  (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor
+  (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor win
   addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
   settingsRef <- newIORef Settings
     { _sInfoMode = Settings.defaultInfoMode
     }
-  cacheRef <- newIORef $ Cache.new 0x10000000
   wrapFlyNav <- makeFlyNav
   let
     makeWidget (config, size) = do
       cursor <- dbToIO . Transaction.getP $ DbLayout.cursor DbLayout.revisionProps
       sizeFactor <- readIORef sizeFactorRef
       globalEventMap <- mkGlobalEventMap config settingsRef
-      let eventMap = globalEventMap `mappend` sizeFactorEvents config
-      prevCache <- readIORef cacheRef
-      (widget, newCache) <-
-        (`runStateT` prevCache) $
+      let eventMap = globalEventMap `mappend` sizeFactorEvents (Config.zoom config)
+      widget <-
         mkWidgetWithFallback config settingsRef (baseStyle config font) dbToIO
         (size / sizeFactor, cursor)
-      writeIORef cacheRef newCache
       return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
   makeWidgetCached <- cacheMakeWidget makeWidget
   mainLoopDebugMode win getConfig $ \config size ->
     ( wrapFlyNav =<< makeWidgetCached (config, size)
-    , addHelpWithStyle (helpConfig font config) size
+    , addHelpWithStyle (helpConfig font (Config.help config)) size
     )
   where
     dbToIO = DbLayout.runDbTransaction db
 
 nextInfoMode :: Settings.InfoMode -> Settings.InfoMode
 nextInfoMode Settings.None = Settings.Types
-nextInfoMode Settings.Types = Settings.None -- Settings.Examples
-nextInfoMode Settings.Examples = Settings.None
+nextInfoMode Settings.Types = Settings.None
 
 mkGlobalEventMap :: Config -> IORef Settings -> IO (Widget.EventHandlers IO)
 mkGlobalEventMap config settingsRef = do
@@ -289,31 +327,30 @@ mkWidgetWithFallback ::
   TextEdit.Style ->
   (forall a. Transaction DbLayout.DbM a -> IO a) ->
   (Widget.Size, Widget.Id) ->
-  StateT Cache IO (Widget IO)
+  IO (Widget IO)
 mkWidgetWithFallback config settingsRef style dbToIO (size, cursor) = do
-  settings <- lift $ readIORef settingsRef
+  settings <- readIORef settingsRef
   (isValid, widget) <-
-    mapStateT dbToIO $ do
+    dbToIO $ do
       candidateWidget <- fromCursor settings cursor
       (isValid, widget) <-
-        if candidateWidget ^. Widget.wIsFocused
+        if candidateWidget ^. Widget.isFocused
         then return (True, candidateWidget)
         else do
           finalWidget <- fromCursor settings rootCursor
-          lift $ Transaction.setP (DbLayout.cursor DbLayout.revisionProps) rootCursor
+          Transaction.setP (DbLayout.cursor DbLayout.revisionProps) rootCursor
           return (False, finalWidget)
-      unless (widget ^. Widget.wIsFocused) $
+      unless (widget ^. Widget.isFocused) $
         fail "Root cursor did not match"
       return (isValid, widget)
-  if isValid
-    then return widget
-    else do
-      lift . putStrLn $ "Invalid cursor: " ++ show cursor
-      widget
-        & Widget.backgroundColor (Config.layerMax (Config.layers config))
-          ["invalid cursor bg"] (Config.invalidCursorBGColor config)
-        & return
+  unless isValid $ putStrLn $ "Invalid cursor: " ++ show cursor
+  widget
+    & Widget.backgroundColor (Config.layerMax (Config.layers config))
+      ["background"] (bgColor isValid config)
+    & return
   where
+    bgColor False = Config.invalidCursorBGColor
+    bgColor True = Config.backgroundColor
     fromCursor settings = makeRootWidget config settings style dbToIO size
     rootCursor = WidgetIds.fromGuid rootGuid
 
@@ -324,25 +361,51 @@ makeRootWidget ::
   Config -> Settings -> TextEdit.Style ->
   (forall a. Transaction DbLayout.DbM a -> IO a) ->
   Widget.Size -> Widget.Id ->
-  StateT Cache (Transaction DbLayout.DbM) (Widget IO)
-makeRootWidget config settings style dbToIO size cursor = do
-  actions <- lift VersionControl.makeActions
-  mapStateT (runWidgetEnvT cursor style config) $ do
-    codeEdit <-
-      (fmap . Widget.atEvents) (VersionControl.runEvent cursor) .
-      (mapStateT . WE.mapWidgetEnvT) VersionControl.runAction $
-      CodeEdit.make env rootGuid
-    branchGui <- lift $ VersionControlGUI.make id size actions codeEdit
+  Transaction DbLayout.DbM (Widget IO)
+makeRootWidget config settings style dbToIO fullSize cursor = do
+  actions <- VersionControl.makeActions
+  let
+    widgetEnv = WE.Env
+      { _envCursor = cursor
+      , _envTextStyle = style
+      , backgroundCursorId = WidgetIds.backgroundCursorId
+      , cursorBGColor = Config.cursorBGColor config
+      , layerCursor = Config.layerCursor $ Config.layers config
+      , layerInterval = Config.layerInterval $ Config.layers config
+      , verticalSpacing = Config.verticalSpacing config
+      , stdSpaceWidth = Config.spaceWidth config
+      }
+  runWidgetEnvT widgetEnv $ do
+    branchGui <-
+      VersionControlGUI.make (Config.versionControl config)
+      (Config.layerChoiceBG (Config.layers config))
+      id actions $
+      \branchSelector ->
+        do
+          let hoverPadding = Spacer.makeWidget (Vector2 0 (Config.paneHoverPadding (Config.pane config)))
+          let nonCodeHeight =
+                hoverPadding   ^. Widget.height +
+                branchSelector ^. Widget.height
+          let codeSize = fullSize - Vector2 0 nonCodeHeight
+          codeEdit <-
+            CodeEdit.make (env codeSize) rootGuid
+            & WE.mapWidgetEnvT VersionControl.runAction
+            <&> Widget.events %~ VersionControl.runEvent cursor
+            <&> Widget.padToSizeAlign codeSize 0
+          Box.vbox [(0.5, hoverPadding), (0.5, codeEdit), (0.5, branchSelector)]
+            & return
     let
       quitEventMap =
         Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
-    return .
-      Widget.atEvents (dbToIO . (attachCursor =<<)) $
-      Widget.strongerEvents quitEventMap branchGui
+    branchGui
+      & Widget.strongerEvents quitEventMap
+      & Widget.events %~ dbToIO . (attachCursor =<<)
+      & return
   where
-    env = CodeEdit.Env
+    env size = CodeEdit.Env
       { CodeEdit.codeProps = DbLayout.codeProps
       , CodeEdit.totalSize = size
+      , CodeEdit.config = config
       , CodeEdit.settings = settings
       }
     attachCursor eventResult = do

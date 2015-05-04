@@ -1,165 +1,203 @@
-{-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, DeriveFunctor #-}
+{-# LANGUAGE DeriveFunctor, DeriveGeneric, RecordWildCards #-}
 module Graphics.UI.Bottle.EventMap
-  ( KeyEvent(..), IsPress(..), ModKey(..)
-  , prettyModKey
-  , ModState(..), noMods, shift, ctrl, alt
-  , Key(..), InputDoc, Subtitle, Doc(..)
+  ( KeyEvent(..)
+  , InputDoc, Subtitle, Doc(..), docStrs
   , EventMap, lookup, emTickHandlers
-  , charEventMap, allChars, simpleChars
-  , charGroup, sCharGroup
+  , emDocs
+  , charEventMap, allChars
+  , charGroup
   , keyEventMap, keyPress, keyPresses
   , deleteKey, deleteKeys
-  , IsShifted(..)
-  , filterSChars
-  , anyShiftedChars
+  , filterChars
   , eventMapDocs
   , tickHandler
   , specialCharKey
   ) where
 
-import Control.Applicative ((<$>), (<*>))
-import Control.Arrow ((***), (&&&))
-import Control.Lens.Operators
-import Control.Monad (guard, mplus, msum)
-import Data.List (isPrefixOf)
-import Data.Map (Map)
-import Data.Maybe (isJust, listToMaybe, maybeToList)
-import Data.Monoid (Monoid(..))
-import Data.Set (Set)
-import Graphics.UI.GLFW (Key(..))
-import Graphics.UI.GLFW.Events (IsPress(..))
-import Graphics.UI.GLFW.ModState (ModState(..), noMods, shift, ctrl, alt)
-import Prelude hiding (lookup)
+import           Prelude hiding (lookup)
+
+import           Control.Applicative (Applicative(..), (<$>))
+import           Control.Arrow ((***), (&&&))
+import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad (guard, msum)
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Maybe (catMaybes, listToMaybe, maybeToList)
+import           Data.Monoid (Monoid(..))
+import           Data.Set (Set)
 import qualified Data.Set as Set
+import           GHC.Generics (Generic)
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import qualified Graphics.UI.Bottle.ModKey as ModKey
+import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Events as Events
 
-data ModKey = ModKey ModState Key
-  deriving (Show, Eq, Ord)
+data KeyEvent = KeyEvent GLFW.KeyState ModKey
+  deriving (Generic, Show, Eq, Ord)
 
-data KeyEvent = KeyEvent Events.IsPress ModKey
-  deriving (Show, Eq, Ord)
-
-anyShiftedChars :: String -> [(Char, IsShifted)]
-anyShiftedChars s = (,) <$> s <*> [Shifted, NotShifted]
-
-specialCharKey :: Char -> Maybe Key
+specialCharKey :: Char -> Maybe GLFW.Key
 specialCharKey c =
   case c of
-  ' ' -> Just Key'Space
-  '0' -> Just Key'Pad0
-  '1' -> Just Key'Pad1
-  '2' -> Just Key'Pad2
-  '3' -> Just Key'Pad3
-  '4' -> Just Key'Pad4
-  '5' -> Just Key'Pad5
-  '6' -> Just Key'Pad6
-  '7' -> Just Key'Pad7
-  '8' -> Just Key'Pad8
-  '9' -> Just Key'Pad9
-  '/' -> Just Key'PadDivide
-  '*' -> Just Key'PadMultiply
-  '-' -> Just Key'PadSubtract
-  '+' -> Just Key'PadAdd
-  '.' -> Just Key'PadDecimal
-  '=' -> Just Key'PadEqual
+  ' ' -> Just GLFW.Key'Space
+  '0' -> Just GLFW.Key'Pad0
+  '1' -> Just GLFW.Key'Pad1
+  '2' -> Just GLFW.Key'Pad2
+  '3' -> Just GLFW.Key'Pad3
+  '4' -> Just GLFW.Key'Pad4
+  '5' -> Just GLFW.Key'Pad5
+  '6' -> Just GLFW.Key'Pad6
+  '7' -> Just GLFW.Key'Pad7
+  '8' -> Just GLFW.Key'Pad8
+  '9' -> Just GLFW.Key'Pad9
+  '/' -> Just GLFW.Key'PadDivide
+  '*' -> Just GLFW.Key'PadMultiply
+  '-' -> Just GLFW.Key'PadSubtract
+  '+' -> Just GLFW.Key'PadAdd
+  '.' -> Just GLFW.Key'PadDecimal
+  '=' -> Just GLFW.Key'PadEqual
   _ -> Nothing
 
-charOfKey :: Key -> Maybe Char
+charOfKey :: GLFW.Key -> Maybe Char
 charOfKey key =
   case key of
-  Key'A           -> Just 'A'
-  Key'B           -> Just 'B'
-  Key'C           -> Just 'C'
-  Key'D           -> Just 'D'
-  Key'E           -> Just 'E'
-  Key'F           -> Just 'F'
-  Key'G           -> Just 'G'
-  Key'H           -> Just 'H'
-  Key'I           -> Just 'I'
-  Key'J           -> Just 'J'
-  Key'K           -> Just 'K'
-  Key'L           -> Just 'L'
-  Key'M           -> Just 'M'
-  Key'N           -> Just 'N'
-  Key'O           -> Just 'O'
-  Key'P           -> Just 'P'
-  Key'Q           -> Just 'Q'
-  Key'R           -> Just 'R'
-  Key'S           -> Just 'S'
-  Key'T           -> Just 'T'
-  Key'U           -> Just 'U'
-  Key'V           -> Just 'V'
-  Key'W           -> Just 'W'
-  Key'X           -> Just 'X'
-  Key'Y           -> Just 'Y'
-  Key'Z           -> Just 'Z'
-  Key'Space       -> Just ' '
-  Key'Pad0        -> Just '0'
-  Key'Pad1        -> Just '1'
-  Key'Pad2        -> Just '2'
-  Key'Pad3        -> Just '3'
-  Key'Pad4        -> Just '4'
-  Key'Pad5        -> Just '5'
-  Key'Pad6        -> Just '6'
-  Key'Pad7        -> Just '7'
-  Key'Pad8        -> Just '8'
-  Key'Pad9        -> Just '9'
-  Key'PadDivide   -> Just '/'
-  Key'PadMultiply -> Just '*'
-  Key'PadSubtract -> Just '-'
-  Key'PadAdd      -> Just '+'
-  Key'PadDecimal  -> Just '.'
-  Key'PadEqual    -> Just '='
+  GLFW.Key'A           -> Just 'A'
+  GLFW.Key'B           -> Just 'B'
+  GLFW.Key'C           -> Just 'C'
+  GLFW.Key'D           -> Just 'D'
+  GLFW.Key'E           -> Just 'E'
+  GLFW.Key'F           -> Just 'F'
+  GLFW.Key'G           -> Just 'G'
+  GLFW.Key'H           -> Just 'H'
+  GLFW.Key'I           -> Just 'I'
+  GLFW.Key'J           -> Just 'J'
+  GLFW.Key'K           -> Just 'K'
+  GLFW.Key'L           -> Just 'L'
+  GLFW.Key'M           -> Just 'M'
+  GLFW.Key'N           -> Just 'N'
+  GLFW.Key'O           -> Just 'O'
+  GLFW.Key'P           -> Just 'P'
+  GLFW.Key'Q           -> Just 'Q'
+  GLFW.Key'R           -> Just 'R'
+  GLFW.Key'S           -> Just 'S'
+  GLFW.Key'T           -> Just 'T'
+  GLFW.Key'U           -> Just 'U'
+  GLFW.Key'V           -> Just 'V'
+  GLFW.Key'W           -> Just 'W'
+  GLFW.Key'X           -> Just 'X'
+  GLFW.Key'Y           -> Just 'Y'
+  GLFW.Key'Z           -> Just 'Z'
+  GLFW.Key'Space       -> Just ' '
+  GLFW.Key'Pad0        -> Just '0'
+  GLFW.Key'Pad1        -> Just '1'
+  GLFW.Key'Pad2        -> Just '2'
+  GLFW.Key'Pad3        -> Just '3'
+  GLFW.Key'Pad4        -> Just '4'
+  GLFW.Key'Pad5        -> Just '5'
+  GLFW.Key'Pad6        -> Just '6'
+  GLFW.Key'Pad7        -> Just '7'
+  GLFW.Key'Pad8        -> Just '8'
+  GLFW.Key'Pad9        -> Just '9'
+  GLFW.Key'PadDivide   -> Just '/'
+  GLFW.Key'PadMultiply -> Just '*'
+  GLFW.Key'PadSubtract -> Just '-'
+  GLFW.Key'PadAdd      -> Just '+'
+  GLFW.Key'PadDecimal  -> Just '.'
+  GLFW.Key'PadEqual    -> Just '='
   _              -> Nothing
 
 type Subtitle = String
 
 newtype Doc = Doc
-  { docStrs :: [Subtitle]
-  } deriving (Eq, Ord)
+  { _docStrs :: [Subtitle]
+  } deriving (Generic, Eq, Ord)
 
-data DocHandler a = DocHandler {
-  _dhDoc :: Doc,
-  _dhHandler :: a
-  } deriving (Functor)
+docStrs :: Lens.Iso' Doc [Subtitle]
+docStrs = Lens.iso _docStrs Doc
 
-data IsShifted = Shifted | NotShifted
-  deriving (Eq, Ord, Show, Read)
+data DocHandler a = DocHandler
+  { _dhDoc :: Doc
+  , _dhHandler :: a
+  } deriving (Generic, Functor)
+
+dhDoc :: Lens' (DocHandler a) Doc
+dhDoc f DocHandler{..} = f _dhDoc <&> \_dhDoc -> DocHandler{..}
+
+dhHandler :: Lens (DocHandler a) (DocHandler b) a b
+dhHandler f DocHandler{..} = f _dhHandler <&> \_dhHandler -> DocHandler{..}
 
 type InputDoc = String
 
--- AllCharsHandler always conflict with each other, but they may or may
--- not conflict with shifted/unshifted key events (but not with
--- alt'd/ctrl'd)
+-- AllCharsHandler always conflict with each other
 data AllCharsHandler a = AllCharsHandler
   { _chInputDoc :: InputDoc
-  , _chDocHandler :: DocHandler (Char -> IsShifted -> Maybe a)
-  } deriving (Functor)
+  , _chDocHandler :: DocHandler (Char -> Maybe a)
+  } deriving (Generic, Functor)
+
+chInputDoc :: Lens' (AllCharsHandler a) InputDoc
+chInputDoc f AllCharsHandler{..} = f _chInputDoc <&> \_chInputDoc -> AllCharsHandler{..}
+
+chDocHandler ::
+  Lens
+  (AllCharsHandler a) (AllCharsHandler b)
+  (DocHandler (Char -> Maybe a)) (DocHandler (Char -> Maybe b))
+chDocHandler f AllCharsHandler{..} = f _chDocHandler <&> \_chDocHandler -> AllCharsHandler{..}
 
 data CharGroupHandler a = CharGroupHandler
   { _cgInputDoc :: InputDoc
-  , _cgChars :: Set (Char, IsShifted)
-  , _cgDocHandler :: DocHandler (Char -> IsShifted -> a)
-  } deriving (Functor)
+  , _cgChars :: Set Char
+  , _cgDocHandler :: DocHandler (Char -> a)
+  } deriving (Generic, Functor)
+
+cgInputDoc :: Lens' (CharGroupHandler a) InputDoc
+cgInputDoc f CharGroupHandler{..} = f _cgInputDoc <&> \_cgInputDoc -> CharGroupHandler{..}
+
+cgChars :: Lens' (CharGroupHandler a) (Set Char)
+cgChars f CharGroupHandler{..} = f _cgChars <&> \_cgChars -> CharGroupHandler{..}
+
+cgDocHandler ::
+  Lens
+  (CharGroupHandler a)
+  (CharGroupHandler b)
+  (DocHandler (Char -> a))
+  (DocHandler (Char -> b))
+cgDocHandler f CharGroupHandler{..} = f _cgDocHandler <&> \_cgDocHandler -> CharGroupHandler{..}
 
 data EventMap a = EventMap
   { _emKeyMap :: Map KeyEvent (DocHandler a)
   , _emCharGroupHandlers :: [CharGroupHandler a]
-  , _emCharGroupChars :: Set (Char, IsShifted)
-  , _emAllCharsHandler :: Maybe (AllCharsHandler a)
+  , _emCharGroupChars :: Set Char
+  , _emAllCharsHandler :: [AllCharsHandler a]
   , _emTickHandlers :: [a]
-  } deriving (Functor)
+  } deriving (Generic, Functor)
 
-Lens.makeLenses ''DocHandler
-Lens.makeLenses ''CharGroupHandler
-Lens.makeLenses ''AllCharsHandler
-Lens.makeLenses ''EventMap
+emDocs :: Lens.Traversal' (EventMap a) Doc
+emDocs f (EventMap keyMap charGroupHandlers charGroupChars allCharsHandler tickHandlers) =
+  EventMap
+  <$> (Lens.traverse . dhDoc) f keyMap
+  <*> (Lens.traverse . cgDocHandler . dhDoc) f charGroupHandlers
+  <*> pure charGroupChars
+  <*> (Lens.traverse . chDocHandler . dhDoc) f allCharsHandler
+  <*> pure tickHandlers
+
+emKeyMap :: Lens' (EventMap a) (Map KeyEvent (DocHandler a))
+emKeyMap f EventMap{..} = f _emKeyMap <&> \_emKeyMap -> EventMap{..}
+
+emCharGroupHandlers :: Lens' (EventMap a) [CharGroupHandler a]
+emCharGroupHandlers f EventMap{..} = f _emCharGroupHandlers <&> \_emCharGroupHandlers -> EventMap{..}
+
+emCharGroupChars :: Lens' (EventMap a) (Set Char)
+emCharGroupChars f EventMap{..} = f _emCharGroupChars <&> \_emCharGroupChars -> EventMap{..}
+
+emAllCharsHandler :: Lens' (EventMap a) [AllCharsHandler a]
+emAllCharsHandler f EventMap{..} = f _emAllCharsHandler <&> \_emAllCharsHandler -> EventMap{..}
+
+emTickHandlers :: Lens' (EventMap a) [a]
+emTickHandlers f EventMap{..} = f _emTickHandlers <&> \_emTickHandlers -> EventMap{..}
 
 instance Monoid (EventMap a) where
-  mempty = EventMap Map.empty [] Set.empty Nothing []
+  mempty = EventMap Map.empty [] Set.empty [] []
   mappend = overrides
 
 overrides :: EventMap a -> EventMap a -> EventMap a
@@ -168,79 +206,66 @@ overrides
   (EventMap yMap yCharGroups yChars yMAllChars yTicks) =
   EventMap
   (xMap `mappend` filteredYMap)
-  (xCharGroups `mappend` filteredYCharGroups)
+  (xCharGroups ++ filteredYCharGroups)
   (xChars `mappend` yChars)
-  (xMAllChars `mplus` yMAllChars)
+  (xMAllChars ++ yMAllChars)
   (xTicks ++ yTicks)
   where
     filteredYMap = filterByKey (not . isKeyConflict) yMap
     isKeyConflict (KeyEvent _ (ModKey mods key))
       | isCharMods mods =
-        maybe False (flip (isCharConflict x) (shiftedMods mods)) $ charOfKey key
+        maybe False (isCharConflict x) $ charOfKey key
       | otherwise = False
     filteredYCharGroups =
-      filterCharGroups (fmap not . isCharConflict x) yCharGroups
+      filterCharGroups (not . isCharConflict x) yCharGroups
 
 filterCharGroups ::
-  (Char -> IsShifted -> Bool) ->
+  (Char -> Bool) ->
   [CharGroupHandler a] ->
   [CharGroupHandler a]
 filterCharGroups f =
   filter (not . Set.null . (^. cgChars)) .
-  (Lens.traversed . cgChars %~ Set.filter (uncurry f))
+  (Lens.traversed . cgChars %~ Set.filter f)
 
-isCharConflict :: EventMap a -> Char -> IsShifted -> Bool
-isCharConflict eventMap char isShifted =
-  Set.member (char, isShifted) (eventMap ^. emCharGroupChars) ||
-  isJust
-  (($ isShifted) . ($ char) . (^. chDocHandler . dhHandler) =<<
+isCharConflict :: EventMap a -> Char -> Bool
+isCharConflict eventMap char =
+  char `Set.member` (eventMap ^. emCharGroupChars) ||
+  (not . null . catMaybes)
+  (($ char) . (^. chDocHandler . dhHandler) <$>
    eventMap ^. emAllCharsHandler)
 
-filterSChars
-  :: (Char -> IsShifted -> Bool) -> EventMap a -> EventMap a
-filterSChars p =
+filterChars
+  :: (Char -> Bool) -> EventMap a -> EventMap a
+filterChars p =
   (emCharGroupHandlers %~ filterCharGroups p) .
+  (emCharGroupChars %~ Set.filter p) .
   (emAllCharsHandler . Lens.traversed . chDocHandler . dhHandler %~ f)
   where
-    f handler c isShifted = do
-      guard $ p c isShifted
-      handler c isShifted
-
-prettyKey :: Key -> InputDoc
-prettyKey k
-  | "Key" `isPrefixOf` show k = drop 3 $ show k
-  | otherwise = show k
-
-prettyModKey :: ModKey -> InputDoc
-prettyModKey (ModKey ms key) = prettyModState ms ++ prettyKey key
+    f handler c = do
+      guard $ p c
+      handler c
 
 prettyKeyEvent :: KeyEvent -> InputDoc
-prettyKeyEvent (KeyEvent Press modKey) = prettyModKey modKey
-prettyKeyEvent (KeyEvent Release modKey) =
-  "Depress " ++ prettyModKey modKey
+prettyKeyEvent (KeyEvent GLFW.KeyState'Pressed modKey) = ModKey.pretty modKey
+prettyKeyEvent (KeyEvent GLFW.KeyState'Repeating modKey) = "Repeat " ++ ModKey.pretty modKey
+prettyKeyEvent (KeyEvent GLFW.KeyState'Released modKey) = "Depress " ++ ModKey.pretty modKey
 
-prettyModState :: ModState -> InputDoc
-prettyModState ms = concat $
-  ["Ctrl+" | modCtrl ms] ++
-  ["Alt+" | modAlt ms] ++
-  ["Shift+" | modShift ms]
-
-isCharMods :: ModState -> Bool
-isCharMods ModState { modCtrl = False, modAlt = False } = True
-isCharMods _ = False
-
-shiftedMods :: ModState -> IsShifted
-shiftedMods ModState { modShift = True } = Shifted
-shiftedMods ModState { modShift = False } = NotShifted
+isCharMods :: GLFW.ModifierKeys -> Bool
+isCharMods modKeys =
+    not $ any ($ modKeys)
+    [ GLFW.modifierKeysSuper
+    , GLFW.modifierKeysControl
+    , GLFW.modifierKeysAlt
+    ]
 
 -- TODO: Remove this:
-mkModKey :: ModState -> Key -> ModKey
+mkModKey :: GLFW.ModifierKeys -> GLFW.Key -> ModKey
 mkModKey = ModKey
 
 eventMapDocs :: EventMap a -> [(InputDoc, Doc)]
 eventMapDocs (EventMap dict charGroups _ mAllCharsHandler _) =
   concat
-  [ map ((^. chInputDoc) &&& (^. chDocHandler . dhDoc)) $ maybeToList mAllCharsHandler
+  [ map ((^. chInputDoc) &&& (^. chDocHandler . dhDoc)) mAllCharsHandler
   , map ((^. cgInputDoc) &&& (^. cgDocHandler . dhDoc)) charGroups
   , map (prettyKeyEvent *** (^. dhDoc)) $ Map.toList dict
   ]
@@ -255,27 +280,27 @@ deleteKeys :: [KeyEvent] -> EventMap a -> EventMap a
 deleteKeys = foldr ((.) . deleteKey) id
 
 lookup :: Events.KeyEvent -> EventMap a -> Maybe a
-lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict charGroups _ mAllCharHandlers _) =
+lookup (Events.KeyEvent k _scanCode keyState modKeys mchar) (EventMap dict charGroups _ allCharHandlers _) =
   msum
   [ (^. dhHandler) <$>
-    KeyEvent isPress modKey `Map.lookup` dict
+    KeyEvent keyState modKey `Map.lookup` dict
   , listToMaybe $ do
-      Press <- return isPress
+      GLFW.KeyState'Pressed <- return keyState
       char <- maybeToList mchar
       CharGroupHandler _ chars handler <- charGroups
-      guard $ Set.member (char, isShifted) chars
-      return $ (handler ^. dhHandler) char isShifted
-  , do
-      Press <- return isPress
-      AllCharsHandler _ handler <- mAllCharHandlers
-      flip (handler ^. dhHandler) isShifted =<< mchar
+      guard $ Set.member char chars
+      return $ (handler ^. dhHandler) char
+  , listToMaybe $ do
+      GLFW.KeyState'Pressed <- return keyState
+      char <- maybeToList mchar
+      AllCharsHandler _ handler <- allCharHandlers
+      maybeToList $ (handler ^. dhHandler) char
   ]
   where
-    isShifted = shiftedMods ms
-    modKey = mkModKey ms k
+    modKey = mkModKey modKeys k
 
-sCharGroup :: InputDoc -> Doc -> [(Char, IsShifted)] -> (Char -> IsShifted -> a) -> EventMap a
-sCharGroup iDoc oDoc chars handler =
+charGroup :: InputDoc -> Doc -> String -> (Char -> a) -> EventMap a
+charGroup iDoc oDoc chars handler =
   mempty
   { _emCharGroupHandlers =
       [CharGroupHandler iDoc s (DocHandler oDoc handler)]
@@ -284,25 +309,18 @@ sCharGroup iDoc oDoc chars handler =
   where
     s = Set.fromList chars
 
-charGroup :: InputDoc -> Doc -> String -> (Char -> IsShifted -> a) -> EventMap a
-charGroup iDoc oDoc = sCharGroup iDoc oDoc . (flip (,) <$> [NotShifted, Shifted] <*>)
-
 -- low-level "smart constructor" in case we need to enforce
 -- invariants:
 charEventMap
-  :: InputDoc -> Doc -> (Char -> IsShifted -> Maybe a) -> EventMap a
+  :: InputDoc -> Doc -> (Char -> Maybe a) -> EventMap a
 charEventMap iDoc oDoc handler =
   mempty
   { _emAllCharsHandler =
-    Just $ AllCharsHandler iDoc (DocHandler oDoc handler)
+    [AllCharsHandler iDoc (DocHandler oDoc handler)]
   }
 
-allChars :: InputDoc -> Doc -> (Char -> IsShifted -> a) -> EventMap a
-allChars iDoc oDoc f = charEventMap iDoc oDoc $ fmap Just . f
-
-simpleChars :: InputDoc -> Doc -> (Char -> a) -> EventMap a
-simpleChars iDoc oDoc f =
-  allChars iDoc oDoc (const . f)
+allChars :: InputDoc -> Doc -> (Char -> a) -> EventMap a
+allChars iDoc oDoc f = charEventMap iDoc oDoc $ Just . f
 
 keyEventMap :: KeyEvent -> Doc -> a -> EventMap a
 keyEventMap eventType doc handler =
@@ -311,8 +329,7 @@ keyEventMap eventType doc handler =
   }
 
 keyPress :: ModKey -> Doc -> a -> EventMap a
-keyPress =
-  keyEventMap . KeyEvent Press
+keyPress = keyEventMap . KeyEvent GLFW.KeyState'Pressed
 
 keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress

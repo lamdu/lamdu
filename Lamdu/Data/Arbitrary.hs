@@ -1,91 +1,109 @@
-{-# OPTIONS -fno-warn-orphans #-} -- Arbitrary Data.Expression
-{-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
-module Lamdu.Data.Arbitrary () where
+{-# OPTIONS -fno-warn-orphans #-} -- Arbitrary E.Val
+{-# LANGUAGE FlexibleInstances #-}
+module Lamdu.Data.Arbitrary (Name(..)) where
 
-import Control.Applicative (Applicative(..), (<$>), (<*))
-import Control.Lens ((%~))
-import Control.Monad (join)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.State (StateT, evalStateT)
-import Data.Derive.Arbitrary (makeArbitrary)
-import Data.DeriveTH (derive)
-import Data.Maybe (maybeToList)
-import Data.Store.Guid (Guid)
-import Lamdu.Data.Expression (Kind(..))
-import Test.QuickCheck (Arbitrary(..), Gen, choose)
+import           Control.Applicative (Applicative(..), (<$>), (<*))
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad (replicateM, join)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
+import           Control.Monad.Trans.State (StateT, evalStateT)
 import qualified Control.Monad.Trans.State as State
-import qualified Data.Store.Guid as Guid
-import qualified Lamdu.Data.Expression as Expr
+import qualified Data.ByteString as BS
+import           Data.Map (Map)
+import qualified Data.Map as Map
+import           Data.String (IsString(..))
+import           Lamdu.Expr.Identifier (Identifier(..))
+import           Lamdu.Expr.Scheme (Scheme)
+import qualified Lamdu.Expr.Type as T
+import           Lamdu.Expr.Val (Val(..))
+import qualified Lamdu.Expr.Val as V
+import           Test.QuickCheck (Arbitrary(..), Gen)
 import qualified Test.QuickCheck.Gen as Gen
 
-data Env def = Env
-  { _envScope :: [Guid]
-  , __envMakeDef :: Maybe (Gen def)
+data Env = Env
+  { _envScope :: [V.Var]
+  , __envGlobals :: Map V.GlobalId Scheme
   }
-Lens.makeLenses ''Env
+envScope :: Lens' Env [V.Var]
+envScope f e = mkEnv <$> f (_envScope e)
+  where
+    mkEnv x = e { _envScope = x }
 
-type GenExpr def = ReaderT (Env def) (StateT [Guid] Gen)
+type GenExpr = ReaderT Env (StateT [V.Var] Gen)
 
-liftGen :: Gen a -> GenExpr def a
+liftGen :: Gen a -> GenExpr a
 liftGen = lift . lift
 
-next :: GenExpr def Guid
+next :: GenExpr V.Var
 next = lift $ State.gets head <* State.modify tail
 
-arbitraryLambda :: Arbitrary a => GenExpr def (Expr.Lam (Expr.Expression def a))
-arbitraryLambda = do
-  guid <- next
-  flip Expr.Lam guid <$> liftGen arbitrary <*> arbitraryExpr <*>
-    Reader.local (envScope %~ (guid :)) arbitraryExpr
+arbitraryLam :: Arbitrary a => GenExpr (V.Lam (Val a))
+arbitraryLam = do
+  par <- next
+  V.Lam par {-TODO: Arbitrary constraints on param types??-}
+    <$> Reader.local (envScope %~ (par :)) arbitraryExpr
 
-arbitraryApply :: Arbitrary a => GenExpr def (Expr.Apply (Expr.Expression def a))
-arbitraryApply = Expr.Apply <$> arbitraryExpr <*> arbitraryExpr
+arbitraryRecExtend :: Arbitrary a => GenExpr (V.RecExtend (Val a))
+arbitraryRecExtend =
+  V.RecExtend <$> liftGen arbitrary <*> arbitraryExpr <*> arbitraryExpr
 
-arbitraryLeaf :: GenExpr def (Expr.Leaf def)
+arbitraryGetField :: Arbitrary a => GenExpr (V.GetField (Val a))
+arbitraryGetField = V.GetField <$> arbitraryExpr <*> liftGen arbitrary
+
+arbitraryApply :: Arbitrary a => GenExpr (V.Apply (Val a))
+arbitraryApply = V.Apply <$> arbitraryExpr <*> arbitraryExpr
+
+arbitraryLeaf :: GenExpr V.Leaf
 arbitraryLeaf = do
-  Env scope mGenDefI <- Reader.ask
+  Env locals globals <- Reader.ask
   join . liftGen . Gen.elements $
-    [ Expr.LiteralInteger <$> liftGen arbitrary
-    , pure Expr.Type
-    , pure Expr.IntegerType
-    , pure Expr.Hole
+    [ V.LLiteralInteger <$> liftGen arbitrary
+    , pure V.LHole
+    , pure V.LRecEmpty
     ] ++
-    map (pure . Expr.GetVariable . Expr.ParameterRef) scope ++
-    map (fmap (Expr.GetVariable . Expr.DefinitionRef) . liftGen)
-      (maybeToList mGenDefI)
+    map (pure . V.LVar) locals ++
+    map (pure . V.LGlobal) (Map.keys globals)
 
-arbitraryBody :: Arbitrary a => GenExpr def (Expr.BodyExpr def a)
+arbitraryBody :: Arbitrary a => GenExpr (V.Body (Val a))
 arbitraryBody =
-  join . liftGen . Gen.frequency . (Lens.mapped . Lens._2 %~ pure) $
-  [ weight 2  $ Expr.BodyLam    <$> arbitraryLambda
-  , weight 5  $ Expr.BodyApply  <$> arbitraryApply
-  , weight 10 $ Expr.BodyLeaf   <$> arbitraryLeaf
+  join . liftGen . Gen.frequency . (Lens.mapped . _2 %~ pure) $
+  [ weight 2  $ V.BAbs         <$> arbitraryLam
+  , weight 2  $ V.BRecExtend   <$> arbitraryRecExtend
+  , weight 2  $ V.BGetField    <$> arbitraryGetField
+  , weight 5  $ V.BApp         <$> arbitraryApply
+  , weight 17 $ V.BLeaf        <$> arbitraryLeaf
   ]
   where
     weight = (,)
 
-arbitraryExpr :: Arbitrary a => GenExpr def (Expr.Expression def a)
-arbitraryExpr = Expr.Expression <$> arbitraryBody <*> liftGen arbitrary
+arbitraryExpr :: Arbitrary a => GenExpr (Val a)
+arbitraryExpr = Val <$> liftGen arbitrary <*> arbitraryBody
 
-nameStream :: [Guid]
-nameStream = map Guid.fromString names
-  where
-    alphabet = map (:[]) ['a'..'z']
-    names = (alphabet ++) $ (++) <$> names <*> alphabet
+class Name n where
+  names :: [n]
 
-exprGen :: Arbitrary a => Maybe (Gen def) -> Gen (Expr.Expression def a)
-exprGen makeDefI =
-  (`evalStateT` nameStream) .
-  (`runReaderT` Env [] makeDefI) $
+exprGen :: Arbitrary a => Map V.GlobalId Scheme -> Gen (Val a)
+exprGen globals =
+  (`evalStateT` names) .
+  (`runReaderT` Env [] globals) $
   arbitraryExpr
+
+instance Name V.Var where
+  names = fromString . (: []) <$> ['a'..]
+
+instance Arbitrary Identifier where
+  arbitrary = Identifier . BS.pack <$> replicateM 8 arbitrary
+
+instance Arbitrary T.Tag where
+  arbitrary = T.Tag <$> arbitrary
 
 -- TODO: This instance doesn't know which Definitions exist in the
 -- world so avoids DefinitionRef and only has valid ParameterRefs to
 -- its own lambdas.
-instance Arbitrary a => Arbitrary (Expr.Expression def a) where
-  arbitrary = exprGen Nothing
-
-derive makeArbitrary ''Expr.Kind
+instance Arbitrary a => Arbitrary (Val a) where
+  arbitrary = exprGen Map.empty

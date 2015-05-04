@@ -1,333 +1,286 @@
-{-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, DeriveDataTypeable, RankNTypes #-}
+{-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes, RecordWildCards #-}
 module Lamdu.Sugar.Types
-  ( Definition(..), drName, drGuid, drBody
+  ( EntityId
+  , Definition(..), drEntityId, drName, drBody
   , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
   , ListItemActions(..), itemAddNext, itemDelete
-  , FuncParamActions(..), fpListItemActions, fpGetExample
+  , VarToTags(..), TagsToVar(..)
+  , ParamDelResult(..), ParamAddResult(..)
+  , FuncParamActions(..), fpAddNext, fpDelete
   , DefinitionExpression(..), deContent, deTypeInfo
-  , ShowIncompleteType(..), AcceptNewType(..)
+  , AcceptNewType(..)
   , DefinitionTypeInfo(..)
     , _DefinitionExportedTypeInfo
-    , _DefinitionIncompleteType
     , _DefinitionNewType
-  , DefinitionContent(..)
-    , dDepParams, dParams, dBody, dWhereItems, dAddFirstParam, dAddInnermostWhereItem
-  , DefinitionBuiltin(..)
-  , WrapAction(..)
+  , Anchors.PresentationMode(..)
+  , BinderActions(..)
+    , baAddFirstParam, baAddInnermostWhereItem
+  , BinderParams(..), _NoParams, _VarParam, _FieldParams
+  , Binder(..)
+    , dSetPresentationMode, dParams, dBody, dWhereItems, dMActions
+  , DefinitionBuiltin(..), biType, biName, biSetName
+  , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
+  , SetToHole(..), _SetToHole, _AlreadyAHole
+  , SetToInnerExpr(..), _SetToInnerExpr, _NoInnerExpr
   , Actions(..)
-    , storedGuid, wrap, mSetToHole, mSetToInnerExpr, cut
+    , wrap, setToHole, setToInnerExpr, cut
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
-    , _BodyCollapsed, _BodyLiteralInteger
-    , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
-  , Payload(..), plGuid, plInferredTypes, plActions, plData
+    , _BodyLiteralInteger, _BodyList, _BodyRecord
+  , Payload(..), plEntityId, plInferredType, plActions, plData
   , ExpressionP(..), rBody, rPayload
-  , NameSource(..), NameCollision(..), Name(..), MStoredName
-  , DefinitionN, DefinitionU
-  , Expression, ExpressionN
-  , BodyN
-  , WhereItem(..), wiValue, wiGuid, wiName, wiActions, wiInferredType
+  , DefinitionU
+  , Expression
+  , WhereItem(..), wiEntityId, wiValue, wiName, wiActions, wiInferredType
   , ListItem(..), liMActions, liExpr
   , ListActions(..), List(..)
-  , RecordField(..), rfMItemActions, rfTag, rfExpr
-  , Kind(..)
-  , Record(..), rFields, rKind
-  , FieldList(..), flItems, flMAddFirstItem
+  , RecordField(..), rfMDelete, rfTag, rfExpr
+  , RecordTail(..), _RecordExtending, _ClosedRecord
+  , RecordAddFieldResult(..), rafrNewTag, rafrNewVal, rafrRecExtend
+  , Record(..), rItems, rMAddField, rTail
   , GetField(..), gfRecord, gfTag
-  , GetVarType(..)
-  , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
-  , GetParams(..), gpDefGuid, gpDefName, gpJumpTo
+  , NamedVarType(..)
+  , NamedVar(..), nvName, nvJumpTo, nvVarType
+  , GetVar(..), _GetVarNamed, _GetVarParamsRecord
+  , ParamsRecordVar(..), prvFieldNames
   , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
-  , AnnotatedArg(..), aaTag, aaTagExprGuid, aaExpr
+  , AnnotatedArg(..), aaTag, aaExpr
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
-  , Lam(..), lKind, lParam, lIsDep, lResultType
-  , FuncParamType(..)
-  , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpType, fpInferredType, fpMActions
+  , FuncParam(..)
+    , fpName, fpId, fpVarInfo, fpInferredType, fpMActions, fpHiddenIds
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
-  , HoleArg(..), haExpr, haExprPresugared, haUnwrap
-  , HoleInferred(..), hiBaseValue, hiWithVarsValue, hiType, hiMakeConverted
+  , HoleArg(..), haExpr, haUnwrap
   , Hole(..)
-    , holeMActions, holeMArg, holeMInferred
-  , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
-  , ScopeItem
-  , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
+    , holeMActions, holeMArg, holeSuggested, holeGuid
+  , ScopeGetVar(..), sgvGetVar, sgvVal
   , HoleActions(..)
-    , holeScope, holePaste, holeInferExprType
+    , holeScope, holePaste, holeResults
+  , HoleResultScore
   , HoleResult(..)
-    , holeResultInferred
     , holeResultConverted
     , holeResultPick
-    , holeResultHasHoles
+    , holeResultHoleTarget
+  , IsInjected(..)
   , PickedResult(..), prMJumpTo, prIdTranslation
-  , TagG(..), tagName, tagGuid
-  , Collapsed(..), cFuncGuid, cCompact, cFullExpression, cFullExprHasInfo
-  , MStorePoint, ExprStorePoint
-  -- Input types:
-  , InputPayloadP(..), ipGuid, ipInferred, ipStored, ipData
-  , InputPayload, InputExpr
-  , Stored, InferredWC
+  , TagG(..), tagGName, tagVal, tagInstance
   ) where
 
-import Data.Binary (Binary)
-import Data.Derive.Monoid (makeMonoid)
-import Data.DeriveTH (derive)
-import Data.Foldable (Foldable)
-import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag)
-import Data.Traversable (Traversable)
-import Data.Typeable (Typeable)
-import Lamdu.Data.Expression (Kind(..))
-import Lamdu.Data.Expression.IRef (DefIM)
-import Lamdu.Sugar.Types.Internal (T, CT, Stored, InferredWC)
 import qualified Control.Lens as Lens
+import           Control.Monad.ListT (ListT)
+import           Data.Foldable (Foldable)
 import qualified Data.List as List
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Guid (Guid)
+import           Data.Store.Transaction (Transaction, MkProperty)
+import           Data.Traversable (Traversable)
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Infer as Infer
-import qualified Lamdu.Sugar.Types.Internal as TypesInternal
-import qualified System.Random as Random
+import           Lamdu.Expr.Scheme (Scheme)
+import           Lamdu.Expr.Type (Type)
+import qualified Lamdu.Expr.Type as T
+import           Lamdu.Expr.Val (Val)
+import qualified Lamdu.Expr.Val as V
+import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
-data InputPayloadP inferred stored a
-  = InputPayload
-    { _ipGuid :: Guid
-    , _ipInferred :: inferred
-    , _ipStored :: stored
-    , _ipData :: a
-    }
-Lens.makeLenses ''InputPayloadP
-
-type InputPayload m a =
-  InputPayloadP (Maybe (InferredWC m)) (Maybe (Stored m)) a
-type InputExpr m a = ExprIRef.ExpressionM m (InputPayload m a)
+type T = Transaction
 
 data WrapAction m
-  = WrapperAlready -- I'm an apply-of-hole, no need to wrap
-  | WrappedAlready Guid -- I'm an arg of apply-of-hole (Guid of apply), no need to wrap
-  | WrapNotAllowed -- I'm already wrapped or a tag or a hole
-  | WrapAction (T m Guid) -- Wrap me!
+  = WrapperAlready (Guid, EntityId) -- I'm an apply-of-hole, (Guid,EntityId of hole), no need to wrap
+  | WrappedAlready (Guid, EntityId) -- I'm an arg of apply-of-hole (Guid,EntityId of hole), no need to wrap
+  | WrapNotAllowed -- I'm a hole
+  | WrapAction (T m (Guid, EntityId)) -- Wrap me!
+
+data SetToHole m
+  = SetToHole (T m (Guid, EntityId))
+  | AlreadyAHole
+
+data SetToInnerExpr m = SetToInnerExpr (T m EntityId) | NoInnerExpr
 
 data Actions m = Actions
-  { _storedGuid :: Guid
-  , -- wrap not available for wrapped exprs or wrapper exprs
-    _wrap :: WrapAction m
-  , -- mSetToHole not available for holes.
-    _mSetToHole :: Maybe (T m Guid)
-  , _mSetToInnerExpr :: Maybe (T m Guid)
-  , _cut :: T m Guid
+  { _wrap :: WrapAction m
+  , _setToHole :: SetToHole m
+  , _setToInnerExpr :: SetToInnerExpr m
+  , _cut :: Maybe (T m EntityId) -- Nothing if already hole
   }
 
-data Payload name m a = Payload
-  { _plInferredTypes :: [Expression name m ()]
-  -- This must be embedded in the expression AST and not as a separate
-  -- function so that AddNames can correct the "name" here in the
-  -- right context.
+data Payload m a = Payload
+  { _plInferredType :: Type
   , _plActions :: Maybe (Actions m)
-  , _plGuid :: Guid
+  , _plEntityId :: EntityId
   , _plData :: a
   } deriving (Functor, Foldable, Traversable)
-
-type MStorePoint m a =
-  (Maybe (TypesInternal.StorePoint (Tag m)), a)
-
-type ExprStorePoint m a =
-  ExprIRef.ExpressionM m (MStorePoint m a)
 
 data ExpressionP name m pl = Expression
   { _rBody :: Body name m (ExpressionP name m pl)
   , _rPayload :: pl
   } deriving (Functor, Foldable, Traversable)
 
-data NameSource = AutoGeneratedName | StoredName
-  deriving (Show)
-data NameCollision = NoCollision | Collision {-Disambiguator:-} Int
-  deriving (Show)
-data Name = Name
-  { nNameSource :: NameSource
-  , nNameCollisionSuffix :: NameCollision
-  , nName :: String
-  } deriving (Show)
-type MStoredName = Maybe String
-
-type Expression name m a = ExpressionP name m (Payload name m a)
-type ExpressionN m a = Expression Name m a
-
-type BodyN m a = Body Name m (ExpressionN m a)
+type Expression name m a = ExpressionP name m (Payload m a)
 
 data ListItemActions m = ListItemActions
-  { _itemAddNext :: T m Guid
-  , _itemDelete :: T m Guid
+  { _itemAddNext :: T m EntityId
+  , _itemDelete :: T m ()
   }
 
-data FuncParamActions name m = FuncParamActions
-  { _fpListItemActions :: ListItemActions m
-  , _fpGetExample :: CT m (Expression name m ())
+data VarToTags = VarToTags
+  { vttReplacedVar :: V.Var
+  , vttReplacedVarEntityId :: EntityId
+   -- Since this is just a result of a transaction, no name is
+   -- actually needed in the Tags below
+  , vttReplacedByTag :: TagG ()
+  , vttNewTag :: TagG ()
   }
 
-data FuncParamType = FuncParameter | FuncFieldParameter
+data ParamAddResult
+  = ParamAddResultNewVar EntityId V.Var
+  | ParamAddResultVarToTags VarToTags
+  | ParamAddResultNewTag (TagG ())
 
--- TODO:
--- FuncParam for lambda needs GetExample, but not ListItemActions
--- FuncParam for pi needs neither
--- FuncParam for definition needs both
--- So separate the types properly
-data FuncParam name m expr = FuncParam
-  { -- non-unique (e.g: tag guid). Name attached here:
-    _fpGuid :: Guid
-  , _fpId :: Guid
-  , _fpAltIds :: [Guid]
-  , _fpVarKind :: FuncParamType
+data TagsToVar = TagsToVar
+  { ttvReplacedTag :: TagG ()
+  , ttvReplacedByVar :: V.Var
+  , ttvReplacedByVarEntityId :: EntityId
+  , ttvDeletedTag :: TagG ()
+  }
+
+data ParamDelResult
+  = ParamDelResultDelVar
+  | ParamDelResultTagsToVar TagsToVar
+  | ParamDelResultDelTag
+
+data FuncParamActions m = FuncParamActions
+  { _fpAddNext :: T m ParamAddResult
+  , _fpDelete :: T m ParamDelResult
+  }
+
+data FuncParam varinfo name m = FuncParam
+  { _fpId :: EntityId
+  , _fpVarInfo :: varinfo
   , _fpName :: name
-  , _fpType :: expr
-  , _fpInferredType :: ExprIRef.ExpressionM m ()
-  , _fpMActions :: Maybe (FuncParamActions name m)
-  } deriving (Functor, Foldable, Traversable)
+  , _fpInferredType :: Type
+  , _fpMActions :: Maybe (FuncParamActions m)
+  , -- Sometimes the Lambda disappears in Sugar, the Param "swallows" its id
+    _fpHiddenIds :: [EntityId]
+  }
 
-data Lam name m expr = Lam
-  { _lKind :: Kind
-  , _lParam :: FuncParam name m expr
-  , _lIsDep :: Bool
-  , _lResultType :: expr
-  } deriving (Functor, Foldable, Traversable)
+data TagG name = TagG
+  { _tagInstance :: EntityId -- Unique across different uses of a tag
+  , _tagVal :: T.Tag
+  , _tagGName :: name
+  }
 
 data PickedResult = PickedResult
-  { _prMJumpTo :: Maybe Guid
+  { _prMJumpTo :: Maybe EntityId -- Hole identifier within
   , -- pairs of ids from converted expression and written expression.
-    _prIdTranslation :: [(Guid, Guid)]
+    _prIdTranslation :: [(EntityId, EntityId)]
   }
 
-data HoleResult name m a = HoleResult
-  { _holeResultInferred :: ExprIRef.ExpressionM m (Infer.Inferred (DefIM m))
-  , _holeResultConverted :: Expression name m a
+data IsInjected = Injected | NotInjected
+
+instance Monoid IsInjected where
+  mempty = NotInjected
+  mappend NotInjected NotInjected = NotInjected
+  mappend _ _ = Injected
+
+type HoleResultScore = [Int]
+
+data HoleResult name m = HoleResult
+  { _holeResultConverted :: Expression name m IsInjected
   , _holeResultPick :: T m PickedResult
-  , _holeResultHasHoles :: Bool
-  } deriving (Functor, Foldable, Traversable)
+  , _holeResultHoleTarget :: Maybe EntityId -- hole inside picked result
+  }
 
-data HoleResultSeed m a
-  = ResultSeedExpression (ExprIRef.ExpressionM m a)
-  | ResultSeedNewTag String
-  | ResultSeedNewDefinition String
-  deriving (Functor, Foldable, Traversable)
-
-type ScopeItem m a = (a, ExprIRef.ExpressionM m ())
-
-data Scope name m = Scope
-  { _scopeLocals    :: [ScopeItem m (GetVar name m)]
-  , _scopeGlobals   :: [ScopeItem m (GetVar name m)]
-  , _scopeTags      :: [ScopeItem m (TagG name)]
-  , _scopeGetParams :: [ScopeItem m (GetParams name m)]
+data ScopeGetVar name m = ScopeGetVar
+  { _sgvGetVar :: GetVar name m
+  , _sgvVal :: Val ()
   }
 
 data HoleActions name m = HoleActions
-  { _holeScope :: T m (Scope name m)
-  , -- Infer expression "on the side" (not in the hole position),
-    -- but with the hole's scope.
-    -- If given expression does not type check on its own, returns Nothing.
-    -- (used by HoleEdit to suggest variations based on type)
-    _holeInferExprType :: ExprIRef.ExpressionM m () -> CT m (Maybe (ExprIRef.ExpressionM m ()))
-  , holeResult ::
-      forall a.
-      (Binary a, Typeable a, Ord a, Monoid a) =>
-      (Guid -> Random.StdGen) -> -- for consistent guids
-      HoleResultSeed m (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
-      CT m (Maybe (HoleResult name m a))
-  , _holePaste :: Maybe (T m Guid)
+  { _holeScope :: T m [ScopeGetVar name m]
+  , _holeResults ::
+      Val () -> ListT (T m) (HoleResultScore, T m (HoleResult name m))
+  , _holePaste :: Maybe (T m EntityId)
+
+  , _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
   }
 
 data Unwrap m
-  = UnwrapMAction (Maybe (T m Guid))
+  = UnwrapMAction (Maybe (T m EntityId))
   | UnwrapTypeMismatch
 
 data HoleArg m expr = HoleArg
   { _haExpr :: expr
-  , _haExprPresugared :: ExprStorePoint m ()
   , _haUnwrap :: Unwrap m
   } deriving (Functor, Foldable, Traversable)
 
-data HoleInferred name m = HoleInferred
-  { -- hiBaseValue is the inferred value WITHOUT the vars context
-    _hiBaseValue :: ExprIRef.ExpressionM m ()
-  , _hiWithVarsValue :: ExprIRef.ExpressionM m ()
-  , _hiType :: ExprIRef.ExpressionM m ()
-  -- The Sugar Expression of the WithVarsValue
-  , _hiMakeConverted :: Random.StdGen -> CT m (Expression name m ())
-  }
-
 data Hole name m expr = Hole
   { _holeMActions :: Maybe (HoleActions name m)
-  , _holeMInferred :: Maybe (HoleInferred name m)
+  , _holeSuggested :: Val ()
   , _holeMArg :: Maybe (HoleArg m expr)
   } deriving (Functor, Foldable, Traversable)
 
-data Collapsed name m expr = Collapsed
-  { _cFuncGuid :: Guid
-  , _cCompact :: GetVar name m
-  , _cFullExpression :: expr
-    -- If the full expr has info (non-hole args) we want to leave it
-    -- expanded:
-  , _cFullExprHasInfo :: Bool
-  } deriving (Functor, Foldable, Traversable)
-
--- TODO: Do we want to store/allow-access to the implicit type params (nil's type, each cons type?)
 data ListItem m expr = ListItem
   { _liMActions :: Maybe (ListItemActions m)
   , _liExpr :: expr
   } deriving (Functor, Foldable, Traversable)
 
 data ListActions m = ListActions
-  { addFirstItem :: T m Guid
-  , replaceNil :: T m Guid
+  { addFirstItem :: T m EntityId
+  , replaceNil :: T m EntityId
   }
 
 data List m expr = List
   { lValues :: [ListItem m expr]
   , lMActions :: Maybe (ListActions m)
-  , -- Nil guid stays consistent when adding items.
+  , -- Nil EntityId stays consistent when adding items.
     -- (Exposed for consistent animations)
-    lNilGuid :: Guid
+    lNilEntityId :: EntityId
   } deriving (Functor, Foldable, Traversable)
 
-data RecordField m expr = RecordField
-  { _rfMItemActions :: Maybe (ListItemActions m)
-  , _rfTag :: expr
+data RecordField name m expr = RecordField
+  { _rfMDelete :: Maybe (T m EntityId)
+  , _rfTag :: TagG name
   , _rfExpr :: expr -- field type or val
   } deriving (Functor, Foldable, Traversable)
 
-data FieldList m expr = FieldList
-  { _flItems :: [RecordField m expr]
-  , _flMAddFirstItem :: Maybe (T m Guid)
+data RecordTail m expr
+  = RecordExtending expr
+  | ClosedRecord (Maybe (T m EntityId)) -- delete action
+  deriving (Functor, Foldable, Traversable)
+
+data RecordAddFieldResult = RecordAddFieldResult
+  { _rafrNewTag :: TagG ()
+  , _rafrNewVal :: EntityId
+  , _rafrRecExtend :: EntityId
+  }
+
+data Record name m expr = Record
+  { _rItems :: [RecordField name m expr]
+  , _rTail :: RecordTail m expr
+  , _rMAddField :: Maybe (T m RecordAddFieldResult)
   } deriving (Functor, Foldable, Traversable)
 
-data Record m expr = Record
-  { _rKind :: Kind -- record type or val
-  , _rFields :: FieldList m expr
-  } deriving (Functor, Foldable, Traversable)
-
-data GetField expr = GetField
+data GetField name expr = GetField
   { _gfRecord :: expr
-  , _gfTag :: expr
+  , _gfTag :: TagG name
   } deriving (Functor, Foldable, Traversable)
 
-data GetVarType = GetDefinition | GetFieldParameter | GetParameter
+data NamedVarType = GetDefinition | GetFieldParameter | GetParameter
   deriving (Eq, Ord)
 
-data GetVar name m = GetVar
-  { _gvIdentifier :: Guid
-  , _gvName :: name
-  , _gvJumpTo :: T m Guid
-  , _gvVarType :: GetVarType
+data NamedVar name m = NamedVar
+  { _nvName :: name
+  , _nvJumpTo :: T m EntityId
+  , _nvVarType :: NamedVarType
   }
 
-data GetParams name m = GetParams
-  { _gpDefGuid :: Guid
-  , _gpDefName :: name
-  , _gpJumpTo :: T m Guid
-  }
+newtype ParamsRecordVar name = ParamsRecordVar
+  { _prvFieldNames :: [name]
+  } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
-data TagG name = TagG
-  { _tagGuid :: Guid
-  , _tagName :: name
-  } deriving (Functor, Foldable, Traversable)
+data GetVar name m
+  = GetVarNamed (NamedVar name m)
+  | GetVarParamsRecord (ParamsRecordVar name)
 
 data SpecialArgs expr
   = NoSpecialArgs
@@ -337,8 +290,6 @@ data SpecialArgs expr
 
 data AnnotatedArg name expr = AnnotatedArg
   { _aaTag :: TagG name
-  , -- Used for animation ids consistent with record.
-    _aaTagExprGuid :: Guid
   , _aaExpr :: expr
   } deriving (Functor, Foldable, Traversable)
 
@@ -349,35 +300,25 @@ data Apply name expr = Apply
   } deriving (Functor, Foldable, Traversable)
 
 data Body name m expr
-  = BodyLam (Lam name m expr)
+  = BodyLam (Binder name m expr)
   | BodyApply (Apply name expr)
   | BodyHole (Hole name m expr)
-  | BodyCollapsed (Collapsed name m expr)
   | BodyLiteralInteger Integer
-  | BodyAtom String
   | BodyList (List m expr)
-  | BodyRecord (Record m expr)
-  | BodyGetField (GetField expr)
-  | BodyTag (TagG name)
+  | BodyRecord (Record name m expr)
+  | BodyGetField (GetField name expr)
   | BodyGetVar (GetVar name m)
-  | BodyGetParams (GetParams name m)
   deriving (Functor, Foldable, Traversable)
 
-instance Show expr => Show (FuncParam name m expr) where
-  show fp =
-    concat ["(", show (_fpGuid fp), ":", show (_fpType fp), ")"]
+instance (Show paraminfo, Show name) => Show (FuncParam paraminfo name m) where
+  show FuncParam{..} = "(FuncParam " ++ show _fpId ++ " " ++ show _fpVarInfo ++ " " ++ show _fpName ++
+                       " " ++ show _fpInferredType ++ " )"
+
 
 instance Show expr => Show (Body name m expr) where
-  show (BodyLam (Lam KVal _paramType _isDep _body)) = "TODO:Lam"
-  show (BodyLam (Lam KType paramType isDep resultType)) =
-    paramName ++ show paramType ++ " -> " ++ show resultType
-    where
-      paramName | isDep = "_:"
-                | otherwise = ""
+  show (BodyLam _) = "TODO show lam"
   show BodyHole {} = "Hole"
-  show BodyCollapsed {} = "Collapsed"
   show (BodyLiteralInteger i) = show i
-  show (BodyAtom atom) = atom
   show (BodyList (List items _ _)) =
     concat
     [ "["
@@ -387,105 +328,105 @@ instance Show expr => Show (Body name m expr) where
   show BodyApply {} = "LabelledApply:TODO"
   show BodyRecord {} = "Record:TODO"
   show BodyGetField {} = "GetField:TODO"
-  show BodyTag {} = "Tag:TODO"
   show BodyGetVar {} = "GetVar:TODO"
-  show BodyGetParams {} = "GetParams:TODO"
 
 data WhereItem name m expr = WhereItem
-  { _wiValue :: DefinitionContent name m expr
-  , _wiInferredType :: ExprIRef.ExpressionM m ()
-  , _wiGuid :: Guid
+  { _wiValue :: Binder name m expr
+  , _wiEntityId :: EntityId
+  , _wiInferredType :: Type
   , _wiName :: name
   , _wiActions :: Maybe (ListItemActions m)
   } deriving (Functor, Foldable, Traversable)
 
--- Common data for definitions and where-items
-data DefinitionContent name m expr = DefinitionContent
-  { _dDepParams :: [FuncParam name m expr]
-  , _dParams :: [FuncParam name m expr]
+data BinderActions m = BinderActions
+  { _baAddFirstParam :: T m ParamAddResult
+  , _baAddInnermostWhereItem :: T m EntityId
+  }
+
+data BinderParams name m
+  = NoParams -- used in definitions and where items
+  | VarParam (FuncParam () name m)
+  | FieldParams [FuncParam T.Tag name m]
+
+data Binder name m expr = Binder
+  { _dSetPresentationMode :: Maybe (MkProperty m Anchors.PresentationMode)
+  , _dParams :: BinderParams name m
   , _dBody :: expr
   , _dWhereItems :: [WhereItem name m expr]
-  , _dAddFirstParam :: T m Guid
-  , _dAddInnermostWhereItem :: T m Guid
+  , _dMActions :: Maybe (BinderActions m)
   } deriving (Functor, Foldable, Traversable)
 
-data AcceptNewType m expr = AcceptNewType
-  { antOldType :: expr
-  , antNewType :: expr
+data AcceptNewType m = AcceptNewType
+  { antOldType :: Definition.ExportedType
+  , antNewType :: Scheme
   , antAccept :: T m ()
-  } deriving (Functor, Foldable, Traversable)
+  }
 
-data ShowIncompleteType expr = ShowIncompleteType
-  { sitOldType :: expr
-  , sitNewIncompleteType :: expr
-  } deriving (Functor, Foldable, Traversable)
-
-data DefinitionTypeInfo m expr
-  = DefinitionExportedTypeInfo expr
-  | DefinitionIncompleteType (ShowIncompleteType expr)
-  | DefinitionNewType (AcceptNewType m expr)
-  deriving (Functor, Foldable, Traversable)
+data DefinitionTypeInfo m
+  = DefinitionExportedTypeInfo Scheme
+  | DefinitionNewType (AcceptNewType m)
 
 data DefinitionExpression name m expr = DefinitionExpression
-  { _deTypeInfo :: DefinitionTypeInfo m expr
-  , _deContent :: DefinitionContent name m expr
+  { _deTypeInfo :: DefinitionTypeInfo m
+  , _deContent :: Binder name m expr
   } deriving (Functor, Foldable, Traversable)
 
-data DefinitionBuiltin m expr = DefinitionBuiltin
-  { biName :: Definition.FFIName
-  -- Consider removing Maybe'ness here
-  , biMSetName :: Maybe (Definition.FFIName -> T m ())
-  , biType :: expr
-  } deriving (Functor, Foldable, Traversable)
+data DefinitionBuiltin m = DefinitionBuiltin
+  { _biName :: Definition.FFIName
+  , _biSetName :: Definition.FFIName -> T m ()
+  , _biType :: Scheme
+  }
 
 data DefinitionBody name m expr
   = DefinitionBodyExpression (DefinitionExpression name m expr)
-  | DefinitionBodyBuiltin (DefinitionBuiltin m expr)
+  | DefinitionBodyBuiltin (DefinitionBuiltin m)
   deriving (Functor, Foldable, Traversable)
 
 data Definition name m expr = Definition
-  { _drGuid :: Guid
-  , _drName :: name
+  { _drName :: name
+  , _drEntityId :: EntityId
   , _drBody :: DefinitionBody name m expr
   } deriving (Functor, Foldable, Traversable)
 
-type DefinitionN m a = Definition Name m (Expression Name m a)
-type DefinitionU m a = Definition MStoredName m (Expression MStoredName m a)
+type DefinitionU m a = Definition Guid m (Expression Guid m a)
 
 Lens.makeLenses ''Actions
 Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''Apply
+Lens.makeLenses ''Binder
+Lens.makeLenses ''BinderActions
 Lens.makeLenses ''Body
-Lens.makeLenses ''Collapsed
 Lens.makeLenses ''Definition
-Lens.makeLenses ''DefinitionContent
+Lens.makeLenses ''DefinitionBuiltin
 Lens.makeLenses ''DefinitionExpression
 Lens.makeLenses ''ExpressionP
-Lens.makeLenses ''FieldList
 Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''GetField
-Lens.makeLenses ''GetParams
-Lens.makeLenses ''GetVar
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg
-Lens.makeLenses ''HoleInferred
 Lens.makeLenses ''HoleResult
-Lens.makeLenses ''Lam
 Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions
+Lens.makeLenses ''NamedVar
+Lens.makeLenses ''ParamsRecordVar
 Lens.makeLenses ''Payload
 Lens.makeLenses ''PickedResult
 Lens.makeLenses ''Record
 Lens.makeLenses ''RecordField
-Lens.makeLenses ''Scope
+Lens.makeLenses ''RecordAddFieldResult
+Lens.makeLenses ''ScopeGetVar
 Lens.makeLenses ''TagG
 Lens.makeLenses ''WhereItem
 Lens.makePrisms ''Body
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo
-Lens.makePrisms ''HoleResultSeed
+Lens.makePrisms ''GetVar
+Lens.makePrisms ''RecordTail
+Lens.makePrisms ''SetToHole
+Lens.makePrisms ''SetToInnerExpr
 Lens.makePrisms ''SpecialArgs
 Lens.makePrisms ''Unwrap
-derive makeMonoid ''Scope
+Lens.makePrisms ''WrapAction
+Lens.makePrisms ''BinderParams

@@ -1,165 +1,146 @@
+{-# LANGUAGE RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Sugar.Convert.List
-  ( convert
+  ( cons
+  , nil
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad (guard, MonadPlus(..))
+import Control.Lens.Tuple
+import Control.Monad (guard, void, MonadPlus(..))
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Either.Utils (justToLeft, leftToJust)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.MonadA (MonadA)
+import Data.Foldable (Foldable)
 import Data.Maybe.Utils (maybeToMPlus)
-import Data.Monoid (First(..), Monoid(..), (<>))
-import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag)
-import Data.Typeable (Typeable1)
+import Data.Monoid (Monoid(..), (<>))
+import Data.Store.Transaction (Transaction)
+import Data.Traversable (Traversable(..))
+import Lamdu.Expr.Val (Val(..))
+import Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
-import Lamdu.Sugar.Types.Internal
 import qualified Control.Lens as Lens
+import qualified Data.Map.Utils as MapUtils
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
-import qualified Lamdu.Sugar.Convert.Infer as SugarInfer
+import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.RecordVal as RecordVal
+import qualified Lamdu.Expr.Type as T
+import qualified Lamdu.Expr.Val as V
+import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
-convert ::
-  (MonadA m, Typeable1 m, Monoid a) =>
-  Expr.Apply (InputExpr m a) ->
-  ExpressionU m a ->
-  InputPayload m a ->
-  MaybeT (ConvertM m) (ExpressionU m a)
-convert app argS exprPl = leftToJust $ do
-  justToLeft $ nil app exprPl
-  justToLeft $ cons app argS exprPl
+type T = Transaction
 
 nil ::
-  (Typeable1 m, MonadA m, Monoid a) =>
-  Expr.Apply (InputExpr m a) ->
-  InputPayload m a ->
-  MaybeT (ConvertM m) (ExpressionU m a)
-nil app@(Expr.Apply funcI _) exprPl = do
+  MonadA m => V.GlobalId -> Input.Payload m a -> MaybeT (ConvertM m) (ExpressionU m a)
+nil globId exprPl = do
   specialFunctions <-
     lift $ (^. ConvertM.scSpecialFunctions) <$> ConvertM.readContext
+  guard $ globId == ExprIRef.globalId (Anchors.sfNil specialFunctions)
   let
     mkListActions exprS =
       ListActions
       { addFirstItem = mkListAddFirstItem specialFunctions exprS
-      , replaceNil = ExprIRef.exprGuid <$> DataOps.setToHole exprS
+      , replaceNil = EntityId.ofValI <$> DataOps.setToHole exprS
       }
-  guard $
-    Lens.anyOf ExprLens.exprDefinitionRef
-    (== Anchors.sfNil specialFunctions) funcI
-  (lift . ConvertExpr.make exprPl . BodyList)
+  (lift . addActions exprPl . BodyList)
     List
     { lValues = []
-    , lMActions = mkListActions <$> exprPl ^. ipStored
-    , lNilGuid = exprPl ^. ipGuid
+    , lMActions = mkListActions <$> exprPl ^. Input.mStored
+    , lNilEntityId = exprPl ^. Input.entityId
     }
-    <&> rPayload . plData <>~ app ^. Lens.traversed . Lens.traversed . ipData
 
 mkListAddFirstItem ::
-  MonadA m => Anchors.SpecialFunctions (Tag m) -> Stored m -> T m Guid
+  MonadA m => Anchors.SpecialFunctions m -> ExprIRef.ValIProperty m ->
+  T m EntityId
 mkListAddFirstItem specialFunctions =
-  fmap (ExprIRef.exprGuid . snd) . DataOps.addListItem specialFunctions
-
-isCons ::
-  Anchors.SpecialFunctions t ->
-  ExprIRef.Expression t a -> Bool
-isCons specialFunctions =
-  Lens.anyOf
-  (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprDefinitionRef)
-  (== Anchors.sfCons specialFunctions)
+  fmap (EntityId.ofValI . snd) . DataOps.addListItem specialFunctions
 
 mkListItem ::
   (MonadA m, Monoid a) =>
-  ExpressionU m a -> ExpressionU m a ->
-  InputPayload m a -> InputExpr m a -> Maybe (T m Guid) ->
+  ExpressionU m a ->
+  Input.Payload m a -> Val (Input.Payload m a) -> Maybe (T m EntityId) ->
   ListItem m (ExpressionU m a)
-mkListItem listItemExpr recordArgS exprPl tailI mAddNextItem =
+mkListItem listItemExpr exprPl tailI mAddNextItem =
   ListItem
   { _liExpr =
     listItemExpr
-    & rPayload . plData <>~ recordArgS ^. rPayload . plData
   , _liMActions = do
       addNext <- mAddNextItem
-      exprProp <- exprPl ^. ipStored
-      argProp <- tailI ^. SugarInfer.exprStored
+      exprProp <- exprPl ^. Input.mStored
+      argProp <- tailI ^. V.payload . Input.mStored
       return ListItemActions
         { _itemAddNext = addNext
-        , _itemDelete = SugarInfer.replaceWith exprProp argProp
+        , _itemDelete = void $ replaceWith exprProp argProp
         }
   }
 
-guardHeadTailTags ::
-  MonadPlus m =>
-  Anchors.SpecialFunctions t ->
-  Lens.Getting (First Guid) s Guid ->
-  s -> s -> m ()
-guardHeadTailTags specialFunctions tagLens hd tl = do
-  guardTag Anchors.sfHeadTag hd
-  guardTag Anchors.sfTailTag tl
-  where
-    guardTag tag x =
-      guard . (== tag specialFunctions) =<<
-      maybeToMPlus (x ^? tagLens)
+data ConsParams a = ConsParams
+  { cpHead :: a
+  , cpTail :: a
+  } deriving (Functor, Foldable, Traversable)
 
 getSugaredHeadTail ::
   (MonadPlus m, Monoid a) =>
   Anchors.SpecialFunctions t ->
   ExpressionU f a ->
-  m (a, ExpressionU f a, ExpressionU f a)
-getSugaredHeadTail specialFunctions argS = do
-  Record KVal (FieldList [headField, tailField] _) <-
+  m (ConsParams (ExpressionU f a))
+getSugaredHeadTail Anchors.SpecialFunctions{..} argS = do
+  Record [headField, tailField] ClosedRecord{} _ <-
     maybeToMPlus $ argS ^? rBody . _BodyRecord
-  guardHeadTailTags specialFunctions
-    (rfTag . rBody . _BodyTag . tagGuid) headField tailField
-  return
-    ( [headField, tailField] ^. Lens.traversed . rfTag . rPayload . plData
-    , headField ^. rfExpr
-    , tailField ^. rfExpr
-    )
+  guard $ sfHeadTag == headField ^. rfTag . tagVal
+  guard $ sfTailTag == tailField ^. rfTag . tagVal
+  return ConsParams
+    { cpHead = headField ^. rfExpr
+    , cpTail = tailField ^. rfExpr
+    }
 
-getExprHeadTail ::
-  MonadPlus m =>
-  Anchors.SpecialFunctions t ->
-  Expr.Expression def a ->
-  m (Expr.Expression def a, Expr.Expression def a)
-getExprHeadTail specialFunctions argI = do
-  [(headTagI, headExprI), (tailTagI, tailExprI)] <-
-    maybeToMPlus $ argI ^? ExprLens.exprKindedRecordFields KVal
-  guardHeadTailTags specialFunctions ExprLens.exprTag headTagI tailTagI
-  return (headExprI, tailExprI)
+consTags :: Anchors.SpecialFunctions t -> ConsParams T.Tag
+consTags Anchors.SpecialFunctions{..} = ConsParams sfHeadTag sfTailTag
+
+valConsParams ::
+  Anchors.SpecialFunctions t -> Val a -> Maybe ([a], ConsParams (Val a))
+valConsParams specialFunctions val = do
+  recTail ^? ExprLens.valRecEmpty
+  consParams <- MapUtils.matchKeys (consTags specialFunctions) fields
+  let payloads = recTail ^. V.payload : consParams ^.. traverse . _1
+  return (payloads, consParams <&> snd)
+  where
+    (fields, recTail) = RecordVal.unpack val
 
 cons ::
-  (Typeable1 m, MonadA m, Monoid a) =>
-  Expr.Apply (InputExpr m a) -> ExpressionU m a -> InputPayload m a ->
+  (MonadA m, Monoid a) =>
+  V.Apply (Val (Input.Payload m a)) ->
+  ExpressionU m a -> Input.Payload m a ->
   MaybeT (ConvertM m) (ExpressionU m a)
-cons (Expr.Apply funcI argI) argS exprPl = do
-  specialFunctions <- lift $ (^. ConvertM.scSpecialFunctions) <$> ConvertM.readContext
-  (hidden, headS, tailS) <- getSugaredHeadTail specialFunctions argS
-  (_headI, tailI) <- getExprHeadTail specialFunctions argI
+cons (V.Apply funcI argI) argS exprPl = do
+  specialFunctions <-
+    lift $ (^. ConvertM.scSpecialFunctions) <$> ConvertM.readContext
+  let consGlobalId = ExprIRef.globalId $ Anchors.sfCons specialFunctions
+  guard $ Lens.anyOf ExprLens.valGlobal (== consGlobalId) funcI
+  ConsParams headS tailS <- getSugaredHeadTail specialFunctions argS
+  (pls, ConsParams _headI tailI) <-
+    maybeToMPlus $ valConsParams specialFunctions argI
   List innerValues innerListMActions nilGuid <- maybeToMPlus $ tailS ^? rBody . _BodyList
-  guard $ isCons specialFunctions funcI
   let
     listItem =
-      mkListItem headS argS exprPl tailI
+      mkListItem headS exprPl tailI
       (addFirstItem <$> innerListMActions)
       & liExpr . rPayload . plData <>~
-        (funcI ^. Lens.traversed . ipData <>
-         tailS ^. rPayload . plData <>
-         hidden)
+        (funcI ^. Lens.traversed . Input.userData <>
+         tailS ^. rPayload . plData)
     mListActions = do
-      exprS <- exprPl ^. ipStored
+      exprS <- exprPl ^. Input.mStored
       innerListActions <- innerListMActions
       pure ListActions
         { addFirstItem = mkListAddFirstItem specialFunctions exprS
         , replaceNil = replaceNil innerListActions
         }
-  lift . ConvertExpr.make exprPl . BodyList $
+  lift . addActions exprPl . BodyList $
     List (listItem : innerValues) mListActions nilGuid
+    <&> rPayload . plData <>~ (pls ^. traverse . Input.userData)
