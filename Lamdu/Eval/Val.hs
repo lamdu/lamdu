@@ -14,7 +14,7 @@ data ValHead pl
     = HFunc (Closure pl)
     | HRecExtend (V.RecExtend ThunkId)
     | HRecEmpty
-    | HLiteralInteger Integer
+    | HInteger Integer
     | HBuiltin FFIName
     deriving (Functor, Show)
 

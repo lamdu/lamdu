@@ -138,7 +138,7 @@ whnfScopedValInner mThunkId (ScopedVal scope expr) =
         Nothing -> evalError $ "Variable out of scope: " ++ show var
         Just thunkId -> whnfThunk thunkId
     V.BLeaf V.LRecEmpty -> return HRecEmpty
-    V.BLeaf (V.LLiteralInteger i) -> HLiteralInteger i & return
+    V.BLeaf (V.LLiteralInteger i) -> HInteger i & return
     V.BLeaf V.LHole -> evalError "Hole"
     where
         reportResultComputed result =

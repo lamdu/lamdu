@@ -14,7 +14,7 @@ fromValHead :: Monad m => ValHead pl -> EvalT pl m (Val ())
 fromValHead HRecEmpty = return P.recEmpty
 fromValHead (HRecExtend recExtend) =
     Lens.traverse fromThunkId recExtend <&> Val () . V.BRecExtend
-fromValHead (HLiteralInteger i) = P.litInt i & return
+fromValHead (HInteger i) = P.litInt i & return
 -- Not converting functions to exprs for now
 fromValHead (HBuiltin _) = return P.hole
 fromValHead (HFunc _) = return P.hole
