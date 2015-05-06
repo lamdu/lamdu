@@ -76,13 +76,16 @@ mainLoopImage win imageHandlers =
                             image
                                 & (DrawUtils.translate (Vector2 (-1) 1) <>
                                    DrawUtils.scale (Vector2 (2/winSizeX) (-2/winSizeY)) %%)
-#ifdef DRAWINGCOMBINATORS__SIZED
                                 & let Vector2 glPixelRatioX glPixelRatioY = winSize / 2 -- GL range is -1..1
-                                  in Draw.clearRenderSized (glPixelRatioX, glPixelRatioY)
-#else
-                                & Draw.clearRender
-#endif
+                                  in clearRenderSized (glPixelRatioX, glPixelRatioY)
                             return True
+
+clearRenderSized :: Draw.R2 -> Draw.Image a -> IO ()
+#ifdef DRAWINGCOMBINATORS__SIZED
+clearRenderSized = Draw.clearRenderSized
+#else
+clearRenderSized _ = Draw.clearRender
+#endif
 
 data AnimHandlers = AnimHandlers
     { animTickHandler :: IO (Maybe (Monoid.Endo AnimId))
