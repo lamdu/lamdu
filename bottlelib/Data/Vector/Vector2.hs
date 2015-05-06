@@ -16,6 +16,8 @@ import Data.Monoid.Generic (def_mempty, def_mappend)
 import GHC.Generics (Generic)
 import Prelude hiding (curry, uncurry, zip)
 import qualified Control.Lens as Lens
+import           Control.DeepSeq.Generics (genericRnf)
+import           Control.DeepSeq (NFData(..))
 
 data Vector2 a = Vector2
   { _first :: !a
@@ -25,6 +27,8 @@ data Vector2 a = Vector2
   -- (Vectors aren't ordinals!). Useful to have in a binary search
   -- tree though.
 instance Binary a => Binary (Vector2 a)
+
+instance NFData a => NFData (Vector2 a) where rnf = genericRnf
 
 instance ToJSON a => ToJSON (Vector2 a)
 instance FromJSON a => FromJSON (Vector2 a)

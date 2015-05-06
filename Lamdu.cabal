@@ -92,6 +92,7 @@ Library
                        cryptohash >= 0.7,
                        GLFW-b >= 1.2.1 && < 1.5,
                        deepseq,
+                       deepseq-generics >= 0.1,
                        OpenGL,
                        StateVar,
                        TraceUtils,

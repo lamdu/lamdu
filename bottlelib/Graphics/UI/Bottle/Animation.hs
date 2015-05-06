@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric, TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
 
 module Graphics.UI.Bottle.Animation
   ( R, Size, Layer
@@ -27,6 +27,7 @@ import           Data.Maybe (isJust)
 import           Data.Monoid (Monoid(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
+import           GHC.Generics (Generic)
 import           Graphics.DrawingCombinators (R, (%%))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
@@ -43,12 +44,12 @@ data Image = Image
     -- iUnitImage always occupies (0,0)..(1,1),
     -- the translation/scaling occurs when drawing
   , _iRect :: Rect
-  }
+  } deriving (Generic)
 Lens.makeLenses ''Image
 
 newtype Frame = Frame
   { _frameImagesMap :: Map AnimId [Image]
-  }
+  } deriving (Generic)
 Lens.makeLenses ''Frame
 
 {-# INLINE images #-}

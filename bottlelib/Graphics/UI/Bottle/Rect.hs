@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric, TemplateHaskell #-}
 module Graphics.UI.Bottle.Rect
   ( R, Rect(..), topLeft, size
   , topLeftAndSize
@@ -10,19 +10,25 @@ module Graphics.UI.Bottle.Rect
   ) where
 
 import           Control.Applicative ((<$>), liftA2)
+import           Control.DeepSeq (NFData(..))
+import           Control.DeepSeq.Generics (genericRnf)
 import           Control.Lens (Traversal', Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
+import           Foreign.C.Types.Instances ()
+import           GHC.Generics (Generic)
 import           Graphics.DrawingCombinators (R)
 
-data Rect = Rect {
-  _topLeft :: Vector2 R,
-  _size :: Vector2 R
-  } deriving Show
+data Rect = Rect
+  { _topLeft :: Vector2 R
+  , _size :: Vector2 R
+  } deriving (Show, Generic)
 Lens.makeLenses ''Rect
+
+instance NFData Rect where rnf = genericRnf
 
 {-# INLINE topLeftAndSize #-}
 topLeftAndSize :: Traversal' Rect (Vector2 R)
