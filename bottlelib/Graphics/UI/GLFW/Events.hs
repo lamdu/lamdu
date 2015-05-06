@@ -1,10 +1,9 @@
 {-# LANGUAGE TupleSections #-}
 module Graphics.UI.GLFW.Events
-  ( KeyEvent(..), Event(..)
+  ( KeyEvent(..), Event(..), Result(..)
   , eventLoop
   ) where
 
-import           Control.Monad (forever, when)
 import           Data.IORef
 import qualified Graphics.UI.GLFW as GLFW
 
@@ -31,6 +30,12 @@ data Event
     | EventWindowRefresh
     deriving (Show, Eq)
 
+data Result
+    = ResultNone
+    | ResultDidDraw
+    | ResultQuit
+    deriving (Show, Eq)
+
 fromChar :: Char -> Maybe Char
 fromChar char
     -- Range for "key" characters (keys for left key, right key, etc.)
@@ -51,7 +56,7 @@ translate (RawCharEvent _ : xs) = translate xs
 atomicModifyIORef_ :: IORef a -> (a -> a) -> IO ()
 atomicModifyIORef_ var f = atomicModifyIORef var ((, ()) . f)
 
-rawEventLoop :: GLFW.Window -> ([GLFWRawEvent] -> IO Bool) -> IO a
+rawEventLoop :: GLFW.Window -> ([GLFWRawEvent] -> IO Result) -> IO ()
 rawEventLoop win eventsHandler = do
   eventsVar <- newIORef []
 
@@ -61,18 +66,24 @@ rawEventLoop win eventsHandler = do
       addEvent $ RawKeyEvent key scanCode keyState modKeys
     charEventHandler = addEvent . RawCharEvent
     setCallback f cb = f win $ Just $ const cb
+    loop =
+      do
+        GLFW.pollEvents
+        let handleReversedEvents rEvents = ([], reverse rEvents)
+        events <- atomicModifyIORef eventsVar handleReversedEvents
+        res <- eventsHandler events
+        case res of
+          ResultNone -> loop
+          ResultDidDraw -> GLFW.swapBuffers win >> loop
+          ResultQuit -> return ()
+
   setCallback GLFW.setCharCallback charEventHandler
   setCallback GLFW.setKeyCallback addKeyEvent
   setCallback GLFW.setWindowRefreshCallback $ addEvent RawWindowRefresh
   setCallback GLFW.setWindowSizeCallback . const . const $ addEvent RawWindowRefresh
   setCallback GLFW.setWindowCloseCallback $ addEvent RawWindowClose
 
-  forever $ do
-    GLFW.pollEvents
-    let handleReversedEvents rEvents = ([], reverse rEvents)
-    events <- atomicModifyIORef eventsVar handleReversedEvents
-    didDraw <- eventsHandler events
-    when didDraw $ GLFW.swapBuffers win
+  loop
 
-eventLoop :: GLFW.Window -> ([Event] -> IO Bool) -> IO a
+eventLoop :: GLFW.Window -> ([Event] -> IO Result) -> IO ()
 eventLoop win handler = rawEventLoop win (handler . translate)

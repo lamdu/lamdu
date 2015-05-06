@@ -30,7 +30,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
-import           Graphics.UI.GLFW.Events (KeyEvent, Event(..), eventLoop)
+import           Graphics.UI.GLFW.Events (KeyEvent, Event(..), Result(..), eventLoop)
 
 type ForceRedraw = Bool
 
@@ -39,7 +39,7 @@ data ImageHandlers = ImageHandlers
   , imageMake :: ForceRedraw -> IO (Maybe Image)
   }
 
-mainLoopImage :: GLFW.Window -> (Widget.Size -> ImageHandlers) -> IO a
+mainLoopImage :: GLFW.Window -> (Widget.Size -> ImageHandlers) -> IO ()
 mainLoopImage win imageHandlers =
     eventLoop win handleEvents
     where
@@ -70,7 +70,7 @@ mainLoopImage win imageHandlers =
                             -- TODO: If we can verify that there's sync-to-vblank, we
                             -- need no sleep here
                             threadDelay 10000
-                            return False
+                            return ResultNone
                     Just image ->
                         do
                             image
@@ -78,7 +78,7 @@ mainLoopImage win imageHandlers =
                                    DrawUtils.scale (Vector2 (2/winSizeX) (-2/winSizeY)) %%)
                                 & let Vector2 glPixelRatioX glPixelRatioY = winSize / 2 -- GL range is -1..1
                                   in clearRenderSized (glPixelRatioX, glPixelRatioY)
-                            return True
+                            return ResultDidDraw
 
 clearRenderSized :: Draw.R2 -> Draw.Image a -> IO ()
 #ifdef DRAWINGCOMBINATORS__SIZED
@@ -93,7 +93,7 @@ data AnimHandlers = AnimHandlers
     , animMakeFrame :: IO Anim.Frame
     }
 
-mainLoopAnim :: GLFW.Window -> IO Anim.R -> (Widget.Size -> AnimHandlers) -> IO a
+mainLoopAnim :: GLFW.Window -> IO Anim.R -> (Widget.Size -> AnimHandlers) -> IO ()
 mainLoopAnim win getAnimationHalfLife animHandlers =
     do
         frameStateVar <- newIORef Nothing
@@ -146,7 +146,7 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
                     frameStateResult <$> readIORef frameStateVar
             }
 
-mainLoopWidget :: GLFW.Window -> IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO Anim.R -> IO a
+mainLoopWidget :: GLFW.Window -> IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO Anim.R -> IO ()
 mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationHalfLife =
     do
         mkWidgetRef <- newIORef =<< memoIO mkWidgetUnmemod

@@ -183,7 +183,7 @@ mainLoopDebugMode ::
     ( IO (Widget IO)
     , Widget IO -> IO (Widget IO)
     )
-  ) -> IO a
+  ) -> IO ()
 mainLoopDebugMode win getConfig iteration = do
   debugModeRef <- newIORef False
   lastVersionNumRef <- newIORef 0
@@ -283,7 +283,7 @@ baseStyle config font = TextEdit.Style
   , TextEdit._sEmptyFocusedString = ""
   }
 
-runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO a
+runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO ()
 runDb win getConfig font db = do
   (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor win
   addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
