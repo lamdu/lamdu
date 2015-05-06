@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, RecordWildCards #-}
 module Graphics.UI.Bottle.MainLoop
     ( mainLoopAnim
     , mainLoopImage
@@ -7,14 +7,14 @@ module Graphics.UI.Bottle.MainLoop
 
 import           Control.Applicative ((<$>))
 import           Control.Concurrent (threadDelay)
+import           Control.Lens (Lens')
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Monad (when, unless)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Monoid (Monoid(..), (<>))
 import qualified Data.Monoid as Monoid
-import           Data.Time.Clock (getCurrentTime, diffUTCTime)
+import           Data.Time.Clock (UTCTime, getCurrentTime, diffUTCTime)
 import           Data.Traversable (traverse, sequenceA)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
@@ -96,40 +96,58 @@ data AnimHandlers = AnimHandlers
 data IsAnimating = Animating | NotAnimating
     deriving Eq
 
+data AnimState = AnimState
+    { _asIsAnimating :: IsAnimating
+    , _asCurTime :: UTCTime
+    , _asCurFrame :: Anim.Frame
+    }
+
+asIsAnimating :: Lens' AnimState IsAnimating
+asIsAnimating f AnimState {..} = f _asIsAnimating <&> \_asIsAnimating -> AnimState {..}
+
+newAnimState :: Anim.Frame -> IO AnimState
+newAnimState initialFrame =
+    do
+        curTime <- getCurrentTime
+        return AnimState
+            { _asIsAnimating = Animating
+            , _asCurTime = curTime
+            , _asCurFrame = initialFrame
+            }
+
 mainLoopAnim :: GLFW.Window -> IO Anim.R -> (Widget.Size -> AnimHandlers) -> IO ()
 mainLoopAnim win getAnimationHalfLife animHandlers =
     do
         frameStateVar <-
-            do
-                curTime <- getCurrentTime
-                initialFrame <- windowSize win <&> animHandlers >>= animMakeFrame
-                newIORef (Animating, curTime, initialFrame)
+            windowSize win <&> animHandlers >>= animMakeFrame >>= newAnimState
+            >>= newIORef
         let handleResult Nothing = return ()
             handleResult (Just animIdMapping) =
-                modifyIORef frameStateVar $ \(_oldChange, curTime, frame) ->
-                (Animating, curTime, Anim.mapIdentities (Monoid.appEndo animIdMapping) frame)
+                modifyIORef frameStateVar $ \(AnimState _ curTime frame) ->
+                AnimState Animating curTime $
+                Anim.mapIdentities (Monoid.appEndo animIdMapping) frame
             updateFrameState aHandlers =
                 do
                     animTickHandler aHandlers >>= handleResult
                     curTime <- getCurrentTime
-                    (prevAnimating, prevTime, prevFrame) <- readIORef frameStateVar
+                    AnimState prevAnimating prevTime prevFrame <- readIORef frameStateVar
                     res <-
                         if Animating == prevAnimating
                         then do
                             dest <- animMakeFrame aHandlers
                             animationHalfLife <- getAnimationHalfLife
                             let elapsed = realToFrac (curTime `diffUTCTime` prevTime)
-                                progress = 1 - 0.5 ** (elapsed/animationHalfLife)
+                                progress = 1 - 0.5 ** (elapsed / animationHalfLife)
                             return $
                                 case Anim.nextFrame progress dest prevFrame of
-                                Nothing -> (NotAnimating, curTime, dest)
-                                Just newFrame -> (Animating, curTime, newFrame)
+                                Nothing -> AnimState NotAnimating curTime dest
+                                Just newFrame -> AnimState Animating curTime newFrame
                         else
-                            return (NotAnimating, curTime, prevFrame)
+                            return $ AnimState NotAnimating curTime prevFrame
                     writeIORef frameStateVar res
                     return res
 
-            frameStateResult (isAnimating, _, frame)
+            frameStateResult (AnimState isAnimating _ frame)
                 | Animating == isAnimating = Just $ Anim.draw frame
                 | otherwise = Nothing
         let makeHandlers size =
@@ -138,8 +156,8 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
                       animEventHandler aHandlers event >>= handleResult
                 , imageRefresh =
                     do
-                        modifyIORef frameStateVar $ _1 .~ Animating
-                        updateFrameState aHandlers <&> (^. _3) <&> Anim.draw
+                        modifyIORef frameStateVar $ asIsAnimating .~ Animating
+                        updateFrameState aHandlers <&> _asCurFrame <&> Anim.draw
                 , imageUpdate = updateFrameState aHandlers <&> frameStateResult
                 }
                 where
