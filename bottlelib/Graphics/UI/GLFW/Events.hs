@@ -5,6 +5,7 @@ module Graphics.UI.GLFW.Events
   ) where
 
 import           Data.IORef
+import           Data.Monoid
 import qualified Graphics.UI.GLFW as GLFW
 
 -- this is the reification of the callback information:
@@ -34,7 +35,11 @@ data Result
     = ResultNone
     | ResultDidDraw
     | ResultQuit
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
+
+instance Monoid Result where
+    mempty = ResultNone
+    mappend = max
 
 fromChar :: Char -> Maybe Char
 fromChar char
