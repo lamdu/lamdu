@@ -93,6 +93,9 @@ data AnimHandlers = AnimHandlers
     , animMakeFrame :: IO Anim.Frame
     }
 
+data Change = Change | NoChange
+    deriving Eq
+
 mainLoopAnim :: GLFW.Window -> IO Anim.R -> (Widget.Size -> AnimHandlers) -> IO ()
 mainLoopAnim win getAnimationHalfLife animHandlers =
     do
@@ -103,15 +106,15 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
                     modifyIORef frameStateVar $ \state ->
                         state
                         <&> (_2 . _2 %~ Anim.mapIdentities (Monoid.appEndo animIdMapping))
-                        <&> (_1 .~ True)
+                        <&> (_1 .~ Change)
                     return True
 
             nextFrameState curTime handlers Nothing =
                 do
                     dest <- animMakeFrame handlers
-                    return $ Just (True, (curTime, dest))
+                    return $ Just (Change, (curTime, dest))
             nextFrameState curTime handlers (Just (wasChange, (prevTime, prevFrame))) =
-                if wasChange
+                if Change == wasChange
                 then do
                     dest <- animMakeFrame handlers
                     animationHalfLife <- getAnimationHalfLife
@@ -119,14 +122,14 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
                         progress = 1 - 0.5 ** (elapsed/animationHalfLife)
                     return . Just $
                         case Anim.nextFrame progress dest prevFrame of
-                        Nothing -> (False, (curTime, dest))
-                        Just newFrame -> (True, (curTime, newFrame))
+                        Nothing -> (NoChange, (curTime, dest))
+                        Just newFrame -> (Change, (curTime, newFrame))
                 else
-                    return $ Just (False, (curTime, prevFrame))
+                    return $ Just (NoChange, (curTime, prevFrame))
 
             frameStateResult Nothing = error "No frame to draw at start??"
             frameStateResult (Just (change, (_, frame)))
-                | change = Just $ Anim.draw frame
+                | Change == change = Just $ Anim.draw frame
                 | otherwise = Nothing
         mainLoopImage win $ \size -> ImageHandlers
             { imageEventHandler = \event ->
@@ -137,7 +140,7 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
                     let handlers = animHandlers size
                     when forceRedraw .
                         modifyIORef frameStateVar $
-                        Lens.mapped . _1 .~ True
+                        Lens.mapped . _1 .~ Change
                     _ <- handleResult =<< animTickHandler handlers
                     curTime <- getCurrentTime
                     writeIORef frameStateVar =<<
