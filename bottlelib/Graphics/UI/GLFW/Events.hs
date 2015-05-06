@@ -63,7 +63,7 @@ atomicModifyIORef_ var f = atomicModifyIORef var ((, ()) . f)
 
 rawEventLoop :: GLFW.Window -> ([GLFWRawEvent] -> IO Result) -> IO ()
 rawEventLoop win eventsHandler = do
-  eventsVar <- newIORef []
+  eventsVar <- newIORef [RawWindowRefresh]
 
   let
     addEvent event = atomicModifyIORef_ eventsVar (event:)
