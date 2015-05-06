@@ -66,19 +66,23 @@ mainLoopImage win imageHandlers =
                 mNewImage <- imageMake handlers anyChange
                 case mNewImage of
                     Nothing ->
-                        -- TODO: If we can verify that there's sync-to-vblank, we
-                        -- need no sleep here
-                        threadDelay 10000
+                        do
+                            -- TODO: If we can verify that there's sync-to-vblank, we
+                            -- need no sleep here
+                            threadDelay 10000
+                            return False
                     Just image ->
-                        image
-                        & (DrawUtils.translate (Vector2 (-1) 1) <>
-                           DrawUtils.scale (Vector2 (2/winSizeX) (-2/winSizeY)) %%)
+                        do
+                            image
+                                & (DrawUtils.translate (Vector2 (-1) 1) <>
+                                   DrawUtils.scale (Vector2 (2/winSizeX) (-2/winSizeY)) %%)
 #ifdef DRAWINGCOMBINATORS__SIZED
-                        & let Vector2 glPixelRatioX glPixelRatioY = winSize / 2 -- GL range is -1..1
-                          in Draw.clearRenderSized (glPixelRatioX, glPixelRatioY)
+                                & let Vector2 glPixelRatioX glPixelRatioY = winSize / 2 -- GL range is -1..1
+                                  in Draw.clearRenderSized (glPixelRatioX, glPixelRatioY)
 #else
-                        & Draw.clearRender
+                                & Draw.clearRender
 #endif
+                            return True
 
 data AnimHandlers = AnimHandlers
     { animTickHandler :: IO (Maybe (Monoid.Endo AnimId))
@@ -121,12 +125,7 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
             frameStateResult (Just (drawCount, (_, frame)))
                 | drawCount < stopAtDrawCount = Just $ Anim.draw frame
                 | otherwise = Nothing
-            -- A note on draw counts:
-            -- When a frame is dis-similar to the previous the count resets to 0
-            -- When a frame is similar and animation stops the count becomes 1
-            -- We then should draw it again (for double buffering issues) at count 2
-            -- And stop drawing it at count 3.
-            stopAtDrawCount = 3
+            stopAtDrawCount = 1
         mainLoopImage win $ \size -> ImageHandlers
             { imageEventHandler = \event ->
                 animEventHandler (animHandlers size) event

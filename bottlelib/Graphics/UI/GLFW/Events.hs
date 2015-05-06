@@ -4,7 +4,7 @@ module Graphics.UI.GLFW.Events
   , eventLoop
   ) where
 
-import           Control.Monad (forever)
+import           Control.Monad (forever, when)
 import           Data.IORef
 import qualified Graphics.UI.GLFW as GLFW
 
@@ -51,7 +51,7 @@ translate (RawCharEvent _ : xs) = translate xs
 atomicModifyIORef_ :: IORef a -> (a -> a) -> IO ()
 atomicModifyIORef_ var f = atomicModifyIORef var ((, ()) . f)
 
-rawEventLoop :: GLFW.Window -> ([GLFWRawEvent] -> IO ()) -> IO a
+rawEventLoop :: GLFW.Window -> ([GLFWRawEvent] -> IO Bool) -> IO a
 rawEventLoop win eventsHandler = do
   eventsVar <- newIORef []
 
@@ -71,8 +71,8 @@ rawEventLoop win eventsHandler = do
     GLFW.pollEvents
     let handleReversedEvents rEvents = ([], reverse rEvents)
     events <- atomicModifyIORef eventsVar handleReversedEvents
-    eventsHandler events
-    GLFW.swapBuffers win
+    didDraw <- eventsHandler events
+    when didDraw $ GLFW.swapBuffers win
 
-eventLoop :: GLFW.Window -> ([Event] -> IO ()) -> IO a
+eventLoop :: GLFW.Window -> ([Event] -> IO Bool) -> IO a
 eventLoop win handler = rawEventLoop win (handler . translate)
