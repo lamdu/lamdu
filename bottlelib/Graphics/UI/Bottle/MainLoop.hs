@@ -7,7 +7,6 @@ module Graphics.UI.Bottle.MainLoop
 
 import           Control.Applicative ((<$>))
 import           Control.Concurrent (threadDelay)
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (when, unless)
@@ -32,53 +31,62 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (KeyEvent, Event(..), Result(..), eventLoop)
 
-type ForceRedraw = Bool
-
 data ImageHandlers = ImageHandlers
-  { imageEventHandler :: KeyEvent -> IO Bool
-  , imageMake :: ForceRedraw -> IO (Maybe Image)
+  { imageEventHandler :: KeyEvent -> IO ()
+  , imageUpdate :: IO (Maybe Image)
+  , imageRefresh :: IO Image
   }
+
+windowSize :: GLFW.Window -> IO Widget.Size
+windowSize win =
+    do
+        (x, y) <- GLFW.getFramebufferSize win
+        return $ fromIntegral <$> Vector2 x y
+
+data EventResult =
+    ERNone | ERRefresh | ERQuit
+    deriving (Eq, Ord, Show)
+instance Monoid EventResult where
+    mempty = ERNone
+    mappend = max
 
 mainLoopImage :: GLFW.Window -> (Widget.Size -> ImageHandlers) -> IO ()
 mainLoopImage win imageHandlers =
     eventLoop win handleEvents
     where
-        windowSize =
-            do
-                (x, y) <- GLFW.getFramebufferSize win
-                return $ fromIntegral <$> Vector2 x y
-
         handleEvent handlers (EventKey keyEvent) =
-            imageEventHandler handlers keyEvent
-        handleEvent _ EventWindowClose =
-            error "Quit" -- TODO: Make close event
-        handleEvent _ EventWindowRefresh = return True
+            do
+                imageEventHandler handlers keyEvent
+                return ERNone
+        handleEvent _ EventWindowClose = return ERQuit
+        handleEvent _ EventWindowRefresh = return ERRefresh
 
         handleEvents events =
             do
-                winSize@(Vector2 winSizeX winSizeY) <- windowSize
+                winSize <- windowSize win
                 let handlers = imageHandlers winSize
-                anyChange <- or <$> traverse (handleEvent handlers) events
-                -- TODO: Don't do this *EVERY* frame but on frame-buffer size update events?
+                eventResult <- mconcat <$> traverse (handleEvent handlers) events
+                case eventResult of
+                    ERQuit -> return ResultQuit
+                    ERRefresh -> imageRefresh handlers >>= draw winSize
+                    ERNone -> imageUpdate handlers >>= maybe delay (draw winSize)
+        delay =
+            do
+                -- TODO: If we can verify that there's sync-to-vblank, we
+                -- need no sleep here
+                threadDelay 10000
+                return ResultNone
+        draw winSize@(Vector2 winSizeX winSizeY) image =
+            do
                 GL.viewport $=
                     (GL.Position 0 0,
                      GL.Size (round winSizeX) (round winSizeY))
-                mNewImage <- imageMake handlers anyChange
-                case mNewImage of
-                    Nothing ->
-                        do
-                            -- TODO: If we can verify that there's sync-to-vblank, we
-                            -- need no sleep here
-                            threadDelay 10000
-                            return ResultNone
-                    Just image ->
-                        do
-                            image
-                                & (DrawUtils.translate (Vector2 (-1) 1) <>
-                                   DrawUtils.scale (Vector2 (2/winSizeX) (-2/winSizeY)) %%)
-                                & let Vector2 glPixelRatioX glPixelRatioY = winSize / 2 -- GL range is -1..1
-                                  in clearRenderSized (glPixelRatioX, glPixelRatioY)
-                            return ResultDidDraw
+                image
+                    & (DrawUtils.translate (Vector2 (-1) 1) <>
+                       DrawUtils.scale (Vector2 (2/winSizeX) (-2/winSizeY)) %%)
+                    & let Vector2 glPixelRatioX glPixelRatioY = winSize / 2 -- GL range is -1..1
+                      in clearRenderSized (glPixelRatioX, glPixelRatioY)
+                return ResultDidDraw
 
 clearRenderSized :: Draw.R2 -> Draw.Image a -> IO ()
 #ifdef DRAWINGCOMBINATORS__SIZED
@@ -93,61 +101,65 @@ data AnimHandlers = AnimHandlers
     , animMakeFrame :: IO Anim.Frame
     }
 
-data Change = Change | NoChange
+data IsAnimating = Animating | NotAnimating
     deriving Eq
 
 mainLoopAnim :: GLFW.Window -> IO Anim.R -> (Widget.Size -> AnimHandlers) -> IO ()
 mainLoopAnim win getAnimationHalfLife animHandlers =
     do
-        frameStateVar <- newIORef Nothing
-        let handleResult Nothing = return False
+        frameStateVar <-
+            do
+                curTime <- getCurrentTime
+                initialFrame <- windowSize win <&> animHandlers >>= animMakeFrame
+                newIORef (Animating, curTime, initialFrame)
+        let handleResult Nothing = return ()
             handleResult (Just animIdMapping) =
-                do
-                    modifyIORef frameStateVar $ \state ->
-                        state
-                        <&> (_2 . _2 %~ Anim.mapIdentities (Monoid.appEndo animIdMapping))
-                        <&> (_1 .~ Change)
-                    return True
+                modifyIORef frameStateVar $ \(_oldChange, curTime, frame) ->
+                    ( Animating
+                    , curTime
+                    , Anim.mapIdentities (Monoid.appEndo animIdMapping) frame
+                    )
 
-            nextFrameState curTime handlers Nothing =
-                do
-                    dest <- animMakeFrame handlers
-                    return $ Just (Change, (curTime, dest))
-            nextFrameState curTime handlers (Just (wasChange, (prevTime, prevFrame))) =
-                if Change == wasChange
+            nextFrameState curTime handlers (isAnimating, prevTime, prevFrame) =
+                if Animating == isAnimating
                 then do
                     dest <- animMakeFrame handlers
                     animationHalfLife <- getAnimationHalfLife
                     let elapsed = realToFrac (curTime `diffUTCTime` prevTime)
                         progress = 1 - 0.5 ** (elapsed/animationHalfLife)
-                    return . Just $
+                    return $
                         case Anim.nextFrame progress dest prevFrame of
-                        Nothing -> (NoChange, (curTime, dest))
-                        Just newFrame -> (Change, (curTime, newFrame))
+                        Nothing -> (NotAnimating, curTime, dest)
+                        Just newFrame -> (Animating, curTime, newFrame)
                 else
-                    return $ Just (NoChange, (curTime, prevFrame))
+                    return (NotAnimating, curTime, prevFrame)
 
-            frameStateResult Nothing = error "No frame to draw at start??"
-            frameStateResult (Just (change, (_, frame)))
-                | Change == change = Just $ Anim.draw frame
+            frameStateResult (isAnimating, _, frame)
+                | Animating == isAnimating = Just $ Anim.draw frame
                 | otherwise = Nothing
-        mainLoopImage win $ \size -> ImageHandlers
-            { imageEventHandler = \event ->
-                animEventHandler (animHandlers size) event
-                >>= handleResult
-            , imageMake = \forceRedraw ->
-                do
-                    let handlers = animHandlers size
-                    when forceRedraw .
-                        modifyIORef frameStateVar $
-                        Lens.mapped . _1 .~ Change
-                    _ <- handleResult =<< animTickHandler handlers
-                    curTime <- getCurrentTime
-                    writeIORef frameStateVar =<<
-                        nextFrameState curTime handlers =<<
-                        readIORef frameStateVar
-                    frameStateResult <$> readIORef frameStateVar
-            }
+        let makeHandlers size =
+                ImageHandlers
+                { imageEventHandler = \event ->
+                    animEventHandler aHandlers event
+                    >>= handleResult
+                , imageRefresh =
+                    do
+                        modifyIORef frameStateVar $ _1 .~ Animating
+                        updateFrameState <&> (^. _3) <&> Anim.draw
+                , imageUpdate = updateFrameState <&> frameStateResult
+                }
+                where
+                    updateFrameState =
+                        do
+                            handleResult =<< animTickHandler aHandlers
+                            curTime <- getCurrentTime
+                            res <-
+                                nextFrameState curTime aHandlers =<<
+                                readIORef frameStateVar
+                            writeIORef frameStateVar res
+                            return res
+                    aHandlers = animHandlers size
+        mainLoopImage win makeHandlers
 
 mainLoopWidget :: GLFW.Window -> IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO Anim.R -> IO ()
 mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationHalfLife =
