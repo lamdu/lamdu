@@ -32,11 +32,15 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (KeyEvent, Event(..), eventLoop)
 
-mainLoopImage ::
-    GLFW.Window ->
-    (Widget.Size -> KeyEvent -> IO Bool) ->
-    (Bool -> Widget.Size -> IO (Maybe Image)) -> IO a
-mainLoopImage win eventHandler makeImage =
+type ForceRedraw = Bool
+
+data ImageHandlers = ImageHandlers
+  { imageEventHandler :: KeyEvent -> IO Bool
+  , imageMake :: ForceRedraw -> IO (Maybe Image)
+  }
+
+mainLoopImage :: GLFW.Window -> (Widget.Size -> ImageHandlers) -> IO a
+mainLoopImage win imageHandlers =
     eventLoop win handleEvents
     where
         windowSize =
@@ -44,8 +48,8 @@ mainLoopImage win eventHandler makeImage =
                 (x, y) <- GLFW.getFramebufferSize win
                 return $ fromIntegral <$> Vector2 x y
 
-        handleEvent size (EventKey keyEvent) =
-            eventHandler size keyEvent
+        handleEvent handlers (EventKey keyEvent) =
+            imageEventHandler handlers keyEvent
         handleEvent _ EventWindowClose =
             error "Quit" -- TODO: Make close event
         handleEvent _ EventWindowRefresh = return True
@@ -53,12 +57,13 @@ mainLoopImage win eventHandler makeImage =
         handleEvents events =
             do
                 winSize@(Vector2 winSizeX winSizeY) <- windowSize
-                anyChange <- or <$> traverse (handleEvent winSize) events
+                let handlers = imageHandlers winSize
+                anyChange <- or <$> traverse (handleEvent handlers) events
                 -- TODO: Don't do this *EVERY* frame but on frame-buffer size update events?
                 GL.viewport $=
                     (GL.Position 0 0,
                      GL.Size (round winSizeX) (round winSizeY))
-                mNewImage <- makeImage anyChange winSize
+                mNewImage <- imageMake handlers anyChange
                 case mNewImage of
                     Nothing ->
                         -- TODO: If we can verify that there's sync-to-vblank, we
@@ -112,7 +117,21 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
                 else
                     return $ Just (drawCount + 1, (curTime, prevFrame))
 
-            makeImage forceRedraw size =
+            frameStateResult Nothing = error "No frame to draw at start??"
+            frameStateResult (Just (drawCount, (_, frame)))
+                | drawCount < stopAtDrawCount = Just $ Anim.draw frame
+                | otherwise = Nothing
+            -- A note on draw counts:
+            -- When a frame is dis-similar to the previous the count resets to 0
+            -- When a frame is similar and animation stops the count becomes 1
+            -- We then should draw it again (for double buffering issues) at count 2
+            -- And stop drawing it at count 3.
+            stopAtDrawCount = 3
+        mainLoopImage win $ \size -> ImageHandlers
+            { imageEventHandler = \event ->
+                animEventHandler (animHandlers size) event
+                >>= handleResult
+            , imageMake = \forceRedraw ->
                 do
                     let handlers = animHandlers size
                     when forceRedraw .
@@ -124,20 +143,7 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
                         nextFrameState curTime handlers =<<
                         readIORef frameStateVar
                     frameStateResult <$> readIORef frameStateVar
-
-            frameStateResult Nothing = error "No frame to draw at start??"
-            frameStateResult (Just (drawCount, (_, frame)))
-                | drawCount < stopAtDrawCount = Just $ Anim.draw frame
-                | otherwise = Nothing
-            -- A note on draw counts:
-            -- When a frame is dis-similar to the previous the count resets to 0
-            -- When a frame is similar and animation stops the count becomes 1
-            -- We then should draw it again (for double buffering issues) at count 2
-            -- And stop drawing it at count 3.
-            stopAtDrawCount = 3
-            imgEventHandler size event =
-                handleResult =<< animEventHandler (animHandlers size) event
-        mainLoopImage win imgEventHandler makeImage
+            }
 
 mainLoopWidget :: GLFW.Window -> IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO Anim.R -> IO a
 mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationHalfLife =
