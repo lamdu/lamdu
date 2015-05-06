@@ -90,7 +90,7 @@ Library
                        aeson >= 0.6.2.1 && < 0.7.1,
                        leveldb-haskell >= 0.6,
                        cryptohash >= 0.7,
-                       GLFW-b >= 1.2.1 && < 1.5,
+                       GLFW-b >= 1.4.7 && < 1.5,
                        deepseq,
                        deepseq-generics >= 0.1,
                        OpenGL,
