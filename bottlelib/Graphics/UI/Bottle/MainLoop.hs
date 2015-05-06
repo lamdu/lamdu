@@ -18,7 +18,6 @@ import           Data.Time.Clock (getCurrentTime, diffUTCTime)
 import           Data.Traversable (traverse, sequenceA)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
-import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators.Utils (Image)
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.Rendering.OpenGL.GL (($=))
@@ -85,15 +84,8 @@ mainLoopImage win imageHandlers =
                     & (DrawUtils.translate (Vector2 (-1) 1) <>
                        DrawUtils.scale (Vector2 (2/winSizeX) (-2/winSizeY)) %%)
                     & let Vector2 glPixelRatioX glPixelRatioY = winSize / 2 -- GL range is -1..1
-                      in clearRenderSized (glPixelRatioX, glPixelRatioY)
+                      in DrawUtils.clearRenderSized (glPixelRatioX, glPixelRatioY)
                 return ResultDidDraw
-
-clearRenderSized :: Draw.R2 -> Draw.Image a -> IO ()
-#ifdef DRAWINGCOMBINATORS__SIZED
-clearRenderSized = Draw.clearRenderSized
-#else
-clearRenderSized _ = Draw.clearRender
-#endif
 
 data AnimHandlers = AnimHandlers
     { animTickHandler :: IO (Maybe (Monoid.Endo AnimId))

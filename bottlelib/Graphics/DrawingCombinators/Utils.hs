@@ -8,6 +8,7 @@ module Graphics.DrawingCombinators.Utils
   , drawText, drawTextLines
   , backgroundColor
   , scale, translate
+  , clearRenderSized
   ) where
 
 import           Control.Lens.Operators
@@ -28,6 +29,13 @@ deriving instance Generic Draw.Color
 
 instance ToJSON Draw.Color
 instance FromJSON Draw.Color
+
+clearRenderSized :: Draw.R2 -> Draw.Image a -> IO ()
+#ifdef DRAWINGCOMBINATORS__SIZED
+clearRenderSized = Draw.clearRenderSized
+#else
+clearRenderSized _ = Draw.clearRender
+#endif
 
 scale :: Vector2 Draw.R -> Draw.Affine
 scale (Vector2 x y) = Draw.scale x y
