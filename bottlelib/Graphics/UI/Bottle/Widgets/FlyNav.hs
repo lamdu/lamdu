@@ -48,12 +48,12 @@ type State = Maybe ActiveState
 modKey :: GLFW.Key -> ModKey
 modKey = ModKey (ctrlMods <> shiftMods)
 
-modifierKeys :: [GLFW.Key]
-modifierKeys =
-  [ GLFW.Key'LeftControl
-  , GLFW.Key'RightControl
-  , GLFW.Key'LeftShift
-  , GLFW.Key'RightShift
+finishKeys :: [ModKey]
+finishKeys =
+  [ ModKey shiftMods GLFW.Key'LeftControl
+  , ModKey shiftMods GLFW.Key'RightControl
+  , ModKey ctrlMods GLFW.Key'LeftShift
+  , ModKey ctrlMods GLFW.Key'RightShift
   ]
 
 initState :: State
@@ -180,11 +180,8 @@ make config animId (Just (ActiveState pos movements)) setState w =
       | (Movement name mk _, lessMovements) <- zipped movements
       ]
     finishMove = mconcat
-    -- TODO: This is buggy, need to be able to be informed that the
-    -- key combo was released, regardless of which mod/key was
-    -- released first:
-      [ finishOn (modKey key)
-      | key <- modifierKeys
+      [ finishOn key
+      | key <- finishKeys
       ]
     stopMovement name mk newMovements =
       mkKeyMap GLFW.KeyState'Released mk (EventMap.Doc ["Navigation", "Stop FlyNav", name]) .
