@@ -4,6 +4,7 @@ module Lamdu.Sugar.OrderTags
     ) where
 
 import Control.Lens.Operators
+import Control.Monad ((>=>))
 import Control.MonadA (MonadA)
 import Data.List.Utils (sortOn)
 import Data.Store.Transaction (Transaction)
@@ -49,30 +50,28 @@ orderType t =
     >>= T.nextLayer orderType
 
 orderRecordFields ::
-    MonadA m => Order m [Sugar.RecordField name f (Sugar.Expression name f a)]
-orderRecordFields xs =
-    xs
-    & Lens.traversed . Sugar.rfExpr %%~ orderExpr
-    >>= orderByTag (^. Sugar.rfTag . Sugar.tagVal)
+    MonadA m => Order m [Sugar.RecordField name f a]
+orderRecordFields = orderByTag (^. Sugar.rfTag . Sugar.tagVal)
 
 orderRecord ::
-    MonadA m => Order m (Sugar.Record name f (Sugar.Expression name f a))
+    MonadA m => Order m (Sugar.Record name f a)
 orderRecord = Sugar.rItems %%~ orderRecordFields
 
-orderApply :: MonadA m => Order m (Sugar.Apply name (Sugar.Expression name f a))
+orderApply :: MonadA m => Order m (Sugar.Apply name a)
 orderApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag . Sugar.tagVal)
 
-orderBody :: MonadA m => Order m (Sugar.Body name f (Sugar.Expression name f a))
+orderBody :: MonadA m => Order m (Sugar.Body name f a)
 orderBody (Sugar.BodyLam b) = orderBinder b <&> Sugar.BodyLam
 orderBody (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
 orderBody (Sugar.BodyApply a) = orderApply a <&> Sugar.BodyApply
-orderBody b = b & Lens.traversed %%~ orderExpr
+orderBody b = return b
 
 orderExpr :: MonadA m => Order m (Sugar.Expression name f a)
 orderExpr e =
     e
     & Sugar.rPayload . Sugar.plInferredType %%~ orderType
     >>= Sugar.rBody %%~ orderBody
+    >>= Sugar.rBody . Lens.traversed %%~ orderExpr
 
 orderParams :: MonadA m => Order m [Sugar.FuncParam T.Tag name f]
 orderParams xs =
@@ -81,11 +80,10 @@ orderParams xs =
     >>= orderByTag (^. Sugar.fpVarInfo)
 
 orderBinder ::
-    MonadA m => Order m (Sugar.Binder name f (Sugar.Expression name f a))
+    MonadA m => Order m (Sugar.Binder name f a)
 orderBinder b =
     b
     & Sugar.dParams . Sugar._FieldParams %%~ orderParams
-    >>= Sugar.dBody %%~ orderExpr
 
 orderDef ::
     MonadA m => Order m (Sugar.Definition name f (Sugar.Expression name f a))
@@ -93,7 +91,7 @@ orderDef def =
     def
     & SugarLens.defSchemes . S.schemeType %%~ orderType
     >>= Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent
-        %%~ orderBinder
+        %%~ (orderBinder >=> Sugar.dBody %%~ orderExpr)
 
 orderedFlatComposite ::
     T.Composite a -> ([(T.Tag, T.Type)], Maybe (T.Var (T.Composite a)))
