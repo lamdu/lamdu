@@ -116,6 +116,9 @@ data Config = Config
   , hole :: Hole
   , name :: Name
 
+  , animationTimePeriodSec :: Double
+  , animationRemainInPeriod :: Double
+
   , backgroundColor :: Draw.Color
   , baseColor :: Draw.Color
   , baseTextSize :: Double

@@ -190,10 +190,14 @@ mainLoopDebugMode win getConfig iteration = do
   let
     getAnimHalfLife = do
       isDebugMode <- readIORef debugModeRef
-      return $
-        if isDebugMode
-        then AnimConfig 6.64 0.01
-        else AnimConfig 0.33 0.01
+      if isDebugMode
+        then return $ AnimConfig 6.64 0.01
+        else do
+          (_, config) <- getConfig
+          return $
+            AnimConfig
+            (realToFrac (Config.animationTimePeriodSec config))
+            (realToFrac (Config.animationRemainInPeriod config))
     addDebugMode config widget = do
       isDebugMode <- readIORef debugModeRef
       let

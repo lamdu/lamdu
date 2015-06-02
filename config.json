@@ -1,4 +1,6 @@
 {
+    "animationTimePeriodSec": 0.33,
+    "animationRemainInPeriod": 0.01,
     "layers": {
         "layerMin": -100,
         "layerMax": 100,
