@@ -26,7 +26,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
-import           Graphics.UI.Bottle.MainLoop (mainLoopWidget)
+import           Graphics.UI.Bottle.MainLoop (mainLoopWidget, AnimConfig (..))
 import           Graphics.UI.Bottle.SizedFont (SizedFont(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -190,7 +190,10 @@ mainLoopDebugMode win getConfig iteration = do
   let
     getAnimHalfLife = do
       isDebugMode <- readIORef debugModeRef
-      return $ if isDebugMode then 1.0 else 0.05
+      return $
+        if isDebugMode
+        then AnimConfig 6.64 0.01
+        else AnimConfig 0.33 0.01
     addDebugMode config widget = do
       isDebugMode <- readIORef debugModeRef
       let

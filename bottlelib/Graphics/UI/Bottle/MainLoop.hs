@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP, RecordWildCards #-}
 module Graphics.UI.Bottle.MainLoop
-    ( mainLoopAnim
+    ( AnimConfig (..)
+    , mainLoopAnim
     , mainLoopImage
     , mainLoopWidget
     ) where
@@ -9,12 +10,12 @@ import           Control.Applicative ((<$>))
 import           Control.Concurrent (threadDelay)
 import           Control.Lens (Lens')
 import           Control.Lens.Operators
-import           Control.Monad (when, unless, guard)
+import           Control.Monad (when, unless)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Monoid (Monoid(..), (<>))
 import qualified Data.Monoid as Monoid
-import           Data.Time.Clock (DiffTime, UTCTime, getCurrentTime, diffUTCTime)
+import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
 import           Data.Traversable (traverse, sequenceA)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
@@ -29,6 +30,11 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (KeyEvent, Event(..), Result(..), eventLoop)
+
+data AnimConfig = AnimConfig
+  { acTimePeriod :: NominalDiffTime
+  , acRatioInPeriod :: Anim.R
+  }
 
 data EventResult =
     ERNone | ERRefresh | ERQuit
@@ -90,7 +96,9 @@ data AnimHandlers = AnimHandlers
     , animMakeFrame :: IO Anim.Frame
     }
 
-data IsAnimating = Animating | NotAnimating
+data IsAnimating
+    = Animating NominalDiffTime -- Current animation speed half-life
+    | NotAnimating
     deriving Eq
 
 data AnimState = AnimState
@@ -126,8 +134,11 @@ newAnimState initialFrame =
 atomicModifyIORef_ :: IORef a -> (a -> a) -> IO ()
 atomicModifyIORef_ ioref f = atomicModifyIORef ioref (flip (,) () . f)
 
-mainLoopAnim :: GLFW.Window -> IO DiffTime -> (Widget.Size -> AnimHandlers) -> IO ()
-mainLoopAnim win getAnimationHalfLife animHandlers =
+desiredFrameRate :: Num a => a
+desiredFrameRate = 60
+
+mainLoopAnim :: GLFW.Window -> IO AnimConfig -> (Widget.Size -> AnimHandlers) -> IO ()
+mainLoopAnim win getAnimationConfig animHandlers =
     do
         frameStateVar <-
             windowSize win <&> animHandlers >>= animMakeFrame >>= newAnimState
@@ -140,9 +151,18 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
                     return ERRefresh
             refreshIfNeeded ERRefresh aHandlers state =
                 do
+                    AnimConfig timePeriod ratio <- getAnimationConfig
+                    curTime <- getCurrentTime
+                    let timeRemaining =
+                            max 0 $
+                            diffUTCTime
+                            (addUTCTime timePeriod (state ^. asCurTime))
+                            curTime
+                    let animationHalfLife = timeRemaining / realToFrac (logBase 0.5 ratio)
                     destFrame <- animMakeFrame aHandlers
                     state
-                        & asIsAnimating .~ Animating
+                        & asCurTime .~ addUTCTime (-1.0 / desiredFrameRate) curTime
+                        & asIsAnimating .~ Animating animationHalfLife
                         & asDestFrame .~ destFrame
                         & return
             refreshIfNeeded _ _ state = return state
@@ -150,9 +170,8 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
                 do
                     curTime <- getCurrentTime
                     case state ^. asIsAnimating of
-                        Animating ->
+                        Animating animationHalfLife ->
                             do
-                                animationHalfLife <- getAnimationHalfLife
                                 let elapsed = curTime `diffUTCTime` (state ^. asCurTime)
                                     progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
                                 return $
@@ -185,21 +204,22 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
                 , imageUpdate =
                     updateFrameState ERNone aHandlers
                     <&> \state ->
-                        do
-                            guard $ Animating == state ^. asIsAnimating
-                            Just $ Anim.draw $ state ^. asCurFrame
+                        case state ^. asIsAnimating of
+                        Animating _ -> Just $ Anim.draw $ state ^. asCurFrame
+                        NotAnimating -> Nothing
+
                 }
                 where
                     aHandlers = animHandlers size
         mainLoopImage win makeHandlers
 
-mainLoopWidget :: GLFW.Window -> IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO DiffTime -> IO ()
-mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationHalfLife =
+mainLoopWidget :: GLFW.Window -> IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO AnimConfig -> IO ()
+mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationConfig =
     do
         mkWidgetRef <- newIORef =<< memoIO mkWidgetUnmemod
         let newWidget = writeIORef mkWidgetRef =<< memoIO mkWidgetUnmemod
             getWidget size = ($ size) =<< readIORef mkWidgetRef
-        mainLoopAnim win getAnimationHalfLife $ \size -> AnimHandlers
+        mainLoopAnim win getAnimationConfig $ \size -> AnimHandlers
             { animTickHandler =
                 do
                     anyUpdate <- widgetTickHandler
