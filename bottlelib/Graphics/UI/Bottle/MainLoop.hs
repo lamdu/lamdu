@@ -30,8 +30,15 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (KeyEvent, Event(..), Result(..), eventLoop)
 
+data EventResult =
+    ERNone | ERRefresh | ERQuit
+    deriving (Eq, Ord, Show)
+instance Monoid EventResult where
+    mempty = ERNone
+    mappend = max
+
 data ImageHandlers = ImageHandlers
-  { imageEventHandler :: KeyEvent -> IO ()
+  { imageEventHandler :: KeyEvent -> IO EventResult
   , imageUpdate :: IO (Maybe Image)
   , imageRefresh :: IO Image
   }
@@ -42,21 +49,11 @@ windowSize win =
         (x, y) <- GLFW.getFramebufferSize win
         return $ fromIntegral <$> Vector2 x y
 
-data EventResult =
-    ERNone | ERRefresh | ERQuit
-    deriving (Eq, Ord, Show)
-instance Monoid EventResult where
-    mempty = ERNone
-    mappend = max
-
 mainLoopImage :: GLFW.Window -> (Widget.Size -> ImageHandlers) -> IO ()
 mainLoopImage win imageHandlers =
     eventLoop win handleEvents
     where
-        handleEvent handlers (EventKey keyEvent) =
-            do
-                imageEventHandler handlers keyEvent
-                return ERNone
+        handleEvent handlers (EventKey keyEvent) = imageEventHandler handlers keyEvent
         handleEvent _ EventWindowClose = return ERQuit
         handleEvent _ EventWindowRefresh = return ERRefresh
 
@@ -129,20 +126,25 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
         frameStateVar <-
             windowSize win <&> animHandlers >>= animMakeFrame >>= newAnimState
             >>= newIORef
-        let handleResult Nothing = return ()
+        let handleResult Nothing = return ERNone
             handleResult (Just animIdMapping) =
-                atomicModifyIORef_ frameStateVar $
-                (asIsAnimating .~ Animating) .
-                (asCurFrame %~ Anim.mapIdentities (Monoid.appEndo animIdMapping))
-            updateFrameState aHandlers =
                 do
-                    animTickHandler aHandlers >>= handleResult
+                    atomicModifyIORef_ frameStateVar $
+                        (asIsAnimating .~ Animating) .
+                        (asCurFrame %~ Anim.mapIdentities (Monoid.appEndo animIdMapping))
+                    return ERRefresh
+            updateFrameState er aHandlers =
+                do
+                    tickEr <- animTickHandler aHandlers >>= handleResult
                     curTime <- getCurrentTime
                     AnimState prevAnimating prevTime prevFrame prevDestFrame <- readIORef frameStateVar
                     res <-
                         if Animating == prevAnimating
                         then do
-                            destFrame <- animMakeFrame aHandlers
+                            destFrame <-
+                                case mappend er tickEr of
+                                ERRefresh -> animMakeFrame aHandlers
+                                _ -> return prevDestFrame
                             animationHalfLife <- getAnimationHalfLife
                             let elapsed = realToFrac (curTime `diffUTCTime` prevTime)
                                 progress = 1 - 0.5 ** (elapsed / animationHalfLife)
@@ -165,8 +167,8 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
                 , imageRefresh =
                     do
                         modifyIORef frameStateVar $ asIsAnimating .~ Animating
-                        updateFrameState aHandlers <&> _asCurFrame <&> Anim.draw
-                , imageUpdate = updateFrameState aHandlers <&> frameStateResult
+                        updateFrameState ERRefresh aHandlers <&> _asCurFrame <&> Anim.draw
+                , imageUpdate = updateFrameState ERNone aHandlers <&> frameStateResult
                 }
                 where
                     aHandlers = animHandlers size
