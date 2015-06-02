@@ -9,7 +9,7 @@ import           Control.Applicative ((<$>))
 import           Control.Concurrent (threadDelay)
 import           Control.Lens (Lens')
 import           Control.Lens.Operators
-import           Control.Monad (when, unless)
+import           Control.Monad (when, unless, guard)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Monoid (Monoid(..), (<>))
@@ -103,8 +103,14 @@ data AnimState = AnimState
 asIsAnimating :: Lens' AnimState IsAnimating
 asIsAnimating f AnimState {..} = f _asIsAnimating <&> \_asIsAnimating -> AnimState {..}
 
+asCurTime :: Lens' AnimState UTCTime
+asCurTime f AnimState {..} = f _asCurTime <&> \_asCurTime -> AnimState {..}
+
 asCurFrame :: Lens' AnimState Anim.Frame
 asCurFrame f AnimState {..} = f _asCurFrame <&> \_asCurFrame -> AnimState {..}
+
+asDestFrame :: Lens' AnimState Anim.Frame
+asDestFrame f AnimState {..} = f _asDestFrame <&> \_asDestFrame -> AnimState {..}
 
 newAnimState :: Anim.Frame -> IO AnimState
 newAnimState initialFrame =
@@ -137,29 +143,36 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
                 do
                     tickEr <- animTickHandler aHandlers >>= handleResult
                     curTime <- getCurrentTime
-                    AnimState prevAnimating prevTime prevFrame prevDestFrame <- readIORef frameStateVar
+                    state <- readIORef frameStateVar
                     res <-
-                        if Animating == prevAnimating
+                        (asCurTime .~ curTime) <$>
+                        if Animating == state ^. asIsAnimating
                         then do
                             destFrame <-
                                 case mappend er tickEr of
                                 ERRefresh -> animMakeFrame aHandlers
-                                _ -> return prevDestFrame
+                                _ -> return $ state ^. asDestFrame
                             animationHalfLife <- getAnimationHalfLife
-                            let elapsed = curTime `diffUTCTime` prevTime
+                            let elapsed = curTime `diffUTCTime` (state ^. asCurTime)
                                 progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
+                            let newState = state & asDestFrame .~ destFrame
                             return $
-                                case Anim.nextFrame progress destFrame prevFrame of
-                                Nothing -> AnimState NotAnimating curTime destFrame destFrame
-                                Just newFrame -> AnimState Animating curTime newFrame destFrame
-                        else
-                            return $ AnimState NotAnimating curTime prevFrame prevDestFrame
+                                case Anim.nextFrame progress destFrame (state ^. asCurFrame) of
+                                Nothing ->
+                                    newState
+                                    & asIsAnimating .~ NotAnimating
+                                    & asCurFrame .~ destFrame
+                                Just newFrame ->
+                                    newState
+                                    & asCurFrame .~ newFrame
+                        else return state
                     writeIORef frameStateVar res
                     return res
 
-            frameStateResult (AnimState isAnimating _ frame _)
-                | Animating == isAnimating = Just $ Anim.draw frame
-                | otherwise = Nothing
+            frameStateResult state =
+                do
+                    guard $ Animating == state ^. asIsAnimating
+                    Just $ Anim.draw $ state ^. asCurFrame
         let makeHandlers size =
                 ImageHandlers
                 { imageEventHandler = \event ->
