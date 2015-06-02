@@ -6,6 +6,7 @@ module Main (main) where
 import           Control.Monad (unless)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Encode.Pretty as PP
+import           Data.Aeson.Types
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Monoid ((<>))
 import           Lamdu.Config (Config)
