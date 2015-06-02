@@ -87,7 +87,7 @@ Library
   Other-Modules:       Data.Store.Rev.ViewBranchInternal
 
   Build-depends:       base >= 4,
-                       aeson >= 0.6.2.1 && < 0.7.1,
+                       aeson >= 0.6.2.1 && < 0.9,
                        leveldb-haskell >= 0.6,
                        cryptohash >= 0.7,
                        GLFW-b >= 1.4.7 && < 1.5,
