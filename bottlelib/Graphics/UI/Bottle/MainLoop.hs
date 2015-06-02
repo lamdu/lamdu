@@ -117,7 +117,7 @@ newAnimState initialFrame =
     do
         curTime <- getCurrentTime
         return AnimState
-            { _asIsAnimating = Animating
+            { _asIsAnimating = NotAnimating
             , _asCurTime = curTime
             , _asCurFrame = initialFrame
             , _asDestFrame = initialFrame
