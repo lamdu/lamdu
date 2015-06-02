@@ -136,52 +136,58 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
             handleResult (Just animIdMapping) =
                 do
                     atomicModifyIORef_ frameStateVar $
-                        (asIsAnimating .~ Animating) .
-                        (asCurFrame %~ Anim.mapIdentities (Monoid.appEndo animIdMapping))
+                        asCurFrame %~ Anim.mapIdentities (Monoid.appEndo animIdMapping)
                     return ERRefresh
+            refreshIfNeeded ERRefresh aHandlers state =
+                do
+                    destFrame <- animMakeFrame aHandlers
+                    state
+                        & asIsAnimating .~ Animating
+                        & asDestFrame .~ destFrame
+                        & return
+            refreshIfNeeded _ _ state = return state
+            advanceAnimation state =
+                do
+                    curTime <- getCurrentTime
+                    case state ^. asIsAnimating of
+                        Animating ->
+                            do
+                                animationHalfLife <- getAnimationHalfLife
+                                let elapsed = curTime `diffUTCTime` (state ^. asCurTime)
+                                    progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
+                                return $
+                                    case Anim.nextFrame progress (state ^. asDestFrame) (state ^. asCurFrame) of
+                                    Nothing ->
+                                        state
+                                        & asIsAnimating .~ NotAnimating
+                                        & asCurFrame .~ state ^. asDestFrame
+                                    Just newFrame ->
+                                        state
+                                        & asCurFrame .~ newFrame
+                        NotAnimating -> return state
+                        <&> asCurTime .~ curTime
             updateFrameState er aHandlers =
                 do
                     tickEr <- animTickHandler aHandlers >>= handleResult
-                    curTime <- getCurrentTime
-                    state <- readIORef frameStateVar
-                    res <-
-                        (asCurTime .~ curTime) <$>
-                        if Animating == state ^. asIsAnimating
-                        then do
-                            destFrame <-
-                                case mappend er tickEr of
-                                ERRefresh -> animMakeFrame aHandlers
-                                _ -> return $ state ^. asDestFrame
-                            animationHalfLife <- getAnimationHalfLife
-                            let elapsed = curTime `diffUTCTime` (state ^. asCurTime)
-                                progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
-                            let newState = state & asDestFrame .~ destFrame
-                            return $
-                                case Anim.nextFrame progress destFrame (state ^. asCurFrame) of
-                                Nothing ->
-                                    newState
-                                    & asIsAnimating .~ NotAnimating
-                                    & asCurFrame .~ destFrame
-                                Just newFrame ->
-                                    newState
-                                    & asCurFrame .~ newFrame
-                        else return state
-                    writeIORef frameStateVar res
-                    return res
+                    state <-
+                        readIORef frameStateVar
+                        >>= refreshIfNeeded (mappend er tickEr) aHandlers
+                        >>= advanceAnimation
+                    writeIORef frameStateVar state
+                    return state
 
-            frameStateResult state =
-                do
-                    guard $ Animating == state ^. asIsAnimating
-                    Just $ Anim.draw $ state ^. asCurFrame
         let makeHandlers size =
                 ImageHandlers
                 { imageEventHandler = \event ->
-                      animEventHandler aHandlers event >>= handleResult
+                    animEventHandler aHandlers event >>= handleResult
                 , imageRefresh =
-                    do
-                        modifyIORef frameStateVar $ asIsAnimating .~ Animating
-                        updateFrameState ERRefresh aHandlers <&> _asCurFrame <&> Anim.draw
-                , imageUpdate = updateFrameState ERNone aHandlers <&> frameStateResult
+                    updateFrameState ERRefresh aHandlers <&> (^. asCurFrame) <&> Anim.draw
+                , imageUpdate =
+                    updateFrameState ERNone aHandlers
+                    <&> \state ->
+                        do
+                            guard $ Animating == state ^. asIsAnimating
+                            Just $ Anim.draw $ state ^. asCurFrame
                 }
                 where
                     aHandlers = animHandlers size
