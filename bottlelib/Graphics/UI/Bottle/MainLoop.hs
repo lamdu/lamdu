@@ -14,7 +14,7 @@ import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Monoid (Monoid(..), (<>))
 import qualified Data.Monoid as Monoid
-import           Data.Time.Clock (UTCTime, getCurrentTime, diffUTCTime)
+import           Data.Time.Clock (DiffTime, UTCTime, getCurrentTime, diffUTCTime)
 import           Data.Traversable (traverse, sequenceA)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
@@ -120,7 +120,7 @@ newAnimState initialFrame =
 atomicModifyIORef_ :: IORef a -> (a -> a) -> IO ()
 atomicModifyIORef_ ioref f = atomicModifyIORef ioref (flip (,) () . f)
 
-mainLoopAnim :: GLFW.Window -> IO Anim.R -> (Widget.Size -> AnimHandlers) -> IO ()
+mainLoopAnim :: GLFW.Window -> IO DiffTime -> (Widget.Size -> AnimHandlers) -> IO ()
 mainLoopAnim win getAnimationHalfLife animHandlers =
     do
         frameStateVar <-
@@ -146,8 +146,8 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
                                 ERRefresh -> animMakeFrame aHandlers
                                 _ -> return prevDestFrame
                             animationHalfLife <- getAnimationHalfLife
-                            let elapsed = realToFrac (curTime `diffUTCTime` prevTime)
-                                progress = 1 - 0.5 ** (elapsed / animationHalfLife)
+                            let elapsed = curTime `diffUTCTime` prevTime
+                                progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
                             return $
                                 case Anim.nextFrame progress destFrame prevFrame of
                                 Nothing -> AnimState NotAnimating curTime destFrame destFrame
@@ -174,7 +174,7 @@ mainLoopAnim win getAnimationHalfLife animHandlers =
                     aHandlers = animHandlers size
         mainLoopImage win makeHandlers
 
-mainLoopWidget :: GLFW.Window -> IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO Anim.R -> IO ()
+mainLoopWidget :: GLFW.Window -> IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO DiffTime -> IO ()
 mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationHalfLife =
     do
         mkWidgetRef <- newIORef =<< memoIO mkWidgetUnmemod
