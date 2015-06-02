@@ -56,6 +56,14 @@ finishKeys =
   , ModKey ctrlMods GLFW.Key'RightShift
   ]
 
+modifierKeys :: [GLFW.Key]
+modifierKeys =
+  [ GLFW.Key'LeftControl
+  , GLFW.Key'RightControl
+  , GLFW.Key'LeftShift
+  , GLFW.Key'RightShift
+  ]
+
 initState :: State
 initState = Nothing
 
@@ -179,10 +187,7 @@ make config animId (Just (ActiveState pos movements)) setState w =
       [ stopMovement name mk lessMovements
       | (Movement name mk _, lessMovements) <- zipped movements
       ]
-    finishMove = mconcat
-      [ finishOn key
-      | key <- finishKeys
-      ]
+    finishMove = mconcat $ map finishOn $ finishKeys ++ map modKey modifierKeys
     stopMovement name mk newMovements =
       mkKeyMap GLFW.KeyState'Released mk (EventMap.Doc ["Navigation", "Stop FlyNav", name]) .
       setState . Just $ ActiveState pos newMovements
