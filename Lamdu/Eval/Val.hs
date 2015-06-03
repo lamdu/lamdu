@@ -1,13 +1,31 @@
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFunctor, TemplateHaskell #-}
 module Lamdu.Eval.Val
     ( ValHead, ValBody(..), ThunkId, Closure(..), Scope(..), ScopeId, emptyScope
+    , _HFunc, _HRecExtend, _HRecEmpty, _HInteger, _HBuiltin
+    , children
     ) where
 
-import Data.Map (Map)
-import Lamdu.Data.Definition (FFIName)
-import Lamdu.Expr.Val (Val)
+import qualified Control.Lens as Lens
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Lamdu.Data.Definition (FFIName)
+import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
+
+type ThunkId = Int
+
+type ScopeId = Int
+
+data Scope = Scope
+    { _scopeMap :: Map V.Var ThunkId
+    , _scopeId :: ScopeId
+    } deriving (Show)
+
+data Closure pl = Closure
+    { _cOuterScope :: Scope
+    , _cLam :: V.Lam (Val pl)
+    , _cLamPayload :: pl
+    } deriving (Functor, Show)
 
 data ValBody val pl
     = HFunc (Closure pl)
@@ -17,22 +35,12 @@ data ValBody val pl
     | HBuiltin FFIName
     deriving (Functor, Show)
 
+Lens.makePrisms ''ValBody
+
+children :: Lens.Traversal (ValBody a pl) (ValBody b pl) a b
+children = _HRecExtend . Lens.traverse
+
 type ValHead = ValBody ThunkId
-
-type ThunkId = Int
-
-data Closure pl = Closure
-    { _cOuterScope :: Scope
-    , _cLam :: V.Lam (Val pl)
-    , _cLamPayload :: pl
-    } deriving (Functor, Show)
-
-data Scope = Scope
-    { _scopeMap :: Map V.Var ThunkId
-    , _scopeId :: ScopeId
-    } deriving (Show)
-
-type ScopeId = Int
 
 emptyScope :: Scope
 emptyScope = Scope Map.empty 0
