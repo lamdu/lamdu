@@ -22,7 +22,7 @@ import qualified Data.ByteString.Char8 as SBS
 import qualified Data.List as List
 import           Data.List.Utils (groupOn, sortOn)
 import           Data.Map (Map, (!))
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Maybe (isJust)
 import           Data.Monoid (Monoid(..))
 import           Data.Vector.Vector2 (Vector2(..))

@@ -7,10 +7,13 @@ module Graphics.UI.Bottle.MainLoop
     ) where
 
 import           Control.Applicative ((<$>))
-import           Control.Concurrent (threadDelay)
+import           Control.Concurrent (forkIO, threadDelay, killThread, myThreadId)
+import           Control.Concurrent.STM.TVar
+import           Control.Exception (bracket, onException)
 import           Control.Lens (Lens')
 import           Control.Lens.Operators
-import           Control.Monad (when, unless)
+import           Control.Monad (when, unless, forever)
+import qualified Control.Monad.STM as STM
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Monoid (Monoid(..), (<>))
@@ -44,7 +47,7 @@ instance Monoid EventResult where
     mappend = max
 
 data ImageHandlers = ImageHandlers
-  { imageEventHandler :: KeyEvent -> IO EventResult
+  { imageEventHandler :: KeyEvent -> IO ()
   , imageUpdate :: IO (Maybe Image)
   , imageRefresh :: IO Image
   }
@@ -59,7 +62,10 @@ mainLoopImage :: GLFW.Window -> (Widget.Size -> ImageHandlers) -> IO ()
 mainLoopImage win imageHandlers =
     eventLoop win handleEvents
     where
-        handleEvent handlers (EventKey keyEvent) = imageEventHandler handlers keyEvent
+        handleEvent handlers (EventKey keyEvent) =
+            do
+                imageEventHandler handlers keyEvent
+                return ERNone
         handleEvent _ EventWindowClose = return ERQuit
         handleEvent _ EventWindowRefresh = return ERRefresh
 
@@ -101,27 +107,42 @@ data IsAnimating
     | NotAnimating
     deriving Eq
 
+withForkedIO :: IO () -> IO a -> IO a
+withForkedIO action = bracket (forkIO action) killThread . const
+
+-- Animation thread will have not only the cur frame, but the dest
+-- frame in its mutable current state (to update it asynchronously)
+
+-- Worker thread receives events, ticks (which may be lost), handles them, responds to animation thread
+-- Animation thread sends events, ticks to worker thread. Samples results from worker thread, applies them to the cur state
+
 data AnimState = AnimState
-    { _asIsAnimating :: IsAnimating
-    , _asCurTime :: UTCTime
-    , _asCurFrame :: Anim.Frame
-    , _asDestFrame :: Anim.Frame
+    { _asIsAnimating :: !IsAnimating
+    , _asCurTime :: !UTCTime
+    , _asCurFrame :: !Anim.Frame
+    , _asDestFrame :: !Anim.Frame
     }
 
 asIsAnimating :: Lens' AnimState IsAnimating
 asIsAnimating f AnimState {..} = f _asIsAnimating <&> \_asIsAnimating -> AnimState {..}
 
-asCurTime :: Lens' AnimState UTCTime
-asCurTime f AnimState {..} = f _asCurTime <&> \_asCurTime -> AnimState {..}
-
 asCurFrame :: Lens' AnimState Anim.Frame
 asCurFrame f AnimState {..} = f _asCurFrame <&> \_asCurFrame -> AnimState {..}
+
+asCurTime :: Lens' AnimState UTCTime
+asCurTime f AnimState {..} = f _asCurTime <&> \_asCurTime -> AnimState {..}
 
 asDestFrame :: Lens' AnimState Anim.Frame
 asDestFrame f AnimState {..} = f _asDestFrame <&> \_asDestFrame -> AnimState {..}
 
-newAnimState :: Anim.Frame -> IO AnimState
-newAnimState initialFrame =
+data ThreadSyncVar = ThreadSyncVar
+    { _tsvHaveTicks :: Bool
+    , _tsvWinSize :: Widget.Size
+    , _tsvReversedEvents :: [KeyEvent]
+    }
+
+initialAnimState :: Anim.Frame -> IO AnimState
+initialAnimState initialFrame =
     do
         curTime <- getCurrentTime
         return AnimState
@@ -131,8 +152,23 @@ newAnimState initialFrame =
             , _asDestFrame = initialFrame
             }
 
+tsvHaveTicks :: Lens' ThreadSyncVar Bool
+tsvHaveTicks f ThreadSyncVar {..} = f _tsvHaveTicks <&> \_tsvHaveTicks -> ThreadSyncVar {..}
+
+tsvWinSize :: Lens' ThreadSyncVar Widget.Size
+tsvWinSize f ThreadSyncVar {..} = f _tsvWinSize <&> \_tsvWinSize -> ThreadSyncVar {..}
+
+tsvReversedEvents :: Lens' ThreadSyncVar [KeyEvent]
+tsvReversedEvents f ThreadSyncVar {..} = f _tsvReversedEvents <&> \_tsvReversedEvents -> ThreadSyncVar {..}
+
 atomicModifyIORef_ :: IORef a -> (a -> a) -> IO ()
 atomicModifyIORef_ ioref f = atomicModifyIORef ioref (flip (,) () . f)
+
+killSelfOnError :: IO a -> IO (IO a)
+killSelfOnError action =
+    do
+        selfId <- myThreadId
+        return $ action `onException` killThread selfId
 
 desiredFrameRate :: Num a => a
 desiredFrameRate = 60
@@ -140,78 +176,108 @@ desiredFrameRate = 60
 mainLoopAnim :: GLFW.Window -> IO AnimConfig -> (Widget.Size -> AnimHandlers) -> IO ()
 mainLoopAnim win getAnimationConfig animHandlers =
     do
+        initialWinSize <- windowSize win
         frameStateVar <-
-            windowSize win <&> animHandlers >>= animMakeFrame >>= newAnimState
-            >>= newIORef
-        let handleResult Nothing = return ERNone
-            handleResult (Just animIdMapping) =
+            animMakeFrame (animHandlers initialWinSize)
+            >>= initialAnimState >>= newIORef
+        eventTVar <-
+            STM.atomically $ newTVar ThreadSyncVar
+            { _tsvHaveTicks = False
+            , _tsvWinSize = initialWinSize
+            , _tsvReversedEvents = []
+            }
+        eventHandler <- killSelfOnError (eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers)
+        withForkedIO eventHandler $
+            mainLoopAnimThread frameStateVar eventTVar win
+
+eventHandlerThread :: IORef AnimState -> TVar ThreadSyncVar -> IO AnimConfig -> (Widget.Size -> AnimHandlers) -> IO ()
+eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers =
+    forever $
+    do
+        tsv <-
+            do
+                tsv <- readTVar eventTVar
+                when (not (tsv ^. tsvHaveTicks) && null (tsv ^. tsvReversedEvents)) $
+                    STM.retry
+                tsv
+                    & tsvHaveTicks .~ False
+                    & tsvReversedEvents .~ []
+                    & writeTVar eventTVar
+                return tsv
+            & STM.atomically
+        userEventTime <- getCurrentTime
+        let handlers = animHandlers (tsv ^. tsvWinSize)
+        eventResults <-
+            mapM (animEventHandler handlers) $ reverse (tsv ^. tsvReversedEvents)
+        tickResult <-
+            if tsv ^. tsvHaveTicks
+            then animTickHandler handlers
+            else return Nothing
+        case mconcat (tickResult : eventResults) of
+            Nothing -> return ()
+            Just mapping ->
                 do
-                    atomicModifyIORef_ frameStateVar $
-                        asCurFrame %~ Anim.mapIdentities (Monoid.appEndo animIdMapping)
-                    return ERRefresh
-            refreshIfNeeded ERRefresh aHandlers state =
-                do
+                    destFrame <- animMakeFrame handlers
                     AnimConfig timePeriod ratio <- getAnimationConfig
                     curTime <- getCurrentTime
                     let timeRemaining =
                             max 0 $
                             diffUTCTime
-                            (addUTCTime timePeriod (state ^. asCurTime))
+                            (addUTCTime timePeriod userEventTime)
                             curTime
                     let animationHalfLife = timeRemaining / realToFrac (logBase 0.5 ratio)
-                    destFrame <- animMakeFrame aHandlers
-                    state
-                        & asCurTime .~ addUTCTime (-1.0 / desiredFrameRate) curTime
+                    atomicModifyIORef_ frameStateVar $
+                        \oldFrameState ->
+                        oldFrameState
                         & asIsAnimating .~ Animating animationHalfLife
                         & asDestFrame .~ destFrame
-                        & return
-            refreshIfNeeded _ _ state = return state
-            advanceAnimation state =
-                do
-                    curTime <- getCurrentTime
-                    case state ^. asIsAnimating of
-                        Animating animationHalfLife ->
-                            do
-                                let elapsed = curTime `diffUTCTime` (state ^. asCurTime)
+                        -- retroactively pretend animation started at
+                        -- user event time to make the
+                        -- animation-until-dest-frame last the same
+                        -- amount of time no matter how long it took
+                        -- to handle the event:
+                        & asCurTime .~ addUTCTime (-1.0 / desiredFrameRate) curTime
+                        & asCurFrame %~ Anim.mapIdentities (Monoid.appEndo mapping)
+
+mainLoopAnimThread ::
+    IORef AnimState -> TVar ThreadSyncVar -> GLFW.Window -> IO ()
+mainLoopAnimThread frameStateVar eventTVar win =
+    mainLoopImage win $ \size ->
+        ImageHandlers
+        { imageEventHandler = \event ->
+              STM.atomically $ modifyTVar eventTVar $ tsvReversedEvents %~ (event :)
+        , imageRefresh =
+            do
+                atomicModifyIORef_ frameStateVar $ asIsAnimating .~ Animating 0 -- TODO
+                updateFrameState size <&> _asCurFrame <&> Anim.draw
+        , imageUpdate = updateFrameState size <&> frameStateResult
+        }
+    where
+        tick size =
+            STM.atomically $ modifyTVar eventTVar $
+            (tsvHaveTicks .~ True) . (tsvWinSize .~ size)
+        updateFrameState size =
+            do
+                tick size
+                curTime <- getCurrentTime
+                atomicModifyIORef frameStateVar $
+                    \(AnimState prevAnimating prevTime prevFrame destFrame) ->
+                    let newAnimState =
+                            case prevAnimating of
+                            NotAnimating ->
+                                AnimState NotAnimating curTime prevFrame destFrame
+                            Animating animationHalfLife ->
+                                case Anim.nextFrame progress destFrame prevFrame of
+                                Nothing -> AnimState NotAnimating curTime destFrame destFrame
+                                Just newFrame -> AnimState (Animating animationHalfLife) curTime newFrame destFrame
+                                where
+                                    elapsed = curTime `diffUTCTime` prevTime
                                     progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
-                                return $
-                                    case Anim.nextFrame progress (state ^. asDestFrame) (state ^. asCurFrame) of
-                                    Nothing ->
-                                        state
-                                        & asIsAnimating .~ NotAnimating
-                                        & asCurFrame .~ state ^. asDestFrame
-                                    Just newFrame ->
-                                        state
-                                        & asCurFrame .~ newFrame
-                        NotAnimating -> return state
-                        <&> asCurTime .~ curTime
-            updateFrameState er aHandlers =
-                do
-                    tickEr <- animTickHandler aHandlers >>= handleResult
-                    state <-
-                        readIORef frameStateVar
-                        >>= refreshIfNeeded (mappend er tickEr) aHandlers
-                        >>= advanceAnimation
-                    writeIORef frameStateVar state
-                    return state
-
-        let makeHandlers size =
-                ImageHandlers
-                { imageEventHandler = \event ->
-                    animEventHandler aHandlers event >>= handleResult
-                , imageRefresh =
-                    updateFrameState ERRefresh aHandlers <&> (^. asCurFrame) <&> Anim.draw
-                , imageUpdate =
-                    updateFrameState ERNone aHandlers
-                    <&> \state ->
-                        case state ^. asIsAnimating of
-                        Animating _ -> Just $ Anim.draw $ state ^. asCurFrame
-                        NotAnimating -> Nothing
-
-                }
-                where
-                    aHandlers = animHandlers size
-        mainLoopImage win makeHandlers
+                    in (newAnimState, newAnimState)
+        frameStateResult (AnimState isAnimating _ frame _) =
+            case isAnimating of
+            Animating _ -> Just $ Anim.draw frame
+            NotAnimating -> Nothing
 
 mainLoopWidget :: GLFW.Window -> IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO AnimConfig -> IO ()
 mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationConfig =
