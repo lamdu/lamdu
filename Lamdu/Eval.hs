@@ -12,7 +12,6 @@ import Control.Applicative (Applicative)
 import Control.Lens (at, use, traverse)
 import Control.Lens.Operators
 import Control.Monad (void)
-import Control.Monad.State (MonadState(..))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..), left)
 import Control.Monad.Trans.State (StateT(..))
@@ -69,10 +68,13 @@ data EvalState m pl = EvalState
 
 newtype EvalT pl m a = EvalT
     { runEvalT :: EitherT String (StateT (EvalState m pl) m) a
-    } deriving (Functor, Applicative, Monad, MonadState (EvalState m pl))
+    } deriving (Functor, Applicative, Monad)
+
+liftState :: Monad m => StateT (EvalState m pl) m a -> EvalT pl m a
+liftState = EvalT . lift
 
 instance MonadTrans (EvalT pl) where
-    lift = EvalT . lift . lift
+    lift = liftState . lift
 
 Lens.makeLenses ''Scope
 Lens.makeLenses ''EvalActions
@@ -84,18 +86,19 @@ freshThunkId =
         thunkId <- use esThunkCounter
         esThunkCounter += 1
         return thunkId
+    & liftState
 
 report :: Monad m => Event pl -> EvalT pl m ()
 report event =
     do
-        rep <- use $ esReader . aReportEvent
+        rep <- liftState $ use $ esReader . aReportEvent
         rep event & lift
 
 bindVar :: Monad m => pl -> V.Var -> ThunkId -> Scope -> EvalT pl m Scope
 bindVar lamPl var val (Scope parentMap parentId) =
     do
-        newScopeId <- use esScopeCounter
-        esScopeCounter += 1
+        newScopeId <- liftState $ use esScopeCounter
+        liftState $ esScopeCounter += 1
         EventNewScope
             { ensLam = lamPl
             , ensParentId = parentId
@@ -125,7 +128,7 @@ whnfScopedValInner mThunkId (ScopedVal scope expr) =
                         whnfScopedVal (ScopedVal innerScope body)
                 HBuiltin ffiname ->
                     do
-                        runBuiltin <- use $ esReader . aRunBuiltin
+                        runBuiltin <- liftState $ use $ esReader . aRunBuiltin
                         runBuiltin ffiname argThunk
                 _ -> evalError "Apply on non function"
     V.BGetField (V.GetField recordExpr tag) ->
@@ -156,7 +159,7 @@ makeThunk :: Monad m => ScopedVal pl -> EvalT pl m ThunkId
 makeThunk src =
     do
         thunkId <- freshThunkId
-        esThunks . at thunkId .= Just (TSrc src)
+        liftState $ esThunks . at thunkId .= Just (TSrc src)
         return thunkId
 
 whnfGetField :: Monad m => V.GetField (ValHead pl) -> EvalT pl m (ValHead pl)
@@ -171,32 +174,32 @@ whnfGetField (V.GetField val _) =
 
 whnfThunk :: Monad m => ThunkId -> EvalT pl m (ValHead pl)
 whnfThunk thunkId = do
-    thunkState <- use $ esThunks . at thunkId
+    thunkState <- liftState $ use $ esThunks . at thunkId
     case thunkState of
         Just TEvaluating -> evalError "*INFINITE LOOP*"
         Just (TResult r) -> return r
         Just (TSrc thunkSrc) ->
             do
                 res <- whnfScopedValInner (Just thunkId) thunkSrc
-                esThunks . at thunkId .= Just (TResult res)
+                liftState $ esThunks . at thunkId .= Just (TResult res)
                 return res
         Nothing -> evalError $ "BUG: Referenced non-existing thunk " ++ show thunkId
 
 loadGlobal :: Monad m => V.GlobalId -> EvalT pl m (ValHead pl)
 loadGlobal g =
     do
-        loaded <- use (esLoadedGlobals . at g)
+        loaded <- liftState $ use (esLoadedGlobals . at g)
         case loaded of
             Just cached -> return cached
             Nothing -> do
-                loader <- use $ esReader . aLoadGlobal
+                loader <- liftState $ use $ esReader . aLoadGlobal
                 mLoadedGlobal <- lift $ loader g
                 result <-
                     case mLoadedGlobal of
                     Nothing -> evalError $ "Global not found " ++ show g
                     Just (Left name) -> return $ HBuiltin name
                     Just (Right expr) -> whnfScopedVal $ ScopedVal emptyScope expr
-                esLoadedGlobals . at g .= Just result
+                liftState $ esLoadedGlobals . at g .= Just result
                 return result
 
 initialState :: EvalActions m pl -> EvalState m pl
