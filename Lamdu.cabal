@@ -150,7 +150,8 @@ Executable lamdu
                      , transformers
                      , utf8-string
                      , void >= 0.6.1
-  Other-Modules:       Lamdu.CharClassification
+  Other-Modules:       Lamdu.Builtins.Anchors
+               ,       Lamdu.CharClassification
                ,       Lamdu.Config
                ,       Lamdu.Data.Anchors
                ,       Lamdu.Data.Arbitrary

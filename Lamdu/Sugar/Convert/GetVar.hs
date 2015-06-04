@@ -2,23 +2,23 @@ module Lamdu.Sugar.Convert.GetVar
     ( convertVar
     ) where
 
-import Control.Applicative (Applicative(..))
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.Store.Guid (Guid)
-import Lamdu.Expr.Type (Type)
-import Lamdu.Sugar.Internal
-import Lamdu.Sugar.Types
+import           Control.Applicative (Applicative(..))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
+import           Data.Store.Guid (Guid)
+import           Lamdu.Builtins.Anchors (recurseVar)
 import qualified Lamdu.Expr.Lens as ExprLens
+import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.Types
 
 convertVar :: MonadA m => ConvertM.Context m -> V.Var -> Type -> GetVar Guid m
 convertVar sugarContext param paramType
-  | param == recurseGetVar =
+  | param == recurseVar =
     GetVarNamed NamedVar
     { _nvName = UniqueId.toGuid defI
     , _nvJumpTo = pure $ EntityId.ofIRef defI

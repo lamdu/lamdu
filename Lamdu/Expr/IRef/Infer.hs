@@ -68,8 +68,8 @@ loadInferInto pl val = do
 loadInfer ::
   MonadA m => V.Var -> Val a ->
   MaybeT (T m) (Val (Infer.Payload, a), Infer.Context)
-loadInfer recurseGetVar val =
-  liftInfer (Recursive.inferEnv recurseGetVar Infer.emptyScope)
+loadInfer recurseVar val =
+  liftInfer (Recursive.inferEnv recurseVar Infer.emptyScope)
   >>= (`loadInferInto` val)
   & (`runStateT` Infer.initialContext)
 
