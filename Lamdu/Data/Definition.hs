@@ -1,21 +1,19 @@
-{-# LANGUAGE DeriveGeneric, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE DeriveGeneric, DeriveFunctor, DeriveFoldable, DeriveTraversable, TemplateHaskell #-}
 module Lamdu.Data.Definition
   ( FFIName(..)
   , Builtin(..)
-  , ExportedType(..), _ExportedType
-  , Expr(..)
-  , Body(..)
+  , ExportedType(..), _NoExportedType, _ExportedType
+  , Expr(..), expr, exprType
+  , Body(..), _BodyExpr, _BodyBuiltin
   , Definition(..), defBody, defPayload
   ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens (Lens)
-import Data.Binary (Binary(..))
-import Data.Foldable (Foldable(..))
-import Data.Traversable (Traversable(..))
-import GHC.Generics (Generic)
-import Lamdu.Expr.Scheme (Scheme)
 import qualified Control.Lens as Lens
+import           Data.Binary (Binary(..))
+import           Data.Foldable (Foldable(..))
+import           Data.Traversable (Traversable(..))
+import           GHC.Generics (Generic)
+import           Lamdu.Expr.Scheme (Scheme)
 
 data FFIName = FFIName
   { fModule :: [String]
@@ -55,15 +53,7 @@ instance Binary valExpr => Binary (Expr valExpr)
 instance Binary valExpr => Binary (Body valExpr)
 instance (Binary valExpr, Binary a) => Binary (Definition valExpr a)
 
-defBody :: Lens (Definition s a) (Definition t a) (Body s) (Body t)
-defBody f (Definition b p) = (`Definition` p) <$> f b
-
-defPayload :: Lens (Definition expr a) (Definition expr b) a b
-defPayload f (Definition b p) = Definition b <$> f p
-
-_ExportedType :: Lens.Prism' ExportedType Scheme
-_ExportedType =
-  Lens.prism' ExportedType f
-  where
-    f (ExportedType t) = Just t
-    f _ = Nothing
+Lens.makePrisms ''ExportedType
+Lens.makePrisms ''Body
+Lens.makeLenses ''Definition
+Lens.makeLenses ''Expr
