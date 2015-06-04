@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, OverloadedStrings, TemplateHaskell #-}
 
 module Lamdu.Eval
     ( EvalT(..), evalError
@@ -8,49 +8,51 @@ module Lamdu.Eval
     , whnfScopedVal, whnfThunk
     ) where
 
-import Control.Applicative (Applicative)
-import Control.Lens (at, use, traverse)
-import Control.Lens.Operators
-import Control.Monad (void)
-import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.Either (EitherT(..), left)
-import Control.Monad.Trans.State (StateT(..))
-import Data.Map (Map)
-import Lamdu.Data.Definition (FFIName)
-import Lamdu.Eval.Val (ValHead, ValBody(..), ThunkId, Closure(..), Scope(..), ScopeId, emptyScope)
-import Lamdu.Expr.Val (Val)
+import           Control.Applicative (Applicative)
+import           Control.Lens (at, use, traverse)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad (void)
+import           Control.Monad.Trans.Class (MonadTrans(..))
+import           Control.Monad.Trans.Either (EitherT(..), left)
+import           Control.Monad.Trans.State (StateT(..))
+import           Data.Foldable (Foldable)
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Traversable (Traversable)
+import           Lamdu.Data.Definition (FFIName)
+import           Lamdu.Eval.Val (ValHead, ValBody(..), ThunkId, Closure(..), Scope(..), ScopeId, emptyScope)
+import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
 
 data ThunkState pl
     = TSrc (ScopedVal pl)
     | TResult (ValHead pl)
     | TEvaluating -- BlackHoled in GHC
-    deriving (Functor, Show)
+    deriving (Show, Functor, Foldable, Traversable)
 
 data ScopedVal pl = ScopedVal
     { _srcScope :: Scope
     , _srcExpr :: Val pl
-    } deriving (Functor, Show)
+    } deriving (Show, Functor, Foldable, Traversable)
 
 data EventNewScope pl = EventNewScope
     { ensLam :: pl
     , ensParentId :: ScopeId
     , ensId :: ScopeId
-    } deriving (Show)
+    } deriving (Show, Functor, Foldable, Traversable)
 
 data EventResultComputed pl = EventResultComputed
     { ercMThunkId :: Maybe ThunkId
     , ercSource :: pl
     , ercScope :: ScopeId
     , ercResult :: ValHead pl
-    } deriving (Show)
+    } deriving (Show, Functor, Foldable, Traversable)
 
 data Event pl
     = ENewScope (EventNewScope pl)
     | EResultComputed (EventResultComputed pl)
-    deriving (Show)
+    deriving (Show, Functor, Foldable, Traversable)
 
 data EvalActions m pl = EvalActions
     { _aReportEvent :: Event pl -> m ()

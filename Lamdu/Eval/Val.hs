@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Eval.Val
     ( ValHead, ValBody(..), ThunkId, Closure(..), Scope(..), ScopeId, emptyScope
     , _HFunc, _HRecExtend, _HRecEmpty, _HInteger, _HBuiltin
@@ -6,8 +6,10 @@ module Lamdu.Eval.Val
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Foldable (Foldable)
 import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Traversable (Traversable)
 import           Lamdu.Data.Definition (FFIName)
 import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
@@ -25,7 +27,7 @@ data Closure pl = Closure
     { _cOuterScope :: Scope
     , _cLam :: V.Lam (Val pl)
     , _cLamPayload :: pl
-    } deriving (Functor, Show)
+    } deriving (Show, Functor, Foldable, Traversable)
 
 data ValBody val pl
     = HFunc (Closure pl)
@@ -33,7 +35,7 @@ data ValBody val pl
     | HRecEmpty
     | HInteger Integer
     | HBuiltin FFIName
-    deriving (Functor, Show)
+    deriving (Show, Functor, Foldable, Traversable)
 
 Lens.makePrisms ''ValBody
 
