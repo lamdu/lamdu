@@ -48,7 +48,7 @@ codeIRefs = Code
   , tags = IRef.anchor "tags"
   }
 
-revisionIRefs :: Revision (IRef m) m
+revisionIRefs :: Revision (IRef DbM) DbM
 revisionIRefs = Revision
   { branches = IRef.anchor "branches"
   , currentBranch = IRef.anchor "currentBranch"
