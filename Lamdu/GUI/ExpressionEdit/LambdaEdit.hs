@@ -44,6 +44,6 @@ make parentPrecedence binder pl =
         params = binder ^. Sugar.dParams
         body = binder ^. Sugar.dBody
         -- We show the param type instead of the lambda type
-        showParamType = pl ^. Sugar.plData . ExprGuiM.plShowType
-        plNoType = pl & Sugar.plData . ExprGuiM.plShowType .~ ExprGuiM.DoNotShowType
+        showParamType = pl ^. Sugar.plData . ExprGuiM.plShowAnnotation
+        plNoType = pl & Sugar.plData . ExprGuiM.plShowAnnotation .~ ExprGuiM.DoNotShowAnnotation
         bodyId = WidgetIds.fromExprPayload $ body ^. Sugar.rPayload

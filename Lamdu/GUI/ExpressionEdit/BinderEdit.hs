@@ -159,7 +159,7 @@ make name binder myId = do
     makeBinderNameEdit (binder ^. Sugar.dMActions) rhsJumperEquals rhs name myId
     <&> ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
   paramEdits <-
-    makeParamsEdit ExprGuiM.ShowType (ExprGuiM.nextHolesBefore body) myId params
+    makeParamsEdit ExprGuiM.ShowAnnotation (ExprGuiM.nextHolesBefore body) myId params
     <&> Lens.mapped . ExpressionGui.egWidget
         %~ Widget.weakerEvents rhsJumperEquals
   mWheresEdit <- makeWheres (binder ^. Sugar.dWhereItems) myId
@@ -239,7 +239,7 @@ makeResultEdit mActions params result = do
 
 makeParamsEdit ::
   MonadA m =>
-  ExprGuiM.ShowType ->
+  ExprGuiM.ShowAnnotation ->
   NearestHoles ->
   Widget.Id ->
   Sugar.BinderParams (Name m) m ->

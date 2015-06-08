@@ -388,17 +388,17 @@ maybeAddAnnotationPl ::
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 maybeAddAnnotationPl pl =
   maybeAddAnnotation
-  (pl ^. Sugar.plData . ExprGuiM.plShowType)
+  (pl ^. Sugar.plData . ExprGuiM.plShowAnnotation)
   (pl ^. Sugar.plAnnotation)
   (pl ^. Sugar.plEntityId)
 
 maybeAddAnnotation ::
   MonadA m =>
-  ExprGuiM.ShowType -> Sugar.Annotation -> Sugar.EntityId ->
+  ExprGuiM.ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 maybeAddAnnotation showType annotation entityId eg =
   do
-    shouldShow <- ExprGuiM.shouldShowType showType
+    shouldShow <- ExprGuiM.shouldShowAnnotation showType
     eg
       & if shouldShow
         then addInferredType entityId (annotation ^. Sugar.aInferredType)

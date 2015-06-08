@@ -4,10 +4,10 @@ module Lamdu.GUI.ExpressionGui.Monad
   , widgetEnv
   , makeLabel
   , StoredEntityIds(..), Injected(..)
-  , Payload(..), plStoredEntityIds, plInjected, plNearestHoles, plShowType
-  , ShowType(..)
+  , Payload(..), plStoredEntityIds, plInjected, plNearestHoles, plShowAnnotation
+  , ShowAnnotation(..)
   , markRedundantTypes
-  , shouldShowType
+  , shouldShowAnnotation
   , emptyPayload
   , SugarExpr
 
@@ -89,14 +89,14 @@ newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
 newtype Injected = Injected [Bool]
   deriving (Monoid, Binary, Eq, Ord)
 
-data ShowType = ShowTypeInVerboseMode | DoNotShowType | ShowType
+data ShowAnnotation = ShowAnnotationInVerboseMode | DoNotShowAnnotation | ShowAnnotation
 
 -- GUI input payload on sugar exprs
 data Payload = Payload
   { _plStoredEntityIds :: [Sugar.EntityId]
   , _plInjected :: [Bool]
   , _plNearestHoles :: NearestHoles
-  , _plShowType :: ShowType
+  , _plShowAnnotation :: ShowAnnotation
   }
 Lens.makeLenses ''Payload
 
@@ -105,7 +105,7 @@ emptyPayload nearestHoles = Payload
   { _plStoredEntityIds = []
   , _plInjected = []
   , _plNearestHoles = nearestHoles
-  , _plShowType = ShowTypeInVerboseMode
+  , _plShowAnnotation = ShowAnnotationInVerboseMode
   }
 
 type SugarExpr m = ExpressionN m Payload
@@ -247,10 +247,10 @@ nextHolesBefore val =
   where
     node = leftMostLeaf val
 
-shouldShowType :: MonadA m => ShowType -> ExprGuiM m Bool
-shouldShowType DoNotShowType = return False
-shouldShowType ShowType = return True
-shouldShowType ShowTypeInVerboseMode = do
+shouldShowAnnotation :: MonadA m => ShowAnnotation -> ExprGuiM m Bool
+shouldShowAnnotation DoNotShowAnnotation = return False
+shouldShowAnnotation ShowAnnotation = return True
+shouldShowAnnotation ShowAnnotationInVerboseMode = do
   infoMode <- (^. CESettings.sInfoMode) <$> readSettings
   return $
     case infoMode of
@@ -260,9 +260,9 @@ shouldShowType ShowTypeInVerboseMode = do
 markRedundantTypes :: MonadA m => SugarExpr m -> SugarExpr m
 markRedundantTypes v =
   v
-  & redundantTypes         . showType .~ DoNotShowType
-  & SugarLens.holePayloads . showType .~ ShowType
-  & SugarLens.holeArgs     . showType .~ ShowType
-  & Sugar.rPayload         . showType .~ ShowType
+  & redundantTypes         . showType .~ DoNotShowAnnotation
+  & SugarLens.holePayloads . showType .~ ShowAnnotation
+  & SugarLens.holeArgs     . showType .~ ShowAnnotation
+  & Sugar.rPayload         . showType .~ ShowAnnotation
   where
-    showType = Sugar.plData . plShowType
+    showType = Sugar.plData . plShowAnnotation

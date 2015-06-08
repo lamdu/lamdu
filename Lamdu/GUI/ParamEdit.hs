@@ -98,7 +98,7 @@ eventParamDelEventMap (Just actions) keys docSuffix dstPosId =
 
 -- exported for use in definition sugaring.
 make ::
-  MonadA m => ExprGuiM.ShowType -> Widget.Id -> Widget.Id ->
+  MonadA m => ExprGuiM.ShowAnnotation -> Widget.Id -> Widget.Id ->
   Sugar.FuncParam v (Name m) m ->
   ExprGuiM m (ExpressionGui m)
 make showType prevId nextId param =

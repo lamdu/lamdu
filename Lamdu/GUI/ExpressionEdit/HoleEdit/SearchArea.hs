@@ -296,12 +296,12 @@ postProcessSugar ::
 postProcessSugar expr =
     expr
     <&> toPayload
-    & SugarLens.holeArgs . Sugar.plData . ExprGuiM.plShowType .~ ExprGuiM.ShowType
+    & SugarLens.holeArgs . Sugar.plData . ExprGuiM.plShowAnnotation .~ ExprGuiM.ShowAnnotation
 
 toPayload :: Sugar.IsInjected -> ExprGuiM.Payload
 toPayload isInjected =
     ExprGuiM.emptyPayload NearestHoles.none
-    & ExprGuiM.plShowType .~ ExprGuiM.DoNotShowType
+    & ExprGuiM.plShowAnnotation .~ ExprGuiM.DoNotShowAnnotation
     & ExprGuiM.plInjected .~
       case isInjected of
       Sugar.NotInjected -> []
