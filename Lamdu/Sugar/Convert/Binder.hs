@@ -245,6 +245,7 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
           , _fpAnnotation =
             Annotation
             { _aInferredType = fpFieldType fp
+            , _aMEvaluationResult = Nothing
             }
           , _fpMActions = actions
           , _fpHiddenIds = []
@@ -409,6 +410,7 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
         , _fpAnnotation =
           Annotation
           { _aInferredType = paramType
+          , _aMEvaluationResult = Nothing
           }
         , _fpMActions = fst <$> mActions
         , _fpHiddenIds = []
@@ -544,6 +546,7 @@ mExtractWhere expr = do
     , ewiAnnotation =
       Annotation
       { _aInferredType = arg ^. V.payload . Input.inferred . Infer.plType
+      , _aMEvaluationResult = Nothing
       }
     }
 

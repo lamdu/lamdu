@@ -54,6 +54,7 @@ addActions exprPl body = do
     , _plAnnotation =
       Annotation
       { _aInferredType = exprPl ^. Input.inferred . Infer.plType
+      , _aMEvaluationResult = Nothing
       }
     , _plActions = mkActions sugarContext <$> exprPl ^. Input.mStored
     , _plData = exprPl ^. Input.userData

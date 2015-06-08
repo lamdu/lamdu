@@ -27,7 +27,7 @@ module Lamdu.Sugar.Types
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyLiteralInteger, _BodyList, _BodyRecord
-  , Annotation(..), aInferredType
+  , Annotation(..), aInferredType, aMEvaluationResult
   , Payload(..), plEntityId, plAnnotation, plActions, plData
   , Expression(..), rBody, rPayload
   , DefinitionU
@@ -103,8 +103,11 @@ data Actions m = Actions
   , _cut :: Maybe (T m EntityId) -- Nothing if already hole
   }
 
-newtype Annotation = Annotation
+type EvaluationResult = String
+
+data Annotation = Annotation
   { _aInferredType :: Type
+  , _aMEvaluationResult :: Maybe EvaluationResult
   } deriving (Show)
 
 data Payload m a = Payload
