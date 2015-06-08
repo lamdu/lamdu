@@ -143,17 +143,17 @@ wWidth :: Lens' (Widget f) Widget.R
 wWidth = Widget.width
 
 addAnnotationBackground :: Config -> AnimId -> Widget.R -> View -> View
-addAnnotationBackground config animId minWidth typeView =
-  typeView
+addAnnotationBackground config animId minWidth annotationView =
+  annotationView
   & View.size .~ newSize
-  & View.animFrame %~ Anim.translate (Vector2 ((width - typeWidth) / 2) 0)
+  & View.animFrame %~ Anim.translate (Vector2 ((width - annotationWidth) / 2) 0)
   & View.backgroundColor bgAnimId bgLayer bgColor
   where
-    width = max typeWidth minWidth
-    typeWidth = typeView ^. View.width
-    newSize = typeView ^. View.size & _1 .~ width
-    bgAnimId = animId ++ ["type background"]
-    bgLayer = Config.layerTypes $ Config.layers config
+    width = max annotationWidth minWidth
+    annotationWidth = annotationView ^. View.width
+    newSize = annotationView ^. View.size & _1 .~ width
+    bgAnimId = animId ++ ["annotation background"]
+    bgLayer = Config.layerAnnotations $ Config.layers config
     bgColor = Config.typeBoxBGColor config
 
 makeTypeView :: MonadA m => Widget.R -> Sugar.EntityId -> Type -> ExprGuiM m (Widget f)

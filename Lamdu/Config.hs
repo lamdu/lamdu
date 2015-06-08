@@ -20,7 +20,7 @@ import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 data Layers = Layers
   { layerMin
   , layerCursor
-  , layerTypes
+  , layerAnnotations
   , layerChoiceBG
   , layerHoleBG
   , layerDarkHoleBG
