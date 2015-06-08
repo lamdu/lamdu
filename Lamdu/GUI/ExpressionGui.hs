@@ -19,8 +19,7 @@ module Lamdu.GUI.ExpressionGui
   , makeNameOriginEdit
   , diveToNameEdit
   -- Info adding
-  , inferredSpacer
-  , addBelowInferredSpacing
+  , annotationSpacer
   , maybeAddAnnotation
   , makeTypeView
   -- Expression wrapping
@@ -143,8 +142,8 @@ gridTopLeftFocal = Layout.gridTopLeftFocal
 wWidth :: Lens' (Widget f) Widget.R
 wWidth = Widget.width
 
-addTypeBackground :: Config -> AnimId -> Widget.R -> View -> View
-addTypeBackground config animId minWidth typeView =
+addAnnotationBackground :: Config -> AnimId -> Widget.R -> View -> View
+addAnnotationBackground config animId minWidth typeView =
   typeView
   & View.size .~ newSize
   & View.animFrame %~ Anim.translate (Vector2 ((width - typeWidth) / 2) 0)
@@ -162,34 +161,34 @@ makeTypeView minWidth entityId typ =
   do
     config <- ExprGuiM.readConfig
     TypeView.make animId typ
-      <&> addTypeBackground config animId minWidth
+      <&> addAnnotationBackground config animId minWidth
       <&> Widget.fromView
   where
     animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
 
-inferredSpacer :: MonadA m => ExprGuiM m (Widget f)
-inferredSpacer =
+annotationSpacer :: MonadA m => ExprGuiM m (Widget f)
+annotationSpacer =
   do
     config <- ExprGuiM.readConfig
-    Config.valInferredSpacing config
+    Config.valAnnotationSpacing config
       & realToFrac
       & Spacer.makeVertical
       & Widget.fromView
       & return
 
-addBelowInferredSpacing ::
+addBelowAnnotationSpacing ::
   MonadA m => Widget (T m) ->
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addBelowInferredSpacing widget eg =
+addBelowAnnotationSpacing widget eg =
   do
-    vspace <- inferredSpacer
+    vspace <- annotationSpacer
     addBelow 0.5 [(0, vspace), (0.5, widget)] eg & return
 
 addInferredType :: MonadA m => Sugar.EntityId -> Type -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addInferredType entityId inferredType eg =
   do
     typeView <- makeTypeView (eg ^. egWidget . wWidth) entityId inferredType
-    addBelowInferredSpacing typeView eg
+    addBelowAnnotationSpacing typeView eg
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config

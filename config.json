@@ -691,7 +691,7 @@
             "Key'Comma"
         ]
     ],
-    "valInferredSpacing": 3,
+    "valAnnotationSpacing": 3,
     "valFramePadding": {
         "_first": 7.0,
         "_second": 7.0

@@ -402,7 +402,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults editableHoleInfo =
             ExpressionGui.makeTypeView (resultsWidget ^. Widget.width)
             (hiEntityId holeInfo) (hiInferredType holeInfo)
 
-        vspace <- ExpressionGui.inferredSpacer
+        vspace <- ExpressionGui.annotationSpacer
         hoverResultsWidget <-
             resultsWidget
             & Widget.width %~ max (typeView ^. Widget.width)
