@@ -256,7 +256,7 @@ Executable lamdu
                ,       Lamdu.VersionControl
                ,       Lamdu.VersionControl.Actions
                ,       Paths_lamdu_ide
-  ghc-options:         -O -Wall -threaded
+  ghc-options:         -O2 -Wall -threaded
   -- ghc-options is prepended to ghc-prof-options
   ghc-prof-options:    -auto-all -caf-all -rtsopts
   main-is:             Lamdu/Main.hs
