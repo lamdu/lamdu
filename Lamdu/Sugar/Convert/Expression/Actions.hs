@@ -51,7 +51,10 @@ addActions exprPl body = do
   sugarContext <- ConvertM.readContext
   return $ Expression body Payload
     { _plEntityId = exprPl ^. Input.entityId
-    , _plInferredType = exprPl ^. Input.inferred . Infer.plType
+    , _plAnnotation =
+      Annotation
+      { _aInferredType = exprPl ^. Input.inferred . Infer.plType
+      }
     , _plActions = mkActions sugarContext <$> exprPl ^. Input.mStored
     , _plData = exprPl ^. Input.userData
     }

@@ -389,7 +389,7 @@ maybeAddInferredTypePl ::
 maybeAddInferredTypePl pl =
   maybeAddInferredType
   (pl ^. Sugar.plData . ExprGuiM.plShowType)
-  (pl ^. Sugar.plInferredType)
+  (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
   (pl ^. Sugar.plEntityId)
 
 maybeAddInferredType ::

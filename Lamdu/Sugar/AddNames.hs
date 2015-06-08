@@ -470,7 +470,7 @@ withWhereItem ::
   CPS m (WhereItem (NewName m) (TM m) (NewExpression m a))
 withWhereItem item@WhereItem{..} = CPS $ \k -> do
   (name, (value, res)) <-
-    runCPS (opWithWhereItemName (isFunctionType _wiInferredType) _wiName) $
+    runCPS (opWithWhereItemName (isFunctionType (_wiAnnotation ^. aInferredType)) _wiName) $
     (,) <$> toBinder _wiValue <*> k
   pure (item { _wiValue = value, _wiName = name }, res)
 
@@ -479,7 +479,7 @@ withBinderParams ::
   BinderParams (OldName m) (TM m) -> CPS m (BinderParams (NewName m) (TM m))
 withBinderParams NoParams = pure NoParams
 withBinderParams (VarParam FuncParam{..}) =
-  opWithParamName (isFunctionType _fpInferredType) _fpName
+  opWithParamName (isFunctionType (_fpAnnotation ^. aInferredType)) _fpName
   <&> VarParam . \_fpName -> FuncParam{..}
 withBinderParams (FieldParams xs) =
   traverse f xs <&> FieldParams

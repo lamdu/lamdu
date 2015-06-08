@@ -254,7 +254,7 @@ makeAllGroups editableHoleInfo = do
       | tag <-
           hiMArgument holeInfo
           ^.. Lens._Just
-          . Sugar.haExpr . Sugar.rPayload . Sugar.plInferredType
+          . Sugar.haExpr . Sugar.rPayload . Sugar.plAnnotation . Sugar.aInferredType
           . ExprLens._TRecord . ExprLens.compositeTags
       ] ++
       [ Group

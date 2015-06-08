@@ -242,7 +242,10 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
           { _fpName = UniqueId.toGuid $ fpTag fp
           , _fpId = fpIdEntityId fp
           , _fpVarInfo = fpTag fp
-          , _fpInferredType = fpFieldType fp
+          , _fpAnnotation =
+            Annotation
+            { _aInferredType = fpFieldType fp
+            }
           , _fpMActions = actions
           , _fpHiddenIds = []
           }
@@ -403,7 +406,10 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
         { _fpName = UniqueId.toGuid param
         , _fpVarInfo = ()
         , _fpId = paramEntityId
-        , _fpInferredType = paramType
+        , _fpAnnotation =
+          Annotation
+          { _aInferredType = paramType
+          }
         , _fpMActions = fst <$> mActions
         , _fpHiddenIds = []
         }
@@ -523,7 +529,7 @@ data ExprWhereItem a = ExprWhereItem
   , ewiParam :: V.Var
   , ewiArg :: Val a
   , ewiHiddenPayloads :: [a]
-  , ewiInferredType :: Type
+  , ewiAnnotation :: Annotation
   }
 
 mExtractWhere :: Val (Input.Payload m a) -> Maybe (ExprWhereItem (Input.Payload m a))
@@ -535,7 +541,10 @@ mExtractWhere expr = do
     , ewiParam = param
     , ewiArg = arg
     , ewiHiddenPayloads = (^. V.payload) <$> [expr, func]
-    , ewiInferredType = arg ^. V.payload . Input.inferred . Infer.plType
+    , ewiAnnotation =
+      Annotation
+      { _aInferredType = arg ^. V.payload . Input.inferred . Infer.plType
+      }
     }
 
 getParamsToHole :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
@@ -584,7 +593,7 @@ convertWhereItems expr =
             expr ^. V.payload . Input.mStored <*>
             traverse (^. Input.mStored) (ewiBody ewi)
         , _wiName = UniqueId.toGuid param
-        , _wiInferredType = ewiInferredType ewi
+        , _wiAnnotation = ewiAnnotation ewi
         }
     (nextItems, whereBody) <- convertWhereItems $ ewiBody ewi
     return (item : nextItems, whereBody)

@@ -27,10 +27,11 @@ module Lamdu.Sugar.Types
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyLiteralInteger, _BodyList, _BodyRecord
-  , Payload(..), plEntityId, plInferredType, plActions, plData
+  , Annotation(..), aInferredType
+  , Payload(..), plEntityId, plAnnotation, plActions, plData
   , Expression(..), rBody, rPayload
   , DefinitionU
-  , WhereItem(..), wiEntityId, wiValue, wiName, wiActions, wiInferredType
+  , WhereItem(..), wiEntityId, wiValue, wiName, wiActions, wiAnnotation
   , ListItem(..), liMActions, liExpr
   , ListActions(..), List(..)
   , RecordField(..), rfMDelete, rfTag, rfExpr
@@ -46,7 +47,7 @@ module Lamdu.Sugar.Types
   , AnnotatedArg(..), aaTag, aaExpr
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
   , FuncParam(..)
-    , fpName, fpId, fpVarInfo, fpInferredType, fpMActions, fpHiddenIds
+    , fpName, fpId, fpVarInfo, fpAnnotation, fpMActions, fpHiddenIds
   , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
   , HoleArg(..), haExpr, haUnwrap
   , Hole(..)
@@ -102,8 +103,12 @@ data Actions m = Actions
   , _cut :: Maybe (T m EntityId) -- Nothing if already hole
   }
 
+newtype Annotation = Annotation
+  { _aInferredType :: Type
+  } deriving (Show)
+
 data Payload m a = Payload
-  { _plInferredType :: Type
+  { _plAnnotation :: Annotation
   , _plActions :: Maybe (Actions m)
   , _plEntityId :: EntityId
   , _plData :: a
@@ -154,7 +159,7 @@ data FuncParam varinfo name m = FuncParam
   { _fpId :: EntityId
   , _fpVarInfo :: varinfo
   , _fpName :: name
-  , _fpInferredType :: Type
+  , _fpAnnotation :: Annotation
   , _fpMActions :: Maybe (FuncParamActions m)
   , -- Sometimes the Lambda disappears in Sugar, the Param "swallows" its id
     _fpHiddenIds :: [EntityId]
@@ -309,7 +314,7 @@ data Body name m expr
 
 instance (Show paraminfo, Show name) => Show (FuncParam paraminfo name m) where
   show FuncParam{..} = "(FuncParam " ++ show _fpId ++ " " ++ show _fpVarInfo ++ " " ++ show _fpName ++
-                       " " ++ show _fpInferredType ++ " )"
+                       " " ++ show _fpAnnotation ++ " )"
 
 
 instance Show expr => Show (Body name m expr) where
@@ -330,7 +335,7 @@ instance Show expr => Show (Body name m expr) where
 data WhereItem name m expr = WhereItem
   { _wiValue :: Binder name m expr
   , _wiEntityId :: EntityId
-  , _wiInferredType :: Type
+  , _wiAnnotation :: Annotation
   , _wiName :: name
   , _wiActions :: Maybe (ListItemActions m)
   } deriving (Functor, Foldable, Traversable)
@@ -389,6 +394,7 @@ type DefinitionU m a = Definition Guid m (Expression Guid m a)
 
 Lens.makeLenses ''Actions
 Lens.makeLenses ''AnnotatedArg
+Lens.makeLenses ''Annotation
 Lens.makeLenses ''Apply
 Lens.makeLenses ''Binder
 Lens.makeLenses ''BinderActions

@@ -69,14 +69,14 @@ orderBody b = return b
 orderExpr :: MonadA m => Order m (Sugar.Expression name f a)
 orderExpr e =
     e
-    & Sugar.rPayload . Sugar.plInferredType %%~ orderType
+    & Sugar.rPayload . Sugar.plAnnotation . Sugar.aInferredType %%~ orderType
     >>= Sugar.rBody %%~ orderBody
     >>= Sugar.rBody . Lens.traversed %%~ orderExpr
 
 orderParams :: MonadA m => Order m [Sugar.FuncParam T.Tag name f]
 orderParams xs =
     xs
-    & Lens.traversed . Sugar.fpInferredType %%~ orderType
+    & Lens.traversed . Sugar.fpAnnotation . Sugar.aInferredType %%~ orderType
     >>= orderByTag (^. Sugar.fpVarInfo)
 
 orderBinder ::

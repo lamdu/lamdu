@@ -133,7 +133,7 @@ make hole pl =
   where
     holeInfo = HoleInfo
       { hiEntityId = pl ^. Sugar.plEntityId
-      , hiInferredType = pl ^. Sugar.plInferredType
+      , hiInferredType = pl ^. Sugar.plAnnotation . Sugar.aInferredType
       , hiSuggested = hole ^. Sugar.holeSuggested
       , hiIds = WidgetIds{..}
       , hiNearestHoles = pl ^. Sugar.plData . ExprGuiM.plNearestHoles

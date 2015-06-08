@@ -116,7 +116,7 @@ make showType prevId nextId param =
       <&> ExpressionGui.fromValueWidget
     paramNameEdit
       & ExpressionGui.maybeAddInferredType showType
-        (param ^. Sugar.fpInferredType)
+        (param ^. Sugar.fpAnnotation . Sugar.aInferredType)
         (param ^. Sugar.fpId)
   where
     entityId = param ^. Sugar.fpId
