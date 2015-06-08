@@ -113,7 +113,7 @@ make hole pl =
       case mWrapperGui of
         Just wrapperGui -> do
           unfocusedWrapperGui <-
-            wrapperGui & ExpressionGui.maybeAddInferredTypePl pl
+            wrapperGui & ExpressionGui.maybeAddAnnotationPl pl
           isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor hidHole
           let
             layout f = do

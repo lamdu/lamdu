@@ -21,13 +21,13 @@ module Lamdu.GUI.ExpressionGui
   -- Info adding
   , inferredSpacer
   , addBelowInferredSpacing
-  , maybeAddInferredType
+  , maybeAddAnnotation
   , makeTypeView
   -- Expression wrapping
   , MyPrecedence(..), ParentPrecedence(..), Precedence
   , parenify
   , wrapExprEventMap
-  , maybeAddInferredTypePl
+  , maybeAddAnnotationPl
   , stdWrap
   , stdWrapParentExpr
   , stdWrapParenify
@@ -255,7 +255,7 @@ stdWrap ::
   ExprGuiM m (ExpressionGui m)
 stdWrap pl mkGui =
   mkGui
-  >>= maybeAddInferredTypePl pl
+  >>= maybeAddAnnotationPl pl
   & wrapExprEventMap pl
 
 stdWrapParentExpr ::
@@ -382,26 +382,26 @@ addExprEventMap pl resultPickers gui =
       & egWidget %~ Widget.weakerEvents exprEventMap
       & return
 
-maybeAddInferredTypePl ::
+maybeAddAnnotationPl ::
   MonadA m =>
   Sugar.Payload m0 ExprGuiM.Payload ->
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-maybeAddInferredTypePl pl =
-  maybeAddInferredType
+maybeAddAnnotationPl pl =
+  maybeAddAnnotation
   (pl ^. Sugar.plData . ExprGuiM.plShowType)
-  (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
+  (pl ^. Sugar.plAnnotation)
   (pl ^. Sugar.plEntityId)
 
-maybeAddInferredType ::
+maybeAddAnnotation ::
   MonadA m =>
-  ExprGuiM.ShowType -> Type -> Sugar.EntityId ->
+  ExprGuiM.ShowType -> Sugar.Annotation -> Sugar.EntityId ->
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-maybeAddInferredType showType inferredType entityId eg =
+maybeAddAnnotation showType annotation entityId eg =
   do
     shouldShow <- ExprGuiM.shouldShowType showType
     eg
       & if shouldShow
-        then addInferredType entityId inferredType
+        then addInferredType entityId (annotation ^. Sugar.aInferredType)
         else return
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]

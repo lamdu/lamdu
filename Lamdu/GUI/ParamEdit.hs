@@ -115,8 +115,8 @@ make showType prevId nextId param =
       <&> Widget.weakerEvents paramEventMap
       <&> ExpressionGui.fromValueWidget
     paramNameEdit
-      & ExpressionGui.maybeAddInferredType showType
-        (param ^. Sugar.fpAnnotation . Sugar.aInferredType)
+      & ExpressionGui.maybeAddAnnotation showType
+        (param ^. Sugar.fpAnnotation)
         (param ^. Sugar.fpId)
   where
     entityId = param ^. Sugar.fpId
