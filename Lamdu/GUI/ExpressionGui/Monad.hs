@@ -7,7 +7,7 @@ module Lamdu.GUI.ExpressionGui.Monad
   , Payload(..), plStoredEntityIds, plInjected, plNearestHoles, plShowAnnotation
   , ShowAnnotation(..)
   , markRedundantTypes
-  , shouldShowAnnotation
+  , getInfoMode
   , emptyPayload
   , SugarExpr
 
@@ -247,15 +247,16 @@ nextHolesBefore val =
   where
     node = leftMostLeaf val
 
-shouldShowAnnotation :: MonadA m => ShowAnnotation -> ExprGuiM m Bool
-shouldShowAnnotation DoNotShowAnnotation = return False
-shouldShowAnnotation ShowAnnotation = return True
-shouldShowAnnotation ShowAnnotationInVerboseMode = do
-  infoMode <- (^. CESettings.sInfoMode) <$> readSettings
-  return $
-    case infoMode of
-    CESettings.None -> False
-    CESettings.Types -> True
+getInfoMode :: MonadA m => ShowAnnotation -> ExprGuiM m CESettings.InfoMode
+getInfoMode DoNotShowAnnotation = return CESettings.None
+getInfoMode ShowAnnotationInVerboseMode = readSettings <&> (^. CESettings.sInfoMode)
+getInfoMode ShowAnnotation =
+  readSettings
+  <&> (^. CESettings.sInfoMode)
+  <&> \infoMode ->
+      case infoMode of
+      CESettings.None -> CESettings.Types
+      x -> x
 
 markRedundantTypes :: MonadA m => SugarExpr m -> SugarExpr m
 markRedundantTypes v =

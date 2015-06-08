@@ -53,16 +53,18 @@ import           Graphics.UI.Bottle.View (View)
 import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Expr.Type (Type)
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -70,7 +72,6 @@ import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.Parens as Parens
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
 import qualified Lamdu.GUI.TypeView as TypeView
-import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -398,11 +399,11 @@ maybeAddAnnotation ::
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 maybeAddAnnotation showType annotation entityId eg =
   do
-    shouldShow <- ExprGuiM.shouldShowAnnotation showType
+    infoMode <- ExprGuiM.getInfoMode showType
     eg
-      & if shouldShow
-        then addInferredType entityId (annotation ^. Sugar.aInferredType)
-        else return
+      & case infoMode of
+        CESettings.Types -> addInferredType entityId (annotation ^. Sugar.aInferredType)
+        CESettings.None -> return
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests before after dest list =
