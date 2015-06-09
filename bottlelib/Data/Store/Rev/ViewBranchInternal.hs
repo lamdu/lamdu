@@ -12,22 +12,21 @@ module Data.Store.Rev.ViewBranchInternal
     )
 where
 
-import Control.Monad (when)
-import Control.MonadA (MonadA)
-import Data.Binary (Binary(..))
-import Data.Foldable (traverse_)
-import Data.Store.Guid (Guid)
-import Data.Store.IRef (IRef)
-import Data.Store.Rev.Change (Change)
-import Data.Store.Rev.Version (Version)
-import Data.Store.Transaction (Transaction)
-import GHC.Generics (Generic)
 import qualified Control.Lens as Lens
+import           Control.MonadA (MonadA)
+import           Data.Binary (Binary(..))
+import           Data.Foldable (traverse_)
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.Guid as Guid
+import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
+import           Data.Store.Rev.Change (Change)
 import qualified Data.Store.Rev.Change as Change
+import           Data.Store.Rev.Version (Version)
 import qualified Data.Store.Rev.Version as Version
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           GHC.Generics (Generic)
 
 -- This key is XOR'd with object keys to yield the IRef to each
 -- object's current version ref:
@@ -52,11 +51,8 @@ Lens.makeLenses ''ViewData
 -- | moveView must be given the correct source of the movement
 -- | or it will result in undefined results!
 moveView :: MonadA m => View m -> Version m -> Version m -> Transaction m ()
-moveView vm srcVersion destVersion =
-    when (srcVersion /= destVersion) $ do
-        mraIRef <- Version.mostRecentAncestor srcVersion destVersion
-        Version.walkUp applyBackward mraIRef srcVersion
-        Version.walkDown applyForward mraIRef destVersion
+moveView vm =
+    Version.walk applyBackward applyForward
     where
         applyForward = apply Change.newValue
         applyBackward = apply Change.oldValue

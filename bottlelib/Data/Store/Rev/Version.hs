@@ -4,19 +4,21 @@ module Data.Store.Rev.Version
   , preventUndo
   , Version, versionIRef, versionData
   , makeInitialVersion, newVersion, mostRecentAncestor
-  , walkUp, walkDown, versionsBetween
+  , walkUp, walkDown, versionsBetween, walk
   ) where
 
-import Control.Applicative ((<$>), (<*>))
-import Control.Monad (join)
-import Control.MonadA (MonadA)
-import Data.Binary (Binary(..))
-import Data.Foldable (traverse_)
-import Data.Store.IRef (IRef)
-import Data.Store.Rev.Change (Change(..), Key, Value)
-import Data.Store.Transaction (Transaction)
-import GHC.Generics (Generic)
+import           Control.Applicative ((<$>), (<*>))
+import           Control.Lens.Operators
+import           Control.Monad (join)
+import           Control.MonadA (MonadA)
+import           Data.Binary (Binary(..))
+import           Data.Monoid (Monoid(..))
+import           Data.Store.IRef (IRef)
+import           Data.Store.Rev.Change (Change(..), Key, Value)
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Traversable (traverse)
+import           GHC.Generics (Generic)
 
 newtype Version m = Version { versionIRef :: IRef m (VersionData m) }
   deriving (Eq, Ord, Read, Show, Binary)
@@ -75,16 +77,19 @@ mostRecentAncestor aVersion bVersion
     getParent = maybe (fail "Non-0 depth must have a parent") return
 
 walkUp ::
-  MonadA m =>
-  (VersionData m -> Transaction m ()) ->
-  Version m -> Version m -> Transaction m ()
+  (MonadA m, Monoid a) =>
+  (VersionData m -> Transaction m a) ->
+  Version m -> Version m -> Transaction m a
 walkUp onVersion topRef bottomRef
-  | bottomRef == topRef  = return ()
+  | bottomRef == topRef  = return mempty
   | otherwise            = do
     versionD <- versionData bottomRef
-    onVersion versionD
-    maybe (fail "Invalid path given, hit top") (walkUp onVersion topRef) $
-      parent versionD
+    result <- onVersion versionD
+    parent versionD
+      & maybe
+        (fail "Invalid path given, hit top")
+        (walkUp onVersion topRef)
+      <&> mappend result
 
 -- We can't directly walkDown (we don't have references pointing
 -- downwards... But we can generate a list of versions by walking up
@@ -101,7 +106,22 @@ versionsBetween topRef = accumulateWalkUp []
         maybe (fail "Invalid path given, hit top") (accumulateWalkUp (versionD:vs)) $
           parent versionD
 
+walk ::
+    (MonadA m, Monoid a) =>
+    (VersionData m -> Transaction m a) ->
+    (VersionData m -> Transaction m a) ->
+    Version m -> Version m -> Transaction m a
+walk applyBackward applyForward srcVersion destVersion =
+    do
+        mraIRef <- mostRecentAncestor srcVersion destVersion
+        mappend
+            <$> walkUp applyBackward mraIRef srcVersion
+            <*> walkDown applyForward mraIRef destVersion
+
 -- Implement in terms of versionsBetween
-walkDown :: MonadA m => (VersionData m -> Transaction m ()) -> Version m -> Version m -> Transaction m ()
+walkDown ::
+  (MonadA m, Monoid a) =>
+  (VersionData m -> Transaction m a) ->
+  Version m -> Version m -> Transaction m a
 walkDown onVersion topRef bottomRef =
-  traverse_ onVersion =<< versionsBetween topRef bottomRef
+  fmap mconcat . traverse onVersion =<< versionsBetween topRef bottomRef
