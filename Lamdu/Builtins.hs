@@ -69,12 +69,11 @@ builtinIf thunkId =
     do
         [obj, then_, else_] <-
             extractRecordParams [ Builtins.objTag, Builtins.thenTag, Builtins.elseTag ] thunkId
-        HBuiltin condition <- Eval.whnfThunk obj
-        case condition of
-            Def.FFIName ["Prelude"] "True" -> then_
-            Def.FFIName ["Prelude"] "False" -> else_
-            _ -> error "Unexpected condition parameter to if"
-            & Eval.whnfThunk
+        condition <- Eval.whnfThunk obj
+        ( if fromGuest condition
+          then then_
+          else else_
+          ) & Eval.whnfThunk
 
 builtinNegate :: Monad m => BuiltinRunner m pl
 builtinNegate thunkId =
