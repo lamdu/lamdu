@@ -28,6 +28,9 @@ import           Data.Traversable (traverse, sequenceA)
 import           Lamdu.Data.Anchors (assocTagOrder)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
+import           Lamdu.Eval.Results (ComputedVal(..))
+import           Lamdu.Eval.Val (ScopeId)
+import qualified Lamdu.Eval.Val as EV
 import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -37,7 +40,7 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation, truncateStr)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -63,6 +66,7 @@ cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalP
 data FieldParam = FieldParam
   { fpTag :: T.Tag
   , fpFieldType :: Type
+  , fpValue :: Map ScopeId (ComputedVal ())
   }
 
 onMatchingSubexprs ::
@@ -245,7 +249,11 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
           , _fpAnnotation =
             Annotation
             { _aInferredType = fpFieldType fp
-            , _aMEvaluationResult = Nothing
+            , _aMEvaluationResult =
+                fpValue fp
+                & Map.minView
+                <&> fst
+                <&> truncateStr 20 . show
             }
           , _fpMActions = actions
           , _fpHiddenIds = []
@@ -414,7 +422,7 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
             lamExprPl ^. Input.evalLamArgs
             & Map.minView
             <&> fst
-            <&> show
+            <&> truncateStr 20 . show
           }
         , _fpMActions = fst <$> mActions
         , _fpHiddenIds = []
@@ -439,6 +447,17 @@ isParamAlwaysUsedWithGetField (V.Lam param body) =
     cond (_ : Val () V.BGetField{} : _) _ = False
     cond (Val () (V.BLeaf (V.LVar v)) : _) _ = v == param
     cond _ _ = False
+
+extractField :: T.Tag -> ComputedVal pl -> ComputedVal pl
+extractField _ NotYet = NotYet
+extractField tag (ComputedVal (EV.HRecExtend (V.RecExtend vt vv vr)))
+    | vt == tag = vv
+    | otherwise = extractField tag vr
+extractField tag x =
+    unwords
+    [ "extractField expected record containing tag"
+    , show tag, "but got", show (void x)
+    ] & error
 
 convertLamParams ::
   (MonadA m, Monoid a) =>
@@ -465,6 +484,9 @@ convertLamParams mRecursiveVar lambda lambdaPl =
       FieldParam
       { fpTag = tag
       , fpFieldType = typeExpr
+      , fpValue =
+          lambdaPl ^. Input.evalLamArgs
+          <&> extractField tag
       }
 
 convertEmptyParams :: MonadA m =>

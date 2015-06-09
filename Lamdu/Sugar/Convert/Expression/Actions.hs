@@ -1,5 +1,5 @@
 module Lamdu.Sugar.Convert.Expression.Actions
-  ( addActions, makeAnnotation
+  ( addActions, makeAnnotation, truncateStr
   ) where
 
 import           Control.Applicative ((<$>))
