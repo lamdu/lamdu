@@ -1,15 +1,15 @@
+{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Builtins
     ( eval
     ) where
 
---import qualified Data.Map as Map
-
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (void)
+import           Data.Foldable (Foldable(..))
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Map.Utils (matchKeys)
+import           Data.Traversable (Traversable(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Eval (EvalT)
@@ -29,7 +29,8 @@ mapOfParamRecord thunkId =
                 <&> Map.insert tag val
             _ -> error "Param record is not a record"
 
-extractRecordParams :: Monad m => [Tag] -> ThunkId -> EvalT pl m [ThunkId]
+extractRecordParams ::
+    (Monad m, Traversable t, Show (t Tag)) => t Tag -> ThunkId -> EvalT pl m (t ThunkId)
 extractRecordParams expectedTags thunkId =
     do
         paramsMap <- mapOfParamRecord thunkId
@@ -41,12 +42,11 @@ extractRecordParams expectedTags thunkId =
                 ]
             Just paramThunks -> return paramThunks
 
-extractInfixParams :: Monad m => ThunkId -> EvalT pl m (ThunkId, ThunkId)
-extractInfixParams thunkId =
-    do
-        [l, r] <-
-            extractRecordParams [Builtins.infixlTag, Builtins.infixrTag] thunkId
-        return (l, r)
+data V2 a = V2 a a   deriving (Show, Functor, Foldable, Traversable)
+data V3 a = V3 a a a deriving (Show, Functor, Foldable, Traversable)
+
+extractInfixParams :: Monad m => ThunkId -> EvalT pl m (V2 ThunkId)
+extractInfixParams = extractRecordParams (V2 Builtins.infixlTag Builtins.infixrTag)
 
 type BuiltinRunner m pl = ThunkId -> EvalT pl m (ValHead pl)
 
@@ -67,8 +67,9 @@ instance GuestType Bool where
 builtinIf :: Monad m => BuiltinRunner m pl
 builtinIf thunkId =
     do
-        [obj, then_, else_] <-
-            extractRecordParams [ Builtins.objTag, Builtins.thenTag, Builtins.elseTag ] thunkId
+        V3 obj then_ else_ <-
+            extractRecordParams
+            (V3 Builtins.objTag Builtins.thenTag Builtins.elseTag) thunkId
         condition <- Eval.whnfThunk obj
         ( if fromGuest condition
           then then_
@@ -85,7 +86,7 @@ builtinNegate thunkId =
 builtinOr :: Monad m => BuiltinRunner m pl
 builtinOr thunkId =
     do
-        (lThunk, rThunk) <- extractInfixParams thunkId
+        V2 lThunk rThunk <- extractInfixParams thunkId
         l <- Eval.whnfThunk lThunk
         if fromGuest l
             then return $ toGuest True
@@ -96,9 +97,9 @@ intInfixFunc ::
     (Integer -> Integer -> t) -> BuiltinRunner m pl
 intInfixFunc f thunkId =
     do
-        (x, y) <-
+        V2 x y <-
             extractInfixParams thunkId
-            >>= Lens.both (fmap fromGuest . Eval.whnfThunk)
+            >>= traverse (fmap fromGuest . Eval.whnfThunk)
         f x y & toGuest & return
 
 eval :: Monad m => Def.FFIName -> ThunkId -> EvalT pl m (ValHead pl)
