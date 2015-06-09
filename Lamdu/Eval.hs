@@ -3,7 +3,7 @@
 module Lamdu.Eval
     ( EvalT(..), evalError
     , EvalState, initialState
-    , EvalActions(..), Event(..), EventNewScope(..), EventResultComputed(..)
+    , EvalActions(..), Event(..), EventLambdaApplied(..), EventResultComputed(..)
     , ScopedVal(..)
     , whnfScopedVal, whnfThunk
     ) where
@@ -20,7 +20,7 @@ import           Data.Foldable (Foldable)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Traversable (Traversable)
-import           Lamdu.Data.Definition (FFIName)
+import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Eval.Val (ValHead, ValBody(..), ThunkId, Closure(..), Scope(..), ScopeId, emptyScope)
 import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
@@ -36,10 +36,11 @@ data ScopedVal pl = ScopedVal
     , _srcExpr :: Val pl
     } deriving (Show, Functor, Foldable, Traversable)
 
-data EventNewScope pl = EventNewScope
-    { ensLam :: pl
-    , ensParentId :: ScopeId
-    , ensId :: ScopeId
+data EventLambdaApplied pl = EventLambdaApplied
+    { elaLam :: pl
+    , elaParentId :: ScopeId
+    , elaId :: ScopeId
+    , elaArgument :: ThunkId
     } deriving (Show, Functor, Foldable, Traversable)
 
 data EventResultComputed pl = EventResultComputed
@@ -50,14 +51,14 @@ data EventResultComputed pl = EventResultComputed
     } deriving (Show, Functor, Foldable, Traversable)
 
 data Event pl
-    = ENewScope (EventNewScope pl)
+    = ELambdaApplied (EventLambdaApplied pl)
     | EResultComputed (EventResultComputed pl)
     deriving (Show, Functor, Foldable, Traversable)
 
 data EvalActions m pl = EvalActions
     { _aReportEvent :: Event pl -> m ()
-    , _aRunBuiltin :: FFIName -> ThunkId -> EvalT pl m (ValHead pl)
-    , _aLoadGlobal :: V.GlobalId -> m (Maybe (Either FFIName (Val pl)))
+    , _aRunBuiltin :: Def.FFIName -> ThunkId -> EvalT pl m (ValHead pl)
+    , _aLoadGlobal :: V.GlobalId -> m (Maybe (Def.Body (Val pl)))
     }
 
 data EvalState m pl = EvalState
@@ -101,11 +102,12 @@ bindVar lamPl var val (Scope parentMap parentId) =
     do
         newScopeId <- liftState $ use esScopeCounter
         liftState $ esScopeCounter += 1
-        EventNewScope
-            { ensLam = lamPl
-            , ensParentId = parentId
-            , ensId = newScopeId
-            } & ENewScope & report
+        EventLambdaApplied
+            { elaLam = lamPl
+            , elaParentId = parentId
+            , elaId = newScopeId
+            , elaArgument = val
+            } & ELambdaApplied & report
         Scope
             { _scopeId = newScopeId
             , _scopeMap = parentMap & at var .~ Just val
@@ -199,8 +201,10 @@ loadGlobal g =
                 result <-
                     case mLoadedGlobal of
                     Nothing -> evalError $ "Global not found " ++ show g
-                    Just (Left name) -> return $ HBuiltin name
-                    Just (Right expr) -> whnfScopedVal $ ScopedVal emptyScope expr
+                    Just (Def.BodyBuiltin (Def.Builtin name _t)) ->
+                        return $ HBuiltin name
+                    Just (Def.BodyExpr (Def.Expr expr _t)) ->
+                        whnfScopedVal $ ScopedVal emptyScope expr
                 liftState $ esLoadedGlobals . at g .= Just result
                 return result
 

@@ -399,8 +399,8 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults editableHoleInfo =
         -- ExpressionGui.stdWrap, because we want to synchronize the
         -- active BG width with the inferred type width
         typeView <-
-            ExpressionGui.makeTypeView (resultsWidget ^. Widget.width)
-            (hiEntityId holeInfo) (hiInferredType holeInfo)
+            ExpressionGui.makeTypeView (hiEntityId holeInfo)
+            (hiInferredType holeInfo) (resultsWidget ^. Widget.width)
 
         vspace <- ExpressionGui.annotationSpacer
         hoverResultsWidget <-

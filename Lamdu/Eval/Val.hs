@@ -35,7 +35,14 @@ data ValBody val pl
     | HRecEmpty
     | HInteger Integer
     | HBuiltin FFIName
-    deriving (Show, Functor, Foldable, Traversable)
+    deriving (Functor, Foldable, Traversable)
+
+instance (Show pl, Show val) => Show (ValBody val pl) where
+    show (HFunc closure) = show closure
+    show (HRecExtend recExtend) = show recExtend
+    show HRecEmpty = "{}"
+    show (HInteger x) = show x
+    show (HBuiltin ffiName) = show ffiName
 
 Lens.makePrisms ''ValBody
 

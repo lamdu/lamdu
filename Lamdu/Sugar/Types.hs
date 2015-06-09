@@ -27,6 +27,7 @@ module Lamdu.Sugar.Types
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyLiteralInteger, _BodyList, _BodyRecord
+  , EvaluationResult
   , Annotation(..), aInferredType, aMEvaluationResult
   , Payload(..), plEntityId, plAnnotation, plActions, plData
   , Expression(..), rBody, rPayload

@@ -150,7 +150,8 @@ Executable lamdu
                      , transformers
                      , utf8-string
                      , void >= 0.6.1
-  Other-Modules:       Lamdu.Builtins.Anchors
+  Other-Modules:       Lamdu.Builtins
+               ,       Lamdu.Builtins.Anchors
                ,       Lamdu.CharClassification
                ,       Lamdu.Config
                ,       Lamdu.Data.Anchors
@@ -159,7 +160,9 @@ Executable lamdu
                ,       Lamdu.Data.Definition
                ,       Lamdu.Data.ExampleDB
                ,       Lamdu.Data.Ops
-               ,       Lamdu.Eval
+               ,       Lamdu.Eval.Background
+               ,       Lamdu.Eval.Results
+               ,       Lamdu.Eval.ToExpr
                ,       Lamdu.Eval.Val
                ,       Lamdu.Expr.Constraints
                ,       Lamdu.Expr.FlatComposite

@@ -2,12 +2,14 @@
 module Main (main) where
 
 import           Control.Applicative ((<$>), (<*))
+import           Control.Applicative (Applicative(..))
 import           Control.Concurrent (threadDelay, forkIO, ThreadId)
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import           Control.Lens (Lens')
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (unless, forever, replicateM_)
+import           Control.Monad (join, unless, forever, replicateM_)
 import           Control.Monad.Trans.State (execStateT)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
@@ -20,6 +22,7 @@ import           Data.Store.Db (Db)
 import qualified Data.Store.Db as Db
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
+import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Vector.Vector2 (Vector2(..))
@@ -40,10 +43,18 @@ import           Graphics.UI.Bottle.WidgetsEnvT (runWidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
+import qualified Lamdu.Builtins as Builtins
+import qualified Lamdu.Builtins.Anchors as BuiltinAnchors
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.DbLayout as DbLayout
+import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.ExampleDB as ExampleDB
+import qualified Lamdu.Eval.Background as EvalBG
+import           Lamdu.Eval.Results (EvalResults(..))
+import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Load as Load
+import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
@@ -178,13 +189,14 @@ runEditor lamduDir mFontPath = do
 
 mainLoopDebugMode ::
   GLFW.Window ->
+  IO Bool ->
   IO (Version, Config) ->
   ( Config -> Widget.Size ->
     ( IO (Widget IO)
     , Widget IO -> IO (Widget IO)
     )
   ) -> IO ()
-mainLoopDebugMode win getConfig iteration = do
+mainLoopDebugMode win shouldRefresh getConfig iteration = do
   debugModeRef <- newIORef False
   lastVersionNumRef <- newIORef 0
   let
@@ -213,18 +225,24 @@ mainLoopDebugMode win getConfig iteration = do
       addHelp =<< addDebugMode config =<< makeWidget
     tickHandler = do
       (curVersionNum, _) <- getConfig
-      atomicModifyIORef lastVersionNumRef $ \lastVersionNum ->
+      configChanged <- atomicModifyIORef lastVersionNumRef $ \lastVersionNum ->
         (curVersionNum, lastVersionNum /= curVersionNum)
+      if configChanged
+        then return True
+        else shouldRefresh
   mainLoopWidget win tickHandler makeDebugModeWidget getAnimHalfLife
 
-cacheMakeWidget :: Eq a => (a -> IO (Widget IO)) -> IO (a -> IO (Widget IO))
+cacheMakeWidget :: Eq a => (a -> IO (Widget IO)) -> IO (IO (), a -> IO (Widget IO))
 cacheMakeWidget mkWidget = do
   widgetCacheRef <- newIORef =<< memoIO mkWidget
   let invalidateCache = writeIORef widgetCacheRef =<< memoIO mkWidget
-  return $ \x -> do
-    mkWidgetCached <- readIORef widgetCacheRef
-    mkWidgetCached x
+  return
+    ( invalidateCache
+    , \x ->
+      readIORef widgetCacheRef
+      >>= ($ x)
       <&> Widget.events %~ (<* invalidateCache)
+    )
 
 flyNavConfig :: FlyNav.Config
 flyNavConfig = FlyNav.Config
@@ -290,6 +308,43 @@ baseStyle config font = TextEdit.Style
   , TextEdit._sEmptyFocusedString = ""
   }
 
+runViewTransactionInIO :: Db -> Transaction DbLayout.ViewM a -> IO a
+runViewTransactionInIO db =
+    DbLayout.runDbTransaction db .
+    VersionControl.runAction
+
+type ValIRef = ExprIRef.ValI DbLayout.ViewM
+
+evalActions :: IO () -> Db -> EvalBG.Actions ValIRef
+evalActions invalidateCache db = EvalBG.Actions
+  { _aLoadGlobal = runViewTransactionInIO db . loadDef
+  , _aRunBuiltin = Builtins.eval
+  , _aReportUpdatesAvailable = invalidateCache
+  }
+  where
+    loadDef globalId =
+      Load.loadDef (ExprIRef.defI globalId)
+      <&> asDef globalId
+    asDef globalId x =
+      x ^. Def.defBody
+      <&> Lens.mapped %~ Property.value
+      <&> replaceRecursiveReferences globalId
+      & Just
+    replaceRecursiveReferences globalId (V.Val pl (V.BLeaf (V.LVar v)))
+      | v == BuiltinAnchors.recurseVar = V.Val pl (V.BLeaf (V.LGlobal globalId))
+    replaceRecursiveReferences globalId val =
+      val & V.body . Lens.traversed %~ replaceRecursiveReferences globalId
+
+startEval :: IO () -> Db -> IO [EvalBG.Evaluator ValIRef]
+startEval invalidateCache db =
+  DbLayout.panes DbLayout.codeIRefs
+  & Transaction.readIRef
+  >>= mapM Load.loadDef
+  <&> (^.. Lens.traversed . Def.defBody . Def._BodyExpr . Def.expr)
+  <&> Lens.mapped . Lens.mapped %~ Property.value
+  & runViewTransactionInIO db
+  >>= mapM (EvalBG.start (evalActions invalidateCache db))
+
 runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO ()
 runDb win getConfig font db = do
   (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor win
@@ -298,27 +353,65 @@ runDb win getConfig font db = do
     { _sInfoMode = Settings.defaultInfoMode
     }
   wrapFlyNav <- makeFlyNav
+  evaluatorsRef <- newIORef []
+  invalidateCacheRef <- newIORef (return ())
+  let invalidateCache = join (readIORef invalidateCacheRef)
+  let startEvaluator = startEval invalidateCache db >>= writeIORef evaluatorsRef
+  let dbToIO transaction =
+        do
+          evaluators <- readIORef evaluatorsRef
+          mapM_ EvalBG.pauseLoading evaluators
+          (oldVersion, result, newVersion) <-
+            (,,)
+              <$> VersionControl.getVersion
+              <*> transaction
+              <*> VersionControl.getVersion
+            & DbLayout.runDbTransaction db
+          if oldVersion == newVersion
+            then mapM_ EvalBG.resumeLoading evaluators
+            else do
+              mapM_ EvalBG.stop evaluators
+              startEvaluator
+          return result
   let
     makeWidget (config, size) = do
-      cursor <- dbToIO . Transaction.getP $ DbLayout.cursor DbLayout.revisionProps
+      cursor <-
+        DbLayout.cursor DbLayout.revisionProps
+        & Transaction.getP
+        & DbLayout.runDbTransaction db
       sizeFactor <- readIORef sizeFactorRef
       globalEventMap <- mkGlobalEventMap config settingsRef
       let eventMap = globalEventMap `mappend` sizeFactorEvents (Config.zoom config)
+      evalResults <-
+          readIORef evaluatorsRef
+          >>= mapM EvalBG.get
+          <&> map EvalBG.results
+          <&> mconcat
       widget <-
-        mkWidgetWithFallback config settingsRef (baseStyle config font) dbToIO
+        mkWidgetWithFallback evalResults config settingsRef (baseStyle config font) dbToIO
         (size / sizeFactor, cursor)
       return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
-  makeWidgetCached <- cacheMakeWidget makeWidget
-  mainLoopDebugMode win getConfig $ \config size ->
+  (invalidateCacheAction, makeWidgetCached) <- cacheMakeWidget makeWidget
+  refreshRef <- newIORef False
+  let shouldRefresh = atomicModifyIORef refreshRef $ \r -> (False, r)
+  writeIORef invalidateCacheRef $
+    do
+      invalidateCacheAction
+      writeIORef refreshRef True
+  startEvaluator
+
+  mainLoopDebugMode win shouldRefresh getConfig $ \config size ->
     ( wrapFlyNav =<< makeWidgetCached (config, size)
     , addHelpWithStyle (helpConfig font (Config.help config)) size
     )
-  where
-    dbToIO = DbLayout.runDbTransaction db
+
+cyclicSucc :: (Eq a, Enum a, Bounded a) => a -> a
+cyclicSucc x
+  | x == maxBound = minBound
+  | otherwise = succ x
 
 nextInfoMode :: Settings.InfoMode -> Settings.InfoMode
-nextInfoMode Settings.None = Settings.Types
-nextInfoMode Settings.Types = Settings.None
+nextInfoMode = cyclicSucc
 
 mkGlobalEventMap :: Config -> IORef Settings -> IO (Widget.EventHandlers IO)
 mkGlobalEventMap config settingsRef = do
@@ -332,12 +425,12 @@ mkGlobalEventMap config settingsRef = do
     modifyIORef settingsRef $ Settings.sInfoMode .~ next
 
 mkWidgetWithFallback ::
-  Config -> IORef Settings ->
-  TextEdit.Style ->
+  EvalResults (ExprIRef.ValI DbLayout.ViewM) ->
+  Config -> IORef Settings -> TextEdit.Style ->
   (forall a. Transaction DbLayout.DbM a -> IO a) ->
   (Widget.Size, Widget.Id) ->
   IO (Widget IO)
-mkWidgetWithFallback config settingsRef style dbToIO (size, cursor) = do
+mkWidgetWithFallback evalMap config settingsRef style dbToIO (size, cursor) = do
   settings <- readIORef settingsRef
   (isValid, widget) <-
     dbToIO $ do
@@ -360,18 +453,19 @@ mkWidgetWithFallback config settingsRef style dbToIO (size, cursor) = do
   where
     bgColor False = Config.invalidCursorBGColor
     bgColor True = Config.backgroundColor
-    fromCursor settings = makeRootWidget config settings style dbToIO size
+    fromCursor settings = makeRootWidget evalMap config settings style dbToIO size
     rootCursor = WidgetIds.fromGuid rootGuid
 
 rootGuid :: Guid
 rootGuid = IRef.guid $ DbLayout.panes DbLayout.codeIRefs
 
 makeRootWidget ::
+  EvalResults (ExprIRef.ValI DbLayout.ViewM) ->
   Config -> Settings -> TextEdit.Style ->
   (forall a. Transaction DbLayout.DbM a -> IO a) ->
   Widget.Size -> Widget.Id ->
   Transaction DbLayout.DbM (Widget IO)
-makeRootWidget config settings style dbToIO fullSize cursor = do
+makeRootWidget evalMap config settings style dbToIO fullSize cursor = do
   actions <- VersionControl.makeActions
   let
     widgetEnv = WE.Env
@@ -413,6 +507,7 @@ makeRootWidget config settings style dbToIO fullSize cursor = do
   where
     env size = CodeEdit.Env
       { CodeEdit.codeProps = DbLayout.codeProps
+      , CodeEdit.evalMap = evalMap
       , CodeEdit.totalSize = size
       , CodeEdit.config = config
       , CodeEdit.settings = settings

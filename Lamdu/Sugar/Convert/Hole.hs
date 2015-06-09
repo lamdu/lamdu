@@ -246,7 +246,8 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
     intoStorePoint (inferred, (mStorePoint, a)) =
       (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
     toPayload (stored, (inferred, wasStored, a)) =
-      (,) wasStored $ (,) stored $ Input.mkPayload a (inferred, stored)
+      -- TODO: Evaluate hole results instead of Map.empty?
+      (,) wasStored $ (,) stored $ Input.mkPayload a inferred Map.empty Map.empty stored
 
 resultTypeScore :: Type -> [Int]
 resultTypeScore (T.TVar _) = [0]

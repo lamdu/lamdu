@@ -35,7 +35,9 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
+import           Lamdu.Eval.Results (EvalResults(..))
 import           Lamdu.Expr.IRef (DefI)
+import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Load (loadDef)
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
@@ -58,6 +60,7 @@ data Pane m = Pane
 
 data Env m = Env
   { codeProps :: Anchors.CodeProps m
+  , evalMap :: EvalResults (ExprIRef.ValI m)
   , totalSize :: Widget.Size
   , config :: Config
   , settings :: Settings
@@ -116,7 +119,7 @@ processDefI ::
   MonadA m => Env m -> DefI m -> T m (DefinitionN m [Sugar.EntityId])
 processDefI env defI =
   loadDef defI
-  >>= SugarConvert.convertDefI (codeProps env)
+  >>= SugarConvert.convertDefI (evalMap env) (codeProps env)
   >>= OrderTags.orderDef
   >>= AddNames.addToDef
 

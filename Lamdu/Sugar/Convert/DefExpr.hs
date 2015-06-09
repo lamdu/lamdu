@@ -8,6 +8,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad.Trans.Maybe (runMaybeT)
 import           Control.MonadA (MonadA)
+import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Monoid(..))
 import           Data.Store.Guid (Guid)
@@ -18,6 +19,7 @@ import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Builtins.Anchors (recurseVar)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
+import           Lamdu.Eval.Results (EvalResults(..))
 import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
@@ -61,7 +63,12 @@ mkContext defI cp inferContext = do
               <&> fmap (flip (,) ())
               <&> ExprIRef.addProperties undefined
               <&> fmap fst
-              >>= loadInfer
+              >>= -- TODO: loadInfer is for sugar, we don't need sugar here
+                  loadInfer
+                  EvalResults
+                  { erExprValues = Map.empty
+                  , erLambdaParams = Map.empty
+                  }
               <&> Lens.has Lens._Just
     , scConvertSubexpression = ConvertExpr.convert
     }
@@ -80,22 +87,29 @@ makeExprDefTypeInfo defValI defI defType inferredType =
       Definition.Expr defValI $ Definition.ExportedType inferredType
     }
 
-loadInfer :: MonadA m =>
-  Val (ExprIRef.ValIProperty m) ->
+loadInfer ::
+  MonadA m => EvalResults (ExprIRef.ValI m) -> Val (ExprIRef.ValIProperty m) ->
   T m (Maybe (Val (Input.Payload m ()), Infer.Context))
-loadInfer val =
+loadInfer evalResults val =
   IRefInfer.loadInfer recurseVar val
-  <&> _1 . Lens.mapped %~ Input.mkPayload ()
+  <&> _1 . Lens.mapped %~ mkPayload
   >>= ParamList.loadForLambdas
   & runMaybeT
+  where
+    mkPayload (inferPl, valIProp) =
+      Input.mkPayload () inferPl
+      (erExprValues evalResults ^. Lens.at (Property.value valIProp) . Lens._Just)
+      (erLambdaParams evalResults ^. Lens.at (Property.value valIProp) . Lens._Just)
+      valIProp
 
 convert ::
-  MonadA m => Anchors.CodeProps m ->
+  MonadA m => EvalResults (ExprIRef.ValI m) -> Anchors.CodeProps m ->
   Definition.Expr (Val (ExprIRef.ValIProperty m)) ->
   DefI m -> T m (DefinitionBody Guid m (ExpressionU m [EntityId]))
-convert cp (Definition.Expr val defType) defI = do
+convert evalMap cp (Definition.Expr val defType) defI = do
   (valInferred, newInferContext) <-
-    loadInfer val <&> fromMaybe (error "Type inference failed")
+    loadInfer evalMap val
+    <&> fromMaybe (error "Type inference failed")
   context <- mkContext defI cp newInferContext
   ConvertM.run context $ do
     content <-

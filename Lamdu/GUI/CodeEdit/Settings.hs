@@ -5,8 +5,8 @@ module Lamdu.GUI.CodeEdit.Settings
 
 import qualified Control.Lens as Lens
 
-data InfoMode = None | Types
-  deriving (Show)
+data InfoMode = None | Types | Evaluation
+  deriving (Eq, Ord, Show, Enum, Bounded)
 
 defaultInfoMode :: InfoMode
 defaultInfoMode = None

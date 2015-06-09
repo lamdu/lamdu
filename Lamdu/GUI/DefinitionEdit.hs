@@ -65,7 +65,7 @@ topLevelSchemeTypeView :: MonadA m => Widget.R -> Sugar.EntityId -> Scheme -> Ex
 topLevelSchemeTypeView minWidth entityId scheme =
   -- At the definition-level, Schemes can be shown as ordinary
   -- types to avoid confusing forall's:
-  ExpressionGui.makeTypeView minWidth entityId (scheme ^. schemeType)
+  ExpressionGui.makeTypeView entityId (scheme ^. schemeType) minWidth
 
 makeBuiltinDefinition ::
   MonadA m =>

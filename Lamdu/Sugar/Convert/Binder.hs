@@ -37,7 +37,7 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -410,7 +410,11 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
         , _fpAnnotation =
           Annotation
           { _aInferredType = paramType
-          , _aMEvaluationResult = Nothing
+          , _aMEvaluationResult =
+            lamExprPl ^. Input.evalLamArgs
+            & Map.minView
+            <&> fst
+            <&> show
           }
         , _fpMActions = fst <$> mActions
         , _fpHiddenIds = []
@@ -543,11 +547,7 @@ mExtractWhere expr = do
     , ewiParam = param
     , ewiArg = arg
     , ewiHiddenPayloads = (^. V.payload) <$> [expr, func]
-    , ewiAnnotation =
-      Annotation
-      { _aInferredType = arg ^. V.payload . Input.inferred . Infer.plType
-      , _aMEvaluationResult = Nothing
-      }
+    , ewiAnnotation = makeAnnotation (arg ^. V.payload)
     }
 
 getParamsToHole :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()

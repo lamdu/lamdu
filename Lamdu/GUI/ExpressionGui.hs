@@ -156,15 +156,31 @@ addAnnotationBackground config animId minWidth annotationView =
     bgLayer = Config.layerAnnotations $ Config.layers config
     bgColor = Config.typeBoxBGColor config
 
-makeTypeView :: MonadA m => Widget.R -> Sugar.EntityId -> Type -> ExprGuiM m (Widget f)
-makeTypeView minWidth entityId typ =
+makeWithAnnotationBG ::
+  MonadA m => Widget.R -> Sugar.EntityId ->
+  (AnimId -> ExprGuiM m View) -> ExprGuiM m (Widget f)
+makeWithAnnotationBG minWidth entityId f =
   do
     config <- ExprGuiM.readConfig
-    TypeView.make animId typ
+    f animId
       <&> addAnnotationBackground config animId minWidth
       <&> Widget.fromView
   where
     animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
+
+makeEvaluationResultView :: MonadA m => String -> AnimId -> ExprGuiM m View
+makeEvaluationResultView evalRes animId =
+  ExprGuiM.widgetEnv $ BWidgets.makeTextView evalRes animId
+
+makeTypeView ::
+    MonadA m => Sugar.EntityId -> Type -> Widget.R -> ExprGuiM m (Widget f)
+makeTypeView entityId typ minWidth =
+  makeWithAnnotationBG minWidth entityId (`TypeView.make` typ)
+
+makeEvalView ::
+    MonadA m => Sugar.EntityId -> Sugar.EvaluationResult -> Widget.R -> ExprGuiM m (Widget f)
+makeEvalView entityId evalRes minWidth =
+  makeWithAnnotationBG minWidth entityId (makeEvaluationResultView evalRes)
 
 annotationSpacer :: MonadA m => ExprGuiM m (Widget f)
 annotationSpacer =
@@ -176,19 +192,26 @@ annotationSpacer =
       & Widget.fromView
       & return
 
-addBelowAnnotationSpacing ::
-  MonadA m => Widget (T m) ->
+addAnnotation ::
+  MonadA m =>
+  (Widget.R -> ExprGuiM m (Widget (T m))) ->
   ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addBelowAnnotationSpacing widget eg =
+addAnnotation f eg =
   do
     vspace <- annotationSpacer
-    addBelow 0.5 [(0, vspace), (0.5, widget)] eg & return
+    widget <- f (eg ^. egWidget . wWidth)
+    addBelow 0.5 [(0, vspace), (0.5, widget)] eg
+      & return
 
-addInferredType :: MonadA m => Sugar.EntityId -> Type -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addInferredType entityId inferredType eg =
-  do
-    typeView <- makeTypeView (eg ^. egWidget . wWidth) entityId inferredType
-    addBelowAnnotationSpacing typeView eg
+addInferredType ::
+  MonadA m => Sugar.EntityId -> Type ->
+  ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+addInferredType entityId = addAnnotation . makeTypeView entityId
+
+addEvaluationResult ::
+  MonadA m => Sugar.EntityId -> Sugar.EvaluationResult ->
+  ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+addEvaluationResult entityId = addAnnotation . makeEvalView entityId
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
@@ -401,8 +424,14 @@ maybeAddAnnotation showType annotation entityId eg =
     infoMode <- ExprGuiM.getInfoMode showType
     eg
       & case infoMode of
-        CESettings.Types -> addInferredType entityId (annotation ^. Sugar.aInferredType)
         CESettings.None -> return
+        CESettings.Types -> addType
+        CESettings.Evaluation ->
+            case annotation ^. Sugar.aMEvaluationResult of
+            Just evaluationResult -> addEvaluationResult entityId evaluationResult
+            Nothing -> addType
+  where
+    addType = addInferredType entityId (annotation ^. Sugar.aInferredType)
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests before after dest list =

@@ -1,31 +1,34 @@
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
-module Lamdu.Data.ExampleDB(initDB, createBuiltins) where
+module Lamdu.Data.ExampleDB
+    ( initDB, createBuiltins
+    ) where
 
-import Control.Monad (unless, void)
-import Control.Monad.Trans.Class (lift)
-import Control.MonadA (MonadA)
-import Data.Foldable (traverse_)
-import Data.List.Split (splitOn)
-import Data.Monoid (Monoid(..))
-import Data.Store.Db (Db)
-import Data.Store.Rev.Branch (Branch)
-import Data.Store.Rev.Version (Version)
-import Data.Store.Transaction (Transaction, setP)
-import Data.String (IsString(..))
-import Lamdu.Data.Anchors (PresentationMode(..))
-import Lamdu.Expr.Scheme (Scheme(..))
-import Lamdu.Expr.Type (Type, (~>))
+import           Control.Monad (unless, void)
+import           Control.Monad.Trans.Class (lift)
 import qualified Control.Monad.Trans.Writer as Writer
+import           Control.MonadA (MonadA)
+import           Data.Foldable (traverse_)
+import           Data.List.Split (splitOn)
 import qualified Data.Map as Map
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Db (Db)
+import           Data.Store.Rev.Branch (Branch)
 import qualified Data.Store.Rev.Branch as Branch
+import           Data.Store.Rev.Version (Version)
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
+import           Data.Store.Transaction (Transaction, setP)
 import qualified Data.Store.Transaction as Transaction
+import           Data.String (IsString(..))
+import qualified Lamdu.Builtins.Anchors as Builtins
+import           Lamdu.Data.Anchors (PresentationMode(..))
 import qualified Lamdu.Data.DbLayout as Db
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.Scheme (Scheme(..))
 import qualified Lamdu.Expr.Scheme as Scheme
+import           Lamdu.Expr.Type (Type, (~>))
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.TypeVars as TypeVars
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -33,11 +36,14 @@ import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 
 type T = Transaction
 
+setName :: (MonadA m, UniqueId.ToGuid a) => a -> String -> T m ()
+setName x = setP . Db.assocNameRef $ x
+
 namedId ::
   forall a m. (MonadA m, IsString a, UniqueId.ToGuid a) => String -> T m a
 namedId name =
   do
-    setP (Db.assocNameRef tag) name
+    setName tag name
     return tag
   where
     tag :: a
@@ -57,10 +63,24 @@ forAll count f =
 recordType :: [(T.Tag, Type)] -> Type
 recordType = T.TRecord . foldr (uncurry T.CExtend) T.CEmpty
 
+anchorNames :: [(T.Tag, String)]
+anchorNames =
+    [ (Builtins.objTag, "object")
+    , (Builtins.thenTag, "then")
+    , (Builtins.elseTag, "else")
+    , (Builtins.infixlTag, "infixl")
+    , (Builtins.infixrTag, "infixr")
+    ]
+
+nameTheAnchors :: MonadA m => T m ()
+nameTheAnchors = mapM_ (uncurry setName) anchorNames
+
 createBuiltins ::
   MonadA m => T m (Db.SpecialFunctions m, [ExprIRef.DefI m])
 createBuiltins =
   Writer.runWriterT $ do
+    lift nameTheAnchors
+
     let newIdent x = lift $ namedId x
 
     valTParamId <- newIdent "val"
@@ -86,13 +106,11 @@ createBuiltins =
     publicBuiltin_ "Prelude.Just" $ forAll 1 $ \[a] -> a ~> maybe_ a
     publicBuiltin_ "Prelude.Nothing" $ forAll 1 $ \[a] -> maybe_ a
 
-    objTag <- newIdent "object" -- OO hides this
-
     nothingTag <- newIdent "Nothing"
     justTag <- newIdent "Just"
     publicBuiltin_ "Data.Maybe.caseMaybe" . forAll 2 $ \[a, b] ->
       recordType
-      [ ( objTag, maybe_ a )
+      [ ( Builtins.objTag, maybe_ a )
       , ( nothingTag, b )
       , ( justTag, a ~> b )
       ] ~> b
@@ -108,22 +126,20 @@ createBuiltins =
 
     publicBuiltin_ "Prelude.not" $ Scheme.mono $ bool ~> bool
 
-    infixlTag <- newIdent "infixl"
-    infixrTag <- newIdent "infixr"
     let
       infixType lType rType resType =
-        recordType [(infixlTag, lType), (infixrTag, rType)] ~> resType
+        recordType [ (Builtins.infixlTag, lType)
+                   , (Builtins.infixrTag, rType)
+                   ] ~> resType
 
     traverse_ ((`publicBuiltin_` Scheme.mono (infixType bool bool bool)) . ("Prelude."++))
       ["&&", "||"]
 
-    thenTag <- newIdent "then"
-    elseTag <- newIdent "else"
     publicBuiltin_ "Prelude.if" . forAll 1 $ \[a] ->
       recordType
-      [ (objTag, bool)
-      , (thenTag, a)
-      , (elseTag, a)
+      [ (Builtins.objTag, bool)
+      , (Builtins.thenTag, a)
+      , (Builtins.elseTag, a)
       ] ~> a
 
     publicBuiltin_ "Prelude.id" $ forAll 1 $ \[a] -> a ~> a
@@ -185,7 +201,7 @@ createBuiltins =
     publicBuiltin_ "Data.List.map" .
       forAll 2 $ \[a, b] ->
       recordType
-      [ (objTag, list a)
+      [ (Builtins.objTag, list a)
       , (mappingTag, a ~> b)
       ] ~> list b
 
@@ -193,7 +209,7 @@ createBuiltins =
 
     publicBuiltin_ "Data.List.replicate" . forAll 1 $ \[a] ->
       recordType
-      [ (objTag, a)
+      [ (Builtins.objTag, a)
       , (countTag, integer)
       ] ~> list a
 
@@ -203,7 +219,7 @@ createBuiltins =
     itemTag        <- newIdent "item"
     publicBuiltin_ "Data.List.foldl" . forAll 2 $ \[a, b] ->
       recordType
-      [ ( objTag, list b )
+      [ ( Builtins.objTag, list b )
       , ( initialTag, a )
       , ( stepTag
         , recordType
@@ -217,7 +233,7 @@ createBuiltins =
     listItemTag <- newIdent "listitem"
     publicBuiltin_ "Data.List.foldr" . forAll 2 $ \[a, b] ->
       recordType
-      [ ( objTag, list a )
+      [ ( Builtins.objTag, list a )
       , ( emptyTag, b )
       , ( listItemTag
         , recordType
@@ -229,7 +245,7 @@ createBuiltins =
 
     publicBuiltin_ "Data.List.caseList" . forAll 2 $ \[a, b] ->
       recordType
-      [ ( objTag, list a )
+      [ ( Builtins.objTag, list a )
       , ( emptyTag, b )
       , ( listItemTag
         , recordType
@@ -302,7 +318,7 @@ createBuiltins =
 newBranch :: MonadA m => String -> Version m -> T m (Branch m)
 newBranch name ver = do
   branch <- Branch.new ver
-  setP (Db.assocNameRef (Branch.guid branch)) name
+  setName (Branch.guid branch) name
   return branch
 
 initDB :: Db -> IO ()

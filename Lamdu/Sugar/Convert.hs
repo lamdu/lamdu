@@ -3,20 +3,21 @@ module Lamdu.Sugar.Convert
   ( convertDefI
   ) where
 
-import Control.MonadA (MonadA)
-import Data.Store.Guid (Guid)
-import Data.Store.Transaction (Transaction)
-import Lamdu.Expr.IRef (DefI)
-import Lamdu.Expr.Val (Val(..))
-import Lamdu.Sugar.Internal
-import Lamdu.Sugar.Types
+import           Control.MonadA (MonadA)
+import           Data.Store.Guid (Guid)
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
+import           Lamdu.Eval.Results (EvalResults)
+import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
+import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.Types
 
 convertDefIBuiltin ::
   MonadA m => Definition.Builtin -> DefI m ->
@@ -33,11 +34,10 @@ convertDefIBuiltin (Definition.Builtin name scheme) defI =
       Definition.BodyBuiltin . (`Definition.Builtin` scheme)
 
 convertDefI ::
-  MonadA m =>
-  Anchors.CodeProps m ->
+  MonadA m => EvalResults (ExprIRef.ValI m) -> Anchors.CodeProps m ->
   Definition.Definition (Val (ExprIRef.ValIProperty m)) (DefI m) ->
   Transaction m (DefinitionU m [EntityId])
-convertDefI cp (Definition.Definition body defI) = do
+convertDefI evalMap cp (Definition.Definition body defI) = do
   bodyS <- convertDefBody body
   return Definition
     { _drEntityId = EntityId.ofIRef defI
@@ -48,4 +48,4 @@ convertDefI cp (Definition.Definition body defI) = do
     convertDefBody (Definition.BodyBuiltin builtin) =
       return $ convertDefIBuiltin builtin defI
     convertDefBody (Definition.BodyExpr expr) =
-      ConvertDefExpr.convert cp expr defI
+      ConvertDefExpr.convert evalMap cp expr defI

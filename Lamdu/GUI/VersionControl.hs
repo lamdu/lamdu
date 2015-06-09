@@ -88,16 +88,17 @@ make ::
   Actions n m ->
   (Widget m -> WidgetEnvT m (Widget m)) ->
   WidgetEnvT m (Widget m)
-make VersionControl.Config{..} choiceBGLayer transaction actions mkWidget = do
-    branchNameEdits <- traverse makeBranchNameEdit $ branches actions
-    branchSelector <-
-        BWidgets.makeChoiceWidget (setCurrentBranch actions)
-        branchNameEdits (currentBranch actions)
-        (choiceWidgetConfig VersionControl.Config{..} choiceBGLayer)
-        WidgetIds.branchSelection
-    mkWidget branchSelector
-        <&> Widget.strongerEvents
-            (globalEventMap VersionControl.Config{..} actions)
+make VersionControl.Config{..} choiceBGLayer transaction actions mkWidget =
+    do
+        branchNameEdits <- traverse makeBranchNameEdit $ branches actions
+        branchSelector <-
+            BWidgets.makeChoiceWidget (setCurrentBranch actions)
+            branchNameEdits (currentBranch actions)
+            (choiceWidgetConfig VersionControl.Config{..} choiceBGLayer)
+            WidgetIds.branchSelection
+        mkWidget branchSelector
+            <&> Widget.strongerEvents
+                (globalEventMap VersionControl.Config{..} actions)
     where
         makeBranchNameEdit branch = do
             nameProp <-

@@ -1,0 +1,181 @@
+{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
+module Lamdu.Eval.Background
+    ( Evaluator
+    , Actions(..)
+    , start, stop
+    , pauseLoading, resumeLoading
+    , State(..), results
+    , get
+    ) where
+
+import           Control.Concurrent (ThreadId, forkIO, killThread)
+import           Control.Concurrent.MVar
+import qualified Control.Exception as E
+import           Control.Lens (Lens')
+import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad.Trans.Either (runEitherT)
+import           Control.Monad.Trans.State (evalStateT)
+import qualified Data.ByteString.Char8 as BS8
+import           Data.IORef
+import           Data.Map (Map)
+import qualified Data.Map as Map
+import           Data.Monoid ((<>))
+import qualified Lamdu.Data.Definition as Def
+import           Lamdu.Eval (EvalT)
+import qualified Lamdu.Eval as Eval
+import           Lamdu.Eval.Results (EvalResults(..))
+import qualified Lamdu.Eval.Results as Results
+import           Lamdu.Eval.Val (ValHead, ThunkId, ScopeId)
+import qualified Lamdu.Eval.Val as EvalVal
+import           Lamdu.Expr.Val (Val)
+import qualified Lamdu.Expr.Val as V
+import           System.IO (stderr)
+
+-- import           Control.Monad
+-- import           Debug.Trace
+
+data Actions pl = Actions
+    { _aLoadGlobal :: V.GlobalId -> IO (Maybe (Def.Body (Val pl)))
+    , _aRunBuiltin :: Def.FFIName -> ThunkId -> EvalT pl IO (ValHead pl)
+    , _aReportUpdatesAvailable :: IO ()
+    }
+
+aLoadGlobal :: Lens' (Actions pl) (V.GlobalId -> IO (Maybe (Def.Body (Val pl))))
+aLoadGlobal f Actions{..} = f _aLoadGlobal <&> \_aLoadGlobal -> Actions{..}
+
+data Evaluator pl = Evaluator
+    { eStateRef :: IORef (State pl)
+    , eThreadId :: ThreadId
+    , eLoadResumed :: MVar () -- taken when paused
+    }
+
+data Status
+    = Running
+    | Stoppped
+    | Finished
+
+data State pl = State
+    { _sStatus :: Status
+    , _sAppliesOfLam :: Map pl (Map ScopeId [(ScopeId, ThunkId)])
+      -- Maps of already-evaluated pl's/thunks
+    , _sValHeadMap :: Map pl (Map ScopeId (ValHead pl))
+    , _sThunkMap :: Map ThunkId (ValHead pl)
+    }
+
+sAppliesOfLam :: Lens' (State pl) (Map pl (Map ScopeId [(ScopeId, ThunkId)]))
+sAppliesOfLam f State{..} = f _sAppliesOfLam <&> \_sAppliesOfLam -> State{..}
+
+sStatus :: Lens' (State pl) Status
+sStatus f State{..} = f _sStatus <&> \_sStatus -> State{..}
+
+sValHeadMap :: Lens' (State pl) (Map pl (Map ScopeId (ValHead pl)))
+sValHeadMap f State{..} = f _sValHeadMap <&> \_sValHeadMap -> State{..}
+
+sThunkMap :: Lens' (State pl) (Map ThunkId (ValHead pl))
+sThunkMap f State{..} = f _sThunkMap <&> \_sThunkMap -> State{..}
+
+initialState :: State pl
+initialState = State
+    { _sStatus = Running
+    , _sAppliesOfLam = Map.empty
+    , _sValHeadMap = Map.empty
+    , _sThunkMap = Map.empty
+    }
+
+writeStatus :: IORef (State pl) -> Status -> IO ()
+writeStatus stateRef newStatus =
+    atomicModifyIORef' stateRef $ \x -> (x & sStatus .~ newStatus, ())
+
+setJust :: a -> Maybe a -> Maybe a
+setJust x Nothing = Just x
+setJust _ (Just _) = error "Conflicting values in setJust"
+
+processEvent :: Ord pl => Eval.Event pl -> State pl -> State pl
+processEvent (Eval.ELambdaApplied Eval.EventLambdaApplied{..}) state =
+    state & sAppliesOfLam . Lens.at elaLam <>~ Just (Map.singleton elaParentId [(elaId, elaArgument)])
+processEvent (Eval.EResultComputed Eval.EventResultComputed{..}) state =
+    state
+    & sValHeadMap . Lens.at ercSource <>~ Just (Map.singleton ercScope ercResult)
+    & case ercMThunkId of
+        Nothing -> id
+        Just thunkId -> sThunkMap . Lens.at thunkId %~ setJust ercResult
+--    & trace (show (void Eval.EventResultComputed{..}))
+
+evalActions :: Ord pl => Actions pl -> IORef (State pl) -> Eval.EvalActions IO pl
+evalActions actions stateRef =
+    Eval.EvalActions
+    { _aReportEvent = modifyState . processEvent
+    , _aRunBuiltin = _aRunBuiltin actions
+    , _aLoadGlobal = actions ^. aLoadGlobal
+    }
+    where
+        modifyState f =
+            do
+                atomicModifyIORef' stateRef (f <&> flip (,) ())
+                _aReportUpdatesAvailable actions
+
+evalThread :: Ord pl => Actions pl -> IORef (State pl) -> Val pl -> IO ()
+evalThread actions stateRef src =
+    do
+        result <-
+            Eval.whnfScopedVal (Eval.ScopedVal EvalVal.emptyScope src)
+            & Eval.runEvalT
+            & runEitherT
+            & (`evalStateT` Eval.initialState (evalActions actions stateRef))
+        case result of
+            Left e -> handleError e (error e)
+            Right _ -> return ()
+        writeStatus stateRef Finished
+    `E.catch` \e@E.SomeException{..} -> handleError e (E.throw e)
+    where
+        handleError e t =
+            do
+                BS8.hPutStrLn stderr $ "Background evaluator thread failed: " <> BS8.pack (show e)
+                writeStatus stateRef t
+
+results :: State pl -> EvalResults pl
+results state =
+    EvalResults
+    { erExprValues =
+        state ^. sValHeadMap
+        <&> Lens.mapped %~ Results.derefValHead (state ^. sThunkMap)
+        <&> Lens.mapped . Lens.mapped .~ ()
+    , erLambdaParams =
+        state ^. sAppliesOfLam
+        <&> concat . Map.elems
+        <&> Lens.traversed . Lens._2 %~ Results.derefThunkId (state ^. sThunkMap)
+        <&> Map.fromList
+        <&> Lens.mapped . Lens.mapped .~ ()
+    }
+
+withLock :: MVar () -> IO a -> IO a
+withLock mvar action = withMVar mvar (const action)
+
+start :: Ord pl => Actions pl -> Val pl -> IO (Evaluator pl)
+start actions src =
+    do
+        stateRef <- newIORef initialState
+        mvar <- newMVar ()
+        let lockedActions = actions & aLoadGlobal %~ (withLock mvar .)
+        newThreadId <- forkIO $ evalThread lockedActions stateRef src
+        return Evaluator
+            { eStateRef = stateRef
+            , eThreadId = newThreadId
+            , eLoadResumed = mvar
+            }
+
+stop :: Evaluator pl -> IO ()
+stop evaluator =
+    do
+        killThread (eThreadId evaluator)
+        writeStatus (eStateRef evaluator) Stoppped
+
+get :: Evaluator pl -> IO (State pl)
+get = readIORef . eStateRef
+
+pauseLoading :: Evaluator pl -> IO ()
+pauseLoading = takeMVar . eLoadResumed
+
+resumeLoading :: Evaluator pl -> IO ()
+resumeLoading = (`putMVar` ()) . eLoadResumed
