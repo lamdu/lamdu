@@ -60,33 +60,42 @@ orderRecord = Sugar.rItems %%~ orderRecordFields
 orderApply :: MonadA m => Order m (Sugar.Apply name a)
 orderApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag . Sugar.tagVal)
 
-orderBody :: MonadA m => Order m (Sugar.Body name f a)
+orderHoleResult :: MonadA m => Order m (Sugar.HoleResult name m)
+orderHoleResult = Sugar.holeResultConverted %%~ orderExpr
+
+orderHole :: MonadA m => Sugar.Hole name m a -> Sugar.Hole name m a
+orderHole =
+    Sugar.holeMActions . Lens._Just . Sugar.holeResults .
+    Lens.mapped  . Lens.mapped . Lens._2 %~ (>>= orderHoleResult)
+
+orderBody :: MonadA m => Order m (Sugar.Body name m a)
 orderBody (Sugar.BodyLam b) = orderBinder b <&> Sugar.BodyLam
 orderBody (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
 orderBody (Sugar.BodyApply a) = orderApply a <&> Sugar.BodyApply
+orderBody (Sugar.BodyHole a) = orderHole a & Sugar.BodyHole & return
 orderBody b = return b
 
-orderExpr :: MonadA m => Order m (Sugar.Expression name f a)
+orderExpr :: MonadA m => Order m (Sugar.Expression name m a)
 orderExpr e =
     e
     & Sugar.rPayload . Sugar.plAnnotation . Sugar.aInferredType %%~ orderType
     >>= Sugar.rBody %%~ orderBody
     >>= Sugar.rBody . Lens.traversed %%~ orderExpr
 
-orderParams :: MonadA m => Order m [Sugar.FuncParam T.Tag name f]
+orderParams :: MonadA m => Order m [Sugar.FuncParam T.Tag name m]
 orderParams xs =
     xs
     & Lens.traversed . Sugar.fpAnnotation . Sugar.aInferredType %%~ orderType
     >>= orderByTag (^. Sugar.fpVarInfo)
 
 orderBinder ::
-    MonadA m => Order m (Sugar.Binder name f a)
+    MonadA m => Order m (Sugar.Binder name m a)
 orderBinder b =
     b
     & Sugar.dParams . Sugar._FieldParams %%~ orderParams
 
 orderDef ::
-    MonadA m => Order m (Sugar.Definition name f (Sugar.Expression name f a))
+    MonadA m => Order m (Sugar.Definition name m (Sugar.Expression name m a))
 orderDef def =
     def
     & SugarLens.defSchemes . S.schemeType %%~ orderType
