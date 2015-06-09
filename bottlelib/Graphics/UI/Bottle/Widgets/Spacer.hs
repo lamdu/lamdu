@@ -6,10 +6,9 @@ module Graphics.UI.Bottle.Widgets.Spacer
   , makeHorizLine
   ) where
 
-import           Control.Monad (void)
 import           Data.Monoid (mempty)
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
@@ -33,7 +32,7 @@ makeHorizontalWidget = Widget.fromView . makeHorizontal
 
 horizLineFrame :: Anim.AnimId -> Widget.Size -> Anim.Frame
 horizLineFrame animId size@(Vector2 w h) =
-    Anim.sizedFrame animId size . void $ Draw.line (0, h/2) (w, h/2)
+    Anim.sizedFrame animId size $ DrawUtils.line (0, h/2) (w, h/2)
 
 makeHorizLine :: Anim.AnimId -> Widget.Size -> Widget f
 makeHorizLine animId size = Widget.fromView $ View size $ horizLineFrame animId size

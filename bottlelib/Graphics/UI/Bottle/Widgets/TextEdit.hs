@@ -24,7 +24,7 @@ import           Data.Monoid (Monoid(..), (<>))
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
@@ -42,10 +42,10 @@ import qualified Graphics.UI.GLFW as GLFW
 type Cursor = Int
 
 data Style = Style
-  { _sCursorColor :: Draw.Color
+  { _sCursorColor :: DrawUtils.Color
   , _sCursorWidth :: Widget.R
   , _sTextCursorId :: Anim.AnimId
-  , _sBGColor :: Draw.Color
+  , _sBGColor :: DrawUtils.Color
   , _sEmptyUnfocusedString :: String
   , _sEmptyFocusedString :: String
   , _sTextViewStyle :: TextView.Style
@@ -53,8 +53,8 @@ data Style = Style
 Lens.makeLenses ''Style
 
 -- TODO: Replace with a defaultStyle :: TextViewStyle -> .. -> Style
-defaultCursorColor :: Draw.Color
-defaultCursorColor = Draw.Color 0 1 0 1
+defaultCursorColor :: DrawUtils.Color
+defaultCursorColor = DrawUtils.Color 0 1 0 1
 
 defaultCursorWidth :: Widget.R
 defaultCursorWidth = 4
@@ -195,7 +195,7 @@ makeFocused cursorBGAnimId cursor Style{..} str myId =
     cursorRect = mkCursorRect Style{..} cursor str
     cursorFrame =
       Anim.unitSquare _sTextCursorId
-      & Anim.unitImages %~ Draw.tint _sCursorColor
+      & Anim.unitImages %~ DrawUtils.tint _sCursorColor
       & Anim.unitIntoRect cursorRect
       & Anim.layers +~ 2 -- TODO: 2?!
 

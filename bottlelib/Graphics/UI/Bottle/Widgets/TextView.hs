@@ -17,7 +17,7 @@ import           Data.List (foldl')
 import           Data.List.Split (splitWhen)
 import           Data.Monoid (Monoid(..))
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.UI.Bottle.Animation (AnimId, Size)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Rect (Rect(Rect))
@@ -30,7 +30,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 data Style = Style
-    { _styleColor :: Draw.Color
+    { _styleColor :: DrawUtils.Color
     , _styleFont :: SizedFont
     }
 Lens.makeLenses ''Style
@@ -38,11 +38,11 @@ Lens.makeLenses ''Style
 lineHeight :: Style -> Widget.R
 lineHeight Style{..} = SizedFont.textHeight _styleFont
 
-fontRender :: Style -> String -> (Draw.Image (), Size)
+fontRender :: Style -> String -> (DrawUtils.Image, Size)
 fontRender Style{..} str =
     ( str
       & SizedFont.render _styleFont
-      & Draw.tint _styleColor
+      & DrawUtils.tint _styleColor
     , str
       & SizedFont.textSize _styleFont
     )
@@ -69,7 +69,7 @@ joinLines =
         vertical = _1 .~ 0
 
 nestedFrame ::
-    Show a => (a, (Draw.Image (), Size)) -> (AnimId -> Anim.Frame, Size)
+    Show a => (a, (DrawUtils.Image, Size)) -> (AnimId -> Anim.Frame, Size)
 nestedFrame (i, (image, size)) =
     (draw, size)
     where

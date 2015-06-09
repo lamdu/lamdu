@@ -21,8 +21,7 @@ import qualified Data.Monoid as Monoid
 import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
 import           Data.Traversable (traverse, sequenceA)
 import           Data.Vector.Vector2 (Vector2(..))
-import           Graphics.DrawingCombinators ((%%))
-import           Graphics.DrawingCombinators.Utils (Image)
+import           Graphics.DrawingCombinators.Utils (Image, (%%))
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.Rendering.OpenGL.GL (($=))
 import qualified Graphics.Rendering.OpenGL.GL as GL
@@ -71,20 +70,21 @@ mainLoopImage win imageHandlers =
 
         handleEvents events =
             do
+                curTime <- getCurrentTime
                 winSize <- windowSize win
                 let handlers = imageHandlers winSize
                 eventResult <- mconcat <$> traverse (handleEvent handlers) events
                 case eventResult of
                     ERQuit -> return ResultQuit
-                    ERRefresh -> imageRefresh handlers >>= draw winSize
-                    ERNone -> imageUpdate handlers >>= maybe delay (draw winSize)
+                    ERRefresh -> imageRefresh handlers >>= draw winSize curTime
+                    ERNone -> imageUpdate handlers >>= maybe delay (draw winSize curTime)
         delay =
             do
                 -- TODO: If we can verify that there's sync-to-vblank, we
                 -- need no sleep here
                 threadDelay 10000
                 return ResultNone
-        draw winSize@(Vector2 winSizeX winSizeY) image =
+        draw winSize@(Vector2 winSizeX winSizeY) curTime image =
             do
                 GL.viewport $=
                     (GL.Position 0 0,
@@ -93,7 +93,7 @@ mainLoopImage win imageHandlers =
                     & (DrawUtils.translate (Vector2 (-1) 1) <>
                        DrawUtils.scale (Vector2 (2/winSizeX) (-2/winSizeY)) %%)
                     & let Vector2 glPixelRatioX glPixelRatioY = winSize / 2 -- GL range is -1..1
-                      in DrawUtils.clearRenderSized (glPixelRatioX, glPixelRatioY)
+                      in DrawUtils.clearRenderSized (glPixelRatioX, glPixelRatioY) curTime
                 return ResultDidDraw
 
 data AnimHandlers = AnimHandlers
@@ -101,11 +101,6 @@ data AnimHandlers = AnimHandlers
     , animEventHandler :: KeyEvent -> IO (Maybe (Monoid.Endo AnimId))
     , animMakeFrame :: IO Anim.Frame
     }
-
-data IsAnimating
-    = Animating NominalDiffTime -- Current animation speed half-life
-    | NotAnimating
-    deriving Eq
 
 withForkedIO :: IO () -> IO a -> IO a
 withForkedIO action = bracket (forkIO action) killThread . const
@@ -117,14 +112,14 @@ withForkedIO action = bracket (forkIO action) killThread . const
 -- Animation thread sends events, ticks to worker thread. Samples results from worker thread, applies them to the cur state
 
 data AnimState = AnimState
-    { _asIsAnimating :: !IsAnimating
+    { _asCurHalfLife :: !NominalDiffTime
     , _asCurTime :: !UTCTime
     , _asCurFrame :: !Anim.Frame
     , _asDestFrame :: !Anim.Frame
     }
 
-asIsAnimating :: Lens' AnimState IsAnimating
-asIsAnimating f AnimState {..} = f _asIsAnimating <&> \_asIsAnimating -> AnimState {..}
+asCurHalfLife :: Lens' AnimState NominalDiffTime
+asCurHalfLife f AnimState {..} = f _asCurHalfLife <&> \_asCurHalfLife -> AnimState {..}
 
 asCurFrame :: Lens' AnimState Anim.Frame
 asCurFrame f AnimState {..} = f _asCurFrame <&> \_asCurFrame -> AnimState {..}
@@ -146,7 +141,7 @@ initialAnimState initialFrame =
     do
         curTime <- getCurrentTime
         return AnimState
-            { _asIsAnimating = NotAnimating
+            { _asCurHalfLife = 0
             , _asCurTime = curTime
             , _asCurFrame = initialFrame
             , _asDestFrame = initialFrame
@@ -229,7 +224,7 @@ eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers =
                     atomicModifyIORef_ frameStateVar $
                         \oldFrameState ->
                         oldFrameState
-                        & asIsAnimating .~ Animating animationHalfLife
+                        & asCurHalfLife .~ animationHalfLife
                         & asDestFrame .~ destFrame
                         -- retroactively pretend animation started at
                         -- user event time to make the
@@ -248,7 +243,7 @@ mainLoopAnimThread frameStateVar eventTVar win =
               STM.atomically $ modifyTVar eventTVar $ tsvReversedEvents %~ (event :)
         , imageRefresh =
             do
-                atomicModifyIORef_ frameStateVar $ asIsAnimating .~ Animating 0 -- TODO
+                atomicModifyIORef_ frameStateVar $ asCurHalfLife .~ 0 -- TODO
                 updateFrameState size <&> _asCurFrame <&> Anim.draw
         , imageUpdate = updateFrameState size <&> frameStateResult
         }
@@ -261,23 +256,16 @@ mainLoopAnimThread frameStateVar eventTVar win =
                 tick size
                 curTime <- getCurrentTime
                 atomicModifyIORef frameStateVar $
-                    \(AnimState prevAnimating prevTime prevFrame destFrame) ->
+                    \(AnimState animationHalfLife prevTime prevFrame destFrame) ->
                     let newAnimState =
-                            case prevAnimating of
-                            NotAnimating ->
-                                AnimState NotAnimating curTime prevFrame destFrame
-                            Animating animationHalfLife ->
-                                case Anim.nextFrame progress destFrame prevFrame of
-                                Nothing -> AnimState NotAnimating curTime destFrame destFrame
-                                Just newFrame -> AnimState (Animating animationHalfLife) curTime newFrame destFrame
-                                where
-                                    elapsed = curTime `diffUTCTime` prevTime
-                                    progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
+                            case Anim.nextFrame progress destFrame prevFrame of
+                            Nothing -> AnimState 0 curTime destFrame destFrame
+                            Just newFrame -> AnimState animationHalfLife curTime newFrame destFrame
+                            where
+                                elapsed = curTime `diffUTCTime` prevTime
+                                progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
                     in (newAnimState, newAnimState)
-        frameStateResult (AnimState isAnimating _ frame _) =
-            case isAnimating of
-            Animating _ -> Just $ Anim.draw frame
-            NotAnimating -> Nothing
+        frameStateResult (AnimState _ _ frame _) = Just $ Anim.draw frame
 
 mainLoopWidget :: GLFW.Window -> IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO AnimConfig -> IO ()
 mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationConfig =

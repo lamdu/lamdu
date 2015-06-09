@@ -17,7 +17,6 @@ import           Control.Applicative (Applicative(..), liftA2)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (void)
 import qualified Data.ByteString.Char8 as SBS
 import qualified Data.List as List
 import           Data.List.Utils (groupOn, sortOn)
@@ -28,8 +27,7 @@ import           Data.Monoid (Monoid(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GHC.Generics (Generic)
-import           Graphics.DrawingCombinators (R, (%%))
-import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.DrawingCombinators.Utils (R, (%%))
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.UI.Bottle.Animation.Id
 import           Graphics.UI.Bottle.Rect (Rect(Rect))
@@ -40,7 +38,7 @@ type Size = Vector2 R
 
 data Image = Image
   { _iLayer :: Layer
-  , _iUnitImage :: Draw.Image ()
+  , _iUnitImage :: DrawUtils.Image
     -- iUnitImage always occupies (0,0)..(1,1),
     -- the translation/scaling occurs when drawing
   , _iRect :: Rect
@@ -61,14 +59,14 @@ layers :: Lens.Traversal' Frame Layer
 layers = images . iLayer
 
 {-# INLINE unitImages #-}
-unitImages :: Lens.Traversal' Frame (Draw.Image ())
+unitImages :: Lens.Traversal' Frame DrawUtils.Image
 unitImages = images . iUnitImage
 
-simpleFrame :: AnimId -> Draw.Image () -> Frame
+simpleFrame :: AnimId -> DrawUtils.Image -> Frame
 simpleFrame animId image =
   Frame $ Map.singleton animId [Image 0 image (Rect 0 1)]
 
-sizedFrame :: AnimId -> Size -> Draw.Image () -> Frame
+sizedFrame :: AnimId -> Size -> DrawUtils.Image -> Frame
 sizedFrame animId size =
   scale size .
   simpleFrame animId .
@@ -78,16 +76,16 @@ instance Monoid Frame where
   mempty = Frame mempty
   mappend (Frame m0) (Frame m1) = Frame $ Map.unionWith (++) m0 m1
 
-unitX :: Draw.Image ()
-unitX = void $ mconcat
-  [ Draw.line (0, 0) (1, 1)
-  , Draw.line (1, 0) (0, 1)
+unitX :: DrawUtils.Image
+unitX = mconcat
+  [ DrawUtils.line (0, 0) (1, 1)
+  , DrawUtils.line (1, 0) (0, 1)
   ]
 
-red :: Draw.Color
-red = Draw.Color 1 0 0 1
+red :: DrawUtils.Color
+red = DrawUtils.Color 1 0 0 1
 
-draw :: Frame -> Draw.Image ()
+draw :: Frame -> DrawUtils.Image
 draw frame =
   frame
   ^. frameImagesMap
@@ -98,7 +96,7 @@ draw frame =
   & sortOn (^. _1) <&> snd
   & mconcat
   where
-    redX = Draw.tint red unitX
+    redX = DrawUtils.tint red unitX
     markConflicts imgs@(_:_:_) =
       imgs <&> iUnitImage %~ mappend redX
     markConflicts imgs = imgs
@@ -245,10 +243,10 @@ unitHStripedSquare n animId =
     hunits = fromIntegral n * 2 - 1 -- light/dark unit count
     square i = unitSquare $ animId ++ [SBS.pack (show (i :: Int))]
 
-backgroundColor :: AnimId -> Layer -> Draw.Color -> Vector2 R -> Frame -> Frame
+backgroundColor :: AnimId -> Layer -> DrawUtils.Color -> Vector2 R -> Frame -> Frame
 backgroundColor animId layer color size frame =
   unitSquare animId
-  & images . iUnitImage %~ Draw.tint color
+  & images . iUnitImage %~ DrawUtils.tint color
   & scale size
   & layers +~ layer
   & mappend frame

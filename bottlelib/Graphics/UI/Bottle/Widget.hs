@@ -57,7 +57,7 @@ import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Generics (Generic)
-import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.UI.Bottle.Animation (AnimId, R, Size)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Direction (Direction)
@@ -174,17 +174,17 @@ strongerEvents eMap = eventMap %~ (eMap `mappend`)
 weakerEvents :: EventHandlers f -> Widget f -> Widget f
 weakerEvents eMap = eventMap %~ (`mappend` eMap)
 
-backgroundColor :: Int -> AnimId -> Draw.Color -> Widget f -> Widget f
+backgroundColor :: Int -> AnimId -> DrawUtils.Color -> Widget f -> Widget f
 backgroundColor layer animId color =
   view %~ View.backgroundColor animId layer color
 
-addInnerFrame :: Int -> AnimId -> Draw.Color -> Vector2 R -> Widget f -> Widget f
+addInnerFrame :: Int -> AnimId -> DrawUtils.Color -> Vector2 R -> Widget f -> Widget f
 addInnerFrame layer animId color frameWidth widget =
   widget & animFrame %~ mappend emptyRectangle
   where
     emptyRectangle =
       Anim.emptyRectangle frameWidth (widget ^. size) animId
-      & Anim.unitImages %~ Draw.tint color
+      & Anim.unitImages %~ DrawUtils.tint color
       & Anim.layers +~ layer
 
 animIdMappingFromPrefixMap :: Map AnimId AnimId -> Monoid.Endo AnimId
@@ -202,8 +202,8 @@ applyIdMapping widgetIdMap eventResult =
     mapCursor (Id oldCursor) =
       Id $ Anim.mappingFromPrefixMap animIdMap oldCursor
 
-tint :: Draw.Color -> Widget f -> Widget f
-tint color = animFrame . Anim.unitImages %~ Draw.tint color
+tint :: DrawUtils.Color -> Widget f -> Widget f
+tint color = animFrame . Anim.unitImages %~ DrawUtils.tint color
 
 keysEventMap ::
   Functor f => [ModKey] -> EventMap.Doc ->
@@ -267,18 +267,18 @@ data Env = Env
 Lens.makeLenses ''Env
 
 respondToCursorPrefix ::
-  Id -> Draw.Color -> Anim.Layer -> Env ->
+  Id -> DrawUtils.Color -> Anim.Layer -> Env ->
   Widget f -> Widget f
 respondToCursorPrefix myIdPrefix =
   respondToCursorBy (Lens.has Lens._Just . subId myIdPrefix)
 
 respondToCursorAt ::
-  Id -> Draw.Color -> Anim.Layer -> Env ->
+  Id -> DrawUtils.Color -> Anim.Layer -> Env ->
   Widget f -> Widget f
 respondToCursorAt wId = respondToCursorBy (== wId)
 
 respondToCursorBy ::
-  (Id -> Bool) -> Draw.Color -> Anim.Layer -> Env ->
+  (Id -> Bool) -> DrawUtils.Color -> Anim.Layer -> Env ->
   Widget f -> Widget f
 respondToCursorBy f color layer env widget
   | f (env ^. envCursor) =
@@ -286,7 +286,7 @@ respondToCursorBy f color layer env widget
   | otherwise = widget
 
 respondToCursor ::
-  Draw.Color -> Anim.Layer -> AnimId -> Widget f -> Widget f
+  DrawUtils.Color -> Anim.Layer -> AnimId -> Widget f -> Widget f
 respondToCursor color layer animId widget =
   widget
   & backgroundColor layer animId color

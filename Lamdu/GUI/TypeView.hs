@@ -17,7 +17,7 @@ import           Data.Monoid (Monoid(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.View (View(..))
@@ -211,4 +211,4 @@ make prefix t =
       & runM
       & (`evalStateT` Random.mkStdGen 0)
       <&> View.animFrame %~ Anim.mapIdentities (mappend prefix)
-      <&> View.animFrame . Anim.unitImages %~ Draw.tint (Config.typeTint config)
+      <&> View.animFrame . Anim.unitImages %~ DrawUtils.tint (Config.typeTint config)

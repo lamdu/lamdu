@@ -11,10 +11,10 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (void)
+
 import           Data.Monoid (Monoid(..), (<>))
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
@@ -90,17 +90,17 @@ accel = 1.05
 targetSize :: Size
 targetSize = Vector2 25 25
 
-targetColor :: Draw.Color
-targetColor = Draw.Color 0.9 0.9 0 0.7
+targetColor :: DrawUtils.Color
+targetColor = DrawUtils.Color 0.9 0.9 0 0.7
 
-highlightColor :: Draw.Color
-highlightColor = Draw.Color 0.4 0.4 1 0.4
+highlightColor :: DrawUtils.Color
+highlightColor = DrawUtils.Color 0.4 0.4 1 0.4
 
 target :: Config -> AnimId -> Vector2 Widget.R -> Anim.Frame
 target config animId pos =
-  void Draw.circle
+  DrawUtils.circle
   & Anim.simpleFrame animId
-  & Anim.unitImages %~ Draw.tint targetColor
+  & Anim.unitImages %~ DrawUtils.tint targetColor
   & Anim.scale targetSize
   & Anim.translate pos
   & Anim.layers +~ configLayer config
@@ -111,7 +111,7 @@ cap size = liftA2 max 0 . liftA2 min size
 highlightRect :: AnimId -> Rect -> Anim.Frame
 highlightRect animId (Rect pos size) =
   Anim.unitSquare animId
-  & Anim.unitImages %~ Draw.tint highlightColor
+  & Anim.unitImages %~ DrawUtils.tint highlightColor
   & Anim.layers -~ 50 -- TODO: 50?!
   & Anim.scale size
   & Anim.translate pos

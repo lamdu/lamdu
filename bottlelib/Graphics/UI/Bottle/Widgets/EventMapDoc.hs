@@ -18,7 +18,7 @@ import           Data.Monoid (Monoid(..))
 import           Data.Traversable (traverse)
 import qualified Data.Tuple as Tuple
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import           Graphics.UI.Bottle.Animation (AnimId, R)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.EventMap (EventMap)
@@ -35,8 +35,8 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
 data Config = Config
   { configStyle :: TextView.Style
-  , configInputDocColor :: Draw.Color
-  , configBGColor :: Draw.Color
+  , configInputDocColor :: DrawUtils.Color
+  , configBGColor :: DrawUtils.Color
   , configOverlayDocKeys :: [ModKey]
   }
 
@@ -76,7 +76,7 @@ makeShortcutKeyView ::
 makeShortcutKeyView config (animId, inputDocs) =
   inputDocs
   <&> TextView.label (configStyle config) animId
-  <&> View.animFrame . Anim.unitImages %~ Draw.tint (configInputDocColor config)
+  <&> View.animFrame . Anim.unitImages %~ DrawUtils.tint (configInputDocColor config)
   & GridView.verticalAlign 0
 
 makeTextViews ::
@@ -153,12 +153,12 @@ addHelp f size =
   Widget.animFrame <>~ docFrame
   where
     View eventMapSize eventMapFrame = f ["help box"]
-    transparency = Draw.Color 1 1 1
+    transparency = DrawUtils.Color 1 1 1
     docFrame =
       eventMapFrame
       & Anim.translate (size - eventMapSize)
       & Anim.layers -~ 10 -- TODO: 10?!
-      & Anim.unitImages %~ Draw.tint (transparency 0.8) -- TODO: 0.8?!
+      & Anim.unitImages %~ DrawUtils.tint (transparency 0.8) -- TODO: 0.8?!
 
 data IsHelpShown = HelpShown | HelpNotShown
   deriving (Eq, Ord, Read, Show)
