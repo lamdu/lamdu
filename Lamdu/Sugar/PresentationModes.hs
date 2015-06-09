@@ -38,24 +38,27 @@ addToApply ::
     Sugar.Apply name (ExpressionU m pl) ->
     T m (Sugar.Apply name (ExpressionU m pl))
 addToApply a =
-    do
-        presentationMode <-
-            a ^. Sugar.aFunc & indirectDefinitionPresentationMode
-        let
-            (specialArgs, annotatedArgs) =
-                case (presentationMode, a ^. Sugar.aAnnotatedArgs) of
-                (Just Sugar.Infix, (a0:a1:as)) ->
-                    ( Sugar.InfixArgs
-                      (a0 ^. Sugar.aaExpr) (a1 ^. Sugar.aaExpr)
-                    , as
-                    )
-                (Just Sugar.OO, (a0:as)) ->
-                    (Sugar.ObjectArg (a0 ^. Sugar.aaExpr), as)
-                (_, args) -> (Sugar.NoSpecialArgs, args)
-        a
-            & Sugar.aAnnotatedArgs .~ annotatedArgs
-            & Sugar.aSpecialArgs .~ specialArgs
-            & return
+    case a ^. Sugar.aSpecialArgs of
+    Sugar.NoSpecialArgs ->
+        do
+            presentationMode <-
+                a ^. Sugar.aFunc & indirectDefinitionPresentationMode
+            let
+                (specialArgs, annotatedArgs) =
+                    case (presentationMode, a ^. Sugar.aAnnotatedArgs) of
+                    (Just Sugar.Infix, (a0:a1:as)) ->
+                        ( Sugar.InfixArgs
+                          (a0 ^. Sugar.aaExpr) (a1 ^. Sugar.aaExpr)
+                        , as
+                        )
+                    (Just Sugar.OO, (a0:as)) ->
+                        (Sugar.ObjectArg (a0 ^. Sugar.aaExpr), as)
+                    (_, args) -> (Sugar.NoSpecialArgs, args)
+            a
+                & Sugar.aAnnotatedArgs .~ annotatedArgs
+                & Sugar.aSpecialArgs .~ specialArgs
+                & return
+    _ -> return a
 
 addToHoleResult ::
     MonadA m => Sugar.HoleResult Guid m -> T m (Sugar.HoleResult Guid m)
