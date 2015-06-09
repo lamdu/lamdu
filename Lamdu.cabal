@@ -253,6 +253,7 @@ Executable lamdu
                ,       Lamdu.Sugar.Lens
                ,       Lamdu.Sugar.NearestHoles
                ,       Lamdu.Sugar.OrderTags
+               ,       Lamdu.Sugar.PresentationModes
                ,       Lamdu.Sugar.RedundantTypes
                ,       Lamdu.Sugar.Types
                ,       Lamdu.Suggest

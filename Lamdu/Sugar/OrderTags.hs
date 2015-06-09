@@ -66,7 +66,7 @@ orderHoleResult = Sugar.holeResultConverted %%~ orderExpr
 orderHole :: MonadA m => Sugar.Hole name m a -> Sugar.Hole name m a
 orderHole =
     Sugar.holeMActions . Lens._Just . Sugar.holeResults .
-    Lens.mapped  . Lens.mapped . Lens._2 %~ (>>= orderHoleResult)
+    Lens.mapped . Lens.mapped . Lens._2 %~ (>>= orderHoleResult)
 
 orderBody :: MonadA m => Order m (Sugar.Body name m a)
 orderBody (Sugar.BodyLam b) = orderBinder b <&> Sugar.BodyLam

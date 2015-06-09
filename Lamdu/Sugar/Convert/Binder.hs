@@ -25,7 +25,6 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, MkProperty)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Traversable (traverse, sequenceA)
-import           Lamdu.Data.Anchors (assocTagOrder)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (ComputedVal(..))
@@ -265,7 +264,7 @@ setParamList paramListProp newParamList =
     zip newParamList [0..] & mapM_ (uncurry setParamOrder)
     Just newParamList & Transaction.setP paramListProp
   where
-    setParamOrder = Transaction.setP . assocTagOrder
+    setParamOrder = Transaction.setP . Anchors.assocTagOrder
 
 makeAddFieldParam ::
   MonadA m =>

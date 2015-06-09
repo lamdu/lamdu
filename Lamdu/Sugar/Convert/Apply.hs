@@ -13,7 +13,6 @@ import Control.Monad.Trans.State (evalStateT)
 import Control.MonadA (MonadA)
 import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.Expr.Type (Type)
@@ -27,7 +26,6 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
-import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -57,23 +55,6 @@ convert app@(V.Apply funcI argI) exprPl =
     justToLeft $ convertLabeled funcS argS argI exprPl
     lift $ convertPrefix funcS argS exprPl
 
-indirectDefinitionGuid :: ExpressionU m pl -> Maybe Guid
-indirectDefinitionGuid funcS =
-  case funcS ^. rBody of
-  -- TODO: This is incorrect because BodyGetVar is used even when it's
-  -- a GetField behind the scenes, and we probably don't want to
-  -- associate the Guid of the tag here? Need to throw this Guid or
-  -- associated data into the GetVar/GetField itself anyway!
-  BodyGetVar (GetVarNamed NamedVar { _nvName }) -> Just _nvName
-  -- TODO: <-- do we want to make something up for get-fields, etc?
-  _ -> Nothing
-
-indirectDefinitionPresentationMode ::
-  MonadA m => ExpressionU m pl -> ConvertM m (Maybe PresentationMode)
-indirectDefinitionPresentationMode =
-  traverse (ConvertM.getP . Anchors.assocPresentationMode) .
-  indirectDefinitionGuid
-
 noRepetitions :: Ord a => [a] -> Bool
 noRepetitions x = length x == Set.size (Set.fromList x)
 
@@ -90,17 +71,11 @@ convertLabeled funcS argS argI exprPl = do
         { _aaTag = field ^. rfTag
         , _aaExpr = field ^. rfExpr
         }
-  let args@(arg0 : args1toN@(arg1 : args2toN)) = map getArg $ record ^. rItems
+  let args = map getArg $ record ^. rItems
   let tags = args ^.. Lens.traversed . aaTag . tagVal
   unless (noRepetitions tags) $ error "Repetitions should not type-check"
-  presentationMode <- MaybeT $ indirectDefinitionPresentationMode funcS
   protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
   let
-    (specialArgs, annotatedArgs) =
-      case presentationMode of
-      Verbose -> (NoSpecialArgs, args)
-      OO -> (ObjectArg (arg0 ^. aaExpr), args1toN)
-      Infix -> (InfixArgs (arg0 ^. aaExpr) (arg1 ^. aaExpr), args2toN)
     setToInnerExprAction =
       maybe NoInnerExpr SetToInnerExpr $
       do
@@ -115,8 +90,8 @@ convertLabeled funcS argS argI exprPl = do
           protectedSetToVal stored (Property.value (valStored ^. V.payload))
   BodyApply Apply
     { _aFunc = funcS
-    , _aSpecialArgs = specialArgs
-    , _aAnnotatedArgs = annotatedArgs
+    , _aSpecialArgs = NoSpecialArgs
+    , _aAnnotatedArgs = args
     }
     & lift . addActions exprPl
     <&> rPayload %~
