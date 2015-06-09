@@ -13,13 +13,17 @@ import qualified Control.Exception as E
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Monad.Trans.Either (runEitherT)
 import           Control.Monad.Trans.State (evalStateT)
 import qualified Data.ByteString.Char8 as BS8
+import           Data.Foldable (foldMap)
 import           Data.IORef
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Monoid ((<>))
+import           Data.Set (Set)
+import qualified Data.Set as Set
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Eval (EvalT)
 import qualified Lamdu.Eval as Eval
@@ -60,6 +64,7 @@ data State pl = State
       -- Maps of already-evaluated pl's/thunks
     , _sValHeadMap :: Map pl (Map ScopeId (ValHead pl))
     , _sThunkMap :: Map ThunkId (ValHead pl)
+    , _sDependencies :: (Set pl, Set V.GlobalId)
     }
 
 sAppliesOfLam :: Lens' (State pl) (Map pl (Map ScopeId [(ScopeId, ThunkId)]))
@@ -74,12 +79,16 @@ sValHeadMap f State{..} = f _sValHeadMap <&> \_sValHeadMap -> State{..}
 sThunkMap :: Lens' (State pl) (Map ThunkId (ValHead pl))
 sThunkMap f State{..} = f _sThunkMap <&> \_sThunkMap -> State{..}
 
+sDependencies :: Lens' (State pl) (Set pl, Set V.GlobalId)
+sDependencies f State{..} = f _sDependencies <&> \_sDependencies -> State{..}
+
 initialState :: State pl
 initialState = State
     { _sStatus = Running
     , _sAppliesOfLam = Map.empty
     , _sValHeadMap = Map.empty
     , _sThunkMap = Map.empty
+    , _sDependencies = (Set.empty, Set.empty)
     }
 
 writeStatus :: IORef (State pl) -> Status -> IO ()
@@ -101,17 +110,29 @@ processEvent (Eval.EResultComputed Eval.EventResultComputed{..}) state =
         Just thunkId -> sThunkMap . Lens.at thunkId %~ setJust ercResult
 --    & trace (show (void Eval.EventResultComputed{..}))
 
+getDependencies :: Ord pl => V.GlobalId -> Maybe (Def.Body (Val pl)) -> (Set pl, Set V.GlobalId)
+getDependencies globalId defBody =
+    ( defBody ^. Lens._Just . Lens.traverse . Lens.traverse . Lens.to Set.singleton
+    , Set.singleton globalId
+    )
+
 evalActions :: Ord pl => Actions pl -> IORef (State pl) -> Eval.EvalActions IO pl
 evalActions actions stateRef =
     Eval.EvalActions
-    { _aReportEvent = modifyState . processEvent
+    { _aReportEvent = update . processEvent
     , _aRunBuiltin = _aRunBuiltin actions
-    , _aLoadGlobal = actions ^. aLoadGlobal
+    , _aLoadGlobal = loadGlobal
     }
     where
-        modifyState f =
+        loadGlobal globalId =
             do
-                atomicModifyIORef' stateRef (f <&> flip (,) ())
+                defBody <- (actions ^. aLoadGlobal) globalId
+                modifyState (sDependencies <>~ getDependencies globalId defBody)
+                return defBody
+        modifyState f = atomicModifyIORef' stateRef (f <&> flip (,) ())
+        update f =
+            do
+                modifyState f
                 _aReportUpdatesAvailable actions
 
 evalThread :: Ord pl => Actions pl -> IORef (State pl) -> Val pl -> IO ()
@@ -160,7 +181,10 @@ withLock mvar action = withMVar mvar (const action)
 start :: Ord pl => Actions pl -> Val pl -> IO (Evaluator pl)
 start actions src =
     do
-        stateRef <- newIORef initialState
+        stateRef <-
+            initialState
+            & sDependencies . _1 <>~ foldMap Set.singleton src
+            & newIORef
         mvar <- newMVar ()
         let lockedActions = actions & aLoadGlobal %~ (withLock mvar .)
         newThreadId <- forkIO $ evalThread lockedActions stateRef src
