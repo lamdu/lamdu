@@ -14,6 +14,7 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Control.Monad ((>=>))
 import           Control.Monad.Trans.Either (runEitherT)
 import           Control.Monad.Trans.State (evalStateT)
 import qualified Data.ByteString.Char8 as BS8
@@ -140,6 +141,7 @@ evalThread actions stateRef src =
     do
         result <-
             Eval.whnfScopedVal (Eval.ScopedVal EvalVal.emptyScope src)
+            >>= force
             & Eval.runEvalT
             & runEitherT
             & (`evalStateT` Eval.initialState (evalActions actions stateRef))
@@ -153,6 +155,7 @@ evalThread actions stateRef src =
             do
                 BS8.hPutStrLn stderr $ "Background evaluator thread failed: " <> BS8.pack (show e)
                 writeStatus stateRef t
+        force = Lens.traverseOf_ EvalVal.children (Eval.whnfThunk >=> force)
 
 results :: State pl -> EvalResults pl
 results state =
