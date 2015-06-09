@@ -384,8 +384,7 @@ runDb win getConfig font db = do
       let eventMap = globalEventMap `mappend` sizeFactorEvents (Config.zoom config)
       evalResults <-
           readIORef evaluatorsRef
-          >>= mapM EvalBG.get
-          <&> map EvalBG.results
+          >>= mapM EvalBG.getResults
           <&> mconcat
       widget <-
         mkWidgetWithFallback evalResults config settingsRef (baseStyle config font) dbToIO

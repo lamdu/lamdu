@@ -4,8 +4,7 @@ module Lamdu.Eval.Background
     , Actions(..)
     , start, stop
     , pauseLoading, resumeLoading
-    , State(..), results
-    , get
+    , getResults
     ) where
 
 import           Control.Concurrent (ThreadId, forkIO, killThread)
@@ -149,6 +148,12 @@ results state =
         <&> Lens.mapped . Lens.mapped .~ ()
     }
 
+getState :: Evaluator pl -> IO (State pl)
+getState = readIORef . eStateRef
+
+getResults :: Evaluator pl -> IO (EvalResults pl)
+getResults evaluator = getState evaluator <&> results
+
 withLock :: MVar () -> IO a -> IO a
 withLock mvar action = withMVar mvar (const action)
 
@@ -170,9 +175,6 @@ stop evaluator =
     do
         killThread (eThreadId evaluator)
         writeStatus (eStateRef evaluator) Stoppped
-
-get :: Evaluator pl -> IO (State pl)
-get = readIORef . eStateRef
 
 pauseLoading :: Evaluator pl -> IO ()
 pauseLoading = takeMVar . eLoadResumed
