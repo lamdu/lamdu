@@ -9,6 +9,7 @@ import qualified Control.Exception as E
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Monad (join, unless, forever, replicateM_)
 import           Control.Monad.Trans.State (execStateT)
 import qualified Data.Aeson as Aeson
@@ -335,15 +336,20 @@ evalActions invalidateCache db = EvalBG.Actions
     replaceRecursiveReferences globalId val =
       val & V.body . Lens.traversed %~ replaceRecursiveReferences globalId
 
-startEval :: IO () -> Db -> IO [EvalBG.Evaluator ValIRef]
+startEval :: IO () -> Db -> IO [(ExprIRef.DefI DbLayout.ViewM, EvalBG.Evaluator ValIRef)]
 startEval invalidateCache db =
   DbLayout.panes DbLayout.codeIRefs
   & Transaction.readIRef
-  >>= mapM Load.loadDef
-  <&> (^.. Lens.traversed . Def.defBody . Def._BodyExpr . Def.expr)
-  <&> Lens.mapped . Lens.mapped %~ Property.value
+
+  >>= mapM loadDef
   & runViewTransactionInIO db
-  >>= mapM (EvalBG.start (evalActions invalidateCache db))
+
+  <&> mapMaybe (_2 %%~ (^? Def.defBody . Def._BodyExpr . Def.expr))
+  <&> Lens.mapped . _2 . Lens.mapped %~ Property.value
+
+  >>= Lens.traverse . _2 %%~ EvalBG.start (evalActions invalidateCache db)
+  where
+    loadDef defI = Load.loadDef defI <&> (,) defI
 
 runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO ()
 runDb win getConfig font db = do
@@ -359,14 +365,15 @@ runDb win getConfig font db = do
   let startEvaluator = startEval invalidateCache db >>= writeIORef evaluatorsRef
   let dbToIO transaction =
         do
-          evaluators <- readIORef evaluatorsRef
-          mapM_ EvalBG.pauseLoading evaluators
+          defEvaluators <- readIORef evaluatorsRef
+          _dependencies <- defEvaluators & Lens.traversed . _2 %%~ EvalBG.pauseLoading
           (oldVersion, result, newVersion) <-
             (,,)
               <$> VersionControl.getVersion
               <*> transaction
               <*> VersionControl.getVersion
             & DbLayout.runDbTransaction db
+          let evaluators = map snd defEvaluators
           if oldVersion == newVersion
             then mapM_ EvalBG.resumeLoading evaluators
             else do
@@ -384,7 +391,7 @@ runDb win getConfig font db = do
       let eventMap = globalEventMap `mappend` sizeFactorEvents (Config.zoom config)
       evalResults <-
           readIORef evaluatorsRef
-          >>= mapM EvalBG.getResults
+          >>= mapM (EvalBG.getResults . snd)
           <&> mconcat
       widget <-
         mkWidgetWithFallback evalResults config settingsRef (baseStyle config font) dbToIO

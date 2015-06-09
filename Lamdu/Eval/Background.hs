@@ -200,8 +200,14 @@ stop evaluator =
         killThread (eThreadId evaluator)
         writeStatus (eStateRef evaluator) Stoppped
 
-pauseLoading :: Evaluator pl -> IO ()
-pauseLoading = takeMVar . eLoadResumed
+pauseLoading :: Evaluator pl -> IO (Set pl, Set V.GlobalId)
+pauseLoading evaluator =
+    do
+        takeMVar (eLoadResumed evaluator)
+        -- When pausing, dependency list stops being changed (only the
+        -- now-paused loadGlobal may change it) so this is a coherent
+        -- position to return it
+        getState evaluator <&> (^. sDependencies)
 
 resumeLoading :: Evaluator pl -> IO ()
 resumeLoading = (`putMVar` ()) . eLoadResumed
