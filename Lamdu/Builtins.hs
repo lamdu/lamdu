@@ -4,11 +4,12 @@ module Lamdu.Builtins
 
 --import qualified Data.Map as Map
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Monad (void)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Map.Utils (matchKeys)
-import           Data.Traversable (traverse)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Eval (EvalT)
@@ -40,15 +41,28 @@ extractRecordParams expectedTags thunkId =
                 ]
             Just paramThunks -> return paramThunks
 
-extractInfixParams :: Monad m => ThunkId -> EvalT pl m [ThunkId]
-extractInfixParams =
-    extractRecordParams [Builtins.infixlTag, Builtins.infixrTag]
+extractInfixParams :: Monad m => ThunkId -> EvalT pl m (ThunkId, ThunkId)
+extractInfixParams thunkId =
+    do
+        [l, r] <-
+            extractRecordParams [Builtins.infixlTag, Builtins.infixrTag] thunkId
+        return (l, r)
 
 type BuiltinRunner m pl = ThunkId -> EvalT pl m (ValHead pl)
 
-class GuestType t where toGuest :: t -> ValHead pl
-instance GuestType Integer where toGuest = HInteger
-instance GuestType Bool where toGuest = HBuiltin . Def.FFIName ["Prelude"] . show
+class GuestType t where
+    toGuest :: t -> ValHead pl
+    fromGuest :: ValHead pl -> t
+
+instance GuestType Integer where
+    toGuest = HInteger
+    fromGuest (HInteger x) = x
+    fromGuest x = error $ "expected int, got " ++ show (void x)
+
+instance GuestType Bool where
+    toGuest = HBuiltin . Def.FFIName ["Prelude"] . show
+    fromGuest (HBuiltin (Def.FFIName ["Prelude"] x)) = read x
+    fromGuest x = error $ "expected bool, got " ++ show (void x)
 
 builtinIf :: Monad m => BuiltinRunner m pl
 builtinIf thunkId =
@@ -64,22 +78,29 @@ builtinIf thunkId =
 
 builtinNegate :: Monad m => BuiltinRunner m pl
 builtinNegate thunkId =
+    Eval.whnfThunk thunkId <&> fromGuest <&> intNegate <&> toGuest
+    where
+        intNegate :: Integer -> Integer
+        intNegate = negate
+
+builtinOr :: Monad m => BuiltinRunner m pl
+builtinOr thunkId =
     do
-        param <- Eval.whnfThunk thunkId
-        case param of
-            HInteger t -> negate t & HInteger & return
-            _ -> error "negate expects integer"
+        (lThunk, rThunk) <- extractInfixParams thunkId
+        l <- Eval.whnfThunk lThunk
+        if fromGuest l
+            then return $ toGuest True
+            else Eval.whnfThunk rThunk
 
 intInfixFunc ::
     (Monad m, GuestType t) =>
-    (Integer -> Integer -> t) -> ThunkId -> EvalT pl m (ValHead pl)
+    (Integer -> Integer -> t) -> BuiltinRunner m pl
 intInfixFunc f thunkId =
     do
-        [l, r] <- extractInfixParams thunkId >>= traverse Eval.whnfThunk
-        case (l, r) of
-            (HInteger x, HInteger y) -> toGuest (f x y)
-            _ -> error "== currently only supports Integers"
-            & return
+        (x, y) <-
+            extractInfixParams thunkId
+            >>= Lens.both (fmap fromGuest . Eval.whnfThunk)
+        f x y & toGuest & return
 
 eval :: Monad m => Def.FFIName -> ThunkId -> EvalT pl m (ValHead pl)
 eval name =
@@ -89,5 +110,7 @@ eval name =
     Def.FFIName ["Prelude"] "*" -> intInfixFunc (*)
     Def.FFIName ["Prelude"] "+" -> intInfixFunc (+)
     Def.FFIName ["Prelude"] "-" -> intInfixFunc (-)
+    Def.FFIName ["Prelude"] "mod" -> intInfixFunc mod
     Def.FFIName ["Prelude"] "negate" -> builtinNegate
+    Def.FFIName ["Prelude"] "||" -> builtinOr
     _ -> error $ show name ++ " not yet supported"
