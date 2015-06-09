@@ -19,11 +19,15 @@ import           Data.MRUMemo (memoIO)
 import           Data.Maybe
 import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
+import           Data.Set (Set)
+import qualified Data.Set as Set
 import           Data.Store.Db (Db)
 import qualified Data.Store.Db as Db
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
+import qualified Data.Store.Rev.Change as Change
+import qualified Data.Store.Rev.Version as Version
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Vector.Vector2 (Vector2(..))
@@ -351,6 +355,15 @@ startEval invalidateCache db =
   where
     loadDef defI = Load.loadDef defI <&> (,) defI
 
+sumDependency ::
+  ExprIRef.DefI m -> (Set (ExprIRef.ValI m), Set V.GlobalId) -> Set Guid
+sumDependency defI (subexprs, globals) =
+  mconcat
+  [ Set.singleton (IRef.guid defI)
+  , Set.map (IRef.guid . ExprIRef.unValI) subexprs
+  , Set.map (IRef.guid . ExprIRef.defI) globals
+  ]
+
 runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO ()
 runDb win getConfig font db = do
   (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor win
@@ -366,19 +379,35 @@ runDb win getConfig font db = do
   let dbToIO transaction =
         do
           defEvaluators <- readIORef evaluatorsRef
-          _dependencies <- defEvaluators & Lens.traversed . _2 %%~ EvalBG.pauseLoading
-          (oldVersion, result, newVersion) <-
-            (,,)
-              <$> VersionControl.getVersion
-              <*> transaction
-              <*> VersionControl.getVersion
+          dependencies <-
+            defEvaluators
+            & Lens.traverse . _2 %%~ EvalBG.pauseLoading
+            <&> Lens.mapped %~ uncurry sumDependency
+            <&> mconcat
+          (dependencyChanged, result) <-
+            do
+              (oldVersion, result, newVersion) <-
+                (,,)
+                <$> VersionControl.getVersion
+                <*> transaction
+                <*> VersionControl.getVersion
+              let checkDependencyChange versionData =
+                    Version.changes versionData
+                    <&> Change.objectKey
+                    <&> (`Set.member` dependencies)
+                    <&> Monoid.Any
+                    & mconcat
+                    & return
+              Monoid.Any dependencyChanged <-
+                Version.walk checkDependencyChange checkDependencyChange oldVersion newVersion
+              return (dependencyChanged, result)
             & DbLayout.runDbTransaction db
           let evaluators = map snd defEvaluators
-          if oldVersion == newVersion
-            then mapM_ EvalBG.resumeLoading evaluators
-            else do
+          if dependencyChanged
+            then do
               mapM_ EvalBG.stop evaluators
               startEvaluator
+            else mapM_ EvalBG.resumeLoading evaluators
           return result
   let
     makeWidget (config, size) = do
