@@ -60,8 +60,8 @@ instance GuestType Integer where
     fromGuest x = error $ "expected int, got " ++ show (void x)
 
 instance GuestType Bool where
-    toGuest = HBuiltin . Def.FFIName ["Prelude"] . show
-    fromGuest (HBuiltin (Def.FFIName ["Prelude"] x)) = read x
+    toGuest = HBuiltin . Def.FFIName [] . show
+    fromGuest (HBuiltin (Def.FFIName [] x)) = read x
     fromGuest x = error $ "expected bool, got " ++ show (void x)
 
 builtinIf :: Monad m => BuiltinRunner m pl

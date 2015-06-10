@@ -121,8 +121,8 @@ createBuiltins =
     boolTag <- newIdent "Bool"
     let bool = T.TInst boolTag Map.empty
 
-    true <- publicBuiltin "Prelude.True" $ Scheme.mono bool
-    false <- publicBuiltin "Prelude.False" $ Scheme.mono bool
+    true <- publicBuiltin "True" $ Scheme.mono bool
+    false <- publicBuiltin "False" $ Scheme.mono bool
 
     publicBuiltin_ "Prelude.not" $ Scheme.mono $ bool ~> bool
 
