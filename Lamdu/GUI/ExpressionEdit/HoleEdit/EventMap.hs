@@ -30,6 +30,7 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.ShownResult (Picke
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -113,8 +114,8 @@ pickEventMap Config.Hole{..} holeInfo shownResult =
             (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
             return $ WidgetIds.fromEntityId nextHoleEntityId
         holeResultHasHoles =
-            Lens.has (Sugar.holeResultHoleTarget . Lens._Just) $
             srHoleResult shownResult
+            & Lens.has (Sugar.holeResultConverted . SugarLens.holePayloads)
         simplePickRes keys =
             Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick"]) $
             return ()

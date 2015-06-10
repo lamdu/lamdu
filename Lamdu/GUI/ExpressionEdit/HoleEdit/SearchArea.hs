@@ -284,7 +284,9 @@ makeHoleResultWidget resultId holeResult =
         holeResultEntityId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
         idWithinResultWidget =
-            holeResult ^. Sugar.holeResultHoleTarget
+            holeResult
+            ^? Sugar.holeResultConverted
+            . SugarLens.holePayloads . Sugar.plEntityId
             & fromMaybe holeResultEntityId
             & WidgetIds.fromEntityId
         holeResultConverted = holeResult ^. Sugar.holeResultConverted

@@ -60,7 +60,6 @@ module Lamdu.Sugar.Types
   , HoleResult(..)
     , holeResultConverted
     , holeResultPick
-    , holeResultHoleTarget
   , IsInjected(..)
   , PickedResult(..), prMJumpTo, prIdTranslation
   , TagG(..), tagGName, tagVal, tagInstance
@@ -193,7 +192,6 @@ type HoleResultScore = [Int]
 data HoleResult name m = HoleResult
   { _holeResultConverted :: Expression name m IsInjected
   , _holeResultPick :: T m PickedResult
-  , _holeResultHoleTarget :: Maybe EntityId -- hole inside picked result
   }
 
 data ScopeGetVar name m = ScopeGetVar
