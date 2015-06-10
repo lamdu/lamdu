@@ -384,6 +384,7 @@ runDb win getConfig font db = do
             & Lens.traverse . _2 %%~ EvalBG.pauseLoading
             <&> Lens.mapped %~ uncurry sumDependency
             <&> mconcat
+            <&> Set.insert rootGuid
           (dependencyChanged, result) <-
             do
               (oldVersion, result, newVersion) <-
