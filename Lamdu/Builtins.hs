@@ -76,12 +76,11 @@ builtinIf thunkId =
           else else_
           ) & Eval.whnfThunk
 
-builtinNegate :: Monad m => BuiltinRunner m pl
-builtinNegate thunkId =
-    Eval.whnfThunk thunkId <&> fromGuest <&> intNegate <&> toGuest
-    where
-        intNegate :: Integer -> Integer
-        intNegate = negate
+builtin1 ::
+    (Monad m, GuestType a, GuestType b) =>
+    (a -> b) -> ThunkId -> EvalT pl m (ValHead pl)
+builtin1 f thunkId =
+    Eval.whnfThunk thunkId <&> fromGuest <&> f <&> toGuest
 
 builtinOr :: Monad m => BuiltinRunner m pl
 builtinOr thunkId =
@@ -92,29 +91,36 @@ builtinOr thunkId =
             then return $ toGuest True
             else Eval.whnfThunk rThunk
 
-intInfixFunc ::
-    (Monad m, GuestType t) =>
-    (Integer -> Integer -> t) -> BuiltinRunner m pl
-intInfixFunc f thunkId =
+builtin2Infix ::
+    ( Monad m
+    , GuestType a
+    , GuestType b
+    , GuestType c ) =>
+    (a -> b -> c) -> ThunkId -> EvalT pl m (ValHead pl)
+builtin2Infix f thunkId =
     do
         V2 x y <-
             extractInfixParams thunkId
-            >>= traverse (fmap fromGuest . Eval.whnfThunk)
-        f x y & toGuest & return
+            >>= traverse Eval.whnfThunk
+        f (fromGuest x) (fromGuest y) & toGuest & return
+
+intArg :: (Integer -> a) -> Integer -> a
+intArg = id
 
 eval :: Monad m => Def.FFIName -> ThunkId -> EvalT pl m (ValHead pl)
 eval name =
     case name of
-    Def.FFIName ["Prelude"] "if" -> builtinIf
-    Def.FFIName ["Prelude"] "==" -> intInfixFunc (==)
-    Def.FFIName ["Prelude"] "<" -> intInfixFunc (<)
-    Def.FFIName ["Prelude"] "<=" -> intInfixFunc (<=)
-    Def.FFIName ["Prelude"] ">" -> intInfixFunc (>)
-    Def.FFIName ["Prelude"] ">=" -> intInfixFunc (>=)
-    Def.FFIName ["Prelude"] "*" -> intInfixFunc (*)
-    Def.FFIName ["Prelude"] "+" -> intInfixFunc (+)
-    Def.FFIName ["Prelude"] "-" -> intInfixFunc (-)
-    Def.FFIName ["Prelude"] "mod" -> intInfixFunc mod
-    Def.FFIName ["Prelude"] "negate" -> builtinNegate
-    Def.FFIName ["Prelude"] "||" -> builtinOr
+    Def.FFIName ["Prelude"] "if"     -> builtinIf
+    Def.FFIName ["Prelude"] "||"     -> builtinOr
+
+    Def.FFIName ["Prelude"] "=="     -> builtin2Infix $ intArg (==)
+    Def.FFIName ["Prelude"] "<"      -> builtin2Infix $ intArg (<)
+    Def.FFIName ["Prelude"] "<="     -> builtin2Infix $ intArg (<=)
+    Def.FFIName ["Prelude"] ">"      -> builtin2Infix $ intArg (>)
+    Def.FFIName ["Prelude"] ">="     -> builtin2Infix $ intArg (>=)
+    Def.FFIName ["Prelude"] "*"      -> builtin2Infix $ intArg (*)
+    Def.FFIName ["Prelude"] "+"      -> builtin2Infix $ intArg (+)
+    Def.FFIName ["Prelude"] "-"      -> builtin2Infix $ intArg (-)
+    Def.FFIName ["Prelude"] "mod"    -> builtin2Infix $ intArg mod
+    Def.FFIName ["Prelude"] "negate" -> builtin1      $ intArg negate
     _ -> error $ show name ++ " not yet supported"
