@@ -107,6 +107,10 @@ eval name =
     case name of
     Def.FFIName ["Prelude"] "if" -> builtinIf
     Def.FFIName ["Prelude"] "==" -> intInfixFunc (==)
+    Def.FFIName ["Prelude"] "<" -> intInfixFunc (<)
+    Def.FFIName ["Prelude"] "<=" -> intInfixFunc (<=)
+    Def.FFIName ["Prelude"] ">" -> intInfixFunc (>)
+    Def.FFIName ["Prelude"] ">=" -> intInfixFunc (>=)
     Def.FFIName ["Prelude"] "*" -> intInfixFunc (*)
     Def.FFIName ["Prelude"] "+" -> intInfixFunc (+)
     Def.FFIName ["Prelude"] "-" -> intInfixFunc (-)
