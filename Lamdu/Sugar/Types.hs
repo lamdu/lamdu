@@ -61,7 +61,7 @@ module Lamdu.Sugar.Types
     , holeResultConverted
     , holeResultPick
   , IsInjected(..)
-  , PickedResult(..), prMJumpTo, prIdTranslation
+  , PickedResult(..), prIdTranslation
   , TagG(..), tagGName, tagVal, tagInstance
   ) where
 
@@ -174,10 +174,8 @@ data TagG name = TagG
   , _tagGName :: name
   }
 
-data PickedResult = PickedResult
-  { _prMJumpTo :: Maybe EntityId -- Hole identifier within
-  , -- pairs of ids from converted expression and written expression.
-    _prIdTranslation :: [(EntityId, EntityId)]
+newtype PickedResult = PickedResult
+  { _prIdTranslation :: [(EntityId, EntityId)]
   }
 
 data IsInjected = Injected | NotInjected

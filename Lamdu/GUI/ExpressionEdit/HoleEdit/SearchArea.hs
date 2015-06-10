@@ -65,14 +65,16 @@ extraSymbolScaleFactor = 0.5
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id
 
-eventResultOfPickedResult :: Sugar.PickedResult -> PickedResult
-eventResultOfPickedResult pr =
+eventResultOfPickedResult ::
+    Maybe Sugar.EntityId -> Sugar.PickedResult -> PickedResult
+eventResultOfPickedResult mDestId pr =
     PickedResult
     { _pickedEventResult =
         Widget.EventResult
         { Widget._eCursor =
-            Monoid.Last $
-            WidgetIds.fromEntityId <$> pr ^. Sugar.prMJumpTo
+            mDestId
+            >>= (`lookup` (pr ^. Sugar.prIdTranslation))
+            <&> WidgetIds.fromEntityId & Monoid.Last
         , Widget._eAnimIdMapping =
             Monoid.Endo $ pickedResultAnimIdTranslation $ pr ^. Sugar.prIdTranslation
         }
@@ -99,12 +101,13 @@ resultSuffix :: Lens.Prism' AnimId AnimId
 resultSuffix = suffixed ["result suffix"]
 
 afterPick ::
-    Monad m => EditableHoleInfo m -> Widget.Id -> Sugar.PickedResult ->
-    T m PickedResult
-afterPick editableHoleInfo resultId pr =
+    Monad m =>
+    EditableHoleInfo m -> Widget.Id -> Maybe Sugar.EntityId ->
+    Sugar.PickedResult -> T m PickedResult
+afterPick editableHoleInfo resultId mDestId pr =
     do
         Property.set (ehiState editableHoleInfo) HoleState.emptyState
-        eventResultOfPickedResult pr
+        eventResultOfPickedResult mDestId pr
             & pickedEventResult . Widget.eCursor %~
               mappend (Monoid.Last (Just myHoleId))
             & pickedEventResult . Widget.eAnimIdMapping %~
@@ -131,6 +134,9 @@ makeShownResult editableHoleInfo result =
         config <- Config.hole <$> ExprGuiM.readConfig
         (widget, mkEventMap) <- makeHoleResultWidget (rId result) res
         let padding = Config.holeResultPadding config <&> realToFrac
+        let dest =
+                res ^? Sugar.holeResultConverted
+                . SugarLens.holePayloads . Sugar.plEntityId
         return
             ( widget & Widget.pad padding
             , ShownResult
@@ -138,7 +144,7 @@ makeShownResult editableHoleInfo result =
               , srHoleResult = res
               , srPick =
                 res ^. Sugar.holeResultPick
-                >>= afterPick editableHoleInfo (rId result)
+                >>= afterPick editableHoleInfo (rId result) dest
               }
             )
 

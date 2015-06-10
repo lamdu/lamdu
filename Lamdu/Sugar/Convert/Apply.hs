@@ -23,6 +23,7 @@ import Lamdu.Sugar.Convert.Monad (ConvertM)
 import Lamdu.Sugar.Internal
 import Lamdu.Sugar.Types
 import qualified Control.Lens as Lens
+import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
@@ -112,6 +113,14 @@ convertPrefix funcS argS applyPl =
   , _aAnnotatedArgs = []
   }
 
+orderedInnerHoles :: Val a -> [Val a]
+orderedInnerHoles e =
+  case e ^. V.body of
+  V.BLeaf V.LHole -> [e]
+  V.BApp (V.Apply func@(V.Val _ (V.BLeaf V.LHole)) arg) ->
+      orderedInnerHoles arg ++ [func]
+  body -> Foldable.concatMap orderedInnerHoles body
+
 unwrap ::
   MonadA m =>
   ExprIRef.ValIProperty m ->
@@ -121,7 +130,7 @@ unwrap ::
 unwrap outerP argP argExpr = do
   res <- DataOps.replace outerP (Property.value argP)
   return $
-    case ConvertHole.orderedInnerHoles argExpr of
+    case orderedInnerHoles argExpr of
     (x:_) -> x ^. V.payload . Input.entityId
     _ -> EntityId.ofValI res
 

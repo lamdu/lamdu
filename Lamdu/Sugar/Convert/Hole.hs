@@ -1,7 +1,7 @@
 {-# LANGUAGE ConstraintKinds, OverloadedStrings, RankNTypes #-}
 
 module Lamdu.Sugar.Convert.Hole
-  ( convert, convertPlain, orderedInnerHoles
+  ( convert, convertPlain
   ) where
 
 import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
@@ -494,10 +494,7 @@ mkHoleResult sugarContext entityId stored val =
   where
     mkPickedResult consistentExpr writtenExpr =
       PickedResult
-      { _prMJumpTo =
-        (orderedInnerHoles writtenExpr ^? Lens.traverse . V.payload . _2)
-        <&> (^. Input.entityId)
-      , _prIdTranslation =
+      { _prIdTranslation =
         idTranslations
         ( consistentExpr <&>
           \input ->
@@ -544,11 +541,3 @@ writeExprMStored exprIRef exprMStorePoint = do
   exprMStorePoint
     & randomizeNonStoredParamIds (genFromHashable key)
     & ExprIRef.writeValWithStoredSubexpressions exprIRef
-
-orderedInnerHoles :: Val a -> [Val a]
-orderedInnerHoles e =
-  case e ^. V.body of
-  V.BLeaf V.LHole -> [e]
-  V.BApp (V.Apply func@(V.Val _ (V.BLeaf V.LHole)) arg) ->
-      orderedInnerHoles arg ++ [func]
-  body -> Foldable.concatMap orderedInnerHoles body
