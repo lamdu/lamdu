@@ -348,12 +348,12 @@ runTransactionReevaluate db evaluatorsRef invalidateCache transaction =
                     <*> transaction
                     <*> VersionControl.getVersion
                 let checkDependencyChange versionData =
-                            Version.changes versionData
-                            <&> Change.objectKey
-                            <&> (`Set.member` dependencies)
-                            <&> Monoid.Any
-                            & mconcat
-                            & return
+                        Version.changes versionData
+                        <&> Change.objectKey
+                        <&> (`Set.member` dependencies)
+                        <&> Monoid.Any
+                        & mconcat
+                        & return
                 Monoid.Any dependencyChanged <-
                     Version.walk checkDependencyChange checkDependencyChange oldVersion newVersion
                 return (dependencyChanged, result)
