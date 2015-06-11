@@ -361,6 +361,53 @@ sumDependency defI (subexprs, globals) =
     , Set.map (IRef.guid . ExprIRef.defI) globals
     ]
 
+startEvaluators ::
+    Db -> IORef [(ExprIRef.DefI DbLayout.ViewM, EvalBG.Evaluator ValIRef)] ->
+    IO () -> IO ()
+startEvaluators db evaluatorsRef invalidateCache =
+    startEval invalidateCache db >>= writeIORef evaluatorsRef
+
+runTransactionReevaluate ::
+    Db ->
+    IORef [(ExprIRef.DefI DbLayout.ViewM, EvalBG.Evaluator ValIRef)] ->
+    IO () ->
+    Transaction DbLayout.DbM a ->
+    IO a
+runTransactionReevaluate db evaluatorsRef invalidateCache transaction =
+    do
+        defEvaluators <- readIORef evaluatorsRef
+        dependencies <-
+            defEvaluators
+            & Lens.traverse . _2 %%~ EvalBG.pauseLoading
+            <&> Lens.mapped %~ uncurry sumDependency
+            <&> mconcat
+            <&> Set.insert rootGuid
+        (dependencyChanged, result) <-
+            do
+                (oldVersion, result, newVersion) <-
+                    (,,)
+                    <$> VersionControl.getVersion
+                    <*> transaction
+                    <*> VersionControl.getVersion
+                let checkDependencyChange versionData =
+                            Version.changes versionData
+                            <&> Change.objectKey
+                            <&> (`Set.member` dependencies)
+                            <&> Monoid.Any
+                            & mconcat
+                            & return
+                Monoid.Any dependencyChanged <-
+                    Version.walk checkDependencyChange checkDependencyChange oldVersion newVersion
+                return (dependencyChanged, result)
+            & DbLayout.runDbTransaction db
+        let evaluators = map snd defEvaluators
+        if dependencyChanged
+            then do
+                mapM_ EvalBG.stop evaluators
+                startEvaluators db evaluatorsRef invalidateCache
+            else mapM_ EvalBG.resumeLoading evaluators
+        return result
+
 runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO ()
 runDb win getConfig font db = do
     (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor win
@@ -372,41 +419,6 @@ runDb win getConfig font db = do
     evaluatorsRef <- newIORef []
     invalidateCacheRef <- newIORef (return ())
     let invalidateCache = join (readIORef invalidateCacheRef)
-    let startEvaluator = startEval invalidateCache db >>= writeIORef evaluatorsRef
-    let dbToIO transaction =
-                do
-                    defEvaluators <- readIORef evaluatorsRef
-                    dependencies <-
-                        defEvaluators
-                        & Lens.traverse . _2 %%~ EvalBG.pauseLoading
-                        <&> Lens.mapped %~ uncurry sumDependency
-                        <&> mconcat
-                        <&> Set.insert rootGuid
-                    (dependencyChanged, result) <-
-                        do
-                            (oldVersion, result, newVersion) <-
-                                (,,)
-                                <$> VersionControl.getVersion
-                                <*> transaction
-                                <*> VersionControl.getVersion
-                            let checkDependencyChange versionData =
-                                        Version.changes versionData
-                                        <&> Change.objectKey
-                                        <&> (`Set.member` dependencies)
-                                        <&> Monoid.Any
-                                        & mconcat
-                                        & return
-                            Monoid.Any dependencyChanged <-
-                                Version.walk checkDependencyChange checkDependencyChange oldVersion newVersion
-                            return (dependencyChanged, result)
-                        & DbLayout.runDbTransaction db
-                    let evaluators = map snd defEvaluators
-                    if dependencyChanged
-                        then do
-                            mapM_ EvalBG.stop evaluators
-                            startEvaluator
-                        else mapM_ EvalBG.resumeLoading evaluators
-                    return result
     let makeWidget (config, size) = do
             cursor <-
                 DbLayout.cursor DbLayout.revisionProps
@@ -420,7 +432,9 @@ runDb win getConfig font db = do
                     >>= mapM (EvalBG.getResults . snd)
                     <&> mconcat
             widget <-
-                mkWidgetWithFallback evalResults config settingsRef (baseStyle config font) dbToIO
+                mkWidgetWithFallback evalResults config settingsRef
+                (baseStyle config font)
+                (runTransactionReevaluate db evaluatorsRef invalidateCache)
                 (size / sizeFactor, cursor)
             return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
     (invalidateCacheAction, makeWidgetCached) <- cacheMakeWidget makeWidget
@@ -430,7 +444,7 @@ runDb win getConfig font db = do
         do
             invalidateCacheAction
             writeIORef refreshRef True
-    startEvaluator
+    startEvaluators db evaluatorsRef invalidateCache
 
     mainLoopDebugMode win shouldRefresh getConfig $ \config size ->
         ( wrapFlyNav =<< makeWidgetCached (config, size)
