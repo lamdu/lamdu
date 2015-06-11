@@ -63,6 +63,7 @@ convertLabeled ::
     MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled funcS argS argI exprPl =
     do
+        guard $ Lens.has (rBody . _BodyGetVar . _GetVarNamed . nvVarType . _GetDefinition) funcS
         record <- maybeToMPlus $ argS ^? rBody . _BodyRecord
         guard $ length (record ^. rItems) >= 2
         let getArg field =

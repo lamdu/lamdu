@@ -40,7 +40,7 @@ module Lamdu.Sugar.Types
     , RecordAddFieldResult(..), rafrNewTag, rafrNewVal, rafrRecExtend
     , Record(..), rItems, rMAddField, rTail
     , GetField(..), gfRecord, gfTag
-    , NamedVarType(..)
+    , NamedVarType(..), _GetDefinition, _GetFieldParameter, _GetParameter
     , NamedVar(..), nvName, nvJumpTo, nvVarType
     , GetVar(..), _GetVarNamed, _GetVarParamsRecord
     , ParamsRecordVar(..), prvFieldNames
@@ -417,19 +417,20 @@ Lens.makeLenses ''ParamsRecordVar
 Lens.makeLenses ''Payload
 Lens.makeLenses ''PickedResult
 Lens.makeLenses ''Record
-Lens.makeLenses ''RecordField
 Lens.makeLenses ''RecordAddFieldResult
+Lens.makeLenses ''RecordField
 Lens.makeLenses ''ScopeGetVar
 Lens.makeLenses ''TagG
 Lens.makeLenses ''WhereItem
+Lens.makePrisms ''BinderParams
 Lens.makePrisms ''Body
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo
 Lens.makePrisms ''GetVar
+Lens.makePrisms ''NamedVarType
 Lens.makePrisms ''RecordTail
 Lens.makePrisms ''SetToHole
 Lens.makePrisms ''SetToInnerExpr
 Lens.makePrisms ''SpecialArgs
 Lens.makePrisms ''Unwrap
 Lens.makePrisms ''WrapAction
-Lens.makePrisms ''BinderParams
