@@ -4,9 +4,7 @@ module Lamdu.GUI.Main
     ) where
 
 import           Control.Lens.Operators
-import qualified Data.Monoid as Monoid
 import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -30,10 +28,9 @@ import qualified Lamdu.VersionControl as VersionControl
 make ::
     EvalResults (ExprIRef.ValI DbLayout.ViewM) ->
     Config -> Settings -> TextEdit.Style ->
-    (forall a. Transaction DbLayout.DbM a -> IO a) ->
     Widget.Size -> Widget.Id -> Widget.Id ->
-    Transaction DbLayout.DbM (Widget IO)
-make evalMap config settings style dbToIO fullSize cursor rootId =
+    Transaction DbLayout.DbM (Widget (Transaction DbLayout.DbM))
+make evalMap config settings style fullSize cursor rootId =
     do
         actions <- VersionControl.makeActions
         let widgetEnv = Env
@@ -69,7 +66,6 @@ make evalMap config settings style dbToIO fullSize cursor rootId =
                         Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
                 branchGui
                     & Widget.strongerEvents quitEventMap
-                    & Widget.events %~ dbToIO . (attachCursor =<<)
                     & return
     where
         hoverPadding = Spacer.makeWidget $ Vector2 0 $ Config.paneHoverPadding $ Config.pane config
@@ -80,8 +76,3 @@ make evalMap config settings style dbToIO fullSize cursor rootId =
             , CodeEdit.config = config
             , CodeEdit.settings = settings
             }
-        attachCursor eventResult =
-            do
-                maybe (return ()) (Transaction.setP (DbLayout.cursor DbLayout.revisionProps)) .
-                    Monoid.getLast $ eventResult ^. Widget.eCursor
-                return eventResult

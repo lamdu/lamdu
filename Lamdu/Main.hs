@@ -397,7 +397,7 @@ runDb win getConfig font db =
                         >>= mkWidgetWithFallback evalResults config
                             (baseStyle config font)
                             (runTransactionReevaluate db evaluatorsRef invalidateCache)
-                            (size / sizeFactor, cursor)
+                            (size / sizeFactor) cursor
                     return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
         (invalidateCacheAction, makeWidgetCached) <- cacheMakeWidget makeWidget
         refreshRef <- newIORef False
@@ -428,14 +428,14 @@ mkWidgetWithFallback ::
     EvalResults (ExprIRef.ValI DbLayout.ViewM) ->
     Config -> TextEdit.Style ->
     (forall a. Transaction DbLayout.DbM a -> IO a) ->
-    (Widget.Size, Widget.Id) -> Settings ->
+    Widget.Size -> Widget.Id -> Settings ->
     IO (Widget IO)
-mkWidgetWithFallback evalMap config style dbToIO (size, cursor) settings =
+mkWidgetWithFallback evalMap config style dbToIO size origCursor settings =
     do
         (isValid, widget) <-
             dbToIO $
             do
-                candidateWidget <- fromCursor cursor
+                candidateWidget <- fromCursor origCursor
                 (isValid, widget) <-
                     if candidateWidget ^. Widget.isFocused
                     then return (True, candidateWidget)
@@ -446,7 +446,7 @@ mkWidgetWithFallback evalMap config style dbToIO (size, cursor) settings =
                 unless (widget ^. Widget.isFocused) $
                     fail "Root cursor did not match"
                 return (isValid, widget)
-        unless isValid $ putStrLn $ "Invalid cursor: " ++ show cursor
+        unless isValid $ putStrLn $ "Invalid cursor: " ++ show origCursor
         widget
             & Widget.backgroundColor (Config.layerMax (Config.layers config))
               ["background"] (bgColor isValid config)
@@ -454,7 +454,13 @@ mkWidgetWithFallback evalMap config style dbToIO (size, cursor) settings =
     where
         bgColor False = Config.invalidCursorBGColor
         bgColor True = Config.backgroundColor
-        fromCursor =
-            GUIMain.make evalMap config settings style dbToIO size
-            (WidgetIds.fromGuid rootGuid)
+        fromCursor cursor =
+            GUIMain.make evalMap config settings style size
+            (WidgetIds.fromGuid rootGuid) cursor
+            <&> Widget.events %~ dbToIO . (attachCursor =<<)
+        attachCursor eventResult =
+            do
+                maybe (return ()) (Transaction.setP (DbLayout.cursor DbLayout.revisionProps)) .
+                    Monoid.getLast $ eventResult ^. Widget.eCursor
+                return eventResult
         rootCursor = WidgetIds.fromGuid rootGuid
