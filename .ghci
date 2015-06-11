@@ -1,5 +1,6 @@
 :set -ibottlelib
 :set -itest
 :set -isubmodules/AlgoW
+:set -isubmodules/AlgoW/src
 :set -idist/build/autogen
 :set -Wall
