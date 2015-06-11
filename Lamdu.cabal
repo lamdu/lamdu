@@ -184,6 +184,7 @@ Executable lamdu
                      , Lamdu.Expr.TypeVars
                      , Lamdu.Expr.UniqueId
                      , Lamdu.Expr.Val
+                     , Lamdu.Font
                      , Lamdu.GUI.CodeEdit
                      , Lamdu.GUI.CodeEdit.Settings
                      , Lamdu.GUI.DefinitionEdit

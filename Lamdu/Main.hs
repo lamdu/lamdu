@@ -31,8 +31,8 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.ExampleDB as ExampleDB
-import           Lamdu.DataFile (accessDataFile)
 import qualified Lamdu.DefEvaluators as DefEvaluators
+import qualified Lamdu.Font as Font
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.Main as GUIMain
@@ -89,16 +89,8 @@ runEditor mFontPath db =
         GLFWUtils.withGLFW $
             do
                 win <- GLFWUtils.createWindow "Lamdu" =<< GLFWUtils.getVideoModeSize
+                font <- Font.get startDir mFontPath
                 -- Fonts must be loaded after the GL context is created..
-                let getFont path =
-                        do
-                            exists <- Directory.doesFileExist path
-                            unless exists . ioError . userError $ path ++ " does not exist!"
-                            Draw.openFont path
-                font <-
-                    case mFontPath of
-                    Nothing -> accessDataFile startDir getFont "fonts/DejaVuSans.ttf"
-                    Just path -> getFont path
                 runDb win (ConfigSampler.getConfig configSampler) font db
 
 
