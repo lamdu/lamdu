@@ -45,12 +45,6 @@ import           Lamdu.VersionControl.Actions (mUndo)
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 
-undo :: Transaction DbLayout.DbM Widget.Id
-undo =
-    do
-        actions <- VersionControl.makeActions
-        fromMaybe (fail "Cannot undo any further") $ mUndo actions
-
 deleteDB :: FilePath -> IO ()
 deleteDB lamduDir =
     do
@@ -62,6 +56,11 @@ undoN n db =
     do
         putStrLn $ "Undoing " ++ show n ++ " times"
         DbLayout.runDbTransaction db $ replicateM_ n undo
+    where
+        undo =
+            do
+                actions <- VersionControl.makeActions
+                fromMaybe (fail "Cannot undo any further") $ mUndo actions
 
 main :: IO ()
 main =
