@@ -50,7 +50,6 @@ import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import           Paths_lamdu_ide (getDataFileName)
 import qualified System.Directory as Directory
-import           System.Environment (getArgs)
 import           System.FilePath ((</>))
 
 undo :: Transaction DbLayout.DbM Widget.Id
@@ -63,10 +62,9 @@ main :: IO ()
 main =
     do
         setNumCapabilities =<< getNumProcessors
-        args <- getArgs
         home <- Directory.getHomeDirectory
         let lamduDir = home </> ".lamdu"
-        Opts.Parsed{..} <- either fail return $ Opts.parse args
+        Opts.Parsed{..} <- either fail return =<< Opts.get
         if _poShouldDeleteDB
             then do
                 putStrLn "Deleting DB..."

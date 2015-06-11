@@ -2,12 +2,13 @@
 module Lamdu.Opts
     ( Parsed(..)
     , poShouldDeleteDB, poMFontPath, poUndoCount
-    , parse
+    , parse, get
     ) where
 
 import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Monad.Trans.State (execStateT)
+import System.Environment (getArgs)
 
 data Parsed = Parsed
     { _poShouldDeleteDB :: Bool
@@ -40,3 +41,6 @@ parse =
         go (arg : _) = failUsage $ "Unexpected arg: " ++ show arg
         failUsage msg = fail $ unlines [ msg, usage ]
         usage = "Usage: lamdu [-deletedb] [-font <filename>] [-undo <N>]"
+
+get :: IO (Either String Parsed)
+get = getArgs <&> parse
