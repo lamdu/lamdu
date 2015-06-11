@@ -1,10 +1,10 @@
 module Graphics.UI.Bottle.Widgets.Spacer
-  ( make
-  , makeWidget
-  , makeHorizontal, makeVertical
-  , makeHorizontalWidget
-  , makeHorizLine
-  ) where
+    ( make
+    , makeWidget
+    , makeHorizontal, makeVertical
+    , makeHorizontalWidget
+    , makeHorizLine
+    ) where
 
 import           Control.Monad (void)
 import           Data.Monoid (mempty)

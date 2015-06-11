@@ -211,8 +211,7 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
         & writeExprMStored (Property.value holeStored)
         <&> ExprIRef.addProperties (Property.set holeStored)
         <&> fmap toPayload
-    let
-        -- Replace the guids with consistent ones:
+    let -- Replace the guids with consistent ones:
 
         -- The sugar convert must apply *inside* the forked transaction
         -- upon the *written* expr because we actually make use of the

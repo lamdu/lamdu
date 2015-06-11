@@ -154,8 +154,7 @@ makeExtraSymbolWidget animId isSelected results
     | otherwise =
         do
             Config.Hole{..} <- Config.hole <$> ExprGuiM.readConfig
-            let
-                extraSymbolColor
+            let extraSymbolColor
                     | isSelected = holeExtraSymbolColorSelected
                     | otherwise = holeExtraSymbolColorUnselected
             ExprGuiM.makeLabel extraSymbol animId
@@ -353,8 +352,7 @@ makeResultsWidget ::
 makeResultsWidget editableHoleInfo shownResultsLists hiddenResults =
     do
         groupsWidgets <- traverse (makeResultGroup editableHoleInfo) shownResultsLists
-        let
-            mSelectedResult = groupsWidgets ^? Lens.traversed . rgwMSelectedResult . Lens._Just
+        let mSelectedResult = groupsWidgets ^? Lens.traversed . rgwMSelectedResult . Lens._Just
             mFirstResult = groupsWidgets ^? Lens.traversed . rgwMainResult
             mResult = mSelectedResult <|> mFirstResult
             rows = groupsWidgets ^.. Lens.traversed . rgwRow
@@ -372,8 +370,7 @@ assignHoleEditCursor ::
 assignHoleEditCursor editableHoleInfo shownMainResultsIds allShownResultIds searchTermId action =
     do
         cursor <- ExprGuiM.widgetEnv WE.readCursor
-        let
-            sub = isJust . flip Widget.subId cursor
+        let sub = isJust . flip Widget.subId cursor
             holeInfo = ehiInfo editableHoleInfo
             WidgetIds{..} = hiIds holeInfo
             shouldBeOnResult = sub hidResultsPrefix
@@ -448,8 +445,7 @@ makeOpenSearchTermGui pl editableHoleInfo =
             if isHoleResult
             then return ([], HaveHiddenResults)
             else HoleResults.makeAll editableHoleInfo
-        let
-            shownMainResultsIds =
+        let shownMainResultsIds =
                 rId . (^. HoleResults.rlMain) <$> shownResultsLists
             allShownResultIds =
                 [ rId . (^. HoleResults.rlMain)

@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
-  ( blockDownEvents, disallowChars
-  , makeOpenEventMaps
-  ) where
+    ( blockDownEvents, disallowChars
+    , makeOpenEventMaps
+    ) where
 
 import           Control.Applicative (Applicative(..), (<$))
 import qualified Control.Lens as Lens
@@ -95,8 +95,8 @@ deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
 deleteKeys = E.deleteKeys . map (E.KeyEvent GLFW.KeyState'Pressed)
 
 pickEventMap ::
-  MonadA m => Config.Hole -> HoleInfo m -> ShownResult m ->
-  Widget.EventHandlers (T m)
+    MonadA m => Config.Hole -> HoleInfo m -> ShownResult m ->
+    Widget.EventHandlers (T m)
 pickEventMap Config.Hole{..} holeInfo shownResult =
     -- TODO: Does this entityId business make sense?
     case hiNearestHoles holeInfo ^. NearestHoles.next of
@@ -133,12 +133,12 @@ pickBefore shownResult action =
 -- | Remove unwanted event handlers from a hole result
 removeUnwanted :: Config -> Widget.EventHandlers f -> Widget.EventHandlers f
 removeUnwanted config =
-  deleteKeys (delKeys ++ gridKeyEvents ++ holeNavigationKeys)
-  where
-    Config.Hole{..} = Config.hole config
-    holeNavigationKeys = holeOpenKeys ++ holeCloseKeys
-    gridKeyEvents = Foldable.toList Grid.stdKeys
-    delKeys = Config.delKeys config
+    deleteKeys (delKeys ++ gridKeyEvents ++ holeNavigationKeys)
+    where
+        Config.Hole{..} = Config.hole config
+        holeNavigationKeys = holeOpenKeys ++ holeCloseKeys
+        gridKeyEvents = Foldable.toList Grid.stdKeys
+        delKeys = Config.delKeys config
 
 mkEventsOnPickedResult :: MonadA m => ShownResult m -> ExprGuiM m (Widget.EventHandlers (T m))
 mkEventsOnPickedResult shownResult =
@@ -156,20 +156,21 @@ makeOpenEventMaps ::
     ( Widget.EventHandlers (T m)
     , Widget.EventHandlers (T m)
     )
-makeOpenEventMaps editableHoleInfo mShownResult = do
-    holeConfig <- ExprGuiM.readConfig <&> Config.hole
-    -- below ad-hoc and search term edit:
-    eventMap <-
-        [ pure $ pasteEventMap holeConfig editableHoleInfo
-        , case mShownResult of
-          Nothing -> pure mempty
-          Just shownResult ->
-              mkEventsOnPickedResult shownResult
-              <&> mappend
-              (pickEventMap holeConfig holeInfo shownResult)
-        ] & sequenceA <&> mconcat
-    let adHocEdit =
-            adHocTextEditEventMap (HoleInfo.ehiSearchTermProperty editableHoleInfo)
-    pure (eventMap, adHocEdit <> eventMap)
+makeOpenEventMaps editableHoleInfo mShownResult =
+    do
+        holeConfig <- ExprGuiM.readConfig <&> Config.hole
+        -- below ad-hoc and search term edit:
+        eventMap <-
+            [ pure $ pasteEventMap holeConfig editableHoleInfo
+            , case mShownResult of
+              Nothing -> pure mempty
+              Just shownResult ->
+                  mkEventsOnPickedResult shownResult
+                  <&> mappend
+                  (pickEventMap holeConfig holeInfo shownResult)
+            ] & sequenceA <&> mconcat
+        let adHocEdit =
+                adHocTextEditEventMap (HoleInfo.ehiSearchTermProperty editableHoleInfo)
+        pure (eventMap, adHocEdit <> eventMap)
     where
         holeInfo = ehiInfo editableHoleInfo

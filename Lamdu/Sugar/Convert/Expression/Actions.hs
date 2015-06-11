@@ -1,6 +1,6 @@
 module Lamdu.Sugar.Convert.Expression.Actions
-  ( addActions, makeAnnotation, truncateStr
-  ) where
+    ( addActions, makeAnnotation, truncateStr
+    ) where
 
 import           Control.Applicative ((<$>))
 import           Control.Lens.Operators
@@ -23,54 +23,54 @@ import           Lamdu.Sugar.Types
 type T = Transaction
 
 mkCutter ::
-  MonadA m => Anchors.CodeProps m -> ExprIRef.ValI m -> T m EntityId -> T m EntityId
+    MonadA m => Anchors.CodeProps m -> ExprIRef.ValI m -> T m EntityId -> T m EntityId
 mkCutter cp expr replaceWithHole = do
-  _ <- DataOps.newClipboard cp expr
-  replaceWithHole
+    _ <- DataOps.newClipboard cp expr
+    replaceWithHole
 
 mkReplaceWithNewHole :: MonadA m => ExprIRef.ValIProperty m -> T m EntityId
 mkReplaceWithNewHole stored =
-  EntityId.ofValI <$> DataOps.replaceWithHole stored
+    EntityId.ofValI <$> DataOps.replaceWithHole stored
 
 mkActions :: MonadA m => ConvertM.Context m -> ExprIRef.ValIProperty m -> Actions m
 mkActions sugarContext stored =
-  Actions
-  { _wrap = WrapAction $ addEntityId <$> DataOps.wrap stored
-  , _setToHole = SetToHole $ addEntityId <$> DataOps.setToHole stored
-  , _setToInnerExpr = NoInnerExpr
-  , _cut =
-    Just $ -- overridden by hole conversion
-    mkCutter (sugarContext ^. ConvertM.scCodeAnchors)
-    (Property.value stored) $ mkReplaceWithNewHole stored
-  }
-  where
-    addEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
+    Actions
+    { _wrap = WrapAction $ addEntityId <$> DataOps.wrap stored
+    , _setToHole = SetToHole $ addEntityId <$> DataOps.setToHole stored
+    , _setToInnerExpr = NoInnerExpr
+    , _cut =
+        Just $ -- overridden by hole conversion
+        mkCutter (sugarContext ^. ConvertM.scCodeAnchors)
+        (Property.value stored) $ mkReplaceWithNewHole stored
+    }
+    where
+        addEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
 
 addActions ::
-  MonadA m => Input.Payload m a -> BodyU m a -> ConvertM m (ExpressionU m a)
+    MonadA m => Input.Payload m a -> BodyU m a -> ConvertM m (ExpressionU m a)
 addActions exprPl body = do
-  sugarContext <- ConvertM.readContext
-  return $ Expression body Payload
-    { _plEntityId = exprPl ^. Input.entityId
-    , _plAnnotation = makeAnnotation exprPl
-    , _plActions = mkActions sugarContext <$> exprPl ^. Input.mStored
-    , _plData = exprPl ^. Input.userData
-    }
+    sugarContext <- ConvertM.readContext
+    return $ Expression body Payload
+        { _plEntityId = exprPl ^. Input.entityId
+        , _plAnnotation = makeAnnotation exprPl
+        , _plActions = mkActions sugarContext <$> exprPl ^. Input.mStored
+        , _plData = exprPl ^. Input.userData
+        }
 
 truncateStr :: Int -> String -> String
 truncateStr n s
-  | l > n = take (n `div` 3) s ++ ".." ++ drop (l - (2 * n `div` 3)) s
-  | otherwise = s
-  where
-    l = length s
+    | l > n = take (n `div` 3) s ++ ".." ++ drop (l - (2 * n `div` 3)) s
+    | otherwise = s
+    where
+        l = length s
 
 makeAnnotation :: Input.Payload m a -> Annotation
 makeAnnotation payload =
-  Annotation
-  { _aInferredType = payload ^. Input.inferred . Infer.plType
-  , _aMEvaluationResult =
-    payload ^. Input.evalResults
-    & Map.minView
-    <&> fst
-    <&> truncateStr 20 . show
-  }
+    Annotation
+    { _aInferredType = payload ^. Input.inferred . Infer.plType
+    , _aMEvaluationResult =
+        payload ^. Input.evalResults
+        & Map.minView
+        <&> fst
+        <&> truncateStr 20 . show
+    }

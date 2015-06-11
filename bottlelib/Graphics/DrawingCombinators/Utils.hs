@@ -1,15 +1,15 @@
 {-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE CPP, StandaloneDeriving, DeriveGeneric #-}
 module Graphics.DrawingCombinators.Utils
-  ( Image
-  , square
-  , textHeight, textSize
-  , textLinesWidth, textLinesHeight, textLinesSize
-  , drawText, drawTextLines
-  , backgroundColor
-  , scale, translate
-  , clearRenderSized
-  ) where
+    ( Image
+    , square
+    , textHeight, textSize
+    , textLinesWidth, textLinesHeight, textLinesSize
+    , drawText, drawTextLines
+    , backgroundColor
+    , scale, translate
+    , clearRenderSized
+    ) where
 
 import           Control.Lens.Operators
 import           Control.Monad (void)
@@ -61,14 +61,14 @@ descender _ = -0.5 -- approximate
 
 drawText :: Draw.Font -> String -> Image
 drawText font str =
-  str
-  & Draw.text font
-  & void
-  -- Text is normally at height -0.5..1.5.  We move it to be -textHeight..0
-  & (translate (Vector2 0 (-textHeight - descender font)) %%)
-  -- We want to reverse it so that higher y is down, and it is also
-  -- moved to 0..2
-  & (scale (Vector2 1 (-1)) %%)
+    str
+    & Draw.text font
+    & void
+    -- Text is normally at height -0.5..1.5.  We move it to be -textHeight..0
+    & (translate (Vector2 0 (-textHeight - descender font)) %%)
+    -- We want to reverse it so that higher y is down, and it is also
+    -- moved to 0..2
+    & (scale (Vector2 1 (-1)) %%)
 
 textLinesHeight :: [String] -> Draw.R
 textLinesHeight = (textHeight *) . genericLength
@@ -81,13 +81,13 @@ textLinesSize font textLines = Vector2 (textLinesWidth font textLines) (textLine
 
 drawTextLines :: Draw.Font -> [String] -> Image
 drawTextLines font =
-  foldr (step . drawText font) mempty
-  where
-    step lineImage restImage =
-      mappend lineImage $
-      translate (Vector2 0 textHeight) %% restImage
+    foldr (step . drawText font) mempty
+    where
+        step lineImage restImage =
+            mappend lineImage $
+            translate (Vector2 0 textHeight) %% restImage
 
 backgroundColor :: Draw.Color -> Vector2 Draw.R -> Image -> Image
 backgroundColor color size image =
-  mappend image $
-  Draw.tint color $ scale size %% square
+    mappend image $
+    Draw.tint color $ scale size %% square

@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
-  ( makeRecordTag, makeParamTag, diveToRecordTag
-  ) where
+    ( makeRecordTag, makeParamTag, diveToRecordTag
+    ) where
 
 import           Control.Applicative ((<$>))
 import           Control.Lens.Operators
@@ -28,45 +28,47 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction
 
 makeRecordTagNameEdit ::
-  MonadA m => Sugar.TagG (Name m) -> ExprGuiM m (Widget (T m))
-makeRecordTagNameEdit tagG = do
-  Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
-  ExpressionGui.makeNameEdit (tagG ^. Sugar.tagGName) myId
-    & ExprGuiM.withFgColor recordTagColor
-  where
-    myId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
+    MonadA m => Sugar.TagG (Name m) -> ExprGuiM m (Widget (T m))
+makeRecordTagNameEdit tagG =
+    do
+        Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
+        ExpressionGui.makeNameEdit (tagG ^. Sugar.tagGName) myId
+            & ExprGuiM.withFgColor recordTagColor
+    where
+        myId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
 
 makeRecordTag ::
-  MonadA m =>
-  NearestHoles -> Sugar.TagG (Name m) ->
-  ExprGuiM m (ExpressionGui m)
-makeRecordTag nearestHoles tagG = do
-  config <- ExprGuiM.readConfig
-  jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
-  let
-    eventMap =
-      jumpHolesEventMap <>
-      maybe mempty jumpNextEventMap (nearestHoles ^. NearestHoles.next)
-  let Config.Name{..} = Config.name config
-  makeRecordTagNameEdit tagG
-    <&> Widget.weakerEvents eventMap
-    <&> ExpressionGui.fromValueWidget
-  where
-    jumpNextEventMap nextHole =
-      Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Space]
-      (E.Doc ["Navigation", "Jump to next hole"]) $
-      return $ WidgetIds.fromEntityId nextHole
+    MonadA m =>
+    NearestHoles -> Sugar.TagG (Name m) ->
+    ExprGuiM m (ExpressionGui m)
+makeRecordTag nearestHoles tagG =
+    do
+        config <- ExprGuiM.readConfig
+        jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
+        let eventMap =
+                jumpHolesEventMap <>
+                maybe mempty jumpNextEventMap (nearestHoles ^. NearestHoles.next)
+        let Config.Name{..} = Config.name config
+        makeRecordTagNameEdit tagG
+            <&> Widget.weakerEvents eventMap
+            <&> ExpressionGui.fromValueWidget
+    where
+        jumpNextEventMap nextHole =
+            Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Space]
+            (E.Doc ["Navigation", "Jump to next hole"]) $
+            return $ WidgetIds.fromEntityId nextHole
 
 -- | Unfocusable tag view (e.g: in apply params)
 makeParamTag ::
-  MonadA m => Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
-makeParamTag t = do
-  Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
-  ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
-    & ExprGuiM.withFgColor paramTagColor
-    <&> ExpressionGui.fromValueWidget
-  where
-    animId = t ^. Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
+    MonadA m => Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
+makeParamTag t =
+    do
+        Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
+        ExpressionGui.makeNameView (t ^. Sugar.tagGName) animId
+            & ExprGuiM.withFgColor paramTagColor
+            <&> ExpressionGui.fromValueWidget
+    where
+        animId = t ^. Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
 
 diveToRecordTag :: Widget.Id -> Widget.Id
 diveToRecordTag = ExpressionGui.diveToNameEdit

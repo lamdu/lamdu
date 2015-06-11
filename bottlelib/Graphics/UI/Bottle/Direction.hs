@@ -1,6 +1,6 @@
 module Graphics.UI.Bottle.Direction
-  ( Direction(..), coordinates
-  ) where
+    ( Direction(..), coordinates
+    ) where
 
 import Control.Applicative (pure, (<$>))
 import Control.Lens.Operators
@@ -16,4 +16,4 @@ coordinates :: Lens.Traversal' Direction Rect
 coordinates _ Outside = pure Outside
 coordinates f (PrevFocalArea x) = PrevFocalArea <$> f x
 coordinates f (Point x) =
-  Point . (^. Rect.topLeft) <$> f (Rect x 0)
+    Point . (^. Rect.topLeft) <$> f (Rect x 0)

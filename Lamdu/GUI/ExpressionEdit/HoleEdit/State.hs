@@ -1,8 +1,8 @@
 {-# LANGUAGE RecordWildCards, OverloadedStrings, TemplateHaskell, DeriveGeneric #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.State
-  ( HoleState(..), hsSearchTerm
-  , emptyState, setHoleStateAndJump, assocStateRef
-  ) where
+    ( HoleState(..), hsSearchTerm
+    , emptyState, setHoleStateAndJump, assocStateRef
+    ) where
 
 import qualified Control.Lens as Lens
 import           Control.MonadA (MonadA)
@@ -18,22 +18,22 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction.Transaction
 
 newtype HoleState = HoleState
-  { _hsSearchTerm :: String
-  } deriving (Eq, Generic)
+    { _hsSearchTerm :: String
+    } deriving (Eq, Generic)
 Lens.makeLenses ''HoleState
 instance Binary HoleState
 
 emptyState :: HoleState
 emptyState =
-  HoleState
-  { _hsSearchTerm = ""
-  }
+    HoleState
+    { _hsSearchTerm = ""
+    }
 
 setHoleStateAndJump :: MonadA m => Guid -> HoleState -> Sugar.EntityId -> T m Widget.Id
 setHoleStateAndJump guid state entityId = do
-  Transaction.setP (assocStateRef guid) state
-  let WidgetIds{..} = WidgetIds.make entityId
-  return hidOpenSearchTerm
+    Transaction.setP (assocStateRef guid) state
+    let WidgetIds{..} = WidgetIds.make entityId
+    return hidOpenSearchTerm
 
 assocStateRef :: MonadA m => Guid -> Transaction.MkProperty m HoleState
 assocStateRef = Transaction.assocDataRefDef emptyState "searchTerm"

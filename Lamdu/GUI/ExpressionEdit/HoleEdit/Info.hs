@@ -1,8 +1,8 @@
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Info
-  ( HoleInfo(..), EditableHoleInfo(..)
-  , ehiSearchTermProperty
-  , ehiSearchTerm
-  ) where
+    ( HoleInfo(..), EditableHoleInfo(..)
+    , ehiSearchTermProperty
+    , ehiSearchTerm
+    ) where
 
 import           Control.Lens.Operators
 import           Data.Store.Property (Property(..))
@@ -20,23 +20,23 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction.Transaction
 
 data HoleInfo m = HoleInfo
-  { hiEntityId :: Sugar.EntityId
-  , hiInferredType :: Type
-  , hiIds :: WidgetIds
-  , hiSuggested :: Val ()
-  , hiMArgument :: Maybe (Sugar.HoleArg m (ExprGuiM.SugarExpr m))
-  , hiNearestHoles :: NearestHoles
-  }
+    { hiEntityId :: Sugar.EntityId
+    , hiInferredType :: Type
+    , hiIds :: WidgetIds
+    , hiSuggested :: Val ()
+    , hiMArgument :: Maybe (Sugar.HoleArg m (ExprGuiM.SugarExpr m))
+    , hiNearestHoles :: NearestHoles
+    }
 
 data EditableHoleInfo m = EditableHoleInfo
-  { ehiState :: Property (T m) HoleState
-  , ehiActions :: Sugar.HoleActions (Name m) m
-  , ehiInfo :: HoleInfo m
-  }
+    { ehiState :: Property (T m) HoleState
+    , ehiActions :: Sugar.HoleActions (Name m) m
+    , ehiInfo :: HoleInfo m
+    }
 
 ehiSearchTermProperty :: EditableHoleInfo m -> Property (T m) String
 ehiSearchTermProperty holeInfo =
-  Property.composeLens hsSearchTerm $ ehiState holeInfo
+    Property.composeLens hsSearchTerm $ ehiState holeInfo
 
 ehiSearchTerm :: EditableHoleInfo m -> String
 ehiSearchTerm holeInfo = Property.value (ehiState holeInfo) ^. hsSearchTerm

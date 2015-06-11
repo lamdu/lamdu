@@ -1,21 +1,21 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Graphics.UI.Bottle.WidgetsEnvT
-  ( WidgetEnvT, runWidgetEnvT
-  , mapWidgetEnvT
+    ( WidgetEnvT, runWidgetEnvT
+    , mapWidgetEnvT
 
-  , readCursor, subCursor, isSubCursor
+    , readCursor, subCursor, isSubCursor
 
-  , Env(..), envCursor, envTextStyle
+    , Env(..), envCursor, envTextStyle
 
-  , readEnv
+    , readEnv
 
-  , localEnv
-  , envAssignCursor, envAssignCursorPrefix
-  , assignCursor, assignCursorPrefix
+    , localEnv
+    , envAssignCursor, envAssignCursorPrefix
+    , assignCursor, assignCursorPrefix
 
-  , readTextStyle
-  , setTextSizeColor, setTextColor
-  ) where
+    , readTextStyle
+    , setTextSizeColor, setTextColor
+    ) where
 
 import           Control.Applicative (Applicative)
 import qualified Control.Lens as Lens
@@ -34,31 +34,31 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
 data Env = Env
-  { _envCursor :: Widget.Id
-  , _envTextStyle :: TextEdit.Style
-  , backgroundCursorId :: AnimId
-  , cursorBGColor :: Draw.Color
-  , layerCursor :: Anim.Layer
-  , layerInterval :: Anim.Layer
-  , verticalSpacing :: Double
-  , stdSpaceWidth :: Double
-  }
+    { _envCursor :: Widget.Id
+    , _envTextStyle :: TextEdit.Style
+    , backgroundCursorId :: AnimId
+    , cursorBGColor :: Draw.Color
+    , layerCursor :: Anim.Layer
+    , layerInterval :: Anim.Layer
+    , verticalSpacing :: Double
+    , stdSpaceWidth :: Double
+    }
 Lens.makeLenses ''Env
 
 newtype WidgetEnvT m a = WidgetEnvT
-  { _widgetEnvT :: ReaderT Env m a
-  } deriving (Functor, Applicative, Monad, MonadTrans)
+    { _widgetEnvT :: ReaderT Env m a
+    } deriving (Functor, Applicative, Monad, MonadTrans)
 Lens.makeLenses ''WidgetEnvT
 
 runWidgetEnvT ::
-  MonadA m => Env -> WidgetEnvT m a -> m a
+    MonadA m => Env -> WidgetEnvT m a -> m a
 runWidgetEnvT env (WidgetEnvT action) = runReaderT action env
 
 mapWidgetEnvT
-  :: MonadA m
-  => (m a -> n a)
-  -> WidgetEnvT m a
-  -> WidgetEnvT n a
+    :: MonadA m
+    => (m a -> n a)
+    -> WidgetEnvT m a
+    -> WidgetEnvT n a
 mapWidgetEnvT = (widgetEnvT %~) . Reader.mapReaderT
 
 readEnv :: MonadA m => WidgetEnvT m Env
@@ -77,44 +77,44 @@ readTextStyle :: MonadA m => WidgetEnvT m TextEdit.Style
 readTextStyle = readEnv <&> (^. envTextStyle)
 
 envAssignCursor
-  :: Widget.Id -> Widget.Id -> Env -> Env
+    :: Widget.Id -> Widget.Id -> Env -> Env
 envAssignCursor src dest =
-  envCursor %~ replace
-  where
-    replace cursor
-      | cursor == src = dest
-      | otherwise = cursor
+    envCursor %~ replace
+    where
+        replace cursor
+            | cursor == src = dest
+            | otherwise = cursor
 
 envAssignCursorPrefix
-  :: Widget.Id -> (AnimId -> Widget.Id) -> Env -> Env
+    :: Widget.Id -> (AnimId -> Widget.Id) -> Env -> Env
 envAssignCursorPrefix srcFolder dest =
-  envCursor %~ replace
-  where
-    replace cursor =
-      case Widget.subId srcFolder cursor of
-      Nothing -> cursor
-      Just suffix -> dest suffix
+    envCursor %~ replace
+    where
+        replace cursor =
+            case Widget.subId srcFolder cursor of
+            Nothing -> cursor
+            Just suffix -> dest suffix
 
 assignCursor ::
-  MonadA m => Widget.Id -> Widget.Id ->
-  WidgetEnvT m a -> WidgetEnvT m a
+    MonadA m => Widget.Id -> Widget.Id ->
+    WidgetEnvT m a -> WidgetEnvT m a
 assignCursor x y = localEnv $ envAssignCursor x y
 
 assignCursorPrefix ::
-  MonadA m => Widget.Id -> (AnimId -> Widget.Id) ->
-  WidgetEnvT m a -> WidgetEnvT m a
+    MonadA m => Widget.Id -> (AnimId -> Widget.Id) ->
+    WidgetEnvT m a -> WidgetEnvT m a
 assignCursorPrefix x y = localEnv $ envAssignCursorPrefix x y
 
 setTextSizeColor :: Double -> Draw.Color -> Env -> Env
 setTextSizeColor textSize textColor env =
-  env
-  & envTextStyle . TextEdit.sTextViewStyle %~
-    (TextView.styleFont . SizedFont.fontSize .~ textSize) .
-    (TextView.styleColor .~ textColor)
+    env
+    & envTextStyle . TextEdit.sTextViewStyle %~
+        (TextView.styleFont . SizedFont.fontSize .~ textSize) .
+        (TextView.styleColor .~ textColor)
 
 localEnv :: MonadA m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
 localEnv = (widgetEnvT %~) . Reader.local
 
 setTextColor :: Draw.Color -> Env -> Env
 setTextColor color =
-  envTextStyle . TextEdit.sTextViewStyle . TextView.styleColor .~ color
+    envTextStyle . TextEdit.sTextViewStyle . TextView.styleColor .~ color

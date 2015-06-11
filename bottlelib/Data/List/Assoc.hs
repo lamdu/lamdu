@@ -1,6 +1,6 @@
 module Data.List.Assoc
-  ( at, match
-  ) where
+    ( at, match
+    ) where
 
 import           Control.Applicative (Applicative)
 import           Control.Lens (LensLike')
@@ -14,8 +14,8 @@ at key = Lens.traverse . Lens.filtered ((== key) . fst) . _2
 
 match :: Eq k => (a -> b -> c) -> [(k, a)] -> [(k, b)] -> Maybe [(k, c)]
 match f xs ys =
-  sequence =<< List.match matchItem xs ys
-  where
-    matchItem (k0, v0) (k1, v1) = do
-      guard $ k0 == k1
-      return (k0, f v0 v1)
+    sequence =<< List.match matchItem xs ys
+    where
+        matchItem (k0, v0) (k1, v1) = do
+            guard $ k0 == k1
+            return (k0, f v0 v1)

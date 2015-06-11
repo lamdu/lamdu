@@ -95,8 +95,7 @@ typeIndicator ::
 typeIndicator width color myId =
     do
         config <- ExprGuiM.readConfig
-        let
-            typeIndicatorHeight =
+        let typeIndicatorHeight =
                 realToFrac $ Config.typeIndicatorFrameWidth config ^. _2
         Anim.unitSquare (Widget.toAnimId (typeIndicatorId myId))
             & View 1
@@ -112,8 +111,7 @@ acceptableTypeIndicator ::
 acceptableTypeIndicator width accept color myId =
     do
         config <- ExprGuiM.readConfig
-        let
-            acceptKeyMap =
+        let acceptKeyMap =
                 Widget.keysEventMapMovesCursor (Config.acceptDefinitionTypeKeys config)
                 (E.Doc ["Edit", "Accept inferred type"]) (accept >> return myId)
         typeIndicator width color myId

@@ -14,19 +14,19 @@ withGLFW = bracket_ (GLFW.init >>= assert "initialize failed") GLFW.terminate
 
 createWindow :: Int -> Int -> String -> IO GLFW.Window
 createWindow w h title = do
-  mWin <- GLFW.createWindow w h title Nothing Nothing
-  case mWin of
-    Nothing -> fail "Open window failed"
-    Just win -> do
-      GLFW.makeContextCurrent $ Just win
-      return win
+    mWin <- GLFW.createWindow w h title Nothing Nothing
+    case mWin of
+        Nothing -> fail "Open window failed"
+        Just win -> do
+            GLFW.makeContextCurrent $ Just win
+            return win
 
 getVideoModeSize :: IO (Vector2 Int)
 getVideoModeSize = do
-  monitor <-
-    maybe (fail "GLFW: Can't get primary monitor") return =<<
-    GLFW.getPrimaryMonitor
-  videoMode <-
-    maybe (fail "GLFW: Can't get video mode of monitor") return =<<
-    GLFW.getVideoMode monitor
-  return $ Vector2 (GLFW.videoModeWidth videoMode) (GLFW.videoModeHeight videoMode)
+    monitor <-
+        maybe (fail "GLFW: Can't get primary monitor") return =<<
+        GLFW.getPrimaryMonitor
+    videoMode <-
+        maybe (fail "GLFW: Can't get video mode of monitor") return =<<
+        GLFW.getVideoMode monitor
+    return $ Vector2 (GLFW.videoModeWidth videoMode) (GLFW.videoModeHeight videoMode)

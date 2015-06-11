@@ -182,8 +182,7 @@ makeNewDefinitionEventMap ::
 makeNewDefinitionEventMap cp =
     do
         curCursor <- WE.readCursor
-        let
-            newDefinition =
+        let newDefinition =
                 do
                     newDefI <- DataOps.newPublicDefinition cp ""
                     DataOps.newPane cp newDefI

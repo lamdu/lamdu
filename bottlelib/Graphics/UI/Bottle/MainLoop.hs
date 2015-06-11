@@ -35,9 +35,9 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (KeyEvent, Event(..), Result(..), eventLoop)
 
 data AnimConfig = AnimConfig
-  { acTimePeriod :: NominalDiffTime
-  , acRatioInPeriod :: Anim.R
-  }
+    { acTimePeriod :: NominalDiffTime
+    , acRatioInPeriod :: Anim.R
+    }
 
 data EventResult =
     ERNone | ERRefresh | ERQuit
@@ -47,10 +47,10 @@ instance Monoid EventResult where
     mappend = max
 
 data ImageHandlers = ImageHandlers
-  { imageEventHandler :: KeyEvent -> IO ()
-  , imageUpdate :: IO (Maybe Image)
-  , imageRefresh :: IO Image
-  }
+    { imageEventHandler :: KeyEvent -> IO ()
+    , imageUpdate :: IO (Maybe Image)
+    , imageRefresh :: IO Image
+    }
 
 windowSize :: GLFW.Window -> IO Widget.Size
 windowSize win =

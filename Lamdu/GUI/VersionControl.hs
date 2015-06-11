@@ -82,12 +82,12 @@ branchTextEditId :: Branch t -> Widget.Id
 branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 
 make ::
-  (MonadA m, MonadA n) =>
-  VersionControl.Config -> Anim.Layer ->
-  (forall a. Transaction n a -> m a) ->
-  Actions n m ->
-  (Widget m -> WidgetEnvT m (Widget m)) ->
-  WidgetEnvT m (Widget m)
+    (MonadA m, MonadA n) =>
+    VersionControl.Config -> Anim.Layer ->
+    (forall a. Transaction n a -> m a) ->
+    Actions n m ->
+    (Widget m -> WidgetEnvT m (Widget m)) ->
+    WidgetEnvT m (Widget m)
 make VersionControl.Config{..} choiceBGLayer transaction actions mkWidget =
     do
         branchNameEdits <- traverse makeBranchNameEdit $ branches actions
@@ -100,19 +100,19 @@ make VersionControl.Config{..} choiceBGLayer transaction actions mkWidget =
             <&> Widget.strongerEvents
                 (globalEventMap VersionControl.Config{..} actions)
     where
-        makeBranchNameEdit branch = do
-            nameProp <-
-                lift . transaction . (Lens.mapped . Property.pSet . Lens.mapped %~ transaction) $
-                Anchors.assocNameRef (Branch.guid branch) ^. Transaction.mkProperty
-            branchNameEdit <-
-                BWidgets.makeLineEdit nameProp (branchTextEditId branch)
-                >>= BWidgets.makeFocusDelegator branchNameFDConfig
-                    FocusDelegator.FocusEntryParent (branchDelegatorId branch)
-            let
-                delEventMap
-                    | ListUtils.isLengthAtLeast 2 (branches actions) =
-                        Widget.keysEventMapMovesCursor
-                        delBranchKeys (E.Doc ["Branches", "Delete"])
-                        (branchDelegatorId <$> deleteBranch actions branch)
-                    | otherwise = mempty
-            return (branch, branchNameEdit & Widget.weakerEvents delEventMap)
+        makeBranchNameEdit branch =
+            do
+                nameProp <-
+                    lift . transaction . (Lens.mapped . Property.pSet . Lens.mapped %~ transaction) $
+                    Anchors.assocNameRef (Branch.guid branch) ^. Transaction.mkProperty
+                branchNameEdit <-
+                    BWidgets.makeLineEdit nameProp (branchTextEditId branch)
+                    >>= BWidgets.makeFocusDelegator branchNameFDConfig
+                        FocusDelegator.FocusEntryParent (branchDelegatorId branch)
+                let delEventMap
+                        | ListUtils.isLengthAtLeast 2 (branches actions) =
+                            Widget.keysEventMapMovesCursor
+                            delBranchKeys (E.Doc ["Branches", "Delete"])
+                            (branchDelegatorId <$> deleteBranch actions branch)
+                        | otherwise = mempty
+                return (branch, branchNameEdit & Widget.weakerEvents delEventMap)

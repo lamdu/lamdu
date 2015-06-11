@@ -1,8 +1,8 @@
 module Control.Monad.Trans.Either.Utils
-  ( leftToJust, justToLeft
-  , Matcher, runMatcher, runMatcherT
-  , eitherToMaybeT
-  ) where
+    ( leftToJust, justToLeft
+    , Matcher, runMatcher, runMatcherT
+    , eitherToMaybeT
+    ) where
 
 import Control.Monad (mzero, (<=<))
 import Control.Monad.Trans.Class (lift)

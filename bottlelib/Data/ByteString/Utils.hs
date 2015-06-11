@@ -25,6 +25,6 @@ ljust len chr s = s `SBS.append` SBS.replicate (len - SBS.length s) chr
 
 xorBS :: SBS.ByteString -> SBS.ByteString -> SBS.ByteString
 xorBS x y =
-  SBS.pack $ on (SBS.zipWith xor) (ljust l 0) x y
-  where
-    l = on max SBS.length x y
+    SBS.pack $ on (SBS.zipWith xor) (ljust l 0) x y
+    where
+        l = on max SBS.length x y

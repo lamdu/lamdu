@@ -30,10 +30,10 @@ loadInferScope scope = runIdentity . loadInfer loader scope
 -- WARNING: Returned inferred val requires update
 loadInferInto :: Infer.Payload -> Val a -> Infer (Val (Infer.Payload, a))
 loadInferInto pl val = do
-  inferredVal <- loadInferScope (pl ^. Infer.plScope) val
-  let inferredType = inferredVal ^. V.payload . _1 . Infer.plType
-  unify inferredType (pl ^. Infer.plType)
-  return inferredVal
+    inferredVal <- loadInferScope (pl ^. Infer.plScope) val
+    let inferredType = inferredVal ^. V.payload . _1 . Infer.plType
+    unify inferredType (pl ^. Infer.plType)
+    return inferredVal
 
 loadInferDef :: Val a -> Infer (Val (Infer.Payload, a))
 loadInferDef = loadInferScope Infer.emptyScope

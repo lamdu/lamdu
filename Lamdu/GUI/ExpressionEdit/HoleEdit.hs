@@ -1,7 +1,7 @@
 {-# LANGUAGE NoMonomorphismRestriction, RecordWildCards, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit
-  ( make
-  ) where
+    ( make
+    ) where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -31,112 +31,111 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction
 
 mkEditableHoleInfo ::
-  MonadA m => HoleInfo m -> Sugar.HoleActions (Name m) m -> T m (EditableHoleInfo m)
+    MonadA m => HoleInfo m -> Sugar.HoleActions (Name m) m -> T m (EditableHoleInfo m)
 mkEditableHoleInfo holeInfo actions =
-  do
-    stateProp <-
-      HoleState.assocStateRef (actions ^. Sugar.holeGuid) ^.
-      Transaction.mkProperty
-    EditableHoleInfo
-      { ehiActions = actions
-      , ehiState = stateProp
-      , ehiInfo = holeInfo
-      } & return
+    do
+        stateProp <-
+            HoleState.assocStateRef (actions ^. Sugar.holeGuid) ^.
+            Transaction.mkProperty
+        EditableHoleInfo
+            { ehiActions = actions
+            , ehiState = stateProp
+            , ehiInfo = holeInfo
+            } & return
 
 makeWrapper ::
-  MonadA m => Sugar.Payload m ExprGuiM.Payload ->
-  HoleInfo m -> ExprGuiM m (Maybe (ExpressionGui m))
+    MonadA m => Sugar.Payload m ExprGuiM.Payload ->
+    HoleInfo m -> ExprGuiM m (Maybe (ExpressionGui m))
 makeWrapper pl holeInfo =
-  hiMArgument holeInfo
-  & Lens._Just %%~
-    ExpressionGui.wrapExprEventMap pl . Wrapper.make (hiIds holeInfo)
+    hiMArgument holeInfo
+    & Lens._Just %%~
+        ExpressionGui.wrapExprEventMap pl . Wrapper.make (hiIds holeInfo)
 
 assignHoleCursor ::
-  MonadA m =>
-  WidgetIds -> Maybe (Sugar.HoleArg m expr) -> ExprGuiM m a -> ExprGuiM m a
+    MonadA m =>
+    WidgetIds -> Maybe (Sugar.HoleArg m expr) -> ExprGuiM m a -> ExprGuiM m a
 assignHoleCursor WidgetIds{..} Nothing =
-  ExprGuiM.assignCursor hidHole hidOpen .
-  ExprGuiM.assignCursor (WidgetIds.notDelegatingId hidHole) hidClosedSearchArea
+    ExprGuiM.assignCursor hidHole hidOpen .
+    ExprGuiM.assignCursor (WidgetIds.notDelegatingId hidHole) hidClosedSearchArea
 assignHoleCursor WidgetIds{..} (Just _) =
-  ExprGuiM.assignCursor hidHole hidWrapper .
-  ExprGuiM.assignCursor (WidgetIds.notDelegatingId hidHole) hidWrapper
+    ExprGuiM.assignCursor hidHole hidWrapper .
+    ExprGuiM.assignCursor (WidgetIds.notDelegatingId hidHole) hidWrapper
 
 liftLayers :: MonadA m => ExpressionGui n -> ExprGuiM m (ExpressionGui n)
 liftLayers =
-  ExpressionGui.egWidget %%~ ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
+    ExpressionGui.egWidget %%~ ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
 
 addSearchAreaBelow ::
-  MonadA m => WidgetIds ->
-  ExpressionGui f -> ExpressionGui f ->
-  ExprGuiM m (ExpressionGui f)
+    MonadA m => WidgetIds ->
+    ExpressionGui f -> ExpressionGui f ->
+    ExprGuiM m (ExpressionGui f)
 addSearchAreaBelow WidgetIds{..} wrapperGui searchAreaGui =
-  do
-    hoveringSearchArea <-
-      searchAreaGui
-      & addDarkBackground
-        (Widget.toAnimId hidOpen ++ ["searchAreaDarkBg"])
-      >>= liftLayers
-    wrapperGui
-      & Layout.addAfter Layout.Vertical [hoveringSearchArea]
-      & return
+    do
+        hoveringSearchArea <-
+            searchAreaGui
+            & addDarkBackground
+                (Widget.toAnimId hidOpen ++ ["searchAreaDarkBg"])
+            >>= liftLayers
+        wrapperGui
+            & Layout.addAfter Layout.Vertical [hoveringSearchArea]
+            & return
 
 addWrapperAbove ::
-  MonadA m =>
-  WidgetIds -> ExpressionGui f -> ExpressionGui f ->
-  ExprGuiM m (ExpressionGui f)
+    MonadA m =>
+    WidgetIds -> ExpressionGui f -> ExpressionGui f ->
+    ExprGuiM m (ExpressionGui f)
 addWrapperAbove WidgetIds{..} wrapperGui searchAreaGui =
-  do
-    Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
-    hoveringWrapper <-
-      addDarkBackground (Widget.toAnimId hidWrapper ++ ["wrapperDarkBg"])
-      wrapperGui
-      <&> Layout.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
-      >>= liftLayers
-    searchAreaGui
-      & Layout.addBefore Layout.Vertical [hoveringWrapper]
-      & return
+    do
+        Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
+        hoveringWrapper <-
+            addDarkBackground (Widget.toAnimId hidWrapper ++ ["wrapperDarkBg"])
+            wrapperGui
+            <&> Layout.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
+            >>= liftLayers
+        searchAreaGui
+            & Layout.addBefore Layout.Vertical [hoveringWrapper]
+            & return
 
 make ::
-  MonadA m =>
-  Sugar.Hole (Name m) m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload m ExprGuiM.Payload ->
-  ExprGuiM m (ExpressionGui m)
+    MonadA m =>
+    Sugar.Hole (Name m) m (ExprGuiM.SugarExpr m) ->
+    Sugar.Payload m ExprGuiM.Payload ->
+    ExprGuiM m (ExpressionGui m)
 make hole pl =
-  do
-    Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
-    mEditableHoleInfo <-
-      hole ^. Sugar.holeMActions
-      & Lens._Just %%~ mkEditableHoleInfo holeInfo
-      & ExprGuiM.transaction
     do
-      mWrapperGui <- makeWrapper pl holeInfo
-      case mWrapperGui of
-        Just wrapperGui -> do
-          unfocusedWrapperGui <-
-            wrapperGui & ExpressionGui.maybeAddAnnotationPl pl
-          isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor hidHole
-          let
-            layout f = do
-              searchAreaGui <-
-                SearchArea.makeStdWrapped pl holeInfo mEditableHoleInfo
-              f WidgetIds{..} wrapperGui searchAreaGui
-                <&> (`Layout.hoverInPlaceOf` unfocusedWrapperGui)
-          if wrapperGui ^. ExpressionGui.egWidget . Widget.isFocused
-             then
-               layout addSearchAreaBelow
-             else if isSelected then
-               layout addWrapperAbove
-             else
-               return unfocusedWrapperGui
-        Nothing -> SearchArea.makeStdWrapped pl holeInfo mEditableHoleInfo
-      & assignHoleCursor WidgetIds{..} (hole ^. Sugar.holeMArg)
-  where
-    holeInfo = HoleInfo
-      { hiEntityId = pl ^. Sugar.plEntityId
-      , hiInferredType = pl ^. Sugar.plAnnotation . Sugar.aInferredType
-      , hiSuggested = hole ^. Sugar.holeSuggested
-      , hiIds = WidgetIds{..}
-      , hiNearestHoles = pl ^. Sugar.plData . ExprGuiM.plNearestHoles
-      , hiMArgument = hole ^. Sugar.holeMArg
-      }
-    WidgetIds{..} = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
+        Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
+        mEditableHoleInfo <-
+            hole ^. Sugar.holeMActions
+            & Lens._Just %%~ mkEditableHoleInfo holeInfo
+            & ExprGuiM.transaction
+        do
+            mWrapperGui <- makeWrapper pl holeInfo
+            case mWrapperGui of
+                Just wrapperGui ->
+                    do
+                        unfocusedWrapperGui <-
+                            wrapperGui & ExpressionGui.maybeAddAnnotationPl pl
+                        isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor hidHole
+                        let layout f = do
+                                searchAreaGui <-
+                                    SearchArea.makeStdWrapped pl holeInfo mEditableHoleInfo
+                                f WidgetIds{..} wrapperGui searchAreaGui
+                                    <&> (`Layout.hoverInPlaceOf` unfocusedWrapperGui)
+                        if wrapperGui ^. ExpressionGui.egWidget . Widget.isFocused
+                            then layout addSearchAreaBelow
+                            else if isSelected then
+                                     layout addWrapperAbove
+                                 else
+                                     return unfocusedWrapperGui
+                Nothing -> SearchArea.makeStdWrapped pl holeInfo mEditableHoleInfo
+            & assignHoleCursor WidgetIds{..} (hole ^. Sugar.holeMArg)
+    where
+        holeInfo = HoleInfo
+            { hiEntityId = pl ^. Sugar.plEntityId
+            , hiInferredType = pl ^. Sugar.plAnnotation . Sugar.aInferredType
+            , hiSuggested = hole ^. Sugar.holeSuggested
+            , hiIds = WidgetIds{..}
+            , hiNearestHoles = pl ^. Sugar.plData . ExprGuiM.plNearestHoles
+            , hiMArgument = hole ^. Sugar.holeMArg
+            }
+        WidgetIds{..} = HoleWidgetIds.make (pl ^. Sugar.plEntityId)

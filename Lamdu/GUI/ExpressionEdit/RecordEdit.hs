@@ -31,10 +31,10 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction
 
 make ::
-  MonadA m =>
-  Sugar.Record (Name m) m (ExprGuiM.SugarExpr m) ->
-  Sugar.Payload m ExprGuiM.Payload ->
-  ExprGuiM m (ExpressionGui m)
+    MonadA m =>
+    Sugar.Record (Name m) m (ExprGuiM.SugarExpr m) ->
+    Sugar.Payload m ExprGuiM.Payload ->
+    ExprGuiM m (ExpressionGui m)
 make (Sugar.Record fields recordTail mAddField) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     let defaultPos =
@@ -44,10 +44,12 @@ make (Sugar.Record fields recordTail mAddField) pl =
                 f ^. Sugar.rfExpr . Sugar.rPayload
                 & WidgetIds.fromExprPayload
     in
-    ExprGuiM.assignCursor myId defaultPos $ do
+    ExprGuiM.assignCursor myId defaultPos $
+    do
         config <- ExprGuiM.readConfig
         (gui, resultPickers) <-
-            ExprGuiM.listenResultPickers $ do
+            ExprGuiM.listenResultPickers $
+            do
                 fieldsGui <- makeFieldsWidget fields myId <&> pad config
                 case recordTail of
                     Sugar.ClosedRecord mDeleteTail ->
@@ -72,9 +74,9 @@ make (Sugar.Record fields recordTail mAddField) pl =
             & ExpressionGui.egWidget %%~ ExpressionGui.addValBG myId
 
 makeFieldRow ::
-  MonadA m =>
-  Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiM.Payload) ->
-  ExprGuiM m [ExpressionGui m]
+    MonadA m =>
+    Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiM.Payload) ->
+    ExprGuiM m [ExpressionGui m]
 makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) =
     do
         config <- ExprGuiM.readConfig
@@ -92,9 +94,9 @@ makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) =
             & return
 
 makeFieldsWidget ::
-  MonadA m =>
-  [Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiM.Payload)] ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
+    MonadA m =>
+    [Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiM.Payload)] ->
+    Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
     ExpressionGui.grammarLabel "Ø" (Widget.toAnimId myId)
     >>= ExpressionGui.egWidget %%~
@@ -116,9 +118,10 @@ separationBar config width animId =
     & Widget.scale (Vector2 width 10)
     & ExpressionGui.fromValueWidget
 
-makeOpenRecord :: MonadA m =>
-  ExpressionGui m -> ExprGuiM.SugarExpr m -> AnimId ->
-  ExprGuiM m (ExpressionGui m)
+makeOpenRecord ::
+    MonadA m =>
+    ExpressionGui m -> ExprGuiM.SugarExpr m -> AnimId ->
+    ExprGuiM m (ExpressionGui m)
 makeOpenRecord fieldsGui rest animId =
     do
         config <- ExprGuiM.readConfig
@@ -137,15 +140,15 @@ pad :: Config -> ExpressionGui m -> ExpressionGui m
 pad config = ExpressionGui.pad $ realToFrac <$> Config.valFramePadding config
 
 recordOpenEventMap ::
-  MonadA m =>
-  Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
+    MonadA m =>
+    Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
 recordOpenEventMap config open =
     Widget.keysEventMapMovesCursor (Config.recordOpenKeys config)
     (E.Doc ["Edit", "Record", "Open"]) $ WidgetIds.fromEntityId <$> open
 
 recordDelEventMap ::
-  MonadA m =>
-  Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
+    MonadA m =>
+    Config -> T m Sugar.EntityId -> Widget.EventHandlers (T m)
 recordDelEventMap config delete =
     Widget.keysEventMapMovesCursor (Config.delKeys config)
     (E.Doc ["Edit", "Record", "Delete Field"]) $ WidgetIds.fromEntityId <$> delete

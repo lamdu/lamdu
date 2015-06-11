@@ -1,8 +1,8 @@
 {-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE StandaloneDeriving, DeriveGeneric #-}
 module Graphics.UI.GLFW.Instances
-  (
-  ) where
+    (
+    ) where
 
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import Graphics.UI.GLFW (Key(..), ModifierKeys(..))

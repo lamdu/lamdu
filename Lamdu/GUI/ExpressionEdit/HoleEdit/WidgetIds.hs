@@ -1,8 +1,8 @@
 -- | The widget ids of exposed hole components
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds
-  ( WidgetIds(..), make
-  ) where
+    ( WidgetIds(..), make
+    ) where
 
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.GUI.WidgetIds as WidgetIds

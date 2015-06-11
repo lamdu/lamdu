@@ -89,8 +89,7 @@ makeActions = do
     curVersion <- View.curVersion view
     curVersionData <- Version.versionData curVersion
     allRedos <- getP $ revProp DbLayout.redos
-    let
-        toDb = DbLayout.runViewTransaction view
+    let toDb = DbLayout.runViewTransaction view
         undo parentVersion = do
             preCursor <- toDb . getP $ codeProp DbLayout.preCursor
             View.move view parentVersion

@@ -1,13 +1,13 @@
 {-# LANGUAGE RecordWildCards, RankNTypes, OverloadedStrings #-}
 module Graphics.UI.Bottle.View
-  ( View(..)
-  , empty
-  , size, animFrame
-  , width, height
-  , Size
-  , augmentAnimId, backgroundColor
-  , scale
-  ) where
+    ( View(..)
+    , empty
+    , size, animFrame
+    , width, height
+    , Size
+    , augmentAnimId, backgroundColor
+    , scale
+    ) where
 
 import           Control.Lens (Lens')
 import           Control.Lens.Operators

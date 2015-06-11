@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.ShownResult
-  ( PickedResult(..), pickedEventResult, pickedIdTranslations
-  , ShownResult(..)
-  ) where
+    ( PickedResult(..), pickedEventResult, pickedIdTranslations
+    , ShownResult(..)
+    ) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
@@ -14,13 +14,13 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction.Transaction
 
 data PickedResult = PickedResult
-  { _pickedEventResult :: Widget.EventResult
-  , _pickedIdTranslations :: Widget.Id -> Widget.Id
-  }
+    { _pickedEventResult :: Widget.EventResult
+    , _pickedIdTranslations :: Widget.Id -> Widget.Id
+    }
 Lens.makeLenses ''PickedResult
 
 data ShownResult m = ShownResult
-  { srMkEventMap :: ExprGuiM m (Widget.EventHandlers (T m))
-  , srHoleResult :: Sugar.HoleResult (Name m) m
-  , srPick :: T m PickedResult
-  }
+    { srMkEventMap :: ExprGuiM m (Widget.EventHandlers (T m))
+    , srHoleResult :: Sugar.HoleResult (Name m) m
+    , srPick :: T m PickedResult
+    }

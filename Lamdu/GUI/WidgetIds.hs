@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.WidgetIds
-  ( module Lamdu.GUI.WidgetIds
-  , module Lamdu.GUI.WidgetIdIRef
-  ) where
+    ( module Lamdu.GUI.WidgetIds
+    , module Lamdu.GUI.WidgetIdIRef
+    ) where
 
 import           Control.Lens.Operators
 import           Data.ByteString.Char8 (ByteString)

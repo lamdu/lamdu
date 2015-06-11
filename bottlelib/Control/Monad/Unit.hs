@@ -5,12 +5,12 @@ import Control.Applicative (Applicative(..))
 import Control.Monad (ap)
 
 data Unit a = Unit
-  deriving (Functor)
+    deriving (Functor)
 
 instance Applicative Unit where
-  pure = return
-  (<*>) = ap
+    pure = return
+    (<*>) = ap
 
 instance Monad Unit where
-  return = const Unit
-  _ >>= _ = Unit
+    return = const Unit
+    _ >>= _ = Unit

@@ -1,12 +1,12 @@
 {-# LANGUAGE RankNTypes #-}
 module Control.Lens.Utils
-  ( Context'
-  , contextSetter, contextVal
-  , _fromJust
-  , addListContexts
-  , addTuple2Contexts
-  , getPrism
-  ) where
+    ( Context'
+    , contextSetter, contextVal
+    , _fromJust
+    , addListContexts
+    , addTuple2Contexts
+    , getPrism
+    ) where
 
 import Control.Applicative ((<$>))
 import Control.Lens (Lens)
@@ -28,18 +28,18 @@ contextVal f (Lens.Context set val) = Lens.Context set <$> f val
 addListContexts :: (a -> b) -> Lens.Context [a] [b] t -> [Lens.Context a b t]
 addListContexts _   (Lens.Context _         []) = []
 addListContexts tob (Lens.Context fromBList (a:as)) =
-  Lens.Context (fromBList . (:bs)) a :
-  addListContexts tob (Lens.Context (fromBList . (b:)) as)
-  where
-    b = tob a
-    bs = map tob as
+    Lens.Context (fromBList . (:bs)) a :
+    addListContexts tob (Lens.Context (fromBList . (b:)) as)
+    where
+        b = tob a
+        bs = map tob as
 
 -- TODO: can use composition with _2 instead ?
 addTuple2Contexts :: Lens.Context (z, a) (z, b) t -> (z, Lens.Context a b t)
 addTuple2Contexts (Lens.Context fromBTuple (z, a)) =
-  (z, Lens.Context chg a)
-  where
-    chg b = fromBTuple (z, b)
+    (z, Lens.Context chg a)
+    where
+        chg b = fromBTuple (z, b)
 
 getPrism :: Lens.Prism s t a b -> s -> Either a t
 getPrism p = p Left

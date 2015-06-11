@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.BuiltinEdit
-  ( make
-  ) where
+    ( make
+    ) where
 
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)

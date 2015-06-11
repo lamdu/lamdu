@@ -10,7 +10,7 @@ import Data.Word     (Word8)
 import System.Random (Random(..))
 
 instance Random Word8 where
-  randomR (a,b) = (_1 %~ fromIntegral) . randomR (fromIntegral a :: Int, fromIntegral b)
-  random        = randomR (minBound, maxBound)
+    randomR (a,b) = (_1 %~ fromIntegral) . randomR (fromIntegral a :: Int, fromIntegral b)
+    random        = randomR (minBound, maxBound)
 
 #endif

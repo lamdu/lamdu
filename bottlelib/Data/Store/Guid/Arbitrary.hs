@@ -9,4 +9,4 @@ import qualified Data.ByteString as BS
 import qualified Data.Store.Guid as Guid
 
 instance Arbitrary Guid where
-  arbitrary = Guid.make . BS.pack <$> replicateM Guid.length arbitrary
+    arbitrary = Guid.make . BS.pack <$> replicateM Guid.length arbitrary

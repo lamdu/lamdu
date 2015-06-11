@@ -41,12 +41,12 @@ import qualified Test.HUnit as HUnit
 
 annotateTypes :: Val Type -> String
 annotateTypes expr =
-  expr
-  & Lens.traverse %%~ fmap (:[]) . annotate
-  & errorMessage
-  & snd
-  where
-    annotate typ = addAnnotation ("Type: " ++ show typ)
+    expr
+    & Lens.traverse %%~ fmap (:[]) . annotate
+    & errorMessage
+    & snd
+    where
+        annotate typ = addAnnotation ("Type: " ++ show typ)
 
 type VarMap t = Map (T.Var t) (T.Var t)
 type FreshSupply t = [T.Var t]
@@ -61,175 +61,175 @@ runCanonizer = flip evalState (emptyVarState, emptyVarState)
 
 canonizeTV :: T.Var t -> State (VarState t) (T.Var t)
 canonizeTV tv =
-  do  mtv <- Lens.use (_1 . Lens.at tv)
-      case mtv of
-        Just tv' -> return tv'
-        Nothing ->
-          do  tv' <- fresh
-              _1 . Lens.at tv .= Just tv'
-              return tv'
-  where
-    fresh =
-      Lens.zoom _2 $
-      do  (x:xs) <- State.get
-          State.put xs
-          return x
+    do  mtv <- Lens.use (_1 . Lens.at tv)
+            case mtv of
+                Just tv' -> return tv'
+                Nothing ->
+                    do  tv' <- fresh
+                            _1 . Lens.at tv .= Just tv'
+                            return tv'
+    where
+        fresh =
+            Lens.zoom _2 $
+            do  (x:xs) <- State.get
+                    State.put xs
+                    return x
 
 canonizeCompositeType ::
-  T.Composite p -> State (VarState (T.Composite p)) (T.Composite p)
+    T.Composite p -> State (VarState (T.Composite p)) (T.Composite p)
 canonizeCompositeType =
-  fmap f . go
-  where
-    f (fields, end) = foldr (uncurry T.CExtend) end (Map.toList fields)
-    go (T.CExtend tag typ rest) = go rest <&> _1 %~ Map.insert tag typ
-    go T.CEmpty = return (mempty, T.CEmpty)
-    go (T.CVar ctv) =
-      do  ctv' <- canonizeTV ctv
-          return (mempty, T.CVar ctv')
+    fmap f . go
+    where
+        f (fields, end) = foldr (uncurry T.CExtend) end (Map.toList fields)
+        go (T.CExtend tag typ rest) = go rest <&> _1 %~ Map.insert tag typ
+        go T.CEmpty = return (mempty, T.CEmpty)
+        go (T.CVar ctv) =
+            do  ctv' <- canonizeTV ctv
+                    return (mempty, T.CVar ctv')
 
 canonizeType :: Type -> Canonizer Type
 canonizeType (T.TVar tv) =
-  T.TVar <$> Lens.zoom _1 (canonizeTV tv)
+    T.TVar <$> Lens.zoom _1 (canonizeTV tv)
 canonizeType (T.TRecord c) =
-  Lens.zoom _2 (canonizeCompositeType c)
-  <&> T.TRecord
-  >>= T.nextLayer %%~ canonizeType
+    Lens.zoom _2 (canonizeCompositeType c)
+    <&> T.TRecord
+    >>= T.nextLayer %%~ canonizeType
 canonizeType t =
-  t
-  & T.nextLayer %%~ canonizeType
+    t
+    & T.nextLayer %%~ canonizeType
 
 onInferError :: (Error -> Error) -> Infer a -> Infer a
 onInferError f (Infer act) = Infer $ mapStateT (Lens._Left %~ f) act
 
 -- An expr with both the actual infer result, and the expected result
 data ExprTestPayload = ExprTestPayload
-  { _etpExpectedType :: Type
-  , _etpInferredType :: Type
-  }
+    { _etpExpectedType :: Type
+    , _etpInferredType :: Type
+    }
 
 etpExpectedType :: Lens' ExprTestPayload Type
 etpExpectedType f e =
-  mk <$> f (_etpExpectedType e)
-  where
-    mk x = e { _etpExpectedType = x}
+    mk <$> f (_etpExpectedType e)
+    where
+        mk x = e { _etpExpectedType = x}
 
 etpInferredType :: Lens' ExprTestPayload Type
 etpInferredType f e =
-  mk <$> f (_etpInferredType e)
-  where
-    mk x = e { _etpInferredType = x}
+    mk <$> f (_etpInferredType e)
+    where
+        mk x = e { _etpInferredType = x}
 
 type ExprTest = Val ExprTestPayload
 type ExprComplete = Val (Infer.Payload, Resumptions)
 
 exprTestPayload :: (Infer.Payload, Resumptions) -> ExprTestPayload
 exprTestPayload (pl, resumptions) = ExprTestPayload
-  { _etpExpectedType = resumptions ^. rTyp
-  , _etpInferredType = pl ^. Infer.plType
-  }
+    { _etpExpectedType = resumptions ^. rTyp
+    , _etpInferredType = pl ^. Infer.plType
+    }
 
 canonizedExprTest :: ExprComplete -> ExprTest
 canonizedExprTest =
-  canonize etpExpectedType . canonize etpInferredType . fmap exprTestPayload
-  where
-    canonize t expr =
-      expr
-      & Lens.traversed . t %%~ canonizeType
-      & runCanonizer
+    canonize etpExpectedType . canonize etpInferredType . fmap exprTestPayload
+    where
+        canonize t expr =
+            expr
+            & Lens.traversed . t %%~ canonizeType
+            & runCanonizer
 
 inferThrow :: Error -> Infer a
 inferThrow = Infer . lift . Left
 
 verifyExprComplete :: String -> ExprComplete -> Infer ()
 verifyExprComplete msg expr
-  | null errors = return ()
-  | otherwise = inferThrow $ error $ msg ++ ": " ++ fullMsg
-  where
-    (errors, fullMsg) =
-      errorMessage $ Lens.traverse verifyExprTestPayload $
-      canonizedExprTest expr
+    | null errors = return ()
+    | otherwise = inferThrow $ error $ msg ++ ": " ++ fullMsg
+    where
+        (errors, fullMsg) =
+            errorMessage $ Lens.traverse verifyExprTestPayload $
+            canonizedExprTest expr
 
 verifyExprTestPayload :: ExprTestPayload -> AnnotationM [AnnotationIndex]
 verifyExprTestPayload pl
-  | i == e = return []
-  | otherwise =
-    fmap (:[]) . addAnnotation $ show $
-    "Type mismatch:" <+> pPrint i <+> " (expected:" <+> pPrint e <+> ")"
-  where
-    i = pl ^. etpInferredType
-    e = pl ^. etpExpectedType
+    | i == e = return []
+    | otherwise =
+        fmap (:[]) . addAnnotation $ show $
+        "Type mismatch:" <+> pPrint i <+> " (expected:" <+> pPrint e <+> ")"
+    where
+        i = pl ^. etpInferredType
+        e = pl ^. etpExpectedType
 
 inferVerifyExpr :: ExprWithResumptions -> Infer ExprComplete
 inferVerifyExpr exprExpected =
-  go (0 :: Int) =<< annotateErrors "initial infer: " (loadInferDef exprExpected)
-  where
-    msg count = "Resumption phase " ++ show count ++ " failed:\n"
-    annotateErrors prefix = onInferError (error . (prefix ++) . show . pPrint)
-    go count exprComplete = do
-      verifyExprComplete (msg count) exprComplete
-      (exprNextInput, (resumptionsExpected, resumptionsHappened)) <-
-        annotateErrors (msg count) . runWriterT $
-        handleResumption (verifyExprComplete (msg (count+1))) exprComplete
-      case (resumptionsExpected, resumptionsHappened) of
-        (Monoid.Any False, Monoid.Any False) -> return exprNextInput
-        (Monoid.Any True, Monoid.Any False) ->
-          error "NewInferred specified, but no subexpr has ResumeWith/ResumeOnSide"
-        (_, _) -> go (count+1) exprNextInput
+    go (0 :: Int) =<< annotateErrors "initial infer: " (loadInferDef exprExpected)
+    where
+        msg count = "Resumption phase " ++ show count ++ " failed:\n"
+        annotateErrors prefix = onInferError (error . (prefix ++) . show . pPrint)
+        go count exprComplete = do
+            verifyExprComplete (msg count) exprComplete
+            (exprNextInput, (resumptionsExpected, resumptionsHappened)) <-
+                annotateErrors (msg count) . runWriterT $
+                handleResumption (verifyExprComplete (msg (count+1))) exprComplete
+            case (resumptionsExpected, resumptionsHappened) of
+                (Monoid.Any False, Monoid.Any False) -> return exprNextInput
+                (Monoid.Any True, Monoid.Any False) ->
+                    error "NewInferred specified, but no subexpr has ResumeWith/ResumeOnSide"
+                (_, _) -> go (count+1) exprNextInput
 
 handleResumption ::
-  (ExprComplete -> Infer ()) -> ExprComplete ->
-  WriterT (Monoid.Any, Monoid.Any) Infer ExprComplete
+    (ExprComplete -> Infer ()) -> ExprComplete ->
+    WriterT (Monoid.Any, Monoid.Any) Infer ExprComplete
 handleResumption verifyInfersOnSide =
-  lift . Update.liftInfer . Update.inferredVal <=< go
-  where
-    recurseBody body pl = Val pl <$> Lens.traverse go body
-    go (Val pl body) =
-      case pl ^. _2 . rStep of
-      ResumeWith newExpr -> do
-        Writer.tell (Monoid.Any True, Monoid.Any True)
-        lift $ loadInferInto (pl ^. _1) newExpr
-      ResumeOnSide newExpr resumptions -> do
-        Writer.tell (Monoid.Any True, Monoid.Any True)
-        lift $ verifyInfersOnSide =<< Update.liftInfer . Update.inferredVal =<<
-          loadInferScope (pl ^. _1 . Infer.plScope) newExpr
-        recurseBody body $ pl & _2 .~ resumptions
-      NewInferred resumptions -> do
-        Writer.tell (Monoid.Any True, Monoid.Any False)
-        recurseBody body $ pl & _2 .~ resumptions
-      Final ->
-        recurseBody body pl
+    lift . Update.liftInfer . Update.inferredVal <=< go
+    where
+        recurseBody body pl = Val pl <$> Lens.traverse go body
+        go (Val pl body) =
+            case pl ^. _2 . rStep of
+            ResumeWith newExpr -> do
+                Writer.tell (Monoid.Any True, Monoid.Any True)
+                lift $ loadInferInto (pl ^. _1) newExpr
+            ResumeOnSide newExpr resumptions -> do
+                Writer.tell (Monoid.Any True, Monoid.Any True)
+                lift $ verifyInfersOnSide =<< Update.liftInfer . Update.inferredVal =<<
+                    loadInferScope (pl ^. _1 . Infer.plScope) newExpr
+                recurseBody body $ pl & _2 .~ resumptions
+            NewInferred resumptions -> do
+                Writer.tell (Monoid.Any True, Monoid.Any False)
+                recurseBody body $ pl & _2 .~ resumptions
+            Final ->
+                recurseBody body pl
 
 expectLeft ::
-  String -> (l -> HUnit.Assertion) ->
-  Either l (Val Type) -> HUnit.Assertion
+    String -> (l -> HUnit.Assertion) ->
+    Either l (Val Type) -> HUnit.Assertion
 expectLeft _ handleLeft (Left x) = handleLeft x
 expectLeft msg _ (Right x) =
-  error $ unwords
-  [ "Error", msg, "expected.  Unexpected success encountered:"
-  , "\n", x & UnescapedStr . annotateTypes & show
-  ]
+    error $ unwords
+    [ "Error", msg, "expected.  Unexpected success encountered:"
+    , "\n", x & UnescapedStr . annotateTypes & show
+    ]
 
 inferFailsAssertion ::
-  String -> (Error -> Bool) -> Val () -> HUnit.Assertion
+    String -> (Error -> Bool) -> Val () -> HUnit.Assertion
 inferFailsAssertion errorName isExpectedError val =
-  expectLeft errorName verifyError $ (fmap . fmap) (^. _1 . Infer.plType) $
-  runNewContext $ loadInferDef val
-  where
-    verifyError err
-      | isExpectedError err = return ()
-      | otherwise =
-        error $ errorName ++ " error expected, but got: " ++ show (pPrint err)
+    expectLeft errorName verifyError $ (fmap . fmap) (^. _1 . Infer.plType) $
+    runNewContext $ loadInferDef val
+    where
+        verifyError err
+            | isExpectedError err = return ()
+            | otherwise =
+                error $ errorName ++ " error expected, but got: " ++ show (pPrint err)
 
 allowFailAssertion :: String -> HUnit.Assertion -> HUnit.Assertion
 allowFailAssertion msg assertion =
-  (assertion >> successOccurred) `E.catch`
-  \(E.SomeException _) -> errorOccurred
-  where
-    successOccurred =
-      hPutStrLn stderr . ansiAround ansiYellow $ "NOTE: doesn't fail. Remove AllowFail?"
-    errorOccurred =
-      hPutStrLn stderr . ansiAround ansiYellow $
-      concat ["WARNING: Allowing failure (", msg, ") in:"]
+    (assertion >> successOccurred) `E.catch`
+    \(E.SomeException _) -> errorOccurred
+    where
+        successOccurred =
+            hPutStrLn stderr . ansiAround ansiYellow $ "NOTE: doesn't fail. Remove AllowFail?"
+        errorOccurred =
+            hPutStrLn stderr . ansiAround ansiYellow $
+            concat ["WARNING: Allowing failure (", msg, ") in:"]
 
 defaultTestOptions :: TestOptions' Maybe
 defaultTestOptions = mempty { topt_timeout = Just (Just 4000000) }
@@ -239,12 +239,12 @@ testCase name = plusTestOptions defaultTestOptions . HUnitProvider.testCase name
 
 inferAssertion :: ExprWithResumptions -> HUnit.Assertion
 inferAssertion =
-  either (error . show . pPrint) (const (return ())) .
-  runNewContext . inferVerifyExpr
+    either (error . show . pPrint) (const (return ())) .
+    runNewContext . inferVerifyExpr
 
 testInfer :: String -> ExprWithResumptions -> TestFramework.Test
 testInfer name = testCase name . inferAssertion
 
 testInferAllowFail :: String -> String -> ExprWithResumptions -> TestFramework.Test
 testInferAllowFail msg name expr =
-  testCase name . allowFailAssertion msg $ inferAssertion expr
+    testCase name . allowFailAssertion msg $ inferAssertion expr

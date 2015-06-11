@@ -1,16 +1,16 @@
 {-# LANGUAGE Rank2Types, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.Box
-  ( Box, KBox(..), Alignment
-  , make, makeKeyed, makeAlign, makeCentered
-  , unkey
-  , boxMCursor, boxSize, boxContent, boxOrientation
-  , Element, elementRect, elementAlign, elementOriginalWidget
-  , Cursor, toWidget, toWidgetBiased
-  , Orientation, horizontal, vertical
-  , hboxAlign, vboxAlign
-  , hboxCentered, vboxCentered
-  , hbox, vbox
-  ) where
+    ( Box, KBox(..), Alignment
+    , make, makeKeyed, makeAlign, makeCentered
+    , unkey
+    , boxMCursor, boxSize, boxContent, boxOrientation
+    , Element, elementRect, elementAlign, elementOriginalWidget
+    , Cursor, toWidget, toWidgetBiased
+    , Orientation, horizontal, vertical
+    , hboxAlign, vboxAlign
+    , hboxCentered, vboxCentered
+    , hbox, vbox
+    ) where
 
 import           Control.Lens ((^.))
 import qualified Control.Lens as Lens
@@ -32,27 +32,27 @@ eHead [] = error "Grid returned invalid list without any elements, instead of li
 type Alignment = Grid.Alignment
 
 data Orientation = Orientation
-  { oToGridCursor :: Cursor -> Grid.Cursor
-  , oToGridChildren :: forall a. [a] -> [[a]]
-  , oFromGridCursor :: Grid.Cursor -> Cursor
-  , oFromGridChildren :: forall a. [[a]] -> [a]
-  }
+    { oToGridCursor :: Cursor -> Grid.Cursor
+    , oToGridChildren :: forall a. [a] -> [[a]]
+    , oFromGridCursor :: Grid.Cursor -> Cursor
+    , oFromGridChildren :: forall a. [[a]] -> [a]
+    }
 
 horizontal :: Orientation
 horizontal = Orientation
-  { oToGridCursor = (`Vector2` 0)
-  , oToGridChildren = (: [])
-  , oFromGridCursor = (^. _1)
-  , oFromGridChildren = eHead
-  }
+    { oToGridCursor = (`Vector2` 0)
+    , oToGridChildren = (: [])
+    , oFromGridCursor = (^. _1)
+    , oFromGridChildren = eHead
+    }
 
 vertical :: Orientation
 vertical = Orientation
-  { oToGridCursor = (0 `Vector2`)
-  , oToGridChildren = map (: [])
-  , oFromGridCursor = (^. _2)
-  , oFromGridChildren = map eHead
-  }
+    { oToGridCursor = (0 `Vector2`)
+    , oToGridChildren = map (: [])
+    , oFromGridCursor = (^. _2)
+    , oFromGridChildren = map eHead
+    }
 
 type Element = Grid.Element
 
@@ -69,12 +69,12 @@ elementOriginalWidget :: Lens.Getter (Element f) (Widget f)
 elementOriginalWidget = Grid.elementOriginalWidget
 
 data KBox key f = KBox
-  { __boxOrientation :: Orientation
-  , __boxMCursor :: Maybe Cursor
-  , __boxSize :: Size
-  , __boxContent :: [(key, Element f)]
-  , __boxGrid :: KGrid key f
-  }
+    { __boxOrientation :: Orientation
+    , __boxMCursor :: Maybe Cursor
+    , __boxSize :: Size
+    , __boxContent :: [(key, Element f)]
+    , __boxGrid :: KGrid key f
+    }
 Lens.makeLenses ''KBox
 
 {-# INLINE boxOrientation #-}
@@ -97,14 +97,14 @@ type Box = KBox ()
 
 makeKeyed :: Orientation -> [(key, (Alignment, Widget f))] -> KBox key f
 makeKeyed orientation children = KBox
-  { __boxOrientation = orientation
-  , __boxMCursor = fmap (oFromGridCursor orientation) $ grid ^. Grid.gridMCursor
-  , __boxSize = grid ^. Grid.gridSize
-  , __boxContent = oFromGridChildren orientation $ grid ^. Grid.gridContent
-  , __boxGrid = grid
-  }
-  where
-    grid = Grid.makeKeyed $ oToGridChildren orientation children
+    { __boxOrientation = orientation
+    , __boxMCursor = fmap (oFromGridCursor orientation) $ grid ^. Grid.gridMCursor
+    , __boxSize = grid ^. Grid.gridSize
+    , __boxContent = oFromGridChildren orientation $ grid ^. Grid.gridContent
+    , __boxGrid = grid
+    }
+    where
+        grid = Grid.makeKeyed $ oToGridChildren orientation children
 
 unkey :: [(Alignment, Widget f)] -> [((), (Alignment, Widget f))]
 unkey = map ((,) ())
@@ -123,14 +123,14 @@ toWidget = Grid.toWidget . __boxGrid
 
 toWidgetBiased :: Cursor -> KBox key f -> Widget f
 toWidgetBiased cursor box =
-  Grid.toWidgetBiased gridCursor $ __boxGrid box
-  where
-    gridCursor = oToGridCursor (box ^. boxOrientation) cursor
+    Grid.toWidgetBiased gridCursor $ __boxGrid box
+    where
+        gridCursor = oToGridCursor (box ^. boxOrientation) cursor
 
 boxAlign :: Orientation -> Alignment -> [Widget f] -> Widget f
 boxAlign orientation align =
-  toWidget .
-  makeAlign align orientation
+    toWidget .
+    makeAlign align orientation
 
 hboxAlign :: Alignment -> [Widget f] -> Widget f
 hboxAlign = boxAlign horizontal

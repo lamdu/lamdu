@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.ListEdit
-     ( make
-     ) where
+    ( make
+    ) where
 
 import           Control.Applicative ((<$>), (<$), Applicative(..))
 import qualified Control.Lens as Lens
@@ -26,69 +26,69 @@ make ::
     Sugar.Payload m ExprGuiM.Payload ->
     ExprGuiM m (ExpressionGui m)
 make list pl =
-  ExpressionGui.stdWrapParentExpr pl $ \myId ->
-  ExprGuiM.assignCursor myId cursorDest $
-  do
-    config <- ExprGuiM.readConfig
-    bracketOpenLabel <-
-      ExpressionGui.grammarLabel "[" (Widget.toAnimId bracketsId)
-      >>= ExpressionGui.makeFocusableView firstBracketId
-      <&>
-        ExpressionGui.egWidget %~
-        Widget.weakerEvents
-        (actionEventMap (Config.listAddItemKeys config) "Add First Item" Sugar.addFirstItem)
-    bracketCloseLabel <- ExpressionGui.grammarLabel "]" (Widget.toAnimId bracketsId)
-    case ExpressionGui.listWithDelDests firstBracketId firstBracketId itemId (Sugar.lValues list) of
-      [] ->
-        return $ ExpressionGui.hbox [bracketOpenLabel, bracketCloseLabel]
-      firstValue : nextValues -> do
-        (_, firstEdit) <- makeItem firstValue
-        nextEdits <- mapM makeItem nextValues
+    ExpressionGui.stdWrapParentExpr pl $ \myId ->
+    ExprGuiM.assignCursor myId cursorDest $
+    do
+        config <- ExprGuiM.readConfig
+        bracketOpenLabel <-
+            ExpressionGui.grammarLabel "[" (Widget.toAnimId bracketsId)
+            >>= ExpressionGui.makeFocusableView firstBracketId
+            <&>
+                ExpressionGui.egWidget %~
+                Widget.weakerEvents
+                (actionEventMap (Config.listAddItemKeys config) "Add First Item" Sugar.addFirstItem)
+        bracketCloseLabel <- ExpressionGui.grammarLabel "]" (Widget.toAnimId bracketsId)
+        case ExpressionGui.listWithDelDests firstBracketId firstBracketId itemId (Sugar.lValues list) of
+            [] ->
+                return $ ExpressionGui.hbox [bracketOpenLabel, bracketCloseLabel]
+            firstValue : nextValues ->
+                do
+                    (_, firstEdit) <- makeItem firstValue
+                    nextEdits <- mapM makeItem nextValues
 
-        jumpHolesEventMap <-
-          firstValue ^. _3 . Sugar.liExpr
-          & ExprGuiM.nextHolesBefore
-          & ExprEventMap.jumpHolesEventMap
-        let
-          nilDeleteEventMap =
-            actionEventMap (Config.delKeys config) "Replace nil with hole" Sugar.replaceNil
-          addLastEventMap =
+                    jumpHolesEventMap <-
+                        firstValue ^. _3 . Sugar.liExpr
+                        & ExprGuiM.nextHolesBefore
+                        & ExprEventMap.jumpHolesEventMap
+                    let nilDeleteEventMap =
+                            actionEventMap (Config.delKeys config) "Replace nil with hole" Sugar.replaceNil
+                        addLastEventMap =
+                            maybe mempty
+                            ( Widget.keysEventMapMovesCursor (Config.listAddItemKeys config)
+                                (E.Doc ["Edit", "List", "Add Last Item"])
+                            . fmap WidgetIds.fromEntityId
+                            ) $ Sugar.lValues list ^? lastLens . Sugar.liMActions . Lens._Just . Sugar.itemAddNext
+                        closerEventMap = mappend nilDeleteEventMap addLastEventMap
+                        closeBracketId = Widget.joinId myId ["close-bracket"]
+                    bracketClose <-
+                        ExpressionGui.makeFocusableView closeBracketId bracketCloseLabel
+                        <&> ExpressionGui.egWidget %~ Widget.weakerEvents closerEventMap
+                    return . ExpressionGui.hbox $ concat
+                        [ [ bracketOpenLabel
+                                & ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
+                            , firstEdit
+                            ]
+                        , nextEdits >>= pairToList
+                        , [ bracketClose ]
+                        ]
+    where
+        bracketsId = WidgetIds.fromEntityId $ Sugar.lNilEntityId list
+        pairToList (x, y) = [x, y]
+        itemId = WidgetIds.fromExprPayload . (^. Sugar.liExpr . Sugar.rPayload)
+        actionEventMap keys doc actSelect =
             maybe mempty
-            ( Widget.keysEventMapMovesCursor (Config.listAddItemKeys config)
-              (E.Doc ["Edit", "List", "Add Last Item"])
-            . fmap WidgetIds.fromEntityId
-            ) $ Sugar.lValues list ^? lastLens . Sugar.liMActions . Lens._Just . Sugar.itemAddNext
-          closerEventMap = mappend nilDeleteEventMap addLastEventMap
-          closeBracketId = Widget.joinId myId ["close-bracket"]
-        bracketClose <-
-          ExpressionGui.makeFocusableView closeBracketId bracketCloseLabel
-          <&> ExpressionGui.egWidget %~ Widget.weakerEvents closerEventMap
-        return . ExpressionGui.hbox $ concat
-          [ [ bracketOpenLabel
-              & ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
-            , firstEdit
-            ]
-          , nextEdits >>= pairToList
-          , [ bracketClose ]
-          ]
-  where
-    bracketsId = WidgetIds.fromEntityId $ Sugar.lNilEntityId list
-    pairToList (x, y) = [x, y]
-    itemId = WidgetIds.fromExprPayload . (^. Sugar.liExpr . Sugar.rPayload)
-    actionEventMap keys doc actSelect =
-      maybe mempty
-      ( Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc])
-      . fmap WidgetIds.fromEntityId . actSelect ) $
-      Sugar.lMActions list
-    firstBracketId = mappend (Widget.Id ["first bracket"]) bracketsId
-    cursorDest =
-      Sugar.lValues list ^? Lens.traversed
-      & maybe firstBracketId itemId
+            ( Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc])
+            . fmap WidgetIds.fromEntityId . actSelect ) $
+            Sugar.lMActions list
+        firstBracketId = mappend (Widget.Id ["first bracket"]) bracketsId
+        cursorDest =
+            Sugar.lValues list ^? Lens.traversed
+            & maybe firstBracketId itemId
 
 makeItem ::
-  MonadA m =>
-  (Widget.Id, Widget.Id, Sugar.ListItem m (ExprGuiM.SugarExpr m)) ->
-  ExprGuiM m (ExpressionGui m, ExpressionGui m)
+    MonadA m =>
+    (Widget.Id, Widget.Id, Sugar.ListItem m (ExprGuiM.SugarExpr m)) ->
+    ExprGuiM m (ExpressionGui m, ExpressionGui m)
 makeItem (_, nextId, item) =
     do
         config <- ExprGuiM.readConfig

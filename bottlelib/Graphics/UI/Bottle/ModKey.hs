@@ -47,21 +47,21 @@ super :: GLFW.Key -> ModKey
 super = ModKey superMods
 
 data ModKey = ModKey GLFW.ModifierKeys GLFW.Key
-  deriving (Generic, Show, Eq, Ord)
+    deriving (Generic, Show, Eq, Ord)
 
 instance ToJSON ModKey
 instance FromJSON ModKey
 
 prettyKey :: GLFW.Key -> String
 prettyKey k
-  | "Key'" `isPrefixOf` show k = drop 4 $ show k
-  | otherwise = show k
+    | "Key'" `isPrefixOf` show k = drop 4 $ show k
+    | otherwise = show k
 
 prettyModKeys :: GLFW.ModifierKeys -> String
 prettyModKeys ms = concat $
-  ["Ctrl+" | GLFW.modifierKeysControl ms] ++
-  ["Alt+" | GLFW.modifierKeysAlt ms] ++
-  ["Shift+" | GLFW.modifierKeysShift ms]
+    ["Ctrl+" | GLFW.modifierKeysControl ms] ++
+    ["Alt+" | GLFW.modifierKeysAlt ms] ++
+    ["Shift+" | GLFW.modifierKeysShift ms]
 
 pretty :: ModKey -> String
 pretty (ModKey ms key) = prettyModKeys ms ++ prettyKey key

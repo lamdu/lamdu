@@ -22,16 +22,18 @@ boolType = T.TInst "Bool" Map.empty
 
 definitionTypes :: Map V.GlobalId Scheme
 definitionTypes =
-  exampleDBDefs `mappend` extras
-  where
-    extras = Map.singleton "IntToBoolFunc" $ Scheme.mono $ T.int ~> boolType
-    exampleDBDefs =
-      fst . MapStore.runEmpty . Transaction.run MapStore.mapStore $
-        do  (_, defIs) <- ExampleDB.createBuiltins
-            Map.fromList <$> mapM readDef defIs
+    exampleDBDefs `mappend` extras
+    where
+        extras = Map.singleton "IntToBoolFunc" $ Scheme.mono $ T.int ~> boolType
+        exampleDBDefs =
+            fst . MapStore.runEmpty . Transaction.run MapStore.mapStore $
+                do
+                    (_, defIs) <- ExampleDB.createBuiltins
+                    Map.fromList <$> mapM readDef defIs
 
-    nameOf = fmap fromString . Transaction.getP . Anchors.assocNameRef
-    readDef defI =
-      do  Definition.BodyBuiltin (Definition.Builtin _ scheme) <- Transaction.readIRef defI
-          name <- nameOf defI
-          return (name, scheme)
+        nameOf = fmap fromString . Transaction.getP . Anchors.assocNameRef
+        readDef defI =
+            do
+                Definition.BodyBuiltin (Definition.Builtin _ scheme) <- Transaction.readIRef defI
+                name <- nameOf defI
+                return (name, scheme)

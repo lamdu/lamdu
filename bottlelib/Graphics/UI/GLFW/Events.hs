@@ -1,8 +1,8 @@
 {-# LANGUAGE TupleSections #-}
 module Graphics.UI.GLFW.Events
-  ( KeyEvent(..), Event(..), Result(..)
-  , eventLoop
-  ) where
+    ( KeyEvent(..), Event(..), Result(..)
+    , eventLoop
+    ) where
 
 import           Data.IORef
 import           Data.Monoid
@@ -62,33 +62,33 @@ atomicModifyIORef_ :: IORef a -> (a -> a) -> IO ()
 atomicModifyIORef_ var f = atomicModifyIORef var ((, ()) . f)
 
 rawEventLoop :: GLFW.Window -> ([GLFWRawEvent] -> IO Result) -> IO ()
-rawEventLoop win eventsHandler = do
-  eventsVar <- newIORef [RawWindowRefresh]
+rawEventLoop win eventsHandler =
+    do
+        eventsVar <- newIORef [RawWindowRefresh]
 
-  let
-    addEvent event = atomicModifyIORef_ eventsVar (event:)
-    addKeyEvent key scanCode keyState modKeys =
-      addEvent $ RawKeyEvent key scanCode keyState modKeys
-    charEventHandler = addEvent . RawCharEvent
-    setCallback f cb = f win $ Just $ const cb
-    loop =
-      do
-        GLFW.pollEvents
-        let handleReversedEvents rEvents = ([], reverse rEvents)
-        events <- atomicModifyIORef eventsVar handleReversedEvents
-        res <- eventsHandler events
-        case res of
-          ResultNone -> loop
-          ResultDidDraw -> GLFW.swapBuffers win >> loop
-          ResultQuit -> return ()
+        let addEvent event = atomicModifyIORef_ eventsVar (event:)
+            addKeyEvent key scanCode keyState modKeys =
+                addEvent $ RawKeyEvent key scanCode keyState modKeys
+            charEventHandler = addEvent . RawCharEvent
+            setCallback f cb = f win $ Just $ const cb
+            loop =
+                do
+                    GLFW.pollEvents
+                    let handleReversedEvents rEvents = ([], reverse rEvents)
+                    events <- atomicModifyIORef eventsVar handleReversedEvents
+                    res <- eventsHandler events
+                    case res of
+                        ResultNone -> loop
+                        ResultDidDraw -> GLFW.swapBuffers win >> loop
+                        ResultQuit -> return ()
 
-  setCallback GLFW.setCharCallback charEventHandler
-  setCallback GLFW.setKeyCallback addKeyEvent
-  setCallback GLFW.setWindowRefreshCallback $ addEvent RawWindowRefresh
-  setCallback GLFW.setWindowSizeCallback . const . const $ addEvent RawWindowRefresh
-  setCallback GLFW.setWindowCloseCallback $ addEvent RawWindowClose
+        setCallback GLFW.setCharCallback charEventHandler
+        setCallback GLFW.setKeyCallback addKeyEvent
+        setCallback GLFW.setWindowRefreshCallback $ addEvent RawWindowRefresh
+        setCallback GLFW.setWindowSizeCallback . const . const $ addEvent RawWindowRefresh
+        setCallback GLFW.setWindowCloseCallback $ addEvent RawWindowClose
 
-  loop
+        loop
 
 eventLoop :: GLFW.Window -> ([Event] -> IO Result) -> IO ()
 eventLoop win handler = rawEventLoop win (handler . translate)

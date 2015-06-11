@@ -43,8 +43,7 @@ addToApply a =
         do
             presentationMode <-
                 a ^. Sugar.aFunc & indirectDefinitionPresentationMode
-            let
-                (specialArgs, annotatedArgs) =
+            let (specialArgs, annotatedArgs) =
                     case (presentationMode, a ^. Sugar.aAnnotatedArgs) of
                     (Just Sugar.Infix, (a0:a1:as)) ->
                         ( Sugar.InfixArgs

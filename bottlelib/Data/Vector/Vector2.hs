@@ -20,12 +20,12 @@ import           Control.DeepSeq.Generics (genericRnf)
 import           Control.DeepSeq (NFData(..))
 
 data Vector2 a = Vector2
-  { _first :: !a
-  , _second :: !a
-  } deriving (Generic, Eq, Ord, Show, Read)
-  -- Note the Ord instance is obviously not a mathematical one
-  -- (Vectors aren't ordinals!). Useful to have in a binary search
-  -- tree though.
+    { _first :: !a
+    , _second :: !a
+    } deriving (Generic, Eq, Ord, Show, Read)
+    -- Note the Ord instance is obviously not a mathematical one
+    -- (Vectors aren't ordinals!). Useful to have in a binary search
+    -- tree though.
 instance Binary a => Binary (Vector2 a)
 
 instance NFData a => NFData (Vector2 a) where rnf = genericRnf
@@ -34,9 +34,9 @@ instance ToJSON a => ToJSON (Vector2 a)
 instance FromJSON a => FromJSON (Vector2 a)
 
 instance a ~ b => Lens.Field1 (Vector2 a) (Vector2 b) a b where
-  _1 f (Vector2 x y) = (`Vector2` y) <$> Lens.indexed f (0 :: Int) x
+    _1 f (Vector2 x y) = (`Vector2` y) <$> Lens.indexed f (0 :: Int) x
 instance a ~ b => Lens.Field2 (Vector2 a) (Vector2 b) a b where
-  _2 f (Vector2 x y) = Vector2 x <$> Lens.indexed f (1 :: Int) y
+    _2 f (Vector2 x y) = Vector2 x <$> Lens.indexed f (1 :: Int) y
 
 -- Taken almost verbatim from QuickCheck's instance for (a, b)
 -- instance Arbitrary a => Arbitrary (Vector2 a) where
@@ -82,25 +82,25 @@ sqrNorm :: Num a => Vector2 a -> a
 sqrNorm = uncurry (+) . (^ (2::Int))
 
 instance Functor Vector2 where
-  fmap = both
+    fmap = both
 instance Applicative Vector2 where
-  pure x = Vector2 x x
-  Vector2 f g <*> Vector2 x y = Vector2 (f x) (g y)
+    pure x = Vector2 x x
+    Vector2 f g <*> Vector2 x y = Vector2 (f x) (g y)
 
 instance Monoid a => Monoid (Vector2 a) where
-  mempty = def_mempty
-  mappend = def_mappend
+    mempty = def_mempty
+    mappend = def_mappend
 
 -- An improper Num instance, for convenience
 instance Num a => Num (Vector2 a) where
-  (+) = liftA2 (+)
-  (-) = liftA2 (-)
-  (*) = liftA2 (*)
-  abs = fmap abs
-  negate = fmap negate
-  signum = fmap signum
-  fromInteger = pure . fromInteger
+    (+) = liftA2 (+)
+    (-) = liftA2 (-)
+    (*) = liftA2 (*)
+    abs = fmap abs
+    negate = fmap negate
+    signum = fmap signum
+    fromInteger = pure . fromInteger
 
 instance Fractional a => Fractional (Vector2 a) where
-  (/) = liftA2 (/)
-  fromRational = pure . fromRational
+    (/) = liftA2 (/)
+    fromRational = pure . fromRational

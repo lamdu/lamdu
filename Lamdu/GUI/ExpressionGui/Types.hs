@@ -1,6 +1,6 @@
 module Lamdu.GUI.ExpressionGui.Types
-  ( ExpressionGui
-  ) where
+    ( ExpressionGui
+    ) where
 
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widgets.Layout (Layout)

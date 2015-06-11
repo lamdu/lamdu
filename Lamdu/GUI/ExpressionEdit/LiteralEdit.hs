@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.LiteralEdit
-  ( makeInt
-  ) where
+    ( makeInt
+    ) where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -26,31 +26,32 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction.Transaction
 
 setColor :: MonadA m => ExprGuiM m a -> ExprGuiM m a
-setColor action = do
-  config <- ExprGuiM.readConfig
-  ExprGuiM.withFgColor (Config.literalIntColor config) action
+setColor action =
+    do
+        config <- ExprGuiM.readConfig
+        ExprGuiM.withFgColor (Config.literalIntColor config) action
 
 mkEditEventMap ::
-  MonadA m => Integer -> T m (Guid, Sugar.EntityId) -> Widget.EventHandlers (T m)
+    MonadA m => Integer -> T m (Guid, Sugar.EntityId) -> Widget.EventHandlers (T m)
 mkEditEventMap integer setToHole =
-  Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Enter]
-  (E.Doc ["Edit", "Integer"]) $
-  do
-    (guid, entityId) <- setToHole
-    setHoleStateAndJump guid (HoleState (show integer)) entityId
+    Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Enter]
+    (E.Doc ["Edit", "Integer"]) $
+    do
+        (guid, entityId) <- setToHole
+        setHoleStateAndJump guid (HoleState (show integer)) entityId
 
 makeInt ::
-  MonadA m =>
-  Integer -> Sugar.Payload m ExprGuiM.Payload ->
-  ExprGuiM m (ExpressionGui m)
+    MonadA m =>
+    Integer -> Sugar.Payload m ExprGuiM.Payload ->
+    ExprGuiM m (ExpressionGui m)
 makeInt integer pl =
-  BWidgets.makeFocusableTextView (show integer) myId
-  & setColor . ExprGuiM.widgetEnv
-  <&> Widget.weakerEvents editEventMap
-  <&> ExpressionGui.fromValueWidget
-  & ExpressionGui.stdWrap pl
-  where
-    myId = WidgetIds.fromExprPayload pl
-    editEventMap =
-      maybe mempty (mkEditEventMap integer) $
-      pl ^? Sugar.plActions . Lens._Just . Sugar.setToHole . Sugar._SetToHole
+    BWidgets.makeFocusableTextView (show integer) myId
+    & setColor . ExprGuiM.widgetEnv
+    <&> Widget.weakerEvents editEventMap
+    <&> ExpressionGui.fromValueWidget
+    & ExpressionGui.stdWrap pl
+    where
+        myId = WidgetIds.fromExprPayload pl
+        editEventMap =
+            maybe mempty (mkEditEventMap integer) $
+            pl ^? Sugar.plActions . Lens._Just . Sugar.setToHole . Sugar._SetToHole

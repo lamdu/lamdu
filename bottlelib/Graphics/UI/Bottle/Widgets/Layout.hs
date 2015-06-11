@@ -225,12 +225,12 @@ pad padding =
 -- Resize a layout to be the same alignment/size as another layout
 hoverInPlaceOf :: Layout f -> Layout f -> Layout f
 layout `hoverInPlaceOf` src =
-  ( srcAbsAlignment
-  , layoutWidget
-    & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
-    & Widget.size .~ srcSize
-  ) ^. Lens.from absAlignedWidget
-  where
-    (layoutAbsAlignment, layoutWidget) = layout ^. absAlignedWidget
-    (srcAbsAlignment, srcWidget) = src ^. absAlignedWidget
-    srcSize = srcWidget ^. Widget.size
+    ( srcAbsAlignment
+    , layoutWidget
+        & Widget.translate (srcAbsAlignment - layoutAbsAlignment)
+        & Widget.size .~ srcSize
+    ) ^. Lens.from absAlignedWidget
+    where
+        (layoutAbsAlignment, layoutWidget) = layout ^. absAlignedWidget
+        (srcAbsAlignment, srcWidget) = src ^. absAlignedWidget
+        srcSize = srcWidget ^. Widget.size
