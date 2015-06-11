@@ -1,5 +1,4 @@
-{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
-{-# LANGUAGE RecordWildCards, OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, RecordWildCards, OverloadedStrings, TypeFamilies #-}
 module Lamdu.GUI.CodeEdit
     ( make
     , Env(..)
@@ -13,9 +12,7 @@ import           Control.Monad.Trans.Class (lift)
 import           Control.MonadA (MonadA)
 import           Data.Foldable (Foldable)
 import           Data.List.Utils (insertAt, removeAt)
-import           Data.Maybe (listToMaybe)
 import           Data.Monoid (Monoid(..))
-import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
@@ -54,7 +51,7 @@ type T = Transaction
 
 data Pane m = Pane
     { paneDefI :: DefI m
-    , paneDel :: Maybe (T m Guid)
+    , paneDel :: Maybe (T m Widget.Id)
     , paneMoveDown :: Maybe (T m ())
     , paneMoveUp :: Maybe (T m ())
     }
@@ -70,8 +67,8 @@ data Env m = Env
 totalWidth :: Env m -> Widget.R
 totalWidth = (^. _1) . totalSize
 
-makePanes :: MonadA m => Transaction.Property m [DefI m] -> Guid -> [Pane m]
-makePanes (Property panes setPanes) rootGuid =
+makePanes :: MonadA m => Transaction.Property m [DefI m] -> Widget.Id -> [Pane m]
+makePanes (Property panes setPanes) rootId =
     panes ^@.. Lens.traversed <&> convertPane
     where
         mkMDelPane i
@@ -79,8 +76,9 @@ makePanes (Property panes setPanes) rootGuid =
                 Just $ do
                     let newPanes = removeAt i panes
                     setPanes newPanes
-                    return . maybe rootGuid IRef.guid . listToMaybe . reverse $
-                        take (i+1) newPanes
+                    newPanes ^? Lens.ix i
+                        & maybe rootId (WidgetIds.fromGuid . IRef.guid)
+                        & return
             | otherwise = Nothing
         movePane oldIndex newIndex =
             do
@@ -152,12 +150,12 @@ addNearestHoles pcs =
     <&> Lens.mapped %~ (,)
     & NearestHoles.add traverse
 
-make :: MonadA m => Env m -> Guid -> WidgetEnvT (T m) (Widget (T m))
-make env rootGuid =
+make :: MonadA m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (T m))
+make env rootId =
     do
         prop <- lift $ Anchors.panes (codeProps env) ^. Transaction.mkProperty
 
-        let sugarPanes = makePanes prop rootGuid
+        let sugarPanes = makePanes prop rootId
         sugarClipboards <- lift $ getClipboards $ codeProps env
 
         PanesAndClipboards loadedPanes loadedClipboards <-
@@ -167,7 +165,7 @@ make env rootGuid =
             & lift
             <&> addNearestHoles
 
-        panesEdit <- makePanesEdit env loadedPanes $ WidgetIds.fromGuid rootGuid
+        panesEdit <- makePanesEdit env loadedPanes rootId
         clipboardsEdit <- makeClipboardsEdit env loadedClipboards
 
         return $
@@ -238,7 +236,7 @@ makePaneEdit env Config.Pane{..} (pane, defS) =
         paneEventMap =
             [ maybe mempty
                 (Widget.keysEventMapMovesCursor paneCloseKeys
-                  (E.Doc ["View", "Pane", "Close"]) . fmap WidgetIds.fromGuid) $ paneDel pane
+                  (E.Doc ["View", "Pane", "Close"])) $ paneDel pane
             , maybe mempty
                 (Widget.keysEventMap paneMoveDownKeys
                   (E.Doc ["View", "Pane", "Move down"])) $ paneMoveDown pane

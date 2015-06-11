@@ -38,14 +38,10 @@ import           Graphics.UI.Bottle.MainLoop (mainLoopWidget, AnimConfig (..))
 import           Graphics.UI.Bottle.SizedFont (SizedFont(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
-import           Graphics.UI.Bottle.WidgetsEnvT (runWidgetEnvT)
-import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import qualified Lamdu.Builtins as Builtins
@@ -60,10 +56,8 @@ import           Lamdu.Eval.Results (EvalResults(..))
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Val as V
-import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
-import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.GUI.Zoom as Zoom
@@ -329,6 +323,9 @@ startEvaluators ::
 startEvaluators db evaluatorsRef invalidateCache =
     startEval invalidateCache db >>= writeIORef evaluatorsRef
 
+rootGuid :: Guid
+rootGuid = IRef.guid $ DbLayout.panes DbLayout.codeIRefs
+
 runTransactionReevaluate ::
     Db ->
     IORef [(ExprIRef.DefI DbLayout.ViewM, EvalBG.Evaluator ValIRef)] ->
@@ -457,5 +454,7 @@ mkWidgetWithFallback evalMap config style dbToIO (size, cursor) settings =
     where
         bgColor False = Config.invalidCursorBGColor
         bgColor True = Config.backgroundColor
-        fromCursor = GUIMain.make evalMap config settings style dbToIO size
+        fromCursor =
+            GUIMain.make evalMap config settings style dbToIO size
+            (WidgetIds.fromGuid rootGuid)
         rootCursor = WidgetIds.fromGuid rootGuid

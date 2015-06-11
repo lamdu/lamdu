@@ -5,8 +5,6 @@ module Lamdu.GUI.Main
 
 import           Control.Lens.Operators
 import qualified Data.Monoid as Monoid
-import           Data.Store.Guid (Guid)
-import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Vector.Vector2 (Vector2(..))
@@ -29,16 +27,13 @@ import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.VersionControl as VersionControl
 
-rootGuid :: Guid
-rootGuid = IRef.guid $ DbLayout.panes DbLayout.codeIRefs
-
 make ::
     EvalResults (ExprIRef.ValI DbLayout.ViewM) ->
     Config -> Settings -> TextEdit.Style ->
     (forall a. Transaction DbLayout.DbM a -> IO a) ->
-    Widget.Size -> Widget.Id ->
+    Widget.Size -> Widget.Id -> Widget.Id ->
     Transaction DbLayout.DbM (Widget IO)
-make evalMap config settings style dbToIO fullSize cursor =
+make evalMap config settings style dbToIO fullSize cursor rootId =
     do
         actions <- VersionControl.makeActions
         let widgetEnv = Env
@@ -64,7 +59,7 @@ make evalMap config settings style dbToIO fullSize cursor =
                                     branchSelector ^. Widget.height
                             let codeSize = fullSize - Vector2 0 nonCodeHeight
                             codeEdit <-
-                                CodeEdit.make (env codeSize) rootGuid
+                                CodeEdit.make (env codeSize) rootId
                                 & WE.mapWidgetEnvT VersionControl.runAction
                                 <&> Widget.events %~ VersionControl.runEvent cursor
                                 <&> Widget.padToSizeAlign codeSize 0
