@@ -17,8 +17,8 @@ assert msg p = unless p (fail msg)
 withGLFW :: IO a -> IO a
 withGLFW = bracket_ (GLFW.init >>= assert "initialize failed") GLFW.terminate
 
-createWindow :: Int -> Int -> String -> IO GLFW.Window
-createWindow w h title = do
+createWindow :: String -> Vector2 Int -> IO GLFW.Window
+createWindow title (Vector2 w h) = do
     mWin <- GLFW.createWindow w h title Nothing Nothing
     case mWin of
         Nothing -> fail "Open window failed"

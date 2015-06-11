@@ -16,7 +16,6 @@ import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
@@ -91,8 +90,7 @@ runEditor mFontPath db =
 
         GLFWUtils.withGLFW $
             do
-                Vector2 displayWidth displayHeight <- GLFWUtils.getVideoModeSize
-                win <- GLFWUtils.createWindow displayWidth displayHeight "Lamdu"
+                win <- GLFWUtils.createWindow "Lamdu" =<< GLFWUtils.getVideoModeSize
                 -- Fonts must be loaded after the GL context is created..
                 let getFont path =
                         do
