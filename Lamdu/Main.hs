@@ -414,20 +414,12 @@ runDb win getConfig font db =
             , addHelpWithStyle (helpConfig font (Config.help config)) size
             )
 
-cyclicSucc :: (Eq a, Enum a, Bounded a) => a -> a
-cyclicSucc x
-    | x == maxBound = minBound
-    | otherwise = succ x
-
-nextInfoMode :: Settings.InfoMode -> Settings.InfoMode
-nextInfoMode = cyclicSucc
-
 mkGlobalEventMap :: Config -> IORef Settings -> IO (Widget.EventHandlers IO)
 mkGlobalEventMap config settingsRef =
     do
         settings <- readIORef settingsRef
         let curInfoMode = settings ^. Settings.sInfoMode
-            next = nextInfoMode curInfoMode
+            next = Settings.nextInfoMode curInfoMode
             nextDoc = EventMap.Doc ["View", "Subtext", "Show " ++ show next]
         return .
             Widget.keysEventMap (Config.nextInfoModeKeys config) nextDoc .
