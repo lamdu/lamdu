@@ -28,6 +28,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Sampler (Sampler)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.ExampleDB as ExampleDB
@@ -91,25 +92,31 @@ runEditor mFontPath db =
                 win <- GLFWUtils.createWindow "Lamdu" =<< GLFWUtils.getVideoModeSize
                 font <- Font.get startDir mFontPath
                 -- Fonts must be loaded after the GL context is created..
-                runDb win (ConfigSampler.getConfig configSampler) font db
+                runDb win configSampler font db
 
+
+newtype RefreshScheduler = RefreshScheduler (IORef Bool)
+newRefreshScheduler :: IO RefreshScheduler
+newRefreshScheduler = newIORef False <&> RefreshScheduler
+shouldRefresh :: RefreshScheduler -> IO Bool
+shouldRefresh (RefreshScheduler ref) = atomicModifyIORef ref $ \r -> (False, r)
+scheduleRefresh :: RefreshScheduler -> IO ()
+scheduleRefresh (RefreshScheduler ref) = writeIORef ref True
 
 mainLoopDebugMode ::
-    GLFW.Window ->
-    IO Bool ->
-    IO (ConfigSampler.Version, Config) ->
+    GLFW.Window -> RefreshScheduler -> Sampler Config ->
     ( Config -> Widget.Size ->
         ( IO (Widget IO)
         , Widget IO -> IO (Widget IO)
         )
     ) -> IO ()
-mainLoopDebugMode win shouldRefresh getConfig iteration =
+mainLoopDebugMode win refreshScheduler configSampler iteration =
     do
         debugModeRef <- newIORef False
         lastVersionNumRef <- newIORef 0
         let getAnimHalfLife =
                 do
-                    (_, config) <- getConfig
+                    (_, config) <- ConfigSampler.getConfig configSampler
                     isDebugMode <- readIORef debugModeRef
                     Style.anim config isDebugMode & return
             addDebugMode config widget =
@@ -123,17 +130,17 @@ mainLoopDebugMode win shouldRefresh getConfig iteration =
                         widget
             makeDebugModeWidget size =
                 do
-                    (_, config) <- getConfig
+                    (_, config) <- ConfigSampler.getConfig configSampler
                     let (makeWidget, addHelp) = iteration config size
                     addHelp =<< addDebugMode config =<< makeWidget
             tickHandler =
                 do
-                    (curVersionNum, _) <- getConfig
+                    (curVersionNum, _) <- ConfigSampler.getConfig configSampler
                     configChanged <- atomicModifyIORef lastVersionNumRef $ \lastVersionNum ->
                         (curVersionNum, lastVersionNum /= curVersionNum)
                     if configChanged
                         then return True
-                        else shouldRefresh
+                        else shouldRefresh refreshScheduler
         mainLoopWidget win tickHandler makeDebugModeWidget getAnimHalfLife
 
 cacheMakeWidget :: Eq a => (a -> IO (Widget IO)) -> IO (IO (), a -> IO (Widget IO))
@@ -162,9 +169,8 @@ makeFlyNav =
 rootGuid :: Guid
 rootGuid = IRef.guid $ DbLayout.panes DbLayout.codeIRefs
 
-runDb ::
-    GLFW.Window -> IO (ConfigSampler.Version, Config) -> Draw.Font -> Db -> IO ()
-runDb win getConfig font db =
+runDb :: GLFW.Window -> Sampler Config -> Draw.Font -> Db -> IO ()
+runDb win configSampler font db =
     do
         zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
         addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
@@ -200,15 +206,15 @@ runDb win getConfig font db =
                     widget <- mkWidgetWithFallback dbToIO env
                     return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
         (invalidateCacheAction, makeWidgetCached) <- cacheMakeWidget makeWidget
-        refreshRef <- newIORef False
-        let shouldRefresh = atomicModifyIORef refreshRef $ \r -> (False, r)
+        refreshScheduler <- newRefreshScheduler
         writeIORef invalidateCacheRef $
             do
                 invalidateCacheAction
-                writeIORef refreshRef True
+                scheduleRefresh refreshScheduler
         DefEvaluators.start evaluators
 
-        mainLoopDebugMode win shouldRefresh getConfig $ \config size ->
+        mainLoopDebugMode win refreshScheduler configSampler $
+            \config size ->
             ( wrapFlyNav =<< makeWidgetCached (config, size)
             , addHelpWithStyle (Style.help font (Config.help config)) size
             )
