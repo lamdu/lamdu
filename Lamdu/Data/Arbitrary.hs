@@ -1,6 +1,8 @@
 {-# OPTIONS -fno-warn-orphans #-} -- Arbitrary E.Val
 {-# LANGUAGE FlexibleInstances #-}
-module Lamdu.Data.Arbitrary (Name(..)) where
+module Lamdu.Data.Arbitrary
+    ( Name(..)
+    ) where
 
 import           Control.Applicative (Applicative(..), (<$>), (<*))
 import           Control.Lens (Lens')
@@ -26,13 +28,13 @@ import           Test.QuickCheck (Arbitrary(..), Gen)
 import qualified Test.QuickCheck.Gen as Gen
 
 data Env = Env
-  { _envScope :: [V.Var]
-  , __envGlobals :: Map V.GlobalId Scheme
-  }
+    { _envScope :: [V.Var]
+    , __envGlobals :: Map V.GlobalId Scheme
+    }
 envScope :: Lens' Env [V.Var]
 envScope f e = mkEnv <$> f (_envScope e)
-  where
-    mkEnv x = e { _envScope = x }
+    where
+        mkEnv x = e { _envScope = x }
 
 type GenExpr = ReaderT Env (StateT [V.Var] Gen)
 
@@ -44,13 +46,13 @@ next = lift $ State.gets head <* State.modify tail
 
 arbitraryLam :: Arbitrary a => GenExpr (V.Lam (Val a))
 arbitraryLam = do
-  par <- next
-  V.Lam par {-TODO: Arbitrary constraints on param types??-}
-    <$> Reader.local (envScope %~ (par :)) arbitraryExpr
+    par <- next
+    V.Lam par {-TODO: Arbitrary constraints on param types??-}
+        <$> Reader.local (envScope %~ (par :)) arbitraryExpr
 
 arbitraryRecExtend :: Arbitrary a => GenExpr (V.RecExtend (Val a))
 arbitraryRecExtend =
-  V.RecExtend <$> liftGen arbitrary <*> arbitraryExpr <*> arbitraryExpr
+    V.RecExtend <$> liftGen arbitrary <*> arbitraryExpr <*> arbitraryExpr
 
 arbitraryGetField :: Arbitrary a => GenExpr (V.GetField (Val a))
 arbitraryGetField = V.GetField <$> arbitraryExpr <*> liftGen arbitrary
@@ -60,50 +62,50 @@ arbitraryApply = V.Apply <$> arbitraryExpr <*> arbitraryExpr
 
 arbitraryLeaf :: GenExpr V.Leaf
 arbitraryLeaf = do
-  Env locals globals <- Reader.ask
-  join . liftGen . Gen.elements $
-    [ V.LLiteralInteger <$> liftGen arbitrary
-    , pure V.LHole
-    , pure V.LRecEmpty
-    ] ++
-    map (pure . V.LVar) locals ++
-    map (pure . V.LGlobal) (Map.keys globals)
+    Env locals globals <- Reader.ask
+    join . liftGen . Gen.elements $
+        [ V.LLiteralInteger <$> liftGen arbitrary
+        , pure V.LHole
+        , pure V.LRecEmpty
+        ] ++
+        map (pure . V.LVar) locals ++
+        map (pure . V.LGlobal) (Map.keys globals)
 
 arbitraryBody :: Arbitrary a => GenExpr (V.Body (Val a))
 arbitraryBody =
-  join . liftGen . Gen.frequency . (Lens.mapped . _2 %~ pure) $
-  [ weight 2  $ V.BAbs         <$> arbitraryLam
-  , weight 2  $ V.BRecExtend   <$> arbitraryRecExtend
-  , weight 2  $ V.BGetField    <$> arbitraryGetField
-  , weight 5  $ V.BApp         <$> arbitraryApply
-  , weight 17 $ V.BLeaf        <$> arbitraryLeaf
-  ]
-  where
-    weight = (,)
+    join . liftGen . Gen.frequency . (Lens.mapped . _2 %~ pure) $
+    [ weight 2  $ V.BAbs         <$> arbitraryLam
+    , weight 2  $ V.BRecExtend   <$> arbitraryRecExtend
+    , weight 2  $ V.BGetField    <$> arbitraryGetField
+    , weight 5  $ V.BApp         <$> arbitraryApply
+    , weight 17 $ V.BLeaf        <$> arbitraryLeaf
+    ]
+    where
+        weight = (,)
 
 arbitraryExpr :: Arbitrary a => GenExpr (Val a)
 arbitraryExpr = Val <$> liftGen arbitrary <*> arbitraryBody
 
 class Name n where
-  names :: [n]
+    names :: [n]
 
 exprGen :: Arbitrary a => Map V.GlobalId Scheme -> Gen (Val a)
 exprGen globals =
-  (`evalStateT` names) .
-  (`runReaderT` Env [] globals) $
-  arbitraryExpr
+    (`evalStateT` names) .
+    (`runReaderT` Env [] globals) $
+    arbitraryExpr
 
 instance Name V.Var where
-  names = fromString . (: []) <$> ['a'..]
+    names = fromString . (: []) <$> ['a'..]
 
 instance Arbitrary Identifier where
-  arbitrary = Identifier . BS.pack <$> replicateM 8 arbitrary
+    arbitrary = Identifier . BS.pack <$> replicateM 8 arbitrary
 
 instance Arbitrary T.Tag where
-  arbitrary = T.Tag <$> arbitrary
+    arbitrary = T.Tag <$> arbitrary
 
 -- TODO: This instance doesn't know which Definitions exist in the
 -- world so avoids DefinitionRef and only has valid ParameterRefs to
 -- its own lambdas.
 instance Arbitrary a => Arbitrary (Val a) where
-  arbitrary = exprGen Map.empty
+    arbitrary = exprGen Map.empty
