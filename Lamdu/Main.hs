@@ -12,7 +12,6 @@ import           Data.Maybe
 import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
 import           Data.Store.Db (Db)
-import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -156,8 +155,8 @@ cacheMakeWidget mkWidget =
                 <&> Widget.events %~ (<* invalidateCache)
             )
 
-rootGuid :: Guid
-rootGuid = IRef.guid $ DbLayout.panes DbLayout.codeIRefs
+rootCursor :: Widget.Id
+rootCursor = WidgetIds.fromGuid $ IRef.guid $ DbLayout.panes DbLayout.codeIRefs
 
 runDb :: GLFW.Window -> Sampler Config -> Draw.Font -> Db -> IO ()
 runDb win configSampler font db =
@@ -238,13 +237,12 @@ mkWidgetWithFallback dbToIO env =
         config = GUIMain.envConfig env
         bgColor False = Config.invalidCursorBGColor
         bgColor True = Config.backgroundColor
-        rootCursor = WidgetIds.fromGuid rootGuid
 
 makeMainGui ::
     (forall a. Transaction DbLayout.DbM a -> f a) ->
     GUIMain.Env -> Transaction DbLayout.DbM (Widget f)
 makeMainGui runTransaction env =
-    GUIMain.make env (WidgetIds.fromGuid rootGuid)
+    GUIMain.make env rootCursor
     <&> Widget.events %~ runTransaction . (attachCursor =<<)
     where
         attachCursor eventResult =
