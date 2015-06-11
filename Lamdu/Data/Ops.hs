@@ -1,17 +1,17 @@
 {-# LANGUAGE RecordWildCards #-}
 module Lamdu.Data.Ops
-  ( newHole, wrap, setToWrapper
-  , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
-  , recExtend, RecExtendResult(..)
-  , addListItem
-  , newPublicDefinition
-  , newDefinition, presentationModeOfName
-  , savePreJumpPosition, jumpBack
-  , newPane
-  , newClipboard
-  , makeNewTag, makeNewPublicTag
-  , isInfix
-  ) where
+    ( newHole, wrap, setToWrapper
+    , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
+    , recExtend, RecExtendResult(..)
+    , addListItem
+    , newPublicDefinition
+    , newDefinition, presentationModeOfName
+    , savePreJumpPosition, jumpBack
+    , newPane
+    , newClipboard
+    , makeNewTag, makeNewPublicTag
+    , isInfix
+    ) where
 
 import Control.Applicative ((<$>), (<$))
 import Control.Lens.Operators
@@ -37,161 +37,176 @@ import qualified System.Random.Utils as RandomUtils
 type T = Transaction
 
 setToWrapper ::
-  MonadA m => ExprIRef.ValI m -> ExprIRef.ValIProperty m -> T m (ExprIRef.ValI m)
-setToWrapper wrappedI destP = do
-  newFuncI <- newHole
-  resI <- ExprIRef.newValBody . V.BApp $ V.Apply newFuncI wrappedI
-  Property.set destP resI
-  return resI
+    MonadA m => ExprIRef.ValI m -> ExprIRef.ValIProperty m -> T m (ExprIRef.ValI m)
+setToWrapper wrappedI destP =
+    do
+        newFuncI <- newHole
+        resI <- ExprIRef.newValBody . V.BApp $ V.Apply newFuncI wrappedI
+        Property.set destP resI
+        return resI
 
 wrap ::
-  MonadA m =>
-  ExprIRef.ValIProperty m ->
-  T m (ExprIRef.ValI m)
-wrap exprP = do
-  newFuncI <- newHole
-  applyI <- ExprIRef.newValBody . V.BApp . V.Apply newFuncI $ Property.value exprP
-  Property.set exprP applyI
-  return applyI
+    MonadA m =>
+    ExprIRef.ValIProperty m ->
+    T m (ExprIRef.ValI m)
+wrap exprP =
+    do
+        newFuncI <- newHole
+        applyI <- ExprIRef.newValBody . V.BApp . V.Apply newFuncI $ Property.value exprP
+        Property.set exprP applyI
+        return applyI
 
 newHole :: MonadA m => T m (ExprIRef.ValI m)
 newHole = ExprIRef.newValBody $ V.BLeaf V.LHole
 
 replace ::
-  MonadA m =>
-  ExprIRef.ValIProperty m ->
-  ExprIRef.ValI m ->
-  T m (ExprIRef.ValI m)
-replace exprP newExprI = do
-  Property.set exprP newExprI
-  return newExprI
+    MonadA m =>
+    ExprIRef.ValIProperty m ->
+    ExprIRef.ValI m ->
+    T m (ExprIRef.ValI m)
+replace exprP newExprI =
+    do
+        Property.set exprP newExprI
+        return newExprI
 
 replaceWithHole :: MonadA m => ExprIRef.ValIProperty m -> T m (ExprIRef.ValI m)
 replaceWithHole exprP = replace exprP =<< newHole
 
 setToHole :: MonadA m => ExprIRef.ValIProperty m -> T m (ExprIRef.ValI m)
 setToHole exprP =
-  exprI <$ ExprIRef.writeValBody exprI hole
-  where
-    hole = V.BLeaf V.LHole
-    exprI = Property.value exprP
+    exprI <$ ExprIRef.writeValBody exprI hole
+    where
+        hole = V.BLeaf V.LHole
+        exprI = Property.value exprP
 
 lambdaWrap :: MonadA m => ExprIRef.ValIProperty m -> T m (V.Var, ExprIRef.ValI m)
-lambdaWrap exprP = do
-  (newParam, newExprI) <- ExprIRef.newLambda $ Property.value exprP
-  Property.set exprP newExprI
-  return (newParam, newExprI)
+lambdaWrap exprP =
+    do
+        (newParam, newExprI) <- ExprIRef.newLambda $ Property.value exprP
+        Property.set exprP newExprI
+        return (newParam, newExprI)
 
 redexWrap :: MonadA m => ExprIRef.ValIProperty m -> T m (V.Var, ExprIRef.ValI m)
-redexWrap exprP = do
-  (newParam, newLambdaI) <- ExprIRef.newLambda $ Property.value exprP
-  newValueI <- newHole
-  newApplyI <- ExprIRef.newValBody . V.BApp $ V.Apply newLambdaI newValueI
-  Property.set exprP newApplyI
-  return (newParam, newLambdaI)
+redexWrap exprP =
+    do
+        (newParam, newLambdaI) <- ExprIRef.newLambda $ Property.value exprP
+        newValueI <- newHole
+        newApplyI <- ExprIRef.newValBody . V.BApp $ V.Apply newLambdaI newValueI
+        Property.set exprP newApplyI
+        return (newParam, newLambdaI)
 
 data RecExtendResult m = RecExtendResult
-  { rerNewTag :: T.Tag
-  , rerNewVal :: ExprIRef.ValI m
-  , rerResult :: ExprIRef.ValI m
-  }
+    { rerNewTag :: T.Tag
+    , rerNewVal :: ExprIRef.ValI m
+    , rerResult :: ExprIRef.ValI m
+    }
 
 recExtend :: MonadA m => ExprIRef.ValIProperty m -> T m (RecExtendResult m)
-recExtend valP = do
-  tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
-  newValueI <- newHole
-  resultI <-
-    ExprIRef.newValBody . V.BRecExtend $
-    V.RecExtend tag newValueI $ Property.value valP
-  Property.set valP resultI
-  return $ RecExtendResult tag newValueI resultI
+recExtend valP =
+    do
+        tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
+        newValueI <- newHole
+        resultI <-
+            ExprIRef.newValBody . V.BRecExtend $
+            V.RecExtend tag newValueI $ Property.value valP
+        Property.set valP resultI
+        return $ RecExtendResult tag newValueI resultI
 
 addListItem ::
-  MonadA m =>
-  Anchors.SpecialFunctions m ->
-  ExprIRef.ValIProperty m ->
-  T m (ExprIRef.ValI m, ExprIRef.ValI m)
-addListItem Anchors.SpecialFunctions {..} exprP = do
-  newItemI <- newHole
-  newListI <- ExprIRef.writeValTree $
-    app cons $
-    recEx sfHeadTag (ValTreeLeaf newItemI) $
-    recEx sfTailTag (ValTreeLeaf (Property.value exprP))
-    recEmpty
-  Property.set exprP newListI
-  return (newListI, newItemI)
-  where
-    v = ValTreeNode
-    app f x            = v $ V.BApp $ V.Apply f x
-    recEx tag val rest = v $ V.BRecExtend $ V.RecExtend tag val rest
-    recEmpty           = v $ V.BLeaf V.LRecEmpty
-    cons               = v $ ExprLens.valBodyGlobal # ExprIRef.globalId sfCons
+    MonadA m =>
+    Anchors.SpecialFunctions m ->
+    ExprIRef.ValIProperty m ->
+    T m (ExprIRef.ValI m, ExprIRef.ValI m)
+addListItem Anchors.SpecialFunctions {..} exprP =
+    do
+        newItemI <- newHole
+        newListI <- ExprIRef.writeValTree $
+            app cons $
+            recEx sfHeadTag (ValTreeLeaf newItemI) $
+            recEx sfTailTag (ValTreeLeaf (Property.value exprP))
+            recEmpty
+        Property.set exprP newListI
+        return (newListI, newItemI)
+    where
+        v = ValTreeNode
+        app f x            = v $ V.BApp $ V.Apply f x
+        recEx tag val rest = v $ V.BRecExtend $ V.RecExtend tag val rest
+        recEmpty           = v $ V.BLeaf V.LRecEmpty
+        cons               = v $ ExprLens.valBodyGlobal # ExprIRef.globalId sfCons
 
 newPane :: MonadA m => Anchors.CodeProps m -> DefI m -> T m ()
-newPane codeProps defI = do
-  let panesProp = Anchors.panes codeProps
-  panes <- getP panesProp
-  when (defI `notElem` panes) $
-    setP panesProp $ Anchors.makePane defI : panes
+newPane codeProps defI =
+    do
+        let panesProp = Anchors.panes codeProps
+        panes <- getP panesProp
+        when (defI `notElem` panes) $
+            setP panesProp $ Anchors.makePane defI : panes
 
 savePreJumpPosition :: MonadA m => Anchors.CodeProps m -> WidgetId.Id -> T m ()
 savePreJumpPosition codeProps pos = modP (Anchors.preJumps codeProps) $ (pos :) . take 19
 
 jumpBack :: MonadA m => Anchors.CodeProps m -> T m (Maybe (T m WidgetId.Id))
-jumpBack codeProps = do
-  preJumps <- getP (Anchors.preJumps codeProps)
-  return $
-    case preJumps of
-    [] -> Nothing
-    (j:js) -> Just $ do
-      setP (Anchors.preJumps codeProps) js
-      return j
+jumpBack codeProps =
+    do
+        preJumps <- getP (Anchors.preJumps codeProps)
+        return $
+            case preJumps of
+            [] -> Nothing
+            (j:js) ->
+                Just $ do
+                    setP (Anchors.preJumps codeProps) js
+                    return j
 
 isInfix :: String -> Bool
 isInfix x = not (null x) && all (`elem` operatorChars) x
 
 presentationModeOfName :: String -> PresentationMode
 presentationModeOfName x
-  | isInfix x = Infix
-  | otherwise = OO
+    | isInfix x = Infix
+    | otherwise = OO
 
 newDefinition ::
-  MonadA m => String -> PresentationMode ->
-  Definition.Body (ExprIRef.ValI m) -> T m (DefI m)
-newDefinition name presentationMode defBody = do
-  newDef <- Transaction.newIRef defBody
-  setP (Anchors.assocNameRef newDef) name
-  setP (Anchors.assocPresentationMode newDef) presentationMode
-  return newDef
+    MonadA m => String -> PresentationMode ->
+    Definition.Body (ExprIRef.ValI m) -> T m (DefI m)
+newDefinition name presentationMode defBody =
+    do
+        newDef <- Transaction.newIRef defBody
+        setP (Anchors.assocNameRef newDef) name
+        setP (Anchors.assocPresentationMode newDef) presentationMode
+        return newDef
 
 newPublicDefinition ::
-  MonadA m => Anchors.CodeProps m -> String -> T m (DefI m)
-newPublicDefinition codeProps name = do
-  defI <-
-    newDefinition name (presentationModeOfName name) =<<
-    (Definition.BodyExpr . (`Definition.Expr` Definition.NoExportedType) <$> newHole)
-  modP (Anchors.globals codeProps) (defI :)
-  return defI
+    MonadA m => Anchors.CodeProps m -> String -> T m (DefI m)
+newPublicDefinition codeProps name =
+    do
+        defI <-
+            newDefinition name (presentationModeOfName name) =<<
+            (Definition.BodyExpr . (`Definition.Expr` Definition.NoExportedType) <$> newHole)
+        modP (Anchors.globals codeProps) (defI :)
+        return defI
 
 newClipboard ::
-  MonadA m => Anchors.CodeProps m ->
-  ExprIRef.ValI m ->
-  T m (DefI m)
-newClipboard codeProps expr = do
-  len <- length <$> getP (Anchors.clipboards codeProps)
-  let def = Definition.BodyExpr $ Definition.Expr expr Definition.NoExportedType
-  defI <- newDefinition ("clipboard" ++ show len) OO def
-  modP (Anchors.clipboards codeProps) (defI:)
-  return defI
+    MonadA m => Anchors.CodeProps m ->
+    ExprIRef.ValI m ->
+    T m (DefI m)
+newClipboard codeProps expr =
+    do
+        len <- length <$> getP (Anchors.clipboards codeProps)
+        let def = Definition.BodyExpr $ Definition.Expr expr Definition.NoExportedType
+        defI <- newDefinition ("clipboard" ++ show len) OO def
+        modP (Anchors.clipboards codeProps) (defI:)
+        return defI
 
 makeNewTag :: MonadA m => String -> T m T.Tag
-makeNewTag name = do
-  tag <- UniqueId.new
-  setP (Anchors.assocNameRef tag) name
-  return tag
+makeNewTag name =
+    do
+        tag <- UniqueId.new
+        setP (Anchors.assocNameRef tag) name
+        return tag
 
 makeNewPublicTag :: MonadA m => Anchors.CodeProps m -> String -> T m T.Tag
-makeNewPublicTag codeProps name = do
-  tag <- makeNewTag name
-  modP (Anchors.tags codeProps) (tag :)
-  return tag
+makeNewPublicTag codeProps name =
+    do
+        tag <- makeNewTag name
+        modP (Anchors.tags codeProps) (tag :)
+        return tag
