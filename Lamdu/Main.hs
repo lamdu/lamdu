@@ -19,18 +19,16 @@ import qualified Data.Store.Transaction as Transaction
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
-import           Graphics.UI.Bottle.MainLoop (mainLoopWidget, AnimConfig (..))
-import           Graphics.UI.Bottle.SizedFont (SizedFont(..))
+import           Graphics.UI.Bottle.MainLoop (mainLoopWidget)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.ExampleDB as ExampleDB
 import           Lamdu.DataFile (accessDataFile)
@@ -41,11 +39,11 @@ import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.Zoom as Zoom
 import qualified Lamdu.Opts as Opts
+import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
-import qualified Lamdu.Config.Sampler as ConfigSampler
 
 undo :: Transaction DbLayout.DbM Widget.Id
 undo =
@@ -119,15 +117,9 @@ mainLoopDebugMode win shouldRefresh getConfig iteration =
         lastVersionNumRef <- newIORef 0
         let getAnimHalfLife =
                 do
+                    (_, config) <- getConfig
                     isDebugMode <- readIORef debugModeRef
-                    if isDebugMode
-                        then return $ AnimConfig 6.64 0.01
-                        else do
-                            (_, config) <- getConfig
-                            return $
-                                AnimConfig
-                                (realToFrac (Config.animationTimePeriodSec config))
-                                (realToFrac (Config.animationRemainInPeriod config))
+                    Style.anim config isDebugMode & return
             addDebugMode config widget =
                 do
                     isDebugMode <- readIORef debugModeRef
@@ -165,11 +157,6 @@ cacheMakeWidget mkWidget =
                 <&> Widget.events %~ (<* invalidateCache)
             )
 
-flyNavConfig :: FlyNav.Config
-flyNavConfig = FlyNav.Config
-    { FlyNav.configLayer = -10000 -- that should cover it :-)
-    }
-
 makeFlyNav :: IO (Widget IO -> IO (Widget IO))
 makeFlyNav =
     do
@@ -178,35 +165,7 @@ makeFlyNav =
             do
                 fnState <- readIORef flyNavState
                 return $
-                    FlyNav.make flyNavConfig WidgetIds.flyNav fnState (writeIORef flyNavState) widget
-
-helpConfig :: Draw.Font -> Config.Help -> EventMapDoc.Config
-helpConfig font Config.Help{..} =
-    EventMapDoc.Config
-    { EventMapDoc.configStyle =
-        TextView.Style
-        { TextView._styleColor = helpTextColor
-        , TextView._styleFont = SizedFont font helpTextSize
-        }
-    , EventMapDoc.configInputDocColor = helpInputDocColor
-    , EventMapDoc.configBGColor = helpBGColor
-    , EventMapDoc.configOverlayDocKeys = helpKeys
-    }
-
-baseStyle :: Config -> Draw.Font -> TextEdit.Style
-baseStyle config font = TextEdit.Style
-    { TextEdit._sTextViewStyle =
-        TextView.Style
-        { TextView._styleColor = Config.baseColor config
-        , TextView._styleFont = SizedFont font (Config.baseTextSize config)
-        }
-    , TextEdit._sCursorColor = TextEdit.defaultCursorColor
-    , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
-    , TextEdit._sTextCursorId = WidgetIds.textCursorId
-    , TextEdit._sBGColor = Config.cursorBGColor config
-    , TextEdit._sEmptyUnfocusedString = ""
-    , TextEdit._sEmptyFocusedString = ""
-    }
+                    FlyNav.make Style.flyNav WidgetIds.flyNav fnState (writeIORef flyNavState) widget
 
 rootGuid :: Guid
 rootGuid = IRef.guid $ DbLayout.panes DbLayout.codeIRefs
@@ -241,7 +200,7 @@ runDb win getConfig font db =
                             { envEvalMap = evalResults
                             , envConfig = config
                             , envSettings = settings
-                            , envStyle = baseStyle config font
+                            , envStyle = Style.base config font
                             , envFullSize = size / sizeFactor
                             , envCursor = cursor
                             }
@@ -259,7 +218,7 @@ runDb win getConfig font db =
 
         mainLoopDebugMode win shouldRefresh getConfig $ \config size ->
             ( wrapFlyNav =<< makeWidgetCached (config, size)
-            , addHelpWithStyle (helpConfig font (Config.help config)) size
+            , addHelpWithStyle (Style.help font (Config.help config)) size
             )
 
 mkWidgetWithFallback ::

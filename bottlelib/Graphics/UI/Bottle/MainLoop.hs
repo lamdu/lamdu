@@ -36,7 +36,7 @@ import           Graphics.UI.GLFW.Events (KeyEvent, Event(..), Result(..), event
 
 data AnimConfig = AnimConfig
     { acTimePeriod :: NominalDiffTime
-    , acRatioInPeriod :: Anim.R
+    , acRemainingRatioInPeriod :: Anim.R
     }
 
 data EventResult =

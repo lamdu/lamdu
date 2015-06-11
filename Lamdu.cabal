@@ -236,6 +236,7 @@ Executable lamdu
                      , Lamdu.Infer.Update
                      , Lamdu.Main
                      , Lamdu.Opts
+                     , Lamdu.Style
                      , Lamdu.Sugar.AddNames
                      , Lamdu.Sugar.AddNames.CPS
                      , Lamdu.Sugar.AddNames.NameGen
