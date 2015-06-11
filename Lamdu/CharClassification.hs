@@ -1,6 +1,6 @@
 module Lamdu.CharClassification
-  ( operatorChars, alphaNumericChars
-  ) where
+    ( operatorChars, alphaNumericChars
+    ) where
 
 operatorChars :: String
 operatorChars = "\\+-*/^=><&|%$:."
