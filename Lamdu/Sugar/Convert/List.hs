@@ -1,8 +1,8 @@
 {-# LANGUAGE RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Sugar.Convert.List
-  ( cons
-  , nil
-  ) where
+    ( cons
+    , nil
+    ) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
@@ -37,110 +37,114 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 type T = Transaction
 
 nil ::
-  MonadA m => V.GlobalId -> Input.Payload m a -> MaybeT (ConvertM m) (ExpressionU m a)
-nil globId exprPl = do
-  specialFunctions <-
-    lift $ (^. ConvertM.scSpecialFunctions) <$> ConvertM.readContext
-  guard $ globId == ExprIRef.globalId (Anchors.sfNil specialFunctions)
-  let
-    mkListActions exprS =
-      ListActions
-      { addFirstItem = mkListAddFirstItem specialFunctions exprS
-      , replaceNil = EntityId.ofValI <$> DataOps.setToHole exprS
-      }
-  (lift . addActions exprPl . BodyList)
-    List
-    { lValues = []
-    , lMActions = mkListActions <$> exprPl ^. Input.mStored
-    , lNilEntityId = exprPl ^. Input.entityId
-    }
+    MonadA m => V.GlobalId -> Input.Payload m a -> MaybeT (ConvertM m) (ExpressionU m a)
+nil globId exprPl =
+    do
+        specialFunctions <-
+            lift $ (^. ConvertM.scSpecialFunctions) <$> ConvertM.readContext
+        guard $ globId == ExprIRef.globalId (Anchors.sfNil specialFunctions)
+        let mkListActions exprS =
+                ListActions
+                { addFirstItem = mkListAddFirstItem specialFunctions exprS
+                , replaceNil = EntityId.ofValI <$> DataOps.setToHole exprS
+                }
+        (lift . addActions exprPl . BodyList)
+            List
+            { lValues = []
+            , lMActions = mkListActions <$> exprPl ^. Input.mStored
+            , lNilEntityId = exprPl ^. Input.entityId
+            }
 
 mkListAddFirstItem ::
-  MonadA m => Anchors.SpecialFunctions m -> ExprIRef.ValIProperty m ->
-  T m EntityId
+    MonadA m => Anchors.SpecialFunctions m -> ExprIRef.ValIProperty m ->
+    T m EntityId
 mkListAddFirstItem specialFunctions =
-  fmap (EntityId.ofValI . snd) . DataOps.addListItem specialFunctions
+    fmap (EntityId.ofValI . snd) . DataOps.addListItem specialFunctions
 
 mkListItem ::
-  (MonadA m, Monoid a) =>
-  ExpressionU m a ->
-  Input.Payload m a -> Val (Input.Payload m a) -> Maybe (T m EntityId) ->
-  ListItem m (ExpressionU m a)
+    (MonadA m, Monoid a) =>
+    ExpressionU m a ->
+    Input.Payload m a -> Val (Input.Payload m a) -> Maybe (T m EntityId) ->
+    ListItem m (ExpressionU m a)
 mkListItem listItemExpr exprPl tailI mAddNextItem =
-  ListItem
-  { _liExpr =
-    listItemExpr
-  , _liMActions = do
-      addNext <- mAddNextItem
-      exprProp <- exprPl ^. Input.mStored
-      argProp <- tailI ^. V.payload . Input.mStored
-      return ListItemActions
-        { _itemAddNext = addNext
-        , _itemDelete = void $ replaceWith exprProp argProp
-        }
-  }
+    ListItem
+    { _liExpr =
+        listItemExpr
+    , _liMActions =
+        do
+            addNext <- mAddNextItem
+            exprProp <- exprPl ^. Input.mStored
+            argProp <- tailI ^. V.payload . Input.mStored
+            return ListItemActions
+                { _itemAddNext = addNext
+                , _itemDelete = void $ replaceWith exprProp argProp
+                }
+    }
 
 data ConsParams a = ConsParams
-  { cpHead :: a
-  , cpTail :: a
-  } deriving (Functor, Foldable, Traversable)
+    { cpHead :: a
+    , cpTail :: a
+    } deriving (Functor, Foldable, Traversable)
 
 getSugaredHeadTail ::
-  (MonadPlus m, Monoid a) =>
-  Anchors.SpecialFunctions t ->
-  ExpressionU f a ->
-  m (ConsParams (ExpressionU f a))
-getSugaredHeadTail Anchors.SpecialFunctions{..} argS = do
-  Record [headField, tailField] ClosedRecord{} _ <-
-    maybeToMPlus $ argS ^? rBody . _BodyRecord
-  guard $ sfHeadTag == headField ^. rfTag . tagVal
-  guard $ sfTailTag == tailField ^. rfTag . tagVal
-  return ConsParams
-    { cpHead = headField ^. rfExpr
-    , cpTail = tailField ^. rfExpr
-    }
+    (MonadPlus m, Monoid a) =>
+    Anchors.SpecialFunctions t ->
+    ExpressionU f a ->
+    m (ConsParams (ExpressionU f a))
+getSugaredHeadTail Anchors.SpecialFunctions{..} argS =
+    do
+        Record [headField, tailField] ClosedRecord{} _ <-
+            maybeToMPlus $ argS ^? rBody . _BodyRecord
+        guard $ sfHeadTag == headField ^. rfTag . tagVal
+        guard $ sfTailTag == tailField ^. rfTag . tagVal
+        return ConsParams
+            { cpHead = headField ^. rfExpr
+            , cpTail = tailField ^. rfExpr
+            }
 
 consTags :: Anchors.SpecialFunctions t -> ConsParams T.Tag
 consTags Anchors.SpecialFunctions{..} = ConsParams sfHeadTag sfTailTag
 
 valConsParams ::
-  Anchors.SpecialFunctions t -> Val a -> Maybe ([a], ConsParams (Val a))
-valConsParams specialFunctions val = do
-  recTail ^? ExprLens.valRecEmpty
-  consParams <- MapUtils.matchKeys (consTags specialFunctions) fields
-  let payloads = recTail ^. V.payload : consParams ^.. traverse . _1
-  return (payloads, consParams <&> snd)
-  where
-    (fields, recTail) = RecordVal.unpack val
+    Anchors.SpecialFunctions t -> Val a -> Maybe ([a], ConsParams (Val a))
+valConsParams specialFunctions val =
+    do
+        recTail ^? ExprLens.valRecEmpty
+        consParams <- MapUtils.matchKeys (consTags specialFunctions) fields
+        let payloads = recTail ^. V.payload : consParams ^.. traverse . _1
+        return (payloads, consParams <&> snd)
+    where
+        (fields, recTail) = RecordVal.unpack val
 
 cons ::
-  (MonadA m, Monoid a) =>
-  V.Apply (Val (Input.Payload m a)) ->
-  ExpressionU m a -> Input.Payload m a ->
-  MaybeT (ConvertM m) (ExpressionU m a)
-cons (V.Apply funcI argI) argS exprPl = do
-  specialFunctions <-
-    lift $ (^. ConvertM.scSpecialFunctions) <$> ConvertM.readContext
-  let consGlobalId = ExprIRef.globalId $ Anchors.sfCons specialFunctions
-  guard $ Lens.anyOf ExprLens.valGlobal (== consGlobalId) funcI
-  ConsParams headS tailS <- getSugaredHeadTail specialFunctions argS
-  (pls, ConsParams _headI tailI) <-
-    maybeToMPlus $ valConsParams specialFunctions argI
-  List innerValues innerListMActions nilGuid <- maybeToMPlus $ tailS ^? rBody . _BodyList
-  let
-    listItem =
-      mkListItem headS exprPl tailI
-      (addFirstItem <$> innerListMActions)
-      & liExpr . rPayload . plData <>~
-        (funcI ^. Lens.traversed . Input.userData <>
-         tailS ^. rPayload . plData)
-    mListActions = do
-      exprS <- exprPl ^. Input.mStored
-      innerListActions <- innerListMActions
-      pure ListActions
-        { addFirstItem = mkListAddFirstItem specialFunctions exprS
-        , replaceNil = replaceNil innerListActions
-        }
-  lift . addActions exprPl . BodyList $
-    List (listItem : innerValues) mListActions nilGuid
-    <&> rPayload . plData <>~ (pls ^. traverse . Input.userData)
+    (MonadA m, Monoid a) =>
+    V.Apply (Val (Input.Payload m a)) ->
+    ExpressionU m a -> Input.Payload m a ->
+    MaybeT (ConvertM m) (ExpressionU m a)
+cons (V.Apply funcI argI) argS exprPl =
+    do
+        specialFunctions <-
+            lift $ (^. ConvertM.scSpecialFunctions) <$> ConvertM.readContext
+        let consGlobalId = ExprIRef.globalId $ Anchors.sfCons specialFunctions
+        guard $ Lens.anyOf ExprLens.valGlobal (== consGlobalId) funcI
+        ConsParams headS tailS <- getSugaredHeadTail specialFunctions argS
+        (pls, ConsParams _headI tailI) <-
+            maybeToMPlus $ valConsParams specialFunctions argI
+        List innerValues innerListMActions nilGuid <- maybeToMPlus $ tailS ^? rBody . _BodyList
+        let listItem =
+                mkListItem headS exprPl tailI
+                (addFirstItem <$> innerListMActions)
+                & liExpr . rPayload . plData <>~
+                    (funcI ^. Lens.traversed . Input.userData <>
+                      tailS ^. rPayload . plData)
+            mListActions =
+                do
+                    exprS <- exprPl ^. Input.mStored
+                    innerListActions <- innerListMActions
+                    pure ListActions
+                        { addFirstItem = mkListAddFirstItem specialFunctions exprS
+                        , replaceNil = replaceNil innerListActions
+                        }
+        lift . addActions exprPl . BodyList $
+            List (listItem : innerValues) mListActions nilGuid
+            <&> rPayload . plData <>~ (pls ^. traverse . Input.userData)
