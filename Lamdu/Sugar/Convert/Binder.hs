@@ -65,7 +65,7 @@ cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalP
 data FieldParam = FieldParam
     { fpTag :: T.Tag
     , fpFieldType :: Type
-    , fpValue :: Map ScopeId (ComputedVal ())
+    , fpValue :: Map ScopeId [(ScopeId, ComputedVal ())]
     }
 
 onMatchingSubexprs ::
@@ -250,8 +250,7 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
                         { _aInferredType = fpFieldType fp
                         , _aMEvaluationResult =
                                 fpValue fp
-                                & Map.minView
-                                <&> fst
+                                ^? Lens.traversed . Lens.traversed . Lens._2
                                 <&> truncateStr 20 . show
                         }
                     , _fpMActions = actions
@@ -416,9 +415,8 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
                     Annotation
                     { _aInferredType = paramType
                     , _aMEvaluationResult =
-                        lamExprPl ^. Input.evalLamArgs
-                        & Map.minView
-                        <&> fst
+                        lamExprPl ^. Input.evalAppliesOfLam
+                        ^? Lens.traversed . Lens.traversed . Lens._2
                         <&> truncateStr 20 . show
                     }
                 , _fpMActions = fst <$> mActions
@@ -482,8 +480,8 @@ convertLamParams mRecursiveVar lambda lambdaPl =
             { fpTag = tag
             , fpFieldType = typeExpr
             , fpValue =
-                    lambdaPl ^. Input.evalLamArgs
-                    <&> extractField tag
+                    lambdaPl ^. Input.evalAppliesOfLam
+                    <&> Lens.mapped . Lens._2 %~ extractField tag
             }
 
 convertEmptyParams :: MonadA m =>

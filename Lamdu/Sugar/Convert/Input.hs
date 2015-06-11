@@ -1,7 +1,7 @@
 -- | Preprocess of input to sugar
 {-# LANGUAGE RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Sugar.Convert.Input
-    ( Payload(..), entityId, inferred, mStored, evalResults, evalLamArgs, userData
+    ( Payload(..), entityId, inferred, mStored, evalResults, evalAppliesOfLam, userData
     , mkPayload, mkUnstoredPayload
     ) where
 
@@ -26,7 +26,7 @@ data Payload m a = Payload
     , _inferred :: Infer.Payload
     , _mStored :: Maybe (ExprIRef.ValIProperty m)
     , _evalResults :: Map ScopeId (ComputedVal ())
-    , _evalLamArgs :: Map ScopeId (ComputedVal ())
+    , _evalAppliesOfLam :: Map ScopeId [(ScopeId, ComputedVal ())]
     , _userData :: a
     } deriving (Functor, Foldable, Traversable)
 
@@ -43,17 +43,17 @@ mStored f Payload{..} = f _mStored <&> \_mStored -> Payload{..}
 evalResults :: Lens' (Payload m a) (Map ScopeId (ComputedVal ()))
 evalResults f Payload{..} = f _evalResults <&> \_evalResults -> Payload{..}
 
-evalLamArgs :: Lens' (Payload m a) (Map ScopeId (ComputedVal ()))
-evalLamArgs f Payload{..} = f _evalLamArgs <&> \_evalLamArgs -> Payload{..}
+evalAppliesOfLam :: Lens' (Payload m a) (Map ScopeId [(ScopeId, ComputedVal ())])
+evalAppliesOfLam f Payload{..} = f _evalAppliesOfLam <&> \_evalAppliesOfLam -> Payload{..}
 
 userData :: Lens (Payload m a) (Payload m b) a b
 userData f Payload{..} = f _userData <&> \_userData -> Payload{..}
 
 mkPayload ::
     a -> Infer.Payload ->
-    Map ScopeId (ComputedVal ()) -> Map ScopeId (ComputedVal ()) ->
+    Map ScopeId (ComputedVal ()) -> Map ScopeId [(ScopeId, ComputedVal ())] ->
     ExprIRef.ValIProperty m -> Payload m a
-mkPayload _userData _inferred _evalResults _evalLamArgs stored =
+mkPayload _userData _inferred _evalResults _evalAppliesOfLam stored =
     Payload{..}
     where
         _guid = IRef.guid $ ExprIRef.unValI $ Property.value stored
@@ -66,4 +66,4 @@ mkUnstoredPayload _userData _inferred _guid _entityId =
     where
         _mStored = Nothing
         _evalResults = Map.empty
-        _evalLamArgs = Map.empty
+        _evalAppliesOfLam = Map.empty

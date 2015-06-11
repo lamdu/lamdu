@@ -27,19 +27,19 @@ instance Functor ComputedVal where
 data EvalResults pl =
     EvalResults
     { erExprValues :: Map pl (Map ScopeId (ComputedVal ()))
-    , erLambdaParams :: Map pl (Map ScopeId (ComputedVal ()))
+    , erAppliesOfLam :: Map pl (Map ScopeId [(ScopeId, ComputedVal ())])
     }
 
 instance Ord pl => Monoid (EvalResults pl) where
     mempty =
         EvalResults
         { erExprValues = Map.empty
-        , erLambdaParams = Map.empty
+        , erAppliesOfLam = Map.empty
         }
     mappend x y =
         EvalResults
         { erExprValues = mappend (erExprValues x) (erExprValues y)
-        , erLambdaParams = mappend (erLambdaParams x) (erLambdaParams y)
+        , erAppliesOfLam = mappend (erAppliesOfLam x) (erAppliesOfLam y)
         }
 
 derefThunkId :: Map ThunkId (ValHead pl) -> ThunkId -> ComputedVal pl

@@ -68,7 +68,7 @@ mkContext defI cp inferContext =
                                   loadInfer
                                   EvalResults
                                   { erExprValues = Map.empty
-                                  , erLambdaParams = Map.empty
+                                  , erAppliesOfLam = Map.empty
                                   }
                               <&> Lens.has Lens._Just
             , scConvertSubexpression = ConvertExpr.convert
@@ -100,7 +100,7 @@ loadInfer evalResults val =
         mkPayload (inferPl, valIProp) =
             Input.mkPayload () inferPl
             (erExprValues evalResults ^. Lens.at (Property.value valIProp) . Lens._Just)
-            (erLambdaParams evalResults ^. Lens.at (Property.value valIProp) . Lens._Just)
+            (erAppliesOfLam evalResults ^. Lens.at (Property.value valIProp) . Lens._Just)
             valIProp
 
 convert ::

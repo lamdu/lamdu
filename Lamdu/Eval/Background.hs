@@ -14,7 +14,7 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad ((>=>))
+import           Control.Monad ((>=>), void)
 import           Control.Monad.Trans.Either (runEitherT)
 import           Control.Monad.Trans.State (evalStateT)
 import qualified Data.ByteString.Char8 as BS8
@@ -109,7 +109,6 @@ processEvent (Eval.EResultComputed Eval.EventResultComputed{..}) state =
     & case ercMThunkId of
         Nothing -> id
         Just thunkId -> sThunkMap . Lens.at thunkId %~ setJust ercResult
---    & trace (show (void Eval.EventResultComputed{..}))
 
 getDependencies :: Ord pl => V.GlobalId -> Maybe (Def.Body (Val pl)) -> (Set pl, Set V.GlobalId)
 getDependencies globalId defBody =
@@ -164,12 +163,10 @@ results state =
         state ^. sValHeadMap
         <&> Lens.mapped %~ Results.derefValHead (state ^. sThunkMap)
         <&> Lens.mapped . Lens.mapped .~ ()
-    , erLambdaParams =
+    , erAppliesOfLam =
         state ^. sAppliesOfLam
-        <&> concat . Map.elems
-        <&> Lens.traversed . Lens._2 %~ Results.derefThunkId (state ^. sThunkMap)
-        <&> Map.fromList
-        <&> Lens.mapped . Lens.mapped .~ ()
+        <&> Lens.mapped . Lens.mapped . Lens._2 %~
+            void . Results.derefThunkId (state ^. sThunkMap)
     }
 
 getState :: Evaluator pl -> IO (State pl)
