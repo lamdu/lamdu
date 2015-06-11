@@ -16,7 +16,6 @@ import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
-import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.MainLoop (mainLoopWidget)
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -44,7 +43,6 @@ import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import qualified System.Directory as Directory
-import           System.FilePath ((</>))
 
 main :: IO ()
 main =
@@ -90,8 +88,52 @@ runEditor mFontPath db =
                 win <- GLFWUtils.createWindow "Lamdu" =<< GLFWUtils.getVideoModeSize
                 font <- Font.get startDir mFontPath
                 -- Fonts must be loaded after the GL context is created..
-                runDb win configSampler font db
+                zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
+                addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
+                settingsRef <- newIORef Settings
+                    { _sInfoMode = Settings.defaultInfoMode
+                    }
+                wrapFlyNav <- FlyNav.makeIO Style.flyNav WidgetIds.flyNav
+                invalidateCacheRef <- newIORef (return ())
+                let invalidateCache = join (readIORef invalidateCacheRef)
+                evaluators <-
+                    DefEvaluators.new invalidateCache (DbLayout.runDbTransaction db) $
+                    DbLayout.panes DbLayout.codeIRefs
+                let makeWidget (config, size) =
+                        do
+                            cursor <-
+                                DbLayout.cursor DbLayout.revisionProps
+                                & Transaction.getP
+                                & DbLayout.runDbTransaction db
+                            sizeFactor <- Zoom.getSizeFactor zoom
+                            globalEventMap <- Settings.mkEventMap config settingsRef
+                            let eventMap = globalEventMap `mappend` Zoom.eventMap zoom (Config.zoom config)
+                            evalResults <- DefEvaluators.getResults evaluators
+                            settings <- readIORef settingsRef
+                            let env = GUIMain.Env
+                                    { envEvalMap = evalResults
+                                    , envConfig = config
+                                    , envSettings = settings
+                                    , envStyle = Style.base config font
+                                    , envFullSize = size / sizeFactor
+                                    , envCursor = cursor
+                                    }
+                            let dbToIO = DefEvaluators.runTransactionAndMaybeRestartEvaluators evaluators
+                            widget <- mkWidgetWithFallback dbToIO env
+                            return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
+                (invalidateCacheAction, makeWidgetCached) <- cacheMakeWidget makeWidget
+                refreshScheduler <- newRefreshScheduler
+                writeIORef invalidateCacheRef $
+                    do
+                        invalidateCacheAction
+                        scheduleRefresh refreshScheduler
+                DefEvaluators.start evaluators
 
+                mainLoopDebugMode win refreshScheduler configSampler $
+                    \config size ->
+                    ( wrapFlyNav =<< makeWidgetCached (config, size)
+                    , addHelpWithStyle (Style.help font (Config.help config)) size
+                    )
 
 newtype RefreshScheduler = RefreshScheduler (IORef Bool)
 newRefreshScheduler :: IO RefreshScheduler
@@ -156,56 +198,6 @@ cacheMakeWidget mkWidget =
 
 rootCursor :: Widget.Id
 rootCursor = WidgetIds.fromGuid $ IRef.guid $ DbLayout.panes DbLayout.codeIRefs
-
-runDb :: GLFW.Window -> Sampler Config -> Draw.Font -> Db -> IO ()
-runDb win configSampler font db =
-    do
-        zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
-        addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
-        settingsRef <- newIORef Settings
-            { _sInfoMode = Settings.defaultInfoMode
-            }
-        wrapFlyNav <- FlyNav.makeIO Style.flyNav WidgetIds.flyNav
-        invalidateCacheRef <- newIORef (return ())
-        let invalidateCache = join (readIORef invalidateCacheRef)
-        evaluators <-
-            DefEvaluators.new invalidateCache (DbLayout.runDbTransaction db) $
-            DbLayout.panes DbLayout.codeIRefs
-        let makeWidget (config, size) =
-                do
-                    cursor <-
-                        DbLayout.cursor DbLayout.revisionProps
-                        & Transaction.getP
-                        & DbLayout.runDbTransaction db
-                    sizeFactor <- Zoom.getSizeFactor zoom
-                    globalEventMap <- Settings.mkEventMap config settingsRef
-                    let eventMap = globalEventMap `mappend` Zoom.eventMap zoom (Config.zoom config)
-                    evalResults <- DefEvaluators.getResults evaluators
-                    settings <- readIORef settingsRef
-                    let env = GUIMain.Env
-                            { envEvalMap = evalResults
-                            , envConfig = config
-                            , envSettings = settings
-                            , envStyle = Style.base config font
-                            , envFullSize = size / sizeFactor
-                            , envCursor = cursor
-                            }
-                    let dbToIO = DefEvaluators.runTransactionAndMaybeRestartEvaluators evaluators
-                    widget <- mkWidgetWithFallback dbToIO env
-                    return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
-        (invalidateCacheAction, makeWidgetCached) <- cacheMakeWidget makeWidget
-        refreshScheduler <- newRefreshScheduler
-        writeIORef invalidateCacheRef $
-            do
-                invalidateCacheAction
-                scheduleRefresh refreshScheduler
-        DefEvaluators.start evaluators
-
-        mainLoopDebugMode win refreshScheduler configSampler $
-            \config size ->
-            ( wrapFlyNav =<< makeWidgetCached (config, size)
-            , addHelpWithStyle (Style.help font (Config.help config)) size
-            )
 
 mkWidgetWithFallback ::
     (forall a. Transaction DbLayout.DbM a -> IO a) ->
