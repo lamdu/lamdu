@@ -3,14 +3,11 @@ module Main
     ( main
     ) where
 
-import           Control.Applicative ((<$>), (<*))
-import           Control.Applicative (Applicative(..))
+import           Control.Applicative (Applicative(..), (<$>), (<*))
 import           Control.Concurrent (threadDelay, forkIO, ThreadId)
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Monad (join, unless, forever, replicateM_)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
@@ -19,15 +16,10 @@ import           Data.MRUMemo (memoIO)
 import           Data.Maybe
 import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
-import           Data.Set (Set)
-import qualified Data.Set as Set
 import           Data.Store.Db (Db)
 import qualified Data.Store.Db as Db
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
-import qualified Data.Store.Rev.Change as Change
-import qualified Data.Store.Rev.Version as Version
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Vector.Vector2 (Vector2(..))
@@ -44,21 +36,15 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
-import qualified Lamdu.Builtins as Builtins
-import qualified Lamdu.Builtins.Anchors as BuiltinAnchors
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.DbLayout as DbLayout
-import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.ExampleDB as ExampleDB
-import qualified Lamdu.Eval.Background as EvalBG
-import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Load as Load
-import qualified Lamdu.Expr.Val as V
+import qualified Lamdu.DefEvaluators as DefEvaluators
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.Main as GUIMain
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.Zoom as Zoom
 import qualified Lamdu.Opts as Opts
 import qualified Lamdu.VersionControl as VersionControl
@@ -265,106 +251,8 @@ baseStyle config font = TextEdit.Style
     , TextEdit._sEmptyFocusedString = ""
     }
 
-runViewTransactionInIO :: Db -> Transaction DbLayout.ViewM a -> IO a
-runViewTransactionInIO db =
-        DbLayout.runDbTransaction db .
-        VersionControl.runAction
-
-type ValIRef = ExprIRef.ValI DbLayout.ViewM
-
-evalActions :: IO () -> Db -> EvalBG.Actions ValIRef
-evalActions invalidateCache db = EvalBG.Actions
-    { _aLoadGlobal = runViewTransactionInIO db . loadDef
-    , _aRunBuiltin = Builtins.eval
-    , _aReportUpdatesAvailable = invalidateCache
-    }
-    where
-        loadDef globalId =
-            Load.loadDef (ExprIRef.defI globalId)
-            <&> asDef globalId
-        asDef globalId x =
-            x ^. Def.defBody
-            <&> Lens.mapped %~ Property.value
-            <&> replaceRecursiveReferences globalId
-            & Just
-        replaceRecursiveReferences globalId (V.Val pl (V.BLeaf (V.LVar v)))
-            | v == BuiltinAnchors.recurseVar = V.Val pl (V.BLeaf (V.LGlobal globalId))
-        replaceRecursiveReferences globalId val =
-            val & V.body . Lens.traversed %~ replaceRecursiveReferences globalId
-
-startEval :: IO () -> Db -> IO [(ExprIRef.DefI DbLayout.ViewM, EvalBG.Evaluator ValIRef)]
-startEval invalidateCache db =
-    DbLayout.panes DbLayout.codeIRefs
-    & Transaction.readIRef
-
-    >>= mapM loadDef
-    & runViewTransactionInIO db
-
-    <&> mapMaybe (_2 %%~ (^? Def.defBody . Def._BodyExpr . Def.expr))
-    <&> Lens.mapped . _2 . Lens.mapped %~ Property.value
-
-    >>= Lens.traverse . _2 %%~ EvalBG.start (evalActions invalidateCache db)
-    where
-        loadDef defI = Load.loadDef defI <&> (,) defI
-
-sumDependency ::
-    ExprIRef.DefI m -> (Set (ExprIRef.ValI m), Set V.GlobalId) -> Set Guid
-sumDependency defI (subexprs, globals) =
-    mconcat
-    [ Set.singleton (IRef.guid defI)
-    , Set.map (IRef.guid . ExprIRef.unValI) subexprs
-    , Set.map (IRef.guid . ExprIRef.defI) globals
-    ]
-
-startEvaluators ::
-    Db -> IORef [(ExprIRef.DefI DbLayout.ViewM, EvalBG.Evaluator ValIRef)] ->
-    IO () -> IO ()
-startEvaluators db evaluatorsRef invalidateCache =
-    startEval invalidateCache db >>= writeIORef evaluatorsRef
-
 rootGuid :: Guid
 rootGuid = IRef.guid $ DbLayout.panes DbLayout.codeIRefs
-
-runTransactionReevaluate ::
-    Db ->
-    IORef [(ExprIRef.DefI DbLayout.ViewM, EvalBG.Evaluator ValIRef)] ->
-    IO () ->
-    Transaction DbLayout.DbM a ->
-    IO a
-runTransactionReevaluate db evaluatorsRef invalidateCache transaction =
-    do
-        defEvaluators <- readIORef evaluatorsRef
-        dependencies <-
-            defEvaluators
-            & Lens.traverse . _2 %%~ EvalBG.pauseLoading
-            <&> Lens.mapped %~ uncurry sumDependency
-            <&> mconcat
-            <&> Set.insert rootGuid
-        (dependencyChanged, result) <-
-            do
-                (oldVersion, result, newVersion) <-
-                    (,,)
-                    <$> VersionControl.getVersion
-                    <*> transaction
-                    <*> VersionControl.getVersion
-                let checkDependencyChange versionData =
-                        Version.changes versionData
-                        <&> Change.objectKey
-                        <&> (`Set.member` dependencies)
-                        <&> Monoid.Any
-                        & mconcat
-                        & return
-                Monoid.Any dependencyChanged <-
-                    Version.walk checkDependencyChange checkDependencyChange oldVersion newVersion
-                return (dependencyChanged, result)
-            & DbLayout.runDbTransaction db
-        let evaluators = map snd defEvaluators
-        if dependencyChanged
-            then do
-                mapM_ EvalBG.stop evaluators
-                startEvaluators db evaluatorsRef invalidateCache
-            else mapM_ EvalBG.resumeLoading evaluators
-        return result
 
 runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO ()
 runDb win getConfig font db =
@@ -375,9 +263,11 @@ runDb win getConfig font db =
             { _sInfoMode = Settings.defaultInfoMode
             }
         wrapFlyNav <- makeFlyNav
-        evaluatorsRef <- newIORef []
         invalidateCacheRef <- newIORef (return ())
         let invalidateCache = join (readIORef invalidateCacheRef)
+        evaluators <-
+            DefEvaluators.new invalidateCache (DbLayout.runDbTransaction db) $
+            DbLayout.panes DbLayout.codeIRefs
         let makeWidget (config, size) =
                 do
                     cursor <-
@@ -387,10 +277,7 @@ runDb win getConfig font db =
                     sizeFactor <- Zoom.getSizeFactor zoom
                     globalEventMap <- mkGlobalEventMap config settingsRef
                     let eventMap = globalEventMap `mappend` Zoom.eventMap zoom (Config.zoom config)
-                    evalResults <-
-                        readIORef evaluatorsRef
-                        >>= mapM (EvalBG.getResults . snd)
-                        <&> mconcat
+                    evalResults <- DefEvaluators.getResults evaluators
                     settings <- readIORef settingsRef
                     let env = GUIMain.Env
                             { envEvalMap = evalResults
@@ -400,7 +287,7 @@ runDb win getConfig font db =
                             , envFullSize = size / sizeFactor
                             , envCursor = cursor
                             }
-                    let dbToIO = runTransactionReevaluate db evaluatorsRef invalidateCache
+                    let dbToIO = DefEvaluators.runTransactionAndMaybeRestartEvaluators evaluators
                     widget <- mkWidgetWithFallback dbToIO env
                     return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
         (invalidateCacheAction, makeWidgetCached) <- cacheMakeWidget makeWidget
@@ -410,7 +297,7 @@ runDb win getConfig font db =
             do
                 invalidateCacheAction
                 writeIORef refreshRef True
-        startEvaluators db evaluatorsRef invalidateCache
+        DefEvaluators.start evaluators
 
         mainLoopDebugMode win shouldRefresh getConfig $ \config size ->
             ( wrapFlyNav =<< makeWidgetCached (config, size)
