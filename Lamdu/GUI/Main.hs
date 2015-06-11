@@ -1,6 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 module Lamdu.GUI.Main
     ( make
+    , Env(..)
     ) where
 
 import           Control.Lens.Operators
@@ -12,7 +13,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import           Graphics.UI.Bottle.WidgetsEnvT (runWidgetEnvT, Env(..))
+import           Graphics.UI.Bottle.WidgetsEnvT (runWidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -25,23 +26,30 @@ import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.VersionControl as VersionControl
 
+data Env = Env
+    { envEvalMap :: EvalResults (ExprIRef.ValI DbLayout.ViewM)
+    , envConfig :: Config
+    , envSettings :: Settings
+    , envStyle :: TextEdit.Style
+    , envFullSize :: Widget.Size
+    , envCursor :: Widget.Id
+    }
+
 make ::
-    EvalResults (ExprIRef.ValI DbLayout.ViewM) ->
-    Config -> Settings -> TextEdit.Style ->
-    Widget.Size -> Widget.Id -> Widget.Id ->
+    Env -> Widget.Id ->
     Transaction DbLayout.DbM (Widget (Transaction DbLayout.DbM))
-make evalMap config settings style fullSize cursor rootId =
+make (Env evalMap config settings style fullSize cursor) rootId =
     do
         actions <- VersionControl.makeActions
-        let widgetEnv = Env
-                { _envCursor = cursor
-                , _envTextStyle = style
-                , backgroundCursorId = WidgetIds.backgroundCursorId
-                , cursorBGColor = Config.cursorBGColor config
-                , layerCursor = Config.layerCursor $ Config.layers config
-                , layerInterval = Config.layerInterval $ Config.layers config
-                , verticalSpacing = Config.verticalSpacing config
-                , stdSpaceWidth = Config.spaceWidth config
+        let widgetEnv = WE.Env
+                { WE._envCursor = cursor
+                , WE._envTextStyle = style
+                , WE.backgroundCursorId = WidgetIds.backgroundCursorId
+                , WE.cursorBGColor = Config.cursorBGColor config
+                , WE.layerCursor = Config.layerCursor $ Config.layers config
+                , WE.layerInterval = Config.layerInterval $ Config.layers config
+                , WE.verticalSpacing = Config.verticalSpacing config
+                , WE.stdSpaceWidth = Config.spaceWidth config
                 }
         runWidgetEnvT widgetEnv $
             do

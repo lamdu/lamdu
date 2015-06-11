@@ -52,7 +52,6 @@ import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.ExampleDB as ExampleDB
 import qualified Lamdu.Eval.Background as EvalBG
-import           Lamdu.Eval.Results (EvalResults(..))
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Val as V
@@ -392,12 +391,17 @@ runDb win getConfig font db =
                         readIORef evaluatorsRef
                         >>= mapM (EvalBG.getResults . snd)
                         <&> mconcat
-                    widget <-
-                        readIORef settingsRef
-                        >>= mkWidgetWithFallback evalResults config
-                            (baseStyle config font)
-                            (runTransactionReevaluate db evaluatorsRef invalidateCache)
-                            (size / sizeFactor) cursor
+                    settings <- readIORef settingsRef
+                    let env = GUIMain.Env
+                            { envEvalMap = evalResults
+                            , envConfig = config
+                            , envSettings = settings
+                            , envStyle = baseStyle config font
+                            , envFullSize = size / sizeFactor
+                            , envCursor = cursor
+                            }
+                    let dbToIO = runTransactionReevaluate db evaluatorsRef invalidateCache
+                    widget <- mkWidgetWithFallback dbToIO env
                     return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
         (invalidateCacheAction, makeWidgetCached) <- cacheMakeWidget makeWidget
         refreshRef <- newIORef False
@@ -425,42 +429,45 @@ mkGlobalEventMap config settingsRef =
             modifyIORef settingsRef $ Settings.sInfoMode .~ next
 
 mkWidgetWithFallback ::
-    EvalResults (ExprIRef.ValI DbLayout.ViewM) ->
-    Config -> TextEdit.Style ->
     (forall a. Transaction DbLayout.DbM a -> IO a) ->
-    Widget.Size -> Widget.Id -> Settings ->
-    IO (Widget IO)
-mkWidgetWithFallback evalMap config style dbToIO size origCursor settings =
+    GUIMain.Env -> IO (Widget IO)
+mkWidgetWithFallback dbToIO env =
     do
         (isValid, widget) <-
             dbToIO $
             do
-                candidateWidget <- fromCursor origCursor
+                candidateWidget <- makeMainGui dbToIO env
                 (isValid, widget) <-
                     if candidateWidget ^. Widget.isFocused
                     then return (True, candidateWidget)
                     else do
-                        finalWidget <- fromCursor rootCursor
+                        finalWidget <- makeMainGui dbToIO env { GUIMain.envCursor = rootCursor }
                         Transaction.setP (DbLayout.cursor DbLayout.revisionProps) rootCursor
                         return (False, finalWidget)
                 unless (widget ^. Widget.isFocused) $
                     fail "Root cursor did not match"
                 return (isValid, widget)
-        unless isValid $ putStrLn $ "Invalid cursor: " ++ show origCursor
+        unless isValid $ putStrLn $ "Invalid cursor: " ++ show (GUIMain.envCursor env)
         widget
-            & Widget.backgroundColor (Config.layerMax (Config.layers config))
+            & Widget.backgroundColor
+              (Config.layerMax (Config.layers config))
               ["background"] (bgColor isValid config)
             & return
     where
+        config = GUIMain.envConfig env
         bgColor False = Config.invalidCursorBGColor
         bgColor True = Config.backgroundColor
-        fromCursor cursor =
-            GUIMain.make evalMap config settings style size
-            (WidgetIds.fromGuid rootGuid) cursor
-            <&> Widget.events %~ dbToIO . (attachCursor =<<)
+        rootCursor = WidgetIds.fromGuid rootGuid
+
+makeMainGui ::
+    (forall a. Transaction DbLayout.DbM a -> f a) ->
+    GUIMain.Env -> Transaction DbLayout.DbM (Widget f)
+makeMainGui runTransaction env =
+    GUIMain.make env (WidgetIds.fromGuid rootGuid)
+    <&> Widget.events %~ runTransaction . (attachCursor =<<)
+    where
         attachCursor eventResult =
             do
                 maybe (return ()) (Transaction.setP (DbLayout.cursor DbLayout.revisionProps)) .
                     Monoid.getLast $ eventResult ^. Widget.eCursor
                 return eventResult
-        rootCursor = WidgetIds.fromGuid rootGuid
