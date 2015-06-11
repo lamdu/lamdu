@@ -31,6 +31,7 @@ import           Lamdu.Config.Sampler (Sampler)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.ExampleDB as ExampleDB
+import           Lamdu.DataFile (getLamduDir)
 import qualified Lamdu.DefEvaluators as DefEvaluators
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
@@ -44,6 +45,19 @@ import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
+
+main :: IO ()
+main =
+    do
+        setNumCapabilities =<< getNumProcessors
+        lamduDir <- getLamduDir
+        opts <- either fail return =<< Opts.get
+        let withDB = ExampleDB.withDB lamduDir
+        case opts of
+            Opts.Parsed{..}
+                | _poShouldDeleteDB -> deleteDB lamduDir
+                | _poUndoCount > 0  -> withDB $ undoN _poUndoCount
+                | otherwise         -> withDB $ runEditor _poMFontPath
 
 deleteDB :: FilePath -> IO ()
 deleteDB lamduDir =
@@ -61,20 +75,6 @@ undoN n db =
             do
                 actions <- VersionControl.makeActions
                 fromMaybe (fail "Cannot undo any further") $ mUndo actions
-
-main :: IO ()
-main =
-    do
-        setNumCapabilities =<< getNumProcessors
-        home <- Directory.getHomeDirectory
-        let lamduDir = home </> ".lamdu"
-        opts <- either fail return =<< Opts.get
-        let withDB = ExampleDB.withDB lamduDir
-        case opts of
-            Opts.Parsed{..}
-                | _poShouldDeleteDB -> deleteDB lamduDir
-                | _poUndoCount > 0  -> withDB $ undoN _poUndoCount
-                | otherwise         -> withDB $ runEditor _poMFontPath
 
 runEditor :: Maybe FilePath -> Db -> IO ()
 runEditor mFontPath db =
