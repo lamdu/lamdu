@@ -1,6 +1,6 @@
 module Lamdu.Expr.UniqueId
-  ( ToGuid(..), UniqueId(..)
-  ) where
+    ( ToGuid(..), UniqueId(..)
+    ) where
 
 import Control.Applicative ((<$>))
 import Control.MonadA (MonadA)
