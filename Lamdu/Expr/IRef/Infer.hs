@@ -1,11 +1,11 @@
 -- | Infer expressions where GlobalId's are known to be DefI's
 module Lamdu.Expr.IRef.Infer
-  ( ExpressionSetter
+    ( ExpressionSetter
 
-  , loadInferScope
-  , loadInferInto
-  , loadInfer
-  ) where
+    , loadInferScope
+    , loadInferInto
+    , loadInfer
+    ) where
 
 import Control.Lens.Operators
 import Control.Lens.Tuple
@@ -35,15 +35,16 @@ type ExpressionSetter def = Val () -> Val ()
 
 loader :: MonadA m => Loader (MaybeT (T m))
 loader =
-  Loader loadType
-  where
-    loadType globalId = do
-      defBody <- lift $ Transaction.readIRef $ ExprIRef.defI globalId
-      case defBody of
-        Definition.BodyExpr (Definition.Expr _ (Definition.ExportedType scheme)) ->
-          return scheme
-        Definition.BodyBuiltin (Definition.Builtin _ scheme) -> return scheme
-        _ -> mzero -- Reference to global with non-exported type!
+    Loader loadType
+    where
+        loadType globalId =
+            do
+                defBody <- lift $ Transaction.readIRef $ ExprIRef.defI globalId
+                case defBody of
+                    Definition.BodyExpr (Definition.Expr _ (Definition.ExportedType scheme)) ->
+                        return scheme
+                    Definition.BodyBuiltin (Definition.Builtin _ scheme) -> return scheme
+                    _ -> mzero -- Reference to global with non-exported type!
 
 type M m = StateT Infer.Context (MaybeT (T m))
 
@@ -51,25 +52,28 @@ liftInfer :: Monad m => Infer a -> M m a
 liftInfer = mapStateT eitherToMaybeT . Infer.run
 
 loadInferScope ::
-  MonadA m => Infer.Scope -> Val a -> M m (Val (Infer.Payload, a))
-loadInferScope scope val = do
-  inferAction <- lift $ InferLoad.loadInfer loader scope val
-  liftInfer inferAction
+    MonadA m => Infer.Scope -> Val a -> M m (Val (Infer.Payload, a))
+loadInferScope scope val =
+    do
+        inferAction <- lift $ InferLoad.loadInfer loader scope val
+        liftInfer inferAction
 
 loadInferInto ::
-  MonadA m => Infer.Payload -> Val a -> M m (Val (Infer.Payload, a))
-loadInferInto pl val = do
-  inferredVal <- loadInferScope (pl ^. Infer.plScope) val
-  let inferredType = inferredVal ^. V.payload . _1 . Infer.plType
-  liftInfer $ do
-    unify inferredType (pl ^. Infer.plType)
-    Update.inferredVal inferredVal & Update.liftInfer
+    MonadA m => Infer.Payload -> Val a -> M m (Val (Infer.Payload, a))
+loadInferInto pl val =
+    do
+        inferredVal <- loadInferScope (pl ^. Infer.plScope) val
+        let inferredType = inferredVal ^. V.payload . _1 . Infer.plType
+        liftInfer $
+            do
+                unify inferredType (pl ^. Infer.plType)
+                Update.inferredVal inferredVal & Update.liftInfer
 
 loadInfer ::
-  MonadA m => V.Var -> Val a ->
-  MaybeT (T m) (Val (Infer.Payload, a), Infer.Context)
+    MonadA m => V.Var -> Val a ->
+    MaybeT (T m) (Val (Infer.Payload, a), Infer.Context)
 loadInfer recurseVar val =
-  liftInfer (Recursive.inferEnv recurseVar Infer.emptyScope)
-  >>= (`loadInferInto` val)
-  & (`runStateT` Infer.initialContext)
+    liftInfer (Recursive.inferEnv recurseVar Infer.emptyScope)
+    >>= (`loadInferInto` val)
+    & (`runStateT` Infer.initialContext)
 
