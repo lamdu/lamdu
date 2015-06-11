@@ -61,19 +61,22 @@ runCanonizer = flip evalState (emptyVarState, emptyVarState)
 
 canonizeTV :: T.Var t -> State (VarState t) (T.Var t)
 canonizeTV tv =
-    do  mtv <- Lens.use (_1 . Lens.at tv)
-            case mtv of
-                Just tv' -> return tv'
-                Nothing ->
-                    do  tv' <- fresh
-                            _1 . Lens.at tv .= Just tv'
-                            return tv'
+    do
+        mtv <- Lens.use (_1 . Lens.at tv)
+        case mtv of
+            Just tv' -> return tv'
+            Nothing ->
+                do
+                    tv' <- fresh
+                    _1 . Lens.at tv .= Just tv'
+                    return tv'
     where
         fresh =
             Lens.zoom _2 $
-            do  (x:xs) <- State.get
-                    State.put xs
-                    return x
+            do
+                (x:xs) <- State.get
+                State.put xs
+                return x
 
 canonizeCompositeType ::
     T.Composite p -> State (VarState (T.Composite p)) (T.Composite p)
@@ -84,8 +87,9 @@ canonizeCompositeType =
         go (T.CExtend tag typ rest) = go rest <&> _1 %~ Map.insert tag typ
         go T.CEmpty = return (mempty, T.CEmpty)
         go (T.CVar ctv) =
-            do  ctv' <- canonizeTV ctv
-                    return (mempty, T.CVar ctv')
+            do
+                ctv' <- canonizeTV ctv
+                return (mempty, T.CVar ctv')
 
 canonizeType :: Type -> Canonizer Type
 canonizeType (T.TVar tv) =
