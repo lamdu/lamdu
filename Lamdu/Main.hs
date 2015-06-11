@@ -242,18 +242,11 @@ makeFlyNav =
                 return $
                     FlyNav.make flyNavConfig WidgetIds.flyNav fnState (writeIORef flyNavState) widget
 
-getDisplayScale :: GLFW.Window -> IO Widget.R
-getDisplayScale window =
-    do
-        (fbWidth, _) <- GLFW.getFramebufferSize window
-        (winWidth, _) <- GLFW.getWindowSize window
-        return $ fromIntegral fbWidth / fromIntegral winWidth
-
 makeScaleFactor ::
     GLFW.Window -> IO (IORef (Vector2 Widget.R), Config.Zoom -> Widget.EventHandlers IO)
 makeScaleFactor window =
     do
-        factor <- newIORef . realToFrac =<< getDisplayScale window
+        factor <- newIORef =<< GLFWUtils.getDisplayScale window
         let eventMap Config.Zoom{..} = mconcat
                 [ Widget.keysEventMap enlargeKeys
                     (EventMap.Doc ["View", "Zoom", "Enlarge"]) $

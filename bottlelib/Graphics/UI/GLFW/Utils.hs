@@ -1,4 +1,9 @@
-module Graphics.UI.GLFW.Utils(withGLFW, createWindow, getVideoModeSize) where
+module Graphics.UI.GLFW.Utils
+    ( withGLFW
+    , createWindow
+    , getVideoModeSize
+    , getDisplayScale
+    ) where
 
 import Control.Exception(bracket_)
 import Control.Monad(unless)
@@ -30,3 +35,10 @@ getVideoModeSize = do
         maybe (fail "GLFW: Can't get video mode of monitor") return =<<
         GLFW.getVideoMode monitor
     return $ Vector2 (GLFW.videoModeWidth videoMode) (GLFW.videoModeHeight videoMode)
+
+getDisplayScale :: Fractional a => GLFW.Window -> IO a
+getDisplayScale window =
+    do
+        (fbWidth, _) <- GLFW.getFramebufferSize window
+        (winWidth, _) <- GLFW.getWindowSize window
+        return $ fromIntegral fbWidth / fromIntegral winWidth
