@@ -17,7 +17,6 @@ import           Data.Maybe
 import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
 import           Data.Store.Db (Db)
-import qualified Data.Store.Db as Db
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
@@ -60,15 +59,6 @@ undo =
         actions <- VersionControl.makeActions
         fromMaybe (fail "Cannot undo any further") $ mUndo actions
 
-withDb :: FilePath -> (Db -> IO a) -> IO a
-withDb lamduDir body =
-    do
-        Directory.createDirectoryIfMissing False lamduDir
-        Db.withDb (lamduDir </> "codeedit.db") $ \db ->
-            do
-                ExampleDB.initDB db
-                body db
-
 main :: IO ()
 main =
     do
@@ -85,7 +75,7 @@ main =
                 if _poUndoCount > 0
                 then do
                     putStrLn $ "Undoing " ++ show _poUndoCount ++ " times"
-                    withDb lamduDir $ \db ->
+                    ExampleDB.withDB lamduDir $ \db ->
                         DbLayout.runDbTransaction db $ replicateM_ _poUndoCount undo
                 else runEditor lamduDir _poMFontPath
 
@@ -144,7 +134,7 @@ runEditor lamduDir mFontPath =
                     case mFontPath of
                     Nothing -> accessDataFile startDir getFont "fonts/DejaVuSans.ttf"
                     Just path -> getFont path
-                withDb lamduDir $ runDb win getConfig font
+                ExampleDB.withDB lamduDir $ runDb win getConfig font
 
 
 mainLoopDebugMode ::

@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 module Lamdu.Data.ExampleDB
     ( initDB, createBuiltins
+    , withDB
     ) where
 
 import           Control.Monad (unless, void)
@@ -12,6 +13,7 @@ import           Data.List.Split (splitOn)
 import qualified Data.Map as Map
 import           Data.Monoid (Monoid(..))
 import           Data.Store.Db (Db)
+import qualified Data.Store.Db as Db
 import           Data.Store.Rev.Branch (Branch)
 import qualified Data.Store.Rev.Branch as Branch
 import           Data.Store.Rev.Version (Version)
@@ -33,6 +35,8 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.TypeVars as TypeVars
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
+import qualified System.Directory as Directory
+import           System.FilePath ((</>))
 
 type T = Transaction
 
@@ -355,3 +359,12 @@ initDB db =
                 -- Prevent undo into the invalid empty revision
                 newVer <- Branch.curVersion master
                 Version.preventUndo newVer
+
+withDB :: FilePath -> (Db -> IO a) -> IO a
+withDB lamduDir body =
+    do
+        Directory.createDirectoryIfMissing False lamduDir
+        Db.withDb (lamduDir </> "codeedit.db") $ \db ->
+            do
+                initDB db
+                body db
