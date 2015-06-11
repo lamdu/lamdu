@@ -18,24 +18,22 @@ import           Lamdu.Sugar.Types
 
 convertVar :: MonadA m => ConvertM.Context m -> V.Var -> Type -> GetVar Guid m
 convertVar sugarContext param paramType
-  | param == recurseVar =
-    GetVarNamed NamedVar
-    { _nvName = UniqueId.toGuid defI
-    , _nvJumpTo = pure $ EntityId.ofIRef defI
-    , _nvVarType = GetDefinition
-    }
-  | otherwise =
-    if isGetParamRecord
-    then
-        GetVarParamsRecord ParamsRecordVar
-        { _prvFieldNames = typeRecordGuids
-        }
-    else
-        GetVarNamed NamedVar
-        { _nvName = UniqueId.toGuid param
-        , _nvJumpTo = pure $ EntityId.ofLambdaParam param
-        , _nvVarType = GetParameter
-        }
+    | param == recurseVar =
+      GetVarNamed NamedVar
+      { _nvName = UniqueId.toGuid defI
+      , _nvJumpTo = pure $ EntityId.ofIRef defI
+      , _nvVarType = GetDefinition
+      }
+    | isGetParamRecord =
+      GetVarParamsRecord ParamsRecordVar
+      { _prvFieldNames = typeRecordGuids
+      }
+    | otherwise =
+      GetVarNamed NamedVar
+      { _nvName = UniqueId.toGuid param
+      , _nvJumpTo = pure $ EntityId.ofLambdaParam param
+      , _nvVarType = GetParameter
+      }
     where
         typeRecordGuids = typeRecordTags <&> UniqueId.toGuid
         typeRecordTags = paramType ^.. ExprLens._TRecord . ExprLens.compositeTags
