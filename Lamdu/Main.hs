@@ -39,6 +39,7 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.ExampleDB as ExampleDB
+import           Lamdu.DataFile (accessDataFile)
 import qualified Lamdu.DefEvaluators as DefEvaluators
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
@@ -48,7 +49,6 @@ import qualified Lamdu.GUI.Zoom as Zoom
 import qualified Lamdu.Opts as Opts
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
-import           Paths_lamdu_ide (getDataFileName)
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 
@@ -91,12 +91,6 @@ loadConfig configPath =
         either (fail . (msg ++)) return eConfig
     where
         msg = "Failed to parse config file contents at " ++ show configPath ++ ": "
-
-accessDataFile :: FilePath -> (FilePath -> IO a) -> FilePath -> IO a
-accessDataFile startDir accessor fileName =
-    (accessor =<< getDataFileName fileName)
-    `E.catch` \(E.SomeException _) ->
-    accessor $ startDir </> fileName
 
 type Version = Int
 

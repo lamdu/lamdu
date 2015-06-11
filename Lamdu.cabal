@@ -160,6 +160,7 @@ Executable lamdu
                      , Lamdu.Data.Definition
                      , Lamdu.Data.ExampleDB
                      , Lamdu.Data.Ops
+                     , Lamdu.DataFile
                      , Lamdu.Eval.Background
                      , Lamdu.Eval.Results
                      , Lamdu.Eval.ToExpr
