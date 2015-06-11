@@ -156,16 +156,6 @@ cacheMakeWidget mkWidget =
                 <&> Widget.events %~ (<* invalidateCache)
             )
 
-makeFlyNav :: IO (Widget IO -> IO (Widget IO))
-makeFlyNav =
-    do
-        flyNavState <- newIORef FlyNav.initState
-        return $ \widget ->
-            do
-                fnState <- readIORef flyNavState
-                return $
-                    FlyNav.make Style.flyNav WidgetIds.flyNav fnState (writeIORef flyNavState) widget
-
 rootGuid :: Guid
 rootGuid = IRef.guid $ DbLayout.panes DbLayout.codeIRefs
 
@@ -177,7 +167,7 @@ runDb win configSampler font db =
         settingsRef <- newIORef Settings
             { _sInfoMode = Settings.defaultInfoMode
             }
-        wrapFlyNav <- makeFlyNav
+        wrapFlyNav <- FlyNav.makeIO Style.flyNav WidgetIds.flyNav
         invalidateCacheRef <- newIORef (return ())
         let invalidateCache = join (readIORef invalidateCacheRef)
         evaluators <-

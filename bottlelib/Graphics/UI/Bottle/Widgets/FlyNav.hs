@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.FlyNav
-    ( make
+    ( make, makeIO
     , Config(..)
     , State
     , initState
@@ -12,6 +12,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (void)
+import           Data.IORef
 import           Data.Monoid (Monoid(..), (<>))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -199,3 +200,13 @@ make config animId (Just (ActiveState pos movements)) setState w =
                 -- Nothing...
                 maybe (pure mempty) (^. Widget.enterResultEvent)
                     mEnteredChild
+
+makeIO :: Config -> AnimId -> IO (Widget IO -> IO (Widget IO))
+makeIO config animId =
+    do
+        flyNavState <- newIORef initState
+        return $ \widget ->
+            do
+                fnState <- readIORef flyNavState
+                return $
+                    make config animId fnState (writeIORef flyNavState) widget
