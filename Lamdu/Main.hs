@@ -72,6 +72,7 @@ import           Paths_lamdu_ide (getDataFileName)
 import qualified System.Directory as Directory
 import           System.Environment (getArgs)
 import           System.FilePath ((</>))
+import qualified Lamdu.GUI.Zoom as Zoom
 
 undo :: Transaction DbLayout.DbM Widget.Id
 undo =
@@ -242,21 +243,6 @@ makeFlyNav =
                 return $
                     FlyNav.make flyNavConfig WidgetIds.flyNav fnState (writeIORef flyNavState) widget
 
-makeScaleFactor ::
-    GLFW.Window -> IO (IORef (Vector2 Widget.R), Config.Zoom -> Widget.EventHandlers IO)
-makeScaleFactor window =
-    do
-        factor <- newIORef =<< GLFWUtils.getDisplayScale window
-        let eventMap Config.Zoom{..} = mconcat
-                [ Widget.keysEventMap enlargeKeys
-                    (EventMap.Doc ["View", "Zoom", "Enlarge"]) $
-                    modifyIORef factor (* realToFrac enlargeFactor)
-                , Widget.keysEventMap shrinkKeys
-                    (EventMap.Doc ["View", "Zoom", "Shrink"]) $
-                    modifyIORef factor (/ realToFrac shrinkFactor)
-                ]
-        return (factor, eventMap)
-
 helpConfig :: Draw.Font -> Config.Help -> EventMapDoc.Config
 helpConfig font Config.Help{..} =
     EventMapDoc.Config
@@ -386,7 +372,7 @@ runTransactionReevaluate db evaluatorsRef invalidateCache transaction =
 runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO ()
 runDb win getConfig font db =
     do
-        (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor win
+        zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
         addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
         settingsRef <- newIORef Settings
             { _sInfoMode = Settings.defaultInfoMode
@@ -401,9 +387,9 @@ runDb win getConfig font db =
                         DbLayout.cursor DbLayout.revisionProps
                         & Transaction.getP
                         & DbLayout.runDbTransaction db
-                    sizeFactor <- readIORef sizeFactorRef
+                    sizeFactor <- Zoom.getSizeFactor zoom
                     globalEventMap <- mkGlobalEventMap config settingsRef
-                    let eventMap = globalEventMap `mappend` sizeFactorEvents (Config.zoom config)
+                    let eventMap = globalEventMap `mappend` Zoom.eventMap zoom (Config.zoom config)
                     evalResults <-
                         readIORef evaluatorsRef
                         >>= mapM (EvalBG.getResults . snd)

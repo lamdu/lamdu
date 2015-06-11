@@ -218,6 +218,7 @@ Executable lamdu
                      , Lamdu.GUI.VersionControl
                      , Lamdu.GUI.WidgetIdIRef
                      , Lamdu.GUI.WidgetIds
+                     , Lamdu.GUI.Zoom
                      , Lamdu.Infer
                      , Lamdu.Infer.Error
                      , Lamdu.Infer.Internal.Constraints
