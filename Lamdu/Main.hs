@@ -395,10 +395,11 @@ runDb win getConfig font db =
                         >>= mapM (EvalBG.getResults . snd)
                         <&> mconcat
                     widget <-
-                        mkWidgetWithFallback evalResults config settingsRef
-                        (baseStyle config font)
-                        (runTransactionReevaluate db evaluatorsRef invalidateCache)
-                        (size / sizeFactor, cursor)
+                        readIORef settingsRef
+                        >>= mkWidgetWithFallback evalResults config
+                            (baseStyle config font)
+                            (runTransactionReevaluate db evaluatorsRef invalidateCache)
+                            (size / sizeFactor, cursor)
                     return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
         (invalidateCacheAction, makeWidgetCached) <- cacheMakeWidget makeWidget
         refreshRef <- newIORef False
@@ -427,22 +428,21 @@ mkGlobalEventMap config settingsRef =
 
 mkWidgetWithFallback ::
     EvalResults (ExprIRef.ValI DbLayout.ViewM) ->
-    Config -> IORef Settings -> TextEdit.Style ->
+    Config -> TextEdit.Style ->
     (forall a. Transaction DbLayout.DbM a -> IO a) ->
-    (Widget.Size, Widget.Id) ->
+    (Widget.Size, Widget.Id) -> Settings ->
     IO (Widget IO)
-mkWidgetWithFallback evalMap config settingsRef style dbToIO (size, cursor) =
+mkWidgetWithFallback evalMap config style dbToIO (size, cursor) settings =
     do
-        settings <- readIORef settingsRef
         (isValid, widget) <-
             dbToIO $
             do
-                candidateWidget <- fromCursor settings cursor
+                candidateWidget <- fromCursor cursor
                 (isValid, widget) <-
                     if candidateWidget ^. Widget.isFocused
                     then return (True, candidateWidget)
                     else do
-                        finalWidget <- fromCursor settings rootCursor
+                        finalWidget <- fromCursor rootCursor
                         Transaction.setP (DbLayout.cursor DbLayout.revisionProps) rootCursor
                         return (False, finalWidget)
                 unless (widget ^. Widget.isFocused) $
@@ -456,7 +456,7 @@ mkWidgetWithFallback evalMap config settingsRef style dbToIO (size, cursor) =
     where
         bgColor False = Config.invalidCursorBGColor
         bgColor True = Config.backgroundColor
-        fromCursor settings = makeRootWidget evalMap config settings style dbToIO size
+        fromCursor = makeRootWidget evalMap config settings style dbToIO size
         rootCursor = WidgetIds.fromGuid rootGuid
 
 rootGuid :: Guid
