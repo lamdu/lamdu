@@ -45,18 +45,19 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.WidgetId (toAnimId)
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import           Lamdu.Eval.Val (ScopeId)
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import           Lamdu.GUI.Precedence (ParentPrecedence(..), Precedence)
-import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
-import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (ExpressionN)
 import qualified Lamdu.Sugar.Lens as SugarLens
