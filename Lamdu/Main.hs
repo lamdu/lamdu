@@ -3,14 +3,9 @@ module Main
     ( main
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>), (<*))
-import           Control.Concurrent (threadDelay, forkIO, ThreadId)
-import           Control.Concurrent.MVar
-import qualified Control.Exception as E
+import           Control.Applicative (Applicative(..), (<*))
 import           Control.Lens.Operators
-import           Control.Monad (join, unless, forever, replicateM_)
-import qualified Data.Aeson as Aeson
-import qualified Data.ByteString.Lazy as LBS
+import           Control.Monad (join, unless, replicateM_)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Maybe
@@ -51,6 +46,7 @@ import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
+import qualified Lamdu.Config.Sampler as ConfigSampler
 
 undo :: Transaction DbLayout.DbM Widget.Id
 undo =
@@ -84,32 +80,6 @@ main =
                 | _poUndoCount > 0  -> withDB $ undoN _poUndoCount
                 | otherwise         -> withDB $ runEditor _poMFontPath
 
-loadConfig :: FilePath -> IO Config
-loadConfig configPath =
-    do
-        eConfig <- Aeson.eitherDecode' <$> LBS.readFile configPath
-        either (fail . (msg ++)) return eConfig
-    where
-        msg = "Failed to parse config file contents at " ++ show configPath ++ ": "
-
-type Version = Int
-
-sampler :: Eq a => IO a -> IO (ThreadId, IO (Version, a))
-sampler sample =
-    do
-        ref <- newMVar . (,) 0 =<< E.evaluate =<< sample
-        let updateMVar new =
-                modifyMVar_ ref $ \(ver, old) -> return $
-                if old == new
-                then (ver, old)
-                else (ver+1, new)
-        tid <-
-            forkIO . forever $
-            do
-                threadDelay 200000
-                (updateMVar =<< sample) `E.catch` \E.SomeException {} -> return ()
-        return (tid, readMVar ref)
-
 runEditor :: Maybe FilePath -> Db -> IO ()
 runEditor mFontPath db =
     do
@@ -117,7 +87,7 @@ runEditor mFontPath db =
         startDir <- Directory.getCurrentDirectory
 
         -- Load config as early as possible, before we open any windows/etc
-        (_, getConfig) <- sampler $ accessDataFile startDir loadConfig "config.json"
+        configSampler <- ConfigSampler.new startDir
 
         GLFWUtils.withGLFW $
             do
@@ -133,13 +103,13 @@ runEditor mFontPath db =
                     case mFontPath of
                     Nothing -> accessDataFile startDir getFont "fonts/DejaVuSans.ttf"
                     Just path -> getFont path
-                runDb win getConfig font db
+                runDb win (ConfigSampler.getConfig configSampler) font db
 
 
 mainLoopDebugMode ::
     GLFW.Window ->
     IO Bool ->
-    IO (Version, Config) ->
+    IO (ConfigSampler.Version, Config) ->
     ( Config -> Widget.Size ->
         ( IO (Widget IO)
         , Widget IO -> IO (Widget IO)
@@ -243,7 +213,8 @@ baseStyle config font = TextEdit.Style
 rootGuid :: Guid
 rootGuid = IRef.guid $ DbLayout.panes DbLayout.codeIRefs
 
-runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO ()
+runDb ::
+    GLFW.Window -> IO (ConfigSampler.Version, Config) -> Draw.Font -> Db -> IO ()
 runDb win getConfig font db =
     do
         zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win

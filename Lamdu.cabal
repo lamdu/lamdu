@@ -154,6 +154,7 @@ Executable lamdu
                      , Lamdu.Builtins.Anchors
                      , Lamdu.CharClassification
                      , Lamdu.Config
+                     , Lamdu.Config.Sampler
                      , Lamdu.Data.Anchors
                      , Lamdu.Data.Arbitrary
                      , Lamdu.Data.DbLayout
