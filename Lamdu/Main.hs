@@ -122,28 +122,30 @@ withDb lamduDir body =
                 body db
 
 main :: IO ()
-main = do
-    setNumCapabilities =<< getNumProcessors
-    args <- getArgs
-    home <- Directory.getHomeDirectory
-    let lamduDir = home </> ".lamdu"
-    ParsedOpts{..} <- either fail return $ parseArgs args
-    if _poShouldDeleteDB
-        then do
-            putStrLn "Deleting DB..."
-            Directory.removeDirectoryRecursive lamduDir
-        else
-            if _poUndoCount > 0
+main =
+    do
+        setNumCapabilities =<< getNumProcessors
+        args <- getArgs
+        home <- Directory.getHomeDirectory
+        let lamduDir = home </> ".lamdu"
+        ParsedOpts{..} <- either fail return $ parseArgs args
+        if _poShouldDeleteDB
             then do
-                putStrLn $ "Undoing " ++ show _poUndoCount ++ " times"
-                withDb lamduDir $ \db ->
-                    DbLayout.runDbTransaction db $ replicateM_ _poUndoCount undo
-            else runEditor lamduDir _poMFontPath
+                putStrLn "Deleting DB..."
+                Directory.removeDirectoryRecursive lamduDir
+            else
+                if _poUndoCount > 0
+                then do
+                    putStrLn $ "Undoing " ++ show _poUndoCount ++ " times"
+                    withDb lamduDir $ \db ->
+                        DbLayout.runDbTransaction db $ replicateM_ _poUndoCount undo
+                else runEditor lamduDir _poMFontPath
 
 loadConfig :: FilePath -> IO Config
-loadConfig configPath = do
-    eConfig <- Aeson.eitherDecode' <$> LBS.readFile configPath
-    either (fail . (msg ++)) return eConfig
+loadConfig configPath =
+    do
+        eConfig <- Aeson.eitherDecode' <$> LBS.readFile configPath
+        either (fail . (msg ++)) return eConfig
     where
         msg = "Failed to parse config file contents at " ++ show configPath ++ ": "
 
@@ -156,40 +158,45 @@ accessDataFile startDir accessor fileName =
 type Version = Int
 
 sampler :: Eq a => IO a -> IO (ThreadId, IO (Version, a))
-sampler sample = do
-    ref <- newMVar . (,) 0 =<< E.evaluate =<< sample
-    let updateMVar new =
-            modifyMVar_ ref $ \(ver, old) -> return $
-            if old == new
-            then (ver, old)
-            else (ver+1, new)
-    tid <-
-        forkIO . forever $ do
-            threadDelay 200000
-            (updateMVar =<< sample) `E.catch` \E.SomeException {} -> return ()
-    return (tid, readMVar ref)
+sampler sample =
+    do
+        ref <- newMVar . (,) 0 =<< E.evaluate =<< sample
+        let updateMVar new =
+                modifyMVar_ ref $ \(ver, old) -> return $
+                if old == new
+                then (ver, old)
+                else (ver+1, new)
+        tid <-
+            forkIO . forever $
+            do
+                threadDelay 200000
+                (updateMVar =<< sample) `E.catch` \E.SomeException {} -> return ()
+        return (tid, readMVar ref)
 
 runEditor :: FilePath -> Maybe FilePath -> IO ()
-runEditor lamduDir mFontPath = do
-    -- GLFW changes the directory from start directory, at least on macs.
-    startDir <- Directory.getCurrentDirectory
+runEditor lamduDir mFontPath =
+    do
+        -- GLFW changes the directory from start directory, at least on macs.
+        startDir <- Directory.getCurrentDirectory
 
-    -- Load config as early as possible, before we open any windows/etc
-    (_, getConfig) <- sampler $ accessDataFile startDir loadConfig "config.json"
+        -- Load config as early as possible, before we open any windows/etc
+        (_, getConfig) <- sampler $ accessDataFile startDir loadConfig "config.json"
 
-    GLFWUtils.withGLFW $ do
-        Vector2 displayWidth displayHeight <- GLFWUtils.getVideoModeSize
-        win <- GLFWUtils.createWindow displayWidth displayHeight "Lamdu"
-        -- Fonts must be loaded after the GL context is created..
-        let getFont path = do
-                exists <- Directory.doesFileExist path
-                unless exists . ioError . userError $ path ++ " does not exist!"
-                Draw.openFont path
-        font <-
-            case mFontPath of
-            Nothing -> accessDataFile startDir getFont "fonts/DejaVuSans.ttf"
-            Just path -> getFont path
-        withDb lamduDir $ runDb win getConfig font
+        GLFWUtils.withGLFW $
+            do
+                Vector2 displayWidth displayHeight <- GLFWUtils.getVideoModeSize
+                win <- GLFWUtils.createWindow displayWidth displayHeight "Lamdu"
+                -- Fonts must be loaded after the GL context is created..
+                let getFont path =
+                        do
+                            exists <- Directory.doesFileExist path
+                            unless exists . ioError . userError $ path ++ " does not exist!"
+                            Draw.openFont path
+                font <-
+                    case mFontPath of
+                    Nothing -> accessDataFile startDir getFont "fonts/DejaVuSans.ttf"
+                    Just path -> getFont path
+                withDb lamduDir $ runDb win getConfig font
 
 
 mainLoopDebugMode ::
@@ -201,51 +208,57 @@ mainLoopDebugMode ::
         , Widget IO -> IO (Widget IO)
         )
     ) -> IO ()
-mainLoopDebugMode win shouldRefresh getConfig iteration = do
-    debugModeRef <- newIORef False
-    lastVersionNumRef <- newIORef 0
-    let getAnimHalfLife = do
-            isDebugMode <- readIORef debugModeRef
-            if isDebugMode
-                then return $ AnimConfig 6.64 0.01
-                else do
-                    (_, config) <- getConfig
+mainLoopDebugMode win shouldRefresh getConfig iteration =
+    do
+        debugModeRef <- newIORef False
+        lastVersionNumRef <- newIORef 0
+        let getAnimHalfLife =
+                do
+                    isDebugMode <- readIORef debugModeRef
+                    if isDebugMode
+                        then return $ AnimConfig 6.64 0.01
+                        else do
+                            (_, config) <- getConfig
+                            return $
+                                AnimConfig
+                                (realToFrac (Config.animationTimePeriodSec config))
+                                (realToFrac (Config.animationRemainInPeriod config))
+            addDebugMode config widget =
+                do
+                    isDebugMode <- readIORef debugModeRef
+                    let doc = EventMap.Doc $ "Debug Mode" : if isDebugMode then ["Disable"] else ["Enable"]
+                        set = writeIORef debugModeRef (not isDebugMode)
                     return $
-                        AnimConfig
-                        (realToFrac (Config.animationTimePeriodSec config))
-                        (realToFrac (Config.animationRemainInPeriod config))
-        addDebugMode config widget = do
-            isDebugMode <- readIORef debugModeRef
-            let doc = EventMap.Doc $ "Debug Mode" : if isDebugMode then ["Disable"] else ["Enable"]
-                set = writeIORef debugModeRef (not isDebugMode)
-            return $
-                Widget.strongerEvents
-                (Widget.keysEventMap (Config.debugModeKeys config) doc set)
-                widget
-        makeDebugModeWidget size = do
-            (_, config) <- getConfig
-            let (makeWidget, addHelp) = iteration config size
-            addHelp =<< addDebugMode config =<< makeWidget
-        tickHandler = do
-            (curVersionNum, _) <- getConfig
-            configChanged <- atomicModifyIORef lastVersionNumRef $ \lastVersionNum ->
-                (curVersionNum, lastVersionNum /= curVersionNum)
-            if configChanged
-                then return True
-                else shouldRefresh
-    mainLoopWidget win tickHandler makeDebugModeWidget getAnimHalfLife
+                        Widget.strongerEvents
+                        (Widget.keysEventMap (Config.debugModeKeys config) doc set)
+                        widget
+            makeDebugModeWidget size =
+                do
+                    (_, config) <- getConfig
+                    let (makeWidget, addHelp) = iteration config size
+                    addHelp =<< addDebugMode config =<< makeWidget
+            tickHandler =
+                do
+                    (curVersionNum, _) <- getConfig
+                    configChanged <- atomicModifyIORef lastVersionNumRef $ \lastVersionNum ->
+                        (curVersionNum, lastVersionNum /= curVersionNum)
+                    if configChanged
+                        then return True
+                        else shouldRefresh
+        mainLoopWidget win tickHandler makeDebugModeWidget getAnimHalfLife
 
 cacheMakeWidget :: Eq a => (a -> IO (Widget IO)) -> IO (IO (), a -> IO (Widget IO))
-cacheMakeWidget mkWidget = do
-    widgetCacheRef <- newIORef =<< memoIO mkWidget
-    let invalidateCache = writeIORef widgetCacheRef =<< memoIO mkWidget
-    return
-        ( invalidateCache
-        , \x ->
-            readIORef widgetCacheRef
-            >>= ($ x)
-            <&> Widget.events %~ (<* invalidateCache)
-        )
+cacheMakeWidget mkWidget =
+    do
+        widgetCacheRef <- newIORef =<< memoIO mkWidget
+        let invalidateCache = writeIORef widgetCacheRef =<< memoIO mkWidget
+        return
+            ( invalidateCache
+            , \x ->
+                readIORef widgetCacheRef
+                >>= ($ x)
+                <&> Widget.events %~ (<* invalidateCache)
+            )
 
 flyNavConfig :: FlyNav.Config
 flyNavConfig = FlyNav.Config
@@ -253,12 +266,14 @@ flyNavConfig = FlyNav.Config
     }
 
 makeFlyNav :: IO (Widget IO -> IO (Widget IO))
-makeFlyNav = do
-    flyNavState <- newIORef FlyNav.initState
-    return $ \widget -> do
-        fnState <- readIORef flyNavState
-        return $
-            FlyNav.make flyNavConfig WidgetIds.flyNav fnState (writeIORef flyNavState) widget
+makeFlyNav =
+    do
+        flyNavState <- newIORef FlyNav.initState
+        return $ \widget ->
+            do
+                fnState <- readIORef flyNavState
+                return $
+                    FlyNav.make flyNavConfig WidgetIds.flyNav fnState (writeIORef flyNavState) widget
 
 getDisplayScale :: GLFW.Window -> IO Widget.R
 getDisplayScale window =
@@ -409,47 +424,49 @@ runTransactionReevaluate db evaluatorsRef invalidateCache transaction =
         return result
 
 runDb :: GLFW.Window -> IO (Version, Config) -> Draw.Font -> Db -> IO ()
-runDb win getConfig font db = do
-    (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor win
-    addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
-    settingsRef <- newIORef Settings
-        { _sInfoMode = Settings.defaultInfoMode
-        }
-    wrapFlyNav <- makeFlyNav
-    evaluatorsRef <- newIORef []
-    invalidateCacheRef <- newIORef (return ())
-    let invalidateCache = join (readIORef invalidateCacheRef)
-    let makeWidget (config, size) = do
-            cursor <-
-                DbLayout.cursor DbLayout.revisionProps
-                & Transaction.getP
-                & DbLayout.runDbTransaction db
-            sizeFactor <- readIORef sizeFactorRef
-            globalEventMap <- mkGlobalEventMap config settingsRef
-            let eventMap = globalEventMap `mappend` sizeFactorEvents (Config.zoom config)
-            evalResults <-
-                    readIORef evaluatorsRef
-                    >>= mapM (EvalBG.getResults . snd)
-                    <&> mconcat
-            widget <-
-                mkWidgetWithFallback evalResults config settingsRef
-                (baseStyle config font)
-                (runTransactionReevaluate db evaluatorsRef invalidateCache)
-                (size / sizeFactor, cursor)
-            return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
-    (invalidateCacheAction, makeWidgetCached) <- cacheMakeWidget makeWidget
-    refreshRef <- newIORef False
-    let shouldRefresh = atomicModifyIORef refreshRef $ \r -> (False, r)
-    writeIORef invalidateCacheRef $
-        do
-            invalidateCacheAction
-            writeIORef refreshRef True
-    startEvaluators db evaluatorsRef invalidateCache
+runDb win getConfig font db =
+    do
+        (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor win
+        addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
+        settingsRef <- newIORef Settings
+            { _sInfoMode = Settings.defaultInfoMode
+            }
+        wrapFlyNav <- makeFlyNav
+        evaluatorsRef <- newIORef []
+        invalidateCacheRef <- newIORef (return ())
+        let invalidateCache = join (readIORef invalidateCacheRef)
+        let makeWidget (config, size) =
+                do
+                    cursor <-
+                        DbLayout.cursor DbLayout.revisionProps
+                        & Transaction.getP
+                        & DbLayout.runDbTransaction db
+                    sizeFactor <- readIORef sizeFactorRef
+                    globalEventMap <- mkGlobalEventMap config settingsRef
+                    let eventMap = globalEventMap `mappend` sizeFactorEvents (Config.zoom config)
+                    evalResults <-
+                        readIORef evaluatorsRef
+                        >>= mapM (EvalBG.getResults . snd)
+                        <&> mconcat
+                    widget <-
+                        mkWidgetWithFallback evalResults config settingsRef
+                        (baseStyle config font)
+                        (runTransactionReevaluate db evaluatorsRef invalidateCache)
+                        (size / sizeFactor, cursor)
+                    return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
+        (invalidateCacheAction, makeWidgetCached) <- cacheMakeWidget makeWidget
+        refreshRef <- newIORef False
+        let shouldRefresh = atomicModifyIORef refreshRef $ \r -> (False, r)
+        writeIORef invalidateCacheRef $
+            do
+                invalidateCacheAction
+                writeIORef refreshRef True
+        startEvaluators db evaluatorsRef invalidateCache
 
-    mainLoopDebugMode win shouldRefresh getConfig $ \config size ->
-        ( wrapFlyNav =<< makeWidgetCached (config, size)
-        , addHelpWithStyle (helpConfig font (Config.help config)) size
-        )
+        mainLoopDebugMode win shouldRefresh getConfig $ \config size ->
+            ( wrapFlyNav =<< makeWidgetCached (config, size)
+            , addHelpWithStyle (helpConfig font (Config.help config)) size
+            )
 
 cyclicSucc :: (Eq a, Enum a, Bounded a) => a -> a
 cyclicSucc x
@@ -460,14 +477,15 @@ nextInfoMode :: Settings.InfoMode -> Settings.InfoMode
 nextInfoMode = cyclicSucc
 
 mkGlobalEventMap :: Config -> IORef Settings -> IO (Widget.EventHandlers IO)
-mkGlobalEventMap config settingsRef = do
-    settings <- readIORef settingsRef
-    let curInfoMode = settings ^. Settings.sInfoMode
-        next = nextInfoMode curInfoMode
-        nextDoc = EventMap.Doc ["View", "Subtext", "Show " ++ show next]
-    return .
-        Widget.keysEventMap (Config.nextInfoModeKeys config) nextDoc .
-        modifyIORef settingsRef $ Settings.sInfoMode .~ next
+mkGlobalEventMap config settingsRef =
+    do
+        settings <- readIORef settingsRef
+        let curInfoMode = settings ^. Settings.sInfoMode
+            next = nextInfoMode curInfoMode
+            nextDoc = EventMap.Doc ["View", "Subtext", "Show " ++ show next]
+        return .
+            Widget.keysEventMap (Config.nextInfoModeKeys config) nextDoc .
+            modifyIORef settingsRef $ Settings.sInfoMode .~ next
 
 mkWidgetWithFallback ::
     EvalResults (ExprIRef.ValI DbLayout.ViewM) ->
@@ -475,26 +493,28 @@ mkWidgetWithFallback ::
     (forall a. Transaction DbLayout.DbM a -> IO a) ->
     (Widget.Size, Widget.Id) ->
     IO (Widget IO)
-mkWidgetWithFallback evalMap config settingsRef style dbToIO (size, cursor) = do
-    settings <- readIORef settingsRef
-    (isValid, widget) <-
-        dbToIO $ do
-            candidateWidget <- fromCursor settings cursor
-            (isValid, widget) <-
-                if candidateWidget ^. Widget.isFocused
-                then return (True, candidateWidget)
-                else do
-                    finalWidget <- fromCursor settings rootCursor
-                    Transaction.setP (DbLayout.cursor DbLayout.revisionProps) rootCursor
-                    return (False, finalWidget)
-            unless (widget ^. Widget.isFocused) $
-                fail "Root cursor did not match"
-            return (isValid, widget)
-    unless isValid $ putStrLn $ "Invalid cursor: " ++ show cursor
-    widget
-        & Widget.backgroundColor (Config.layerMax (Config.layers config))
-            ["background"] (bgColor isValid config)
-        & return
+mkWidgetWithFallback evalMap config settingsRef style dbToIO (size, cursor) =
+    do
+        settings <- readIORef settingsRef
+        (isValid, widget) <-
+            dbToIO $
+            do
+                candidateWidget <- fromCursor settings cursor
+                (isValid, widget) <-
+                    if candidateWidget ^. Widget.isFocused
+                    then return (True, candidateWidget)
+                    else do
+                        finalWidget <- fromCursor settings rootCursor
+                        Transaction.setP (DbLayout.cursor DbLayout.revisionProps) rootCursor
+                        return (False, finalWidget)
+                unless (widget ^. Widget.isFocused) $
+                    fail "Root cursor did not match"
+                return (isValid, widget)
+        unless isValid $ putStrLn $ "Invalid cursor: " ++ show cursor
+        widget
+            & Widget.backgroundColor (Config.layerMax (Config.layers config))
+                ["background"] (bgColor isValid config)
+            & return
     where
         bgColor False = Config.invalidCursorBGColor
         bgColor True = Config.backgroundColor
@@ -510,44 +530,46 @@ makeRootWidget ::
     (forall a. Transaction DbLayout.DbM a -> IO a) ->
     Widget.Size -> Widget.Id ->
     Transaction DbLayout.DbM (Widget IO)
-makeRootWidget evalMap config settings style dbToIO fullSize cursor = do
-    actions <- VersionControl.makeActions
-    let widgetEnv = WE.Env
-            { _envCursor = cursor
-            , _envTextStyle = style
-            , backgroundCursorId = WidgetIds.backgroundCursorId
-            , cursorBGColor = Config.cursorBGColor config
-            , layerCursor = Config.layerCursor $ Config.layers config
-            , layerInterval = Config.layerInterval $ Config.layers config
-            , verticalSpacing = Config.verticalSpacing config
-            , stdSpaceWidth = Config.spaceWidth config
-            }
-    runWidgetEnvT widgetEnv $ do
-        branchGui <-
-            VersionControlGUI.make (Config.versionControl config)
-            (Config.layerChoiceBG (Config.layers config))
-            id actions $
-            \branchSelector ->
-                do
-                    let hoverPadding = Spacer.makeWidget (Vector2 0 (Config.paneHoverPadding (Config.pane config)))
-                    let nonCodeHeight =
-                                hoverPadding   ^. Widget.height +
-                                branchSelector ^. Widget.height
-                    let codeSize = fullSize - Vector2 0 nonCodeHeight
-                    codeEdit <-
-                        CodeEdit.make (env codeSize) rootGuid
-                        & WE.mapWidgetEnvT VersionControl.runAction
-                        <&> Widget.events %~ VersionControl.runEvent cursor
-                        <&> Widget.padToSizeAlign codeSize 0
-                    Box.vbox [(0.5, hoverPadding), (0.5, codeEdit), (0.5, branchSelector)]
-                        & return
-        let quitEventMap =
-                Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
-        branchGui
-            & Widget.strongerEvents quitEventMap
-            & Widget.events %~ dbToIO . (attachCursor =<<)
-            & return
+makeRootWidget evalMap config settings style dbToIO fullSize cursor =
+    do
+        actions <- VersionControl.makeActions
+        let widgetEnv = WE.Env
+                { _envCursor = cursor
+                , _envTextStyle = style
+                , backgroundCursorId = WidgetIds.backgroundCursorId
+                , cursorBGColor = Config.cursorBGColor config
+                , layerCursor = Config.layerCursor $ Config.layers config
+                , layerInterval = Config.layerInterval $ Config.layers config
+                , verticalSpacing = Config.verticalSpacing config
+                , stdSpaceWidth = Config.spaceWidth config
+                }
+        runWidgetEnvT widgetEnv $
+            do
+                branchGui <-
+                    VersionControlGUI.make (Config.versionControl config)
+                    (Config.layerChoiceBG (Config.layers config))
+                    id actions $
+                    \branchSelector ->
+                        do
+                            let nonCodeHeight =
+                                    hoverPadding   ^. Widget.height +
+                                    branchSelector ^. Widget.height
+                            let codeSize = fullSize - Vector2 0 nonCodeHeight
+                            codeEdit <-
+                                CodeEdit.make (env codeSize) rootGuid
+                                & WE.mapWidgetEnvT VersionControl.runAction
+                                <&> Widget.events %~ VersionControl.runEvent cursor
+                                <&> Widget.padToSizeAlign codeSize 0
+                            Box.vbox [(0.5, hoverPadding), (0.5, codeEdit), (0.5, branchSelector)]
+                                & return
+                let quitEventMap =
+                        Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
+                branchGui
+                    & Widget.strongerEvents quitEventMap
+                    & Widget.events %~ dbToIO . (attachCursor =<<)
+                    & return
     where
+        hoverPadding = Spacer.makeWidget $ Vector2 0 $ Config.paneHoverPadding $ Config.pane config
         env size = CodeEdit.Env
             { CodeEdit.codeProps = DbLayout.codeProps
             , CodeEdit.evalMap = evalMap
@@ -555,7 +577,8 @@ makeRootWidget evalMap config settings style dbToIO fullSize cursor = do
             , CodeEdit.config = config
             , CodeEdit.settings = settings
             }
-        attachCursor eventResult = do
-            maybe (return ()) (Transaction.setP (DbLayout.cursor DbLayout.revisionProps)) .
-                Monoid.getLast $ eventResult ^. Widget.eCursor
-            return eventResult
+        attachCursor eventResult =
+            do
+                maybe (return ()) (Transaction.setP (DbLayout.cursor DbLayout.revisionProps)) .
+                    Monoid.getLast $ eventResult ^. Widget.eCursor
+                return eventResult
