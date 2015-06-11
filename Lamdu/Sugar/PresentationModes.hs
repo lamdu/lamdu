@@ -80,11 +80,20 @@ addToExpr e =
     & Sugar.rBody %%~ addToBody
     >>= Sugar.rBody . Lens.traversed %%~ addToExpr
 
+addToBinder ::
+    MonadA m =>
+    Sugar.Binder Guid m (ExpressionU m pl) ->
+    T m (Sugar.Binder Guid m (ExpressionU m pl))
+addToBinder b =
+    b
+    & Sugar.dBody %%~ addToExpr
+    >>= Sugar.dWhereItems . Lens.traversed . Sugar.wiValue %%~ addToBinder
+
 addToDef ::
     MonadA m =>
-    Sugar.Definition name f (ExpressionU m a) ->
-    T m (Sugar.Definition name f (ExpressionU m a))
+    Sugar.Definition Guid m (ExpressionU m a) ->
+    T m (Sugar.Definition Guid m (ExpressionU m a))
 addToDef def =
     def
     & Sugar.drBody . Sugar._DefinitionBodyExpression .
-      Sugar.deContent . Sugar.dBody %%~ addToExpr
+      Sugar.deContent %%~ addToBinder
