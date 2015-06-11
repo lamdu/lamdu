@@ -58,24 +58,31 @@ undo =
         actions <- VersionControl.makeActions
         fromMaybe (fail "Cannot undo any further") $ mUndo actions
 
+deleteDB :: FilePath -> IO ()
+deleteDB lamduDir =
+    do
+        putStrLn "Deleting DB..."
+        Directory.removeDirectoryRecursive lamduDir
+
+undoN :: Int -> Db -> IO ()
+undoN n db =
+    do
+        putStrLn $ "Undoing " ++ show n ++ " times"
+        DbLayout.runDbTransaction db $ replicateM_ n undo
+
 main :: IO ()
 main =
     do
         setNumCapabilities =<< getNumProcessors
         home <- Directory.getHomeDirectory
         let lamduDir = home </> ".lamdu"
-        Opts.Parsed{..} <- either fail return =<< Opts.get
-        if _poShouldDeleteDB
-            then do
-                putStrLn "Deleting DB..."
-                Directory.removeDirectoryRecursive lamduDir
-            else
-                if _poUndoCount > 0
-                then do
-                    putStrLn $ "Undoing " ++ show _poUndoCount ++ " times"
-                    ExampleDB.withDB lamduDir $ \db ->
-                        DbLayout.runDbTransaction db $ replicateM_ _poUndoCount undo
-                else runEditor lamduDir _poMFontPath
+        opts <- either fail return =<< Opts.get
+        let withDB = ExampleDB.withDB lamduDir
+        case opts of
+            Opts.Parsed{..}
+                | _poShouldDeleteDB -> deleteDB lamduDir
+                | _poUndoCount > 0  -> withDB $ undoN _poUndoCount
+                | otherwise         -> withDB $ runEditor _poMFontPath
 
 loadConfig :: FilePath -> IO Config
 loadConfig configPath =
@@ -109,8 +116,8 @@ sampler sample =
                 (updateMVar =<< sample) `E.catch` \E.SomeException {} -> return ()
         return (tid, readMVar ref)
 
-runEditor :: FilePath -> Maybe FilePath -> IO ()
-runEditor lamduDir mFontPath =
+runEditor :: Maybe FilePath -> Db -> IO ()
+runEditor mFontPath db =
     do
         -- GLFW changes the directory from start directory, at least on macs.
         startDir <- Directory.getCurrentDirectory
@@ -132,7 +139,7 @@ runEditor lamduDir mFontPath =
                     case mFontPath of
                     Nothing -> accessDataFile startDir getFont "fonts/DejaVuSans.ttf"
                     Just path -> getFont path
-                ExampleDB.withDB lamduDir $ runDb win getConfig font
+                runDb win getConfig font db
 
 
 mainLoopDebugMode ::
