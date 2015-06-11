@@ -8,12 +8,10 @@ import           Control.Applicative (Applicative(..))
 import           Control.Concurrent (threadDelay, forkIO, ThreadId)
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (join, unless, forever, replicateM_)
-import           Control.Monad.Trans.State (execStateT)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.IORef
@@ -67,44 +65,13 @@ import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Opts as Opts
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import           Paths_lamdu_ide (getDataFileName)
 import qualified System.Directory as Directory
 import           System.Environment (getArgs)
 import           System.FilePath ((</>))
-
-data ParsedOpts = ParsedOpts
-    { _poShouldDeleteDB :: Bool
-    , _poUndoCount :: Int
-    , _poMFontPath :: Maybe FilePath
-    }
-poShouldDeleteDB :: Lens' ParsedOpts Bool
-poShouldDeleteDB f ParsedOpts{..} = f _poShouldDeleteDB <&> \_poShouldDeleteDB -> ParsedOpts{..}
-poMFontPath :: Lens' ParsedOpts (Maybe FilePath)
-poMFontPath f ParsedOpts{..} = f _poMFontPath <&> \_poMFontPath -> ParsedOpts{..}
-poUndoCount :: Lens' ParsedOpts Int
-poUndoCount f ParsedOpts{..} = f _poUndoCount <&> \_poUndoCount -> ParsedOpts{..}
-
-parseArgs :: [String] -> Either String ParsedOpts
-parseArgs =
-    (`execStateT` ParsedOpts False 0 Nothing) . go
-    where
-        go [] = return ()
-        go ("-deletedb" : args) = poShouldDeleteDB .= True >> go args
-        go ["-font"] = failUsage "-font must be followed by a font name"
-        go ("-font" : fn : args) = poMFontPath %= setPath >> go args
-            where
-                setPath Nothing = Just fn
-                setPath Just {} = failUsage "Duplicate -font arguments"
-        go ["-undo"] = failUsage "-undo must be followed by an undo count"
-        go ("-undo" : countStr : args) =
-            case reads countStr of
-                [(count, "")] -> poUndoCount += count >> go args
-                _ -> failUsage $ "Invalid undo count: " ++ countStr
-        go (arg : _) = failUsage $ "Unexpected arg: " ++ show arg
-        failUsage msg = fail $ unlines [ msg, usage ]
-        usage = "Usage: lamdu [-deletedb] [-font <filename>] [-undo <N>]"
 
 undo :: Transaction DbLayout.DbM Widget.Id
 undo =
@@ -128,7 +95,7 @@ main =
         args <- getArgs
         home <- Directory.getHomeDirectory
         let lamduDir = home </> ".lamdu"
-        ParsedOpts{..} <- either fail return $ parseArgs args
+        Opts.Parsed{..} <- either fail return $ Opts.parse args
         if _poShouldDeleteDB
             then do
                 putStrLn "Deleting DB..."
