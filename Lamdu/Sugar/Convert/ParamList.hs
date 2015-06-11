@@ -8,13 +8,11 @@ module Lamdu.Sugar.Convert.ParamList
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad ((<=<))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either.Utils (eitherToMaybeT)
 import Control.Monad.Trans.Maybe (MaybeT)
 import Control.Monad.Trans.State (StateT(..), mapStateT)
 import Control.MonadA (MonadA)
-import Data.Foldable (traverse_)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.Expr.Type (Type)
@@ -48,8 +46,8 @@ mkProp lambdaI =
 loadStored :: MonadA m => ExprIRef.ValIProperty m -> T m (Maybe ParamList)
 loadStored = Transaction.getP . mkProp . Property.value
 
-funcType :: ParamList -> Infer Type
-funcType paramList =
+mkFuncType :: ParamList -> Infer Type
+mkFuncType paramList =
     T.TFun
     <$> (T.TRecord <$> foldr step (pure T.CEmpty) paramList)
     <*> Infer.freshInferredVar "lamres"
@@ -75,7 +73,13 @@ loadForLambdas (val, ctx) =
             Just stored ->
                 do
                     mParamList <- loadStored stored & lift & lift
-                    let typ = pl ^. Input.inferred . Infer.plType
-                    traverse_ (unify typ <=< funcType) mParamList
-                        & Infer.run
-                        & mapStateT eitherToMaybeT
+                    case mParamList of
+                        Nothing -> return ()
+                        Just paramList ->
+                            do
+                                funcType <- mkFuncType paramList
+                                unify typ funcType
+                            & Infer.run
+                            & mapStateT eitherToMaybeT
+            where
+                typ = pl ^. Input.inferred . Infer.plType
