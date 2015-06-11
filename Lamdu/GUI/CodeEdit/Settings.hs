@@ -2,9 +2,16 @@
 module Lamdu.GUI.CodeEdit.Settings
     ( Settings(..), sInfoMode, InfoMode(..), defaultInfoMode
     , nextInfoMode
+    , mkEventMap
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Data.IORef
+import qualified Graphics.UI.Bottle.EventMap as EventMap
+import qualified Graphics.UI.Bottle.Widget as Widget
+import           Lamdu.Config (Config)
+import qualified Lamdu.Config as Config
 
 data InfoMode = None | Types | Evaluation
     deriving (Eq, Ord, Show, Enum, Bounded)
@@ -24,3 +31,14 @@ cyclicSucc x
 
 nextInfoMode :: InfoMode -> InfoMode
 nextInfoMode = cyclicSucc
+
+mkEventMap :: Config -> IORef Settings -> IO (Widget.EventHandlers IO)
+mkEventMap config settingsRef =
+    do
+        settings <- readIORef settingsRef
+        let curInfoMode = settings ^. sInfoMode
+            next = nextInfoMode curInfoMode
+            nextDoc = EventMap.Doc ["View", "Subtext", "Show " ++ show next]
+        return .
+            Widget.keysEventMap (Config.nextInfoModeKeys config) nextDoc .
+            modifyIORef settingsRef $ sInfoMode .~ next

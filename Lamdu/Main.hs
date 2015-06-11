@@ -233,7 +233,7 @@ runDb win getConfig font db =
                         & Transaction.getP
                         & DbLayout.runDbTransaction db
                     sizeFactor <- Zoom.getSizeFactor zoom
-                    globalEventMap <- mkGlobalEventMap config settingsRef
+                    globalEventMap <- Settings.mkEventMap config settingsRef
                     let eventMap = globalEventMap `mappend` Zoom.eventMap zoom (Config.zoom config)
                     evalResults <- DefEvaluators.getResults evaluators
                     settings <- readIORef settingsRef
@@ -261,17 +261,6 @@ runDb win getConfig font db =
             ( wrapFlyNav =<< makeWidgetCached (config, size)
             , addHelpWithStyle (helpConfig font (Config.help config)) size
             )
-
-mkGlobalEventMap :: Config -> IORef Settings -> IO (Widget.EventHandlers IO)
-mkGlobalEventMap config settingsRef =
-    do
-        settings <- readIORef settingsRef
-        let curInfoMode = settings ^. Settings.sInfoMode
-            next = Settings.nextInfoMode curInfoMode
-            nextDoc = EventMap.Doc ["View", "Subtext", "Show " ++ show next]
-        return .
-            Widget.keysEventMap (Config.nextInfoModeKeys config) nextDoc .
-            modifyIORef settingsRef $ Settings.sInfoMode .~ next
 
 mkWidgetWithFallback ::
     (forall a. Transaction DbLayout.DbM a -> IO a) ->
