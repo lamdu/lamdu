@@ -1,6 +1,10 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Eval.Val
-    ( ValHead, ValBody(..), ThunkId, Closure(..), Scope(..), ScopeId, emptyScope
+    ( ValHead, ValBody(..)
+    , ThunkId(..), thunkIdInt
+    , ScopeId(..), scopeIdInt
+    , Closure(..), Scope(..)
+    , emptyScope
     , _HFunc, _HRecExtend, _HRecEmpty, _HInteger, _HBuiltin
     , children
     ) where
@@ -14,14 +18,22 @@ import           Lamdu.Data.Definition (FFIName)
 import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
 
-type ThunkId = Int
+newtype ThunkId = ThunkId { getThunkId :: Int }
+    deriving (Show, Eq, Ord)
 
-type ScopeId = Int
+newtype ScopeId = ScopeId { getScopeId :: Int }
+    deriving (Show, Eq, Ord)
+
+thunkIdInt :: Lens.Iso' ThunkId Int
+thunkIdInt = Lens.iso getThunkId ThunkId
 
 data Scope = Scope
     { _scopeMap :: Map V.Var ThunkId
     , _scopeId :: ScopeId
     } deriving (Show)
+
+scopeIdInt :: Lens.Iso' ScopeId Int
+scopeIdInt = Lens.iso getScopeId ScopeId
 
 data Closure pl = Closure
     { _cOuterScope :: Scope
@@ -52,4 +64,4 @@ children = _HRecExtend . Lens.traverse
 type ValHead = ValBody ThunkId
 
 emptyScope :: Scope
-emptyScope = Scope Map.empty 0
+emptyScope = Scope Map.empty (ScopeId 0)

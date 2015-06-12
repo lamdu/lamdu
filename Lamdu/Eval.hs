@@ -21,7 +21,8 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Traversable (Traversable)
 import qualified Lamdu.Data.Definition as Def
-import           Lamdu.Eval.Val (ValHead, ValBody(..), ThunkId, Closure(..), Scope(..), ScopeId, emptyScope)
+import           Lamdu.Eval.Val (ValHead, ValBody(..), Closure(..), Scope(..), emptyScope)
+import           Lamdu.Eval.Val (ThunkId(..), thunkIdInt, ScopeId(..), scopeIdInt)
 import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
 
@@ -87,7 +88,7 @@ freshThunkId :: Monad m => EvalT pl m ThunkId
 freshThunkId =
     do
         thunkId <- use esThunkCounter
-        esThunkCounter += 1
+        esThunkCounter . thunkIdInt += 1
         return thunkId
     & liftState
 
@@ -101,7 +102,7 @@ bindVar :: Monad m => pl -> V.Var -> ThunkId -> Scope -> EvalT pl m Scope
 bindVar lamPl var val (Scope parentMap parentId) =
     do
         newScopeId <- liftState $ use esScopeCounter
-        liftState $ esScopeCounter += 1
+        liftState $ esScopeCounter . scopeIdInt += 1
         EventLambdaApplied
             { elaLam = lamPl
             , elaParentId = parentId
@@ -212,8 +213,8 @@ initialState :: EvalActions m pl -> EvalState m pl
 initialState actions =
     EvalState
     { _esThunks = Map.empty
-    , _esThunkCounter = 0
-    , _esScopeCounter = 1
+    , _esThunkCounter = ThunkId 0
+    , _esScopeCounter = ScopeId 1
     , _esLoadedGlobals = Map.empty
     , _esReader = actions
     }
