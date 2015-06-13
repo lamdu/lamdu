@@ -16,7 +16,6 @@ import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
-import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.MainLoop (mainLoopWidget)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -129,7 +128,7 @@ runEditor mFontPath db =
                         scheduleRefresh refreshScheduler
                 DefEvaluators.start evaluators
 
-                mainLoopDebugMode win refreshScheduler configSampler $
+                mainLoop win refreshScheduler configSampler $
                     \config size ->
                     ( wrapFlyNav =<< makeWidgetCached (config, size)
                     , addHelpWithStyle (Style.help font (Config.help config)) size
@@ -143,36 +142,23 @@ shouldRefresh (RefreshScheduler ref) = atomicModifyIORef ref $ \r -> (False, r)
 scheduleRefresh :: RefreshScheduler -> IO ()
 scheduleRefresh (RefreshScheduler ref) = writeIORef ref True
 
-mainLoopDebugMode ::
+mainLoop ::
     GLFW.Window -> RefreshScheduler -> Sampler Config ->
     ( Config -> Widget.Size ->
         ( IO (Widget IO)
         , Widget IO -> IO (Widget IO)
         )
     ) -> IO ()
-mainLoopDebugMode win refreshScheduler configSampler iteration =
+mainLoop win refreshScheduler configSampler iteration =
     do
-        debugModeRef <- newIORef False
         lastVersionNumRef <- newIORef 0
         let getAnimHalfLife =
+                ConfigSampler.getConfig configSampler <&> Style.anim . snd
+            makeWidget size =
                 do
                     (_, config) <- ConfigSampler.getConfig configSampler
-                    isDebugMode <- readIORef debugModeRef
-                    Style.anim config isDebugMode & return
-            addDebugMode config widget =
-                do
-                    isDebugMode <- readIORef debugModeRef
-                    let doc = EventMap.Doc $ "Debug Mode" : if isDebugMode then ["Disable"] else ["Enable"]
-                        set = writeIORef debugModeRef (not isDebugMode)
-                    return $
-                        Widget.strongerEvents
-                        (Widget.keysEventMap (Config.debugModeKeys config) doc set)
-                        widget
-            makeDebugModeWidget size =
-                do
-                    (_, config) <- ConfigSampler.getConfig configSampler
-                    let (makeWidget, addHelp) = iteration config size
-                    addHelp =<< addDebugMode config =<< makeWidget
+                    let (makeBaseWidget, addHelp) = iteration config size
+                    addHelp =<< makeBaseWidget
             tickHandler =
                 do
                     (curVersionNum, _) <- ConfigSampler.getConfig configSampler
@@ -181,7 +167,7 @@ mainLoopDebugMode win refreshScheduler configSampler iteration =
                     if configChanged
                         then return True
                         else shouldRefresh refreshScheduler
-        mainLoopWidget win tickHandler makeDebugModeWidget getAnimHalfLife
+        mainLoopWidget win tickHandler makeWidget getAnimHalfLife
 
 cacheMakeWidget :: Eq a => (a -> IO (Widget IO)) -> IO (IO (), a -> IO (Widget IO))
 cacheMakeWidget mkWidget =

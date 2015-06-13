@@ -3,7 +3,7 @@ module Lamdu.Style
     ( flyNav
     , help
     , base
-    , IsDebugMode, anim
+    , anim
     ) where
 
 import qualified Graphics.DrawingCombinators as Draw
@@ -50,15 +50,8 @@ base config font = TextEdit.Style
     , TextEdit._sEmptyFocusedString = ""
     }
 
--- TODO: Kill debug mode?
-type IsDebugMode = Bool
-anim :: Config -> IsDebugMode -> AnimConfig
-anim _ True =
-    AnimConfig
-    { acTimePeriod = 6.64
-    , acRemainingRatioInPeriod = 0.01
-    }
-anim config False =
+anim :: Config -> AnimConfig
+anim config =
     AnimConfig
     { acTimePeriod = realToFrac (Config.animationTimePeriodSec config)
     , acRemainingRatioInPeriod = realToFrac (Config.animationRemainInPeriod config)
