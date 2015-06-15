@@ -1,15 +1,10 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module Lamdu.GUI.ExpressionGui.Monad
     ( ExprGuiM
     , widgetEnv
     , makeLabel
     , StoredEntityIds(..), Injected(..)
-    , Payload(..), plStoredEntityIds, plInjected, plNearestHoles, plShowAnnotation
-    , ShowAnnotation(..)
-    , markRedundantTypes
     , getInfoMode
-    , emptyPayload
-    , SugarExpr
 
     , transaction, localEnv, withFgColor
     , getP, assignCursor, assignCursorPrefix
@@ -22,7 +17,6 @@ module Lamdu.GUI.ExpressionGui.Monad
     --
     , HolePickers, holePickersAddDocPrefix, holePickersAction
     , addResultPicker, listenResultPickers
-    , nextHolesBefore
     , run
     ) where
 
@@ -56,13 +50,9 @@ import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Precedence (ParentPrecedence(..), Precedence)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Sugar.AddNames.Types (ExpressionN)
-import qualified Lamdu.Sugar.Lens as SugarLens
-import           Lamdu.Sugar.NearestHoles (NearestHoles)
-import qualified Lamdu.Sugar.NearestHoles as NearestHoles
-import           Lamdu.Sugar.RedundantTypes (redundantTypes)
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -89,32 +79,11 @@ newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
 newtype Injected = Injected [Bool]
     deriving (Monoid, Binary, Eq, Ord)
 
-data ShowAnnotation = ShowAnnotationInVerboseMode | DoNotShowAnnotation | ShowAnnotation
-
--- GUI input payload on sugar exprs
-data Payload = Payload
-    { _plStoredEntityIds :: [Sugar.EntityId]
-    , _plInjected :: [Bool]
-    , _plNearestHoles :: NearestHoles
-    , _plShowAnnotation :: ShowAnnotation
-    }
-Lens.makeLenses ''Payload
-
-emptyPayload :: NearestHoles -> Payload
-emptyPayload nearestHoles = Payload
-    { _plStoredEntityIds = []
-    , _plInjected = []
-    , _plNearestHoles = nearestHoles
-    , _plShowAnnotation = ShowAnnotationInVerboseMode
-    }
-
-type SugarExpr m = ExpressionN m Payload
-
 data Askable m = Askable
     { _aSettings :: Settings
     , _aConfig :: Config
     , _aMakeSubexpression ::
-        ParentPrecedence -> SugarExpr m ->
+        ParentPrecedence -> ExprGuiT.SugarExpr m ->
         ExprGuiM m (ExpressionGui m)
     , _aCodeAnchors :: Anchors.CodeProps m
     , _aSubexpressionLayer :: Int
@@ -149,7 +118,8 @@ mkPrejumpPosSaver =
     DataOps.savePreJumpPosition <$> readCodeAnchors <*> widgetEnv WE.readCursor
 
 makeSubexpression ::
-    MonadA m => Precedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)
+    MonadA m =>
+    Precedence -> ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeSubexpression parentPrecedence expr = do
     depth <- ExprGuiM $ Lens.view aSubexpressionLayer
     if depth >= 15
@@ -166,7 +136,7 @@ makeSubexpression parentPrecedence expr = do
 
 run ::
     MonadA m =>
-    (ParentPrecedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
+    (ParentPrecedence -> ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
     Anchors.CodeProps m -> Config -> Settings -> ExprGuiM m a ->
     WidgetEnvT (T m) a
 run makeSubexpr codeAnchors config settings (ExprGuiM action) =
@@ -232,38 +202,14 @@ listenResultPickers = listener oHolePickers
 addResultPicker :: MonadA m => T m Widget.EventResult -> ExprGuiM m ()
 addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }
 
-leftMostLeaf :: Sugar.Expression name m a -> Sugar.Expression name m a
-leftMostLeaf val =
-    case val ^.. Sugar.rBody . Lens.traversed of
-    [] -> val
-    (x:_) -> leftMostLeaf x
-
-nextHolesBefore :: Sugar.Expression name m Payload -> NearestHoles
-nextHolesBefore val =
-    node ^. Sugar.rPayload . Sugar.plData . plNearestHoles
-    & if Lens.has (Sugar.rBody . Sugar._BodyHole) node
-        then NearestHoles.next .~ Just (node ^. Sugar.rPayload . Sugar.plEntityId)
-        else id
-    where
-        node = leftMostLeaf val
-
-getInfoMode :: MonadA m => ShowAnnotation -> ExprGuiM m CESettings.InfoMode
-getInfoMode DoNotShowAnnotation = return CESettings.None
-getInfoMode ShowAnnotationInVerboseMode = readSettings <&> (^. CESettings.sInfoMode)
-getInfoMode ShowAnnotation =
+getInfoMode :: MonadA m => ExprGuiT.ShowAnnotation -> ExprGuiM m CESettings.InfoMode
+getInfoMode ExprGuiT.DoNotShowAnnotation = return CESettings.None
+getInfoMode ExprGuiT.ShowAnnotationInVerboseMode =
+    readSettings <&> (^. CESettings.sInfoMode)
+getInfoMode ExprGuiT.ShowAnnotation =
     readSettings
     <&> (^. CESettings.sInfoMode)
     <&> \infoMode ->
             case infoMode of
             CESettings.None -> CESettings.Types
             x -> x
-
-markRedundantTypes :: SugarExpr m -> SugarExpr m
-markRedundantTypes v =
-    v
-    & redundantTypes         . showType .~ DoNotShowAnnotation
-    & SugarLens.holePayloads . showType .~ ShowAnnotation
-    & SugarLens.holeArgs     . showType .~ ShowAnnotation
-    & Sugar.rPayload         . showType .~ ShowAnnotation
-    where
-        showType = Sugar.plData . plShowAnnotation

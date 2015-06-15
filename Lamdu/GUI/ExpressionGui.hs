@@ -67,6 +67,7 @@ import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.Parens as Parens
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
@@ -284,7 +285,7 @@ makeNameEdit (Name nameSrc nameCollision setName name) myId =
             E.filterChars (`notElem` disallowedNameChars)
 
 stdWrap ::
-    MonadA m => Sugar.Payload m ExprGuiM.Payload ->
+    MonadA m => Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
 stdWrap pl mkGui =
@@ -294,7 +295,7 @@ stdWrap pl mkGui =
 
 stdWrapParentExpr ::
     MonadA m =>
-    Sugar.Payload m ExprGuiM.Payload ->
+    Sugar.Payload m ExprGuiT.Payload ->
     (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
 stdWrapParentExpr pl mkGui = do
@@ -359,7 +360,7 @@ addValFrame myId gui =
 
 stdWrapParenify ::
     MonadA m =>
-    Sugar.Payload m ExprGuiM.Payload -> ParentPrecedence -> MyPrecedence ->
+    Sugar.Payload m ExprGuiT.Payload -> ParentPrecedence -> MyPrecedence ->
     (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
 stdWrapParenify pl parentPrec prec mkGui =
@@ -396,7 +397,7 @@ makeCollisionSuffixLabels (Collision suffix) animId =
 
 wrapExprEventMap ::
     MonadA m =>
-    Sugar.Payload m ExprGuiM.Payload ->
+    Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m) ->
     ExprGuiM m (ExpressionGui m)
 wrapExprEventMap pl action =
@@ -406,7 +407,7 @@ wrapExprEventMap pl action =
 
 addExprEventMap ::
     MonadA m =>
-    Sugar.Payload m ExprGuiM.Payload -> HolePickers m ->
+    Sugar.Payload m ExprGuiT.Payload -> HolePickers m ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addExprEventMap pl resultPickers gui =
     do
@@ -417,17 +418,17 @@ addExprEventMap pl resultPickers gui =
 
 maybeAddAnnotationPl ::
     MonadA m =>
-    Sugar.Payload m0 ExprGuiM.Payload ->
+    Sugar.Payload m0 ExprGuiT.Payload ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 maybeAddAnnotationPl pl =
     maybeAddAnnotation
-    (pl ^. Sugar.plData . ExprGuiM.plShowAnnotation)
+    (pl ^. Sugar.plData . ExprGuiT.plShowAnnotation)
     (pl ^. Sugar.plAnnotation)
     (pl ^. Sugar.plEntityId)
 
 maybeAddAnnotation ::
     MonadA m =>
-    ExprGuiM.ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
+    ExprGuiT.ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 maybeAddAnnotation showType annotation entityId eg =
     do

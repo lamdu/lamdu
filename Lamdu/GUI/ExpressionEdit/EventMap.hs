@@ -23,6 +23,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleEditState
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -32,7 +33,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction.Transaction
 
 make ::
-    MonadA m => HolePickers m -> Sugar.Payload m ExprGuiM.Payload ->
+    MonadA m => HolePickers m -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (EventHandlers (T m))
 make holePickers pl =
     mconcat <$> sequenceA
@@ -86,13 +87,13 @@ jumpHolesEventMap hg =
         jumpDoc dirStr = "Jump to " ++ dirStr ++ " hole"
 
 jumpHolesEventMapIfSelected ::
-    MonadA m => Sugar.Payload m ExprGuiM.Payload ->
-    ExprGuiM m (EventHandlers (T m))
+    MonadA m =>
+    Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (EventHandlers (T m))
 jumpHolesEventMapIfSelected pl =
     do
         cursor <- ExprGuiM.widgetEnv WE.readCursor
         if isExprSelected pl cursor
-            then pl ^. Sugar.plData . ExprGuiM.plNearestHoles & jumpHolesEventMap
+            then pl ^. Sugar.plData . ExprGuiT.plNearestHoles & jumpHolesEventMap
             else pure mempty
 
 cutEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)
@@ -102,7 +103,7 @@ cutEventMap config actions =
 
 replaceOrComeToParentEventMap ::
     MonadA m =>
-    Sugar.Payload m ExprGuiM.Payload ->
+    Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (EventHandlers (T m))
 replaceOrComeToParentEventMap pl =
     do

@@ -32,6 +32,7 @@ import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..), DefinitionN)
@@ -40,9 +41,9 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
-toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiM.Payload
+toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
 toExprGuiMPayload (entityIds, nearestHoles) =
-    ExprGuiM.emptyPayload nearestHoles & ExprGuiM.plStoredEntityIds .~ entityIds
+    ExprGuiT.emptyPayload nearestHoles & ExprGuiT.plStoredEntityIds .~ entityIds
 
 make ::
     MonadA m => Anchors.CodeProps m -> Config -> Settings ->
@@ -59,7 +60,7 @@ make cp config settings defS =
         exprGuiDefS =
             defS
             <&> Lens.mapped %~ toExprGuiMPayload
-            <&> ExprGuiM.markRedundantTypes
+            <&> ExprGuiT.markRedundantTypes
 
 topLevelSchemeTypeView :: MonadA m => Widget.R -> Sugar.EntityId -> Scheme -> ExprGuiM m (Widget f)
 topLevelSchemeTypeView minWidth entityId scheme =
@@ -69,7 +70,7 @@ topLevelSchemeTypeView minWidth entityId scheme =
 
 makeBuiltinDefinition ::
     MonadA m =>
-    Sugar.Definition (Name m) m (ExprGuiM.SugarExpr m) ->
+    Sugar.Definition (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.DefinitionBuiltin m -> ExprGuiM m (Widget (T m))
 makeBuiltinDefinition def builtin =
     Box.vboxAlign 0 <$> sequenceA
@@ -120,8 +121,8 @@ acceptableTypeIndicator width accept color myId =
 
 makeExprDefinition ::
     MonadA m =>
-    Sugar.Definition (Name m) m (ExprGuiM.SugarExpr m) ->
-    Sugar.DefinitionExpression (Name m) m (ExprGuiM.SugarExpr m) ->
+    Sugar.Definition (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.DefinitionExpression (Name m) m (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (Widget (T m))
 makeExprDefinition def bodyExpr =
     do

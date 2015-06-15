@@ -25,6 +25,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -47,7 +48,7 @@ shrinkIfHigherThanLine w =
 
 make ::
     MonadA m => ParentPrecedence ->
-    ExprGuiM.SugarExpr m -> ExprGuiM m (ExpressionGui m)
+    ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence sExpr =
     assignCursor $
     do
@@ -60,10 +61,10 @@ make parentPrecedence sExpr =
         Sugar.Expression body pl = sExpr
         exprHiddenEntityIds =
             List.delete (pl ^. Sugar.plEntityId)
-            (pl ^. Sugar.plData ^. ExprGuiM.plStoredEntityIds)
+            (pl ^. Sugar.plData ^. ExprGuiT.plStoredEntityIds)
         myId = WidgetIds.fromExprPayload pl
         maybeShrink
-            | or (pl ^. Sugar.plData ^. ExprGuiM.plInjected) = shrinkIfHigherThanLine
+            | or (pl ^. Sugar.plData ^. ExprGuiT.plInjected) = shrinkIfHigherThanLine
             | otherwise = return
         assignCursor x =
             foldr (`ExprGuiM.assignCursorPrefix` const myId) x $
@@ -71,8 +72,8 @@ make parentPrecedence sExpr =
 
 makeEditor ::
     MonadA m => ParentPrecedence ->
-    Sugar.Body (Name m) m (ExprGuiM.SugarExpr m) ->
-    Sugar.Payload m ExprGuiM.Payload ->
+    Sugar.Body (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeEditor parentPrecedence body =
     case body of

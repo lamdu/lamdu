@@ -11,14 +11,15 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 make ::
     MonadA m =>
-    Sugar.GetField (Name m) (ExprGuiM.SugarExpr m) ->
-    Sugar.Payload m ExprGuiM.Payload ->
+    Sugar.GetField (Name m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (Sugar.GetField recExpr tagG) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
@@ -26,7 +27,7 @@ make (Sugar.GetField recExpr tagG) pl =
         recExprEdit <- ExprGuiM.makeSubexpression 11 recExpr
         tagEdit <-
             TagEdit.makeRecordTag
-            (pl ^. Sugar.plData . ExprGuiM.plNearestHoles) tagG
+            (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tagG
         dotLabel <- ExpressionGui.makeLabel "." (Widget.toAnimId myId)
         return $ ExpressionGui.hbox [recExprEdit, dotLabel, tagEdit]
         & ExprGuiM.assignCursor myId tagId

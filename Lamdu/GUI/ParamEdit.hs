@@ -19,6 +19,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -98,7 +99,7 @@ eventParamDelEventMap (Just actions) keys docSuffix dstPosId =
 
 -- exported for use in definition sugaring.
 make ::
-    MonadA m => ExprGuiM.ShowAnnotation -> Widget.Id -> Widget.Id ->
+    MonadA m => ExprGuiT.ShowAnnotation -> Widget.Id -> Widget.Id ->
     Sugar.FuncParam v (Name m) m ->
     ExprGuiM m (ExpressionGui m)
 make showType prevId nextId param =

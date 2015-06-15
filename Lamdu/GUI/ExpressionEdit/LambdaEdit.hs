@@ -12,6 +12,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -19,8 +20,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 make ::
     MonadA m =>
     ExpressionGui.ParentPrecedence ->
-    Sugar.Binder (Name m) m (ExprGuiM.SugarExpr m) ->
-    Sugar.Payload m ExprGuiM.Payload ->
+    Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make parentPrecedence binder pl =
     ExpressionGui.stdWrapParenify plNoType parentPrecedence
@@ -28,7 +29,8 @@ make parentPrecedence binder pl =
     ExprGuiM.assignCursor myId bodyId $
     do
         paramsEdit <-
-            BinderEdit.makeParamsEdit showParamType (ExprGuiM.nextHolesBefore body) bodyId params
+            BinderEdit.makeParamsEdit showParamType
+            (ExprGuiT.nextHolesBefore body) bodyId params
             <&> map (ExpressionGui.egAlignment . _1 .~ 0.5)
             >>= ExpressionGui.vboxTopFocalSpaced
             >>= case params of
@@ -44,6 +46,9 @@ make parentPrecedence binder pl =
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody
         -- We show the param type instead of the lambda type
-        showParamType = pl ^. Sugar.plData . ExprGuiM.plShowAnnotation
-        plNoType = pl & Sugar.plData . ExprGuiM.plShowAnnotation .~ ExprGuiM.DoNotShowAnnotation
+        showParamType = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation
+        plNoType =
+            pl
+            & Sugar.plData . ExprGuiT.plShowAnnotation
+            .~ ExprGuiT.DoNotShowAnnotation
         bodyId = WidgetIds.fromExprPayload $ body ^. Sugar.rPayload

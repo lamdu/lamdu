@@ -48,6 +48,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..), ExpressionN)
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -299,17 +300,18 @@ makeHoleResultWidget resultId holeResult =
 postProcessSugar ::
     MonadA m =>
     ExpressionN m Sugar.IsInjected ->
-    ExpressionN m ExprGuiM.Payload
+    ExpressionN m ExprGuiT.Payload
 postProcessSugar expr =
     expr
     <&> toPayload
-    & SugarLens.holeArgs . Sugar.plData . ExprGuiM.plShowAnnotation .~ ExprGuiM.ShowAnnotation
+    & SugarLens.holeArgs . Sugar.plData . ExprGuiT.plShowAnnotation
+    .~ ExprGuiT.ShowAnnotation
 
-toPayload :: Sugar.IsInjected -> ExprGuiM.Payload
+toPayload :: Sugar.IsInjected -> ExprGuiT.Payload
 toPayload isInjected =
-    ExprGuiM.emptyPayload NearestHoles.none
-    & ExprGuiM.plShowAnnotation .~ ExprGuiM.DoNotShowAnnotation
-    & ExprGuiM.plInjected .~
+    ExprGuiT.emptyPayload NearestHoles.none
+    & ExprGuiT.plShowAnnotation .~ ExprGuiT.DoNotShowAnnotation
+    & ExprGuiT.plInjected .~
       case isInjected of
       Sugar.NotInjected -> []
       Sugar.Injected -> [True]
@@ -435,7 +437,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults editableHoleInfo =
 
 makeOpenSearchTermGui ::
     MonadA m =>
-    Sugar.Payload m ExprGuiM.Payload ->
+    Sugar.Payload m ExprGuiT.Payload ->
     EditableHoleInfo m ->
     ExprGuiM m (ExpressionGui m)
 makeOpenSearchTermGui pl editableHoleInfo =
@@ -459,7 +461,7 @@ makeOpenSearchTermGui pl editableHoleInfo =
     where
         isHoleResult =
             Lens.nullOf
-            (Sugar.plData . ExprGuiM.plStoredEntityIds . Lens.traversed) pl
+            (Sugar.plData . ExprGuiT.plStoredEntityIds . Lens.traversed) pl
         holeInfo = ehiInfo editableHoleInfo
 
 fdConfig :: Config.Hole -> FocusDelegator.Config
@@ -473,7 +475,7 @@ fdConfig Config.Hole{..} = FocusDelegator.Config
 -- Has an ExpressionGui.stdWrap/typeView under the search term
 makeStdWrapped ::
     MonadA m =>
-    Sugar.Payload m ExprGuiM.Payload ->
+    Sugar.Payload m ExprGuiT.Payload ->
     HoleInfo m -> Maybe (EditableHoleInfo m) ->
     ExprGuiM m (ExpressionGui m)
 makeStdWrapped pl holeInfo mEditableHoleInfo =

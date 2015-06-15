@@ -24,6 +24,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -44,7 +45,7 @@ mkEditableHoleInfo holeInfo actions =
             } & return
 
 makeWrapper ::
-    MonadA m => Sugar.Payload m ExprGuiM.Payload ->
+    MonadA m => Sugar.Payload m ExprGuiT.Payload ->
     HoleInfo m -> ExprGuiM m (Maybe (ExpressionGui m))
 makeWrapper pl holeInfo =
     hiMArgument holeInfo
@@ -98,8 +99,8 @@ addWrapperAbove WidgetIds{..} wrapperGui searchAreaGui =
 
 make ::
     MonadA m =>
-    Sugar.Hole (Name m) m (ExprGuiM.SugarExpr m) ->
-    Sugar.Payload m ExprGuiM.Payload ->
+    Sugar.Hole (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make hole pl =
     do
@@ -135,7 +136,7 @@ make hole pl =
             , hiInferredType = pl ^. Sugar.plAnnotation . Sugar.aInferredType
             , hiSuggested = hole ^. Sugar.holeSuggested
             , hiIds = WidgetIds{..}
-            , hiNearestHoles = pl ^. Sugar.plData . ExprGuiM.plNearestHoles
+            , hiNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
             , hiMArgument = hole ^. Sugar.holeMArg
             }
         WidgetIds{..} = HoleWidgetIds.make (pl ^. Sugar.plEntityId)

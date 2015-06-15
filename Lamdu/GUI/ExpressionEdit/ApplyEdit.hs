@@ -19,6 +19,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -44,8 +45,8 @@ mkOverrideModifyEventMap (Just actions) =
 
 make ::
     MonadA m => ParentPrecedence ->
-    Sugar.Apply (Name m) (ExprGuiM.SugarExpr m) ->
-    Sugar.Payload m ExprGuiM.Payload ->
+    Sugar.Apply (Name m) (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotatedArgs) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
@@ -88,7 +89,7 @@ make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotated
 
 makeArgRows ::
     MonadA m =>
-    Sugar.AnnotatedArg (Name m) (ExprGuiM.SugarExpr m) ->
+    Sugar.AnnotatedArg (Name m) (ExprGuiT.SugarExpr m) ->
     ExprGuiM m [[(Grid.Alignment, Widget (T m))]]
 makeArgRows arg =
     do
@@ -107,7 +108,7 @@ makeArgRows arg =
 mkBoxed ::
     MonadA m =>
     ExprGuiM m (ExpressionGui m) ->
-    [Sugar.AnnotatedArg (Name m) (ExprGuiM.SugarExpr m)] ->
+    [Sugar.AnnotatedArg (Name m) (ExprGuiT.SugarExpr m)] ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
 mkBoxed mkFuncRow annotatedArgs myId =

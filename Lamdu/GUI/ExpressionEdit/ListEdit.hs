@@ -17,13 +17,14 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, holePickersAction)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
     MonadA m =>
-    Sugar.List m (ExprGuiM.SugarExpr m) ->
-    Sugar.Payload m ExprGuiM.Payload ->
+    Sugar.List m (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make list pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
@@ -48,7 +49,7 @@ make list pl =
 
                     jumpHolesEventMap <-
                         firstValue ^. _3 . Sugar.liExpr
-                        & ExprGuiM.nextHolesBefore
+                        & ExprGuiT.nextHolesBefore
                         & ExprEventMap.jumpHolesEventMap
                     let nilDeleteEventMap =
                             actionEventMap (Config.delKeys config) "Replace nil with hole" Sugar.replaceNil
@@ -87,7 +88,7 @@ make list pl =
 
 makeItem ::
     MonadA m =>
-    (Widget.Id, Widget.Id, Sugar.ListItem m (ExprGuiM.SugarExpr m)) ->
+    (Widget.Id, Widget.Id, Sugar.ListItem m (ExprGuiT.SugarExpr m)) ->
     ExprGuiM m (ExpressionGui m, ExpressionGui m)
 makeItem (_, nextId, item) =
     do

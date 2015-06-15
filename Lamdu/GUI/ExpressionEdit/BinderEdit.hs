@@ -30,6 +30,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..))
@@ -47,7 +48,7 @@ makeBinderNameEdit ::
     MonadA m =>
     Maybe (Sugar.BinderActions m) ->
     Widget.EventHandlers (Transaction m) ->
-    (String, ExprGuiM.SugarExpr m) ->
+    (String, ExprGuiT.SugarExpr m) ->
     Name m -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
 makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
@@ -70,7 +71,7 @@ makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
 
 makeWheres ::
     MonadA m =>
-    [Sugar.WhereItem (Name m) m (ExprGuiM.SugarExpr m)] -> Widget.Id ->
+    [Sugar.WhereItem (Name m) m (ExprGuiT.SugarExpr m)] -> Widget.Id ->
     ExprGuiM m (Maybe (Widget (T m)))
 makeWheres [] _ = return Nothing
 makeWheres whereItems myId =
@@ -146,7 +147,7 @@ layout defNameEdit paramEdits bodyEdit mWheresEdit myId =
 make ::
     MonadA m =>
     Name m ->
-    Sugar.Binder (Name m) m (ExprGuiM.SugarExpr m) ->
+    Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
 make name binder myId = do
@@ -159,7 +160,8 @@ make name binder myId = do
         makeBinderNameEdit (binder ^. Sugar.bMActions) rhsJumperEquals rhs name myId
         <&> ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
     paramEdits <-
-        makeParamsEdit ExprGuiM.ShowAnnotation (ExprGuiM.nextHolesBefore body) myId params
+        makeParamsEdit ExprGuiT.ShowAnnotation
+        (ExprGuiT.nextHolesBefore body) myId params
         <&> Lens.mapped . ExpressionGui.egWidget
                 %~ Widget.weakerEvents rhsJumperEquals
     mWheresEdit <- makeWheres (binder ^. Sugar.bWhereItems) myId
@@ -172,7 +174,7 @@ make name binder myId = do
 
 makeWhereItemEdit ::
     MonadA m =>
-    (Widget.Id, Widget.Id, Sugar.WhereItem (Name m) m (ExprGuiM.SugarExpr m)) ->
+    (Widget.Id, Widget.Id, Sugar.WhereItem (Name m) m (ExprGuiT.SugarExpr m)) ->
     ExprGuiM m (ExpressionGui m)
 makeWhereItemEdit (_prevId, nextId, item) = do
     config <- ExprGuiM.readConfig
@@ -196,7 +198,7 @@ makeWhereItemEdit (_prevId, nextId, item) = do
 
 jumpToRHS ::
     (MonadA m, MonadA f) =>
-    [ModKey] -> (String, ExprGuiM.SugarExpr m) ->
+    [ModKey] -> (String, ExprGuiT.SugarExpr m) ->
     ExprGuiM f (Widget.EventHandlers (T f))
 jumpToRHS keys (rhsDoc, rhs) = do
     savePos <- ExprGuiM.mkPrejumpPosSaver
@@ -210,7 +212,7 @@ makeResultEdit ::
     MonadA m =>
     Maybe (Sugar.BinderActions m) ->
     Sugar.BinderParams name m ->
-    ExprGuiM.SugarExpr m -> ExprGuiM m (ExpressionGui m)
+    ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeResultEdit mActions params result = do
     savePos <- ExprGuiM.mkPrejumpPosSaver
     config <- ExprGuiM.readConfig
@@ -237,7 +239,7 @@ makeResultEdit mActions params result = do
 
 makeParamsEdit ::
     MonadA m =>
-    ExprGuiM.ShowAnnotation ->
+    ExprGuiT.ShowAnnotation ->
     NearestHoles ->
     Widget.Id ->
     Sugar.BinderParams (Name m) m ->

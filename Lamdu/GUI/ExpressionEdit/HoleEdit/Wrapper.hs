@@ -21,6 +21,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (ExpressionN)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -65,7 +66,7 @@ makeUnwrapEventMap arg WidgetIds{..} =
 
 make ::
     MonadA m => WidgetIds ->
-    Sugar.HoleArg m (ExpressionN m ExprGuiM.Payload) ->
+    Sugar.HoleArg m (ExpressionN m ExprGuiT.Payload) ->
     ExprGuiM m (ExpressionGui m)
 make WidgetIds{..} arg =
     do
