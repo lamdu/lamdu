@@ -433,14 +433,14 @@ maybeAddAnnotation ::
 maybeAddAnnotation showType annotation entityId eg =
     do
         infoMode <- ExprGuiM.getInfoMode showType
-        eg
-            & case infoMode of
-                CESettings.None -> return
-                CESettings.Types -> addType
-                CESettings.Evaluation ->
-                        case annotation ^. Sugar.aMEvaluationResult of
-                        Just evaluationResult -> addEvaluationResult entityId evaluationResult
-                        Nothing -> addType
+        eg &
+            case infoMode of
+            CESettings.None -> return
+            CESettings.Types -> addType
+            CESettings.Evaluation ->
+                case annotation ^. Sugar.aMEvaluationResult of
+                Just evaluationResult -> addEvaluationResult entityId evaluationResult
+                Nothing -> addType
     where
         addType = addInferredType entityId (annotation ^. Sugar.aInferredType)
 
