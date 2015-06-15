@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
-    ( make, diveToNameEdit, makeParamsEdit, makeResultEdit, makeWheres
+    ( make, diveToNameEdit
+    , Parts(..), makeParts
     ) where
 
-import           Control.Applicative ((<$>), (<$))
+import           Control.Applicative (Applicative(..), (<$>), (<$))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -144,6 +145,27 @@ layout defNameEdit paramEdits bodyEdit mWheresEdit myId =
             & ExpressionGui.hboxSpaced
             <&> ExpressionGui.addBelow 0 (mWheresEdit ^.. Lens._Just <&> (,) 0)
 
+data Parts m = Parts
+    { pParamEdits :: [ExpressionGui m]
+    , pBodyEdit :: ExpressionGui m
+    , pMWheresEdit :: Maybe (Widget (T m))
+    }
+
+makeParts ::
+    MonadA m =>
+    ExprGuiT.ShowAnnotation ->
+    Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) -> Widget.Id ->
+    ExprGuiM m (Parts m)
+makeParts showAnnotation binder myId =
+    Parts
+    <$> makeParamsEdit showAnnotation
+        (ExprGuiT.nextHolesBefore body) myId params
+    <*> makeResultEdit (binder ^. Sugar.bMActions) params body
+    <*> makeWheres (binder ^. Sugar.bWhereItems) myId
+    where
+        params = binder ^. Sugar.bParams
+        body = binder ^. Sugar.bBody
+
 make ::
     MonadA m =>
     Name m ->
@@ -152,26 +174,23 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make name binder myId =
     do
+        Parts paramEdits bodyEdit mWheresEdit <-
+            makeParts ExprGuiT.ShowAnnotation binder myId
         rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
-        bodyEdit <- makeResultEdit (binder ^. Sugar.bMActions) params body
         presentationEdits <-
-            traverse (mkPresentationModeEdit presentationChoiceId) $
             binder ^.. Sugar.bSetPresentationMode . Lens._Just
+            & traverse (mkPresentationModeEdit presentationChoiceId)
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bMActions)
             rhsJumperEquals rhs name myId
             <&> ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
-        paramEdits <-
-            makeParamsEdit ExprGuiT.ShowAnnotation
-            (ExprGuiT.nextHolesBefore body) myId params
-            <&> Lens.mapped . ExpressionGui.egWidget
-                    %~ Widget.weakerEvents rhsJumperEquals
-        mWheresEdit <- makeWheres (binder ^. Sugar.bWhereItems) myId
-        layout defNameEdit paramEdits bodyEdit mWheresEdit myId
+        layout defNameEdit
+            (paramEdits & Lens.mapped . ExpressionGui.egWidget
+                %~ Widget.weakerEvents rhsJumperEquals)
+            bodyEdit mWheresEdit myId
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
         rhs = ("Def Body", body)
-        params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody
 
 makeWhereItemEdit ::

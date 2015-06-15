@@ -28,18 +28,15 @@ make parentPrecedence binder pl =
     (ExpressionGui.MyPrecedence 0) $ \myId ->
     ExprGuiM.assignCursor myId bodyId $
     do
+        BinderEdit.Parts paramEdits bodyEdit mWheresEdit <-
+            BinderEdit.makeParts showParamType binder myId
         paramsEdit <-
-            BinderEdit.makeParamsEdit showParamType
-            (ExprGuiT.nextHolesBefore body) bodyId params
-            <&> map (ExpressionGui.egAlignment . _1 .~ 0.5)
-            >>= ExpressionGui.vboxTopFocalSpaced
+            map (ExpressionGui.egAlignment . _1 .~ 0.5) paramEdits
+            & ExpressionGui.vboxTopFocalSpaced
             >>= case params of
                     Sugar.FieldParams _ -> ExpressionGui.addValFrame myId
                     _ -> return
         arrowLabel <- ExpressionGui.grammarLabel "→" $ Widget.toAnimId myId
-        bodyEdit <- BinderEdit.makeResultEdit (binder ^. Sugar.bMActions) params body
-        mWheresEdit <-
-            BinderEdit.makeWheres (binder ^. Sugar.bWhereItems) myId
         ExpressionGui.hboxSpaced [paramsEdit, arrowLabel, bodyEdit]
             <&> maybe id (ExpressionGui.addBelow 0 . (:[]) . (,) 0) mWheresEdit
     where
