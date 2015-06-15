@@ -110,9 +110,9 @@ binderFuncParamAdds f Binder{..} =
         onBody body = body & Lens.traversed %%~ onExpr
 
 binderFuncParamDeletes ::
-        Lens.Traversal'
-        (Binder name m (Expression name m a))
-        (Transaction m ParamDelResult)
+    Lens.Traversal'
+    (Binder name m (Expression name m a))
+    (Transaction m ParamDelResult)
 binderFuncParamDeletes f Binder{..} =
     (\_bParams _bBody _bWhereItems -> Binder{..})
     <$> (_bParams & binderParamsActions . fpDelete %%~ f)
