@@ -17,6 +17,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -24,7 +25,6 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
