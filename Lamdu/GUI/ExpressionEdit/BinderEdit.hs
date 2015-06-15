@@ -151,24 +151,24 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make name binder myId = do
     rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
-    bodyEdit <- makeResultEdit (binder ^. Sugar.dMActions) params body
+    bodyEdit <- makeResultEdit (binder ^. Sugar.bMActions) params body
     presentationEdits <-
         traverse (mkPresentationModeEdit presentationChoiceId) $
-        binder ^.. Sugar.dSetPresentationMode . Lens._Just
+        binder ^.. Sugar.bSetPresentationMode . Lens._Just
     defNameEdit <-
-        makeBinderNameEdit (binder ^. Sugar.dMActions) rhsJumperEquals rhs name myId
+        makeBinderNameEdit (binder ^. Sugar.bMActions) rhsJumperEquals rhs name myId
         <&> ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
     paramEdits <-
         makeParamsEdit ExprGuiM.ShowAnnotation (ExprGuiM.nextHolesBefore body) myId params
         <&> Lens.mapped . ExpressionGui.egWidget
                 %~ Widget.weakerEvents rhsJumperEquals
-    mWheresEdit <- makeWheres (binder ^. Sugar.dWhereItems) myId
+    mWheresEdit <- makeWheres (binder ^. Sugar.bWhereItems) myId
     layout defNameEdit paramEdits bodyEdit mWheresEdit myId
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
         rhs = ("Def Body", body)
-        params = binder ^. Sugar.dParams
-        body = binder ^. Sugar.dBody
+        params = binder ^. Sugar.bParams
+        body = binder ^. Sugar.bBody
 
 makeWhereItemEdit ::
     MonadA m =>

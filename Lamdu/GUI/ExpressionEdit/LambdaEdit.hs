@@ -35,14 +35,14 @@ make parentPrecedence binder pl =
                     Sugar.FieldParams _ -> ExpressionGui.addValFrame myId
                     _ -> return
         arrowLabel <- ExpressionGui.grammarLabel "→" $ Widget.toAnimId myId
-        bodyEdit <- BinderEdit.makeResultEdit (binder ^. Sugar.dMActions) params body
+        bodyEdit <- BinderEdit.makeResultEdit (binder ^. Sugar.bMActions) params body
         mWheresEdit <-
-            BinderEdit.makeWheres (binder ^. Sugar.dWhereItems) myId
+            BinderEdit.makeWheres (binder ^. Sugar.bWhereItems) myId
         ExpressionGui.hboxSpaced [paramsEdit, arrowLabel, bodyEdit]
             <&> maybe id (ExpressionGui.addBelow 0 . (:[]) . (,) 0) mWheresEdit
     where
-        params = binder ^. Sugar.dParams
-        body = binder ^. Sugar.dBody
+        params = binder ^. Sugar.bParams
+        body = binder ^. Sugar.bBody
         -- We show the param type instead of the lambda type
         showParamType = pl ^. Sugar.plData . ExprGuiM.plShowAnnotation
         plNoType = pl & Sugar.plData . ExprGuiM.plShowAnnotation .~ ExprGuiM.DoNotShowAnnotation

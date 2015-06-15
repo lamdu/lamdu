@@ -92,7 +92,7 @@ orderBinder ::
     MonadA m => Order m (Sugar.Binder name m a)
 orderBinder b =
     b
-    & Sugar.dParams . Sugar._FieldParams %%~ orderParams
+    & Sugar.bParams . Sugar._FieldParams %%~ orderParams
 
 orderDef ::
     MonadA m => Order m (Sugar.Definition name m (Sugar.Expression name m a))
@@ -100,7 +100,7 @@ orderDef def =
     def
     & SugarLens.defSchemes . S.schemeType %%~ orderType
     >>= Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent
-        %%~ (orderBinder >=> Sugar.dBody %%~ orderExpr)
+        %%~ (orderBinder >=> Sugar.bBody %%~ orderExpr)
 
 orderedFlatComposite ::
     T.Composite a -> ([(T.Tag, T.Type)], Maybe (T.Var (T.Composite a)))

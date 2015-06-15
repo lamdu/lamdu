@@ -139,7 +139,7 @@ makeExprDefinition def bodyExpr =
                 sequence $
                 typeIndicator width (Config.typeIndicatorMatchColor config) myId :
                 [ topLevelSchemeTypeView width entityId scheme
-                | Lens.hasn't (Sugar.deContent . Sugar.dParams . Sugar._NoParams) bodyExpr
+                | Lens.hasn't (Sugar.deContent . Sugar.bParams . Sugar._NoParams) bodyExpr
                 ]
             Sugar.DefinitionNewType (Sugar.AcceptNewType oldScheme _ accept) ->
                 sequence $

@@ -607,7 +607,7 @@ convertWhereItems expr =
                     { _wiEntityId = defEntityId
                     , _wiValue =
                             value
-                            & dBody . rPayload . plData <>~ hiddenData
+                            & bBody . rPayload . plData <>~ hiddenData
                     , _wiActions =
                             mkWIActions <$>
                             expr ^. V.payload . Input.mStored <*>
@@ -632,11 +632,11 @@ makeBinder setPresentationMode convParams funcBody =
             (whereItems, whereBody) <- convertWhereItems funcBody
             bodyS <- ConvertM.convertSubexpression whereBody
             return Binder
-                { _dParams = convParams ^. cpParams
-                , _dSetPresentationMode = setPresentationMode
-                , _dBody = bodyS
-                , _dWhereItems = whereItems
-                , _dMActions =
+                { _bParams = convParams ^. cpParams
+                , _bSetPresentationMode = setPresentationMode
+                , _bBody = bodyS
+                , _bWhereItems = whereItems
+                , _bMActions =
                     mkActions
                     <$> cpMAddFirstParam convParams
                     <*> whereBody ^. V.payload . Input.mStored
@@ -663,7 +663,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                 do
                     guard $ Lens.nullOf ExprLens.valHole lamBody
                     mDeleteLam
-                        <&> Lens.mapped .~ binder ^. dBody . rPayload . plEntityId
+                        <&> Lens.mapped .~ binder ^. bBody . rPayload . plEntityId
         BodyLam binder
             & addActions exprPl
             <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction

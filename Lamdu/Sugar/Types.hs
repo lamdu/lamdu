@@ -17,7 +17,7 @@ module Lamdu.Sugar.Types
         , baAddFirstParam, baAddInnermostWhereItem
     , BinderParams(..), _NoParams, _VarParam, _FieldParams
     , Binder(..)
-        , dSetPresentationMode, dParams, dBody, dWhereItems, dMActions
+        , bSetPresentationMode, bParams, bBody, bWhereItems, bMActions
     , DefinitionBuiltin(..), biType, biName, biSetName
     , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
     , SetToHole(..), _SetToHole, _AlreadyAHole
@@ -354,11 +354,11 @@ data BinderParams name m
     | FieldParams [FuncParam T.Tag name m]
 
 data Binder name m expr = Binder
-    { _dSetPresentationMode :: Maybe (MkProperty m Anchors.PresentationMode)
-    , _dParams :: BinderParams name m
-    , _dBody :: expr
-    , _dWhereItems :: [WhereItem name m expr]
-    , _dMActions :: Maybe (BinderActions m)
+    { _bSetPresentationMode :: Maybe (MkProperty m Anchors.PresentationMode)
+    , _bParams :: BinderParams name m
+    , _bBody :: expr
+    , _bWhereItems :: [WhereItem name m expr]
+    , _bMActions :: Maybe (BinderActions m)
     } deriving (Functor, Foldable, Traversable)
 
 data AcceptNewType m = AcceptNewType

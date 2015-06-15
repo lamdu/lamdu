@@ -85,8 +85,8 @@ addToBinder ::
     T m (Sugar.Binder Guid m (ExpressionU m pl))
 addToBinder b =
     b
-    & Sugar.dBody %%~ addToExpr
-    >>= Sugar.dWhereItems . Lens.traversed . Sugar.wiValue %%~ addToBinder
+    & Sugar.bBody %%~ addToExpr
+    >>= Sugar.bWhereItems . Lens.traversed . Sugar.wiValue %%~ addToBinder
 
 addToDef ::
     MonadA m =>

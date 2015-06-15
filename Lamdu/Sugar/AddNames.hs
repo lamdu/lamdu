@@ -501,13 +501,13 @@ toBinder ::
 toBinder binder@Binder{..} =
     do
         (params, (whereItems, body)) <-
-            runCPS (withBinderParams _dParams) .
-            runCPS (traverse withWhereItem _dWhereItems) $
-            toExpression _dBody
+            runCPS (withBinderParams _bParams) .
+            runCPS (traverse withWhereItem _bWhereItems) $
+            toExpression _bBody
         binder
-            { _dParams = params
-            , _dBody = body
-            , _dWhereItems = whereItems
+            { _bParams = params
+            , _bBody = body
+            , _bWhereItems = whereItems
             } & pure
 
 toDefinitionBody ::
