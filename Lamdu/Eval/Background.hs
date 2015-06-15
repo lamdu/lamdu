@@ -102,7 +102,11 @@ setJust _ (Just _) = error "Conflicting values in setJust"
 
 processEvent :: Ord pl => Eval.Event pl -> State pl -> State pl
 processEvent (Eval.ELambdaApplied Eval.EventLambdaApplied{..}) state =
-    state & sAppliesOfLam . Lens.at elaLam <>~ Just (Map.singleton elaParentId [(elaId, elaArgument)])
+    state & sAppliesOfLam . Lens.at elaLam %~ addApply
+    where
+        apply = Map.singleton elaParentId [(elaId, elaArgument)]
+        addApply Nothing = Just apply
+        addApply (Just x) = Just $ Map.unionWith (++) x apply
 processEvent (Eval.EResultComputed Eval.EventResultComputed{..}) state =
     state
     & sValHeadMap . Lens.at ercSource <>~ Just (Map.singleton ercScope ercResult)

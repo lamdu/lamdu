@@ -38,8 +38,10 @@ instance Ord pl => Monoid (EvalResults pl) where
         }
     mappend x y =
         EvalResults
-        { erExprValues = mappend (erExprValues x) (erExprValues y)
-        , erAppliesOfLam = mappend (erAppliesOfLam x) (erAppliesOfLam y)
+        { erExprValues = Map.unionWith mappend (erExprValues x) (erExprValues y)
+        , erAppliesOfLam =
+            Map.unionWith (Map.unionWith (++))
+            (erAppliesOfLam x) (erAppliesOfLam y)
         }
 
 derefThunkId :: Map ThunkId (ValHead pl) -> ThunkId -> ComputedVal pl
