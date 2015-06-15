@@ -615,8 +615,9 @@ convertWhereItems expr =
                     , _wiName = UniqueId.toGuid param
                     , _wiAnnotation = ewiAnnotation ewi
                     }
-            (nextItems, whereBody) <- convertWhereItems $ ewiBody ewi
-            return (item : nextItems, whereBody)
+            ewiBody ewi
+                & convertWhereItems
+                <&> _1 %~ (item :)
         where
             param = ewiParam ewi
             defGuid = UniqueId.toGuid param
