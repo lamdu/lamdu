@@ -2,7 +2,7 @@
 module Lamdu.Eval.Val
     ( ValHead, ValBody(..)
     , ThunkId(..), thunkIdInt
-    , ScopeId(..), scopeIdInt
+    , ScopeId(..), scopeIdInt, topLevelScopeId
     , Closure(..), Scope(..)
     , emptyScope
     , _HFunc, _HRecExtend, _HRecEmpty, _HInteger, _HBuiltin
@@ -63,5 +63,8 @@ children = _HRecExtend . Lens.traverse
 
 type ValHead = ValBody ThunkId
 
+topLevelScopeId :: ScopeId
+topLevelScopeId = ScopeId 0
+
 emptyScope :: Scope
-emptyScope = Scope Map.empty (ScopeId 0)
+emptyScope = Scope Map.empty topLevelScopeId
