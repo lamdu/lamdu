@@ -1,5 +1,5 @@
 module Lamdu.Sugar.Convert.Expression.Actions
-    ( addActions, makeAnnotation, truncateStr
+    ( addActions, makeAnnotation
     ) where
 
 import           Control.Applicative ((<$>))
@@ -57,13 +57,6 @@ addActions exprPl body = do
         , _plData = exprPl ^. Input.userData
         }
 
-truncateStr :: Int -> String -> String
-truncateStr n s
-    | l > n = take (n `div` 3) s ++ ".." ++ drop (l - (2 * n `div` 3)) s
-    | otherwise = s
-    where
-        l = length s
-
 makeAnnotation :: Input.Payload m a -> Annotation
 makeAnnotation payload =
     Annotation
@@ -72,5 +65,4 @@ makeAnnotation payload =
         payload ^. Input.evalResults
         & Map.minView
         <&> fst
-        <&> truncateStr 20 . show
     }

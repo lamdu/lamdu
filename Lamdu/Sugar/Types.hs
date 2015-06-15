@@ -75,6 +75,7 @@ import           Data.Store.Transaction (Transaction, MkProperty)
 import           Data.Traversable (Traversable)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
+import           Lamdu.Eval.Results (ComputedVal)
 import           Lamdu.Expr.Scheme (Scheme)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
@@ -103,7 +104,7 @@ data Actions m = Actions
     , _cut :: Maybe (T m EntityId) -- Nothing if already hole
     }
 
-type EvaluationResult = String
+type EvaluationResult = ComputedVal ()
 
 data Annotation = Annotation
     { _aInferredType :: Type

@@ -39,7 +39,7 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation, truncateStr)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -251,7 +251,6 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
                         , _aMEvaluationResult =
                                 fpValue fp
                                 ^? Lens.traversed . Lens.traversed . Lens._2
-                                <&> truncateStr 20 . show
                         }
                     , _fpMActions = actions
                     , _fpHiddenIds = []
@@ -417,7 +416,6 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
                     , _aMEvaluationResult =
                         lamExprPl ^. Input.evalAppliesOfLam
                         ^? Lens.traversed . Lens.traversed . Lens._2
-                        <&> truncateStr 20 . show
                     }
                 , _fpMActions = fst <$> mActions
                 , _fpHiddenIds = []

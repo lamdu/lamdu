@@ -168,9 +168,18 @@ makeWithAnnotationBG minWidth entityId f =
     where
         animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
 
-makeEvaluationResultView :: MonadA m => String -> AnimId -> ExprGuiM m View
+makeEvaluationResultView :: MonadA m => Sugar.EvaluationResult -> AnimId -> ExprGuiM m View
 makeEvaluationResultView evalRes animId =
-    ExprGuiM.widgetEnv $ BWidgets.makeTextView evalRes animId
+    BWidgets.makeTextView text animId & ExprGuiM.widgetEnv
+    where
+        text = show evalRes & truncateStr 20
+
+truncateStr :: Int -> String -> String
+truncateStr n s
+    | l > n = take (n `div` 3) s ++ ".." ++ drop (l - (2 * n `div` 3)) s
+    | otherwise = s
+    where
+        l = length s
 
 makeTypeView ::
         MonadA m => Sugar.EntityId -> Type -> Widget.R -> ExprGuiM m (Widget f)
