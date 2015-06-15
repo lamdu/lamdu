@@ -25,7 +25,6 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, MkProperty)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Traversable (traverse, sequenceA)
-import qualified Data.Tuple as Tuple
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (ComputedVal(..))
@@ -422,8 +421,8 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
                         do
                             lamExprPl ^. Input.evalAppliesOfLam
                                 & Map.null & not & guard
-                            lamExprPl ^. Input.evalAppliesOfLam
-                                ^.. Lens.traversed . Lens.traversed
+                            lamExprPl ^.. Input.evalAppliesOfLam .
+                                Lens.traversed . Lens.traversed
                                 & Map.fromList & Just
                     }
                 , _fpMActions = fst <$> mActions
@@ -626,8 +625,6 @@ convertWhereItems expr =
                     , _itemAddNext = EntityId.ofLambdaParam . fst <$> DataOps.redexWrap topLevelProp
                     }
             let hiddenData = ewiHiddenPayloads ewi ^. Lens.traversed . Input.userData
-            (items, body, bodyScopesMap) <- ewiBody ewi & convertWhereItems
-            let newScopeMap = appendScopeMaps (ewiBodyScopesMap ewi) bodyScopesMap
             let item = WhereItem
                     { _wiEntityId = defEntityId
                     , _wiValue =
@@ -640,9 +637,18 @@ convertWhereItems expr =
                     , _wiName = UniqueId.toGuid param
                     , _wiAnnotation = ewiAnnotation ewi
                     , _wiScopes =
-                        Map.toList newScopeMap <&> Tuple.swap & Map.fromList
+                        ewiBodyScopesMap ewi
+                        & Map.keys & map (join (,)) & Map.fromList
                     }
-            return (item : items, body, newScopeMap)
+            (items, body, bodyScopesMap) <- ewiBody ewi & convertWhereItems
+            return
+                ( item :
+                    ( items <&>
+                        wiScopes %~ appendScopeMaps (ewiBodyScopesMap ewi)
+                    )
+                , body
+                , appendScopeMaps (ewiBodyScopesMap ewi) bodyScopesMap
+                )
         where
             param = ewiParam ewi
             defGuid = UniqueId.toGuid param
@@ -658,13 +664,12 @@ makeBinder setPresentationMode convParams funcBody =
         do
             (whereItems, whereBody, bodyScopesMap) <- convertWhereItems funcBody
             bodyS <- ConvertM.convertSubexpression whereBody
+            let binderScopes s = Map.lookup s bodyScopesMap <&> (,) s
             return Binder
                 { _bParams = convParams ^. cpParams
                 , _bSetPresentationMode = setPresentationMode
                 , _bBody = bodyS
-                , _bScopes =
-                    cpScopes convParams
-                    <&> mapMaybe (`Map.lookup` bodyScopesMap)
+                , _bScopes = cpScopes convParams <&> mapMaybe binderScopes
                 , _bWhereItems = whereItems
                 , _bMActions =
                     mkActions

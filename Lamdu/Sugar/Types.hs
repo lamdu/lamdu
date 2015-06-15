@@ -342,9 +342,7 @@ data WhereItem name m expr = WhereItem
     , _wiAnnotation :: Annotation
     , _wiName :: name
     , _wiActions :: Maybe (ListItemActions m)
-    , -- Binder's bScopes refer to the scope inside the binder body,
-      -- This is a mapping from scopes in bScopes to the where item's scope
-      -- which is actually a parent scope of the binder's body scope.
+    , -- This is a mapping from param in bScopes to the where item's scope
       _wiScopes :: Map ScopeId ScopeId
     } deriving (Functor, Foldable, Traversable)
 
@@ -364,7 +362,9 @@ data Binder name m expr = Binder
     , _bBody :: expr
     , _bWhereItems :: [WhereItem name m expr]
     , _bMActions :: Maybe (BinderActions m)
-    , _bScopes :: Map ScopeId [ScopeId]
+    , -- Tuples of param and body scopes
+      -- (the body scope may be internal of the param scope include where items)
+      _bScopes :: Map ScopeId [(ScopeId, ScopeId)]
     } deriving (Functor, Foldable, Traversable)
 
 data AcceptNewType m = AcceptNewType
