@@ -13,11 +13,11 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 
-data InfoMode = None | Types | Evaluation
+data InfoMode = Evaluation | Types | None
     deriving (Eq, Ord, Show, Enum, Bounded)
 
 defaultInfoMode :: InfoMode
-defaultInfoMode = None
+defaultInfoMode = Evaluation
 
 newtype Settings = Settings
     { _sInfoMode :: InfoMode
