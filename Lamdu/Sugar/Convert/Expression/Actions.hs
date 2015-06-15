@@ -4,6 +4,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
 
 import           Control.Applicative ((<$>))
 import           Control.Lens.Operators
+import           Control.Monad (guard)
 import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import qualified Data.Store.Property as Property
@@ -62,7 +63,7 @@ makeAnnotation payload =
     Annotation
     { _aInferredType = payload ^. Input.inferred . Infer.plType
     , _aMEvaluationResult =
-        payload ^. Input.evalResults
-        & Map.minView
-        <&> fst
+        do
+            payload ^. Input.evalResults & Map.null & not & guard
+            payload ^. Input.evalResults & Just
     }

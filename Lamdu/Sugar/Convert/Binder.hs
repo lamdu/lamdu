@@ -249,8 +249,10 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
                         Annotation
                         { _aInferredType = fpFieldType fp
                         , _aMEvaluationResult =
-                                fpValue fp
-                                ^? Lens.traversed . Lens.traversed . Lens._2
+                            do
+                                fpValue fp & Map.null & not & guard
+                                fpValue fp ^.. Lens.traversed . Lens.traversed
+                                    & Map.fromList & Just
                         }
                     , _fpMActions = actions
                     , _fpHiddenIds = []
@@ -414,8 +416,12 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
                     Annotation
                     { _aInferredType = paramType
                     , _aMEvaluationResult =
-                        lamExprPl ^. Input.evalAppliesOfLam
-                        ^? Lens.traversed . Lens.traversed . Lens._2
+                        do
+                            lamExprPl ^. Input.evalAppliesOfLam
+                                & Map.null & not & guard
+                            lamExprPl ^. Input.evalAppliesOfLam
+                                ^.. Lens.traversed . Lens.traversed
+                                & Map.fromList & Just
                     }
                 , _fpMActions = fst <$> mActions
                 , _fpHiddenIds = []

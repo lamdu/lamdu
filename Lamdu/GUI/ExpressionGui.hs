@@ -172,7 +172,9 @@ makeEvaluationResultView :: MonadA m => Sugar.EvaluationResult -> AnimId -> Expr
 makeEvaluationResultView evalRes animId =
     BWidgets.makeTextView text animId & ExprGuiM.widgetEnv
     where
-        text = show evalRes & truncateStr 20
+        text =
+            evalRes ^? Lens.traversed
+            ^. Lens.traversed . Lens.to show & truncateStr 20
 
 truncateStr :: Int -> String -> String
 truncateStr n s
