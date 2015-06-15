@@ -17,7 +17,7 @@ module Lamdu.Sugar.Types
         , baAddFirstParam, baAddInnermostWhereItem
     , BinderParams(..), _NoParams, _VarParam, _FieldParams
     , Binder(..)
-        , bSetPresentationMode, bParams, bBody, bWhereItems, bMActions
+        , bSetPresentationMode, bParams, bBody, bWhereItems, bMActions, bScopes
     , DefinitionBuiltin(..), biType, biName, biSetName
     , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
     , SetToHole(..), _SetToHole, _AlreadyAHole
@@ -32,7 +32,8 @@ module Lamdu.Sugar.Types
     , Payload(..), plEntityId, plAnnotation, plActions, plData
     , Expression(..), rBody, rPayload
     , DefinitionU
-    , WhereItem(..), wiEntityId, wiValue, wiName, wiActions, wiAnnotation
+    , WhereItem(..)
+        , wiEntityId, wiValue, wiName, wiActions, wiAnnotation, wiScopes
     , ListItem(..), liMActions, liExpr
     , ListActions(..), List(..)
     , RecordField(..), rfMDelete, rfTag, rfExpr
@@ -341,6 +342,10 @@ data WhereItem name m expr = WhereItem
     , _wiAnnotation :: Annotation
     , _wiName :: name
     , _wiActions :: Maybe (ListItemActions m)
+    , -- Binder's bScopes refer to the scope inside the binder body,
+      -- This is a mapping from scopes in bScopes to the where item's scope
+      -- which is actually a parent scope of the binder's body scope.
+      _wiScopes :: Map ScopeId ScopeId
     } deriving (Functor, Foldable, Traversable)
 
 data BinderActions m = BinderActions
@@ -359,6 +364,7 @@ data Binder name m expr = Binder
     , _bBody :: expr
     , _bWhereItems :: [WhereItem name m expr]
     , _bMActions :: Maybe (BinderActions m)
+    , _bScopes :: Map ScopeId [ScopeId]
     } deriving (Functor, Foldable, Traversable)
 
 data AcceptNewType m = AcceptNewType

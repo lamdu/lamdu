@@ -8,14 +8,14 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (guard, void, when)
+import           Control.Monad (guard, void, when, join)
 import           Control.MonadA (MonadA)
 import           Data.Foldable (traverse_)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Monoid (Monoid(..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -25,6 +25,7 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, MkProperty)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Traversable (traverse, sequenceA)
+import qualified Data.Tuple as Tuple
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (ComputedVal(..))
@@ -57,6 +58,7 @@ data ConventionalParams m a = ConventionalParams
     , cpParamInfos :: Map T.Tag ConvertM.TagParamInfo
     , _cpParams :: BinderParams Guid m
     , cpMAddFirstParam :: Maybe (T m ParamAddResult)
+    , cpScopes :: Map ScopeId [ScopeId]
     }
 
 cpParams :: Lens' (ConventionalParams m a) (BinderParams Guid m)
@@ -229,6 +231,7 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
             , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
             , _cpParams = FieldParams params
             , cpMAddFirstParam = mAddFirstParam
+            , cpScopes = pl ^. Input.evalAppliesOfLam <&> map fst
             }
     where
         tags = fpTag <$> fieldParams
@@ -431,6 +434,7 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
             , cpParamInfos = Map.empty
             , _cpParams = VarParam funcParam
             , cpMAddFirstParam = snd <$> mActions
+            , cpScopes = lamExprPl ^. Input.evalAppliesOfLam <&> map fst
             }
     where
         mStoredLam = mkStoredLam lam lamExprPl
@@ -489,7 +493,7 @@ convertLamParams mRecursiveVar lambda lambdaPl =
             }
 
 convertEmptyParams :: MonadA m =>
-    Maybe V.Var -> Val (Maybe (ExprIRef.ValIProperty m)) -> ConvertM m (ConventionalParams m a)
+    Maybe V.Var -> Val (Input.Payload m a) -> ConvertM m (ConventionalParams m a)
 convertEmptyParams mRecursiveVar val =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -510,8 +514,12 @@ convertEmptyParams mRecursiveVar val =
             , _cpParams = NoParams
             , cpMAddFirstParam =
                 val
+                <&> (^. Input.mStored)
                 & sequenceA
                 & Lens._Just %~ makeAddFirstParam
+            , cpScopes =
+                val ^. V.payload . Input.evalResults
+                & Map.keys <&> join (,) & Map.fromList <&> (:[])
             }
 
 convertParams ::
@@ -536,10 +544,7 @@ convertParams mRecursiveVar expr =
               hiddenIds = [expr ^. V.payload . Input.entityId]
     _ ->
         do
-            params <-
-                expr
-                <&> (^. Input.mStored)
-                & convertEmptyParams mRecursiveVar
+            params <- convertEmptyParams mRecursiveVar expr
             return (params, expr)
 
 changeRecursionsToCalls :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
@@ -553,6 +558,7 @@ changeRecursionsToCalls =
 
 data ExprWhereItem a = ExprWhereItem
     { ewiBody :: Val a
+    , ewiBodyScopesMap :: Map ScopeId ScopeId
     , ewiParam :: V.Var
     , ewiArg :: Val a
     , ewiHiddenPayloads :: [a]
@@ -565,11 +571,18 @@ mExtractWhere expr = do
     V.Lam param body <- func ^? V.body . ExprLens._BAbs
     Just ExprWhereItem
         { ewiBody = body
+        , ewiBodyScopesMap =
+            func ^. V.payload . Input.evalAppliesOfLam
+            <&> extractRedexApplies
         , ewiParam = param
         , ewiArg = arg
         , ewiHiddenPayloads = (^. V.payload) <$> [expr, func]
         , ewiAnnotation = makeAnnotation (arg ^. V.payload)
         }
+    where
+        extractRedexApplies [(scopeId, _)] = scopeId
+        extractRedexApplies _ =
+            error "redex should only be applied once per parent scope"
 
 getParamsToHole :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
 getParamsToHole = onMatchingSubexprs toHole . const . isGetVarOf
@@ -587,10 +600,20 @@ getFieldParamsToHole tag (StoredLam (V.Lam param lamBody) _) =
 convertWhereItems ::
     (MonadA m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m ([WhereItem Guid m (ExpressionU m a)], Val (Input.Payload m a))
+    ConvertM m
+    ( [WhereItem Guid m (ExpressionU m a)]
+    , Val (Input.Payload m a)
+    , Map ScopeId ScopeId
+    )
 convertWhereItems expr =
     case mExtractWhere expr of
-    Nothing -> return ([], expr)
+    Nothing ->
+        return
+        ( []
+        , expr
+        , expr ^. V.payload . Input.evalResults
+          & Map.keys <&> join (,) & Map.fromList
+        )
     Just ewi ->
         do
             value <- convertBinder Nothing defGuid (ewiArg ewi)
@@ -603,25 +626,28 @@ convertWhereItems expr =
                     , _itemAddNext = EntityId.ofLambdaParam . fst <$> DataOps.redexWrap topLevelProp
                     }
             let hiddenData = ewiHiddenPayloads ewi ^. Lens.traversed . Input.userData
-                item = WhereItem
+            (items, body, bodyScopesMap) <- ewiBody ewi & convertWhereItems
+            let newScopeMap = appendScopeMaps (ewiBodyScopesMap ewi) bodyScopesMap
+            let item = WhereItem
                     { _wiEntityId = defEntityId
                     , _wiValue =
-                            value
-                            & bBody . rPayload . plData <>~ hiddenData
+                        value
+                        & bBody . rPayload . plData <>~ hiddenData
                     , _wiActions =
-                            mkWIActions <$>
-                            expr ^. V.payload . Input.mStored <*>
-                            traverse (^. Input.mStored) (ewiBody ewi)
+                        mkWIActions <$>
+                        expr ^. V.payload . Input.mStored <*>
+                        traverse (^. Input.mStored) (ewiBody ewi)
                     , _wiName = UniqueId.toGuid param
                     , _wiAnnotation = ewiAnnotation ewi
+                    , _wiScopes =
+                        Map.toList newScopeMap <&> Tuple.swap & Map.fromList
                     }
-            ewiBody ewi
-                & convertWhereItems
-                <&> _1 %~ (item :)
+            return (item : items, body, newScopeMap)
         where
             param = ewiParam ewi
             defGuid = UniqueId.toGuid param
             defEntityId = EntityId.ofLambdaParam param
+            appendScopeMaps x y = Map.mapMaybe (`Map.lookup` y) x
 
 makeBinder :: (MonadA m, Monoid a) =>
     Maybe (MkProperty m PresentationMode) ->
@@ -630,12 +656,15 @@ makeBinder :: (MonadA m, Monoid a) =>
 makeBinder setPresentationMode convParams funcBody =
     ConvertM.local (ConvertM.scTagParamInfos <>~ cpParamInfos convParams) $
         do
-            (whereItems, whereBody) <- convertWhereItems funcBody
+            (whereItems, whereBody, bodyScopesMap) <- convertWhereItems funcBody
             bodyS <- ConvertM.convertSubexpression whereBody
             return Binder
                 { _bParams = convParams ^. cpParams
                 , _bSetPresentationMode = setPresentationMode
                 , _bBody = bodyS
+                , _bScopes =
+                    cpScopes convParams
+                    <&> mapMaybe (`Map.lookup` bodyScopesMap)
                 , _bWhereItems = whereItems
                 , _bMActions =
                     mkActions
