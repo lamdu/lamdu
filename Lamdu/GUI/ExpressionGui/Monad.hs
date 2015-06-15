@@ -258,7 +258,7 @@ getInfoMode ShowAnnotation =
             CESettings.None -> CESettings.Types
             x -> x
 
-markRedundantTypes :: MonadA m => SugarExpr m -> SugarExpr m
+markRedundantTypes :: SugarExpr m -> SugarExpr m
 markRedundantTypes v =
     v
     & redundantTypes         . showType .~ DoNotShowAnnotation
