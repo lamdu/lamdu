@@ -15,6 +15,8 @@ module Lamdu.GUI.ExpressionGui.Monad
     , readConfig, readSettings, readCodeAnchors
     , getCodeAnchor, mkPrejumpPosSaver
     --
+    , readMScopeId, withLocalMScopeId
+    --
     , HolePickers, holePickersAddDocPrefix, holePickersAction
     , addResultPicker, listenResultPickers
     , run
@@ -47,6 +49,7 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
+import           Lamdu.Eval.Val (ScopeId, topLevelScopeId)
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
@@ -87,6 +90,7 @@ data Askable m = Askable
         ExprGuiM m (ExpressionGui m)
     , _aCodeAnchors :: Anchors.CodeProps m
     , _aSubexpressionLayer :: Int
+    , _aMScopeId :: Maybe ScopeId
     }
 
 newtype ExprGuiM m a = ExprGuiM
@@ -147,6 +151,7 @@ run makeSubexpr codeAnchors config settings (ExprGuiM action) =
     , _aMakeSubexpression = makeSubexpr
     , _aCodeAnchors = codeAnchors
     , _aSubexpressionLayer = 0
+    , _aMScopeId = Just topLevelScopeId
     }
     ()
     where
@@ -213,3 +218,9 @@ getInfoMode ExprGuiT.ShowAnnotation =
             case infoMode of
             CESettings.None -> CESettings.Types
             x -> x
+
+readMScopeId :: MonadA m => ExprGuiM m (Maybe ScopeId)
+readMScopeId = ExprGuiM $ Lens.view aMScopeId
+
+withLocalMScopeId :: MonadA m => Maybe ScopeId -> ExprGuiM m a -> ExprGuiM m a
+withLocalMScopeId mScopeId = exprGuiM %~ RWS.local (aMScopeId .~ mScopeId)

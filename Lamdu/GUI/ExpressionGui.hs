@@ -62,6 +62,7 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import           Lamdu.Eval.Results (ComputedVal)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -169,13 +170,11 @@ makeWithAnnotationBG minWidth entityId f =
     where
         animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
 
-makeEvaluationResultView :: MonadA m => Sugar.EvaluationResult -> AnimId -> ExprGuiM m View
+makeEvaluationResultView :: MonadA m => ComputedVal () -> AnimId -> ExprGuiM m View
 makeEvaluationResultView evalRes animId =
     BWidgets.makeTextView text animId & ExprGuiM.widgetEnv
     where
-        text =
-            evalRes ^? Lens.traversed
-            ^. Lens.traversed . Lens.to show & truncateStr 20
+        text = show evalRes & truncateStr 20
 
 truncateStr :: Int -> String -> String
 truncateStr n s
@@ -190,7 +189,7 @@ makeTypeView entityId typ minWidth =
     makeWithAnnotationBG minWidth entityId (`TypeView.make` typ)
 
 makeEvalView ::
-        MonadA m => Sugar.EntityId -> Sugar.EvaluationResult -> Widget.R -> ExprGuiM m (Widget f)
+    MonadA m => Sugar.EntityId -> ComputedVal () -> Widget.R -> ExprGuiM m (Widget f)
 makeEvalView entityId evalRes minWidth =
     makeWithAnnotationBG minWidth entityId (makeEvaluationResultView evalRes)
 
@@ -221,7 +220,7 @@ addInferredType ::
 addInferredType entityId = addAnnotation . makeTypeView entityId
 
 addEvaluationResult ::
-    MonadA m => Sugar.EntityId -> Sugar.EvaluationResult ->
+    MonadA m => Sugar.EntityId -> ComputedVal () ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addEvaluationResult entityId = addAnnotation . makeEvalView entityId
 
@@ -433,16 +432,18 @@ maybeAddAnnotation ::
 maybeAddAnnotation showType annotation entityId eg =
     do
         infoMode <- ExprGuiM.getInfoMode showType
-        eg &
-            case infoMode of
-            CESettings.None -> return
-            CESettings.Types -> addType
+        case infoMode of
+            CESettings.None -> return eg
+            CESettings.Types -> addType eg
             CESettings.Evaluation ->
-                case annotation ^. Sugar.aMEvaluationResult of
-                Just evaluationResult -> addEvaluationResult entityId evaluationResult
-                Nothing -> addType
+                ExprGuiM.readMScopeId
+                <&> (>>= valOfScope)
+                >>= ($ eg) . maybe addType (addEvaluationResult entityId)
     where
         addType = addInferredType entityId (annotation ^. Sugar.aInferredType)
+        valOfScope scopeId =
+            annotation ^? Sugar.aMEvaluationResult .
+            Lens._Just . Lens.at scopeId . Lens._Just
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests before after dest list =

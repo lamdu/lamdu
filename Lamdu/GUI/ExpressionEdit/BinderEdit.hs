@@ -4,12 +4,13 @@ module Lamdu.GUI.ExpressionEdit.BinderEdit
     , Parts(..), makeParts
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>), (<$))
+import           Control.Applicative ((<$>), (<$))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.List.Utils (nonEmptyAll)
+import qualified Data.Map as Map
 import           Data.Monoid (Monoid(..), (<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -79,7 +80,7 @@ makeWheres whereItems myId =
     do
         whereLabel <- ExpressionGui.grammarLabel "where" (Widget.toAnimId myId)
         itemEdits <-
-            whereItems & reverse
+            reverse whereItems
             & ExpressionGui.listWithDelDests myId myId wiCursor
             & traverse makeWhereItemEdit
         ExpressionGui.hboxSpaced
@@ -157,11 +158,26 @@ makeParts ::
     Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) -> Widget.Id ->
     ExprGuiM m (Parts m)
 makeParts showAnnotation binder myId =
-    Parts
-    <$> makeParamsEdit showAnnotation
-        (ExprGuiT.nextHolesBefore body) myId params
-    <*> makeResultEdit (binder ^. Sugar.bMActions) params body
-    <*> makeWheres (binder ^. Sugar.bWhereItems) myId
+    do
+        mOuterScopeId <- ExprGuiM.readMScopeId
+        let mScopes =
+                do
+                    outerScopeId <- mOuterScopeId
+                    binder ^? Sugar.bScopes . Lens.at outerScopeId .
+                        Lens._Just . Lens.traversed
+        let mParamScope = mScopes <&> fst
+        let mBodyScope = mScopes <&> snd
+        paramEdits <-
+            makeParamsEdit showAnnotation
+            (ExprGuiT.nextHolesBefore body) myId params
+            & ExprGuiM.withLocalMScopeId mParamScope
+        bodyEdit <-
+            makeResultEdit (binder ^. Sugar.bMActions) params body
+            & ExprGuiM.withLocalMScopeId mBodyScope
+        wheresEdit <-
+            makeWheres (binder ^. Sugar.bWhereItems) myId
+            & ExprGuiM.withLocalMScopeId mParamScope
+        return $ Parts paramEdits bodyEdit wheresEdit
     where
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody
@@ -206,26 +222,33 @@ makeWhereItemEdit (_prevId, nextId, item) =
                     [ Widget.keysEventMapMovesCursor (Config.delKeys config)
                         (E.Doc ["Edit", "Where clause", "Delete"]) $
                         nextId <$ wiActions ^. Sugar.itemDelete
-                    , Widget.keysEventMapMovesCursor (Config.whereAddItemKeys config)
-                        (E.Doc ["Edit", "Where clause", "Add next"]) .
-                        fmap WidgetIds.fromEntityId $ wiActions ^. Sugar.itemAddNext
+                    , Widget.keysEventMapMovesCursor
+                        (Config.whereAddItemKeys config)
+                        (E.Doc ["Edit", "Where clause", "Add next"]) $
+                        WidgetIds.fromEntityId <$>
+                        wiActions ^. Sugar.itemAddNext
                     ]
                 | otherwise = mempty
+        mBodyScopeId <- ExprGuiM.readMScopeId
         make
             (item ^. Sugar.wiName)
             (item ^. Sugar.wiValue)
             (WidgetIds.fromEntityId (item ^. Sugar.wiEntityId))
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
-            <&> ExpressionGui.pad (Config.whereItemPadding config <&> realToFrac)
+            <&> ExpressionGui.pad
+                (Config.whereItemPadding config <&> realToFrac)
+            & ExprGuiM.withLocalMScopeId
+                (mBodyScopeId >>= (`Map.lookup` (item ^. Sugar.wiScopes)))
 
 jumpToRHS ::
     (MonadA m, MonadA f) =>
     [ModKey] -> (String, ExprGuiT.SugarExpr m) ->
     ExprGuiM f (Widget.EventHandlers (T f))
-jumpToRHS keys (rhsDoc, rhs) =
-    ExprGuiM.mkPrejumpPosSaver
-    <&> (rhsId <$)
-    <&> Widget.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Jump to " ++ rhsDoc])
+jumpToRHS keys (rhsDoc, rhs) = do
+    savePos <- ExprGuiM.mkPrejumpPosSaver
+    return $
+        Widget.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Jump to " ++ rhsDoc]) $
+            rhsId <$ savePos
     where
         rhsId = WidgetIds.fromExprPayload $ rhs ^. Sugar.rPayload
 
@@ -234,30 +257,27 @@ makeResultEdit ::
     Maybe (Sugar.BinderActions m) ->
     Sugar.BinderParams name m ->
     ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeResultEdit mActions params result =
-    do
-        savePos <- ExprGuiM.mkPrejumpPosSaver
-        config <- ExprGuiM.readConfig
-        let jumpToLhsEventMap =
-                case params of
-                Sugar.NoParams -> mempty
-                Sugar.VarParam param ->
-                    Widget.keysEventMapMovesCursor
-                    (Config.jumpRHStoLHSKeys config)
-                    (E.Doc ["Navigation", "Jump to param"]) $
-                    WidgetIds.fromEntityId (param ^. Sugar.fpId) <$ savePos
-                Sugar.FieldParams ps ->
-                    Widget.keysEventMapMovesCursor
-                    (Config.jumpRHStoLHSKeys config)
-                    (E.Doc ["Navigation", "Jump to last param"]) $
-                    WidgetIds.fromEntityId (last ps ^. Sugar.fpId) <$ savePos
-        let addWhereItemEventMap actions =
-                Widget.keysEventMapMovesCursor (Config.whereAddItemKeys config)
-                (E.Doc ["Edit", "Where clause", "Add first"]) .
-                fmap (diveToNameEdit . WidgetIds.fromEntityId) $
-                savePos >> actions ^. Sugar.baAddInnermostWhereItem
-        ExprGuiM.makeSubexpression 0 result
-            <&> ExpressionGui.egWidget %~
+makeResultEdit mActions params result = do
+    savePos <- ExprGuiM.mkPrejumpPosSaver
+    config <- ExprGuiM.readConfig
+    let jumpToLhsEventMap =
+            case params of
+            Sugar.NoParams -> mempty
+            Sugar.VarParam param ->
+                Widget.keysEventMapMovesCursor
+                (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to param"]) $
+                WidgetIds.fromEntityId (param ^. Sugar.fpId) <$ savePos
+            Sugar.FieldParams ps ->
+                Widget.keysEventMapMovesCursor
+                (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to last param"]) $
+                WidgetIds.fromEntityId (last ps ^. Sugar.fpId) <$ savePos
+        addWhereItemEventMap actions =
+            Widget.keysEventMapMovesCursor (Config.whereAddItemKeys config)
+            (E.Doc ["Edit", "Where clause", "Add first"]) .
+            fmap (diveToNameEdit . WidgetIds.fromEntityId) $
+            savePos >> actions ^. Sugar.baAddInnermostWhereItem
+    ExprGuiM.makeSubexpression 0 result
+        <&> ExpressionGui.egWidget %~
                 Widget.weakerEvents
                 (jumpToLhsEventMap <> maybe mempty addWhereItemEventMap mActions)
 
@@ -268,13 +288,13 @@ makeParamsEdit ::
     Widget.Id ->
     Sugar.BinderParams (Name m) m ->
     ExprGuiM m [ExpressionGui m]
-makeParamsEdit showType nearestHoles lhsId params =
+makeParamsEdit showAnnotation nearestHoles lhsId params =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         let mkParam (prevId, nextId, param) =
-                ParamEdit.make showType prevId nextId param
+                ParamEdit.make showAnnotation prevId nextId param
                 <&> ExpressionGui.egWidget
-                    %~ Widget.weakerEvents jumpHolesEventMap
+                %~ Widget.weakerEvents jumpHolesEventMap
         ExpressionGui.listWithDelDests lhsId lhsId
             (WidgetIds.fromEntityId . (^. Sugar.fpId)) paramList
             & traverse mkParam
