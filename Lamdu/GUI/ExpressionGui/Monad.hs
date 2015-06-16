@@ -4,8 +4,6 @@ module Lamdu.GUI.ExpressionGui.Monad
     , widgetEnv
     , makeLabel
     , StoredEntityIds(..), Injected(..)
-    , getInfoMode
-
     , transaction, localEnv, withFgColor
     , getP, assignCursor, assignCursorPrefix
     , makeFocusDelegator
@@ -51,7 +49,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Val (ScopeId, topLevelScopeId)
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
-import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Precedence (ParentPrecedence(..), Precedence)
@@ -206,18 +203,6 @@ listenResultPickers = listener oHolePickers
 
 addResultPicker :: MonadA m => T m Widget.EventResult -> ExprGuiM m ()
 addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }
-
-getInfoMode :: MonadA m => ExprGuiT.ShowAnnotation -> ExprGuiM m CESettings.InfoMode
-getInfoMode ExprGuiT.DoNotShowAnnotation = return CESettings.None
-getInfoMode ExprGuiT.ShowAnnotationInVerboseMode =
-    readSettings <&> (^. CESettings.sInfoMode)
-getInfoMode ExprGuiT.ShowAnnotation =
-    readSettings
-    <&> (^. CESettings.sInfoMode)
-    <&> \infoMode ->
-            case infoMode of
-            CESettings.None -> CESettings.Types
-            x -> x
 
 readMScopeId :: MonadA m => ExprGuiM m (Maybe ScopeId)
 readMScopeId = ExprGuiM $ Lens.view aMScopeId

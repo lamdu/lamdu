@@ -203,11 +203,11 @@ annotationSpacer =
             & Widget.fromView
             & return
 
-addAnnotation ::
+addAnnotationH ::
     MonadA m =>
     (Widget.R -> ExprGuiM m (Widget (T m))) ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addAnnotation f eg =
+addAnnotationH f eg =
     do
         vspace <- annotationSpacer
         widget <- f (eg ^. egWidget . wWidth)
@@ -217,12 +217,12 @@ addAnnotation f eg =
 addInferredType ::
     MonadA m => Sugar.EntityId -> Type ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addInferredType entityId = addAnnotation . makeTypeView entityId
+addInferredType entityId = addAnnotationH . makeTypeView entityId
 
 addEvaluationResult ::
     MonadA m => Sugar.EntityId -> ComputedVal () ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addEvaluationResult entityId = addAnnotation . makeEvalView entityId
+addEvaluationResult entityId = addAnnotationH . makeEvalView entityId
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
@@ -425,25 +425,40 @@ maybeAddAnnotationPl pl =
     (pl ^. Sugar.plAnnotation)
     (pl ^. Sugar.plEntityId)
 
+data MissingAnnotationBehavior = ShowNothing | ShowType
+
+maybeAddAnnotationH ::
+    MonadA m =>
+    MissingAnnotationBehavior -> Sugar.Annotation -> Sugar.EntityId ->
+    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+maybeAddAnnotationH missingAnnotationBehavior annotation entityId eg =
+    do
+        settings <- ExprGuiM.readSettings
+        case settings ^. CESettings.sInfoMode of
+            CESettings.None -> handleMissingAnnotation
+            CESettings.Types -> withType
+            CESettings.Evaluation ->
+                ExprGuiM.readMScopeId <&> (>>= valOfScope)
+                >>= maybe handleMissingAnnotation (($ eg) . addEvaluationResult entityId)
+    where
+        handleMissingAnnotation =
+            case missingAnnotationBehavior of
+            ShowNothing -> return eg
+            ShowType -> withType
+        withType = addInferredType entityId (annotation ^. Sugar.aInferredType) eg
+        valOfScope scopeId =
+            annotation ^? Sugar.aMEvaluationResult .
+            Lens._Just . Lens.at scopeId . Lens._Just
+
 maybeAddAnnotation ::
     MonadA m =>
     ExprGuiT.ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-maybeAddAnnotation showType annotation entityId eg =
-    do
-        infoMode <- ExprGuiM.getInfoMode showType
-        case infoMode of
-            CESettings.None -> return eg
-            CESettings.Types -> addType eg
-            CESettings.Evaluation ->
-                ExprGuiM.readMScopeId
-                <&> (>>= valOfScope)
-                >>= ($ eg) . maybe addType (addEvaluationResult entityId)
-    where
-        addType = addInferredType entityId (annotation ^. Sugar.aInferredType)
-        valOfScope scopeId =
-            annotation ^? Sugar.aMEvaluationResult .
-            Lens._Just . Lens.at scopeId . Lens._Just
+maybeAddAnnotation ExprGuiT.DoNotShowAnnotation _ _ eg = return eg
+maybeAddAnnotation ExprGuiT.ShowAnnotation annotation entityId eg =
+    maybeAddAnnotationH ShowType annotation entityId eg
+maybeAddAnnotation ExprGuiT.ShowAnnotationInVerboseMode annotation entityId eg =
+    maybeAddAnnotationH ShowNothing annotation entityId eg
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests before after dest list =
