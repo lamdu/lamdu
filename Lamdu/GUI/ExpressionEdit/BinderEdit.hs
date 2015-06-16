@@ -194,7 +194,7 @@ make name binder myId =
             makeParts ExprGuiT.ShowAnnotation binder myId
         rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
         presentationEdits <-
-            binder ^.. Sugar.bSetPresentationMode . Lens._Just
+            binder ^.. Sugar.bMPresentationModeProp . Lens._Just
             & traverse (mkPresentationModeEdit presentationChoiceId)
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bMActions)

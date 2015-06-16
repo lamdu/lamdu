@@ -667,7 +667,7 @@ makeBinder setPresentationMode convParams funcBody =
             let binderScopes s = Map.lookup s bodyScopesMap <&> (,) s
             return Binder
                 { _bParams = convParams ^. cpParams
-                , _bSetPresentationMode = setPresentationMode
+                , _bMPresentationModeProp = setPresentationMode
                 , _bBody = bodyS
                 , _bScopes = cpScopes convParams <&> mapMaybe binderScopes
                 , _bWhereItems = whereItems

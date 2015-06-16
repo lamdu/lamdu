@@ -17,7 +17,7 @@ module Lamdu.Sugar.Types
         , baAddFirstParam, baAddInnermostWhereItem
     , BinderParams(..), _NoParams, _VarParam, _FieldParams
     , Binder(..)
-        , bSetPresentationMode, bParams, bBody, bWhereItems, bMActions, bScopes
+        , bMPresentationModeProp, bParams, bBody, bWhereItems, bMActions, bScopes
     , DefinitionBuiltin(..), biType, biName, biSetName
     , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
     , SetToHole(..), _SetToHole, _AlreadyAHole
@@ -357,7 +357,7 @@ data BinderParams name m
     | FieldParams [FuncParam T.Tag name m]
 
 data Binder name m expr = Binder
-    { _bSetPresentationMode :: Maybe (MkProperty m Anchors.PresentationMode)
+    { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
     , _bParams :: BinderParams name m
     , _bBody :: expr
     , _bWhereItems :: [WhereItem name m expr]
