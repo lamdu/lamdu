@@ -302,8 +302,10 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationConfig =
                 do
                     widget <- getWidget size
                     mAnimIdMapping <-
-                        (traverse . fmap) (^. Widget.eAnimIdMapping) .
-                        E.lookup event $ widget ^. Widget.eventMap
+                        widget ^. Widget.eventMap
+                        & E.lookup event
+                        & sequenceA
+                        & (fmap . fmap) (^. Widget.eAnimIdMapping)
                     case mAnimIdMapping of
                         Nothing -> return ()
                         Just _ -> newWidget
