@@ -32,13 +32,16 @@ cyclicSucc x
 nextInfoMode :: InfoMode -> InfoMode
 nextInfoMode = cyclicSucc
 
-mkEventMap :: Config -> IORef Settings -> IO (Widget.EventHandlers IO)
-mkEventMap config settingsRef =
+mkEventMap ::
+    (Settings -> IO ()) -> Config -> IORef Settings -> IO (Widget.EventHandlers IO)
+mkEventMap onSettingsChange config settingsRef =
     do
         settings <- readIORef settingsRef
-        let curInfoMode = settings ^. sInfoMode
-            next = nextInfoMode curInfoMode
-            nextDoc = EventMap.Doc ["View", "Subtext", "Show " ++ show next]
-        return .
-            Widget.keysEventMap (Config.nextInfoModeKeys config) nextDoc .
-            modifyIORef settingsRef $ sInfoMode .~ next
+        let next = settings ^. sInfoMode & nextInfoMode
+        let nextDoc = EventMap.Doc ["View", "Subtext", "Show " ++ show next]
+        let nextSettings = settings & sInfoMode .~ next
+        do
+            writeIORef settingsRef nextSettings
+            onSettingsChange nextSettings
+            & Widget.keysEventMap (Config.nextInfoModeKeys config) nextDoc
+            & return

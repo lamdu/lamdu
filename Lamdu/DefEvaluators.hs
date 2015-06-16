@@ -2,7 +2,7 @@
 module Lamdu.DefEvaluators
     ( Evaluators(..)
     , new
-    , start
+    , start, stop
     , getResults
     , runTransactionAndMaybeRestartEvaluators
     ) where
@@ -108,6 +108,9 @@ start evaluators =
     where
         tagLoadDef defI = loadDef evaluators defI <&> (,) defI
 
+stop :: Evaluators -> IO ()
+stop evaluators = readIORef (eRef evaluators) >>= mapM_ (EvalBG.stop . snd)
+
 sumDependency ::
     ExprIRef.DefI ViewM -> (Set (ExprIRef.ValI ViewM), Set V.GlobalId) -> Set Guid
 sumDependency defI (subexprs, globals) =
@@ -145,10 +148,9 @@ runTransactionAndMaybeRestartEvaluators evaluators transaction =
                     Version.walk checkDependencyChange checkDependencyChange oldVersion newVersion
                 return (dependencyChanged, result)
             & eRunTransaction evaluators
-        let bgEvaluators = map snd defEvaluators
         if dependencyChanged
             then do
-                mapM_ EvalBG.stop bgEvaluators
+                stop evaluators
                 start evaluators
-            else mapM_ EvalBG.resumeLoading bgEvaluators
+            else map snd defEvaluators & mapM_ EvalBG.resumeLoading
         return result

@@ -98,6 +98,10 @@ runEditor mFontPath db =
                 evaluators <-
                     DefEvaluators.new invalidateCache (DbLayout.runDbTransaction db) $
                     DbLayout.panes DbLayout.codeIRefs
+                let onSettingsChange settings =
+                        case settings ^. Settings.sInfoMode of
+                        Settings.Evaluation -> DefEvaluators.start evaluators
+                        _ -> DefEvaluators.stop evaluators
                 let makeWidget (config, size) =
                         do
                             cursor <-
@@ -105,7 +109,7 @@ runEditor mFontPath db =
                                 & Transaction.getP
                                 & DbLayout.runDbTransaction db
                             sizeFactor <- Zoom.getSizeFactor zoom
-                            globalEventMap <- Settings.mkEventMap config settingsRef
+                            globalEventMap <- Settings.mkEventMap onSettingsChange config settingsRef
                             let eventMap = globalEventMap `mappend` Zoom.eventMap zoom (Config.zoom config)
                             evalResults <- DefEvaluators.getResults evaluators
                             settings <- readIORef settingsRef
@@ -117,7 +121,11 @@ runEditor mFontPath db =
                                     , envFullSize = size / sizeFactor
                                     , envCursor = cursor
                                     }
-                            let dbToIO = DefEvaluators.runTransactionAndMaybeRestartEvaluators evaluators
+                            let dbToIO =
+                                    case settings ^. Settings.sInfoMode of
+                                    Settings.Evaluation ->
+                                        DefEvaluators.runTransactionAndMaybeRestartEvaluators evaluators
+                                    _ -> DbLayout.runDbTransaction db
                             widget <- mkWidgetWithFallback dbToIO env
                             return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
                 (invalidateCacheAction, makeWidgetCached) <- cacheMakeWidget makeWidget
