@@ -28,7 +28,7 @@ data EvalResults pl =
     EvalResults
     { erExprValues :: Map pl (Map ScopeId (ComputedVal ()))
     , erAppliesOfLam :: Map pl (Map ScopeId [(ScopeId, ComputedVal ())])
-    }
+    } deriving Show
 
 instance Ord pl => Monoid (EvalResults pl) where
     mempty =
