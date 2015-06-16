@@ -4,19 +4,22 @@ module Lamdu.GUI.ExpressionEdit.BinderEdit
     , Parts(..), makeParts
     ) where
 
-import           Control.Applicative ((<$>), (<$))
+import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Control.Monad (join)
 import           Control.MonadA (MonadA)
 import           Data.List.Utils (nonEmptyAll)
 import qualified Data.Map as Map
+import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Monoid(..), (<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Traversable (traverse)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
@@ -27,6 +30,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import           Lamdu.Eval.Val (ScopeId)
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -152,6 +156,50 @@ data Parts m = Parts
     , pMWheresEdit :: Maybe (Widget (T m))
     }
 
+data ScopeCursor = ScopeCursor
+    { sParamScope :: ScopeId
+    , sBodyScope :: ScopeId
+    , sMPrevParamScope :: Maybe ScopeId
+    , sMNextParamScope :: Maybe ScopeId
+    }
+
+getScopeCursor :: Maybe ScopeId -> [(ScopeId, ScopeId)] -> Maybe ScopeCursor
+getScopeCursor mChosenScope scopes =
+    do
+        chosenScope <- mChosenScope
+        (prevs, it:nexts) <- break ((== chosenScope) . fst) scopes & Just
+        Just ScopeCursor
+            { sParamScope = fst it
+            , sBodyScope = snd it
+            , sMPrevParamScope = reverse prevs ^? Lens.traversed . _1
+            , sMNextParamScope = nexts ^? Lens.traversed . _1
+            }
+    <|> (scopes ^? Lens.traversed <&> def)
+    where
+        def (paramScope, bodyScope) =
+            ScopeCursor
+            { sParamScope = paramScope
+            , sBodyScope = bodyScope
+            , sMPrevParamScope = Nothing
+            , sMNextParamScope = scopes ^? Lens.ix 1 . _1
+            }
+
+makeScopeEventMap ::
+    MonadA m =>
+    (Maybe ScopeId -> T m ()) -> ScopeCursor -> Widget.EventHandlers (T m)
+makeScopeEventMap setter cursor =
+    do
+        (key, doc, scope) <-
+            (sMPrevParamScope cursor ^.. Lens._Just <&> (,,) prevKey prevDoc) ++
+            (sMNextParamScope cursor ^.. Lens._Just <&> (,,) nextKey nextDoc)
+        [Just scope & setter & Widget.keysEventMap key doc]
+    & mconcat
+    where
+        prevKey = [ModKey.alt GLFW.Key'Left]
+        prevDoc = E.Doc ["Evaluation", "Scope", "Previous"]
+        nextKey = [ModKey.alt GLFW.Key'Right]
+        nextDoc = E.Doc ["Evaluation", "Scope", "Next"]
+
 makeParts ::
     MonadA m =>
     ExprGuiT.ShowAnnotation ->
@@ -160,23 +208,32 @@ makeParts ::
 makeParts showAnnotation binder myId =
     do
         mOuterScopeId <- ExprGuiM.readMScopeId
-        let mScopes =
-                do
-                    outerScopeId <- mOuterScopeId
-                    binder ^? Sugar.bScopes . Lens.at outerScopeId .
-                        Lens._Just . Lens.traversed
-        let mParamScope = mScopes <&> fst
-        let mBodyScope = mScopes <&> snd
+        mChosenScope <-
+            binder ^. Sugar.bMChosenScopeProp
+            & Lens._Just %%~ Transaction.getP
+            & ExprGuiM.transaction
+            <&> join
+        let mScopeCursor =
+                mOuterScopeId
+                >>= (`Map.lookup` (binder ^. Sugar.bScopes))
+                >>= getScopeCursor mChosenScope
+        let scopeEventMap =
+                makeScopeEventMap
+                <$> (binder ^. Sugar.bMChosenScopeProp <&> Transaction.setP)
+                <*> mScopeCursor
+                & fromMaybe mempty
         paramEdits <-
             makeParamsEdit showAnnotation
             (ExprGuiT.nextHolesBefore body) myId params
-            & ExprGuiM.withLocalMScopeId mParamScope
+            & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
+            <&> Lens.mapped . ExpressionGui.egWidget
+                %~ Widget.weakerEvents scopeEventMap
         bodyEdit <-
             makeResultEdit (binder ^. Sugar.bMActions) params body
-            & ExprGuiM.withLocalMScopeId mBodyScope
+            & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sBodyScope)
         wheresEdit <-
             makeWheres (binder ^. Sugar.bWhereItems) myId
-            & ExprGuiM.withLocalMScopeId mParamScope
+            & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
         return $ Parts paramEdits bodyEdit wheresEdit
     where
         params = binder ^. Sugar.bParams
