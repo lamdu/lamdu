@@ -656,10 +656,11 @@ convertWhereItems expr =
             appendScopeMaps x y = Map.mapMaybe (`Map.lookup` y) x
 
 makeBinder :: (MonadA m, Monoid a) =>
+    Maybe (MkProperty m (Maybe ScopeId)) ->
     Maybe (MkProperty m PresentationMode) ->
     ConventionalParams m a -> Val (Input.Payload m a) ->
     ConvertM m (Binder Guid m (ExpressionU m a))
-makeBinder mPresentationModeProp convParams funcBody =
+makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
     ConvertM.local (ConvertM.scTagParamInfos <>~ cpParamInfos convParams) $
         do
             (whereItems, whereBody, bodyScopesMap) <- convertWhereItems funcBody
@@ -668,6 +669,7 @@ makeBinder mPresentationModeProp convParams funcBody =
             return Binder
                 { _bParams = convParams ^. cpParams
                 , _bMPresentationModeProp = mPresentationModeProp
+                , _bMChosenScopeProp = mChosenScopeProp
                 , _bBody = bodyS
                 , _bScopes = cpScopes convParams <&> mapMaybe binderScopes
                 , _bWhereItems = whereItems
@@ -692,7 +694,10 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
     do
         mDeleteLam <- mkStoredLam lam exprPl & Lens._Just %%~ makeDeleteLambda Nothing
         convParams <- convertLamParams Nothing lam exprPl
-        binder <- makeBinder Nothing convParams $ lam ^. V.lamResult
+        binder <-
+            makeBinder
+            (exprPl ^. Input.mStored <&> Anchors.assocScopeRef . Property.value)
+            Nothing convParams (lam ^. V.lamResult)
         let setToInnerExprAction =
                 maybe NoInnerExpr SetToInnerExpr $
                 do
@@ -715,4 +720,5 @@ convertBinder mRecursiveVar defGuid expr =
                 | Lens.has (cpParams . _FieldParams) convParams =
                     Just $ Anchors.assocPresentationMode defGuid
                 | otherwise = Nothing
-        makeBinder mPresentationModeProp convParams funcBody
+        makeBinder (Just (Anchors.assocScopeRef defGuid)) mPresentationModeProp
+            convParams funcBody

@@ -5,23 +5,25 @@ module Lamdu.Data.Anchors
     , Pane, makePane
     , CodeProps, RevisionProps
     , assocNameRef
+    , assocScopeRef
     , PresentationMode(..)
     , assocPresentationMode
     , SpecialFunctions(..)
     , assocTagOrder
     ) where
 
-import Control.MonadA (MonadA)
-import Data.Binary (Binary)
-import Data.ByteString.Char8 ()
-import Data.Store.Rev.Branch (Branch)
-import Data.Store.Rev.Version (Version)
-import Data.Store.Rev.View (View)
-import Data.Store.Transaction (MkProperty(..))
-import GHC.Generics (Generic)
-import Lamdu.Expr.IRef (DefI)
+import           Control.MonadA (MonadA)
+import           Data.Binary (Binary)
+import           Data.ByteString.Char8 ()
+import           Data.Store.Rev.Branch (Branch)
+import           Data.Store.Rev.Version (Version)
+import           Data.Store.Rev.View (View)
+import           Data.Store.Transaction (MkProperty(..))
 import qualified Data.Store.Transaction as Transaction
+import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
+import           Lamdu.Eval.Val (ScopeId)
+import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 
@@ -70,6 +72,10 @@ makePane = id
 
 assocNameRef :: (UniqueId.ToGuid a, MonadA m) => a -> MkProperty m String
 assocNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toGuid
+
+assocScopeRef ::
+    (UniqueId.ToGuid a, MonadA m) => a -> MkProperty m (Maybe ScopeId)
+assocScopeRef = Transaction.assocDataRef "ScopeId" . UniqueId.toGuid
 
 assocTagOrder :: MonadA m => T.Tag -> MkProperty m Int
 assocTagOrder = Transaction.assocDataRefDef 0 "Order" . UniqueId.toGuid

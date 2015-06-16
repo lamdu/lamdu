@@ -17,7 +17,8 @@ module Lamdu.Sugar.Types
         , baAddFirstParam, baAddInnermostWhereItem
     , BinderParams(..), _NoParams, _VarParam, _FieldParams
     , Binder(..)
-        , bMPresentationModeProp, bParams, bBody, bWhereItems, bMActions, bScopes
+        , bMPresentationModeProp, bMChosenScopeProp, bParams, bBody
+        , bWhereItems, bMActions, bScopes
     , DefinitionBuiltin(..), biType, biName, biSetName
     , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
     , SetToHole(..), _SetToHole, _AlreadyAHole
@@ -358,6 +359,7 @@ data BinderParams name m
 
 data Binder name m expr = Binder
     { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
+    , _bMChosenScopeProp :: Maybe (MkProperty m (Maybe ScopeId))
     , _bParams :: BinderParams name m
     , _bBody :: expr
     , _bWhereItems :: [WhereItem name m expr]

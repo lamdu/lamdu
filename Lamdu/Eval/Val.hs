@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving #-}
 module Lamdu.Eval.Val
     ( ValHead, ValBody(..)
     , ThunkId(..), thunkIdInt
@@ -10,6 +10,7 @@ module Lamdu.Eval.Val
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Binary (Binary)
 import           Data.Foldable (Foldable)
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -22,7 +23,7 @@ newtype ThunkId = ThunkId { getThunkId :: Int }
     deriving (Show, Eq, Ord)
 
 newtype ScopeId = ScopeId { getScopeId :: Int }
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Ord, Binary)
 
 thunkIdInt :: Lens.Iso' ThunkId Int
 thunkIdInt = Lens.iso getThunkId ThunkId
