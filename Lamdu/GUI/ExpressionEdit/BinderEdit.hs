@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, PatternGuards #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings, PatternGuards #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make, diveToNameEdit
     , Parts(..), makeParts
@@ -19,7 +19,6 @@ import qualified Data.Store.Transaction as Transaction
 import           Data.Traversable (traverse)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
@@ -186,8 +185,9 @@ getScopeCursor mChosenScope scopes =
 
 makeScopeEventMap ::
     MonadA m =>
-    (Maybe ScopeId -> T m ()) -> ScopeCursor -> Widget.EventHandlers (T m)
-makeScopeEventMap setter cursor =
+    Config.Eval -> (Maybe ScopeId -> T m ()) -> ScopeCursor ->
+    Widget.EventHandlers (T m)
+makeScopeEventMap Config.Eval{..} setter cursor =
     do
         (key, doc, scope) <-
             (sMPrevParamScope cursor ^.. Lens._Just <&> (,,) prevKey prevDoc) ++
@@ -195,9 +195,9 @@ makeScopeEventMap setter cursor =
         [Just scope & setter & Widget.keysEventMap key doc]
     & mconcat
     where
-        prevKey = [ModKey.alt GLFW.Key'Left]
+        prevKey = prevScopeKeys
         prevDoc = E.Doc ["Evaluation", "Scope", "Previous"]
-        nextKey = [ModKey.alt GLFW.Key'Right]
+        nextKey = nextScopeKeys
         nextDoc = E.Doc ["Evaluation", "Scope", "Next"]
 
 makeParts ::
@@ -207,6 +207,7 @@ makeParts ::
     ExprGuiM m (Parts m)
 makeParts showAnnotation binder myId =
     do
+        config <- ExprGuiM.readConfig
         mOuterScopeId <- ExprGuiM.readMScopeId
         mChosenScope <-
             binder ^. Sugar.bMChosenScopeProp
@@ -218,7 +219,7 @@ makeParts showAnnotation binder myId =
                 >>= (`Map.lookup` (binder ^. Sugar.bScopes))
                 >>= getScopeCursor mChosenScope
         let scopeEventMap =
-                makeScopeEventMap
+                makeScopeEventMap (Config.eval config)
                 <$> (binder ^. Sugar.bMChosenScopeProp <&> Transaction.setP)
                 <*> mScopeCursor
                 & fromMaybe mempty

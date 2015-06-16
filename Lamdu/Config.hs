@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric, RecordWildCards #-}
 module Lamdu.Config
     ( Layers(..)
-    , Help(..), Zoom(..), Pane(..), Hole(..), Name(..)
+    , Help(..), Zoom(..), Pane(..), Hole(..), Name(..), Eval(..)
     , Config(..)
     , delKeys
     , layerInterval
@@ -107,6 +107,13 @@ data Name = Name
 instance ToJSON Name
 instance FromJSON Name
 
+data Eval = Eval
+    { prevScopeKeys :: [ModKey]
+    , nextScopeKeys :: [ModKey]
+    } deriving (Eq, Generic, Show)
+instance ToJSON Eval
+instance FromJSON Eval
+
 data Config = Config
     { layers :: Layers
     , help :: Help
@@ -115,6 +122,7 @@ data Config = Config
     , versionControl :: VersionControl.Config
     , hole :: Hole
     , name :: Name
+    , eval :: Eval
 
     , animationTimePeriodSec :: Double
     , animationRemainInPeriod :: Double

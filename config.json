@@ -406,6 +406,30 @@
             1.0
         ]
     },
+    "eval": {
+        "prevScopeKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
+                },
+                "Key'Left"
+            ]
+        ],
+        "nextScopeKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
+                },
+                "Key'Right"
+            ]
+        ]
+    },
     "previousCursorKeys": [
         [
             {
