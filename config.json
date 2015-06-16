@@ -415,7 +415,7 @@
                     "modifierKeysShift": false,
                     "modifierKeysControl": true
                 },
-                "Key'Left"
+                "Key'Up"
             ]
         ],
         "nextScopeKeys": [
@@ -426,7 +426,7 @@
                     "modifierKeysShift": false,
                     "modifierKeysControl": true
                 },
-                "Key'Right"
+                "Key'Down"
             ]
         ]
     },
