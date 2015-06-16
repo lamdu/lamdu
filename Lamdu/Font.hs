@@ -1,5 +1,5 @@
 module Lamdu.Font
-    ( get
+    ( with
     ) where
 
 import           Control.Monad (unless)
@@ -11,13 +11,13 @@ import qualified System.Directory as Directory
 defaultFontPath :: String
 defaultFontPath = "fonts/DejaVuSans.ttf"
 
-tryFont :: FilePath -> IO Draw.Font
-tryFont path =
+tryFont :: FilePath -> (Draw.Font -> IO a) -> IO a
+tryFont path action =
     do
         exists <- Directory.doesFileExist path
         unless exists . ioError . userError $ path ++ " does not exist!"
-        Draw.openFont path
+        Draw.withFont path action
 
-get :: FilePath -> Maybe FilePath -> IO Draw.Font
-get startDir Nothing = accessDataFile startDir tryFont defaultFontPath
-get _ (Just path) = tryFont path
+with :: FilePath -> Maybe FilePath -> (Draw.Font -> IO a) -> IO a
+with startDir Nothing action = accessDataFile startDir (`tryFont` action) defaultFontPath
+with _ (Just path) action = tryFont path action

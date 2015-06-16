@@ -116,7 +116,7 @@ Library
     Build-Depends: graphics-drawingcombinators >= 1.5.0.3
     CPP-Options: -DDRAWINGCOMBINATORS__SIZED -DDRAWINGCOMBINATORS__FONT_APIS
   else
-    Build-Depends: graphics-drawingcombinators >= 1.4
+    Build-Depends: graphics-drawingcombinators >= 1.5.0.2
 
   ghc-options:         -O2 -Wall -threaded
   -- ghc-options is prepended to ghc-prof-options

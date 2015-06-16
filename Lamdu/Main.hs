@@ -82,10 +82,9 @@ runEditor mFontPath db =
         -- Load config as early as possible, before we open any windows/etc
         configSampler <- ConfigSampler.new startDir
 
-        GLFWUtils.withGLFW $
-            do
-                win <- GLFWUtils.createWindow "Lamdu" =<< GLFWUtils.getVideoModeSize
-                font <- Font.get startDir mFontPath
+        GLFWUtils.withGLFW $ do
+            win <- GLFWUtils.createWindow "Lamdu" =<< GLFWUtils.getVideoModeSize
+            Font.with startDir mFontPath $ \font -> do
                 -- Fonts must be loaded after the GL context is created..
                 zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
                 addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
