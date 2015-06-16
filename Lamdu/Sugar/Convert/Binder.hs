@@ -659,7 +659,7 @@ makeBinder :: (MonadA m, Monoid a) =>
     Maybe (MkProperty m PresentationMode) ->
     ConventionalParams m a -> Val (Input.Payload m a) ->
     ConvertM m (Binder Guid m (ExpressionU m a))
-makeBinder setPresentationMode convParams funcBody =
+makeBinder mPresentationModeProp convParams funcBody =
     ConvertM.local (ConvertM.scTagParamInfos <>~ cpParamInfos convParams) $
         do
             (whereItems, whereBody, bodyScopesMap) <- convertWhereItems funcBody
@@ -667,7 +667,7 @@ makeBinder setPresentationMode convParams funcBody =
             let binderScopes s = Map.lookup s bodyScopesMap <&> (,) s
             return Binder
                 { _bParams = convParams ^. cpParams
-                , _bMPresentationModeProp = setPresentationMode
+                , _bMPresentationModeProp = mPresentationModeProp
                 , _bBody = bodyS
                 , _bScopes = cpScopes convParams <&> mapMaybe binderScopes
                 , _bWhereItems = whereItems
@@ -711,8 +711,8 @@ convertBinder ::
 convertBinder mRecursiveVar defGuid expr =
     do
         (convParams, funcBody) <- convertParams mRecursiveVar expr
-        let setPresentationMode
+        let mPresentationModeProp
                 | Lens.has (cpParams . _FieldParams) convParams =
                     Just $ Anchors.assocPresentationMode defGuid
                 | otherwise = Nothing
-        makeBinder setPresentationMode convParams funcBody
+        makeBinder mPresentationModeProp convParams funcBody
