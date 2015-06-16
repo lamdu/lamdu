@@ -104,6 +104,7 @@ data AnimHandlers = AnimHandlers
 
 data IsAnimating
     = Animating NominalDiffTime -- Current animation speed half-life
+    | FinalFrame
     | NotAnimating
     deriving Eq
 
@@ -262,21 +263,23 @@ mainLoopAnimThread frameStateVar eventTVar win =
                 curTime <- getCurrentTime
                 atomicModifyIORef frameStateVar $
                     \(AnimState prevAnimating prevTime prevFrame destFrame) ->
-                    let newAnimState =
+                    let notAnimating = AnimState NotAnimating curTime destFrame destFrame
+                        newAnimState =
                             case prevAnimating of
-                            NotAnimating ->
-                                AnimState NotAnimating curTime prevFrame destFrame
                             Animating animationHalfLife ->
                                 case Anim.nextFrame progress destFrame prevFrame of
-                                Nothing -> AnimState NotAnimating curTime destFrame destFrame
+                                Nothing -> AnimState FinalFrame curTime destFrame destFrame
                                 Just newFrame -> AnimState (Animating animationHalfLife) curTime newFrame destFrame
                                 where
                                     elapsed = curTime `diffUTCTime` prevTime
                                     progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
+                            FinalFrame -> notAnimating
+                            NotAnimating -> notAnimating
                     in (newAnimState, newAnimState)
         frameStateResult (AnimState isAnimating _ frame _) =
             case isAnimating of
             Animating _ -> Just $ Anim.draw frame
+            FinalFrame -> Just $ Anim.draw frame
             NotAnimating -> Nothing
 
 mainLoopWidget :: GLFW.Window -> IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO AnimConfig -> IO ()
