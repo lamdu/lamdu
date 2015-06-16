@@ -162,8 +162,8 @@ data ScopeCursor = ScopeCursor
     , sMNextParamScope :: Maybe ScopeId
     }
 
-getScopeCursor :: Maybe ScopeId -> [(ScopeId, ScopeId)] -> Maybe ScopeCursor
-getScopeCursor mChosenScope scopes =
+scopeCursor :: Maybe ScopeId -> [(ScopeId, ScopeId)] -> Maybe ScopeCursor
+scopeCursor mChosenScope scopes =
     do
         chosenScope <- mChosenScope
         (prevs, it:nexts) <- break ((== chosenScope) . fst) scopes & Just
@@ -182,6 +182,23 @@ getScopeCursor mChosenScope scopes =
             , sMPrevParamScope = Nothing
             , sMNextParamScope = scopes ^? Lens.ix 1 . _1
             }
+
+mkScopeCursor ::
+    MonadA m =>
+    Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) ->
+    ExprGuiM m (Maybe ScopeCursor)
+mkScopeCursor binder =
+    do
+        mOuterScopeId <- ExprGuiM.readMScopeId
+        mChosenScope <-
+            binder ^. Sugar.bMChosenScopeProp
+            & Lens._Just %%~ Transaction.getP
+            & ExprGuiM.transaction
+            <&> join
+        mOuterScopeId
+            >>= (`Map.lookup` (binder ^. Sugar.bScopes))
+            >>= scopeCursor mChosenScope
+            & return
 
 makeScopeEventMap ::
     MonadA m =>
@@ -207,17 +224,8 @@ makeParts ::
     ExprGuiM m (Parts m)
 makeParts showAnnotation binder myId =
     do
+        mScopeCursor <- mkScopeCursor binder
         config <- ExprGuiM.readConfig
-        mOuterScopeId <- ExprGuiM.readMScopeId
-        mChosenScope <-
-            binder ^. Sugar.bMChosenScopeProp
-            & Lens._Just %%~ Transaction.getP
-            & ExprGuiM.transaction
-            <&> join
-        let mScopeCursor =
-                mOuterScopeId
-                >>= (`Map.lookup` (binder ^. Sugar.bScopes))
-                >>= getScopeCursor mChosenScope
         let scopeEventMap =
                 makeScopeEventMap (Config.eval config)
                 <$> (binder ^. Sugar.bMChosenScopeProp <&> Transaction.setP)
