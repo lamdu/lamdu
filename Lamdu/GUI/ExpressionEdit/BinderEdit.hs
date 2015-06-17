@@ -8,7 +8,7 @@ import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (join)
+import           Control.Monad (guard, join)
 import           Control.MonadA (MonadA)
 import           Data.List.Utils (nonEmptyAll)
 import qualified Data.Map as Map
@@ -30,6 +30,7 @@ import           Lamdu.CharClassification (operatorChars)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Eval.Val (ScopeId)
+import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -218,6 +219,21 @@ makeScopeEventMap Config.Eval{..} setter cursor =
         nextKey = nextScopeKeys
         nextDoc = E.Doc ["Evaluation", "Scope", "Next"]
 
+makeScopeNavEdit ::
+    MonadA m => Widget.Id -> ScopeCursor -> ExprGuiM m (Maybe (ExpressionGui m))
+makeScopeNavEdit myId cursor
+    | null scopes = return Nothing
+    | otherwise =
+        scopes
+        <&> (^. _1)
+        & mapM (`ExpressionGui.grammarLabel` Widget.toAnimId myId)
+        >>= ExpressionGui.hboxSpaced
+        <&> Just
+    where
+        scopes =
+            (sMPrevParamScope cursor ^.. Lens._Just <&> (,) "◀") ++
+            (sMNextParamScope cursor ^.. Lens._Just <&> (,) "▶")
+
 makeParts ::
     MonadA m =>
     ExprGuiT.ShowAnnotation ->
@@ -246,7 +262,14 @@ makeParts showAnnotation binder myId =
                 <$> mSetScope
                 <*> mScopeCursor
                 & fromMaybe mempty
-        return $ Parts paramEdits bodyEdit wheresEdit scopeEventMap
+        settings <- ExprGuiM.readSettings
+        scopeNavEdits <-
+            guard (settings ^. CESettings.sInfoMode == CESettings.Evaluation)
+            >> mScopeCursor
+            <&> makeScopeNavEdit myId
+            & Lens.sequenceOf Lens._Just <&> join <&> maybe [] (:[])
+        Parts (paramEdits ++ scopeNavEdits) bodyEdit wheresEdit scopeEventMap
+            & return
     where
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody
