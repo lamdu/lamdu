@@ -171,8 +171,9 @@ makeRecord T.CEmpty = makeEmptyRecord
 makeRecord composite =
     do
         fieldsView <- GridView.make <$> mapM makeField fields
-        let barWidth | null fields = 150
-                              | otherwise = fieldsView ^. View.width
+        let barWidth
+                | null fields = 150
+                | otherwise = fieldsView ^. View.width
         varView <-
             case extension of
             Nothing -> pure View.empty
