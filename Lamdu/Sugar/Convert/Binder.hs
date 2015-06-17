@@ -307,7 +307,7 @@ makeFieldParamActions mRecursiveVar param tags fp storedLam =
             }
     where
         mkNewTags tag=
-            break (== fpTag fp) tags & \(pre, post) -> pre ++ [tag] ++ post
+            break (== fpTag fp) tags & \(pre, x:post) -> pre ++ [x, tag] ++ post
 
 fixRecursiveCallRemoveField ::
     MonadA m =>
