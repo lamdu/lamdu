@@ -191,21 +191,24 @@ mainLoopAnim win getAnimationConfig animHandlers =
         withForkedIO eventHandler $
             mainLoopAnimThread frameStateVar eventTVar win
 
+waitForEvent :: TVar ThreadSyncVar -> IO ThreadSyncVar
+waitForEvent eventTVar =
+    do
+        tsv <- readTVar eventTVar
+        when (not (tsv ^. tsvHaveTicks) && null (tsv ^. tsvReversedEvents)) $
+            STM.retry
+        tsv
+            & tsvHaveTicks .~ False
+            & tsvReversedEvents .~ []
+            & writeTVar eventTVar
+        return tsv
+    & STM.atomically
+
 eventHandlerThread :: IORef AnimState -> TVar ThreadSyncVar -> IO AnimConfig -> (Widget.Size -> AnimHandlers) -> IO ()
 eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers =
     forever $
     do
-        tsv <-
-            do
-                tsv <- readTVar eventTVar
-                when (not (tsv ^. tsvHaveTicks) && null (tsv ^. tsvReversedEvents)) $
-                    STM.retry
-                tsv
-                    & tsvHaveTicks .~ False
-                    & tsvReversedEvents .~ []
-                    & writeTVar eventTVar
-                return tsv
-            & STM.atomically
+        tsv <- waitForEvent eventTVar
         userEventTime <- getCurrentTime
         let handlers = animHandlers (tsv ^. tsvWinSize)
         eventResults <-
