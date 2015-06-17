@@ -204,9 +204,9 @@ mkScopeCursor binder =
 
 makeScopeEventMap ::
     MonadA m =>
-    Config.Eval -> (ScopeId -> T m ()) -> ScopeCursor ->
+    [ModKey] -> [ModKey] -> (ScopeId -> T m ()) -> ScopeCursor ->
     Widget.EventHandlers (T m)
-makeScopeEventMap Config.Eval{..} setter cursor =
+makeScopeEventMap prevKey nextKey setter cursor =
     do
         (key, doc, scope) <-
             (sMPrevParamScope cursor ^.. Lens._Just <&> (,,) prevKey prevDoc) ++
@@ -214,25 +214,38 @@ makeScopeEventMap Config.Eval{..} setter cursor =
         [setter scope & Widget.keysEventMap key doc]
     & mconcat
     where
-        prevKey = prevScopeKeys
         prevDoc = E.Doc ["Evaluation", "Scope", "Previous"]
-        nextKey = nextScopeKeys
         nextDoc = E.Doc ["Evaluation", "Scope", "Next"]
 
 makeScopeNavEdit ::
-    MonadA m => Widget.Id -> ScopeCursor -> ExprGuiM m (Maybe (ExpressionGui m))
-makeScopeNavEdit myId cursor
+    MonadA m =>
+    Widget.Id -> (ScopeId -> T m ()) -> ScopeCursor ->
+    ExprGuiM m (Maybe (ExpressionGui m))
+makeScopeNavEdit myId setter cursor
     | null scopes = return Nothing
     | otherwise =
         scopes
         <&> (^. _1)
         & mapM (`ExpressionGui.grammarLabel` Widget.toAnimId myId)
         >>= ExpressionGui.hboxSpaced
+        >>= ExpressionGui.makeFocusableView scopesNavId
+        <&> ExpressionGui.egWidget %~ Widget.weakerEvents
+            (mappend
+                (makeScopeEventMap leftKeys rightKeys setter cursor)
+                blockEventMap)
         <&> Just
     where
+        leftKeys = [ModKey mempty GLFW.Key'Left]
+        rightKeys = [ModKey mempty GLFW.Key'Right]
+        scopesNavId = Widget.joinId myId ["scopesNav"]
         scopes =
             (sMPrevParamScope cursor ^.. Lens._Just <&> (,) "◀") ++
             (sMNextParamScope cursor ^.. Lens._Just <&> (,) "▶")
+        blockEventMap =
+            E.keyPresses
+            (leftKeys ++ rightKeys)
+            (E.Doc ["Navigation", "Move", "(blocked)"]) $
+            return mempty
 
 makeParts ::
     MonadA m =>
@@ -242,7 +255,6 @@ makeParts ::
 makeParts showAnnotation binder myId =
     do
         mScopeCursor <- mkScopeCursor binder
-        config <- ExprGuiM.readConfig
         paramEdits <-
             makeParamsEdit showAnnotation
             (ExprGuiT.nextHolesBefore body) myId params
@@ -253,20 +265,21 @@ makeParts showAnnotation binder myId =
         wheresEdit <-
             makeWheres (binder ^. Sugar.bWhereItems) myId
             & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
+        config <- ExprGuiM.readConfig <&> Config.eval
         let mSetScope =
                 binder ^. Sugar.bMChosenScopeProp
                 <&> Transaction.setP
                 <&> (. Just)
         let scopeEventMap =
-                makeScopeEventMap (Config.eval config)
+                makeScopeEventMap
+                (Config.prevScopeKeys config) (Config.nextScopeKeys config)
                 <$> mSetScope
                 <*> mScopeCursor
                 & fromMaybe mempty
         settings <- ExprGuiM.readSettings
         scopeNavEdits <-
-            guard (settings ^. CESettings.sInfoMode == CESettings.Evaluation)
-            >> mScopeCursor
-            <&> makeScopeNavEdit myId
+            guard (settings ^. CESettings.sInfoMode == CESettings.Evaluation) >>
+            makeScopeNavEdit myId <$> mSetScope <*> mScopeCursor
             & Lens.sequenceOf Lens._Just <&> join <&> maybe [] (:[])
         Parts (paramEdits ++ scopeNavEdits) bodyEdit wheresEdit scopeEventMap
             & return
