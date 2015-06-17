@@ -2,7 +2,6 @@ module Lamdu.DataFile
     ( accessDataFile, getLamduDir
     ) where
 
-import qualified Control.Exception as E
 import           Control.Lens.Operators
 import           Paths_lamdu_ide (getDataFileName)
 import qualified System.Directory as Directory
@@ -13,6 +12,8 @@ getLamduDir = Directory.getHomeDirectory <&> (</> ".lamdu")
 
 accessDataFile :: FilePath -> (FilePath -> IO a) -> FilePath -> IO a
 accessDataFile startDir accessor fileName =
-    (accessor =<< getDataFileName fileName)
-    `E.catch` \(E.SomeException _) ->
-    accessor $ startDir </> fileName
+    do
+        exists <- Directory.doesFileExist customPath
+        accessor =<< if exists then return customPath else getDataFileName fileName
+    where
+        customPath = startDir </> fileName
