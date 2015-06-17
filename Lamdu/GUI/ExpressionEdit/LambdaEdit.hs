@@ -28,7 +28,7 @@ make parentPrecedence binder pl =
     (ExpressionGui.MyPrecedence 0) $ \myId ->
     ExprGuiM.assignCursor myId bodyId $
     do
-        BinderEdit.Parts paramEdits bodyEdit mWheresEdit <-
+        BinderEdit.Parts paramEdits bodyEdit mWheresEdit eventMap <-
             BinderEdit.makeParts showParamType binder myId
         paramsEdit <-
             map (ExpressionGui.egAlignment . _1 .~ 0.5) paramEdits
@@ -39,6 +39,7 @@ make parentPrecedence binder pl =
         arrowLabel <- ExpressionGui.grammarLabel "→" $ Widget.toAnimId myId
         ExpressionGui.hboxSpaced [paramsEdit, arrowLabel, bodyEdit]
             <&> maybe id (ExpressionGui.addBelow 0 . (:[]) . (,) 0) mWheresEdit
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody

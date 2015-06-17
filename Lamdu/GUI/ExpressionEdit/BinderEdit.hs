@@ -153,6 +153,7 @@ data Parts m = Parts
     { pParamEdits :: [ExpressionGui m]
     , pBodyEdit :: ExpressionGui m
     , pMWheresEdit :: Maybe (Widget (T m))
+    , pEventMap :: Widget.EventHandlers (T m)
     }
 
 data ScopeCursor = ScopeCursor
@@ -226,24 +227,22 @@ makeParts showAnnotation binder myId =
     do
         mScopeCursor <- mkScopeCursor binder
         config <- ExprGuiM.readConfig
-        let scopeEventMap =
-                makeScopeEventMap (Config.eval config)
-                <$> (binder ^. Sugar.bMChosenScopeProp <&> Transaction.setP)
-                <*> mScopeCursor
-                & fromMaybe mempty
         paramEdits <-
             makeParamsEdit showAnnotation
             (ExprGuiT.nextHolesBefore body) myId params
             & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
-            <&> Lens.mapped . ExpressionGui.egWidget
-                %~ Widget.weakerEvents scopeEventMap
         bodyEdit <-
             makeResultEdit (binder ^. Sugar.bMActions) params body
             & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sBodyScope)
         wheresEdit <-
             makeWheres (binder ^. Sugar.bWhereItems) myId
             & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
-        return $ Parts paramEdits bodyEdit wheresEdit
+        let scopeEventMap =
+                makeScopeEventMap (Config.eval config)
+                <$> (binder ^. Sugar.bMChosenScopeProp <&> Transaction.setP)
+                <*> mScopeCursor
+                & fromMaybe mempty
+        return $ Parts paramEdits bodyEdit wheresEdit scopeEventMap
     where
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody
@@ -256,7 +255,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make name binder myId =
     do
-        Parts paramEdits bodyEdit mWheresEdit <-
+        Parts paramEdits bodyEdit mWheresEdit eventMap <-
             makeParts ExprGuiT.ShowAnnotation binder myId
         rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
         presentationEdits <-
@@ -270,6 +269,7 @@ make name binder myId =
             (paramEdits & Lens.mapped . ExpressionGui.egWidget
                 %~ Widget.weakerEvents rhsJumperEquals)
             bodyEdit mWheresEdit myId
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
         rhs = ("Def Body", body)
