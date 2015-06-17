@@ -100,7 +100,7 @@ orderDef def =
     def
     & SugarLens.defSchemes . S.schemeType %%~ orderType
     >>= Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent
-        %%~ (orderBinder >=> Sugar.bBody %%~ orderExpr)
+        %%~ (orderBinder >=> Lens.traversed %%~ orderExpr)
 
 orderedFlatComposite ::
     T.Composite a -> ([(T.Tag, T.Type)], Maybe (T.Var (T.Composite a)))
