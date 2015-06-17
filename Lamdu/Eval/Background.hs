@@ -14,7 +14,7 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad ((>=>), void)
+import           Control.Monad ((>=>), void, join)
 import           Control.Monad.Trans.Either (runEitherT)
 import           Control.Monad.Trans.State (evalStateT)
 import qualified Data.ByteString.Char8 as BS8
@@ -56,7 +56,7 @@ data Evaluator pl = Evaluator
 
 data Status
     = Running
-    | Stoppped
+    | Stopped
     | Finished
 
 data State pl = State
@@ -133,7 +133,12 @@ evalActions actions stateRef =
                 defBody <- (actions ^. aLoadGlobal) globalId
                 modifyState (sDependencies <>~ getDependencies globalId defBody)
                 return defBody
-        modifyState f = atomicModifyIORef' stateRef (f <&> flip (,) ())
+        modifyState f =
+            do
+                newState <- atomicModifyIORef' stateRef (f <&> join (,))
+                case newState ^. sStatus of
+                    Stopped -> error "stopped"
+                    _ -> return ()
         update f =
             do
                 modifyState f
@@ -201,8 +206,8 @@ start actions src =
 stop :: Evaluator pl -> IO ()
 stop evaluator =
     do
+        writeStatus (eStateRef evaluator) Stopped
         killThread (eThreadId evaluator)
-        writeStatus (eStateRef evaluator) Stoppped
 
 pauseLoading :: Evaluator pl -> IO (Set pl, Set V.GlobalId)
 pauseLoading evaluator =
