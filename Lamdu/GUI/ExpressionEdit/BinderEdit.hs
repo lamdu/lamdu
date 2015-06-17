@@ -228,7 +228,7 @@ makeScopeNavEdit myId setter cursor
         <&> (^. _1)
         & mapM (`ExpressionGui.grammarLabel` Widget.toAnimId myId)
         >>= ExpressionGui.hboxSpaced
-        >>= ExpressionGui.makeFocusableView scopesNavId
+        >>= ExpressionGui.makeFocusableView myId
         <&> ExpressionGui.egWidget %~ Widget.weakerEvents
             (mappend
                 (makeScopeEventMap leftKeys rightKeys setter cursor)
@@ -237,7 +237,6 @@ makeScopeNavEdit myId setter cursor
     where
         leftKeys = [ModKey mempty GLFW.Key'Left]
         rightKeys = [ModKey mempty GLFW.Key'Right]
-        scopesNavId = Widget.joinId myId ["scopesNav"]
         scopes =
             (sMPrevParamScope cursor ^.. Lens._Just <&> (,) "◀") ++
             (sMNextParamScope cursor ^.. Lens._Just <&> (,) "▶")
@@ -255,8 +254,26 @@ makeParts ::
 makeParts showAnnotation binder myId =
     do
         mScopeCursor <- mkScopeCursor binder
+        let mSetScope =
+                binder ^. Sugar.bMChosenScopeProp
+                <&> Transaction.setP
+                <&> (. Just)
+        settings <- ExprGuiM.readSettings
+        mScopeNavEdit <-
+            guard (settings ^. CESettings.sInfoMode == CESettings.Evaluation) >>
+            makeScopeNavEdit scopesNavId <$> mSetScope <*> mScopeCursor
+            & Lens.sequenceOf Lens._Just <&> join
+        let annotationMode =
+                do
+                    mScopeNavEdit ^?
+                        Lens._Just . ExpressionGui.egWidget . Widget.isFocused
+                        >>= guard
+                    ExpressionGui.WithNeighbouringAnnotations
+                        <$> (mScopeCursor <&> sMPrevParamScope)
+                        <*> (mScopeCursor <&> sMNextParamScope)
+                & fromMaybe ExpressionGui.NormalAnnotation
         paramEdits <-
-            makeParamsEdit showAnnotation
+            makeParamsEdit annotationMode showAnnotation
             (ExprGuiT.nextHolesBefore body) myId params
             & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
         bodyEdit <-
@@ -266,26 +283,19 @@ makeParts showAnnotation binder myId =
             makeWheres (binder ^. Sugar.bWhereItems) myId
             & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
         config <- ExprGuiM.readConfig <&> Config.eval
-        let mSetScope =
-                binder ^. Sugar.bMChosenScopeProp
-                <&> Transaction.setP
-                <&> (. Just)
         let scopeEventMap =
                 makeScopeEventMap
                 (Config.prevScopeKeys config) (Config.nextScopeKeys config)
                 <$> mSetScope
                 <*> mScopeCursor
                 & fromMaybe mempty
-        settings <- ExprGuiM.readSettings
-        scopeNavEdits <-
-            guard (settings ^. CESettings.sInfoMode == CESettings.Evaluation) >>
-            makeScopeNavEdit myId <$> mSetScope <*> mScopeCursor
-            & Lens.sequenceOf Lens._Just <&> join <&> maybe [] (:[])
-        Parts (paramEdits ++ scopeNavEdits) bodyEdit wheresEdit scopeEventMap
+        Parts (paramEdits ++ (mScopeNavEdit ^.. Lens.traversed))
+            bodyEdit wheresEdit scopeEventMap
             & return
     where
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody
+        scopesNavId = Widget.joinId myId ["scopesNav"]
 
 make ::
     MonadA m =>
@@ -389,16 +399,14 @@ makeResultEdit mActions params result = do
 
 makeParamsEdit ::
     MonadA m =>
-    ExprGuiT.ShowAnnotation ->
-    NearestHoles ->
-    Widget.Id ->
-    Sugar.BinderParams (Name m) m ->
+    ExpressionGui.AnnotationOptions -> ExprGuiT.ShowAnnotation ->
+    NearestHoles -> Widget.Id -> Sugar.BinderParams (Name m) m ->
     ExprGuiM m [ExpressionGui m]
-makeParamsEdit showAnnotation nearestHoles lhsId params =
+makeParamsEdit annotationOpts showAnnotation nearestHoles lhsId params =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         let mkParam (prevId, nextId, param) =
-                ParamEdit.make showAnnotation prevId nextId param
+                ParamEdit.make annotationOpts showAnnotation prevId nextId param
                 <&> ExpressionGui.egWidget
                 %~ Widget.weakerEvents jumpHolesEventMap
         ExpressionGui.listWithDelDests lhsId lhsId

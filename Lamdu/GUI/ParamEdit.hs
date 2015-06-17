@@ -99,10 +99,12 @@ eventParamDelEventMap (Just actions) keys docSuffix dstPosId =
 
 -- exported for use in definition sugaring.
 make ::
-    MonadA m => ExprGuiT.ShowAnnotation -> Widget.Id -> Widget.Id ->
+    MonadA m =>
+    ExpressionGui.AnnotationOptions ->
+    ExprGuiT.ShowAnnotation -> Widget.Id -> Widget.Id ->
     Sugar.FuncParam v (Name m) m ->
     ExprGuiM m (ExpressionGui m)
-make showType prevId nextId param =
+make annotationOpts showType prevId nextId param =
     assignCursor $
     do
         config <- ExprGuiM.readConfig
@@ -116,7 +118,7 @@ make showType prevId nextId param =
             <&> Widget.weakerEvents paramEventMap
             <&> ExpressionGui.fromValueWidget
         paramNameEdit
-            & ExpressionGui.maybeAddAnnotation showType
+            & ExpressionGui.maybeAddAnnotationWith annotationOpts showType
                 (param ^. Sugar.fpAnnotation)
                 (param ^. Sugar.fpId)
     where

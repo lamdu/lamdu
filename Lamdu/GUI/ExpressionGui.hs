@@ -21,6 +21,7 @@ module Lamdu.GUI.ExpressionGui
     -- Info adding
     , annotationSpacer
     , maybeAddAnnotation
+    , AnnotationOptions(..), maybeAddAnnotationWith
     , makeTypeView
     -- Expression wrapping
     , MyPrecedence(..), ParentPrecedence(..), Precedence
@@ -38,6 +39,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
+import           Data.Binary.Utils (encodeS)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import           Data.Monoid (Monoid(..))
@@ -55,6 +57,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -63,6 +66,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Eval.Results (ComputedVal)
+import           Lamdu.Eval.Val (ScopeId)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -170,10 +174,13 @@ makeWithAnnotationBG minWidth entityId f =
     where
         animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
 
-makeEvaluationResultView :: MonadA m => ComputedVal () -> AnimId -> ExprGuiM m View
-makeEvaluationResultView evalRes animId =
-    BWidgets.makeTextView text animId & ExprGuiM.widgetEnv
+type ScopeAndVal = (ScopeId, ComputedVal ())
+
+makeEvaluationResultView :: MonadA m => ScopeAndVal -> AnimId -> ExprGuiM m View
+makeEvaluationResultView (scopeId, evalRes) animId =
+    BWidgets.makeTextView text resId & ExprGuiM.widgetEnv
     where
+        resId = animId ++ [encodeS scopeId]
         text = show evalRes & truncateStr 20
 
 truncateStr :: Int -> String -> String
@@ -189,9 +196,21 @@ makeTypeView entityId typ minWidth =
     makeWithAnnotationBG minWidth entityId (`TypeView.make` typ)
 
 makeEvalView ::
-    MonadA m => Sugar.EntityId -> ComputedVal () -> Widget.R -> ExprGuiM m (Widget f)
-makeEvalView entityId evalRes minWidth =
-    makeWithAnnotationBG minWidth entityId (makeEvaluationResultView evalRes)
+    MonadA m =>
+    Sugar.EntityId -> (Maybe ScopeAndVal, Maybe ScopeAndVal) -> ScopeAndVal ->
+    Widget.R -> ExprGuiM m (Widget f)
+makeEvalView entityId (mPrev, mNext) evalRes minWidth =
+    makeWithAnnotationBG minWidth entityId $
+    \animId ->
+    neighbourViews animId mPrev ++ makeEvaluationResultView evalRes animId :
+    neighbourViews animId mNext
+    & sequence
+    <&> GridView.horizontalAlign 0.5
+    where
+        neighbourViews animId n =
+            n ^.. Lens._Just
+            <&> (`makeEvaluationResultView` animId)
+            <&> Lens.mapped %~ View.scale 0.5
 
 annotationSpacer :: MonadA m => ExprGuiM m (Widget f)
 annotationSpacer =
@@ -220,9 +239,11 @@ addInferredType ::
 addInferredType entityId = addAnnotationH . makeTypeView entityId
 
 addEvaluationResult ::
-    MonadA m => Sugar.EntityId -> ComputedVal () ->
+    MonadA m =>
+    Sugar.EntityId -> (Maybe ScopeAndVal, Maybe ScopeAndVal) -> ScopeAndVal ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addEvaluationResult entityId = addAnnotationH . makeEvalView entityId
+addEvaluationResult entityId prevNext =
+    addAnnotationH . makeEvalView entityId prevNext
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
@@ -427,25 +448,38 @@ maybeAddAnnotationPl pl =
 
 data MissingAnnotationBehavior = ShowNothing | ShowType
 
+data AnnotationOptions
+    = NormalAnnotation
+    | WithNeighbouringAnnotations (Maybe ScopeId) (Maybe ScopeId)
+
 maybeAddAnnotationH ::
     MonadA m =>
-    MissingAnnotationBehavior -> Sugar.Annotation -> Sugar.EntityId ->
-    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-maybeAddAnnotationH missingAnnotationBehavior annotation entityId eg =
+    AnnotationOptions -> MissingAnnotationBehavior ->
+    Sugar.Annotation -> Sugar.EntityId -> ExpressionGui m ->
+    ExprGuiM m (ExpressionGui m)
+maybeAddAnnotationH opt missingAnnotationBehavior annotation entityId eg =
     do
         settings <- ExprGuiM.readSettings
         case settings ^. CESettings.sInfoMode of
             CESettings.None -> handleMissingAnnotation
             CESettings.Types -> withType
             CESettings.Evaluation ->
-                ExprGuiM.readMScopeId <&> (>>= valOfScope)
-                >>= maybe handleMissingAnnotation (($ eg) . addEvaluationResult entityId)
+                ExprGuiM.readMScopeId <&> (>>= valAndScope)
+                >>= maybe handleMissingAnnotation
+                    (($ eg) . addEvaluationResult entityId neighbourVals)
+                where
+                    neighbourVals =
+                        case opt of
+                        NormalAnnotation -> (Nothing, Nothing)
+                        WithNeighbouringAnnotations p n ->
+                            (p >>= valAndScope, n >>= valAndScope)
     where
         handleMissingAnnotation =
             case missingAnnotationBehavior of
             ShowNothing -> return eg
             ShowType -> withType
         withType = addInferredType entityId (annotation ^. Sugar.aInferredType) eg
+        valAndScope scopeId = valOfScope scopeId <&> (,) scopeId
         valOfScope scopeId =
             annotation ^? Sugar.aMEvaluationResult .
             Lens._Just . Lens.at scopeId . Lens._Just
@@ -454,11 +488,18 @@ maybeAddAnnotation ::
     MonadA m =>
     ExprGuiT.ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-maybeAddAnnotation ExprGuiT.DoNotShowAnnotation _ _ eg = return eg
-maybeAddAnnotation ExprGuiT.ShowAnnotation annotation entityId eg =
-    maybeAddAnnotationH ShowType annotation entityId eg
-maybeAddAnnotation ExprGuiT.ShowAnnotationInVerboseMode annotation entityId eg =
-    maybeAddAnnotationH ShowNothing annotation entityId eg
+maybeAddAnnotation = maybeAddAnnotationWith NormalAnnotation
+
+maybeAddAnnotationWith ::
+    MonadA m =>
+    AnnotationOptions ->
+    ExprGuiT.ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
+    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+maybeAddAnnotationWith _ ExprGuiT.DoNotShowAnnotation _ _ eg = return eg
+maybeAddAnnotationWith o ExprGuiT.ShowAnnotation annotation entityId eg =
+    maybeAddAnnotationH o ShowType annotation entityId eg
+maybeAddAnnotationWith o ExprGuiT.ShowAnnotationInVerboseMode annotation entityId eg =
+    maybeAddAnnotationH o ShowNothing annotation entityId eg
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests before after dest list =
