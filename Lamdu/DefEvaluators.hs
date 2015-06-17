@@ -152,5 +152,5 @@ runTransactionAndMaybeRestartEvaluators evaluators transaction =
             then do
                 stop evaluators
                 start evaluators
-            else map snd defEvaluators & mapM_ EvalBG.resumeLoading
+            else mapM_ (EvalBG.resumeLoading . snd) defEvaluators
         return result
