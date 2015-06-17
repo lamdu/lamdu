@@ -15,7 +15,7 @@ import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe, mapMaybe)
+import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Monoid(..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -517,8 +517,11 @@ convertEmptyParams mRecursiveVar val =
                 & sequenceA
                 & Lens._Just %~ makeAddFirstParam
             , cpScopes =
-                val ^. V.payload . Input.evalResults
-                & Map.keys <&> join (,) & Map.fromList <&> (:[])
+                -- Collect scopes from all evaluated subexpressions.
+                val ^..
+                    ExprLens.subExprPayloads . Input.evalResults .
+                    Lens.to Map.keys . Lens.traversed
+                <&> join (,) & Map.fromList <&> (:[])
             }
 
 convertParams ::
@@ -606,13 +609,7 @@ convertWhereItems ::
     )
 convertWhereItems expr =
     case mExtractWhere expr of
-    Nothing ->
-        return
-        ( []
-        , expr
-        , expr ^. V.payload . Input.evalResults
-          & Map.keys <&> join (,) & Map.fromList
-        )
+    Nothing -> return ([], expr, Map.empty)
     Just ewi ->
         do
             value <- convertBinder Nothing defGuid (ewiArg ewi)
@@ -653,7 +650,10 @@ convertWhereItems expr =
             param = ewiParam ewi
             defGuid = UniqueId.toGuid param
             defEntityId = EntityId.ofLambdaParam param
-            appendScopeMaps x y = Map.mapMaybe (`Map.lookup` y) x
+            appendScopeMaps x y = x <&> overrideId y
+
+overrideId :: Ord a => Map a a -> a -> a
+overrideId mapping k = Map.lookup k mapping & fromMaybe k
 
 makeBinder :: (MonadA m, Monoid a) =>
     Maybe (MkProperty m (Maybe ScopeId)) ->
@@ -665,13 +665,13 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
         do
             (whereItems, whereBody, bodyScopesMap) <- convertWhereItems funcBody
             bodyS <- ConvertM.convertSubexpression whereBody
-            let binderScopes s = Map.lookup s bodyScopesMap <&> (,) s
+            let binderScopes s = (s, overrideId bodyScopesMap s)
             return Binder
                 { _bParams = convParams ^. cpParams
                 , _bMPresentationModeProp = mPresentationModeProp
                 , _bMChosenScopeProp = mChosenScopeProp
                 , _bBody = bodyS
-                , _bScopes = cpScopes convParams <&> mapMaybe binderScopes
+                , _bScopes = cpScopes convParams <&> map binderScopes
                 , _bWhereItems = whereItems
                 , _bMActions =
                     mkActions
