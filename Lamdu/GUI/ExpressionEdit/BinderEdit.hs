@@ -203,14 +203,14 @@ mkScopeCursor binder =
 
 makeScopeEventMap ::
     MonadA m =>
-    Config.Eval -> (Maybe ScopeId -> T m ()) -> ScopeCursor ->
+    Config.Eval -> (ScopeId -> T m ()) -> ScopeCursor ->
     Widget.EventHandlers (T m)
 makeScopeEventMap Config.Eval{..} setter cursor =
     do
         (key, doc, scope) <-
             (sMPrevParamScope cursor ^.. Lens._Just <&> (,,) prevKey prevDoc) ++
             (sMNextParamScope cursor ^.. Lens._Just <&> (,,) nextKey nextDoc)
-        [Just scope & setter & Widget.keysEventMap key doc]
+        [setter scope & Widget.keysEventMap key doc]
     & mconcat
     where
         prevKey = prevScopeKeys
@@ -237,9 +237,13 @@ makeParts showAnnotation binder myId =
         wheresEdit <-
             makeWheres (binder ^. Sugar.bWhereItems) myId
             & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
+        let mSetScope =
+                binder ^. Sugar.bMChosenScopeProp
+                <&> Transaction.setP
+                <&> (. Just)
         let scopeEventMap =
                 makeScopeEventMap (Config.eval config)
-                <$> (binder ^. Sugar.bMChosenScopeProp <&> Transaction.setP)
+                <$> mSetScope
                 <*> mScopeCursor
                 & fromMaybe mempty
         return $ Parts paramEdits bodyEdit wheresEdit scopeEventMap
