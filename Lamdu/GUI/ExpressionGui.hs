@@ -69,6 +69,7 @@ import           Lamdu.Eval.Results (ComputedVal)
 import           Lamdu.Eval.Val (ScopeId)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
+import qualified Lamdu.GUI.EvalView as EvalView
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -178,17 +179,7 @@ type ScopeAndVal = (ScopeId, ComputedVal ())
 
 makeEvaluationResultView :: MonadA m => ScopeAndVal -> AnimId -> ExprGuiM m View
 makeEvaluationResultView (scopeId, evalRes) animId =
-    BWidgets.makeTextView text resId & ExprGuiM.widgetEnv
-    where
-        resId = animId ++ [encodeS scopeId]
-        text = show evalRes & truncateStr 20
-
-truncateStr :: Int -> String -> String
-truncateStr n s
-    | l > n = take (n `div` 3) s ++ ".." ++ drop (l - (2 * n `div` 3)) s
-    | otherwise = s
-    where
-        l = length s
+    EvalView.make (animId ++ [encodeS scopeId]) evalRes
 
 makeTypeView ::
         MonadA m => Sugar.EntityId -> Type -> Widget.R -> ExprGuiM m (Widget f)

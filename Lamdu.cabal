@@ -188,6 +188,7 @@ Executable lamdu
                      , Lamdu.GUI.CodeEdit
                      , Lamdu.GUI.CodeEdit.Settings
                      , Lamdu.GUI.DefinitionEdit
+                     , Lamdu.GUI.EvalView
                      , Lamdu.GUI.ExpressionEdit
                      , Lamdu.GUI.ExpressionEdit.ApplyEdit
                      , Lamdu.GUI.ExpressionEdit.BinderEdit
