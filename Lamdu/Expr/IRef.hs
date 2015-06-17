@@ -17,6 +17,7 @@ module Lamdu.Expr.IRef
     ) where
 
 import           Control.Applicative ((<$>))
+import           Control.DeepSeq (NFData)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -48,7 +49,7 @@ defI (V.GlobalId (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make bs
 
 newtype ValI m = ValI
     { unValI :: IRef m (V.Body (ValI m))
-    } deriving (Eq, Ord, Show, Binary)
+    } deriving (Eq, Ord, Show, Binary, NFData)
 
 type ValIProperty m = Property (T m) (ValI m)
 type ValBody m = V.Body (ValI m)
