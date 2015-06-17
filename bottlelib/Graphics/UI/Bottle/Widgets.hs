@@ -27,7 +27,9 @@ import qualified Data.Store.Property as Property
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.Rect (Rect(..))
 import           Graphics.UI.Bottle.View (View)
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -91,6 +93,7 @@ makeFocusableView ::
     Widget f -> WidgetEnvT m (Widget f)
 makeFocusableView myIdPrefix widget =
     widget
+    & Widget.focalArea .~ Rect 0 (widget ^. Widget.view . View.size)
     -- TODO: make it non-prefix-related?
     & Widget.takesFocus (const (pure myIdPrefix))
     & respondToCursorPrefix myIdPrefix
