@@ -221,7 +221,10 @@ makePanesEdit env loadedPanes myId =
                 BWidgets.makeFocusableTextView "New..." newDefinitionActionId
                     & WE.localEnv (WE.setTextColor newDefinitionActionColor)
                     <&> Widget.weakerEvents
-                            (newDefinitionEventMap [ModKey mempty GLFW.Key'Enter])
+                        (newDefinitionEventMap
+                        [ ModKey mempty GLFW.Key'Enter
+                        , ModKey mempty GLFW.Key'Space
+                        ])
         addSpacerAfter x = [x, Spacer.makeWidget 50]
         Config.Pane{..} = Config.pane $ config env
 
