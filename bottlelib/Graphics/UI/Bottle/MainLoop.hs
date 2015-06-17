@@ -16,6 +16,7 @@ import           Control.Monad (when, unless, forever)
 import qualified Control.Monad.STM as STM
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
+import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Monoid(..), (<>))
 import qualified Data.Monoid as Monoid
 import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
@@ -138,6 +139,7 @@ asDestFrame f AnimState {..} = f _asDestFrame <&> \_asDestFrame -> AnimState {..
 
 data ThreadSyncVar = ThreadSyncVar
     { _tsvHaveTicks :: Bool
+    , _tsvRefreshRequested :: Bool
     , _tsvWinSize :: Widget.Size
     , _tsvReversedEvents :: [KeyEvent]
     }
@@ -155,6 +157,9 @@ initialAnimState initialFrame =
 
 tsvHaveTicks :: Lens' ThreadSyncVar Bool
 tsvHaveTicks f ThreadSyncVar {..} = f _tsvHaveTicks <&> \_tsvHaveTicks -> ThreadSyncVar {..}
+
+tsvRefreshRequested :: Lens' ThreadSyncVar Bool
+tsvRefreshRequested f ThreadSyncVar {..} = f _tsvRefreshRequested <&> \_tsvRefreshRequested -> ThreadSyncVar {..}
 
 tsvWinSize :: Lens' ThreadSyncVar Widget.Size
 tsvWinSize f ThreadSyncVar {..} = f _tsvWinSize <&> \_tsvWinSize -> ThreadSyncVar {..}
@@ -184,6 +189,7 @@ mainLoopAnim win getAnimationConfig animHandlers =
         eventTVar <-
             STM.atomically $ newTVar ThreadSyncVar
             { _tsvHaveTicks = False
+            , _tsvRefreshRequested = False
             , _tsvWinSize = initialWinSize
             , _tsvReversedEvents = []
             }
@@ -195,10 +201,13 @@ waitForEvent :: TVar ThreadSyncVar -> IO ThreadSyncVar
 waitForEvent eventTVar =
     do
         tsv <- readTVar eventTVar
-        when (not (tsv ^. tsvHaveTicks) && null (tsv ^. tsvReversedEvents)) $
+        when (not (tsv ^. tsvHaveTicks) &&
+              not (tsv ^. tsvRefreshRequested) &&
+              null (tsv ^. tsvReversedEvents)) $
             STM.retry
         tsv
             & tsvHaveTicks .~ False
+            & tsvRefreshRequested .~ False
             & tsvReversedEvents .~ []
             & writeTVar eventTVar
         return tsv
@@ -217,9 +226,9 @@ eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers =
             if tsv ^. tsvHaveTicks
             then animTickHandler handlers
             else return Nothing
-        case mconcat (tickResult : eventResults) of
-            Nothing -> return ()
-            Just mapping ->
+        case (tsv ^. tsvRefreshRequested, mconcat (tickResult : eventResults)) of
+            (False, Nothing) -> return ()
+            (_, mMapping) ->
                 do
                     destFrame <- animMakeFrame handlers
                     AnimConfig timePeriod ratio <- getAnimationConfig
@@ -241,25 +250,23 @@ eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers =
                         -- amount of time no matter how long it took
                         -- to handle the event:
                         & asCurTime .~ addUTCTime (-1.0 / desiredFrameRate) curTime
-                        & asCurFrame %~ Anim.mapIdentities (Monoid.appEndo mapping)
+                        & asCurFrame %~ Anim.mapIdentities (Monoid.appEndo (fromMaybe mempty mMapping))
 
 mainLoopAnimThread ::
     IORef AnimState -> TVar ThreadSyncVar -> GLFW.Window -> IO ()
 mainLoopAnimThread frameStateVar eventTVar win =
     mainLoopImage win $ \size ->
         ImageHandlers
-        { imageEventHandler = \event ->
-              STM.atomically $ modifyTVar eventTVar $ tsvReversedEvents %~ (event :)
+        { imageEventHandler = \event -> updateTVar $ tsvReversedEvents %~ (event :)
         , imageRefresh =
             do
-                atomicModifyIORef_ frameStateVar $ asIsAnimating .~ Animating 0 -- TODO
+                updateTVar (tsvRefreshRequested .~ True)
                 updateFrameState size <&> _asCurFrame <&> Anim.draw
         , imageUpdate = updateFrameState size <&> frameStateResult
         }
     where
-        tick size =
-            STM.atomically $ modifyTVar eventTVar $
-            (tsvHaveTicks .~ True) . (tsvWinSize .~ size)
+        updateTVar = STM.atomically . modifyTVar eventTVar
+        tick size = updateTVar $ (tsvHaveTicks .~ True) . (tsvWinSize .~ size)
         updateFrameState size =
             do
                 tick size
