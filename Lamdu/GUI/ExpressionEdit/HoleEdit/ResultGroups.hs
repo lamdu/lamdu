@@ -247,15 +247,19 @@ makeAllGroups editableHoleInfo =
             | Lens.nullOf ExprLens.valHole suggestedVal
             ] ++
             [ Group
-                { _groupAttributes = GroupAttributes ["get field", "."] HighPrecedence
+                { _groupAttributes =
+                    GroupAttributes
+                    ["get field", ".", nName (tagG ^. Sugar.tagGName)]
+                    HighPrecedence
                 , _groupBaseExpr =
-                        Val () $ V.BGetField $ V.GetField P.hole tag
+                    tagG ^. Sugar.tagVal
+                    & V.GetField P.hole
+                    & V.BGetField
+                    & Val ()
                 }
-            | tag <-
-                    hiMArgument holeInfo
-                    ^.. Lens._Just
-                    . Sugar.haExpr . Sugar.rPayload . Sugar.plAnnotation . Sugar.aInferredType
-                    . ExprLens._TRecord . ExprLens.compositeTags
+            | tagG <-
+                hiMArgument holeInfo ^..
+                Lens._Just . Sugar.haTags . Lens.traversed
             ] ++
             [ Group
                 { _groupAttributes = GroupAttributes ["apply"] HighPrecedence
