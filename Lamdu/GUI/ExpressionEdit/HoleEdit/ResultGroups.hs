@@ -249,7 +249,7 @@ makeAllGroups editableHoleInfo =
             [ Group
                 { _groupAttributes =
                     GroupAttributes
-                    ["get field", ".", nName (tagG ^. Sugar.tagGName)]
+                    ["field", '.' : nName (tagG ^. Sugar.tagGName)]
                     HighPrecedence
                 , _groupBaseExpr =
                     tagG ^. Sugar.tagVal

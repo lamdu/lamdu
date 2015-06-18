@@ -87,7 +87,8 @@ disallowChars searchTerm =
         disallowMix
             | nonEmptyAll (`notElem` operatorChars) searchTerm =
                   E.filterChars (`notElem` operatorChars)
-            | nonEmptyAll (`elem` operatorChars) searchTerm =
+            | nonEmptyAll (`elem` operatorChars) searchTerm
+            && searchTerm /= "." =
                   E.filterChars (`notElem` alphaNumericChars)
             | otherwise = id
 
