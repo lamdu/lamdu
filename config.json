@@ -430,8 +430,8 @@
             ]
         ],
         "neighborsScaleFactor": {
-            "_first": 0.5,
-            "_second": 0.5
+            "_first": 0.65,
+            "_second": 0.65
         }
     },
     "previousCursorKeys": [
