@@ -170,7 +170,7 @@ data FuncParam varinfo name m = FuncParam
     , _fpAnnotation :: Annotation
     , _fpMActions :: Maybe (FuncParamActions m)
     , -- Sometimes the Lambda disappears in Sugar, the Param "swallows" its id
-        _fpHiddenIds :: [EntityId]
+      _fpHiddenIds :: [EntityId]
     }
 
 data TagG name = TagG
