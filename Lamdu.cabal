@@ -249,6 +249,7 @@ Executable lamdu
                      , Lamdu.Sugar.Convert.DefExpr
                      , Lamdu.Sugar.Convert.Expression
                      , Lamdu.Sugar.Convert.Expression.Actions
+                     , Lamdu.Sugar.Convert.GetField
                      , Lamdu.Sugar.Convert.GetVar
                      , Lamdu.Sugar.Convert.Hole
                      , Lamdu.Sugar.Convert.Input
