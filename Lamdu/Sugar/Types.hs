@@ -50,7 +50,7 @@ module Lamdu.Sugar.Types
     , AnnotatedArg(..), aaTag, aaExpr
     , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
     , FuncParam(..)
-        , fpName, fpId, fpVarInfo, fpAnnotation, fpMActions, fpHiddenIds
+        , fpName, fpId, fpAnnotation, fpMActions, fpHiddenIds
     , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap, haTags
     , Hole(..)
@@ -163,9 +163,8 @@ data FuncParamActions m = FuncParamActions
     , _fpDelete :: T m ParamDelResult
     }
 
-data FuncParam varinfo name m = FuncParam
+data FuncParam name m = FuncParam
     { _fpId :: EntityId
-    , _fpVarInfo :: varinfo
     , _fpName :: name
     , _fpAnnotation :: Annotation
     , _fpMActions :: Maybe (FuncParamActions m)
@@ -319,8 +318,8 @@ data Body name m expr
     | BodyGetVar (GetVar name m)
     deriving (Functor, Foldable, Traversable)
 
-instance (Show paraminfo, Show name) => Show (FuncParam paraminfo name m) where
-    show FuncParam{..} = "(FuncParam " ++ show _fpId ++ " " ++ show _fpVarInfo ++ " " ++ show _fpName ++
+instance Show name => Show (FuncParam name m) where
+    show FuncParam{..} = "(FuncParam " ++ show _fpId ++ " " ++ show _fpName ++
                                               " " ++ show _fpAnnotation ++ " )"
 
 
@@ -356,8 +355,8 @@ data BinderActions m = BinderActions
 
 data BinderParams name m
     = NoParams -- used in definitions and where items
-    | VarParam (FuncParam () name m)
-    | FieldParams [FuncParam T.Tag name m]
+    | VarParam (FuncParam name m)
+    | FieldParams [(T.Tag, FuncParam name m)]
 
 data Binder name m expr = Binder
     { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)

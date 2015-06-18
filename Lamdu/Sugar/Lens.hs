@@ -7,14 +7,15 @@ module Lamdu.Sugar.Lens
     , binderFuncParamDeletes
     ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens.Operators
-import Control.Monad (void)
-import Data.Store.Transaction (Transaction)
-import Lamdu.Expr.Scheme (Scheme)
-import Lamdu.Sugar.Types
-import qualified Lamdu.Data.Definition as Def
+import           Control.Applicative (Applicative(..), (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad (void)
+import           Data.Store.Transaction (Transaction)
+import qualified Lamdu.Data.Definition as Def
+import           Lamdu.Expr.Scheme (Scheme)
+import           Lamdu.Sugar.Types
 
 subExprPayloads ::
     Lens.IndexedTraversal
@@ -92,7 +93,7 @@ binderParamsActions _ NoParams = pure NoParams
 binderParamsActions f (VarParam p) =
     p & fpMActions . Lens._Just %%~ f <&> VarParam
 binderParamsActions f (FieldParams ps) =
-    ps & Lens.traversed . fpMActions . Lens._Just %%~ f <&> FieldParams
+    ps & Lens.traversed . _2 . fpMActions . Lens._Just %%~ f <&> FieldParams
 
 binderFuncParamAdds ::
     Lens.Traversal'

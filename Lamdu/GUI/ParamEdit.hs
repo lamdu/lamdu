@@ -102,7 +102,7 @@ make ::
     MonadA m =>
     ExpressionGui.AnnotationOptions ->
     ExprGuiT.ShowAnnotation -> Widget.Id -> Widget.Id ->
-    Sugar.FuncParam v (Name m) m ->
+    Sugar.FuncParam (Name m) m ->
     ExprGuiM m (ExpressionGui m)
 make annotationOpts showType prevId nextId param =
     assignCursor $

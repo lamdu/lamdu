@@ -503,7 +503,7 @@ withBinderParams (VarParam FuncParam{..}) =
     opWithParamName (isFunctionType (_fpAnnotation ^. aInferredType)) _fpName
     <&> VarParam . \_fpName -> FuncParam{..}
 withBinderParams (FieldParams xs) =
-    traverse f xs <&> FieldParams
+    (traverse . _2) f xs <&> FieldParams
     where
         f FuncParam{..} = opWithTagName _fpName <&> \_fpName -> FuncParam{..}
 

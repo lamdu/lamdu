@@ -387,7 +387,7 @@ makeResultEdit mActions params result = do
             Sugar.FieldParams ps ->
                 Widget.keysEventMapMovesCursor
                 (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to last param"]) $
-                WidgetIds.fromEntityId (last ps ^. Sugar.fpId) <$ savePos
+                WidgetIds.fromEntityId (last ps ^. _2 . Sugar.fpId) <$ savePos
         addWhereItemEventMap actions =
             Widget.keysEventMapMovesCursor (Config.whereAddItemKeys config)
             (E.Doc ["Edit", "Where clause", "Add first"]) .
@@ -418,7 +418,7 @@ makeParamsEdit annotationOpts showAnnotation nearestHoles lhsId params =
             case params of
             Sugar.NoParams -> []
             Sugar.VarParam p -> [p]
-            Sugar.FieldParams ps -> ps & Lens.traversed . Sugar.fpVarInfo .~ ()
+            Sugar.FieldParams ps -> ps ^.. Lens.traversed . _2
 
 diveToNameEdit :: Widget.Id -> Widget.Id
 diveToNameEdit = ExpressionGui.diveToNameEdit -- Name editor

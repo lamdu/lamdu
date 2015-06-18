@@ -243,22 +243,24 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
                 actions <-
                     mStoredLam
                     & Lens.traverse %%~ makeFieldParamActions mRecursiveVar param tags fp
-                pure FuncParam
-                    { _fpName = UniqueId.toGuid $ fpTag fp
-                    , _fpId = fpIdEntityId fp
-                    , _fpVarInfo = fpTag fp
-                    , _fpAnnotation =
-                        Annotation
-                        { _aInferredType = fpFieldType fp
-                        , _aMEvaluationResult =
-                            do
-                                fpValue fp & Map.null & not & guard
-                                fpValue fp ^.. Lens.traversed . Lens.traversed
-                                    & Map.fromList & Just
+                pure
+                    ( fpTag fp
+                    , FuncParam
+                        { _fpName = UniqueId.toGuid $ fpTag fp
+                        , _fpId = fpIdEntityId fp
+                        , _fpAnnotation =
+                            Annotation
+                            { _aInferredType = fpFieldType fp
+                            , _aMEvaluationResult =
+                                do
+                                    fpValue fp & Map.null & not & guard
+                                    fpValue fp ^.. Lens.traversed . Lens.traversed
+                                        & Map.fromList & Just
+                            }
+                        , _fpMActions = actions
+                        , _fpHiddenIds = []
                         }
-                    , _fpMActions = actions
-                    , _fpHiddenIds = []
-                    }
+                    )
 
 setParamList :: MonadA m => MkProperty m (Maybe [T.Tag]) -> [T.Tag] -> T m ()
 setParamList paramListProp newParamList =
@@ -412,7 +414,6 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
         let funcParam =
                 FuncParam
                 { _fpName = UniqueId.toGuid param
-                , _fpVarInfo = ()
                 , _fpId = paramEntityId
                 , _fpAnnotation =
                     Annotation
@@ -540,7 +541,7 @@ convertParams mRecursiveVar expr =
                 -- The lambda disappears here, so add its id to the first
                 -- param's hidden ids:
                 <&> cpParams . _VarParam . fpHiddenIds <>~ hiddenIds
-                <&> cpParams . _FieldParams . Lens.ix 0 . fpHiddenIds <>~ hiddenIds
+                <&> cpParams . _FieldParams . Lens.ix 0 . _2 . fpHiddenIds <>~ hiddenIds
             return (params, lambda ^. V.lamResult)
         where
               hiddenIds = [expr ^. V.payload . Input.entityId]

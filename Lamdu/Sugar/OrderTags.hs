@@ -3,20 +3,21 @@ module Lamdu.Sugar.OrderTags
     , orderedFlatComposite
     ) where
 
-import Control.Lens.Operators
-import Control.Monad ((>=>))
-import Control.MonadA (MonadA)
-import Data.List.Utils (sortOn)
-import Data.Store.Transaction (Transaction)
-import Lamdu.Data.Anchors (assocTagOrder)
-import Lamdu.Expr.FlatComposite (FlatComposite(..))
-import Lamdu.Expr.Type (Type)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad ((>=>))
+import           Control.MonadA (MonadA)
+import           Data.List.Utils (sortOn)
 import qualified Data.Map as Map
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Lamdu.Data.Anchors (assocTagOrder)
+import           Lamdu.Expr.FlatComposite (FlatComposite(..))
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Scheme as S
+import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
@@ -82,11 +83,11 @@ orderExpr e =
     >>= Sugar.rBody %%~ orderBody
     >>= Sugar.rBody . Lens.traversed %%~ orderExpr
 
-orderParams :: MonadA m => Order m [Sugar.FuncParam T.Tag name m]
+orderParams :: MonadA m => Order m [(T.Tag, Sugar.FuncParam name m)]
 orderParams xs =
     xs
-    & Lens.traversed . Sugar.fpAnnotation . Sugar.aInferredType %%~ orderType
-    >>= orderByTag (^. Sugar.fpVarInfo)
+    & Lens.traversed . _2 . Sugar.fpAnnotation . Sugar.aInferredType %%~ orderType
+    >>= orderByTag (^. _1)
 
 orderBinder ::
     MonadA m => Order m (Sugar.Binder name m a)
