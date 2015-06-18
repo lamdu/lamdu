@@ -397,8 +397,10 @@ toHoleArg ::
 toHoleArg arg@HoleArg{..} =
     do
         expr <- toExpression _haExpr
+        tags <- mapM toTagG _haTags
         pure arg
             { _haExpr = expr
+            , _haTags = tags
             }
 
 toHole ::

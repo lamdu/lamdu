@@ -154,20 +154,21 @@ convertAppliedHole funcI argS argI exprPl =
         let argWrap =
                 exprPl ^. Input.mStored
                 & maybe WrapNotAllowed (WrappedAlready . addEntityId)
-            holeArg = HoleArg
+        let mUnwrap =
+                do
+                    stored <- exprPl ^. Input.mStored
+                    argP <- argI ^. V.payload . Input.mStored
+                    return $ unwrap stored argP argI
+        let holeArg = HoleArg
                 { _haExpr =
                       argS
                       & rPayload . plActions . Lens._Just . wrap .~ argWrap
+                , _haTags = tags
                 , _haUnwrap =
                       if isTypeMatch
                       then UnwrapMAction mUnwrap
                       else UnwrapTypeMismatch
                 }
-            mUnwrap =
-                do
-                    stored <- exprPl ^. Input.mStored
-                    argP <- argI ^. V.payload . Input.mStored
-                    return $ unwrap stored argP argI
         lift $ ConvertHole.convertPlain (Just argI) exprPl
             <&> rBody . _BodyHole . holeMArg .~ Just holeArg
             <&> rPayload . plData <>~ funcI ^. V.payload . Input.userData
@@ -176,3 +177,14 @@ convertAppliedHole funcI argS argI exprPl =
     where
         addEntityId = guidEntityId . Property.value
         guidEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
+        tags =
+            argS
+            ^.. rPayload . plAnnotation . aInferredType
+            . ExprLens._TRecord . ExprLens.compositeTags
+            <&> holeArgTag (exprPl ^. Input.entityId)
+        holeArgTag entityId tag =
+            TagG
+            { _tagInstance = EntityId.ofGetFieldTag entityId
+            , _tagVal = tag
+            , _tagGName = UniqueId.toGuid tag
+            }
