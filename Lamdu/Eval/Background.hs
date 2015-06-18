@@ -103,17 +103,17 @@ setJust _ (Just _) = error "Conflicting values in setJust"
 
 processEvent :: Ord pl => Eval.Event pl -> State pl -> State pl
 processEvent (Eval.ELambdaApplied Eval.EventLambdaApplied{..}) state =
-    state & sAppliesOfLam . Lens.at elaLam %~ addApply
+    state & sAppliesOfLam %~ Map.alter addApply elaLam
     where
         apply = Map.singleton elaParentId [(elaId, elaArgument)]
         addApply Nothing = Just apply
         addApply (Just x) = Just $ Map.unionWith (++) x apply
 processEvent (Eval.EResultComputed Eval.EventResultComputed{..}) state =
     state
-    & sValHeadMap . Lens.at ercSource <>~ Just (Map.singleton ercScope ercResult)
+    & sValHeadMap %~ Map.alter (<> Just (Map.singleton ercScope ercResult)) ercSource
     & case ercMThunkId of
         Nothing -> id
-        Just thunkId -> sThunkMap . Lens.at thunkId %~ setJust ercResult
+        Just thunkId -> sThunkMap %~ Map.alter (setJust ercResult) thunkId
 
 getDependencies :: Ord pl => V.GlobalId -> Maybe (Def.Body (Val pl)) -> (Set pl, Set V.GlobalId)
 getDependencies globalId defBody =
