@@ -237,6 +237,7 @@ makeScopeNavEdit myId setter cursor
     where
         leftKeys = [ModKey mempty GLFW.Key'Left]
         rightKeys = [ModKey mempty GLFW.Key'Right]
+        scopes :: [(String, ScopeId)]
         scopes =
             (sMPrevParamScope cursor ^.. Lens._Just <&> (,) "◀") ++
             (sMNextParamScope cursor ^.. Lens._Just <&> (,) "▶")
