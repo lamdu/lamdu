@@ -40,6 +40,7 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..))
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -225,7 +226,7 @@ makeScopeNavEdit myId setter cursor
     | null scopes = return Nothing
     | otherwise =
         scopes
-        <&> (^. _1)
+        <&> fst
         & mapM (`ExpressionGui.grammarLabel` Widget.toAnimId myId)
         >>= ExpressionGui.hboxSpaced
         >>= ExpressionGui.makeFocusableView myId
@@ -264,38 +265,46 @@ makeParts showAnnotation binder myId =
             guard (settings ^. CESettings.sInfoMode == CESettings.Evaluation) >>
             makeScopeNavEdit scopesNavId <$> mSetScope <*> mScopeCursor
             & Lens.sequenceOf Lens._Just <&> join
-        let annotationMode =
-                do
-                    mScopeNavEdit ^?
-                        Lens._Just . ExpressionGui.egWidget . Widget.isFocused
-                        >>= guard
-                    ExpressionGui.WithNeighbouringAnnotations
-                        <$> (mScopeCursor <&> sMPrevParamScope)
-                        <*> (mScopeCursor <&> sMNextParamScope)
-                & fromMaybe ExpressionGui.NormalAnnotation
-        paramEdits <-
-            makeParamsEdit annotationMode showAnnotation
-            (ExprGuiT.nextHolesBefore body) myId params
-            & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
-        bodyEdit <-
-            makeResultEdit (binder ^. Sugar.bMActions) params body
-            & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sBodyScope)
-        wheresEdit <-
-            makeWheres (binder ^. Sugar.bWhereItems) myId
-            & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
-        config <- ExprGuiM.readConfig <&> Config.eval
-        let scopeEventMap =
-                makeScopeEventMap
-                (Config.prevScopeKeys config) (Config.nextScopeKeys config)
-                <$> mSetScope
-                <*> mScopeCursor
-                & fromMaybe mempty
-        Parts (paramEdits ++ (mScopeNavEdit ^.. Lens.traversed))
-            bodyEdit wheresEdit scopeEventMap
-            & return
+        maybe takeNavCursor (const id) mScopeNavEdit $
+            do
+                let annotationMode =
+                        do
+                            mScopeNavEdit ^?
+                                Lens._Just . ExpressionGui.egWidget . Widget.isFocused
+                                >>= guard
+                            ExpressionGui.WithNeighbouringAnnotations
+                                <$> (mScopeCursor <&> sMPrevParamScope)
+                                <*> (mScopeCursor <&> sMNextParamScope)
+                        & fromMaybe ExpressionGui.NormalAnnotation
+                paramEdits <-
+                    makeParamsEdit annotationMode showAnnotation
+                    (ExprGuiT.nextHolesBefore body) myId params
+                    & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
+                bodyEdit <-
+                    makeResultEdit (binder ^. Sugar.bMActions) params body
+                    & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sBodyScope)
+                wheresEdit <-
+                    makeWheres (binder ^. Sugar.bWhereItems) myId
+                    & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
+                config <- ExprGuiM.readConfig <&> Config.eval
+                let scopeEventMap =
+                        makeScopeEventMap
+                        (Config.prevScopeKeys config) (Config.nextScopeKeys config)
+                        <$> mSetScope
+                        <*> mScopeCursor
+                        & fromMaybe mempty
+                Parts (paramEdits ++ (mScopeNavEdit ^.. Lens.traversed))
+                    bodyEdit wheresEdit scopeEventMap
+                    & return
     where
+        takeNavCursor = ExprGuiM.assignCursorPrefix scopesNavId (const destId)
+        destId =
+            params ^? SugarLens.binderParams . Sugar.fpId
+            & fromMaybe bodyId
+            & WidgetIds.fromEntityId
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody
+        bodyId = body ^. Sugar.rPayload . Sugar.plEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
 
 make ::
