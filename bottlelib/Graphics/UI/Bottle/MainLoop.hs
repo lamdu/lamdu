@@ -7,12 +7,12 @@ module Graphics.UI.Bottle.MainLoop
     ) where
 
 import           Control.Applicative ((<$>))
-import           Control.Concurrent (forkIO, threadDelay, killThread, myThreadId)
+import           Control.Concurrent (ThreadId, forkIO, threadDelay, killThread, myThreadId)
 import           Control.Concurrent.STM.TVar
 import           Control.Exception (bracket, onException)
 import           Control.Lens (Lens')
 import           Control.Lens.Operators
-import           Control.Monad (when, unless, forever)
+import           Control.Monad (void, when, unless, forever)
 import qualified Control.Monad.STM as STM
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
@@ -109,8 +109,11 @@ data IsAnimating
     | NotAnimating
     deriving Eq
 
+asyncKillThread :: ThreadId -> IO ()
+asyncKillThread = void . forkIO . killThread
+
 withForkedIO :: IO () -> IO a -> IO a
-withForkedIO action = bracket (forkIO action) killThread . const
+withForkedIO action = bracket (forkIO action) asyncKillThread . const
 
 -- Animation thread will have not only the cur frame, but the dest
 -- frame in its mutable current state (to update it asynchronously)
@@ -174,7 +177,7 @@ killSelfOnError :: IO a -> IO (IO a)
 killSelfOnError action =
     do
         selfId <- myThreadId
-        return $ action `onException` killThread selfId
+        return $ action `onException` asyncKillThread selfId
 
 desiredFrameRate :: Num a => a
 desiredFrameRate = 60
