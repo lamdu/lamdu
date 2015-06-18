@@ -4,6 +4,7 @@ module Main
     ) where
 
 import           Control.Applicative (Applicative(..), (<*))
+import qualified Control.Exception as E
 import           Control.Lens.Operators
 import           Control.Monad (join, unless, replicateM_)
 import           Data.IORef
@@ -42,6 +43,7 @@ import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import qualified System.Directory as Directory
+import           System.IO (hPutStrLn, stderr)
 
 main :: IO ()
 main =
@@ -55,6 +57,9 @@ main =
                 | _poShouldDeleteDB -> deleteDB lamduDir
                 | _poUndoCount > 0  -> withDB $ undoN _poUndoCount
                 | otherwise         -> withDB $ runEditor _poMFontPath
+    `E.catch` \e@E.SomeException{} -> do
+    hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
+    return ()
 
 deleteDB :: FilePath -> IO ()
 deleteDB lamduDir =
