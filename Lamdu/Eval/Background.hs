@@ -101,6 +101,13 @@ setJust :: a -> Maybe a -> Maybe a
 setJust x Nothing = Just x
 setJust _ (Just _) = error "Conflicting values in setJust"
 
+-- VERY WEIRDLY, this forceMapKeysList prevents an apparent GC leak
+-- from the eval thread to the event thread which pulls the eval
+-- results.  I have no idea why it helps, but I couldn't find any
+-- other solution that is better than this.
+forceMapKeysList :: Map k a -> Map k a
+forceMapKeysList m = length (Map.keys m) `seq` m
+
 processEvent :: Ord pl => Eval.Event pl -> State pl -> State pl
 processEvent (Eval.ELambdaApplied Eval.EventLambdaApplied{..}) state =
     state & sAppliesOfLam %~ Map.alter addApply elaLam
@@ -110,10 +117,14 @@ processEvent (Eval.ELambdaApplied Eval.EventLambdaApplied{..}) state =
         addApply (Just x) = Just $ Map.unionWith (++) x apply
 processEvent (Eval.EResultComputed Eval.EventResultComputed{..}) state =
     state
-    & sValHeadMap %~ Map.alter (<> Just (Map.singleton ercScope ercResult)) ercSource
+    & sValHeadMap %~ Map.alter addResult ercSource
     & case ercMThunkId of
         Nothing -> id
         Just thunkId -> sThunkMap %~ Map.alter (setJust ercResult) thunkId
+    where
+        addResult old =
+            old <> Just (Map.singleton ercScope ercResult)
+            <&> forceMapKeysList
 
 getDependencies :: Ord pl => V.GlobalId -> Maybe (Def.Body (Val pl)) -> (Set pl, Set V.GlobalId)
 getDependencies globalId defBody =
