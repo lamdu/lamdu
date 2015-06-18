@@ -3,6 +3,8 @@ module Lamdu.Sugar.Lens
     ( subExprPayloads, payloadsIndexedByPath
     , holePayloads, holeArgs
     , defSchemes
+    , binderParams
+    , binderParamsActions
     , binderFuncParamAdds
     , binderFuncParamDeletes
     ) where
@@ -87,13 +89,23 @@ defBodySchemes f (DefinitionBodyExpression de) =
 defSchemes :: Lens.Traversal' (Definition name m expr) Scheme
 defSchemes = drBody . defBodySchemes
 
+binderParams ::
+    Lens.Traversal
+    (BinderParams a m)
+    (BinderParams b n)
+    (FuncParam a m)
+    (FuncParam b n)
+binderParams _ NoParams = pure NoParams
+binderParams f (VarParam p) = VarParam <$> f p
+binderParams f (FieldParams ps) = FieldParams <$> (Lens.traverse . _2) f ps
+
 binderParamsActions ::
-    Lens.Traversal' (BinderParams name m) (FuncParamActions m)
-binderParamsActions _ NoParams = pure NoParams
-binderParamsActions f (VarParam p) =
-    p & fpMActions . Lens._Just %%~ f <&> VarParam
-binderParamsActions f (FieldParams ps) =
-    ps & Lens.traversed . _2 . fpMActions . Lens._Just %%~ f <&> FieldParams
+    Lens.Traversal
+    (BinderParams name m)
+    (BinderParams name n)
+    (FuncParamActions m)
+    (FuncParamActions n)
+binderParamsActions = binderParams . fpMActions . Lens._Just
 
 binderFuncParamAdds ::
     Lens.Traversal'
