@@ -57,6 +57,7 @@ data Evaluator pl = Evaluator
 data Status
     = Running
     | Stoppped
+    | Error
     | Finished
 
 data State pl = State
@@ -149,10 +150,10 @@ evalThread actions stateRef src =
             & runEitherT
             & (`evalStateT` Eval.initialState (evalActions actions stateRef))
         case result of
-            Left e -> handleError e (error e)
+            Left e -> handleError e Error
             Right _ -> return ()
         writeStatus stateRef Finished
-    `E.catch` \e@E.SomeException{..} -> handleError e (E.throw e)
+    `E.catch` \e@E.SomeException{..} -> handleError e Error
     where
         handleError e t =
             do
