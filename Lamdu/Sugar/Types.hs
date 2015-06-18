@@ -215,7 +215,7 @@ data Unwrap m
     = UnwrapMAction (Maybe (T m EntityId))
     | UnwrapTypeMismatch
 
-data HoleArg m expr = HoleArg
+data HoleArg name m expr = HoleArg
     { _haExpr :: expr
     , _haUnwrap :: Unwrap m
     } deriving (Functor, Foldable, Traversable)
@@ -223,7 +223,7 @@ data HoleArg m expr = HoleArg
 data Hole name m expr = Hole
     { _holeMActions :: Maybe (HoleActions name m)
     , _holeSuggested :: Val ()
-    , _holeMArg :: Maybe (HoleArg m expr)
+    , _holeMArg :: Maybe (HoleArg name m expr)
     } deriving (Functor, Foldable, Traversable)
 
 data ListItem m expr = ListItem

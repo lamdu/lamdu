@@ -390,6 +390,17 @@ toHoleActions ha@HoleActions {..} =
                     (>>= holeResultConverted (run . toExpression))
             }
 
+toHoleArg ::
+    MonadNaming m =>
+    HoleArg (OldName m) (TM m) (OldExpression m a) ->
+    m (HoleArg (NewName m) (TM m) (NewExpression m a))
+toHoleArg arg@HoleArg{..} =
+    do
+        expr <- toExpression _haExpr
+        pure arg
+            { _haExpr = expr
+            }
+
 toHole ::
     MonadNaming m =>
     Hole (OldName m) (TM m) (OldExpression m a) ->
@@ -397,7 +408,7 @@ toHole ::
 toHole hole@Hole {..} =
     do
         mActions <- _holeMActions & Lens._Just %%~ toHoleActions
-        mArg <- _holeMArg & Lens._Just . Lens.traversed %%~ toExpression
+        mArg <- _holeMArg & Lens._Just %%~ toHoleArg
         pure hole
             { _holeMActions = mActions
             , _holeMArg = mArg

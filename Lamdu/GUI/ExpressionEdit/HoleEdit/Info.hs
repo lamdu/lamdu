@@ -24,7 +24,7 @@ data HoleInfo m = HoleInfo
     , hiInferredType :: Type
     , hiIds :: WidgetIds
     , hiSuggested :: Val ()
-    , hiMArgument :: Maybe (Sugar.HoleArg m (ExprGuiT.SugarExpr m))
+    , hiMArgument :: Maybe (Sugar.HoleArg (Name m) m (ExprGuiT.SugarExpr m))
     , hiNearestHoles :: NearestHoles
     }
 
