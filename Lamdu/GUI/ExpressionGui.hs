@@ -193,15 +193,17 @@ makeEvalView ::
 makeEvalView entityId (mPrev, mNext) evalRes minWidth =
     makeWithAnnotationBG minWidth entityId $
     \animId ->
-    neighbourViews animId mPrev ++ makeEvaluationResultView evalRes animId :
-    neighbourViews animId mNext
-    & sequence
-    <&> GridView.horizontalAlign 0.5
-    where
-        neighbourViews animId n =
-            n ^.. Lens._Just
-            <&> (`makeEvaluationResultView` animId)
-            <&> Lens.mapped %~ View.scale 0.5
+        do
+            Config.Eval{..} <- ExprGuiM.readConfig <&> Config.eval
+            let neighbourViews n =
+                    n ^.. Lens._Just
+                    <&> (`makeEvaluationResultView` animId)
+                    <&> Lens.mapped %~ View.scale (neighborsScaleFactor <&> realToFrac)
+            neighbourViews mPrev
+                ++ makeEvaluationResultView evalRes animId
+                : neighbourViews mNext
+                & sequence
+                <&> GridView.horizontalAlign 0.5
 
 annotationSpacer :: MonadA m => ExprGuiM m (Widget f)
 annotationSpacer =
