@@ -272,9 +272,10 @@ createBuiltins =
         traverse_
             ((`publicBuiltin_` Scheme.mono (infixType integer integer integer)) .
               ("Prelude." ++))
-            ["+", "-", "*", "/", "^", "div"]
+            ["+", "-", "*", "/", "^"]
         publicBuiltin_ "Prelude.++" $ forAll 1 $ \[a] -> infixType (list a) (list a) (list a)
         publicDef_ "%" Infix ["Prelude"] "mod" $ Scheme.mono $ infixType integer integer integer
+        publicDef_ "//" Infix ["Prelude"] "div" $ Scheme.mono $ infixType integer integer integer
         publicBuiltin_ "Prelude.negate" $ Scheme.mono $ integer ~> integer
         publicBuiltin_ "Prelude.sqrt" $ Scheme.mono $ integer ~> integer
 

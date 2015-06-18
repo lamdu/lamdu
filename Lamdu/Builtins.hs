@@ -121,6 +121,7 @@ eval name =
     Def.FFIName ["Prelude"] "*"      -> builtin2Infix $ intArg (*)
     Def.FFIName ["Prelude"] "+"      -> builtin2Infix $ intArg (+)
     Def.FFIName ["Prelude"] "-"      -> builtin2Infix $ intArg (-)
+    Def.FFIName ["Prelude"] "div"    -> builtin2Infix $ intArg div
     Def.FFIName ["Prelude"] "mod"    -> builtin2Infix $ intArg mod
     Def.FFIName ["Prelude"] "negate" -> builtin1      $ intArg negate
     _ -> error $ show name ++ " not yet supported"
