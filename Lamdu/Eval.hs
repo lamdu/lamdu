@@ -15,10 +15,10 @@ import           Control.Lens.Operators
 import           Control.Monad (void)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Either (EitherT(..), left)
-import           Control.Monad.Trans.State (StateT(..))
+import           Control.Monad.Trans.State.Strict (StateT(..))
 import           Data.Foldable (Foldable)
 import           Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Traversable (Traversable)
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Eval.Val (ValHead, ValBody(..), Closure(..), Scope(..), emptyScope)
@@ -33,22 +33,22 @@ data ThunkState pl
     deriving (Show, Functor, Foldable, Traversable)
 
 data ScopedVal pl = ScopedVal
-    { _srcScope :: Scope
-    , _srcExpr :: Val pl
+    { _srcScope :: !Scope
+    , _srcExpr :: !(Val pl)
     } deriving (Show, Functor, Foldable, Traversable)
 
 data EventLambdaApplied pl = EventLambdaApplied
     { elaLam :: pl
-    , elaParentId :: ScopeId
-    , elaId :: ScopeId
-    , elaArgument :: ThunkId
+    , elaParentId :: !ScopeId
+    , elaId :: !ScopeId
+    , elaArgument :: !ThunkId
     } deriving (Show, Functor, Foldable, Traversable)
 
 data EventResultComputed pl = EventResultComputed
-    { ercMThunkId :: Maybe ThunkId
+    { ercMThunkId :: !(Maybe ThunkId)
     , ercSource :: pl
-    , ercScope :: ScopeId
-    , ercResult :: ValHead pl
+    , ercScope :: !ScopeId
+    , ercResult :: !(ValHead pl)
     } deriving (Show, Functor, Foldable, Traversable)
 
 data Event pl
@@ -63,11 +63,11 @@ data EvalActions m pl = EvalActions
     }
 
 data EvalState m pl = EvalState
-    { _esThunks :: Map ThunkId (ThunkState pl)
-    , _esThunkCounter :: ThunkId
-    , _esScopeCounter :: ScopeId
-    , _esLoadedGlobals :: Map V.GlobalId (ValHead pl)
-    , _esReader :: EvalActions m pl -- This is ReaderT
+    { _esThunks :: !(Map ThunkId (ThunkState pl))
+    , _esThunkCounter :: !ThunkId
+    , _esScopeCounter :: !ScopeId
+    , _esLoadedGlobals :: !(Map V.GlobalId (ValHead pl))
+    , _esReader :: !(EvalActions m pl) -- This is ReaderT
     }
 
 newtype EvalT pl m a = EvalT

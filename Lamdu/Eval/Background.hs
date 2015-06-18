@@ -16,12 +16,12 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad ((>=>), void)
 import           Control.Monad.Trans.Either (runEitherT)
-import           Control.Monad.Trans.State (evalStateT)
+import           Control.Monad.Trans.State.Strict (evalStateT)
 import qualified Data.ByteString.Char8 as BS8
 import           Data.Foldable (foldMap)
 import           Data.IORef
-import           Data.Map (Map)
-import qualified Data.Map as Map
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import           Data.Monoid ((<>))
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -61,12 +61,12 @@ data Status
     | Finished
 
 data State pl = State
-    { _sStatus :: Status
-    , _sAppliesOfLam :: Map pl (Map ScopeId [(ScopeId, ThunkId)])
+    { _sStatus :: !Status
+    , _sAppliesOfLam :: !(Map pl (Map ScopeId [(ScopeId, ThunkId)]))
       -- Maps of already-evaluated pl's/thunks
-    , _sValHeadMap :: Map pl (Map ScopeId (ValHead pl))
-    , _sThunkMap :: Map ThunkId (ValHead pl)
-    , _sDependencies :: (Set pl, Set V.GlobalId)
+    , _sValHeadMap :: !(Map pl (Map ScopeId (ValHead pl)))
+    , _sThunkMap :: !(Map ThunkId (ValHead pl))
+    , _sDependencies :: !(Set pl, Set V.GlobalId)
     }
 
 sAppliesOfLam :: Lens' (State pl) (Map pl (Map ScopeId [(ScopeId, ThunkId)]))
