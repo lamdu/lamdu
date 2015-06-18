@@ -2,12 +2,15 @@ module Lamdu.Sugar.Convert.GetField
     ( convert
     ) where
 
+import           Control.Applicative (Applicative(..), (<$>))
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (guard)
 import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import           Data.Monoid (Monoid(..))
 import           Data.Store.Guid (Guid)
+import qualified Data.Store.Property as Property
 import           Data.Traversable (traverse)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -41,20 +44,31 @@ convertGetFieldParam (V.GetField recExpr tag) =
 
 convertGetFieldNonParam ::
     (MonadA m, Monoid a) =>
-    V.GetField (Val (Input.Payload m a)) -> EntityId ->
+    V.GetField (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (Body Guid m (ExpressionU m a))
-convertGetFieldNonParam (V.GetField recExpr tag) entityId =
-    GetField
-    { _gfRecord = recExpr
-    , _gfTag =
-            TagG
-            { _tagInstance = EntityId.ofGetFieldTag entityId
-            , _tagVal = tag
-            , _tagGName = UniqueId.toGuid tag
+convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
+    do
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
+        GetField
+            { _gfRecord = recExpr
+            , _gfTag =
+                TagG
+                { _tagInstance = EntityId.ofGetFieldTag entityId
+                , _tagVal = tag
+                , _tagGName = UniqueId.toGuid tag
+                }
+            , _gfMDeleteField =
+                protectedSetToVal
+                <$> exprPl ^. Input.mStored
+                <*> ( recExpr ^. V.payload . Input.mStored
+                    <&> Property.value
+                    )
+                <&> Lens.mapped %~ EntityId.ofValI
             }
-    }
-    & traverse ConvertM.convertSubexpression
+            & traverse ConvertM.convertSubexpression
     <&> BodyGetField
+    where
+        entityId = exprPl ^. Input.entityId
 
 convert ::
     (MonadA m, Monoid a) =>
@@ -63,7 +77,5 @@ convert ::
     ConvertM m (ExpressionU m a)
 convert getField exprPl =
     convertGetFieldParam getField
-    >>= maybe (convertGetFieldNonParam getField entityId) (return . BodyGetVar)
+    >>= maybe (convertGetFieldNonParam getField exprPl) (return . BodyGetVar)
     >>= addActions exprPl
-    where
-        entityId = exprPl ^. Input.entityId

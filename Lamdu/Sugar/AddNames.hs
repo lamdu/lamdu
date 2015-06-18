@@ -360,8 +360,8 @@ toRecord record@Record {..} =
 
 toGetField ::
     MonadNaming m =>
-    GetField (OldName m) (OldExpression m a) ->
-    m (GetField (NewName m) (NewExpression m a))
+    GetField (OldName m) (TM m) (OldExpression m a) ->
+    m (GetField (NewName m) (TM m) (NewExpression m a))
 toGetField getField@GetField {..} =
     do
         record <- toExpression _gfRecord
