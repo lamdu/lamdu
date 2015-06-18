@@ -7,7 +7,7 @@ module Graphics.UI.Bottle.MainLoop
     ) where
 
 import           Control.Applicative ((<$>))
-import           Control.Concurrent (ThreadId, forkIO, threadDelay, killThread, myThreadId)
+import           Control.Concurrent (ThreadId, forkIO, forkIOWithUnmask, threadDelay, killThread, myThreadId)
 import           Control.Concurrent.STM.TVar
 import           Control.Exception (bracket, onException)
 import           Control.Lens (Lens')
@@ -113,7 +113,8 @@ asyncKillThread :: ThreadId -> IO ()
 asyncKillThread = void . forkIO . killThread
 
 withForkedIO :: IO () -> IO a -> IO a
-withForkedIO action = bracket (forkIO action) asyncKillThread . const
+withForkedIO action =
+    bracket (forkIOWithUnmask (\unmask -> unmask action)) asyncKillThread . const
 
 -- Animation thread will have not only the cur frame, but the dest
 -- frame in its mutable current state (to update it asynchronously)
