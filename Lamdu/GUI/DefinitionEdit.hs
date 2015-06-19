@@ -146,7 +146,7 @@ makeExprDefinition def bodyExpr =
                 sequence $
                 case oldScheme of
                 Definition.NoExportedType ->
-                    [ acceptableTypeIndicator width accept (Config.acceptDefinitionTypeForFirstTimeColor config) myId
+                    [ acceptableTypeIndicator width accept (Config.typeIndicatorFirstTimeColor config) myId
                     ]
                 Definition.ExportedType scheme ->
                     [ acceptableTypeIndicator width accept (Config.typeIndicatorErrorColor config) myId

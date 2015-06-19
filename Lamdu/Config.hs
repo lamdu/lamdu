@@ -151,11 +151,11 @@ data Config = Config
     , literalIntColor :: Draw.Color
     , typeIndicatorErrorColor :: Draw.Color
     , typeIndicatorMatchColor :: Draw.Color
+    , typeIndicatorFirstTimeColor :: Draw.Color
     , typeIndicatorFrameWidth :: Vector2 Double
     , foreignModuleColor :: Draw.Color
     , foreignVarColor :: Draw.Color
 
-    , acceptDefinitionTypeForFirstTimeColor :: Draw.Color
     , acceptDefinitionTypeKeys :: [ModKey]
 
     , whereAddItemKeys :: [ModKey]
