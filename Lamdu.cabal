@@ -16,102 +16,102 @@ Library
   hs-Source-Dirs:      bottlelib
                      , submodules/AlgoW
 
-  Exposed-modules:     Control.Concurrent.Utils,
-                       Control.Monad.Trans.Decycle,
-                       Data.Function.Decycle,
-                       Data.List.Assoc,
-                       Data.List.Utils,
-                       Data.Map.Utils,
-                       Data.Hashable.Generic,
-                       Data.Maybe.Utils,
-                       Data.Monoid.Applicative,
-                       Data.Monoid.Generic,
-                       Data.Monoid.Instances,
-                       Data.MRUMemo,
-                       Data.Set.Ordered,
-                       Data.Vector.Vector2,
-                       Numeric.Utils,
-                       Foreign.C.Types.Instances,
-                       Graphics.DrawingCombinators.Utils,
-                       Graphics.UI.Bottle.Animation,
-                       Graphics.UI.Bottle.Animation.Id,
-                       Graphics.UI.Bottle.Direction,
-                       Graphics.UI.Bottle.EventMap,
-                       Graphics.UI.Bottle.MainLoop,
-                       Graphics.UI.Bottle.ModKey,
-                       Graphics.UI.Bottle.Rect,
-                       Graphics.UI.Bottle.View,
-                       Graphics.UI.Bottle.Widget,
-                       Graphics.UI.Bottle.WidgetId,
-                       Graphics.UI.Bottle.Widgets,
-                       Graphics.UI.Bottle.WidgetsEnvT,
-                       Graphics.UI.Bottle.Widgets.Box,
-                       Graphics.UI.Bottle.Widgets.Choice,
-                       Graphics.UI.Bottle.Widgets.EventMapDoc,
-                       Graphics.UI.Bottle.Widgets.FlyNav,
-                       Graphics.UI.Bottle.Widgets.FocusDelegator,
-                       Graphics.UI.Bottle.Widgets.Grid,
-                       Graphics.UI.Bottle.Widgets.GridView,
-                       Graphics.UI.Bottle.Widgets.Layout,
-                       Graphics.UI.Bottle.Widgets.Spacer,
-                       Graphics.UI.Bottle.Widgets.StdKeys,
-                       Graphics.UI.Bottle.Widgets.TextEdit,
-                       Graphics.UI.Bottle.Widgets.TextView,
-                       Graphics.UI.Bottle.SizedFont,
-                       Graphics.UI.GLFW.Events,
-                       Graphics.UI.GLFW.Instances,
-                       Graphics.UI.GLFW.Utils,
+  Exposed-modules:     Control.Concurrent.Utils
+                     , Control.Monad.Trans.Decycle
+                     , Data.Function.Decycle
+                     , Data.List.Assoc
+                     , Data.List.Utils
+                     , Data.Map.Utils
+                     , Data.Hashable.Generic
+                     , Data.Maybe.Utils
+                     , Data.Monoid.Applicative
+                     , Data.Monoid.Generic
+                     , Data.Monoid.Instances
+                     , Data.MRUMemo
+                     , Data.Set.Ordered
+                     , Data.Vector.Vector2
+                     , Numeric.Utils
+                     , Foreign.C.Types.Instances
+                     , Graphics.DrawingCombinators.Utils
+                     , Graphics.UI.Bottle.Animation
+                     , Graphics.UI.Bottle.Animation.Id
+                     , Graphics.UI.Bottle.Direction
+                     , Graphics.UI.Bottle.EventMap
+                     , Graphics.UI.Bottle.MainLoop
+                     , Graphics.UI.Bottle.ModKey
+                     , Graphics.UI.Bottle.Rect
+                     , Graphics.UI.Bottle.View
+                     , Graphics.UI.Bottle.Widget
+                     , Graphics.UI.Bottle.WidgetId
+                     , Graphics.UI.Bottle.Widgets
+                     , Graphics.UI.Bottle.WidgetsEnvT
+                     , Graphics.UI.Bottle.Widgets.Box
+                     , Graphics.UI.Bottle.Widgets.Choice
+                     , Graphics.UI.Bottle.Widgets.EventMapDoc
+                     , Graphics.UI.Bottle.Widgets.FlyNav
+                     , Graphics.UI.Bottle.Widgets.FocusDelegator
+                     , Graphics.UI.Bottle.Widgets.Grid
+                     , Graphics.UI.Bottle.Widgets.GridView
+                     , Graphics.UI.Bottle.Widgets.Layout
+                     , Graphics.UI.Bottle.Widgets.Spacer
+                     , Graphics.UI.Bottle.Widgets.StdKeys
+                     , Graphics.UI.Bottle.Widgets.TextEdit
+                     , Graphics.UI.Bottle.Widgets.TextView
+                     , Graphics.UI.Bottle.SizedFont
+                     , Graphics.UI.GLFW.Events
+                     , Graphics.UI.GLFW.Instances
+                     , Graphics.UI.GLFW.Utils
 
-                       Data.Random.Instances,
-                       Data.ByteString.Utils,
-                       Data.ByteString.NFData,
-                       Data.Binary.Utils,
-                       Data.Store.Guid,
-                       Data.Store.IRef,
-                       Data.Store.Rev.Change,
-                       Data.Store.Rev.Version,
-                       Data.Store.Rev.Branch,
-                       Data.Store.Rev.View,
-                       Data.Store.Transaction,
-                       Data.Store.Map,
-                       Data.Store.Property,
-                       Data.Store.Db,
+                     , Data.Random.Instances
+                     , Data.ByteString.Utils
+                     , Data.ByteString.NFData
+                     , Data.Binary.Utils
+                     , Data.Store.Guid
+                     , Data.Store.IRef
+                     , Data.Store.Rev.Change
+                     , Data.Store.Rev.Version
+                     , Data.Store.Rev.Branch
+                     , Data.Store.Rev.View
+                     , Data.Store.Transaction
+                     , Data.Store.Map
+                     , Data.Store.Property
+                     , Data.Store.Db
 
-                       Control.Applicative.Utils,
-                       Control.Lens.Utils,
-                       Control.Monad.Trans.Either.Utils,
-                       Control.Monad.Trans.State.Utils,
-                       Control.Monad.Unit,
-                       Control.MonadA,
-                       System.Random.Utils
+                     , Control.Applicative.Utils
+                     , Control.Lens.Utils
+                     , Control.Monad.Trans.Either.Utils
+                     , Control.Monad.Trans.State.Utils
+                     , Control.Monad.Unit
+                     , Control.MonadA
+                     , System.Random.Utils
 
   Other-Modules:       Data.Store.Rev.ViewBranchInternal
 
-  Build-depends:       base >= 4,
-                       aeson >= 0.6.2.1 && < 0.9,
-                       leveldb-haskell >= 0.6,
-                       cryptohash >= 0.7,
-                       GLFW-b >= 1.4.7 && < 1.5,
-                       deepseq,
-                       deepseq-generics >= 0.1,
-                       OpenGL,
-                       StateVar,
-                       TraceUtils,
-                       hashable,
-                       either,
-                       lens >= 4.1,
-                       binary >= 0.7,
-                       bytestring,
-                       containers >= 0.4,
-                       directory >= 1.0.1.1,
-                       filepath >= 1.1,
-                       random >= 1.0.0,
-                       split >= 0.1,
-                       stm,
-                       template-haskell,
-                       time >= 1.2,
-                       transformers >= 0.2.1,
-                       utf8-string >= 0.3
+  Build-depends:       base >= 4
+                     , aeson >= 0.6.2.1 && < 0.9
+                     , leveldb-haskell >= 0.6
+                     , cryptohash >= 0.7
+                     , GLFW-b >= 1.4.7 && < 1.5
+                     , deepseq
+                     , deepseq-generics >= 0.1
+                     , OpenGL
+                     , StateVar
+                     , TraceUtils
+                     , hashable
+                     , either
+                     , lens >= 4.1
+                     , binary >= 0.7
+                     , bytestring
+                     , containers >= 0.4
+                     , directory >= 1.0.1.1
+                     , filepath >= 1.1
+                     , random >= 1.0.0
+                     , split >= 0.1
+                     , stm
+                     , template-haskell
+                     , time >= 1.2
+                     , transformers >= 0.2.1
+                     , utf8-string >= 0.3
 
   if flag(SmoothFonts)
     Build-Depends: graphics-drawingcombinators >= 1.5.0.3
@@ -125,7 +125,7 @@ Library
 
 Executable lamdu
   hs-Source-Dirs:      .
-                ,      submodules/AlgoW
+                     , submodules/AlgoW
   Build-Depends:       GLFW-b
                      , List >= 0.5.1
                      , TraceUtils
@@ -270,7 +270,7 @@ Executable lamdu
                      , Lamdu.Suggest
                      , Lamdu.VersionControl
                      , Lamdu.VersionControl.Actions
-               ,       Paths_lamdu_ide
+                     , Paths_lamdu_ide
   ghc-options:         -O2 -Wall -threaded
   -- ghc-options is prepended to ghc-prof-options
   ghc-prof-options:    -auto-all -caf-all -rtsopts
