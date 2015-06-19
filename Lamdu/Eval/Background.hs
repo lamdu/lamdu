@@ -7,8 +7,9 @@ module Lamdu.Eval.Background
     , getResults
     ) where
 
-import           Control.Concurrent (ThreadId, forkIO, killThread)
+import           Control.Concurrent (ThreadId, killThread)
 import           Control.Concurrent.MVar
+import           Control.Concurrent.Utils (forkIOUnmasked)
 import qualified Control.Exception as E
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
@@ -203,7 +204,7 @@ start actions src =
             & newIORef
         mvar <- newMVar ()
         let lockedActions = actions & aLoadGlobal %~ (withLock mvar .)
-        newThreadId <- forkIO $ evalThread lockedActions stateRef src
+        newThreadId <- forkIOUnmasked $ evalThread lockedActions stateRef src
         return Evaluator
             { eStateRef = stateRef
             , eThreadId = newThreadId

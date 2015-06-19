@@ -16,7 +16,8 @@ Library
   hs-Source-Dirs:      bottlelib
                      , submodules/AlgoW
 
-  Exposed-modules:     Control.Monad.Trans.Decycle,
+  Exposed-modules:     Control.Concurrent.Utils,
+                       Control.Monad.Trans.Decycle,
                        Data.Function.Decycle,
                        Data.List.Assoc,
                        Data.List.Utils,

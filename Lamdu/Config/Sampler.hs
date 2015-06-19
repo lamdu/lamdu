@@ -4,8 +4,9 @@ module Lamdu.Config.Sampler
     ) where
 
 import           Control.Applicative ((<$>))
-import           Control.Concurrent (threadDelay, forkIO, ThreadId)
+import           Control.Concurrent (threadDelay, ThreadId)
 import           Control.Concurrent.MVar
+import           Control.Concurrent.Utils (forkIOUnmasked)
 import qualified Control.Exception as E
 import           Control.Monad (forever)
 import qualified Data.Aeson as Aeson
@@ -33,7 +34,7 @@ sampler sample =
                 then (ver, oldSample)
                 else (ver+1, newSample)
         tid <-
-            forkIO . forever $
+            forkIOUnmasked . forever $
             do
                 threadDelay 200000
                 (updateMVar =<< sample) `E.catch` \E.SomeException {} -> return ()
