@@ -12,8 +12,8 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
 
 newtype Zoom = Zoom
-  { _scaleFactorRef :: IORef (Vector2 Widget.R)
-  }
+    { _scaleFactorRef :: IORef (Vector2 Widget.R)
+    }
 
 eventMap :: Zoom -> Config.Zoom -> Widget.EventHandlers IO
 eventMap (Zoom ref) Config.Zoom{..} =
