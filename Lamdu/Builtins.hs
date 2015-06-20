@@ -91,6 +91,15 @@ builtinOr thunkId =
             then return $ toGuest True
             else Eval.whnfThunk rThunk
 
+builtinAnd :: Monad m => BuiltinRunner m pl
+builtinAnd thunkId =
+    do
+        V2 lThunk rThunk <- extractInfixParams thunkId
+        l <- Eval.whnfThunk lThunk
+        if fromGuest l
+            then Eval.whnfThunk rThunk
+            else return $ toGuest False
+
 builtin2Infix ::
     ( Monad m
     , GuestType a
@@ -112,8 +121,10 @@ eval name =
     case name of
     Def.FFIName ["Prelude"] "if"     -> builtinIf
     Def.FFIName ["Prelude"] "||"     -> builtinOr
+    Def.FFIName ["Prelude"] "&&"     -> builtinAnd
 
     Def.FFIName ["Prelude"] "=="     -> builtin2Infix $ intArg (==)
+    Def.FFIName ["Prelude"] "/="     -> builtin2Infix $ intArg (/=)
     Def.FFIName ["Prelude"] "<"      -> builtin2Infix $ intArg (<)
     Def.FFIName ["Prelude"] "<="     -> builtin2Infix $ intArg (<=)
     Def.FFIName ["Prelude"] ">"      -> builtin2Infix $ intArg (>)
