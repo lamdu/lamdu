@@ -86,10 +86,13 @@ disallowChars searchTerm =
         k = ModKey mempty
         disallowMix
             | nonEmptyAll (`notElem` operatorChars) searchTerm =
-                  E.filterChars (`notElem` operatorChars)
+                E.filterChars (`notElem` operatorChars)
+            | "." == take 1 searchTerm
+            && nonEmptyAll (`notElem` operatorChars) (drop 1 searchTerm) =
+                E.filterChars (`notElem` operatorChars)
             | nonEmptyAll (`elem` operatorChars) searchTerm
             && searchTerm /= "." =
-                  E.filterChars (`notElem` alphaNumericChars)
+                E.filterChars (`notElem` alphaNumericChars)
             | otherwise = id
 
 deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
