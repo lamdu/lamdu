@@ -171,11 +171,11 @@ makeThunk src =
         return thunkId
 
 whnfGetField :: Monad m => V.GetField (ValHead pl) -> EvalT pl m (ValHead pl)
-whnfGetField (V.GetField (HRecExtend (V.RecExtend otherTag otherVal restRef)) tag)
-    | tag == otherTag = whnfThunk otherVal
+whnfGetField (V.GetField (HRecExtend (V.RecExtend tag val restThunk)) searchTag)
+    | searchTag == tag = whnfThunk val
     | otherwise =
-        whnfThunk restRef
-        <&> (`V.GetField` tag)
+        whnfThunk restThunk
+        <&> (`V.GetField` searchTag)
         >>= whnfGetField
 whnfGetField (V.GetField val _) =
     evalError $ "GetField of value without the field " ++ show (void val)
