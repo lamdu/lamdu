@@ -40,11 +40,10 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction
 
 data GroupPrecedence = LowPrecedence | HighPrecedence
-    deriving Eq
+    deriving (Eq, Ord)
 instance Monoid GroupPrecedence where
     mempty = LowPrecedence
-    mappend LowPrecedence LowPrecedence = LowPrecedence
-    mappend _ _ = HighPrecedence
+    mappend = max
 
 data GroupAttributes = GroupAttributes
     { _searchTerms :: [String]
