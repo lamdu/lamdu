@@ -102,6 +102,7 @@ data Name = Name
     , definitionColor :: Draw.Color
     , parameterColor :: Draw.Color
     , recordTagColor :: Draw.Color
+    , caseTagColor :: Draw.Color
     , paramTagColor :: Draw.Color
     } deriving (Eq, Generic, Show)
 instance ToJSON Name
@@ -184,6 +185,10 @@ data Config = Config
     , recordOpenKeys :: [ModKey]
     , recordTailColor :: Draw.Color
     , recordAddFieldKeys :: [ModKey]
+
+    , caseOpenKeys :: [ModKey]
+    , caseTailColor :: Draw.Color
+    , caseAddAltKeys :: [ModKey]
 
     , presentationChoiceScaleFactor :: Vector2 Double
     , presentationChoiceColor :: Draw.Color

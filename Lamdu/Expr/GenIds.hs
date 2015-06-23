@@ -121,10 +121,12 @@ randomizeParamIdsG preNG gen initMap convertPL =
                                 <&> V.BAbs
                     V.BLeaf (V.LVar par) ->
                         pure $ V.BLeaf $ V.LVar $ fromMaybe par $ Map.lookup par parMap
-                    x@V.BLeaf {}     -> traverse go x
-                    x@V.BApp {}      -> traverse go x
-                    x@V.BGetField {} -> traverse go x
-                    x@V.BRecExtend {}      -> traverse go x
+                    x@V.BLeaf {}      -> traverse go x
+                    x@V.BApp {}       -> traverse go x
+                    x@V.BGetField {}  -> traverse go x
+                    x@V.BRecExtend {} -> traverse go x
+                    x@V.BCase {}      -> traverse go x
+                    x@V.BInject {}    -> traverse go x
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s
 

@@ -126,16 +126,16 @@ onTVars f t = t & T.nextLayer %~ onTVars f
 
 glob :: [TypeStream] -> V.GlobalId -> ExprWithResumptions
 glob typeVarAssignments globalId
-    | Set.null rtvs =
+    | Set.null rtvs && Set.null stvs =
         mkExprWithResumptions (V.BLeaf (V.LGlobal globalId)) $
         instantiate scheme <$>
         Lens.sequenceAOf (Lens.traversed . _2) typeVarAssignments'
-    | otherwise = error "TODO: Handle record type vars in globals"
+    | otherwise = error "TODO: Handle record/sum type vars in globals"
     where
         scheme =
             fromMaybe (error ("global " ++ show globalId ++ " does not exist")) $
             Map.lookup globalId definitionTypes
-        TypeVars tvs rtvs = scheme ^. Scheme.schemeForAll
+        TypeVars tvs rtvs stvs = scheme ^. Scheme.schemeForAll
         typeVarAssignments' = zip (Set.toList tvs) typeVarAssignments
 
 intType :: TypeStream

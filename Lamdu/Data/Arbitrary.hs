@@ -54,6 +54,14 @@ arbitraryRecExtend :: Arbitrary a => GenExpr (V.RecExtend (Val a))
 arbitraryRecExtend =
     V.RecExtend <$> liftGen arbitrary <*> arbitraryExpr <*> arbitraryExpr
 
+arbitraryCase :: Arbitrary a => GenExpr (V.Case (Val a))
+arbitraryCase =
+    V.Case <$> liftGen arbitrary <*> arbitraryExpr <*> arbitraryExpr
+
+arbitraryInject :: Arbitrary a => GenExpr (V.Inject (Val a))
+arbitraryInject =
+    V.Inject <$> liftGen arbitrary <*> arbitraryExpr
+
 arbitraryGetField :: Arbitrary a => GenExpr (V.GetField (Val a))
 arbitraryGetField = V.GetField <$> arbitraryExpr <*> liftGen arbitrary
 
@@ -67,6 +75,7 @@ arbitraryLeaf = do
         [ V.LLiteralInteger <$> liftGen arbitrary
         , pure V.LHole
         , pure V.LRecEmpty
+        , pure V.LAbsurd
         ] ++
         map (pure . V.LVar) locals ++
         map (pure . V.LGlobal) (Map.keys globals)
@@ -76,6 +85,8 @@ arbitraryBody =
     join . liftGen . Gen.frequency . (Lens.mapped . _2 %~ pure) $
     [ weight 2  $ V.BAbs         <$> arbitraryLam
     , weight 2  $ V.BRecExtend   <$> arbitraryRecExtend
+    , weight 2  $ V.BCase        <$> arbitraryCase
+    , weight 2  $ V.BInject      <$> arbitraryInject
     , weight 2  $ V.BGetField    <$> arbitraryGetField
     , weight 5  $ V.BApp         <$> arbitraryApply
     , weight 17 $ V.BLeaf        <$> arbitraryLeaf

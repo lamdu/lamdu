@@ -2,31 +2,30 @@ module Lamdu.Sugar.Convert.Record
     ( convertEmpty, convertExtend
     ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens.Operators
-import Control.Monad (void)
-import Control.MonadA (MonadA)
-import Data.Maybe (fromMaybe)
-import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
-import Data.Store.Transaction (Transaction)
-import Lamdu.Data.Anchors (assocTagOrder)
-import Lamdu.Expr.Val (Val(..))
-import Lamdu.Sugar.Convert.Expression.Actions (addActions)
-import Lamdu.Sugar.Convert.Monad (ConvertM)
-import Lamdu.Sugar.Internal
-import Lamdu.Sugar.Types
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad (void)
+import           Control.MonadA (MonadA)
+import           Data.Maybe (fromMaybe)
+import           Data.Monoid (Monoid(..))
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Lamdu.Data.Anchors (assocTagOrder)
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
+import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.Types
 
 plValI :: Lens.Traversal' (Input.Payload m a) (ExprIRef.ValI m)
 plValI = Input.mStored . Lens._Just . Property.pVal
@@ -75,7 +74,7 @@ deleteField mStored mRestI restS expr exprS =
                             RecordExtending ext ->
                                 ext ^? rPayload . plActions . Lens._Just . wrap . _WrapAction
                                 <&> fmap snd
-                            ClosedRecord mOpen -> (delete >>) <$> mOpen
+                            ClosedRecord mOpen -> mOpen <&> (delete >>)
 
 convertField ::
     (MonadA m, Monoid a) =>

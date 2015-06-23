@@ -3,6 +3,7 @@ module Lamdu.Data.Ops
     ( newHole, wrap, setToWrapper
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap, redexWrapWith
     , recExtend, RecExtendResult(..)
+    , case_, CaseResult(..)
     , addListItem
     , newDefinitionWithPane
     , newDefinition, presentationModeOfName
@@ -117,6 +118,23 @@ recExtend valP =
             V.RecExtend tag newValueI $ Property.value valP
         Property.set valP resultI
         return $ RecExtendResult tag newValueI resultI
+
+data CaseResult m = CaseResult
+    { crNewTag :: T.Tag
+    , crNewVal :: ExprIRef.ValI m
+    , crResult :: ExprIRef.ValI m
+    }
+
+case_ :: MonadA m => ExprIRef.ValIProperty m -> T m (CaseResult m)
+case_ valP =
+    do
+        tag <- fst . GenIds.randomTag . RandomUtils.genFromHashable <$> Transaction.newKey
+        newValueI <- newHole
+        resultI <-
+            ExprIRef.newValBody . V.BCase $
+            V.Case tag newValueI $ Property.value valP
+        Property.set valP resultI
+        return $ CaseResult tag newValueI resultI
 
 addListItem ::
     MonadA m =>

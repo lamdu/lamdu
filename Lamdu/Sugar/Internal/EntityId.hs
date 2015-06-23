@@ -5,8 +5,10 @@ module Lamdu.Sugar.Internal.EntityId
     , ofValI, ofIRef
     , ofLambdaParam
     , ofLambdaTagParam
+    , ofInjectTag
     , ofGetFieldTag
     , ofRecExtendTag
+    , ofCaseTag
     , randomizeExprAndParams
     ) where
 
@@ -53,8 +55,14 @@ ofLambdaTagParam :: V.Var -> T.Tag -> EntityId
 ofLambdaTagParam v p =
     EntityId $ Guid.combine (UniqueId.toGuid v) (UniqueId.toGuid p)
 
+ofInjectTag :: EntityId -> EntityId
+ofInjectTag = augment "tag"
+
 ofGetFieldTag :: EntityId -> EntityId
 ofGetFieldTag = augment "tag"
 
 ofRecExtendTag :: EntityId -> EntityId
 ofRecExtendTag = augment "tag"
+
+ofCaseTag :: EntityId -> EntityId
+ofCaseTag = augment "tag"

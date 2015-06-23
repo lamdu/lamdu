@@ -20,10 +20,12 @@ import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
+import qualified Lamdu.Sugar.Convert.Case as ConvertCase
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.GetField as ConvertGetField
 import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
+import qualified Lamdu.Sugar.Convert.Inject as ConvertInject
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -80,8 +82,11 @@ convert v =
       V.BApp x -> ConvertApply.convert x
       V.BRecExtend x -> ConvertRecord.convertExtend x
       V.BGetField x -> ConvertGetField.convert x
+      V.BInject x -> ConvertInject.convert x
+      V.BCase x -> ConvertCase.convert x
       V.BLeaf (V.LVar x) -> convertGetVar x
       V.BLeaf (V.LGlobal x) -> convertGlobal x
       V.BLeaf (V.LLiteralInteger x) -> convertVLiteralInteger x
       V.BLeaf V.LHole -> ConvertHole.convert
       V.BLeaf V.LRecEmpty -> ConvertRecord.convertEmpty
+      V.BLeaf V.LAbsurd -> ConvertCase.convertAbsurd

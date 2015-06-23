@@ -67,7 +67,17 @@ makeField parentAnimId tag val =
 make :: MonadA m => AnimId -> ComputedVal () -> ExprGuiM m View
 make animId NotYet = textView "?" animId
 make animId (ComputedVal (HFunc _)) = textView "Fn" animId
+make animId (ComputedVal HAbsurd) = textView "Fn" animId
+make animId (ComputedVal (HCase _)) = textView "Fn" animId
 make animId (ComputedVal HRecEmpty) = textView "Ø" animId
+make animId (ComputedVal (HInject inj)) =
+    do
+        tagView <- inj ^. V.injectTag & makeTag (animId ++ ["tag"])
+        space <-
+            ExprGuiM.readConfig
+            <&> Spacer.makeHorizontal . realToFrac . Config.spaceWidth
+        valView <- inj ^. V.injectVal & make (animId ++ ["val"])
+        GridView.horizontalAlign 0.5 [tagView, space, valView] & return
 make animId (ComputedVal (HRecExtend recExtend)) =
     do
         fieldsView <- mapM (uncurry (makeField animId)) fields <&> GridView.make

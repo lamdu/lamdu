@@ -26,8 +26,8 @@ module Lamdu.Sugar.Types
     , Actions(..)
         , wrap, setToHole, setToInnerExpr, extract
     , Body(..)
-        , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
-        , _BodyLiteralInteger, _BodyList, _BodyRecord
+        , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
+        , _BodyLiteralInteger, _BodyList, _BodyCase, _BodyRecord
     , EvaluationResult
     , Annotation(..), aInferredType, aMEvaluationResult
     , Payload(..), plEntityId, plAnnotation, plActions, plData
@@ -39,11 +39,21 @@ module Lamdu.Sugar.Types
         , wiAddNext, wiDelete, wiExtract
     , ListItem(..), liMActions, liExpr
     , ListActions(..), List(..)
+    -- record:
     , RecordField(..), rfMDelete, rfTag, rfExpr
     , RecordTail(..), _RecordExtending, _ClosedRecord
     , RecordAddFieldResult(..), rafrNewTag, rafrNewVal, rafrRecExtend
     , Record(..), rItems, rMAddField, rTail
+    -- case
+    , CaseAlt(..), caMDelete, caTag, caHandler
+    , CaseTail(..), _CaseExtending, _ClosedCase
+    , CaseAddAltResult(..), caarNewTag, caarNewVal, caarCase
+    , CaseArg(..), caVal, caMToLambdaCase
+    , CaseKind(..), _LambdaCase, _CaseWithArg
+    , Case(..), cKind, cAlts, cMAddAlt, cTail, cEntityId
+    --
     , GetField(..), gfRecord, gfTag, gfMDeleteGetField
+    , Inject(..), iTag, iVal, iMDeleteInject
     , NamedVarType(..), _GetDefinition, _GetFieldParameter, _GetParameter
     , NamedVar(..), nvName, nvJumpTo, nvVarType
     , GetVar(..), _GetVarNamed, _GetVarParamsRecord
@@ -56,7 +66,7 @@ module Lamdu.Sugar.Types
     , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap, haGetFieldTags
     , Hole(..)
-        , holeMActions, holeMArg, holeSuggested, holeGuid
+        , holeMActions, holeMArg, holeSuggested, holeSuggestedInjectTags, holeGuid
     , ScopeGetVar(..), sgvGetVar, sgvVal
     , HoleActions(..)
         , holeScope, holePaste, holeResults
@@ -225,6 +235,7 @@ data HoleArg name m expr = HoleArg
 data Hole name m expr = Hole
     { _holeMActions :: Maybe (HoleActions name m)
     , _holeSuggested :: Val ()
+    , _holeSuggestedInjectTags :: [TagG name]
     , _holeMArg :: Maybe (HoleArg name m expr)
     } deriving (Functor, Foldable, Traversable)
 
@@ -246,6 +257,7 @@ data List m expr = List
         lNilEntityId :: EntityId
     } deriving (Functor, Foldable, Traversable)
 
+{- Record start -}
 data RecordField name m expr = RecordField
     { _rfMDelete :: Maybe (T m EntityId)
     , _rfTag :: TagG name
@@ -268,11 +280,56 @@ data Record name m expr = Record
     , _rTail :: RecordTail m expr
     , _rMAddField :: Maybe (T m RecordAddFieldResult)
     } deriving (Functor, Foldable, Traversable)
+{- Record end -}
+
+{- Case start -}
+data CaseAlt name m expr = CaseAlt
+    { _caMDelete :: Maybe (T m EntityId)
+    , _caTag :: TagG name
+    , _caHandler :: expr
+    } deriving (Functor, Foldable, Traversable)
+
+data CaseTail m expr
+    = CaseExtending expr
+    | ClosedCase (Maybe (T m EntityId)) -- delete action
+    deriving (Functor, Foldable, Traversable)
+
+data CaseAddAltResult = CaseAddAltResult
+    { _caarNewTag :: TagG ()
+    , _caarNewVal :: EntityId
+    , _caarCase :: EntityId
+    }
+
+data CaseArg m expr = CaseArg
+    { _caVal :: expr
+    , _caMToLambdaCase :: Maybe (T m EntityId)
+    } deriving (Functor, Foldable, Traversable)
+
+data CaseKind m expr
+    = LambdaCase
+    | CaseWithArg (CaseArg m expr)
+    deriving (Functor, Foldable, Traversable)
+
+data Case name m expr = Case
+    { _cKind :: CaseKind m expr
+    , _cAlts :: [CaseAlt name m expr]
+    , _cTail :: CaseTail m expr
+    , _cMAddAlt :: Maybe (T m CaseAddAltResult)
+    , -- The entity id of the underlying lambda-case
+      _cEntityId :: EntityId
+    } deriving (Functor, Foldable, Traversable)
+{- Case end -}
 
 data GetField name m expr = GetField
     { _gfRecord :: expr
     , _gfTag :: TagG name
     , _gfMDeleteGetField :: Maybe (T m EntityId)
+    } deriving (Functor, Foldable, Traversable)
+
+data Inject name m expr = Inject
+    { _iTag :: TagG name
+    , _iVal :: expr
+    , _iMDeleteInject :: Maybe (T m EntityId)
     } deriving (Functor, Foldable, Traversable)
 
 data NamedVarType = GetDefinition | GetFieldParameter | GetParameter
@@ -317,6 +374,8 @@ data Body name m expr
     | BodyList (List m expr)
     | BodyRecord (Record name m expr)
     | BodyGetField (GetField name m expr)
+    | BodyCase (Case name m expr)
+    | BodyInject (Inject name m expr)
     | BodyGetVar (GetVar name m)
     deriving (Functor, Foldable, Traversable)
 
@@ -338,6 +397,8 @@ instance Show expr => Show (Body name m expr) where
     show BodyApply {} = "LabelledApply:TODO"
     show BodyRecord {} = "Record:TODO"
     show BodyGetField {} = "GetField:TODO"
+    show BodyCase {} = "Case:TODO"
+    show BodyInject {} = "Inject:TODO"
     show BodyGetVar {} = "GetVar:TODO"
 
 data WhereItemActions m = WhereItemActions
@@ -419,6 +480,10 @@ Lens.makeLenses ''Apply
 Lens.makeLenses ''Binder
 Lens.makeLenses ''BinderActions
 Lens.makeLenses ''Body
+Lens.makeLenses ''Case
+Lens.makeLenses ''CaseAddAltResult
+Lens.makeLenses ''CaseAlt
+Lens.makeLenses ''CaseArg
 Lens.makeLenses ''Definition
 Lens.makeLenses ''DefinitionBuiltin
 Lens.makeLenses ''DefinitionExpression
@@ -430,6 +495,7 @@ Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg
 Lens.makeLenses ''HoleResult
+Lens.makeLenses ''Inject
 Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions
 Lens.makeLenses ''NamedVar
@@ -445,6 +511,8 @@ Lens.makeLenses ''WhereItem
 Lens.makeLenses ''WhereItemActions
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''Body
+Lens.makePrisms ''CaseKind
+Lens.makePrisms ''CaseTail
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo
 Lens.makePrisms ''GetVar

@@ -32,7 +32,7 @@ import           Lamdu.Expr.Scheme (Scheme(..))
 import qualified Lamdu.Expr.Scheme as Scheme
 import           Lamdu.Expr.Type (Type, (~>))
 import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.TypeVars as TypeVars
+import qualified Lamdu.Expr.TypeVars as TV
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified System.Directory as Directory
@@ -53,12 +53,12 @@ namedId name =
         tag :: a
         tag = fromString name
 
-forAll :: forall a. TypeVars.VarKind a => Int -> ([a] -> Type) -> Scheme
+forAll :: forall a. TV.VarKind a => Int -> ([a] -> Type) -> Scheme
 forAll count f =
     Scheme
-    { _schemeForAll = mconcat $ map TypeVars.singleton typeVars
+    { _schemeForAll = mconcat $ map TV.singleton typeVars
     , _schemeConstraints = mempty
-    , _schemeType = f $ map T.liftVar typeVars
+    , _schemeType = f $ map TV.lift typeVars
     }
     where
         typeVars :: [T.Var a]

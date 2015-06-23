@@ -358,6 +358,30 @@ toRecord record@Record {..} =
         t <- traverse toExpression _rTail
         pure record { _rItems = items, _rTail = t }
 
+toCaseAlt ::
+    MonadNaming m =>
+    CaseAlt (OldName m) (TM m) (OldExpression m a) ->
+    m (CaseAlt (NewName m) (TM m) (NewExpression m a))
+toCaseAlt alt@CaseAlt {..} =
+    do
+        tag <- toTagG _caTag
+        handler <- toExpression _caHandler
+        pure alt
+            { _caTag = tag
+            , _caHandler = handler
+            }
+
+toCase ::
+    MonadNaming m =>
+    Case (OldName m) (TM m) (OldExpression m a) ->
+    m (Case (NewName m) (TM m) (NewExpression m a))
+toCase case_@Case {..} =
+    do
+        kind <- traverse toExpression _cKind
+        alts <- traverse toCaseAlt _cAlts
+        t <- traverse toExpression _cTail
+        pure case_ { _cKind = kind, _cAlts = alts, _cTail = t }
+
 toGetField ::
     MonadNaming m =>
     GetField (OldName m) (TM m) (OldExpression m a) ->
@@ -367,6 +391,16 @@ toGetField getField@GetField {..} =
         record <- toExpression _gfRecord
         tag <- toTagG _gfTag
         pure getField { _gfRecord = record, _gfTag = tag }
+
+toInject ::
+    MonadNaming m =>
+    Inject (OldName m) (TM m) (OldExpression m a) ->
+    m (Inject (NewName m) (TM m) (NewExpression m a))
+toInject inject@Inject {..} =
+    do
+        val <- toExpression _iVal
+        tag <- toTagG _iTag
+        pure inject { _iVal = val, _iTag = tag }
 
 toScopeGetVar ::
     MonadNaming m =>
@@ -411,9 +445,11 @@ toHole hole@Hole {..} =
     do
         mActions <- _holeMActions & Lens._Just %%~ toHoleActions
         mArg <- _holeMArg & Lens._Just %%~ toHoleArg
+        suggestedInjectTags <- traverse toTagG _holeSuggestedInjectTags
         pure hole
             { _holeMActions = mActions
             , _holeMArg = mArg
+            , _holeSuggestedInjectTags = suggestedInjectTags
             }
 
 toNamedVar ::
@@ -473,7 +509,9 @@ toBody (BodyList x)           = traverseToExpr BodyList x
 toBody (BodyLiteralInteger x) = pure $ BodyLiteralInteger x
 --
 toBody (BodyGetField x) = BodyGetField <$> toGetField x
+toBody (BodyInject x) = BodyInject <$> toInject x
 toBody (BodyRecord x) = BodyRecord <$> toRecord x
+toBody (BodyCase x) = BodyCase <$> toCase x
 toBody (BodyLam x) = BodyLam <$> toBinder x
 toBody (BodyApply x) = BodyApply <$> toApply x
 toBody (BodyHole x) = BodyHole <$> toHole x

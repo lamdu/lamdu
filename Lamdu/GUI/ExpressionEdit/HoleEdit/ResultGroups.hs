@@ -242,6 +242,22 @@ getFieldGroups holeInfo =
         Lens._Just . Sugar.haGetFieldTags . Lens.traversed
     ]
 
+injectGroups :: HoleInfo m -> [Group def]
+injectGroups holeInfo =
+    [ Group
+      { _groupAttributes =
+          GroupAttributes
+          ["inject", nName (tagG ^. Sugar.tagGName)]
+          HighPrecedence
+      , _groupBaseExpr =
+          tagG ^. Sugar.tagVal
+          & (`V.Inject` P.hole)
+          & V.BInject
+          & Val ()
+      }
+    | tagG <- hiSuggestedInjectTags holeInfo
+    ]
+
 applyGroups :: HoleInfo m -> [Group def]
 applyGroups holeInfo =
     [ Group
@@ -293,6 +309,8 @@ primitiveGroups holeInfo =
         V.BAbs $ V.Lam "NewLambda" P.hole
     , mkGroupBody LowPrecedence ["Empty", "Record", "{}", "0", "Ø"] $
         V.BLeaf V.LRecEmpty
+    , mkGroupBody HighPrecedence ["Absurd", "Case"] $
+        V.BLeaf V.LAbsurd
     ]
     where
         searchTerm = ehiSearchTerm holeInfo
@@ -306,6 +324,7 @@ makeAllGroups editableHoleInfo =
     do
         paramGroups <- makeParamGroups editableHoleInfo
         getFieldGroups holeInfo ++
+            injectGroups holeInfo ++
             applyGroups holeInfo ++
             primitiveGroups editableHoleInfo ++
             paramGroups

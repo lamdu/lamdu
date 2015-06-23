@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.GUI.ExpressionEdit.GetFieldEdit
+module Lamdu.GUI.ExpressionEdit.InjectEdit
     ( make
     ) where
 
@@ -21,17 +21,15 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
 make ::
     MonadA m =>
-    Sugar.GetField (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.Inject (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.GetField recExpr tagG mDelField) pl =
+make (Sugar.Inject tagG val mDelInject) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
-        recExprEdit <- ExprGuiM.makeSubexpression 11 recExpr
-        dotLabel <- ExpressionGui.makeLabel "." (Widget.toAnimId myId)
         config <- ExprGuiM.readConfig
         let delEventMap =
-                mDelField
+                mDelInject
                 <&> fmap WidgetIds.fromEntityId
                 & maybe mempty
                 (Widget.keysEventMapMovesCursor (Config.delKeys config) delDoc)
@@ -39,8 +37,10 @@ make (Sugar.GetField recExpr tagG mDelField) pl =
             TagEdit.makeRecordTag
             (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tagG
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents delEventMap
-        return $ ExpressionGui.hbox [recExprEdit, dotLabel, tagEdit]
+
+        valEdit <- ExprGuiM.makeSubexpression 11 val
+        ExpressionGui.hboxSpaced [tagEdit, valEdit]
     & ExprGuiM.assignCursor myId tagId
     where
         tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
-        delDoc = E.Doc ["Edit", "Delete GetField"]
+        delDoc = E.Doc ["Edit", "Delete Inject"]

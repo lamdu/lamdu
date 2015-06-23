@@ -8,11 +8,11 @@ module Lamdu.Eval
     , whnfScopedVal, whnfThunk
     ) where
 
-import           Control.Applicative (Applicative)
+import           Control.Applicative (Applicative(..), (<$>))
 import           Control.Lens (at, use, traverse)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (void)
+import           Control.Monad (void, join)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Either (EitherT(..), left)
 import           Control.Monad.Trans.State.Strict (StateT(..))
@@ -23,6 +23,7 @@ import           Data.Traversable (Traversable)
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Eval.Val (ValHead, ValBody(..), Closure(..), Scope(..), emptyScope)
 import           Lamdu.Eval.Val (ThunkId(..), thunkIdInt, ScopeId(..), scopeIdInt)
+import qualified Lamdu.Eval.Val as EvalVal
 import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
 
@@ -117,40 +118,58 @@ bindVar lamPl var val (Scope parentMap parentId) =
 evalError :: Monad m => String -> EvalT pl m a
 evalError = EvalT . left
 
-whnfApply :: Monad m => Scope -> V.Apply (Val pl) -> EvalT pl m (ValHead pl)
-whnfApply scope (V.Apply funcExpr argExpr) =
-    do
-        func <- whnfScopedVal $ ScopedVal scope funcExpr
-        argThunk <- makeThunk (ScopedVal scope argExpr)
-        case func of
-            HFunc (Closure outerScope (V.Lam var body) lamPl) ->
+whnfApplyThunked :: Monad m => ValBody ThunkId pl -> ThunkId -> EvalT pl m (ValHead pl)
+whnfApplyThunked func argThunk =
+    case func of
+    HFunc (Closure outerScope (V.Lam var body) lamPl) ->
+        do
+            innerScope <- bindVar lamPl var argThunk outerScope
+            whnfScopedVal (ScopedVal innerScope body)
+    HBuiltin ffiname ->
+        do
+            runBuiltin <- liftState $ use $ esReader . aRunBuiltin
+            runBuiltin ffiname argThunk
+    HCase (V.Case caseTag handlerThunk restThunk) ->
+        do
+            handlerFunc <- whnfThunk handlerThunk
+            HInject (V.Inject sumTag valThunk) <- whnfThunk argThunk
+            if caseTag == sumTag
+                then whnfApplyThunked handlerFunc valThunk
+                else
                 do
-                    innerScope <- bindVar lamPl var argThunk outerScope
-                    whnfScopedVal (ScopedVal innerScope body)
-            HBuiltin ffiname ->
-                do
-                    runBuiltin <- liftState $ use $ esReader . aRunBuiltin
-                    runBuiltin ffiname argThunk
-            _ -> evalError "Apply on non function"
+                    rest <- whnfThunk restThunk
+                    whnfApplyThunked rest argThunk
+    _ -> evalError $ "Apply on non function: " ++ funcStr
+        where
+            funcStr = func & EvalVal.children .~ () & EvalVal.payloads .~ () & show
+
+whnfApply :: Monad m => V.Apply (ScopedVal pl) -> EvalT pl m (ValHead pl)
+whnfApply (V.Apply func arg) =
+    whnfApplyThunked <$> whnfScopedVal func <*> makeThunk arg & join
 
 whnfScopedValInner :: Monad m => Maybe ThunkId -> ScopedVal pl -> EvalT pl m (ValHead pl)
 whnfScopedValInner mThunkId (ScopedVal scope expr) =
     reportResultComputed =<<
     case expr ^. V.body of
     V.BAbs lam -> return $ HFunc $ Closure scope lam (expr ^. V.payload)
-    V.BApp apply -> whnfApply scope apply
+    V.BApp apply -> apply <&> ScopedVal scope & whnfApply
     V.BGetField (V.GetField recordExpr tag) ->
         do
             record <- whnfScopedVal $ ScopedVal scope recordExpr
             whnfGetField $ V.GetField record tag
+    V.BInject inject ->
+        inject & traverse %%~ makeThunk . ScopedVal scope <&> HInject
     V.BRecExtend recExtend ->
         recExtend & traverse %%~ makeThunk . ScopedVal scope <&> HRecExtend
+    V.BCase case_ ->
+        case_ & traverse %%~ makeThunk . ScopedVal scope <&> HCase
     V.BLeaf (V.LGlobal global) -> loadGlobal global
     V.BLeaf (V.LVar var) ->
         case scope ^. scopeMap . at var of
         Nothing -> evalError $ "Variable out of scope: " ++ show var
         Just thunkId -> whnfThunk thunkId
     V.BLeaf V.LRecEmpty -> return HRecEmpty
+    V.BLeaf V.LAbsurd -> return HAbsurd
     V.BLeaf (V.LLiteralInteger i) -> HInteger i & return
     V.BLeaf V.LHole -> evalError "Hole"
     where

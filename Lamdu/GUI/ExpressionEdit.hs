@@ -14,9 +14,11 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
+import qualified Lamdu.GUI.ExpressionEdit.CaseEdit as CaseEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetFieldEdit as GetFieldEdit
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit as HoleEdit
+import qualified Lamdu.GUI.ExpressionEdit.InjectEdit as InjectEdit
 import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
@@ -77,11 +79,13 @@ makeEditor ::
     ExprGuiM m (ExpressionGui m)
 makeEditor parentPrecedence body =
     case body of
-    Sugar.BodyHole hole -> HoleEdit.make hole
-    Sugar.BodyApply apply -> ApplyEdit.make parentPrecedence apply
-    Sugar.BodyLam lam -> LambdaEdit.make parentPrecedence lam
-    Sugar.BodyLiteralInteger integer -> LiteralEdit.makeInt integer
-    Sugar.BodyList list -> ListEdit.make list
-    Sugar.BodyRecord record -> RecordEdit.make record
-    Sugar.BodyGetField getField -> GetFieldEdit.make getField
-    Sugar.BodyGetVar gv -> GetVarEdit.make gv
+    Sugar.BodyHole           x -> x & HoleEdit.make
+    Sugar.BodyApply          x -> x & ApplyEdit.make parentPrecedence
+    Sugar.BodyLam            x -> x & LambdaEdit.make parentPrecedence
+    Sugar.BodyLiteralInteger x -> x & LiteralEdit.makeInt
+    Sugar.BodyList           x -> x & ListEdit.make
+    Sugar.BodyRecord         x -> x & RecordEdit.make
+    Sugar.BodyCase           x -> x & CaseEdit.make
+    Sugar.BodyGetField       x -> x & GetFieldEdit.make
+    Sugar.BodyInject         x -> x & InjectEdit.make
+    Sugar.BodyGetVar         x -> x & GetVarEdit.make

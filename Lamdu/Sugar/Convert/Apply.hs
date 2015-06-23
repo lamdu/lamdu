@@ -3,10 +3,10 @@ module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where
 
-import           Control.Applicative ((<$>))
+import           Control.Applicative (Applicative(..), (<$>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (guard, unless)
+import           Control.Monad (MonadPlus(..), guard, unless)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
@@ -17,6 +17,7 @@ import qualified Data.Map as Map
 import           Data.Maybe.Utils (maybeToMPlus)
 import           Data.Monoid (Monoid(..))
 import qualified Data.Set as Set
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import           Data.Traversable (traverse)
@@ -51,6 +52,8 @@ convert app@(V.Apply funcI argI) exprPl =
         justToLeft $ convertAppliedHole funcI argS argI exprPl
         justToLeft $ ConvertList.cons app argS exprPl
         funcS <- ConvertM.convertSubexpression funcI & lift
+        justToLeft $
+            convertAppliedCase (funcS ^. rBody) (funcI ^. V.payload) argS exprPl
         justToLeft $ convertLabeled funcS argS argI exprPl
         lift $ convertPrefix funcS argS exprPl
 
@@ -181,10 +184,33 @@ convertAppliedHole funcI argS argI exprPl =
             argS
             ^.. rPayload . plAnnotation . aInferredType
             . ExprLens._TRecord . ExprLens.compositeTags
-            <&> holeArgTag (exprPl ^. Input.entityId)
-        holeArgTag entityId tag =
+            <&> holeArgTag
+        holeArgTag tag =
             TagG
-            { _tagInstance = EntityId.ofGetFieldTag entityId
+            { _tagInstance = EntityId.ofGetFieldTag (exprPl ^. Input.entityId)
             , _tagVal = tag
             , _tagGName = UniqueId.toGuid tag
             }
+
+convertAppliedCase ::
+    (MonadA m, Monoid a) =>
+    Body Guid m (ExpressionU m a) -> Input.Payload m a ->
+    ExpressionU m a -> Input.Payload m a ->
+    MaybeT (ConvertM m) (ExpressionU m a)
+convertAppliedCase (BodyCase caseB) casePl argS exprPl =
+    do
+        protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
+        caseB
+            & cKind .~ CaseWithArg
+                CaseArg
+                { _caVal = argS
+                , _caMToLambdaCase =
+                    protectedSetToVal
+                    <$> exprPl ^. Input.mStored
+                    <*> (casePl ^. Input.mStored <&> Property.value)
+                    <&> Lens.mapped %~ EntityId.ofValI
+                }
+            & BodyCase
+            & lift . addActions exprPl
+    <&> rPayload . plData <>~ casePl ^. Input.userData
+convertAppliedCase _ _ _ _ = mzero

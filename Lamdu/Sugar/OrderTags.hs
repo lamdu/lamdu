@@ -34,7 +34,7 @@ orderByTag toTag =
             & Transaction.getP
             <&> (,) x
 
-orderComposite :: MonadA m => Order m (T.Composite T.Product)
+orderComposite :: MonadA m => Order m (T.Composite p)
 orderComposite c =
     fields
     & Map.toList
@@ -47,7 +47,8 @@ orderComposite c =
 orderType :: MonadA m => Order m Type
 orderType t =
     t
-    & ExprLens._TRecord orderComposite
+    & ExprLens._TRecord %%~ orderComposite
+    >>= ExprLens._TSum %%~ orderComposite
     >>= T.nextLayer orderType
 
 orderRecordFields ::

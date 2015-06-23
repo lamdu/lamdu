@@ -194,6 +194,7 @@ Executable lamdu
                      , Lamdu.GUI.ExpressionEdit.ApplyEdit
                      , Lamdu.GUI.ExpressionEdit.BinderEdit
                      , Lamdu.GUI.ExpressionEdit.BuiltinEdit
+                     , Lamdu.GUI.ExpressionEdit.CaseEdit
                      , Lamdu.GUI.ExpressionEdit.EventMap
                      , Lamdu.GUI.ExpressionEdit.GetFieldEdit
                      , Lamdu.GUI.ExpressionEdit.GetVarEdit
@@ -208,6 +209,7 @@ Executable lamdu
                      , Lamdu.GUI.ExpressionEdit.HoleEdit.State
                      , Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds
                      , Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
+                     , Lamdu.GUI.ExpressionEdit.InjectEdit
                      , Lamdu.GUI.ExpressionEdit.LambdaEdit
                      , Lamdu.GUI.ExpressionEdit.ListEdit
                      , Lamdu.GUI.ExpressionEdit.LiteralEdit
@@ -247,12 +249,14 @@ Executable lamdu
                      , Lamdu.Sugar.Convert
                      , Lamdu.Sugar.Convert.Apply
                      , Lamdu.Sugar.Convert.Binder
+                     , Lamdu.Sugar.Convert.Case
                      , Lamdu.Sugar.Convert.DefExpr
                      , Lamdu.Sugar.Convert.Expression
                      , Lamdu.Sugar.Convert.Expression.Actions
                      , Lamdu.Sugar.Convert.GetField
                      , Lamdu.Sugar.Convert.GetVar
                      , Lamdu.Sugar.Convert.Hole
+                     , Lamdu.Sugar.Convert.Inject
                      , Lamdu.Sugar.Convert.Input
                      , Lamdu.Sugar.Convert.List
                      , Lamdu.Sugar.Convert.Monad

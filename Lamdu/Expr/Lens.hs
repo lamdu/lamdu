@@ -4,6 +4,7 @@ module Lamdu.Expr.Lens
     ( _LGlobal
     , _LHole
     , _LRecEmpty
+    , _LAbsurd
     , _LVar
     , _LLiteralInteger
     -- ValBody prisms:
@@ -12,6 +13,8 @@ module Lamdu.Expr.Lens
     , _BAbs
     , _BGetField
     , _BRecExtend
+    , _BCase
+    , _BInject
     -- Leafs
     , valGlobal        , valBodyGlobal
     , valHole          , valBodyHole
@@ -27,6 +30,7 @@ module Lamdu.Expr.Lens
     -- Types:
     , _TRecord
     , _TFun
+    , _TSum
     -- Tags:
     , valTags, bodyTags, biTraverseBodyTags
     -- Composites:
@@ -92,6 +96,12 @@ _LRecEmpty = prism' (\() -> V.LRecEmpty) get
         get V.LRecEmpty = Just ()
         get _ = Nothing
 
+_LAbsurd :: Prism' V.Leaf ()
+_LAbsurd = prism' (\() -> V.LAbsurd) get
+    where
+        get V.LAbsurd = Just ()
+        get _ = Nothing
+
 _LVar :: Prism' V.Leaf V.Var
 _LVar = prism' V.LVar get
     where
@@ -129,10 +139,22 @@ _BGetField = prism' V.BGetField get
         get (V.BGetField x) = Just x
         get _ = Nothing
 
+_BInject :: Prism' (V.Body a) (V.Inject a)
+_BInject = prism' V.BInject get
+    where
+        get (V.BInject x) = Just x
+        get _ = Nothing
+
 _BRecExtend :: Prism' (V.Body a) (V.RecExtend a)
 _BRecExtend = prism' V.BRecExtend get
     where
         get (V.BRecExtend x) = Just x
+        get _ = Nothing
+
+_BCase :: Prism' (V.Body a) (V.Case a)
+_BCase = prism' V.BCase get
+    where
+        get (V.BCase x) = Just x
         get _ = Nothing
 
 valBodyGlobal :: Prism' (V.Body e) V.GlobalId
@@ -150,10 +172,16 @@ valBodyRecEmpty = _BLeaf . _LRecEmpty
 valBodyLiteralInteger :: Prism' (V.Body expr) Integer
 valBodyLiteralInteger = _BLeaf . _LLiteralInteger
 
-_TRecord :: Prism' Type (T.Composite T.Product)
+_TRecord :: Prism' Type T.Product
 _TRecord = prism' T.TRecord get
     where
         get (T.TRecord x) = Just x
+        get _ = Nothing
+
+_TSum :: Prism' Type T.Sum
+_TSum = prism' T.TSum get
+    where
+        get (T.TSum x) = Just x
         get _ = Nothing
 
 _TFun :: Prism' Type (Type, Type)

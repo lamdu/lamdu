@@ -127,8 +127,20 @@ mkHole mInjectedArg exprPl = do
     pure Hole
         { _holeMActions = mActions
         , _holeSuggested = mkHoleSuggested (exprPl ^. Input.inferred)
+        , _holeSuggestedInjectTags =
+            exprPl ^..
+            Input.inferred . Infer.plType . ExprLens._TSum .
+            ExprLens.compositeTags <&> mkInjectTag
         , _holeMArg = Nothing
         }
+    where
+        mkInjectTag tag =
+            TagG
+            { _tagInstance = EntityId.ofInjectTag (exprPl ^. Input.entityId)
+            , _tagVal = tag
+            , _tagGName = UniqueId.toGuid tag
+            }
+
 
 getLocalScopeGetVars ::
     MonadA m => ConvertM.Context m -> (V.Var, Type) -> [ScopeGetVar Guid m]
@@ -234,12 +246,15 @@ resultTypeScore :: Type -> [Int]
 resultTypeScore (T.TVar _) = [0]
 resultTypeScore (T.TInst _ p) = 2 : maximum ([] : map resultTypeScore (Map.elems p))
 resultTypeScore (T.TFun a r) = 2 : max (resultTypeScore a) (resultTypeScore r)
+resultTypeScore (T.TSum c) =
+    compositeTypeScore c
 resultTypeScore (T.TRecord c) =
-    compositeScore c
-    where
-        compositeScore (T.CEmpty) = [2]
-        compositeScore (T.CVar _) = [1]
-        compositeScore (T.CExtend _ t r) = 2 : max (resultTypeScore t) (compositeScore r)
+    compositeTypeScore c
+
+compositeTypeScore :: T.Composite t -> [Int]
+compositeTypeScore (T.CEmpty) = [2]
+compositeTypeScore (T.CVar _) = [1]
+compositeTypeScore (T.CExtend _ t r) = 2 : max (resultTypeScore t) (compositeTypeScore r)
 
 resultScore :: Val Infer.Payload -> [Int]
 resultScore (Val pl body) =

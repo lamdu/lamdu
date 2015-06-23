@@ -16,6 +16,7 @@ import qualified Data.Map as Map
 import           Data.Monoid (Monoid(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Traversable (sequenceA)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -151,26 +152,41 @@ addBGColor view =
             & return
 
 addBackgroundFrame :: MonadA m => View -> M m View
-addBackgroundFrame v =
-    v & addPadding >>= addBGColor
+addBackgroundFrame v = v & addPadding >>= addBGColor
 
 makeEmptyRecord :: MonadA m => M m View
 makeEmptyRecord = text "Ø"
 
-makeField :: (MonadA m, Fractional a) => (T.Tag, Type) -> M m [(Vector2 a, View)]
-makeField (tag, fieldType) = do
-    name <- transaction $ Transaction.getP $ Anchors.assocNameRef tag
-    Lens.sequenceOf (Lens.traversed . _2)
-        [ (Vector2 1 0.5, text name)
-        , (0.5, mkSpace)
-        , (Vector2 0 0.5, splitMake (ParentPrecedence 0) fieldType)
-        ]
+makeTag :: MonadA m => T.Tag -> M m View
+makeTag tag =
+    Anchors.assocNameRef tag & Transaction.getP & transaction
+    >>= text
 
-makeRecord :: MonadA m => T.Composite T.Product -> M m View
-makeRecord T.CEmpty = makeEmptyRecord
-makeRecord composite =
+makeField :: MonadA m => (T.Tag, Type) -> M m [(Vector2 Anim.R, View)]
+makeField (tag, fieldType) =
+    Lens.sequenceOf (Lens.traversed . _2)
+    [ (Vector2 1 0.5, makeTag tag)
+    , (0.5, mkSpace)
+    , (Vector2 0 0.5, splitMake (ParentPrecedence 0) fieldType)
+    ]
+
+makeSumField :: MonadA m => (T.Tag, Type) -> M m [(Vector2 Anim.R, View)]
+makeSumField (tag, T.TRecord T.CEmpty) =
+    makeTag tag <&> (,) (Vector2 1 0.5) <&> (:[])
+makeSumField (tag, fieldType) =
+    Lens.sequenceOf (Lens.traversed . _2)
+    [ (Vector2 1 0.5, makeTag tag)
+    , (0.5, mkSpace)
+    , (Vector2 0 0.5, splitMake (ParentPrecedence 0) fieldType)
+    ]
+
+makeComposite ::
+    MonadA m =>
+    ((T.Tag, Type) -> M m [(Vector2 Anim.R, View)]) -> T.Composite t -> M m View
+makeComposite _ T.CEmpty = makeEmptyRecord
+makeComposite mkField composite =
     do
-        fieldsView <- GridView.make <$> mapM makeField fields
+        fieldsView <- GridView.make <$> mapM mkField fields
         let barWidth
                 | null fields = 150
                 | otherwise = fieldsView ^. View.width
@@ -185,8 +201,7 @@ makeRecord composite =
                             & View.scale (Vector2 barWidth 10)
                     v <- makeTVar var
                     return $ GridView.verticalAlign 0.5 [sqr, v]
-        GridView.verticalAlign 0.5 [fieldsView, varView]
-            & addBackgroundFrame
+        GridView.verticalAlign 0.5 [fieldsView, varView] & addBackgroundFrame
     where
         (fields, extension) = orderedFlatComposite composite
 
@@ -199,7 +214,12 @@ makeInternal parentPrecedence typ =
     T.TVar var -> makeTVar var
     T.TFun a b -> makeTFun parentPrecedence a b
     T.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
-    T.TRecord composite -> makeRecord composite
+    T.TRecord composite -> makeComposite makeField composite
+    T.TSum composite ->
+        [ text "+"
+        , makeComposite makeSumField composite
+        ] & sequenceA
+        <&> hbox
 
 make :: MonadA m => AnimId -> Type -> ExprGuiM m View
 make prefix t =

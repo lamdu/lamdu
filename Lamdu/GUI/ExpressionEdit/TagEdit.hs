@@ -1,6 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
-    ( makeRecordTag, makeParamTag, diveToRecordTag
+    ( makeRecordTag, makeCaseTag
+    , makeParamTag
+    , diveToRecordTag, diveToCaseTag
     ) where
 
 import           Control.Applicative ((<$>))
@@ -8,6 +10,7 @@ import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Data.Monoid (Monoid(..), (<>))
 import           Data.Store.Transaction (Transaction)
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -27,21 +30,19 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
-makeRecordTagNameEdit ::
-    MonadA m => Sugar.TagG (Name m) -> ExprGuiM m (Widget (T m))
-makeRecordTagNameEdit tagG =
-    do
-        Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
-        ExpressionGui.makeNameEdit (tagG ^. Sugar.tagGName) myId
-            & ExprGuiM.withFgColor recordTagColor
+makeTagNameEdit ::
+    MonadA m => Draw.Color -> Sugar.TagG (Name m) -> ExprGuiM m (Widget (T m))
+makeTagNameEdit tagColor tagG =
+    ExpressionGui.makeNameEdit (tagG ^. Sugar.tagGName) myId
+    & ExprGuiM.withFgColor tagColor
     where
         myId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
 
-makeRecordTag ::
+makeTagH ::
     MonadA m =>
-    NearestHoles -> Sugar.TagG (Name m) ->
+    Draw.Color -> NearestHoles -> Sugar.TagG (Name m) ->
     ExprGuiM m (ExpressionGui m)
-makeRecordTag nearestHoles tagG =
+makeTagH tagColor nearestHoles tagG =
     do
         config <- ExprGuiM.readConfig
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
@@ -49,7 +50,7 @@ makeRecordTag nearestHoles tagG =
                 jumpHolesEventMap <>
                 maybe mempty jumpNextEventMap (nearestHoles ^. NearestHoles.next)
         let Config.Name{..} = Config.name config
-        makeRecordTagNameEdit tagG
+        makeTagNameEdit tagColor tagG
             <&> Widget.weakerEvents eventMap
             <&> ExpressionGui.fromValueWidget
     where
@@ -57,6 +58,20 @@ makeRecordTag nearestHoles tagG =
             Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Space]
             (E.Doc ["Navigation", "Jump to next hole"]) $
             return $ WidgetIds.fromEntityId nextHole
+
+makeRecordTag ::
+    MonadA m => NearestHoles -> Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
+makeRecordTag nearestHoles tagG =
+    do
+        Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
+        makeTagH recordTagColor nearestHoles tagG
+
+makeCaseTag ::
+    MonadA m => NearestHoles -> Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
+makeCaseTag nearestHoles tagG =
+    do
+        Config.Name{..} <- Config.name <$> ExprGuiM.readConfig
+        makeTagH caseTagColor nearestHoles tagG
 
 -- | Unfocusable tag view (e.g: in apply params)
 makeParamTag ::
@@ -72,3 +87,6 @@ makeParamTag t =
 
 diveToRecordTag :: Widget.Id -> Widget.Id
 diveToRecordTag = ExpressionGui.diveToNameEdit
+
+diveToCaseTag :: Widget.Id -> Widget.Id
+diveToCaseTag = ExpressionGui.diveToNameEdit
