@@ -239,7 +239,7 @@ getFieldGroups holeInfo =
       }
     | tagG <-
         hiMArgument holeInfo ^..
-        Lens._Just . Sugar.haTags . Lens.traversed
+        Lens._Just . Sugar.haGetFieldTags . Lens.traversed
     ]
 
 applyGroups :: HoleInfo m -> [Group def]

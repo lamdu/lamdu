@@ -163,7 +163,7 @@ convertAppliedHole funcI argS argI exprPl =
                 { _haExpr =
                       argS
                       & rPayload . plActions . Lens._Just . wrap .~ argWrap
-                , _haTags = tags
+                , _haGetFieldTags = tags
                 , _haUnwrap =
                       if isTypeMatch
                       then UnwrapMAction mUnwrap
