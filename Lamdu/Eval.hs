@@ -170,9 +170,23 @@ makeThunk src =
         liftState $ esThunks . at thunkId .= Just (TSrc src)
         return thunkId
 
+whnfRecordShape :: Monad m => ThunkId -> EvalT pl m ()
+whnfRecordShape restThunk =
+    whnfThunk restThunk >>= go
+    where
+        go HRecEmpty = return ()
+        go (HRecExtend (V.RecExtend _ _ newRestThunk)) = whnfRecordShape newRestThunk
+        go x = error $ "RecExtend of non-record: " ++ show (void x)
+
 whnfGetField :: Monad m => V.GetField (ValHead pl) -> EvalT pl m (ValHead pl)
 whnfGetField (V.GetField (HRecExtend (V.RecExtend tag val restThunk)) searchTag)
-    | searchTag == tag = whnfThunk val
+    | searchTag == tag =
+          do
+              -- To avoid artifacts of RecExtend ordering, force the
+              -- entire record shape rather than forcing the prefix we
+              -- depend on:
+              whnfRecordShape restThunk
+              whnfThunk val
     | otherwise =
         whnfThunk restThunk
         <&> (`V.GetField` searchTag)
