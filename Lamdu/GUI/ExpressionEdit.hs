@@ -43,7 +43,7 @@ shrinkIfHigherThanLine w =
                 ** realToFrac (Config.holeResultInjectedScaleExponent config)
         return $
             if ratio < 1
-            then ExpressionGui.scaleFromTop (realToFrac ratio) w
+            then ExpressionGui.scale (realToFrac ratio) w
             else w
 
 make ::
