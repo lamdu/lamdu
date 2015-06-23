@@ -282,7 +282,9 @@ idTranslations consistentExpr dest
             , pairUpTags ExprLens._BGetField EntityId.ofGetFieldTag
             , pairUpLambdaRecordParams (consistentExpr <&> snd) dest
             ]
-    | otherwise = error "idTranslations of mismatching expressions"
+    | otherwise =
+          error $ "Hole.idTranslations of mismatching expressions: " ++
+          show (void src) ++ " " ++ show (void dest)
     where
         pairUpLambdaRecordParams aVal bVal =
             case (aVal, bVal) of
