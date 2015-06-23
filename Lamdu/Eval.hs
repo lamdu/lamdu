@@ -117,25 +117,28 @@ bindVar lamPl var val (Scope parentMap parentId) =
 evalError :: Monad m => String -> EvalT pl m a
 evalError = EvalT . left
 
+whnfApply :: Monad m => Scope -> V.Apply (Val pl) -> EvalT pl m (ValHead pl)
+whnfApply scope (V.Apply funcExpr argExpr) =
+    do
+        func <- whnfScopedVal $ ScopedVal scope funcExpr
+        argThunk <- makeThunk (ScopedVal scope argExpr)
+        case func of
+            HFunc (Closure outerScope (V.Lam var body) lamPl) ->
+                do
+                    innerScope <- bindVar lamPl var argThunk outerScope
+                    whnfScopedVal (ScopedVal innerScope body)
+            HBuiltin ffiname ->
+                do
+                    runBuiltin <- liftState $ use $ esReader . aRunBuiltin
+                    runBuiltin ffiname argThunk
+            _ -> evalError "Apply on non function"
+
 whnfScopedValInner :: Monad m => Maybe ThunkId -> ScopedVal pl -> EvalT pl m (ValHead pl)
 whnfScopedValInner mThunkId (ScopedVal scope expr) =
     reportResultComputed =<<
     case expr ^. V.body of
     V.BAbs lam -> return $ HFunc $ Closure scope lam (expr ^. V.payload)
-    V.BApp (V.Apply funcExpr argExpr) ->
-        do
-            func <- whnfScopedVal $ ScopedVal scope funcExpr
-            argThunk <- makeThunk (ScopedVal scope argExpr)
-            case func of
-                HFunc (Closure outerScope (V.Lam var body) lamPl) ->
-                    do
-                        innerScope <- bindVar lamPl var argThunk outerScope
-                        whnfScopedVal (ScopedVal innerScope body)
-                HBuiltin ffiname ->
-                    do
-                        runBuiltin <- liftState $ use $ esReader . aRunBuiltin
-                        runBuiltin ffiname argThunk
-                _ -> evalError "Apply on non function"
+    V.BApp apply -> whnfApply scope apply
     V.BGetField (V.GetField recordExpr tag) ->
         do
             record <- whnfScopedVal $ ScopedVal scope recordExpr
