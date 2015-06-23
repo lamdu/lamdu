@@ -213,12 +213,45 @@ getVarTypesOrder =
     , Sugar.GetDefinition
     ]
 
+holeSuggested :: HoleInfo m -> [Group def]
+holeSuggested holeInfo =
+    [ Group
+      { _groupAttributes = GroupAttributes ["suggested"] HighPrecedence
+      , _groupBaseExpr = suggestedVal
+      }
+    | Lens.nullOf ExprLens.valHole suggestedVal
+    ]
+    where
+        suggestedVal = hiSuggested holeInfo
+
 makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [GroupM m]
 makeAllGroups editableHoleInfo =
     do
         scopeGetVars <- ehiActions editableHoleInfo ^. Sugar.holeScope
         let allGroups =
                 addSuggestedGroups $
+                [ Group
+                    { _groupAttributes =
+                        GroupAttributes
+                        ["field", '.' : nName (tagG ^. Sugar.tagGName)]
+                        HighPrecedence
+                    , _groupBaseExpr =
+                        tagG ^. Sugar.tagVal
+                        & V.GetField P.hole
+                        & V.BGetField
+                        & Val ()
+                    }
+                | tagG <-
+                    hiMArgument holeInfo ^..
+                    Lens._Just . Sugar.haTags . Lens.traversed
+                ] ++
+                [ Group
+                    { _groupAttributes = GroupAttributes ["apply"] HighPrecedence
+                    , _groupBaseExpr =
+                            Val () $ V.BApp $ V.Apply P.hole P.hole
+                    }
+                | _ <- hiMArgument holeInfo ^.. Lens._Just
+                ] ++
                 primitiveGroups editableHoleInfo ++
                 concat
                 [ scopeGetVars
@@ -237,41 +270,11 @@ makeAllGroups editableHoleInfo =
             & map getVarToGroup
             & sortOn (^. groupAttributes . searchTerms)
         holeInfo = ehiInfo editableHoleInfo
-        suggestedVal = hiSuggested holeInfo
-        suggestedGroups =
-            [ Group
-                { _groupAttributes = GroupAttributes ["suggested"] HighPrecedence
-                , _groupBaseExpr = suggestedVal
-                }
-            | Lens.nullOf ExprLens.valHole suggestedVal
-            ] ++
-            [ Group
-                { _groupAttributes =
-                    GroupAttributes
-                    ["field", '.' : nName (tagG ^. Sugar.tagGName)]
-                    HighPrecedence
-                , _groupBaseExpr =
-                    tagG ^. Sugar.tagVal
-                    & V.GetField P.hole
-                    & V.BGetField
-                    & Val ()
-                }
-            | tagG <-
-                hiMArgument holeInfo ^..
-                Lens._Just . Sugar.haTags . Lens.traversed
-            ] ++
-            [ Group
-                { _groupAttributes = GroupAttributes ["apply"] HighPrecedence
-                , _groupBaseExpr =
-                        Val () $ V.BApp $ V.Apply P.hole P.hole
-                }
-            | _ <- hiMArgument holeInfo ^.. Lens._Just
-            ]
         addSuggestedGroups groups =
             let (dupsOfSuggested, others) =
-                    List.partition (V.alphaEq suggestedVal . (^. groupBaseExpr)) groups
+                    List.partition (V.alphaEq (hiSuggested holeInfo) . (^. groupBaseExpr)) groups
                 dupsGroupNames = dupsOfSuggested ^. Lens.traverse . groupAttributes
-            in  ( suggestedGroups & Lens.traverse . groupAttributes <>~ dupsGroupNames
+            in  ( holeSuggested holeInfo & Lens.traverse . groupAttributes <>~ dupsGroupNames
                 ) ++ others
 
 primitiveGroups :: EditableHoleInfo m -> [GroupM m]
