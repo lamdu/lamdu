@@ -41,7 +41,7 @@ module Lamdu.Sugar.Types
     , RecordTail(..), _RecordExtending, _ClosedRecord
     , RecordAddFieldResult(..), rafrNewTag, rafrNewVal, rafrRecExtend
     , Record(..), rItems, rMAddField, rTail
-    , GetField(..), gfRecord, gfTag, gfMDeleteField
+    , GetField(..), gfRecord, gfTag, gfMDeleteGetField
     , NamedVarType(..), _GetDefinition, _GetFieldParameter, _GetParameter
     , NamedVar(..), nvName, nvJumpTo, nvVarType
     , GetVar(..), _GetVarNamed, _GetVarParamsRecord
@@ -270,7 +270,7 @@ data Record name m expr = Record
 data GetField name m expr = GetField
     { _gfRecord :: expr
     , _gfTag :: TagG name
-    , _gfMDeleteField :: Maybe (T m EntityId)
+    , _gfMDeleteGetField :: Maybe (T m EntityId)
     } deriving (Functor, Foldable, Traversable)
 
 data NamedVarType = GetDefinition | GetFieldParameter | GetParameter

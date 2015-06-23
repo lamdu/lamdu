@@ -57,7 +57,7 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
                 , _tagVal = tag
                 , _tagGName = UniqueId.toGuid tag
                 }
-            , _gfMDeleteField =
+            , _gfMDeleteGetField =
                 protectedSetToVal
                 <$> exprPl ^. Input.mStored
                 <*> ( recExpr ^. V.payload . Input.mStored
