@@ -26,26 +26,26 @@ type T = Transaction
 mkExtractter :: MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
 mkExtractter bodyStored stored =
     do
-        lamI <-
+        (lamI, getVarI) <-
             if Property.value stored == Property.value bodyStored
             then
                 do
                     -- Create temporary hole to give to newLambda
                     -- because we want to know the param to set its value.
-                    newBody <- DataOps.newHole
-                    (newParam, lamI) <- ExprIRef.newLambda newBody
-                    V.LVar newParam & V.BLeaf & ExprIRef.writeValBody newBody
-                    return lamI
+                    newBodyI <- DataOps.newHole
+                    (newParam, lamI) <- ExprIRef.newLambda newBodyI
+                    V.LVar newParam & V.BLeaf & ExprIRef.writeValBody newBodyI
+                    return (lamI, newBodyI)
             else
                 do
                     (newParam, lamI) <-
                         ExprIRef.newLambda (Property.value bodyStored)
-                    ExprIRef.newValBody (V.BLeaf (V.LVar newParam))
-                        >>= Property.set stored
-                    return lamI
+                    getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValBody
+                    Property.set stored getVarI
+                    return (lamI, getVarI)
         Property.value stored & V.Apply lamI & V.BApp & ExprIRef.newValBody
             >>= Property.set bodyStored
-        Property.value stored & EntityId.ofValI & return
+        EntityId.ofValI getVarI & return
 
 mkActions ::
     MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> Actions m
