@@ -149,10 +149,11 @@ makeNewDefinitionEventMap cp =
         curCursor <- WE.readCursor
         let newDefinition =
                 do
-                    newDefI <- DataOps.newPublicDefinition cp ""
-                    DataOps.newPane cp newDefI
+                    newDefI <-
+                        DataOps.newHole >>= DataOps.newDefinitionWithPane cp
                     DataOps.savePreJumpPosition cp curCursor
-                    return . DefinitionEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
+                    return newDefI
+                <&> DefinitionEdit.diveToNameEdit . WidgetIds.fromIRef
         return $ \newDefinitionKeys ->
             Widget.keysEventMapMovesCursor newDefinitionKeys
             (E.Doc ["Edit", "New definition"]) newDefinition

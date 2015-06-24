@@ -4,7 +4,7 @@ module Lamdu.Data.Ops
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap, redexWrapWith
     , recExtend, RecExtendResult(..)
     , addListItem
-    , newPublicDefinition
+    , newDefinitionWithPane
     , newDefinition, presentationModeOfName
     , savePreJumpPosition, jumpBack
     , newPane
@@ -182,13 +182,22 @@ newDefinition name presentationMode defBody =
         return newDef
 
 newPublicDefinition ::
-    MonadA m => Anchors.CodeProps m -> String -> T m (DefI m)
-newPublicDefinition codeProps name =
+    MonadA m => Anchors.CodeProps m -> ExprIRef.ValI m -> String -> T m (DefI m)
+newPublicDefinition codeProps bodyI name =
     do
         defI <-
-            newDefinition name (presentationModeOfName name) =<<
-            (Definition.BodyExpr . (`Definition.Expr` Definition.NoExportedType) <$> newHole)
+            Definition.Expr bodyI Definition.NoExportedType
+            & Definition.BodyExpr
+            & newDefinition name (presentationModeOfName name)
         modP (Anchors.globals codeProps) (defI :)
+        return defI
+
+newDefinitionWithPane ::
+    MonadA m => Anchors.CodeProps m -> ExprIRef.ValI m -> T m (DefI m)
+newDefinitionWithPane codeProps bodyI =
+    do
+        defI <- newPublicDefinition codeProps bodyI ""
+        newPane codeProps defI
         return defI
 
 makeNewTag :: MonadA m => String -> T m T.Tag
