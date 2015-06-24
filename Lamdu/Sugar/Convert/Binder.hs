@@ -58,6 +58,7 @@ data ConventionalParams m a = ConventionalParams
     , _cpParams :: BinderParams Guid m
     , cpMAddFirstParam :: Maybe (T m ParamAddResult)
     , cpScopes :: Map ScopeId [ScopeId]
+    , cpMLamParam :: Maybe V.Var
     }
 
 cpParams :: Lens' (ConventionalParams m a) (BinderParams Guid m)
@@ -231,6 +232,7 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
             , _cpParams = FieldParams params
             , cpMAddFirstParam = mAddFirstParam
             , cpScopes = pl ^. Input.evalAppliesOfLam <&> map fst
+            , cpMLamParam = Just param
             }
     where
         tags = fpTag <$> fieldParams
@@ -435,6 +437,7 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
             , _cpParams = VarParam funcParam
             , cpMAddFirstParam = snd <$> mActions
             , cpScopes = lamExprPl ^. Input.evalAppliesOfLam <&> map fst
+            , cpMLamParam = Just param
             }
     where
         mStoredLam = mkStoredLam lam lamExprPl
@@ -523,6 +526,7 @@ convertEmptyParams mRecursiveVar val =
                     ExprLens.subExprPayloads . Input.evalResults .
                     Lens.to Map.keys . Lens.traversed
                 <&> join (,) & Map.fromList <&> (:[])
+            , cpMLamParam = Nothing
             }
 
 convertParams ::
@@ -606,49 +610,93 @@ getFieldParamsToHole :: MonadA m => T.Tag -> StoredLam m -> T m ()
 getFieldParamsToHole tag (StoredLam (V.Lam param lamBody) _) =
     onMatchingSubexprs toHole (const (isGetFieldParam param tag)) lamBody
 
+mkExtract ::
+    MonadA m =>
+    [V.Var] -> V.Var -> Transaction m () ->
+    Val (ExprIRef.ValIProperty m) -> Val (ExprIRef.ValIProperty m) ->
+    ConvertM m (Transaction m EntityId)
+mkExtract binderScopeVars param delItem bodyStored argStored =
+    do
+        ctx <- ConvertM.readContext
+        do
+            mapM_ (`getVarsToHole` argStored) binderScopeVars
+            delItem
+            case ctx ^. ConvertM.scMBodyStored of
+                Nothing ->
+                    do
+                        getVarsToHole param bodyStored
+                        DataOps.newDefinitionWithPane
+                            (ctx ^. ConvertM.scCodeAnchors) extractedI
+                            <&> EntityId.ofIRef
+                Just scopeBodyP ->
+                    do
+                        (newParam, _) <- DataOps.redexWrapWith extractedI scopeBodyP
+                        let toNewVar p =
+                                V.LVar newParam & V.BLeaf
+                                & ExprIRef.writeValBody (Property.value p)
+                        onGetVars toNewVar param bodyStored
+                        EntityId.ofLambdaParam newParam & return
+            & return
+    where
+        extractedI = argStored ^. V.payload & Property.value
+
+mkWIActions ::
+    MonadA m =>
+    [V.Var] -> V.Var -> ExprIRef.ValIProperty m ->
+    Val (ExprIRef.ValIProperty m) -> Val (ExprIRef.ValIProperty m) ->
+    ConvertM m (WhereItemActions m)
+mkWIActions binderScopeVars param topLevelProp bodyStored argStored =
+    do
+        extr <- mkExtract binderScopeVars param del bodyStored argStored
+        return
+            WhereItemActions
+            { _wiDelete = getVarsToHole param bodyStored >> del
+            , _wiAddNext =
+                DataOps.redexWrap topLevelProp <&> EntityId.ofLambdaParam . fst
+            , _wiExtract = extr
+            }
+    where
+        del = bodyStored ^. V.payload & replaceWith topLevelProp & void
+
 convertWhereItems ::
     (MonadA m, Monoid a) =>
-    Val (Input.Payload m a) ->
+    [V.Var] -> Val (Input.Payload m a) ->
     ConvertM m
     ( [WhereItem Guid m (ExpressionU m a)]
     , Val (Input.Payload m a)
     , Map ScopeId ScopeId
     )
-convertWhereItems expr =
+convertWhereItems binderScopeVars expr =
     case mExtractWhere expr of
     Nothing -> return ([], expr, Map.empty)
     Just ewi ->
         do
             value <- convertBinder Nothing defGuid (ewiArg ewi)
-            let mkWIActions topLevelProp bodyStored =
-                    WhereItemActions
-                    { _wiDelete =
-                        do
-                            getVarsToHole param bodyStored
-                            void $ replaceWith topLevelProp $ bodyStored ^. V.payload
-                    , _wiAddNext = EntityId.ofLambdaParam . fst <$> DataOps.redexWrap topLevelProp
-                    }
-            let hiddenData = ewiHiddenPayloads ewi ^. Lens.traversed . Input.userData
-            let item = WhereItem
+            actions <-
+                mkWIActions binderScopeVars param
+                <$> expr ^. V.payload . Input.mStored
+                <*> traverse (^. Input.mStored) (ewiBody ewi)
+                <*> traverse (^. Input.mStored) (ewiArg ewi)
+                & Lens.sequenceOf Lens._Just
+            (items, body, bodyScopesMap) <-
+                ewiBody ewi & convertWhereItems (ewiParam ewi : binderScopeVars)
+            return
+                ( WhereItem
                     { _wiEntityId = defEntityId
                     , _wiValue =
                         value
-                        & bBody . rPayload . plData <>~ hiddenData
-                    , _wiActions =
-                        mkWIActions <$>
-                        expr ^. V.payload . Input.mStored <*>
-                        traverse (^. Input.mStored) (ewiBody ewi)
+                        & bBody . rPayload . plData <>~
+                        ewiHiddenPayloads ewi ^. Lens.traversed . Input.userData
+                    , _wiActions = actions
                     , _wiName = UniqueId.toGuid param
                     , _wiAnnotation = ewiAnnotation ewi
                     , _wiScopes =
                         ewiBodyScopesMap ewi
                         & Map.keys & map (join (,)) & Map.fromList
                     }
-            (items, body, bodyScopesMap) <- ewiBody ewi & convertWhereItems
-            return
-                ( item :
-                    ( items <&>
-                        wiScopes %~ appendScopeMaps (ewiBodyScopesMap ewi)
+                    :
+                    ( items
+                        <&> wiScopes %~ appendScopeMaps (ewiBodyScopesMap ewi)
                     )
                 , body
                 , appendScopeMaps (ewiBodyScopesMap ewi) bodyScopesMap
@@ -668,28 +716,29 @@ makeBinder :: (MonadA m, Monoid a) =>
     ConventionalParams m a -> Val (Input.Payload m a) ->
     ConvertM m (Binder Guid m (ExpressionU m a))
 makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
-    ConvertM.local (ConvertM.scTagParamInfos <>~ cpParamInfos convParams) $
-        do
-            (whereItems, whereBody, bodyScopesMap) <- convertWhereItems funcBody
-            bodyS <-
-                ConvertM.convertSubexpression whereBody
-                & ConvertM.local
-                    ( ConvertM.scMBodyStored .~
-                        whereBody ^. V.payload . Input.mStored
-                    )
-            let binderScopes s = (s, overrideId bodyScopesMap s)
-            return Binder
-                { _bParams = convParams ^. cpParams
-                , _bMPresentationModeProp = mPresentationModeProp
-                , _bMChosenScopeProp = mChosenScopeProp
-                , _bBody = bodyS
-                , _bScopes = cpScopes convParams <&> map binderScopes
-                , _bWhereItems = whereItems
-                , _bMActions =
-                    mkActions
-                    <$> cpMAddFirstParam convParams
-                    <*> whereBody ^. V.payload . Input.mStored
-                }
+    do
+        (whereItems, whereBody, bodyScopesMap) <-
+            convertWhereItems (cpMLamParam convParams ^.. Lens._Just) funcBody
+        bodyS <-
+            ConvertM.convertSubexpression whereBody
+            & ConvertM.local
+                ( ConvertM.scMBodyStored .~
+                    whereBody ^. V.payload . Input.mStored
+                )
+        let binderScopes s = (s, overrideId bodyScopesMap s)
+        return Binder
+            { _bParams = convParams ^. cpParams
+            , _bMPresentationModeProp = mPresentationModeProp
+            , _bMChosenScopeProp = mChosenScopeProp
+            , _bBody = bodyS
+            , _bScopes = cpScopes convParams <&> map binderScopes
+            , _bWhereItems = whereItems
+            , _bMActions =
+                mkActions
+                <$> cpMAddFirstParam convParams
+                <*> whereBody ^. V.payload . Input.mStored
+            }
+    & ConvertM.local (ConvertM.scTagParamInfos <>~ cpParamInfos convParams)
     where
         mkActions addFirstParam whereStored =
             BinderActions

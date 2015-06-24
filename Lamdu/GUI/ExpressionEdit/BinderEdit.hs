@@ -344,16 +344,20 @@ makeWhereItemEdit (_prevId, nextId, item) =
         config <- ExprGuiM.readConfig
         let eventMap
                 | Just wiActions <- item ^. Sugar.wiActions =
-                    mconcat
-                    [ Widget.keysEventMapMovesCursor (Config.delKeys config)
-                        (E.Doc ["Edit", "Where clause", "Delete"]) $
-                        nextId <$ wiActions ^. Sugar.wiDelete
-                    , Widget.keysEventMapMovesCursor
-                        (Config.whereAddItemKeys config)
-                        (E.Doc ["Edit", "Where clause", "Add next"]) $
-                        WidgetIds.fromEntityId <$>
-                        wiActions ^. Sugar.wiAddNext
-                    ]
+                mconcat
+                [ Widget.keysEventMapMovesCursor (Config.delKeys config)
+                    (E.Doc ["Edit", "Where clause", "Delete"]) $
+                    nextId <$ wiActions ^. Sugar.wiDelete
+                , Widget.keysEventMapMovesCursor
+                    (Config.whereAddItemKeys config)
+                    (E.Doc ["Edit", "Where clause", "Add next"]) $
+                    WidgetIds.fromEntityId <$>
+                    wiActions ^. Sugar.wiAddNext
+                , Widget.keysEventMapMovesCursor (Config.extractKeys config)
+                    (E.Doc ["Edit", "Where clause", "Extract to outer scope"]) $
+                    WidgetIds.fromEntityId <$>
+                    wiActions ^. Sugar.wiExtract
+                ]
                 | otherwise = mempty
         mBodyScopeId <- ExprGuiM.readMScopeId
         make

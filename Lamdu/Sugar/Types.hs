@@ -36,7 +36,7 @@ module Lamdu.Sugar.Types
     , WhereItem(..)
         , wiEntityId, wiValue, wiName, wiActions, wiAnnotation, wiScopes
     , WhereItemActions(..)
-        , wiAddNext, wiDelete
+        , wiAddNext, wiDelete, wiExtract
     , ListItem(..), liMActions, liExpr
     , ListActions(..), List(..)
     , RecordField(..), rfMDelete, rfTag, rfExpr
@@ -343,6 +343,7 @@ instance Show expr => Show (Body name m expr) where
 data WhereItemActions m = WhereItemActions
     { _wiAddNext :: T m EntityId
     , _wiDelete :: T m ()
+    , _wiExtract :: T m EntityId
     }
 
 data WhereItem name m expr = WhereItem
