@@ -347,12 +347,12 @@ makeWhereItemEdit (_prevId, nextId, item) =
                     mconcat
                     [ Widget.keysEventMapMovesCursor (Config.delKeys config)
                         (E.Doc ["Edit", "Where clause", "Delete"]) $
-                        nextId <$ wiActions ^. Sugar.itemDelete
+                        nextId <$ wiActions ^. Sugar.wiDelete
                     , Widget.keysEventMapMovesCursor
                         (Config.whereAddItemKeys config)
                         (E.Doc ["Edit", "Where clause", "Add next"]) $
                         WidgetIds.fromEntityId <$>
-                        wiActions ^. Sugar.itemAddNext
+                        wiActions ^. Sugar.wiAddNext
                     ]
                 | otherwise = mempty
         mBodyScopeId <- ExprGuiM.readMScopeId

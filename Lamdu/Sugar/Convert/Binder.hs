@@ -615,12 +615,12 @@ convertWhereItems expr =
         do
             value <- convertBinder Nothing defGuid (ewiArg ewi)
             let mkWIActions topLevelProp bodyStored =
-                    ListItemActions
-                    { _itemDelete =
+                    WhereItemActions
+                    { _wiDelete =
                           do
                               getParamsToHole param bodyStored
                               void $ replaceWith topLevelProp $ bodyStored ^. V.payload
-                    , _itemAddNext = EntityId.ofLambdaParam . fst <$> DataOps.redexWrap topLevelProp
+                    , _wiAddNext = EntityId.ofLambdaParam . fst <$> DataOps.redexWrap topLevelProp
                     }
             let hiddenData = ewiHiddenPayloads ewi ^. Lens.traversed . Input.userData
             let item = WhereItem

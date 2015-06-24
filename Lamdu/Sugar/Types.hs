@@ -35,6 +35,8 @@ module Lamdu.Sugar.Types
     , DefinitionU
     , WhereItem(..)
         , wiEntityId, wiValue, wiName, wiActions, wiAnnotation, wiScopes
+    , WhereItemActions(..)
+        , wiAddNext, wiDelete
     , ListItem(..), liMActions, liExpr
     , ListActions(..), List(..)
     , RecordField(..), rfMDelete, rfTag, rfExpr
@@ -338,12 +340,17 @@ instance Show expr => Show (Body name m expr) where
     show BodyGetField {} = "GetField:TODO"
     show BodyGetVar {} = "GetVar:TODO"
 
+data WhereItemActions m = WhereItemActions
+    { _wiAddNext :: T m EntityId
+    , _wiDelete :: T m ()
+    }
+
 data WhereItem name m expr = WhereItem
     { _wiValue :: Binder name m expr
     , _wiEntityId :: EntityId
     , _wiAnnotation :: Annotation
     , _wiName :: name
-    , _wiActions :: Maybe (ListItemActions m)
+    , _wiActions :: Maybe (WhereItemActions m)
     , -- This is a mapping from param in bScopes to the where item's scope
       _wiScopes :: Map ScopeId ScopeId
     } deriving (Functor, Foldable, Traversable)
@@ -434,6 +441,7 @@ Lens.makeLenses ''RecordField
 Lens.makeLenses ''ScopeGetVar
 Lens.makeLenses ''TagG
 Lens.makeLenses ''WhereItem
+Lens.makeLenses ''WhereItemActions
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''Body
 Lens.makePrisms ''DefinitionBody
