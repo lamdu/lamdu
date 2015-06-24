@@ -96,10 +96,10 @@ jumpHolesEventMapIfSelected pl =
             then pl ^. Sugar.plData . ExprGuiT.plNearestHoles & jumpHolesEventMap
             else pure mempty
 
-cutEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)
-cutEventMap config actions =
-    maybe mempty (mkEventMap (Config.cutKeys config) (E.Doc ["Edit", "Cut"])) $
-    actions ^. Sugar.cut
+extractEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)
+extractEventMap config actions =
+    maybe mempty (mkEventMap (Config.extractKeys config) (E.Doc ["Edit", "Extract"])) $
+    actions ^. Sugar.extract
 
 replaceOrComeToParentEventMap ::
     MonadA m =>
@@ -133,7 +133,7 @@ actionsEventMap holePickers actions =
         return $ mconcat
             [ wrapEventMap holePickers config
             , applyOperatorEventMap holePickers
-            , cutEventMap config
+            , extractEventMap config
             ] actions
 
 applyOperatorEventMap ::

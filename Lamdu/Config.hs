@@ -161,7 +161,7 @@ data Config = Config
     , whereAddItemKeys :: [ModKey]
     , whereItemPadding :: Vector2 Double
 
-    , cutKeys :: [ModKey]
+    , extractKeys :: [ModKey]
 
     , typeTint :: Draw.Color
     , typeBoxBGColor :: Draw.Color

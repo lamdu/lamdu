@@ -67,7 +67,7 @@ convert ::
 convert exprPl =
     convertPlain Nothing exprPl
     <&> rPayload . plActions . Lens._Just . setToHole .~ AlreadyAHole
-    <&> rPayload . plActions . Lens._Just . cut .~ Nothing
+    <&> rPayload . plActions . Lens._Just . extract .~ Nothing
 
 convertPlain ::
     (MonadA m, Monoid a) =>

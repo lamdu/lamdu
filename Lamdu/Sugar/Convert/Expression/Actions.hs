@@ -23,9 +23,9 @@ import           Lamdu.Sugar.Types
 
 type T = Transaction
 
-mkCutter ::
+mkExtractter ::
     MonadA m => Anchors.CodeProps m -> ExprIRef.ValI m -> T m EntityId -> T m EntityId
-mkCutter cp expr replaceWithHole = do
+mkExtractter cp expr replaceWithHole = do
     _ <- DataOps.newClipboard cp expr
     replaceWithHole
 
@@ -39,9 +39,9 @@ mkActions sugarContext stored =
     { _wrap = WrapAction $ addEntityId <$> DataOps.wrap stored
     , _setToHole = SetToHole $ addEntityId <$> DataOps.setToHole stored
     , _setToInnerExpr = NoInnerExpr
-    , _cut =
+    , _extract =
         Just $ -- overridden by hole conversion
-        mkCutter (sugarContext ^. ConvertM.scCodeAnchors)
+        mkExtractter (sugarContext ^. ConvertM.scCodeAnchors)
         (Property.value stored) $ mkReplaceWithNewHole stored
     }
     where

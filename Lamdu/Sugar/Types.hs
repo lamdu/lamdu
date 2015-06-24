@@ -24,7 +24,7 @@ module Lamdu.Sugar.Types
     , SetToHole(..), _SetToHole, _AlreadyAHole
     , SetToInnerExpr(..), _SetToInnerExpr, _NoInnerExpr
     , Actions(..)
-        , wrap, setToHole, setToInnerExpr, cut
+        , wrap, setToHole, setToInnerExpr, extract
     , Body(..)
         , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
         , _BodyLiteralInteger, _BodyList, _BodyRecord
@@ -105,7 +105,7 @@ data Actions m = Actions
     { _wrap :: WrapAction m
     , _setToHole :: SetToHole m
     , _setToInnerExpr :: SetToInnerExpr m
-    , _cut :: Maybe (T m EntityId) -- Nothing if already hole
+    , _extract :: Maybe (T m EntityId) -- Nothing if already hole
     }
 
 type EvaluationResult = Map ScopeId (ComputedVal ())

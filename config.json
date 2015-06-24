@@ -630,7 +630,7 @@
         0.25,
         1.0
     ],
-    "cutKeys": [
+    "extractKeys": [
         [
             {
                 "modifierKeysSuper": false,
