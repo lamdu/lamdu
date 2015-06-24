@@ -41,14 +41,17 @@ extractFields (V.RecExtend tag val rest) =
 textView :: MonadA m => String -> AnimId -> ExprGuiM m View
 textView x animId = BWidgets.makeTextView x animId & ExprGuiM.widgetEnv
 
+makeTag :: MonadA m => AnimId -> T.Tag -> ExprGuiM m View
+makeTag animId tag =
+    Anchors.assocNameRef tag & Transaction.getP & ExprGuiM.transaction
+    >>= (`textView` animId)
+
 makeField ::
     MonadA m =>
     AnimId -> T.Tag -> ComputedVal () -> ExprGuiM m [(GridView.Alignment, View)]
 makeField parentAnimId tag val =
     do
-        name <-
-            Anchors.assocNameRef tag & Transaction.getP & ExprGuiM.transaction
-        tagView <- textView name (baseId ++ ["tag"])
+        tagView <- makeTag (baseId ++ ["tag"]) tag
         space <-
             ExprGuiM.readConfig
             <&> Spacer.makeHorizontal . realToFrac . Config.spaceWidth
