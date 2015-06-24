@@ -28,7 +28,6 @@ import qualified Data.Store.Transaction as Transaction
 import           Data.String (IsString(..))
 import           Data.Traversable (traverse, sequenceA)
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -78,21 +77,6 @@ convertPlain mInjectedArg exprPl =
     >>= addActions exprPl
     <&> rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
 
-mkPaste ::
-    MonadA m => ExprIRef.ValIProperty m -> ConvertM m (Maybe (T m EntityId))
-mkPaste exprP = do
-    clipboardsP <- ConvertM.codeAnchor Anchors.clipboards
-    clipboards <- ConvertM.getP clipboardsP
-    typeProtectedSetToVal <- ConvertM.typeProtectedSetToVal
-    case clipboards of
-        [] -> return Nothing
-        (clipDefI : clips) ->
-            return $ Just $ do
-                Definition.BodyExpr (Definition.Expr pasteExpr _) <- Transaction.readIRef clipDefI
-                Transaction.deleteIRef clipDefI
-                Transaction.setP clipboardsP clips
-                EntityId.ofValI <$> typeProtectedSetToVal exprP pasteExpr
-
 mkWritableHoleActions ::
     (MonadA m) =>
     Maybe (Val (Input.Payload m a)) ->
@@ -100,13 +84,12 @@ mkWritableHoleActions ::
     ConvertM m (HoleActions Guid m)
 mkWritableHoleActions mInjectedArg exprPl stored = do
     sugarContext <- ConvertM.readContext
-    mPaste <- mkPaste stored
     globals <-
         ConvertM.liftTransaction . Transaction.getP . Anchors.globals $
         sugarContext ^. ConvertM.scCodeAnchors
     let inferredScope = inferred ^. Infer.plScope
     pure HoleActions
-        { _holePaste = mPaste
+        { _holePaste = Nothing
         , _holeScope =
             return $
             -- ^ We wrap this in a (T m) so that AddNames can place the

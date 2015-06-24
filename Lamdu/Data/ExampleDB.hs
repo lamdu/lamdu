@@ -349,7 +349,6 @@ initDB db =
                     do
                         (specialFunctions, builtins) <- createBuiltins
                         let writeCodeAnchor f = Transaction.writeIRef (f Db.codeIRefs)
-                        writeCodeAnchor Db.clipboards []
                         writeCodeAnchor Db.specialFunctions specialFunctions
                         writeCodeAnchor Db.globals builtins
                         writeCodeAnchor Db.panes []

@@ -8,7 +8,6 @@ module Lamdu.Data.Ops
     , newDefinition, presentationModeOfName
     , savePreJumpPosition, jumpBack
     , newPane
-    , newClipboard
     , makeNewTag, makeNewPublicTag
     , isInfix
     ) where
@@ -183,18 +182,6 @@ newPublicDefinition codeProps name =
             newDefinition name (presentationModeOfName name) =<<
             (Definition.BodyExpr . (`Definition.Expr` Definition.NoExportedType) <$> newHole)
         modP (Anchors.globals codeProps) (defI :)
-        return defI
-
-newClipboard ::
-    MonadA m => Anchors.CodeProps m ->
-    ExprIRef.ValI m ->
-    T m (DefI m)
-newClipboard codeProps expr =
-    do
-        len <- length <$> getP (Anchors.clipboards codeProps)
-        let def = Definition.BodyExpr $ Definition.Expr expr Definition.NoExportedType
-        defI <- newDefinition ("clipboard" ++ show len) OO def
-        modP (Anchors.clipboards codeProps) (defI:)
         return defI
 
 makeNewTag :: MonadA m => String -> T m T.Tag

@@ -41,7 +41,6 @@ type Pane m = DefI m
 
 data Code f m = Code
     { panes :: f [Pane m]
-    , clipboards :: f [DefI m]
     , globals :: f [DefI m]
     , specialFunctions :: f (SpecialFunctions m)
     , preJumps :: f [WidgetId.Id]
@@ -50,8 +49,8 @@ data Code f m = Code
     , tags :: f [T.Tag]
     }
 onCode :: (forall a. Binary a => f a -> g a) -> Code f m -> Code g m
-onCode f (Code x0 x1 x2 x3 x4 x5 x6 x7) =
-    Code (f x0) (f x1) (f x2) (f x3) (f x4) (f x5) (f x6) (f x7)
+onCode f (Code x0 x1 x2 x3 x4 x5 x6) =
+    Code (f x0) (f x1) (f x2) (f x3) (f x4) (f x5) (f x6)
 
 data Revision f m = Revision
     { branches :: f [Branch m]

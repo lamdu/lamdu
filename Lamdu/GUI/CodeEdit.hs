@@ -4,7 +4,6 @@ module Lamdu.GUI.CodeEdit
     , Env(..)
     ) where
 
-import           Control.Applicative ((<$>), (<*>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -101,22 +100,6 @@ makePanes (Property panes setPanes) rootId =
 
 type ProcessedDef m = DefinitionN m ([Sugar.EntityId], NearestHoles.NearestHoles)
 
-makeClipboardsEdit ::
-    MonadA m => Env m ->
-    [ProcessedDef m] ->
-    WidgetEnvT (T m) (Widget (T m))
-makeClipboardsEdit env clipboards =
-    do
-        clipboardsEdits <- traverse (makePaneWidget env) clipboards
-        clipboardTitle <-
-            if null clipboardsEdits
-            then return Widget.empty
-            else BWidgets.makeTextViewWidget "Clipboards:" ["clipboards title"]
-        return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
-
-getClipboards :: MonadA m => Anchors.CodeProps m -> T m [DefI m]
-getClipboards = Transaction.getP . Anchors.clipboards
-
 processDefI ::
     MonadA m => Env m -> DefI m -> T m (DefinitionN m [Sugar.EntityId])
 processDefI env defI =
@@ -133,18 +116,15 @@ processPane env pane =
     processDefI env (paneDefI pane)
     <&> (,) pane
 
-type PanesAndClipboards name m a =
-        PanesAndClipboardsP name m (Sugar.Expression name m a)
-data PanesAndClipboardsP name m expr =
-    PanesAndClipboards
+type Panes name m a = PanesP name m (Sugar.Expression name m a)
+newtype PanesP name m expr = Panes
     { _panes :: [(Pane m, Sugar.Definition name m expr)]
-    , _clipboards :: [Sugar.Definition name m expr]
     } deriving (Functor, Foldable, Traversable)
 
 addNearestHoles ::
     MonadA m =>
-    PanesAndClipboards name m [Sugar.EntityId] ->
-    PanesAndClipboards name m ([Sugar.EntityId], NearestHoles.NearestHoles)
+    Panes name m [Sugar.EntityId] ->
+    Panes name m ([Sugar.EntityId], NearestHoles.NearestHoles)
 addNearestHoles pcs =
     pcs
     <&> Lens.mapped %~ (,)
@@ -154,25 +134,12 @@ make :: MonadA m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (T m))
 make env rootId =
     do
         prop <- lift $ Anchors.panes (codeProps env) ^. Transaction.mkProperty
-
         let sugarPanes = makePanes prop rootId
-        sugarClipboards <- lift $ getClipboards $ codeProps env
-
-        PanesAndClipboards loadedPanes loadedClipboards <-
-            PanesAndClipboards
-            <$> traverse (processPane env) sugarPanes
-            <*> traverse (processDefI env) sugarClipboards
+        Panes loadedPanes <-
+            traverse (processPane env) sugarPanes
             & lift
-            <&> addNearestHoles
-
-        panesEdit <- makePanesEdit env loadedPanes rootId
-        clipboardsEdit <- makeClipboardsEdit env loadedClipboards
-
-        return $
-            Box.vboxAlign 0
-            [ panesEdit
-            , clipboardsEdit
-            ]
+            <&> addNearestHoles . Panes
+        makePanesEdit env loadedPanes rootId
 
 makeNewDefinitionEventMap ::
     MonadA m => Anchors.CodeProps m ->

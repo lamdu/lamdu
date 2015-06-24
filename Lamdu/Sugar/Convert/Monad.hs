@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Convert.Monad
     ( Context(..), TagParamInfo(..)
     , scInferContext, scReinferCheckDefinition, scDefI
-    , scCodeAnchors, scSpecialFunctions, scTagParamInfos
+    , scCodeAnchors, scSpecialFunctions, scTagParamInfos, scMBodyStored
     , ConvertM(..), run
     , readContext, liftTransaction, local
     , codeAnchor
@@ -50,10 +50,12 @@ data Context m = Context
     , _scCodeAnchors :: Anchors.CodeProps m
     , _scSpecialFunctions :: Anchors.SpecialFunctions m
     , _scTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
-        -- TODO: scTagParamInfos needs a reverse-lookup map too
+      -- TODO: scTagParamInfos needs a reverse-lookup map too
     , -- Check whether the definition is valid after an edit,
-        -- so that can hole-wrap bad edits.
-        _scReinferCheckDefinition :: T m Bool
+      -- so that can hole-wrap bad edits.
+      _scReinferCheckDefinition :: T m Bool
+    , -- The body of the binder which we are currently converting in:
+      _scMBodyStored :: Maybe (ExprIRef.ValIProperty m)
     , scConvertSubexpression ::
               forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
     }
