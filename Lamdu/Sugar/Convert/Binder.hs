@@ -124,7 +124,7 @@ makeDeleteLambda mRecursiveVar (StoredLam (V.Lam paramVar lamBodyStored) lambdaP
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         return $
             do
-                getParamsToHole paramVar lamBodyStored
+                getVarsToHole paramVar lamBodyStored
                 mRecursiveVar
                     & Lens._Just %%~ (`changeRecursionsFromCalls` lamBodyStored)
                     & void
@@ -587,8 +587,14 @@ mExtractWhere expr = do
         extractRedexApplies _ =
             error "redex should only be applied once per parent scope"
 
-getParamsToHole :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
-getParamsToHole = onMatchingSubexprs toHole . const . isGetVarOf
+onGetVars ::
+    MonadA m =>
+    (ExprIRef.ValIProperty m -> T m ()) -> V.Var ->
+    Val (ExprIRef.ValIProperty m) -> T m ()
+onGetVars f = onMatchingSubexprs f . const . isGetVarOf
+
+getVarsToHole :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
+getVarsToHole = onGetVars toHole
 
 isGetFieldParam :: V.Var -> T.Tag -> Val t -> Bool
 isGetFieldParam param tag
@@ -617,9 +623,9 @@ convertWhereItems expr =
             let mkWIActions topLevelProp bodyStored =
                     WhereItemActions
                     { _wiDelete =
-                          do
-                              getParamsToHole param bodyStored
-                              void $ replaceWith topLevelProp $ bodyStored ^. V.payload
+                        do
+                            getVarsToHole param bodyStored
+                            void $ replaceWith topLevelProp $ bodyStored ^. V.payload
                     , _wiAddNext = EntityId.ofLambdaParam . fst <$> DataOps.redexWrap topLevelProp
                     }
             let hiddenData = ewiHiddenPayloads ewi ^. Lens.traversed . Input.userData
