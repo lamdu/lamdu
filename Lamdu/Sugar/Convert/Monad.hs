@@ -11,27 +11,27 @@ module Lamdu.Sugar.Convert.Monad
     , typeProtectTransaction, typeProtectedSetToVal, wrapOnTypeError
     ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens ((^.))
-import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.MonadA (MonadA)
-import Data.Map (Map)
-import Data.Monoid (Monoid)
-import Data.Store.Transaction (Transaction)
-import Lamdu.Expr.Val (Val)
-import Lamdu.Sugar.Internal
+import           Control.Applicative (Applicative(..), (<$>))
+import           Control.Lens ((^.))
 import qualified Control.Lens as Lens
+import           Control.Monad.Trans.Class (MonadTrans(..))
+import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
+import           Control.MonadA (MonadA)
+import           Data.Map (Map)
+import           Data.Monoid (Monoid)
 import qualified Data.Store.Property as Property
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
+import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
+import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction

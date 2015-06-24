@@ -7,26 +7,26 @@ module Lamdu.Expr.IRef.Infer
     , loadInfer
     ) where
 
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Control.Monad (mzero)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Either.Utils (eitherToMaybeT)
-import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (StateT(..), mapStateT)
-import Control.MonadA (MonadA)
-import Data.Store.Transaction (Transaction)
-import Lamdu.Expr.Val (Val(..))
-import Lamdu.Infer (Infer)
-import Lamdu.Infer.Load (Loader(..))
-import Lamdu.Infer.Unify (unify)
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad (mzero)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Either.Utils (eitherToMaybeT)
+import           Control.Monad.Trans.Maybe (MaybeT(..))
+import           Control.Monad.Trans.State (StateT(..), mapStateT)
+import           Control.MonadA (MonadA)
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
+import           Lamdu.Infer.Load (Loader(..))
 import qualified Lamdu.Infer.Load as InferLoad
 import qualified Lamdu.Infer.Recursive as Recursive
+import           Lamdu.Infer.Unify (unify)
 import qualified Lamdu.Infer.Update as Update
 
 type T = Transaction

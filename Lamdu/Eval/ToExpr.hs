@@ -2,12 +2,12 @@ module Lamdu.Eval.ToExpr
     ( fromValHead
     ) where
 
-import Control.Lens.Operators
-import Lamdu.Eval
-import Lamdu.Eval.Val
-import Lamdu.Expr.Val (Val(..))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Lamdu.Eval
+import           Lamdu.Eval.Val
 import qualified Lamdu.Expr.Pure as P
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 
 fromValHead :: Monad m => ValHead pl -> EvalT pl m (Val ())

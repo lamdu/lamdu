@@ -37,14 +37,14 @@ module Lamdu.Expr.Lens
     , payloadsIndexedByPath
     ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens (Traversal', Prism', prism', Iso', iso)
-import Control.Lens.Operators
-import Control.Monad (void)
-import Lamdu.Expr.Type (Type)
-import Lamdu.Expr.Val (Val(..))
+import           Control.Applicative (Applicative(..), (<$>))
+import           Control.Lens (Traversal', Prism', prism', Iso', iso)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad (void)
+import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 
 valApply :: Traversal' (Val a) (V.Apply (Val a))

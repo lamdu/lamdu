@@ -8,10 +8,10 @@ module Control.Lens.Utils
     , getPrism
     ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens (Lens)
-import Data.Maybe (fromMaybe)
+import           Control.Applicative ((<$>))
+import           Control.Lens (Lens)
 import qualified Control.Lens as Lens
+import           Data.Maybe (fromMaybe)
 
 _fromJust :: String -> Lens.Iso (Maybe a) (Maybe b) a b
 _fromJust msg = Lens.iso (fromMaybe (error msg)) Just

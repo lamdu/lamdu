@@ -2,25 +2,25 @@ module Data.Store.Rev.View
     (View, curVersion, branch, setBranch, move, new, store)
 where
 
-import Control.Applicative ((<$>), (<$))
-import Control.Lens.Operators
-import Control.Monad ((<=<), guard, unless)
-import Control.MonadA (MonadA)
-import Data.Maybe (catMaybes)
-import Data.Store.IRef (IRef)
-import Data.Store.Rev.Branch (Branch)
-import Data.Store.Rev.Change(Change(..))
-import Data.Store.Rev.Version (Version)
-import Data.Store.Rev.ViewBranchInternal (BranchData, ViewData(..), View(..), Branch(..), moveView, makeViewKey, applyChangesToView, brViews, vdBranch)
-import Data.Store.Transaction (Transaction, Store(..))
-import Data.Traversable (traverse)
-import Prelude hiding (lookup)
+import           Control.Applicative ((<$>), (<$))
+import           Control.Lens.Operators
+import           Control.Monad ((<=<), guard, unless)
+import           Control.MonadA (MonadA)
 import qualified Data.List as List
+import           Data.Maybe (catMaybes)
+import           Data.Store.IRef (IRef)
 import qualified Data.Store.Property as Property
+import           Data.Store.Rev.Branch (Branch)
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Change as Change
+import           Data.Store.Rev.Change (Change(..))
+import           Data.Store.Rev.Version (Version)
 import qualified Data.Store.Rev.Version as Version
+import           Data.Store.Rev.ViewBranchInternal (BranchData, ViewData(..), View(..), Branch(..), moveView, makeViewKey, applyChangesToView, brViews, vdBranch)
+import           Data.Store.Transaction (Transaction, Store(..))
 import qualified Data.Store.Transaction as Transaction
+import           Data.Traversable (traverse)
+import           Prelude hiding (lookup)
 
 -- | A Version Map is a large mapping of ObjectKeys to their
 -- | "current-version" values. This serves as a "cache" which is

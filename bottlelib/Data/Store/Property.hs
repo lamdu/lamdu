@@ -6,11 +6,11 @@ module Data.Store.Property
     , list
     ) where
 
-import Control.Lens (Lens')
-import Control.Lens.Operators
-import Control.Monad ((<=<))
-import Control.MonadA (MonadA)
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad ((<=<))
+import           Control.MonadA (MonadA)
 
 data Property m a = Property {
     _pVal :: a,

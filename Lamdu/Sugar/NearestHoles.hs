@@ -5,14 +5,14 @@ module Lamdu.Sugar.NearestHoles
     , add
     ) where
 
-import Control.Applicative.Utils (when)
-import Control.Lens (LensLike)
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Control.Monad.Trans.State (State, evalState)
-import Control.MonadA (MonadA)
+import           Control.Applicative.Utils (when)
+import           Control.Lens (LensLike)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad.Trans.State (State, evalState)
 import qualified Control.Monad.Trans.State as State
+import           Control.MonadA (MonadA)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 

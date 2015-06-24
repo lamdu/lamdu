@@ -7,11 +7,11 @@ module Lamdu.GUI.WidgetIdIRef
     ( fromIRef
     ) where
 
-import Graphics.UI.Bottle.WidgetId (Id(..))
-import Data.Store.IRef(IRef)
-import Data.Store.Guid(Guid)
-import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Guid as Guid
+import           Data.Store.Guid (Guid)
+import qualified Data.Store.IRef as IRef
+import           Data.Store.IRef (IRef)
+import           Graphics.UI.Bottle.WidgetId (Id(..))
 
 fromGuid :: Guid -> Id
 fromGuid = Id . (: []) . Guid.bs

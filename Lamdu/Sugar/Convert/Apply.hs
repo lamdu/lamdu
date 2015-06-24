@@ -3,42 +3,42 @@ module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens.Operators
-import Control.Monad (guard, unless)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
-import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.Monad.Trans.State (evalStateT)
-import Control.MonadA (MonadA)
-import Data.Maybe.Utils (maybeToMPlus)
-import Data.Monoid (Monoid(..))
-import Data.Store.Transaction (Transaction)
-import Data.Traversable (traverse)
-import Lamdu.Expr.Type (Type)
-import Lamdu.Expr.Val (Val(..))
-import Lamdu.Infer.Unify (unify)
-import Lamdu.Sugar.Convert.Expression.Actions (addActions)
-import Lamdu.Sugar.Convert.Monad (ConvertM)
-import Lamdu.Sugar.Internal
-import Lamdu.Sugar.Types
+import           Control.Applicative ((<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad (guard, unless)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
+import           Control.Monad.Trans.Maybe (MaybeT(..))
+import           Control.Monad.Trans.State (evalStateT)
+import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
+import           Data.Maybe.Utils (maybeToMPlus)
+import           Data.Monoid (Monoid(..))
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
+import           Data.Store.Transaction (Transaction)
+import           Data.Traversable (traverse)
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.RecordVal as RecordVal
+import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
+import           Lamdu.Infer.Unify (unify)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.List as ConvertList
+import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.Types
 
 type T = Transaction
 

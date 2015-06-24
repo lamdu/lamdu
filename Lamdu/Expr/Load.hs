@@ -3,16 +3,16 @@ module Lamdu.Expr.Load
     ( loadDef
     ) where
 
-import Control.Applicative ((<$>))
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.Store.Transaction (Transaction)
-import Lamdu.Data.Definition (Definition(..))
-import Lamdu.Expr.IRef (DefI, DefI)
-import Lamdu.Expr.Val (Val(..))
+import           Control.Applicative ((<$>))
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
+import           Lamdu.Expr.IRef (DefI, DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.Val (Val(..))
 
 type T = Transaction
 

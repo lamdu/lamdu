@@ -4,14 +4,14 @@ module Control.Monad.Trans.Decycle
     ( DecycleT, runDecycleT, visit
     ) where
 
-import Control.Applicative (Applicative)
-import Control.Lens.Operators
-import Control.Monad (liftM)
-import Control.Monad.Trans.Class (MonadTrans)
-import Control.Monad.Trans.Reader (ReaderT(..))
-import Data.Set (Set)
+import           Control.Applicative (Applicative)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad (liftM)
+import           Control.Monad.Trans.Class (MonadTrans)
+import           Control.Monad.Trans.Reader (ReaderT(..))
 import qualified Control.Monad.Trans.Reader as Reader
+import           Data.Set (Set)
 import qualified Data.Set as Set
 
 newtype DecycleT k m a =

@@ -11,28 +11,28 @@ module Lamdu.Expr.GenIds
     , NameGen(..), randomNameGen
     ) where
 
-import Control.Applicative ((<$>), Applicative(..))
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Control.Monad
-import Control.MonadA (MonadA)
-import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.Reader (ReaderT(..))
-import Control.Monad.Trans.State (evalState, state, runState)
-import Data.Map (Map)
-import Data.Maybe (fromMaybe)
-import Data.Store.Transaction (Transaction)
-import Data.Traversable (traverse)
-import Lamdu.Expr.Identifier (Identifier(..))
-import Lamdu.Expr.Val (Val(..))
-import System.Random (Random, RandomGen, random)
+import           Control.Applicative ((<$>), Applicative(..))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad
+import           Control.Monad.Trans.Class (MonadTrans(..))
+import           Control.Monad.Trans.Reader (ReaderT(..))
 import qualified Control.Monad.Trans.Reader as Reader
+import           Control.Monad.Trans.State (evalState, state, runState)
+import           Control.MonadA (MonadA)
 import qualified Data.ByteString as BS
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Maybe (fromMaybe)
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Traversable (traverse)
+import           Lamdu.Expr.Identifier (Identifier(..))
 import qualified Lamdu.Expr.Type as T
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           System.Random (Random, RandomGen, random)
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 

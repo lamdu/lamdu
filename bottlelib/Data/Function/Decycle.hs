@@ -1,7 +1,7 @@
 module Data.Function.Decycle (decycleOn, decycle) where
 
-import Control.Lens.Operators
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
 import qualified Data.Set as Set
 
 -- | A fix for functions that terminates recursive cycles

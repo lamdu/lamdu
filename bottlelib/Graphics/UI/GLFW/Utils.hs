@@ -5,10 +5,10 @@ module Graphics.UI.GLFW.Utils
     , getDisplayScale
     ) where
 
-import Control.Exception(bracket_)
-import Control.Monad(unless)
-import Control.MonadA (MonadA)
-import Data.Vector.Vector2 (Vector2(..))
+import           Control.Exception (bracket_)
+import           Control.Monad (unless)
+import           Control.MonadA (MonadA)
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.GLFW as GLFW
 
 assert :: MonadA m => String -> Bool -> m ()

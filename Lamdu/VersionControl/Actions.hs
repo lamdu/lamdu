@@ -2,7 +2,7 @@ module Lamdu.VersionControl.Actions
     ( Actions(..)
     ) where
 
-import Data.Store.Rev.Branch (Branch)
+import           Data.Store.Rev.Branch (Branch)
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 data Actions t m = Actions

@@ -4,35 +4,35 @@ module Lamdu.Sugar.Convert.List
     , nil
     ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Control.Monad (guard, void, MonadPlus(..))
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Maybe (MaybeT(..))
-import Control.MonadA (MonadA)
-import Data.Foldable (Foldable)
-import Data.Maybe.Utils (maybeToMPlus)
-import Data.Monoid (Monoid(..), (<>))
-import Data.Store.Transaction (Transaction)
-import Data.Traversable (Traversable(..))
-import Lamdu.Expr.Val (Val(..))
-import Lamdu.Sugar.Convert.Expression.Actions (addActions)
-import Lamdu.Sugar.Convert.Monad (ConvertM)
-import Lamdu.Sugar.Internal
-import Lamdu.Sugar.Types
+import           Control.Applicative (Applicative(..), (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad (guard, void, MonadPlus(..))
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Maybe (MaybeT(..))
+import           Control.MonadA (MonadA)
+import           Data.Foldable (Foldable)
 import qualified Data.Map.Utils as MapUtils
+import           Data.Maybe.Utils (maybeToMPlus)
+import           Data.Monoid (Monoid(..), (<>))
+import           Data.Store.Transaction (Transaction)
+import           Data.Traversable (Traversable(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.RecordVal as RecordVal
 import qualified Lamdu.Expr.Type as T
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
+import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.Types
 
 type T = Transaction
 

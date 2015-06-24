@@ -7,18 +7,18 @@ module Lamdu.Data.DbLayout
     , module Lamdu.Data.Anchors
     ) where
 
-import Control.Applicative (Applicative)
-import Control.Monad.IO.Class (MonadIO)
-import Data.ByteString.Char8 ()
-import Data.Store.Db (Db)
-import Data.Store.IRef (IRef)
-import Data.Store.Rev.View (View)
-import Data.Store.Transaction (Transaction)
-import Lamdu.Data.Anchors (Code(..), Revision(..), assocNameRef, SpecialFunctions(..))
+import           Control.Applicative (Applicative)
+import           Control.Monad.IO.Class (MonadIO)
+import           Data.ByteString.Char8 ()
+import           Data.Store.Db (Db)
 import qualified Data.Store.Db as Db
+import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
+import           Data.Store.Rev.View (View)
 import qualified Data.Store.Rev.View as View
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Lamdu.Data.Anchors (Code(..), Revision(..), assocNameRef, SpecialFunctions(..))
 import qualified Lamdu.Data.Anchors as Anchors
 
 type T = Transaction

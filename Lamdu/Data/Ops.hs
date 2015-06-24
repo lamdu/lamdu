@@ -12,20 +12,20 @@ module Lamdu.Data.Ops
     , isInfix
     ) where
 
-import Control.Applicative ((<$>), (<$))
-import Control.Lens.Operators
-import Control.Monad (when)
-import Control.MonadA (MonadA)
-import Data.Store.Transaction (Transaction, getP, setP, modP)
-import Lamdu.CharClassification (operatorChars)
-import Lamdu.Data.Anchors (PresentationMode(..))
-import Lamdu.Expr.IRef (DefI, ValTree(..))
+import           Control.Applicative ((<$>), (<$))
+import           Control.Lens.Operators
+import           Control.Monad (when)
+import           Control.MonadA (MonadA)
 import qualified Data.Store.Property as Property
+import           Data.Store.Transaction (Transaction, getP, setP, modP)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
+import           Lamdu.CharClassification (operatorChars)
+import           Lamdu.Data.Anchors (PresentationMode(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.GenIds as GenIds
+import           Lamdu.Expr.IRef (DefI, ValTree(..))
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Type as T

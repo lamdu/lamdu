@@ -3,11 +3,11 @@ module Lamdu.Sugar.RedundantTypes
     ( redundantTypes
     ) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens (Traversal')
-import Control.Lens.Operators
-import Lamdu.Sugar.Types
+import           Control.Applicative (Applicative(..), (<$>))
+import           Control.Lens (Traversal')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Lamdu.Sugar.Types
 
 redundantTypesDefaultTop :: Bool -> Traversal' (Expression name m a) (Payload m a)
 redundantTypesDefaultTop topRedundant f (Expression body pl) =

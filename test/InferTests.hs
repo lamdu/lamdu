@@ -2,19 +2,19 @@
 {-# OPTIONS -fno-warn-missing-signatures #-}
 module InferTests (allTests, factorialExpr, euler1Expr, solveDepressedQuarticExpr) where
 
-import Control.Applicative ((<$>))
-import Data.String (IsString(..))
-import InferAssert
-import InferCombinators
-import InferWrappers
-import Lamdu.Expr.Val (Val(..))
-import Test.Framework (testGroup)
-import Test.Framework.Providers.QuickCheck2 (testProperty)
-import Test.QuickCheck (Property)
-import Test.QuickCheck.Property (property, rejected)
+import           Control.Applicative ((<$>))
+import           Data.String (IsString(..))
+import           InferAssert
+import           InferCombinators
+import           InferWrappers
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.Type as T
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Infer.Error as InferErr
+import           Test.Framework (testGroup)
+import           Test.Framework.Providers.QuickCheck2 (testProperty)
+import           Test.QuickCheck (Property)
+import           Test.QuickCheck.Property (property, rejected)
 
 a, b, c, d :: TypeStream
 a:b:c:d:_ = map (typeVar . fromString . (:[])) ['a'..]

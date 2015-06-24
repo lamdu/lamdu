@@ -2,24 +2,24 @@
 module Data.Store.Guid
     (Guid, make, bs, length, new, combine, augment, fromString, asHex) where
 
-import Control.DeepSeq (NFData(..))
-import Control.Lens ((%~), _1)
-import Control.Monad (guard)
-import Data.Binary (Binary(..))
-import Data.Binary.Get (getByteString)
-import Data.Binary.Put (putByteString)
-import Data.Binary.Utils (encodeS)
-import Data.ByteString.NFData ()
-import Data.ByteString.Utils (randomBS, xorBS)
-import Data.Hashable (Hashable, hashWithSalt)
-import Data.Maybe (fromMaybe)
-import Data.Monoid (mappend)
-import Numeric.Utils (encodeHex)
-import Prelude hiding (length)
-import System.Random (Random(..), split)
+import           Control.DeepSeq (NFData(..))
+import           Control.Lens ((%~), _1)
+import           Control.Monad (guard)
+import           Data.Binary (Binary(..))
+import           Data.Binary.Get (getByteString)
+import           Data.Binary.Put (putByteString)
+import           Data.Binary.Utils (encodeS)
 import qualified Data.ByteString as SBS
+import           Data.ByteString.NFData ()
 import qualified Data.ByteString.UTF8 as UTF8
+import           Data.ByteString.Utils (randomBS, xorBS)
 import qualified Data.Char as Char
+import           Data.Hashable (Hashable, hashWithSalt)
+import           Data.Maybe (fromMaybe)
+import           Data.Monoid (mappend)
+import           Numeric.Utils (encodeHex)
+import           Prelude hiding (length)
+import           System.Random (Random(..), split)
 
 newtype Guid = Guid { bs :: SBS.ByteString }
     deriving (Eq, Ord, Read, NFData, Hashable)

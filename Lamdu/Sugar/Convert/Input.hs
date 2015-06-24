@@ -5,20 +5,20 @@ module Lamdu.Sugar.Convert.Input
     , mkPayload, mkUnstoredPayload
     ) where
 
-import Control.Lens (Lens, Lens')
-import Control.Lens.Operators
-import Data.Foldable (Foldable)
-import Data.Map (Map)
-import Data.Store.Guid (Guid)
-import Data.Traversable (Traversable)
-import Lamdu.Eval.Results (ComputedVal)
-import Lamdu.Eval.Val (ScopeId)
-import Lamdu.Sugar.EntityId (EntityId)
+import           Control.Lens (Lens, Lens')
+import           Control.Lens.Operators
+import           Data.Foldable (Foldable)
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
+import           Data.Traversable (Traversable)
+import           Lamdu.Eval.Results (ComputedVal)
+import           Lamdu.Eval.Val (ScopeId)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
+import           Lamdu.Sugar.EntityId (EntityId)
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
 data Payload m a = Payload

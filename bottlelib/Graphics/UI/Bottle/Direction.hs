@@ -2,11 +2,11 @@ module Graphics.UI.Bottle.Direction
     ( Direction(..), coordinates
     ) where
 
-import Control.Applicative (pure, (<$>))
-import Control.Lens.Operators
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.Rect (R, Rect(..))
+import           Control.Applicative (pure, (<$>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Data.Vector.Vector2 (Vector2(..))
+import           Graphics.UI.Bottle.Rect (R, Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 
 -- RelativePos pos is relative to the top-left of the widget

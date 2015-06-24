@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import Lamdu.Eval
-import Lamdu.Eval.Val
+import           Lamdu.Eval
+import           Lamdu.Eval.Val
 
-import Control.Lens
-import Control.Monad.Trans.Either (EitherT(..))
-import Control.Monad.Trans.State (evalStateT)
-import Control.Monad.Writer
-import Lamdu.Data.Definition
-import Lamdu.Expr.Val (Val)
+import           Control.Lens
+import           Control.Monad.Trans.Either (EitherT(..))
+import           Control.Monad.Trans.State (evalStateT)
+import           Control.Monad.Writer
+import           Lamdu.Data.Definition
+import           Lamdu.Expr.Val (Val)
 import qualified Data.Map as Map
 import qualified Lamdu.Eval.ToExpr as ToExpr
 import qualified Lamdu.Expr.Pure as P

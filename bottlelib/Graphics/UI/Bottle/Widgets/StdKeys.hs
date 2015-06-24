@@ -1,8 +1,8 @@
 {-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys) where
 
-import Data.Foldable (Foldable)
-import Data.Traversable (Traversable)
+import           Data.Foldable (Foldable)
+import           Data.Traversable (Traversable)
 import qualified Graphics.UI.GLFW as GLFW
 
 data DirKeys key = DirKeys

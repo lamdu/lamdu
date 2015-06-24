@@ -2,16 +2,16 @@ module Data.Store.Rev.Branch
     (Branch, guid, new, move, curVersion, newVersion)
 where
 
-import Control.Lens.Operators
-import Control.MonadA (MonadA)
-import Data.Foldable (traverse_)
-import Data.Store.Guid (Guid)
-import Data.Store.Rev.Change (Change)
-import Data.Store.Rev.Version (Version)
-import Data.Store.Rev.ViewBranchInternal (BranchData(..), Branch(..), moveView, brVersion)
-import Data.Store.Transaction (Transaction)
+import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
+import           Data.Foldable (traverse_)
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
+import           Data.Store.Rev.Change (Change)
+import           Data.Store.Rev.Version (Version)
 import qualified Data.Store.Rev.Version as Version
+import           Data.Store.Rev.ViewBranchInternal (BranchData(..), Branch(..), moveView, brVersion)
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 
 guid :: Branch t -> Guid

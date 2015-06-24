@@ -1,4 +1,4 @@
-import InferTests (allTests)
+import           InferTests (allTests)
 import qualified Test.Framework as TestFramework
 
 main :: IO ()

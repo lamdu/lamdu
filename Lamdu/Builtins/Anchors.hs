@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.Builtins.Anchors where
 
+import           Lamdu.Expr.Type (Tag)
 import qualified Lamdu.Expr.Val as V
-import Lamdu.Expr.Type (Tag)
 
 recurseVar :: V.Var
 recurseVar = "RECURSE"

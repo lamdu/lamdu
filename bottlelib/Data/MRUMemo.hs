@@ -7,7 +7,7 @@ module Data.MRUMemo
 
 import Control.Concurrent.MVar
 import Data.IORef
-import System.IO.Unsafe(unsafePerformIO)
+import System.IO.Unsafe (unsafePerformIO)
 
 memoIO :: Eq a => (a -> IO b) -> IO (a -> IO b)
 memoIO act =

@@ -4,14 +4,14 @@ module Lamdu.Sugar.AddNames.NameGen
     , IsFunction(..), existingName, newName
     ) where
 
-import Control.Applicative ((<$>))
-import Control.Arrow ((&&&))
-import Control.Lens.Operators
-import Control.Monad.Trans.State (State, state)
-import Data.Map (Map)
-import Data.Maybe (fromMaybe)
+import           Control.Applicative ((<$>))
+import           Control.Arrow ((&&&))
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad.Trans.State (State, state)
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Maybe (fromMaybe)
 
 data IsFunction = Function | NotFunction
 

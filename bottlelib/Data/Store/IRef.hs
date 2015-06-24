@@ -5,9 +5,9 @@ module Data.Store.IRef
     , anchor
     ) where
 
-import Control.DeepSeq (NFData(..))
-import Data.Binary (Binary(..))
-import Data.Store.Guid (Guid)
+import           Control.DeepSeq (NFData(..))
+import           Data.Binary (Binary(..))
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.Guid as Guid
 
 newtype IRef (m :: * -> *) a = IRef

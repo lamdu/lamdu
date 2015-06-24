@@ -1,43 +1,43 @@
 {-# LANGUAGE OverloadedStrings, RankNTypes #-}
 module InferAssert where
 
-import AnnotatedExpr
-import Control.Applicative ((<$>))
-import Control.Lens (Lens')
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Control.Monad ((<=<))
-import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.State (State, evalState, mapStateT)
-import Control.Monad.Trans.Writer (WriterT(..))
-import Data.Map (Map)
-import Data.Monoid (Monoid(..))
-import Data.String (IsString(..))
-import Formatting
-import InferCombinators
-import InferWrappers
-import Lamdu.Data.Arbitrary () -- Arbitrary instance
-import Lamdu.Expr.Type (Type)
-import Lamdu.Expr.Val (Val(..))
-import Lamdu.Infer (Infer, InferCtx(..))
-import Lamdu.Infer.Error (Error)
-import System.IO (hPutStrLn, stderr)
-import Test.Framework (plusTestOptions)
-import Test.Framework.Options (TestOptions'(..))
-import Text.PrettyPrint.HughesPJ ((<+>))
-import Text.PrettyPrint.HughesPJClass (pPrint)
+import           AnnotatedExpr
+import           Control.Applicative ((<$>))
 import qualified Control.Exception as E
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad ((<=<))
+import           Control.Monad.Trans.Class (MonadTrans(..))
+import           Control.Monad.Trans.State (State, evalState, mapStateT)
 import qualified Control.Monad.Trans.State as State
+import           Control.Monad.Trans.Writer (WriterT(..))
 import qualified Control.Monad.Trans.Writer as Writer
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
+import           Data.String (IsString(..))
+import           Formatting
+import           InferCombinators
+import           InferWrappers
+import           Lamdu.Data.Arbitrary ()
+import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
+import           Lamdu.Expr.Val (Val(..))
+import           Lamdu.Infer (Infer, InferCtx(..))
 import qualified Lamdu.Infer as Infer
+import           Lamdu.Infer.Error (Error)
 import qualified Lamdu.Infer.Update as Update
+import           System.IO (hPutStrLn, stderr)
+import           Test.Framework (plusTestOptions)
 import qualified Test.Framework as TestFramework
+import           Test.Framework.Options (TestOptions'(..))
 import qualified Test.Framework.Providers.HUnit as HUnitProvider
 import qualified Test.HUnit as HUnit
+import           Text.PrettyPrint.HughesPJ ((<+>))
+import           Text.PrettyPrint.HughesPJClass (pPrint)
 
 annotateTypes :: Val Type -> String
 annotateTypes expr =

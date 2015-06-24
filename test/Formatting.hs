@@ -1,7 +1,7 @@
 module Formatting where
 
-import Text.PrettyPrint.HughesPJClass (Pretty(..))
 import qualified Text.PrettyPrint as PP
+import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 
 data UnescapedStr = UnescapedStr String
 instance Show UnescapedStr where show (UnescapedStr x) = x

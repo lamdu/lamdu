@@ -2,17 +2,17 @@ module Lamdu.Expr.UniqueId
     ( ToGuid(..), UniqueId(..)
     ) where
 
-import Control.Applicative ((<$>))
-import Control.MonadA (MonadA)
-import Data.Store.Guid (Guid)
-import Data.Store.IRef (IRef)
-import Data.Store.Transaction (Transaction)
-import Lamdu.Expr.IRef (ValI(..))
-import Lamdu.Expr.Identifier (Identifier(..))
+import           Control.Applicative ((<$>))
+import           Control.MonadA (MonadA)
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.Guid as Guid
+import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Lamdu.Expr.IRef (ValI(..))
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.Identifier (Identifier(..))
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 

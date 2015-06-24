@@ -1,18 +1,18 @@
 module InferWrappers where
 
-import Control.Lens.Operators
-import Control.Lens.Tuple
-import Control.Monad.Trans.State (evalStateT)
-import Data.Functor.Identity (Identity(..))
-import DefinitionTypes
-import Lamdu.Expr.Val (Val)
-import Lamdu.Infer (Infer)
-import Lamdu.Infer.Load (loadInfer, Loader(..))
-import Lamdu.Infer.Unify (unify)
+import           Control.Lens.Operators
+import           Control.Lens.Tuple
+import           Control.Monad.Trans.State (evalStateT)
+import           Data.Functor.Identity (Identity(..))
 import qualified Data.Map as Map
+import           DefinitionTypes
+import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Error as InferErr
+import           Lamdu.Infer.Load (loadInfer, Loader(..))
+import           Lamdu.Infer.Unify (unify)
 
 infer :: Infer.Scope -> Val a -> Infer (Val (Infer.Payload, a))
 infer = Infer.infer definitionTypes

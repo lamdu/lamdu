@@ -1,19 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 module DefinitionTypes (definitionTypes) where
 
-import Control.Applicative ((<$>))
-import Data.Map (Map)
-import Data.Monoid (mappend)
-import Data.String (IsString(..))
-import Lamdu.Expr.Scheme (Scheme)
-import Lamdu.Expr.Type (Type, (~>))
+import           Control.Applicative ((<$>))
+import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Monoid (mappend)
 import qualified Data.Store.Map as MapStore
 import qualified Data.Store.Transaction as Transaction
+import           Data.String (IsString(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.ExampleDB as ExampleDB
+import           Lamdu.Expr.Scheme (Scheme)
 import qualified Lamdu.Expr.Scheme as Scheme
+import           Lamdu.Expr.Type (Type, (~>))
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 
