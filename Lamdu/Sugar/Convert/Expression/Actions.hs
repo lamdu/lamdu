@@ -2,7 +2,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
     ( addActions, makeAnnotation
     ) where
 
-import           Control.Applicative ((<$>))
+import           Control.Applicative (Applicative(..), (<$>))
 import           Control.Lens.Operators
 import           Control.Monad (guard)
 import           Control.MonadA (MonadA)
@@ -12,32 +12,51 @@ import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
+import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
 type T = Transaction
 
-mkExtractter :: MonadA m => ExprIRef.ValI m -> T m EntityId -> T m EntityId
-mkExtractter _expr replaceWithHole =
-    replaceWithHole
+mkExtractter :: MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
+mkExtractter bodyStored stored =
+    do
+        lamI <-
+            if Property.value stored == Property.value bodyStored
+            then
+                do
+                    -- Create temporary hole to give to newLambda
+                    -- because we want to know the param to set its value.
+                    newBody <- DataOps.newHole
+                    (newParam, lamI) <- ExprIRef.newLambda newBody
+                    V.LVar newParam & V.BLeaf & ExprIRef.writeValBody newBody
+                    return lamI
+            else
+                do
+                    (newParam, lamI) <-
+                        ExprIRef.newLambda (Property.value bodyStored)
+                    ExprIRef.newValBody (V.BLeaf (V.LVar newParam))
+                        >>= Property.set stored
+                    return lamI
+        Property.value stored & V.Apply lamI & V.BApp & ExprIRef.newValBody
+            >>= Property.set bodyStored
+        Property.value stored & EntityId.ofValI & return
 
-mkReplaceWithNewHole :: MonadA m => ExprIRef.ValIProperty m -> T m EntityId
-mkReplaceWithNewHole stored =
-    EntityId.ofValI <$> DataOps.replaceWithHole stored
-
-mkActions :: MonadA m => ExprIRef.ValIProperty m -> Actions m
-mkActions stored =
+mkActions ::
+    MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> Actions m
+mkActions bodyStored stored =
     Actions
     { _wrap = WrapAction $ addEntityId <$> DataOps.wrap stored
     , _setToHole = SetToHole $ addEntityId <$> DataOps.setToHole stored
     , _setToInnerExpr = NoInnerExpr
     , _extract =
         Just $ -- overridden by hole conversion
-        mkExtractter (Property.value stored) $ mkReplaceWithNewHole stored
+        mkExtractter bodyStored stored
     }
     where
         addEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
@@ -45,12 +64,14 @@ mkActions stored =
 addActions ::
     MonadA m => Input.Payload m a -> BodyU m a -> ConvertM m (ExpressionU m a)
 addActions exprPl body =
-    return $ Expression body Payload
-        { _plEntityId = exprPl ^. Input.entityId
-        , _plAnnotation = makeAnnotation exprPl
-        , _plActions = mkActions  <$> exprPl ^. Input.mStored
-        , _plData = exprPl ^. Input.userData
-        }
+    do
+        mBodyStored <- ConvertM.readContext <&> (^. ConvertM.scMBodyStored)
+        return $ Expression body Payload
+            { _plEntityId = exprPl ^. Input.entityId
+            , _plAnnotation = makeAnnotation exprPl
+            , _plActions = mkActions <$> mBodyStored <*> exprPl ^. Input.mStored
+            , _plData = exprPl ^. Input.userData
+            }
 
 makeAnnotation :: Input.Payload m a -> Annotation
 makeAnnotation payload =

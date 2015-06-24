@@ -98,8 +98,9 @@ jumpHolesEventMapIfSelected pl =
 
 extractEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)
 extractEventMap config actions =
-    maybe mempty (mkEventMap (Config.extractKeys config) (E.Doc ["Edit", "Extract"])) $
     actions ^. Sugar.extract
+    & maybe mempty (mkEventMap (Config.extractKeys config)
+      (E.Doc ["Edit", "Extract to where-item"]))
 
 replaceOrComeToParentEventMap ::
     MonadA m =>

@@ -54,7 +54,8 @@ data Context m = Context
     , -- Check whether the definition is valid after an edit,
       -- so that can hole-wrap bad edits.
       _scReinferCheckDefinition :: T m Bool
-    , -- The body of the binder which we are currently converting in:
+    , -- The body of the binder which we are currently converting in.
+      -- Used for extracting into where item in current binder.
       _scMBodyStored :: Maybe (ExprIRef.ValIProperty m)
     , scConvertSubexpression ::
               forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)

@@ -665,7 +665,12 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
     ConvertM.local (ConvertM.scTagParamInfos <>~ cpParamInfos convParams) $
         do
             (whereItems, whereBody, bodyScopesMap) <- convertWhereItems funcBody
-            bodyS <- ConvertM.convertSubexpression whereBody
+            bodyS <-
+                ConvertM.convertSubexpression whereBody
+                & ConvertM.local
+                    ( ConvertM.scMBodyStored .~
+                        whereBody ^. V.payload . Input.mStored
+                    )
             let binderScopes s = (s, overrideId bodyScopesMap s)
             return Binder
                 { _bParams = convParams ^. cpParams
