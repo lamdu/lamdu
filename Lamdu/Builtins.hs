@@ -3,8 +3,9 @@ module Lamdu.Builtins
     ( eval
     ) where
 
+import           Control.Applicative (Applicative(..), (<$>))
 import           Control.Lens.Operators
-import           Control.Monad (void)
+import           Control.Monad (void, join)
 import           Data.Foldable (Foldable(..))
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -18,22 +19,26 @@ import           Lamdu.Eval.Val (ValBody(..), ValHead, ThunkId)
 import           Lamdu.Expr.Type (Tag)
 import qualified Lamdu.Expr.Val as V
 
-mapOfParamRecord :: Monad m => ThunkId -> EvalT pl m (Map Tag ThunkId)
-mapOfParamRecord thunkId =
+forceRecExtend :: Monad m => V.RecExtend ThunkId -> EvalT pl m (Map Tag ThunkId)
+forceRecExtend (V.RecExtend tag val rest) =
+    whnfRecordShape rest
+    <&> Map.insert tag val
+
+whnfRecordShape :: Monad m => ThunkId -> EvalT pl m (Map Tag ThunkId)
+whnfRecordShape thunkId =
     do
         recordHead <- Eval.whnfThunk thunkId
         case recordHead of
             HRecEmpty -> return Map.empty
-            HRecExtend (V.RecExtend tag val rest) ->
-                mapOfParamRecord rest
-                <&> Map.insert tag val
+            HRecExtend recExtend ->
+                forceRecExtend recExtend
             _ -> error "Param record is not a record"
 
 extractRecordParams ::
     (Monad m, Traversable t, Show (t Tag)) => t Tag -> ThunkId -> EvalT pl m (t ThunkId)
 extractRecordParams expectedTags thunkId =
     do
-        paramsMap <- mapOfParamRecord thunkId
+        paramsMap <- whnfRecordShape thunkId
         case matchKeys expectedTags paramsMap of
             Nothing ->
                 error $ concat
@@ -108,10 +113,43 @@ builtin2Infix ::
     (a -> b -> c) -> ThunkId -> EvalT pl m (ValHead pl)
 builtin2Infix f thunkId =
     do
-        V2 x y <-
-            extractInfixParams thunkId
-            >>= traverse Eval.whnfThunk
+        V2 x y <- extractInfixParams thunkId >>= traverse Eval.whnfThunk
         f (fromGuest x) (fromGuest y) & toGuest & return
+
+eqThunks :: Monad m => ThunkId -> ThunkId -> EvalT t m Bool
+eqThunks aThunk bThunk =
+    join $ eq <$> Eval.whnfThunk aThunk <*> Eval.whnfThunk bThunk
+
+eq :: Monad m => ValBody ThunkId t -> ValBody ThunkId t -> EvalT pl m Bool
+eq HFunc {} _ = error "Cannot compare functions"
+eq HAbsurd {} _ = error "Cannot compare case analysis"
+eq HCase {} _ = error "Cannot compare case analysis"
+eq HBuiltin {} _ = error "Cannot compare builtins"
+eq (HInteger x) (HInteger y) = return $ x == y
+eq (HRecExtend x) (HRecExtend y) =
+    do
+        xm <- forceRecExtend x
+        ym <- forceRecExtend y
+        if Map.keys xm == Map.keys ym
+            then Map.intersectionWith eqThunks xm ym & Map.elems & sequenceA <&> and
+            else return False
+eq HRecEmpty HRecEmpty = return True
+eq (HInject (V.Inject xf xv)) (HInject (V.Inject yf yv))
+    | xf == yf = eqThunks xv yv
+    | otherwise = return False
+eq _ _ = return False -- assume type checking ruled out errorenous equalities already
+
+builtinEqH :: (Monad m, GuestType t) => (Bool -> t) -> ThunkId -> EvalT pl m (ValHead pl)
+builtinEqH f thunkId =
+    do
+        V2 x y <- extractInfixParams thunkId >>= traverse Eval.whnfThunk
+        eq x y <&> f <&> toGuest
+
+builtinEq :: Monad m => ThunkId -> EvalT pl m (ValHead pl)
+builtinEq = builtinEqH id
+
+builtinNotEq :: Monad m => ThunkId -> EvalT pl m (ValHead pl)
+builtinNotEq = builtinEqH not
 
 intArg :: (Integer -> a) -> Integer -> a
 intArg = id
@@ -123,8 +161,8 @@ eval name =
     Def.FFIName ["Prelude"] "||"     -> builtinOr
     Def.FFIName ["Prelude"] "&&"     -> builtinAnd
 
-    Def.FFIName ["Prelude"] "=="     -> builtin2Infix $ intArg (==)
-    Def.FFIName ["Prelude"] "/="     -> builtin2Infix $ intArg (/=)
+    Def.FFIName ["Prelude"] "=="     -> builtinEq
+    Def.FFIName ["Prelude"] "/="     -> builtinNotEq
     Def.FFIName ["Prelude"] "<"      -> builtin2Infix $ intArg (<)
     Def.FFIName ["Prelude"] "<="     -> builtin2Infix $ intArg (<=)
     Def.FFIName ["Prelude"] ">"      -> builtin2Infix $ intArg (>)
