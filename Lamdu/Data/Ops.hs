@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 module Lamdu.Data.Ops
     ( newHole, wrap, setToWrapper
-    , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
+    , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap, redexWrapWith
     , recExtend, RecExtendResult(..)
     , addListItem
     , newPublicDefinition
@@ -85,14 +85,21 @@ lambdaWrap exprP =
         Property.set exprP newExprI
         return (newParam, newExprI)
 
-redexWrap :: MonadA m => ExprIRef.ValIProperty m -> T m (V.Var, ExprIRef.ValI m)
-redexWrap exprP =
+redexWrapWith ::
+    MonadA m =>
+    ExprIRef.ValI m -> ExprIRef.ValIProperty m -> T m (V.Var, ExprIRef.ValI m)
+redexWrapWith newValueI exprP =
     do
         (newParam, newLambdaI) <- ExprIRef.newLambda $ Property.value exprP
-        newValueI <- newHole
         newApplyI <- ExprIRef.newValBody . V.BApp $ V.Apply newLambdaI newValueI
         Property.set exprP newApplyI
         return (newParam, newLambdaI)
+
+redexWrap :: MonadA m => ExprIRef.ValIProperty m -> T m (V.Var, ExprIRef.ValI m)
+redexWrap exprP =
+    do
+        newValueI <- newHole
+        redexWrapWith newValueI exprP
 
 data RecExtendResult m = RecExtendResult
     { rerNewTag :: T.Tag
