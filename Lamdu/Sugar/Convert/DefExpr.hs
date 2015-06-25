@@ -63,7 +63,7 @@ mkContext defI cp inferContext =
                           Definition.BodyExpr (Definition.Expr valI _) ->
                               ExprIRef.readVal valI
                               <&> fmap (flip (,) ())
-                              <&> ExprIRef.addProperties undefined
+                              <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")
                               <&> fmap fst
                               >>= -- TODO: loadInfer is for sugar, we don't need sugar here
                                   loadInfer
