@@ -171,7 +171,6 @@ Executable lamdu
                      , Lamdu.Expr.Constraints
                      , Lamdu.Expr.FlatComposite
                      , Lamdu.Expr.GenIds
-                     , Lamdu.Expr.Globals
                      , Lamdu.Expr.Identifier
                      , Lamdu.Expr.IRef
                      , Lamdu.Expr.IRef.Infer
