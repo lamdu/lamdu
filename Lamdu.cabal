@@ -157,7 +157,6 @@ Executable lamdu
                      , Lamdu.Config
                      , Lamdu.Config.Sampler
                      , Lamdu.Data.Anchors
-                     , Lamdu.Data.Arbitrary
                      , Lamdu.Data.DbLayout
                      , Lamdu.Data.Definition
                      , Lamdu.Data.ExampleDB
@@ -176,6 +175,7 @@ Executable lamdu
                      , Lamdu.Expr.IRef.Infer
                      , Lamdu.Expr.Lens
                      , Lamdu.Expr.Load
+                     , Lamdu.Expr.Nominal
                      , Lamdu.Expr.Pure
                      , Lamdu.Expr.RecordVal
                      , Lamdu.Expr.Scheme
@@ -184,6 +184,7 @@ Executable lamdu
                      , Lamdu.Expr.TypeVars
                      , Lamdu.Expr.UniqueId
                      , Lamdu.Expr.Val
+                     , Lamdu.Expr.Val.Arbitrary
                      , Lamdu.Font
                      , Lamdu.GUI.CodeEdit
                      , Lamdu.GUI.CodeEdit.Settings
@@ -212,6 +213,7 @@ Executable lamdu
                      , Lamdu.GUI.ExpressionEdit.LambdaEdit
                      , Lamdu.GUI.ExpressionEdit.ListEdit
                      , Lamdu.GUI.ExpressionEdit.LiteralEdit
+                     , Lamdu.GUI.ExpressionEdit.NomEdit
                      , Lamdu.GUI.ExpressionEdit.RecordEdit
                      , Lamdu.GUI.ExpressionEdit.TagEdit
                      , Lamdu.GUI.ExpressionGui
@@ -259,8 +261,10 @@ Executable lamdu
                      , Lamdu.Sugar.Convert.Input
                      , Lamdu.Sugar.Convert.List
                      , Lamdu.Sugar.Convert.Monad
+                     , Lamdu.Sugar.Convert.Nominal
                      , Lamdu.Sugar.Convert.ParamList
                      , Lamdu.Sugar.Convert.Record
+                     , Lamdu.Sugar.Convert.TIdG
                      , Lamdu.Sugar.EntityId
                      , Lamdu.Sugar.Internal
                      , Lamdu.Sugar.Internal.EntityId

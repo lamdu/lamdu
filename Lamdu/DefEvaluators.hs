@@ -17,6 +17,7 @@ import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Store.Db (Db)
 import           Data.Store.Guid (Guid)
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
@@ -27,7 +28,9 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins as Builtins
 import qualified Lamdu.Builtins.Anchors as BuiltinAnchors
+import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (DbM, ViewM)
+import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Eval.Background as EvalBG
 import           Lamdu.Eval.Results (EvalResults)
@@ -39,27 +42,22 @@ import qualified Lamdu.VersionControl as VersionControl
 
 data Evaluators = Evaluators
     { eInvalidateCache :: IO ()
-    , eRunTransaction :: forall a. Transaction DbM a -> IO a
-    , eDefsI :: IRef ViewM [DefI ViewM]
+    , eDb :: Db
     , eRef :: IORef [(DefI ViewM, EvalBG.Evaluator (ValI ViewM))]
     }
 
-new ::
-    IO () -> (forall a. Transaction DbM a -> IO a) ->
-    IRef ViewM [DefI ViewM] -> IO (Evaluators)
-new invalidateCache runTransaction defsI =
+new :: IO () -> Db -> IO Evaluators
+new invalidateCache db =
     do
         ref <- newIORef []
         return Evaluators
             { eInvalidateCache = invalidateCache
-            , eRunTransaction = runTransaction
-            , eDefsI = defsI
+            , eDb = db
             , eRef = ref
             }
 
-runViewTransactionInIO :: Evaluators -> Transaction ViewM a -> IO a
-runViewTransactionInIO evaluators =
-    eRunTransaction evaluators . VersionControl.runAction
+runViewTransactionInIO :: Db -> Transaction ViewM a -> IO a
+runViewTransactionInIO db = DbLayout.runDbTransaction db . VersionControl.runAction
 
 getResults :: Evaluators -> IO (EvalResults (ValI ViewM))
 getResults evaluators =
@@ -70,7 +68,7 @@ getResults evaluators =
 loadDef ::
     Evaluators -> DefI ViewM ->
     IO (Def.Definition (V.Val (ExprIRef.ValIProperty ViewM)) (DefI ViewM))
-loadDef evaluators = runViewTransactionInIO evaluators . Load.loadDef
+loadDef evaluators = runViewTransactionInIO (eDb evaluators) . Load.loadDef
 
 evalActions :: Evaluators -> EvalBG.Actions (ValI ViewM)
 evalActions evaluators =
@@ -94,10 +92,13 @@ evalActions evaluators =
         replaceRecursiveReferences globalId val =
             val & V.body . Lens.traversed %~ replaceRecursiveReferences globalId
 
+panesIRef :: IRef ViewM [Anchors.Pane ViewM]
+panesIRef = DbLayout.panes DbLayout.codeIRefs
+
 start :: Evaluators -> IO ()
 start evaluators =
-    Transaction.readIRef (eDefsI evaluators)
-    & runViewTransactionInIO evaluators
+    Transaction.readIRef panesIRef
+    & runViewTransactionInIO (eDb evaluators)
     >>= mapM tagLoadDef
 
     <&> mapMaybe (_2 %%~ (^? Def.defBody . Def._BodyExpr . Def.expr))
@@ -129,7 +130,7 @@ runTransactionAndMaybeRestartEvaluators evaluators transaction =
             & Lens.traverse . _2 %%~ EvalBG.pauseLoading
             <&> Lens.mapped %~ uncurry sumDependency
             <&> mconcat
-            <&> Set.insert (IRef.guid (eDefsI evaluators))
+            <&> Set.insert (IRef.guid panesIRef)
         (dependencyChanged, result) <-
             do
                 (oldVersion, result, newVersion) <-
@@ -147,7 +148,7 @@ runTransactionAndMaybeRestartEvaluators evaluators transaction =
                 Monoid.Any dependencyChanged <-
                     Version.walk checkDependencyChange checkDependencyChange oldVersion newVersion
                 return (dependencyChanged, result)
-            & eRunTransaction evaluators
+            & DbLayout.runDbTransaction (eDb evaluators)
         if dependencyChanged
             then do
                 stop evaluators

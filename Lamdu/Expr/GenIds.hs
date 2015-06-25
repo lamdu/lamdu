@@ -127,6 +127,8 @@ randomizeParamIdsG preNG gen initMap convertPL =
                     x@V.BRecExtend {} -> traverse go x
                     x@V.BCase {}      -> traverse go x
                     x@V.BInject {}    -> traverse go x
+                    x@V.BFromNom {}   -> traverse go x
+                    x@V.BToNom {}     -> traverse go x
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s
 

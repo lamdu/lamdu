@@ -22,6 +22,7 @@ import qualified Lamdu.GUI.ExpressionEdit.InjectEdit as InjectEdit
 import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
+import qualified Lamdu.GUI.ExpressionEdit.NomEdit as NomEdit
 import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -89,3 +90,5 @@ makeEditor parentPrecedence body =
     Sugar.BodyGetField       x -> x & GetFieldEdit.make
     Sugar.BodyInject         x -> x & InjectEdit.make
     Sugar.BodyGetVar         x -> x & GetVarEdit.make
+    Sugar.BodyToNom          x -> x & NomEdit.makeToNom
+    Sugar.BodyFromNom        x -> x & NomEdit.makeFromNom

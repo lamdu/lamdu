@@ -30,6 +30,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.List as ConvertList
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Convert.Nominal as ConvertNominal
 import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -83,6 +84,8 @@ convert v =
       V.BRecExtend x -> ConvertRecord.convertExtend x
       V.BGetField x -> ConvertGetField.convert x
       V.BInject x -> ConvertInject.convert x
+      V.BToNom x -> ConvertNominal.convertToNom x
+      V.BFromNom x -> ConvertNominal.convertFromNom x
       V.BCase x -> ConvertCase.convert x
       V.BLeaf (V.LVar x) -> convertGetVar x
       V.BLeaf (V.LGlobal x) -> convertGlobal x

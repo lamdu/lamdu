@@ -1,5 +1,5 @@
-module Lamdu.Sugar.Convert.Inject
-    ( convert
+module Lamdu.Sugar.Convert.Nominal
+    ( convertFromNom, convertToNom
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>))
@@ -7,33 +7,37 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Data.Monoid (Monoid(..))
+import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
 import           Data.Traversable (traverse)
-import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Expr.Val (Val)
+import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Convert.TIdG as ConvertTIdG
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
-convert :: (MonadA m, Monoid a) => V.Inject (Val (Input.Payload m a)) -> Input.Payload m a -> ConvertM m (ExpressionU m a)
-convert (V.Inject tag val) exprPl =
+convertFromNom ::
+    (MonadA m, Monoid a) => V.Nom (Val (Input.Payload m a)) ->
+    Input.Payload m a -> ConvertM m (ExpressionU m a)
+convertFromNom = convert BodyFromNom
+
+convert ::
+    (MonadA m, Monoid a) =>
+    (Nominal Guid m (ExpressionU m a) -> BodyU m b) ->
+    V.Nom (Val (Input.Payload m a)) ->
+    Input.Payload m b -> ConvertM m (ExpressionU m b)
+convert f (V.Nom tid val) exprPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        -- TODO: Lots of duplication here from getField, generalize both!
-        Inject
-            { _iVal = val
-            , _iTag =
-                TagG
-                { _tagInstance = EntityId.ofInjectTag entityId
-                , _tagVal = tag
-                , _tagGName = UniqueId.toGuid tag
-                }
-            , _iMDeleteInject =
+        Nominal
+            { _nTId = ConvertTIdG.convert tid
+            , _nVal = val
+            , _nMDeleteNom =
                 protectedSetToVal
                 <$> exprPl ^. Input.mStored
                 <*> ( val ^. V.payload . Input.mStored
@@ -42,7 +46,10 @@ convert (V.Inject tag val) exprPl =
                 <&> Lens.mapped %~ EntityId.ofValI
             }
             & traverse ConvertM.convertSubexpression
-            <&> BodyInject
+            <&> f
             >>= addActions exprPl
-    where
-        entityId = exprPl ^. Input.entityId
+
+convertToNom ::
+    (MonadA m, Monoid a) => V.Nom (Val (Input.Payload m a)) ->
+    Input.Payload m a -> ConvertM m (ExpressionU m a)
+convertToNom = convert BodyToNom

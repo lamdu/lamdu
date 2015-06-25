@@ -3,7 +3,10 @@
 module Lamdu.Eval
     ( EvalT(..), evalError
     , EvalState, initialState
-    , EvalActions(..), Event(..), EventLambdaApplied(..), EventResultComputed(..)
+    , ask
+    , EvalActions(..)
+    , Env(..), eEvalActions
+    , Event(..), EventLambdaApplied(..), EventResultComputed(..)
     , ScopedVal(..)
     , whnfScopedVal, whnfThunk
     , asThunk
@@ -22,8 +25,8 @@ import           Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Traversable (Traversable)
 import qualified Lamdu.Data.Definition as Def
-import           Lamdu.Eval.Val (ValHead, ValBody(..), Closure(..), Scope(..), emptyScope)
 import           Lamdu.Eval.Val (ThunkId(..), thunkIdInt, ScopeId(..), scopeIdInt)
+import           Lamdu.Eval.Val (ValHead, ValBody(..), Closure(..), Scope(..), emptyScope)
 import qualified Lamdu.Eval.Val as EvalVal
 import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
@@ -64,8 +67,8 @@ data EvalActions m pl = EvalActions
     , _aLoadGlobal :: V.GlobalId -> m (Maybe (Def.Body (Val pl)))
     }
 
-newtype EvalEnv m pl = EvalEnv
-    { _eeEvalActions :: EvalActions m pl
+newtype Env m pl = Env
+    { _eEvalActions :: EvalActions m pl
     }
 
 data EvalState m pl = EvalState
@@ -73,7 +76,7 @@ data EvalState m pl = EvalState
     , _esThunkCounter :: !ThunkId
     , _esScopeCounter :: !ScopeId
     , _esLoadedGlobals :: !(Map V.GlobalId (ValHead pl))
-    , _esReader :: !(EvalEnv m pl) -- This is ReaderT
+    , _esReader :: !(Env m pl) -- This is ReaderT
     }
 
 newtype EvalT pl m a = EvalT
@@ -88,8 +91,11 @@ instance MonadTrans (EvalT pl) where
 
 Lens.makeLenses ''Scope
 Lens.makeLenses ''EvalActions
-Lens.makeLenses ''EvalEnv
+Lens.makeLenses ''Env
 Lens.makeLenses ''EvalState
+
+ask :: Monad m => EvalT pl m (Env m pl)
+ask = use esReader & liftState
 
 freshThunkId :: Monad m => EvalT pl m ThunkId
 freshThunkId =
@@ -102,7 +108,7 @@ freshThunkId =
 report :: Monad m => Event pl -> EvalT pl m ()
 report event =
     do
-        rep <- liftState $ use $ esReader . eeEvalActions . aReportEvent
+        rep <- ask <&> (^. eEvalActions . aReportEvent)
         rep event & lift
 
 bindVar :: Monad m => pl -> V.Var -> ThunkId -> Scope -> EvalT pl m Scope
@@ -124,7 +130,7 @@ bindVar lamPl var val (Scope parentMap parentId) =
 evalError :: Monad m => String -> EvalT pl m a
 evalError = EvalT . left
 
-whnfApplyThunked :: Monad m => ValBody ThunkId pl -> ThunkId -> EvalT pl m (ValHead pl)
+whnfApplyThunked :: Monad m => ValHead pl -> ThunkId -> EvalT pl m (ValHead pl)
 whnfApplyThunked func argThunk =
     case func of
     HFunc (Closure outerScope (V.Lam var body) lamPl) ->
@@ -133,7 +139,7 @@ whnfApplyThunked func argThunk =
             whnfScopedVal (ScopedVal innerScope body)
     HBuiltin ffiname ->
         do
-            runBuiltin <- liftState $ use $ esReader . eeEvalActions . aRunBuiltin
+            runBuiltin <- ask <&> (^. eEvalActions . aRunBuiltin)
             runBuiltin ffiname argThunk
     HCase (V.Case caseTag handlerThunk restThunk) ->
         do
@@ -182,6 +188,8 @@ whnfScopedValInner mThunkId (ScopedVal scope expr) =
     V.BLeaf V.LAbsurd -> return HAbsurd
     V.BLeaf (V.LLiteralInteger i) -> HInteger i & return
     V.BLeaf V.LHole -> evalError "Hole"
+    V.BFromNom (V.Nom _ v) -> ScopedVal scope v & whnfScopedValInner Nothing
+    V.BToNom (V.Nom _ v) -> ScopedVal scope v & whnfScopedValInner Nothing
     where
         thunk = makeThunk . TSrc . ScopedVal scope
         reportResultComputed result =
@@ -240,7 +248,7 @@ loadGlobal g =
         case loaded of
             Just cached -> return cached
             Nothing -> do
-                loader <- liftState $ use $ esReader . eeEvalActions . aLoadGlobal
+                loader <- ask <&> (^. eEvalActions . aLoadGlobal)
                 mLoadedGlobal <- lift $ loader g
                 result <-
                     case mLoadedGlobal of
@@ -252,12 +260,12 @@ loadGlobal g =
                 liftState $ esLoadedGlobals . at g .= Just result
                 return result
 
-initialState :: EvalActions m pl -> EvalState m pl
-initialState actions =
+initialState :: Env m pl -> EvalState m pl
+initialState env =
     EvalState
     { _esThunks = Map.empty
     , _esThunkCounter = ThunkId 0
     , _esScopeCounter = ScopeId 1
     , _esLoadedGlobals = Map.empty
-    , _esReader = EvalEnv actions
+    , _esReader = env
     }

@@ -96,7 +96,7 @@ sugarNameToGroup name = sugarNamesToGroup [name]
 
 sugarNamesToGroup :: [Name m] -> Val () -> Group def
 sugarNamesToGroup names expr = Group
-    { _groupAttributes = GroupAttributes (concatMap mkSearchTerms names)  HighPrecedence
+    { _groupAttributes = GroupAttributes (concatMap mkSearchTerms names) HighPrecedence
     , _groupBaseExpr = expr
     }
     where
@@ -278,26 +278,32 @@ applyGroups holeInfo =
     | _ <- hiMArgument holeInfo ^.. Lens._Just
     ]
 
-makeParamGroups :: MonadA m => EditableHoleInfo m -> Transaction m [Group def]
+makeParamGroups :: MonadA m => EditableHoleInfo m -> T m [Group def]
 makeParamGroups editableHoleInfo =
     do
         scopeGetVars <- ehiActions editableHoleInfo ^. Sugar.holeScope
+        tids <- ehiActions editableHoleInfo ^. Sugar.holeTIds
         concat
             [ scopeGetVars
                 & filter ((Just nvType ==) . (^? Sugar.sgvGetVar . Sugar._GetVarNamed . Sugar.nvVarType))
-                & sortedGetVarGroups
+                & map getVarToGroup & sorted
             | nvType <- getVarTypesOrder
             ] ++
             ( scopeGetVars
                 & filter (Lens.has (Sugar.sgvGetVar . Sugar._GetVarParamsRecord))
-                & sortedGetVarGroups
+                & map getVarToGroup & sorted
+            ) ++
+            ( tids
+              & concatMap fromTid
+              & sorted
             )
             & pure
     where
-        sortedGetVarGroups getVars =
-            getVars
-            & map getVarToGroup
-            & sortOn (^. groupAttributes . searchTerms)
+        fromTid tid = [ sugarNamesToGroup [tid ^. Sugar.tidgName] $
+                        V.Val () $ f (V.Nom (tid ^. Sugar.tidgTId) P.hole)
+                      | f <- [V.BFromNom, V.BToNom]
+                      ]
+        sorted = sortOn (^. groupAttributes . searchTerms)
 
 addSuggestedGroups :: HoleInfo m -> [Group def] -> [Group def]
 addSuggestedGroups holeInfo groups =

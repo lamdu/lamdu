@@ -44,6 +44,7 @@ codeIRefs = Code
     , preCursor = IRef.anchor "precursor"
     , postCursor = IRef.anchor "postcursor"
     , tags = IRef.anchor "tags"
+    , tids = IRef.anchor "tids"
     }
 
 revisionIRefs :: Revision (IRef DbM) DbM

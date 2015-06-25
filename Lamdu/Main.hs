@@ -99,9 +99,7 @@ runEditor mFontPath db =
                 wrapFlyNav <- FlyNav.makeIO Style.flyNav WidgetIds.flyNav
                 invalidateCacheRef <- newIORef (return ())
                 let invalidateCache = join (readIORef invalidateCacheRef)
-                evaluators <-
-                    DefEvaluators.new invalidateCache (DbLayout.runDbTransaction db) $
-                    DbLayout.panes DbLayout.codeIRefs
+                evaluators <- DefEvaluators.new invalidateCache db
                 let onSettingsChange settings =
                         case settings ^. Settings.sInfoMode of
                         Settings.Evaluation -> DefEvaluators.start evaluators

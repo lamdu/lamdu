@@ -21,6 +21,7 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, getP, setP, modP)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
+import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.CharClassification (operatorChars)
 import           Lamdu.Data.Anchors (PresentationMode(..))
 import qualified Lamdu.Data.Anchors as Anchors
@@ -146,8 +147,8 @@ addListItem Anchors.SpecialFunctions {..} exprP =
         newItemI <- newHole
         newListI <- ExprIRef.writeValTree $
             app cons $
-            recEx sfHeadTag (ValTreeLeaf newItemI) $
-            recEx sfTailTag (ValTreeLeaf (Property.value exprP))
+            recEx Builtins.headTag (ValTreeLeaf newItemI) $
+            recEx Builtins.tailTag (ValTreeLeaf (Property.value exprP))
             recEmpty
         Property.set exprP newListI
         return (newListI, newItemI)

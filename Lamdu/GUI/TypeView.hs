@@ -94,6 +94,9 @@ parens (ParentPrecedence parent) (MyPrecedence my) view
 makeTVar :: MonadA m => T.Var p -> M m View
 makeTVar (T.Var name) = showIdentifier name
 
+makeTInt :: MonadA m => M m View
+makeTInt = text "Int"
+
 makeTFun :: MonadA m => ParentPrecedence -> Type -> Type -> M m View
 makeTFun parentPrecedence a b =
     addPadding =<<
@@ -214,6 +217,7 @@ makeInternal parentPrecedence typ =
     T.TVar var -> makeTVar var
     T.TFun a b -> makeTFun parentPrecedence a b
     T.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
+    T.TInt -> makeTInt
     T.TRecord composite -> makeComposite makeField composite
     T.TSum composite ->
         [ text "+"

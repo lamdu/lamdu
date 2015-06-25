@@ -58,6 +58,7 @@ class (MonadA m, MonadA (TM m)) => MonadNaming m where
     opWithTagName :: CPSNameConvertor m
     opGetDefName :: NameConvertor m
     opGetTagName :: NameConvertor m
+    opGetTIdName :: NameConvertor m
     opGetParamName :: NameConvertor m
     opGetHiddenParamsName :: NameConvertor m
 
@@ -87,6 +88,7 @@ instance MonadA tm => MonadNaming (Pass0M tm) where
     opGetParamName = p0nameConvertor
     opGetHiddenParamsName = p0nameConvertor
     opGetTagName = p0nameConvertor
+    opGetTIdName = p0nameConvertor
     opGetDefName = p0nameConvertor
 
 getMStoredName :: MonadA tm => Guid -> Pass0M tm MStoredName
@@ -168,6 +170,7 @@ instance MonadA tm => MonadNaming (Pass1M tm) where
     opGetParamName = p1nameConvertor Local
     opGetHiddenParamsName = p1nameConvertor Local
     opGetTagName = p1nameConvertor Global
+    opGetTIdName = p1nameConvertor Global
     opGetDefName = p1nameConvertor Global
 
 pass1Result ::
@@ -248,6 +251,7 @@ instance MonadA tm => MonadNaming (Pass2M tm) where
         (Name NameSourceStored NoCollision (setName guid))
         mName
     opGetTagName = p2nameConvertor "tag_"
+    opGetTIdName = p2nameConvertor "nom_"
     opGetDefName = p2nameConvertor "def_"
 
 makeFinalName ::
@@ -418,6 +422,8 @@ toHoleActions ha@HoleActions {..} =
         pure ha
             { _holeScope =
                 run . traverse toScopeGetVar =<< _holeScope
+            , _holeTIds =
+                run . traverse toTIdG =<< _holeTIds
             , _holeResults =
                 _holeResults
                 & Lens.mapped . Lens.mapped . _2 %~
@@ -482,6 +488,19 @@ toGetVar (GetVarNamed x) =
 toGetVar (GetVarParamsRecord x) =
     GetVarParamsRecord <$> toParamsRecordVar x
 
+toTIdG :: MonadNaming m => TIdG (OldName m) -> m (TIdG (NewName m))
+toTIdG = tidgName %%~ opGetTIdName
+
+toNominal ::
+    MonadNaming m =>
+    Nominal (OldName m) (TM m) (OldExpression m a) ->
+    m (Nominal (NewName m) (TM m) (NewExpression m a))
+toNominal nom@Nominal {..} =
+    do
+        val <- toExpression _nVal
+        tid <- toTIdG _nTId
+        return nom { _nVal = val, _nTId = tid }
+
 toApply ::
     MonadNaming m =>
     Apply (OldName m) (OldExpression m a) ->
@@ -518,6 +537,8 @@ toBody (BodyLam x) = BodyLam <$> toBinder x
 toBody (BodyApply x) = BodyApply <$> toApply x
 toBody (BodyHole x) = BodyHole <$> toHole x
 toBody (BodyGetVar x) = BodyGetVar <$> toGetVar x
+toBody (BodyToNom x) = BodyToNom <$> toNominal x
+toBody (BodyFromNom x) = BodyFromNom <$> toNominal x
 
 toExpression ::
     MonadNaming m => OldExpression m a ->

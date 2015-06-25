@@ -9,6 +9,7 @@ module Lamdu.Sugar.Internal.EntityId
     , ofGetFieldTag
     , ofRecExtendTag
     , ofCaseTag
+    , ofTId
     , randomizeExprAndParams
     ) where
 
@@ -47,6 +48,9 @@ ofIRef = EntityId . UniqueId.toGuid
 
 ofValI :: ExprIRef.ValI m -> EntityId
 ofValI = ofIRef . ExprIRef.unValI
+
+ofTId :: T.Id -> EntityId
+ofTId = EntityId . UniqueId.toGuid
 
 ofLambdaParam :: V.Var -> EntityId
 ofLambdaParam = EntityId . UniqueId.toGuid

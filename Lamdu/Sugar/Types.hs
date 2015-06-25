@@ -28,6 +28,7 @@ module Lamdu.Sugar.Types
     , Body(..)
         , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteralInteger, _BodyList, _BodyCase, _BodyRecord
+        , _BodyFromNom, _BodyToNom
     , EvaluationResult
     , Annotation(..), aInferredType, aMEvaluationResult
     , Payload(..), plEntityId, plAnnotation, plActions, plData
@@ -51,6 +52,7 @@ module Lamdu.Sugar.Types
     , CaseArg(..), caVal, caMToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
     , Case(..), cKind, cAlts, cMAddAlt, cTail, cEntityId
+    , Nominal(..), nTId, nVal, nMDeleteNom
     --
     , GetField(..), gfRecord, gfTag, gfMDeleteGetField
     , Inject(..), iTag, iVal, iMDeleteInject
@@ -68,8 +70,9 @@ module Lamdu.Sugar.Types
     , Hole(..)
         , holeMActions, holeMArg, holeSuggested, holeSuggestedInjectTags, holeGuid
     , ScopeGetVar(..), sgvGetVar, sgvVal
+    , TIdG(..), tidgName, tidgTId, tidgEntityId
     , HoleActions(..)
-        , holeScope, holePaste, holeResults
+        , holeScope, holeTIds, holePaste, holeResults
     , HoleResultScore
     , HoleResult(..)
         , holeResultConverted
@@ -213,8 +216,15 @@ data ScopeGetVar name m = ScopeGetVar
     , _sgvVal :: Val ()
     }
 
+data TIdG name = TIdG
+    { _tidgName :: name
+    , _tidgEntityId :: EntityId
+    , _tidgTId :: T.Id
+    }
+
 data HoleActions name m = HoleActions
     { _holeScope :: T m [ScopeGetVar name m]
+    , _holeTIds :: T m [TIdG name]
     , _holeResults ::
             Val () -> ListT (T m) (HoleResultScore, T m (HoleResult name m))
     , _holePaste :: Maybe (T m EntityId)
@@ -367,6 +377,12 @@ data Apply name expr = Apply
     , _aAnnotatedArgs :: [AnnotatedArg name expr]
     } deriving (Functor, Foldable, Traversable)
 
+data Nominal name m expr = Nominal
+    { _nTId :: TIdG name
+    , _nVal :: expr
+    , _nMDeleteNom :: Maybe (T m EntityId)
+    } deriving (Functor, Foldable, Traversable)
+
 data Body name m expr
     = BodyLam (Binder name m expr)
     | BodyApply (Apply name expr)
@@ -378,6 +394,8 @@ data Body name m expr
     | BodyCase (Case name m expr)
     | BodyInject (Inject name m expr)
     | BodyGetVar (GetVar name m)
+    | BodyToNom (Nominal name m expr)
+    | BodyFromNom (Nominal name m expr)
     deriving (Functor, Foldable, Traversable)
 
 instance Show name => Show (FuncParam name m) where
@@ -401,6 +419,8 @@ instance Show expr => Show (Body name m expr) where
     show BodyCase {} = "Case:TODO"
     show BodyInject {} = "Inject:TODO"
     show BodyGetVar {} = "GetVar:TODO"
+    show BodyFromNom {} = "FromNom:TODO"
+    show BodyToNom {} = "ToNom:TODO"
 
 data WhereItemActions m = WhereItemActions
     { _wiAddNext :: T m EntityId
@@ -500,6 +520,7 @@ Lens.makeLenses ''Inject
 Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions
 Lens.makeLenses ''NamedVar
+Lens.makeLenses ''Nominal
 Lens.makeLenses ''ParamsRecordVar
 Lens.makeLenses ''Payload
 Lens.makeLenses ''PickedResult
@@ -507,6 +528,7 @@ Lens.makeLenses ''Record
 Lens.makeLenses ''RecordAddFieldResult
 Lens.makeLenses ''RecordField
 Lens.makeLenses ''ScopeGetVar
+Lens.makeLenses ''TIdG
 Lens.makeLenses ''TagG
 Lens.makeLenses ''WhereItem
 Lens.makeLenses ''WhereItemActions

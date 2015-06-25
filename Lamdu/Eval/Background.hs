@@ -149,13 +149,14 @@ evalThread actions stateRef src =
             >>= force
             & Eval.runEvalT
             & runEitherT
-            & (`evalStateT` Eval.initialState (evalActions actions stateRef))
+            & (`evalStateT` Eval.initialState env)
         case result of
             Left e -> handleError e Error
             Right _ -> return ()
         writeStatus stateRef Finished
     `E.catch` \e@E.SomeException{..} -> handleError e Error
     where
+        env = Eval.Env $ evalActions actions stateRef
         handleError e t =
             do
                 BS8.hPutStrLn stderr $ "Background evaluator thread failed: " <> BS8.pack (show e)

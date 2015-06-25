@@ -1,11 +1,13 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings, ScopedTypeVariables, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.ExampleDB
-    ( initDB, createBuiltins
+    ( initDB, createPublics
     , withDB
     ) where
 
+import           Control.Lens.Operators
 import           Control.Monad (unless, void)
 import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Writer (WriterT)
 import qualified Control.Monad.Trans.Writer as Writer
 import           Control.MonadA (MonadA)
 import           Data.Foldable (traverse_)
@@ -28,12 +30,16 @@ import qualified Lamdu.Data.DbLayout as Db
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.Nominal (Nominal(..))
+import qualified Lamdu.Expr.Pure as Pure
 import           Lamdu.Expr.Scheme (Scheme(..))
 import qualified Lamdu.Expr.Scheme as Scheme
 import           Lamdu.Expr.Type (Type, (~>))
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.TypeVars as TV
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Lamdu.Expr.Val (Val)
+import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
@@ -67,69 +73,237 @@ forAll count f =
 recordType :: [(T.Tag, Type)] -> Type
 recordType = T.TRecord . foldr (uncurry T.CExtend) T.CEmpty
 
-anchorNames :: [(T.Tag, String)]
-anchorNames =
-        [ (Builtins.objTag, "object")
-        , (Builtins.thenTag, "then")
-        , (Builtins.elseTag, "else")
-        , (Builtins.infixlTag, "infixl")
-        , (Builtins.infixrTag, "infixr")
-        ]
+sumType :: [(T.Tag, Type)] -> Type
+sumType = T.TSum . foldr (uncurry T.CExtend) T.CEmpty
 
 nameTheAnchors :: MonadA m => T m ()
-nameTheAnchors = mapM_ (uncurry setName) anchorNames
+nameTheAnchors = mapM_ (uncurry setName) Builtins.anchorNames
 
-createBuiltins ::
-    MonadA m => T m (Db.SpecialFunctions m, [ExprIRef.DefI m])
-createBuiltins =
+data Public m = Public
+    { publicDefs :: [ExprIRef.DefI m]
+    , publicTags :: [T.Tag]
+    , publicTIds :: [T.Id]
+    }
+
+instance Monoid (Public m) where
+    mempty = Public mempty mempty mempty
+    mappend (Public x0 y0 z0) (Public x1 y1 z1) =
+        Public (mappend x0 x1) (mappend y0 y1) (mappend z0 z1)
+
+publicize :: (Monad m, Monoid s) => m b -> (b -> s) -> WriterT s m b
+publicize act g =
+    do
+        x <- lift act
+        Writer.tell $ g x
+        return x
+
+type M m = WriterT (Public m) (T m)
+
+newTag :: MonadA m => String -> M m T.Tag
+newTag n = publicize (namedId n) $ \x -> mempty { publicTags = [x] }
+
+newTId :: MonadA m => String -> M m T.Id
+newTId n = publicize (namedId n) $ \x -> mempty { publicTIds = [x] }
+
+newPublicDef ::
+    Monad m => m (ExprIRef.DefI n) -> WriterT (Public n) m (ExprIRef.DefI n)
+newPublicDef act = publicize act $ \x -> mempty { publicDefs = [x] }
+
+type TypeCtor = [Type] -> Type
+
+newNominal ::
+    MonadA m => String -> [(T.ParamId, T.TypeVar)] ->
+    ({-fixpoint:-}TypeCtor -> Scheme) ->
+    M m (T.Id, TypeCtor)
+newNominal name params body =
+    do
+        tid <- newTId name
+        let tinst typeParams =
+                T.TInst tid $ Map.fromList $ zip (map fst params) typeParams
+        let scheme = body tinst
+        lift $ Transaction.writeIRef (ExprIRef.nominalI tid) $
+            Nominal (Map.fromList params) scheme
+        return (tid, tinst)
+
+newPublicExpr ::
+    MonadA m =>
+    String -> PresentationMode -> Val () ->
+    Scheme -> M m (ExprIRef.DefI m)
+newPublicExpr name presentationMode expr typ =
+    do
+        valI <- lift $ ExprIRef.newVal expr
+        newPublicDef $
+            DataOps.newDefinition name presentationMode .
+            Definition.BodyExpr $ Definition.Expr valI $
+            Definition.ExportedType $ typ
+
+data CtorInfo = CtorInfo
+    { _ctorName :: String
+    , ctorTag :: T.Tag
+    , _ctorPresentationMode :: PresentationMode
+    , _ctorScheme :: Scheme
+    }
+
+createInjectorI ::
+    MonadA m =>
+    ((Val () -> Val ()) -> Val ()) -> T.Id -> CtorInfo ->
+    M m (ExprIRef.DefI m)
+createInjectorI f typeName (CtorInfo name tag presentationMode scheme) =
+    newPublicExpr name presentationMode
+    (f (Pure.toNom typeName . Pure.inject tag))
+    scheme
+
+createInjector ::
+    MonadA m => T.Id -> CtorInfo -> M m (ExprIRef.DefI m)
+createInjector = createInjectorI (Pure.lambda "x")
+
+createNullaryInjector ::
+    MonadA m => T.Id -> CtorInfo -> M m (ExprIRef.DefI m)
+createNullaryInjector = createInjectorI ($ Pure.recEmpty)
+
+data ListNames m = ListNames
+    { _lnTid :: T.Id
+    , lnNil :: ExprIRef.DefI m
+    , lnCons :: ExprIRef.DefI m
+    }
+
+data Ctor
+    = Nullary CtorInfo
+    | Normal Type CtorInfo
+
+adt ::
+    MonadA m => String -> [(T.ParamId, T.TypeVar)] -> (TypeCtor -> [Ctor]) ->
+    M m (TypeCtor, T.Id, [ExprIRef.DefI m])
+adt name params ctors =
+    do
+        (tid, t) <-
+            newNominal name params $ \t ->
+            ctors t
+            <&> onCtor
+            & sumType
+            & Scheme.mono
+        let mkInjectorFor (Nullary info) = createNullaryInjector tid info
+            mkInjectorFor (Normal _ info) = createInjector tid info
+        injectors <- mapM mkInjectorFor $ ctors t
+        return (t, tid, injectors)
+    where
+        onCtor (Nullary info) = (ctorTag info, recordType [])
+        onCtor (Normal typ info) = (ctorTag info, typ)
+
+createList :: MonadA m => T.ParamId -> M m (TypeCtor, ListNames m)
+createList valTParamId =
+    do
+        (list, tid, [nil, cons]) <-
+            adt "List" [(valTParamId, valT)] $ \list ->
+            [ Nullary $ CtorInfo "[]" Builtins.nilTag Verbose $ forAll 1 $ \[a] -> list [a]
+            , let consType =
+                      recordType
+                      [ (Builtins.headTag, T.TVar valT)
+                      , (Builtins.tailTag, list [T.TVar valT])
+                      ]
+              in  Normal consType $
+                  CtorInfo ":" Builtins.consTag Infix $
+                  forAll 1 $ \ [a] -> consType ~> list [a]
+            ]
+
+        (list, ListNames tid nil cons) & return
+    where
+        valT = "a"
+
+createMaybe ::
+    MonadA m => T.ParamId -> M m (TypeCtor, T.Id, [ExprIRef.DefI m])
+createMaybe valTParamId =
+    do
+        let valT = "a"
+        adt "Maybe" [(valTParamId, valT)] $ \maybe_ ->
+            [ Nullary $ CtorInfo "Nothing" Builtins.nothingTag Verbose $
+              forAll 1 $ \[a] -> maybe_ [a]
+            , Normal (T.TVar valT) $ CtorInfo "Just" Builtins.justTag Verbose $
+              forAll 1 $ \[a] -> a ~> maybe_ [a]
+            ]
+
+data BoolNames m = BoolNames
+    { bnTid :: T.Id
+    , bnTrue :: ExprIRef.DefI m
+    , bnFalse :: ExprIRef.DefI m
+    }
+
+createBool :: MonadA m => M m (Type, BoolNames m)
+createBool =
+    do
+        (tyCon, tid, [injectTrue, injectFalse]) <-
+            adt "Bool" [] $ \boolTCons ->
+            [ Nullary $ CtorInfo "True" Builtins.trueTag Verbose $
+              Scheme.mono $ boolTCons []
+            , Nullary $ CtorInfo "False" Builtins.falseTag Verbose $
+              Scheme.mono $ boolTCons []
+            ]
+        return
+            ( tyCon []
+            , BoolNames
+              { bnTid = tid
+              , bnTrue = injectTrue
+              , bnFalse = injectFalse
+              }
+            )
+
+caseBool :: BoolNames m -> V.Var -> V.Var -> Val () -> Val () -> Val () -> Val ()
+caseBool boolNames v1 v2 cond then_ else_ =
+    cases `Pure.app` Pure.fromNom (bnTid boolNames) cond
+    where
+        cases =
+            Pure._case Builtins.trueTag (Pure.abs v1 then_) $
+            Pure._case Builtins.falseTag (Pure.abs v2 else_) $
+            Pure.absurd
+
+createIf :: MonadA m => Type -> BoolNames m -> M m (ExprIRef.DefI m)
+createIf bool boolNames =
+    do
+        condTag <- newTag "condition"
+        thenTag <- newTag "then"
+        elseTag <- newTag "else"
+        v0 <- lift ExprIRef.newVar
+        v1 <- lift ExprIRef.newVar
+        v2 <- lift ExprIRef.newVar
+        newPublicExpr "if" OO
+            ( Pure.lambdaRecord v0
+              [condTag , thenTag, elseTag] $
+              \[cond   , then_  , else_  ] ->
+              caseBool boolNames v1 v2 cond then_ else_
+            ) $
+            forAll 1 $ \[a] -> recordType
+            [ (condTag, bool)
+            , (thenTag, a)
+            , (elseTag, a)
+            ] ~> a
+
+createNot :: MonadA m => Type -> BoolNames m -> M m (ExprIRef.DefI m)
+createNot bool boolNames@BoolNames{..} =
+    do
+        v0 <- lift ExprIRef.newVar
+        v1 <- lift ExprIRef.newVar
+        v2 <- lift ExprIRef.newVar
+        newPublicExpr "not" Verbose
+            ( Pure.lambda v0 $ \b ->
+              caseBool boolNames v1 v2 b (getDef bnFalse) (getDef bnTrue) ) $
+            Scheme.mono $ bool ~> bool
+    where
+        getDef = Pure.global . ExprIRef.globalId
+
+createPublics :: MonadA m => T m (Db.SpecialFunctions m, Public m)
+createPublics =
     Writer.runWriterT $
     do
         lift nameTheAnchors
 
-        let newIdent x = lift $ namedId x
-
         valTParamId <- newIdent "val"
 
-        mapTId <- newIdent "Map"
-        keyTParamId <- newIdent "key"
-        let mapType k v = T.TInst mapTId $ Map.fromList [(keyTParamId, k), (valTParamId, v)]
+        (list, listNames) <- createList valTParamId
+        _ <- createMaybe valTParamId
+        (bool, boolNames) <- createBool
 
-        listTId <- newIdent "List"
-        let list x = T.TInst listTId $ Map.singleton valTParamId x
-
-        headTag <- newIdent "head"
-        tailTag <- newIdent "tail"
-        nonEmpty <-
-            publicBuiltin "Prelude.:" $ forAll 1 $ \[a] ->
-            recordType [(headTag, a), (tailTag, list a)] ~> list a
-        nil <- publicBuiltin "Prelude.[]" $ forAll 1 $ \[a] -> list a
-        publicBuiltin_ "Data.List.tail" $ forAll 1 $ \[a] -> list a ~> list a
-        publicBuiltin_ "Data.List.head" . forAll 1 $ \[a] -> list a ~> a
-
-        maybeTag <- newIdent "Maybe"
-        let maybe_ x = T.TInst maybeTag $ Map.singleton valTParamId x
-        publicBuiltin_ "Prelude.Just" $ forAll 1 $ \[a] -> a ~> maybe_ a
-        publicBuiltin_ "Prelude.Nothing" $ forAll 1 $ \[a] -> maybe_ a
-
-        nothingTag <- newIdent "Nothing"
-        justTag <- newIdent "Just"
-        publicBuiltin_ "Data.Maybe.caseMaybe" . forAll 2 $ \[a, b] ->
-            recordType
-            [ ( Builtins.objTag, maybe_ a )
-            , ( nothingTag, b )
-            , ( justTag, a ~> b )
-            ] ~> b
-
-        intTag <- newIdent "Int"
-        let integer = T.TInst intTag Map.empty
-
-        boolTag <- newIdent "Bool"
-        let bool = T.TInst boolTag Map.empty
-
-        true <- publicBuiltin "True" $ Scheme.mono bool
-        false <- publicBuiltin "False" $ Scheme.mono bool
-
-        publicBuiltin_ "Prelude.not" $ Scheme.mono $ bool ~> bool
+        _ <- createIf bool boolNames
+        _ <- createNot bool boolNames
 
         let infixType lType rType resType =
                 recordType [ (Builtins.infixlTag, lType)
@@ -138,13 +312,6 @@ createBuiltins =
 
         traverse_ ((`publicBuiltin_` Scheme.mono (infixType bool bool bool)) . ("Prelude."++))
             ["&&", "||"]
-
-        publicBuiltin_ "Prelude.if" . forAll 1 $ \[a] ->
-            recordType
-            [ (Builtins.objTag, bool)
-            , (Builtins.thenTag, a)
-            , (Builtins.elseTag, a)
-            ] ~> a
 
         publicBuiltin_ "Prelude.id" $ forAll 1 $ \[a] -> a ~> a
 
@@ -155,75 +322,63 @@ createBuiltins =
         publicBuiltin_ "Data.Function.fix" . forAll 1 $ \[a] ->
             (a ~> a) ~> a
 
-        publicBuiltin_ "Data.List.reverse" $ forAll 1 $ \[a] -> list a ~> list a
-        publicBuiltin_ "Data.List.last" $ forAll 1 $ \[a] -> list a ~> a
-        publicBuiltin_ "Data.List.null" $ forAll 1 $ \[a] -> list a ~> bool
+        publicBuiltin_ "Data.List.reverse" $ forAll 1 $ \[a] -> list [a] ~> list [a]
+        publicBuiltin_ "Data.List.last" $ forAll 1 $ \[a] -> list [a] ~> a
+        publicBuiltin_ "Data.List.null" $ forAll 1 $ \[a] -> list [a] ~> bool
 
-        publicBuiltin_ "Data.List.length" . forAll 1 $ \[a] -> list a ~> integer
+        publicBuiltin_ "Data.List.length" . forAll 1 $ \[a] -> list [a] ~> T.TInt
 
-        traverse_ ((`publicBuiltin_` Scheme.mono (list integer ~> integer)) . ("Prelude."++))
+        traverse_ ((`publicBuiltin_` Scheme.mono (list [T.TInt] ~> T.TInt)) . ("Prelude."++))
             ["product", "sum", "maximum", "minimum"]
 
-        fromTag <- newIdent "from"
-        toTag <- newIdent "to"
-        keyTag <- newIdent "key"
-        valTag <- newIdent "val"
+        fromTag <- newTag "from"
 
-        publicBuiltin_ "Data.Map.empty" . forAll 2 $ \[k, v] -> mapType k v
-        publicDef_ "insert" Verbose ["Data", "Map"] "insert" . forAll 2 $
-            \[k, v] ->
-            recordType
-            [ ( keyTag, k )
-            , ( valTag, v )
-            , ( toTag, mapType k v )
-            ] ~> mapType k v
-
-        predicateTag <- newIdent "predicate"
+        predicateTag <- newTag "predicate"
         publicDef_ "filter" Verbose ["Data", "List"] "filter" $
             forAll 1 $ \[a] ->
             recordType
-            [ (fromTag, list a)
+            [ (fromTag, list [a])
             , (predicateTag, a ~> bool)
-            ] ~> list a
+            ] ~> list [a]
 
-        whileTag <- newIdent "while"
+        whileTag <- newTag "while"
         publicDef_ "take" Verbose ["Data", "List"] "takeWhile" $
             forAll 1 $ \[a] ->
             recordType
-            [ (fromTag, list a)
+            [ (fromTag, list [a])
             , (whileTag, a ~> bool)
-            ] ~> list a
+            ] ~> list [a]
 
-        countTag <- newIdent "count"
+        countTag <- newTag "count"
         publicDef_ "take" Verbose ["Data", "List"] "take" . forAll 1 $ \[a] ->
             recordType
-            [ (fromTag, list a)
-            , (countTag, integer)
-            ] ~> list a
+            [ (fromTag, list [a])
+            , (countTag, T.TInt)
+            ] ~> list [a]
 
-        mappingTag <- newIdent "mapping"
+        mappingTag <- newTag "mapping"
         publicBuiltin_ "Data.List.map" .
             forAll 2 $ \[a, b] ->
             recordType
-            [ (Builtins.objTag, list a)
+            [ (Builtins.objTag, list [a])
             , (mappingTag, a ~> b)
-            ] ~> list b
+            ] ~> list [b]
 
-        publicBuiltin_ "Data.List.concat" . forAll 1 $ \[a] -> list (list a) ~> list a
+        publicBuiltin_ "Data.List.concat" . forAll 1 $ \[a] -> list [list [a]] ~> list [a]
 
         publicBuiltin_ "Data.List.replicate" . forAll 1 $ \[a] ->
             recordType
             [ (Builtins.objTag, a)
-            , (countTag, integer)
-            ] ~> list a
+            , (countTag, T.TInt)
+            ] ~> list [a]
 
         initialTag     <- newIdent "initial"
         stepTag        <- newIdent "step"
-        accumulatorTag <- newIdent "accumulator"
+        accumulatorTag <- newTag "accumulator"
         itemTag        <- newIdent "item"
         publicBuiltin_ "Data.List.foldl" . forAll 2 $ \[a, b] ->
             recordType
-            [ ( Builtins.objTag, list b )
+            [ ( Builtins.objTag, list [b] )
             , ( initialTag, a )
             , ( stepTag
                 , recordType
@@ -233,78 +388,74 @@ createBuiltins =
                 )
             ] ~> a
 
-        emptyTag <- newIdent "empty"
-        listItemTag <- newIdent "listitem"
+        emptyTag <- newTag "empty"
+        listItemTag <- newTag "listitem"
         publicBuiltin_ "Data.List.foldr" . forAll 2 $ \[a, b] ->
             recordType
-            [ ( Builtins.objTag, list a )
+            [ ( Builtins.objTag, list [a] )
             , ( emptyTag, b )
             , ( listItemTag
                 , recordType
-                    [ (headTag, a)
-                    , (tailTag, b)
+                    [ (Builtins.headTag, a)
+                    , (Builtins.tailTag, b)
                     ] ~> b
                 )
             ] ~> b
 
         publicBuiltin_ "Data.List.caseList" . forAll 2 $ \[a, b] ->
             recordType
-            [ ( Builtins.objTag, list a )
+            [ ( Builtins.objTag, list [a] )
             , ( emptyTag, b )
             , ( listItemTag
                 , recordType
-                    [ (headTag, a)
-                    , (tailTag, list a)
+                    [ (Builtins.headTag, a)
+                    , (Builtins.tailTag, list [a])
                     ] ~> b
                 )
             ] ~> b
 
-        funcTag <- newIdent "func"
-        xTag <- newIdent "x"
-        yTag <- newIdent "y"
+        funcTag <- newTag "func"
+        xTag <- newTag "x"
+        yTag <- newTag "y"
         publicBuiltin_ "Data.List.zipWith" . forAll 3 $ \[a, b, c] ->
             recordType
             [ ( funcTag, recordType [(xTag, a), (yTag, b)] ~> c)
-            , ( xTag, list a )
-            , ( yTag, list b )
-            ] ~> list c
+            , ( xTag, list [a] )
+            , ( yTag, list [b] )
+            ] ~> list [c]
 
         traverse_
-            ((`publicBuiltin_` Scheme.mono (infixType integer integer integer)) .
+            ((`publicBuiltin_` Scheme.mono (infixType T.TInt T.TInt T.TInt)) .
               ("Prelude." ++))
             ["+", "-", "*", "/", "^"]
-        publicBuiltin_ "Prelude.++" $ forAll 1 $ \[a] -> infixType (list a) (list a) (list a)
-        publicDef_ "%" Infix ["Prelude"] "mod" $ Scheme.mono $ infixType integer integer integer
-        publicDef_ "//" Infix ["Prelude"] "div" $ Scheme.mono $ infixType integer integer integer
-        publicBuiltin_ "Prelude.negate" $ Scheme.mono $ integer ~> integer
-        publicBuiltin_ "Prelude.sqrt" $ Scheme.mono $ integer ~> integer
+        publicBuiltin_ "Prelude.++" $ forAll 1 $ \[a] -> infixType (list [a]) (list [a]) (list [a])
+        publicDef_ "%" Infix ["Prelude"] "mod" $ Scheme.mono $ infixType T.TInt T.TInt T.TInt
+        publicDef_ "//" Infix ["Prelude"] "div" $ Scheme.mono $ infixType T.TInt T.TInt T.TInt
+        publicBuiltin_ "Prelude.negate" $ Scheme.mono $ T.TInt ~> T.TInt
+        publicBuiltin_ "Prelude.sqrt" $ Scheme.mono $ T.TInt ~> T.TInt
 
         let aToAToBool = forAll 1 $ \[a] -> infixType a a bool
         traverse_ ((`publicBuiltin_` aToAToBool) . ("Prelude." ++))
             ["==", "/=", "<=", ">=", "<", ">"]
 
         publicDef_ ".." Infix ["Prelude"] "enumFromTo" .
-            Scheme.mono . infixType integer integer $ list integer
-        publicBuiltin_ "Prelude.enumFrom" $ Scheme.mono $ integer ~> list integer
+            Scheme.mono . infixType T.TInt T.TInt $ list [T.TInt]
+        publicBuiltin_ "Prelude.enumFrom" $ Scheme.mono $ T.TInt ~> list [T.TInt]
 
         publicDef_ "iterate" Verbose ["Data", "List"] "iterate" .
             forAll 1 $ \[a] ->
-            recordType [(initialTag, a), (stepTag, a ~> a)] ~> list a
+            recordType [(initialTag, a), (stepTag, a ~> a)] ~> list [a]
 
         return
             Db.SpecialFunctions
-                { Db.sfNil = nil
-                , Db.sfCons = nonEmpty
-                , Db.sfHeadTag = headTag
-                , Db.sfTailTag = tailTag
-                , Db.sfFalse = false
-                , Db.sfTrue = true
+                { Db.sfNil = lnNil listNames
+                , Db.sfCons = lnCons listNames
                 }
     where
         publicDef_ name presentationMode ffiPath ffiName typ =
             void $ publicDef name presentationMode ffiPath ffiName typ
         publicDef name presentationMode ffiPath ffiName typ =
-            publicize $
+            newPublicDef $
             DataOps.newDefinition name presentationMode .
             Definition.BodyBuiltin $ Definition.Builtin (Definition.FFIName ffiPath ffiName) typ
         publicBuiltin fullyQualifiedName =
@@ -315,11 +466,7 @@ createBuiltins =
                 fqPath = splitOn "." fullyQualifiedName
         publicBuiltin_ builtinName typ =
             void $ publicBuiltin builtinName typ
-        publicize f =
-            do
-                x <- lift f
-                Writer.tell [x]
-                return x
+        newIdent x = lift $ namedId x
 
 newBranch :: MonadA m => String -> Version m -> T m (Branch m)
 newBranch name ver =
@@ -347,15 +494,16 @@ initDB db =
                 writeRevAnchor Db.cursor paneWId
                 Db.runViewTransaction view $
                     do
-                        (specialFunctions, builtins) <- createBuiltins
+                        (specialFunctions, public) <- createPublics
                         let writeCodeAnchor f = Transaction.writeIRef (f Db.codeIRefs)
                         writeCodeAnchor Db.specialFunctions specialFunctions
-                        writeCodeAnchor Db.globals builtins
+                        writeCodeAnchor Db.globals (publicDefs public)
                         writeCodeAnchor Db.panes []
                         writeCodeAnchor Db.preJumps []
                         writeCodeAnchor Db.preCursor paneWId
                         writeCodeAnchor Db.postCursor paneWId
-                        writeCodeAnchor Db.tags []
+                        writeCodeAnchor Db.tids (publicTIds public)
+                        writeCodeAnchor Db.tags (publicTags public)
                 -- Prevent undo into the invalid empty revision
                 newVer <- Branch.curVersion master
                 Version.preventUndo newVer

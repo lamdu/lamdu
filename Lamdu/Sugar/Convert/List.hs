@@ -18,6 +18,7 @@ import           Data.Maybe.Utils (maybeToMPlus)
 import           Data.Monoid (Monoid(..), (<>))
 import           Data.Store.Transaction (Transaction)
 import           Data.Traversable (Traversable(..))
+import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -95,15 +96,15 @@ getSugaredHeadTail Anchors.SpecialFunctions{..} argS =
     do
         Record [headField, tailField] ClosedRecord{} _ <-
             maybeToMPlus $ argS ^? rBody . _BodyRecord
-        guard $ sfHeadTag == headField ^. rfTag . tagVal
-        guard $ sfTailTag == tailField ^. rfTag . tagVal
+        guard $ Builtins.headTag == headField ^. rfTag . tagVal
+        guard $ Builtins.tailTag == tailField ^. rfTag . tagVal
         return ConsParams
             { cpHead = headField ^. rfExpr
             , cpTail = tailField ^. rfExpr
             }
 
 consTags :: Anchors.SpecialFunctions t -> ConsParams T.Tag
-consTags Anchors.SpecialFunctions{..} = ConsParams sfHeadTag sfTailTag
+consTags Anchors.SpecialFunctions{..} = ConsParams Builtins.headTag Builtins.tailTag
 
 valConsParams ::
     Anchors.SpecialFunctions t -> Val a -> Maybe ([a], ConsParams (Val a))

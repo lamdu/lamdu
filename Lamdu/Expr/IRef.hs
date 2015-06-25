@@ -1,17 +1,18 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
 module Lamdu.Expr.IRef
     ( ValI(..)
     , ValBody
     , ValIProperty
     , Lam, Apply
     , newValBody, readValBody, writeValBody
+    , newVar
     , newLambda
     , newVal, writeVal, readVal
     , writeValWithStoredSubexpressions
     , DefI
     , addProperties
 
-    , globalId, defI
+    , globalId, defI, nominalI
 
     , ValTree(..), ValTreeM, writeValTree
     ) where
@@ -24,6 +25,7 @@ import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.Binary (Binary(..))
 import           Data.Function.Decycle (decycle)
+import           Data.Monoid ((<>))
 import qualified Data.Store.Guid as Guid
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
@@ -33,6 +35,8 @@ import qualified Data.Store.Transaction as Transaction
 import           Data.Traversable (traverse)
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.Identifier (Identifier(..))
+import           Lamdu.Expr.Nominal (Nominal)
+import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 
@@ -47,6 +51,9 @@ globalId = V.GlobalId . Identifier . Guid.bs . IRef.guid
 defI :: V.GlobalId -> DefI m
 defI (V.GlobalId (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make bs
 
+nominalI :: T.Id -> IRef m Nominal
+nominalI (T.Id (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make ("Nom:" <> bs)
+
 newtype ValI m = ValI
     { unValI :: IRef m (V.Body (ValI m))
     } deriving (Eq, Ord, Show, Binary, NFData)
@@ -59,11 +66,14 @@ type Apply m = V.Apply (ValI m)
 newValBody :: MonadA m => ValBody m -> T m (ValI m)
 newValBody = fmap ValI . Transaction.newIRef
 
+newVar :: MonadA m => T m V.Var
+newVar = V.Var . Identifier . Guid.bs <$> Transaction.newKey
+
 -- TODO: Remove this
 newLambda :: MonadA m => ValI m -> T m (V.Var, ValI m)
 newLambda body =
     do
-        paramId <- V.Var . Identifier . Guid.bs <$> Transaction.newKey
+        paramId <- newVar
         expr <- newValBody $ V.BAbs $ V.Lam paramId body
         return (paramId, expr)
 

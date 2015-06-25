@@ -47,6 +47,7 @@ import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Convert.TIdG as ConvertTIdG
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -83,13 +84,14 @@ mkWritableHoleActions ::
     ConvertM m (HoleActions Guid m)
 mkWritableHoleActions mInjectedArg exprPl stored = do
     sugarContext <- ConvertM.readContext
+    let get f =
+            Transaction.getP . f $
+            sugarContext ^. ConvertM.scCodeAnchors
     pure HoleActions
         { _holePaste = Nothing
         , _holeScope =
             do
-                globals <-
-                    Transaction.getP . Anchors.globals $
-                    sugarContext ^. ConvertM.scCodeAnchors
+                globals <- get Anchors.globals
                 return $ concat
                     -- ^ We wrap this in a (T m) so that AddNames can place the
                     -- name-getting penalty under a transaction that the GUI may
@@ -102,6 +104,10 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
                       & filter (/= sugarContext ^. ConvertM.scDefI)
                       & map getGlobalScopeGetVar
                     ]
+        , _holeTIds =
+            do
+                tids <- get Anchors.tids
+                return $ map ConvertTIdG.convert tids
         , _holeResults = mkHoleResults mInjectedArg sugarContext exprPl stored
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
         }
@@ -175,15 +181,15 @@ getLocalScopeGetVars sugarContext (par, typeExpr) =
 -- TODO: Put the result in scopeGlobals in the caller, not here?
 getGlobalScopeGetVar :: MonadA m => DefI m -> ScopeGetVar Guid m
 getGlobalScopeGetVar defI =
-        ScopeGetVar
-        { _sgvGetVar =
-            GetVarNamed NamedVar
-            { _nvName = UniqueId.toGuid defI
-            , _nvJumpTo = errorJumpTo
-            , _nvVarType = GetDefinition
-            }
-        , _sgvVal = P.global $ ExprIRef.globalId defI
+    ScopeGetVar
+    { _sgvGetVar =
+        GetVarNamed NamedVar
+        { _nvName = UniqueId.toGuid defI
+        , _nvJumpTo = errorJumpTo
+        , _nvVarType = GetDefinition
         }
+    , _sgvVal = P.global $ ExprIRef.globalId defI
+    }
     where
         errorJumpTo = error "Jump to on scope item??"
 
@@ -247,6 +253,7 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
 
 resultTypeScore :: Type -> [Int]
 resultTypeScore (T.TVar _) = [0]
+resultTypeScore T.TInt = [1]
 resultTypeScore (T.TInst _ p) = 2 : maximum ([] : map resultTypeScore (Map.elems p))
 resultTypeScore (T.TFun a r) = 2 : max (resultTypeScore a) (resultTypeScore r)
 resultTypeScore (T.TSum c) =

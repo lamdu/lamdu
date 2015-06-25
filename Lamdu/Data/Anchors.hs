@@ -32,10 +32,6 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 data SpecialFunctions m = SpecialFunctions
     { sfNil :: DefI m
     , sfCons :: DefI m
-    , sfHeadTag :: T.Tag
-    , sfTailTag :: T.Tag
-    , sfTrue :: DefI m
-    , sfFalse :: DefI m
     } deriving (Generic)
 instance Binary (SpecialFunctions m)
 
@@ -49,10 +45,11 @@ data Code f m = Code
     , preCursor :: f WidgetId.Id
     , postCursor :: f WidgetId.Id
     , tags :: f [T.Tag]
+    , tids :: f [T.Id]
     }
 onCode :: (forall a. Binary a => f a -> g a) -> Code f m -> Code g m
-onCode f (Code x0 x1 x2 x3 x4 x5 x6) =
-    Code (f x0) (f x1) (f x2) (f x3) (f x4) (f x5) (f x6)
+onCode f (Code x0 x1 x2 x3 x4 x5 x6 x7) =
+    Code (f x0) (f x1) (f x2) (f x3) (f x4) (f x5) (f x6) (f x7)
 
 data Revision f m = Revision
     { branches :: f [Branch m]

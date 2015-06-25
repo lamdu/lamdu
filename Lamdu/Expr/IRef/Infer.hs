@@ -44,16 +44,23 @@ instance Pretty Error where
 
 loader :: MonadA m => Loader (EitherT Error (T m))
 loader =
-    Loader loadType
-    where
-        loadType globalId =
-            do
-                defBody <- lift $ Transaction.readIRef $ ExprIRef.defI globalId
-                case defBody of
-                    Definition.BodyExpr (Definition.Expr _ (Definition.ExportedType scheme)) ->
-                        return scheme
-                    Definition.BodyBuiltin (Definition.Builtin _ scheme) -> return scheme
-                    _ -> left UnexportedGlobalReferred -- Reference to global with non-exported type!
+    Loader
+    { loadTypeOf = \globalId ->
+        do
+            defBody <- lift $ Transaction.readIRef $ ExprIRef.defI globalId
+            case defBody of
+                Definition.BodyExpr (Definition.Expr _ (Definition.ExportedType scheme)) ->
+                    return scheme
+                Definition.BodyBuiltin (Definition.Builtin _ scheme) -> return scheme
+                _ -> left UnexportedGlobalReferred -- Reference to global with non-exported type!
+    , loadNominal = \tid ->
+          do
+              let iref = ExprIRef.nominalI tid
+              e <- lift $ Transaction.irefExists iref
+              if e
+                  then lift $ Transaction.readIRef iref
+                  else fail "Missing Nominal Value"
+    }
 
 type M m = StateT Infer.Context (EitherT Error (T m))
 
