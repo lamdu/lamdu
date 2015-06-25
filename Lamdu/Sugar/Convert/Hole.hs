@@ -84,30 +84,28 @@ mkWritableHoleActions ::
     ConvertM m (HoleActions Guid m)
 mkWritableHoleActions mInjectedArg exprPl stored = do
     sugarContext <- ConvertM.readContext
-    globals <-
-        ConvertM.liftTransaction . Transaction.getP . Anchors.globals $
-        sugarContext ^. ConvertM.scCodeAnchors
-    let inferredScope = inferred ^. Infer.plScope
     pure HoleActions
         { _holePaste = Nothing
         , _holeScope =
-            return $ concat
-            -- ^ We wrap this in a (T m) so that AddNames can place the
-            -- name-getting penalty under a transaction that the GUI may
-            -- avoid using
-            [ inferredScope
-              & Infer.scopeToTypeMap
-              & Map.toList
-              & concatMap (getLocalScopeGetVars sugarContext)
-            , globals
-              & filter (/= sugarContext ^. ConvertM.scDefI)
-              & map getGlobalScopeGetVar
-            ]
+            do
+                globals <-
+                    Transaction.getP . Anchors.globals $
+                    sugarContext ^. ConvertM.scCodeAnchors
+                return $ concat
+                    -- ^ We wrap this in a (T m) so that AddNames can place the
+                    -- name-getting penalty under a transaction that the GUI may
+                    -- avoid using
+                    [ exprPl ^. Input.inferred . Infer.plScope
+                      & Infer.scopeToTypeMap
+                      & Map.toList
+                      & concatMap (getLocalScopeGetVars sugarContext)
+                    , globals
+                      & filter (/= sugarContext ^. ConvertM.scDefI)
+                      & map getGlobalScopeGetVar
+                    ]
         , _holeResults = mkHoleResults mInjectedArg sugarContext exprPl stored
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
         }
-    where
-        inferred = exprPl ^. Input.inferred
 
 -- Ignoring alpha-renames:
 consistentExprIds :: EntityId -> Val (EntityId -> a) -> Val a
