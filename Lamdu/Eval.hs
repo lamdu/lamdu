@@ -6,6 +6,7 @@ module Lamdu.Eval
     , EvalActions(..), Event(..), EventLambdaApplied(..), EventResultComputed(..)
     , ScopedVal(..)
     , whnfScopedVal, whnfThunk
+    , asThunk
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>))
@@ -143,9 +144,16 @@ whnfApplyThunked func argThunk =
         where
             funcStr = func & EvalVal.children .~ () & EvalVal.payloads .~ () & show
 
+makeThunk :: Monad m => ThunkState pl -> EvalT pl m ThunkId
+makeThunk src =
+    do
+        thunkId <- freshThunkId
+        liftState $ esThunks . at thunkId .= Just src
+        return thunkId
+
 whnfApply :: Monad m => V.Apply (ScopedVal pl) -> EvalT pl m (ValHead pl)
 whnfApply (V.Apply func arg) =
-    whnfApplyThunked <$> whnfScopedVal func <*> makeThunk arg & join
+    whnfApplyThunked <$> whnfScopedVal func <*> makeThunk (TSrc arg) & join
 
 whnfScopedValInner :: Monad m => Maybe ThunkId -> ScopedVal pl -> EvalT pl m (ValHead pl)
 whnfScopedValInner mThunkId (ScopedVal scope expr) =
@@ -157,12 +165,9 @@ whnfScopedValInner mThunkId (ScopedVal scope expr) =
         do
             record <- whnfScopedVal $ ScopedVal scope recordExpr
             whnfGetField $ V.GetField record tag
-    V.BInject inject ->
-        inject & traverse %%~ makeThunk . ScopedVal scope <&> HInject
-    V.BRecExtend recExtend ->
-        recExtend & traverse %%~ makeThunk . ScopedVal scope <&> HRecExtend
-    V.BCase case_ ->
-        case_ & traverse %%~ makeThunk . ScopedVal scope <&> HCase
+    V.BInject    inject    -> inject    & traverse %%~ thunk <&> HInject
+    V.BRecExtend recExtend -> recExtend & traverse %%~ thunk <&> HRecExtend
+    V.BCase      case_     -> case_     & traverse %%~ thunk <&> HCase
     V.BLeaf (V.LGlobal global) -> loadGlobal global
     V.BLeaf (V.LVar var) ->
         case scope ^. scopeMap . at var of
@@ -173,6 +178,7 @@ whnfScopedValInner mThunkId (ScopedVal scope expr) =
     V.BLeaf (V.LLiteralInteger i) -> HInteger i & return
     V.BLeaf V.LHole -> evalError "Hole"
     where
+        thunk = makeThunk . TSrc . ScopedVal scope
         reportResultComputed result =
             do
                 EventResultComputed mThunkId (expr ^. V.payload) (scope ^. scopeId) result
@@ -181,13 +187,6 @@ whnfScopedValInner mThunkId (ScopedVal scope expr) =
 
 whnfScopedVal :: Monad m => ScopedVal pl -> EvalT pl m (ValHead pl)
 whnfScopedVal = whnfScopedValInner Nothing
-
-makeThunk :: Monad m => ScopedVal pl -> EvalT pl m ThunkId
-makeThunk src =
-    do
-        thunkId <- freshThunkId
-        liftState $ esThunks . at thunkId .= Just (TSrc src)
-        return thunkId
 
 whnfRecordShape :: Monad m => ThunkId -> EvalT pl m ()
 whnfRecordShape restThunk =
@@ -212,6 +211,9 @@ whnfGetField (V.GetField (HRecExtend (V.RecExtend tag val restThunk)) searchTag)
         >>= whnfGetField
 whnfGetField (V.GetField val _) =
     evalError $ "GetField of value without the field " ++ show (void val)
+
+asThunk :: Monad m => ValHead pl -> EvalT pl m ThunkId
+asThunk = makeThunk . TResult
 
 whnfThunk :: Monad m => ThunkId -> EvalT pl m (ValHead pl)
 whnfThunk thunkId = do
