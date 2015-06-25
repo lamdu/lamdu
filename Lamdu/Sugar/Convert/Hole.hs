@@ -91,12 +91,18 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
     pure HoleActions
         { _holePaste = Nothing
         , _holeScope =
-            return $
+            return $ concat
             -- ^ We wrap this in a (T m) so that AddNames can place the
             -- name-getting penalty under a transaction that the GUI may
             -- avoid using
-            (concatMap (getLocalScopeGetVars sugarContext) . Map.toList . Infer.scopeToTypeMap) inferredScope ++
-            map getGlobalScopeGetVar (filter (/= sugarContext ^. ConvertM.scDefI) globals)
+            [ inferredScope
+              & Infer.scopeToTypeMap
+              & Map.toList
+              & concatMap (getLocalScopeGetVars sugarContext)
+            , globals
+              & filter (/= sugarContext ^. ConvertM.scDefI)
+              & map getGlobalScopeGetVar
+            ]
         , _holeResults = mkHoleResults mInjectedArg sugarContext exprPl stored
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
         }
