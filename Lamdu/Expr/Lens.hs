@@ -39,6 +39,9 @@ module Lamdu.Expr.Lens
     , subExprPayloads
     , subExprs
     , payloadsIndexedByPath
+    -- Traversals:
+    , compositeTypes
+    , nextLayer
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>))
@@ -50,6 +53,19 @@ import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+
+compositeTypes :: Lens.Traversal' (T.Composite p) Type
+compositeTypes f (T.CExtend tag typ rest) = T.CExtend tag <$> f typ <*> compositeTypes f rest
+compositeTypes _ T.CEmpty = pure T.CEmpty
+compositeTypes _ (T.CVar tv) = pure (T.CVar tv)
+
+-- | Traverse direct types within a type
+nextLayer :: Lens.Traversal' Type Type
+nextLayer _ (T.TVar tv) = pure (T.TVar tv)
+nextLayer f (T.TFun a r) = T.TFun <$> f a <*> f r
+nextLayer f (T.TInst tid m) = T.TInst tid <$> Lens.traverse f m
+nextLayer f (T.TRecord p) = T.TRecord <$> compositeTypes f p
+nextLayer f (T.TSum s) = T.TSum <$> compositeTypes f s
 
 valApply :: Traversal' (Val a) (V.Apply (Val a))
 valApply = V.body . _BApp
