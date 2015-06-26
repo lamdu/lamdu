@@ -154,9 +154,6 @@ vboxTopFocalSpaced guis =
 gridTopLeftFocal :: [[ExpressionGui m]] -> ExpressionGui m
 gridTopLeftFocal = Layout.gridTopLeftFocal
 
-wWidth :: Lens' (Widget f) Widget.R
-wWidth = Widget.width
-
 addAnnotationBackground :: Config -> AnimId -> Widget.R -> View -> View
 addAnnotationBackground config animId minWidth annotationView =
     annotationView
@@ -230,7 +227,7 @@ addAnnotationH ::
 addAnnotationH f eg =
     do
         vspace <- annotationSpacer
-        widget <- f (eg ^. egWidget . wWidth)
+        widget <- f (eg ^. egWidget . Widget.width)
         addBelow 0.5 [(0, vspace), (0.5, widget)] eg
             & return
 
