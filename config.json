@@ -438,6 +438,10 @@
         "neighborsScaleFactor": {
             "_first": 0.65,
             "_second": 0.65
+        },
+        "neighborsPadding": {
+            "_first": 3,
+            "_second": 3
         }
     },
     "previousCursorKeys": [

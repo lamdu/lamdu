@@ -112,6 +112,7 @@ data Eval = Eval
     { prevScopeKeys :: [ModKey]
     , nextScopeKeys :: [ModKey]
     , neighborsScaleFactor :: Vector2 Double
+    , neighborsPadding :: Vector2 Double
     } deriving (Eq, Generic, Show)
 instance ToJSON Eval
 instance FromJSON Eval

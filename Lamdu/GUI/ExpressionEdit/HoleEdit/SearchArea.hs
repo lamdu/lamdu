@@ -412,12 +412,12 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults editableHoleInfo =
         vspace <- ExpressionGui.annotationSpacer
         hoverResultsWidget <-
             resultsWidget
-            & Widget.width %~ max (typeView ^. Widget.width)
+            & Widget.width %~ max (typeView ^. ExpressionGui.egWidget . Widget.width)
             & Widget.strongerEvents resultsEventMap .
               addBackground (Widget.toAnimId hidResultsPrefix) (Config.layers config)
               holeOpenBGColor
             & ExpressionGui.fromValueWidget
-            & Layout.addAfter Layout.Vertical [(0.5, vspace), (0.5, typeView)]
+            & Layout.addAfter Layout.Vertical [vspace, typeView]
             & addDarkBackground (Widget.toAnimId hidResultsPrefix)
             <&> (^. ExpressionGui.egWidget)
             >>= ExprGuiM.widgetEnv . BWidgets.liftLayerInterval

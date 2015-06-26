@@ -143,7 +143,7 @@ layout defNameEdit paramEdits bodyEdit mWheresEdit myId =
             [] -> return []
             [x] -> return [x]
             xs ->
-                xs <&> ExpressionGui.egAlignment . _1 .~ 0.5
+                xs
                 & ExpressionGui.vboxTopFocalSpaced
                 >>= ExpressionGui.addValFrame myId
                 <&> (:[])

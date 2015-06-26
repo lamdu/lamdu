@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings, RankNTypes #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies #-}
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGui, egWidget, egAlignment
     -- General:
@@ -7,7 +7,7 @@ module Lamdu.GUI.ExpressionGui
     , pad
     , stdSpace
     , hbox, hboxSpaced
-    , vboxTopFocal, vboxTopFocalSpaced
+    , vboxTopFocal, vboxTopFocalSpaced, vboxTopFocalAlignedTo
     , gridTopLeftFocal
     , listWithDelDests
     , makeLabel
@@ -48,17 +48,13 @@ import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import           Graphics.UI.Bottle.View (View)
-import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -98,20 +94,19 @@ fromValueWidget :: Widget (T m) -> ExpressionGui m
 fromValueWidget = Layout.fromCenteredWidget
 
 alignAdd ::
-        ([(Widget.R, Widget (T m))] -> ExpressionGui m -> ExpressionGui m) ->
-        Widget.R -> [(Widget.R, Widget (T m))] ->
-        ExpressionGui m -> ExpressionGui m
+    (t -> ExpressionGui m -> b) -> Widget.R ->
+    t -> ExpressionGui m -> b
 alignAdd addFunc hAlign widgets eg =
     eg & egAlignment . _1 .~ hAlign & addFunc widgets
 
 addAbove ::
-        Widget.R -> [(Widget.R, Widget (T m))] ->
-        ExpressionGui m -> ExpressionGui m
+    (Layout.AddLayout w, Layout.LayoutType w ~ ExpressionGui m) =>
+    Widget.R -> [w] -> ExpressionGui m -> ExpressionGui m
 addAbove = alignAdd (Layout.addBefore Layout.Vertical)
 
 addBelow ::
-        Widget.R -> [(Widget.R, Widget (T m))] ->
-        ExpressionGui m -> ExpressionGui m
+    (Layout.AddLayout w, Layout.LayoutType w ~ ExpressionGui m) =>
+    Widget.R -> [w] -> ExpressionGui m -> ExpressionGui m
 addBelow = alignAdd (Layout.addAfter Layout.Vertical)
 
 -- | Scale the given ExpressionGui without moving its top alignment
@@ -139,6 +134,10 @@ hboxSpaced guis =
     <&> (`List.intersperse` guis)
     <&> hbox
 
+vboxTopFocalAlignedTo :: Widget.R -> [ExpressionGui m] -> ExpressionGui m
+vboxTopFocalAlignedTo hAlign guis =
+    guis <&> egAlignment . _1 .~ hAlign & vboxTopFocal
+
 vboxTopFocal :: [ExpressionGui m] -> ExpressionGui m
 vboxTopFocal [] = Layout.empty
 vboxTopFocal (gui:guis) = gui & Layout.addAfter Layout.Vertical guis
@@ -154,63 +153,88 @@ vboxTopFocalSpaced guis =
 gridTopLeftFocal :: [[ExpressionGui m]] -> ExpressionGui m
 gridTopLeftFocal = Layout.gridTopLeftFocal
 
-addAnnotationBackground :: Config -> AnimId -> Widget.R -> View -> View
-addAnnotationBackground config animId minWidth annotationView =
-    annotationView
-    & View.size .~ newSize
-    & View.animFrame %~ Anim.translate (Vector2 ((width - annotationWidth) / 2) 0)
-    & View.backgroundColor bgAnimId bgLayer bgColor
+annotationBackground ::
+    Config -> AnimId ->
+    ExpressionGui m ->
+    ExpressionGui m
+annotationBackground config animId =
+    egWidget %~ Widget.backgroundColor bgLayer bgAnimId bgColor
     where
-        width = max annotationWidth minWidth
-        annotationWidth = annotationView ^. View.width
-        newSize = annotationView ^. View.size & _1 .~ width
         bgAnimId = animId ++ ["annotation background"]
         bgLayer = Config.layerAnnotations $ Config.layers config
         bgColor = Config.typeBoxBGColor config
 
+addAnnotationBackground ::
+    Config -> AnimId -> Widget.R -> ExpressionGui m -> ExpressionGui m
+addAnnotationBackground config animId minWidth annotationEg =
+    annotationEg
+    & pad padding
+    & annotationBackground config animId
+    where
+        padding = Vector2 ((width - annotationWidth) / 2) 0
+        width = max annotationWidth minWidth
+        annotationWidth = annotationEg ^. egWidget . Widget.width
+
 makeWithAnnotationBG ::
     MonadA m => Widget.R -> Sugar.EntityId ->
-    (AnimId -> ExprGuiM m View) -> ExprGuiM m (Widget f)
+    (AnimId -> ExprGuiM m (ExpressionGui m)) ->
+    ExprGuiM m (ExpressionGui m)
 makeWithAnnotationBG minWidth entityId f =
     do
         config <- ExprGuiM.readConfig
         f animId
             <&> addAnnotationBackground config animId minWidth
-            <&> Widget.fromView
     where
         animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
 
 type ScopeAndVal = (ScopeId, ComputedVal ())
 
-makeEvaluationResultView :: MonadA m => ScopeAndVal -> AnimId -> ExprGuiM m View
-makeEvaluationResultView (scopeId, evalRes) animId =
+makeEvaluationResultView ::
+    MonadA m => AnimId -> ScopeAndVal -> ExprGuiM m (ExpressionGui m)
+makeEvaluationResultView animId (scopeId, evalRes) =
     EvalView.make (animId ++ [encodeS scopeId]) evalRes
+    <&> Widget.fromView
+    <&> fromValueWidget
+
+makeEvaluationResultViewBG ::
+    MonadA m => Config -> AnimId -> (ScopeId, ComputedVal ()) ->
+    ExprGuiM m (ExpressionGui m)
+makeEvaluationResultViewBG config animId (scopeId, evalRes) =
+    makeEvaluationResultView animId (scopeId, evalRes)
+    <&> annotationBackground config (animId ++ [encodeS scopeId])
 
 makeTypeView ::
-        MonadA m => Sugar.EntityId -> Type -> Widget.R -> ExprGuiM m (Widget f)
+    MonadA m => Sugar.EntityId -> Type -> Widget.R -> ExprGuiM m (ExpressionGui m)
 makeTypeView entityId typ minWidth =
-    makeWithAnnotationBG minWidth entityId (`TypeView.make` typ)
+    makeWithAnnotationBG minWidth entityId
+    (fmap (fromValueWidget . Widget.fromView) . (`TypeView.make` typ))
 
 makeEvalView ::
     MonadA m =>
     Sugar.EntityId -> (Maybe ScopeAndVal, Maybe ScopeAndVal) -> ScopeAndVal ->
-    Widget.R -> ExprGuiM m (Widget f)
+    Widget.R -> ExprGuiM m (ExpressionGui m)
 makeEvalView entityId (mPrev, mNext) evalRes minWidth =
     makeWithAnnotationBG minWidth entityId $
     \animId ->
         do
-            Config.Eval{..} <- ExprGuiM.readConfig <&> Config.eval
+            config <- ExprGuiM.readConfig
+            let Config.Eval{..} = Config.eval config
             let neighbourViews n =
                     n ^.. Lens._Just
-                    <&> (`makeEvaluationResultView` animId)
-                    <&> Lens.mapped %~ View.scale (neighborsScaleFactor <&> realToFrac)
-            neighbourViews mPrev
-                ++ makeEvaluationResultView evalRes animId
-                : neighbourViews mNext
-                & sequence
-                <&> GridView.horizontalAlign 0.5
+                    <&> makeEvaluationResultViewBG config animId
+                    <&> Lens.mapped %~
+                        pad (neighborsPadding <&> realToFrac) .
+                        scale (neighborsScaleFactor <&> realToFrac)
+            prevs <- sequence (neighbourViews mPrev)
+            nexts <- sequence (neighbourViews mNext)
+            evalView <- makeEvaluationResultView animId evalRes
+            evalView
+                & Layout.addBefore Layout.Horizontal prevs
+                & Layout.addAfter Layout.Horizontal nexts
+                & (`Layout.hoverInPlaceOf` evalView)
+                & return
 
-annotationSpacer :: MonadA m => ExprGuiM m (Widget f)
+annotationSpacer :: MonadA m => ExprGuiM m (ExpressionGui f)
 annotationSpacer =
     do
         config <- ExprGuiM.readConfig
@@ -218,18 +242,22 @@ annotationSpacer =
             & realToFrac
             & Spacer.makeVertical
             & Widget.fromView
+            & fromValueWidget
             & return
 
 addAnnotationH ::
     MonadA m =>
-    (Widget.R -> ExprGuiM m (Widget (T m))) ->
+    (Widget.R -> ExprGuiM m (ExpressionGui m)) ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addAnnotationH f eg =
     do
         vspace <- annotationSpacer
-        widget <- f (eg ^. egWidget . Widget.width)
-        addBelow 0.5 [(0, vspace), (0.5, widget)] eg
-            & return
+        annotationEg <- f (eg ^. egWidget . Widget.width)
+        vboxTopFocal
+            [ eg & egAlignment . _1 .~ 0.5
+            , vspace
+            , annotationEg
+            ] & return
 
 addInferredType ::
     MonadA m => Sugar.EntityId -> Type ->

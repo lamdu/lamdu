@@ -6,6 +6,7 @@ module Lamdu.GUI.ParamEdit
     ) where
 
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import           Data.Monoid (Monoid(..))
@@ -118,6 +119,7 @@ make annotationOpts showType prevId nextId param =
             <&> Widget.weakerEvents paramEventMap
             <&> ExpressionGui.fromValueWidget
         paramNameEdit
+            & ExpressionGui.egAlignment . _1 .~ 0.5
             & ExpressionGui.maybeAddAnnotationWith annotationOpts showType
                 (param ^. Sugar.fpAnnotation)
                 (param ^. Sugar.fpId)
