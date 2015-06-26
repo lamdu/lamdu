@@ -166,7 +166,8 @@ convertAppliedHole funcI argS argI exprPl =
                 { _haExpr =
                       argS
                       & rPayload . plActions . Lens._Just . wrap .~ argWrap
-                , _haGetFieldTags = tags
+                , _haGetFieldTags = getFieldTags
+                , _haMSum = mSumTags
                 , _haUnwrap =
                       if isTypeMatch
                       then UnwrapMAction mUnwrap
@@ -180,11 +181,11 @@ convertAppliedHole funcI argS argI exprPl =
     where
         addEntityId = guidEntityId . Property.value
         guidEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
-        tags =
-            argS
-            ^.. rPayload . plAnnotation . aInferredType
-            . ExprLens._TRecord . ExprLens.compositeTags
-            <&> holeArgTag
+        argType = argS ^. rPayload . plAnnotation . aInferredType
+        mSum = argType ^? ExprLens._TSum
+        mSumTags = mSum <&> (^.. ExprLens.compositeTags) <&> map holeArgTag
+        getFieldTags =
+            argType ^.. ExprLens._TRecord . ExprLens.compositeTags <&> holeArgTag
         holeArgTag tag =
             TagG
             { _tagInstance = EntityId.ofGetFieldTag (exprPl ^. Input.entityId)

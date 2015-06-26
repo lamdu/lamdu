@@ -64,7 +64,7 @@ module Lamdu.Sugar.Types
     , FuncParam(..)
         , fpName, fpId, fpAnnotation, fpMActions, fpHiddenIds
     , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
-    , HoleArg(..), haExpr, haUnwrap, haGetFieldTags
+    , HoleArg(..), haExpr, haUnwrap, haGetFieldTags, haMSum
     , Hole(..)
         , holeMActions, holeMArg, holeSuggested, holeSuggestedInjectTags, holeGuid
     , ScopeGetVar(..), sgvGetVar, sgvVal
@@ -229,6 +229,7 @@ data Unwrap m
 data HoleArg name m expr = HoleArg
     { _haExpr :: expr
     , _haGetFieldTags :: [TagG name]
+    , _haMSum :: Maybe [TagG name]
     , _haUnwrap :: Unwrap m
     } deriving (Functor, Foldable, Traversable)
 
