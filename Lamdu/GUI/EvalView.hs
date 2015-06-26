@@ -65,42 +65,45 @@ makeField parentAnimId tag val =
         baseId = parentAnimId ++ [BinUtils.encodeS tag]
 
 make :: MonadA m => AnimId -> ComputedVal () -> ExprGuiM m View
-make animId NotYet = textView "?" animId
-make animId (ComputedVal (HFunc _)) = textView "Fn" animId
-make animId (ComputedVal HAbsurd) = textView "Fn" animId
-make animId (ComputedVal (HCase _)) = textView "Fn" animId
-make animId (ComputedVal HRecEmpty) = textView "Ø" animId
-make animId (ComputedVal (HInject inj)) =
-    do
-        tagView <- inj ^. V.injectTag & makeTag (animId ++ ["tag"])
-        space <-
-            ExprGuiM.readConfig
-            <&> Spacer.makeHorizontal . realToFrac . Config.spaceWidth
-        valView <- inj ^. V.injectVal & make (animId ++ ["val"])
-        GridView.horizontalAlign 0.5 [tagView, space, valView] & return
-make animId (ComputedVal (HRecExtend recExtend)) =
-    do
-        fieldsView <- mapM (uncurry (makeField animId)) fields <&> GridView.make
-        let barWidth
-                | null fields = 150
-                | otherwise = fieldsView ^. View.width
-        restView <-
-            case recStatus of
-            RecordComputed -> return View.empty
-            RecordNotFinished ->
-                do
-                    let sqr =
-                            View 1 (Anim.unitSquare (animId ++ ["line"]))
-                            & View.scale (Vector2 barWidth 1)
-                    v <- textView "?" (animId ++ ["?"])
-                    return $ GridView.verticalAlign 0.5 [sqr, v]
-        GridView.verticalAlign 0.5 [fieldsView, restView] & return
-    where
-        (fields, recStatus) = extractFields recExtend
-make animId (ComputedVal body) =
-    BWidgets.makeTextView text animId & ExprGuiM.widgetEnv
-    where
-        text = show body & truncateStr 20
+make animId val =
+    case val of
+    NotYet -> textView "?" animId
+    ComputedVal (HFunc _) -> textView "Fn" animId
+    ComputedVal HAbsurd -> textView "Fn" animId
+    ComputedVal (HCase _) -> textView "Fn" animId
+    ComputedVal HRecEmpty -> textView "Ø" animId
+    ComputedVal (HInject inj) ->
+        do
+            tagView <- inj ^. V.injectTag & makeTag (animId ++ ["tag"])
+            space <-
+                ExprGuiM.readConfig
+                <&> Spacer.makeHorizontal . realToFrac . Config.spaceWidth
+            valView <- inj ^. V.injectVal & make (animId ++ ["val"])
+            GridView.horizontalAlign 0.5 [tagView, space, valView] & return
+    ComputedVal (HRecExtend recExtend) ->
+        do
+            fieldsView <- mapM (uncurry (makeField animId)) fields <&> GridView.make
+            let barWidth
+                    | null fields = 150
+                    | otherwise = fieldsView ^. View.width
+            restView <-
+                case recStatus of
+                RecordComputed -> return View.empty
+                RecordNotFinished ->
+                    do
+                        let sqr =
+                                View 1 (Anim.unitSquare (animId ++ ["line"]))
+                                & View.scale (Vector2 barWidth 1)
+                        v <- textView "?" (animId ++ ["?"])
+                        return $ GridView.verticalAlign 0.5 [sqr, v]
+            GridView.verticalAlign 0.5 [fieldsView, restView] & return
+        where
+            (fields, recStatus) = extractFields recExtend
+    ComputedVal body ->
+        BWidgets.makeTextView text animId & ExprGuiM.widgetEnv
+        where
+            text = show body & truncateStr 20
+    & ExprGuiM.advanceDepth return animId
 
 truncateStr :: Int -> String -> String
 truncateStr n s

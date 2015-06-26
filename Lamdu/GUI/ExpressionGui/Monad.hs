@@ -9,6 +9,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , makeFocusDelegator
     --
     , makeSubexpression
+    , advanceDepth
     --
     , readConfig, readSettings, readCodeAnchors
     , getCodeAnchor, mkPrejumpPosSaver
@@ -36,6 +37,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation.Id (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.View (View)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.WidgetId (toAnimId)
@@ -121,19 +123,27 @@ mkPrejumpPosSaver =
 makeSubexpression ::
     MonadA m =>
     Precedence -> ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeSubexpression parentPrecedence expr = do
-    depth <- ExprGuiM $ Lens.view aSubexpressionLayer
-    if depth >= 15
-        then
-            mkErrorWidget <&> Layout.fromCenteredWidget & widgetEnv
-        else do
-            maker <- ExprGuiM $ Lens.view aMakeSubexpression
-            maker (ParentPrecedence parentPrecedence) expr
-                & exprGuiM %~ RWS.local (aSubexpressionLayer +~ 1)
+makeSubexpression parentPrecedence expr =
+    advanceDepth (return . Layout.fromCenteredWidget . Widget.fromView) animId $
+    do
+        maker <- ExprGuiM $ Lens.view aMakeSubexpression
+        maker (ParentPrecedence parentPrecedence) expr
     where
-        widgetId = WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
+        animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
+
+advanceDepth ::
+    MonadA m => (View -> ExprGuiM m r) ->
+    AnimId -> ExprGuiM m r -> ExprGuiM m r
+advanceDepth f animId action =
+    do
+        depth <- ExprGuiM $ Lens.view aSubexpressionLayer
+        if depth >= 15
+            then mkErrorWidget >>= f
+            else action & exprGuiM %~ RWS.local (aSubexpressionLayer +~ 1)
+    where
         mkErrorWidget =
-            BWidgets.makeTextViewWidget "ERROR: Subexpr too deep" (toAnimId widgetId)
+            BWidgets.makeTextView "ERROR: Subexpr too deep" animId
+            & widgetEnv
 
 run ::
     MonadA m =>
