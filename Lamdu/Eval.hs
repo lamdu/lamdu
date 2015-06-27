@@ -64,12 +64,16 @@ data EvalActions m pl = EvalActions
     , _aLoadGlobal :: V.GlobalId -> m (Maybe (Def.Body (Val pl)))
     }
 
+newtype EvalEnv m pl = EvalEnv
+    { _eeEvalActions :: EvalActions m pl
+    }
+
 data EvalState m pl = EvalState
     { _esThunks :: !(Map ThunkId (ThunkState pl))
     , _esThunkCounter :: !ThunkId
     , _esScopeCounter :: !ScopeId
     , _esLoadedGlobals :: !(Map V.GlobalId (ValHead pl))
-    , _esReader :: !(EvalActions m pl) -- This is ReaderT
+    , _esReader :: !(EvalEnv m pl) -- This is ReaderT
     }
 
 newtype EvalT pl m a = EvalT
@@ -84,6 +88,7 @@ instance MonadTrans (EvalT pl) where
 
 Lens.makeLenses ''Scope
 Lens.makeLenses ''EvalActions
+Lens.makeLenses ''EvalEnv
 Lens.makeLenses ''EvalState
 
 freshThunkId :: Monad m => EvalT pl m ThunkId
@@ -97,7 +102,7 @@ freshThunkId =
 report :: Monad m => Event pl -> EvalT pl m ()
 report event =
     do
-        rep <- liftState $ use $ esReader . aReportEvent
+        rep <- liftState $ use $ esReader . eeEvalActions . aReportEvent
         rep event & lift
 
 bindVar :: Monad m => pl -> V.Var -> ThunkId -> Scope -> EvalT pl m Scope
@@ -128,7 +133,7 @@ whnfApplyThunked func argThunk =
             whnfScopedVal (ScopedVal innerScope body)
     HBuiltin ffiname ->
         do
-            runBuiltin <- liftState $ use $ esReader . aRunBuiltin
+            runBuiltin <- liftState $ use $ esReader . eeEvalActions . aRunBuiltin
             runBuiltin ffiname argThunk
     HCase (V.Case caseTag handlerThunk restThunk) ->
         do
@@ -235,7 +240,7 @@ loadGlobal g =
         case loaded of
             Just cached -> return cached
             Nothing -> do
-                loader <- liftState $ use $ esReader . aLoadGlobal
+                loader <- liftState $ use $ esReader . eeEvalActions . aLoadGlobal
                 mLoadedGlobal <- lift $ loader g
                 result <-
                     case mLoadedGlobal of
@@ -254,5 +259,5 @@ initialState actions =
     , _esThunkCounter = ThunkId 0
     , _esScopeCounter = ScopeId 1
     , _esLoadedGlobals = Map.empty
-    , _esReader = actions
+    , _esReader = EvalEnv actions
     }
