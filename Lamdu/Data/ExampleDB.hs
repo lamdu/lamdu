@@ -25,7 +25,7 @@ import           Data.Store.Transaction (Transaction, setP)
 import qualified Data.Store.Transaction as Transaction
 import           Data.String (IsString(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
-import           Lamdu.Data.Anchors (ParamList, assocFieldParamList, PresentationMode(..))
+import           Lamdu.Data.Anchors (assocTagOrder, ParamList, assocFieldParamList, PresentationMode(..))
 import qualified Lamdu.Data.DbLayout as Db
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
@@ -99,8 +99,12 @@ publicize act g =
 
 type M m = WriterT (Public m) (T m)
 
-newTag :: MonadA m => String -> M m T.Tag
-newTag n = publicize (namedId n) $ \x -> mempty { publicTags = [x] }
+newTag :: MonadA m => Int -> String -> M m T.Tag
+newTag order n =
+    do
+        tag <- publicize (namedId n) $ \x -> mempty { publicTags = [x] }
+        lift $ Transaction.setP (assocTagOrder tag) order
+        return tag
 
 newTId :: MonadA m => String -> M m T.Id
 newTId n = publicize (namedId n) $ \x -> mempty { publicTIds = [x] }
@@ -269,9 +273,9 @@ setParamList lambdaI tags =
 createIf :: MonadA m => Type -> BoolNames m -> M m (ExprIRef.DefI m)
 createIf bool boolNames =
     do
-        condTag <- newTag "condition"
-        thenTag <- newTag "then"
-        elseTag <- newTag "else"
+        condTag <- newTag 0 "condition"
+        thenTag <- newTag 1 "then"
+        elseTag <- newTag 2 "else"
         v0 <- lift ExprIRef.newVar
         v1 <- lift ExprIRef.newVar
         v2 <- lift ExprIRef.newVar
@@ -307,7 +311,7 @@ createPublics =
     do
         lift nameTheAnchors
 
-        valTParamId <- newIdent "val"
+        valTParamId <- lift $ namedId "val"
 
         (list, listNames) <- createList valTParamId
         _ <- createMaybe valTParamId
@@ -342,9 +346,9 @@ createPublics =
         traverse_ ((`publicBuiltin_` Scheme.mono (list [T.TInt] ~> T.TInt)) . ("Prelude."++))
             ["product", "sum", "maximum", "minimum"]
 
-        fromTag <- newTag "from"
+        fromTag <- newTag 0 "from"
 
-        predicateTag <- newTag "predicate"
+        predicateTag <- newTag 1 "predicate"
         publicDef_ "filter" Verbose ["Data", "List"] "filter" $
             forAll 1 $ \[a] ->
             recordType
@@ -352,7 +356,7 @@ createPublics =
             , (predicateTag, a ~> bool)
             ] ~> list [a]
 
-        whileTag <- newTag "while"
+        whileTag <- newTag 1 "while"
         publicDef_ "take" Verbose ["Data", "List"] "takeWhile" $
             forAll 1 $ \[a] ->
             recordType
@@ -360,14 +364,14 @@ createPublics =
             , (whileTag, a ~> bool)
             ] ~> list [a]
 
-        countTag <- newTag "count"
+        countTag <- newTag 1 "count"
         publicDef_ "take" Verbose ["Data", "List"] "take" . forAll 1 $ \[a] ->
             recordType
             [ (fromTag, list [a])
             , (countTag, T.TInt)
             ] ~> list [a]
 
-        mappingTag <- newTag "mapping"
+        mappingTag <- newTag 1 "mapping"
         publicBuiltin_ "Data.List.map" .
             forAll 2 $ \[a, b] ->
             recordType
@@ -383,10 +387,10 @@ createPublics =
             , (countTag, T.TInt)
             ] ~> list [a]
 
-        initialTag     <- newIdent "initial"
-        stepTag        <- newIdent "step"
-        accumulatorTag <- newTag "accumulator"
-        itemTag        <- newIdent "item"
+        initialTag     <- newTag 0 "initial"
+        stepTag        <- newTag 1 "step"
+        accumulatorTag <- newTag 2 "accumulator"
+        itemTag        <- newTag 3 "item"
         publicBuiltin_ "Data.List.foldl" . forAll 2 $ \[a, b] ->
             recordType
             [ ( Builtins.objTag, list [b] )
@@ -399,8 +403,8 @@ createPublics =
                 )
             ] ~> a
 
-        emptyTag <- newTag "empty"
-        listItemTag <- newTag "listitem"
+        emptyTag <- newTag 0 "empty"
+        listItemTag <- newTag 1 "listitem"
         publicBuiltin_ "Data.List.foldr" . forAll 2 $ \[a, b] ->
             recordType
             [ ( Builtins.objTag, list [a] )
@@ -425,9 +429,9 @@ createPublics =
                 )
             ] ~> b
 
-        funcTag <- newTag "func"
-        xTag <- newTag "x"
-        yTag <- newTag "y"
+        funcTag <- newTag 0 "func"
+        xTag <- newTag 1 "x"
+        yTag <- newTag 2 "y"
         publicBuiltin_ "Data.List.zipWith" . forAll 3 $ \[a, b, c] ->
             recordType
             [ ( funcTag, recordType [(xTag, a), (yTag, b)] ~> c)
@@ -477,7 +481,6 @@ createPublics =
                 fqPath = splitOn "." fullyQualifiedName
         publicBuiltin_ builtinName typ =
             void $ publicBuiltin builtinName typ
-        newIdent x = lift $ namedId x
 
 newBranch :: MonadA m => String -> Version m -> T m (Branch m)
 newBranch name ver =
