@@ -11,14 +11,13 @@ import           Control.Lens.Tuple
 import           Control.Monad (join, void, liftM)
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.Maybe (MaybeT(..))
+import           Control.Monad.Trans.Either (EitherT(..))
 import           Control.Monad.Trans.State (StateT(..), evalState, mapStateT)
 import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
-import           Data.Maybe (maybeToList)
 import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
 import           Data.Store.Guid (Guid)
@@ -317,8 +316,8 @@ idTranslations consistentExpr dest
             V.body . ExprLens._BAbs . V.lamParamId .
             Lens.to EntityId.ofLambdaParam
 
-maybeTtoListT :: Monad m => MaybeT m a -> ListT m a
-maybeTtoListT = ListClass.joinL . liftM (ListClass.fromList . maybeToList) . runMaybeT
+eitherTtoListT :: Monad m => EitherT err m a -> ListT m a
+eitherTtoListT = ListClass.joinL . liftM (ListClass.fromList . (^.. Lens._Right)) . runEitherT
 
 eitherToListT :: Monad m => Either t a -> ListT m a
 eitherToListT (Left _) = mempty
@@ -458,7 +457,7 @@ mkHoleResultVals mInjectedArg exprPl base =
     do
         inferredBase <-
             IRefInfer.loadInferScope scopeAtHole base
-            & mapStateT maybeTtoListT
+            & mapStateT eitherTtoListT
             <&> Lens.traversed . _2 %~ (,) Nothing
         form <- applyForms (Nothing, ()) inferredBase
         let formType = form ^. V.payload . _1 . Infer.plType

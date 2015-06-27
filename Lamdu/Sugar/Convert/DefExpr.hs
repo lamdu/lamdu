@@ -6,10 +6,9 @@ module Lamdu.Sugar.Convert.DefExpr
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad.Trans.Maybe (runMaybeT)
+import           Control.Monad.Trans.Either (runEitherT)
 import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Monoid(..))
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
@@ -37,6 +36,7 @@ import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import           Text.PrettyPrint.HughesPJClass (pPrint)
 
 type T = Transaction
 
@@ -71,7 +71,7 @@ mkContext defI cp inferContext =
                                   { erExprValues = Map.empty
                                   , erAppliesOfLam = Map.empty
                                   }
-                              <&> Lens.has Lens._Just
+                              <&> Lens.has Lens._Right
             , scConvertSubexpression = ConvertExpr.convert
             }
 
@@ -91,12 +91,12 @@ makeExprDefTypeInfo defValI defI defType inferredType =
 
 loadInfer ::
     MonadA m => EvalResults (ExprIRef.ValI m) -> Val (ExprIRef.ValIProperty m) ->
-    T m (Maybe (Val (Input.Payload m ()), Infer.Context))
+    T m (Either IRefInfer.Error (Val (Input.Payload m ()), Infer.Context))
 loadInfer evalResults val =
     IRefInfer.loadInfer recurseVar val
     <&> _1 . Lens.mapped %~ mkPayload
     >>= ParamList.loadForLambdas
-    & runMaybeT
+    & runEitherT
     where
         mkPayload (inferPl, valIProp) =
             Input.mkPayload () inferPl
@@ -112,7 +112,7 @@ convert evalMap cp (Definition.Expr val defType) defI =
     do
         (valInferred, newInferContext) <-
             loadInfer evalMap val
-            <&> fromMaybe (error "Type inference failed")
+            <&> either (error . ("Type inference failed: " ++) . show . pPrint) id
         context <- mkContext defI cp newInferContext
         ConvertM.run context $
             do

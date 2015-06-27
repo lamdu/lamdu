@@ -10,8 +10,7 @@ import           Control.Applicative (Applicative(..), (<$>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (MonadTrans(..))
-import           Control.Monad.Trans.Either.Utils (eitherToMaybeT)
-import           Control.Monad.Trans.Maybe (MaybeT)
+import           Control.Monad.Trans.Either (EitherT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)
@@ -20,6 +19,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Traversable (traverse)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
@@ -57,7 +57,7 @@ mkFuncType paramList =
 loadForLambdas ::
     MonadA m =>
     (Val (Input.Payload m a), Infer.Context) ->
-    MaybeT (T m) (Val (Input.Payload m a), Infer.Context)
+    EitherT IRefInfer.Error (T m) (Val (Input.Payload m a), Infer.Context)
 loadForLambdas (val, ctx) =
     do
         Lens.itraverseOf_ ExprLens.subExprPayloads loadLambdaParamList val
@@ -80,6 +80,6 @@ loadForLambdas (val, ctx) =
                                 funcType <- mkFuncType paramList
                                 unify typ funcType
                             & Infer.run
-                            & mapStateT eitherToMaybeT
+                            & mapStateT IRefInfer.toEitherT
             where
                 typ = pl ^. Input.inferred . Infer.plType

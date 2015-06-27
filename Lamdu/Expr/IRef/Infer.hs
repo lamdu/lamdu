@@ -5,14 +5,14 @@ module Lamdu.Expr.IRef.Infer
     , loadInferScope
     , loadInferInto
     , loadInfer
+    , Error(..), toEitherT
     ) where
 
+import           Control.Lens (_Left)
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (mzero)
 import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.Either.Utils (eitherToMaybeT)
-import           Control.Monad.Trans.Maybe (MaybeT(..))
+import           Control.Monad.Trans.Either (EitherT(..), left, hoistEither)
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
@@ -23,17 +23,26 @@ import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Error as InferErr
 import           Lamdu.Infer.Load (Loader(..))
 import qualified Lamdu.Infer.Load as InferLoad
 import qualified Lamdu.Infer.Recursive as Recursive
 import           Lamdu.Infer.Unify (unify)
 import qualified Lamdu.Infer.Update as Update
+import qualified Text.PrettyPrint as PP
+import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 
 type T = Transaction
 
 type ExpressionSetter def = Val () -> Val ()
 
-loader :: MonadA m => Loader (MaybeT (T m))
+data Error = UnexportedGlobalReferred | InferError InferErr.Error
+
+instance Pretty Error where
+    pPrint UnexportedGlobalReferred = PP.text "Unexported global referred"
+    pPrint (InferError e) = pPrint e
+
+loader :: MonadA m => Loader (EitherT Error (T m))
 loader =
     Loader loadType
     where
@@ -44,12 +53,15 @@ loader =
                     Definition.BodyExpr (Definition.Expr _ (Definition.ExportedType scheme)) ->
                         return scheme
                     Definition.BodyBuiltin (Definition.Builtin _ scheme) -> return scheme
-                    _ -> mzero -- Reference to global with non-exported type!
+                    _ -> left UnexportedGlobalReferred -- Reference to global with non-exported type!
 
-type M m = StateT Infer.Context (MaybeT (T m))
+type M m = StateT Infer.Context (EitherT Error (T m))
+
+toEitherT :: Monad m => Either InferErr.Error a -> EitherT Error m a
+toEitherT = hoistEither . (_Left %~ InferError)
 
 liftInfer :: Monad m => Infer a -> M m a
-liftInfer = mapStateT eitherToMaybeT . Infer.run
+liftInfer = mapStateT toEitherT . Infer.run
 
 loadInferScope ::
     MonadA m => Infer.Scope -> Val a -> M m (Val (Infer.Payload, a))
@@ -71,7 +83,7 @@ loadInferInto pl val =
 
 loadInfer ::
     MonadA m => V.Var -> Val a ->
-    MaybeT (T m) (Val (Infer.Payload, a), Infer.Context)
+    EitherT Error (T m) (Val (Infer.Payload, a), Infer.Context)
 loadInfer recurseVar val =
     liftInfer (Recursive.inferEnv recurseVar Infer.emptyScope)
     >>= (`loadInferInto` val)
