@@ -309,7 +309,7 @@ primitiveGroups holeInfo =
         V.BAbs $ V.Lam "NewLambda" P.hole
     , mkGroupBody LowPrecedence ["Empty", "Record", "{}", "0", "Ø"] $
         V.BLeaf V.LRecEmpty
-    , mkGroupBody HighPrecedence ["Absurd", "Case"] $
+    , mkGroupBody LowPrecedence ["Absurd", "Case"] $
         V.BLeaf V.LAbsurd
     ]
     where
