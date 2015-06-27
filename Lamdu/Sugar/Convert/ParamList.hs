@@ -1,9 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 -- | Manage, read, write lambda-associated param lists
 module Lamdu.Sugar.Convert.ParamList
-    ( ParamList
-    , mkProp
-    , loadForLambdas
+    ( ParamList, loadForLambdas
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>))
@@ -18,12 +16,12 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Traversable (traverse)
+import           Lamdu.Data.Anchors (ParamList, assocFieldParamList)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Infer (Infer)
@@ -34,17 +32,9 @@ import qualified Lamdu.Infer.Update as Update
 import qualified Lamdu.Sugar.Convert.Input as Input
 
 type T = Transaction
-type ParamList = [T.Tag]
-
-mkProp ::
-    MonadA m =>
-    ExprIRef.ValI m -> Transaction.MkProperty m (Maybe ParamList)
-mkProp lambdaI =
-    Transaction.assocDataRef "field param list" $
-    UniqueId.toGuid lambdaI
 
 loadStored :: MonadA m => ExprIRef.ValIProperty m -> T m (Maybe ParamList)
-loadStored = Transaction.getP . mkProp . Property.value
+loadStored = Transaction.getP . assocFieldParamList . Property.value
 
 mkFuncType :: ParamList -> Infer Type
 mkFuncType paramList =

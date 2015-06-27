@@ -10,6 +10,8 @@ module Lamdu.Data.Anchors
     , assocPresentationMode
     , SpecialFunctions(..)
     , assocTagOrder
+    , ParamList
+    , assocFieldParamList
     ) where
 
 import           Control.MonadA (MonadA)
@@ -23,7 +25,7 @@ import qualified Data.Store.Transaction as Transaction
 import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import           Lamdu.Eval.Val (ScopeId)
-import           Lamdu.Expr.IRef (DefI)
+import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 
@@ -78,6 +80,13 @@ assocScopeRef = Transaction.assocDataRef "ScopeId" . UniqueId.toGuid
 
 assocTagOrder :: MonadA m => T.Tag -> MkProperty m Int
 assocTagOrder = Transaction.assocDataRefDef 0 "Order" . UniqueId.toGuid
+
+type ParamList = [T.Tag]
+
+assocFieldParamList ::
+    MonadA m => ValI m -> Transaction.MkProperty m (Maybe ParamList)
+assocFieldParamList lambdaI =
+    Transaction.assocDataRef "field param list" $ UniqueId.toGuid lambdaI
 
 data PresentationMode = OO | Verbose | Infix
     deriving (Eq, Ord, Enum, Bounded, Show, Generic)

@@ -44,7 +44,6 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
-import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
@@ -210,7 +209,7 @@ makeConvertToRecordParams mRecursiveVar (StoredLam (V.Lam paramVar lamBody) lamP
                     , vttNewTag = tagGForLambdaTagParam paramVar tagForNewVar
                     }
     where
-        paramList = ParamList.mkProp (Property.value lamProp)
+        paramList = Anchors.assocFieldParamList (Property.value lamProp)
 
 tagGForLambdaTagParam :: V.Var -> T.Tag -> TagG ()
 tagGForLambdaTagParam paramVar tag = TagG (EntityId.ofLambdaTagParam paramVar tag) tag ()
@@ -389,7 +388,7 @@ makeDelFieldParam mRecursiveVar tags fp storedLam =
             xs -> (Just xs, Nothing, ParamDelResultDelTag)
 
 slParamList :: MonadA m => StoredLam m -> Transaction.MkProperty m (Maybe ParamList)
-slParamList = ParamList.mkProp . Property.value . slLambdaProp
+slParamList = Anchors.assocFieldParamList . Property.value . slLambdaProp
 
 makeNonRecordParamActions ::
     MonadA m => Maybe V.Var -> StoredLam m ->
