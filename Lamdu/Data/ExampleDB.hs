@@ -29,6 +29,7 @@ import           Lamdu.Data.Anchors (assocTagOrder, ParamList, assocFieldParamLi
 import qualified Lamdu.Data.DbLayout as Db
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
+import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Nominal (Nominal(..))
 import qualified Lamdu.Expr.Pure as Pure
@@ -80,7 +81,7 @@ nameTheAnchors :: MonadA m => T m ()
 nameTheAnchors = mapM_ (uncurry setName) Builtins.anchorNames
 
 data Public m = Public
-    { publicDefs :: [ExprIRef.DefI m]
+    { publicDefs :: [DefI m]
     , publicTags :: [T.Tag]
     , publicTIds :: [T.Id]
     }
@@ -110,7 +111,7 @@ newTId :: MonadA m => String -> M m T.Id
 newTId n = publicize (namedId n) $ \x -> mempty { publicTIds = [x] }
 
 newPublicDef ::
-    Monad m => m (ExprIRef.DefI n) -> WriterT (Public n) m (ExprIRef.DefI n)
+    Monad m => m (DefI n) -> WriterT (Public n) m (DefI n)
 newPublicDef act = publicize act $ \x -> mempty { publicDefs = [x] }
 
 type TypeCtor = [Type] -> Type
@@ -130,8 +131,8 @@ newNominal name params body =
         return (tid, tinst)
 
 newPublicDefVal ::
-    MonadA m => String -> PresentationMode -> ExprIRef.ValI m -> Scheme ->
-    WriterT (Public m) (Transaction m) (ExprIRef.DefI m)
+    MonadA m => String -> PresentationMode -> ValI m -> Scheme ->
+    WriterT (Public m) (Transaction m) (DefI m)
 newPublicDefVal name presentationMode valI typ =
     newPublicDef $
     DataOps.newDefinition name presentationMode .
@@ -141,7 +142,7 @@ newPublicDefVal name presentationMode valI typ =
 newPublicDefExpr ::
     MonadA m =>
     String -> PresentationMode -> Val () ->
-    Scheme -> M m (ExprIRef.DefI m)
+    Scheme -> M m (DefI m)
 newPublicDefExpr name presentationMode expr typ =
     do
         valI <- lift $ ExprIRef.newVal expr
@@ -157,24 +158,24 @@ data CtorInfo = CtorInfo
 createInjectorI ::
     MonadA m =>
     ((Val () -> Val ()) -> Val ()) -> T.Id -> CtorInfo ->
-    M m (ExprIRef.DefI m)
+    M m (DefI m)
 createInjectorI f typeName (CtorInfo name tag presentationMode scheme) =
     newPublicDefExpr name presentationMode
     (f (Pure.toNom typeName . Pure.inject tag))
     scheme
 
 createInjector ::
-    MonadA m => T.Id -> CtorInfo -> M m (ExprIRef.DefI m)
+    MonadA m => T.Id -> CtorInfo -> M m (DefI m)
 createInjector = createInjectorI (Pure.lambda "x")
 
 createNullaryInjector ::
-    MonadA m => T.Id -> CtorInfo -> M m (ExprIRef.DefI m)
+    MonadA m => T.Id -> CtorInfo -> M m (DefI m)
 createNullaryInjector = createInjectorI ($ Pure.recEmpty)
 
 data ListNames m = ListNames
     { _lnTid :: T.Id
-    , lnNil :: ExprIRef.DefI m
-    , lnCons :: ExprIRef.DefI m
+    , lnNil :: DefI m
+    , lnCons :: DefI m
     }
 
 data Ctor
@@ -183,7 +184,7 @@ data Ctor
 
 adt ::
     MonadA m => String -> [(T.ParamId, T.TypeVar)] -> (TypeCtor -> [Ctor]) ->
-    M m (TypeCtor, T.Id, [ExprIRef.DefI m])
+    M m (TypeCtor, T.Id, [DefI m])
 adt name params ctors =
     do
         (tid, t) <-
@@ -221,7 +222,7 @@ createList valTParamId =
         valT = "a"
 
 createMaybe ::
-    MonadA m => T.ParamId -> M m (TypeCtor, T.Id, [ExprIRef.DefI m])
+    MonadA m => T.ParamId -> M m (TypeCtor, T.Id, [DefI m])
 createMaybe valTParamId =
     do
         let valT = "a"
@@ -234,8 +235,8 @@ createMaybe valTParamId =
 
 data BoolNames m = BoolNames
     { bnTid :: T.Id
-    , bnTrue :: ExprIRef.DefI m
-    , bnFalse :: ExprIRef.DefI m
+    , bnTrue :: DefI m
+    , bnFalse :: DefI m
     }
 
 createBool :: MonadA m => M m (Type, BoolNames m)
@@ -266,11 +267,21 @@ caseBool boolNames v1 v2 cond then_ else_ =
             Pure._case Builtins.falseTag (Pure.abs v2 else_) $
             Pure.absurd
 
-setParamList :: MonadA m => ExprIRef.ValI m -> ParamList -> M m ()
+setParamList :: MonadA m => ValI m -> ParamList -> M m ()
 setParamList lambdaI tags =
     lift $ Transaction.setP (assocFieldParamList lambdaI) $ Just tags
 
-createIf :: MonadA m => Type -> BoolNames m -> M m (ExprIRef.DefI m)
+newPublicFunc ::
+    MonadA m => String -> PresentationMode -> V.Var -> [T.Tag] ->
+    ([Val ()] -> Val ()) -> Scheme -> M m (DefI m)
+newPublicFunc name presentationMode v tags mkBody scheme =
+    do
+        lambdaI <-
+            lift $ ExprIRef.newVal $ Pure.lambdaRecord v tags mkBody
+        setParamList lambdaI tags
+        newPublicDefVal name presentationMode lambdaI scheme
+
+createIf :: MonadA m => Type -> BoolNames m -> M m (DefI m)
 createIf bool boolNames =
     do
         condTag <- newTag 0 "condition"
@@ -279,20 +290,16 @@ createIf bool boolNames =
         v0 <- lift ExprIRef.newVar
         v1 <- lift ExprIRef.newVar
         v2 <- lift ExprIRef.newVar
-        lambdaI <-
-            lift $ ExprIRef.newVal $ Pure.lambdaRecord v0
-            [condTag , thenTag, elseTag] $
-            \[cond   , then_  , else_  ] ->
-                caseBool boolNames v1 v2 cond then_ else_
-        setParamList lambdaI [condTag, thenTag, elseTag]
-        newPublicDefVal "if" OO lambdaI $
+        newPublicFunc "if" OO v0
+            [condTag, thenTag, elseTag]
+            (\[cond, then_ , else_] -> caseBool boolNames v1 v2 cond then_ else_) $
             forAll 1 $ \[a] -> recordType
             [ (condTag, bool)
             , (thenTag, a)
             , (elseTag, a)
             ] ~> a
 
-createNot :: MonadA m => Type -> BoolNames m -> M m (ExprIRef.DefI m)
+createNot :: MonadA m => Type -> BoolNames m -> M m (DefI m)
 createNot bool boolNames@BoolNames{..} =
     do
         v0 <- lift ExprIRef.newVar
