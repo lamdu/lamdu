@@ -1,0 +1,40 @@
+This may be out of date, but I added it because why not :)
+
+HoleEdit:
+
+A hole edit is a complex widget, and is quite different when it
+represents a Sugar.Hole with or without an "argument" (wrapper).
+
+When Sugar.Arg doesn't exist in the Sugar.Hole, the HoleEdit is an
+RegularHoleEdit, and can be Closed (cursor on SearchTerm parent
+delegator) or Open (cursor on SearchTerm TextEdit or any result).
+
+When the RegularHoleEdit is Open, the HoleEdit.Results widget hovers
+below.
+
+When Sugar.Arg does exist in the Sugar.Hole, the HoleEdit is a
+WrapperHoleEdit, which is more complex than RegularHoleEdit, and has
+multiple states, all of which use the wrapper's GUI size/alignment.
+
+* Unfocused: Cursor outside hole, only the Wrapper is visible.
+
+* Wrapper is focused: RegularHoleEdit hovers below.
+
+* RegularHoleEdit is focused: The Wrapper hovers above.
+
+Cursor Id's: The prefix cursor Id of all HoleEdit widget id's is the
+Hole's entity id. Then, each widget inside has a different suffix:
+
+Component           Suffix
+Wrapper             ["wrapper"]
+SearchTermFocusDel  ["regular", "closed"]
+SearchTermTextEdit  ["regular", "open", "searchTermTextEdit"]
+Results             ["regular", "open", "results"]
+
+Results are shown iff the cursor is inside "open".
+
+If a wrapper exists, the assignCursor of the hole's entity id is "wrapper".
+Otherwise, it is ["regular", "open"].
+
+HoleEdit chooses between creating a Wrapper hole or a RegularHole.
+A RegularHole can be open or closed.
