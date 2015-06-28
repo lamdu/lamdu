@@ -32,6 +32,7 @@ import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Nominal (Nominal(..))
+import           Lamdu.Expr.Pure (($$))
 import qualified Lamdu.Expr.Pure as Pure
 import           Lamdu.Expr.Scheme (Scheme(..))
 import qualified Lamdu.Expr.Scheme as Scheme
@@ -260,7 +261,7 @@ createBool =
 
 caseBool :: BoolNames m -> V.Var -> V.Var -> Val () -> Val () -> Val () -> Val ()
 caseBool boolNames v1 v2 cond then_ else_ =
-    cases `Pure.app` Pure.fromNom (bnTid boolNames) cond
+    cases $$ Pure.fromNom (bnTid boolNames) cond
     where
         cases =
             Pure._case Builtins.trueTag (Pure.abs v1 then_) $
@@ -272,10 +273,11 @@ setParamList lambdaI tags =
     lift $ Transaction.setP (assocFieldParamList lambdaI) $ Just tags
 
 newPublicFunc ::
-    MonadA m => String -> PresentationMode -> V.Var -> [T.Tag] ->
+    MonadA m => String -> PresentationMode -> [T.Tag] ->
     ([Val ()] -> Val ()) -> Scheme -> M m (DefI m)
-newPublicFunc name presentationMode v tags mkBody scheme =
+newPublicFunc name presentationMode tags mkBody scheme =
     do
+        v <- lift ExprIRef.newVar
         lambdaI <-
             lift $ ExprIRef.newVal $ Pure.lambdaRecord v tags mkBody
         setParamList lambdaI tags
@@ -287,10 +289,9 @@ createIf bool boolNames =
         condTag <- newTag 0 "condition"
         thenTag <- newTag 1 "then"
         elseTag <- newTag 2 "else"
-        v0 <- lift ExprIRef.newVar
         v1 <- lift ExprIRef.newVar
         v2 <- lift ExprIRef.newVar
-        newPublicFunc "if" OO v0
+        newPublicFunc "if" OO
             [condTag, thenTag, elseTag]
             (\[cond, then_ , else_] -> caseBool boolNames v1 v2 cond then_ else_) $
             forAll 1 $ \[a] -> recordType
@@ -298,6 +299,9 @@ createIf bool boolNames =
             , (thenTag, a)
             , (elseTag, a)
             ] ~> a
+
+getDef :: DefI m -> Val ()
+getDef = Pure.global . ExprIRef.globalId
 
 createNot :: MonadA m => Type -> BoolNames m -> M m (DefI m)
 createNot bool boolNames@BoolNames{..} =
@@ -309,8 +313,6 @@ createNot bool boolNames@BoolNames{..} =
             ( Pure.lambda v0 $ \b ->
               caseBool boolNames v1 v2 b (getDef bnFalse) (getDef bnTrue) ) $
             Scheme.mono $ bool ~> bool
-    where
-        getDef = Pure.global . ExprIRef.globalId
 
 createPublics :: MonadA m => T m (Db.SpecialFunctions m, Public m)
 createPublics =
