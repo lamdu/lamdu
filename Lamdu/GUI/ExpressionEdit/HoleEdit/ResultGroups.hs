@@ -243,18 +243,6 @@ getFieldGroups holeInfo =
         Sugar.holeMArg . Lens._Just . Sugar.haGetFieldTags . Lens.traversed
     ]
 
-caseGroups :: HoleInfo m -> [Group def]
-caseGroups holeInfo =
-    [ Group
-      { _groupAttributes = GroupAttributes ["case"] HighPrecedence
-      , _groupBaseExpr = caseVal
-      }
-    | Just tags <-
-      [hiHole holeInfo ^?
-       Sugar.holeMArg . Lens._Just . Sugar.haMSum . Lens._Just]
-    , let caseVal = tags <&> (^. Sugar.tagVal) & foldr (`P._case` P.hole) P.absurd
-    ]
-
 applyGroups :: HoleInfo m -> [Group def]
 applyGroups holeInfo =
     [ Group
@@ -329,7 +317,6 @@ makeAllGroups editableHoleInfo =
     do
         paramGroups <- makeParamGroups editableHoleInfo
         getFieldGroups holeInfo ++
-            caseGroups holeInfo ++
             applyGroups holeInfo ++
             primitiveGroups editableHoleInfo ++
             paramGroups

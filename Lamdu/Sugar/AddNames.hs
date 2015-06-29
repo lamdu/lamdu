@@ -438,11 +438,9 @@ toHoleArg arg@HoleArg{..} =
     do
         expr <- toExpression _haExpr
         getFieldTags <- mapM toTagG _haGetFieldTags
-        mSum <- _haMSum & Lens._Just . traverse %%~ toTagG
         pure arg
             { _haExpr = expr
             , _haGetFieldTags = getFieldTags
-            , _haMSum = mSum
             }
 
 toHole ::
