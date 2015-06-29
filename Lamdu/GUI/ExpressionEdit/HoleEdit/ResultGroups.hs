@@ -33,6 +33,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Get as NamesGet
 import           Lamdu.Sugar.Names.Types (Name(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -215,11 +216,31 @@ getVarTypesOrder =
     , Sugar.GetDefinition
     ]
 
+searchTermsOfBody :: Sugar.Body (Name m) m expr -> [String]
+searchTermsOfBody Sugar.BodyLam {} = ["\\", "lambda"]
+searchTermsOfBody Sugar.BodyApply {} = ["Apply"]
+searchTermsOfBody Sugar.BodyList {} = ["list", "[]"]
+searchTermsOfBody Sugar.BodyRecord {} = ["record", "{}"]
+searchTermsOfBody Sugar.BodyGetField {} = [".", "field"]
+searchTermsOfBody Sugar.BodyCase {} = ["case", "of"]
+searchTermsOfBody Sugar.BodyInject {} = ["inject", "[]"]
+searchTermsOfBody Sugar.BodyToNom {} = []
+searchTermsOfBody Sugar.BodyFromNom {} = []
+searchTermsOfBody Sugar.BodyLiteralInteger {} = []
+searchTermsOfBody Sugar.BodyHole {} = []
+searchTermsOfBody Sugar.BodyGetVar {} = []
+
 holeSuggested :: MonadA m => Sugar.HoleSuggested (Name m) m -> T m (Group def)
 holeSuggested suggested =
     do
-        names <- suggested ^. Sugar.hsSugaredBaseExpr <&> NamesGet.fromExpression
-        let searchTerms = "suggested" : concatMap searchTermsOfNames names
+        sugaredBaseExpr <- suggested ^. Sugar.hsSugaredBaseExpr
+        let searchTerms =
+                "suggested" :
+                concatMap searchTermsOfNames
+                (NamesGet.fromExpression sugaredBaseExpr) ++
+                concatMap searchTermsOfBody
+                (sugaredBaseExpr ^..
+                 SugarLens.subExprPayloads . Lens.asIndex . Sugar.rBody)
         pure Group
             { _groupAttributes = GroupAttributes searchTerms HighPrecedence
             , _groupBaseExpr = suggested ^. Sugar.hsVal
