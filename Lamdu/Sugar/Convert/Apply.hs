@@ -174,6 +174,8 @@ convertAppliedHole funcI argS argI exprPl =
                 }
         lift $ ConvertHole.convertPlain (Just argI) exprPl
             <&> rBody . _BodyHole . holeMArg .~ Just holeArg
+            <&> rBody . _BodyHole . holeSuggested <>~
+                ConvertHole.mkHoleSuggested (funcI ^. V.payload . Input.inferred)
             <&> rPayload . plData <>~ funcI ^. V.payload . Input.userData
             <&> rPayload . plActions . Lens._Just . wrap .~
                 maybe WrapNotAllowed (WrapperAlready . addEntityId) (exprPl ^. Input.mStored)

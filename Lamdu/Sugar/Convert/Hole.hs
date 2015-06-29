@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds, OverloadedStrings, RankNTypes #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert, convertPlain
+    , mkHoleSuggested
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
@@ -118,8 +119,7 @@ consistentExprIds = EntityId.randomizeExprAndParams . genFromHashable
 
 mkHoleSuggested :: Infer.Payload -> [Val ()]
 mkHoleSuggested inferred =
-    inferred ^. Infer.plType
-    & suggestValueWith mkVar
+    inferred ^. Infer.plType & suggestValueWith mkVar
     <&> (`evalState` (0 :: Int))
     where
         mkVar = do
