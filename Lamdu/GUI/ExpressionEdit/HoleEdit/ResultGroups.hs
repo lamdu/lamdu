@@ -25,6 +25,7 @@ import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
 import           Lamdu.Expr.IRef (DefI)
+import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
@@ -304,6 +305,7 @@ makeParamGroups editableHoleInfo =
 addSuggestedGroups :: MonadA m => HoleInfo m -> [Group def] -> T m [Group def]
 addSuggestedGroups holeInfo groups =
     suggesteds
+    & filter (Lens.nullOf (Sugar.hsVal . ExprLens.valHole))
     & Lens.traverse %%~ holeSuggested
     <&> Lens.traverse . groupAttributes <>~ dupsGroupNames
     <&> (++ others)
