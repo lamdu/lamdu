@@ -245,7 +245,7 @@ data HoleArg name m expr = HoleArg
 
 data Hole name m expr = Hole
     { _holeMActions :: Maybe (HoleActions name m)
-    , _holeSuggested :: Val ()
+    , _holeSuggested :: [Val ()]
     , _holeSuggestedInjectTags :: [TagG name]
     , _holeMArg :: Maybe (HoleArg name m expr)
     } deriving (Functor, Foldable, Traversable)

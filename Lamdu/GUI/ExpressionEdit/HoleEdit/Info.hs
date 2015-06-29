@@ -23,7 +23,7 @@ data HoleInfo m = HoleInfo
     { hiEntityId :: Sugar.EntityId
     , hiInferredType :: Type
     , hiIds :: WidgetIds
-    , hiSuggested :: Val ()
+    , hiSuggested :: [Val ()]
     , hiSuggestedInjectTags :: [Sugar.TagG (Name m)]
     , hiMArgument :: Maybe (Sugar.HoleArg (Name m) m (ExprGuiT.SugarExpr m))
     , hiNearestHoles :: NearestHoles

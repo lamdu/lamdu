@@ -219,10 +219,11 @@ holeSuggested holeInfo =
       { _groupAttributes = GroupAttributes ["suggested"] HighPrecedence
       , _groupBaseExpr = suggestedVal
       }
-    | Lens.nullOf ExprLens.valHole suggestedVal
+    | suggestedVal <- suggestedVals
+    , Lens.nullOf ExprLens.valHole suggestedVal
     ]
     where
-        suggestedVal = hiSuggested holeInfo
+        suggestedVals = hiSuggested holeInfo
 
 getFieldGroups :: HoleInfo m -> [Group def]
 getFieldGroups holeInfo =
@@ -311,8 +312,9 @@ addSuggestedGroups holeInfo groups =
     & Lens.traverse . groupAttributes <>~ dupsGroupNames
     & (++ others)
     where
+        equivalentToSuggested x = any (V.alphaEq x) (hiSuggested holeInfo)
         (dupsOfSuggested, others) =
-            List.partition (V.alphaEq (hiSuggested holeInfo) . (^. groupBaseExpr)) groups
+            List.partition (equivalentToSuggested . (^. groupBaseExpr)) groups
         dupsGroupNames = dupsOfSuggested ^. Lens.traverse . groupAttributes
 
 primitiveGroups :: EditableHoleInfo m -> [GroupM m]
