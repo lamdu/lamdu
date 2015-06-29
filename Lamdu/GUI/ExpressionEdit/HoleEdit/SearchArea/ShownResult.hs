@@ -8,7 +8,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import           Lamdu.Sugar.AddNames.Types (Name)
+import           Lamdu.Sugar.Names.Types (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction

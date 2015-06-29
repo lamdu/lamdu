@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-module Lamdu.Sugar.AddNames.Types
+module Lamdu.Sugar.Names.Types
     ( NameSource(..), NameCollision(..), Name(..)
     , ExpressionN, BodyN, DefinitionN
     ) where

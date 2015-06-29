@@ -13,7 +13,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Store.Transaction (Transaction)
 import           Graphics.UI.Bottle.Widgets.Layout (Layout)
-import           Lamdu.Sugar.AddNames.Types (ExpressionN)
+import           Lamdu.Sugar.Names.Types (ExpressionN)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles

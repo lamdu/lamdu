@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.Sugar.AddNames.NameGen
+module Lamdu.Sugar.Names.NameGen
     ( NameGen, initial
     , IsFunction(..), existingName, newName
     ) where

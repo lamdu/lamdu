@@ -76,7 +76,7 @@ import qualified Lamdu.GUI.Parens as Parens
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Sugar.AddNames.Types (Name(..), NameSource(..), NameCollision(..))
+import           Lamdu.Sugar.Names.Types (Name(..), NameSource(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction

@@ -12,7 +12,7 @@ import           Lamdu.Expr.Type (Type)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState, hsSearchTerm)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import           Lamdu.Sugar.AddNames.Types (Name)
+import           Lamdu.Sugar.Names.Types (Name)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 

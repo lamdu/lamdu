@@ -1,6 +1,6 @@
 import "hint" HLint.HLint
 
-ignore "Avoid lambda" = Lamdu.Sugar.AddNames
+ignore "Avoid lambda" = Lamdu.Sugar.Names
 
 infixr 4 %%@~, <%@~, %%~, <+~, <*~, <-~, <//~, <^~, <^^~, <**~
 infix 4 %%@=, <%@=, %%=, <+=, <*=, <-=, <//=, <^=, <^^=, <**=

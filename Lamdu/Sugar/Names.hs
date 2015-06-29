@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, RankNTypes, DeriveGeneric, FlexibleInstances, KindSignatures, FlexibleContexts #-}
-module Lamdu.Sugar.AddNames
+module Lamdu.Sugar.Names
     ( addToDef
     ) where
 
@@ -32,10 +32,10 @@ import           GHC.Generics (Generic)
 import           Lamdu.Data.Anchors (assocNameRef)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
-import           Lamdu.Sugar.AddNames.CPS (CPS(..))
-import           Lamdu.Sugar.AddNames.NameGen (NameGen)
-import qualified Lamdu.Sugar.AddNames.NameGen as NameGen
-import           Lamdu.Sugar.AddNames.Types
+import           Lamdu.Sugar.Names.CPS (CPS(..))
+import           Lamdu.Sugar.Names.NameGen (NameGen)
+import qualified Lamdu.Sugar.Names.NameGen as NameGen
+import           Lamdu.Sugar.Names.Types
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 

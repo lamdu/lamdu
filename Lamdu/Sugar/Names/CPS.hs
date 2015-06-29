@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveFunctor, RankNTypes #-}
-module Lamdu.Sugar.AddNames.CPS
+module Lamdu.Sugar.Names.CPS
     ( CPS(..)
     ) where
 
