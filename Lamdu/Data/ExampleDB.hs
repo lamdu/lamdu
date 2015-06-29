@@ -334,20 +334,20 @@ createPublics =
                                       , (Builtins.infixrTag, rType)
                                       ] ~> resType
 
-        traverse_ ((`publicBuiltin_` Scheme.mono (infixType bool bool bool)) . ("Prelude."++))
+        traverse_ ((`newPublicBuiltinQualified_` Scheme.mono (infixType bool bool bool)) . ("Prelude."++))
             ["&&", "||"]
 
         traverse_
-            ((`publicBuiltin_` Scheme.mono (infixType T.TInt T.TInt T.TInt)) .
+            ((`newPublicBuiltinQualified_` Scheme.mono (infixType T.TInt T.TInt T.TInt)) .
               ("Prelude." ++))
             ["+", "-", "*", "^"]
-        publicDef_ "%" Infix ["Prelude"] "mod" $ Scheme.mono $ infixType T.TInt T.TInt T.TInt
-        publicDef_ "//" Infix ["Prelude"] "div" $ Scheme.mono $ infixType T.TInt T.TInt T.TInt
-        publicBuiltin_ "Prelude.negate" $ Scheme.mono $ T.TInt ~> T.TInt
-        publicBuiltin_ "Prelude.sqrt" $ Scheme.mono $ T.TInt ~> T.TInt
+        newPublicBuiltin_ "%" Infix ["Prelude"] "mod" $ Scheme.mono $ infixType T.TInt T.TInt T.TInt
+        newPublicBuiltin_ "//" Infix ["Prelude"] "div" $ Scheme.mono $ infixType T.TInt T.TInt T.TInt
+        newPublicBuiltinQualified_ "Prelude.negate" $ Scheme.mono $ T.TInt ~> T.TInt
+        newPublicBuiltinQualified_ "Prelude.sqrt" $ Scheme.mono $ T.TInt ~> T.TInt
 
         let aToAToBool = forAll 1 $ \[a] -> infixType a a bool
-        traverse_ ((`publicBuiltin_` aToAToBool) . ("Prelude." ++))
+        traverse_ ((`newPublicBuiltinQualified_` aToAToBool) . ("Prelude." ++))
             ["==", "/=", "<=", ">=", "<", ">"]
 
         return
@@ -356,20 +356,20 @@ createPublics =
                 , Db.sfCons = lnCons listNames
                 }
     where
-        publicDef_ name presentationMode ffiPath ffiName typ =
-            void $ publicDef name presentationMode ffiPath ffiName typ
-        publicDef name presentationMode ffiPath ffiName typ =
+        newPublicBuiltin_ name presentationMode ffiPath ffiName typ =
+            void $ newPublicBuiltin name presentationMode ffiPath ffiName typ
+        newPublicBuiltin name presentationMode ffiPath ffiName typ =
             newPublicDef $
             DataOps.newDefinition name presentationMode .
             Definition.BodyBuiltin $ Definition.Builtin (Definition.FFIName ffiPath ffiName) typ
-        publicBuiltin fullyQualifiedName =
-            publicDef name (DataOps.presentationModeOfName name) path name
+        newPublicBuiltinQualified fullyQualifiedName =
+            newPublicBuiltin name (DataOps.presentationModeOfName name) path name
             where
                 path = init fqPath
                 name = last fqPath
                 fqPath = splitOn "." fullyQualifiedName
-        publicBuiltin_ builtinName typ =
-            void $ publicBuiltin builtinName typ
+        newPublicBuiltinQualified_ fullyQualifiedName typ =
+            void $ newPublicBuiltinQualified fullyQualifiedName typ
 
 newBranch :: MonadA m => String -> Version m -> T m (Branch m)
 newBranch name ver =
