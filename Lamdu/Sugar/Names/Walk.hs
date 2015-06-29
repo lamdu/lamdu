@@ -6,7 +6,7 @@ module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
     , InTransaction(..)
     , NameConvertor, CPSNameConvertor
-    , toDef
+    , toDef, toExpression
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>))
