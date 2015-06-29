@@ -40,17 +40,19 @@ justTag = "BI:just"
 nothingTag :: Tag
 nothingTag = "BI:nothing"
 
-anchorNames :: [(Tag, String)]
+type Order = Int
+
+anchorNames :: [(Order, Tag, String)]
 anchorNames =
-    [ (objTag, "object")
-    , (infixlTag, "infixl")
-    , (infixrTag, "infixr")
-    , (headTag, "head")
-    , (tailTag, "tail")
-    , (consTag, "NonEmpty")
-    , (nilTag, "Empty")
-    , (trueTag, "True")
-    , (falseTag, "False")
-    , (justTag, "Just")
-    , (nothingTag, "Nothing")
+    [ (0, objTag, "object")
+    , (0, infixlTag, "infixl")
+    , (1, infixrTag, "infixr")
+    , (0, headTag, "head")
+    , (1, tailTag, "tail")
+    , (0, nilTag, "Empty")
+    , (1, consTag, "NonEmpty")
+    , (0, falseTag, "False")
+    , (1, trueTag, "True")
+    , (0, nothingTag, "Nothing")
+    , (1, justTag, "Just")
     ]

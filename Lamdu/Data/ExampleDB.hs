@@ -51,6 +51,9 @@ type T = Transaction
 setName :: (MonadA m, UniqueId.ToGuid a) => a -> String -> T m ()
 setName x = setP . Db.assocNameRef $ x
 
+setTagOrder :: MonadA m => T.Tag -> Builtins.Order -> T m ()
+setTagOrder tag order = Transaction.setP (assocTagOrder tag) order
+
 namedId ::
     forall a m. (MonadA m, IsString a, UniqueId.ToGuid a) => String -> T m a
 namedId name =
@@ -79,7 +82,13 @@ sumType :: [(T.Tag, Type)] -> Type
 sumType = T.TSum . foldr (uncurry T.CExtend) T.CEmpty
 
 nameTheAnchors :: MonadA m => T m ()
-nameTheAnchors = mapM_ (uncurry setName) Builtins.anchorNames
+nameTheAnchors =
+    mapM_ describeAnchor Builtins.anchorNames
+    where
+        describeAnchor (order, tag, name) =
+            do
+                setName tag name
+                setTagOrder tag order
 
 data Public m = Public
     { publicDefs :: [DefI m]
@@ -105,7 +114,7 @@ newTag :: MonadA m => Int -> String -> M m T.Tag
 newTag order n =
     do
         tag <- publicize (namedId n) $ \x -> mempty { publicTags = [x] }
-        lift $ Transaction.setP (assocTagOrder tag) order
+        lift $ setTagOrder tag order
         return tag
 
 newTId :: MonadA m => String -> M m T.Id
