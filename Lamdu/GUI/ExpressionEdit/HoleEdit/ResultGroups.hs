@@ -217,13 +217,13 @@ holeSuggested :: HoleInfo m -> [Group def]
 holeSuggested holeInfo =
     [ Group
       { _groupAttributes = GroupAttributes ["suggested"] HighPrecedence
-      , _groupBaseExpr = suggestedVal
+      , _groupBaseExpr = suggested ^. Sugar.hsVal
       }
-    | suggestedVal <- suggestedVals
-    , Lens.nullOf ExprLens.valHole suggestedVal
+    | suggested <- suggesteds
+    , Lens.nullOf (Sugar.hsVal . ExprLens.valHole) suggested
     ]
     where
-        suggestedVals = hiHole holeInfo ^. Sugar.holeSuggested
+        suggesteds = hiHole holeInfo ^. Sugar.holeSuggested
 
 getFieldGroups :: HoleInfo m -> [Group def]
 getFieldGroups holeInfo =
@@ -287,7 +287,8 @@ addSuggestedGroups holeInfo groups =
     & (++ others)
     where
         equivalentToSuggested x =
-            any (V.alphaEq x) (hiHole holeInfo ^. Sugar.holeSuggested)
+            any (V.alphaEq x)
+            (hiHole holeInfo ^.. Sugar.holeSuggested . Lens.traverse . Sugar.hsVal)
         (dupsOfSuggested, others) =
             List.partition (equivalentToSuggested . (^. groupBaseExpr)) groups
         dupsGroupNames = dupsOfSuggested ^. Lens.traverse . groupAttributes

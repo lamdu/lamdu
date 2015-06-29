@@ -117,10 +117,10 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
 consistentExprIds :: EntityId -> Val (EntityId -> a) -> Val a
 consistentExprIds = EntityId.randomizeExprAndParams . genFromHashable
 
-mkHoleSuggested :: Infer.Payload -> [Val ()]
+mkHoleSuggested :: Infer.Payload -> [HoleSuggested]
 mkHoleSuggested inferred =
     inferred ^. Infer.plType & suggestValueWith mkVar
-    <&> (`evalState` (0 :: Int))
+    <&> HoleSuggested . (`evalState` (0 :: Int))
     where
         mkVar = do
             i <- State.get
