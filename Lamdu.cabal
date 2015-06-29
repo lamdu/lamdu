@@ -247,6 +247,7 @@ Executable lamdu
                      , Lamdu.Sugar.Names.CPS
                      , Lamdu.Sugar.Names.NameGen
                      , Lamdu.Sugar.Names.Types
+                     , Lamdu.Sugar.Names.Walk
                      , Lamdu.Sugar.Convert
                      , Lamdu.Sugar.Convert.Apply
                      , Lamdu.Sugar.Convert.Binder
