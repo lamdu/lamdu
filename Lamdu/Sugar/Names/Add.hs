@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, DeriveGeneric, FlexibleInstances, KindSignatures #-}
-module Lamdu.Sugar.Names
+module Lamdu.Sugar.Names.Add
     ( addToDef
     ) where
 
