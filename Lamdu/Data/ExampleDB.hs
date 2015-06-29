@@ -322,7 +322,7 @@ createPublics =
 
         valTParamId <- lift $ namedId "val"
 
-        (list, listNames) <- createList valTParamId
+        (_, listNames) <- createList valTParamId
         _ <- createMaybe valTParamId
         (bool, boolNames) <- createBool
 
