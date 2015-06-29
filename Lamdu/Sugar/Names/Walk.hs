@@ -130,6 +130,12 @@ toScopeGetVar ::
     m (ScopeGetVar (NewName m) (TM m))
 toScopeGetVar (ScopeGetVar gv val) = (`ScopeGetVar` val) <$> toGetVar gv
 
+toHoleResult ::
+    MonadNaming m =>
+    HoleResult (OldName m) (TM m) ->
+    m (HoleResult (NewName m) (TM m))
+toHoleResult = holeResultConverted toExpression
+
 toHoleActions ::
     MonadNaming m =>
     HoleActions (OldName m) (TM m) ->
@@ -145,7 +151,7 @@ toHoleActions ha@HoleActions {..} =
             , _holeResults =
                 _holeResults
                 & Lens.mapped . Lens.mapped . _2 %~
-                    (>>= holeResultConverted (run . toExpression))
+                    (>>= run . toHoleResult)
             }
 
 toHoleArg ::

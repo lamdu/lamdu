@@ -229,7 +229,6 @@ data HoleActions name m = HoleActions
     , _holeResults ::
             Val () -> ListT (T m) (HoleResultScore, T m (HoleResult name m))
     , _holePaste :: Maybe (T m EntityId)
-
     , _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
     }
 
