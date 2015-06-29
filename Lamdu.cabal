@@ -245,6 +245,7 @@ Executable lamdu
                      , Lamdu.Style
                      , Lamdu.Sugar.Names.Add
                      , Lamdu.Sugar.Names.CPS
+                     , Lamdu.Sugar.Names.Get
                      , Lamdu.Sugar.Names.NameGen
                      , Lamdu.Sugar.Names.Types
                      , Lamdu.Sugar.Names.Walk
