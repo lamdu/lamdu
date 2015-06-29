@@ -29,7 +29,7 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm, hiMArgument)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -223,7 +223,7 @@ holeSuggested holeInfo =
     , Lens.nullOf ExprLens.valHole suggestedVal
     ]
     where
-        suggestedVals = hiSuggested holeInfo
+        suggestedVals = hiHole holeInfo ^. Sugar.holeSuggested
 
 getFieldGroups :: HoleInfo m -> [Group def]
 getFieldGroups holeInfo =
@@ -239,8 +239,8 @@ getFieldGroups holeInfo =
           & Val ()
       }
     | tagG <-
-        hiMArgument holeInfo ^..
-        Lens._Just . Sugar.haGetFieldTags . Lens.traversed
+        hiHole holeInfo ^..
+        Sugar.holeMArg . Lens._Just . Sugar.haGetFieldTags . Lens.traversed
     ]
 
 caseGroups :: HoleInfo m -> [Group def]
@@ -249,7 +249,9 @@ caseGroups holeInfo =
       { _groupAttributes = GroupAttributes ["case"] HighPrecedence
       , _groupBaseExpr = caseVal
       }
-    | Just tags <- [hiMArgument holeInfo ^? Lens._Just . Sugar.haMSum . Lens._Just]
+    | Just tags <-
+      [hiHole holeInfo ^?
+       Sugar.holeMArg . Lens._Just . Sugar.haMSum . Lens._Just]
     , let caseVal = tags <&> (^. Sugar.tagVal) & foldr (`P._case` P.hole) P.absurd
     ]
 
@@ -260,7 +262,7 @@ applyGroups holeInfo =
       , _groupBaseExpr =
           Val () $ V.BApp $ V.Apply P.hole P.hole
       }
-    | _ <- hiMArgument holeInfo ^.. Lens._Just
+    | _ <- hiHole holeInfo ^.. Sugar.holeMArg . Lens._Just
     ]
 
 makeParamGroups :: MonadA m => EditableHoleInfo m -> T m [Group def]
@@ -296,7 +298,8 @@ addSuggestedGroups holeInfo groups =
     & Lens.traverse . groupAttributes <>~ dupsGroupNames
     & (++ others)
     where
-        equivalentToSuggested x = any (V.alphaEq x) (hiSuggested holeInfo)
+        equivalentToSuggested x =
+            any (V.alphaEq x) (hiHole holeInfo ^. Sugar.holeSuggested)
         (dupsOfSuggested, others) =
             List.partition (equivalentToSuggested . (^. groupBaseExpr)) groups
         dupsGroupNames = dupsOfSuggested ^. Lens.traverse . groupAttributes

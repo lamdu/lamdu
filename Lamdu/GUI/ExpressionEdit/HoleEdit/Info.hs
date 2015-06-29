@@ -9,7 +9,6 @@ import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Expr.Type (Type)
-import           Lamdu.Expr.Val (Val)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState, hsSearchTerm)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
@@ -23,8 +22,7 @@ data HoleInfo m = HoleInfo
     { hiEntityId :: Sugar.EntityId
     , hiInferredType :: Type
     , hiIds :: WidgetIds
-    , hiSuggested :: [Val ()]
-    , hiMArgument :: Maybe (Sugar.HoleArg (Name m) m (ExprGuiT.SugarExpr m))
+    , hiHole :: Sugar.Hole (Name m) m (ExprGuiT.SugarExpr m)
     , hiNearestHoles :: NearestHoles
     }
 

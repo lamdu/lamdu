@@ -48,7 +48,7 @@ makeWrapper ::
     MonadA m => Sugar.Payload m ExprGuiT.Payload ->
     HoleInfo m -> ExprGuiM m (Maybe (ExpressionGui m))
 makeWrapper pl holeInfo =
-    hiMArgument holeInfo
+    hiHole holeInfo ^. Sugar.holeMArg
     & Lens._Just %%~
         ExpressionGui.wrapExprEventMap pl . Wrapper.make (hiIds holeInfo)
 
@@ -135,9 +135,8 @@ make hole pl =
         holeInfo = HoleInfo
             { hiEntityId = pl ^. Sugar.plEntityId
             , hiInferredType = pl ^. Sugar.plAnnotation . Sugar.aInferredType
-            , hiSuggested = hole ^. Sugar.holeSuggested
+            , hiHole = hole
             , hiIds = WidgetIds{..}
             , hiNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
-            , hiMArgument = hole ^. Sugar.holeMArg
             }
         WidgetIds{..} = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
