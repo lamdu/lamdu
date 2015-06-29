@@ -453,11 +453,9 @@ toHole hole@Hole {..} =
     do
         mActions <- _holeMActions & Lens._Just %%~ toHoleActions
         mArg <- _holeMArg & Lens._Just %%~ toHoleArg
-        suggestedInjectTags <- traverse toTagG _holeSuggestedInjectTags
         pure hole
             { _holeMActions = mActions
             , _holeMArg = mArg
-            , _holeSuggestedInjectTags = suggestedInjectTags
             }
 
 toNamedVar ::

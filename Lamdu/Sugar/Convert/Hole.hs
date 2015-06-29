@@ -136,19 +136,8 @@ mkHole mInjectedArg exprPl = do
     pure Hole
         { _holeMActions = mActions
         , _holeSuggested = mkHoleSuggested (exprPl ^. Input.inferred)
-        , _holeSuggestedInjectTags =
-            exprPl ^..
-            Input.inferred . Infer.plType . ExprLens._TSum .
-            ExprLens.compositeTags <&> mkInjectTag
         , _holeMArg = Nothing
         }
-    where
-        mkInjectTag tag =
-            TagG
-            { _tagInstance = EntityId.ofInjectTag (exprPl ^. Input.entityId)
-            , _tagVal = tag
-            , _tagGName = UniqueId.toGuid tag
-            }
 
 
 getLocalScopeGetVars ::

@@ -68,7 +68,7 @@ module Lamdu.Sugar.Types
     , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap, haGetFieldTags, haMSum
     , Hole(..)
-        , holeMActions, holeMArg, holeSuggested, holeSuggestedInjectTags, holeGuid
+        , holeMActions, holeMArg, holeSuggested, holeGuid
     , ScopeGetVar(..), sgvGetVar, sgvVal
     , TIdG(..), tidgName, tidgTId, tidgEntityId
     , HoleActions(..)
@@ -246,7 +246,6 @@ data HoleArg name m expr = HoleArg
 data Hole name m expr = Hole
     { _holeMActions :: Maybe (HoleActions name m)
     , _holeSuggested :: [Val ()]
-    , _holeSuggestedInjectTags :: [TagG name]
     , _holeMArg :: Maybe (HoleArg name m expr)
     } deriving (Functor, Foldable, Traversable)
 

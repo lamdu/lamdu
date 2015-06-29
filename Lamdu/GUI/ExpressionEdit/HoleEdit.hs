@@ -136,7 +136,6 @@ make hole pl =
             { hiEntityId = pl ^. Sugar.plEntityId
             , hiInferredType = pl ^. Sugar.plAnnotation . Sugar.aInferredType
             , hiSuggested = hole ^. Sugar.holeSuggested
-            , hiSuggestedInjectTags = hole ^. Sugar.holeSuggestedInjectTags
             , hiIds = WidgetIds{..}
             , hiNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
             , hiMArgument = hole ^. Sugar.holeMArg

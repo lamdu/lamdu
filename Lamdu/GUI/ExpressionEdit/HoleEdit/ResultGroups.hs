@@ -253,22 +253,6 @@ caseGroups holeInfo =
     , let caseVal = tags <&> (^. Sugar.tagVal) & foldr (`P._case` P.hole) P.absurd
     ]
 
-injectGroups :: HoleInfo m -> [Group def]
-injectGroups holeInfo =
-    [ Group
-      { _groupAttributes =
-          GroupAttributes
-          ["inject", nName (tagG ^. Sugar.tagGName)]
-          HighPrecedence
-      , _groupBaseExpr =
-          tagG ^. Sugar.tagVal
-          & (`V.Inject` P.hole)
-          & V.BInject
-          & Val ()
-      }
-    | tagG <- hiSuggestedInjectTags holeInfo
-    ]
-
 applyGroups :: HoleInfo m -> [Group def]
 applyGroups holeInfo =
     [ Group
@@ -343,7 +327,6 @@ makeAllGroups editableHoleInfo =
         paramGroups <- makeParamGroups editableHoleInfo
         getFieldGroups holeInfo ++
             caseGroups holeInfo ++
-            injectGroups holeInfo ++
             applyGroups holeInfo ++
             primitiveGroups editableHoleInfo ++
             paramGroups
