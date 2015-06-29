@@ -337,122 +337,10 @@ createPublics =
         traverse_ ((`publicBuiltin_` Scheme.mono (infixType bool bool bool)) . ("Prelude."++))
             ["&&", "||"]
 
-        publicBuiltin_ "Prelude.id" $ forAll 1 $ \[a] -> a ~> a
-
-        publicBuiltin_ "Prelude.const" .
-            forAll 2 $ \[a, b] ->
-            a ~> b ~> a
-
-        publicBuiltin_ "Data.Function.fix" . forAll 1 $ \[a] ->
-            (a ~> a) ~> a
-
-        publicBuiltin_ "Data.List.reverse" $ forAll 1 $ \[a] -> list [a] ~> list [a]
-        publicBuiltin_ "Data.List.last" $ forAll 1 $ \[a] -> list [a] ~> a
-        publicBuiltin_ "Data.List.null" $ forAll 1 $ \[a] -> list [a] ~> bool
-
-        publicBuiltin_ "Data.List.length" . forAll 1 $ \[a] -> list [a] ~> T.TInt
-
-        traverse_ ((`publicBuiltin_` Scheme.mono (list [T.TInt] ~> T.TInt)) . ("Prelude."++))
-            ["product", "sum", "maximum", "minimum"]
-
-        fromTag <- newTag 0 "from"
-
-        predicateTag <- newTag 1 "predicate"
-        publicDef_ "filter" Verbose ["Data", "List"] "filter" $
-            forAll 1 $ \[a] ->
-            recordType
-            [ (fromTag, list [a])
-            , (predicateTag, a ~> bool)
-            ] ~> list [a]
-
-        whileTag <- newTag 1 "while"
-        publicDef_ "take" Verbose ["Data", "List"] "takeWhile" $
-            forAll 1 $ \[a] ->
-            recordType
-            [ (fromTag, list [a])
-            , (whileTag, a ~> bool)
-            ] ~> list [a]
-
-        countTag <- newTag 1 "count"
-        publicDef_ "take" Verbose ["Data", "List"] "take" . forAll 1 $ \[a] ->
-            recordType
-            [ (fromTag, list [a])
-            , (countTag, T.TInt)
-            ] ~> list [a]
-
-        mappingTag <- newTag 1 "mapping"
-        publicBuiltin_ "Data.List.map" .
-            forAll 2 $ \[a, b] ->
-            recordType
-            [ (Builtins.objTag, list [a])
-            , (mappingTag, a ~> b)
-            ] ~> list [b]
-
-        publicBuiltin_ "Data.List.concat" . forAll 1 $ \[a] -> list [list [a]] ~> list [a]
-
-        publicBuiltin_ "Data.List.replicate" . forAll 1 $ \[a] ->
-            recordType
-            [ (Builtins.objTag, a)
-            , (countTag, T.TInt)
-            ] ~> list [a]
-
-        initialTag     <- newTag 0 "initial"
-        stepTag        <- newTag 1 "step"
-        accumulatorTag <- newTag 2 "accumulator"
-        itemTag        <- newTag 3 "item"
-        publicBuiltin_ "Data.List.foldl" . forAll 2 $ \[a, b] ->
-            recordType
-            [ ( Builtins.objTag, list [b] )
-            , ( initialTag, a )
-            , ( stepTag
-                , recordType
-                    [ (accumulatorTag, a)
-                    , (itemTag, b)
-                    ] ~> a
-                )
-            ] ~> a
-
-        emptyTag <- newTag 0 "empty"
-        listItemTag <- newTag 1 "listitem"
-        publicBuiltin_ "Data.List.foldr" . forAll 2 $ \[a, b] ->
-            recordType
-            [ ( Builtins.objTag, list [a] )
-            , ( emptyTag, b )
-            , ( listItemTag
-                , recordType
-                    [ (Builtins.headTag, a)
-                    , (Builtins.tailTag, b)
-                    ] ~> b
-                )
-            ] ~> b
-
-        publicBuiltin_ "Data.List.caseList" . forAll 2 $ \[a, b] ->
-            recordType
-            [ ( Builtins.objTag, list [a] )
-            , ( emptyTag, b )
-            , ( listItemTag
-                , recordType
-                    [ (Builtins.headTag, a)
-                    , (Builtins.tailTag, list [a])
-                    ] ~> b
-                )
-            ] ~> b
-
-        funcTag <- newTag 0 "func"
-        xTag <- newTag 1 "x"
-        yTag <- newTag 2 "y"
-        publicBuiltin_ "Data.List.zipWith" . forAll 3 $ \[a, b, c] ->
-            recordType
-            [ ( funcTag, recordType [(xTag, a), (yTag, b)] ~> c)
-            , ( xTag, list [a] )
-            , ( yTag, list [b] )
-            ] ~> list [c]
-
         traverse_
             ((`publicBuiltin_` Scheme.mono (infixType T.TInt T.TInt T.TInt)) .
               ("Prelude." ++))
-            ["+", "-", "*", "/", "^"]
-        publicBuiltin_ "Prelude.++" $ forAll 1 $ \[a] -> infixType (list [a]) (list [a]) (list [a])
+            ["+", "-", "*", "^"]
         publicDef_ "%" Infix ["Prelude"] "mod" $ Scheme.mono $ infixType T.TInt T.TInt T.TInt
         publicDef_ "//" Infix ["Prelude"] "div" $ Scheme.mono $ infixType T.TInt T.TInt T.TInt
         publicBuiltin_ "Prelude.negate" $ Scheme.mono $ T.TInt ~> T.TInt
@@ -461,14 +349,6 @@ createPublics =
         let aToAToBool = forAll 1 $ \[a] -> infixType a a bool
         traverse_ ((`publicBuiltin_` aToAToBool) . ("Prelude." ++))
             ["==", "/=", "<=", ">=", "<", ">"]
-
-        publicDef_ ".." Infix ["Prelude"] "enumFromTo" .
-            Scheme.mono . infixType T.TInt T.TInt $ list [T.TInt]
-        publicBuiltin_ "Prelude.enumFrom" $ Scheme.mono $ T.TInt ~> list [T.TInt]
-
-        publicDef_ "iterate" Verbose ["Data", "List"] "iterate" .
-            forAll 1 $ \[a] ->
-            recordType [(initialTag, a), (stepTag, a ~> a)] ~> list [a]
 
         return
             Db.SpecialFunctions

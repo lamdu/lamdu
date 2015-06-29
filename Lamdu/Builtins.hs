@@ -204,5 +204,4 @@ eval name =
     Def.FFIName ["Prelude"] "mod"    -> builtin2Infix $ intArg mod
     Def.FFIName ["Prelude"] "negate" -> builtin1      $ intArg negate
     Def.FFIName ["Prelude"] "sqrt"   -> builtin1      $ intArg ((floor :: Double -> Integer) . sqrt . fromIntegral)
-    Def.FFIName ["Prelude"] "sum"    -> builtin1      $ intResult sum
     _ -> error $ show name ++ " not yet supported"
