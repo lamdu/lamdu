@@ -77,13 +77,16 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
         let label text =
                 WidgetIds.fromEntityId cEntityId & Widget.toAnimId
                 & ExpressionGui.grammarLabel text
+            headerLabel text =
+                label text >>=
+                ExpressionGui.makeFocusableView
+                (Widget.joinId myId ["header"])
         header <-
             case mArg of
-            Sugar.LambdaCase ->
-                mapM label ["λ", "case"] >>= ExpressionGui.hboxSpaced
+            Sugar.LambdaCase -> headerLabel "λcase"
             Sugar.CaseWithArg (Sugar.CaseArg arg mToLambdaCase) ->
                 do
-                    caseLabel <- label "case"
+                    caseLabel <- headerLabel "case"
                     argEdit <-
                         ExprGuiM.makeSubexpression 0 arg
                         <&> ExpressionGui.egWidget %~ Widget.weakerEvents
