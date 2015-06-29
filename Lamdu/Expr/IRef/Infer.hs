@@ -2,6 +2,7 @@
 module Lamdu.Expr.IRef.Infer
     ( ExpressionSetter
 
+    , M
     , loadInferScope
     , loadInferInto
     , loadInfer

@@ -1,7 +1,7 @@
 {-# LANGUAGE ConstraintKinds, OverloadedStrings, RankNTypes #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert, convertPlain
-    , mkHoleSuggested
+    , mkHoleSuggesteds
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
@@ -13,7 +13,7 @@ import           Control.Monad (join, void, liftM)
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either (EitherT(..))
-import           Control.Monad.Trans.State (StateT(..), evalState, mapStateT)
+import           Control.Monad.Trans.State (StateT(..), evalState, mapStateT, evalStateT)
 import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
@@ -55,6 +55,7 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Suggest (suggestValueWith)
 import qualified System.Random as Random
 import           System.Random.Utils (genFromHashable)
+import           Text.PrettyPrint.HughesPJClass (pPrint)
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 type T = Transaction
@@ -114,13 +115,54 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
         }
 
 -- Ignoring alpha-renames:
-consistentExprIds :: EntityId -> Val (EntityId -> a) -> Val a
+consistentExprIds :: EntityId -> Val (Guid -> EntityId -> a) -> Val a
 consistentExprIds = EntityId.randomizeExprAndParams . genFromHashable
 
-mkHoleSuggested :: Infer.Payload -> [HoleSuggested]
-mkHoleSuggested inferred =
-    inferred ^. Infer.plType & suggestValueWith mkVar
-    <&> HoleSuggested . (`evalState` (0 :: Int))
+infer :: MonadA m => Infer.Payload -> Val a -> IRefInfer.M m (Val (Infer.Payload, a))
+infer holeInferred =
+    IRefInfer.loadInferScope scopeAtHole
+    where
+        scopeAtHole = holeInferred ^. Infer.plScope
+
+inferAssertSuccess ::
+    MonadA m => ConvertM.Context m -> Infer.Payload ->
+    Val a -> T m (Val (Infer.Payload, a))
+inferAssertSuccess sugarContext holeInferred val =
+    val
+    & infer holeInferred
+    & (`evalStateT` (sugarContext ^. ConvertM.scInferContext))
+    & runEitherT
+    <&> either
+        (error . ("infer error on suggested val in hole: " ++) .
+         show . pPrint) id
+
+sugar ::
+    (MonadA m, Monoid a) =>
+    ConvertM.Context m -> Input.Payload m dummy -> Val a -> T m (ExpressionU m a)
+sugar sugarContext exprPl val =
+    inferAssertSuccess sugarContext holeInferred val
+    <&> Lens.mapped %~ mkPayload
+    <&> (EntityId.randomizeExprAndParams . genFromHashable)
+        (exprPl ^. Input.entityId)
+    <&> ConvertM.convertSubexpression
+    >>= ConvertM.run sugarContext
+    where
+        mkPayload (pl, x) = Input.mkUnstoredPayload x pl
+        holeInferred = exprPl ^. Input.inferred
+
+mkHoleSuggesteds ::
+    MonadA m => Input.Payload m a -> ConvertM m [HoleSuggested Guid m]
+mkHoleSuggesteds exprPl =
+    do
+        sugarContext <- ConvertM.readContext
+        let suggest val = HoleSuggested
+                { _hsVal = val
+                , _hsSugaredBaseExpr = sugar sugarContext exprPl val
+                }
+        exprPl ^. Input.inferred . Infer.plType
+            & suggestValueWith mkVar
+            <&> suggest . (`evalState` (0 :: Int))
+            & return
     where
         mkVar = do
             i <- State.get
@@ -133,12 +175,12 @@ mkHole ::
     Input.Payload m a -> ConvertM m (Hole Guid m (ExpressionU m a))
 mkHole mInjectedArg exprPl = do
     mActions <- traverse (mkWritableHoleActions mInjectedArg exprPl) (exprPl ^. Input.mStored)
+    suggested <- mkHoleSuggesteds exprPl
     pure Hole
         { _holeMActions = mActions
-        , _holeSuggested = mkHoleSuggested (exprPl ^. Input.inferred)
+        , _holeSuggesteds = suggested
         , _holeMArg = Nothing
         }
-
 
 getLocalScopeGetVars ::
     MonadA m => ConvertM.Context m -> (V.Var, Type) -> [ScopeGetVar Guid m]
@@ -204,22 +246,23 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
         & writeExprMStored (Property.value holeStored)
         <&> ExprIRef.addProperties (Property.set holeStored)
         <&> fmap toPayload
-    let -- Replace the guids with consistent ones:
+    let -- Replace the entity ids with consistent ones:
 
         -- The sugar convert must apply *inside* the forked transaction
         -- upon the *written* expr because we actually make use of the
         -- resulting actions (e.g: press ',' on a list hole result).
         -- However, the written expr goes crazy with new guids every time.
         --
-        -- So, we do something a bit odd: Take the written expr with its
-        -- in-tact stored allowing actions to be built correctly but
-        -- replace the Input.guid/Input.entityId with determinstic/consistent
-        -- pseudo-random generated ones that preserve proper animations
-        -- and cursor navigation.
+        -- So, we do something a bit odd: Take the written expr with
+        -- its in-tact stored allowing actions to be built correctly
+        -- but replace the Input.entityId with determinstic/consistent
+        -- pseudo-random generated ones that preserve proper
+        -- animations and cursor navigation. The guids are kept as
+        -- metadata anchors.
 
-        makeConsistentPayload (False, (_, pl)) entityId = pl
+        makeConsistentPayload (False, (_, pl)) _guid entityId = pl
             & Input.entityId .~ entityId
-        makeConsistentPayload (True, (_, pl)) _ = pl
+        makeConsistentPayload (True, (_, pl)) _ _ = pl
         consistentExpr =
             writtenExpr
             <&> makeConsistentPayload
@@ -237,8 +280,12 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
         intoStorePoint (inferred, (mStorePoint, a)) =
             (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
         toPayload (stored, (inferred, wasStored, a)) =
-            -- TODO: Evaluate hole results instead of Map.empty?
-            (,) wasStored $ (,) stored $ Input.mkPayload a inferred Map.empty Map.empty stored
+            -- TODO: Evaluate hole results instead of Map.empty's?
+            ( wasStored
+            , ( stored
+              , Input.mkPayload a inferred Map.empty Map.empty stored
+              )
+            )
 
 resultTypeScore :: Type -> [Int]
 resultTypeScore (T.TVar _) = [0]
@@ -452,7 +499,7 @@ mkHoleResultVals ::
 mkHoleResultVals mInjectedArg exprPl base =
     do
         inferredBase <-
-            IRefInfer.loadInferScope scopeAtHole base
+            base & infer inferred
             & mapStateT eitherTtoListT
             <&> Lens.traversed . _2 %~ (,) Nothing
         form <- applyForms (Nothing, ()) inferredBase
@@ -469,8 +516,8 @@ mkHoleResultVals mInjectedArg exprPl base =
     where
         liftUpdate = State.gets . Update.run
         liftInfer = stateEitherSequence . Infer.run
-        holeType = exprPl ^. Input.inferred . Infer.plType
-        scopeAtHole = exprPl ^. Input.inferred . Infer.plScope
+        inferred = exprPl ^. Input.inferred
+        holeType = inferred ^. Infer.plType
 
 mkHoleResult ::
     MonadA m =>

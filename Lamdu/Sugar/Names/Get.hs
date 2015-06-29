@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies #-}
 module Lamdu.Sugar.Names.Get
-    ( getInExpression
+    ( fromExpression
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>))
@@ -41,5 +41,5 @@ cpsTellName name = CPS $ \k -> (,) <$> tellName name <*> k
 
 -- | Returns all the *foldable* names in the given expression
 -- (excluding names hidden behind transactions)
-getInExpression :: MonadA m => Expression name m a -> [name]
-getInExpression = snd . runCollect . Walk.toExpression
+fromExpression :: MonadA m => Expression name m a -> [name]
+fromExpression = snd . runCollect . Walk.toExpression

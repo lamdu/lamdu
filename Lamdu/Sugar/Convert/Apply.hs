@@ -172,10 +172,10 @@ convertAppliedHole funcI argS argI exprPl =
                       then UnwrapMAction mUnwrap
                       else UnwrapTypeMismatch
                 }
+        suggesteds <- ConvertHole.mkHoleSuggesteds (funcI ^. V.payload) & lift
         lift $ ConvertHole.convertPlain (Just argI) exprPl
             <&> rBody . _BodyHole . holeMArg .~ Just holeArg
-            <&> rBody . _BodyHole . holeSuggested <>~
-                ConvertHole.mkHoleSuggested (funcI ^. V.payload . Input.inferred)
+            <&> rBody . _BodyHole . holeSuggesteds <>~ suggesteds
             <&> rPayload . plData <>~ funcI ^. V.payload . Input.userData
             <&> rPayload . plActions . Lens._Just . wrap .~
                 maybe WrapNotAllowed (WrapperAlready . addEntityId) (exprPl ^. Input.mStored)

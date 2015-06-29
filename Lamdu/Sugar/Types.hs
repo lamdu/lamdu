@@ -67,9 +67,9 @@ module Lamdu.Sugar.Types
         , fpName, fpId, fpAnnotation, fpMActions, fpHiddenIds
     , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap, haGetFieldTags
-    , HoleSuggested(..), hsVal
+    , HoleSuggested(..), hsVal, hsSugaredBaseExpr
     , Hole(..)
-        , holeMActions, holeMArg, holeSuggested, holeGuid
+        , holeMActions, holeMArg, holeSuggesteds, holeGuid
     , ScopeGetVar(..), sgvGetVar, sgvVal
     , TIdG(..), tidgName, tidgTId, tidgEntityId
     , HoleActions(..)
@@ -242,13 +242,14 @@ data HoleArg name m expr = HoleArg
     , _haUnwrap :: Unwrap m
     } deriving (Functor, Foldable, Traversable)
 
-newtype HoleSuggested = HoleSuggested
+data HoleSuggested name m = HoleSuggested
     { _hsVal :: Val ()
+    , _hsSugaredBaseExpr :: T m (Expression name m ())
     }
 
 data Hole name m expr = Hole
     { _holeMActions :: Maybe (HoleActions name m)
-    , _holeSuggested :: [HoleSuggested]
+    , _holeSuggesteds :: [HoleSuggested name m]
     , _holeMArg :: Maybe (HoleArg name m expr)
     } deriving (Functor, Foldable, Traversable)
 

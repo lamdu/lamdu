@@ -33,12 +33,11 @@ bs :: EntityId -> ByteString
 bs (EntityId guid) = Guid.bs guid
 
 randomizeExprAndParams ::
-    RandomGen gen =>
-    gen -> Val (EntityId -> a) -> Val a
+    RandomGen gen => gen -> Val (Guid -> EntityId -> a) -> Val a
 randomizeExprAndParams gen =
     GenIds.randomizeExprAndParams gen . fmap addEntityId
     where
-        addEntityId f guid = f (EntityId guid)
+        addEntityId f guid = f guid (EntityId guid)
 
 augment :: String -> EntityId -> EntityId
 augment str (EntityId x) = EntityId $ Guid.augment str x
