@@ -182,9 +182,6 @@ builtinNotEq = builtinEqH not
 intArg :: (Integer -> a) -> Integer -> a
 intArg = id
 
-intResult :: (a -> Integer) -> a -> Integer
-intResult = id
-
 eval :: Monad m => Def.FFIName -> ThunkId -> EvalT pl m (ValHead pl)
 eval name =
     case name of
