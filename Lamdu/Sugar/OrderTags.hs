@@ -51,13 +51,8 @@ orderType t =
     >>= ExprLens._TSum %%~ orderComposite
     >>= ExprLens.nextLayer orderType
 
-orderRecordFields ::
-    MonadA m => Order m [Sugar.RecordField name f a]
-orderRecordFields = orderByTag (^. Sugar.rfTag . Sugar.tagVal)
-
-orderRecord ::
-    MonadA m => Order m (Sugar.Record name f a)
-orderRecord = Sugar.rItems %%~ orderRecordFields
+orderRecord :: MonadA m => Order m (Sugar.Record name f a)
+orderRecord = Sugar.rItems %%~ orderByTag (^. Sugar.rfTag . Sugar.tagVal)
 
 orderApply :: MonadA m => Order m (Sugar.Apply name a)
 orderApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag . Sugar.tagVal)
@@ -70,12 +65,22 @@ orderHole =
     Sugar.holeMActions . Lens._Just . Sugar.holeResults .
     Lens.mapped . Lens.mapped . Lens._2 %~ (>>= orderHoleResult)
 
+orderCase :: MonadA m => Order m (Sugar.Case name m a)
+orderCase = Sugar.cAlts %%~ orderByTag (^. Sugar.caTag . Sugar.tagVal)
+
 orderBody :: MonadA m => Order m (Sugar.Body name m a)
 orderBody (Sugar.BodyLam b) = orderBinder b <&> Sugar.BodyLam
 orderBody (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
 orderBody (Sugar.BodyApply a) = orderApply a <&> Sugar.BodyApply
+orderBody (Sugar.BodyCase c) = orderCase c <&> Sugar.BodyCase
 orderBody (Sugar.BodyHole a) = orderHole a & Sugar.BodyHole & return
-orderBody b = return b
+orderBody x@Sugar.BodyLiteralInteger{} = return x
+orderBody x@Sugar.BodyList{} = return x
+orderBody x@Sugar.BodyGetField{} = return x
+orderBody x@Sugar.BodyGetVar{} = return x
+orderBody x@Sugar.BodyInject{} = return x
+orderBody x@Sugar.BodyToNom{} = return x
+orderBody x@Sugar.BodyFromNom{} = return x
 
 orderExpr :: MonadA m => Order m (Sugar.Expression name m a)
 orderExpr e =
