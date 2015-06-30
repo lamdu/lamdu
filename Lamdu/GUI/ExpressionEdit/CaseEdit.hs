@@ -125,7 +125,7 @@ makeAltsWidget ::
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeAltsWidget [] myId =
     ExpressionGui.grammarLabel "Ø" (Widget.toAnimId myId)
-    >>= ExpressionGui.makeFocusableView myId
+    >>= ExpressionGui.makeFocusableView (Widget.joinId myId ["Ø"])
 makeAltsWidget alts _ =
     do
         vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
