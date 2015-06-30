@@ -414,14 +414,15 @@ makeResultEdit mActions params result = do
 
 makeNullLambdaActions ::
     MonadA m =>
-    Sugar.NullParamActions m ->
+    Widget.Id -> Sugar.NullParamActions m ->
     ExprGuiM m (Widget.EventHandlers (Transaction m))
-makeNullLambdaActions actions =
+makeNullLambdaActions dstId actions =
     do
         config <- ExprGuiM.readConfig
-        Widget.keysEventMap
-            (Config.delKeys config) (E.Doc ["Edit", "Delete lambda"])
-            (actions ^. Sugar.npDeleteLambda)
+        actions ^. Sugar.npDeleteLambda
+            & Lens.mapped .~ dstId
+            & Widget.keysEventMapMovesCursor
+                (Config.delKeys config) (E.Doc ["Edit", "Delete lambda"])
             & return
 
 makeParamsEdit ::
@@ -434,7 +435,8 @@ makeParamsEdit annotationOpts showAnnotation nearestHoles lhsId params =
     Sugar.DefintionWithoutParams -> return []
     Sugar.NullParam mActions ->
         do
-            actions <- maybe (return mempty) makeNullLambdaActions mActions
+            actions <-
+                maybe (return mempty) (makeNullLambdaActions lhsId) mActions
             ExpressionGui.grammarLabel "|" (Widget.toAnimId lhsId)
                 >>= ExpressionGui.makeFocusableView (Widget.joinId lhsId ["param"])
                 <&> ExpressionGui.egWidget %~ Widget.weakerEvents actions
