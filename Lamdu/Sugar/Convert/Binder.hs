@@ -487,6 +487,10 @@ extractField tag x =
         , show tag, "but got", show (void x)
         ] & error
 
+isParamUnused :: V.Lam (Val a) -> Bool
+isParamUnused (V.Lam var body) =
+    Lens.allOf (ExprLens.valLeafs . ExprLens._LVar) (/= var) body
+
 convertLamParams ::
     (MonadA m, Monoid a) =>
     Maybe V.Var ->
@@ -496,8 +500,9 @@ convertLamParams mRecursiveVar lambda lambdaPl =
     do
         tagsInOuterScope <- ConvertM.readContext <&> Map.keysSet . (^. ConvertM.scTagParamInfos)
         case lambdaPl ^. Input.inferred . Infer.plType of
-            T.TFun (T.TRecord T.CEmpty) _ ->
-                convertNullParam mRecursiveVar lambda lambdaPl
+            T.TFun (T.TRecord T.CEmpty) _
+                | isParamUnused lambda ->
+                    convertNullParam mRecursiveVar lambda lambdaPl
             T.TFun (T.TRecord composite) _
                 | Nothing <- extension
                 , ListUtils.isLengthAtLeast 2 fields
