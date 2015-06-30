@@ -30,7 +30,7 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 
 data SpecialFunctions m = SpecialFunctions
-    { sfNil :: DefI m
+    { sfList :: T.Id
     , sfCons :: DefI m
     } deriving (Generic)
 instance Binary (SpecialFunctions m)

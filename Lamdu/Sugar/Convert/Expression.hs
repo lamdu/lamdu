@@ -5,8 +5,6 @@ module Lamdu.Sugar.Convert.Expression
 
 import           Control.Applicative ((<$>), (<$))
 import           Control.Lens.Operators
-import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.MonadA (MonadA)
 import           Data.Monoid (Monoid(..))
 import           Data.Store.Transaction (Transaction)
@@ -27,7 +25,6 @@ import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Inject as ConvertInject
 import qualified Lamdu.Sugar.Convert.Input as Input
-import qualified Lamdu.Sugar.Convert.List as ConvertList
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Nominal as ConvertNominal
@@ -50,19 +47,16 @@ convertVLiteralInteger i exprPl = addActions exprPl $ BodyLiteralInteger i
 convertGlobal ::
     MonadA m => V.GlobalId -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertGlobal globalId exprPl =
-    runMatcherT $
     do
-        justToLeft $ ConvertList.nil globalId exprPl
-        lift $ do
-            cp <- (^. ConvertM.scCodeAnchors) <$> ConvertM.readContext
-            addActions exprPl .
-                BodyGetVar $ GetVarNamed NamedVar
-                { _nvName = UniqueId.toGuid defI
-                , _nvJumpTo = jumpToDefI cp defI
-                , _nvVarType = GetDefinition
-                }
-        where
-            defI = ExprIRef.defI globalId
+        cp <- (^. ConvertM.scCodeAnchors) <$> ConvertM.readContext
+        addActions exprPl .
+            BodyGetVar $ GetVarNamed NamedVar
+            { _nvName = UniqueId.toGuid defI
+            , _nvJumpTo = jumpToDefI cp defI
+            , _nvVarType = GetDefinition
+            }
+    where
+        defI = ExprIRef.defI globalId
 
 convertGetVar ::
     MonadA m =>

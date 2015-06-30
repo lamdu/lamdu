@@ -5,6 +5,8 @@ module Lamdu.Sugar.Convert.Nominal
 import           Control.Applicative (Applicative(..), (<$>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.MonadA (MonadA)
 import           Data.Monoid (Monoid(..))
 import           Data.Store.Guid (Guid)
@@ -14,6 +16,7 @@ import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
+import qualified Lamdu.Sugar.Convert.List as ConvertList
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.TIdG as ConvertTIdG
@@ -50,6 +53,11 @@ convert f (V.Nom tid val) exprPl =
             >>= addActions exprPl
 
 convertToNom ::
-    (MonadA m, Monoid a) => V.Nom (Val (Input.Payload m a)) ->
-    Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertToNom = convert BodyToNom
+    (MonadA m, Monoid a) =>
+    V.Nom (Val (Input.Payload m a)) -> Input.Payload m a ->
+    ConvertM m (ExpressionU m a)
+convertToNom nom exprPl =
+    do
+        ConvertList.nil nom exprPl & justToLeft
+        convert BodyToNom nom exprPl & lift
+    & runMatcherT

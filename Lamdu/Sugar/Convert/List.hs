@@ -38,23 +38,30 @@ import           Lamdu.Sugar.Types
 type T = Transaction
 
 nil ::
-    MonadA m => V.GlobalId -> Input.Payload m a -> MaybeT (ConvertM m) (ExpressionU m a)
-nil globId exprPl =
+    (MonadA m, Monoid a) =>
+    V.Nom (Val (Input.Payload m a)) -> Input.Payload m a ->
+    MaybeT (ConvertM m) (ExpressionU m a)
+nil (V.Nom tid val) exprPl =
     do
         specialFunctions <-
             lift $ (^. ConvertM.scSpecialFunctions) <$> ConvertM.readContext
-        guard $ globId == ExprIRef.globalId (Anchors.sfNil specialFunctions)
+        guard $ tid == Anchors.sfList specialFunctions
+        injTag <- val ^? V.body . ExprLens._BInject . V.injectTag & maybeToMPlus
+        guard $ injTag == Builtins.nilTag
         let mkListActions exprS =
                 ListActions
                 { addFirstItem = mkListAddFirstItem specialFunctions exprS
                 , replaceNil = EntityId.ofValI <$> DataOps.setToHole exprS
                 }
-        (lift . addActions exprPl . BodyList)
-            List
+        List
             { lValues = []
             , lMActions = mkListActions <$> exprPl ^. Input.mStored
             , lNilEntityId = exprPl ^. Input.entityId
             }
+            & BodyList & addActions exprPl
+            <&> rPayload . plData
+                <>~ val ^. ExprLens.subExprPayloads . Input.userData
+            & lift
 
 mkListAddFirstItem ::
     MonadA m => Anchors.SpecialFunctions m -> ExprIRef.ValIProperty m ->

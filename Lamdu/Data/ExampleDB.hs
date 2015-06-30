@@ -183,8 +183,7 @@ createNullaryInjector ::
 createNullaryInjector = createInjectorI ($ Pure.recEmpty)
 
 data ListNames m = ListNames
-    { _lnTid :: T.Id
-    , lnNil :: DefI m
+    { lnTid :: T.Id
     , lnCons :: DefI m
     }
 
@@ -214,9 +213,9 @@ adt name params ctors =
 createList :: MonadA m => T.ParamId -> M m (TypeCtor, ListNames m)
 createList valTParamId =
     do
-        (list, tid, [nil, cons]) <-
+        (list, tid, [_nil, cons]) <-
             adt "List" [(valTParamId, valT)] $ \list ->
-            [ Nullary $ CtorInfo "[]" Builtins.nilTag Verbose $ forAll 1 $ \[a] -> list [a]
+            [ Nullary $ CtorInfo "TODO[]DEL?" Builtins.nilTag Verbose $ forAll 1 $ \[a] -> list [a]
             , let consType =
                       recordType
                       [ (Builtins.headTag, T.TVar valT)
@@ -227,7 +226,7 @@ createList valTParamId =
                   forAll 1 $ \ [a] -> consType ~> list [a]
             ]
 
-        (list, ListNames tid nil cons) & return
+        (list, ListNames tid cons) & return
     where
         valT = "a"
 
@@ -361,7 +360,7 @@ createPublics =
 
         return
             Db.SpecialFunctions
-                { Db.sfNil = lnNil listNames
+                { Db.sfList = lnTid listNames
                 , Db.sfCons = lnCons listNames
                 }
     where

@@ -27,6 +27,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.String (IsString(..))
 import           Data.Traversable (traverse, sequenceA)
+import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -165,6 +166,7 @@ mkOptions exprPl =
         sugarContext <- ConvertM.readContext
         tids <- ConvertM.codeAnchor Anchors.tids >>= ConvertM.getP
         globals <- ConvertM.codeAnchor Anchors.globals >>= ConvertM.getP
+        let specialFunctions = sugarContext ^. ConvertM.scSpecialFunctions
         concat
             [ exprPl ^. Input.inferred . Infer.plScope
                 & Infer.scopeToTypeMap
@@ -177,7 +179,10 @@ mkOptions exprPl =
                 tid <- tids
                 f <- [V.BFromNom, V.BToNom]
                 [ V.Nom tid P.hole & f & V.Val () ]
-            , [P.abs "NewLambda" P.hole, P.recEmpty, P.absurd]
+            , [ P.abs "NewLambda" P.hole, P.recEmpty, P.absurd
+              , P.inject Builtins.nilTag P.recEmpty
+                & P.toNom (Anchors.sfList specialFunctions)
+              ]
             ]
             & mapM (mkHoleOption exprPl)
 
