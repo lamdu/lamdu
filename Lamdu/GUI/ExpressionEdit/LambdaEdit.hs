@@ -30,13 +30,15 @@ make parentPrecedence binder pl =
     do
         BinderEdit.Parts paramEdits bodyEdit mWheresEdit eventMap <-
             BinderEdit.makeParts showParamType binder myId
+        let animId = Widget.toAnimId myId
         paramsEdit <-
             map (ExpressionGui.egAlignment . _1 .~ 0.5) paramEdits
             & ExpressionGui.vboxTopFocalSpaced
             >>= case params of
-                    Sugar.FieldParams _ -> ExpressionGui.addValFrame myId
-                    _ -> return
-        arrowLabel <- ExpressionGui.grammarLabel "→" $ Widget.toAnimId myId
+                Sugar.FieldParams _ ->
+                    ExpressionGui.addValFrame myId
+                _ -> return
+        arrowLabel <- ExpressionGui.grammarLabel "→" animId
         ExpressionGui.hboxSpaced [paramsEdit, arrowLabel, bodyEdit]
             <&> maybe id (ExpressionGui.addBelow 0 . (:[]) . (,) 0) mWheresEdit
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap

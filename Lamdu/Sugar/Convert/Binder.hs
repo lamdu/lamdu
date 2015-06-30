@@ -263,6 +263,29 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
                         }
                     )
 
+convertNullParam ::
+    (MonadA m, Monoid a) =>
+    Maybe V.Var ->
+    V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
+    ConvertM m (ConventionalParams m a)
+convertNullParam mRecursiveVar lam@(V.Lam param _) pl =
+    do
+        mActions <-
+            mStoredLam
+            & Lens._Just %%~ makeDeleteLambda mRecursiveVar
+            <&> Lens._Just %~ NullParamActions . void
+        return
+            ConventionalParams
+            { cpTags = Set.empty
+            , cpParamInfos = Map.empty
+            , _cpParams = NullParam mActions
+            , cpMAddFirstParam = Nothing
+            , cpScopes = pl ^. Input.evalAppliesOfLam <&> map fst
+            , cpMLamParam = Just param
+            }
+    where
+        mStoredLam = mkStoredLam lam pl
+
 setParamList :: MonadA m => MkProperty m (Maybe [T.Tag]) -> [T.Tag] -> T m ()
 setParamList paramListProp newParamList =
     do
@@ -473,6 +496,8 @@ convertLamParams mRecursiveVar lambda lambdaPl =
     do
         tagsInOuterScope <- ConvertM.readContext <&> Map.keysSet . (^. ConvertM.scTagParamInfos)
         case lambdaPl ^. Input.inferred . Infer.plType of
+            T.TFun (T.TRecord T.CEmpty) _ ->
+                convertNullParam mRecursiveVar lambda lambdaPl
             T.TFun (T.TRecord composite) _
                 | Nothing <- extension
                 , ListUtils.isLengthAtLeast 2 fields
@@ -513,7 +538,7 @@ convertEmptyParams mRecursiveVar val =
             ConventionalParams
             { cpTags = mempty
             , cpParamInfos = Map.empty
-            , _cpParams = NoParams
+            , _cpParams = DefintionWithoutParams
             , cpMAddFirstParam =
                 val
                 <&> (^. Input.mStored)

@@ -15,7 +15,9 @@ module Lamdu.Sugar.Types
     , Anchors.PresentationMode(..)
     , BinderActions(..)
         , baAddFirstParam, baAddInnermostWhereItem
-    , BinderParams(..), _NoParams, _VarParam, _FieldParams
+    , NullParamActions(..), npDeleteLambda
+    , BinderParams(..),
+        _DefintionWithoutParams, _NullParam, _VarParam, _FieldParams
     , Binder(..)
         , bMPresentationModeProp, bMChosenScopeProp, bParams, bBody
         , bWhereItems, bMActions, bScopes
@@ -446,8 +448,18 @@ data BinderActions m = BinderActions
     , _baAddInnermostWhereItem :: T m EntityId
     }
 
+newtype NullParamActions m = NullParamActions
+    { _npDeleteLambda :: T m ()
+    }
+
 data BinderParams name m
-    = NoParams -- used in definitions and where items
+    = -- a definition or where-item without parameters
+      DefintionWithoutParams
+    | -- null param represents a lambda whose parameter's type is inferred
+      -- to be the empty record.
+      -- This can represent "deferred execution" when we switch to
+      -- a strict evaluation model.
+      NullParam (Maybe (NullParamActions m))
     | VarParam (FuncParam name m)
     | FieldParams [(T.Tag, FuncParam name m)]
 
@@ -536,6 +548,7 @@ Lens.makeLenses ''TIdG
 Lens.makeLenses ''TagG
 Lens.makeLenses ''WhereItem
 Lens.makeLenses ''WhereItemActions
+Lens.makeLenses ''NullParamActions
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind

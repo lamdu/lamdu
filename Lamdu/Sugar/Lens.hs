@@ -92,19 +92,16 @@ defSchemes = drBody . defBodySchemes
 binderParams ::
     Lens.Traversal
     (BinderParams a m)
-    (BinderParams b n)
+    (BinderParams b m)
     (FuncParam a m)
-    (FuncParam b n)
-binderParams _ NoParams = pure NoParams
+    (FuncParam b m)
+binderParams _ DefintionWithoutParams = pure DefintionWithoutParams
+binderParams _ (NullParam a) = pure (NullParam a)
 binderParams f (VarParam p) = VarParam <$> f p
 binderParams f (FieldParams ps) = FieldParams <$> (Lens.traverse . _2) f ps
 
 binderParamsActions ::
-    Lens.Traversal
-    (BinderParams name m)
-    (BinderParams name n)
-    (FuncParamActions m)
-    (FuncParamActions n)
+    Lens.Traversal' (BinderParams name m) (FuncParamActions m)
 binderParamsActions = binderParams . fpMActions . Lens._Just
 
 binderFuncParamAdds ::

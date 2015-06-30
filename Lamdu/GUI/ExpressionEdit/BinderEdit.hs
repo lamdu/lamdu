@@ -392,7 +392,8 @@ makeResultEdit mActions params result = do
     config <- ExprGuiM.readConfig
     let jumpToLhsEventMap =
             case params of
-            Sugar.NoParams -> mempty
+            Sugar.DefintionWithoutParams -> mempty
+            Sugar.NullParam _ -> mempty
             Sugar.VarParam param ->
                 Widget.keysEventMapMovesCursor
                 (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to param"]) $
@@ -411,27 +412,46 @@ makeResultEdit mActions params result = do
                 Widget.weakerEvents
                 (jumpToLhsEventMap <> maybe mempty addWhereItemEventMap mActions)
 
+makeNullLambdaActions ::
+    MonadA m =>
+    Sugar.NullParamActions m ->
+    ExprGuiM m (Widget.EventHandlers (Transaction m))
+makeNullLambdaActions actions =
+    do
+        config <- ExprGuiM.readConfig
+        Widget.keysEventMap
+            (Config.delKeys config) (E.Doc ["Edit", "Delete lambda"])
+            (actions ^. Sugar.npDeleteLambda)
+            & return
+
 makeParamsEdit ::
     MonadA m =>
     ExpressionGui.AnnotationOptions -> ExprGuiT.ShowAnnotation ->
     NearestHoles -> Widget.Id -> Sugar.BinderParams (Name m) m ->
     ExprGuiM m [ExpressionGui m]
 makeParamsEdit annotationOpts showAnnotation nearestHoles lhsId params =
-    do
-        jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
-        let mkParam (prevId, nextId, param) =
-                ParamEdit.make annotationOpts showAnnotation prevId nextId param
-                <&> ExpressionGui.egWidget
-                %~ Widget.weakerEvents jumpHolesEventMap
-        ExpressionGui.listWithDelDests lhsId lhsId
-            (WidgetIds.fromEntityId . (^. Sugar.fpId)) paramList
-            & traverse mkParam
+    case params of
+    Sugar.DefintionWithoutParams -> return []
+    Sugar.NullParam mActions ->
+        do
+            actions <- maybe (return mempty) makeNullLambdaActions mActions
+            ExpressionGui.grammarLabel "|" (Widget.toAnimId lhsId)
+                >>= ExpressionGui.makeFocusableView (Widget.joinId lhsId ["param"])
+                <&> ExpressionGui.egWidget %~ Widget.weakerEvents actions
+                <&> (:[])
+    Sugar.VarParam p -> fromParamList [p]
+    Sugar.FieldParams ps -> ps ^.. Lens.traversed . _2 & fromParamList
     where
-        paramList =
-            case params of
-            Sugar.NoParams -> []
-            Sugar.VarParam p -> [p]
-            Sugar.FieldParams ps -> ps ^.. Lens.traversed . _2
+        fromParamList paramList =
+            do
+                jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
+                let mkParam (prevId, nextId, param) =
+                        ParamEdit.make annotationOpts showAnnotation prevId nextId param
+                        <&> ExpressionGui.egWidget
+                        %~ Widget.weakerEvents jumpHolesEventMap
+                ExpressionGui.listWithDelDests lhsId lhsId
+                    (WidgetIds.fromEntityId . (^. Sugar.fpId)) paramList
+                    & traverse mkParam
 
 diveToNameEdit :: Widget.Id -> Widget.Id
 diveToNameEdit = ExpressionGui.diveToNameEdit -- Name editor

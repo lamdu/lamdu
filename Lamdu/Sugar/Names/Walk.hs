@@ -292,7 +292,8 @@ withWhereItem item@WhereItem{..} =
 withBinderParams ::
     MonadNaming m =>
     BinderParams (OldName m) (TM m) -> CPS m (BinderParams (NewName m) (TM m))
-withBinderParams NoParams = pure NoParams
+withBinderParams DefintionWithoutParams = pure DefintionWithoutParams
+withBinderParams (NullParam a) = pure (NullParam a)
 withBinderParams (VarParam FuncParam{..}) =
     opWithParamName (isFunctionType (_fpAnnotation ^. aInferredType)) _fpName
     <&> VarParam . \_fpName -> FuncParam{..}
