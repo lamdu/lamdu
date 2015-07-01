@@ -90,8 +90,7 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
             Transaction.getP . f $
             sugarContext ^. ConvertM.scCodeAnchors
     pure HoleActions
-        { _holePaste = Nothing
-        , _holeScope =
+        { _holeScope =
             do
                 globals <- get Anchors.globals
                 return $ concat

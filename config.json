@@ -316,26 +316,6 @@
                 "Key'Escape"
             ]
         ],
-        "holePasteKeys": [
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": true
-                },
-                "Key'V"
-            ],
-            [
-                {
-                    "modifierKeysSuper": false,
-                    "modifierKeysAlt": false,
-                    "modifierKeysShift": false,
-                    "modifierKeysControl": false
-                },
-                "Key'V"
-            ]
-        ],
         "holeUnwrapKeys": [
             [
                 {

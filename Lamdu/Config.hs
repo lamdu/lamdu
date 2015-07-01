@@ -87,7 +87,6 @@ data Hole = Hole
     , holeUnwrapKeys :: [ModKey]
     , holeOpenKeys :: [ModKey]
     , holeCloseKeys :: [ModKey]
-    , holePasteKeys :: [ModKey]
     , holeHoveringWrapperScaleFactor :: Vector2 Double
     } deriving (Eq, Generic, Show)
 instance ToJSON Hole

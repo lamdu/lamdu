@@ -14,7 +14,6 @@ import           Data.Monoid (Monoid(..), (<>))
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import           Data.Traversable (sequenceA)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -43,14 +42,6 @@ blockDownEvents =
     [ModKey mempty GLFW.Key'Down]
     (E.Doc ["Navigation", "Move", "down (blocked)"]) $
     return mempty
-
-pasteEventMap ::
-    Functor m => Config.Hole -> EditableHoleInfo m -> Widget.EventHandlers (T m)
-pasteEventMap Config.Hole{..} holeInfo =
-    maybe mempty
-    (Widget.keysEventMapMovesCursor
-     holePasteKeys (E.Doc ["Edit", "Paste"]) .
-     fmap WidgetIds.fromEntityId) $ ehiActions holeInfo ^. Sugar.holePaste
 
 adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap searchTermProp =
@@ -167,14 +158,11 @@ makeOpenEventMaps editableHoleInfo mShownResult =
         holeConfig <- ExprGuiM.readConfig <&> Config.hole
         -- below ad-hoc and search term edit:
         eventMap <-
-            [ pure $ pasteEventMap holeConfig editableHoleInfo
-            , case mShownResult of
-              Nothing -> pure mempty
-              Just shownResult ->
-                  mkEventsOnPickedResult shownResult
-                  <&> mappend
-                  (pickEventMap holeConfig holeInfo shownResult)
-            ] & sequenceA <&> mconcat
+            case mShownResult of
+            Nothing -> pure mempty
+            Just shownResult ->
+                mkEventsOnPickedResult shownResult
+                & Lens.mapped <>~ pickEventMap holeConfig holeInfo shownResult
         let adHocEdit =
                 adHocTextEditEventMap (HoleInfo.ehiSearchTermProperty editableHoleInfo)
         pure (eventMap, adHocEdit <> eventMap)

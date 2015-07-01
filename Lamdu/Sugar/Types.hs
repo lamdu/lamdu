@@ -74,8 +74,7 @@ module Lamdu.Sugar.Types
         , holeMActions, holeMArg, holeSuggesteds, holeGuid
     , ScopeGetVar(..), sgvGetVar, sgvVal
     , TIdG(..), tidgName, tidgTId, tidgEntityId
-    , HoleActions(..)
-        , holeScope, holeTIds, holePaste, holeResults
+    , HoleActions(..), holeScope, holeTIds, holeResults
     , HoleResultScore
     , HoleResult(..)
         , holeResultConverted
@@ -230,7 +229,6 @@ data HoleActions name m = HoleActions
     , _holeTIds :: T m [TIdG name]
     , _holeResults ::
             Val () -> ListT (T m) (HoleResultScore, T m (HoleResult name m))
-    , _holePaste :: Maybe (T m EntityId)
     , _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
     }
 
