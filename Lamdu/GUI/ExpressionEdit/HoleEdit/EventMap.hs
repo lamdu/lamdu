@@ -162,7 +162,7 @@ makeOpenEventMaps editableHoleInfo mShownResult =
             Nothing -> pure mempty
             Just shownResult ->
                 mkEventsOnPickedResult shownResult
-                & Lens.mapped <>~ pickEventMap holeConfig holeInfo shownResult
+                <&> mappend (pickEventMap holeConfig holeInfo shownResult)
         let adHocEdit =
                 adHocTextEditEventMap (HoleInfo.ehiSearchTermProperty editableHoleInfo)
         pure (eventMap, adHocEdit <> eventMap)
