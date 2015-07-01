@@ -68,13 +68,13 @@ module Lamdu.Sugar.Types
     , FuncParam(..)
         , fpName, fpId, fpAnnotation, fpMActions, fpHiddenIds
     , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
-    , HoleArg(..), haExpr, haUnwrap, haGetFieldTags
-    , HoleSuggested(..), hsVal, hsSugaredBaseExpr
+    , HoleArg(..), haExpr, haUnwrap
+    , HoleOption(..), hsVal, hsSugaredBaseExpr
     , Hole(..)
-        , holeMActions, holeMArg, holeSuggesteds, holeGuid
+        , holeMActions, holeMArg, holeSuggesteds, holeOptions
     , ScopeGetVar(..), sgvGetVar, sgvVal
     , TIdG(..), tidgName, tidgTId, tidgEntityId
-    , HoleActions(..), holeScope, holeTIds, holeResults
+    , HoleActions(..), holeResults, holeGuid
     , HoleResultScore
     , HoleResult(..)
         , holeResultConverted
@@ -225,9 +225,7 @@ data TIdG name = TIdG
     }
 
 data HoleActions name m = HoleActions
-    { _holeScope :: T m [ScopeGetVar name m]
-    , _holeTIds :: T m [TIdG name]
-    , _holeResults ::
+    { _holeResults ::
             Val () -> ListT (T m) (HoleResultScore, T m (HoleResult name m))
     , _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
     }
@@ -238,18 +236,18 @@ data Unwrap m
 
 data HoleArg name m expr = HoleArg
     { _haExpr :: expr
-    , _haGetFieldTags :: [TagG name]
     , _haUnwrap :: Unwrap m
     } deriving (Functor, Foldable, Traversable)
 
-data HoleSuggested name m = HoleSuggested
+data HoleOption name m = HoleOption
     { _hsVal :: Val ()
     , _hsSugaredBaseExpr :: T m (Expression name m ())
     }
 
 data Hole name m expr = Hole
     { _holeMActions :: Maybe (HoleActions name m)
-    , _holeSuggesteds :: [HoleSuggested name m]
+    , _holeSuggesteds :: [HoleOption name m]
+    , _holeOptions :: [HoleOption name m]
     , _holeMArg :: Maybe (HoleArg name m expr)
     } deriving (Functor, Foldable, Traversable)
 
@@ -529,7 +527,7 @@ Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg
 Lens.makeLenses ''HoleResult
-Lens.makeLenses ''HoleSuggested
+Lens.makeLenses ''HoleOption
 Lens.makeLenses ''Inject
 Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions

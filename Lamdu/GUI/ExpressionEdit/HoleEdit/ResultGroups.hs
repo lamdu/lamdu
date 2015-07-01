@@ -26,7 +26,6 @@ import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
 import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.Pure as P
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm)
@@ -49,7 +48,7 @@ instance Monoid GroupPrecedence where
 
 data GroupAttributes = GroupAttributes
     { _groupSearchTerms :: [String]
-    , __precedence :: GroupPrecedence
+    , _precedence :: GroupPrecedence
     } deriving (Generic)
 instance Monoid GroupAttributes where
     mempty = def_mempty
@@ -61,7 +60,6 @@ data Group def = Group
     }
 type GroupM m = Group (DefI m)
 
-Lens.makeLenses ''GroupAttributes
 Lens.makeLenses ''Group
 
 data ResultType = GoodResult | BadResult
@@ -86,26 +84,9 @@ data ResultsList m = ResultsList
     }
 Lens.makeLenses ''ResultsList
 
-getVarToGroup :: Sugar.ScopeGetVar (Name n) m -> Group def
-getVarToGroup (Sugar.ScopeGetVar (Sugar.GetVarNamed namedVar) expr) =
-    sugarNameToGroup (namedVar ^. Sugar.nvName) expr
-getVarToGroup (Sugar.ScopeGetVar (Sugar.GetVarParamsRecord paramsRecord) expr) =
-    sugarNamesToGroup (paramsRecord ^. Sugar.prvFieldNames) expr
-    & groupAttributes . groupSearchTerms <>~ ["params", "record"]
-
-sugarNameToGroup :: Name m -> Val () -> Group def
-sugarNameToGroup name = sugarNamesToGroup [name]
-
-searchTermsOfNames :: Name m -> [String]
-searchTermsOfNames (Name _ NoCollision _ varName) = [varName]
-searchTermsOfNames (Name _ (Collision suffix) _ varName) = [varName ++ show suffix]
-
-sugarNamesToGroup :: [Name m] -> Val () -> Group def
-sugarNamesToGroup names expr = Group
-    { _groupAttributes = GroupAttributes (concatMap searchTermsOfNames names) HighPrecedence
-    , _groupBaseExpr = expr
-    }
-    where
+searchTermOfName :: Name m -> String
+searchTermOfName (Name _ NoCollision _ varName) = varName
+searchTermOfName (Name _ (Collision suffix) _ varName) = varName ++ show suffix
 
 prefixId :: HoleInfo m -> WidgetId.Id
 prefixId = HoleWidgetIds.hidResultsPrefix . hiIds
@@ -210,20 +191,22 @@ makeAll holeInfo =
             >>= collectResults config
             & ExprGuiM.transaction
 
-getVarTypesOrder :: [Sugar.NamedVarType]
-getVarTypesOrder =
-    [ Sugar.GetParameter
-    , Sugar.GetFieldParameter
-    , Sugar.GetDefinition
-    ]
-
 searchTermsOfBody :: Sugar.Body (Name m) m expr -> [String]
-searchTermsOfBody Sugar.BodyLam {} = ["\\", "lambda"]
+searchTermsOfBody Sugar.BodyLam {} = ["lambda", "\\", "Λ", "λ"]
 searchTermsOfBody Sugar.BodyApply {} = ["Apply"]
 searchTermsOfBody Sugar.BodyList {} = ["list", "[]"]
-searchTermsOfBody Sugar.BodyRecord {} = ["record", "{}"]
-searchTermsOfBody Sugar.BodyGetField {} = [".", "field"]
-searchTermsOfBody Sugar.BodyCase {} = ["case", "of"]
+searchTermsOfBody (Sugar.BodyRecord rec) =
+    ["record", "{}"] ++
+    do
+        Sugar.Record [] Sugar.ClosedRecord{} _ <- [rec]
+        ["Empty", "0", "Ø"]
+searchTermsOfBody (Sugar.BodyGetField gf) =
+    [".", "field", "." ++ searchTermOfName (gf ^. Sugar.gfTag . Sugar.tagGName)]
+searchTermsOfBody (Sugar.BodyCase cas) =
+    ["case", "of"] ++
+    do
+        Sugar.Case Sugar.LambdaCase [] Sugar.ClosedCase{} _ _ <- [cas]
+        ["absurd"]
 searchTermsOfBody Sugar.BodyInject {} = ["inject", "[]"]
 searchTermsOfBody Sugar.BodyToNom {} = []
 searchTermsOfBody Sugar.BodyFromNom {} = []
@@ -231,76 +214,20 @@ searchTermsOfBody Sugar.BodyLiteralInteger {} = []
 searchTermsOfBody Sugar.BodyHole {} = []
 searchTermsOfBody Sugar.BodyGetVar {} = []
 
-holeSuggested :: MonadA m => Sugar.HoleSuggested (Name m) m -> T m (Group def)
+holeSuggested :: MonadA m => Sugar.HoleOption (Name m) m -> T m (Group def)
 holeSuggested suggested =
     do
         sugaredBaseExpr <- suggested ^. Sugar.hsSugaredBaseExpr
         let searchTerms =
-                "suggested" :
-                concatMap searchTermsOfNames
-                (NamesGet.fromExpression sugaredBaseExpr) ++
-                concatMap searchTermsOfBody
+                "suggested"
+                : (NamesGet.fromExpression sugaredBaseExpr <&> searchTermOfName)
+                ++ concatMap searchTermsOfBody
                 (sugaredBaseExpr ^..
                  SugarLens.subExprPayloads . Lens.asIndex . Sugar.rBody)
         pure Group
             { _groupAttributes = GroupAttributes searchTerms HighPrecedence
             , _groupBaseExpr = suggested ^. Sugar.hsVal
             }
-
-getFieldGroups :: HoleInfo m -> [Group def]
-getFieldGroups holeInfo =
-    [ Group
-      { _groupAttributes =
-          GroupAttributes
-          ["field", '.' : nName (tagG ^. Sugar.tagGName)]
-          HighPrecedence
-      , _groupBaseExpr =
-          tagG ^. Sugar.tagVal
-          & V.GetField P.hole
-          & V.BGetField
-          & Val ()
-      }
-    | tagG <-
-        hiHole holeInfo ^..
-        Sugar.holeMArg . Lens._Just . Sugar.haGetFieldTags . Lens.traversed
-    ]
-
-applyGroups :: HoleInfo m -> [Group def]
-applyGroups holeInfo =
-    [ Group
-      { _groupAttributes = GroupAttributes ["apply"] HighPrecedence
-      , _groupBaseExpr =
-          Val () $ V.BApp $ V.Apply P.hole P.hole
-      }
-    | _ <- hiHole holeInfo ^.. Sugar.holeMArg . Lens._Just
-    ]
-
-makeParamGroups :: MonadA m => EditableHoleInfo m -> T m [Group def]
-makeParamGroups editableHoleInfo =
-    do
-        scopeGetVars <- ehiActions editableHoleInfo ^. Sugar.holeScope
-        tids <- ehiActions editableHoleInfo ^. Sugar.holeTIds
-        concat
-            [ scopeGetVars
-                & filter ((Just nvType ==) . (^? Sugar.sgvGetVar . Sugar._GetVarNamed . Sugar.nvVarType))
-                & map getVarToGroup & sorted
-            | nvType <- getVarTypesOrder
-            ] ++
-            ( scopeGetVars
-                & filter (Lens.has (Sugar.sgvGetVar . Sugar._GetVarParamsRecord))
-                & map getVarToGroup & sorted
-            ) ++
-            ( tids
-              & concatMap fromTid
-              & sorted
-            )
-            & pure
-    where
-        fromTid tid = [ sugarNamesToGroup [tid ^. Sugar.tidgName] $
-                        V.Val () $ f (V.Nom (tid ^. Sugar.tidgTId) P.hole)
-                      | f <- [V.BFromNom, V.BToNom]
-                      ]
-        sorted = sortOn (^. groupAttributes . groupSearchTerms)
 
 addSuggestedGroups :: MonadA m => HoleInfo m -> [Group def] -> T m [Group def]
 addSuggestedGroups holeInfo groups =
@@ -323,13 +250,6 @@ primitiveGroups holeInfo =
     [ mkGroupBody HighPrecedence [searchTerm] $
         V.BLeaf $ V.LLiteralInteger $ read searchTerm
     | nonEmptyAll Char.isDigit searchTerm
-    ] ++
-    [ mkGroupBody LowPrecedence ["\\", "Lambda", "Λ", "λ"] $
-        V.BAbs $ V.Lam "NewLambda" P.hole
-    , mkGroupBody LowPrecedence ["Empty", "Record", "{}", "0", "Ø"] $
-        V.BLeaf V.LRecEmpty
-    , mkGroupBody LowPrecedence ["Absurd", "Case"] $
-        V.BLeaf V.LAbsurd
     ]
     where
         searchTerm = ehiSearchTerm holeInfo
@@ -340,17 +260,10 @@ primitiveGroups holeInfo =
 
 makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [GroupM m]
 makeAllGroups editableHoleInfo =
-    do
-        paramGroups <- makeParamGroups editableHoleInfo
-        let groups =
-                getFieldGroups holeInfo ++
-                applyGroups holeInfo ++
-                primitiveGroups editableHoleInfo ++
-                paramGroups
-        withSuggested <- addSuggestedGroups holeInfo groups
-        withSuggested
-            & holeMatches (^. groupAttributes) (ehiSearchTerm editableHoleInfo)
-            & pure
+    hiHole holeInfo ^. Sugar.holeOptions & mapM holeSuggested
+    <&> (primitiveGroups editableHoleInfo ++)
+    >>= addSuggestedGroups holeInfo
+    <&> holeMatches (^. groupAttributes) (ehiSearchTerm editableHoleInfo)
     where
         holeInfo = ehiInfo editableHoleInfo
 

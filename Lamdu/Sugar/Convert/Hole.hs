@@ -1,7 +1,7 @@
 {-# LANGUAGE ConstraintKinds, OverloadedStrings, RankNTypes #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert, convertPlain
-    , mkHoleSuggesteds
+    , mkHoleSuggesteds, mkHoleOption
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
@@ -29,7 +29,6 @@ import           Data.String (IsString(..))
 import           Data.Traversable (traverse, sequenceA)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.GenIds as GenIds
-import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -44,11 +43,9 @@ import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Infer.Update (update)
 import qualified Lamdu.Infer.Update as Update
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
-import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import qualified Lamdu.Sugar.Convert.TIdG as ConvertTIdG
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -86,30 +83,8 @@ mkWritableHoleActions ::
     ConvertM m (HoleActions Guid m)
 mkWritableHoleActions mInjectedArg exprPl stored = do
     sugarContext <- ConvertM.readContext
-    let get f =
-            Transaction.getP . f $
-            sugarContext ^. ConvertM.scCodeAnchors
     pure HoleActions
-        { _holeScope =
-            do
-                globals <- get Anchors.globals
-                return $ concat
-                    -- ^ We wrap this in a (T m) so that AddNames can place the
-                    -- name-getting penalty under a transaction that the GUI may
-                    -- avoid using
-                    [ exprPl ^. Input.inferred . Infer.plScope
-                      & Infer.scopeToTypeMap
-                      & Map.toList
-                      & concatMap (getLocalScopeGetVars sugarContext)
-                    , globals
-                      & filter (/= sugarContext ^. ConvertM.scDefI)
-                      & map getGlobalScopeGetVar
-                    ]
-        , _holeTIds =
-            do
-                tids <- get Anchors.tids
-                return $ map ConvertTIdG.convert tids
-        , _holeResults = mkHoleResults mInjectedArg sugarContext exprPl stored
+        { _holeResults = mkHoleResults mInjectedArg sugarContext exprPl stored
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
         }
 
@@ -149,24 +124,62 @@ sugar sugarContext exprPl val =
         mkPayload (pl, x) = Input.mkUnstoredPayload x pl
         holeInferred = exprPl ^. Input.inferred
 
-mkHoleSuggesteds ::
-    MonadA m => Input.Payload m a -> ConvertM m [HoleSuggested Guid m]
-mkHoleSuggesteds exprPl =
+mkHoleOption ::
+    MonadA m => Input.Payload m a -> Val () -> ConvertM m (HoleOption Guid m)
+mkHoleOption exprPl val =
     do
         sugarContext <- ConvertM.readContext
-        let suggest val = HoleSuggested
-                { _hsVal = val
-                , _hsSugaredBaseExpr = sugar sugarContext exprPl val
-                }
-        exprPl ^. Input.inferred . Infer.plType
-            & suggestValueWith mkVar
-            <&> suggest . (`evalState` (0 :: Int))
-            & return
+        return HoleOption
+            { _hsVal = val
+            , _hsSugaredBaseExpr =
+                case val ^? ExprLens.valGlobal of
+                Just g -> getGlobalExpr g & return
+                Nothing -> sugar sugarContext exprPl val
+            }
+    where
+        -- HACK:
+        -- Avoid sugar converting get-globals because their inference can fail.
+        -- The generated expr is only used to get names from.
+        getGlobalExpr globId =
+            GetVarNamed NamedVar
+            { _nvName = ExprIRef.defI globId & UniqueId.toGuid
+            , _nvJumpTo = error "HACK getGlobalExpr"
+            , _nvVarType = GetDefinition
+            } & BodyGetVar & (`Expression` error "HACK getGlobalExpr")
+
+mkHoleSuggesteds ::
+    MonadA m => Input.Payload m a -> ConvertM m [HoleOption Guid m]
+mkHoleSuggesteds exprPl =
+    exprPl ^. Input.inferred . Infer.plType
+    & suggestValueWith mkVar
+    & mapM (mkHoleOption exprPl . (`evalState` (0 :: Int)))
     where
         mkVar = do
             i <- State.get
             State.modify (+1)
             return . fromString $ "var" ++ show i
+
+mkOptions :: MonadA m => Input.Payload m a -> ConvertM m [HoleOption Guid m]
+mkOptions exprPl =
+    do
+        sugarContext <- ConvertM.readContext
+        tids <- ConvertM.codeAnchor Anchors.tids >>= ConvertM.getP
+        globals <- ConvertM.codeAnchor Anchors.globals >>= ConvertM.getP
+        concat
+            [ exprPl ^. Input.inferred . Infer.plScope
+                & Infer.scopeToTypeMap
+                & Map.keys
+                & concatMap (getLocalScopeGetVars sugarContext)
+            , globals
+                & filter (/= sugarContext ^. ConvertM.scDefI)
+                <&> P.global . ExprIRef.globalId
+            , do
+                tid <- tids
+                f <- [V.BFromNom, V.BToNom]
+                [ V.Nom tid P.hole & f & V.Val () ]
+            , [P.abs "NewLambda" P.hole, P.recEmpty, P.absurd]
+            ]
+            & mapM (mkHoleOption exprPl)
 
 mkHole ::
     (MonadA m, Monoid a) =>
@@ -175,21 +188,19 @@ mkHole ::
 mkHole mInjectedArg exprPl = do
     mActions <- traverse (mkWritableHoleActions mInjectedArg exprPl) (exprPl ^. Input.mStored)
     suggested <- mkHoleSuggesteds exprPl
+    options <- mkOptions exprPl
     pure Hole
         { _holeMActions = mActions
         , _holeSuggesteds = suggested
+        , _holeOptions = options
         , _holeMArg = Nothing
         }
 
-getLocalScopeGetVars ::
-    MonadA m => ConvertM.Context m -> (V.Var, Type) -> [ScopeGetVar Guid m]
-getLocalScopeGetVars sugarContext (par, typeExpr) =
-    ScopeGetVar
-    { _sgvGetVar = ConvertGetVar.convertVar sugarContext par typeExpr
-    , _sgvVal = P.var par
-    } :
-    map mkFieldParam fieldTags
+getLocalScopeGetVars :: MonadA m => ConvertM.Context m -> V.Var -> [Val ()]
+getLocalScopeGetVars sugarContext par =
+    map mkFieldParam fieldTags ++ [var]
     where
+        var = Val () (V.BLeaf (V.LVar par))
         fieldTags =
             ( sugarContext ^@..
                 ConvertM.scTagParamInfos .>
@@ -197,31 +208,7 @@ getLocalScopeGetVars sugarContext (par, typeExpr) =
                     Lens.to ConvertM.tpiFromParameters ) <.
                     Lens.filtered (== par)
             ) <&> fst
-        mkFieldParam tag =
-            ScopeGetVar
-            { _sgvGetVar =
-                GetVarNamed NamedVar
-                { _nvName = UniqueId.toGuid tag
-                , _nvJumpTo = error "Jump to on scope item??"
-                , _nvVarType = GetFieldParameter
-                }
-            , _sgvVal = P.getField (P.var par) tag
-            }
-
--- TODO: Put the result in scopeGlobals in the caller, not here?
-getGlobalScopeGetVar :: MonadA m => DefI m -> ScopeGetVar Guid m
-getGlobalScopeGetVar defI =
-    ScopeGetVar
-    { _sgvGetVar =
-        GetVarNamed NamedVar
-        { _nvName = UniqueId.toGuid defI
-        , _nvJumpTo = errorJumpTo
-        , _nvVarType = GetDefinition
-        }
-    , _sgvVal = P.global $ ExprIRef.globalId defI
-    }
-    where
-        errorJumpTo = error "Jump to on scope item??"
+        mkFieldParam tag = V.GetField var tag & V.BGetField & Val ()
 
 type HoleResultVal m a = Val (Infer.Payload, (Maybe (ExprIRef.ValI m), a))
 

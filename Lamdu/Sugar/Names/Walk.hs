@@ -124,12 +124,6 @@ toInject inject@Inject {..} =
         tag <- toTagG _iTag
         pure inject { _iVal = val, _iTag = tag }
 
-toScopeGetVar ::
-    MonadNaming m =>
-    ScopeGetVar (OldName m) (TM m) ->
-    m (ScopeGetVar (NewName m) (TM m))
-toScopeGetVar (ScopeGetVar gv val) = (`ScopeGetVar` val) <$> toGetVar gv
-
 toHoleResult ::
     MonadNaming m =>
     HoleResult (OldName m) (TM m) ->
@@ -144,11 +138,7 @@ toHoleActions ha@HoleActions {..} =
     do
         InTransaction run <- opRun
         pure ha
-            { _holeScope =
-                run . traverse toScopeGetVar =<< _holeScope
-            , _holeTIds =
-                run . traverse toTIdG =<< _holeTIds
-            , _holeResults =
+            { _holeResults =
                 _holeResults
                 & Lens.mapped . Lens.mapped . _2 %~
                     (>>= run . toHoleResult)
@@ -161,20 +151,18 @@ toHoleArg ::
 toHoleArg arg@HoleArg{..} =
     do
         expr <- toExpression _haExpr
-        getFieldTags <- mapM toTagG _haGetFieldTags
         pure arg
             { _haExpr = expr
-            , _haGetFieldTags = getFieldTags
             }
 
-toSuggested ::
+toOption ::
     MonadNaming m =>
-    HoleSuggested (OldName m) (TM m) ->
-    m (HoleSuggested (NewName m) (TM m))
-toSuggested suggested =
+    HoleOption (OldName m) (TM m) ->
+    m (HoleOption (NewName m) (TM m))
+toOption option =
     do
         InTransaction run <- opRun
-        suggested
+        option
             & hsSugaredBaseExpr %~ (>>= run . toExpression)
             & pure
 
@@ -186,11 +174,13 @@ toHole hole@Hole {..} =
     do
         mActions <- _holeMActions & Lens._Just %%~ toHoleActions
         mArg <- _holeMArg & Lens._Just %%~ toHoleArg
-        suggested <- _holeSuggesteds & Lens.traversed %%~ toSuggested
+        suggested <- _holeSuggesteds & Lens.traversed %%~ toOption
+        options <- _holeOptions & Lens.traversed %%~ toOption
         pure hole
             { _holeMActions = mActions
             , _holeMArg = mArg
             , _holeSuggesteds = suggested
+            , _holeOptions = options
             }
 
 toNamedVar ::

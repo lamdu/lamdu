@@ -24,6 +24,7 @@ import           Data.Traversable (traverse)
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.RecordVal as RecordVal
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -166,16 +167,23 @@ convertAppliedHole funcI argS argI exprPl =
                 { _haExpr =
                       argS
                       & rPayload . plActions . Lens._Just . wrap .~ argWrap
-                , _haGetFieldTags = getFieldTags
                 , _haUnwrap =
                       if isTypeMatch
                       then UnwrapMAction mUnwrap
                       else UnwrapTypeMismatch
                 }
-        suggesteds <- ConvertHole.mkHoleSuggesteds (funcI ^. V.payload) & lift
-        lift $ ConvertHole.convertPlain (Just argI) exprPl
+        do
+            suggesteds <- ConvertHole.mkHoleSuggesteds (funcI ^. V.payload)
+            options <-
+                (argType ^.. ExprLens._TRecord . ExprLens.compositeTags
+                    <&> P.getField P.hole)
+                ++ [P.app P.hole P.hole]
+                & mapM (ConvertHole.mkHoleOption exprPl)
+            ConvertHole.convertPlain (Just argI) exprPl
+                <&> rBody . _BodyHole . holeSuggesteds %~ mappend suggesteds
+                <&> rBody . _BodyHole . holeOptions %~ mappend options
+            & lift
             <&> rBody . _BodyHole . holeMArg .~ Just holeArg
-            <&> rBody . _BodyHole . holeSuggesteds <>~ suggesteds
             <&> rPayload . plData <>~ funcI ^. V.payload . Input.userData
             <&> rPayload . plActions . Lens._Just . wrap .~
                 maybe WrapNotAllowed (WrapperAlready . addEntityId) (exprPl ^. Input.mStored)
@@ -183,14 +191,6 @@ convertAppliedHole funcI argS argI exprPl =
         addEntityId = guidEntityId . Property.value
         guidEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
         argType = argS ^. rPayload . plAnnotation . aInferredType
-        getFieldTags =
-            argType ^.. ExprLens._TRecord . ExprLens.compositeTags <&> holeArgTag
-        holeArgTag tag =
-            TagG
-            { _tagInstance = EntityId.ofGetFieldTag (exprPl ^. Input.entityId)
-            , _tagVal = tag
-            , _tagGName = UniqueId.toGuid tag
-            }
 
 convertAppliedCase ::
     (MonadA m, Monoid a) =>
