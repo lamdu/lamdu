@@ -25,6 +25,7 @@ import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.VersionControl as VersionControl
+import qualified Lamdu.GUI.Scroll as Scroll
 
 data Env = Env
     { envEvalMap :: EvalResults (ExprIRef.ValI DbLayout.ViewM)
@@ -59,16 +60,17 @@ make (Env evalMap config settings style fullSize cursor) rootId =
                     id actions $
                     \branchSelector ->
                         do
-                            let nonCodeHeight =
-                                    hoverPadding   ^. Widget.height +
-                                    branchSelector ^. Widget.height
-                            let codeSize = fullSize - Vector2 0 nonCodeHeight
+                            let codeSize = fullSize - Vector2 0 (branchSelector ^. Widget.height)
                             codeEdit <-
                                 CodeEdit.make (env codeSize) rootId
                                 & WE.mapWidgetEnvT VersionControl.runAction
                                 <&> Widget.events %~ VersionControl.runEvent cursor
-                                <&> Widget.padToSizeAlign codeSize 0
-                            Box.vbox [(0.5, hoverPadding), (0.5, codeEdit), (0.5, branchSelector)]
+                            let scrollBox =
+                                    Box.vbox [(0.5, hoverPadding), (0.5, codeEdit)]
+                                    & Widget.padToSizeAlign codeSize 0
+                                    & Scroll.focusAreaIntoWindow fullSize
+                                    & Widget.size .~ codeSize
+                            Box.vbox [(0.5, scrollBox), (0.5, branchSelector)]
                                 & return
                 let quitEventMap =
                         Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")

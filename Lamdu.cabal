@@ -226,6 +226,7 @@ Executable lamdu
                      , Lamdu.GUI.TypeView
                      , Lamdu.GUI.VersionControl.Config
                      , Lamdu.GUI.VersionControl
+                     , Lamdu.GUI.Scroll
                      , Lamdu.GUI.WidgetIdIRef
                      , Lamdu.GUI.WidgetIds
                      , Lamdu.GUI.Zoom

@@ -46,7 +46,7 @@ module Graphics.UI.Bottle.Widget
     , respondToCursor
     ) where
 
-import           Control.Applicative ((<$>), (<*>))
+import           Control.Applicative ((<$>), (<*>), liftA2)
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -254,7 +254,7 @@ padToSizeAlign :: Size -> Vector2 R -> Widget f -> Widget f
 padToSizeAlign newSize alignment widget =
     widget
     & translate (sizeDiff * alignment)
-    & size .~ newSize
+    & size %~ liftA2 max newSize
     where
         sizeDiff = max <$> 0 <*> newSize - widget ^. size
 
