@@ -81,17 +81,6 @@ recordType = T.TRecord . foldr (uncurry T.CExtend) T.CEmpty
 sumType :: [(T.Tag, Type)] -> Type
 sumType = T.TSum . foldr (uncurry T.CExtend) T.CEmpty
 
-nameTheAnchors :: MonadA m => T m ()
-nameTheAnchors =
-    do
-        mapM_ describeAnchor Builtins.anchorNames
-        setName Builtins.listTid "List"
-    where
-        describeAnchor (order, tag, name) =
-            do
-                setName tag name
-                setTagOrder tag order
-
 data Public m = Public
     { publicDefs :: [DefI m]
     , publicTags :: [T.Tag]
@@ -111,6 +100,19 @@ publicize act g =
         return x
 
 type M m = WriterT (Public m) (T m)
+
+blessAnchors :: MonadA m => M m ()
+blessAnchors =
+    do
+        mapM_ describeAnchorTag Builtins.anchorTags
+        lift $ setName Builtins.listTid "List"
+        Writer.tell $ mempty { publicTIds = [Builtins.listTid] }
+    where
+        describeAnchorTag (order, tag, name) =
+            do
+                lift $ setName tag name
+                lift $ setTagOrder tag order
+                Writer.tell $ mempty { publicTags = [tag] }
 
 newTag :: MonadA m => Int -> String -> M m T.Tag
 newTag order n =
@@ -270,7 +272,7 @@ createIf bool boolNames =
 createPublics :: MonadA m => T m (Public m)
 createPublics =
     do
-        lift nameTheAnchors
+        blessAnchors
 
         valTParamId <- lift $ namedId "val"
 

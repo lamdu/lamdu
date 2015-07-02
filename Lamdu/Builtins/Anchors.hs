@@ -46,8 +46,8 @@ nothingTag = "BI:nothing"
 
 type Order = Int
 
-anchorNames :: [(Order, Tag, String)]
-anchorNames =
+anchorTags :: [(Order, Tag, String)]
+anchorTags =
     [ (0, objTag, "object")
     , (0, infixlTag, "infixl")
     , (1, infixrTag, "infixr")
