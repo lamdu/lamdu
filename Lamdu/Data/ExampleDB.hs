@@ -152,38 +152,11 @@ newPublicDefVal name presentationMode valI typ =
     Definition.BodyExpr $ Definition.Expr valI $
     Definition.ExportedType $ typ
 
-newPublicDefExpr ::
-    MonadA m =>
-    String -> PresentationMode -> Val () ->
-    Scheme -> M m (DefI m)
-newPublicDefExpr name presentationMode expr typ =
-    do
-        valI <- lift $ ExprIRef.newVal expr
-        newPublicDefVal name presentationMode valI typ
-
 data CtorInfo = CtorInfo
-    { _ctorName :: String
-    , ctorTag :: T.Tag
+    { ctorTag :: T.Tag
     , _ctorPresentationMode :: PresentationMode
     , _ctorScheme :: Scheme
     }
-
-createInjectorI ::
-    MonadA m =>
-    ((Val () -> Val ()) -> Val ()) -> T.Id -> CtorInfo ->
-    M m (DefI m)
-createInjectorI f typeName (CtorInfo name tag presentationMode scheme) =
-    newPublicDefExpr name presentationMode
-    (f (Pure.toNom typeName . Pure.inject tag))
-    scheme
-
-createInjector ::
-    MonadA m => T.Id -> CtorInfo -> M m (DefI m)
-createInjector = createInjectorI (Pure.lambda "x")
-
-createNullaryInjector ::
-    MonadA m => T.Id -> CtorInfo -> M m (DefI m)
-createNullaryInjector = createInjectorI ($ Pure.recEmpty)
 
 data Ctor
     = Nullary CtorInfo
@@ -191,83 +164,69 @@ data Ctor
 
 adt ::
     MonadA m => T.Id -> [(T.ParamId, T.TypeVar)] -> (TypeCtor -> [Ctor]) ->
-    M m (TypeCtor, [DefI m])
+    M m TypeCtor
 adt tid params ctors =
-    do
-        t <-
-            lift $ newNominal tid params $ \t ->
-            ctors t
-            <&> onCtor
-            & sumType
-            & Scheme.mono
-        let mkInjectorFor (Nullary info) = createNullaryInjector tid info
-            mkInjectorFor (Normal _ info) = createInjector tid info
-        injectors <- mapM mkInjectorFor $ ctors t
-        return (t, injectors)
+    lift $ newNominal tid params $
+    \t ->
+        ctors t
+        <&> onCtor
+        & sumType
+        & Scheme.mono
     where
         onCtor (Nullary info) = (ctorTag info, recordType [])
         onCtor (Normal typ info) = (ctorTag info, typ)
 
 createList :: MonadA m => T.ParamId -> M m TypeCtor
 createList valTParamId =
-    do
-        (list, _sumTags) <-
-            adt Builtins.listTid [(valTParamId, valT)] $ \list ->
-            [ Nullary $ CtorInfo "TODO[]DEL?" Builtins.nilTag Verbose $ forAll 1 $ \[a] -> list [a]
-            , let consType =
-                      recordType
-                      [ (Builtins.headTag, T.TVar valT)
-                      , (Builtins.tailTag, list [T.TVar valT])
-                      ]
-              in  Normal consType $
-                  CtorInfo "TODO:DEL?" Builtins.consTag Infix $
-                  forAll 1 $ \ [a] -> consType ~> list [a]
-            ]
-        return list
+    adt Builtins.listTid [(valTParamId, valT)] $ \list ->
+    [ Nullary $ CtorInfo Builtins.nilTag Verbose $ forAll 1 $ \[a] -> list [a]
+    , let consType =
+              recordType
+              [ (Builtins.headTag, T.TVar valT)
+              , (Builtins.tailTag, list [T.TVar valT])
+              ]
+      in  Normal consType $
+          CtorInfo Builtins.consTag Infix $
+          forAll 1 $ \ [a] -> consType ~> list [a]
+    ]
     where
         valT = "a"
 
 createMaybe ::
-    MonadA m => T.ParamId -> M m (TypeCtor, [DefI m])
+    MonadA m => T.ParamId -> M m TypeCtor
 createMaybe valTParamId =
     do
         tid <- newTId "Maybe"
         adt tid [(valTParamId, valT)] $ \maybe_ ->
-            [ Nullary $ CtorInfo "Nothing" Builtins.nothingTag Verbose $
+            [ Nullary $ CtorInfo Builtins.nothingTag Verbose $
               forAll 1 $ \[a] -> maybe_ [a]
-            , Normal (T.TVar valT) $ CtorInfo "Just" Builtins.justTag Verbose $
+            , Normal (T.TVar valT) $ CtorInfo Builtins.justTag Verbose $
               forAll 1 $ \[a] -> a ~> maybe_ [a]
             ]
     where
         valT = "a"
 
-data BoolNames m = BoolNames
+newtype BoolNames = BoolNames
     { bnTid :: T.Id
-    , bnTrue :: DefI m
-    , bnFalse :: DefI m
     }
 
-createBool :: MonadA m => M m (Type, BoolNames m)
+createBool :: MonadA m => M m (Type, BoolNames)
 createBool =
     do
         tid <- newTId "Bool"
-        (tyCon, [injectTrue, injectFalse]) <-
+        tyCon <-
             adt tid [] $ \boolTCons ->
-            [ Nullary $ CtorInfo "True" Builtins.trueTag Verbose $
+            [ Nullary $ CtorInfo Builtins.trueTag Verbose $
               Scheme.mono $ boolTCons []
-            , Nullary $ CtorInfo "False" Builtins.falseTag Verbose $
+            , Nullary $ CtorInfo Builtins.falseTag Verbose $
               Scheme.mono $ boolTCons []
             ]
         return
             ( tyCon []
-            , BoolNames
-              { bnTid = tid
-              , bnTrue = injectTrue
-              , bnFalse = injectFalse
-              }
+            , BoolNames { bnTid = tid }
             )
 
-caseBool :: BoolNames m -> V.Var -> V.Var -> Val () -> Val () -> Val () -> Val ()
+caseBool :: BoolNames -> V.Var -> V.Var -> Val () -> Val () -> Val () -> Val ()
 caseBool boolNames v1 v2 cond then_ else_ =
     cases $$ Pure.fromNom (bnTid boolNames) cond
     where
@@ -291,7 +250,7 @@ newPublicFunc name presentationMode tags mkBody scheme =
         setParamList lambdaI tags
         newPublicDefVal name presentationMode lambdaI scheme
 
-createIf :: MonadA m => Type -> BoolNames m -> M m (DefI m)
+createIf :: MonadA m => Type -> BoolNames -> M m (DefI m)
 createIf bool boolNames =
     do
         condTag <- newTag 0 "condition"
@@ -308,20 +267,6 @@ createIf bool boolNames =
             , (elseTag, a)
             ] ~> a
 
-getDef :: DefI m -> Val ()
-getDef = Pure.global . ExprIRef.globalId
-
-createNot :: MonadA m => Type -> BoolNames m -> M m (DefI m)
-createNot bool boolNames@BoolNames{..} =
-    do
-        v0 <- lift ExprIRef.newVar
-        v1 <- lift ExprIRef.newVar
-        v2 <- lift ExprIRef.newVar
-        newPublicDefExpr "not" Verbose
-            ( Pure.lambda v0 $ \b ->
-              caseBool boolNames v1 v2 b (getDef bnFalse) (getDef bnTrue) ) $
-            Scheme.mono $ bool ~> bool
-
 createPublics :: MonadA m => T m (Public m)
 createPublics =
     do
@@ -334,7 +279,6 @@ createPublics =
         (bool, boolNames) <- createBool
 
         _ <- createIf bool boolNames
-        _ <- createNot bool boolNames
 
         let infixType lType rType resType =
                 recordType [ (Builtins.infixlTag, lType)
