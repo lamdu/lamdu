@@ -17,12 +17,26 @@ redundantTypesDefaultTop topRedundant f (Expression body pl) =
     BodyLiteralInteger {} -> redundant
     BodyRecord{} -> redundant
     BodyList{} -> redundantChildren
+    BodyToNom nom ->
+        nom & Lens.traversed . redundantTypesDefaultTop True %%~ f
+        <&> BodyToNom & mk
     BodyApply (Apply func specialArgs annotatedArgs) ->
         Apply
         <$> ( func & redundantTypesDefaultTop True %%~ f )
         <*> ( specialArgs & Lens.traversed recurse )
         <*> ( annotatedArgs & Lens.traversed . Lens.traversed %%~ recurse )
         <&> BodyApply & mk
+    BodyCase (Case kind alts caseTail mAddAlt entityId) ->
+        Case
+        <$> (kind & Lens.traversed . redundantTypesDefaultTop True %%~ f)
+        <*> ( alts
+              & Lens.traversed . Lens.traversed
+              . rBody . _BodyLam . Lens.traversed
+              . redundantTypesDefaultTop True %%~ f)
+        <*> (caseTail & Lens.traversed %%~ recurse)
+        <*> pure mAddAlt
+        <*> pure entityId
+        <&> BodyCase & mk
     _ -> mk recBody
     where
         recurse = redundantTypes f
