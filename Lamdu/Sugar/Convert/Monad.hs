@@ -48,7 +48,7 @@ data Context m = Context
     { _scInferContext :: Infer.Context
     , _scDefI :: ExprIRef.DefI m
     , _scCodeAnchors :: Anchors.CodeProps m
-    , _scSpecialFunctions :: Anchors.SpecialFunctions m
+    , _scSpecialFunctions :: Anchors.SpecialFunctions
     , _scTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
       -- TODO: scTagParamInfos needs a reverse-lookup map too
     , -- Check whether the definition is valid after an edit,

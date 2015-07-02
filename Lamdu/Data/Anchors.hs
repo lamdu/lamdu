@@ -29,18 +29,17 @@ import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 
-data SpecialFunctions m = SpecialFunctions
+data SpecialFunctions = SpecialFunctions
     { sfList :: T.Id
-    , sfCons :: DefI m
-    } deriving (Generic)
-instance Binary (SpecialFunctions m)
+    } deriving Generic
+instance Binary SpecialFunctions
 
 type Pane m = DefI m
 
 data Code f m = Code
     { panes :: f [Pane m]
     , globals :: f [DefI m]
-    , specialFunctions :: f (SpecialFunctions m)
+    , specialFunctions :: f SpecialFunctions
     , preJumps :: f [WidgetId.Id]
     , preCursor :: f WidgetId.Id
     , postCursor :: f WidgetId.Id

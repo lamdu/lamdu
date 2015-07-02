@@ -21,6 +21,7 @@ import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import           Data.Traversable (traverse)
+import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -35,7 +36,6 @@ import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Input as Input
-import qualified Lamdu.Sugar.Convert.List as ConvertList
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
@@ -47,11 +47,10 @@ type T = Transaction
 convert ::
     (MonadA m, Monoid a) => V.Apply (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
-convert app@(V.Apply funcI argI) exprPl =
+convert (V.Apply funcI argI) exprPl =
     runMatcherT $ do
         argS <- lift $ ConvertM.convertSubexpression argI
         justToLeft $ convertAppliedHole funcI argS argI exprPl
-        justToLeft $ ConvertList.cons app argS exprPl
         funcS <- ConvertM.convertSubexpression funcI & lift
         justToLeft $
             convertAppliedCase (funcS ^. rBody) (funcI ^. V.payload) argS exprPl
@@ -177,7 +176,18 @@ convertAppliedHole funcI argS argI exprPl =
             options <-
                 (argType ^.. ExprLens._TRecord . ExprLens.compositeTags
                     <&> P.getField P.hole)
-                ++ [P.app P.hole P.hole]
+                ++
+                [ P.app P.hole P.hole
+                , P.toNom Builtins.listTid $
+                  P.inject Builtins.consTag $
+                  P.record
+                  [ (Builtins.headTag, P.hole)
+                  , ( Builtins.tailTag
+                    , P.toNom Builtins.listTid $
+                      P.inject Builtins.nilTag P.recEmpty
+                    )
+                  ]
+                ]
                 & mapM (ConvertHole.mkHoleOption exprPl)
             ConvertHole.convertPlain (Just argI) exprPl
                 <&> rBody . _BodyHole . holeSuggesteds %~ mappend suggesteds

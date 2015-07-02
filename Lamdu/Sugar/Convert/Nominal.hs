@@ -59,5 +59,6 @@ convertToNom ::
 convertToNom nom exprPl =
     do
         ConvertList.nil nom exprPl & justToLeft
+        ConvertList.cons nom exprPl & justToLeft
         convert BodyToNom nom exprPl & lift
     & runMatcherT

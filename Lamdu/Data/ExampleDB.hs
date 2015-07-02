@@ -182,10 +182,7 @@ createNullaryInjector ::
     MonadA m => T.Id -> CtorInfo -> M m (DefI m)
 createNullaryInjector = createInjectorI ($ Pure.recEmpty)
 
-data ListNames m = ListNames
-    { lnTid :: T.Id
-    , lnCons :: DefI m
-    }
+newtype ListNames = ListNames { lnTid :: T.Id }
 
 data Ctor
     = Nullary CtorInfo
@@ -210,10 +207,10 @@ adt name params ctors =
         onCtor (Nullary info) = (ctorTag info, recordType [])
         onCtor (Normal typ info) = (ctorTag info, typ)
 
-createList :: MonadA m => T.ParamId -> M m (TypeCtor, ListNames m)
+createList :: MonadA m => T.ParamId -> M m (TypeCtor, ListNames)
 createList valTParamId =
     do
-        (list, tid, [_nil, cons]) <-
+        (list, tid, _sumTags) <-
             adt "List" [(valTParamId, valT)] $ \list ->
             [ Nullary $ CtorInfo "TODO[]DEL?" Builtins.nilTag Verbose $ forAll 1 $ \[a] -> list [a]
             , let consType =
@@ -222,11 +219,11 @@ createList valTParamId =
                       , (Builtins.tailTag, list [T.TVar valT])
                       ]
               in  Normal consType $
-                  CtorInfo ":" Builtins.consTag Infix $
+                  CtorInfo "TODO:DEL?" Builtins.consTag Infix $
                   forAll 1 $ \ [a] -> consType ~> list [a]
             ]
 
-        (list, ListNames tid cons) & return
+        (list, ListNames tid) & return
     where
         valT = "a"
 
@@ -322,7 +319,7 @@ createNot bool boolNames@BoolNames{..} =
               caseBool boolNames v1 v2 b (getDef bnFalse) (getDef bnTrue) ) $
             Scheme.mono $ bool ~> bool
 
-createPublics :: MonadA m => T m (Db.SpecialFunctions m, Public m)
+createPublics :: MonadA m => T m (Db.SpecialFunctions, Public m)
 createPublics =
     Writer.runWriterT $
     do
@@ -360,9 +357,8 @@ createPublics =
 
         return
             Db.SpecialFunctions
-                { Db.sfList = lnTid listNames
-                , Db.sfCons = lnCons listNames
-                }
+            { Db.sfList = lnTid listNames
+            }
     where
         newPublicBuiltin_ name presentationMode ffiPath ffiName typ =
             void $ newPublicBuiltin name presentationMode ffiPath ffiName typ

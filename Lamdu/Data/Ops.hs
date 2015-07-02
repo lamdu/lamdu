@@ -29,7 +29,6 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValTree(..))
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
@@ -139,14 +138,16 @@ case_ valP =
 
 addListItem ::
     MonadA m =>
-    Anchors.SpecialFunctions m ->
+    Anchors.SpecialFunctions ->
     ExprIRef.ValIProperty m ->
     T m (ExprIRef.ValI m, ExprIRef.ValI m)
 addListItem Anchors.SpecialFunctions {..} exprP =
     do
         newItemI <- newHole
-        newListI <- ExprIRef.writeValTree $
-            app cons $
+        newListI <-
+            ExprIRef.writeValTree $
+            v $ V.BToNom $ V.Nom sfList $
+            v $ V.BInject $ V.Inject Builtins.consTag $
             recEx Builtins.headTag (ValTreeLeaf newItemI) $
             recEx Builtins.tailTag (ValTreeLeaf (Property.value exprP))
             recEmpty
@@ -154,10 +155,8 @@ addListItem Anchors.SpecialFunctions {..} exprP =
         return (newListI, newItemI)
     where
         v = ValTreeNode
-        app f x            = v $ V.BApp $ V.Apply f x
         recEx tag val rest = v $ V.BRecExtend $ V.RecExtend tag val rest
         recEmpty           = v $ V.BLeaf V.LRecEmpty
-        cons               = v $ ExprLens.valBodyGlobal # ExprIRef.globalId sfCons
 
 newPane :: MonadA m => Anchors.CodeProps m -> DefI m -> T m ()
 newPane codeProps defI =
