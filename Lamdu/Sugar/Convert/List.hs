@@ -103,15 +103,14 @@ getSugaredHeadTail Anchors.SpecialFunctions{..} argS =
             , cpTail = tailField ^. rfExpr
             }
 
-consTags :: Anchors.SpecialFunctions t -> ConsParams T.Tag
-consTags Anchors.SpecialFunctions{..} = ConsParams Builtins.headTag Builtins.tailTag
+consTags :: ConsParams T.Tag
+consTags = ConsParams Builtins.headTag Builtins.tailTag
 
-valConsParams ::
-    Anchors.SpecialFunctions t -> Val a -> Maybe ([a], ConsParams (Val a))
-valConsParams specialFunctions val =
+valConsParams :: Val a -> Maybe ([a], ConsParams (Val a))
+valConsParams val =
     do
         recTail ^? ExprLens.valRecEmpty
-        consParams <- MapUtils.matchKeys (consTags specialFunctions) fields
+        consParams <- MapUtils.matchKeys consTags fields
         let payloads = recTail ^. V.payload : consParams ^.. traverse . _1
         return (payloads, consParams <&> snd)
     where
@@ -129,8 +128,7 @@ cons (V.Apply funcI argI) argS exprPl =
         let consGlobalId = ExprIRef.globalId $ Anchors.sfCons specialFunctions
         guard $ Lens.anyOf ExprLens.valGlobal (== consGlobalId) funcI
         ConsParams headS tailS <- getSugaredHeadTail specialFunctions argS
-        (pls, ConsParams _headI tailI) <-
-            maybeToMPlus $ valConsParams specialFunctions argI
+        (pls, ConsParams _headI tailI) <- maybeToMPlus $ valConsParams argI
         List innerValues innerListMActions nilGuid <- maybeToMPlus $ tailS ^? rBody . _BodyList
         let listItem =
                 mkListItem headS exprPl tailI
