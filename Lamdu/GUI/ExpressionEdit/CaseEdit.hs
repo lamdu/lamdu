@@ -83,17 +83,16 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
                 (Widget.joinId myId ["header"])
         header <-
             case mArg of
-            Sugar.LambdaCase -> headerLabel "λcase"
+            Sugar.LambdaCase -> headerLabel "λ:"
             Sugar.CaseWithArg (Sugar.CaseArg arg mToLambdaCase) ->
                 do
-                    caseLabel <- headerLabel "case"
                     argEdit <-
                         ExprGuiM.makeSubexpression 0 arg
                         <&> ExpressionGui.egWidget %~ Widget.weakerEvents
                             (maybe mempty (toLambdaCaseEventMap config)
                                 mToLambdaCase)
-                    ofLabel <- label "of"
-                    ExpressionGui.hboxSpaced [caseLabel, argEdit, ofLabel]
+                    caseLabel <- headerLabel ":"
+                    ExpressionGui.hbox [argEdit, caseLabel] & return
         let gui = ExpressionGui.vboxTopFocalAlignedTo 0 [header, altsGui]
         gui
             & ExpressionGui.egWidget %~
