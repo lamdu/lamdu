@@ -94,7 +94,7 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
                                 mToLambdaCase)
                     ofLabel <- label "of"
                     ExpressionGui.hboxSpaced [caseLabel, argEdit, ofLabel]
-        let gui = ExpressionGui.vboxTopFocal [header, altsGui]
+        let gui = ExpressionGui.vboxTopFocalAlignedTo 0 [header, altsGui]
         gui
             & ExpressionGui.egWidget %~
               Widget.weakerEvents (addAltEventMap mAddAlt)
