@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Convert.Monad
     ( Context(..), TagParamInfo(..)
     , scInferContext, scReinferCheckDefinition, scDefI
-    , scCodeAnchors, scSpecialFunctions, scTagParamInfos, scMBodyStored
+    , scCodeAnchors, scTagParamInfos, scMBodyStored
     , ConvertM(..), run
     , readContext, liftTransaction, local
     , codeAnchor
@@ -48,7 +48,6 @@ data Context m = Context
     { _scInferContext :: Infer.Context
     , _scDefI :: ExprIRef.DefI m
     , _scCodeAnchors :: Anchors.CodeProps m
-    , _scSpecialFunctions :: Anchors.SpecialFunctions
     , _scTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
       -- TODO: scTagParamInfos needs a reverse-lookup map too
     , -- Check whether the definition is valid after an edit,

@@ -18,7 +18,7 @@ import           Data.Store.Rev.View (View)
 import qualified Data.Store.Rev.View as View
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Lamdu.Data.Anchors (Code(..), Revision(..), assocNameRef, SpecialFunctions(..))
+import           Lamdu.Data.Anchors (Code(..), Revision(..), assocNameRef)
 import qualified Lamdu.Data.Anchors as Anchors
 
 type T = Transaction
@@ -39,7 +39,6 @@ codeIRefs :: Code (IRef ViewM) ViewM
 codeIRefs = Code
     { panes = IRef.anchor "panes"
     , globals = IRef.anchor "globals"
-    , specialFunctions = IRef.anchor "specialFuncs"
     , preJumps = IRef.anchor "prejumps"
     , preCursor = IRef.anchor "precursor"
     , postCursor = IRef.anchor "postcursor"

@@ -83,7 +83,9 @@ sumType = T.TSum . foldr (uncurry T.CExtend) T.CEmpty
 
 nameTheAnchors :: MonadA m => T m ()
 nameTheAnchors =
-    mapM_ describeAnchor Builtins.anchorNames
+    do
+        mapM_ describeAnchor Builtins.anchorNames
+        setName Builtins.listTid "List"
     where
         describeAnchor (order, tag, name) =
             do
@@ -127,18 +129,19 @@ newPublicDef act = publicize act $ \x -> mempty { publicDefs = [x] }
 type TypeCtor = [Type] -> Type
 
 newNominal ::
-    MonadA m => String -> [(T.ParamId, T.TypeVar)] ->
+    MonadA m =>
+    T.Id -> [(T.ParamId, T.TypeVar)] ->
     ({-fixpoint:-}TypeCtor -> Scheme) ->
-    M m (T.Id, TypeCtor)
-newNominal name params body =
+    Transaction m TypeCtor
+newNominal tid params body =
     do
-        tid <- newTId name
-        let tinst typeParams =
-                T.TInst tid $ Map.fromList $ zip (map fst params) typeParams
-        let scheme = body tinst
-        lift $ Transaction.writeIRef (ExprIRef.nominalI tid) $
+        Transaction.writeIRef (ExprIRef.nominalI tid) $
             Nominal (Map.fromList params) scheme
-        return (tid, tinst)
+        return tinst
+    where
+        tinst typeParams =
+            T.TInst tid $ Map.fromList $ zip (map fst params) typeParams
+        scheme = body tinst
 
 newPublicDefVal ::
     MonadA m => String -> PresentationMode -> ValI m -> Scheme ->
@@ -182,19 +185,17 @@ createNullaryInjector ::
     MonadA m => T.Id -> CtorInfo -> M m (DefI m)
 createNullaryInjector = createInjectorI ($ Pure.recEmpty)
 
-newtype ListNames = ListNames { lnTid :: T.Id }
-
 data Ctor
     = Nullary CtorInfo
     | Normal Type CtorInfo
 
 adt ::
-    MonadA m => String -> [(T.ParamId, T.TypeVar)] -> (TypeCtor -> [Ctor]) ->
-    M m (TypeCtor, T.Id, [DefI m])
-adt name params ctors =
+    MonadA m => T.Id -> [(T.ParamId, T.TypeVar)] -> (TypeCtor -> [Ctor]) ->
+    M m (TypeCtor, [DefI m])
+adt tid params ctors =
     do
-        (tid, t) <-
-            newNominal name params $ \t ->
+        t <-
+            lift $ newNominal tid params $ \t ->
             ctors t
             <&> onCtor
             & sumType
@@ -202,16 +203,16 @@ adt name params ctors =
         let mkInjectorFor (Nullary info) = createNullaryInjector tid info
             mkInjectorFor (Normal _ info) = createInjector tid info
         injectors <- mapM mkInjectorFor $ ctors t
-        return (t, tid, injectors)
+        return (t, injectors)
     where
         onCtor (Nullary info) = (ctorTag info, recordType [])
         onCtor (Normal typ info) = (ctorTag info, typ)
 
-createList :: MonadA m => T.ParamId -> M m (TypeCtor, ListNames)
+createList :: MonadA m => T.ParamId -> M m TypeCtor
 createList valTParamId =
     do
-        (list, tid, _sumTags) <-
-            adt "List" [(valTParamId, valT)] $ \list ->
+        (list, _sumTags) <-
+            adt Builtins.listTid [(valTParamId, valT)] $ \list ->
             [ Nullary $ CtorInfo "TODO[]DEL?" Builtins.nilTag Verbose $ forAll 1 $ \[a] -> list [a]
             , let consType =
                       recordType
@@ -222,22 +223,23 @@ createList valTParamId =
                   CtorInfo "TODO:DEL?" Builtins.consTag Infix $
                   forAll 1 $ \ [a] -> consType ~> list [a]
             ]
-
-        (list, ListNames tid) & return
+        return list
     where
         valT = "a"
 
 createMaybe ::
-    MonadA m => T.ParamId -> M m (TypeCtor, T.Id, [DefI m])
+    MonadA m => T.ParamId -> M m (TypeCtor, [DefI m])
 createMaybe valTParamId =
     do
-        let valT = "a"
-        adt "Maybe" [(valTParamId, valT)] $ \maybe_ ->
+        tid <- newTId "Maybe"
+        adt tid [(valTParamId, valT)] $ \maybe_ ->
             [ Nullary $ CtorInfo "Nothing" Builtins.nothingTag Verbose $
               forAll 1 $ \[a] -> maybe_ [a]
             , Normal (T.TVar valT) $ CtorInfo "Just" Builtins.justTag Verbose $
               forAll 1 $ \[a] -> a ~> maybe_ [a]
             ]
+    where
+        valT = "a"
 
 data BoolNames m = BoolNames
     { bnTid :: T.Id
@@ -248,8 +250,9 @@ data BoolNames m = BoolNames
 createBool :: MonadA m => M m (Type, BoolNames m)
 createBool =
     do
-        (tyCon, tid, [injectTrue, injectFalse]) <-
-            adt "Bool" [] $ \boolTCons ->
+        tid <- newTId "Bool"
+        (tyCon, [injectTrue, injectFalse]) <-
+            adt tid [] $ \boolTCons ->
             [ Nullary $ CtorInfo "True" Builtins.trueTag Verbose $
               Scheme.mono $ boolTCons []
             , Nullary $ CtorInfo "False" Builtins.falseTag Verbose $
@@ -319,15 +322,14 @@ createNot bool boolNames@BoolNames{..} =
               caseBool boolNames v1 v2 b (getDef bnFalse) (getDef bnTrue) ) $
             Scheme.mono $ bool ~> bool
 
-createPublics :: MonadA m => T m (Db.SpecialFunctions, Public m)
+createPublics :: MonadA m => T m (Public m)
 createPublics =
-    Writer.runWriterT $
     do
         lift nameTheAnchors
 
         valTParamId <- lift $ namedId "val"
 
-        (_, listNames) <- createList valTParamId
+        _ <- createList valTParamId
         _ <- createMaybe valTParamId
         (bool, boolNames) <- createBool
 
@@ -354,11 +356,7 @@ createPublics =
         let aToAToBool = forAll 1 $ \[a] -> infixType a a bool
         traverse_ ((`newPublicBuiltinQualified_` aToAToBool) . ("Prelude." ++))
             ["==", "/=", "<=", ">=", "<", ">"]
-
-        return
-            Db.SpecialFunctions
-            { Db.sfList = lnTid listNames
-            }
+    & Writer.runWriterT <&> snd
     where
         newPublicBuiltin_ name presentationMode ffiPath ffiName typ =
             void $ newPublicBuiltin name presentationMode ffiPath ffiName typ
@@ -401,9 +399,8 @@ initDB db =
                 writeRevAnchor Db.cursor paneWId
                 Db.runViewTransaction view $
                     do
-                        (specialFunctions, public) <- createPublics
+                        public <- createPublics
                         let writeCodeAnchor f = Transaction.writeIRef (f Db.codeIRefs)
-                        writeCodeAnchor Db.specialFunctions specialFunctions
                         writeCodeAnchor Db.globals (publicDefs public)
                         writeCodeAnchor Db.panes []
                         writeCodeAnchor Db.preJumps []

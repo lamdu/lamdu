@@ -2,6 +2,7 @@
 module Lamdu.Builtins.Anchors where
 
 import           Lamdu.Expr.Type (Tag)
+import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 
 recurseVar :: V.Var
@@ -15,6 +16,9 @@ infixlTag = "BI:infixl"
 
 infixrTag :: Tag
 infixrTag = "BI:infixr"
+
+listTid :: T.Id
+listTid = "BI:list"
 
 headTag :: Tag
 headTag = "BI:head"

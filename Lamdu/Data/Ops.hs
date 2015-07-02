@@ -138,15 +138,14 @@ case_ valP =
 
 addListItem ::
     MonadA m =>
-    Anchors.SpecialFunctions ->
     ExprIRef.ValIProperty m ->
     T m (ExprIRef.ValI m, ExprIRef.ValI m)
-addListItem Anchors.SpecialFunctions {..} exprP =
+addListItem exprP =
     do
         newItemI <- newHole
         newListI <-
             ExprIRef.writeValTree $
-            v $ V.BToNom $ V.Nom sfList $
+            v $ V.BToNom $ V.Nom Builtins.listTid $
             v $ V.BInject $ V.Inject Builtins.consTag $
             recEx Builtins.headTag (ValTreeLeaf newItemI) $
             recEx Builtins.tailTag (ValTreeLeaf (Property.value exprP))

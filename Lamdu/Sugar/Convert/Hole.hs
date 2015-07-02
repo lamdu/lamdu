@@ -166,7 +166,6 @@ mkOptions exprPl =
         sugarContext <- ConvertM.readContext
         tids <- ConvertM.codeAnchor Anchors.tids >>= ConvertM.getP
         globals <- ConvertM.codeAnchor Anchors.globals >>= ConvertM.getP
-        let specialFunctions = sugarContext ^. ConvertM.scSpecialFunctions
         concat
             [ exprPl ^. Input.inferred . Infer.plScope
                 & Infer.scopeToTypeMap
@@ -180,8 +179,7 @@ mkOptions exprPl =
                 f <- [V.BFromNom, V.BToNom]
                 [ V.Nom tid P.hole & f & V.Val () ]
             , [ P.abs "NewLambda" P.hole, P.recEmpty, P.absurd
-              , P.inject Builtins.nilTag P.recEmpty
-                & P.toNom (Anchors.sfList specialFunctions)
+              , P.inject Builtins.nilTag P.recEmpty & P.toNom Builtins.listTid
               ]
             ]
             & mapM (mkHoleOption exprPl)

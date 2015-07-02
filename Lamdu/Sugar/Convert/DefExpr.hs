@@ -42,38 +42,34 @@ type T = Transaction
 
 mkContext ::
     MonadA m =>
-    DefI m ->
-    Anchors.Code (Transaction.MkProperty m) m ->
-    Infer.Context -> T m (Context m)
+    DefI m -> Anchors.Code (Transaction.MkProperty m) m -> Infer.Context ->
+    Context m
 mkContext defI cp inferContext =
-    do
-        specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
-        return Context
-            { _scInferContext = inferContext
-            , _scDefI = defI
-            , _scCodeAnchors = cp
-            , _scSpecialFunctions = specialFunctions
-            , _scTagParamInfos = mempty
-            , _scMBodyStored = Nothing
-            , _scReinferCheckDefinition =
-                  do
-                      defBody <- Transaction.readIRef defI
-                      case defBody of
-                          Definition.BodyBuiltin {} -> return True
-                          Definition.BodyExpr (Definition.Expr valI _) ->
-                              ExprIRef.readVal valI
-                              <&> fmap (flip (,) ())
-                              <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")
-                              <&> fmap fst
-                              >>= -- TODO: loadInfer is for sugar, we don't need sugar here
-                                  loadInfer
-                                  EvalResults
-                                  { erExprValues = Map.empty
-                                  , erAppliesOfLam = Map.empty
-                                  }
-                              <&> Lens.has Lens._Right
-            , scConvertSubexpression = ConvertExpr.convert
-            }
+    Context
+    { _scInferContext = inferContext
+    , _scDefI = defI
+    , _scCodeAnchors = cp
+    , _scTagParamInfos = mempty
+    , _scMBodyStored = Nothing
+    , _scReinferCheckDefinition =
+          do
+              defBody <- Transaction.readIRef defI
+              case defBody of
+                  Definition.BodyBuiltin {} -> return True
+                  Definition.BodyExpr (Definition.Expr valI _) ->
+                      ExprIRef.readVal valI
+                      <&> fmap (flip (,) ())
+                      <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")
+                      <&> fmap fst
+                      >>= -- TODO: loadInfer is for sugar, we don't need sugar here
+                          loadInfer
+                          EvalResults
+                          { erExprValues = Map.empty
+                          , erAppliesOfLam = Map.empty
+                          }
+                      <&> Lens.has Lens._Right
+    , scConvertSubexpression = ConvertExpr.convert
+    }
 
 makeExprDefTypeInfo ::
     MonadA m => ExprIRef.ValI m -> DefI m -> Definition.ExportedType -> Scheme -> DefinitionTypeInfo m
@@ -113,19 +109,17 @@ convert evalMap cp (Definition.Expr val defType) defI =
         (valInferred, newInferContext) <-
             loadInfer evalMap val
             <&> either (error . ("Type inference failed: " ++) . show . pPrint) id
-        context <- mkContext defI cp newInferContext
-        ConvertM.run context $
-            do
-                content <-
-                    valInferred <&> addStoredEntityIds
-                    & ConvertBinder.convertBinder (Just recurseVar) defGuid
-                return $ DefinitionBodyExpression DefinitionExpression
-                    { _deContent = content
-                    , _deTypeInfo =
-                        makeExprDefTypeInfo exprI defI defType $
-                        Infer.makeScheme newInferContext $
-                        valInferred ^. V.payload . Input.inferred . Infer.plType
-                    }
+        content <-
+            valInferred <&> addStoredEntityIds
+            & ConvertBinder.convertBinder (Just recurseVar) defGuid
+            & ConvertM.run (mkContext defI cp newInferContext)
+        return $ DefinitionBodyExpression DefinitionExpression
+            { _deContent = content
+            , _deTypeInfo =
+                makeExprDefTypeInfo exprI defI defType $
+                Infer.makeScheme newInferContext $
+                valInferred ^. V.payload . Input.inferred . Infer.plType
+            }
     where
         addStoredEntityIds x =
             x

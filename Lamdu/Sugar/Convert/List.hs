@@ -18,7 +18,6 @@ import           Data.Monoid (Monoid(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.Traversable (Traversable(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
-import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -42,14 +41,12 @@ nil ::
     MaybeT (ConvertM m) (ExpressionU m a)
 nil (V.Nom tid val) exprPl =
     do
-        specialFunctions <-
-            lift $ (^. ConvertM.scSpecialFunctions) <$> ConvertM.readContext
-        guard $ tid == Anchors.sfList specialFunctions
+        guard $ tid == Builtins.listTid
         injTag <- val ^? V.body . ExprLens._BInject . V.injectTag & maybeToMPlus
         guard $ injTag == Builtins.nilTag
         let mkListActions exprS =
                 ListActions
-                { addFirstItem = mkListAddFirstItem specialFunctions exprS
+                { addFirstItem = mkListAddFirstItem exprS
                 , replaceNil = EntityId.ofValI <$> DataOps.setToHole exprS
                 }
         List
@@ -62,11 +59,8 @@ nil (V.Nom tid val) exprPl =
                 <>~ val ^. ExprLens.subExprPayloads . Input.userData
             & lift
 
-mkListAddFirstItem ::
-    MonadA m =>
-    Anchors.SpecialFunctions -> ExprIRef.ValIProperty m -> T m EntityId
-mkListAddFirstItem specialFunctions =
-    fmap (EntityId.ofValI . snd) . DataOps.addListItem specialFunctions
+mkListAddFirstItem :: MonadA m => ExprIRef.ValIProperty m -> T m EntityId
+mkListAddFirstItem = fmap (EntityId.ofValI . snd) . DataOps.addListItem
 
 mkListItem ::
     (MonadA m, Monoid a) =>
@@ -124,12 +118,10 @@ cons ::
     (MonadA m, Monoid a) =>
     V.Nom (Val (Input.Payload m a)) -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-cons (V.Nom nomId (Val injPl (V.BInject (V.Inject tag argI)))) exprPl =
+cons (V.Nom nomId (Val injPl (V.BInject (V.Inject tag argI)))) exprPl
+    | tag == Builtins.consTag
+    && nomId == Builtins.listTid =
     do
-        specialFunctions <-
-            ConvertM.readContext & lift <&> (^. ConvertM.scSpecialFunctions)
-        tag == Builtins.consTag & guard
-        nomId == Anchors.sfList specialFunctions & guard
         argS <- ConvertM.convertSubexpression argI & lift
         ConsParams headS tailS <- getSugaredHeadTail argS
         (pls, ConsParams _headI tailI) <- valConsParams argI & maybeToMPlus
@@ -148,11 +140,10 @@ cons (V.Nom nomId (Val injPl (V.BInject (V.Inject tag argI)))) exprPl =
                     exprS <- exprPl ^. Input.mStored
                     innerListActions <- innerListMActions
                     pure ListActions
-                        { addFirstItem = mkListAddFirstItem specialFunctions exprS
+                        { addFirstItem = mkListAddFirstItem exprS
                         , replaceNil = replaceNil innerListActions
                         }
         List (listItem : innerValues) mListActions nilGuid
             & BodyList
             & addActions exprPl & lift
-
 cons _ _ = mzero
