@@ -6,7 +6,6 @@ module Lamdu.GUI.CodeEdit
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Monad.Trans.Class (lift)
 import           Control.MonadA (MonadA)
 import           Data.Foldable (Foldable)
@@ -58,13 +57,9 @@ data Pane m = Pane
 data Env m = Env
     { codeProps :: Anchors.CodeProps m
     , evalMap :: EvalResults (ExprIRef.ValI m)
-    , totalSize :: Widget.Size
     , config :: Config
     , settings :: Settings
     }
-
-totalWidth :: Env m -> Widget.R
-totalWidth = (^. _1) . totalSize
 
 makePanes :: MonadA m => Transaction.Property m [DefI m] -> Widget.Id -> [Pane m]
 makePanes (Property panes setPanes) rootId =
@@ -235,7 +230,7 @@ makePaneWidget ::
     MonadA m => Env m -> ProcessedDef m -> WidgetEnvT (T m) (Widget (T m))
 makePaneWidget env defS =
     DefinitionEdit.make (codeProps env) (config env) (settings env) defS
-        <&> fitToWidth (totalWidth env) . colorize
+    <&> colorize
     where
         Config.Pane{..} = Config.pane (config env)
         colorize widget
@@ -246,10 +241,3 @@ makePaneWidget env defS =
             (Config.layerActivePane (Config.layers (config env)))
             WidgetIds.activePaneBackground paneActiveBGColor
         colorizeInactivePane = Widget.tint paneInactiveTintColor
-
-fitToWidth :: Widget.R -> Widget f -> Widget f
-fitToWidth width w
-    | ratio < 1 = w & Widget.scale (realToFrac ratio)
-    | otherwise = w
-    where
-        ratio = width / w ^. Widget.width

@@ -62,7 +62,7 @@ make (Env evalMap config settings style fullSize cursor) rootId =
                         do
                             let codeSize = fullSize - Vector2 0 (branchSelector ^. Widget.height)
                             codeEdit <-
-                                CodeEdit.make (env codeSize) rootId
+                                CodeEdit.make env rootId
                                 & WE.mapWidgetEnvT VersionControl.runAction
                                 <&> Widget.events %~ VersionControl.runEvent cursor
                             let scrollBox =
@@ -79,10 +79,9 @@ make (Env evalMap config settings style fullSize cursor) rootId =
                     & return
     where
         hoverPadding = Spacer.makeWidget $ Vector2 0 $ Config.paneHoverPadding $ Config.pane config
-        env size = CodeEdit.Env
+        env = CodeEdit.Env
             { CodeEdit.codeProps = DbLayout.codeProps
             , CodeEdit.evalMap = evalMap
-            , CodeEdit.totalSize = size
             , CodeEdit.config = config
             , CodeEdit.settings = settings
             }
