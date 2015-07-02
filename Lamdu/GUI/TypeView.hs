@@ -108,9 +108,10 @@ makeTFun parentPrecedence a b =
     ]
 
 makeTInst :: MonadA m => ParentPrecedence -> T.Id -> Map T.ParamId Type -> M m View
-makeTInst _parentPrecedence (T.Id name) typeParams =
+makeTInst _parentPrecedence tid typeParams =
     do
-        nameView <- showIdentifier name
+        nameView <-
+            Anchors.assocNameRef tid & Transaction.getP & transaction >>= text
         space <- mkSpace
         let afterName paramsView = addPadding $ hbox [nameView, space, paramsView]
             makeTypeParam (T.ParamId tParamId, arg) =
