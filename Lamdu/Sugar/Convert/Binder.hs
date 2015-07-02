@@ -767,8 +767,15 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
                 <$> cpMAddFirstParam convParams
                 <*> whereBody ^. V.payload . Input.mStored
             }
-    & ConvertM.local (ConvertM.scTagParamInfos <>~ cpParamInfos convParams)
+    & ConvertM.local addParams
     where
+        addParams ctx =
+            ctx
+            & ConvertM.scTagParamInfos <>~ cpParamInfos convParams
+            & ConvertM.scNullParams <>~
+            case convParams ^. cpParams of
+            NullParam {} -> Set.fromList (cpMLamParam convParams ^.. Lens._Just)
+            _ -> Set.empty
         mkActions addFirstParam whereStored =
             BinderActions
             { _baAddFirstParam = addFirstParam

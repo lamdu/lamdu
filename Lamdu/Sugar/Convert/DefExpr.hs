@@ -51,6 +51,7 @@ mkContext defI cp inferContext =
     , _scCodeAnchors = cp
     , _scTagParamInfos = mempty
     , _scMBodyStored = Nothing
+    , _scNullParams = mempty
     , _scReinferCheckDefinition =
           do
               defBody <- Transaction.readIRef defI
