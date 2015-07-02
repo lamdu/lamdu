@@ -6,6 +6,7 @@ module Graphics.UI.GLFW.Utils
     ) where
 
 import           Control.Exception (bracket_)
+import           Control.Lens.Operators
 import           Control.Monad (unless)
 import           Control.MonadA (MonadA)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -36,9 +37,9 @@ getVideoModeSize = do
         GLFW.getVideoMode monitor
     return $ Vector2 (GLFW.videoModeWidth videoMode) (GLFW.videoModeHeight videoMode)
 
-getDisplayScale :: Fractional a => GLFW.Window -> IO a
+getDisplayScale :: Fractional a => GLFW.Window -> IO (Vector2 a)
 getDisplayScale window =
     do
-        (fbWidth, _) <- GLFW.getFramebufferSize window
-        (winWidth, _) <- GLFW.getWindowSize window
-        return $ fromIntegral fbWidth / fromIntegral winWidth
+        fbSize <- GLFW.getFramebufferSize window <&> uncurry Vector2 <&> fmap fromIntegral
+        winSize <- GLFW.getWindowSize window <&> uncurry Vector2 <&> fmap fromIntegral
+        fbSize / winSize & return
