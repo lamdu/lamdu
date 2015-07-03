@@ -314,6 +314,15 @@
                     "modifierKeysControl": false
                 },
                 "Key'Escape"
+            ],
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": true
+                },
+                "Key'LeftBracket"
             ]
         ],
         "holeUnwrapKeys": [
