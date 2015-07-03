@@ -69,7 +69,9 @@ make (ParentPrecedence parentPrecedence) (Sugar.Apply func specialArgs annotated
                     <&> if null annotatedArgs
                         then id
                         else overrideModifyEventMap
-                , ExprGuiM.makeSubexpression prefixPrecedence arg
+                , ExprGuiM.makeSubexpression
+                    (if isBoxed then 0 else prefixPrecedence)
+                    arg
                 ]
                 >>= ExpressionGui.hboxSpaced
                 & mk (Just prefixPrecedence)
