@@ -437,7 +437,7 @@ makeParamsEdit annotationOpts showAnnotation nearestHoles lhsId params =
         do
             actions <-
                 maybe (return mempty) (makeNullLambdaActions lhsId) mActions
-            ExpressionGui.grammarLabel "|" (Widget.toAnimId lhsId)
+            ExpressionGui.grammarLabel "◗" (Widget.toAnimId lhsId)
                 >>= ExpressionGui.makeFocusableView (Widget.joinId lhsId ["param"])
                 <&> ExpressionGui.egWidget %~ Widget.weakerEvents actions
                 <&> (:[])
