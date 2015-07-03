@@ -28,7 +28,7 @@ redundantTypesDefaultTop topRedundant f (Expression body pl) =
         <&> BodyApply & mk
     BodyCase (Case kind alts caseTail mAddAlt entityId) ->
         Case
-        <$> (kind & Lens.traversed . redundantTypesDefaultTop True %%~ f)
+        <$> (kind & Lens.traversed %%~ recurse)
         <*> ( alts
               & Lens.traversed . Lens.traversed
               . rBody . _BodyLam . Lens.traversed
