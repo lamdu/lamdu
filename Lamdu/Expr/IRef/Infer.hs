@@ -20,12 +20,14 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.Nominal (Nominal)
+import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Error as InferErr
-import           Lamdu.Infer.Load (Loader(..))
+import           Lamdu.Infer.Load (Loader(Loader))
 import qualified Lamdu.Infer.Load as InferLoad
 import qualified Lamdu.Infer.Recursive as Recursive
 import           Lamdu.Infer.Unify (unify)
@@ -46,7 +48,7 @@ instance Pretty Error where
 loader :: MonadA m => Loader (EitherT Error (T m))
 loader =
     Loader
-    { loadTypeOf = \globalId ->
+    { InferLoad.loadTypeOf = \globalId ->
         do
             defBody <- lift $ Transaction.readIRef $ ExprIRef.defI globalId
             case defBody of
@@ -54,14 +56,18 @@ loader =
                     return scheme
                 Definition.BodyBuiltin (Definition.Builtin _ scheme) -> return scheme
                 _ -> left UnexportedGlobalReferred -- Reference to global with non-exported type!
-    , loadNominal = \tid ->
-          do
-              let iref = ExprIRef.nominalI tid
-              e <- lift $ Transaction.irefExists iref
-              if e
-                  then lift $ Transaction.readIRef iref
-                  else fail "Missing Nominal Value"
+    , InferLoad.loadNominal = lift . loadNominal
     }
+
+loadNominal :: MonadA m => T.Id -> T m Nominal
+loadNominal tid =
+    do
+        e <- Transaction.irefExists iref
+        if e
+            then Transaction.readIRef iref
+            else fail "Missing Nominal Value"
+    where
+        iref = ExprIRef.nominalI tid
 
 type M m = StateT Infer.Context (EitherT Error (T m))
 
