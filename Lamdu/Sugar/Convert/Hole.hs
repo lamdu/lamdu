@@ -1,7 +1,7 @@
 {-# LANGUAGE ConstraintKinds, OverloadedStrings, RankNTypes #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert, convertPlain
-    , mkHoleSuggesteds, addSuggestedOptions, mkHoleOption
+    , withSuggestedOptions, mkHoleOption
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
@@ -77,6 +77,77 @@ convertPlain mInjectedArg exprPl =
     >>= addActions exprPl
     <&> rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
 
+mkHoleOption ::
+    MonadA m => ConvertM.Context m -> Input.Payload m a -> Val () -> HoleOption Guid m
+mkHoleOption sugarContext exprPl val =
+    HoleOption
+    { _hoVal = val
+    , _hoSugaredBaseExpr =
+        case val ^? ExprLens.valGlobal of
+        Just g -> getGlobalExpr g & return
+        Nothing -> sugar sugarContext exprPl val
+    }
+    where
+        -- HACK:
+        -- Avoid sugar converting get-globals because their inference can fail.
+        -- The generated expr is only used to get names from.
+        getGlobalExpr globId =
+            GetVarNamed NamedVar
+            { _nvName = ExprIRef.defI globId & UniqueId.toGuid
+            , _nvJumpTo = error "HACK getGlobalExpr"
+            , _nvVarType = GetDefinition
+            } & BodyGetVar & (`Expression` error "HACK getGlobalExpr")
+
+mkHoleSuggesteds ::
+    MonadA m => ConvertM.Context m -> Input.Payload m a -> [HoleOption Guid m]
+mkHoleSuggesteds sugarContext exprPl =
+    exprPl ^. Input.inferred . Infer.plType
+    & suggestValueWith mkVar
+    <&> mkHoleOption sugarContext exprPl . (`evalState` (0 :: Int))
+    where
+        mkVar = do
+            i <- State.get
+            State.modify (+1)
+            return . fromString $ "var" ++ show i
+
+withSuggestedOptions ::
+    MonadA m => ConvertM.Context m -> Input.Payload m a ->
+    [HoleOption Guid m] -> [HoleOption Guid m]
+withSuggestedOptions sugarContext exprPl options
+    | null suggesteds = options
+    | otherwise = suggesteds ++ filter (not . equivalentToSuggested) options
+    where
+        suggesteds =
+            mkHoleSuggesteds sugarContext exprPl
+            & filter (Lens.nullOf (hoVal . ExprLens.valHole))
+        equivalentToSuggested x =
+            any (V.alphaEq (x ^. hoVal)) (suggesteds ^.. Lens.traverse . hoVal)
+
+mkOptions :: MonadA m => Input.Payload m a -> ConvertM m [HoleOption Guid m]
+mkOptions exprPl =
+    do
+        sugarContext <- ConvertM.readContext
+        tids <- ConvertM.codeAnchor Anchors.tids >>= ConvertM.getP
+        globals <- ConvertM.codeAnchor Anchors.globals >>= ConvertM.getP
+        concat
+            [ exprPl ^. Input.inferred . Infer.plScope
+                & Infer.scopeToTypeMap
+                & Map.keys
+                & concatMap (getLocalScopeGetVars sugarContext)
+            , globals
+                & filter (/= sugarContext ^. ConvertM.scDefI)
+                <&> P.global . ExprIRef.globalId
+            , do
+                tid <- tids
+                f <- [V.BFromNom, V.BToNom]
+                [ V.Nom tid P.hole & f & V.Val () ]
+            , [ P.abs "NewLambda" P.hole, P.recEmpty, P.absurd
+              , P.inject Builtins.nilTag P.recEmpty & P.toNom Builtins.listTid
+              ]
+            ]
+            <&> mkHoleOption sugarContext exprPl
+            & return
+
 mkWritableHoleActions ::
     (MonadA m) =>
     Maybe (Val (Input.Payload m a)) ->
@@ -85,10 +156,9 @@ mkWritableHoleActions ::
 mkWritableHoleActions mInjectedArg exprPl stored = do
     sugarContext <- ConvertM.readContext
     options <- mkOptions exprPl
-    suggesteds <- mkHoleSuggesteds exprPl
     pure HoleActions
         { _holeResults = mkHoleResults mInjectedArg sugarContext exprPl stored
-        , _holeOptions = addSuggestedOptions suggesteds options
+        , _holeOptions = withSuggestedOptions sugarContext exprPl options
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
         }
 
@@ -127,76 +197,6 @@ sugar sugarContext exprPl val =
     where
         mkPayload (pl, x) = Input.mkUnstoredPayload x pl
         holeInferred = exprPl ^. Input.inferred
-
-mkHoleOption ::
-    MonadA m => Input.Payload m a -> Val () -> ConvertM m (HoleOption Guid m)
-mkHoleOption exprPl val =
-    do
-        sugarContext <- ConvertM.readContext
-        return HoleOption
-            { _hoVal = val
-            , _hoSugaredBaseExpr =
-                case val ^? ExprLens.valGlobal of
-                Just g -> getGlobalExpr g & return
-                Nothing -> sugar sugarContext exprPl val
-            }
-    where
-        -- HACK:
-        -- Avoid sugar converting get-globals because their inference can fail.
-        -- The generated expr is only used to get names from.
-        getGlobalExpr globId =
-            GetVarNamed NamedVar
-            { _nvName = ExprIRef.defI globId & UniqueId.toGuid
-            , _nvJumpTo = error "HACK getGlobalExpr"
-            , _nvVarType = GetDefinition
-            } & BodyGetVar & (`Expression` error "HACK getGlobalExpr")
-
-mkHoleSuggesteds ::
-    MonadA m => Input.Payload m a -> ConvertM m [HoleOption Guid m]
-mkHoleSuggesteds exprPl =
-    exprPl ^. Input.inferred . Infer.plType
-    & suggestValueWith mkVar
-    & mapM (mkHoleOption exprPl . (`evalState` (0 :: Int)))
-    where
-        mkVar = do
-            i <- State.get
-            State.modify (+1)
-            return . fromString $ "var" ++ show i
-
-mkOptions :: MonadA m => Input.Payload m a -> ConvertM m [HoleOption Guid m]
-mkOptions exprPl =
-    do
-        sugarContext <- ConvertM.readContext
-        tids <- ConvertM.codeAnchor Anchors.tids >>= ConvertM.getP
-        globals <- ConvertM.codeAnchor Anchors.globals >>= ConvertM.getP
-        concat
-            [ exprPl ^. Input.inferred . Infer.plScope
-                & Infer.scopeToTypeMap
-                & Map.keys
-                & concatMap (getLocalScopeGetVars sugarContext)
-            , globals
-                & filter (/= sugarContext ^. ConvertM.scDefI)
-                <&> P.global . ExprIRef.globalId
-            , do
-                tid <- tids
-                f <- [V.BFromNom, V.BToNom]
-                [ V.Nom tid P.hole & f & V.Val () ]
-            , [ P.abs "NewLambda" P.hole, P.recEmpty, P.absurd
-              , P.inject Builtins.nilTag P.recEmpty & P.toNom Builtins.listTid
-              ]
-            ]
-            & mapM (mkHoleOption exprPl)
-
-addSuggestedOptions ::
-    MonadA m => [HoleOption name m] -> [HoleOption name m] -> [HoleOption name m]
-addSuggestedOptions rawSuggested options
-    | null suggesteds = options
-    | otherwise = suggesteds ++ filter (not . equivalentToSuggested) options
-    where
-        suggesteds =
-            filter (Lens.nullOf (hoVal . ExprLens.valHole)) rawSuggested
-        equivalentToSuggested x =
-            any (V.alphaEq (x ^. hoVal)) (suggesteds ^.. Lens.traverse . hoVal)
 
 mkHole ::
     (MonadA m, Monoid a) =>

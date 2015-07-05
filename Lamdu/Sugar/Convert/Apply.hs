@@ -147,8 +147,9 @@ ipType = Input.inferred . Infer.plType
 
 mkAppliedHoleOptions ::
     MonadA m =>
-    Expression name m a -> Input.Payload m a -> ConvertM m [HoleOption Guid m]
-mkAppliedHoleOptions argS exprPl =
+    ConvertM.Context m -> Expression name m a -> Input.Payload m a ->
+    [HoleOption Guid m]
+mkAppliedHoleOptions sugarContext argS exprPl =
     getFields ++
     [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ] ++
     [ P.toNom Builtins.listTid $
@@ -161,7 +162,7 @@ mkAppliedHoleOptions argS exprPl =
         )
       ]
     ]
-    & mapM (ConvertHole.mkHoleOption exprPl)
+    <&> ConvertHole.mkHoleOption sugarContext exprPl
     where
         argType = argS ^. rPayload . plAnnotation . aInferredType
         getFields =
@@ -195,11 +196,12 @@ convertAppliedHole funcI argS argI exprPl =
                       else UnwrapTypeMismatch
                 }
         do
-            suggesteds <- ConvertHole.mkHoleSuggesteds (funcI ^. V.payload)
-            options <- mkAppliedHoleOptions argS exprPl
+            sugarContext <- ConvertM.readContext
+            let options = mkAppliedHoleOptions sugarContext argS exprPl
             ConvertHole.convertPlain (Just argI) exprPl
                 <&> rBody . _BodyHole . holeMActions . Lens._Just . holeOptions %~
-                    ConvertHole.addSuggestedOptions suggesteds . mappend options
+                    ConvertHole.withSuggestedOptions sugarContext (funcI ^. V.payload) .
+                    mappend options
             & lift
             <&> rBody . _BodyHole . holeMArg .~ Just holeArg
             <&> rPayload . plData <>~ funcI ^. V.payload . Input.userData
