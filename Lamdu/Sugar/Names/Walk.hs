@@ -134,12 +134,13 @@ toHoleOption ::
     MonadNaming m =>
     HoleOption (OldName m) (TM m) ->
     m (HoleOption (NewName m) (TM m))
-toHoleOption option =
+toHoleOption option@HoleOption{..} =
     do
         InTransaction run <- opRun
-        option
-            & hoSugaredBaseExpr %~ (>>= run . toExpression)
-            & pure
+        pure option
+            { _hoSugaredBaseExpr = _hoSugaredBaseExpr >>= run . toExpression
+            , _hoResults = _hoResults <&> _2 %~ (>>= run . toHoleResult)
+            }
 
 toHoleActions ::
     MonadNaming m =>
@@ -149,11 +150,9 @@ toHoleActions ha@HoleActions {..} =
     do
         InTransaction run <- opRun
         pure ha
-            { _holeResults =
-                _holeResults
-                & Lens.mapped . Lens.mapped . _2 %~
-                    (>>= run . toHoleResult)
-            , _holeOptions = _holeOptions >>= run . traverse toHoleOption
+            { _holeOptions = _holeOptions >>= run . traverse toHoleOption
+            , _holeOptionLiteralInt =
+                _holeOptionLiteralInt <&> (>>= run . toHoleOption)
             }
 
 toHoleArg ::

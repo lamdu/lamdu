@@ -68,8 +68,8 @@ module Lamdu.Sugar.Types
     , FuncParam(..), fpName, fpId, fpAnnotation, fpMActions, fpHiddenIds
     , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
-    , HoleOption(..), hoVal, hoSugaredBaseExpr
-    , HoleActions(..), holeResults, holeGuid, holeOptions
+    , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
+    , HoleActions(..), holeGuid, holeOptions, holeOptionLiteralInt
     , Hole(..), holeMActions, holeMArg
     , ScopeGetVar(..), sgvGetVar, sgvVal
     , TIdG(..), tidgName, tidgTId, tidgEntityId
@@ -225,13 +225,14 @@ data TIdG name = TIdG
 data HoleOption name m = HoleOption
     { _hoVal :: Val ()
     , _hoSugaredBaseExpr :: T m (Expression name m ())
+    , -- A group in the hole results based on this option
+      _hoResults :: ListT (T m) (HoleResultScore, T m (HoleResult name m))
     }
 
 data HoleActions name m = HoleActions
-    { _holeResults ::
-            Val () -> ListT (T m) (HoleResultScore, T m (HoleResult name m))
-    , _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
+    { _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
     , _holeOptions :: T m [HoleOption name m]
+    , _holeOptionLiteralInt :: Integer -> T m (HoleOption name m)
     }
 
 data Unwrap m

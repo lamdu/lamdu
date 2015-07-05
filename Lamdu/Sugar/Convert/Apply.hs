@@ -147,9 +147,13 @@ ipType = Input.inferred . Infer.plType
 
 mkAppliedHoleOptions ::
     MonadA m =>
-    ConvertM.Context m -> Expression name m a -> Input.Payload m a ->
+    ConvertM.Context m ->
+    Val (Input.Payload m a) ->
+    Expression name m a ->
+    Input.Payload m a ->
+    ExprIRef.ValIProperty m ->
     [HoleOption Guid m]
-mkAppliedHoleOptions sugarContext argS exprPl =
+mkAppliedHoleOptions sugarContext argI argS exprPl stored =
     getFields ++
     [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ] ++
     [ P.toNom Builtins.listTid $
@@ -162,7 +166,7 @@ mkAppliedHoleOptions sugarContext argS exprPl =
         )
       ]
     ]
-    <&> ConvertHole.mkHoleOption sugarContext exprPl
+    <&> ConvertHole.mkHoleOption sugarContext (Just argI) exprPl stored
     where
         argType = argS ^. rPayload . plAnnotation . aInferredType
         getFields =
@@ -197,11 +201,15 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 }
         do
             sugarContext <- ConvertM.readContext
-            let options = mkAppliedHoleOptions sugarContext argS exprPl
             ConvertHole.convertCommon (Just argI) exprPl
-                <&> rBody . _BodyHole . holeMActions . Lens._Just . holeOptions . Lens.mapped %~
-                    ConvertHole.withSuggestedOptions sugarContext (funcI ^. V.payload) .
-                    mappend options
+                <&> case exprPl ^. Input.mStored of
+                    Nothing -> id
+                    Just stored ->
+                        rBody . _BodyHole . holeMActions . Lens._Just . holeOptions . Lens.mapped
+                        %~  ConvertHole.withSuggestedOptions sugarContext
+                            (Just argI)
+                            (funcI ^. V.payload . Input.inferred . Infer.plType) exprPl stored
+                          . mappend (mkAppliedHoleOptions sugarContext argI argS exprPl stored)
             & lift
             <&> rBody . _BodyHole . holeMArg .~ Just holeArg
             <&> rPayload . plData <>~ funcI ^. V.payload . Input.userData

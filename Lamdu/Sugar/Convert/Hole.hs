@@ -78,14 +78,18 @@ convertCommon mInjectedArg exprPl =
     <&> rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
 
 mkHoleOption ::
-    MonadA m => ConvertM.Context m -> Input.Payload m a -> Val () -> HoleOption Guid m
-mkHoleOption sugarContext exprPl val =
+    MonadA m => ConvertM.Context m ->
+    Maybe (Val (Input.Payload m a)) ->
+    Input.Payload m a -> ExprIRef.ValIProperty m ->
+    Val () -> HoleOption Guid m
+mkHoleOption sugarContext mInjectedArg exprPl stored val =
     HoleOption
     { _hoVal = val
     , _hoSugaredBaseExpr =
         case val ^? ExprLens.valGlobal of
         Just g -> getGlobalExpr g & return
         Nothing -> sugar sugarContext exprPl val
+    , _hoResults = mkHoleResults mInjectedArg sugarContext exprPl stored val
     }
     where
         -- HACK:
@@ -99,11 +103,13 @@ mkHoleOption sugarContext exprPl val =
             } & BodyGetVar & (`Expression` error "HACK getGlobalExpr")
 
 mkHoleSuggesteds ::
-    MonadA m => ConvertM.Context m -> Input.Payload m a -> [HoleOption Guid m]
-mkHoleSuggesteds sugarContext exprPl =
-    exprPl ^. Input.inferred . Infer.plType
-    & suggestValueWith mkVar
-    <&> mkHoleOption sugarContext exprPl . (`evalState` (0 :: Int))
+    MonadA m =>
+    ConvertM.Context m -> Maybe (Val (Input.Payload m a)) -> Type ->
+    Input.Payload m a -> ExprIRef.ValIProperty m -> [HoleOption Guid m]
+mkHoleSuggesteds sugarContext mInjectedArg typ exprPl stored =
+    suggestValueWith mkVar typ
+    <&> mkHoleOption sugarContext mInjectedArg exprPl stored .
+        (`evalState` (0 :: Int))
     where
         mkVar = do
             i <- State.get
@@ -111,20 +117,25 @@ mkHoleSuggesteds sugarContext exprPl =
             return . fromString $ "var" ++ show i
 
 withSuggestedOptions ::
-    MonadA m => ConvertM.Context m -> Input.Payload m a ->
+    MonadA m => ConvertM.Context m -> Maybe (Val (Input.Payload m a)) ->
+    Type -> Input.Payload m a -> ExprIRef.ValIProperty m ->
     [HoleOption Guid m] -> [HoleOption Guid m]
-withSuggestedOptions sugarContext exprPl options
+withSuggestedOptions sugarContext mInjectedArg typ exprPl stored options
     | null suggesteds = options
     | otherwise = suggesteds ++ filter (not . equivalentToSuggested) options
     where
         suggesteds =
-            mkHoleSuggesteds sugarContext exprPl
+            mkHoleSuggesteds sugarContext mInjectedArg typ exprPl stored
             & filter (Lens.nullOf (hoVal . ExprLens.valHole))
         equivalentToSuggested x =
             any (V.alphaEq (x ^. hoVal)) (suggesteds ^.. Lens.traverse . hoVal)
 
-mkOptions :: MonadA m => ConvertM.Context m -> Input.Payload m a -> T m [HoleOption Guid m]
-mkOptions sugarContext exprPl =
+mkOptions ::
+    MonadA m => ConvertM.Context m ->
+    Maybe (Val (Input.Payload m a)) ->
+    Input.Payload m a -> ExprIRef.ValIProperty m ->
+    T m [HoleOption Guid m]
+mkOptions sugarContext mInjectedArg exprPl stored =
     do
         tids <-
             sugarContext ^. ConvertM.scCodeAnchors
@@ -148,7 +159,7 @@ mkOptions sugarContext exprPl =
               , P.inject Builtins.nilTag P.recEmpty & P.toNom Builtins.listTid
               ]
             ]
-            <&> mkHoleOption sugarContext exprPl
+            <&> mkHoleOption sugarContext mInjectedArg exprPl stored
             & return
 
 mkWritableHoleActions ::
@@ -159,9 +170,13 @@ mkWritableHoleActions ::
 mkWritableHoleActions mInjectedArg exprPl stored = do
     sugarContext <- ConvertM.readContext
     pure HoleActions
-        { _holeResults = mkHoleResults mInjectedArg sugarContext exprPl stored
-        , _holeOptions =
-            mkOptions sugarContext exprPl <&> withSuggestedOptions sugarContext exprPl
+        { _holeOptions =
+            mkOptions sugarContext mInjectedArg exprPl stored
+            <&> withSuggestedOptions sugarContext mInjectedArg
+                (exprPl ^. Input.inferred . Infer.plType) exprPl stored
+        , _holeOptionLiteralInt =
+            return . mkHoleOption sugarContext mInjectedArg exprPl stored .
+            Val () . V.BLeaf . V.LLiteralInteger
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
         }
 

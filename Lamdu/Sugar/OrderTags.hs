@@ -62,8 +62,9 @@ orderHoleResult = Sugar.holeResultConverted %%~ orderExpr
 
 orderHole :: MonadA m => Sugar.Hole name m a -> Sugar.Hole name m a
 orderHole =
-    Sugar.holeMActions . Lens._Just . Sugar.holeResults .
-    Lens.mapped . Lens.mapped . Lens._2 %~ (>>= orderHoleResult)
+    Sugar.holeMActions . Lens._Just .
+    Sugar.holeOptions . Lens.mapped . Lens.mapped . Sugar.hoResults .
+    Lens.mapped . Lens._2 %~ (>>= orderHoleResult)
 
 orderCase :: MonadA m => Order m (Sugar.Case name m a)
 orderCase = Sugar.cAlts %%~ orderByTag (^. Sugar.caTag . Sugar.tagVal)

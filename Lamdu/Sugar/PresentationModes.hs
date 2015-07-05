@@ -6,6 +6,7 @@ module Lamdu.Sugar.PresentationModes
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.Store.Guid (Guid)
 import           Data.Store.Transaction (Transaction)
@@ -65,8 +66,9 @@ addToHoleResult = Sugar.holeResultConverted %%~ addToExpr
 
 addToHole :: MonadA m => Sugar.Hole Guid m a -> Sugar.Hole Guid m a
 addToHole =
-    Sugar.holeMActions . Lens._Just . Sugar.holeResults .
-    Lens.mapped . Lens.mapped . Lens._2 %~ (>>= addToHoleResult)
+    Sugar.holeMActions . Lens._Just . Sugar.holeOptions .
+    Lens.mapped . Lens.mapped . Sugar.hoResults . Lens.mapped .
+    _2 %~ (>>= addToHoleResult)
 
 addToBody :: MonadA m => BodyU m pl -> T m (BodyU m pl)
 addToBody (Sugar.BodyApply a) = addToApply a <&> Sugar.BodyApply
