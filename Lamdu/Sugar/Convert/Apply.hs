@@ -150,8 +150,8 @@ mkAppliedHoleOptions ::
     Expression name m a -> Input.Payload m a -> ConvertM m [HoleOption Guid m]
 mkAppliedHoleOptions argS exprPl =
     getFields ++
-    [ P.app P.hole P.hole
-    , P.toNom Builtins.listTid $
+    [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ] ++
+    [ P.toNom Builtins.listTid $
       P.inject Builtins.consTag $
       P.record
       [ (Builtins.headTag, P.hole)
