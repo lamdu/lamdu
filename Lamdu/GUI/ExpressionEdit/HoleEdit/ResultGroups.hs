@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings, TemplateHaskell, FlexibleContexts, DeriveGeneric #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings, TemplateHaskell #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
     ( makeAll, HaveHiddenResults(..)
     , Result(..)
@@ -15,13 +15,10 @@ import           Control.MonadA (MonadA)
 import qualified Data.Char as Char
 import           Data.Function (on)
 import           Data.List (isInfixOf, isPrefixOf)
-import qualified Data.List as List
 import qualified Data.List.Class as ListClass
 import           Data.List.Utils (sortOn, nonEmptyAll)
 import           Data.Monoid (Monoid(..), (<>))
-import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Store.Transaction (Transaction)
-import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
 import           Lamdu.Expr.IRef (DefI)
@@ -40,22 +37,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
-data GroupPrecedence = LowPrecedence | HighPrecedence
-    deriving (Eq, Ord)
-instance Monoid GroupPrecedence where
-    mempty = LowPrecedence
-    mappend = max
-
-data GroupAttributes = GroupAttributes
-    { _groupSearchTerms :: [String]
-    , _precedence :: GroupPrecedence
-    } deriving (Generic)
-instance Monoid GroupAttributes where
-    mempty = def_mempty
-    mappend = def_mappend
-
 data Group def = Group
-    { _groupAttributes :: GroupAttributes
+    { _groupSearchTerms :: [String]
     , _groupBaseExpr :: Val ()
     }
 type GroupM m = Group (DefI m)
@@ -143,7 +126,7 @@ makeResultsList holeInfo group =
     <&> Lens.mapped %~ rlPreferred .~ toPreferred
     where
         toPreferred
-            | Lens.anyOf groupAttributes (preferFor searchTerm) group = Preferred
+            | searchTerm `elem` (group ^. groupSearchTerms) = Preferred
             | otherwise = NotPreferred
         searchTerm = ehiSearchTerm holeInfo
         baseExpr = group ^. groupBaseExpr
@@ -209,87 +192,73 @@ searchTermsOfBody (Sugar.BodyCase cas) =
 searchTermsOfBody Sugar.BodyInject {} = ["inject", "[]"]
 searchTermsOfBody Sugar.BodyToNom {} = []
 searchTermsOfBody Sugar.BodyFromNom {} = []
-searchTermsOfBody Sugar.BodyLiteralInteger {} = []
+searchTermsOfBody (Sugar.BodyLiteralInteger i) = [show i]
 searchTermsOfBody Sugar.BodyHole {} = []
 searchTermsOfBody Sugar.BodyGetVar {} = []
 
-holeSuggested :: MonadA m => Sugar.HoleOption (Name m) m -> T m (Group def)
-holeSuggested suggested =
+mkGroup :: MonadA m => Sugar.HoleOption (Name m) m -> T m (Group def)
+mkGroup suggested =
     do
         sugaredBaseExpr <- suggested ^. Sugar.hsSugaredBaseExpr
         let searchTerms =
-                "suggested"
-                : (NamesGet.fromExpression sugaredBaseExpr <&> searchTermOfName)
+                (NamesGet.fromExpression sugaredBaseExpr <&> searchTermOfName)
                 ++ concatMap searchTermsOfBody
                 (sugaredBaseExpr ^..
                  SugarLens.subExprPayloads . Lens.asIndex . Sugar.rBody)
         pure Group
-            { _groupAttributes = GroupAttributes searchTerms HighPrecedence
+            { _groupSearchTerms = searchTerms
             , _groupBaseExpr = suggested ^. Sugar.hsVal
             }
 
 addSuggestedGroups :: MonadA m => HoleInfo m -> [Group def] -> T m [Group def]
 addSuggestedGroups holeInfo groups =
     suggesteds
-    & filter (Lens.nullOf (Sugar.hsVal . ExprLens.valHole))
-    & Lens.traverse %%~ holeSuggested
-    <&> Lens.traverse . groupAttributes <>~ dupsGroupNames
-    <&> (++ others)
+    & Lens.traverse %%~ mkGroup
+    <&> (++ filter (not . equivalentToSuggested) groups)
     where
-        suggesteds = hiHole holeInfo ^. Sugar.holeSuggesteds
+        suggesteds =
+            hiHole holeInfo ^. Sugar.holeSuggesteds
+            & filter (Lens.nullOf (Sugar.hsVal . ExprLens.valHole))
         equivalentToSuggested x =
-            any (V.alphaEq x)
-            (suggesteds ^.. Lens.traverse . Sugar.hsVal)
-        (dupsOfSuggested, others) =
-            List.partition (equivalentToSuggested . (^. groupBaseExpr)) groups
-        dupsGroupNames = dupsOfSuggested ^. Lens.traverse . groupAttributes
+            any (V.alphaEq (x ^. groupBaseExpr)) (suggesteds ^.. Lens.traverse . Sugar.hsVal)
 
-primitiveGroups :: EditableHoleInfo m -> [GroupM m]
-primitiveGroups holeInfo =
-    [ mkGroupBody HighPrecedence [searchTerm] $
-        V.BLeaf $ V.LLiteralInteger $ read searchTerm
+literalIntGroups :: EditableHoleInfo m -> [GroupM m]
+literalIntGroups holeInfo =
+    [ Group
+      { _groupSearchTerms = [searchTerm]
+      , _groupBaseExpr = Val () $ V.BLeaf $ V.LLiteralInteger $ read searchTerm
+      }
     | nonEmptyAll Char.isDigit searchTerm
     ]
     where
         searchTerm = ehiSearchTerm holeInfo
-        mkGroupBody prec terms body = Group
-            { _groupAttributes = GroupAttributes terms prec
-            , _groupBaseExpr = Val () body
-            }
 
 makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [GroupM m]
 makeAllGroups editableHoleInfo =
-    hiHole holeInfo ^. Sugar.holeOptions & mapM holeSuggested
-    <&> (primitiveGroups editableHoleInfo ++)
+    hiHole holeInfo ^. Sugar.holeOptions
+    & mapM mkGroup
+    <&> (literalIntGroups editableHoleInfo ++)
     >>= addSuggestedGroups holeInfo
-    <&> holeMatches (^. groupAttributes) (ehiSearchTerm editableHoleInfo)
+    <&> holeMatches (ehiSearchTerm editableHoleInfo)
     where
         holeInfo = ehiInfo editableHoleInfo
 
-preferFor :: String -> GroupAttributes -> Bool
-preferFor searchTerm (GroupAttributes terms HighPrecedence) = searchTerm `elem` terms
-preferFor _ _ = False
-
-groupOrdering :: String -> GroupAttributes -> [Bool]
-groupOrdering searchTerm (GroupAttributes terms precedence) =
+groupOrdering :: String -> Group def -> [Bool]
+groupOrdering searchTerm group =
     map not
-    [ precedence == HighPrecedence
-    , match (==)
+    [ match (==)
     , match isPrefixOf
     , match insensitivePrefixOf
     , match isInfixOf
     ]
     where
         insensitivePrefixOf = isPrefixOf `on` map Char.toLower
-        match f = any (f searchTerm) terms
+        match f = any (f searchTerm) (group ^. groupSearchTerms)
 
-holeMatches :: (a -> GroupAttributes) -> String -> [a] -> [a]
-holeMatches getSearchTerms searchTerm =
-    sortOn (groupOrdering searchTerm . getSearchTerms) .
-    filter (nameMatch . getSearchTerms)
+holeMatches :: String -> [Group def] -> [Group def]
+holeMatches searchTerm =
+    sortOn (groupOrdering searchTerm) .
+    filter nameMatch
     where
-        nameMatch (GroupAttributes _ LowPrecedence)
-            | null searchTerm = False
-        nameMatch (GroupAttributes terms _) =
-            any (insensitiveInfixOf searchTerm) terms
+        nameMatch group = any (insensitiveInfixOf searchTerm) (group ^. groupSearchTerms)
         insensitiveInfixOf = isInfixOf `on` map Char.toLower
