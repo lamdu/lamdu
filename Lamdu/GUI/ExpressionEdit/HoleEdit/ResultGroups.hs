@@ -222,12 +222,10 @@ literalIntGroups holeInfo =
 
 makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [GroupM m]
 makeAllGroups editableHoleInfo =
-    hiHole holeInfo ^. Sugar.holeOptions
+    ehiActions editableHoleInfo ^. Sugar.holeOptions
     & mapM mkGroup
     <&> (literalIntGroups editableHoleInfo ++)
     <&> holeMatches (ehiSearchTerm editableHoleInfo)
-    where
-        holeInfo = ehiInfo editableHoleInfo
 
 groupOrdering :: String -> Group def -> [Bool]
 groupOrdering searchTerm group =

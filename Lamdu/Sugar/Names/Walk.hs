@@ -130,6 +130,17 @@ toHoleResult ::
     m (HoleResult (NewName m) (TM m))
 toHoleResult = holeResultConverted toExpression
 
+toHoleOption ::
+    MonadNaming m =>
+    HoleOption (OldName m) (TM m) ->
+    m (HoleOption (NewName m) (TM m))
+toHoleOption option =
+    do
+        InTransaction run <- opRun
+        option
+            & hsSugaredBaseExpr %~ (>>= run . toExpression)
+            & pure
+
 toHoleActions ::
     MonadNaming m =>
     HoleActions (OldName m) (TM m) ->
@@ -137,11 +148,13 @@ toHoleActions ::
 toHoleActions ha@HoleActions {..} =
     do
         InTransaction run <- opRun
+        options <- traverse toHoleOption _holeOptions
         pure ha
             { _holeResults =
                 _holeResults
                 & Lens.mapped . Lens.mapped . _2 %~
                     (>>= run . toHoleResult)
+            , _holeOptions = options
             }
 
 toHoleArg ::
@@ -155,17 +168,6 @@ toHoleArg arg@HoleArg{..} =
             { _haExpr = expr
             }
 
-toOption ::
-    MonadNaming m =>
-    HoleOption (OldName m) (TM m) ->
-    m (HoleOption (NewName m) (TM m))
-toOption option =
-    do
-        InTransaction run <- opRun
-        option
-            & hsSugaredBaseExpr %~ (>>= run . toExpression)
-            & pure
-
 toHole ::
     MonadNaming m =>
     Hole (OldName m) (TM m) (OldExpression m a) ->
@@ -174,11 +176,9 @@ toHole hole@Hole {..} =
     do
         mActions <- _holeMActions & Lens._Just %%~ toHoleActions
         mArg <- _holeMArg & Lens._Just %%~ toHoleArg
-        options <- _holeOptions & Lens.traversed %%~ toOption
         pure hole
             { _holeMActions = mActions
             , _holeMArg = mArg
-            , _holeOptions = options
             }
 
 toNamedVar ::

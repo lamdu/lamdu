@@ -84,8 +84,11 @@ mkWritableHoleActions ::
     ConvertM m (HoleActions Guid m)
 mkWritableHoleActions mInjectedArg exprPl stored = do
     sugarContext <- ConvertM.readContext
+    options <- mkOptions exprPl
+    suggesteds <- mkHoleSuggesteds exprPl
     pure HoleActions
         { _holeResults = mkHoleResults mInjectedArg sugarContext exprPl stored
+        , _holeOptions = addSuggestedOptions suggesteds options
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
         }
 
@@ -201,11 +204,8 @@ mkHole ::
     Input.Payload m a -> ConvertM m (Hole Guid m (ExpressionU m a))
 mkHole mInjectedArg exprPl = do
     mActions <- traverse (mkWritableHoleActions mInjectedArg exprPl) (exprPl ^. Input.mStored)
-    options <- mkOptions exprPl
-    suggesteds <- mkHoleSuggesteds exprPl
     pure Hole
         { _holeMActions = mActions
-        , _holeOptions = addSuggestedOptions suggesteds options
         , _holeMArg = Nothing
         }
 

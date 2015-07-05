@@ -65,16 +65,14 @@ module Lamdu.Sugar.Types
     , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
     , AnnotatedArg(..), aaTag, aaExpr
     , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
-    , FuncParam(..)
-        , fpName, fpId, fpAnnotation, fpMActions, fpHiddenIds
+    , FuncParam(..), fpName, fpId, fpAnnotation, fpMActions, fpHiddenIds
     , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
     , HoleOption(..), hsVal, hsSugaredBaseExpr
-    , Hole(..)
-        , holeMActions, holeMArg, holeOptions
+    , HoleActions(..), holeResults, holeGuid, holeOptions
+    , Hole(..), holeMActions, holeMArg
     , ScopeGetVar(..), sgvGetVar, sgvVal
     , TIdG(..), tidgName, tidgTId, tidgEntityId
-    , HoleActions(..), holeResults, holeGuid
     , HoleResultScore
     , HoleResult(..)
         , holeResultConverted
@@ -228,6 +226,7 @@ data HoleActions name m = HoleActions
     { _holeResults ::
             Val () -> ListT (T m) (HoleResultScore, T m (HoleResult name m))
     , _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
+    , _holeOptions :: [HoleOption name m]
     }
 
 data Unwrap m
@@ -246,7 +245,6 @@ data HoleOption name m = HoleOption
 
 data Hole name m expr = Hole
     { _holeMActions :: Maybe (HoleActions name m)
-    , _holeOptions :: [HoleOption name m]
     , _holeMArg :: Maybe (HoleArg name m expr)
     } deriving (Functor, Foldable, Traversable)
 
