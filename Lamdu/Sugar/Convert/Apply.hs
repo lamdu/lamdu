@@ -145,6 +145,29 @@ checkTypeMatch x y =
 ipType :: Lens.Lens' (Input.Payload m a) Type
 ipType = Input.inferred . Infer.plType
 
+mkAppliedHoleOptions ::
+    MonadA m =>
+    Expression name m a -> Input.Payload m a -> ConvertM m [HoleOption Guid m]
+mkAppliedHoleOptions argS exprPl =
+    getFields ++
+    [ P.app P.hole P.hole
+    , P.toNom Builtins.listTid $
+      P.inject Builtins.consTag $
+      P.record
+      [ (Builtins.headTag, P.hole)
+      , ( Builtins.tailTag
+        , P.toNom Builtins.listTid $
+          P.inject Builtins.nilTag P.recEmpty
+        )
+      ]
+    ]
+    & mapM (ConvertHole.mkHoleOption exprPl)
+    where
+        argType = argS ^. rPayload . plAnnotation . aInferredType
+        getFields =
+            argType ^.. ExprLens._TRecord . ExprLens.compositeTags
+            <&> P.getField P.hole
+
 convertAppliedHole ::
     (MonadA m, Monoid a) =>
     Val (Input.Payload m a) -> ExpressionU m a ->
@@ -173,22 +196,7 @@ convertAppliedHole funcI argS argI exprPl =
                 }
         do
             suggesteds <- ConvertHole.mkHoleSuggesteds (funcI ^. V.payload)
-            options <-
-                (argType ^.. ExprLens._TRecord . ExprLens.compositeTags
-                    <&> P.getField P.hole)
-                ++
-                [ P.app P.hole P.hole
-                , P.toNom Builtins.listTid $
-                  P.inject Builtins.consTag $
-                  P.record
-                  [ (Builtins.headTag, P.hole)
-                  , ( Builtins.tailTag
-                    , P.toNom Builtins.listTid $
-                      P.inject Builtins.nilTag P.recEmpty
-                    )
-                  ]
-                ]
-                & mapM (ConvertHole.mkHoleOption exprPl)
+            options <- mkAppliedHoleOptions argS exprPl
             ConvertHole.convertPlain (Just argI) exprPl
                 <&> rBody . _BodyHole . holeSuggesteds %~ mappend suggesteds
                 <&> rBody . _BodyHole . holeOptions %~ mappend options
@@ -200,7 +208,6 @@ convertAppliedHole funcI argS argI exprPl =
     where
         addEntityId = guidEntityId . Property.value
         guidEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
-        argType = argS ^. rPayload . plAnnotation . aInferredType
 
 convertAppliedCase ::
     (MonadA m, Monoid a) =>
