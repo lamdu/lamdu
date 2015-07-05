@@ -138,7 +138,7 @@ toHoleOption option =
     do
         InTransaction run <- opRun
         option
-            & hsSugaredBaseExpr %~ (>>= run . toExpression)
+            & hoSugaredBaseExpr %~ (>>= run . toExpression)
             & pure
 
 toHoleActions ::

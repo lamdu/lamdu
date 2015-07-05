@@ -198,7 +198,7 @@ searchTermsOfBody Sugar.BodyGetVar {} = []
 mkGroup :: MonadA m => Sugar.HoleOption (Name m) m -> T m (Group def)
 mkGroup suggested =
     do
-        sugaredBaseExpr <- suggested ^. Sugar.hsSugaredBaseExpr
+        sugaredBaseExpr <- suggested ^. Sugar.hoSugaredBaseExpr
         let searchTerms =
                 (NamesGet.fromExpression sugaredBaseExpr <&> searchTermOfName)
                 ++ concatMap searchTermsOfBody
@@ -206,7 +206,7 @@ mkGroup suggested =
                  SugarLens.subExprPayloads . Lens.asIndex . Sugar.rBody)
         pure Group
             { _groupSearchTerms = searchTerms
-            , _groupBaseExpr = suggested ^. Sugar.hsVal
+            , _groupBaseExpr = suggested ^. Sugar.hoVal
             }
 
 literalIntGroups :: EditableHoleInfo m -> [GroupM m]

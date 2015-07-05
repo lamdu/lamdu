@@ -134,8 +134,8 @@ mkHoleOption exprPl val =
     do
         sugarContext <- ConvertM.readContext
         return HoleOption
-            { _hsVal = val
-            , _hsSugaredBaseExpr =
+            { _hoVal = val
+            , _hoSugaredBaseExpr =
                 case val ^? ExprLens.valGlobal of
                 Just g -> getGlobalExpr g & return
                 Nothing -> sugar sugarContext exprPl val
@@ -194,9 +194,9 @@ addSuggestedOptions rawSuggested options
     | otherwise = suggesteds ++ filter (not . equivalentToSuggested) options
     where
         suggesteds =
-            filter (Lens.nullOf (hsVal . ExprLens.valHole)) rawSuggested
+            filter (Lens.nullOf (hoVal . ExprLens.valHole)) rawSuggested
         equivalentToSuggested x =
-            any (V.alphaEq (x ^. hsVal)) (suggesteds ^.. Lens.traverse . hsVal)
+            any (V.alphaEq (x ^. hoVal)) (suggesteds ^.. Lens.traverse . hoVal)
 
 mkHole ::
     (MonadA m, Monoid a) =>
