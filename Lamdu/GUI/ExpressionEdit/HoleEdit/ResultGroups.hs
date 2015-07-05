@@ -210,17 +210,18 @@ mkGroup suggested =
             , _groupBaseExpr = suggested ^. Sugar.hsVal
             }
 
-addSuggestedGroups :: MonadA m => HoleInfo m -> [Group def] -> T m [Group def]
-addSuggestedGroups holeInfo groups =
-    suggesteds
-    & Lens.traverse %%~ mkGroup
-    <&> (++ filter (not . equivalentToSuggested) groups)
+addSuggestedGroups ::
+    MonadA m => HoleInfo m ->
+    [Sugar.HoleOption (Name m) m] ->
+    [Sugar.HoleOption (Name m) m]
+addSuggestedGroups holeInfo options =
+    suggesteds ++ filter (not . equivalentToSuggested) options
     where
         suggesteds =
             hiHole holeInfo ^. Sugar.holeSuggesteds
             & filter (Lens.nullOf (Sugar.hsVal . ExprLens.valHole))
         equivalentToSuggested x =
-            any (V.alphaEq (x ^. groupBaseExpr)) (suggesteds ^.. Lens.traverse . Sugar.hsVal)
+            any (V.alphaEq (x ^. Sugar.hsVal)) (suggesteds ^.. Lens.traverse . Sugar.hsVal)
 
 literalIntGroups :: EditableHoleInfo m -> [GroupM m]
 literalIntGroups holeInfo =
@@ -236,9 +237,9 @@ literalIntGroups holeInfo =
 makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [GroupM m]
 makeAllGroups editableHoleInfo =
     hiHole holeInfo ^. Sugar.holeOptions
+    & addSuggestedGroups holeInfo
     & mapM mkGroup
     <&> (literalIntGroups editableHoleInfo ++)
-    >>= addSuggestedGroups holeInfo
     <&> holeMatches (ehiSearchTerm editableHoleInfo)
     where
         holeInfo = ehiInfo editableHoleInfo
