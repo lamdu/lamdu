@@ -71,7 +71,7 @@ module Lamdu.Sugar.Types
     , HoleArg(..), haExpr, haUnwrap
     , HoleOption(..), hsVal, hsSugaredBaseExpr
     , Hole(..)
-        , holeMActions, holeMArg, holeSuggesteds, holeOptions
+        , holeMActions, holeMArg, holeOptions
     , ScopeGetVar(..), sgvGetVar, sgvVal
     , TIdG(..), tidgName, tidgTId, tidgEntityId
     , HoleActions(..), holeResults, holeGuid
@@ -246,7 +246,6 @@ data HoleOption name m = HoleOption
 
 data Hole name m expr = Hole
     { _holeMActions :: Maybe (HoleActions name m)
-    , _holeSuggesteds :: [HoleOption name m]
     , _holeOptions :: [HoleOption name m]
     , _holeMArg :: Maybe (HoleArg name m expr)
     } deriving (Functor, Foldable, Traversable)

@@ -1,7 +1,7 @@
 {-# LANGUAGE ConstraintKinds, OverloadedStrings, RankNTypes #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert, convertPlain
-    , mkHoleSuggesteds, mkHoleOption
+    , mkHoleSuggesteds, addSuggestedOptions, mkHoleOption
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
@@ -184,18 +184,28 @@ mkOptions exprPl =
             ]
             & mapM (mkHoleOption exprPl)
 
+addSuggestedOptions ::
+    MonadA m => [HoleOption name m] -> [HoleOption name m] -> [HoleOption name m]
+addSuggestedOptions rawSuggested options
+    | null suggesteds = options
+    | otherwise = suggesteds ++ filter (not . equivalentToSuggested) options
+    where
+        suggesteds =
+            filter (Lens.nullOf (hsVal . ExprLens.valHole)) rawSuggested
+        equivalentToSuggested x =
+            any (V.alphaEq (x ^. hsVal)) (suggesteds ^.. Lens.traverse . hsVal)
+
 mkHole ::
     (MonadA m, Monoid a) =>
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (Hole Guid m (ExpressionU m a))
 mkHole mInjectedArg exprPl = do
     mActions <- traverse (mkWritableHoleActions mInjectedArg exprPl) (exprPl ^. Input.mStored)
-    suggested <- mkHoleSuggesteds exprPl
     options <- mkOptions exprPl
+    suggesteds <- mkHoleSuggesteds exprPl
     pure Hole
         { _holeMActions = mActions
-        , _holeSuggesteds = suggested
-        , _holeOptions = options
+        , _holeOptions = addSuggestedOptions suggesteds options
         , _holeMArg = Nothing
         }
 

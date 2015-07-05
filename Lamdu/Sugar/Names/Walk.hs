@@ -174,12 +174,10 @@ toHole hole@Hole {..} =
     do
         mActions <- _holeMActions & Lens._Just %%~ toHoleActions
         mArg <- _holeMArg & Lens._Just %%~ toHoleArg
-        suggested <- _holeSuggesteds & Lens.traversed %%~ toOption
         options <- _holeOptions & Lens.traversed %%~ toOption
         pure hole
             { _holeMActions = mActions
             , _holeMArg = mArg
-            , _holeSuggesteds = suggested
             , _holeOptions = options
             }
 

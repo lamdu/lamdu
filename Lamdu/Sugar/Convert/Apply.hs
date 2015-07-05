@@ -198,8 +198,8 @@ convertAppliedHole funcI argS argI exprPl =
             suggesteds <- ConvertHole.mkHoleSuggesteds (funcI ^. V.payload)
             options <- mkAppliedHoleOptions argS exprPl
             ConvertHole.convertPlain (Just argI) exprPl
-                <&> rBody . _BodyHole . holeSuggesteds %~ mappend suggesteds
-                <&> rBody . _BodyHole . holeOptions %~ mappend options
+                <&> rBody . _BodyHole . holeOptions %~
+                    ConvertHole.addSuggestedOptions suggesteds . mappend options
             & lift
             <&> rBody . _BodyHole . holeMArg .~ Just holeArg
             <&> rPayload . plData <>~ funcI ^. V.payload . Input.userData

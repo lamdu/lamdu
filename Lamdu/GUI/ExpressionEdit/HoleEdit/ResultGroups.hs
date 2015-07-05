@@ -22,7 +22,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
 import           Lamdu.Expr.IRef (DefI)
-import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm)
@@ -210,19 +209,6 @@ mkGroup suggested =
             , _groupBaseExpr = suggested ^. Sugar.hsVal
             }
 
-addSuggestedGroups ::
-    MonadA m => HoleInfo m ->
-    [Sugar.HoleOption (Name m) m] ->
-    [Sugar.HoleOption (Name m) m]
-addSuggestedGroups holeInfo options =
-    suggesteds ++ filter (not . equivalentToSuggested) options
-    where
-        suggesteds =
-            hiHole holeInfo ^. Sugar.holeSuggesteds
-            & filter (Lens.nullOf (Sugar.hsVal . ExprLens.valHole))
-        equivalentToSuggested x =
-            any (V.alphaEq (x ^. Sugar.hsVal)) (suggesteds ^.. Lens.traverse . Sugar.hsVal)
-
 literalIntGroups :: EditableHoleInfo m -> [GroupM m]
 literalIntGroups holeInfo =
     [ Group
@@ -237,7 +223,6 @@ literalIntGroups holeInfo =
 makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [GroupM m]
 makeAllGroups editableHoleInfo =
     hiHole holeInfo ^. Sugar.holeOptions
-    & addSuggestedGroups holeInfo
     & mapM mkGroup
     <&> (literalIntGroups editableHoleInfo ++)
     <&> holeMatches (ehiSearchTerm editableHoleInfo)
