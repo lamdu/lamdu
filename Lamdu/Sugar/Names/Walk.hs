@@ -148,13 +148,12 @@ toHoleActions ::
 toHoleActions ha@HoleActions {..} =
     do
         InTransaction run <- opRun
-        options <- traverse toHoleOption _holeOptions
         pure ha
             { _holeResults =
                 _holeResults
                 & Lens.mapped . Lens.mapped . _2 %~
                     (>>= run . toHoleResult)
-            , _holeOptions = options
+            , _holeOptions = _holeOptions >>= run . traverse toHoleOption
             }
 
 toHoleArg ::

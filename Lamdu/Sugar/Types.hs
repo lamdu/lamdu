@@ -231,7 +231,7 @@ data HoleActions name m = HoleActions
     { _holeResults ::
             Val () -> ListT (T m) (HoleResultScore, T m (HoleResult name m))
     , _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
-    , _holeOptions :: [HoleOption name m]
+    , _holeOptions :: T m [HoleOption name m]
     }
 
 data Unwrap m

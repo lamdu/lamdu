@@ -223,7 +223,7 @@ literalIntGroups holeInfo =
 makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [GroupM m]
 makeAllGroups editableHoleInfo =
     ehiActions editableHoleInfo ^. Sugar.holeOptions
-    & mapM mkGroup
+    >>= mapM mkGroup
     <&> (literalIntGroups editableHoleInfo ++)
     <&> holeMatches (ehiSearchTerm editableHoleInfo)
 

@@ -123,12 +123,15 @@ withSuggestedOptions sugarContext exprPl options
         equivalentToSuggested x =
             any (V.alphaEq (x ^. hoVal)) (suggesteds ^.. Lens.traverse . hoVal)
 
-mkOptions :: MonadA m => Input.Payload m a -> ConvertM m [HoleOption Guid m]
-mkOptions exprPl =
+mkOptions :: MonadA m => ConvertM.Context m -> Input.Payload m a -> T m [HoleOption Guid m]
+mkOptions sugarContext exprPl =
     do
-        sugarContext <- ConvertM.readContext
-        tids <- ConvertM.codeAnchor Anchors.tids >>= ConvertM.getP
-        globals <- ConvertM.codeAnchor Anchors.globals >>= ConvertM.getP
+        tids <-
+            sugarContext ^. ConvertM.scCodeAnchors
+            & Anchors.tids & Transaction.getP
+        globals <-
+            sugarContext ^. ConvertM.scCodeAnchors
+            & Anchors.globals & Transaction.getP
         concat
             [ exprPl ^. Input.inferred . Infer.plScope
                 & Infer.scopeToTypeMap
@@ -155,10 +158,10 @@ mkWritableHoleActions ::
     ConvertM m (HoleActions Guid m)
 mkWritableHoleActions mInjectedArg exprPl stored = do
     sugarContext <- ConvertM.readContext
-    options <- mkOptions exprPl
     pure HoleActions
         { _holeResults = mkHoleResults mInjectedArg sugarContext exprPl stored
-        , _holeOptions = withSuggestedOptions sugarContext exprPl options
+        , _holeOptions =
+            mkOptions sugarContext exprPl <&> withSuggestedOptions sugarContext exprPl
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
         }
 
