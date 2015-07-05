@@ -55,8 +55,8 @@ anchorTags =
     , (1, tailTag, "tail")
     , (0, nilTag, "Empty")
     , (1, consTag, "NonEmpty")
-    , (0, falseTag, "False")
-    , (1, trueTag, "True")
+    , (0, trueTag, "True")
+    , (1, falseTag, "False")
     , (0, nothingTag, "Nothing")
     , (1, justTag, "Just")
     ]
