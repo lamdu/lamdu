@@ -25,7 +25,6 @@ import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.String (IsString(..))
 import           Data.Traversable (traverse, sequenceA)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Anchors as Anchors
@@ -50,7 +49,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
-import           Lamdu.Sugar.Convert.Hole.Suggest (suggestValueWith)
+import           Lamdu.Sugar.Convert.Hole.Suggest (suggestValueWith, stateMkVar)
 import qualified System.Random as Random
 import           System.Random.Utils (genFromHashable)
 import           Text.PrettyPrint.HughesPJClass (pPrint)
@@ -107,14 +106,8 @@ mkHoleSuggesteds ::
     ConvertM.Context m -> Maybe (Val (Input.Payload m a)) -> Type ->
     Input.Payload m a -> ExprIRef.ValIProperty m -> [HoleOption Guid m]
 mkHoleSuggesteds sugarContext mInjectedArg typ exprPl stored =
-    suggestValueWith mkVar typ
-    <&> mkHoleOption sugarContext mInjectedArg exprPl stored .
-        (`evalState` (0 :: Int))
-    where
-        mkVar = do
-            i <- State.get
-            State.modify (+1)
-            return . fromString $ "var" ++ show i
+    suggestValueWith stateMkVar typ
+    <&> mkHoleOption sugarContext mInjectedArg exprPl stored . (`evalState` 0)
 
 withSuggestedOptions ::
     MonadA m => ConvertM.Context m -> Maybe (Val (Input.Payload m a)) ->

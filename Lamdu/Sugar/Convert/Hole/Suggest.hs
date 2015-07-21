@@ -1,16 +1,27 @@
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( suggestValueWith, suggestRecordWith
+    , stateMkVar
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>))
 import           Control.Compose ((:.)(..), unO)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Monad.Trans.State (StateT(..))
+import qualified Control.Monad.Trans.State as State
+import           Data.String (IsString(..))
 import qualified Lamdu.Expr.Pure as P
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+
+stateMkVar :: Monad m => StateT Int m V.Var
+stateMkVar =
+    do
+        i <- State.get
+        State.modify (+1)
+        "var" ++ show i & fromString & return
 
 suggestValueWith :: Applicative f => f V.Var -> Type -> [f (Val ())]
 suggestValueWith _ T.TVar{}                  = [pure P.hole]
