@@ -198,7 +198,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         do
             sugarContext <- ConvertM.readContext
             let options = mkAppliedHoleOptions sugarContext argS exprPl
-            ConvertHole.convertPlain (Just argI) exprPl
+            ConvertHole.convertCommon (Just argI) exprPl
                 <&> rBody . _BodyHole . holeMActions . Lens._Just . holeOptions . Lens.mapped %~
                     ConvertHole.withSuggestedOptions sugarContext (funcI ^. V.payload) .
                     mappend options

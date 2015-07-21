@@ -1,6 +1,6 @@
 {-# LANGUAGE ConstraintKinds, OverloadedStrings, RankNTypes #-}
 module Lamdu.Sugar.Convert.Hole
-    ( convert, convertPlain
+    ( convert, convertCommon
     , withSuggestedOptions, mkHoleOption
     ) where
 
@@ -64,14 +64,14 @@ convert ::
     (MonadA m, Monoid a) =>
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert exprPl =
-    convertPlain Nothing exprPl
+    convertCommon Nothing exprPl
     <&> rPayload . plActions . Lens._Just . setToHole .~ AlreadyAHole
     <&> rPayload . plActions . Lens._Just . extract .~ Nothing
 
-convertPlain ::
+convertCommon ::
     (MonadA m, Monoid a) =>
     Maybe (Val (Input.Payload m a)) -> Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertPlain mInjectedArg exprPl =
+convertCommon mInjectedArg exprPl =
     mkHole mInjectedArg exprPl
     <&> BodyHole
     >>= addActions exprPl
