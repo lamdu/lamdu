@@ -10,12 +10,13 @@ import           Control.Monad (MonadPlus(..), guard, unless)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Control.Monad.Trans.State (evalStateT)
+import           Control.Monad.Trans.State (evalState, evalStateT)
 import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import           Data.Maybe.Utils (maybeToMPlus)
 import           Data.Monoid (Monoid(..))
+import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
@@ -35,6 +36,7 @@ import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
+import           Lamdu.Sugar.Convert.Hole.Suggest (suggestValueConversion, stateMkVar)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -154,24 +156,30 @@ mkAppliedHoleOptions ::
     ExprIRef.ValIProperty m ->
     [HoleOption Guid m]
 mkAppliedHoleOptions sugarContext argI argS exprPl stored =
-    getFields ++
-    [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ] ++
-    [ P.toNom Builtins.listTid $
-      P.inject Builtins.consTag $
-      P.record
-      [ (Builtins.headTag, P.hole)
-      , ( Builtins.tailTag
-        , P.toNom Builtins.listTid $
-          P.inject Builtins.nilTag P.recEmpty
-        )
-      ]
-    ]
-    <&> ConvertHole.mkHoleOption sugarContext (Just argI) exprPl stored
+    suggestions ++ byDestType
     where
+        suggestions =
+            suggestValueConversion stateMkVar (argI <&> Monoid.First . Just)
+            argType dstType
+            <&> (`evalState` 0)
+            <&> Lens.mapped %~ Monoid.getFirst
+            <&> ConvertHole.mkHoleOptionFromInjected
+                sugarContext exprPl stored
+        byDestType =
+            [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ] ++
+            [ P.toNom Builtins.listTid $
+              P.inject Builtins.consTag $
+              P.record
+              [ (Builtins.headTag, P.hole)
+              , ( Builtins.tailTag
+                , P.toNom Builtins.listTid $
+                  P.inject Builtins.nilTag P.recEmpty
+                )
+              ]
+            ]
+            <&> ConvertHole.mkHoleOption sugarContext (Just argI) exprPl stored
         argType = argS ^. rPayload . plAnnotation . aInferredType
-        getFields =
-            argType ^.. ExprLens._TRecord . ExprLens.compositeTags
-            <&> P.getField P.hole
+        dstType = exprPl ^. Input.inferred . Infer.plType
 
 convertAppliedHole ::
     (MonadA m, Monoid a) =>
@@ -206,10 +214,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                     Nothing -> id
                     Just stored ->
                         rBody . _BodyHole . holeMActions . Lens._Just . holeOptions . Lens.mapped
-                        %~  ConvertHole.withSuggestedOptions sugarContext
-                            (Just argI)
-                            (funcI ^. V.payload . Input.inferred . Infer.plType) exprPl stored
-                          . mappend (mkAppliedHoleOptions sugarContext argI argS exprPl stored)
+                        %~  mappend (mkAppliedHoleOptions sugarContext argI argS exprPl stored)
             & lift
             <&> rBody . _BodyHole . holeMArg .~ Just holeArg
             <&> rPayload . plData <>~ funcI ^. V.payload . Input.userData

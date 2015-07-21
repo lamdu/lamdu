@@ -1,7 +1,7 @@
 {-# LANGUAGE ConstraintKinds, OverloadedStrings, RankNTypes #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert, convertCommon
-    , withSuggestedOptions, mkHoleOption
+    , withSuggestedOptions, mkHoleOption, mkHoleOptionFromInjected
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
@@ -40,7 +40,7 @@ import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)
-import           Lamdu.Infer.Update (update)
+import           Lamdu.Infer.Update (Update, update)
 import qualified Lamdu.Infer.Update as Update
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -76,6 +76,32 @@ convertCommon mInjectedArg exprPl =
     >>= addActions exprPl
     <&> rPayload . plActions . Lens._Just . wrap .~ WrapNotAllowed
 
+mkHoleOptionFromInjected ::
+    MonadA m =>
+    ConvertM.Context m ->
+    Input.Payload m a -> ExprIRef.ValIProperty m ->
+    Val (Maybe (Input.Payload m a)) -> HoleOption Guid m
+mkHoleOptionFromInjected sugarContext exprPl stored val =
+    HoleOption
+    { _hoVal = baseExpr
+    , _hoSugaredBaseExpr = sugar sugarContext exprPl baseExpr
+    , _hoResults =
+        do
+            (result, inferContext) <-
+                mkHoleResultValInjected exprPl val
+                & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
+            let newSugarContext = sugarContext & ConvertM.scInferContext .~ inferContext
+            return
+                ( resultScore (fst <$> result)
+                , mkHoleResult newSugarContext (exprPl ^. Input.entityId) stored result
+                )
+        <&> return & ListClass.joinL
+    }
+    where
+        baseExpr = pruneExpr val
+        pruneExpr (Val Just{} _) = P.hole
+        pruneExpr (Val Nothing b) = b <&> pruneExpr & Val ()
+
 mkHoleOption ::
     MonadA m => ConvertM.Context m ->
     Maybe (Val (Input.Payload m a)) ->
@@ -103,22 +129,23 @@ mkHoleOption sugarContext mInjectedArg exprPl stored val =
 
 mkHoleSuggesteds ::
     MonadA m =>
-    ConvertM.Context m -> Maybe (Val (Input.Payload m a)) -> Type ->
+    ConvertM.Context m -> Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ExprIRef.ValIProperty m -> [HoleOption Guid m]
-mkHoleSuggesteds sugarContext mInjectedArg typ exprPl stored =
-    suggestValueWith stateMkVar typ
+mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
+    exprPl ^. Input.inferred . Infer.plType
+    & suggestValueWith stateMkVar
     <&> mkHoleOption sugarContext mInjectedArg exprPl stored . (`evalState` 0)
 
 withSuggestedOptions ::
     MonadA m => ConvertM.Context m -> Maybe (Val (Input.Payload m a)) ->
-    Type -> Input.Payload m a -> ExprIRef.ValIProperty m ->
+    Input.Payload m a -> ExprIRef.ValIProperty m ->
     [HoleOption Guid m] -> [HoleOption Guid m]
-withSuggestedOptions sugarContext mInjectedArg typ exprPl stored options
+withSuggestedOptions sugarContext mInjectedArg exprPl stored options
     | null suggesteds = options
     | otherwise = suggesteds ++ filter (not . equivalentToSuggested) options
     where
         suggesteds =
-            mkHoleSuggesteds sugarContext mInjectedArg typ exprPl stored
+            mkHoleSuggesteds sugarContext mInjectedArg exprPl stored
             & filter (Lens.nullOf (hoVal . ExprLens.valHole))
         equivalentToSuggested x =
             any (V.alphaEq (x ^. hoVal)) (suggesteds ^.. Lens.traverse . hoVal)
@@ -165,8 +192,7 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
     pure HoleActions
         { _holeOptions =
             mkOptions sugarContext mInjectedArg exprPl stored
-            <&> withSuggestedOptions sugarContext mInjectedArg
-                (exprPl ^. Input.inferred . Infer.plType) exprPl stored
+            <&> withSuggestedOptions sugarContext mInjectedArg exprPl stored
         , _holeOptionLiteralInt =
             return . mkHoleOption sugarContext mInjectedArg exprPl stored .
             Val () . V.BLeaf . V.LLiteralInteger
@@ -428,15 +454,36 @@ applyForms empty val =
         inferPl = val ^. V.payload . _1
         plSameScope t = (inferPl & Infer.plType .~ t, empty)
 
-holeWrap :: a -> Type -> Val (Infer.Payload, a) -> Val (Infer.Payload, a)
-holeWrap empty resultType val =
-    Val (plSameScope resultType, empty) $
-    V.BApp $ V.Apply func val
+holeWrapIfNeeded ::
+    Monad m =>
+    Type -> Val (Infer.Payload, (Maybe a, IsInjected)) ->
+    StateT Infer.Context m (Val (Infer.Payload, (Maybe a, IsInjected)))
+holeWrapIfNeeded holeType val =
+    do
+        unifyResult <-
+            unify holeType (val ^. V.payload . _1 . Infer.plType) & liftInfer
+        updated <- Update.inferredVal val & liftUpdate
+        case unifyResult of
+            Right{} -> return updated
+            Left{} -> holeWrap holeType updated & liftUpdate
     where
+        liftUpdate = State.gets . Update.run
+        liftInfer = stateEitherSequence . Infer.run
+
+holeWrap ::
+    Type -> Val (Infer.Payload, (Maybe a, IsInjected)) ->
+    Update (Val (Infer.Payload, (Maybe a, IsInjected)))
+holeWrap resultType val =
+    update resultType <&> mk
+    where
+        mk updatedType =
+            V.Apply func val & V.BApp
+            & Val (plSameScope updatedType, emptyPl)
         plSameScope typ = inferPl & Infer.plType .~ typ
         inferPl = val ^. V.payload . _1
-        func = Val (plSameScope funcType, empty) $ V.BLeaf V.LHole
+        func = Val (plSameScope funcType, emptyPl) $ V.BLeaf V.LHole
         funcType = T.TFun (inferPl ^. Infer.plType) resultType
+        emptyPl = (Nothing, NotInjected)
 
 replaceEachUnwrappedHole :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
 replaceEachUnwrappedHole replaceHole =
@@ -501,6 +548,22 @@ holeResultsInject injectedArg val =
                 )
         injectedType = injectedArg ^. V.payload . Input.inferred . Infer.plType
 
+mkHoleResultValInjected ::
+    MonadA m =>
+    Input.Payload m dummy ->
+    Val (Maybe (Input.Payload m a)) ->
+    StateT Infer.Context (T m) (HoleResultVal m IsInjected)
+mkHoleResultValInjected exprPl val =
+    val
+    <&> toInjected
+    & infer inferred
+    & mapStateT (fmap (either (error "injected val infer failed") id) . runEitherT)
+    >>= holeWrapIfNeeded (inferred ^. Infer.plType)
+    where
+        inferred = exprPl ^. Input.inferred
+        toInjected Nothing = (Nothing, NotInjected)
+        toInjected (Just x) = (x ^. Input.mStored <&> Property.value, Injected)
+
 mkHoleResultVals ::
     MonadA m =>
     Maybe (Val (Input.Payload m a)) ->
@@ -508,27 +571,14 @@ mkHoleResultVals ::
     Val () ->
     StateT Infer.Context (ListT (T m)) (HoleResultVal m IsInjected)
 mkHoleResultVals mInjectedArg exprPl base =
-    do
-        inferredBase <-
-            base & infer inferred
-            & mapStateT eitherTtoListT
-            <&> Lens.traversed . _2 %~ (,) Nothing
-        form <- applyForms (Nothing, ()) inferredBase
-        let formType = form ^. V.payload . _1 . Infer.plType
-        injected <- maybe (return . markNotInjected) holeResultsInject mInjectedArg form
-        unifyResult <- unify holeType formType & liftInfer
-        injectedUpdated <- Update.inferredVal injected & liftUpdate
-        case unifyResult of
-            Right {} -> return injectedUpdated
-            Left {} ->
-                do
-                    updatedHoleType <- update holeType & liftUpdate
-                    return $ holeWrap (Nothing, NotInjected) updatedHoleType injectedUpdated
+    infer inferred base
+    & mapStateT eitherTtoListT
+    <&> Lens.traversed . _2 %~ (,) Nothing
+    >>= applyForms (Nothing, ())
+    >>= maybe (return . markNotInjected) holeResultsInject mInjectedArg
+    >>= holeWrapIfNeeded (inferred ^. Infer.plType)
     where
-        liftUpdate = State.gets . Update.run
-        liftInfer = stateEitherSequence . Infer.run
         inferred = exprPl ^. Input.inferred
-        holeType = inferred ^. Infer.plType
 
 mkHoleResult ::
     MonadA m =>

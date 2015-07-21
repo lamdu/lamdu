@@ -1,5 +1,6 @@
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( suggestValueWith, suggestRecordWith
+    , suggestValueConversion
     , stateMkVar
     ) where
 
@@ -9,7 +10,9 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.State (StateT(..))
 import qualified Control.Monad.Trans.State as State
+import           Data.Monoid (Monoid(..))
 import           Data.String (IsString(..))
+import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
@@ -22,6 +25,24 @@ stateMkVar =
         i <- State.get
         State.modify (+1)
         "var" ++ show i & fromString & return
+
+suggestValueConversion ::
+    (Monoid a, Applicative f) =>
+    f V.Var -> Val a -> Type -> Type -> [f (Val a)]
+suggestValueConversion _ arg (T.TInst name _params) _ =
+    [V.Nom name arg & V.BFromNom & V.Val mempty & pure]
+suggestValueConversion mkVar arg (T.TSum composite) r =
+    suggestCaseWith mkVar composite r
+    <&> Lens.mapped %~ applyCase
+    where
+        applyCase c =
+            c
+            & Lens.traversed .~ mempty
+            & (`V.Apply` arg) & V.BApp & V.Val mempty
+suggestValueConversion _ arg (T.TRecord composite) _ =
+    composite ^.. ExprLens.compositeTags
+    <&> pure . V.Val mempty . V.BGetField . V.GetField arg
+suggestValueConversion _ _ _ _ = []
 
 suggestValueWith :: Applicative f => f V.Var -> Type -> [f (Val ())]
 suggestValueWith _ T.TVar{}                  = [pure P.hole]
