@@ -1,4 +1,4 @@
-module Lamdu.Suggest
+module Lamdu.Sugar.Convert.Hole.Suggest
     ( suggestValueWith, suggestRecordWith
     ) where
 

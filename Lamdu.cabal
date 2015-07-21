@@ -260,6 +260,7 @@ Executable lamdu
                      , Lamdu.Sugar.Convert.GetField
                      , Lamdu.Sugar.Convert.GetVar
                      , Lamdu.Sugar.Convert.Hole
+                     , Lamdu.Sugar.Convert.Hole.Suggest
                      , Lamdu.Sugar.Convert.Inject
                      , Lamdu.Sugar.Convert.Input
                      , Lamdu.Sugar.Convert.List
@@ -277,7 +278,6 @@ Executable lamdu
                      , Lamdu.Sugar.PresentationModes
                      , Lamdu.Sugar.RedundantTypes
                      , Lamdu.Sugar.Types
-                     , Lamdu.Suggest
                      , Lamdu.VersionControl
                      , Lamdu.VersionControl.Actions
                      , Paths_lamdu_ide

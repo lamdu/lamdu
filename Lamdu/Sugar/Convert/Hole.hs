@@ -50,7 +50,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
-import           Lamdu.Suggest (suggestValueWith)
+import           Lamdu.Sugar.Convert.Hole.Suggest (suggestValueWith)
 import qualified System.Random as Random
 import           System.Random.Utils (genFromHashable)
 import           Text.PrettyPrint.HughesPJClass (pPrint)
