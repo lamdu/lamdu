@@ -21,7 +21,6 @@ import           Data.Monoid (Monoid(..), (<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
-import           Lamdu.Expr.IRef (DefI)
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm)
@@ -36,11 +35,10 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
-data Group def = Group
+data Group = Group
     { _groupSearchTerms :: [String]
     , _groupBaseExpr :: Val ()
     }
-type GroupM m = Group (DefI m)
 
 Lens.makeLenses ''Group
 
@@ -118,7 +116,7 @@ typeCheckToResultsList holeInfo baseId expr =
     typeCheckResults holeInfo expr
 
 makeResultsList ::
-    MonadA m => EditableHoleInfo m -> GroupM m ->
+    MonadA m => EditableHoleInfo m -> Group ->
     T m (Maybe (ResultsList m))
 makeResultsList holeInfo group =
     typeCheckToResultsList holeInfo baseId baseExpr
@@ -195,10 +193,10 @@ searchTermsOfBody (Sugar.BodyLiteralInteger i) = [show i]
 searchTermsOfBody Sugar.BodyHole {} = []
 searchTermsOfBody Sugar.BodyGetVar {} = []
 
-mkGroup :: MonadA m => Sugar.HoleOption (Name m) m -> T m (Group def)
-mkGroup suggested =
+mkGroup :: MonadA m => Sugar.HoleOption (Name m) m -> T m Group
+mkGroup option =
     do
-        sugaredBaseExpr <- suggested ^. Sugar.hoSugaredBaseExpr
+        sugaredBaseExpr <- option ^. Sugar.hoSugaredBaseExpr
         let searchTerms =
                 (NamesGet.fromExpression sugaredBaseExpr <&> searchTermOfName)
                 ++ concatMap searchTermsOfBody
@@ -206,10 +204,10 @@ mkGroup suggested =
                  SugarLens.subExprPayloads . Lens.asIndex . Sugar.rBody)
         pure Group
             { _groupSearchTerms = searchTerms
-            , _groupBaseExpr = suggested ^. Sugar.hoVal
+            , _groupBaseExpr = option ^. Sugar.hoVal
             }
 
-literalIntGroups :: EditableHoleInfo m -> [GroupM m]
+literalIntGroups :: EditableHoleInfo m -> [Group]
 literalIntGroups holeInfo =
     [ Group
       { _groupSearchTerms = [searchTerm]
@@ -220,14 +218,14 @@ literalIntGroups holeInfo =
     where
         searchTerm = ehiSearchTerm holeInfo
 
-makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [GroupM m]
+makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [Group]
 makeAllGroups editableHoleInfo =
     ehiActions editableHoleInfo ^. Sugar.holeOptions
     >>= mapM mkGroup
     <&> (literalIntGroups editableHoleInfo ++)
     <&> holeMatches (ehiSearchTerm editableHoleInfo)
 
-groupOrdering :: String -> Group def -> [Bool]
+groupOrdering :: String -> Group -> [Bool]
 groupOrdering searchTerm group =
     map not
     [ match (==)
@@ -239,7 +237,7 @@ groupOrdering searchTerm group =
         insensitivePrefixOf = isPrefixOf `on` map Char.toLower
         match f = any (f searchTerm) (group ^. groupSearchTerms)
 
-holeMatches :: String -> [Group def] -> [Group def]
+holeMatches :: String -> [Group] -> [Group]
 holeMatches searchTerm =
     sortOn (groupOrdering searchTerm) .
     filter nameMatch
