@@ -47,10 +47,10 @@ type T = Transaction
 convert ::
     (MonadA m, Monoid a) => V.Apply (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
-convert (V.Apply funcI argI) exprPl =
+convert app@(V.Apply funcI argI) exprPl =
     runMatcherT $ do
         argS <- lift $ ConvertM.convertSubexpression argI
-        justToLeft $ convertAppliedHole funcI argS argI exprPl
+        justToLeft $ convertAppliedHole app argS exprPl
         funcS <- ConvertM.convertSubexpression funcI & lift
         justToLeft $
             convertAppliedCase (funcS ^. rBody) (funcI ^. V.payload) argS exprPl
@@ -171,10 +171,10 @@ mkAppliedHoleOptions sugarContext argS exprPl =
 
 convertAppliedHole ::
     (MonadA m, Monoid a) =>
-    Val (Input.Payload m a) -> ExpressionU m a ->
-    Val (Input.Payload m a) -> Input.Payload m a ->
+    V.Apply (Val (Input.Payload m a)) -> ExpressionU m a ->
+    Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-convertAppliedHole funcI argS argI exprPl =
+convertAppliedHole (V.Apply funcI argI) argS exprPl =
     do
         guard $ Lens.has ExprLens.valHole funcI
         isTypeMatch <- lift $ checkTypeMatch (argI ^. V.payload . ipType) (exprPl ^. ipType)
