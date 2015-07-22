@@ -1,5 +1,5 @@
 module Lamdu.Sugar.Convert.Hole.Suggest
-    ( suggestValueWith, suggestRecordWith
+    ( suggestValueWith
     , suggestValueConversion
     , stateMkVar
     ) where
@@ -67,11 +67,12 @@ suggestValueWith _ T.TInst{}                 = [pure P.hole]
 -- TODO: Need access to the Nominals map here, to only suggest
 -- nominals that can fromNominal, and also offer to build the inner
 -- value
-suggestValueWith mkVar (T.TSum (T.CExtend f t sumType)) =
-    (suggestValueWith mkVar t <&> Lens.mapped %~ P.inject f)  ++
-    suggestValueWith mkVar (T.TSum sumType)
 suggestValueWith _ (T.TSum T.CEmpty)         = [] -- Void value uninhabitable
 suggestValueWith _ (T.TSum T.CVar {})        = [pure P.hole]
+suggestValueWith mkVar (T.TSum comp) =
+    comp ^.. ExprLens.compositeFields
+    >>= \(tag, typ) ->
+        suggestValueWith mkVar typ <&> Lens.mapped %~ P.inject tag
 suggestValueWith _ T.TInt                    = [pure P.hole]
 suggestValueWith mkVar (T.TRecord composite) =
     suggestRecordWith mkVar composite
