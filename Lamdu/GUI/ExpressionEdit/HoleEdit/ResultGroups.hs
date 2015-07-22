@@ -170,7 +170,7 @@ searchTermsOfBody (Sugar.BodyGetField gf) =
     [".", "field", "." ++ searchTermOfName (gf ^. Sugar.gfTag . Sugar.tagGName)]
 searchTermsOfBody (Sugar.BodyCase cas) =
     case cas of
-    Sugar.Case Sugar.LambdaCase [] Sugar.ClosedCase{} _ _ -> ["absurd"]
+    Sugar.Case Sugar.LambdaCase [] Sugar.ClosedCase{} _ _ -> ["absurd", "case", ":"]
     _ -> ["case", ":"]
 searchTermsOfBody Sugar.BodyInject {} = ["inject", "[]"]
 searchTermsOfBody Sugar.BodyToNom {} = []
