@@ -25,6 +25,7 @@ import           Data.Traversable (traverse)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.RecordVal as RecordVal
@@ -154,17 +155,16 @@ mkAppliedHoleOptions ::
     Expression name m a ->
     Input.Payload m a ->
     ExprIRef.ValIProperty m ->
-    [HoleOption Guid m]
+    T m [HoleOption Guid m]
 mkAppliedHoleOptions sugarContext argI argS exprPl stored =
-    suggestions ++ byDestType
+    suggestValueConversion IRefInfer.loadNominal stateMkVar
+    (argI <&> Monoid.First . Just) argType dstType
+    <&> Lens.mapped %~
+        ConvertHole.mkHoleOptionFromInjected
+        sugarContext exprPl stored
+        . (Lens.mapped %~ Monoid.getFirst) . (`evalState` 0)
+    <&> (++ byDestType)
     where
-        suggestions =
-            suggestValueConversion stateMkVar (argI <&> Monoid.First . Just)
-            argType dstType
-            <&> (`evalState` 0)
-            <&> Lens.mapped %~ Monoid.getFirst
-            <&> ConvertHole.mkHoleOptionFromInjected
-                sugarContext exprPl stored
         byDestType =
             [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ] ++
             [ P.toNom Builtins.listTid $
@@ -209,12 +209,20 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 }
         do
             sugarContext <- ConvertM.readContext
-            ConvertHole.convertCommon (Just argI) exprPl
-                <&> case exprPl ^. Input.mStored of
-                    Nothing -> id
-                    Just stored ->
-                        rBody . _BodyHole . holeMActions . Lens._Just . holeOptions . Lens.mapped
-                        %~  mappend (mkAppliedHoleOptions sugarContext argI argS exprPl stored)
+            hole <- ConvertHole.convertCommon (Just argI) exprPl
+            case exprPl ^. Input.mStored of
+                Nothing -> return hole
+                Just stored ->
+                    do
+                        options <-
+                            mkAppliedHoleOptions sugarContext
+                            argI argS exprPl stored
+                            & ConvertM.liftTransaction
+                        hole
+                            & rBody . _BodyHole . holeMActions
+                            . Lens._Just . holeOptions . Lens.mapped
+                                %~ mappend options
+                            & return
             & lift
             <&> rBody . _BodyHole . holeMArg .~ Just holeArg
             <&> rPayload . plData <>~ funcI ^. V.payload . Input.userData

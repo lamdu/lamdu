@@ -6,6 +6,7 @@ module Lamdu.Expr.IRef.Infer
     , loadInferScope
     , loadInferInto
     , loadInfer
+    , loadNominal
     , Error(..), toEitherT
     ) where
 
