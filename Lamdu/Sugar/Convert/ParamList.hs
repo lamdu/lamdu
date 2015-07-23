@@ -40,9 +40,9 @@ mkFuncType :: ParamList -> Infer Type
 mkFuncType paramList =
     T.TFun
     <$> (T.TRecord <$> foldr step (pure T.CEmpty) paramList)
-    <*> Infer.freshInferredVar "lamres"
+    <*> Infer.freshInferredVar "l"
     where
-        step tag rest = T.CExtend tag <$> Infer.freshInferredVar "tagpar" <*> rest
+        step tag rest = T.CExtend tag <$> Infer.freshInferredVar "t" <*> rest
 
 loadForLambdas ::
     MonadA m =>
