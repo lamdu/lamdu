@@ -42,11 +42,21 @@ suggestValueConversion loadNominal mkVar arg (T.TInst name params) r =
             -- I think this happens to be fine for suggest but there are less
             -- doubts if using a proper instantiantion of the scheme..
             <&> (^. schemeType)
-        suggestValueConversion loadNominal mkVar fromNom fromNomType r
+        suggestValueConversionNoSplit mkVar fromNom fromNomType r
     <&> (++ [pure fromNom])
     where
         fromNom = V.Nom name arg & V.BFromNom & V.Val mempty
-suggestValueConversion _ mkVar arg (T.TSum composite) r =
+suggestValueConversion _ _ arg (T.TRecord composite) _ =
+    composite ^.. ExprLens.compositeTags
+    <&> pure . V.Val mempty . V.BGetField . V.GetField arg
+    & return
+suggestValueConversion _ mkVar arg srcType dstType =
+    suggestValueConversionNoSplit mkVar arg srcType dstType
+
+suggestValueConversionNoSplit ::
+    (Monoid a, Applicative f, MonadA m) =>
+    f V.Var -> Val a -> Type -> Type -> m [f (Val a)]
+suggestValueConversionNoSplit mkVar arg (T.TSum composite) r =
     suggestCaseWith mkVar composite r
     <&> Lens.mapped %~ applyCase
     & return
@@ -55,42 +65,39 @@ suggestValueConversion _ mkVar arg (T.TSum composite) r =
             c
             & Lens.traversed .~ mempty
             & (`V.Apply` arg) & V.BApp & V.Val mempty
-suggestValueConversion _ _ arg (T.TRecord composite) _ =
-    composite ^.. ExprLens.compositeTags
-    <&> pure . V.Val mempty . V.BGetField . V.GetField arg
-    & return
-suggestValueConversion _ _ _ _ _ = return []
+suggestValueConversionNoSplit _ _ _ _ = return [pure P.hole]
 
 suggestValueWith :: Applicative f => f V.Var -> Type -> [f (Val ())]
-suggestValueWith _ T.TVar{}                  = [pure P.hole]
-suggestValueWith _ T.TInst{}                 = [pure P.hole]
--- TODO: Need access to the Nominals map here, to only suggest
--- nominals that can fromNominal, and also offer to build the inner
--- value
-suggestValueWith _ (T.TSum T.CEmpty)         = [] -- Void value uninhabitable
-suggestValueWith _ (T.TSum T.CVar {})        = [pure P.hole]
 suggestValueWith mkVar (T.TSum comp) =
-    comp ^.. ExprLens.compositeFields
-    >>= \(tag, typ) ->
-        suggestValueWith mkVar typ <&> Lens.mapped %~ P.inject tag
-suggestValueWith _ T.TInt                    = [pure P.hole]
-suggestValueWith mkVar (T.TRecord composite) =
+    case comp of
+    T.CVar{} -> [pure P.hole]
+    _ ->
+        comp ^.. ExprLens.compositeFields
+        >>= \(tag, typ) ->
+            suggestValueWithNoSplit mkVar typ <&> Lens.mapped %~ P.inject tag
+suggestValueWith mkVar t = suggestValueWithNoSplit mkVar t
+
+suggestValueWithNoSplit :: Applicative f => f V.Var -> Type -> [f (Val ())]
+suggestValueWithNoSplit mkVar (T.TRecord composite) =
     suggestRecordWith mkVar composite
-suggestValueWith mkVar (T.TFun (T.TSum composite) r) =
+suggestValueWithNoSplit mkVar (T.TFun (T.TSum composite) r) =
     suggestCaseWith mkVar composite r
-suggestValueWith mkVar (T.TFun _ r)          =
-    unO $ P.abs <$> O [mkVar] <*> O (suggestValueWith mkVar r)
+suggestValueWithNoSplit mkVar (T.TFun _ r) =
+    unO $ P.abs <$> O [mkVar] <*> O (suggestValueWithNoSplit mkVar r)
+suggestValueWithNoSplit _ _ = [pure P.hole]
 
 suggestRecordWith :: Applicative f => f V.Var -> T.Product -> [f (Val ())]
 suggestRecordWith _ T.CVar{}          = [pure P.hole]
 suggestRecordWith _ T.CEmpty          = [pure P.recEmpty]
 suggestRecordWith mkVar (T.CExtend f t r) =
-    unO $ P.recExtend f <$> O (suggestValueWith mkVar t) <*> O (suggestRecordWith mkVar r)
+    unO $ P.recExtend f
+    <$> O (suggestValueWithNoSplit mkVar t)
+    <*> O (suggestRecordWith mkVar r)
 
 suggestCaseWith :: Applicative f => f V.Var -> T.Sum -> Type -> [f (Val ())]
 suggestCaseWith _ T.CVar{} _ = [pure P.hole]
 suggestCaseWith _ T.CEmpty _ = [pure P.absurd]
 suggestCaseWith mkVar (T.CExtend f t r) res =
     unO $ P._case f
-    <$> O (suggestValueWith mkVar (T.TFun t res))
+    <$> O (suggestValueWithNoSplit mkVar (T.TFun t res))
     <*> O (suggestCaseWith mkVar r res)

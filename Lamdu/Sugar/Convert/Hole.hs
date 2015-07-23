@@ -135,17 +135,17 @@ mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
     exprPl ^. Input.inferred . Infer.plType
     & suggestValueWith stateMkVar
     <&> mkHoleOption sugarContext mInjectedArg exprPl stored . (`evalState` 0)
-    & filter (Lens.nullOf (hoVal . ExprLens.valHole))
 
 addSuggestedOptions ::
     MonadA m =>
     [HoleOption Guid m] -> [HoleOption Guid m] -> [HoleOption Guid m]
 addSuggestedOptions suggesteds options
-    | null suggesteds = options
-    | otherwise = suggesteds ++ filter (not . equivalentToSuggested) options
+    | null nonTrivial = options
+    | otherwise = nonTrivial ++ filter (not . equivalentToSuggested) options
     where
         equivalentToSuggested x =
-            any (V.alphaEq (x ^. hoVal)) (suggesteds ^.. Lens.traverse . hoVal)
+            any (V.alphaEq (x ^. hoVal)) (nonTrivial ^.. Lens.traverse . hoVal)
+        nonTrivial = filter (Lens.nullOf (hoVal . ExprLens.valHole)) suggesteds
 
 mkOptions ::
     MonadA m => ConvertM.Context m ->
