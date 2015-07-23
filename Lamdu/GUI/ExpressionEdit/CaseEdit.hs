@@ -55,7 +55,7 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
         (altsGui, resultPickers) <-
             ExprGuiM.listenResultPickers $
             do
-                altsGui <- makeAltsWidget alts myId <&> pad config
+                altsGui <- makeAltsWidget alts myId
                 case caseTail of
                     Sugar.ClosedCase mDeleteTail ->
                         altsGui
@@ -93,8 +93,10 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
                                 mToLambdaCase)
                     caseLabel <- headerLabel ":"
                     ExpressionGui.hbox [argEdit, caseLabel] & return
-        let gui = ExpressionGui.vboxTopFocalAlignedTo 0 [header, altsGui]
-        gui
+        vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
+        [header, ExpressionGui.fromValueWidget vspace, altsGui]
+            & ExpressionGui.vboxTopFocalAlignedTo 0
+            & pad config
             & ExpressionGui.egWidget %~
               Widget.weakerEvents (addAltEventMap mAddAlt)
             & ExpressionGui.egWidget %%~ ExpressionGui.addValBG myId
