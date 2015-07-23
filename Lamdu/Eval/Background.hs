@@ -205,7 +205,7 @@ stop :: Evaluator pl -> IO ()
 stop evaluator =
     do
         killThread (eThreadId evaluator)
-        writeStatus (eStateRef evaluator) Stopped
+        initialState & sStatus .~ Stopped & writeIORef (eStateRef evaluator)
 
 pauseLoading :: Evaluator pl -> IO (Set pl, Set V.GlobalId)
 pauseLoading evaluator =
