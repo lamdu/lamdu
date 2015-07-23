@@ -1,7 +1,7 @@
 {-# LANGUAGE ConstraintKinds, OverloadedStrings, RankNTypes #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert, convertCommon
-    , withSuggestedOptions, mkHoleOption, mkHoleOptionFromInjected
+    , mkHoleOption, mkHoleOptionFromInjected, addSuggestedOptions
     ) where
 
 import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
@@ -135,18 +135,15 @@ mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
     exprPl ^. Input.inferred . Infer.plType
     & suggestValueWith stateMkVar
     <&> mkHoleOption sugarContext mInjectedArg exprPl stored . (`evalState` 0)
+    & filter (Lens.nullOf (hoVal . ExprLens.valHole))
 
-withSuggestedOptions ::
-    MonadA m => ConvertM.Context m -> Maybe (Val (Input.Payload m a)) ->
-    Input.Payload m a -> ExprIRef.ValIProperty m ->
-    [HoleOption Guid m] -> [HoleOption Guid m]
-withSuggestedOptions sugarContext mInjectedArg exprPl stored options
+addSuggestedOptions ::
+    MonadA m =>
+    [HoleOption Guid m] -> [HoleOption Guid m] -> [HoleOption Guid m]
+addSuggestedOptions suggesteds options
     | null suggesteds = options
     | otherwise = suggesteds ++ filter (not . equivalentToSuggested) options
     where
-        suggesteds =
-            mkHoleSuggesteds sugarContext mInjectedArg exprPl stored
-            & filter (Lens.nullOf (hoVal . ExprLens.valHole))
         equivalentToSuggested x =
             any (V.alphaEq (x ^. hoVal)) (suggesteds ^.. Lens.traverse . hoVal)
 
@@ -192,7 +189,8 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
     pure HoleActions
         { _holeOptions =
             mkOptions sugarContext mInjectedArg exprPl stored
-            <&> withSuggestedOptions sugarContext mInjectedArg exprPl stored
+            <&> addSuggestedOptions
+                (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
         , _holeOptionLiteralInt =
             return . mkHoleOption sugarContext mInjectedArg exprPl stored .
             Val () . V.BLeaf . V.LLiteralInteger

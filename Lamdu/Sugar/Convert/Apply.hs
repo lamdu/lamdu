@@ -155,29 +155,36 @@ mkAppliedHoleOptions ::
     Expression name m a ->
     Input.Payload m a ->
     ExprIRef.ValIProperty m ->
-    T m [HoleOption Guid m]
+    [HoleOption Guid m]
 mkAppliedHoleOptions sugarContext argI argS exprPl stored =
+    [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ] ++
+    [ P.record
+      [ (Builtins.headTag, P.hole)
+      , ( Builtins.tailTag
+        , P.inject Builtins.nilTag P.recEmpty & P.toNom Builtins.listTid
+        )
+      ]
+      & P.inject Builtins.consTag
+      & P.toNom Builtins.listTid
+    ]
+    <&> ConvertHole.mkHoleOption sugarContext (Just argI) exprPl stored
+
+mkAppliedHoleSuggesteds ::
+    MonadA m =>
+    ConvertM.Context m ->
+    Val (Input.Payload m a) ->
+    Expression name m a ->
+    Input.Payload m a ->
+    ExprIRef.ValIProperty m ->
+    T m [HoleOption Guid m]
+mkAppliedHoleSuggesteds sugarContext argI argS exprPl stored =
     suggestValueConversion IRefInfer.loadNominal stateMkVar
     (argI <&> Monoid.First . Just) argType dstType
     <&> Lens.mapped %~
         ConvertHole.mkHoleOptionFromInjected
         sugarContext exprPl stored
         . (Lens.mapped %~ Monoid.getFirst) . (`evalState` 0)
-    <&> (++ byDestType)
     where
-        byDestType =
-            [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ] ++
-            [ P.toNom Builtins.listTid $
-              P.inject Builtins.consTag $
-              P.record
-              [ (Builtins.headTag, P.hole)
-              , ( Builtins.tailTag
-                , P.toNom Builtins.listTid $
-                  P.inject Builtins.nilTag P.recEmpty
-                )
-              ]
-            ]
-            <&> ConvertHole.mkHoleOption sugarContext (Just argI) exprPl stored
         argType = argS ^. rPayload . plAnnotation . aInferredType
         dstType = exprPl ^. Input.inferred . Infer.plType
 
@@ -214,14 +221,16 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 Nothing -> return hole
                 Just stored ->
                     do
-                        options <-
-                            mkAppliedHoleOptions sugarContext
+                        suggesteds <-
+                            mkAppliedHoleSuggesteds sugarContext
                             argI argS exprPl stored
                             & ConvertM.liftTransaction
                         hole
                             & rBody . _BodyHole . holeMActions
                             . Lens._Just . holeOptions . Lens.mapped
-                                %~ mappend options
+                                %~  ConvertHole.addSuggestedOptions suggesteds
+                                .   mappend (mkAppliedHoleOptions sugarContext
+                                    argI argS exprPl stored)
                             & return
             & lift
             <&> rBody . _BodyHole . holeMArg .~ Just holeArg
