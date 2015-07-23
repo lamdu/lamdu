@@ -288,11 +288,14 @@ makeParts showAnnotation binder myId =
                     & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
                 config <- ExprGuiM.readConfig <&> Config.eval
                 let scopeEventMap =
-                        makeScopeEventMap
-                        (Config.prevScopeKeys config) (Config.nextScopeKeys config)
-                        <$> mSetScope
-                        <*> mScopeCursor
-                        & fromMaybe mempty
+                        case settings ^. CESettings.sInfoMode of
+                        CESettings.Evaluation ->
+                            makeScopeEventMap
+                            (Config.prevScopeKeys config) (Config.nextScopeKeys config)
+                            <$> mSetScope
+                            <*> mScopeCursor
+                            & fromMaybe mempty
+                        _ -> mempty
                 Parts (paramEdits ++ (mScopeNavEdit ^.. Lens.traversed))
                     bodyEdit wheresEdit scopeEventMap
                     & return
