@@ -57,7 +57,7 @@ data Evaluator pl = Evaluator
 
 data Status
     = Running
-    | Stoppped
+    | Stopped
     | Error
     | Finished
 
@@ -205,7 +205,7 @@ stop :: Evaluator pl -> IO ()
 stop evaluator =
     do
         killThread (eThreadId evaluator)
-        writeStatus (eStateRef evaluator) Stoppped
+        writeStatus (eStateRef evaluator) Stopped
 
 pauseLoading :: Evaluator pl -> IO (Set pl, Set V.GlobalId)
 pauseLoading evaluator =
