@@ -111,7 +111,7 @@ makeResultsList holeInfo group =
             | x < [5] = GoodResult
             | otherwise = BadResult
         toPreferred
-            | searchTerm `elem` (group ^. groupSearchTerms) = Preferred
+            | [searchTerm] == group ^. groupSearchTerms = Preferred
             | otherwise = NotPreferred
         searchTerm = ehiSearchTerm holeInfo
 
