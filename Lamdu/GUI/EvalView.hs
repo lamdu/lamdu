@@ -19,8 +19,7 @@ import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Eval.Results (ComputedVal(..))
-import           Lamdu.Eval.Val (ValBody(..))
+import           Lamdu.Eval.Val (Val(..))
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -29,12 +28,11 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 data RecordStatus = RecordComputed | RecordNotFinished
 
 extractFields ::
-    V.RecExtend (ComputedVal ()) -> ([(T.Tag, ComputedVal ())], RecordStatus)
+    V.RecExtend (Val ()) -> ([(T.Tag, Val ())], RecordStatus)
 extractFields (V.RecExtend tag val rest) =
     case rest of
-    NotYet -> ([(tag, val)], RecordNotFinished)
-    ComputedVal HRecEmpty -> ([(tag, val)], RecordComputed)
-    ComputedVal (HRecExtend recExtend) ->
+    HRecEmpty -> ([(tag, val)], RecordComputed)
+    HRecExtend recExtend ->
         extractFields recExtend & _1 %~ ((tag, val):)
     _ -> error "RecExtend of non-record"
 
@@ -48,7 +46,7 @@ makeTag animId tag =
 
 makeField ::
     MonadA m =>
-    AnimId -> T.Tag -> ComputedVal () -> ExprGuiM m [(GridView.Alignment, View)]
+    AnimId -> T.Tag -> Val () -> ExprGuiM m [(GridView.Alignment, View)]
 makeField parentAnimId tag val =
     do
         tagView <- makeTag (baseId ++ ["tag"]) tag
@@ -64,15 +62,14 @@ makeField parentAnimId tag val =
     where
         baseId = parentAnimId ++ [BinUtils.encodeS tag]
 
-make :: MonadA m => AnimId -> ComputedVal () -> ExprGuiM m View
+make :: MonadA m => AnimId -> Val () -> ExprGuiM m View
 make animId val =
     case val of
-    NotYet -> textView "?" animId
-    ComputedVal (HFunc _) -> textView "Fn" animId
-    ComputedVal HAbsurd -> textView "Fn" animId
-    ComputedVal (HCase _) -> textView "Fn" animId
-    ComputedVal HRecEmpty -> textView "Ø" animId
-    ComputedVal (HInject inj) ->
+    HFunc{} -> textView "Fn" animId
+    HAbsurd -> textView "Fn" animId
+    HCase{} -> textView "Fn" animId
+    HRecEmpty -> textView "Ø" animId
+    HInject inj ->
         do
             tagView <- inj ^. V.injectTag & makeTag (animId ++ ["tag"])
             space <-
@@ -80,7 +77,7 @@ make animId val =
                 <&> Spacer.makeHorizontal . realToFrac . Config.spaceWidth
             valView <- inj ^. V.injectVal & make (animId ++ ["val"])
             GridView.horizontalAlign 0.5 [tagView, space, valView] & return
-    ComputedVal (HRecExtend recExtend) ->
+    HRecExtend recExtend ->
         do
             fieldsView <- mapM (uncurry (makeField animId)) fields <&> GridView.make
             let barWidth
@@ -99,7 +96,7 @@ make animId val =
             GridView.verticalAlign 0.5 [fieldsView, restView] & return
         where
             (fields, recStatus) = extractFields recExtend
-    ComputedVal body ->
+    body ->
         BWidgets.makeTextView text animId & ExprGuiM.widgetEnv
         where
             text = show body & truncateStr 20

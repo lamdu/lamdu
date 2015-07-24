@@ -62,8 +62,7 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Eval.Results (ComputedVal)
-import           Lamdu.Eval.Val (ScopeId)
+import           Lamdu.Eval.Val (Val, ScopeId)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.EvalView as EvalView
@@ -187,7 +186,7 @@ makeWithAnnotationBG minWidth entityId f =
     where
         animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
 
-type ScopeAndVal = (ScopeId, ComputedVal ())
+type ScopeAndVal = (ScopeId, Val ())
 
 makeEvaluationResultView ::
     MonadA m => AnimId -> ScopeAndVal -> ExprGuiM m (ExpressionGui m)
@@ -197,7 +196,7 @@ makeEvaluationResultView animId (scopeId, evalRes) =
     <&> fromValueWidget
 
 makeEvaluationResultViewBG ::
-    MonadA m => Config -> AnimId -> (ScopeId, ComputedVal ()) ->
+    MonadA m => Config -> AnimId -> (ScopeId, Val ()) ->
     ExprGuiM m (ExpressionGui m)
 makeEvaluationResultViewBG config animId (scopeId, evalRes) =
     makeEvaluationResultView animId (scopeId, evalRes)

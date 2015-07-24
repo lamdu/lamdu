@@ -288,9 +288,6 @@ createPublics =
                                       , (Builtins.infixrTag, rType)
                                       ] ~> resType
 
-        traverse_ ((`newPublicBuiltinQualified_` Scheme.mono (infixType bool bool bool)) . ("Prelude."++))
-            ["&&", "||"]
-
         traverse_
             ((`newPublicBuiltinQualified_` Scheme.mono (infixType T.TInt T.TInt T.TInt)) .
               ("Prelude." ++))

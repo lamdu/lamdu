@@ -74,7 +74,7 @@ evalActions :: Evaluators -> EvalBG.Actions (ValI ViewM)
 evalActions evaluators =
     EvalBG.Actions
     { EvalBG._aLoadGlobal = loadGlobal
-    , EvalBG._aRunBuiltin = Builtins.eval
+    , EvalBG._aRunBuiltin = \n -> return . Builtins.eval n
     , EvalBG._aReportUpdatesAvailable = eInvalidateCache evaluators
     }
     where

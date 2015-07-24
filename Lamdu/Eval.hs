@@ -8,8 +8,7 @@ module Lamdu.Eval
     , Env(..), eEvalActions
     , Event(..), EventLambdaApplied(..), EventResultComputed(..)
     , ScopedVal(..)
-    , whnfScopedVal, whnfThunk
-    , asThunk
+    , evalScopedVal
     ) where
 
 import           Prelude.Compat
@@ -17,42 +16,32 @@ import           Prelude.Compat
 import           Control.Lens (at, use)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (void, join)
+import           Control.Monad (void)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Either (EitherT(..), left)
 import           Control.Monad.Trans.State.Strict (StateT(..))
 import           Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import qualified Lamdu.Data.Definition as Def
-import           Lamdu.Eval.Val (ThunkId(..), thunkIdInt, ScopeId(..), scopeIdInt)
-import           Lamdu.Eval.Val (ValHead, ValBody(..), Closure(..), Scope(..), emptyScope)
-import qualified Lamdu.Eval.Val as EvalVal
-import           Lamdu.Expr.Val (Val)
+import           Lamdu.Eval.Val (Val(..), Closure(..), Scope(..), emptyScope, ScopeId(..), scopeIdInt)
 import qualified Lamdu.Expr.Val as V
 
-data ThunkState pl
-    = TSrc (ScopedVal pl)
-    | TResult (ValHead pl)
-    | TEvaluating -- BlackHoled in GHC
-    deriving (Show, Functor, Foldable, Traversable)
-
 data ScopedVal pl = ScopedVal
-    { _srcScope :: !Scope
-    , _srcExpr :: !(Val pl)
+    { _srcScope :: !(Scope pl)
+    , _srcExpr :: !(V.Val pl)
     } deriving (Show, Functor, Foldable, Traversable)
 
 data EventLambdaApplied pl = EventLambdaApplied
     { elaLam :: pl
     , elaParentId :: !ScopeId
     , elaId :: !ScopeId
-    , elaArgument :: !ThunkId
+    , elaArgument :: !(Val pl)
     } deriving (Show, Functor, Foldable, Traversable)
 
 data EventResultComputed pl = EventResultComputed
-    { ercMThunkId :: !(Maybe ThunkId)
-    , ercSource :: pl
+    { ercSource :: pl
     , ercScope :: !ScopeId
-    , ercResult :: !(ValHead pl)
+    , ercResult :: !(Val pl)
     } deriving (Show, Functor, Foldable, Traversable)
 
 data Event pl
@@ -62,8 +51,8 @@ data Event pl
 
 data EvalActions m pl = EvalActions
     { _aReportEvent :: Event pl -> m ()
-    , _aRunBuiltin :: Def.FFIName -> ThunkId -> EvalT pl m (ValHead pl)
-    , _aLoadGlobal :: V.GlobalId -> m (Maybe (Def.Body (Val pl)))
+    , _aRunBuiltin :: Def.FFIName -> Val pl -> m (Val pl)
+    , _aLoadGlobal :: V.GlobalId -> m (Maybe (Def.Body (V.Val pl)))
     }
 
 newtype Env m pl = Env
@@ -71,10 +60,8 @@ newtype Env m pl = Env
     }
 
 data EvalState m pl = EvalState
-    { _esThunks :: !(Map ThunkId (ThunkState pl))
-    , _esThunkCounter :: !ThunkId
-    , _esScopeCounter :: !ScopeId
-    , _esLoadedGlobals :: !(Map V.GlobalId (ValHead pl))
+    { _esScopeCounter :: !ScopeId
+    , _esLoadedGlobals :: !(Map V.GlobalId (Val pl))
     , _esReader :: !(Env m pl) -- This is ReaderT
     }
 
@@ -96,21 +83,13 @@ Lens.makeLenses ''EvalState
 ask :: Monad m => EvalT pl m (Env m pl)
 ask = use esReader & liftState
 
-freshThunkId :: Monad m => EvalT pl m ThunkId
-freshThunkId =
-    do
-        thunkId <- use esThunkCounter
-        esThunkCounter . thunkIdInt += 1
-        return thunkId
-    & liftState
-
 report :: Monad m => Event pl -> EvalT pl m ()
 report event =
     do
         rep <- ask <&> (^. eEvalActions . aReportEvent)
         rep event & lift
 
-bindVar :: Monad m => pl -> V.Var -> ThunkId -> Scope -> EvalT pl m Scope
+bindVar :: Monad m => pl -> V.Var -> Val pl -> Scope pl -> EvalT pl m (Scope pl)
 bindVar lamPl var val (Scope parentMap parentId) =
     do
         newScopeId <- liftState $ use esScopeCounter
@@ -129,118 +108,61 @@ bindVar lamPl var val (Scope parentMap parentId) =
 evalError :: Monad m => String -> EvalT pl m a
 evalError = EvalT . left
 
-whnfApplyThunked :: Monad m => ValHead pl -> ThunkId -> EvalT pl m (ValHead pl)
-whnfApplyThunked func argThunk =
+evalApply :: Monad m => V.Apply (Val pl) -> EvalT pl m (Val pl)
+evalApply (V.Apply func arg) =
     case func of
     HFunc (Closure outerScope (V.Lam var body) lamPl) ->
-        do
-            innerScope <- bindVar lamPl var argThunk outerScope
-            whnfScopedVal (ScopedVal innerScope body)
+        bindVar lamPl var arg outerScope
+        >>= evalScopedVal . (`ScopedVal` body)
     HBuiltin ffiname ->
         do
             runBuiltin <- ask <&> (^. eEvalActions . aRunBuiltin)
-            runBuiltin ffiname argThunk
-    HCase (V.Case caseTag handlerThunk restThunk) ->
-        do
-            handlerFunc <- whnfThunk handlerThunk
-            HInject (V.Inject sumTag valThunk) <- whnfThunk argThunk
-            if caseTag == sumTag
-                then whnfApplyThunked handlerFunc valThunk
-                else
-                do
-                    rest <- whnfThunk restThunk
-                    whnfApplyThunked rest argThunk
-    _ -> evalError $ "Apply on non function: " ++ funcStr
-        where
-            funcStr = func & EvalVal.children .~ () & EvalVal.payloads .~ () & show
+            runBuiltin ffiname arg & lift
+    HCase (V.Case caseTag handlerFunc rest) ->
+        case arg of
+        HInject (V.Inject sumTag injected)
+            | caseTag == sumTag -> V.Apply handlerFunc injected & evalApply
+            | otherwise -> V.Apply rest arg & evalApply
+        _ -> evalError "Case applied on non sum-type"
+    _ -> evalError "Apply on non function: "
 
-makeThunk :: Monad m => ThunkState pl -> EvalT pl m ThunkId
-makeThunk src =
-    do
-        thunkId <- freshThunkId
-        liftState $ esThunks . at thunkId .= Just src
-        return thunkId
-
-whnfApply :: Monad m => V.Apply (ScopedVal pl) -> EvalT pl m (ValHead pl)
-whnfApply (V.Apply func arg) =
-    whnfApplyThunked <$> whnfScopedVal func <*> makeThunk (TSrc arg) & join
-
-whnfScopedValInner :: Monad m => Maybe ThunkId -> ScopedVal pl -> EvalT pl m (ValHead pl)
-whnfScopedValInner mThunkId (ScopedVal scope expr) =
+evalScopedVal :: Monad m => ScopedVal pl -> EvalT pl m (Val pl)
+evalScopedVal (ScopedVal scope expr) =
     reportResultComputed =<<
     case expr ^. V.body of
     V.BAbs lam -> return $ HFunc $ Closure scope lam (expr ^. V.payload)
-    V.BApp apply -> apply <&> ScopedVal scope & whnfApply
-    V.BGetField (V.GetField recordExpr tag) ->
-        do
-            record <- whnfScopedVal $ ScopedVal scope recordExpr
-            whnfGetField $ V.GetField record tag
-    V.BInject    inject    -> inject    & traverse %%~ thunk <&> HInject
-    V.BRecExtend recExtend -> recExtend & traverse %%~ thunk <&> HRecExtend
-    V.BCase      case_     -> case_     & traverse %%~ thunk <&> HCase
+    V.BApp apply -> traverse inner apply >>= evalApply
+    V.BGetField getField -> traverse inner getField >>= evalGetField
+    V.BInject    inject    -> traverse inner inject    <&> HInject
+    V.BRecExtend recExtend -> traverse inner recExtend <&> HRecExtend
+    V.BCase      case_     -> traverse inner case_     <&> HCase
     V.BLeaf (V.LGlobal global) -> loadGlobal global
     V.BLeaf (V.LVar var) ->
         case scope ^. scopeMap . at var of
         Nothing -> evalError $ "Variable out of scope: " ++ show var
-        Just thunkId -> whnfThunk thunkId
+        Just val -> return val
     V.BLeaf V.LRecEmpty -> return HRecEmpty
-    V.BLeaf V.LAbsurd -> return HAbsurd
+    V.BLeaf V.LAbsurd   -> return HAbsurd
     V.BLeaf (V.LLiteralInteger i) -> HInteger i & return
     V.BLeaf V.LHole -> evalError "Hole"
-    V.BFromNom (V.Nom _ v) -> ScopedVal scope v & whnfScopedValInner Nothing
-    V.BToNom (V.Nom _ v) -> ScopedVal scope v & whnfScopedValInner Nothing
+    V.BFromNom (V.Nom _ v) -> inner v
+    V.BToNom   (V.Nom _ v) -> inner v
     where
-        thunk = makeThunk . TSrc . ScopedVal scope
+        inner = evalScopedVal . ScopedVal scope
         reportResultComputed result =
             do
-                EventResultComputed mThunkId (expr ^. V.payload) (scope ^. scopeId) result
+                EventResultComputed (expr ^. V.payload) (scope ^. scopeId) result
                     & EResultComputed & report
                 return result
 
-whnfScopedVal :: Monad m => ScopedVal pl -> EvalT pl m (ValHead pl)
-whnfScopedVal = whnfScopedValInner Nothing
-
-whnfRecordShape :: Monad m => ThunkId -> EvalT pl m ()
-whnfRecordShape restThunk =
-    whnfThunk restThunk >>= go
-    where
-        go HRecEmpty = return ()
-        go (HRecExtend (V.RecExtend _ _ newRestThunk)) = whnfRecordShape newRestThunk
-        go x = error $ "RecExtend of non-record: " ++ show (void x)
-
-whnfGetField :: Monad m => V.GetField (ValHead pl) -> EvalT pl m (ValHead pl)
-whnfGetField (V.GetField (HRecExtend (V.RecExtend tag val restThunk)) searchTag)
-    | searchTag == tag =
-          do
-              -- To avoid artifacts of RecExtend ordering, force the
-              -- entire record shape rather than forcing the prefix we
-              -- depend on:
-              whnfRecordShape restThunk
-              whnfThunk val
-    | otherwise =
-        whnfThunk restThunk
-        <&> (`V.GetField` searchTag)
-        >>= whnfGetField
-whnfGetField (V.GetField val _) =
+evalGetField :: Monad m => V.GetField (Val pl) -> EvalT pl m (Val pl)
+evalGetField (V.GetField (HRecExtend (V.RecExtend tag val rest)) searchTag)
+    | searchTag == tag = return val
+    | otherwise = V.GetField rest searchTag & evalGetField
+evalGetField (V.GetField val _) =
     evalError $ "GetField of value without the field " ++ show (void val)
 
-asThunk :: Monad m => ValHead pl -> EvalT pl m ThunkId
-asThunk = makeThunk . TResult
-
-whnfThunk :: Monad m => ThunkId -> EvalT pl m (ValHead pl)
-whnfThunk thunkId = do
-    thunkState <- liftState $ use $ esThunks . at thunkId
-    case thunkState of
-        Just TEvaluating -> evalError "*INFINITE LOOP*"
-        Just (TResult r) -> return r
-        Just (TSrc thunkSrc) ->
-            do
-                res <- whnfScopedValInner (Just thunkId) thunkSrc
-                liftState $ esThunks . at thunkId .= Just (TResult res)
-                return res
-        Nothing -> evalError $ "BUG: Referenced non-existing thunk " ++ show thunkId
-
-loadGlobal :: Monad m => V.GlobalId -> EvalT pl m (ValHead pl)
+loadGlobal :: Monad m => V.GlobalId -> EvalT pl m (Val pl)
 loadGlobal g =
     do
         loaded <- liftState $ use (esLoadedGlobals . at g)
@@ -255,16 +177,14 @@ loadGlobal g =
                     Just (Def.BodyBuiltin (Def.Builtin name _t)) ->
                         return $ HBuiltin name
                     Just (Def.BodyExpr (Def.Expr expr _t)) ->
-                        whnfScopedVal $ ScopedVal emptyScope expr
+                        evalScopedVal $ ScopedVal emptyScope expr
                 liftState $ esLoadedGlobals . at g .= Just result
                 return result
 
 initialState :: Env m pl -> EvalState m pl
 initialState env =
     EvalState
-    { _esThunks = Map.empty
-    , _esThunkCounter = ThunkId 0
-    , _esScopeCounter = ScopeId 1
+    { _esScopeCounter = ScopeId 1
     , _esLoadedGlobals = Map.empty
     , _esReader = env
     }

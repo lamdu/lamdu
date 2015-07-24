@@ -17,7 +17,6 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad ((>=>), void)
 import           Control.Monad.Trans.Either (runEitherT)
 import           Control.Monad.Trans.State.Strict (evalStateT)
 import qualified Data.ByteString.Char8 as BS8
@@ -28,13 +27,10 @@ import           Data.Monoid ((<>))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Lamdu.Data.Definition as Def
-import           Lamdu.Eval (EvalT)
 import qualified Lamdu.Eval as Eval
 import           Lamdu.Eval.Results (EvalResults(..))
-import qualified Lamdu.Eval.Results as Results
-import           Lamdu.Eval.Val (ValHead, ThunkId, ScopeId)
+import           Lamdu.Eval.Val (Val, ScopeId)
 import qualified Lamdu.Eval.Val as EvalVal
-import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
 import           System.IO (stderr)
 
@@ -42,12 +38,12 @@ import           System.IO (stderr)
 -- import           Debug.Trace
 
 data Actions pl = Actions
-    { _aLoadGlobal :: V.GlobalId -> IO (Maybe (Def.Body (Val pl)))
-    , _aRunBuiltin :: Def.FFIName -> ThunkId -> EvalT pl IO (ValHead pl)
+    { _aLoadGlobal :: V.GlobalId -> IO (Maybe (Def.Body (V.Val pl)))
+    , _aRunBuiltin :: Def.FFIName -> Val pl -> IO (Val pl)
     , _aReportUpdatesAvailable :: IO ()
     }
 
-aLoadGlobal :: Lens' (Actions pl) (V.GlobalId -> IO (Maybe (Def.Body (Val pl))))
+aLoadGlobal :: Lens' (Actions pl) (V.GlobalId -> IO (Maybe (Def.Body (V.Val pl))))
 aLoadGlobal f Actions{..} = f _aLoadGlobal <&> \_aLoadGlobal -> Actions{..}
 
 data Evaluator pl = Evaluator
@@ -64,24 +60,20 @@ data Status
 
 data State pl = State
     { _sStatus :: !Status
-    , _sAppliesOfLam :: !(Map pl (Map ScopeId [(ScopeId, ThunkId)]))
+    , _sAppliesOfLam :: !(Map pl (Map ScopeId [(ScopeId, Val pl)]))
       -- Maps of already-evaluated pl's/thunks
-    , _sValHeadMap :: !(Map pl (Map ScopeId (ValHead pl)))
-    , _sThunkMap :: !(Map ThunkId (ValHead pl))
+    , _sValMap :: !(Map pl (Map ScopeId (Val pl)))
     , _sDependencies :: !(Set pl, Set V.GlobalId)
     }
 
-sAppliesOfLam :: Lens' (State pl) (Map pl (Map ScopeId [(ScopeId, ThunkId)]))
+sAppliesOfLam :: Lens' (State pl) (Map pl (Map ScopeId [(ScopeId, Val pl)]))
 sAppliesOfLam f State{..} = f _sAppliesOfLam <&> \_sAppliesOfLam -> State{..}
 
 sStatus :: Lens' (State pl) Status
 sStatus f State{..} = f _sStatus <&> \_sStatus -> State{..}
 
-sValHeadMap :: Lens' (State pl) (Map pl (Map ScopeId (ValHead pl)))
-sValHeadMap f State{..} = f _sValHeadMap <&> \_sValHeadMap -> State{..}
-
-sThunkMap :: Lens' (State pl) (Map ThunkId (ValHead pl))
-sThunkMap f State{..} = f _sThunkMap <&> \_sThunkMap -> State{..}
+sValMap :: Lens' (State pl) (Map pl (Map ScopeId (Val pl)))
+sValMap f State{..} = f _sValMap <&> \_sValMap -> State{..}
 
 sDependencies :: Lens' (State pl) (Set pl, Set V.GlobalId)
 sDependencies f State{..} = f _sDependencies <&> \_sDependencies -> State{..}
@@ -90,18 +82,13 @@ initialState :: State pl
 initialState = State
     { _sStatus = Running
     , _sAppliesOfLam = Map.empty
-    , _sValHeadMap = Map.empty
-    , _sThunkMap = Map.empty
+    , _sValMap = Map.empty
     , _sDependencies = (Set.empty, Set.empty)
     }
 
 writeStatus :: IORef (State pl) -> Status -> IO ()
 writeStatus stateRef newStatus =
     atomicModifyIORef' stateRef $ \x -> (x & sStatus .~ newStatus, ())
-
-setJust :: a -> Maybe a -> Maybe a
-setJust x Nothing = Just x
-setJust _ (Just _) = error "Conflicting values in setJust"
 
 processEvent :: Ord pl => Eval.Event pl -> State pl -> State pl
 processEvent (Eval.ELambdaApplied Eval.EventLambdaApplied{..}) state =
@@ -112,12 +99,9 @@ processEvent (Eval.ELambdaApplied Eval.EventLambdaApplied{..}) state =
         addApply (Just x) = Just $ Map.unionWith (++) x apply
 processEvent (Eval.EResultComputed Eval.EventResultComputed{..}) state =
     state
-    & sValHeadMap %~ Map.alter (<> Just (Map.singleton ercScope ercResult)) ercSource
-    & case ercMThunkId of
-        Nothing -> id
-        Just thunkId -> sThunkMap %~ Map.alter (setJust ercResult) thunkId
+    & sValMap %~ Map.alter (<> Just (Map.singleton ercScope ercResult)) ercSource
 
-getDependencies :: Ord pl => V.GlobalId -> Maybe (Def.Body (Val pl)) -> (Set pl, Set V.GlobalId)
+getDependencies :: Ord pl => V.GlobalId -> Maybe (Def.Body (V.Val pl)) -> (Set pl, Set V.GlobalId)
 getDependencies globalId defBody =
     ( defBody ^. Lens._Just . Lens.traverse . Lens.traverse . Lens.to Set.singleton
     , Set.singleton globalId
@@ -142,12 +126,11 @@ evalActions actions stateRef =
                 modifyState f
                 _aReportUpdatesAvailable actions
 
-evalThread :: Ord pl => Actions pl -> IORef (State pl) -> Val pl -> IO ()
+evalThread :: Ord pl => Actions pl -> IORef (State pl) -> V.Val pl -> IO ()
 evalThread actions stateRef src =
     do
         result <-
-            Eval.whnfScopedVal (Eval.ScopedVal EvalVal.emptyScope src)
-            >>= force
+            Eval.evalScopedVal (Eval.ScopedVal EvalVal.emptyScope src)
             & Eval.runEvalT
             & runEitherT
             & (`evalStateT` Eval.initialState env)
@@ -162,19 +145,14 @@ evalThread actions stateRef src =
             do
                 BS8.hPutStrLn stderr $ "Background evaluator thread failed: " <> BS8.pack (show e)
                 writeStatus stateRef t
-        force = Lens.traverseOf_ EvalVal.children (Eval.whnfThunk >=> force)
 
 results :: State pl -> EvalResults pl
 results state =
     EvalResults
-    { erExprValues =
-        state ^. sValHeadMap
-        <&> Lens.mapped %~ Results.derefValHead (state ^. sThunkMap)
-        <&> Lens.mapped . Lens.mapped .~ ()
+    { erExprValues = state ^. sValMap <&> Lens.mapped . Lens.mapped .~ ()
     , erAppliesOfLam =
         state ^. sAppliesOfLam
-        <&> Lens.mapped . Lens.mapped . Lens._2 %~
-            void . Results.derefThunkId (state ^. sThunkMap)
+        <&> Lens.mapped . Lens.mapped . Lens._2 . Lens.mapped .~ ()
     }
 
 getState :: Evaluator pl -> IO (State pl)
@@ -186,7 +164,7 @@ getResults evaluator = getState evaluator <&> results
 withLock :: MVar () -> IO a -> IO a
 withLock mvar action = withMVar mvar (const action)
 
-start :: Ord pl => Actions pl -> Val pl -> IO (Evaluator pl)
+start :: Ord pl => Actions pl -> V.Val pl -> IO (Evaluator pl)
 start actions src =
     do
         stateRef <-

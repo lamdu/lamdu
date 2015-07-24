@@ -26,7 +26,6 @@ import           Data.Store.Transaction (Transaction, MkProperty)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Eval.Results (ComputedVal(..))
 import           Lamdu.Eval.Val (ScopeId)
 import qualified Lamdu.Eval.Val as EV
 import qualified Lamdu.Expr.GenIds as GenIds
@@ -65,7 +64,7 @@ cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalP
 data FieldParam = FieldParam
     { fpTag :: T.Tag
     , fpFieldType :: Type
-    , fpValue :: Map ScopeId [(ScopeId, ComputedVal ())]
+    , fpValue :: Map ScopeId [(ScopeId, EV.Val ())]
     }
 
 onMatchingSubexprs ::
@@ -475,9 +474,8 @@ isParamAlwaysUsedWithGetField (V.Lam param body) =
         cond (Val () (V.BLeaf (V.LVar v)) : _) _ = v == param
         cond _ _ = False
 
-extractField :: T.Tag -> ComputedVal pl -> ComputedVal pl
-extractField _ NotYet = NotYet
-extractField tag (ComputedVal (EV.HRecExtend (V.RecExtend vt vv vr)))
+extractField :: T.Tag -> EV.Val pl -> EV.Val pl
+extractField tag (EV.HRecExtend (V.RecExtend vt vv vr))
         | vt == tag = vv
         | otherwise = extractField tag vr
 extractField tag x =

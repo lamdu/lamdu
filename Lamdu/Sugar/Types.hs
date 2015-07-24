@@ -92,12 +92,10 @@ import           Data.Store.Guid (Guid)
 import           Data.Store.Transaction (Transaction, MkProperty)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Eval.Val (ScopeId)
-import           Lamdu.Eval.Results (ComputedVal)
+import qualified Lamdu.Eval.Val as E
 import           Lamdu.Expr.Scheme (Scheme)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
@@ -122,7 +120,7 @@ data Actions m = Actions
     , _extract :: Maybe (T m EntityId) -- Nothing if already hole
     }
 
-type EvaluationResult = Map ScopeId (ComputedVal ())
+type EvaluationResult = Map E.ScopeId (E.Val ())
 
 data Annotation = Annotation
     { _aInferredType :: Type
@@ -212,7 +210,7 @@ data HoleResult name m = HoleResult
 
 data ScopeGetVar name m = ScopeGetVar
     { _sgvGetVar :: GetVar name m
-    , _sgvVal :: Val ()
+    , _sgvVal :: V.Val ()
     }
 
 data TIdG name = TIdG
@@ -222,7 +220,7 @@ data TIdG name = TIdG
     }
 
 data HoleOption name m = HoleOption
-    { _hoVal :: Val ()
+    { _hoVal :: V.Val ()
     , _hoSugaredBaseExpr :: T m (Expression name m ())
     , -- A group in the hole results based on this option
       _hoResults :: ListT (T m) (HoleResultScore, T m (HoleResult name m))
@@ -433,7 +431,7 @@ data WhereItem name m expr = WhereItem
     , _wiName :: name
     , _wiActions :: Maybe (WhereItemActions m)
     , -- This is a mapping from param in bScopes to the where item's scope
-      _wiScopes :: Map ScopeId ScopeId
+      _wiScopes :: Map E.ScopeId E.ScopeId
     } deriving (Functor, Foldable, Traversable)
 
 data BinderActions m = BinderActions
@@ -458,14 +456,14 @@ data BinderParams name m
 
 data Binder name m expr = Binder
     { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
-    , _bMChosenScopeProp :: Maybe (MkProperty m (Maybe ScopeId))
+    , _bMChosenScopeProp :: Maybe (MkProperty m (Maybe E.ScopeId))
     , _bParams :: BinderParams name m
     , _bBody :: expr
     , _bWhereItems :: [WhereItem name m expr]
     , _bMActions :: Maybe (BinderActions m)
     , -- Tuples of param and body scopes
       -- (the body scope may be internal of the param scope include where items)
-      _bScopes :: Map ScopeId [(ScopeId, ScopeId)]
+      _bScopes :: Map E.ScopeId [(E.ScopeId, E.ScopeId)]
     } deriving (Functor, Foldable, Traversable)
 
 data AcceptNewType m = AcceptNewType
