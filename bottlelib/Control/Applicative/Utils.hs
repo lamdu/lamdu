@@ -1,6 +1,7 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Control.Applicative.Utils (when) where
 
-import Control.Applicative (Applicative(..))
+import Prelude.Compat
 
 when :: Applicative f => Bool -> f () -> f ()
 when True x = x

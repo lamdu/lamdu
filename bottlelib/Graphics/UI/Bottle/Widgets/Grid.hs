@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Graphics.UI.Bottle.Widgets.Grid
     ( Grid, KGrid(..)
     , make, makeKeyed, makeAlign, makeCentered
@@ -13,19 +13,19 @@ module Graphics.UI.Bottle.Widgets.Grid
     , toWidgetBiased, toWidgetBiasedWithKeys
     ) where
 
-import           Control.Applicative (liftA2, (<$>))
+import           Prelude.Compat
+
+import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (msum)
-import           Data.Foldable (Foldable)
 import           Data.Function (on)
 import           Data.List (foldl', transpose, find)
 import           Data.List.Utils (groupOn, sortOn, minimumOn)
 import           Data.MRUMemo (memo)
 import           Data.Maybe (fromMaybe)
-import           Data.Monoid (Monoid(..), (<>))
-import           Data.Traversable (Traversable)
+import           Data.Monoid ((<>))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           Graphics.UI.Bottle.Direction (Direction)

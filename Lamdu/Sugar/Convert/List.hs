@@ -1,22 +1,20 @@
-{-# LANGUAGE RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Sugar.Convert.List
     ( cons
     , nil
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (guard, void, MonadPlus(..))
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.MonadA (MonadA)
-import           Data.Foldable (Foldable)
 import qualified Data.Map.Utils as MapUtils
 import           Data.Maybe.Utils (maybeToMPlus)
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Transaction (Transaction)
-import           Data.Traversable (Traversable(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef

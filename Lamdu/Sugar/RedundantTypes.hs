@@ -1,9 +1,10 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, RankNTypes #-}
 module Lamdu.Sugar.RedundantTypes
     ( redundantTypes
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import           Control.Lens (Traversal')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators

@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Graphics.UI.Bottle.Widgets.Spacer
     ( make
     , makeWidget
@@ -6,8 +7,9 @@ module Graphics.UI.Bottle.Widgets.Spacer
     , makeHorizLine
     ) where
 
+import           Prelude.Compat
+
 import           Control.Monad (void)
-import           Data.Monoid (mempty)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim

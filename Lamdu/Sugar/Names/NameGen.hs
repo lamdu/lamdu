@@ -1,10 +1,11 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 module Lamdu.Sugar.Names.NameGen
     ( NameGen, initial
     , IsFunction(..), existingName, newName
     ) where
 
-import           Control.Applicative ((<$>))
+import           Prelude.Compat
+
 import           Control.Arrow ((&&&))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators

@@ -1,8 +1,10 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Graphics.UI.Bottle.Direction
     ( Direction(..), coordinates
     ) where
 
-import           Control.Applicative (pure, (<$>))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Vector.Vector2 (Vector2(..))

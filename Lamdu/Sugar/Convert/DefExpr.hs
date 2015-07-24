@@ -1,7 +1,9 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, ScopedTypeVariables #-}
 module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
+
+import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -9,7 +11,6 @@ import           Control.Lens.Tuple
 import           Control.Monad.Trans.Either (runEitherT)
 import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property

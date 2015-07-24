@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.DbLayout
     ( DbM, runDbTransaction
     , ViewM, runViewTransaction
@@ -7,7 +7,8 @@ module Lamdu.Data.DbLayout
     , module Lamdu.Data.Anchors
     ) where
 
-import           Control.Applicative (Applicative)
+import           Prelude.Compat
+
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.ByteString.Char8 ()
 import           Data.Store.Db (Db)

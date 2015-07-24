@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TemplateHaskell, RankNTypes, FlexibleInstances #-}
+{-# LANGUAGE NoImplicitPrelude, TypeFamilies, TemplateHaskell, RankNTypes, FlexibleInstances #-}
 module Graphics.UI.Bottle.Widgets.Layout
     ( Layout
     , Box.Alignment
@@ -19,7 +19,8 @@ module Graphics.UI.Bottle.Widgets.Layout
     , hoverInPlaceOf
     ) where
 
-import           Control.Applicative (Applicative(..))
+import           Prelude.Compat
+
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators

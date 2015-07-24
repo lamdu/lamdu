@@ -1,8 +1,10 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.VersionControl
     ( makeActions, runAction, runEvent, getVersion
     ) where
 
-import           Control.Applicative ((<$>))
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Control.Monad (unless)
 import           Data.List (elemIndex)

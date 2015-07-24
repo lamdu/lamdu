@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, RankNTypes #-}
 module Lamdu.DefEvaluators
     ( Evaluators(..)
     , new
@@ -7,13 +7,13 @@ module Lamdu.DefEvaluators
     , runTransactionAndMaybeRestartEvaluators
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.IORef
 import           Data.Maybe (mapMaybe)
-import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
 import           Data.Set (Set)
 import qualified Data.Set as Set

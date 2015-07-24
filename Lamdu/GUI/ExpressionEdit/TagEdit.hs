@@ -1,14 +1,15 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
     ( makeRecordTag, makeCaseTag
     , makeParamTag
     , diveToRecordTag, diveToCaseTag
     ) where
 
-import           Control.Applicative ((<$>))
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
-import           Data.Monoid (Monoid(..), (<>))
+import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E

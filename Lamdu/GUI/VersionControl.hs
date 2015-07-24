@@ -1,21 +1,20 @@
-{-# LANGUAGE RecordWildCards, TypeOperators, OverloadedStrings, RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude ,RecordWildCards, TypeOperators, OverloadedStrings, RankNTypes #-}
 module Lamdu.GUI.VersionControl
     ( make
     ) where
 
-import           Control.Applicative (Applicative, (<$>), pure)
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (lift)
 import           Control.MonadA (MonadA)
 import qualified Data.List.Utils as ListUtils
-import           Data.Monoid (Monoid(..))
 import qualified Data.Store.Property as Property
 import           Data.Store.Rev.Branch (Branch)
 import qualified Data.Store.Rev.Branch as Branch
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Traversable (traverse)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))

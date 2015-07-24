@@ -1,16 +1,17 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.GUI.ExpressionEdit.EventMap
     ( make
     , modifyEventMap
     , jumpHolesEventMap
     ) where
 
-import           Control.Applicative ((<$>), Applicative(..), liftA2)
+import           Prelude.Compat
+
+import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
-import           Data.Monoid (Monoid(..))
 import qualified Data.Store.Transaction as Transaction
-import           Data.Traversable (sequenceA)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (EventHandlers)

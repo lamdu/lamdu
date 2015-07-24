@@ -1,11 +1,12 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards #-}
 module Lamdu.GUI.Zoom
     ( Zoom, make, eventMap, getSizeFactor
     ) where
 
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Data.IORef
-import           Data.Monoid (mconcat)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget

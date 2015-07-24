@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Graphics.UI.Bottle.WidgetsEnvT
     ( WidgetEnvT, runWidgetEnvT
     , mapWidgetEnvT
@@ -17,7 +17,8 @@ module Graphics.UI.Bottle.WidgetsEnvT
     , setTextSizeColor, setTextColor
     ) where
 
-import           Control.Applicative (Applicative)
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (MonadTrans(..))

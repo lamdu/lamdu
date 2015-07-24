@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies #-}
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGui, egWidget, egAlignment
     -- General:
@@ -34,7 +34,8 @@ module Lamdu.GUI.ExpressionGui
     , stdWrapParenify
     ) where
 
-import           Control.Applicative ((<$>))
+import           Prelude.Compat
+
 import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -43,7 +44,6 @@ import           Control.MonadA (MonadA)
 import           Data.Binary.Utils (encodeS)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))

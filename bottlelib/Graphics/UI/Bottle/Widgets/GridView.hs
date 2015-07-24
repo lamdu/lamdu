@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Graphics.UI.Bottle.Widgets.GridView
     ( make, makePlacements, makeAlign, makeCentered
     , Alignment
@@ -5,11 +6,12 @@ module Graphics.UI.Bottle.Widgets.GridView
     , horizontalAlign, horizontal
     ) where
 
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.List (transpose)
-import           Data.Monoid (Monoid(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Rect (Rect(..))

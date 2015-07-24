@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell #-}
 module Graphics.UI.Bottle.Rect
     ( R, Rect(..), topLeft, size
     , topLeftAndSize
@@ -9,7 +9,9 @@ module Graphics.UI.Bottle.Rect
     , distance
     ) where
 
-import           Control.Applicative ((<$>), liftA2)
+import           Prelude.Compat
+
+import           Control.Applicative (liftA2)
 import           Control.DeepSeq (NFData(..))
 import           Control.DeepSeq.Generics (genericRnf)
 import           Control.Lens (Traversal', Lens')

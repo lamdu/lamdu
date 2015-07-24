@@ -11,6 +11,10 @@ Build-type:          Simple
 Extra-source-files:  test/*.hs test/Makefile Makefile
 Cabal-version:       >= 1.8
 Data-files:          fonts/DejaVuSans.ttf, config.json
+
+Flag noprettyclass
+    Description: Using pretty>=1.1.2? If so, mustn't depend on prettyclass which was inlined into the pretty package
+
 Library
   -- Modules exported by the library.
   hs-Source-Dirs:      bottlelib
@@ -88,6 +92,7 @@ Library
   Other-Modules:       Data.Store.Rev.ViewBranchInternal
 
   Build-depends:       base >= 4
+                     , base-compat >= 0.8.2 && < 0.9
                      , aeson >= 0.6.2.1 && < 0.9
                      , leveldb-haskell >= 0.6
                      , cryptohash >= 0.7
@@ -131,7 +136,8 @@ Executable lamdu
                      , TraceUtils
                      , TypeCompose
                      , aeson
-                     , base >= 4
+                     , base
+                     , base-compat
                      , binary
                      , bytestring
                      , containers
@@ -144,13 +150,16 @@ Executable lamdu
                      , hashable
                      , lamdu-ide
                      , lens
-                     , pretty
-                     , prettyclass
                      , random
                      , split
                      , transformers
                      , utf8-string
                      , void >= 0.6.1
+  if flag(noprettyclass)
+    build-depends:     pretty >=1.1.2 && <1.2
+  else
+    build-depends:     pretty >=1.1 && <1.1.2
+                     , prettyclass ==1.0.0.0
   Other-Modules:       Lamdu.Builtins
                      , Lamdu.Builtins.Anchors
                      , Lamdu.CharClassification

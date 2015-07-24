@@ -1,8 +1,10 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Expr.UniqueId
     ( ToGuid(..), UniqueId(..)
     ) where
 
-import           Control.Applicative ((<$>))
+import           Prelude.Compat
+
 import           Control.MonadA (MonadA)
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Guid as Guid

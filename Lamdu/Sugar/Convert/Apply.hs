@@ -1,9 +1,10 @@
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NoImplicitPrelude, NamedFieldPuns #-}
 module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (MonadPlus(..), guard, unless)
@@ -15,13 +16,11 @@ import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import           Data.Maybe.Utils (maybeToMPlus)
-import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
-import           Data.Traversable (traverse)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef

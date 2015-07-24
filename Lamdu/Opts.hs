@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE FlexibleContexts, RecordWildCards #-}
 module Lamdu.Opts
     ( Parsed(..)
     , poShouldDeleteDB, poMFontPath, poUndoCount

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RecordWildCards #-}
 module Lamdu.Eval.Val
     ( ValHead, ValBody(..)
     , ThunkId(..), thunkIdInt
@@ -9,14 +9,13 @@ module Lamdu.Eval.Val
     , bitraverse, payloads, children
     ) where
 
-import           Control.Applicative (Applicative(..))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Binary (Binary)
-import           Data.Foldable (Foldable)
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Traversable (Traversable)
 import           Lamdu.Data.Definition (FFIName)
 import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V

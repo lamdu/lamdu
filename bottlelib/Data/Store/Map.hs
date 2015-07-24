@@ -1,13 +1,15 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Data.Store.Map
     ( mapStore, runEmpty
     ) where
+
+import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad.Trans.State (State, runState, state)
 import           Data.Map (Map)
-import           Data.Monoid (mempty)
 import           Data.Store.Rev.Change (Key, Value)
 import           Data.Store.Transaction (Store(..))
 import           System.Random (RandomGen, random)

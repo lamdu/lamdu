@@ -4,3 +4,5 @@
 :set -isubmodules/AlgoW/src
 :set -idist/build/autogen
 :set -Wall
+:set -DMIN_VERSION_deepseq(a,b,c)=1
+:set -DMIN_VERSION_pretty(a,b,c)=1

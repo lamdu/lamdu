@@ -1,15 +1,16 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.DefinitionEdit
     ( make
     , diveToNameEdit
     ) where
+
+import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
-import           Data.Traversable (sequenceA)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim

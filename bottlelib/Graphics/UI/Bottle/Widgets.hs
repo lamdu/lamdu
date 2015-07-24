@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets
     ( makeTextView, makeTextViewWidget, makeLabel
     , makeFocusableView
@@ -15,13 +15,13 @@ module Graphics.UI.Bottle.Widgets
     , respondToCursorPrefix
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Control.Monad (when)
 import           Control.MonadA (MonadA)
 import           Data.ByteString.Char8 (pack)
 import           Data.List (intersperse)
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Graphics.UI.Bottle.Animation (AnimId)

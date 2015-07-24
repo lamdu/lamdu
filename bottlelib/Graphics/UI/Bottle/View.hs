@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, RankNTypes, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, RankNTypes, OverloadedStrings #-}
 module Graphics.UI.Bottle.View
     ( View(..)
     , empty
@@ -9,11 +9,12 @@ module Graphics.UI.Bottle.View
     , scale
     ) where
 
+import           Prelude.Compat
+
 import           Control.Lens (Lens')
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import qualified Data.ByteString.Char8 as SBS8
-import           Data.Monoid (Monoid(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, Layer)

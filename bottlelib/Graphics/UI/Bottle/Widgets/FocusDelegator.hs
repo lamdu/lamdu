@@ -1,13 +1,13 @@
-{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
 module Graphics.UI.Bottle.Widgets.FocusDelegator
     ( FocusEntryTarget(..)
     , Config(..), Style(..), Env(..)
     , make
     ) where
 
-import           Control.Applicative (Applicative(..))
+import           Prelude.Compat
+
 import           Control.Lens.Operators
-import           Data.Monoid (mempty)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Direction (Direction)

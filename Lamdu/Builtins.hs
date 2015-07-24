@@ -1,16 +1,15 @@
-{-# LANGUAGE OverloadedStrings, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Builtins
     ( eval
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Control.Monad (void, join)
-import           Data.Foldable (Foldable(..))
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Map.Utils (matchKeys)
-import           Data.Traversable (Traversable(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Eval (EvalT)

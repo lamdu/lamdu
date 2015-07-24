@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving, DeriveGeneric #-}
 module Graphics.UI.Bottle.Widget
     ( module Graphics.UI.Bottle.WidgetId
 
@@ -46,13 +46,14 @@ module Graphics.UI.Bottle.Widget
     , respondToCursor
     ) where
 
-import           Control.Applicative ((<$>), (<*>), liftA2)
+import           Prelude.Compat
+
+import           Control.Applicative (liftA2)
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Vector.Vector2 (Vector2(..))

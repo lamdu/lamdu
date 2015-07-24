@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module Lamdu.GUI.ExpressionGui.Monad
     ( ExprGuiM
     , widgetEnv
@@ -21,7 +21,8 @@ module Lamdu.GUI.ExpressionGui.Monad
     , run
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -31,7 +32,6 @@ import qualified Control.Monad.Trans.RWS as RWS
 import           Control.MonadA (MonadA)
 import           Data.Binary (Binary)
 import qualified Data.Char as Char
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw

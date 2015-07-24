@@ -1,12 +1,12 @@
-{-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types #-}
 module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where
 
-import           Control.Applicative ((<$>), (<$))
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps

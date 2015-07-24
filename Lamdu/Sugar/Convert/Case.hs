@@ -1,14 +1,16 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.Case
     ( convert
     , convertAbsurd
     ) where
+
+import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (void)
 import           Control.MonadA (MonadA)
 import           Data.Maybe (fromMaybe)
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)

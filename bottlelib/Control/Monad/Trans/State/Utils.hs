@@ -1,6 +1,8 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Control.Monad.Trans.State.Utils (toStateT) where
 
-import Control.Applicative (Applicative(..))
+import Prelude.Compat
+
 import Control.Monad.Trans.State (State, StateT, mapStateT)
 import Data.Functor.Identity (runIdentity)
 

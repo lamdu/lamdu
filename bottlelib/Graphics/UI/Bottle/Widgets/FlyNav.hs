@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.FlyNav
     ( make, makeIO
     , Config(..)
@@ -6,14 +6,16 @@ module Graphics.UI.Bottle.Widgets.FlyNav
     , initState
     ) where
 
-import           Control.Applicative (Applicative(..), liftA2, (*>))
+import           Prelude.Compat
+
+import           Control.Applicative (liftA2)
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (void)
 import           Data.IORef
-import           Data.Monoid (Monoid(..), (<>))
+import           Data.Monoid ((<>))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)

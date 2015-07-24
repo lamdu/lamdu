@@ -1,7 +1,7 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Data.Monoid.Applicative (ApplicativeMonoid(..)) where
 
-import Control.Applicative (Applicative(..), (<$>))
-import Data.Monoid (Monoid(..))
+import Prelude.Compat
 
 newtype ApplicativeMonoid f a =
     ApplicativeMonoid { runApplicativeMonoid :: f a }

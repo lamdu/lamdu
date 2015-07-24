@@ -1,14 +1,15 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.ListEdit
     ( make
     ) where
 
-import           Control.Applicative ((<$>), (<$), Applicative(..))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
-import           Data.Monoid (Monoid(..), (<>))
+import           Data.Monoid ((<>))
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config

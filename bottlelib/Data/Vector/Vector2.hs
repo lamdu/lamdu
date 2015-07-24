@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, MultiParamTypeClasses, FlexibleInstances, TypeFamilies, DeriveGeneric #-}
 module Data.Vector.Vector2
     ( Vector2(Vector2)
     , (***),both,zip
@@ -7,17 +7,17 @@ module Data.Vector.Vector2
     )
 where
 
-import           Control.Applicative (Applicative(..), (<$>), liftA2)
+import           Prelude.Compat hiding (curry, uncurry, zip)
+
+import           Control.Applicative (liftA2)
 import           Control.DeepSeq (NFData(..))
 import           Control.DeepSeq.Generics (genericRnf)
 import qualified Control.Lens as Lens
 import           Control.Monad (join)
 import           Data.Aeson (ToJSON(..), FromJSON(..))
 import           Data.Binary (Binary(..))
-import           Data.Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           GHC.Generics (Generic)
-import           Prelude hiding (curry, uncurry, zip)
 
 data Vector2 a = Vector2
     { _first :: !a

@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, RankNTypes, TemplateHaskell #-}
 
 module Data.Store.Transaction
     ( Transaction, run
@@ -22,7 +22,9 @@ module Data.Store.Transaction
     )
 where
 
-import           Control.Applicative (Applicative, (<$>), (<|>))
+import           Prelude.Compat hiding (lookup)
+
+import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -38,14 +40,12 @@ import           Data.ByteString (ByteString)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, isJust)
-import           Data.Monoid (mempty)
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Guid as Guid
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import           Data.Store.Rev.Change (Key, Value)
-import           Prelude hiding (lookup)
 
 type ChangesMap = Map Key (Maybe Value)
 

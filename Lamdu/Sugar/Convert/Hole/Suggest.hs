@@ -1,17 +1,18 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( suggestValueWith
     , suggestValueConversion
     , stateMkVar
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import           Control.Compose ((:.)(..), unO)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Control.Monad.Trans.State (StateT(..))
 import qualified Control.Monad.Trans.State as State
-import           Data.Monoid (Monoid(..))
 import           Data.String (IsString(..))
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Nominal (Nominal)

@@ -1,13 +1,14 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.GUI.ExpressionEdit.ApplyEdit
     ( make
     ) where
 
-import           Control.Applicative (Applicative(..))
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
-import           Data.Traversable (traverse, sequenceA)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid

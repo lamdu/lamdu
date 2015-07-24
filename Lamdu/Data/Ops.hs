@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards #-}
 module Lamdu.Data.Ops
     ( newHole, wrap, setToWrapper
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap, redexWrapWith
@@ -13,7 +13,8 @@ module Lamdu.Data.Ops
     , isInfix
     ) where
 
-import           Control.Applicative ((<$>), (<$))
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Control.Monad (when)
 import           Control.MonadA (MonadA)

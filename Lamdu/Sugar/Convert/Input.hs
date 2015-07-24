@@ -1,19 +1,19 @@
 -- | Preprocess of input to sugar
-{-# LANGUAGE RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Sugar.Convert.Input
     ( Payload(..), entityId, inferred, mStored, evalResults, evalAppliesOfLam, userData
     , mkPayload, mkUnstoredPayload
     ) where
 
+import           Prelude.Compat
+
 import           Control.Lens (Lens, Lens')
 import           Control.Lens.Operators
-import           Data.Foldable (Foldable)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
-import           Data.Traversable (Traversable)
 import           Lamdu.Eval.Results (ComputedVal)
 import           Lamdu.Eval.Val (ScopeId)
 import qualified Lamdu.Expr.IRef as ExprIRef

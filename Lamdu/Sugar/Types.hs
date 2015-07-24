@@ -1,4 +1,4 @@
-{-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes, RecordWildCards #-}
 module Lamdu.Sugar.Types
     ( EntityId
     , Definition(..), drEntityId, drName, drBody
@@ -82,15 +82,14 @@ module Lamdu.Sugar.Types
     , TagG(..), tagGName, tagVal, tagInstance
     ) where
 
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
-import           Data.Foldable (Foldable)
 import qualified Data.List as List
 import           Data.Map (Map)
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Guid (Guid)
 import           Data.Store.Transaction (Transaction, MkProperty)
-import           Data.Traversable (Traversable)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Val (ScopeId)

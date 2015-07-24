@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings #-}
 module Lamdu.Eval.Background
     ( Evaluator
     , Actions(..)
@@ -6,6 +6,8 @@ module Lamdu.Eval.Background
     , pauseLoading, resumeLoading
     , getResults
     ) where
+
+import           Prelude.Compat
 
 import           Control.Concurrent (ThreadId, killThread)
 import           Control.Concurrent.MVar
@@ -19,7 +21,6 @@ import           Control.Monad ((>=>), void)
 import           Control.Monad.Trans.Either (runEitherT)
 import           Control.Monad.Trans.State.Strict (evalStateT)
 import qualified Data.ByteString.Char8 as BS8
-import           Data.Foldable (foldMap)
 import           Data.IORef
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -154,7 +155,7 @@ evalThread actions stateRef src =
             Left e -> handleError e Error
             Right _ -> return ()
         writeStatus stateRef Finished
-    `E.catch` \e@E.SomeException{..} -> handleError e Error
+    `E.catch` \e@E.SomeException{} -> handleError e Error
     where
         env = Eval.Env $ evalActions actions stateRef
         handleError e t =

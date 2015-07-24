@@ -1,11 +1,10 @@
-{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFoldable #-}
 module Data.Set.Ordered
     ( OrderedSet
     , singleton
     ) where
 
-import Data.Foldable (Foldable)
-import Data.Monoid (Monoid(..))
+import Prelude.Compat
 
 newtype OrderedSet a = OrderedSet [a]
     deriving (Show, Eq, Ord, Foldable)

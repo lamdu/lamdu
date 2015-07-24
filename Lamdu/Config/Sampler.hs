@@ -1,9 +1,11 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Config.Sampler
     ( Sampler, new
     , Version, getConfig
     ) where
 
-import           Control.Applicative ((<$>))
+import           Prelude.Compat
+
 import           Control.Concurrent (threadDelay, ThreadId)
 import           Control.Concurrent.MVar
 import           Control.Concurrent.Utils (forkIOUnmasked)

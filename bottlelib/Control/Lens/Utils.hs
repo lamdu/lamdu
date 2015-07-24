@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, RankNTypes #-}
 module Control.Lens.Utils
     ( Context'
     , contextSetter, contextVal
@@ -8,7 +8,8 @@ module Control.Lens.Utils
     , getPrism
     ) where
 
-import           Control.Applicative ((<$>))
+import           Prelude.Compat
+
 import           Control.Lens (Lens)
 import qualified Control.Lens as Lens
 import           Data.Maybe (fromMaybe)

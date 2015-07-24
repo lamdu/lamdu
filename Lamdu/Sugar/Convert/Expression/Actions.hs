@@ -1,8 +1,10 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.Expression.Actions
     ( addActions, makeAnnotation
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Control.Monad (guard)
 import           Control.MonadA (MonadA)

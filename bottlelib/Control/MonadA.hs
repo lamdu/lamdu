@@ -1,7 +1,7 @@
-{-# LANGUAGE FlexibleInstances, UndecidableInstances #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleInstances, UndecidableInstances #-}
 module Control.MonadA(MonadA) where
 
-import Control.Applicative (Applicative)
+import Prelude.Compat
 
 class (Monad m, Applicative m) => MonadA m
 instance (Monad m, Applicative m) => MonadA m

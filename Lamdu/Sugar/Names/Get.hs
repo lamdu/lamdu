@@ -1,9 +1,10 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TypeFamilies #-}
 module Lamdu.Sugar.Names.Get
     ( fromExpression
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import           Control.Monad.Trans.State (State, runState)
 import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)

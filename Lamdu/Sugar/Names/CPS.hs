@@ -1,9 +1,9 @@
-{-# LANGUAGE DeriveFunctor, RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, RankNTypes #-}
 module Lamdu.Sugar.Names.CPS
     ( CPS(..)
     ) where
 
-import Control.Applicative (Applicative(..))
+import Prelude.Compat
 
 data CPS m a = CPS { runCPS :: forall r. m r -> m (a, r) }
     deriving (Functor)

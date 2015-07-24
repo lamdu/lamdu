@@ -1,9 +1,10 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE NoImplicitPrelude, TypeFamilies, FlexibleContexts #-}
 module Lamdu.Expr.Load
     ( loadDef
     ) where
 
-import           Control.Applicative ((<$>))
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)

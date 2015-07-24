@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric, TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveGeneric, TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
 
 module Graphics.UI.Bottle.Animation
     ( R, Size, Layer
@@ -13,7 +13,9 @@ module Graphics.UI.Bottle.Animation
     , module Graphics.UI.Bottle.Animation.Id
     ) where
 
-import           Control.Applicative (Applicative(..), liftA2)
+import           Prelude.Compat
+
+import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -24,7 +26,6 @@ import           Data.List.Utils (groupOn, sortOn)
 import           Data.Map (Map, (!))
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (isJust)
-import           Data.Monoid (Monoid(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GHC.Generics (Generic)

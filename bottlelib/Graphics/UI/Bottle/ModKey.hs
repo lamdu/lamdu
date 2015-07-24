@@ -1,6 +1,6 @@
 -- | ModKey type: Grouping the modifier keys with the key
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveGeneric #-}
 module Graphics.UI.Bottle.ModKey
     ( ModKey(..), ctrlMods, altMods, shiftMods, superMods
     , ctrl, alt, shift, super
@@ -8,9 +8,10 @@ module Graphics.UI.Bottle.ModKey
     , pretty
     ) where
 
+import           Prelude.Compat
+
 import           Data.Aeson (ToJSON(..), FromJSON(..))
 import           Data.List (isPrefixOf)
-import           Data.Monoid (Monoid(..))
 import           GHC.Generics (Generic)
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Instances ()

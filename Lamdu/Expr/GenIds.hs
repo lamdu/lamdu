@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 -- TODO: Split/rename to more generic (non-sugar) modules
 module Lamdu.Expr.GenIds
     ( randomizeExprAndParams
@@ -11,7 +12,8 @@ module Lamdu.Expr.GenIds
     , NameGen(..), randomNameGen
     ) where
 
-import           Control.Applicative ((<$>), Applicative(..))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -27,7 +29,6 @@ import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Traversable (traverse)
 import           Lamdu.Expr.Identifier (Identifier(..))
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))

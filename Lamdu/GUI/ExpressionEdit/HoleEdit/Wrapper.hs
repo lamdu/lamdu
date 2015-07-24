@@ -1,11 +1,11 @@
-{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
 -- | Wrapper hole
-
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
     ( make
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)

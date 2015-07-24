@@ -1,14 +1,14 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.Inject
     ( convert
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
-import           Data.Monoid (Monoid(..))
 import qualified Data.Store.Property as Property
-import           Data.Traversable (traverse)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V

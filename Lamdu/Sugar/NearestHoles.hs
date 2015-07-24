@@ -1,9 +1,11 @@
-{-# LANGUAGE TemplateHaskell, RankNTypes #-}
+{-# LANGUAGE FlexibleContexts, NoImplicitPrelude, TemplateHaskell, RankNTypes #-}
 module Lamdu.Sugar.NearestHoles
     ( NearestHoles(..), prev, next
     , none
     , add
     ) where
+
+import           Prelude.Compat
 
 import           Control.Applicative.Utils (when)
 import           Control.Lens (LensLike)

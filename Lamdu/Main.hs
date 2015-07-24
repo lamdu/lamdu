@@ -1,16 +1,16 @@
-{-# LANGUAGE OverloadedStrings, Rank2Types, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, Rank2Types, RecordWildCards #-}
 module Main
     ( main
     ) where
 
-import           Control.Applicative (Applicative(..), (<*))
+import           Prelude.Compat
+
 import qualified Control.Exception as E
 import           Control.Lens.Operators
 import           Control.Monad (join, unless, replicateM_)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Maybe
-import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
 import           Data.Store.Db (Db)
 import qualified Data.Store.IRef as IRef

@@ -1,15 +1,16 @@
-{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
 module Lamdu.GUI.ParamEdit
     ( make
     , eventMapAddFirstParam
     , diveToNameEdit
     ) where
 
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey)

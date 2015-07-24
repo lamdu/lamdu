@@ -1,7 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, TypeFamilies, RankNTypes, RecordWildCards #-}
 module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
     , InTransaction(..)
@@ -9,14 +6,13 @@ module Lamdu.Sugar.Names.Walk
     , toDef, toExpression
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Monad ((<=<))
 import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
-import           Data.Traversable (Traversable, traverse)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.Sugar.Names.CPS (CPS(..))
@@ -139,8 +135,11 @@ toHoleOption option@HoleOption{..} =
         InTransaction run <- opRun
         pure option
             { _hoSugaredBaseExpr = _hoSugaredBaseExpr >>= run . toExpression
-            , _hoResults = _hoResults <&> _2 %~ (>>= run . toHoleResult)
+            , _hoResults = _hoResults <&> second (>>= run . toHoleResult)
             }
+    where
+        {-# INLINE second #-}
+        second f (x, y) = (x, f y)
 
 toHoleActions ::
     MonadNaming m =>
@@ -284,9 +283,9 @@ withBinderParams (VarParam FuncParam{..}) =
     opWithParamName (isFunctionType (_fpAnnotation ^. aInferredType)) _fpName
     <&> VarParam . \_fpName -> FuncParam{..}
 withBinderParams (FieldParams xs) =
-    (traverse . _2) f xs <&> FieldParams
+    (traverse . second) (fpName opWithTagName) xs <&> FieldParams
     where
-        f FuncParam{..} = opWithTagName _fpName <&> \_fpName -> FuncParam{..}
+        second f (x, y) = (,) x <$> f y
 
 toBinder ::
     MonadNaming m =>

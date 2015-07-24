@@ -1,21 +1,20 @@
-{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, RecordWildCards, OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable, RecordWildCards, OverloadedStrings, TypeFamilies #-}
 module Lamdu.GUI.CodeEdit
     ( make
     , Env(..)
     ) where
 
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (lift)
 import           Control.MonadA (MonadA)
-import           Data.Foldable (Foldable)
 import           Data.List.Utils (insertAt, removeAt)
-import           Data.Monoid (Monoid(..))
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Traversable (Traversable, traverse)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)

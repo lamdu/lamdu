@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Monad
     ( Context(..), TagParamInfo(..)
     , scInferContext, scReinferCheckDefinition, scDefI
@@ -11,7 +11,8 @@ module Lamdu.Sugar.Convert.Monad
     , typeProtectTransaction, typeProtectedSetToVal, wrapOnTypeError
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import           Control.Lens ((^.))
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Class (MonadTrans(..))
@@ -19,7 +20,6 @@ import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.MonadA (MonadA)
 import           Data.Map (Map)
-import           Data.Monoid (Monoid)
 import           Data.Set (Set)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)

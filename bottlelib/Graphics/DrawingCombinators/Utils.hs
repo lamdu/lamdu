@@ -1,5 +1,5 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE CPP, StandaloneDeriving, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, CPP, StandaloneDeriving, DeriveGeneric #-}
 module Graphics.DrawingCombinators.Utils
     ( Image
     , square
@@ -11,11 +11,12 @@ module Graphics.DrawingCombinators.Utils
     , clearRenderSized
     ) where
 
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Control.Monad (void)
 import           Data.Aeson (ToJSON(..), FromJSON(..))
 import           Data.List (genericLength)
-import           Data.Monoid (Monoid(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           Foreign.C.Types.Instances ()
 import           GHC.Generics (Generic)

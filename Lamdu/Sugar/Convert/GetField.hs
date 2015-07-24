@@ -1,17 +1,17 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.GetField
     ( convert
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (guard)
 import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
-import           Data.Traversable (traverse)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))

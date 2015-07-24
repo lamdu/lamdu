@@ -1,16 +1,17 @@
-{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
     ( blockDownEvents, disallowChars
     , makeOpenEventMaps
     ) where
 
-import           Control.Applicative (Applicative(..), (<$))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
 import           Data.List.Utils (nonEmptyAll)
-import           Data.Monoid (Monoid(..), (<>))
+import           Data.Monoid ((<>))
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction

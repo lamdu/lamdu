@@ -1,11 +1,12 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE NoImplicitPrelude, TupleSections #-}
 module Graphics.UI.GLFW.Events
     ( KeyEvent(..), Event(..), Result(..)
     , eventLoop
     ) where
 
+import           Prelude.Compat
+
 import           Data.IORef
-import           Data.Monoid
 import qualified Graphics.UI.GLFW as GLFW
 
 -- this is the reification of the callback information:

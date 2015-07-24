@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards #-}
 module Lamdu.Sugar.Lens
     ( subExprPayloads, payloadsIndexedByPath
     , holePayloads, holeArgs
@@ -9,7 +9,8 @@ module Lamdu.Sugar.Lens
     , binderFuncParamDeletes
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple

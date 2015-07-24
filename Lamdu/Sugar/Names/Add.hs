@@ -1,9 +1,10 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, DeriveGeneric, FlexibleInstances, KindSignatures #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, DeriveGeneric, FlexibleInstances, KindSignatures #-}
 module Lamdu.Sugar.Names.Add
     ( addToDef
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Reader (Reader, runReader)
@@ -16,7 +17,7 @@ import           Data.Foldable (toList)
 import qualified Data.List.Utils as ListUtils
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Monoid (Monoid(..))
+
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Set (Set)
 import qualified Data.Set as Set

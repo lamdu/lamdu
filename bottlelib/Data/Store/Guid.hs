@@ -1,6 +1,8 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving #-}
 module Data.Store.Guid
     (Guid, make, bs, length, new, combine, augment, fromString, asHex) where
+
+import           Prelude.Compat hiding (length)
 
 import           Control.DeepSeq (NFData(..))
 import           Control.Lens ((%~), _1)
@@ -16,9 +18,7 @@ import           Data.ByteString.Utils (randomBS, xorBS)
 import qualified Data.Char as Char
 import           Data.Hashable (Hashable, hashWithSalt)
 import           Data.Maybe (fromMaybe)
-import           Data.Monoid (mappend)
 import           Numeric.Utils (encodeHex)
-import           Prelude hiding (length)
 import           System.Random (Random(..), split)
 
 newtype Guid = Guid { bs :: SBS.ByteString }

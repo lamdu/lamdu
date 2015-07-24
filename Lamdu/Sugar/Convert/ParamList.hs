@@ -1,10 +1,11 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 -- | Manage, read, write lambda-associated param lists
 module Lamdu.Sugar.Convert.ParamList
     ( ParamList, loadForLambdas
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (MonadTrans(..))
@@ -15,7 +16,6 @@ import           Control.MonadA (MonadA)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Traversable (traverse)
 import           Lamdu.Data.Anchors (ParamList, assocFieldParamList)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer

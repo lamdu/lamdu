@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, DeriveGeneric, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveGeneric, RecordWildCards #-}
 module Graphics.UI.Bottle.EventMap
     ( KeyEvent(..)
     , InputDoc, Subtitle, Doc(..), docStrs
@@ -14,9 +14,8 @@ module Graphics.UI.Bottle.EventMap
     , specialCharKey
     ) where
 
-import           Prelude hiding (lookup)
+import           Prelude.Compat hiding (lookup)
 
-import           Control.Applicative (Applicative(..), (<$>))
 import           Control.Arrow ((***), (&&&))
 import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
@@ -25,7 +24,6 @@ import           Control.Monad (guard, msum)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (catMaybes, listToMaybe, maybeToList)
-import           Data.Monoid (Monoid(..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)

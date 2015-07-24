@@ -1,10 +1,11 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, OverloadedStrings, TypeFamilies #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ( makeStdWrapped
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
+import           Prelude.Compat
+
+import           Control.Applicative ((<|>))
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -14,11 +15,11 @@ import           Control.MonadA (MonadA)
 import           Data.List.Lens (suffixed)
 import qualified Data.Map as Map
 import           Data.Maybe (isJust, maybeToList, fromMaybe)
-import           Data.Monoid (Monoid(..), (<>))
+import           Data.Monoid ((<>))
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
-import           Data.Traversable (traverse)
+
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim

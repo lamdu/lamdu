@@ -1,12 +1,13 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.WidgetIds
     ( module Lamdu.GUI.WidgetIds
     , module Lamdu.GUI.WidgetIdIRef
     ) where
 
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Data.ByteString.Char8 (ByteString)
-import           Data.Monoid (mappend)
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Guid as Guid
 import           Graphics.UI.Bottle.Animation (AnimId)

@@ -1,9 +1,10 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.GetVarEdit
     ( make
     ) where
 
-import           Control.Applicative ((<$>))
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.ByteString.Char8 as SBS8

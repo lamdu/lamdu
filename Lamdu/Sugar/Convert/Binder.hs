@@ -1,9 +1,10 @@
-{-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types, PatternGuards, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types, PatternGuards, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertBinder, convertLam
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -16,7 +17,6 @@ import qualified Data.List.Utils as ListUtils
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
-import           Data.Monoid (Monoid(..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Store.Guid (Guid)
@@ -24,7 +24,6 @@ import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, MkProperty)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Traversable (traverse, sequenceA)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (ComputedVal(..))

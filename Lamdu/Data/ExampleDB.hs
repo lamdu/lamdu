@@ -1,8 +1,10 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings, ScopedTypeVariables, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, ScopedTypeVariables, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.ExampleDB
     ( initDB, createPublics
     , withDB
     ) where
+
+import           Prelude.Compat
 
 import           Control.Lens.Operators
 import           Control.Monad (unless, void)
@@ -13,7 +15,6 @@ import           Control.MonadA (MonadA)
 import           Data.Foldable (traverse_)
 import           Data.List.Split (splitOn)
 import qualified Data.Map as Map
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Db (Db)
 import qualified Data.Store.Db as Db
 import           Data.Store.Rev.Branch (Branch)

@@ -1,17 +1,17 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.Nominal
     ( convertFromNom, convertToNom
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.MonadA (MonadA)
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
-import           Data.Traversable (traverse)
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)

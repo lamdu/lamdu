@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, OverloadedStrings, TemplateHaskell #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
     ( makeAll, HaveHiddenResults(..)
     , Result(..)
@@ -6,7 +6,8 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
     , prefixId
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -17,9 +18,8 @@ import           Data.Function (on)
 import           Data.List (isInfixOf, isPrefixOf)
 import qualified Data.List.Class as ListClass
 import           Data.List.Utils (sortOn, nonEmptyAll)
-import           Data.Monoid (Monoid(..), (<>))
+import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
-import           Data.Traversable (sequenceA)
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm)

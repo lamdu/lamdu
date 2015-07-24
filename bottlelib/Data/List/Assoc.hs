@@ -1,8 +1,10 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module Data.List.Assoc
     ( at, match
     ) where
 
-import           Control.Applicative (Applicative)
+import           Prelude.Compat
+
 import           Control.Lens (LensLike')
 import qualified Control.Lens as Lens
 import           Control.Lens.Tuple

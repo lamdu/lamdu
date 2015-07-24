@@ -1,7 +1,8 @@
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor #-}
 module Control.Monad.Unit(Unit(..)) where
 
-import Control.Applicative (Applicative(..))
+import Prelude.Compat
+
 import Control.Monad (ap)
 
 data Unit a = Unit

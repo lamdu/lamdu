@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, OverloadedStrings, TemplateHaskell #-}
 
 module Lamdu.Eval
     ( EvalT(..), evalError
@@ -12,18 +12,17 @@ module Lamdu.Eval
     , asThunk
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
-import           Control.Lens (at, use, traverse)
+import           Prelude.Compat
+
+import           Control.Lens (at, use)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (void, join)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Either (EitherT(..), left)
 import           Control.Monad.Trans.State.Strict (StateT(..))
-import           Data.Foldable (Foldable)
 import           Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Traversable (Traversable)
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Eval.Val (ThunkId(..), thunkIdInt, ScopeId(..), scopeIdInt)
 import           Lamdu.Eval.Val (ValHead, ValBody(..), Closure(..), Scope(..), emptyScope)

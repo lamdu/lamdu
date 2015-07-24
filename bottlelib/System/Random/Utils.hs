@@ -1,9 +1,11 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS -fno-warn-orphans #-}
 module System.Random.Utils
     ( splits, randFunc, genFromHashable
     ) where
 
-import Control.Applicative ((<$>))
+import Prelude.Compat
+
 import Data.Binary (Binary(..))
 import Data.Hashable (Hashable, hashWithSalt)
 import System.Random (RandomGen, Random, StdGen, split, mkStdGen, random)

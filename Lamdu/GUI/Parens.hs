@@ -1,9 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.Parens
     ( addHighlightedTextParens
     ) where
 
-import           Control.Applicative (Applicative(..))
+import           Prelude.Compat
+
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)

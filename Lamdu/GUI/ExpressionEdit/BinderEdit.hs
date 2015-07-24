@@ -1,10 +1,12 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings, PatternGuards #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, PatternGuards #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make, diveToNameEdit
     , Parts(..), makeParts
     ) where
 
-import           Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
+import           Prelude.Compat
+
+import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -13,10 +15,10 @@ import           Control.MonadA (MonadA)
 import           Data.List.Utils (nonEmptyAll)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
-import           Data.Monoid (Monoid(..), (<>))
+import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Traversable (traverse)
+
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)

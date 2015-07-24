@@ -1,13 +1,14 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.BuiltinEdit
     ( make
     ) where
+
+import           Prelude.Compat
 
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.List as List
 import           Data.List.Split (splitOn)
-import           Data.Monoid (Monoid(..))
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
