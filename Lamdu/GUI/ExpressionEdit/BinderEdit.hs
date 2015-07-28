@@ -365,15 +365,21 @@ makeWhereItemEdit (_prevId, nextId, item) =
                 ]
                 | otherwise = mempty
         mBodyScopeId <- ExprGuiM.readMScopeId
+        jumpHolesEventMap <-
+            binder ^. Sugar.bBody
+            & ExprGuiT.nextHolesBefore & ExprEventMap.jumpHolesEventMap
         make
             (item ^. Sugar.wiName)
-            (item ^. Sugar.wiValue)
+            binder
             (WidgetIds.fromEntityId (item ^. Sugar.wiEntityId))
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
+            <&> ExpressionGui.egWidget
+                %~ Widget.weakerEvents (mappend jumpHolesEventMap eventMap)
             <&> ExpressionGui.pad
                 (Config.whereItemPadding config <&> realToFrac)
             & ExprGuiM.withLocalMScopeId
                 (mBodyScopeId >>= (`Map.lookup` (item ^. Sugar.wiScopes)))
+    where
+        binder = item ^. Sugar.wiValue
 
 jumpToRHS ::
     (MonadA m, MonadA f) =>
