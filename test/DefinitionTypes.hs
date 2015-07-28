@@ -1,35 +1,33 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module DefinitionTypes (definitionTypes) where
 
-import           Control.Applicative ((<$>))
-import           Data.Map (Map)
+import           Prelude.Compat
+
 import qualified Data.Map as Map
-import           Data.Monoid (mappend)
 import qualified Data.Store.Map as MapStore
 import qualified Data.Store.Transaction as Transaction
 import           Data.String (IsString(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.ExampleDB as ExampleDB
-import           Lamdu.Expr.Scheme (Scheme)
 import qualified Lamdu.Expr.Scheme as Scheme
 import           Lamdu.Expr.Type (Type, (~>))
 import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.Val as V
+import qualified Lamdu.Infer as Infer
 
 boolType :: Type
 boolType = T.TInst "Bool" Map.empty
 
-definitionTypes :: Map V.GlobalId Scheme
+definitionTypes :: Infer.Loaded
 definitionTypes =
-    exampleDBDefs `mappend` extras
+    Infer.Loaded (exampleDBDefs `mappend` extras) Map.empty
     where
-        extras = Map.singleton "IntToBoolFunc" $ Scheme.mono $ T.int ~> boolType
+        extras = Map.singleton "IntToBoolFunc" $ Scheme.mono $ T.TInt ~> boolType
         exampleDBDefs =
             fst . MapStore.runEmpty . Transaction.run MapStore.mapStore $
                 do
-                    (_, defIs) <- ExampleDB.createBuiltins
-                    Map.fromList <$> mapM readDef defIs
+                    publics <- ExampleDB.createPublics
+                    Map.fromList <$> mapM readDef (ExampleDB.publicDefs publics)
 
         nameOf = fmap fromString . Transaction.getP . Anchors.assocNameRef
         readDef defI =

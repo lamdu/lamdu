@@ -1,8 +1,9 @@
-{-# LANGUAGE RankNTypes, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, RankNTypes, OverloadedStrings #-}
 {-# OPTIONS -fno-warn-missing-signatures #-}
 module InferTests (allTests, factorialExpr, euler1Expr, solveDepressedQuarticExpr) where
 
-import           Control.Applicative ((<$>))
+import           Prelude.Compat
+
 import           Data.String (IsString(..))
 import           InferAssert
 import           InferCombinators
@@ -19,7 +20,7 @@ import           Test.QuickCheck.Property (property, rejected)
 a, b, c, d :: TypeStream
 a:b:c:d:_ = map (typeVar . fromString . (:[])) ['a'..]
 
-r :: RepeatList (T.Composite T.Product)
+r :: RepeatList T.Product
 r = typeVar $ fromString "r"
 
 simpleTests =

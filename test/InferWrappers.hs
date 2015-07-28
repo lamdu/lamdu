@@ -22,7 +22,11 @@ runNewContext = (`evalStateT` Infer.initialContext) . Infer.run
 
 {-# INLINE loader #-}
 loader :: Monad m => Loader m
-loader = Loader { loadTypeOf = return . (definitionTypes Map.!) }
+loader =
+    Loader
+    { loadTypeOf = return . (Infer.loadedGlobalTypes definitionTypes Map.!)
+    , loadNominal = return . (Infer.loadedNominals definitionTypes Map.!)
+    }
 
 loadInferScope :: Infer.Scope -> Val a -> Infer (Val (Infer.Payload, a))
 loadInferScope scope = runIdentity . loadInfer loader scope

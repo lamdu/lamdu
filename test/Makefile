@@ -1,7 +1,7 @@
 GHC=ghc
 RUNGHC=run${GHC}
 GHC_FLAGS=-O2 -Wall -Werror -XScopedTypeVariables
-SRCDIRS=-i.. -i../bottlelib -i../submodules/AlgoW
+SRCDIRS=-i.. -i../bottlelib -i../submodules/AlgoW -optP-include -optP../dist/build/autogen/cabal_macros.h
 
 all: run_test_infer
 

@@ -1,6 +1,8 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 module AnnotatedExpr where
 
-import           Control.Applicative (pure, (<$>))
+import           Prelude.Compat
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple

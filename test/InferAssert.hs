@@ -1,8 +1,9 @@
-{-# LANGUAGE OverloadedStrings, RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings, RankNTypes #-}
 module InferAssert where
 
+import           Prelude.Compat
+
 import           AnnotatedExpr
-import           Control.Applicative ((<$>))
 import qualified Control.Exception as E
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
@@ -16,16 +17,16 @@ import           Control.Monad.Trans.Writer (WriterT(..))
 import qualified Control.Monad.Trans.Writer as Writer
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Monoid (Monoid(..))
 import qualified Data.Monoid as Monoid
 import           Data.String (IsString(..))
 import           Formatting
 import           InferCombinators
 import           InferWrappers
-import           Lamdu.Data.Arbitrary ()
+import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))
+import           Lamdu.Expr.Val.Arbitrary ()
 import           Lamdu.Infer (Infer, InferCtx(..))
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Error (Error)
@@ -55,7 +56,7 @@ type VarState t = (VarMap t, FreshSupply t)
 emptyVarState :: VarState t
 emptyVarState = (Map.empty, map (fromString . (:[])) ['a'..])
 
-type Canonizer = State (VarState Type, VarState (T.Composite T.Product))
+type Canonizer = State (VarState Type, VarState T.Product)
 runCanonizer :: Canonizer a -> a
 runCanonizer = flip evalState (emptyVarState, emptyVarState)
 
@@ -97,10 +98,10 @@ canonizeType (T.TVar tv) =
 canonizeType (T.TRecord c) =
     Lens.zoom _2 (canonizeCompositeType c)
     <&> T.TRecord
-    >>= T.nextLayer %%~ canonizeType
+    >>= ExprLens.nextLayer %%~ canonizeType
 canonizeType t =
     t
-    & T.nextLayer %%~ canonizeType
+    & ExprLens.nextLayer %%~ canonizeType
 
 onInferError :: (Error -> Error) -> Infer a -> Infer a
 onInferError f (Infer act) = Infer $ mapStateT (Lens._Left %~ f) act

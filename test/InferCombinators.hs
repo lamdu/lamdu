@@ -1,25 +1,27 @@
-{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable, OverloadedStrings #-}
 module InferCombinators where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Prelude.Compat
+
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Data.Foldable (Foldable)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
-import           Data.Traversable (Traversable)
 import           DefinitionTypes
-import           Lamdu.Data.Arbitrary ()
+import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Scheme (Scheme(..))
 import qualified Lamdu.Expr.Scheme as Scheme
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.TypeVars (TypeVars(..))
+import qualified Lamdu.Expr.TypeVars as TV
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Expr.Val.Arbitrary ()
+import qualified Lamdu.Infer as Infer
 import           Text.PrettyPrint ((<+>))
 import qualified Text.PrettyPrint as PP
 import           Text.PrettyPrint.HughesPJClass (Pretty(..))
@@ -106,8 +108,8 @@ emptyCompositeType = pure T.CEmpty
 
 compositeTypeExtend ::
     T.Tag -> TypeStream ->
-    RepeatList (T.Composite T.Product) ->
-    RepeatList (T.Composite T.Product)
+    RepeatList T.Product ->
+    RepeatList T.Product
 compositeTypeExtend tag typ base =
     T.CExtend tag <$> typ <*> base
 
@@ -122,7 +124,7 @@ instantiate scheme typeVarAssignments =
 
 onTVars :: (T.Var Type -> Type) -> Type -> Type
 onTVars f (T.TVar v) = f v
-onTVars f t = t & T.nextLayer %~ onTVars f
+onTVars f t = t & ExprLens.nextLayer %~ onTVars f
 
 glob :: [TypeStream] -> V.GlobalId -> ExprWithResumptions
 glob typeVarAssignments globalId
@@ -134,12 +136,13 @@ glob typeVarAssignments globalId
     where
         scheme =
             fromMaybe (error ("global " ++ show globalId ++ " does not exist")) $
-            Map.lookup globalId definitionTypes
+            Map.lookup globalId $
+            Infer.loadedGlobalTypes definitionTypes
         TypeVars tvs rtvs stvs = scheme ^. Scheme.schemeForAll
         typeVarAssignments' = zip (Set.toList tvs) typeVarAssignments
 
 intType :: TypeStream
-intType = pure T.int
+intType = pure T.TInt
 
 literalInteger :: Integer -> ExprWithResumptions
 literalInteger x =
@@ -150,8 +153,8 @@ literalInteger x =
 holeWithInferredType :: TypeStream -> ExprWithResumptions
 holeWithInferredType = mkExprWithResumptions (V.BLeaf V.LHole)
 
-typeVar :: T.LiftVar b => T.Var b -> RepeatList b
-typeVar x = pure . T.liftVar $ x
+typeVar :: TV.VarKind b => T.Var b -> RepeatList b
+typeVar x = pure . TV.lift $ x
 
 infixr 1 ~>
 (~>) :: TypeStream -> TypeStream -> TypeStream
@@ -188,7 +191,7 @@ compositeOfList base [] = base
 compositeOfList base ((tag, typ):rest) = T.CExtend tag typ $ compositeOfList base rest
 
 lambdaRecord ::
-    RepeatList (T.Composite T.Product) -> V.Var -> [(T.Tag, TypeStream)] ->
+    RepeatList T.Product -> V.Var -> [(T.Tag, TypeStream)] ->
     ([ExprWithResumptions] -> ExprWithResumptions) -> ExprWithResumptions
 lambdaRecord baseRecord paramsName fields mkResult =
     lambda paramsName recordType $ \params ->
