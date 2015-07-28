@@ -2,6 +2,7 @@
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( value
     , valueConversion
+    , valueNoSplit
     ) where
 
 import           Prelude.Compat
@@ -77,15 +78,18 @@ value typ@(T.TSum comp) =
     <&> Val typ
     where
         inject (tag, innerTyp) =
-            valueNoSplit innerTyp & run & V.Inject tag & V.BInject
-value typ = [valueNoSplit typ & run]
+            valueNoSplitM innerTyp & run & V.Inject tag & V.BInject
+value typ = [valueNoSplitM typ & run]
 
-valueNoSplit :: Type -> M (Val Type)
-valueNoSplit (T.TRecord composite) = suggestRecordWith composite
-valueNoSplit (T.TFun (T.TSum composite) r) = suggestCaseWith composite r
-valueNoSplit typ =
+valueNoSplit :: Type -> Val Type
+valueNoSplit typ = valueNoSplitM typ & run
+
+valueNoSplitM :: Type -> M (Val Type)
+valueNoSplitM (T.TRecord composite) = suggestRecordWith composite
+valueNoSplitM (T.TFun (T.TSum composite) r) = suggestCaseWith composite r
+valueNoSplitM typ =
     case typ of
-    T.TFun _ r -> V.Lam <$> mkVar <*> valueNoSplit r <&> V.BAbs
+    T.TFun _ r -> V.Lam <$> mkVar <*> valueNoSplitM r <&> V.BAbs
     _ -> V.BLeaf V.LHole & pure
     <&> Val typ
 
@@ -96,7 +100,7 @@ suggestRecordWith recordType =
     T.CEmpty        -> V.BLeaf V.LRecEmpty & pure
     T.CExtend f t r ->
         V.RecExtend f
-        <$> valueNoSplit t
+        <$> valueNoSplitM t
         <*> suggestRecordWith r
         <&> V.BRecExtend
     <&> Val (T.TRecord recordType)
@@ -108,7 +112,7 @@ suggestCaseWith sumType resultType =
     T.CEmpty -> V.BLeaf V.LAbsurd & pure
     T.CExtend tag fieldType rest ->
         V.Case tag
-        <$> valueNoSplit (T.TFun fieldType resultType)
+        <$> valueNoSplitM (T.TFun fieldType resultType)
         <*> suggestCaseWith rest resultType
         <&> V.BCase
     <&> Val (T.TFun (T.TSum sumType) resultType)
