@@ -175,8 +175,7 @@ createList valTParamId =
     where
         valT = "a"
 
-createMaybe ::
-    MonadA m => T.ParamId -> M m TypeCtor
+createMaybe :: MonadA m => T.ParamId -> M m TypeCtor
 createMaybe valTParamId =
     do
         tid <- newTId "Maybe"
@@ -186,6 +185,19 @@ createMaybe valTParamId =
             , Normal (T.TVar valT) $ CtorInfo Builtins.justTag Verbose $
               forAll 1 $ \[a] -> a ~> maybe_ [a]
             ]
+    where
+        valT = "a"
+
+createInfiniteStream :: MonadA m => T.ParamId -> M m TypeCtor
+createInfiniteStream valTParamId =
+    do
+        tid <- newTId "InfStream"
+        lift $ newNominal tid [(valTParamId, valT)] $
+            \stream ->
+            recordType [] ~> recordType
+            [ (Builtins.headTag, T.TVar valT)
+            , (Builtins.tailTag, stream [T.TVar valT])
+            ] & Scheme.mono
     where
         valT = "a"
 
@@ -218,6 +230,7 @@ createPublics =
 
         _ <- createList valTParamId
         _ <- createMaybe valTParamId
+        _ <- createInfiniteStream valTParamId
         (bool, _boolNames) <- createBool
 
         let infixType lType rType resType =
