@@ -655,13 +655,8 @@ mkExtract binderScopeVars param delItem bodyStored argStored =
                             (ctx ^. ConvertM.scCodeAnchors) extractedI
                             <&> EntityId.ofIRef
                 Just scopeBodyP ->
-                    do
-                        (newParam, _) <- DataOps.redexWrapWith extractedI scopeBodyP
-                        let toNewVar p =
-                                V.LVar newParam & V.BLeaf
-                                & ExprIRef.writeValBody (Property.value p)
-                        onGetVars toNewVar param bodyStored
-                        EntityId.ofLambdaParam newParam & return
+                    DataOps.redexWrapWithGivenParam param extractedI scopeBodyP
+                    & Lens.mapped .~ EntityId.ofLambdaParam param
             & return
     where
         extractedI = argStored ^. V.payload & Property.value

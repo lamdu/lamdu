@@ -1,7 +1,8 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards #-}
 module Lamdu.Data.Ops
     ( newHole, wrap, setToWrapper
-    , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap, redexWrapWith
+    , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
+    , redexWrapWithGivenParam
     , recExtend, RecExtendResult(..)
     , case_, CaseResult(..)
     , addListItem
@@ -87,21 +88,25 @@ lambdaWrap exprP =
         Property.set exprP newExprI
         return (newParam, newExprI)
 
-redexWrapWith ::
+redexWrapWithGivenParam ::
     MonadA m =>
-    ExprIRef.ValI m -> ExprIRef.ValIProperty m -> T m (V.Var, ExprIRef.ValI m)
-redexWrapWith newValueI exprP =
+    V.Var -> ExprIRef.ValI m -> ExprIRef.ValIProperty m ->
+    T m (ExprIRef.ValI m)
+redexWrapWithGivenParam param newValueI exprP =
     do
-        (newParam, newLambdaI) <- ExprIRef.newLambda $ Property.value exprP
+        newLambdaI <-
+            ExprIRef.newValBody $ V.BAbs $ V.Lam param $ Property.value exprP
         newApplyI <- ExprIRef.newValBody . V.BApp $ V.Apply newLambdaI newValueI
         Property.set exprP newApplyI
-        return (newParam, newLambdaI)
+        return newLambdaI
 
 redexWrap :: MonadA m => ExprIRef.ValIProperty m -> T m (V.Var, ExprIRef.ValI m)
 redexWrap exprP =
     do
         newValueI <- newHole
-        redexWrapWith newValueI exprP
+        newParam <- ExprIRef.newVar
+        newLambdaI <- redexWrapWithGivenParam newParam newValueI exprP
+        return (newParam, newLambdaI)
 
 data RecExtendResult m = RecExtendResult
     { rerNewTag :: T.Tag
