@@ -401,20 +401,6 @@ eitherToListT :: Monad m => Either t a -> ListT m a
 eitherToListT (Left _) = mempty
 eitherToListT (Right x) = return x
 
-applyFormArg :: a -> (Infer.Payload, a) -> Val (Infer.Payload, a)
-applyFormArg empty pl =
-    Val pl $
-    case pl ^. _1 . Infer.plType of
-    T.TRecord T.CEmpty -> V.BLeaf V.LRecEmpty
-    T.TRecord (T.CExtend f typ rest) ->
-        V.BRecExtend $
-            V.RecExtend f
-            (Val (plSameScope typ) (V.BLeaf V.LHole)) $
-            applyFormArg empty (plSameScope (T.TRecord rest))
-    _ -> V.BLeaf V.LHole
-    where
-        plSameScope typ = (pl ^. _1 & Infer.plType .~ typ, empty)
-
 applyForms ::
     MonadA m =>
     a -> Val (Infer.Payload, a) ->
@@ -423,9 +409,10 @@ applyForms _ v@(Val _ V.BAbs {}) = return v
 applyForms empty val =
     case inferPl ^. Infer.plType of
     T.TFun arg res ->
-        applyForms empty $
-        Val (plSameScope res) $ V.BApp $ V.Apply val $
-        applyFormArg empty (plSameScope arg)
+        Suggest.valueNoSplit arg
+        <&> plSameScope
+        & V.Apply val & V.BApp & Val (plSameScope res)
+        & applyForms empty
     T.TVar tv
         | any (`Lens.has` val)
             [ ExprLens.valVar
