@@ -124,7 +124,7 @@ newNominal ::
     MonadA m =>
     T.Id -> [(T.ParamId, T.TypeVar)] ->
     ({-fixpoint:-}TypeCtor -> Scheme) ->
-    Transaction m TypeCtor
+    T m TypeCtor
 newNominal tid params body =
     do
         Transaction.writeIRef (ExprIRef.nominalI tid) $
