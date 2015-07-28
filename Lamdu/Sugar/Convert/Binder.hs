@@ -24,6 +24,7 @@ import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, MkProperty)
 import qualified Data.Store.Transaction as Transaction
+import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Val (ScopeId)
@@ -651,6 +652,7 @@ mkExtract binderScopeVars param delItem bodyStored argStored =
                 Nothing ->
                     do
                         getVarsToHole param bodyStored
+                        getVarsToHole Builtins.recurseVar argStored
                         DataOps.newDefinitionWithPane
                             (ctx ^. ConvertM.scCodeAnchors) extractedI
                             <&> EntityId.ofIRef
