@@ -448,9 +448,11 @@ makeParamsEdit annotationOpts showAnnotation nearestHoles lhsId params =
         do
             actions <-
                 maybe (return mempty) (makeNullLambdaActions lhsId) mActions
+            jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
             ExpressionGui.grammarLabel "◗" (Widget.toAnimId lhsId)
                 >>= ExpressionGui.makeFocusableView (Widget.joinId lhsId ["param"])
-                <&> ExpressionGui.egWidget %~ Widget.weakerEvents actions
+                <&> ExpressionGui.egWidget
+                    %~ Widget.weakerEvents (mappend actions jumpHolesEventMap)
                 <&> (:[])
     Sugar.VarParam p -> fromParamList [p]
     Sugar.FieldParams ps -> ps ^.. Lens.traversed . _2 & fromParamList
