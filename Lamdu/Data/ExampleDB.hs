@@ -26,23 +26,19 @@ import           Data.Store.Transaction (Transaction, setP)
 import qualified Data.Store.Transaction as Transaction
 import           Data.String (IsString(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
-import           Lamdu.Data.Anchors (assocTagOrder, ParamList, assocFieldParamList, PresentationMode(..))
+import           Lamdu.Data.Anchors (assocTagOrder, PresentationMode(..))
 import qualified Lamdu.Data.DbLayout as Db
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (DefI, ValI)
+import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Nominal (Nominal(..))
-import           Lamdu.Expr.Pure (($$))
-import qualified Lamdu.Expr.Pure as Pure
 import           Lamdu.Expr.Scheme (Scheme(..))
 import qualified Lamdu.Expr.Scheme as Scheme
 import           Lamdu.Expr.Type (Type, (~>))
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.TypeVars as TV
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Expr.Val (Val)
-import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
@@ -115,13 +111,6 @@ blessAnchors =
                 lift $ setTagOrder tag order
                 Writer.tell $ mempty { publicTags = [tag] }
 
-newTag :: MonadA m => Int -> String -> M m T.Tag
-newTag order n =
-    do
-        tag <- publicize (namedId n) $ \x -> mempty { publicTags = [x] }
-        lift $ setTagOrder tag order
-        return tag
-
 newTId :: MonadA m => String -> M m T.Id
 newTId n = publicize (namedId n) $ \x -> mempty { publicTIds = [x] }
 
@@ -145,15 +134,6 @@ newNominal tid params body =
         tinst typeParams =
             T.TInst tid $ Map.fromList $ zip (map fst params) typeParams
         scheme = body tinst
-
-newPublicDefVal ::
-    MonadA m => String -> PresentationMode -> ValI m -> Scheme ->
-    WriterT (Public m) (Transaction m) (DefI m)
-newPublicDefVal name presentationMode valI typ =
-    newPublicDef $
-    DataOps.newDefinition name presentationMode .
-    Definition.BodyExpr $ Definition.Expr valI $
-    Definition.ExportedType $ typ
 
 data CtorInfo = CtorInfo
     { ctorTag :: T.Tag
@@ -229,30 +209,6 @@ createBool =
             , BoolNames { bnTid = tid }
             )
 
-caseBool :: BoolNames -> V.Var -> V.Var -> Val () -> Val () -> Val () -> Val ()
-caseBool boolNames v1 v2 cond then_ else_ =
-    cases $$ Pure.fromNom (bnTid boolNames) cond
-    where
-        cases =
-            Pure._case Builtins.trueTag (Pure.abs v1 then_) $
-            Pure._case Builtins.falseTag (Pure.abs v2 else_) $
-            Pure.absurd
-
-setParamList :: MonadA m => ValI m -> ParamList -> M m ()
-setParamList lambdaI tags =
-    lift $ Transaction.setP (assocFieldParamList lambdaI) $ Just tags
-
-newPublicFunc ::
-    MonadA m => String -> PresentationMode -> [T.Tag] ->
-    ([Val ()] -> Val ()) -> Scheme -> M m (DefI m)
-newPublicFunc name presentationMode tags mkBody scheme =
-    do
-        v <- lift ExprIRef.newVar
-        lambdaI <-
-            lift $ ExprIRef.newVal $ Pure.lambdaRecord v tags mkBody
-        setParamList lambdaI tags
-        newPublicDefVal name presentationMode lambdaI scheme
-
 createPublics :: MonadA m => T m (Public m)
 createPublics =
     do
@@ -262,7 +218,7 @@ createPublics =
 
         _ <- createList valTParamId
         _ <- createMaybe valTParamId
-        (bool, boolNames) <- createBool
+        (bool, _boolNames) <- createBool
 
         let infixType lType rType resType =
                 recordType [ (Builtins.infixlTag, lType)
