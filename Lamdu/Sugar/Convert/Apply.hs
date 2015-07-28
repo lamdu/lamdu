@@ -36,7 +36,7 @@ import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
-import           Lamdu.Sugar.Convert.Hole.Suggest (suggestValueConversion, stateMkVar)
+import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -177,7 +177,7 @@ mkAppliedHoleSuggesteds ::
     ExprIRef.ValIProperty m ->
     T m [HoleOption Guid m]
 mkAppliedHoleSuggesteds sugarContext argI argS exprPl stored =
-    suggestValueConversion IRefInfer.loadNominal stateMkVar
+    Suggest.valueConversion IRefInfer.loadNominal Suggest.stateMkVar
     (argI <&> Monoid.First . Just) argType dstType
     <&> Lens.mapped %~
         ConvertHole.mkHoleOptionFromInjected

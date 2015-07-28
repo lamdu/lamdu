@@ -49,7 +49,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
-import           Lamdu.Sugar.Convert.Hole.Suggest (suggestValueWith, stateMkVar)
+import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
 import qualified System.Random as Random
 import           System.Random.Utils (genFromHashable)
 import           Text.PrettyPrint.HughesPJClass (pPrint)
@@ -133,7 +133,7 @@ mkHoleSuggesteds ::
     Input.Payload m a -> ExprIRef.ValIProperty m -> [HoleOption Guid m]
 mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
     exprPl ^. Input.inferred . Infer.plType
-    & suggestValueWith stateMkVar
+    & Suggest.valueWith Suggest.stateMkVar
     <&> mkHoleOption sugarContext mInjectedArg exprPl stored . (`evalState` 0)
 
 addSuggestedOptions ::

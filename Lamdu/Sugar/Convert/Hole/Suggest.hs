@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
-    ( suggestValueWith
-    , suggestValueConversion
+    ( valueWith
+    , valueConversion
     , stateMkVar
     ) where
 
@@ -30,11 +30,11 @@ stateMkVar =
         State.modify (+1)
         "var" ++ show i & fromString & return
 
-suggestValueConversion ::
+valueConversion ::
     (Monoid a, Applicative f, MonadA m) =>
     (T.Id -> m Nominal) ->
     f V.Var -> Val a -> Type -> Type -> m [f (Val a)]
-suggestValueConversion loadNominal mkVar arg (T.TInst name params) r =
+valueConversion loadNominal mkVar arg (T.TInst name params) r =
     do
         fromNomType <-
             loadNominal name <&> Nominal.apply params
@@ -42,22 +42,22 @@ suggestValueConversion loadNominal mkVar arg (T.TInst name params) r =
             -- I think this happens to be fine for suggest but there are less
             -- doubts if using a proper instantiantion of the scheme..
             <&> (^. schemeType)
-        suggestValueConversionNoSplit mkVar fromNom fromNomType r
+        valueConversionNoSplit mkVar fromNom fromNomType r
     <&> (: [pure fromNom])
     where
         fromNom = V.Nom name arg & V.BFromNom & V.Val mempty
-suggestValueConversion _ _ arg (T.TRecord composite) _ =
+valueConversion _ _ arg (T.TRecord composite) _ =
     composite ^.. ExprLens.compositeTags
     <&> pure . V.Val mempty . V.BGetField . V.GetField arg
     & return
-suggestValueConversion _ mkVar arg srcType dstType =
-    suggestValueConversionNoSplit mkVar arg srcType dstType
+valueConversion _ mkVar arg srcType dstType =
+    valueConversionNoSplit mkVar arg srcType dstType
     <&> (:[])
 
-suggestValueConversionNoSplit ::
+valueConversionNoSplit ::
     (Monoid a, Applicative f, MonadA m) =>
     f V.Var -> Val a -> Type -> Type -> m (f (Val a))
-suggestValueConversionNoSplit mkVar arg (T.TSum composite) r =
+valueConversionNoSplit mkVar arg (T.TSum composite) r =
     suggestCaseWith mkVar composite r
     <&> applyCase
     & return
@@ -66,33 +66,33 @@ suggestValueConversionNoSplit mkVar arg (T.TSum composite) r =
             c
             & Lens.traversed .~ mempty
             & (`V.Apply` arg) & V.BApp & V.Val mempty
-suggestValueConversionNoSplit _ _ _ _ = return $ pure P.hole
+valueConversionNoSplit _ _ _ _ = return $ pure P.hole
 
-suggestValueWith :: Applicative f => f V.Var -> Type -> [f (Val ())]
-suggestValueWith mkVar (T.TSum comp) =
+valueWith :: Applicative f => f V.Var -> Type -> [f (Val ())]
+valueWith mkVar (T.TSum comp) =
     case comp of
     T.CVar{} -> [pure P.hole]
     _ ->
         comp ^.. ExprLens.compositeFields
         <&> \(tag, typ) ->
-            suggestValueWithNoSplit mkVar typ <&> P.inject tag
-suggestValueWith mkVar t = [suggestValueWithNoSplit mkVar t]
+            valueWithNoSplit mkVar typ <&> P.inject tag
+valueWith mkVar t = [valueWithNoSplit mkVar t]
 
-suggestValueWithNoSplit :: Applicative f => f V.Var -> Type -> f (Val ())
-suggestValueWithNoSplit mkVar (T.TRecord composite) =
+valueWithNoSplit :: Applicative f => f V.Var -> Type -> f (Val ())
+valueWithNoSplit mkVar (T.TRecord composite) =
     suggestRecordWith mkVar composite
-suggestValueWithNoSplit mkVar (T.TFun (T.TSum composite) r) =
+valueWithNoSplit mkVar (T.TFun (T.TSum composite) r) =
     suggestCaseWith mkVar composite r
-suggestValueWithNoSplit mkVar (T.TFun _ r) =
-    P.abs <$> mkVar <*> suggestValueWithNoSplit mkVar r
-suggestValueWithNoSplit _ _ = pure P.hole
+valueWithNoSplit mkVar (T.TFun _ r) =
+    P.abs <$> mkVar <*> valueWithNoSplit mkVar r
+valueWithNoSplit _ _ = pure P.hole
 
 suggestRecordWith :: Applicative f => f V.Var -> T.Product -> f (Val ())
 suggestRecordWith _ T.CVar{}          = pure P.hole
 suggestRecordWith _ T.CEmpty          = pure P.recEmpty
 suggestRecordWith mkVar (T.CExtend f t r) =
     P.recExtend f
-    <$> suggestValueWithNoSplit mkVar t
+    <$> valueWithNoSplit mkVar t
     <*> suggestRecordWith mkVar r
 
 suggestCaseWith :: Applicative f => f V.Var -> T.Sum -> Type -> f (Val ())
@@ -100,5 +100,5 @@ suggestCaseWith _ T.CVar{} _ = pure P.hole
 suggestCaseWith _ T.CEmpty _ = pure P.absurd
 suggestCaseWith mkVar (T.CExtend f t r) res =
     P._case f
-    <$> suggestValueWithNoSplit mkVar (T.TFun t res)
+    <$> valueWithNoSplit mkVar (T.TFun t res)
     <*> suggestCaseWith mkVar r res
