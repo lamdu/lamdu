@@ -253,23 +253,6 @@ newPublicFunc name presentationMode tags mkBody scheme =
         setParamList lambdaI tags
         newPublicDefVal name presentationMode lambdaI scheme
 
-createIf :: MonadA m => Type -> BoolNames -> M m (DefI m)
-createIf bool boolNames =
-    do
-        condTag <- newTag 0 "condition"
-        thenTag <- newTag 1 "then"
-        elseTag <- newTag 2 "else"
-        v1 <- lift ExprIRef.newVar
-        v2 <- lift ExprIRef.newVar
-        newPublicFunc "if" OO
-            [condTag, thenTag, elseTag]
-            (\[cond, then_ , else_] -> caseBool boolNames v1 v2 cond then_ else_) $
-            forAll 1 $ \[a] -> recordType
-            [ (condTag, bool)
-            , (thenTag, a)
-            , (elseTag, a)
-            ] ~> a
-
 createPublics :: MonadA m => T m (Public m)
 createPublics =
     do
@@ -280,8 +263,6 @@ createPublics =
         _ <- createList valTParamId
         _ <- createMaybe valTParamId
         (bool, boolNames) <- createBool
-
-        _ <- createIf bool boolNames
 
         let infixType lType rType resType =
                 recordType [ (Builtins.infixlTag, lType)
