@@ -15,7 +15,7 @@ import           Control.Monad (join, void, liftM)
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either (EitherT(..))
-import           Control.Monad.Trans.State (StateT(..), evalState, mapStateT, evalStateT)
+import           Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
 import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
@@ -133,8 +133,8 @@ mkHoleSuggesteds ::
     Input.Payload m a -> ExprIRef.ValIProperty m -> [HoleOption Guid m]
 mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
     exprPl ^. Input.inferred . Infer.plType
-    & Suggest.valueWith Suggest.stateMkVar
-    <&> mkHoleOption sugarContext mInjectedArg exprPl stored . (`evalState` 0)
+    & Suggest.value
+    <&> mkHoleOption sugarContext mInjectedArg exprPl stored
 
 addSuggestedOptions ::
     MonadA m =>
