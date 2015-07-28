@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, ScopedTypeVariables, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.ExampleDB
-    ( initDB, createPublics
+    ( initDB, createPublics, Public(..)
     , withDB
     ) where
 
