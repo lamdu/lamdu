@@ -133,7 +133,7 @@ mkHoleSuggesteds ::
     Input.Payload m a -> ExprIRef.ValIProperty m -> [HoleOption Guid m]
 mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
     exprPl ^. Input.inferred . Infer.plType
-    & Suggest.value
+    & Suggest.value <&> void
     <&> mkHoleOption sugarContext mInjectedArg exprPl stored
 
 addSuggestedOptions ::

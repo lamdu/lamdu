@@ -69,36 +69,46 @@ valueConversionNoSplit arg (T.TSum composite) r =
             & (`V.Apply` arg) & V.BApp & V.Val mempty
 valueConversionNoSplit _ _ _ = return P.hole
 
-value :: Type -> [Val ()]
-value (T.TSum comp) =
+value :: Type -> [Val Type]
+value typ@(T.TSum comp) =
     case comp of
-    T.CVar{} -> [P.hole]
-    _ ->
-        comp ^.. ExprLens.compositeFields
-        <&> \(tag, typ) -> valueNoSplit typ & run & P.inject tag
-value t = [valueNoSplit t & run]
+    T.CVar{} -> [V.BLeaf V.LHole]
+    _ -> comp ^.. ExprLens.compositeFields <&> inject
+    <&> Val typ
+    where
+        inject (tag, innerTyp) =
+            valueNoSplit innerTyp & run & V.Inject tag & V.BInject
+value typ = [valueNoSplit typ & run]
 
-valueNoSplit :: Type -> M (Val ())
-valueNoSplit (T.TRecord composite) =
-    suggestRecordWith composite
-valueNoSplit (T.TFun (T.TSum composite) r) =
-    suggestCaseWith composite r
-valueNoSplit (T.TFun _ r) =
-    P.abs <$> mkVar <*> valueNoSplit r
-valueNoSplit _ = pure P.hole
+valueNoSplit :: Type -> M (Val Type)
+valueNoSplit (T.TRecord composite) = suggestRecordWith composite
+valueNoSplit (T.TFun (T.TSum composite) r) = suggestCaseWith composite r
+valueNoSplit typ =
+    case typ of
+    T.TFun _ r -> V.Lam <$> mkVar <*> valueNoSplit r <&> V.BAbs
+    _ -> V.BLeaf V.LHole & pure
+    <&> Val typ
 
-suggestRecordWith :: T.Product -> M (Val ())
-suggestRecordWith T.CVar{}          = pure P.hole
-suggestRecordWith T.CEmpty          = pure P.recEmpty
-suggestRecordWith (T.CExtend f t r) =
-    P.recExtend f
-    <$> valueNoSplit t
-    <*> suggestRecordWith r
+suggestRecordWith :: T.Product -> M (Val Type)
+suggestRecordWith recordType =
+    case recordType of
+    T.CVar{}        -> V.BLeaf V.LHole & pure
+    T.CEmpty        -> V.BLeaf V.LRecEmpty & pure
+    T.CExtend f t r ->
+        V.RecExtend f
+        <$> valueNoSplit t
+        <*> suggestRecordWith r
+        <&> V.BRecExtend
+    <&> Val (T.TRecord recordType)
 
-suggestCaseWith :: T.Sum -> Type -> M (Val ())
-suggestCaseWith T.CVar{} _ = pure P.hole
-suggestCaseWith T.CEmpty _ = pure P.absurd
-suggestCaseWith (T.CExtend f t r) res =
-    P._case f
-    <$> valueNoSplit (T.TFun t res)
-    <*> suggestCaseWith r res
+suggestCaseWith :: T.Sum -> Type -> M (Val Type)
+suggestCaseWith sumType resultType =
+    case sumType of
+    T.CVar{} -> V.BLeaf V.LHole & pure
+    T.CEmpty -> V.BLeaf V.LAbsurd & pure
+    T.CExtend tag fieldType rest ->
+        V.Case tag
+        <$> valueNoSplit (T.TFun fieldType resultType)
+        <*> suggestCaseWith rest resultType
+        <&> V.BCase
+    <&> Val (T.TFun (T.TSum sumType) resultType)
