@@ -98,13 +98,17 @@ makeTInt = text "Int"
 
 makeTFun :: MonadA m => ParentPrecedence -> Type -> Type -> M m View
 makeTFun parentPrecedence a b =
-    addPadding =<<
-    parens parentPrecedence (MyPrecedence 0) =<<
-    hbox <$> sequence
-    [ splitMake (ParentPrecedence 1) a
-    , text " → "
-    , splitMake (ParentPrecedence 0) b
-    ]
+    case a of
+    T.TRecord T.CEmpty -> [text "◗ "]
+    _ ->
+        [ splitMake (ParentPrecedence 1) a
+        , text " → "
+        ]
+    ++ [splitMake (ParentPrecedence 0) b]
+    & sequence
+    <&> hbox
+    >>= parens parentPrecedence (MyPrecedence 0)
+    >>= addPadding
 
 makeTInst :: MonadA m => ParentPrecedence -> T.Id -> Map T.ParamId Type -> M m View
 makeTInst _parentPrecedence tid typeParams =
