@@ -137,7 +137,6 @@ newNominal tid params body =
 
 data CtorInfo = CtorInfo
     { ctorTag :: T.Tag
-    , _ctorPresentationMode :: PresentationMode
     , _ctorScheme :: Scheme
     }
 
@@ -162,14 +161,14 @@ adt tid params ctors =
 createList :: MonadA m => T.ParamId -> M m TypeCtor
 createList valTParamId =
     adt Builtins.listTid [(valTParamId, valT)] $ \list ->
-    [ Nullary $ CtorInfo Builtins.nilTag Verbose $ forAll 1 $ \[a] -> list [a]
+    [ Nullary $ CtorInfo Builtins.nilTag $ forAll 1 $ \[a] -> list [a]
     , let consType =
               recordType
               [ (Builtins.headTag, T.TVar valT)
               , (Builtins.tailTag, list [T.TVar valT])
               ]
       in  Normal consType $
-          CtorInfo Builtins.consTag Infix $
+          CtorInfo Builtins.consTag $
           forAll 1 $ \ [a] -> consType ~> list [a]
     ]
     where
@@ -180,9 +179,9 @@ createMaybe valTParamId =
     do
         tid <- newTId "Maybe"
         adt tid [(valTParamId, valT)] $ \maybe_ ->
-            [ Nullary $ CtorInfo Builtins.nothingTag Verbose $
+            [ Nullary $ CtorInfo Builtins.nothingTag $
               forAll 1 $ \[a] -> maybe_ [a]
-            , Normal (T.TVar valT) $ CtorInfo Builtins.justTag Verbose $
+            , Normal (T.TVar valT) $ CtorInfo Builtins.justTag $
               forAll 1 $ \[a] -> a ~> maybe_ [a]
             ]
     where
@@ -211,9 +210,9 @@ createBool =
         tid <- newTId "Bool"
         tyCon <-
             adt tid [] $ \boolTCons ->
-            [ Nullary $ CtorInfo Builtins.trueTag Verbose $
+            [ Nullary $ CtorInfo Builtins.trueTag $
               Scheme.mono $ boolTCons []
-            , Nullary $ CtorInfo Builtins.falseTag Verbose $
+            , Nullary $ CtorInfo Builtins.falseTag $
               Scheme.mono $ boolTCons []
             ]
         return
