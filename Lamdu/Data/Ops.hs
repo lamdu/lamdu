@@ -7,7 +7,7 @@ module Lamdu.Data.Ops
     , case_, CaseResult(..)
     , addListItem
     , newDefinitionWithPane
-    , newDefinition, presentationModeOfName
+    , newDefinition
     , savePreJumpPosition, jumpBack
     , newPane
     , makeNewTag, makeNewPublicTag
@@ -191,7 +191,7 @@ isInfix x = not (null x) && all (`elem` operatorChars) x
 
 presentationModeOfName :: String -> PresentationMode
 presentationModeOfName x
-    | isInfix x = Infix
+    | isInfix x = Infix 5
     | otherwise = OO
 
 newDefinition ::

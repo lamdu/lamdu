@@ -77,8 +77,8 @@ assocFieldParamList ::
 assocFieldParamList lambdaI =
     Transaction.assocDataRef "field param list" $ UniqueId.toGuid lambdaI
 
-data PresentationMode = OO | Verbose | Infix
-    deriving (Eq, Ord, Enum, Bounded, Show, Generic)
+data PresentationMode = OO | Verbose | Infix Int
+    deriving (Eq, Ord, Show, Generic)
 instance Binary PresentationMode
 
 assocPresentationMode ::

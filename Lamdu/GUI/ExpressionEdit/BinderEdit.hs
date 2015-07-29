@@ -125,7 +125,7 @@ mkPresentationModeEdit myId prop = do
                 ExprGuiM.widgetEnv $
                 BWidgets.makeFocusableLabel (show presentationMode) myId
             return (presentationMode, widget)
-    pairs <- traverse mkPair [minBound..maxBound]
+    pairs <- traverse mkPair [Sugar.OO, Sugar.Verbose, Sugar.Infix 5]
     fmap (Widget.scale (realToFrac <$> Config.presentationChoiceScaleFactor config)) .
         ExprGuiM.widgetEnv $
         BWidgets.makeChoiceWidget (Transaction.setP prop) pairs cur

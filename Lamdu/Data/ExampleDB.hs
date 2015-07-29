@@ -237,18 +237,22 @@ createPublics =
                                       , (Builtins.infixrTag, rType)
                                       ] ~> resType
 
-        traverse_
-            ((`newPublicBuiltinQualified_` Scheme.mono (infixType T.TInt T.TInt T.TInt)) .
-              ("Prelude." ++))
-            ["+", "-", "*", "^"]
-        newPublicBuiltin_ "%" Infix ["Prelude"] "mod" $ Scheme.mono $ infixType T.TInt T.TInt T.TInt
-        newPublicBuiltin_ "//" Infix ["Prelude"] "div" $ Scheme.mono $ infixType T.TInt T.TInt T.TInt
-        newPublicBuiltinQualified_ "Prelude.negate" $ Scheme.mono $ T.TInt ~> T.TInt
-        newPublicBuiltinQualified_ "Prelude.sqrt" $ Scheme.mono $ T.TInt ~> T.TInt
+        let arith n i =
+                newPublicBuiltinQualified_ ("Prelude." ++ n) (Infix i)
+                (Scheme.mono (infixType T.TInt T.TInt T.TInt))
+        arith "+" 6
+        arith "-" 6
+        arith "*" 7
+        arith "^" 8
+        newPublicBuiltin_ "%" (Infix 7) ["Prelude"] "mod" $ Scheme.mono $ infixType T.TInt T.TInt T.TInt
+        newPublicBuiltin_ "//" (Infix 7) ["Prelude"] "div" $ Scheme.mono $ infixType T.TInt T.TInt T.TInt
+        newPublicBuiltinQualified_ "Prelude.negate" OO $ Scheme.mono $ T.TInt ~> T.TInt
+        newPublicBuiltinQualified_ "Prelude.sqrt" OO $ Scheme.mono $ T.TInt ~> T.TInt
 
-        let aToAToBool = forAll 1 $ \[a] -> infixType a a bool
-        traverse_ ((`newPublicBuiltinQualified_` aToAToBool) . ("Prelude." ++))
-            ["==", "/=", "<=", ">=", "<", ">"]
+        let cmp n =
+                newPublicBuiltinQualified_ ("Prelude." ++ n) (Infix 4) $
+                forAll 1 $ \[a] -> infixType a a bool
+        traverse_ cmp ["==", "/=", "<=", ">=", "<", ">"]
     & Writer.runWriterT <&> snd
     where
         newPublicBuiltin_ name presentationMode ffiPath ffiName typ =
@@ -257,14 +261,14 @@ createPublics =
             newPublicDef $
             DataOps.newDefinition name presentationMode .
             Definition.BodyBuiltin $ Definition.Builtin (Definition.FFIName ffiPath ffiName) typ
-        newPublicBuiltinQualified fullyQualifiedName =
-            newPublicBuiltin name (DataOps.presentationModeOfName name) path name
+        newPublicBuiltinQualified fullyQualifiedName presMode =
+            newPublicBuiltin name presMode path name
             where
                 path = init fqPath
                 name = last fqPath
                 fqPath = splitOn "." fullyQualifiedName
-        newPublicBuiltinQualified_ fullyQualifiedName typ =
-            void $ newPublicBuiltinQualified fullyQualifiedName typ
+        newPublicBuiltinQualified_ fullyQualifiedName presMode typ =
+            void $ newPublicBuiltinQualified fullyQualifiedName presMode typ
 
 newBranch :: MonadA m => String -> Version m -> T m (Branch m)
 newBranch name ver =

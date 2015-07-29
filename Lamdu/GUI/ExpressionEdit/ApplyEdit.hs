@@ -28,9 +28,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
-infixPrecedence :: Int
-infixPrecedence = 5
-
 prefixPrecedence :: Int
 prefixPrecedence = 10
 
@@ -50,7 +47,7 @@ mkPrecedence specialArgs =
     case specialArgs of
     Sugar.NoSpecialArgs -> 0
     Sugar.ObjectArg{} -> prefixPrecedence
-    Sugar.InfixArgs{} -> infixPrecedence
+    Sugar.InfixArgs prec _ _ -> prec
     & fromIntegral & MyPrecedence
 
 makeFuncRow ::
@@ -78,15 +75,15 @@ makeFuncRow outerPrecedence (Sugar.Apply func specialArgs annotatedArgs) pl =
                     arg
                 ]
                 >>= ExpressionGui.hboxSpaced
-            Sugar.InfixArgs l r ->
+            Sugar.InfixArgs prec l r ->
                 sequenceA
                 [ ExprGuiM.makeSubexpression
-                    outerPrecedence { ExpressionGui.precRight = infixPrecedence+1 }
+                    outerPrecedence { ExpressionGui.precRight = prec+1 }
                     l
                 , -- TODO: What precedence to give when it must be atomic?:
                     ExprGuiM.makeSubexpression 20 func <&> overrideModifyEventMap
                 , ExprGuiM.makeSubexpression
-                    outerPrecedence { ExpressionGui.precLeft = infixPrecedence+1 }
+                    outerPrecedence { ExpressionGui.precLeft = prec+1 }
                     r
                 ]
                 >>= ExpressionGui.hboxSpaced
