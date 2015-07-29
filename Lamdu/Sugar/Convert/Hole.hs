@@ -48,6 +48,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.OrderTags (orderType)
 import           Lamdu.Sugar.Types
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
 import qualified System.Random as Random
@@ -404,15 +405,16 @@ eitherToListT (Right x) = return x
 applyForms ::
     MonadA m =>
     a -> Val (Infer.Payload, a) ->
-    StateT Infer.Context (ListT m) (Val (Infer.Payload, a))
+    StateT Infer.Context (ListT (T m)) (Val (Infer.Payload, a))
 applyForms _ v@(Val _ V.BAbs {}) = return v
 applyForms empty val =
     case inferPl ^. Infer.plType of
     T.TFun arg res ->
-        Suggest.valueNoSplit arg
-        <&> plSameScope
-        & V.Apply val & V.BApp & Val (plSameScope res)
-        & applyForms empty
+        orderType arg & lift & lift
+        <&> Suggest.valueNoSplit
+        <&> Lens.mapped %~ plSameScope
+        <&> V.Apply val <&> V.BApp <&> Val (plSameScope res)
+        >>= applyForms empty
     T.TVar tv
         | any (`Lens.has` val)
             [ ExprLens.valVar
