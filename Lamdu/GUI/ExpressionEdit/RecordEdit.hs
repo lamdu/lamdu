@@ -32,6 +32,13 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
+defaultPos ::
+    [Sugar.RecordField name m (Sugar.Expression name m a)] ->
+    Widget.Id -> Widget.Id
+defaultPos [] myId = myId
+defaultPos (f : _) _ =
+    f ^. Sugar.rfExpr . Sugar.rPayload & WidgetIds.fromExprPayload
+
 make ::
     MonadA m =>
     Sugar.Record (Name m) m (ExprGuiT.SugarExpr m) ->
@@ -39,14 +46,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make (Sugar.Record fields recordTail mAddField) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
-    let defaultPos =
-            case fields of
-            [] -> myId
-            (f : _) ->
-                f ^. Sugar.rfExpr . Sugar.rPayload
-                & WidgetIds.fromExprPayload
-    in
-    ExprGuiM.assignCursor myId defaultPos $
+    ExprGuiM.assignCursor myId (defaultPos fields myId) $
     do
         config <- ExprGuiM.readConfig
         (gui, resultPickers) <-
