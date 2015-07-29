@@ -116,9 +116,9 @@ toInject ::
     m (Inject (NewName m) (TM m) (NewExpression m a))
 toInject inject@Inject {..} =
     do
-        val <- toExpression _iVal
+        mVal <- Lens._Just toExpression _iMVal
         tag <- toTagG _iTag
-        pure inject { _iVal = val, _iTag = tag }
+        pure inject { _iMVal = mVal, _iTag = tag }
 
 toHoleResult ::
     MonadNaming m =>

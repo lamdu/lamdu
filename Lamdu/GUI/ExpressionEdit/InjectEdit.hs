@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
 
 import           Prelude.Compat
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -25,7 +26,7 @@ make ::
     Sugar.Inject (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.Inject tagG val mDelInject) pl =
+make (Sugar.Inject tagG mVal mDelInject) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
         config <- ExprGuiM.readConfig
@@ -39,8 +40,10 @@ make (Sugar.Inject tagG val mDelInject) pl =
             (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tagG
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents delEventMap
 
-        valEdit <- ExprGuiM.makeSubexpression 11 val
-        ExpressionGui.hboxSpaced [tagEdit, valEdit]
+        valEdits <-
+            mVal ^.. Lens._Just
+            & mapM (ExprGuiM.makeSubexpression 11)
+        ExpressionGui.hboxSpaced $ tagEdit : valEdits
     & ExprGuiM.assignCursor myId tagId
     where
         tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)

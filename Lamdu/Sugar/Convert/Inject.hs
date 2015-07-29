@@ -26,7 +26,7 @@ convert (V.Inject tag val) exprPl =
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         -- TODO: Lots of duplication here from getField, generalize both!
         Inject
-            { _iVal = val
+            { _iMVal = mVal
             , _iTag =
                 TagG
                 { _tagInstance = EntityId.ofInjectTag entityId
@@ -44,5 +44,10 @@ convert (V.Inject tag val) exprPl =
             & traverse ConvertM.convertSubexpression
             <&> BodyInject
             >>= addActions exprPl
+            <&> rPayload . plData <>~ hiddenPls
     where
         entityId = exprPl ^. Input.entityId
+        (mVal, hiddenPls) =
+            case val ^. V.body of
+            V.BLeaf V.LRecEmpty -> (Nothing, val ^. V.payload . Input.userData)
+            _ -> (Just val, mempty)
