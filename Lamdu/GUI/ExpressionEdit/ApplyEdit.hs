@@ -16,7 +16,7 @@ import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, MyPrecedence(..), ParentPrecedence(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -44,10 +44,13 @@ mkOverrideModifyEventMap (Just actions) =
             Widget.strongerEvents (ExprEventMap.modifyEventMap [] config actions)
             & return
 
-mkMPrecedence :: Sugar.SpecialArgs a -> Maybe ExpressionGui.Precedence
-mkMPrecedence Sugar.NoSpecialArgs = Nothing
-mkMPrecedence Sugar.ObjectArg{} = fromIntegral prefixPrecedence & Just
-mkMPrecedence Sugar.InfixArgs{} = fromIntegral infixPrecedence & Just
+mkPrecedence :: Sugar.SpecialArgs a -> MyPrecedence
+mkPrecedence specialArgs =
+    case specialArgs of
+    Sugar.NoSpecialArgs -> 0
+    Sugar.ObjectArg{} -> prefixPrecedence
+    Sugar.InfixArgs{} -> infixPrecedence
+    & MyPrecedence
 
 makeFuncRow ::
     MonadA m =>
@@ -94,10 +97,8 @@ make parentPrecedence apply@(Sugar.Apply func specialArgs annotatedArgs) pl =
         if isBoxed
             then mkBoxed funcRow annotatedArgs myId
             else
-                mkMParened
-                parentPrecedence
-                (mkMPrecedence specialArgs <&> ExpressionGui.MyPrecedence)
-                funcRow myId
+                ExpressionGui.parenify parentPrecedence
+                (mkPrecedence specialArgs) myId funcRow
     & ExprGuiM.assignCursor myId funcId
     where
         funcId = func ^. Sugar.rPayload & WidgetIds.fromExprPayload
@@ -136,13 +137,3 @@ mkBoxed funcRow annotatedArgs myId =
         funcRow
             & ExpressionGui.addBelow 0 [(0, grid)]
             & ExpressionGui.addValFrame myId
-
-mkMParened ::
-    MonadA m =>
-    ParentPrecedence ->
-    Maybe ExpressionGui.MyPrecedence ->
-    ExpressionGui m ->
-    Widget.Id -> ExprGuiM m (ExpressionGui m)
-mkMParened _ Nothing funcRow _ = return funcRow
-mkMParened parentPrecedence (Just precedence) funcRow myId =
-    ExpressionGui.parenify parentPrecedence precedence myId funcRow
