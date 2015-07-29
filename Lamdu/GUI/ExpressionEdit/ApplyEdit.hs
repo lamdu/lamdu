@@ -87,7 +87,7 @@ make ::
     Sugar.Apply (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (ParentPrecedence parentPrecedence) apply@(Sugar.Apply func specialArgs annotatedArgs) pl =
+make parentPrecedence apply@(Sugar.Apply func specialArgs annotatedArgs) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
         funcRow <- makeFuncRow apply pl
@@ -95,7 +95,7 @@ make (ParentPrecedence parentPrecedence) apply@(Sugar.Apply func specialArgs ann
             then mkBoxed funcRow annotatedArgs myId
             else
                 mkMParened
-                (ParentPrecedence parentPrecedence)
+                parentPrecedence
                 (mkMPrecedence specialArgs <&> ExpressionGui.MyPrecedence)
                 funcRow myId
     & ExprGuiM.assignCursor myId funcId
