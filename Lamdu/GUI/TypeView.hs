@@ -34,7 +34,7 @@ import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..))
+import           Lamdu.GUI.Precedence (ParentPrecedence(..), MyPrecedence(..), needParens)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           System.Random (Random, random)
@@ -86,8 +86,8 @@ parensAround view =
 
 parens ::
     MonadA m => ParentPrecedence -> MyPrecedence -> View -> M m View
-parens (ParentPrecedence parent) (MyPrecedence my) view
-    | parent > my = parensAround view
+parens parent my view
+    | needParens parent my = parensAround view
     | otherwise = return view
 
 makeTVar :: MonadA m => T.Var p -> M m View

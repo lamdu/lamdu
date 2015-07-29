@@ -16,21 +16,22 @@ import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, MyPrecedence(..), ParentPrecedence(..))
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import           Lamdu.GUI.Precedence (Precedence(..), ParentPrecedence(..), MyPrecedence(..), needParens)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
-infixPrecedence :: ExpressionGui.Precedence
+infixPrecedence :: Int
 infixPrecedence = 5
 
-prefixPrecedence :: ExpressionGui.Precedence
+prefixPrecedence :: Int
 prefixPrecedence = 10
 
 mkOverrideModifyEventMap ::
@@ -50,13 +51,13 @@ mkPrecedence specialArgs =
     Sugar.NoSpecialArgs -> 0
     Sugar.ObjectArg{} -> prefixPrecedence
     Sugar.InfixArgs{} -> infixPrecedence
-    & MyPrecedence
+    & fromIntegral & MyPrecedence
 
 makeFuncRow ::
     MonadA m =>
-    Sugar.Apply name (ExprGuiT.SugarExpr m) -> Sugar.Payload m a ->
-    ExprGuiM m (ExpressionGui m)
-makeFuncRow (Sugar.Apply func specialArgs annotatedArgs) pl =
+    Precedence -> Sugar.Apply name (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload m a -> ExprGuiM m (ExpressionGui m)
+makeFuncRow outerPrecedence (Sugar.Apply func specialArgs annotatedArgs) pl =
     do
         overrideModifyEventMap <- mkOverrideModifyEventMap (pl ^. Sugar.plActions)
         case specialArgs of
@@ -65,25 +66,30 @@ makeFuncRow (Sugar.Apply func specialArgs annotatedArgs) pl =
                 <&> overrideModifyEventMap
             Sugar.ObjectArg arg ->
                 sequenceA
-                [ ExprGuiM.makeSubexpression (prefixPrecedence+1) func
+                [ ExprGuiM.makeSubexpression
+                    outerPrecedence { ExpressionGui.precRight = prefixPrecedence+1 }
+                    func
                     <&> if null annotatedArgs
                         then id
                         else overrideModifyEventMap
                 , ExprGuiM.makeSubexpression
-                    (if isBoxed then 0 else prefixPrecedence)
+                    ( outerPrecedence { ExpressionGui.precLeft = prefixPrecedence }
+                    )
                     arg
                 ]
                 >>= ExpressionGui.hboxSpaced
             Sugar.InfixArgs l r ->
                 sequenceA
-                [ ExprGuiM.makeSubexpression (infixPrecedence+1) l
+                [ ExprGuiM.makeSubexpression
+                    outerPrecedence { ExpressionGui.precRight = infixPrecedence+1 }
+                    l
                 , -- TODO: What precedence to give when it must be atomic?:
                     ExprGuiM.makeSubexpression 20 func <&> overrideModifyEventMap
-                , ExprGuiM.makeSubexpression (infixPrecedence+1) r
+                , ExprGuiM.makeSubexpression
+                    outerPrecedence { ExpressionGui.precLeft = infixPrecedence+1 }
+                    r
                 ]
                 >>= ExpressionGui.hboxSpaced
-    where
-        isBoxed = not $ null annotatedArgs
 
 make ::
     MonadA m => ParentPrecedence ->
@@ -93,16 +99,19 @@ make ::
 make parentPrecedence apply@(Sugar.Apply func specialArgs annotatedArgs) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
-        funcRow <- makeFuncRow apply pl
+        funcRow <- makeFuncRow outerPrecedence apply pl
         if isBoxed
             then mkBoxed funcRow annotatedArgs myId
             else
-                ExpressionGui.parenify parentPrecedence
-                (mkPrecedence specialArgs) myId funcRow
+                ExpressionGui.parenify parentPrecedence myPrecedence myId funcRow
     & ExprGuiM.assignCursor myId funcId
     where
         funcId = func ^. Sugar.rPayload & WidgetIds.fromExprPayload
+        myPrecedence = mkPrecedence specialArgs
         isBoxed = not $ null annotatedArgs
+        outerPrecedence
+            | isBoxed || needParens parentPrecedence myPrecedence = 0
+            | otherwise = unParentPrecedence parentPrecedence
 
 makeArgRows ::
     MonadA m =>

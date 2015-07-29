@@ -25,7 +25,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make parentPrecedence binder pl =
     ExpressionGui.stdWrapParenify plNoType parentPrecedence
-    (ExpressionGui.MyPrecedence 0) $ \myId ->
+    (ExpressionGui.MyPrecedence (ExpressionGui.Precedence 20 0)) $ \myId ->
     ExprGuiM.assignCursor myId bodyId $
     do
         BinderEdit.Parts paramEdits bodyEdit mWheresEdit eventMap <-

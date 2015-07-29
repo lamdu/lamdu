@@ -25,7 +25,7 @@ module Lamdu.GUI.ExpressionGui
     , AnnotationOptions(..), maybeAddAnnotationWith
     , makeTypeView
     -- Expression wrapping
-    , MyPrecedence(..), ParentPrecedence(..), Precedence
+    , MyPrecedence(..), ParentPrecedence(..), Precedence(..)
     , parenify
     , wrapExprEventMap
     , maybeAddAnnotationPl
@@ -72,7 +72,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.Parens as Parens
-import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence)
+import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence(..), needParens)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..), NameSource(..), NameCollision(..))
@@ -367,11 +367,9 @@ parenify ::
     (MonadA f, MonadA m) =>
     ParentPrecedence -> MyPrecedence -> Widget.Id ->
     ExpressionGui f -> ExprGuiM m (ExpressionGui f)
-parenify (ParentPrecedence parent) (MyPrecedence prec) myId widget
-    | parent > prec =
-        widget & Parens.addHighlightedTextParens myId
-    | otherwise =
-        widget & return
+parenify parent prec myId
+    | needParens parent prec = Parens.addHighlightedTextParens myId
+    | otherwise = return
 
 makeLabel :: MonadA m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
 makeLabel text animId = ExprGuiM.makeLabel text animId <&> fromValueWidget
