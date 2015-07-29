@@ -162,10 +162,10 @@ searchTermsOfBody Sugar.BodyLam {} = ["lambda", "\\", "Λ", "λ"]
 searchTermsOfBody Sugar.BodyApply {} = ["Apply"]
 searchTermsOfBody Sugar.BodyList {} = ["list", "[]"]
 searchTermsOfBody (Sugar.BodyRecord rec) =
-    ["record", "{}"] ++
-    do
-        Sugar.Record [] Sugar.ClosedRecord{} _ <- [rec]
-        ["Empty", "0", "Ø"]
+    ["record", "{}", "()"] ++
+    case rec of
+    Sugar.Record [] Sugar.ClosedRecord{} _ -> ["empty"]
+    _ -> []
 searchTermsOfBody (Sugar.BodyGetField gf) =
     [".", "field", "." ++ searchTermOfName (gf ^. Sugar.gfTag . Sugar.tagGName)]
 searchTermsOfBody (Sugar.BodyCase cas) =

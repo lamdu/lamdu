@@ -67,7 +67,7 @@ adHocTextEditEventMap searchTermProp =
         changeText f = mempty <$ Property.pureModify searchTermProp f
 
 disallowedHoleChars :: String
-disallowedHoleChars = ",`\n() "
+disallowedHoleChars = ",`\n "
 
 disallowChars :: String -> E.EventMap a -> E.EventMap a
 disallowChars searchTerm =

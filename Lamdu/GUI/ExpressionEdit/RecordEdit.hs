@@ -39,12 +39,16 @@ defaultPos [] myId = myId
 defaultPos (f : _) _ =
     f ^. Sugar.rfExpr . Sugar.rPayload & WidgetIds.fromExprPayload
 
+shouldAddBg :: MonadA m => Sugar.Record name m a -> Bool
+shouldAddBg (Sugar.Record [] Sugar.ClosedRecord{} _) = False
+shouldAddBg _ = True
+
 make ::
     MonadA m =>
     Sugar.Record (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.Record fields recordTail mAddField) pl =
+make rec@(Sugar.Record fields recordTail mAddField) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     ExprGuiM.assignCursor myId (defaultPos fields myId) $
     do
@@ -52,7 +56,9 @@ make (Sugar.Record fields recordTail mAddField) pl =
         (gui, resultPickers) <-
             ExprGuiM.listenResultPickers $
             do
-                fieldsGui <- makeFieldsWidget fields myId <&> pad config
+                fieldsGui <-
+                    makeFieldsWidget fields myId
+                    <&> if addBg then pad config else id
                 case recordTail of
                     Sugar.ClosedRecord mDeleteTail ->
                         fieldsGui
@@ -73,7 +79,11 @@ make (Sugar.Record fields recordTail mAddField) pl =
         gui
             & ExpressionGui.egWidget %~
               Widget.weakerEvents (addFieldEventMap mAddField)
-            & ExpressionGui.egWidget %%~ ExpressionGui.addValBG myId
+            & if addBg
+                then ExpressionGui.egWidget %%~ ExpressionGui.addValBG myId
+                else return
+    where
+        addBg = shouldAddBg rec
 
 makeFieldRow ::
     MonadA m =>
@@ -100,7 +110,7 @@ makeFieldsWidget ::
     [Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldsWidget [] myId =
-    ExpressionGui.grammarLabel "Ø" (Widget.toAnimId myId)
+    ExpressionGui.grammarLabel "()" (Widget.toAnimId myId)
     >>= ExpressionGui.egWidget %%~
         ExprGuiM.widgetEnv . BWidgets.makeFocusableView myId
 makeFieldsWidget fields _ =
