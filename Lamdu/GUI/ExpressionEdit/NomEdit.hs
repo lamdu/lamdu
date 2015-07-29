@@ -27,6 +27,7 @@ makeToNom ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeToNom (Sugar.Nominal tidg val mDel) pl =
+    ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
         delEventMap <- mkDelEventMap "Wrapper" mDel
         valEdit <- ExprGuiM.makeSubexpression 0 val
@@ -38,11 +39,9 @@ makeToNom (Sugar.Nominal tidg val mDel) pl =
             <&> ExpressionGui.fromValueWidget
             >>= ExpressionGui.addValFrame nameId
         ExpressionGui.vboxTopFocalSpaced [valEdit, nameEdit]
-    & ExpressionGui.stdWrap pl
     & ExprGuiM.assignCursor myId nameId
     where
         nameId = Widget.joinId (WidgetIds.fromEntityId (pl ^. Sugar.plEntityId)) ["name"]
-        myId = WidgetIds.fromExprPayload pl
 
 makeFromNom ::
     MonadA m =>
