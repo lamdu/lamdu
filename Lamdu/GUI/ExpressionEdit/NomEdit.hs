@@ -26,17 +26,15 @@ makeToNom ::
     Sugar.Nominal (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeToNom (Sugar.Nominal tidg val mDel) pl =
+makeToNom nom@(Sugar.Nominal _ val _) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
-        delEventMap <- mkDelEventMap "Wrapper" mDel
         valEdit <- ExprGuiM.makeSubexpression 0 val
         let valWidth = valEdit ^. ExpressionGui.egWidget . Widget.width
         nameEdit <-
-            ExpressionGui.makeNameEdit (tidg ^. Sugar.tidgName) nameId
-            <&> Widget.weakerEvents delEventMap
-            <&> Widget.padToSizeAlign (Vector2 valWidth 0) 0.5
-            <&> ExpressionGui.fromValueWidget
+            nameGui "Wrapper" nom nameId
+            <&> ExpressionGui.egWidget
+                %~ Widget.padToSizeAlign (Vector2 valWidth 0) 0.5
             >>= ExpressionGui.addValFrame nameId
         ExpressionGui.vboxTopFocalSpaced [valEdit, nameEdit]
     & ExprGuiM.assignCursor myId nameId
@@ -48,22 +46,27 @@ makeFromNom ::
     Sugar.Nominal (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeFromNom (Sugar.Nominal tidg val mDel) pl =
+makeFromNom nom@(Sugar.Nominal _ val _) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
-        delEventMap <- mkDelEventMap "Unwrapper" mDel
-        nameEdit <-
-            ExpressionGui.makeNameEdit (tidg ^. Sugar.tidgName) nameId
-            <&> Widget.weakerEvents delEventMap
-            <&> ExpressionGui.fromValueWidget
-
+        nameEdit <- nameGui "Unwrapper" nom nameId
         valEdit <- ExprGuiM.makeSubexpression 11 val
-
         symLabel <- ExpressionGui.grammarLabel "⇈" (Widget.toAnimId myId)
         ExpressionGui.hboxSpaced [nameEdit, symLabel, valEdit]
     & ExprGuiM.assignCursor myId nameId
     where
         nameId = Widget.joinId (WidgetIds.fromEntityId (pl ^. Sugar.plEntityId)) ["name"]
+
+nameGui ::
+    MonadA m =>
+    String -> Sugar.Nominal (Name m) m a -> Widget.Id ->
+    ExprGuiM m (ExpressionGui m)
+nameGui docName (Sugar.Nominal tidg _val mDel) nameId =
+    do
+        delEventMap <- mkDelEventMap docName mDel
+        ExpressionGui.makeNameEdit (tidg ^. Sugar.tidgName) nameId
+            <&> Widget.weakerEvents delEventMap
+    <&> ExpressionGui.fromValueWidget
 
 mkDelEventMap ::
     MonadA m =>
