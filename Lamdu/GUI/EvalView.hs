@@ -69,6 +69,7 @@ make animId val =
     HAbsurd -> textView "Fn" animId
     HCase{} -> textView "Fn" animId
     HRecEmpty -> textView "Ø" animId
+    HInject (V.Inject injTag HRecEmpty) -> makeTag (animId ++ ["tag"]) injTag
     HInject inj ->
         do
             tagView <- inj ^. V.injectTag & makeTag (animId ++ ["tag"])
