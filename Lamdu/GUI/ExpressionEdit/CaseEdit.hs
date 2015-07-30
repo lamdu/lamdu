@@ -20,6 +20,9 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Eval.Val as EV
+import           Lamdu.Expr.Type (Tag)
+import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -53,10 +56,32 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
     assignCursor myId alts $
     do
         config <- ExprGuiM.readConfig
+        let label text =
+                WidgetIds.fromEntityId cEntityId & Widget.toAnimId
+                & ExpressionGui.grammarLabel text
+        let headerLabel text =
+                label text >>=
+                ExpressionGui.makeFocusableView
+                (Widget.joinId myId ["header"])
+        (mActiveTag, header) <-
+            case mArg of
+            Sugar.LambdaCase -> headerLabel "λ:" <&> (,) Nothing
+            Sugar.CaseWithArg (Sugar.CaseArg arg mToLambdaCase) ->
+                do
+                    argEdit <-
+                        ExprGuiM.makeSubexpression 0 arg
+                        <&> ExpressionGui.egWidget %~ Widget.weakerEvents
+                            (maybe mempty (toLambdaCaseEventMap config)
+                                mToLambdaCase)
+                    caseLabel <- headerLabel ":"
+                    mTag <-
+                        ExpressionGui.evaluationResult (arg ^. Sugar.rPayload)
+                        <&> (>>= (^? EV._HInject . V.injectTag))
+                    return (mTag, ExpressionGui.hbox [argEdit, caseLabel])
         (altsGui, resultPickers) <-
             ExprGuiM.listenResultPickers $
             do
-                altsGui <- makeAltsWidget alts myId
+                altsGui <- makeAltsWidget mActiveTag alts myId
                 case caseTail of
                     Sugar.ClosedCase mDeleteTail ->
                         altsGui
@@ -75,25 +100,6 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
                 <&> TagEdit.diveToCaseTag
                 & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                   (E.Doc ["Edit", "Case", "Add Alt"])
-        let label text =
-                WidgetIds.fromEntityId cEntityId & Widget.toAnimId
-                & ExpressionGui.grammarLabel text
-            headerLabel text =
-                label text >>=
-                ExpressionGui.makeFocusableView
-                (Widget.joinId myId ["header"])
-        header <-
-            case mArg of
-            Sugar.LambdaCase -> headerLabel "λ:"
-            Sugar.CaseWithArg (Sugar.CaseArg arg mToLambdaCase) ->
-                do
-                    argEdit <-
-                        ExprGuiM.makeSubexpression 0 arg
-                        <&> ExpressionGui.egWidget %~ Widget.weakerEvents
-                            (maybe mempty (toLambdaCaseEventMap config)
-                                mToLambdaCase)
-                    caseLabel <- headerLabel ":"
-                    ExpressionGui.hbox [argEdit, caseLabel] & return
         vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
         [header, ExpressionGui.fromValueWidget vspace, altsGui]
             & ExpressionGui.vboxTopFocalAlignedTo 0
@@ -104,13 +110,18 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
 
 makeAltRow ::
     MonadA m =>
+    Maybe Tag ->
     Sugar.CaseAlt (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
     ExprGuiM m [ExpressionGui m]
-makeAltRow (Sugar.CaseAlt mDelete tag altExpr) =
+makeAltRow mActiveTag (Sugar.CaseAlt mDelete tag altExpr) =
     do
         config <- ExprGuiM.readConfig
         altRefGui <-
             TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
+            >>= if mActiveTag == Just (tag ^. Sugar.tagVal)
+                then ExpressionGui.addValFrame
+                    (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
+                else return
         altExprGui <- ExprGuiM.makeSubexpression 0 altExpr
         let itemEventMap = maybe mempty (caseDelEventMap config) mDelete
         space <- ExpressionGui.stdSpace
@@ -123,15 +134,16 @@ makeAltRow (Sugar.CaseAlt mDelete tag altExpr) =
 
 makeAltsWidget ::
     MonadA m =>
+    Maybe Tag ->
     [Sugar.CaseAlt (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload)] ->
     Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeAltsWidget [] myId =
+makeAltsWidget _ [] myId =
     ExpressionGui.grammarLabel "Ø" (Widget.toAnimId myId)
     >>= ExpressionGui.makeFocusableView (Widget.joinId myId ["Ø"])
-makeAltsWidget alts _ =
+makeAltsWidget mActiveTag alts _ =
     do
         vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
-        mapM makeAltRow alts
+        mapM (makeAltRow mActiveTag) alts
             <&> List.intersperse
                 (replicate 3 (ExpressionGui.fromValueWidget vspace))
             <&> ExpressionGui.gridTopLeftFocal

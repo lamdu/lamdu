@@ -21,9 +21,9 @@ module Lamdu.GUI.ExpressionGui
     , diveToNameEdit
     -- Info adding
     , annotationSpacer
-    , maybeAddAnnotation
     , AnnotationOptions(..), maybeAddAnnotationWith
     , makeTypeView
+    , evaluationResult
     -- Expression wrapping
     , MyPrecedence(..), ParentPrecedence(..), Precedence(..)
     , parenify
@@ -469,6 +469,12 @@ maybeAddAnnotationPl pl =
     (pl ^. Sugar.plAnnotation)
     (pl ^. Sugar.plEntityId)
 
+evaluationResult ::
+    MonadA m => Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (Maybe (Val ()))
+evaluationResult pl =
+    ExprGuiM.readMScopeId
+    <&> (>>= valOfScope (pl ^. Sugar.plAnnotation))
+
 data MissingAnnotationBehavior = ShowNothing | ShowType
 
 data AnnotationOptions
@@ -502,10 +508,12 @@ maybeAddAnnotationH opt missingAnnotationBehavior annotation entityId eg =
             ShowNothing -> return eg
             ShowType -> withType
         withType = addInferredType entityId (annotation ^. Sugar.aInferredType) eg
-        valAndScope scopeId = valOfScope scopeId <&> (,) scopeId
-        valOfScope scopeId =
-            annotation ^? Sugar.aMEvaluationResult .
-            Lens._Just . Lens.at scopeId . Lens._Just
+        valAndScope scopeId = valOfScope annotation scopeId <&> (,) scopeId
+
+valOfScope :: Sugar.Annotation -> ScopeId -> Maybe (Val ())
+valOfScope annotation scopeId =
+    annotation ^? Sugar.aMEvaluationResult .
+    Lens._Just . Lens.at scopeId . Lens._Just
 
 maybeAddAnnotation ::
     MonadA m =>

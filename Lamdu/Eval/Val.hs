@@ -4,7 +4,8 @@ module Lamdu.Eval.Val
     , ScopeId(..), scopeIdInt, topLevelScopeId
     , Closure(..), Scope(..)
     , emptyScope
-    , _HFunc, _HRecExtend, _HCase, _HRecEmpty, _HAbsurd, _HInteger, _HBuiltin
+    , _HFunc, _HRecExtend, _HCase, _HRecEmpty
+    , _HAbsurd, _HInteger, _HBuiltin, _HInject
     ) where
 
 import           Prelude.Compat
