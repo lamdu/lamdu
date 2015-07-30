@@ -114,16 +114,25 @@ evalApply (V.Apply func arg) =
     HFunc (Closure outerScope (V.Lam var body) lamPl) ->
         bindVar lamPl var arg outerScope
         >>= evalScopedVal . (`ScopedVal` body)
-    HBuiltin ffiname ->
-        do
-            runBuiltin <- ask <&> (^. eEvalActions . aRunBuiltin)
-            runBuiltin ffiname arg & lift
+    HBuiltin ffiname
+        | containsError arg -> return HError
+        | otherwise ->
+            do
+                runBuiltin <- ask <&> (^. eEvalActions . aRunBuiltin)
+                runBuiltin ffiname arg & lift
+        where
+            -- only supports records because that's what builtins handle..
+            containsError HError = True
+            containsError (HRecExtend (V.RecExtend _ v r)) =
+                containsError v || containsError r
+            containsError _ = False
     HCase (V.Case caseTag handlerFunc rest) ->
         case arg of
         HInject (V.Inject sumTag injected)
             | caseTag == sumTag -> V.Apply handlerFunc injected & evalApply
             | otherwise -> V.Apply rest arg & evalApply
         _ -> evalError "Case applied on non sum-type"
+    HError -> return HError
     _ -> evalError "Apply on non function: "
 
 evalScopedVal :: Monad m => ScopedVal pl -> EvalT pl m (Val pl)
@@ -144,7 +153,7 @@ evalScopedVal (ScopedVal scope expr) =
     V.BLeaf V.LRecEmpty -> return HRecEmpty
     V.BLeaf V.LAbsurd   -> return HAbsurd
     V.BLeaf (V.LLiteralInteger i) -> HInteger i & return
-    V.BLeaf V.LHole -> evalError "Hole"
+    V.BLeaf V.LHole -> return HError
     V.BFromNom (V.Nom _ v) -> inner v
     V.BToNom   (V.Nom _ v) -> inner v
     where

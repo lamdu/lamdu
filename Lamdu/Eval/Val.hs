@@ -4,7 +4,7 @@ module Lamdu.Eval.Val
     , ScopeId(..), scopeIdInt, topLevelScopeId
     , Closure(..), Scope(..)
     , emptyScope
-    , _HFunc, _HRecExtend, _HCase, _HRecEmpty
+    , _HError, _HFunc, _HRecExtend, _HCase, _HRecEmpty
     , _HAbsurd, _HInteger, _HBuiltin, _HInject
     ) where
 
@@ -35,7 +35,8 @@ data Closure pl = Closure
     } deriving (Show, Functor, Foldable, Traversable)
 
 data Val pl
-    = HFunc (Closure pl)
+    = HError -- when evaluating hole etc
+    | HFunc (Closure pl)
     | HRecExtend (V.RecExtend (Val pl))
     | HRecEmpty
     | HAbsurd
@@ -46,11 +47,12 @@ data Val pl
     deriving (Functor, Foldable, Traversable)
 
 instance Show pl => Show (Val pl) where
+    show HError = "ERR"
     show (HFunc closure) = show closure
     show (HRecExtend recExtend) = show recExtend
     show (HCase case_) = show case_
     show (HInject inject) = show inject
-    show HRecEmpty = "{}"
+    show HRecEmpty = "()"
     show HAbsurd = "Absurd"
     show (HInteger x) = show x
     show (HBuiltin ffiName) = show ffiName
