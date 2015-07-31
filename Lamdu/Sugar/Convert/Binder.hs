@@ -479,6 +479,7 @@ extractField :: T.Tag -> EV.Val pl -> EV.Val pl
 extractField tag (EV.HRecExtend (V.RecExtend vt vv vr))
         | vt == tag = vv
         | otherwise = extractField tag vr
+extractField _ EV.HError = EV.HError
 extractField tag x =
         unwords
         [ "extractField expected record containing tag"
