@@ -72,7 +72,7 @@ module Lamdu.Sugar.Types
     , HoleActions(..), holeGuid, holeOptions, holeOptionLiteralInt
     , Hole(..), holeMActions, holeMArg
     , ScopeGetVar(..), sgvGetVar, sgvVal
-    , TIdG(..), tidgName, tidgTId, tidgEntityId
+    , TIdG(..), tidgName, tidgTId
     , HoleResultScore
     , HoleResult(..)
         , holeResultConverted
@@ -215,7 +215,6 @@ data ScopeGetVar name m = ScopeGetVar
 
 data TIdG name = TIdG
     { _tidgName :: name
-    , _tidgEntityId :: EntityId
     , _tidgTId :: T.Id
     }
 
