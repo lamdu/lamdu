@@ -448,8 +448,7 @@ data BinderParams name m
       DefintionWithoutParams
     | -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
-      -- This can represent "deferred execution" when we switch to
-      -- a strict evaluation model.
+      -- This is often used to represent "deferred execution"
       NullParam (Maybe (NullParamActions m))
     | VarParam (FuncParam name m)
     | FieldParams [(T.Tag, FuncParam name m)]
