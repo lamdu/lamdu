@@ -437,7 +437,7 @@ applyForms empty val =
             "Unify of a tv with function type should always succeed, but failed: " ++
             prettyShow err
         assertSuccess (Right x) = return x
-        freshVar = Infer.run . Infer.freshInferredVar
+        freshVar = Infer.run . Infer.freshInferredVar (inferPl ^. Infer.plScope)
         inferPl = val ^. V.payload . _1
         plSameScope t = (inferPl & Infer.plType .~ t, empty)
 

@@ -36,13 +36,14 @@ type T = Transaction
 loadStored :: MonadA m => ExprIRef.ValIProperty m -> T m (Maybe ParamList)
 loadStored = Transaction.getP . assocFieldParamList . Property.value
 
-mkFuncType :: ParamList -> Infer Type
-mkFuncType paramList =
+mkFuncType :: Infer.Payload -> ParamList -> Infer Type
+mkFuncType inferred paramList =
     T.TFun
     <$> (T.TRecord <$> foldr step (pure T.CEmpty) paramList)
-    <*> Infer.freshInferredVar "l"
+    <*> Infer.freshInferredVar scope "l"
     where
-        step tag rest = T.CExtend tag <$> Infer.freshInferredVar "t" <*> rest
+        scope = inferred ^. Infer.plScope
+        step tag rest = T.CExtend tag <$> Infer.freshInferredVar scope "t" <*> rest
 
 loadForLambdas ::
     MonadA m =>
@@ -67,9 +68,10 @@ loadForLambdas (val, ctx) =
                         Nothing -> return ()
                         Just paramList ->
                             do
-                                funcType <- mkFuncType paramList
+                                funcType <- mkFuncType inferred paramList
                                 unify typ funcType
                             & Infer.run
                             & mapStateT IRefInfer.toEitherT
             where
-                typ = pl ^. Input.inferred . Infer.plType
+                inferred = pl ^. Input.inferred
+                typ = inferred ^. Infer.plType
