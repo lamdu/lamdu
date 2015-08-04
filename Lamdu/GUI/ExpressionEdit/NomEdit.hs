@@ -6,6 +6,7 @@ module Lamdu.GUI.ExpressionEdit.NomEdit
 import           Prelude.Compat
 
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -29,7 +30,9 @@ makeToNom ::
 makeToNom nom@(Sugar.Nominal _ val _) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
-        valEdit <- ExprGuiM.makeSubexpression 0 val
+        valEdit <-
+            ExprGuiM.makeSubexpression 0 val
+            <&> ExpressionGui.egAlignment . _1 .~ 0.5
         let valWidth = valEdit ^. ExpressionGui.egWidget . Widget.width
         nameEdit <-
             nameGui "Wrapper" nom nameId
