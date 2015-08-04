@@ -172,6 +172,24 @@ createMaybe valTParamId =
     where
         valT = "a"
 
+createStream :: MonadA m => T.ParamId -> M m TypeCtor
+createStream valTParamId =
+    do
+        tid <- newTId "Stream"
+        lift $ newNominal tid [(valTParamId, valT)] $
+            \stream ->
+            recordType [] ~>
+            sumType
+            [ recordType [] & Ctor Builtins.nilTag
+            , recordType
+                [ (Builtins.headTag, T.TVar valT)
+                , (Builtins.tailTag, stream [T.TVar valT])
+                ]
+              & Ctor Builtins.consTag
+            ] & Scheme.mono
+    where
+        valT = "a"
+
 createInfiniteStream :: MonadA m => T.ParamId -> M m TypeCtor
 createInfiniteStream valTParamId =
     do
@@ -205,6 +223,7 @@ createPublics =
 
         _ <- createList valTParamId
         _ <- createMaybe valTParamId
+        _ <- createStream valTParamId
         _ <- createInfiniteStream valTParamId
         bool <- createBool
 
