@@ -75,8 +75,11 @@ forAll count f =
 recordType :: [(T.Tag, Type)] -> Type
 recordType = T.TRecord . foldr (uncurry T.CExtend) T.CEmpty
 
-sumType :: [(T.Tag, Type)] -> Type
-sumType = T.TSum . foldr (uncurry T.CExtend) T.CEmpty
+sumType :: [Ctor] -> Type
+sumType =
+    T.TSum . foldr f T.CEmpty
+    where
+        f (Ctor tag typ) = T.CExtend tag typ
 
 data Public m = Public
     { publicDefs :: [DefI m]
@@ -135,41 +138,25 @@ newNominal tid params body =
             T.TInst tid $ Map.fromList $ zip (map fst params) typeParams
         scheme = body tinst
 
-data CtorInfo = CtorInfo
-    { ctorTag :: T.Tag
-    , _ctorScheme :: Scheme
+data Ctor = Ctor
+    { _ctorTag :: T.Tag
+    , _ctorType :: Type
     }
-
-data Ctor
-    = Nullary CtorInfo
-    | Normal Type CtorInfo
 
 adt ::
     MonadA m => T.Id -> [(T.ParamId, T.TypeVar)] -> (TypeCtor -> [Ctor]) ->
     M m TypeCtor
 adt tid params ctors =
-    lift $ newNominal tid params $
-    \t ->
-        ctors t
-        <&> onCtor
-        & sumType
-        & Scheme.mono
-    where
-        onCtor (Nullary info) = (ctorTag info, recordType [])
-        onCtor (Normal typ info) = (ctorTag info, typ)
+    newNominal tid params (Scheme.mono . sumType . ctors) & lift
 
 createList :: MonadA m => T.ParamId -> M m TypeCtor
 createList valTParamId =
     adt Builtins.listTid [(valTParamId, valT)] $ \list ->
-    [ Nullary $ CtorInfo Builtins.nilTag $ forAll 1 $ \[a] -> list [a]
-    , let consType =
-              recordType
-              [ (Builtins.headTag, T.TVar valT)
-              , (Builtins.tailTag, list [T.TVar valT])
-              ]
-      in  Normal consType $
-          CtorInfo Builtins.consTag $
-          forAll 1 $ \ [a] -> consType ~> list [a]
+    [ recordType [] & Ctor Builtins.nilTag
+    , recordType
+      [ (Builtins.headTag, T.TVar valT)
+      , (Builtins.tailTag, list [T.TVar valT])
+      ] & Ctor Builtins.consTag
     ]
     where
         valT = "a"
@@ -178,11 +165,9 @@ createMaybe :: MonadA m => T.ParamId -> M m TypeCtor
 createMaybe valTParamId =
     do
         tid <- newTId "Maybe"
-        adt tid [(valTParamId, valT)] $ \maybe_ ->
-            [ Nullary $ CtorInfo Builtins.nothingTag $
-              forAll 1 $ \[a] -> maybe_ [a]
-            , Normal (T.TVar valT) $ CtorInfo Builtins.justTag $
-              forAll 1 $ \[a] -> a ~> maybe_ [a]
+        adt tid [(valTParamId, valT)] $ \_ ->
+            [ recordType [] & Ctor Builtins.nothingTag
+            , T.TVar valT & Ctor Builtins.justTag
             ]
     where
         valT = "a"
@@ -209,11 +194,9 @@ createBool =
     do
         tid <- newTId "Bool"
         tyCon <-
-            adt tid [] $ \boolTCons ->
-            [ Nullary $ CtorInfo Builtins.trueTag $
-              Scheme.mono $ boolTCons []
-            , Nullary $ CtorInfo Builtins.falseTag $
-              Scheme.mono $ boolTCons []
+            adt tid [] $ \_ ->
+            [ recordType [] & Ctor Builtins.trueTag
+            , recordType [] & Ctor Builtins.falseTag
             ]
         return
             ( tyCon []
