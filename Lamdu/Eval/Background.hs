@@ -29,14 +29,14 @@ import qualified Data.Set as Set
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Eval as Eval
 import           Lamdu.Eval.Results (EvalResults(..))
-import           Lamdu.Eval.Val (Val, ScopeId)
+import           Lamdu.Eval.Val (EvalResult, ScopeId)
 import qualified Lamdu.Eval.Val as EvalVal
 import qualified Lamdu.Expr.Val as V
 import           System.IO (stderr)
 
 data Actions pl = Actions
     { _aLoadGlobal :: V.GlobalId -> IO (Maybe (Def.Body (V.Val pl)))
-    , _aRunBuiltin :: Def.FFIName -> Val pl -> Val pl
+    , _aRunBuiltin :: Def.FFIName -> EvalResult pl -> EvalResult pl
     , _aReportUpdatesAvailable :: IO ()
     }
 
@@ -57,19 +57,19 @@ data Status
 
 data State pl = State
     { _sStatus :: !Status
-    , _sAppliesOfLam :: !(Map pl (Map ScopeId [(ScopeId, Val pl)]))
+    , _sAppliesOfLam :: !(Map pl (Map ScopeId [(ScopeId, EvalResult pl)]))
       -- Maps of already-evaluated pl's/thunks
-    , _sValMap :: !(Map pl (Map ScopeId (Val pl)))
+    , _sValMap :: !(Map pl (Map ScopeId (EvalResult pl)))
     , _sDependencies :: !(Set pl, Set V.GlobalId)
     }
 
-sAppliesOfLam :: Lens' (State pl) (Map pl (Map ScopeId [(ScopeId, Val pl)]))
+sAppliesOfLam :: Lens' (State pl) (Map pl (Map ScopeId [(ScopeId, EvalResult pl)]))
 sAppliesOfLam f State{..} = f _sAppliesOfLam <&> \_sAppliesOfLam -> State{..}
 
 sStatus :: Lens' (State pl) Status
 sStatus f State{..} = f _sStatus <&> \_sStatus -> State{..}
 
-sValMap :: Lens' (State pl) (Map pl (Map ScopeId (Val pl)))
+sValMap :: Lens' (State pl) (Map pl (Map ScopeId (EvalResult pl)))
 sValMap f State{..} = f _sValMap <&> \_sValMap -> State{..}
 
 sDependencies :: Lens' (State pl) (Set pl, Set V.GlobalId)

@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RecordWildCards #-}
 module Lamdu.Eval.Val
-    ( Val(..)
+    ( EvalResult(..)
     , ScopeId(..), scopeIdInt, topLevelScopeId
     , Closure(..), Scope(..)
     , emptyScope
@@ -21,7 +21,7 @@ newtype ScopeId = ScopeId { getScopeId :: Int }
     deriving (Show, Eq, Ord, Binary)
 
 data Scope pl = Scope
-    { _scopeMap :: Map V.Var (Val pl)
+    { _scopeMap :: Map V.Var (EvalResult pl)
     , _scopeId :: ScopeId
     } deriving (Show, Functor, Foldable, Traversable)
 
@@ -34,19 +34,19 @@ data Closure pl = Closure
     , _cLamPayload :: pl
     } deriving (Show, Functor, Foldable, Traversable)
 
-data Val pl
+data EvalResult pl
     = HError -- when evaluating hole etc
     | HFunc (Closure pl)
-    | HRecExtend (V.RecExtend (Val pl))
+    | HRecExtend (V.RecExtend (EvalResult pl))
     | HRecEmpty
     | HAbsurd
-    | HCase (V.Case (Val pl))
+    | HCase (V.Case (EvalResult pl))
     | HInteger Integer
     | HBuiltin FFIName
-    | HInject (V.Inject (Val pl))
+    | HInject (V.Inject (EvalResult pl))
     deriving (Functor, Foldable, Traversable)
 
-instance Show pl => Show (Val pl) where
+instance Show pl => Show (EvalResult pl) where
     show HError = "ERR"
     show (HFunc closure) = show closure
     show (HRecExtend recExtend) = show recExtend
@@ -57,7 +57,7 @@ instance Show pl => Show (Val pl) where
     show (HInteger x) = show x
     show (HBuiltin ffiName) = show ffiName
 
-Lens.makePrisms ''Val
+Lens.makePrisms ''EvalResult
 
 topLevelScopeId :: ScopeId
 topLevelScopeId = ScopeId 0

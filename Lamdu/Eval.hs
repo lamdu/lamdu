@@ -23,7 +23,7 @@ import           Control.Monad.Trans.State.Strict (StateT(..))
 import           Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import qualified Lamdu.Data.Definition as Def
-import           Lamdu.Eval.Val (Val(..), Closure(..), Scope(..), emptyScope, ScopeId(..), scopeIdInt)
+import           Lamdu.Eval.Val (EvalResult(..), Closure(..), Scope(..), emptyScope, ScopeId(..), scopeIdInt)
 import qualified Lamdu.Expr.Val as V
 
 data ScopedVal pl = ScopedVal
@@ -35,13 +35,13 @@ data EventLambdaApplied pl = EventLambdaApplied
     { elaLam :: pl
     , elaParentId :: !ScopeId
     , elaId :: !ScopeId
-    , elaArgument :: !(Val pl)
+    , elaArgument :: !(EvalResult pl)
     } deriving (Show, Functor, Foldable, Traversable)
 
 data EventResultComputed pl = EventResultComputed
     { ercSource :: pl
     , ercScope :: !ScopeId
-    , ercResult :: !(Val pl)
+    , ercResult :: !(EvalResult pl)
     } deriving (Show, Functor, Foldable, Traversable)
 
 data Event pl
@@ -51,7 +51,7 @@ data Event pl
 
 data EvalActions m pl = EvalActions
     { _aReportEvent :: Event pl -> m ()
-    , _aRunBuiltin :: Def.FFIName -> Val pl -> Val pl
+    , _aRunBuiltin :: Def.FFIName -> EvalResult pl -> EvalResult pl
     , _aLoadGlobal :: V.GlobalId -> m (Maybe (Def.Body (V.Val pl)))
     }
 
@@ -61,7 +61,7 @@ newtype Env m pl = Env
 
 data EvalState m pl = EvalState
     { _esScopeCounter :: !ScopeId
-    , _esLoadedGlobals :: !(Map V.GlobalId (Val pl))
+    , _esLoadedGlobals :: !(Map V.GlobalId (EvalResult pl))
     , _esReader :: !(Env m pl) -- This is ReaderT
     }
 
@@ -89,7 +89,7 @@ report event =
         rep <- ask <&> (^. eEvalActions . aReportEvent)
         rep event & lift
 
-bindVar :: Monad m => pl -> V.Var -> Val pl -> Scope pl -> EvalT pl m (Scope pl)
+bindVar :: Monad m => pl -> V.Var -> EvalResult pl -> Scope pl -> EvalT pl m (Scope pl)
 bindVar lamPl var val (Scope parentMap parentId) =
     do
         newScopeId <- liftState $ use esScopeCounter
@@ -108,7 +108,7 @@ bindVar lamPl var val (Scope parentMap parentId) =
 evalError :: Monad m => String -> EvalT pl m a
 evalError = EvalT . left
 
-evalApply :: Monad m => V.Apply (Val pl) -> EvalT pl m (Val pl)
+evalApply :: Monad m => V.Apply (EvalResult pl) -> EvalT pl m (EvalResult pl)
 evalApply (V.Apply func arg) =
     case func of
     HFunc (Closure outerScope (V.Lam var body) lamPl) ->
@@ -135,7 +135,7 @@ evalApply (V.Apply func arg) =
     HError -> return HError
     _ -> evalError "Apply on non function: "
 
-evalScopedVal :: Monad m => ScopedVal pl -> EvalT pl m (Val pl)
+evalScopedVal :: Monad m => ScopedVal pl -> EvalT pl m (EvalResult pl)
 evalScopedVal (ScopedVal scope expr) =
     reportResultComputed =<<
     case expr ^. V.body of
@@ -164,14 +164,14 @@ evalScopedVal (ScopedVal scope expr) =
                     & EResultComputed & report
                 return result
 
-evalGetField :: Monad m => V.GetField (Val pl) -> EvalT pl m (Val pl)
+evalGetField :: Monad m => V.GetField (EvalResult pl) -> EvalT pl m (EvalResult pl)
 evalGetField (V.GetField (HRecExtend (V.RecExtend tag val rest)) searchTag)
     | searchTag == tag = return val
     | otherwise = V.GetField rest searchTag & evalGetField
 evalGetField (V.GetField val _) =
     evalError $ "GetField of value without the field " ++ show (void val)
 
-loadGlobal :: Monad m => V.GlobalId -> EvalT pl m (Val pl)
+loadGlobal :: Monad m => V.GlobalId -> EvalT pl m (EvalResult pl)
 loadGlobal g =
     do
         loaded <- liftState $ use (esLoadedGlobals . at g)

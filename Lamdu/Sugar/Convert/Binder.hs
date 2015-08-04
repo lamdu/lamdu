@@ -65,7 +65,7 @@ cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalP
 data FieldParam = FieldParam
     { fpTag :: T.Tag
     , fpFieldType :: Type
-    , fpValue :: Map ScopeId [(ScopeId, EV.Val ())]
+    , fpValue :: Map ScopeId [(ScopeId, EV.EvalResult ())]
     }
 
 onMatchingSubexprs ::
@@ -475,7 +475,7 @@ isParamAlwaysUsedWithGetField (V.Lam param body) =
         cond (Val () (V.BLeaf (V.LVar v)) : _) _ = v == param
         cond _ _ = False
 
-extractField :: T.Tag -> EV.Val pl -> EV.Val pl
+extractField :: T.Tag -> EV.EvalResult pl -> EV.EvalResult pl
 extractField tag (EV.HRecExtend (V.RecExtend vt vv vr))
         | vt == tag = vv
         | otherwise = extractField tag vr

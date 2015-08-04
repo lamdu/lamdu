@@ -12,18 +12,18 @@ import qualified Data.Map as Map
 import           Data.Map.Utils (matchKeys)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Definition as Def
-import           Lamdu.Eval.Val (Val(..))
+import           Lamdu.Eval.Val (EvalResult(..))
 import           Lamdu.Expr.Type (Tag)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 
-flatRecord :: Val pl -> Map Tag (Val pl)
+flatRecord :: EvalResult pl -> Map Tag (EvalResult pl)
 flatRecord HRecEmpty = Map.empty
 flatRecord (HRecExtend (V.RecExtend t v rest)) = flatRecord rest & Map.insert t v
 flatRecord _ = error "Param record is not a record"
 
 extractRecordParams ::
-    (Traversable t, Show (t Tag)) => t Tag -> Val pl -> t (Val pl)
+    (Traversable t, Show (t Tag)) => t Tag -> EvalResult pl -> t (EvalResult pl)
 extractRecordParams expectedTags val =
     case matchKeys expectedTags paramsMap of
     Nothing ->
@@ -38,12 +38,12 @@ extractRecordParams expectedTags val =
 data V2 a = V2 a a   deriving (Show, Functor, Foldable, Traversable)
 data V3 a = V3 a a a deriving (Show, Functor, Foldable, Traversable)
 
-extractInfixParams :: Val pl -> V2 (Val pl)
+extractInfixParams :: EvalResult pl -> V2 (EvalResult pl)
 extractInfixParams = extractRecordParams (V2 Builtins.infixlTag Builtins.infixrTag)
 
 class GuestType t where
-    toGuest :: t -> Val pl
-    fromGuest :: Val pl -> t
+    toGuest :: t -> EvalResult pl
+    fromGuest :: EvalResult pl -> t
 
 instance GuestType Integer where
     toGuest = HInteger
@@ -63,7 +63,7 @@ instance GuestType Bool where
             | boolTag == Builtins.falseTag -> False
         _ -> error $ "expected bool, got " ++ show (void v)
 
-record :: [(T.Tag, Val pl)] -> Val pl
+record :: [(T.Tag, EvalResult pl)] -> EvalResult pl
 record [] = HRecEmpty
 record ((tag, val) : xs) = record xs & V.RecExtend tag val & HRecExtend
 
@@ -84,20 +84,20 @@ instance GuestType t => GuestType [t] where
             fields = flatRecord val
     fromGuest x = error $ "Expected list: got " ++ show (void x)
 
-builtin1 :: (GuestType a, GuestType b) => (a -> b) -> Val pl -> Val pl
+builtin1 :: (GuestType a, GuestType b) => (a -> b) -> EvalResult pl -> EvalResult pl
 builtin1 f val = fromGuest val & f & toGuest
 
 builtin2Infix ::
     ( GuestType a
     , GuestType b
     , GuestType c ) =>
-    (a -> b -> c) -> Val pl -> Val pl
+    (a -> b -> c) -> EvalResult pl -> EvalResult pl
 builtin2Infix f thunkId =
     f (fromGuest x) (fromGuest y) & toGuest
     where
         V2 x y = extractInfixParams thunkId
 
-eq :: Val t -> Val t -> Bool
+eq :: EvalResult t -> EvalResult t -> Bool
 eq HFunc {} _ = error "Cannot compare functions"
 eq HAbsurd {} _ = error "Cannot compare case analysis"
 eq HCase {} _ = error "Cannot compare case analysis"
@@ -115,22 +115,22 @@ eq (HInject (V.Inject xf xv)) (HInject (V.Inject yf yv))
     | otherwise = False
 eq _ _ = False -- assume type checking ruled out errorenous equalities already
 
-builtinEqH :: GuestType t => (Bool -> t) -> Val pl -> Val pl
+builtinEqH :: GuestType t => (Bool -> t) -> EvalResult pl -> EvalResult pl
 builtinEqH f val =
     eq x y & f & toGuest
     where
         V2 x y = extractInfixParams val
 
-builtinEq :: Val pl -> Val pl
+builtinEq :: EvalResult pl -> EvalResult pl
 builtinEq = builtinEqH id
 
-builtinNotEq :: Val pl -> Val pl
+builtinNotEq :: EvalResult pl -> EvalResult pl
 builtinNotEq = builtinEqH not
 
 intArg :: (Integer -> a) -> Integer -> a
 intArg = id
 
-eval :: Def.FFIName -> Val pl -> Val pl
+eval :: Def.FFIName -> EvalResult pl -> EvalResult pl
 eval name =
     case name of
     Def.FFIName ["Prelude"] "=="     -> builtinEq

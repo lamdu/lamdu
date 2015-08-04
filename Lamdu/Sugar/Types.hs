@@ -120,7 +120,7 @@ data Actions m = Actions
     , _extract :: Maybe (T m EntityId) -- Nothing if already hole
     }
 
-type EvaluationResult = Map E.ScopeId (E.Val ())
+type EvaluationResult = Map E.ScopeId (E.EvalResult ())
 
 data Annotation = Annotation
     { _aInferredType :: Type

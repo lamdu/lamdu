@@ -14,7 +14,7 @@ import qualified Data.Map as Map
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
-import           Lamdu.Eval.Val (Val, ScopeId)
+import           Lamdu.Eval.Val (EvalResult, ScopeId)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.EntityId (EntityId)
@@ -24,8 +24,8 @@ data Payload m a = Payload
     { _entityId :: EntityId
     , _inferred :: Infer.Payload
     , _mStored :: Maybe (ExprIRef.ValIProperty m)
-    , _evalResults :: Map ScopeId (Val ())
-    , _evalAppliesOfLam :: Map ScopeId [(ScopeId, Val ())]
+    , _evalResults :: Map ScopeId (EvalResult ())
+    , _evalAppliesOfLam :: Map ScopeId [(ScopeId, EvalResult ())]
     , _userData :: a
     } deriving (Functor, Foldable, Traversable)
 
@@ -39,10 +39,10 @@ inferred f Payload{..} = f _inferred <&> \_inferred -> Payload{..}
 mStored :: Lens' (Payload m a) (Maybe (ExprIRef.ValIProperty m))
 mStored f Payload{..} = f _mStored <&> \_mStored -> Payload{..}
 
-evalResults :: Lens' (Payload m a) (Map ScopeId (Val ()))
+evalResults :: Lens' (Payload m a) (Map ScopeId (EvalResult ()))
 evalResults f Payload{..} = f _evalResults <&> \_evalResults -> Payload{..}
 
-evalAppliesOfLam :: Lens' (Payload m a) (Map ScopeId [(ScopeId, Val ())])
+evalAppliesOfLam :: Lens' (Payload m a) (Map ScopeId [(ScopeId, EvalResult ())])
 evalAppliesOfLam f Payload{..} = f _evalAppliesOfLam <&> \_evalAppliesOfLam -> Payload{..}
 
 userData :: Lens (Payload m a) (Payload m b) a b
@@ -50,7 +50,7 @@ userData f Payload{..} = f _userData <&> \_userData -> Payload{..}
 
 mkPayload ::
     a -> Infer.Payload ->
-    Map ScopeId (Val ()) -> Map ScopeId [(ScopeId, Val ())] ->
+    Map ScopeId (EvalResult ()) -> Map ScopeId [(ScopeId, EvalResult ())] ->
     ExprIRef.ValIProperty m -> Payload m a
 mkPayload _userData _inferred _evalResults _evalAppliesOfLam stored =
     Payload{..}

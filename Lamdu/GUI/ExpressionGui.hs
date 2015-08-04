@@ -62,7 +62,7 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Eval.Val (Val, ScopeId)
+import           Lamdu.Eval.Val (EvalResult, ScopeId)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.EvalView as EvalView
@@ -186,7 +186,7 @@ makeWithAnnotationBG minWidth entityId f =
     where
         animId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
 
-type ScopeAndVal = (ScopeId, Val ())
+type ScopeAndVal = (ScopeId, EvalResult ())
 
 makeEvaluationResultView ::
     MonadA m => AnimId -> ScopeAndVal -> ExprGuiM m (ExpressionGui m)
@@ -196,7 +196,7 @@ makeEvaluationResultView animId (scopeId, evalRes) =
     <&> fromValueWidget
 
 makeEvaluationResultViewBG ::
-    MonadA m => Config -> AnimId -> (ScopeId, Val ()) ->
+    MonadA m => Config -> AnimId -> (ScopeId, EvalResult ()) ->
     ExprGuiM m (ExpressionGui m)
 makeEvaluationResultViewBG config animId (scopeId, evalRes) =
     makeEvaluationResultView animId (scopeId, evalRes)
@@ -470,7 +470,7 @@ maybeAddAnnotationPl pl =
     (pl ^. Sugar.plEntityId)
 
 evaluationResult ::
-    MonadA m => Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (Maybe (Val ()))
+    MonadA m => Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (Maybe (EvalResult ()))
 evaluationResult pl =
     ExprGuiM.readMScopeId
     <&> (>>= valOfScope (pl ^. Sugar.plAnnotation))
@@ -510,7 +510,7 @@ maybeAddAnnotationH opt missingAnnotationBehavior annotation entityId eg =
         withType = addInferredType entityId (annotation ^. Sugar.aInferredType) eg
         valAndScope scopeId = valOfScope annotation scopeId <&> (,) scopeId
 
-valOfScope :: Sugar.Annotation -> ScopeId -> Maybe (Val ())
+valOfScope :: Sugar.Annotation -> ScopeId -> Maybe (EvalResult ())
 valOfScope annotation scopeId =
     annotation ^? Sugar.aMEvaluationResult .
     Lens._Just . Lens.at scopeId . Lens._Just
