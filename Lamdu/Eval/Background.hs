@@ -39,7 +39,7 @@ import           System.IO (stderr)
 
 data Actions pl = Actions
     { _aLoadGlobal :: V.GlobalId -> IO (Maybe (Def.Body (V.Val pl)))
-    , _aRunBuiltin :: Def.FFIName -> Val pl -> IO (Val pl)
+    , _aRunBuiltin :: Def.FFIName -> Val pl -> Val pl
     , _aReportUpdatesAvailable :: IO ()
     }
 

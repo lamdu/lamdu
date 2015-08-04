@@ -51,7 +51,7 @@ data Event pl
 
 data EvalActions m pl = EvalActions
     { _aReportEvent :: Event pl -> m ()
-    , _aRunBuiltin :: Def.FFIName -> Val pl -> m (Val pl)
+    , _aRunBuiltin :: Def.FFIName -> Val pl -> Val pl
     , _aLoadGlobal :: V.GlobalId -> m (Maybe (Def.Body (V.Val pl)))
     }
 
@@ -119,7 +119,7 @@ evalApply (V.Apply func arg) =
         | otherwise ->
             do
                 runBuiltin <- ask <&> (^. eEvalActions . aRunBuiltin)
-                runBuiltin ffiname arg & lift
+                runBuiltin ffiname arg & return
         where
             -- only supports records because that's what builtins handle..
             containsError HError = True
