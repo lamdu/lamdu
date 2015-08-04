@@ -143,15 +143,15 @@ data Ctor = Ctor
     , _ctorType :: Type
     }
 
-adt ::
+nominalSum ::
     MonadA m => T.Id -> [(T.ParamId, T.TypeVar)] -> (TypeCtor -> [Ctor]) ->
     M m TypeCtor
-adt tid params ctors =
+nominalSum tid params ctors =
     newNominal tid params (Scheme.mono . sumType . ctors) & lift
 
 createList :: MonadA m => T.ParamId -> M m TypeCtor
 createList valTParamId =
-    adt Builtins.listTid [(valTParamId, valT)] $ \list ->
+    nominalSum Builtins.listTid [(valTParamId, valT)] $ \list ->
     [ recordType [] & Ctor Builtins.nilTag
     , recordType
       [ (Builtins.headTag, T.TVar valT)
@@ -165,7 +165,7 @@ createMaybe :: MonadA m => T.ParamId -> M m TypeCtor
 createMaybe valTParamId =
     do
         tid <- newTId "Maybe"
-        adt tid [(valTParamId, valT)] $ \_ ->
+        nominalSum tid [(valTParamId, valT)] $ \_ ->
             [ recordType [] & Ctor Builtins.nothingTag
             , T.TVar valT & Ctor Builtins.justTag
             ]
@@ -194,7 +194,7 @@ createBool =
     do
         tid <- newTId "Bool"
         tyCon <-
-            adt tid [] $ \_ ->
+            nominalSum tid [] $ \_ ->
             [ recordType [] & Ctor Builtins.trueTag
             , recordType [] & Ctor Builtins.falseTag
             ]
