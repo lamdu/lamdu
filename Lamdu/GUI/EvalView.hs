@@ -19,7 +19,7 @@ import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Eval.Val (EvalResult(..))
+import           Lamdu.Eval.Val (EvalResult, Val(..))
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)

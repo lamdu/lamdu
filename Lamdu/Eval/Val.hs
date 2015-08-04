@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RecordWildCards #-}
 module Lamdu.Eval.Val
-    ( EvalResult(..)
+    ( Val(..), EvalResult
     , ScopeId(..), scopeIdInt, topLevelScopeId
     , Closure(..), Scope(..)
     , emptyScope
@@ -34,7 +34,7 @@ data Closure pl = Closure
     , _cLamPayload :: pl
     } deriving (Show, Functor, Foldable, Traversable)
 
-data EvalResult pl
+data Val pl
     = HError -- when evaluating hole etc
     | HFunc (Closure pl)
     | HRecExtend (V.RecExtend (EvalResult pl))
@@ -46,7 +46,9 @@ data EvalResult pl
     | HInject (V.Inject (EvalResult pl))
     deriving (Functor, Foldable, Traversable)
 
-instance Show pl => Show (EvalResult pl) where
+type EvalResult = Val
+
+instance Show pl => Show (Val pl) where
     show HError = "ERR"
     show (HFunc closure) = show closure
     show (HRecExtend recExtend) = show recExtend
@@ -57,7 +59,7 @@ instance Show pl => Show (EvalResult pl) where
     show (HInteger x) = show x
     show (HBuiltin ffiName) = show ffiName
 
-Lens.makePrisms ''EvalResult
+Lens.makePrisms ''Val
 
 topLevelScopeId :: ScopeId
 topLevelScopeId = ScopeId 0

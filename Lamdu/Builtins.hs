@@ -12,7 +12,7 @@ import qualified Data.Map as Map
 import           Data.Map.Utils (matchKeys)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Definition as Def
-import           Lamdu.Eval.Val (EvalResult(..))
+import           Lamdu.Eval.Val (EvalResult, Val(..))
 import           Lamdu.Expr.Type (Tag)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V

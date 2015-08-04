@@ -23,7 +23,7 @@ import           Control.Monad.Trans.State.Strict (StateT(..))
 import           Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import qualified Lamdu.Data.Definition as Def
-import           Lamdu.Eval.Val (EvalResult(..), Closure(..), Scope(..), emptyScope, ScopeId(..), scopeIdInt)
+import           Lamdu.Eval.Val (EvalResult, Val(..), Closure(..), Scope(..), emptyScope, ScopeId(..), scopeIdInt)
 import qualified Lamdu.Expr.Val as V
 
 data ScopedVal pl = ScopedVal
