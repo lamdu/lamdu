@@ -78,24 +78,24 @@ makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
                 & Widget.weakerEvents rhsJumperEquals
             | otherwise = widget
 
-makeWheres ::
+makeLets ::
     MonadA m =>
-    [Sugar.WhereItem (Name m) m (ExprGuiT.SugarExpr m)] -> Widget.Id ->
+    [Sugar.LetItem (Name m) m (ExprGuiT.SugarExpr m)] -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-makeWheres [] _ = ExpressionGui.fromValueWidget Widget.empty & return
-makeWheres whereItems myId =
+makeLets [] _ = ExpressionGui.fromValueWidget Widget.empty & return
+makeLets letItems myId =
     do
-        whereLabel <- ExpressionGui.grammarLabel "where" (Widget.toAnimId myId)
+        letLabel <- ExpressionGui.grammarLabel "where" (Widget.toAnimId myId)
         itemEdits <-
-            reverse whereItems
-            & ExpressionGui.listWithDelDests myId myId wiCursor
-            & traverse makeWhereItemEdit
+            reverse letItems
+            & ExpressionGui.listWithDelDests myId myId liCursor
+            & traverse makeLetItemEdit
         ExpressionGui.hboxSpaced
-            [ whereLabel
+            [ letLabel
             , ExpressionGui.vboxTopFocal itemEdits
             ]
     where
-        wiCursor = WidgetIds.fromEntityId . (^. Sugar.wiEntityId)
+        liCursor = WidgetIds.fromEntityId . (^. Sugar.liEntityId)
 
 presentationModeChoiceConfig :: Config -> Choice.Config
 presentationModeChoiceConfig config = Choice.Config
@@ -136,7 +136,7 @@ layout ::
     ExpressionGui m -> ExpressionGui m ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-layout defNameEdit paramEdits bodyEdit wheresEdit myId =
+layout defNameEdit paramEdits bodyEdit letsEdit myId =
     do
         equals <- ExpressionGui.makeLabel "=" (Widget.toAnimId myId)
         paramsEdit <-
@@ -151,12 +151,12 @@ layout defNameEdit paramEdits bodyEdit wheresEdit myId =
         top <-
             defNameEdit : paramsEdit ++ [ equals, bodyEdit ]
             & ExpressionGui.hboxSpaced
-        ExpressionGui.vboxTopFocalAlignedTo 0 [top, wheresEdit] & return
+        ExpressionGui.vboxTopFocalAlignedTo 0 [top, letsEdit] & return
 
 data Parts m = Parts
     { pParamEdits :: [ExpressionGui m]
     , pBodyEdit :: ExpressionGui m
-    , pWheresEdit :: ExpressionGui m
+    , pLetsEdit :: ExpressionGui m
     , pEventMap :: Widget.EventHandlers (T m)
     }
 
@@ -285,8 +285,8 @@ makeParts showAnnotation binder myId =
                 bodyEdit <-
                     makeResultEdit (binder ^. Sugar.bMActions) params body
                     & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sBodyScope)
-                wheresEdit <-
-                    makeWheres (binder ^. Sugar.bWhereItems) myId
+                letsEdit <-
+                    makeLets (binder ^. Sugar.bLetItems) myId
                     & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
                 config <- ExprGuiM.readConfig <&> Config.eval
                 let scopeEventMap =
@@ -299,7 +299,7 @@ makeParts showAnnotation binder myId =
                             & fromMaybe mempty
                         _ -> mempty
                 Parts (paramEdits ++ (mScopeNavEdit ^.. Lens.traversed))
-                    bodyEdit wheresEdit scopeEventMap
+                    bodyEdit letsEdit scopeEventMap
                     & return
     where
         takeNavCursor = ExprGuiM.assignCursorPrefix scopesNavId (const destId)
@@ -320,7 +320,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make name binder myId =
     do
-        Parts paramEdits bodyEdit wheresEdit eventMap <-
+        Parts paramEdits bodyEdit letsEdit eventMap <-
             makeParts ExprGuiT.ShowAnnotation binder myId
         rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
         presentationEdits <-
@@ -333,35 +333,35 @@ make name binder myId =
         layout defNameEdit
             (paramEdits & Lens.mapped . ExpressionGui.egWidget
                 %~ Widget.weakerEvents rhsJumperEquals)
-            bodyEdit wheresEdit myId
+            bodyEdit letsEdit myId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
         rhs = ("Def Body", body)
         body = binder ^. Sugar.bBody
 
-makeWhereItemEdit ::
+makeLetItemEdit ::
     MonadA m =>
-    (Widget.Id, Widget.Id, Sugar.WhereItem (Name m) m (ExprGuiT.SugarExpr m)) ->
+    (Widget.Id, Widget.Id, Sugar.LetItem (Name m) m (ExprGuiT.SugarExpr m)) ->
     ExprGuiM m (ExpressionGui m)
-makeWhereItemEdit (_prevId, nextId, item) =
+makeLetItemEdit (_prevId, nextId, item) =
     do
         config <- ExprGuiM.readConfig
         let eventMap
-                | Just wiActions <- item ^. Sugar.wiActions =
+                | Just liActions <- item ^. Sugar.liActions =
                 mconcat
                 [ Widget.keysEventMapMovesCursor (Config.delKeys config)
-                    (E.Doc ["Edit", "Where clause", "Delete"]) $
-                    nextId <$ wiActions ^. Sugar.wiDelete
+                    (E.Doc ["Edit", "Let clause", "Delete"]) $
+                    nextId <$ liActions ^. Sugar.liDelete
                 , Widget.keysEventMapMovesCursor
                     (Config.whereAddItemKeys config)
-                    (E.Doc ["Edit", "Where clause", "Add next"]) $
+                    (E.Doc ["Edit", "Let clause", "Add next"]) $
                     WidgetIds.fromEntityId <$>
-                    wiActions ^. Sugar.wiAddNext
+                    liActions ^. Sugar.liAddNext
                 , Widget.keysEventMapMovesCursor (Config.extractKeys config)
-                    (E.Doc ["Edit", "Where clause", "Extract to outer scope"]) $
+                    (E.Doc ["Edit", "Let clause", "Extract to outer scope"]) $
                     WidgetIds.fromEntityId <$>
-                    wiActions ^. Sugar.wiExtract
+                    liActions ^. Sugar.liExtract
                 ]
                 | otherwise = mempty
         mBodyScopeId <- ExprGuiM.readMScopeId
@@ -369,17 +369,17 @@ makeWhereItemEdit (_prevId, nextId, item) =
             binder ^. Sugar.bBody
             & ExprGuiT.nextHolesBefore & ExprEventMap.jumpHolesEventMap
         make
-            (item ^. Sugar.wiName)
+            (item ^. Sugar.liName)
             binder
-            (WidgetIds.fromEntityId (item ^. Sugar.wiEntityId))
+            (WidgetIds.fromEntityId (item ^. Sugar.liEntityId))
             <&> ExpressionGui.egWidget
                 %~ Widget.weakerEvents (mappend jumpHolesEventMap eventMap)
             <&> ExpressionGui.pad
-                (Config.whereItemPadding config <&> realToFrac)
+                (Config.letItemPadding config <&> realToFrac)
             & ExprGuiM.withLocalMScopeId
-                (mBodyScopeId >>= (`Map.lookup` (item ^. Sugar.wiScopes)))
+                (mBodyScopeId >>= (`Map.lookup` (item ^. Sugar.liScopes)))
     where
-        binder = item ^. Sugar.wiValue
+        binder = item ^. Sugar.liValue
 
 jumpToRHS ::
     (MonadA m, MonadA f) =>
@@ -413,15 +413,15 @@ makeResultEdit mActions params result = do
                 Widget.keysEventMapMovesCursor
                 (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to last param"]) $
                 WidgetIds.fromEntityId (last ps ^. _2 . Sugar.fpId) <$ savePos
-        addWhereItemEventMap actions =
+        addLetItemEventMap actions =
             Widget.keysEventMapMovesCursor (Config.whereAddItemKeys config)
-            (E.Doc ["Edit", "Where clause", "Add first"]) .
+            (E.Doc ["Edit", "Let clause", "Add first"]) .
             fmap (diveToNameEdit . WidgetIds.fromEntityId) $
-            savePos >> actions ^. Sugar.baAddInnermostWhereItem
+            savePos >> actions ^. Sugar.baAddInnermostLetItem
     ExprGuiM.makeSubexpression 0 result
         <&> ExpressionGui.egWidget %~
                 Widget.weakerEvents
-                (jumpToLhsEventMap <> maybe mempty addWhereItemEventMap mActions)
+                (jumpToLhsEventMap <> maybe mempty addLetItemEventMap mActions)
 
 makeNullLambdaActions ::
     MonadA m =>

@@ -110,10 +110,10 @@ binderFuncParamAdds ::
     (Binder name m (Expression name m a))
     (Transaction m ParamAddResult)
 binderFuncParamAdds f Binder{..} =
-    (\_bParams _bBody _bWhereItems _bMActions -> Binder{..})
+    (\_bParams _bBody _bLetItems _bMActions -> Binder{..})
     <$> (_bParams & binderParamsActions . fpAddNext %%~ f)
     <*> onExpr _bBody
-    <*> (_bWhereItems & Lens.traversed . wiValue . binderFuncParamAdds %%~ f)
+    <*> (_bLetItems & Lens.traversed . liValue . binderFuncParamAdds %%~ f)
     <*> (_bMActions & Lens._Just . baAddFirstParam %%~ f)
     where
         onExpr = rBody %%~ onBody
@@ -125,10 +125,10 @@ binderFuncParamDeletes ::
     (Binder name m (Expression name m a))
     (Transaction m ParamDelResult)
 binderFuncParamDeletes f Binder{..} =
-    (\_bParams _bBody _bWhereItems -> Binder{..})
+    (\_bParams _bBody _bLetItems -> Binder{..})
     <$> (_bParams & binderParamsActions . fpDelete %%~ f)
     <*> onExpr _bBody
-    <*> (_bWhereItems & Lens.traversed . wiValue . binderFuncParamDeletes %%~ f)
+    <*> (_bLetItems & Lens.traversed . liValue . binderFuncParamDeletes %%~ f)
     where
         onExpr = rBody %%~ onBody
         onBody (BodyLam binder) = binder & binderFuncParamDeletes %%~ f <&> BodyLam

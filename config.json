@@ -786,7 +786,7 @@
         1.0,
         0.25
     ],
-    "whereItemPadding": {
+    "letItemPadding": {
         "_first": 5,
         "_second": 5
     },

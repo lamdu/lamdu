@@ -160,7 +160,7 @@ data Config = Config
     , acceptDefinitionTypeKeys :: [ModKey]
 
     , whereAddItemKeys :: [ModKey]
-    , whereItemPadding :: Vector2 Double
+    , letItemPadding :: Vector2 Double
 
     , extractKeys :: [ModKey]
 

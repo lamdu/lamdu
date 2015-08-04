@@ -14,13 +14,13 @@ module Lamdu.Sugar.Types
         , _DefinitionNewType
     , Anchors.PresentationMode(..)
     , BinderActions(..)
-        , baAddFirstParam, baAddInnermostWhereItem
+        , baAddFirstParam, baAddInnermostLetItem
     , NullParamActions(..), npDeleteLambda
     , BinderParams(..),
         _DefintionWithoutParams, _NullParam, _VarParam, _FieldParams
     , Binder(..)
         , bMPresentationModeProp, bMChosenScopeProp, bParams, bBody
-        , bWhereItems, bMActions, bScopes
+        , bLetItems, bMActions, bScopes
     , DefinitionBuiltin(..), biType, biName, biSetName
     , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
     , SetToHole(..), _SetToHole, _AlreadyAHole
@@ -36,10 +36,10 @@ module Lamdu.Sugar.Types
     , Payload(..), plEntityId, plAnnotation, plActions, plData
     , Expression(..), rBody, rPayload
     , DefinitionU
-    , WhereItem(..)
-        , wiEntityId, wiValue, wiName, wiActions, wiAnnotation, wiScopes
-    , WhereItemActions(..)
-        , wiAddNext, wiDelete, wiExtract
+    , LetItem(..)
+        , liEntityId, liValue, liName, liActions, liAnnotation, liScopes
+    , LetItemActions(..)
+        , liAddNext, liDelete, liExtract
     , ListItem(..), liMActions, liExpr
     , ListActions(..), List(..)
     -- record:
@@ -417,25 +417,25 @@ instance Show expr => Show (Body name m expr) where
     show BodyFromNom {} = "FromNom:TODO"
     show BodyToNom {} = "ToNom:TODO"
 
-data WhereItemActions m = WhereItemActions
-    { _wiAddNext :: T m EntityId
-    , _wiDelete :: T m ()
-    , _wiExtract :: T m EntityId
+data LetItemActions m = LetItemActions
+    { _liAddNext :: T m EntityId
+    , _liDelete :: T m ()
+    , _liExtract :: T m EntityId
     }
 
-data WhereItem name m expr = WhereItem
-    { _wiValue :: Binder name m expr
-    , _wiEntityId :: EntityId
-    , _wiAnnotation :: Annotation
-    , _wiName :: name
-    , _wiActions :: Maybe (WhereItemActions m)
+data LetItem name m expr = LetItem
+    { _liValue :: Binder name m expr
+    , _liEntityId :: EntityId
+    , _liAnnotation :: Annotation
+    , _liName :: name
+    , _liActions :: Maybe (LetItemActions m)
     , -- This is a mapping from param in bScopes to the where item's scope
-      _wiScopes :: Map E.ScopeId E.ScopeId
+      _liScopes :: Map E.ScopeId E.ScopeId
     } deriving (Functor, Foldable, Traversable)
 
 data BinderActions m = BinderActions
     { _baAddFirstParam :: T m ParamAddResult
-    , _baAddInnermostWhereItem :: T m EntityId
+    , _baAddInnermostLetItem :: T m EntityId
     }
 
 newtype NullParamActions m = NullParamActions
@@ -457,7 +457,7 @@ data Binder name m expr = Binder
     , _bMChosenScopeProp :: Maybe (MkProperty m (Maybe E.ScopeId))
     , _bParams :: BinderParams name m
     , _bBody :: expr
-    , _bWhereItems :: [WhereItem name m expr]
+    , _bLetItems :: [LetItem name m expr]
     , _bMActions :: Maybe (BinderActions m)
     , -- Tuples of param and body scopes
       -- (the body scope may be internal of the param scope include where items)
@@ -535,8 +535,8 @@ Lens.makeLenses ''RecordField
 Lens.makeLenses ''ScopeGetVar
 Lens.makeLenses ''TIdG
 Lens.makeLenses ''TagG
-Lens.makeLenses ''WhereItem
-Lens.makeLenses ''WhereItemActions
+Lens.makeLenses ''LetItem
+Lens.makeLenses ''LetItemActions
 Lens.makeLenses ''NullParamActions
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''Body

@@ -34,7 +34,7 @@ class (MonadA m, MonadA (TM m)) => MonadNaming m where
     opRun :: m (InTransaction m (TM m))
 
     opWithParamName :: NameGen.IsFunction -> CPSNameConvertor m
-    opWithWhereItemName :: NameGen.IsFunction -> CPSNameConvertor m
+    opWithLetItemName :: NameGen.IsFunction -> CPSNameConvertor m
     opWithDefName :: CPSNameConvertor m
     opWithTagName :: CPSNameConvertor m
     opGetDefName :: NameConvertor m
@@ -263,16 +263,16 @@ toExpression ::
     m (NewExpression m a)
 toExpression = rBody toBody
 
-withWhereItem ::
+withLetItem ::
     MonadNaming m =>
-    WhereItem (OldName m) (TM m) (OldExpression m a) ->
-    CPS m (WhereItem (NewName m) (TM m) (NewExpression m a))
-withWhereItem item@WhereItem{..} =
+    LetItem (OldName m) (TM m) (OldExpression m a) ->
+    CPS m (LetItem (NewName m) (TM m) (NewExpression m a))
+withLetItem item@LetItem{..} =
     CPS $ \k -> do
         (name, (value, res)) <-
-            runCPS (opWithWhereItemName (isFunctionType (_wiAnnotation ^. aInferredType)) _wiName) $
-            (,) <$> toBinder _wiValue <*> k
-        pure (item { _wiValue = value, _wiName = name }, res)
+            runCPS (opWithLetItemName (isFunctionType (_liAnnotation ^. aInferredType)) _liName) $
+            (,) <$> toBinder _liValue <*> k
+        pure (item { _liValue = value, _liName = name }, res)
 
 withBinderParams ::
     MonadNaming m =>
@@ -293,14 +293,14 @@ toBinder ::
     m (Binder (NewName m) (TM m) (NewExpression m a))
 toBinder binder@Binder{..} =
     do
-        (params, (whereItems, body)) <-
+        (params, (letItems, body)) <-
             runCPS (withBinderParams _bParams) .
-            runCPS (traverse withWhereItem _bWhereItems) $
+            runCPS (traverse withLetItem _bLetItems) $
             toExpression _bBody
         binder
             { _bParams = params
             , _bBody = body
-            , _bWhereItems = whereItems
+            , _bLetItems = letItems
             } & pure
 
 toDefinitionBody ::

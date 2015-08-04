@@ -201,9 +201,9 @@ lambdaRecord baseRecord paramsName fields mkResult =
             T.TRecord <$>
             (compositeOfList <$> baseRecord <*> Lens.sequenceAOf (Lens.traversed . _2) fields)
 
-whereItem ::
+letItem ::
     V.Var -> ExprWithResumptions -> (ExprWithResumptions -> ExprWithResumptions) -> ExprWithResumptions
-whereItem name val mkBody = lambda name (exprTypeStream val) mkBody $$ val
+letItem name val mkBody = lambda name (exprTypeStream val) mkBody $$ val
 
 -- Uses inferred holes for cons type
 nonEmptyList :: [ExprWithResumptions] -> ExprWithResumptions

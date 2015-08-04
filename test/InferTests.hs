@@ -53,7 +53,7 @@ applyOnVar =
 
 monomorphRedex =
     testInfer "monomorphRedex: f (\\x -> \\_1 -> x ?) where f = \\_2 -> ?" $
-    whereItem "f" (lambda "_2" ((a ~> b) ~> c ~> b) $ \_ -> holeWithInferredType d) $ \f ->
+    letItem "f" (lambda "_2" ((a ~> b) ~> c ~> b) $ \_ -> holeWithInferredType d) $ \f ->
     f $$
     ( lambda "x" (a ~> b) $ \x ->
         lambda "_1" c $ const $ x $$ holeWithInferredType a
@@ -61,7 +61,7 @@ monomorphRedex =
 
 idPreservesDependency =
     testInfer "5 + f _ where f x = id _{no inferred type}" $
-    whereItem "f"
+    letItem "f"
     ( lambda "x" a (const (glob [intType] "id" $$
         holeWithInferredType intType))
     ) $ \f ->
@@ -287,11 +287,11 @@ solveDepressedQuarticExpr =
     , ("d0", intType)
     , ("c0", intType)
     ] $ \[e0, d0, c0] ->
-    whereItem "solvePoly" ( glob [iListInt] "id" )
+    letItem "solvePoly" ( glob [iListInt] "id" )
     $ \solvePoly ->
-    whereItem "sqrts"
+    letItem "sqrts"
     ( lambda "x" intType $ \x ->
-        whereItem "r"
+        letItem "r"
         ( glob [] "sqrt" $$ x
         ) $ \rr ->
         nonEmptyList [rr, glob [] "negate" $$ rr]

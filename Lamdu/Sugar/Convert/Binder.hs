@@ -590,7 +590,7 @@ changeRecursionsToCalls =
             >>= ExprIRef.newValBody . V.BApp . V.Apply (Property.value prop)
             >>= Property.set prop
 
-data ExprWhereItem a = ExprWhereItem
+data ExprLetItem a = ExprLetItem
     { ewiBody :: Val a
     , ewiBodyScopesMap :: Map ScopeId ScopeId
     , ewiParam :: V.Var
@@ -599,11 +599,11 @@ data ExprWhereItem a = ExprWhereItem
     , ewiAnnotation :: Annotation
     }
 
-mExtractWhere :: Val (Input.Payload m a) -> Maybe (ExprWhereItem (Input.Payload m a))
-mExtractWhere expr = do
+mExtractLet :: Val (Input.Payload m a) -> Maybe (ExprLetItem (Input.Payload m a))
+mExtractLet expr = do
     V.Apply func arg <- expr ^? ExprLens.valApply
     V.Lam param body <- func ^? V.body . ExprLens._BAbs
-    Just ExprWhereItem
+    Just ExprLetItem
         { ewiBody = body
         , ewiBodyScopesMap =
             func ^. V.payload . Input.evalAppliesOfLam
@@ -667,30 +667,30 @@ mkWIActions ::
     MonadA m =>
     [V.Var] -> V.Var -> ExprIRef.ValIProperty m ->
     Val (ExprIRef.ValIProperty m) -> Val (ExprIRef.ValIProperty m) ->
-    ConvertM m (WhereItemActions m)
+    ConvertM m (LetItemActions m)
 mkWIActions binderScopeVars param topLevelProp bodyStored argStored =
     do
         extr <- mkExtract binderScopeVars param del bodyStored argStored
         return
-            WhereItemActions
-            { _wiDelete = getVarsToHole param bodyStored >> del
-            , _wiAddNext =
+            LetItemActions
+            { _liDelete = getVarsToHole param bodyStored >> del
+            , _liAddNext =
                 DataOps.redexWrap topLevelProp <&> EntityId.ofLambdaParam . fst
-            , _wiExtract = extr
+            , _liExtract = extr
             }
     where
         del = bodyStored ^. V.payload & replaceWith topLevelProp & void
 
-convertWhereItems ::
+convertLetItems ::
     (MonadA m, Monoid a) =>
     [V.Var] -> Val (Input.Payload m a) ->
     ConvertM m
-    ( [WhereItem Guid m (ExpressionU m a)]
+    ( [LetItem Guid m (ExpressionU m a)]
     , Val (Input.Payload m a)
     , Map ScopeId ScopeId
     )
-convertWhereItems binderScopeVars expr =
-    case mExtractWhere expr of
+convertLetItems binderScopeVars expr =
+    case mExtractLet expr of
     Nothing -> return ([], expr, Map.empty)
     Just ewi ->
         do
@@ -702,24 +702,24 @@ convertWhereItems binderScopeVars expr =
                 <*> traverse (^. Input.mStored) (ewiArg ewi)
                 & Lens.sequenceOf Lens._Just
             (items, body, bodyScopesMap) <-
-                ewiBody ewi & convertWhereItems (ewiParam ewi : binderScopeVars)
+                ewiBody ewi & convertLetItems (ewiParam ewi : binderScopeVars)
             return
-                ( WhereItem
-                    { _wiEntityId = defEntityId
-                    , _wiValue =
+                ( LetItem
+                    { _liEntityId = defEntityId
+                    , _liValue =
                         value
                         & bBody . rPayload . plData <>~
                         ewiHiddenPayloads ewi ^. Lens.traversed . Input.userData
-                    , _wiActions = actions
-                    , _wiName = UniqueId.toGuid param
-                    , _wiAnnotation = ewiAnnotation ewi
-                    , _wiScopes =
+                    , _liActions = actions
+                    , _liName = UniqueId.toGuid param
+                    , _liAnnotation = ewiAnnotation ewi
+                    , _liScopes =
                         ewiBodyScopesMap ewi
                         & Map.keys & map (join (,)) & Map.fromList
                     }
                     :
                     ( items
-                        <&> wiScopes %~ appendScopeMaps (ewiBodyScopesMap ewi)
+                        <&> liScopes %~ appendScopeMaps (ewiBodyScopesMap ewi)
                     )
                 , body
                 , appendScopeMaps (ewiBodyScopesMap ewi) bodyScopesMap
@@ -740,8 +740,8 @@ makeBinder :: (MonadA m, Monoid a) =>
     ConvertM m (Binder Guid m (ExpressionU m a))
 makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
     do
-        (whereItems, whereBody, bodyScopesMap) <-
-            convertWhereItems (cpMLamParam convParams ^.. Lens._Just) funcBody
+        (letItems, whereBody, bodyScopesMap) <-
+            convertLetItems (cpMLamParam convParams ^.. Lens._Just) funcBody
         bodyS <-
             ConvertM.convertSubexpression whereBody
             & ConvertM.local
@@ -755,7 +755,7 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
             , _bMChosenScopeProp = mChosenScopeProp
             , _bBody = bodyS
             , _bScopes = cpScopes convParams <&> map binderScopes
-            , _bWhereItems = whereItems
+            , _bLetItems = letItems
             , _bMActions =
                 mkActions
                 <$> cpMAddFirstParam convParams
@@ -773,7 +773,7 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
         mkActions addFirstParam whereStored =
             BinderActions
             { _baAddFirstParam = addFirstParam
-            , _baAddInnermostWhereItem =
+            , _baAddInnermostLetItem =
                     EntityId.ofLambdaParam . fst <$> DataOps.redexWrap whereStored
             }
 
@@ -799,7 +799,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
             & addActions exprPl
             <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
 
--- Where-item or definition (form of <name> [params] = <body>)
+-- Let-item or definition (form of <name> [params] = <body>)
 convertBinder ::
     (MonadA m, Monoid a) =>
     Maybe V.Var -> Guid ->
