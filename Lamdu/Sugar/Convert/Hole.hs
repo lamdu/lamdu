@@ -155,7 +155,7 @@ mkOptions ::
     T m [HoleOption Guid m]
 mkOptions sugarContext mInjectedArg exprPl stored =
     do
-        tids <-
+        nominalTids <-
             sugarContext ^. ConvertM.scCodeAnchors
             & Anchors.tids & Transaction.getP
         globals <-
@@ -170,9 +170,9 @@ mkOptions sugarContext mInjectedArg exprPl stored =
                 & filter (/= sugarContext ^. ConvertM.scDefI)
                 <&> P.global . ExprIRef.globalId
             , do
-                tid <- tids
+                nominalTid <- nominalTids
                 f <- [V.BFromNom, V.BToNom]
-                [ V.Nom tid P.hole & f & V.Val () ]
+                [ V.Nom nominalTid P.hole & f & V.Val () ]
             , [ P.abs "NewLambda" P.hole, P.recEmpty, P.absurd
               , P.inject Builtins.nilTag P.recEmpty & P.toNom Builtins.listTid
               ]
