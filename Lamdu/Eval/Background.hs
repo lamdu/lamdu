@@ -34,9 +34,6 @@ import qualified Lamdu.Eval.Val as EvalVal
 import qualified Lamdu.Expr.Val as V
 import           System.IO (stderr)
 
--- import           Control.Monad
--- import           Debug.Trace
-
 data Actions pl = Actions
     { _aLoadGlobal :: V.GlobalId -> IO (Maybe (Def.Body (V.Val pl)))
     , _aRunBuiltin :: Def.FFIName -> Val pl -> Val pl
