@@ -44,9 +44,10 @@ make parentPrecedence binder pl =
                     do
                         arrowLabel <- ExpressionGui.grammarLabel "→" animId
                         ExpressionGui.hboxSpaced [e, arrowLabel]
-        ExpressionGui.hboxSpaced [paramsEdit, bodyEdit]
-            <&> ExpressionGui.addBelow 0 [(0, wheresEdit)]
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
+        top <- ExpressionGui.hboxSpaced [paramsEdit, bodyEdit]
+        ExpressionGui.vboxTopFocalAlignedTo 0 [top, wheresEdit]
+            & ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
+            & return
     where
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody

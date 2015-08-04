@@ -81,8 +81,8 @@ makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
 makeWheres ::
     MonadA m =>
     [Sugar.WhereItem (Name m) m (ExprGuiT.SugarExpr m)] -> Widget.Id ->
-    ExprGuiM m (Widget (T m))
-makeWheres [] _ = return Widget.empty
+    ExprGuiM m (ExpressionGui m)
+makeWheres [] _ = ExpressionGui.fromValueWidget Widget.empty & return
 makeWheres whereItems myId =
     do
         whereLabel <- ExpressionGui.grammarLabel "where" (Widget.toAnimId myId)
@@ -94,7 +94,6 @@ makeWheres whereItems myId =
             [ whereLabel
             , ExpressionGui.vboxTopFocal itemEdits
             ]
-            <&> (^. ExpressionGui.egWidget)
     where
         wiCursor = WidgetIds.fromEntityId . (^. Sugar.wiEntityId)
 
@@ -134,7 +133,7 @@ mkPresentationModeEdit myId prop = do
 layout ::
     MonadA m =>
     ExpressionGui m -> [ExpressionGui m] ->
-    ExpressionGui m -> Widget (T m) ->
+    ExpressionGui m -> ExpressionGui m ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
 layout defNameEdit paramEdits bodyEdit wheresEdit myId =
@@ -149,14 +148,15 @@ layout defNameEdit paramEdits bodyEdit wheresEdit myId =
                 & ExpressionGui.vboxTopFocalSpaced
                 >>= ExpressionGui.addValFrame myId
                 <&> (:[])
-        defNameEdit : paramsEdit ++ [ equals, bodyEdit ]
+        top <-
+            defNameEdit : paramsEdit ++ [ equals, bodyEdit ]
             & ExpressionGui.hboxSpaced
-            <&> ExpressionGui.addBelow 0 [(0, wheresEdit)]
+        ExpressionGui.vboxTopFocalAlignedTo 0 [top, wheresEdit] & return
 
 data Parts m = Parts
     { pParamEdits :: [ExpressionGui m]
     , pBodyEdit :: ExpressionGui m
-    , pWheresEdit :: Widget (T m)
+    , pWheresEdit :: ExpressionGui m
     , pEventMap :: Widget.EventHandlers (T m)
     }
 
