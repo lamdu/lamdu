@@ -18,7 +18,6 @@ import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -81,19 +80,18 @@ makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
 makeLets ::
     MonadA m =>
     [Sugar.LetItem (Name m) m (ExprGuiT.SugarExpr m)] -> Widget.Id ->
-    ExprGuiM m (ExpressionGui m)
-makeLets [] _ = ExpressionGui.fromValueWidget Widget.empty & return
+    ExprGuiM m [ExpressionGui m]
+makeLets [] _ = return []
 makeLets letItems myId =
     do
-        letLabel <- ExpressionGui.grammarLabel "where" (Widget.toAnimId myId)
+        letLabel <- ExpressionGui.grammarLabel "let" (Widget.toAnimId myId)
         itemEdits <-
-            reverse letItems
-            & ExpressionGui.listWithDelDests myId myId liCursor
+            ExpressionGui.listWithDelDests myId myId liCursor letItems
             & traverse makeLetItemEdit
         ExpressionGui.hboxSpaced
             [ letLabel
             , ExpressionGui.vboxTopFocal itemEdits
-            ]
+            ] <&> (:[])
     where
         liCursor = WidgetIds.fromEntityId . (^. Sugar.liEntityId)
 
@@ -132,11 +130,9 @@ mkPresentationModeEdit myId prop = do
 
 layout ::
     MonadA m =>
-    ExpressionGui m -> [ExpressionGui m] ->
-    ExpressionGui m -> ExpressionGui m ->
-    Widget.Id ->
+    ExpressionGui m -> [ExpressionGui m] -> ExpressionGui m -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-layout defNameEdit paramEdits bodyEdit letsEdit myId =
+layout defNameEdit paramEdits bodyEdit myId =
     do
         equals <- ExpressionGui.makeLabel "=" (Widget.toAnimId myId)
         paramsEdit <-
@@ -148,15 +144,12 @@ layout defNameEdit paramEdits bodyEdit letsEdit myId =
                 & ExpressionGui.vboxTopFocalSpaced
                 >>= ExpressionGui.addValFrame myId
                 <&> (:[])
-        top <-
-            defNameEdit : paramsEdit ++ [ equals, bodyEdit ]
+        defNameEdit : paramsEdit ++ [equals, bodyEdit]
             & ExpressionGui.hboxSpaced
-        ExpressionGui.vboxTopFocalAlignedTo 0 [top, letsEdit] & return
 
 data Parts m = Parts
     { pParamEdits :: [ExpressionGui m]
     , pBodyEdit :: ExpressionGui m
-    , pLetsEdit :: ExpressionGui m
     , pEventMap :: Widget.EventHandlers (T m)
     }
 
@@ -285,9 +278,13 @@ makeParts showAnnotation binder myId =
                 bodyEdit <-
                     makeResultEdit (binder ^. Sugar.bMActions) params body
                     & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sBodyScope)
-                letsEdit <-
+                letEdits <-
                     makeLets (binder ^. Sugar.bLetItems) myId
                     & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
+                rhs <-
+                    letEdits ++ [bodyEdit]
+                    <&> ExpressionGui.egAlignment . _1 .~ 0
+                    & ExpressionGui.vboxTopFocalSpaced
                 config <- ExprGuiM.readConfig <&> Config.eval
                 let scopeEventMap =
                         case settings ^. CESettings.sInfoMode of
@@ -299,7 +296,7 @@ makeParts showAnnotation binder myId =
                             & fromMaybe mempty
                         _ -> mempty
                 Parts (paramEdits ++ (mScopeNavEdit ^.. Lens.traversed))
-                    bodyEdit letsEdit scopeEventMap
+                    rhs scopeEventMap
                     & return
     where
         takeNavCursor = ExprGuiM.assignCursorPrefix scopesNavId (const destId)
@@ -320,7 +317,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make name binder myId =
     do
-        Parts paramEdits bodyEdit letsEdit eventMap <-
+        Parts paramEdits bodyEdit eventMap <-
             makeParts ExprGuiT.ShowAnnotation binder myId
         rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
         presentationEdits <-
@@ -333,7 +330,7 @@ make name binder myId =
         layout defNameEdit
             (paramEdits & Lens.mapped . ExpressionGui.egWidget
                 %~ Widget.weakerEvents rhsJumperEquals)
-            bodyEdit letsEdit myId
+            bodyEdit myId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
@@ -378,6 +375,7 @@ makeLetItemEdit (_prevId, nextId, item) =
                 (Config.letItemPadding config <&> realToFrac)
             & ExprGuiM.withLocalMScopeId
                 (mBodyScopeId >>= (`Map.lookup` (item ^. Sugar.liScopes)))
+            <&> ExpressionGui.egAlignment . _1 .~ 0
     where
         binder = item ^. Sugar.liValue
 
