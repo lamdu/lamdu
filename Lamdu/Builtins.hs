@@ -67,23 +67,6 @@ record :: [(T.Tag, EvalResult pl)] -> EvalResult pl
 record [] = HRecEmpty
 record ((tag, val) : xs) = record xs & V.RecExtend tag val & HRecExtend
 
-instance GuestType t => GuestType [t] where
-    toGuest [] = record [] & V.Inject "[]" & HInject
-    toGuest (x:xs) =
-        record
-        [ ("head", toGuest x)
-        , ("tail", toGuest xs)
-        ] & V.Inject "[]" & HInject
-    fromGuest (HInject (V.Inject t val))
-        | t == "[]" = []
-        | t == ":" =
-            case (Map.lookup "head" fields, Map.lookup "tail" fields) of
-            (Just hd, Just tl) -> fromGuest hd : fromGuest tl
-            _ -> error ": constructor without head/tail in it?!"
-        where
-            fields = flatRecord val
-    fromGuest x = error $ "Expected list: got " ++ show (void x)
-
 builtin1 :: (GuestType a, GuestType b) => (a -> b) -> EvalResult pl -> EvalResult pl
 builtin1 f val = fromGuest val & f & toGuest
 
