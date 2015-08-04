@@ -81,8 +81,8 @@ makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
 makeWheres ::
     MonadA m =>
     [Sugar.WhereItem (Name m) m (ExprGuiT.SugarExpr m)] -> Widget.Id ->
-    ExprGuiM m (Maybe (Widget (T m)))
-makeWheres [] _ = return Nothing
+    ExprGuiM m (Widget (T m))
+makeWheres [] _ = return Widget.empty
 makeWheres whereItems myId =
     do
         whereLabel <- ExpressionGui.grammarLabel "where" (Widget.toAnimId myId)
@@ -94,7 +94,7 @@ makeWheres whereItems myId =
             [ whereLabel
             , ExpressionGui.vboxTopFocal itemEdits
             ]
-            <&> Just . (^. ExpressionGui.egWidget)
+            <&> (^. ExpressionGui.egWidget)
     where
         wiCursor = WidgetIds.fromEntityId . (^. Sugar.wiEntityId)
 
@@ -134,10 +134,10 @@ mkPresentationModeEdit myId prop = do
 layout ::
     MonadA m =>
     ExpressionGui m -> [ExpressionGui m] ->
-    ExpressionGui m -> Maybe (Widget (T m)) ->
+    ExpressionGui m -> Widget (T m) ->
     Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-layout defNameEdit paramEdits bodyEdit mWheresEdit myId =
+layout defNameEdit paramEdits bodyEdit wheresEdit myId =
     do
         equals <- ExpressionGui.makeLabel "=" (Widget.toAnimId myId)
         paramsEdit <-
@@ -151,12 +151,12 @@ layout defNameEdit paramEdits bodyEdit mWheresEdit myId =
                 <&> (:[])
         defNameEdit : paramsEdit ++ [ equals, bodyEdit ]
             & ExpressionGui.hboxSpaced
-            <&> ExpressionGui.addBelow 0 (mWheresEdit ^.. Lens._Just <&> (,) 0)
+            <&> ExpressionGui.addBelow 0 [(0, wheresEdit)]
 
 data Parts m = Parts
     { pParamEdits :: [ExpressionGui m]
     , pBodyEdit :: ExpressionGui m
-    , pMWheresEdit :: Maybe (Widget (T m))
+    , pWheresEdit :: Widget (T m)
     , pEventMap :: Widget.EventHandlers (T m)
     }
 
@@ -320,7 +320,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make name binder myId =
     do
-        Parts paramEdits bodyEdit mWheresEdit eventMap <-
+        Parts paramEdits bodyEdit wheresEdit eventMap <-
             makeParts ExprGuiT.ShowAnnotation binder myId
         rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
         presentationEdits <-
@@ -333,7 +333,7 @@ make name binder myId =
         layout defNameEdit
             (paramEdits & Lens.mapped . ExpressionGui.egWidget
                 %~ Widget.weakerEvents rhsJumperEquals)
-            bodyEdit mWheresEdit myId
+            bodyEdit wheresEdit myId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
