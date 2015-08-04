@@ -17,7 +17,6 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad.Trans.Either (runEitherT)
 import           Control.Monad.Trans.State.Strict (evalStateT)
 import qualified Data.ByteString.Char8 as BS8
 import           Data.IORef
@@ -129,7 +128,6 @@ evalThread actions stateRef src =
         result <-
             Eval.evalScopedVal (Eval.ScopedVal EvalVal.emptyScope src)
             & Eval.runEvalT
-            & runEitherT
             & (`evalStateT` Eval.initialState env)
         case result of
             Left e -> handleError e Error
@@ -146,10 +144,10 @@ evalThread actions stateRef src =
 results :: State pl -> EvalResults pl
 results state =
     EvalResults
-    { erExprValues = state ^. sValMap <&> Lens.mapped . Lens.mapped .~ ()
+    { erExprValues = state ^. sValMap <&> Lens.mapped . Lens._Right . Lens.mapped .~ ()
     , erAppliesOfLam =
         state ^. sAppliesOfLam
-        <&> Lens.mapped . Lens.mapped . Lens._2 . Lens.mapped .~ ()
+        <&> Lens.mapped . Lens.mapped . Lens._2 . Lens._Right . Lens.mapped .~ ()
     }
 
 getState :: Evaluator pl -> IO (State pl)

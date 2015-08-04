@@ -1,10 +1,11 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RecordWildCards #-}
 module Lamdu.Eval.Val
-    ( Val(..), EvalResult
+    ( EvalError(..)
+    , EvalResult, Val(..)
     , ScopeId(..), scopeIdInt, topLevelScopeId
     , Closure(..), Scope(..)
     , emptyScope
-    , _HError, _HFunc, _HRecExtend, _HCase, _HRecEmpty
+    , _HFunc, _HRecExtend, _HCase, _HRecEmpty
     , _HAbsurd, _HInteger, _HBuiltin, _HInject
     ) where
 
@@ -34,9 +35,17 @@ data Closure pl = Closure
     , _cLamPayload :: pl
     } deriving (Show, Functor, Foldable, Traversable)
 
+data EvalError
+    = EvalHole
+    | EvalTypeError String
+    | EvalLoadGlobalFailed V.GlobalId
+    | EvalTodoError String
+    deriving Show
+
+type EvalResult pl = Either EvalError (Val pl)
+
 data Val pl
-    = HError -- when evaluating hole etc
-    | HFunc (Closure pl)
+    = HFunc (Closure pl)
     | HRecExtend (V.RecExtend (EvalResult pl))
     | HRecEmpty
     | HAbsurd
@@ -46,10 +55,7 @@ data Val pl
     | HInject (V.Inject (EvalResult pl))
     deriving (Functor, Foldable, Traversable)
 
-type EvalResult = Val
-
 instance Show pl => Show (Val pl) where
-    show HError = "ERR"
     show (HFunc closure) = show closure
     show (HRecExtend recExtend) = show recExtend
     show (HCase case_) = show case_

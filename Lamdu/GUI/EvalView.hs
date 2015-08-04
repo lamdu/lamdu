@@ -19,22 +19,27 @@ import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Eval.Val (EvalResult, Val(..))
+import           Lamdu.Eval.Val (EvalResult, Val(..), EvalError(..))
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 
-data RecordStatus = RecordComputed | RecordNotFinished
+data RecordStatus = RecordComputed | RecordExtendsError EvalError
 
 extractFields ::
     V.RecExtend (EvalResult ()) -> ([(T.Tag, EvalResult ())], RecordStatus)
 extractFields (V.RecExtend tag val rest) =
     case rest of
-    HRecEmpty -> ([(tag, val)], RecordComputed)
-    HRecExtend recExtend ->
+    Right HRecEmpty -> ([(tag, val)], RecordComputed)
+    Right (HRecExtend recExtend) ->
         extractFields recExtend & _1 %~ ((tag, val):)
-    _ -> error "RecExtend of non-record"
+    Right x ->
+        ( []
+        , "extractFields expects record, got: " ++ show x
+          & EvalTypeError & RecordExtendsError
+        )
+    Left err -> ([], RecordExtendsError err)
 
 textView :: MonadA m => String -> AnimId -> ExprGuiM m View
 textView x animId = BWidgets.makeTextView x animId & ExprGuiM.widgetEnv
@@ -62,14 +67,27 @@ makeField parentAnimId tag val =
     where
         baseId = parentAnimId ++ [BinUtils.encodeS tag]
 
+makeError :: MonadA m => AnimId -> EvalError -> ExprGuiM m View
+makeError animId err = textView msg $ animId ++ ["error"]
+    where
+        msg =
+            case err of
+            EvalHole -> "?"
+            _ -> show err
+
 make :: MonadA m => AnimId -> EvalResult () -> ExprGuiM m View
-make animId val =
+make animId (Left err) = makeError animId err
+make animId (Right val) = makeForVal animId val
+
+makeForVal :: MonadA m => AnimId -> Val () -> ExprGuiM m View
+makeForVal animId val =
     case val of
     HFunc{} -> textView "Fn" animId
     HAbsurd -> textView "Fn" animId
     HCase{} -> textView "Fn" animId
     HRecEmpty -> textView "Ø" animId
-    HInject (V.Inject injTag HRecEmpty) -> makeTag (animId ++ ["tag"]) injTag
+    HInject (V.Inject injTag (Right HRecEmpty)) ->
+        makeTag (animId ++ ["tag"]) injTag
     HInject inj ->
         do
             tagView <- inj ^. V.injectTag & makeTag (animId ++ ["tag"])
@@ -87,13 +105,14 @@ make animId val =
             restView <-
                 case recStatus of
                 RecordComputed -> return View.empty
-                RecordNotFinished ->
+                RecordExtendsError err ->
                     do
-                        let sqr =
-                                View 1 (Anim.unitSquare (animId ++ ["line"]))
-                                & View.scale (Vector2 barWidth 1)
-                        v <- textView "?" (animId ++ ["?"])
-                        return $ GridView.verticalAlign 0.5 [sqr, v]
+                        v <- makeError animId err
+                        GridView.verticalAlign 0.5 [sqr, v] & return
+                    where
+                        sqr =
+                            View 1 (Anim.unitSquare (animId ++ ["line"]))
+                            & View.scale (Vector2 barWidth 1)
             GridView.verticalAlign 0.5 [fieldsView, restView] & return
         where
             (fields, recStatus) = extractFields recExtend
