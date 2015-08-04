@@ -185,11 +185,7 @@ createInfiniteStream valTParamId =
     where
         valT = "a"
 
-newtype BoolNames = BoolNames
-    { bnTid :: T.Id
-    }
-
-createBool :: MonadA m => M m (Type, BoolNames)
+createBool :: MonadA m => M m Type
 createBool =
     do
         tid <- newTId "Bool"
@@ -198,10 +194,7 @@ createBool =
             [ recordType [] & Ctor Builtins.trueTag
             , recordType [] & Ctor Builtins.falseTag
             ]
-        return
-            ( tyCon []
-            , BoolNames { bnTid = tid }
-            )
+        tyCon [] & return
 
 createPublics :: MonadA m => T m (Public m)
 createPublics =
@@ -213,7 +206,7 @@ createPublics =
         _ <- createList valTParamId
         _ <- createMaybe valTParamId
         _ <- createInfiniteStream valTParamId
-        (bool, _boolNames) <- createBool
+        bool <- createBool
 
         let infixType lType rType resType =
                 recordType [ (Builtins.infixlTag, lType)
