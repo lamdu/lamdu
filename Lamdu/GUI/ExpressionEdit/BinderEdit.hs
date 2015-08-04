@@ -81,17 +81,9 @@ makeLets ::
     MonadA m =>
     [Sugar.LetItem (Name m) m (ExprGuiT.SugarExpr m)] -> Widget.Id ->
     ExprGuiM m [ExpressionGui m]
-makeLets [] _ = return []
 makeLets letItems myId =
-    do
-        letLabel <- ExpressionGui.grammarLabel "let" (Widget.toAnimId myId)
-        itemEdits <-
-            ExpressionGui.listWithDelDests myId myId liCursor letItems
-            & traverse makeLetItemEdit
-        ExpressionGui.hboxSpaced
-            [ letLabel
-            , ExpressionGui.vboxTopFocal itemEdits
-            ] <&> (:[])
+    ExpressionGui.listWithDelDests myId myId liCursor letItems
+    & traverse makeLetItemEdit
     where
         liCursor = WidgetIds.fromEntityId . (^. Sugar.liEntityId)
 
@@ -365,10 +357,11 @@ makeLetItemEdit (_prevId, nextId, item) =
         jumpHolesEventMap <-
             binder ^. Sugar.bBody
             & ExprGuiT.nextHolesBefore & ExprEventMap.jumpHolesEventMap
-        make
+        edit <-
+            make
             (item ^. Sugar.liName)
             binder
-            (WidgetIds.fromEntityId (item ^. Sugar.liEntityId))
+            myId
             <&> ExpressionGui.egWidget
                 %~ Widget.weakerEvents (mappend jumpHolesEventMap eventMap)
             <&> ExpressionGui.pad
@@ -376,7 +369,10 @@ makeLetItemEdit (_prevId, nextId, item) =
             & ExprGuiM.withLocalMScopeId
                 (mBodyScopeId >>= (`Map.lookup` (item ^. Sugar.liScopes)))
             <&> ExpressionGui.egAlignment . _1 .~ 0
+        letLabel <- ExpressionGui.grammarLabel "let" (Widget.toAnimId myId)
+        ExpressionGui.hboxSpaced [letLabel, edit]
     where
+        myId = item ^. Sugar.liEntityId & WidgetIds.fromEntityId
         binder = item ^. Sugar.liValue
 
 jumpToRHS ::
