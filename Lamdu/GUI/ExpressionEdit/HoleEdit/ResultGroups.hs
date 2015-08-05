@@ -214,7 +214,8 @@ makeAllGroups editableHoleInfo =
 groupOrdering :: String -> Group m -> [Bool]
 groupOrdering searchTerm group =
     map not
-    [ match (==)
+    [ null (group ^. groupSearchTerms)
+    , match (==)
     , match isPrefixOf
     , match insensitivePrefixOf
     , match isInfixOf
@@ -224,9 +225,13 @@ groupOrdering searchTerm group =
         match f = any (f searchTerm) (group ^. groupSearchTerms)
 
 holeMatches :: String -> [Group m] -> [Group m]
-holeMatches searchTerm =
-    sortOn (groupOrdering searchTerm) .
-    filter nameMatch
+holeMatches searchTerm groups =
+    groups
+    & filterBySearchTerm
+    & sortOn (groupOrdering searchTerm)
     where
+        filterBySearchTerm
+            | null searchTerm = id
+            | otherwise = filter nameMatch
         nameMatch group = any (insensitiveInfixOf searchTerm) (group ^. groupSearchTerms)
         insensitiveInfixOf = isInfixOf `on` map Char.toLower
