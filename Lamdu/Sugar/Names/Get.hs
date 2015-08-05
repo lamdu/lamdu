@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TypeFamilies #-}
 module Lamdu.Sugar.Names.Get
-    ( fromExpression
+    ( fromExpression, fromBody
     ) where
 
 import           Prelude.Compat
@@ -44,3 +44,6 @@ cpsTellName name = CPS $ \k -> (,) <$> tellName name <*> k
 -- (excluding names hidden behind transactions)
 fromExpression :: MonadA m => Expression name m a -> [name]
 fromExpression = snd . runCollect . Walk.toExpression
+
+fromBody :: MonadA m => Body name m expr -> [name]
+fromBody = snd . runCollect . Walk.toBody pure

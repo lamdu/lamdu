@@ -3,7 +3,7 @@ module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
     , InTransaction(..)
     , NameConvertor, CPSNameConvertor
-    , toDef, toExpression
+    , toDef, toExpression, toBody
     ) where
 
 import qualified Control.Lens as Lens
