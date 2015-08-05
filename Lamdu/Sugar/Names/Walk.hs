@@ -156,14 +156,9 @@ toHoleActions ha@HoleActions {..} =
 
 toHoleArg ::
     MonadNaming m =>
-    HoleArg (OldName m) (TM m) (OldExpression m a) ->
-    m (HoleArg (NewName m) (TM m) (NewExpression m a))
-toHoleArg arg@HoleArg{..} =
-    do
-        expr <- toExpression _haExpr
-        pure arg
-            { _haExpr = expr
-            }
+    HoleArg (TM m) (OldExpression m a) ->
+    m (HoleArg (TM m) (NewExpression m a))
+toHoleArg = traverse toExpression
 
 toHole ::
     MonadNaming m =>

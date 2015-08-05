@@ -54,7 +54,7 @@ makeWrapper pl holeInfo =
 
 assignHoleCursor ::
     MonadA m =>
-    WidgetIds -> Maybe (Sugar.HoleArg (Name m) m expr) ->
+    WidgetIds -> Maybe (Sugar.HoleArg m expr) ->
     ExprGuiM m a -> ExprGuiM m a
 assignHoleCursor WidgetIds{..} Nothing =
     ExprGuiM.assignCursor hidHole hidOpen .

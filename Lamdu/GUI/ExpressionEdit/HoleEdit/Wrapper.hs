@@ -23,14 +23,14 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Sugar.Names.Types (ExpressionN, Name)
+import           Lamdu.Sugar.Names.Types (ExpressionN)
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
 
 modifyWrappedEventMap ::
     (MonadA m, Applicative f) =>
-    Config -> Bool -> Sugar.HoleArg (Name m) m (ExpressionN m a) -> WidgetIds ->
+    Config -> Bool -> Sugar.HoleArg m (ExpressionN m a) -> WidgetIds ->
     Widget.EventHandlers f ->
     Widget.EventHandlers f
 modifyWrappedEventMap config argIsFocused arg WidgetIds{..} eventMap
@@ -47,7 +47,7 @@ modifyWrappedEventMap config argIsFocused arg WidgetIds{..} eventMap
 
 makeUnwrapEventMap ::
     (MonadA m, MonadA f) =>
-    Sugar.HoleArg (Name f) f (ExpressionN f a) -> WidgetIds ->
+    Sugar.HoleArg f (ExpressionN f a) -> WidgetIds ->
     ExprGuiM m (Widget.EventHandlers (T f))
 makeUnwrapEventMap arg WidgetIds{..} =
     do
@@ -66,7 +66,7 @@ makeUnwrapEventMap arg WidgetIds{..} =
 
 make ::
     MonadA m => WidgetIds ->
-    Sugar.HoleArg (Name m) m (ExpressionN m ExprGuiT.Payload) ->
+    Sugar.HoleArg m (ExpressionN m ExprGuiT.Payload) ->
     ExprGuiM m (ExpressionGui m)
 make WidgetIds{..} arg =
     do
