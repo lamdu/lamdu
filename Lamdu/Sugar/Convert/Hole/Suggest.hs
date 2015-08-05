@@ -16,7 +16,6 @@ import           Data.String (IsString(..))
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Nominal (Nominal)
 import qualified Lamdu.Expr.Nominal as Nominal
-import qualified Lamdu.Expr.Pure as P
 import           Lamdu.Expr.Scheme (schemeType)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
@@ -48,7 +47,7 @@ valueConversion loadNominal arg (T.TInst name params) r =
             -- doubts if using a proper instantiantion of the scheme..
             <&> (^. schemeType)
         valueConversionNoSplit fromNom fromNomType r
-    <&> (: [fromNom])
+    <&> (:[])
     where
         fromNom = V.Nom name arg & V.BFromNom & V.Val mempty
 valueConversion _ arg (T.TRecord composite) _ =
@@ -68,7 +67,7 @@ valueConversionNoSplit arg (T.TSum composite) r =
             c
             & Lens.traversed .~ mempty
             & (`V.Apply` arg) & V.BApp & V.Val mempty
-valueConversionNoSplit _ _ _ = return P.hole
+valueConversionNoSplit arg _ _ = return arg
 
 value :: Type -> [Val Type]
 value typ@(T.TSum comp) =
