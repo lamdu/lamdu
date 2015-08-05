@@ -256,8 +256,7 @@ makeParts showAnnotation binder delVarBackwardsId myId =
                                 <*> (mScopeCursor <&> sMNextParamScope)
                         & fromMaybe ExpressionGui.NormalAnnotation
                 paramEdits <-
-                    makeParamsEdit annotationMode showAnnotation
-                    (ExprGuiT.nextHolesBefore body)
+                    makeParamsEdit annotationMode showAnnotation nearestHoles
                     delVarBackwardsId myId (WidgetIds.fromEntityId bodyId)
                     params
                     & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
@@ -295,6 +294,7 @@ makeParts showAnnotation binder delVarBackwardsId myId =
                         _ -> mempty
                 Parts mParamsEdit rhs scopeEventMap & return
     where
+        nearestHoles = ExprGuiT.nextHolesBefore body
         takeNavCursor = ExprGuiM.assignCursorPrefix scopesNavId (const destId)
         destId =
             params ^? SugarLens.binderParams . Sugar.fpId
@@ -319,16 +319,19 @@ make name binder myId =
         presentationEdits <-
             binder ^.. Sugar.bMPresentationModeProp . Lens._Just
             & traverse (mkPresentationModeEdit presentationChoiceId)
+        jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bMActions)
             rhsJumperEquals rhs name myId
             <&> ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
         layout defNameEdit
             (mParamsEdit & Lens.mapped . ExpressionGui.egWidget
                 %~ Widget.weakerEvents rhsJumperEquals)
             bodyEdit myId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
+        nearestHoles = ExprGuiT.nextHolesBefore (binder ^. Sugar.bBody)
         presentationChoiceId = Widget.joinId myId ["presentation"]
         rhs = ("Def Body", body)
         body = binder ^. Sugar.bBody
