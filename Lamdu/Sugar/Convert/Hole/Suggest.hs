@@ -60,13 +60,17 @@ valueConversionNoSplit loadNominal arg (T.TInst name params) r =
         valueConversionNoSplit loadNominal fromNom fromNomType r
     where
         fromNom = V.Nom name arg & V.BFromNom & V.Val mempty
-valueConversionNoSplit _ arg (T.TSum composite) r =
-    suggestCaseWith composite r & run & applyCase & return
+valueConversionNoSplit loadNominal arg (T.TFun at rt) r =
+    valueConversionNoSplit loadNominal applied rt r
     where
-        applyCase c =
-            c
-            & Lens.traversed .~ mempty
-            & (`V.Apply` arg) & V.BApp & V.Val mempty
+        applied =
+            valueNoSplit at & Lens.traversed .~ mempty
+            & V.Apply arg & V.BApp & V.Val mempty
+valueConversionNoSplit _ arg (T.TSum composite) r =
+    suggestCaseWith composite r & run
+    & Lens.traversed .~ mempty
+    & (`V.Apply` arg) & V.BApp & V.Val mempty
+    & return
 valueConversionNoSplit _ arg _ _ = return arg
 
 value :: Type -> [Val Type]
