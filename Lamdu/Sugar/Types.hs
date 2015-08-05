@@ -456,8 +456,8 @@ data Binder name m expr = Binder
     { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
     , _bMChosenScopeProp :: Maybe (MkProperty m (Maybe E.ScopeId))
     , _bParams :: BinderParams name m
-    , _bBody :: expr
     , _bLetItems :: [LetItem name m expr]
+    , _bBody :: expr
     , _bMActions :: Maybe (BinderActions m)
     , -- Tuples of param and body scopes
       -- (the body scope may be internal of the param scope include where items)
