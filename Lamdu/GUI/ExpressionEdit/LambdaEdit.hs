@@ -29,7 +29,7 @@ make parentPrecedence binder pl =
     ExprGuiM.assignCursor myId bodyId $
     do
         BinderEdit.Parts mParamsEdit bodyEdit eventMap <-
-            BinderEdit.makeParts showParamType binder myId
+            BinderEdit.makeParts showParamType binder bodyId myId
         let animId = Widget.toAnimId myId
         labelEdits <-
             case params of

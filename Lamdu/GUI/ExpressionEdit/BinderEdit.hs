@@ -4,8 +4,6 @@ module Lamdu.GUI.ExpressionEdit.BinderEdit
     , Parts(..), makeParts
     ) where
 
-import           Prelude.Compat
-
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -44,6 +42,8 @@ import           Lamdu.Sugar.Names.Types (Name(..), NameSource(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Prelude.Compat
 
 type T = Transaction
 
@@ -230,9 +230,9 @@ makeParts ::
     MonadA m =>
     ExprGuiT.ShowAnnotation ->
     Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) ->
-    Widget.Id ->
+    Widget.Id -> Widget.Id ->
     ExprGuiM m (Parts m)
-makeParts showAnnotation binder myId =
+makeParts showAnnotation binder delVarBackwardsId myId =
     do
         mScopeCursor <- mkScopeCursor binder
         let mSetScope =
@@ -257,8 +257,9 @@ makeParts showAnnotation binder myId =
                         & fromMaybe ExpressionGui.NormalAnnotation
                 paramEdits <-
                     makeParamsEdit annotationMode showAnnotation
-                    (ExprGuiT.nextHolesBefore body) myId
-                    (WidgetIds.fromEntityId bodyId) params
+                    (ExprGuiT.nextHolesBefore body)
+                    delVarBackwardsId myId (WidgetIds.fromEntityId bodyId)
+                    params
                     & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
                     <&> (++ (mScopeNavEdit ^.. Lens.traversed))
                 mParamsEdit <-
@@ -313,7 +314,7 @@ make ::
 make name binder myId =
     do
         Parts mParamsEdit bodyEdit eventMap <-
-            makeParts ExprGuiT.ShowAnnotation binder myId
+            makeParts ExprGuiT.ShowAnnotation binder myId myId
         rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
         presentationEdits <-
             binder ^.. Sugar.bMPresentationModeProp . Lens._Just
@@ -435,10 +436,11 @@ makeNullLambdaActions dstId actions =
 
 makeParamsEdit ::
     MonadA m =>
-    ExpressionGui.AnnotationOptions -> ExprGuiT.ShowAnnotation ->
-    NearestHoles -> Widget.Id -> Widget.Id -> Sugar.BinderParams (Name m) m ->
+    ExpressionGui.AnnotationOptions -> ExprGuiT.ShowAnnotation -> NearestHoles ->
+    Widget.Id -> Widget.Id -> Widget.Id ->
+    Sugar.BinderParams (Name m) m ->
     ExprGuiM m [ExpressionGui m]
-makeParamsEdit annotationOpts showAnnotation nearestHoles lhsId rhsId params =
+makeParamsEdit annotationOpts showAnnotation nearestHoles delVarBackwardsId lhsId rhsId params =
     case params of
     Sugar.DefintionWithoutParams -> return []
     Sugar.NullParam mActions ->
@@ -451,17 +453,17 @@ makeParamsEdit annotationOpts showAnnotation nearestHoles lhsId rhsId params =
                 <&> ExpressionGui.egWidget
                     %~ Widget.weakerEvents (mappend actions jumpHolesEventMap)
                 <&> (:[])
-    Sugar.VarParam p -> fromParamList rhsId rhsId [p]
+    Sugar.VarParam p -> fromParamList delVarBackwardsId rhsId [p]
     Sugar.FieldParams ps -> ps ^.. Lens.traversed . _2 & fromParamList lhsId rhsId
     where
-        fromParamList lId rId paramList =
+        fromParamList delDestFirst delDestLast paramList =
             do
                 jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
                 let mkParam (prevId, nextId, param) =
                         ParamEdit.make annotationOpts showAnnotation prevId nextId param
                         <&> ExpressionGui.egWidget
                         %~ Widget.weakerEvents jumpHolesEventMap
-                ExpressionGui.listWithDelDests lId rId
+                ExpressionGui.listWithDelDests delDestFirst delDestLast
                     (WidgetIds.fromEntityId . (^. Sugar.fpId)) paramList
                     & traverse mkParam
 

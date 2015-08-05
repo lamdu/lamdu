@@ -533,8 +533,4 @@ maybeAddAnnotationWith o ExprGuiT.ShowAnnotationInVerboseMode annotation entityI
     maybeAddAnnotationH o ShowNothing annotation entityId eg
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
-listWithDelDests before after dest list =
-    ListUtils.withPrevNext
-    (maybe before dest (list ^? Lens.ix 1))
-    (maybe after dest (reverse list ^? Lens.ix 1))
-    dest list
+listWithDelDests = ListUtils.withPrevNext

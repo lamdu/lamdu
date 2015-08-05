@@ -5,8 +5,6 @@ module Lamdu.GUI.ParamEdit
     , diveToNameEdit
     ) where
 
-import           Prelude.Compat
-
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
@@ -25,6 +23,8 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Prelude.Compat
 
 type T = Transaction
 
