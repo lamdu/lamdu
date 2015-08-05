@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import qualified Data.List as List
 import qualified Graphics.UI.Bottle.SizedFont as SizedFont
@@ -46,7 +47,9 @@ shrinkIfHigherThanLine w =
                 ** realToFrac (Config.holeResultInjectedScaleExponent config)
         return $
             if ratio < 1
-            then ExpressionGui.scale (realToFrac ratio) w
+            then
+                ExpressionGui.scale (realToFrac ratio) w
+                & ExpressionGui.egAlignment . _2 .~ 0.5
             else w
 
 make ::
