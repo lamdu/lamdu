@@ -119,10 +119,10 @@ addNearestHoles ::
     MonadA m =>
     Panes name m [Sugar.EntityId] ->
     Panes name m ([Sugar.EntityId], NearestHoles.NearestHoles)
-addNearestHoles pcs =
-    pcs
-    <&> Lens.mapped %~ (,)
-    & NearestHoles.add traverse
+addNearestHoles (Panes panes) =
+    panes
+    <&> Lens._2 %~ NearestHoles.add traverse . (Lens.traversed %~ (<&> (,)))
+    & Panes
 
 make :: MonadA m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (T m))
 make env rootId =
