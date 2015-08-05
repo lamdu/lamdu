@@ -331,7 +331,7 @@ makeFieldParamActions mRecursiveVar param tags fp storedLam =
             , _fpDelete = delParam
             }
     where
-        mkNewTags tag=
+        mkNewTags tag =
             break (== fpTag fp) tags & \(pre, x:post) -> pre ++ [x, tag] ++ post
 
 fixRecursiveCallRemoveField ::
@@ -740,13 +740,13 @@ makeBinder :: (MonadA m, Monoid a) =>
     ConvertM m (Binder Guid m (ExpressionU m a))
 makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
     do
-        (letItems, whereBody, bodyScopesMap) <-
+        (letItems, letBody, bodyScopesMap) <-
             convertLetItems (cpMLamParam convParams ^.. Lens._Just) funcBody
         bodyS <-
-            ConvertM.convertSubexpression whereBody
+            ConvertM.convertSubexpression letBody
             & ConvertM.local
                 ( ConvertM.scMBodyStored .~
-                    whereBody ^. V.payload . Input.mStored
+                    letBody ^. V.payload . Input.mStored
                 )
         let binderScopes s = (s, overrideId bodyScopesMap s)
         return Binder
@@ -759,7 +759,7 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
             , _bMActions =
                 mkActions
                 <$> cpMAddFirstParam convParams
-                <*> whereBody ^. V.payload . Input.mStored
+                <*> letBody ^. V.payload . Input.mStored
             }
     & ConvertM.local addParams
     where
@@ -770,11 +770,11 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
             case convParams ^. cpParams of
             NullParam {} -> Set.fromList (cpMLamParam convParams ^.. Lens._Just)
             _ -> Set.empty
-        mkActions addFirstParam whereStored =
+        mkActions addFirstParam letStored =
             BinderActions
             { _baAddFirstParam = addFirstParam
             , _baAddInnermostLetItem =
-                    EntityId.ofLambdaParam . fst <$> DataOps.redexWrap whereStored
+                    EntityId.ofLambdaParam . fst <$> DataOps.redexWrap letStored
             }
 
 convertLam ::
