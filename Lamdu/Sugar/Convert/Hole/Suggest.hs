@@ -60,6 +60,7 @@ valueConversionNoSplit loadNominal arg (T.TInst name params) r =
         valueConversionNoSplit loadNominal fromNom fromNomType r
     where
         fromNom = V.Nom name arg & V.BFromNom & V.Val mempty
+valueConversionNoSplit _ arg@(V.Val _ V.BAbs{}) T.TFun{} _ = return arg
 valueConversionNoSplit loadNominal arg (T.TFun at rt) r =
     valueConversionNoSplit loadNominal applied rt r
     where
