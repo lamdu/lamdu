@@ -360,6 +360,8 @@ idTranslations consistentExpr dest
             , pairUp params
             , pairUpTags ExprLens._BRecExtend EntityId.ofRecExtendTag
             , pairUpTags ExprLens._BGetField EntityId.ofGetFieldTag
+            , pairUpTags ExprLens._BCase EntityId.ofCaseTag
+            , pairUpTags ExprLens._BInject EntityId.ofInjectTag
             , pairUpLambdaRecordParams (consistentExpr <&> snd) dest
             ]
     | otherwise =
