@@ -10,6 +10,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import qualified Data.List as List
+import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -24,6 +25,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Eval.Val as EV
 import           Lamdu.Expr.Type (Tag)
 import qualified Lamdu.Expr.Val as V
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -57,13 +59,23 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
     assignCursor myId alts $
     do
         config <- ExprGuiM.readConfig
+        let mExprAfterHeader =
+                ( (alts ^.. Lens.traversed . Lens.traversed)
+                    ++ (caseTail ^.. Lens.traversed)
+                ) ^? Lens.traversed
+        labelJumpHoleEventMap <-
+            mExprAfterHeader <&> ExprGuiT.nextHolesBefore
+            & Lens._Just ExprEventMap.jumpHolesEventMap
+            <&> fromMaybe mempty
         let label text =
                 WidgetIds.fromEntityId cEntityId & Widget.toAnimId
                 & ExpressionGui.grammarLabel text
         let headerLabel text =
-                label text >>=
-                ExpressionGui.makeFocusableView
-                (Widget.joinId myId ["header"])
+                label text
+                >>= ExpressionGui.makeFocusableView
+                    (Widget.joinId myId ["header"])
+                <&> ExpressionGui.egWidget
+                    %~ Widget.weakerEvents labelJumpHoleEventMap
         (mActiveTag, header) <-
             case mArg of
             Sugar.LambdaCase -> headerLabel "λ:" <&> (,) Nothing
