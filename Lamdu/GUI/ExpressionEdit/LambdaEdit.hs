@@ -3,8 +3,8 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
@@ -28,23 +28,15 @@ make parentPrecedence binder pl =
     (ExpressionGui.MyPrecedence (ExpressionGui.Precedence 20 0)) $ \myId ->
     ExprGuiM.assignCursor myId bodyId $
     do
-        BinderEdit.Parts paramEdits bodyEdit eventMap <-
+        BinderEdit.Parts mParamsEdit bodyEdit eventMap <-
             BinderEdit.makeParts showParamType binder myId
         let animId = Widget.toAnimId myId
-        paramsEdit <-
-            map (ExpressionGui.egAlignment . _1 .~ 0.5) paramEdits
-            & ExpressionGui.vboxTopFocalSpaced
-            >>= case params of
-                Sugar.FieldParams{} -> ExpressionGui.addValFrame myId
-                _ -> return
-            >>= case params of
-                Sugar.NullParam{} -> return
-                _ ->
-                    \e ->
-                    do
-                        arrowLabel <- ExpressionGui.grammarLabel "→" animId
-                        ExpressionGui.hboxSpaced [e, arrowLabel]
-        ExpressionGui.hboxSpaced [paramsEdit, bodyEdit]
+        labelEdits <-
+            case params of
+            Sugar.NullParam{} -> return []
+            _ -> ExpressionGui.grammarLabel "→" animId <&> (:[])
+        (mParamsEdit ^.. Lens._Just) ++ labelEdits ++ [bodyEdit]
+            & ExpressionGui.hboxSpaced
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         params = binder ^. Sugar.bParams

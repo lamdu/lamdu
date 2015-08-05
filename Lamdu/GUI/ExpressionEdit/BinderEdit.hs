@@ -122,25 +122,16 @@ mkPresentationModeEdit myId prop = do
 
 layout ::
     MonadA m =>
-    ExpressionGui m -> [ExpressionGui m] -> ExpressionGui m -> Widget.Id ->
+    ExpressionGui m -> Maybe (ExpressionGui m) -> ExpressionGui m -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-layout defNameEdit paramEdits bodyEdit myId =
+layout defNameEdit mParamsEdit bodyEdit myId =
     do
         equals <- ExpressionGui.makeLabel "=" (Widget.toAnimId myId)
-        paramsEdit <-
-            case paramEdits of
-            [] -> return []
-            [x] -> return [x]
-            xs ->
-                xs
-                & ExpressionGui.vboxTopFocalSpaced
-                >>= ExpressionGui.addValFrame myId
-                <&> (:[])
-        defNameEdit : paramsEdit ++ [equals, bodyEdit]
+        defNameEdit : (mParamsEdit ^.. Lens._Just) ++ [equals, bodyEdit]
             & ExpressionGui.hboxSpaced
 
 data Parts m = Parts
-    { pParamEdits :: [ExpressionGui m]
+    { pMParamsEdit :: Maybe (ExpressionGui m)
     , pBodyEdit :: ExpressionGui m
     , pEventMap :: Widget.EventHandlers (T m)
     }
@@ -267,6 +258,18 @@ makeParts showAnnotation binder myId =
                     makeParamsEdit annotationMode showAnnotation
                     (ExprGuiT.nextHolesBefore body) myId params
                     & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
+                    <&> (++ (mScopeNavEdit ^.. Lens.traversed))
+                mParamsEdit <-
+                    case paramEdits of
+                    [] -> return Nothing
+                    _ ->
+                        paramEdits
+                        <&> ExpressionGui.egAlignment . _1 .~ 0.5
+                        & ExpressionGui.vboxTopFocalSpaced
+                        >>= case params of
+                            Sugar.FieldParams{} -> ExpressionGui.addValFrame myId
+                            _ -> return
+                        <&> Just
                 bodyEdit <-
                     makeResultEdit (binder ^. Sugar.bMActions) params body
                     & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sBodyScope)
@@ -287,9 +290,7 @@ makeParts showAnnotation binder myId =
                             <*> mScopeCursor
                             & fromMaybe mempty
                         _ -> mempty
-                Parts (paramEdits ++ (mScopeNavEdit ^.. Lens.traversed))
-                    rhs scopeEventMap
-                    & return
+                Parts mParamsEdit rhs scopeEventMap & return
     where
         takeNavCursor = ExprGuiM.assignCursorPrefix scopesNavId (const destId)
         destId =
@@ -309,7 +310,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make name binder myId =
     do
-        Parts paramEdits bodyEdit eventMap <-
+        Parts mParamsEdit bodyEdit eventMap <-
             makeParts ExprGuiT.ShowAnnotation binder myId
         rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
         presentationEdits <-
@@ -320,7 +321,7 @@ make name binder myId =
             rhsJumperEquals rhs name myId
             <&> ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
         layout defNameEdit
-            (paramEdits & Lens.mapped . ExpressionGui.egWidget
+            (mParamsEdit & Lens.mapped . ExpressionGui.egWidget
                 %~ Widget.weakerEvents rhsJumperEquals)
             bodyEdit myId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
