@@ -247,9 +247,7 @@ convertAppliedCase ::
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedCase (BodyCase caseB) casePl argS exprPl =
     do
-        case caseB ^. cKind of
-            LambdaCase -> return ()
-            _ -> mzero
+        Lens.has (cKind . _LambdaCase) caseB & guard
         protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
         let (shownArg, pls) =
                 case argS ^. rBody of
