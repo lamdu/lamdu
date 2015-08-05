@@ -357,7 +357,8 @@ addToDef origDef =
                 map Map.fromList . filter (ListUtils.isLengthAtLeast 2) .
                 map ((`zip` [0..]) . toList) $ Map.elems globalNamesMap
             }
-        pass0 = runPass0M . Walk.toDef
-        pass1 = runPass1M . Walk.toDef
+        pass0 = runPass0M . Walk.toDef Walk.toExpression
+        pass1 = runPass1M . Walk.toDef Walk.toExpression
         pass2 (def, storedNamesBelow) =
-            runPass2M (emptyP2Env (storedNamesBelow ^. snwGlobalNames)) $ Walk.toDef def
+            Walk.toDef Walk.toExpression def
+            & runPass2M (emptyP2Env (storedNamesBelow ^. snwGlobalNames))
