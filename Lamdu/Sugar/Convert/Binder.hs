@@ -269,16 +269,18 @@ convertNullParam ::
     ConvertM m (ConventionalParams m a)
 convertNullParam mRecursiveVar lam@(V.Lam param _) pl =
     do
-        mActions <-
+        mNullParamActions <-
             mStoredLam
             & Lens._Just %%~ makeDeleteLambda mRecursiveVar
             <&> Lens._Just %~ NullParamActions . void
+        mActions <-
+            mStoredLam & Lens._Just %%~ makeNonRecordParamActions mRecursiveVar
         return
             ConventionalParams
             { cpTags = Set.empty
             , cpParamInfos = Map.empty
-            , _cpParams = NullParam mActions
-            , cpMAddFirstParam = Nothing
+            , _cpParams = NullParam mNullParamActions
+            , cpMAddFirstParam = mActions <&> snd
             , cpScopes = pl ^. Input.evalAppliesOfLam <&> map fst
             , cpMLamParam = Just param
             }
@@ -456,7 +458,7 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
             { cpTags = mempty
             , cpParamInfos = Map.empty
             , _cpParams = VarParam funcParam
-            , cpMAddFirstParam = snd <$> mActions
+            , cpMAddFirstParam = mActions <&> snd
             , cpScopes = lamExprPl ^. Input.evalAppliesOfLam <&> map fst
             , cpMLamParam = Just param
             }
