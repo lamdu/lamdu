@@ -229,7 +229,8 @@ makeScopeNavEdit myId setter cursor
 makeParts ::
     MonadA m =>
     ExprGuiT.ShowAnnotation ->
-    Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) -> Widget.Id ->
+    Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) ->
+    Widget.Id ->
     ExprGuiM m (Parts m)
 makeParts showAnnotation binder myId =
     do
@@ -256,7 +257,8 @@ makeParts showAnnotation binder myId =
                         & fromMaybe ExpressionGui.NormalAnnotation
                 paramEdits <-
                     makeParamsEdit annotationMode showAnnotation
-                    (ExprGuiT.nextHolesBefore body) myId params
+                    (ExprGuiT.nextHolesBefore body) myId
+                    (WidgetIds.fromEntityId bodyId) params
                     & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
                     <&> (++ (mScopeNavEdit ^.. Lens.traversed))
                 mParamsEdit <-
@@ -434,9 +436,9 @@ makeNullLambdaActions dstId actions =
 makeParamsEdit ::
     MonadA m =>
     ExpressionGui.AnnotationOptions -> ExprGuiT.ShowAnnotation ->
-    NearestHoles -> Widget.Id -> Sugar.BinderParams (Name m) m ->
+    NearestHoles -> Widget.Id -> Widget.Id -> Sugar.BinderParams (Name m) m ->
     ExprGuiM m [ExpressionGui m]
-makeParamsEdit annotationOpts showAnnotation nearestHoles lhsId params =
+makeParamsEdit annotationOpts showAnnotation nearestHoles lhsId rhsId params =
     case params of
     Sugar.DefintionWithoutParams -> return []
     Sugar.NullParam mActions ->
@@ -449,17 +451,17 @@ makeParamsEdit annotationOpts showAnnotation nearestHoles lhsId params =
                 <&> ExpressionGui.egWidget
                     %~ Widget.weakerEvents (mappend actions jumpHolesEventMap)
                 <&> (:[])
-    Sugar.VarParam p -> fromParamList [p]
-    Sugar.FieldParams ps -> ps ^.. Lens.traversed . _2 & fromParamList
+    Sugar.VarParam p -> fromParamList rhsId rhsId [p]
+    Sugar.FieldParams ps -> ps ^.. Lens.traversed . _2 & fromParamList lhsId rhsId
     where
-        fromParamList paramList =
+        fromParamList lId rId paramList =
             do
                 jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
                 let mkParam (prevId, nextId, param) =
                         ParamEdit.make annotationOpts showAnnotation prevId nextId param
                         <&> ExpressionGui.egWidget
                         %~ Widget.weakerEvents jumpHolesEventMap
-                ExpressionGui.listWithDelDests lhsId lhsId
+                ExpressionGui.listWithDelDests lId rId
                     (WidgetIds.fromEntityId . (^. Sugar.fpId)) paramList
                     & traverse mkParam
 
