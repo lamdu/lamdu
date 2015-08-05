@@ -38,7 +38,18 @@ valueConversion ::
     (Monoid a, MonadA m) =>
     (T.Id -> m Nominal) ->
     Val a -> Type -> Type -> m [Val a]
-valueConversion loadNominal arg (T.TInst name params) r =
+valueConversion _ arg (T.TRecord composite) _ =
+    composite ^.. ExprLens.compositeTags
+    <&> V.Val mempty . V.BGetField . V.GetField arg
+    & return
+valueConversion loadNominal arg srcType dstType =
+    valueConversionNoSplit loadNominal arg srcType dstType
+    <&> (:[])
+
+valueConversionNoSplit ::
+    (Monoid a, MonadA m) =>
+    (T.Id -> m Nominal) -> Val a -> Type -> Type -> m (Val a)
+valueConversionNoSplit loadNominal arg (T.TInst name params) r =
     do
         fromNomType <-
             loadNominal name <&> Nominal.apply params
@@ -46,28 +57,17 @@ valueConversion loadNominal arg (T.TInst name params) r =
             -- I think this happens to be fine for suggest but there are less
             -- doubts if using a proper instantiantion of the scheme..
             <&> (^. schemeType)
-        valueConversionNoSplit fromNom fromNomType r
-    <&> (:[])
+        valueConversionNoSplit loadNominal fromNom fromNomType r
     where
         fromNom = V.Nom name arg & V.BFromNom & V.Val mempty
-valueConversion _ arg (T.TRecord composite) _ =
-    composite ^.. ExprLens.compositeTags
-    <&> V.Val mempty . V.BGetField . V.GetField arg
-    & return
-valueConversion _ arg srcType dstType =
-    valueConversionNoSplit arg srcType dstType
-    <&> (:[])
-
-valueConversionNoSplit ::
-    (Monoid a, MonadA m) => Val a -> Type -> Type -> m (Val a)
-valueConversionNoSplit arg (T.TSum composite) r =
+valueConversionNoSplit _ arg (T.TSum composite) r =
     suggestCaseWith composite r & run & applyCase & return
     where
         applyCase c =
             c
             & Lens.traversed .~ mempty
             & (`V.Apply` arg) & V.BApp & V.Val mempty
-valueConversionNoSplit arg _ _ = return arg
+valueConversionNoSplit _ arg _ _ = return arg
 
 value :: Type -> [Val Type]
 value typ@(T.TSum comp) =
