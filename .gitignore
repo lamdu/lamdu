@@ -1,4 +1,3 @@
-.tm_properties
 *.hi
 *.o
 *.p_hi
@@ -7,9 +6,9 @@
 *.i_o
 *.dyn_hi
 *.dyn_o
-TAGS
-tags
-GUIWidgets
-dist/
-cabal-dev/
-TODO
+/.tm_properties
+/TAGS
+/tags
+/dist/
+/cabal-dev/
+/TODO
