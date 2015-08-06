@@ -3,7 +3,7 @@ module Lamdu.DataFile
     ) where
 
 import           Control.Lens.Operators
-import           Paths_lamdu_ide (getDataFileName)
+import           Paths_Lamdu (getDataFileName)
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 

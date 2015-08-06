@@ -1,4 +1,4 @@
-Name:                lamdu-ide
+Name:                Lamdu
 Version:             0.1
 Synopsis:            A next generation IDE
 Description:         Lamdu functional programming editor
@@ -148,7 +148,7 @@ Executable lamdu
                      , filepath
                      , graphics-drawingcombinators >= 1.4
                      , hashable
-                     , lamdu-ide
+                     , Lamdu
                      , lens
                      , random
                      , split
@@ -289,7 +289,7 @@ Executable lamdu
                      , Lamdu.Sugar.Types
                      , Lamdu.VersionControl
                      , Lamdu.VersionControl.Actions
-                     , Paths_lamdu_ide
+                     , Paths_Lamdu
   ghc-options:         -O2 -Wall -threaded
   -- ghc-options is prepended to ghc-prof-options
   ghc-prof-options:    -auto-all -caf-all -rtsopts
