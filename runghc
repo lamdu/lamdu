@@ -1,0 +1,3 @@
+#!/bin/bash
+OPTS="-optP-include -optPdist/build/autogen/cabal_macros.h -ibottlelib -isubmodules/AlgoW -idist/build/autogen -Wall"
+/usr/bin/env runghc $OPTS $@
