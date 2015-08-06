@@ -20,103 +20,101 @@ Library
   hs-Source-Dirs:      bottlelib
                      , submodules/AlgoW
 
-  Exposed-modules:     Control.Concurrent.Utils
-                     , Control.Monad.Trans.Decycle
-                     , Data.Function.Decycle
-                     , Data.List.Assoc
-                     , Data.List.Utils
-                     , Data.Map.Utils
-                     , Data.Hashable.Generic
-                     , Data.Maybe.Utils
-                     , Data.Monoid.Applicative
-                     , Data.Monoid.Generic
-                     , Data.Monoid.Instances
-                     , Data.MRUMemo
-                     , Data.Set.Ordered
-                     , Data.Vector.Vector2
-                     , Numeric.Utils
-                     , Foreign.C.Types.Instances
-                     , Graphics.DrawingCombinators.Utils
-                     , Graphics.UI.Bottle.Animation
-                     , Graphics.UI.Bottle.Animation.Id
-                     , Graphics.UI.Bottle.Direction
-                     , Graphics.UI.Bottle.EventMap
-                     , Graphics.UI.Bottle.MainLoop
-                     , Graphics.UI.Bottle.ModKey
-                     , Graphics.UI.Bottle.Rect
-                     , Graphics.UI.Bottle.View
-                     , Graphics.UI.Bottle.Widget
-                     , Graphics.UI.Bottle.WidgetId
-                     , Graphics.UI.Bottle.Widgets
-                     , Graphics.UI.Bottle.WidgetsEnvT
-                     , Graphics.UI.Bottle.Widgets.Box
-                     , Graphics.UI.Bottle.Widgets.Choice
-                     , Graphics.UI.Bottle.Widgets.EventMapDoc
-                     , Graphics.UI.Bottle.Widgets.FlyNav
-                     , Graphics.UI.Bottle.Widgets.FocusDelegator
-                     , Graphics.UI.Bottle.Widgets.Grid
-                     , Graphics.UI.Bottle.Widgets.GridView
-                     , Graphics.UI.Bottle.Widgets.Layout
-                     , Graphics.UI.Bottle.Widgets.Spacer
-                     , Graphics.UI.Bottle.Widgets.StdKeys
-                     , Graphics.UI.Bottle.Widgets.TextEdit
-                     , Graphics.UI.Bottle.Widgets.TextView
-                     , Graphics.UI.Bottle.SizedFont
-                     , Graphics.UI.GLFW.Events
-                     , Graphics.UI.GLFW.Instances
-                     , Graphics.UI.GLFW.Utils
+  Exposed-modules:  Data.Random.Instances
+                  , Data.MRUMemo
+                  , Data.Set.Ordered
+                  , Data.Maybe.Utils
+                  , Data.List.Assoc
+                  , Data.List.Utils
+                  , Data.Store.Db
+                  , Data.Store.IRef
+                  , Data.Store.Guid
+                  , Data.Store.Map
+                  , Data.Store.Transaction
+                  , Data.Store.Guid.Arbitrary
+                  , Data.Store.Property
+                  , Data.Store.Rev.Change
+                  , Data.Store.Rev.Version
+                  , Data.Store.Rev.View
+                  , Data.Store.Rev.Branch
+                  , Data.Function.Decycle
+                  , Data.Monoid.Generic
+                  , Data.Monoid.Instances
+                  , Data.Monoid.Applicative
+                  , Data.Binary.Utils
+                  , Data.ByteString.NFData
+                  , Data.ByteString.Utils
+                  , Data.Vector.Vector2
+                  , Numeric.Utils
+                  , Foreign.C.Types.Instances
+                  , Graphics.DrawingCombinators.Utils
+                  , Graphics.UI.Bottle.Direction
+                  , Graphics.UI.Bottle.ModKey
+                  , Graphics.UI.Bottle.WidgetId
+                  , Graphics.UI.Bottle.View
+                  , Graphics.UI.Bottle.Rect
+                  , Graphics.UI.Bottle.Animation.Id
+                  , Graphics.UI.Bottle.Widgets.TextView
+                  , Graphics.UI.Bottle.Widgets.Box
+                  , Graphics.UI.Bottle.Widgets.Choice
+                  , Graphics.UI.Bottle.Widgets.FlyNav
+                  , Graphics.UI.Bottle.Widgets.StdKeys
+                  , Graphics.UI.Bottle.Widgets.Grid
+                  , Graphics.UI.Bottle.Widgets.Layout
+                  , Graphics.UI.Bottle.Widgets.EventMapDoc
+                  , Graphics.UI.Bottle.Widgets.Spacer
+                  , Graphics.UI.Bottle.Widgets.TextEdit
+                  , Graphics.UI.Bottle.Widgets.GridView
+                  , Graphics.UI.Bottle.Widgets.FocusDelegator
+                  , Graphics.UI.Bottle.Animation
+                  , Graphics.UI.Bottle.Widget
+                  , Graphics.UI.Bottle.EventMap
+                  , Graphics.UI.Bottle.WidgetsEnvT
+                  , Graphics.UI.Bottle.MainLoop
+                  , Graphics.UI.Bottle.Widgets
+                  , Graphics.UI.Bottle.SizedFont
+                  , Graphics.UI.GLFW.Instances
+                  , Graphics.UI.GLFW.Utils
+                  , Graphics.UI.GLFW.Events
+                  , System.Random.Utils
+                  , Control.Monad.Unit
+                  , Control.Monad.Trans.State.Utils
+                  , Control.Monad.Trans.Either.Utils
+                  , Control.Monad.Trans.Decycle
+                  , Control.Concurrent.Utils
+                  , Control.MonadA
+                  , Control.Applicative.Utils
+                  , Control.Lens.Utils
 
-                     , Data.Random.Instances
-                     , Data.ByteString.Utils
-                     , Data.ByteString.NFData
-                     , Data.Binary.Utils
-                     , Data.Store.Guid
-                     , Data.Store.IRef
-                     , Data.Store.Rev.Change
-                     , Data.Store.Rev.Version
-                     , Data.Store.Rev.Branch
-                     , Data.Store.Rev.View
-                     , Data.Store.Transaction
-                     , Data.Store.Map
-                     , Data.Store.Property
-                     , Data.Store.Db
+  Other-Modules:    Data.Store.Rev.ViewBranchInternal
 
-                     , Control.Applicative.Utils
-                     , Control.Lens.Utils
-                     , Control.Monad.Trans.Either.Utils
-                     , Control.Monad.Trans.State.Utils
-                     , Control.Monad.Unit
-                     , Control.MonadA
-                     , System.Random.Utils
-
-  Other-Modules:       Data.Store.Rev.ViewBranchInternal
-
-  Build-depends:       base >= 4
-                     , base-compat >= 0.8.2 && < 0.9
-                     , aeson >= 0.6.2.1 && < 0.9
-                     , leveldb-haskell >= 0.6
-                     , cryptohash >= 0.7
-                     , GLFW-b >= 1.4.7 && < 1.5
-                     , deepseq
-                     , deepseq-generics >= 0.1
-                     , OpenGL
-                     , StateVar
-                     , TraceUtils
-                     , hashable
-                     , either
-                     , lens >= 4.1
-                     , binary >= 0.7
-                     , bytestring
-                     , containers >= 0.4
-                     , directory >= 1.0.1.1
-                     , filepath >= 1.1
-                     , random >= 1.0.0
-                     , split >= 0.1
-                     , stm
-                     , template-haskell
-                     , time >= 1.2
-                     , transformers >= 0.2.1
-                     , utf8-string >= 0.3
+  Build-depends:    base >= 4
+                  , base-compat >= 0.8.2 && < 0.9
+                  , aeson >= 0.6.2.1 && < 0.9
+                  , leveldb-haskell >= 0.6
+                  , cryptohash >= 0.7
+                  , GLFW-b >= 1.4.7 && < 1.5
+                  , QuickCheck >= 2.8 && < 2.9
+                  , deepseq
+                  , deepseq-generics >= 0.1
+                  , OpenGL
+                  , StateVar
+                  , TraceUtils
+                  , hashable
+                  , either
+                  , lens >= 4.1
+                  , binary >= 0.7
+                  , bytestring
+                  , containers >= 0.4
+                  , directory >= 1.0.1.1
+                  , filepath >= 1.1
+                  , random >= 1.0.0
+                  , split >= 0.1
+                  , stm
+                  , template-haskell
+                  , time >= 1.2
+                  , transformers >= 0.2.1
+                  , utf8-string >= 0.3
 
   if flag(SmoothFonts)
     Build-Depends: graphics-drawingcombinators >= 1.5.0.3
@@ -129,167 +127,173 @@ Library
   ghc-prof-options:    -auto-all -caf-all -rtsopts
 
 Executable lamdu
-  hs-Source-Dirs:      .
-                     , submodules/AlgoW
-  Build-Depends:       GLFW-b
-                     , List >= 0.5.1
-                     , TraceUtils
-                     , TypeCompose
-                     , aeson
-                     , base
-                     , base-compat
-                     , binary
-                     , bytestring
-                     , containers
-                     , deepseq
-                     , deepseq-generics >= 0.1
-                     , directory
-                     , either
-                     , filepath
-                     , graphics-drawingcombinators >= 1.4
-                     , hashable
-                     , Lamdu
-                     , lens
-                     , random
-                     , split
-                     , transformers
-                     , utf8-string
-                     , void >= 0.6.1
+  hs-Source-Dirs: .
+                  , submodules/AlgoW
+  Build-Depends:    GLFW-b
+                  , List >= 0.5.1
+                  , TraceUtils
+                  , TypeCompose
+                  , aeson
+                  , base
+                  , base-compat
+                  , binary
+                  , bytestring
+                  , containers
+                  , deepseq
+                  , deepseq-generics >= 0.1
+                  , directory
+                  , either
+                  , filepath
+                  , graphics-drawingcombinators >= 1.4
+                  , hashable
+                  , Lamdu
+                  , lens
+                  , random
+                  , split
+                  , transformers
+                  , utf8-string
+                  , void >= 0.6.1
   if flag(noprettyclass)
-    build-depends:     pretty >=1.1.2 && <1.2
+    build-depends:  pretty >=1.1.2 && <1.2
   else
-    build-depends:     pretty >=1.1 && <1.1.2
-                     , prettyclass ==1.0.0.0
-  Other-Modules:       Lamdu.Builtins
-                     , Lamdu.Builtins.Anchors
-                     , Lamdu.CharClassification
-                     , Lamdu.Config
-                     , Lamdu.Config.Sampler
-                     , Lamdu.Data.Anchors
-                     , Lamdu.Data.DbLayout
-                     , Lamdu.Data.Definition
-                     , Lamdu.Data.ExampleDB
-                     , Lamdu.Data.Ops
-                     , Lamdu.DataFile
-                     , Lamdu.DefEvaluators
-                     , Lamdu.Eval.Background
-                     , Lamdu.Eval.Results
-                     , Lamdu.Eval.ToExpr
-                     , Lamdu.Eval.Val
-                     , Lamdu.Expr.Constraints
-                     , Lamdu.Expr.FlatComposite
-                     , Lamdu.Expr.GenIds
-                     , Lamdu.Expr.Identifier
-                     , Lamdu.Expr.IRef
-                     , Lamdu.Expr.IRef.Infer
-                     , Lamdu.Expr.Lens
-                     , Lamdu.Expr.Load
-                     , Lamdu.Expr.Nominal
-                     , Lamdu.Expr.Pure
-                     , Lamdu.Expr.RecordVal
-                     , Lamdu.Expr.Scheme
-                     , Lamdu.Expr.Type
-                     , Lamdu.Expr.Type.Match
-                     , Lamdu.Expr.TypeVars
-                     , Lamdu.Expr.UniqueId
-                     , Lamdu.Expr.Val
-                     , Lamdu.Expr.Val.Arbitrary
-                     , Lamdu.Font
-                     , Lamdu.GUI.CodeEdit
-                     , Lamdu.GUI.CodeEdit.Settings
-                     , Lamdu.GUI.DefinitionEdit
-                     , Lamdu.GUI.EvalView
-                     , Lamdu.GUI.ExpressionEdit
-                     , Lamdu.GUI.ExpressionEdit.ApplyEdit
-                     , Lamdu.GUI.ExpressionEdit.BinderEdit
-                     , Lamdu.GUI.ExpressionEdit.BuiltinEdit
-                     , Lamdu.GUI.ExpressionEdit.CaseEdit
-                     , Lamdu.GUI.ExpressionEdit.EventMap
-                     , Lamdu.GUI.ExpressionEdit.GetFieldEdit
-                     , Lamdu.GUI.ExpressionEdit.GetVarEdit
-                     , Lamdu.GUI.ExpressionEdit.HoleEdit
-                     , Lamdu.GUI.ExpressionEdit.HoleEdit.Common
-                     , Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
-                     , Lamdu.GUI.ExpressionEdit.HoleEdit.Info
-                     , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
-                     , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
-                     , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.SearchTerm
-                     , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.ShownResult
-                     , Lamdu.GUI.ExpressionEdit.HoleEdit.State
-                     , Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds
-                     , Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
-                     , Lamdu.GUI.ExpressionEdit.InjectEdit
-                     , Lamdu.GUI.ExpressionEdit.LambdaEdit
-                     , Lamdu.GUI.ExpressionEdit.ListEdit
-                     , Lamdu.GUI.ExpressionEdit.LiteralEdit
-                     , Lamdu.GUI.ExpressionEdit.NomEdit
-                     , Lamdu.GUI.ExpressionEdit.RecordEdit
-                     , Lamdu.GUI.ExpressionEdit.TagEdit
-                     , Lamdu.GUI.ExpressionGui
-                     , Lamdu.GUI.ExpressionGui.Monad
-                     , Lamdu.GUI.ExpressionGui.Types
-                     , Lamdu.GUI.Main
-                     , Lamdu.GUI.ParamEdit
-                     , Lamdu.GUI.Parens
-                     , Lamdu.GUI.Precedence
-                     , Lamdu.GUI.TypeView
-                     , Lamdu.GUI.VersionControl.Config
-                     , Lamdu.GUI.VersionControl
-                     , Lamdu.GUI.Scroll
-                     , Lamdu.GUI.WidgetIdIRef
-                     , Lamdu.GUI.WidgetIds
-                     , Lamdu.GUI.Zoom
-                     , Lamdu.Infer
-                     , Lamdu.Infer.Error
-                     , Lamdu.Infer.Internal.Constraints
-                     , Lamdu.Infer.Internal.Monad
-                     , Lamdu.Infer.Internal.Scheme
-                     , Lamdu.Infer.Internal.Scope
-                     , Lamdu.Infer.Internal.Subst
-                     , Lamdu.Infer.Load
-                     , Lamdu.Infer.Recursive
-                     , Lamdu.Infer.Unify
-                     , Lamdu.Infer.Update
-                     , Lamdu.Main
-                     , Lamdu.Opts
-                     , Lamdu.Style
-                     , Lamdu.Sugar.Names.Add
-                     , Lamdu.Sugar.Names.CPS
-                     , Lamdu.Sugar.Names.Get
-                     , Lamdu.Sugar.Names.NameGen
-                     , Lamdu.Sugar.Names.Types
-                     , Lamdu.Sugar.Names.Walk
-                     , Lamdu.Sugar.Convert
-                     , Lamdu.Sugar.Convert.Apply
-                     , Lamdu.Sugar.Convert.Binder
-                     , Lamdu.Sugar.Convert.Case
-                     , Lamdu.Sugar.Convert.DefExpr
-                     , Lamdu.Sugar.Convert.Expression
-                     , Lamdu.Sugar.Convert.Expression.Actions
-                     , Lamdu.Sugar.Convert.GetField
-                     , Lamdu.Sugar.Convert.GetVar
-                     , Lamdu.Sugar.Convert.Hole
-                     , Lamdu.Sugar.Convert.Hole.Suggest
-                     , Lamdu.Sugar.Convert.Inject
-                     , Lamdu.Sugar.Convert.Input
-                     , Lamdu.Sugar.Convert.List
-                     , Lamdu.Sugar.Convert.Monad
-                     , Lamdu.Sugar.Convert.Nominal
-                     , Lamdu.Sugar.Convert.ParamList
-                     , Lamdu.Sugar.Convert.Record
-                     , Lamdu.Sugar.Convert.TIdG
-                     , Lamdu.Sugar.EntityId
-                     , Lamdu.Sugar.Internal
-                     , Lamdu.Sugar.Internal.EntityId
-                     , Lamdu.Sugar.Lens
-                     , Lamdu.Sugar.NearestHoles
-                     , Lamdu.Sugar.OrderTags
-                     , Lamdu.Sugar.PresentationModes
-                     , Lamdu.Sugar.RedundantTypes
-                     , Lamdu.Sugar.Types
-                     , Lamdu.VersionControl
-                     , Lamdu.VersionControl.Actions
-                     , Paths_Lamdu
+    build-depends:  pretty >=1.1 && <1.1.2
+                  , prettyclass ==1.0.0.0
+  Other-Modules:    Lamdu.Data.Anchors
+                  , Lamdu.Data.Definition
+                  , Lamdu.Data.DbLayout
+                  , Lamdu.Data.Ops
+                  , Lamdu.Data.ExampleDB
+                  , Lamdu.DataFile
+                  , Lamdu.Style
+                  , Lamdu.VersionControl.Actions
+                  , Lamdu.Eval
+                  , Lamdu.Eval.Background
+                  , Lamdu.Eval.Val
+                  , Lamdu.Eval.Results
+                  , Lamdu.Eval.ToExpr
+                  , Lamdu.DefEvaluators
+                  , Lamdu.VersionControl
+                  , Lamdu.CharClassification
+                  , Lamdu.Opts
+                  , Lamdu.Config
+                  , Lamdu.Expr.Load
+                  , Lamdu.Expr.UniqueId
+                  , Lamdu.Expr.IRef.Infer
+                  , Lamdu.Expr.RecordVal
+                  , Lamdu.Expr.IRef
+                  , Lamdu.Expr.GenIds
+                  , Lamdu.GUI.TypeView
+                  , Lamdu.GUI.VersionControl.Config
+                  , Lamdu.GUI.ExpressionGui.Types
+                  , Lamdu.GUI.ExpressionGui.Monad
+                  , Lamdu.GUI.Scroll
+                  , Lamdu.GUI.Precedence
+                  , Lamdu.GUI.WidgetIds
+                  , Lamdu.GUI.VersionControl
+                  , Lamdu.GUI.Parens
+                  , Lamdu.GUI.Zoom
+                  , Lamdu.GUI.CodeEdit.Settings
+                  , Lamdu.GUI.ExpressionGui
+                  , Lamdu.GUI.ExpressionEdit.RecordEdit
+                  , Lamdu.GUI.ExpressionEdit.InjectEdit
+                  , Lamdu.GUI.ExpressionEdit.BinderEdit
+                  , Lamdu.GUI.ExpressionEdit.CaseEdit
+                  , Lamdu.GUI.ExpressionEdit.LiteralEdit
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.Info
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.Common
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.SearchTerm
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.ShownResult
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.State
+                  , Lamdu.GUI.ExpressionEdit.GetVarEdit
+                  , Lamdu.GUI.ExpressionEdit.EventMap
+                  , Lamdu.GUI.ExpressionEdit.LambdaEdit
+                  , Lamdu.GUI.ExpressionEdit.BuiltinEdit
+                  , Lamdu.GUI.ExpressionEdit.NomEdit
+                  , Lamdu.GUI.ExpressionEdit.TagEdit
+                  , Lamdu.GUI.ExpressionEdit.ApplyEdit
+                  , Lamdu.GUI.ExpressionEdit.ListEdit
+                  , Lamdu.GUI.ExpressionEdit.GetFieldEdit
+                  , Lamdu.GUI.ExpressionEdit
+                  , Lamdu.GUI.Main
+                  , Lamdu.GUI.WidgetIdIRef
+                  , Lamdu.GUI.CodeEdit
+                  , Lamdu.GUI.DefinitionEdit
+                  , Lamdu.GUI.ParamEdit
+                  , Lamdu.GUI.EvalView
+                  , Lamdu.Main
+                  , Lamdu.Config.Sampler
+                  , Lamdu.Font
+                  , Lamdu.Sugar.Internal
+                  , Lamdu.Sugar.Internal.EntityId
+                  , Lamdu.Sugar.PresentationModes
+                  , Lamdu.Sugar.RedundantTypes
+                  , Lamdu.Sugar.Types
+                  , Lamdu.Sugar.Lens
+                  , Lamdu.Sugar.OrderTags
+                  , Lamdu.Sugar.EntityId
+                  , Lamdu.Sugar.Convert.DefExpr
+                  , Lamdu.Sugar.Convert.List
+                  , Lamdu.Sugar.Convert.Expression
+                  , Lamdu.Sugar.Convert.ParamList
+                  , Lamdu.Sugar.Convert.Hole
+                  , Lamdu.Sugar.Convert.GetVar
+                  , Lamdu.Sugar.Convert.Inject
+                  , Lamdu.Sugar.Convert.Case
+                  , Lamdu.Sugar.Convert.Record
+                  , Lamdu.Sugar.Convert.Input
+                  , Lamdu.Sugar.Convert.Monad
+                  , Lamdu.Sugar.Convert.Binder
+                  , Lamdu.Sugar.Convert.GetField
+                  , Lamdu.Sugar.Convert.TIdG
+                  , Lamdu.Sugar.Convert.Hole.Suggest
+                  , Lamdu.Sugar.Convert.Expression.Actions
+                  , Lamdu.Sugar.Convert.Apply
+                  , Lamdu.Sugar.Convert.Nominal
+                  , Lamdu.Sugar.NearestHoles
+                  , Lamdu.Sugar.Names.Types
+                  , Lamdu.Sugar.Names.NameGen
+                  , Lamdu.Sugar.Names.Walk
+                  , Lamdu.Sugar.Names.Get
+                  , Lamdu.Sugar.Names.Add
+                  , Lamdu.Sugar.Names.CPS
+                  , Lamdu.Sugar.Convert
+                  , Lamdu.Builtins
+                  , Lamdu.Builtins.Anchors
+                    -- algow:
+                  , Data.Hashable.Generic
+                  , Data.Map.Utils
+                  , Text.PrettyPrint.HughesPJClass.Compat
+                  , Lamdu.Infer.Load
+                  , Lamdu.Infer.Update
+                  , Lamdu.Infer.Internal.Monad
+                  , Lamdu.Infer.Internal.Subst
+                  , Lamdu.Infer.Internal.Scheme
+                  , Lamdu.Infer.Internal.Scope
+                  , Lamdu.Infer.Internal.Unify
+                  , Lamdu.Infer.Internal.Constraints
+                  , Lamdu.Infer.Recursive
+                  , Lamdu.Infer.Unify
+                  , Lamdu.Infer.Error
+                  , Lamdu.Infer
+                  , Lamdu.Expr.Identifier
+                  , Lamdu.Expr.Type.Match
+                  , Lamdu.Expr.Lens
+                  , Lamdu.Expr.FlatComposite
+                  , Lamdu.Expr.Type
+                  , Lamdu.Expr.Val
+                  , Lamdu.Expr.Val.Arbitrary
+                  , Lamdu.Expr.TypeVars
+                  , Lamdu.Expr.Scheme
+                  , Lamdu.Expr.Pure
+                  , Lamdu.Expr.Nominal
+                  , Lamdu.Expr.Constraints
+
   ghc-options:         -O2 -Wall -threaded
   -- ghc-options is prepended to ghc-prof-options
   ghc-prof-options:    -auto-all -caf-all -rtsopts
