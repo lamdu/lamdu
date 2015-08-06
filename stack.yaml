@@ -1,0 +1,17 @@
+packages:
+- .
+- location:
+    git: git@github.com:luqui/graphics-drawingcombinators
+    commit: d4b7f64707eed0929f123b307933bb95d7afa4a7
+
+resolver: nightly-2015-08-06
+extra-deps:
+- FTGL-2.1
+- GLFW-b-1.4.7.2
+- TraceUtils-0.1.0.2
+- TypeCompose-0.9.10
+- bindings-GLFW-3.1.1.3
+- bitmap-0.0.2
+- bitmap-opengl-0.0.1.5
+- leveldb-haskell-0.6.3
+- stb-image-0.2.1
