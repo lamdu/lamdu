@@ -116,7 +116,7 @@ make annotationOpts showType prevId nextId param =
                 , eventMapAddNextParam config mActions
                 ]
         paramNameEdit <-
-            ExpressionGui.makeNameOriginEdit (param ^. Sugar.fpInfo . Sugar.fpiName) myId
+            ExpressionGui.makeNameOriginEdit (param ^. Sugar.fpInfo . Sugar.npiName) myId
             <&> Widget.weakerEvents paramEventMap
             <&> ExpressionGui.fromValueWidget
         paramNameEdit
@@ -127,7 +127,7 @@ make annotationOpts showType prevId nextId param =
     where
         entityId = param ^. Sugar.fpId
         myId = WidgetIds.fromEntityId entityId
-        mActions = param ^. Sugar.fpInfo . Sugar.fpiMActions
+        mActions = param ^. Sugar.fpInfo . Sugar.npiMActions
         hiddenIds = map WidgetIds.fromEntityId $ param ^. Sugar.fpHiddenIds
         assignCursor x =
             foldr (`ExprGuiM.assignCursorPrefix` const myId) x hiddenIds

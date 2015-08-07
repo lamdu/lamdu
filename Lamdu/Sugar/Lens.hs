@@ -103,7 +103,7 @@ binderParams f (FieldParams ps) = FieldParams <$> (Lens.traverse . _2) f ps
 
 binderParamsActions ::
     Lens.Traversal' (BinderParams name m) (FuncParamActions m)
-binderParamsActions = binderParams . fpInfo . fpiMActions . Lens._Just
+binderParamsActions = binderParams . fpInfo . npiMActions . Lens._Just
 
 binderFuncParamAdds ::
     Lens.Traversal'

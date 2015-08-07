@@ -65,7 +65,7 @@ module Lamdu.Sugar.Types
     , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
     , AnnotatedArg(..), aaTag, aaExpr
     , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
-    , FuncParamInfo(..), fpiName, fpiMActions
+    , NamedParamInfo(..), npiName, npiMActions
     , FuncParam(..), fpId, fpInfo, fpAnnotation, fpHiddenIds
     , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
@@ -176,15 +176,15 @@ data FuncParamActions m = FuncParamActions
     , _fpDelete :: T m ParamDelResult
     }
 
-data FuncParamInfo name m = FuncParamInfo
-    { _fpiName :: name
-    , _fpiMActions :: Maybe (FuncParamActions m)
+data NamedParamInfo name m = NamedParamInfo
+    { _npiName :: name
+    , _npiMActions :: Maybe (FuncParamActions m)
     }
 
 data FuncParam name m = FuncParam
     { _fpId :: EntityId
     , _fpAnnotation :: Annotation
-    , _fpInfo :: FuncParamInfo name m
+    , _fpInfo :: NamedParamInfo name m
     , -- Sometimes the Lambda disappears in Sugar, the Param "swallows" its id
       _fpHiddenIds :: [EntityId]
     }
@@ -398,9 +398,9 @@ data Body name m expr
     | BodyFromNom (Nominal name m expr)
     deriving (Functor, Foldable, Traversable)
 
-instance Show name => Show (FuncParamInfo name m) where
-    show FuncParamInfo{..} =
-        "(FuncParamInfo " ++ show _fpiName ++ ")"
+instance Show name => Show (NamedParamInfo name m) where
+    show NamedParamInfo{..} =
+        "(NamedParamInfo " ++ show _npiName ++ ")"
 
 instance Show name => Show (FuncParam name m) where
     show FuncParam{..} = "(FuncParam " ++ show _fpId ++ " " ++ show _fpInfo ++
@@ -523,7 +523,7 @@ Lens.makeLenses ''DefinitionBuiltin
 Lens.makeLenses ''DefinitionExpression
 Lens.makeLenses ''Expression
 Lens.makeLenses ''FuncParam
-Lens.makeLenses ''FuncParamInfo
+Lens.makeLenses ''NamedParamInfo
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''GetField
 Lens.makeLenses ''Hole

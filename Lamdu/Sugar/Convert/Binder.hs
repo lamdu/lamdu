@@ -247,9 +247,9 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
                     ( fpTag fp
                     , FuncParam
                         { _fpInfo =
-                          FuncParamInfo
-                          { _fpiName = UniqueId.toGuid $ fpTag fp
-                          , _fpiMActions = actions
+                          NamedParamInfo
+                          { _npiName = UniqueId.toGuid $ fpTag fp
+                          , _npiMActions = actions
                           }
                         , _fpId = fpIdEntityId fp
                         , _fpAnnotation =
@@ -442,9 +442,9 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
         let funcParam =
                 FuncParam
                 { _fpInfo =
-                  FuncParamInfo
-                  { _fpiName = UniqueId.toGuid param
-                  , _fpiMActions = fst <$> mActions
+                  NamedParamInfo
+                  { _npiName = UniqueId.toGuid param
+                  , _npiMActions = fst <$> mActions
                   }
                 , _fpId = paramEntityId
                 , _fpAnnotation =
