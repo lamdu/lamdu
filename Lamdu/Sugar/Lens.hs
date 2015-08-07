@@ -94,8 +94,8 @@ binderParams ::
     Lens.Traversal
     (BinderParams a m)
     (BinderParams b m)
-    (FuncParam a m)
-    (FuncParam b m)
+    (FuncParam (NamedParamInfo a m))
+    (FuncParam (NamedParamInfo b m))
 binderParams _ DefintionWithoutParams = pure DefintionWithoutParams
 binderParams _ (NullParam a) = pure (NullParam a)
 binderParams f (VarParam p) = VarParam <$> f p

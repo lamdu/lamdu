@@ -181,10 +181,10 @@ data NamedParamInfo name m = NamedParamInfo
     , _npiMActions :: Maybe (FuncParamActions m)
     }
 
-data FuncParam name m = FuncParam
+data FuncParam info = FuncParam
     { _fpId :: EntityId
     , _fpAnnotation :: Annotation
-    , _fpInfo :: NamedParamInfo name m
+    , _fpInfo :: info
     , -- Sometimes the Lambda disappears in Sugar, the Param "swallows" its id
       _fpHiddenIds :: [EntityId]
     }
@@ -402,7 +402,7 @@ instance Show name => Show (NamedParamInfo name m) where
     show NamedParamInfo{..} =
         "(NamedParamInfo " ++ show _npiName ++ ")"
 
-instance Show name => Show (FuncParam name m) where
+instance Show info => Show (FuncParam info) where
     show FuncParam{..} = "(FuncParam " ++ show _fpId ++ " " ++ show _fpInfo ++
                                               " " ++ show _fpAnnotation ++ " )"
 
@@ -458,8 +458,8 @@ data BinderParams name m
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
       NullParam (Maybe (NullParamActions m))
-    | VarParam (FuncParam name m)
-    | FieldParams [(T.Tag, FuncParam name m)]
+    | VarParam (FuncParam (NamedParamInfo name m))
+    | FieldParams [(T.Tag, FuncParam (NamedParamInfo name m))]
 
 data Binder name m expr = Binder
     { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
