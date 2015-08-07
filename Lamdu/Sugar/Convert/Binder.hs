@@ -246,7 +246,11 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
                 pure
                     ( fpTag fp
                     , FuncParam
-                        { _fpName = UniqueId.toGuid $ fpTag fp
+                        { _fpInfo =
+                          FuncParamInfo
+                          { _fpiName = UniqueId.toGuid $ fpTag fp
+                          , _fpiMActions = actions
+                          }
                         , _fpId = fpIdEntityId fp
                         , _fpAnnotation =
                             Annotation
@@ -257,7 +261,6 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
                                     fpValue fp ^.. Lens.traversed . Lens.traversed
                                         & Map.fromList & Just
                             }
-                        , _fpMActions = actions
                         , _fpHiddenIds = []
                         }
                     )
@@ -438,7 +441,11 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
         mActions <- mStoredLam & Lens._Just %%~ makeNonRecordParamActions mRecursiveVar
         let funcParam =
                 FuncParam
-                { _fpName = UniqueId.toGuid param
+                { _fpInfo =
+                  FuncParamInfo
+                  { _fpiName = UniqueId.toGuid param
+                  , _fpiMActions = fst <$> mActions
+                  }
                 , _fpId = paramEntityId
                 , _fpAnnotation =
                     Annotation
@@ -451,7 +458,6 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
                                 Lens.traversed . Lens.traversed
                                 & Map.fromList & Just
                     }
-                , _fpMActions = fst <$> mActions
                 , _fpHiddenIds = []
                 }
         pure ConventionalParams

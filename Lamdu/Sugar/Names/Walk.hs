@@ -158,11 +158,12 @@ withBinderParams ::
     BinderParams (OldName m) (TM m) -> CPS m (BinderParams (NewName m) (TM m))
 withBinderParams DefintionWithoutParams = pure DefintionWithoutParams
 withBinderParams (NullParam a) = pure (NullParam a)
-withBinderParams (VarParam FuncParam{..}) =
-    opWithParamName (isFunctionType (_fpAnnotation ^. aInferredType)) _fpName
-    <&> VarParam . \_fpName -> FuncParam{..}
+withBinderParams (VarParam fp) =
+    opWithParamName (isFunctionType (fp ^. fpAnnotation . aInferredType))
+    (fp ^. fpInfo . fpiName)
+    <&> VarParam . \newName -> fp & fpInfo . fpiName .~ newName
 withBinderParams (FieldParams xs) =
-    (traverse . second) (fpName opWithTagName) xs <&> FieldParams
+    (traverse . second . fpInfo . fpiName) opWithTagName xs <&> FieldParams
     where
         second f (x, y) = (,) x <$> f y
 
