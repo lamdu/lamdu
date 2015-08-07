@@ -265,31 +265,6 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
                         }
                     )
 
-convertNullParam ::
-    (MonadA m, Monoid a) =>
-    Maybe V.Var ->
-    V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
-    ConvertM m (ConventionalParams m a)
-convertNullParam mRecursiveVar lam@(V.Lam param _) pl =
-    do
-        mNullParamActions <-
-            mStoredLam
-            & Lens._Just %%~ makeDeleteLambda mRecursiveVar
-            <&> Lens._Just %~ NullParamActions . void
-        mActions <-
-            mStoredLam & Lens._Just %%~ makeNonRecordParamActions mRecursiveVar
-        return
-            ConventionalParams
-            { cpTags = Set.empty
-            , cpParamInfos = Map.empty
-            , _cpParams = NullParam mNullParamActions
-            , cpMAddFirstParam = mActions <&> snd
-            , cpScopes = pl ^. Input.evalAppliesOfLam <&> map fst
-            , cpMLamParam = Just param
-            }
-    where
-        mStoredLam = mkStoredLam lam pl
-
 setParamList :: MonadA m => MkProperty m (Maybe [T.Tag]) -> [T.Tag] -> T m ()
 setParamList paramListProp newParamList =
     do
@@ -432,38 +407,56 @@ makeNonRecordParamActions mRecursiveVar storedLam =
             , convertToRecordParams
             )
 
-convertNonRecordParam :: MonadA m =>
-    Maybe V.Var ->
+lamParamType :: Input.Payload m a -> Type
+lamParamType lamExprPl =
+    fromMaybe (error "Lambda value not inferred to a function type?!") $
+    lamExprPl ^? Input.inferred . Infer.plType . ExprLens._TFun . _1
+
+mkFuncParam :: EntityId -> Input.Payload m a -> info -> FuncParam info
+mkFuncParam paramEntityId lamExprPl info =
+    FuncParam
+    { _fpInfo = info
+    , _fpId = paramEntityId
+    , _fpAnnotation =
+        Annotation
+        { _aInferredType = lamParamType lamExprPl
+        , _aMEvaluationResult =
+            do
+                lamExprPl ^. Input.evalAppliesOfLam
+                    & Map.null & not & guard
+                lamExprPl ^.. Input.evalAppliesOfLam .
+                    Lens.traversed . Lens.traversed
+                    & Map.fromList & Just
+        }
+    , _fpHiddenIds = []
+    }
+
+convertNonRecordParam ::
+    MonadA m => Maybe V.Var ->
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m a)
 convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
     do
         mActions <- mStoredLam & Lens._Just %%~ makeNonRecordParamActions mRecursiveVar
         let funcParam =
-                FuncParam
-                { _fpInfo =
-                  NamedParamInfo
-                  { _npiName = UniqueId.toGuid param
-                  , _npiMActions = fst <$> mActions
-                  }
-                , _fpId = paramEntityId
-                , _fpAnnotation =
-                    Annotation
-                    { _aInferredType = paramType
-                    , _aMEvaluationResult =
-                        do
-                            lamExprPl ^. Input.evalAppliesOfLam
-                                & Map.null & not & guard
-                            lamExprPl ^.. Input.evalAppliesOfLam .
-                                Lens.traversed . Lens.traversed
-                                & Map.fromList & Just
-                    }
-                , _fpHiddenIds = []
-                }
+                case lamParamType lamExprPl of
+                T.TRecord T.CEmpty
+                    | isParamUnused lam ->
+                      mActions
+                      <&> (^. _1 . fpDelete)
+                      <&> void
+                      <&> NullParamActions
+                      & NullParamInfo
+                      & mkFuncParam paramEntityId lamExprPl & NullParam
+                _ ->
+                    NamedParamInfo
+                    { _npiName = UniqueId.toGuid param
+                    , _npiMActions = mActions <&> fst
+                    } & mkFuncParam paramEntityId lamExprPl & VarParam
         pure ConventionalParams
             { cpTags = mempty
             , cpParamInfos = Map.empty
-            , _cpParams = VarParam funcParam
+            , _cpParams = funcParam
             , cpMAddFirstParam = mActions <&> snd
             , cpScopes = lamExprPl ^. Input.evalAppliesOfLam <&> map fst
             , cpMLamParam = Just param
@@ -471,9 +464,6 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
     where
         mStoredLam = mkStoredLam lam lamExprPl
         paramEntityId = EntityId.ofLambdaParam param
-        paramType =
-            fromMaybe (error "Lambda value not inferred to a function type?!") $
-            lamExprPl ^? Input.inferred . Infer.plType . ExprLens._TFun . _1
 
 isParamAlwaysUsedWithGetField :: V.Lam (Val a) -> Bool
 isParamAlwaysUsedWithGetField (V.Lam param body) =
@@ -506,9 +496,6 @@ convertLamParams mRecursiveVar lambda lambdaPl =
     do
         tagsInOuterScope <- ConvertM.readContext <&> Map.keysSet . (^. ConvertM.scTagParamInfos)
         case lambdaPl ^. Input.inferred . Infer.plType of
-            T.TFun (T.TRecord T.CEmpty) _
-                | isParamUnused lambda ->
-                    convertNullParam mRecursiveVar lambda lambdaPl
             T.TFun (T.TRecord composite) _
                 | Nothing <- extension
                 , ListUtils.isLengthAtLeast 2 fields

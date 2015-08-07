@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
 module Lamdu.GUI.ParamEdit
-    ( make
+    ( Info(..), make
     , eventMapAddFirstParam
     , diveToNameEdit
     ) where
@@ -21,7 +21,6 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Prelude.Compat
@@ -69,24 +68,24 @@ eventMapAddFirstParam config (Just addFirstParam) =
 eventMapAddNextParam ::
     Functor m =>
     Config ->
-    Maybe (Sugar.FuncParamActions m) ->
+    Maybe (T m Sugar.ParamAddResult) ->
     Widget.EventHandlers (T m)
 eventMapAddNextParam _ Nothing = mempty
-eventMapAddNextParam config (Just actions) =
-    actions ^. Sugar.fpAddNext
+eventMapAddNextParam config (Just fpAdd) =
+    fpAdd
     <&> chooseAddResultEntityId
     & E.keyPresses (Config.addNextParamKeys config)
         (E.Doc ["Edit", "Add next parameter"])
 
 eventParamDelEventMap ::
     MonadA m =>
-    Maybe (Sugar.FuncParamActions m) ->
+    Maybe (T m Sugar.ParamDelResult) ->
     [ModKey] -> String -> Widget.Id ->
     Widget.EventHandlers (T m)
 eventParamDelEventMap Nothing _ _ _ = mempty
-eventParamDelEventMap (Just actions) keys docSuffix dstPosId =
+eventParamDelEventMap (Just fpDel) keys docSuffix dstPosId =
     do
-        res <- actions ^. Sugar.fpDelete
+        res <- fpDel
         let widgetIdMap =
                 case res of
                 Sugar.ParamDelResultTagsToVar Sugar.TagsToVar {..} ->
@@ -99,35 +98,37 @@ eventParamDelEventMap (Just actions) keys docSuffix dstPosId =
     & E.keyPresses keys
         (E.Doc ["Edit", "Delete parameter" ++ docSuffix])
 
+data Info m = Info
+    { iMakeNameEdit :: Widget.Id -> ExprGuiM m (ExpressionGui m)
+    , iMDel :: Maybe (T m Sugar.ParamDelResult)
+    , iMAddNext :: Maybe (T m Sugar.ParamAddResult)
+    }
+
 -- exported for use in definition sugaring.
 make ::
     MonadA m =>
     ExpressionGui.AnnotationOptions ->
     ExprGuiT.ShowAnnotation -> Widget.Id -> Widget.Id ->
-    Sugar.FuncParam (Sugar.NamedParamInfo (Name m) m) ->
-    ExprGuiM m (ExpressionGui m)
+    Sugar.FuncParam (Info m) -> ExprGuiM m (ExpressionGui m)
 make annotationOpts showType prevId nextId param =
     assignCursor $
     do
         config <- ExprGuiM.readConfig
         let paramEventMap = mconcat
-                [ eventParamDelEventMap mActions (Config.delForwardKeys config) "" nextId
-                , eventParamDelEventMap mActions (Config.delBackwardKeys config) " backwards" prevId
-                , eventMapAddNextParam config mActions
+                [ eventParamDelEventMap mFpDel (Config.delForwardKeys config) "" nextId
+                , eventParamDelEventMap mFpDel (Config.delBackwardKeys config) " backwards" prevId
+                , eventMapAddNextParam config mFpAdd
                 ]
-        paramNameEdit <-
-            ExpressionGui.makeNameOriginEdit (param ^. Sugar.fpInfo . Sugar.npiName) myId
-            <&> Widget.weakerEvents paramEventMap
-            <&> ExpressionGui.fromValueWidget
-        paramNameEdit
-            & ExpressionGui.egAlignment . _1 .~ 0.5
-            & ExpressionGui.maybeAddAnnotationWith annotationOpts showType
+        makeNameEdit myId
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap
+            <&> ExpressionGui.egAlignment . _1 .~ 0.5
+            >>= ExpressionGui.maybeAddAnnotationWith annotationOpts showType
                 (param ^. Sugar.fpAnnotation)
                 (param ^. Sugar.fpId)
     where
         entityId = param ^. Sugar.fpId
         myId = WidgetIds.fromEntityId entityId
-        mActions = param ^. Sugar.fpInfo . Sugar.npiMActions
+        Info makeNameEdit mFpDel mFpAdd = param ^. Sugar.fpInfo
         hiddenIds = map WidgetIds.fromEntityId $ param ^. Sugar.fpHiddenIds
         assignCursor x =
             foldr (`ExprGuiM.assignCursorPrefix` const myId) x hiddenIds

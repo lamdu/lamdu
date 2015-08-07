@@ -66,6 +66,7 @@ module Lamdu.Sugar.Types
     , AnnotatedArg(..), aaTag, aaExpr
     , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
     , NamedParamInfo(..), npiName, npiMActions
+    , NullParamInfo(..), nullParamInfoMActions
     , FuncParam(..), fpId, fpInfo, fpAnnotation, fpHiddenIds
     , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
@@ -181,13 +182,21 @@ data NamedParamInfo name m = NamedParamInfo
     , _npiMActions :: Maybe (FuncParamActions m)
     }
 
+newtype NullParamActions m = NullParamActions
+    { _npDeleteLambda :: T m ()
+    }
+
+data NullParamInfo m = NullParamInfo
+    { _nullParamInfoMActions :: Maybe (NullParamActions m)
+    }
+
 data FuncParam info = FuncParam
     { _fpId :: EntityId
     , _fpAnnotation :: Annotation
     , _fpInfo :: info
     , -- Sometimes the Lambda disappears in Sugar, the Param "swallows" its id
       _fpHiddenIds :: [EntityId]
-    }
+    } deriving (Functor, Foldable, Traversable)
 
 data TagG name = TagG
     { _tagInstance :: EntityId -- Unique across different uses of a tag
@@ -447,17 +456,13 @@ data BinderActions m = BinderActions
     , _baAddInnermostLetItem :: T m EntityId
     }
 
-newtype NullParamActions m = NullParamActions
-    { _npDeleteLambda :: T m ()
-    }
-
 data BinderParams name m
     = -- a definition or where-item without parameters
       DefintionWithoutParams
     | -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
-      NullParam (Maybe (NullParamActions m))
+      NullParam (FuncParam (NullParamInfo m))
     | VarParam (FuncParam (NamedParamInfo name m))
     | FieldParams [(T.Tag, FuncParam (NamedParamInfo name m))]
 
@@ -548,6 +553,7 @@ Lens.makeLenses ''TagG
 Lens.makeLenses ''LetItem
 Lens.makeLenses ''LetItemActions
 Lens.makeLenses ''NullParamActions
+Lens.makeLenses ''NullParamInfo
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
