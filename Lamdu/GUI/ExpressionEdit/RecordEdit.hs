@@ -58,7 +58,7 @@ make rec@(Sugar.Record fields recordTail mAddField) pl =
             do
                 fieldsGui <-
                     makeFieldsWidget fields myId
-                    <&> if addBg then pad config else id
+                    >>= if addBg then ExpressionGui.addValPadding else return
                 case recordTail of
                     Sugar.ClosedRecord mDeleteTail ->
                         fieldsGui
@@ -137,7 +137,8 @@ makeOpenRecord fieldsGui rest animId =
     do
         config <- ExprGuiM.readConfig
         vspace <- ExpressionGui.verticalSpace
-        restExpr <- ExprGuiM.makeSubexpression 0 rest <&> pad config
+        restExpr <-
+            ExprGuiM.makeSubexpression 0 rest >>= ExpressionGui.addValPadding
         let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.width
         [ fieldsGui
             , separationBar config (max minWidth targetWidth) animId
@@ -146,9 +147,6 @@ makeOpenRecord fieldsGui rest animId =
             ] & ExpressionGui.vboxTopFocal & return
     where
         targetWidth = fieldsGui ^. ExpressionGui.egWidget . Widget.width
-
-pad :: Config -> ExpressionGui m -> ExpressionGui m
-pad config = ExpressionGui.pad $ realToFrac <$> Config.valFramePadding config
 
 recordOpenEventMap ::
     MonadA m =>

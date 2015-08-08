@@ -108,7 +108,7 @@ makeTFun parentPrecedence a b =
     & sequence
     <&> hbox
     >>= parens parentPrecedence (MyPrecedence 0)
-    >>= addPadding
+    >>= addValPadding
 
 makeTInst :: MonadA m => ParentPrecedence -> T.Id -> Map T.ParamId Type -> M m View
 makeTInst _parentPrecedence tid typeParams =
@@ -116,7 +116,7 @@ makeTInst _parentPrecedence tid typeParams =
         nameView <-
             Anchors.assocNameRef tid & Transaction.getP & transaction >>= text
         space <- mkSpace
-        let afterName paramsView = addPadding $ hbox [nameView, space, paramsView]
+        let afterName paramsView = addValPadding $ hbox [nameView, space, paramsView]
             makeTypeParam (T.ParamId tParamId, arg) =
                 do
                     paramIdView <- showIdentifier tParamId
@@ -137,15 +137,12 @@ makeTInst _parentPrecedence tid typeParams =
                 >>= addBackgroundFrame
                 >>= afterName
 
-addPadding :: MonadA m => View -> M m View
-addPadding view =
+addValPadding :: MonadA m => View -> M m View
+addValPadding view =
     do
         config <- egui ExprGuiM.readConfig
         let padding = realToFrac <$> Config.valFramePadding config
-        view
-            & View.animFrame %~ Anim.translate padding
-            & View.size +~ 2 * padding
-            & return
+        View.pad padding view & return
 
 addBGColor :: MonadA m => View -> M m View
 addBGColor view =
@@ -159,7 +156,7 @@ addBGColor view =
             & return
 
 addBackgroundFrame :: MonadA m => View -> M m View
-addBackgroundFrame v = v & addPadding >>= addBGColor
+addBackgroundFrame v = v & addValPadding >>= addBGColor
 
 makeEmptyRecord :: MonadA m => M m View
 makeEmptyRecord = text "Ø"

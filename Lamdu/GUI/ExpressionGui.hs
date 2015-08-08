@@ -12,7 +12,7 @@ module Lamdu.GUI.ExpressionGui
     , listWithDelDests
     , makeLabel
     , grammarLabel
-    , addValBG, addValFrame
+    , addValBG, addValFrame, addValPadding
     -- Lifted widgets:
     , makeFocusableView
     , makeNameView
@@ -392,14 +392,15 @@ addValBG myId gui =
     where
         animId = Widget.toAnimId myId ++ ["val"]
 
+addValPadding :: MonadA m => ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+addValPadding gui =
+    do
+        padding <- ExprGuiM.readConfig <&> Config.valFramePadding
+        pad (padding <&> realToFrac) gui & return
+
 addValFrame ::
     MonadA m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addValFrame myId gui =
-    do
-        config <- ExprGuiM.readConfig
-        gui
-            & pad (realToFrac <$> Config.valFramePadding config)
-            & egWidget %%~ addValBG myId
+addValFrame myId gui = addValPadding gui >>= egWidget %%~ addValBG myId
 
 stdWrapParenify ::
     MonadA m =>

@@ -115,10 +115,10 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
         vspace <- ExpressionGui.verticalSpace
         [header, vspace, altsGui]
             & ExpressionGui.vboxTopFocalAlignedTo 0
-            & pad config
-            & ExpressionGui.egWidget %~
-              Widget.weakerEvents (addAltEventMap mAddAlt)
-            & ExpressionGui.egWidget %%~ ExpressionGui.addValBG myId
+            & ExpressionGui.addValPadding
+            <&> ExpressionGui.egWidget %~
+                Widget.weakerEvents (addAltEventMap mAddAlt)
+            >>= ExpressionGui.egWidget %%~ ExpressionGui.addValBG myId
 
 makeAltRow ::
     MonadA m =>
@@ -176,7 +176,8 @@ makeOpenCase rest animId altsGui =
     do
         config <- ExprGuiM.readConfig
         vspace <- ExpressionGui.verticalSpace
-        restExpr <- ExprGuiM.makeSubexpression 0 rest <&> pad config
+        restExpr <-
+            ExprGuiM.makeSubexpression 0 rest >>= ExpressionGui.addValPadding
         let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.width
         [ altsGui
             , separationBar config (max minWidth targetWidth) animId
@@ -185,9 +186,6 @@ makeOpenCase rest animId altsGui =
             ] & ExpressionGui.vboxTopFocal & return
     where
         targetWidth = altsGui ^. ExpressionGui.egWidget . Widget.width
-
-pad :: Config -> ExpressionGui m -> ExpressionGui m
-pad config = ExpressionGui.pad $ realToFrac <$> Config.valFramePadding config
 
 caseOpenEventMap ::
     MonadA m =>
