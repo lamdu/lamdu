@@ -124,6 +124,7 @@ evalApply (V.Apply (Right func) argEr) =
             | caseTag == sumTag -> V.Apply handlerFunc injected & evalApply
             | otherwise         -> V.Apply rest        argEr    & evalApply
         Right x -> EvalTypeError ("Case expects Inject, found: " ++ show (void x)) & Left & return
+    HAbsurd -> EvalAbsurd & Left & return
     _ ->
         "Apply expects func, builtin, or case, found: " ++ show (void func)
         & EvalTypeError & Left & return

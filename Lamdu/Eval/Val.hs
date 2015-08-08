@@ -37,6 +37,9 @@ data Closure pl = Closure
 
 data EvalError
     = EvalHole
+    | EvalAbsurd
+      -- Value of type Void constructed (or a type-error was
+      -- constructed)
     | EvalTypeError String
     | EvalLoadGlobalFailed V.GlobalId
     | EvalTodoError String
