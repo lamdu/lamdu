@@ -63,18 +63,18 @@ makeFuncRow outerPrecedence (Sugar.Apply func specialArgs annotatedArgs) pl =
                 <&> overrideModifyEventMap
             Sugar.ObjectArg arg ->
                 sequenceA
-                [ ExprGuiM.makeSubexpression
-                    outerPrecedence { ExpressionGui.precRight = prefixPrecedence+1 }
-                    func
-                    <&> if null annotatedArgs
-                        then id
-                        else overrideModifyEventMap
-                , ExprGuiM.makeSubexpression
-                    ( outerPrecedence { ExpressionGui.precLeft = prefixPrecedence }
-                    )
-                    arg
+                [ ExprGuiM.makeSubexpression funcPrec func <&> onFunc
+                , ExprGuiM.makeSubexpression argPrec arg
                 ]
                 >>= ExpressionGui.hboxSpaced
+                where
+                    (funcPrec, argPrec, onFunc)
+                        | null annotatedArgs =
+                            ( outerPrecedence { ExpressionGui.precRight = prefixPrecedence+1 }
+                            , outerPrecedence { ExpressionGui.precLeft = prefixPrecedence }
+                            , id
+                            )
+                        | otherwise = (0, 0, overrideModifyEventMap)
             Sugar.InfixArgs prec l r ->
                 sequenceA
                 [ ExprGuiM.makeSubexpression
