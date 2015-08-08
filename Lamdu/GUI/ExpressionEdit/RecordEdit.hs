@@ -144,7 +144,7 @@ makeOpenRecord fieldsGui rest animId =
             , separationBar config (max minWidth targetWidth) animId
             , vspace
             , restExpr
-            ] & ExpressionGui.vboxTopFocal & return
+            ] & ExpressionGui.vboxTopFocalAlignedTo 0 & return
     where
         targetWidth = fieldsGui ^. ExpressionGui.egWidget . Widget.width
 

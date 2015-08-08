@@ -183,7 +183,7 @@ makeOpenCase rest animId altsGui =
             , separationBar config (max minWidth targetWidth) animId
             , vspace
             , restExpr
-            ] & ExpressionGui.vboxTopFocal & return
+            ] & ExpressionGui.vboxTopFocalAlignedTo 0 & return
     where
         targetWidth = altsGui ^. ExpressionGui.egWidget . Widget.width
 
