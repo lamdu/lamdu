@@ -19,7 +19,6 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Eval.Val as EV
@@ -113,8 +112,8 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
                 <&> TagEdit.diveToCaseTag
                 & Widget.keysEventMapMovesCursor (Config.caseAddAltKeys config)
                   (E.Doc ["Edit", "Case", "Add Alt"])
-        vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
-        [header, ExpressionGui.fromValueWidget vspace, altsGui]
+        vspace <- ExpressionGui.verticalSpace
+        [header, vspace, altsGui]
             & ExpressionGui.vboxTopFocalAlignedTo 0
             & pad config
             & ExpressionGui.egWidget %~
@@ -155,10 +154,9 @@ makeAltsWidget _ [] myId =
     >>= ExpressionGui.makeFocusableView (Widget.joinId myId ["Ø"])
 makeAltsWidget mActiveTag alts _ =
     do
-        vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
+        vspace <- ExpressionGui.verticalSpace
         mapM (makeAltRow mActiveTag) alts
-            <&> List.intersperse
-                (replicate 3 (ExpressionGui.fromValueWidget vspace))
+            <&> List.intersperse (replicate 3 vspace)
             <&> ExpressionGui.gridTopLeftFocal
 
 separationBar :: Config -> Widget.R -> Anim.AnimId -> ExpressionGui m
@@ -177,12 +175,12 @@ makeOpenCase ::
 makeOpenCase rest animId altsGui =
     do
         config <- ExprGuiM.readConfig
-        vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
+        vspace <- ExpressionGui.verticalSpace
         restExpr <- ExprGuiM.makeSubexpression 0 rest <&> pad config
         let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.width
         [ altsGui
             , separationBar config (max minWidth targetWidth) animId
-            , ExpressionGui.fromValueWidget vspace
+            , vspace
             , restExpr
             ] & ExpressionGui.vboxTopFocal & return
     where

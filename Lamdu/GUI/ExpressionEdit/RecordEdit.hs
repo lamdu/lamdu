@@ -115,10 +115,9 @@ makeFieldsWidget [] myId =
         ExprGuiM.widgetEnv . BWidgets.makeFocusableView myId
 makeFieldsWidget fields _ =
     do
-        vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
+        vspace <- ExpressionGui.verticalSpace
         mapM makeFieldRow fields
-            <&> List.intersperse
-                (replicate 3 (ExpressionGui.fromValueWidget vspace))
+            <&> List.intersperse (replicate 3 vspace)
             <&> ExpressionGui.gridTopLeftFocal
 
 separationBar :: Config -> Widget.R -> Anim.AnimId -> ExpressionGui m
@@ -137,12 +136,12 @@ makeOpenRecord ::
 makeOpenRecord fieldsGui rest animId =
     do
         config <- ExprGuiM.readConfig
-        vspace <- ExprGuiM.widgetEnv BWidgets.verticalSpace
+        vspace <- ExpressionGui.verticalSpace
         restExpr <- ExprGuiM.makeSubexpression 0 rest <&> pad config
         let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.width
         [ fieldsGui
             , separationBar config (max minWidth targetWidth) animId
-            , ExpressionGui.fromValueWidget vspace
+            , vspace
             , restExpr
             ] & ExpressionGui.vboxTopFocal & return
     where
