@@ -4,9 +4,10 @@ module Graphics.UI.Bottle.View
     , empty
     , size, animFrame
     , width, height
-    , Size
+    , pad, assymetricPad
+    , Size, R
     , augmentAnimId, backgroundColor
-    , scale
+    , translate, scale
     ) where
 
 import           Prelude.Compat
@@ -17,7 +18,7 @@ import           Control.Lens.Tuple
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.UI.Bottle.Animation (AnimId, Layer)
+import           Graphics.UI.Bottle.Animation (AnimId, Layer, R)
 import qualified Graphics.UI.Bottle.Animation as Anim
 
 type Size = Anim.Size
@@ -36,10 +37,10 @@ size f View{..} = f _size <&> \_size -> View{..}
 animFrame :: Lens' View Anim.Frame
 animFrame f View{..} = f _animFrame <&> \_animFrame -> View{..}
 
-width :: Lens' View Anim.R
+width :: Lens' View R
 width = size . _1
 
-height :: Lens' View Anim.R
+height :: Lens' View R
 height = size . _2
 
 augmentAnimId :: Show a => AnimId -> a -> AnimId
@@ -55,3 +56,15 @@ backgroundColor animId layer color view =
 scale :: Vector2 Draw.R -> View -> View
 scale ratio (View sz frm) =
     View (sz*ratio) (Anim.scale ratio frm)
+
+pad :: Vector2 R -> View -> View
+pad p = assymetricPad p p
+
+translate :: Vector2 R -> View -> View
+translate pos = animFrame %~ Anim.translate pos
+
+assymetricPad :: Vector2 R -> Vector2 R -> View -> View
+assymetricPad leftAndTop rightAndBottom view =
+    view
+    & size +~ leftAndTop + rightAndBottom
+    & translate leftAndTop

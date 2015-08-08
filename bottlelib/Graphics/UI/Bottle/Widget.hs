@@ -231,7 +231,7 @@ translate pos widget =
     & mEnter . Lens._Just . Lens.mapped .
         enterResultRect . Rect.topLeft +~ pos
     & focalArea . Rect.topLeft +~ pos
-    & animFrame %~ Anim.translate pos
+    & view %~ View.translate pos
 
 scale :: Vector2 R -> Widget f -> Widget f
 scale mult widget =
