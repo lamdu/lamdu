@@ -184,16 +184,21 @@ convertVarToGetField tagForVar paramVar =
             <&> (`V.GetField` tagForVar) <&> V.BGetField
             >>= ExprIRef.writeValBody bodyI
 
+data NewParamPosition = NewParamBefore | NewParamAfter
+
 makeConvertToRecordParams ::
-    MonadA m => Maybe V.Var -> StoredLam m -> ConvertM m (T m ParamAddResult)
+    MonadA m => Maybe V.Var -> StoredLam m ->
+    ConvertM m (NewParamPosition -> T m ParamAddResult)
 makeConvertToRecordParams mRecursiveVar (StoredLam (V.Lam paramVar lamBody) lamProp) =
     do
         wrapOnError <- ConvertM.wrapOnTypeError
-        return $
+        return $ \newParamPosition ->
             do
                 tagForVar <- newTag
                 tagForNewVar <- newTag
-                setParamList paramList [tagForVar, tagForNewVar]
+                setParamList paramList $ case newParamPosition of
+                    NewParamBefore -> [tagForNewVar, tagForVar]
+                    NewParamAfter -> [tagForVar, tagForNewVar]
                 convertVarToGetField tagForVar paramVar lamBody
                 mRecursiveVar
                     & traverse_
@@ -401,10 +406,10 @@ makeNonRecordParamActions mRecursiveVar storedLam =
         convertToRecordParams <- makeConvertToRecordParams mRecursiveVar storedLam
         return
             ( FuncParamActions
-                { _fpAddNext = convertToRecordParams
+                { _fpAddNext = convertToRecordParams NewParamAfter
                 , _fpDelete = delete
                 }
-            , convertToRecordParams
+            , convertToRecordParams NewParamBefore
             )
 
 lamParamType :: Input.Payload m a -> Type
