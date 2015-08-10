@@ -51,7 +51,10 @@ loadForLambdas ::
 loadForLambdas (val, ctx) =
     do
         Lens.itraverseOf_ ExprLens.subExprPayloads loadLambdaParamList val
-        val & traverse . Input.inferred %%~ update & Update.run & State.gets
+        val
+            & traverse . Input.inferredType %%~ update
+            >>= traverse . Input.inferredScope %%~ update
+            & Update.run & State.gets
     & (`runStateT` ctx)
     where
         loadLambdaParamList (V.Val _ V.BAbs {}) pl = loadUnifyParamList pl
