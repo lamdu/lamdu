@@ -165,9 +165,9 @@ data Config = Config
     , extractKeys :: [ModKey]
 
     , typeTint :: Draw.Color
-    , typeBoxBGColor :: Draw.Color
     , valFrameBGColor :: Draw.Color
     , valFramePadding :: Vector2 Double
+    , valAnnotationBGColor :: Draw.Color
     , valAnnotationSpacing :: Double
     , typeFrameBGColor :: Draw.Color
     , verticalSpacing :: Double

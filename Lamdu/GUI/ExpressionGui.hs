@@ -163,7 +163,7 @@ annotationBackground config animId =
     where
         bgAnimId = animId ++ ["annotation background"]
         bgLayer = Config.layerAnnotations $ Config.layers config
-        bgColor = Config.typeBoxBGColor config
+        bgColor = Config.valAnnotationBGColor config
 
 data AnnotationParams = AnnotationParams
     { apMinWidth :: Widget.R
