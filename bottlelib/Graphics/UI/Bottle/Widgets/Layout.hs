@@ -13,7 +13,7 @@ module Graphics.UI.Bottle.Widgets.Layout
     , box, hbox, vbox
     , gridTopLeftFocal
 
-    , scaleFromTopLeft
+    , scaleAround
     , scale
     , pad
     , hoverInPlaceOf
@@ -201,11 +201,16 @@ gridTopLeftFocal rows@((_:_):_) =
 -- TODO: These functions and the AlignedWidget type could possibly be
 -- extracted to their own module?
 
-scaleFromTopLeft :: Vector2 Widget.R -> Layout f -> Layout f
-scaleFromTopLeft ratio =
+-- | scale = scaleAround 0.5
+--   scaleFromTopMiddle = scaleAround (Vector2 0.5 0)
+scaleAround :: Vector2 Widget.R -> Vector2 Widget.R -> Layout f -> Layout f
+scaleAround point ratio =
     alignedWidget %~ f
     where
-        f (alignment, widget) = (alignment / ratio, Widget.scale ratio widget)
+        f (alignment, widget) =
+            ( point + (alignment - point) / ratio
+            , Widget.scale ratio widget
+            )
 
 scale :: Vector2 Widget.R -> Layout g -> Layout g
 scale ratio = alignedWidget . _2 %~ Widget.scale ratio

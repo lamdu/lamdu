@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionGui
     ( ExpressionGui, egWidget, egAlignment
     -- General:
     , fromValueWidget, addBelow, addAbove
-    , scaleFromTop, scale
+    , scale
     , pad
     , stdSpace, verticalSpace
     , hbox, hboxSpaced
@@ -109,11 +109,6 @@ addBelow ::
     (Layout.AddLayout w, Layout.LayoutType w ~ ExpressionGui m) =>
     Widget.R -> [w] -> ExpressionGui m -> ExpressionGui m
 addBelow = alignAdd (Layout.addAfter Layout.Vertical)
-
--- | Scale the given ExpressionGui without moving its top alignment
--- point:
-scaleFromTop :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
-scaleFromTop = Layout.scaleFromTopLeft
 
 scale :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
 scale = Layout.scale
