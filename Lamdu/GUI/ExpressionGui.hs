@@ -149,10 +149,7 @@ vboxTopFocalSpaced guis =
 gridTopLeftFocal :: [[ExpressionGui m]] -> ExpressionGui m
 gridTopLeftFocal = Layout.gridTopLeftFocal
 
-annotationBackground ::
-    Config -> AnimId ->
-    ExpressionGui m ->
-    ExpressionGui m
+annotationBackground :: Config -> AnimId -> ExpressionGui m -> ExpressionGui m
 annotationBackground config animId =
     egWidget %~ Widget.backgroundColor bgLayer bgAnimId bgColor
     where
@@ -199,13 +196,6 @@ makeEvaluationResultView animId (scopeId, evalRes) =
     <&> Widget.fromView
     <&> fromValueWidget
 
-makeEvaluationResultViewBG ::
-    MonadA m => Config -> AnimId -> (ScopeId, EvalResult ()) ->
-    ExprGuiM m (ExpressionGui m)
-makeEvaluationResultViewBG config animId (scopeId, evalRes) =
-    makeEvaluationResultView animId (scopeId, evalRes)
-    <&> annotationBackground config (animId ++ [encodeS scopeId])
-
 makeTypeView ::
     MonadA m => Type -> AnnotationParams -> ExprGuiM m (ExpressionGui m)
 makeTypeView typ =
@@ -222,9 +212,12 @@ makeEvalView (mPrev, mNext) evalRes =
         do
             config <- ExprGuiM.readConfig
             let Config.Eval{..} = Config.eval config
+            let makeEvaluationResultViewBG (scopeId, res) =
+                    makeEvaluationResultView animId (scopeId, res)
+                    <&> annotationBackground config (animId ++ [encodeS scopeId])
             let neighbourViews n =
                     n ^.. Lens._Just
-                    <&> makeEvaluationResultViewBG config animId
+                    <&> makeEvaluationResultViewBG
                     <&> Lens.mapped %~
                         pad (neighborsPadding <&> realToFrac) .
                         scale (neighborsScaleFactor <&> realToFrac)
