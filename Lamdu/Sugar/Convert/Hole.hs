@@ -133,7 +133,7 @@ mkHoleSuggesteds ::
     ConvertM.Context m -> Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ExprIRef.ValIProperty m -> [HoleOption Guid m]
 mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
-    exprPl ^. Input.inferred . Infer.plType
+    exprPl ^. Input.inferredType
     & Suggest.value <&> void
     <&> mkHoleOption sugarContext mInjectedArg exprPl stored
 
@@ -162,7 +162,7 @@ mkOptions sugarContext mInjectedArg exprPl stored =
             sugarContext ^. ConvertM.scCodeAnchors
             & Anchors.globals & Transaction.getP
         concat
-            [ exprPl ^. Input.inferred . Infer.plScope
+            [ exprPl ^. Input.inferredScope
                 & Infer.scopeToTypeMap
                 & Map.keys
                 & concatMap (getLocalScopeGetVars sugarContext)
@@ -535,7 +535,7 @@ holeResultsInject injectedArg val =
                     <&> onInjectedPayload
                     & V.payload . _2 . _2 .~ Injected
                 )
-        injectedType = injectedArg ^. V.payload . Input.inferred . Infer.plType
+        injectedType = injectedArg ^. V.payload . Input.inferredType
 
 mkHoleResultValInjected ::
     MonadA m =>
@@ -596,7 +596,7 @@ mkHoleResult sugarContext entityId stored val =
                 ( consistentExpr <&>
                     \input ->
                     ( input ^. Input.entityId
-                    , input ^. Input.inferred . Infer.plType
+                    , input ^. Input.inferredType
                     ) )
                 (writtenExpr <&> EntityId.ofValI . Property.value . fst)
             }

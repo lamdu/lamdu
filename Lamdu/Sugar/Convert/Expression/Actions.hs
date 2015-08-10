@@ -15,7 +15,6 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
-import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -78,7 +77,7 @@ addActions exprPl body =
 makeAnnotation :: Input.Payload m a -> Annotation
 makeAnnotation payload =
     Annotation
-    { _aInferredType = payload ^. Input.inferred . Infer.plType
+    { _aInferredType = payload ^. Input.inferredType
     , _aMEvaluationResult =
         do
             payload ^. Input.evalResults & Map.null & not & guard

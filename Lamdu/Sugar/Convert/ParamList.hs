@@ -68,10 +68,8 @@ loadForLambdas (val, ctx) =
                         Nothing -> return ()
                         Just paramList ->
                             do
-                                funcType <- mkFuncType inferred paramList
-                                unify typ funcType
+                                funcType <-
+                                    mkFuncType (pl ^. Input.inferred) paramList
+                                unify (pl ^. Input.inferredType) funcType
                             & Infer.run
                             & mapStateT IRefInfer.toEitherT
-            where
-                inferred = pl ^. Input.inferred
-                typ = inferred ^. Infer.plType

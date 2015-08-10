@@ -15,7 +15,6 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
-import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import qualified Lamdu.Sugar.Convert.Case as ConvertCase
@@ -65,7 +64,7 @@ convertGetVar param exprPl =
     do
         sugarContext <- ConvertM.readContext
         ConvertGetVar.convertVar sugarContext param
-            (exprPl ^. Input.inferred . Infer.plType)
+            (exprPl ^. Input.inferredType)
             & BodyGetVar
             & addActions exprPl
 

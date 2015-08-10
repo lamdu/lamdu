@@ -37,7 +37,6 @@ import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
-import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -415,7 +414,7 @@ makeNonRecordParamActions mRecursiveVar storedLam =
 lamParamType :: Input.Payload m a -> Type
 lamParamType lamExprPl =
     fromMaybe (error "Lambda value not inferred to a function type?!") $
-    lamExprPl ^? Input.inferred . Infer.plType . ExprLens._TFun . _1
+    lamExprPl ^? Input.inferredType . ExprLens._TFun . _1
 
 mkFuncParam :: EntityId -> Input.Payload m a -> info -> FuncParam info
 mkFuncParam paramEntityId lamExprPl info =
@@ -500,7 +499,7 @@ convertLamParams ::
 convertLamParams mRecursiveVar lambda lambdaPl =
     do
         tagsInOuterScope <- ConvertM.readContext <&> Map.keysSet . (^. ConvertM.scTagParamInfos)
-        case lambdaPl ^. Input.inferred . Infer.plType of
+        case lambdaPl ^. Input.inferredType of
             T.TFun (T.TRecord composite) _
                 | Nothing <- extension
                 , ListUtils.isLengthAtLeast 2 fields

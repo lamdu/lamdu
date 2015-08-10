@@ -143,9 +143,6 @@ checkTypeMatch x y =
         inferContext <- (^. ConvertM.scInferContext) <$> ConvertM.readContext
         return $ Lens.has Lens._Right $ evalStateT (Infer.run (unify x y)) inferContext
 
-ipType :: Lens.Lens' (Input.Payload m a) Type
-ipType = Input.inferred . Infer.plType
-
 mkAppliedHoleOptions ::
     MonadA m =>
     ConvertM.Context m ->
@@ -180,8 +177,8 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl stored =
     <&> Lens.mapped %~
         ConvertHole.mkHoleOptionFromInjected sugarContext exprPl stored
     where
-        onPl pl = (pl ^. Input.inferred . Infer.plType, Just pl)
-        dstType = exprPl ^. Input.inferred . Infer.plType
+        onPl pl = (pl ^. Input.inferredType, Just pl)
+        dstType = exprPl ^. Input.inferredType
 
 convertAppliedHole ::
     (MonadA m, Monoid a) =>
@@ -191,7 +188,9 @@ convertAppliedHole ::
 convertAppliedHole (V.Apply funcI argI) argS exprPl =
     do
         guard $ Lens.has ExprLens.valHole funcI
-        isTypeMatch <- lift $ checkTypeMatch (argI ^. V.payload . ipType) (exprPl ^. ipType)
+        isTypeMatch <-
+            checkTypeMatch (argI ^. V.payload . Input.inferredType)
+            (exprPl ^. Input.inferredType) & lift
         let argWrap =
                 exprPl ^. Input.mStored
                 & maybe WrapNotAllowed (WrappedAlready . addEntityId)

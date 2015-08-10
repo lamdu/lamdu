@@ -2,6 +2,7 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Sugar.Convert.Input
     ( Payload(..), entityId, inferred, mStored, evalResults, evalAppliesOfLam, userData
+    , inferredType, inferredScope
     , mkPayload, mkUnstoredPayload
     ) where
 
@@ -16,6 +17,7 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import           Lamdu.Eval.Val (EvalResult, ScopeId)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.EntityId (EntityId)
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -35,6 +37,12 @@ entityId f Payload{..} = f _entityId <&> \_entityId -> Payload{..}
 
 inferred :: Lens' (Payload m a) Infer.Payload
 inferred f Payload{..} = f _inferred <&> \_inferred -> Payload{..}
+
+inferredType :: Lens' (Payload m a) Type
+inferredType = inferred . Infer.plType
+
+inferredScope :: Lens' (Payload m a) Infer.Scope
+inferredScope = inferred . Infer.plScope
 
 mStored :: Lens' (Payload m a) (Maybe (ExprIRef.ValIProperty m))
 mStored f Payload{..} = f _mStored <&> \_mStored -> Payload{..}

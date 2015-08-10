@@ -120,7 +120,7 @@ convert evalMap cp (Definition.Expr val defType) defI =
             , _deTypeInfo =
                 makeExprDefTypeInfo exprI defI defType $
                 Infer.makeScheme newInferContext $
-                valInferred ^. V.payload . Input.inferred . Infer.plType
+                valInferred ^. V.payload . Input.inferredType
             }
     where
         addStoredEntityIds x =
