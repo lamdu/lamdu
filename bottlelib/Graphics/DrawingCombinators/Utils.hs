@@ -4,7 +4,7 @@ module Graphics.DrawingCombinators.Utils
     ( Image
     , square
     , textHeight, textSize
-    , textLinesWidth, textLinesHeight, textLinesSize
+    , textLinesSize
     , drawText, drawTextLines
     , backgroundColor
     , scale, translate
