@@ -13,7 +13,7 @@ module Lamdu.GUI.ExpressionGui
     , makeLabel
     , grammarLabel
     , addValBG, addValFrame, addValPadding
-    , isExprSelected
+    , isExprSelected, liftLayers
     -- Lifted widgets:
     , makeFocusableView
     , makeNameView
@@ -412,6 +412,10 @@ isExprSelected pl cursor =
     WidgetIds.fromExprPayload pl
     & (`Widget.subId` cursor)
     & Lens.has Lens._Just
+
+liftLayers :: MonadA m => ExpressionGui n -> ExprGuiM m (ExpressionGui n)
+liftLayers =
+    egWidget %%~ ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
 
 addValFrame ::
     MonadA m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)

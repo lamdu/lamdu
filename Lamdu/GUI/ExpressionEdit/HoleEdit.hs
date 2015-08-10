@@ -9,7 +9,6 @@ import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
@@ -63,10 +62,6 @@ assignHoleCursor WidgetIds{..} (Just _) =
     ExprGuiM.assignCursor hidHole hidWrapper .
     ExprGuiM.assignCursor (WidgetIds.notDelegatingId hidHole) hidWrapper
 
-liftLayers :: MonadA m => ExpressionGui n -> ExprGuiM m (ExpressionGui n)
-liftLayers =
-    ExpressionGui.egWidget %%~ ExprGuiM.widgetEnv . BWidgets.liftLayerInterval
-
 addSearchAreaBelow ::
     MonadA m => WidgetIds ->
     ExpressionGui f -> ExpressionGui f ->
@@ -77,7 +72,7 @@ addSearchAreaBelow WidgetIds{..} wrapperGui searchAreaGui =
             searchAreaGui
             & addDarkBackground
                 (Widget.toAnimId hidOpen ++ ["searchAreaDarkBg"])
-            >>= liftLayers
+            >>= ExpressionGui.liftLayers
         wrapperGui
             & Layout.addAfter Layout.Vertical [hoveringSearchArea]
             & return
@@ -93,7 +88,7 @@ addWrapperAbove WidgetIds{..} wrapperGui searchAreaGui =
             addDarkBackground (Widget.toAnimId hidWrapper ++ ["wrapperDarkBg"])
             wrapperGui
             <&> Layout.scale (holeHoveringWrapperScaleFactor <&> realToFrac)
-            >>= liftLayers
+            >>= ExpressionGui.liftLayers
         searchAreaGui
             & Layout.addBefore Layout.Vertical [hoveringWrapper]
             & return
