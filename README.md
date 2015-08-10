@@ -1,4 +1,4 @@
-# Project Lamdu
+# Lamdu [![Build Status](https://travis-ci.org/rvion/lamdu.svg)](https://travis-ci.org/rvion/lamdu)
 
 [![Join the chat at https://gitter.im/lamdu/lamdu](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/lamdu/lamdu?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
