@@ -5,6 +5,7 @@ module Graphics.UI.Bottle.Widgets.TextView
 
     , make, makeWidget
     , label
+    , RenderedText(..), renderedTextSize
     , drawTextAsSingleLetters, drawTextAsLines
     , letterRects
     ) where
@@ -39,68 +40,75 @@ Lens.makeLenses ''Style
 lineHeight :: Style -> Widget.R
 lineHeight Style{..} = SizedFont.textHeight _styleFont
 
-fontRender :: Style -> String -> (Draw.Image (), Size)
+data RenderedText a = RenderedText
+    { _renderedTextSize :: Size
+    , renderedText :: a
+    }
+
+Lens.makeLenses ''RenderedText
+
+fontRender :: Style -> String -> RenderedText (Draw.Image ())
 fontRender Style{..} str =
-    ( str
+    RenderedText
+    { _renderedTextSize = SizedFont.textSize _styleFont str
+    , renderedText =
+      str
       & SizedFont.render _styleFont
       & Draw.tint _styleColor
-    , str
-      & SizedFont.textSize _styleFont
-    )
+    }
 
 drawMany ::
     (Size -> Size) ->
-    [(AnimId -> Anim.Frame, Size)] ->
-    (AnimId -> Anim.Frame, Size)
+    [RenderedText (AnimId -> Anim.Frame)] ->
+    RenderedText (AnimId -> Anim.Frame)
 drawMany sizeToTranslate =
-    foldl' step (mempty, 0)
+    foldl' step (RenderedText 0 mempty)
     where
-        step (drawAcc, sizeAcc) (drawX, sizeX) =
-            (mappend drawAcc $ Anim.translate trans . drawX,
-             liftA2 max sizeAcc $ trans + sizeX)
+        step (RenderedText sizeAcc drawAcc) (RenderedText sizeX drawX) =
+            RenderedText
+            (liftA2 max sizeAcc (trans + sizeX))
+            (mappend drawAcc (Anim.translate trans . drawX))
             where
                 trans = sizeToTranslate sizeAcc
 
 joinLines ::
-    [(AnimId -> Anim.Frame, Size)] ->
-    (AnimId -> Anim.Frame, Size)
+    [RenderedText (AnimId -> Anim.Frame)] ->
+    RenderedText (AnimId -> Anim.Frame)
 joinLines =
     drawMany vertical
     where
         vertical = _1 .~ 0
 
 nestedFrame ::
-    Show a => (a, (Draw.Image (), Size)) -> (AnimId -> Anim.Frame, Size)
-nestedFrame (i, (image, size)) =
-    (draw, size)
+    Show a => (a, RenderedText (Draw.Image ())) -> RenderedText (AnimId -> Anim.Frame)
+nestedFrame (i, RenderedText size img) =
+    RenderedText size draw
     where
-        draw animId =
-            Anim.sizedFrame (View.augmentAnimId animId i) size image
+        draw animId = Anim.sizedFrame (View.augmentAnimId animId i) size img
 
-drawTextAsSingleLetters ::
-    Style -> String -> (AnimId -> Anim.Frame, Size)
+drawTextAsSingleLetters :: Style -> String -> RenderedText (AnimId -> Anim.Frame)
 drawTextAsSingleLetters style text =
     text ^@.. Lens.traversed
     & splitWhen ((== '\n') . snd)
     <&> Lens.mapped . _2 %~ renderLetter
     <&> Lens.mapped %~ nestedFrame
     <&> drawMany horizontal
-    <&> _2 %~ max minLineSize
+    <&> renderedTextSize . _2 %~ max minLineSize
     & joinLines
     where
-        (_, minLineSize) = fontRender style ""
+        minLineSize = SizedFont.textHeight (_styleFont style)
         horizontal = _2 .~ 0
         renderLetter = fontRender style . (:[])
 
 -- | Returns at least one rect
 letterRects :: Style -> String -> [[Rect]]
-letterRects style text =
+letterRects Style{..} text =
     zipWith locateLineHeight (iterate (+ height) 0) textLines
     where
         -- splitWhen returns at least one string:
         textLines = map makeLine $ splitWhen (== '\n') text
         locateLineHeight y = Lens.mapped . Rect.top +~ y
-        (_, Vector2 _ height) = fontRender style ""
+        height = SizedFont.textHeight _styleFont
         makeLine textLine =
             sizes
             <&> (^. _1)
@@ -108,10 +116,10 @@ letterRects style text =
             & scanl (+) 0
             & zipWith makeLetterRect sizes
             where
-                sizes = textLine <&> snd . fontRender style . (:[])
+                sizes = textLine <&> SizedFont.textSize _styleFont . (:[])
                 makeLetterRect size xpos = Rect (Vector2 xpos 0) size
 
-drawTextAsLines :: Style -> String -> (AnimId -> Anim.Frame, Size)
+drawTextAsLines :: Style -> String -> RenderedText (AnimId -> Anim.Frame)
 drawTextAsLines style text =
     splitWhen (== '\n') text ^@.. Lens.traversed
     <&> _1 %~ (,) "Line"
@@ -122,7 +130,7 @@ drawTextAsLines style text =
 make :: Style -> String -> AnimId -> View
 make style text animId = View textSize (frame animId)
     where
-        (frame, textSize) = drawTextAsLines style text
+        RenderedText textSize frame = drawTextAsLines style text
 
 makeWidget :: Style -> String -> AnimId -> Widget a
 makeWidget style text = Widget.fromView . make style text

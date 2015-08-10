@@ -191,7 +191,7 @@ makeFocused cursorBGAnimId cursor Style{..} str myId =
         myAnimId = Widget.toAnimId myId
         img = cursorTranslate Style{..} $ frameGen myAnimId
         displayStr = makeDisplayStr _sEmptyFocusedString str
-        (frameGen, Vector2 tlWidth tlHeight) =
+        (TextView.RenderedText (Vector2 tlWidth tlHeight) frameGen) =
             TextView.drawTextAsSingleLetters _sTextViewStyle displayStr
 
         cursorRect = mkCursorRect Style{..} cursor str
@@ -210,7 +210,7 @@ mkCursorRect Style{..} cursor str = Rect cursorPos cursorSize
         cursorSize = Vector2 _sCursorWidth lineHeight
         cursorPosX =
             TextView.drawTextAsSingleLetters _sTextViewStyle (last beforeCursorLines) ^.
-            _2 . _1
+            TextView.renderedTextSize . _1
         cursorPosY = lineHeight * (genericLength beforeCursorLines - 1)
 
 eventMap ::
