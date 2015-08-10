@@ -68,11 +68,15 @@ valueConversionNoSplit empty loadNominal src dstType =
                     V.Nom name src & V.BFromNom & V.Val (fromNomType, empty)
             valueConversionNoSplit empty loadNominal fromNom dstType
     T.TFun argType resType | bodyNot ExprLens._BAbs ->
-        valueConversionNoSplit empty loadNominal applied dstType
+        if Lens.has (ExprLens.valLeafs . ExprLens._LHole) arg
+            then
+                -- If the suggested argument has holes in it
+                -- then stop suggesting there to avoid "overwhelming"..
+                return applied
+            else valueConversionNoSplit empty loadNominal applied dstType
         where
-            applied =
-                valueNoSplit argType & Lens.traversed %~ flip (,) empty
-                & V.Apply src & V.BApp & V.Val (resType, empty)
+            arg = valueNoSplit argType & Lens.traversed %~ flip (,) empty
+            applied = V.Apply src arg & V.BApp & V.Val (resType, empty)
     T.TSum composite | bodyNot ExprLens._BInject  ->
         suggestCaseWith composite dstType & run
         & Lens.traversed %~ flip (,) empty
