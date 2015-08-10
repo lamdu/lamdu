@@ -23,6 +23,7 @@ module Lamdu.GUI.ExpressionGui
     -- Info adding
     , annotationSpacer
     , EvalAnnotationOptions(..), maybeAddAnnotationWith
+    , WideAnnotationBehavior(..), wideAnnotationBehaviorFromSelected
     , AnnotationParams(..), annotationParamsFor
     , makeTypeView
     , evaluationResult
@@ -49,6 +50,7 @@ import qualified Data.List.Utils as ListUtils
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
+import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
@@ -71,8 +73,8 @@ import qualified Lamdu.GUI.EvalView as EvalView
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Parens as Parens
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence(..), needParens)
 import qualified Lamdu.GUI.TypeView as TypeView
@@ -149,43 +151,89 @@ vboxTopFocalSpaced guis =
 gridTopLeftFocal :: [[ExpressionGui m]] -> ExpressionGui m
 gridTopLeftFocal = Layout.gridTopLeftFocal
 
-annotationBackground :: Config -> AnimId -> ExpressionGui m -> ExpressionGui m
-annotationBackground config animId =
+addAnnotationBackgroundH :: (Config -> Draw.Color) -> Config -> AnimId -> ExpressionGui m -> ExpressionGui m
+addAnnotationBackgroundH getColor config animId =
     egWidget %~ Widget.backgroundColor bgLayer bgAnimId bgColor
     where
         bgAnimId = animId ++ ["annotation background"]
         bgLayer = Config.layerAnnotations $ Config.layers config
-        bgColor = Config.valAnnotationBGColor config
+        bgColor = getColor config
+
+addAnnotationBackground :: Config -> AnimId -> ExpressionGui m -> ExpressionGui m
+addAnnotationBackground = addAnnotationBackgroundH Config.valAnnotationBGColor
+
+addAnnotationHoverBackground :: Config -> AnimId -> ExpressionGui m -> ExpressionGui m
+addAnnotationHoverBackground = addAnnotationBackgroundH Config.valAnnotationHoverBGColor
+
+data WideAnnotationBehavior
+    = ShrinkWideAnnotation
+    | HoverWideAnnotation
+    | KeepWideAnnotation
+
+wideAnnotationBehaviorFromSelected :: Bool -> WideAnnotationBehavior
+wideAnnotationBehaviorFromSelected False = ShrinkWideAnnotation
+wideAnnotationBehaviorFromSelected True = HoverWideAnnotation
 
 data AnnotationParams = AnnotationParams
     { apMinWidth :: Widget.R
     , apAnimId :: AnimId
+    , apWideAnnotationBehavior :: WideAnnotationBehavior
     }
 
-annotationParamsFor :: Sugar.EntityId -> ExpressionGui m -> AnnotationParams
-annotationParamsFor entityId eg =
+annotationParamsFor ::
+    WideAnnotationBehavior -> Sugar.EntityId -> ExpressionGui m -> AnnotationParams
+annotationParamsFor wideBehavior entityId eg =
     AnnotationParams
     { apMinWidth = eg ^. egWidget . Widget.width
     , apAnimId = Widget.toAnimId $ WidgetIds.fromEntityId entityId
+    , apWideAnnotationBehavior = wideBehavior
     }
 
-addAnnotationBackground :: Config -> AnnotationParams -> ExpressionGui m -> ExpressionGui m
-addAnnotationBackground config AnnotationParams{..} annotationEg =
-    annotationEg
-    & pad padding
-    & annotationBackground config apAnimId
+-- NOTE: Also adds the background color, because it differs based on
+-- whether we're hovering
+applyWideAnnotationBehavior ::
+    MonadA m => Config -> AnimId -> WideAnnotationBehavior -> Vector2 Widget.R -> ExpressionGui m ->
+    ExprGuiM m (ExpressionGui m)
+applyWideAnnotationBehavior config animId wideAnnotationBehavior shrinkRatio eg =
+    case wideAnnotationBehavior of
+    ShrinkWideAnnotation ->
+        scaledDown
+        & addAnnotationBackground config animId
+        & return
+    HoverWideAnnotation ->
+        eg
+        & addAnnotationHoverBackground config animId
+        & (`Layout.hoverInPlaceOf` scaledDown)
+        & liftLayers
+    KeepWideAnnotation -> return eg
     where
-        padding = Vector2 ((width - annotationWidth) / 2) 0
-        width = max annotationWidth apMinWidth
-        annotationWidth = annotationEg ^. egWidget . Widget.width
+        scaledDown =
+            eg
+            & Layout.scaleAround (Vector2 0.5 0) shrinkRatio
 
 makeWithAnnotationBG ::
     MonadA m => (AnimId -> ExprGuiM m (ExpressionGui m)) ->
     AnnotationParams -> ExprGuiM m (ExpressionGui m)
-makeWithAnnotationBG f ap =
+makeWithAnnotationBG f (AnnotationParams minWidth animId wideAnnotationBehavior) =
     do
         config <- ExprGuiM.readConfig
-        f (apAnimId ap) <&> addAnnotationBackground config ap
+        let expansionLimit = Config.valAnnotationWidthExpansionLimit config
+        let maxWidth = minWidth + realToFrac expansionLimit
+        annotationEg <- f animId
+        let annotationWidth = annotationEg ^. egWidget . Widget.width
+        let width = max annotationWidth minWidth
+        let shrinkRatio = pure (maxWidth / annotationWidth)
+        let maybeTooNarrow
+                | minWidth > annotationWidth = pad (Vector2 ((width - annotationWidth) / 2) 0)
+                | otherwise = id
+        let maybeTooWide
+                | annotationWidth > maxWidth =
+                  applyWideAnnotationBehavior config animId
+                  wideAnnotationBehavior shrinkRatio
+                | otherwise = return . addAnnotationBackground config animId
+        annotationEg
+            & maybeTooNarrow
+            & maybeTooWide
 
 type ScopeAndVal = (ScopeId, EvalResult ())
 
@@ -214,7 +262,7 @@ makeEvalView (mPrev, mNext) evalRes =
             let Config.Eval{..} = Config.eval config
             let makeEvaluationResultViewBG (scopeId, res) =
                     makeEvaluationResultView animId (scopeId, res)
-                    <&> annotationBackground config (animId ++ [encodeS scopeId])
+                    <&> addAnnotationBackground config (animId ++ [encodeS scopeId])
             let neighbourViews n =
                     n ^.. Lens._Just
                     <&> makeEvaluationResultViewBG
@@ -244,11 +292,12 @@ annotationSpacer =
 addAnnotationH ::
     MonadA m =>
     (AnnotationParams -> ExprGuiM m (ExpressionGui m)) ->
-    Sugar.EntityId -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addAnnotationH f entityId eg =
+    WideAnnotationBehavior -> Sugar.EntityId ->
+    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+addAnnotationH f wideBehavior entityId eg =
     do
         vspace <- annotationSpacer
-        annotationEg <- f (annotationParamsFor entityId eg)
+        annotationEg <- f (annotationParamsFor wideBehavior entityId eg)
         vboxTopFocal
             [ eg & egAlignment . _1 .~ 0.5
             , vspace
@@ -256,14 +305,15 @@ addAnnotationH f entityId eg =
             ] & return
 
 addInferredType ::
-    MonadA m => Type -> Sugar.EntityId ->
+    MonadA m => Type -> WideAnnotationBehavior -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addInferredType typ = addAnnotationH (makeTypeView typ)
 
 addEvaluationResult ::
     MonadA m =>
     (Maybe ScopeAndVal, Maybe ScopeAndVal) -> ScopeAndVal ->
-    Sugar.EntityId -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+    WideAnnotationBehavior -> Sugar.EntityId ->
+    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addEvaluationResult prevNext scopeAndVal =
     addAnnotationH (makeEvalView prevNext scopeAndVal)
 
@@ -471,11 +521,15 @@ maybeAddAnnotationPl ::
     MonadA m =>
     Sugar.Payload m0 ExprGuiT.Payload ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-maybeAddAnnotationPl pl =
-    maybeAddAnnotation
-    (pl ^. Sugar.plData . ExprGuiT.plShowAnnotation)
-    (pl ^. Sugar.plAnnotation)
-    (pl ^. Sugar.plEntityId)
+maybeAddAnnotationPl pl eg =
+    do
+        wideAnnotationBehavior <-
+            ExprGuiM.isExprSelected pl <&> wideAnnotationBehaviorFromSelected
+        eg
+            & maybeAddAnnotation wideAnnotationBehavior
+              (pl ^. Sugar.plData . ExprGuiT.plShowAnnotation)
+              (pl ^. Sugar.plAnnotation)
+              (pl ^. Sugar.plEntityId)
 
 evaluationResult ::
     MonadA m => Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (Maybe (EvalResult ()))
@@ -491,10 +545,11 @@ data EvalAnnotationOptions
 
 maybeAddAnnotationH ::
     MonadA m =>
-    EvalAnnotationOptions -> MissingAnnotationBehavior ->
+    EvalAnnotationOptions -> WideAnnotationBehavior ->
+    MissingAnnotationBehavior ->
     Sugar.Annotation -> Sugar.EntityId -> ExpressionGui m ->
     ExprGuiM m (ExpressionGui m)
-maybeAddAnnotationH opt missingAnnotationBehavior annotation entityId eg =
+maybeAddAnnotationH opt wideAnnotationBehavior missingAnnotationBehavior annotation entityId eg =
     do
         settings <- ExprGuiM.readSettings
         case settings ^. CESettings.sInfoMode of
@@ -505,7 +560,7 @@ maybeAddAnnotationH opt missingAnnotationBehavior annotation entityId eg =
                 >>= \case
                     Nothing -> handleMissingAnnotation
                     Just scopeAndVal ->
-                        addEvaluationResult neighbourVals scopeAndVal entityId eg
+                        addEvaluationResult neighbourVals scopeAndVal wideAnnotationBehavior entityId eg
                 where
                     neighbourVals =
                         case opt of
@@ -517,7 +572,7 @@ maybeAddAnnotationH opt missingAnnotationBehavior annotation entityId eg =
             case missingAnnotationBehavior of
             ShowNothing -> return eg
             ShowType -> withType
-        withType = addInferredType (annotation ^. Sugar.aInferredType) entityId eg
+        withType = addInferredType (annotation ^. Sugar.aInferredType) wideAnnotationBehavior entityId eg
         valAndScope scopeId = valOfScope annotation scopeId <&> (,) scopeId
 
 valOfScope :: Sugar.Annotation -> ScopeId -> Maybe (EvalResult ())
@@ -527,20 +582,20 @@ valOfScope annotation scopeId =
 
 maybeAddAnnotation ::
     MonadA m =>
-    ExprGuiT.ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
+    WideAnnotationBehavior -> ExprGuiT.ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
 maybeAddAnnotationWith ::
     MonadA m =>
-    EvalAnnotationOptions ->
+    EvalAnnotationOptions -> WideAnnotationBehavior ->
     ExprGuiT.ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-maybeAddAnnotationWith _ ExprGuiT.DoNotShowAnnotation _ _ eg = return eg
-maybeAddAnnotationWith o ExprGuiT.ShowAnnotation annotation entityId eg =
-    maybeAddAnnotationH o ShowType annotation entityId eg
-maybeAddAnnotationWith o ExprGuiT.ShowAnnotationInVerboseMode annotation entityId eg =
-    maybeAddAnnotationH o ShowNothing annotation entityId eg
+maybeAddAnnotationWith _ _ ExprGuiT.DoNotShowAnnotation _ _ eg = return eg
+maybeAddAnnotationWith o w ExprGuiT.ShowAnnotation annotation entityId eg =
+    maybeAddAnnotationH o w ShowType annotation entityId eg
+maybeAddAnnotationWith o w ExprGuiT.ShowAnnotationInVerboseMode annotation entityId eg =
+    maybeAddAnnotationH o w ShowNothing annotation entityId eg
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests = ListUtils.withPrevNext

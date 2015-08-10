@@ -587,6 +587,12 @@
         0.0,
         0.2
     ],
+    "valAnnotationHoverBGColor": [
+        0.0,
+        0.0,
+        0.0,
+        0.9
+    ],
     "typeIndicatorFrameWidth": {
         "_first": 7.0,
         "_second": 7.0
@@ -756,6 +762,7 @@
         ]
     ],
     "valAnnotationSpacing": 3,
+    "valAnnotationWidthExpansionLimit": 34,
     "valFramePadding": {
         "_first": 7.0,
         "_second": 7.0

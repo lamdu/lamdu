@@ -403,6 +403,9 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults editableHoleInfo =
         (searchTermEventMap, resultsEventMap) <-
             EventMap.makeOpenEventMaps editableHoleInfo mShownResult
 
+        wideAnnotationBehavior <-
+            WE.isSubCursor hidHole & ExprGuiM.widgetEnv
+            <&> ExpressionGui.wideAnnotationBehaviorFromSelected
         -- We make our own type view here instead of
         -- ExpressionGui.stdWrap, because we want to synchronize the
         -- active BG width with the inferred type width
@@ -410,6 +413,7 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults editableHoleInfo =
             ExpressionGui.makeTypeView (hiInferredType holeInfo) AnnotationParams
             { apMinWidth = resultsWidget ^. Widget.width
             , apAnimId = Widget.toAnimId hidHole
+            , apWideAnnotationBehavior = wideAnnotationBehavior
             }
 
         vspace <- ExpressionGui.annotationSpacer

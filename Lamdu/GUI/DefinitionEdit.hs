@@ -83,9 +83,13 @@ makeBuiltinDefinition def builtin =
             & sequenceA
             >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced
             <&> ExpressionGui.fromValueWidget
+        let wideAnnotationBehavior =
+                assignment ^. ExpressionGui.egWidget . Widget.isFocused
+                & ExpressionGui.wideAnnotationBehaviorFromSelected
         typeView <-
             topLevelSchemeTypeView (builtin ^. Sugar.biType) $
-            ExpressionGui.annotationParamsFor entityId assignment
+            ExpressionGui.annotationParamsFor wideAnnotationBehavior
+            entityId assignment
         [assignment, typeView]
             & ExpressionGui.vboxTopFocalAlignedTo 0
             & return
@@ -140,7 +144,9 @@ makeExprDefinition def bodyExpr =
             BinderEdit.make (def ^. Sugar.drName)
             (bodyExpr ^. Sugar.deContent) myId
         let width = bodyGui ^. ExpressionGui.egWidget . Widget.width
-            ap = ExpressionGui.annotationParamsFor entityId bodyGui
+            ap =
+                ExpressionGui.annotationParamsFor ExpressionGui.KeepWideAnnotation
+                entityId bodyGui
         vspace <- ExpressionGui.verticalSpace
         typeGui <-
             case bodyExpr ^. Sugar.deTypeInfo of
