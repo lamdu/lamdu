@@ -9,6 +9,7 @@ import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Control.Monad.Trans.State (State, evalState)
 import qualified Control.Monad.Trans.State as State
@@ -37,41 +38,50 @@ mkVar =
 valueConversion ::
     MonadA m =>
     a -> (T.Id -> m Nominal) ->
-    Val a -> Type -> Type -> m [Val a]
-valueConversion empty _ arg (T.TRecord composite) _ =
-    composite ^.. ExprLens.compositeTags
-    <&> V.Val empty . V.BGetField . V.GetField arg
-    & return
-valueConversion empty loadNominal arg srcType dstType =
-    valueConversionNoSplit empty loadNominal arg srcType dstType
-    <&> (:[])
+    Val (Type, a) -> Type -> m [Val (Type, a)]
+valueConversion empty loadNominal src dstType =
+    case src ^. V.payload . _1 of
+    T.TRecord composite ->
+        composite ^.. ExprLens.compositeFields
+        <&> getField
+        & return
+        where
+            getField (tag, typ) =
+                V.GetField src tag & V.BGetField & V.Val (typ, empty)
+    _ -> valueConversionNoSplit empty loadNominal src dstType <&> (:[])
 
 valueConversionNoSplit ::
-    MonadA m => a -> (T.Id -> m Nominal) -> Val a -> Type -> Type -> m (Val a)
-valueConversionNoSplit empty loadNominal arg (T.TInst name params) r =
-    do
-        fromNomType <-
-            loadNominal name <&> Nominal.apply params
-            -- TODO: Instantiate instead of access type?
-            -- I think this happens to be fine for suggest but there are less
-            -- doubts if using a proper instantiantion of the scheme..
-            <&> (^. schemeType)
-        valueConversionNoSplit empty loadNominal fromNom fromNomType r
-    where
-        fromNom = V.Nom name arg & V.BFromNom & V.Val empty
-valueConversionNoSplit _ _ arg@(V.Val _ V.BAbs{}) T.TFun{} _ = return arg
-valueConversionNoSplit empty loadNominal arg (T.TFun at rt) r =
-    valueConversionNoSplit empty loadNominal applied rt r
-    where
-        applied =
-            valueNoSplit at & Lens.traversed .~ empty
-            & V.Apply arg & V.BApp & V.Val empty
-valueConversionNoSplit empty _ arg (T.TSum composite) r =
-    suggestCaseWith composite r & run
-    & Lens.traversed .~ empty
-    & (`V.Apply` arg) & V.BApp & V.Val empty
-    & return
-valueConversionNoSplit _ _ arg _ _ = return arg
+    MonadA m =>
+    a -> (T.Id -> m Nominal) ->
+    Val (Type, a) -> Type -> m (Val (Type, a))
+valueConversionNoSplit empty loadNominal src dstType =
+    case src ^. V.payload . _1 of
+    T.TInst name params ->
+        do
+            fromNomType <-
+                loadNominal name <&> Nominal.apply params
+                -- TODO: Instantiate instead of access type?
+                -- I think this happens to be fine for suggest but there are less
+                -- doubts if using a proper instantiantion of the scheme..
+                <&> (^. schemeType)
+            let fromNom =
+                    V.Nom name src & V.BFromNom & V.Val (fromNomType, empty)
+            valueConversionNoSplit empty loadNominal fromNom dstType
+    T.TFun argType resType ->
+        case src ^. V.body of
+        V.BAbs{} -> return src
+        _ ->
+            valueConversionNoSplit empty loadNominal applied dstType
+            where
+                applied =
+                    valueNoSplit argType & Lens.traversed %~ flip (,) empty
+                    & V.Apply src & V.BApp & V.Val (resType, empty)
+    T.TSum composite ->
+        suggestCaseWith composite dstType & run
+        & Lens.traversed %~ flip (,) empty
+        & (`V.Apply` src) & V.BApp & V.Val (dstType, empty)
+        & return
+    _ -> return src
 
 value :: Type -> [Val Type]
 value typ@(T.TSum comp) =

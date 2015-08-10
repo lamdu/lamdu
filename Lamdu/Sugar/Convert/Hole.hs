@@ -81,7 +81,7 @@ mkHoleOptionFromInjected ::
     MonadA m =>
     ConvertM.Context m ->
     Input.Payload m a -> ExprIRef.ValIProperty m ->
-    Val (Maybe (Input.Payload m a)) -> HoleOption Guid m
+    Val (Type, Maybe (Input.Payload m a)) -> HoleOption Guid m
 mkHoleOptionFromInjected sugarContext exprPl stored val =
     HoleOption
     { _hoVal = baseExpr
@@ -100,8 +100,8 @@ mkHoleOptionFromInjected sugarContext exprPl stored val =
     }
     where
         baseExpr = pruneExpr val
-        pruneExpr (Val Just{} _) = P.hole
-        pruneExpr (Val Nothing b) = b <&> pruneExpr & Val ()
+        pruneExpr (Val (_, Just{}) _) = P.hole
+        pruneExpr (Val _ b) = b <&> pruneExpr & Val ()
 
 mkHoleOption ::
     MonadA m => ConvertM.Context m ->
@@ -540,18 +540,20 @@ holeResultsInject injectedArg val =
 mkHoleResultValInjected ::
     MonadA m =>
     Input.Payload m dummy ->
-    Val (Maybe (Input.Payload m a)) ->
+    Val (Type, Maybe (Input.Payload m a)) ->
     StateT Infer.Context (T m) (HoleResultVal m IsInjected)
 mkHoleResultValInjected exprPl val =
-    val
-    <&> toInjected
-    & infer inferred
-    & mapStateT (fmap (either (error "injected val infer failed") id) . runEitherT)
-    >>= holeWrapIfNeeded (inferred ^. Infer.plType)
+    val <&> onPl
+    & holeWrapIfNeeded (inferred ^. Infer.plType)
     where
         inferred = exprPl ^. Input.inferred
-        toInjected Nothing = (Nothing, NotInjected)
-        toInjected (Just x) = (x ^. Input.mStored <&> Property.value, Injected)
+        onPl (typ, mInputPl) =
+            ( inferred & Infer.plType .~ typ
+            , case mInputPl of
+              Nothing -> (Nothing, NotInjected)
+              Just inputPl ->
+                (inputPl ^. Input.mStored <&> Property.value, Injected)
+            )
 
 mkHoleResultVals ::
     MonadA m =>
