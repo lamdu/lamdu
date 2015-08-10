@@ -85,7 +85,7 @@ makeForVal animId val =
     HFunc{} -> textView "Fn" animId
     HAbsurd -> textView "Fn" animId
     HCase{} -> textView "Fn" animId
-    HRecEmpty -> textView "Ø" animId
+    HRecEmpty -> textView "()" animId
     HInject (V.Inject injTag (Right HRecEmpty)) ->
         makeTag (animId ++ ["tag"]) injTag
     HInject inj ->
