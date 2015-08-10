@@ -16,7 +16,6 @@ import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import           Data.Maybe.Utils (maybeToMPlus)
-import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
@@ -177,12 +176,10 @@ mkAppliedHoleSuggesteds ::
     ExprIRef.ValIProperty m ->
     T m [HoleOption Guid m]
 mkAppliedHoleSuggesteds sugarContext argI argS exprPl stored =
-    Suggest.valueConversion mempty IRefInfer.loadNominal
-    (argI <&> Monoid.First . Just) argType dstType
+    Suggest.valueConversion Nothing IRefInfer.loadNominal
+    (argI <&> Just) argType dstType
     <&> Lens.mapped %~
-        ConvertHole.mkHoleOptionFromInjected
-        sugarContext exprPl stored
-        . (Lens.mapped %~ Monoid.getFirst)
+        ConvertHole.mkHoleOptionFromInjected sugarContext exprPl stored
     where
         argType = argS ^. rPayload . plAnnotation . aInferredType
         dstType = exprPl ^. Input.inferred . Infer.plType
