@@ -45,7 +45,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.SearchTerm as Sear
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, AnnotationParams(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -407,8 +407,10 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults editableHoleInfo =
         -- ExpressionGui.stdWrap, because we want to synchronize the
         -- active BG width with the inferred type width
         typeView <-
-            ExpressionGui.makeTypeView (hiEntityId holeInfo)
-            (hiInferredType holeInfo) (resultsWidget ^. Widget.width)
+            ExpressionGui.makeTypeView (hiInferredType holeInfo) AnnotationParams
+            { apMinWidth = resultsWidget ^. Widget.width
+            , apAnimId = Widget.toAnimId hidHole
+            }
 
         vspace <- ExpressionGui.annotationSpacer
         hoverResultsWidget <-

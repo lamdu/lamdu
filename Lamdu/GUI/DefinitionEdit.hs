@@ -29,7 +29,7 @@ import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, AnnotationParams(..))
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -63,11 +63,11 @@ make cp config settings defS =
             <&> Lens.mapped %~ toExprGuiMPayload
             <&> ExprGuiT.markRedundantTypes
 
-topLevelSchemeTypeView :: MonadA m => Widget.R -> Sugar.EntityId -> Scheme -> ExprGuiM m (ExpressionGui m)
-topLevelSchemeTypeView minWidth entityId scheme =
+topLevelSchemeTypeView :: MonadA m => Scheme -> AnnotationParams -> ExprGuiM m (ExpressionGui m)
+topLevelSchemeTypeView scheme =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:
-    ExpressionGui.makeTypeView entityId (scheme ^. schemeType) minWidth
+    ExpressionGui.makeTypeView (scheme ^. schemeType)
 
 makeBuiltinDefinition ::
     MonadA m =>
@@ -84,7 +84,8 @@ makeBuiltinDefinition def builtin =
             >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced
             <&> ExpressionGui.fromValueWidget
         typeView <-
-            topLevelSchemeTypeView 0 entityId (builtin ^. Sugar.biType)
+            topLevelSchemeTypeView (builtin ^. Sugar.biType) $
+            ExpressionGui.annotationParamsFor entityId assignment
         [assignment, typeView]
             & ExpressionGui.vboxTopFocalAlignedTo 0
             & return
@@ -135,16 +136,17 @@ makeExprDefinition ::
 makeExprDefinition def bodyExpr =
     do
         config <- ExprGuiM.readConfig
-        bodyWidget <-
+        bodyGui <-
             BinderEdit.make (def ^. Sugar.drName)
             (bodyExpr ^. Sugar.deContent) myId
-        let width = bodyWidget ^. ExpressionGui.egWidget . Widget.width
+        let width = bodyGui ^. ExpressionGui.egWidget . Widget.width
+            ap = ExpressionGui.annotationParamsFor entityId bodyGui
         vspace <- ExpressionGui.verticalSpace
-        typeWidget <-
+        typeGui <-
             case bodyExpr ^. Sugar.deTypeInfo of
             Sugar.DefinitionExportedTypeInfo scheme ->
                 typeIndicator width (Config.typeIndicatorMatchColor config) myId :
-                [ topLevelSchemeTypeView width entityId scheme
+                [ topLevelSchemeTypeView scheme ap
                 | Lens.hasn't (Sugar.deContent . Sugar.bParams . Sugar._DefintionWithoutParams) bodyExpr
                 ] & sequence
             Sugar.DefinitionNewType (Sugar.AcceptNewType oldScheme _ accept) ->
@@ -154,11 +156,11 @@ makeExprDefinition def bodyExpr =
                     ]
                 Definition.ExportedType scheme ->
                     [ acceptableTypeIndicator width accept (Config.typeIndicatorErrorColor config) myId
-                    , topLevelSchemeTypeView width entityId scheme
+                    , topLevelSchemeTypeView scheme ap
                     ]
                 & sequence
             <&> ExpressionGui.vboxTopFocalAlignedTo 0 . concatMap (\w -> [vspace, w])
-        ExpressionGui.vboxTopFocalAlignedTo 0 [bodyWidget, typeWidget]
+        ExpressionGui.vboxTopFocalAlignedTo 0 [bodyGui, typeGui]
             & return
     where
         entityId = def ^. Sugar.drEntityId
