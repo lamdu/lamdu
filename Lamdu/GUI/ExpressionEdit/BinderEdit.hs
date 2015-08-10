@@ -350,7 +350,7 @@ makeLetItemEdit (_prevId, nextId, item) =
                     (E.Doc ["Edit", "Let clause", "Delete"]) $
                     nextId <$ liActions ^. Sugar.liDelete
                 , Widget.keysEventMapMovesCursor
-                    (Config.whereAddItemKeys config)
+                    (Config.letAddItemKeys config)
                     (E.Doc ["Edit", "Let clause", "Add next"]) $
                     WidgetIds.fromEntityId <$>
                     liActions ^. Sugar.liAddNext
@@ -415,7 +415,7 @@ makeResultEdit mActions params result = do
                 (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to last param"]) $
                 WidgetIds.fromEntityId (last ps ^. _2 . Sugar.fpId) <$ savePos
         addLetItemEventMap actions =
-            Widget.keysEventMapMovesCursor (Config.whereAddItemKeys config)
+            Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
             (E.Doc ["Edit", "Let clause", "Add first"]) .
             fmap (diveToNameEdit . WidgetIds.fromEntityId) $
             savePos >> actions ^. Sugar.baAddInnermostLetItem

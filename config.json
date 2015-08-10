@@ -790,7 +790,7 @@
         "_first": 5,
         "_second": 5
     },
-    "whereAddItemKeys": [
+    "letAddItemKeys": [
         [
             {
                 "modifierKeysSuper": false,
