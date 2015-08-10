@@ -39,6 +39,7 @@ data EvalError
     = EvalHole
     | EvalTypeError String
     | EvalLoadGlobalFailed V.GlobalId
+    | EvalMissingBuiltin FFIName
     | EvalTodoError String
     deriving Show
 

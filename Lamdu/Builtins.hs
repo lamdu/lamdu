@@ -22,7 +22,7 @@ flatRecord (Left err) = Left err
 flatRecord (Right HRecEmpty) = Right Map.empty
 flatRecord (Right (HRecExtend (V.RecExtend t v rest))) =
     flatRecord rest <&> Map.insert t v
-flatRecord _ = error "Param record is not a record"
+flatRecord _ = "Param record is not a record" & EvalTypeError & Left
 
 extractRecordParams ::
     (Traversable t, Show (t Tag)) =>
@@ -56,7 +56,7 @@ fromGuest = (>>= fromGuestVal)
 instance GuestType Integer where
     toGuestVal = HInteger
     fromGuestVal (HInteger x) = Right x
-    fromGuestVal x = error $ "expected int, got " ++ show (void x)
+    fromGuestVal x = "expected int, got " ++ show (void x) & EvalTypeError & Left
 
 instance GuestType Bool where
     toGuestVal b =
@@ -146,4 +146,4 @@ eval name =
     Def.FFIName ["Prelude"] "mod"    -> builtin2Infix $ intArg mod
     Def.FFIName ["Prelude"] "negate" -> builtin1      $ intArg negate
     Def.FFIName ["Prelude"] "sqrt"   -> builtin1      $ intArg ((floor :: Double -> Integer) . sqrt . fromIntegral)
-    _ -> error $ show name ++ " not yet supported"
+    _ -> name & EvalMissingBuiltin & Left & const
