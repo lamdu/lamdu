@@ -1,7 +1,7 @@
 packages:
 - .
 - location:
-    git: git@github.com:luqui/graphics-drawingcombinators
+    git: https://github.com/luqui/graphics-drawingcombinators
     commit: d4b7f64707eed0929f123b307933bb95d7afa4a7
 
 resolver: nightly-2015-08-06
