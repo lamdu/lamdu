@@ -56,7 +56,7 @@ valueConversionNoSplit ::
     Val (Type, a) -> Type -> m (Val (Type, a))
 valueConversionNoSplit empty loadNominal src dstType =
     case src ^. V.payload . _1 of
-    T.TInst name params ->
+    T.TInst name params | bodyNot ExprLens._BToNom ->
         do
             fromNomType <-
                 loadNominal name <&> Nominal.apply params
@@ -67,21 +67,20 @@ valueConversionNoSplit empty loadNominal src dstType =
             let fromNom =
                     V.Nom name src & V.BFromNom & V.Val (fromNomType, empty)
             valueConversionNoSplit empty loadNominal fromNom dstType
-    T.TFun argType resType ->
-        case src ^. V.body of
-        V.BAbs{} -> return src
-        _ ->
-            valueConversionNoSplit empty loadNominal applied dstType
-            where
-                applied =
-                    valueNoSplit argType & Lens.traversed %~ flip (,) empty
-                    & V.Apply src & V.BApp & V.Val (resType, empty)
-    T.TSum composite ->
+    T.TFun argType resType | bodyNot ExprLens._BAbs ->
+        valueConversionNoSplit empty loadNominal applied dstType
+        where
+            applied =
+                valueNoSplit argType & Lens.traversed %~ flip (,) empty
+                & V.Apply src & V.BApp & V.Val (resType, empty)
+    T.TSum composite | bodyNot ExprLens._BInject  ->
         suggestCaseWith composite dstType & run
         & Lens.traversed %~ flip (,) empty
         & (`V.Apply` src) & V.BApp & V.Val (dstType, empty)
         & return
     _ -> return src
+    where
+        bodyNot f = Lens.nullOf (V.body . f) src
 
 value :: Type -> [Val Type]
 value typ@(T.TSum comp) =
