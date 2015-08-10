@@ -171,17 +171,16 @@ mkAppliedHoleSuggesteds ::
     MonadA m =>
     ConvertM.Context m ->
     Val (Input.Payload m a) ->
-    Expression name m a ->
     Input.Payload m a ->
     ExprIRef.ValIProperty m ->
     T m [HoleOption Guid m]
-mkAppliedHoleSuggesteds sugarContext argI argS exprPl stored =
+mkAppliedHoleSuggesteds sugarContext argI exprPl stored =
     Suggest.valueConversion Nothing IRefInfer.loadNominal
     (argI <&> Just) argType dstType
     <&> Lens.mapped %~
         ConvertHole.mkHoleOptionFromInjected sugarContext exprPl stored
     where
-        argType = argS ^. rPayload . plAnnotation . aInferredType
+        argType = argI ^. V.payload . Input.inferred . Infer.plType
         dstType = exprPl ^. Input.inferred . Infer.plType
 
 convertAppliedHole ::
@@ -219,7 +218,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                     do
                         suggesteds <-
                             mkAppliedHoleSuggesteds sugarContext
-                            argI argS exprPl stored
+                            argI exprPl stored
                             & ConvertM.liftTransaction
                         hole
                             & rBody . _BodyHole . holeMActions
