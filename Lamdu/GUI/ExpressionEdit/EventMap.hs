@@ -25,7 +25,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
@@ -64,12 +63,6 @@ mkEventMapWithPickers holePickers keys doc f =
     liftA2 mappend (ExprGuiM.holePickersAction holePickers) .
     fmap Widget.eventResultFromCursor . f
 
-isExprSelected :: Sugar.Payload f a -> Widget.Id -> Bool
-isExprSelected pl cursor =
-    WidgetIds.fromExprPayload pl
-    & (`Widget.subId` cursor)
-    & Lens.has Lens._Just
-
 jumpHolesEventMap ::
     MonadA m => NearestHoles -> ExprGuiM m (EventHandlers (T m))
 jumpHolesEventMap hg =
@@ -92,8 +85,8 @@ jumpHolesEventMapIfSelected ::
     Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (EventHandlers (T m))
 jumpHolesEventMapIfSelected pl =
     do
-        cursor <- ExprGuiM.widgetEnv WE.readCursor
-        if isExprSelected pl cursor
+        isSelected <- ExprGuiM.isExprSelected pl
+        if isSelected
             then pl ^. Sugar.plData . ExprGuiT.plNearestHoles & jumpHolesEventMap
             else pure mempty
 
@@ -111,9 +104,9 @@ replaceOrComeToParentEventMap pl =
     do
         config <- ExprGuiM.readConfig
         let delKeys = Config.replaceKeys config ++ Config.delKeys config
-        cursor <- ExprGuiM.widgetEnv WE.readCursor
+        isSelected <- ExprGuiM.isExprSelected pl
         return $
-            if isExprSelected pl cursor
+            if isSelected
             then maybe mempty (replaceEventMap config) $ pl ^. Sugar.plActions
             else
                 Widget.keysEventMapMovesCursor delKeys

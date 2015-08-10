@@ -13,6 +13,7 @@ module Lamdu.GUI.ExpressionGui
     , makeLabel
     , grammarLabel
     , addValBG, addValFrame, addValPadding
+    , isExprSelected
     -- Lifted widgets:
     , makeFocusableView
     , makeNameView
@@ -405,6 +406,12 @@ addValPadding gui =
     do
         padding <- ExprGuiM.readConfig <&> Config.valFramePadding
         pad (padding <&> realToFrac) gui & return
+
+isExprSelected :: Sugar.Payload f a -> Widget.Id -> Bool
+isExprSelected pl cursor =
+    WidgetIds.fromExprPayload pl
+    & (`Widget.subId` cursor)
+    & Lens.has Lens._Just
 
 addValFrame ::
     MonadA m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)

@@ -15,6 +15,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , getCodeAnchor, mkPrejumpPosSaver
     --
     , readMScopeId, withLocalMScopeId
+    , isExprSelected
     --
     , HolePickers, holePickersAddDocPrefix, holePickersAction
     , addResultPicker, listenResultPickers
@@ -219,3 +220,6 @@ readMScopeId = ExprGuiM $ Lens.view aMScopeId
 
 withLocalMScopeId :: MonadA m => Maybe ScopeId -> ExprGuiM m a -> ExprGuiM m a
 withLocalMScopeId mScopeId = exprGuiM %~ RWS.local (aMScopeId .~ mScopeId)
+
+isExprSelected :: MonadA m => Sugar.Payload f a -> ExprGuiM m Bool
+isExprSelected = widgetEnv . WE.isSubCursor . WidgetIds.fromExprPayload
