@@ -251,10 +251,10 @@ makeParts showAnnotation binder delVarBackwardsId myId =
                             mScopeNavEdit ^?
                                 Lens._Just . ExpressionGui.egWidget . Widget.isFocused
                                 >>= guard
-                            ExpressionGui.WithNeighbouringAnnotations
+                            ExpressionGui.WithNeighbouringEvalAnnotations
                                 <$> (mScopeCursor <&> sMPrevParamScope)
                                 <*> (mScopeCursor <&> sMNextParamScope)
-                        & fromMaybe ExpressionGui.NormalAnnotation
+                        & fromMaybe ExpressionGui.NormalEvalAnnotation
                 paramEdits <-
                     makeParamsEdit annotationMode showAnnotation nearestHoles
                     delVarBackwardsId myId (WidgetIds.fromEntityId bodyId)
@@ -451,7 +451,7 @@ nullParamEditInfo (Sugar.NullParamInfo mActions) =
 
 makeParamsEdit ::
     MonadA m =>
-    ExpressionGui.AnnotationOptions -> ExprGuiT.ShowAnnotation -> NearestHoles ->
+    ExpressionGui.EvalAnnotationOptions -> ExprGuiT.ShowAnnotation -> NearestHoles ->
     Widget.Id -> Widget.Id -> Widget.Id ->
     Sugar.BinderParams (Name m) m ->
     ExprGuiM m [ExpressionGui m]

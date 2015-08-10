@@ -107,7 +107,7 @@ data Info m = Info
 -- exported for use in definition sugaring.
 make ::
     MonadA m =>
-    ExpressionGui.AnnotationOptions ->
+    ExpressionGui.EvalAnnotationOptions ->
     ExprGuiT.ShowAnnotation -> Widget.Id -> Widget.Id ->
     Sugar.FuncParam (Info m) -> ExprGuiM m (ExpressionGui m)
 make annotationOpts showType prevId nextId param =

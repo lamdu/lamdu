@@ -21,7 +21,7 @@ module Lamdu.GUI.ExpressionGui
     , diveToNameEdit
     -- Info adding
     , annotationSpacer
-    , AnnotationOptions(..), maybeAddAnnotationWith
+    , EvalAnnotationOptions(..), maybeAddAnnotationWith
     , makeTypeView
     , evaluationResult
     -- Expression wrapping
@@ -478,13 +478,13 @@ evaluationResult pl =
 
 data MissingAnnotationBehavior = ShowNothing | ShowType
 
-data AnnotationOptions
-    = NormalAnnotation
-    | WithNeighbouringAnnotations (Maybe ScopeId) (Maybe ScopeId)
+data EvalAnnotationOptions
+    = NormalEvalAnnotation
+    | WithNeighbouringEvalAnnotations (Maybe ScopeId) (Maybe ScopeId)
 
 maybeAddAnnotationH ::
     MonadA m =>
-    AnnotationOptions -> MissingAnnotationBehavior ->
+    EvalAnnotationOptions -> MissingAnnotationBehavior ->
     Sugar.Annotation -> Sugar.EntityId -> ExpressionGui m ->
     ExprGuiM m (ExpressionGui m)
 maybeAddAnnotationH opt missingAnnotationBehavior annotation entityId eg =
@@ -500,8 +500,8 @@ maybeAddAnnotationH opt missingAnnotationBehavior annotation entityId eg =
                 where
                     neighbourVals =
                         case opt of
-                        NormalAnnotation -> (Nothing, Nothing)
-                        WithNeighbouringAnnotations p n ->
+                        NormalEvalAnnotation -> (Nothing, Nothing)
+                        WithNeighbouringEvalAnnotations p n ->
                             (p >>= valAndScope, n >>= valAndScope)
     where
         handleMissingAnnotation =
@@ -520,11 +520,11 @@ maybeAddAnnotation ::
     MonadA m =>
     ExprGuiT.ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-maybeAddAnnotation = maybeAddAnnotationWith NormalAnnotation
+maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
 maybeAddAnnotationWith ::
     MonadA m =>
-    AnnotationOptions ->
+    EvalAnnotationOptions ->
     ExprGuiT.ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 maybeAddAnnotationWith _ ExprGuiT.DoNotShowAnnotation _ _ eg = return eg
