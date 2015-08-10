@@ -35,21 +35,20 @@ mkVar =
         "var" ++ show i & fromString & return
 
 valueConversion ::
-    (Monoid a, MonadA m) =>
-    (T.Id -> m Nominal) ->
+    MonadA m =>
+    a -> (T.Id -> m Nominal) ->
     Val a -> Type -> Type -> m [Val a]
-valueConversion _ arg (T.TRecord composite) _ =
+valueConversion empty _ arg (T.TRecord composite) _ =
     composite ^.. ExprLens.compositeTags
-    <&> V.Val mempty . V.BGetField . V.GetField arg
+    <&> V.Val empty . V.BGetField . V.GetField arg
     & return
-valueConversion loadNominal arg srcType dstType =
-    valueConversionNoSplit loadNominal arg srcType dstType
+valueConversion empty loadNominal arg srcType dstType =
+    valueConversionNoSplit empty loadNominal arg srcType dstType
     <&> (:[])
 
 valueConversionNoSplit ::
-    (Monoid a, MonadA m) =>
-    (T.Id -> m Nominal) -> Val a -> Type -> Type -> m (Val a)
-valueConversionNoSplit loadNominal arg (T.TInst name params) r =
+    MonadA m => a -> (T.Id -> m Nominal) -> Val a -> Type -> Type -> m (Val a)
+valueConversionNoSplit empty loadNominal arg (T.TInst name params) r =
     do
         fromNomType <-
             loadNominal name <&> Nominal.apply params
@@ -57,22 +56,22 @@ valueConversionNoSplit loadNominal arg (T.TInst name params) r =
             -- I think this happens to be fine for suggest but there are less
             -- doubts if using a proper instantiantion of the scheme..
             <&> (^. schemeType)
-        valueConversionNoSplit loadNominal fromNom fromNomType r
+        valueConversionNoSplit empty loadNominal fromNom fromNomType r
     where
-        fromNom = V.Nom name arg & V.BFromNom & V.Val mempty
-valueConversionNoSplit _ arg@(V.Val _ V.BAbs{}) T.TFun{} _ = return arg
-valueConversionNoSplit loadNominal arg (T.TFun at rt) r =
-    valueConversionNoSplit loadNominal applied rt r
+        fromNom = V.Nom name arg & V.BFromNom & V.Val empty
+valueConversionNoSplit _ _ arg@(V.Val _ V.BAbs{}) T.TFun{} _ = return arg
+valueConversionNoSplit empty loadNominal arg (T.TFun at rt) r =
+    valueConversionNoSplit empty loadNominal applied rt r
     where
         applied =
-            valueNoSplit at & Lens.traversed .~ mempty
-            & V.Apply arg & V.BApp & V.Val mempty
-valueConversionNoSplit _ arg (T.TSum composite) r =
+            valueNoSplit at & Lens.traversed .~ empty
+            & V.Apply arg & V.BApp & V.Val empty
+valueConversionNoSplit empty _ arg (T.TSum composite) r =
     suggestCaseWith composite r & run
-    & Lens.traversed .~ mempty
-    & (`V.Apply` arg) & V.BApp & V.Val mempty
+    & Lens.traversed .~ empty
+    & (`V.Apply` arg) & V.BApp & V.Val empty
     & return
-valueConversionNoSplit _ arg _ _ = return arg
+valueConversionNoSplit _ _ arg _ _ = return arg
 
 value :: Type -> [Val Type]
 value typ@(T.TSum comp) =

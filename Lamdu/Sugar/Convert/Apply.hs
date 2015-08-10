@@ -177,7 +177,7 @@ mkAppliedHoleSuggesteds ::
     ExprIRef.ValIProperty m ->
     T m [HoleOption Guid m]
 mkAppliedHoleSuggesteds sugarContext argI argS exprPl stored =
-    Suggest.valueConversion IRefInfer.loadNominal
+    Suggest.valueConversion mempty IRefInfer.loadNominal
     (argI <&> Monoid.First . Just) argType dstType
     <&> Lens.mapped %~
         ConvertHole.mkHoleOptionFromInjected
