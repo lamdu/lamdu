@@ -9,8 +9,6 @@ module Graphics.UI.Bottle.Widgets.TextEdit
     , defaultCursorWidth
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -27,6 +25,7 @@ import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.DrawingCombinators.Utils (TextSize(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
@@ -40,6 +39,8 @@ import           Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
+
+import           Prelude.Compat
 
 type Cursor = Int
 
@@ -191,7 +192,8 @@ makeFocused cursorBGAnimId cursor Style{..} str myId =
         myAnimId = Widget.toAnimId myId
         img = cursorTranslate Style{..} $ frameGen myAnimId
         displayStr = makeDisplayStr _sEmptyFocusedString str
-        (TextView.RenderedText (Vector2 tlWidth tlHeight) frameGen) =
+        Vector2 tlWidth tlHeight = bounding renderedSize
+        (TextView.RenderedText renderedSize frameGen) =
             TextView.drawTextAsSingleLetters _sTextViewStyle displayStr
 
         cursorRect = mkCursorRect Style{..} cursor str
@@ -210,7 +212,7 @@ mkCursorRect Style{..} cursor str = Rect cursorPos cursorSize
         cursorSize = Vector2 _sCursorWidth lineHeight
         cursorPosX =
             TextView.drawTextAsSingleLetters _sTextViewStyle (last beforeCursorLines) ^.
-            TextView.renderedTextSize . _1
+            TextView.renderedTextSize . Lens.to advance . _1
         cursorPosY = lineHeight * (genericLength beforeCursorLines - 1)
 
 eventMap ::

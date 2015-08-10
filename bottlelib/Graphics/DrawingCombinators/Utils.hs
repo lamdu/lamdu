@@ -1,18 +1,18 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE NoImplicitPrelude, CPP, StandaloneDeriving, DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude, StandaloneDeriving, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveGeneric #-}
 module Graphics.DrawingCombinators.Utils
     ( Image
     , square
+    , TextSize(..)
     , textHeight, textSize
     , textLinesSize
     , drawText, drawTextLines
     , backgroundColor
     , scale, translate
-    , clearRenderSized
+    , Draw.clearRenderSized
     ) where
 
-import           Prelude.Compat
-
+import           Control.Applicative (liftA2)
 import           Control.Lens.Operators
 import           Control.Monad (void)
 import           Data.Aeson (ToJSON(..), FromJSON(..))
@@ -23,6 +23,8 @@ import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators ((%%))
 
+import           Prelude.Compat
+
 type Image = Draw.Image ()
 
 deriving instance Read Draw.Color
@@ -30,13 +32,6 @@ deriving instance Generic Draw.Color
 
 instance ToJSON Draw.Color
 instance FromJSON Draw.Color
-
-clearRenderSized :: Draw.R2 -> Draw.Image a -> IO ()
-#ifdef DRAWINGCOMBINATORS__SIZED
-clearRenderSized = Draw.clearRenderSized
-#else
-clearRenderSized _ = Draw.clearRender
-#endif
 
 scale :: Vector2 Draw.R -> Draw.Affine
 scale (Vector2 x y) = Draw.scale x y
@@ -50,15 +45,39 @@ square = void $ Draw.convexPoly [ (0, 0), (1, 0), (1, 1), (0, 1) ]
 textHeight :: Draw.R
 textHeight = 2
 
-textSize :: Draw.Font -> String -> Vector2 Draw.R
-textSize font str = Vector2 (Draw.textWidth font str) textHeight
+data TextSize a = TextSize
+    { bounding :: a
+    , advance :: a
+    } deriving (Functor, Foldable, Traversable)
+instance Applicative TextSize where
+    pure x = TextSize x x
+    TextSize f1 f2 <*> TextSize x1 x2 = TextSize (f1 x1) (f2 x2)
+instance Num a => Num (TextSize a) where
+    fromInteger = pure . fromInteger
+    (+) = liftA2 (+)
+    (*) = liftA2 (*)
+    abs = fmap abs
+    signum = fmap signum
+    negate = fmap negate
+
+textWidth :: Draw.Font -> String -> TextSize Draw.R
+textWidth font str =
+    TextSize
+    { bounding =
+      Draw.textBoundingWidth font str
+      -- max with advance because spaces are counted only in advance
+      -- but not the bounding width
+      & max adv
+    , advance = adv
+    }
+    where
+        adv = Draw.textAdvance font str
+
+textSize :: Draw.Font -> String -> TextSize (Vector2 Draw.R)
+textSize font str = (`Vector2` textHeight) <$> textWidth font str
 
 descender :: Draw.Font -> Draw.R
-#ifdef DRAWINGCOMBINATORS__FONT_APIS
 descender = Draw.fontDescender
-#else
-descender _ = -0.5 -- approximate
-#endif
 
 drawText :: Draw.Font -> String -> Image
 drawText font str =
@@ -74,11 +93,13 @@ drawText font str =
 textLinesHeight :: [String] -> Draw.R
 textLinesHeight = (textHeight *) . genericLength
 
-textLinesWidth :: Draw.Font -> [String] -> Draw.R
-textLinesWidth font = maximum . map (Draw.textWidth font)
+textLinesWidth :: Draw.Font -> [String] -> TextSize Draw.R
+textLinesWidth font = fmap maximum . traverse (textWidth font)
 
-textLinesSize :: Draw.Font -> [String] -> Vector2 Draw.R
-textLinesSize font textLines = Vector2 (textLinesWidth font textLines) (textLinesHeight textLines)
+textLinesSize :: Draw.Font -> [String] -> TextSize (Vector2 Draw.R)
+textLinesSize font textLines =
+    (`Vector2` textLinesHeight textLines) <$>
+    (textLinesWidth font textLines)
 
 drawTextLines :: Draw.Font -> [String] -> Image
 drawTextLines font =

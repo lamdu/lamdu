@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.SizedFont
     ( SizedFont(..), font, fontSize
     , render
     , textHeight
-    , textSize
+    , textSize, DrawUtils.TextSize(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -28,5 +28,5 @@ render SizedFont{..} str =
 textHeight :: SizedFont -> Draw.R
 textHeight SizedFont{..} = DrawUtils.textHeight * realToFrac _fontSize
 
-textSize :: SizedFont -> String -> Vector2 Draw.R
-textSize SizedFont{..} str = realToFrac _fontSize * DrawUtils.textSize _font str
+textSize :: SizedFont -> String -> DrawUtils.TextSize (Vector2 Draw.R)
+textSize SizedFont{..} str = (realToFrac _fontSize *) <$> DrawUtils.textSize _font str
