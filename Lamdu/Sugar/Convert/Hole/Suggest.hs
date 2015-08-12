@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( value
     , valueConversion
@@ -11,11 +11,8 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
-import           Control.Monad.Trans.State (State, evalState)
-import qualified Control.Monad.Trans.State as State
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.String (IsString(..))
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Nominal (Nominal)
 import qualified Lamdu.Expr.Nominal as Nominal
@@ -25,18 +22,6 @@ import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
-
--- For fresh variable names:
-type M = State Int
-run :: M a -> a
-run act = evalState act 0
-
-mkVar :: M V.Var
-mkVar =
-    do
-        i <- State.get
-        State.modify (+1)
-        "var" ++ show i & fromString & return
 
 loadNominalsForType :: Monad m => (T.Id -> m Nominal) -> Type -> m Infer.Loaded
 loadNominalsForType loadNominal typ =
@@ -102,7 +87,7 @@ valueConversionNoSplit loaded empty src dstType =
             arg = valueNoSplit argType & Lens.traversed %~ flip (,) empty
             applied = V.Apply src arg & V.BApp & V.Val (resType, empty)
     T.TSum composite | bodyNot ExprLens._BInject  ->
-        suggestCaseWith composite dstType & run
+        suggestCaseWith composite dstType
         & Lens.traversed %~ flip (,) empty
         & (`V.Apply` src) & V.BApp & V.Val (dstType, empty)
     _ -> src
@@ -117,41 +102,38 @@ value typ@(T.TSum comp) =
     <&> Val typ
     where
         inject (tag, innerTyp) =
-            valueNoSplitM innerTyp & run & V.Inject tag & V.BInject
-value typ = [valueNoSplitM typ & run]
+            valueNoSplit innerTyp & V.Inject tag & V.BInject
+value typ = [valueNoSplit typ]
 
 valueNoSplit :: Type -> Val Type
-valueNoSplit typ = valueNoSplitM typ & run
-
-valueNoSplitM :: Type -> M (Val Type)
-valueNoSplitM (T.TRecord composite) = suggestRecordWith composite
-valueNoSplitM (T.TFun (T.TSum composite) r) = suggestCaseWith composite r
-valueNoSplitM typ =
+valueNoSplit (T.TRecord composite) = suggestRecordWith composite
+valueNoSplit (T.TFun (T.TSum composite) r) = suggestCaseWith composite r
+valueNoSplit typ =
     case typ of
-    T.TFun _ r -> V.Lam <$> mkVar <*> valueNoSplitM r <&> V.BAbs
-    _ -> V.BLeaf V.LHole & pure
-    <&> Val typ
+    T.TFun _ r -> valueNoSplit r & V.Lam "var" & V.BAbs
+    _ -> V.BLeaf V.LHole
+    & Val typ
 
-suggestRecordWith :: T.Product -> M (Val Type)
+suggestRecordWith :: T.Product -> Val Type
 suggestRecordWith recordType =
     case recordType of
-    T.CVar{}        -> V.BLeaf V.LHole & pure
-    T.CEmpty        -> V.BLeaf V.LRecEmpty & pure
+    T.CVar{} -> V.BLeaf V.LHole
+    T.CEmpty -> V.BLeaf V.LRecEmpty
     T.CExtend f t r ->
         V.RecExtend f
-        <$> valueNoSplitM t
-        <*> suggestRecordWith r
-        <&> V.BRecExtend
-    <&> Val (T.TRecord recordType)
+        (valueNoSplit t)
+        (suggestRecordWith r)
+        & V.BRecExtend
+    & Val (T.TRecord recordType)
 
-suggestCaseWith :: T.Sum -> Type -> M (Val Type)
+suggestCaseWith :: T.Sum -> Type -> Val Type
 suggestCaseWith sumType resultType =
     case sumType of
-    T.CVar{} -> V.BLeaf V.LHole & pure
-    T.CEmpty -> V.BLeaf V.LAbsurd & pure
+    T.CVar{} -> V.BLeaf V.LHole
+    T.CEmpty -> V.BLeaf V.LAbsurd
     T.CExtend tag fieldType rest ->
         V.Case tag
-        <$> valueNoSplitM (T.TFun fieldType resultType)
-        <*> suggestCaseWith rest resultType
-        <&> V.BCase
-    <&> Val (T.TFun (T.TSum sumType) resultType)
+        (valueNoSplit (T.TFun fieldType resultType))
+        (suggestCaseWith rest resultType)
+        & V.BCase
+    & Val (T.TFun (T.TSum sumType) resultType)
