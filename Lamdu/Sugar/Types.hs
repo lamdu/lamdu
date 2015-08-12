@@ -18,6 +18,7 @@ module Lamdu.Sugar.Types
     , NullParamActions(..), npDeleteLambda
     , BinderParams(..),
         _DefintionWithoutParams, _NullParam, _VarParam, _FieldParams
+    , BinderScopes(..), bsParamScope, bsBodyScope
     , Binder(..)
         , bMPresentationModeProp, bMChosenScopeProp, bParams, bBody
         , bLetItems, bMActions, bScopes
@@ -466,6 +467,11 @@ data BinderParams name m
     | VarParam (FuncParam (NamedParamInfo name m))
     | FieldParams [(T.Tag, FuncParam (NamedParamInfo name m))]
 
+data BinderScopes = BinderScopes
+    { _bsParamScope :: E.ScopeId
+    , _bsBodyScope :: E.ScopeId
+    }
+
 data Binder name m expr = Binder
     { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
     , _bMChosenScopeProp :: Maybe (MkProperty m (Maybe E.ScopeId))
@@ -473,9 +479,7 @@ data Binder name m expr = Binder
     , _bLetItems :: [LetItem name m expr]
     , _bBody :: expr
     , _bMActions :: Maybe (BinderActions m)
-    , -- Tuples of param and body scopes
-      -- (the body scope may be internal of the param scope include where items)
-      _bScopes :: Map E.ScopeId [(E.ScopeId, E.ScopeId)]
+    , _bScopes :: Map E.ScopeId [BinderScopes]
     } deriving (Functor, Foldable, Traversable)
 
 data AcceptNewType m = AcceptNewType
@@ -518,6 +522,7 @@ Lens.makeLenses ''Annotation
 Lens.makeLenses ''Apply
 Lens.makeLenses ''Binder
 Lens.makeLenses ''BinderActions
+Lens.makeLenses ''BinderScopes
 Lens.makeLenses ''Body
 Lens.makeLenses ''Case
 Lens.makeLenses ''CaseAddAltResult

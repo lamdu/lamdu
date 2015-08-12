@@ -137,31 +137,28 @@ data Parts m = Parts
     }
 
 data ScopeCursor = ScopeCursor
-    { sParamScope :: ScopeId
-    , sBodyScope :: ScopeId
+    { sBinderScopes :: Sugar.BinderScopes
     , sMPrevParamScope :: Maybe ScopeId
     , sMNextParamScope :: Maybe ScopeId
     }
 
-scopeCursor :: Maybe ScopeId -> [(ScopeId, ScopeId)] -> Maybe ScopeCursor
+scopeCursor :: Maybe ScopeId -> [Sugar.BinderScopes] -> Maybe ScopeCursor
 scopeCursor mChosenScope scopes =
     do
         chosenScope <- mChosenScope
-        (prevs, it:nexts) <- break ((== chosenScope) . fst) scopes & Just
+        (prevs, it:nexts) <- break ((== chosenScope) . (^. Sugar.bsParamScope)) scopes & Just
         Just ScopeCursor
-            { sParamScope = fst it
-            , sBodyScope = snd it
-            , sMPrevParamScope = reverse prevs ^? Lens.traversed . _1
-            , sMNextParamScope = nexts ^? Lens.traversed . _1
+            { sBinderScopes = it
+            , sMPrevParamScope = reverse prevs ^? Lens.traversed . Sugar.bsParamScope
+            , sMNextParamScope = nexts ^? Lens.traversed . Sugar.bsParamScope
             }
     <|> (scopes ^? Lens.traversed <&> def)
     where
-        def (paramScope, bodyScope) =
+        def binderScopes =
             ScopeCursor
-            { sParamScope = paramScope
-            , sBodyScope = bodyScope
+            { sBinderScopes = binderScopes
             , sMPrevParamScope = Nothing
-            , sMNextParamScope = scopes ^? Lens.ix 1 . _1
+            , sMNextParamScope = scopes ^? Lens.ix 1 . Sugar.bsParamScope
             }
 
 mkScopeCursor ::
@@ -225,6 +222,12 @@ makeScopeNavEdit myId setter cursor
             (leftKeys ++ rightKeys)
             (E.Doc ["Navigation", "Move", "(blocked)"]) $
             return mempty
+
+sParamScope :: ScopeCursor -> ScopeId
+sParamScope = (^. Sugar.bsParamScope) . sBinderScopes
+
+sBodyScope :: ScopeCursor -> ScopeId
+sBodyScope = (^. Sugar.bsBodyScope) . sBinderScopes
 
 makeParts ::
     MonadA m =>

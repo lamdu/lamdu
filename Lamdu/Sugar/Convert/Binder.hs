@@ -747,7 +747,11 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
                 ( ConvertM.scMBodyStored .~
                     letBody ^. V.payload . Input.mStored
                 )
-        let binderScopes s = (s, overrideId bodyScopesMap s)
+        let binderScopes s =
+                BinderScopes
+                { _bsParamScope = s
+                , _bsBodyScope = overrideId bodyScopesMap s
+                }
         return Binder
             { _bParams = convParams ^. cpParams
             , _bMPresentationModeProp = mPresentationModeProp
