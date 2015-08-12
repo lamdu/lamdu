@@ -590,12 +590,12 @@ changeRecursionsToCalls =
             >>= Property.set prop
 
 data ExprLetItem a = ExprLetItem
-    { ewiBody :: Val a
-    , ewiBodyScopesMap :: Map ScopeId ScopeId
-    , ewiParam :: V.Var
-    , ewiArg :: Val a
-    , ewiHiddenPayloads :: [a]
-    , ewiAnnotation :: Annotation
+    { eliBody :: Val a
+    , eliBodyScopesMap :: Map ScopeId ScopeId
+    , eliParam :: V.Var
+    , eliArg :: Val a
+    , eliHiddenPayloads :: [a]
+    , eliAnnotation :: Annotation
     }
 
 mExtractLet :: Val (Input.Payload m a) -> Maybe (ExprLetItem (Input.Payload m a))
@@ -603,14 +603,14 @@ mExtractLet expr = do
     V.Apply func arg <- expr ^? ExprLens.valApply
     V.Lam param body <- func ^? V.body . ExprLens._BAbs
     Just ExprLetItem
-        { ewiBody = body
-        , ewiBodyScopesMap =
+        { eliBody = body
+        , eliBodyScopesMap =
             func ^. V.payload . Input.evalAppliesOfLam
             <&> extractRedexApplies
-        , ewiParam = param
-        , ewiArg = arg
-        , ewiHiddenPayloads = (^. V.payload) <$> [expr, func]
-        , ewiAnnotation = makeAnnotation (arg ^. V.payload)
+        , eliParam = param
+        , eliArg = arg
+        , eliHiddenPayloads = (^. V.payload) <$> [expr, func]
+        , eliAnnotation = makeAnnotation (arg ^. V.payload)
         }
     where
         extractRedexApplies [(scopeId, _)] = scopeId
@@ -691,40 +691,40 @@ convertLetItems ::
 convertLetItems binderScopeVars expr =
     case mExtractLet expr of
     Nothing -> return ([], expr, Map.empty)
-    Just ewi ->
+    Just eli ->
         do
-            value <- convertBinder Nothing defGuid (ewiArg ewi)
+            value <- convertBinder Nothing defGuid (eliArg eli)
             actions <-
                 mkWIActions binderScopeVars param
                 <$> expr ^. V.payload . Input.mStored
-                <*> traverse (^. Input.mStored) (ewiBody ewi)
-                <*> traverse (^. Input.mStored) (ewiArg ewi)
+                <*> traverse (^. Input.mStored) (eliBody eli)
+                <*> traverse (^. Input.mStored) (eliArg eli)
                 & Lens.sequenceOf Lens._Just
             (items, body, bodyScopesMap) <-
-                ewiBody ewi & convertLetItems (ewiParam ewi : binderScopeVars)
+                eliBody eli & convertLetItems (eliParam eli : binderScopeVars)
             return
                 ( LetItem
                     { _liEntityId = defEntityId
                     , _liValue =
                         value
                         & bBody . rPayload . plData <>~
-                        ewiHiddenPayloads ewi ^. Lens.traversed . Input.userData
+                        eliHiddenPayloads eli ^. Lens.traversed . Input.userData
                     , _liActions = actions
                     , _liName = UniqueId.toGuid param
-                    , _liAnnotation = ewiAnnotation ewi
+                    , _liAnnotation = eliAnnotation eli
                     , _liScopes =
-                        ewiBodyScopesMap ewi
+                        eliBodyScopesMap eli
                         & Map.keys & map (join (,)) & Map.fromList
                     }
                     :
                     ( items
-                        <&> liScopes %~ appendScopeMaps (ewiBodyScopesMap ewi)
+                        <&> liScopes %~ appendScopeMaps (eliBodyScopesMap eli)
                     )
                 , body
-                , appendScopeMaps (ewiBodyScopesMap ewi) bodyScopesMap
+                , appendScopeMaps (eliBodyScopesMap eli) bodyScopesMap
                 )
         where
-            param = ewiParam ewi
+            param = eliParam eli
             defGuid = UniqueId.toGuid param
             defEntityId = EntityId.ofLambdaParam param
             appendScopeMaps x y = x <&> overrideId y
