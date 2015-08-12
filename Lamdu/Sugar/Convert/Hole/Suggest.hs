@@ -10,7 +10,7 @@ import           Prelude.Compat
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad.Trans.State (State)
+import           Control.Monad.Trans.State (State, mapStateT)
 import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -24,6 +24,8 @@ import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Infer (Context)
 import qualified Lamdu.Infer as Infer
+import           Lamdu.Infer.Update (update)
+import qualified Lamdu.Infer.Update as Update
 
 loadNominalsForType :: Monad m => (T.Id -> m Nominal) -> Type -> m Infer.Loaded
 loadNominalsForType loadNominal typ =
@@ -66,18 +68,21 @@ valueConversionH loaded empty src dstType =
 valueConversionNoSplit ::
     Infer.Loaded -> a -> Val (Type, a) -> Type -> State Context (Val (Type, a))
 valueConversionNoSplit loaded empty src dstType =
-    case src ^. V.payload . _1 of
-    T.TInst name params | bodyNot ExprLens._BToNom ->
-        valueConversionNoSplit loaded empty fromNom dstType
-        where
-            fromNom = V.Nom name src & V.BFromNom & V.Val (fromNomType, empty)
-            fromNomType =
-                Infer.loadedNominals loaded Map.! name
-                & Nominal.apply params
-                -- TODO: Instantiate instead of access type?
-                -- I think this happens to be fine for suggest but there are less
-                -- doubts if using a proper instantiantion of the scheme..
-                & (^. schemeType)
+    case srcType of
+    T.TInst name _params | bodyNot ExprLens._BToNom ->
+        -- TODO: Expose primitives from Infer to do this without partiality
+        do
+            (_, resType) <-
+                Infer.inferFromNom
+                (Infer.loadedNominals loaded) (V.Nom name ())
+                (\_ () -> return (srcType, ()))
+                Infer.emptyScope -- TODO: use real scope
+            updated <- src & Lens.traversed . _1 %%~ update & Update.liftInfer
+            V.Nom name updated & V.BFromNom & V.Val (resType, empty) & return
+        & Infer.run
+        & mapStateT
+            (either (error "Infer of FromNom on Nominal shouldn't fail") Lens.Identity)
+        >>= \x -> valueConversionNoSplit loaded empty x dstType
     T.TFun argType resType | bodyNot ExprLens._BAbs ->
         if Lens.has (ExprLens.valLeafs . ExprLens._LHole) arg
             then
@@ -95,6 +100,7 @@ valueConversionNoSplit loaded empty src dstType =
         & return
     _ -> return src
     where
+        srcType = src ^. V.payload . _1
         bodyNot f = Lens.nullOf (V.body . f) src
 
 value :: Type -> [Val Type]
