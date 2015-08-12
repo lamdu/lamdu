@@ -116,15 +116,5 @@ makeForVal animId val =
             GridView.verticalAlign 0.5 [fieldsView, restView] & return
         where
             (fields, recStatus) = extractFields recExtend
-    body ->
-        BWidgets.makeTextView text animId & ExprGuiM.widgetEnv
-        where
-            text = show body & truncateStr 20
+    body -> BWidgets.makeTextView (show body) animId & ExprGuiM.widgetEnv
     & ExprGuiM.advanceDepth return animId
-
-truncateStr :: Int -> String -> String
-truncateStr n s
-    | l > n = take (n `div` 3) s ++ ".." ++ drop (l - (2 * n `div` 3)) s
-    | otherwise = s
-    where
-        l = length s
