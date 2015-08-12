@@ -3,8 +3,6 @@ module Main
     ( main
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Exception as E
 import           Control.Lens.Operators
 import           Control.Monad (join, unless, replicateM_)
@@ -44,6 +42,8 @@ import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import qualified System.Directory as Directory
 import           System.IO (hPutStrLn, stderr)
+
+import           Prelude.Compat
 
 main :: IO ()
 main =
