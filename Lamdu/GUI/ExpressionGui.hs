@@ -439,7 +439,7 @@ addValBG myId gui =
     where
         animId = Widget.toAnimId myId ++ ["val"]
 
-addValPadding :: MonadA m => ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+addValPadding :: MonadA m => ExpressionGui n -> ExprGuiM m (ExpressionGui n)
 addValPadding gui =
     do
         padding <- ExprGuiM.readConfig <&> Config.valFramePadding
