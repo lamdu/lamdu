@@ -167,6 +167,7 @@ data Config = Config
     , typeTint :: Draw.Color
     , valFrameBGColor :: Draw.Color
     , valFramePadding :: Vector2 Double
+    , valNomBGColor :: Draw.Color
     , valAnnotationBGColor :: Draw.Color
     , valAnnotationHoverBGColor :: Draw.Color
     , valAnnotationSpacing :: Double
