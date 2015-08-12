@@ -714,11 +714,15 @@ convertLetItems binderScopeVars expr =
                     , _liAnnotation = eliAnnotation eli
                     , _liScopes =
                         eliBodyScopesMap eli
-                        & Map.keys & map (join (,)) & Map.fromList
+                        & Map.keys & map ((_1 %~ BinderParamScopeId) . join (,)) & Map.fromList
                     }
                     :
                     ( items
-                        <&> liScopes %~ appendScopeMaps (eliBodyScopesMap eli)
+                          <&> liScopes %~
+                              -- TODO: How to remove the ugly mapKeys here?
+                              Map.mapKeys BinderParamScopeId .
+                              appendScopeMaps (eliBodyScopesMap eli) .
+                              Map.mapKeys (^. bParamScopeId)
                     )
                 , body
                 , appendScopeMaps (eliBodyScopesMap eli) bodyScopesMap
@@ -733,7 +737,7 @@ overrideId :: Ord a => Map a a -> a -> a
 overrideId mapping k = Map.lookup k mapping & fromMaybe k
 
 makeBinder :: (MonadA m, Monoid a) =>
-    Maybe (MkProperty m (Maybe ScopeId)) ->
+    Maybe (MkProperty m (Maybe BinderParamScopeId)) ->
     Maybe (MkProperty m PresentationMode) ->
     ConventionalParams m a -> Val (Input.Payload m a) ->
     ConvertM m (Binder Guid m (ExpressionU m a))
@@ -749,7 +753,7 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
                 )
         let binderScopes s =
                 BinderScopes
-                { _bsParamScope = s
+                { _bsParamScope = BinderParamScopeId s
                 , _bsBodyScope = overrideId bodyScopesMap s
                 }
         return Binder

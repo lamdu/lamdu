@@ -541,7 +541,7 @@ data MissingAnnotationBehavior = ShowNothing | ShowType
 
 data EvalAnnotationOptions
     = NormalEvalAnnotation
-    | WithNeighbouringEvalAnnotations (Maybe ScopeId) (Maybe ScopeId)
+    | WithNeighbouringEvalAnnotations (Maybe Sugar.BinderParamScopeId) (Maybe Sugar.BinderParamScopeId)
 
 maybeAddAnnotationH ::
     MonadA m =>
@@ -565,8 +565,10 @@ maybeAddAnnotationH opt wideAnnotationBehavior missingAnnotationBehavior annotat
                     neighbourVals =
                         case opt of
                         NormalEvalAnnotation -> (Nothing, Nothing)
-                        WithNeighbouringEvalAnnotations p n ->
-                            (p >>= valAndScope, n >>= valAndScope)
+                        WithNeighbouringEvalAnnotations prev next ->
+                            ( prev >>= valAndScope . (^. Sugar.bParamScopeId)
+                            , next >>= valAndScope . (^. Sugar.bParamScopeId)
+                            )
     where
         handleMissingAnnotation =
             case missingAnnotationBehavior of

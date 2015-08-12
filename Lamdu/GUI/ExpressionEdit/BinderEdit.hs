@@ -79,11 +79,12 @@ makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
 
 makeLets ::
     MonadA m =>
+    Maybe Sugar.BinderParamScopeId ->
     [Sugar.LetItem (Name m) m (ExprGuiT.SugarExpr m)] -> Widget.Id ->
     ExprGuiM m [ExpressionGui m]
-makeLets letItems myId =
+makeLets mBinderParamScopeId letItems myId =
     ExpressionGui.listWithDelDests myId myId liCursor letItems
-    & traverse makeLetItemEdit
+    & traverse (makeLetItemEdit mBinderParamScopeId)
     where
         liCursor = WidgetIds.fromEntityId . (^. Sugar.liEntityId)
 
@@ -138,11 +139,11 @@ data Parts m = Parts
 
 data ScopeCursor = ScopeCursor
     { sBinderScopes :: Sugar.BinderScopes
-    , sMPrevParamScope :: Maybe ScopeId
-    , sMNextParamScope :: Maybe ScopeId
+    , sMPrevParamScope :: Maybe Sugar.BinderParamScopeId
+    , sMNextParamScope :: Maybe Sugar.BinderParamScopeId
     }
 
-scopeCursor :: Maybe ScopeId -> [Sugar.BinderScopes] -> Maybe ScopeCursor
+scopeCursor :: Maybe Sugar.BinderParamScopeId -> [Sugar.BinderScopes] -> Maybe ScopeCursor
 scopeCursor mChosenScope scopes =
     do
         chosenScope <- mChosenScope
@@ -180,7 +181,7 @@ mkScopeCursor binder =
 
 makeScopeEventMap ::
     MonadA m =>
-    [ModKey] -> [ModKey] -> (ScopeId -> T m ()) -> ScopeCursor ->
+    [ModKey] -> [ModKey] -> (Sugar.BinderParamScopeId -> T m ()) -> ScopeCursor ->
     Widget.EventHandlers (T m)
 makeScopeEventMap prevKey nextKey setter cursor =
     do
@@ -195,7 +196,7 @@ makeScopeEventMap prevKey nextKey setter cursor =
 
 makeScopeNavEdit ::
     MonadA m =>
-    Widget.Id -> (ScopeId -> T m ()) -> ScopeCursor ->
+    Widget.Id -> (Sugar.BinderParamScopeId -> T m ()) -> ScopeCursor ->
     ExprGuiM m (Maybe (ExpressionGui m))
 makeScopeNavEdit myId setter cursor
     | null scopes = return Nothing
@@ -213,7 +214,7 @@ makeScopeNavEdit myId setter cursor
     where
         leftKeys = [ModKey mempty GLFW.Key'Left]
         rightKeys = [ModKey mempty GLFW.Key'Right]
-        scopes :: [(String, ScopeId)]
+        scopes :: [(String, Sugar.BinderParamScopeId)]
         scopes =
             (sMPrevParamScope cursor ^.. Lens._Just <&> (,) "◀") ++
             (sMNextParamScope cursor ^.. Lens._Just <&> (,) "▶")
@@ -223,7 +224,7 @@ makeScopeNavEdit myId setter cursor
             (E.Doc ["Navigation", "Move", "(blocked)"]) $
             return mempty
 
-sParamScope :: ScopeCursor -> ScopeId
+sParamScope :: ScopeCursor -> Sugar.BinderParamScopeId
 sParamScope = (^. Sugar.bsParamScope) . sBinderScopes
 
 sBodyScope :: ScopeCursor -> ScopeId
@@ -262,7 +263,8 @@ makeParts showAnnotation binder delVarBackwardsId myId =
                     makeParamsEdit annotationMode showAnnotation nearestHoles
                     delVarBackwardsId myId (WidgetIds.fromEntityId bodyId)
                     params
-                    & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
+                    & ExprGuiM.withLocalMScopeId
+                      (mScopeCursor <&> sParamScope <&> (^. Sugar.bParamScopeId))
                     <&> (++ (mScopeNavEdit ^.. Lens.traversed))
                 mParamsEdit <-
                     case paramEdits of
@@ -278,9 +280,7 @@ makeParts showAnnotation binder delVarBackwardsId myId =
                 bodyEdit <-
                     makeResultEdit (binder ^. Sugar.bMActions) params body
                     & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sBodyScope)
-                letEdits <-
-                    makeLets (binder ^. Sugar.bLetItems) myId
-                    & ExprGuiM.withLocalMScopeId (mScopeCursor <&> sParamScope)
+                letEdits <- makeLets (mScopeCursor <&> sParamScope) (binder ^. Sugar.bLetItems) myId
                 rhs <-
                     letEdits ++ [bodyEdit]
                     <&> ExpressionGui.egAlignment . _1 .~ 0
@@ -341,9 +341,10 @@ make name binder myId =
 
 makeLetItemEdit ::
     MonadA m =>
+    Maybe Sugar.BinderParamScopeId ->
     (Widget.Id, Widget.Id, Sugar.LetItem (Name m) m (ExprGuiT.SugarExpr m)) ->
     ExprGuiM m (ExpressionGui m)
-makeLetItemEdit (_prevId, nextId, item) =
+makeLetItemEdit mBinderParamScopeId (_prevId, nextId, item) =
     do
         config <- ExprGuiM.readConfig
         let eventMap
@@ -363,7 +364,6 @@ makeLetItemEdit (_prevId, nextId, item) =
                     liActions ^. Sugar.liExtract
                 ]
                 | otherwise = mempty
-        mBodyScopeId <- ExprGuiM.readMScopeId
         jumpHolesEventMap <-
             binder ^. Sugar.bBody
             & ExprGuiT.nextHolesBefore & ExprEventMap.jumpHolesEventMap
@@ -377,7 +377,7 @@ makeLetItemEdit (_prevId, nextId, item) =
             <&> ExpressionGui.pad
                 (Config.letItemPadding config <&> realToFrac)
             & ExprGuiM.withLocalMScopeId
-                (mBodyScopeId >>= (`Map.lookup` (item ^. Sugar.liScopes)))
+                (mBinderParamScopeId >>= (`Map.lookup` (item ^. Sugar.liScopes)))
             <&> ExpressionGui.egAlignment . _1 .~ 0
         letLabel <- ExpressionGui.grammarLabel "let" (Widget.toAnimId myId)
         ExpressionGui.hboxSpaced [letLabel, edit]

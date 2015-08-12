@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, OverloadedStrings, DeriveGeneric #-}
+{-# LANGUAGE Rank2Types, OverloadedStrings, DeriveGeneric, TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Anchors
     ( Code(..), onCode
     , Revision(..), onRevision
@@ -11,8 +11,10 @@ module Lamdu.Data.Anchors
     , assocTagOrder
     , ParamList
     , assocFieldParamList
+    , BinderParamScopeId(..), bParamScopeId
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.MonadA (MonadA)
 import           Data.Binary (Binary)
 import           Data.ByteString.Char8 ()
@@ -54,6 +56,10 @@ onRevision :: (forall a. Binary a => f a -> g a) -> Revision f m -> Revision g m
 onRevision f (Revision x0 x1 x2 x3 x4) =
     Revision (f x0) (f x1) (f x2) (f x3) (f x4)
 
+newtype BinderParamScopeId = BinderParamScopeId
+    { _bParamScopeId :: ScopeId
+    } deriving (Eq, Ord, Binary)
+
 type CodeProps m = Code (MkProperty m) m
 type RevisionProps m = Revision (MkProperty m) m
 
@@ -64,7 +70,7 @@ assocNameRef :: (UniqueId.ToGuid a, MonadA m) => a -> MkProperty m String
 assocNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toGuid
 
 assocScopeRef ::
-    (UniqueId.ToGuid a, MonadA m) => a -> MkProperty m (Maybe ScopeId)
+    (UniqueId.ToGuid a, MonadA m) => a -> MkProperty m (Maybe BinderParamScopeId)
 assocScopeRef = Transaction.assocDataRef "ScopeId" . UniqueId.toGuid
 
 assocTagOrder :: MonadA m => T.Tag -> MkProperty m Int
@@ -86,3 +92,5 @@ assocPresentationMode ::
     a -> Transaction.MkProperty m PresentationMode
 assocPresentationMode =
     Transaction.assocDataRefDef OO "PresentationMode" . UniqueId.toGuid
+
+Lens.makeLenses ''BinderParamScopeId

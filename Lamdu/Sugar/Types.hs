@@ -19,6 +19,7 @@ module Lamdu.Sugar.Types
     , BinderParams(..),
         _DefintionWithoutParams, _NullParam, _VarParam, _FieldParams
     , BinderScopes(..), bsParamScope, bsBodyScope
+    , BinderParamScopeId(..), bParamScopeId
     , Binder(..)
         , bMPresentationModeProp, bMChosenScopeProp, bParams, bBody
         , bLetItems, bMActions, bScopes
@@ -94,6 +95,7 @@ import           Data.Map (Map)
 import           Data.Store.Guid (Guid)
 import           Data.Store.Transaction (Transaction, MkProperty)
 import qualified Lamdu.Data.Anchors as Anchors
+import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Eval.Val as E
 import           Lamdu.Expr.Scheme (Scheme)
@@ -449,7 +451,7 @@ data LetItem name m expr = LetItem
     , _liName :: name
     , _liActions :: Maybe (LetItemActions m)
     , -- This is a mapping from param in bScopes to the where item's scope
-      _liScopes :: Map E.ScopeId E.ScopeId
+      _liScopes :: Map BinderParamScopeId E.ScopeId
     } deriving (Functor, Foldable, Traversable)
 
 data BinderActions m = BinderActions
@@ -468,13 +470,13 @@ data BinderParams name m
     | FieldParams [(T.Tag, FuncParam (NamedParamInfo name m))]
 
 data BinderScopes = BinderScopes
-    { _bsParamScope :: E.ScopeId
-    , _bsBodyScope :: E.ScopeId
+    { _bsParamScope :: BinderParamScopeId -- Inside lambda scope
+    , _bsBodyScope :: E.ScopeId -- Inside lambda AND redexes scope
     }
 
 data Binder name m expr = Binder
     { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
-    , _bMChosenScopeProp :: Maybe (MkProperty m (Maybe E.ScopeId))
+    , _bMChosenScopeProp :: Maybe (MkProperty m (Maybe BinderParamScopeId))
     , _bParams :: BinderParams name m
     , _bLetItems :: [LetItem name m expr]
     , _bBody :: expr
