@@ -11,7 +11,7 @@ import           Control.Monad (MonadPlus(..), guard, unless)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Control.Monad.Trans.State (evalStateT)
+import           Control.Monad.Trans.State (evalStateT, runState)
 import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
@@ -174,11 +174,17 @@ mkAppliedHoleSuggesteds ::
 mkAppliedHoleSuggesteds sugarContext argI exprPl stored =
     Suggest.valueConversion IRefInfer.loadNominal Nothing
     (argI <&> onPl) dstType
-    <&> Lens.mapped %~
-        ConvertHole.mkHoleOptionFromInjected sugarContext exprPl stored
+    <&> Lens.mapped %~ onSuggestion
     where
         onPl pl = (pl ^. Input.inferredType, Just pl)
         dstType = exprPl ^. Input.inferredType
+        onSuggestion mkSugg =
+            ConvertHole.mkHoleOptionFromInjected
+            (sugarContext & ConvertM.scInferContext .~ newInferCtx)
+            exprPl stored sugg
+            where
+                (sugg, newInferCtx) = runState mkSugg inputInferCtx
+        inputInferCtx = sugarContext ^. ConvertM.scInferContext
 
 convertAppliedHole ::
     (MonadA m, Monoid a) =>

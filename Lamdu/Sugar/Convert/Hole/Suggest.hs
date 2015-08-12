@@ -10,6 +10,7 @@ import           Prelude.Compat
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Control.Monad.Trans.State (State)
 import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -21,6 +22,7 @@ import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Infer (Context)
 import qualified Lamdu.Infer as Infer
 
 loadNominalsForType :: Monad m => (T.Id -> m Nominal) -> Type -> m Infer.Loaded
@@ -43,14 +45,14 @@ loadNominalsForType loadNominal typ =
 valueConversion ::
     MonadA m =>
     (T.Id -> m Nominal) -> a ->
-    Val (Type, a) -> Type -> m [Val (Type, a)]
+    Val (Type, a) -> Type -> m [State Context (Val (Type, a))]
 valueConversion loadNominal empty src dstType =
     do
         loaded <- loadNominalsForType loadNominal (src ^. V.payload . _1)
         valueConversionH loaded empty src dstType & return
 
 valueConversionH ::
-    Infer.Loaded -> a -> Val (Type, a) -> Type -> [Val (Type, a)]
+    Infer.Loaded -> a -> Val (Type, a) -> Type -> [State Context (Val (Type, a))]
 valueConversionH loaded empty src dstType =
     case src ^. V.payload . _1 of
     T.TRecord composite ->
@@ -58,11 +60,11 @@ valueConversionH loaded empty src dstType =
         <&> getField
         where
             getField (tag, typ) =
-                V.GetField src tag & V.BGetField & V.Val (typ, empty)
+                V.GetField src tag & V.BGetField & V.Val (typ, empty) & return
     _ -> [valueConversionNoSplit loaded empty src dstType]
 
 valueConversionNoSplit ::
-    Infer.Loaded -> a -> Val (Type, a) -> Type -> Val (Type, a)
+    Infer.Loaded -> a -> Val (Type, a) -> Type -> State Context (Val (Type, a))
 valueConversionNoSplit loaded empty src dstType =
     case src ^. V.payload . _1 of
     T.TInst name params | bodyNot ExprLens._BToNom ->
@@ -81,7 +83,7 @@ valueConversionNoSplit loaded empty src dstType =
             then
                 -- If the suggested argument has holes in it
                 -- then stop suggesting there to avoid "overwhelming"..
-                applied
+                return applied
             else valueConversionNoSplit loaded empty applied dstType
         where
             arg = valueNoSplit argType & Lens.traversed %~ flip (,) empty
@@ -90,7 +92,8 @@ valueConversionNoSplit loaded empty src dstType =
         suggestCaseWith composite dstType
         & Lens.traversed %~ flip (,) empty
         & (`V.Apply` src) & V.BApp & V.Val (dstType, empty)
-    _ -> src
+        & return
+    _ -> return src
     where
         bodyNot f = Lens.nullOf (V.body . f) src
 
