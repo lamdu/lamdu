@@ -13,6 +13,7 @@ module Lamdu.GUI.ExpressionGui
     , makeLabel
     , grammarLabel
     , addValBG, addValFrame, addValPadding
+    , addValBGWithColor
     , liftLayers
     -- Lifted widgets:
     , makeFocusableView
@@ -430,12 +431,16 @@ grammarLabel text animId =
                 (WE.setTextSizeColor (Config.baseTextSize config) (Config.grammarColor config))
 
 addValBG :: MonadA m => Widget.Id -> Widget f -> ExprGuiM m (Widget f)
-addValBG myId gui =
+addValBG = addValBGWithColor Config.valFrameBGColor
+
+addValBGWithColor ::
+    MonadA m =>
+    (Config -> Draw.Color) -> Widget.Id -> Widget f -> ExprGuiM m (Widget f)
+addValBGWithColor color myId gui =
     do
         config <- ExprGuiM.readConfig
         let layer = Config.layerValFrameBG $ Config.layers config
-        let color = Config.valFrameBGColor config
-        Widget.backgroundColor layer animId color gui & return
+        Widget.backgroundColor layer animId (color config) gui & return
     where
         animId = Widget.toAnimId myId ++ ["val"]
 

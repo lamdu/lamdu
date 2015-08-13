@@ -7,7 +7,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
-import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
@@ -53,7 +52,8 @@ expandingName namePos nomId label nameGui subexprGui showName =
     do
         space <- ExpressionGui.stdSpace
         namePos [nameGui | showName] label
-            & addBG ["nameBG"] nomId
+            & ExpressionGui.egWidget %%~
+                ExpressionGui.addValBGWithColor Config.valNomBGColor nomId
             <&> (:[]) <&> (`namePos` space)
             <&> (:[]) <&> (`namePos` subexprGui)
 
@@ -70,20 +70,6 @@ makeFromNom ::
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeFromNom = mkNomGui "»" $ expandingName addRight
-
-addBG ::
-    MonadA m => AnimId -> Widget.Id ->
-    ExpressionGui n -> ExprGuiM m (ExpressionGui n)
-addBG suffix bgId gui =
-    do
-        config <- ExprGuiM.readConfig
-        let layer = Config.layerValFrameBG $ Config.layers config
-        let color = Config.valNomBGColor config
-        gui
-            & ExpressionGui.egWidget %~ Widget.backgroundColor layer animId color
-            & return
-    where
-        animId = Widget.toAnimId bgId ++ suffix
 
 mkNomGui ::
     Monad m =>
