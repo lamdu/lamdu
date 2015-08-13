@@ -5,9 +5,9 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
 
 import           Prelude.Compat
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
+import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Config as Config
@@ -18,16 +18,16 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.Sugar.Names.Types (Name(..))
+import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
-make ::
+makeCommon ::
     MonadA m =>
-    Sugar.Inject (Name m) m (ExprGuiT.SugarExpr m) ->
-    Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.TagG (Name m) -> Maybe (Transaction m Sugar.EntityId) ->
+    NearestHoles -> [ExpressionGui m] ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.Inject tagG mVal mDelInject) pl =
-    ExpressionGui.stdWrapParentExpr pl $ \myId ->
+makeCommon tagG mDelInject nearestHoles valEdits =
     do
         config <- ExprGuiM.readConfig
         let delEventMap =
@@ -38,15 +38,27 @@ make (Sugar.Inject tagG mVal mDelInject) pl =
         tagEdit <-
             TagEdit.makeRecordTag nearestHoles tagG
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents delEventMap
-
-        valEdits <-
-            mVal ^.. Lens._Just
-            & mapM (ExprGuiM.makeSubexpression 11)
         ExpressionGui.hboxSpaced $ tagEdit : valEdits
-    & ExprGuiM.assignCursor myId tagId
+    where
+        delDoc = E.Doc ["Edit", "Delete Inject"]
+
+make ::
+    MonadA m =>
+    Sugar.Inject (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.Payload m ExprGuiT.Payload ->
+    ExprGuiM m (ExpressionGui m)
+make (Sugar.Inject tagG mVal mDelInject) pl =
+    case mVal of
+    Nothing ->
+        ExpressionGui.stdWrap pl $
+        makeCommon tagG mDelInject nearestHoles []
+    Just val ->
+        ExpressionGui.stdWrapParentExpr pl $ \myId ->
+        ExprGuiM.makeSubexpression 11 val <&> (:[])
+        >>= makeCommon tagG mDelInject nearestHoles
+        & ExprGuiM.assignCursor myId tagId
     where
         tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
-        delDoc = E.Doc ["Edit", "Delete Inject"]
         nearestHoles =
             maybe (pl ^. Sugar.plData . ExprGuiT.plNearestHoles)
             ExprGuiT.nextHolesBefore mVal
