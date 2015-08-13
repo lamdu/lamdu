@@ -39,21 +39,20 @@ hover gui place =
 
 type LayoutFunc m =
     Widget.Id -> -- nomId
-    (String -> ExprGuiM m (ExpressionGui m)) -> -- label
+    ExpressionGui m -> -- label
     ExpressionGui m -> -- name gui
     ExpressionGui m -> -- subexpr gui
     Bool -> -- show name
     ExprGuiM m (ExpressionGui m)
 
 expandingName ::
-    MonadA m => String ->
+    MonadA m =>
     ([ExpressionGui m] -> ExpressionGui m -> ExpressionGui m) ->
     ([ExpressionGui m] -> ExpressionGui m -> ExpressionGui m) ->
     LayoutFunc m
-expandingName str namePos subExprPos nomId label nameGui subexprGui showName =
-    label str
-    <&> namePos [nameGui | showName]
-    >>= addBG ["nameBG"] nomId
+expandingName namePos subExprPos nomId label nameGui subexprGui showName =
+    namePos [nameGui | showName] label
+    & addBG ["nameBG"] nomId
     >>= ExpressionGui.addValPadding
     <&> subExprPos [subexprGui]
 
@@ -62,14 +61,14 @@ makeToNom ::
     Sugar.Nominal (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeToNom = mkNomGui $ expandingName "«" addLeft addRight
+makeToNom = mkNomGui "«" $ expandingName addLeft addRight
 
 makeFromNom ::
     MonadA m =>
     Sugar.Nominal (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeFromNom = mkNomGui $ expandingName "»" addRight addLeft
+makeFromNom = mkNomGui "»" $ expandingName addRight addLeft
 
 addBG ::
     MonadA m => AnimId -> Widget.Id ->
@@ -87,18 +86,18 @@ addBG suffix bgId gui =
 
 mkNomGui ::
     Monad m =>
-    LayoutFunc m -> Sugar.Nominal (Name m) m (ExprGuiT.SugarExpr m) ->
+    String -> LayoutFunc m -> Sugar.Nominal (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
-mkNomGui layout nom@(Sugar.Nominal _ val _) pl =
+mkNomGui str layout nom@(Sugar.Nominal _ val _) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
         let nomId = Widget.joinId myId ["nom"]
         isSelected <- WE.isSubCursor nomId & ExprGuiM.widgetEnv
         let nameId = Widget.joinId nomId ["name"]
-        let label str =
-                ExpressionGui.grammarLabel str (Widget.toAnimId myId)
-                <&> if isSelected then id
-                    else ExpressionGui.egWidget %~ Widget.takesFocus (const (pure nameId))
+        label <-
+            ExpressionGui.grammarLabel str (Widget.toAnimId myId)
+            <&> if isSelected then id
+                else ExpressionGui.egWidget %~ Widget.takesFocus (const (pure nameId))
         nameEdit <-
             mkNameGui "Wrapper" nom nameId
             >>= ExpressionGui.makeFocusableView nameId
