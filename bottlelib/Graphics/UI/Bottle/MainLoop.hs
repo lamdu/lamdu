@@ -62,24 +62,29 @@ windowSize win =
 
 mainLoopImage :: GLFW.Window -> (Widget.Size -> ImageHandlers) -> IO ()
 mainLoopImage win imageHandlers =
-    eventLoop win handleEvents
+    do
+        frameBufferSize <- newIORef =<< windowSize win
+        let handleEvent handlers (EventKey keyEvent) =
+                do
+                    imageEventHandler handlers keyEvent
+                    return ERNone
+            handleEvent _ EventWindowClose = return ERQuit
+            handleEvent _ EventWindowRefresh = return ERRefresh
+            handleEvent _ (EventFrameBufferSize size) =
+                do
+                    writeIORef frameBufferSize (fromIntegral <$> size)
+                    return ERRefresh
+        let handleEvents events =
+                do
+                    winSize <- readIORef frameBufferSize
+                    let handlers = imageHandlers winSize
+                    eventResult <- mconcat <$> traverse (handleEvent handlers) events
+                    case eventResult of
+                        ERQuit -> return ResultQuit
+                        ERRefresh -> imageRefresh handlers >>= draw winSize
+                        ERNone -> imageUpdate handlers >>= maybe delay (draw winSize)
+        eventLoop win handleEvents
     where
-        handleEvent handlers (EventKey keyEvent) =
-            do
-                imageEventHandler handlers keyEvent
-                return ERNone
-        handleEvent _ EventWindowClose = return ERQuit
-        handleEvent _ EventWindowRefresh = return ERRefresh
-
-        handleEvents events =
-            do
-                winSize <- windowSize win
-                let handlers = imageHandlers winSize
-                eventResult <- mconcat <$> traverse (handleEvent handlers) events
-                case eventResult of
-                    ERQuit -> return ResultQuit
-                    ERRefresh -> imageRefresh handlers >>= draw winSize
-                    ERNone -> imageUpdate handlers >>= maybe delay (draw winSize)
         delay =
             do
                 -- TODO: If we can verify that there's sync-to-vblank, we
@@ -117,6 +122,33 @@ withForkedIO :: IO () -> IO a -> IO a
 withForkedIO action =
     bracket (forkIOUnmasked action) asyncKillThread . const
 
+data ThreadSyncVar = ThreadSyncVar
+    { _tsvHaveTicks :: !Bool
+    , _tsvRefreshRequested :: !Bool
+    , _tsvWinSize :: !Widget.Size
+    , _tsvReversedEvents :: [KeyEvent]
+    , _tsvRequestNumber :: !Int
+    , _tsvResponseNumber :: !Int
+    }
+
+tsvHaveTicks :: Lens' ThreadSyncVar Bool
+tsvHaveTicks f ThreadSyncVar {..} = f _tsvHaveTicks <&> \_tsvHaveTicks -> ThreadSyncVar {..}
+
+tsvRefreshRequested :: Lens' ThreadSyncVar Bool
+tsvRefreshRequested f ThreadSyncVar {..} = f _tsvRefreshRequested <&> \_tsvRefreshRequested -> ThreadSyncVar {..}
+
+tsvWinSize :: Lens' ThreadSyncVar Widget.Size
+tsvWinSize f ThreadSyncVar {..} = f _tsvWinSize <&> \_tsvWinSize -> ThreadSyncVar {..}
+
+tsvReversedEvents :: Lens' ThreadSyncVar [KeyEvent]
+tsvReversedEvents f ThreadSyncVar {..} = f _tsvReversedEvents <&> \_tsvReversedEvents -> ThreadSyncVar {..}
+
+tsvRequestNumber :: Lens' ThreadSyncVar Int
+tsvRequestNumber f ThreadSyncVar {..} = f _tsvRequestNumber <&> \_tsvRequestNumber -> ThreadSyncVar {..}
+
+tsvResponseNumber :: Lens' ThreadSyncVar Int
+tsvResponseNumber f ThreadSyncVar {..} = f _tsvResponseNumber <&> \_tsvResponseNumber -> ThreadSyncVar {..}
+
 -- Animation thread will have not only the cur frame, but the dest
 -- frame in its mutable current state (to update it asynchronously)
 
@@ -142,13 +174,6 @@ asCurTime f AnimState {..} = f _asCurTime <&> \_asCurTime -> AnimState {..}
 asDestFrame :: Lens' AnimState Anim.Frame
 asDestFrame f AnimState {..} = f _asDestFrame <&> \_asDestFrame -> AnimState {..}
 
-data ThreadSyncVar = ThreadSyncVar
-    { _tsvHaveTicks :: Bool
-    , _tsvRefreshRequested :: Bool
-    , _tsvWinSize :: Widget.Size
-    , _tsvReversedEvents :: [KeyEvent]
-    }
-
 initialAnimState :: Anim.Frame -> IO AnimState
 initialAnimState initialFrame =
     do
@@ -159,18 +184,6 @@ initialAnimState initialFrame =
             , _asCurFrame = initialFrame
             , _asDestFrame = initialFrame
             }
-
-tsvHaveTicks :: Lens' ThreadSyncVar Bool
-tsvHaveTicks f ThreadSyncVar {..} = f _tsvHaveTicks <&> \_tsvHaveTicks -> ThreadSyncVar {..}
-
-tsvRefreshRequested :: Lens' ThreadSyncVar Bool
-tsvRefreshRequested f ThreadSyncVar {..} = f _tsvRefreshRequested <&> \_tsvRefreshRequested -> ThreadSyncVar {..}
-
-tsvWinSize :: Lens' ThreadSyncVar Widget.Size
-tsvWinSize f ThreadSyncVar {..} = f _tsvWinSize <&> \_tsvWinSize -> ThreadSyncVar {..}
-
-tsvReversedEvents :: Lens' ThreadSyncVar [KeyEvent]
-tsvReversedEvents f ThreadSyncVar {..} = f _tsvReversedEvents <&> \_tsvReversedEvents -> ThreadSyncVar {..}
 
 killSelfOnError :: IO a -> IO (IO a)
 killSelfOnError action =
@@ -194,6 +207,8 @@ mainLoopAnim win getAnimationConfig animHandlers =
             , _tsvRefreshRequested = False
             , _tsvWinSize = initialWinSize
             , _tsvReversedEvents = []
+            , _tsvRequestNumber = 0
+            , _tsvResponseNumber = 0
             }
         eventHandler <- killSelfOnError (eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers)
         withForkedIO eventHandler $ mainLoopAnimThread frameStateVar eventTVar win
@@ -227,6 +242,8 @@ eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers =
             if tsv ^. tsvHaveTicks
             then animTickHandler handlers
             else return Nothing
+        tsvResponseNumber .~ tsv ^. tsvRequestNumber
+            & modifyTVar eventTVar & STM.atomically
         case (tsv ^. tsvRefreshRequested, mconcat (tickResult : eventResults)) of
             (False, Nothing) -> return ()
             (_, mMapping) ->
@@ -256,14 +273,16 @@ eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers =
 mainLoopAnimThread :: TVar AnimState -> TVar ThreadSyncVar -> GLFW.Window -> IO ()
 mainLoopAnimThread frameStateVar eventTVar win =
     mainLoopImage win $ \size ->
-        ImageHandlers
-        { imageEventHandler = \event -> updateTVar $ tsvReversedEvents %~ (event :)
-        , imageRefresh =
-            do
-                updateTVar (tsvRefreshRequested .~ True)
-                updateFrameState size <&> _asCurFrame <&> Anim.draw
-        , imageUpdate = updateFrameState size <&> frameStateResult
-        }
+    ImageHandlers
+    { imageEventHandler = \event ->
+      (tsvRequestNumber +~ 1) . (tsvReversedEvents %~ (event :))
+      & updateTVar
+    , imageRefresh =
+        do
+            updateTVar ((tsvRequestNumber +~ 1) . (tsvRefreshRequested .~ True))
+            updateFrameState size <&> _asCurFrame . snd <&> Anim.draw
+    , imageUpdate = updateFrameState size <&> frameStateResult
+    }
     where
         updateTVar = STM.atomically . modifyTVar eventTVar
         tick size = updateTVar $ (tsvHaveTicks .~ True) . (tsvWinSize .~ size)
@@ -288,8 +307,12 @@ mainLoopAnimThread frameStateVar eventTVar win =
                                 FinalFrame -> notAnimating
                                 NotAnimating -> notAnimating
                         writeTVar frameStateVar newAnimState
-                        return newAnimState
-        frameStateResult (AnimState isAnimating _ frame _) =
+                        reqNum <- readTVar eventTVar <&> _tsvRequestNumber
+                        respNum <- readTVar eventTVar <&> _tsvResponseNumber
+                        return (reqNum > respNum, newAnimState)
+        frameStateResult (awaitingHandler, AnimState isAnimating _ frame _)
+            | awaitingHandler = Just $ Anim.draw frame
+            | otherwise =
             case isAnimating of
             Animating _ -> Just $ Anim.draw frame
             FinalFrame -> Just $ Anim.draw frame

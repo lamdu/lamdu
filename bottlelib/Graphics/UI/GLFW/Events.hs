@@ -4,16 +4,18 @@ module Graphics.UI.GLFW.Events
     , eventLoop
     ) where
 
-import           Prelude.Compat
-
 import           Data.IORef
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.GLFW as GLFW
+
+import           Prelude.Compat
 
 -- this is the reification of the callback information:
 data GLFWRawEvent
     = RawCharEvent Char
     | RawKeyEvent GLFW.Key Int GLFW.KeyState GLFW.ModifierKeys
     | RawWindowRefresh
+    | RawFrameBufferSize (Vector2 Int)
     | RawWindowClose
     deriving (Show, Eq)
 
@@ -30,6 +32,7 @@ data Event
     = EventKey KeyEvent
     | EventWindowClose
     | EventWindowRefresh
+    | EventFrameBufferSize (Vector2 Int)
     deriving (Show, Eq)
 
 data Result
@@ -52,6 +55,7 @@ translate :: [GLFWRawEvent] -> [Event]
 translate [] = []
 translate (RawWindowClose : xs) = EventWindowClose : translate xs
 translate (RawWindowRefresh : xs) = EventWindowRefresh : translate xs
+translate (RawFrameBufferSize size : xs) = EventFrameBufferSize size : translate xs
 translate (RawKeyEvent key scanCode keyState modKeys : RawCharEvent char : xs) =
     EventKey (KeyEvent key scanCode keyState modKeys (fromChar char)) :
     translate xs
@@ -74,19 +78,25 @@ rawEventLoop win eventsHandler =
             setCallback f cb = f win $ Just $ const cb
             loop =
                 do
-                    GLFW.pollEvents
                     let handleReversedEvents rEvents = ([], reverse rEvents)
                     events <- atomicModifyIORef eventsVar handleReversedEvents
                     res <- eventsHandler events
                     case res of
-                        ResultNone -> loop
-                        ResultDidDraw -> GLFW.swapBuffers win >> loop
+                        ResultNone ->
+                            do
+                                GLFW.waitEvents
+                                loop
+                        ResultDidDraw ->
+                            do
+                                GLFW.swapBuffers win
+                                GLFW.pollEvents
+                                loop
                         ResultQuit -> return ()
 
         setCallback GLFW.setCharCallback charEventHandler
         setCallback GLFW.setKeyCallback addKeyEvent
         setCallback GLFW.setWindowRefreshCallback $ addEvent RawWindowRefresh
-        setCallback GLFW.setWindowSizeCallback . const . const $ addEvent RawWindowRefresh
+        setCallback GLFW.setFramebufferSizeCallback $ \w h -> addEvent (RawFrameBufferSize (Vector2 w h))
         setCallback GLFW.setWindowCloseCallback $ addEvent RawWindowClose
 
         loop
