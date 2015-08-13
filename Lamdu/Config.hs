@@ -192,6 +192,7 @@ data Config = Config
     , caseOpenKeys :: [ModKey]
     , caseTailColor :: Draw.Color
     , caseAddAltKeys :: [ModKey]
+    , evaluatedPathBGColor :: Draw.Color
 
     , presentationChoiceScaleFactor :: Vector2 Double
     , presentationChoiceColor :: Draw.Color

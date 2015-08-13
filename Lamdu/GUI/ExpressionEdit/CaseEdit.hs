@@ -130,7 +130,9 @@ makeAltRow mActiveTag (Sugar.CaseAlt mDelete tag altExpr) =
         altRefGui <-
             TagEdit.makeCaseTag (ExprGuiT.nextHolesBefore altExpr) tag
             >>= if mActiveTag == Just (tag ^. Sugar.tagVal)
-                then ExpressionGui.addValFrame
+                then
+                    ExpressionGui.egWidget %%~
+                    ExpressionGui.addValBGWithColor Config.evaluatedPathBGColor
                     (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
                 else return
         altExprGui <- ExprGuiM.makeSubexpression 0 altExpr
