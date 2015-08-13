@@ -48,27 +48,28 @@ type LayoutFunc m =
 expandingName ::
     MonadA m =>
     ([ExpressionGui m] -> ExpressionGui m -> ExpressionGui m) ->
-    ([ExpressionGui m] -> ExpressionGui m -> ExpressionGui m) ->
     LayoutFunc m
-expandingName namePos subExprPos nomId label nameGui subexprGui showName =
-    namePos [nameGui | showName] label
-    & addBG ["nameBG"] nomId
-    >>= ExpressionGui.addValPadding
-    <&> subExprPos [subexprGui]
+expandingName namePos nomId label nameGui subexprGui showName =
+    do
+        space <- ExpressionGui.stdSpace
+        namePos [nameGui | showName] label
+            & addBG ["nameBG"] nomId
+            <&> (:[]) <&> (`namePos` space)
+            <&> (:[]) <&> (`namePos` subexprGui)
 
 makeToNom ::
     MonadA m =>
     Sugar.Nominal (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeToNom = mkNomGui "«" $ expandingName addLeft addRight
+makeToNom = mkNomGui "«" $ expandingName addLeft
 
 makeFromNom ::
     MonadA m =>
     Sugar.Nominal (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeFromNom = mkNomGui "»" $ expandingName addRight addLeft
+makeFromNom = mkNomGui "»" $ expandingName addRight
 
 addBG ::
     MonadA m => AnimId -> Widget.Id ->
