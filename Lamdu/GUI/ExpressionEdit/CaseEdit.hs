@@ -115,10 +115,9 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
         vspace <- ExpressionGui.verticalSpace
         [header, vspace, altsGui]
             & ExpressionGui.vboxTopFocalAlignedTo 0
-            & ExpressionGui.addValPadding
+            & ExpressionGui.addValFrame myId
             <&> ExpressionGui.egWidget %~
                 Widget.weakerEvents (addAltEventMap mAddAlt)
-            >>= ExpressionGui.egWidget %%~ ExpressionGui.addValBG myId
 
 makeAltRow ::
     MonadA m =>
