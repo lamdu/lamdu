@@ -36,8 +36,7 @@ make (Sugar.Inject tagG mVal mDelInject) pl =
                 & maybe mempty
                 (Widget.keysEventMapMovesCursor (Config.delKeys config) delDoc)
         tagEdit <-
-            TagEdit.makeRecordTag
-            (pl ^. Sugar.plData . ExprGuiT.plNearestHoles) tagG
+            TagEdit.makeRecordTag nearestHoles tagG
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents delEventMap
 
         valEdits <-
@@ -48,3 +47,6 @@ make (Sugar.Inject tagG mVal mDelInject) pl =
     where
         tagId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
         delDoc = E.Doc ["Edit", "Delete Inject"]
+        nearestHoles =
+            maybe (pl ^. Sugar.plData . ExprGuiT.plNearestHoles)
+            ExprGuiT.nextHolesBefore mVal
