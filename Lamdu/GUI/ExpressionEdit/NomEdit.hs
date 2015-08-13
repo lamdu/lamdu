@@ -51,12 +51,11 @@ expandingName ::
     ([ExpressionGui m] -> ExpressionGui m -> ExpressionGui m) ->
     LayoutFunc m
 expandingName str namePos subExprPos nomId label nameGui subexprGui showName =
-    do
-        label str
-            <&> namePos [nameGui | showName]
-            >>= addBG ["nameBG"] nomId
-            >>= ExpressionGui.addValPadding
-            <&> subExprPos [subexprGui]
+    label str
+    <&> namePos [nameGui | showName]
+    >>= addBG ["nameBG"] nomId
+    >>= ExpressionGui.addValPadding
+    <&> subExprPos [subexprGui]
 
 makeToNom ::
     MonadA m =>
