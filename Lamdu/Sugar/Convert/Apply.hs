@@ -250,14 +250,10 @@ convertAppliedCase (BodyCase caseB) casePl argS exprPl =
     do
         Lens.has (cKind . _LambdaCase) caseB & guard
         protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
-        let (shownArg, pls) =
-                case argS ^. rBody of
-                BodyFromNom nom -> (nom ^. nVal, argS ^. rPayload . plData)
-                _ -> (argS, mempty)
         caseB
             & cKind .~ CaseWithArg
                 CaseArg
-                { _caVal = shownArg
+                { _caVal = argS
                 , _caMToLambdaCase =
                     protectedSetToVal
                     <$> exprPl ^. Input.mStored
@@ -266,5 +262,5 @@ convertAppliedCase (BodyCase caseB) casePl argS exprPl =
                 }
             & BodyCase
             & lift . addActions exprPl
-            <&> rPayload . plData <>~ mappend pls (casePl ^. Input.userData)
+    <&> rPayload . plData <>~ casePl ^. Input.userData
 convertAppliedCase _ _ _ _ = mzero
