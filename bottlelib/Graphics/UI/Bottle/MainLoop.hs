@@ -172,9 +172,6 @@ tsvWinSize f ThreadSyncVar {..} = f _tsvWinSize <&> \_tsvWinSize -> ThreadSyncVa
 tsvReversedEvents :: Lens' ThreadSyncVar [KeyEvent]
 tsvReversedEvents f ThreadSyncVar {..} = f _tsvReversedEvents <&> \_tsvReversedEvents -> ThreadSyncVar {..}
 
-atomicModifyIORef_ :: IORef a -> (a -> a) -> IO ()
-atomicModifyIORef_ ioref f = atomicModifyIORef ioref (flip (,) () . f)
-
 killSelfOnError :: IO a -> IO (IO a)
 killSelfOnError action =
     do
@@ -190,17 +187,16 @@ mainLoopAnim win getAnimationConfig animHandlers =
         initialWinSize <- windowSize win
         frameStateVar <-
             animMakeFrame (animHandlers initialWinSize)
-            >>= initialAnimState >>= newIORef
+            >>= initialAnimState >>= newTVarIO
         eventTVar <-
-            STM.atomically $ newTVar ThreadSyncVar
+            newTVarIO ThreadSyncVar
             { _tsvHaveTicks = False
             , _tsvRefreshRequested = False
             , _tsvWinSize = initialWinSize
             , _tsvReversedEvents = []
             }
         eventHandler <- killSelfOnError (eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers)
-        withForkedIO eventHandler $
-            mainLoopAnimThread frameStateVar eventTVar win
+        withForkedIO eventHandler $ mainLoopAnimThread frameStateVar eventTVar win
 
 waitForEvent :: TVar ThreadSyncVar -> IO ThreadSyncVar
 waitForEvent eventTVar =
@@ -218,7 +214,7 @@ waitForEvent eventTVar =
         return tsv
     & STM.atomically
 
-eventHandlerThread :: IORef AnimState -> TVar ThreadSyncVar -> IO AnimConfig -> (Widget.Size -> AnimHandlers) -> IO ()
+eventHandlerThread :: TVar AnimState -> TVar ThreadSyncVar -> IO AnimConfig -> (Widget.Size -> AnimHandlers) -> IO ()
 eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers =
     forever $
     do
@@ -244,7 +240,7 @@ eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers =
                             (addUTCTime timePeriod userEventTime)
                             curTime
                     let animationHalfLife = timeRemaining / realToFrac (logBase 0.5 ratio)
-                    atomicModifyIORef_ frameStateVar $
+                    STM.atomically $ modifyTVar frameStateVar $
                         \oldFrameState ->
                         oldFrameState
                         & asIsAnimating .~ Animating animationHalfLife
@@ -257,8 +253,7 @@ eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers =
                         & asCurTime .~ addUTCTime (-1.0 / desiredFrameRate) curTime
                         & asCurFrame %~ Anim.mapIdentities (Monoid.appEndo (fromMaybe mempty mMapping))
 
-mainLoopAnimThread ::
-    IORef AnimState -> TVar ThreadSyncVar -> GLFW.Window -> IO ()
+mainLoopAnimThread :: TVar AnimState -> TVar ThreadSyncVar -> GLFW.Window -> IO ()
 mainLoopAnimThread frameStateVar eventTVar win =
     mainLoopImage win $ \size ->
         ImageHandlers
@@ -276,21 +271,24 @@ mainLoopAnimThread frameStateVar eventTVar win =
             do
                 tick size
                 curTime <- getCurrentTime
-                atomicModifyIORef frameStateVar $
-                    \(AnimState prevAnimating prevTime prevFrame destFrame) ->
-                    let notAnimating = AnimState NotAnimating curTime destFrame destFrame
-                        newAnimState =
-                            case prevAnimating of
-                            Animating animationHalfLife ->
-                                case Anim.nextFrame progress destFrame prevFrame of
-                                Nothing -> AnimState FinalFrame curTime destFrame destFrame
-                                Just newFrame -> AnimState (Animating animationHalfLife) curTime newFrame destFrame
-                                where
-                                    elapsed = curTime `diffUTCTime` prevTime
-                                    progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
-                            FinalFrame -> notAnimating
-                            NotAnimating -> notAnimating
-                    in (newAnimState, newAnimState)
+                STM.atomically $
+                    do
+                        AnimState prevAnimating prevTime prevFrame destFrame <-
+                            readTVar frameStateVar
+                        let notAnimating = AnimState NotAnimating curTime destFrame destFrame
+                            newAnimState =
+                                case prevAnimating of
+                                Animating animationHalfLife ->
+                                    case Anim.nextFrame progress destFrame prevFrame of
+                                    Nothing -> AnimState FinalFrame curTime destFrame destFrame
+                                    Just newFrame -> AnimState (Animating animationHalfLife) curTime newFrame destFrame
+                                    where
+                                        elapsed = curTime `diffUTCTime` prevTime
+                                        progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac animationHalfLife)
+                                FinalFrame -> notAnimating
+                                NotAnimating -> notAnimating
+                        writeTVar frameStateVar newAnimState
+                        return newAnimState
         frameStateResult (AnimState isAnimating _ frame _) =
             case isAnimating of
             Animating _ -> Just $ Anim.draw frame
