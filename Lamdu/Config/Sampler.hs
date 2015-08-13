@@ -13,42 +13,62 @@ import qualified Control.Exception as E
 import           Control.Monad (forever)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
 import           Lamdu.DataFile (accessDataFile)
+import           System.Directory (getModificationTime)
 
-type Version = Int
+type ModificationTime = UTCTime
+type Version = ModificationTime
 
-data Sampler a = Sampler
+data Sampler = Sampler
     { _sThreadId :: ThreadId
-    , sGetConfig :: IO (Version, a)
+    , sGetConfig :: IO (ModificationTime, Config)
     }
 
-getConfig :: Sampler a -> IO (Version, a)
+getConfig :: Sampler -> IO (Version, Config)
 getConfig = sGetConfig
 
-sampler :: Eq a => IO a -> IO (Sampler a)
-sampler sample =
+withMTime :: FilePath -> IO a -> IO (ModificationTime, a)
+withMTime path act =
     do
-        ref <- newMVar . (,) 0 =<< E.evaluate =<< sample
-        let updateMVar newSample =
-                modifyMVar_ ref $ \(ver, oldSample) -> return $
-                if oldSample == newSample
-                then (ver, oldSample)
-                else (ver+1, newSample)
-        tid <-
-            forkIOUnmasked . forever $
-            do
-                threadDelay 200000
-                (updateMVar =<< sample) `E.catch` \E.SomeException {} -> return ()
-        return $ Sampler tid $ readMVar ref
+        mtimeBefore <- getModificationTime path
+        res <- act
+        mtimeAfter <- getModificationTime path
+        if mtimeBefore == mtimeAfter
+            then return (mtimeAfter, res)
+            else withMTime path act
 
-load :: FilePath -> IO Config
+load :: FilePath -> IO (ModificationTime, Config)
 load configPath =
-    do
+    withMTime configPath $ do
         eConfig <- Aeson.eitherDecode' <$> LBS.readFile configPath
         either (fail . (msg ++)) return eConfig
     where
         msg = "Failed to parse config file contents at " ++ show configPath ++ ": "
 
-new :: FilePath -> IO (Sampler Config)
-new startDir = sampler $ accessDataFile startDir load "config.json"
+maybeLoad :: (ModificationTime, Config) -> FilePath -> IO (ModificationTime, Config)
+maybeLoad old@(oldMTime, _) configPath =
+    do
+        mtime <- getModificationTime configPath
+        if mtime == oldMTime
+            then return old
+            else load configPath
+
+new :: FilePath -> IO Sampler
+new startDir =
+    do
+        ref <-
+            sample load
+            >>= E.evaluate
+            >>= newMVar
+        tid <-
+            forkIOUnmasked . forever $
+            do
+                threadDelay 300000
+                modifyMVar_ ref $ \old ->
+                    sample (maybeLoad old)
+                    `E.catch` \E.SomeException {} -> return old
+        return $ Sampler tid $ readMVar ref
+    where
+        sample f = accessDataFile startDir f "config.json"

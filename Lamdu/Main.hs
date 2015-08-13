@@ -14,6 +14,7 @@ import           Data.Store.Db (Db)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.Time.Clock (getCurrentTime)
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           Graphics.UI.Bottle.MainLoop (mainLoopWidget)
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -153,7 +154,7 @@ scheduleRefresh :: RefreshScheduler -> IO ()
 scheduleRefresh (RefreshScheduler ref) = writeIORef ref True
 
 mainLoop ::
-    GLFW.Window -> RefreshScheduler -> Sampler Config ->
+    GLFW.Window -> RefreshScheduler -> Sampler ->
     ( Config -> Widget.Size ->
         ( IO (Widget IO)
         , Widget IO -> IO (Widget IO)
@@ -161,7 +162,7 @@ mainLoop ::
     ) -> IO ()
 mainLoop win refreshScheduler configSampler iteration =
     do
-        lastVersionNumRef <- newIORef 0
+        lastVersionNumRef <- newIORef =<< getCurrentTime
         let getAnimHalfLife =
                 ConfigSampler.getConfig configSampler <&> Style.anim . snd
             makeWidget size =

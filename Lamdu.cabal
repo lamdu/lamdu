@@ -144,6 +144,7 @@ Executable lamdu
                   , lens
                   , random
                   , split
+                  , time
                   , transformers
                   , utf8-string
                   , void >= 0.6.1
