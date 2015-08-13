@@ -46,12 +46,10 @@ type LayoutFunc m =
     ExprGuiM m (ExpressionGui m)
 
 expandingName ::
-    (MonadA m, MonadA n) => String ->
-    ([ExpressionGui n] -> ExpressionGui n -> ExpressionGui n) ->
-    ([ExpressionGui n] -> ExpressionGui n -> ExpressionGui n) ->
-    Widget.Id -> (String -> ExprGuiM m (ExpressionGui n)) ->
-    ExpressionGui n -> ExpressionGui n -> Bool ->
-    ExprGuiM m (ExpressionGui n)
+    MonadA m => String ->
+    ([ExpressionGui m] -> ExpressionGui m -> ExpressionGui m) ->
+    ([ExpressionGui m] -> ExpressionGui m -> ExpressionGui m) ->
+    LayoutFunc m
 expandingName str namePos subExprPos nomId label nameGui subexprGui showName =
     do
         label str
