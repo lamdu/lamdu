@@ -248,10 +248,8 @@ makeEvaluationResultView animId (scopeId, evalRes) =
     <&> Widget.fromView
     <&> fromValueWidget
 
-makeTypeView ::
-    MonadA m => Type -> AnnotationParams -> ExprGuiM m (ExpressionGui m)
+makeTypeView :: MonadA m => Type -> AnimId -> ExprGuiM m (ExpressionGui m)
 makeTypeView typ =
-    makeWithAnnotationBG
     (fmap (fromValueWidget . Widget.fromView) . (`TypeView.make` typ))
 
 data NeighborVals a = NeighborVals
@@ -262,9 +260,8 @@ data NeighborVals a = NeighborVals
 makeEvalView ::
     MonadA m =>
     NeighborVals (Maybe ScopeAndVal) -> ScopeAndVal ->
-    AnnotationParams -> ExprGuiM m (ExpressionGui m)
+    AnimId -> ExprGuiM m (ExpressionGui m)
 makeEvalView (NeighborVals mPrev mNext) evalRes =
-    makeWithAnnotationBG $
     \animId ->
         do
             config <- ExprGuiM.readConfig
@@ -300,13 +297,14 @@ annotationSpacer =
 
 addAnnotationH ::
     MonadA m =>
-    (AnnotationParams -> ExprGuiM m (ExpressionGui m)) ->
+    (AnimId -> ExprGuiM m (ExpressionGui m)) ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addAnnotationH f wideBehavior entityId eg =
     do
         vspace <- annotationSpacer
-        annotationEg <- f (annotationParamsFor wideBehavior entityId eg)
+        annotationEg <-
+            makeWithAnnotationBG f (annotationParamsFor wideBehavior entityId eg)
         vboxTopFocal
             [ eg & egAlignment . _1 .~ 0.5
             , vspace

@@ -42,7 +42,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.SearchTerm as Sear
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult, pickedIdTranslations)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, AnnotationParams(..))
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -402,18 +402,12 @@ makeUnderCursorAssignment shownResultsLists hasHiddenResults editableHoleInfo =
         (searchTermEventMap, resultsEventMap) <-
             EventMap.makeOpenEventMaps editableHoleInfo mShownResult
 
-        wideAnnotationBehavior <-
-            WE.isSubCursor hidHole & ExprGuiM.widgetEnv
-            <&> ExpressionGui.wideAnnotationBehaviorFromSelected
         -- We make our own type view here instead of
         -- ExpressionGui.stdWrap, because we want to synchronize the
         -- active BG width with the inferred type width
         typeView <-
-            ExpressionGui.makeTypeView (hiInferredType holeInfo) AnnotationParams
-            { apMinWidth = resultsWidget ^. Widget.width
-            , apAnimId = Widget.toAnimId hidHole
-            , apWideAnnotationBehavior = wideAnnotationBehavior
-            }
+            ExpressionGui.makeTypeView (hiInferredType holeInfo)
+            (Widget.toAnimId hidHole)
 
         vspace <- ExpressionGui.annotationSpacer
         hoverResultsWidget <-
