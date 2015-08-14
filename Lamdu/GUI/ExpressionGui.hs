@@ -68,6 +68,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Eval.Val (EvalResult, ScopeId)
+import qualified Lamdu.Eval.Val as EV
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.EvalView as EvalView
@@ -315,8 +316,13 @@ addEvaluationResult ::
     (Maybe ScopeAndVal, Maybe ScopeAndVal) -> ScopeAndVal ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addEvaluationResult prevNext scopeAndVal =
-    addAnnotationH (makeEvalView prevNext scopeAndVal)
+addEvaluationResult _prevNext (_, Right EV.HRecEmpty) _wide entityId gui =
+    gui
+    & egWidget %%~
+        addValBGWithColor Config.evaluatedPathBGColor
+        (WidgetIds.fromEntityId entityId)
+addEvaluationResult prevNext scopeAndVal wideBehavior entityId gui =
+    addAnnotationH (makeEvalView prevNext scopeAndVal) wideBehavior entityId gui
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
