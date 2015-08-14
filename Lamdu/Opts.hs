@@ -47,7 +47,7 @@ parse =
             \count -> poUndoCount += count >> go args
         go (arg : _) = failUsage $ "Unexpected arg: " ++ show arg
         failUsage msg = fail $ unlines [ msg, usage ]
-        usage = "Usage: lamdu [-deletedb] [-font <filename>] [-undo <N>]"
+        usage = "Usage: lamdu [-deletedb] [-font <filename>] [-undo <N>] [-windowsize <w> <h>]"
         readOrFail msg str k =
             case reads str of
             [(x, "")] -> k x
