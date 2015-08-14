@@ -598,11 +598,13 @@ maybeAddAnnotationWith ::
     EvalAnnotationOptions -> WideAnnotationBehavior ->
     ExprGuiT.ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-maybeAddAnnotationWith _ _ ExprGuiT.DoNotShowAnnotation _ _ eg = return eg
-maybeAddAnnotationWith o w ExprGuiT.ShowAnnotation annotation entityId eg =
-    maybeAddAnnotationH o w ShowType annotation entityId eg
-maybeAddAnnotationWith o w ExprGuiT.ShowAnnotationInVerboseMode annotation entityId eg =
-    maybeAddAnnotationH o w ShowNothing annotation entityId eg
+maybeAddAnnotationWith o w showAnn annotation entityId =
+    case showAnn of
+    ExprGuiT.DoNotShowAnnotation -> return
+    ExprGuiT.ShowAnnotation -> go ShowType
+    ExprGuiT.ShowAnnotationInVerboseMode -> go ShowNothing
+    where
+        go myShowAnn = maybeAddAnnotationH o w myShowAnn annotation entityId
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests = ListUtils.withPrevNext
