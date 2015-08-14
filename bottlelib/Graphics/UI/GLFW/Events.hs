@@ -99,6 +99,7 @@ rawEventLoop win eventsHandler =
         setCallback GLFW.setFramebufferSizeCallback $ \w h -> addEvent (RawFrameBufferSize (Vector2 w h))
         setCallback GLFW.setWindowCloseCallback $ addEvent RawWindowClose
 
+        GLFW.swapInterval 1
         loop
 
 eventLoop :: GLFW.Window -> ([Event] -> IO Result) -> IO ()

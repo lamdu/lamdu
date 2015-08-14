@@ -8,7 +8,7 @@ module Graphics.UI.Bottle.MainLoop
 
 import           Prelude.Compat
 
-import           Control.Concurrent (ThreadId, threadDelay, killThread, myThreadId)
+import           Control.Concurrent (ThreadId, killThread, myThreadId)
 import           Control.Concurrent.STM.TVar
 import           Control.Concurrent.Utils (forkIOUnmasked)
 import           Control.Exception (bracket, onException)
@@ -82,15 +82,11 @@ mainLoopImage win imageHandlers =
                     case eventResult of
                         ERQuit -> return ResultQuit
                         ERRefresh -> imageRefresh handlers >>= draw winSize
-                        ERNone -> imageUpdate handlers >>= maybe delay (draw winSize)
+                        ERNone ->
+                            imageUpdate handlers >>=
+                            maybe (return ResultNone) (draw winSize)
         eventLoop win handleEvents
     where
-        delay =
-            do
-                -- TODO: If we can verify that there's sync-to-vblank, we
-                -- need no sleep here
-                threadDelay 10000
-                return ResultNone
         draw winSize@(Vector2 winSizeX winSizeY) image =
             do
                 GL.viewport $=
