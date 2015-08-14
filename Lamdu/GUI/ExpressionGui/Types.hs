@@ -61,9 +61,9 @@ leftMostLeaf val =
 markRedundantTypes :: SugarExpr m -> SugarExpr m
 markRedundantTypes v =
     v
-    & redundantTypes         . showType .~ DoNotShowAnnotation
-    & SugarLens.holePayloads . showType .~ ShowAnnotation
-    & SugarLens.holeArgs     . showType .~ ShowAnnotation
-    & Sugar.rPayload         . showType .~ ShowAnnotation
+    & redundantTypes         . showAnn .~ DoNotShowAnnotation
+    & SugarLens.holePayloads . showAnn .~ ShowAnnotation
+    & SugarLens.holeArgs     . showAnn .~ ShowAnnotation
+    & Sugar.rPayload         . showAnn .~ ShowAnnotation
     where
-        showType = Sugar.plData . plShowAnnotation
+        showAnn = Sugar.plData . plShowAnnotation
