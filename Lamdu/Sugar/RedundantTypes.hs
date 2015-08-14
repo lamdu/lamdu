@@ -32,12 +32,18 @@ redundantTypesDefaultTop topRedundant f (Expression body pl) =
         <$> (kind & Lens.traversed . redundantTypesDefaultTop True %%~ f)
         <*> ( alts
               & Lens.traversed . Lens.traversed
-              . rBody . _BodyLam . Lens.traversed
-              . redundantTypesDefaultTop True %%~ f)
+              . rBody . _BodyLam %%~ altLam)
         <*> (caseTail & Lens.traversed %%~ recurse)
         <*> pure mAddAlt
         <*> pure entityId
         <&> BodyCase & mk
+        where
+            altLam (Binder mPres mScope params lets bod mAct scopes) =
+                Binder
+                <$> pure mPres <*> pure mScope <*> pure params
+                <*> (lets & Lens.traversed . Lens.traversed %%~ recurse)
+                <*> (bod & redundantTypesDefaultTop True %%~ f)
+                <*> pure mAct <*> pure scopes
     _ -> mk recBody
     where
         recurse = redundantTypes f
