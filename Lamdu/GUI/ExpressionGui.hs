@@ -542,7 +542,7 @@ evaluationResult pl =
     ExprGuiM.readMScopeId
     <&> (>>= valOfScope (pl ^. Sugar.plAnnotation))
 
-data MissingAnnotationBehavior = ShowNothing | ShowType
+data AnnotationBehavior = ShowNothing | ShowType | DoNotShowVal
 
 data EvalAnnotationOptions
     = NormalEvalAnnotation
@@ -551,10 +551,10 @@ data EvalAnnotationOptions
 maybeAddAnnotationH ::
     MonadA m =>
     EvalAnnotationOptions -> WideAnnotationBehavior ->
-    MissingAnnotationBehavior ->
+    AnnotationBehavior ->
     Sugar.Annotation -> Sugar.EntityId -> ExpressionGui m ->
     ExprGuiM m (ExpressionGui m)
-maybeAddAnnotationH opt wideAnnotationBehavior missingAnnotationBehavior annotation entityId eg =
+maybeAddAnnotationH opt wideAnnotationBehavior annotationBehavior annotation entityId eg =
     do
         settings <- ExprGuiM.readSettings
         case settings ^. CESettings.sInfoMode of
@@ -565,7 +565,11 @@ maybeAddAnnotationH opt wideAnnotationBehavior missingAnnotationBehavior annotat
                 >>= \case
                     Nothing -> handleMissingAnnotation
                     Just scopeAndVal ->
-                        addEvaluationResult neighbourVals scopeAndVal wideAnnotationBehavior entityId eg
+                        case annotationBehavior of
+                        DoNotShowVal -> return eg
+                        _ ->
+                            addEvaluationResult neighbourVals scopeAndVal
+                            wideAnnotationBehavior entityId eg
                 where
                     neighbourVals =
                         case opt of
@@ -576,8 +580,9 @@ maybeAddAnnotationH opt wideAnnotationBehavior missingAnnotationBehavior annotat
                             )
     where
         handleMissingAnnotation =
-            case missingAnnotationBehavior of
+            case annotationBehavior of
             ShowNothing -> return eg
+            DoNotShowVal -> return eg
             ShowType -> withType
         withType = addInferredType (annotation ^. Sugar.aInferredType) wideAnnotationBehavior entityId eg
         valAndScope scopeId = valOfScope annotation scopeId <&> (,) scopeId
@@ -603,6 +608,7 @@ maybeAddAnnotationWith o w showAnn annotation entityId =
     ExprGuiT.DoNotShowAnnotation -> return
     ExprGuiT.ShowAnnotation -> go ShowType
     ExprGuiT.ShowAnnotationInVerboseMode -> go ShowNothing
+    ExprGuiT.DoNotShowVal -> go DoNotShowVal
     where
         go myShowAnn = maybeAddAnnotationH o w myShowAnn annotation entityId
 

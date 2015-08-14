@@ -22,7 +22,9 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type ExpressionGui m = Layout (Transaction m)
 
-data ShowAnnotation = ShowAnnotationInVerboseMode | DoNotShowAnnotation | ShowAnnotation
+data ShowAnnotation =
+    ShowAnnotationInVerboseMode | DoNotShowAnnotation | ShowAnnotation |
+    DoNotShowVal
 
 -- GUI input payload on sugar exprs
 data Payload = Payload
@@ -61,9 +63,11 @@ leftMostLeaf val =
 markRedundantTypes :: SugarExpr m -> SugarExpr m
 markRedundantTypes v =
     v
-    & redundantTypes         . showAnn .~ DoNotShowAnnotation
-    & SugarLens.holePayloads . showAnn .~ ShowAnnotation
-    & SugarLens.holeArgs     . showAnn .~ ShowAnnotation
-    & Sugar.rPayload         . showAnn .~ ShowAnnotation
+    & SugarLens.subExprsOf Sugar._BodyToNom   . showAnn .~ DoNotShowVal
+    & SugarLens.subExprsOf Sugar._BodyFromNom . showAnn .~ DoNotShowVal
+    & redundantTypes                          . showAnn .~ DoNotShowAnnotation
+    & SugarLens.holePayloads                  . showAnn .~ ShowAnnotation
+    & SugarLens.holeArgs                      . showAnn .~ ShowAnnotation
+    & Sugar.rPayload                          . showAnn .~ ShowAnnotation
     where
         showAnn = Sugar.plData . plShowAnnotation

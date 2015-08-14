@@ -1,7 +1,7 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, RankNTypes #-}
 module Lamdu.Sugar.Lens
     ( subExprPayloads, payloadsIndexedByPath
-    , holePayloads, holeArgs
+    , holePayloads, holeArgs, subExprsOf
     , defSchemes
     , binderParams
     , binderParamsActions
@@ -57,16 +57,24 @@ holePayloads =
     where
         predicate idx _ = Lens.has (rBody . _BodyHole) idx
 
+subExprsOf ::
+    Lens.Traversal' (Body name m (Expression name m ())) b ->
+    Lens.IndexedTraversal'
+    [Expression name m ()]
+    (Expression name m a)
+    (Payload m a)
+subExprsOf f =
+    payloadsIndexedByPath . Lens.ifiltered predicate
+    where
+        predicate (_:parent:_) _ = Lens.has (rBody . f) parent
+        predicate _ _ = False
+
 holeArgs ::
     Lens.IndexedTraversal'
     [Expression name m ()]
     (Expression name m a)
     (Payload m a)
-holeArgs =
-    payloadsIndexedByPath . Lens.ifiltered predicate
-    where
-        predicate (_:parent:_) _ = Lens.has (rBody . _BodyHole) parent
-        predicate _ _ = False
+holeArgs = subExprsOf _BodyHole
 
 defTypeInfoSchemes :: Lens.Traversal' (DefinitionTypeInfo m) Scheme
 defTypeInfoSchemes f (DefinitionExportedTypeInfo s) =
