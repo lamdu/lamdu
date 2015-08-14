@@ -544,7 +544,7 @@ evaluationResult pl =
     ExprGuiM.readMScopeId
     <&> (>>= valOfScope (pl ^. Sugar.plAnnotation))
 
-data AnnotationBehavior = ShowNothing | ShowType | DoNotShowVal
+data AnnotationBehavior = ShowNothingIfMissing | ShowAnnotation | DoNotShowVal
 
 data EvalAnnotationOptions
     = NormalEvalAnnotation
@@ -584,9 +584,9 @@ maybeAddAnnotationH opt wideAnnotationBehavior annotationBehavior annotation ent
     where
         handleMissingAnnotation =
             case annotationBehavior of
-            ShowNothing -> return eg
+            ShowNothingIfMissing -> return eg
             DoNotShowVal -> return eg
-            ShowType -> withType
+            ShowAnnotation -> withType
         inferredType = annotation ^. Sugar.aInferredType
         withType = addInferredType inferredType wideAnnotationBehavior entityId eg
         valAndScope scopeId = valOfScope annotation scopeId <&> (,) scopeId
@@ -610,8 +610,8 @@ maybeAddAnnotationWith ::
 maybeAddAnnotationWith o w showAnn annotation entityId =
     case showAnn of
     ExprGuiT.DoNotShowAnnotation -> return
-    ExprGuiT.ShowAnnotation -> go ShowType
-    ExprGuiT.ShowAnnotationInVerboseMode -> go ShowNothing
+    ExprGuiT.ShowAnnotation -> go ShowAnnotation
+    ExprGuiT.ShowAnnotationInVerboseMode -> go ShowNothingIfMissing
     ExprGuiT.DoNotShowVal -> go DoNotShowVal
     where
         go myShowAnn = maybeAddAnnotationH o w myShowAnn annotation entityId
