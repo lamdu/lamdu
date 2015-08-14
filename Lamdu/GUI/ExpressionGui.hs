@@ -313,15 +313,17 @@ addInferredType typ = addAnnotationH (makeTypeView typ)
 
 addEvaluationResult ::
     MonadA m =>
-    (Maybe ScopeAndVal, Maybe ScopeAndVal) -> ScopeAndVal ->
+    Type -> (Maybe ScopeAndVal, Maybe ScopeAndVal) -> ScopeAndVal ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addEvaluationResult _prevNext (_, Right EV.HRecEmpty) _wide entityId gui =
+addEvaluationResult _typ _neigh (_, Right EV.HRecEmpty) _wide entityId gui =
     gui
     & egWidget %%~
         addValBGWithColor Config.evaluatedPathBGColor
         (WidgetIds.fromEntityId entityId)
-addEvaluationResult prevNext scopeAndVal wideBehavior entityId gui =
+addEvaluationResult typ _neigh (_, Right EV.HFunc{}) wideBehavior entityId gui =
+    addAnnotationH (makeTypeView typ) wideBehavior entityId gui
+addEvaluationResult _typ prevNext scopeAndVal wideBehavior entityId gui =
     addAnnotationH (makeEvalView prevNext scopeAndVal) wideBehavior entityId gui
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
@@ -568,7 +570,8 @@ maybeAddAnnotationH opt wideAnnotationBehavior annotationBehavior annotation ent
                         case annotationBehavior of
                         DoNotShowVal -> return eg
                         _ ->
-                            addEvaluationResult neighbourVals scopeAndVal
+                            addEvaluationResult inferredType
+                            neighbourVals scopeAndVal
                             wideAnnotationBehavior entityId eg
                 where
                     neighbourVals =
@@ -584,7 +587,8 @@ maybeAddAnnotationH opt wideAnnotationBehavior annotationBehavior annotation ent
             ShowNothing -> return eg
             DoNotShowVal -> return eg
             ShowType -> withType
-        withType = addInferredType (annotation ^. Sugar.aInferredType) wideAnnotationBehavior entityId eg
+        inferredType = annotation ^. Sugar.aInferredType
+        withType = addInferredType inferredType wideAnnotationBehavior entityId eg
         valAndScope scopeId = valOfScope annotation scopeId <&> (,) scopeId
 
 valOfScope :: Sugar.Annotation -> ScopeId -> Maybe (EvalResult ())
