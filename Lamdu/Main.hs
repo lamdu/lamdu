@@ -15,6 +15,7 @@ import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Time.Clock (getCurrentTime)
+import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           Graphics.UI.Bottle.MainLoop (mainLoopWidget)
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -57,7 +58,7 @@ main =
             Opts.Parsed{..}
                 | _poShouldDeleteDB -> deleteDB lamduDir
                 | _poUndoCount > 0  -> withDB $ undoN _poUndoCount
-                | otherwise         -> withDB $ runEditor _poMFontPath
+                | otherwise         -> withDB $ runEditor _poMFontPath _poWindowSize
     `E.catch` \e@E.SomeException{} -> do
     hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
     return ()
@@ -79,8 +80,8 @@ undoN n db =
                 actions <- VersionControl.makeActions
                 fromMaybe (fail "Cannot undo any further") $ mUndo actions
 
-runEditor :: Maybe FilePath -> Db -> IO ()
-runEditor mFontPath db =
+runEditor :: Maybe FilePath -> Maybe (Vector2 Int) -> Db -> IO ()
+runEditor mFontPath mWinSize db =
     do
         -- GLFW changes the directory from start directory, at least on macs.
         startDir <- Directory.getCurrentDirectory
@@ -89,7 +90,9 @@ runEditor mFontPath db =
         configSampler <- ConfigSampler.new startDir
 
         GLFWUtils.withGLFW $ do
-            win <- GLFWUtils.createWindow "Lamdu" =<< GLFWUtils.getVideoModeSize
+            win <-
+                maybe GLFWUtils.getVideoModeSize return mWinSize
+                >>= GLFWUtils.createWindow "Lamdu"
             Font.with startDir mFontPath $ \font -> do
                 -- Fonts must be loaded after the GL context is created..
                 zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
