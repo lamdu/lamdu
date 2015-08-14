@@ -24,7 +24,7 @@ type ExpressionGui m = Layout (Transaction m)
 
 data ShowAnnotation =
     ShowAnnotationInVerboseMode | DoNotShowAnnotation | ShowAnnotation |
-    DoNotShowVal
+    DoNotShowVal | AlwaysShowType
 
 -- GUI input payload on sugar exprs
 data Payload = Payload
@@ -66,7 +66,7 @@ markRedundantTypes v =
     & SugarLens.subExprsOf Sugar._BodyToNom   . showAnn .~ DoNotShowVal
     & SugarLens.subExprsOf Sugar._BodyFromNom . showAnn .~ DoNotShowVal
     & redundantTypes                          . showAnn .~ DoNotShowAnnotation
-    & SugarLens.holePayloads                  . showAnn .~ ShowAnnotation
+    & SugarLens.holePayloads                  . showAnn .~ AlwaysShowType
     & SugarLens.holeArgs                      . showAnn .~ ShowAnnotation
     & Sugar.rPayload                          . showAnn .~ ShowAnnotation
     where
