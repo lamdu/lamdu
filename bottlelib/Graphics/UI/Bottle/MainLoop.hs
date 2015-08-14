@@ -265,6 +265,10 @@ eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers =
                         -- to handle the event:
                         & asCurTime .~ addUTCTime (-1.0 / desiredFrameRate) curTime
                         & asCurFrame %~ Anim.mapIdentities (Monoid.appEndo (fromMaybe mempty mMapping))
+                    -- In case main thread went to sleep (not knowing
+                    -- whether to anticipate a tick result), wake it
+                    -- up
+                    GLFW.postEmptyEvent
 
 mainLoopAnimThread :: TVar AnimState -> TVar ThreadSyncVar -> GLFW.Window -> IO ()
 mainLoopAnimThread frameStateVar eventTVar win =
