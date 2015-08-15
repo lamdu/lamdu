@@ -25,7 +25,7 @@ import qualified Lamdu.GUI.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.GUI.ExpressionEdit.NomEdit as NomEdit
 import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, Precedence)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -52,11 +52,8 @@ shrinkIfHigherThanLine w =
                 & ExpressionGui.egAlignment . _2 .~ 0.5
             else w
 
-make ::
-    MonadA m => (Precedence -> Precedence) ->
-    ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-make onPrecedence sExpr =
-    ExprGuiM.withLocalPrecedence onPrecedence $
+make :: MonadA m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
+make sExpr =
     assignCursor $
     do
         gui <- makeEditor body pl

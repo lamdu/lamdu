@@ -88,9 +88,7 @@ newtype Injected = Injected [Bool]
 data Askable m = Askable
     { _aSettings :: Settings
     , _aConfig :: Config
-    , _aMakeSubexpression ::
-        (Precedence -> Precedence) -> ExprGuiT.SugarExpr m ->
-        ExprGuiM m (ExpressionGui m)
+    , _aMakeSubexpression :: ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
     , _aCodeAnchors :: Anchors.CodeProps m
     , _aSubexpressionLayer :: Int
     , _aMScopeId :: Maybe ScopeId
@@ -132,7 +130,7 @@ makeSubexpression onPrecedence expr =
     advanceDepth (return . Layout.fromCenteredWidget . Widget.fromView) animId $
     do
         maker <- ExprGuiM $ Lens.view aMakeSubexpression
-        maker onPrecedence expr
+        maker expr & withLocalPrecedence onPrecedence
     where
         animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
 
@@ -152,8 +150,7 @@ advanceDepth f animId action =
 
 run ::
     MonadA m =>
-    ((Precedence -> Precedence) -> ExprGuiT.SugarExpr m ->
-     ExprGuiM m (ExpressionGui m)) ->
+    (ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
     Anchors.CodeProps m -> Config -> Settings -> ExprGuiM m a ->
     WidgetEnvT (T m) a
 run makeSubexpr codeAnchors config settings (ExprGuiM action) =
