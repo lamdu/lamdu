@@ -93,5 +93,5 @@ makeEditor parentPrecedence body =
     Sugar.BodyGetField       x -> x & GetFieldEdit.make
     Sugar.BodyInject         x -> x & InjectEdit.make
     Sugar.BodyGetVar         x -> x & GetVarEdit.make
-    Sugar.BodyToNom          x -> x & NomEdit.makeToNom
-    Sugar.BodyFromNom        x -> x & NomEdit.makeFromNom
+    Sugar.BodyToNom          x -> x & NomEdit.makeToNom parentPrecedence
+    Sugar.BodyFromNom        x -> x & NomEdit.makeFromNom parentPrecedence
