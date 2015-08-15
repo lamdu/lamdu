@@ -29,7 +29,7 @@ module Lamdu.GUI.ExpressionGui
     , makeTypeView
     , evaluationResult
     -- Expression wrapping
-    , MyPrecedence(..), ParentPrecedence(..), Precedence(..)
+    , MyPrecedence(..), ParentPrecedence(..), Precedence(..), Precedence.precLeft, Precedence.precRight
     , parenify
     , wrapExprEventMap
     , maybeAddAnnotationPl
@@ -79,6 +79,7 @@ import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Parens as Parens
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence(..), needParens)
+import qualified Lamdu.GUI.Precedence as Precedence
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..), NameSource(..), NameCollision(..))

@@ -70,20 +70,20 @@ makeFuncRow outerPrecedence (Sugar.Apply func specialArgs annotatedArgs) pl =
                 where
                     (funcPrec, argPrec, onFunc)
                         | null annotatedArgs =
-                            ( outerPrecedence { ExpressionGui.precRight = prefixPrecedence+1 }
-                            , outerPrecedence { ExpressionGui.precLeft = prefixPrecedence }
+                            ( outerPrecedence & ExpressionGui.precRight .~ prefixPrecedence+1
+                            , outerPrecedence & ExpressionGui.precLeft .~ prefixPrecedence
                             , id
                             )
                         | otherwise = (0, 0, overrideModifyEventMap)
             Sugar.InfixArgs prec l r ->
                 sequenceA
                 [ ExprGuiM.makeSubexpression
-                    outerPrecedence { ExpressionGui.precRight = prec+1 }
+                    (outerPrecedence & ExpressionGui.precRight .~ prec+1)
                     l
                 , -- TODO: What precedence to give when it must be atomic?:
                     ExprGuiM.makeSubexpression 20 func <&> overrideModifyEventMap
                 , ExprGuiM.makeSubexpression
-                    outerPrecedence { ExpressionGui.precLeft = prec+1 }
+                    (outerPrecedence & ExpressionGui.precLeft .~ prec+1)
                     r
                 ]
                 >>= ExpressionGui.hboxSpaced
