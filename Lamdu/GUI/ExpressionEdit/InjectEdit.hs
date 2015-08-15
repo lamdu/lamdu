@@ -56,7 +56,7 @@ make (Sugar.Inject tagG mVal mDelInject) pl =
             (WidgetIds.fromEntityId (pl ^. Sugar.plEntityId)) tagId
     Just val ->
         ExpressionGui.stdWrapParentExpr pl $ \myId ->
-        ExprGuiM.makeSubexpression 11 val <&> (:[])
+        ExprGuiM.makeSubexpression (ExpressionGui.precLeft .~ 11) val <&> (:[])
         >>= makeCommon tagG mDelInject nearestHoles
         & ExprGuiM.assignCursor myId tagId
     where

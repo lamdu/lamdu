@@ -19,13 +19,13 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
     MonadA m =>
-    ExpressionGui.ParentPrecedence ->
     Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make parentPrecedence binder pl =
-    ExpressionGui.stdWrapParenify plNoType parentPrecedence
-    (ExpressionGui.MyPrecedence (ExpressionGui.Precedence 20 0)) $ \myId ->
+make binder pl =
+    ExprGuiM.withLocalPrecedence (ExpressionGui.precLeft .~ 0) $
+    ExpressionGui.stdWrapParenify plNoType
+    (ExpressionGui.MyPrecedence (ExpressionGui.Precedence 0 0)) $ \myId ->
     ExprGuiM.assignCursor myId bodyId $
     do
         BinderEdit.Parts mParamsEdit bodyEdit eventMap <-

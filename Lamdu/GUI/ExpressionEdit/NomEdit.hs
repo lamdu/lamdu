@@ -12,7 +12,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..), Precedence, precLeft, precRight)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, Precedence, precLeft, precRight)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -59,7 +59,6 @@ expandingName namePos nomId label nameGui subexprGui showName =
 
 makeToNom ::
     MonadA m =>
-    ParentPrecedence ->
     Sugar.Nominal (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
@@ -67,7 +66,6 @@ makeToNom = mkNomGui precLeft "«" $ expandingName addLeft
 
 makeFromNom ::
     MonadA m =>
-    ParentPrecedence ->
     Sugar.Nominal (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
@@ -79,11 +77,11 @@ nomPrecedence = 9
 mkNomGui ::
     Monad m => Lens.ASetter' Precedence Int ->
     String -> LayoutFunc m ->
-    ParentPrecedence ->
     Sugar.Nominal (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
-mkNomGui nameSidePrecLens str layout parentPrec nom@(Sugar.Nominal _ val _) pl =
-    ExpressionGui.stdWrapParenify pl parentPrec
+mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val _) pl =
+    ExprGuiM.withLocalPrecedence (nameSidePrecLens .~ 0) $
+    ExpressionGui.stdWrapParenify pl
     (ExpressionGui.MyPrecedence (fromIntegral nomPrecedence)) $
     \myId ->
     do
@@ -99,7 +97,7 @@ mkNomGui nameSidePrecLens str layout parentPrec nom@(Sugar.Nominal _ val _) pl =
             >>= ExpressionGui.makeFocusableView nameId
         subexprEdit <-
             ExprGuiM.makeSubexpression
-            (outerPrec & nameSidePrecLens .~ nomPrecedence+1) val
+            (nameSidePrecLens .~ nomPrecedence+1) val
         let mk = layout nomId label nameEdit subexprEdit
         if isHoleResult
             then mk True
@@ -110,7 +108,6 @@ mkNomGui nameSidePrecLens str layout parentPrec nom@(Sugar.Nominal _ val _) pl =
                     else return compact
     & ExprGuiM.assignCursor myId valId
     where
-        outerPrec = unParentPrecedence parentPrec
         valId = val ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
         isHoleResult =
             Lens.nullOf

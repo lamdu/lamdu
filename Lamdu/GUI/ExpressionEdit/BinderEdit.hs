@@ -422,7 +422,7 @@ makeResultEdit mActions params result = do
             (E.Doc ["Edit", "Let clause", "Add first"]) .
             fmap (diveToNameEdit . WidgetIds.fromEntityId) $
             savePos >> actions ^. Sugar.baAddInnermostLetItem
-    ExprGuiM.makeSubexpression 0 result
+    ExprGuiM.makeSubexpression (const 0) result
         <&> ExpressionGui.egWidget %~
                 Widget.weakerEvents
                 (jumpToLhsEventMap <> maybe mempty addLetItemEventMap mActions)

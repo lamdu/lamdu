@@ -422,11 +422,15 @@ makeFocusableView myId gui =
 
 parenify ::
     (MonadA f, MonadA m) =>
-    ParentPrecedence -> MyPrecedence -> Widget.Id ->
-    ExpressionGui f -> ExprGuiM m (ExpressionGui f)
-parenify parent prec myId
-    | needParens parent prec = Parens.addHighlightedTextParens myId
-    | otherwise = return
+    MyPrecedence -> Widget.Id ->
+    ExprGuiM m (ExpressionGui f) -> ExprGuiM m (ExpressionGui f)
+parenify prec myId mkGui =
+    do
+        parent <- ExprGuiM.outerPrecedence
+        if needParens (ParentPrecedence parent) prec
+              then mkGui >>= Parens.addHighlightedTextParens myId
+                   & ExprGuiM.withLocalPrecedence (const 0)
+              else mkGui
 
 makeLabel :: MonadA m => String -> AnimId -> ExprGuiM m (ExpressionGui m)
 makeLabel text animId = ExprGuiM.makeLabel text animId <&> fromValueWidget
@@ -469,13 +473,13 @@ addValFrame myId gui = addValPadding gui >>= egWidget %%~ addValBG myId
 
 stdWrapParenify ::
     MonadA m =>
-    Sugar.Payload m ExprGuiT.Payload -> ParentPrecedence -> MyPrecedence ->
+    Sugar.Payload m ExprGuiT.Payload -> MyPrecedence ->
     (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
-stdWrapParenify pl parentPrec prec mkGui =
+stdWrapParenify pl prec mkGui =
     stdWrapParentExpr pl $ \myId ->
     mkGui myId
-    >>= parenify parentPrec prec myId
+    & parenify prec myId
 
 -- TODO: This doesn't belong here
 makeNameView ::

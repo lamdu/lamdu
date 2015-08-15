@@ -94,7 +94,7 @@ makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) =
         config <- ExprGuiM.readConfig
         fieldRefGui <-
             TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
-        fieldExprGui <- ExprGuiM.makeSubexpression 0 fieldExpr
+        fieldExprGui <- ExprGuiM.makeSubexpression (const 0) fieldExpr
         let itemEventMap = maybe mempty (recordDelEventMap config) mDelete
         space <-
             BWidgets.stdSpaceWidget & ExprGuiM.widgetEnv <&> ExpressionGui.fromValueWidget
@@ -138,7 +138,8 @@ makeOpenRecord fieldsGui rest animId =
         config <- ExprGuiM.readConfig
         vspace <- ExpressionGui.verticalSpace
         restExpr <-
-            ExprGuiM.makeSubexpression 0 rest >>= ExpressionGui.addValPadding
+            ExprGuiM.makeSubexpression (const 0) rest
+            >>= ExpressionGui.addValPadding
         let minWidth = restExpr ^. ExpressionGui.egWidget . Widget.width
         [ fieldsGui
             , separationBar config (max minWidth targetWidth) animId

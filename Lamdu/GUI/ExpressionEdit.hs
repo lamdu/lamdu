@@ -25,7 +25,7 @@ import qualified Lamdu.GUI.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.GUI.ExpressionEdit.NomEdit as NomEdit
 import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, ParentPrecedence(..))
+import           Lamdu.GUI.ExpressionGui (ExpressionGui, Precedence)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -53,12 +53,13 @@ shrinkIfHigherThanLine w =
             else w
 
 make ::
-    MonadA m => ParentPrecedence ->
+    MonadA m => (Precedence -> Precedence) ->
     ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-make parentPrecedence sExpr =
+make onPrecedence sExpr =
+    ExprGuiM.withLocalPrecedence onPrecedence $
     assignCursor $
     do
-        gui <- makeEditor parentPrecedence body pl
+        gui <- makeEditor body pl
         maybeShrink gui <&> ExpressionGui.egWidget %~ maybeDoesntTakeFocus
     where
         maybeDoesntTakeFocus
@@ -77,15 +78,15 @@ make parentPrecedence sExpr =
             exprHiddenEntityIds <&> WidgetIds.fromEntityId
 
 makeEditor ::
-    MonadA m => ParentPrecedence ->
+    MonadA m =>
     Sugar.Body (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeEditor parentPrecedence body =
+makeEditor body =
     case body of
     Sugar.BodyHole           x -> x & HoleEdit.make
-    Sugar.BodyApply          x -> x & ApplyEdit.make parentPrecedence
-    Sugar.BodyLam            x -> x & LambdaEdit.make parentPrecedence
+    Sugar.BodyApply          x -> x & ApplyEdit.make
+    Sugar.BodyLam            x -> x & LambdaEdit.make
     Sugar.BodyLiteralInteger x -> x & LiteralEdit.makeInt
     Sugar.BodyList           x -> x & ListEdit.make
     Sugar.BodyRecord         x -> x & RecordEdit.make
@@ -93,5 +94,5 @@ makeEditor parentPrecedence body =
     Sugar.BodyGetField       x -> x & GetFieldEdit.make
     Sugar.BodyInject         x -> x & InjectEdit.make
     Sugar.BodyGetVar         x -> x & GetVarEdit.make
-    Sugar.BodyToNom          x -> x & NomEdit.makeToNom parentPrecedence
-    Sugar.BodyFromNom        x -> x & NomEdit.makeFromNom parentPrecedence
+    Sugar.BodyToNom          x -> x & NomEdit.makeToNom
+    Sugar.BodyFromNom        x -> x & NomEdit.makeFromNom

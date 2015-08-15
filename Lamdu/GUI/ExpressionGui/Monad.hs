@@ -17,6 +17,9 @@ module Lamdu.GUI.ExpressionGui.Monad
     , readMScopeId, withLocalMScopeId
     , isExprSelected
     --
+    , outerPrecedence
+    , withLocalPrecedence
+    --
     , HolePickers, holePickersAddDocPrefix, holePickersAction
     , addResultPicker, listenResultPickers
     , run
@@ -54,7 +57,7 @@ import           Lamdu.Eval.Val (ScopeId, topLevelScopeId)
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import           Lamdu.GUI.Precedence (ParentPrecedence(..), Precedence)
+import           Lamdu.GUI.Precedence (Precedence)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -86,11 +89,12 @@ data Askable m = Askable
     { _aSettings :: Settings
     , _aConfig :: Config
     , _aMakeSubexpression ::
-        ParentPrecedence -> ExprGuiT.SugarExpr m ->
+        (Precedence -> Precedence) -> ExprGuiT.SugarExpr m ->
         ExprGuiM m (ExpressionGui m)
     , _aCodeAnchors :: Anchors.CodeProps m
     , _aSubexpressionLayer :: Int
     , _aMScopeId :: Maybe ScopeId
+    , _aOuterPrecedence :: Precedence
     }
 
 newtype ExprGuiM m a = ExprGuiM
@@ -123,12 +127,12 @@ mkPrejumpPosSaver =
 
 makeSubexpression ::
     MonadA m =>
-    Precedence -> ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeSubexpression parentPrecedence expr =
+    (Precedence -> Precedence) -> ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
+makeSubexpression onPrecedence expr =
     advanceDepth (return . Layout.fromCenteredWidget . Widget.fromView) animId $
     do
         maker <- ExprGuiM $ Lens.view aMakeSubexpression
-        maker (ParentPrecedence parentPrecedence) expr
+        maker onPrecedence expr
     where
         animId = toAnimId $ WidgetIds.fromExprPayload $ expr ^. Sugar.rPayload
 
@@ -148,7 +152,8 @@ advanceDepth f animId action =
 
 run ::
     MonadA m =>
-    (ParentPrecedence -> ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
+    ((Precedence -> Precedence) -> ExprGuiT.SugarExpr m ->
+     ExprGuiM m (ExpressionGui m)) ->
     Anchors.CodeProps m -> Config -> Settings -> ExprGuiM m a ->
     WidgetEnvT (T m) a
 run makeSubexpr codeAnchors config settings (ExprGuiM action) =
@@ -160,6 +165,7 @@ run makeSubexpr codeAnchors config settings (ExprGuiM action) =
     , _aCodeAnchors = codeAnchors
     , _aSubexpressionLayer = 0
     , _aMScopeId = Just topLevelScopeId
+    , _aOuterPrecedence = 0
     }
     ()
     where
@@ -223,3 +229,9 @@ withLocalMScopeId mScopeId = exprGuiM %~ RWS.local (aMScopeId .~ mScopeId)
 
 isExprSelected :: MonadA m => Sugar.Payload f a -> ExprGuiM m Bool
 isExprSelected = widgetEnv . WE.isSubCursor . WidgetIds.fromExprPayload
+
+outerPrecedence :: MonadA m => ExprGuiM m Precedence
+outerPrecedence = ExprGuiM $ Lens.view aOuterPrecedence
+
+withLocalPrecedence :: MonadA m => (Precedence -> Precedence) -> ExprGuiM m a -> ExprGuiM m a
+withLocalPrecedence f = exprGuiM %~ RWS.local (aOuterPrecedence %~ f)

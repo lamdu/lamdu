@@ -286,7 +286,7 @@ makeHoleResultWidget resultId holeResult =
         mkWidget =
             holeResultConverted
             & postProcessSugar
-            & ExprGuiM.makeSubexpression 0
+            & ExprGuiM.makeSubexpression (const 0)
             <&> (^. ExpressionGui.egWidget)
         holeResultEntityId =
             holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId

@@ -81,7 +81,7 @@ make WidgetIds{..} arg =
             padding = realToFrac <$> Config.valFramePadding config
         argGui <-
             arg ^. Sugar.haExpr
-            & ExprGuiM.makeSubexpression 0
+            & ExprGuiM.makeSubexpression (const 0)
         let argIsFocused = argGui ^. ExpressionGui.egWidget . Widget.isFocused
         unwrapEventMap <- makeUnwrapEventMap arg WidgetIds{..}
         argGui

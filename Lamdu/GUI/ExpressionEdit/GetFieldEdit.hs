@@ -28,7 +28,8 @@ make ::
 make (Sugar.GetField recExpr tagG mDelField) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     do
-        recExprEdit <- ExprGuiM.makeSubexpression 11 recExpr
+        recExprEdit <-
+            ExprGuiM.makeSubexpression (ExpressionGui.precRight .~ 11) recExpr
         dotLabel <- ExpressionGui.makeLabel "." (Widget.toAnimId myId)
         config <- ExprGuiM.readConfig
         let delEventMap =

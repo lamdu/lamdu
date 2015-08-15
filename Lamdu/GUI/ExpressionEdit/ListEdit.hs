@@ -110,7 +110,7 @@ makeItem (_, nextId, item) =
           ExprGuiM.listenResultPickers $
           Lens.sequenceOf Lens.both
           ( ExpressionGui.grammarLabel ", " (Widget.toAnimId itemWidgetId <> [","])
-          , ExprGuiM.makeSubexpression 0 itemExpr
+          , ExprGuiM.makeSubexpression (const 0) itemExpr
           )
         return $ pair
           & _2 . ExpressionGui.egWidget %~
