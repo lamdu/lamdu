@@ -37,16 +37,12 @@ import           Prelude.Compat
 
 type T = Transaction
 
-assignCursor ::
-    MonadA m =>
-    Widget.Id ->
+destCursorId ::
     [Sugar.CaseAlt name n (Sugar.Expression name n p)] ->
-    ExprGuiM m a -> ExprGuiM m a
-assignCursor _ [] = id
-assignCursor myId (alt : _) =
-    ExprGuiM.assignCursor myId
-    ( alt ^. Sugar.caHandler . Sugar.rPayload
-      & WidgetIds.fromExprPayload )
+    Widget.Id -> Widget.Id
+destCursorId [] defDestId = defDestId
+destCursorId (alt : _) _ =
+    alt ^. Sugar.caHandler . Sugar.rPayload & WidgetIds.fromExprPayload
 
 make ::
     MonadA m =>
@@ -55,24 +51,23 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
-    assignCursor myId alts $
+    let headerId = Widget.joinId myId ["header"]
+    in ExprGuiM.assignCursor myId (destCursorId alts headerId) $
     do
         config <- ExprGuiM.readConfig
         let mExprAfterHeader =
-                ( (alts ^.. Lens.traversed . Lens.traversed)
-                    ++ (caseTail ^.. Lens.traversed)
+                ( alts ^.. Lens.traversed . Lens.traversed
+                ++ caseTail ^.. Lens.traversed
                 ) ^? Lens.traversed
         labelJumpHoleEventMap <-
             mExprAfterHeader <&> ExprGuiT.nextHolesBefore
             & Lens._Just ExprEventMap.jumpHolesEventMap
             <&> fromMaybe mempty
-        let label text =
-                WidgetIds.fromEntityId cEntityId & Widget.toAnimId
-                & ExpressionGui.grammarLabel text
         let headerLabel text =
-                label text
-                >>= ExpressionGui.makeFocusableView
-                    (Widget.joinId myId ["header"])
+                WidgetIds.fromEntityId cEntityId
+                & Widget.toAnimId
+                & ExpressionGui.grammarLabel text
+                >>= ExpressionGui.makeFocusableView headerId
                 <&> ExpressionGui.egWidget
                     %~ Widget.weakerEvents labelJumpHoleEventMap
         (mActiveTag, header) <-
