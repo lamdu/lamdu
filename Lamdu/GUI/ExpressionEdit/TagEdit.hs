@@ -13,10 +13,8 @@ import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
-import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -47,6 +45,11 @@ makeTagH tagColor nearestHoles tagG =
     do
         config <- ExprGuiM.readConfig
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
+        let keys = Config.holePickAndMoveToNextHoleKeys (Config.hole config)
+        let jumpNextEventMap nextHole =
+                Widget.keysEventMapMovesCursor keys
+                (E.Doc ["Navigation", "Jump to next hole"]) $
+                return $ WidgetIds.fromEntityId nextHole
         let eventMap =
                 jumpHolesEventMap <>
                 maybe mempty jumpNextEventMap (nearestHoles ^. NearestHoles.next)
@@ -54,11 +57,6 @@ makeTagH tagColor nearestHoles tagG =
         makeTagNameEdit tagColor tagG
             <&> Widget.weakerEvents eventMap
             <&> ExpressionGui.fromValueWidget
-    where
-        jumpNextEventMap nextHole =
-            Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Space]
-            (E.Doc ["Navigation", "Jump to next hole"]) $
-            return $ WidgetIds.fromEntityId nextHole
 
 makeRecordTag ::
     MonadA m => NearestHoles -> Sugar.TagG (Name m) -> ExprGuiM m (ExpressionGui m)
