@@ -143,7 +143,7 @@ makeNewDefinitionEventMap cp =
         let newDefinition =
                 do
                     newDefI <-
-                        DataOps.newHole >>= DataOps.newDefinitionWithPane cp
+                        DataOps.newHole >>= DataOps.newPublicDefinitionWithPane cp
                     DataOps.savePreJumpPosition cp curCursor
                     return newDefI
                 <&> DefinitionEdit.diveToNameEdit . WidgetIds.fromIRef

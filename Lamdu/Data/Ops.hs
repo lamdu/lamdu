@@ -6,7 +6,7 @@ module Lamdu.Data.Ops
     , recExtend, RecExtendResult(..)
     , case_, CaseResult(..)
     , addListItem
-    , newDefinitionWithPane
+    , newPublicDefinitionWithPane
     , newDefinition
     , savePreJumpPosition, jumpBack
     , newPane
@@ -215,9 +215,9 @@ newPublicDefinition codeProps bodyI name =
         modP (Anchors.globals codeProps) (defI :)
         return defI
 
-newDefinitionWithPane ::
+newPublicDefinitionWithPane ::
     MonadA m => Anchors.CodeProps m -> ExprIRef.ValI m -> T m (DefI m)
-newDefinitionWithPane codeProps bodyI =
+newPublicDefinitionWithPane codeProps bodyI =
     do
         defI <- newPublicDefinition codeProps bodyI ""
         newPane codeProps defI
