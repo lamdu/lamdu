@@ -44,15 +44,15 @@ blockDownEvents =
     (E.Doc ["Navigation", "Move", "down (blocked)"]) $
     return mempty
 
-adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
-adHocTextEditEventMap searchTermProp =
+adHocTextEditEventMap :: MonadA m => Config.Hole -> Property m String -> Widget.EventHandlers m
+adHocTextEditEventMap holeConfig searchTermProp =
     appendCharEventMap <> deleteCharEventMap
     where
         appendCharEventMap =
             E.allChars "Character"
             (E.Doc ["Edit", "Search Term", "Append character"])
             (changeText . snoc)
-            & disallowChars searchTerm
+            & disallowChars holeConfig searchTerm
             & if null searchTerm
               then E.filterChars (`notElem` operatorChars)
               else id
@@ -69,13 +69,12 @@ adHocTextEditEventMap searchTermProp =
 disallowedHoleChars :: String
 disallowedHoleChars = ",`\n "
 
-disallowChars :: String -> E.EventMap a -> E.EventMap a
-disallowChars searchTerm =
+disallowChars :: Config.Hole -> String -> E.EventMap a -> E.EventMap a
+disallowChars Config.Hole{..} searchTerm =
     E.filterChars (`notElem` disallowedHoleChars) .
-    deleteKeys [k GLFW.Key'Space, k GLFW.Key'Enter] .
+    deleteKeys (holePickAndMoveToNextHoleKeys ++ holePickResultKeys) .
     disallowMix
     where
-        k = ModKey mempty
         disallowMix
             | nonEmptyAll (`notElem` operatorChars) searchTerm =
                 E.filterChars (`notElem` operatorChars)
@@ -165,7 +164,8 @@ makeOpenEventMaps editableHoleInfo mShownResult =
                 mkEventsOnPickedResult shownResult
                 <&> mappend (pickEventMap holeConfig holeInfo shownResult)
         let adHocEdit =
-                adHocTextEditEventMap (HoleInfo.ehiSearchTermProperty editableHoleInfo)
+                adHocTextEditEventMap holeConfig
+                (HoleInfo.ehiSearchTermProperty editableHoleInfo)
         pure (eventMap, adHocEdit <> eventMap)
     where
         holeInfo = ehiInfo editableHoleInfo

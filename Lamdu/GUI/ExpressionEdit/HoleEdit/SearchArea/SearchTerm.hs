@@ -74,7 +74,7 @@ make holeInfo mEditableHoleInfo =
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
         makeSearchTermPropEdit WidgetIds{..} mSearchTermProp
-            <&> Widget.eventMap %~ EventMap.disallowChars searchTerm
+            <&> Widget.eventMap %~ EventMap.disallowChars Config.Hole{..} searchTerm
             <&> addBackground (Widget.toAnimId hidOpenSearchTerm)
                 (Config.layers config) holeSearchTermBGColor
             <&> ExpressionGui.fromValueWidget
