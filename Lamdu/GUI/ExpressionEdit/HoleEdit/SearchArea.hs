@@ -39,7 +39,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..), Result(..), HaveHiddenResults(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as HoleResults
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.SearchTerm as SearchTerm
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult, pickedIdTranslations)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui, AnnotationParams(..))
@@ -66,16 +66,12 @@ extraSymbolScaleFactor = 0.5
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id
 
-eventResultOfPickedResult ::
-    Maybe Sugar.EntityId -> Sugar.PickedResult -> PickedResult
-eventResultOfPickedResult mDestId pr =
+eventResultOfPickedResult :: Sugar.PickedResult -> PickedResult
+eventResultOfPickedResult pr =
     PickedResult
     { _pickedEventResult =
         Widget.EventResult
-        { Widget._eCursor =
-            mDestId
-            >>= (`lookup` (pr ^. Sugar.prIdTranslation))
-            <&> WidgetIds.fromEntityId & Monoid.Last
+        { Widget._eCursor = Monoid.Last Nothing
         , Widget._eAnimIdMapping =
             Monoid.Endo $ pickedResultAnimIdTranslation $ pr ^. Sugar.prIdTranslation
         }
@@ -105,16 +101,20 @@ afterPick ::
     Monad m =>
     EditableHoleInfo m -> Widget.Id -> Maybe Sugar.EntityId ->
     Sugar.PickedResult -> T m PickedResult
-afterPick editableHoleInfo resultId mDestId pr =
+afterPick editableHoleInfo resultId mFirstHoleInside pr =
     do
         Property.set (ehiState editableHoleInfo) HoleState.emptyState
-        eventResultOfPickedResult mDestId pr
-            & pickedEventResult . Widget.eCursor %~
-              mappend (Monoid.Last (Just myHoleId))
+        result
+            & pickedEventResult . Widget.eCursor .~ Monoid.Last (Just cursorId)
             & pickedEventResult . Widget.eAnimIdMapping %~
               mappend (Monoid.Endo obliterateOtherResults)
             & return
     where
+        result = eventResultOfPickedResult pr
+        cursorId =
+            mFirstHoleInside <&> WidgetIds.fromEntityId
+            & fromMaybe myHoleId
+            & result ^. pickedIdTranslations
         myHoleId =
             WidgetIds.fromEntityId $ hiEntityId (ehiInfo editableHoleInfo)
         obliterateOtherResults animId =
@@ -135,7 +135,7 @@ makeShownResult editableHoleInfo result =
         config <- Config.hole <$> ExprGuiM.readConfig
         (widget, mkEventMap) <- makeHoleResultWidget (rId result) res
         let padding = Config.holeResultPadding config <&> realToFrac
-        let dest =
+        let mFirstHoleInside =
                 res ^? Sugar.holeResultConverted
                 . SugarLens.holePayloads . Sugar.plEntityId
         return
@@ -145,7 +145,7 @@ makeShownResult editableHoleInfo result =
               , srHoleResult = res
               , srPick =
                 res ^. Sugar.holeResultPick
-                >>= afterPick editableHoleInfo (rId result) dest
+                >>= afterPick editableHoleInfo (rId result) mFirstHoleInside
               }
             )
 
