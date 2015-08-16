@@ -93,6 +93,26 @@
                 "Key'N"
             ]
         ],
+        "newDefinitionButtonPressKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'Space"
+            ],
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'Enter"
+            ]
+        ],
         "newDefinitionActionColor": [
             0.3,
             1.0,

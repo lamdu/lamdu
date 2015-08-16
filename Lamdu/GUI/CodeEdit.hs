@@ -24,7 +24,6 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
-import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
@@ -183,10 +182,7 @@ makePanesEdit env loadedPanes myId =
                 BWidgets.makeFocusableTextView "New..." newDefinitionActionId
                     & WE.localEnv (WE.setTextColor newDefinitionActionColor)
                     <&> Widget.weakerEvents
-                        (newDefinitionEventMap
-                        [ ModKey mempty GLFW.Key'Enter
-                        , ModKey mempty GLFW.Key'Space
-                        ])
+                        (newDefinitionEventMap newDefinitionButtonPressKeys)
         addSpacerAfter x = [x, Spacer.makeWidget 50]
         Config.Pane{..} = Config.pane $ config env
 
