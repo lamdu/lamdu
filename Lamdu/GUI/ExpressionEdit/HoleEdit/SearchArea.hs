@@ -3,8 +3,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ( makeStdWrapped
     ) where
 
-import           Prelude.Compat
-
 import           Control.Applicative ((<|>))
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
@@ -19,7 +17,6 @@ import           Data.Monoid ((<>))
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
-
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -55,6 +52,8 @@ import           Lamdu.Sugar.Names.Types (Name(..), ExpressionN)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Prelude.Compat
 
 type T = Transaction
 

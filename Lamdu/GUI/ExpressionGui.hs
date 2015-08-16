@@ -38,8 +38,6 @@ module Lamdu.GUI.ExpressionGui
     , stdWrapParenify
     ) where
 
-import           Prelude.Compat
-
 import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -84,6 +82,8 @@ import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..), NameSource(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Prelude.Compat
 
 type T = Transaction
 
