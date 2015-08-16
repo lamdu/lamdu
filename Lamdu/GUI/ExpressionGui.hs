@@ -18,7 +18,7 @@ module Lamdu.GUI.ExpressionGui
     -- Lifted widgets:
     , makeFocusableView
     , makeNameView
-    , makeNameEdit
+    , makeNameEdit, makeNameEditWith
     , makeNameOriginEdit
     , diveToNameEdit
     -- Info adding
@@ -362,7 +362,11 @@ diveToNameEdit :: Widget.Id -> Widget.Id
 diveToNameEdit = WidgetIds.delegatingId
 
 makeNameEdit :: MonadA m => Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
-makeNameEdit (Name nameSrc nameCollision setName name) myId =
+makeNameEdit = makeNameEditWith id
+
+makeNameEditWith ::
+    MonadA m => (Widget (T m) -> Widget (T m)) -> Name m -> Widget.Id -> ExprGuiM m (Widget (T m))
+makeNameEditWith onActiveEditor (Name nameSrc nameCollision setName name) myId =
     do
         collisionSuffixes <-
             makeCollisionSuffixLabels nameCollision (Widget.toAnimId myId)
@@ -371,8 +375,9 @@ makeNameEdit (Name nameSrc nameCollision setName name) myId =
             & WE.localEnv emptyStringEnv
             & ExprGuiM.widgetEnv
         return . Box.hboxCentered $ nameEdit : collisionSuffixes
+    <&> onActiveEditor
     >>= ExprGuiM.makeFocusDelegator nameEditFDConfig
-            FocusDelegator.FocusEntryParent myId
+        FocusDelegator.FocusEntryParent myId
     where
         emptyStringEnv env = env
             & WE.envTextStyle . TextEdit.sEmptyFocusedString .~ ""
