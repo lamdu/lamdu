@@ -13,6 +13,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad.ListT (ListT)
 import           Control.MonadA (MonadA)
+import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Char as Char
 import           Data.Function (on)
 import           Data.List (isInfixOf, isPrefixOf)
@@ -87,7 +88,7 @@ mResultsListOf holeInfo baseId (x:xs) = Just
     where
         prefix = prefixId (ehiInfo holeInfo)
         mkExtra = mkResult . extraResultId
-        extraResultId i = mappend extraResultsPrefixId $ WidgetIds.hash i
+        extraResultId i = WidgetId.joinId extraResultsPrefixId [BS8.pack (show i)]
         extraResultsPrefixId = prefix <> WidgetId.Id ["extra results"] <> baseId
         mkResult resultId (typ, holeResult) =
             Result
