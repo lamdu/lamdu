@@ -9,7 +9,6 @@ import           Prelude.Compat
 
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
-import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -30,9 +29,11 @@ import qualified Lamdu.Sugar.Types as Sugar
 type T = Transaction
 
 makeTagNameEdit ::
-    MonadA m => Draw.Color -> Sugar.TagG (Name m) -> ExprGuiM m (Widget (T m))
-makeTagNameEdit tagColor tagG =
-    ExpressionGui.makeNameEdit (tagG ^. Sugar.tagGName) myId
+    MonadA m => Widget.EventHandlers (T m) -> Draw.Color ->
+    Sugar.TagG (Name m) -> ExprGuiM m (Widget (T m))
+makeTagNameEdit jumpNextEventMap tagColor tagG =
+    ExpressionGui.makeNameEditWith (Widget.weakerEvents jumpNextEventMap)
+    (tagG ^. Sugar.tagGName) myId
     & ExprGuiM.withFgColor tagColor
     where
         myId = WidgetIds.fromEntityId (tagG ^. Sugar.tagInstance)
@@ -46,16 +47,15 @@ makeTagH tagColor nearestHoles tagG =
         config <- ExprGuiM.readConfig
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         let keys = Config.holePickAndMoveToNextHoleKeys (Config.hole config)
-        let jumpNextEventMap nextHole =
-                Widget.keysEventMapMovesCursor keys
-                (E.Doc ["Navigation", "Jump to next hole"]) $
-                return $ WidgetIds.fromEntityId nextHole
-        let eventMap =
-                jumpHolesEventMap <>
-                maybe mempty jumpNextEventMap (nearestHoles ^. NearestHoles.next)
+        let jumpNextEventMap =
+                nearestHoles ^. NearestHoles.next
+                & maybe mempty
+                  (Widget.keysEventMapMovesCursor keys
+                   (E.Doc ["Navigation", "Jump to next hole"]) .
+                   return . WidgetIds.fromEntityId)
         let Config.Name{..} = Config.name config
-        makeTagNameEdit tagColor tagG
-            <&> Widget.weakerEvents eventMap
+        makeTagNameEdit jumpNextEventMap tagColor tagG
+            <&> Widget.weakerEvents jumpHolesEventMap
             <&> ExpressionGui.fromValueWidget
 
 makeRecordTag ::
