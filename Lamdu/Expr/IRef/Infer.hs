@@ -1,7 +1,7 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- | Infer expressions where GlobalId's are known to be DefI's
 module Lamdu.Expr.IRef.Infer
     ( ExpressionSetter
-
     , M
     , loadInferScope
     , loadInferInto
@@ -14,7 +14,7 @@ import           Control.Lens (_Left)
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.Either (EitherT(..), left, hoistEither)
+import           Control.Monad.Trans.Either (EitherT(..), hoistEither)
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
@@ -22,6 +22,8 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Nominal (Nominal)
+import           Lamdu.Expr.Scheme (Scheme(..))
+import qualified Lamdu.Expr.Scheme as Scheme
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
@@ -46,6 +48,9 @@ instance Pretty Error where
     pPrint UnexportedGlobalReferred = PP.text "Unexported global referred"
     pPrint (InferError e) = pPrint e
 
+unknownGlobalType :: Scheme
+unknownGlobalType = Scheme.any
+
 loader :: MonadA m => Loader (EitherT Error (T m))
 loader =
     Loader
@@ -55,8 +60,9 @@ loader =
             case defBody of
                 Definition.BodyExpr (Definition.Expr _ (Definition.ExportedType scheme)) ->
                     return scheme
+                Definition.BodyExpr (Definition.Expr _ Definition.NoExportedType) ->
+                    return unknownGlobalType
                 Definition.BodyBuiltin (Definition.Builtin _ scheme) -> return scheme
-                _ -> left UnexportedGlobalReferred -- Reference to global with non-exported type!
     , InferLoad.loadNominal = lift . loadNominal
     }
 
