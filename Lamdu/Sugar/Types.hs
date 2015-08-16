@@ -25,7 +25,7 @@ module Lamdu.Sugar.Types
         , bLetItems, bMActions, bScopes
     , DefinitionBuiltin(..), biType, biName, biSetName
     , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
-    , SetToHole(..), _SetToHole, _AlreadyAHole
+    , SetToHole(..), _SetToHole, _SetWrapperToHole, _AlreadyAHole
     , SetToInnerExpr(..), _SetToInnerExpr, _NoInnerExpr
     , Actions(..)
         , wrap, setToHole, setToInnerExpr, extract
@@ -114,6 +114,7 @@ data WrapAction m
 
 data SetToHole m
     = SetToHole (T m (Guid, EntityId))
+    | SetWrapperToHole (T m (Guid, EntityId))
     | AlreadyAHole
 
 data SetToInnerExpr m

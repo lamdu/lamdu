@@ -197,18 +197,19 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         isTypeMatch <-
             checkTypeMatch (argI ^. V.payload . Input.inferredType)
             (exprPl ^. Input.inferredType) & lift
-        let argWrap =
-                exprPl ^. Input.mStored
-                & maybe WrapNotAllowed (WrappedAlready . addEntityId)
         let mUnwrap =
                 do
-                    stored <- exprPl ^. Input.mStored
+                    stored <- mStored
                     argP <- argI ^. V.payload . Input.mStored
                     return $ unwrap stored argP argI
         let holeArg = HoleArg
                 { _haExpr =
                       argS
-                      & rPayload . plActions . Lens._Just . wrap .~ argWrap
+                      & rPayload . plActions . Lens._Just . wrap .~
+                        maybe WrapNotAllowed WrappedAlready mStoredEntityId
+                      & rPayload . plActions . Lens._Just . setToHole .~
+                        ( mStored <&> fmap guidEntityId . DataOps.setToHole
+                        & maybe AlreadyAHole SetWrapperToHole )
                 , _haUnwrap =
                       if isTypeMatch
                       then UnwrapMAction mUnwrap
@@ -217,7 +218,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         do
             sugarContext <- ConvertM.readContext
             hole <- ConvertHole.convertCommon (Just argI) exprPl
-            case exprPl ^. Input.mStored of
+            case mStored of
                 Nothing -> return hole
                 Just stored ->
                     do
@@ -236,8 +237,10 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
             <&> rBody . _BodyHole . holeMArg .~ Just holeArg
             <&> rPayload . plData <>~ funcI ^. V.payload . Input.userData
             <&> rPayload . plActions . Lens._Just . wrap .~
-                maybe WrapNotAllowed (WrapperAlready . addEntityId) (exprPl ^. Input.mStored)
+                maybe WrapNotAllowed WrapperAlready mStoredEntityId
     where
+        mStoredEntityId = mStored <&> addEntityId
+        mStored = exprPl ^. Input.mStored
         addEntityId = guidEntityId . Property.value
         guidEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
 

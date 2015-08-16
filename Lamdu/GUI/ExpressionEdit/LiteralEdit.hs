@@ -57,5 +57,6 @@ makeInt integer pl =
         editEventMap =
             case pl ^? Sugar.plActions . Lens._Just . Sugar.setToHole of
             Just (Sugar.SetToHole action) -> mkEditEventMap integer action
+            Just (Sugar.SetWrapperToHole action) -> mkEditEventMap integer action
             Just Sugar.AlreadyAHole -> error "Literal int is a hole?!"
             Nothing -> mempty -- not modifiable

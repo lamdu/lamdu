@@ -52,8 +52,8 @@ mkActions ::
     MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> Actions m
 mkActions bodyStored stored =
     Actions
-    { _wrap = WrapAction $ addEntityId <$> DataOps.wrap stored
-    , _setToHole = SetToHole $ addEntityId <$> DataOps.setToHole stored
+    { _wrap = DataOps.wrap stored <&> addEntityId & WrapAction
+    , _setToHole = DataOps.setToHole stored <&> addEntityId & SetToHole
     , _setToInnerExpr = NoInnerExpr
     , _extract =
         Just $ -- overridden by hole conversion

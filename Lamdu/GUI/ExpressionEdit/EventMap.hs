@@ -173,7 +173,9 @@ replaceEventMap config actions =
       Sugar.NoInnerExpr -> mempty
     , case actions ^. Sugar.setToHole of
       Sugar.SetToHole action ->
-          mk "Replace expression" delKeys (fmap snd action)
+          mk "Delete expression" delKeys (fmap snd action)
+      Sugar.SetWrapperToHole action ->
+          mk "Delete outer hole" delKeys (fmap snd action)
       Sugar.AlreadyAHole -> mempty
     ]
     where
