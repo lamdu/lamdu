@@ -59,7 +59,7 @@ module Lamdu.Sugar.Types
     , Nominal(..), nTId, nVal
     --
     , GetField(..), gfRecord, gfTag
-    , Inject(..), iTag, iMVal, iMDeleteInject
+    , Inject(..), iTag, iMVal
     , NamedVarType(..), _GetDefinition, _GetFieldParameter, _GetParameter
     , NamedVar(..), nvName, nvJumpTo, nvVarType
     , GetVar(..), _GetVarNamed, _GetVarParamsRecord
@@ -351,10 +351,9 @@ data GetField name expr = GetField
     , _gfTag :: TagG name
     } deriving (Functor, Foldable, Traversable)
 
-data Inject name m expr = Inject
+data Inject name expr = Inject
     { _iTag :: TagG name
     , _iMVal :: Maybe expr
-    , _iMDeleteInject :: Maybe (T m EntityId)
     } deriving (Functor, Foldable, Traversable)
 
 data NamedVarType = GetDefinition | GetFieldParameter | GetParameter
@@ -405,7 +404,7 @@ data Body name m expr
     | BodyRecord (Record name m expr)
     | BodyGetField (GetField name expr)
     | BodyCase (Case name m expr)
-    | BodyInject (Inject name m expr)
+    | BodyInject (Inject name expr)
     | BodyGetVar (GetVar name m)
     | BodyToNom (Nominal name expr)
     | BodyFromNom (Nominal name expr)
