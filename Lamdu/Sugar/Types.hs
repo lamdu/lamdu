@@ -116,7 +116,9 @@ data SetToHole m
     = SetToHole (T m (Guid, EntityId))
     | AlreadyAHole
 
-data SetToInnerExpr m = SetToInnerExpr (T m EntityId) | NoInnerExpr
+data SetToInnerExpr m
+    = SetToInnerExpr (T m EntityId)
+    | NoInnerExpr
 
 data Actions m = Actions
     { _wrap :: WrapAction m

@@ -55,5 +55,7 @@ makeInt integer pl =
     where
         myId = WidgetIds.fromExprPayload pl
         editEventMap =
-            maybe mempty (mkEditEventMap integer) $
-            pl ^? Sugar.plActions . Lens._Just . Sugar.setToHole . Sugar._SetToHole
+            case pl ^? Sugar.plActions . Lens._Just . Sugar.setToHole of
+            Just (Sugar.SetToHole action) -> mkEditEventMap integer action
+            Just Sugar.AlreadyAHole -> error "Literal int is a hole?!"
+            Nothing -> mempty -- not modifiable

@@ -8,7 +8,6 @@ module Lamdu.GUI.ExpressionEdit.EventMap
 import           Prelude.Compat
 
 import           Control.Applicative (liftA2)
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.Store.Transaction as Transaction
@@ -168,15 +167,17 @@ wrapEventMap holePickers config actions =
 replaceEventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (T m)
 replaceEventMap config actions =
     mconcat
-    [ actionEventMap (Sugar.setToInnerExpr . Sugar._SetToInnerExpr)
-        "Replace with inner expression" $ Config.delKeys config
-    , actionEventMap (Sugar.setToHole . Sugar._SetToHole . Lens.to (fmap snd))
-        "Replace expression" delKeys
+    [ case actions ^. Sugar.setToInnerExpr of
+      Sugar.SetToInnerExpr action ->
+          mk "Replace with inner expression" (Config.delKeys config) action
+      Sugar.NoInnerExpr -> mempty
+    , case actions ^. Sugar.setToHole of
+      Sugar.SetToHole action ->
+          mk "Replace expression" delKeys (fmap snd action)
+      Sugar.AlreadyAHole -> mempty
     ]
     where
-        actionEventMap l doc keys =
-            maybe mempty (mkEventMap keys (E.Doc ["Edit", doc])) $
-            actions ^? l
+        mk doc keys = mkEventMap keys (E.Doc ["Edit", doc])
         delKeys = Config.replaceKeys config ++ Config.delKeys config
 
 modifyEventMap ::
