@@ -2,6 +2,7 @@
 module Lamdu.Sugar.Convert.Expression.Actions
     ( addActions, makeAnnotation
     , makeSetToInner
+    , addActionsWithSetToInner
     ) where
 
 import           Prelude.Compat
@@ -97,6 +98,16 @@ addActions exprPl body =
             , _plActions = mkActions <$> mBodyStored <*> exprPl ^. Input.mStored
             , _plData = exprPl ^. Input.userData
             }
+
+addActionsWithSetToInner ::
+    MonadA m =>
+    Input.Payload m a -> V.Val (Input.Payload m b) ->
+    BodyU m a -> ConvertM m (ExpressionU m a)
+addActionsWithSetToInner exprPl inner body =
+    do
+        setToInner <- makeSetToInner exprPl inner
+        addActions exprPl body
+            <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInner
 
 makeAnnotation :: Input.Payload m a -> Annotation
 makeAnnotation payload =
