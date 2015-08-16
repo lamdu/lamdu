@@ -6,8 +6,6 @@ module Lamdu.GUI.ExpressionEdit.NomEdit
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
-import           Data.Store.Transaction (Transaction)
-import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
@@ -59,14 +57,14 @@ expandingName namePos nomId label nameGui subexprGui showName =
 
 makeToNom ::
     MonadA m =>
-    Sugar.Nominal (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.Nominal (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeToNom = mkNomGui precLeft "«" $ expandingName addLeft
 
 makeFromNom ::
     MonadA m =>
-    Sugar.Nominal (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.Nominal (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeFromNom = mkNomGui precRight "»" $ expandingName addRight
@@ -77,9 +75,9 @@ nomPrecedence = 9
 mkNomGui ::
     Monad m => Lens.ASetter' Precedence Int ->
     String -> LayoutFunc m ->
-    Sugar.Nominal (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.Nominal (Name m) (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
-mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val _) pl =
+mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
     ExprGuiM.withLocalPrecedence (nameSidePrecLens .~ 0) $
     ExpressionGui.stdWrapParenify pl
     (ExpressionGui.MyPrecedence (fromIntegral nomPrecedence)) $
@@ -93,7 +91,7 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val _) pl =
             <&> if isSelected then id
                 else ExpressionGui.egWidget %~ Widget.takesFocus (const (pure nameId))
         nameEdit <-
-            mkNameGui "Wrapper" nom nameId
+            mkNameGui nom nameId
             >>= ExpressionGui.makeFocusableView nameId
         subexprEdit <-
             ExprGuiM.makeSubexpression
@@ -114,27 +112,8 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val _) pl =
             (Sugar.plData . ExprGuiT.plStoredEntityIds . Lens.traversed) pl
 
 mkNameGui ::
-    MonadA m =>
-    String -> Sugar.Nominal (Name m) m a -> Widget.Id ->
+    MonadA m => Sugar.Nominal (Name m) a -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-mkNameGui docName (Sugar.Nominal tidg _val mDel) nameId =
-    do
-        delEventMap <- mkDelEventMap docName mDel
-        ExpressionGui.makeNameView (tidg ^. Sugar.tidgName) (Widget.toAnimId nameId)
-            <&> Widget.weakerEvents delEventMap
-            <&> ExpressionGui.fromValueWidget
-
-mkDelEventMap ::
-    MonadA m =>
-    String -> Maybe (Transaction m Sugar.EntityId) ->
-    ExprGuiM m (Widget.EventHandlers (Transaction m))
-mkDelEventMap docName mDel =
-    do
-        config <- ExprGuiM.readConfig
-        mDel
-            <&> fmap WidgetIds.fromEntityId
-            & maybe mempty
-            (Widget.keysEventMapMovesCursor (Config.delKeys config) doc)
-            & return
-    where
-        doc = E.Doc ["Edit", "Delete", docName]
+mkNameGui (Sugar.Nominal tidg _val) nameId =
+    ExpressionGui.makeNameView (tidg ^. Sugar.tidgName) (Widget.toAnimId nameId)
+    <&> ExpressionGui.fromValueWidget

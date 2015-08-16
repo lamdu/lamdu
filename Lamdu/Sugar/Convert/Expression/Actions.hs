@@ -1,10 +1,12 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Sugar.Convert.Expression.Actions
     ( addActions, makeAnnotation
+    , makeSetToInner
     ) where
 
 import           Prelude.Compat
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (guard)
 import           Control.MonadA (MonadA)
@@ -13,6 +15,7 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -61,6 +64,27 @@ mkActions bodyStored stored =
     }
     where
         addEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
+
+makeSetToInnerStored ::
+    Monad m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m ->
+    ConvertM m (Transaction m EntityId)
+makeSetToInnerStored outerProp innerProp =
+    do
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
+        protectedSetToVal outerProp (Property.value innerProp)
+            <&> EntityId.ofValI
+            & return
+
+makeSetToInner ::
+    Monad m => Input.Payload m a -> V.Val (Input.Payload m b) ->
+    ConvertM m (SetToInnerExpr m)
+makeSetToInner outerPl inner
+    | Lens.nullOf ExprLens.valHole inner =
+      makeSetToInnerStored
+      <$> outerPl ^. Input.mStored
+      <*> inner ^. V.payload . Input.mStored
+      & maybe (return NoInnerExpr) (fmap SetToInnerExpr)
+    | otherwise = return NoInnerExpr
 
 addActions ::
     MonadA m => Input.Payload m a -> BodyU m a -> ConvertM m (ExpressionU m a)

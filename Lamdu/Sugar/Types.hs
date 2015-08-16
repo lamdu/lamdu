@@ -56,7 +56,7 @@ module Lamdu.Sugar.Types
     , CaseArg(..), caVal, caMToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
     , Case(..), cKind, cAlts, cMAddAlt, cTail, cEntityId
-    , Nominal(..), nTId, nVal, nMDeleteNom
+    , Nominal(..), nTId, nVal
     --
     , GetField(..), gfRecord, gfTag, gfMDeleteGetField
     , Inject(..), iTag, iMVal, iMDeleteInject
@@ -392,10 +392,9 @@ data Apply name expr = Apply
     , _aAnnotatedArgs :: [AnnotatedArg name expr]
     } deriving (Functor, Foldable, Traversable)
 
-data Nominal name m expr = Nominal
+data Nominal name expr = Nominal
     { _nTId :: TIdG name
     , _nVal :: expr
-    , _nMDeleteNom :: Maybe (T m EntityId)
     } deriving (Functor, Foldable, Traversable)
 
 data Body name m expr
@@ -409,8 +408,8 @@ data Body name m expr
     | BodyCase (Case name m expr)
     | BodyInject (Inject name m expr)
     | BodyGetVar (GetVar name m)
-    | BodyToNom (Nominal name m expr)
-    | BodyFromNom (Nominal name m expr)
+    | BodyToNom (Nominal name expr)
+    | BodyFromNom (Nominal name expr)
     deriving (Functor, Foldable, Traversable)
 
 instance Show name => Show (NamedParamInfo name m) where
