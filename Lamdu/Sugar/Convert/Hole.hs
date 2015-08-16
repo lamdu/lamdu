@@ -111,22 +111,9 @@ mkHoleOption ::
 mkHoleOption sugarContext mInjectedArg exprPl stored val =
     HoleOption
     { _hoVal = val
-    , _hoSugaredBaseExpr =
-        case val ^? ExprLens.valGlobal of
-        Just g -> getGlobalExpr g & return
-        Nothing -> sugar sugarContext exprPl val
+    , _hoSugaredBaseExpr = sugar sugarContext exprPl val
     , _hoResults = mkHoleResults mInjectedArg sugarContext exprPl stored val
     }
-    where
-        -- HACK:
-        -- Avoid sugar converting get-globals because their inference can fail.
-        -- The generated expr is only used to get names from.
-        getGlobalExpr globId =
-            GetVarNamed NamedVar
-            { _nvName = ExprIRef.defI globId & UniqueId.toGuid
-            , _nvJumpTo = error "HACK getGlobalExpr"
-            , _nvVarType = GetDefinition
-            } & BodyGetVar & (`Expression` error "HACK getGlobalExpr")
 
 mkHoleSuggesteds ::
     MonadA m =>
