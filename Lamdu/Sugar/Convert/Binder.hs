@@ -659,12 +659,12 @@ mkExtract binderScopeVars param delItem bodyStored argStored =
                 Nothing ->
                     do
                         paramName <- Anchors.assocNameRef param & Transaction.getP
-                        getVarsToHole param bodyStored
                         onGetVars (toGetGlobal (ctx ^. ConvertM.scDefI))
                             Builtins.recurseVar argStored
-                        DataOps.newPublicDefinitionWithPane paramName
+                        newDefI <- DataOps.newPublicDefinitionWithPane paramName
                             (ctx ^. ConvertM.scCodeAnchors) extractedI
-                            <&> EntityId.ofIRef
+                        onGetVars (toGetGlobal newDefI) param bodyStored
+                        EntityId.ofIRef newDefI & return
                 Just scopeBodyP ->
                     DataOps.redexWrapWithGivenParam param extractedI scopeBodyP
                     & Lens.mapped .~ EntityId.ofLambdaParam param
