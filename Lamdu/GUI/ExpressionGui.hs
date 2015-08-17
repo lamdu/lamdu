@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, RankNTypes, TypeFamilies, LambdaCase, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGui, egWidget, egAlignment
     -- General:
@@ -23,6 +23,7 @@ module Lamdu.GUI.ExpressionGui
     , diveToNameEdit
     -- Info adding
     , annotationSpacer
+    , NeighborVals(..)
     , EvalAnnotationOptions(..), maybeAddAnnotationWith
     , WideAnnotationBehavior(..), wideAnnotationBehaviorFromSelected
     , AnnotationParams(..), annotationParamsFor
@@ -73,7 +74,7 @@ import qualified Lamdu.GUI.EvalView as EvalView
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ShowAnnotation(..))
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Parens as Parens
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence(..), needParens)
@@ -253,11 +254,16 @@ makeTypeView typ =
     makeWithAnnotationBG
     (fmap (fromValueWidget . Widget.fromView) . (`TypeView.make` typ))
 
+data NeighborVals a = NeighborVals
+    { prevNeighbor :: a
+    , nextNeighbor :: a
+    } deriving (Functor, Foldable, Traversable)
+
 makeEvalView ::
     MonadA m =>
-    (Maybe ScopeAndVal, Maybe ScopeAndVal) -> ScopeAndVal ->
+    NeighborVals (Maybe ScopeAndVal) -> ScopeAndVal ->
     AnnotationParams -> ExprGuiM m (ExpressionGui m)
-makeEvalView (mPrev, mNext) evalRes =
+makeEvalView (NeighborVals mPrev mNext) evalRes =
     makeWithAnnotationBG $
     \animId ->
         do
@@ -314,7 +320,7 @@ addInferredType typ = addAnnotationH (makeTypeView typ)
 
 addEvaluationResult ::
     MonadA m =>
-    Type -> (Maybe ScopeAndVal, Maybe ScopeAndVal) -> ScopeAndVal ->
+    Type -> NeighborVals (Maybe ScopeAndVal) -> ScopeAndVal ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 addEvaluationResult _typ _neigh (_, Right EV.HRecEmpty) _wide entityId gui =
@@ -554,81 +560,68 @@ evaluationResult pl =
     ExprGuiM.readMScopeId
     <&> (>>= valOfScope (pl ^. Sugar.plAnnotation))
 
-data AnnotationBehavior =
-    ShowNothingIfMissing | ShowAnnotation | DoNotShowVal | AlwaysShowType
-
 data EvalAnnotationOptions
     = NormalEvalAnnotation
-    | WithNeighbouringEvalAnnotations (Maybe Sugar.BinderParamScopeId) (Maybe Sugar.BinderParamScopeId)
+    | WithNeighbouringEvalAnnotations (NeighborVals (Maybe Sugar.BinderParamScopeId))
 
-maybeAddAnnotationH ::
+maybeAddAnnotation ::
     MonadA m =>
-    EvalAnnotationOptions -> WideAnnotationBehavior ->
-    AnnotationBehavior ->
-    Sugar.Annotation -> Sugar.EntityId -> ExpressionGui m ->
-    ExprGuiM m (ExpressionGui m)
-maybeAddAnnotationH opt wideAnnotationBehavior annotationBehavior annotation entityId eg =
+    WideAnnotationBehavior -> ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
+    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
+
+data AnnotationMode
+    = AnnotationModeNone
+    | AnnotationModeTypes
+    | AnnotationModeEvaluation (NeighborVals (Maybe ScopeAndVal)) ScopeAndVal
+
+getAnnotationMode :: MonadA m => EvalAnnotationOptions -> Sugar.Annotation -> ExprGuiM m AnnotationMode
+getAnnotationMode opt annotation =
     do
         settings <- ExprGuiM.readSettings
         case settings ^. CESettings.sInfoMode of
-            CESettings.None -> handleMissingAnnotation
-            CESettings.Types -> withType
+            CESettings.None -> return AnnotationModeNone
+            CESettings.Types -> return AnnotationModeTypes
             CESettings.Evaluation ->
                 ExprGuiM.readMScopeId <&> (>>= valAndScope)
-                >>= \case
-                    Nothing -> handleMissingAnnotation
-                    Just scopeAndVal ->
-                        case annotationBehavior of
-                        DoNotShowVal -> return eg
-                        AlwaysShowType -> withType
-                        _ ->
-                            addEvaluationResult inferredType
-                            neighbourVals scopeAndVal
-                            wideAnnotationBehavior entityId eg
-                where
-                    neighbourVals =
-                        case opt of
-                        NormalEvalAnnotation -> (Nothing, Nothing)
-                        WithNeighbouringEvalAnnotations prev next ->
-                            ( prev >>= valAndScope . (^. Sugar.bParamScopeId)
-                            , next >>= valAndScope . (^. Sugar.bParamScopeId)
-                            )
+                <&> maybe AnnotationModeNone (AnnotationModeEvaluation neighbourVals)
     where
-        handleMissingAnnotation =
-            case annotationBehavior of
-            ShowNothingIfMissing -> return eg
-            DoNotShowVal -> return eg
-            ShowAnnotation -> withType
-            AlwaysShowType -> withType
+        valAndScope scopeId = valOfScope annotation scopeId <&> (,) scopeId
+        neighbourVals =
+            case opt of
+            NormalEvalAnnotation -> NeighborVals Nothing Nothing
+            WithNeighbouringEvalAnnotations neighbors ->
+                neighbors <&> (>>= valAndScope . (^. Sugar.bParamScopeId))
+
+maybeAddAnnotationWith ::
+    MonadA m =>
+    EvalAnnotationOptions -> WideAnnotationBehavior -> ShowAnnotation ->
+    Sugar.Annotation -> Sugar.EntityId -> ExpressionGui m ->
+    ExprGuiM m (ExpressionGui m)
+maybeAddAnnotationWith opt wideAnnotationBehavior annotationBehavior annotation entityId eg =
+    getAnnotationMode opt annotation
+    <&> (,) annotationBehavior
+    >>= \case
+        (AlwaysShowType     , _                           ) -> withType
+        (NeverShowAnnotation, _                           ) -> noAnnotation
+        (ShowAnnotation     , AnnotationModeNone          ) -> withType
+        (DoNotShowVal       , AnnotationModeEvaluation _ _) -> noAnnotation
+        (_                  , AnnotationModeNone          ) -> noAnnotation
+        (_                  , AnnotationModeEvaluation n v) -> withVal n v
+        (_                  , AnnotationModeTypes         ) -> withType
+    where
+        noAnnotation = return eg
+        -- concise mode and eval mode with no result
         inferredType = annotation ^. Sugar.aInferredType
         withType = addInferredType inferredType wideAnnotationBehavior entityId eg
-        valAndScope scopeId = valOfScope annotation scopeId <&> (,) scopeId
+        withVal neighborVals scopeAndVal =
+            addEvaluationResult inferredType neighborVals scopeAndVal
+            wideAnnotationBehavior entityId eg
 
 valOfScope :: Sugar.Annotation -> ScopeId -> Maybe (EvalResult ())
 valOfScope annotation scopeId =
     annotation ^? Sugar.aMEvaluationResult .
     Lens._Just . Lens.at scopeId . Lens._Just
-
-maybeAddAnnotation ::
-    MonadA m =>
-    WideAnnotationBehavior -> ExprGuiT.ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
-    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
-
-maybeAddAnnotationWith ::
-    MonadA m =>
-    EvalAnnotationOptions -> WideAnnotationBehavior ->
-    ExprGuiT.ShowAnnotation -> Sugar.Annotation -> Sugar.EntityId ->
-    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-maybeAddAnnotationWith o w showAnn annotation entityId =
-    case showAnn of
-    ExprGuiT.NeverShowAnnotation -> return
-    ExprGuiT.ShowAnnotation -> go ShowAnnotation
-    ExprGuiT.ShowAnnotationInVerboseMode -> go ShowNothingIfMissing
-    ExprGuiT.DoNotShowVal -> go DoNotShowVal
-    ExprGuiT.AlwaysShowType -> go AlwaysShowType
-    where
-        go myShowAnn = maybeAddAnnotationH o w myShowAnn annotation entityId
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests = ListUtils.withPrevNext

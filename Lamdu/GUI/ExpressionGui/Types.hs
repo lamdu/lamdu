@@ -22,9 +22,12 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type ExpressionGui m = Layout (Transaction m)
 
-data ShowAnnotation =
-    ShowAnnotationInVerboseMode | NeverShowAnnotation | ShowAnnotation |
-    DoNotShowVal | AlwaysShowType
+data ShowAnnotation
+    = AlwaysShowType
+    | NeverShowAnnotation
+    | ShowAnnotationInVerboseMode
+    | ShowAnnotation
+    | DoNotShowVal
 
 -- GUI input payload on sugar exprs
 data Payload = Payload

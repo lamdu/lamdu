@@ -255,9 +255,10 @@ makeParts showAnnotation binder delVarBackwardsId myId =
                             mScopeNavEdit ^?
                                 Lens._Just . ExpressionGui.egWidget . Widget.isFocused
                                 >>= guard
-                            ExpressionGui.WithNeighbouringEvalAnnotations
+                            ExpressionGui.NeighborVals
                                 <$> (mScopeCursor <&> sMPrevParamScope)
                                 <*> (mScopeCursor <&> sMNextParamScope)
+                                <&> ExpressionGui.WithNeighbouringEvalAnnotations
                         & fromMaybe ExpressionGui.NormalEvalAnnotation
                 paramEdits <-
                     makeParamsEdit annotationMode showAnnotation nearestHoles
