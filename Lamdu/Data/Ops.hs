@@ -216,10 +216,10 @@ newPublicDefinition codeProps bodyI name =
         return defI
 
 newPublicDefinitionWithPane ::
-    MonadA m => Anchors.CodeProps m -> ExprIRef.ValI m -> T m (DefI m)
-newPublicDefinitionWithPane codeProps bodyI =
+    MonadA m => String -> Anchors.CodeProps m -> ExprIRef.ValI m -> T m (DefI m)
+newPublicDefinitionWithPane name codeProps bodyI =
     do
-        defI <- newPublicDefinition codeProps bodyI ""
+        defI <- newPublicDefinition codeProps bodyI name
         newPane codeProps defI
         return defI
 
