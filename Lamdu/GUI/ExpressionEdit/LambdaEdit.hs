@@ -45,5 +45,5 @@ make binder pl =
         plNoType =
             pl
             & Sugar.plData . ExprGuiT.plShowAnnotation
-            .~ ExprGuiT.DoNotShowAnnotation
+            .~ ExprGuiT.NeverShowAnnotation
         bodyId = WidgetIds.fromExprPayload $ body ^. Sugar.rPayload

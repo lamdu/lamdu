@@ -622,7 +622,7 @@ maybeAddAnnotationWith ::
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 maybeAddAnnotationWith o w showAnn annotation entityId =
     case showAnn of
-    ExprGuiT.DoNotShowAnnotation -> return
+    ExprGuiT.NeverShowAnnotation -> return
     ExprGuiT.ShowAnnotation -> go ShowAnnotation
     ExprGuiT.ShowAnnotationInVerboseMode -> go ShowNothingIfMissing
     ExprGuiT.DoNotShowVal -> go DoNotShowVal

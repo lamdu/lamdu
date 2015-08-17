@@ -310,7 +310,7 @@ postProcessSugar expr =
 toPayload :: Sugar.IsInjected -> ExprGuiT.Payload
 toPayload isInjected =
     ExprGuiT.emptyPayload NearestHoles.none
-    & ExprGuiT.plShowAnnotation .~ ExprGuiT.DoNotShowAnnotation
+    & ExprGuiT.plShowAnnotation .~ ExprGuiT.NeverShowAnnotation
     & ExprGuiT.plInjected .~
       case isInjected of
       Sugar.NotInjected -> []

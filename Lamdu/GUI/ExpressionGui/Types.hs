@@ -23,7 +23,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 type ExpressionGui m = Layout (Transaction m)
 
 data ShowAnnotation =
-    ShowAnnotationInVerboseMode | DoNotShowAnnotation | ShowAnnotation |
+    ShowAnnotationInVerboseMode | NeverShowAnnotation | ShowAnnotation |
     DoNotShowVal | AlwaysShowType
 
 -- GUI input payload on sugar exprs
@@ -65,7 +65,7 @@ markRedundantTypes v =
     v
     & SugarLens.subExprsOf Sugar._BodyToNom   . showAnn .~ DoNotShowVal
     & SugarLens.subExprsOf Sugar._BodyFromNom . showAnn .~ DoNotShowVal
-    & redundantTypes                          . showAnn .~ DoNotShowAnnotation
+    & redundantTypes                          . showAnn .~ NeverShowAnnotation
     & SugarLens.holePayloads                  . showAnn .~ AlwaysShowType
     & SugarLens.holeArgs                      . showAnn .~ ShowAnnotation
     & Sugar.rPayload                          . showAnn .~ ShowAnnotation
