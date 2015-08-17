@@ -655,7 +655,7 @@ mkExtract binderScopeVars param delItem bodyStored argStored =
         do
             mapM_ (`getVarsToHole` argStored) binderScopeVars
             delItem
-            case ctx ^. ConvertM.scMBodyStored of
+            case ctx ^. ConvertM.scMExtractDestPos of
                 Nothing ->
                     do
                         paramName <- Anchors.assocNameRef param & Transaction.getP
@@ -758,7 +758,7 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
         bodyS <-
             ConvertM.convertSubexpression letBody
             & ConvertM.local
-                ( ConvertM.scMBodyStored .~
+                ( ConvertM.scMExtractDestPos .~
                     letBody ^. V.payload . Input.mStored
                 )
         let binderScopes s =

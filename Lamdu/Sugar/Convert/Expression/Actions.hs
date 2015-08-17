@@ -102,7 +102,7 @@ addActions ::
     MonadA m => Input.Payload m a -> BodyU m a -> ConvertM m (ExpressionU m a)
 addActions exprPl body =
     do
-        mBodyStored <- ConvertM.readContext <&> (^. ConvertM.scMBodyStored)
+        mBodyStored <- ConvertM.readContext <&> (^. ConvertM.scMExtractDestPos)
         return $ Expression body Payload
             { _plEntityId = exprPl ^. Input.entityId
             , _plAnnotation = makeAnnotation exprPl

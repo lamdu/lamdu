@@ -51,7 +51,7 @@ mkContext defI cp inferContext =
     , _scDefI = defI
     , _scCodeAnchors = cp
     , _scTagParamInfos = mempty
-    , _scMBodyStored = Nothing
+    , _scMExtractDestPos = Nothing
     , _scNullParams = mempty
     , _scReinferCheckDefinition =
           do
