@@ -28,29 +28,40 @@ import           Lamdu.Sugar.Types
 
 type T = Transaction
 
-mkExtractter :: MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
-mkExtractter bodyStored stored =
+createIdentityLambda :: MonadA m => T m (ExprIRef.ValI m, ExprIRef.ValI m)
+createIdentityLambda =
+    do
+        -- Create temporary hole to give to newLambda
+        -- because we want to know the param to set its value.
+        newBodyI <- DataOps.newHole
+        (newParam, lamI) <- ExprIRef.newLambda newBodyI
+        V.LVar newParam & V.BLeaf & ExprIRef.writeValBody newBodyI
+        return (lamI, newBodyI)
+
+mkExtractor :: MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
+mkExtractor bodyStored stored =
     do
         (lamI, getVarI) <-
             if Property.value stored == Property.value bodyStored
             then
-                do
-                    -- Create temporary hole to give to newLambda
-                    -- because we want to know the param to set its value.
-                    newBodyI <- DataOps.newHole
-                    (newParam, lamI) <- ExprIRef.newLambda newBodyI
-                    V.LVar newParam & V.BLeaf & ExprIRef.writeValBody newBodyI
-                    return (lamI, newBodyI)
+                -- Give entire binder body a name (replace binder body
+                -- with "(\x -> x) stored")
+                createIdentityLambda
             else
+                -- Give some subexpr in binder body a name (replace
+                -- binder body with "(\x -> binderBody) stored", and
+                -- stored becomes "x")
                 do
                     (newParam, lamI) <-
-                        ExprIRef.newLambda (Property.value bodyStored)
+                        Property.value bodyStored & ExprIRef.newLambda
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValBody
                     Property.set stored getVarI
                     return (lamI, getVarI)
-        Property.value stored & V.Apply lamI & V.BApp & ExprIRef.newValBody
+        V.Apply lamI oldStored & V.BApp & ExprIRef.newValBody
             >>= Property.set bodyStored
         EntityId.ofValI getVarI & return
+    where
+        oldStored = Property.value stored
 
 mkActions ::
     MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> Actions m
@@ -61,7 +72,7 @@ mkActions bodyStored stored =
     , _setToInnerExpr = NoInnerExpr
     , _extract =
         Just $ -- overridden by hole conversion
-        mkExtractter bodyStored stored
+        mkExtractor bodyStored stored
     }
     where
         addEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
