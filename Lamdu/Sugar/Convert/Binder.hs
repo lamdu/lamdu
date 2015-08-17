@@ -690,6 +690,11 @@ mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
     where
         del = bodyStored ^. V.payload & replaceWith topLevelProp & void
 
+localExtractDestPost :: MonadA m => Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
+localExtractDestPost val =
+    ConvertM.scMExtractDestPos .~ val ^. V.payload . Input.mStored
+    & ConvertM.local
+
 convertLetItems ::
     (MonadA m, Monoid a) =>
     [V.Var] -> Val (Input.Payload m a) ->
@@ -703,7 +708,9 @@ convertLetItems binderScopeVars expr =
     Nothing -> return ([], expr, Map.empty)
     Just eli ->
         do
-            value <- convertBinder Nothing defGuid (eliArg eli)
+            value <-
+                convertBinder Nothing defGuid (eliArg eli)
+                & localExtractDestPost expr
             actions <-
                 mkLIActions binderScopeVars param
                 <$> expr ^. V.payload . Input.mStored
@@ -756,11 +763,7 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
         (letItems, letBody, bodyScopesMap) <-
             convertLetItems (cpMLamParam convParams ^.. Lens._Just) funcBody
         bodyS <-
-            ConvertM.convertSubexpression letBody
-            & ConvertM.local
-                ( ConvertM.scMExtractDestPos .~
-                    letBody ^. V.payload . Input.mStored
-                )
+            ConvertM.convertSubexpression letBody & localExtractDestPost letBody
         let binderScopes s =
                 BinderScopes
                 { _bsParamScope = BinderParamScopeId s
