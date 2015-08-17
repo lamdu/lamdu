@@ -39,10 +39,10 @@ createIdentityLambda =
         return (lamI, newBodyI)
 
 mkExtractor :: MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
-mkExtractor bodyStored stored =
+mkExtractor extractDestPos stored =
     do
         (lamI, getVarI) <-
-            if Property.value stored == Property.value bodyStored
+            if Property.value stored == Property.value extractDestPos
             then
                 -- Give entire binder body a name (replace binder body
                 -- with "(\x -> x) stored")
@@ -53,26 +53,26 @@ mkExtractor bodyStored stored =
                 -- stored becomes "x")
                 do
                     (newParam, lamI) <-
-                        Property.value bodyStored & ExprIRef.newLambda
+                        Property.value extractDestPos & ExprIRef.newLambda
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValBody
                     Property.set stored getVarI
                     return (lamI, getVarI)
         V.Apply lamI oldStored & V.BApp & ExprIRef.newValBody
-            >>= Property.set bodyStored
+            >>= Property.set extractDestPos
         EntityId.ofValI getVarI & return
     where
         oldStored = Property.value stored
 
 mkActions ::
     MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> Actions m
-mkActions bodyStored stored =
+mkActions extractDestPos stored =
     Actions
     { _wrap = DataOps.wrap stored <&> addEntityId & WrapAction
     , _setToHole = DataOps.setToHole stored <&> addEntityId & SetToHole
     , _setToInnerExpr = NoInnerExpr
     , _extract =
         Just $ -- overridden by hole conversion
-        mkExtractor bodyStored stored
+        mkExtractor extractDestPos stored
     }
     where
         addEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
@@ -102,11 +102,11 @@ addActions ::
     MonadA m => Input.Payload m a -> BodyU m a -> ConvertM m (ExpressionU m a)
 addActions exprPl body =
     do
-        mBodyStored <- ConvertM.readContext <&> (^. ConvertM.scMExtractDestPos)
+        mExtractDestPos <- ConvertM.readContext <&> (^. ConvertM.scMExtractDestPos)
         return $ Expression body Payload
             { _plEntityId = exprPl ^. Input.entityId
             , _plAnnotation = makeAnnotation exprPl
-            , _plActions = mkActions <$> mBodyStored <*> exprPl ^. Input.mStored
+            , _plActions = mkActions <$> mExtractDestPos <*> exprPl ^. Input.mStored
             , _plData = exprPl ^. Input.userData
             }
 
