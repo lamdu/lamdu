@@ -82,6 +82,14 @@ onMatchingSubexprsWithPath action predicate =
 toHole :: MonadA m => ExprIRef.ValIProperty m -> T m ()
 toHole = void . DataOps.setToHole
 
+toGetGlobal ::
+    MonadA m => ExprIRef.DefI m -> ExprIRef.ValIProperty m -> T m ()
+toGetGlobal defI exprP =
+    ExprIRef.writeValBody exprI $ V.BLeaf $ V.LGlobal globalId
+    where
+        exprI = Property.value exprP
+        globalId = ExprIRef.globalId defI
+
 isGetVarOf :: V.Var -> Val a -> Bool
 isGetVarOf = Lens.anyOf ExprLens.valVar . (==)
 
@@ -651,7 +659,7 @@ mkExtract binderScopeVars param delItem bodyStored argStored =
                 Nothing ->
                     do
                         getVarsToHole param bodyStored
-                        getVarsToHole Builtins.recurseVar argStored
+                        onGetVars (toGetGlobal (ctx ^. ConvertM.scDefI)) Builtins.recurseVar argStored
                         DataOps.newPublicDefinitionWithPane
                             (ctx ^. ConvertM.scCodeAnchors) extractedI
                             <&> EntityId.ofIRef
