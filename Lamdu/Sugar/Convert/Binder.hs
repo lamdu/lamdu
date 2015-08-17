@@ -662,12 +662,12 @@ mkExtract binderScopeVars param delItem bodyStored argStored =
     where
         extractedI = argStored ^. V.payload & Property.value
 
-mkWIActions ::
+mkLIActions ::
     MonadA m =>
     [V.Var] -> V.Var -> ExprIRef.ValIProperty m ->
     Val (ExprIRef.ValIProperty m) -> Val (ExprIRef.ValIProperty m) ->
     ConvertM m (LetItemActions m)
-mkWIActions binderScopeVars param topLevelProp bodyStored argStored =
+mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
     do
         extr <- mkExtract binderScopeVars param del bodyStored argStored
         return
@@ -695,7 +695,7 @@ convertLetItems binderScopeVars expr =
         do
             value <- convertBinder Nothing defGuid (eliArg eli)
             actions <-
-                mkWIActions binderScopeVars param
+                mkLIActions binderScopeVars param
                 <$> expr ^. V.payload . Input.mStored
                 <*> traverse (^. Input.mStored) (eliBody eli)
                 <*> traverse (^. Input.mStored) (eliArg eli)
