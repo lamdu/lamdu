@@ -22,7 +22,7 @@ import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
-import           Lamdu.Infer (Context)
+import           Lamdu.Infer (Context, Payload(..))
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Update (update)
 import qualified Lamdu.Infer.Update as Update
@@ -47,26 +47,32 @@ loadNominalsForType loadNominal typ =
 valueConversion ::
     MonadA m =>
     (T.Id -> m Nominal) -> a ->
-    Val (Type, a) -> m [State Context (Val (Type, a))]
+    Val (Payload, a) -> m [State Context (Val (Payload, a))]
 valueConversion loadNominal empty src =
     do
-        loaded <- loadNominalsForType loadNominal (src ^. V.payload . _1)
+        loaded <-
+            loadNominalsForType loadNominal
+            (src ^. V.payload . _1 . Infer.plType)
         valueConversionH loaded empty src & return
 
 valueConversionH ::
-    Infer.Loaded -> a -> Val (Type, a) -> [State Context (Val (Type, a))]
+    Infer.Loaded -> a -> Val (Payload, a) -> [State Context (Val (Payload, a))]
 valueConversionH loaded empty src =
-    case src ^. V.payload . _1 of
+    case srcInferPl ^. Infer.plType of
     T.TRecord composite ->
         composite ^.. ExprLens.compositeFields
         <&> getField
         where
             getField (tag, typ) =
-                V.GetField src tag & V.BGetField & V.Val (typ, empty) & return
+                V.GetField src tag & V.BGetField
+                & V.Val (Payload typ (srcInferPl ^. Infer.plScope), empty)
+                & return
     _ -> [valueConversionNoSplit loaded empty src]
+    where
+        srcInferPl = src ^. V.payload . _1
 
 valueConversionNoSplit ::
-    Infer.Loaded -> a -> Val (Type, a) -> State Context (Val (Type, a))
+    Infer.Loaded -> a -> Val (Payload, a) -> State Context (Val (Payload, a))
 valueConversionNoSplit loaded empty src =
     case srcType of
     T.TInst name _params | bodyNot ExprLens._BToNom ->
@@ -76,9 +82,11 @@ valueConversionNoSplit loaded empty src =
                 Infer.inferFromNom
                 (Infer.loadedNominals loaded) (V.Nom name ())
                 (\_ () -> return (srcType, ()))
-                Infer.emptyScope -- TODO: use real scope
-            updated <- src & Lens.traversed . _1 %%~ update & Update.liftInfer
-            V.Nom name updated & V.BFromNom & V.Val (resType, empty) & return
+                srcScope
+            updated <-
+                src & Lens.traversed . _1 . Infer.plType %%~ update
+                & Update.liftInfer
+            V.Nom name updated & V.BFromNom & mkRes resType & return
         & Infer.run
         & mapStateT
             (either (error "Infer of FromNom on Nominal shouldn't fail") Lens.Identity)
@@ -91,66 +99,74 @@ valueConversionNoSplit loaded empty src =
                 return applied
             else valueConversionNoSplit loaded empty applied
         where
-            arg = valueNoSplit argType & Lens.traversed %~ flip (,) empty
-            applied = V.Apply src arg & V.BApp & V.Val (resType, empty)
+            arg =
+                valueNoSplit (Payload argType srcScope)
+                & Lens.traversed %~ flip (,) empty
+            applied = V.Apply src arg & V.BApp & mkRes resType
     T.TSum composite | bodyNot ExprLens._BInject  ->
         do
             dstType <-
-                -- TODO: use real scope
-                Infer.freshInferredVar Infer.emptyScope "s"
+                Infer.freshInferredVar srcScope "s"
                 & Infer.run
                 & mapStateT
                     (either (error "Infer.freshInferredVar shouldn't fail")
                     Lens.Identity)
-            suggestCaseWith composite dstType
+            suggestCaseWith composite (Payload dstType srcScope)
                 & Lens.traversed %~ flip (,) empty
-                & (`V.Apply` src) & V.BApp & V.Val (dstType, empty)
+                & (`V.Apply` src) & V.BApp & mkRes dstType
                 & return
     _ -> return src
     where
-        srcType = src ^. V.payload . _1
+        srcInferPl = src ^. V.payload . _1
+        srcType = srcInferPl ^. Infer.plType
+        srcScope = srcInferPl ^. Infer.plScope
+        mkRes typ = Val (Payload typ srcScope, empty)
         bodyNot f = Lens.nullOf (V.body . f) src
 
-value :: Type -> [Val Type]
-value typ@(T.TSum comp) =
+value :: Payload -> [Val Payload]
+value pl@(Payload (T.TSum comp) scope) =
     case comp of
     T.CVar{} -> [V.BLeaf V.LHole]
     _ -> comp ^.. ExprLens.compositeFields <&> inject
-    <&> Val typ
+    <&> Val pl
     where
         inject (tag, innerTyp) =
-            valueNoSplit innerTyp & V.Inject tag & V.BInject
+            valueNoSplit (Payload innerTyp scope) & V.Inject tag & V.BInject
 value typ = [valueNoSplit typ]
 
-valueNoSplit :: Type -> Val Type
-valueNoSplit (T.TRecord composite) = suggestRecordWith composite
-valueNoSplit (T.TFun (T.TSum composite) r) = suggestCaseWith composite r
-valueNoSplit typ =
+valueNoSplit :: Payload -> Val Payload
+valueNoSplit (Payload (T.TRecord composite) scope) =
+    suggestRecordWith composite scope
+valueNoSplit (Payload (T.TFun (T.TSum composite) r) scope) =
+    suggestCaseWith composite (Payload r scope)
+valueNoSplit pl@(Payload typ scope) =
     case typ of
-    T.TFun _ r -> valueNoSplit r & V.Lam "var" & V.BAbs
+    T.TFun _ r ->
+        -- TODO: add var to the scope?
+        valueNoSplit (Payload r scope) & V.Lam "var" & V.BAbs
     _ -> V.BLeaf V.LHole
-    & Val typ
+    & Val pl
 
-suggestRecordWith :: T.Product -> Val Type
-suggestRecordWith recordType =
+suggestRecordWith :: T.Product -> Infer.Scope -> Val Payload
+suggestRecordWith recordType scope =
     case recordType of
     T.CVar{} -> V.BLeaf V.LHole
     T.CEmpty -> V.BLeaf V.LRecEmpty
     T.CExtend f t r ->
         V.RecExtend f
-        (valueNoSplit t)
-        (suggestRecordWith r)
+        (valueNoSplit (Payload t scope))
+        (suggestRecordWith r scope)
         & V.BRecExtend
-    & Val (T.TRecord recordType)
+    & Val (Payload (T.TRecord recordType) scope)
 
-suggestCaseWith :: T.Sum -> Type -> Val Type
-suggestCaseWith sumType resultType =
+suggestCaseWith :: T.Sum -> Payload -> Val Payload
+suggestCaseWith sumType resultPl@(Payload resultType scope) =
     case sumType of
     T.CVar{} -> V.BLeaf V.LHole
     T.CEmpty -> V.BLeaf V.LAbsurd
     T.CExtend tag fieldType rest ->
         V.Case tag
-        (valueNoSplit (T.TFun fieldType resultType))
-        (suggestCaseWith rest resultType)
+        (valueNoSplit (Payload (T.TFun fieldType resultType) scope))
+        (suggestCaseWith rest resultPl)
         & V.BCase
-    & Val (T.TFun (T.TSum sumType) resultType)
+    & Val (Payload (T.TFun (T.TSum sumType) resultType) scope)

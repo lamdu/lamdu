@@ -120,7 +120,7 @@ mkHoleSuggesteds ::
     ConvertM.Context m -> Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ExprIRef.ValIProperty m -> [HoleOption Guid m]
 mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
-    exprPl ^. Input.inferredType
+    exprPl ^. Input.inferred
     & Suggest.value <&> void
     <&> mkHoleOption sugarContext mInjectedArg exprPl stored
 
@@ -400,8 +400,9 @@ applyForms empty val =
     case inferPl ^. Infer.plType of
     T.TFun arg res ->
         orderType arg & lift & lift
+        <&> (`Infer.Payload` scope)
         <&> Suggest.valueNoSplit
-        <&> Lens.mapped %~ plSameScope
+        <&> Lens.mapped %~ flip (,) empty
         <&> V.Apply val <&> V.BApp <&> Val (plSameScope res)
         >>= applyForms empty
     T.TVar tv
@@ -428,7 +429,8 @@ applyForms empty val =
         assertSuccess (Right x) = return x
         freshVar = Infer.run . Infer.freshInferredVar (inferPl ^. Infer.plScope)
         inferPl = val ^. V.payload . _1
-        plSameScope t = (inferPl & Infer.plType .~ t, empty)
+        scope = inferPl ^. Infer.plScope
+        plSameScope t = (Infer.Payload t scope, empty)
 
 holeWrapIfNeeded ::
     Monad m =>

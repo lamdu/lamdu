@@ -198,11 +198,12 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl stored =
     Suggest.valueConversion IRefInfer.loadNominal Nothing (argI <&> onPl)
     <&> Lens.mapped %~ onSuggestion
     where
-        onPl pl = (pl ^. Input.inferredType, Just pl)
+        onPl pl = (pl ^. Input.inferred, Just pl)
         onSuggestion mkSugg =
             ConvertHole.mkHoleOptionFromInjected
             (sugarContext & ConvertM.scInferContext .~ newInferCtx)
-            exprPl stored sugg
+            exprPl stored
+            (sugg <&> Lens._1 %~ (^. Infer.plType))
             where
                 (sugg, newInferCtx) = runState mkSugg inputInferCtx
         inputInferCtx = sugarContext ^. ConvertM.scInferContext
