@@ -59,4 +59,5 @@ makeInt integer pl =
             Just (Sugar.SetToHole action) -> mkEditEventMap integer action
             Just (Sugar.SetWrapperToHole action) -> mkEditEventMap integer action
             Just Sugar.AlreadyAHole -> error "Literal int is a hole?!"
+            Just Sugar.AlreadyAppliedToHole -> error "Literal int is an apply?!"
             Nothing -> mempty -- not modifiable

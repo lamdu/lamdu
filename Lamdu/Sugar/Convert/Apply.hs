@@ -49,10 +49,33 @@ convert ::
     (MonadA m, Monoid a) => V.Apply (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert app@(V.Apply funcI argI) exprPl =
-    runMatcherT $ do
-        argS <- lift $ ConvertM.convertSubexpression argI
-        justToLeft $ convertAppliedHole app argS exprPl
-        funcS <- ConvertM.convertSubexpression funcI & lift
+    runMatcherT $
+    do
+        (funcS, argS) <-
+            do
+                argS <- lift $ ConvertM.convertSubexpression argI
+                justToLeft $ convertAppliedHole app argS exprPl
+                funcS <- ConvertM.convertSubexpression funcI & lift
+                protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
+                let setToFuncAction =
+                        maybe NoInnerExpr SetToInnerExpr $
+                        do
+                            outerStored <- exprPl ^. Input.mStored
+                            funcStored <- funcI ^. V.payload . Input.mStored
+                            protectedSetToVal outerStored
+                                (Property.value funcStored)
+                                <&> EntityId.ofValI & return
+                if Lens.has (rBody . _BodyHole) argS
+                    then
+                    return
+                    ( funcS
+                      & rPayload . plActions . Lens._Just . setToHole .~
+                        AlreadyAppliedToHole
+                    , argS
+                      & rPayload . plActions . Lens._Just . setToInnerExpr .~
+                        setToFuncAction
+                    )
+                    else return (funcS, argS)
         justToLeft $
             convertAppliedCase (funcS ^. rBody) (funcI ^. V.payload) argS exprPl
         justToLeft $ convertLabeled funcS argS argI exprPl

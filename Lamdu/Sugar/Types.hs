@@ -116,6 +116,7 @@ data SetToHole m
     = SetToHole (T m (Guid, EntityId))
     | SetWrapperToHole (T m (Guid, EntityId))
     | AlreadyAHole
+    | AlreadyAppliedToHole
 
 data SetToInnerExpr m
     = SetToInnerExpr (T m EntityId)
