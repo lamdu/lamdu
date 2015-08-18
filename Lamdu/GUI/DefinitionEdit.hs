@@ -63,13 +63,22 @@ make cp config settings defS =
             <&> Lens.mapped %~ toExprGuiMPayload
             <&> ExprGuiT.markAnnotationsToDisplay
 
+expandTo :: Widget.R -> ExpressionGui m -> ExpressionGui m
+expandTo width eg
+    | padding <= 0 = eg
+    | otherwise = eg & ExpressionGui.pad (Vector2 (padding / 2) 0)
+    where
+        padding = width - eg ^. ExpressionGui.egWidget . Widget.width
+
 topLevelSchemeTypeView ::
-    MonadA m => Scheme -> Sugar.EntityId -> ExprGuiM m (ExpressionGui m)
-topLevelSchemeTypeView scheme =
+    MonadA m => Widget.R -> Scheme -> Sugar.EntityId -> ExprGuiM m (ExpressionGui m)
+topLevelSchemeTypeView width scheme entityId =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:
-    ExpressionGui.makeTypeView (scheme ^. schemeType)
-    . Widget.toAnimId . WidgetIds.fromEntityId
+    WidgetIds.fromEntityId entityId
+    & Widget.toAnimId
+    & ExpressionGui.makeTypeView (scheme ^. schemeType)
+    <&> expandTo width
 
 makeBuiltinDefinition ::
     MonadA m =>
@@ -85,8 +94,9 @@ makeBuiltinDefinition def builtin =
             & sequenceA
             >>= ExprGuiM.widgetEnv . BWidgets.hboxCenteredSpaced
             <&> ExpressionGui.fromValueWidget
+        let width = assignment ^. ExpressionGui.egWidget . Widget.width
         typeView <-
-            topLevelSchemeTypeView (builtin ^. Sugar.biType) entityId
+            topLevelSchemeTypeView width (builtin ^. Sugar.biType) entityId
         [assignment, typeView]
             & ExpressionGui.vboxTopFocalAlignedTo 0
             & return
@@ -146,7 +156,7 @@ makeExprDefinition def bodyExpr =
             case bodyExpr ^. Sugar.deTypeInfo of
             Sugar.DefinitionExportedTypeInfo scheme ->
                 typeIndicator width (Config.typeIndicatorMatchColor config) myId :
-                [ topLevelSchemeTypeView scheme entityId
+                [ topLevelSchemeTypeView width scheme entityId
                 | Lens.hasn't (Sugar.deContent . Sugar.bParams . Sugar._DefintionWithoutParams) bodyExpr
                 ] & sequence
             Sugar.DefinitionNewType (Sugar.AcceptNewType oldScheme _ accept) ->
@@ -156,7 +166,7 @@ makeExprDefinition def bodyExpr =
                     ]
                 Definition.ExportedType scheme ->
                     [ acceptableTypeIndicator width accept (Config.typeIndicatorErrorColor config) myId
-                    , topLevelSchemeTypeView scheme entityId
+                    , topLevelSchemeTypeView width scheme entityId
                     ]
                 & sequence
             <&> ExpressionGui.vboxTopFocalAlignedTo 0 . concatMap (\w -> [vspace, w])
