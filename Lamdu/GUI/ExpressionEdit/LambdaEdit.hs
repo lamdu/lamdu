@@ -24,7 +24,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make binder pl =
     ExprGuiM.withLocalPrecedence (ExpressionGui.precLeft .~ 0) $
-    ExpressionGui.stdWrapParenify plNoType (ExpressionGui.MyPrecedence 0) $ \myId ->
+    ExpressionGui.stdWrapParenify pl (ExpressionGui.MyPrecedence 0) $ \myId ->
     ExprGuiM.assignCursor myId bodyId $
     do
         BinderEdit.Parts mParamsEdit bodyEdit eventMap <-
@@ -40,8 +40,4 @@ make binder pl =
     where
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody
-        plNoType =
-            pl
-            & Sugar.plData . ExprGuiT.plShowAnnotation
-            .~ ExprGuiT.NeverShowAnnotation
         bodyId = WidgetIds.fromExprPayload $ body ^. Sugar.rPayload
