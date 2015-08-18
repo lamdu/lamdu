@@ -10,8 +10,9 @@ import           Prelude.Compat
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Control.Monad (mzero)
 import           Control.Monad.Trans.Class (MonadTrans(..))
-import           Control.Monad.Trans.State (StateT(..), State, mapStateT)
+import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -68,15 +69,21 @@ valueConversionH loaded empty src =
             getField (tag, typ) =
                 V.GetField src tag & V.BGetField
                 & V.Val (Payload typ (srcInferPl ^. Infer.plScope), empty)
-    _ ->
-        valueConversionNoSplit loaded empty src
-        & mapStateT (return . Lens.runIdentity)
+    _ -> valueConversionOrStop loaded empty src
     where
         srcInferPl = src ^. V.payload . _1
 
-valueConversionNoSplit ::
-    Infer.Loaded -> a -> Val (Payload, a) -> State Context (Val (Payload, a))
-valueConversionNoSplit loaded empty src =
+valueConversionOrStop ::
+    Infer.Loaded -> a -> Val (Payload, a) ->
+    StateT Context [] (Val (Payload, a))
+valueConversionOrStop loaded empty src =
+    StateT $ \ctx ->
+    (src, ctx) : runStateT (valueConversionOrStopH loaded empty src) ctx
+
+valueConversionOrStopH ::
+    Infer.Loaded -> a -> Val (Payload, a) ->
+    StateT Context [] (Val (Payload, a))
+valueConversionOrStopH loaded empty src =
     case srcType of
     T.TInst name _params | bodyNot ExprLens._BToNom ->
         -- TODO: Expose primitives from Infer to do this without partiality
@@ -92,15 +99,15 @@ valueConversionNoSplit loaded empty src =
             V.Nom name updated & V.BFromNom & mkRes resType & return
         & Infer.run
         & mapStateT
-            (either (error "Infer of FromNom on Nominal shouldn't fail") Lens.Identity)
-        >>= \x -> valueConversionNoSplit loaded empty x
+            (either (error "Infer of FromNom on Nominal shouldn't fail") return)
+        >>= valueConversionOrStop loaded empty
     T.TFun argType resType | bodyNot ExprLens._BAbs ->
         if Lens.has (ExprLens.valLeafs . ExprLens._LHole) arg
             then
                 -- If the suggested argument has holes in it
                 -- then stop suggesting there to avoid "overwhelming"..
                 return applied
-            else valueConversionNoSplit loaded empty applied
+            else valueConversionOrStop loaded empty applied
         where
             arg =
                 valueNoSplit (Payload argType srcScope)
@@ -113,12 +120,12 @@ valueConversionNoSplit loaded empty src =
                 & Infer.run
                 & mapStateT
                     (either (error "Infer.freshInferredVar shouldn't fail")
-                    Lens.Identity)
+                    return)
             suggestCaseWith composite (Payload dstType srcScope)
                 & Lens.traversed %~ flip (,) empty
                 & (`V.Apply` src) & V.BApp & mkRes dstType
                 & return
-    _ -> return src
+    _ -> mzero
     where
         srcInferPl = src ^. V.payload . _1
         srcType = srcInferPl ^. Infer.plType
