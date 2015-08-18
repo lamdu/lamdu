@@ -5,7 +5,9 @@ module Lamdu.GUI.ExpressionGui.Types
     , Payload(..)
         , plStoredEntityIds, plInjected, plNearestHoles, plShowAnnotation
     , emptyPayload
-    , ShowAnnotation(..)
+    , EvalModeShow(..)
+    , ShowAnnotation(..), showAnnotationWhenVerbose
+      , neverShowAnnotations, alwaysShowAnnotations
     , nextHolesBefore, markAnnotationsToDisplay
     ) where
 
@@ -22,12 +24,28 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type ExpressionGui m = Layout (Transaction m)
 
-data ShowAnnotation
-    = AlwaysShowType
-    | NeverShowAnnotation
-    | ShowAnnotationInVerboseMode
-    | ShowAnnotation
-    | DoNotShowVal
+data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
+    deriving (Eq, Ord, Show)
+
+data ShowAnnotation = ShowAnnotation
+    { _showTypeWhenMissing :: Bool -- concise-mode or eval-mode without val
+    , _showInTypeMode :: Bool
+    , _showInEvalMode :: EvalModeShow
+    } deriving (Eq, Ord, Show)
+Lens.makeLenses ''ShowAnnotation
+
+showAnnotationWhenVerbose :: ShowAnnotation
+showAnnotationWhenVerbose = ShowAnnotation
+    { _showTypeWhenMissing = False
+    , _showInTypeMode = True
+    , _showInEvalMode = EvalModeShowEval
+    }
+
+neverShowAnnotations :: ShowAnnotation
+neverShowAnnotations = ShowAnnotation False False EvalModeShowNothing
+
+alwaysShowAnnotations :: ShowAnnotation
+alwaysShowAnnotations = ShowAnnotation True True EvalModeShowEval
 
 -- GUI input payload on sugar exprs
 data Payload = Payload
@@ -45,7 +63,7 @@ emptyPayload nearestHoles = Payload
     { _plStoredEntityIds = []
     , _plInjected = []
     , _plNearestHoles = nearestHoles
-    , _plShowAnnotation = ShowAnnotationInVerboseMode
+    , _plShowAnnotation = showAnnotationWhenVerbose
     }
 
 nextHolesBefore :: Sugar.Expression name m Payload -> NearestHoles
@@ -66,14 +84,19 @@ leftMostLeaf val =
 markAnnotationsToDisplay :: SugarExpr m -> SugarExpr m
 markAnnotationsToDisplay v =
     v
-    & SugarLens.subExprsOf Sugar._BodyToNom   . showAnn .~ DoNotShowVal
-    & SugarLens.subExprsOf Sugar._BodyFromNom . showAnn .~ DoNotShowVal
-    & SugarLens.payloadsOf Sugar._BodyInject  . showAnn .~ DoNotShowVal
-    & redundantTypes                          . showAnn .~ NeverShowAnnotation
-    & SugarLens.holePayloads                  . showAnn .~ AlwaysShowType
-    & SugarLens.holeArgs                      . showAnn %~ onHoleArgAnn
+    & SugarLens.subExprsOf Sugar._BodyToNom   . showAnn . showInEvalMode .~ EvalModeShowNothing
+    & SugarLens.subExprsOf Sugar._BodyFromNom . showAnn . showInEvalMode .~ EvalModeShowNothing
+    & SugarLens.payloadsOf Sugar._BodyInject  . showAnn . showInEvalMode .~ EvalModeShowNothing
+    & redundantTypes                          . showAnn %~
+      (showInTypeMode .~ False) .
+      (showInEvalMode .~ EvalModeShowNothing) -- TODO: This makes little sense
+    & SugarLens.holePayloads                  . showAnn %~
+      (showTypeWhenMissing .~ True) .
+      (showInEvalMode .~ EvalModeShowType)
+    & SugarLens.holeArgs                      . showAnn %~
+      (showTypeWhenMissing .~ True) .
+      (showInEvalMode %~ don'tShowNothing)
     where
+        don'tShowNothing EvalModeShowNothing = EvalModeShowType
+        don'tShowNothing x = x
         showAnn = Sugar.plData . plShowAnnotation
-        onHoleArgAnn NeverShowAnnotation = AlwaysShowType
-        onHoleArgAnn DoNotShowVal = AlwaysShowType
-        onHoleArgAnn _ = ShowAnnotation

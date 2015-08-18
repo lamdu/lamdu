@@ -74,7 +74,7 @@ import qualified Lamdu.GUI.EvalView as EvalView
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ShowAnnotation(..))
+import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ShowAnnotation(..), EvalModeShow(..))
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.Parens as Parens
 import           Lamdu.GUI.Precedence (MyPrecedence(..), ParentPrecedence(..), Precedence(..), needParens)
@@ -596,17 +596,20 @@ maybeAddAnnotationWith ::
     EvalAnnotationOptions -> WideAnnotationBehavior -> ShowAnnotation ->
     Sugar.Annotation -> Sugar.EntityId -> ExpressionGui m ->
     ExprGuiM m (ExpressionGui m)
-maybeAddAnnotationWith opt wideAnnotationBehavior annotationBehavior annotation entityId eg =
+maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation entityId eg =
     getAnnotationMode opt annotation
-    <&> (,) annotationBehavior
     >>= \case
-        (AlwaysShowType     , _                           ) -> withType
-        (NeverShowAnnotation, _                           ) -> noAnnotation
-        (ShowAnnotation     , AnnotationModeNone          ) -> withType
-        (DoNotShowVal       , AnnotationModeEvaluation _ _) -> noAnnotation
-        (_                  , AnnotationModeNone          ) -> noAnnotation
-        (_                  , AnnotationModeEvaluation n v) -> withVal n v
-        (_                  , AnnotationModeTypes         ) -> withType
+        AnnotationModeNone
+            | _showTypeWhenMissing -> withType
+            | otherwise -> noAnnotation
+        AnnotationModeEvaluation n v ->
+            case _showInEvalMode of
+            EvalModeShowNothing -> noAnnotation
+            EvalModeShowType -> withType
+            EvalModeShowEval -> withVal n v
+        AnnotationModeTypes
+            | _showInTypeMode -> withType
+            | otherwise -> noAnnotation
     where
         noAnnotation = return eg
         -- concise mode and eval mode with no result

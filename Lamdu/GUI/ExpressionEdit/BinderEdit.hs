@@ -462,14 +462,14 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
     case params of
     Sugar.DefintionWithoutParams -> return []
     Sugar.NullParam p ->
-        fromParamList ExprGuiT.NeverShowAnnotation delVarBackwardsId rhsId
+        fromParamList ExprGuiT.neverShowAnnotations delVarBackwardsId rhsId
         [p & Sugar.fpInfo %~ nullParamEditInfo]
     Sugar.VarParam p ->
-        fromParamList ExprGuiT.ShowAnnotation delVarBackwardsId rhsId [p & Sugar.fpInfo %~ namedParamEditInfo]
+        fromParamList ExprGuiT.alwaysShowAnnotations delVarBackwardsId rhsId [p & Sugar.fpInfo %~ namedParamEditInfo]
     Sugar.FieldParams ps ->
         ps ^.. Lens.traversed . _2
         & traverse . Sugar.fpInfo %~ namedParamEditInfo
-        & fromParamList ExprGuiT.ShowAnnotation lhsId rhsId
+        & fromParamList ExprGuiT.alwaysShowAnnotations lhsId rhsId
     where
         fromParamList showParamAnnotation delDestFirst delDestLast paramList =
             do
