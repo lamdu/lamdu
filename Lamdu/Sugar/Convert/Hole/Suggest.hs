@@ -10,7 +10,8 @@ import           Prelude.Compat
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad.Trans.State (State, mapStateT)
+import           Control.Monad.Trans.Class (MonadTrans(..))
+import           Control.Monad.Trans.State (StateT(..), State, mapStateT)
 import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -47,7 +48,7 @@ loadNominalsForType loadNominal typ =
 valueConversion ::
     MonadA m =>
     (T.Id -> m Nominal) -> a ->
-    Val (Payload, a) -> m [State Context (Val (Payload, a))]
+    Val (Payload, a) -> m (StateT Context [] (Val (Payload, a)))
 valueConversion loadNominal empty src =
     do
         loaded <-
@@ -56,18 +57,20 @@ valueConversion loadNominal empty src =
         valueConversionH loaded empty src & return
 
 valueConversionH ::
-    Infer.Loaded -> a -> Val (Payload, a) -> [State Context (Val (Payload, a))]
+    Infer.Loaded -> a -> Val (Payload, a) ->
+    StateT Context [] (Val (Payload, a))
 valueConversionH loaded empty src =
     case srcInferPl ^. Infer.plType of
     T.TRecord composite ->
         composite ^.. ExprLens.compositeFields
-        <&> getField
+        <&> getField & lift
         where
             getField (tag, typ) =
                 V.GetField src tag & V.BGetField
                 & V.Val (Payload typ (srcInferPl ^. Infer.plScope), empty)
-                & return
-    _ -> [valueConversionNoSplit loaded empty src]
+    _ ->
+        valueConversionNoSplit loaded empty src
+        & mapStateT (return . Lens.runIdentity)
     where
         srcInferPl = src ^. V.payload . _1
 
