@@ -486,8 +486,8 @@ data Binder name m expr = Binder
     } deriving (Functor, Foldable, Traversable)
 
 data AcceptNewType m = AcceptNewType
-    { antOldType :: Definition.ExportedType
-    , antNewType :: Scheme
+    { antOldExportedType :: Definition.ExportedType
+    , antNewInferredType :: Scheme
     , antAccept :: T m ()
     }
 

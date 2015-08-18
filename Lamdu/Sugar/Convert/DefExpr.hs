@@ -79,8 +79,8 @@ makeExprDefTypeInfo _ _ (Definition.ExportedType defType) inferredType
     | defType `Scheme.alphaEq` inferredType = DefinitionExportedTypeInfo defType
 makeExprDefTypeInfo defValI defI defType inferredType =
     DefinitionNewType AcceptNewType
-    { antOldType = defType
-    , antNewType = inferredType
+    { antOldExportedType = defType
+    , antNewInferredType = inferredType
     , antAccept =
         Transaction.writeIRef defI $
         Definition.BodyExpr $
