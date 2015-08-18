@@ -72,7 +72,7 @@ make WidgetIds{..} arg =
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
-            bgColor =
+            frameColor =
                 config &
                 case arg ^. Sugar.haUnwrap of
                 Sugar.UnwrapMAction {} -> Config.typeIndicatorMatchColor
@@ -91,7 +91,7 @@ make WidgetIds{..} arg =
             & ExpressionGui.egWidget %~
                 Widget.addInnerFrame
                 (Config.layerHoleBG (Config.layers config))
-                frameId bgColor frameWidth
+                frameId frameColor frameWidth
             & ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap
             & ExpressionGui.egWidget %%~
                 ExprGuiM.widgetEnv . BWidgets.makeFocusableView hidWrapper
