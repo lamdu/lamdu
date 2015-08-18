@@ -111,7 +111,7 @@ make ::
     ExpressionGui.EvalAnnotationOptions ->
     ExprGuiT.ShowAnnotation -> Widget.Id -> Widget.Id ->
     Sugar.FuncParam (Info m) -> ExprGuiM m (ExpressionGui m)
-make annotationOpts showType prevId nextId param =
+make annotationOpts showAnnotation prevId nextId param =
     assignCursor $
     do
         config <- ExprGuiM.readConfig
@@ -127,7 +127,7 @@ make annotationOpts showType prevId nextId param =
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap
             <&> ExpressionGui.egAlignment . _1 .~ 0.5
             >>= ExpressionGui.maybeAddAnnotationWith annotationOpts
-                wideAnnotationBehavior showType
+                wideAnnotationBehavior showAnnotation
                 (param ^. Sugar.fpAnnotation)
                 entityId
     where

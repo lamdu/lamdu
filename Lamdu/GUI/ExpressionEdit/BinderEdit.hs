@@ -232,11 +232,10 @@ sBodyScope = (^. Sugar.bsBodyScope) . sBinderScopes
 
 makeParts ::
     MonadA m =>
-    ExprGuiT.ShowAnnotation ->
     Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) ->
     Widget.Id -> Widget.Id ->
     ExprGuiM m (Parts m)
-makeParts showAnnotation binder delVarBackwardsId myId =
+makeParts binder delVarBackwardsId myId =
     do
         mScopeCursor <- mkScopeCursor binder
         let mSetScope =
@@ -261,7 +260,7 @@ makeParts showAnnotation binder delVarBackwardsId myId =
                                 <&> ExpressionGui.WithNeighbouringEvalAnnotations
                         & fromMaybe ExpressionGui.NormalEvalAnnotation
                 paramEdits <-
-                    makeParamsEdit annotationMode showAnnotation nearestHoles
+                    makeParamsEdit annotationMode nearestHoles
                     delVarBackwardsId myId (WidgetIds.fromEntityId bodyId)
                     params
                     & ExprGuiM.withLocalMScopeId
@@ -318,7 +317,7 @@ make ::
 make name binder myId =
     do
         Parts mParamsEdit bodyEdit eventMap <-
-            makeParts ExprGuiT.ShowAnnotation binder myId myId
+            makeParts binder myId myId
         rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
         presentationEdits <-
             binder ^.. Sugar.bMPresentationModeProp . Lens._Just
@@ -455,27 +454,28 @@ nullParamEditInfo (Sugar.NullParamInfo mActions) =
 
 makeParamsEdit ::
     MonadA m =>
-    ExpressionGui.EvalAnnotationOptions -> ExprGuiT.ShowAnnotation -> NearestHoles ->
+    ExpressionGui.EvalAnnotationOptions -> NearestHoles ->
     Widget.Id -> Widget.Id -> Widget.Id ->
     Sugar.BinderParams (Name m) m ->
     ExprGuiM m [ExpressionGui m]
-makeParamsEdit annotationOpts showAnnotation nearestHoles delVarBackwardsId lhsId rhsId params =
+makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params =
     case params of
     Sugar.DefintionWithoutParams -> return []
     Sugar.NullParam p ->
-        fromParamList delVarBackwardsId rhsId [p & Sugar.fpInfo %~ nullParamEditInfo]
+        fromParamList ExprGuiT.NeverShowAnnotation delVarBackwardsId rhsId
+        [p & Sugar.fpInfo %~ nullParamEditInfo]
     Sugar.VarParam p ->
-        fromParamList delVarBackwardsId rhsId [p & Sugar.fpInfo %~ namedParamEditInfo]
+        fromParamList ExprGuiT.ShowAnnotation delVarBackwardsId rhsId [p & Sugar.fpInfo %~ namedParamEditInfo]
     Sugar.FieldParams ps ->
         ps ^.. Lens.traversed . _2
         & traverse . Sugar.fpInfo %~ namedParamEditInfo
-        & fromParamList lhsId rhsId
+        & fromParamList ExprGuiT.ShowAnnotation lhsId rhsId
     where
-        fromParamList delDestFirst delDestLast paramList =
+        fromParamList showParamAnnotation delDestFirst delDestLast paramList =
             do
                 jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
                 let mkParam (prevId, nextId, param) =
-                        ParamEdit.make annotationOpts showAnnotation prevId nextId param
+                        ParamEdit.make annotationOpts showParamAnnotation prevId nextId param
                         <&> ExpressionGui.egWidget
                         %~ Widget.weakerEvents jumpHolesEventMap
                 ExpressionGui.listWithDelDests delDestFirst delDestLast

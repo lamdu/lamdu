@@ -28,7 +28,7 @@ make binder pl =
     ExprGuiM.assignCursor myId bodyId $
     do
         BinderEdit.Parts mParamsEdit bodyEdit eventMap <-
-            BinderEdit.makeParts showParamType binder bodyId myId
+            BinderEdit.makeParts binder bodyId myId
         let animId = Widget.toAnimId myId
         labelEdits <-
             case params of
@@ -40,8 +40,6 @@ make binder pl =
     where
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody
-        -- We show the param type instead of the lambda type
-        showParamType = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation
         plNoType =
             pl
             & Sugar.plData . ExprGuiT.plShowAnnotation
