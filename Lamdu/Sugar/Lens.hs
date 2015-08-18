@@ -4,8 +4,8 @@ module Lamdu.Sugar.Lens
     , payloadsOf
     , holePayloads, holeArgs, subExprsOf
     , defSchemes
-    , binderParams
-    , binderParamsActions
+    , binderNamedParams
+    , binderNamedParamsActions
     , binderFuncParamAdds
     , binderFuncParamDeletes
     ) where
@@ -107,20 +107,20 @@ defBodySchemes f (DefinitionBodyExpression de) =
 defSchemes :: Lens.Traversal' (Definition name m expr) Scheme
 defSchemes = drBody . defBodySchemes
 
-binderParams ::
+binderNamedParams ::
     Lens.Traversal
     (BinderParams a m)
     (BinderParams b m)
     (FuncParam (NamedParamInfo a m))
     (FuncParam (NamedParamInfo b m))
-binderParams _ DefintionWithoutParams = pure DefintionWithoutParams
-binderParams _ (NullParam a) = pure (NullParam a)
-binderParams f (VarParam p) = VarParam <$> f p
-binderParams f (FieldParams ps) = FieldParams <$> (Lens.traverse . _2) f ps
+binderNamedParams _ DefintionWithoutParams = pure DefintionWithoutParams
+binderNamedParams _ (NullParam a) = pure (NullParam a)
+binderNamedParams f (VarParam p) = VarParam <$> f p
+binderNamedParams f (FieldParams ps) = FieldParams <$> (Lens.traverse . _2) f ps
 
-binderParamsActions ::
+binderNamedParamsActions ::
     Lens.Traversal' (BinderParams name m) (FuncParamActions m)
-binderParamsActions = binderParams . fpInfo . npiMActions . Lens._Just
+binderNamedParamsActions = binderNamedParams . fpInfo . npiMActions . Lens._Just
 
 binderFuncParamAdds ::
     Lens.Traversal'
@@ -128,7 +128,7 @@ binderFuncParamAdds ::
     (Transaction m ParamAddResult)
 binderFuncParamAdds f Binder{..} =
     (\_bParams _bBody _bLetItems _bMActions -> Binder{..})
-    <$> (_bParams & binderParamsActions . fpAddNext %%~ f)
+    <$> (_bParams & binderNamedParamsActions . fpAddNext %%~ f)
     <*> onExpr _bBody
     <*> (_bLetItems & Lens.traversed . liValue . binderFuncParamAdds %%~ f)
     <*> (_bMActions & Lens._Just . baAddFirstParam %%~ f)
@@ -143,7 +143,7 @@ binderFuncParamDeletes ::
     (Transaction m ParamDelResult)
 binderFuncParamDeletes f Binder{..} =
     (\_bParams _bBody _bLetItems -> Binder{..})
-    <$> (_bParams & binderParamsActions . fpDelete %%~ f)
+    <$> (_bParams & binderNamedParamsActions . fpDelete %%~ f)
     <*> onExpr _bBody
     <*> (_bLetItems & Lens.traversed . liValue . binderFuncParamDeletes %%~ f)
     where

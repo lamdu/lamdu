@@ -301,7 +301,7 @@ makeParts showAnnotation binder delVarBackwardsId myId =
         nearestHoles = ExprGuiT.nextHolesBefore body
         takeNavCursor = ExprGuiM.assignCursorPrefix scopesNavId (const destId)
         destId =
-            params ^? SugarLens.binderParams . Sugar.fpId
+            params ^? SugarLens.binderNamedParams . Sugar.fpId
             & fromMaybe bodyId
             & WidgetIds.fromEntityId
         params = binder ^. Sugar.bParams
