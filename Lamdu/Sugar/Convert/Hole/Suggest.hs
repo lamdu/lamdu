@@ -65,25 +65,23 @@ valueConversionH loaded empty src =
     T.TRecord composite ->
         composite ^.. ExprLens.compositeFields
         <&> getField & lift
+        & prependOpt src
         where
             getField (tag, typ) =
                 V.GetField src tag & V.BGetField
                 & V.Val (Payload typ (srcInferPl ^. Infer.plScope), empty)
-    _ -> valueConversionOrStop loaded empty src
+    _ -> valueConversionNoSplit loaded empty src
     where
         srcInferPl = src ^. V.payload . _1
 
-valueConversionOrStop ::
-    Infer.Loaded -> a -> Val (Payload, a) ->
-    StateT Context [] (Val (Payload, a))
-valueConversionOrStop loaded empty src =
-    StateT $ \ctx ->
-    (src, ctx) : runStateT (valueConversionOrStopH loaded empty src) ctx
+prependOpt :: a -> StateT s [] a -> StateT s [] a
+prependOpt opt act = StateT $ \s -> (opt, s) : runStateT act s
 
-valueConversionOrStopH ::
+valueConversionNoSplit ::
     Infer.Loaded -> a -> Val (Payload, a) ->
     StateT Context [] (Val (Payload, a))
-valueConversionOrStopH loaded empty src =
+valueConversionNoSplit loaded empty src =
+    prependOpt src $
     case srcType of
     T.TInst name _params | bodyNot ExprLens._BToNom ->
         -- TODO: Expose primitives from Infer to do this without partiality
@@ -100,14 +98,14 @@ valueConversionOrStopH loaded empty src =
         & Infer.run
         & mapStateT
             (either (error "Infer of FromNom on Nominal shouldn't fail") return)
-        >>= valueConversionOrStop loaded empty
+        >>= valueConversionNoSplit loaded empty
     T.TFun argType resType | bodyNot ExprLens._BAbs ->
         if Lens.has (ExprLens.valLeafs . ExprLens._LHole) arg
             then
                 -- If the suggested argument has holes in it
                 -- then stop suggesting there to avoid "overwhelming"..
                 return applied
-            else valueConversionOrStop loaded empty applied
+            else valueConversionNoSplit loaded empty applied
         where
             arg =
                 valueNoSplit (Payload argType srcScope)
