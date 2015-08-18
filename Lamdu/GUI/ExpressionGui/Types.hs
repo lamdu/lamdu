@@ -72,7 +72,6 @@ markAnnotationsToDisplay v =
     & redundantTypes                          . showAnn .~ NeverShowAnnotation
     & SugarLens.holePayloads                  . showAnn .~ AlwaysShowType
     & SugarLens.holeArgs                      . showAnn %~ onHoleArgAnn
-    & Sugar.rPayload                          . showAnn .~ ShowAnnotation
     where
         showAnn = Sugar.plData . plShowAnnotation
         onHoleArgAnn NeverShowAnnotation = AlwaysShowType
