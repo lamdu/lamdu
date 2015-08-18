@@ -71,10 +71,13 @@ markRedundantTypes v =
     & injects                                 . showAnn .~ DoNotShowVal
     & redundantTypes                          . showAnn .~ NeverShowAnnotation
     & SugarLens.holePayloads                  . showAnn .~ AlwaysShowType
-    & SugarLens.holeArgs                      . showAnn .~ ShowAnnotation
+    & SugarLens.holeArgs                      . showAnn %~ onHoleArgAnn
     & Sugar.rPayload                          . showAnn .~ ShowAnnotation
     where
         showAnn = Sugar.plData . plShowAnnotation
         injects =
             SugarLens.subExprPayloads . Lens.ifiltered
             (const . Lens.has (Sugar.rBody . Sugar._BodyInject))
+        onHoleArgAnn NeverShowAnnotation = AlwaysShowType
+        onHoleArgAnn DoNotShowVal = AlwaysShowType
+        onHoleArgAnn _ = ShowAnnotation
