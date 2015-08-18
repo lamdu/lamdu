@@ -9,50 +9,52 @@ import           Control.Lens (Traversal')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Lamdu.Sugar.Types
+import qualified Lamdu.Sugar.Lens as SugarLens
 
 redundantTypesDefaultTop :: Bool -> Traversal' (Expression name m a) (Payload m a)
-redundantTypesDefaultTop topRedundant f (Expression body pl) =
+redundantTypesDefaultTop topRedundant f e@(Expression body pl) =
     case body of
-    BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetFieldParameter }) -> redundant
-    BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetParameter }) -> redundant
-    BodyLiteralInteger {} -> redundant
-    BodyRecord{} -> redundant
+    BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetFieldParameter }) -> redundant e
+    BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetParameter }) -> redundant e
+    BodyLiteralInteger {} -> redundant e
+    BodyRecord{} -> redundant e
     BodyList{} -> redundantChildren
     BodyToNom nom ->
-        nom & Lens.traversed . redundantTypesDefaultTop True %%~ f
+        nom & Lens.traversed %%~ redundantTop
         <&> BodyToNom & mk
     BodyApply (Apply func specialArgs annotatedArgs) ->
         Apply
-        <$> ( func & redundantTypesDefaultTop True %%~ f )
+        <$> ( redundantTop func )
         <*> ( specialArgs & Lens.traversed recurse )
         <*> ( annotatedArgs & Lens.traversed . Lens.traversed %%~ recurse )
         <&> BodyApply & mk
     BodyCase (Case kind alts caseTail mAddAlt entityId) ->
         Case
-        <$> (kind & Lens.traversed . redundantTypesDefaultTop True %%~ f)
+        <$> (kind & Lens.traversed %%~ redundantTop)
         <*> ( alts
-              & Lens.traversed . Lens.traversed
-              . rBody . _BodyLam %%~ altLam)
+              & Lens.traversed . Lens.traversed %%~
+                SugarLens.bitraverseExpression (_BodyLam %%~ altLam) f)
         <*> (caseTail & Lens.traversed %%~ recurse)
         <*> pure mAddAlt
         <*> pure entityId
         <&> BodyCase & mk
         where
-            altLam (Binder mPres mScope params lets bod mAct scopes) =
-                Binder
-                <$> pure mPres <*> pure mScope <*> pure params
-                <*> (lets & Lens.traversed . Lens.traversed %%~ recurse)
-                <*> (bod & redundantTypesDefaultTop True %%~ f)
-                <*> pure mAct <*> pure scopes
-    _ -> mk recBody
+    BodyLam{} -> redundant e
+    _ -> Lens.traversed recurse body & mk
     where
-        recurse = redundantTypes f
+        altLam = onBinder (Lens.traversed . Lens.traversed %%~ recurse) redundantTop
+        onBinder onLets onBody (Binder mPres mScope params lets bod mAct scopes) =
+            Binder mPres mScope params
+            <$> onLets lets
+            <*> onBody bod
+            <*> pure mAct <*> pure scopes
+        redundantTop = redundantTypesDefaultTop True f
+        recurse = redundantTypesDefaultTop False f
         mk newBody =
             Expression <$> newBody <*> (if topRedundant then f else pure) pl
-        recBody = body & Lens.traversed recurse
-        redundant = Expression <$> recBody <*> f pl
+        redundant = SugarLens.bitraverseExpression (Lens.traversed recurse) f
         redundantChildren =
-            body & Lens.traversed . redundantTypesDefaultTop True %%~ f & mk
+            body & Lens.traversed %%~ redundantTop & mk
 
 redundantTypes :: Traversal' (Expression name m a) (Payload m a)
 redundantTypes = redundantTypesDefaultTop False
