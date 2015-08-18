@@ -51,6 +51,7 @@ import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
+import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Val (ScopeId, topLevelScopeId)
@@ -139,8 +140,9 @@ advanceDepth ::
     AnimId -> ExprGuiM m r -> ExprGuiM m r
 advanceDepth f animId action =
     do
+        maxDepth <- readConfig <&> Config.maxExprDepth
         depth <- ExprGuiM $ Lens.view aSubexpressionLayer
-        if depth >= 15
+        if depth >= maxDepth
             then mkErrorWidget >>= f
             else action & exprGuiM %~ RWS.local (aSubexpressionLayer +~ 1)
     where

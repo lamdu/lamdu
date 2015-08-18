@@ -130,6 +130,8 @@ data Config = Config
     , animationTimePeriodSec :: Double
     , animationRemainInPeriod :: Double
 
+    , maxExprDepth :: Int
+
     , backgroundColor :: Draw.Color
     , baseColor :: Draw.Color
     , baseTextSize :: Double
