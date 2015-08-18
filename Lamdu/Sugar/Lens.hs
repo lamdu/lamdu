@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, RankNTypes #-}
 module Lamdu.Sugar.Lens
-    ( subExprPayloads, payloadsIndexedByPath
+    ( bitraverseExpression, subExprPayloads, payloadsIndexedByPath
     , payloadsOf
     , holePayloads, holeArgs, subExprsOf
     , defSchemes
@@ -20,6 +20,15 @@ import           Lamdu.Expr.Scheme (Scheme)
 import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
+
+bitraverseExpression ::
+    Applicative f =>
+    (Body name m (Expression name m a) ->
+     f (Body name m (Expression name m b))) ->
+    (Payload m a -> f (Payload m b)) ->
+    Expression name m a -> f (Expression name m b)
+bitraverseExpression onBody onPl (Expression body pl) =
+    Expression <$> onBody body <*> onPl pl
 
 subExprPayloads ::
     Lens.IndexedTraversal
