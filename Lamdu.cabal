@@ -221,6 +221,7 @@ Executable lamdu
                   , Lamdu.GUI.CodeEdit
                   , Lamdu.GUI.DefinitionEdit
                   , Lamdu.GUI.ParamEdit
+                  , Lamdu.GUI.RedundantAnnotations
                   , Lamdu.GUI.EvalView
                   , Lamdu.Main
                   , Lamdu.Config.Sampler
@@ -228,7 +229,6 @@ Executable lamdu
                   , Lamdu.Sugar.Internal
                   , Lamdu.Sugar.Internal.EntityId
                   , Lamdu.Sugar.PresentationModes
-                  , Lamdu.Sugar.RedundantTypes
                   , Lamdu.Sugar.Types
                   , Lamdu.Sugar.Lens
                   , Lamdu.Sugar.OrderTags

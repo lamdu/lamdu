@@ -33,6 +33,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..), DefinitionN)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -62,7 +63,7 @@ make cp config settings defS =
         exprGuiDefS =
             defS
             <&> Lens.mapped %~ toExprGuiMPayload
-            <&> ExprGuiT.markAnnotationsToDisplay
+            <&> RedundantAnnotations.markAnnotationsToDisplay
 
 expandTo :: Widget.R -> ExpressionGui m -> ExpressionGui m
 expandTo width eg

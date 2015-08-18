@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, RankNTypes #-}
-module Lamdu.Sugar.RedundantTypes
-    ( redundantTypes
+module Lamdu.GUI.RedundantAnnotations
+    ( markAnnotationsToDisplay
     ) where
 
 import           Prelude.Compat
@@ -8,11 +8,12 @@ import           Prelude.Compat
 import           Control.Lens (Traversal')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Lamdu.Sugar.Types
+import qualified Lamdu.GUI.ExpressionGui.Types as T
 import qualified Lamdu.Sugar.Lens as SugarLens
+import           Lamdu.Sugar.Types
 
-redundantTypesDefaultTop :: Bool -> Traversal' (Expression name m a) (Payload m a)
-redundantTypesDefaultTop topRedundant f e@(Expression body pl) =
+redundantAnnotationsDefaultTop :: Bool -> Traversal' (Expression name m a) (Payload m a)
+redundantAnnotationsDefaultTop topRedundant f e@(Expression body pl) =
     case body of
     BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetFieldParameter }) -> redundant e
     BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetParameter }) -> redundant e
@@ -47,13 +48,33 @@ redundantTypesDefaultTop topRedundant f e@(Expression body pl) =
             <$> onLets lets
             <*> onBody bod
             <*> pure mAct <*> pure scopes
-        redundantTop = redundantTypesDefaultTop True f
-        recurse = redundantTypesDefaultTop False f
+        redundantTop = redundantAnnotationsDefaultTop True f
+        recurse = redundantAnnotationsDefaultTop False f
         mk newBody =
             Expression <$> newBody <*> (if topRedundant then f else pure) pl
         redundant = SugarLens.bitraverseExpression (Lens.traversed recurse) f
         redundantChildren =
             body & Lens.traversed %%~ redundantTop & mk
 
-redundantTypes :: Traversal' (Expression name m a) (Payload m a)
-redundantTypes = redundantTypesDefaultTop False
+redundantAnnotations :: Traversal' (Expression name m a) (Payload m a)
+redundantAnnotations = redundantAnnotationsDefaultTop False
+
+markAnnotationsToDisplay :: T.SugarExpr m -> T.SugarExpr m
+markAnnotationsToDisplay v =
+    v
+    & SugarLens.subExprsOf _BodyToNom   . showAnn . T.showInEvalMode .~ T.EvalModeShowNothing
+    & SugarLens.subExprsOf _BodyFromNom . showAnn . T.showInEvalMode .~ T.EvalModeShowNothing
+    & SugarLens.payloadsOf _BodyInject  . showAnn . T.showInEvalMode .~ T.EvalModeShowNothing
+    & redundantAnnotations                    . showAnn %~
+      (T.showInTypeMode .~ False) .
+      (T.showInEvalMode .~ T.EvalModeShowNothing) -- TODO: This makes little sense
+    & SugarLens.holePayloads                  . showAnn %~
+      (T.showTypeWhenMissing .~ True) .
+      (T.showInEvalMode .~ T.EvalModeShowType)
+    & SugarLens.holeArgs                      . showAnn %~
+      (T.showTypeWhenMissing .~ True) .
+      (T.showInEvalMode %~ don'tShowNothing)
+    where
+        don'tShowNothing T.EvalModeShowNothing = T.EvalModeShowType
+        don'tShowNothing x = x
+        showAnn = plData . T.plShowAnnotation

@@ -6,9 +6,10 @@ module Lamdu.GUI.ExpressionGui.Types
         , plStoredEntityIds, plInjected, plNearestHoles, plShowAnnotation
     , emptyPayload
     , EvalModeShow(..)
-    , ShowAnnotation(..), showAnnotationWhenVerbose
+    , ShowAnnotation(..), showTypeWhenMissing, showInTypeMode, showInEvalMode
+      , showAnnotationWhenVerbose
       , neverShowAnnotations, alwaysShowAnnotations
-    , nextHolesBefore, markAnnotationsToDisplay
+    , nextHolesBefore
     ) where
 
 import qualified Control.Lens as Lens
@@ -16,10 +17,8 @@ import           Control.Lens.Operators
 import           Data.Store.Transaction (Transaction)
 import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import           Lamdu.Sugar.Names.Types (ExpressionN)
-import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
-import           Lamdu.Sugar.RedundantTypes (redundantTypes)
 import qualified Lamdu.Sugar.Types as Sugar
 
 type ExpressionGui m = Layout (Transaction m)
@@ -80,23 +79,3 @@ leftMostLeaf val =
     case val ^.. Sugar.rBody . Lens.traversed of
     [] -> val
     (x:_) -> leftMostLeaf x
-
-markAnnotationsToDisplay :: SugarExpr m -> SugarExpr m
-markAnnotationsToDisplay v =
-    v
-    & SugarLens.subExprsOf Sugar._BodyToNom   . showAnn . showInEvalMode .~ EvalModeShowNothing
-    & SugarLens.subExprsOf Sugar._BodyFromNom . showAnn . showInEvalMode .~ EvalModeShowNothing
-    & SugarLens.payloadsOf Sugar._BodyInject  . showAnn . showInEvalMode .~ EvalModeShowNothing
-    & redundantTypes                          . showAnn %~
-      (showInTypeMode .~ False) .
-      (showInEvalMode .~ EvalModeShowNothing) -- TODO: This makes little sense
-    & SugarLens.holePayloads                  . showAnn %~
-      (showTypeWhenMissing .~ True) .
-      (showInEvalMode .~ EvalModeShowType)
-    & SugarLens.holeArgs                      . showAnn %~
-      (showTypeWhenMissing .~ True) .
-      (showInEvalMode %~ don'tShowNothing)
-    where
-        don'tShowNothing EvalModeShowNothing = EvalModeShowType
-        don'tShowNothing x = x
-        showAnn = Sugar.plData . plShowAnnotation
