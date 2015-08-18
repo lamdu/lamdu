@@ -75,6 +75,7 @@ markRedundantTypes v =
     & Sugar.rPayload                          . showAnn .~ ShowAnnotation
     where
         showAnn = Sugar.plData . plShowAnnotation
+        injects :: Lens.Traversal' (SugarExpr m) (Sugar.Payload m Payload)
         injects =
             SugarLens.subExprPayloads . Lens.ifiltered
             (const . Lens.has (Sugar.rBody . Sugar._BodyInject))
