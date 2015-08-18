@@ -68,15 +68,15 @@ data FieldParam = FieldParam
     }
 
 onMatchingSubexprs ::
-    MonadA m => (a -> m ()) -> (a -> Val () -> Bool) -> Val a -> m ()
+    MonadA m => (a -> m ()) -> (Lens.Fold (Val ()) b) -> Val a -> m ()
 onMatchingSubexprs action predicate =
-    Lens.itraverseOf_ (ExprLens.subExprPayloads . Lens.ifiltered (flip predicate))
+    Lens.itraverseOf_ (ExprLens.subExprPayloads . Lens.ifiltered (\i _ -> Lens.has predicate i))
     (const action)
 
 onMatchingSubexprsWithPath ::
-    MonadA m => (a -> m ()) -> (a -> [Val ()] -> Bool) -> Val a -> m ()
+    MonadA m => (a -> m ()) -> ([Val ()] -> Bool) -> Val a -> m ()
 onMatchingSubexprsWithPath action predicate =
-    Lens.itraverseOf_ (ExprLens.payloadsIndexedByPath . Lens.ifiltered (flip predicate))
+    Lens.itraverseOf_ (ExprLens.payloadsIndexedByPath . Lens.ifiltered (\i _ -> predicate i))
     (const action)
 
 toHole :: MonadA m => ExprIRef.ValIProperty m -> T m ()
@@ -89,9 +89,6 @@ toGetGlobal defI exprP =
     where
         exprI = Property.value exprP
         globalId = ExprIRef.globalId defI
-
-isGetVarOf :: V.Var -> Val a -> Bool
-isGetVarOf = Lens.anyOf ExprLens.valVar . (==)
 
 data StoredLam m = StoredLam
     { _slLam :: V.Lam (Val (ExprIRef.ValIProperty m))
@@ -111,10 +108,9 @@ mkStoredLam lam pl =
 
 changeRecursionsFromCalls :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
 changeRecursionsFromCalls var =
-    onMatchingSubexprs changeRecursion (const isCall)
+    onMatchingSubexprs changeRecursion
+    (V.body . ExprLens._BApp . V.applyFunc . ExprLens.valVar . Lens.only var)
     where
-        isCall (Val _ (V.BApp (V.Apply f _))) = isGetVarOf var f
-        isCall _ = False
         changeRecursion prop =
             do
                 body <- ExprIRef.readValBody (Property.value prop)
@@ -166,7 +162,7 @@ changeRecursiveCallArgs change valProp var =
     -- Reread body before fixing it,
     -- to avoid re-writing old data (without converted vars)
     rereadVal valProp
-    >>= onMatchingSubexprsWithPath changeRecurseArg (const (isRecursiveCallArg var))
+    >>= onMatchingSubexprsWithPath changeRecurseArg (isRecursiveCallArg var)
     where
         changeRecurseArg prop =
             Property.value prop
@@ -184,7 +180,8 @@ wrapArgWithRecord tagForExistingArg tagForNewArg oldArg =
 convertVarToGetField ::
     MonadA m => T.Tag -> V.Var -> Val (Property (T m) (ExprIRef.ValI m)) -> T m ()
 convertVarToGetField tagForVar paramVar =
-    onMatchingSubexprs (convertVar . Property.value) (const (isGetVarOf paramVar))
+    onMatchingSubexprs (convertVar . Property.value)
+    (ExprLens.valVar . Lens.only paramVar)
     where
         convertVar bodyI =
             ExprIRef.newValBody (V.BLeaf (V.LVar paramVar))
@@ -355,10 +352,19 @@ fixRecursiveCallToSingleArg tag argI =
                 | otherwise -> fixRecursiveCallToSingleArg tag restI
             _ -> return argI
 
+getFieldOnVar :: Lens.Traversal' (Val t) (V.Var, T.Tag)
+getFieldOnVar = V.body . ExprLens._BGetField . inGetField
+    where
+        inGetField f (V.GetField (Val pl (V.BLeaf (V.LVar v))) t) =
+            pack pl <$> f (v, t)
+        inGetField _ other = pure other
+        pack pl (v, t) =
+            V.GetField (Val pl (V.BLeaf (V.LVar v))) t
+
 getFieldParamsToParams :: MonadA m => StoredLam m -> T.Tag -> T m ()
 getFieldParamsToParams (StoredLam (V.Lam param lamBody) _) tag =
     onMatchingSubexprs (toParam . Property.value)
-    (const (isGetFieldParam param tag)) lamBody
+    (getFieldOnVar . Lens.only (param, tag)) lamBody
     where
         toParam bodyI = ExprIRef.writeValBody bodyI $ V.BLeaf $ V.LVar param
 
@@ -589,8 +595,8 @@ convertParams mRecursiveVar expr =
             return (params, expr)
 
 changeRecursionsToCalls :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
-changeRecursionsToCalls =
-    onMatchingSubexprs changeRecursion . const . isGetVarOf
+changeRecursionsToCalls var =
+    onMatchingSubexprs changeRecursion (ExprLens.valVar . Lens.only var)
     where
         changeRecursion prop =
             DataOps.newHole
@@ -629,20 +635,15 @@ onGetVars ::
     MonadA m =>
     (ExprIRef.ValIProperty m -> T m ()) -> V.Var ->
     Val (ExprIRef.ValIProperty m) -> T m ()
-onGetVars f = onMatchingSubexprs f . const . isGetVarOf
+onGetVars f var =
+    onMatchingSubexprs f (ExprLens.valVar . Lens.only var)
 
 getVarsToHole :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
 getVarsToHole = onGetVars toHole
 
-isGetFieldParam :: V.Var -> T.Tag -> Val t -> Bool
-isGetFieldParam param tag
-    (Val _ (V.BGetField (V.GetField (Val _ (V.BLeaf (V.LVar v))) t)))
-    = t == tag && v == param
-isGetFieldParam _ _ _ = False
-
 getFieldParamsToHole :: MonadA m => T.Tag -> StoredLam m -> T m ()
 getFieldParamsToHole tag (StoredLam (V.Lam param lamBody) _) =
-    onMatchingSubexprs toHole (const (isGetFieldParam param tag)) lamBody
+    onMatchingSubexprs toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
 
 mkExtract ::
     MonadA m =>
