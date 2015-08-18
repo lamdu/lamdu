@@ -6,7 +6,7 @@ module Lamdu.GUI.ExpressionGui.Types
         , plStoredEntityIds, plInjected, plNearestHoles, plShowAnnotation
     , emptyPayload
     , ShowAnnotation(..)
-    , nextHolesBefore, markRedundantTypes
+    , nextHolesBefore, markAnnotationsToDisplay
     ) where
 
 import qualified Control.Lens as Lens
@@ -63,8 +63,8 @@ leftMostLeaf val =
     [] -> val
     (x:_) -> leftMostLeaf x
 
-markRedundantTypes :: SugarExpr m -> SugarExpr m
-markRedundantTypes v =
+markAnnotationsToDisplay :: SugarExpr m -> SugarExpr m
+markAnnotationsToDisplay v =
     v
     & SugarLens.subExprsOf Sugar._BodyToNom   . showAnn .~ DoNotShowVal
     & SugarLens.subExprsOf Sugar._BodyFromNom . showAnn .~ DoNotShowVal

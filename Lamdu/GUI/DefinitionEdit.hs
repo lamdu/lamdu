@@ -61,7 +61,7 @@ make cp config settings defS =
         exprGuiDefS =
             defS
             <&> Lens.mapped %~ toExprGuiMPayload
-            <&> ExprGuiT.markRedundantTypes
+            <&> ExprGuiT.markAnnotationsToDisplay
 
 topLevelSchemeTypeView ::
     MonadA m => Scheme -> Sugar.EntityId -> ExprGuiM m (ExpressionGui m)
