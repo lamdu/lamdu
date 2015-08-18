@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.Hole.ResultScore
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import qualified Data.Map as Map
+import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Type (Type(..), Composite(..))
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
@@ -26,9 +27,15 @@ compositeTypeScore (CVar _) = [1]
 compositeTypeScore (CExtend _ t r) = 2 : max (resultTypeScore t) (compositeTypeScore r)
 
 resultScore :: Val Infer.Payload -> [Int]
-resultScore (Val pl body) =
-    bodyTopLevelScore body : resultTypeScore (pl ^. Infer.plType) ++
-    (body ^.. Lens.traversed <&> resultScore & ([]:) & maximum)
+resultScore val@(Val pl body) =
+    bodyTopLevelScore body :
+    resultTypeScore (pl ^. Infer.plType) ++
+    [length (val ^.. ExprLens.payloadsOf ExprLens.valBodyHole)] ++
+    (bodyParts body >>= resultScore)
+
+bodyParts :: V.Body a -> [a]
+bodyParts (V.BApp (V.Apply f a)) = [a, f]
+bodyParts x = x ^.. Lens.traversed
 
 bodyTopLevelScore :: V.Body (Val a) -> Int
 bodyTopLevelScore body =

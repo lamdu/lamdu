@@ -7,7 +7,6 @@ module Lamdu.Sugar.Convert.Hole
 import           Prelude.Compat
 
 import           Control.Applicative ((<|>))
-import qualified Control.Applicative as Applicative
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -371,19 +370,13 @@ applyForms ::
 applyForms _ v@(Val _ V.BAbs {}) = return v
 applyForms empty val =
     case inferPl ^. Infer.plType of
-    TFun arg res ->
-        orderType arg & lift & lift
-        <&> (`Infer.Payload` scope)
-        <&> Suggest.valueNoSplit
-        <&> Lens.mapped %~ flip (,) empty
-        <&> V.Apply val <&> V.BApp <&> Val (plSameScope res)
-        >>= applyForms empty
     TVar tv
         | any (`Lens.has` val)
             [ ExprLens.valVar
             , ExprLens.valGetField . V.getFieldRecord . ExprLens.valVar
             ] ->
             -- a variable that's compatible with a function type
+            return val <|>
             do
                 arg <- freshVar "af"
                 res <- freshVar "af"
@@ -392,18 +385,25 @@ applyForms empty val =
                     & Infer.run & mapStateT assertSuccess
                 return $ Val (plSameScope res) $ V.BApp $ V.Apply val $
                     Val (plSameScope arg) (V.BLeaf V.LHole)
-    _ -> Applicative.empty
-    <|> return val
+        where
+            assertSuccess (Left err) =
+                fail $
+                "Unify of a tv with function type should always succeed, but failed: " ++
+                prettyShow err
+            assertSuccess (Right x) = return x
+            freshVar = Infer.run . Infer.freshInferredVar (inferPl ^. Infer.plScope)
+            scope = inferPl ^. Infer.plScope
+            plSameScope t = (Infer.Payload t scope, empty)
+    TRecord{} | Lens.has ExprLens.valVar val ->
+        -- A "params record" (or just a let item which is a record..)
+        return val
+    _ ->
+        val & V.payload . _1 . Infer.plType %%~ orderType
+        >>= Suggest.valueConversion IRefInfer.loadNominal empty
+        <&> mapStateT ListClass.fromList
+        & lift & lift & join
     where
-        assertSuccess (Left err) =
-            fail $
-            "Unify of a tv with function type should always succeed, but failed: " ++
-            prettyShow err
-        assertSuccess (Right x) = return x
-        freshVar = Infer.run . Infer.freshInferredVar (inferPl ^. Infer.plScope)
         inferPl = val ^. V.payload . _1
-        scope = inferPl ^. Infer.plScope
-        plSameScope t = (Infer.Payload t scope, empty)
 
 holeWrapIfNeeded ::
     Monad m =>
