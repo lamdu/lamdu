@@ -4,8 +4,6 @@ module Lamdu.GUI.DefinitionEdit
     , diveToNameEdit
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -13,6 +11,7 @@ import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.View (View(..))
@@ -38,6 +37,8 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..), DefinitionN)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Prelude.Compat
 
 type T = Transaction
 
@@ -71,11 +72,12 @@ expandTo width eg
         padding = width - eg ^. ExpressionGui.egWidget . Widget.width
 
 topLevelSchemeTypeView ::
-    MonadA m => Widget.R -> Scheme -> Sugar.EntityId -> ExprGuiM m (ExpressionGui m)
-topLevelSchemeTypeView width scheme entityId =
+    MonadA m => Widget.R -> Scheme -> Sugar.EntityId -> AnimId -> ExprGuiM m (ExpressionGui m)
+topLevelSchemeTypeView width scheme entityId suffix =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:
     WidgetIds.fromEntityId entityId
+    & (`Widget.joinId` suffix)
     & Widget.toAnimId
     & ExpressionGui.makeTypeView (scheme ^. schemeType)
     <&> expandTo width
@@ -96,7 +98,7 @@ makeBuiltinDefinition def builtin =
             <&> ExpressionGui.fromValueWidget
         let width = assignment ^. ExpressionGui.egWidget . Widget.width
         typeView <-
-            topLevelSchemeTypeView width (builtin ^. Sugar.biType) entityId
+            topLevelSchemeTypeView width (builtin ^. Sugar.biType) entityId ["builtinType"]
         [assignment, typeView]
             & ExpressionGui.vboxTopFocalAlignedTo 0
             & return
@@ -156,17 +158,18 @@ makeExprDefinition def bodyExpr =
             case bodyExpr ^. Sugar.deTypeInfo of
             Sugar.DefinitionExportedTypeInfo scheme ->
                 typeIndicator width (Config.typeIndicatorMatchColor config) myId :
-                [ topLevelSchemeTypeView width scheme entityId
-                | Lens.hasn't (Sugar.deContent . Sugar.bParams . Sugar._DefintionWithoutParams) bodyExpr
+                [ topLevelSchemeTypeView width scheme entityId ["exportedType"]
                 ] & sequence
-            Sugar.DefinitionNewType (Sugar.AcceptNewType oldScheme _ accept) ->
-                case oldScheme of
+            Sugar.DefinitionNewType (Sugar.AcceptNewType oldMExported newInferred accept) ->
+                case oldMExported of
                 Definition.NoExportedType ->
-                    [ acceptableTypeIndicator width accept (Config.typeIndicatorFirstTimeColor config) myId
+                    [ topLevelSchemeTypeView width newInferred entityId ["inferredType"]
+                    , acceptableTypeIndicator width accept (Config.typeIndicatorFirstTimeColor config) myId
                     ]
-                Definition.ExportedType scheme ->
-                    [ acceptableTypeIndicator width accept (Config.typeIndicatorErrorColor config) myId
-                    , topLevelSchemeTypeView width scheme entityId
+                Definition.ExportedType oldExported ->
+                    [ topLevelSchemeTypeView width newInferred entityId ["inferredType"]
+                    , acceptableTypeIndicator width accept (Config.typeIndicatorErrorColor config) myId
+                    , topLevelSchemeTypeView width oldExported entityId ["exportedType"]
                     ]
                 & sequence
             <&> ExpressionGui.vboxTopFocalAlignedTo 0 . concatMap (\w -> [vspace, w])
