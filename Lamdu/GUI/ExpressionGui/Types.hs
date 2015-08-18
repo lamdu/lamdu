@@ -68,17 +68,13 @@ markAnnotationsToDisplay v =
     v
     & SugarLens.subExprsOf Sugar._BodyToNom   . showAnn .~ DoNotShowVal
     & SugarLens.subExprsOf Sugar._BodyFromNom . showAnn .~ DoNotShowVal
-    & injects                                 . showAnn .~ DoNotShowVal
+    & SugarLens.payloadsOf Sugar._BodyInject  . showAnn .~ DoNotShowVal
     & redundantTypes                          . showAnn .~ NeverShowAnnotation
     & SugarLens.holePayloads                  . showAnn .~ AlwaysShowType
     & SugarLens.holeArgs                      . showAnn %~ onHoleArgAnn
     & Sugar.rPayload                          . showAnn .~ ShowAnnotation
     where
         showAnn = Sugar.plData . plShowAnnotation
-        injects :: Lens.Traversal' (SugarExpr m) (Sugar.Payload m Payload)
-        injects =
-            SugarLens.subExprPayloads . Lens.ifiltered
-            (const . Lens.has (Sugar.rBody . Sugar._BodyInject))
         onHoleArgAnn NeverShowAnnotation = AlwaysShowType
         onHoleArgAnn DoNotShowVal = AlwaysShowType
         onHoleArgAnn _ = ShowAnnotation

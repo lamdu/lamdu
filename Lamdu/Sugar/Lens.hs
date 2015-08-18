@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, RankNTypes #-}
 module Lamdu.Sugar.Lens
     ( subExprPayloads, payloadsIndexedByPath
+    , payloadsOf
     , holePayloads, holeArgs, subExprsOf
     , defSchemes
     , binderParams
@@ -8,8 +9,6 @@ module Lamdu.Sugar.Lens
     , binderFuncParamAdds
     , binderFuncParamDeletes
     ) where
-
-import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -19,6 +18,8 @@ import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Expr.Scheme (Scheme)
 import           Lamdu.Sugar.Types
+
+import           Prelude.Compat
 
 subExprPayloads ::
     Lens.IndexedTraversal
@@ -47,15 +48,23 @@ payloadsIndexedByPath f =
             where
                 newPath = void val : path
 
+payloadsOf ::
+    (Lens.Fold (Body name m (Expression name m ())) a) ->
+    Lens.IndexedTraversal'
+    (Expression name m ())
+    (Expression name m b)
+    (Payload m b)
+payloadsOf body =
+    subExprPayloads . Lens.ifiltered predicate
+    where
+        predicate idx _ = Lens.has (rBody . body) idx
+
 holePayloads ::
     Lens.IndexedTraversal'
     (Expression name m ())
     (Expression name m a)
     (Payload m a)
-holePayloads =
-    subExprPayloads . Lens.ifiltered predicate
-    where
-        predicate idx _ = Lens.has (rBody . _BodyHole) idx
+holePayloads = payloadsOf _BodyHole
 
 subExprsOf ::
     Lens.Traversal' (Body name m (Expression name m ())) b ->
