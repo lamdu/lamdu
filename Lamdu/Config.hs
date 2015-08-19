@@ -175,6 +175,7 @@ data Config = Config
     , valAnnotationHoverBGColor :: Draw.Color
     , valAnnotationSpacing :: Double
     , valAnnotationWidthExpansionLimit :: Double
+    , valAnnotationShrinkAtLeast :: Double
     , typeFrameBGColor :: Draw.Color
     , verticalSpacing :: Double
     , cursorBGColor :: Draw.Color

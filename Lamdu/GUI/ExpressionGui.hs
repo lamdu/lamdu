@@ -221,19 +221,23 @@ makeWithAnnotationBG ::
 makeWithAnnotationBG f (AnnotationParams minWidth animId wideAnnotationBehavior) =
     do
         config <- ExprGuiM.readConfig
-        let expansionLimit = Config.valAnnotationWidthExpansionLimit config
-        let maxWidth = minWidth + realToFrac expansionLimit
         annotationEg <- f animId
         let annotationWidth = annotationEg ^. egWidget . Widget.width
         let width = max annotationWidth minWidth
-        let shrinkRatio = pure (maxWidth / annotationWidth)
+        let expansionLimit =
+                Config.valAnnotationWidthExpansionLimit config & realToFrac
+        let maxWidth = minWidth + expansionLimit
+        let shrinkAtLeast = Config.valAnnotationShrinkAtLeast config & realToFrac
+        let shrinkRatio =
+                annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
+                & (/ annotationWidth) & pure
         let maybeTooNarrow
                 | minWidth > annotationWidth = pad (Vector2 ((width - annotationWidth) / 2) 0)
                 | otherwise = id
         let maybeTooWide
-                | annotationWidth > maxWidth =
-                  applyWideAnnotationBehavior config animId
-                  wideAnnotationBehavior shrinkRatio
+                | annotationWidth > minWidth + (max shrinkAtLeast expansionLimit) =
+                    applyWideAnnotationBehavior config animId
+                    wideAnnotationBehavior shrinkRatio
                 | otherwise = return . addAnnotationBackground config animId
         annotationEg
             & maybeTooNarrow
