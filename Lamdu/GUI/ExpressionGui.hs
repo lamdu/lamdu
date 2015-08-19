@@ -235,7 +235,7 @@ makeWithAnnotationBG f (AnnotationParams minWidth animId wideAnnotationBehavior)
                 | minWidth > annotationWidth = pad (Vector2 ((width - annotationWidth) / 2) 0)
                 | otherwise = id
         let maybeTooWide
-                | annotationWidth > minWidth + (max shrinkAtLeast expansionLimit) =
+                | annotationWidth > minWidth + max shrinkAtLeast expansionLimit =
                     applyWideAnnotationBehavior config animId
                     wideAnnotationBehavior shrinkRatio
                 | otherwise = return . addAnnotationBackground config animId
