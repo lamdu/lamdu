@@ -128,8 +128,11 @@ pickBefore shownResult action =
 -- | Remove unwanted event handlers from a hole result
 removeUnwanted :: Config -> Widget.EventHandlers f -> Widget.EventHandlers f
 removeUnwanted config =
-    deleteKeys (delKeys ++ gridKeyEvents ++ holeNavigationKeys ++ subexprNavigationKeys)
+    deleteKeys
+    (delKeys ++ gridKeyEvents ++ holeNavigationKeys ++ subexprNavigationKeys ++
+     letAddItemKeys)
     where
+        letAddItemKeys = Config.letAddItemKeys config
         subexprNavigationKeys =
             config & Config.leaveSubexpressionKeys <> Config.enterSubexpressionKeys
         Config.Hole{..} = Config.hole config
