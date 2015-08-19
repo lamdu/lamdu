@@ -59,6 +59,12 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         Expression newBody pl & don'tShowEval
     BodyInject _ ->
         Expression newBody pl & don'tShowEval
+    BodyGetVar (GetVarParamsRecord _) ->
+        Expression newBody pl
+    BodyGetField _ ->
+        Expression newBody pl
+    BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetDefinition }) ->
+        Expression newBody pl
     BodyApply app ->
         Expression (BodyApply (app & aFunc %~ don'tShowAnnotation)) pl
     BodyList l ->
@@ -76,6 +82,5 @@ markAnnotationsToDisplay (Expression oldBody pl) =
                 cas
                 & cKind . Lens.mapped %~ don'tShowAnnotation
                 & cAlts . Lens.mapped . Lens.mapped . rBody . _BodyLam . bBody %~ don'tShowAnnotation
-    _ -> Expression newBody pl
     where
         newBody = oldBody <&> markAnnotationsToDisplay
