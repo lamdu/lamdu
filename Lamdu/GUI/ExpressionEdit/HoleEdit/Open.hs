@@ -187,7 +187,7 @@ makeResultGroup editableHoleInfo results =
         (mainResultWidget, shownMainResult) <-
             makeShownResult editableHoleInfo mainResult
         let mainResultHeight = mainResultWidget ^. Widget.height
-            makeExtra =
+        let makeExtra =
                 results ^. HoleResults.rlExtra
                 & makeExtraResultsWidget editableHoleInfo mainResultHeight
         (mSelectedResult, extraResWidget) <-
@@ -227,7 +227,7 @@ makeExtraResultsWidget editableHoleInfo mainResultHeight extraResults@(firstResu
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
-            mkResWidget result =
+        let mkResWidget result =
                 do
                     isOnResult <-
                         WE.isSubCursor (rId result)
@@ -240,7 +240,7 @@ makeExtraResultsWidget editableHoleInfo mainResultHeight extraResults@(firstResu
         (mResults, widgets) <-
             unzip <$> traverse mkResWidget extraResults
         let headHeight = head widgets ^. Widget.height
-            height = min mainResultHeight headHeight
+        let height = min mainResultHeight headHeight
         return
             ( msum mResults
             , Box.vboxAlign 0 widgets
@@ -262,16 +262,13 @@ makeHoleResultWidget resultId holeResult =
     do
         Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
         let mkEventMap =
-              do
-                  -- Create a hidden result widget that we never display, but only
-                  -- keep the event map from. We always tell it that it has focus,
-                  -- so that even if we're on the search term, we can have valid
-                  -- event maps of any result (we actually use the first one's
-                  -- event map)
-                  hiddenResultWidget <-
-                    mkWidget
-                    & ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget)
-                  hiddenResultWidget ^. Widget.eventMap & return
+                -- Create a hidden result widget that we never display, but only
+                -- keep the event map from. We always tell it that it has focus,
+                -- so that even if we're on the search term, we can have valid
+                -- event maps of any result (we actually use the first one's
+                -- event map)
+                ExprGuiM.localEnv (WE.envCursor .~ idWithinResultWidget) mkWidget
+                <&> (^. Widget.eventMap)
         widget <-
             mkWidget
             <&> Widget.animFrame %~ Anim.mapIdentities (<> (resultSuffix # Widget.toAnimId resultId))
@@ -354,9 +351,9 @@ makeResultsWidget editableHoleInfo shownResultsLists hiddenResults =
     do
         groupsWidgets <- traverse (makeResultGroup editableHoleInfo) shownResultsLists
         let mSelectedResult = groupsWidgets ^? Lens.traversed . rgwMSelectedResult . Lens._Just
-            mFirstResult = groupsWidgets ^? Lens.traversed . rgwMainResult
-            mResult = mSelectedResult <|> mFirstResult
-            rows = groupsWidgets ^.. Lens.traversed . rgwRow
+        let mFirstResult = groupsWidgets ^? Lens.traversed . rgwMainResult
+        let mResult = mSelectedResult <|> mFirstResult
+        let rows = groupsWidgets ^.. Lens.traversed . rgwRow
         addMResultPicker mResult
         widget <- layoutResults rows hiddenResults myId
         return (mResult, widget)
@@ -372,19 +369,19 @@ assignHoleEditCursor editableHoleInfo shownMainResultsIds allShownResultIds sear
     do
         cursor <- ExprGuiM.widgetEnv WE.readCursor
         let sub = isJust . flip Widget.subId cursor
-            holeInfo = ehiInfo editableHoleInfo
-            WidgetIds{..} = hiIds holeInfo
-            shouldBeOnResult = sub hidResultsPrefix
-            isOnResult = any sub allShownResultIds
-            -- TODO: Instead of assignSource, use setCursor
-            -- vs. assignCursor?
-            assignSource
+        let shouldBeOnResult = sub hidResultsPrefix
+        let isOnResult = any sub allShownResultIds
+        -- TODO: Instead of assignSource, use setCursor
+        -- vs. assignCursor?
+        let assignSource
                 | shouldBeOnResult && not isOnResult = cursor
                 | otherwise = hidOpen
-            destId
-                | null (HoleInfo.ehiSearchTerm editableHoleInfo) = searchTermId
-                | otherwise = head (shownMainResultsIds ++ [searchTermId])
         ExprGuiM.assignCursor assignSource destId action
+    where
+        WidgetIds{..} = ehiInfo editableHoleInfo & hiIds
+        destId
+            | null (HoleInfo.ehiSearchTerm editableHoleInfo) = searchTermId
+            | otherwise = head (shownMainResultsIds ++ [searchTermId])
 
 makeUnderCursorAssignment ::
     MonadA m =>
@@ -448,7 +445,7 @@ makeOpenSearchTermGui pl editableHoleInfo =
             else HoleResults.makeAll editableHoleInfo
         let shownMainResultsIds =
                 rId . (^. HoleResults.rlMain) <$> shownResultsLists
-            allShownResultIds =
+        let allShownResultIds =
                 [ rId . (^. HoleResults.rlMain)
                 , (^. HoleResults.rlExtraResultsPrefixId)
                 ] <*> shownResultsLists
