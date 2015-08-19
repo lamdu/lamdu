@@ -237,6 +237,8 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.Expression
                   , Lamdu.Sugar.Convert.ParamList
                   , Lamdu.Sugar.Convert.Hole
+                  , Lamdu.Sugar.Convert.Hole.ResultScore
+                  , Lamdu.Sugar.Convert.Hole.Suggest
                   , Lamdu.Sugar.Convert.GetVar
                   , Lamdu.Sugar.Convert.Inject
                   , Lamdu.Sugar.Convert.Case
@@ -246,7 +248,6 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.Binder
                   , Lamdu.Sugar.Convert.GetField
                   , Lamdu.Sugar.Convert.TIdG
-                  , Lamdu.Sugar.Convert.Hole.Suggest
                   , Lamdu.Sugar.Convert.Expression.Actions
                   , Lamdu.Sugar.Convert.Apply
                   , Lamdu.Sugar.Convert.Nominal

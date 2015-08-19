@@ -18,7 +18,6 @@ import           Control.Monad.Trans.Either (EitherT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
 import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)
-import qualified Data.Foldable as Foldable
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
@@ -34,7 +33,6 @@ import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
 import           Lamdu.Expr.Type (Type(..))
-import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
@@ -50,6 +48,7 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.OrderTags (orderType)
 import           Lamdu.Sugar.Types
+import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
 import qualified System.Random as Random
 import           System.Random.Utils (genFromHashable)
@@ -309,32 +308,6 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
               , Input.mkPayload a inferred Map.empty Map.empty stored
               )
             )
-
-resultTypeScore :: Type -> [Int]
-resultTypeScore (TVar _) = [0]
-resultTypeScore TInt = [1]
-resultTypeScore (TInst _ p) = 2 : maximum ([] : map resultTypeScore (Map.elems p))
-resultTypeScore (TFun a r) = 2 : max (resultTypeScore a) (resultTypeScore r)
-resultTypeScore (TSum c) =
-    compositeTypeScore c
-resultTypeScore (TRecord c) =
-    compositeTypeScore c
-
-compositeTypeScore :: T.Composite t -> [Int]
-compositeTypeScore (T.CEmpty) = [2]
-compositeTypeScore (T.CVar _) = [1]
-compositeTypeScore (T.CExtend _ t r) = 2 : max (resultTypeScore t) (compositeTypeScore r)
-
-resultScore :: Val Infer.Payload -> [Int]
-resultScore (Val pl body) =
-    bodyTopLevelScore : resultTypeScore (pl ^. Infer.plType) ++
-    (body & Foldable.toList <&> resultScore & ([]:) & maximum)
-    where
-        bodyTopLevelScore =
-            case body of
-            V.BApp (V.Apply (Val _ (V.BLeaf V.LHole)) _) -> 10
-            V.BLeaf V.LHole -> 1
-            _ -> 0
 
 idTranslations ::
     Val (EntityId, Type) ->
