@@ -165,6 +165,7 @@ data ResultGroupWidgets m = ResultGroupWidgets
     { _rgwMainResult :: ShownResult m
     , _rgwMSelectedResult :: Maybe (ShownResult m) -- Can be an extra result
     , _rgwRow :: [Widget (T m)]
+    , _rgwPadding :: Widget.R
     }
 rgwMainResult :: Lens' (ResultGroupWidgets m) (ShownResult m)
 rgwMainResult f ResultGroupWidgets{..} =
@@ -175,6 +176,9 @@ rgwMSelectedResult f ResultGroupWidgets{..} =
 rgwRow :: Lens' (ResultGroupWidgets m) [Widget (T m)]
 rgwRow f ResultGroupWidgets{..} =
     f _rgwRow <&> \_rgwRow -> ResultGroupWidgets{..}
+rgwPadding :: Lens' (ResultGroupWidgets m) Widget.R
+rgwPadding f ResultGroupWidgets{..} =
+    f _rgwPadding <&> \_rgwPadding -> ResultGroupWidgets{..}
 
 makeResultGroup ::
     MonadA m =>
@@ -190,11 +194,11 @@ makeResultGroup editableHoleInfo results =
         let makeExtra =
                 results ^. HoleResults.rlExtra
                 & makeExtraResultsWidget editableHoleInfo mainResultHeight
-        (mSelectedResult, extraResWidget) <-
+        (mSelectedResult, extraResWidget, extraPadding) <-
             if mainResultWidget ^. Widget.isFocused
             then do
-                widget <- snd <$> makeExtra
-                return (Just shownMainResult, widget)
+                (_, extraResWidget, extraPadding) <- makeExtra
+                return (Just shownMainResult, extraResWidget, extraPadding)
             else do
                 cursorOnExtra <-
                     results ^. HoleResults.rlExtraResultsPrefixId
@@ -204,7 +208,7 @@ makeResultGroup editableHoleInfo results =
                     else
                     Widget.empty
                     & focusFirstExtraResult (results ^. HoleResults.rlExtra)
-                    <&> (,) Nothing
+                    <&> \x -> (Nothing, x, 0)
         let isSelected = Lens.has Lens._Just mSelectedResult
         extraSymbolWidget <-
             makeExtraSymbolWidget (Widget.toAnimId (rId mainResult)) isSelected
@@ -213,6 +217,7 @@ makeResultGroup editableHoleInfo results =
             { _rgwMainResult = shownMainResult
             , _rgwMSelectedResult = mSelectedResult
             , _rgwRow = [mainResultWidget, extraSymbolWidget, extraResWidget]
+            , _rgwPadding = extraPadding
             }
     where
         mainResult = results ^. HoleResults.rlMain
@@ -221,8 +226,8 @@ makeResultGroup editableHoleInfo results =
 
 makeExtraResultsWidget ::
     MonadA m => EditableHoleInfo m -> Anim.R -> [Result m] ->
-    ExprGuiM m (Maybe (ShownResult m), Widget (T m))
-makeExtraResultsWidget _ _ [] = return (Nothing, Widget.empty)
+    ExprGuiM m (Maybe (ShownResult m), Widget (T m), Widget.R)
+makeExtraResultsWidget _ _ [] = return (Nothing, Widget.empty, 0)
 makeExtraResultsWidget editableHoleInfo mainResultHeight extraResults@(firstResult:_) =
     do
         config <- ExprGuiM.readConfig
@@ -241,13 +246,17 @@ makeExtraResultsWidget editableHoleInfo mainResultHeight extraResults@(firstResu
             unzip <$> traverse mkResWidget extraResults
         let headHeight = head widgets ^. Widget.height
         let height = min mainResultHeight headHeight
+        let widget =
+                Box.vboxAlign 0 widgets
+                & addBackground (Widget.toAnimId (rId firstResult))
+                    (Config.layers config) holeOpenBGColor
         return
             ( msum mResults
-            , Box.vboxAlign 0 widgets
-              & addBackground (Widget.toAnimId (rId firstResult))
-                (Config.layers config) holeOpenBGColor
-              & Widget.size .~ Vector2 0 height
-              & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
+            , widget
+                & Widget.size .~ Vector2 0 height
+                & Widget.translate (Vector2 0 (0.5 * (height - headHeight)))
+            , (widget ^. Widget.size . _2) - 0.5 * (headHeight + mainResultHeight)
+                & max 0
             )
 
 makeFocusable ::
@@ -327,11 +336,20 @@ addMResultPicker mSelectedResult =
     Nothing -> return ()
     Just res -> ExprGuiM.addResultPicker $ (^. pickedEventResult) <$> srPick res
 
+calcPadding :: [ResultGroupWidgets m] -> Widget.R
+calcPadding =
+    foldl step 0
+    where
+        step accum item =
+            max 0 (accum - (head (item ^. rgwRow) ^. Widget.size . _2))
+            + (item ^. rgwPadding)
+
 layoutResults ::
     MonadA m =>
-    [[Widget (T m)]] -> HaveHiddenResults -> Widget.Id -> ExprGuiM m (Widget (T m))
-layoutResults rows hiddenResults myId
-    | null rows = makeNoResults (Widget.toAnimId myId)
+    [ResultGroupWidgets m] -> HaveHiddenResults -> Widget.Id ->
+    ExprGuiM m (Widget (T m))
+layoutResults groups hiddenResults myId
+    | null groups = makeNoResults (Widget.toAnimId myId)
     | otherwise =
         do
             hiddenResultsWidgets <-
@@ -341,7 +359,15 @@ layoutResults rows hiddenResults myId
                   & Lens.mapped . Lens.mapped %~ (,) (Vector2 0 0.5)
                   & Grid.make & Grid.toWidget
                   & EventMap.blockDownEvents
-            grid : hiddenResultsWidgets & Box.vboxCentered & return
+            let padHeight =
+                    calcPadding groups
+                    - sum (hiddenResultsWidgets ^.. Lens.traversed . Widget.size . _2)
+                    & max 0
+            grid : hiddenResultsWidgets & Box.vboxCentered
+                & Widget.assymetricPad 0 (Vector2 0 padHeight)
+                & return
+    where
+        rows = groups ^.. Lens.traversed . rgwRow
 
 makeResultsWidget ::
     MonadA m => EditableHoleInfo m ->
@@ -353,9 +379,8 @@ makeResultsWidget editableHoleInfo shownResultsLists hiddenResults =
         let mSelectedResult = groupsWidgets ^? Lens.traversed . rgwMSelectedResult . Lens._Just
         let mFirstResult = groupsWidgets ^? Lens.traversed . rgwMainResult
         let mResult = mSelectedResult <|> mFirstResult
-        let rows = groupsWidgets ^.. Lens.traversed . rgwRow
         addMResultPicker mResult
-        widget <- layoutResults rows hiddenResults myId
+        widget <- layoutResults groupsWidgets hiddenResults myId
         return (mResult, widget)
     where
         myId = editableHoleInfo & ehiInfo & hiIds & hidOpen
