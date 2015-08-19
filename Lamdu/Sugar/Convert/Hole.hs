@@ -311,13 +311,13 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
             )
 
 resultTypeScore :: Type -> [Int]
-resultTypeScore (T.TVar _) = [0]
-resultTypeScore T.TInt = [1]
-resultTypeScore (T.TInst _ p) = 2 : maximum ([] : map resultTypeScore (Map.elems p))
-resultTypeScore (T.TFun a r) = 2 : max (resultTypeScore a) (resultTypeScore r)
-resultTypeScore (T.TSum c) =
+resultTypeScore (TVar _) = [0]
+resultTypeScore TInt = [1]
+resultTypeScore (TInst _ p) = 2 : maximum ([] : map resultTypeScore (Map.elems p))
+resultTypeScore (TFun a r) = 2 : max (resultTypeScore a) (resultTypeScore r)
+resultTypeScore (TSum c) =
     compositeTypeScore c
-resultTypeScore (T.TRecord c) =
+resultTypeScore (TRecord c) =
     compositeTypeScore c
 
 compositeTypeScore :: T.Composite t -> [Int]
@@ -398,14 +398,14 @@ applyForms ::
 applyForms _ v@(Val _ V.BAbs {}) = return v
 applyForms empty val =
     case inferPl ^. Infer.plType of
-    T.TFun arg res ->
+    TFun arg res ->
         orderType arg & lift & lift
         <&> (`Infer.Payload` scope)
         <&> Suggest.valueNoSplit
         <&> Lens.mapped %~ flip (,) empty
         <&> V.Apply val <&> V.BApp <&> Val (plSameScope res)
         >>= applyForms empty
-    T.TVar tv
+    TVar tv
         | any (`Lens.has` val)
             [ ExprLens.valVar
             , ExprLens.valGetField . V.getFieldRecord . ExprLens.valVar
@@ -414,8 +414,8 @@ applyForms empty val =
             do
                 arg <- freshVar "af"
                 res <- freshVar "af"
-                let varTyp = T.TFun arg res
-                unify varTyp (T.TVar tv)
+                let varTyp = TFun arg res
+                unify varTyp (TVar tv)
                     & Infer.run & mapStateT assertSuccess
                 return $ Val (plSameScope res) $ V.BApp $ V.Apply val $
                     Val (plSameScope arg) (V.BLeaf V.LHole)
@@ -460,7 +460,7 @@ holeWrap resultType val =
         plSameScope typ = inferPl & Infer.plType .~ typ
         inferPl = val ^. V.payload . _1
         func = Val (plSameScope funcType, emptyPl) $ V.BLeaf V.LHole
-        funcType = T.TFun (inferPl ^. Infer.plType) resultType
+        funcType = TFun (inferPl ^. Infer.plType) resultType
         emptyPl = (Nothing, NotInjected)
 
 replaceEachUnwrappedHole :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
