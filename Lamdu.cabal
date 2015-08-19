@@ -198,6 +198,7 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.Info
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.Common
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.Open
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
