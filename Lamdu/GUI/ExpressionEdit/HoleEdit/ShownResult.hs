@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.ShownResult
+module Lamdu.GUI.ExpressionEdit.HoleEdit.ShownResult
     ( PickedResult(..), pickedEventResult, pickedIdTranslations
     , ShownResult(..)
     ) where

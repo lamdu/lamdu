@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 -- | A hole's search term component
 
-module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea.SearchTerm
+module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
     ( make
     ) where
 
