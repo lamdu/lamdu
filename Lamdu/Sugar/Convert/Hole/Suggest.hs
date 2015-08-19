@@ -3,6 +3,7 @@ module Lamdu.Sugar.Convert.Hole.Suggest
     ( value
     , valueConversion
     , valueNoSplit
+    , fillHoles
     ) where
 
 import           Prelude.Compat
@@ -178,3 +179,11 @@ suggestCaseWith sumType resultPl@(Payload resultType scope) =
         (suggestCaseWith rest resultPl)
         & V.BCase
     & Val (Payload (T.TFun (T.TSum sumType) resultType) scope)
+
+fillHoles :: a -> Val (Payload, a) -> Val (Payload, a)
+fillHoles empty (Val pl (V.BLeaf V.LHole)) =
+    valueNoSplit (pl ^. _1) <&> flip (,) empty & V.payload . _2 .~ (pl ^. _2)
+fillHoles empty (Val pl (V.BApp (V.Apply func arg))) =
+    -- Dont fill in holes inside apply funcs. This may create redexes..
+    fillHoles empty arg & V.Apply func & V.BApp & Val pl
+fillHoles empty val = val & V.body . Lens.traversed %~ fillHoles empty
