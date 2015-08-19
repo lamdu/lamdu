@@ -3,78 +3,79 @@ module Lamdu.GUI.RedundantAnnotations
     ( markAnnotationsToDisplay
     ) where
 
-import           Prelude.Compat
-
-import           Control.Lens (Traversal')
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import qualified Lamdu.GUI.ExpressionGui.Types as T
-import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
-redundantAnnotationsDefaultTop :: Bool -> Traversal' (Expression name m a) (Payload m a)
-redundantAnnotationsDefaultTop topRedundant f e@(Expression body pl) =
-    case body of
-    BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetFieldParameter }) -> redundant e
-    BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetParameter }) -> redundant e
-    BodyLiteralInteger {} -> redundant e
-    BodyRecord{} -> redundant e
-    BodyList{} -> redundantChildren
-    BodyToNom nom ->
-        nom & Lens.traversed %%~ redundantTop
-        <&> BodyToNom & mk
-    BodyApply (Apply func specialArgs annotatedArgs) ->
-        Apply
-        <$> redundantTop func
-        <*> Lens.traversed recurse specialArgs
-        <*> (annotatedArgs & Lens.traversed . Lens.traversed %%~ recurse)
-        <&> BodyApply & mk
-    BodyCase (Case kind alts caseTail mAddAlt entityId) ->
-        Case
-        <$> (kind & Lens.traversed %%~ redundantTop)
-        <*> ( alts
-              & Lens.traversed . Lens.traversed %%~
-                SugarLens.bitraverseExpression (_BodyLam %%~ altLam) f)
-        <*> (caseTail & Lens.traversed %%~ recurse)
-        <*> pure mAddAlt
-        <*> pure entityId
-        <&> BodyCase & mk
-    BodyLam _ -> redundant e
-    _ -> Lens.traversed recurse body & mk
-    where
-        altLam = onBinder (Lens.traversed . Lens.traversed %%~ recurse) redundantTop
-        onBinder onLets onBody (Binder mPres mScope params lets bod mAct scopes) =
-            Binder mPres mScope params
-            <$> onLets lets
-            <*> onBody bod
-            <*> pure mAct <*> pure scopes
-        redundantTop = redundantAnnotationsDefaultTop True f
-        recurse = redundantAnnotationsDefaultTop False f
-        mk newBody =
-            Expression <$> newBody <*> (if topRedundant then f else pure) pl
-        redundant = SugarLens.bitraverseExpression (Lens.traversed recurse) f
-        redundantChildren =
-            body & Lens.traversed %%~ redundantTop & mk
+import           Prelude.Compat
 
-redundantAnnotations :: Traversal' (Expression name m a) (Payload m a)
-redundantAnnotations = redundantAnnotationsDefaultTop False
+showAnn :: Lens' (Payload m0 T.Payload) T.ShowAnnotation
+showAnn x = (plData . T.plShowAnnotation) x
 
-markAnnotationsToDisplay :: T.SugarExpr m -> T.SugarExpr m
-markAnnotationsToDisplay v =
-    v
-    & SugarLens.subExprsOf _BodyToNom   . showAnn . T.showInEvalMode .~ T.EvalModeShowNothing
-    & SugarLens.subExprsOf _BodyFromNom . showAnn . T.showInEvalMode .~ T.EvalModeShowNothing
-    & SugarLens.payloadsOf _BodyInject  . showAnn . T.showInEvalMode .~ T.EvalModeShowNothing
-    & redundantAnnotations                    . showAnn %~
-      (T.showInTypeMode .~ False) .
-      (T.showInEvalMode .~ T.EvalModeShowNothing) -- TODO: This makes little sense
-    & SugarLens.holePayloads                  . showAnn %~
-      (T.showTypeWhenMissing .~ True) .
-      (T.showInEvalMode .~ T.EvalModeShowType)
-    & SugarLens.holeArgs                      . showAnn %~
-      (T.showTypeWhenMissing .~ True) .
-      (T.showInEvalMode %~ don'tShowNothing)
+don'tShowEval :: Expression name m T.Payload -> Expression name m T.Payload
+don'tShowEval = rPayload . showAnn . T.showInEvalMode .~ T.EvalModeShowNothing
+
+don'tShowType :: Expression name m T.Payload -> Expression name m T.Payload
+don'tShowType =
+    rPayload . showAnn %~
+    (T.showInTypeMode .~ False) .
+    (T.showInEvalMode .~ T.EvalModeShowNothing)
+
+don'tShowAnnotation :: Expression name m T.Payload -> Expression name m T.Payload
+don'tShowAnnotation = rPayload . showAnn .~ T.neverShowAnnotations
+
+forceShowType :: Expression name m T.Payload -> Expression name m T.Payload
+forceShowType =
+    rPayload . showAnn %~
+    (T.showTypeWhenMissing .~ True) .
+    (T.showInEvalMode .~ T.EvalModeShowType)
+
+forceShowTypeOrEval :: Expression name m T.Payload -> Expression name m T.Payload
+forceShowTypeOrEval =
+    rPayload . showAnn %~
+    (T.showTypeWhenMissing .~ True) .
+    (T.showInEvalMode .~ T.EvalModeShowEval)
+
+markAnnotationsToDisplay ::
+    Expression name m T.Payload ->
+    Expression name m T.Payload
+markAnnotationsToDisplay (Expression oldBody pl) =
+    case newBody of
+    BodyLiteralInteger _ ->
+        Expression newBody pl & don'tShowAnnotation
+    BodyRecord _ ->
+        Expression newBody pl & don'tShowAnnotation
+    BodyLam _ ->
+        Expression newBody pl & don'tShowAnnotation
+    BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetFieldParameter }) ->
+        Expression newBody pl & don'tShowAnnotation
+    BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetParameter }) ->
+        Expression newBody pl & don'tShowAnnotation
+    BodyFromNom _ ->
+        Expression newBody pl & don'tShowEval
+    BodyToNom _ ->
+        Expression newBody pl & don'tShowEval
+    BodyInject _ ->
+        Expression newBody pl & don'tShowEval
+    BodyApply app ->
+        Expression (BodyApply (app & aFunc %~ don'tShowAnnotation)) pl
+    BodyList l ->
+        Expression (BodyList l') pl & don'tShowEval
+        where
+            l' = l & lValues . Lens.mapped . liExpr %~ don'tShowType
+    BodyHole hole ->
+        Expression (BodyHole hole') pl & forceShowType
+        where
+            hole' = hole & holeMArg . Lens._Just . haExpr %~ forceShowTypeOrEval
+    BodyCase cas ->
+        Expression (BodyCase cas') pl
+        where
+            cas' =
+                cas
+                & cKind . Lens.mapped %~ don'tShowAnnotation
+                & cAlts . Lens.mapped . Lens.mapped . rBody . _BodyLam . bBody %~ don'tShowAnnotation
+    _ -> Expression newBody pl
     where
-        don'tShowNothing T.EvalModeShowNothing = T.EvalModeShowType
-        don'tShowNothing x = x
-        showAnn = plData . T.plShowAnnotation
+        newBody = oldBody <&> markAnnotationsToDisplay
