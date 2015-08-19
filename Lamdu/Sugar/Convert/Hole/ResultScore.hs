@@ -40,5 +40,6 @@ bodyTopLevelScore :: V.Body (Val a) -> Int
 bodyTopLevelScore body =
     case body of
     V.BApp (V.Apply (Val _ (V.BLeaf V.LHole)) _) -> 10
-    V.BLeaf V.LHole -> 1
-    _ -> 0
+    V.BLeaf V.LHole -> 2
+    V.BLeaf V.LGlobal{} -> 0
+    _ -> 1
