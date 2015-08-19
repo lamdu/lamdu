@@ -12,7 +12,7 @@ import           Control.Monad (guard, msum)
 import           Control.MonadA (MonadA)
 import           Data.List.Lens (suffixed)
 import qualified Data.Map as Map
-import           Data.Maybe (isJust, maybeToList, fromMaybe)
+import           Data.Maybe (isJust, fromMaybe)
 import           Data.Monoid ((<>))
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Property as Property
@@ -337,7 +337,8 @@ layoutResults rows hiddenResults myId
     | null rows = makeNoResults (Widget.toAnimId myId)
     | otherwise =
         do
-            hiddenResultsWidgets <- maybeToList <$> makeHiddenResultsMWidget hiddenResults myId
+            hiddenResultsWidgets <-
+                makeHiddenResultsMWidget hiddenResults myId <&> (^.. Lens._Just)
             let grid =
                   rows
                   & Lens.mapped . Lens.mapped %~ (,) (Vector2 0 0.5)

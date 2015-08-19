@@ -23,7 +23,7 @@ import           Control.Lens.Operators
 import           Control.Monad (guard, msum)
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe (catMaybes, listToMaybe, maybeToList)
+import           Data.Maybe (catMaybes, listToMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
@@ -284,15 +284,15 @@ lookup (Events.KeyEvent k _scanCode keyState modKeys mchar) (EventMap dict charG
         KeyEvent keyState modKey `Map.lookup` dict
     , listToMaybe $ do
             GLFW.KeyState'Pressed <- return keyState
-            char <- maybeToList mchar
+            char <- mchar ^.. Lens._Just
             CharGroupHandler _ chars handler <- charGroups
             guard $ Set.member char chars
             return $ (handler ^. dhHandler) char
     , listToMaybe $ do
             GLFW.KeyState'Pressed <- return keyState
-            char <- maybeToList mchar
+            char <- mchar ^.. Lens._Just
             AllCharsHandler _ handler <- allCharHandlers
-            maybeToList $ (handler ^. dhHandler) char
+            (handler ^. dhHandler) char ^.. Lens._Just
     ]
     where
         modKey = mkModKey modKeys k
