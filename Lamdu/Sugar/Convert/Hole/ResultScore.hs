@@ -27,11 +27,12 @@ compositeTypeScore (CExtend _ t r) = 2 : max (resultTypeScore t) (compositeTypeS
 
 resultScore :: Val Infer.Payload -> [Int]
 resultScore (Val pl body) =
-    bodyTopLevelScore : resultTypeScore (pl ^. Infer.plType) ++
+    bodyTopLevelScore body : resultTypeScore (pl ^. Infer.plType) ++
     (body ^.. Lens.traversed <&> resultScore & ([]:) & maximum)
-    where
-        bodyTopLevelScore =
-            case body of
-            V.BApp (V.Apply (Val _ (V.BLeaf V.LHole)) _) -> 10
-            V.BLeaf V.LHole -> 1
-            _ -> 0
+
+bodyTopLevelScore :: V.Body (Val a) -> Int
+bodyTopLevelScore body =
+    case body of
+    V.BApp (V.Apply (Val _ (V.BLeaf V.LHole)) _) -> 10
+    V.BLeaf V.LHole -> 1
+    _ -> 0
