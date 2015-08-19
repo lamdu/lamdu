@@ -43,7 +43,8 @@ module Lamdu.Sugar.Types
     , LetItemActions(..)
         , liAddNext, liDelete, liExtract
     , ListItem(..), liMActions, liExpr
-    , ListActions(..), List(..)
+    , ListActions(..)
+    , List(..), lValues, lMActions, lNilEntityId
     -- record:
     , RecordField(..), rfMDelete, rfTag, rfExpr
     , RecordTail(..), _RecordExtending, _ClosedRecord
@@ -277,11 +278,11 @@ data ListActions m = ListActions
     }
 
 data List m expr = List
-    { lValues :: [ListItem m expr]
-    , lMActions :: Maybe (ListActions m)
+    { _lValues :: [ListItem m expr]
+    , _lMActions :: Maybe (ListActions m)
     , -- Nil EntityId stays consistent when adding items.
         -- (Exposed for consistent animations)
-        lNilEntityId :: EntityId
+        _lNilEntityId :: EntityId
     } deriving (Functor, Foldable, Traversable)
 
 {- Record start -}
@@ -545,6 +546,7 @@ Lens.makeLenses ''HoleArg
 Lens.makeLenses ''HoleResult
 Lens.makeLenses ''HoleOption
 Lens.makeLenses ''Inject
+Lens.makeLenses ''List
 Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions
 Lens.makeLenses ''NamedVar

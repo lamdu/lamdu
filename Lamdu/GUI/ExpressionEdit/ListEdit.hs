@@ -40,7 +40,7 @@ make list pl =
                 Widget.weakerEvents
                 (actionEventMap (Config.listAddItemKeys config) "Add First Item" Sugar.addFirstItem)
         bracketCloseLabel <- ExpressionGui.grammarLabel "]" (Widget.toAnimId bracketsId)
-        case ExpressionGui.listWithDelDests firstBracketId firstBracketId itemId (Sugar.lValues list) of
+        case ExpressionGui.listWithDelDests firstBracketId firstBracketId itemId (list ^. Sugar.lValues) of
             [] ->
                 return $ ExpressionGui.hbox [bracketOpenLabel, bracketCloseLabel]
             firstValue : nextValues ->
@@ -59,7 +59,7 @@ make list pl =
                             ( Widget.keysEventMapMovesCursor (Config.listAddItemKeys config)
                                 (E.Doc ["Edit", "List", "Add Last Item"])
                             . fmap WidgetIds.fromEntityId
-                            ) $ Sugar.lValues list ^? lastLens . Sugar.liMActions . Lens._Just . Sugar.itemAddNext
+                            ) $ list ^? Sugar.lValues . lastLens . Sugar.liMActions . Lens._Just . Sugar.itemAddNext
                         closerEventMap = mappend nilDeleteEventMap addLastEventMap
                         closeBracketId = Widget.joinId myId ["close-bracket"]
                     bracketClose <-
@@ -74,17 +74,17 @@ make list pl =
                         , [ bracketClose ]
                         ]
     where
-        bracketsId = WidgetIds.fromEntityId $ Sugar.lNilEntityId list
+        bracketsId = list ^. Sugar.lNilEntityId & WidgetIds.fromEntityId
         pairToList (x, y) = [x, y]
         itemId = WidgetIds.fromExprPayload . (^. Sugar.liExpr . Sugar.rPayload)
         actionEventMap keys doc actSelect =
-            maybe mempty
-            ( Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc])
-            . fmap WidgetIds.fromEntityId . actSelect ) $
-            Sugar.lMActions list
+            list ^. Sugar.lMActions
+            & maybe mempty
+              ( Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc])
+              . fmap WidgetIds.fromEntityId . actSelect )
         firstBracketId = mappend (Widget.Id ["first bracket"]) bracketsId
         cursorDest =
-            Sugar.lValues list ^? Lens.traversed
+            list ^? Sugar.lValues . Lens.traversed
             & maybe firstBracketId itemId
 
 makeItem ::

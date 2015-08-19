@@ -48,9 +48,9 @@ nil (V.Nom tid val) exprPl =
                 , replaceNil = EntityId.ofValI <$> DataOps.setToHole exprS
                 }
         List
-            { lValues = []
-            , lMActions = mkListActions <$> exprPl ^. Input.mStored
-            , lNilEntityId = exprPl ^. Input.entityId
+            { _lValues = []
+            , _lMActions = mkListActions <$> exprPl ^. Input.mStored
+            , _lNilEntityId = exprPl ^. Input.entityId
             }
             & BodyList & addActions exprPl
             <&> rPayload . plData
