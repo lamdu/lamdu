@@ -44,6 +44,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           Lamdu.Sugar.Types
 
@@ -816,9 +817,45 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                     guard $ Lens.nullOf ExprLens.valHole lamBody
                     mDeleteLam
                         <&> Lens.mapped .~ binder ^. bBody . rPayload . plEntityId
-        BodyLam binder
+        case binder of
+            Binder { _bParams = FieldParams params, _bLetItems = [] }
+                | Lens.nullOf
+                    ( bBody . SugarLens.subExprPayloads . Lens.asIndex
+                    . rBody . _BodyLam . bParams . _LightParams)
+                    binder
+                -> binder
+                    & bBody
+                        %~ markLightParams (exprPl ^. Input.entityId) paramSet
+                    & bParams .~ LightParams params
+                where
+                    paramSet =
+                        params ^.. Lens.traversed . _2 .
+                        Lens.traversed . npiName
+                        & Set.fromList
+            _ -> binder
+            & BodyLam
             & addActions exprPl
             <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
+
+markLightParams ::
+    MonadA m => EntityId -> Set Guid -> ExpressionU m a -> ExpressionU m a
+markLightParams dst paramNames (Expression body pl) =
+    case body of
+    BodyGetVar (GetVarNamed n)
+        | Set.member (n ^. nvName) paramNames ->
+            n
+            & nvVarType .~ LightLamParameter
+            & nvJumpTo .~ return dst
+            & GetVarNamed & BodyGetVar
+    BodyHole h ->
+        h
+        & holeMActions . Lens._Just
+        . holeOptions . Lens.mapped . Lens.traversed . hoResults
+        . Lens.mapped . _2 . Lens.mapped . holeResultConverted
+            %~ markLightParams dst paramNames
+        & BodyHole
+    _ -> body <&> markLightParams dst paramNames
+    & (`Expression` pl)
 
 -- Let-item or definition (form of <name> [params] = <body>)
 convertBinder ::

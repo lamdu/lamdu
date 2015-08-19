@@ -16,8 +16,9 @@ module Lamdu.Sugar.Types
     , BinderActions(..)
         , baAddFirstParam, baAddInnermostLetItem
     , NullParamActions(..), npDeleteLambda
-    , BinderParams(..),
-        _DefintionWithoutParams, _NullParam, _VarParam, _FieldParams
+    , BinderParams(..)
+        , _DefintionWithoutParams, _NullParam, _VarParam
+        , _FieldParams, _LightParams
     , BinderScopes(..), bsParamScope, bsBodyScope
     , BinderParamScopeId(..), bParamScopeId
     , Binder(..)
@@ -358,7 +359,8 @@ data Inject name expr = Inject
     , _iMVal :: Maybe expr
     } deriving (Functor, Foldable, Traversable)
 
-data NamedVarType = GetDefinition | GetFieldParameter | GetParameter
+data NamedVarType =
+    GetDefinition | GetFieldParameter | GetParameter | LightLamParameter
     deriving (Eq, Ord)
 
 data NamedVar name m = NamedVar
@@ -470,6 +472,7 @@ data BinderParams name m
       NullParam (FuncParam (NullParamInfo m))
     | VarParam (FuncParam (NamedParamInfo name m))
     | FieldParams [(T.Tag, FuncParam (NamedParamInfo name m))]
+    | LightParams [(T.Tag, FuncParam (NamedParamInfo name m))]
 
 data BinderScopes = BinderScopes
     { _bsParamScope :: BinderParamScopeId -- Inside lambda scope

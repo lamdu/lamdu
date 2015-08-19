@@ -93,6 +93,7 @@ toNamedVar namedVar =
         f = case namedVar ^. nvVarType of
             GetParameter      -> opGetParamName
             GetFieldParameter -> opGetTagName
+            LightLamParameter -> opGetTagName
             GetDefinition     -> opGetDefName
 
 toGetVar ::
@@ -162,8 +163,15 @@ withBinderParams (VarParam fp) =
     opWithParamName (isFunctionType (fp ^. fpAnnotation . aInferredType))
     (fp ^. fpInfo . npiName)
     <&> VarParam . \newName -> fp & fpInfo . npiName .~ newName
-withBinderParams (FieldParams xs) =
-    (traverse . second . fpInfo . npiName) opWithTagName xs <&> FieldParams
+withBinderParams (FieldParams xs) = onTagParams xs <&> FieldParams
+withBinderParams (LightParams xs) = onTagParams xs <&> LightParams
+
+onTagParams ::
+    MonadNaming m =>
+    [(T.Tag, FuncParam (NamedParamInfo (OldName m) (TM m)))] ->
+    CPS m [(T.Tag, FuncParam (NamedParamInfo (NewName m) (TM m)))]
+onTagParams =
+    (traverse . second . fpInfo . npiName) opWithTagName
     where
         second f (x, y) = (,) x <$> f y
 

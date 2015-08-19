@@ -60,6 +60,7 @@ make getVar pl =
                         Sugar.GetDefinition -> makeSimpleView definitionColor
                         Sugar.GetParameter -> makeSimpleView parameterColor
                         Sugar.GetFieldParameter -> makeSimpleView parameterColor
+                        Sugar.LightLamParameter -> makeSimpleView nameOriginFGColor
             Sugar.GetVarParamsRecord paramsRecordVar ->
                 sequence
                 [ ExpressionGui.makeLabel "Params {" (Widget.toAnimId myId <> ["prefix"])

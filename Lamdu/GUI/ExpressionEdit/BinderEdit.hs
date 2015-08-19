@@ -409,6 +409,7 @@ makeResultEdit mActions params result = do
             case params of
             Sugar.DefintionWithoutParams -> mempty
             Sugar.NullParam _ -> mempty
+            Sugar.LightParams _ -> mempty
             Sugar.VarParam param ->
                 Widget.keysEventMapMovesCursor
                 (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to param"]) $
@@ -461,6 +462,16 @@ makeParamsEdit ::
 makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params =
     case params of
     Sugar.DefintionWithoutParams -> return []
+    Sugar.LightParams _ ->
+        do
+            config <- ExprGuiM.readConfig
+            ExpressionGui.makeLabel "λ" (Widget.toAnimId paramsId)
+                & ExprGuiM.withFgColor
+                    ((Config.nameOriginFGColor . Config.name) config)
+                >>= ExpressionGui.makeFocusableView paramsId
+                <&> (:[])
+        where
+            paramsId = Widget.joinId lhsId ["params"]
     Sugar.NullParam p ->
         fromParamList ExprGuiT.showAnnotationWhenVerbose delVarBackwardsId rhsId
         [p & Sugar.fpInfo %~ nullParamEditInfo]

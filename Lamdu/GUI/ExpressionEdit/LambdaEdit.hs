@@ -33,6 +33,7 @@ make binder pl =
         labelEdits <-
             case params of
             Sugar.NullParam{} -> return []
+            Sugar.LightParams{} -> return []
             _ -> ExpressionGui.grammarLabel "→" animId <&> (:[])
         (mParamsEdit ^.. Lens._Just) ++ labelEdits ++ [bodyEdit]
             & ExpressionGui.hboxSpaced
