@@ -1,5 +1,4 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE StandaloneDeriving, DeriveGeneric #-}
 module Graphics.UI.GLFW.Instances
     (
     ) where

@@ -48,7 +48,7 @@ make ::
     Sugar.Record (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make rec@(Sugar.Record fields recordTail mAddField) pl =
+make record@(Sugar.Record fields recordTail mAddField) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     ExprGuiM.assignCursor myId (defaultPos fields myId) $
     do
@@ -83,7 +83,7 @@ make rec@(Sugar.Record fields recordTail mAddField) pl =
                 then ExpressionGui.egWidget %%~ ExpressionGui.addValBG myId
                 else return
     where
-        addBg = shouldAddBg rec
+        addBg = shouldAddBg record
 
 makeFieldRow ::
     MonadA m =>

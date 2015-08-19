@@ -58,7 +58,7 @@ payloadsIndexedByPath f =
                 newPath = void val : path
 
 payloadsOf ::
-    (Lens.Fold (Body name m (Expression name m ())) a) ->
+    Lens.Fold (Body name m (Expression name m ())) a ->
     Lens.IndexedTraversal'
     (Expression name m ())
     (Expression name m b)

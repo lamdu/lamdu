@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, PatternGuards #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, PatternGuards #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make, diveToNameEdit
     , Parts(..), makeParts

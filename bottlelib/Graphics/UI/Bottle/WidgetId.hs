@@ -19,7 +19,7 @@ newtype Id = Id
 
 instance Show Id where
     show (Id animId) =
-        "W:" ++ (intercalate ":" (map each animId))
+        "W:" ++ intercalate ":" (map each animId)
         where
             each bs = encodeHex bs ++ "(" ++ show bs ++ ")"
 

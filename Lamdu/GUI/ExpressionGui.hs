@@ -249,8 +249,8 @@ makeEvaluationResultView animId (scopeId, evalRes) =
     <&> fromValueWidget
 
 makeTypeView :: MonadA m => Type -> AnimId -> ExprGuiM m (ExpressionGui m)
-makeTypeView typ =
-    (fmap (fromValueWidget . Widget.fromView) . (`TypeView.make` typ))
+makeTypeView typ animId =
+    TypeView.make animId typ <&> fromValueWidget . Widget.fromView
 
 data NeighborVals a = NeighborVals
     { prevNeighbor :: a
@@ -261,28 +261,27 @@ makeEvalView ::
     MonadA m =>
     NeighborVals (Maybe ScopeAndVal) -> ScopeAndVal ->
     AnimId -> ExprGuiM m (ExpressionGui m)
-makeEvalView (NeighborVals mPrev mNext) evalRes =
-    \animId ->
-        do
-            config <- ExprGuiM.readConfig
-            let Config.Eval{..} = Config.eval config
-            let makeEvaluationResultViewBG (scopeId, res) =
-                    makeEvaluationResultView animId (scopeId, res)
-                    <&> addAnnotationBackground config (animId ++ [encodeS scopeId])
-            let neighbourViews n =
-                    n ^.. Lens._Just
-                    <&> makeEvaluationResultViewBG
-                    <&> Lens.mapped %~
-                        pad (neighborsPadding <&> realToFrac) .
-                        scale (neighborsScaleFactor <&> realToFrac)
-            prevs <- sequence (neighbourViews mPrev)
-            nexts <- sequence (neighbourViews mNext)
-            evalView <- makeEvaluationResultView animId evalRes
-            evalView
-                & Layout.addBefore Layout.Horizontal prevs
-                & Layout.addAfter Layout.Horizontal nexts
-                & (`Layout.hoverInPlaceOf` evalView)
-                & return
+makeEvalView (NeighborVals mPrev mNext) evalRes animId =
+    do
+        config <- ExprGuiM.readConfig
+        let Config.Eval{..} = Config.eval config
+        let makeEvaluationResultViewBG (scopeId, res) =
+                makeEvaluationResultView animId (scopeId, res)
+                <&> addAnnotationBackground config (animId ++ [encodeS scopeId])
+        let neighbourViews n =
+                n ^.. Lens._Just
+                <&> makeEvaluationResultViewBG
+                <&> Lens.mapped %~
+                    pad (neighborsPadding <&> realToFrac) .
+                    scale (neighborsScaleFactor <&> realToFrac)
+        prevs <- sequence (neighbourViews mPrev)
+        nexts <- sequence (neighbourViews mNext)
+        evalView <- makeEvaluationResultView animId evalRes
+        evalView
+            & Layout.addBefore Layout.Horizontal prevs
+            & Layout.addAfter Layout.Horizontal nexts
+            & (`Layout.hoverInPlaceOf` evalView)
+            & return
 
 annotationSpacer :: MonadA m => ExprGuiM m (ExpressionGui f)
 annotationSpacer =

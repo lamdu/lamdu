@@ -205,7 +205,7 @@ waitForEvent eventTVar =
         tsv <- readTVar eventTVar
         when (not (tsv ^. tsvHaveTicks) &&
               not (tsv ^. tsvRefreshRequested) &&
-              null (tsv ^. tsvReversedEvents)) $
+              null (tsv ^. tsvReversedEvents))
             STM.retry
         tsv
             & tsvHaveTicks .~ False
@@ -293,7 +293,7 @@ mainLoopAnimThread frameStateVar eventTVar win =
                                 FinalFrame -> notAnimating
                                 NotAnimating -> notAnimating
                         writeTVar frameStateVar newAnimState
-                        return (newAnimState)
+                        return newAnimState
         frameStateResult (AnimState isAnimating _ frame _) =
             case isAnimating of
             Animating _ -> Just $ Anim.draw frame

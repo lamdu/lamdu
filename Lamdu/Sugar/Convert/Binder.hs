@@ -68,7 +68,7 @@ data FieldParam = FieldParam
     }
 
 onMatchingSubexprs ::
-    MonadA m => (a -> m ()) -> (Lens.Fold (Val ()) b) -> Val a -> m ()
+    MonadA m => (a -> m ()) -> Lens.Fold (Val ()) b -> Val a -> m ()
 onMatchingSubexprs action predicate =
     Lens.itraverseOf_ (ExprLens.subExprPayloads . Lens.ifiltered (\i _ -> Lens.has predicate i))
     (const action)

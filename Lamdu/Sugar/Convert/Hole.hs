@@ -52,8 +52,7 @@ import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
 import qualified System.Random as Random
 import           System.Random.Utils (genFromHashable)
-import           Text.PrettyPrint.HughesPJClass (pPrint)
-import           Text.PrettyPrint.HughesPJClass (prettyShow)
+import           Text.PrettyPrint.HughesPJClass (pPrint, prettyShow)
 
 type T = Transaction
 

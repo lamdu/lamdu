@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, ScopedTypeVariables, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, ScopedTypeVariables #-}
 module Lamdu.Data.ExampleDB
     ( initDB, createPublics, Public(..)
     , withDB
@@ -49,7 +49,7 @@ setName :: (MonadA m, UniqueId.ToGuid a) => a -> String -> T m ()
 setName x = setP . Db.assocNameRef $ x
 
 setTagOrder :: MonadA m => T.Tag -> Builtins.Order -> T m ()
-setTagOrder tag order = Transaction.setP (assocTagOrder tag) order
+setTagOrder = Transaction.setP . assocTagOrder
 
 namedId ::
     forall a m. (MonadA m, IsString a, UniqueId.ToGuid a) => String -> T m a

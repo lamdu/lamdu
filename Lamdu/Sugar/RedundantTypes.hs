@@ -24,9 +24,9 @@ redundantTypesDefaultTop topRedundant f e@(Expression body pl) =
         <&> BodyToNom & mk
     BodyApply (Apply func specialArgs annotatedArgs) ->
         Apply
-        <$> ( redundantTop func )
-        <*> ( specialArgs & Lens.traversed recurse )
-        <*> ( annotatedArgs & Lens.traversed . Lens.traversed %%~ recurse )
+        <$> redundantTop func
+        <*> Lens.traversed recurse specialArgs
+        <*> (annotatedArgs & Lens.traversed . Lens.traversed %%~ recurse)
         <&> BodyApply & mk
     BodyCase (Case kind alts caseTail mAddAlt entityId) ->
         Case
@@ -38,8 +38,7 @@ redundantTypesDefaultTop topRedundant f e@(Expression body pl) =
         <*> pure mAddAlt
         <*> pure entityId
         <&> BodyCase & mk
-        where
-    BodyLam{} -> redundant e
+    BodyLam _ -> redundant e
     _ -> Lens.traversed recurse body & mk
     where
         altLam = onBinder (Lens.traversed . Lens.traversed %%~ recurse) redundantTop

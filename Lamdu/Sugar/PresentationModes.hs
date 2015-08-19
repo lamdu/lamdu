@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Lamdu.Sugar.PresentationModes
     ( addToDef
     ) where
@@ -46,12 +44,12 @@ addToApply a =
                 a ^. Sugar.aFunc & indirectDefinitionPresentationMode
             let (specialArgs, annotatedArgs) =
                     case (presentationMode, a ^. Sugar.aAnnotatedArgs) of
-                    (Just (Sugar.Infix prec), (a0:a1:as)) ->
+                    (Just (Sugar.Infix prec), a0:a1:as) ->
                         ( Sugar.InfixArgs prec
                           (a0 ^. Sugar.aaExpr) (a1 ^. Sugar.aaExpr)
                         , as
                         )
-                    (Just Sugar.OO, (a0:as)) ->
+                    (Just Sugar.OO, a0:as) ->
                         (Sugar.ObjectArg (a0 ^. Sugar.aaExpr), as)
                     (_, args) -> (Sugar.NoSpecialArgs, args)
             a

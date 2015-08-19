@@ -99,7 +99,7 @@ textLinesWidth font = fmap maximum . traverse (textWidth font)
 textLinesSize :: Draw.Font -> [String] -> TextSize (Vector2 Draw.R)
 textLinesSize font textLines =
     (`Vector2` textLinesHeight textLines) <$>
-    (textLinesWidth font textLines)
+    textLinesWidth font textLines
 
 drawTextLines :: Draw.Font -> [String] -> Image
 drawTextLines font =

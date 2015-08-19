@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Data.Ops
     ( newHole, wrap, setToWrapper
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap

@@ -73,11 +73,10 @@ makePanes (Property panes setPanes) rootId =
                         & return
             | otherwise = Nothing
         movePane oldIndex newIndex =
-            do
-                setPanes newPanes
+            insertAt newIndex item (before ++ after)
+            & setPanes
             where
                 (before, item:after) = splitAt oldIndex panes
-                newPanes = insertAt newIndex item $ before ++ after
         mkMMovePaneDown i
             | i+1 < length panes = Just $ movePane i (i+1)
             | otherwise = Nothing
