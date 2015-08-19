@@ -185,6 +185,7 @@ mkAppliedHoleOptions sugarContext argI argS exprPl stored =
       & P.inject Builtins.consTag
       & P.toNom Builtins.listTid
     ]
+    <&> ConvertHole.SeedExpr
     <&> ConvertHole.mkHoleOption sugarContext (Just argI) exprPl stored
 
 mkAppliedHoleSuggesteds ::

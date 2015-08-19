@@ -2,6 +2,7 @@
 module Lamdu.Sugar.Convert.Hole
     ( convert, convertCommon
     , mkHoleOption, mkHoleOptionFromInjected, addSuggestedOptions
+    , BaseExpr(..)
     ) where
 
 import           Prelude.Compat
@@ -101,17 +102,25 @@ mkHoleOptionFromInjected sugarContext exprPl stored val =
         pruneExpr (Val (_, Just{}) _) = P.hole
         pruneExpr (Val _ b) = b <&> pruneExpr & Val ()
 
+data BaseExpr = SuggestedExpr (Val Infer.Payload) | SeedExpr (Val ())
+
+getBaseExprVal :: BaseExpr -> Val ()
+getBaseExprVal (SuggestedExpr v) = void v
+getBaseExprVal (SeedExpr v) = v
+
 mkHoleOption ::
     MonadA m => ConvertM.Context m ->
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ExprIRef.ValIProperty m ->
-    Val () -> HoleOption Guid m
+    BaseExpr -> HoleOption Guid m
 mkHoleOption sugarContext mInjectedArg exprPl stored val =
     HoleOption
-    { _hoVal = val
-    , _hoSugaredBaseExpr = sugar sugarContext exprPl val
+    { _hoVal = v
+    , _hoSugaredBaseExpr = sugar sugarContext exprPl v
     , _hoResults = mkHoleResults mInjectedArg sugarContext exprPl stored val
     }
+    where
+        v = getBaseExprVal val
 
 mkHoleSuggesteds ::
     MonadA m =>
@@ -119,7 +128,8 @@ mkHoleSuggesteds ::
     Input.Payload m a -> ExprIRef.ValIProperty m -> [HoleOption Guid m]
 mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
     exprPl ^. Input.inferred
-    & Suggest.value <&> void
+    & Suggest.value
+    <&> SuggestedExpr
     <&> mkHoleOption sugarContext mInjectedArg exprPl stored
 
 addSuggestedOptions ::
@@ -162,6 +172,7 @@ mkOptions sugarContext mInjectedArg exprPl stored =
               , P.inject Builtins.nilTag P.recEmpty & P.toNom Builtins.listTid
               ]
             ]
+            <&> SeedExpr
             <&> mkHoleOption sugarContext mInjectedArg exprPl stored
             & return
 
@@ -179,7 +190,7 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
                 (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
         , _holeOptionLiteralInt =
             return . mkHoleOption sugarContext mInjectedArg exprPl stored .
-            Val () . V.BLeaf . V.LLiteralInteger
+            SeedExpr . Val () . V.BLeaf . V.LLiteralInteger
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
         }
 
@@ -521,13 +532,17 @@ mkHoleResultVals ::
     MonadA m =>
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m dummy ->
-    Val () ->
+    BaseExpr ->
     StateT Infer.Context (ListT (T m)) (HoleResultVal m IsInjected)
 mkHoleResultVals mInjectedArg exprPl base =
-    infer inferred base
-    & mapStateT eitherTtoListT
-    <&> Lens.traversed . _2 %~ (,) Nothing
-    >>= applyForms (Nothing, ())
+    case base of
+    SeedExpr seed ->
+        infer inferred seed
+        & mapStateT eitherTtoListT
+        <&> Lens.traversed . _2 %~ (,) Nothing
+        >>= applyForms (Nothing, ())
+    SuggestedExpr sugg ->
+        sugg & Lens.traversed %~ flip (,) (Nothing, ()) & return
     >>= maybe (return . markNotInjected) holeResultsInject mInjectedArg
     >>= holeWrapIfNeeded (inferred ^. Infer.plType)
     where
@@ -568,7 +583,7 @@ mkHoleResults ::
     Maybe (Val (Input.Payload m a)) ->
     ConvertM.Context m ->
     Input.Payload m dummy -> ExprIRef.ValIProperty m ->
-    Val () ->
+    BaseExpr ->
     ListT (T m) (HoleResultScore, T m (HoleResult Guid m))
 mkHoleResults mInjectedArg sugarContext exprPl stored base =
     do
