@@ -18,10 +18,7 @@ don'tShowEval :: Expression name m T.Payload -> Expression name m T.Payload
 don'tShowEval = rPayload . showAnn . T.showInEvalMode .~ T.EvalModeShowNothing
 
 don'tShowType :: Expression name m T.Payload -> Expression name m T.Payload
-don'tShowType =
-    rPayload . showAnn %~
-    (T.showInTypeMode .~ False) .
-    (T.showInEvalMode .~ T.EvalModeShowNothing)
+don'tShowType = rPayload . showAnn . T.showInTypeMode .~ False
 
 don'tShowAnnotation :: Expression name m T.Payload -> Expression name m T.Payload
 don'tShowAnnotation = rPayload . showAnn .~ T.neverShowAnnotations
