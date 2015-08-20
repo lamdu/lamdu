@@ -820,9 +820,11 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
         case binder of
             Binder { _bParams = FieldParams params, _bLetItems = [] }
                 | Lens.nullOf
-                    ( bBody . SugarLens.subExprPayloads . Lens.asIndex
-                    . rBody . _BodyLam . bParams . _LightParams)
-                    binder
+                    ( bBody . SugarLens.subExprPayloads . Lens.asIndex . rBody
+                    . _BodyLam . bParams . _LightParams) binder
+                && Lens.nullOf
+                    ( bBody . SugarLens.subExprPayloads . Lens.asIndex . rBody
+                    . _BodyHole) binder
                 -> binder
                     & bBody
                         %~ markLightParams (exprPl ^. Input.entityId) paramSet
