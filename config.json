@@ -356,6 +356,15 @@
                     "modifierKeysControl": false
                 },
                 "Key'Space"
+            ],
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'Enter"
             ]
         ],
         "holeHoveringWrapperScaleFactor": {
