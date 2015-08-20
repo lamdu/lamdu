@@ -8,6 +8,7 @@ import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.Monoid ((<>))
 import qualified Data.Store.Transaction as Transaction
@@ -72,13 +73,12 @@ make WidgetIds{..} arg =
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
-            frameColor =
+        let frameColor =
                 config &
                 case arg ^. Sugar.haUnwrap of
                 Sugar.UnwrapMAction {} -> Config.typeIndicatorMatchColor
                 Sugar.UnwrapTypeMismatch {} -> Config.typeIndicatorErrorColor
-            frameWidth = realToFrac <$> Config.typeIndicatorFrameWidth config
-            padding = realToFrac <$> Config.valFramePadding config
+        let frameWidth = Config.typeIndicatorFrameWidth config <&> realToFrac
         argGui <-
             arg ^. Sugar.haExpr
             & ExprGuiM.makeSubexpression (const 0)
@@ -87,10 +87,10 @@ make WidgetIds{..} arg =
         argGui
             & ExpressionGui.egWidget . Widget.eventMap %~
                 modifyWrappedEventMap config argIsFocused arg WidgetIds{..}
-            & ExpressionGui.pad (padding + frameWidth)
+            & ExpressionGui.pad (frameWidth & _2 .~ 0)
             & ExpressionGui.egWidget %~
                 Widget.addInnerFrame
-                (Config.layerHoleBG (Config.layers config))
+                (Config.layerTypeIndicatorFrame (Config.layers config))
                 frameId frameColor frameWidth
             & ExpressionGui.egWidget %~ Widget.weakerEvents unwrapEventMap
             & ExpressionGui.egWidget %%~

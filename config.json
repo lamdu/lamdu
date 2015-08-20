@@ -6,6 +6,7 @@
         "layerMin": -100,
         "layerMax": 100,
         "layerCursor": -1,
+        "layerTypeIndicatorFrame": 1,
         "layerParensHighlightBG": 34,
         "layerActivePane": 40,
         "layerHoleBG": 38,
@@ -627,8 +628,8 @@
         0.9
     ],
     "typeIndicatorFrameWidth": {
-        "_first": 7.0,
-        "_second": 7.0
+        "_first": 2.0,
+        "_second": 2.0
     },
     "typeIndicatorErrorColor": [
         1.0,

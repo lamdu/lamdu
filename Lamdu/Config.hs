@@ -21,6 +21,7 @@ data Layers = Layers
     { layerMin
     , layerCursor
     , layerAnnotations
+    , layerTypeIndicatorFrame
     , layerChoiceBG
     , layerHoleBG
     , layerDarkHoleBG
