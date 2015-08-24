@@ -126,6 +126,8 @@ makeAnnotation payload =
     { _aInferredType = payload ^. Input.inferredType
     , _aMEvaluationResult =
         do
-            payload ^. Input.evalResults & Map.null & not & guard
-            payload ^. Input.evalResults & Just
+            Map.null res & not & guard
+            Just res
     }
+    where
+        res = payload ^. Input.evalResults . Input.eResults

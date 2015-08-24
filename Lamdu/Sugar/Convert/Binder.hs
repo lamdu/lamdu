@@ -238,7 +238,8 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
             , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
             , _cpParams = FieldParams params
             , cpMAddFirstParam = mAddFirstParam
-            , cpScopes = pl ^. Input.evalAppliesOfLam <&> map fst
+            , cpScopes =
+                pl ^. Input.evalResults . Input.eAppliesOfLam <&> map fst
             , cpMLamParam = Just param
             }
     where
@@ -440,14 +441,14 @@ mkFuncParam paramEntityId lamExprPl info =
         { _aInferredType = lamParamType lamExprPl
         , _aMEvaluationResult =
             do
-                lamExprPl ^. Input.evalAppliesOfLam
-                    & Map.null & not & guard
-                lamExprPl ^.. Input.evalAppliesOfLam .
-                    Lens.traversed . Lens.traversed
-                    & Map.fromList & Just
+                Map.null lamApplies & not & guard
+                lamApplies ^..
+                    Lens.traversed . Lens.traversed & Map.fromList & Just
         }
     , _fpHiddenIds = []
     }
+    where
+        lamApplies = lamExprPl ^. Input.evalResults . Input.eAppliesOfLam
 
 convertNonRecordParam ::
     MonadA m => Maybe V.Var ->
@@ -476,7 +477,8 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
             , cpParamInfos = Map.empty
             , _cpParams = funcParam
             , cpMAddFirstParam = mActions <&> snd
-            , cpScopes = lamExprPl ^. Input.evalAppliesOfLam <&> map fst
+            , cpScopes =
+                lamExprPl ^. Input.evalResults . Input.eAppliesOfLam <&> map fst
             , cpMLamParam = Just param
             }
     where
@@ -531,7 +533,7 @@ convertLamParams mRecursiveVar lambda lambdaPl =
             { fpTag = tag
             , fpFieldType = typeExpr
             , fpValue =
-                    lambdaPl ^. Input.evalAppliesOfLam
+                    lambdaPl ^. Input.evalResults . Input.eAppliesOfLam
                     <&> Lens.mapped . Lens._2 %~ extractField tag
             }
 
@@ -564,7 +566,7 @@ convertEmptyParams mRecursiveVar val =
                 -- Collect scopes from all evaluated subexpressions.
                 val ^..
                     ExprLens.subExprPayloads . Input.evalResults .
-                    Lens.to Map.keys . Lens.traversed
+                    Input.eResults . Lens.to Map.keys . Lens.traversed
                 <&> join (,) & Map.fromList <&> (:[])
             , cpMLamParam = Nothing
             }
@@ -619,7 +621,7 @@ mExtractLet expr = do
     Just ExprLetItem
         { eliBody = body
         , eliBodyScopesMap =
-            func ^. V.payload . Input.evalAppliesOfLam
+            func ^. V.payload . Input.evalResults . Input.eAppliesOfLam
             <&> extractRedexApplies
         , eliParam = param
         , eliArg = arg
