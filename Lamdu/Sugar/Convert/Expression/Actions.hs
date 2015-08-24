@@ -125,9 +125,10 @@ makeAnnotation payload =
     Annotation
     { _aInferredType = payload ^. Input.inferredType
     , _aMEvaluationResult =
-        do
-            Map.null res & not & guard
-            Just res
+        payload ^. Input.evalResults <&> (^. Input.eResults) <&> mk
     }
     where
-        res = payload ^. Input.evalResults . Input.eResults
+        mk res =
+            do
+                Map.null res & not & guard
+                Just res

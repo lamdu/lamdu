@@ -1,8 +1,9 @@
 -- | Preprocess of input to sugar
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Sugar.Convert.Input
-    ( Payload(..), entityId, inferred, mStored, evalResults, userData
-    , EvalResultsForExpr(..), eResults, eAppliesOfLam
+    ( Payload(..)
+        , entityId, inferred, mStored, evalResults, userData
+    , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
     , inferredType, inferredScope
     , mkPayload, mkUnstoredPayload
     ) where
@@ -11,6 +12,7 @@ import           Prelude.Compat
 
 import           Control.Lens (Lens, Lens')
 import           Control.Lens.Operators
+import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Store.Guid (Guid)
@@ -32,7 +34,7 @@ data Payload m a = Payload
     { _entityId :: EntityId
     , _inferred :: Infer.Payload
     , _mStored :: Maybe (ExprIRef.ValIProperty m)
-    , _evalResults :: EvalResultsForExpr
+    , _evalResults :: CurAndPrev EvalResultsForExpr
     , _userData :: a
     } deriving (Functor, Foldable, Traversable)
 
@@ -57,7 +59,7 @@ inferredScope = inferred . Infer.plScope
 mStored :: Lens' (Payload m a) (Maybe (ExprIRef.ValIProperty m))
 mStored f Payload{..} = f _mStored <&> \_mStored -> Payload{..}
 
-evalResults :: Lens' (Payload m a) EvalResultsForExpr
+evalResults :: Lens' (Payload m a) (CurAndPrev EvalResultsForExpr)
 evalResults f Payload{..} = f _evalResults <&> \_evalResults -> Payload{..}
 
 userData :: Lens (Payload m a) (Payload m b) a b
@@ -65,19 +67,21 @@ userData f Payload{..} = f _userData <&> \_userData -> Payload{..}
 
 mkPayload ::
     a -> Infer.Payload ->
-    Map ScopeId (EvalResult ()) -> Map ScopeId [(ScopeId, EvalResult ())] ->
-    ExprIRef.ValIProperty m -> Payload m a
-mkPayload _userData _inferred eRes eAppsOfLam stored =
+    CurAndPrev EvalResultsForExpr -> ExprIRef.ValIProperty m ->
+    Payload m a
+mkPayload _userData _inferred _evalResults stored =
     Payload{..}
     where
         _guid = IRef.guid $ ExprIRef.unValI $ Property.value stored
         _entityId = EntityId.ofValI $ Property.value stored
         _mStored = Just stored
-        _evalResults = EvalResultsForExpr eRes eAppsOfLam
 
 mkUnstoredPayload :: a -> Infer.Payload -> Guid -> EntityId -> Payload m a
 mkUnstoredPayload _userData _inferred _guid _entityId =
     Payload{..}
     where
         _mStored = Nothing
-        _evalResults = EvalResultsForExpr Map.empty Map.empty
+        _evalResults = CurAndPrev emptyEvalResults emptyEvalResults
+
+emptyEvalResults :: EvalResultsForExpr
+emptyEvalResults = EvalResultsForExpr Map.empty Map.empty

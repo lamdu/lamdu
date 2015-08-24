@@ -113,7 +113,7 @@ makeRootWidget font db zoom settingsRef evaluators (config, size) =
         evalResults <- DefEvaluators.getResults evaluators
         settings <- readIORef settingsRef
         let env = GUIMain.Env
-                { envEvalMap = evalResults
+                { envEvalRes = evalResults
                 , envConfig = config
                 , envSettings = settings
                 , envStyle = Style.base config font

@@ -5,6 +5,7 @@ module Lamdu.GUI.Main
     ) where
 
 import           Control.Lens.Operators
+import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.Bottle.EventMap as EventMap
@@ -18,17 +19,17 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.DbLayout as DbLayout
-import           Lamdu.Eval.Results (EvalResults(..))
+import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.GUI.Scroll as Scroll
+import qualified Lamdu.VersionControl as VersionControl
 
 data Env = Env
-    { envEvalMap :: EvalResults (ExprIRef.ValI DbLayout.ViewM)
+    { envEvalRes :: CurAndPrev (EvalResults (ExprIRef.ValI DbLayout.ViewM))
     , envConfig :: Config
     , envSettings :: Settings
     , envStyle :: TextEdit.Style
@@ -39,7 +40,7 @@ data Env = Env
 make ::
     Env -> Widget.Id ->
     Transaction DbLayout.DbM (Widget (Transaction DbLayout.DbM))
-make (Env evalMap config settings style fullSize cursor) rootId =
+make (Env evalRes config settings style fullSize cursor) rootId =
     do
         actions <- VersionControl.makeActions
         let widgetEnv = WE.Env
@@ -81,7 +82,7 @@ make (Env evalMap config settings style fullSize cursor) rootId =
         hoverPadding = Spacer.makeWidget $ Vector2 0 $ Config.paneHoverPadding $ Config.pane config
         env = CodeEdit.Env
             { CodeEdit.codeProps = DbLayout.codeProps
-            , CodeEdit.evalMap = evalMap
+            , CodeEdit.evalResults = evalRes
             , CodeEdit.config = config
             , CodeEdit.settings = settings
             }

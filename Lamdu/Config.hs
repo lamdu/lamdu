@@ -114,6 +114,7 @@ data Eval = Eval
     , nextScopeKeys :: [ModKey]
     , neighborsScaleFactor :: Vector2 Double
     , neighborsPadding :: Vector2 Double
+    , staleResultTint :: Draw.Color
     } deriving (Eq, Generic, Show)
 instance ToJSON Eval
 instance FromJSON Eval

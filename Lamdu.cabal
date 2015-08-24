@@ -21,6 +21,7 @@ Library
                      , submodules/AlgoW
 
   Exposed-modules:  Data.Random.Instances
+                  , Data.CurAndPrev
                   , Data.MRUMemo
                   , Data.Set.Ordered
                   , Data.Maybe.Utils

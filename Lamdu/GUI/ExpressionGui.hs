@@ -39,12 +39,14 @@ module Lamdu.GUI.ExpressionGui
     , stdWrapParenify
     ) where
 
+import           Control.Applicative ((<|>))
 import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.Binary.Utils (encodeS)
+import           Data.CurAndPrev (current, prev)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import           Data.Store.Property (Property(..))
@@ -54,6 +56,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
@@ -243,12 +246,26 @@ makeWithAnnotationBG f (AnnotationParams minWidth animId wideAnnotationBehavior)
             & maybeTooNarrow
             & maybeTooWide
 
-type ScopeAndVal = (ScopeId, EvalResult ())
+data ResultSource = Current | Previous
+
+data EvalResDisplay = EvalResDisplay
+    { erdScope :: ScopeId
+    , erdSource :: ResultSource
+    , erdVal :: EvalResult ()
+    }
 
 makeEvaluationResultView ::
-    MonadA m => AnimId -> ScopeAndVal -> ExprGuiM m (ExpressionGui m)
-makeEvaluationResultView animId (scopeId, evalRes) =
-    EvalView.make (animId ++ [encodeS scopeId]) evalRes
+    MonadA m => AnimId -> EvalResDisplay -> ExprGuiM m (ExpressionGui m)
+makeEvaluationResultView animId res =
+    EvalView.make (animId ++ [encodeS (erdScope res)]) (erdVal res)
+    >>= case erdSource res of
+        Current -> return
+        Previous ->
+            \view ->
+            do
+                config <- ExprGuiM.readConfig
+                View.tint (Config.staleResultTint (Config.eval config)) view
+                    & return
     <&> Widget.fromView
     <&> fromValueWidget
 
@@ -263,15 +280,15 @@ data NeighborVals a = NeighborVals
 
 makeEvalView ::
     MonadA m =>
-    NeighborVals (Maybe ScopeAndVal) -> ScopeAndVal ->
+    NeighborVals (Maybe EvalResDisplay) -> EvalResDisplay ->
     AnimId -> ExprGuiM m (ExpressionGui m)
 makeEvalView (NeighborVals mPrev mNext) evalRes animId =
     do
         config <- ExprGuiM.readConfig
         let Config.Eval{..} = Config.eval config
-        let makeEvaluationResultViewBG (scopeId, res) =
-                makeEvaluationResultView animId (scopeId, res)
-                <&> addAnnotationBackground config (animId ++ [encodeS scopeId])
+        let makeEvaluationResultViewBG res =
+                makeEvaluationResultView animId res
+                <&> addAnnotationBackground config (animId ++ [encodeS (erdScope res)])
         let neighbourViews n =
                 n ^.. Lens._Just
                 <&> makeEvaluationResultViewBG
@@ -321,18 +338,18 @@ addInferredType typ = addAnnotationH (makeTypeView typ)
 
 addEvaluationResult ::
     MonadA m =>
-    Type -> NeighborVals (Maybe ScopeAndVal) -> ScopeAndVal ->
+    Type -> NeighborVals (Maybe EvalResDisplay) -> EvalResDisplay ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addEvaluationResult _typ _neigh (_, Right EV.HRecEmpty) _wide entityId gui =
+addEvaluationResult _typ _neigh EvalResDisplay{erdVal = Right EV.HRecEmpty} _wide entityId gui =
     gui
     & egWidget %%~
         addValBGWithColor Config.evaluatedPathBGColor
         (WidgetIds.fromEntityId entityId)
-addEvaluationResult typ _neigh (_, Right EV.HFunc{}) wideBehavior entityId gui =
+addEvaluationResult typ _neigh EvalResDisplay{erdVal = Right EV.HFunc{}} wideBehavior entityId gui =
     addAnnotationH (makeTypeView typ) wideBehavior entityId gui
-addEvaluationResult _typ prevNext scopeAndVal wideBehavior entityId gui =
-    addAnnotationH (makeEvalView prevNext scopeAndVal) wideBehavior entityId gui
+addEvaluationResult _typ prevNext res wideBehavior entityId gui =
+    addAnnotationH (makeEvalView prevNext res) wideBehavior entityId gui
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
@@ -560,6 +577,7 @@ evaluationResult ::
 evaluationResult pl =
     ExprGuiM.readMScopeId
     <&> (>>= valOfScope (pl ^. Sugar.plAnnotation))
+    <&> Lens.mapped %~ erdVal
 
 data EvalAnnotationOptions
     = NormalEvalAnnotation
@@ -574,7 +592,7 @@ maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 data AnnotationMode
     = AnnotationModeNone
     | AnnotationModeTypes
-    | AnnotationModeEvaluation (NeighborVals (Maybe ScopeAndVal)) ScopeAndVal
+    | AnnotationModeEvaluation (NeighborVals (Maybe EvalResDisplay)) EvalResDisplay
 
 getAnnotationMode :: MonadA m => EvalAnnotationOptions -> Sugar.Annotation -> ExprGuiM m AnnotationMode
 getAnnotationMode opt annotation =
@@ -584,15 +602,14 @@ getAnnotationMode opt annotation =
             CESettings.None -> return AnnotationModeNone
             CESettings.Types -> return AnnotationModeTypes
             CESettings.Evaluation ->
-                ExprGuiM.readMScopeId <&> (>>= valAndScope)
+                ExprGuiM.readMScopeId <&> (>>= valOfScope annotation)
                 <&> maybe AnnotationModeNone (AnnotationModeEvaluation neighbourVals)
     where
-        valAndScope scopeId = valOfScope annotation scopeId <&> (,) scopeId
         neighbourVals =
             case opt of
             NormalEvalAnnotation -> NeighborVals Nothing Nothing
             WithNeighbouringEvalAnnotations neighbors ->
-                neighbors <&> (>>= valAndScope . (^. Sugar.bParamScopeId))
+                neighbors <&> (>>= valOfScope annotation . (^. Sugar.bParamScopeId))
 
 maybeAddAnnotationWith ::
     MonadA m =>
@@ -622,10 +639,14 @@ maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation 
             addEvaluationResult inferredType neighborVals scopeAndVal
             wideAnnotationBehavior entityId eg
 
-valOfScope :: Sugar.Annotation -> ScopeId -> Maybe (EvalResult ())
+valOfScope :: Sugar.Annotation -> ScopeId -> Maybe EvalResDisplay
 valOfScope annotation scopeId =
-    annotation ^? Sugar.aMEvaluationResult .
-    Lens._Just . Lens.at scopeId . Lens._Just
+    go current Current <|> go prev Previous
+    where
+        go l t =
+            annotation ^? Sugar.aMEvaluationResult . l .
+            Lens._Just . Lens.at scopeId . Lens._Just
+            <&> EvalResDisplay scopeId t
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests = ListUtils.withPrevNext

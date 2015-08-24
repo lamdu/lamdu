@@ -10,6 +10,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (lift)
 import           Control.MonadA (MonadA)
+import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.List.Utils (insertAt, removeAt)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Property (Property(..))
@@ -28,16 +29,16 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Eval.Results (EvalResults(..))
+import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Load (loadDef)
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Names.Add as AddNames
 import           Lamdu.Sugar.Names.Types (DefinitionN)
-import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.OrderTags as OrderTags
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
@@ -54,7 +55,7 @@ data Pane m = Pane
 
 data Env m = Env
     { codeProps :: Anchors.CodeProps m
-    , evalMap :: EvalResults (ExprIRef.ValI m)
+    , evalResults :: CurAndPrev (EvalResults (ExprIRef.ValI m))
     , config :: Config
     , settings :: Settings
     }
@@ -96,7 +97,7 @@ processDefI ::
     MonadA m => Env m -> DefI m -> T m (DefinitionN m [Sugar.EntityId])
 processDefI env defI =
     loadDef defI
-    >>= SugarConvert.convertDefI (evalMap env) (codeProps env)
+    >>= SugarConvert.convertDefI (evalResults env) (codeProps env)
     >>= OrderTags.orderDef
     >>= PresentationModes.addToDef
     >>= AddNames.addToDef

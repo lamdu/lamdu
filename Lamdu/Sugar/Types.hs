@@ -92,6 +92,7 @@ import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
+import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.List as List
 import           Data.Map (Map)
 import           Data.Store.Guid (Guid)
@@ -135,7 +136,7 @@ type EvaluationResult = Map E.ScopeId (E.EvalResult ())
 
 data Annotation = Annotation
     { _aInferredType :: Type
-    , _aMEvaluationResult :: Maybe EvaluationResult
+    , _aMEvaluationResult :: CurAndPrev (Maybe EvaluationResult)
     } deriving (Show)
 
 data Payload m a = Payload

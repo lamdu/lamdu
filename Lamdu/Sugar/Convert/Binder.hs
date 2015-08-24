@@ -11,6 +11,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (guard, void, when, join)
 import           Control.MonadA (MonadA)
+import           Data.CurAndPrev (CurAndPrev, current, prev)
 import           Data.Foldable (traverse_)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
@@ -54,7 +55,7 @@ data ConventionalParams m a = ConventionalParams
     , cpParamInfos :: Map T.Tag ConvertM.TagParamInfo
     , _cpParams :: BinderParams Guid m
     , cpMAddFirstParam :: Maybe (T m ParamAddResult)
-    , cpScopes :: Map ScopeId [ScopeId]
+    , cpScopes :: CurAndPrev (Map ScopeId [ScopeId])
     , cpMLamParam :: Maybe V.Var
     }
 
@@ -64,7 +65,7 @@ cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalP
 data FieldParam = FieldParam
     { fpTag :: T.Tag
     , fpFieldType :: Type
-    , fpValue :: Map ScopeId [(ScopeId, EV.EvalResult ())]
+    , fpValue :: CurAndPrev (Map ScopeId [(ScopeId, EV.EvalResult ())])
     }
 
 onMatchingSubexprs ::
@@ -238,8 +239,7 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
             , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
             , _cpParams = FieldParams params
             , cpMAddFirstParam = mAddFirstParam
-            , cpScopes =
-                pl ^. Input.evalResults . Input.eAppliesOfLam <&> map fst
+            , cpScopes = pl ^. Input.evalResults <&> mkCpScopes
             , cpMLamParam = Just param
             }
     where
@@ -266,14 +266,19 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
                             Annotation
                             { _aInferredType = fpFieldType fp
                             , _aMEvaluationResult =
+                                fpValue fp <&>
+                                \x ->
                                 do
-                                    fpValue fp & Map.null & not & guard
-                                    fpValue fp ^.. Lens.traversed . Lens.traversed
+                                    Map.null x & not & guard
+                                    x ^.. Lens.traversed . Lens.traversed
                                         & Map.fromList & Just
                             }
                         , _fpHiddenIds = []
                         }
                     )
+
+mkCpScopes :: Input.EvalResultsForExpr -> Map ScopeId [ScopeId]
+mkCpScopes x = x ^. Input.eAppliesOfLam <&> Lens.traversed %~ fst
 
 setParamList :: MonadA m => MkProperty m (Maybe [T.Tag]) -> [T.Tag] -> T m ()
 setParamList paramListProp newParamList =
@@ -440,6 +445,9 @@ mkFuncParam paramEntityId lamExprPl info =
         Annotation
         { _aInferredType = lamParamType lamExprPl
         , _aMEvaluationResult =
+            lamExprPl ^. Input.evalResults
+            <&> (^. Input.eAppliesOfLam)
+            <&> \lamApplies ->
             do
                 Map.null lamApplies & not & guard
                 lamApplies ^..
@@ -447,8 +455,6 @@ mkFuncParam paramEntityId lamExprPl info =
         }
     , _fpHiddenIds = []
     }
-    where
-        lamApplies = lamExprPl ^. Input.evalResults . Input.eAppliesOfLam
 
 convertNonRecordParam ::
     MonadA m => Maybe V.Var ->
@@ -477,8 +483,7 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
             , cpParamInfos = Map.empty
             , _cpParams = funcParam
             , cpMAddFirstParam = mActions <&> snd
-            , cpScopes =
-                lamExprPl ^. Input.evalResults . Input.eAppliesOfLam <&> map fst
+            , cpScopes = lamExprPl ^. Input.evalResults <&> mkCpScopes
             , cpMLamParam = Just param
             }
     where
@@ -533,8 +538,9 @@ convertLamParams mRecursiveVar lambda lambdaPl =
             { fpTag = tag
             , fpFieldType = typeExpr
             , fpValue =
-                    lambdaPl ^. Input.evalResults . Input.eAppliesOfLam
-                    <&> Lens.mapped . Lens._2 %~ extractField tag
+                    lambdaPl ^. Input.evalResults
+                    <&> (^. Input.eAppliesOfLam)
+                    <&> Lens.traversed . Lens.mapped . Lens._2 %~ extractField tag
             }
 
 convertEmptyParams :: MonadA m =>
@@ -564,10 +570,12 @@ convertEmptyParams mRecursiveVar val =
                 & Lens._Just %~ makeAddFirstParam
             , cpScopes =
                 -- Collect scopes from all evaluated subexpressions.
-                val ^..
-                    ExprLens.subExprPayloads . Input.evalResults .
-                    Input.eResults . Lens.to Map.keys . Lens.traversed
-                <&> join (,) & Map.fromList <&> (:[])
+                val ^.. ExprLens.subExprPayloads . Input.evalResults
+                & sequenceA
+                <&> (^.. Lens.traversed . Input.eResults . Lens.to Map.keys . Lens.traversed)
+                <&> Lens.traversed %~ join (,)
+                <&> Map.fromList
+                <&> Lens.traversed %~ (:[])
             , cpMLamParam = Nothing
             }
 
@@ -621,7 +629,7 @@ mExtractLet expr = do
     Just ExprLetItem
         { eliBody = body
         , eliBodyScopesMap =
-            func ^. V.payload . Input.evalResults . Input.eAppliesOfLam
+            func ^. V.payload . Input.evalResults . current . Input.eAppliesOfLam
             <&> extractRedexApplies
         , eliParam = param
         , eliArg = arg
@@ -777,7 +785,11 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
             , _bMPresentationModeProp = mPresentationModeProp
             , _bMChosenScopeProp = mChosenScopeProp
             , _bBody = bodyS
-            , _bScopes = cpScopes convParams <&> map binderScopes
+            , _bScopes =
+                map binderScopes <$>
+                cpScopes convParams ^.
+                if Map.null (cpScopes convParams ^. current)
+                then prev else current
             , _bLetItems = letItems
             , _bMActions =
                 mkActions

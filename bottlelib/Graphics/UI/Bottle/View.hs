@@ -7,7 +7,7 @@ module Graphics.UI.Bottle.View
     , pad, assymetricPad
     , Size, R
     , augmentAnimId, backgroundColor
-    , translate, scale
+    , translate, scale, tint
     ) where
 
 import           Prelude.Compat
@@ -68,3 +68,6 @@ assymetricPad leftAndTop rightAndBottom view =
     view
     & size +~ leftAndTop + rightAndBottom
     & translate leftAndTop
+
+tint :: Draw.Color -> View -> View
+tint color = animFrame . Anim.unitImages %~ Draw.tint color

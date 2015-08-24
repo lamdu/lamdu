@@ -18,6 +18,7 @@ import           Control.Monad.Trans.Either (EitherT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
 import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)
+import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
@@ -314,9 +315,10 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
             -- TODO: Evaluate hole results instead of Map.empty's?
             ( wasStored
             , ( stored
-              , Input.mkPayload a inferred Map.empty Map.empty stored
+              , Input.mkPayload a inferred (CurAndPrev noEval noEval) stored
               )
             )
+        noEval = Input.EvalResultsForExpr Map.empty Map.empty
 
 idTranslations ::
     Val (EntityId, Type) ->

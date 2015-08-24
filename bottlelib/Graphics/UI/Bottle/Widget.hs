@@ -204,7 +204,7 @@ applyIdMapping widgetIdMap eventResult =
             Id $ Anim.mappingFromPrefixMap animIdMap oldCursor
 
 tint :: Draw.Color -> Widget f -> Widget f
-tint color = animFrame . Anim.unitImages %~ Draw.tint color
+tint color = view %~ View.tint color
 
 keysEventMap ::
     Functor f => [ModKey] -> EventMap.Doc ->

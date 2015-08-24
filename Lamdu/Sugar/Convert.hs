@@ -4,6 +4,7 @@ module Lamdu.Sugar.Convert
     ) where
 
 import           Control.MonadA (MonadA)
+import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Guid (Guid)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -34,10 +35,12 @@ convertDefIBuiltin (Definition.Builtin name scheme) defI =
             Definition.BodyBuiltin . (`Definition.Builtin` scheme)
 
 convertDefI ::
-    MonadA m => EvalResults (ExprIRef.ValI m) -> Anchors.CodeProps m ->
+    MonadA m =>
+    CurAndPrev (EvalResults (ExprIRef.ValI m)) ->
+    Anchors.CodeProps m ->
     Definition.Definition (Val (ExprIRef.ValIProperty m)) (DefI m) ->
     Transaction m (DefinitionU m [EntityId])
-convertDefI evalMap cp (Definition.Definition body defI) =
+convertDefI evalRes cp (Definition.Definition body defI) =
     do
         bodyS <- convertDefBody body
         return Definition
@@ -49,4 +52,4 @@ convertDefI evalMap cp (Definition.Definition body defI) =
         convertDefBody (Definition.BodyBuiltin builtin) =
             return $ convertDefIBuiltin builtin defI
         convertDefBody (Definition.BodyExpr expr) =
-            ConvertDefExpr.convert evalMap cp expr defI
+            ConvertDefExpr.convert evalRes cp expr defI
