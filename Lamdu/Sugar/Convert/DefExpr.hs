@@ -19,7 +19,7 @@ import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Builtins.Anchors (recurseVar)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Eval.Results (EvalResults(..))
+import           Lamdu.Eval.Results (EvalResults(..), erExprValues, erAppliesOfLam)
 import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
@@ -66,8 +66,8 @@ mkContext defI cp inferContext =
                       >>= -- TODO: loadInfer is for sugar, we don't need sugar here
                           loadInfer
                           EvalResults
-                          { erExprValues = Map.empty
-                          , erAppliesOfLam = Map.empty
+                          { _erExprValues = Map.empty
+                          , _erAppliesOfLam = Map.empty
                           }
                       <&> Lens.has Lens._Right
     , scConvertSubexpression = ConvertExpr.convert
@@ -98,8 +98,8 @@ loadInfer evalResults val =
     where
         mkPayload (inferPl, valIProp) =
             Input.mkPayload () inferPl
-            (erExprValues evalResults ^. Lens.at (Property.value valIProp) . Lens._Just)
-            (erAppliesOfLam evalResults ^. Lens.at (Property.value valIProp) . Lens._Just)
+            (evalResults ^. erExprValues . Lens.at (Property.value valIProp) . Lens._Just)
+            (evalResults ^. erAppliesOfLam . Lens.at (Property.value valIProp) . Lens._Just)
             valIProp
 
 convert ::

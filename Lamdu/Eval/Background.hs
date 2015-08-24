@@ -144,8 +144,8 @@ evalThread actions stateRef src =
 results :: State pl -> EvalResults pl
 results state =
     EvalResults
-    { erExprValues = state ^. sValMap <&> Lens.mapped . Lens._Right . Lens.mapped .~ ()
-    , erAppliesOfLam =
+    { _erExprValues = state ^. sValMap <&> Lens.mapped . Lens._Right . Lens.mapped .~ ()
+    , _erAppliesOfLam =
         state ^. sAppliesOfLam
         <&> Lens.mapped . Lens.mapped . Lens._2 . Lens._Right . Lens.mapped .~ ()
     }
