@@ -2,10 +2,13 @@
 
 module Data.CurAndPrev
     ( CurAndPrev(..), current, prev
+    , fallbackToPrev
+    , CurPrevTag(..), curPrevTag
     ) where
 
 import           Prelude.Compat
 
+import           Control.Applicative (Alternative(..))
 import           Control.Lens (Lens')
 import           Control.Lens.Operators
 
@@ -28,3 +31,15 @@ current f CurAndPrev{..} = f _current <&> \_current -> CurAndPrev{..}
 
 prev :: Lens' (CurAndPrev a) a
 prev f CurAndPrev{..} = f _prev <&> \_prev -> CurAndPrev{..}
+
+fallbackToPrev :: Alternative f => CurAndPrev (f a) -> f a
+fallbackToPrev cp = cp ^. current <|> cp ^. prev
+
+data CurPrevTag = Current | Prev deriving (Eq, Ord, Show, Enum)
+
+curPrevTag :: CurAndPrev CurPrevTag
+curPrevTag =
+    CurAndPrev
+    { _current = Current
+    , _prev = Prev
+    }

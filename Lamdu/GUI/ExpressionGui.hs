@@ -39,14 +39,13 @@ module Lamdu.GUI.ExpressionGui
     , stdWrapParenify
     ) where
 
-import           Control.Applicative ((<|>))
 import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.Binary.Utils (encodeS)
-import           Data.CurAndPrev (current, prev)
+import           Data.CurAndPrev (CurPrevTag(..), curPrevTag, fallbackToPrev)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import           Data.Store.Property (Property(..))
@@ -246,11 +245,9 @@ makeWithAnnotationBG f (AnnotationParams minWidth animId wideAnnotationBehavior)
             & maybeTooNarrow
             & maybeTooWide
 
-data ResultSource = Current | Previous
-
 data EvalResDisplay = EvalResDisplay
     { erdScope :: ScopeId
-    , erdSource :: ResultSource
+    , erdSource :: CurPrevTag
     , erdVal :: EvalResult ()
     }
 
@@ -263,7 +260,7 @@ makeEvaluationResultView animId res =
         view
             & case erdSource res of
             Current -> id
-            Previous -> View.tint (Config.staleResultTint (Config.eval config))
+            Prev -> View.tint (Config.staleResultTint (Config.eval config))
             & return
     <&> Widget.fromView
     <&> fromValueWidget
@@ -641,12 +638,14 @@ maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation 
 
 valOfScope :: Sugar.Annotation -> ScopeId -> Maybe EvalResDisplay
 valOfScope annotation scopeId =
-    go current Current <|> go prev Previous
+    go
+    <$> curPrevTag
+    <*> annotation ^. Sugar.aMEvaluationResult
+    & fallbackToPrev
     where
-        go l t =
-            annotation ^? Sugar.aMEvaluationResult . l .
-            Lens._Just . Lens.at scopeId . Lens._Just
-            <&> EvalResDisplay scopeId t
+        go tag res =
+            res ^? Lens._Just . Lens.at scopeId . Lens._Just
+            <&> EvalResDisplay scopeId tag
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests = ListUtils.withPrevNext
