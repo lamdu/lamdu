@@ -340,6 +340,7 @@ addEvaluationResult ::
     Type -> NeighborVals (Maybe EvalResDisplay) -> EvalResDisplay ->
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+-- REVIEW(Eyal): This is misleading when it refers to Previous results
 addEvaluationResult _typ _neigh EvalResDisplay{erdVal = Right EV.HRecEmpty} _wide entityId gui =
     gui
     & egWidget %%~
