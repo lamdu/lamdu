@@ -12,6 +12,7 @@ import           Prelude.Compat
 
 import           Control.Lens (Lens)
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
 import           Data.Maybe (fromMaybe)
 
 _fromJust :: String -> Lens.Iso (Maybe a) (Maybe b) a b
@@ -21,10 +22,10 @@ _fromJust msg = Lens.iso (fromMaybe (error msg)) Just
 type Context' a t = Lens.Context a a t
 
 contextSetter :: Lens (Lens.Context a b0 t0) (Lens.Context a b1 t1) (b0 -> t0) (b1 -> t1)
-contextSetter f (Lens.Context set val) = (`Lens.Context` val) <$> f set
+contextSetter f (Lens.Context set val) = f set <&> (`Lens.Context` val)
 
 contextVal :: Lens (Lens.Context a0 b t) (Lens.Context a1 b t) a0 a1
-contextVal f (Lens.Context set val) = Lens.Context set <$> f val
+contextVal f (Lens.Context set val) = f val <&> Lens.Context set
 
 addListContexts :: (a -> b) -> Lens.Context [a] [b] t -> [Lens.Context a b t]
 addListContexts _   (Lens.Context _         []) = []
