@@ -10,8 +10,7 @@ module Lamdu.DefEvaluators
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (join)
-import           Data.CurAndPrev (CurAndPrev(..), current)
+import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.IORef
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -35,7 +34,7 @@ import           Lamdu.Data.DbLayout (DbM, ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Eval.Background as EvalBG
-import           Lamdu.Eval.Results (EvalResults, erExprValues)
+import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
@@ -44,30 +43,26 @@ import qualified Lamdu.VersionControl as VersionControl
 
 import           Prelude.Compat
 
-newtype DefEval = DefEval
-    { _deEval :: EvalBG.Evaluator (ValI ViewM)
+data DefEval = DefEval
+    { _dePrev :: EvalResults (ValI ViewM)
+    , _deEval :: EvalBG.Evaluator (ValI ViewM)
     }
-
 Lens.makeLenses ''DefEval
 
 data Evaluators = Evaluators
     { eInvalidateCache :: IO ()
     , eDb :: Db
     , eRef :: IORef (Map (DefI ViewM) DefEval)
-      -- TODO: Only store the prev here
-    , eResultsRef :: IORef (CurAndPrev (EvalResults (ValI ViewM)))
     }
 
 new :: IO () -> Db -> IO Evaluators
 new invalidateCache db =
     do
         ref <- newIORef mempty
-        resultsRef <- newIORef mempty
         return Evaluators
             { eInvalidateCache = invalidateCache
             , eDb = db
             , eRef = ref
-            , eResultsRef = resultsRef
             }
 
 runViewTransactionInIO :: Db -> Transaction ViewM a -> IO a
@@ -75,13 +70,14 @@ runViewTransactionInIO db = DbLayout.runDbTransaction db . VersionControl.runAct
 
 getResults :: Evaluators -> IO (CurAndPrev (EvalResults (ValI ViewM)))
 getResults evaluators =
-    do
-        res <-
-            readIORef (eRef evaluators)
-            >>= mapM (EvalBG.getResults . (^. deEval)) . Map.elems
-            <&> mconcat
-        atomicModifyIORef (eResultsRef evaluators)
-            (join (,) . (current .~ res))
+    readIORef (eRef evaluators)
+    >>= traverse getCurAndPrev
+    <&> mconcat . Map.elems
+    where
+        getCurAndPrev defEval =
+            do
+                current <- defEval ^. deEval & EvalBG.getResults
+                return CurAndPrev { _prev = defEval ^. dePrev, _current = current }
 
 loadDef ::
     Evaluators -> DefI ViewM ->
@@ -115,17 +111,21 @@ panesIRef = DbLayout.panes DbLayout.codeIRefs
 
 start :: Evaluators -> IO ()
 start evaluators =
-    Transaction.readIRef panesIRef
-    & runViewTransactionInIO (eDb evaluators)
-    >>= mapM tagLoadDef
+    do
+        defEvaluators <- readIORef (eRef evaluators)
+        let toDefEval (defI, eval) =
+                (defI, DefEval (defEvaluators ^. Lens.ix defI . dePrev) eval)
+        Transaction.readIRef panesIRef
+            & runViewTransactionInIO (eDb evaluators)
+            >>= mapM tagLoadDef
 
-    <&> mapMaybe (_2 %%~ (^? Def.defBody . Def._BodyExpr . Def.expr))
-    <&> Lens.mapped . _2 . Lens.mapped %~ Property.value
+            <&> mapMaybe (_2 %%~ (^? Def.defBody . Def._BodyExpr . Def.expr))
+            <&> Lens.mapped . _2 . Lens.mapped %~ Property.value
 
-    >>= Lens.traverse . _2 %%~ EvalBG.start (evalActions evaluators)
-    <&> Lens.mapped . _2 %~ DefEval
-    <&> Map.fromList
-    >>= writeIORef (eRef evaluators)
+            >>= Lens.traverse . _2 %%~ EvalBG.start (evalActions evaluators)
+            <&> Lens.mapped %~ toDefEval
+            <&> Map.fromList
+            >>= writeIORef (eRef evaluators)
     where
         tagLoadDef defI = loadDef evaluators defI <&> (,) defI
 
@@ -174,18 +174,6 @@ runTransactionAndMaybeRestartEvaluators evaluators transaction =
         if dependencyChanged
             then do
                 stop evaluators
-                atomicModifyIORef (eResultsRef evaluators)
-                    (flip (,) () . pickPrevResults)
                 start evaluators
             else Map.elems defEvaluators & mapM_ (EvalBG.resumeLoading . (^. deEval))
         return result
-
-pickPrevResults ::
-    Ord pl => CurAndPrev (EvalResults pl) -> CurAndPrev (EvalResults pl)
-pickPrevResults (CurAndPrev latest prev) =
-    CurAndPrev { _current = mempty, _prev = newPrev }
-    where
-        newPrev
-            | Map.size (latest ^. erExprValues) >
-                Map.size (prev ^. erExprValues) = latest
-            | otherwise = prev
