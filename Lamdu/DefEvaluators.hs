@@ -13,7 +13,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (join)
-import           Data.CurAndPrev (CurAndPrev(..), current, prev)
+import           Data.CurAndPrev (CurAndPrev(..), prev, current)
 import           Data.IORef
 import           Data.IORef.Utils (atomicModifyIORef_)
 import           Data.Map (Map)
@@ -94,7 +94,10 @@ evalActions evaluators =
     { EvalBG._aLoadGlobal = loadGlobal
     , EvalBG._aRunBuiltin = Builtins.eval
     , EvalBG._aReportUpdatesAvailable = eInvalidateCache evaluators
-    , EvalBG._aCompleted = \_ -> return ()
+    , EvalBG._aCompleted = \_ ->
+      do
+          atomicModifyIORef_ (eResultsRef evaluators) (prev .~ mempty)
+          eInvalidateCache evaluators
     }
     where
         loadGlobal globalId =
