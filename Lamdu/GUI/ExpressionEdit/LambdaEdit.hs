@@ -19,10 +19,10 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 make ::
     MonadA m =>
-    Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.Lambda (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make binder pl =
+make lam pl =
     ExprGuiM.withLocalPrecedence (ExpressionGui.precLeft .~ 0) $
     ExpressionGui.stdWrapParenify pl (ExpressionGui.MyPrecedence 0) $ \myId ->
     ExprGuiM.assignCursor myId bodyId $
@@ -33,12 +33,12 @@ make binder pl =
         labelEdits <-
             case params of
             Sugar.NullParam{} -> return []
-            Sugar.LightParams{} -> return []
             _ -> ExpressionGui.grammarLabel "→" animId <&> (:[])
         (mParamsEdit ^.. Lens._Just) ++ labelEdits ++ [bodyEdit]
             & ExpressionGui.hboxSpaced
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
+        binder = lam ^. Sugar.lamBinder
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody
         bodyId = WidgetIds.fromExprPayload $ body ^. Sugar.rPayload

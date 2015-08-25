@@ -17,8 +17,7 @@ module Lamdu.Sugar.Types
         , baAddFirstParam, baAddInnermostLetItem
     , NullParamActions(..), npDeleteLambda
     , BinderParams(..)
-        , _DefintionWithoutParams, _NullParam, _VarParam
-        , _FieldParams, _LightParams
+        , _DefintionWithoutParams, _NullParam, _VarParam , _FieldParams
     , BinderScopes(..), bsParamScope, bsBodyScope
     , BinderParamScopeId(..), bParamScopeId
     , Binder(..)
@@ -86,6 +85,8 @@ module Lamdu.Sugar.Types
     , IsInjected(..)
     , PickedResult(..), prIdTranslation
     , TagG(..), tagGName, tagVal, tagInstance
+    , Lambda(..), lamBinder, lamMode
+    , LambdaMode(..)
     ) where
 
 import           Prelude.Compat
@@ -400,8 +401,15 @@ data Nominal name expr = Nominal
     , _nVal :: expr
     } deriving (Functor, Foldable, Traversable)
 
+data LambdaMode = NormalLambda | LightLambda
+
+data Lambda name m expr = Lambda
+    { _lamMode :: LambdaMode
+    , _lamBinder :: Binder name m expr
+    } deriving (Functor, Foldable, Traversable)
+
 data Body name m expr
-    = BodyLam (Binder name m expr)
+    = BodyLam (Lambda name m expr)
     | BodyApply (Apply name expr)
     | BodyHole (Hole name m expr)
     | BodyLiteralInteger Integer
@@ -473,7 +481,6 @@ data BinderParams name m
       NullParam (FuncParam (NullParamInfo m))
     | VarParam (FuncParam (NamedParamInfo name m))
     | FieldParams [(T.Tag, FuncParam (NamedParamInfo name m))]
-    | LightParams [(T.Tag, FuncParam (NamedParamInfo name m))]
 
 data BinderScopes = BinderScopes
     { _bsParamScope :: BinderParamScopeId -- Inside lambda scope
@@ -550,6 +557,7 @@ Lens.makeLenses ''HoleArg
 Lens.makeLenses ''HoleResult
 Lens.makeLenses ''HoleOption
 Lens.makeLenses ''Inject
+Lens.makeLenses ''Lambda
 Lens.makeLenses ''List
 Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions

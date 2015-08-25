@@ -126,7 +126,6 @@ binderNamedParams _ DefintionWithoutParams = pure DefintionWithoutParams
 binderNamedParams _ (NullParam a) = pure (NullParam a)
 binderNamedParams f (VarParam p) = VarParam <$> f p
 binderNamedParams f (FieldParams ps) = FieldParams <$> (Lens.traverse . _2) f ps
-binderNamedParams f (LightParams ps) = LightParams <$> (Lens.traverse . _2) f ps
 
 binderNamedParamsActions ::
     Lens.Traversal' (BinderParams name m) (FuncParamActions m)
@@ -144,7 +143,8 @@ binderFuncParamAdds f Binder{..} =
     <*> (_bMActions & Lens._Just . baAddFirstParam %%~ f)
     where
         onExpr = rBody %%~ onBody
-        onBody (BodyLam binder) = binder & binderFuncParamAdds %%~ f <&> BodyLam
+        onBody (BodyLam lam) =
+            lam & lamBinder . binderFuncParamAdds %%~ f <&> BodyLam
         onBody body = body & Lens.traversed %%~ onExpr
 
 binderFuncParamDeletes ::
@@ -158,5 +158,6 @@ binderFuncParamDeletes f Binder{..} =
     <*> (_bLetItems & Lens.traversed . liValue . binderFuncParamDeletes %%~ f)
     where
         onExpr = rBody %%~ onBody
-        onBody (BodyLam binder) = binder & binderFuncParamDeletes %%~ f <&> BodyLam
+        onBody (BodyLam lam) =
+            lam & lamBinder . binderFuncParamDeletes %%~ f <&> BodyLam
         onBody body = body & Lens.traversed %%~ onExpr

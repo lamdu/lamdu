@@ -80,6 +80,7 @@ markAnnotationsToDisplay (Expression oldBody pl) =
             cas' =
                 cas
                 & cKind . Lens.mapped %~ don'tShowAnnotation
-                & cAlts . Lens.mapped . Lens.mapped . rBody . _BodyLam . bBody %~ don'tShowAnnotation
+                & cAlts . Lens.mapped . Lens.mapped . rBody
+                    . _BodyLam . lamBinder . bBody %~ don'tShowAnnotation
     where
         newBody = oldBody <&> markAnnotationsToDisplay

@@ -837,7 +837,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                     guard $ Lens.nullOf ExprLens.valHole lamBody
                     mDeleteLam
                         <&> Lens.mapped .~ binder ^. bBody . rPayload . plEntityId
-        BodyLam binder
+        Lambda NormalLambda binder & BodyLam
             & addActions exprPl
             <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
 

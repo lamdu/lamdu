@@ -69,8 +69,11 @@ orderHole =
 orderCase :: MonadA m => Order m (Sugar.Case name m a)
 orderCase = Sugar.cAlts %%~ orderByTag (^. Sugar.caTag . Sugar.tagVal)
 
+orderLam :: MonadA m => Order m (Sugar.Lambda name m a)
+orderLam = Sugar.lamBinder orderBinder
+
 orderBody :: MonadA m => Order m (Sugar.Body name m a)
-orderBody (Sugar.BodyLam b) = orderBinder b <&> Sugar.BodyLam
+orderBody (Sugar.BodyLam l) = orderLam l <&> Sugar.BodyLam
 orderBody (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
 orderBody (Sugar.BodyApply a) = orderApply a <&> Sugar.BodyApply
 orderBody (Sugar.BodyCase c) = orderCase c <&> Sugar.BodyCase

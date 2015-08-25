@@ -130,6 +130,12 @@ toBinder expr binder@Binder{..} =
             , _bLetItems = letItems
             } & pure
 
+toLam ::
+    MonadNaming m => (a -> m b) ->
+    Lambda (OldName m) (TM m) a ->
+    m (Lambda (NewName m) (TM m) b)
+toLam = lamBinder . toBinder
+
 toBody ::
     MonadNaming m => (a -> m b) ->
     Body (OldName m) (TM m) a ->
@@ -146,7 +152,7 @@ toBody expr = \case
     BodyFromNom        x -> traverse expr x >>= nTId toTIdG <&> BodyFromNom
     BodyGetVar         x -> toGetVar x <&> BodyGetVar
     BodyLiteralInteger x -> pure $ BodyLiteralInteger x
-    BodyLam            x -> toBinder expr x <&> BodyLam
+    BodyLam            x -> toLam expr x <&> BodyLam
     where
         toTagG = tagGName opGetTagName
         toTIdG = tidgName %%~ opGetTIdName
@@ -164,7 +170,6 @@ withBinderParams (VarParam fp) =
     (fp ^. fpInfo . npiName)
     <&> VarParam . \newName -> fp & fpInfo . npiName .~ newName
 withBinderParams (FieldParams xs) = onTagParams xs <&> FieldParams
-withBinderParams (LightParams xs) = onTagParams xs <&> LightParams
 
 onTagParams ::
     MonadNaming m =>
