@@ -39,6 +39,7 @@ convertGetFieldParam (V.GetField recExpr tag) exprPl =
                 { _nvName = UniqueId.toGuid tag
                 , _nvJumpTo = return (ConvertM.tpiJumpTo paramInfo)
                 , _nvVarType = GetFieldParameter
+                , _nvMode = NormalBinder
                 } & BodyGetVar & Just
             & Lens._Just %%~ addActions exprPl
 

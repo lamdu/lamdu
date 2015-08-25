@@ -25,6 +25,7 @@ convertVar sugarContext param paramType
       { _nvName = UniqueId.toGuid defI
       , _nvJumpTo = pure $ EntityId.ofIRef defI
       , _nvVarType = GetDefinition
+      , _nvMode = NormalBinder
       }
     | isGetParamRecord =
       GetVarParamsRecord ParamsRecordVar
@@ -35,6 +36,7 @@ convertVar sugarContext param paramType
       { _nvName = UniqueId.toGuid param
       , _nvJumpTo = pure $ EntityId.ofLambdaParam param
       , _nvVarType = GetParameter
+      , _nvMode = NormalBinder
       }
     where
         typeRecordGuids = typeRecordTags <&> UniqueId.toGuid

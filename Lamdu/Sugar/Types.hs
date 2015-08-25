@@ -62,7 +62,7 @@ module Lamdu.Sugar.Types
     , GetField(..), gfRecord, gfTag
     , Inject(..), iTag, iMVal
     , NamedVarType(..), _GetDefinition, _GetFieldParameter, _GetParameter
-    , NamedVar(..), nvName, nvJumpTo, nvVarType
+    , NamedVar(..), nvName, nvJumpTo, nvVarType, nvMode
     , GetVar(..), _GetVarNamed, _GetVarParamsRecord
     , ParamsRecordVar(..), prvFieldNames
     , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
@@ -86,7 +86,7 @@ module Lamdu.Sugar.Types
     , PickedResult(..), prIdTranslation
     , TagG(..), tagGName, tagVal, tagInstance
     , Lambda(..), lamBinder, lamMode
-    , LambdaMode(..)
+    , BinderMode(..)
     ) where
 
 import           Prelude.Compat
@@ -369,6 +369,7 @@ data NamedVar name m = NamedVar
     { _nvName :: name
     , _nvJumpTo :: T m EntityId
     , _nvVarType :: NamedVarType
+    , _nvMode :: BinderMode
     }
 
 newtype ParamsRecordVar name = ParamsRecordVar
@@ -401,10 +402,10 @@ data Nominal name expr = Nominal
     , _nVal :: expr
     } deriving (Functor, Foldable, Traversable)
 
-data LambdaMode = NormalLambda | LightLambda
+data BinderMode = NormalBinder | LightLambda
 
 data Lambda name m expr = Lambda
-    { _lamMode :: LambdaMode
+    { _lamMode :: BinderMode
     , _lamBinder :: Binder name m expr
     } deriving (Functor, Foldable, Traversable)
 

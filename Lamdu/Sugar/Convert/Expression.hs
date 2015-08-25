@@ -53,6 +53,7 @@ convertGlobal globalId exprPl =
             { _nvName = UniqueId.toGuid defI
             , _nvJumpTo = jumpToDefI cp defI
             , _nvVarType = GetDefinition
+            , _nvMode = NormalBinder
             }
     where
         defI = ExprIRef.defI globalId

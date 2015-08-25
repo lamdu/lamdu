@@ -842,7 +842,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                 | Lens.has (bLetItems . Lens.traversed) binder
                 || Lens.has (bBody . SugarLens.payloadsOf _BodyLam) binder
                 || Lens.has (bBody . SugarLens.payloadsOf _BodyHole) binder
-                    = NormalLambda
+                    = NormalBinder
                 | otherwise = LightLambda
         Lambda lambdaMode binder & BodyLam
             & addActions exprPl
