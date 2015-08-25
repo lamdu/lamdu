@@ -1,7 +1,7 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, TemplateHaskell #-}
 module Lamdu.Eval.Background
     ( Evaluator
-    , Actions(..)
+    , Actions(..), aLoadGlobal, aRunBuiltin, aReportUpdatesAvailable, aCompleted
     , start, stop
     , pauseLoading, resumeLoading
     , getResults
@@ -13,7 +13,6 @@ import           Control.Concurrent (ThreadId, killThread)
 import           Control.Concurrent.MVar
 import           Control.Concurrent.Utils (forkIOUnmasked)
 import qualified Control.Exception as E
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -40,11 +39,7 @@ data Actions pl = Actions
     , _aCompleted :: Either E.SomeException (EvalResult pl) -> IO ()
     }
 
-aLoadGlobal :: Lens' (Actions pl) (V.GlobalId -> IO (Maybe (Def.Body (V.Val pl))))
-aLoadGlobal f Actions{..} = f _aLoadGlobal <&> \_aLoadGlobal -> Actions{..}
-
-aCompleted :: Lens' (Actions pl) (Either E.SomeException (EvalResult pl) -> IO ())
-aCompleted f Actions{..} = f _aCompleted <&> \_aCompleted -> Actions{..}
+Lens.makeLenses ''Actions
 
 data Evaluator pl = Evaluator
     { eStateRef :: IORef (State pl)
@@ -65,17 +60,7 @@ data State pl = State
     , _sDependencies :: !(Set pl, Set V.GlobalId)
     }
 
-sAppliesOfLam :: Lens' (State pl) (Map pl (Map ScopeId [(ScopeId, EvalResult pl)]))
-sAppliesOfLam f State{..} = f _sAppliesOfLam <&> \_sAppliesOfLam -> State{..}
-
-sStatus :: Lens' (State pl) (Status pl)
-sStatus f State{..} = f _sStatus <&> \_sStatus -> State{..}
-
-sValMap :: Lens' (State pl) (Map pl (Map ScopeId (EvalResult pl)))
-sValMap f State{..} = f _sValMap <&> \_sValMap -> State{..}
-
-sDependencies :: Lens' (State pl) (Set pl, Set V.GlobalId)
-sDependencies f State{..} = f _sDependencies <&> \_sDependencies -> State{..}
+Lens.makeLenses ''State
 
 emptyState :: Status pl -> State pl
 emptyState status = State
