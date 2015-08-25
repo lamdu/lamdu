@@ -74,9 +74,9 @@ sValMap f State{..} = f _sValMap <&> \_sValMap -> State{..}
 sDependencies :: Lens' (State pl) (Set pl, Set V.GlobalId)
 sDependencies f State{..} = f _sDependencies <&> \_sDependencies -> State{..}
 
-initialState :: State pl
-initialState = State
-    { _sStatus = Running
+emptyState :: Status -> State pl
+emptyState status = State
+    { _sStatus = status
     , _sAppliesOfLam = Map.empty
     , _sValMap = Map.empty
     , _sDependencies = (Set.empty, Set.empty)
@@ -163,7 +163,7 @@ start :: Ord pl => Actions pl -> V.Val pl -> IO (Evaluator pl)
 start actions src =
     do
         stateRef <-
-            initialState
+            emptyState Running
             & sDependencies . _1 <>~ foldMap Set.singleton src
             & newIORef
         mvar <- newMVar ()
@@ -179,7 +179,7 @@ stop :: Evaluator pl -> IO ()
 stop evaluator =
     do
         killThread (eThreadId evaluator)
-        initialState & sStatus .~ Stopped & writeIORef (eStateRef evaluator)
+        emptyState Stopped & writeIORef (eStateRef evaluator)
 
 pauseLoading :: Evaluator pl -> IO (Set pl, Set V.GlobalId)
 pauseLoading evaluator =
