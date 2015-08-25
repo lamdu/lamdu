@@ -258,14 +258,13 @@ makeEvaluationResultView ::
     MonadA m => AnimId -> EvalResDisplay -> ExprGuiM m (ExpressionGui m)
 makeEvaluationResultView animId res =
     do
+        config <- ExprGuiM.readConfig
         view <- EvalView.make (animId ++ [encodeS (erdScope res)]) (erdVal res)
-        case erdSource res of
-            Current -> return view
-            Previous ->
-                do
-                    config <- ExprGuiM.readConfig
-                    View.tint (Config.staleResultTint (Config.eval config)) view
-                        & return
+        view
+            & case erdSource res of
+            Current -> id
+            Previous -> View.tint (Config.staleResultTint (Config.eval config))
+            & return
     <&> Widget.fromView
     <&> fromValueWidget
 
