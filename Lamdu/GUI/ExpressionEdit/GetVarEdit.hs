@@ -56,10 +56,13 @@ make getVar pl =
                             DataOps.savePreJumpPosition cp myId
                             WidgetIds.fromEntityId <$> namedVar ^. Sugar.nvJumpTo
                     makeView =
-                        case namedVar ^. Sugar.nvVarType of
-                        Sugar.GetDefinition -> makeSimpleView definitionColor
-                        Sugar.GetParameter -> makeSimpleView parameterColor
-                        Sugar.GetFieldParameter -> makeSimpleView parameterColor
+                        case namedVar ^. Sugar.nvMode of
+                        Sugar.LightLambda -> makeSimpleView nameOriginFGColor
+                        _ ->
+                            case namedVar ^. Sugar.nvVarType of
+                            Sugar.GetDefinition -> makeSimpleView definitionColor
+                            Sugar.GetParameter -> makeSimpleView parameterColor
+                            Sugar.GetFieldParameter -> makeSimpleView parameterColor
             Sugar.GetVarParamsRecord paramsRecordVar ->
                 sequence
                 [ ExpressionGui.makeLabel "Params {" (Widget.toAnimId myId <> ["prefix"])

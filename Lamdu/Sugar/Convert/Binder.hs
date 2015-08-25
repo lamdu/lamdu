@@ -838,15 +838,41 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                     guard $ Lens.nullOf ExprLens.valHole lamBody
                     mDeleteLam
                         <&> Lens.mapped .~ binder ^. bBody . rPayload . plEntityId
-        let lambdaMode
+        let paramSet =
+                binder ^.. bParams . SugarLens.binderNamedParams .
+                Lens.traversed . npiName
+                & Set.fromList
+        let lambda
                 | Lens.has (bLetItems . Lens.traversed) binder
                 || Lens.has (bBody . SugarLens.payloadsOf _BodyLam) binder
-                || Lens.has (bBody . SugarLens.payloadsOf _BodyHole) binder
-                    = NormalBinder
-                | otherwise = LightLambda
-        Lambda lambdaMode binder & BodyLam
+                || Lens.has (bBody . SugarLens.payloadsOf _BodyHole) binder =
+                    Lambda NormalBinder binder
+                | otherwise =
+                    binder
+                    & bBody %~ markLightParams paramSet
+                    & Lambda LightLambda
+        BodyLam lambda
             & addActions exprPl
             <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
+
+markLightParams ::
+    MonadA m => Set Guid -> ExpressionU m a -> ExpressionU m a
+markLightParams paramNames (Expression body pl) =
+    case body of
+    BodyGetVar (GetVarNamed n)
+        | Set.member (n ^. nvName) paramNames ->
+            n
+            & nvMode .~ LightLambda
+            & GetVarNamed & BodyGetVar
+    BodyHole h ->
+        h
+        & holeMActions . Lens._Just
+        . holeOptions . Lens.mapped . Lens.traversed . hoResults
+        . Lens.mapped . _2 . Lens.mapped . holeResultConverted
+            %~ markLightParams paramNames
+        & BodyHole
+    _ -> body <&> markLightParams paramNames
+    & (`Expression` pl)
 
 -- Let-item or definition (form of <name> [params] = <body>)
 convertBinder ::

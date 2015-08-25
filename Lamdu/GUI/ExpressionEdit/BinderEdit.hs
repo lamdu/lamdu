@@ -134,6 +134,7 @@ layout defNameEdit mParamsEdit bodyEdit myId =
 
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
+    , pMScopesEdit :: Maybe (ExpressionGui m)
     , pBodyEdit :: ExpressionGui m
     , pEventMap :: Widget.EventHandlers (T m)
     }
@@ -271,7 +272,6 @@ makeParts binder delVarBackwardsId myId =
                       ( mScopeCursor
                       <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sParamScope
                       )
-                    <&> (++ (mScopeNavEdit ^.. Lens.traversed))
                 mParamsEdit <-
                     case paramEdits of
                     [] -> return Nothing
@@ -301,7 +301,7 @@ makeParts binder delVarBackwardsId myId =
                             <*> curCursor
                             & fromMaybe mempty
                         _ -> mempty
-                Parts mParamsEdit rhs scopeEventMap & return
+                Parts mParamsEdit mScopeNavEdit rhs scopeEventMap & return
     where
         nearestHoles = ExprGuiT.nextHolesBefore body
         takeNavCursor = ExprGuiM.assignCursorPrefix scopesNavId (const destId)
@@ -322,7 +322,7 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make name binder myId =
     do
-        Parts mParamsEdit bodyEdit eventMap <-
+        Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             makeParts binder myId myId
         rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
         presentationEdits <-
@@ -334,10 +334,14 @@ make name binder myId =
             rhsJumperEquals rhs name myId
             <&> ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
-        layout defNameEdit
-            (mParamsEdit & Lens.mapped . ExpressionGui.egWidget
-                %~ Widget.weakerEvents rhsJumperEquals)
-            bodyEdit myId
+        mLhsEdit <-
+            mParamsEdit
+            <&> (: mScopeEdit ^.. Lens._Just)
+            <&> Lens.traversed . ExpressionGui.egAlignment . _1 .~ 0.5
+            & Lens._Just ExpressionGui.vboxTopFocalSpaced
+            <&> Lens._Just . ExpressionGui.egWidget
+                %~ Widget.weakerEvents rhsJumperEquals
+        layout defNameEdit mLhsEdit bodyEdit myId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         nearestHoles = ExprGuiT.nextHolesBefore (binder ^. Sugar.bBody)
