@@ -5,6 +5,8 @@ module Lamdu.Eval.Background
     , start, stop
     , pauseLoading, resumeLoading
     , getResults
+    , Status(..), _Running, _Stopped, _Finished
+    , getStatus
     ) where
 
 import           Prelude.Compat
@@ -41,16 +43,12 @@ data Actions pl = Actions
 
 Lens.makeLenses ''Actions
 
-data Evaluator pl = Evaluator
-    { eStateRef :: IORef (State pl)
-    , eThreadId :: ThreadId
-    , eLoadResumed :: MVar () -- taken when paused
-    }
-
 data Status pl
     = Running
     | Stopped
     | Finished (Either E.SomeException (EvalResult pl))
+
+Lens.makePrisms ''Status
 
 data State pl = State
     { _sStatus :: !(Status pl)
@@ -61,6 +59,12 @@ data State pl = State
     }
 
 Lens.makeLenses ''State
+
+data Evaluator pl = Evaluator
+    { eStateRef :: IORef (State pl)
+    , eThreadId :: ThreadId
+    , eLoadResumed :: MVar () -- taken when paused
+    }
 
 emptyState :: Status pl -> State pl
 emptyState status = State
@@ -144,6 +148,9 @@ getState = readIORef . eStateRef
 
 getResults :: Evaluator pl -> IO (EvalResults pl)
 getResults evaluator = getState evaluator <&> results
+
+getStatus :: Evaluator pl -> IO (Status pl)
+getStatus evaluator = getState evaluator <&> (^. sStatus)
 
 withLock :: MVar () -> IO a -> IO a
 withLock mvar action = withMVar mvar (const action)
