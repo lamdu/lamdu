@@ -7,11 +7,13 @@ module Lamdu.DefEvaluators
     , runTransactionAndMaybeRestartEvaluators
     ) where
 
+import           Control.Concurrent (ThreadId, killThread)
+import           Control.Concurrent.Utils (runAfter)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (join)
-import           Data.CurAndPrev (CurAndPrev(..), current)
+import           Data.CurAndPrev (CurAndPrev(..), current, prev)
 import           Data.IORef
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -50,6 +52,7 @@ data Evaluators = Evaluators
     , eRef :: IORef (Map (DefI ViewM) (EvalBG.Evaluator (ValI ViewM)))
       -- TODO: Only store the prev here
     , eResultsRef :: IORef (CurAndPrev (EvalResults (ValI ViewM)))
+    , eCancelTimerRef :: IORef (Maybe ThreadId)
     }
 
 new :: IO () -> Db -> IO Evaluators
@@ -57,11 +60,13 @@ new invalidateCache db =
     do
         ref <- newIORef mempty
         resultsRef <- newIORef mempty
+        cancelRef <- newIORef Nothing
         return Evaluators
             { eInvalidateCache = invalidateCache
             , eDb = db
             , eRef = ref
             , eResultsRef = resultsRef
+            , eCancelTimerRef = cancelRef
             }
 
 runViewTransactionInIO :: Db -> Transaction ViewM a -> IO a
@@ -168,18 +173,30 @@ runTransactionAndMaybeRestartEvaluators evaluators transaction =
         if dependencyChanged
             then do
                 stop evaluators
+                setCancelTimer evaluators
                 atomicModifyIORef (eResultsRef evaluators)
                     (flip (,) () . pickPrevResults)
                 start evaluators
             else Map.elems defEvaluators & mapM_ EvalBG.resumeLoading
         return result
 
+setCancelTimer :: Evaluators -> IO ()
+setCancelTimer evaluators =
+    do
+        newCancelTimer <- runAfter 5000000 -- 5 seconds
+            (atomicModifyIORef (eResultsRef evaluators)
+                (flip (,) () . (prev .~ mempty))
+            )
+        atomicModifyIORef (eCancelTimerRef evaluators)
+            (\x -> (Just newCancelTimer, x))
+            >>= Lens.traverseOf_ Lens._Just killThread
+
 pickPrevResults ::
     Ord pl => CurAndPrev (EvalResults pl) -> CurAndPrev (EvalResults pl)
-pickPrevResults (CurAndPrev latest prev) =
+pickPrevResults (CurAndPrev latest pre) =
     CurAndPrev { _current = mempty, _prev = newPrev }
     where
         newPrev
             | Map.size (latest ^. erExprValues) >
-                Map.size (prev ^. erExprValues) = latest
-            | otherwise = prev
+                Map.size (pre ^. erExprValues) = latest
+            | otherwise = pre
