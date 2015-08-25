@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, RankNTypes, LambdaCase #-}
 module Lamdu.DefEvaluators
     ( Evaluators(..)
     , new
@@ -95,9 +95,15 @@ evalActions evaluators =
     , EvalBG._aRunBuiltin = Builtins.eval
     , EvalBG._aReportUpdatesAvailable = eInvalidateCache evaluators
     , EvalBG._aCompleted = \_ ->
-      do
-          atomicModifyIORef_ (eResultsRef evaluators) (prev .~ mempty)
-          eInvalidateCache evaluators
+      eRef evaluators & readIORef <&> Map.elems
+      >>= Lens.traversed EvalBG.getStatus
+      <&> all (Lens.has (EvalBG._Finished . Lens._Right))
+      >>= \case
+      False -> return ()
+      True ->
+          do
+              atomicModifyIORef_ (eResultsRef evaluators) (prev .~ mempty)
+              eInvalidateCache evaluators
     }
     where
         loadGlobal globalId =
