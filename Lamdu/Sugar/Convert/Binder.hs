@@ -45,6 +45,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           Lamdu.Sugar.Types
 
@@ -837,7 +838,13 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                     guard $ Lens.nullOf ExprLens.valHole lamBody
                     mDeleteLam
                         <&> Lens.mapped .~ binder ^. bBody . rPayload . plEntityId
-        Lambda NormalLambda binder & BodyLam
+        let lambdaMode
+                | Lens.has (bLetItems . Lens.traversed) binder
+                || Lens.has (bBody . SugarLens.payloadsOf _BodyLam) binder
+                || Lens.has (bBody . SugarLens.payloadsOf _BodyHole) binder
+                    = NormalLambda
+                | otherwise = LightLambda
+        Lambda lambdaMode binder & BodyLam
             & addActions exprPl
             <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
 
