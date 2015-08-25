@@ -36,6 +36,7 @@ import qualified Control.Monad.Trans.RWS as RWS
 import           Control.MonadA (MonadA)
 import           Data.Binary (Binary)
 import qualified Data.Char as Char
+import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
@@ -92,7 +93,7 @@ data Askable m = Askable
     , _aMakeSubexpression :: ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
     , _aCodeAnchors :: Anchors.CodeProps m
     , _aSubexpressionLayer :: Int
-    , _aMScopeId :: Maybe ScopeId
+    , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aOuterPrecedence :: Precedence
     }
 
@@ -163,7 +164,7 @@ run makeSubexpr codeAnchors config settings (ExprGuiM action) =
     , _aMakeSubexpression = makeSubexpr
     , _aCodeAnchors = codeAnchors
     , _aSubexpressionLayer = 0
-    , _aMScopeId = Just topLevelScopeId
+    , _aMScopeId = Just topLevelScopeId & pure
     , _aOuterPrecedence = 0
     }
     ()
@@ -220,10 +221,11 @@ listenResultPickers = listener oHolePickers
 addResultPicker :: MonadA m => T m Widget.EventResult -> ExprGuiM m ()
 addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }
 
-readMScopeId :: MonadA m => ExprGuiM m (Maybe ScopeId)
+readMScopeId :: MonadA m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
 readMScopeId = ExprGuiM $ Lens.view aMScopeId
 
-withLocalMScopeId :: MonadA m => Maybe ScopeId -> ExprGuiM m a -> ExprGuiM m a
+withLocalMScopeId ::
+    MonadA m => CurAndPrev (Maybe ScopeId) -> ExprGuiM m a -> ExprGuiM m a
 withLocalMScopeId mScopeId = exprGuiM %~ RWS.local (aMScopeId .~ mScopeId)
 
 isExprSelected :: MonadA m => Sugar.Payload f a -> ExprGuiM m Bool
