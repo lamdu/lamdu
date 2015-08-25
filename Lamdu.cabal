@@ -22,6 +22,7 @@ Library
 
   Exposed-modules:  Data.Random.Instances
                   , Data.CurAndPrev
+                  , Data.IORef.Utils
                   , Data.MRUMemo
                   , Data.Set.Ordered
                   , Data.Maybe.Utils

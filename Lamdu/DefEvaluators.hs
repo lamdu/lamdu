@@ -15,6 +15,7 @@ import           Control.Lens.Tuple
 import           Control.Monad (join)
 import           Data.CurAndPrev (CurAndPrev(..), current, prev)
 import           Data.IORef
+import           Data.IORef.Utils (atomicModifyIORef_)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
@@ -174,8 +175,7 @@ runTransactionAndMaybeRestartEvaluators evaluators transaction =
             then do
                 stop evaluators
                 setCancelTimer evaluators
-                atomicModifyIORef (eResultsRef evaluators)
-                    (flip (,) () . pickPrevResults)
+                atomicModifyIORef_ (eResultsRef evaluators) pickPrevResults
                 start evaluators
             else Map.elems defEvaluators & mapM_ EvalBG.resumeLoading
         return result

@@ -1,10 +1,11 @@
-{-# LANGUAGE NoImplicitPrelude, TupleSections #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module Graphics.UI.GLFW.Events
     ( KeyEvent(..), Event(..), Result(..)
     , eventLoop
     ) where
 
 import           Data.IORef
+import           Data.IORef.Utils (atomicModifyIORef_)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.GLFW as GLFW
 
@@ -62,9 +63,6 @@ translate (RawKeyEvent key scanCode keyState modKeys : RawCharEvent char : xs) =
 translate (RawKeyEvent key scanCode keyState modKeys : xs) =
     EventKey (KeyEvent key scanCode keyState modKeys Nothing) : translate xs
 translate (RawCharEvent _ : xs) = translate xs
-
-atomicModifyIORef_ :: IORef a -> (a -> a) -> IO ()
-atomicModifyIORef_ var f = atomicModifyIORef var ((, ()) . f)
 
 rawEventLoop :: GLFW.Window -> ([GLFWRawEvent] -> IO Result) -> IO ()
 rawEventLoop win eventsHandler =
