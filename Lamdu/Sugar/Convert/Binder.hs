@@ -844,7 +844,9 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                 & Set.fromList
         let lambda
                 | Lens.has (bLetItems . Lens.traversed) binder
-                || Lens.has (bBody . SugarLens.payloadsOf _BodyLam) binder
+                || Lens.has (bBody . SugarLens.payloadsOf
+                    (_BodyLam . lamBinder . bParams . SugarLens.binderNamedParams))
+                    binder
                 || Lens.has (bBody . SugarLens.payloadsOf _BodyHole) binder =
                     Lambda NormalBinder binder
                 | otherwise =
