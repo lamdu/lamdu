@@ -7,14 +7,13 @@ module Lamdu.DefEvaluators
     , runTransactionAndMaybeRestartEvaluators
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (join)
 import           Data.CurAndPrev (CurAndPrev(..), current)
 import           Data.IORef
+import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
 import qualified Data.Monoid as Monoid
@@ -43,10 +42,12 @@ import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.VersionControl as VersionControl
 
+import           Prelude.Compat
+
 data Evaluators = Evaluators
     { eInvalidateCache :: IO ()
     , eDb :: Db
-    , eRef :: IORef [(DefI ViewM, EvalBG.Evaluator (ValI ViewM))]
+    , eRef :: IORef (Map (DefI ViewM) (EvalBG.Evaluator (ValI ViewM)))
       -- TODO: Only store the prev here
     , eResultsRef :: IORef (CurAndPrev (EvalResults (ValI ViewM)))
     }
@@ -54,7 +55,7 @@ data Evaluators = Evaluators
 new :: IO () -> Db -> IO Evaluators
 new invalidateCache db =
     do
-        ref <- newIORef []
+        ref <- newIORef mempty
         resultsRef <- newIORef mempty
         return Evaluators
             { eInvalidateCache = invalidateCache
@@ -69,8 +70,9 @@ runViewTransactionInIO db = DbLayout.runDbTransaction db . VersionControl.runAct
 getResults :: Evaluators -> IO (CurAndPrev (EvalResults (ValI ViewM)))
 getResults evaluators =
     do
-        res <- readIORef (eRef evaluators)
-            >>= mapM (EvalBG.getResults . snd)
+        res <-
+            readIORef (eRef evaluators)
+            >>= mapM EvalBG.getResults . Map.elems
             <&> mconcat
         atomicModifyIORef (eResultsRef evaluators)
             (join (,) . (current .~ res))
@@ -115,12 +117,14 @@ start evaluators =
     <&> Lens.mapped . _2 . Lens.mapped %~ Property.value
 
     >>= Lens.traverse . _2 %%~ EvalBG.start (evalActions evaluators)
+    <&> Map.fromList
     >>= writeIORef (eRef evaluators)
     where
         tagLoadDef defI = loadDef evaluators defI <&> (,) defI
 
 stop :: Evaluators -> IO ()
-stop evaluators = readIORef (eRef evaluators) >>= mapM_ (EvalBG.stop . snd)
+stop evaluators =
+    readIORef (eRef evaluators) >>= mapM_ EvalBG.stop . Map.elems
 
 sumDependency ::
     ExprIRef.DefI ViewM -> (Set (ExprIRef.ValI ViewM), Set V.GlobalId) -> Set Guid
@@ -137,7 +141,8 @@ runTransactionAndMaybeRestartEvaluators evaluators transaction =
         defEvaluators <- readIORef (eRef evaluators)
         dependencies <-
             defEvaluators
-            & Lens.traverse . _2 %%~ EvalBG.pauseLoading
+            & Lens.traverse %%~ EvalBG.pauseLoading
+            <&> Map.toList
             <&> Lens.mapped %~ uncurry sumDependency
             <&> mconcat
             <&> Set.insert (IRef.guid panesIRef)
@@ -165,7 +170,7 @@ runTransactionAndMaybeRestartEvaluators evaluators transaction =
                 atomicModifyIORef (eResultsRef evaluators)
                     (flip (,) () . pickPrevResults)
                 start evaluators
-            else mapM_ (EvalBG.resumeLoading . snd) defEvaluators
+            else Map.elems defEvaluators & mapM_ EvalBG.resumeLoading
         return result
 
 pickPrevResults ::
