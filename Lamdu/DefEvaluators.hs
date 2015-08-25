@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude, RankNTypes, TemplateHaskell #-}
 module Lamdu.DefEvaluators
     ( Evaluators(..)
     , new
@@ -44,10 +44,16 @@ import qualified Lamdu.VersionControl as VersionControl
 
 import           Prelude.Compat
 
+newtype DefEval = DefEval
+    { _deEval :: EvalBG.Evaluator (ValI ViewM)
+    }
+
+Lens.makeLenses ''DefEval
+
 data Evaluators = Evaluators
     { eInvalidateCache :: IO ()
     , eDb :: Db
-    , eRef :: IORef (Map (DefI ViewM) (EvalBG.Evaluator (ValI ViewM)))
+    , eRef :: IORef (Map (DefI ViewM) DefEval)
       -- TODO: Only store the prev here
     , eResultsRef :: IORef (CurAndPrev (EvalResults (ValI ViewM)))
     }
@@ -72,7 +78,7 @@ getResults evaluators =
     do
         res <-
             readIORef (eRef evaluators)
-            >>= mapM EvalBG.getResults . Map.elems
+            >>= mapM (EvalBG.getResults . (^. deEval)) . Map.elems
             <&> mconcat
         atomicModifyIORef (eResultsRef evaluators)
             (join (,) . (current .~ res))
@@ -117,6 +123,7 @@ start evaluators =
     <&> Lens.mapped . _2 . Lens.mapped %~ Property.value
 
     >>= Lens.traverse . _2 %%~ EvalBG.start (evalActions evaluators)
+    <&> Lens.mapped . _2 %~ DefEval
     <&> Map.fromList
     >>= writeIORef (eRef evaluators)
     where
@@ -124,7 +131,7 @@ start evaluators =
 
 stop :: Evaluators -> IO ()
 stop evaluators =
-    readIORef (eRef evaluators) >>= mapM_ EvalBG.stop . Map.elems
+    readIORef (eRef evaluators) >>= mapM_ (EvalBG.stop . (^. deEval)) . Map.elems
 
 sumDependency ::
     ExprIRef.DefI ViewM -> (Set (ExprIRef.ValI ViewM), Set V.GlobalId) -> Set Guid
@@ -141,7 +148,7 @@ runTransactionAndMaybeRestartEvaluators evaluators transaction =
         defEvaluators <- readIORef (eRef evaluators)
         dependencies <-
             defEvaluators
-            & Lens.traverse %%~ EvalBG.pauseLoading
+            & Lens.traverse %%~ EvalBG.pauseLoading . (^. deEval)
             <&> Map.toList
             <&> Lens.mapped %~ uncurry sumDependency
             <&> mconcat
@@ -170,7 +177,7 @@ runTransactionAndMaybeRestartEvaluators evaluators transaction =
                 atomicModifyIORef (eResultsRef evaluators)
                     (flip (,) () . pickPrevResults)
                 start evaluators
-            else Map.elems defEvaluators & mapM_ EvalBG.resumeLoading
+            else Map.elems defEvaluators & mapM_ (EvalBG.resumeLoading . (^. deEval))
         return result
 
 pickPrevResults ::
