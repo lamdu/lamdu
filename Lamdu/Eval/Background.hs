@@ -128,16 +128,16 @@ evalActions actions stateRef =
 evalThread ::
     Ord pl => Actions pl -> IORef (State pl) -> V.Val pl -> IO ()
 evalThread actions stateRef src =
-    do
-        result <-
-            Eval.evalScopedVal (Eval.ScopedVal EvalVal.emptyScope src)
-            & Eval.runEvalT
-            & (`evalStateT` Eval.initialState env)
-        finish (Right result)
-    `E.catch` \e@E.SomeException{} ->
-    do
-        BS8.hPutStrLn stderr $ "Background evaluator thread failed: " <> BS8.pack (show e)
-        finish (Left e)
+    ( ( Eval.evalScopedVal (Eval.ScopedVal EvalVal.emptyScope src)
+        & Eval.runEvalT
+        & (`evalStateT` Eval.initialState env)
+        <&> Right
+      ) `E.catch` \e@E.SomeException{} ->
+      do
+          BS8.hPutStrLn stderr $ "Background evaluator thread failed: " <> BS8.pack (show e)
+          return (Left e)
+    )
+    >>= finish
     where
         finish res =
             do
