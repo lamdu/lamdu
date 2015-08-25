@@ -6,40 +6,17 @@ license: AllRightsReserved
 license-file: ""
 copyright:
 maintainer:
-build-depends:
-  GLFW-b >= 1.4.7.3 && < 1.5
-  , List >= 0.5.1
-  , OpenGL
-  , QuickCheck >= 2.8 && < 2.9
-  , StateVar
-  , TraceUtils
-  , TypeCompose
-  , aeson >= 0.6.2.1 && < 0.9
-  , base >= 4
-  , base-compat >= 0.8.2 && < 0.9
-  , binary >= 0.7
-  , bytestring
-  , containers >= 0.4
-  , cryptohash >= 0.7
-  , deepseq
-  , deepseq-generics >= 0.1
-  , directory >= 1.0.1.1
-  , either
-  , filepath >= 1.1
-  , graphics-drawingcombinators >= 1.5.0.3
-  , hashable
-  , lens >= 4.1
-  , leveldb-haskell >= 0.6
-  , pretty >=1.1 && <1.1.2
-  , prettyclass ==1.0.0.0
-  , random >= 1.0.0
-  , split >= 0.1
-  , stm
-  , template-haskell
-  , time >= 1.2
-  , transformers >= 0.2.1
-  , utf8-string >= 0.3
-  , void >= 0.6.1
+build-depends: GLFW-b >=1.4.7.3 && <1.5, List >=0.5.1, OpenGL -any,
+               QuickCheck >=2.8 && <2.9, StateVar -any, TraceUtils -any,
+               TypeCompose -any, aeson >=0.6.2.1 && <0.9, base >=4,
+               base-compat >=0.8.2 && <0.9, binary >=0.7, bytestring -any,
+               containers >=0.4, cryptohash >=0.7, deepseq -any,
+               deepseq-generics >=0.1, directory >=1.0.1.1, either -any,
+               filepath >=1.1, graphics-drawingcombinators >=1.5.0.3,
+               hashable -any, lens >=4.1, leveldb-haskell >=0.6,
+               pretty >=1.1 && <1.1.2, prettyclass ==1.0.0.0, random >=1.0.0,
+               split >=0.1, stm -any, template-haskell -any, time >=1.2,
+               transformers >=0.2.1, utf8-string >=0.3, void >=0.6.1
 stability: experimental
 homepage:
 package-url:
@@ -75,210 +52,96 @@ Executable lamdu
   install-includes:
   include-dirs:
   hs-source-dirs:
-  other-modules:
-    Control.Applicative.Utils
-    Control.Concurrent.Utils
-    Control.Lens.Utils
-    Control.Monad.Trans.Decycle
-    Control.Monad.Trans.Either.Utils
-    Control.Monad.Trans.State.Utils
-    Control.Monad.Unit
-    Control.MonadA
-    Data.Binary.Utils
-    Data.ByteString.NFData
-    Data.ByteString.Utils
-    Data.CurAndPrev
-    Data.Function.Decycle
-    Data.Hashable.Generic
-    Data.List.Assoc
-    Data.List.Utils
-    Data.Map.Utils
-    Data.Maybe.Utils
-    Data.Monoid.Applicative
-    Data.Monoid.Generic
-    Data.Monoid.Instances
-    Data.MRUMemo
-    Data.Random.Instances
-    Data.Set.Ordered
-    Data.Store.Db
-    Data.Store.Guid.Arbitrary
-    Data.Store.Guid
-    Data.Store.IRef
-    Data.Store.Map
-    Data.Store.Property
-    Data.Store.Rev.Branch
-    Data.Store.Rev.Change
-    Data.Store.Rev.Version
-    Data.Store.Rev.View
-    Data.Store.Rev.ViewBranchInternal
-    Data.Store.Transaction
-    Data.Vector.Vector2
-    Foreign.C.Types.Instances
-    Graphics.DrawingCombinators.Utils
-    Graphics.UI.Bottle.Animation.Id
-    Graphics.UI.Bottle.Animation
-    Graphics.UI.Bottle.Direction
-    Graphics.UI.Bottle.EventMap
-    Graphics.UI.Bottle.MainLoop
-    Graphics.UI.Bottle.ModKey
-    Graphics.UI.Bottle.Rect
-    Graphics.UI.Bottle.SizedFont
-    Graphics.UI.Bottle.View
-    Graphics.UI.Bottle.Widget
-    Graphics.UI.Bottle.WidgetId
-    Graphics.UI.Bottle.Widgets.Box
-    Graphics.UI.Bottle.Widgets.Choice
-    Graphics.UI.Bottle.Widgets.EventMapDoc
-    Graphics.UI.Bottle.Widgets.FlyNav
-    Graphics.UI.Bottle.Widgets.FocusDelegator
-    Graphics.UI.Bottle.Widgets.Grid
-    Graphics.UI.Bottle.Widgets.GridView
-    Graphics.UI.Bottle.Widgets.Layout
-    Graphics.UI.Bottle.Widgets.Spacer
-    Graphics.UI.Bottle.Widgets.StdKeys
-    Graphics.UI.Bottle.Widgets.TextEdit
-    Graphics.UI.Bottle.Widgets.TextView
-    Graphics.UI.Bottle.Widgets
-    Graphics.UI.Bottle.WidgetsEnvT
-    Graphics.UI.GLFW.Events
-    Graphics.UI.GLFW.Instances
-    Graphics.UI.GLFW.Utils
-    Lamdu.Builtins.Anchors
-    Lamdu.Builtins
-    Lamdu.CharClassification
-    Lamdu.Config.Sampler
-    Lamdu.Config
-    Lamdu.Data.Anchors
-    Lamdu.Data.DbLayout
-    Lamdu.Data.Definition
-    Lamdu.Data.ExampleDB
-    Lamdu.Data.Ops
-    Lamdu.DataFile
-    Lamdu.DefEvaluators
-    Lamdu.Eval.Background
-    Lamdu.Eval.Results
-    Lamdu.Eval.ToExpr
-    Lamdu.Eval.Val
-    Lamdu.Eval
-    Lamdu.Expr.Constraints
-    Lamdu.Expr.FlatComposite
-    Lamdu.Expr.GenIds
-    Lamdu.Expr.Identifier
-    Lamdu.Expr.IRef.Infer
-    Lamdu.Expr.IRef
-    Lamdu.Expr.Lens
-    Lamdu.Expr.Load
-    Lamdu.Expr.Nominal
-    Lamdu.Expr.Pure
-    Lamdu.Expr.RecordVal
-    Lamdu.Expr.Scheme
-    Lamdu.Expr.Type.Match
-    Lamdu.Expr.Type
-    Lamdu.Expr.TypeVars
-    Lamdu.Expr.UniqueId
-    Lamdu.Expr.Val.Arbitrary
-    Lamdu.Expr.Val
-    Lamdu.Font
-    Lamdu.GUI.CodeEdit.Settings
-    Lamdu.GUI.CodeEdit
-    Lamdu.GUI.DefinitionEdit
-    Lamdu.GUI.EvalView
-    Lamdu.GUI.ExpressionEdit.ApplyEdit
-    Lamdu.GUI.ExpressionEdit.BinderEdit
-    Lamdu.GUI.ExpressionEdit.BuiltinEdit
-    Lamdu.GUI.ExpressionEdit.CaseEdit
-    Lamdu.GUI.ExpressionEdit.EventMap
-    Lamdu.GUI.ExpressionEdit.GetFieldEdit
-    Lamdu.GUI.ExpressionEdit.GetVarEdit
-    Lamdu.GUI.ExpressionEdit.HoleEdit.Common
-    Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
-    Lamdu.GUI.ExpressionEdit.HoleEdit.Info
-    Lamdu.GUI.ExpressionEdit.HoleEdit.Open
-    Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
-    Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
-    Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
-    Lamdu.GUI.ExpressionEdit.HoleEdit.ShownResult
-    Lamdu.GUI.ExpressionEdit.HoleEdit.State
-    Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds
-    Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
-    Lamdu.GUI.ExpressionEdit.HoleEdit
-    Lamdu.GUI.ExpressionEdit.InjectEdit
-    Lamdu.GUI.ExpressionEdit.LambdaEdit
-    Lamdu.GUI.ExpressionEdit.ListEdit
-    Lamdu.GUI.ExpressionEdit.LiteralEdit
-    Lamdu.GUI.ExpressionEdit.NomEdit
-    Lamdu.GUI.ExpressionEdit.RecordEdit
-    Lamdu.GUI.ExpressionEdit.TagEdit
-    Lamdu.GUI.ExpressionEdit
-    Lamdu.GUI.ExpressionGui.Monad
-    Lamdu.GUI.ExpressionGui.Types
-    Lamdu.GUI.ExpressionGui
-    Lamdu.GUI.Main
-    Lamdu.GUI.ParamEdit
-    Lamdu.GUI.Parens
-    Lamdu.GUI.Precedence
-    Lamdu.GUI.RedundantAnnotations
-    Lamdu.GUI.Scroll
-    Lamdu.GUI.TypeView
-    Lamdu.GUI.VersionControl.Config
-    Lamdu.GUI.VersionControl
-    Lamdu.GUI.WidgetIdIRef
-    Lamdu.GUI.WidgetIds
-    Lamdu.GUI.Zoom
-    Lamdu.Infer.Error
-    Lamdu.Infer.Internal.Constraints
-    Lamdu.Infer.Internal.Monad
-    Lamdu.Infer.Internal.Scheme
-    Lamdu.Infer.Internal.Scope
-    Lamdu.Infer.Internal.Subst
-    Lamdu.Infer.Internal.Unify
-    Lamdu.Infer.Load
-    Lamdu.Infer.Recursive
-    Lamdu.Infer.Unify
-    Lamdu.Infer.Update
-    Lamdu.Infer
-    Lamdu.Opts
-    Lamdu.Style
-    Lamdu.Sugar.Convert.Apply
-    Lamdu.Sugar.Convert.Binder
-    Lamdu.Sugar.Convert.Case
-    Lamdu.Sugar.Convert.DefExpr
-    Lamdu.Sugar.Convert.Expression.Actions
-    Lamdu.Sugar.Convert.Expression
-    Lamdu.Sugar.Convert.GetField
-    Lamdu.Sugar.Convert.GetVar
-    Lamdu.Sugar.Convert.Hole.ResultScore
-    Lamdu.Sugar.Convert.Hole.Suggest
-    Lamdu.Sugar.Convert.Hole
-    Lamdu.Sugar.Convert.Inject
-    Lamdu.Sugar.Convert.Input
-    Lamdu.Sugar.Convert.List
-    Lamdu.Sugar.Convert.Monad
-    Lamdu.Sugar.Convert.Nominal
-    Lamdu.Sugar.Convert.ParamList
-    Lamdu.Sugar.Convert.Record
-    Lamdu.Sugar.Convert.TIdG
-    Lamdu.Sugar.Convert
-    Lamdu.Sugar.EntityId
-    Lamdu.Sugar.Internal.EntityId
-    Lamdu.Sugar.Internal
-    Lamdu.Sugar.Lens
-    Lamdu.Sugar.Names.Add
-    Lamdu.Sugar.Names.CPS
-    Lamdu.Sugar.Names.Get
-    Lamdu.Sugar.Names.NameGen
-    Lamdu.Sugar.Names.Types
-    Lamdu.Sugar.Names.Walk
-    Lamdu.Sugar.NearestHoles
-    Lamdu.Sugar.OrderTags
-    Lamdu.Sugar.PresentationModes
-    Lamdu.Sugar.Types
-    Lamdu.VersionControl.Actions
-    Lamdu.VersionControl
-    Numeric.Utils
-    System.Random.Utils
-    Text.PrettyPrint.HughesPJClass.Compat
-  Exposed-modules:
+  other-modules: Foreign.C.Types.Instances Data.List.Utils
+                 Data.List.Assoc Data.Monoid.Instances Data.Monoid.Applicative
+                 Data.Monoid.Generic Data.Hashable.Generic Data.CurAndPrev
+                 Data.Store.Guid.Arbitrary Data.Store.Map Data.Store.IRef
+                 Data.Store.Property Data.Store.Rev.Version Data.Store.Rev.Branch
+                 Data.Store.Rev.View Data.Store.Rev.ViewBranchInternal
+                 Data.Store.Rev.Change Data.Store.Db Data.Store.Transaction
+                 Data.Binary.Utils Data.ByteString.Utils Data.ByteString.NFData
+                 Data.Vector.Vector2 Data.Random.Instances Data.MRUMemo
+                 Data.Function.Decycle Data.Maybe.Utils Data.Map.Utils
+                 Data.Set.Ordered Lamdu.DefEvaluators Lamdu.CharClassification
+                 Lamdu.VersionControl.Actions Lamdu.Eval.Background Lamdu.Eval.Val
+                 Lamdu.Eval.ToExpr Lamdu.Eval.Results Lamdu.Font Lamdu.Sugar.Types
+                 Lamdu.Sugar.EntityId Lamdu.Sugar.NearestHoles
+                 Lamdu.Sugar.Convert.ParamList Lamdu.Sugar.Convert.DefExpr
+                 Lamdu.Sugar.Convert.Apply Lamdu.Sugar.Convert.GetField
+                 Lamdu.Sugar.Convert.List Lamdu.Sugar.Convert.Inject
+                 Lamdu.Sugar.Convert.Hole.Suggest
+                 Lamdu.Sugar.Convert.Hole.ResultScore Lamdu.Sugar.Convert.GetVar
+                 Lamdu.Sugar.Convert.Record Lamdu.Sugar.Convert.Case
+                 Lamdu.Sugar.Convert.Binder Lamdu.Sugar.Convert.Input
+                 Lamdu.Sugar.Convert.Monad Lamdu.Sugar.Convert.TIdG
+                 Lamdu.Sugar.Convert.Expression.Actions Lamdu.Sugar.Convert.Nominal
+                 Lamdu.Sugar.Internal.EntityId Lamdu.Sugar.OrderTags
+                 Lamdu.Sugar.Names.CPS Lamdu.Sugar.Names.Add Lamdu.Sugar.Names.Get
+                 Lamdu.Sugar.Names.Types Lamdu.Sugar.Names.Walk
+                 Lamdu.Sugar.Names.NameGen Lamdu.Sugar.Lens
+                 Lamdu.Sugar.PresentationModes Lamdu.DataFile Lamdu.GUI.Main
+                 Lamdu.GUI.VersionControl.Config Lamdu.GUI.DefinitionEdit
+                 Lamdu.GUI.WidgetIds Lamdu.GUI.Precedence
+                 Lamdu.GUI.CodeEdit.Settings Lamdu.GUI.Parens Lamdu.GUI.WidgetIdIRef
+                 Lamdu.GUI.RedundantAnnotations Lamdu.GUI.Zoom Lamdu.GUI.ParamEdit
+                 Lamdu.GUI.ExpressionGui.Types Lamdu.GUI.ExpressionGui.Monad
+                 Lamdu.GUI.ExpressionEdit.BinderEdit
+                 Lamdu.GUI.ExpressionEdit.CaseEdit Lamdu.GUI.ExpressionEdit.EventMap
+                 Lamdu.GUI.ExpressionEdit.NomEdit Lamdu.GUI.ExpressionEdit.TagEdit
+                 Lamdu.GUI.ExpressionEdit.RecordEdit
+                 Lamdu.GUI.ExpressionEdit.ListEdit
+                 Lamdu.GUI.ExpressionEdit.ApplyEdit
+                 Lamdu.GUI.ExpressionEdit.LambdaEdit
+                 Lamdu.GUI.ExpressionEdit.GetFieldEdit
+                 Lamdu.GUI.ExpressionEdit.BuiltinEdit
+                 Lamdu.GUI.ExpressionEdit.GetVarEdit
+                 Lamdu.GUI.ExpressionEdit.InjectEdit
+                 Lamdu.GUI.ExpressionEdit.LiteralEdit
+                 Lamdu.GUI.ExpressionEdit.HoleEdit.Common
+                 Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
+                 Lamdu.GUI.ExpressionEdit.HoleEdit.ShownResult
+                 Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
+                 Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds
+                 Lamdu.GUI.ExpressionEdit.HoleEdit.State
+                 Lamdu.GUI.ExpressionEdit.HoleEdit.Info
+                 Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
+                 Lamdu.GUI.ExpressionEdit.HoleEdit.Open
+                 Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
+                 Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm Lamdu.GUI.EvalView
+                 Lamdu.GUI.Scroll Lamdu.GUI.TypeView Lamdu.Style Lamdu.Expr.TypeVars
+                 Lamdu.Expr.Val.Arbitrary Lamdu.Expr.Type.Match Lamdu.Expr.Pure
+                 Lamdu.Expr.Lens Lamdu.Expr.RecordVal Lamdu.Expr.GenIds
+                 Lamdu.Expr.Constraints Lamdu.Expr.Identifier Lamdu.Expr.Scheme
+                 Lamdu.Expr.IRef.Infer Lamdu.Expr.FlatComposite Lamdu.Expr.UniqueId
+                 Lamdu.Expr.Load Lamdu.Expr.Nominal Lamdu.Data.Anchors
+                 Lamdu.Data.Ops Lamdu.Data.DbLayout Lamdu.Data.Definition
+                 Lamdu.Data.ExampleDB Lamdu.Opts Lamdu.Builtins.Anchors
+                 Lamdu.Config.Sampler Lamdu.Infer.Unify Lamdu.Infer.Update
+                 Lamdu.Infer.Error Lamdu.Infer.Load Lamdu.Infer.Internal.Subst
+                 Lamdu.Infer.Internal.Scope Lamdu.Infer.Internal.Monad
+                 Lamdu.Infer.Internal.Constraints Lamdu.Infer.Internal.Scheme
+                 Lamdu.Infer.Internal.Unify Lamdu.Infer.Recursive
+                 Graphics.UI.Bottle.WidgetId Graphics.UI.Bottle.EventMap
+                 Graphics.UI.Bottle.Direction Graphics.UI.Bottle.View
+                 Graphics.UI.Bottle.Widget Graphics.UI.Bottle.Rect
+                 Graphics.UI.Bottle.Animation.Id Graphics.UI.Bottle.Widgets.FlyNav
+                 Graphics.UI.Bottle.Widgets.Layout Graphics.UI.Bottle.Widgets.Box
+                 Graphics.UI.Bottle.Widgets.EventMapDoc
+                 Graphics.UI.Bottle.Widgets.FocusDelegator
+                 Graphics.UI.Bottle.Widgets.Grid Graphics.UI.Bottle.Widgets.GridView
+                 Graphics.UI.Bottle.Widgets.Choice Graphics.UI.Bottle.Widgets.Spacer
+                 Graphics.UI.Bottle.Widgets.TextEdit
+                 Graphics.UI.Bottle.Widgets.StdKeys
+                 Graphics.UI.Bottle.Widgets.TextView Graphics.UI.Bottle.ModKey
+                 Graphics.UI.Bottle.WidgetsEnvT Graphics.UI.Bottle.SizedFont
+                 Graphics.UI.Bottle.MainLoop Graphics.UI.GLFW.Events
+                 Graphics.UI.GLFW.Utils Graphics.UI.GLFW.Instances
+                 Graphics.DrawingCombinators.Utils
+                 Text.PrettyPrint.HughesPJClass.Compat System.Random.Utils
+                 Control.Monad.Trans.State.Utils Control.Monad.Trans.Either.Utils
+                 Control.Monad.Trans.Decycle Control.Monad.Unit
+                 Control.Concurrent.Utils Control.MonadA Control.Applicative.Utils
+                 Control.Lens.Utils Numeric.Utils
   ghc-prof-options:
   ghc-shared-options:
   ghc-options:
