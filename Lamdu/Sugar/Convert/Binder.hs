@@ -11,7 +11,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (guard, void, when, join)
 import           Control.MonadA (MonadA)
-import           Data.CurAndPrev (CurAndPrev, current)
+import           Data.CurAndPrev (CurAndPrev)
 import           Data.Foldable (traverse_)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
@@ -615,7 +615,7 @@ changeRecursionsToCalls var =
 
 data ExprLetItem a = ExprLetItem
     { eliBody :: Val a
-    , eliBodyScopesMap :: Map ScopeId ScopeId
+    , eliBodyScopesMap :: CurAndPrev (Map ScopeId ScopeId)
     , eliParam :: V.Var
     , eliArg :: Val a
     , eliHiddenPayloads :: [a]
@@ -629,8 +629,9 @@ mExtractLet expr = do
     Just ExprLetItem
         { eliBody = body
         , eliBodyScopesMap =
-            func ^. V.payload . Input.evalResults . current . Input.eAppliesOfLam
-            <&> extractRedexApplies
+            func ^. V.payload . Input.evalResults
+            <&> (^. Input.eAppliesOfLam)
+            <&> Lens.traversed %~ extractRedexApplies
         , eliParam = param
         , eliArg = arg
         , eliHiddenPayloads = (^. V.payload) <$> [expr, func]
@@ -712,11 +713,11 @@ convertLetItems ::
     ConvertM m
     ( [LetItem Guid m (ExpressionU m a)]
     , Val (Input.Payload m a)
-    , Map ScopeId ScopeId
+    , CurAndPrev (Map ScopeId ScopeId)
     )
 convertLetItems binderScopeVars expr =
     case mExtractLet expr of
-    Nothing -> return ([], expr, Map.empty)
+    Nothing -> return ([], expr, mempty)
     Just eli ->
         do
             value <-
@@ -742,18 +743,22 @@ convertLetItems binderScopeVars expr =
                     , _liAnnotation = eliAnnotation eli
                     , _liScopes =
                         eliBodyScopesMap eli
-                        & Map.keys & map ((_1 %~ BinderParamScopeId) . join (,)) & Map.fromList
+                        <&> Map.keys
+                        <&> map ((_1 %~ BinderParamScopeId) . join (,))
+                        <&> Map.fromList
                     }
                     :
                     ( items
-                          <&> liScopes %~
-                              -- TODO: How to remove the ugly mapKeys here?
-                              Map.mapKeys BinderParamScopeId .
-                              appendScopeMaps (eliBodyScopesMap eli) .
-                              Map.mapKeys (^. bParamScopeId)
+                        <&> liScopes %~
+                        \scopes ->
+                        appendScopeMaps
+                        <$> (scopes <&> Map.mapKeys (^. bParamScopeId))
+                        -- TODO: How to remove the ugly mapKeys here?
+                        <*> eliBodyScopesMap eli
+                        <&> Map.mapKeys BinderParamScopeId
                     )
                 , body
-                , appendScopeMaps (eliBodyScopesMap eli) bodyScopesMap
+                , appendScopeMaps <$> eliBodyScopesMap eli <*> bodyScopesMap
                 )
         where
             param = eliParam eli
@@ -775,19 +780,15 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
             convertLetItems (cpMLamParam convParams ^.. Lens._Just) funcBody
         bodyS <-
             ConvertM.convertSubexpression letBody & localExtractDestPost letBody
-        let binderScopes s =
-                BinderScopes
-                { _bsParamScope = BinderParamScopeId s
-                , _bsBodyScope = overrideId bodyScopesMap s
-                }
         return Binder
             { _bParams = convParams ^. cpParams
             , _bMPresentationModeProp = mPresentationModeProp
             , _bMChosenScopeProp = mChosenScopeProp
             , _bBody = bodyS
             , _bScopes =
-                cpScopes convParams
-                <&> Lens.traversed . Lens.traversed %~ binderScopes
+                binderScopes
+                <$> bodyScopesMap
+                <*> cpScopes convParams
             , _bLetItems = letItems
             , _bMActions =
                 mkActions
@@ -796,6 +797,14 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
             }
     & ConvertM.local addParams
     where
+        binderScopes scopesMap paramScopes =
+            paramScopes
+            <&> Lens.traversed %~
+            \s ->
+            BinderScopes
+            { _bsParamScope = BinderParamScopeId s
+            , _bsBodyScope = overrideId scopesMap s
+            }
         addParams ctx =
             ctx
             & ConvertM.scTagParamInfos <>~ cpParamInfos convParams

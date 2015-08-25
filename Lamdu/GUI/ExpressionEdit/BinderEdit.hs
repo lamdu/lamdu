@@ -378,7 +378,7 @@ makeLetItemEdit mBinderParamScopeId (_prevId, nextId, item) =
             <&> ExpressionGui.pad
                 (Config.letItemPadding config <&> realToFrac)
             & ExprGuiM.withLocalMScopeId
-                (mBinderParamScopeId >>= (`Map.lookup` (item ^. Sugar.liScopes)))
+                (mBinderParamScopeId >>= (`Map.lookup` (item ^. Sugar.liScopes . current)))
             <&> ExpressionGui.egAlignment . _1 .~ 0
         letLabel <- ExpressionGui.grammarLabel "let" (Widget.toAnimId myId)
         ExpressionGui.hboxSpaced [letLabel, edit]

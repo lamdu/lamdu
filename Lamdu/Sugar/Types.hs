@@ -456,7 +456,7 @@ data LetItem name m expr = LetItem
     , _liName :: name
     , _liActions :: Maybe (LetItemActions m)
     , -- This is a mapping from param in bScopes to the where item's scope
-      _liScopes :: Map BinderParamScopeId E.ScopeId
+      _liScopes :: CurAndPrev (Map BinderParamScopeId E.ScopeId)
     } deriving (Functor, Foldable, Traversable)
 
 data BinderActions m = BinderActions
