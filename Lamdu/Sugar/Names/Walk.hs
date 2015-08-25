@@ -93,7 +93,6 @@ toNamedVar namedVar =
         f = case namedVar ^. nvVarType of
             GetParameter      -> opGetParamName
             GetFieldParameter -> opGetTagName
-            LightLamParameter -> opGetTagName
             GetDefinition     -> opGetDefName
 
 toGetVar ::

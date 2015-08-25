@@ -362,7 +362,7 @@ data Inject name expr = Inject
     } deriving (Functor, Foldable, Traversable)
 
 data NamedVarType =
-    GetDefinition | GetFieldParameter | GetParameter | LightLamParameter
+    GetDefinition | GetFieldParameter | GetParameter
     deriving (Eq, Ord)
 
 data NamedVar name m = NamedVar

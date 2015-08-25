@@ -48,8 +48,6 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         Expression newBody pl & don'tShowAnnotation
     BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetFieldParameter }) ->
         Expression newBody pl & don'tShowAnnotation
-    BodyGetVar (GetVarNamed NamedVar { _nvVarType = LightLamParameter }) ->
-        Expression newBody pl
     BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetParameter }) ->
         Expression newBody pl & don'tShowAnnotation
     BodyFromNom _ ->
