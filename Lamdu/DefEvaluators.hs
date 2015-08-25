@@ -171,7 +171,7 @@ runTransactionAndMaybeRestartEvaluators evaluators transaction =
 pickPrevResults ::
     Ord pl => CurAndPrev (EvalResults pl) -> CurAndPrev (EvalResults pl)
 pickPrevResults (CurAndPrev latest prev) =
-    CurAndPrev mempty newPrev
+    CurAndPrev { _current = mempty, _prev = newPrev }
     where
         newPrev
             | Map.size (latest ^. erExprValues) >
