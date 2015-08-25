@@ -13,3 +13,11 @@
 /cabal-dev/
 /TODO
 /.stack-work/
+/lamdu.hsproj/Control/
+/lamdu.hsproj/Data/
+/lamdu.hsproj/Foreign/
+/lamdu.hsproj/Graphics/
+/lamdu.hsproj/Lamdu/
+/lamdu.hsproj/Numeric/
+/lamdu.hsproj/System/
+/lamdu.hsproj/Text/
