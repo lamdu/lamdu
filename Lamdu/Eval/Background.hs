@@ -18,6 +18,7 @@ import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Control.Monad (join)
 import           Control.Monad.Trans.State.Strict (evalStateT)
 import qualified Data.ByteString.Char8 as BS8
 import           Data.IORef
@@ -121,12 +122,16 @@ evalThread actions stateRef src =
         & Eval.runEvalT
         & (`evalStateT` Eval.initialState env)
         <&> Right
-      ) `E.catch` \e@E.SomeException{} ->
+        <&> finish
+      )
+      `E.catch` (\e -> case e of
+          E.ThreadKilled -> writeStatus stateRef Stopped & return
+          _ -> E.throwIO e)
+      `E.catch` (\e@E.SomeException{} ->
       do
           BS8.hPutStrLn stderr $ "Background evaluator thread failed: " <> BS8.pack (show e)
-          return (Left e)
-    )
-    >>= finish
+          finish (Left e) & return)
+    ) & join
     where
         finish res =
             do
@@ -173,10 +178,7 @@ start actions src =
             }
 
 stop :: Evaluator pl -> IO ()
-stop evaluator =
-    do
-        killThread (eThreadId evaluator)
-        emptyState Stopped & writeIORef (eStateRef evaluator)
+stop = killThread . eThreadId
 
 pauseLoading :: Evaluator pl -> IO (Set pl, Set V.GlobalId)
 pauseLoading evaluator =
