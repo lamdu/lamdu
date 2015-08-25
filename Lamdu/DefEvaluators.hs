@@ -47,6 +47,7 @@ data Evaluators = Evaluators
     { eInvalidateCache :: IO ()
     , eDb :: Db
     , eRef :: IORef [(DefI ViewM, EvalBG.Evaluator (ValI ViewM))]
+      -- TODO: Only store the prev here
     , eResultsRef :: IORef (CurAndPrev (EvalResults (ValI ViewM)))
     }
 
