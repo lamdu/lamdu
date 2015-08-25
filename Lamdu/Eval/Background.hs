@@ -37,10 +37,14 @@ data Actions pl = Actions
     { _aLoadGlobal :: V.GlobalId -> IO (Maybe (Def.Body (V.Val pl)))
     , _aRunBuiltin :: Def.FFIName -> EvalResult pl -> EvalResult pl
     , _aReportUpdatesAvailable :: IO ()
+    , _aCompleted :: Either E.SomeException (EvalResult pl) -> IO ()
     }
 
 aLoadGlobal :: Lens' (Actions pl) (V.GlobalId -> IO (Maybe (Def.Body (V.Val pl))))
 aLoadGlobal f Actions{..} = f _aLoadGlobal <&> \_aLoadGlobal -> Actions{..}
+
+aCompleted :: Lens' (Actions pl) (Either E.SomeException (EvalResult pl) -> IO ())
+aCompleted f Actions{..} = f _aCompleted <&> \_aCompleted -> Actions{..}
 
 data Evaluator pl = Evaluator
     { eStateRef :: IORef (State pl)
@@ -48,14 +52,13 @@ data Evaluator pl = Evaluator
     , eLoadResumed :: MVar () -- taken when paused
     }
 
-data Status
+data Status pl
     = Running
     | Stopped
-    | Error
-    | Finished
+    | Finished (Either E.SomeException (EvalResult pl))
 
 data State pl = State
-    { _sStatus :: !Status
+    { _sStatus :: !(Status pl)
     , _sAppliesOfLam :: !(Map pl (Map ScopeId [(ScopeId, EvalResult pl)]))
       -- Maps of already-evaluated pl's/thunks
     , _sValMap :: !(Map pl (Map ScopeId (EvalResult pl)))
@@ -65,7 +68,7 @@ data State pl = State
 sAppliesOfLam :: Lens' (State pl) (Map pl (Map ScopeId [(ScopeId, EvalResult pl)]))
 sAppliesOfLam f State{..} = f _sAppliesOfLam <&> \_sAppliesOfLam -> State{..}
 
-sStatus :: Lens' (State pl) Status
+sStatus :: Lens' (State pl) (Status pl)
 sStatus f State{..} = f _sStatus <&> \_sStatus -> State{..}
 
 sValMap :: Lens' (State pl) (Map pl (Map ScopeId (EvalResult pl)))
@@ -74,7 +77,7 @@ sValMap f State{..} = f _sValMap <&> \_sValMap -> State{..}
 sDependencies :: Lens' (State pl) (Set pl, Set V.GlobalId)
 sDependencies f State{..} = f _sDependencies <&> \_sDependencies -> State{..}
 
-emptyState :: Status -> State pl
+emptyState :: Status pl -> State pl
 emptyState status = State
     { _sStatus = status
     , _sAppliesOfLam = Map.empty
@@ -82,7 +85,7 @@ emptyState status = State
     , _sDependencies = (Set.empty, Set.empty)
     }
 
-writeStatus :: IORef (State pl) -> Status -> IO ()
+writeStatus :: IORef (State pl) -> Status pl -> IO ()
 writeStatus stateRef newStatus =
     atomicModifyIORef' stateRef $ \x -> (x & sStatus .~ newStatus, ())
 
@@ -122,24 +125,25 @@ evalActions actions stateRef =
                 modifyState f
                 _aReportUpdatesAvailable actions
 
-evalThread :: Ord pl => Actions pl -> IORef (State pl) -> V.Val pl -> IO ()
+evalThread ::
+    Ord pl => Actions pl -> IORef (State pl) -> V.Val pl -> IO ()
 evalThread actions stateRef src =
     do
         result <-
             Eval.evalScopedVal (Eval.ScopedVal EvalVal.emptyScope src)
             & Eval.runEvalT
             & (`evalStateT` Eval.initialState env)
-        case result of
-            Left e -> handleError e Error
-            Right _ -> return ()
-        writeStatus stateRef Finished
-    `E.catch` \e@E.SomeException{} -> handleError e Error
+        finish (Right result)
+    `E.catch` \e@E.SomeException{} ->
+    do
+        BS8.hPutStrLn stderr $ "Background evaluator thread failed: " <> BS8.pack (show e)
+        finish (Left e)
     where
-        env = Eval.Env $ evalActions actions stateRef
-        handleError e t =
+        finish res =
             do
-                BS8.hPutStrLn stderr $ "Background evaluator thread failed: " <> BS8.pack (show e)
-                writeStatus stateRef t
+                writeStatus stateRef (Finished res)
+                res & actions ^. aCompleted
+        env = Eval.Env $ evalActions actions stateRef
 
 results :: State pl -> EvalResults pl
 results state =
@@ -159,7 +163,8 @@ getResults evaluator = getState evaluator <&> results
 withLock :: MVar () -> IO a -> IO a
 withLock mvar action = withMVar mvar (const action)
 
-start :: Ord pl => Actions pl -> V.Val pl -> IO (Evaluator pl)
+start ::
+    Ord pl => Actions pl -> V.Val pl -> IO (Evaluator pl)
 start actions src =
     do
         stateRef <-
@@ -168,7 +173,7 @@ start actions src =
             & newIORef
         mvar <- newMVar ()
         let lockedActions = actions & aLoadGlobal %~ (withLock mvar .)
-        newThreadId <- forkIOUnmasked $ evalThread lockedActions stateRef src
+        newThreadId <- evalThread lockedActions stateRef src & forkIOUnmasked
         return Evaluator
             { eStateRef = stateRef
             , eThreadId = newThreadId

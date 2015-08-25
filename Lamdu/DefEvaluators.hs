@@ -88,6 +88,7 @@ evalActions evaluators =
     { EvalBG._aLoadGlobal = loadGlobal
     , EvalBG._aRunBuiltin = Builtins.eval
     , EvalBG._aReportUpdatesAvailable = eInvalidateCache evaluators
+    , EvalBG._aCompleted = \_ -> return ()
     }
     where
         loadGlobal globalId =
