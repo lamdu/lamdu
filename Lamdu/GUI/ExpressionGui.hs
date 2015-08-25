@@ -257,15 +257,15 @@ data EvalResDisplay = EvalResDisplay
 makeEvaluationResultView ::
     MonadA m => AnimId -> EvalResDisplay -> ExprGuiM m (ExpressionGui m)
 makeEvaluationResultView animId res =
-    EvalView.make (animId ++ [encodeS (erdScope res)]) (erdVal res)
-    >>= case erdSource res of
-        Current -> return
-        Previous ->
-            \view ->
-            do
-                config <- ExprGuiM.readConfig
-                View.tint (Config.staleResultTint (Config.eval config)) view
-                    & return
+    do
+        view <- EvalView.make (animId ++ [encodeS (erdScope res)]) (erdVal res)
+        case erdSource res of
+            Current -> return view
+            Previous ->
+                do
+                    config <- ExprGuiM.readConfig
+                    View.tint (Config.staleResultTint (Config.eval config)) view
+                        & return
     <&> Widget.fromView
     <&> fromValueWidget
 
