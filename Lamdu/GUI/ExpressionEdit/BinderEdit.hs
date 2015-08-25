@@ -10,6 +10,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (guard, join)
 import           Control.MonadA (MonadA)
+import           Data.CurAndPrev (current)
 import           Data.List.Utils (nonEmptyAll)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
@@ -175,7 +176,7 @@ mkScopeCursor binder =
             & ExprGuiM.transaction
             <&> join
         mOuterScopeId
-            >>= (`Map.lookup` (binder ^. Sugar.bScopes))
+            >>= (`Map.lookup` (binder ^. Sugar.bScopes . current))
             >>= scopeCursor mChosenScope
             & return
 

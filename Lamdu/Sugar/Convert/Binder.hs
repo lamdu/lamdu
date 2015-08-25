@@ -11,7 +11,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (guard, void, when, join)
 import           Control.MonadA (MonadA)
-import           Data.CurAndPrev (CurAndPrev, current, prev)
+import           Data.CurAndPrev (CurAndPrev, current)
 import           Data.Foldable (traverse_)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
@@ -786,10 +786,8 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
             , _bMChosenScopeProp = mChosenScopeProp
             , _bBody = bodyS
             , _bScopes =
-                map binderScopes <$>
-                cpScopes convParams ^.
-                if Map.null (cpScopes convParams ^. current)
-                then prev else current
+                cpScopes convParams
+                <&> Lens.traversed . Lens.traversed %~ binderScopes
             , _bLetItems = letItems
             , _bMActions =
                 mkActions

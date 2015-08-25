@@ -487,7 +487,7 @@ data Binder name m expr = Binder
     , _bLetItems :: [LetItem name m expr]
     , _bBody :: expr
     , _bMActions :: Maybe (BinderActions m)
-    , _bScopes :: Map E.ScopeId [BinderScopes]
+    , _bScopes :: CurAndPrev (Map E.ScopeId [BinderScopes])
     } deriving (Functor, Foldable, Traversable)
 
 data AcceptNewType m = AcceptNewType
