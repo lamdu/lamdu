@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell #-}
 module Lamdu.Sugar.Names.NameGen
     ( NameGen, initial
-    , IsFunction(..), existingName, newName
+    , VarInfo(..), existingName, newName
     ) where
 
 import           Prelude.Compat
@@ -14,7 +14,7 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 
-data IsFunction = Function | NotFunction
+data VarInfo = Function | NormalVar
 
 data NameGen g = NameGen
     { _ngUnusedNames :: [String]
@@ -37,7 +37,7 @@ existingName g =
     fromMaybe ("TodoError:" ++ show g) <$>
     Lens.uses ngUsedNames (Map.lookup g)
 
-newName :: Ord g => (String -> Bool) -> IsFunction -> g -> State (NameGen g) String
+newName :: Ord g => (String -> Bool) -> VarInfo -> g -> State (NameGen g) String
 newName acceptName isFunc g =
     do
         name <- Lens.zoom names loop
@@ -52,5 +52,5 @@ newName acceptName isFunc g =
                     else loop
         names =
             case isFunc of
-            NotFunction -> ngUnusedNames
+            NormalVar -> ngUnusedNames
             Function -> ngUnusedFuncNames

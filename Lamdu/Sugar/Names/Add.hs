@@ -285,7 +285,7 @@ p2cpsNameConvertorGlobal prefix storedNames =
     p2cpsNameConvertor storedNames $
     \p2env -> (makeGuidName prefix (storedNames ^. storedName), p2env)
 
-p2cpsNameConvertorLocal :: MonadA tm => NameGen.IsFunction -> Walk.CPSNameConvertor (Pass2M tm)
+p2cpsNameConvertorLocal :: MonadA tm => NameGen.VarInfo -> Walk.CPSNameConvertor (Pass2M tm)
 p2cpsNameConvertorLocal isFunction storedNames =
     p2cpsNameConvertor storedNames $ \p2env ->
     (`runState` p2env) . Lens.zoom p2NameGen $

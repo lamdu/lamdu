@@ -32,8 +32,8 @@ class (MonadA m, MonadA (TM m)) => MonadNaming m where
     type TM m :: * -> *
     opRun :: m (InTransaction m (TM m))
 
-    opWithParamName :: NameGen.IsFunction -> CPSNameConvertor m
-    opWithLetItemName :: NameGen.IsFunction -> CPSNameConvertor m
+    opWithParamName :: NameGen.VarInfo -> CPSNameConvertor m
+    opWithLetItemName :: NameGen.VarInfo -> CPSNameConvertor m
     opWithDefName :: CPSNameConvertor m
     opWithTagName :: CPSNameConvertor m
     opGetDefName :: NameConvertor m
@@ -45,9 +45,9 @@ class (MonadA m, MonadA (TM m)) => MonadNaming m where
 type OldExpression m a = Expression (OldName m) (TM m) a
 type NewExpression m a = Expression (NewName m) (TM m) a
 
-isFunctionType :: Type -> NameGen.IsFunction
+isFunctionType :: Type -> NameGen.VarInfo
 isFunctionType T.TFun {} = NameGen.Function
-isFunctionType _ = NameGen.NotFunction
+isFunctionType _ = NameGen.NormalVar
 
 toHoleResult ::
     MonadNaming m =>
