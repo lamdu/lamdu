@@ -113,9 +113,8 @@ readVal =
     where
         loop valI =
             \case
-                Nothing -> error $ "Recursive reference: " ++ show valI
-                Just go -> fmap (Val valI) .
-                           traverse go =<< readValBody valI
+            Nothing -> error $ "Recursive reference: " ++ show valI
+            Just go -> readValBody valI >>= traverse go <&> Val valI
 
 expressionBodyFrom ::
     MonadA m =>
