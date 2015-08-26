@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, GeneralizedNewtypeDeriving, LambdaCase #-}
 module Lamdu.Expr.IRef
     ( ValI(..)
     , ValBody
@@ -111,10 +111,11 @@ readVal ::
 readVal =
     decycle loop
     where
-        loop Nothing valI = error $ "Recursive reference: " ++ show valI
-        loop (Just go) valI =
-            fmap (Val valI) .
-            traverse go =<< readValBody valI
+        loop valI =
+            \case
+                Nothing -> error $ "Recursive reference: " ++ show valI
+                Just go -> fmap (Val valI) .
+                           traverse go =<< readValBody valI
 
 expressionBodyFrom ::
     MonadA m =>
