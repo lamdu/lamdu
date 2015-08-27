@@ -44,9 +44,6 @@ justTag = "BI:just"
 nothingTag :: Tag
 nothingTag = "BI:nothing"
 
-infiniteStreamTag :: Tag
-infiniteStreamTag = "BI:just"
-
 type Order = Int
 
 anchorTags :: [(Order, Tag, String)]
