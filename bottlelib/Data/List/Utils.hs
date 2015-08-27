@@ -32,9 +32,9 @@ insertAt :: Int -> a -> [a] -> [a]
 insertAt n x xs = take n xs ++ x : drop n xs
 
 isLengthAtLeast :: Int -> [a] -> Bool
-isLengthAtLeast n list
-    | n <= 0 = True
-    | otherwise = list ^? Lens.ix (n-1) & Lens.has Lens._Just
+isLengthAtLeast n
+    | n <= 0 = const True
+    | otherwise = Lens.has (Lens.ix (n-1))
 
 nonEmptyAll :: (a -> Bool) -> [a] -> Bool
 nonEmptyAll _ [] = False
