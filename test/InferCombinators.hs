@@ -215,7 +215,7 @@ nonEmptyList items@(x:_) =
         cons h t = glob [typ] ":" $$: [h, t]
         nil = glob [typ] "[]"
 
-tInst :: T.Id -> [(T.ParamId, TypeStream)] -> TypeStream
+tInst :: T.NominalId -> [(T.ParamId, TypeStream)] -> TypeStream
 tInst name =
     fmap (T.TInst name . Map.fromList) . Lens.sequenceAOf (Lens.traversed . _2)
 

@@ -84,7 +84,7 @@ sumType =
 data Public m = Public
     { publicDefs :: [DefI m]
     , publicTags :: [T.Tag]
-    , publicTIds :: [T.Id]
+    , publicTIds :: [T.NominalId]
     }
 
 instance Monoid (Public m) where
@@ -114,7 +114,7 @@ blessAnchors =
                 lift $ setTagOrder tag order
                 Writer.tell $ mempty { publicTags = [tag] }
 
-newTId :: MonadA m => String -> M m T.Id
+newTId :: MonadA m => String -> M m T.NominalId
 newTId n = publicize (namedId n) $ \x -> mempty { publicTIds = [x] }
 
 newPublicDef ::
@@ -125,7 +125,7 @@ type TypeCtor = [Type] -> Type
 
 newNominal ::
     MonadA m =>
-    T.Id -> [(T.ParamId, T.TypeVar)] ->
+    T.NominalId -> [(T.ParamId, T.TypeVar)] ->
     ({-fixpoint:-}TypeCtor -> Scheme) ->
     T m TypeCtor
 newNominal tid params body =
@@ -144,7 +144,7 @@ data Ctor = Ctor
     }
 
 nominalSum ::
-    MonadA m => T.Id -> [(T.ParamId, T.TypeVar)] -> (TypeCtor -> [Ctor]) ->
+    MonadA m => T.NominalId -> [(T.ParamId, T.TypeVar)] -> (TypeCtor -> [Ctor]) ->
     M m TypeCtor
 nominalSum tid params ctors =
     newNominal tid params (Scheme.mono . sumType . ctors) & lift

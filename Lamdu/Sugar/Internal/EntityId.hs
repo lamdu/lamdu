@@ -48,7 +48,7 @@ ofIRef = EntityId . UniqueId.toGuid
 ofValI :: ExprIRef.ValI m -> EntityId
 ofValI = ofIRef . ExprIRef.unValI
 
-ofTId :: T.Id -> EntityId
+ofTId :: T.NominalId -> EntityId
 ofTId = EntityId . UniqueId.toGuid
 
 ofLambdaParam :: V.Var -> EntityId

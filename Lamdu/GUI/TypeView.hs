@@ -110,7 +110,7 @@ makeTFun parentPrecedence a b =
     >>= parens parentPrecedence (MyPrecedence 0)
     >>= addValPadding
 
-makeTInst :: MonadA m => ParentPrecedence -> T.Id -> Map T.ParamId Type -> M m View
+makeTInst :: MonadA m => ParentPrecedence -> T.NominalId -> Map T.ParamId Type -> M m View
 makeTInst _parentPrecedence tid typeParams =
     do
         nameView <-

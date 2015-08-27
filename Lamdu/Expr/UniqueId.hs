@@ -24,13 +24,13 @@ guidOfIdentifier (Identifier bs) = Guid.make bs
 identifierOfGuid :: Guid -> Identifier
 identifierOfGuid = Identifier . Guid.bs
 
-class    ToGuid a          where toGuid :: a -> Guid
-instance ToGuid V.Var      where toGuid = guidOfIdentifier . V.vvName
-instance ToGuid T.Tag      where toGuid = guidOfIdentifier . T.tagName
-instance ToGuid T.Id       where toGuid = guidOfIdentifier . T.typeId
-instance ToGuid T.ParamId  where toGuid = guidOfIdentifier . T.typeParamId
-instance ToGuid (IRef m a) where toGuid = IRef.guid
-instance ToGuid (ValI m)   where toGuid = toGuid . ExprIRef.unValI
+class    ToGuid a           where toGuid :: a -> Guid
+instance ToGuid V.Var       where toGuid = guidOfIdentifier . V.vvName
+instance ToGuid T.Tag       where toGuid = guidOfIdentifier . T.tagName
+instance ToGuid T.NominalId where toGuid = guidOfIdentifier . T.nomId
+instance ToGuid T.ParamId   where toGuid = guidOfIdentifier . T.typeParamId
+instance ToGuid (IRef m a)  where toGuid = IRef.guid
+instance ToGuid (ValI m)    where toGuid = toGuid . ExprIRef.unValI
 
 -- TODO: Remove this when all code uses more descritive types than Guid
 instance ToGuid Guid  where toGuid = id
@@ -42,4 +42,4 @@ mkNew f = f . identifierOfGuid <$> Transaction.newKey
 class ToGuid a => UniqueId a     where new :: MonadA m => Transaction m a
 instance          UniqueId V.Var where new = mkNew V.Var
 instance          UniqueId T.Tag where new = mkNew T.Tag
-instance          UniqueId T.Id  where new = mkNew T.Id
+instance          UniqueId T.NominalId  where new = mkNew T.NominalId

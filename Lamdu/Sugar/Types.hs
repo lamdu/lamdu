@@ -240,7 +240,7 @@ data ScopeGetVar name m = ScopeGetVar
 
 data TIdG name = TIdG
     { _tidgName :: name
-    , _tidgTId :: T.Id
+    , _tidgTId :: T.NominalId
     }
 
 data HoleOption name m = HoleOption

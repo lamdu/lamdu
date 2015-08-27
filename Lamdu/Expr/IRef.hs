@@ -51,8 +51,8 @@ globalId = V.GlobalId . Identifier . Guid.bs . IRef.guid
 defI :: V.GlobalId -> DefI m
 defI (V.GlobalId (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make bs
 
-nominalI :: T.Id -> IRef m Nominal
-nominalI (T.Id (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make ("Nom:" <> bs)
+nominalI :: T.NominalId -> IRef m Nominal
+nominalI (T.NominalId (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make ("Nom:" <> bs)
 
 newtype ValI m = ValI
     { unValI :: IRef m (V.Body (ValI m))

@@ -17,7 +17,7 @@ infixlTag = "BI:infixl"
 infixrTag :: Tag
 infixrTag = "BI:infixr"
 
-listTid :: T.Id
+listTid :: T.NominalId
 listTid = "BI:list"
 
 headTag :: Tag

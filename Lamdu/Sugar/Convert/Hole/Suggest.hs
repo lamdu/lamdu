@@ -30,7 +30,7 @@ import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Update (update)
 import qualified Lamdu.Infer.Update as Update
 
-loadNominalsForType :: Monad m => (T.Id -> m Nominal) -> Type -> m Infer.Loaded
+loadNominalsForType :: Monad m => (T.NominalId -> m Nominal) -> Type -> m Infer.Loaded
 loadNominalsForType loadNominal typ =
     go Map.empty (typ ^. ExprLens.typeTIds . Lens.to Set.singleton)
     where
@@ -49,7 +49,7 @@ loadNominalsForType loadNominal typ =
 
 valueConversion ::
     MonadA m =>
-    (T.Id -> m Nominal) -> a ->
+    (T.NominalId -> m Nominal) -> a ->
     Val (Payload, a) -> m (StateT Context [] (Val (Payload, a)))
 valueConversion loadNominal empty src =
     do

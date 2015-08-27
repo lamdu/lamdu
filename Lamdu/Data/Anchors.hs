@@ -39,7 +39,7 @@ data Code f m = Code
     , preCursor :: f WidgetId.Id
     , postCursor :: f WidgetId.Id
     , tags :: f [T.Tag]
-    , tids :: f [T.Id]
+    , tids :: f [T.NominalId]
     }
 onCode :: (forall a. Binary a => f a -> g a) -> Code f m -> Code g m
 onCode f (Code x0 x1 x2 x3 x4 x5 x6) =

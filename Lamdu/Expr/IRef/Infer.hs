@@ -66,7 +66,7 @@ loader =
     , InferLoad.loadNominal = lift . loadNominal
     }
 
-loadNominal :: MonadA m => T.Id -> T m Nominal
+loadNominal :: MonadA m => T.NominalId -> T m Nominal
 loadNominal tid =
     do
         e <- Transaction.irefExists iref
