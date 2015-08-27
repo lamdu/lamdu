@@ -46,11 +46,12 @@ make getVar pl =
         case getVar of
             Sugar.GetVarNamed namedVar ->
                 makeView (namedVar ^. Sugar.nvName) myId
-                    & ExpressionGui.stdWrap pl
                     <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
+                    & ExpressionGui.stdWrap pl
                 where
                     jumpToDefinitionEventMap =
-                        Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
+                        Widget.keysEventMapMovesCursor
+                        (Config.jumpToDefinitionKeys config ++ Config.extractKeys config)
                         (E.Doc ["Navigation", "Jump to definition"]) $
                         do
                             DataOps.savePreJumpPosition cp myId
