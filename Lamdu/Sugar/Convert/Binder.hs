@@ -857,11 +857,16 @@ useNormalLambda :: Binder name m (Expression name m a) -> Bool
 useNormalLambda binder =
     or
     [ Lens.has (bLetItems . Lens.traversed) binder
-    , Lens.has (bBody . SugarLens.payloadsOf
-        (_BodyLam . lamBinder . bParams . SugarLens.binderNamedParams))
-        binder
-    , Lens.has (bBody . SugarLens.payloadsOf _BodyHole) binder
+    , Lens.has (bBody . SugarLens.payloadsOf forbiddenLightLamSubExprs) binder
     ]
+    where
+        forbiddenLightLamSubExprs :: Lens.Fold (Body name m a) ()
+        forbiddenLightLamSubExprs =
+            Lens.failing (_BodyHole . check)
+            (_BodyLam . lamBinder . bParams . SugarLens.binderNamedParams .
+                check)
+        check :: Lens.Fold a ()
+        check = const () & Lens.to
 
 markLightParams ::
     MonadA m => Set Guid -> ExpressionU m a -> ExpressionU m a
