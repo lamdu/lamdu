@@ -1,5 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.Builtins.Anchors where
+module Lamdu.Builtins.Anchors
+    ( recurseVar, objTag, infixlTag, infixrTag, listTid
+    , headTag, tailTag, consTag, nilTag, trueTag, falseTag, justTag, nothingTag
+    , Order, anchorTags
+    ) where
 
 import           Lamdu.Expr.Type (Tag)
 import qualified Lamdu.Expr.Type as T
