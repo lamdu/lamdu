@@ -843,11 +843,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                 Lens.traversed . npiName
                 & Set.fromList
         let lambda
-                | Lens.has (bLetItems . Lens.traversed) binder
-                || Lens.has (bBody . SugarLens.payloadsOf
-                    (_BodyLam . lamBinder . bParams . SugarLens.binderNamedParams))
-                    binder
-                || Lens.has (bBody . SugarLens.payloadsOf _BodyHole) binder =
+                | useNormalLambda binder =
                     Lambda NormalBinder binder
                 | otherwise =
                     binder
@@ -856,6 +852,16 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
         BodyLam lambda
             & addActions exprPl
             <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
+
+useNormalLambda :: Binder name m (Expression name m a) -> Bool
+useNormalLambda binder =
+    or
+    [ Lens.has (bLetItems . Lens.traversed) binder
+    , Lens.has (bBody . SugarLens.payloadsOf
+        (_BodyLam . lamBinder . bParams . SugarLens.binderNamedParams))
+        binder
+    , Lens.has (bBody . SugarLens.payloadsOf _BodyHole) binder
+    ]
 
 markLightParams ::
     MonadA m => Set Guid -> ExpressionU m a -> ExpressionU m a
