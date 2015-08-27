@@ -34,7 +34,7 @@ insertAt n x xs = take n xs ++ x : drop n xs
 isLengthAtLeast :: Int -> [a] -> Bool
 isLengthAtLeast n list
     | n <= 0 = True
-    | otherwise = list ^? Lens.ix (n-1) & Lens.has Lens._Just
+    | otherwise = Lens.element (n-1) `Lens.notNullOf` list
 
 nonEmptyAll :: (a -> Bool) -> [a] -> Bool
 nonEmptyAll _ [] = False
