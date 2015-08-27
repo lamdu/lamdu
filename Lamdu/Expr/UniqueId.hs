@@ -28,6 +28,7 @@ class    ToGuid a           where toGuid :: a -> Guid
 instance ToGuid V.Var       where toGuid = guidOfIdentifier . V.vvName
 instance ToGuid T.Tag       where toGuid = guidOfIdentifier . T.tagName
 instance ToGuid T.NominalId where toGuid = guidOfIdentifier . T.nomId
+instance ToGuid T.PrimId    where toGuid = guidOfIdentifier . T.primId
 instance ToGuid T.ParamId   where toGuid = guidOfIdentifier . T.typeParamId
 instance ToGuid (IRef m a)  where toGuid = IRef.guid
 instance ToGuid (ValI m)    where toGuid = toGuid . ExprIRef.unValI

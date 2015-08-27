@@ -13,7 +13,7 @@ import qualified Lamdu.Infer as Infer
 
 resultTypeScore :: Type -> [Int]
 resultTypeScore (TVar _) = [0]
-resultTypeScore TInt = [1]
+resultTypeScore (TPrim _) = [1]
 resultTypeScore (TInst _ p) = 2 : maximum ([] : map resultTypeScore (Map.elems p))
 resultTypeScore (TFun a r) = 2 : max (resultTypeScore a) (resultTypeScore r)
 resultTypeScore (TSum c) = 2 : compositeTypeScore c

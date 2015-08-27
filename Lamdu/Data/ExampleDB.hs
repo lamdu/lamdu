@@ -106,6 +106,7 @@ blessAnchors =
     do
         mapM_ describeAnchorTag Builtins.anchorTags
         lift $ setName Builtins.listTid "List"
+        lift $ setName Builtins.intId "Int"
         Writer.tell $ mempty { publicTIds = [Builtins.listTid] }
     where
         describeAnchorTag (order, tag, name) =
@@ -214,6 +215,9 @@ createBool =
             ]
         tyCon [] & return
 
+int :: Type
+int = T.TPrim Builtins.intId
+
 createPublics :: MonadA m => T m (Public m)
 createPublics =
     do
@@ -234,15 +238,15 @@ createPublics =
 
         let arith n i =
                 newPublicBuiltinQualified_ ("Prelude." ++ n) (Infix i)
-                (Scheme.mono (infixType T.TInt T.TInt T.TInt))
+                (Scheme.mono (infixType int int int))
         arith "+" 6
         arith "-" 6
         arith "*" 7
         arith "^" 8
-        newPublicBuiltin_ "%" (Infix 7) ["Prelude"] "mod" $ Scheme.mono $ infixType T.TInt T.TInt T.TInt
-        newPublicBuiltin_ "//" (Infix 7) ["Prelude"] "div" $ Scheme.mono $ infixType T.TInt T.TInt T.TInt
-        newPublicBuiltinQualified_ "Prelude.negate" OO $ Scheme.mono $ T.TInt ~> T.TInt
-        newPublicBuiltinQualified_ "Prelude.sqrt" OO $ Scheme.mono $ T.TInt ~> T.TInt
+        newPublicBuiltin_ "%" (Infix 7) ["Prelude"] "mod" $ Scheme.mono $ infixType int int int
+        newPublicBuiltin_ "//" (Infix 7) ["Prelude"] "div" $ Scheme.mono $ infixType int int int
+        newPublicBuiltinQualified_ "Prelude.negate" OO $ Scheme.mono $ int ~> int
+        newPublicBuiltinQualified_ "Prelude.sqrt" OO $ Scheme.mono $ int ~> int
 
         let cmp n =
                 newPublicBuiltinQualified_ ("Prelude." ++ n) (Infix 4) $
