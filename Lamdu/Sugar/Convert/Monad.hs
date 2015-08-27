@@ -58,7 +58,7 @@ data Context m = Context
     , -- Where "extract to let" goes:
       _scMExtractDestPos :: Maybe (ExprIRef.ValIProperty m)
     , scConvertSubexpression ::
-              forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
+        forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
     }
 Lens.makeLenses ''Context
 
