@@ -9,6 +9,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
+import           Data.Maybe.Utils (unsafeUnjust)
 import qualified Data.Set as Set
 import           DefinitionTypes
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -119,7 +120,7 @@ instantiate scheme typeVarAssignments =
     onTVars subst (scheme ^. Scheme.schemeType)
     where
         subst =
-            fromMaybe (error "Missing type var assignment") .
+            unsafeUnjust "Missing type var assignment" .
             (`lookup` typeVarAssignments)
 
 onTVars :: (T.Var Type -> Type) -> Type -> Type
@@ -135,7 +136,7 @@ glob typeVarAssignments globalId
     | otherwise = error "TODO: Handle record/sum type vars in globals"
     where
         scheme =
-            fromMaybe (error ("global " ++ show globalId ++ " does not exist")) $
+            unsafeUnjust ("global " ++ show globalId ++ " does not exist") $
             Map.lookup globalId $
             Infer.loadedGlobalTypes definitionTypes
         TypeVars tvs rtvs stvs = scheme ^. Scheme.schemeForAll

@@ -10,6 +10,7 @@ import           Control.Monad (unless)
 import           Data.List (elemIndex)
 import           Data.List.Utils (removeAt)
 import           Data.Maybe (fromMaybe)
+import           Data.Maybe.Utils (unsafeUnjust)
 import qualified Data.Monoid as Monoid
 import           Data.Store.Rev.Branch (Branch)
 import qualified Data.Store.Rev.Branch as Branch
@@ -48,7 +49,7 @@ deleteBranch view branches branch = do
     where
         newBranch = newBranches !! min (length newBranches - 1) index
         index =
-            fromMaybe (error "Invalid current branch!") $
+            unsafeUnjust "Invalid current branch!" $
             elemIndex branch branches
         newBranches = removeAt index branches
 

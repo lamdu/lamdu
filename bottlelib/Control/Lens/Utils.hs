@@ -13,10 +13,10 @@ import           Prelude.Compat
 import           Control.Lens (Lens)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe.Utils (unsafeUnjust)
 
 _fromJust :: String -> Lens.Iso (Maybe a) (Maybe b) a b
-_fromJust msg = Lens.iso (fromMaybe (error msg)) Just
+_fromJust msg = Lens.iso (unsafeUnjust msg) Just
 {-# INLINE _fromJust #-}
 
 type Context' a t = Lens.Context a a t
