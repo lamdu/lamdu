@@ -18,6 +18,7 @@ import qualified Data.List.Utils as ListUtils
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
+import           Data.Maybe.Utils (unsafeUnjust)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Store.Guid (Guid)
@@ -434,7 +435,7 @@ makeNonRecordParamActions mRecursiveVar storedLam =
 
 lamParamType :: Input.Payload m a -> Type
 lamParamType lamExprPl =
-    fromMaybe (error "Lambda value not inferred to a function type?!") $
+    unsafeUnjust "Lambda value not inferred to a function type?!" $
     lamExprPl ^? Input.inferredType . ExprLens._TFun . _1
 
 mkFuncParam :: EntityId -> Input.Payload m a -> info -> FuncParam info

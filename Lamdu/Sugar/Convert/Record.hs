@@ -9,7 +9,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (void)
 import           Control.MonadA (MonadA)
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe.Utils (unsafeUnjust)
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -71,7 +71,7 @@ deleteField mStored mRestI restS expr exprS =
                     case mResult of
                         Just result -> return result
                         Nothing ->
-                            fromMaybe (error "should have a way to fix type error") $
+                            unsafeUnjust "should have a way to fix type error" $
                             case restS ^. rTail of
                             RecordExtending ext ->
                                 ext ^? rPayload . plActions . Lens._Just . wrap . _WrapAction
