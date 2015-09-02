@@ -3,11 +3,9 @@ module Lamdu.Builtins.Anchors
     ( recurseVar, objTag, infixlTag, infixrTag, listTid
     , headTag, tailTag, consTag, nilTag, trueTag, falseTag, justTag, nothingTag
     , Order, anchorTags
-    , intId, encodeInt, decodeInt
+    , intId
     ) where
 
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 import           Lamdu.Expr.Type (Tag)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
@@ -70,20 +68,3 @@ anchorTags =
     , (0, nothingTag, "Nothing")
     , (1, justTag, "Just")
     ]
-
-decodeInt :: ByteString -> Integer
-decodeInt = fromDigitsLE 0x100 . BS.unpack
-
-encodeInt :: Integer -> ByteString
-encodeInt = BS.pack . toDigitsLE 0x100
-
-fromDigitsLE :: Integral a => Integer -> [a] -> Integer
-fromDigitsLE _ [] = 0
-fromDigitsLE base (x:xs) = fromIntegral x + base * fromDigitsLE base xs
-
-toDigitsLE :: Integral a => Integer -> Integer -> [a]
-toDigitsLE _ 0 = []
-toDigitsLE base x =
-    fromIntegral m : toDigitsLE base d
-    where
-        (d, m) = divMod x base

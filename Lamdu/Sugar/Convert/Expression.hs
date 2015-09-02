@@ -8,6 +8,7 @@ import           Prelude.Compat
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
+import           Data.Binary.Utils (decodeS)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
@@ -85,7 +86,7 @@ convert v =
       V.BLeaf (V.LVar x) -> convertGetVar x
       V.BLeaf (V.LGlobal x) -> convertGlobal x
       V.BLeaf (V.LLiteral (V.Literal p bs))
-          | p == Builtins.intId -> convertVLiteralInteger (Builtins.decodeInt bs)
+          | p == Builtins.intId -> convertVLiteralInteger (decodeS bs)
           | otherwise -> error "TODO Literals which are not integers"
       V.BLeaf V.LHole -> ConvertHole.convert
       V.BLeaf V.LRecEmpty -> ConvertRecord.convertEmpty

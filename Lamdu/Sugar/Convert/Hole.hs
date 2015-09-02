@@ -18,6 +18,7 @@ import           Control.Monad.Trans.Either (EitherT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
 import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)
+import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
@@ -191,7 +192,7 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
         , _holeOptionLiteralInt =
             return . mkHoleOption sugarContext mInjectedArg exprPl stored .
             SeedExpr . Val () . V.BLeaf .
-            V.LLiteral . V.Literal Builtins.intId . Builtins.encodeInt
+            V.LLiteral . V.Literal Builtins.intId . encodeS
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
         }
 
