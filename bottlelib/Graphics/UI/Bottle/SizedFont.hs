@@ -20,11 +20,12 @@ data SizedFont = SizedFont
     }
 Lens.makeLenses ''SizedFont
 
-render :: SizedFont -> String -> (DrawUtils.TextSize (Vector2 Draw.R), Draw.Image ())
-render sizedFont str =
+render :: SizedFont -> Draw.Color -> String -> (DrawUtils.TextSize (Vector2 Draw.R), Draw.Image ())
+render sizedFont color str =
     ( textSize sizedFont str
-    , DrawUtils.scale (realToFrac (sizedFont ^. fontSize)) %%
-      DrawUtils.drawText (sizedFont ^. font) str
+    , ( DrawUtils.scale (realToFrac (sizedFont ^. fontSize)) %%
+        DrawUtils.drawText (sizedFont ^. font) str
+      ) & Draw.tint color
     )
 
 textHeight :: SizedFont -> Draw.R
