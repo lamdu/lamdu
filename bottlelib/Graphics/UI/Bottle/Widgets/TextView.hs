@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, BangPatterns, RecordWildCards, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.TextView
-    ( Style(..), styleColor, styleFont
+    ( SizedFont.Underline(..), SizedFont.underlineColor, SizedFont.underlineWidth
+    , Style(..), styleColor, styleFont, styleUnderline
     , lineHeight
 
     , make, makeWidget
@@ -34,6 +35,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 data Style = Style
     { _styleColor :: Draw.Color
     , _styleFont :: SizedFont
+    , _styleUnderline :: Maybe SizedFont.Underline
     }
 Lens.makeLenses ''Style
 
@@ -48,7 +50,7 @@ Lens.makeLenses ''RenderedText
 
 fontRender :: Style -> String -> RenderedText (Draw.Image ())
 fontRender Style{..} str =
-    SizedFont.render _styleFont _styleColor str
+    SizedFont.render _styleFont _styleColor _styleUnderline str
     & uncurry RenderedText
 
 drawMany ::

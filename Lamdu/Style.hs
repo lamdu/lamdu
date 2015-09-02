@@ -29,6 +29,7 @@ help font Config.Help{..} =
         TextView.Style
         { TextView._styleColor = helpTextColor
         , TextView._styleFont = SizedFont font helpTextSize
+        , TextView._styleUnderline = Nothing
         }
     , EventMapDoc.configInputDocColor = helpInputDocColor
     , EventMapDoc.configBGColor = helpBGColor
@@ -41,6 +42,7 @@ base config font = TextEdit.Style
         TextView.Style
         { TextView._styleColor = Config.baseColor config
         , TextView._styleFont = SizedFont font (Config.baseTextSize config)
+        , TextView._styleUnderline = Nothing
         }
     , TextEdit._sCursorColor = TextEdit.defaultCursorColor
     , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
