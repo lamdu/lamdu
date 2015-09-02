@@ -42,20 +42,15 @@ lineHeight Style{..} = SizedFont.textHeight _styleFont
 
 data RenderedText a = RenderedText
     { _renderedTextSize :: TextSize Size
-    , renderedText :: a
+    , _renderedText :: a
     }
-
 Lens.makeLenses ''RenderedText
 
 fontRender :: Style -> String -> RenderedText (Draw.Image ())
 fontRender Style{..} str =
-    RenderedText
-    { _renderedTextSize = SizedFont.textSize _styleFont str
-    , renderedText =
-      str
-      & SizedFont.render _styleFont
-      & Draw.tint _styleColor
-    }
+    SizedFont.render _styleFont str
+    & uncurry RenderedText
+    & renderedText %~ Draw.tint _styleColor
 
 drawMany ::
     (Size -> Size) ->
