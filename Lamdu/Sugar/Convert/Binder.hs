@@ -859,6 +859,7 @@ useNormalLambda binder =
     or
     [ Lens.has (bLetItems . Lens.traversed) binder
     , Lens.has (bBody . SugarLens.payloadsOf forbiddenLightLamSubExprs) binder
+    , Lens.nullOf (bParams . _FieldParams) binder
     ]
     where
         forbiddenLightLamSubExprs :: Lens.Fold (Body name m a) ()
