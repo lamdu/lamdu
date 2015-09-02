@@ -28,7 +28,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Get as NamesGet
 import           Lamdu.Sugar.Names.Types (Name(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -189,17 +188,13 @@ searchTermsOfBodyNames = \case
     Sugar.BodyLam {} -> []
     body -> NamesGet.fromBody body <&> searchTermOfName
 
-searchTermsOfBody :: MonadA m => Sugar.Body (Name m) m expr -> [String]
-searchTermsOfBody = searchTermsOfBodyShape <> searchTermsOfBodyNames
-
 mkGroup :: MonadA m => Sugar.HoleOption (Name m) m -> T m (Group m)
 mkGroup option =
     do
         sugaredBaseExpr <- option ^. Sugar.hoSugaredBaseExpr
         let searchTerms =
-                concatMap searchTermsOfBody
-                (sugaredBaseExpr ^..
-                 SugarLens.subExprPayloads . Lens.asIndex . Sugar.rBody)
+                (searchTermsOfBodyNames <> searchTermsOfBodyShape)
+                (sugaredBaseExpr ^. Sugar.rBody)
         pure Group
             { _groupSearchTerms = searchTerms
             , _groupResults = option ^. Sugar.hoResults
