@@ -179,27 +179,22 @@ Executable lamdu
                   , Lamdu.Expr.RecordVal
                   , Lamdu.Expr.IRef
                   , Lamdu.Expr.GenIds
-                  , Lamdu.GUI.TypeView
-                  , Lamdu.GUI.VersionControl.Config
-                  , Lamdu.GUI.ExpressionGui.Types
-                  , Lamdu.GUI.ExpressionGui.Monad
-                  , Lamdu.GUI.Scroll
-                  , Lamdu.GUI.Precedence
-                  , Lamdu.GUI.WidgetIds
-                  , Lamdu.GUI.VersionControl
-                  , Lamdu.GUI.Parens
-                  , Lamdu.GUI.Zoom
+                  , Lamdu.GUI.CodeEdit
                   , Lamdu.GUI.CodeEdit.Settings
-                  , Lamdu.GUI.ExpressionGui
-                  , Lamdu.GUI.ExpressionEdit.RecordEdit
-                  , Lamdu.GUI.ExpressionEdit.InjectEdit
+                  , Lamdu.GUI.DefinitionEdit
+                  , Lamdu.GUI.EvalView
+                  , Lamdu.GUI.ExpressionEdit
+                  , Lamdu.GUI.ExpressionEdit.ApplyEdit
                   , Lamdu.GUI.ExpressionEdit.BinderEdit
+                  , Lamdu.GUI.ExpressionEdit.BuiltinEdit
                   , Lamdu.GUI.ExpressionEdit.CaseEdit
-                  , Lamdu.GUI.ExpressionEdit.LiteralEdit
+                  , Lamdu.GUI.ExpressionEdit.EventMap
+                  , Lamdu.GUI.ExpressionEdit.GetFieldEdit
+                  , Lamdu.GUI.ExpressionEdit.GetVarEdit
                   , Lamdu.GUI.ExpressionEdit.HoleEdit
-                  , Lamdu.GUI.ExpressionEdit.HoleEdit.Info
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.Common
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.Info
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.Open
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
@@ -208,23 +203,28 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.State
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
-                  , Lamdu.GUI.ExpressionEdit.GetVarEdit
-                  , Lamdu.GUI.ExpressionEdit.EventMap
+                  , Lamdu.GUI.ExpressionEdit.InjectEdit
                   , Lamdu.GUI.ExpressionEdit.LambdaEdit
-                  , Lamdu.GUI.ExpressionEdit.BuiltinEdit
-                  , Lamdu.GUI.ExpressionEdit.NomEdit
-                  , Lamdu.GUI.ExpressionEdit.TagEdit
-                  , Lamdu.GUI.ExpressionEdit.ApplyEdit
                   , Lamdu.GUI.ExpressionEdit.ListEdit
-                  , Lamdu.GUI.ExpressionEdit.GetFieldEdit
-                  , Lamdu.GUI.ExpressionEdit
+                  , Lamdu.GUI.ExpressionEdit.LiteralEdit
+                  , Lamdu.GUI.ExpressionEdit.NomEdit
+                  , Lamdu.GUI.ExpressionEdit.RecordEdit
+                  , Lamdu.GUI.ExpressionEdit.TagEdit
+                  , Lamdu.GUI.ExpressionGui
+                  , Lamdu.GUI.ExpressionGui.Monad
+                  , Lamdu.GUI.ExpressionGui.Types
                   , Lamdu.GUI.Main
-                  , Lamdu.GUI.WidgetIdIRef
-                  , Lamdu.GUI.CodeEdit
-                  , Lamdu.GUI.DefinitionEdit
                   , Lamdu.GUI.ParamEdit
+                  , Lamdu.GUI.Parens
+                  , Lamdu.GUI.Precedence
                   , Lamdu.GUI.RedundantAnnotations
-                  , Lamdu.GUI.EvalView
+                  , Lamdu.GUI.Scroll
+                  , Lamdu.GUI.TypeView
+                  , Lamdu.GUI.VersionControl
+                  , Lamdu.GUI.VersionControl.Config
+                  , Lamdu.GUI.WidgetIdIRef
+                  , Lamdu.GUI.WidgetIds
+                  , Lamdu.GUI.Zoom
                   , Lamdu.Main
                   , Lamdu.Config.Sampler
                   , Lamdu.Font
