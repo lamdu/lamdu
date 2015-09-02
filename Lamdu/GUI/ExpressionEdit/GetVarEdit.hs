@@ -3,12 +3,15 @@ module Lamdu.GUI.ExpressionEdit.GetVarEdit
     ( make
     ) where
 
-import           Prelude.Compat
-
 import           Control.Lens.Operators
+import qualified Control.Lens as Lens
 import           Control.MonadA (MonadA)
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.Monoid ((<>))
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -16,13 +19,12 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets as BWidgets
+
+import           Prelude.Compat
 
 makeSimpleView ::
     MonadA m => Draw.Color -> Name m -> Widget.Id ->
@@ -58,7 +60,10 @@ make getVar pl =
                             WidgetIds.fromEntityId <$> namedVar ^. Sugar.nvJumpTo
                     makeView =
                         case namedVar ^. Sugar.nvMode of
-                        Sugar.LightLambda -> makeSimpleView nameOriginFGColor
+                        Sugar.LightLambda ->
+                            makeSimpleView nameOriginFGColor
+                            <&> Lens.mapped %~
+                                LightLambda.withUnderline (Config.lightLambda config)
                         _ ->
                             case namedVar ^. Sugar.nvVarType of
                             Sugar.GetDefinition -> makeSimpleView definitionColor

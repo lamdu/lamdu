@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , widgetEnv
     , makeLabel
     , StoredEntityIds(..), Injected(..)
-    , transaction, localEnv, withFgColor
+    , transaction, localEnv, withFgColor, withLocalUnderline
     , getP, assignCursor, assignCursorPrefix
     , makeFocusDelegator
     --
@@ -47,6 +47,8 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.WidgetId (toAnimId)
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
@@ -111,6 +113,12 @@ localEnv = (exprGuiM %~) . RWS.mapRWST . WE.localEnv
 
 withFgColor :: MonadA m => Draw.Color -> ExprGuiM m a -> ExprGuiM m a
 withFgColor = localEnv . WE.setTextColor
+
+withLocalUnderline :: MonadA m => TextView.Underline -> ExprGuiM m a -> ExprGuiM m a
+withLocalUnderline underline =
+    WE.envTextStyle . TextEdit.sTextViewStyle .
+    TextView.styleUnderline ?~ underline
+    & localEnv
 
 readSettings :: MonadA m => ExprGuiM m Settings
 readSettings = ExprGuiM $ Lens.view aSettings

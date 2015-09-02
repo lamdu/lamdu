@@ -10,12 +10,14 @@ import           Control.MonadA (MonadA)
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
+import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..))
@@ -53,10 +55,12 @@ mkLightLambda mParamsEdit mScopeEdit params myId =
             mapM (WE.isSubCursor . WidgetIds.fromEntityId) paramIds
             <&> or
             & ExprGuiM.widgetEnv
+        config <- ExprGuiM.readConfig <&> Config.lightLambda
         if isSelected
             then mkExpanded mParamsEdit mScopeEdit animId
             else
                 ExpressionGui.grammarLabel "λ" animId
+                & LightLambda.withUnderline config
                 >>= ExpressionGui.makeFocusableView
                     (Widget.joinId myId ["lam"])
                 -- TODO: add event to jump to first param

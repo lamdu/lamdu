@@ -3,6 +3,7 @@
 module Lamdu.Config
     ( Layers(..)
     , Help(..), Zoom(..), Pane(..), Hole(..), Name(..), Eval(..)
+    , LightLambda(..)
     , Config(..)
     , delKeys
     , layerInterval
@@ -109,6 +110,13 @@ data Name = Name
 instance ToJSON Name
 instance FromJSON Name
 
+data LightLambda = LightLambda
+    { lightLambdaUnderlineColor :: Draw.Color
+    , lightLambdaUnderlineWidth :: Double
+    } deriving (Eq, Generic, Show)
+instance ToJSON LightLambda
+instance FromJSON LightLambda
+
 data Eval = Eval
     { prevScopeKeys :: [ModKey]
     , nextScopeKeys :: [ModKey]
@@ -127,6 +135,7 @@ data Config = Config
     , versionControl :: VersionControl.Config
     , hole :: Hole
     , name :: Name
+    , lightLambda :: LightLambda
     , eval :: Eval
 
     , animationTimePeriodSec :: Double
