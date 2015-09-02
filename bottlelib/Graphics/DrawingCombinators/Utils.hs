@@ -76,16 +76,13 @@ textWidth font str =
 textSize :: Draw.Font -> String -> TextSize (Vector2 Draw.R)
 textSize font str = (`Vector2` textHeight) <$> textWidth font str
 
-descender :: Draw.Font -> Draw.R
-descender = Draw.fontDescender
-
 drawText :: Draw.Font -> String -> Image
 drawText font str =
     str
     & Draw.text font
     & void
     -- Text is normally at height -0.5..1.5.  We move it to be -textHeight..0
-    & (translate (Vector2 0 (-textHeight - descender font)) %%)
+    & (translate (Vector2 0 (-textHeight - Draw.fontDescender font)) %%)
     -- We want to reverse it so that higher y is down, and it is also
     -- moved to 0..2
     & (scale (Vector2 1 (-1)) %%)
