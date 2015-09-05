@@ -464,7 +464,7 @@ data LetItem name m expr = LetItem
     , _liAnnotation :: Annotation
     , _liName :: name
     , _liActions :: Maybe (LetItemActions m)
-    , -- This is a mapping from param in bScopes to the where item's scope
+    , -- This is a mapping from param in bScopes to the let item's scope
       _liScopes :: CurAndPrev (Map BinderParamScopeId E.ScopeId)
     } deriving (Functor, Foldable, Traversable)
 
@@ -474,7 +474,7 @@ data BinderActions m = BinderActions
     }
 
 data BinderParams name m
-    = -- a definition or where-item without parameters
+    = -- a definition or let-item without parameters
       DefintionWithoutParams
     | -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
