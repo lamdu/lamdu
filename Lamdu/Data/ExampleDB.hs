@@ -229,8 +229,6 @@ createPublics =
         _ <- createMaybe valTParamId
         _ <- createStream valTParamId
         _ <- createInfiniteStream valTParamId
-        lamdu <- newTId "Lamdu"
-        lift $ newNominal lamdu [] $ const $ Scheme.mono int
         bool <- createBool
 
         let infixType lType rType resType =
