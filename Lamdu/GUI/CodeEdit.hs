@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable, RecordWildCards, OverloadedStrings #-}
 module Lamdu.GUI.CodeEdit
     ( make
     , Env(..)
@@ -8,6 +8,7 @@ import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Monad.Trans.Class (lift)
 import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev(..))
@@ -35,10 +36,13 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Load (loadDef)
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
+import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
+import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Names.Add as AddNames
 import           Lamdu.Sugar.Names.Types (DefinitionN, Name)
+import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.OrderTags as OrderTags
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
@@ -91,8 +95,6 @@ makePanes defaultDelDest (Property panes setPanes) =
             , paneMoveUp = mkMMovePaneUp i
             }
 
-type Payload = ([Sugar.EntityId], NearestHoles.NearestHoles)
-
 processDefI ::
     MonadA m => Env m -> DefI m -> T m (DefinitionN m [Sugar.EntityId])
 processDefI env defI =
@@ -109,17 +111,22 @@ processPane env pane = processDefI env (paneDefI pane) <&> (,) pane
 
 type Panes name m a = PanesP name m (Sugar.Expression name m a)
 newtype PanesP name m expr = Panes
-    { _panes :: [(Pane m, Sugar.Definition name m expr)]
+    { _panesList :: [(Pane m, Sugar.Definition name m expr)]
     } deriving (Functor, Foldable, Traversable)
+Lens.makeLenses ''PanesP
 
 addNearestHoles ::
     MonadA m =>
     Panes name m [Sugar.EntityId] ->
-    Panes name m Payload
+    Panes name m ([Sugar.EntityId], NearestHoles)
 addNearestHoles (Panes panes) =
     panes
     <&> Lens._2 %~ NearestHoles.add traverse . (Lens.traversed %~ (<&> (,)))
     & Panes
+
+toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
+toExprGuiMPayload (entityIds, nearestHoles) =
+    ExprGuiT.emptyPayload nearestHoles & ExprGuiT.plStoredEntityIds .~ entityIds
 
 make :: MonadA m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (T m))
 make env rootId =
@@ -127,6 +134,8 @@ make env rootId =
     <&> makePanes rootId
     >>= lift . traverse (processPane env)
     <&> addNearestHoles . Panes
+    <&> Lens.mapped . Lens.mapped %~ toExprGuiMPayload
+    <&> panesList . Lens.mapped . _2 . Lens.mapped %~ RedundantAnnotations.markAnnotationsToDisplay
     >>= makePanesEdit env rootId
     where
         getProp f = f (codeProps env) ^. Transaction.mkProperty & lift
@@ -149,7 +158,7 @@ makeNewDefinitionEventMap cp =
             (E.Doc ["Edit", "New definition"]) newDefinition
 
 makePanesEdit ::
-    MonadA m => Env m -> Widget.Id -> Panes (Name m) m Payload ->
+    MonadA m => Env m -> Widget.Id -> Panes (Name m) m ExprGuiT.Payload ->
     WidgetEnvT (T m) (Widget (T m))
 makePanesEdit env myId (Panes loadedPanes) =
     do
@@ -185,7 +194,7 @@ makePanesEdit env myId (Panes loadedPanes) =
 
 makePaneEdit ::
     MonadA m =>
-    Env m -> Config.Pane -> (Pane m, DefinitionN m Payload) ->
+    Env m -> Config.Pane -> (Pane m, DefinitionN m ExprGuiT.Payload) ->
     WidgetEnvT (T m) (Widget (T m))
 makePaneEdit env Config.Pane{..} (pane, defS) =
     makePaneWidget env defS
@@ -219,7 +228,7 @@ panesEventMap Env{..} =
         Config.Pane{..} = Config.pane config
 
 makePaneWidget ::
-    MonadA m => Env m -> DefinitionN m Payload -> WidgetEnvT (T m) (Widget (T m))
+    MonadA m => Env m -> DefinitionN m ExprGuiT.Payload -> WidgetEnvT (T m) (Widget (T m))
 makePaneWidget env defS =
     DefinitionEdit.make (codeProps env) (config env) (settings env) defS
     <&> colorize

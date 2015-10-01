@@ -4,7 +4,6 @@ module Lamdu.GUI.DefinitionEdit
     , diveToNameEdit
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
@@ -33,25 +32,18 @@ import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
-import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..), DefinitionN)
-import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Prelude.Compat
 
 type T = Transaction
 
-toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
-toExprGuiMPayload (entityIds, nearestHoles) =
-    ExprGuiT.emptyPayload nearestHoles & ExprGuiT.plStoredEntityIds .~ entityIds
-
 make ::
     MonadA m => Anchors.CodeProps m -> Config -> Settings ->
-    DefinitionN m ([Sugar.EntityId], NearestHoles) ->
-    WidgetEnvT (T m) (Widget (T m))
-make cp config settings defS =
+    DefinitionN m ExprGuiT.Payload -> WidgetEnvT (T m) (Widget (T m))
+make cp config settings exprGuiDefS =
     case exprGuiDefS ^. Sugar.drBody of
         Sugar.DefinitionBodyExpression bodyExpr ->
             makeExprDefinition exprGuiDefS bodyExpr
@@ -59,11 +51,6 @@ make cp config settings defS =
             makeBuiltinDefinition exprGuiDefS builtin
     & ExprGuiM.run ExpressionEdit.make cp config settings
     <&> (^. ExpressionGui.egWidget)
-    where
-        exprGuiDefS =
-            defS
-            <&> Lens.mapped %~ toExprGuiMPayload
-            <&> RedundantAnnotations.markAnnotationsToDisplay
 
 expandTo :: Widget.R -> ExpressionGui m -> ExpressionGui m
 expandTo width eg
