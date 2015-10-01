@@ -25,6 +25,7 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Choice as Choice
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars)
 import           Lamdu.Config (Config)
@@ -200,28 +201,41 @@ makeScopeEventMap prevKey nextKey setter cursor =
 
 makeScopeNavEdit ::
     MonadA m =>
-    Widget.Id -> (Sugar.BinderParamScopeId -> T m ()) -> ScopeCursor ->
-    ExprGuiM m (Maybe (ExpressionGui m))
-makeScopeNavEdit myId setter cursor
-    | null scopes = return Nothing
-    | otherwise =
-        scopes
-        <&> fst
-        & mapM (`ExpressionGui.grammarLabel` Widget.toAnimId myId)
-        >>= ExpressionGui.hboxSpaced
-        >>= ExpressionGui.makeFocusableView myId
-        <&> ExpressionGui.egWidget %~ Widget.weakerEvents
-            (mappend
-                (makeScopeEventMap leftKeys rightKeys setter cursor)
-                blockEventMap)
-        <&> Just
+    Widget.Id -> Maybe (Sugar.BinderParamScopeId -> T m (), ScopeCursor) ->
+    ExprGuiM m (ExpressionGui m)
+makeScopeNavEdit myId mSetterAndCursor =
+    mapM mkArrow scopes
+    >>= ExpressionGui.hboxSpaced
+    >>= ExpressionGui.makeFocusableView myId
+    <&>
+    case mSetterAndCursor of
+    Nothing -> id
+    Just (setter, cursor) ->
+        ExpressionGui.egWidget %~ Widget.weakerEvents
+        (mappend
+            (makeScopeEventMap leftKeys rightKeys setter cursor)
+            blockEventMap)
     where
+        mCursor = mSetterAndCursor ^? Lens._Just . _2
+        mkArrow (txt, mScopeId) =
+            do
+                config <- ExprGuiM.readConfig
+                ExpressionGui.makeLabel txt (Widget.toAnimId myId)
+                    & ExprGuiM.localEnv
+                    ( WE.setTextSizeColor
+                        (Config.navArrowsSize config)
+                        ( case mScopeId of
+                            Nothing -> Config.disabledColor config
+                            Just _ -> Config.grammarColor config
+                        )
+                    )
         leftKeys = [ModKey mempty GLFW.Key'Left]
         rightKeys = [ModKey mempty GLFW.Key'Right]
-        scopes :: [(String, Sugar.BinderParamScopeId)]
+        scopes :: [(String, Maybe Sugar.BinderParamScopeId)]
         scopes =
-            (sMPrevParamScope cursor ^.. Lens._Just <&> (,) "◀") ++
-            (sMNextParamScope cursor ^.. Lens._Just <&> (,) "▶")
+            [ ("◀", mCursor >>= sMPrevParamScope)
+            , ("▶", mCursor >>= sMNextParamScope)
+            ]
         blockEventMap =
             E.keyPresses
             (leftKeys ++ rightKeys)
@@ -249,9 +263,11 @@ makeParts binder delVarBackwardsId myId =
         settings <- ExprGuiM.readSettings
         let curCursor = mScopeCursor ^. current
         mScopeNavEdit <-
-            guard (settings ^. CESettings.sInfoMode == CESettings.Evaluation) >>
-            makeScopeNavEdit scopesNavId <$> mSetScope <*> curCursor
-            & Lens.sequenceOf Lens._Just <&> join
+            case settings ^. CESettings.sInfoMode of
+            CESettings.Evaluation ->
+                makeScopeNavEdit scopesNavId ((,) <$> mSetScope <*> curCursor)
+                <&> Just
+            _ -> return Nothing
         maybe takeNavCursor (const id) mScopeNavEdit $
             do
                 let annotationMode =

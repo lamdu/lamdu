@@ -146,6 +146,7 @@ data Config = Config
     , backgroundColor :: Draw.Color
     , baseColor :: Draw.Color
     , baseTextSize :: Double
+    , navArrowsSize :: Double
     , spaceWidth :: Double
 
     , quitKeys :: [ModKey]
@@ -191,6 +192,7 @@ data Config = Config
     , verticalSpacing :: Double
     , cursorBGColor :: Draw.Color
     , grammarColor :: Draw.Color
+    , disabledColor :: Draw.Color
 
     , listAddItemKeys :: [ModKey]
 

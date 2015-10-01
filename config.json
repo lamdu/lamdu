@@ -558,6 +558,7 @@
         ]
     ],
     "baseTextSize": 13,
+    "navArrowsSize": 10,
     "spaceWidth": 10,
     "wrapKeys": [
         [
@@ -778,6 +779,12 @@
         0.8,
         0.9,
         1.0
+    ],
+    "disabledColor": [
+        0.4,
+        0.4,
+        0.45,
+        0.5
     ],
     "recordAddFieldKeys": [
         [
