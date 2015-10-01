@@ -36,6 +36,8 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Load (loadDef)
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
+import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -230,8 +232,8 @@ panesEventMap Env{..} =
 makePaneWidget ::
     MonadA m => Env m -> DefinitionN m ExprGuiT.Payload -> WidgetEnvT (T m) (Widget (T m))
 makePaneWidget env defS =
-    DefinitionEdit.make (codeProps env) (config env) (settings env) defS
-    <&> colorize
+    DefinitionEdit.make defS <&> colorize
+    & ExprGuiM.run ExpressionEdit.make (codeProps env) (config env) (settings env)
     where
         Config.Pane{..} = Config.pane (config env)
         colorize widget

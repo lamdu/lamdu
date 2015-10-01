@@ -17,14 +17,9 @@ import           Graphics.UI.Bottle.View (View(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
-import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.Scheme (Scheme(..), schemeType)
-import           Lamdu.GUI.CodeEdit.Settings (Settings)
-import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -40,16 +35,13 @@ import           Prelude.Compat
 
 type T = Transaction
 
-make ::
-    MonadA m => Anchors.CodeProps m -> Config -> Settings ->
-    DefinitionN m ExprGuiT.Payload -> WidgetEnvT (T m) (Widget (T m))
-make cp config settings exprGuiDefS =
+make :: MonadA m => DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m))
+make exprGuiDefS =
     case exprGuiDefS ^. Sugar.drBody of
-        Sugar.DefinitionBodyExpression bodyExpr ->
-            makeExprDefinition exprGuiDefS bodyExpr
-        Sugar.DefinitionBodyBuiltin builtin ->
-            makeBuiltinDefinition exprGuiDefS builtin
-    & ExprGuiM.run ExpressionEdit.make cp config settings
+    Sugar.DefinitionBodyExpression bodyExpr ->
+        makeExprDefinition exprGuiDefS bodyExpr
+    Sugar.DefinitionBodyBuiltin builtin ->
+        makeBuiltinDefinition exprGuiDefS builtin
     <&> (^. ExpressionGui.egWidget)
 
 expandTo :: Widget.R -> ExpressionGui m -> ExpressionGui m
