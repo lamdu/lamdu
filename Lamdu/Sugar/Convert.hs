@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types #-}
 module Lamdu.Sugar.Convert
-    ( convertDefI
+    ( convertDefI, convertExpr
     ) where
 
 import qualified Control.Lens as Lens
@@ -14,7 +14,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults)
-import           Lamdu.Expr.IRef (DefI)
+import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
@@ -32,6 +32,8 @@ import           Text.PrettyPrint.HughesPJClass (pPrint)
 
 import           Prelude.Compat
 
+type T = Transaction
+
 convertDefIBuiltin ::
     MonadA m => Definition.Builtin -> DefI m ->
     DefinitionBody Guid m (ExpressionU m [EntityId])
@@ -46,40 +48,43 @@ convertDefIBuiltin (Definition.Builtin name scheme) defI =
             Transaction.writeIRef defI .
             Definition.BodyBuiltin . (`Definition.Builtin` scheme)
 
+reinferCheckDefinition :: MonadA m => DefI m -> T m Bool
+reinferCheckDefinition defI =
+    do
+        defBody <- Transaction.readIRef defI
+        case defBody of
+            Definition.BodyBuiltin {} -> return True
+            Definition.BodyExpr (Definition.Expr valI _) ->
+                ExprIRef.readVal valI
+                <&> fmap (flip (,) ())
+                <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")
+                <&> fmap fst
+                >>= -- TODO: loadInfer is for sugar, we don't need sugar here
+                    loadInfer mempty
+                <&> Lens.has Lens._Right
+
 mkContext ::
     MonadA m =>
-    DefI m -> Anchors.Code (Transaction.MkProperty m) m -> Infer.Context ->
+    Maybe (DefI m) -> Anchors.Code (Transaction.MkProperty m) m -> T m Bool -> Infer.Context ->
     Context m
-mkContext defI cp inferContext =
+mkContext defI cp reinferCheckRoot inferContext =
     Context
     { _scInferContext = inferContext
-    , _scDefI = Just defI
+    , _scDefI = defI
     , _scCodeAnchors = cp
     , _scTagParamInfos = mempty
     , _scMExtractDestPos = Nothing
     , _scNullParams = mempty
-    , _scReinferCheckRoot =
-          do
-              defBody <- Transaction.readIRef defI
-              case defBody of
-                  Definition.BodyBuiltin {} -> return True
-                  Definition.BodyExpr (Definition.Expr valI _) ->
-                      ExprIRef.readVal valI
-                      <&> fmap (flip (,) ())
-                      <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")
-                      <&> fmap fst
-                      >>= -- TODO: loadInfer is for sugar, we don't need sugar here
-                          loadInfer mempty
-                      <&> Lens.has Lens._Right
+    , _scReinferCheckRoot = reinferCheckRoot
     , scConvertSubexpression = ConvertExpr.convert
     }
 
 convertDefI ::
     MonadA m =>
-    CurAndPrev (EvalResults (ExprIRef.ValI m)) ->
+    CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeProps m ->
-    Definition.Definition (Val (ExprIRef.ValIProperty m)) (DefI m) ->
-    Transaction m (DefinitionU m [EntityId])
+    Definition.Definition (Val (ValIProperty m)) (DefI m) ->
+    T m (DefinitionU m [EntityId])
 convertDefI evalRes cp (Definition.Definition body defI) =
     do
         bodyS <- convertDefBody body
@@ -98,4 +103,19 @@ convertDefI evalRes cp (Definition.Definition body defI) =
                     <&> either (error . ("Type inference failed: " ++) . show . pPrint) id
                 let exprI = val ^. V.payload . Property.pVal
                 ConvertDefExpr.convert exprI (Definition.Expr valInferred typ) defI
-                    & ConvertM.run (mkContext defI cp newInferContext)
+                    & ConvertM.run (mkContext (Just defI) cp (reinferCheckDefinition defI) newInferContext)
+
+convertExpr ::
+    MonadA m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
+    Val (ValIProperty m) -> T m (ExpressionU m ())
+convertExpr evalRes cp val =
+    do
+        (valInferred, newInferContext) <-
+            loadInfer evalRes val
+            <&> either (error . ("Type inference failed: " ++) . show . pPrint) id
+        let reinferCheckExpression = loadInfer evalRes val <&> either (const False) (const True)
+        ConvertM.convertSubexpression valInferred
+            & ConvertM.run
+              (mkContext Nothing cp reinferCheckExpression newInferContext)
+              { _scMExtractDestPos = valInferred ^. V.payload . Input.mStored
+              }
