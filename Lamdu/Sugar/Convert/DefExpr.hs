@@ -50,7 +50,7 @@ mkContext defI cp inferContext =
     , _scTagParamInfos = mempty
     , _scMExtractDestPos = Nothing
     , _scNullParams = mempty
-    , _scReinferCheckDefinition =
+    , _scReinferCheckRoot =
           do
               defBody <- Transaction.readIRef defI
               case defBody of

@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Monad
     ( Context(..), TagParamInfo(..)
-    , scInferContext, scReinferCheckDefinition, scDefI
+    , scInferContext, scReinferCheckRoot, scDefI
     , scCodeAnchors, scTagParamInfos, scMExtractDestPos, scNullParams
     , ConvertM(..), run
     , readContext, liftTransaction, local
@@ -54,7 +54,7 @@ data Context m = Context
       -- TODO: scTagParamInfos needs a reverse-lookup map too
     , -- Check whether the definition is valid after an edit,
       -- so that can hole-wrap bad edits.
-      _scReinferCheckDefinition :: T m Bool
+      _scReinferCheckRoot :: T m Bool
     , -- Where "extract to let" goes:
       _scMExtractDestPos :: Maybe (ExprIRef.ValIProperty m)
     , scConvertSubexpression ::
@@ -65,7 +65,7 @@ Lens.makeLenses ''Context
 typeProtectTransaction :: MonadA m => ConvertM m (T m a -> T m (Maybe a))
 typeProtectTransaction =
     do
-        checkOk <- (^. scReinferCheckDefinition) <$> readContext
+        checkOk <- (^. scReinferCheckRoot) <$> readContext
         let protect act =
                 do
                     (resume, changes) <-
