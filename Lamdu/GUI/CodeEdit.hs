@@ -37,6 +37,7 @@ import           Lamdu.Expr.Load (loadDef)
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
@@ -134,13 +135,14 @@ make :: MonadA m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (T m))
 make env rootId =
     getProp Anchors.panes
     <&> makePanes rootId
-    >>= lift . traverse (processPane env)
+    >>= ExprGuiM.transaction . traverse (processPane env)
     <&> addNearestHoles . Panes
     <&> Lens.mapped . Lens.mapped %~ toExprGuiMPayload
     <&> panesList . Lens.mapped . _2 . Lens.mapped %~ RedundantAnnotations.markAnnotationsToDisplay
     >>= makePanesEdit env rootId
+    & ExprGuiM.run ExpressionEdit.make (codeProps env) (config env) (settings env)
     where
-        getProp f = f (codeProps env) ^. Transaction.mkProperty & lift
+        getProp f = f (codeProps env) ^. Transaction.mkProperty & ExprGuiM.transaction
 
 makeNewDefinitionEventMap ::
     MonadA m => Anchors.CodeProps m ->
@@ -161,14 +163,14 @@ makeNewDefinitionEventMap cp =
 
 makePanesEdit ::
     MonadA m => Env m -> Widget.Id -> Panes (Name m) m ExprGuiT.Payload ->
-    WidgetEnvT (T m) (Widget (T m))
+    ExprGuiM m (Widget (T m))
 makePanesEdit env myId (Panes loadedPanes) =
     do
         panesWidget <-
             case loadedPanes of
             [] ->
                 makeNewDefinitionAction
-                & WE.assignCursor myId newDefinitionActionId
+                & ExprGuiM.assignCursor myId newDefinitionActionId
             ((firstPane, _):_) ->
                 do
                     newDefinitionAction <- makeNewDefinitionAction
@@ -177,8 +179,8 @@ makePanesEdit env myId (Panes loadedPanes) =
                         <&> concatMap addSpacerAfter
                         <&> (++ [newDefinitionAction])
                         <&> Box.vboxAlign 0
-                & (WE.assignCursor myId . WidgetIds.fromIRef . paneDefI) firstPane
-        eventMap <- panesEventMap env
+                & (ExprGuiM.assignCursor myId . WidgetIds.fromIRef . paneDefI) firstPane
+        eventMap <- panesEventMap env & ExprGuiM.widgetEnv
         panesWidget
             & Widget.weakerEvents eventMap
             & return
@@ -191,15 +193,16 @@ makePanesEdit env myId (Panes loadedPanes) =
                     & WE.localEnv (WE.setTextColor newDefinitionActionColor)
                     <&> Widget.weakerEvents
                         (newDefinitionEventMap newDefinitionButtonPressKeys)
+            & ExprGuiM.widgetEnv
         addSpacerAfter x = [x, Spacer.makeWidget 50]
         Config.Pane{..} = Config.pane $ config env
 
 makePaneEdit ::
     MonadA m =>
     Env m -> Config.Pane -> (Pane m, DefinitionN m ExprGuiT.Payload) ->
-    WidgetEnvT (T m) (Widget (T m))
+    ExprGuiM m (Widget (T m))
 makePaneEdit env Config.Pane{..} (pane, defS) =
-    makePaneWidget env defS
+    makePaneWidget (config env) defS
     <&> Widget.weakerEvents paneEventMap
     where
         paneEventMap =
@@ -230,17 +233,16 @@ panesEventMap Env{..} =
         Config.Pane{..} = Config.pane config
 
 makePaneWidget ::
-    MonadA m => Env m -> DefinitionN m ExprGuiT.Payload -> WidgetEnvT (T m) (Widget (T m))
-makePaneWidget env defS =
+    MonadA m => Config -> DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m))
+makePaneWidget conf defS =
     DefinitionEdit.make defS <&> colorize
-    & ExprGuiM.run ExpressionEdit.make (codeProps env) (config env) (settings env)
     where
-        Config.Pane{..} = Config.pane (config env)
+        Config.Pane{..} = Config.pane conf
         colorize widget
             | widget ^. Widget.isFocused = colorizeActivePane widget
             | otherwise = colorizeInactivePane widget
         colorizeActivePane =
             Widget.backgroundColor
-            (Config.layerActivePane (Config.layers (config env)))
+            (Config.layerActivePane (Config.layers conf))
             WidgetIds.activePaneBackground paneActiveBGColor
         colorizeInactivePane = Widget.tint paneInactiveTintColor
