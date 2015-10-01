@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable, RecordWildCards, OverloadedStrings #-}
 module Lamdu.GUI.CodeEdit
     ( make
     , Env(..)
@@ -6,7 +6,6 @@ module Lamdu.GUI.CodeEdit
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Monad.Trans.Class (lift)
 import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev(..))
@@ -29,8 +28,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (EvalResults)
-import           Lamdu.Expr.IRef (DefI)
-import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.IRef (DefI, ValI)
 import           Lamdu.Expr.Load (loadDef)
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
@@ -42,7 +40,7 @@ import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Names.Add as AddNames
-import           Lamdu.Sugar.Names.Types (DefinitionN, Name)
+import           Lamdu.Sugar.Names.Types (DefinitionN)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.OrderTags as OrderTags
@@ -62,7 +60,7 @@ data Pane m = Pane
 
 data Env m = Env
     { codeProps :: Anchors.CodeProps m
-    , evalResults :: CurAndPrev (EvalResults (ExprIRef.ValI m))
+    , evalResults :: CurAndPrev (EvalResults (ValI m))
     , config :: Config
     , settings :: Settings
     }
@@ -98,47 +96,38 @@ makePanes defaultDelDest (Property panes setPanes) =
             , paneMoveUp = mkMMovePaneUp i
             }
 
+addNearestHoles ::
+    (Traversable t, MonadA m) =>
+    t (Sugar.Expression name m a) ->
+    t (Sugar.Expression name m (a, NearestHoles))
+addNearestHoles = NearestHoles.add traverse . (Lens.traversed %~ (<&> (,)))
+
+toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
+toExprGuiMPayload (entityIds, nearestHoles) =
+    ExprGuiT.emptyPayload nearestHoles & ExprGuiT.plStoredEntityIds .~ entityIds
+
 processDefI ::
-    MonadA m => Env m -> DefI m -> T m (DefinitionN m [Sugar.EntityId])
+    MonadA m => Env m -> DefI m -> T m (DefinitionN m ExprGuiT.Payload)
 processDefI env defI =
     loadDef defI
     >>= SugarConvert.convertDefI (evalResults env) (codeProps env)
     >>= OrderTags.orderDef
     >>= PresentationModes.addToDef
     >>= AddNames.addToDef
+    <&> addNearestHoles
+    <&> Lens.mapped . Lens.mapped %~ toExprGuiMPayload
+    <&> Lens.mapped %~ RedundantAnnotations.markAnnotationsToDisplay
 
 processPane ::
     MonadA m => Env m -> Pane m ->
-    T m (Pane m, DefinitionN m [Sugar.EntityId])
+    T m (Pane m, DefinitionN m ExprGuiT.Payload)
 processPane env pane = processDefI env (paneDefI pane) <&> (,) pane
-
-type Panes name m a = PanesP name m (Sugar.Expression name m a)
-newtype PanesP name m expr = Panes
-    { _panesList :: [(Pane m, Sugar.Definition name m expr)]
-    } deriving (Functor, Foldable, Traversable)
-Lens.makeLenses ''PanesP
-
-addNearestHoles ::
-    MonadA m =>
-    Panes name m [Sugar.EntityId] ->
-    Panes name m ([Sugar.EntityId], NearestHoles)
-addNearestHoles (Panes panes) =
-    panes
-    <&> Lens._2 %~ NearestHoles.add traverse . (Lens.traversed %~ (<&> (,)))
-    & Panes
-
-toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
-toExprGuiMPayload (entityIds, nearestHoles) =
-    ExprGuiT.emptyPayload nearestHoles & ExprGuiT.plStoredEntityIds .~ entityIds
 
 make :: MonadA m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (T m))
 make env rootId =
     getProp Anchors.panes
     <&> makePanes rootId
     >>= ExprGuiM.transaction . traverse (processPane env)
-    <&> addNearestHoles . Panes
-    <&> Lens.mapped . Lens.mapped %~ toExprGuiMPayload
-    <&> panesList . Lens.mapped . _2 . Lens.mapped %~ RedundantAnnotations.markAnnotationsToDisplay
     >>= makePanesEdit env rootId
     & ExprGuiM.run ExpressionEdit.make (codeProps env) (config env) (settings env)
     where
@@ -162,9 +151,10 @@ makeNewDefinitionEventMap cp =
             (E.Doc ["Edit", "New definition"]) newDefinition
 
 makePanesEdit ::
-    MonadA m => Env m -> Widget.Id -> Panes (Name m) m ExprGuiT.Payload ->
+    MonadA m => Env m -> Widget.Id ->
+    [(Pane m, DefinitionN m ExprGuiT.Payload)] ->
     ExprGuiM m (Widget (T m))
-makePanesEdit env myId (Panes loadedPanes) =
+makePanesEdit env myId loadedPanes =
     do
         panesWidget <-
             case loadedPanes of
