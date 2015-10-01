@@ -53,7 +53,7 @@ mkContext ::
 mkContext defI cp inferContext =
     Context
     { _scInferContext = inferContext
-    , _scDefI = defI
+    , _scDefI = Just defI
     , _scCodeAnchors = cp
     , _scTagParamInfos = mempty
     , _scMExtractDestPos = Nothing

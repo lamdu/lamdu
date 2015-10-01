@@ -163,7 +163,10 @@ mkOptions sugarContext mInjectedArg exprPl stored =
                 & Map.keys
                 & concatMap (getLocalScopeGetVars sugarContext)
             , globals
-                & filter (/= sugarContext ^. ConvertM.scDefI)
+                & ( case sugarContext ^. ConvertM.scDefI of
+                    Nothing -> id
+                    Just defI -> filter (/= defI)
+                  )
                 <&> P.global . ExprIRef.globalId
             , do
                 nominalTid <- nominalTids

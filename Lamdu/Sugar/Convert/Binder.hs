@@ -673,7 +673,10 @@ mkExtract binderScopeVars param delItem bodyStored argStored =
                 Nothing ->
                     do
                         paramName <- Anchors.assocNameRef param & Transaction.getP
-                        onGetVars (toGetGlobal (ctx ^. ConvertM.scDefI))
+                        onGetVars
+                            (toGetGlobal
+                             (fromMaybe (error "recurseVar used not in definition context?!")
+                              (ctx ^. ConvertM.scDefI)))
                             Builtins.recurseVar argStored
                         newDefI <- DataOps.newPublicDefinitionWithPane paramName
                             (ctx ^. ConvertM.scCodeAnchors) extractedI

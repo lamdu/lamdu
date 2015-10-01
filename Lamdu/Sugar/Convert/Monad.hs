@@ -47,7 +47,7 @@ newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
 
 data Context m = Context
     { _scInferContext :: Infer.Context
-    , _scDefI :: ExprIRef.DefI m
+    , _scDefI :: Maybe (ExprIRef.DefI m)
     , _scCodeAnchors :: Anchors.CodeProps m
     , _scTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
     , _scNullParams :: Set V.Var
