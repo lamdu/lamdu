@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable, RecordWildCards, OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable, RecordWildCards, OverloadedStrings #-}
 module Lamdu.GUI.CodeEdit
     ( make
     , Env(..)
@@ -38,7 +38,7 @@ import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Names.Add as AddNames
-import           Lamdu.Sugar.Names.Types (DefinitionN)
+import           Lamdu.Sugar.Names.Types (DefinitionN, Name)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.OrderTags as OrderTags
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
@@ -60,8 +60,8 @@ data Env m = Env
     , settings :: Settings
     }
 
-makePanes :: MonadA m => Transaction.Property m [DefI m] -> Widget.Id -> [Pane m]
-makePanes (Property panes setPanes) rootId =
+makePanes :: MonadA m => Widget.Id -> Transaction.Property m [DefI m] -> [Pane m]
+makePanes defaultDelDest (Property panes setPanes) =
     panes ^@.. Lens.traversed <&> convertPane
     where
         mkMDelPane i
@@ -70,7 +70,7 @@ makePanes (Property panes setPanes) rootId =
                     let newPanes = removeAt i panes
                     setPanes newPanes
                     newPanes ^? Lens.ix i
-                        & maybe rootId (WidgetIds.fromGuid . IRef.guid)
+                        & maybe defaultDelDest (WidgetIds.fromGuid . IRef.guid)
                         & return
             | otherwise = Nothing
         movePane oldIndex newIndex =
@@ -91,7 +91,7 @@ makePanes (Property panes setPanes) rootId =
             , paneMoveUp = mkMMovePaneUp i
             }
 
-type ProcessedDef m = DefinitionN m ([Sugar.EntityId], NearestHoles.NearestHoles)
+type Payload = ([Sugar.EntityId], NearestHoles.NearestHoles)
 
 processDefI ::
     MonadA m => Env m -> DefI m -> T m (DefinitionN m [Sugar.EntityId])
@@ -105,9 +105,7 @@ processDefI env defI =
 processPane ::
     MonadA m => Env m -> Pane m ->
     T m (Pane m, DefinitionN m [Sugar.EntityId])
-processPane env pane =
-    processDefI env (paneDefI pane)
-    <&> (,) pane
+processPane env pane = processDefI env (paneDefI pane) <&> (,) pane
 
 type Panes name m a = PanesP name m (Sugar.Expression name m a)
 newtype PanesP name m expr = Panes
@@ -117,7 +115,7 @@ newtype PanesP name m expr = Panes
 addNearestHoles ::
     MonadA m =>
     Panes name m [Sugar.EntityId] ->
-    Panes name m ([Sugar.EntityId], NearestHoles.NearestHoles)
+    Panes name m Payload
 addNearestHoles (Panes panes) =
     panes
     <&> Lens._2 %~ NearestHoles.add traverse . (Lens.traversed %~ (<&> (,)))
@@ -125,14 +123,13 @@ addNearestHoles (Panes panes) =
 
 make :: MonadA m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (T m))
 make env rootId =
-    do
-        prop <- lift $ Anchors.panes (codeProps env) ^. Transaction.mkProperty
-        let sugarPanes = makePanes prop rootId
-        Panes loadedPanes <-
-            traverse (processPane env) sugarPanes
-            & lift
-            <&> addNearestHoles . Panes
-        makePanesEdit env loadedPanes rootId
+    getProp Anchors.panes
+    <&> makePanes rootId
+    >>= lift . traverse (processPane env)
+    <&> addNearestHoles . Panes
+    >>= makePanesEdit env rootId
+    where
+        getProp f = f (codeProps env) ^. Transaction.mkProperty & lift
 
 makeNewDefinitionEventMap ::
     MonadA m => Anchors.CodeProps m ->
@@ -152,9 +149,9 @@ makeNewDefinitionEventMap cp =
             (E.Doc ["Edit", "New definition"]) newDefinition
 
 makePanesEdit ::
-    MonadA m => Env m -> [(Pane m, ProcessedDef m)] ->
-    Widget.Id -> WidgetEnvT (T m) (Widget (T m))
-makePanesEdit env loadedPanes myId =
+    MonadA m => Env m -> Widget.Id -> Panes (Name m) m Payload ->
+    WidgetEnvT (T m) (Widget (T m))
+makePanesEdit env myId (Panes loadedPanes) =
     do
         panesWidget <-
             case loadedPanes of
@@ -188,7 +185,7 @@ makePanesEdit env loadedPanes myId =
 
 makePaneEdit ::
     MonadA m =>
-    Env m -> Config.Pane -> (Pane m, ProcessedDef m) ->
+    Env m -> Config.Pane -> (Pane m, DefinitionN m Payload) ->
     WidgetEnvT (T m) (Widget (T m))
 makePaneEdit env Config.Pane{..} (pane, defS) =
     makePaneWidget env defS
@@ -222,7 +219,7 @@ panesEventMap Env{..} =
         Config.Pane{..} = Config.pane config
 
 makePaneWidget ::
-    MonadA m => Env m -> ProcessedDef m -> WidgetEnvT (T m) (Widget (T m))
+    MonadA m => Env m -> DefinitionN m Payload -> WidgetEnvT (T m) (Widget (T m))
 makePaneWidget env defS =
     DefinitionEdit.make (codeProps env) (config env) (settings env) defS
     <&> colorize
