@@ -23,23 +23,23 @@ import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-addScopeEdit :: MonadA m => Maybe (ExpressionGui m) -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+addScopeEdit :: MonadA m => Maybe (ExpressionGui m) -> ExpressionGui m -> ExpressionGui m
 addScopeEdit mScopeEdit e =
     e : (mScopeEdit ^.. Lens._Just)
     <&> ExpressionGui.egAlignment . _1 .~ 0.5
-    & ExpressionGui.vboxTopFocalSpaced
+    & ExpressionGui.vboxTopFocal
 
-mkLhsEdits :: MonadA m => Maybe (ExpressionGui m) -> Maybe (ExpressionGui m) -> ExprGuiM m [ExpressionGui m]
+mkLhsEdits :: MonadA m => Maybe (ExpressionGui m) -> Maybe (ExpressionGui m) -> [ExpressionGui m]
 mkLhsEdits mParamsEdit mScopeEdit =
-    Lens._Just (addScopeEdit mScopeEdit) mParamsEdit
-    <&> (^.. Lens._Just)
+    mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 
 mkExpanded :: MonadA m => Maybe (ExpressionGui m) -> Maybe (ExpressionGui m) -> AnimId -> ExprGuiM m [ExpressionGui m]
 mkExpanded mParamsEdit mScopeEdit animId =
     do
-        lhsEdits <- mkLhsEdits mParamsEdit mScopeEdit
         labelEdit <- ExpressionGui.grammarLabel "→" animId
         lhsEdits ++ [labelEdit] & return
+    where
+        lhsEdits = mkLhsEdits mParamsEdit mScopeEdit
 
 mkLightLambda ::
     MonadA n =>
@@ -64,7 +64,7 @@ mkLightLambda mParamsEdit mScopeEdit params myId =
                 >>= ExpressionGui.makeFocusableView
                     (Widget.joinId myId ["lam"])
                 -- TODO: add event to jump to first param
-                >>= addScopeEdit mScopeEdit
+                <&> addScopeEdit mScopeEdit
                 <&> (:[])
     where
         animId = Widget.toAnimId myId
@@ -84,7 +84,7 @@ make lam pl =
         let animId = Widget.toAnimId myId
         paramsAndLabelEdits <-
             case (lam ^. Sugar.lamMode, params) of
-            (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit
+            (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & return
             (Sugar.LightLambda, _) -> mkLightLambda mParamsEdit mScopeEdit params myId
             _ -> mkExpanded mParamsEdit mScopeEdit animId
         paramsAndLabelEdits ++ [bodyEdit]
