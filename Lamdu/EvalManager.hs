@@ -11,14 +11,12 @@ import           Control.Concurrent (ThreadId, killThread)
 import           Control.Concurrent.Utils (runAfter)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Monad (join)
 import           Data.CurAndPrev (CurAndPrev(..), prev, current)
+import           Data.Foldable (traverse_)
 import           Data.IORef
 import           Data.IORef.Utils (atomicModifyIORef_)
-import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe (mapMaybe)
 import qualified Data.Monoid as Monoid
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -33,7 +31,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins as Builtins
 import qualified Lamdu.Builtins.Anchors as BuiltinAnchors
-import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (DbM, ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.Definition as Def
@@ -43,14 +40,21 @@ import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.VersionControl (getVersion)
 import qualified Lamdu.VersionControl as VersionControl
 
 import           Prelude.Compat
 
+data BGEvaluator = NotStarted | Started (EvalBG.Evaluator (ValI ViewM))
+
+startedEvaluator :: BGEvaluator -> Maybe (EvalBG.Evaluator (ValI ViewM))
+startedEvaluator NotStarted = Nothing
+startedEvaluator (Started eval) = Just eval
+
 data Evaluators = Evaluators
     { eInvalidateCache :: IO ()
     , eDb :: Db
-    , eDefEvaluatorsRef :: IORef (Map (DefI ViewM) (EvalBG.Evaluator (ValI ViewM)))
+    , eEvaluatorRef :: IORef BGEvaluator
       -- TODO: Only store the prev here
     , eResultsRef :: IORef (CurAndPrev (EvalResults (ValI ViewM)))
     , eCancelTimerRef :: IORef (Maybe ThreadId)
@@ -59,13 +63,13 @@ data Evaluators = Evaluators
 new :: IO () -> Db -> IO Evaluators
 new invalidateCache db =
     do
-        ref <- newIORef mempty
+        ref <- newIORef NotStarted
         resultsRef <- newIORef mempty
         cancelRef <- newIORef Nothing
         return Evaluators
             { eInvalidateCache = invalidateCache
             , eDb = db
-            , eDefEvaluatorsRef = ref
+            , eEvaluatorRef = ref
             , eResultsRef = resultsRef
             , eCancelTimerRef = cancelRef
             }
@@ -77,9 +81,8 @@ getResults :: Evaluators -> IO (CurAndPrev (EvalResults (ValI ViewM)))
 getResults evaluators =
     do
         res <-
-            readIORef (eDefEvaluatorsRef evaluators)
-            >>= mapM EvalBG.getResults . Map.elems
-            <&> mconcat
+            readIORef (eEvaluatorRef evaluators) <&> startedEvaluator
+            >>= maybe (return mempty) EvalBG.getResults
         atomicModifyIORef (eResultsRef evaluators)
             (join (,) . (current .~ res))
 
@@ -95,9 +98,10 @@ evalActions evaluators =
     , EvalBG._aRunBuiltin = Builtins.eval
     , EvalBG._aReportUpdatesAvailable = eInvalidateCache evaluators
     , EvalBG._aCompleted = \_ ->
-      eDefEvaluatorsRef evaluators & readIORef <&> Map.elems
-      >>= Lens.traversed EvalBG.getStatus
-      <&> all (Lens.has EvalBG._Finished)
+      readIORef (eEvaluatorRef evaluators)
+      <&> startedEvaluator
+      >>= Lens._Just %%~ EvalBG.getStatus
+      <&> Lens.has (Lens._Just . EvalBG._Finished)
       >>= \case
       False -> return ()
       True ->
@@ -120,74 +124,62 @@ evalActions evaluators =
         replaceRecursiveReferences globalId val =
             val & V.body . Lens.traversed %~ replaceRecursiveReferences globalId
 
-panesIRef :: IRef ViewM [Anchors.Pane ViewM]
-panesIRef = DbLayout.panes DbLayout.codeIRefs
+replIRef :: IRef ViewM (ValI ViewM)
+replIRef = DbLayout.repl DbLayout.codeIRefs
 
 start :: Evaluators -> IO ()
 start evaluators =
-    Transaction.readIRef panesIRef
+    Transaction.readIRef replIRef >>= ExprIRef.readVal
     & runViewTransactionInIO (eDb evaluators)
-    >>= mapM tagLoadDef
-
-    <&> mapMaybe (_2 %%~ (^? Def.defBody . Def._BodyExpr . Def.expr))
-    <&> Lens.mapped . _2 . Lens.mapped %~ Property.value
-
-    >>= Lens.traverse . _2 %%~ EvalBG.start (evalActions evaluators)
-    <&> Map.fromList
-    >>= writeIORef (eDefEvaluatorsRef evaluators)
-    where
-        tagLoadDef defI = loadDef evaluators defI <&> (,) defI
+    >>= EvalBG.start (evalActions evaluators) <&> Started
+    >>= writeIORef (eEvaluatorRef evaluators)
 
 stop :: Evaluators -> IO ()
 stop evaluators =
-    readIORef (eDefEvaluatorsRef evaluators) >>= mapM_ EvalBG.stop . Map.elems
+    readIORef (eEvaluatorRef evaluators)
+    <&> startedEvaluator
+    >>= traverse_ EvalBG.stop
 
-sumDependency ::
-    ExprIRef.DefI ViewM -> (Set (ExprIRef.ValI ViewM), Set V.GlobalId) -> Set Guid
-sumDependency defI (subexprs, globals) =
+sumDependency :: Set (ExprIRef.ValI ViewM) -> Set V.GlobalId -> Set Guid
+sumDependency subexprs globals =
     mconcat
-    [ Set.singleton (IRef.guid defI)
-    , Set.map (IRef.guid . ExprIRef.unValI) subexprs
+    [ Set.map (IRef.guid . ExprIRef.unValI) subexprs
     , Set.map (IRef.guid . ExprIRef.defI) globals
     ]
 
 runTransactionAndMaybeRestartEvaluators :: Evaluators -> Transaction DbM a -> IO a
 runTransactionAndMaybeRestartEvaluators evaluators transaction =
-    do
-        defEvaluators <- readIORef (eDefEvaluatorsRef evaluators)
-        dependencies <-
-            defEvaluators
-            & Lens.traverse %%~ EvalBG.pauseLoading
-            <&> Map.toList
-            <&> Lens.mapped %~ uncurry sumDependency
-            <&> mconcat
-            <&> Set.insert (IRef.guid panesIRef)
-        (dependencyChanged, result) <-
-            do
-                (oldVersion, result, newVersion) <-
-                    (,,)
-                    <$> VersionControl.getVersion
-                    <*> transaction
-                    <*> VersionControl.getVersion
-                let checkDependencyChange versionData =
-                        Version.changes versionData
-                        <&> Change.objectKey
-                        <&> (`Set.member` dependencies)
-                        <&> Monoid.Any
-                        & mconcat
-                        & return
-                Monoid.Any dependencyChanged <-
-                    Version.walk checkDependencyChange checkDependencyChange oldVersion newVersion
-                return (dependencyChanged, result)
-            & DbLayout.runDbTransaction (eDb evaluators)
-        if dependencyChanged
-            then do
-                stop evaluators
-                setCancelTimer evaluators
-                atomicModifyIORef_ (eResultsRef evaluators) pickPrevResults
-                start evaluators
-            else Map.elems defEvaluators & mapM_ EvalBG.resumeLoading
-        return result
+    readIORef (eEvaluatorRef evaluators)
+    >>= \case
+    NotStarted -> runTrans transaction
+    Started eval ->
+        do
+            dependencies <-
+                EvalBG.pauseLoading eval
+                <&> uncurry sumDependency
+                <&> Set.insert (IRef.guid replIRef)
+            (dependencyChanged, result) <-
+                do
+                    (oldVersion, result, newVersion) <-
+                        (,,) <$> getVersion <*> transaction <*> getVersion
+                    let checkDependencyChange versionData =
+                            Version.changes versionData
+                            <&> Change.objectKey <&> (`Set.member` dependencies)
+                            <&> Monoid.Any & mconcat & return
+                    Monoid.Any dependencyChanged <-
+                        Version.walk checkDependencyChange checkDependencyChange oldVersion newVersion
+                    return (dependencyChanged, result)
+                & runTrans
+            if dependencyChanged
+                then do
+                    stop evaluators
+                    setCancelTimer evaluators
+                    atomicModifyIORef_ (eResultsRef evaluators) pickPrevResults
+                    start evaluators
+                else EvalBG.resumeLoading eval
+            return result
+    where
+        runTrans = DbLayout.runDbTransaction (eDb evaluators)
 
 setCancelTimer :: Evaluators -> IO ()
 setCancelTimer evaluators =

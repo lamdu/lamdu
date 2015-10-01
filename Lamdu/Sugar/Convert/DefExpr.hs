@@ -3,12 +3,10 @@ module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Builtins.Anchors (recurseVar)
 import qualified Lamdu.Data.Definition as Definition
@@ -23,7 +21,6 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
-import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
@@ -43,16 +40,14 @@ makeExprDefTypeInfo defValI defI defType inferredType =
     }
 
 convert ::
-    MonadA m =>
+    (Monoid a, MonadA m) =>
     ValI m -> Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
-    ConvertM m (DefinitionBody Guid m (ExpressionU m [EntityId]))
+    ConvertM m (DefinitionBody Guid m (ExpressionU m a))
 convert exprI (Definition.Expr val defType) defI =
     do
         sugarContext <- ConvertM.readContext
         let inferContext = sugarContext ^. ConvertM.scInferContext
-        content <-
-            val <&> addStoredEntityIds
-            & ConvertBinder.convertBinder (Just recurseVar) defGuid
+        content <- ConvertBinder.convertBinder (Just recurseVar) defGuid val
         return $ DefinitionBodyExpression DefinitionExpression
             { _deContent = content
             , _deTypeInfo =
@@ -61,9 +56,4 @@ convert exprI (Definition.Expr val defType) defI =
                 val ^. V.payload . Input.inferredType
             }
     where
-        addStoredEntityIds x =
-            x
-            & Input.userData .~
-                (x ^.. Input.mStored . Lens._Just
-                  <&> EntityId.ofValI . Property.value)
         defGuid = IRef.guid defI

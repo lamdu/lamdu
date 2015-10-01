@@ -1,9 +1,7 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, DeriveGeneric, FlexibleInstances, KindSignatures #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, DeriveGeneric, FlexibleInstances, KindSignatures, NoMonomorphismRestriction #-}
 module Lamdu.Sugar.Names.Add
-    ( addToDef
+    ( addToDef, addToExpr
     ) where
-
-import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -17,7 +15,6 @@ import           Data.Foldable (toList)
 import qualified Data.List.Utils as ListUtils
 import           Data.Map (Map)
 import qualified Data.Map as Map
-
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -36,6 +33,8 @@ import           Lamdu.Sugar.Names.Types
 import           Lamdu.Sugar.Names.Walk (MonadNaming)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types
+
+import           Prelude.Compat
 
 type T = Transaction
 
@@ -188,6 +187,16 @@ data P2Env = P2Env
     }
 Lens.makeLenses ''P2Env
 
+emptyP2Env :: NameGuidMap -> P2Env
+emptyP2Env (NameGuidMap globalNamesMap) = P2Env
+    { _p2NameGen = NameGen.initial
+    , _p2StoredNames = mempty
+    , _p2StoredNameSuffixes =
+        mconcat .
+        map Map.fromList . filter (ListUtils.isLengthAtLeast 2) .
+        map ((`zip` [0..]) . toList) $ Map.elems globalNamesMap
+    }
+
 newtype Pass2M (tm :: * -> *) a = Pass2M (Reader P2Env a)
     deriving (Functor, Applicative, Monad)
 runPass2M :: P2Env -> Pass2M tm a -> a
@@ -196,6 +205,9 @@ p2GetEnv :: Pass2M tm P2Env
 p2GetEnv = Pass2M Reader.ask
 p2WithEnv :: (P2Env -> P2Env) -> Pass2M tm a -> Pass2M tm a
 p2WithEnv f (Pass2M act) = Pass2M $ Reader.local f act
+
+runPass2MInitial :: StoredNamesWithin -> Pass2M tm a -> a
+runPass2MInitial storedNamesBelow = runPass2M (emptyP2Env (storedNamesBelow ^. snwGlobalNames))
 
 setName :: MonadA tm => Guid -> StoredName -> T tm ()
 setName = Transaction.setP . assocNameRef
@@ -341,24 +353,27 @@ fixBinder binder =
                 () <- f res
                 return res
 
-addToDef :: MonadA tm => DefinitionU tm a -> T tm (DefinitionN tm a)
-addToDef origDef =
-    origDef
-    & drBody . _DefinitionBodyExpression . deContent %~ fixBinder
-    & pass0
-    <&> pass1
-    <&> pass2
+addTo ::
+    Functor tm =>
+    (a -> Pass0M tm b) -> (b -> Pass1M tm c) -> (c -> Pass2M tm d) ->
+    a -> Transaction tm d
+addTo f0 f1 f2 =
+    fmap (pass2 . pass1) . pass0
     where
-        emptyP2Env (NameGuidMap globalNamesMap) = P2Env
-            { _p2NameGen = NameGen.initial
-            , _p2StoredNames = mempty
-            , _p2StoredNameSuffixes =
-                mconcat .
-                map Map.fromList . filter (ListUtils.isLengthAtLeast 2) .
-                map ((`zip` [0..]) . toList) $ Map.elems globalNamesMap
-            }
-        pass0 = runPass0M . Walk.toDef Walk.toExpression
-        pass1 = runPass1M . Walk.toDef Walk.toExpression
-        pass2 (def, storedNamesBelow) =
-            Walk.toDef Walk.toExpression def
-            & runPass2M (emptyP2Env (storedNamesBelow ^. snwGlobalNames))
+        pass0 = runPass0M . f0
+        pass1 = runPass1M . f1
+        pass2 (x, storedNamesBelow) =
+            f2 x & runPass2MInitial storedNamesBelow
+
+addToDef :: MonadA tm => DefinitionU tm a -> T tm (DefinitionN tm a)
+addToDef def =
+    def
+    & drBody . _DefinitionBodyExpression . deContent %~ fixBinder
+    & addTo f f f
+    where
+        f = Walk.toDef Walk.toExpression
+
+addToExpr :: MonadA tm => Expression Guid tm a -> T tm (Expression (Name tm) tm a)
+addToExpr = addTo f f f
+    where
+        f = Walk.toExpression

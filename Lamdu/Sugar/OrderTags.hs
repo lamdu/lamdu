@@ -1,5 +1,5 @@
 module Lamdu.Sugar.OrderTags
-    ( orderDef, orderType
+    ( orderDef, orderType, orderExpr
     , orderedFlatComposite
     ) where
 

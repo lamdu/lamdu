@@ -1,5 +1,5 @@
 module Lamdu.Sugar.PresentationModes
-    ( addToDef
+    ( addToDef, addToExpr
     ) where
 
 import qualified Control.Lens as Lens

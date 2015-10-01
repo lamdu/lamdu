@@ -299,6 +299,7 @@ initDB db =
                         let writeCodeAnchor f = Transaction.writeIRef (f Db.codeIRefs)
                         writeCodeAnchor Db.globals (publicDefs public)
                         writeCodeAnchor Db.panes []
+                        writeCodeAnchor Db.repl =<< DataOps.newHole
                         writeCodeAnchor Db.preJumps []
                         writeCodeAnchor Db.preCursor paneWId
                         writeCodeAnchor Db.postCursor paneWId
