@@ -5,8 +5,6 @@ module Lamdu.Sugar.Convert.Infer
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
-import           Control.Monad.Trans.Either (runEitherT)
 import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Store.Property as Property
@@ -29,10 +27,10 @@ loadInfer ::
     Val (ExprIRef.ValIProperty m) ->
     T m (Either IRefInfer.Error (Val (Input.Payload m ()), Infer.Context))
 loadInfer evalRes val =
-    IRefInfer.loadInfer recurseVar val
-    <&> _1 . Lens.mapped %~ mkPayload
+    IRefInfer.loadInferRecursive recurseVar val
+    <&> Lens.mapped %~ mkPayload
     >>= ParamList.loadForLambdas
-    & runEitherT
+    & IRefInfer.run
     where
         mkPayload (inferPl, valIProp) =
             Input.mkPayload () inferPl

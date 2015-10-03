@@ -23,6 +23,7 @@ import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import           Lamdu.Sugar.Convert.Infer (loadInfer)
+import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (Context(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal

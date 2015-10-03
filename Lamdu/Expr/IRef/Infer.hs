@@ -5,8 +5,9 @@ module Lamdu.Expr.IRef.Infer
     , M
     , loadInferScope
     , loadInferInto
-    , loadInfer
+    , loadInferRecursive
     , loadNominal
+    , run
     , Error(..), toEitherT
     ) where
 
@@ -102,11 +103,10 @@ loadInferInto pl val =
                 unify inferredType (pl ^. Infer.plType)
                 Update.inferredVal inferredVal & Update.liftInfer
 
-loadInfer ::
-    MonadA m => V.Var -> Val a ->
-    EitherT Error (T m) (Val (Infer.Payload, a), Infer.Context)
-loadInfer recurseVar val =
+loadInferRecursive :: MonadA m => V.Var -> Val a -> M m (Val (Infer.Payload, a))
+loadInferRecursive recurseVar val =
     liftInfer (Recursive.inferEnv recurseVar Infer.emptyScope)
     >>= (`loadInferInto` val)
-    & (`runStateT` Infer.initialContext)
 
+run :: M m a -> T m (Either Error (a, Infer.Context))
+run = runEitherT . (`runStateT` Infer.initialContext)

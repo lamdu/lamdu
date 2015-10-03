@@ -9,8 +9,7 @@ import           Prelude.Compat
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (MonadTrans(..))
-import           Control.Monad.Trans.Either (EitherT(..))
-import           Control.Monad.Trans.State (StateT(..), mapStateT)
+import           Control.Monad.Trans.State (mapStateT)
 import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)
 import qualified Data.Store.Property as Property
@@ -45,17 +44,14 @@ mkFuncType scope paramList =
         step tag rest = T.CExtend tag <$> Infer.freshInferredVar scope "t" <*> rest
 
 loadForLambdas ::
-    MonadA m =>
-    (Val (Input.Payload m a), Infer.Context) ->
-    EitherT IRefInfer.Error (T m) (Val (Input.Payload m a), Infer.Context)
-loadForLambdas (val, ctx) =
+    MonadA m => Val (Input.Payload m a) -> IRefInfer.M m (Val (Input.Payload m a))
+loadForLambdas val =
     do
         Lens.itraverseOf_ ExprLens.subExprPayloads loadLambdaParamList val
         val
             & traverse . Input.inferredType %%~ update
             >>= traverse . Input.inferredScope %%~ update
             & Update.run & State.gets
-    & (`runStateT` ctx)
     where
         loadLambdaParamList (V.Val _ V.BAbs {}) pl = loadUnifyParamList pl
         loadLambdaParamList _ _ = return ()
