@@ -28,8 +28,8 @@ import           Lamdu.Sugar.Types
 
 type T = Transaction
 
-mkExtractor :: MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
-mkExtractor extractDestPos stored =
+mkExtractToLetItem :: MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
+mkExtractToLetItem extractDestPos stored =
     do
         (lamI, getVarI) <-
             if Property.value stored == Property.value extractDestPos
@@ -62,7 +62,7 @@ mkActions extractDestPos stored =
     , _setToInnerExpr = NoInnerExpr
     , _extract =
         Just $ -- overridden by hole conversion
-        mkExtractor extractDestPos stored
+        mkExtractToLetItem extractDestPos stored
     }
     where
         addEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
