@@ -624,8 +624,8 @@ data ExprLetItem a = ExprLetItem
     , eliAnnotation :: Annotation
     }
 
-mExtractLet :: Val (Input.Payload m a) -> Maybe (ExprLetItem (Input.Payload m a))
-mExtractLet expr = do
+mCheckForRedex :: Val (Input.Payload m a) -> Maybe (ExprLetItem (Input.Payload m a))
+mCheckForRedex expr = do
     V.Apply func arg <- expr ^? ExprLens.valApply
     V.Lam param body <- func ^? V.body . ExprLens._BAbs
     Just ExprLetItem
@@ -633,15 +633,15 @@ mExtractLet expr = do
         , eliBodyScopesMap =
             func ^. V.payload . Input.evalResults
             <&> (^. Input.eAppliesOfLam)
-            <&> Lens.traversed %~ extractRedexApplies
+            <&> Lens.traversed %~ getRedexApplies
         , eliParam = param
         , eliArg = arg
         , eliHiddenPayloads = (^. V.payload) <$> [expr, func]
         , eliAnnotation = makeAnnotation (arg ^. V.payload)
         }
     where
-        extractRedexApplies [(scopeId, _)] = scopeId
-        extractRedexApplies _ =
+        getRedexApplies [(scopeId, _)] = scopeId
+        getRedexApplies _ =
             error "redex should only be applied once per parent scope"
 
 onGetVars ::
@@ -658,12 +658,12 @@ getFieldParamsToHole :: MonadA m => T.Tag -> StoredLam m -> T m ()
 getFieldParamsToHole tag (StoredLam (V.Lam param lamBody) _) =
     onMatchingSubexprs toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
 
-mkExtract ::
+mkLetItemToOutside ::
     MonadA m =>
     [V.Var] -> V.Var -> Transaction m () ->
     Val (ExprIRef.ValIProperty m) -> Val (ExprIRef.ValIProperty m) ->
     ConvertM m (Transaction m EntityId)
-mkExtract binderScopeVars param delItem bodyStored argStored =
+mkLetItemToOutside binderScopeVars param delItem bodyStored argStored =
     do
         ctx <- ConvertM.readContext
         do
@@ -683,8 +683,8 @@ mkExtract binderScopeVars param delItem bodyStored argStored =
                         onGetVars (toGetGlobal newDefI) param bodyStored
                         EntityId.ofIRef newDefI & return
                 Just scopeBodyP ->
+                    EntityId.ofLambdaParam param <$
                     DataOps.redexWrapWithGivenParam param extractedI scopeBodyP
-                    & Lens.mapped .~ EntityId.ofLambdaParam param
             & return
     where
         extractedI = argStored ^. V.payload & Property.value
@@ -696,13 +696,13 @@ mkLIActions ::
     ConvertM m (LetItemActions m)
 mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
     do
-        extr <- mkExtract binderScopeVars param del bodyStored argStored
+        letItemToOutside <- mkLetItemToOutside binderScopeVars param del bodyStored argStored
         return
             LetItemActions
             { _liDelete = getVarsToHole param bodyStored >> del
             , _liAddNext =
                 DataOps.redexWrap topLevelProp <&> EntityId.ofLambdaParam . fst
-            , _liExtract = extr
+            , _liExtract = letItemToOutside
             }
     where
         del = bodyStored ^. V.payload & replaceWith topLevelProp & void
@@ -721,7 +721,7 @@ convertLetItems ::
     , CurAndPrev (Map ScopeId ScopeId)
     )
 convertLetItems binderScopeVars expr =
-    case mExtractLet expr of
+    case mCheckForRedex expr of
     Nothing -> return ([], expr, mempty)
     Just eli ->
         do
