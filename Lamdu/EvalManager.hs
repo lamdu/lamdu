@@ -50,7 +50,7 @@ import           Prelude.Compat
 data Evaluators = Evaluators
     { eInvalidateCache :: IO ()
     , eDb :: Db
-    , eRef :: IORef (Map (DefI ViewM) (EvalBG.Evaluator (ValI ViewM)))
+    , eDefEvaluatorsRef :: IORef (Map (DefI ViewM) (EvalBG.Evaluator (ValI ViewM)))
       -- TODO: Only store the prev here
     , eResultsRef :: IORef (CurAndPrev (EvalResults (ValI ViewM)))
     , eCancelTimerRef :: IORef (Maybe ThreadId)
@@ -65,7 +65,7 @@ new invalidateCache db =
         return Evaluators
             { eInvalidateCache = invalidateCache
             , eDb = db
-            , eRef = ref
+            , eDefEvaluatorsRef = ref
             , eResultsRef = resultsRef
             , eCancelTimerRef = cancelRef
             }
@@ -77,7 +77,7 @@ getResults :: Evaluators -> IO (CurAndPrev (EvalResults (ValI ViewM)))
 getResults evaluators =
     do
         res <-
-            readIORef (eRef evaluators)
+            readIORef (eDefEvaluatorsRef evaluators)
             >>= mapM EvalBG.getResults . Map.elems
             <&> mconcat
         atomicModifyIORef (eResultsRef evaluators)
@@ -95,7 +95,7 @@ evalActions evaluators =
     , EvalBG._aRunBuiltin = Builtins.eval
     , EvalBG._aReportUpdatesAvailable = eInvalidateCache evaluators
     , EvalBG._aCompleted = \_ ->
-      eRef evaluators & readIORef <&> Map.elems
+      eDefEvaluatorsRef evaluators & readIORef <&> Map.elems
       >>= Lens.traversed EvalBG.getStatus
       <&> all (Lens.has (EvalBG._Finished . Lens._Right))
       >>= \case
@@ -134,13 +134,13 @@ start evaluators =
 
     >>= Lens.traverse . _2 %%~ EvalBG.start (evalActions evaluators)
     <&> Map.fromList
-    >>= writeIORef (eRef evaluators)
+    >>= writeIORef (eDefEvaluatorsRef evaluators)
     where
         tagLoadDef defI = loadDef evaluators defI <&> (,) defI
 
 stop :: Evaluators -> IO ()
 stop evaluators =
-    readIORef (eRef evaluators) >>= mapM_ EvalBG.stop . Map.elems
+    readIORef (eDefEvaluatorsRef evaluators) >>= mapM_ EvalBG.stop . Map.elems
 
 sumDependency ::
     ExprIRef.DefI ViewM -> (Set (ExprIRef.ValI ViewM), Set V.GlobalId) -> Set Guid
@@ -154,7 +154,7 @@ sumDependency defI (subexprs, globals) =
 runTransactionAndMaybeRestartEvaluators :: Evaluators -> Transaction DbM a -> IO a
 runTransactionAndMaybeRestartEvaluators evaluators transaction =
     do
-        defEvaluators <- readIORef (eRef evaluators)
+        defEvaluators <- readIORef (eDefEvaluatorsRef evaluators)
         dependencies <-
             defEvaluators
             & Lens.traverse %%~ EvalBG.pauseLoading
