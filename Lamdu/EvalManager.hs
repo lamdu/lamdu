@@ -97,7 +97,7 @@ evalActions evaluators =
     , EvalBG._aCompleted = \_ ->
       eDefEvaluatorsRef evaluators & readIORef <&> Map.elems
       >>= Lens.traversed EvalBG.getStatus
-      <&> all (Lens.has (EvalBG._Finished . Lens._Right))
+      <&> all (Lens.has EvalBG._Finished)
       >>= \case
       False -> return ()
       True ->
