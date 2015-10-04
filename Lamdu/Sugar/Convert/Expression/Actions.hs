@@ -28,16 +28,6 @@ import           Lamdu.Sugar.Types
 
 type T = Transaction
 
-createIdentityLambda :: MonadA m => T m (ExprIRef.ValI m, ExprIRef.ValI m)
-createIdentityLambda =
-    do
-        -- Create temporary hole to give to newLambda
-        -- because we want to know the param to set its value.
-        newBodyI <- DataOps.newHole
-        (newParam, lamI) <- ExprIRef.newLambda newBodyI
-        V.LVar newParam & V.BLeaf & ExprIRef.writeValBody newBodyI
-        return (lamI, newBodyI)
-
 mkExtractor :: MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
 mkExtractor extractDestPos stored =
     do
@@ -46,14 +36,14 @@ mkExtractor extractDestPos stored =
             then
                 -- Give entire binder body a name (replace binder body
                 -- with "(\x -> x) stored")
-                createIdentityLambda
+                DataOps.newIdentityLambda
             else
                 -- Give some subexpr in binder body a name (replace
                 -- binder body with "(\x -> binderBody) stored", and
                 -- stored becomes "x")
                 do
                     (newParam, lamI) <-
-                        Property.value extractDestPos & ExprIRef.newLambda
+                        Property.value extractDestPos & DataOps.newLambda
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValBody
                     Property.set stored getVarI
                     return (lamI, getVarI)
