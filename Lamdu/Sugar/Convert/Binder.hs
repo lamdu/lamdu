@@ -3,8 +3,6 @@ module Lamdu.Sugar.Convert.Binder
     ( convertBinder, convertLam
     ) where
 
-import           Prelude.Compat
-
 import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -33,6 +31,7 @@ import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Eval.Val (ScopeId)
 import qualified Lamdu.Eval.Val as EV
 import qualified Lamdu.Expr.GenIds as GenIds
+import           Lamdu.Expr.IRef (ValI, DefI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Type (Type)
@@ -50,6 +49,8 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           Lamdu.Sugar.Types
+
+import           Prelude.Compat
 
 type T = Transaction
 
@@ -72,11 +73,11 @@ data FieldParam = FieldParam
     }
 
 data StoredLam m = StoredLam
-    { _slLam :: V.Lam (Val (ExprIRef.ValIProperty m))
-    , slLambdaProp :: ExprIRef.ValIProperty m
+    { _slLam :: V.Lam (Val (ValIProperty m))
+    , slLambdaProp :: ValIProperty m
     }
 
-slLam :: Lens' (StoredLam m) (V.Lam (Val (ExprIRef.ValIProperty m)))
+slLam :: Lens' (StoredLam m) (V.Lam (Val (ValIProperty m)))
 slLam f StoredLam{..} = f _slLam <&> \_slLam -> StoredLam{..}
 
 mkStoredLam ::
@@ -87,7 +88,7 @@ mkStoredLam lam pl =
     <$> (lam & (traverse . traverse) (^. Input.mStored))
     <*> pl ^. Input.mStored
 
-changeRecursionsFromCalls :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
+changeRecursionsFromCalls :: MonadA m => V.Var -> Val (ValIProperty m) -> T m ()
 changeRecursionsFromCalls var =
     SubExprs.onMatchingSubexprs changeRecursion
     (V.body . ExprLens._BApp . V.applyFunc . ExprLens.valVar . Lens.only var)
@@ -128,7 +129,7 @@ isRecursiveCallArg _ _ = False
 -- TODO: find nicer way to do it than using properties and rereading
 -- data?  Perhaps keep track of the up-to-date pure val as it is being
 -- mutated?
-rereadVal :: MonadA m => ExprIRef.ValIProperty m -> T m (Val (ExprIRef.ValIProperty m))
+rereadVal :: MonadA m => ValIProperty m -> T m (Val (ValIProperty m))
 rereadVal valProp =
     ExprIRef.readVal (Property.value valProp)
     <&> fmap (flip (,) ())
@@ -137,8 +138,8 @@ rereadVal valProp =
 
 changeRecursiveCallArgs ::
     MonadA m =>
-    (ExprIRef.ValI m -> T m (ExprIRef.ValI m)) ->
-    ExprIRef.ValIProperty m -> V.Var -> T m ()
+    (ValI m -> T m (ValI m)) ->
+    ValIProperty m -> V.Var -> T m ()
 changeRecursiveCallArgs change valProp var =
     -- Reread body before fixing it,
     -- to avoid re-writing old data (without converted vars)
@@ -150,7 +151,7 @@ changeRecursiveCallArgs change valProp var =
             & change
             >>= Property.set prop
 
-wrapArgWithRecord :: MonadA m => T.Tag -> T.Tag -> ExprIRef.ValI m -> T m (ExprIRef.ValI m)
+wrapArgWithRecord :: MonadA m => T.Tag -> T.Tag -> ValI m -> T m (ValI m)
 wrapArgWithRecord tagForExistingArg tagForNewArg oldArg =
     do
         hole <- DataOps.newHole
@@ -159,7 +160,7 @@ wrapArgWithRecord tagForExistingArg tagForNewArg oldArg =
             >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tagForExistingArg oldArg
 
 convertVarToGetField ::
-    MonadA m => T.Tag -> V.Var -> Val (Property (T m) (ExprIRef.ValI m)) -> T m ()
+    MonadA m => T.Tag -> V.Var -> Val (Property (T m) (ValI m)) -> T m ()
 convertVarToGetField tagForVar paramVar =
     SubExprs.onMatchingSubexprs (convertVar . Property.value)
     (ExprLens.valVar . Lens.only paramVar)
@@ -311,7 +312,7 @@ makeFieldParamActions mRecursiveVar param tags fp storedLam =
 
 fixRecursiveCallRemoveField ::
     MonadA m =>
-    T.Tag -> ExprIRef.ValI m -> T m (ExprIRef.ValI m)
+    T.Tag -> ValI m -> T m (ValI m)
 fixRecursiveCallRemoveField tag argI =
     do
         body <- ExprIRef.readValBody argI
@@ -328,7 +329,7 @@ fixRecursiveCallRemoveField tag argI =
             _ -> return argI
 
 fixRecursiveCallToSingleArg ::
-    MonadA m => T.Tag -> ExprIRef.ValI m -> T m (ExprIRef.ValI m)
+    MonadA m => T.Tag -> ValI m -> T m (ValI m)
 fixRecursiveCallToSingleArg tag argI =
     do
         body <- ExprIRef.readValBody argI
@@ -584,7 +585,7 @@ convertParams mRecursiveVar expr =
             params <- convertEmptyParams mRecursiveVar expr
             return (params, expr)
 
-changeRecursionsToCalls :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
+changeRecursionsToCalls :: MonadA m => V.Var -> Val (ValIProperty m) -> T m ()
 changeRecursionsToCalls var =
     SubExprs.onMatchingSubexprs changeRecursion (ExprLens.valVar . Lens.only var)
     where
@@ -627,51 +628,55 @@ getFieldParamsToHole :: MonadA m => T.Tag -> StoredLam m -> T m ()
 getFieldParamsToHole tag (StoredLam (V.Lam param lamBody) _) =
     SubExprs.onMatchingSubexprs SubExprs.toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
 
-mkLetItemToOutside ::
+-- Move let item one level outside
+letItemToOutside ::
     MonadA m =>
-    [V.Var] -> V.Var -> Transaction m () ->
-    Val (ExprIRef.ValIProperty m) -> Val (ExprIRef.ValIProperty m) ->
-    ConvertM m (Transaction m EntityId)
-mkLetItemToOutside binderScopeVars param delItem bodyStored argStored =
+    Maybe (ValIProperty m) ->
+    Maybe (DefI m) ->
+    Anchors.CodeProps m ->
+    [V.Var] -> V.Var -> T m () ->
+    Val (ValIProperty m) -> Val (ValIProperty m) ->
+    T m EntityId
+letItemToOutside mExtractDestPos mRecursiveDefI cp binderScopeVars param delItem bodyStored argStored =
     do
-        ctx <- ConvertM.readContext
-        do
-            mapM_ (`SubExprs.getVarsToHole` argStored) binderScopeVars
-            delItem
-            case ctx ^. ConvertM.scMExtractDestPos of
-                Nothing ->
-                    do
-                        paramName <- Anchors.assocNameRef param & Transaction.getP
-                        SubExprs.onGetVars
-                            (SubExprs.toGetGlobal
-                             (fromMaybe (error "recurseVar used not in definition context?!")
-                              (ctx ^. ConvertM.scDefI)))
-                            Builtins.recurseVar argStored
-                        newDefI <- DataOps.newPublicDefinitionWithPane paramName
-                            (ctx ^. ConvertM.scCodeAnchors) extractedI
-                        SubExprs.onGetVars (SubExprs.toGetGlobal newDefI) param bodyStored
-                        EntityId.ofIRef newDefI & return
-                Just scopeBodyP ->
-                    EntityId.ofLambdaParam param <$
-                    DataOps.redexWrapWithGivenParam param extractedI scopeBodyP
-            & return
+        mapM_ (`SubExprs.getVarsToHole` argStored) binderScopeVars
+        delItem
+        case mExtractDestPos of
+            Nothing ->
+                do
+                    paramName <- Anchors.assocNameRef param & Transaction.getP
+                    SubExprs.onGetVars
+                        (SubExprs.toGetGlobal
+                         (fromMaybe (error "recurseVar used not in definition context?!") mRecursiveDefI))
+                        Builtins.recurseVar argStored
+                    newDefI <- DataOps.newPublicDefinitionWithPane paramName cp extractedI
+                    SubExprs.onGetVars (SubExprs.toGetGlobal newDefI) param bodyStored
+                    EntityId.ofIRef newDefI & return
+            Just scopeBodyP ->
+                EntityId.ofLambdaParam param <$
+                DataOps.redexWrapWithGivenParam param extractedI scopeBodyP
     where
         extractedI = argStored ^. V.payload & Property.value
 
 mkLIActions ::
     MonadA m =>
-    [V.Var] -> V.Var -> ExprIRef.ValIProperty m ->
-    Val (ExprIRef.ValIProperty m) -> Val (ExprIRef.ValIProperty m) ->
+    [V.Var] -> V.Var -> ValIProperty m ->
+    Val (ValIProperty m) -> Val (ValIProperty m) ->
     ConvertM m (LetItemActions m)
 mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
     do
-        letItemToOutside <- mkLetItemToOutside binderScopeVars param del bodyStored argStored
+        ctx <- ConvertM.readContext
         return
             LetItemActions
             { _liDelete = SubExprs.getVarsToHole param bodyStored >> del
             , _liAddNext =
                 DataOps.redexWrap topLevelProp <&> EntityId.ofLambdaParam . fst
-            , _liExtract = letItemToOutside
+            , _liExtract =
+              letItemToOutside
+              (ctx ^. ConvertM.scMExtractDestPos)
+              (ctx ^. ConvertM.scDefI)
+              (ctx ^. ConvertM.scCodeAnchors)
+              binderScopeVars param del bodyStored argStored
             }
     where
         del = bodyStored ^. V.payload & replaceWith topLevelProp & void
