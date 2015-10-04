@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types, PatternGuards, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, RankNTypes, PatternGuards, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertBinder, convertLam
     ) where
@@ -29,6 +29,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
+import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Eval.Val (ScopeId)
 import qualified Lamdu.Eval.Val as EV
 import qualified Lamdu.Expr.GenIds as GenIds
@@ -70,29 +71,6 @@ data FieldParam = FieldParam
     , fpValue :: CurAndPrev (Map ScopeId [(ScopeId, EV.EvalResult ())])
     }
 
-onMatchingSubexprs ::
-    MonadA m => (a -> m ()) -> Lens.Fold (Val ()) b -> Val a -> m ()
-onMatchingSubexprs action predicate =
-    Lens.itraverseOf_ (ExprLens.subExprPayloads . Lens.ifiltered (\i _ -> Lens.has predicate i))
-    (const action)
-
-onMatchingSubexprsWithPath ::
-    MonadA m => (a -> m ()) -> ([Val ()] -> Bool) -> Val a -> m ()
-onMatchingSubexprsWithPath action predicate =
-    Lens.itraverseOf_ (ExprLens.payloadsIndexedByPath . Lens.ifiltered (\i _ -> predicate i))
-    (const action)
-
-toHole :: MonadA m => ExprIRef.ValIProperty m -> T m ()
-toHole = void . DataOps.setToHole
-
-toGetGlobal ::
-    MonadA m => ExprIRef.DefI m -> ExprIRef.ValIProperty m -> T m ()
-toGetGlobal defI exprP =
-    ExprIRef.writeValBody exprI $ V.BLeaf $ V.LGlobal globalId
-    where
-        exprI = Property.value exprP
-        globalId = ExprIRef.globalId defI
-
 data StoredLam m = StoredLam
     { _slLam :: V.Lam (Val (ExprIRef.ValIProperty m))
     , slLambdaProp :: ExprIRef.ValIProperty m
@@ -111,7 +89,7 @@ mkStoredLam lam pl =
 
 changeRecursionsFromCalls :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
 changeRecursionsFromCalls var =
-    onMatchingSubexprs changeRecursion
+    SubExprs.onMatchingSubexprs changeRecursion
     (V.body . ExprLens._BApp . V.applyFunc . ExprLens.valVar . Lens.only var)
     where
         changeRecursion prop =
@@ -129,7 +107,7 @@ makeDeleteLambda mRecursiveVar (StoredLam (V.Lam paramVar lamBodyStored) lambdaP
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         return $
             do
-                getVarsToHole paramVar lamBodyStored
+                SubExprs.getVarsToHole paramVar lamBodyStored
                 mRecursiveVar
                     & Lens._Just %%~ (`changeRecursionsFromCalls` lamBodyStored)
                     & void
@@ -165,7 +143,7 @@ changeRecursiveCallArgs change valProp var =
     -- Reread body before fixing it,
     -- to avoid re-writing old data (without converted vars)
     rereadVal valProp
-    >>= onMatchingSubexprsWithPath changeRecurseArg (isRecursiveCallArg var)
+    >>= SubExprs.onMatchingSubexprsWithPath changeRecurseArg (isRecursiveCallArg var)
     where
         changeRecurseArg prop =
             Property.value prop
@@ -183,7 +161,7 @@ wrapArgWithRecord tagForExistingArg tagForNewArg oldArg =
 convertVarToGetField ::
     MonadA m => T.Tag -> V.Var -> Val (Property (T m) (ExprIRef.ValI m)) -> T m ()
 convertVarToGetField tagForVar paramVar =
-    onMatchingSubexprs (convertVar . Property.value)
+    SubExprs.onMatchingSubexprs (convertVar . Property.value)
     (ExprLens.valVar . Lens.only paramVar)
     where
         convertVar bodyI =
@@ -371,7 +349,7 @@ getFieldOnVar = V.body . ExprLens._BGetField . inGetField
 
 getFieldParamsToParams :: MonadA m => StoredLam m -> T.Tag -> T m ()
 getFieldParamsToParams (StoredLam (V.Lam param lamBody) _) tag =
-    onMatchingSubexprs (toParam . Property.value)
+    SubExprs.onMatchingSubexprs (toParam . Property.value)
     (getFieldOnVar . Lens.only (param, tag)) lamBody
     where
         toParam bodyI = ExprIRef.writeValBody bodyI $ V.BLeaf $ V.LVar param
@@ -608,7 +586,7 @@ convertParams mRecursiveVar expr =
 
 changeRecursionsToCalls :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
 changeRecursionsToCalls var =
-    onMatchingSubexprs changeRecursion (ExprLens.valVar . Lens.only var)
+    SubExprs.onMatchingSubexprs changeRecursion (ExprLens.valVar . Lens.only var)
     where
         changeRecursion prop =
             DataOps.newHole
@@ -644,19 +622,10 @@ mCheckForRedex expr = do
         getRedexApplies _ =
             error "redex should only be applied once per parent scope"
 
-onGetVars ::
-    MonadA m =>
-    (ExprIRef.ValIProperty m -> T m ()) -> V.Var ->
-    Val (ExprIRef.ValIProperty m) -> T m ()
-onGetVars f var =
-    onMatchingSubexprs f (ExprLens.valVar . Lens.only var)
-
-getVarsToHole :: MonadA m => V.Var -> Val (ExprIRef.ValIProperty m) -> T m ()
-getVarsToHole = onGetVars toHole
 
 getFieldParamsToHole :: MonadA m => T.Tag -> StoredLam m -> T m ()
 getFieldParamsToHole tag (StoredLam (V.Lam param lamBody) _) =
-    onMatchingSubexprs toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
+    SubExprs.onMatchingSubexprs SubExprs.toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
 
 mkLetItemToOutside ::
     MonadA m =>
@@ -667,20 +636,20 @@ mkLetItemToOutside binderScopeVars param delItem bodyStored argStored =
     do
         ctx <- ConvertM.readContext
         do
-            mapM_ (`getVarsToHole` argStored) binderScopeVars
+            mapM_ (`SubExprs.getVarsToHole` argStored) binderScopeVars
             delItem
             case ctx ^. ConvertM.scMExtractDestPos of
                 Nothing ->
                     do
                         paramName <- Anchors.assocNameRef param & Transaction.getP
-                        onGetVars
-                            (toGetGlobal
+                        SubExprs.onGetVars
+                            (SubExprs.toGetGlobal
                              (fromMaybe (error "recurseVar used not in definition context?!")
                               (ctx ^. ConvertM.scDefI)))
                             Builtins.recurseVar argStored
                         newDefI <- DataOps.newPublicDefinitionWithPane paramName
                             (ctx ^. ConvertM.scCodeAnchors) extractedI
-                        onGetVars (toGetGlobal newDefI) param bodyStored
+                        SubExprs.onGetVars (SubExprs.toGetGlobal newDefI) param bodyStored
                         EntityId.ofIRef newDefI & return
                 Just scopeBodyP ->
                     EntityId.ofLambdaParam param <$
@@ -699,7 +668,7 @@ mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
         letItemToOutside <- mkLetItemToOutside binderScopeVars param del bodyStored argStored
         return
             LetItemActions
-            { _liDelete = getVarsToHole param bodyStored >> del
+            { _liDelete = SubExprs.getVarsToHole param bodyStored >> del
             , _liAddNext =
                 DataOps.redexWrap topLevelProp <&> EntityId.ofLambdaParam . fst
             , _liExtract = letItemToOutside
