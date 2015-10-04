@@ -168,7 +168,7 @@ Executable lamdu
                   , Lamdu.Eval.Val
                   , Lamdu.Eval.Results
                   , Lamdu.Eval.ToExpr
-                  , Lamdu.DefEvaluators
+                  , Lamdu.EvalManager
                   , Lamdu.VersionControl
                   , Lamdu.CharClassification
                   , Lamdu.Opts

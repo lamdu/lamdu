@@ -62,7 +62,7 @@ Executable lamdu
                  Data.Binary.Utils Data.ByteString.Utils Data.ByteString.NFData
                  Data.Vector.Vector2 Data.Random.Instances Data.MRUMemo
                  Data.Function.Decycle Data.Maybe.Utils Data.Map.Utils
-                 Data.Set.Ordered Lamdu.DefEvaluators Lamdu.CharClassification
+                 Data.Set.Ordered Lamdu.EvalManager Lamdu.CharClassification
                  Lamdu.VersionControl.Actions Lamdu.Eval.Background Lamdu.Eval.Val
                  Lamdu.Eval.ToExpr Lamdu.Eval.Results Lamdu.Font Lamdu.Sugar.Types
                  Lamdu.Sugar.EntityId Lamdu.Sugar.NearestHoles

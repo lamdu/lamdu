@@ -31,7 +31,7 @@ import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.ExampleDB as ExampleDB
 import           Lamdu.DataFile (getLamduDir)
-import qualified Lamdu.DefEvaluators as DefEvaluators
+import qualified Lamdu.EvalManager as EvalManager
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
@@ -92,14 +92,14 @@ createWindow Opts.FullScreen =
         mMonitor <- GLFW.getPrimaryMonitor
         GLFWUtils.getVideoModeSize >>= GLFWUtils.createWindow "Lamdu" mMonitor
 
-settingsChangeHandler :: DefEvaluators.Evaluators -> Settings -> IO ()
+settingsChangeHandler :: EvalManager.Evaluators -> Settings -> IO ()
 settingsChangeHandler evaluators settings =
     case settings ^. Settings.sInfoMode of
-    Settings.Evaluation -> DefEvaluators.start evaluators
-    _ -> DefEvaluators.stop evaluators
+    Settings.Evaluation -> EvalManager.start evaluators
+    _ -> EvalManager.stop evaluators
 
 makeRootWidget ::
-    Font -> Db -> Zoom -> IORef Settings -> DefEvaluators.Evaluators ->
+    Font -> Db -> Zoom -> IORef Settings -> EvalManager.Evaluators ->
     (Config, Widget.Size) -> IO (Widget IO)
 makeRootWidget font db zoom settingsRef evaluators (config, size) =
     do
@@ -110,7 +110,7 @@ makeRootWidget font db zoom settingsRef evaluators (config, size) =
         sizeFactor <- Zoom.getSizeFactor zoom
         globalEventMap <- Settings.mkEventMap (settingsChangeHandler evaluators) config settingsRef
         let eventMap = globalEventMap `mappend` Zoom.eventMap zoom (Config.zoom config)
-        evalResults <- DefEvaluators.getResults evaluators
+        evalResults <- EvalManager.getResults evaluators
         settings <- readIORef settingsRef
         let env = GUIMain.Env
                 { envEvalRes = evalResults
@@ -123,7 +123,7 @@ makeRootWidget font db zoom settingsRef evaluators (config, size) =
         let dbToIO =
                 case settings ^. Settings.sInfoMode of
                 Settings.Evaluation ->
-                    DefEvaluators.runTransactionAndMaybeRestartEvaluators evaluators
+                    EvalManager.runTransactionAndMaybeRestartEvaluators evaluators
                 _ -> DbLayout.runDbTransaction db
         widget <- mkWidgetWithFallback dbToIO env
         return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
@@ -144,7 +144,7 @@ runEditor mFontPath windowMode db =
                 wrapFlyNav <- FlyNav.makeIO Style.flyNav WidgetIds.flyNav
                 invalidateCacheRef <- newIORef (return ())
                 let invalidateCache = join (readIORef invalidateCacheRef)
-                evaluators <- DefEvaluators.new invalidateCache db
+                evaluators <- EvalManager.new invalidateCache db
                 zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
                 settingsRef <- Settings Settings.defaultInfoMode & newIORef
                 (invalidateCacheAction, makeRootWidgetCached) <-
@@ -155,7 +155,7 @@ runEditor mFontPath windowMode db =
                     do
                         invalidateCacheAction
                         scheduleRefresh refreshScheduler
-                DefEvaluators.start evaluators
+                EvalManager.start evaluators
 
                 addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
                 mainLoop win refreshScheduler configSampler $

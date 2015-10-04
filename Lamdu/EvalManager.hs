@@ -1,5 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude, RankNTypes, LambdaCase #-}
-module Lamdu.DefEvaluators
+module Lamdu.EvalManager
     ( Evaluators(..)
     , new
     , start, stop
