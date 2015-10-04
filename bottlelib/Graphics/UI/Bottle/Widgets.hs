@@ -110,11 +110,8 @@ makeFocusableLabel
     :: (Applicative f, MonadA m)
     => String -> Widget.Id
     -> WidgetEnvT m (Widget f)
-makeFocusableLabel text myIdPrefix = do
-    textView <- makeTextViewWidget text $ Widget.toAnimId myId
-    makeFocusableView myId textView
-    where
-        myId = Widget.joinId myIdPrefix [pack text]
+makeFocusableLabel text myIdPrefix =
+    makeFocusableTextView text (Widget.joinId myIdPrefix [pack text])
 
 fdStyle :: WE.Env -> FocusDelegator.Style
 fdStyle env = FocusDelegator.Style
