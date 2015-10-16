@@ -15,7 +15,7 @@ requires [stack](https://github.com/commercialhaskell/stack/releases), [brew](ht
 
 ```shell
 brew install ftgl leveldb
-git clone --recursive https://github.com/Peaker/lamdu
+git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
 stack install
@@ -28,7 +28,7 @@ requires [stack](https://github.com/commercialhaskell/stack/releases)
 ```shell
 sudo apt-get update -qq
 sudo apt-get install git libftgl-dev libleveldb-dev libglfw-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev -yq
-git clone --recursive https://github.com/Peaker/lamdu
+git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
 stack install
