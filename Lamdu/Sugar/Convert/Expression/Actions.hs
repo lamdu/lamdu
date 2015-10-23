@@ -43,7 +43,7 @@ mkExtractToDef cp stored =
         newDefI <- DataOps.newPublicDefinitionWithPane "" cp (Property.value stored)
         getVarI <- ExprIRef.globalId newDefI & V.LGlobal & V.BLeaf & ExprIRef.newValBody
         Property.set stored getVarI
-        EntityId.ofValI getVarI & return
+        EntityId.ofIRef newDefI & return
 
 mkExtractToLetItem :: MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
 mkExtractToLetItem extractDestPos stored =
