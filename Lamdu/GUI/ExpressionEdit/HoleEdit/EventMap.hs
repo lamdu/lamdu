@@ -21,7 +21,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.GLFW as GLFW
-import           Lamdu.CharClassification (operatorChars, alphaNumericChars)
+import           Lamdu.CharClassification (operatorChars)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..))
@@ -76,14 +76,15 @@ disallowChars Config.Hole{..} searchTerm =
     disallowMix
     where
         disallowMix
-            | nonEmptyAll (`notElem` operatorChars) searchTerm =
-                E.filterChars (`notElem` operatorChars)
-            | "." == take 1 searchTerm
-            && nonEmptyAll (`notElem` operatorChars) (drop 1 searchTerm) =
-                E.filterChars (`notElem` operatorChars)
             | nonEmptyAll (`elem` operatorChars) searchTerm
             && searchTerm /= "." =
-                E.filterChars (`notElem` alphaNumericChars)
+                E.filterChars (`elem` operatorChars)
+
+            | nonEmptyAll (`notElem` operatorChars) searchTerm
+            || ("." == take 1 searchTerm &&
+                nonEmptyAll (`notElem` operatorChars) (drop 1 searchTerm)) =
+                E.filterChars (`notElem` operatorChars)
+
             | otherwise = id
 
 deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
