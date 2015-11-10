@@ -199,6 +199,14 @@ makeScopeEventMap prevKey nextKey setter cursor =
         prevDoc = E.Doc ["Evaluation", "Scope", "Previous"]
         nextDoc = E.Doc ["Evaluation", "Scope", "Next"]
 
+blockEventMap :: MonadA m => Widget.EventHandlers (T m)
+blockEventMap =
+    return mempty
+    & E.keyPresses dirKeys
+    (E.Doc ["Navigation", "Move", "(blocked)"])
+    where
+        dirKeys = [GLFW.Key'Left, GLFW.Key'Right] <&> ModKey mempty
+
 makeScopeNavEdit ::
     MonadA m =>
     Sugar.Binder name m expr ->
@@ -225,34 +233,24 @@ makeScopeNavEdit binder mScopeCursor myId =
                 >>= ExpressionGui.hboxSpaced
                 >>= ExpressionGui.makeFocusableView myId
                 <&>
-                case mSetterAndCursor of
-                Nothing -> id
-                Just (setter, cursor) ->
-                    ExpressionGui.egWidget %~ Widget.weakerEvents
-                    (mappend
-                        (makeScopeEventMap leftKeys rightKeys setter cursor)
-                        blockEventMap)
+                ExpressionGui.egWidget %~ Widget.weakerEvents
+                ( mkScopeEventMap leftKeys rightKeys
+                  & maybe mempty (`mappend` blockEventMap)
+                )
                 <&> Just
                 <&> (,)
-                    (makeScopeEventMap prevScopeKeys nextScopeKeys
-                     <$> mSetScope <*> curCursor
+                    (mkScopeEventMap prevScopeKeys nextScopeKeys
                      & fromMaybe mempty)
             _ -> return (mempty, Nothing)
     where
-        mSetterAndCursor = ((,) <$> mSetScope <*> curCursor)
-        mCursor = mSetterAndCursor ^? Lens._Just . _2
+        mkScopeEventMap l r = makeScopeEventMap l r <$> mSetScope <*> curCursor
         leftKeys = [ModKey mempty GLFW.Key'Left]
         rightKeys = [ModKey mempty GLFW.Key'Right]
         scopes :: [(String, Maybe Sugar.BinderParamScopeId)]
         scopes =
-            [ ("◀", mCursor >>= sMPrevParamScope)
-            , ("▶", mCursor >>= sMNextParamScope)
+            [ ("◀", curCursor >>= sMPrevParamScope)
+            , ("▶", curCursor >>= sMNextParamScope)
             ]
-        blockEventMap =
-            E.keyPresses
-            (leftKeys ++ rightKeys)
-            (E.Doc ["Navigation", "Move", "(blocked)"]) $
-            return mempty
         curCursor = mScopeCursor ^. current
         mSetScope =
             binder ^. Sugar.bMChosenScopeProp
