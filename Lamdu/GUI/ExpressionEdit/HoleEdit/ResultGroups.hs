@@ -215,6 +215,12 @@ literalIntGroups holeInfo =
     where
         searchTerm = ehiSearchTerm holeInfo
 
+insensitivePrefixOf :: String -> String -> Bool
+insensitivePrefixOf = isPrefixOf `on` map Char.toLower
+
+insensitiveInfixOf :: String -> String -> Bool
+insensitiveInfixOf = isInfixOf `on` map Char.toLower
+
 globalNameMatches :: Monad m => String -> V.Val () -> T m Bool
 globalNameMatches searchTerm (V.Val () body) =
     case body of
@@ -225,7 +231,7 @@ globalNameMatches searchTerm (V.Val () body) =
     where
         verifyName entity =
             Anchors.assocNameRef entity & Transaction.getP
-            <&> (searchTerm `isInfixOf`)
+            <&> (searchTerm `insensitiveInfixOf`)
 
 makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [Group m]
 makeAllGroups editableHoleInfo =
@@ -255,7 +261,6 @@ groupOrdering searchTerm group =
     , match isInfixOf
     ]
     where
-        insensitivePrefixOf = isPrefixOf `on` map Char.toLower
         match f = any (f searchTerm) (group ^. groupSearchTerms)
 
 holeMatches :: String -> [Group m] -> [Group m]
@@ -268,4 +273,3 @@ holeMatches searchTerm groups =
             | null searchTerm = id
             | otherwise = filter nameMatch
         nameMatch group = any (insensitiveInfixOf searchTerm) (group ^. groupSearchTerms)
-        insensitiveInfixOf = isInfixOf `on` map Char.toLower
