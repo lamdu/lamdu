@@ -301,14 +301,17 @@ makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId body params =
 
 makeParts ::
     MonadA m =>
+    ExprGuiT.FuncApplyLimit ->
     Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) ->
     Widget.Id -> Widget.Id ->
     ExprGuiM m (Parts m)
-makeParts binder delVarBackwardsId myId =
+makeParts funcApplyLimit binder delVarBackwardsId myId =
     do
         mScopeCursor <- mkScopeCursor binder
         (scopeEventMap, mScopeNavEdit) <-
-            mScopeCursor ^. current
+            do
+                guard (funcApplyLimit == ExprGuiT.UnlimitedFuncApply)
+                mScopeCursor ^. current
             & maybe (return (mempty, Nothing)) (makeScopeNavEdit binder scopesNavId)
         do
             mParamsEdit <- makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId body params
@@ -343,7 +346,7 @@ make ::
 make name binder myId =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
-            makeParts binder myId myId
+            makeParts ExprGuiT.UnlimitedFuncApply binder myId myId
         rhsJumperEquals <- jumpToRHS [ModKey mempty GLFW.Key'Equal] rhs
         presentationEdits <-
             binder ^.. Sugar.bMPresentationModeProp . Lens._Just

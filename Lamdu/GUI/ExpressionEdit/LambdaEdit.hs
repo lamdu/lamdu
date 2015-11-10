@@ -80,7 +80,7 @@ make lam pl =
     ExprGuiM.assignCursor myId bodyId $
     do
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
-            BinderEdit.makeParts binder bodyId myId
+            BinderEdit.makeParts funcApplyLimit binder bodyId myId
         let animId = Widget.toAnimId myId
         paramsAndLabelEdits <-
             case (lam ^. Sugar.lamMode, params) of
@@ -91,6 +91,7 @@ make lam pl =
             & ExpressionGui.hboxSpaced
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
+        funcApplyLimit = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation . ExprGuiT.funcApplyLimit
         params = binder ^. Sugar.bParams
         binder = lam ^. Sugar.lamBinder
         body = binder ^. Sugar.bBody

@@ -6,7 +6,9 @@ module Lamdu.GUI.ExpressionGui.Types
         , plStoredEntityIds, plInjected, plNearestHoles, plShowAnnotation
     , emptyPayload
     , EvalModeShow(..)
+    , FuncApplyLimit(..)
     , ShowAnnotation(..), showTypeWhenMissing, showInTypeMode, showInEvalMode
+      , funcApplyLimit
       , showAnnotationWhenVerbose
       , neverShowAnnotations, alwaysShowAnnotations
     , nextHolesBefore
@@ -27,10 +29,17 @@ type ExpressionGui m = Layout (Transaction m)
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
     deriving (Eq, Ord, Show)
 
+-- This is only relevant for function subexprs, and means their
+-- parameter can only ever get one scope per parent scope id, meaning
+-- we may avoid showing their scope nav altogether.
+data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
+    deriving (Eq, Ord, Show)
+
 data ShowAnnotation = ShowAnnotation
     { _showTypeWhenMissing :: Bool -- concise-mode or eval-mode without val
     , _showInTypeMode :: Bool
     , _showInEvalMode :: EvalModeShow
+    , _funcApplyLimit :: FuncApplyLimit
     } deriving (Eq, Ord, Show)
 Lens.makeLenses ''ShowAnnotation
 
@@ -39,13 +48,14 @@ showAnnotationWhenVerbose = ShowAnnotation
     { _showTypeWhenMissing = False
     , _showInTypeMode = True
     , _showInEvalMode = EvalModeShowEval
+    , _funcApplyLimit = UnlimitedFuncApply
     }
 
 neverShowAnnotations :: ShowAnnotation
-neverShowAnnotations = ShowAnnotation False False EvalModeShowNothing
+neverShowAnnotations = ShowAnnotation False False EvalModeShowNothing UnlimitedFuncApply
 
 alwaysShowAnnotations :: ShowAnnotation
-alwaysShowAnnotations = ShowAnnotation True True EvalModeShowEval
+alwaysShowAnnotations = ShowAnnotation True True EvalModeShowEval UnlimitedFuncApply
 
 -- GUI input payload on sugar exprs
 data Payload = Payload

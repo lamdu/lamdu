@@ -79,8 +79,12 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         where
             cas' =
                 cas
+                -- cKind contains the scrutinee which is not always
+                -- visible (for case alts that aren't lambdas), so
+                -- maybe we do want to show the annotation
                 & cKind . Lens.mapped %~ don'tShowAnnotation
-                & cAlts . Lens.mapped . Lens.mapped . rBody
-                    . _BodyLam . lamBinder . bBody %~ don'tShowAnnotation
+                & cAlts . Lens.mapped . Lens.mapped %~
+                  (rBody . _BodyLam . lamBinder . bBody %~ don'tShowAnnotation) .
+                  (rPayload . showAnn . T.funcApplyLimit .~ T.AtMostOneFuncApply)
     where
         newBody = oldBody <&> markAnnotationsToDisplay
