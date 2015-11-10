@@ -8,7 +8,6 @@ module Lamdu.GUI.ExpressionEdit.EventMap
 import           Prelude.Compat
 
 import           Control.Applicative (liftA2)
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.Store.Transaction as Transaction
@@ -43,14 +42,6 @@ make holePickers pl =
     , jumpHolesEventMapIfSelected pl
     , replaceOrComeToParentEventMap pl
     ]
-
-mkEventMap ::
-    Functor f =>
-    [ModKey] -> E.Doc ->
-    f Sugar.EntityId -> EventHandlers f
-mkEventMap keys doc =
-    Widget.keysEventMapMovesCursor keys doc .
-    fmap WidgetIds.fromEntityId
 
 mkEventMapWithPickers ::
     (Functor f, MonadA m) =>
@@ -93,9 +84,12 @@ jumpHolesEventMapIfSelected pl =
 extractEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)
 extractEventMap config actions =
     actions ^. Sugar.extract
-    & maybe mempty
-      (mkEventMap (Config.extractKeys config) (E.Doc ["Edit", "Extract"]))
-    <&> Lens.mapped . Widget.eCursor . Lens._Wrapped' . Lens._Just %~ WidgetIds.nameEditOf
+    & maybe mempty (Widget.keysEventMapMovesCursor keys doc . fmap extractor)
+    where
+        doc = E.Doc ["Edit", "Extract"]
+        keys = Config.extractKeys config
+        extractor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
+        extractor (Sugar.ExtractToDef defId) = WidgetIds.nameEditOf (WidgetIds.fromEntityId defId)
 
 replaceOrComeToParentEventMap ::
     MonadA m =>
@@ -184,6 +178,9 @@ replaceEventMap config actions =
     where
         mk doc keys = mkEventMap keys (E.Doc ["Edit", doc])
         delKeys = Config.replaceKeys config ++ Config.delKeys config
+        mkEventMap keys doc =
+            Widget.keysEventMapMovesCursor keys doc .
+            fmap WidgetIds.fromEntityId
 
 modifyEventMap ::
     MonadA m => HolePickers m -> Config ->

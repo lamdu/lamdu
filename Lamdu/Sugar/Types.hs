@@ -27,6 +27,7 @@ module Lamdu.Sugar.Types
     , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
     , SetToHole(..), _SetToHole, _SetWrapperToHole, _AlreadyAHole
     , SetToInnerExpr(..), _SetToInnerExpr, _NoInnerExpr
+    , ExtractToDestination(..)
     , Actions(..)
         , wrap, setToHole, setToInnerExpr, extract
     , Body(..)
@@ -126,11 +127,15 @@ data SetToInnerExpr m
     = SetToInnerExpr (T m EntityId)
     | NoInnerExpr
 
+data ExtractToDestination
+    = ExtractToLet EntityId
+    | ExtractToDef EntityId
+
 data Actions m = Actions
     { _wrap :: WrapAction m
     , _setToHole :: SetToHole m
     , _setToInnerExpr :: SetToInnerExpr m
-    , _extract :: Maybe (T m EntityId) -- Nothing if already hole
+    , _extract :: Maybe (T m ExtractToDestination) -- Nothing if already hole
     }
 
 type EvaluationResult = Map E.ScopeId (E.EvalResult ())

@@ -30,11 +30,11 @@ import           Lamdu.Sugar.Types
 type T = Transaction
 
 mkExtract ::
-    MonadA m => ConvertM.Context m -> ExprIRef.ValIProperty m -> T m EntityId
+    MonadA m => ConvertM.Context m -> ExprIRef.ValIProperty m -> T m ExtractToDestination
 mkExtract ctx stored =
     case ctx ^. ConvertM.scMExtractDestPos of
-    Nothing -> mkExtractToDef (ctx ^. ConvertM.scCodeAnchors) stored
-    Just extractDestPos -> mkExtractToLetItem extractDestPos stored
+    Nothing -> mkExtractToDef (ctx ^. ConvertM.scCodeAnchors) stored <&> ExtractToDef
+    Just extractDestPos -> mkExtractToLetItem extractDestPos stored <&> ExtractToLet
 
 mkExtractToDef ::
     MonadA m => Anchors.CodeProps m -> ExprIRef.ValIProperty m -> T m EntityId
@@ -45,7 +45,8 @@ mkExtractToDef cp stored =
         Property.set stored getVarI
         EntityId.ofIRef newDefI & return
 
-mkExtractToLetItem :: MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
+mkExtractToLetItem ::
+    MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
 mkExtractToLetItem extractDestPos stored =
     do
         (lamI, getVarI) <-
