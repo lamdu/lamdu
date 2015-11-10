@@ -15,3 +15,8 @@ extra-deps:
 - stb-image-0.2.1
 - bindings-GLFW-3.1.1.4
 - GLFW-b-1.4.7.3
+
+extra-include-dirs:
+- /usr/local/include
+extra-lib-dirs:
+- /usr/local/lib
