@@ -177,9 +177,8 @@ mkScopeCursor binder =
             & Lens._Just %%~ Transaction.getP
             & ExprGuiM.transaction
             <&> join
-        liftA2 Map.lookup
-            <$> mOuterScopeId
-            <*> (binder ^. Sugar.bScopes <&> Just)
+        -- The liftA2's go thru Maybe, CurAndPrev
+        (liftA2 . liftA2) Map.lookup mOuterScopeId (binder ^. Sugar.bScopes <&> Just)
             <&> join
             <&> (>>= scopeCursor mChosenScope)
             & return
@@ -209,10 +208,9 @@ blockEventMap =
 
 makeScopeNavEdit ::
     MonadA m =>
-    Sugar.Binder name m expr ->
-    CurAndPrev (Maybe ScopeCursor) -> Widget.Id ->
+    Sugar.Binder name m expr -> Maybe ScopeCursor -> Widget.Id ->
     ExprGuiM m (Widget.EventHandlers (T m), Maybe (ExpressionGui m))
-makeScopeNavEdit binder mScopeCursor myId =
+makeScopeNavEdit binder mCurCursor myId =
     do
         config <- ExprGuiM.readConfig
         let mkArrow (txt, mScopeId) =
@@ -243,15 +241,14 @@ makeScopeNavEdit binder mScopeCursor myId =
                      & fromMaybe mempty)
             _ -> return (mempty, Nothing)
     where
-        mkScopeEventMap l r = makeScopeEventMap l r <$> mSetScope <*> curCursor
+        mkScopeEventMap l r = makeScopeEventMap l r <$> mSetScope <*> mCurCursor
         leftKeys = [ModKey mempty GLFW.Key'Left]
         rightKeys = [ModKey mempty GLFW.Key'Right]
         scopes :: [(String, Maybe Sugar.BinderParamScopeId)]
         scopes =
-            [ ("◀", curCursor >>= sMPrevParamScope)
-            , ("▶", curCursor >>= sMNextParamScope)
+            [ ("◀", mCurCursor >>= sMPrevParamScope)
+            , ("▶", mCurCursor >>= sMNextParamScope)
             ]
-        curCursor = mScopeCursor ^. current
         mSetScope =
             binder ^. Sugar.bMChosenScopeProp
             <&> Transaction.setP
@@ -289,7 +286,7 @@ makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId body params =
         <&> Just
     where
         bodyId = body ^. Sugar.rPayload . Sugar.plEntityId
-        curCursor = mScopeCursor ^. current
+        mCurCursor = mScopeCursor ^. current
         nearestHoles = ExprGuiT.nextHolesBefore body
         annotationMode =
             do
@@ -297,8 +294,8 @@ makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId body params =
                     Lens._Just . ExpressionGui.egWidget . Widget.isFocused
                     >>= guard
                 ExpressionGui.NeighborVals
-                    <$> (curCursor <&> sMPrevParamScope)
-                    <*> (curCursor <&> sMNextParamScope)
+                    <$> (mCurCursor <&> sMPrevParamScope)
+                    <*> (mCurCursor <&> sMNextParamScope)
                     <&> ExpressionGui.WithNeighbouringEvalAnnotations
             & fromMaybe ExpressionGui.NormalEvalAnnotation
 
@@ -310,7 +307,8 @@ makeParts ::
 makeParts binder delVarBackwardsId myId =
     do
         mScopeCursor <- mkScopeCursor binder
-        (scopeEventMap, mScopeNavEdit) <- makeScopeNavEdit binder mScopeCursor scopesNavId
+        (scopeEventMap, mScopeNavEdit) <-
+            makeScopeNavEdit binder (mScopeCursor ^. current) scopesNavId
         do
             mParamsEdit <- makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId body params
             bodyEdit <-
