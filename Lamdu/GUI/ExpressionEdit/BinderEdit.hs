@@ -185,9 +185,9 @@ mkScopeCursor binder =
 
 makeScopeEventMap ::
     MonadA m =>
-    [ModKey] -> [ModKey] -> (Sugar.BinderParamScopeId -> T m ()) -> ScopeCursor ->
+    [ModKey] -> [ModKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> T m ()) ->
     Widget.EventHandlers (T m)
-makeScopeEventMap prevKey nextKey setter cursor =
+makeScopeEventMap prevKey nextKey cursor setter =
     do
         (key, doc, scope) <-
             (sMPrevParamScope cursor ^.. Lens._Just <&> (,,) prevKey prevDoc) ++
@@ -208,9 +208,9 @@ blockEventMap =
 
 makeScopeNavEdit ::
     MonadA m =>
-    Sugar.Binder name m expr -> Maybe ScopeCursor -> Widget.Id ->
+    Sugar.Binder name m expr -> Widget.Id -> ScopeCursor ->
     ExprGuiM m (Widget.EventHandlers (T m), Maybe (ExpressionGui m))
-makeScopeNavEdit binder mCurCursor myId =
+makeScopeNavEdit binder myId curCursor =
     do
         config <- ExprGuiM.readConfig
         let mkArrow (txt, mScopeId) =
@@ -241,13 +241,13 @@ makeScopeNavEdit binder mCurCursor myId =
                      & fromMaybe mempty)
             _ -> return (mempty, Nothing)
     where
-        mkScopeEventMap l r = makeScopeEventMap l r <$> mSetScope <*> mCurCursor
+        mkScopeEventMap l r = makeScopeEventMap l r curCursor <$> mSetScope
         leftKeys = [ModKey mempty GLFW.Key'Left]
         rightKeys = [ModKey mempty GLFW.Key'Right]
         scopes :: [(String, Maybe Sugar.BinderParamScopeId)]
         scopes =
-            [ ("◀", mCurCursor >>= sMPrevParamScope)
-            , ("▶", mCurCursor >>= sMNextParamScope)
+            [ ("◀", sMPrevParamScope curCursor)
+            , ("▶", sMNextParamScope curCursor)
             ]
         mSetScope =
             binder ^. Sugar.bMChosenScopeProp
@@ -308,7 +308,8 @@ makeParts binder delVarBackwardsId myId =
     do
         mScopeCursor <- mkScopeCursor binder
         (scopeEventMap, mScopeNavEdit) <-
-            makeScopeNavEdit binder (mScopeCursor ^. current) scopesNavId
+            mScopeCursor ^. current
+            & maybe (return (mempty, Nothing)) (makeScopeNavEdit binder scopesNavId)
         do
             mParamsEdit <- makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId body params
             bodyEdit <-
