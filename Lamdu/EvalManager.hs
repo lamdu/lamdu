@@ -11,12 +11,10 @@ import           Control.Concurrent (ThreadId, killThread)
 import           Control.Concurrent.Utils (runAfter)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (join)
-import           Data.CurAndPrev (CurAndPrev(..), prev, current)
+import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Foldable (traverse_)
 import           Data.IORef
 import           Data.IORef.Utils (atomicModifyIORef_)
-import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -35,7 +33,7 @@ import           Lamdu.Data.DbLayout (DbM, ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Eval.Background as EvalBG
-import           Lamdu.Eval.Results (EvalResults, erExprValues)
+import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
@@ -55,8 +53,7 @@ data Evaluator = Evaluator
     { eInvalidateCache :: IO ()
     , eDb :: Db
     , eEvaluatorRef :: IORef BGEvaluator
-      -- TODO: Only store the prev here
-    , eResultsRef :: IORef (CurAndPrev (EvalResults (ValI ViewM)))
+    , eResultsRef :: IORef (EvalResults (ValI ViewM))
     , eCancelTimerRef :: IORef (Maybe ThreadId)
     }
 
@@ -77,14 +74,17 @@ new invalidateCache db =
 runViewTransactionInIO :: Db -> Transaction ViewM a -> IO a
 runViewTransactionInIO db = DbLayout.runDbTransaction db . VersionControl.runAction
 
+getLatestResults :: Evaluator -> IO (EvalResults (ValI ViewM))
+getLatestResults evaluator =
+    readIORef (eEvaluatorRef evaluator) <&> startedEvaluator
+    >>= maybe (return mempty) EvalBG.getResults
+
 getResults :: Evaluator -> IO (CurAndPrev (EvalResults (ValI ViewM)))
 getResults evaluator =
     do
-        res <-
-            readIORef (eEvaluatorRef evaluator) <&> startedEvaluator
-            >>= maybe (return mempty) EvalBG.getResults
-        atomicModifyIORef (eResultsRef evaluator)
-            (join (,) . (current .~ res))
+        res <- getLatestResults evaluator
+        prevResults <- readIORef (eResultsRef evaluator)
+        return CurAndPrev { _prev = prevResults, _current = res }
 
 loadDef ::
     Evaluator -> DefI ViewM ->
@@ -106,7 +106,7 @@ evalActions evaluator =
       False -> return ()
       True ->
           do
-              atomicModifyIORef_ (eResultsRef evaluator) (prev .~ mempty)
+              atomicModifyIORef_ (eResultsRef evaluator) (const mempty)
               eInvalidateCache evaluator
     }
     where
@@ -172,9 +172,10 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
                 & runTrans
             if dependencyChanged
                 then do
+                    prevResults <- getLatestResults evaluator
                     stop evaluator
                     setCancelTimer evaluator
-                    atomicModifyIORef_ (eResultsRef evaluator) pickPrevResults
+                    atomicModifyIORef_ (eResultsRef evaluator) (const prevResults)
                     start evaluator
                 else EvalBG.resumeLoading eval
             return result
@@ -186,18 +187,8 @@ setCancelTimer evaluator =
     do
         newCancelTimer <- runAfter 5000000 -- 5 seconds
             (atomicModifyIORef (eResultsRef evaluator)
-                (flip (,) () . (prev .~ mempty))
+                (flip (,) () . const mempty)
             )
         atomicModifyIORef (eCancelTimerRef evaluator)
             (\x -> (Just newCancelTimer, x))
             >>= Lens.traverseOf_ Lens._Just killThread
-
-pickPrevResults ::
-    Ord pl => CurAndPrev (EvalResults pl) -> CurAndPrev (EvalResults pl)
-pickPrevResults (CurAndPrev latest pre) =
-    CurAndPrev { _current = mempty, _prev = newPrev }
-    where
-        newPrev
-            | Map.size (latest ^. erExprValues) >
-                Map.size (pre ^. erExprValues) = latest
-            | otherwise = pre
