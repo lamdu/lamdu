@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, RankNTypes, LambdaCase #-}
 module Lamdu.EvalManager
-    ( Evaluators(..)
+    ( Evaluators
     , new
     , start, stop
     , getResults
