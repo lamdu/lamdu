@@ -136,9 +136,12 @@ start evaluator =
 
 stop :: Evaluator -> IO ()
 stop evaluator =
-    readIORef (eEvaluatorRef evaluator)
-    <&> startedEvaluator
-    >>= traverse_ EvalBG.stop
+    do
+        readIORef (eEvaluatorRef evaluator)
+            <&> startedEvaluator
+            >>= traverse_ EvalBG.stop
+        writeIORef (eEvaluatorRef evaluator) NotStarted
+        writeIORef (eResultsRef evaluator) mempty
 
 sumDependency :: Set (ExprIRef.ValI ViewM) -> Set V.GlobalId -> Set Guid
 sumDependency subexprs globals =
