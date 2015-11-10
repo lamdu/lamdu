@@ -25,6 +25,7 @@ import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
@@ -225,10 +226,11 @@ globalNameMatches :: Monad m => String -> V.Val () -> T m Bool
 globalNameMatches searchTerm (V.Val () body) =
     case body of
     V.BLeaf (V.LGlobal globalId) -> verifyName (ExprIRef.defI globalId)
-    V.BToNom (V.Nom nomId _) -> verifyName nomId
-    V.BFromNom (V.Nom nomId _) -> verifyName nomId
+    V.BToNom (V.Nom nomId h) | isHole h -> verifyName nomId
+    V.BFromNom (V.Nom nomId h) | isHole h -> verifyName nomId
     _ -> return True
     where
+        isHole = Lens.notNullOf ExprLens.valHole
         verifyName entity =
             Anchors.assocNameRef entity & Transaction.getP
             <&> (searchTerm `insensitiveInfixOf`)
