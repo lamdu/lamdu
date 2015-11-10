@@ -38,7 +38,8 @@ runViewTransaction v = viewM . (Transaction.run . Transaction.onStoreM ViewM . V
 
 codeIRefs :: Code (IRef ViewM) ViewM
 codeIRefs = Code
-    { panes = IRef.anchor "panes"
+    { repl = IRef.anchor "repl"
+    , panes = IRef.anchor "panes"
     , globals = IRef.anchor "globals"
     , preJumps = IRef.anchor "prejumps"
     , preCursor = IRef.anchor "precursor"

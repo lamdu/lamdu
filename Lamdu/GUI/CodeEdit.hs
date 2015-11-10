@@ -9,6 +9,8 @@ import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (lift)
 import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev(..))
+import           Data.Functor.Identity (Identity(..))
+import           Data.List (intersperse)
 import           Data.List.Utils (insertAt, removeAt)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Property (Property(..))
@@ -29,10 +31,11 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (DefI, ValI)
-import           Lamdu.Expr.Load (loadDef)
+import           Lamdu.Expr.Load (loadDef, loadExprProperty)
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
+import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
@@ -96,96 +99,48 @@ makePanes defaultDelDest (Property panes setPanes) =
             , paneMoveUp = mkMMovePaneUp i
             }
 
-addNearestHoles ::
-    (Traversable t, MonadA m) =>
-    t (Sugar.Expression name m a) ->
-    t (Sugar.Expression name m (a, NearestHoles))
-addNearestHoles = NearestHoles.add traverse . (Lens.traversed %~ (<&> (,)))
-
 toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
 toExprGuiMPayload (entityIds, nearestHoles) =
     ExprGuiT.emptyPayload nearestHoles & ExprGuiT.plStoredEntityIds .~ entityIds
 
-processDefI ::
-    MonadA m => Env m -> DefI m -> T m (DefinitionN m ExprGuiT.Payload)
-processDefI env defI =
-    loadDef defI
+processPane ::
+    MonadA m => Env m -> Pane m ->
+    T m (Pane m, DefinitionN m ExprGuiT.Payload)
+processPane env pane =
+    paneDefI pane
+    & loadDef
     >>= SugarConvert.convertDefI (evalResults env) (codeProps env)
     >>= OrderTags.orderDef
     >>= PresentationModes.addToDef
     >>= AddNames.addToDef
-    <&> addNearestHoles
+    <&> NearestHoles.add traverse . (Lens.traversed %~ (<&> (,)))
     <&> Lens.mapped . Lens.mapped %~ toExprGuiMPayload
     <&> Lens.mapped %~ RedundantAnnotations.markAnnotationsToDisplay
+    <&> (,) pane
 
-processPane ::
-    MonadA m => Env m -> Pane m ->
-    T m (Pane m, DefinitionN m ExprGuiT.Payload)
-processPane env pane = processDefI env (paneDefI pane) <&> (,) pane
+processExpr ::
+    MonadA m => Env m -> Transaction.Property m (ValI m) ->
+    T m (ExprGuiT.SugarExpr m)
+processExpr env expr =
+    loadExprProperty expr
+    >>= SugarConvert.convertExpr (evalResults env) (codeProps env)
+    >>= OrderTags.orderExpr
+    >>= PresentationModes.addToExpr
+    >>= AddNames.addToExpr
+    <&> Lens.mapped %~ (,)
+    <&> runIdentity . NearestHoles.add traverse . Identity
+    <&> Lens.mapped %~ toExprGuiMPayload
+    <&> RedundantAnnotations.markAnnotationsToDisplay
 
 make :: MonadA m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (T m))
 make env rootId =
-    getProp Anchors.panes
-    <&> makePanes rootId
-    >>= ExprGuiM.transaction . traverse (processPane env)
-    >>= makePanesEdit env rootId
-    & ExprGuiM.run ExpressionEdit.make (codeProps env) (config env) (settings env)
-    where
-        getProp f = f (codeProps env) ^. Transaction.mkProperty & ExprGuiM.transaction
-
-makeNewDefinitionEventMap ::
-    MonadA m => Anchors.CodeProps m ->
-    WidgetEnvT (T m) ([ModKey] -> Widget.EventHandlers (T m))
-makeNewDefinitionEventMap cp =
     do
-        curCursor <- WE.readCursor
-        let newDefinition =
-                do
-                    newDefI <-
-                        DataOps.newHole >>= DataOps.newPublicDefinitionWithPane "" cp
-                    DataOps.savePreJumpPosition cp curCursor
-                    return newDefI
-                <&> DefinitionEdit.diveToNameEdit . WidgetIds.fromIRef
-        return $ \newDefinitionKeys ->
-            Widget.keysEventMapMovesCursor newDefinitionKeys
-            (E.Doc ["Edit", "New definition"]) newDefinition
-
-makePanesEdit ::
-    MonadA m => Env m -> Widget.Id ->
-    [(Pane m, DefinitionN m ExprGuiT.Payload)] ->
-    ExprGuiM m (Widget (T m))
-makePanesEdit env myId loadedPanes =
-    do
-        panesWidget <-
-            case loadedPanes of
-            [] ->
-                makeNewDefinitionAction
-                & ExprGuiM.assignCursor myId newDefinitionActionId
-            ((firstPane, _):_) ->
-                do
-                    newDefinitionAction <- makeNewDefinitionAction
-                    loadedPanes
-                        & traverse (makePaneEdit env Config.Pane{..})
-                        <&> concatMap addSpacerAfter
-                        <&> (++ [newDefinitionAction])
-                        <&> Box.vboxAlign 0
-                & (ExprGuiM.assignCursor myId . WidgetIds.fromIRef . paneDefI) firstPane
-        eventMap <- panesEventMap env & ExprGuiM.widgetEnv
-        panesWidget
-            & Widget.weakerEvents eventMap
-            & return
+        replExpr <-
+            getProp Anchors.repl >>= lift . processExpr env
+        panes <- getProp Anchors.panes <&> makePanes rootId
+        gui env rootId replExpr panes
     where
-        newDefinitionActionId = Widget.joinId myId ["NewDefinition"]
-        makeNewDefinitionAction =
-            do
-                newDefinitionEventMap <- makeNewDefinitionEventMap (codeProps env)
-                BWidgets.makeFocusableTextView "New..." newDefinitionActionId
-                    & WE.localEnv (WE.setTextColor newDefinitionActionColor)
-                    <&> Widget.weakerEvents
-                        (newDefinitionEventMap newDefinitionButtonPressKeys)
-            & ExprGuiM.widgetEnv
-        addSpacerAfter x = [x, Spacer.makeWidget 50]
-        Config.Pane{..} = Config.pane $ config env
+        getProp f = f (codeProps env) ^. Transaction.mkProperty & lift
 
 makePaneEdit ::
     MonadA m =>
@@ -207,6 +162,69 @@ makePaneEdit env Config.Pane{..} (pane, defS) =
                   (E.Doc ["View", "Pane", "Move up"])) $ paneMoveUp pane
             ] & mconcat
 
+makeNewDefinitionEventMap ::
+    MonadA m => Anchors.CodeProps m ->
+    WidgetEnvT (T m) ([ModKey] -> Widget.EventHandlers (T m))
+makeNewDefinitionEventMap cp =
+    do
+        curCursor <- WE.readCursor
+        let newDefinition =
+                do
+                    newDefI <-
+                        DataOps.newHole >>= DataOps.newPublicDefinitionWithPane "" cp
+                    DataOps.savePreJumpPosition cp curCursor
+                    return newDefI
+                <&> WidgetIds.nameEditOf . WidgetIds.fromIRef
+        return $ \newDefinitionKeys ->
+            Widget.keysEventMapMovesCursor newDefinitionKeys
+            (E.Doc ["Edit", "New definition"]) newDefinition
+
+makeNewDefinitionButton :: MonadA m => Env m -> Widget.Id -> ExprGuiM m (Widget (T m))
+makeNewDefinitionButton env myId =
+    do
+        newDefinitionEventMap <- makeNewDefinitionEventMap (codeProps env)
+        BWidgets.makeFocusableTextView "New..." newDefinitionButtonId
+            & WE.localEnv (WE.setTextColor newDefinitionActionColor)
+            <&> Widget.weakerEvents
+                (newDefinitionEventMap newDefinitionButtonPressKeys)
+    & ExprGuiM.widgetEnv
+    where
+        Config.Pane{..} = Config.pane $ config env
+        newDefinitionButtonId = Widget.joinId myId ["NewDefinition"]
+
+makeReplEdit ::
+    MonadA m => Widget.Id -> ExprGuiT.SugarExpr m -> ExprGuiM m (Widget (T m))
+makeReplEdit myId replExpr =
+    [ ExpressionGui.makeLabel "⋙" (Widget.toAnimId myId)
+    , ExprGuiM.makeSubexpression id replExpr
+    ] & sequenceA
+    >>= ExpressionGui.hboxSpaced
+    <&> (^. ExpressionGui.egWidget)
+
+gui ::
+    MonadA m =>
+    Env m -> Widget.Id -> ExprGuiT.SugarExpr m -> [Pane m] ->
+    WidgetEnvT (T m) (Widget (T m))
+gui env rootId replExpr panes =
+    do
+        replEdit <- makeReplEdit rootId replExpr
+        panesEdits <-
+            panes
+            & ExprGuiM.transaction . traverse (processPane env)
+            >>= traverse (makePaneEdit env (Config.pane (config env)))
+        newDefinitionButton <- makeNewDefinitionButton env rootId
+        eventMap <- panesEventMap env & ExprGuiM.widgetEnv
+        [replEdit] ++ panesEdits ++ [newDefinitionButton]
+            & intersperse space
+            & Box.vboxAlign 0
+            & Widget.weakerEvents eventMap
+            & return
+    & ExprGuiM.assignCursor rootId replId
+    & ExprGuiM.run ExpressionEdit.make (codeProps env) (config env) (settings env)
+    where
+        space = Spacer.makeWidget 50
+        replId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
+
 panesEventMap ::
     MonadA m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (T m))
 panesEventMap Env{..} =
@@ -214,13 +232,11 @@ panesEventMap Env{..} =
         mJumpBack <- lift $ DataOps.jumpBack codeProps
         newDefinitionEventMap <- makeNewDefinitionEventMap codeProps
         return $ mconcat
-            [ newDefinitionEventMap newDefinitionKeys
+            [ newDefinitionEventMap (Config.newDefinitionKeys (Config.pane config))
             , maybe mempty
                 (Widget.keysEventMapMovesCursor (Config.previousCursorKeys config)
                   (E.Doc ["Navigation", "Go back"])) mJumpBack
             ]
-    where
-        Config.Pane{..} = Config.pane config
 
 makePaneWidget ::
     MonadA m => Config -> DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m))

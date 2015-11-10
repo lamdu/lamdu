@@ -85,7 +85,7 @@ makeParamTag t =
         animId = t ^. Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
 
 diveToRecordTag :: Widget.Id -> Widget.Id
-diveToRecordTag = ExpressionGui.diveToNameEdit
+diveToRecordTag = WidgetIds.nameEditOf
 
 diveToCaseTag :: Widget.Id -> Widget.Id
-diveToCaseTag = ExpressionGui.diveToNameEdit
+diveToCaseTag = WidgetIds.nameEditOf

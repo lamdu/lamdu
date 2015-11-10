@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.DefinitionEdit
     ( make
-    , diveToNameEdit
     ) where
 
 import           Control.Lens.Operators
@@ -158,6 +157,3 @@ makeExprDefinition def bodyExpr =
     where
         entityId = def ^. Sugar.drEntityId
         myId = WidgetIds.fromEntityId entityId
-
-diveToNameEdit :: Widget.Id -> Widget.Id
-diveToNameEdit = BinderEdit.diveToNameEdit

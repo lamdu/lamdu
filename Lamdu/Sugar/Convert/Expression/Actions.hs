@@ -14,6 +14,7 @@ import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -28,32 +29,38 @@ import           Lamdu.Sugar.Types
 
 type T = Transaction
 
-createIdentityLambda :: MonadA m => T m (ExprIRef.ValI m, ExprIRef.ValI m)
-createIdentityLambda =
-    do
-        -- Create temporary hole to give to newLambda
-        -- because we want to know the param to set its value.
-        newBodyI <- DataOps.newHole
-        (newParam, lamI) <- ExprIRef.newLambda newBodyI
-        V.LVar newParam & V.BLeaf & ExprIRef.writeValBody newBodyI
-        return (lamI, newBodyI)
+mkExtract ::
+    MonadA m => ConvertM.Context m -> ExprIRef.ValIProperty m -> T m EntityId
+mkExtract ctx stored =
+    case ctx ^. ConvertM.scMExtractDestPos of
+    Nothing -> mkExtractToDef (ctx ^. ConvertM.scCodeAnchors) stored
+    Just extractDestPos -> mkExtractToLetItem extractDestPos stored
 
-mkExtractor :: MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
-mkExtractor extractDestPos stored =
+mkExtractToDef ::
+    MonadA m => Anchors.CodeProps m -> ExprIRef.ValIProperty m -> T m EntityId
+mkExtractToDef cp stored =
+    do
+        newDefI <- DataOps.newPublicDefinitionWithPane "" cp (Property.value stored)
+        getVarI <- ExprIRef.globalId newDefI & V.LGlobal & V.BLeaf & ExprIRef.newValBody
+        Property.set stored getVarI
+        EntityId.ofIRef newDefI & return
+
+mkExtractToLetItem :: MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
+mkExtractToLetItem extractDestPos stored =
     do
         (lamI, getVarI) <-
             if Property.value stored == Property.value extractDestPos
             then
                 -- Give entire binder body a name (replace binder body
                 -- with "(\x -> x) stored")
-                createIdentityLambda
+                DataOps.newIdentityLambda
             else
                 -- Give some subexpr in binder body a name (replace
                 -- binder body with "(\x -> binderBody) stored", and
                 -- stored becomes "x")
                 do
                     (newParam, lamI) <-
-                        Property.value extractDestPos & ExprIRef.newLambda
+                        Property.value extractDestPos & DataOps.newLambda
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValBody
                     Property.set stored getVarI
                     return (lamI, getVarI)
@@ -64,15 +71,13 @@ mkExtractor extractDestPos stored =
         oldStored = Property.value stored
 
 mkActions ::
-    MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> Actions m
-mkActions extractDestPos stored =
+    MonadA m => ConvertM.Context m -> ExprIRef.ValIProperty m -> Actions m
+mkActions ctx stored =
     Actions
     { _wrap = DataOps.wrap stored <&> addEntityId & WrapAction
     , _setToHole = DataOps.setToHole stored <&> addEntityId & SetToHole
     , _setToInnerExpr = NoInnerExpr
-    , _extract =
-        Just $ -- overridden by hole conversion
-        mkExtractor extractDestPos stored
+    , _extract = mkExtract ctx stored & Just
     }
     where
         addEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
@@ -102,11 +107,11 @@ addActions ::
     MonadA m => Input.Payload m a -> BodyU m a -> ConvertM m (ExpressionU m a)
 addActions exprPl body =
     do
-        mExtractDestPos <- ConvertM.readContext <&> (^. ConvertM.scMExtractDestPos)
+        ctx <- ConvertM.readContext
         return $ Expression body Payload
             { _plEntityId = exprPl ^. Input.entityId
             , _plAnnotation = makeAnnotation exprPl
-            , _plActions = mkActions <$> mExtractDestPos <*> exprPl ^. Input.mStored
+            , _plActions = exprPl ^. Input.mStored <&> mkActions ctx
             , _plData = exprPl ^. Input.userData
             }
 

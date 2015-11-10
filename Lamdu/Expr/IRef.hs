@@ -6,7 +6,6 @@ module Lamdu.Expr.IRef
     , Lam, Apply
     , newValBody, readValBody, writeValBody
     , newVar
-    , newLambda
     , newVal, writeVal, readVal
     , writeValWithStoredSubexpressions
     , DefI
@@ -68,14 +67,6 @@ newValBody = fmap ValI . Transaction.newIRef
 
 newVar :: MonadA m => T m V.Var
 newVar = V.Var . Identifier . Guid.bs <$> Transaction.newKey
-
--- TODO: Remove this
-newLambda :: MonadA m => ValI m -> T m (V.Var, ValI m)
-newLambda body =
-    do
-        paramId <- newVar
-        expr <- newValBody $ V.BAbs $ V.Lam paramId body
-        return (paramId, expr)
 
 readValBody :: MonadA m => ValI m -> T m (ValBody m)
 readValBody = Transaction.readIRef . unValI

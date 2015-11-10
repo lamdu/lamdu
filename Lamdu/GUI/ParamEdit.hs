@@ -2,7 +2,6 @@
 module Lamdu.GUI.ParamEdit
     ( Info(..), make
     , eventMapAddFirstParam
-    , diveToNameEdit
     ) where
 
 import           Control.Lens.Operators
@@ -51,10 +50,7 @@ eventResultFromEntityId :: Sugar.EntityId -> Widget.EventResult
 eventResultFromEntityId = Widget.eventResultFromCursor . cursorFromEntityId
 
 cursorFromEntityId :: Sugar.EntityId -> Widget.Id
-cursorFromEntityId = diveToNameEdit . WidgetIds.fromEntityId
-
-diveToNameEdit :: Widget.Id -> Widget.Id
-diveToNameEdit = ExpressionGui.diveToNameEdit
+cursorFromEntityId = WidgetIds.nameEditOf . WidgetIds.fromEntityId
 
 eventMapAddFirstParam ::
     Functor m => Config -> Maybe (T m Sugar.ParamAddResult) ->

@@ -11,21 +11,23 @@ import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Lamdu.Builtins.Anchors (recurseVar)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
-import           Lamdu.Sugar.Convert.Infer (loadInfer)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (Context(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -49,6 +51,11 @@ convertDefIBuiltin (Definition.Builtin name scheme) defI =
             Transaction.writeIRef defI .
             Definition.BodyBuiltin . (`Definition.Builtin` scheme)
 
+assertRunInfer :: MonadA m => IRefInfer.M m a -> T m (a, Infer.Context)
+assertRunInfer action =
+    IRefInfer.run action
+    <&> either (error . ("Type inference failed: " ++) . show . pPrint) id
+
 reinferCheckDefinition :: MonadA m => DefI m -> T m Bool
 reinferCheckDefinition defI =
     do
@@ -60,9 +67,15 @@ reinferCheckDefinition defI =
                 <&> fmap (flip (,) ())
                 <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")
                 <&> fmap fst
-                >>= -- TODO: loadInfer is for sugar, we don't need sugar here
-                    loadInfer mempty
+                >>= IRefInfer.run . IRefInfer.loadInferRecursive recurseVar
                 <&> Lens.has Lens._Right
+
+reinferCheckExpression :: MonadA m => ValI m -> Transaction m Bool
+reinferCheckExpression valI =
+    do
+        val <- ExprIRef.readVal valI
+        IRefInfer.run (IRefInfer.loadInferScope Infer.emptyScope val)
+            <&> Lens.has Lens._Right
 
 mkContext ::
     MonadA m =>
@@ -79,6 +92,17 @@ mkContext defI cp reinferCheckRoot inferContext =
     , _scReinferCheckRoot = reinferCheckRoot
     , scConvertSubexpression = ConvertExpr.convert
     }
+
+loadInferPrepareInput ::
+    MonadA m =>
+    CurAndPrev (EvalResults (ValI m)) ->
+    IRefInfer.M m (Val (Infer.Payload, ValIProperty m)) ->
+    T m (Val (Input.Payload m [EntityId]), Infer.Context)
+loadInferPrepareInput evalRes action =
+    action
+    <&> Input.preparePayloads evalRes
+    >>= ParamList.loadForLambdas
+    & assertRunInfer
 
 convertDefI ::
     MonadA m =>
@@ -100,23 +124,20 @@ convertDefI evalRes cp (Definition.Definition body defI) =
         convertDefBody (Definition.BodyExpr (Definition.Expr val typ)) =
             do
                 (valInferred, newInferContext) <-
-                    loadInfer evalRes val
-                    <&> either (error . ("Type inference failed: " ++) . show . pPrint) id
+                    IRefInfer.loadInferRecursive recurseVar val
+                    & loadInferPrepareInput evalRes
                 let exprI = val ^. V.payload . Property.pVal
                 ConvertDefExpr.convert exprI (Definition.Expr valInferred typ) defI
                     & ConvertM.run (mkContext (Just defI) cp (reinferCheckDefinition defI) newInferContext)
 
 convertExpr ::
     MonadA m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
-    Val (ValIProperty m) -> T m (ExpressionU m ())
+    Val (ValIProperty m) -> T m (ExpressionU m [EntityId])
 convertExpr evalRes cp val =
     do
         (valInferred, newInferContext) <-
-            loadInfer evalRes val
-            <&> either (error . ("Type inference failed: " ++) . show . pPrint) id
-        let reinferCheckExpression = loadInfer evalRes val <&> either (const False) (const True)
+            IRefInfer.loadInferScope Infer.emptyScope val
+            & loadInferPrepareInput evalRes
         ConvertM.convertSubexpression valInferred
             & ConvertM.run
-              (mkContext Nothing cp reinferCheckExpression newInferContext)
-              { _scMExtractDestPos = valInferred ^. V.payload . Input.mStored
-              }
+              (mkContext Nothing cp (reinferCheckExpression (val ^. V.payload . Property.pVal)) newInferContext)

@@ -3,6 +3,7 @@ module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
     , InTransaction(..)
     , NameConvertor, CPSNameConvertor
+    , OldExpression, NewExpression
     , toDef, toExpression, toBody
     ) where
 

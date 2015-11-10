@@ -159,6 +159,7 @@ Executable lamdu
                   , Lamdu.Data.Definition
                   , Lamdu.Data.DbLayout
                   , Lamdu.Data.Ops
+                  , Lamdu.Data.Ops.Subexprs
                   , Lamdu.Data.ExampleDB
                   , Lamdu.DataFile
                   , Lamdu.Style
@@ -237,7 +238,6 @@ Executable lamdu
                   , Lamdu.Sugar.OrderTags
                   , Lamdu.Sugar.EntityId
                   , Lamdu.Sugar.Convert.DefExpr
-                  , Lamdu.Sugar.Convert.Infer
                   , Lamdu.Sugar.Convert.List
                   , Lamdu.Sugar.Convert.Expression
                   , Lamdu.Sugar.Convert.ParamList

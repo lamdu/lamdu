@@ -27,10 +27,13 @@ fromEntityId = fromBS . EntityId.bs
 fromExprPayload :: Sugar.Payload m a -> Id
 fromExprPayload pl = fromEntityId (pl ^. Sugar.plEntityId)
 
+nameEditOf :: Id -> Id
+nameEditOf = delegatingId
+
 fromGuid :: Guid -> Id
 fromGuid = fromBS . Guid.bs
 
-hash :: Show a => a -> Widget.Id
+hash :: Show a => a -> Id
 hash = fromGuid . randFunc . show
 
 backgroundCursorId :: AnimId
@@ -39,11 +42,11 @@ backgroundCursorId = ["background cursor"]
 textCursorId :: AnimId
 textCursorId = ["text cursor"]
 
-branchSelection :: Widget.Id
-branchSelection = Widget.Id ["selected branch"]
+branchSelection :: Id
+branchSelection = Id ["selected branch"]
 
-goUpId :: Widget.Id
-goUpId = Widget.Id ["go up"]
+goUpId :: Id
+goUpId = Id ["go up"]
 
 parenHighlightId :: AnimId
 parenHighlightId = ["paren highlight"]
@@ -60,8 +63,8 @@ activePaneBackground = ["active def bg"]
 flyNav :: AnimId
 flyNav = ["flyNav"]
 
-delegatingId :: Widget.Id -> Widget.Id
+delegatingId :: Id -> Id
 delegatingId = flip Widget.joinId ["delegating"]
 
-notDelegatingId :: Widget.Id -> Widget.Id
+notDelegatingId :: Id -> Id
 notDelegatingId = flip Widget.joinId ["non-delegating"]
