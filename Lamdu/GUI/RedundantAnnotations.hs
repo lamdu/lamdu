@@ -53,9 +53,9 @@ markAnnotationsToDisplay (Expression oldBody pl) =
     BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetParameter }) ->
         Expression newBody pl & don'tShowAnnotation
     BodyFromNom _ ->
-        Expression newBody pl & don'tShowEval
+        Expression (newBody <&> don'tShowEval) pl
     BodyToNom _ ->
-        Expression newBody pl & don'tShowEval
+        Expression (newBody <&> don'tShowEval) pl
     BodyInject _ ->
         Expression newBody pl & don'tShowEval
     BodyGetVar (GetVarParamsRecord _) ->
