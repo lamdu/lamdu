@@ -12,7 +12,6 @@ import           Data.Store.Transaction (Transaction)
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey)
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -116,14 +115,11 @@ make annotationOpts showAnnotation prevId nextId param =
                 , eventParamDelEventMap mFpDel (Config.delBackwardKeys config) " backwards" prevId
                 , eventMapAddNextParam config mFpAdd
                 ]
-        fpIsSelected <- WE.isSubCursor myId & ExprGuiM.widgetEnv
-        let wideAnnotationBehavior =
-                ExpressionGui.wideAnnotationBehaviorFromSelected fpIsSelected
         makeNameEdit myId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap
             <&> ExpressionGui.egAlignment . _1 .~ 0.5
             >>= ExpressionGui.maybeAddAnnotationWith annotationOpts
-                wideAnnotationBehavior showAnnotation
+                ExpressionGui.KeepWideAnnotation showAnnotation
                 (param ^. Sugar.fpAnnotation)
                 entityId
     where
