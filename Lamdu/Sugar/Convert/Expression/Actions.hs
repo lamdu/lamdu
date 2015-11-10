@@ -78,7 +78,7 @@ mkActions ctx stored =
     { _wrap = DataOps.wrap stored <&> addEntityId & WrapAction
     , _setToHole = DataOps.setToHole stored <&> addEntityId & SetToHole
     , _setToInnerExpr = NoInnerExpr
-    , _extract = mkExtract ctx stored & Just
+    , _extract = mkExtract ctx stored
     }
     where
         addEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)

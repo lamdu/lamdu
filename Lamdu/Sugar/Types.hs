@@ -135,7 +135,7 @@ data Actions m = Actions
     { _wrap :: WrapAction m
     , _setToHole :: SetToHole m
     , _setToInnerExpr :: SetToInnerExpr m
-    , _extract :: Maybe (T m ExtractToDestination) -- Nothing if already hole
+    , _extract :: T m ExtractToDestination
     }
 
 type EvaluationResult = Map E.ScopeId (E.EvalResult ())

@@ -88,7 +88,7 @@ jumpHolesEventMapIfSelected pl =
 extractEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)
 extractEventMap config actions =
     actions ^. Sugar.extract
-    & maybe mempty (Widget.keysEventMapMovesCursor keys doc . fmap extractor)
+    & Widget.keysEventMapMovesCursor keys doc . fmap extractor
     where
         doc = E.Doc ["Edit", "Extract"]
         keys = Config.extractKeys config
