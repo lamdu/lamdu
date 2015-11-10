@@ -149,6 +149,14 @@ mkEventsOnPickedResult shownResult =
             <&> Lens.mapped %~ pickBefore shownResult
             <&> removeUnwanted config
 
+-- To make HoleEdit
+emptyPickEventMap :: MonadA f => Config.Hole -> Widget.EventHandlers f
+emptyPickEventMap Config.Hole{..} =
+    return ()
+    & Widget.keysEventMap keys (E.Doc ["Edit", "Result", "Pick (N/A)"])
+    where
+        keys = holePickResultKeys ++ holePickAndMoveToNextHoleKeys
+
 makeOpenEventMaps ::
     MonadA m =>
     EditableHoleInfo m -> Maybe (ShownResult m) ->
@@ -162,7 +170,7 @@ makeOpenEventMaps editableHoleInfo mShownResult =
         -- below ad-hoc and search term edit:
         eventMap <-
             case mShownResult of
-            Nothing -> pure mempty
+            Nothing -> pure (emptyPickEventMap holeConfig)
             Just shownResult ->
                 mkEventsOnPickedResult shownResult
                 <&> mappend (pickEventMap holeConfig holeInfo shownResult)
