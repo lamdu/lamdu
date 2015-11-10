@@ -7,7 +7,7 @@ module Lamdu.GUI.ExpressionGui.Types
     , emptyPayload
     , EvalModeShow(..)
     , FuncApplyLimit(..)
-    , ShowAnnotation(..), showTypeWhenMissing, showInTypeMode, showInEvalMode
+    , ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
       , funcApplyLimit
       , showAnnotationWhenVerbose
       , neverShowAnnotations, alwaysShowAnnotations
@@ -36,7 +36,10 @@ data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
     deriving (Eq, Ord, Show)
 
 data ShowAnnotation = ShowAnnotation
-    { _showTypeWhenMissing :: Bool -- concise-mode or eval-mode without val
+    { -- showExpanded means we:
+      -- A) Show even in concise-mode & eval-mode without val
+      -- B) Do not shrink the annotation to fit
+      _showExpanded :: Bool
     , _showInTypeMode :: Bool
     , _showInEvalMode :: EvalModeShow
     , _funcApplyLimit :: FuncApplyLimit
@@ -45,7 +48,7 @@ Lens.makeLenses ''ShowAnnotation
 
 showAnnotationWhenVerbose :: ShowAnnotation
 showAnnotationWhenVerbose = ShowAnnotation
-    { _showTypeWhenMissing = False
+    { _showExpanded = False
     , _showInTypeMode = True
     , _showInEvalMode = EvalModeShowEval
     , _funcApplyLimit = UnlimitedFuncApply

@@ -558,12 +558,16 @@ maybeAddAnnotationPl ::
 maybeAddAnnotationPl pl eg =
     do
         wideAnnotationBehavior <-
-            ExprGuiM.isExprSelected pl <&> wideAnnotationBehaviorFromSelected
+            if showAnnotation ^. ExprGuiT.showExpanded
+            then return KeepWideAnnotation
+            else ExprGuiM.isExprSelected pl <&> wideAnnotationBehaviorFromSelected
         eg
             & maybeAddAnnotation wideAnnotationBehavior
-              (pl ^. Sugar.plData . ExprGuiT.plShowAnnotation)
+              showAnnotation
               (pl ^. Sugar.plAnnotation)
               (pl ^. Sugar.plEntityId)
+    where
+        showAnnotation = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation
 
 evaluationResult ::
     MonadA m => Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (Maybe (EvalResult ()))
@@ -613,7 +617,7 @@ maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation 
     getAnnotationMode opt annotation
     >>= \case
         AnnotationModeNone
-            | _showTypeWhenMissing -> withType
+            | _showExpanded -> withType
             | otherwise -> noAnnotation
         AnnotationModeEvaluation n v ->
             case _showInEvalMode of

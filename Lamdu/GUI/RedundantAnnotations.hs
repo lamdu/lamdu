@@ -26,13 +26,13 @@ don'tShowAnnotation = rPayload . showAnn .~ T.neverShowAnnotations
 forceShowType :: Expression name m T.Payload -> Expression name m T.Payload
 forceShowType =
     rPayload . showAnn %~
-    (T.showTypeWhenMissing .~ True) .
+    (T.showExpanded .~ True) .
     (T.showInEvalMode .~ T.EvalModeShowType)
 
 forceShowTypeOrEval :: Expression name m T.Payload -> Expression name m T.Payload
 forceShowTypeOrEval =
     rPayload . showAnn %~
-    (T.showTypeWhenMissing .~ True) .
+    (T.showExpanded .~ True) .
     (T.showInEvalMode .~ T.EvalModeShowEval)
 
 markAnnotationsToDisplay ::
