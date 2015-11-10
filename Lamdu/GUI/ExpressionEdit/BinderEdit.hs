@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, PatternGuards, LambdaCase #-}
+{-# LANGUAGE RecordWildCards, NoImplicitPrelude, OverloadedStrings, PatternGuards, LambdaCase #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     , Parts(..), makeParts
@@ -201,34 +201,46 @@ makeScopeEventMap prevKey nextKey setter cursor =
 
 makeScopeNavEdit ::
     MonadA m =>
-    Widget.Id -> Maybe (Sugar.BinderParamScopeId -> T m (), ScopeCursor) ->
-    ExprGuiM m (ExpressionGui m)
-makeScopeNavEdit myId mSetterAndCursor =
-    mapM mkArrow scopes
-    >>= ExpressionGui.hboxSpaced
-    >>= ExpressionGui.makeFocusableView myId
-    <&>
-    case mSetterAndCursor of
-    Nothing -> id
-    Just (setter, cursor) ->
-        ExpressionGui.egWidget %~ Widget.weakerEvents
-        (mappend
-            (makeScopeEventMap leftKeys rightKeys setter cursor)
-            blockEventMap)
-    where
-        mCursor = mSetterAndCursor ^? Lens._Just . _2
-        mkArrow (txt, mScopeId) =
-            do
-                config <- ExprGuiM.readConfig
+    Sugar.Binder name m expr ->
+    CurAndPrev (Maybe ScopeCursor) -> Widget.Id ->
+    ExprGuiM m (Widget.EventHandlers (T m), Maybe (ExpressionGui m))
+makeScopeNavEdit binder mScopeCursor myId =
+    do
+        config <- ExprGuiM.readConfig
+        let mkArrow (txt, mScopeId) =
                 ExpressionGui.makeLabel txt (Widget.toAnimId myId)
-                    & ExprGuiM.localEnv
-                    ( WE.setTextSizeColor
-                        (Config.navArrowsSize config)
-                        ( case mScopeId of
-                            Nothing -> Config.disabledColor config
-                            Just _ -> Config.grammarColor config
-                        )
+                & ExprGuiM.localEnv
+                ( WE.setTextSizeColor
+                    (Config.navArrowsSize config)
+                    ( case mScopeId of
+                        Nothing -> Config.disabledColor config
+                        Just _ -> Config.grammarColor config
                     )
+                )
+        let Config.Eval{..} = Config.eval config
+        settings <- ExprGuiM.readSettings
+        case settings ^. CESettings.sInfoMode of
+            CESettings.Evaluation ->
+                mapM mkArrow scopes
+                >>= ExpressionGui.hboxSpaced
+                >>= ExpressionGui.makeFocusableView myId
+                <&>
+                case mSetterAndCursor of
+                Nothing -> id
+                Just (setter, cursor) ->
+                    ExpressionGui.egWidget %~ Widget.weakerEvents
+                    (mappend
+                        (makeScopeEventMap leftKeys rightKeys setter cursor)
+                        blockEventMap)
+                <&> Just
+                <&> (,)
+                    (makeScopeEventMap prevScopeKeys nextScopeKeys
+                     <$> mSetScope <*> curCursor
+                     & fromMaybe mempty)
+            _ -> return (mempty, Nothing)
+    where
+        mSetterAndCursor = ((,) <$> mSetScope <*> curCursor)
+        mCursor = mSetterAndCursor ^? Lens._Just . _2
         leftKeys = [ModKey mempty GLFW.Key'Left]
         rightKeys = [ModKey mempty GLFW.Key'Right]
         scopes :: [(String, Maybe Sugar.BinderParamScopeId)]
@@ -241,6 +253,11 @@ makeScopeNavEdit myId mSetterAndCursor =
             (leftKeys ++ rightKeys)
             (E.Doc ["Navigation", "Move", "(blocked)"]) $
             return mempty
+        curCursor = mScopeCursor ^. current
+        mSetScope =
+            binder ^. Sugar.bMChosenScopeProp
+            <&> Transaction.setP
+            <&> (. Just)
 
 sParamScope :: ScopeCursor -> Sugar.BinderParamScopeId
 sParamScope = (^. Sugar.bsParamScope) . sBinderScopes
@@ -295,42 +312,22 @@ makeParts ::
 makeParts binder delVarBackwardsId myId =
     do
         mScopeCursor <- mkScopeCursor binder
-        let mSetScope =
-                binder ^. Sugar.bMChosenScopeProp
-                <&> Transaction.setP
-                <&> (. Just)
-        settings <- ExprGuiM.readSettings
-        let curCursor = mScopeCursor ^. current
-        mScopeNavEdit <-
-            case settings ^. CESettings.sInfoMode of
-            CESettings.Evaluation ->
-                makeScopeNavEdit scopesNavId ((,) <$> mSetScope <*> curCursor)
-                <&> Just
-            _ -> return Nothing
-        maybe takeNavCursor (const id) mScopeNavEdit $
-            do
-                mParamsEdit <- makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId body params
-                bodyEdit <-
-                    makeResultEdit (binder ^. Sugar.bMActions) params body
-                    & ExprGuiM.withLocalMScopeId (mScopeCursor <&> Lens.traversed %~ sBodyScope)
-                letEdits <- makeLets (mScopeCursor <&> Lens.traversed %~ sParamScope) (binder ^. Sugar.bLetItems) myId
-                rhs <-
-                    letEdits ++ [bodyEdit]
-                    <&> ExpressionGui.egAlignment . _1 .~ 0
-                    & ExpressionGui.vboxTopFocalSpaced
-                config <- ExprGuiM.readConfig <&> Config.eval
-                let scopeEventMap =
-                        case settings ^. CESettings.sInfoMode of
-                        CESettings.Evaluation ->
-                            makeScopeEventMap
-                            (Config.prevScopeKeys config) (Config.nextScopeKeys config)
-                            <$> mSetScope
-                            <*> curCursor
-                            & fromMaybe mempty
-                        _ -> mempty
-                Parts mParamsEdit mScopeNavEdit rhs scopeEventMap & return
+        (scopeEventMap, mScopeNavEdit) <- makeScopeNavEdit binder mScopeCursor scopesNavId
+        do
+            mParamsEdit <- makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId body params
+            bodyEdit <-
+                makeResultEdit (binder ^. Sugar.bMActions) params body
+                & ExprGuiM.withLocalMScopeId (mScopeCursor <&> Lens.traversed %~ sBodyScope)
+            letEdits <- makeLets (mScopeCursor <&> Lens.traversed %~ sParamScope) (binder ^. Sugar.bLetItems) myId
+            rhs <-
+                letEdits ++ [bodyEdit]
+                <&> ExpressionGui.egAlignment . _1 .~ 0
+                & ExpressionGui.vboxTopFocalSpaced
+            Parts mParamsEdit mScopeNavEdit rhs scopeEventMap & return
+            & case mScopeNavEdit of
+              Nothing -> ExprGuiM.assignCursorPrefix scopesNavId (const destId)
+              Just _ -> id
     where
-        takeNavCursor = ExprGuiM.assignCursorPrefix scopesNavId (const destId)
         destId =
             params ^? SugarLens.binderNamedParams . Sugar.fpId
             & fromMaybe bodyId
