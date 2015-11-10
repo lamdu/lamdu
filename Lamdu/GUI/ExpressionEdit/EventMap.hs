@@ -31,14 +31,18 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
 
+data IsHoleResult = HoleResult | NotHoleResult
+
 make ::
     MonadA m => HolePickers m -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (EventHandlers (T m))
 make holePickers pl =
     mconcat <$> sequenceA
     [ maybe (return mempty)
-        (actionsEventMap holePickers)
-        (pl ^. Sugar.plActions)
+      ( actionsEventMap holePickers
+      $ if ExprGuiT.plOfHoleResult pl then HoleResult else NotHoleResult
+      )
+      (pl ^. Sugar.plActions)
     , jumpHolesEventMapIfSelected pl
     , replaceOrComeToParentEventMap pl
     ]
@@ -114,16 +118,18 @@ replaceOrComeToParentEventMap pl =
 
 actionsEventMap ::
     MonadA m =>
-    HolePickers m ->
+    HolePickers m -> IsHoleResult ->
     Sugar.Actions m ->
     ExprGuiM m (EventHandlers (T m))
-actionsEventMap holePickers actions =
+actionsEventMap holePickers isHoleResult actions =
     do
         config <- ExprGuiM.readConfig
         return $ mconcat
             [ wrapEventMap holePickers config
             , applyOperatorEventMap holePickers
-            , extractEventMap config
+            , case isHoleResult of
+              HoleResult -> mempty
+              NotHoleResult -> extractEventMap config
             ] actions
 
 applyOperatorEventMap ::
