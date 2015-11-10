@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings, PatternGuards #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
-    ( make, diveToNameEdit
+    ( make
     , Parts(..), makeParts
     ) where
 
@@ -450,7 +450,7 @@ makeResultEdit mActions params result = do
         addLetItemEventMap actions =
             Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
             (E.Doc ["Edit", "Let clause", "Add first"]) .
-            fmap (diveToNameEdit . WidgetIds.fromEntityId) $
+            fmap (WidgetIds.nameEditOf . WidgetIds.fromEntityId) $
             savePos >> actions ^. Sugar.baAddInnermostLetItem
     ExprGuiM.makeSubexpression (const 0) result
         <&> ExpressionGui.egWidget %~
@@ -511,6 +511,3 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
                 ExpressionGui.listWithDelDests delDestFirst delDestLast
                     (WidgetIds.fromEntityId . (^. Sugar.fpId)) paramList
                     & traverse mkParam
-
-diveToNameEdit :: Widget.Id -> Widget.Id
-diveToNameEdit = ExpressionGui.diveToNameEdit -- Name editor

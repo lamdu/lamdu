@@ -174,7 +174,7 @@ makeNewDefinitionEventMap cp =
                         DataOps.newHole >>= DataOps.newPublicDefinitionWithPane "" cp
                     DataOps.savePreJumpPosition cp curCursor
                     return newDefI
-                <&> DefinitionEdit.diveToNameEdit . WidgetIds.fromIRef
+                <&> WidgetIds.nameEditOf . WidgetIds.fromIRef
         return $ \newDefinitionKeys ->
             Widget.keysEventMapMovesCursor newDefinitionKeys
             (E.Doc ["Edit", "New definition"]) newDefinition
