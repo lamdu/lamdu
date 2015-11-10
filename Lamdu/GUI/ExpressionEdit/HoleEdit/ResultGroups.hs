@@ -6,11 +6,10 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
     , prefixId
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Control.Monad (filterM)
 import           Control.Monad.ListT (ListT)
 import           Control.MonadA (MonadA)
 import qualified Data.ByteString.Char8 as BS8
@@ -21,8 +20,12 @@ import qualified Data.List.Class as ListClass
 import           Data.List.Utils (sortOn, nonEmptyAll)
 import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
+import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Val as V
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -31,6 +34,8 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Names.Get as NamesGet
 import           Lamdu.Sugar.Names.Types (Name(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Prelude.Compat
 
 type T = Transaction
 
@@ -210,13 +215,35 @@ literalIntGroups holeInfo =
     where
         searchTerm = ehiSearchTerm holeInfo
 
+globalNameMatches :: Monad m => String -> V.Val () -> T m Bool
+globalNameMatches searchTerm (V.Val () body) =
+    case body of
+    V.BLeaf (V.LGlobal globalId) -> verifyName (ExprIRef.defI globalId)
+    V.BToNom (V.Nom nomId _) -> verifyName nomId
+    V.BFromNom (V.Nom nomId _) -> verifyName nomId
+    _ -> return True
+    where
+        verifyName entity =
+            Anchors.assocNameRef entity & Transaction.getP
+            <&> (searchTerm `isInfixOf`)
+
 makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [Group m]
 makeAllGroups editableHoleInfo =
     (++)
     <$> literalIntGroups editableHoleInfo
     <*> ehiActions editableHoleInfo ^. Sugar.holeOptions
+    >>= preFilter
     >>= mapM mkGroup
     <&> holeMatches (ehiSearchTerm editableHoleInfo)
+    where
+        -- This is used to filter globals/nominals prior to sugaring
+        -- to avoid type-checking globals/nominals if the name doesn't
+        -- match. After sugaring, we also need a filter for the
+        -- non-globals.
+        preFilter =
+            filterM
+            (globalNameMatches (ehiSearchTerm editableHoleInfo) .
+             (^. Sugar.hoVal))
 
 groupOrdering :: String -> Group m -> [Bool]
 groupOrdering searchTerm group =
