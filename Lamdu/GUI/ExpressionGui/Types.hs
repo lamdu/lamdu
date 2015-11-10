@@ -10,6 +10,7 @@ module Lamdu.GUI.ExpressionGui.Types
       , showAnnotationWhenVerbose
       , neverShowAnnotations, alwaysShowAnnotations
     , nextHolesBefore
+    , plOfHoleResult
     ) where
 
 import qualified Control.Lens as Lens
@@ -54,6 +55,10 @@ data Payload = Payload
     , _plShowAnnotation :: ShowAnnotation
     }
 Lens.makeLenses ''Payload
+
+plOfHoleResult :: Sugar.Payload m Payload -> Bool
+plOfHoleResult =
+    Lens.nullOf (Sugar.plData . plStoredEntityIds . Lens.traversed)
 
 type SugarExpr m = ExpressionN m Payload
 

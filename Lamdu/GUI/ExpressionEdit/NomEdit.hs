@@ -97,7 +97,7 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
             ExprGuiM.makeSubexpression
             (nameSidePrecLens .~ nomPrecedence+1) val
         let mk = layout nomId label nameEdit subexprEdit
-        if isHoleResult
+        if ExprGuiT.plOfHoleResult pl
             then mk True
             else do
                 compact <- mk False
@@ -107,9 +107,6 @@ mkNomGui nameSidePrecLens str layout nom@(Sugar.Nominal _ val) pl =
     & ExprGuiM.assignCursor myId valId
     where
         valId = val ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
-        isHoleResult =
-            Lens.nullOf
-            (Sugar.plData . ExprGuiT.plStoredEntityIds . Lens.traversed) pl
 
 mkNameGui ::
     MonadA m => Sugar.Nominal (Name m) a -> Widget.Id ->

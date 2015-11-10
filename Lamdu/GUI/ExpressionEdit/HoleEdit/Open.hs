@@ -465,7 +465,7 @@ makeOpenSearchTermGui pl editableHoleInfo =
     do
         (shownResultsLists, hasHiddenResults) <-
             -- Don't generate results of open holes inside hole results
-            if isHoleResult
+            if ExprGuiT.plOfHoleResult pl
             then return ([], HaveHiddenResults)
             else HoleResults.makeAll editableHoleInfo
         let shownMainResultsIds =
@@ -480,7 +480,4 @@ makeOpenSearchTermGui pl editableHoleInfo =
               allShownResultIds (holeInfo & hiIds & hidOpenSearchTerm)
             & ExpressionGui.wrapExprEventMap pl
     where
-        isHoleResult =
-            Lens.nullOf
-            (Sugar.plData . ExprGuiT.plStoredEntityIds . Lens.traversed) pl
         holeInfo = ehiInfo editableHoleInfo
