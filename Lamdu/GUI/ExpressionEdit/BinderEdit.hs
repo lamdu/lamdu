@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, PatternGuards #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, PatternGuards, LambdaCase #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     , Parts(..), makeParts
@@ -248,6 +248,45 @@ sParamScope = (^. Sugar.bsParamScope) . sBinderScopes
 sBodyScope :: ScopeCursor -> ScopeId
 sBodyScope = (^. Sugar.bsBodyScope) . sBinderScopes
 
+makeMParamsEdit ::
+    MonadA m =>
+    CurAndPrev (Maybe ScopeCursor) -> Maybe (ExpressionGui n) ->
+    Widget.Id -> Widget.Id ->
+    ExprGuiT.SugarExpr m -> Sugar.BinderParams (Name m) m ->
+    ExprGuiM m (Maybe (ExpressionGui m))
+makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId body params =
+    params
+    & makeParamsEdit annotationMode nearestHoles
+      delVarBackwardsId myId (WidgetIds.fromEntityId bodyId)
+    & ExprGuiM.withLocalMScopeId
+      ( mScopeCursor
+      <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sParamScope
+      )
+    >>= \case
+    [] -> return Nothing
+    paramEdits ->
+        paramEdits
+        <&> ExpressionGui.egAlignment . _1 .~ 0.5
+        & ExpressionGui.vboxTopFocalSpaced
+        >>= case params of
+            Sugar.FieldParams{} -> ExpressionGui.addValFrame myId
+            _ -> return
+        <&> Just
+    where
+        bodyId = body ^. Sugar.rPayload . Sugar.plEntityId
+        curCursor = mScopeCursor ^. current
+        nearestHoles = ExprGuiT.nextHolesBefore body
+        annotationMode =
+            do
+                mScopeNavEdit ^?
+                    Lens._Just . ExpressionGui.egWidget . Widget.isFocused
+                    >>= guard
+                ExpressionGui.NeighborVals
+                    <$> (curCursor <&> sMPrevParamScope)
+                    <*> (curCursor <&> sMNextParamScope)
+                    <&> ExpressionGui.WithNeighbouringEvalAnnotations
+            & fromMaybe ExpressionGui.NormalEvalAnnotation
+
 makeParts ::
     MonadA m =>
     Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) ->
@@ -270,35 +309,7 @@ makeParts binder delVarBackwardsId myId =
             _ -> return Nothing
         maybe takeNavCursor (const id) mScopeNavEdit $
             do
-                let annotationMode =
-                        do
-                            mScopeNavEdit ^?
-                                Lens._Just . ExpressionGui.egWidget . Widget.isFocused
-                                >>= guard
-                            ExpressionGui.NeighborVals
-                                <$> (curCursor <&> sMPrevParamScope)
-                                <*> (curCursor <&> sMNextParamScope)
-                                <&> ExpressionGui.WithNeighbouringEvalAnnotations
-                        & fromMaybe ExpressionGui.NormalEvalAnnotation
-                paramEdits <-
-                    makeParamsEdit annotationMode nearestHoles
-                    delVarBackwardsId myId (WidgetIds.fromEntityId bodyId)
-                    params
-                    & ExprGuiM.withLocalMScopeId
-                      ( mScopeCursor
-                      <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sParamScope
-                      )
-                mParamsEdit <-
-                    case paramEdits of
-                    [] -> return Nothing
-                    _ ->
-                        paramEdits
-                        <&> ExpressionGui.egAlignment . _1 .~ 0.5
-                        & ExpressionGui.vboxTopFocalSpaced
-                        >>= case params of
-                            Sugar.FieldParams{} -> ExpressionGui.addValFrame myId
-                            _ -> return
-                        <&> Just
+                mParamsEdit <- makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId body params
                 bodyEdit <-
                     makeResultEdit (binder ^. Sugar.bMActions) params body
                     & ExprGuiM.withLocalMScopeId (mScopeCursor <&> Lens.traversed %~ sBodyScope)
@@ -319,7 +330,6 @@ makeParts binder delVarBackwardsId myId =
                         _ -> mempty
                 Parts mParamsEdit mScopeNavEdit rhs scopeEventMap & return
     where
-        nearestHoles = ExprGuiT.nextHolesBefore body
         takeNavCursor = ExprGuiM.assignCursorPrefix scopesNavId (const destId)
         destId =
             params ^? SugarLens.binderNamedParams . Sugar.fpId
