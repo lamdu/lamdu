@@ -1,10 +1,10 @@
 {-# LANGUAGE NoImplicitPrelude, RankNTypes, LambdaCase #-}
 module Lamdu.EvalManager
-    ( Evaluators
+    ( Evaluator
     , new
     , start, stop
     , getResults
-    , runTransactionAndMaybeRestartEvaluators
+    , runTransactionAndMaybeRestartEvaluator
     ) where
 
 import           Control.Concurrent (ThreadId, killThread)
@@ -51,7 +51,7 @@ startedEvaluator :: BGEvaluator -> Maybe (EvalBG.Evaluator (ValI ViewM))
 startedEvaluator NotStarted = Nothing
 startedEvaluator (Started eval) = Just eval
 
-data Evaluators = Evaluators
+data Evaluator = Evaluator
     { eInvalidateCache :: IO ()
     , eDb :: Db
     , eEvaluatorRef :: IORef BGEvaluator
@@ -60,13 +60,13 @@ data Evaluators = Evaluators
     , eCancelTimerRef :: IORef (Maybe ThreadId)
     }
 
-new :: IO () -> Db -> IO Evaluators
+new :: IO () -> Db -> IO Evaluator
 new invalidateCache db =
     do
         ref <- newIORef NotStarted
         resultsRef <- newIORef mempty
         cancelRef <- newIORef Nothing
-        return Evaluators
+        return Evaluator
             { eInvalidateCache = invalidateCache
             , eDb = db
             , eEvaluatorRef = ref
@@ -77,28 +77,28 @@ new invalidateCache db =
 runViewTransactionInIO :: Db -> Transaction ViewM a -> IO a
 runViewTransactionInIO db = DbLayout.runDbTransaction db . VersionControl.runAction
 
-getResults :: Evaluators -> IO (CurAndPrev (EvalResults (ValI ViewM)))
-getResults evaluators =
+getResults :: Evaluator -> IO (CurAndPrev (EvalResults (ValI ViewM)))
+getResults evaluator =
     do
         res <-
-            readIORef (eEvaluatorRef evaluators) <&> startedEvaluator
+            readIORef (eEvaluatorRef evaluator) <&> startedEvaluator
             >>= maybe (return mempty) EvalBG.getResults
-        atomicModifyIORef (eResultsRef evaluators)
+        atomicModifyIORef (eResultsRef evaluator)
             (join (,) . (current .~ res))
 
 loadDef ::
-    Evaluators -> DefI ViewM ->
+    Evaluator -> DefI ViewM ->
     IO (Def.Definition (V.Val (ExprIRef.ValIProperty ViewM)) (DefI ViewM))
-loadDef evaluators = runViewTransactionInIO (eDb evaluators) . Load.loadDef
+loadDef evaluator = runViewTransactionInIO (eDb evaluator) . Load.loadDef
 
-evalActions :: Evaluators -> EvalBG.Actions (ValI ViewM)
-evalActions evaluators =
+evalActions :: Evaluator -> EvalBG.Actions (ValI ViewM)
+evalActions evaluator =
     EvalBG.Actions
     { EvalBG._aLoadGlobal = loadGlobal
     , EvalBG._aRunBuiltin = Builtins.eval
-    , EvalBG._aReportUpdatesAvailable = eInvalidateCache evaluators
+    , EvalBG._aReportUpdatesAvailable = eInvalidateCache evaluator
     , EvalBG._aCompleted = \_ ->
-      readIORef (eEvaluatorRef evaluators)
+      readIORef (eEvaluatorRef evaluator)
       <&> startedEvaluator
       >>= Lens._Just %%~ EvalBG.getStatus
       <&> Lens.has (Lens._Just . EvalBG._Finished)
@@ -106,13 +106,13 @@ evalActions evaluators =
       False -> return ()
       True ->
           do
-              atomicModifyIORef_ (eResultsRef evaluators) (prev .~ mempty)
-              eInvalidateCache evaluators
+              atomicModifyIORef_ (eResultsRef evaluator) (prev .~ mempty)
+              eInvalidateCache evaluator
     }
     where
         loadGlobal globalId =
             ExprIRef.defI globalId
-            & loadDef evaluators
+            & loadDef evaluator
             <&> asDef globalId
         asDef globalId x =
             x ^. Def.defBody
@@ -127,16 +127,16 @@ evalActions evaluators =
 replIRef :: IRef ViewM (ValI ViewM)
 replIRef = DbLayout.repl DbLayout.codeIRefs
 
-start :: Evaluators -> IO ()
-start evaluators =
+start :: Evaluator -> IO ()
+start evaluator =
     Transaction.readIRef replIRef >>= ExprIRef.readVal
-    & runViewTransactionInIO (eDb evaluators)
-    >>= EvalBG.start (evalActions evaluators) <&> Started
-    >>= writeIORef (eEvaluatorRef evaluators)
+    & runViewTransactionInIO (eDb evaluator)
+    >>= EvalBG.start (evalActions evaluator) <&> Started
+    >>= writeIORef (eEvaluatorRef evaluator)
 
-stop :: Evaluators -> IO ()
-stop evaluators =
-    readIORef (eEvaluatorRef evaluators)
+stop :: Evaluator -> IO ()
+stop evaluator =
+    readIORef (eEvaluatorRef evaluator)
     <&> startedEvaluator
     >>= traverse_ EvalBG.stop
 
@@ -147,9 +147,9 @@ sumDependency subexprs globals =
     , Set.map (IRef.guid . ExprIRef.defI) globals
     ]
 
-runTransactionAndMaybeRestartEvaluators :: Evaluators -> Transaction DbM a -> IO a
-runTransactionAndMaybeRestartEvaluators evaluators transaction =
-    readIORef (eEvaluatorRef evaluators)
+runTransactionAndMaybeRestartEvaluator :: Evaluator -> Transaction DbM a -> IO a
+runTransactionAndMaybeRestartEvaluator evaluator transaction =
+    readIORef (eEvaluatorRef evaluator)
     >>= \case
     NotStarted -> runTrans transaction
     Started eval ->
@@ -172,23 +172,23 @@ runTransactionAndMaybeRestartEvaluators evaluators transaction =
                 & runTrans
             if dependencyChanged
                 then do
-                    stop evaluators
-                    setCancelTimer evaluators
-                    atomicModifyIORef_ (eResultsRef evaluators) pickPrevResults
-                    start evaluators
+                    stop evaluator
+                    setCancelTimer evaluator
+                    atomicModifyIORef_ (eResultsRef evaluator) pickPrevResults
+                    start evaluator
                 else EvalBG.resumeLoading eval
             return result
     where
-        runTrans = DbLayout.runDbTransaction (eDb evaluators)
+        runTrans = DbLayout.runDbTransaction (eDb evaluator)
 
-setCancelTimer :: Evaluators -> IO ()
-setCancelTimer evaluators =
+setCancelTimer :: Evaluator -> IO ()
+setCancelTimer evaluator =
     do
         newCancelTimer <- runAfter 5000000 -- 5 seconds
-            (atomicModifyIORef (eResultsRef evaluators)
+            (atomicModifyIORef (eResultsRef evaluator)
                 (flip (,) () . (prev .~ mempty))
             )
-        atomicModifyIORef (eCancelTimerRef evaluators)
+        atomicModifyIORef (eCancelTimerRef evaluator)
             (\x -> (Just newCancelTimer, x))
             >>= Lens.traverseOf_ Lens._Just killThread
 

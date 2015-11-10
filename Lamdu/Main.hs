@@ -92,25 +92,25 @@ createWindow Opts.FullScreen =
         mMonitor <- GLFW.getPrimaryMonitor
         GLFWUtils.getVideoModeSize >>= GLFWUtils.createWindow "Lamdu" mMonitor
 
-settingsChangeHandler :: EvalManager.Evaluators -> Settings -> IO ()
-settingsChangeHandler evaluators settings =
+settingsChangeHandler :: EvalManager.Evaluator -> Settings -> IO ()
+settingsChangeHandler evaluator settings =
     case settings ^. Settings.sInfoMode of
-    Settings.Evaluation -> EvalManager.start evaluators
-    _ -> EvalManager.stop evaluators
+    Settings.Evaluation -> EvalManager.start evaluator
+    _ -> EvalManager.stop evaluator
 
 makeRootWidget ::
-    Font -> Db -> Zoom -> IORef Settings -> EvalManager.Evaluators ->
+    Font -> Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
     (Config, Widget.Size) -> IO (Widget IO)
-makeRootWidget font db zoom settingsRef evaluators (config, size) =
+makeRootWidget font db zoom settingsRef evaluator (config, size) =
     do
         cursor <-
             DbLayout.cursor DbLayout.revisionProps
             & Transaction.getP
             & DbLayout.runDbTransaction db
         sizeFactor <- Zoom.getSizeFactor zoom
-        globalEventMap <- Settings.mkEventMap (settingsChangeHandler evaluators) config settingsRef
+        globalEventMap <- Settings.mkEventMap (settingsChangeHandler evaluator) config settingsRef
         let eventMap = globalEventMap `mappend` Zoom.eventMap zoom (Config.zoom config)
-        evalResults <- EvalManager.getResults evaluators
+        evalResults <- EvalManager.getResults evaluator
         settings <- readIORef settingsRef
         let env = GUIMain.Env
                 { envEvalRes = evalResults
@@ -123,7 +123,7 @@ makeRootWidget font db zoom settingsRef evaluators (config, size) =
         let dbToIO =
                 case settings ^. Settings.sInfoMode of
                 Settings.Evaluation ->
-                    EvalManager.runTransactionAndMaybeRestartEvaluators evaluators
+                    EvalManager.runTransactionAndMaybeRestartEvaluator evaluator
                 _ -> DbLayout.runDbTransaction db
         widget <- mkWidgetWithFallback dbToIO env
         return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
@@ -144,18 +144,18 @@ runEditor mFontPath windowMode db =
                 wrapFlyNav <- FlyNav.makeIO Style.flyNav WidgetIds.flyNav
                 invalidateCacheRef <- newIORef (return ())
                 let invalidateCache = join (readIORef invalidateCacheRef)
-                evaluators <- EvalManager.new invalidateCache db
+                evaluator <- EvalManager.new invalidateCache db
                 zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
                 settingsRef <- Settings Settings.defaultInfoMode & newIORef
                 (invalidateCacheAction, makeRootWidgetCached) <-
-                    makeRootWidget font db zoom settingsRef evaluators
+                    makeRootWidget font db zoom settingsRef evaluator
                     & memoizeMakeWidget
                 refreshScheduler <- newRefreshScheduler
                 writeIORef invalidateCacheRef $
                     do
                         invalidateCacheAction
                         scheduleRefresh refreshScheduler
-                EvalManager.start evaluators
+                EvalManager.start evaluator
 
                 addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
                 mainLoop win refreshScheduler configSampler $
