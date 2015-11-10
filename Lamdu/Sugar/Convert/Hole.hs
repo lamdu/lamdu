@@ -66,7 +66,6 @@ convert ::
 convert exprPl =
     convertCommon Nothing exprPl
     <&> rPayload . plActions . Lens._Just . setToHole .~ AlreadyAHole
-    <&> rPayload . plActions . Lens._Just . extract .~ Nothing
 
 convertCommon ::
     (MonadA m, Monoid a) =>
