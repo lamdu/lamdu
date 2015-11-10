@@ -8,6 +8,7 @@ module Lamdu.GUI.ExpressionEdit.EventMap
 import           Prelude.Compat
 
 import           Control.Applicative (liftA2)
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.Store.Transaction as Transaction
@@ -94,6 +95,7 @@ extractEventMap config actions =
     actions ^. Sugar.extract
     & maybe mempty
       (mkEventMap (Config.extractKeys config) (E.Doc ["Edit", "Extract"]))
+    <&> Lens.mapped . Widget.eCursor . Lens._Wrapped' . Lens._Just %~ WidgetIds.nameEditOf
 
 replaceOrComeToParentEventMap ::
     MonadA m =>
