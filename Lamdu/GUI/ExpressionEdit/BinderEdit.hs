@@ -311,7 +311,11 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
         (scopeEventMap, mScopeNavEdit) <-
             do
                 guard (funcApplyLimit == ExprGuiT.UnlimitedFuncApply)
-                mScopeCursor ^. current
+                currentScope <- mScopeCursor ^. current
+                guard $
+                    Lens.nullOf (Sugar.bParams . Sugar._NullParam) binder ||
+                    Lens.has (Lens.traversed . Lens._Just) [sMPrevParamScope currentScope, sMNextParamScope currentScope]
+                Just currentScope
             & maybe (return (mempty, Nothing)) (makeScopeNavEdit binder scopesNavId)
         do
             mParamsEdit <- makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId body params
