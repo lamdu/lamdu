@@ -1,8 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Monad
     ( TagParamInfo(..)
-
-    , ScopeInfo(..), siTagParamInfos, siNullParams
+    , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems
 
     , Context(..)
     , scInferContext, scReinferCheckRoot, scDefI
@@ -48,6 +47,7 @@ data TagParamInfo = TagParamInfo
 data ScopeInfo = ScopeInfo
     { _siTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
     , _siNullParams :: Set V.Var
+    , _siLetItems :: Set V.Var
       -- TODO: siTagParamInfos needs a reverse-lookup map too
     }
 Lens.makeLenses ''ScopeInfo

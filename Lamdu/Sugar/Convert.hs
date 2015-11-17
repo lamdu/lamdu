@@ -90,6 +90,7 @@ mkContext defI cp reinferCheckRoot inferContext =
     , _scScopeInfo = ScopeInfo
       { _siTagParamInfos = mempty
       , _siNullParams = mempty
+      , _siLetItems = mempty
       }
     , _scReinferCheckRoot = reinferCheckRoot
     , scConvertSubexpression = ConvertExpr.convert

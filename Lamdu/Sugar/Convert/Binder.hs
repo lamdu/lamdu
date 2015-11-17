@@ -41,7 +41,7 @@ import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation)
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.Monad (ConvertM)
+import           Lamdu.Sugar.Convert.Monad (ConvertM, scScopeInfo, siLetItems)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
 import           Lamdu.Sugar.Internal
@@ -702,7 +702,9 @@ convertRedex binderScopeVars expr redex =
             <*> traverse (^. Input.mStored) (redexBody redex)
             <*> traverse (^. Input.mStored) (redexArg redex)
             & Lens.sequenceOf Lens._Just
-        body <- makeBinderBody (redexParam redex : binderScopeVars) (redexBody redex)
+        body <-
+            makeBinderBody (redexParam redex : binderScopeVars) (redexBody redex)
+            & ConvertM.local (scScopeInfo . siLetItems <>~ Set.singleton (redexParam redex))
         Let
             { _lEntityId = defEntityId
             , _lValue =
