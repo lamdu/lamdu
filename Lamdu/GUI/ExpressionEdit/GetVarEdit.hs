@@ -3,11 +3,12 @@ module Lamdu.GUI.ExpressionEdit.GetVarEdit
     ( make
     ) where
 
-import           Control.Lens.Operators
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.Monoid ((<>))
+import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -26,6 +27,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Prelude.Compat
 
+type T = Transaction
+
 makeSimpleView ::
     MonadA m => Draw.Color -> Name m -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
@@ -35,6 +38,19 @@ makeSimpleView color name myId =
     <&> ExpressionGui.fromValueWidget
     & ExprGuiM.withFgColor color
 
+makeJumpToDefinitionEventMap ::
+    MonadA m => Widget.Id -> Sugar.NameRef name m -> ExprGuiM m (Widget.EventHandlers (T m))
+makeJumpToDefinitionEventMap myId nameRef =
+    do
+        cp <- ExprGuiM.readCodeAnchors
+        config <- ExprGuiM.readConfig
+        return $ Widget.keysEventMapMovesCursor
+            (Config.jumpToDefinitionKeys config ++ Config.extractKeys config)
+            (E.Doc ["Navigation", "Jump to definition"]) $
+            do
+                DataOps.savePreJumpPosition cp myId
+                WidgetIds.fromEntityId <$> nameRef ^. Sugar.nrGotoDefinition
+
 make ::
     MonadA m =>
     Sugar.GetVar (Name m) m ->
@@ -42,22 +58,17 @@ make ::
     ExprGuiM m (ExpressionGui m)
 make getVar pl =
     do
-        cp <- ExprGuiM.readCodeAnchors
         config <- ExprGuiM.readConfig
         let Config.Name{..} = Config.name config
         case getVar of
             Sugar.GetVarNamed namedVar ->
-                makeView (namedVar ^. Sugar.nvNameRef . Sugar.nrName) myId
-                    <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
-                    & ExpressionGui.stdWrap pl
+                do
+                    jumpToDefinitionEventMap <-
+                        makeJumpToDefinitionEventMap myId (namedVar ^. Sugar.nvNameRef)
+                    makeView (namedVar ^. Sugar.nvNameRef . Sugar.nrName) myId
+                        <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
+                        & ExpressionGui.stdWrap pl
                 where
-                    jumpToDefinitionEventMap =
-                        Widget.keysEventMapMovesCursor
-                        (Config.jumpToDefinitionKeys config ++ Config.extractKeys config)
-                        (E.Doc ["Navigation", "Jump to definition"]) $
-                        do
-                            DataOps.savePreJumpPosition cp myId
-                            WidgetIds.fromEntityId <$> namedVar ^. Sugar.nvNameRef . Sugar.nrGotoDefinition
                     makeView =
                         case namedVar ^. Sugar.nvMode of
                         Sugar.LightLambda ->
