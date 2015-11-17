@@ -102,13 +102,12 @@ replaceOrComeToParentEventMap ::
 replaceOrComeToParentEventMap pl =
     do
         config <- ExprGuiM.readConfig
-        let delKeys = Config.replaceKeys config ++ Config.delKeys config
         isSelected <- ExprGuiM.isExprSelected pl
         return $
             if isSelected
             then maybe mempty (replaceEventMap config) $ pl ^. Sugar.plActions
             else
-                Widget.keysEventMapMovesCursor delKeys
+                Widget.keysEventMapMovesCursor (Config.delKeys config)
                 (E.Doc ["Navigation", "Select parent"]) selectParent
     where
         selectParent =
@@ -171,7 +170,7 @@ replaceEventMap config actions =
     mconcat
     [ case actions ^. Sugar.setToInnerExpr of
       Sugar.SetToInnerExpr action ->
-          mk "Replace with inner expression" (Config.delKeys config) action
+          mk "Replace with inner expression" delKeys action
       Sugar.NoInnerExpr -> mempty
     , case actions ^. Sugar.setToHole of
       Sugar.SetToHole action ->
@@ -183,7 +182,7 @@ replaceEventMap config actions =
     ]
     where
         mk doc keys = mkEventMap keys (E.Doc ["Edit", doc])
-        delKeys = Config.replaceKeys config ++ Config.delKeys config
+        delKeys = Config.delKeys config
         mkEventMap keys doc =
             Widget.keysEventMapMovesCursor keys doc .
             fmap WidgetIds.fromEntityId

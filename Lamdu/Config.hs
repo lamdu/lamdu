@@ -158,7 +158,6 @@ data Config = Config
 
     , addNextParamKeys :: [ModKey]
     , jumpToDefinitionKeys :: [ModKey]
-    , replaceKeys :: [ModKey]
     , delForwardKeys :: [ModKey]
     , delBackwardKeys :: [ModKey]
     , wrapKeys :: [ModKey]

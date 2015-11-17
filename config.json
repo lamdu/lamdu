@@ -889,17 +889,6 @@
         0.5,
         1.0
     ],
-    "replaceKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": true,
-                "modifierKeysShift": false,
-                "modifierKeysControl": false
-            },
-            "Key'R"
-        ]
-    ],
     "presentationChoiceColor": [
         0.4,
         0.4,
