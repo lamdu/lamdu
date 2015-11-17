@@ -89,7 +89,7 @@ toNamedVar ::
     NamedVar (OldName m) (TM m) ->
     m (NamedVar (NewName m) (TM m))
 toNamedVar namedVar =
-    nvName f namedVar
+    (nvNameRef . nrName) f namedVar
     where
         f = case namedVar ^. nvVarType of
             GetParameter      -> opGetParamName

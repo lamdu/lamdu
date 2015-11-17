@@ -52,8 +52,10 @@ convertGlobal globalId exprPl =
         cp <- (^. ConvertM.scCodeAnchors) <$> ConvertM.readContext
         addActions exprPl .
             BodyGetVar $ GetVarNamed NamedVar
-            { _nvName = UniqueId.toGuid defI
-            , _nvJumpTo = jumpToDefI cp defI
+            { _nvNameRef = NameRef
+              { _nrName = UniqueId.toGuid defI
+              , _nrGotoDefinition = jumpToDefI cp defI
+              }
             , _nvVarType = GetDefinition
             , _nvMode = NormalBinder
             }

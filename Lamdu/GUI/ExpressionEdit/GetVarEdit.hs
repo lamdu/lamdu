@@ -47,7 +47,7 @@ make getVar pl =
         let Config.Name{..} = Config.name config
         case getVar of
             Sugar.GetVarNamed namedVar ->
-                makeView (namedVar ^. Sugar.nvName) myId
+                makeView (namedVar ^. Sugar.nvNameRef . Sugar.nrName) myId
                     <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
                     & ExpressionGui.stdWrap pl
                 where
@@ -57,7 +57,7 @@ make getVar pl =
                         (E.Doc ["Navigation", "Jump to definition"]) $
                         do
                             DataOps.savePreJumpPosition cp myId
-                            WidgetIds.fromEntityId <$> namedVar ^. Sugar.nvJumpTo
+                            WidgetIds.fromEntityId <$> namedVar ^. Sugar.nvNameRef . Sugar.nrGotoDefinition
                     makeView =
                         case namedVar ^. Sugar.nvMode of
                         Sugar.LightLambda ->

@@ -63,7 +63,8 @@ module Lamdu.Sugar.Types
     , GetField(..), gfRecord, gfTag
     , Inject(..), iTag, iMVal
     , NamedVarType(..), _GetDefinition, _GetFieldParameter, _GetParameter
-    , NamedVar(..), nvName, nvJumpTo, nvVarType, nvMode
+    , NameRef(..), nrName, nrGotoDefinition
+    , NamedVar(..), nvNameRef, nvVarType, nvMode
     , GetVar(..), _GetVarNamed, _GetVarParamsRecord
     , ParamsRecordVar(..), prvFieldNames
     , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
@@ -370,9 +371,13 @@ data NamedVarType =
     GetDefinition | GetFieldParameter | GetParameter
     deriving (Eq, Ord)
 
+data NameRef name m = NameRef
+    { _nrName :: name
+    , _nrGotoDefinition :: T m EntityId
+    }
+
 data NamedVar name m = NamedVar
-    { _nvName :: name
-    , _nvJumpTo :: T m EntityId
+    { _nvNameRef :: NameRef name m
     , _nvVarType :: NamedVarType
     , _nvMode :: BinderMode
     }
@@ -554,21 +559,26 @@ Lens.makeLenses ''DefinitionBuiltin
 Lens.makeLenses ''DefinitionExpression
 Lens.makeLenses ''Expression
 Lens.makeLenses ''FuncParam
-Lens.makeLenses ''NamedParamInfo
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''GetField
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions
 Lens.makeLenses ''HoleArg
-Lens.makeLenses ''HoleResult
 Lens.makeLenses ''HoleOption
+Lens.makeLenses ''HoleResult
 Lens.makeLenses ''Inject
 Lens.makeLenses ''Lambda
+Lens.makeLenses ''LetItem
+Lens.makeLenses ''LetItemActions
 Lens.makeLenses ''List
 Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions
+Lens.makeLenses ''NameRef
+Lens.makeLenses ''NamedParamInfo
 Lens.makeLenses ''NamedVar
 Lens.makeLenses ''Nominal
+Lens.makeLenses ''NullParamActions
+Lens.makeLenses ''NullParamInfo
 Lens.makeLenses ''ParamsRecordVar
 Lens.makeLenses ''Payload
 Lens.makeLenses ''PickedResult
@@ -578,10 +588,6 @@ Lens.makeLenses ''RecordField
 Lens.makeLenses ''ScopeGetVar
 Lens.makeLenses ''TIdG
 Lens.makeLenses ''TagG
-Lens.makeLenses ''LetItem
-Lens.makeLenses ''LetItemActions
-Lens.makeLenses ''NullParamActions
-Lens.makeLenses ''NullParamInfo
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind

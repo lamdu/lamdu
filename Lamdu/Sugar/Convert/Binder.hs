@@ -853,7 +853,7 @@ markLightParams ::
 markLightParams paramNames (Expression body pl) =
     case body of
     BodyGetVar (GetVarNamed n)
-        | Set.member (n ^. nvName) paramNames ->
+        | Set.member (n ^. nvNameRef . nrName) paramNames ->
             n
             & nvMode .~ LightLambda
             & GetVarNamed & BodyGetVar

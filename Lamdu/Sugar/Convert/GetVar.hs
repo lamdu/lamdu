@@ -23,8 +23,10 @@ convertVar :: MonadA m => ConvertM.Context m -> V.Var -> Type -> GetVar Guid m
 convertVar sugarContext param paramType
     | param == recurseVar =
       GetVarNamed NamedVar
-      { _nvName = UniqueId.toGuid defI
-      , _nvJumpTo = pure $ EntityId.ofIRef defI
+      { _nvNameRef = NameRef
+        { _nrName = UniqueId.toGuid defI
+        , _nrGotoDefinition = pure $ EntityId.ofIRef defI
+        }
       , _nvVarType = GetDefinition
       , _nvMode = NormalBinder
       }
@@ -34,8 +36,10 @@ convertVar sugarContext param paramType
       }
     | otherwise =
       GetVarNamed NamedVar
-      { _nvName = UniqueId.toGuid param
-      , _nvJumpTo = pure $ EntityId.ofLambdaParam param
+      { _nvNameRef = NameRef
+        { _nrName = UniqueId.toGuid param
+        , _nrGotoDefinition = pure $ EntityId.ofLambdaParam param
+        }
       , _nvVarType = GetParameter
       , _nvMode = NormalBinder
       }

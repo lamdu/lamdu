@@ -22,7 +22,7 @@ indirectDefinitionGuid funcS =
     -- a GetField behind the scenes, and we probably don't want to
     -- associate the Guid of the tag here? Need to throw this Guid or
     -- associated data into the GetVar/GetField itself anyway!
-    Sugar.BodyGetVar (Sugar.GetVarNamed n) -> Just $ n ^. Sugar.nvName
+    Sugar.BodyGetVar (Sugar.GetVarNamed n) -> Just $ n ^. Sugar.nvNameRef . Sugar.nrName
     -- TODO: <-- do we want to make something up for get-fields, etc?
     _ -> Nothing
 
