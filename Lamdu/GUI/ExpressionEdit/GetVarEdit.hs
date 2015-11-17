@@ -51,48 +51,52 @@ makeJumpToDefinitionEventMap myId nameRef =
                 DataOps.savePreJumpPosition cp myId
                 WidgetIds.fromEntityId <$> nameRef ^. Sugar.nrGotoDefinition
 
+makeParamsRecord ::
+    MonadA m => Widget.Id -> Sugar.ParamsRecordVar (Name m) -> ExprGuiM m (ExpressionGui m)
+makeParamsRecord myId paramsRecordVar =
+    do
+        config <- ExprGuiM.readConfig
+        let Config.Name{..} = Config.name config
+        sequence
+            [ ExpressionGui.makeLabel "Params {" (Widget.toAnimId myId <> ["prefix"])
+            , zip [0..] fieldNames
+                & mapM
+                    (\(i, fieldName) ->
+                      makeSimpleView parameterColor fieldName $
+                      Widget.joinId myId ["params", SBS8.pack (show (i::Int))])
+                >>= ExpressionGui.hboxSpaced
+            , ExpressionGui.makeLabel "}" (Widget.toAnimId myId <> ["suffix"])
+            ] <&> ExpressionGui.hbox
+    where
+        Sugar.ParamsRecordVar fieldNames = paramsRecordVar
+
 make ::
     MonadA m =>
     Sugar.GetVar (Name m) m ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make getVar pl =
-    do
-        config <- ExprGuiM.readConfig
-        let Config.Name{..} = Config.name config
-        case getVar of
-            Sugar.GetVarNamed namedVar ->
-                do
-                    jumpToDefinitionEventMap <-
-                        makeJumpToDefinitionEventMap myId (namedVar ^. Sugar.nvNameRef)
-                    makeView (namedVar ^. Sugar.nvNameRef . Sugar.nrName) myId
-                        <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
-                        & ExpressionGui.stdWrap pl
-                where
-                    makeView =
-                        case namedVar ^. Sugar.nvMode of
-                        Sugar.LightLambda ->
-                            makeSimpleView nameOriginFGColor
-                            <&> Lens.mapped %~
-                                LightLambda.withUnderline (Config.lightLambda config)
-                        _ ->
-                            case namedVar ^. Sugar.nvVarType of
-                            Sugar.GetDefinition -> makeSimpleView definitionColor
-                            Sugar.GetParameter -> makeSimpleView parameterColor
-                            Sugar.GetFieldParameter -> makeSimpleView parameterColor
-            Sugar.GetVarParamsRecord paramsRecordVar ->
-                sequence
-                [ ExpressionGui.makeLabel "Params {" (Widget.toAnimId myId <> ["prefix"])
-                , zip [0..] fieldNames
-                    & mapM
-                        (\(i, fieldName) ->
-                          makeSimpleView parameterColor fieldName $
-                          Widget.joinId myId ["params", SBS8.pack (show (i::Int))])
-                    >>= ExpressionGui.hboxSpaced
-                , ExpressionGui.makeLabel "}" (Widget.toAnimId myId <> ["suffix"])
-                ] <&> ExpressionGui.hbox
-                & ExpressionGui.stdWrap pl
-                where
-                    Sugar.ParamsRecordVar fieldNames = paramsRecordVar
+    case getVar of
+    Sugar.GetVarNamed namedVar ->
+        do
+            config <- ExprGuiM.readConfig
+            let Config.Name{..} = Config.name config
+            let makeView =
+                    case namedVar ^. Sugar.nvMode of
+                    Sugar.LightLambda ->
+                        makeSimpleView nameOriginFGColor
+                        <&> Lens.mapped %~
+                            LightLambda.withUnderline (Config.lightLambda config)
+                    _ ->
+                        case namedVar ^. Sugar.nvVarType of
+                        Sugar.GetDefinition -> makeSimpleView definitionColor
+                        Sugar.GetParameter -> makeSimpleView parameterColor
+                        Sugar.GetFieldParameter -> makeSimpleView parameterColor
+            jumpToDefinitionEventMap <-
+                makeJumpToDefinitionEventMap myId (namedVar ^. Sugar.nvNameRef)
+            makeView (namedVar ^. Sugar.nvNameRef . Sugar.nrName) myId
+                <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
+    Sugar.GetVarParamsRecord paramsRecordVar -> makeParamsRecord myId paramsRecordVar
+    & ExpressionGui.stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl
