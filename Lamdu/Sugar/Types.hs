@@ -63,10 +63,12 @@ module Lamdu.Sugar.Types
     --
     , GetField(..), gfRecord, gfTag
     , Inject(..), iTag, iMVal
-    , NamedVarType(..), _GetDefinition, _GetFieldParameter, _GetParameter
+    , ParameterForm(..), _GetFieldParameter, _GetParameter
     , NameRef(..), nrName, nrGotoDefinition
-    , NamedVar(..), nvNameRef, nvVarType, nvMode
-    , GetVar(..), _GetVarNamed, _GetVarParamsRecord
+    , Param(..), pNameRef, pForm, pBinderMode
+    , BinderVarForm(..), _GetDefinition, _GetLet
+    , BinderVar(..), bvNameRef, bvForm
+    , GetVar(..), _GetParam, _GetParamsRecord, _GetBinder
     , ParamsRecordVar(..), prvFieldNames
     , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
     , AnnotatedArg(..), aaTag, aaExpr
@@ -368,19 +370,28 @@ data Inject name expr = Inject
     , _iMVal :: Maybe expr
     } deriving (Functor, Foldable, Traversable)
 
-data NamedVarType =
-    GetDefinition | GetFieldParameter | GetParameter
-    deriving (Eq, Ord)
-
 data NameRef name m = NameRef
     { _nrName :: name
     , _nrGotoDefinition :: T m EntityId
     }
 
-data NamedVar name m = NamedVar
-    { _nvNameRef :: NameRef name m
-    , _nvVarType :: NamedVarType
-    , _nvMode :: BinderMode
+data ParameterForm = GetFieldParameter | GetParameter
+    deriving (Eq, Ord)
+
+data BinderMode = NormalBinder | LightLambda
+
+data Param name m = Param
+    { _pNameRef :: NameRef name m
+    , _pForm :: ParameterForm
+    , _pBinderMode :: BinderMode
+    }
+
+data BinderVarForm = GetDefinition | GetLet
+    deriving (Eq, Ord)
+
+data BinderVar name m = BinderVar
+    { _bvNameRef :: NameRef name m
+    , _bvForm :: BinderVarForm
     }
 
 newtype ParamsRecordVar name = ParamsRecordVar
@@ -388,8 +399,9 @@ newtype ParamsRecordVar name = ParamsRecordVar
     } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 data GetVar name m
-    = GetVarNamed (NamedVar name m)
-    | GetVarParamsRecord (ParamsRecordVar name)
+    = GetParam (Param name m)
+    | GetParamsRecord (ParamsRecordVar name)
+    | GetBinder (BinderVar name m)
 
 data SpecialArgs expr
     = NoSpecialArgs
@@ -412,8 +424,6 @@ data Nominal name expr = Nominal
     { _nTId :: TIdG name
     , _nVal :: expr
     } deriving (Functor, Foldable, Traversable)
-
-data BinderMode = NormalBinder | LightLambda
 
 data Lambda name m expr = Lambda
     { _lamMode :: BinderMode
@@ -562,6 +572,7 @@ Lens.makeLenses ''Binder
 Lens.makeLenses ''BinderActions
 Lens.makeLenses ''BinderBody
 Lens.makeLenses ''BinderBodyActions
+Lens.makeLenses ''BinderVar
 Lens.makeLenses ''Body
 Lens.makeLenses ''Case
 Lens.makeLenses ''CaseAddAltResult
@@ -588,10 +599,10 @@ Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions
 Lens.makeLenses ''NameRef
 Lens.makeLenses ''NamedParamInfo
-Lens.makeLenses ''NamedVar
 Lens.makeLenses ''Nominal
 Lens.makeLenses ''NullParamActions
 Lens.makeLenses ''NullParamInfo
+Lens.makeLenses ''Param
 Lens.makeLenses ''ParamsRecordVar
 Lens.makeLenses ''Payload
 Lens.makeLenses ''PickedResult
@@ -603,13 +614,14 @@ Lens.makeLenses ''TIdG
 Lens.makeLenses ''TagG
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''BinderParams
+Lens.makePrisms ''BinderVarForm
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CaseTail
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo
 Lens.makePrisms ''GetVar
-Lens.makePrisms ''NamedVarType
+Lens.makePrisms ''ParameterForm
 Lens.makePrisms ''RecordTail
 Lens.makePrisms ''SetToHole
 Lens.makePrisms ''SetToInnerExpr

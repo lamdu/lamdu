@@ -84,24 +84,35 @@ toHoleActions ha@HoleActions {..} =
                 _holeOptionLiteralNum <&> (>>= run . toHoleOption)
             }
 
-toNamedVar ::
+toParam ::
     MonadNaming m =>
-    NamedVar (OldName m) (TM m) ->
-    m (NamedVar (NewName m) (TM m))
-toNamedVar namedVar =
-    (nvNameRef . nrName) f namedVar
+    Param (OldName m) (TM m) ->
+    m (Param (NewName m) (TM m))
+toParam param =
+    (pNameRef . nrName) f param
     where
-        f = case namedVar ^. nvVarType of
+        f = case param ^. pForm of
             GetParameter      -> opGetParamName
             GetFieldParameter -> opGetTagName
-            GetDefinition     -> opGetDefName
+
+toBinderVar ::
+    MonadNaming m =>
+    BinderVar (OldName m) (TM m) ->
+    m (BinderVar (NewName m) (TM m))
+toBinderVar binderVar =
+    (bvNameRef . nrName) f binderVar
+    where
+        f = case binderVar ^. bvForm of
+            GetLet        -> opGetParamName -- TODO: Separate op for lets?
+            GetDefinition -> opGetDefName
 
 toGetVar ::
     MonadNaming m =>
     GetVar (OldName m) (TM m) ->
     m (GetVar (NewName m) (TM m))
-toGetVar (GetVarNamed x) = GetVarNamed <$> toNamedVar x
-toGetVar (GetVarParamsRecord x) = GetVarParamsRecord <$> traverse opGetTagName x
+toGetVar (GetParam x) = GetParam <$> toParam x
+toGetVar (GetBinder x) = GetBinder <$> toBinderVar x
+toGetVar (GetParamsRecord x) = GetParamsRecord <$> traverse opGetTagName x
 
 toLet ::
     MonadNaming m => (a -> m b) ->

@@ -35,13 +35,13 @@ convertGetFieldParam (V.GetField recExpr tag) exprPl =
             paramInfo <- Map.lookup tag tagParamInfos
             param <- recExpr ^? ExprLens.valVar
             guard $ param == ConvertM.tpiFromParameters paramInfo
-            GetVarNamed NamedVar
-                { _nvNameRef = NameRef
+            GetParam Param
+                { _pNameRef = NameRef
                   { _nrName = UniqueId.toGuid tag
                   , _nrGotoDefinition = return (ConvertM.tpiJumpTo paramInfo)
                   }
-                , _nvVarType = GetFieldParameter
-                , _nvMode = NormalBinder
+                , _pForm = GetFieldParameter
+                , _pBinderMode = NormalBinder
                 } & BodyGetVar & Just
             & Lens._Just %%~ addActions exprPl
 

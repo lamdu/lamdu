@@ -183,7 +183,7 @@ searchTermsOfBodyShape = \case
             _ -> []
     Sugar.BodyInject {} -> ["inject", "[]"]
     Sugar.BodyLiteralNum i -> [formatNum i]
-    Sugar.BodyGetVar Sugar.GetVarParamsRecord {} -> ["Params"]
+    Sugar.BodyGetVar Sugar.GetParamsRecord {} -> ["Params"]
     Sugar.BodyGetVar {} -> []
     Sugar.BodyToNom {} -> []
     Sugar.BodyFromNom {} -> []
@@ -191,7 +191,7 @@ searchTermsOfBodyShape = \case
 
 searchTermsOfBodyNames :: MonadA m => Sugar.Body (Name m) m expr -> [String]
 searchTermsOfBodyNames = \case
-    Sugar.BodyGetVar Sugar.GetVarParamsRecord {} -> []
+    Sugar.BodyGetVar Sugar.GetParamsRecord {} -> []
     Sugar.BodyLam {} -> []
     body -> NamesGet.fromBody body <&> searchTermOfName
 

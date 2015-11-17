@@ -18,12 +18,10 @@ type T = Transaction
 indirectDefinitionGuid :: ExpressionU m pl -> Maybe Guid
 indirectDefinitionGuid funcS =
     case funcS ^. Sugar.rBody of
-    -- TODO: This is incorrect because BodyGetVar is used even when it's
-    -- a GetField behind the scenes, and we probably don't want to
-    -- associate the Guid of the tag here? Need to throw this Guid or
-    -- associated data into the GetVar/GetField itself anyway!
-    Sugar.BodyGetVar (Sugar.GetVarNamed n) -> Just $ n ^. Sugar.nvNameRef . Sugar.nrName
-    -- TODO: <-- do we want to make something up for get-fields, etc?
+    Sugar.BodyGetVar
+        (Sugar.GetBinder
+         binderVar@Sugar.BinderVar { Sugar._bvForm = Sugar.GetDefinition }) ->
+            Just $ binderVar ^. Sugar.bvNameRef . Sugar.nrName
     _ -> Nothing
 
 indirectDefinitionPresentationMode ::

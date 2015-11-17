@@ -8,7 +8,6 @@ import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.Monoid ((<>))
-import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -27,8 +26,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Prelude.Compat
 
-type T = Transaction
-
 makeSimpleView ::
     MonadA m => Draw.Color -> Name m -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
@@ -37,19 +34,6 @@ makeSimpleView color name myId =
     >>= ExprGuiM.widgetEnv . BWidgets.makeFocusableView myId
     <&> ExpressionGui.fromValueWidget
     & ExprGuiM.withFgColor color
-
-makeJumpToDefinitionEventMap ::
-    MonadA m => Widget.Id -> Sugar.NameRef name m -> ExprGuiM m (Widget.EventHandlers (T m))
-makeJumpToDefinitionEventMap myId nameRef =
-    do
-        cp <- ExprGuiM.readCodeAnchors
-        config <- ExprGuiM.readConfig
-        return $ Widget.keysEventMapMovesCursor
-            (Config.jumpToDefinitionKeys config ++ Config.extractKeys config)
-            (E.Doc ["Navigation", "Jump to definition"]) $
-            do
-                DataOps.savePreJumpPosition cp myId
-                WidgetIds.fromEntityId <$> nameRef ^. Sugar.nrGotoDefinition
 
 makeParamsRecord ::
     MonadA m => Widget.Id -> Sugar.ParamsRecordVar (Name m) -> ExprGuiM m (ExpressionGui m)
@@ -70,33 +54,49 @@ makeParamsRecord myId paramsRecordVar =
     where
         Sugar.ParamsRecordVar fieldNames = paramsRecordVar
 
+makeNameRef ::
+    MonadA m => Widget.Id -> Sugar.NameRef name m ->
+    (name -> Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
+    ExprGuiM m (ExpressionGui m)
+makeNameRef myId nameRef makeView =
+    do
+        cp <- ExprGuiM.readCodeAnchors
+        config <- ExprGuiM.readConfig
+        let jumpToDefinitionEventMap =
+                Widget.keysEventMapMovesCursor
+                (Config.jumpToDefinitionKeys config ++ Config.extractKeys config)
+                (E.Doc ["Navigation", "Jump to definition"]) $
+                do
+                    DataOps.savePreJumpPosition cp myId
+                    WidgetIds.fromEntityId <$> nameRef ^. Sugar.nrGotoDefinition
+        makeView (nameRef ^. Sugar.nrName) myId
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
+
 make ::
     MonadA m =>
     Sugar.GetVar (Name m) m ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make getVar pl =
-    case getVar of
-    Sugar.GetVarNamed namedVar ->
-        do
-            config <- ExprGuiM.readConfig
-            let Config.Name{..} = Config.name config
-            let makeView =
-                    case namedVar ^. Sugar.nvMode of
-                    Sugar.LightLambda ->
-                        makeSimpleView nameOriginFGColor
-                        <&> Lens.mapped %~
-                            LightLambda.withUnderline (Config.lightLambda config)
-                    _ ->
-                        case namedVar ^. Sugar.nvVarType of
-                        Sugar.GetDefinition -> makeSimpleView definitionColor
-                        Sugar.GetParameter -> makeSimpleView parameterColor
-                        Sugar.GetFieldParameter -> makeSimpleView parameterColor
-            jumpToDefinitionEventMap <-
-                makeJumpToDefinitionEventMap myId (namedVar ^. Sugar.nvNameRef)
-            makeView (namedVar ^. Sugar.nvNameRef . Sugar.nrName) myId
-                <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
-    Sugar.GetVarParamsRecord paramsRecordVar -> makeParamsRecord myId paramsRecordVar
+    do
+        config <- ExprGuiM.readConfig
+        let Config.Name{..} = Config.name config
+        case getVar of
+            Sugar.GetBinder binderVar ->
+                case binderVar ^. Sugar.bvForm of
+                Sugar.GetLet -> letColor
+                Sugar.GetDefinition -> definitionColor
+                & makeSimpleView
+                & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
+            Sugar.GetParam param ->
+                case param ^. Sugar.pBinderMode of
+                Sugar.LightLambda ->
+                    makeSimpleView nameOriginFGColor
+                    <&> Lens.mapped %~
+                        LightLambda.withUnderline (Config.lightLambda config)
+                _ -> makeSimpleView parameterColor
+                & makeNameRef myId (param ^. Sugar.pNameRef)
+            Sugar.GetParamsRecord paramsRecordVar -> makeParamsRecord myId paramsRecordVar
     & ExpressionGui.stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl

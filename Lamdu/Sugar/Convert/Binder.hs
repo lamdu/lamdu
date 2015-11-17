@@ -833,11 +833,11 @@ markLightParams ::
     MonadA m => Set Guid -> ExpressionU m a -> ExpressionU m a
 markLightParams paramNames (Expression body pl) =
     case body of
-    BodyGetVar (GetVarNamed n)
-        | Set.member (n ^. nvNameRef . nrName) paramNames ->
+    BodyGetVar (GetParam n)
+        | Set.member (n ^. pNameRef . nrName) paramNames ->
             n
-            & nvMode .~ LightLambda
-            & GetVarNamed & BodyGetVar
+            & pBinderMode .~ LightLambda
+            & GetParam & BodyGetVar
     BodyHole h ->
         h
         & holeMActions . Lens._Just

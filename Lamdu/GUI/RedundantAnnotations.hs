@@ -47,11 +47,13 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         Expression newBody pl & don'tShowAnnotation
     BodyLam _ ->
         Expression newBody pl & don'tShowAnnotation
-    BodyGetVar (GetVarNamed NamedVar { _nvMode = LightLambda }) ->
+    BodyGetVar (GetParam Param { _pBinderMode = LightLambda }) ->
         Expression newBody pl
-    BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetFieldParameter }) ->
+    BodyGetVar (GetParam Param { _pBinderMode = NormalBinder }) ->
         Expression newBody pl & don'tShowAnnotation
-    BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetParameter }) ->
+    BodyGetVar (GetBinder BinderVar { _bvForm = GetDefinition }) ->
+        Expression newBody pl
+    BodyGetVar (GetBinder BinderVar { _bvForm = GetLet }) ->
         Expression newBody pl & don'tShowAnnotation
     BodyFromNom _ ->
         Expression (newBody <&> don'tShowEval) pl
@@ -59,11 +61,9 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         Expression (newBody <&> don'tShowEval) pl
     BodyInject _ ->
         Expression newBody pl & don'tShowEval
-    BodyGetVar (GetVarParamsRecord _) ->
+    BodyGetVar (GetParamsRecord _) ->
         Expression newBody pl
     BodyGetField _ ->
-        Expression newBody pl
-    BodyGetVar (GetVarNamed NamedVar { _nvVarType = GetDefinition }) ->
         Expression newBody pl
     BodyApply app ->
         Expression (BodyApply (app & aFunc %~ don'tShowAnnotation)) pl

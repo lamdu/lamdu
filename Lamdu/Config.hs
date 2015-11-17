@@ -103,6 +103,7 @@ data Name = Name
     , nameOriginFGColor :: Draw.Color
     , definitionColor :: Draw.Color
     , parameterColor :: Draw.Color
+    , letColor :: Draw.Color
     , recordTagColor :: Draw.Color
     , caseTagColor :: Draw.Color
     , paramTagColor :: Draw.Color
