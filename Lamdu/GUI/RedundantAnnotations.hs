@@ -40,7 +40,7 @@ markAnnotationsToDisplay ::
     Expression name m T.Payload
 markAnnotationsToDisplay (Expression oldBody pl) =
     case newBody of
-    BodyLiteralInteger _ ->
+    BodyLiteralNum _ ->
         Expression newBody pl & don'tShowAnnotation
     BodyRecord _ ->
         Expression newBody pl & don'tShowAnnotation

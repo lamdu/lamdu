@@ -47,6 +47,6 @@ test =
                 do
                     arg <- whnfThunk argThunk
                     case arg of
-                        HInteger i -> return $ HInteger $ negate i
+                        HFloat i -> return $ HFloat $ negate i
                         _ -> evalError $ "negate expected integer not " ++ show arg
             | otherwise = evalError "Builtin not implemented"

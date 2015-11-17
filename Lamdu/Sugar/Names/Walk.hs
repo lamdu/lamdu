@@ -80,8 +80,8 @@ toHoleActions ha@HoleActions {..} =
         InTransaction run <- opRun
         pure ha
             { _holeOptions = _holeOptions >>= run . traverse toHoleOption
-            , _holeOptionLiteralInt =
-                _holeOptionLiteralInt <&> (>>= run . toHoleOption)
+            , _holeOptionLiteralNum =
+                _holeOptionLiteralNum <&> (>>= run . toHoleOption)
             }
 
 toNamedVar ::
@@ -141,18 +141,18 @@ toBody ::
     Body (OldName m) (TM m) a ->
     m (Body (NewName m) (TM m) b)
 toBody expr = \case
-    BodyList           x -> traverse expr x <&> BodyList
-    BodyGetField       x -> traverse expr x >>= gfTag toTagG <&> BodyGetField
-    BodyInject         x -> traverse expr x >>= iTag toTagG <&> BodyInject
-    BodyRecord         x -> traverse expr x >>= (rItems . traverse . rfTag) toTagG <&> BodyRecord
-    BodyCase           x -> traverse expr x >>= (cAlts . traverse . caTag) toTagG <&> BodyCase
-    BodyApply          x -> traverse expr x >>= (aAnnotatedArgs . traverse . aaTag) toTagG <&> BodyApply
-    BodyHole           x -> traverse expr x >>= (holeMActions . Lens._Just) toHoleActions <&> BodyHole
-    BodyToNom          x -> traverse expr x >>= nTId toTIdG <&> BodyToNom
-    BodyFromNom        x -> traverse expr x >>= nTId toTIdG <&> BodyFromNom
-    BodyGetVar         x -> toGetVar x <&> BodyGetVar
-    BodyLiteralInteger x -> pure $ BodyLiteralInteger x
-    BodyLam            x -> toLam expr x <&> BodyLam
+    BodyList       x -> traverse expr x <&> BodyList
+    BodyGetField   x -> traverse expr x >>= gfTag toTagG <&> BodyGetField
+    BodyInject     x -> traverse expr x >>= iTag toTagG <&> BodyInject
+    BodyRecord     x -> traverse expr x >>= (rItems . traverse . rfTag) toTagG <&> BodyRecord
+    BodyCase       x -> traverse expr x >>= (cAlts . traverse . caTag) toTagG <&> BodyCase
+    BodyApply      x -> traverse expr x >>= (aAnnotatedArgs . traverse . aaTag) toTagG <&> BodyApply
+    BodyHole       x -> traverse expr x >>= (holeMActions . Lens._Just) toHoleActions <&> BodyHole
+    BodyToNom      x -> traverse expr x >>= nTId toTIdG <&> BodyToNom
+    BodyFromNom    x -> traverse expr x >>= nTId toTIdG <&> BodyFromNom
+    BodyGetVar     x -> toGetVar x <&> BodyGetVar
+    BodyLiteralNum x -> pure $ BodyLiteralNum x
+    BodyLam        x -> toLam expr x <&> BodyLam
     where
         toTagG = tagGName opGetTagName
         toTIdG = tidgName %%~ opGetTIdName

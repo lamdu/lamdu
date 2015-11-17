@@ -81,15 +81,15 @@ makeEditor ::
     ExprGuiM m (ExpressionGui m)
 makeEditor body =
     case body of
-    Sugar.BodyHole           x -> x & HoleEdit.make
-    Sugar.BodyApply          x -> x & ApplyEdit.make
-    Sugar.BodyLam            x -> x & LambdaEdit.make
-    Sugar.BodyLiteralInteger x -> x & LiteralEdit.makeInt
-    Sugar.BodyList           x -> x & ListEdit.make
-    Sugar.BodyRecord         x -> x & RecordEdit.make
-    Sugar.BodyCase           x -> x & CaseEdit.make
-    Sugar.BodyGetField       x -> x & GetFieldEdit.make
-    Sugar.BodyInject         x -> x & InjectEdit.make
-    Sugar.BodyGetVar         x -> x & GetVarEdit.make
-    Sugar.BodyToNom          x -> x & NomEdit.makeToNom
-    Sugar.BodyFromNom        x -> x & NomEdit.makeFromNom
+    Sugar.BodyHole       x -> x & HoleEdit.make
+    Sugar.BodyApply      x -> x & ApplyEdit.make
+    Sugar.BodyLam        x -> x & LambdaEdit.make
+    Sugar.BodyLiteralNum x -> x & LiteralEdit.makeNum
+    Sugar.BodyList       x -> x & ListEdit.make
+    Sugar.BodyRecord     x -> x & RecordEdit.make
+    Sugar.BodyCase       x -> x & CaseEdit.make
+    Sugar.BodyGetField   x -> x & GetFieldEdit.make
+    Sugar.BodyInject     x -> x & InjectEdit.make
+    Sugar.BodyGetVar     x -> x & GetVarEdit.make
+    Sugar.BodyToNom      x -> x & NomEdit.makeToNom
+    Sugar.BodyFromNom    x -> x & NomEdit.makeFromNom

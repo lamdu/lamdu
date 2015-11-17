@@ -22,6 +22,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Val (EvalResult, Val(..), EvalError(..))
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Formatting (formatNum)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 
@@ -116,5 +117,8 @@ makeForVal animId val =
             GridView.verticalAlign 0.5 [fieldsView, restView] & return
         where
             (fields, recStatus) = extractFields recExtend
-    body -> BWidgets.makeTextView (show body) animId & ExprGuiM.widgetEnv
+    HBuiltin x -> asText (show x)
+    HFloat x -> asText (formatNum x)
     & ExprGuiM.advanceDepth return animId
+    where
+        asText text = BWidgets.makeTextView text animId & ExprGuiM.widgetEnv

@@ -5,6 +5,7 @@ module Lamdu.Builtins
 
 import           Control.Lens.Operators
 import           Control.Monad (join, void, when)
+import           Data.Fixed (mod', div')
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Map.Utils (matchKeys)
@@ -53,9 +54,9 @@ toGuest = Right . toGuestVal
 fromGuest :: GuestType t => EvalResult pl -> Either EvalError t
 fromGuest = (>>= fromGuestVal)
 
-instance GuestType Integer where
-    toGuestVal = HInteger
-    fromGuestVal (HInteger x) = Right x
+instance GuestType Double where
+    toGuestVal = HFloat
+    fromGuestVal (HFloat x) = Right x
     fromGuestVal x = "expected int, got " ++ show (void x) & EvalTypeError & Left
 
 instance GuestType Bool where
@@ -97,7 +98,7 @@ eqVal HFunc {} _    = EvalTodoError "Eq of func" & Left
 eqVal HAbsurd {} _  = EvalTodoError "Eq of absurd" & Left
 eqVal HCase {} _    = EvalTodoError "Eq of case" & Left
 eqVal HBuiltin {} _ = EvalTodoError "Eq of builtin" & Left
-eqVal (HInteger x) (HInteger y) = x == y & Right
+eqVal (HFloat x) (HFloat y) = x == y & Right
 eqVal (HRecExtend x) (HRecExtend y) =
     do
         fx <- HRecExtend x & Right & flatRecord
@@ -127,23 +128,24 @@ builtinEq = builtinEqH id
 builtinNotEq :: EvalResult pl -> EvalResult pl
 builtinNotEq = builtinEqH not
 
-intArg :: (Integer -> a) -> Integer -> a
-intArg = id
+floatArg :: (Double -> a) -> Double -> a
+floatArg = id
 
 eval :: Def.FFIName -> EvalResult pl -> EvalResult pl
 eval name =
     case name of
     Def.FFIName ["Prelude"] "=="     -> builtinEq
     Def.FFIName ["Prelude"] "/="     -> builtinNotEq
-    Def.FFIName ["Prelude"] "<"      -> builtin2Infix $ intArg (<)
-    Def.FFIName ["Prelude"] "<="     -> builtin2Infix $ intArg (<=)
-    Def.FFIName ["Prelude"] ">"      -> builtin2Infix $ intArg (>)
-    Def.FFIName ["Prelude"] ">="     -> builtin2Infix $ intArg (>=)
-    Def.FFIName ["Prelude"] "*"      -> builtin2Infix $ intArg (*)
-    Def.FFIName ["Prelude"] "+"      -> builtin2Infix $ intArg (+)
-    Def.FFIName ["Prelude"] "-"      -> builtin2Infix $ intArg (-)
-    Def.FFIName ["Prelude"] "div"    -> builtin2Infix $ intArg div
-    Def.FFIName ["Prelude"] "mod"    -> builtin2Infix $ intArg mod
-    Def.FFIName ["Prelude"] "negate" -> builtin1      $ intArg negate
-    Def.FFIName ["Prelude"] "sqrt"   -> builtin1      $ intArg ((floor :: Double -> Integer) . sqrt . fromIntegral)
+    Def.FFIName ["Prelude"] "<"      -> builtin2Infix $ floatArg (<)
+    Def.FFIName ["Prelude"] "<="     -> builtin2Infix $ floatArg (<=)
+    Def.FFIName ["Prelude"] ">"      -> builtin2Infix $ floatArg (>)
+    Def.FFIName ["Prelude"] ">="     -> builtin2Infix $ floatArg (>=)
+    Def.FFIName ["Prelude"] "*"      -> builtin2Infix $ floatArg (*)
+    Def.FFIName ["Prelude"] "+"      -> builtin2Infix $ floatArg (+)
+    Def.FFIName ["Prelude"] "-"      -> builtin2Infix $ floatArg (-)
+    Def.FFIName ["Prelude"] "/"      -> builtin2Infix $ floatArg (/)
+    Def.FFIName ["Prelude"] "div"    -> builtin2Infix $ ((fromIntegral :: Int -> Double) .) . floatArg div'
+    Def.FFIName ["Prelude"] "mod"    -> builtin2Infix $ floatArg mod'
+    Def.FFIName ["Prelude"] "negate" -> builtin1      $ floatArg negate
+    Def.FFIName ["Prelude"] "sqrt"   -> builtin1      $ floatArg sqrt
     _ -> name & EvalMissingBuiltin & Left & const

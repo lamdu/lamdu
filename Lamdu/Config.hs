@@ -164,7 +164,7 @@ data Config = Config
     , wrapKeys :: [ModKey]
 
     , parenHighlightColor :: Draw.Color
-    , literalIntColor :: Draw.Color
+    , literalNumColor :: Draw.Color
     , typeIndicatorErrorColor :: Draw.Color
     , typeIndicatorMatchColor :: Draw.Color
     , typeIndicatorFirstTimeColor :: Draw.Color

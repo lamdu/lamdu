@@ -6,7 +6,7 @@ module Lamdu.Eval.Val
     , Closure(..), Scope(..)
     , emptyScope
     , _HFunc, _HRecExtend, _HCase, _HRecEmpty
-    , _HAbsurd, _HInteger, _HBuiltin, _HInject
+    , _HAbsurd, _HFloat, _HBuiltin, _HInject
     ) where
 
 import           Prelude.Compat
@@ -51,7 +51,7 @@ data Val pl
     | HRecEmpty
     | HAbsurd
     | HCase (V.Case (EvalResult pl))
-    | HInteger Integer
+    | HFloat Double
     | HBuiltin FFIName
     | HInject (V.Inject (EvalResult pl))
     deriving (Functor, Foldable, Traversable)
@@ -63,7 +63,7 @@ instance Show pl => Show (Val pl) where
     show (HInject inject) = show inject
     show HRecEmpty = "()"
     show HAbsurd = "Absurd"
-    show (HInteger x) = show x
+    show (HFloat x) = show x
     show (HBuiltin ffiName) = show ffiName
 
 Lens.makePrisms ''Val

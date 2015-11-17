@@ -169,8 +169,8 @@ evalScopedVal (ScopedVal scope expr) =
     V.BLeaf V.LRecEmpty -> Right HRecEmpty & return
     V.BLeaf V.LAbsurd   -> Right HAbsurd & return
     V.BLeaf (V.LLiteral (V.Literal p bs))
-        | p == Builtins.intId -> decodeS bs & HInteger & Right & return
-        | otherwise -> error "TODO Literals which are not integers"
+        | p == Builtins.floatId -> decodeS bs & HFloat & Right & return
+        | otherwise -> error "TODO Literals which are not nums"
     V.BLeaf V.LHole -> Left EvalHole & return
     where
         inner = evalScopedVal . ScopedVal scope

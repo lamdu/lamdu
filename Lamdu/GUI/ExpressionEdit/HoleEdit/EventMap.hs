@@ -10,7 +10,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
-import           Data.List.Utils (nonEmptyAll)
+import           Data.List (isInfixOf)
 import           Data.Monoid ((<>))
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
@@ -21,7 +21,7 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.GLFW as GLFW
-import           Lamdu.CharClassification (operatorChars)
+import           Lamdu.CharClassification (operatorChars, digitChars)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..))
@@ -75,17 +75,24 @@ disallowChars Config.Hole{..} searchTerm =
     deleteKeys (holePickAndMoveToNextHoleKeys ++ holePickResultKeys) .
     disallowMix
     where
-        disallowMix
-            | nonEmptyAll (`elem` operatorChars) searchTerm
-            && searchTerm /= "." =
-                E.filterChars (`elem` operatorChars)
-
-            | nonEmptyAll (`notElem` operatorChars) searchTerm
-            || ("." == take 1 searchTerm &&
-                nonEmptyAll (`notElem` operatorChars) (drop 1 searchTerm)) =
-                E.filterChars (`notElem` operatorChars)
-
-            | otherwise = id
+        allowDigitsOnly = E.filterChars (`notElem` digitChars)
+        allowOperatorsOnly = E.filterChars (`elem` operatorChars)
+        disallowOperators = E.filterChars (`notElem` operatorChars)
+        allowNumCharsOnly = E.filterChars (`elem` ('.':digitChars))
+        disallowMix =
+            case searchTerm of
+            "" -> id
+            "." -> id
+            '.':x:_
+                | x `elem` operatorChars -> allowOperatorsOnly
+                | otherwise -> disallowOperators
+            x:xs
+                | x `elem` operatorChars -> allowOperatorsOnly
+                | "." `isInfixOf` xs -> allowDigitsOnly
+                | all (`elem` digitChars) searchTerm -> allowNumCharsOnly
+                | all (`notElem` operatorChars) searchTerm -> disallowOperators
+                | otherwise ->
+                  error "Mix of operator/non-operator chars happened in search term?"
 
 deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
 deleteKeys = E.deleteKeys . map (E.KeyEvent GLFW.KeyState'Pressed)

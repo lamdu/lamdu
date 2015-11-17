@@ -17,7 +17,7 @@ import qualified Data.Char as Char
 import           Data.Function (on)
 import           Data.List (isInfixOf, isPrefixOf)
 import qualified Data.List.Class as ListClass
-import           Data.List.Utils (sortOn, nonEmptyAll)
+import           Data.List.Utils (sortOn)
 import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -27,6 +27,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Formatting (formatNum)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -168,20 +169,20 @@ searchTermsOfBodyShape = \case
     Sugar.BodyLam {} -> ["lambda", "\\", "Λ", "λ"]
     Sugar.BodyApply {} -> ["Apply"]
     Sugar.BodyList {} -> ["list", "[]"]
-    (Sugar.BodyRecord r) ->
+    Sugar.BodyRecord r ->
         ["record", "{}", "()"] ++
         case r of
         Sugar.Record [] Sugar.ClosedRecord{} _ -> ["empty"]
         _ -> []
-    (Sugar.BodyGetField gf) ->
+    Sugar.BodyGetField gf ->
         [".", "field", "." ++ searchTermOfName (gf ^. Sugar.gfTag . Sugar.tagGName)]
-    (Sugar.BodyCase cas) ->
+    Sugar.BodyCase cas ->
         ["case", ":"] ++
         case cas of
             Sugar.Case Sugar.LambdaCase [] Sugar.ClosedCase{} _ _ -> ["absurd"]
             _ -> []
     Sugar.BodyInject {} -> ["inject", "[]"]
-    (Sugar.BodyLiteralInteger i) -> [show i]
+    Sugar.BodyLiteralNum i -> [formatNum i]
     Sugar.BodyGetVar Sugar.GetVarParamsRecord {} -> ["Params"]
     Sugar.BodyGetVar {} -> []
     Sugar.BodyToNom {} -> []
@@ -207,13 +208,14 @@ mkGroup option =
             , _groupId = WidgetIds.hash (option ^. Sugar.hoVal)
             }
 
-literalIntGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
-literalIntGroups holeInfo =
-    [ read searchTerm
-      & ehiActions holeInfo ^. Sugar.holeOptionLiteralInt
-    | nonEmptyAll Char.isDigit searchTerm
-    ] & sequenceA
+literalNumGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
+literalNumGroups holeInfo =
+    case reads searchTerm of
+    [(val, "")] -> option val
+    [(val, ".")] -> option val
+    _ -> pure []
     where
+        option val = val & ehiActions holeInfo ^. Sugar.holeOptionLiteralNum <&> (: [])
         searchTerm = ehiSearchTerm holeInfo
 
 insensitivePrefixOf :: String -> String -> Bool
@@ -238,7 +240,7 @@ globalNameMatches searchTerm (V.Val () body) =
 makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [Group m]
 makeAllGroups editableHoleInfo =
     (++)
-    <$> literalIntGroups editableHoleInfo
+    <$> literalNumGroups editableHoleInfo
     <*> ehiActions editableHoleInfo ^. Sugar.holeOptions
     >>= preFilter
     >>= mapM mkGroup

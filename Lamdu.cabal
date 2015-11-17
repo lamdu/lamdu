@@ -230,6 +230,7 @@ Executable lamdu
                   , Lamdu.Main
                   , Lamdu.Config.Sampler
                   , Lamdu.Font
+                  , Lamdu.Formatting
                   , Lamdu.Sugar.Internal
                   , Lamdu.Sugar.Internal.EntityId
                   , Lamdu.Sugar.PresentationModes

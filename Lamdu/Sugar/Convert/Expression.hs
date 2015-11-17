@@ -40,10 +40,10 @@ jumpToDefI ::
     MonadA m => Anchors.CodeProps m -> DefI m -> T m EntityId
 jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
-convertVLiteralInteger ::
-    MonadA m => Integer ->
+convertLiteralFloat ::
+    MonadA m => Double ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertVLiteralInteger i exprPl = addActions exprPl $ BodyLiteralInteger i
+convertLiteralFloat i exprPl = addActions exprPl $ BodyLiteralNum i
 
 convertGlobal ::
     MonadA m => V.GlobalId -> Input.Payload m a -> ConvertM m (ExpressionU m a)
@@ -86,8 +86,8 @@ convert v =
       V.BLeaf (V.LVar x) -> convertGetVar x
       V.BLeaf (V.LGlobal x) -> convertGlobal x
       V.BLeaf (V.LLiteral (V.Literal p bs))
-          | p == Builtins.intId -> convertVLiteralInteger (decodeS bs)
-          | otherwise -> error "TODO Literals which are not integers"
+          | p == Builtins.floatId -> convertLiteralFloat (decodeS bs)
+          | otherwise -> error "TODO Literals which are not nums"
       V.BLeaf V.LHole -> ConvertHole.convert
       V.BLeaf V.LRecEmpty -> ConvertRecord.convertEmpty
       V.BLeaf V.LAbsurd -> ConvertCase.convertAbsurd

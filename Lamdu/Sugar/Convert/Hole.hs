@@ -191,10 +191,10 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
             mkOptions sugarContext mInjectedArg exprPl stored
             <&> addSuggestedOptions
                 (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
-        , _holeOptionLiteralInt =
+        , _holeOptionLiteralNum =
             return . mkHoleOption sugarContext mInjectedArg exprPl stored .
             SeedExpr . Val () . V.BLeaf .
-            V.LLiteral . V.Literal Builtins.intId . encodeS
+            V.LLiteral . V.Literal Builtins.floatId . encodeS
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
         }
 

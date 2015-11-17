@@ -32,7 +32,7 @@ module Lamdu.Sugar.Types
         , wrap, setToHole, setToInnerExpr, extract
     , Body(..)
         , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
-        , _BodyLiteralInteger, _BodyList, _BodyCase, _BodyRecord
+        , _BodyLiteralNum, _BodyList, _BodyCase, _BodyRecord
         , _BodyFromNom, _BodyToNom
     , EvaluationResult
     , Annotation(..), aInferredType, aMEvaluationResult
@@ -75,7 +75,7 @@ module Lamdu.Sugar.Types
     , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
-    , HoleActions(..), holeGuid, holeOptions, holeOptionLiteralInt
+    , HoleActions(..), holeGuid, holeOptions, holeOptionLiteralNum
     , Hole(..), holeMActions, holeMArg
     , ScopeGetVar(..), sgvGetVar, sgvVal
     , TIdG(..), tidgName, tidgTId
@@ -258,7 +258,7 @@ data HoleOption name m = HoleOption
 data HoleActions name m = HoleActions
     { _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
     , _holeOptions :: T m [HoleOption name m]
-    , _holeOptionLiteralInt :: Integer -> T m (HoleOption name m)
+    , _holeOptionLiteralNum :: Double -> T m (HoleOption name m)
     }
 
 data Unwrap m
@@ -418,7 +418,7 @@ data Body name m expr
     = BodyLam (Lambda name m expr)
     | BodyApply (Apply name expr)
     | BodyHole (Hole name m expr)
-    | BodyLiteralInteger Integer
+    | BodyLiteralNum Double
     | BodyList (List m expr)
     | BodyRecord (Record name m expr)
     | BodyGetField (GetField name expr)
@@ -441,7 +441,7 @@ instance Show info => Show (FuncParam info) where
 instance Show expr => Show (Body name m expr) where
     show (BodyLam _) = "TODO show lam"
     show BodyHole {} = "Hole"
-    show (BodyLiteralInteger i) = show i
+    show (BodyLiteralNum i) = show i
     show (BodyList (List items _ _)) =
         concat
         [ "["
