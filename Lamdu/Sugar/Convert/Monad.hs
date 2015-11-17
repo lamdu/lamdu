@@ -1,8 +1,13 @@
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Monad
-    ( Context(..), TagParamInfo(..)
+    ( TagParamInfo(..)
+
+    , ScopeInfo(..), siTagParamInfos, siNullParams
+
+    , Context(..)
     , scInferContext, scReinferCheckRoot, scDefI
-    , scCodeAnchors, scTagParamInfos, scMExtractDestPos, scNullParams
+    , scCodeAnchors, scMExtractDestPos, scScopeInfo
+
     , ConvertM(..), run
     , readContext, liftTransaction, local
     , codeAnchor
@@ -35,12 +40,19 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
 
-type T = Transaction
-
 data TagParamInfo = TagParamInfo
     { tpiFromParameters :: V.Var -- TODO: Rename "From" to something else
     , tpiJumpTo :: Sugar.EntityId
     }
+
+data ScopeInfo = ScopeInfo
+    { _siTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
+    , _siNullParams :: Set V.Var
+      -- TODO: siTagParamInfos needs a reverse-lookup map too
+    }
+Lens.makeLenses ''ScopeInfo
+
+type T = Transaction
 
 newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
     deriving (Functor, Applicative, Monad)
@@ -49,9 +61,7 @@ data Context m = Context
     { _scInferContext :: Infer.Context
     , _scDefI :: Maybe (ExprIRef.DefI m)
     , _scCodeAnchors :: Anchors.CodeProps m
-    , _scTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
-    , _scNullParams :: Set V.Var
-      -- TODO: scTagParamInfos needs a reverse-lookup map too
+    , _scScopeInfo :: ScopeInfo
     , -- Check whether the definition is valid after an edit,
       -- so that can hole-wrap bad edits.
       _scReinferCheckRoot :: T m Bool

@@ -45,7 +45,7 @@ convertVar sugarContext param paramType
         isGetParamRecord = param `elem` recordParamVars
         recordParamVars =
             sugarContext ^..
-            ConvertM.scTagParamInfos . Lens.traverse .
+            ConvertM.scScopeInfo . ConvertM.siTagParamInfos . Lens.traverse .
             Lens.to ConvertM.tpiFromParameters
         defI =
             sugarContext ^. ConvertM.scDefI

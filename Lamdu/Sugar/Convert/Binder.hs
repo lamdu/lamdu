@@ -500,7 +500,8 @@ convertLamParams ::
     ConvertM m (ConventionalParams m a)
 convertLamParams mRecursiveVar lambda lambdaPl =
     do
-        tagsInOuterScope <- ConvertM.readContext <&> Map.keysSet . (^. ConvertM.scTagParamInfos)
+        tagsInOuterScope <-
+            ConvertM.readContext <&> Map.keysSet . (^. ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
         case lambdaPl ^. Input.inferredType of
             T.TFun (T.TRecord composite) _
                 | Nothing <- extension
@@ -774,7 +775,7 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
                 <$> cpMAddFirstParam convParams
                 <*> letBody ^. V.payload . Input.mStored
             }
-    & ConvertM.local addParams
+    & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
     where
         binderScopes scopesMap paramScopes =
             paramScopes
@@ -786,8 +787,8 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
             }
         addParams ctx =
             ctx
-            & ConvertM.scTagParamInfos <>~ cpParamInfos convParams
-            & ConvertM.scNullParams <>~
+            & ConvertM.siTagParamInfos <>~ cpParamInfos convParams
+            & ConvertM.siNullParams <>~
             case convParams ^. cpParams of
             NullParam {} -> Set.fromList (cpMLamParam convParams ^.. Lens._Just)
             _ -> Set.empty

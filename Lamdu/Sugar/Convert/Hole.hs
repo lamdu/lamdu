@@ -247,13 +247,13 @@ mkHole mInjectedArg exprPl = do
 
 getLocalScopeGetVars :: MonadA m => ConvertM.Context m -> V.Var -> [Val ()]
 getLocalScopeGetVars sugarContext par
-    | sugarContext ^. ConvertM.scNullParams . Lens.contains par = []
+    | sugarContext ^. ConvertM.scScopeInfo . ConvertM.siNullParams . Lens.contains par = []
     | otherwise = map mkFieldParam fieldTags ++ [var]
     where
         var = Val () (V.BLeaf (V.LVar par))
         fieldTags =
             ( sugarContext ^@..
-                ConvertM.scTagParamInfos .>
+                ConvertM.scScopeInfo . ConvertM.siTagParamInfos .>
                 ( Lens.itraversed <.
                     Lens.to ConvertM.tpiFromParameters ) <.
                     Lens.filtered (== par)
