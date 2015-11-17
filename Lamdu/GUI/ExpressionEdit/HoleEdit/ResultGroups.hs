@@ -240,11 +240,11 @@ globalNameMatches searchTerm (V.Val () body) =
 makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [Group m]
 makeAllGroups editableHoleInfo =
     (++)
-    <$> literalNumGroups editableHoleInfo
-    <*> ehiActions editableHoleInfo ^. Sugar.holeOptions
-    >>= preFilter
-    >>= mapM mkGroup
-    <&> holeMatches (ehiSearchTerm editableHoleInfo)
+    <$> (literalNumGroups editableHoleInfo >>= mapM mkGroup)
+    <*> (ehiActions editableHoleInfo ^. Sugar.holeOptions
+         >>= preFilter
+         >>= mapM mkGroup
+         <&> holeMatches (ehiSearchTerm editableHoleInfo))
     where
         -- This is used to filter globals/nominals prior to sugaring
         -- to avoid type-checking globals/nominals if the name doesn't
