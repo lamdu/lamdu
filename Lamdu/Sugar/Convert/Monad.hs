@@ -16,9 +16,7 @@ module Lamdu.Sugar.Convert.Monad
     , typeProtectTransaction, typeProtectedSetToVal, wrapOnTypeError
     ) where
 
-import           Prelude.Compat
-
-import           Control.Lens ((^.))
+import           Control.Lens.Operators
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -39,6 +37,8 @@ import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Prelude.Compat
 
 data TagParamInfo = TagParamInfo
     { tpiFromParameters :: V.Var -- TODO: Rename "From" to something else
