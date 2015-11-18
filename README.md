@@ -54,7 +54,9 @@ To type the calculation above:
 
 Directly under each expression in the code we see annotations of its evaluation results. Some annotations are more far apart from the expression's code due to its subexpression's annotation appearing between them.
 
-So as to not expand the expression, some annotations are shrunk. In this case `sqrt 5`'s annotation is shrunk. To see it in normal size - simply navigate to this expression, by going to the `sqrt` or `5` and pressing **shift+left**.
+So as to not expand the expression, some annotations are shrunk. In this case `sqrt 5`'s annotation is shrunk. To see it in normal size - navigate to this expression, by going to the `sqrt` or `5` and pressing **shift+left**.
+
+To name the golden ratio you have just declared, navigate to the top-level expression using repeated pressing of **shift+left**. Press 'x' to extract the code into a new definition. Type "golden" and <return>.
 
 ### Creating a function
 
@@ -72,7 +74,8 @@ To create the function above:
 
 We've now written the function. Let's use it.
 
-* Go to the interactive shell, choose the expression there with repeates **shift+left**s and then press **delete** to delete it.
+* Go to the interactive shell (the top row in right of the ⋙ symbol), 
+  navigate to the top-level expression (repeatedly pressing **shift+left** if necessary) and then press **delete** to delete it.
 * Type "**`fac 5`**" and press **space**
 
 The function is now being evaluated and we see subexpression evaluation results within it. The result of `x == 0` is displayed by a highlight on the active pattern match path (`False`).
