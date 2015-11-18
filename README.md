@@ -34,3 +34,22 @@ stack setup
 stack install
 
 ```
+
+## Tutorial
+
+At the top we have an interactive shell, where we can type calculations.
+
+![Golden ratio example](https://i.imgur.com/vbPRcCO.png)
+
+To type the calculation above:
+
+* type "**`1+s`**"
+* at this point we apply the addition operator to the number 1 and are picking the other argument to the addition. we are offered different options which contain the string "s" in their names
+* pick the option we desire ("sqrt _") by filtering the option by typing and navigating to it with the cursor keys, and then pressing **space** (as of writing this, it is the first option offered, partly due to a currently minimal library of available functions).
+* type "**`5`**" and press **space**
+* select the whole expression by pressing **shift+left** twice
+* type "**`/2`**" and press **space**
+
+Directly under each expression in the code we see annotations of its evaluation results. Some annotations are more far apart from the expression's code due to its subexpression's annotation appearing between them.
+
+So as to not expand the expression, some annotations are shrunk. In this case `sqrt 5`'s annotation is shrunk. To see it in normal size - simply navigate to this expression, by going to the `sqrt` or `5` and pressing **shift+left**.
