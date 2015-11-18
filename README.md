@@ -56,7 +56,7 @@ Directly under each expression in the code we see annotations of its evaluation 
 
 So as to not expand the expression, some annotations are shrunk. In this case `sqrt 5`'s annotation is shrunk. To see it in normal size - navigate to this expression, by going to the `sqrt` or `5` and pressing **shift+left**.
 
-To name the golden ratio you have just declared, navigate to the top-level expression using repeated pressing of **shift+left**. Press 'x' to extract the code into a new definition. Type "golden" and <return>.
+To name the golden ratio you have just declared, navigate to the top-level expression using repeated pressing of **shift+left**. Press 'x' to extract the code into a new definition. Type "**`golden`**" and **return**.
 
 ### Creating a function
 
@@ -81,3 +81,5 @@ We've now written the function. Let's use it.
 The function is now being evaluated and we see subexpression evaluation results within it. The result of `x == 0` is displayed by a highlight on the active pattern match path (`False`).
 
 This function is recursive and invoked additional calls to itself. To navigate between these calls go to the arrows under its parameter `x` and press **right** or **left**.
+
+To rename any symbol, press **return** twice and edit the name. Note that all references are displayed with the updated name correctly.
