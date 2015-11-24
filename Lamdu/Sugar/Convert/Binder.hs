@@ -595,29 +595,29 @@ changeRecursionsToCalls var =
             >>= ExprIRef.newValBody . V.BApp . V.Apply (Property.value prop)
             >>= Property.set prop
 
-data ExprLet a = ExprLet
-    { eliBody :: Val a
-    , eliBodyScopesMap :: CurAndPrev (Map ScopeId ScopeId)
-    , eliParam :: V.Var
-    , eliArg :: Val a
-    , eliHiddenPayloads :: [a]
-    , elAnnotation :: Annotation
+data Redex a = Redex
+    { redexBody :: Val a
+    , redexBodyScope :: CurAndPrev (Map ScopeId ScopeId)
+    , redexParam :: V.Var
+    , redexArg :: Val a
+    , redexHiddenPayloads :: [a]
+    , redexArgAnnotation :: Annotation
     }
 
-checkForRedex :: Val (Input.Payload m a) -> Maybe (ExprLet (Input.Payload m a))
+checkForRedex :: Val (Input.Payload m a) -> Maybe (Redex (Input.Payload m a))
 checkForRedex expr = do
     V.Apply func arg <- expr ^? ExprLens.valApply
     V.Lam param body <- func ^? V.body . ExprLens._BAbs
-    Just ExprLet
-        { eliBody = body
-        , eliBodyScopesMap =
+    Just Redex
+        { redexBody = body
+        , redexBodyScope =
             func ^. V.payload . Input.evalResults
             <&> (^. Input.eAppliesOfLam)
             <&> Lens.traversed %~ getRedexApplies
-        , eliParam = param
-        , eliArg = arg
-        , eliHiddenPayloads = (^. V.payload) <$> [expr, func]
-        , elAnnotation = makeAnnotation (arg ^. V.payload)
+        , redexParam = param
+        , redexArg = arg
+        , redexHiddenPayloads = (^. V.payload) <$> [expr, func]
+        , redexArgAnnotation = makeAnnotation (arg ^. V.payload)
         }
     where
         getRedexApplies [(scopeId, _)] = scopeId
@@ -709,19 +709,19 @@ makeBinderBody binderScopeVars expr =
         do
             exprS <- ConvertM.convertSubexpression expr & localExtractDestPost expr
             return (expr, BinderExpr exprS, mempty)
-    Just eli ->
+    Just redex ->
         do
             value <-
-                convertBinder Nothing defGuid (eliArg eli)
+                convertBinder Nothing defGuid (redexArg redex)
                 & localExtractDestPost expr
             actions <-
                 mkLIActions binderScopeVars param
                 <$> expr ^. V.payload . Input.mStored
-                <*> traverse (^. Input.mStored) (eliBody eli)
-                <*> traverse (^. Input.mStored) (eliArg eli)
+                <*> traverse (^. Input.mStored) (redexBody redex)
+                <*> traverse (^. Input.mStored) (redexArg redex)
                 & Lens.sequenceOf Lens._Just
             (innerBody, body, bodyScopesMap) <-
-                makeBinderBody (eliParam eli : binderScopeVars) (eliBody eli)
+                makeBinderBody (redexParam redex : binderScopeVars) (redexBody redex)
             return
                 ( innerBody
                 , BinderLet
@@ -730,12 +730,12 @@ makeBinderBody binderScopeVars expr =
                   , _lValue =
                       value
                       & bBody . SugarLens.binderBodyExpr . rPayload . plData <>~
-                      eliHiddenPayloads eli ^. Lens.traversed . Input.userData
+                      redexHiddenPayloads redex ^. Lens.traversed . Input.userData
                   , _lActions = actions
                   , _lName = UniqueId.toGuid param
-                  , _lAnnotation = elAnnotation eli
+                  , _lAnnotation = redexArgAnnotation redex
                   , _lScopes =
-                      eliBodyScopesMap eli
+                      redexBodyScope redex
                       <&> Map.keys
                       <&> map ((_1 %~ BinderParamScopeId) . join (,))
                       <&> Map.fromList
@@ -746,13 +746,13 @@ makeBinderBody binderScopeVars expr =
                       appendScopeMaps
                       <$> (scopes <&> Map.mapKeys (^. bParamScopeId))
                       -- TODO: How to remove the ugly mapKeys here?
-                      <*> eliBodyScopesMap eli
+                      <*> redexBodyScope redex
                       <&> Map.mapKeys BinderParamScopeId
                   }
-                , appendScopeMaps <$> eliBodyScopesMap eli <*> bodyScopesMap
+                , appendScopeMaps <$> redexBodyScope redex <*> bodyScopesMap
                 )
         where
-            param = eliParam eli
+            param = redexParam redex
             defGuid = UniqueId.toGuid param
             defEntityId = EntityId.ofLambdaParam param
             appendScopeMaps x y = x <&> overrideId y
