@@ -318,7 +318,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
         do
             mParamsEdit <- makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId nearestHoles bodyId params
             bodyEdit <-
-                makeResultEdit (binder ^. Sugar.bMActions) params body
+                makeRHSEdit (binder ^. Sugar.bMActions) params body
                 & ExprGuiM.withLocalMScopeId (mScopeCursor <&> Lens.traversed %~ sBodyScope)
             letEdits <- makeLets (mScopeCursor <&> Lens.traversed %~ sParamScope) (binder ^. Sugar.bLetItems) myId
             rhs <-
@@ -437,12 +437,12 @@ jumpToRHS keys (rhsDoc, rhs) = do
     where
         rhsId = WidgetIds.fromExprPayload $ rhs ^. Sugar.rPayload
 
-makeResultEdit ::
+makeRHSEdit ::
     MonadA m =>
     Maybe (Sugar.BinderActions m) ->
     Sugar.BinderParams name m ->
     ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeResultEdit mActions params result = do
+makeRHSEdit mActions params binderBody = do
     savePos <- ExprGuiM.mkPrejumpPosSaver
     config <- ExprGuiM.readConfig
     let jumpToLhsEventMap =
@@ -462,7 +462,7 @@ makeResultEdit mActions params result = do
             (E.Doc ["Edit", "Let clause", "Add first"]) .
             fmap (WidgetIds.nameEditOf . WidgetIds.fromEntityId) $
             savePos >> actions ^. Sugar.baAddInnermostLetItem
-    ExprGuiM.makeSubexpression (const 0) result
+    ExprGuiM.makeSubexpression (const 0) binderBody
         <&> ExpressionGui.egWidget %~
                 Widget.weakerEvents
                 (jumpToLhsEventMap <> maybe mempty addLetItemEventMap mActions)
