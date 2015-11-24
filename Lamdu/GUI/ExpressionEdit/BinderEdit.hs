@@ -381,7 +381,7 @@ makeLetEdit mBinderParamScopeId delDestId item =
                 mconcat
                 [ Widget.keysEventMapMovesCursor (Config.delKeys config)
                     (E.Doc ["Edit", "Let clause", "Delete"]) $
-                    delDestId <$ lActions ^. Sugar.laDelete
+                    delDestId <$ lActions ^. Sugar.laSetToInner
                 , Widget.keysEventMapMovesCursor
                     (Config.letAddItemKeys config)
                     (E.Doc ["Edit", "Let clause", "Add next"]) $
@@ -448,8 +448,10 @@ makeRHSEdit mBinderParamScopeId mActions params (Sugar.BinderLet l) =
     ] & sequence
     <&> map (ExpressionGui.egAlignment . _1 .~ 0)
     >>= ExpressionGui.vboxTopFocalSpaced
+    >>= ExpressionGui.parentDelegator letEntityId
     where
         bodyEntityId = binderBodyEntityId body & WidgetIds.fromEntityId
+        letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
         body = l ^. Sugar.lBody
 makeRHSEdit _ mActions params (Sugar.BinderExpr binderBody) =
     do

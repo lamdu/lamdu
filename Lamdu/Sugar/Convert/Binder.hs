@@ -669,7 +669,7 @@ mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
         ctx <- ConvertM.readContext
         return
             LetActions
-            { _laDelete = SubExprs.getVarsToHole param bodyStored >> del
+            { _laSetToInner = SubExprs.getVarsToHole param bodyStored >> del
             , _laAddNext =
                 DataOps.redexWrap topLevelProp <&> EntityId.ofLambdaParam . fst
             , _laExtract =
