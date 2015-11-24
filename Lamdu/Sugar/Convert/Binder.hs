@@ -833,7 +833,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                     Lambda NormalBinder binder
                 | otherwise =
                     binder
-                    & bBody . SugarLens.binderBodyExpr %~ markLightParams paramSet
+                    & bBody . Lens.traverse %~ markLightParams paramSet
                     & Lambda LightLambda
         BodyLam lambda
             & addActions exprPl
@@ -843,7 +843,7 @@ useNormalLambda :: Binder name m (Expression name m a) -> Bool
 useNormalLambda binder =
     or
     [ Lens.has (bBody . _BinderLet) binder
-    , Lens.has (bBody . SugarLens.binderBodyExpr . SugarLens.payloadsOf forbiddenLightLamSubExprs) binder
+    , Lens.has (bBody . Lens.traverse . SugarLens.payloadsOf forbiddenLightLamSubExprs) binder
     , Lens.nullOf (bParams . _FieldParams) binder
     ]
     where
