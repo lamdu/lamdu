@@ -264,9 +264,9 @@ makeMParamsEdit ::
     MonadA m =>
     CurAndPrev (Maybe ScopeCursor) -> Maybe (ExpressionGui n) ->
     Widget.Id -> Widget.Id ->
-    ExprGuiT.SugarExpr m -> Sugar.BinderParams (Name m) m ->
+    NearestHoles -> Sugar.EntityId -> Sugar.BinderParams (Name m) m ->
     ExprGuiM m (Maybe (ExpressionGui m))
-makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId body params =
+makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId nearestHoles bodyId params =
     params
     & makeParamsEdit annotationMode nearestHoles
       delVarBackwardsId myId (WidgetIds.fromEntityId bodyId)
@@ -285,9 +285,7 @@ makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId body params =
             _ -> return
         <&> Just
     where
-        bodyId = body ^. Sugar.rPayload . Sugar.plEntityId
         mCurCursor = mScopeCursor ^. current
-        nearestHoles = ExprGuiT.nextHolesBefore body
         annotationMode =
             do
                 mScopeNavEdit ^?
@@ -318,7 +316,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
                 Just currentScope
             & maybe (return (mempty, Nothing)) (makeScopeNavEdit binder scopesNavId)
         do
-            mParamsEdit <- makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId body params
+            mParamsEdit <- makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId nearestHoles bodyId params
             bodyEdit <-
                 makeResultEdit (binder ^. Sugar.bMActions) params body
                 & ExprGuiM.withLocalMScopeId (mScopeCursor <&> Lens.traversed %~ sBodyScope)
@@ -332,6 +330,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
               Nothing -> ExprGuiM.assignCursorPrefix scopesNavId (const destId)
               Just _ -> id
     where
+        nearestHoles = ExprGuiT.nextHolesBefore body
         destId =
             params ^? SugarLens.binderNamedParams . Sugar.fpId
             & fromMaybe bodyId
