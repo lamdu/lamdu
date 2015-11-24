@@ -671,8 +671,6 @@ mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
             LetActions
             { _laSetToInner = SubExprs.getVarsToHole param bodyStored >> del
             , _laSetToHole = DataOps.setToHole topLevelProp <&> EntityId.ofValI
-            , _laAddNext =
-              DataOps.redexWrap topLevelProp <&> EntityId.ofLambdaParam . fst
             , _laExtract =
               letItemToOutside
               (ctx ^. ConvertM.scMExtractDestPos)
@@ -688,19 +686,15 @@ localExtractDestPost val =
     ConvertM.scMExtractDestPos .~ val ^. V.payload . Input.mStored
     & ConvertM.local
 
-makeBinderBody ::
+makeBinderContent ::
     (MonadA m, Monoid a) =>
     [V.Var] -> Val (Input.Payload m a) ->
-    ConvertM m
-    ( Val (Input.Payload m a)
-    , BinderBody Guid m (ExpressionU m a)
-    )
-makeBinderBody binderScopeVars expr =
+    ConvertM m (BinderContent Guid m (ExpressionU m a))
+makeBinderContent binderScopeVars expr =
     case checkForRedex expr of
     Nothing ->
-        do
-            exprS <- ConvertM.convertSubexpression expr & localExtractDestPost expr
-            return (expr, BinderBody (BinderExpr exprS))
+        ConvertM.convertSubexpression expr & localExtractDestPost expr
+        <&> BinderExpr
     Just redex ->
         do
             value <-
@@ -712,27 +706,41 @@ makeBinderBody binderScopeVars expr =
                 <*> traverse (^. Input.mStored) (redexBody redex)
                 <*> traverse (^. Input.mStored) (redexArg redex)
                 & Lens.sequenceOf Lens._Just
-            (innerBody, body) <-
-                makeBinderBody (redexParam redex : binderScopeVars) (redexBody redex)
-            return
-                ( innerBody
-                , Let
-                  { _lEntityId = defEntityId
-                  , _lValue =
-                      value
-                      & bBody . bbContent . SugarLens.binderContentExpr . rPayload . plData <>~
-                      redexHiddenPayloads redex ^. Lens.traversed . Input.userData
-                  , _lActions = actions
-                  , _lName = UniqueId.toGuid param
-                  , _lAnnotation = redexArgAnnotation redex
-                  , _lBodyScope = redexBodyScope redex
-                  , _lBody = body
-                  } & BinderLet & BinderBody
-                )
-        where
-            param = redexParam redex
-            defGuid = UniqueId.toGuid param
-            defEntityId = EntityId.ofLambdaParam param
+            body <- makeBinderBody (redexParam redex : binderScopeVars) (redexBody redex)
+            Let
+                { _lEntityId = defEntityId
+                , _lValue =
+                    value
+                    & bBody . bbContent . SugarLens.binderContentExpr . rPayload . plData <>~
+                    redexHiddenPayloads redex ^. Lens.traversed . Input.userData
+                , _lActions = actions
+                , _lName = UniqueId.toGuid param
+                , _lAnnotation = redexArgAnnotation redex
+                , _lBodyScope = redexBodyScope redex
+                , _lBody = body
+                } & BinderLet & return
+      where
+          param = redexParam redex
+          defGuid = UniqueId.toGuid param
+          defEntityId = EntityId.ofLambdaParam param
+
+makeBinderBody ::
+    (MonadA m, Monoid a) =>
+    [V.Var] -> Val (Input.Payload m a) ->
+    ConvertM m (BinderBody Guid m (ExpressionU m a))
+makeBinderBody binderScopeVars expr =
+    do
+        content <- makeBinderContent binderScopeVars expr
+        BinderBody
+            { _bbMActions =
+              expr ^. V.payload . Input.mStored
+              <&> \exprProp ->
+              BinderBodyActions
+              { _bbaAddOuterLet =
+                DataOps.redexWrap exprProp <&> EntityId.ofLambdaParam . fst
+              }
+            , _bbContent = content
+            } & return
 
 makeBinder :: (MonadA m, Monoid a) =>
     Maybe (MkProperty m (Maybe BinderParamScopeId)) ->
@@ -741,7 +749,7 @@ makeBinder :: (MonadA m, Monoid a) =>
     ConvertM m (Binder Guid m (ExpressionU m a))
 makeBinder mChosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody =
     do
-        (innerMostLetBody, binderBody) <- makeBinderBody ourParams funcBody
+        binderBody <- makeBinderBody ourParams funcBody
         return Binder
             { _bParams = _cpParams
             , _bMPresentationModeProp = mPresentationModeProp
@@ -749,10 +757,7 @@ makeBinder mChosenScopeProp mPresentationModeProp ConventionalParams{..} funcBod
             , _bBody = binderBody
             , _bBodyScopes =
               cpScopes <&> Lens.mapped . Lens.traversed %~ BinderParamScopeId
-            , _bMActions =
-                mkActions
-                <$> cpMAddFirstParam
-                <*> innerMostLetBody ^. V.payload . Input.mStored
+            , _bMActions = cpMAddFirstParam <&> BinderActions
             }
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
     where
@@ -764,12 +769,6 @@ makeBinder mChosenScopeProp mPresentationModeProp ConventionalParams{..} funcBod
             case _cpParams of
             NullParam {} -> Set.fromList (cpMLamParam ^.. Lens._Just)
             _ -> Set.empty
-        mkActions addFirstParam letStored =
-            BinderActions
-            { _baAddFirstParam = addFirstParam
-            , _baAddInnermostLet =
-                    EntityId.ofLambdaParam . fst <$> DataOps.redexWrap letStored
-            }
 
 convertLam ::
     (MonadA m, Monoid a) =>

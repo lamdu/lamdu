@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, NoImplicitPrelude, OverloadedStrings, PatternGuards, LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns, RecordWildCards, NoImplicitPrelude, OverloadedStrings, PatternGuards, LambdaCase #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     , Parts(..), makeParts
@@ -319,8 +319,8 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
         do
             mParamsEdit <-
                 makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId
-                (binderContentNearestHoles body) bodyId params
-            rhs <- makeRHSEdit (binder ^. Sugar.bMActions) params body
+                (binderContentNearestHoles bodyContent) bodyId params
+            rhs <- makeBinderBodyEdit params body
             Parts mParamsEdit mScopeNavEdit rhs scopeEventMap & return
             & case mScopeNavEdit of
               Nothing -> ExprGuiM.assignCursorPrefix scopesNavId (const destId)
@@ -332,8 +332,9 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
             <&> WidgetIds.fromEntityId
             & fromMaybe bodyId
         params = binder ^. Sugar.bParams
-        body = binder ^. Sugar.bBody . Sugar.bbContent
-        bodyId = body ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
+        body = binder ^. Sugar.bBody
+        bodyContent = body ^. Sugar.bbContent
+        bodyId = bodyContent ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
 
 make ::
@@ -384,11 +385,6 @@ makeLetEdit item =
                 [ Widget.keysEventMapMovesCursor (Config.delKeys config)
                   (E.Doc ["Edit", "Let clause", "Delete"]) $
                   bodyId <$ lActions ^. Sugar.laSetToInner
-                , Widget.keysEventMapMovesCursor
-                  (Config.letAddItemKeys config)
-                  (E.Doc ["Edit", "Let clause", "Add next"]) $
-                  WidgetIds.fromEntityId <$>
-                  lActions ^. Sugar.laAddNext
                 , Widget.keysEventMapMovesCursor (Config.extractKeys config)
                   (E.Doc ["Edit", "Let clause", "Extract to outer scope"]) $
                   WidgetIds.fromEntityId <$>
@@ -404,7 +400,9 @@ makeLetEdit item =
         letLabel <- ExpressionGui.grammarLabel "let" (Widget.toAnimId myId)
         ExpressionGui.hboxSpaced [letLabel, edit]
     where
-        bodyId = item ^. Sugar.lBody . Sugar.bbContent . SugarLens.binderContentEntityId & WidgetIds.fromEntityId
+        bodyId =
+            item ^. Sugar.lBody . Sugar.bbContent . SugarLens.binderContentEntityId
+            & WidgetIds.fromEntityId
         myId = item ^. Sugar.lEntityId & WidgetIds.fromEntityId
         binder = item ^. Sugar.lValue
 
@@ -417,12 +415,34 @@ jumpToRHS keys (rhsDoc, rhsId) = do
         Widget.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Jump to " ++ rhsDoc]) $
             WidgetIds.fromEntityId rhsId <$ savePos
 
-makeRHSEdit ::
+makeBinderBodyEdit ::
     MonadA m =>
-    Maybe (Sugar.BinderActions m) -> Sugar.BinderParams name m ->
+    Sugar.BinderParams name m ->
+    Sugar.BinderBody (Name m) m (ExprGuiT.SugarExpr m) ->
+    ExprGuiM m (ExpressionGui m)
+makeBinderBodyEdit params (Sugar.BinderBody mActions content) =
+    do
+        config <- ExprGuiM.readConfig
+        savePos <- ExprGuiM.mkPrejumpPosSaver
+        let newLetEventMap =
+                case mActions of
+                Nothing -> mempty
+                Just Sugar.BinderBodyActions { _bbaAddOuterLet } ->
+                    do
+                        savePos
+                        _bbaAddOuterLet
+                        <&> WidgetIds.fromEntityId <&> WidgetIds.nameEditOf
+                    & Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
+                      (E.Doc ["Edit", "Let clause", "Add"])
+        makeBinderContentEdit params content
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents newLetEventMap
+
+makeBinderContentEdit ::
+    MonadA m =>
+    Sugar.BinderParams name m ->
     Sugar.BinderContent (Name m) m (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
-makeRHSEdit mActions params (Sugar.BinderLet l) =
+makeBinderContentEdit params (Sugar.BinderLet l) =
     do
         config <- ExprGuiM.readConfig
         let delEventMap =
@@ -433,18 +453,17 @@ makeRHSEdit mActions params (Sugar.BinderLet l) =
                 (l ^. Sugar.lActions)
         letBodyScope <- getEvalScope (l ^. Sugar.lBodyScope)
         [ makeLetEdit l
-            , makeRHSEdit mActions params body
+            , makeBinderBodyEdit params body
               & ExprGuiM.withLocalMScopeId letBodyScope
             ] & sequence
             <&> map (ExpressionGui.egAlignment . _1 .~ 0)
             >>= ExpressionGui.vboxTopFocalSpaced
             >>= ExpressionGui.parentDelegator letEntityId
-            <&> ExpressionGui.egWidget %~
-                Widget.weakerEvents delEventMap
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents delEventMap
     where
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
-        body = l ^. Sugar.lBody . Sugar.bbContent
-makeRHSEdit mActions params (Sugar.BinderExpr binderBody) =
+        body = l ^. Sugar.lBody
+makeBinderContentEdit params (Sugar.BinderExpr binderBody) =
     do
         savePos <- ExprGuiM.mkPrejumpPosSaver
         config <- ExprGuiM.readConfig
@@ -460,15 +479,8 @@ makeRHSEdit mActions params (Sugar.BinderExpr binderBody) =
                     Widget.keysEventMapMovesCursor
                     (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to last param"]) $
                     WidgetIds.fromEntityId (last ps ^. _2 . Sugar.fpId) <$ savePos
-            addLetEventMap actions =
-                Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
-                (E.Doc ["Edit", "Let clause", "Add"]) .
-                fmap (WidgetIds.nameEditOf . WidgetIds.fromEntityId) $
-                savePos >> actions ^. Sugar.baAddInnermostLet
         ExprGuiM.makeSubexpression (const 0) binderBody
-            <&> ExpressionGui.egWidget %~
-                    Widget.weakerEvents
-                    (jumpToLhsEventMap <> maybe mempty addLetEventMap mActions)
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToLhsEventMap
 
 namedParamEditInfo :: MonadA m => Sugar.NamedParamInfo (Name m) m -> ParamEdit.Info m
 namedParamEditInfo paramInfo =

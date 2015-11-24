@@ -13,13 +13,13 @@ module Lamdu.Sugar.Types
         , _DefinitionExportedTypeInfo
         , _DefinitionNewType
     , Anchors.PresentationMode(..)
-    , BinderActions(..)
-        , baAddFirstParam, baAddInnermostLet
+    , BinderActions(..), baAddFirstParam
     , NullParamActions(..), npDeleteLambda
     , BinderParams(..)
         , _DefintionWithoutParams, _NullParam, _VarParam , _FieldParams
     , BinderParamScopeId(..), bParamScopeId
-    , BinderBody(..), bbContent
+    , BinderBodyActions(..), bbaAddOuterLet
+    , BinderBody(..), bbMActions, bbContent
     , BinderContent(..), _BinderLet, _BinderExpr
     , Binder(..)
         , bMPresentationModeProp, bMChosenScopeProp, bParams, bBody
@@ -43,7 +43,7 @@ module Lamdu.Sugar.Types
     , Let(..)
         , lEntityId, lValue, lName, lActions, lAnnotation, lBodyScope, lBody
     , LetActions(..)
-        , laAddNext, laSetToInner, laSetToHole, laExtract
+        , laSetToInner, laSetToHole, laExtract
     , ListItem(..), liMActions, liExpr
     , ListActions(..)
     , List(..), lValues, lMActions, lNilEntityId
@@ -464,8 +464,7 @@ instance Show expr => Show (Body name m expr) where
     show BodyToNom {} = "ToNom:TODO"
 
 data LetActions m = LetActions
-    { _laAddNext :: T m EntityId
-    , _laSetToInner :: T m ()
+    { _laSetToInner :: T m ()
     , _laSetToHole :: T m EntityId
     , _laExtract :: T m EntityId
     }
@@ -483,9 +482,8 @@ data Let name m expr = Let
     , _lBody :: BinderBody name m expr -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable)
 
-data BinderActions m = BinderActions
+newtype BinderActions m = BinderActions
     { _baAddFirstParam :: T m ParamAddResult
-    , _baAddInnermostLet :: T m EntityId
     }
 
 data BinderParams name m
@@ -498,15 +496,18 @@ data BinderParams name m
     | VarParam (FuncParam (NamedParamInfo name m))
     | FieldParams [(T.Tag, FuncParam (NamedParamInfo name m))]
 
--- TODO: Record around this sum type that has "add outer let" action
--- instead of _baAddInnermostLet, _laAddNext
 data BinderContent name m expr
     = BinderLet (Let name m expr)
     | BinderExpr expr
     deriving (Functor, Foldable, Traversable)
 
+newtype BinderBodyActions m = BinderBodyActions
+    { _bbaAddOuterLet :: T m EntityId
+    }
+
 data BinderBody name m expr = BinderBody
-    { _bbContent :: BinderContent name m expr
+    { _bbMActions :: Maybe (BinderBodyActions m)
+    , _bbContent :: BinderContent name m expr
     } deriving (Functor, Foldable, Traversable)
 
 data Binder name m expr = Binder
@@ -560,6 +561,7 @@ Lens.makeLenses ''Apply
 Lens.makeLenses ''Binder
 Lens.makeLenses ''BinderActions
 Lens.makeLenses ''BinderBody
+Lens.makeLenses ''BinderBodyActions
 Lens.makeLenses ''Body
 Lens.makeLenses ''Case
 Lens.makeLenses ''CaseAddAltResult
