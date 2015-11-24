@@ -693,7 +693,7 @@ makeBinderBody ::
     [V.Var] -> Val (Input.Payload m a) ->
     ConvertM m
     ( Val (Input.Payload m a)
-    , BinderBody Guid m (ExpressionU m a)
+    , BinderContent Guid m (ExpressionU m a)
     )
 makeBinderBody binderScopeVars expr =
     case checkForRedex expr of
@@ -721,7 +721,7 @@ makeBinderBody binderScopeVars expr =
                   { _lEntityId = defEntityId
                   , _lValue =
                       value
-                      & bBody . SugarLens.binderBodyExpr . rPayload . plData <>~
+                      & bBody . SugarLens.binderContentExpr . rPayload . plData <>~
                       redexHiddenPayloads redex ^. Lens.traversed . Input.userData
                   , _lActions = actions
                   , _lName = UniqueId.toGuid param
@@ -789,7 +789,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                 do
                     guard $ Lens.nullOf ExprLens.valHole lamBody
                     mDeleteLam
-                        <&> Lens.mapped .~ binder ^. bBody . SugarLens.binderBodyExpr . rPayload . plEntityId
+                        <&> Lens.mapped .~ binder ^. bBody . SugarLens.binderContentExpr . rPayload . plEntityId
         let paramSet =
                 binder ^.. bParams . SugarLens.binderNamedParams .
                 Lens.traversed . npiName

@@ -19,7 +19,7 @@ module Lamdu.Sugar.Types
     , BinderParams(..)
         , _DefintionWithoutParams, _NullParam, _VarParam , _FieldParams
     , BinderParamScopeId(..), bParamScopeId
-    , BinderBody(..), _BinderLet, _BinderExpr
+    , BinderContent(..), _BinderLet, _BinderExpr
     , Binder(..)
         , bMPresentationModeProp, bMChosenScopeProp, bParams, bBody
         , bMActions, bBodyScopes
@@ -479,7 +479,7 @@ data Let name m expr = Let
       -- BinderParamScopeId for outer-most let) to the inside of the
       -- redex lambda (redex is applied exactly once):
       _lBodyScope :: CurAndPrev (Map E.ScopeId E.ScopeId)
-    , _lBody :: BinderBody name m expr -- "let foo = bar in [[x]]"
+    , _lBody :: BinderContent name m expr -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable)
 
 data BinderActions m = BinderActions
@@ -499,7 +499,7 @@ data BinderParams name m
 
 -- TODO: Record around this sum type that has "add outer let" action
 -- instead of _baAddInnermostLet, _laAddNext
-data BinderBody name m expr
+data BinderContent name m expr
     = BinderLet (Let name m expr)
     | BinderExpr expr
     deriving (Functor, Foldable, Traversable)
@@ -508,7 +508,7 @@ data Binder name m expr = Binder
     { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
     , _bMChosenScopeProp :: Maybe (MkProperty m (Maybe BinderParamScopeId))
     , _bParams :: BinderParams name m
-    , _bBody :: BinderBody name m expr
+    , _bBody :: BinderContent name m expr
     , _bMActions :: Maybe (BinderActions m)
     , -- The scope inside a lambda (if exists)
       _bBodyScopes :: CurAndPrev (Map E.ScopeId [BinderParamScopeId])
@@ -593,7 +593,7 @@ Lens.makeLenses ''RecordField
 Lens.makeLenses ''ScopeGetVar
 Lens.makeLenses ''TIdG
 Lens.makeLenses ''TagG
-Lens.makePrisms ''BinderBody
+Lens.makePrisms ''BinderContent
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind

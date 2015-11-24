@@ -94,5 +94,5 @@ make lam pl =
         funcApplyLimit = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation . ExprGuiT.funcApplyLimit
         params = binder ^. Sugar.bParams
         binder = lam ^. Sugar.lamBinder
-        body = binder ^. Sugar.bBody . SugarLens.binderBodyExpr
+        body = binder ^. Sugar.bBody . SugarLens.binderContentExpr
         bodyId = WidgetIds.fromExprPayload $ body ^. Sugar.rPayload

@@ -8,7 +8,7 @@ module Lamdu.Sugar.Lens
     , binderNamedParamsActions
     , binderFuncParamAdds
     , binderFuncParamDeletes
-    , binderBodyExpr
+    , binderContentExpr
     ) where
 
 import           Control.Lens (Lens')
@@ -133,14 +133,14 @@ binderNamedParamsActions ::
     Lens.Traversal' (BinderParams name m) (FuncParamActions m)
 binderNamedParamsActions = binderNamedParams . fpInfo . npiMActions . Lens._Just
 
-binderBodyFuncParamOps ::
+binderContentFuncParamOps ::
     Lens.Traversal' (Binder name m (Expression name m a)) t ->
-    Lens.Traversal' (BinderBody name m (Expression name m a)) t
-binderBodyFuncParamOps ops f (BinderLet Let{..}) =
+    Lens.Traversal' (BinderContent name m (Expression name m a)) t
+binderContentFuncParamOps ops f (BinderLet Let{..}) =
     (\_lValue _lBody -> BinderLet Let{..})
     <$> ops f _lValue
-    <*> binderBodyFuncParamOps ops f _lBody
-binderBodyFuncParamOps ops f (BinderExpr e) =
+    <*> binderContentFuncParamOps ops f _lBody
+binderContentFuncParamOps ops f (BinderExpr e) =
     onExpr e <&> BinderExpr
     where
         onExpr = rBody %%~ onBody
@@ -155,7 +155,7 @@ binderFuncParamAdds ::
 binderFuncParamAdds f Binder{..} =
     (\_bParams _bBody _bMActions -> Binder{..})
     <$> (_bParams & binderNamedParamsActions . fpAddNext %%~ f)
-    <*> binderBodyFuncParamOps binderFuncParamAdds f _bBody
+    <*> binderContentFuncParamOps binderFuncParamAdds f _bBody
     <*> (_bMActions & Lens._Just . baAddFirstParam %%~ f)
 
 binderFuncParamDeletes ::
@@ -165,8 +165,8 @@ binderFuncParamDeletes ::
 binderFuncParamDeletes f Binder{..} =
     (\_bParams _bBody -> Binder{..})
     <$> (_bParams & binderNamedParamsActions . fpDelete %%~ f)
-    <*> binderBodyFuncParamOps binderFuncParamDeletes f _bBody
+    <*> binderContentFuncParamOps binderFuncParamDeletes f _bBody
 
-binderBodyExpr :: Lens' (BinderBody name m a) a
-binderBodyExpr f (BinderLet l) = l & lBody . binderBodyExpr %%~ f <&> BinderLet
-binderBodyExpr f (BinderExpr e) = f e <&> BinderExpr
+binderContentExpr :: Lens' (BinderContent name m a) a
+binderContentExpr f (BinderLet l) = l & lBody . binderContentExpr %%~ f <&> BinderLet
+binderContentExpr f (BinderExpr e) = f e <&> BinderExpr

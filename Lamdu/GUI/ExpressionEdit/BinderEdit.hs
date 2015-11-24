@@ -291,8 +291,8 @@ makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId nearestHoles b
                     <&> ExpressionGui.WithNeighbouringEvalAnnotations
             & fromMaybe ExpressionGui.NormalEvalAnnotation
 
-binderBodyNearestHoles :: Sugar.BinderBody name m (ExprGuiT.SugarExpr m) -> NearestHoles
-binderBodyNearestHoles body =
+binderContentNearestHoles :: Sugar.BinderContent name m (ExprGuiT.SugarExpr m) -> NearestHoles
+binderContentNearestHoles body =
     body ^? Lens.traverse
     & fromMaybe (error "We have at least a body expression inside the binder")
     & ExprGuiT.nextHolesBefore
@@ -319,7 +319,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
         do
             mParamsEdit <-
                 makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId
-                (binderBodyNearestHoles body) bodyId params
+                (binderContentNearestHoles body) bodyId params
             rhs <- makeRHSEdit (binder ^. Sugar.bMActions) params body
             Parts mParamsEdit mScopeNavEdit rhs scopeEventMap & return
             & case mScopeNavEdit of
@@ -333,7 +333,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
             & WidgetIds.fromEntityId
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody
-        bodyId = body ^. SugarLens.binderBodyExpr . Sugar.rPayload . Sugar.plEntityId
+        bodyId = body ^. SugarLens.binderContentExpr . Sugar.rPayload . Sugar.plEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
 
 make ::
@@ -351,7 +351,7 @@ make name binder myId =
             binder ^.. Sugar.bMPresentationModeProp . Lens._Just
             & traverse (mkPresentationModeEdit presentationChoiceId)
         jumpHolesEventMap <-
-            ExprEventMap.jumpHolesEventMap (binderBodyNearestHoles body)
+            ExprEventMap.jumpHolesEventMap (binderContentNearestHoles body)
         defNameEdit <-
             makeBinderNameEdit (binder ^. Sugar.bMActions)
             rhsJumperEquals rhs name myId
@@ -368,7 +368,7 @@ make name binder myId =
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
-        rhs = ("Def Body", body ^. SugarLens.binderBodyExpr)
+        rhs = ("Def Body", body ^. SugarLens.binderContentExpr)
         body = binder ^. Sugar.bBody
 
 makeLetEdit ::
@@ -396,7 +396,7 @@ makeLetEdit delDestId item =
                 ]
                 | otherwise = mempty
         jumpHolesEventMap <-
-            binderBodyNearestHoles (binder ^. Sugar.bBody)
+            binderContentNearestHoles (binder ^. Sugar.bBody)
             & ExprEventMap.jumpHolesEventMap
         edit <-
             make (item ^. Sugar.lName) binder myId
@@ -423,7 +423,7 @@ jumpToRHS keys (rhsDoc, rhs) = do
     where
         rhsId = WidgetIds.fromExprPayload $ rhs ^. Sugar.rPayload
 
-binderBodyEntityId :: Sugar.BinderBody name m (ExprGuiT.SugarExpr m) -> Sugar.EntityId
+binderBodyEntityId :: Sugar.BinderContent name m (ExprGuiT.SugarExpr m) -> Sugar.EntityId
 binderBodyEntityId (Sugar.BinderExpr e) =
     e ^. Sugar.rPayload . Sugar.plEntityId
 binderBodyEntityId (Sugar.BinderLet l) =
@@ -432,7 +432,7 @@ binderBodyEntityId (Sugar.BinderLet l) =
 makeRHSEdit ::
     MonadA m =>
     Maybe (Sugar.BinderActions m) -> Sugar.BinderParams name m ->
-    Sugar.BinderBody (Name m) m (ExprGuiT.SugarExpr m) ->
+    Sugar.BinderContent (Name m) m (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 makeRHSEdit mActions params (Sugar.BinderLet l) =
     do

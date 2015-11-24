@@ -83,14 +83,14 @@ addToBinder ::
     MonadA m =>
     Sugar.Binder Guid m (ExpressionU m pl) ->
     T m (Sugar.Binder Guid m (ExpressionU m pl))
-addToBinder = Sugar.bBody %%~ addToBinderBody
+addToBinder = Sugar.bBody %%~ addToBinderContent
 
-addToBinderBody ::
+addToBinderContent ::
     MonadA m =>
-    Sugar.BinderBody Guid m (ExpressionU m pl) ->
-    T m (Sugar.BinderBody Guid m (ExpressionU m pl))
-addToBinderBody (Sugar.BinderExpr e) = addToExpr e <&> Sugar.BinderExpr
-addToBinderBody (Sugar.BinderLet l) = addToLet l <&> Sugar.BinderLet
+    Sugar.BinderContent Guid m (ExpressionU m pl) ->
+    T m (Sugar.BinderContent Guid m (ExpressionU m pl))
+addToBinderContent (Sugar.BinderExpr e) = addToExpr e <&> Sugar.BinderExpr
+addToBinderContent (Sugar.BinderLet l) = addToLet l <&> Sugar.BinderLet
 
 addToLet ::
     MonadA m =>
@@ -99,7 +99,7 @@ addToLet ::
 addToLet letItem =
     letItem
     & Sugar.lValue %%~ addToBinder
-    >>= Sugar.lBody %%~ addToBinderBody
+    >>= Sugar.lBody %%~ addToBinderContent
 
 addToDef ::
     MonadA m =>
