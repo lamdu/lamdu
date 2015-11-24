@@ -765,26 +765,26 @@ makeBinder :: (MonadA m, Monoid a) =>
     Maybe (MkProperty m PresentationMode) ->
     ConventionalParams m a -> Val (Input.Payload m a) ->
     ConvertM m (Binder Guid m (ExpressionU m a))
-makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
+makeBinder mChosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody =
     do
         (innerMostLetBody, binderBody, bodyScopesMap) <- makeBinderBody ourParams funcBody
         return Binder
-            { _bParams = convParams ^. cpParams
+            { _bParams = _cpParams
             , _bMPresentationModeProp = mPresentationModeProp
             , _bMChosenScopeProp = mChosenScopeProp
             , _bBody = binderBody
             , _bScopes =
                 binderScopes
                 <$> bodyScopesMap
-                <*> cpScopes convParams
+                <*> cpScopes
             , _bMActions =
                 mkActions
-                <$> cpMAddFirstParam convParams
+                <$> cpMAddFirstParam
                 <*> innerMostLetBody ^. V.payload . Input.mStored
             }
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
     where
-        ourParams = cpMLamParam convParams ^.. Lens._Just
+        ourParams = cpMLamParam ^.. Lens._Just
         binderScopes scopesMap paramScopes =
             paramScopes
             <&> Lens.traversed %~
@@ -795,10 +795,10 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
             }
         addParams ctx =
             ctx
-            & ConvertM.siTagParamInfos <>~ cpParamInfos convParams
+            & ConvertM.siTagParamInfos <>~ cpParamInfos
             & ConvertM.siNullParams <>~
-            case convParams ^. cpParams of
-            NullParam {} -> Set.fromList (cpMLamParam convParams ^.. Lens._Just)
+            case _cpParams of
+            NullParam {} -> Set.fromList (cpMLamParam ^.. Lens._Just)
             _ -> Set.empty
         mkActions addFirstParam letStored =
             BinderActions
