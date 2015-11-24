@@ -372,10 +372,10 @@ make name binder myId =
         body = binder ^. Sugar.bBody . Sugar.bbContent
 
 makeLetEdit ::
-    MonadA m => Widget.Id ->
+    MonadA m =>
     Sugar.Let (Name m) m (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
-makeLetEdit delDestId item =
+makeLetEdit item =
     do
         config <- ExprGuiM.readConfig
         let eventMap
@@ -383,7 +383,7 @@ makeLetEdit delDestId item =
                 mconcat
                 [ Widget.keysEventMapMovesCursor (Config.delKeys config)
                   (E.Doc ["Edit", "Let clause", "Delete"]) $
-                  delDestId <$ lActions ^. Sugar.laSetToInner
+                  bodyId <$ lActions ^. Sugar.laSetToInner
                 , Widget.keysEventMapMovesCursor
                   (Config.letAddItemKeys config)
                   (E.Doc ["Edit", "Let clause", "Add next"]) $
@@ -408,6 +408,7 @@ makeLetEdit delDestId item =
         letLabel <- ExpressionGui.grammarLabel "let" (Widget.toAnimId myId)
         ExpressionGui.hboxSpaced [letLabel, edit]
     where
+        bodyId = item ^. Sugar.lBody . Sugar.bbContent . SugarLens.binderContentEntityId & WidgetIds.fromEntityId
         myId = item ^. Sugar.lEntityId & WidgetIds.fromEntityId
         binder = item ^. Sugar.lValue
 
@@ -435,7 +436,7 @@ makeRHSEdit mActions params (Sugar.BinderLet l) =
                  . fmap WidgetIds.fromEntityId . (^. Sugar.laSetToHole))
                 (l ^. Sugar.lActions)
         letBodyScope <- getEvalScope (l ^. Sugar.lBodyScope)
-        [ makeLetEdit bodyEntityId l
+        [ makeLetEdit l
             , makeRHSEdit mActions params body
               & ExprGuiM.withLocalMScopeId letBodyScope
             ] & sequence
@@ -445,7 +446,6 @@ makeRHSEdit mActions params (Sugar.BinderLet l) =
             <&> ExpressionGui.egWidget %~
                 Widget.weakerEvents delEventMap
     where
-        bodyEntityId = body ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
         body = l ^. Sugar.lBody . Sugar.bbContent
 makeRHSEdit mActions params (Sugar.BinderExpr binderBody) =
