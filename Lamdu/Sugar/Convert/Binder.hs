@@ -686,6 +686,40 @@ localExtractDestPost val =
     ConvertM.scMExtractDestPos .~ val ^. V.payload . Input.mStored
     & ConvertM.local
 
+convertRedex ::
+    (MonadA m, Monoid a) =>
+    [V.Var] -> Val (Input.Payload m a) ->
+    Redex (Input.Payload m a) ->
+    ConvertM m (Let Guid m (ExpressionU m a))
+convertRedex binderScopeVars expr redex =
+    do
+        value <-
+            convertBinder Nothing defGuid (redexArg redex)
+            & localExtractDestPost expr
+        actions <-
+            mkLIActions binderScopeVars param
+            <$> expr ^. V.payload . Input.mStored
+            <*> traverse (^. Input.mStored) (redexBody redex)
+            <*> traverse (^. Input.mStored) (redexArg redex)
+            & Lens.sequenceOf Lens._Just
+        body <- makeBinderBody (redexParam redex : binderScopeVars) (redexBody redex)
+        Let
+            { _lEntityId = defEntityId
+            , _lValue =
+                value
+                & bBody . bbContent . SugarLens.binderContentExpr . rPayload . plData <>~
+                redexHiddenPayloads redex ^. Lens.traversed . Input.userData
+            , _lActions = actions
+            , _lName = UniqueId.toGuid param
+            , _lAnnotation = redexArgAnnotation redex
+            , _lBodyScope = redexBodyScope redex
+            , _lBody = body
+            } & return
+  where
+      param = redexParam redex
+      defGuid = UniqueId.toGuid param
+      defEntityId = EntityId.ofLambdaParam param
+
 makeBinderContent ::
     (MonadA m, Monoid a) =>
     [V.Var] -> Val (Input.Payload m a) ->
@@ -695,34 +729,7 @@ makeBinderContent binderScopeVars expr =
     Nothing ->
         ConvertM.convertSubexpression expr & localExtractDestPost expr
         <&> BinderExpr
-    Just redex ->
-        do
-            value <-
-                convertBinder Nothing defGuid (redexArg redex)
-                & localExtractDestPost expr
-            actions <-
-                mkLIActions binderScopeVars param
-                <$> expr ^. V.payload . Input.mStored
-                <*> traverse (^. Input.mStored) (redexBody redex)
-                <*> traverse (^. Input.mStored) (redexArg redex)
-                & Lens.sequenceOf Lens._Just
-            body <- makeBinderBody (redexParam redex : binderScopeVars) (redexBody redex)
-            Let
-                { _lEntityId = defEntityId
-                , _lValue =
-                    value
-                    & bBody . bbContent . SugarLens.binderContentExpr . rPayload . plData <>~
-                    redexHiddenPayloads redex ^. Lens.traversed . Input.userData
-                , _lActions = actions
-                , _lName = UniqueId.toGuid param
-                , _lAnnotation = redexArgAnnotation redex
-                , _lBodyScope = redexBodyScope redex
-                , _lBody = body
-                } & BinderLet & return
-      where
-          param = redexParam redex
-          defGuid = UniqueId.toGuid param
-          defEntityId = EntityId.ofLambdaParam param
+    Just redex -> convertRedex binderScopeVars expr redex <&> BinderLet
 
 makeBinderBody ::
     (MonadA m, Monoid a) =>
