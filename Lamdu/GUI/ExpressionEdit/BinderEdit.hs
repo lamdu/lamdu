@@ -59,7 +59,7 @@ makeBinderNameEdit ::
     MonadA m =>
     Maybe (Sugar.BinderActions m) ->
     Widget.EventHandlers (Transaction m) ->
-    (String, ExprGuiT.SugarExpr m) ->
+    (String, Sugar.EntityId) ->
     Name m -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
 makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
@@ -258,12 +258,12 @@ makeMParamsEdit ::
     MonadA m =>
     CurAndPrev (Maybe ScopeCursor) -> Maybe (ExpressionGui n) ->
     Widget.Id -> Widget.Id ->
-    NearestHoles -> Sugar.EntityId -> Sugar.BinderParams (Name m) m ->
+    NearestHoles -> Widget.Id -> Sugar.BinderParams (Name m) m ->
     ExprGuiM m (Maybe (ExpressionGui m))
 makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId nearestHoles bodyId params =
     params
     & makeParamsEdit annotationMode nearestHoles
-      delVarBackwardsId myId (WidgetIds.fromEntityId bodyId)
+      delVarBackwardsId myId bodyId
     & ExprGuiM.withLocalMScopeId
       ( mScopeCursor
       <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sBinderScope
@@ -329,11 +329,11 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
     where
         destId =
             params ^? SugarLens.binderNamedParams . Sugar.fpId
+            <&> WidgetIds.fromEntityId
             & fromMaybe bodyId
-            & WidgetIds.fromEntityId
         params = binder ^. Sugar.bParams
         body = binder ^. Sugar.bBody
-        bodyId = body ^. SugarLens.binderContentExpr . Sugar.rPayload . Sugar.plEntityId
+        bodyId = body ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
 
 make ::
@@ -368,7 +368,7 @@ make name binder myId =
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
-        rhs = ("Def Body", body ^. SugarLens.binderContentExpr)
+        rhs = ("Def Body", body ^. SugarLens.binderContentEntityId)
         body = binder ^. Sugar.bBody
 
 makeLetEdit ::
@@ -412,16 +412,13 @@ makeLetEdit delDestId item =
         binder = item ^. Sugar.lValue
 
 jumpToRHS ::
-    (MonadA m, MonadA f) =>
-    [ModKey] -> (String, ExprGuiT.SugarExpr m) ->
+    MonadA f => [ModKey] -> (String, Sugar.EntityId) ->
     ExprGuiM f (Widget.EventHandlers (T f))
-jumpToRHS keys (rhsDoc, rhs) = do
+jumpToRHS keys (rhsDoc, rhsId) = do
     savePos <- ExprGuiM.mkPrejumpPosSaver
     return $
         Widget.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Jump to " ++ rhsDoc]) $
-            rhsId <$ savePos
-    where
-        rhsId = WidgetIds.fromExprPayload $ rhs ^. Sugar.rPayload
+            WidgetIds.fromEntityId rhsId <$ savePos
 
 makeRHSEdit ::
     MonadA m =>
