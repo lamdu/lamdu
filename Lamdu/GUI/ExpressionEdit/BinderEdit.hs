@@ -332,7 +332,7 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
             <&> WidgetIds.fromEntityId
             & fromMaybe bodyId
         params = binder ^. Sugar.bParams
-        body = binder ^. Sugar.bBody
+        body = binder ^. Sugar.bBody . Sugar.bbContent
         bodyId = body ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
 
@@ -369,7 +369,7 @@ make name binder myId =
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
         rhs = ("Def Body", body ^. SugarLens.binderContentEntityId)
-        body = binder ^. Sugar.bBody
+        body = binder ^. Sugar.bBody . Sugar.bbContent
 
 makeLetEdit ::
     MonadA m => Widget.Id ->
@@ -396,7 +396,7 @@ makeLetEdit delDestId item =
                 ]
                 | otherwise = mempty
         jumpHolesEventMap <-
-            binderContentNearestHoles (binder ^. Sugar.bBody)
+            binderContentNearestHoles (binder ^. Sugar.bBody . Sugar.bbContent)
             & ExprEventMap.jumpHolesEventMap
         edit <-
             make (item ^. Sugar.lName) binder myId
@@ -447,7 +447,7 @@ makeRHSEdit mActions params (Sugar.BinderLet l) =
     where
         bodyEntityId = body ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
-        body = l ^. Sugar.lBody
+        body = l ^. Sugar.lBody . Sugar.bbContent
 makeRHSEdit mActions params (Sugar.BinderExpr binderBody) =
     do
         savePos <- ExprGuiM.mkPrejumpPosSaver

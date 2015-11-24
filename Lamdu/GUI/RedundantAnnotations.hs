@@ -85,7 +85,7 @@ markAnnotationsToDisplay (Expression oldBody pl) =
                 -- maybe we do want to show the annotation
                 & cKind . Lens.mapped %~ don'tShowAnnotation
                 & cAlts . Lens.mapped . Lens.mapped %~
-                  (rBody . _BodyLam . lamBinder . bBody .
+                  (rBody . _BodyLam . lamBinder . bBody . bbContent .
                    SugarLens.binderContentExpr %~ don'tShowAnnotation) .
                   (rPayload . showAnn . T.funcApplyLimit .~ T.AtMostOneFuncApply)
     where

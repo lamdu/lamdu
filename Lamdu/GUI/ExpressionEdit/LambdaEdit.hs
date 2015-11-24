@@ -95,5 +95,5 @@ make lam pl =
         params = binder ^. Sugar.bParams
         binder = lam ^. Sugar.lamBinder
         bodyId =
-            binder ^. Sugar.bBody . SugarLens.binderContentEntityId
+            binder ^. Sugar.bBody . Sugar.bbContent . SugarLens.binderContentEntityId
             & WidgetIds.fromEntityId

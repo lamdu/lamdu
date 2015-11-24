@@ -111,7 +111,7 @@ toLet expr item@Let{..} =
     do
         (name, body) <-
             runCPS (opWithLetName (isFunctionType (_lAnnotation ^. aInferredType)) _lName) $
-            toBinderContent expr _lBody
+            toBinderBody expr _lBody
         value <- toBinder expr _lValue
         item { _lValue = value, _lName = name, _lBody = body } & pure
 
@@ -122,6 +122,12 @@ toBinderContent ::
 toBinderContent expr (BinderLet l) = toLet expr l <&> BinderLet
 toBinderContent expr (BinderExpr e) = expr e <&> BinderExpr
 
+toBinderBody ::
+    MonadNaming m => (a -> m b) ->
+    BinderBody (OldName m) (TM m) a ->
+    m (BinderBody (NewName m) (TM m) b)
+toBinderBody expr = bbContent %%~ toBinderContent expr
+
 toBinder ::
     MonadNaming m => (a -> m b) ->
     Binder (OldName m) (TM m) a ->
@@ -129,7 +135,7 @@ toBinder ::
 toBinder expr binder@Binder{..} =
     do
         (params, body) <-
-            runCPS (withBinderParams _bParams) $ toBinderContent expr _bBody
+            runCPS (withBinderParams _bParams) $ toBinderBody expr _bBody
         binder
             { _bParams = params
             , _bBody = body

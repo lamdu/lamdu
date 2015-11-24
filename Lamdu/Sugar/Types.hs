@@ -19,6 +19,7 @@ module Lamdu.Sugar.Types
     , BinderParams(..)
         , _DefintionWithoutParams, _NullParam, _VarParam , _FieldParams
     , BinderParamScopeId(..), bParamScopeId
+    , BinderBody(..), bbContent
     , BinderContent(..), _BinderLet, _BinderExpr
     , Binder(..)
         , bMPresentationModeProp, bMChosenScopeProp, bParams, bBody
@@ -479,7 +480,7 @@ data Let name m expr = Let
       -- BinderParamScopeId for outer-most let) to the inside of the
       -- redex lambda (redex is applied exactly once):
       _lBodyScope :: CurAndPrev (Map E.ScopeId E.ScopeId)
-    , _lBody :: BinderContent name m expr -- "let foo = bar in [[x]]"
+    , _lBody :: BinderBody name m expr -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable)
 
 data BinderActions m = BinderActions
@@ -504,11 +505,15 @@ data BinderContent name m expr
     | BinderExpr expr
     deriving (Functor, Foldable, Traversable)
 
+data BinderBody name m expr = BinderBody
+    { _bbContent :: BinderContent name m expr
+    } deriving (Functor, Foldable, Traversable)
+
 data Binder name m expr = Binder
     { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
     , _bMChosenScopeProp :: Maybe (MkProperty m (Maybe BinderParamScopeId))
     , _bParams :: BinderParams name m
-    , _bBody :: BinderContent name m expr
+    , _bBody :: BinderBody name m expr
     , _bMActions :: Maybe (BinderActions m)
     , -- The scope inside a lambda (if exists)
       _bBodyScopes :: CurAndPrev (Map E.ScopeId [BinderParamScopeId])
@@ -554,6 +559,7 @@ Lens.makeLenses ''Annotation
 Lens.makeLenses ''Apply
 Lens.makeLenses ''Binder
 Lens.makeLenses ''BinderActions
+Lens.makeLenses ''BinderBody
 Lens.makeLenses ''Body
 Lens.makeLenses ''Case
 Lens.makeLenses ''CaseAddAltResult

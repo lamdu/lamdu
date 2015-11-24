@@ -693,14 +693,14 @@ makeBinderBody ::
     [V.Var] -> Val (Input.Payload m a) ->
     ConvertM m
     ( Val (Input.Payload m a)
-    , BinderContent Guid m (ExpressionU m a)
+    , BinderBody Guid m (ExpressionU m a)
     )
 makeBinderBody binderScopeVars expr =
     case checkForRedex expr of
     Nothing ->
         do
             exprS <- ConvertM.convertSubexpression expr & localExtractDestPost expr
-            return (expr, BinderExpr exprS)
+            return (expr, BinderBody (BinderExpr exprS))
     Just redex ->
         do
             value <-
@@ -716,19 +716,18 @@ makeBinderBody binderScopeVars expr =
                 makeBinderBody (redexParam redex : binderScopeVars) (redexBody redex)
             return
                 ( innerBody
-                , BinderLet
-                  Let
+                , Let
                   { _lEntityId = defEntityId
                   , _lValue =
                       value
-                      & bBody . SugarLens.binderContentExpr . rPayload . plData <>~
+                      & bBody . bbContent . SugarLens.binderContentExpr . rPayload . plData <>~
                       redexHiddenPayloads redex ^. Lens.traversed . Input.userData
                   , _lActions = actions
                   , _lName = UniqueId.toGuid param
                   , _lAnnotation = redexArgAnnotation redex
                   , _lBodyScope = redexBodyScope redex
                   , _lBody = body
-                  }
+                  } & BinderLet & BinderBody
                 )
         where
             param = redexParam redex
@@ -789,7 +788,8 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                 do
                     guard $ Lens.nullOf ExprLens.valHole lamBody
                     mDeleteLam
-                        <&> Lens.mapped .~ binder ^. bBody . SugarLens.binderContentExpr . rPayload . plEntityId
+                        <&> Lens.mapped .~ binder ^. bBody . bbContent .
+                            SugarLens.binderContentExpr . rPayload . plEntityId
         let paramSet =
                 binder ^.. bParams . SugarLens.binderNamedParams .
                 Lens.traversed . npiName
@@ -808,7 +808,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
 useNormalLambda :: Binder name m (Expression name m a) -> Bool
 useNormalLambda binder =
     or
-    [ Lens.has (bBody . _BinderLet) binder
+    [ Lens.has (bBody . bbContent . _BinderLet) binder
     , Lens.has (bBody . Lens.traverse . SugarLens.payloadsOf forbiddenLightLamSubExprs) binder
     , Lens.nullOf (bParams . _FieldParams) binder
     ]
