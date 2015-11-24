@@ -18,12 +18,11 @@ module Lamdu.Sugar.Types
     , NullParamActions(..), npDeleteLambda
     , BinderParams(..)
         , _DefintionWithoutParams, _NullParam, _VarParam , _FieldParams
-    , BinderScopes(..), bsParamScope, bsBodyScope
     , BinderParamScopeId(..), bParamScopeId
     , BinderBody(..), _BinderLet, _BinderExpr
     , Binder(..)
         , bMPresentationModeProp, bMChosenScopeProp, bParams, bBody
-        , bMActions, bScopes
+        , bMActions, bBodyScopes
     , DefinitionBuiltin(..), biType, biName, biSetName
     , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
     , SetToHole(..), _SetToHole, _SetWrapperToHole, _AlreadyAHole
@@ -41,7 +40,7 @@ module Lamdu.Sugar.Types
     , Expression(..), rBody, rPayload
     , DefinitionU
     , Let(..)
-        , lEntityId, lValue, lName, lActions, lAnnotation, lScopes, lBody
+        , lEntityId, lValue, lName, lActions, lAnnotation, lBodyScope, lBody
     , LetActions(..)
         , laAddNext, laSetToInner, laSetToHole, laExtract
     , ListItem(..), liMActions, liExpr
@@ -476,8 +475,10 @@ data Let name m expr = Let
     , _lAnnotation :: Annotation
     , _lName :: name
     , _lActions :: Maybe (LetActions m)
-    , -- This is a mapping from param in bScopes to the let item's scope
-      _lScopes :: CurAndPrev (Map BinderParamScopeId E.ScopeId)
+    , -- This is a mapping from parent scope (the ScopeId inside
+      -- BinderParamScopeId for outer-most let) to the inside of the
+      -- redex lambda (redex is applied exactly once):
+      _lBodyScope :: CurAndPrev (Map E.ScopeId E.ScopeId)
     , _lBody :: BinderBody name m expr -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable)
 
@@ -496,11 +497,6 @@ data BinderParams name m
     | VarParam (FuncParam (NamedParamInfo name m))
     | FieldParams [(T.Tag, FuncParam (NamedParamInfo name m))]
 
-data BinderScopes = BinderScopes
-    { _bsParamScope :: BinderParamScopeId -- Inside lambda scope
-    , _bsBodyScope :: E.ScopeId -- Inside lambda AND redexes scope
-    }
-
 -- TODO: Record around this sum type that has "add outer let" action
 -- instead of _baAddInnermostLet, _laAddNext
 data BinderBody name m expr
@@ -514,7 +510,8 @@ data Binder name m expr = Binder
     , _bParams :: BinderParams name m
     , _bBody :: BinderBody name m expr
     , _bMActions :: Maybe (BinderActions m)
-    , _bScopes :: CurAndPrev (Map E.ScopeId [BinderScopes])
+    , -- The scope inside a lambda (if exists)
+      _bBodyScopes :: CurAndPrev (Map E.ScopeId [BinderParamScopeId])
     } deriving (Functor, Foldable, Traversable)
 
 data AcceptNewType m = AcceptNewType
@@ -557,7 +554,6 @@ Lens.makeLenses ''Annotation
 Lens.makeLenses ''Apply
 Lens.makeLenses ''Binder
 Lens.makeLenses ''BinderActions
-Lens.makeLenses ''BinderScopes
 Lens.makeLenses ''Body
 Lens.makeLenses ''Case
 Lens.makeLenses ''CaseAddAltResult

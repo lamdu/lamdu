@@ -12,6 +12,7 @@ import           Control.Monad (guard, join)
 import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev, current)
 import           Data.List.Utils (nonEmptyAll)
+import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))
@@ -40,8 +41,8 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Sugar.Names.Types (Name(..), NameSource(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
+import           Lamdu.Sugar.Names.Types (Name(..), NameSource(..))
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -130,47 +131,57 @@ data Parts m = Parts
     }
 
 data ScopeCursor = ScopeCursor
-    { sBinderScopes :: Sugar.BinderScopes
+    { sBinderScope :: Sugar.BinderParamScopeId
     , sMPrevParamScope :: Maybe Sugar.BinderParamScopeId
     , sMNextParamScope :: Maybe Sugar.BinderParamScopeId
     }
 
-scopeCursor :: Maybe Sugar.BinderParamScopeId -> [Sugar.BinderScopes] -> Maybe ScopeCursor
+scopeCursor :: Maybe Sugar.BinderParamScopeId -> [Sugar.BinderParamScopeId] -> Maybe ScopeCursor
 scopeCursor mChosenScope scopes =
     do
         chosenScope <- mChosenScope
-        (prevs, it:nexts) <- break ((== chosenScope) . (^. Sugar.bsParamScope)) scopes & Just
+        (prevs, it:nexts) <- break (== chosenScope) scopes & Just
         Just ScopeCursor
-            { sBinderScopes = it
-            , sMPrevParamScope = reverse prevs ^? Lens.traversed . Sugar.bsParamScope
-            , sMNextParamScope = nexts ^? Lens.traversed . Sugar.bsParamScope
+            { sBinderScope = it
+            , sMPrevParamScope = reverse prevs ^? Lens.traversed
+            , sMNextParamScope = nexts ^? Lens.traversed
             }
     <|> (scopes ^? Lens.traversed <&> def)
     where
-        def binderScopes =
+        def binderScope =
             ScopeCursor
-            { sBinderScopes = binderScopes
+            { sBinderScope = binderScope
             , sMPrevParamScope = Nothing
-            , sMNextParamScope = scopes ^? Lens.ix 1 . Sugar.bsParamScope
+            , sMNextParamScope = scopes ^? Lens.ix 1
             }
 
-mkScopeCursor ::
+getEvalScope :: MonadA m => CurAndPrev (Map ScopeId a) -> ExprGuiM m (CurAndPrev (Maybe a))
+getEvalScope scopeMap =
+    do
+        mOuterScopeId <- ExprGuiM.readMScopeId
+        (liftA2 . liftA2) Map.lookup mOuterScopeId (scopeMap <&> Just)
+            <&> join
+            & return
+
+readBinderChosenScope ::
+    MonadA m =>
+    Sugar.Binder name m expr -> ExprGuiM m (Maybe Sugar.BinderParamScopeId)
+readBinderChosenScope binder =
+    binder ^. Sugar.bMChosenScopeProp
+    & Lens._Just %%~ Transaction.getP
+    & ExprGuiM.transaction
+    <&> join
+
+mkChosenScopeCursor ::
     MonadA m =>
     Sugar.Binder (Name m) m (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (CurAndPrev (Maybe ScopeCursor))
-mkScopeCursor binder =
+mkChosenScopeCursor binder =
     do
-        mOuterScopeId <- ExprGuiM.readMScopeId
-        mChosenScope <-
-            binder ^. Sugar.bMChosenScopeProp
-            & Lens._Just %%~ Transaction.getP
-            & ExprGuiM.transaction
-            <&> join
+        mChosenScope <- readBinderChosenScope binder
         -- The liftA2's go thru Maybe, CurAndPrev
-        (liftA2 . liftA2) Map.lookup mOuterScopeId (binder ^. Sugar.bScopes <&> Just)
-            <&> join
-            <&> (>>= scopeCursor mChosenScope)
-            & return
+        binderBodyScopes <- getEvalScope (binder ^. Sugar.bBodyScopes)
+        binderBodyScopes <&> (>>= scopeCursor mChosenScope) & return
 
 makeScopeEventMap ::
     MonadA m =>
@@ -243,12 +254,6 @@ makeScopeNavEdit binder myId curCursor =
             <&> Transaction.setP
             <&> (. Just)
 
-sParamScope :: ScopeCursor -> Sugar.BinderParamScopeId
-sParamScope = (^. Sugar.bsParamScope) . sBinderScopes
-
-sBodyScope :: ScopeCursor -> ScopeId
-sBodyScope = (^. Sugar.bsBodyScope) . sBinderScopes
-
 makeMParamsEdit ::
     MonadA m =>
     CurAndPrev (Maybe ScopeCursor) -> Maybe (ExpressionGui n) ->
@@ -261,7 +266,7 @@ makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId nearestHoles b
       delVarBackwardsId myId (WidgetIds.fromEntityId bodyId)
     & ExprGuiM.withLocalMScopeId
       ( mScopeCursor
-      <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sParamScope
+      <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sBinderScope
       )
     >>= \case
     [] -> return Nothing
@@ -300,7 +305,8 @@ makeParts ::
     ExprGuiM m (Parts m)
 makeParts funcApplyLimit binder delVarBackwardsId myId =
     do
-        mScopeCursor <- mkScopeCursor binder
+        mScopeCursor <- mkChosenScopeCursor binder
+        let binderScopeId = mScopeCursor <&> Lens.mapped %~ (^. Sugar.bParamScopeId) . sBinderScope
         (scopeEventMap, mScopeNavEdit) <-
             do
                 guard (funcApplyLimit == ExprGuiT.UnlimitedFuncApply)
@@ -314,15 +320,12 @@ makeParts funcApplyLimit binder delVarBackwardsId myId =
             mParamsEdit <-
                 makeMParamsEdit mScopeCursor mScopeNavEdit delVarBackwardsId myId
                 (binderBodyNearestHoles body) bodyId params
-            rhs <-
-                makeRHSEdit
-                (mScopeCursor <&> Lens.traversed %~ sParamScope)
-                (binder ^. Sugar.bMActions) params body
-                & ExprGuiM.withLocalMScopeId (mScopeCursor <&> Lens.traversed %~ sBodyScope)
+            rhs <- makeRHSEdit (binder ^. Sugar.bMActions) params body
             Parts mParamsEdit mScopeNavEdit rhs scopeEventMap & return
             & case mScopeNavEdit of
               Nothing -> ExprGuiM.assignCursorPrefix scopesNavId (const destId)
               Just _ -> id
+            & ExprGuiM.withLocalMScopeId binderScopeId
     where
         destId =
             params ^? SugarLens.binderNamedParams . Sugar.fpId
@@ -369,11 +372,10 @@ make name binder myId =
         body = binder ^. Sugar.bBody
 
 makeLetEdit ::
-    MonadA m =>
-    CurAndPrev (Maybe Sugar.BinderParamScopeId) ->
-    Widget.Id -> Sugar.Let (Name m) m (ExprGuiT.SugarExpr m) ->
+    MonadA m => Widget.Id ->
+    Sugar.Let (Name m) m (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
-makeLetEdit mBinderParamScopeId delDestId item =
+makeLetEdit delDestId item =
     do
         config <- ExprGuiM.readConfig
         let eventMap
@@ -397,20 +399,11 @@ makeLetEdit mBinderParamScopeId delDestId item =
             binderBodyNearestHoles (binder ^. Sugar.bBody)
             & ExprEventMap.jumpHolesEventMap
         edit <-
-            make
-            (item ^. Sugar.lName)
-            binder
-            myId
+            make (item ^. Sugar.lName) binder myId
             <&> ExpressionGui.egWidget
                 %~ Widget.weakerEvents (mappend jumpHolesEventMap eventMap)
             <&> ExpressionGui.pad
                 (Config.letItemPadding config <&> realToFrac)
-            & ExprGuiM.withLocalMScopeId
-                ( liftA2 Map.lookup
-                <$> mBinderParamScopeId
-                <*> (item ^. Sugar.lScopes <&> Just)
-                <&> join
-                )
             <&> ExpressionGui.egAlignment . _1 .~ 0
         letLabel <- ExpressionGui.grammarLabel "let" (Widget.toAnimId myId)
         ExpressionGui.hboxSpaced [letLabel, edit]
@@ -438,11 +431,10 @@ binderBodyEntityId (Sugar.BinderLet l) =
 
 makeRHSEdit ::
     MonadA m =>
-    CurAndPrev (Maybe Sugar.BinderParamScopeId) ->
     Maybe (Sugar.BinderActions m) -> Sugar.BinderParams name m ->
     Sugar.BinderBody (Name m) m (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
-makeRHSEdit mBinderParamScopeId mActions params (Sugar.BinderLet l) =
+makeRHSEdit mActions params (Sugar.BinderLet l) =
     do
         config <- ExprGuiM.readConfig
         let delEventMap =
@@ -451,8 +443,10 @@ makeRHSEdit mBinderParamScopeId mActions params (Sugar.BinderLet l) =
                  (E.Doc ["Edit", "Delete let expression"])
                  . fmap WidgetIds.fromEntityId . (^. Sugar.laSetToHole))
                 (l ^. Sugar.lActions)
-        [ makeLetEdit mBinderParamScopeId bodyEntityId l
-            , makeRHSEdit mBinderParamScopeId mActions params body
+        letBodyScope <- getEvalScope (l ^. Sugar.lBodyScope)
+        [ makeLetEdit bodyEntityId l
+            , makeRHSEdit mActions params body
+              & ExprGuiM.withLocalMScopeId letBodyScope
             ] & sequence
             <&> map (ExpressionGui.egAlignment . _1 .~ 0)
             >>= ExpressionGui.vboxTopFocalSpaced
@@ -463,7 +457,7 @@ makeRHSEdit mBinderParamScopeId mActions params (Sugar.BinderLet l) =
         bodyEntityId = binderBodyEntityId body & WidgetIds.fromEntityId
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
         body = l ^. Sugar.lBody
-makeRHSEdit _ mActions params (Sugar.BinderExpr binderBody) =
+makeRHSEdit mActions params (Sugar.BinderExpr binderBody) =
     do
         savePos <- ExprGuiM.mkPrejumpPosSaver
         config <- ExprGuiM.readConfig

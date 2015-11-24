@@ -688,27 +688,19 @@ localExtractDestPost val =
     ConvertM.scMExtractDestPos .~ val ^. V.payload . Input.mStored
     & ConvertM.local
 
-letScopes :: Lens.Traversal' (BinderBody name m a) (CurAndPrev (Map BinderParamScopeId ScopeId))
-letScopes _ (BinderExpr e) = pure (BinderExpr e)
-letScopes f (BinderLet Let{..}) =
-    (\_lScopes _lBody -> BinderLet Let{..})
-    <$> f _lScopes
-    <*> letScopes f _lBody
-
 makeBinderBody ::
     (MonadA m, Monoid a) =>
     [V.Var] -> Val (Input.Payload m a) ->
     ConvertM m
     ( Val (Input.Payload m a)
     , BinderBody Guid m (ExpressionU m a)
-    , CurAndPrev (Map ScopeId ScopeId)
     )
 makeBinderBody binderScopeVars expr =
     case checkForRedex expr of
     Nothing ->
         do
             exprS <- ConvertM.convertSubexpression expr & localExtractDestPost expr
-            return (expr, BinderExpr exprS, mempty)
+            return (expr, BinderExpr exprS)
     Just redex ->
         do
             value <-
@@ -720,7 +712,7 @@ makeBinderBody binderScopeVars expr =
                 <*> traverse (^. Input.mStored) (redexBody redex)
                 <*> traverse (^. Input.mStored) (redexArg redex)
                 & Lens.sequenceOf Lens._Just
-            (innerBody, body, bodyScopesMap) <-
+            (innerBody, body) <-
                 makeBinderBody (redexParam redex : binderScopeVars) (redexBody redex)
             return
                 ( innerBody
@@ -734,31 +726,14 @@ makeBinderBody binderScopeVars expr =
                   , _lActions = actions
                   , _lName = UniqueId.toGuid param
                   , _lAnnotation = redexArgAnnotation redex
-                  , _lScopes =
-                      redexBodyScope redex
-                      <&> Map.keys
-                      <&> map ((_1 %~ BinderParamScopeId) . join (,))
-                      <&> Map.fromList
-                  , _lBody =
-                    body
-                    & letScopes %~
-                      \scopes ->
-                      appendScopeMaps
-                      <$> (scopes <&> Map.mapKeys (^. bParamScopeId))
-                      -- TODO: How to remove the ugly mapKeys here?
-                      <*> redexBodyScope redex
-                      <&> Map.mapKeys BinderParamScopeId
+                  , _lBodyScope = redexBodyScope redex
+                  , _lBody = body
                   }
-                , appendScopeMaps <$> redexBodyScope redex <*> bodyScopesMap
                 )
         where
             param = redexParam redex
             defGuid = UniqueId.toGuid param
             defEntityId = EntityId.ofLambdaParam param
-            appendScopeMaps x y = x <&> overrideId y
-
-overrideId :: Ord a => Map a a -> a -> a
-overrideId mapping k = Map.lookup k mapping & fromMaybe k
 
 makeBinder :: (MonadA m, Monoid a) =>
     Maybe (MkProperty m (Maybe BinderParamScopeId)) ->
@@ -767,16 +742,14 @@ makeBinder :: (MonadA m, Monoid a) =>
     ConvertM m (Binder Guid m (ExpressionU m a))
 makeBinder mChosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody =
     do
-        (innerMostLetBody, binderBody, bodyScopesMap) <- makeBinderBody ourParams funcBody
+        (innerMostLetBody, binderBody) <- makeBinderBody ourParams funcBody
         return Binder
             { _bParams = _cpParams
             , _bMPresentationModeProp = mPresentationModeProp
             , _bMChosenScopeProp = mChosenScopeProp
             , _bBody = binderBody
-            , _bScopes =
-                binderScopes
-                <$> bodyScopesMap
-                <*> cpScopes
+            , _bBodyScopes =
+              cpScopes <&> Lens.mapped . Lens.traversed %~ BinderParamScopeId
             , _bMActions =
                 mkActions
                 <$> cpMAddFirstParam
@@ -785,14 +758,6 @@ makeBinder mChosenScopeProp mPresentationModeProp ConventionalParams{..} funcBod
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
     where
         ourParams = cpMLamParam ^.. Lens._Just
-        binderScopes scopesMap paramScopes =
-            paramScopes
-            <&> Lens.traversed %~
-            \s ->
-            BinderScopes
-            { _bsParamScope = BinderParamScopeId s
-            , _bsBodyScope = overrideId scopesMap s
-            }
         addParams ctx =
             ctx
             & ConvertM.siTagParamInfos <>~ cpParamInfos
