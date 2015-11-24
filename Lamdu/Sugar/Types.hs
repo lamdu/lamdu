@@ -14,7 +14,7 @@ module Lamdu.Sugar.Types
         , _DefinitionNewType
     , Anchors.PresentationMode(..)
     , BinderActions(..)
-        , baAddFirstParam, baAddInnermostLetItem
+        , baAddFirstParam, baAddInnermostLet
     , NullParamActions(..), npDeleteLambda
     , BinderParams(..)
         , _DefintionWithoutParams, _NullParam, _VarParam , _FieldParams
@@ -22,7 +22,7 @@ module Lamdu.Sugar.Types
     , BinderParamScopeId(..), bParamScopeId
     , Binder(..)
         , bMPresentationModeProp, bMChosenScopeProp, bParams, bBody
-        , bLetItems, bMActions, bScopes
+        , bLets, bMActions, bScopes
     , DefinitionBuiltin(..), biType, biName, biSetName
     , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
     , SetToHole(..), _SetToHole, _SetWrapperToHole, _AlreadyAHole
@@ -39,10 +39,10 @@ module Lamdu.Sugar.Types
     , Payload(..), plEntityId, plAnnotation, plActions, plData
     , Expression(..), rBody, rPayload
     , DefinitionU
-    , LetItem(..)
-        , liEntityId, liValue, liName, liActions, liAnnotation, liScopes
-    , LetItemActions(..)
-        , liAddNext, liDelete, liExtract
+    , Let(..)
+        , lEntityId, lValue, lName, lActions, lAnnotation, lScopes
+    , LetActions(..)
+        , laAddNext, laDelete, laExtract
     , ListItem(..), liMActions, liExpr
     , ListActions(..)
     , List(..), lValues, lMActions, lNilEntityId
@@ -462,25 +462,25 @@ instance Show expr => Show (Body name m expr) where
     show BodyFromNom {} = "FromNom:TODO"
     show BodyToNom {} = "ToNom:TODO"
 
-data LetItemActions m = LetItemActions
-    { _liAddNext :: T m EntityId
-    , _liDelete :: T m ()
-    , _liExtract :: T m EntityId
+data LetActions m = LetActions
+    { _laAddNext :: T m EntityId
+    , _laDelete :: T m ()
+    , _laExtract :: T m EntityId
     }
 
-data LetItem name m expr = LetItem
-    { _liValue :: Binder name m expr
-    , _liEntityId :: EntityId
-    , _liAnnotation :: Annotation
-    , _liName :: name
-    , _liActions :: Maybe (LetItemActions m)
+data Let name m expr = Let
+    { _lValue :: Binder name m expr
+    , _lEntityId :: EntityId
+    , _lAnnotation :: Annotation
+    , _lName :: name
+    , _lActions :: Maybe (LetActions m)
     , -- This is a mapping from param in bScopes to the let item's scope
-      _liScopes :: CurAndPrev (Map BinderParamScopeId E.ScopeId)
+      _lScopes :: CurAndPrev (Map BinderParamScopeId E.ScopeId)
     } deriving (Functor, Foldable, Traversable)
 
 data BinderActions m = BinderActions
     { _baAddFirstParam :: T m ParamAddResult
-    , _baAddInnermostLetItem :: T m EntityId
+    , _baAddInnermostLet :: T m EntityId
     }
 
 data BinderParams name m
@@ -502,7 +502,7 @@ data Binder name m expr = Binder
     { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
     , _bMChosenScopeProp :: Maybe (MkProperty m (Maybe BinderParamScopeId))
     , _bParams :: BinderParams name m
-    , _bLetItems :: [LetItem name m expr]
+    , _bLets :: [Let name m expr]
     , _bBody :: expr
     , _bMActions :: Maybe (BinderActions m)
     , _bScopes :: CurAndPrev (Map E.ScopeId [BinderScopes])
@@ -568,8 +568,8 @@ Lens.makeLenses ''HoleOption
 Lens.makeLenses ''HoleResult
 Lens.makeLenses ''Inject
 Lens.makeLenses ''Lambda
-Lens.makeLenses ''LetItem
-Lens.makeLenses ''LetItemActions
+Lens.makeLenses ''Let
+Lens.makeLenses ''LetActions
 Lens.makeLenses ''List
 Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions

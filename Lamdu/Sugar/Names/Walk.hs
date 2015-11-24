@@ -34,7 +34,7 @@ class (MonadA m, MonadA (TM m)) => MonadNaming m where
     opRun :: m (InTransaction m (TM m))
 
     opWithParamName :: NameGen.VarInfo -> CPSNameConvertor m
-    opWithLetItemName :: NameGen.VarInfo -> CPSNameConvertor m
+    opWithLetName :: NameGen.VarInfo -> CPSNameConvertor m
     opWithDefName :: CPSNameConvertor m
     opWithTagName :: CPSNameConvertor m
     opGetDefName :: NameConvertor m
@@ -103,16 +103,16 @@ toGetVar ::
 toGetVar (GetVarNamed x) = GetVarNamed <$> toNamedVar x
 toGetVar (GetVarParamsRecord x) = GetVarParamsRecord <$> traverse opGetTagName x
 
-withLetItem ::
+withLet ::
     MonadNaming m => (a -> m b) ->
-    LetItem (OldName m) (TM m) a ->
-    CPS m (LetItem (NewName m) (TM m) b)
-withLetItem expr item@LetItem{..} =
+    Let (OldName m) (TM m) a ->
+    CPS m (Let (NewName m) (TM m) b)
+withLet expr item@Let{..} =
     CPS $ \k -> do
         (name, (value, res)) <-
-            runCPS (opWithLetItemName (isFunctionType (_liAnnotation ^. aInferredType)) _liName) $
-            (,) <$> toBinder expr _liValue <*> k
-        pure (item { _liValue = value, _liName = name }, res)
+            runCPS (opWithLetName (isFunctionType (_lAnnotation ^. aInferredType)) _lName) $
+            (,) <$> toBinder expr _lValue <*> k
+        pure (item { _lValue = value, _lName = name }, res)
 
 toBinder ::
     MonadNaming m => (a -> m b) ->
@@ -122,12 +122,12 @@ toBinder expr binder@Binder{..} =
     do
         (params, (letItems, body)) <-
             runCPS (withBinderParams _bParams) .
-            runCPS (traverse (withLetItem expr) _bLetItems) $
+            runCPS (traverse (withLet expr) _bLets) $
             expr _bBody
         binder
             { _bParams = params
             , _bBody = body
-            , _bLetItems = letItems
+            , _bLets = letItems
             } & pure
 
 toLam ::

@@ -595,20 +595,20 @@ changeRecursionsToCalls var =
             >>= ExprIRef.newValBody . V.BApp . V.Apply (Property.value prop)
             >>= Property.set prop
 
-data ExprLetItem a = ExprLetItem
+data ExprLet a = ExprLet
     { eliBody :: Val a
     , eliBodyScopesMap :: CurAndPrev (Map ScopeId ScopeId)
     , eliParam :: V.Var
     , eliArg :: Val a
     , eliHiddenPayloads :: [a]
-    , eliAnnotation :: Annotation
+    , elAnnotation :: Annotation
     }
 
-mCheckForRedex :: Val (Input.Payload m a) -> Maybe (ExprLetItem (Input.Payload m a))
+mCheckForRedex :: Val (Input.Payload m a) -> Maybe (ExprLet (Input.Payload m a))
 mCheckForRedex expr = do
     V.Apply func arg <- expr ^? ExprLens.valApply
     V.Lam param body <- func ^? V.body . ExprLens._BAbs
-    Just ExprLetItem
+    Just ExprLet
         { eliBody = body
         , eliBodyScopesMap =
             func ^. V.payload . Input.evalResults
@@ -617,7 +617,7 @@ mCheckForRedex expr = do
         , eliParam = param
         , eliArg = arg
         , eliHiddenPayloads = (^. V.payload) <$> [expr, func]
-        , eliAnnotation = makeAnnotation (arg ^. V.payload)
+        , elAnnotation = makeAnnotation (arg ^. V.payload)
         }
     where
         getRedexApplies [(scopeId, _)] = scopeId
@@ -663,16 +663,16 @@ mkLIActions ::
     MonadA m =>
     [V.Var] -> V.Var -> ValIProperty m ->
     Val (ValIProperty m) -> Val (ValIProperty m) ->
-    ConvertM m (LetItemActions m)
+    ConvertM m (LetActions m)
 mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
     do
         ctx <- ConvertM.readContext
         return
-            LetItemActions
-            { _liDelete = SubExprs.getVarsToHole param bodyStored >> del
-            , _liAddNext =
+            LetActions
+            { _laDelete = SubExprs.getVarsToHole param bodyStored >> del
+            , _laAddNext =
                 DataOps.redexWrap topLevelProp <&> EntityId.ofLambdaParam . fst
-            , _liExtract =
+            , _laExtract =
               letItemToOutside
               (ctx ^. ConvertM.scMExtractDestPos)
               (ctx ^. ConvertM.scDefI)
@@ -687,15 +687,15 @@ localExtractDestPost val =
     ConvertM.scMExtractDestPos .~ val ^. V.payload . Input.mStored
     & ConvertM.local
 
-convertLetItems ::
+convertLets ::
     (MonadA m, Monoid a) =>
     [V.Var] -> Val (Input.Payload m a) ->
     ConvertM m
-    ( [LetItem Guid m (ExpressionU m a)]
+    ( [Let Guid m (ExpressionU m a)]
     , Val (Input.Payload m a)
     , CurAndPrev (Map ScopeId ScopeId)
     )
-convertLetItems binderScopeVars expr =
+convertLets binderScopeVars expr =
     case mCheckForRedex expr of
     Nothing -> return ([], expr, mempty)
     Just eli ->
@@ -710,18 +710,18 @@ convertLetItems binderScopeVars expr =
                 <*> traverse (^. Input.mStored) (eliArg eli)
                 & Lens.sequenceOf Lens._Just
             (items, body, bodyScopesMap) <-
-                eliBody eli & convertLetItems (eliParam eli : binderScopeVars)
+                eliBody eli & convertLets (eliParam eli : binderScopeVars)
             return
-                ( LetItem
-                    { _liEntityId = defEntityId
-                    , _liValue =
+                ( Let
+                    { _lEntityId = defEntityId
+                    , _lValue =
                         value
                         & bBody . rPayload . plData <>~
                         eliHiddenPayloads eli ^. Lens.traversed . Input.userData
-                    , _liActions = actions
-                    , _liName = UniqueId.toGuid param
-                    , _liAnnotation = eliAnnotation eli
-                    , _liScopes =
+                    , _lActions = actions
+                    , _lName = UniqueId.toGuid param
+                    , _lAnnotation = elAnnotation eli
+                    , _lScopes =
                         eliBodyScopesMap eli
                         <&> Map.keys
                         <&> map ((_1 %~ BinderParamScopeId) . join (,))
@@ -729,7 +729,7 @@ convertLetItems binderScopeVars expr =
                     }
                     :
                     ( items
-                        <&> liScopes %~
+                        <&> lScopes %~
                         \scopes ->
                         appendScopeMaps
                         <$> (scopes <&> Map.mapKeys (^. bParamScopeId))
@@ -757,7 +757,7 @@ makeBinder :: (MonadA m, Monoid a) =>
 makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
     do
         (letItems, letBody, bodyScopesMap) <-
-            convertLetItems (cpMLamParam convParams ^.. Lens._Just) funcBody
+            convertLets (cpMLamParam convParams ^.. Lens._Just) funcBody
         bodyS <-
             ConvertM.convertSubexpression letBody & localExtractDestPost letBody
         return Binder
@@ -769,7 +769,7 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
                 binderScopes
                 <$> bodyScopesMap
                 <*> cpScopes convParams
-            , _bLetItems = letItems
+            , _bLets = letItems
             , _bMActions =
                 mkActions
                 <$> cpMAddFirstParam convParams
@@ -795,7 +795,7 @@ makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
         mkActions addFirstParam letStored =
             BinderActions
             { _baAddFirstParam = addFirstParam
-            , _baAddInnermostLetItem =
+            , _baAddInnermostLet =
                     EntityId.ofLambdaParam . fst <$> DataOps.redexWrap letStored
             }
 
@@ -835,7 +835,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
 useNormalLambda :: Binder name m (Expression name m a) -> Bool
 useNormalLambda binder =
     or
-    [ Lens.has (bLetItems . Lens.traversed) binder
+    [ Lens.has (bLets . Lens.traversed) binder
     , Lens.has (bBody . SugarLens.payloadsOf forbiddenLightLamSubExprs) binder
     , Lens.nullOf (bParams . _FieldParams) binder
     ]

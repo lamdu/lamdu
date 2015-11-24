@@ -34,7 +34,7 @@ mkExtract ::
 mkExtract ctx stored =
     case ctx ^. ConvertM.scMExtractDestPos of
     Nothing -> mkExtractToDef (ctx ^. ConvertM.scCodeAnchors) stored <&> ExtractToDef
-    Just extractDestPos -> mkExtractToLetItem extractDestPos stored <&> ExtractToLet
+    Just extractDestPos -> mkExtractToLet extractDestPos stored <&> ExtractToLet
 
 mkExtractToDef ::
     MonadA m => Anchors.CodeProps m -> ExprIRef.ValIProperty m -> T m EntityId
@@ -45,9 +45,9 @@ mkExtractToDef cp stored =
         Property.set stored getVarI
         EntityId.ofIRef newDefI & return
 
-mkExtractToLetItem ::
+mkExtractToLet ::
     MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
-mkExtractToLetItem extractDestPos stored =
+mkExtractToLet extractDestPos stored =
     do
         (lamI, getVarI) <-
             if Property.value stored == Property.value extractDestPos

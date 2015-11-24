@@ -55,7 +55,7 @@ instance MonadA tm => MonadNaming (Pass0M tm) where
     type TM (Pass0M tm) = tm
     opRun = pure $ Walk.InTransaction runPass0M
     opWithParamName _ = p0cpsNameConvertor
-    opWithLetItemName _ = p0cpsNameConvertor
+    opWithLetName _ = p0cpsNameConvertor
     opWithDefName = p0cpsNameConvertor
     opWithTagName = p0cpsNameConvertor
     opGetParamName = p0nameConvertor
@@ -137,7 +137,7 @@ instance MonadA tm => MonadNaming (Pass1M tm) where
     type TM (Pass1M tm) = tm
     opRun = pure $ Walk.InTransaction $ return . fst . runPass1M
     opWithParamName _ = p1cpsNameConvertor Local
-    opWithLetItemName _ = p1cpsNameConvertor Local
+    opWithLetName _ = p1cpsNameConvertor Local
     opWithDefName = p1cpsNameConvertor Local
     opWithTagName = p1cpsNameConvertor Local
     opGetParamName = p1nameConvertor Local
@@ -220,7 +220,7 @@ instance MonadA tm => MonadNaming (Pass2M tm) where
     opWithDefName = p2cpsNameConvertorGlobal "def_"
     opWithTagName = p2cpsNameConvertorGlobal "tag_"
     opWithParamName = p2cpsNameConvertorLocal
-    opWithLetItemName = p2cpsNameConvertorLocal
+    opWithLetName = p2cpsNameConvertorLocal
     opGetParamName (StoredNames (MStoredName mName guid) storedNamesUnder) =
         case mName of
             Just name ->
