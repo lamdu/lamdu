@@ -395,13 +395,9 @@ makeLetEdit item =
                   lActions ^. Sugar.laExtract
                 ]
                 | otherwise = mempty
-        jumpHolesEventMap <-
-            binderContentNearestHoles (binder ^. Sugar.bBody . Sugar.bbContent)
-            & ExprEventMap.jumpHolesEventMap
         edit <-
             make (item ^. Sugar.lName) binder myId
-            <&> ExpressionGui.egWidget
-                %~ Widget.weakerEvents (mappend jumpHolesEventMap eventMap)
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
             <&> ExpressionGui.pad
                 (Config.letItemPadding config <&> realToFrac)
             <&> ExpressionGui.egAlignment . _1 .~ 0
