@@ -670,8 +670,9 @@ mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
         return
             LetActions
             { _laSetToInner = SubExprs.getVarsToHole param bodyStored >> del
+            , _laSetToHole = DataOps.setToHole topLevelProp <&> EntityId.ofValI
             , _laAddNext =
-                DataOps.redexWrap topLevelProp <&> EntityId.ofLambdaParam . fst
+              DataOps.redexWrap topLevelProp <&> EntityId.ofLambdaParam . fst
             , _laExtract =
               letItemToOutside
               (ctx ^. ConvertM.scMExtractDestPos)

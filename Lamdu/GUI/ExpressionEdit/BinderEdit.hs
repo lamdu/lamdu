@@ -380,17 +380,17 @@ makeLetEdit mBinderParamScopeId delDestId item =
                 | Just lActions <- item ^. Sugar.lActions =
                 mconcat
                 [ Widget.keysEventMapMovesCursor (Config.delKeys config)
-                    (E.Doc ["Edit", "Let clause", "Delete"]) $
-                    delDestId <$ lActions ^. Sugar.laSetToInner
+                  (E.Doc ["Edit", "Let clause", "Delete"]) $
+                  delDestId <$ lActions ^. Sugar.laSetToInner
                 , Widget.keysEventMapMovesCursor
-                    (Config.letAddItemKeys config)
-                    (E.Doc ["Edit", "Let clause", "Add next"]) $
-                    WidgetIds.fromEntityId <$>
-                    lActions ^. Sugar.laAddNext
+                  (Config.letAddItemKeys config)
+                  (E.Doc ["Edit", "Let clause", "Add next"]) $
+                  WidgetIds.fromEntityId <$>
+                  lActions ^. Sugar.laAddNext
                 , Widget.keysEventMapMovesCursor (Config.extractKeys config)
-                    (E.Doc ["Edit", "Let clause", "Extract to outer scope"]) $
-                    WidgetIds.fromEntityId <$>
-                    lActions ^. Sugar.laExtract
+                  (E.Doc ["Edit", "Let clause", "Extract to outer scope"]) $
+                  WidgetIds.fromEntityId <$>
+                  lActions ^. Sugar.laExtract
                 ]
                 | otherwise = mempty
         jumpHolesEventMap <-
@@ -443,12 +443,22 @@ makeRHSEdit ::
     Sugar.BinderBody (Name m) m (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
 makeRHSEdit mBinderParamScopeId mActions params (Sugar.BinderLet l) =
-    [ makeLetEdit mBinderParamScopeId bodyEntityId l
-    , makeRHSEdit mBinderParamScopeId mActions params body
-    ] & sequence
-    <&> map (ExpressionGui.egAlignment . _1 .~ 0)
-    >>= ExpressionGui.vboxTopFocalSpaced
-    >>= ExpressionGui.parentDelegator letEntityId
+    do
+        config <- ExprGuiM.readConfig
+        let delEventMap =
+                maybe mempty
+                (Widget.keysEventMapMovesCursor (Config.delKeys config)
+                 (E.Doc ["Edit", "Delete let expression"])
+                 . fmap WidgetIds.fromEntityId . (^. Sugar.laSetToHole))
+                (l ^. Sugar.lActions)
+        [ makeLetEdit mBinderParamScopeId bodyEntityId l
+            , makeRHSEdit mBinderParamScopeId mActions params body
+            ] & sequence
+            <&> map (ExpressionGui.egAlignment . _1 .~ 0)
+            >>= ExpressionGui.vboxTopFocalSpaced
+            >>= ExpressionGui.parentDelegator letEntityId
+            <&> ExpressionGui.egWidget %~
+                Widget.weakerEvents delEventMap
     where
         bodyEntityId = binderBodyEntityId body & WidgetIds.fromEntityId
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId

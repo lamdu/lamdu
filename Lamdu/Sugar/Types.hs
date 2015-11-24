@@ -43,7 +43,7 @@ module Lamdu.Sugar.Types
     , Let(..)
         , lEntityId, lValue, lName, lActions, lAnnotation, lScopes, lBody
     , LetActions(..)
-        , laAddNext, laSetToInner, laExtract
+        , laAddNext, laSetToInner, laSetToHole, laExtract
     , ListItem(..), liMActions, liExpr
     , ListActions(..)
     , List(..), lValues, lMActions, lNilEntityId
@@ -466,6 +466,7 @@ instance Show expr => Show (Body name m expr) where
 data LetActions m = LetActions
     { _laAddNext :: T m EntityId
     , _laSetToInner :: T m ()
+    , _laSetToHole :: T m EntityId
     , _laExtract :: T m EntityId
     }
 
