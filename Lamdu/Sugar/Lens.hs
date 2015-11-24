@@ -9,6 +9,7 @@ module Lamdu.Sugar.Lens
     , binderFuncParamAdds
     , binderFuncParamDeletes
     , binderContentExpr
+    , binderContentEntityId
     ) where
 
 import           Control.Lens (Lens')
@@ -170,3 +171,10 @@ binderFuncParamDeletes f Binder{..} =
 binderContentExpr :: Lens' (BinderContent name m a) a
 binderContentExpr f (BinderLet l) = l & lBody . binderContentExpr %%~ f <&> BinderLet
 binderContentExpr f (BinderExpr e) = f e <&> BinderExpr
+
+binderContentEntityId ::
+    Lens' (BinderContent name m (Expression name m a)) EntityId
+binderContentEntityId f (BinderExpr e) =
+    e & rPayload . plEntityId %%~ f <&> BinderExpr
+binderContentEntityId f (BinderLet l) =
+    l & lEntityId %%~ f <&> BinderLet

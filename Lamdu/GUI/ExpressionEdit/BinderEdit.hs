@@ -423,12 +423,6 @@ jumpToRHS keys (rhsDoc, rhs) = do
     where
         rhsId = WidgetIds.fromExprPayload $ rhs ^. Sugar.rPayload
 
-binderBodyEntityId :: Sugar.BinderContent name m (ExprGuiT.SugarExpr m) -> Sugar.EntityId
-binderBodyEntityId (Sugar.BinderExpr e) =
-    e ^. Sugar.rPayload . Sugar.plEntityId
-binderBodyEntityId (Sugar.BinderLet l) =
-    l ^. Sugar.lEntityId
-
 makeRHSEdit ::
     MonadA m =>
     Maybe (Sugar.BinderActions m) -> Sugar.BinderParams name m ->
@@ -454,7 +448,7 @@ makeRHSEdit mActions params (Sugar.BinderLet l) =
             <&> ExpressionGui.egWidget %~
                 Widget.weakerEvents delEventMap
     where
-        bodyEntityId = binderBodyEntityId body & WidgetIds.fromEntityId
+        bodyEntityId = body ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
         body = l ^. Sugar.lBody
 makeRHSEdit mActions params (Sugar.BinderExpr binderBody) =
