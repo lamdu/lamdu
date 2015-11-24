@@ -34,6 +34,7 @@ module Lamdu.GUI.ExpressionGui
     , wrapExprEventMap
     , maybeAddAnnotationPl
     , stdWrap
+    , parentDelegator
     , stdWrapParentExpr
     , stdWrapParenify
     ) where
@@ -417,22 +418,28 @@ stdWrap pl mkGui =
     >>= maybeAddAnnotationPl pl
     & wrapExprEventMap pl
 
+parentDelegator ::
+    MonadA m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+parentDelegator myId gui =
+    do
+        config <- ExprGuiM.readConfig
+        gui
+            & egWidget %%~
+            ExprGuiM.makeFocusDelegator (parentExprFDConfig config)
+            FocusDelegator.FocusEntryChild (WidgetIds.notDelegatingId myId)
+
 stdWrapParentExpr ::
     MonadA m =>
     Sugar.Payload m ExprGuiT.Payload ->
     (Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
     ExprGuiM m (ExpressionGui m)
-stdWrapParentExpr pl mkGui = do
-    config <- ExprGuiM.readConfig
+stdWrapParentExpr pl mkGui =
     mkGui innerId
-        >>= egWidget %%~
-                ExprGuiM.makeFocusDelegator (parentExprFDConfig config)
-                FocusDelegator.FocusEntryChild outerId
-        & stdWrap pl
-        & ExprGuiM.assignCursor myId innerId
+    >>= parentDelegator myId
+    & stdWrap pl
+    & ExprGuiM.assignCursor myId innerId
     where
         myId = WidgetIds.fromExprPayload pl
-        outerId = WidgetIds.notDelegatingId myId
         innerId = WidgetIds.delegatingId myId
 
 makeFocusableView ::
