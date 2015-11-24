@@ -7,6 +7,7 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import qualified Lamdu.GUI.ExpressionGui.Types as T
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
@@ -84,7 +85,8 @@ markAnnotationsToDisplay (Expression oldBody pl) =
                 -- maybe we do want to show the annotation
                 & cKind . Lens.mapped %~ don'tShowAnnotation
                 & cAlts . Lens.mapped . Lens.mapped %~
-                  (rBody . _BodyLam . lamBinder . bBody %~ don'tShowAnnotation) .
+                  (rBody . _BodyLam . lamBinder . bBody .
+                   SugarLens.binderBodyExpr %~ don'tShowAnnotation) .
                   (rPayload . showAnn . T.funcApplyLimit .~ T.AtMostOneFuncApply)
     where
         newBody = oldBody <&> markAnnotationsToDisplay

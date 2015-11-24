@@ -103,16 +103,24 @@ toGetVar ::
 toGetVar (GetVarNamed x) = GetVarNamed <$> toNamedVar x
 toGetVar (GetVarParamsRecord x) = GetVarParamsRecord <$> traverse opGetTagName x
 
-withLet ::
+toLet ::
     MonadNaming m => (a -> m b) ->
     Let (OldName m) (TM m) a ->
-    CPS m (Let (NewName m) (TM m) b)
-withLet expr item@Let{..} =
-    CPS $ \k -> do
-        (name, (value, res)) <-
+    m (Let (NewName m) (TM m) b)
+toLet expr item@Let{..} =
+    do
+        (name, body) <-
             runCPS (opWithLetName (isFunctionType (_lAnnotation ^. aInferredType)) _lName) $
-            (,) <$> toBinder expr _lValue <*> k
-        pure (item { _lValue = value, _lName = name }, res)
+            toBinderBody expr _lBody
+        value <- toBinder expr _lValue
+        item { _lValue = value, _lName = name, _lBody = body } & pure
+
+toBinderBody ::
+    MonadNaming m => (a -> m b) ->
+    BinderBody (OldName m) (TM m) a ->
+    m (BinderBody (NewName m) (TM m) b)
+toBinderBody expr (BinderLet l) = toLet expr l <&> BinderLet
+toBinderBody expr (BinderExpr e) = expr e <&> BinderExpr
 
 toBinder ::
     MonadNaming m => (a -> m b) ->
@@ -120,14 +128,11 @@ toBinder ::
     m (Binder (NewName m) (TM m) b)
 toBinder expr binder@Binder{..} =
     do
-        (params, (letItems, body)) <-
-            runCPS (withBinderParams _bParams) .
-            runCPS (traverse (withLet expr) _bLets) $
-            expr _bBody
+        (params, body) <-
+            runCPS (withBinderParams _bParams) $ toBinderBody expr _bBody
         binder
             { _bParams = params
             , _bBody = body
-            , _bLets = letItems
             } & pure
 
 toLam ::

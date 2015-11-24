@@ -20,9 +20,10 @@ module Lamdu.Sugar.Types
         , _DefintionWithoutParams, _NullParam, _VarParam , _FieldParams
     , BinderScopes(..), bsParamScope, bsBodyScope
     , BinderParamScopeId(..), bParamScopeId
+    , BinderBody(..), _BinderLet, _BinderExpr
     , Binder(..)
         , bMPresentationModeProp, bMChosenScopeProp, bParams, bBody
-        , bLets, bMActions, bScopes
+        , bMActions, bScopes
     , DefinitionBuiltin(..), biType, biName, biSetName
     , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
     , SetToHole(..), _SetToHole, _SetWrapperToHole, _AlreadyAHole
@@ -40,7 +41,7 @@ module Lamdu.Sugar.Types
     , Expression(..), rBody, rPayload
     , DefinitionU
     , Let(..)
-        , lEntityId, lValue, lName, lActions, lAnnotation, lScopes
+        , lEntityId, lValue, lName, lActions, lAnnotation, lScopes, lBody
     , LetActions(..)
         , laAddNext, laDelete, laExtract
     , ListItem(..), liMActions, liExpr
@@ -469,13 +470,14 @@ data LetActions m = LetActions
     }
 
 data Let name m expr = Let
-    { _lValue :: Binder name m expr
+    { _lValue :: Binder name m expr -- "let [[foo = bar]] in x"
     , _lEntityId :: EntityId
     , _lAnnotation :: Annotation
     , _lName :: name
     , _lActions :: Maybe (LetActions m)
     , -- This is a mapping from param in bScopes to the let item's scope
       _lScopes :: CurAndPrev (Map BinderParamScopeId E.ScopeId)
+    , _lBody :: BinderBody name m expr -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable)
 
 data BinderActions m = BinderActions
@@ -498,12 +500,18 @@ data BinderScopes = BinderScopes
     , _bsBodyScope :: E.ScopeId -- Inside lambda AND redexes scope
     }
 
+-- TODO: Record around this sum type that has "add outer let" action
+-- instead of _baAddInnermostLet, _laAddNext
+data BinderBody name m expr
+    = BinderLet (Let name m expr)
+    | BinderExpr expr
+    deriving (Functor, Foldable, Traversable)
+
 data Binder name m expr = Binder
     { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
     , _bMChosenScopeProp :: Maybe (MkProperty m (Maybe BinderParamScopeId))
     , _bParams :: BinderParams name m
-    , _bLets :: [Let name m expr]
-    , _bBody :: expr
+    , _bBody :: BinderBody name m expr
     , _bMActions :: Maybe (BinderActions m)
     , _bScopes :: CurAndPrev (Map E.ScopeId [BinderScopes])
     } deriving (Functor, Foldable, Traversable)
@@ -588,6 +596,7 @@ Lens.makeLenses ''RecordField
 Lens.makeLenses ''ScopeGetVar
 Lens.makeLenses ''TIdG
 Lens.makeLenses ''TagG
+Lens.makePrisms ''BinderBody
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind

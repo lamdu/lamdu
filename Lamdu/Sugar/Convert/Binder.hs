@@ -604,8 +604,8 @@ data ExprLet a = ExprLet
     , elAnnotation :: Annotation
     }
 
-mCheckForRedex :: Val (Input.Payload m a) -> Maybe (ExprLet (Input.Payload m a))
-mCheckForRedex expr = do
+checkForRedex :: Val (Input.Payload m a) -> Maybe (ExprLet (Input.Payload m a))
+checkForRedex expr = do
     V.Apply func arg <- expr ^? ExprLens.valApply
     V.Lam param body <- func ^? V.body . ExprLens._BAbs
     Just ExprLet
@@ -687,17 +687,27 @@ localExtractDestPost val =
     ConvertM.scMExtractDestPos .~ val ^. V.payload . Input.mStored
     & ConvertM.local
 
-convertLets ::
+letScopes :: Lens.Traversal' (BinderBody name m a) (CurAndPrev (Map BinderParamScopeId ScopeId))
+letScopes _ (BinderExpr e) = pure (BinderExpr e)
+letScopes f (BinderLet Let{..}) =
+    (\_lScopes _lBody -> BinderLet Let{..})
+    <$> f _lScopes
+    <*> letScopes f _lBody
+
+makeBinderBody ::
     (MonadA m, Monoid a) =>
     [V.Var] -> Val (Input.Payload m a) ->
     ConvertM m
-    ( [Let Guid m (ExpressionU m a)]
-    , Val (Input.Payload m a)
+    ( Val (Input.Payload m a)
+    , BinderBody Guid m (ExpressionU m a)
     , CurAndPrev (Map ScopeId ScopeId)
     )
-convertLets binderScopeVars expr =
-    case mCheckForRedex expr of
-    Nothing -> return ([], expr, mempty)
+makeBinderBody binderScopeVars expr =
+    case checkForRedex expr of
+    Nothing ->
+        do
+            exprS <- ConvertM.convertSubexpression expr & localExtractDestPost expr
+            return (expr, BinderExpr exprS, mempty)
     Just eli ->
         do
             value <-
@@ -709,35 +719,35 @@ convertLets binderScopeVars expr =
                 <*> traverse (^. Input.mStored) (eliBody eli)
                 <*> traverse (^. Input.mStored) (eliArg eli)
                 & Lens.sequenceOf Lens._Just
-            (items, body, bodyScopesMap) <-
-                eliBody eli & convertLets (eliParam eli : binderScopeVars)
+            (innerBody, body, bodyScopesMap) <-
+                makeBinderBody (eliParam eli : binderScopeVars) (eliBody eli)
             return
-                ( Let
-                    { _lEntityId = defEntityId
-                    , _lValue =
-                        value
-                        & bBody . rPayload . plData <>~
-                        eliHiddenPayloads eli ^. Lens.traversed . Input.userData
-                    , _lActions = actions
-                    , _lName = UniqueId.toGuid param
-                    , _lAnnotation = elAnnotation eli
-                    , _lScopes =
-                        eliBodyScopesMap eli
-                        <&> Map.keys
-                        <&> map ((_1 %~ BinderParamScopeId) . join (,))
-                        <&> Map.fromList
-                    }
-                    :
-                    ( items
-                        <&> lScopes %~
-                        \scopes ->
-                        appendScopeMaps
-                        <$> (scopes <&> Map.mapKeys (^. bParamScopeId))
-                        -- TODO: How to remove the ugly mapKeys here?
-                        <*> eliBodyScopesMap eli
-                        <&> Map.mapKeys BinderParamScopeId
-                    )
-                , body
+                ( innerBody
+                , BinderLet
+                  Let
+                  { _lEntityId = defEntityId
+                  , _lValue =
+                      value
+                      & bBody . SugarLens.binderBodyExpr . rPayload . plData <>~
+                      eliHiddenPayloads eli ^. Lens.traversed . Input.userData
+                  , _lActions = actions
+                  , _lName = UniqueId.toGuid param
+                  , _lAnnotation = elAnnotation eli
+                  , _lScopes =
+                      eliBodyScopesMap eli
+                      <&> Map.keys
+                      <&> map ((_1 %~ BinderParamScopeId) . join (,))
+                      <&> Map.fromList
+                  , _lBody =
+                    body
+                    & letScopes %~
+                      \scopes ->
+                      appendScopeMaps
+                      <$> (scopes <&> Map.mapKeys (^. bParamScopeId))
+                      -- TODO: How to remove the ugly mapKeys here?
+                      <*> eliBodyScopesMap eli
+                      <&> Map.mapKeys BinderParamScopeId
+                  }
                 , appendScopeMaps <$> eliBodyScopesMap eli <*> bodyScopesMap
                 )
         where
@@ -756,27 +766,24 @@ makeBinder :: (MonadA m, Monoid a) =>
     ConvertM m (Binder Guid m (ExpressionU m a))
 makeBinder mChosenScopeProp mPresentationModeProp convParams funcBody =
     do
-        (letItems, letBody, bodyScopesMap) <-
-            convertLets (cpMLamParam convParams ^.. Lens._Just) funcBody
-        bodyS <-
-            ConvertM.convertSubexpression letBody & localExtractDestPost letBody
+        (innerMostLetBody, binderBody, bodyScopesMap) <- makeBinderBody ourParams funcBody
         return Binder
             { _bParams = convParams ^. cpParams
             , _bMPresentationModeProp = mPresentationModeProp
             , _bMChosenScopeProp = mChosenScopeProp
-            , _bBody = bodyS
+            , _bBody = binderBody
             , _bScopes =
                 binderScopes
                 <$> bodyScopesMap
                 <*> cpScopes convParams
-            , _bLets = letItems
             , _bMActions =
                 mkActions
                 <$> cpMAddFirstParam convParams
-                <*> letBody ^. V.payload . Input.mStored
+                <*> innerMostLetBody ^. V.payload . Input.mStored
             }
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
     where
+        ourParams = cpMLamParam convParams ^.. Lens._Just
         binderScopes scopesMap paramScopes =
             paramScopes
             <&> Lens.traversed %~
@@ -816,7 +823,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                 do
                     guard $ Lens.nullOf ExprLens.valHole lamBody
                     mDeleteLam
-                        <&> Lens.mapped .~ binder ^. bBody . rPayload . plEntityId
+                        <&> Lens.mapped .~ binder ^. bBody . SugarLens.binderBodyExpr . rPayload . plEntityId
         let paramSet =
                 binder ^.. bParams . SugarLens.binderNamedParams .
                 Lens.traversed . npiName
@@ -826,7 +833,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                     Lambda NormalBinder binder
                 | otherwise =
                     binder
-                    & bBody %~ markLightParams paramSet
+                    & bBody . SugarLens.binderBodyExpr %~ markLightParams paramSet
                     & Lambda LightLambda
         BodyLam lambda
             & addActions exprPl
@@ -835,8 +842,8 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
 useNormalLambda :: Binder name m (Expression name m a) -> Bool
 useNormalLambda binder =
     or
-    [ Lens.has (bLets . Lens.traversed) binder
-    , Lens.has (bBody . SugarLens.payloadsOf forbiddenLightLamSubExprs) binder
+    [ Lens.has (bBody . _BinderLet) binder
+    , Lens.has (bBody . SugarLens.binderBodyExpr . SugarLens.payloadsOf forbiddenLightLamSubExprs) binder
     , Lens.nullOf (bParams . _FieldParams) binder
     ]
     where
