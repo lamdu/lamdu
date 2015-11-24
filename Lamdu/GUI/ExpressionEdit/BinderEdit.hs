@@ -459,7 +459,7 @@ makeRHSEdit mActions params binderBody = do
                 WidgetIds.fromEntityId (last ps ^. _2 . Sugar.fpId) <$ savePos
         addLetEventMap actions =
             Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
-            (E.Doc ["Edit", "Let clause", "Add first"]) .
+            (E.Doc ["Edit", "Let clause", "Add"]) .
             fmap (WidgetIds.nameEditOf . WidgetIds.fromEntityId) $
             savePos >> actions ^. Sugar.baAddInnermostLet
     ExprGuiM.makeSubexpression (const 0) binderBody
