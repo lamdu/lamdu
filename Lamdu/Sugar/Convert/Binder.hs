@@ -7,7 +7,7 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (guard, void, when, join)
+import           Control.Monad (guard, void, when)
 import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Foldable (traverse_)
@@ -59,7 +59,7 @@ data ConventionalParams m a = ConventionalParams
     , cpParamInfos :: Map T.Tag ConvertM.TagParamInfo
     , _cpParams :: BinderParams Guid m
     , cpMAddFirstParam :: Maybe (T m ParamAddResult)
-    , cpScopes :: CurAndPrev (Map ScopeId [ScopeId])
+    , cpScopes :: BinderBodyScope
     , cpMLamParam :: Maybe V.Var
     }
 
@@ -204,9 +204,10 @@ makeConvertToRecordParams mRecursiveVar (StoredLam (V.Lam paramVar lamBody) lamP
 tagGForLambdaTagParam :: V.Var -> T.Tag -> TagG ()
 tagGForLambdaTagParam paramVar tag = TagG (EntityId.ofLambdaTagParam paramVar tag) tag ()
 
-mkCpScopesOfLam :: Input.Payload m a -> CurAndPrev (Map ScopeId [ScopeId])
+mkCpScopesOfLam :: Input.Payload m a -> CurAndPrev (Map ScopeId [BinderParamScopeId])
 mkCpScopesOfLam x =
     x ^. Input.evalResults <&> (^. Input.eAppliesOfLam) <&> (fmap . fmap) fst
+    <&> (fmap . map) BinderParamScopeId
 
 convertRecordParams ::
     (MonadA m, Monoid a) =>
@@ -224,7 +225,7 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
             , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
             , _cpParams = FieldParams params
             , cpMAddFirstParam = mAddFirstParam
-            , cpScopes = mkCpScopesOfLam pl
+            , cpScopes = BinderBodyScope $ mkCpScopesOfLam pl
             , cpMLamParam = Just param
             }
     where
@@ -465,7 +466,7 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
             , cpParamInfos = Map.empty
             , _cpParams = funcParam
             , cpMAddFirstParam = mActions <&> snd
-            , cpScopes = mkCpScopesOfLam lamExprPl
+            , cpScopes = BinderBodyScope $ mkCpScopesOfLam lamExprPl
             , cpMLamParam = Just param
             }
     where
@@ -551,14 +552,7 @@ convertEmptyParams mRecursiveVar val =
                 <&> (^. Input.mStored)
                 & sequenceA
                 & Lens._Just %~ makeAddFirstParam
-            , cpScopes =
-                -- Collect scopes from all evaluated subexpressions.
-                val ^.. ExprLens.subExprPayloads . Input.evalResults
-                & sequenceA
-                <&> (^.. Lens.traversed . Input.eResults . Lens.to Map.keys . Lens.traversed)
-                <&> Lens.traversed %~ join (,)
-                <&> Map.fromList
-                <&> Lens.traversed %~ (:[])
+            , cpScopes = SameAsParentScope
             , cpMLamParam = Nothing
             }
 
@@ -765,8 +759,7 @@ makeBinder mChosenScopeProp mPresentationModeProp ConventionalParams{..} funcBod
             , _bMPresentationModeProp = mPresentationModeProp
             , _bMChosenScopeProp = mChosenScopeProp
             , _bBody = binderBody
-            , _bBodyScopes =
-              cpScopes <&> Lens.mapped . Lens.traversed %~ BinderParamScopeId
+            , _bBodyScopes = cpScopes
             , _bMActions = cpMAddFirstParam <&> BinderActions
             }
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)

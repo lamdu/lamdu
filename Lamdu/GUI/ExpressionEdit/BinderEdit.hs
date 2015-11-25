@@ -136,6 +136,9 @@ data ScopeCursor = ScopeCursor
     , sMNextParamScope :: Maybe Sugar.BinderParamScopeId
     }
 
+trivialScopeCursor :: Sugar.BinderParamScopeId -> ScopeCursor
+trivialScopeCursor x = ScopeCursor x Nothing Nothing
+
 scopeCursor :: Maybe Sugar.BinderParamScopeId -> [Sugar.BinderParamScopeId] -> Maybe ScopeCursor
 scopeCursor mChosenScope scopes =
     do
@@ -155,13 +158,12 @@ scopeCursor mChosenScope scopes =
             , sMNextParamScope = scopes ^? Lens.ix 1
             }
 
-getEvalScope :: MonadA m => CurAndPrev (Map ScopeId a) -> ExprGuiM m (CurAndPrev (Maybe a))
-getEvalScope scopeMap =
-    do
-        mOuterScopeId <- ExprGuiM.readMScopeId
-        (liftA2 . liftA2) Map.lookup mOuterScopeId (scopeMap <&> Just)
-            <&> join
-            & return
+getEvalScope ::
+    CurAndPrev (Maybe ScopeId) ->
+    CurAndPrev (Map ScopeId a) ->
+    CurAndPrev (Maybe a)
+getEvalScope mOuterScopeId scopeMap =
+    (liftA2 . liftA2) Map.lookup mOuterScopeId (scopeMap <&> Just) <&> join
 
 readBinderChosenScope ::
     MonadA m =>
@@ -178,10 +180,15 @@ mkChosenScopeCursor ::
     ExprGuiM m (CurAndPrev (Maybe ScopeCursor))
 mkChosenScopeCursor binder =
     do
-        mChosenScope <- readBinderChosenScope binder
-        -- The liftA2's go thru Maybe, CurAndPrev
-        binderBodyScopes <- getEvalScope (binder ^. Sugar.bBodyScopes)
-        binderBodyScopes <&> (>>= scopeCursor mChosenScope) & return
+        mOuterScopeId <- ExprGuiM.readMScopeId
+        case binder ^. Sugar.bBodyScopes of
+            Sugar.SameAsParentScope ->
+                mOuterScopeId <&> fmap (trivialScopeCursor . Sugar.BinderParamScopeId) & return
+            Sugar.BinderBodyScope binderBodyScope ->
+                do
+                    mChosenScope <- readBinderChosenScope binder
+                    getEvalScope mOuterScopeId binderBodyScope
+                        <&> (>>= scopeCursor mChosenScope) & return
 
 makeScopeEventMap ::
     MonadA m =>
@@ -451,7 +458,8 @@ makeBinderContentEdit params (Sugar.BinderLet l) =
                  (E.Doc ["Edit", "Delete let expression"])
                  . fmap WidgetIds.fromEntityId . (^. Sugar.laSetToHole))
                 (l ^. Sugar.lActions)
-        letBodyScope <- getEvalScope (l ^. Sugar.lBodyScope)
+        mOuterScopeId <- ExprGuiM.readMScopeId
+        let letBodyScope = getEvalScope mOuterScopeId (l ^. Sugar.lBodyScope)
         [ makeLetEdit l
             , makeBinderBodyEdit params body
               & ExprGuiM.withLocalMScopeId letBodyScope

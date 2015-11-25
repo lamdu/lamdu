@@ -21,6 +21,7 @@ module Lamdu.Sugar.Types
     , BinderBodyActions(..), bbaAddOuterLet
     , BinderBody(..), bbMActions, bbContent
     , BinderContent(..), _BinderLet, _BinderExpr
+    , BinderBodyScope(..)
     , Binder(..)
         , bMPresentationModeProp, bMChosenScopeProp, bParams, bBody
         , bMActions, bBodyScopes
@@ -520,6 +521,13 @@ data BinderBody name m expr = BinderBody
     , _bbContent :: BinderContent name m expr
     } deriving (Functor, Foldable, Traversable)
 
+data BinderBodyScope
+    = SameAsParentScope
+      -- ^ no binder params
+    | BinderBodyScope (CurAndPrev (Map E.ScopeId [BinderParamScopeId]))
+      -- ^ binder has params, use the map to get the param application
+      -- scopes
+
 data Binder name m expr = Binder
     { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
     , _bMChosenScopeProp :: Maybe (MkProperty m (Maybe BinderParamScopeId))
@@ -527,7 +535,7 @@ data Binder name m expr = Binder
     , _bBody :: BinderBody name m expr
     , _bMActions :: Maybe (BinderActions m)
     , -- The scope inside a lambda (if exists)
-      _bBodyScopes :: CurAndPrev (Map E.ScopeId [BinderParamScopeId])
+      _bBodyScopes :: BinderBodyScope
     } deriving (Functor, Foldable, Traversable)
 
 data AcceptNewType m = AcceptNewType
