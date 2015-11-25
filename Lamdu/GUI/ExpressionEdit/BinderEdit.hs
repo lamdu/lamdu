@@ -31,7 +31,6 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Eval.Val (ScopeId)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -158,12 +157,8 @@ scopeCursor mChosenScope scopes =
             , sMNextParamScope = scopes ^? Lens.ix 1
             }
 
-getEvalScope ::
-    CurAndPrev (Maybe ScopeId) ->
-    CurAndPrev (Map ScopeId a) ->
-    CurAndPrev (Maybe a)
-getEvalScope mOuterScopeId scopeMap =
-    (liftA2 . liftA2) Map.lookup mOuterScopeId (scopeMap <&> Just) <&> join
+lookupMKey :: Ord k => Maybe k -> Map k a -> Maybe a
+lookupMKey k m = k >>= (`Map.lookup` m)
 
 readBinderChosenScope ::
     MonadA m =>
@@ -187,7 +182,7 @@ mkChosenScopeCursor binder =
             Sugar.BinderBodyScope binderBodyScope ->
                 do
                     mChosenScope <- readBinderChosenScope binder
-                    getEvalScope mOuterScopeId binderBodyScope
+                    liftA2 lookupMKey mOuterScopeId binderBodyScope
                         <&> (>>= scopeCursor mChosenScope) & return
 
 makeScopeEventMap ::
@@ -459,7 +454,7 @@ makeBinderContentEdit params (Sugar.BinderLet l) =
                  . fmap WidgetIds.fromEntityId . (^. Sugar.laSetToHole))
                 (l ^. Sugar.lActions)
         mOuterScopeId <- ExprGuiM.readMScopeId
-        let letBodyScope = getEvalScope mOuterScopeId (l ^. Sugar.lBodyScope)
+        let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
         [ makeLetEdit l
             , makeBinderBodyEdit params body
               & ExprGuiM.withLocalMScopeId letBodyScope
