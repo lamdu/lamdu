@@ -210,7 +210,7 @@ mkGroup option =
 
 literalNumGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
 literalNumGroups holeInfo =
-    case reads searchTerm of
+    case reads ('0':searchTerm) of
     [(val, "")] -> option val
     [(val, ".")] -> option val
     _ -> pure []
