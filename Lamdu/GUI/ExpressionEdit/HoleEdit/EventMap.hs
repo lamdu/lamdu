@@ -75,7 +75,7 @@ disallowChars Config.Hole{..} searchTerm =
     deleteKeys (holePickAndMoveToNextHoleKeys ++ holePickResultKeys) .
     disallowMix
     where
-        allowDigitsOnly = E.filterChars (`notElem` digitChars)
+        allowDigitsOnly = E.filterChars (`elem` digitChars)
         allowOperatorsOnly = E.filterChars (`elem` operatorChars)
         disallowOperators = E.filterChars (`notElem` operatorChars)
         allowNumCharsOnly = E.filterChars (`elem` ('.':digitChars))
