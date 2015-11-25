@@ -204,6 +204,10 @@ makeConvertToRecordParams mRecursiveVar (StoredLam (V.Lam paramVar lamBody) lamP
 tagGForLambdaTagParam :: V.Var -> T.Tag -> TagG ()
 tagGForLambdaTagParam paramVar tag = TagG (EntityId.ofLambdaTagParam paramVar tag) tag ()
 
+mkCpScopesOfLam :: Input.Payload m a -> CurAndPrev (Map ScopeId [ScopeId])
+mkCpScopesOfLam x =
+    x ^. Input.evalResults <&> (^. Input.eAppliesOfLam) <&> (fmap . fmap) fst
+
 convertRecordParams ::
     (MonadA m, Monoid a) =>
     Maybe V.Var -> [FieldParam] ->
@@ -220,7 +224,7 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
             , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
             , _cpParams = FieldParams params
             , cpMAddFirstParam = mAddFirstParam
-            , cpScopes = pl ^. Input.evalResults <&> mkCpScopes
+            , cpScopes = mkCpScopesOfLam pl
             , cpMLamParam = Just param
             }
     where
@@ -257,9 +261,6 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
                         , _fpHiddenIds = []
                         }
                     )
-
-mkCpScopes :: Input.EvalResultsForExpr -> Map ScopeId [ScopeId]
-mkCpScopes x = x ^. Input.eAppliesOfLam <&> Lens.traversed %~ fst
 
 setParamList :: MonadA m => MkProperty m (Maybe [T.Tag]) -> [T.Tag] -> T m ()
 setParamList paramListProp newParamList =
@@ -464,7 +465,7 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
             , cpParamInfos = Map.empty
             , _cpParams = funcParam
             , cpMAddFirstParam = mActions <&> snd
-            , cpScopes = lamExprPl ^. Input.evalResults <&> mkCpScopes
+            , cpScopes = mkCpScopesOfLam lamExprPl
             , cpMLamParam = Just param
             }
     where
