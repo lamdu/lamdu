@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Input
         , entityId, inferred, mStored, evalResults, userData
     , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
     , inferredType, inferredScope
-    , mkPayload, mkUnstoredPayload
+    , mkUnstoredPayload
     , preparePayloads
     ) where
 
@@ -72,16 +72,6 @@ userData f Payload{..} = f _userData <&> \_userData -> Payload{..}
 propEntityId :: Property m (ValI m) -> EntityId
 propEntityId = EntityId.ofValI . Property.value
 
-mkPayload ::
-    a -> Infer.Payload ->
-    CurAndPrev EvalResultsForExpr -> ValIProperty m ->
-    Payload m a
-mkPayload _userData _inferred _evalResults stored =
-    Payload{..}
-    where
-        _entityId = propEntityId stored
-        _mStored = Just stored
-
 mkUnstoredPayload :: a -> Infer.Payload -> EntityId -> Payload m a
 mkUnstoredPayload _userData _inferred _entityId =
     Payload{..}
@@ -101,9 +91,13 @@ preparePayloads evalRes inferredVal =
     inferredVal <&> f
     where
         f (inferPl, valIProp) =
-            mkPayload [propEntityId valIProp] inferPl
-            (evalRes <&> exprEvalRes execId)
-            valIProp
+            Payload
+            { _entityId = propEntityId valIProp
+            , _mStored = Just valIProp
+            , _inferred = inferPl
+            , _evalResults = evalRes <&> exprEvalRes execId
+            , _userData = [propEntityId valIProp]
+            }
             where
                 execId = Property.value valIProp
         exprEvalRes pl r =

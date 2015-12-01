@@ -319,7 +319,13 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
             -- TODO: Evaluate hole results instead of Map.empty's?
             ( wasStored
             , ( stored
-              , Input.mkPayload a inferred (CurAndPrev noEval noEval) stored
+              , Input.Payload
+                { Input._userData = a
+                , Input._inferred = inferred
+                , Input._evalResults = CurAndPrev noEval noEval
+                , Input._mStored = Just stored
+                , Input._entityId = stored & Property.value & EntityId.ofValI
+                }
               )
             )
         noEval = Input.EvalResultsForExpr Map.empty Map.empty
