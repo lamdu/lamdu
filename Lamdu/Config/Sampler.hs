@@ -14,7 +14,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
-import           Lamdu.DataFile (accessDataFile)
+import           Lamdu.DataFile (getDataFilePath)
 import           System.Directory (getModificationTime)
 
 import           Prelude.Compat
@@ -69,7 +69,8 @@ new :: FilePath -> IO (Sampler Config)
 new startDir =
     do
         ref <-
-            sample load
+            getConfigPath
+            >>= load
             >>= E.evaluate
             >>= newMVar
         tid <-
@@ -77,8 +78,8 @@ new startDir =
             do
                 threadDelay 300000
                 modifyMVar_ ref $ \old ->
-                    sample (maybeLoad old)
+                    (getConfigPath >>= maybeLoad old)
                     `E.catch` \E.SomeException {} -> return old
         return $ Sampler tid $ readMVar ref
     where
-        sample f = accessDataFile startDir f "config.json"
+        getConfigPath = getDataFilePath startDir "config.json"
