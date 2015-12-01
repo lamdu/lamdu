@@ -16,14 +16,11 @@ import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Store.Guid (Guid)
-import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Property)
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
 import           Lamdu.Eval.Val (EvalResult, ScopeId)
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
-import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Type (Type)
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Infer as Infer
@@ -82,12 +79,11 @@ mkPayload ::
 mkPayload _userData _inferred _evalResults stored =
     Payload{..}
     where
-        _guid = IRef.guid $ ExprIRef.unValI $ Property.value stored
         _entityId = propEntityId stored
         _mStored = Just stored
 
-mkUnstoredPayload :: a -> Infer.Payload -> Guid -> EntityId -> Payload m a
-mkUnstoredPayload _userData _inferred _guid _entityId =
+mkUnstoredPayload :: a -> Infer.Payload -> EntityId -> Payload m a
+mkUnstoredPayload _userData _inferred _entityId =
     Payload{..}
     where
         _mStored = Nothing
