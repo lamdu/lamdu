@@ -231,7 +231,14 @@ sugar sugarContext exprPl val =
     <&> ConvertM.convertSubexpression
     >>= ConvertM.run sugarContext
     where
-        mkPayload (pl, x) entityId = Input.mkUnstoredPayload x pl entityId
+        mkPayload (pl, x) entityId =
+            Input.Payload
+            { Input._userData = x
+            , Input._inferred = pl
+            , Input._entityId = entityId
+            , Input._mStored = Nothing
+            , Input._evalResults = CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
+            }
         holeInferred = exprPl ^. Input.inferred
 
 mkHole ::

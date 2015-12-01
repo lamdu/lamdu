@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.Input
         , entityId, inferred, mStored, evalResults, userData
     , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
     , inferredType, inferredScope
-    , mkUnstoredPayload
     , preparePayloads
     ) where
 
@@ -71,13 +70,6 @@ userData f Payload{..} = f _userData <&> \_userData -> Payload{..}
 
 propEntityId :: Property m (ValI m) -> EntityId
 propEntityId = EntityId.ofValI . Property.value
-
-mkUnstoredPayload :: a -> Infer.Payload -> EntityId -> Payload m a
-mkUnstoredPayload _userData _inferred _entityId =
-    Payload{..}
-    where
-        _mStored = Nothing
-        _evalResults = CurAndPrev emptyEvalResults emptyEvalResults
 
 emptyEvalResults :: EvalResultsForExpr
 emptyEvalResults = EvalResultsForExpr Map.empty Map.empty
