@@ -24,10 +24,16 @@ import           Prelude.Compat
 convertVar :: MonadA m => ConvertM.Context m -> V.Var -> Type -> GetVar Guid m
 convertVar sugarContext param paramType
     | param == recurseVar =
-      GetBinder (BinderVar selfNameRef GetDefinition)
+      GetBinder BinderVar
+      { _bvNameRef = selfNameRef
+      , _bvForm = GetDefinition
+      }
 
     | isGetLet =
-      GetBinder (BinderVar paramNameRef GetLet)
+      GetBinder BinderVar
+      { _bvNameRef = paramNameRef
+      , _bvForm = GetLet
+      }
 
     | isGetParamRecord =
       GetParamsRecord ParamsRecordVar { _prvFieldNames = typeRecordGuids }
