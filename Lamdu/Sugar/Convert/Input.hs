@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Input
         , entityId, inferred, mStored, evalResults, userData
     , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
     , inferredType, inferredScope
-    , preparePayloads
+    , preparePayloads, prepareUnstoredPayloads
     ) where
 
 import           Control.Lens (Lens, Lens')
@@ -72,6 +72,22 @@ propEntityId = EntityId.ofValI . Property.value
 
 emptyEvalResults :: EvalResultsForExpr
 emptyEvalResults = EvalResultsForExpr Map.empty Map.empty
+
+-- Unstored and without eval results (e.g: hole result)
+prepareUnstoredPayloads ::
+    Val (Infer.Payload, EntityId, a) ->
+    Val (Payload m a)
+prepareUnstoredPayloads val =
+    val <&> f
+    where
+        f (inferPl, eId, x) =
+            Payload
+            { _userData = x
+            , _inferred = inferPl
+            , _entityId = eId
+            , _mStored = Nothing
+            , _evalResults = CurAndPrev emptyEvalResults emptyEvalResults
+            }
 
 preparePayloads ::
     CurAndPrev (EvalResults (ValI m)) ->

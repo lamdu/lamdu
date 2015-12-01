@@ -228,17 +228,11 @@ sugar sugarContext exprPl val =
     <&> Lens.mapped %~ mkPayload
     <&> (EntityId.randomizeExprAndParams . genFromHashable)
         (exprPl ^. Input.entityId)
+    <&> Input.prepareUnstoredPayloads
     <&> ConvertM.convertSubexpression
     >>= ConvertM.run sugarContext
     where
-        mkPayload (pl, x) entityId =
-            Input.Payload
-            { Input._userData = x
-            , Input._inferred = pl
-            , Input._entityId = entityId
-            , Input._mStored = Nothing
-            , Input._evalResults = CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
-            }
+        mkPayload (pl, x) entityId = (pl, entityId, x)
         holeInferred = exprPl ^. Input.inferred
 
 mkHole ::
