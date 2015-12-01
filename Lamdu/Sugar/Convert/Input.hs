@@ -1,5 +1,5 @@
 -- | Preprocess of input to sugar
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable, TemplateHaskell #-}
 module Lamdu.Sugar.Convert.Input
     ( Payload(..)
         , entityId, inferred, mStored, evalResults, userData
@@ -8,7 +8,7 @@ module Lamdu.Sugar.Convert.Input
     , preparePayloads, prepareUnstoredPayloads
     ) where
 
-import           Control.Lens (Lens, Lens')
+import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.CurAndPrev (CurAndPrev(..))
@@ -40,32 +40,14 @@ data Payload m a = Payload
     , _userData :: a
     } deriving (Functor, Foldable, Traversable)
 
-eResults :: Lens' EvalResultsForExpr (Map ScopeId (EvalResult ()))
-eResults f EvalResultsForExpr{..} = f _eResults <&> \_eResults -> EvalResultsForExpr{..}
-
-eAppliesOfLam :: Lens' EvalResultsForExpr (Map ScopeId [(ScopeId, EvalResult ())])
-eAppliesOfLam f EvalResultsForExpr{..} = f _eAppliesOfLam <&> \_eAppliesOfLam -> EvalResultsForExpr{..}
-
-entityId :: Lens' (Payload m a) EntityId
-entityId f Payload{..} = f _entityId <&> \_entityId -> Payload{..}
-
-inferred :: Lens' (Payload m a) Infer.Payload
-inferred f Payload{..} = f _inferred <&> \_inferred -> Payload{..}
+Lens.makeLenses ''EvalResultsForExpr
+Lens.makeLenses ''Payload
 
 inferredType :: Lens' (Payload m a) Type
 inferredType = inferred . Infer.plType
 
 inferredScope :: Lens' (Payload m a) Infer.Scope
 inferredScope = inferred . Infer.plScope
-
-mStored :: Lens' (Payload m a) (Maybe (ValIProperty m))
-mStored f Payload{..} = f _mStored <&> \_mStored -> Payload{..}
-
-evalResults :: Lens' (Payload m a) (CurAndPrev EvalResultsForExpr)
-evalResults f Payload{..} = f _evalResults <&> \_evalResults -> Payload{..}
-
-userData :: Lens (Payload m a) (Payload m b) a b
-userData f Payload{..} = f _userData <&> \_userData -> Payload{..}
 
 propEntityId :: Property m (ValI m) -> EntityId
 propEntityId = EntityId.ofValI . Property.value
