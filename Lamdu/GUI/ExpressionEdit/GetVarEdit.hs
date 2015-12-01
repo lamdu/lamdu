@@ -12,6 +12,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -72,6 +73,14 @@ makeNameRef myId nameRef makeView =
         makeView (nameRef ^. Sugar.nrName) myId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
 
+makeInlineEventMap ::
+    Functor f => Config -> Maybe (f Sugar.EntityId) -> Widget.EventHandlers f
+makeInlineEventMap _ Nothing = mempty
+makeInlineEventMap config (Just inline) =
+    inline <&> WidgetIds.fromEntityId
+    & Widget.keysEventMapMovesCursor (Config.inlineKeys config)
+      (E.Doc ["Edit", "Inline"])
+
 make ::
     MonadA m =>
     Sugar.GetVar (Name m) m ->
@@ -88,6 +97,9 @@ make getVar pl =
                 Sugar.GetDefinition -> definitionColor
                 & makeSimpleView
                 & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
+                <&> ExpressionGui.egWidget %~
+                    Widget.weakerEvents
+                    (makeInlineEventMap config (binderVar ^. Sugar.bvMInline))
             Sugar.GetParam param ->
                 case param ^. Sugar.pBinderMode of
                 Sugar.LightLambda ->

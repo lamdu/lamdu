@@ -68,7 +68,7 @@ module Lamdu.Sugar.Types
     , NameRef(..), nrName, nrGotoDefinition
     , Param(..), pNameRef, pForm, pBinderMode
     , BinderVarForm(..), _GetDefinition, _GetLet
-    , BinderVar(..), bvNameRef, bvForm
+    , BinderVar(..), bvNameRef, bvForm, bvMInline
     , GetVar(..), _GetParam, _GetParamsRecord, _GetBinder
     , ParamsRecordVar(..), prvFieldNames
     , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
@@ -393,6 +393,8 @@ data BinderVarForm = GetDefinition | GetLet
 data BinderVar name m = BinderVar
     { _bvNameRef :: NameRef name m
     , _bvForm :: BinderVarForm
+    , -- Just means it is stored and inlinable:
+      _bvMInline :: Maybe (T m EntityId)
     }
 
 newtype ParamsRecordVar name = ParamsRecordVar

@@ -178,6 +178,7 @@ data Config = Config
     , letItemPadding :: Vector2 Double
 
     , extractKeys :: [ModKey]
+    , inlineKeys :: [ModKey]
 
     , typeTint :: Draw.Color
     , valFrameBGColor :: Draw.Color

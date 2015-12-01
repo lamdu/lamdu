@@ -27,12 +27,14 @@ convertVar sugarContext param paramType
       GetBinder BinderVar
       { _bvNameRef = selfNameRef
       , _bvForm = GetDefinition
+      , _bvMInline = Nothing
       }
 
     | isGetLet =
       GetBinder BinderVar
       { _bvNameRef = paramNameRef
       , _bvForm = GetLet
+      , _bvMInline = Nothing
       }
 
     | isGetParamRecord =
