@@ -199,7 +199,7 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
         }
 
 -- Ignoring alpha-renames:
-consistentExprIds :: EntityId -> Val (Guid -> EntityId -> a) -> Val a
+consistentExprIds :: EntityId -> Val (EntityId -> a) -> Val a
 consistentExprIds = EntityId.randomizeExprAndParams . genFromHashable
 
 infer :: MonadA m => Infer.Payload -> Val a -> IRefInfer.M m (Val (Infer.Payload, a))
@@ -231,7 +231,7 @@ sugar sugarContext exprPl val =
     <&> ConvertM.convertSubexpression
     >>= ConvertM.run sugarContext
     where
-        mkPayload (pl, x) _guid entityId = Input.mkUnstoredPayload x pl entityId
+        mkPayload (pl, x) entityId = Input.mkUnstoredPayload x pl entityId
         holeInferred = exprPl ^. Input.inferred
 
 mkHole ::
@@ -296,9 +296,9 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
         -- animations and cursor navigation. The guids are kept as
         -- metadata anchors.
 
-        makeConsistentPayload (False, (_, pl)) _guid entityId = pl
+        makeConsistentPayload (False, (_, pl)) entityId = pl
             & Input.entityId .~ entityId
-        makeConsistentPayload (True, (_, pl)) _ _ = pl
+        makeConsistentPayload (True, (_, pl)) _ = pl
         consistentExpr =
             writtenExpr
             <&> makeConsistentPayload
