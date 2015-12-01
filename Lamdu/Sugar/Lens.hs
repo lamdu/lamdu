@@ -41,7 +41,7 @@ subExprPayloads ::
     (Payload m a) (Payload m b)
 subExprPayloads f val@(Expression body pl) =
     Expression
-    <$> (body & Lens.traversed .> subExprPayloads %%~ f)
+    <$> (Lens.traversed .> subExprPayloads) f body
     <*> Lens.indexed f (void val) pl
 
 payloadsIndexedByPath ::
