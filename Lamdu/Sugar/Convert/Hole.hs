@@ -220,6 +220,27 @@ inferAssertSuccess sugarContext holeInferred val =
         (error . ("infer error on suggested val in hole: " ++) .
          show . pPrint) id
 
+-- Unstored and without eval results (e.g: hole result)
+prepareUnstoredPayloads ::
+    Val (Infer.Payload, EntityId, a) ->
+    Val (Input.Payload m a)
+prepareUnstoredPayloads val =
+    val <&> mk & Input.preparePayloads
+    where
+        mk (inferPl, eId, x) =
+            ( eId
+            , \varRefs ->
+              Input.Payload
+              { Input._varRefsOfLambda = varRefs
+              , Input._userData = x
+              , Input._inferred = inferPl
+              , Input._entityId = eId
+              , Input._mStored = Nothing
+              , Input._evalResults =
+                CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
+              }
+            )
+
 sugar ::
     (MonadA m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy -> Val a -> T m (ExpressionU m a)
@@ -228,7 +249,7 @@ sugar sugarContext exprPl val =
     <&> Lens.mapped %~ mkPayload
     <&> (EntityId.randomizeExprAndParams . genFromHashable)
         (exprPl ^. Input.entityId)
-    <&> Input.prepareUnstoredPayloads
+    <&> prepareUnstoredPayloads
     <&> ConvertM.convertSubexpression
     >>= ConvertM.run sugarContext
     where
@@ -282,7 +303,7 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
         <&> intoStorePoint
         & writeExprMStored (Property.value holeStored)
         <&> ExprIRef.addProperties (Property.set holeStored)
-        <&> fmap toPayload
+        <&> Input.preparePayloads . fmap toPayload
     let -- Replace the entity ids with consistent ones:
 
         -- The sugar convert must apply *inside* the forked transaction
@@ -318,17 +339,23 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
             (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
         toPayload (stored, (inferred, wasStored, a)) =
             -- TODO: Evaluate hole results instead of Map.empty's?
-            ( wasStored
-            , ( stored
-              , Input.Payload
-                { Input._userData = a
-                , Input._inferred = inferred
-                , Input._evalResults = CurAndPrev noEval noEval
-                , Input._mStored = Just stored
-                , Input._entityId = stored & Property.value & EntityId.ofValI
-                }
+            ( eId
+            , \varRefs ->
+              ( wasStored
+              , ( stored
+                , Input.Payload
+                  { Input._varRefsOfLambda = varRefs
+                  , Input._userData = a
+                  , Input._inferred = inferred
+                  , Input._evalResults = CurAndPrev noEval noEval
+                  , Input._mStored = Just stored
+                  , Input._entityId = eId
+                  }
+                )
               )
             )
+            where
+                eId = Property.value stored & EntityId.ofValI
         noEval = Input.EvalResultsForExpr Map.empty Map.empty
 
 idTranslations ::

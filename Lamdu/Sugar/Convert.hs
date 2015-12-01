@@ -8,13 +8,14 @@ import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Store.Guid (Guid)
+import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Builtins.Anchors (recurseVar)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Eval.Results (EvalResults)
+import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
 import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
@@ -96,6 +97,37 @@ mkContext defI cp reinferCheckRoot inferContext =
     , scConvertSubexpression = ConvertExpr.convert
     }
 
+
+propEntityId :: Property f (ValI m) -> EntityId
+propEntityId = EntityId.ofValI . Property.value
+
+preparePayloads ::
+    CurAndPrev (EvalResults (ValI m)) ->
+    Val (Infer.Payload, ValIProperty m) ->
+    Val (Input.Payload m ())
+preparePayloads evalRes inferredVal =
+    inferredVal <&> f & Input.preparePayloads
+    where
+        f (inferPl, valIProp) =
+            ( eId
+            , \varRefs ->
+              Input.Payload
+              { Input._varRefsOfLambda = varRefs
+              , Input._entityId = eId
+              , Input._mStored = Just undefined -- valIProp
+              , Input._inferred = inferPl
+              , Input._evalResults = evalRes <&> exprEvalRes execId
+              , Input._userData = ()
+              }
+            )
+            where
+                eId = propEntityId valIProp
+                execId = Property.value valIProp
+        exprEvalRes pl r =
+            Input.EvalResultsForExpr
+            (r ^. erExprValues . Lens.at pl . Lens._Just)
+            (r ^. erAppliesOfLam . Lens.at pl . Lens._Just)
+
 loadInferPrepareInput ::
     MonadA m =>
     CurAndPrev (EvalResults (ValI m)) ->
@@ -103,7 +135,7 @@ loadInferPrepareInput ::
     T m (Val (Input.Payload m [EntityId]), Infer.Context)
 loadInferPrepareInput evalRes action =
     action
-    <&> Input.preparePayloads evalRes
+    <&> preparePayloads evalRes
     <&> Lens.mapped %~ setUserData
     >>= ParamList.loadForLambdas
     & assertRunInfer

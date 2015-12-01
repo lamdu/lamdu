@@ -2,10 +2,10 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable, TemplateHaskell #-}
 module Lamdu.Sugar.Convert.Input
     ( Payload(..)
-        , entityId, inferred, mStored, evalResults, userData
+        , varRefsOfLambda, entityId, inferred, mStored, evalResults, userData
     , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
     , inferredType, inferredScope
-    , preparePayloads, prepareUnstoredPayloads
+    , preparePayloads
     ) where
 
 import           Control.Lens (Lens')
@@ -14,16 +14,13 @@ import           Control.Lens.Operators
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Property)
-import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
 import           Lamdu.Eval.Val (EvalResult, ScopeId)
-import           Lamdu.Expr.IRef (ValI, ValIProperty)
+import           Lamdu.Expr.IRef (ValIProperty)
 import           Lamdu.Expr.Type (Type)
 import           Lamdu.Expr.Val (Val(..))
+import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.EntityId (EntityId)
-import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 
 import           Prelude.Compat
 
@@ -37,6 +34,8 @@ data Payload m a = Payload
     , _inferred :: Infer.Payload
     , _mStored :: Maybe (ValIProperty m)
     , _evalResults :: CurAndPrev EvalResultsForExpr
+    , -- The GetVars of this lambda's var if this is a lambda
+      _varRefsOfLambda :: [EntityId]
     , _userData :: a
     } deriving (Functor, Foldable, Traversable)
 
@@ -49,46 +48,28 @@ inferredType = inferred . Infer.plType
 inferredScope :: Lens' (Payload m a) Infer.Scope
 inferredScope = inferred . Infer.plScope
 
-propEntityId :: Property m (ValI m) -> EntityId
-propEntityId = EntityId.ofValI . Property.value
-
 emptyEvalResults :: EvalResultsForExpr
 emptyEvalResults = EvalResultsForExpr Map.empty Map.empty
 
--- Unstored and without eval results (e.g: hole result)
-prepareUnstoredPayloads ::
-    Val (Infer.Payload, EntityId, a) ->
-    Val (Payload m a)
-prepareUnstoredPayloads val =
-    val <&> f
+preparePayloads :: Val (EntityId, [EntityId] -> pl) -> Val pl
+preparePayloads =
+    snd . go
     where
-        f (inferPl, eId, x) =
-            Payload
-            { _userData = x
-            , _inferred = inferPl
-            , _entityId = eId
-            , _mStored = Nothing
-            , _evalResults = CurAndPrev emptyEvalResults emptyEvalResults
-            }
-
-preparePayloads ::
-    CurAndPrev (EvalResults (ValI m)) ->
-    Val (Infer.Payload, ValIProperty m) ->
-    Val (Payload m ())
-preparePayloads evalRes inferredVal =
-    inferredVal <&> f
-    where
-        f (inferPl, valIProp) =
-            Payload
-            { _entityId = propEntityId valIProp
-            , _mStored = Just valIProp
-            , _inferred = inferPl
-            , _evalResults = evalRes <&> exprEvalRes execId
-            , _userData = ()
-            }
+        go :: Val (EntityId, [EntityId] -> pl) -> (Map V.Var [EntityId], Val pl)
+        go (Val (x, mkPayload) body) =
+            ( childrenVars
+              & case body of
+                V.BLeaf (V.LVar var) -> Lens.at var <>~ Just [x]
+                V.BAbs (V.Lam var _) -> Lens.at var .~ Nothing
+                _ -> id
+            , b <&> snd
+              & Val
+                ( case body of
+                  V.BAbs (V.Lam var _) -> childrenVars ^. Lens.at var . Lens._Just
+                  _ -> []
+                  & mkPayload
+                )
+            )
             where
-                execId = Property.value valIProp
-        exprEvalRes pl r =
-            EvalResultsForExpr
-            (r ^. erExprValues . Lens.at pl . Lens._Just)
-            (r ^. erAppliesOfLam . Lens.at pl . Lens._Just)
+                childrenVars = Map.unionsWith (++) (b ^.. Lens.traverse . Lens._1)
+                b = body <&> go
