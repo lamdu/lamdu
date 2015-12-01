@@ -11,7 +11,6 @@ module Lamdu.Sugar.Convert.Input
 import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -75,7 +74,6 @@ emptyEvalResults :: EvalResultsForExpr
 emptyEvalResults = EvalResultsForExpr Map.empty Map.empty
 
 preparePayloads ::
-    MonadA m =>
     CurAndPrev (EvalResults (ValI m)) ->
     Val (Infer.Payload, ValIProperty m) ->
     Val (Payload m [EntityId])
