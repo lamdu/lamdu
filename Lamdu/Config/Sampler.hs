@@ -1,15 +1,14 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Lamdu.Config.Sampler
     ( Sampler, new
-    , Version, getConfig
+    , Sample(..), getSample
     ) where
-
-import           Prelude.Compat
 
 import           Control.Concurrent (threadDelay, ThreadId)
 import           Control.Concurrent.MVar
 import           Control.Concurrent.Utils (forkIOUnmasked)
 import qualified Control.Exception as E
+import           Control.Lens.Operators
 import           Control.Monad (forever)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
@@ -18,44 +17,54 @@ import           Lamdu.Config (Config)
 import           Lamdu.DataFile (accessDataFile)
 import           System.Directory (getModificationTime)
 
+import           Prelude.Compat
+
 type ModificationTime = UTCTime
-type Version = ModificationTime
 
-data Sampler = Sampler
+-- TODO: FRP-style sampling of (mtime, file content) of the config
+-- file, then map over that to Config
+
+data Sample a = Sample
+    { sVersion :: ModificationTime
+    , sValue :: a
+    } deriving (Eq, Ord, Functor, Foldable, Traversable)
+
+data Sampler a = Sampler
     { _sThreadId :: ThreadId
-    , sGetConfig :: IO (ModificationTime, Config)
-    }
+    , sGetSample :: IO (Sample a)
+    } deriving Functor
 
-getConfig :: Sampler -> IO (Version, Config)
-getConfig = sGetConfig
+getSample :: Sampler a -> IO (Sample a)
+getSample = sGetSample
 
-withMTime :: FilePath -> IO a -> IO (ModificationTime, a)
+withMTime :: FilePath -> IO a -> IO (Sample a)
 withMTime path act =
     do
         mtimeBefore <- getModificationTime path
         res <- act
         mtimeAfter <- getModificationTime path
         if mtimeBefore == mtimeAfter
-            then return (mtimeAfter, res)
+            then Sample mtimeAfter res & return
             else withMTime path act
 
-load :: FilePath -> IO (ModificationTime, Config)
+load :: FilePath -> IO (Sample Config)
 load configPath =
-    withMTime configPath $ do
+    withMTime configPath $
+    do
         eConfig <- Aeson.eitherDecode' <$> LBS.readFile configPath
         either (fail . (msg ++)) return eConfig
     where
         msg = "Failed to parse config file contents at " ++ show configPath ++ ": "
 
-maybeLoad :: (ModificationTime, Config) -> FilePath -> IO (ModificationTime, Config)
-maybeLoad old@(oldMTime, _) configPath =
+maybeLoad :: Sample Config -> FilePath -> IO (Sample Config)
+maybeLoad old@(Sample oldMTime _) configPath =
     do
         mtime <- getModificationTime configPath
         if mtime == oldMTime
             then return old
             else load configPath
 
-new :: FilePath -> IO Sampler
+new :: FilePath -> IO (Sampler Config)
 new startDir =
     do
         ref <-

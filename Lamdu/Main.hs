@@ -173,20 +173,25 @@ scheduleRefresh :: RefreshScheduler -> IO ()
 scheduleRefresh (RefreshScheduler ref) = writeIORef ref True
 
 mainLoop ::
-    GLFW.Window -> RefreshScheduler -> Sampler ->
+    GLFW.Window -> RefreshScheduler -> Sampler Config ->
     (Config -> Widget.Size -> IO (Widget IO)) -> IO ()
 mainLoop win refreshScheduler configSampler iteration =
     do
         lastVersionNumRef <- newIORef =<< getCurrentTime
         let getAnimHalfLife =
-                ConfigSampler.getConfig configSampler <&> Style.anim . snd
+                ConfigSampler.getSample configSampler
+                <&> Style.anim . ConfigSampler.sValue
             makeWidget size =
                 do
-                    (_, config) <- ConfigSampler.getConfig configSampler
+                    config <-
+                        ConfigSampler.getSample configSampler
+                        <&> ConfigSampler.sValue
                     iteration config size
             tickHandler =
                 do
-                    (curVersionNum, _) <- ConfigSampler.getConfig configSampler
+                    curVersionNum <-
+                        ConfigSampler.getSample configSampler
+                        <&> ConfigSampler.sVersion
                     configChanged <- atomicModifyIORef lastVersionNumRef $ \lastVersionNum ->
                         (curVersionNum, lastVersionNum /= curVersionNum)
                     if configChanged
