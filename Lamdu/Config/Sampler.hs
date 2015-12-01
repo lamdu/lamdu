@@ -26,6 +26,7 @@ type ModificationTime = UTCTime
 
 data Sample a = Sample
     { sVersion :: ModificationTime
+    , sFilePath :: FilePath
     , sValue :: a
     } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
@@ -44,23 +45,23 @@ withMTime path act =
         res <- act
         mtimeAfter <- getModificationTime path
         if mtimeBefore == mtimeAfter
-            then Sample mtimeAfter res & return
+            then Sample mtimeAfter path res & return
             else withMTime path act
 
 load :: FilePath -> IO (Sample Config)
 load configPath =
-    withMTime configPath $
     do
         eConfig <- Aeson.eitherDecode' <$> LBS.readFile configPath
         either (fail . (msg ++)) return eConfig
+    & withMTime configPath
     where
         msg = "Failed to parse config file contents at " ++ show configPath ++ ": "
 
 maybeLoad :: Sample Config -> FilePath -> IO (Sample Config)
-maybeLoad old@(Sample oldMTime _) configPath =
+maybeLoad old configPath =
     do
         mtime <- getModificationTime configPath
-        if mtime == oldMTime
+        if mtime == sVersion old
             then return old
             else load configPath
 
