@@ -92,7 +92,7 @@ prepareUnstoredPayloads val =
 preparePayloads ::
     CurAndPrev (EvalResults (ValI m)) ->
     Val (Infer.Payload, ValIProperty m) ->
-    Val (Payload m [EntityId])
+    Val (Payload m ())
 preparePayloads evalRes inferredVal =
     inferredVal <&> f
     where
@@ -102,7 +102,7 @@ preparePayloads evalRes inferredVal =
             , _mStored = Just valIProp
             , _inferred = inferPl
             , _evalResults = evalRes <&> exprEvalRes execId
-            , _userData = [propEntityId valIProp]
+            , _userData = ()
             }
             where
                 execId = Property.value valIProp

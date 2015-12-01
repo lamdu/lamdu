@@ -104,8 +104,12 @@ loadInferPrepareInput ::
 loadInferPrepareInput evalRes action =
     action
     <&> Input.preparePayloads evalRes
+    <&> Lens.mapped %~ setUserData
     >>= ParamList.loadForLambdas
     & assertRunInfer
+    where
+        setUserData pl =
+            pl & Input.userData %~ \() -> [pl ^. Input.entityId]
 
 convertDefI ::
     MonadA m =>
