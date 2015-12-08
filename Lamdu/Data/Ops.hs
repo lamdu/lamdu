@@ -18,6 +18,7 @@ module Lamdu.Data.Ops
 import           Control.Lens.Operators
 import           Control.Monad (when)
 import           Control.MonadA (MonadA)
+import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, getP, setP, modP)
 import qualified Data.Store.Transaction as Transaction
@@ -90,13 +91,17 @@ lambdaWrap exprP =
         Property.set exprP newExprI
         return (newParam, newExprI)
 
-redexWrapWithGivenParam :: MonadA m => V.Var -> ValI m -> ValIProperty m -> T m (ValI m)
+redexWrapWithGivenParam :: MonadA m => V.Var -> ValI m -> ValIProperty m -> T m (ValIProperty m)
 redexWrapWithGivenParam param newValueI exprP =
     do
-        newLambdaI <- ExprIRef.newValBody $ V.BAbs $ V.Lam param $ Property.value exprP
+        newLambdaI <- ExprIRef.newValBody $ mkLam $ Property.value exprP
         newApplyI <- ExprIRef.newValBody . V.BApp $ V.Apply newLambdaI newValueI
         Property.set exprP newApplyI
-        return newLambdaI
+        Property (Property.value exprP)
+            (ExprIRef.writeValBody newLambdaI . mkLam)
+            & return
+    where
+        mkLam = V.BAbs . V.Lam param
 
 redexWrap :: MonadA m => ValIProperty m -> T m V.Var
 redexWrap exprP =
