@@ -98,13 +98,13 @@ redexWrapWithGivenParam param newValueI exprP =
         Property.set exprP newApplyI
         return newLambdaI
 
-redexWrap :: MonadA m => ValIProperty m -> T m (V.Var, ValI m)
+redexWrap :: MonadA m => ValIProperty m -> T m V.Var
 redexWrap exprP =
     do
         newValueI <- newHole
         newParam <- ExprIRef.newVar
-        newLambdaI <- redexWrapWithGivenParam newParam newValueI exprP
-        return (newParam, newLambdaI)
+        _ <- redexWrapWithGivenParam newParam newValueI exprP
+        return newParam
 
 data RecExtendResult m = RecExtendResult
     { rerNewTag :: T.Tag

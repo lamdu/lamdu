@@ -781,7 +781,7 @@ makeBinderBody binderScopeVars expr =
               <&> \exprProp ->
               BinderBodyActions
               { _bbaAddOuterLet =
-                DataOps.redexWrap exprProp <&> EntityId.ofLambdaParam . fst
+                DataOps.redexWrap exprProp <&> EntityId.ofLambdaParam
               }
             , _bbContent = content
             } & return
