@@ -99,8 +99,8 @@ settingsChangeHandler evaluator settings =
 
 makeRootWidget ::
     Font -> Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
-    (Config, Widget.Size) -> IO (Widget IO)
-makeRootWidget font db zoom settingsRef evaluator (config, size) =
+    Config -> Widget.Size -> IO (Widget IO)
+makeRootWidget font db zoom settingsRef evaluator config size =
     do
         cursor <-
             DbLayout.cursor DbLayout.revisionProps
@@ -124,8 +124,9 @@ makeRootWidget font db zoom settingsRef evaluator (config, size) =
                 Settings.Evaluation ->
                     EvalManager.runTransactionAndMaybeRestartEvaluator evaluator
                 _ -> DbLayout.runDbTransaction db
-        widget <- mkWidgetWithFallback dbToIO env
-        return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
+        mkWidgetWithFallback dbToIO env
+            <&> Widget.weakerEvents eventMap
+            <&> Widget.scale sizeFactor
 
 runEditor :: Maybe FilePath -> Opts.WindowMode -> Db -> IO ()
 runEditor mFontPath windowMode db =
@@ -148,9 +149,8 @@ runEditor mFontPath windowMode db =
                 EvalManager.start evaluator
 
                 addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
-                mainLoop win refreshScheduler configSampler $
-                    \config size ->
-                    makeRootWidget font db zoom settingsRef evaluator (config, size)
+                mainLoop win refreshScheduler configSampler $ \config size ->
+                    makeRootWidget font db zoom settingsRef evaluator config size
                     >>= wrapFlyNav
                     >>= addHelp (Style.help font (Config.help config)) size
 
