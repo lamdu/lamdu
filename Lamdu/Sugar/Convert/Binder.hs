@@ -697,23 +697,29 @@ inlineLet var topLevelProp redexBodyStored redexArgStored =
         go (Val stored body) =
             case (body, redexArgStored ^. V.body) of
             (V.BLeaf (V.LVar v), _) | v == var ->
-                do
-                    Property.set stored redexArgI
-                    return (redexArgI, [])
+                setToBody stored redexArgStored
+                <&> (,) redexArgI
             (V.BApp (V.Apply (Val _ (V.BLeaf (V.LVar v))) arg)
               , V.BAbs (V.Lam param lamBody))
               | v == var ->
-                do
-                    let lamBodyI = lamBody ^. V.payload & Property.value
-                    Property.set stored lamBodyI
-                    return (lamBodyI, [(param, arg)])
+                setToBody stored lamBody
+                <&> (:) (param, Property.value (arg ^. V.payload))
+                <&> (,) (lamBody ^. V.payload & Property.value)
             _ ->
                 traverse go body
                 <&> (^.. Lens.traverse . _2 . Lens.traverse)
                 <&> (,) (Property.value stored)
         addLet letPoint (param, val) =
-            DataOps.redexWrapWithGivenParam param
-            (Property.value (val ^. V.payload)) letPoint
+            DataOps.redexWrapWithGivenParam param val letPoint
+        setToBody stored expr =
+            case expr ^. V.body of
+            V.BApp (V.Apply (Val _ (V.BAbs lam)) arg) ->
+                setToBody stored (lam ^. V.lamResult)
+                <&> (:) (lam ^. V.lamParamId, Property.value (arg ^. V.payload))
+            _ ->
+                do
+                    expr ^. V.payload & Property.value & Property.set stored
+                    return []
 
 makeMInline ::
     MonadA m =>
