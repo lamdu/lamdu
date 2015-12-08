@@ -7,7 +7,7 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (foldM, guard, void, when)
+import           Control.Monad (foldM, foldM_, guard, void, when)
 import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Foldable (traverse_)
@@ -683,6 +683,12 @@ localExtractDestPost val =
     ConvertM.scMExtractDestPos .~ val ^. V.payload . Input.mStored
     & ConvertM.local
 
+redexes :: Val a -> ([(V.Var, Val a)], Val a)
+redexes (Val _ (V.BApp (V.Apply (V.Val _ (V.BAbs lam)) arg))) =
+    redexes (lam ^. V.lamResult)
+    & _1 %~ (:) (lam ^. V.lamParamId, arg)
+redexes v = ([], v)
+
 inlineLet ::
     MonadA m =>
     V.Var -> ValIProperty m -> Val (ValIProperty m) -> Val (ValIProperty m) ->
@@ -690,7 +696,14 @@ inlineLet ::
 inlineLet var topLevelProp redexBodyStored redexArgStored =
     do
         (newBodyI, newLets) <- go redexBodyStored
-        foldM addLet topLevelProp newLets >>= (`Property.set` newBodyI)
+        case redexes redexBodyStored of
+            ([], _) ->
+                foldM addLet topLevelProp newLets
+                >>= (`Property.set` newBodyI)
+            (_, letPos) ->
+                do
+                    Property.set topLevelProp newBodyI
+                    foldM_ addLet (letPos ^. V.payload) newLets
         EntityId.ofValI newBodyI & return
     where
         redexArgI = redexArgStored ^. V.payload & Property.value
