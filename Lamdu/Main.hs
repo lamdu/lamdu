@@ -145,8 +145,9 @@ runEditor mFontPath windowMode db =
                 refreshScheduler <- newRefreshScheduler
                 evaluator <- EvalManager.new (scheduleRefresh refreshScheduler) db
                 zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
-                settingsRef <- Settings Settings.defaultInfoMode & newIORef
-                EvalManager.start evaluator
+                let initialSettings = Settings Settings.defaultInfoMode
+                settingsRef <- newIORef initialSettings
+                settingsChangeHandler evaluator initialSettings
 
                 addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
                 mainLoop win refreshScheduler configSampler $ \config size ->
