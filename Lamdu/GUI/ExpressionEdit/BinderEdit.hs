@@ -381,7 +381,7 @@ makeLetEdit ::
 makeLetEdit item =
     do
         config <- ExprGuiM.readConfig
-        let eventMap
+        let actionsEventMap
                 | Just lActions <- item ^. Sugar.lActions =
                 mconcat
                 [ Widget.keysEventMapMovesCursor (Config.delKeys config)
@@ -393,6 +393,14 @@ makeLetEdit item =
                   lActions ^. Sugar.laExtract
                 ]
                 | otherwise = mempty
+        let usageEventMap =
+                mconcat
+                [ Widget.keysEventMapMovesCursor (Config.inlineKeys config)
+                  (E.Doc ["Navigation", "Jump to first use"])
+                  (return (WidgetIds.fromEntityId usage))
+                | usage <- take 1 (item ^. Sugar.lUsages)
+                ]
+        let eventMap = mappend actionsEventMap usageEventMap
         edit <-
             make (item ^. Sugar.lName) binder myId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap

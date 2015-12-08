@@ -594,6 +594,7 @@ data Redex a = Redex
     { redexBody :: Val a
     , redexBodyScope :: CurAndPrev (Map ScopeId ScopeId)
     , redexParam :: V.Var
+    , redexParamRefs :: [EntityId]
     , redexArg :: Val a
     , redexHiddenPayloads :: [a]
     , redexArgAnnotation :: Annotation
@@ -613,6 +614,7 @@ checkForRedex expr = do
         , redexArg = arg
         , redexHiddenPayloads = (^. V.payload) <$> [expr, func]
         , redexArgAnnotation = makeAnnotation (arg ^. V.payload)
+        , redexParamRefs = func ^. V.payload . Input.varRefsOfLambda
         }
     where
         getRedexApplies [(scopeId, _)] = scopeId
@@ -711,6 +713,7 @@ convertRedex binderScopeVars expr redex =
             , _lAnnotation = redexArgAnnotation redex
             , _lBodyScope = redexBodyScope redex
             , _lBody = body
+            , _lUsages = redexParamRefs redex
             } & return
   where
       param = redexParam redex

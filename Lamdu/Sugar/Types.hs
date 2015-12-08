@@ -42,7 +42,8 @@ module Lamdu.Sugar.Types
     , Expression(..), rBody, rPayload
     , DefinitionU
     , Let(..)
-        , lEntityId, lValue, lName, lActions, lAnnotation, lBodyScope, lBody
+        , lEntityId, lValue, lName, lUsages
+        , lActions, lAnnotation, lBodyScope, lBody
     , LetActions(..)
         , laSetToInner, laSetToHole, laExtract
     , ListItem(..), liMActions, liExpr
@@ -485,6 +486,7 @@ data LetActions m = LetActions
 data Let name m expr = Let
     { _lValue :: Binder name m expr -- "let [[foo = bar]] in x"
     , _lEntityId :: EntityId
+    , _lUsages :: [EntityId]
     , _lAnnotation :: Annotation
     , _lName :: name
     , _lActions :: Maybe (LetActions m)
