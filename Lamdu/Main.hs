@@ -60,7 +60,7 @@ main =
             Opts.Parsed{..}
                 | _poShouldDeleteDB -> deleteDB lamduDir
                 | _poUndoCount > 0  -> withDB $ undoN _poUndoCount
-                | otherwise         -> withDB $ runEditor _poMFontPath _poWindowMode
+                | otherwise         -> withDB $ runEditor _poWindowMode
     `E.catch` \e@E.SomeException{} -> do
     hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
     mapM_ (hPutStrLn stderr) =<< whoCreated e
@@ -135,8 +135,8 @@ withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
     E.bracket (newMVar (Just val)) (\mvar -> modifyMVar_ mvar (\_ -> return Nothing))
 
-runEditor :: Maybe FilePath -> Opts.WindowMode -> Db -> IO ()
-runEditor mFontPath windowMode db =
+runEditor :: Opts.WindowMode -> Db -> IO ()
+runEditor windowMode db =
     do
         -- GLFW changes the directory from start directory, at least on macs.
         startDir <- Directory.getCurrentDirectory
@@ -158,7 +158,7 @@ runEditor mFontPath windowMode db =
                     settingsChangeHandler evaluator initialSettings
                     addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
 
-                    Font.with startDir mFontPath $ \font ->
+                    Font.with startDir $ \font ->
                         mainLoop win refreshScheduler configSampler $ \config size ->
                             makeRootWidget font db zoom settingsRef evaluator config size
                             >>= wrapFlyNav

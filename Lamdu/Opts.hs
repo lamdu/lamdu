@@ -2,7 +2,7 @@
 module Lamdu.Opts
     ( Parsed(..)
     , WindowMode(..)
-    , poShouldDeleteDB, poMFontPath, poUndoCount, poWindowMode
+    , poShouldDeleteDB, poUndoCount, poWindowMode
     , parse, get
     ) where
 
@@ -17,13 +17,10 @@ data WindowMode = VideoModeSize | WindowSize (Vector2 Int) | FullScreen
 data Parsed = Parsed
     { _poShouldDeleteDB :: Bool
     , _poUndoCount :: Int
-    , _poMFontPath :: Maybe FilePath
     , _poWindowMode :: WindowMode
     }
 poShouldDeleteDB :: Lens' Parsed Bool
 poShouldDeleteDB f Parsed{..} = f _poShouldDeleteDB <&> \_poShouldDeleteDB -> Parsed{..}
-poMFontPath :: Lens' Parsed (Maybe FilePath)
-poMFontPath f Parsed{..} = f _poMFontPath <&> \_poMFontPath -> Parsed{..}
 poUndoCount :: Lens' Parsed Int
 poUndoCount f Parsed{..} = f _poUndoCount <&> \_poUndoCount -> Parsed{..}
 poWindowMode :: Lens' Parsed WindowMode
@@ -31,7 +28,7 @@ poWindowMode f Parsed{..} = f _poWindowMode <&> \_poWindowMode -> Parsed{..}
 
 parse :: [String] -> Either String Parsed
 parse =
-    (`execStateT` Parsed False 0 Nothing VideoModeSize) . go
+    (`execStateT` Parsed False 0 VideoModeSize) . go
     where
         go [] = return ()
         go ("-deletedb" : args) = poShouldDeleteDB .= True >> go args
@@ -45,11 +42,6 @@ parse =
            let set VideoModeSize = FullScreen
                set _ = failUsage "Duplicate -windowsize / -fullscreen options specified"
            in poWindowMode %= set >> go args
-        go ["-font"] = failUsage "-font must be followed by a font name"
-        go ("-font" : fn : args) = poMFontPath %= setPath >> go args
-            where
-                setPath Nothing = Just fn
-                setPath Just {} = failUsage "Duplicate -font arguments"
         go ["-undo"] = failUsage "-undo must be followed by an undo count"
         go ("-undo" : countStr : args) =
             readOrFail "Invalid undo count" countStr $

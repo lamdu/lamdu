@@ -18,6 +18,6 @@ tryFont action path =
         unless exists . ioError . userError $ path ++ " does not exist!"
         Draw.withFont path action
 
-with :: FilePath -> Maybe FilePath -> (Draw.Font -> IO a) -> IO a
-with startDir Nothing action = getDataFilePath startDir defaultFontPath >>= tryFont action
-with _ (Just path) action = tryFont action path
+with :: FilePath -> (Draw.Font -> IO a) -> IO a
+with startDir action =
+    getDataFilePath startDir defaultFontPath >>= tryFont action
