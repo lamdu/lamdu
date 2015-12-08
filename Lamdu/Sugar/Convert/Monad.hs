@@ -44,15 +44,16 @@ data TagParamInfo = TagParamInfo
     , tpiJumpTo :: Sugar.EntityId
     }
 
-data ScopeInfo = ScopeInfo
+type T = Transaction
+
+data ScopeInfo m = ScopeInfo
     { _siTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
     , _siNullParams :: Set V.Var
-    , _siLetItems :: Set V.Var
+    , -- Each let item potentially has an inline action
+      _siLetItems :: Map V.Var (Maybe (T m Sugar.EntityId))
       -- TODO: siTagParamInfos needs a reverse-lookup map too
     }
 Lens.makeLenses ''ScopeInfo
-
-type T = Transaction
 
 newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
     deriving (Functor, Applicative, Monad)
@@ -61,7 +62,7 @@ data Context m = Context
     { _scInferContext :: Infer.Context
     , _scDefI :: Maybe (ExprIRef.DefI m)
     , _scCodeAnchors :: Anchors.CodeProps m
-    , _scScopeInfo :: ScopeInfo
+    , _scScopeInfo :: ScopeInfo m
     , -- Check whether the definition is valid after an edit,
       -- so that can hole-wrap bad edits.
       _scReinferCheckRoot :: T m Bool

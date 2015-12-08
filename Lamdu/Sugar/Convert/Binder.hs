@@ -701,7 +701,7 @@ convertRedex binderScopeVars expr redex =
             & Lens.sequenceOf Lens._Just
         body <-
             makeBinderBody (redexParam redex : binderScopeVars) (redexBody redex)
-            & ConvertM.local (scScopeInfo . siLetItems <>~ Set.singleton (redexParam redex))
+            & ConvertM.local (scScopeInfo . siLetItems <>~ Map.singleton (redexParam redex) Nothing)
         Let
             { _lEntityId = defEntityId
             , _lValue =

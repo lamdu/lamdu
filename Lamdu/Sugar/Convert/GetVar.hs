@@ -3,11 +3,11 @@ module Lamdu.Sugar.Convert.GetVar
     ( convertVar
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
-import qualified Data.Set as Set
 import           Data.Store.Guid (Guid)
 import           Lamdu.Builtins.Anchors (recurseVar)
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -30,11 +30,11 @@ convertVar sugarContext param paramType
       , _bvMInline = Nothing
       }
 
-    | isGetLet =
+    | Just mInline <- scopeInfo ^. ConvertM.siLetItems . Lens.at param =
       GetBinder BinderVar
       { _bvNameRef = paramNameRef
       , _bvForm = GetLet
-      , _bvMInline = Nothing
+      , _bvMInline = mInline
       }
 
     | isGetParamRecord =
@@ -56,7 +56,6 @@ convertVar sugarContext param paramType
             }
         typeRecordGuids = typeRecordTags <&> UniqueId.toGuid
         typeRecordTags = paramType ^.. ExprLens._TRecord . ExprLens.compositeTags
-        isGetLet = param `Set.member` (scopeInfo ^. ConvertM.siLetItems)
         isGetParamRecord = param `elem` recordParamVars
         scopeInfo = sugarContext ^. ConvertM.scScopeInfo
         recordParamVars =
