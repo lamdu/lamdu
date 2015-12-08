@@ -3,6 +3,7 @@ module Main
     ( main
     ) where
 
+import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import           Control.Lens.Operators
 import           Control.Monad (unless, replicateM_)
@@ -128,6 +129,10 @@ makeRootWidget font db zoom settingsRef evaluator config size =
             <&> Widget.weakerEvents eventMap
             <&> Widget.scale sizeFactor
 
+withMVarProtection :: a -> (MVar a -> IO b) -> IO b
+withMVarProtection val =
+    E.bracket (newMVar val) (\mvar -> modifyMVar mvar (error "withMVarProtection exited"))
+
 runEditor :: Maybe FilePath -> Opts.WindowMode -> Db -> IO ()
 runEditor mFontPath windowMode db =
     do
@@ -142,18 +147,20 @@ runEditor mFontPath windowMode db =
             -- Fonts must be loaded after the GL context is created..
             wrapFlyNav <- FlyNav.makeIO Style.flyNav WidgetIds.flyNav
             refreshScheduler <- newRefreshScheduler
-            evaluator <- EvalManager.new (scheduleRefresh refreshScheduler) db
-            zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
-            let initialSettings = Settings Settings.defaultInfoMode
-            settingsRef <- newIORef initialSettings
-            settingsChangeHandler evaluator initialSettings
-            addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
+            withMVarProtection db $ \dbMVar ->
+                do
+                    evaluator <- EvalManager.new (scheduleRefresh refreshScheduler) dbMVar
+                    zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
+                    let initialSettings = Settings Settings.defaultInfoMode
+                    settingsRef <- newIORef initialSettings
+                    settingsChangeHandler evaluator initialSettings
+                    addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
 
-            Font.with startDir mFontPath $ \font ->
-                mainLoop win refreshScheduler configSampler $ \config size ->
-                    makeRootWidget font db zoom settingsRef evaluator config size
-                    >>= wrapFlyNav
-                    >>= addHelp (Style.help font (Config.help config)) size
+                    Font.with startDir mFontPath $ \font ->
+                        mainLoop win refreshScheduler configSampler $ \config size ->
+                            makeRootWidget font db zoom settingsRef evaluator config size
+                            >>= wrapFlyNav
+                            >>= addHelp (Style.help font (Config.help config)) size
 
 newtype RefreshScheduler = RefreshScheduler (IORef Bool)
 newRefreshScheduler :: IO RefreshScheduler

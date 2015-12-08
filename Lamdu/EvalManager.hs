@@ -8,6 +8,7 @@ module Lamdu.EvalManager
     ) where
 
 import           Control.Concurrent (ThreadId, killThread)
+import           Control.Concurrent.MVar
 import           Control.Concurrent.Utils (runAfter)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -51,13 +52,13 @@ startedEvaluator (Started eval) = Just eval
 
 data Evaluator = Evaluator
     { eInvalidateCache :: IO ()
-    , eDb :: Db
+    , eDb :: MVar Db
     , eEvaluatorRef :: IORef BGEvaluator
     , eResultsRef :: IORef (EvalResults (ValI ViewM))
     , eCancelTimerRef :: IORef (Maybe ThreadId)
     }
 
-new :: IO () -> Db -> IO Evaluator
+new :: IO () -> MVar Db -> IO Evaluator
 new invalidateCache db =
     do
         ref <- newIORef NotStarted
@@ -71,8 +72,10 @@ new invalidateCache db =
             , eCancelTimerRef = cancelRef
             }
 
-runViewTransactionInIO :: Db -> Transaction ViewM a -> IO a
-runViewTransactionInIO db = DbLayout.runDbTransaction db . VersionControl.runAction
+runViewTransactionInIO :: MVar Db -> Transaction ViewM a -> IO a
+runViewTransactionInIO dbMVar trans =
+    withMVar dbMVar $ \db ->
+    DbLayout.runDbTransaction db (VersionControl.runAction trans)
 
 getLatestResults :: Evaluator -> IO (EvalResults (ValI ViewM))
 getLatestResults evaluator =
@@ -183,7 +186,8 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
                 else EvalBG.resumeLoading eval
             return result
     where
-        runTrans = DbLayout.runDbTransaction (eDb evaluator)
+        runTrans trans =
+            withMVar (eDb evaluator) $ \db -> DbLayout.runDbTransaction db trans
 
 setCancelTimer :: Evaluator -> IO ()
 setCancelTimer evaluator =
