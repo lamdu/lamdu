@@ -421,10 +421,6 @@ makeNonRecordParamActions mRecursiveVar storedLam =
             , convertToRecordParams NewParamBefore
             )
 
-isParamUnused :: V.Lam (Val a) -> Bool
-isParamUnused (V.Lam var body) =
-    Lens.allOf (ExprLens.valLeafs . ExprLens._LVar) (/= var) body
-
 mkFuncParam :: EntityId -> Input.Payload m a -> info -> FuncParam info
 mkFuncParam paramEntityId lamExprPl info =
     FuncParam
@@ -455,7 +451,7 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
         let funcParam =
                 case lamParamType lamExprPl of
                 T.TRecord T.CEmpty
-                    | isParamUnused lam ->
+                    | null (lamExprPl ^. Input.varRefsOfLambda) ->
                       mActions
                       <&> (^. _1 . fpDelete)
                       <&> void
