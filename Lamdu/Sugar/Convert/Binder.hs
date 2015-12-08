@@ -7,7 +7,7 @@ import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (guard, void, when)
+import           Control.Monad (foldM, guard, void, when)
 import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Foldable (traverse_)
@@ -689,22 +689,31 @@ inlineLet ::
     T m EntityId
 inlineLet var topLevelProp redexBodyStored redexArgStored =
     do
-        newBodyI <- go redexBodyStored
-        -- delete let
-        Property.set topLevelProp newBodyI
-        -- return val within
-        EntityId.ofValI redexArgI & return
+        (newBodyI, newLets) <- go redexBodyStored
+        foldM addLet topLevelProp newLets >>= (`Property.set` newBodyI)
+        EntityId.ofValI newBodyI & return
     where
         redexArgI = redexArgStored ^. V.payload & Property.value
-        go (Val stored (V.BLeaf (V.LVar v)))
-            | v == var =
+        go (Val stored body) =
+            case (body, redexArgStored ^. V.body) of
+            (V.BLeaf (V.LVar v), _) | v == var ->
                 do
                     Property.set stored redexArgI
-                    return redexArgI
-        go (Val stored body) =
-            do
-                traverse_ go body
-                Property.value stored & return
+                    return (redexArgI, [])
+            (V.BApp (V.Apply (Val _ (V.BLeaf (V.LVar v))) arg)
+              , V.BAbs (V.Lam param lamBody))
+              | v == var ->
+                do
+                    let lamBodyI = lamBody ^. V.payload & Property.value
+                    Property.set stored lamBodyI
+                    return (lamBodyI, [(param, arg)])
+            _ ->
+                traverse go body
+                <&> (^.. Lens.traverse . _2 . Lens.traverse)
+                <&> (,) (Property.value stored)
+        addLet letPoint (param, val) =
+            DataOps.redexWrapWithGivenParam param
+            (Property.value (val ^. V.payload)) letPoint
 
 makeMInline ::
     MonadA m =>
