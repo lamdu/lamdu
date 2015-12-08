@@ -8,6 +8,7 @@ module Lamdu.Expr.IRef
     , newVar
     , newVal, writeVal, readVal
     , writeValWithStoredSubexpressions
+    , newValWithStoredSubexpressions
     , DefI
     , addProperties
 
@@ -76,7 +77,7 @@ writeValBody ::
 writeValBody = Transaction.writeIRef . unValI
 
 newVal :: MonadA m => Val () -> T m (ValI m)
-newVal = fmap (^. V.payload . _1) . newValFromH . ((,) Nothing <$>)
+newVal = fmap (^. V.payload . _1) . newValWithStoredSubexpressions . ((,) Nothing <$>)
 
 -- Returns expression with new Guids
 writeVal ::
@@ -111,10 +112,10 @@ expressionBodyFrom ::
     MonadA m =>
     Val (Maybe (ValI m), a) ->
     T m (V.Body (Val (ValI m, a)))
-expressionBodyFrom = traverse newValFromH . (^. V.body)
+expressionBodyFrom = traverse newValWithStoredSubexpressions . (^. V.body)
 
-newValFromH :: MonadA m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
-newValFromH expr =
+newValWithStoredSubexpressions :: MonadA m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
+newValWithStoredSubexpressions expr =
     case mIRef of
     Just iref -> writeValWithStoredSubexpressions iref expr
     Nothing ->

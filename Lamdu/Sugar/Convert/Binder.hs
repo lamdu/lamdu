@@ -139,8 +139,8 @@ makeMInline mStored redex =
     [_singleUsage] ->
         inlineLet (redexParam redex)
         <$> mStored
-        <*> (traverse (^. Input.mStored) (redexBody redex))
-        <*> (traverse (^. Input.mStored) (redexArg redex))
+        <*> (traverse (^. Input.mStored) (redexBody redex) <&> fmap Property.value)
+        <*> (traverse (^. Input.mStored) (redexArg redex) <&> fmap Property.value)
     _ -> Nothing
 
 convertRedex ::
