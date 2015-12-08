@@ -5,9 +5,8 @@ module Main
 
 import qualified Control.Exception as E
 import           Control.Lens.Operators
-import           Control.Monad (join, unless, replicateM_)
+import           Control.Monad (unless, replicateM_)
 import           Data.IORef
-import           Data.MRUMemo (memoIO)
 import           Data.Maybe
 import qualified Data.Monoid as Monoid
 import           Data.Store.Db (Db)
@@ -142,25 +141,16 @@ runEditor mFontPath windowMode db =
             Font.with startDir mFontPath $ \font -> do
                 -- Fonts must be loaded after the GL context is created..
                 wrapFlyNav <- FlyNav.makeIO Style.flyNav WidgetIds.flyNav
-                invalidateCacheRef <- newIORef (return ())
-                let invalidateCache = join (readIORef invalidateCacheRef)
-                evaluator <- EvalManager.new invalidateCache db
+                refreshScheduler <- newRefreshScheduler
+                evaluator <- EvalManager.new (scheduleRefresh refreshScheduler) db
                 zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
                 settingsRef <- Settings Settings.defaultInfoMode & newIORef
-                (invalidateCacheAction, makeRootWidgetCached) <-
-                    makeRootWidget font db zoom settingsRef evaluator
-                    & memoizeMakeWidget
-                refreshScheduler <- newRefreshScheduler
-                writeIORef invalidateCacheRef $
-                    do
-                        invalidateCacheAction
-                        scheduleRefresh refreshScheduler
                 EvalManager.start evaluator
 
                 addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
                 mainLoop win refreshScheduler configSampler $
                     \config size ->
-                    makeRootWidgetCached (config, size)
+                    makeRootWidget font db zoom settingsRef evaluator (config, size)
                     >>= wrapFlyNav
                     >>= addHelp (Style.help font (Config.help config)) size
 
@@ -198,19 +188,6 @@ mainLoop win refreshScheduler configSampler iteration =
                         then return True
                         else shouldRefresh refreshScheduler
         mainLoopWidget win tickHandler makeWidget getAnimHalfLife
-
-memoizeMakeWidget :: Eq a => (a -> IO (Widget IO)) -> IO (IO (), a -> IO (Widget IO))
-memoizeMakeWidget mkWidget =
-    do
-        widgetCacheRef <- newIORef =<< memoIO mkWidget
-        let invalidateCache = writeIORef widgetCacheRef =<< memoIO mkWidget
-        return
-            ( invalidateCache
-            , \x ->
-                readIORef widgetCacheRef
-                >>= ($ x)
-                <&> Widget.events %~ (<* invalidateCache)
-            )
 
 rootCursor :: Widget.Id
 rootCursor = WidgetIds.fromGuid $ IRef.guid $ DbLayout.panes DbLayout.codeIRefs
