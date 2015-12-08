@@ -139,17 +139,17 @@ runEditor mFontPath windowMode db =
 
         GLFWUtils.withGLFW $ do
             win <- createWindow windowMode
-            Font.with startDir mFontPath $ \font -> do
-                -- Fonts must be loaded after the GL context is created..
-                wrapFlyNav <- FlyNav.makeIO Style.flyNav WidgetIds.flyNav
-                refreshScheduler <- newRefreshScheduler
-                evaluator <- EvalManager.new (scheduleRefresh refreshScheduler) db
-                zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
-                let initialSettings = Settings Settings.defaultInfoMode
-                settingsRef <- newIORef initialSettings
-                settingsChangeHandler evaluator initialSettings
+            -- Fonts must be loaded after the GL context is created..
+            wrapFlyNav <- FlyNav.makeIO Style.flyNav WidgetIds.flyNav
+            refreshScheduler <- newRefreshScheduler
+            evaluator <- EvalManager.new (scheduleRefresh refreshScheduler) db
+            zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
+            let initialSettings = Settings Settings.defaultInfoMode
+            settingsRef <- newIORef initialSettings
+            settingsChangeHandler evaluator initialSettings
+            addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
 
-                addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
+            Font.with startDir mFontPath $ \font ->
                 mainLoop win refreshScheduler configSampler $ \config size ->
                     makeRootWidget font db zoom settingsRef evaluator config size
                     >>= wrapFlyNav
