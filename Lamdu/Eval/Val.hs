@@ -7,16 +7,20 @@ module Lamdu.Eval.Val
     , emptyScope
     , _HFunc, _HRecExtend, _HCase, _HRecEmpty
     , _HAbsurd, _HFloat, _HBuiltin, _HInject
+    , extractField
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
+import           Control.Lens.Operators
+import           Control.Monad (void)
 import           Data.Binary (Binary)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Lamdu.Data.Definition (FFIName)
+import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
+
+import           Prelude.Compat
 
 newtype ScopeId = ScopeId { getScopeId :: Int }
     deriving (Show, Eq, Ord, Binary)
@@ -73,3 +77,12 @@ topLevelScopeId = ScopeId 0
 
 emptyScope :: Scope pl
 emptyScope = Scope Map.empty topLevelScopeId
+
+extractField :: T.Tag -> EvalResult pl -> EvalResult pl
+extractField _ (Left err) = Left err
+extractField tag (Right (HRecExtend (V.RecExtend vt vv vr)))
+    | vt == tag = vv
+    | otherwise = extractField tag vr
+extractField tag (Right x) =
+    "Expected record with tag: " ++ show tag ++ " got: " ++ show (void x)
+    & EvalTypeError & Left

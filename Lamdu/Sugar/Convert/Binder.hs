@@ -481,16 +481,6 @@ isParamAlwaysUsedWithGetField (V.Lam param body) =
         cond (Val () (V.BLeaf (V.LVar v)) : _) _ = v == param
         cond _ _ = False
 
--- TODO: move to eval vals
-extractField :: T.Tag -> EV.EvalResult pl -> EV.EvalResult pl
-extractField _ (Left err) = Left err
-extractField tag (Right (EV.HRecExtend (V.RecExtend vt vv vr)))
-    | vt == tag = vv
-    | otherwise = extractField tag vr
-extractField tag (Right x) =
-    "Expected record with tag: " ++ show tag ++ " got: " ++ show (void x)
-    & EV.EvalTypeError & Left
-
 isParamUnused :: V.Lam (Val a) -> Bool
 isParamUnused (V.Lam var body) =
     Lens.allOf (ExprLens.valLeafs . ExprLens._LVar) (/= var) body
@@ -524,7 +514,7 @@ convertLamParams mRecursiveVar lambda lambdaPl =
             , fpValue =
                     lambdaPl ^. Input.evalResults
                     <&> (^. Input.eAppliesOfLam)
-                    <&> Lens.traversed . Lens.mapped . Lens._2 %~ extractField tag
+                    <&> Lens.traversed . Lens.mapped . Lens._2 %~ EV.extractField tag
             }
 
 convertEmptyParams :: MonadA m =>
