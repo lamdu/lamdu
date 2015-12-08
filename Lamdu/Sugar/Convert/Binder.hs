@@ -683,6 +683,41 @@ localExtractDestPost val =
     ConvertM.scMExtractDestPos .~ val ^. V.payload . Input.mStored
     & ConvertM.local
 
+inlineLet ::
+    MonadA m =>
+    V.Var -> ValIProperty m -> Val (ValIProperty m) -> Val (ValIProperty m) ->
+    T m EntityId
+inlineLet var topLevelProp redexBodyStored redexArgStored =
+    do
+        newBodyI <- go redexBodyStored
+        -- delete let
+        Property.set topLevelProp newBodyI
+        -- return val within
+        EntityId.ofValI redexArgI & return
+    where
+        redexArgI = redexArgStored ^. V.payload & Property.value
+        go (Val stored (V.BLeaf (V.LVar v)))
+            | v == var =
+                do
+                    Property.set stored redexArgI
+                    return redexArgI
+        go (Val stored body) =
+            do
+                traverse_ go body
+                Property.value stored & return
+
+makeMInline ::
+    MonadA m =>
+    Maybe (ValIProperty m) -> Redex (Input.Payload m a) -> Maybe (T m EntityId)
+makeMInline mStored redex =
+    case redexParamRefs redex of
+    [_singleUsage] ->
+        inlineLet (redexParam redex)
+        <$> mStored
+        <*> (traverse (^. Input.mStored) (redexBody redex))
+        <*> (traverse (^. Input.mStored) (redexArg redex))
+    _ -> Nothing
+
 convertRedex ::
     (MonadA m, Monoid a) =>
     [V.Var] -> Val (Input.Payload m a) ->
@@ -701,7 +736,9 @@ convertRedex binderScopeVars expr redex =
             & Lens.sequenceOf Lens._Just
         body <-
             makeBinderBody (redexParam redex : binderScopeVars) (redexBody redex)
-            & ConvertM.local (scScopeInfo . siLetItems <>~ Map.singleton (redexParam redex) Nothing)
+            & ConvertM.local (scScopeInfo . siLetItems <>~
+                Map.singleton (redexParam redex)
+                (makeMInline (expr ^. V.payload . Input.mStored) redex))
         Let
             { _lEntityId = defEntityId
             , _lValue =
