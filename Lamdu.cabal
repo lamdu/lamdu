@@ -252,6 +252,7 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.Input
                   , Lamdu.Sugar.Convert.Monad
                   , Lamdu.Sugar.Convert.Binder
+                  , Lamdu.Sugar.Convert.Binder.Inline
                   , Lamdu.Sugar.Convert.Binder.Params
                   , Lamdu.Sugar.Convert.GetField
                   , Lamdu.Sugar.Convert.TIdG
