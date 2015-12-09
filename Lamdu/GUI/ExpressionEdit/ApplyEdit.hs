@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.ApplyEdit
     ( make
     ) where
@@ -9,11 +9,15 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
+import           Data.Vector.Vector2 (Vector2(..))
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -23,6 +27,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Precedence (MyPrecedence(..))
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.Names.Get as NamesGet
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -49,6 +54,46 @@ mkPrecedence specialArgs =
     Sugar.ObjectArg{} -> prefixPrecedence
     Sugar.InfixArgs prec _ _ -> prec
     & fromIntegral & MyPrecedence
+
+infixMarker :: Vector2 Anim.R -> Draw.Image ()
+infixMarker (Vector2 w h) =
+    mconcat
+    [ Draw.line (x, 0) (0,x)
+    , Draw.line (w-x, 0) (w,x)
+    , Draw.line (w-x, h) (w,h-x)
+    , Draw.line (x, h) (0,h-x)
+    , Draw.line (0, x) (0, h-x)
+    , Draw.line (w, x) (w, h-x)
+    , Draw.line (x, 0) (w-x, 0)
+    , Draw.line (x, h) (w-x, h)
+    ]
+    <&> const ()
+    where
+        x = min w h / 4
+
+addInfixMarker :: Widget.Id -> Widget a -> Widget a
+addInfixMarker widgetId widget =
+    widget
+    & Widget.animFrame
+    <>~ Anim.simpleFrame frameId (infixMarker (widget ^. Widget.size))
+    where
+        frameId = Widget.toAnimId widgetId ++ ["infix"]
+
+makeInfixFuncName ::
+    MonadA m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
+makeInfixFuncName func =
+    do
+        res <- ExprGuiM.makeSubexpression (const prec) func
+        if any BinderEdit.nonOperatorName (NamesGet.fromExpression func)
+            then
+                res
+                & ExpressionGui.egWidget %~
+                    addInfixMarker (WidgetIds.fromExprPayload (func ^. Sugar.rPayload))
+                & return
+            else return res
+    where
+        -- TODO: What precedence to give when it must be atomic?:
+        prec = 20
 
 makeFuncRow ::
     MonadA m =>
@@ -79,8 +124,7 @@ makeFuncRow (Sugar.Apply func specialArgs annotatedArgs) pl =
                 [ ExprGuiM.makeSubexpression
                     (ExpressionGui.precRight .~ prec+1)
                     l
-                , -- TODO: What precedence to give when it must be atomic?:
-                    ExprGuiM.makeSubexpression (const 20) func <&> overrideModifyEventMap
+                , makeInfixFuncName func <&> overrideModifyEventMap
                 , ExprGuiM.makeSubexpression
                     (ExpressionGui.precLeft .~ prec+1)
                     r

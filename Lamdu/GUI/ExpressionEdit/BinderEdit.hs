@@ -2,6 +2,7 @@
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     , Parts(..), makeParts
+    , nonOperatorName
     ) where
 
 import           Control.Applicative ((<|>), liftA2)
