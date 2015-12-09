@@ -5,7 +5,6 @@ module Lamdu.Builtins
 
 import           Control.Lens.Operators
 import           Control.Monad (join, void, when)
-import           Data.Fixed (mod', div')
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Map.Utils (matchKeys)
@@ -131,6 +130,12 @@ builtinNotEq = builtinEqH not
 floatArg :: (Double -> a) -> Double -> a
 floatArg = id
 
+genericDiv :: (RealFrac a, Integral b) => a -> a -> b
+genericDiv n d = n / d & floor
+
+genericMod :: RealFrac a => a -> a -> a
+genericMod n d = n - d * fromIntegral (genericDiv n d :: Int)
+
 eval :: Def.FFIName -> EvalResult pl -> EvalResult pl
 eval name =
     case name of
@@ -144,8 +149,8 @@ eval name =
     Def.FFIName ["Prelude"] "+"      -> builtin2Infix $ floatArg (+)
     Def.FFIName ["Prelude"] "-"      -> builtin2Infix $ floatArg (-)
     Def.FFIName ["Prelude"] "/"      -> builtin2Infix $ floatArg (/)
-    Def.FFIName ["Prelude"] "div"    -> builtin2Infix $ ((fromIntegral :: Int -> Double) .) . floatArg div'
-    Def.FFIName ["Prelude"] "mod"    -> builtin2Infix $ floatArg mod'
+    Def.FFIName ["Prelude"] "div"    -> builtin2Infix $ ((fromIntegral :: Int -> Double) .) . floatArg genericDiv
+    Def.FFIName ["Prelude"] "mod"    -> builtin2Infix $ floatArg genericMod
     Def.FFIName ["Prelude"] "negate" -> builtin1      $ floatArg negate
     Def.FFIName ["Prelude"] "sqrt"   -> builtin1      $ floatArg sqrt
     _ -> name & EvalMissingBuiltin & Left & const
