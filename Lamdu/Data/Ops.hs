@@ -192,7 +192,7 @@ isInfix x = not (null x) && all (`elem` operatorChars) x
 presentationModeOfName :: String -> PresentationMode
 presentationModeOfName x
     | isInfix x = Infix 5
-    | otherwise = OO
+    | otherwise = Verbose
 
 newDefinition ::
     MonadA m => String -> PresentationMode ->

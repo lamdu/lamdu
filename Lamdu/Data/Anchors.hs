@@ -92,6 +92,6 @@ assocPresentationMode ::
     (UniqueId.ToGuid a, MonadA m) =>
     a -> Transaction.MkProperty m PresentationMode
 assocPresentationMode =
-    Transaction.assocDataRefDef OO "PresentationMode" . UniqueId.toGuid
+    Transaction.assocDataRefDef Verbose "PresentationMode" . UniqueId.toGuid
 
 Lens.makeLenses ''BinderParamScopeId
