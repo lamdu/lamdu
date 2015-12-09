@@ -69,7 +69,7 @@ module Lamdu.Sugar.Types
     , NameRef(..), nrName, nrGotoDefinition
     , Param(..), pNameRef, pForm, pBinderMode
     , BinderVarForm(..), _GetDefinition, _GetLet
-    , BinderVarInline(..), _InlineVar, _CannotInline
+    , BinderVarInline(..), _InlineVar, _CannotInlineDueToUses, _CannotInline
     , BinderVar(..), bvNameRef, bvForm, bvInline
     , GetVar(..), _GetParam, _GetParamsRecord, _GetBinder
     , ParamsRecordVar(..), prvFieldNames
@@ -392,7 +392,10 @@ data Param name m = Param
 data BinderVarForm = GetDefinition | GetLet
     deriving (Eq, Ord)
 
-data BinderVarInline m = InlineVar (T m EntityId) | CannotInline
+data BinderVarInline m
+    = InlineVar (T m EntityId)
+    | CannotInlineDueToUses [EntityId]
+    | CannotInline
 
 data BinderVar name m = BinderVar
     { _bvNameRef :: NameRef name m

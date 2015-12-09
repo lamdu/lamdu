@@ -142,7 +142,8 @@ makeInline mStored redex =
         <*> (traverse (^. Input.mStored) (redexBody redex) <&> fmap Property.value)
         <*> (traverse (^. Input.mStored) (redexArg redex) <&> fmap Property.value)
         & maybe CannotInline InlineVar
-    _ -> CannotInline
+    [] -> CannotInline
+    uses -> CannotInlineDueToUses uses
 
 convertRedex ::
     (MonadA m, Monoid a) =>

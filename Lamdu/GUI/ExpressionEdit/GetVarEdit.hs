@@ -75,13 +75,17 @@ makeNameRef myId nameRef makeView =
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
 
 makeInlineEventMap ::
-    Functor m =>
+    MonadA m =>
     Config -> Sugar.BinderVarInline m -> Widget.EventHandlers (Transaction m)
-makeInlineEventMap _ Sugar.CannotInline = mempty
 makeInlineEventMap config (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
     & Widget.keysEventMapMovesCursor (Config.inlineKeys config)
       (E.Doc ["Edit", "Inline"])
+makeInlineEventMap config (Sugar.CannotInlineDueToUses (x:_)) =
+    WidgetIds.fromEntityId x & return
+    & Widget.keysEventMapMovesCursor (Config.inlineKeys config)
+      (E.Doc ["Navigation", "Jump to next use"])
+makeInlineEventMap _ _ = mempty
 
 make ::
     MonadA m =>

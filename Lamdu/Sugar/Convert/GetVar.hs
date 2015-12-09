@@ -23,6 +23,12 @@ import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
 
+usesAround :: Eq a => a -> [a] -> [a]
+usesAround x xs =
+    drop 1 after ++ before
+    where
+        (before, after) = break (== x) xs
+
 convertH ::
     MonadA m => ConvertM.Context m -> V.Var -> Input.Payload m a -> GetVar Guid m
 convertH sugarContext param exprPl
@@ -41,7 +47,8 @@ convertH sugarContext param exprPl
       GetBinder BinderVar
       { _bvNameRef = paramNameRef
       , _bvForm = GetLet
-      , _bvInline = inline
+      , _bvInline =
+        inline & _CannotInlineDueToUses %~ usesAround (exprPl ^. Input.entityId)
       }
 
     | isGetParamRecord =
