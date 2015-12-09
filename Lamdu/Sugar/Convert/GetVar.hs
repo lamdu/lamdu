@@ -11,7 +11,6 @@ import           Data.Maybe (fromMaybe)
 import           Data.Store.Guid (Guid)
 import           Lamdu.Builtins.Anchors (recurseVar)
 import qualified Lamdu.Expr.Lens as ExprLens
-import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
@@ -24,11 +23,16 @@ import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
 
-convertH :: MonadA m => ConvertM.Context m -> V.Var -> Type -> GetVar Guid m
-convertH sugarContext param paramType
+convertH ::
+    MonadA m => ConvertM.Context m -> V.Var -> Input.Payload m a -> GetVar Guid m
+convertH sugarContext param exprPl
     | param == recurseVar =
       GetBinder BinderVar
-      { _bvNameRef = selfNameRef
+      { _bvNameRef =
+            NameRef
+            { _nrName = UniqueId.toGuid defI
+            , _nrGotoDefinition = pure $ EntityId.ofIRef defI
+            }
       , _bvForm = GetDefinition
       , _bvInline = CannotInline
       }
@@ -41,28 +45,25 @@ convertH sugarContext param paramType
       }
 
     | isGetParamRecord =
-      GetParamsRecord ParamsRecordVar { _prvFieldNames = typeRecordGuids }
+      GetParamsRecord ParamsRecordVar
+      { _prvFieldNames =
+          exprPl ^.. Input.inferredType . ExprLens._TRecord . ExprLens.compositeTags <&> UniqueId.toGuid
+      }
 
     | otherwise =
       GetParam (Param paramNameRef GetParameter NormalBinder)
 
     where
-        selfNameRef =
-            NameRef
-            { _nrName = UniqueId.toGuid defI
-            , _nrGotoDefinition = pure $ EntityId.ofIRef defI
-            }
         paramNameRef =
             NameRef
             { _nrName = UniqueId.toGuid param
             , _nrGotoDefinition = pure $ EntityId.ofLambdaParam param
             }
-        typeRecordGuids = typeRecordTags <&> UniqueId.toGuid
-        typeRecordTags = paramType ^.. ExprLens._TRecord . ExprLens.compositeTags
-        isGetParamRecord = param `elem` recordParamVars
+        isGetParamRecord =
+            scopeInfo ^. siTagParamInfos & Map.elems
+            & map tpiFromParameters
+            & elem param
         scopeInfo = sugarContext ^. ConvertM.scScopeInfo
-        recordParamVars =
-            scopeInfo ^. siTagParamInfos & Map.elems & map tpiFromParameters
         defI =
             sugarContext ^. ConvertM.scDefI
             & fromMaybe (error "recurseVar used not in definition context?!")
@@ -73,7 +74,6 @@ convert ::
 convert param exprPl =
     do
         sugarContext <- ConvertM.readContext
-        convertH sugarContext param
-            (exprPl ^. Input.inferredType)
+        convertH sugarContext param exprPl
             & BodyGetVar
             & addActions exprPl
