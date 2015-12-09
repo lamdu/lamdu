@@ -27,14 +27,14 @@ convertVar sugarContext param paramType
       GetBinder BinderVar
       { _bvNameRef = selfNameRef
       , _bvForm = GetDefinition
-      , _bvMInline = Nothing
+      , _bvInline = CannotInline
       }
 
-    | Just mInline <- scopeInfo ^. ConvertM.siLetItems . Lens.at param =
+    | Just inline <- scopeInfo ^. ConvertM.siLetItems . Lens.at param =
       GetBinder BinderVar
       { _bvNameRef = paramNameRef
       , _bvForm = GetLet
-      , _bvMInline = mInline
+      , _bvInline = inline
       }
 
     | isGetParamRecord =

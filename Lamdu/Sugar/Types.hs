@@ -69,7 +69,8 @@ module Lamdu.Sugar.Types
     , NameRef(..), nrName, nrGotoDefinition
     , Param(..), pNameRef, pForm, pBinderMode
     , BinderVarForm(..), _GetDefinition, _GetLet
-    , BinderVar(..), bvNameRef, bvForm, bvMInline
+    , BinderVarInline(..), _InlineVar, _CannotInline
+    , BinderVar(..), bvNameRef, bvForm, bvInline
     , GetVar(..), _GetParam, _GetParamsRecord, _GetBinder
     , ParamsRecordVar(..), prvFieldNames
     , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
@@ -391,11 +392,13 @@ data Param name m = Param
 data BinderVarForm = GetDefinition | GetLet
     deriving (Eq, Ord)
 
+data BinderVarInline m = InlineVar (T m EntityId) | CannotInline
+
 data BinderVar name m = BinderVar
     { _bvNameRef :: NameRef name m
     , _bvForm :: BinderVarForm
     , -- Just means it is stored and inlinable:
-      _bvMInline :: Maybe (T m EntityId)
+      _bvInline :: BinderVarInline m
     }
 
 newtype ParamsRecordVar name = ParamsRecordVar
@@ -627,6 +630,7 @@ Lens.makeLenses ''TagG
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''BinderVarForm
+Lens.makePrisms ''BinderVarInline
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CaseTail

@@ -8,6 +8,7 @@ import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.ByteString.Char8 as SBS8
 import           Data.Monoid ((<>))
+import           Data.Store.Transaction (Transaction)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -74,9 +75,10 @@ makeNameRef myId nameRef makeView =
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpToDefinitionEventMap
 
 makeInlineEventMap ::
-    Functor f => Config -> Maybe (f Sugar.EntityId) -> Widget.EventHandlers f
-makeInlineEventMap _ Nothing = mempty
-makeInlineEventMap config (Just inline) =
+    Functor m =>
+    Config -> Sugar.BinderVarInline m -> Widget.EventHandlers (Transaction m)
+makeInlineEventMap _ Sugar.CannotInline = mempty
+makeInlineEventMap config (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
     & Widget.keysEventMapMovesCursor (Config.inlineKeys config)
       (E.Doc ["Edit", "Inline"])
@@ -99,7 +101,7 @@ make getVar pl =
                 & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
                 <&> ExpressionGui.egWidget %~
                     Widget.weakerEvents
-                    (makeInlineEventMap config (binderVar ^. Sugar.bvMInline))
+                    (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
             Sugar.GetParam param ->
                 case param ^. Sugar.pBinderMode of
                 Sugar.LightLambda ->

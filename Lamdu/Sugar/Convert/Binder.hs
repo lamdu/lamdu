@@ -131,17 +131,18 @@ localExtractDestPost val =
     ConvertM.scMExtractDestPos .~ val ^. V.payload . Input.mStored
     & ConvertM.local
 
-makeMInline ::
+makeInline ::
     MonadA m =>
-    Maybe (ValIProperty m) -> Redex (Input.Payload m a) -> Maybe (T m EntityId)
-makeMInline mStored redex =
+    Maybe (ValIProperty m) -> Redex (Input.Payload m a) -> BinderVarInline m
+makeInline mStored redex =
     case redexParamRefs redex of
     [_singleUsage] ->
         inlineLet (redexParam redex)
         <$> mStored
         <*> (traverse (^. Input.mStored) (redexBody redex) <&> fmap Property.value)
         <*> (traverse (^. Input.mStored) (redexArg redex) <&> fmap Property.value)
-    _ -> Nothing
+        & maybe CannotInline InlineVar
+    _ -> CannotInline
 
 convertRedex ::
     (MonadA m, Monoid a) =>
@@ -163,7 +164,7 @@ convertRedex binderScopeVars expr redex =
             makeBinderBody (redexParam redex : binderScopeVars) (redexBody redex)
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton (redexParam redex)
-                (makeMInline (expr ^. V.payload . Input.mStored) redex))
+                (makeInline (expr ^. V.payload . Input.mStored) redex))
         Let
             { _lEntityId = defEntityId
             , _lValue =

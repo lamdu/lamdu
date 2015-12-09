@@ -57,7 +57,7 @@ convertGlobal globalId exprPl =
               , _nrGotoDefinition = jumpToDefI cp defI
               }
             , _bvForm = GetDefinition
-            , _bvMInline = Nothing
+            , _bvInline = CannotInline
             }
     where
         defI = ExprIRef.defI globalId
