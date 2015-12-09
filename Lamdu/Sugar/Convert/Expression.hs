@@ -62,17 +62,6 @@ convertGlobal globalId exprPl =
     where
         defI = ExprIRef.defI globalId
 
-convertGetVar ::
-    MonadA m =>
-    V.Var -> Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertGetVar param exprPl =
-    do
-        sugarContext <- ConvertM.readContext
-        ConvertGetVar.convertVar sugarContext param
-            (exprPl ^. Input.inferredType)
-            & BodyGetVar
-            & addActions exprPl
-
 convert :: (MonadA m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert v =
     v ^. V.payload
@@ -85,7 +74,7 @@ convert v =
       V.BToNom x -> ConvertNominal.convertToNom x
       V.BFromNom x -> ConvertNominal.convertFromNom x
       V.BCase x -> ConvertCase.convert x
-      V.BLeaf (V.LVar x) -> convertGetVar x
+      V.BLeaf (V.LVar x) -> ConvertGetVar.convert x
       V.BLeaf (V.LGlobal x) -> convertGlobal x
       V.BLeaf (V.LLiteral (V.Literal p bs))
           | p == Builtins.floatId -> convertLiteralFloat (decodeS bs)
