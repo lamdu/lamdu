@@ -87,11 +87,11 @@ mkContext defI cp reinferCheckRoot inferContext =
     { _scInferContext = inferContext
     , _scDefI = defI
     , _scCodeAnchors = cp
-    , _scMExtractDestPos = Nothing
     , _scScopeInfo = ScopeInfo
       { _siTagParamInfos = mempty
       , _siNullParams = mempty
       , _siLetItems = mempty
+      , _siMOuter = Nothing
       }
     , _scReinferCheckRoot = reinferCheckRoot
     , scConvertSubexpression = ConvertExpr.convert

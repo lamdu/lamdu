@@ -1,11 +1,12 @@
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Monad
     ( TagParamInfo(..)
-    , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems
+    , OuterScopeInfo(..), osiPos
+    , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siMOuter
 
     , Context(..)
     , scInferContext, scReinferCheckRoot, scDefI
-    , scCodeAnchors, scMExtractDestPos, scScopeInfo
+    , scCodeAnchors, scScopeInfo
 
     , ConvertM(..), run
     , readContext, liftTransaction, local
@@ -44,7 +45,10 @@ data TagParamInfo = TagParamInfo
     , tpiJumpTo :: Sugar.EntityId
     }
 
-type T = Transaction
+newtype OuterScopeInfo m = OuterScopeInfo
+    { _osiPos :: ExprIRef.ValIProperty m
+    }
+Lens.makeLenses ''OuterScopeInfo
 
 data ScopeInfo m = ScopeInfo
     { _siTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
@@ -52,8 +56,12 @@ data ScopeInfo m = ScopeInfo
     , -- Each let item potentially has an inline action
       _siLetItems :: Map V.Var (Sugar.BinderVarInline m)
       -- TODO: siTagParamInfos needs a reverse-lookup map too
+    , -- Where "extract to let" goes:
+      _siMOuter :: Maybe (OuterScopeInfo m)
     }
 Lens.makeLenses ''ScopeInfo
+
+type T = Transaction
 
 newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
     deriving (Functor, Applicative, Monad)
@@ -66,8 +74,6 @@ data Context m = Context
     , -- Check whether the definition is valid after an edit,
       -- so that can hole-wrap bad edits.
       _scReinferCheckRoot :: T m Bool
-    , -- Where "extract to let" goes:
-      _scMExtractDestPos :: Maybe (ExprIRef.ValIProperty m)
     , scConvertSubexpression ::
         forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
     }

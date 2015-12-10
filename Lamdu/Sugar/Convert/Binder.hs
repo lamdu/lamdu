@@ -84,7 +84,7 @@ mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
             , _laSetToHole = DataOps.setToHole topLevelProp <&> EntityId.ofValI
             , _laExtract =
               extractLetToOuterScope
-              (ctx ^. ConvertM.scMExtractDestPos)
+              (ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter)
               (ctx ^. ConvertM.scDefI)
               (ctx ^. ConvertM.scCodeAnchors)
               binderScopeVars param del bodyStored argStored
@@ -94,7 +94,8 @@ mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
 
 localExtractDestPost :: MonadA m => Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
 localExtractDestPost val =
-    ConvertM.scMExtractDestPos .~ val ^. V.payload . Input.mStored
+    ConvertM.scScopeInfo . ConvertM.siMOuter .~
+    (val ^. V.payload . Input.mStored <&> ConvertM.OuterScopeInfo)
     & ConvertM.local
 
 makeInline ::

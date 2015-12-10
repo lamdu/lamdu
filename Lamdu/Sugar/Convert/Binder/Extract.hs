@@ -17,6 +17,7 @@ import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, ValIProperty)
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
@@ -24,17 +25,17 @@ import           Prelude.Compat
 
 extractLetToOuterScope ::
     MonadA m =>
-    Maybe (ValIProperty m) ->
+    Maybe (ConvertM.OuterScopeInfo m) ->
     Maybe (DefI m) ->
     Anchors.CodeProps m ->
     [V.Var] -> V.Var -> Transaction m () ->
     Val (ValIProperty m) -> Val (ValIProperty m) ->
     Transaction m EntityId
-extractLetToOuterScope mExtractDestPos mRecursiveDefI cp binderScopeVars param delItem bodyStored argStored =
+extractLetToOuterScope mOuterScope mRecursiveDefI cp binderScopeVars param delItem bodyStored argStored =
     do
         mapM_ (`SubExprs.getVarsToHole` argStored) binderScopeVars
         delItem
-        case mExtractDestPos of
+        case mOuterScope of
             Nothing ->
                 do
                     paramName <- Anchors.assocNameRef param & Transaction.getP
@@ -45,8 +46,9 @@ extractLetToOuterScope mExtractDestPos mRecursiveDefI cp binderScopeVars param d
                     newDefI <- DataOps.newPublicDefinitionWithPane paramName cp extractedI
                     SubExprs.onGetVars (SubExprs.toGetGlobal newDefI) param bodyStored
                     EntityId.ofIRef newDefI & return
-            Just scopeBodyP ->
+            Just outerScope ->
                 EntityId.ofLambdaParam param <$
-                DataOps.redexWrapWithGivenParam param extractedI scopeBodyP
+                DataOps.redexWrapWithGivenParam param extractedI
+                (outerScope ^. ConvertM.osiPos)
     where
         extractedI = argStored ^. V.payload & Property.value

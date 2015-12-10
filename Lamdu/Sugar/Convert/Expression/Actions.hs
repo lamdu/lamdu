@@ -32,7 +32,7 @@ type T = Transaction
 mkExtract ::
     MonadA m => ConvertM.Context m -> ExprIRef.ValIProperty m -> T m ExtractToDestination
 mkExtract ctx stored =
-    case ctx ^. ConvertM.scMExtractDestPos of
+    case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
     Nothing -> mkExtractToDef (ctx ^. ConvertM.scCodeAnchors) stored <&> ExtractToDef
     Just extractDestPos -> mkExtractToLet extractDestPos stored <&> ExtractToLet
 
@@ -46,11 +46,11 @@ mkExtractToDef cp stored =
         EntityId.ofIRef newDefI & return
 
 mkExtractToLet ::
-    MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
-mkExtractToLet extractDestPos stored =
+    MonadA m => ConvertM.OuterScopeInfo m -> ExprIRef.ValIProperty m -> T m EntityId
+mkExtractToLet outerScope stored =
     do
         (lamI, getVarI) <-
-            if Property.value stored == Property.value extractDestPos
+            if Property.value stored == extractPosI
             then
                 -- Give entire binder body a name (replace binder body
                 -- with "(\x -> x) stored")
@@ -60,15 +60,15 @@ mkExtractToLet extractDestPos stored =
                 -- binder body with "(\x -> binderBody) stored", and
                 -- stored becomes "x")
                 do
-                    (newParam, lamI) <-
-                        Property.value extractDestPos & DataOps.newLambda
+                    (newParam, lamI) <- DataOps.newLambda extractPosI
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValBody
                     Property.set stored getVarI
                     return (lamI, getVarI)
         V.Apply lamI oldStored & V.BApp & ExprIRef.newValBody
-            >>= Property.set extractDestPos
+            >>= Property.set (outerScope ^. ConvertM.osiPos)
         EntityId.ofValI getVarI & return
     where
+        extractPosI = outerScope ^. ConvertM.osiPos & Property.value
         oldStored = Property.value stored
 
 mkActions ::
