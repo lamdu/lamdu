@@ -129,6 +129,7 @@ convertRedex binderScopeVars expr redex =
             & Lens.sequenceOf Lens._Just
         body <-
             makeBinderBody (redexParam redex : binderScopeVars) (redexBody redex)
+            & localExtractDestPost expr
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton (redexParam redex)
                 (makeInline (expr ^. V.payload . Input.mStored) redex))
