@@ -11,23 +11,21 @@ import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction, MkProperty)
-import qualified Data.Store.Transaction as Transaction
-import qualified Lamdu.Builtins.Anchors as Builtins
+import           Data.Store.Transaction (MkProperty)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Eval.Val (ScopeId)
-import           Lamdu.Expr.IRef (DefI, ValIProperty)
+import           Lamdu.Expr.IRef (ValIProperty)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Sugar.Convert.Binder.Extract (extractLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
 import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), cpParams, convertParams, convertLamParams, mkStoredLam, makeDeleteLambda)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation)
@@ -40,8 +38,6 @@ import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
-
-type T = Transaction
 
 data Redex a = Redex
     { redexBody :: Val a
@@ -74,36 +70,6 @@ checkForRedex expr = do
         getRedexApplies _ =
             error "redex should only be applied once per parent scope"
 
--- Move let item one level outside
-letItemToOutside ::
-    MonadA m =>
-    Maybe (ValIProperty m) ->
-    Maybe (DefI m) ->
-    Anchors.CodeProps m ->
-    [V.Var] -> V.Var -> T m () ->
-    Val (ValIProperty m) -> Val (ValIProperty m) ->
-    T m EntityId
-letItemToOutside mExtractDestPos mRecursiveDefI cp binderScopeVars param delItem bodyStored argStored =
-    do
-        mapM_ (`SubExprs.getVarsToHole` argStored) binderScopeVars
-        delItem
-        case mExtractDestPos of
-            Nothing ->
-                do
-                    paramName <- Anchors.assocNameRef param & Transaction.getP
-                    SubExprs.onGetVars
-                        (SubExprs.toGetGlobal
-                         (fromMaybe (error "recurseVar used not in definition context?!") mRecursiveDefI))
-                        Builtins.recurseVar argStored
-                    newDefI <- DataOps.newPublicDefinitionWithPane paramName cp extractedI
-                    SubExprs.onGetVars (SubExprs.toGetGlobal newDefI) param bodyStored
-                    EntityId.ofIRef newDefI & return
-            Just scopeBodyP ->
-                EntityId.ofLambdaParam param <$
-                DataOps.redexWrapWithGivenParam param extractedI scopeBodyP
-    where
-        extractedI = argStored ^. V.payload & Property.value
-
 mkLIActions ::
     MonadA m =>
     [V.Var] -> V.Var -> ValIProperty m ->
@@ -117,7 +83,7 @@ mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
             { _laSetToInner = SubExprs.getVarsToHole param bodyStored >> del
             , _laSetToHole = DataOps.setToHole topLevelProp <&> EntityId.ofValI
             , _laExtract =
-              letItemToOutside
+              extractLetToOuterScope
               (ctx ^. ConvertM.scMExtractDestPos)
               (ctx ^. ConvertM.scDefI)
               (ctx ^. ConvertM.scCodeAnchors)
