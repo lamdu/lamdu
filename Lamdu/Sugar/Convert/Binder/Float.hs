@@ -20,6 +20,7 @@ import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
@@ -35,15 +36,15 @@ toGetGlobal defI exprP =
 floatLetToOuterScope ::
     MonadA m =>
     ConvertM.Context m ->
-    V.Var -> Transaction m () -> Val (ValIProperty m) -> Val (ValIProperty m) ->
+    V.Var -> ValIProperty m -> Val (ValIProperty m) -> Val (ValIProperty m) ->
     Transaction m EntityId
-floatLetToOuterScope ctx param delItem bodyStored argStored =
+floatLetToOuterScope ctx param topLevelProp bodyStored argStored =
     do
         ctx ^.
             ConvertM.scScopeInfo . ConvertM.siOuter .
             ConvertM.osiVarsUnderPos
             & mapM_ (`SubExprs.getVarsToHole` argStored)
-        delItem
+        _ <- bodyStored ^. V.payload & replaceWith topLevelProp
         case ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiPos of
             Nothing ->
                 do
@@ -65,9 +66,10 @@ floatLetToOuterScope ctx param delItem bodyStored argStored =
 
 makeFloatLetToOuterScope ::
     MonadA m =>
-    V.Var -> Transaction m () -> Val (ValIProperty m) -> Val (ValIProperty m) ->
+    V.Var -> ValIProperty m -> Val (ValIProperty m) -> Val (ValIProperty m) ->
     ConvertM m (Transaction m EntityId)
-makeFloatLetToOuterScope param delItem bodyStored argStored =
+makeFloatLetToOuterScope param topLevelProp bodyStored argStored =
     do
         ctx <- ConvertM.readContext
-        floatLetToOuterScope ctx param delItem bodyStored argStored & return
+        floatLetToOuterScope ctx param topLevelProp bodyStored argStored
+            & return

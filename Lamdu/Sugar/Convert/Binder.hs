@@ -76,15 +76,16 @@ mkLIActions ::
     ConvertM m (LetActions m)
 mkLIActions param topLevelProp bodyStored argStored =
     do
-        ext <- makeFloatLetToOuterScope param del bodyStored argStored
+        ext <- makeFloatLetToOuterScope param topLevelProp bodyStored argStored
         return
             LetActions
-            { _laSetToInner = SubExprs.getVarsToHole param bodyStored >> del
+            { _laSetToInner =
+                do
+                    SubExprs.getVarsToHole param bodyStored
+                    bodyStored ^. V.payload & replaceWith topLevelProp & void
             , _laSetToHole = DataOps.setToHole topLevelProp <&> EntityId.ofValI
             , _laExtract = ext
             }
-    where
-        del = bodyStored ^. V.payload & replaceWith topLevelProp & void
 
 localNewExtractDestPos ::
     MonadA m => Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
