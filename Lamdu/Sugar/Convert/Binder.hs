@@ -39,17 +39,18 @@ import           Prelude.Compat
 
 mkLIActions ::
     MonadA m =>
-    V.Var -> ValIProperty m -> Val (ValIProperty m) -> Val (ValIProperty m) ->
+    ValIProperty m -> Redex (ValIProperty m) ->
     ConvertM m (LetActions m)
-mkLIActions param topLevelProp bodyStored argStored =
+mkLIActions topLevelProp redex =
     do
-        ext <- makeFloatLetToOuterScope param topLevelProp bodyStored argStored
+        ext <- makeFloatLetToOuterScope topLevelProp redex
         return
             LetActions
             { _laSetToInner =
                 do
-                    SubExprs.getVarsToHole param bodyStored
-                    bodyStored ^. V.payload & replaceWith topLevelProp & void
+                    SubExprs.getVarsToHole (redexParam redex) (redexBody redex)
+                    redexBody redex ^. V.payload
+                        & replaceWith topLevelProp & void
             , _laSetToHole = DataOps.setToHole topLevelProp <&> EntityId.ofValI
             , _laExtract = ext
             }
@@ -94,10 +95,9 @@ convertRedex expr redex =
             convertBinder Nothing defGuid (redexArg redex)
             & localNewExtractDestPos expr
         actions <-
-            mkLIActions param
+            mkLIActions
             <$> expr ^. V.payload . Input.mStored
-            <*> traverse (^. Input.mStored) (redexBody redex)
-            <*> traverse (^. Input.mStored) (redexArg redex)
+            <*> Lens.traverse (^. Input.mStored) redex
             & Lens.sequenceOf Lens._Just
         body <-
             makeBinderBody (redexBody redex)

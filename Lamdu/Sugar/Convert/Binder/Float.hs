@@ -19,6 +19,7 @@ import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
+import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -67,47 +68,48 @@ addLetParam varToReplace argStored =
 
 floatLetToOuterScope ::
     MonadA m =>
-    ConvertM.Context m ->
-    V.Var -> ValIProperty m -> Val (ValIProperty m) -> Val (ValIProperty m) ->
+    ValIProperty m -> Redex (ValIProperty m) -> ConvertM.Context m ->
     Transaction m EntityId
-floatLetToOuterScope ctx param topLevelProp bodyStored argStored =
+floatLetToOuterScope topLevelProp redex ctx =
     do
         (onUse, fixedArgI) <-
             case outerScopeInfo ^. ConvertM.osiVarsUnderPos of
-            [] -> return (id, Property.value (argStored ^. V.payload))
-            [x] -> addLetParam x argStored
+            [] -> return (id, Property.value (redexArg redex ^. V.payload))
+            [x] -> addLetParam x (redexArg redex)
             _ -> error "multiple osiVarsUnderPos not expected!?"
         (newLeafBody, resultEntity) <-
             case outerScopeInfo ^. ConvertM.osiPos of
             Nothing ->
                 do
-                    newDefI <- moveToGlobalScope ctx param argStored fixedArgI
+                    newDefI <-
+                        moveToGlobalScope ctx
+                        (redexParam redex) (redexArg redex) fixedArgI
                     return
                         ( ExprIRef.globalId newDefI & V.LGlobal
                         , EntityId.ofIRef newDefI
                         )
             Just outerScope ->
-                (V.LVar param, EntityId.ofLambdaParam param) <$
-                DataOps.redexWrapWithGivenParam param fixedArgI outerScope
+                ( V.LVar (redexParam redex)
+                , EntityId.ofLambdaParam (redexParam redex)
+                ) <$
+                DataOps.redexWrapWithGivenParam
+                    (redexParam redex) fixedArgI outerScope
         let newBody = V.BLeaf newLeafBody
         let
-            go (Val s (V.BLeaf (V.LVar v))) | v == param =
+            go (Val s (V.BLeaf (V.LVar v))) | v == redexParam redex =
                 onUse (Val s newBody)
             go val = val & V.body . Lens.mapped %~ go
         _ <-
             ExprIRef.writeValWithStoredSubexpressions
             (Property.value topLevelProp)
-            (go (bodyStored <&> Just . Property.value) <&> flip (,) ())
+            (go (redexBody redex <&> Just . Property.value) <&> flip (,) ())
         return resultEntity
     where
         outerScopeInfo = ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter
 
 makeFloatLetToOuterScope ::
     MonadA m =>
-    V.Var -> ValIProperty m -> Val (ValIProperty m) -> Val (ValIProperty m) ->
+    ValIProperty m -> Redex (ValIProperty m) ->
     ConvertM m (Transaction m EntityId)
-makeFloatLetToOuterScope param topLevelProp bodyStored argStored =
-    do
-        ctx <- ConvertM.readContext
-        floatLetToOuterScope ctx param topLevelProp bodyStored argStored
-            & return
+makeFloatLetToOuterScope topLevelProp redex =
+    ConvertM.readContext <&> floatLetToOuterScope topLevelProp redex
