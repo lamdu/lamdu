@@ -19,7 +19,7 @@ import           Data.Time.Clock (getCurrentTime)
 import           Data.Typeable (Typeable)
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
-import           Graphics.DrawingCombinators (Font)
+import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.MainLoop (mainLoopWidget)
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -35,6 +35,7 @@ import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.ExampleDB as ExampleDB
 import           Lamdu.DataFile (getLamduDir)
 import qualified Lamdu.EvalManager as EvalManager
+import           Lamdu.Font (Fonts(..))
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
 import qualified Lamdu.GUI.CodeEdit.Settings as Settings
@@ -53,8 +54,11 @@ import           System.IO (hPutStrLn, stderr)
 
 import           Prelude.Compat
 
-defaultFontOnErr :: FilePath
-defaultFontOnErr = "fonts/Purisa.ttf"
+defaultFonts :: Fonts FilePath
+defaultFonts =
+    Fonts defaultFontName defaultFontName
+    where
+        defaultFontName = "fonts/Purisa.ttf"
 
 main :: IO ()
 main =
@@ -108,7 +112,7 @@ settingsChangeHandler evaluator settings =
     _ -> EvalManager.stop evaluator
 
 makeRootWidget ::
-    Font -> Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
+    Fonts Draw.Font -> Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
     Config -> Widget.Size -> IO (Widget IO)
 makeRootWidget font db zoom settingsRef evaluator config size =
     do
@@ -125,7 +129,7 @@ makeRootWidget font db zoom settingsRef evaluator config size =
                 { envEvalRes = evalResults
                 , envConfig = config
                 , envSettings = settings
-                , envStyle = Style.base config font
+                , envStyle = Style.base config (Font.fontDefault font)
                 , envFullSize = size / sizeFactor
                 , envCursor = cursor
                 }
@@ -165,10 +169,10 @@ runEditor windowMode db =
                     settingsChangeHandler evaluator initialSettings
                     addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
 
-                    mainLoop win refreshScheduler configSampler $ \font config size ->
-                        makeRootWidget font db zoom settingsRef evaluator config size
+                    mainLoop win refreshScheduler configSampler $ \fonts config size ->
+                        makeRootWidget fonts db zoom settingsRef evaluator config size
                         >>= wrapFlyNav
-                        >>= addHelp (Style.help font (Config.help config)) size
+                        >>= addHelp (Style.help (Font.fontDefault fonts) (Config.help config)) size
 
 newtype RefreshScheduler = RefreshScheduler (IORef Bool)
 newRefreshScheduler :: IO RefreshScheduler
@@ -193,36 +197,45 @@ loopWhileException _ act = loop
             Nothing -> loop
             Just res -> return res
 
-samplePrependConfigDir :: ConfigSampler.Sample Config -> FilePath -> FilePath
-samplePrependConfigDir sample path =
-    FilePath.takeDirectory (ConfigSampler.sFilePath sample) </> path
+prependConfigPath ::
+    ConfigSampler.Sample Config ->
+    Fonts FilePath ->
+    Fonts FilePath
+prependConfigPath sample =
+    fmap (dir </>)
+    where
+        dir = FilePath.takeDirectory (ConfigSampler.sFilePath sample)
 
-fontPathOfSample :: ConfigSampler.Sample Config -> FilePath
-fontPathOfSample sample =
-    samplePrependConfigDir sample (Config.font (ConfigSampler.sValue sample))
+fontsOfConfig :: Config.Fonts -> Fonts FilePath
+fontsOfConfig (Config.Fonts a b) = Fonts a b
 
-withFontLoop :: Sampler Config -> (IO () -> Font -> IO a) -> IO a
+absFontsOfSample :: ConfigSampler.Sample Config -> Fonts FilePath
+absFontsOfSample sample =
+    prependConfigPath sample $ fontsOfConfig $ Config.fonts $
+    ConfigSampler.sValue sample
+
+withFontLoop :: Sampler Config -> (IO () -> Fonts Draw.Font -> IO a) -> IO a
 withFontLoop configSampler act =
     loopWhileException (Proxy :: Proxy FontChanged) $ do
         sample <- ConfigSampler.getSample configSampler
-        let fontPath = fontPathOfSample sample
-        let defaultFontPath = samplePrependConfigDir sample defaultFontOnErr
+        let absFonts = absFontsOfSample sample
+        let defaultFontsAbs = prependConfigPath sample defaultFonts
         let throwIfFontChanged =
                 do
-                    newFontPath <- ConfigSampler.getSample configSampler <&> fontPathOfSample
-                    when (newFontPath /= fontPath) $ E.throwIO FontChanged
+                    newAbsFonts <- ConfigSampler.getSample configSampler <&> absFontsOfSample
+                    when (newAbsFonts /= absFonts) $ E.throwIO FontChanged
         res <-
-            withFont (const (return Nothing)) fontPath $ \font ->
-            Just <$> act throwIfFontChanged font
+            withFont (const (return Nothing)) absFonts $ \fonts ->
+            Just <$> act throwIfFontChanged fonts
         case res of
-            Nothing -> withFont E.throwIO defaultFontPath $ act throwIfFontChanged
+            Nothing -> withFont E.throwIO defaultFontsAbs $ act throwIfFontChanged
             Just success -> return success
     where
         withFont err = Font.with (\x@E.SomeException{} -> err x)
 
 mainLoop ::
     GLFW.Window -> RefreshScheduler -> Sampler Config ->
-    (Font -> Config -> Widget.Size -> IO (Widget IO)) -> IO ()
+    (Fonts Draw.Font -> Config -> Widget.Size -> IO (Widget IO)) -> IO ()
 mainLoop win refreshScheduler configSampler iteration =
     withFontLoop configSampler $ \checkFont font ->
     do

@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric, RecordWildCards #-}
 module Lamdu.Config
     ( Layers(..)
-    , Help(..), Zoom(..), Pane(..), Hole(..), Name(..), Eval(..)
+    , Fonts(..), Help(..), Zoom(..), Pane(..), Hole(..), Name(..), Eval(..)
     , LightLambda(..)
     , Config(..)
     , delKeys
@@ -136,8 +136,16 @@ instance Aeson.ToJSON Eval where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Eval
 
+data Fonts = Fonts
+    { fontDefault :: FilePath
+    , fontAutoName :: FilePath
+    } deriving (Eq, Generic, Show)
+instance Aeson.ToJSON Fonts where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Fonts
+
 data Config = Config
-    { font :: FilePath
+    { fonts :: Fonts
     , layers :: Layers
     , help :: Help
     , zoom :: Zoom
