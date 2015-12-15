@@ -77,17 +77,13 @@ mkLIActions ::
     ConvertM m (LetActions m)
 mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
     do
-        ctx <- ConvertM.readContext
+        ext <-
+            extractLetToOuterScope binderScopeVars param del bodyStored argStored
         return
             LetActions
             { _laSetToInner = SubExprs.getVarsToHole param bodyStored >> del
             , _laSetToHole = DataOps.setToHole topLevelProp <&> EntityId.ofValI
-            , _laExtract =
-              extractLetToOuterScope
-              (ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter)
-              (ctx ^. ConvertM.scDefI)
-              (ctx ^. ConvertM.scCodeAnchors)
-              binderScopeVars param del bodyStored argStored
+            , _laExtract = ext
             }
     where
         del = bodyStored ^. V.payload & replaceWith topLevelProp & void
