@@ -12,7 +12,7 @@ module Lamdu.Data.Ops
     , newPane
     , makeNewTag, makeNewPublicTag
     , isInfix
-    , newLambda, newIdentityLambda
+    , newIdentityLambda
     ) where
 
 import           Control.Lens.Operators
@@ -76,18 +76,13 @@ setToHole exprP =
         hole = V.BLeaf V.LHole
         exprI = Property.value exprP
 
--- TODO: Remove this
-newLambda :: MonadA m => ValI m -> T m (V.Var, ValI m)
-newLambda body =
-    do
-        paramId <- ExprIRef.newVar
-        lamI <- V.Lam paramId body & V.BAbs & ExprIRef.newValBody
-        return (paramId, lamI)
-
 lambdaWrap :: MonadA m => ValIProperty m -> T m (V.Var, ValI m)
 lambdaWrap exprP =
     do
-        (newParam, newExprI) <- newLambda $ Property.value exprP
+        newParam <- ExprIRef.newVar
+        newExprI <-
+            Property.value exprP & V.Lam newParam & V.BAbs
+            & ExprIRef.newValBody
         Property.set exprP newExprI
         return (newParam, newExprI)
 

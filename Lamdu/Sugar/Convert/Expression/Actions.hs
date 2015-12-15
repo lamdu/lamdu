@@ -60,7 +60,10 @@ mkExtractToLet outerScope stored =
                 -- binder body with "(\x -> binderBody) stored", and
                 -- stored becomes "x")
                 do
-                    (newParam, lamI) <- DataOps.newLambda extractPosI
+                    newParam <- ExprIRef.newVar
+                    lamI <-
+                        V.Lam newParam extractPosI & V.BAbs
+                        & ExprIRef.newValBody
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValBody
                     Property.set stored getVarI
                     return (lamI, getVarI)
