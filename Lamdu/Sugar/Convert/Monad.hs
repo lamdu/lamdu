@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Monad
     ( TagParamInfo(..)
-    , OuterScopeInfo(..), osiPos
+    , OuterScopeInfo(..), osiPos, osiVarsUnderPos
     , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siOuter
 
     , Context(..)
@@ -45,8 +45,10 @@ data TagParamInfo = TagParamInfo
     , tpiJumpTo :: Sugar.EntityId
     }
 
-newtype OuterScopeInfo m = OuterScopeInfo
+data OuterScopeInfo m = OuterScopeInfo
     { _osiPos :: Maybe (ExprIRef.ValIProperty m)
+    , -- The vars that disappear from scope when moving up to pos
+      _osiVarsUnderPos :: [V.Var]
     }
 Lens.makeLenses ''OuterScopeInfo
 

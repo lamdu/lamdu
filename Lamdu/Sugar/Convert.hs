@@ -93,6 +93,7 @@ mkContext defI cp reinferCheckRoot inferContext =
       , _siLetItems = mempty
       , _siOuter = OuterScopeInfo
         { _osiPos = Nothing
+        , _osiVarsUnderPos = []
         }
       }
     , _scReinferCheckRoot = reinferCheckRoot
