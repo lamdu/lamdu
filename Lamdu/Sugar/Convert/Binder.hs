@@ -72,13 +72,11 @@ checkForRedex expr = do
 
 mkLIActions ::
     MonadA m =>
-    [V.Var] -> V.Var -> ValIProperty m ->
-    Val (ValIProperty m) -> Val (ValIProperty m) ->
+    V.Var -> ValIProperty m -> Val (ValIProperty m) -> Val (ValIProperty m) ->
     ConvertM m (LetActions m)
-mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
+mkLIActions param topLevelProp bodyStored argStored =
     do
-        ext <-
-            extractLetToOuterScope binderScopeVars param del bodyStored argStored
+        ext <- extractLetToOuterScope param del bodyStored argStored
         return
             LetActions
             { _laSetToInner = SubExprs.getVarsToHole param bodyStored >> del
@@ -88,13 +86,20 @@ mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
     where
         del = bodyStored ^. V.payload & replaceWith topLevelProp & void
 
-localExtractDestPost :: MonadA m => Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
-localExtractDestPost val =
+localNewExtractDestPos ::
+    MonadA m => Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
+localNewExtractDestPos val =
     ConvertM.scScopeInfo . ConvertM.siOuter .~
     ConvertM.OuterScopeInfo
     { _osiPos = val ^. V.payload . Input.mStored
     , _osiVarsUnderPos = []
     }
+    & ConvertM.local
+
+localVarsUnderExtractDestPos ::
+    MonadA m => [V.Var] -> ConvertM m a -> ConvertM m a
+localVarsUnderExtractDestPos vars =
+    ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiVarsUnderPos <>~ vars
     & ConvertM.local
 
 makeInline ::
@@ -113,23 +118,24 @@ makeInline mStored redex =
 
 convertRedex ::
     (MonadA m, Monoid a) =>
-    [V.Var] -> Val (Input.Payload m a) ->
+    Val (Input.Payload m a) ->
     Redex (Input.Payload m a) ->
     ConvertM m (Let Guid m (ExpressionU m a))
-convertRedex binderScopeVars expr redex =
+convertRedex expr redex =
     do
         value <-
             convertBinder Nothing defGuid (redexArg redex)
-            & localExtractDestPost expr
+            & localNewExtractDestPos expr
         actions <-
-            mkLIActions binderScopeVars param
+            mkLIActions param
             <$> expr ^. V.payload . Input.mStored
             <*> traverse (^. Input.mStored) (redexBody redex)
             <*> traverse (^. Input.mStored) (redexArg redex)
             & Lens.sequenceOf Lens._Just
         body <-
-            makeBinderBody (redexParam redex : binderScopeVars) (redexBody redex)
-            & localExtractDestPost expr
+            makeBinderBody (redexBody redex)
+            & localVarsUnderExtractDestPos [redexParam redex]
+            & localNewExtractDestPos expr
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton (redexParam redex)
                 (makeInline (expr ^. V.payload . Input.mStored) redex))
@@ -153,22 +159,22 @@ convertRedex binderScopeVars expr redex =
 
 makeBinderContent ::
     (MonadA m, Monoid a) =>
-    [V.Var] -> Val (Input.Payload m a) ->
+    Val (Input.Payload m a) ->
     ConvertM m (BinderContent Guid m (ExpressionU m a))
-makeBinderContent binderScopeVars expr =
+makeBinderContent expr =
     case checkForRedex expr of
     Nothing ->
-        ConvertM.convertSubexpression expr & localExtractDestPost expr
+        ConvertM.convertSubexpression expr & localNewExtractDestPos expr
         <&> BinderExpr
-    Just redex -> convertRedex binderScopeVars expr redex <&> BinderLet
+    Just redex -> convertRedex expr redex <&> BinderLet
 
 makeBinderBody ::
     (MonadA m, Monoid a) =>
-    [V.Var] -> Val (Input.Payload m a) ->
+    Val (Input.Payload m a) ->
     ConvertM m (BinderBody Guid m (ExpressionU m a))
-makeBinderBody binderScopeVars expr =
+makeBinderBody expr =
     do
-        content <- makeBinderContent binderScopeVars expr
+        content <- makeBinderContent expr
         BinderBody
             { _bbMActions =
               expr ^. V.payload . Input.mStored
@@ -187,7 +193,9 @@ makeBinder :: (MonadA m, Monoid a) =>
     ConvertM m (Binder Guid m (ExpressionU m a))
 makeBinder mChosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody =
     do
-        binderBody <- makeBinderBody ourParams funcBody
+        binderBody <-
+            makeBinderBody funcBody
+            & localVarsUnderExtractDestPos (cpMLamParam ^.. Lens._Just)
         return Binder
             { _bParams = _cpParams
             , _bMPresentationModeProp = mPresentationModeProp
@@ -198,7 +206,6 @@ makeBinder mChosenScopeProp mPresentationModeProp ConventionalParams{..} funcBod
             }
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
     where
-        ourParams = cpMLamParam ^.. Lens._Just
         addParams ctx =
             ctx
             & ConvertM.siTagParamInfos <>~ cpParamInfos

@@ -26,28 +26,29 @@ import           Prelude.Compat
 
 extractLetToOuterScope ::
     MonadA m =>
-    [V.Var] -> V.Var -> Transaction m () ->
+    V.Var -> Transaction m () ->
     Val (ValIProperty m) -> Val (ValIProperty m) ->
     ConvertM m (Transaction m EntityId)
-extractLetToOuterScope binderScopeVars param delItem bodyStored argStored =
+extractLetToOuterScope param delItem bodyStored argStored =
     do
         ctx <- ConvertM.readContext
-        let mOuterScope =
-                ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiPos
-        let mRecursiveDefI = ctx ^. ConvertM.scDefI
-        let cp = ctx ^. ConvertM.scCodeAnchors
         do
-            mapM_ (`SubExprs.getVarsToHole` argStored) binderScopeVars
+            ctx ^.
+                ConvertM.scScopeInfo . ConvertM.siOuter .
+                ConvertM.osiVarsUnderPos
+                & mapM_ (`SubExprs.getVarsToHole` argStored)
             delItem
-            case mOuterScope of
+            case ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiPos of
                 Nothing ->
                     do
                         paramName <- Anchors.assocNameRef param & Transaction.getP
                         SubExprs.onGetVars
                             (SubExprs.toGetGlobal
-                             (fromMaybe (error "recurseVar used not in definition context?!") mRecursiveDefI))
+                             (fromMaybe (error "recurseVar used not in definition context?!") (ctx ^. ConvertM.scDefI)))
                             Builtins.recurseVar argStored
-                        newDefI <- DataOps.newPublicDefinitionWithPane paramName cp extractedI
+                        newDefI <-
+                            DataOps.newPublicDefinitionWithPane paramName
+                            (ctx ^. ConvertM.scCodeAnchors) extractedI
                         SubExprs.onGetVars (SubExprs.toGetGlobal newDefI) param bodyStored
                         EntityId.ofIRef newDefI & return
                 Just outerScope ->
