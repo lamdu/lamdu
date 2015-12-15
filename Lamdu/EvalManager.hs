@@ -52,13 +52,13 @@ startedEvaluator (Started eval) = Just eval
 
 data Evaluator = Evaluator
     { eInvalidateCache :: IO ()
-    , eDb :: MVar Db
+    , eDb :: MVar (Maybe Db)
     , eEvaluatorRef :: IORef BGEvaluator
     , eResultsRef :: IORef (EvalResults (ValI ViewM))
     , eCancelTimerRef :: IORef (Maybe ThreadId)
     }
 
-new :: IO () -> MVar Db -> IO Evaluator
+new :: IO () -> MVar (Maybe Db) -> IO Evaluator
 new invalidateCache db =
     do
         ref <- newIORef NotStarted
@@ -72,9 +72,15 @@ new invalidateCache db =
             , eCancelTimerRef = cancelRef
             }
 
-runViewTransactionInIO :: MVar Db -> Transaction ViewM a -> IO a
+withDb :: MVar (Maybe Db) -> (Db -> IO a) -> IO a
+withDb mvar action =
+    withMVar mvar $ \case
+    Nothing -> error "Trying to use DB when it is already gone"
+    Just db -> action db
+
+runViewTransactionInIO :: MVar (Maybe Db) -> Transaction ViewM a -> IO a
 runViewTransactionInIO dbMVar trans =
-    withMVar dbMVar $ \db ->
+    withDb dbMVar $ \db ->
     DbLayout.runDbTransaction db (VersionControl.runAction trans)
 
 getLatestResults :: Evaluator -> IO (EvalResults (ValI ViewM))
@@ -187,7 +193,7 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
             return result
     where
         runTrans trans =
-            withMVar (eDb evaluator) $ \db -> DbLayout.runDbTransaction db trans
+            withDb (eDb evaluator) $ \db -> DbLayout.runDbTransaction db trans
 
 setCancelTimer :: Evaluator -> IO ()
 setCancelTimer evaluator =

@@ -131,9 +131,9 @@ makeRootWidget font db zoom settingsRef evaluator config size =
             <&> Widget.weakerEvents eventMap
             <&> Widget.scale sizeFactor
 
-withMVarProtection :: a -> (MVar a -> IO b) -> IO b
+withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
-    E.bracket (newMVar val) (\mvar -> modifyMVar_ mvar (\_ -> return (error "withMVarProtection exited")))
+    E.bracket (newMVar (Just val)) (\mvar -> modifyMVar_ mvar (\_ -> return Nothing))
 
 runEditor :: Maybe FilePath -> Opts.WindowMode -> Db -> IO ()
 runEditor mFontPath windowMode db =
