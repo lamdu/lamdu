@@ -117,7 +117,7 @@ Library
                   , time >= 1.2
                   , transformers >= 0.2.1
                   , utf8-string >= 0.3
-                  , graphics-drawingcombinators >= 1.5.0.3
+                  , graphics-drawingcombinators >= 1.5.1.2
   ghc-options:         -O2 -Wall -threaded
   -- ghc-options is prepended to ghc-prof-options
   ghc-prof-options:    -auto-all -caf-all -rtsopts
@@ -140,7 +140,7 @@ Executable lamdu
                   , directory
                   , either
                   , filepath
-                  , graphics-drawingcombinators >= 1.4
+                  , graphics-drawingcombinators >= 1.5.1.2
                   , hashable
                   , Lamdu
                   , lens
