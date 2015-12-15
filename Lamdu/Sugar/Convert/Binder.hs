@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, RankNTypes, PatternGuards, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, RankNTypes, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertBinder, convertLam
     ) where
@@ -106,7 +106,7 @@ convertRedex expr redex =
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton (redexParam redex)
                 (makeInline (expr ^. V.payload . Input.mStored) redex))
-        Let
+        return Let
             { _lEntityId = defEntityId
             , _lValue =
                 value
@@ -118,7 +118,7 @@ convertRedex expr redex =
             , _lBodyScope = redexBodyScope redex
             , _lBody = body
             , _lUsages = redexParamRefs redex
-            } & return
+            }
   where
       param = redexParam redex
       defGuid = UniqueId.toGuid param
@@ -217,11 +217,9 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
 
 useNormalLambda :: Binder name m (Expression name m a) -> Bool
 useNormalLambda binder =
-    or
-    [ Lens.has (bBody . bbContent . _BinderLet) binder
-    , Lens.has (bBody . Lens.traverse . SugarLens.payloadsOf forbiddenLightLamSubExprs) binder
-    , Lens.nullOf (bParams . _FieldParams) binder
-    ]
+    Lens.has (bBody . bbContent . _BinderLet) binder
+    || Lens.has (bBody . Lens.traverse . SugarLens.payloadsOf forbiddenLightLamSubExprs) binder
+    || Lens.nullOf (bParams . _FieldParams) binder
     where
         forbiddenLightLamSubExprs :: Lens.Fold (Body name m a) ()
         forbiddenLightLamSubExprs =

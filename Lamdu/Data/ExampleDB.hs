@@ -166,7 +166,7 @@ createMaybe :: MonadA m => T.ParamId -> M m TypeCtor
 createMaybe valTParamId =
     do
         tid <- newTId "Maybe"
-        nominalSum tid [(valTParamId, valT)] $ \_ ->
+        nominalSum tid [(valTParamId, valT)] $ const
             [ recordType [] & Ctor Builtins.nothingTag
             , T.TVar valT & Ctor Builtins.justTag
             ]
@@ -209,7 +209,7 @@ createBool =
     do
         tid <- newTId "Bool"
         tyCon <-
-            nominalSum tid [] $ \_ ->
+            nominalSum tid [] $ const
             [ recordType [] & Ctor Builtins.trueTag
             , recordType [] & Ctor Builtins.falseTag
             ]

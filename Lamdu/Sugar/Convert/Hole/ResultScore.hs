@@ -20,7 +20,7 @@ resultTypeScore (TSum c) = 2 : compositeTypeScore c
 resultTypeScore (TRecord c) = 2 : compositeTypeScore c
 
 compositeTypeScore :: Composite t -> [Int]
-compositeTypeScore (CEmpty) = []
+compositeTypeScore CEmpty = []
 compositeTypeScore (CVar _) = [1]
 compositeTypeScore (CExtend _ t r) =
     max (resultTypeScore t) (compositeTypeScore r)

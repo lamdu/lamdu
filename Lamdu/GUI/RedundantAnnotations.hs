@@ -13,16 +13,16 @@ import           Lamdu.Sugar.Types
 import           Prelude.Compat
 
 showAnn :: Lens' (Payload m0 T.Payload) T.ShowAnnotation
-showAnn x = (plData . T.plShowAnnotation) x
+showAnn = plData . T.plShowAnnotation
 
-don'tShowEval :: Expression name m T.Payload -> Expression name m T.Payload
-don'tShowEval = rPayload . showAnn . T.showInEvalMode .~ T.EvalModeShowNothing
+dontShowEval :: Expression name m T.Payload -> Expression name m T.Payload
+dontShowEval = rPayload . showAnn . T.showInEvalMode .~ T.EvalModeShowNothing
 
-don'tShowType :: Expression name m T.Payload -> Expression name m T.Payload
-don'tShowType = rPayload . showAnn . T.showInTypeMode .~ False
+dontShowType :: Expression name m T.Payload -> Expression name m T.Payload
+dontShowType = rPayload . showAnn . T.showInTypeMode .~ False
 
-don'tShowAnnotation :: Expression name m T.Payload -> Expression name m T.Payload
-don'tShowAnnotation = rPayload . showAnn .~ T.neverShowAnnotations
+dontShowAnnotation :: Expression name m T.Payload -> Expression name m T.Payload
+dontShowAnnotation = rPayload . showAnn .~ T.neverShowAnnotations
 
 forceShowType :: Expression name m T.Payload -> Expression name m T.Payload
 forceShowType =
@@ -42,35 +42,35 @@ markAnnotationsToDisplay ::
 markAnnotationsToDisplay (Expression oldBody pl) =
     case newBody of
     BodyLiteralNum _ ->
-        Expression newBody pl & don'tShowAnnotation
+        Expression newBody pl & dontShowAnnotation
     BodyRecord _ ->
-        Expression newBody pl & don'tShowAnnotation
+        Expression newBody pl & dontShowAnnotation
     BodyLam _ ->
-        Expression newBody pl & don'tShowAnnotation
+        Expression newBody pl & dontShowAnnotation
     BodyGetVar (GetParam Param { _pBinderMode = LightLambda }) ->
         Expression newBody pl
     BodyGetVar (GetParam Param { _pBinderMode = NormalBinder }) ->
-        Expression newBody pl & don'tShowAnnotation
+        Expression newBody pl & dontShowAnnotation
     BodyGetVar (GetBinder BinderVar { _bvForm = GetDefinition }) ->
         Expression newBody pl
     BodyGetVar (GetBinder BinderVar { _bvForm = GetLet }) ->
-        Expression newBody pl & don'tShowAnnotation
+        Expression newBody pl & dontShowAnnotation
     BodyFromNom _ ->
-        Expression (newBody <&> don'tShowEval) pl
+        Expression (newBody <&> dontShowEval) pl
     BodyToNom _ ->
-        Expression (newBody <&> don'tShowEval) pl
+        Expression (newBody <&> dontShowEval) pl
     BodyInject _ ->
-        Expression newBody pl & don'tShowEval
+        Expression newBody pl & dontShowEval
     BodyGetVar (GetParamsRecord _) ->
         Expression newBody pl
     BodyGetField _ ->
         Expression newBody pl
     BodyApply app ->
-        Expression (BodyApply (app & aFunc %~ don'tShowAnnotation)) pl
+        Expression (BodyApply (app & aFunc %~ dontShowAnnotation)) pl
     BodyList l ->
-        Expression (BodyList l') pl & don'tShowEval
+        Expression (BodyList l') pl & dontShowEval
         where
-            l' = l & lValues . Lens.mapped . liExpr %~ don'tShowType
+            l' = l & lValues . Lens.mapped . liExpr %~ dontShowType
     BodyHole hole ->
         Expression (BodyHole hole') pl & forceShowType
         where
@@ -83,10 +83,10 @@ markAnnotationsToDisplay (Expression oldBody pl) =
                 -- cKind contains the scrutinee which is not always
                 -- visible (for case alts that aren't lambdas), so
                 -- maybe we do want to show the annotation
-                & cKind . Lens.mapped %~ don'tShowAnnotation
+                & cKind . Lens.mapped %~ dontShowAnnotation
                 & cAlts . Lens.mapped . Lens.mapped %~
                   (rBody . _BodyLam . lamBinder . bBody . bbContent .
-                   SugarLens.binderContentExpr %~ don'tShowAnnotation) .
+                   SugarLens.binderContentExpr %~ dontShowAnnotation) .
                   (rPayload . showAnn . T.funcApplyLimit .~ T.AtMostOneFuncApply)
     where
         newBody = oldBody <&> markAnnotationsToDisplay

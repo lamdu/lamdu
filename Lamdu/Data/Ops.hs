@@ -29,8 +29,7 @@ import           Lamdu.Data.Anchors (PresentationMode(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.GenIds as GenIds
-import           Lamdu.Expr.IRef (DefI, ValTree(..))
-import           Lamdu.Expr.IRef (ValIProperty, ValI)
+import           Lamdu.Expr.IRef (DefI, ValIProperty, ValI, ValTree(..))
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
