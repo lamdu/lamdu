@@ -15,10 +15,14 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import           Lamdu.Font (Fonts(..))
+import qualified Lamdu.Font as Fonts
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 
-newtype Style = Style
+data Style = Style
     { styleBase :: TextEdit.Style
+    , styleAutoNameOrigin :: TextEdit.Style
+    , styleNameOrigin :: TextEdit.Style
     }
 
 flyNav :: FlyNav.Config
@@ -40,25 +44,35 @@ help font Config.Help{..} =
     , EventMapDoc.configOverlayDocKeys = helpKeys
     }
 
-style :: Config -> Draw.Font -> Style
-style config font =
+textEdit :: Config -> Draw.Color -> Draw.Font -> TextEdit.Style
+textEdit config color font =
+    TextEdit.Style
+    { TextEdit._sTextViewStyle =
+      TextView.Style
+      { TextView._styleColor = color
+      , TextView._styleFont = SizedFont font (Config.baseTextSize config)
+      , TextView._styleUnderline = Nothing
+      }
+    , TextEdit._sCursorColor = TextEdit.defaultCursorColor
+    , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
+    , TextEdit._sTextCursorId = WidgetIds.textCursorId
+    , TextEdit._sBGColor = Config.cursorBGColor config
+    , TextEdit._sEmptyUnfocusedString = ""
+    , TextEdit._sEmptyFocusedString = ""
+    }
+
+style :: Config -> Fonts Draw.Font -> Style
+style config fonts =
     Style
     { styleBase =
-      TextEdit.Style
-      { TextEdit._sTextViewStyle =
-        TextView.Style
-        { TextView._styleColor = Config.baseColor config
-        , TextView._styleFont = SizedFont font (Config.baseTextSize config)
-        , TextView._styleUnderline = Nothing
-        }
-      , TextEdit._sCursorColor = TextEdit.defaultCursorColor
-      , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
-      , TextEdit._sTextCursorId = WidgetIds.textCursorId
-      , TextEdit._sBGColor = Config.cursorBGColor config
-      , TextEdit._sEmptyUnfocusedString = ""
-      , TextEdit._sEmptyFocusedString = ""
-      }
+      textEdit config (Config.baseColor config) (Fonts.fontDefault fonts)
+    , styleAutoNameOrigin =
+      textEdit config autoNameOriginFGColor (Fonts.fontAutoName fonts)
+    , styleNameOrigin =
+      textEdit config nameOriginFGColor (Fonts.fontDefault fonts)
     }
+    where
+        Config.Name{..} = Config.name config
 
 anim :: Config -> AnimConfig
 anim config =

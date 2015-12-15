@@ -13,7 +13,7 @@ module Graphics.UI.Bottle.WidgetsEnvT
     , envAssignCursor, envAssignCursorPrefix
     , assignCursor, assignCursorPrefix
 
-    , readTextStyle
+    , readTextStyle, setTextStyle
     , setTextSizeColor, setTextColor
     ) where
 
@@ -76,6 +76,9 @@ isSubCursor = fmap isJust . subCursor
 
 readTextStyle :: MonadA m => WidgetEnvT m TextEdit.Style
 readTextStyle = readEnv <&> (^. envTextStyle)
+
+setTextStyle :: MonadA m => TextEdit.Style -> WidgetEnvT m a -> WidgetEnvT m a
+setTextStyle style = localEnv (envTextStyle .~ style)
 
 envAssignCursor
     :: Widget.Id -> Widget.Id -> Env -> Env

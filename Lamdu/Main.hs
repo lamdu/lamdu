@@ -114,7 +114,7 @@ settingsChangeHandler evaluator settings =
 makeRootWidget ::
     Fonts Draw.Font -> Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
     Config -> Widget.Size -> IO (Widget IO)
-makeRootWidget font db zoom settingsRef evaluator config size =
+makeRootWidget fonts db zoom settingsRef evaluator config size =
     do
         cursor <-
             DbLayout.cursor DbLayout.revisionProps
@@ -129,7 +129,7 @@ makeRootWidget font db zoom settingsRef evaluator config size =
                 { envEvalRes = evalResults
                 , envConfig = config
                 , envSettings = settings
-                , envStyle = Style.style config (Font.fontDefault font)
+                , envStyle = Style.style config fonts
                 , envFullSize = size / sizeFactor
                 , envCursor = cursor
                 }
