@@ -90,8 +90,8 @@ mkLIActions binderScopeVars param topLevelProp bodyStored argStored =
 
 localExtractDestPost :: MonadA m => Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
 localExtractDestPost val =
-    ConvertM.scScopeInfo . ConvertM.siMOuter .~
-    (val ^. V.payload . Input.mStored <&> ConvertM.OuterScopeInfo)
+    ConvertM.scScopeInfo . ConvertM.siOuter .~
+    ConvertM.OuterScopeInfo (val ^. V.payload . Input.mStored)
     & ConvertM.local
 
 makeInline ::

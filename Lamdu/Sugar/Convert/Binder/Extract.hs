@@ -32,7 +32,8 @@ extractLetToOuterScope ::
 extractLetToOuterScope binderScopeVars param delItem bodyStored argStored =
     do
         ctx <- ConvertM.readContext
-        let mOuterScope = ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter
+        let mOuterScope =
+                ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiPos
         let mRecursiveDefI = ctx ^. ConvertM.scDefI
         let cp = ctx ^. ConvertM.scCodeAnchors
         do
@@ -51,8 +52,7 @@ extractLetToOuterScope binderScopeVars param delItem bodyStored argStored =
                         EntityId.ofIRef newDefI & return
                 Just outerScope ->
                     EntityId.ofLambdaParam param <$
-                    DataOps.redexWrapWithGivenParam param extractedI
-                    (outerScope ^. ConvertM.osiPos)
+                    DataOps.redexWrapWithGivenParam param extractedI outerScope
             & return
     where
         extractedI = argStored ^. V.payload & Property.value

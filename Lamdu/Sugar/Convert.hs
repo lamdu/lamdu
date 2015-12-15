@@ -26,7 +26,7 @@ import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..))
+import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), OuterScopeInfo(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import           Lamdu.Sugar.Internal
@@ -91,7 +91,9 @@ mkContext defI cp reinferCheckRoot inferContext =
       { _siTagParamInfos = mempty
       , _siNullParams = mempty
       , _siLetItems = mempty
-      , _siMOuter = Nothing
+      , _siOuter = OuterScopeInfo
+        { _osiPos = Nothing
+        }
       }
     , _scReinferCheckRoot = reinferCheckRoot
     , scConvertSubexpression = ConvertExpr.convert

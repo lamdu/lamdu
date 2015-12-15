@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Convert.Monad
     ( TagParamInfo(..)
     , OuterScopeInfo(..), osiPos
-    , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siMOuter
+    , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siOuter
 
     , Context(..)
     , scInferContext, scReinferCheckRoot, scDefI
@@ -46,7 +46,7 @@ data TagParamInfo = TagParamInfo
     }
 
 newtype OuterScopeInfo m = OuterScopeInfo
-    { _osiPos :: ExprIRef.ValIProperty m
+    { _osiPos :: Maybe (ExprIRef.ValIProperty m)
     }
 Lens.makeLenses ''OuterScopeInfo
 
@@ -57,7 +57,7 @@ data ScopeInfo m = ScopeInfo
       _siLetItems :: Map V.Var (Sugar.BinderVarInline m)
       -- TODO: siTagParamInfos needs a reverse-lookup map too
     , -- Where "extract to let" goes:
-      _siMOuter :: Maybe (OuterScopeInfo m)
+      _siOuter :: OuterScopeInfo m
     }
 Lens.makeLenses ''ScopeInfo
 

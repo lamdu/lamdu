@@ -32,7 +32,7 @@ type T = Transaction
 mkExtract ::
     MonadA m => ConvertM.Context m -> ExprIRef.ValIProperty m -> T m ExtractToDestination
 mkExtract ctx stored =
-    case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
+    case ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiPos of
     Nothing -> mkExtractToDef (ctx ^. ConvertM.scCodeAnchors) stored <&> ExtractToDef
     Just extractDestPos -> mkExtractToLet extractDestPos stored <&> ExtractToLet
 
@@ -46,7 +46,7 @@ mkExtractToDef cp stored =
         EntityId.ofIRef newDefI & return
 
 mkExtractToLet ::
-    MonadA m => ConvertM.OuterScopeInfo m -> ExprIRef.ValIProperty m -> T m EntityId
+    MonadA m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
 mkExtractToLet outerScope stored =
     do
         (lamI, getVarI) <-
@@ -65,10 +65,10 @@ mkExtractToLet outerScope stored =
                     Property.set stored getVarI
                     return (lamI, getVarI)
         V.Apply lamI oldStored & V.BApp & ExprIRef.newValBody
-            >>= Property.set (outerScope ^. ConvertM.osiPos)
+            >>= Property.set outerScope
         EntityId.ofValI getVarI & return
     where
-        extractPosI = outerScope ^. ConvertM.osiPos & Property.value
+        extractPosI = Property.value outerScope
         oldStored = Property.value stored
 
 mkActions ::
