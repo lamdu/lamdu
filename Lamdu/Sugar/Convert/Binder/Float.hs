@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Lamdu.Sugar.Convert.Binder.Float
-    ( floatLetToOuterScope
+    ( makeFloatLetToOuterScope
     ) where
 
 import           Control.Lens.Operators
@@ -26,34 +26,40 @@ import           Prelude.Compat
 
 floatLetToOuterScope ::
     MonadA m =>
-    V.Var -> Transaction m () ->
-    Val (ValIProperty m) -> Val (ValIProperty m) ->
-    ConvertM m (Transaction m EntityId)
-floatLetToOuterScope param delItem bodyStored argStored =
+    ConvertM.Context m ->
+    V.Var -> Transaction m () -> Val (ValIProperty m) -> Val (ValIProperty m) ->
+    Transaction m EntityId
+floatLetToOuterScope ctx param delItem bodyStored argStored =
     do
-        ctx <- ConvertM.readContext
-        do
-            ctx ^.
-                ConvertM.scScopeInfo . ConvertM.siOuter .
-                ConvertM.osiVarsUnderPos
-                & mapM_ (`SubExprs.getVarsToHole` argStored)
-            delItem
-            case ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiPos of
-                Nothing ->
-                    do
-                        paramName <- Anchors.assocNameRef param & Transaction.getP
-                        SubExprs.onGetVars
-                            (SubExprs.toGetGlobal
-                             (fromMaybe (error "recurseVar used not in definition context?!") (ctx ^. ConvertM.scDefI)))
-                            Builtins.recurseVar argStored
-                        newDefI <-
-                            DataOps.newPublicDefinitionWithPane paramName
-                            (ctx ^. ConvertM.scCodeAnchors) extractedI
-                        SubExprs.onGetVars (SubExprs.toGetGlobal newDefI) param bodyStored
-                        EntityId.ofIRef newDefI & return
-                Just outerScope ->
-                    EntityId.ofLambdaParam param <$
-                    DataOps.redexWrapWithGivenParam param extractedI outerScope
-            & return
+        ctx ^.
+            ConvertM.scScopeInfo . ConvertM.siOuter .
+            ConvertM.osiVarsUnderPos
+            & mapM_ (`SubExprs.getVarsToHole` argStored)
+        delItem
+        case ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiPos of
+            Nothing ->
+                do
+                    paramName <- Anchors.assocNameRef param & Transaction.getP
+                    SubExprs.onGetVars
+                        (SubExprs.toGetGlobal
+                         (fromMaybe (error "recurseVar used not in definition context?!") (ctx ^. ConvertM.scDefI)))
+                        Builtins.recurseVar argStored
+                    newDefI <-
+                        DataOps.newPublicDefinitionWithPane paramName
+                        (ctx ^. ConvertM.scCodeAnchors) extractedI
+                    SubExprs.onGetVars (SubExprs.toGetGlobal newDefI) param bodyStored
+                    EntityId.ofIRef newDefI & return
+            Just outerScope ->
+                EntityId.ofLambdaParam param <$
+                DataOps.redexWrapWithGivenParam param extractedI outerScope
     where
         extractedI = argStored ^. V.payload & Property.value
+
+makeFloatLetToOuterScope ::
+    MonadA m =>
+    V.Var -> Transaction m () -> Val (ValIProperty m) -> Val (ValIProperty m) ->
+    ConvertM m (Transaction m EntityId)
+makeFloatLetToOuterScope param delItem bodyStored argStored =
+    do
+        ctx <- ConvertM.readContext
+        floatLetToOuterScope ctx param delItem bodyStored argStored & return

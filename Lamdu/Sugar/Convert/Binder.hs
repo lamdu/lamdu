@@ -25,7 +25,7 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
-import           Lamdu.Sugar.Convert.Binder.Float (floatLetToOuterScope)
+import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
 import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), cpParams, convertParams, convertLamParams, mkStoredLam, makeDeleteLambda)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation)
@@ -76,7 +76,7 @@ mkLIActions ::
     ConvertM m (LetActions m)
 mkLIActions param topLevelProp bodyStored argStored =
     do
-        ext <- floatLetToOuterScope param del bodyStored argStored
+        ext <- makeFloatLetToOuterScope param del bodyStored argStored
         return
             LetActions
             { _laSetToInner = SubExprs.getVarsToHole param bodyStored >> del
