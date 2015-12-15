@@ -41,6 +41,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.RedundantAnnotations as RedundantAnnotations
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Names.Add as AddNames
 import           Lamdu.Sugar.Names.Types (DefinitionN)
@@ -66,6 +67,7 @@ data Env m = Env
     , evalResults :: CurAndPrev (EvalResults (ValI m))
     , config :: Config
     , settings :: Settings
+    , style :: Style
     }
 
 makePanes :: MonadA m => Widget.Id -> Transaction.Property m [DefI m] -> [Pane m]
@@ -220,7 +222,8 @@ gui env rootId replExpr panes =
             & Widget.weakerEvents eventMap
             & return
     & ExprGuiM.assignCursor rootId replId
-    & ExprGuiM.run ExpressionEdit.make (codeProps env) (config env) (settings env)
+    & ExprGuiM.run ExpressionEdit.make
+      (codeProps env) (config env) (settings env) (style env)
     where
         space = Spacer.makeWidget 50
         replId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId

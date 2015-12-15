@@ -11,7 +11,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , makeSubexpression
     , advanceDepth
     --
-    , readConfig, readSettings, readCodeAnchors
+    , readConfig, readSettings, readStyle, readCodeAnchors
     , getCodeAnchor, mkPrejumpPosSaver
     --
     , readMScopeId, withLocalMScopeId
@@ -47,10 +47,10 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.WidgetId (toAnimId)
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
+import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
@@ -63,6 +63,7 @@ import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import           Lamdu.GUI.Precedence (Precedence)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
@@ -97,6 +98,7 @@ data Askable m = Askable
     , _aSubexpressionLayer :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aOuterPrecedence :: Precedence
+    , _aStyle :: Style
     }
 
 newtype ExprGuiM m a = ExprGuiM
@@ -119,6 +121,9 @@ withLocalUnderline underline =
     WE.envTextStyle . TextEdit.sTextViewStyle .
     TextView.styleUnderline ?~ underline
     & localEnv
+
+readStyle :: MonadA m => ExprGuiM m Style
+readStyle = ExprGuiM $ Lens.view aStyle
 
 readSettings :: MonadA m => ExprGuiM m Settings
 readSettings = ExprGuiM $ Lens.view aSettings
@@ -162,9 +167,9 @@ advanceDepth f animId action =
 run ::
     MonadA m =>
     (ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
-    Anchors.CodeProps m -> Config -> Settings -> ExprGuiM m a ->
+    Anchors.CodeProps m -> Config -> Settings -> Style -> ExprGuiM m a ->
     WidgetEnvT (T m) a
-run makeSubexpr codeAnchors config settings (ExprGuiM action) =
+run makeSubexpr codeAnchors config settings style (ExprGuiM action) =
     f <$> runRWST action
     Askable
     { _aConfig = config
@@ -174,6 +179,7 @@ run makeSubexpr codeAnchors config settings (ExprGuiM action) =
     , _aSubexpressionLayer = 0
     , _aMScopeId = Just topLevelScopeId & pure
     , _aOuterPrecedence = 0
+    , _aStyle = style
     }
     ()
     where

@@ -86,4 +86,5 @@ make (Env evalRes config settings style fullSize cursor) rootId =
             , CodeEdit.evalResults = evalRes
             , CodeEdit.config = config
             , CodeEdit.settings = settings
+            , CodeEdit.style = style
             }
