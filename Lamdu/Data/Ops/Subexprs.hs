@@ -3,7 +3,6 @@ module Lamdu.Data.Ops.Subexprs
     ( onMatchingSubexprs
     , onMatchingSubexprsWithPath
     , toHole
-    , toGetGlobal
     , onGetVars
     , getVarsToHole
     ) where
@@ -12,11 +11,9 @@ module Lamdu.Data.Ops.Subexprs
 import qualified Control.Lens as Lens
 import           Control.Monad (void)
 import           Control.MonadA (MonadA)
-import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (DefI, ValIProperty)
-import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.IRef (ValIProperty)
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
@@ -37,13 +34,6 @@ onMatchingSubexprsWithPath action predicate =
 
 toHole :: MonadA m => ValIProperty m -> T m ()
 toHole = void . DataOps.setToHole
-
-toGetGlobal :: MonadA m => DefI m -> ValIProperty m -> T m ()
-toGetGlobal defI exprP =
-    ExprIRef.writeValBody exprI $ V.BLeaf $ V.LGlobal globalId
-    where
-        exprI = Property.value exprP
-        globalId = ExprIRef.globalId defI
 
 onGetVars ::
     MonadA m => (ValIProperty m -> T m ()) -> V.Var ->

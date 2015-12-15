@@ -14,7 +14,8 @@ import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import           Lamdu.Expr.IRef (ValIProperty)
+import           Lamdu.Expr.IRef (DefI, ValIProperty)
+import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -23,6 +24,13 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
+
+toGetGlobal :: MonadA m => DefI m -> ValIProperty m -> Transaction m ()
+toGetGlobal defI exprP =
+    ExprIRef.writeValBody exprI $ V.BLeaf $ V.LGlobal globalId
+    where
+        exprI = Property.value exprP
+        globalId = ExprIRef.globalId defI
 
 floatLetToOuterScope ::
     MonadA m =>
@@ -41,13 +49,13 @@ floatLetToOuterScope ctx param delItem bodyStored argStored =
                 do
                     paramName <- Anchors.assocNameRef param & Transaction.getP
                     SubExprs.onGetVars
-                        (SubExprs.toGetGlobal
+                        (toGetGlobal
                          (fromMaybe (error "recurseVar used not in definition context?!") (ctx ^. ConvertM.scDefI)))
                         Builtins.recurseVar argStored
                     newDefI <-
                         DataOps.newPublicDefinitionWithPane paramName
                         (ctx ^. ConvertM.scCodeAnchors) extractedI
-                    SubExprs.onGetVars (SubExprs.toGetGlobal newDefI) param bodyStored
+                    SubExprs.onGetVars (toGetGlobal newDefI) param bodyStored
                     EntityId.ofIRef newDefI & return
             Just outerScope ->
                 EntityId.ofLambdaParam param <$
