@@ -133,7 +133,7 @@ makeRootWidget font db zoom settingsRef evaluator config size =
 
 withMVarProtection :: a -> (MVar a -> IO b) -> IO b
 withMVarProtection val =
-    E.bracket (newMVar val) (\mvar -> modifyMVar mvar (error "withMVarProtection exited"))
+    E.bracket (newMVar val) (\mvar -> modifyMVar_ mvar (\_ -> return (error "withMVarProtection exited")))
 
 runEditor :: Maybe FilePath -> Opts.WindowMode -> Db -> IO ()
 runEditor mFontPath windowMode db =
