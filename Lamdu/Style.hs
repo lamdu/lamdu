@@ -2,7 +2,7 @@
 module Lamdu.Style
     ( flyNav
     , help
-    , base
+    , Style(..), style
     , anim
     ) where
 
@@ -16,6 +16,10 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+
+newtype Style = Style
+    { styleBase :: TextEdit.Style
+    }
 
 flyNav :: FlyNav.Config
 flyNav = FlyNav.Config
@@ -36,20 +40,24 @@ help font Config.Help{..} =
     , EventMapDoc.configOverlayDocKeys = helpKeys
     }
 
-base :: Config -> Draw.Font -> TextEdit.Style
-base config font = TextEdit.Style
-    { TextEdit._sTextViewStyle =
+style :: Config -> Draw.Font -> Style
+style config font =
+    Style
+    { styleBase =
+      TextEdit.Style
+      { TextEdit._sTextViewStyle =
         TextView.Style
         { TextView._styleColor = Config.baseColor config
         , TextView._styleFont = SizedFont font (Config.baseTextSize config)
         , TextView._styleUnderline = Nothing
         }
-    , TextEdit._sCursorColor = TextEdit.defaultCursorColor
-    , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
-    , TextEdit._sTextCursorId = WidgetIds.textCursorId
-    , TextEdit._sBGColor = Config.cursorBGColor config
-    , TextEdit._sEmptyUnfocusedString = ""
-    , TextEdit._sEmptyFocusedString = ""
+      , TextEdit._sCursorColor = TextEdit.defaultCursorColor
+      , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
+      , TextEdit._sTextCursorId = WidgetIds.textCursorId
+      , TextEdit._sBGColor = Config.cursorBGColor config
+      , TextEdit._sEmptyUnfocusedString = ""
+      , TextEdit._sEmptyFocusedString = ""
+      }
     }
 
 anim :: Config -> AnimConfig

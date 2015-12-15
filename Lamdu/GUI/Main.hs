@@ -13,7 +13,6 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import           Graphics.UI.Bottle.WidgetsEnvT (runWidgetEnvT)
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import           Lamdu.Config (Config)
@@ -23,16 +22,18 @@ import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
+import qualified Lamdu.GUI.Scroll as Scroll
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.GUI.Scroll as Scroll
+import           Lamdu.Style (Style)
+import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
 
 data Env = Env
     { envEvalRes :: CurAndPrev (EvalResults (ExprIRef.ValI DbLayout.ViewM))
     , envConfig :: Config
     , envSettings :: Settings
-    , envStyle :: TextEdit.Style
+    , envStyle :: Style
     , envFullSize :: Widget.Size
     , envCursor :: Widget.Id
     }
@@ -45,7 +46,7 @@ make (Env evalRes config settings style fullSize cursor) rootId =
         actions <- VersionControl.makeActions
         let widgetEnv = WE.Env
                 { WE._envCursor = cursor
-                , WE._envTextStyle = style
+                , WE._envTextStyle = Style.styleBase style
                 , WE.backgroundCursorId = WidgetIds.backgroundCursorId
                 , WE.cursorBGColor = Config.cursorBGColor config
                 , WE.layerCursor = Config.layerCursor $ Config.layers config

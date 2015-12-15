@@ -129,7 +129,7 @@ makeRootWidget font db zoom settingsRef evaluator config size =
                 { envEvalRes = evalResults
                 , envConfig = config
                 , envSettings = settings
-                , envStyle = Style.base config (Font.fontDefault font)
+                , envStyle = Style.style config (Font.fontDefault font)
                 , envFullSize = size / sizeFactor
                 , envCursor = cursor
                 }
