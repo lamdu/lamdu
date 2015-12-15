@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 
 module Lamdu.Sugar.Convert.Binder.Redex
     ( Redex(..)
@@ -27,7 +27,7 @@ data Redex a = Redex
     , redexArg :: Val a
     , redexHiddenPayloads :: [a]
     , redexArgAnnotation :: Annotation
-    }
+    } deriving (Functor, Foldable, Traversable)
 
 checkForRedex :: Val (Input.Payload m a) -> Maybe (Redex (Input.Payload m a))
 checkForRedex expr = do
