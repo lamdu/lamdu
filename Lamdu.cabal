@@ -255,6 +255,7 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.Binder.Float
                   , Lamdu.Sugar.Convert.Binder.Inline
                   , Lamdu.Sugar.Convert.Binder.Params
+                  , Lamdu.Sugar.Convert.Binder.Redex
                   , Lamdu.Sugar.Convert.GetField
                   , Lamdu.Sugar.Convert.TIdG
                   , Lamdu.Sugar.Convert.Expression.Actions

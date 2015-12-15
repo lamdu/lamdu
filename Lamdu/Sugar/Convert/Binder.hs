@@ -8,8 +8,6 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (guard, void)
 import           Control.MonadA (MonadA)
-import           Data.CurAndPrev (CurAndPrev)
-import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -19,7 +17,6 @@ import           Data.Store.Transaction (MkProperty)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import           Lamdu.Eval.Val (ScopeId)
 import           Lamdu.Expr.IRef (ValIProperty)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -28,7 +25,8 @@ import qualified Lamdu.Expr.Val as V
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
 import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), cpParams, convertParams, convertLamParams, mkStoredLam, makeDeleteLambda)
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation)
+import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..), checkForRedex)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, scScopeInfo, siLetItems)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -38,37 +36,6 @@ import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
-
-data Redex a = Redex
-    { redexBody :: Val a
-    , redexBodyScope :: CurAndPrev (Map ScopeId ScopeId)
-    , redexParam :: V.Var
-    , redexParamRefs :: [EntityId]
-    , redexArg :: Val a
-    , redexHiddenPayloads :: [a]
-    , redexArgAnnotation :: Annotation
-    }
-
-checkForRedex :: Val (Input.Payload m a) -> Maybe (Redex (Input.Payload m a))
-checkForRedex expr = do
-    V.Apply func arg <- expr ^? ExprLens.valApply
-    V.Lam param body <- func ^? V.body . ExprLens._BAbs
-    Just Redex
-        { redexBody = body
-        , redexBodyScope =
-            func ^. V.payload . Input.evalResults
-            <&> (^. Input.eAppliesOfLam)
-            <&> Lens.traversed %~ getRedexApplies
-        , redexParam = param
-        , redexArg = arg
-        , redexHiddenPayloads = (^. V.payload) <$> [expr, func]
-        , redexArgAnnotation = makeAnnotation (arg ^. V.payload)
-        , redexParamRefs = func ^. V.payload . Input.varRefsOfLambda
-        }
-    where
-        getRedexApplies [(scopeId, _)] = scopeId
-        getRedexApplies _ =
-            error "redex should only be applied once per parent scope"
 
 mkLIActions ::
     MonadA m =>
