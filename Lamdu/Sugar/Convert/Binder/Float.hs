@@ -15,7 +15,7 @@ import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import           Lamdu.Expr.IRef (DefI, ValIProperty)
+import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
@@ -35,18 +35,35 @@ toGetGlobal defI exprP =
 
 moveToGlobalScope ::
     MonadA m =>
-    ConvertM.Context m -> V.Var -> Val (ValIProperty m) ->
+    ConvertM.Context m -> V.Var -> Val (ValIProperty m) -> ValI m ->
     Transaction m (DefI m)
-moveToGlobalScope ctx param argStored =
+moveToGlobalScope ctx param letBodyStored letI =
     do
         paramName <- Anchors.assocNameRef param & Transaction.getP
         SubExprs.onGetVars
             (toGetGlobal
              (fromMaybe (error "recurseVar used not in definition context?!") (ctx ^. ConvertM.scDefI)))
-            Builtins.recurseVar argStored
+            Builtins.recurseVar letBodyStored
         DataOps.newPublicDefinitionWithPane paramName
-            (ctx ^. ConvertM.scCodeAnchors)
-            (Property.value (argStored ^. V.payload))
+            (ctx ^. ConvertM.scCodeAnchors) letI
+
+addLetParam ::
+    Monad m =>
+    V.Var -> Val (ValIProperty m) ->
+    Transaction m (Val (Maybe (ValI m)) -> Val (Maybe (ValI m)), ValI m)
+addLetParam varToReplace argStored =
+    do
+        newParam <- ExprIRef.newVar
+        let toNewParam prop =
+                V.LVar newParam & V.BLeaf &
+                ExprIRef.writeValBody (Property.value prop)
+        SubExprs.onGetVars toNewParam varToReplace argStored
+        argStored ^. V.payload & Property.value
+            & V.Lam newParam & V.BAbs & ExprIRef.newValBody
+            <&> (,)
+            ( Val Nothing . V.BApp
+            . (`V.Apply` Val Nothing (V.BLeaf (V.LVar varToReplace)))
+            )
 
 floatLetToOuterScope ::
     MonadA m =>
@@ -55,32 +72,35 @@ floatLetToOuterScope ::
     Transaction m EntityId
 floatLetToOuterScope ctx param topLevelProp bodyStored argStored =
     do
-        outerScopeInfo ^. ConvertM.osiVarsUnderPos
-            & mapM_ (`SubExprs.getVarsToHole` argStored)
+        (onUse, fixedArgI) <-
+            case outerScopeInfo ^. ConvertM.osiVarsUnderPos of
+            [] -> return (id, Property.value (argStored ^. V.payload))
+            [x] -> addLetParam x argStored
+            _ -> error "multiple osiVarsUnderPos not expected!?"
         (newLeafBody, resultEntity) <-
             case outerScopeInfo ^. ConvertM.osiPos of
             Nothing ->
                 do
-                    newDefI <- moveToGlobalScope ctx param argStored
+                    newDefI <- moveToGlobalScope ctx param argStored fixedArgI
                     return
                         ( ExprIRef.globalId newDefI & V.LGlobal
                         , EntityId.ofIRef newDefI
                         )
             Just outerScope ->
                 (V.LVar param, EntityId.ofLambdaParam param) <$
-                DataOps.redexWrapWithGivenParam param
-                (Property.value (argStored ^. V.payload)) outerScope
+                DataOps.redexWrapWithGivenParam param fixedArgI outerScope
         let newBody = V.BLeaf newLeafBody
+        let
+            go (Val s (V.BLeaf (V.LVar v))) | v == param =
+                onUse (Val s newBody)
+            go val = val & V.body . Lens.mapped %~ go
         _ <-
             ExprIRef.writeValWithStoredSubexpressions
             (Property.value topLevelProp)
-            (go newBody (bodyStored <&> Just . Property.value) <&> flip (,) ())
+            (go (bodyStored <&> Just . Property.value) <&> flip (,) ())
         return resultEntity
     where
         outerScopeInfo = ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter
-        go newBody (Val s (V.BLeaf (V.LVar v))) | v == param =
-            Val s newBody
-        go newBody val = val & V.body . Lens.mapped %~ go newBody
 
 makeFloatLetToOuterScope ::
     MonadA m =>
