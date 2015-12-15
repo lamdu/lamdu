@@ -33,6 +33,21 @@ toGetGlobal defI exprP =
         exprI = Property.value exprP
         globalId = ExprIRef.globalId defI
 
+moveToGlobalScope ::
+    MonadA m =>
+    ConvertM.Context m -> V.Var -> Val (ValIProperty m) ->
+    Transaction m (DefI m)
+moveToGlobalScope ctx param argStored =
+    do
+        paramName <- Anchors.assocNameRef param & Transaction.getP
+        SubExprs.onGetVars
+            (toGetGlobal
+             (fromMaybe (error "recurseVar used not in definition context?!") (ctx ^. ConvertM.scDefI)))
+            Builtins.recurseVar argStored
+        DataOps.newPublicDefinitionWithPane paramName
+            (ctx ^. ConvertM.scCodeAnchors)
+            (Property.value (argStored ^. V.payload))
+
 floatLetToOuterScope ::
     MonadA m =>
     ConvertM.Context m ->
@@ -48,21 +63,13 @@ floatLetToOuterScope ctx param topLevelProp bodyStored argStored =
         case ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiPos of
             Nothing ->
                 do
-                    paramName <- Anchors.assocNameRef param & Transaction.getP
-                    SubExprs.onGetVars
-                        (toGetGlobal
-                         (fromMaybe (error "recurseVar used not in definition context?!") (ctx ^. ConvertM.scDefI)))
-                        Builtins.recurseVar argStored
-                    newDefI <-
-                        DataOps.newPublicDefinitionWithPane paramName
-                        (ctx ^. ConvertM.scCodeAnchors) extractedI
+                    newDefI <- moveToGlobalScope ctx param argStored
                     SubExprs.onGetVars (toGetGlobal newDefI) param bodyStored
                     EntityId.ofIRef newDefI & return
             Just outerScope ->
                 EntityId.ofLambdaParam param <$
-                DataOps.redexWrapWithGivenParam param extractedI outerScope
-    where
-        extractedI = argStored ^. V.payload & Property.value
+                DataOps.redexWrapWithGivenParam param
+                (Property.value (argStored ^. V.payload)) outerScope
 
 makeFloatLetToOuterScope ::
     MonadA m =>
