@@ -8,10 +8,10 @@ module Graphics.UI.Bottle.MainLoop
 
 import           Prelude.Compat
 
-import           Control.Concurrent (ThreadId, killThread, myThreadId)
+import           Control.Concurrent (ThreadId, myThreadId)
 import           Control.Concurrent.STM.TVar
 import           Control.Concurrent.Utils (forkIOUnmasked)
-import           Control.Exception (bracket, onException)
+import qualified Control.Exception as E
 import           Control.Lens (Lens')
 import           Control.Lens.Operators
 import           Control.Monad (void, when, unless, forever)
@@ -111,12 +111,12 @@ data IsAnimating
     | NotAnimating
     deriving Eq
 
-asyncKillThread :: ThreadId -> IO ()
-asyncKillThread = void . forkIOUnmasked . killThread
+asyncThrowTo :: E.Exception e => ThreadId -> e -> IO ()
+asyncThrowTo threadId exc = void $ forkIOUnmasked $ E.throwTo threadId exc
 
 withForkedIO :: IO () -> IO a -> IO a
 withForkedIO action =
-    bracket (forkIOUnmasked action) asyncKillThread . const
+    E.bracket (forkIOUnmasked action) (`asyncThrowTo` E.ThreadKilled) . const
 
 data ThreadSyncVar = ThreadSyncVar
     { _tsvHaveTicks :: !Bool
@@ -173,11 +173,14 @@ initialAnimState initialFrame =
             , _asDestFrame = initialFrame
             }
 
-killSelfOnError :: IO a -> IO (IO a)
-killSelfOnError action =
+forwardExceptions :: IO a -> IO (IO a)
+forwardExceptions action =
     do
         selfId <- myThreadId
-        return $ action `onException` asyncKillThread selfId
+        return $ action `E.catch` \exc@E.SomeException{} ->
+            do
+                asyncThrowTo selfId exc
+                E.throwIO exc
 
 desiredFrameRate :: Num a => a
 desiredFrameRate = 60
@@ -196,7 +199,7 @@ mainLoopAnim win getAnimationConfig animHandlers =
             , _tsvWinSize = initialWinSize
             , _tsvReversedEvents = []
             }
-        eventHandler <- killSelfOnError (eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers)
+        eventHandler <- forwardExceptions (eventHandlerThread frameStateVar eventTVar getAnimationConfig animHandlers)
         withForkedIO eventHandler $ mainLoopAnimThread frameStateVar eventTVar win
 
 waitForEvent :: TVar ThreadSyncVar -> IO ThreadSyncVar
