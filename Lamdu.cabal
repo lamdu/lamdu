@@ -130,7 +130,7 @@ Executable lamdu
                   , TraceUtils
                   , TypeCompose
                   , aeson
-                  , base
+                  , base >= 4.7
                   , base-compat
                   , binary
                   , bytestring

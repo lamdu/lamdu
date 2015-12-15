@@ -137,7 +137,8 @@ instance Aeson.ToJSON Eval where
 instance Aeson.FromJSON Eval
 
 data Config = Config
-    { layers :: Layers
+    { font :: FilePath
+    , layers :: Layers
     , help :: Help
     , zoom :: Zoom
     , pane :: Pane

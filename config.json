@@ -1,4 +1,5 @@
 {
+    "font": "fonts/DejaVuSans.ttf",
     "animationTimePeriodSec": 0.11,
     "animationRemainInPeriod": 0.2,
     "maxExprDepth": 40,

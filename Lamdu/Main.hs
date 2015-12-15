@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, Rank2Types, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, Rank2Types, RecordWildCards, DeriveDataTypeable, ScopedTypeVariables, LambdaCase #-}
 module Main
     ( main
     ) where
@@ -6,15 +6,17 @@ module Main
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import           Control.Lens.Operators
-import           Control.Monad (unless, replicateM_)
+import           Control.Monad (when, unless, replicateM_)
 import           Data.IORef
 import           Data.Maybe
 import qualified Data.Monoid as Monoid
+import           Data.Proxy (Proxy(..))
 import           Data.Store.Db (Db)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Time.Clock (getCurrentTime)
+import           Data.Typeable (Typeable)
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import           Graphics.DrawingCombinators (Font)
@@ -45,6 +47,8 @@ import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import qualified System.Directory as Directory
+import           System.FilePath ((</>))
+import qualified System.FilePath as FilePath
 import           System.IO (hPutStrLn, stderr)
 
 import           Prelude.Compat
@@ -158,11 +162,10 @@ runEditor windowMode db =
                     settingsChangeHandler evaluator initialSettings
                     addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
 
-                    Font.with startDir $ \font ->
-                        mainLoop win refreshScheduler configSampler $ \config size ->
-                            makeRootWidget font db zoom settingsRef evaluator config size
-                            >>= wrapFlyNav
-                            >>= addHelp (Style.help font (Config.help config)) size
+                    mainLoop win refreshScheduler configSampler $ \font config size ->
+                        makeRootWidget font db zoom settingsRef evaluator config size
+                        >>= wrapFlyNav
+                        >>= addHelp (Style.help font (Config.help config)) size
 
 newtype RefreshScheduler = RefreshScheduler (IORef Bool)
 newRefreshScheduler :: IO RefreshScheduler
@@ -172,10 +175,44 @@ shouldRefresh (RefreshScheduler ref) = atomicModifyIORef ref $ \r -> (False, r)
 scheduleRefresh :: RefreshScheduler -> IO ()
 scheduleRefresh (RefreshScheduler ref) = writeIORef ref True
 
+
+data FontChanged = FontChanged
+    deriving (Show, Typeable)
+instance E.Exception FontChanged
+
+loopWhileException :: forall a e. E.Exception e => Proxy e -> IO a -> IO a
+loopWhileException _ act = loop
+    where
+        loop =
+            (act <&> Just)
+            `E.catch` (\(_ :: e) -> return Nothing)
+            >>= \case
+            Nothing -> loop
+            Just res -> return res
+
+fontPathOfSample :: ConfigSampler.Sample Config -> FilePath
+fontPathOfSample sample =
+    configDir </> Config.font config
+    where
+        config = ConfigSampler.sValue sample
+        configDir = FilePath.takeDirectory (ConfigSampler.sFilePath sample)
+
+withFontLoop :: Sampler Config -> (IO () -> Font -> IO a) -> IO a
+withFontLoop configSampler act =
+    loopWhileException (Proxy :: Proxy FontChanged) $ do
+        fontPath <- ConfigSampler.getSample configSampler <&> fontPathOfSample
+        let throwIfFontChanged =
+                do
+                    newFontPath <- ConfigSampler.getSample configSampler <&> fontPathOfSample
+                    when (newFontPath /= fontPath) $ E.throwIO FontChanged
+        Font.with fontPath $ \font ->
+            act throwIfFontChanged font
+
 mainLoop ::
     GLFW.Window -> RefreshScheduler -> Sampler Config ->
-    (Config -> Widget.Size -> IO (Widget IO)) -> IO ()
+    (Font -> Config -> Widget.Size -> IO (Widget IO)) -> IO ()
 mainLoop win refreshScheduler configSampler iteration =
+    withFontLoop configSampler $ \checkFont font ->
     do
         lastVersionNumRef <- newIORef =<< getCurrentTime
         let getAnimHalfLife =
@@ -186,9 +223,10 @@ mainLoop win refreshScheduler configSampler iteration =
                     config <-
                         ConfigSampler.getSample configSampler
                         <&> ConfigSampler.sValue
-                    iteration config size
+                    iteration font config size
             tickHandler =
                 do
+                    checkFont
                     curVersionNum <-
                         ConfigSampler.getSample configSampler
                         <&> ConfigSampler.sVersion
