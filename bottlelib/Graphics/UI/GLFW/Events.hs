@@ -4,8 +4,11 @@ module Graphics.UI.GLFW.Events
     , eventLoop
     ) where
 
+import qualified Control.Exception as E
+import           Control.Monad (when)
 import           Data.IORef
 import           Data.IORef.Utils (atomicModifyIORef_)
+import           Data.Typeable (Typeable)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.GLFW as GLFW
 
@@ -64,9 +67,15 @@ translate (RawKeyEvent key scanCode keyState modKeys : xs) =
     EventKey (KeyEvent key scanCode keyState modKeys Nothing) : translate xs
 translate (RawCharEvent _ : xs) = translate xs
 
+data EventLoopDisallowedWhenMasked = EventLoopDisallowedWhenMasked
+    deriving (Show, Typeable)
+instance E.Exception EventLoopDisallowedWhenMasked
+
 rawEventLoop :: GLFW.Window -> ([GLFWRawEvent] -> IO Result) -> IO ()
 rawEventLoop win eventsHandler =
     do
+        maskingState <- E.getMaskingState
+        when (maskingState /= E.Unmasked) $ E.throwIO EventLoopDisallowedWhenMasked
         eventsVar <- newIORef [RawWindowRefresh]
 
         let addEvent event = atomicModifyIORef_ eventsVar (event:)
