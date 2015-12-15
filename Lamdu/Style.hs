@@ -67,7 +67,7 @@ style config fonts =
     { styleBase =
       textEdit config (Config.baseColor config) (Fonts.fontDefault fonts)
     , styleAutoNameOrigin =
-      textEdit config autoNameOriginFGColor (Fonts.fontAutoName fonts)
+      textEdit config nameOriginFGColor (Fonts.fontAutoName fonts)
     , styleNameOrigin =
       textEdit config nameOriginFGColor (Fonts.fontDefault fonts)
     }

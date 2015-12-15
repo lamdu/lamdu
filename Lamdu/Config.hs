@@ -104,7 +104,6 @@ data Name = Name
     { collisionSuffixTextColor :: Draw.Color
     , collisionSuffixBGColor :: Draw.Color
     , collisionSuffixScaleFactor :: Vector2 Double
-    , autoNameOriginFGColor :: Draw.Color
     , nameOriginFGColor :: Draw.Color
     , definitionColor :: Draw.Color
     , parameterColor :: Draw.Color
