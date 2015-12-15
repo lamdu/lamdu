@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Lamdu.Sugar.Convert.Binder.Extract
-    ( extractLetToOuterScope
+module Lamdu.Sugar.Convert.Binder.Float
+    ( floatLetToOuterScope
     ) where
 
 import           Control.Lens.Operators
@@ -24,12 +24,12 @@ import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
 
-extractLetToOuterScope ::
+floatLetToOuterScope ::
     MonadA m =>
     V.Var -> Transaction m () ->
     Val (ValIProperty m) -> Val (ValIProperty m) ->
     ConvertM m (Transaction m EntityId)
-extractLetToOuterScope param delItem bodyStored argStored =
+floatLetToOuterScope param delItem bodyStored argStored =
     do
         ctx <- ConvertM.readContext
         do
