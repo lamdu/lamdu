@@ -76,10 +76,9 @@ makeInline ::
 makeInline mStored redex =
     case redexParamRefs redex of
     [_singleUsage] ->
-        inlineLet (redexParam redex)
+        inlineLet
         <$> mStored
-        <*> (traverse (^. Input.mStored) (redexBody redex) <&> fmap Property.value)
-        <*> (traverse (^. Input.mStored) (redexArg redex) <&> fmap Property.value)
+        <*> (Lens.traverse (^. Input.mStored) redex <&> fmap Property.value)
         & maybe CannotInline InlineVar
     [] -> CannotInline
     uses -> CannotInlineDueToUses uses
