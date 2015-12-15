@@ -53,6 +53,9 @@ import           System.IO (hPutStrLn, stderr)
 
 import           Prelude.Compat
 
+defaultFontOnErr :: FilePath
+defaultFontOnErr = "fonts/Purisa.ttf"
+
 main :: IO ()
 main =
     do
@@ -190,23 +193,32 @@ loopWhileException _ act = loop
             Nothing -> loop
             Just res -> return res
 
+samplePrependConfigDir :: ConfigSampler.Sample Config -> FilePath -> FilePath
+samplePrependConfigDir sample path =
+    FilePath.takeDirectory (ConfigSampler.sFilePath sample) </> path
+
 fontPathOfSample :: ConfigSampler.Sample Config -> FilePath
 fontPathOfSample sample =
-    configDir </> Config.font config
-    where
-        config = ConfigSampler.sValue sample
-        configDir = FilePath.takeDirectory (ConfigSampler.sFilePath sample)
+    samplePrependConfigDir sample (Config.font (ConfigSampler.sValue sample))
 
 withFontLoop :: Sampler Config -> (IO () -> Font -> IO a) -> IO a
 withFontLoop configSampler act =
     loopWhileException (Proxy :: Proxy FontChanged) $ do
-        fontPath <- ConfigSampler.getSample configSampler <&> fontPathOfSample
+        sample <- ConfigSampler.getSample configSampler
+        let fontPath = fontPathOfSample sample
+        let defaultFontPath = samplePrependConfigDir sample defaultFontOnErr
         let throwIfFontChanged =
                 do
                     newFontPath <- ConfigSampler.getSample configSampler <&> fontPathOfSample
                     when (newFontPath /= fontPath) $ E.throwIO FontChanged
-        Font.with fontPath $ \font ->
-            act throwIfFontChanged font
+        res <-
+            withFont (const (return Nothing)) fontPath $ \font ->
+            Just <$> act throwIfFontChanged font
+        case res of
+            Nothing -> withFont E.throwIO defaultFontPath $ act throwIfFontChanged
+            Just success -> return success
+    where
+        withFont err = Font.with (\x@E.SomeException{} -> err x)
 
 mainLoop ::
     GLFW.Window -> RefreshScheduler -> Sampler Config ->
