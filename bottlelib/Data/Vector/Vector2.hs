@@ -14,7 +14,7 @@ import           Control.DeepSeq (NFData(..))
 import           Control.DeepSeq.Generics (genericRnf)
 import qualified Control.Lens as Lens
 import           Control.Monad (join)
-import           Data.Aeson (ToJSON(..), FromJSON(..))
+import qualified Data.Aeson.Types as Aeson
 import           Data.Binary (Binary(..))
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           GHC.Generics (Generic)
@@ -30,8 +30,9 @@ instance Binary a => Binary (Vector2 a)
 
 instance NFData a => NFData (Vector2 a) where rnf = genericRnf
 
-instance ToJSON a => ToJSON (Vector2 a)
-instance FromJSON a => FromJSON (Vector2 a)
+instance Aeson.ToJSON a => Aeson.ToJSON (Vector2 a) where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON a => Aeson.FromJSON (Vector2 a)
 
 instance a ~ b => Lens.Field1 (Vector2 a) (Vector2 b) a b where
     _1 f (Vector2 x y) = (`Vector2` y) <$> Lens.indexed f (0 :: Int) x

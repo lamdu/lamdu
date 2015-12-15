@@ -3,7 +3,7 @@ module Lamdu.GUI.VersionControl.Config
     ( Config(..)
     ) where
 
-import           Data.Aeson (ToJSON(..), FromJSON(..))
+import qualified Data.Aeson.Types as Aeson
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators.Utils ()
@@ -18,5 +18,6 @@ data Config = Config
     , selectedBranchColor :: Draw.Color
     } deriving (Eq, Generic, Show)
 
-instance ToJSON Config
-instance FromJSON Config
+instance Aeson.ToJSON Config where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Config

@@ -92,7 +92,7 @@ Library
 
   Build-depends:    base >= 4
                   , base-compat >= 0.8.2 && < 0.9
-                  , aeson >= 0.6.2.1 && < 0.9
+                  , aeson >= 0.6.2.1 && < 0.11
                   , leveldb-haskell >= 0.6
                   , cryptohash >= 0.7
                   , GLFW-b >= 1.4.7.3 && < 1.5

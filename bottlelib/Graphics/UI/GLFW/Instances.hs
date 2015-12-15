@@ -3,11 +3,13 @@ module Graphics.UI.GLFW.Instances
     (
     ) where
 
-import Data.Aeson (ToJSON(..), FromJSON(..))
-import Graphics.UI.GLFW (Key(..), ModifierKeys(..))
+import qualified Data.Aeson.Types as Aeson
+import           Graphics.UI.GLFW (Key(..), ModifierKeys(..))
 
-instance ToJSON Key
-instance FromJSON Key
+instance Aeson.ToJSON Key where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Key
 
-instance ToJSON ModifierKeys
-instance FromJSON ModifierKeys
+instance Aeson.ToJSON ModifierKeys where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON ModifierKeys

@@ -15,7 +15,7 @@ module Graphics.DrawingCombinators.Utils
 import           Control.Applicative (liftA2)
 import           Control.Lens.Operators
 import           Control.Monad (void)
-import           Data.Aeson (ToJSON(..), FromJSON(..))
+import qualified Data.Aeson.Types as Aeson
 import           Data.List (genericLength)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Foreign.C.Types.Instances ()
@@ -30,8 +30,9 @@ type Image = Draw.Image ()
 deriving instance Read Draw.Color
 deriving instance Generic Draw.Color
 
-instance ToJSON Draw.Color
-instance FromJSON Draw.Color
+instance Aeson.ToJSON Draw.Color where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Draw.Color
 
 scale :: Vector2 Draw.R -> Draw.Affine
 scale (Vector2 x y) = Draw.scale x y

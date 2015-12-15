@@ -9,7 +9,7 @@ module Lamdu.Config
     , layerInterval
     ) where
 
-import           Data.Aeson (ToJSON(..), FromJSON(..))
+import qualified Data.Aeson.Types as Aeson
 import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
@@ -32,8 +32,9 @@ data Layers = Layers
     , layerActivePane
     , layerMax :: Anim.Layer
     } deriving (Eq, Generic, Show)
-instance ToJSON Layers
-instance FromJSON Layers
+instance Aeson.ToJSON Layers where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Layers
 
 layerInterval :: Layers -> Int
 layerInterval Layers{..} = layerMax - layerMin
@@ -45,8 +46,9 @@ data Help = Help
     , helpBGColor :: Draw.Color
     , helpKeys :: [ModKey]
     } deriving (Eq, Generic, Show)
-instance ToJSON Help
-instance FromJSON Help
+instance Aeson.ToJSON Help where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Help
 
 data Zoom = Zoom
     { shrinkKeys :: [ModKey]
@@ -54,8 +56,9 @@ data Zoom = Zoom
     , enlargeFactor :: Double
     , shrinkFactor :: Double
     } deriving (Eq, Generic, Show)
-instance ToJSON Zoom
-instance FromJSON Zoom
+instance Aeson.ToJSON Zoom where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Zoom
 
 data Pane = Pane
     { paneInactiveTintColor :: Draw.Color
@@ -70,8 +73,9 @@ data Pane = Pane
     , newDefinitionButtonPressKeys :: [ModKey]
     , newDefinitionActionColor :: Draw.Color
     } deriving (Eq, Generic, Show)
-instance ToJSON Pane
-instance FromJSON Pane
+instance Aeson.ToJSON Pane where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Pane
 
 data Hole = Hole
     { holePickAndMoveToNextHoleKeys :: [ModKey]
@@ -92,8 +96,9 @@ data Hole = Hole
     , holeCloseKeys :: [ModKey]
     , holeHoveringWrapperScaleFactor :: Vector2 Double
     } deriving (Eq, Generic, Show)
-instance ToJSON Hole
-instance FromJSON Hole
+instance Aeson.ToJSON Hole where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Hole
 
 data Name = Name
     { collisionSuffixTextColor :: Draw.Color
@@ -108,15 +113,17 @@ data Name = Name
     , caseTagColor :: Draw.Color
     , paramTagColor :: Draw.Color
     } deriving (Eq, Generic, Show)
-instance ToJSON Name
-instance FromJSON Name
+instance Aeson.ToJSON Name where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Name
 
 data LightLambda = LightLambda
     { lightLambdaUnderlineColor :: Draw.Color
     , lightLambdaUnderlineWidth :: Double
     } deriving (Eq, Generic, Show)
-instance ToJSON LightLambda
-instance FromJSON LightLambda
+instance Aeson.ToJSON LightLambda where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON LightLambda
 
 data Eval = Eval
     { prevScopeKeys :: [ModKey]
@@ -125,8 +132,9 @@ data Eval = Eval
     , neighborsPadding :: Vector2 Double
     , staleResultTint :: Draw.Color
     } deriving (Eq, Generic, Show)
-instance ToJSON Eval
-instance FromJSON Eval
+instance Aeson.ToJSON Eval where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Eval
 
 data Config = Config
     { layers :: Layers
@@ -215,8 +223,9 @@ data Config = Config
     , presentationChoiceScaleFactor :: Vector2 Double
     , presentationChoiceColor :: Draw.Color
     } deriving (Eq, Generic, Show)
-instance ToJSON Config
-instance FromJSON Config
+instance Aeson.ToJSON Config where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Config
 
 delKeys :: Config -> [ModKey]
 delKeys config = delForwardKeys config ++ delBackwardKeys config
