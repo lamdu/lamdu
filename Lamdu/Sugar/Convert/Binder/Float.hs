@@ -4,6 +4,7 @@ module Lamdu.Sugar.Convert.Binder.Float
     ( makeFloatLetToOuterScope
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Data.Maybe (fromMaybe)
@@ -20,7 +21,6 @@ import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
@@ -55,21 +55,32 @@ floatLetToOuterScope ::
     Transaction m EntityId
 floatLetToOuterScope ctx param topLevelProp bodyStored argStored =
     do
-        ctx ^.
-            ConvertM.scScopeInfo . ConvertM.siOuter .
-            ConvertM.osiVarsUnderPos
+        outerScopeInfo ^. ConvertM.osiVarsUnderPos
             & mapM_ (`SubExprs.getVarsToHole` argStored)
-        _ <- bodyStored ^. V.payload & replaceWith topLevelProp
-        case ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiPos of
+        (newLeafBody, resultEntity) <-
+            case outerScopeInfo ^. ConvertM.osiPos of
             Nothing ->
                 do
                     newDefI <- moveToGlobalScope ctx param argStored
-                    SubExprs.onGetVars (toGetGlobal newDefI) param bodyStored
-                    EntityId.ofIRef newDefI & return
+                    return
+                        ( ExprIRef.globalId newDefI & V.LGlobal
+                        , EntityId.ofIRef newDefI
+                        )
             Just outerScope ->
-                EntityId.ofLambdaParam param <$
+                (V.LVar param, EntityId.ofLambdaParam param) <$
                 DataOps.redexWrapWithGivenParam param
                 (Property.value (argStored ^. V.payload)) outerScope
+        let newBody = V.BLeaf newLeafBody
+        _ <-
+            ExprIRef.writeValWithStoredSubexpressions
+            (Property.value topLevelProp)
+            (go newBody (bodyStored <&> Just . Property.value) <&> flip (,) ())
+        return resultEntity
+    where
+        outerScopeInfo = ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter
+        go newBody (Val s (V.BLeaf (V.LVar v))) | v == param =
+            Val s newBody
+        go newBody val = val & V.body . Lens.mapped %~ go newBody
 
 makeFloatLetToOuterScope ::
     MonadA m =>
