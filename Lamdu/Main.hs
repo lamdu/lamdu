@@ -16,6 +16,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Time.Clock (getCurrentTime)
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
+import           GHC.Stack (whoCreated)
 import           Graphics.DrawingCombinators (Font)
 import           Graphics.UI.Bottle.MainLoop (mainLoopWidget)
 import           Graphics.UI.Bottle.Widget (Widget)
@@ -62,6 +63,7 @@ main =
                 | otherwise         -> withDB $ runEditor _poMFontPath _poWindowMode
     `E.catch` \e@E.SomeException{} -> do
     hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
+    mapM_ (hPutStrLn stderr) =<< whoCreated e
     return ()
 
 deleteDB :: FilePath -> IO ()
