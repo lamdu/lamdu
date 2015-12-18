@@ -2,9 +2,9 @@ packages:
 - .
 - location:
     git: https://github.com/luqui/graphics-drawingcombinators
-    commit: 0d48a34c666393bd7361b71d733dad138727ad1d
+    commit: 752d8326bcb0411f24788aaf8221e1dab30ddf7f
 
-resolver: nightly-2015-08-06
+resolver: nightly-2015-12-17
 extra-deps:
 - FTGL-2.1
 - TraceUtils-0.1.0.2
