@@ -3,6 +3,7 @@ module Lamdu.Sugar.Convert.Binder.Params
     ( ConventionalParams(..), cpParams
     , convertParams, convertLamParams
     , mkStoredLam, makeDeleteLambda
+    , tagGForLambdaTagParam, convertVarToGetField
     ) where
 
 import           Control.Lens (Lens')
