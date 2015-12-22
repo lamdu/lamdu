@@ -21,16 +21,9 @@ erExprValues f EvalResults{..} = f _erExprValues <&> \_erExprValues -> EvalResul
 erAppliesOfLam :: Lens' (EvalResults pl) (Map pl (Map ScopeId [(ScopeId, EvalResult ())]))
 erAppliesOfLam f EvalResults{..} = f _erAppliesOfLam <&> \_erAppliesOfLam -> EvalResults{..}
 
-instance Ord pl => Monoid (EvalResults pl) where
-    mempty =
-        EvalResults
-        { _erExprValues = Map.empty
-        , _erAppliesOfLam = Map.empty
-        }
-    mappend x y =
-        EvalResults
-        { _erExprValues = Map.unionWith mappend (x ^. erExprValues) (y ^. erExprValues)
-        , _erAppliesOfLam =
-            Map.unionWith (Map.unionWith (++))
-            (x ^. erAppliesOfLam) (y ^. erAppliesOfLam)
-        }
+empty :: EvalResults pl
+empty =
+    EvalResults
+    { _erExprValues = Map.empty
+    , _erAppliesOfLam = Map.empty
+    }

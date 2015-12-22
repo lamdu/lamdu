@@ -35,6 +35,7 @@ import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Eval.Background as EvalBG
 import           Lamdu.Eval.Results (EvalResults)
+import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
@@ -62,7 +63,7 @@ new :: IO () -> MVar (Maybe Db) -> IO Evaluator
 new invalidateCache db =
     do
         ref <- newIORef NotStarted
-        resultsRef <- newIORef mempty
+        resultsRef <- newIORef EvalResults.empty
         cancelRef <- newIORef Nothing
         return Evaluator
             { eInvalidateCache = invalidateCache
@@ -86,7 +87,7 @@ runViewTransactionInIO dbMVar trans =
 getLatestResults :: Evaluator -> IO (EvalResults (ValI ViewM))
 getLatestResults evaluator =
     readIORef (eEvaluatorRef evaluator) <&> startedEvaluator
-    >>= maybe (return mempty) EvalBG.getResults
+    >>= maybe (return EvalResults.empty) EvalBG.getResults
 
 getResults :: Evaluator -> IO (CurAndPrev (EvalResults (ValI ViewM)))
 getResults evaluator =
@@ -108,7 +109,7 @@ evalActions evaluator =
     , EvalBG._aReportUpdatesAvailable = eInvalidateCache evaluator
     , EvalBG._aCompleted = \_ ->
           do
-              atomicModifyIORef_ (eResultsRef evaluator) (const mempty)
+              atomicModifyIORef_ (eResultsRef evaluator) (const EvalResults.empty)
               eInvalidateCache evaluator
     }
     where
@@ -143,7 +144,7 @@ stop evaluator =
             <&> startedEvaluator
             >>= traverse_ EvalBG.stop
         writeIORef (eEvaluatorRef evaluator) NotStarted
-        writeIORef (eResultsRef evaluator) mempty
+        writeIORef (eResultsRef evaluator) EvalResults.empty
 
 sumDependency :: Set (ExprIRef.ValI ViewM) -> Set V.GlobalId -> Set Guid
 sumDependency subexprs globals =
@@ -193,7 +194,7 @@ setCancelTimer evaluator =
     do
         newCancelTimer <- runAfter 5000000 -- 5 seconds
             (atomicModifyIORef (eResultsRef evaluator)
-                (flip (,) () . const mempty)
+                (flip (,) () . const EvalResults.empty)
             )
         atomicModifyIORef (eCancelTimerRef evaluator)
             (\x -> (Just newCancelTimer, x))
