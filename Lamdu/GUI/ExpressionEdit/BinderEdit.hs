@@ -390,7 +390,7 @@ makeLetEdit item =
                   bodyId <$ lActions ^. Sugar.laSetToInner
                 , Widget.keysEventMapMovesCursor (Config.extractKeys config)
                   (E.Doc ["Edit", "Let clause", "Extract to outer scope"]) $
-                  WidgetIds.fromEntityId <$>
+                  WidgetIds.fromEntityId . Sugar.lfrNewEntity <$>
                   lActions ^. Sugar.laFloat
                 ]
                 | otherwise = mempty

@@ -43,7 +43,7 @@ mkLIActions ::
     ConvertM m (LetActions m)
 mkLIActions topLevelProp redex =
     do
-        ext <- makeFloatLetToOuterScope topLevelProp redex
+        float <- makeFloatLetToOuterScope topLevelProp redex
         return
             LetActions
             { _laSetToInner =
@@ -52,7 +52,7 @@ mkLIActions topLevelProp redex =
                     redexBody redex ^. V.payload
                         & replaceWith topLevelProp & void
             , _laSetToHole = DataOps.setToHole topLevelProp <&> EntityId.ofValI
-            , _laFloat = ext
+            , _laFloat = float
             }
 
 localNewExtractDestPos ::

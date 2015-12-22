@@ -51,6 +51,7 @@ moveToGlobalScope ctx param letBodyStored letI =
 data NewLet m = NewLet
     { nlIRef :: ValI m
     , nlOnVar :: Val (Maybe (ValI m)) -> Val (Maybe (ValI m))
+    , nlMVarToTags :: Maybe VarToTags
     }
 
 addLetParam ::
@@ -70,12 +71,13 @@ addLetParam varToReplace argStored =
             , nlOnVar =
                 Val Nothing . V.BApp
                 . (`V.Apply` Val Nothing (V.BLeaf (V.LVar varToReplace)))
+            , nlMVarToTags = Nothing
             }
 
 floatLetToOuterScope ::
     MonadA m =>
     ValIProperty m -> Redex (ValIProperty m) -> ConvertM.Context m ->
-    Transaction m EntityId
+    Transaction m LetFloatResult
 floatLetToOuterScope topLevelProp redex ctx =
     do
         newLet <-
@@ -84,6 +86,7 @@ floatLetToOuterScope topLevelProp redex ctx =
                 return NewLet
                 { nlIRef = redexArg redex ^. V.payload & Property.value
                 , nlOnVar = id
+                , nlMVarToTags = Nothing
                 }
             [x] -> addLetParam x (redexArg redex)
             _ -> error "multiple osiVarsUnderPos not expected!?"
@@ -113,13 +116,16 @@ floatLetToOuterScope topLevelProp redex ctx =
             ExprIRef.writeValWithStoredSubexpressions
             (Property.value topLevelProp)
             (go (redexBody redex <&> Just . Property.value) <&> flip (,) ())
-        return resultEntity
+        return LetFloatResult
+            { lfrNewEntity = resultEntity
+            , lfrMVarToTags = nlMVarToTags newLet
+            }
     where
         outerScopeInfo = ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter
 
 makeFloatLetToOuterScope ::
     MonadA m =>
     ValIProperty m -> Redex (ValIProperty m) ->
-    ConvertM m (Transaction m EntityId)
+    ConvertM m (Transaction m LetFloatResult)
 makeFloatLetToOuterScope topLevelProp redex =
     ConvertM.readContext <&> floatLetToOuterScope topLevelProp redex

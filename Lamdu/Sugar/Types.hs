@@ -41,11 +41,12 @@ module Lamdu.Sugar.Types
     , Payload(..), plEntityId, plAnnotation, plActions, plData
     , Expression(..), rBody, rPayload
     , DefinitionU
+    , LetFloatResult(..)
+    , LetActions(..)
+        , laSetToInner, laSetToHole, laFloat
     , Let(..)
         , lEntityId, lValue, lName, lUsages
         , lActions, lAnnotation, lBodyScope, lBody
-    , LetActions(..)
-        , laSetToInner, laSetToHole, laFloat
     , ListItem(..), liMActions, liExpr
     , ListActions(..)
     , List(..), lValues, lMActions, lNilEntityId
@@ -483,10 +484,15 @@ instance Show expr => Show (Body name m expr) where
     show BodyFromNom {} = "FromNom:TODO"
     show BodyToNom {} = "ToNom:TODO"
 
+data LetFloatResult = LetFloatResult
+    { lfrNewEntity :: EntityId
+    , lfrMVarToTags :: Maybe VarToTags
+    }
+
 data LetActions m = LetActions
     { _laSetToInner :: T m ()
     , _laSetToHole :: T m EntityId
-    , _laFloat :: T m EntityId
+    , _laFloat :: T m LetFloatResult
     }
 
 data Let name m expr = Let
