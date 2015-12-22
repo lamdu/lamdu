@@ -29,6 +29,8 @@ import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
 
+type T = Transaction
+
 data Env = Env
     { envEvalRes :: CurAndPrev (EvalResults (ExprIRef.ValI DbLayout.ViewM))
     , envConfig :: Config
@@ -38,9 +40,7 @@ data Env = Env
     , envCursor :: Widget.Id
     }
 
-make ::
-    Env -> Widget.Id ->
-    Transaction DbLayout.DbM (Widget (Transaction DbLayout.DbM))
+make :: Env -> Widget.Id -> T DbLayout.DbM (Widget (T DbLayout.DbM))
 make (Env evalRes config settings style fullSize cursor) rootId =
     do
         actions <- VersionControl.makeActions
