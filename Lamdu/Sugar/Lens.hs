@@ -134,24 +134,26 @@ binderNamedParamsActions ::
     Lens.Traversal' (BinderParams name m) (FuncParamActions m)
 binderNamedParamsActions = binderNamedParams . fpInfo . npiMActions . Lens._Just
 
-binderBodyFuncParamOps ::
-    Lens.Traversal' (Binder name m (Expression name m a)) t ->
-    Lens.Traversal' (BinderBody name m (Expression name m a)) t
-binderBodyFuncParamOps ops = bbContent . binderContentFuncParamOps ops
+binderBodyBinders ::
+    Lens.Traversal'
+    (BinderBody name m (Expression name m a))
+    (Binder name m (Expression name m a))
+binderBodyBinders = bbContent . binderContentBinders
 
-binderContentFuncParamOps ::
-    Lens.Traversal' (Binder name m (Expression name m a)) t ->
-    Lens.Traversal' (BinderContent name m (Expression name m a)) t
-binderContentFuncParamOps ops f (BinderLet Let{..}) =
+binderContentBinders ::
+    Lens.Traversal'
+    (BinderContent name m (Expression name m a))
+    (Binder name m (Expression name m a))
+binderContentBinders f (BinderLet Let{..}) =
     (\_lValue _lBody -> BinderLet Let{..})
-    <$> ops f _lValue
-    <*> binderBodyFuncParamOps ops f _lBody
-binderContentFuncParamOps ops f (BinderExpr e) =
+    <$> f _lValue
+    <*> binderBodyBinders f _lBody
+binderContentBinders f (BinderExpr e) =
     onExpr e <&> BinderExpr
     where
         onExpr = rBody %%~ onBody
         onBody (BodyLam lam) =
-            lam & lamBinder . ops %%~ f <&> BodyLam
+            lam & lamBinder %%~ f <&> BodyLam
         onBody body = body & Lens.traversed %%~ onExpr
 
 binderFuncParamAdds ::
@@ -161,7 +163,7 @@ binderFuncParamAdds ::
 binderFuncParamAdds f Binder{..} =
     (\_bParams _bBody _bMActions -> Binder{..})
     <$> (_bParams & binderNamedParamsActions . fpAddNext %%~ f)
-    <*> binderBodyFuncParamOps binderFuncParamAdds f _bBody
+    <*> binderBodyBinders (binderFuncParamAdds f) _bBody
     <*> (_bMActions & Lens._Just . baAddFirstParam %%~ f)
 
 binderFuncParamDeletes ::
@@ -171,7 +173,7 @@ binderFuncParamDeletes ::
 binderFuncParamDeletes f Binder{..} =
     (\_bParams _bBody -> Binder{..})
     <$> (_bParams & binderNamedParamsActions . fpDelete %%~ f)
-    <*> binderBodyFuncParamOps binderFuncParamDeletes f _bBody
+    <*> binderBodyBinders (binderFuncParamDeletes f) _bBody
 
 binderContentExpr :: Lens' (BinderContent name m a) a
 binderContentExpr f (BinderLet l) = l & lBody . bbContent . binderContentExpr %%~ f <&> BinderLet
