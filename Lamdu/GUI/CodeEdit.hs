@@ -134,6 +134,31 @@ processExpr env expr =
     <&> Lens.mapped %~ toExprGuiMPayload
     <&> RedundantAnnotations.markAnnotationsToDisplay
 
+gui ::
+    MonadA m =>
+    Env m -> Widget.Id -> ExprGuiT.SugarExpr m -> [Pane m] ->
+    WidgetEnvT (T m) (Widget (T m))
+gui env rootId replExpr panes =
+    do
+        replEdit <- makeReplEdit rootId replExpr
+        panesEdits <-
+            panes
+            & ExprGuiM.transaction . traverse (processPane env)
+            >>= traverse (makePaneEdit env (Config.pane (config env)))
+        newDefinitionButton <- makeNewDefinitionButton env rootId
+        eventMap <- panesEventMap env & ExprGuiM.widgetEnv
+        [replEdit] ++ panesEdits ++ [newDefinitionButton]
+            & intersperse space
+            & Box.vboxAlign 0
+            & Widget.weakerEvents eventMap
+            & return
+    & ExprGuiM.assignCursor rootId replId
+    & ExprGuiM.run ExpressionEdit.make
+      (codeProps env) (config env) (settings env) (style env)
+    where
+        space = Spacer.makeWidget 50
+        replId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
+
 make :: MonadA m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (T m))
 make env rootId =
     do
@@ -202,31 +227,6 @@ makeReplEdit myId replExpr =
     ] & sequenceA
     >>= ExpressionGui.hboxSpaced
     <&> (^. ExpressionGui.egWidget)
-
-gui ::
-    MonadA m =>
-    Env m -> Widget.Id -> ExprGuiT.SugarExpr m -> [Pane m] ->
-    WidgetEnvT (T m) (Widget (T m))
-gui env rootId replExpr panes =
-    do
-        replEdit <- makeReplEdit rootId replExpr
-        panesEdits <-
-            panes
-            & ExprGuiM.transaction . traverse (processPane env)
-            >>= traverse (makePaneEdit env (Config.pane (config env)))
-        newDefinitionButton <- makeNewDefinitionButton env rootId
-        eventMap <- panesEventMap env & ExprGuiM.widgetEnv
-        [replEdit] ++ panesEdits ++ [newDefinitionButton]
-            & intersperse space
-            & Box.vboxAlign 0
-            & Widget.weakerEvents eventMap
-            & return
-    & ExprGuiM.assignCursor rootId replId
-    & ExprGuiM.run ExpressionEdit.make
-      (codeProps env) (config env) (settings env) (style env)
-    where
-        space = Spacer.makeWidget 50
-        replId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
 panesEventMap ::
     MonadA m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (T m))
