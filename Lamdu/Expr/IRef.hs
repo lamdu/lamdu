@@ -8,7 +8,6 @@ module Lamdu.Expr.IRef
     , newVar
     , newVal, writeVal, readVal
     , writeValWithStoredSubexpressions
-    , newValWithStoredSubexpressions
     , DefI
     , addProperties
 
@@ -77,7 +76,7 @@ writeValBody ::
 writeValBody = Transaction.writeIRef . unValI
 
 newVal :: MonadA m => Val () -> T m (ValI m)
-newVal = fmap (^. V.payload . _1) . newValWithStoredSubexpressions . ((,) Nothing <$>)
+newVal = fmap (^. V.payload . _1) . writeValWithStoredSubexpressions . ((,) Nothing <$>)
 
 -- Returns expression with new Guids
 writeVal ::
@@ -85,18 +84,9 @@ writeVal ::
     ValI m -> Val a ->
     T m (Val (ValI m, a))
 writeVal iref =
-    writeValWithStoredSubexpressions iref .
+    writeValWithStoredSubexpressions .
+    (V.payload . _1 .~ Just iref) .
     fmap ((,) Nothing)
-
-writeValWithStoredSubexpressions ::
-    MonadA m => ValI m -> Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
-writeValWithStoredSubexpressions iref expr =
-    do
-        exprBodyP <- expressionBodyFrom expr
-        exprBodyP
-            <&> (^. V.payload . _1)
-            & writeValBody iref
-        return $ Val (iref, expr ^. V.payload . _2) exprBodyP
 
 readVal ::
     MonadA m => ValI m -> T m (Val (ValI m))
@@ -112,20 +102,21 @@ expressionBodyFrom ::
     MonadA m =>
     Val (Maybe (ValI m), a) ->
     T m (V.Body (Val (ValI m, a)))
-expressionBodyFrom = traverse newValWithStoredSubexpressions . (^. V.body)
+expressionBodyFrom = traverse writeValWithStoredSubexpressions . (^. V.body)
 
-newValWithStoredSubexpressions :: MonadA m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
-newValWithStoredSubexpressions expr =
-    case mIRef of
-    Just iref -> writeValWithStoredSubexpressions iref expr
-    Nothing ->
-        do
-            body <- expressionBodyFrom expr
-            exprI <-
-                body
-                <&> (^. V.payload . _1)
-                & Transaction.newIRef
-            return $ Val (ValI exprI, pl) body
+writeValWithStoredSubexpressions :: MonadA m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
+writeValWithStoredSubexpressions expr =
+    do
+        body <- expressionBodyFrom expr
+        let bodyWithRefs = body <&> (^. V.payload . _1)
+        case mIRef of
+            Just iref ->
+                Val (iref, pl) body <$
+                writeValBody iref bodyWithRefs
+            Nothing ->
+                do
+                    exprI <- Transaction.newIRef bodyWithRefs
+                    return $ Val (ValI exprI, pl) body
     where
         (mIRef, pl) = expr ^. V.payload
 

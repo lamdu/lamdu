@@ -655,4 +655,5 @@ writeExprMStored exprIRef exprMStorePoint =
         key <- Transaction.newKey
         exprMStorePoint
             & randomizeNonStoredParamIds (genFromHashable key)
-            & ExprIRef.writeValWithStoredSubexpressions exprIRef
+            & V.payload . _1 .~ Just exprIRef
+            & ExprIRef.writeValWithStoredSubexpressions

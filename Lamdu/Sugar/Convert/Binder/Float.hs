@@ -113,9 +113,12 @@ floatLetToOuterScope topLevelProp redex ctx =
                 nlOnVar newLet (Val s newBody)
             go val = val & V.body . Lens.mapped %~ go
         _ <-
-            ExprIRef.writeValWithStoredSubexpressions
-            (Property.value topLevelProp)
-            (go (redexBody redex <&> Just . Property.value) <&> flip (,) ())
+            redexBody redex
+            <&> Just . Property.value
+            & go
+            & V.payload .~ Just (Property.value topLevelProp)
+            <&> flip (,) ()
+            & ExprIRef.writeValWithStoredSubexpressions
         return LetFloatResult
             { lfrNewEntity = resultEntity
             , lfrMVarToTags = nlMVarToTags newLet

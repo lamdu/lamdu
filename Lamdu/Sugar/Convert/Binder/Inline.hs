@@ -72,7 +72,7 @@ inlineLet topLevelProp redex =
     redexBody redex <&> Just
     & insideRedexes (inlineLetH (redexParam redex) (redexArg redex <&> Just))
     <&> flip (,) ()
-    & ExprIRef.newValWithStoredSubexpressions
+    & ExprIRef.writeValWithStoredSubexpressions
     <&> (^. V.payload . _1)
     >>= Property.set topLevelProp
     <&> const (cursorDest (redexArg redex <&> EntityId.ofValI))
