@@ -105,6 +105,17 @@ toExprGuiMPayload :: ([Sugar.EntityId], NearestHoles) -> ExprGuiT.Payload
 toExprGuiMPayload (entityIds, nearestHoles) =
     ExprGuiT.emptyPayload nearestHoles & ExprGuiT.plStoredEntityIds .~ entityIds
 
+postProcessExpr ::
+    MonadA m =>
+    Sugar.Expression name m [Sugar.EntityId] ->
+    Sugar.Expression name m ExprGuiT.Payload
+postProcessExpr expr =
+    expr
+    <&> (,)
+    & runIdentity . NearestHoles.add traverse . Identity
+    <&> toExprGuiMPayload
+    & RedundantAnnotations.markAnnotationsToDisplay
+
 processPane ::
     MonadA m => Env m -> Pane m ->
     T m (Pane m, DefinitionN m ExprGuiT.Payload)
@@ -115,9 +126,7 @@ processPane env pane =
     >>= OrderTags.orderDef
     >>= PresentationModes.addToDef
     >>= AddNames.addToDef
-    <&> NearestHoles.add traverse . (Lens.traversed %~ (<&> (,)))
-    <&> Lens.mapped . Lens.mapped %~ toExprGuiMPayload
-    <&> Lens.mapped %~ RedundantAnnotations.markAnnotationsToDisplay
+    <&> Lens.mapped %~ postProcessExpr
     <&> (,) pane
 
 processExpr ::
@@ -129,10 +138,7 @@ processExpr env expr =
     >>= OrderTags.orderExpr
     >>= PresentationModes.addToExpr
     >>= AddNames.addToExpr
-    <&> Lens.mapped %~ (,)
-    <&> runIdentity . NearestHoles.add traverse . Identity
-    <&> Lens.mapped %~ toExprGuiMPayload
-    <&> RedundantAnnotations.markAnnotationsToDisplay
+    <&> postProcessExpr
 
 gui ::
     MonadA m =>
