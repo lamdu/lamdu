@@ -377,6 +377,9 @@ addToDef def =
         f = Walk.toDef Walk.toExpression
 
 addToExpr :: MonadA tm => Expression Guid tm a -> T tm (Expression (Name tm) tm a)
-addToExpr = addTo f f f
+addToExpr expr =
+    expr
+    & SugarLens.exprBinders %~ fixBinder
+    & addTo f f f
     where
         f = Walk.toExpression

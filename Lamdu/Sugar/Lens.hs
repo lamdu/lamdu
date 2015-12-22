@@ -10,6 +10,7 @@ module Lamdu.Sugar.Lens
     , binderFuncParamDeletes
     , binderContentExpr
     , binderContentEntityId
+    , exprBinders
     ) where
 
 import           Control.Lens (Lens')
@@ -140,6 +141,17 @@ binderBodyBinders ::
     (Binder name m (Expression name m a))
 binderBodyBinders = bbContent . binderContentBinders
 
+exprBinders ::
+    Lens.Traversal'
+    (Expression name m a)
+    (Binder name m (Expression name m a))
+exprBinders f =
+    rBody %%~ onBody
+    where
+        onBody (BodyLam lam) =
+            lam & lamBinder %%~ f <&> BodyLam
+        onBody body = body & Lens.traversed . exprBinders %%~ f
+
 binderContentBinders ::
     Lens.Traversal'
     (BinderContent name m (Expression name m a))
@@ -149,12 +161,7 @@ binderContentBinders f (BinderLet Let{..}) =
     <$> f _lValue
     <*> binderBodyBinders f _lBody
 binderContentBinders f (BinderExpr e) =
-    onExpr e <&> BinderExpr
-    where
-        onExpr = rBody %%~ onBody
-        onBody (BodyLam lam) =
-            lam & lamBinder %%~ f <&> BodyLam
-        onBody body = body & Lens.traversed %%~ onExpr
+    e & exprBinders %%~ f <&> BinderExpr
 
 binderFuncParamAdds ::
     Lens.Traversal'
