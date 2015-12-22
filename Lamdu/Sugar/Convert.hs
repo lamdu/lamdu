@@ -71,7 +71,7 @@ reinferCheckDefinition defI =
                 >>= IRefInfer.run . IRefInfer.loadInferRecursive recurseVar
                 <&> Lens.has Lens._Right
 
-reinferCheckExpression :: MonadA m => ValI m -> Transaction m Bool
+reinferCheckExpression :: MonadA m => ValI m -> T m Bool
 reinferCheckExpression valI =
     do
         val <- ExprIRef.readVal valI
