@@ -54,6 +54,8 @@ import           System.IO (hPutStrLn, stderr)
 
 import           Prelude.Compat
 
+type T = Transaction
+
 defaultFonts :: Fonts FilePath
 defaultFonts =
     Fonts defaultFontName defaultFontName
@@ -266,7 +268,7 @@ rootCursor :: Widget.Id
 rootCursor = WidgetIds.fromGuid $ IRef.guid $ DbLayout.panes DbLayout.codeIRefs
 
 mkWidgetWithFallback ::
-    (forall a. Transaction DbLayout.DbM a -> IO a) ->
+    (forall a. T DbLayout.DbM a -> IO a) ->
     GUIMain.Env -> IO (Widget IO)
 mkWidgetWithFallback dbToIO env =
     do
@@ -296,8 +298,8 @@ mkWidgetWithFallback dbToIO env =
         bgColor True = Config.backgroundColor
 
 makeMainGui ::
-    (forall a. Transaction DbLayout.DbM a -> f a) ->
-    GUIMain.Env -> Transaction DbLayout.DbM (Widget f)
+    (forall a. T DbLayout.DbM a -> f a) ->
+    GUIMain.Env -> T DbLayout.DbM (Widget f)
 makeMainGui runTransaction env =
     GUIMain.make env rootCursor
     <&> Widget.events %~ runTransaction . (attachCursor =<<)
