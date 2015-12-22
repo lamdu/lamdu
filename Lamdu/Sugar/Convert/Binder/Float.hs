@@ -100,21 +100,28 @@ convertLetToLam varToReplace redex =
 newTag :: MonadA m => Transaction m T.Tag
 newTag = GenIds.transaction GenIds.randomTag
 
+convertVarToGetFieldParam ::
+    Monad m =>
+    V.Var -> T.Tag -> V.Lam (Val (ValIProperty m)) -> Transaction m ()
+convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
+    SubExprs.onGetVars toNewParam oldVar lamBody
+    where
+        toNewParam prop =
+            V.LVar lamVar & V.BLeaf
+            & ExprIRef.newValBody
+            <&> (`V.GetField` paramTag) <&> V.BGetField
+            >>= ExprIRef.writeValBody (Property.value prop)
+
 convertLetParamToRecord ::
     Monad m =>
     V.Var -> Redex (ValIProperty m) -> V.Lam (Val (ValIProperty m)) ->
     Transaction m (NewLet m)
-convertLetParamToRecord varToReplace redex (V.Lam lamVar lamBody) =
+convertLetParamToRecord varToReplace redex lam@(V.Lam lamVar lamBody) =
     do
         prevParamTag <- newTag
         convertVarToGetField prevParamTag lamVar lamBody
         newParamTag <- newTag
-        let toNewParam prop =
-                V.LVar lamVar & V.BLeaf
-                & ExprIRef.newValBody
-                <&> (`V.GetField` newParamTag) <&> V.BGetField
-                >>= ExprIRef.writeValBody (Property.value prop)
-        SubExprs.onGetVars toNewParam varToReplace lamBody
+        convertVarToGetFieldParam varToReplace newParamTag lam
         let onArg arg =
                 V.BLeaf V.LRecEmpty & Val Nothing
                 & V.RecExtend newParamTag
@@ -135,6 +142,25 @@ convertLetParamToRecord varToReplace redex (V.Lam lamVar lamBody) =
                 }
             }
 
+addFieldToLetParamsRecord ::
+    Monad m =>
+    V.Var -> Redex (ValIProperty m) -> V.Lam (Val (ValIProperty m)) ->
+    Transaction m (NewLet m)
+addFieldToLetParamsRecord varToReplace redex lam =
+    do
+        newParamTag <- newTag
+        convertVarToGetFieldParam varToReplace newParamTag lam
+        return NewLet
+            { nlIRef = redexArg redex ^. V.payload & Property.value
+            , nlOnVar = id
+            , nlOnArgToVar =
+                Val Nothing
+                . V.BRecExtend
+                . V.RecExtend newParamTag
+                    (V.LVar varToReplace & V.BLeaf & Val Nothing)
+            , nlMVarToTags = Nothing
+            }
+
 addLetParam ::
     Monad m => V.Var -> Redex (ValIProperty m) -> Transaction m (NewLet m)
 addLetParam varToReplace redex =
@@ -144,7 +170,7 @@ addLetParam varToReplace redex =
         T.TFun (T.TRecord _) _
             | isVarAlwaysRecordOfGetField
                 (lam ^. V.lamParamId) (lam ^. V.lamResult) ->
-            error "TODO addFieldToLetParams"
+            addFieldToLetParamsRecord varToReplace redex lam
         _ -> convertLetParamToRecord varToReplace redex lam
     _ -> convertLetToLam varToReplace redex
 
