@@ -341,6 +341,9 @@ fixParamDelResult (ParamDelResultTagsToVar TagsToVar {..}) =
         tagName = assocNameRef (ttvReplacedTag ^. tagVal)
 fixParamDelResult _ = return ()
 
+fixLetFloatResult :: MonadA m => LetFloatResult -> T m ()
+fixLetFloatResult = maybe (return ()) fixVarToTags . lfrMVarToTags
+
 fixBinder ::
     MonadA m =>
     Binder name m (Expression name m a) ->
@@ -349,6 +352,7 @@ fixBinder binder =
     binder
     & SugarLens.binderFuncParamAdds %~ postProcess fixParamAddResult
     & SugarLens.binderFuncParamDeletes %~ postProcess fixParamDelResult
+    & SugarLens.binderLetActions . laFloat %~ postProcess fixLetFloatResult
     where
         postProcess f action =
             do

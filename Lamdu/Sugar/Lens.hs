@@ -8,6 +8,7 @@ module Lamdu.Sugar.Lens
     , binderNamedParamsActions
     , binderFuncParamAdds
     , binderFuncParamDeletes
+    , binderLetActions
     , binderContentExpr
     , binderContentEntityId
     , exprBinders
@@ -162,6 +163,28 @@ binderContentBinders f (BinderLet Let{..}) =
     <*> binderBodyBinders f _lBody
 binderContentBinders f (BinderExpr e) =
     e & exprBinders %%~ f <&> BinderExpr
+
+exprLetActions :: Lens.Traversal' (Expression name m a) (LetActions m)
+exprLetActions =
+    exprBinders . bBody . bbContent . binderContentLetActions
+
+binderContentLetActions ::
+    Lens.Traversal'
+    (BinderContent name m (Expression name m a))
+    (LetActions m)
+binderContentLetActions f (BinderLet Let{..}) =
+    (\_lActions _lValue _lBody -> BinderLet Let{..})
+    <$> Lens._Just f _lActions
+    <*> binderLetActions f _lValue
+    <*> bbContent (binderContentLetActions f) _lBody
+binderContentLetActions f (BinderExpr e) =
+    e & exprLetActions %%~ f <&> BinderExpr
+
+binderLetActions ::
+    Lens.Traversal'
+    (Binder name m (Expression name m a))
+    (LetActions m)
+binderLetActions = bBody . bbContent . binderContentLetActions
 
 binderFuncParamAdds ::
     Lens.Traversal'
