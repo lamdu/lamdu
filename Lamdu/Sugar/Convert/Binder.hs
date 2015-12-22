@@ -52,7 +52,7 @@ mkLIActions topLevelProp redex =
                     redexBody redex ^. V.payload
                         & replaceWith topLevelProp & void
             , _laSetToHole = DataOps.setToHole topLevelProp <&> EntityId.ofValI
-            , _laExtract = ext
+            , _laFloat = ext
             }
 
 localNewExtractDestPos ::

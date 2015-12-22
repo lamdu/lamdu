@@ -391,7 +391,7 @@ makeLetEdit item =
                 , Widget.keysEventMapMovesCursor (Config.extractKeys config)
                   (E.Doc ["Edit", "Let clause", "Extract to outer scope"]) $
                   WidgetIds.fromEntityId <$>
-                  lActions ^. Sugar.laExtract
+                  lActions ^. Sugar.laFloat
                 ]
                 | otherwise = mempty
         let usageEventMap =
