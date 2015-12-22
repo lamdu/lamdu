@@ -128,12 +128,12 @@ makeRootWidget fonts db zoom settingsRef evaluator config size =
         evalResults <- EvalManager.getResults evaluator
         settings <- readIORef settingsRef
         let env = GUIMain.Env
-                { envEvalRes = evalResults
-                , envConfig = config
-                , envSettings = settings
-                , envStyle = Style.style config fonts
-                , envFullSize = size / sizeFactor
-                , envCursor = cursor
+                { _envEvalRes = evalResults
+                , _envConfig = config
+                , _envSettings = settings
+                , _envStyle = Style.style config fonts
+                , _envFullSize = size / sizeFactor
+                , _envCursor = cursor
                 }
         let dbToIO =
                 case settings ^. Settings.sInfoMode of
@@ -280,20 +280,21 @@ mkWidgetWithFallback dbToIO env =
                     if candidateWidget ^. Widget.isFocused
                     then return (True, candidateWidget)
                     else do
-                        finalWidget <- makeMainGui dbToIO env { GUIMain.envCursor = rootCursor }
+                        finalWidget <-
+                            env & GUIMain.envCursor .~ rootCursor & makeMainGui dbToIO
                         Transaction.setP (DbLayout.cursor DbLayout.revisionProps) rootCursor
                         return (False, finalWidget)
                 unless (widget ^. Widget.isFocused) $
                     fail "Root cursor did not match"
                 return (isValid, widget)
-        unless isValid $ putStrLn $ "Invalid cursor: " ++ show (GUIMain.envCursor env)
+        unless isValid $ putStrLn $ "Invalid cursor: " ++ show (env ^. GUIMain.envCursor)
         widget
             & Widget.backgroundColor
               (Config.layerMax (Config.layers config))
               ["background"] (bgColor isValid config)
             & return
     where
-        config = GUIMain.envConfig env
+        config = env ^. GUIMain.envConfig
         bgColor False = Config.invalidCursorBGColor
         bgColor True = Config.backgroundColor
 

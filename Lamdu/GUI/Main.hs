@@ -1,9 +1,10 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes #-}
 module Lamdu.GUI.Main
     ( make
-    , Env(..)
+    , Env(..), envEvalRes, envConfig, envSettings, envStyle, envFullSize, envCursor
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Store.Transaction (Transaction)
@@ -32,13 +33,14 @@ import qualified Lamdu.VersionControl as VersionControl
 type T = Transaction
 
 data Env = Env
-    { envEvalRes :: CurAndPrev (EvalResults (ExprIRef.ValI DbLayout.ViewM))
-    , envConfig :: Config
-    , envSettings :: Settings
-    , envStyle :: Style
-    , envFullSize :: Widget.Size
-    , envCursor :: Widget.Id
+    { _envEvalRes :: CurAndPrev (EvalResults (ExprIRef.ValI DbLayout.ViewM))
+    , _envConfig :: Config
+    , _envSettings :: Settings
+    , _envStyle :: Style
+    , _envFullSize :: Widget.Size
+    , _envCursor :: Widget.Id
     }
+Lens.makeLenses ''Env
 
 make :: Env -> Widget.Id -> T DbLayout.DbM (Widget (T DbLayout.DbM))
 make (Env evalRes config settings style fullSize cursor) rootId =
