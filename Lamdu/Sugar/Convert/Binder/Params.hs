@@ -353,8 +353,7 @@ makeDeleteLambda mRecursiveVar (StoredLam (V.Lam paramVar lamBodyStored) lambdaP
 convertVarToGetField ::
     MonadA m => T.Tag -> V.Var -> Val (Property (T m) (ValI m)) -> T m ()
 convertVarToGetField tagForVar paramVar =
-    SubExprs.onMatchingSubexprs (convertVar . Property.value)
-    (ExprLens.valVar . Lens.only paramVar)
+    SubExprs.onGetVars (convertVar . Property.value) paramVar
     where
         convertVar bodyI =
             ExprIRef.newValBody (V.BLeaf (V.LVar paramVar))
@@ -515,8 +514,8 @@ convertLamParams mRecursiveVar lambda lambdaPl =
             }
 
 changeRecursionsToCalls :: MonadA m => V.Var -> Val (ValIProperty m) -> T m ()
-changeRecursionsToCalls var =
-    SubExprs.onMatchingSubexprs changeRecursion (ExprLens.valVar . Lens.only var)
+changeRecursionsToCalls =
+    SubExprs.onGetVars changeRecursion
     where
         changeRecursion prop =
             DataOps.newHole
