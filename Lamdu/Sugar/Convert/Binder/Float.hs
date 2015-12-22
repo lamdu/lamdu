@@ -8,6 +8,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Data.Maybe (fromMaybe)
+import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -17,6 +18,7 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
@@ -81,7 +83,7 @@ floatLetToOuterScope ::
 floatLetToOuterScope topLevelProp redex ctx =
     do
         newLet <-
-            case outerScopeInfo ^. ConvertM.osiVarsUnderPos of
+            case varsToRemove of
             [] ->
                 return NewLet
                 { nlIRef = redexArg redex ^. V.payload & Property.value
@@ -124,7 +126,13 @@ floatLetToOuterScope topLevelProp redex ctx =
             , lfrMVarToTags = nlMVarToTags newLet
             }
     where
+        varsToRemove =
+            filter (`Set.member` usedVars)
+            (outerScopeInfo ^. ConvertM.osiVarsUnderPos)
         outerScopeInfo = ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter
+        usedVars =
+            redexArg redex ^.. ExprLens.valLeafs . ExprLens._LVar
+            & Set.fromList
 
 makeFloatLetToOuterScope ::
     MonadA m =>
