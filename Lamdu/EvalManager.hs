@@ -107,13 +107,6 @@ evalActions evaluator =
     , EvalBG._aRunBuiltin = Builtins.eval
     , EvalBG._aReportUpdatesAvailable = eInvalidateCache evaluator
     , EvalBG._aCompleted = \_ ->
-      readIORef (eEvaluatorRef evaluator)
-      <&> startedEvaluator
-      >>= Lens._Just %%~ EvalBG.getStatus
-      <&> Lens.has (Lens._Just . EvalBG._Finished)
-      >>= \case
-      False -> return ()
-      True ->
           do
               atomicModifyIORef_ (eResultsRef evaluator) (const mempty)
               eInvalidateCache evaluator
