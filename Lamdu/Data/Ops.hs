@@ -10,7 +10,6 @@ module Lamdu.Data.Ops
     , newDefinition
     , savePreJumpPosition, jumpBack
     , newPane
-    , makeNewTag, makeNewPublicTag
     , isInfix
     , newIdentityLambda
     ) where
@@ -32,7 +31,6 @@ import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValIProperty, ValI, ValTree(..))
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
 import qualified System.Random.Utils as RandomUtils
 
@@ -216,20 +214,6 @@ newPublicDefinitionWithPane name codeProps bodyI =
         defI <- newPublicDefinition codeProps bodyI name
         newPane codeProps defI
         return defI
-
-makeNewTag :: MonadA m => String -> T m T.Tag
-makeNewTag name =
-    do
-        tag <- UniqueId.new
-        setP (Anchors.assocNameRef tag) name
-        return tag
-
-makeNewPublicTag :: MonadA m => Anchors.CodeProps m -> String -> T m T.Tag
-makeNewPublicTag codeProps name =
-    do
-        tag <- makeNewTag name
-        modP (Anchors.tags codeProps) (tag :)
-        return tag
 
 newIdentityLambda :: MonadA m => T m (ValI m, ValI m)
 newIdentityLambda =
