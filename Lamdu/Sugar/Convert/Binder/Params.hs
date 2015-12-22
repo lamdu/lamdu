@@ -1,5 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards #-}
-
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, PatternGuards #-}
 module Lamdu.Sugar.Convert.Binder.Params
     ( ConventionalParams(..), cpParams
     , convertParams, convertLamParams
