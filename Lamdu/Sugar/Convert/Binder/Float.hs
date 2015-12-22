@@ -48,10 +48,13 @@ moveToGlobalScope ctx param letBodyStored letI =
         DataOps.newPublicDefinitionWithPane paramName
             (ctx ^. ConvertM.scCodeAnchors) letI
 
+data NewLet m = NewLet
+    { nlIRef :: ValI m
+    , nlOnVar :: Val (Maybe (ValI m)) -> Val (Maybe (ValI m))
+    }
+
 addLetParam ::
-    Monad m =>
-    V.Var -> Val (ValIProperty m) ->
-    Transaction m (Val (Maybe (ValI m)) -> Val (Maybe (ValI m)), ValI m)
+    Monad m => V.Var -> Val (ValIProperty m) -> Transaction m (NewLet m)
 addLetParam varToReplace argStored =
     do
         newParam <- ExprIRef.newVar
@@ -59,12 +62,15 @@ addLetParam varToReplace argStored =
                 V.LVar newParam & V.BLeaf &
                 ExprIRef.writeValBody (Property.value prop)
         SubExprs.onGetVars toNewParam varToReplace argStored
-        argStored ^. V.payload & Property.value
+        fixed <-
+            argStored ^. V.payload & Property.value
             & V.Lam newParam & V.BAbs & ExprIRef.newValBody
-            <&> (,)
-            ( Val Nothing . V.BApp
-            . (`V.Apply` Val Nothing (V.BLeaf (V.LVar varToReplace)))
-            )
+        return NewLet
+            { nlIRef = fixed
+            , nlOnVar =
+                Val Nothing . V.BApp
+                . (`V.Apply` Val Nothing (V.BLeaf (V.LVar varToReplace)))
+            }
 
 floatLetToOuterScope ::
     MonadA m =>
@@ -72,9 +78,13 @@ floatLetToOuterScope ::
     Transaction m EntityId
 floatLetToOuterScope topLevelProp redex ctx =
     do
-        (onUse, fixedArgI) <-
+        newLet <-
             case outerScopeInfo ^. ConvertM.osiVarsUnderPos of
-            [] -> return (id, Property.value (redexArg redex ^. V.payload))
+            [] ->
+                return NewLet
+                { nlIRef = redexArg redex ^. V.payload & Property.value
+                , nlOnVar = id
+                }
             [x] -> addLetParam x (redexArg redex)
             _ -> error "multiple osiVarsUnderPos not expected!?"
         (newLeafBody, resultEntity) <-
@@ -83,7 +93,7 @@ floatLetToOuterScope topLevelProp redex ctx =
                 do
                     newDefI <-
                         moveToGlobalScope ctx
-                        (redexParam redex) (redexArg redex) fixedArgI
+                        (redexParam redex) (redexArg redex) (nlIRef newLet)
                     return
                         ( ExprIRef.globalId newDefI & V.LGlobal
                         , EntityId.ofIRef newDefI
@@ -93,11 +103,11 @@ floatLetToOuterScope topLevelProp redex ctx =
                 , EntityId.ofLambdaParam (redexParam redex)
                 ) <$
                 DataOps.redexWrapWithGivenParam
-                    (redexParam redex) fixedArgI outerScope
+                    (redexParam redex) (nlIRef newLet) outerScope
         let newBody = V.BLeaf newLeafBody
         let
             go (Val s (V.BLeaf (V.LVar v))) | v == redexParam redex =
-                onUse (Val s newBody)
+                nlOnVar newLet (Val s newBody)
             go val = val & V.body . Lens.mapped %~ go
         _ <-
             ExprIRef.writeValWithStoredSubexpressions
