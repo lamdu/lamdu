@@ -28,6 +28,7 @@ import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
 import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
@@ -158,10 +159,13 @@ addLetParam varToReplace redex =
     case redexArg redex ^. V.body of
     V.BAbs lam | isVarAlwaysApplied (redexParam redex) (redexBody redex) ->
         case redexArgType redex of
-        T.TFun (T.TRecord _) _
-            | isVarAlwaysRecordOfGetField
+        T.TFun (T.TRecord composite) _
+            | Nothing <- extension
+            , isVarAlwaysRecordOfGetField
                 (lam ^. V.lamParamId) (lam ^. V.lamResult) ->
             addFieldToLetParamsRecord varToReplace storedLam
+            where
+                (_, extension) = orderedFlatComposite composite
         _ -> convertLetParamToRecord varToReplace storedLam
         where
             storedLam = Params.StoredLam lam (redexArg redex ^. V.payload)
