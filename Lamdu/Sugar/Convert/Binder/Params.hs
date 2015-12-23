@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Binder.Params
     , convertParams, convertLamParams
     , mkStoredLam, makeDeleteLambda
     , StoredLam(..), slLam
-    , NewParamPosition(..), convertToRecordParams
+    , NewParamPosition(..), convertToRecordParams, addFieldParam
     ) where
 
 import           Control.Lens (Lens')

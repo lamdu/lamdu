@@ -16,7 +16,6 @@ import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -98,9 +97,6 @@ convertLetToLam varToReplace redex =
             , nlMVarToTags = Nothing
             }
 
-newTag :: MonadA m => Transaction m T.Tag
-newTag = GenIds.transaction GenIds.randomTag
-
 convertVarToGetFieldParam ::
     Monad m =>
     V.Var -> T.Tag -> V.Lam (Val (ValIProperty m)) -> Transaction m ()
@@ -117,7 +113,7 @@ convertLetParamToRecord ::
     Monad m => V.Var -> Params.StoredLam m -> Transaction m (NewLet m)
 convertLetParamToRecord varToReplace storedLam =
     do
-        vtt <- Params.convertToRecordParams storedLam Params.NewParamBefore
+        vtt <- Params.convertToRecordParams storedLam Params.NewParamAfter
         let newParamTag = vttNewTag vtt ^. tagVal
         convertVarToGetFieldParam varToReplace newParamTag
             (storedLam ^. Params.slLam)
@@ -136,11 +132,12 @@ convertLetParamToRecord varToReplace storedLam =
             }
 
 addFieldToLetParamsRecord ::
-    Monad m => V.Var -> Params.StoredLam m -> Transaction m (NewLet m)
-addFieldToLetParamsRecord varToReplace storedLam =
+    Monad m =>
+    [T.Tag] -> V.Var -> Params.StoredLam m -> Transaction m (NewLet m)
+addFieldToLetParamsRecord fieldTags varToReplace storedLam =
     do
-        newParamTag <- newTag
-        convertVarToGetFieldParam varToReplace newParamTag
+        newParamTag <- Params.addFieldParam ((fieldTags ++) . return) storedLam
+        convertVarToGetFieldParam varToReplace (newParamTag ^. tagVal)
             (storedLam ^. Params.slLam)
         return NewLet
             { nlIRef = Params.slLambdaProp storedLam & Property.value
@@ -148,7 +145,7 @@ addFieldToLetParamsRecord varToReplace storedLam =
             , nlOnArgToVar =
                 Val Nothing
                 . V.BRecExtend
-                . V.RecExtend newParamTag
+                . V.RecExtend (newParamTag ^. tagVal)
                     (V.LVar varToReplace & V.BLeaf & Val Nothing)
             , nlMVarToTags = Nothing
             }
@@ -160,12 +157,10 @@ addLetParam varToReplace redex =
     V.BAbs lam | isVarAlwaysApplied (redexParam redex) (redexBody redex) ->
         case redexArgType redex of
         T.TFun (T.TRecord composite) _
-            | Nothing <- extension
+            | (fields, Nothing) <- orderedFlatComposite composite
             , isVarAlwaysRecordOfGetField
                 (lam ^. V.lamParamId) (lam ^. V.lamResult) ->
-            addFieldToLetParamsRecord varToReplace storedLam
-            where
-                (_, extension) = orderedFlatComposite composite
+            addFieldToLetParamsRecord (fields <&> fst) varToReplace storedLam
         _ -> convertLetParamToRecord varToReplace storedLam
         where
             storedLam = Params.StoredLam lam (redexArg redex ^. V.payload)
