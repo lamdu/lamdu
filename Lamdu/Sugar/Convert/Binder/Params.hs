@@ -133,6 +133,20 @@ changeRecursiveCallArgs change valProp var =
             & change
             >>= Property.set prop
 
+addFieldParam ::
+    MonadA m => (T.Tag -> ParamList) -> StoredLam m -> T m (TagG ())
+addFieldParam mkNewTags storedLam =
+    do
+        tag <- newTag
+        mkNewTags tag & setParamList (slParamList storedLam)
+        return TagG
+            { _tagInstance =
+                EntityId.ofLambdaTagParam
+                (storedLam ^. slLam . V.lamParamId) tag
+            , _tagVal = tag
+            , _tagGName = ()
+            }
+
 makeAddFieldParam ::
     MonadA m =>
     Maybe V.Var -> (T.Tag -> ParamList) -> StoredLam m ->
@@ -142,23 +156,19 @@ makeAddFieldParam mRecursiveVar mkNewTags storedLam =
         wrapOnError <- ConvertM.wrapOnTypeError
         return $
             do
-                tag <- newTag
-                mkNewTags tag & setParamList (slParamList storedLam)
+                tagG <- addFieldParam mkNewTags storedLam
                 let addFieldToCall argI =
                         do
                             hole <- DataOps.newHole
-                            ExprIRef.newValBody $ V.BRecExtend $ V.RecExtend tag hole argI
+                            V.RecExtend (tagG ^. tagVal) hole argI
+                                & V.BRecExtend & ExprIRef.newValBody
                 mRecursiveVar
                     & Lens.traverse %%~
                         changeRecursiveCallArgs addFieldToCall
                         (storedLam ^. slLam . V.lamResult . V.payload)
                     & void
                 void $ wrapOnError $ slLambdaProp storedLam
-                return $
-                    ParamAddResultNewTag $
-                    TagG (EntityId.ofLambdaTagParam param tag) tag ()
-    where
-        param = storedLam ^. slLam . V.lamParamId
+                ParamAddResultNewTag tagG & return
 
 mkCpScopesOfLam :: Input.Payload m a -> CurAndPrev (Map ScopeId [BinderParamScopeId])
 mkCpScopesOfLam x =
