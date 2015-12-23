@@ -23,7 +23,7 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
-import           Lamdu.Sugar.Convert.Binder.Params (convertVarToGetField, tagGForLambdaTagParam)
+import qualified Lamdu.Sugar.Convert.Binder.Params as Params
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -113,33 +113,25 @@ convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
             >>= ExprIRef.writeValBody (Property.value prop)
 
 convertLetParamToRecord ::
-    Monad m =>
-    V.Var -> Redex (ValIProperty m) -> V.Lam (Val (ValIProperty m)) ->
-    Transaction m (NewLet m)
-convertLetParamToRecord varToReplace redex lam@(V.Lam lamVar lamBody) =
+    Monad m => V.Var -> Params.StoredLam m -> Transaction m (NewLet m)
+convertLetParamToRecord varToReplace storedLam =
     do
-        prevParamTag <- newTag
-        convertVarToGetField prevParamTag lamVar lamBody
-        newParamTag <- newTag
-        convertVarToGetFieldParam varToReplace newParamTag lam
+        vtt <- Params.convertToRecordParams storedLam Params.NewParamBefore
+        let newParamTag = vttNewTag vtt ^. tagVal
+        convertVarToGetFieldParam varToReplace newParamTag
+            (storedLam ^. Params.slLam)
         let onArg arg =
                 V.BLeaf V.LRecEmpty & Val Nothing
                 & V.RecExtend newParamTag
                     (Val Nothing (V.BLeaf (V.LVar varToReplace)))
                 & V.BRecExtend & Val Nothing
-                & V.RecExtend prevParamTag arg
+                & V.RecExtend (vttReplacedByTag vtt ^. tagVal) arg
                 & V.BRecExtend & Val Nothing
         return NewLet
-            { nlIRef = redexArg redex ^. V.payload & Property.value
+            { nlIRef = Params.slLambdaProp storedLam & Property.value
             , nlOnVar = id
             , nlOnArgToVar = onArg
-            , nlMVarToTags =
-                Just VarToTags
-                { vttNewTag = tagGForLambdaTagParam lamVar newParamTag
-                , vttReplacedVar = lamVar
-                , vttReplacedByTag = tagGForLambdaTagParam lamVar prevParamTag
-                , vttReplacedVarEntityId = EntityId.ofLambdaParam lamVar
-                }
+            , nlMVarToTags = Just vtt
             }
 
 addFieldToLetParamsRecord ::
@@ -171,7 +163,9 @@ addLetParam varToReplace redex =
             | isVarAlwaysRecordOfGetField
                 (lam ^. V.lamParamId) (lam ^. V.lamResult) ->
             addFieldToLetParamsRecord varToReplace redex lam
-        _ -> convertLetParamToRecord varToReplace redex lam
+        _ -> convertLetParamToRecord varToReplace storedLam
+        where
+            storedLam = Params.StoredLam lam (redexArg redex ^. V.payload)
     _ -> convertLetToLam varToReplace redex
 
 sameLet :: Redex (ValIProperty m) -> NewLet m

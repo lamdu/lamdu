@@ -3,7 +3,9 @@ module Lamdu.Sugar.Convert.Binder.Params
     ( ConventionalParams(..), cpParams
     , convertParams, convertLamParams
     , mkStoredLam, makeDeleteLambda
-    , tagGForLambdaTagParam, convertVarToGetField
+    , tagGForLambdaTagParam
+    , StoredLam(..), slLam
+    , NewParamPosition(..), convertToRecordParams
     ) where
 
 import           Control.Lens (Lens')
@@ -363,44 +365,58 @@ convertVarToGetField tagForVar paramVar =
             <&> (`V.GetField` tagForVar) <&> V.BGetField
             >>= ExprIRef.writeValBody bodyI
 
-wrapArgWithRecord :: MonadA m => T.Tag -> T.Tag -> ValI m -> T m (ValI m)
-wrapArgWithRecord tagForExistingArg tagForNewArg oldArg =
+wrapArgWithRecord :: MonadA m => VarToTags -> ValI m -> T m (ValI m)
+wrapArgWithRecord varToTags oldArg =
     do
         hole <- DataOps.newHole
         ExprIRef.newValBody (V.BLeaf V.LRecEmpty)
-            >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tagForNewArg hole
-            >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tagForExistingArg oldArg
+            >>= ExprIRef.newValBody . V.BRecExtend
+                . V.RecExtend (vttNewTag varToTags ^. tagVal) hole
+            >>= ExprIRef.newValBody . V.BRecExtend
+                . V.RecExtend (vttReplacedByTag varToTags ^. tagVal) oldArg
 
 data NewParamPosition = NewParamBefore | NewParamAfter
+
+convertToRecordParams ::
+    MonadA m => StoredLam m -> NewParamPosition -> T m VarToTags
+convertToRecordParams storedLam newParamPosition =
+    do
+        tagForVar <- newTag
+        tagForNewVar <- newTag
+        case newParamPosition of
+            NewParamBefore -> [tagForNewVar, tagForVar]
+            NewParamAfter -> [tagForVar, tagForNewVar]
+            & setParamList paramList
+        convertVarToGetField tagForVar paramVar
+            (storedLam ^. slLam . V.lamResult)
+        return VarToTags
+            { vttReplacedVar = paramVar
+            , vttReplacedVarEntityId = EntityId.ofLambdaParam paramVar
+            , vttReplacedByTag = tagGForLambdaTagParam paramVar tagForVar
+            , vttNewTag = tagGForLambdaTagParam paramVar tagForNewVar
+            }
+    where
+        paramVar = storedLam ^. slLam . V.lamParamId
+        paramList =
+            slLambdaProp storedLam & Property.value
+            & Anchors.assocFieldParamList
 
 makeConvertToRecordParams ::
     MonadA m => Maybe V.Var -> StoredLam m ->
     ConvertM m (NewParamPosition -> T m ParamAddResult)
-makeConvertToRecordParams mRecursiveVar (StoredLam (V.Lam paramVar lamBody) lamProp) =
+makeConvertToRecordParams mRecursiveVar storedLam =
     do
         wrapOnError <- ConvertM.wrapOnTypeError
         return $ \newParamPosition ->
             do
-                tagForVar <- newTag
-                tagForNewVar <- newTag
-                setParamList paramList $ case newParamPosition of
-                    NewParamBefore -> [tagForNewVar, tagForVar]
-                    NewParamAfter -> [tagForVar, tagForNewVar]
-                convertVarToGetField tagForVar paramVar lamBody
+                varToTags <- convertToRecordParams storedLam newParamPosition
                 mRecursiveVar
                     & traverse_
-                        (changeRecursiveCallArgs
-                          (wrapArgWithRecord tagForVar tagForNewVar)
-                          (lamBody ^. V.payload))
-                _ <- wrapOnError lamProp
-                return $ ParamAddResultVarToTags VarToTags
-                    { vttReplacedVar = paramVar
-                    , vttReplacedVarEntityId = EntityId.ofLambdaParam paramVar
-                    , vttReplacedByTag = tagGForLambdaTagParam paramVar tagForVar
-                    , vttNewTag = tagGForLambdaTagParam paramVar tagForNewVar
-                    }
-    where
-        paramList = Anchors.assocFieldParamList (Property.value lamProp)
+                    (changeRecursiveCallArgs
+                        (wrapArgWithRecord varToTags)
+                        (storedLam ^. slLam . V.lamResult . V.payload))
+                _ <- wrapOnError (slLambdaProp storedLam)
+                ParamAddResultVarToTags varToTags & return
 
 lamParamType :: Input.Payload m a -> Type
 lamParamType lamExprPl =
@@ -413,13 +429,13 @@ makeNonRecordParamActions ::
 makeNonRecordParamActions mRecursiveVar storedLam =
     do
         delete <- makeDeleteLambda mRecursiveVar storedLam
-        convertToRecordParams <- makeConvertToRecordParams mRecursiveVar storedLam
+        addParam <- makeConvertToRecordParams mRecursiveVar storedLam
         return
             ( FuncParamActions
-                { _fpAddNext = convertToRecordParams NewParamAfter
+                { _fpAddNext = addParam NewParamAfter
                 , _fpDelete = delete
                 }
-            , convertToRecordParams NewParamBefore
+            , addParam NewParamBefore
             )
 
 mkFuncParam :: EntityId -> Input.Payload m a -> info -> FuncParam info
