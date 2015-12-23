@@ -134,9 +134,9 @@ changeRecursiveCallArgs change valProp var =
 
 makeAddFieldParam ::
     MonadA m =>
-    Maybe V.Var -> V.Var -> (T.Tag -> ParamList) -> StoredLam m ->
+    Maybe V.Var -> (T.Tag -> ParamList) -> StoredLam m ->
     ConvertM m (T m ParamAddResult)
-makeAddFieldParam mRecursiveVar param mkNewTags storedLam =
+makeAddFieldParam mRecursiveVar mkNewTags storedLam =
     do
         wrapOnError <- ConvertM.wrapOnTypeError
         return $
@@ -156,6 +156,8 @@ makeAddFieldParam mRecursiveVar param mkNewTags storedLam =
                 return $
                     ParamAddResultNewTag $
                     TagG (EntityId.ofLambdaTagParam param tag) tag ()
+    where
+        param = storedLam ^. slLam . V.lamParamId
 
 mkCpScopesOfLam :: Input.Payload m a -> CurAndPrev (Map ScopeId [BinderParamScopeId])
 mkCpScopesOfLam x =
@@ -255,11 +257,11 @@ makeDelFieldParam mRecursiveVar tags fp storedLam =
 
 makeFieldParamActions ::
     MonadA m =>
-    Maybe V.Var -> V.Var -> [T.Tag] -> FieldParam -> StoredLam m ->
+    Maybe V.Var -> [T.Tag] -> FieldParam -> StoredLam m ->
     ConvertM m (FuncParamActions m)
-makeFieldParamActions mRecursiveVar param tags fp storedLam =
+makeFieldParamActions mRecursiveVar tags fp storedLam =
     do
-        addParam <- makeAddFieldParam mRecursiveVar param mkNewTags storedLam
+        addParam <- makeAddFieldParam mRecursiveVar mkNewTags storedLam
         delParam <- makeDelFieldParam mRecursiveVar tags fp storedLam
         pure FuncParamActions
             { _fpAddNext = addParam
@@ -279,7 +281,7 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
         params <- traverse mkParam fieldParams
         mAddFirstParam <-
             mStoredLam
-            & Lens.traverse %%~ makeAddFieldParam mRecursiveVar param (:tags)
+            & Lens.traverse %%~ makeAddFieldParam mRecursiveVar (:tags)
         pure ConventionalParams
             { cpTags = Set.fromList tags
             , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
@@ -298,7 +300,7 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
             do
                 actions <-
                     mStoredLam
-                    & Lens.traverse %%~ makeFieldParamActions mRecursiveVar param tags fp
+                    & Lens.traverse %%~ makeFieldParamActions mRecursiveVar tags fp
                 pure
                     ( fpTag fp
                     , FuncParam
