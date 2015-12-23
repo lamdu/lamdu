@@ -135,15 +135,14 @@ convertLetParamToRecord varToReplace storedLam =
             }
 
 addFieldToLetParamsRecord ::
-    Monad m =>
-    V.Var -> Redex (ValIProperty m) -> V.Lam (Val (ValIProperty m)) ->
-    Transaction m (NewLet m)
-addFieldToLetParamsRecord varToReplace redex lam =
+    Monad m => V.Var -> Params.StoredLam m -> Transaction m (NewLet m)
+addFieldToLetParamsRecord varToReplace storedLam =
     do
         newParamTag <- newTag
-        convertVarToGetFieldParam varToReplace newParamTag lam
+        convertVarToGetFieldParam varToReplace newParamTag
+            (storedLam ^. Params.slLam)
         return NewLet
-            { nlIRef = redexArg redex ^. V.payload & Property.value
+            { nlIRef = Params.slLambdaProp storedLam & Property.value
             , nlOnVar = id
             , nlOnArgToVar =
                 Val Nothing
@@ -162,7 +161,7 @@ addLetParam varToReplace redex =
         T.TFun (T.TRecord _) _
             | isVarAlwaysRecordOfGetField
                 (lam ^. V.lamParamId) (lam ^. V.lamResult) ->
-            addFieldToLetParamsRecord varToReplace redex lam
+            addFieldToLetParamsRecord varToReplace storedLam
         _ -> convertLetParamToRecord varToReplace storedLam
         where
             storedLam = Params.StoredLam lam (redexArg redex ^. V.payload)
