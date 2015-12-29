@@ -127,7 +127,7 @@ binderNamedParams ::
     (BinderParams b m)
     (FuncParam (NamedParamInfo a m))
     (FuncParam (NamedParamInfo b m))
-binderNamedParams _ DefintionWithoutParams = pure DefintionWithoutParams
+binderNamedParams _ BinderWithoutParams = pure BinderWithoutParams
 binderNamedParams _ (NullParam a) = pure (NullParam a)
 binderNamedParams f (VarParam p) = VarParam <$> f p
 binderNamedParams f (FieldParams ps) = FieldParams <$> (Lens.traverse . _2) f ps

@@ -16,7 +16,7 @@ module Lamdu.Sugar.Types
     , BinderActions(..), baAddFirstParam
     , NullParamActions(..), npDeleteLambda
     , BinderParams(..)
-        , _DefintionWithoutParams, _NullParam, _VarParam , _FieldParams
+        , _BinderWithoutParams, _NullParam, _VarParam , _FieldParams
     , BinderParamScopeId(..), bParamScopeId
     , BinderBodyActions(..), bbaAddOuterLet
     , BinderBody(..), bbMActions, bbContent
@@ -515,7 +515,7 @@ newtype BinderActions m = BinderActions
 
 data BinderParams name m
     = -- a definition or let-item without parameters
-      DefintionWithoutParams
+      BinderWithoutParams
     | -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
       -- This is often used to represent "deferred execution"

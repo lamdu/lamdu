@@ -185,7 +185,7 @@ toExpression = rBody (toBody toExpression)
 withBinderParams ::
     MonadNaming m =>
     BinderParams (OldName m) (TM m) -> CPS m (BinderParams (NewName m) (TM m))
-withBinderParams DefintionWithoutParams = pure DefintionWithoutParams
+withBinderParams BinderWithoutParams = pure BinderWithoutParams
 withBinderParams (NullParam a) = pure (NullParam a)
 withBinderParams (VarParam fp) =
     opWithParamName (isFunctionType (fp ^. fpAnnotation . aInferredType))

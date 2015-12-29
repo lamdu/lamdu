@@ -560,7 +560,7 @@ convertEmptyParams mRecursiveVar val =
             ConventionalParams
             { cpTags = mempty
             , cpParamInfos = Map.empty
-            , _cpParams = DefintionWithoutParams
+            , _cpParams = BinderWithoutParams
             , cpMAddFirstParam =
                 val
                 <&> (^. Input.mStored)

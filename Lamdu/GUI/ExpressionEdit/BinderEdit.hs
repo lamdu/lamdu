@@ -481,7 +481,7 @@ makeBinderContentEdit params (Sugar.BinderExpr binderBody) =
         config <- ExprGuiM.readConfig
         let jumpToLhsEventMap =
                 case params of
-                Sugar.DefintionWithoutParams -> mempty
+                Sugar.BinderWithoutParams -> mempty
                 Sugar.NullParam _ -> mempty
                 Sugar.VarParam param ->
                     Widget.keysEventMapMovesCursor
@@ -527,7 +527,7 @@ makeParamsEdit ::
     ExprGuiM m [ExpressionGui m]
 makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params =
     case params of
-    Sugar.DefintionWithoutParams -> return []
+    Sugar.BinderWithoutParams -> return []
     Sugar.NullParam p ->
         fromParamList ExprGuiT.showAnnotationWhenVerbose delVarBackwardsId rhsId
         [p & Sugar.fpInfo %~ nullParamEditInfo]
