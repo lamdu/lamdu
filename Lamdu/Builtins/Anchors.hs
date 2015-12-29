@@ -3,7 +3,7 @@ module Lamdu.Builtins.Anchors
     ( recurseVar, objTag, infixlTag, infixrTag, listTid
     , headTag, tailTag, consTag, nilTag, trueTag, falseTag, justTag, nothingTag
     , Order, anchorTags
-    , floatId
+    , floatId, bytesId
     ) where
 
 import           Lamdu.Expr.Type (Tag)
@@ -24,6 +24,9 @@ infixrTag = "BI:infixr"
 
 floatId :: T.PrimId
 floatId = "BI:float"
+
+bytesId :: T.PrimId
+bytesId = "BI:bytes"
 
 listTid :: T.NominalId
 listTid = "BI:list"

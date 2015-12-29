@@ -82,6 +82,8 @@ toHoleActions ha@HoleActions {..} =
             { _holeOptions = _holeOptions >>= run . traverse toHoleOption
             , _holeOptionLiteralNum =
                 _holeOptionLiteralNum <&> (>>= run . toHoleOption)
+            , _holeOptionLiteralBytes =
+                _holeOptionLiteralBytes <&> (>>= run . toHoleOption)
             }
 
 toParam ::

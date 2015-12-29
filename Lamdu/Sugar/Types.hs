@@ -83,7 +83,7 @@ module Lamdu.Sugar.Types
     , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
-    , HoleActions(..), holeGuid, holeOptions, holeOptionLiteralNum
+    , HoleActions(..), holeGuid, holeOptions, holeOptionLiteralNum, holeOptionLiteralBytes
     , Hole(..), holeMActions, holeMArg
     , ScopeGetVar(..), sgvGetVar, sgvVal
     , TIdG(..), tidgName, tidgTId
@@ -102,13 +102,14 @@ import           Prelude.Compat
 
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
+import qualified Data.ByteString as SBS
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.List as List
 import           Data.Map (Map)
 import           Data.Store.Guid (Guid)
 import           Data.Store.Transaction (Transaction, MkProperty)
-import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Eval.Val as E
 import           Lamdu.Expr.Scheme (Scheme)
@@ -267,6 +268,7 @@ data HoleActions name m = HoleActions
     { _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
     , _holeOptions :: T m [HoleOption name m]
     , _holeOptionLiteralNum :: Double -> T m (HoleOption name m)
+    , _holeOptionLiteralBytes :: SBS.ByteString -> T m (HoleOption name m)
     }
 
 data Unwrap m

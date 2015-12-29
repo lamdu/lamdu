@@ -186,15 +186,18 @@ mkWritableHoleActions ::
     ConvertM m (HoleActions Guid m)
 mkWritableHoleActions mInjectedArg exprPl stored = do
     sugarContext <- ConvertM.readContext
+    let mkLiteralOption =
+            return . mkHoleOption sugarContext mInjectedArg exprPl stored .
+            SeedExpr . Val () . V.BLeaf . V.LLiteral
     pure HoleActions
         { _holeOptions =
             mkOptions sugarContext mInjectedArg exprPl stored
             <&> addSuggestedOptions
                 (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
         , _holeOptionLiteralNum =
-            return . mkHoleOption sugarContext mInjectedArg exprPl stored .
-            SeedExpr . Val () . V.BLeaf .
-            V.LLiteral . V.Literal Builtins.floatId . encodeS
+            mkLiteralOption . V.Literal Builtins.floatId . encodeS
+        , _holeOptionLiteralBytes =
+            mkLiteralOption . V.Literal Builtins.bytesId
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
         }
 
