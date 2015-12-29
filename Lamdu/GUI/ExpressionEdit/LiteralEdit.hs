@@ -3,8 +3,6 @@ module Lamdu.GUI.ExpressionEdit.LiteralEdit
     ( makeNum, makeBytes
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
@@ -13,8 +11,10 @@ import           Data.Store.Guid (Guid)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (formatNum, formatBytes)
@@ -25,15 +25,12 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Style as Style
 import qualified Lamdu.Sugar.Types as Sugar
 
-type T = Transaction.Transaction
+import           Prelude.Compat
 
-setColor :: MonadA m => ExprGuiM m a -> ExprGuiM m a
-setColor action =
-    do
-        config <- ExprGuiM.readConfig
-        ExprGuiM.withFgColor (Config.literalColor config) action
+type T = Transaction.Transaction
 
 mkEditEventMap ::
     MonadA m => String -> T m (Guid, Sugar.EntityId) -> Widget.EventHandlers (T m)
@@ -46,11 +43,12 @@ mkEditEventMap valText setToHole =
 
 makeGeneric ::
     MonadA m =>
+    (ExprGuiM m (Widget (T m)) -> ExprGuiM m (Widget (T m))) ->
     String -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeGeneric valText pl =
+makeGeneric setStyle valText pl =
     BWidgets.makeFocusableTextView valText myId
-    & setColor . ExprGuiM.widgetEnv
+    & setStyle . ExprGuiM.widgetEnv
     <&> Widget.weakerEvents editEventMap
     <&> ExpressionGui.fromValueWidget
     & ExpressionGui.stdWrap pl
@@ -68,10 +66,22 @@ makeNum ::
     MonadA m =>
     Double -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeNum = makeGeneric . formatNum
+makeNum =
+    makeGeneric setColor . formatNum
+    where
+        setColor action =
+            do
+                config <- ExprGuiM.readConfig
+                action & ExprGuiM.withFgColor (Config.literalColor config)
 
 makeBytes ::
     MonadA m =>
     SBS.ByteString -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeBytes = makeGeneric . formatBytes
+makeBytes =
+    makeGeneric setStyle . formatBytes
+    where
+        setStyle action =
+            do
+                style <- ExprGuiM.readStyle
+                action & ExprGuiM.localEnv (WE.envTextStyle .~ Style.styleBytes style)
