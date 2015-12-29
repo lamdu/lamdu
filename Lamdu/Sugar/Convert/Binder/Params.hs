@@ -102,16 +102,6 @@ setParamList paramListProp newParamList =
     where
         setParamOrder = Transaction.setP . Anchors.assocTagOrder
 
--- TODO: find nicer way to do it than using properties and rereading
--- data?  Perhaps keep track of the up-to-date pure val as it is being
--- mutated?
-rereadVal :: MonadA m => ValIProperty m -> T m (Val (ValIProperty m))
-rereadVal valProp =
-    ExprIRef.readVal (Property.value valProp)
-    <&> fmap (flip (,) ())
-    <&> ExprIRef.addProperties (Property.set valProp)
-    <&> fmap fst
-
 isRecursiveCallArg :: V.Var -> [Val ()] -> Bool
 isRecursiveCallArg recursiveVar (cur : parent : _) =
     Lens.allOf ExprLens.valVar (/= recursiveVar) cur &&
@@ -122,17 +112,13 @@ isRecursiveCallArg _ _ = False
 changeRecursiveCallArgs ::
     MonadA m =>
     (ValI m -> T m (ValI m)) ->
-    ValIProperty m -> V.Var -> T m ()
-changeRecursiveCallArgs change valProp var =
-    -- Reread body before fixing it,
-    -- to avoid re-writing old data (without converted vars)
-    rereadVal valProp
-    >>= SubExprs.onMatchingSubexprsWithPath changeRecurseArg (isRecursiveCallArg var)
+    Val (ValIProperty m) -> V.Var -> T m ()
+changeRecursiveCallArgs change val var =
+    SubExprs.onMatchingSubexprsWithPath changeRecurseArg
+    (isRecursiveCallArg var) val
     where
         changeRecurseArg prop =
-            Property.value prop
-            & change
-            >>= Property.set prop
+            Property.value prop & change >>= Property.set prop
 
 addFieldParam ::
     MonadA m => (T.Tag -> ParamList) -> StoredLam m -> T m (TagG ())
@@ -166,7 +152,7 @@ makeAddFieldParam mRecursiveVar mkNewTags storedLam =
                 mRecursiveVar
                     & Lens.traverse %%~
                         changeRecursiveCallArgs addFieldToCall
-                        (storedLam ^. slLam . V.lamResult . V.payload)
+                        (storedLam ^. slLam . V.lamResult)
                     & void
                 void $ wrapOnError $ slLambdaProp storedLam
                 ParamAddResultNewTag tagG & return
@@ -244,7 +230,7 @@ makeDelFieldParam mRecursiveVar tags fp storedLam =
                 mRecursiveVar
                     & traverse_
                         (changeRecursiveCallArgs fixRecurseArg
-                          (storedLam ^. slLam . V.lamResult . V.payload))
+                          (storedLam ^. slLam . V.lamResult))
                 _ <- wrapOnError $ slLambdaProp storedLam
                 return delResult
     where
@@ -424,7 +410,7 @@ makeConvertToRecordParams mRecursiveVar storedLam =
                     & traverse_
                     (changeRecursiveCallArgs
                         (wrapArgWithRecord varToTags)
-                        (storedLam ^. slLam . V.lamResult . V.payload))
+                        (storedLam ^. slLam . V.lamResult))
                 _ <- wrapOnError (slLambdaProp storedLam)
                 ParamAddResultVarToTags varToTags & return
 
