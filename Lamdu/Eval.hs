@@ -18,10 +18,8 @@ import           Control.Monad (void)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State.Strict (StateT(..))
 import           Control.MonadA (MonadA)
-import           Data.Binary.Utils (decodeS)
 import           Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Eval.Val (EvalResult, Val(..), EvalError(..), Closure(..), Scope(..), emptyScope, ScopeId(..), scopeIdInt)
 import qualified Lamdu.Expr.Val as V
@@ -168,9 +166,7 @@ evalScopedVal (ScopedVal scope expr) =
         Just val -> return val
     V.BLeaf V.LRecEmpty -> Right HRecEmpty & return
     V.BLeaf V.LAbsurd   -> Right HAbsurd & return
-    V.BLeaf (V.LLiteral (V.Literal p bs))
-        | p == Builtins.floatId -> decodeS bs & HFloat & Right & return
-        | otherwise -> error "TODO Literals which are not nums"
+    V.BLeaf (V.LLiteral literal) -> HLiteral literal & Right & return
     V.BLeaf V.LHole -> Left EvalHole & return
     where
         inner = evalScopedVal . ScopedVal scope

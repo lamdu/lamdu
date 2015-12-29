@@ -7,6 +7,7 @@ module Lamdu.GUI.EvalView
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
+import           Data.Binary.Utils (decodeS)
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.Store.Transaction as Transaction
 import           Data.Vector.Vector2 (Vector2(..))
@@ -17,6 +18,7 @@ import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
+import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Val (EvalResult, Val(..), EvalError(..))
@@ -118,7 +120,9 @@ makeForVal animId val =
         where
             (fields, recStatus) = extractFields recExtend
     HBuiltin x -> asText (show x)
-    HFloat x -> asText (formatNum x)
+    HLiteral l@(V.Literal tId x)
+        | tId == Builtins.floatId -> (asText . formatNum . decodeS) x
+        | otherwise -> asText (show l)
     & ExprGuiM.advanceDepth return animId
     where
         asText text = BWidgets.makeTextView text animId & ExprGuiM.widgetEnv

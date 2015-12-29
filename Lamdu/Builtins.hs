@@ -5,6 +5,7 @@ module Lamdu.Builtins
 
 import           Control.Lens.Operators
 import           Control.Monad (join, void, when)
+import           Data.Binary.Utils (encodeS, decodeS)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Map.Utils (matchKeys)
@@ -54,9 +55,10 @@ fromGuest :: GuestType t => EvalResult pl -> Either EvalError t
 fromGuest = (>>= fromGuestVal)
 
 instance GuestType Double where
-    toGuestVal = HFloat
-    fromGuestVal (HFloat x) = Right x
-    fromGuestVal x = "expected int, got " ++ show (void x) & EvalTypeError & Left
+    toGuestVal = HLiteral . V.Literal Builtins.floatId . encodeS
+    fromGuestVal (HLiteral (V.Literal primId x))
+        | primId == Builtins.floatId = Right (decodeS x)
+    fromGuestVal x = "expected num, got " ++ show (void x) & EvalTypeError & Left
 
 instance GuestType Bool where
     toGuestVal b =
@@ -97,7 +99,9 @@ eqVal HFunc {} _    = EvalTodoError "Eq of func" & Left
 eqVal HAbsurd {} _  = EvalTodoError "Eq of absurd" & Left
 eqVal HCase {} _    = EvalTodoError "Eq of case" & Left
 eqVal HBuiltin {} _ = EvalTodoError "Eq of builtin" & Left
-eqVal (HFloat x) (HFloat y) = x == y & Right
+eqVal (HLiteral (V.Literal xTId x)) (HLiteral (V.Literal yTId y))
+    | xTId == yTId = Right (x == y)
+    | otherwise = EvalTypeError "Comparison of different literal types!" & Left
 eqVal (HRecExtend x) (HRecExtend y) =
     do
         fx <- HRecExtend x & Right & flatRecord
