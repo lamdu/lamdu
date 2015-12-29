@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.Binder.Params
     , mkStoredLam, makeDeleteLambda
     , StoredLam(..), slLam
     , NewParamPosition(..), convertToRecordParams, addFieldParam
+    , isParamAlwaysUsedWithGetField
     ) where
 
 import           Control.Lens (Lens')
@@ -503,11 +504,15 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
 
 isParamAlwaysUsedWithGetField :: V.Lam (Val a) -> Bool
 isParamAlwaysUsedWithGetField (V.Lam param body) =
-    Lens.nullOf (ExprLens.payloadsIndexedByPath . Lens.ifiltered cond) body
+    go body
     where
-        cond (_ : Val () V.BGetField{} : _) _ = False
-        cond (Val () (V.BLeaf (V.LVar v)) : _) _ = v == param
-        cond _ _ = False
+        go val =
+            case val ^. V.body of
+            V.BLeaf (V.LVar v) | v == param -> False
+            V.BGetField (V.GetField r _) -> checkChildren r
+            _ -> checkChildren val
+            where
+                checkChildren x = all go (x ^.. V.body . Lens.traverse)
 
 convertLamParams ::
     (MonadA m, Monoid a) =>

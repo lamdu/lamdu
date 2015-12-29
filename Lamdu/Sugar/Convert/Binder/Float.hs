@@ -70,16 +70,6 @@ isVarAlwaysApplied var val =
         checkChildren x =
             all (isVarAlwaysApplied var) (x ^.. V.body . Lens.traverse)
 
-isVarAlwaysRecordOfGetField :: V.Var -> Val a -> Bool
-isVarAlwaysRecordOfGetField var val =
-    case val ^. V.body of
-    V.BLeaf (V.LVar v) | v == var -> False
-    V.BGetField (V.GetField r _) -> checkChildren r
-    _ -> checkChildren val
-    where
-        checkChildren x =
-            all (isVarAlwaysRecordOfGetField var) (x ^.. V.body . Lens.traverse)
-
 convertLetToLam ::
     Monad m => V.Var -> Redex (ValIProperty m) -> Transaction m (NewLet m)
 convertLetToLam varToReplace redex =
@@ -162,8 +152,7 @@ addLetParam varToReplace redex =
         case redexArgType redex of
         T.TFun (T.TRecord composite) _
             | (fields, Nothing) <- orderedFlatComposite composite
-            , isVarAlwaysRecordOfGetField
-                (lam ^. V.lamParamId) (lam ^. V.lamResult) ->
+            , Params.isParamAlwaysUsedWithGetField lam ->
             addFieldToLetParamsRecord (fields <&> fst) varToReplace storedLam
         _ -> convertLetParamToRecord varToReplace storedLam
         where
