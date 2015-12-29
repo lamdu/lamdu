@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE PatternGuards, NoImplicitPrelude #-}
 
 module Lamdu.Sugar.Convert.Binder.Float
     ( makeFloatLetToOuterScope
