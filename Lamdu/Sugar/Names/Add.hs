@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, DeriveGeneric, FlexibleInstances, KindSignatures, NoMonomorphismRestriction #-}
+{-# LANGUAGE LambdaCase, NoImplicitPrelude, GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, DeriveGeneric, FlexibleInstances, KindSignatures, NoMonomorphismRestriction #-}
 module Lamdu.Sugar.Names.Add
     ( addToDef, addToExpr
     ) where
@@ -344,6 +344,8 @@ fixParamDelResult _ = return ()
 fixLetFloatResult :: MonadA m => LetFloatResult -> T m ()
 fixLetFloatResult = maybe (return ()) fixVarToTags . lfrMVarToTags
 
+-- mutual recursion fixBinder<->fixExpr
+
 fixBinder ::
     MonadA m =>
     Binder name m (Expression name m a) ->
@@ -352,7 +354,9 @@ fixBinder binder =
     binder
     & SugarLens.binderFuncParamAdds %~ postProcess fixParamAddResult
     & SugarLens.binderFuncParamDeletes %~ postProcess fixParamDelResult
+    & bBody . bbContent . _BinderLet .  lValue %~ fixBinder
     & SugarLens.binderLetActions . laFloat %~ postProcess fixLetFloatResult
+    <&> fixExpr
     where
         postProcess f action =
             do
@@ -360,11 +364,17 @@ fixBinder binder =
                 () <- f res
                 return res
 
-addTo ::
+fixExpr :: MonadA m => Expression name m a -> Expression name m a
+fixExpr expr =
+    expr & rBody %~ \case
+    BodyLam lam -> lam & lamBinder %~ fixBinder & BodyLam
+    body -> body <&> fixExpr
+
+runPasses ::
     Functor tm =>
     (a -> Pass0M tm b) -> (b -> Pass1M tm c) -> (c -> Pass2M tm d) ->
     a -> Transaction tm d
-addTo f0 f1 f2 =
+runPasses f0 f1 f2 =
     fmap (pass2 . pass1) . pass0
     where
         pass0 = runPass0M . f0
@@ -376,14 +386,14 @@ addToDef :: MonadA tm => DefinitionU tm a -> T tm (DefinitionN tm a)
 addToDef def =
     def
     & drBody . _DefinitionBodyExpression . deContent %~ fixBinder
-    & addTo f f f
+    & runPasses f f f
     where
         f = Walk.toDef Walk.toExpression
 
 addToExpr :: MonadA tm => Expression Guid tm a -> T tm (Expression (Name tm) tm a)
 addToExpr expr =
     expr
-    & SugarLens.exprBinders %~ fixBinder
-    & addTo f f f
+    & fixExpr
+    & runPasses f f f
     where
         f = Walk.toExpression
