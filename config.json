@@ -1,7 +1,8 @@
 {
     "fonts": {
         "fontDefault": "fonts/DejaVuSans.ttf",
-        "fontAutoName": "fonts/DejaVuSerif-Italic.ttf"
+        "fontAutoName": "fonts/DejaVuSerif-Italic.ttf",
+        "fontMono": "fonts/DejaVuSansMono.ttf"
     },
     "animationTimePeriodSec": 0.11,
     "animationRemainInPeriod": 0.2,

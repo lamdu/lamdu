@@ -58,7 +58,7 @@ type T = Transaction
 
 defaultFonts :: Fonts FilePath
 defaultFonts =
-    Fonts defaultFontName defaultFontName
+    Fonts defaultFontName defaultFontName defaultFontName
     where
         defaultFontName = "fonts/Purisa.ttf"
 

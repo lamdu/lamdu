@@ -19,6 +19,7 @@ instance E.Exception MissingFont
 data Fonts a = Fonts
     { fontDefault :: a
     , fontAutoName :: a
+    , fontMono :: a
     } deriving (Eq, Generic, Show, Functor, Foldable, Traversable)
 instance Aeson.ToJSON a => Aeson.ToJSON (Fonts a) where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
