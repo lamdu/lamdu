@@ -33,7 +33,7 @@ setColor :: MonadA m => ExprGuiM m a -> ExprGuiM m a
 setColor action =
     do
         config <- ExprGuiM.readConfig
-        ExprGuiM.withFgColor (Config.literalNumColor config) action
+        ExprGuiM.withFgColor (Config.literalColor config) action
 
 mkEditEventMap ::
     MonadA m => String -> T m (Guid, Sugar.EntityId) -> Widget.EventHandlers (T m)

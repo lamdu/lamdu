@@ -180,7 +180,7 @@ data Config = Config
     , wrapKeys :: [ModKey]
 
     , parenHighlightColor :: Draw.Color
-    , literalNumColor :: Draw.Color
+    , literalColor :: Draw.Color
     , typeIndicatorErrorColor :: Draw.Color
     , typeIndicatorMatchColor :: Draw.Color
     , typeIndicatorFirstTimeColor :: Draw.Color
