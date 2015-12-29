@@ -107,6 +107,7 @@ blessAnchors =
         mapM_ describeAnchorTag Builtins.anchorTags
         lift $ setName Builtins.listTid "List"
         lift $ setName Builtins.floatId "Num"
+        lift $ setName Builtins.bytesId "Bytes"
         Writer.tell $ mempty { publicTIds = [Builtins.listTid] }
     where
         describeAnchorTag (order, tag, name) =

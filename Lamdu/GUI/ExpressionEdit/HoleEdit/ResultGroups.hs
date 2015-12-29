@@ -27,7 +27,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Val as V
-import           Lamdu.Formatting (formatNum)
+import           Lamdu.Formatting (formatNum, parseBytes, formatBytes)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -183,6 +183,7 @@ searchTermsOfBodyShape = \case
             _ -> []
     Sugar.BodyInject {} -> ["inject", "[]"]
     Sugar.BodyLiteralNum i -> [formatNum i]
+    Sugar.BodyLiteralBytes i -> [formatBytes i]
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> ["Params"]
     Sugar.BodyGetVar {} -> []
     Sugar.BodyToNom {} -> []
@@ -218,6 +219,19 @@ literalNumGroups holeInfo =
         option val = val & ehiActions holeInfo ^. Sugar.holeOptionLiteralNum <&> (: [])
         searchTerm = ehiSearchTerm holeInfo
 
+literalBytesGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
+literalBytesGroups holeInfo =
+    ehiSearchTerm holeInfo
+    & parseBytes
+    & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteralBytes
+    <&> (^.. Lens._Just)
+
+literalGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
+literalGroups holeInfo =
+    [ literalNumGroups holeInfo
+    , literalBytesGroups holeInfo
+    ] & sequenceA <&> concat
+
 insensitivePrefixOf :: String -> String -> Bool
 insensitivePrefixOf = isPrefixOf `on` map Char.toLower
 
@@ -240,7 +254,7 @@ globalNameMatches searchTerm (V.Val () body) =
 makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [Group m]
 makeAllGroups editableHoleInfo =
     (++)
-    <$> (literalNumGroups editableHoleInfo >>= mapM mkGroup)
+    <$> (literalGroups editableHoleInfo >>= mapM mkGroup)
     <*> (ehiActions editableHoleInfo ^. Sugar.holeOptions
          >>= preFilter
          >>= mapM mkGroup

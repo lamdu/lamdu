@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.LiteralEdit
-    ( makeNum
+    ( makeNum, makeBytes
     ) where
 
 import           Prelude.Compat
@@ -8,6 +8,7 @@ import           Prelude.Compat
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
+import qualified Data.ByteString as SBS
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -16,7 +17,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
-import           Lamdu.Formatting (formatNum)
+import           Lamdu.Formatting (formatNum, formatBytes)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -35,20 +36,20 @@ setColor action =
         ExprGuiM.withFgColor (Config.literalNumColor config) action
 
 mkEditEventMap ::
-    MonadA m => Double -> T m (Guid, Sugar.EntityId) -> Widget.EventHandlers (T m)
-mkEditEventMap val setToHole =
+    MonadA m => String -> T m (Guid, Sugar.EntityId) -> Widget.EventHandlers (T m)
+mkEditEventMap valText setToHole =
     Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Enter]
     (E.Doc ["Edit", "Double"]) $
     do
         (guid, entityId) <- setToHole
-        setHoleStateAndJump guid (HoleState (formatNum val)) entityId
+        setHoleStateAndJump guid (HoleState valText) entityId
 
-makeNum ::
+makeGeneric ::
     MonadA m =>
-    Double -> Sugar.Payload m ExprGuiT.Payload ->
+    String -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeNum val pl =
-    BWidgets.makeFocusableTextView (formatNum val) myId
+makeGeneric valText pl =
+    BWidgets.makeFocusableTextView valText myId
     & setColor . ExprGuiM.widgetEnv
     <&> Widget.weakerEvents editEventMap
     <&> ExpressionGui.fromValueWidget
@@ -57,8 +58,20 @@ makeNum val pl =
         myId = WidgetIds.fromExprPayload pl
         editEventMap =
             case pl ^? Sugar.plActions . Lens._Just . Sugar.setToHole of
-            Just (Sugar.SetToHole action) -> mkEditEventMap val action
-            Just (Sugar.SetWrapperToHole action) -> mkEditEventMap val action
+            Just (Sugar.SetToHole action) -> mkEditEventMap valText action
+            Just (Sugar.SetWrapperToHole action) -> mkEditEventMap valText action
             Just Sugar.AlreadyAHole -> error "Literal val is a hole?!"
             Just Sugar.AlreadyAppliedToHole -> error "Literal val is an apply?!"
             Nothing -> mempty -- not modifiable
+
+makeNum ::
+    MonadA m =>
+    Double -> Sugar.Payload m ExprGuiT.Payload ->
+    ExprGuiM m (ExpressionGui m)
+makeNum = makeGeneric . formatNum
+
+makeBytes ::
+    MonadA m =>
+    SBS.ByteString -> Sugar.Payload m ExprGuiT.Payload ->
+    ExprGuiM m (ExpressionGui m)
+makeBytes = makeGeneric . formatBytes

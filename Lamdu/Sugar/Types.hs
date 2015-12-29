@@ -34,7 +34,7 @@ module Lamdu.Sugar.Types
         , wrap, setToHole, setToInnerExpr, extract
     , Body(..)
         , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
-        , _BodyLiteralNum, _BodyList, _BodyCase, _BodyRecord
+        , _BodyLiteralNum, _BodyLiteralBytes, _BodyList, _BodyCase, _BodyRecord
         , _BodyFromNom, _BodyToNom
     , EvaluationResult
     , Annotation(..), aInferredType, aMEvaluationResult
@@ -448,6 +448,7 @@ data Body name m expr
     | BodyApply (Apply name expr)
     | BodyHole (Hole name m expr)
     | BodyLiteralNum Double
+    | BodyLiteralBytes SBS.ByteString
     | BodyList (List m expr)
     | BodyRecord (Record name m expr)
     | BodyGetField (GetField name expr)
@@ -471,6 +472,7 @@ instance Show expr => Show (Body name m expr) where
     show (BodyLam _) = "TODO show lam"
     show BodyHole {} = "Hole"
     show (BodyLiteralNum i) = show i
+    show (BodyLiteralBytes i) = show i
     show (BodyList (List items _ _)) =
         concat
         [ "["

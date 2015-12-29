@@ -7,8 +7,9 @@ import           Prelude.Compat
 
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
-import           Data.Store.Transaction (Transaction)
 import           Data.Binary.Utils (decodeS)
+import qualified Data.ByteString as SBS
+import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
@@ -41,9 +42,12 @@ jumpToDefI ::
 jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
 convertLiteralFloat ::
-    MonadA m => Double ->
-    Input.Payload m a -> ConvertM m (ExpressionU m a)
+    MonadA m => Double -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLiteralFloat i exprPl = addActions exprPl $ BodyLiteralNum i
+
+convertLiteralBytes ::
+    MonadA m => SBS.ByteString -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+convertLiteralBytes bs exprPl = addActions exprPl $ BodyLiteralBytes bs
 
 convertGlobal ::
     MonadA m => V.GlobalId -> Input.Payload m a -> ConvertM m (ExpressionU m a)
@@ -78,7 +82,8 @@ convert v =
       V.BLeaf (V.LGlobal x) -> convertGlobal x
       V.BLeaf (V.LLiteral (V.Literal p bs))
           | p == Builtins.floatId -> convertLiteralFloat (decodeS bs)
-          | otherwise -> error "TODO Literals which are not nums"
+          | p == Builtins.bytesId -> convertLiteralBytes bs
+          | otherwise -> error $ "TODO Unsupported literal: " ++ show p
       V.BLeaf V.LHole -> ConvertHole.convert
       V.BLeaf V.LRecEmpty -> ConvertRecord.convertEmpty
       V.BLeaf V.LAbsurd -> ConvertCase.convertAbsurd
