@@ -5,6 +5,7 @@ module Lamdu.Font
 
 import qualified Control.Exception as E
 import           Control.Monad.Trans.Cont (ContT(..))
+import qualified Data.Aeson.Types as Aeson
 import           Data.Typeable (Typeable)
 import           GHC.Generics (Generic)
 import qualified Graphics.DrawingCombinators as Draw
@@ -19,6 +20,9 @@ data Fonts a = Fonts
     { fontDefault :: a
     , fontAutoName :: a
     } deriving (Eq, Generic, Show, Functor, Foldable, Traversable)
+instance Aeson.ToJSON a => Aeson.ToJSON (Fonts a) where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON a => Aeson.FromJSON (Fonts a)
 
 withPath :: E.Exception e => (e -> IO a) -> FilePath -> (Draw.Font -> IO a) -> IO a
 withPath catchError path action =

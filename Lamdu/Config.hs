@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric, RecordWildCards #-}
 module Lamdu.Config
     ( Layers(..)
-    , Fonts(..), Help(..), Zoom(..), Pane(..), Hole(..), Name(..), Eval(..)
+    , Help(..), Zoom(..), Pane(..), Hole(..), Name(..), Eval(..)
     , LightLambda(..)
     , Config(..)
     , delKeys
@@ -16,6 +16,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.DrawingCombinators.Utils ()
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Lamdu.Font (Fonts(..))
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
 data Layers = Layers
@@ -135,16 +136,8 @@ instance Aeson.ToJSON Eval where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Eval
 
-data Fonts = Fonts
-    { fontDefault :: FilePath
-    , fontAutoName :: FilePath
-    } deriving (Eq, Generic, Show)
-instance Aeson.ToJSON Fonts where
-    toJSON = Aeson.genericToJSON Aeson.defaultOptions
-instance Aeson.FromJSON Fonts
-
 data Config = Config
-    { fonts :: Fonts
+    { fonts :: Fonts FilePath
     , layers :: Layers
     , help :: Help
     , zoom :: Zoom

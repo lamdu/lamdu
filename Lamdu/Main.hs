@@ -208,13 +208,9 @@ prependConfigPath sample =
     where
         dir = FilePath.takeDirectory (ConfigSampler.sFilePath sample)
 
-fontsOfConfig :: Config.Fonts -> Fonts FilePath
-fontsOfConfig (Config.Fonts a b) = Fonts a b
-
 absFontsOfSample :: ConfigSampler.Sample Config -> Fonts FilePath
 absFontsOfSample sample =
-    prependConfigPath sample $ fontsOfConfig $ Config.fonts $
-    ConfigSampler.sValue sample
+    prependConfigPath sample $ Config.fonts $ ConfigSampler.sValue sample
 
 withFontLoop :: Sampler Config -> (IO () -> Fonts Draw.Font -> IO a) -> IO a
 withFontLoop configSampler act =
