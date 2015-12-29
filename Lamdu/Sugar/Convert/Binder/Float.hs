@@ -61,20 +61,24 @@ data NewLet m = NewLet
     }
 
 isVarAlwaysApplied :: V.Var -> Val a -> Bool
-isVarAlwaysApplied var =
-    go False
+isVarAlwaysApplied var val =
+    case val ^. V.body of
+    V.BLeaf (V.LVar v) | v == var -> False
+    V.BApp (V.Apply f a) -> checkChildren f && isVarAlwaysApplied var a
+    _ -> checkChildren val
     where
-        go isApplied (Val _ (V.BLeaf (V.LVar v))) | v == var = isApplied
-        go _ (Val _ (V.BApp (V.Apply f a))) = go True f && go False a
-        go _ v = all (go False) (v ^.. V.body . Lens.traverse)
+        checkChildren x =
+            all (isVarAlwaysApplied var) (x ^.. V.body . Lens.traverse)
 
 isVarAlwaysRecordOfGetField :: V.Var -> Val a -> Bool
-isVarAlwaysRecordOfGetField var =
-    go False
+isVarAlwaysRecordOfGetField var val =
+    case val ^. V.body of
+    V.BLeaf (V.LVar v) | v == var -> False
+    V.BGetField (V.GetField r _) -> checkChildren r
+    _ -> checkChildren val
     where
-        go isGf (Val _ (V.BLeaf (V.LVar v))) | v == var = isGf
-        go _ (Val _ (V.BGetField (V.GetField r _))) = go True r
-        go _ v = all (go False) (v ^.. V.body . Lens.traverse)
+        checkChildren x =
+            all (isVarAlwaysRecordOfGetField var) (x ^.. V.body . Lens.traverse)
 
 convertLetToLam ::
     Monad m => V.Var -> Redex (ValIProperty m) -> Transaction m (NewLet m)
