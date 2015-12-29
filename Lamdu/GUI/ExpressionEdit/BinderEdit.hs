@@ -113,16 +113,6 @@ mkPresentationModeEdit myId prop = do
         BWidgets.makeChoiceWidget (Transaction.setP prop) pairs cur
         (presentationModeChoiceConfig config) myId
 
-layout ::
-    MonadA m =>
-    ExpressionGui m -> Maybe (ExpressionGui m) -> ExpressionGui m -> Widget.Id ->
-    ExprGuiM m (ExpressionGui m)
-layout defNameEdit mParamsEdit bodyEdit myId =
-    do
-        equals <- ExpressionGui.makeLabel "=" (Widget.toAnimId myId)
-        defNameEdit : (mParamsEdit ^.. Lens._Just) ++ [equals, bodyEdit]
-            & ExpressionGui.hboxSpaced
-
 data Parts m = Parts
     { pMParamsEdit :: Maybe (ExpressionGui m)
     , pMScopesEdit :: Maybe (ExpressionGui m)
@@ -368,7 +358,9 @@ make name binder myId =
             & Lens._Just ExpressionGui.vboxTopFocalSpaced
             <&> Lens._Just . ExpressionGui.egWidget
                 %~ Widget.weakerEvents rhsJumperEquals
-        layout defNameEdit mLhsEdit bodyEdit myId
+        equals <- ExpressionGui.makeLabel "=" (Widget.toAnimId myId)
+        defNameEdit : (mLhsEdit ^.. Lens._Just) ++ [equals, bodyEdit]
+            & ExpressionGui.hboxSpaced
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents eventMap
     where
         presentationChoiceId = Widget.joinId myId ["presentation"]
