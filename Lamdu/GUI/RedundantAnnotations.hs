@@ -74,7 +74,7 @@ markAnnotationsToDisplay (Expression oldBody pl) =
     BodyList l ->
         Expression (BodyList l') pl & dontShowEval
         where
-            l' = l & lValues . Lens.mapped . liExpr %~ dontShowType
+            l' = l & listValues . Lens.mapped . liExpr %~ dontShowType
     BodyHole hole ->
         Expression (BodyHole hole') pl & forceShowType
         where

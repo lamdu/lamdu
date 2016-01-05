@@ -50,7 +50,7 @@ module Lamdu.Sugar.Types
         , lActions, lAnnotation, lBodyScope, lBody
     , ListItem(..), liMActions, liExpr
     , ListActions(..)
-    , List(..), lValues, lMActions, lNilEntityId
+    , List(..), listValues, listMActions, listNilEntityId
     -- record:
     , RecordField(..), rfMDelete, rfTag, rfExpr
     , RecordTail(..), _RecordExtending, _ClosedRecord
@@ -303,11 +303,11 @@ data ListActions m = ListActions
     }
 
 data List m expr = List
-    { _lValues :: [ListItem m expr]
-    , _lMActions :: Maybe (ListActions m)
+    { _listValues :: [ListItem m expr]
+    , _listMActions :: Maybe (ListActions m)
     , -- Nil EntityId stays consistent when adding items.
-        -- (Exposed for consistent animations)
-        _lNilEntityId :: EntityId
+      -- (Exposed for consistent animations)
+      _listNilEntityId :: EntityId
     } deriving (Functor, Foldable, Traversable)
 
 {- Record start -}
