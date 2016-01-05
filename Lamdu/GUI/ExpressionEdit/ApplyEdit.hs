@@ -37,10 +37,9 @@ prefixPrecedence :: Int
 prefixPrecedence = 10
 
 mkOverrideModifyEventMap ::
-    MonadA m => Maybe (Sugar.Actions m) ->
+    MonadA m => Sugar.Actions m ->
     ExprGuiM m (ExpressionGui m -> ExpressionGui m)
-mkOverrideModifyEventMap Nothing = return id
-mkOverrideModifyEventMap (Just actions) =
+mkOverrideModifyEventMap actions =
     do
         config <- ExprGuiM.readConfig
         ExpressionGui.egWidget %~

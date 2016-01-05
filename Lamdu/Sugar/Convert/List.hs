@@ -49,7 +49,7 @@ nil (V.Nom tid val) exprPl =
                 }
         List
             { _listValues = []
-            , _listMActions = mkListActions <$> exprPl ^. Input.stored
+            , _listActions = exprPl ^. Input.stored & mkListActions
             , _listNilEntityId = exprPl ^. Input.entityId
             }
             & BodyList & addActions exprPl
@@ -63,21 +63,18 @@ mkListAddFirstItem = fmap (EntityId.ofValI . snd) . DataOps.addListItem
 mkListItem ::
     (MonadA m, Monoid a) =>
     ExpressionU m a ->
-    Input.Payload m a -> Val (Input.Payload m a) -> Maybe (T m EntityId) ->
+    Input.Payload m a -> Val (Input.Payload m a) -> T m EntityId ->
     ListItem m (ExpressionU m a)
-mkListItem listItemExpr exprPl tailI mAddNextItem =
+mkListItem listItemExpr exprPl tailI addNextItem =
     ListItem
-    { _liExpr =
-        listItemExpr
-    , _liMActions =
-        do
-            addNext <- mAddNextItem
-            exprProp <- exprPl ^. Input.stored
-            argProp <- tailI ^. V.payload . Input.stored
-            return ListItemActions
-                { _itemAddNext = addNext
-                , _itemDelete = void $ replaceWith exprProp argProp
-                }
+    { _liExpr = listItemExpr
+    , _liActions =
+      ListItemActions
+      { _itemAddNext = addNextItem
+      , _itemDelete =
+          replaceWith (exprPl ^. Input.stored) (tailI ^. V.payload . Input.stored)
+          & void
+      }
     }
 
 data ConsParams a = ConsParams
@@ -123,25 +120,21 @@ cons (V.Nom nomId (Val injPl (V.BInject (V.Inject tag argI)))) exprPl
         argS <- ConvertM.convertSubexpression argI & lift
         ConsParams headS tailS <- getSugaredHeadTail argS
         (pls, ConsParams _headI tailI) <- valConsParams argI & maybeToMPlus
-        List innerValues innerListMActions nilGuid <-
+        List innerValues innerListActions nilGuid <-
             tailS ^? rBody . _BodyList & maybeToMPlus
         let listItem =
-                mkListItem headS exprPl tailI
-                (addFirstItem <$> innerListMActions)
+                mkListItem headS exprPl tailI (addFirstItem innerListActions)
                 & liExpr . rPayload . plData <>~ mconcat
                 [ tailS ^. rPayload . plData
                 , pls ^. traverse . Input.userData
                 , injPl ^. Input.userData
                 ]
-        let mListActions =
-                do
-                    exprS <- exprPl ^. Input.stored
-                    innerListActions <- innerListMActions
-                    pure ListActions
-                        { addFirstItem = mkListAddFirstItem exprS
-                        , replaceNil = replaceNil innerListActions
-                        }
-        List (listItem : innerValues) mListActions nilGuid
+        let actions =
+                ListActions
+                { addFirstItem = mkListAddFirstItem (exprPl ^. Input.stored)
+                , replaceNil = replaceNil innerListActions
+                }
+        List (listItem : innerValues) actions nilGuid
             & BodyList
             & addActions exprPl & lift
 cons _ _ = mzero

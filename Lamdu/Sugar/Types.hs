@@ -18,13 +18,12 @@ module Lamdu.Sugar.Types
     , BinderParams(..)
         , _BinderWithoutParams, _NullParam, _VarParam , _FieldParams
     , BinderParamScopeId(..), bParamScopeId
-    , BinderBodyActions(..), bbaAddOuterLet
-    , BinderBody(..), bbMActions, bbContent
+    , BinderBody(..), bbAddOuterLet, bbContent
     , BinderContent(..), _BinderLet, _BinderExpr
     , BinderBodyScope(..)
     , Binder(..)
-        , bMPresentationModeProp, bMChosenScopeProp, bParams, bBody
-        , bMActions, bBodyScopes
+        , bMPresentationModeProp, bChosenScopeProp, bParams, bBody
+        , bActions, bBodyScopes
     , DefinitionBuiltin(..), biType, biName, biSetName
     , WrapAction(..), _WrapperAlready, _WrappedAlready, _WrapNotAllowed, _WrapAction
     , SetToHole(..), _SetToHole, _SetWrapperToHole, _AlreadyAHole
@@ -48,21 +47,21 @@ module Lamdu.Sugar.Types
     , Let(..)
         , lEntityId, lValue, lName, lUsages
         , lActions, lAnnotation, lBodyScope, lBody
-    , ListItem(..), liMActions, liExpr
+    , ListItem(..), liActions, liExpr
     , ListActions(..)
-    , List(..), listValues, listMActions, listNilEntityId
+    , List(..), listValues, listActions, listNilEntityId
     -- record:
-    , RecordField(..), rfMDelete, rfTag, rfExpr
+    , RecordField(..), rfDelete, rfTag, rfExpr
     , RecordTail(..), _RecordExtending, _ClosedRecord
     , RecordAddFieldResult(..), rafrNewTag, rafrNewVal, rafrRecExtend
-    , Record(..), rItems, rMAddField, rTail
+    , Record(..), rItems, rAddField, rTail
     -- case
-    , CaseAlt(..), caMDelete, caTag, caHandler
+    , CaseAlt(..), caDelete, caTag, caHandler
     , CaseTail(..), _CaseExtending, _ClosedCase
     , CaseAddAltResult(..), caarNewTag, caarNewVal, caarCase
-    , CaseArg(..), caVal, caMToLambdaCase
+    , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
-    , Case(..), cKind, cAlts, cMAddAlt, cTail, cEntityId
+    , Case(..), cKind, cAlts, cAddAlt, cTail, cEntityId
     , Nominal(..), nTId, nVal
     --
     , GetField(..), gfRecord, gfTag
@@ -78,14 +77,14 @@ module Lamdu.Sugar.Types
     , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
     , AnnotatedArg(..), aaTag, aaExpr
     , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
-    , NamedParamInfo(..), npiName, npiMActions
-    , NullParamInfo(..), nullParamInfoMActions
+    , NamedParamInfo(..), npiName, npiActions
+    , NullParamInfo(..), nullParamInfoActions
     , FuncParam(..), fpId, fpInfo, fpAnnotation, fpHiddenIds
-    , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
+    , Unwrap(..), _UnwrapAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
     , HoleActions(..), holeGuid, holeOptions, holeOptionLiteral
-    , Hole(..), holeMActions, holeMArg
+    , Hole(..), holeActions, holeMArg
     , ScopeGetVar(..), sgvGetVar, sgvVal
     , TIdG(..), tidgName, tidgTId
     , HoleResultScore
@@ -158,7 +157,7 @@ data Annotation = Annotation
 
 data Payload m a = Payload
     { _plAnnotation :: Annotation
-    , _plActions :: Maybe (Actions m)
+    , _plActions :: Actions m
     , _plEntityId :: EntityId
     , _plData :: a
     } deriving (Functor, Foldable, Traversable)
@@ -206,15 +205,16 @@ data FuncParamActions m = FuncParamActions
 
 data NamedParamInfo name m = NamedParamInfo
     { _npiName :: name
-    , _npiMActions :: Maybe (FuncParamActions m)
+    , _npiActions :: FuncParamActions m
     }
 
 newtype NullParamActions m = NullParamActions
     { _npDeleteLambda :: T m ()
     }
 
-data NullParamInfo m = NullParamInfo
-    { _nullParamInfoMActions :: Maybe (NullParamActions m)
+-- TODO: Remove this?
+newtype NullParamInfo m = NullParamInfo
+    { _nullParamInfoActions :: NullParamActions m
     }
 
 data FuncParam info = FuncParam
@@ -279,7 +279,7 @@ data HoleActions name m = HoleActions
     }
 
 data Unwrap m
-    = UnwrapMAction (Maybe (T m EntityId))
+    = UnwrapAction (T m EntityId)
     | UnwrapTypeMismatch
 
 data HoleArg m expr = HoleArg
@@ -288,12 +288,12 @@ data HoleArg m expr = HoleArg
     } deriving (Functor, Foldable, Traversable)
 
 data Hole name m expr = Hole
-    { _holeMActions :: Maybe (HoleActions name m)
+    { _holeActions :: HoleActions name m
     , _holeMArg :: Maybe (HoleArg m expr)
     } deriving (Functor, Foldable, Traversable)
 
 data ListItem m expr = ListItem
-    { _liMActions :: Maybe (ListItemActions m)
+    { _liActions :: ListItemActions m
     , _liExpr :: expr
     } deriving (Functor, Foldable, Traversable)
 
@@ -304,7 +304,7 @@ data ListActions m = ListActions
 
 data List m expr = List
     { _listValues :: [ListItem m expr]
-    , _listMActions :: Maybe (ListActions m)
+    , _listActions :: ListActions m
     , -- Nil EntityId stays consistent when adding items.
       -- (Exposed for consistent animations)
       _listNilEntityId :: EntityId
@@ -312,14 +312,14 @@ data List m expr = List
 
 {- Record start -}
 data RecordField name m expr = RecordField
-    { _rfMDelete :: Maybe (T m EntityId)
+    { _rfDelete :: T m EntityId
     , _rfTag :: TagG name
     , _rfExpr :: expr -- field type or val
     } deriving (Functor, Foldable, Traversable)
 
 data RecordTail m expr
     = RecordExtending expr
-    | ClosedRecord (Maybe (T m EntityId)) -- delete action
+    | ClosedRecord (T m EntityId) -- delete action
     deriving (Functor, Foldable, Traversable)
 
 data RecordAddFieldResult = RecordAddFieldResult
@@ -331,20 +331,20 @@ data RecordAddFieldResult = RecordAddFieldResult
 data Record name m expr = Record
     { _rItems :: [RecordField name m expr]
     , _rTail :: RecordTail m expr
-    , _rMAddField :: Maybe (T m RecordAddFieldResult)
+    , _rAddField :: T m RecordAddFieldResult
     } deriving (Functor, Foldable, Traversable)
 {- Record end -}
 
 {- Case start -}
 data CaseAlt name m expr = CaseAlt
-    { _caMDelete :: Maybe (T m EntityId)
+    { _caDelete :: T m EntityId
     , _caTag :: TagG name
     , _caHandler :: expr
     } deriving (Functor, Foldable, Traversable)
 
 data CaseTail m expr
     = CaseExtending expr
-    | ClosedCase (Maybe (T m EntityId)) -- delete action
+    | ClosedCase (T m EntityId) -- delete action
     deriving (Functor, Foldable, Traversable)
 
 data CaseAddAltResult = CaseAddAltResult
@@ -355,7 +355,7 @@ data CaseAddAltResult = CaseAddAltResult
 
 data CaseArg m expr = CaseArg
     { _caVal :: expr
-    , _caMToLambdaCase :: Maybe (T m EntityId)
+    , _caToLambdaCase :: T m EntityId
     } deriving (Functor, Foldable, Traversable)
 
 data CaseKind m expr
@@ -367,7 +367,7 @@ data Case name m expr = Case
     { _cKind :: CaseKind m expr
     , _cAlts :: [CaseAlt name m expr]
     , _cTail :: CaseTail m expr
-    , _cMAddAlt :: Maybe (T m CaseAddAltResult)
+    , _cAddAlt :: T m CaseAddAltResult
     , -- The entity id of the underlying lambda-case
       _cEntityId :: EntityId
     } deriving (Functor, Foldable, Traversable)
@@ -510,7 +510,7 @@ data Let name m expr = Let
     , _lUsages :: [EntityId]
     , _lAnnotation :: Annotation
     , _lName :: name
-    , _lActions :: Maybe (LetActions m)
+    , _lActions :: LetActions m
     , -- This is a mapping from parent scope (the ScopeId inside
       -- BinderParamScopeId for outer-most let) to the inside of the
       -- redex lambda (redex is applied exactly once):
@@ -537,12 +537,8 @@ data BinderContent name m expr
     | BinderExpr expr
     deriving (Functor, Foldable, Traversable)
 
-newtype BinderBodyActions m = BinderBodyActions
-    { _bbaAddOuterLet :: T m EntityId
-    }
-
 data BinderBody name m expr = BinderBody
-    { _bbMActions :: Maybe (BinderBodyActions m)
+    { _bbAddOuterLet :: T m EntityId
     , _bbContent :: BinderContent name m expr
     } deriving (Functor, Foldable, Traversable)
 
@@ -555,10 +551,10 @@ data BinderBodyScope
 
 data Binder name m expr = Binder
     { _bMPresentationModeProp :: Maybe (MkProperty m Anchors.PresentationMode)
-    , _bMChosenScopeProp :: Maybe (MkProperty m (Maybe BinderParamScopeId))
+    , _bChosenScopeProp :: MkProperty m (Maybe BinderParamScopeId)
     , _bParams :: BinderParams name m
     , _bBody :: BinderBody name m expr
-    , _bMActions :: Maybe (BinderActions m)
+    , _bActions :: BinderActions m
     , -- The scope inside a lambda (if exists)
       _bBodyScopes :: BinderBodyScope
     } deriving (Functor, Foldable, Traversable)
@@ -604,7 +600,6 @@ Lens.makeLenses ''Apply
 Lens.makeLenses ''Binder
 Lens.makeLenses ''BinderActions
 Lens.makeLenses ''BinderBody
-Lens.makeLenses ''BinderBodyActions
 Lens.makeLenses ''BinderVar
 Lens.makeLenses ''Body
 Lens.makeLenses ''Case

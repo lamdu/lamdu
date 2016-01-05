@@ -7,7 +7,6 @@ module Lamdu.Sugar.Names.Walk
     , toDef, toExpression, toBody
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Data.Store.Transaction (Transaction)
@@ -168,7 +167,7 @@ toBody expr = \case
     BodyRecord       x -> traverse expr x >>= (rItems . traverse . rfTag) toTagG <&> BodyRecord
     BodyCase         x -> traverse expr x >>= (cAlts . traverse . caTag) toTagG <&> BodyCase
     BodyApply        x -> traverse expr x >>= (aAnnotatedArgs . traverse . aaTag) toTagG <&> BodyApply
-    BodyHole         x -> traverse expr x >>= (holeMActions . Lens._Just) toHoleActions <&> BodyHole
+    BodyHole         x -> traverse expr x >>= holeActions toHoleActions <&> BodyHole
     BodyToNom        x -> traverse expr x >>= nTId toTIdG <&> BodyToNom
     BodyFromNom      x -> traverse expr x >>= nTId toTIdG <&> BodyFromNom
     BodyGetVar       x -> toGetVar x <&> BodyGetVar

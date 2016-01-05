@@ -55,11 +55,12 @@ make list pl =
                     let nilDeleteEventMap =
                             actionEventMap (Config.delKeys config) "Replace nil with hole" Sugar.replaceNil
                         addLastEventMap =
-                            maybe mempty
+                            list ^? Sugar.listValues . lastLens . Sugar.liActions . Sugar.itemAddNext
+                            & maybe mempty
                             ( Widget.keysEventMapMovesCursor (Config.listAddItemKeys config)
                                 (E.Doc ["Edit", "List", "Add Last Item"])
                             . fmap WidgetIds.fromEntityId
-                            ) $ list ^? Sugar.listValues . lastLens . Sugar.liMActions . Lens._Just . Sugar.itemAddNext
+                            )
                         closerEventMap = mappend nilDeleteEventMap addLastEventMap
                         closeBracketId = Widget.joinId myId ["close-bracket"]
                     bracketClose <-
@@ -78,10 +79,10 @@ make list pl =
         pairToList (x, y) = [x, y]
         itemId = WidgetIds.fromExprPayload . (^. Sugar.liExpr . Sugar.rPayload)
         actionEventMap keys doc actSelect =
-            list ^. Sugar.listMActions
-            & maybe mempty
-              ( Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc])
-              . fmap WidgetIds.fromEntityId . actSelect )
+            list ^. Sugar.listActions
+            & actSelect
+            <&> WidgetIds.fromEntityId
+            & Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc])
         firstBracketId = mappend (Widget.Id ["first bracket"]) bracketsId
         cursorDest =
             list ^? Sugar.listValues . Lens.traversed
@@ -114,8 +115,7 @@ makeItem (_, nextId, item) =
           )
         return $ pair
           & _2 . ExpressionGui.egWidget %~
-          Widget.weakerEvents
-          (maybe mempty (mkItemEventMap resultPickers) (item ^. Sugar.liMActions))
+          Widget.weakerEvents (mkItemEventMap resultPickers (item ^. Sugar.liActions))
     where
         itemExpr = item ^. Sugar.liExpr
         itemWidgetId = WidgetIds.fromExprPayload $ itemExpr ^. Sugar.rPayload

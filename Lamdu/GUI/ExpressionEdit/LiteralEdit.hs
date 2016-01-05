@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionEdit.LiteralEdit
     ( make
     ) where
 
-import qualified Control.Lens as Lens
+
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import           Data.Store.Guid (Guid)
@@ -55,12 +55,11 @@ makeGeneric getStyle val pl =
         valText = format val
         myId = WidgetIds.fromExprPayload pl
         editEventMap =
-            case pl ^? Sugar.plActions . Lens._Just . Sugar.setToHole of
-            Just (Sugar.SetToHole action) -> mkEditEventMap valText action
-            Just (Sugar.SetWrapperToHole action) -> mkEditEventMap valText action
-            Just Sugar.AlreadyAHole -> error "Literal val is a hole?!"
-            Just Sugar.AlreadyAppliedToHole -> error "Literal val is an apply?!"
-            Nothing -> mempty -- not modifiable
+            case pl ^. Sugar.plActions . Sugar.setToHole of
+            Sugar.SetToHole action -> mkEditEventMap valText action
+            Sugar.SetWrapperToHole action -> mkEditEventMap valText action
+            Sugar.AlreadyAHole -> error "Literal val is a hole?!"
+            Sugar.AlreadyAppliedToHole -> error "Literal val is an apply?!"
         setStyle action =
             do
                 style <- ExprGuiM.readStyle

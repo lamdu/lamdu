@@ -4,9 +4,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
     ( make
     ) where
 
-import           Prelude.Compat
-
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
@@ -26,6 +23,8 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (ExpressionN)
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Prelude.Compat
 
 type T = Transaction.Transaction
 
@@ -55,7 +54,7 @@ makeUnwrapEventMap arg WidgetIds{..} =
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
         pure $
-            case arg ^? Sugar.haUnwrap . Sugar._UnwrapMAction . Lens._Just of
+            case arg ^? Sugar.haUnwrap . Sugar._UnwrapAction of
             Just unwrap ->
                 Widget.keysEventMapMovesCursor
                 (holeUnwrapKeys ++ Config.delKeys config)
@@ -76,7 +75,7 @@ make WidgetIds{..} arg =
         let frameColor =
                 config &
                 case arg ^. Sugar.haUnwrap of
-                Sugar.UnwrapMAction {} -> Config.typeIndicatorMatchColor
+                Sugar.UnwrapAction {} -> Config.typeIndicatorMatchColor
                 Sugar.UnwrapTypeMismatch {} -> Config.typeIndicatorErrorColor
         let frameWidth = Config.typeIndicatorFrameWidth config <&> realToFrac
         argGui <-

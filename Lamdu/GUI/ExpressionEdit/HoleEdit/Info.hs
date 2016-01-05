@@ -1,7 +1,7 @@
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Info
-    ( HoleInfo(..), EditableHoleInfo(..)
-    , ehiSearchTermProperty
-    , ehiSearchTerm
+    ( HoleInfo(..)
+    , hiSearchTermProperty
+    , hiSearchTerm
     ) where
 
 import           Control.Lens.Operators
@@ -24,17 +24,11 @@ data HoleInfo m = HoleInfo
     , hiIds :: WidgetIds
     , hiHole :: Sugar.Hole (Name m) m (ExprGuiT.SugarExpr m)
     , hiNearestHoles :: NearestHoles
+    , hiState :: Property (T m) HoleState
     }
 
-data EditableHoleInfo m = EditableHoleInfo
-    { ehiState :: Property (T m) HoleState
-    , ehiActions :: Sugar.HoleActions (Name m) m
-    , ehiInfo :: HoleInfo m
-    }
+hiSearchTermProperty :: HoleInfo m -> Property (T m) String
+hiSearchTermProperty holeInfo = hiState holeInfo & Property.composeLens hsSearchTerm
 
-ehiSearchTermProperty :: EditableHoleInfo m -> Property (T m) String
-ehiSearchTermProperty holeInfo =
-    Property.composeLens hsSearchTerm $ ehiState holeInfo
-
-ehiSearchTerm :: EditableHoleInfo m -> String
-ehiSearchTerm holeInfo = Property.value (ehiState holeInfo) ^. hsSearchTerm
+hiSearchTerm :: HoleInfo m -> String
+hiSearchTerm holeInfo = Property.value (hiState holeInfo) ^. hsSearchTerm

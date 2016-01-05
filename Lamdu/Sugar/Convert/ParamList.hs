@@ -57,17 +57,14 @@ loadForLambdas val =
         loadLambdaParamList _ _ = return ()
 
         loadUnifyParamList pl =
-            case pl ^. Input.stored of
-            Nothing -> return ()
-            Just stored ->
-                do
-                    mParamList <- loadStored stored & lift & lift
-                    case mParamList of
-                        Nothing -> return ()
-                        Just paramList ->
-                            do
-                                funcType <-
-                                    mkFuncType (pl ^. Input.inferredScope) paramList
-                                unify (pl ^. Input.inferredType) funcType
-                            & Infer.run
-                            & mapStateT IRefInfer.toEitherT
+            do
+                mParamList <- loadStored (pl ^. Input.stored) & lift & lift
+                case mParamList of
+                    Nothing -> return ()
+                    Just paramList ->
+                        do
+                            funcType <-
+                                mkFuncType (pl ^. Input.inferredScope) paramList
+                            unify (pl ^. Input.inferredType) funcType
+                        & Infer.run
+                        & mapStateT IRefInfer.toEitherT

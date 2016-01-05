@@ -49,7 +49,7 @@ make ::
     Sugar.Case (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
+make (Sugar.Case mArg alts caseTail addAlt cEntityId) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     let headerId = Widget.joinId myId ["header"]
     in ExprGuiM.assignCursor myId (destCursorId alts headerId) $
@@ -73,13 +73,12 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
         (mActiveTag, header) <-
             case mArg of
             Sugar.LambdaCase -> headerLabel "λ:" <&> (,) Nothing
-            Sugar.CaseWithArg (Sugar.CaseArg arg mToLambdaCase) ->
+            Sugar.CaseWithArg (Sugar.CaseArg arg toLambdaCase) ->
                 do
                     argEdit <-
                         ExprGuiM.makeSubexpression (const 0) arg
                         <&> ExpressionGui.egWidget %~ Widget.weakerEvents
-                            (maybe mempty (toLambdaCaseEventMap config)
-                                mToLambdaCase)
+                            (toLambdaCaseEventMap config toLambdaCase)
                     caseLabel <- headerLabel ":"
                     mTag <-
                         ExpressionGui.evaluationResult (arg ^. Sugar.rPayload)
@@ -90,17 +89,16 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
             do
                 altsGui <- makeAltsWidget mActiveTag alts myId
                 case caseTail of
-                    Sugar.ClosedCase mDeleteTail ->
+                    Sugar.ClosedCase deleteTail ->
                         altsGui
                         & ExpressionGui.egWidget %~
                           Widget.weakerEvents
-                          (maybe mempty (caseOpenEventMap config) mDeleteTail)
+                          (caseOpenEventMap config deleteTail)
                         & return
                     Sugar.CaseExtending rest ->
                         altsGui
                         & makeOpenCase rest (Widget.toAnimId myId)
-        let addAltEventMap Nothing = mempty
-            addAltEventMap (Just addAlt) =
+        let addAltEventMap =
                 ExprGuiM.holePickersAction resultPickers >> addAlt
                 <&> (^. Sugar.caarNewTag . Sugar.tagInstance)
                 <&> WidgetIds.fromEntityId
@@ -111,15 +109,14 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
         [header, vspace, altsGui]
             & ExpressionGui.vboxTopFocalAlignedTo 0
             & ExpressionGui.addValFrame myId
-            <&> ExpressionGui.egWidget %~
-                Widget.weakerEvents (addAltEventMap mAddAlt)
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents addAltEventMap
 
 makeAltRow ::
     MonadA m =>
     Maybe Tag ->
     Sugar.CaseAlt (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
     ExprGuiM m [ExpressionGui m]
-makeAltRow mActiveTag (Sugar.CaseAlt mDelete tag altExpr) =
+makeAltRow mActiveTag (Sugar.CaseAlt delete tag altExpr) =
     do
         config <- ExprGuiM.readConfig
         altRefGui <-
@@ -131,7 +128,7 @@ makeAltRow mActiveTag (Sugar.CaseAlt mDelete tag altExpr) =
                     (WidgetIds.fromEntityId (tag ^. Sugar.tagInstance))
                 else return
         altExprGui <- ExprGuiM.makeSubexpression (const 0) altExpr
-        let itemEventMap = maybe mempty (caseDelEventMap config) mDelete
+        let itemEventMap = caseDelEventMap config delete
         space <- ExpressionGui.stdSpace
         [ altRefGui & ExpressionGui.egAlignment . _1 .~ 1
             , space

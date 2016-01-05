@@ -6,14 +6,13 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
-import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addDarkBackground)
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
@@ -27,21 +26,6 @@ import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
-
-type T = Transaction
-
-mkEditableHoleInfo ::
-    MonadA m => HoleInfo m -> Sugar.HoleActions (Name m) m -> T m (EditableHoleInfo m)
-mkEditableHoleInfo holeInfo actions =
-    do
-        stateProp <-
-            HoleState.assocStateRef (actions ^. Sugar.holeGuid) ^.
-            Transaction.mkProperty
-        EditableHoleInfo
-            { ehiActions = actions
-            , ehiState = stateProp
-            , ehiInfo = holeInfo
-            } & return
 
 makeWrapper ::
     MonadA m => Sugar.Payload m ExprGuiT.Payload ->
@@ -101,10 +85,20 @@ make ::
 make hole pl =
     do
         Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
-        mEditableHoleInfo <-
-            hole ^. Sugar.holeMActions
-            & Lens._Just %%~ mkEditableHoleInfo holeInfo
-            & ExprGuiM.transaction
+
+        stateProp <-
+            HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeGuid)
+            ^. Transaction.mkProperty & ExprGuiM.transaction
+
+        let holeInfo = HoleInfo
+                { hiEntityId = pl ^. Sugar.plEntityId
+                , hiState = stateProp
+                , hiInferredType = pl ^. Sugar.plAnnotation . Sugar.aInferredType
+                , hiHole = hole
+                , hiIds = WidgetIds{..}
+                , hiNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
+                }
+
         do
             mWrapperGui <- makeWrapper pl holeInfo
             case mWrapperGui of
@@ -115,7 +109,7 @@ make hole pl =
                         isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor hidHole
                         let layout f = do
                                 searchAreaGui <-
-                                    SearchArea.makeStdWrapped pl holeInfo mEditableHoleInfo
+                                    SearchArea.makeStdWrapped pl holeInfo
                                 f WidgetIds{..} wrapperGui searchAreaGui
                                     <&> (`Layout.hoverInPlaceOf` unfocusedWrapperGui)
                         if wrapperGui ^. ExpressionGui.egWidget . Widget.isFocused
@@ -124,14 +118,7 @@ make hole pl =
                                      layout addWrapperAbove
                                  else
                                      return unfocusedWrapperGui
-                Nothing -> SearchArea.makeStdWrapped pl holeInfo mEditableHoleInfo
+                Nothing -> SearchArea.makeStdWrapped pl holeInfo
             & assignHoleCursor WidgetIds{..} (hole ^. Sugar.holeMArg)
     where
-        holeInfo = HoleInfo
-            { hiEntityId = pl ^. Sugar.plEntityId
-            , hiInferredType = pl ^. Sugar.plAnnotation . Sugar.aInferredType
-            , hiHole = hole
-            , hiIds = WidgetIds{..}
-            , hiNearestHoles = pl ^. Sugar.plData . ExprGuiT.plNearestHoles
-            }
         WidgetIds{..} = HoleWidgetIds.make (pl ^. Sugar.plEntityId)

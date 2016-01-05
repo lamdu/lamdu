@@ -48,7 +48,7 @@ make ::
     Sugar.Record (Name m) m (ExprGuiT.SugarExpr m) ->
     Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make record@(Sugar.Record fields recordTail mAddField) pl =
+make record@(Sugar.Record fields recordTail addField) pl =
     ExpressionGui.stdWrapParentExpr pl $ \myId ->
     ExprGuiM.assignCursor myId (defaultPos fields myId) $
     do
@@ -60,16 +60,14 @@ make record@(Sugar.Record fields recordTail mAddField) pl =
                     makeFieldsWidget fields myId
                     >>= if addBg then ExpressionGui.addValPadding else return
                 case recordTail of
-                    Sugar.ClosedRecord mDeleteTail ->
+                    Sugar.ClosedRecord deleteTail ->
                         fieldsGui
                         & ExpressionGui.egWidget %~
-                          Widget.weakerEvents
-                          (maybe mempty (recordOpenEventMap config) mDeleteTail)
+                          Widget.weakerEvents (recordOpenEventMap config deleteTail)
                         & return
                     Sugar.RecordExtending rest ->
                         makeOpenRecord fieldsGui rest (Widget.toAnimId myId)
-        let addFieldEventMap Nothing = mempty
-            addFieldEventMap (Just addField) =
+        let addFieldEventMap =
                 ExprGuiM.holePickersAction resultPickers >> addField
                 <&> (^. Sugar.rafrNewTag . Sugar.tagInstance)
                 <&> WidgetIds.fromEntityId
@@ -77,8 +75,7 @@ make record@(Sugar.Record fields recordTail mAddField) pl =
                 & Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys config)
                   (E.Doc ["Edit", "Record", "Add Field"])
         gui
-            & ExpressionGui.egWidget %~
-              Widget.weakerEvents (addFieldEventMap mAddField)
+            & ExpressionGui.egWidget %~ Widget.weakerEvents addFieldEventMap
             & if addBg
                 then ExpressionGui.egWidget %%~ ExpressionGui.addValBG myId
                 else return
@@ -89,13 +86,13 @@ makeFieldRow ::
     MonadA m =>
     Sugar.RecordField (Name m) m (Sugar.Expression (Name m) m ExprGuiT.Payload) ->
     ExprGuiM m [ExpressionGui m]
-makeFieldRow (Sugar.RecordField mDelete tag fieldExpr) =
+makeFieldRow (Sugar.RecordField delete tag fieldExpr) =
     do
         config <- ExprGuiM.readConfig
         fieldRefGui <-
             TagEdit.makeRecordTag (ExprGuiT.nextHolesBefore fieldExpr) tag
         fieldExprGui <- ExprGuiM.makeSubexpression (const 0) fieldExpr
-        let itemEventMap = maybe mempty (recordDelEventMap config) mDelete
+        let itemEventMap = recordDelEventMap config delete
         space <-
             BWidgets.stdSpaceWidget & ExprGuiM.widgetEnv <&> ExpressionGui.fromValueWidget
         [ fieldRefGui & ExpressionGui.egAlignment . _1 .~ 1

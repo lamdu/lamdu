@@ -62,7 +62,7 @@ addToHoleResult = Sugar.holeResultConverted %%~ addToExpr
 
 addToHole :: MonadA m => Sugar.Hole Guid m a -> Sugar.Hole Guid m a
 addToHole =
-    Sugar.holeMActions . Lens._Just . Sugar.holeOptions .
+    Sugar.holeActions . Sugar.holeOptions .
     Lens.mapped . Lens.mapped . Sugar.hoResults . Lens.mapped .
     _2 %~ (>>= addToHoleResult)
 

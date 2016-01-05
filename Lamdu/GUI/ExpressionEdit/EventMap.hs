@@ -38,14 +38,14 @@ make ::
     ExprGuiM m (EventHandlers (T m))
 make holePickers pl =
     mconcat <$> sequenceA
-    [ maybe (return mempty)
-      ( actionsEventMap holePickers
-      $ if ExprGuiT.plOfHoleResult pl then HoleResult else NotHoleResult
-      )
-      (pl ^. Sugar.plActions)
+    [ actionsEventMap holePickers isHoleResult (pl ^. Sugar.plActions)
     , jumpHolesEventMapIfSelected pl
     , replaceOrComeToParentEventMap pl
     ]
+    where
+        isHoleResult
+            | ExprGuiT.plOfHoleResult pl = HoleResult
+            | otherwise = NotHoleResult
 
 mkEventMapWithPickers ::
     (Functor f, MonadA m) =>
@@ -105,7 +105,7 @@ replaceOrComeToParentEventMap pl =
         isSelected <- ExprGuiM.isExprSelected pl
         return $
             if isSelected
-            then maybe mempty (replaceEventMap config) $ pl ^. Sugar.plActions
+            then replaceEventMap config (pl ^. Sugar.plActions)
             else
                 Widget.keysEventMapMovesCursor (Config.delKeys config)
                 (E.Doc ["Navigation", "Select parent"]) selectParent

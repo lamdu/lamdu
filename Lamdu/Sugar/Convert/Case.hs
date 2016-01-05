@@ -33,8 +33,8 @@ import           Lamdu.Sugar.Types
 -- This is mostly a copy&paste of the Convert.Record module, yuck! DRY
 -- with some abstraction?
 
-plValI :: Lens.Traversal' (Input.Payload m a) (ExprIRef.ValI m)
-plValI = Input.stored . Lens._Just . Property.pVal
+plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
+plValI = Input.stored . Property.pVal
 
 convertTag :: EntityId -> T.Tag -> TagG Guid
 convertTag inst tag = TagG inst tag $ UniqueId.toGuid tag
@@ -67,78 +67,74 @@ makeAddAlt stored =
                 resultEntity = EntityId.ofValI resultI
 
 convertAbsurd :: MonadA m => Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertAbsurd exprPl = do
-    mAddAlt <- exprPl ^. Input.stored & Lens._Just %%~ makeAddAlt
-    BodyCase Case
-        { _cKind = LambdaCase
-        , _cAlts = []
-        , _cTail =
-                exprPl ^. Input.stored
-                <&> DataOps.replaceWithHole
-                <&> Lens.mapped %~ EntityId.ofValI
-                & ClosedCase
-        , _cMAddAlt = mAddAlt
-        , _cEntityId = exprPl ^. Input.entityId
-        }
-        & addActions exprPl
+convertAbsurd exprPl =
+    do
+        addAlt <- exprPl ^. Input.stored & makeAddAlt
+        BodyCase Case
+            { _cKind = LambdaCase
+            , _cAlts = []
+            , _cTail =
+                    exprPl ^. Input.stored
+                    & DataOps.replaceWithHole
+                    <&> EntityId.ofValI
+                    & ClosedCase
+            , _cAddAlt = addAlt
+            , _cEntityId = exprPl ^. Input.entityId
+            }
+            & addActions exprPl
 
 deleteAlt ::
     MonadA m =>
-    Maybe (ExprIRef.ValIProperty m) ->
-    Maybe (ExprIRef.ValI m) ->
+    ExprIRef.ValIProperty m -> ExprIRef.ValI m ->
     Case name0 m (Expression name2 m a1) -> Val (Input.Payload m a) ->
     Expression name1 m0 a0 ->
-    ConvertM m (Maybe (Transaction m EntityId))
-deleteAlt mStored mRestI restS expr exprS =
+    ConvertM m (Transaction m EntityId)
+deleteAlt stored restI restS expr exprS =
     do
         typeProtect <- ConvertM.typeProtectTransaction
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        return $ do
-            stored <- mStored
-            restI <- mRestI
-            exprI <- expr ^? V.payload . plValI
-            Just $
-                if null (restS ^. cAlts)
-                then
-                    case restS ^. cTail of
-                    ClosedCase{}
-                        | Lens.has (rBody . _BodyHole) exprS ->
-                                ExprIRef.newVal $ Val () $ V.BLeaf V.LRecEmpty
-                        | otherwise ->
-                                -- When deleting closed one alt case
-                                -- we replace the case with the alt value
-                                -- (unless it is a hole)
-                                return exprI
-                    CaseExtending{} -> return restI
-                    >>= protectedSetToVal stored
-                    <&> EntityId.ofValI
-                else do
-                    let delete = DataOps.replace stored restI
-                    mResult <- typeProtect delete <&> fmap EntityId.ofValI
-                    case mResult of
-                        Just result -> return result
-                        Nothing ->
-                            unsafeUnjust "should have a way to fix type error" $
-                            case restS ^. cTail of
-                            CaseExtending ext ->
-                                ext ^? rPayload . plActions . Lens._Just . wrap . _WrapAction
-                                <&> fmap snd
-                            ClosedCase mOpen -> mOpen <&> (delete >>)
+        return $
+            if null (restS ^. cAlts)
+            then
+                case restS ^. cTail of
+                ClosedCase{}
+                    | Lens.has (rBody . _BodyHole) exprS ->
+                            ExprIRef.newVal $ Val () $ V.BLeaf V.LRecEmpty
+                    | otherwise ->
+                            -- When deleting closed one alt case
+                            -- we replace the case with the alt value
+                            -- (unless it is a hole)
+                            return (expr ^. V.payload . plValI)
+                CaseExtending{} -> return restI
+                >>= protectedSetToVal stored
+                <&> EntityId.ofValI
+            else do
+                let delete = DataOps.replace stored restI
+                mResult <- typeProtect delete <&> fmap EntityId.ofValI
+                case mResult of
+                    Just result -> return result
+                    Nothing ->
+                        unsafeUnjust "should have a way to fix type error" $
+                        case restS ^. cTail of
+                        CaseExtending ext ->
+                            ext ^? rPayload . plActions . wrap . _WrapAction
+                            <&> fmap snd
+                        ClosedCase open -> delete >> open & Just
 
 convertAlt ::
     (MonadA m, Monoid a) =>
-    Maybe (ExprIRef.ValIProperty m) ->
-    Maybe (ExprIRef.ValI m) -> Case name m (ExpressionU m a) ->
+    ExprIRef.ValIProperty m -> ExprIRef.ValI m ->
+    Case name m (ExpressionU m a) ->
     EntityId -> T.Tag -> Val (Input.Payload m a) ->
     ConvertM m (CaseAlt Guid m (ExpressionU m a))
-convertAlt mStored mRestI restS inst tag expr =
+convertAlt stored restI restS inst tag expr =
     do
         exprS <- ConvertM.convertSubexpression expr
-        delAlt <- deleteAlt mStored mRestI restS expr exprS
+        delAlt <- deleteAlt stored restI restS expr exprS
         return CaseAlt
             { _caTag = convertTag inst tag
             , _caHandler = exprS
-            , _caMDelete = delAlt
+            , _caDelete = delAlt
             }
 
 setTagOrder ::
@@ -158,24 +154,24 @@ convert (V.Case tag val rest) exprPl = do
         BodyCase r -> return (r, restS ^. rPayload . plData)
         _ ->
             do
-                mAddAlt <- rest ^. V.payload . Input.stored & Lens._Just %%~ makeAddAlt
+                addAlt <- rest ^. V.payload . Input.stored & makeAddAlt
                 return
                     ( Case
                         { _cKind = LambdaCase
                         , _cAlts = []
                         , _cTail = CaseExtending restS
-                        , _cMAddAlt = mAddAlt
+                        , _cAddAlt = addAlt
                         , _cEntityId = exprPl ^. Input.entityId
                         }
                     , mempty
                     )
     altS <-
         convertAlt
-        (exprPl ^. Input.stored) (rest ^? V.payload . plValI) restCase
+        (exprPl ^. Input.stored) (rest ^. V.payload . plValI) restCase
         (EntityId.ofCaseTag (exprPl ^. Input.entityId)) tag val
     restCase
         & cAlts %~ (altS:)
-        & cMAddAlt . Lens._Just %~ (>>= setTagOrder (1 + length (restCase ^. cAlts)))
+        & cAddAlt %~ (>>= setTagOrder (1 + length (restCase ^. cAlts)))
         & BodyCase
         & addActions exprPl
         <&> rPayload . plData <>~ hiddenEntities

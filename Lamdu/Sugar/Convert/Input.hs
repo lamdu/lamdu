@@ -32,7 +32,7 @@ data EvalResultsForExpr = EvalResultsForExpr
 data Payload m a = Payload
     { _entityId :: EntityId
     , _inferred :: Infer.Payload
-    , _stored :: Maybe (ValIProperty m)
+    , _stored :: ValIProperty m
     , _evalResults :: CurAndPrev EvalResultsForExpr
     , -- The GetVars of this lambda's var if this is a lambda
       _varRefsOfLambda :: [EntityId]

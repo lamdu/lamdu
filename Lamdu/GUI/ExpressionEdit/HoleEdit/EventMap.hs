@@ -24,7 +24,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.CharClassification (operatorChars, digitChars)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.Info as HoleInfo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ShownResult (PickedResult(..), ShownResult(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -170,12 +170,12 @@ emptyPickEventMap Config.Hole{..} =
 
 makeOpenEventMaps ::
     MonadA m =>
-    EditableHoleInfo m -> Maybe (ShownResult m) ->
+    HoleInfo m -> Maybe (ShownResult m) ->
     ExprGuiM m
     ( Widget.EventHandlers (T m)
     , Widget.EventHandlers (T m)
     )
-makeOpenEventMaps editableHoleInfo mShownResult =
+makeOpenEventMaps holeInfo mShownResult =
     do
         holeConfig <- ExprGuiM.readConfig <&> Config.hole
         -- below ad-hoc and search term edit:
@@ -187,7 +187,5 @@ makeOpenEventMaps editableHoleInfo mShownResult =
                 <&> mappend (pickEventMap holeConfig holeInfo shownResult)
         let adHocEdit =
                 adHocTextEditEventMap holeConfig
-                (HoleInfo.ehiSearchTermProperty editableHoleInfo)
+                (HoleInfo.hiSearchTermProperty holeInfo)
         pure (eventMap, adHocEdit <> eventMap)
-    where
-        holeInfo = ehiInfo editableHoleInfo

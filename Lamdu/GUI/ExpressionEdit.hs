@@ -3,7 +3,6 @@ module Lamdu.GUI.ExpressionEdit
     ( make
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
@@ -54,14 +53,9 @@ shrinkIfHigherThanLine w =
 
 make :: MonadA m => ExprGuiT.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 make sExpr =
-    assignCursor $
-    do
-        gui <- makeEditor body pl
-        maybeShrink gui <&> ExpressionGui.egWidget %~ maybeDoesntTakeFocus
+    makeEditor body pl >>= maybeShrink
+    & assignCursor
     where
-        maybeDoesntTakeFocus
-            | Lens.has Lens._Nothing (pl ^. Sugar.plActions) = Widget.doesntTakeFocus
-            | otherwise = id
         Sugar.Expression body pl = sExpr
         exprHiddenEntityIds =
             List.delete (pl ^. Sugar.plEntityId)

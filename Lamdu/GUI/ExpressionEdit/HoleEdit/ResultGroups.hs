@@ -28,7 +28,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Formatting (Format(..))
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -76,7 +76,7 @@ prefixId :: HoleInfo m -> WidgetId.Id
 prefixId = HoleWidgetIds.hidResultsPrefix . hiIds
 
 mResultsListOf ::
-    EditableHoleInfo m -> WidgetId.Id ->
+    HoleInfo m -> WidgetId.Id ->
     [(ResultType, T m (Sugar.HoleResult (Name m) m))] ->
     Maybe (ResultsList m)
 mResultsListOf _ _ [] = Nothing
@@ -84,14 +84,13 @@ mResultsListOf holeInfo baseId (x:xs) = Just
     ResultsList
     { _rlPreferred = NotPreferred
     , _rlExtraResultsPrefixId = extraResultsPrefixId
-    , _rlMain = mkResult (prefix <> baseId) x
+    , _rlMain = mkResult (prefixId holeInfo <> baseId) x
     , _rlExtra = zipWith mkExtra [(0::Int)..] xs
     }
     where
-        prefix = prefixId (ehiInfo holeInfo)
         mkExtra = mkResult . extraResultId
         extraResultId i = WidgetId.joinId extraResultsPrefixId [BS8.pack (show i)]
-        extraResultsPrefixId = prefix <> WidgetId.Id ["extra results"] <> baseId
+        extraResultsPrefixId = prefixId holeInfo <> WidgetId.Id ["extra results"] <> baseId
         mkResult resultId (typ, holeResult) =
             Result
             { rType = typ
@@ -100,7 +99,7 @@ mResultsListOf holeInfo baseId (x:xs) = Just
             }
 
 makeResultsList ::
-    MonadA m => EditableHoleInfo m -> Group m ->
+    MonadA m => HoleInfo m -> Group m ->
     T m (Maybe (ResultsList m))
 makeResultsList holeInfo group =
     group ^. groupResults
@@ -116,7 +115,7 @@ makeResultsList holeInfo group =
         toPreferred
             | [searchTerm] == group ^. groupSearchTerms = Preferred
             | otherwise = NotPreferred
-        searchTerm = ehiSearchTerm holeInfo
+        searchTerm = hiSearchTerm holeInfo
 
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
 
@@ -148,7 +147,7 @@ collectResults Config.Hole{..} resultsM =
                 %~ (x :)
 
 makeAll ::
-    MonadA m => EditableHoleInfo m ->
+    MonadA m => HoleInfo m ->
     ExprGuiM m ([ResultsList m], HaveHiddenResults)
 makeAll holeInfo =
     do
@@ -171,15 +170,15 @@ mkGroup option =
             }
 
 tryBuildLiteral ::
-    (Format a, MonadA m) => (a -> Sugar.Literal) -> EditableHoleInfo m ->
+    (Format a, MonadA m) => (a -> Sugar.Literal) -> HoleInfo m ->
     T m (Maybe (Sugar.HoleOption (Name m) m))
 tryBuildLiteral mkLiteral holeInfo =
-    ehiSearchTerm holeInfo
+    hiSearchTerm holeInfo
     & tryParse
     <&> mkLiteral
-    & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteral
+    & Lens._Just %%~ hiHole holeInfo ^. Sugar.holeActions . Sugar.holeOptionLiteral
 
-literalGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
+literalGroups :: MonadA m => HoleInfo m -> T m [Sugar.HoleOption (Name m) m]
 literalGroups holeInfo =
     [ tryBuildLiteral Sugar.LiteralNum holeInfo
     , tryBuildLiteral Sugar.LiteralBytes holeInfo
@@ -205,14 +204,14 @@ globalNameMatches searchTerm (V.Val () body) =
             Anchors.assocNameRef entity & Transaction.getP
             <&> (searchTerm `insensitiveInfixOf`)
 
-makeAllGroups :: MonadA m => EditableHoleInfo m -> T m [Group m]
-makeAllGroups editableHoleInfo =
+makeAllGroups :: MonadA m => HoleInfo m -> T m [Group m]
+makeAllGroups holeInfo =
     (++)
-    <$> (literalGroups editableHoleInfo >>= mapM mkGroup)
-    <*> (ehiActions editableHoleInfo ^. Sugar.holeOptions
+    <$> (literalGroups holeInfo >>= mapM mkGroup)
+    <*> (hiHole holeInfo ^. Sugar.holeActions . Sugar.holeOptions
          >>= preFilter
          >>= mapM mkGroup
-         <&> holeMatches (ehiSearchTerm editableHoleInfo))
+         <&> holeMatches (hiSearchTerm holeInfo))
     where
         -- This is used to filter globals/nominals prior to sugaring
         -- to avoid type-checking globals/nominals if the name doesn't
@@ -220,7 +219,7 @@ makeAllGroups editableHoleInfo =
         -- non-globals.
         preFilter =
             filterM
-            (globalNameMatches (ehiSearchTerm editableHoleInfo) .
+            (globalNameMatches (hiSearchTerm holeInfo) .
              (^. Sugar.hoVal))
 
 groupOrdering :: String -> Group m -> [Bool]

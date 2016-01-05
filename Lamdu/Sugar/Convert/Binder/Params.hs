@@ -58,7 +58,7 @@ data ConventionalParams m a = ConventionalParams
     { cpTags :: Set T.Tag
     , cpParamInfos :: Map T.Tag ConvertM.TagParamInfo
     , _cpParams :: BinderParams Guid m
-    , cpMAddFirstParam :: Maybe (T m ParamAddResult)
+    , cpAddFirstParam :: T m ParamAddResult
     , cpScopes :: BinderBodyScope
     , cpMLamParam :: Maybe V.Var
     }
@@ -85,11 +85,11 @@ slParamList = Anchors.assocFieldParamList . Property.value . slLambdaProp
 
 mkStoredLam ::
     V.Lam (Val (Input.Payload m a)) ->
-    Input.Payload m a -> Maybe (StoredLam m)
+    Input.Payload m a -> StoredLam m
 mkStoredLam lam pl =
     StoredLam
-    <$> (lam & (traverse . traverse) (^. Input.stored))
-    <*> pl ^. Input.stored
+    (lam & Lens.mapped . Lens.mapped %~ (^. Input.stored))
+    (pl ^. Input.stored)
 
 newTag :: MonadA m => T m T.Tag
 newTag = GenIds.transaction GenIds.randomTag
@@ -277,14 +277,12 @@ convertRecordParams ::
 convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
     do
         params <- traverse mkParam fieldParams
-        mAddFirstParam <-
-            mStoredLam
-            & Lens.traverse %%~ makeAddFieldParam mRecursiveVar (:tags)
+        addFirstParam <- makeAddFieldParam mRecursiveVar (:tags) storedLam
         pure ConventionalParams
             { cpTags = Set.fromList tags
             , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
             , _cpParams = FieldParams params
-            , cpMAddFirstParam = mAddFirstParam
+            , cpAddFirstParam = addFirstParam
             , cpScopes = BinderBodyScope $ mkCpScopesOfLam pl
             , cpMLamParam = Just param
             }
@@ -293,19 +291,17 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
         fpIdEntityId = EntityId.ofLambdaTagParam param . fpTag
         mkParamInfo fp =
             Map.singleton (fpTag fp) . ConvertM.TagParamInfo param $ fpIdEntityId fp
-        mStoredLam = mkStoredLam lam pl
+        storedLam = mkStoredLam lam pl
         mkParam fp =
             do
-                actions <-
-                    mStoredLam
-                    & Lens.traverse %%~ makeFieldParamActions mRecursiveVar tags fp
+                actions <- makeFieldParamActions mRecursiveVar tags fp storedLam
                 pure
                     ( fpTag fp
                     , FuncParam
                         { _fpInfo =
                           NamedParamInfo
                           { _npiName = UniqueId.toGuid $ fpTag fp
-                          , _npiMActions = actions
+                          , _npiActions = actions
                           }
                         , _fpId = fpIdEntityId fp
                         , _fpAnnotation =
@@ -460,32 +456,31 @@ convertNonRecordParam ::
     ConvertM m (ConventionalParams m a)
 convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
     do
-        mActions <- mStoredLam & Lens._Just %%~ makeNonRecordParamActions mRecursiveVar
+        (funcParamActions, addParam) <- makeNonRecordParamActions mRecursiveVar storedLam
         let funcParam =
                 case lamParamType lamExprPl of
                 T.TRecord T.CEmpty
                     | null (lamExprPl ^. Input.varRefsOfLambda) ->
-                      mActions
-                      <&> (^. _1 . fpDelete)
-                      <&> void
-                      <&> NullParamActions
+                      funcParamActions ^. fpDelete
+                      & void
+                      & NullParamActions
                       & NullParamInfo
                       & mkFuncParam paramEntityId lamExprPl & NullParam
                 _ ->
                     NamedParamInfo
                     { _npiName = UniqueId.toGuid param
-                    , _npiMActions = mActions <&> fst
+                    , _npiActions = funcParamActions
                     } & mkFuncParam paramEntityId lamExprPl & VarParam
         pure ConventionalParams
             { cpTags = mempty
             , cpParamInfos = Map.empty
             , _cpParams = funcParam
-            , cpMAddFirstParam = mActions <&> snd
+            , cpAddFirstParam = addParam
             , cpScopes = BinderBodyScope $ mkCpScopesOfLam lamExprPl
             , cpMLamParam = Just param
             }
     where
-        mStoredLam = mkStoredLam lam lamExprPl
+        storedLam = mkStoredLam lam lamExprPl
         paramEntityId = EntityId.ofLambdaParam param
 
 isParamAlwaysUsedWithGetField :: V.Lam (Val a) -> Bool
@@ -561,11 +556,7 @@ convertEmptyParams mRecursiveVar val =
             { cpTags = mempty
             , cpParamInfos = Map.empty
             , _cpParams = BinderWithoutParams
-            , cpMAddFirstParam =
-                val
-                <&> (^. Input.stored)
-                & sequenceA
-                & Lens._Just %~ makeAddFirstParam
+            , cpAddFirstParam = val <&> (^. Input.stored) & makeAddFirstParam
             , cpScopes = SameAsParentScope
             , cpMLamParam = Nothing
             }

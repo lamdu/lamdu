@@ -86,25 +86,19 @@ mkActions ctx stored =
     where
         addEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
 
-makeSetToInnerStored ::
-    Monad m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m ->
-    ConvertM m (Transaction m EntityId)
-makeSetToInnerStored outerProp innerProp =
-    do
-        protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        protectedSetToVal outerProp (Property.value innerProp)
-            <&> EntityId.ofValI
-            & return
-
 makeSetToInner ::
     Monad m => Input.Payload m a -> V.Val (Input.Payload m b) ->
     ConvertM m (SetToInnerExpr m)
 makeSetToInner outerPl inner
     | Lens.nullOf ExprLens.valHole inner =
-      makeSetToInnerStored
-      <$> outerPl ^. Input.stored
-      <*> inner ^. V.payload . Input.stored
-      & maybe (return NoInnerExpr) (fmap SetToInnerExpr)
+        do
+            protectedSetToVal <- ConvertM.typeProtectedSetToVal
+            inner ^. V.payload . Input.stored
+                & Property.value
+                & protectedSetToVal (outerPl ^. Input.stored)
+                <&> EntityId.ofValI
+                & SetToInnerExpr
+                & return
     | otherwise = return NoInnerExpr
 
 addActions ::
@@ -115,7 +109,7 @@ addActions exprPl body =
         return $ Expression body Payload
             { _plEntityId = exprPl ^. Input.entityId
             , _plAnnotation = makeAnnotation exprPl
-            , _plActions = exprPl ^. Input.stored <&> mkActions ctx
+            , _plActions = exprPl ^. Input.stored & mkActions ctx
             , _plData = exprPl ^. Input.userData
             }
 
@@ -127,7 +121,7 @@ addActionsWithSetToInner exprPl inner body =
     do
         setToInner <- makeSetToInner exprPl inner
         addActions exprPl body
-            <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInner
+            <&> rPayload . plActions . setToInnerExpr .~ setToInner
 
 makeAnnotation :: Input.Payload m a -> Annotation
 makeAnnotation payload =

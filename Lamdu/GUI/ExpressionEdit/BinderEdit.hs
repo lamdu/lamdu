@@ -9,7 +9,7 @@ import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (guard, join)
+import           Control.Monad (guard)
 import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev, current)
 import           Data.List.Utils (nonEmptyAll)
@@ -57,22 +57,23 @@ nonOperatorName _ = False
 
 makeBinderNameEdit ::
     MonadA m =>
-    Maybe (Sugar.BinderActions m) ->
+    Sugar.BinderActions m ->
     Widget.EventHandlers (Transaction m) ->
     (String, Sugar.EntityId) ->
     Name m -> Widget.Id ->
     ExprGuiM m (ExpressionGui m)
-makeBinderNameEdit mBinderActions rhsJumperEquals rhs name myId =
+makeBinderNameEdit binderActions rhsJumperEquals rhs name myId =
     do
         config <- ExprGuiM.readConfig
         rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
         ExpressionGui.makeNameOriginEdit name myId
             <&> jumpToRHSViaEquals name
             <&> Widget.weakerEvents
-                (ParamEdit.eventMapAddFirstParam config mAddFirstParam <> rhsJumper)
+                (ParamEdit.eventMapAddFirstParam config
+                 (binderActions ^. Sugar.baAddFirstParam) <>
+                 rhsJumper)
             <&> ExpressionGui.fromValueWidget
     where
-        mAddFirstParam = mBinderActions ^? Lens._Just . Sugar.baAddFirstParam
         jumpToRHSViaEquals n widget
             | nonOperatorName n =
                 widget
@@ -155,10 +156,7 @@ readBinderChosenScope ::
     MonadA m =>
     Sugar.Binder name m expr -> ExprGuiM m (Maybe Sugar.BinderParamScopeId)
 readBinderChosenScope binder =
-    binder ^. Sugar.bMChosenScopeProp
-    & Lens._Just %%~ Transaction.getP
-    & ExprGuiM.transaction
-    <&> join
+    binder ^. Sugar.bChosenScopeProp & Transaction.getP & ExprGuiM.transaction
 
 mkChosenScopeCursor ::
     MonadA m =>
@@ -223,18 +221,13 @@ makeScopeNavEdit binder myId curCursor =
                 mapM mkArrow scopes
                 >>= ExpressionGui.hboxSpaced
                 >>= ExpressionGui.makeFocusableView myId
-                <&>
-                ExpressionGui.egWidget %~ Widget.weakerEvents
-                ( mkScopeEventMap leftKeys rightKeys
-                  & maybe mempty (`mappend` blockEventMap)
-                )
+                <&> ExpressionGui.egWidget %~ Widget.weakerEvents
+                    (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
                 <&> Just
-                <&> (,)
-                    (mkScopeEventMap prevScopeKeys nextScopeKeys
-                     & fromMaybe mempty)
+                <&> (,) (mkScopeEventMap prevScopeKeys nextScopeKeys)
             _ -> return (mempty, Nothing)
     where
-        mkScopeEventMap l r = makeScopeEventMap l r curCursor <$> mSetScope
+        mkScopeEventMap l r = makeScopeEventMap l r curCursor setScope
         leftKeys = [ModKey mempty GLFW.Key'Left]
         rightKeys = [ModKey mempty GLFW.Key'Right]
         scopes :: [(String, Maybe Sugar.BinderParamScopeId)]
@@ -242,10 +235,7 @@ makeScopeNavEdit binder myId curCursor =
             [ ("◀", sMPrevParamScope curCursor)
             , ("▶", sMNextParamScope curCursor)
             ]
-        mSetScope =
-            binder ^. Sugar.bMChosenScopeProp
-            <&> Transaction.setP
-            <&> (. Just)
+        setScope = Transaction.setP (binder ^. Sugar.bChosenScopeProp) . Just
 
 makeMParamsEdit ::
     MonadA m =>
@@ -347,7 +337,7 @@ make name binder myId =
         jumpHolesEventMap <-
             ExprEventMap.jumpHolesEventMap (binderContentNearestHoles body)
         defNameEdit <-
-            makeBinderNameEdit (binder ^. Sugar.bMActions)
+            makeBinderNameEdit (binder ^. Sugar.bActions)
             rhsJumperEquals rhs name myId
             <&> ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents jumpHolesEventMap
@@ -374,18 +364,16 @@ makeLetEdit ::
 makeLetEdit item =
     do
         config <- ExprGuiM.readConfig
-        let actionsEventMap
-                | Just lActions <- item ^. Sugar.lActions =
+        let actionsEventMap =
                 mconcat
                 [ Widget.keysEventMapMovesCursor (Config.delKeys config)
                   (E.Doc ["Edit", "Let clause", "Delete"]) $
-                  bodyId <$ lActions ^. Sugar.laSetToInner
+                  bodyId <$ item ^. Sugar.lActions . Sugar.laSetToInner
                 , Widget.keysEventMapMovesCursor (Config.extractKeys config)
                   (E.Doc ["Edit", "Let clause", "Extract to outer scope"]) $
                   WidgetIds.fromEntityId . Sugar.lfrNewEntity <$>
-                  lActions ^. Sugar.laFloat
+                  item ^. Sugar.lActions . Sugar.laFloat
                 ]
-                | otherwise = mempty
         let usageEventMap =
                 mconcat
                 [ Widget.keysEventMapMovesCursor (Config.inlineKeys config)
@@ -423,20 +411,15 @@ makeBinderBodyEdit ::
     Sugar.BinderParams name m ->
     Sugar.BinderBody (Name m) m (ExprGuiT.SugarExpr m) ->
     ExprGuiM m (ExpressionGui m)
-makeBinderBodyEdit params (Sugar.BinderBody mActions content) =
+makeBinderBodyEdit params (Sugar.BinderBody addOuterLet content) =
     do
         config <- ExprGuiM.readConfig
         savePos <- ExprGuiM.mkPrejumpPosSaver
         let newLetEventMap =
-                case mActions of
-                Nothing -> mempty
-                Just Sugar.BinderBodyActions { _bbaAddOuterLet } ->
-                    do
-                        savePos
-                        _bbaAddOuterLet
-                        <&> WidgetIds.fromEntityId <&> WidgetIds.nameEditOf
-                    & Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
-                      (E.Doc ["Edit", "Let clause", "Add"])
+                savePos >> addOuterLet
+                <&> WidgetIds.fromEntityId <&> WidgetIds.nameEditOf
+                & Widget.keysEventMapMovesCursor (Config.letAddItemKeys config)
+                  (E.Doc ["Edit", "Let clause", "Add"])
         makeBinderContentEdit params content
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents newLetEventMap
 
@@ -449,11 +432,10 @@ makeBinderContentEdit params (Sugar.BinderLet l) =
     do
         config <- ExprGuiM.readConfig
         let delEventMap =
-                maybe mempty
-                (Widget.keysEventMapMovesCursor (Config.delKeys config)
-                 (E.Doc ["Edit", "Delete let expression"])
-                 . fmap WidgetIds.fromEntityId . (^. Sugar.laSetToHole))
-                (l ^. Sugar.lActions)
+                l ^. Sugar.lActions . Sugar.laSetToHole
+                <&> WidgetIds.fromEntityId
+                & Widget.keysEventMapMovesCursor (Config.delKeys config)
+                  (E.Doc ["Edit", "Delete let expression"])
         mOuterScopeId <- ExprGuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
         [ makeLetEdit l
@@ -492,10 +474,8 @@ namedParamEditInfo paramInfo =
     { ParamEdit.iMakeNameEdit =
       ExpressionGui.makeNameOriginEdit (paramInfo ^. Sugar.npiName)
       <&> Lens.mapped %~ ExpressionGui.fromValueWidget
-    , ParamEdit.iMAddNext =
-      paramInfo ^? Sugar.npiMActions . Lens._Just . Sugar.fpAddNext
-    , ParamEdit.iMDel =
-      paramInfo ^? Sugar.npiMActions . Lens._Just . Sugar.fpDelete
+    , ParamEdit.iMAddNext = paramInfo ^. Sugar.npiActions . Sugar.fpAddNext & Just
+    , ParamEdit.iDel = paramInfo ^. Sugar.npiActions . Sugar.fpDelete
     }
 
 nullParamEditInfo :: MonadA m => Sugar.NullParamInfo m -> ParamEdit.Info m
@@ -506,9 +486,7 @@ nullParamEditInfo (Sugar.NullParamInfo mActions) =
       ExpressionGui.grammarLabel "◗" (Widget.toAnimId myId)
       >>= ExpressionGui.makeFocusableView myId
     , ParamEdit.iMAddNext = Nothing
-    , ParamEdit.iMDel =
-      mActions ^? Lens._Just . Sugar.npDeleteLambda
-      <&> Lens.mapped .~ Sugar.ParamDelResultDelVar
+    , ParamEdit.iDel = Sugar.ParamDelResultDelVar <$ mActions ^. Sugar.npDeleteLambda
     }
 
 makeParamsEdit ::

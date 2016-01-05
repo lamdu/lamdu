@@ -11,7 +11,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (EditableHoleInfo(..), HoleInfo(..))
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Open (makeOpenSearchTermGui)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
@@ -35,10 +35,8 @@ fdConfig Config.Hole{..} = FocusDelegator.Config
 -- Has an ExpressionGui.stdWrap/typeView under the search term
 makeStdWrapped ::
     MonadA m =>
-    Sugar.Payload m ExprGuiT.Payload ->
-    HoleInfo m -> Maybe (EditableHoleInfo m) ->
-    ExprGuiM m (ExpressionGui m)
-makeStdWrapped pl holeInfo mEditableHoleInfo =
+    Sugar.Payload m ExprGuiT.Payload -> HoleInfo m -> ExprGuiM m (ExpressionGui m)
+makeStdWrapped pl holeInfo =
     do
         config <- ExprGuiM.readConfig
         let Config.Hole{..} = Config.hole config
@@ -49,18 +47,15 @@ makeStdWrapped pl holeInfo mEditableHoleInfo =
                 BWidgets.makeFocusDelegator (fdConfig (Config.hole config))
                 FocusDelegator.FocusEntryChild hidClosedSearchArea
         closedSearchTermGui <-
-            SearchTerm.make holeInfo mEditableHoleInfo
-            >>= fdWrap & ExpressionGui.stdWrap pl
+            SearchTerm.make holeInfo >>= fdWrap & ExpressionGui.stdWrap pl
         isSelected <- ExprGuiM.widgetEnv $ WE.isSubCursor hidOpen
-        case mEditableHoleInfo of
-            Just editableHoleInfo
-                | isSelected ->
-                      makeOpenSearchTermGui pl editableHoleInfo
-                      -- ideally the fdWrap would be "inside" the
-                      -- type-view addition and stdWrap, but it's not
-                      -- important in the case the FD is selected, and
-                      -- it is harder to implement, so just wrap it
-                      -- here
-                      >>= fdWrap
-                      <&> (`Layout.hoverInPlaceOf` closedSearchTermGui)
-            _ -> return closedSearchTermGui
+        if isSelected
+            then makeOpenSearchTermGui pl holeInfo
+                 -- ideally the fdWrap would be "inside" the
+                 -- type-view addition and stdWrap, but it's not
+                 -- important in the case the FD is selected, and
+                 -- it is harder to implement, so just wrap it
+                 -- here
+                 >>= fdWrap
+                 <&> (`Layout.hoverInPlaceOf` closedSearchTermGui)
+            else return closedSearchTermGui

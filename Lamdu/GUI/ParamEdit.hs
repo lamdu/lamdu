@@ -52,22 +52,17 @@ cursorFromEntityId :: Sugar.EntityId -> Widget.Id
 cursorFromEntityId = WidgetIds.nameEditOf . WidgetIds.fromEntityId
 
 eventMapAddFirstParam ::
-    Functor m => Config -> Maybe (T m Sugar.ParamAddResult) ->
+    Functor m => Config -> T m Sugar.ParamAddResult ->
     Widget.EventHandlers (T m)
-eventMapAddFirstParam _ Nothing = mempty
-eventMapAddFirstParam config (Just addFirstParam) =
+eventMapAddFirstParam config addFirstParam =
     addFirstParam
     <&> chooseAddResultEntityId
     & E.keyPresses (Config.addNextParamKeys config)
         (E.Doc ["Edit", "Add parameter"])
 
 eventMapAddNextParam ::
-    Functor m =>
-    Config ->
-    Maybe (T m Sugar.ParamAddResult) ->
-    Widget.EventHandlers (T m)
-eventMapAddNextParam _ Nothing = mempty
-eventMapAddNextParam config (Just fpAdd) =
+    Functor m => Config -> T m Sugar.ParamAddResult -> Widget.EventHandlers (T m)
+eventMapAddNextParam config fpAdd =
     fpAdd
     <&> chooseAddResultEntityId
     & E.keyPresses (Config.addNextParamKeys config)
@@ -75,11 +70,9 @@ eventMapAddNextParam config (Just fpAdd) =
 
 eventParamDelEventMap ::
     MonadA m =>
-    Maybe (T m Sugar.ParamDelResult) ->
-    [ModKey] -> String -> Widget.Id ->
+    T m Sugar.ParamDelResult -> [ModKey] -> String -> Widget.Id ->
     Widget.EventHandlers (T m)
-eventParamDelEventMap Nothing _ _ _ = mempty
-eventParamDelEventMap (Just fpDel) keys docSuffix dstPosId =
+eventParamDelEventMap fpDel keys docSuffix dstPosId =
     do
         res <- fpDel
         let widgetIdMap =
@@ -96,7 +89,7 @@ eventParamDelEventMap (Just fpDel) keys docSuffix dstPosId =
 
 data Info m = Info
     { iMakeNameEdit :: Widget.Id -> ExprGuiM m (ExpressionGui m)
-    , iMDel :: Maybe (T m Sugar.ParamDelResult)
+    , iDel :: T m Sugar.ParamDelResult
     , iMAddNext :: Maybe (T m Sugar.ParamAddResult)
     }
 
@@ -111,9 +104,9 @@ make annotationOpts showAnnotation prevId nextId param =
     do
         config <- ExprGuiM.readConfig
         let paramEventMap = mconcat
-                [ eventParamDelEventMap mFpDel (Config.delForwardKeys config) "" nextId
-                , eventParamDelEventMap mFpDel (Config.delBackwardKeys config) " backwards" prevId
-                , eventMapAddNextParam config mFpAdd
+                [ eventParamDelEventMap fpDel (Config.delForwardKeys config) "" nextId
+                , eventParamDelEventMap fpDel (Config.delBackwardKeys config) " backwards" prevId
+                , maybe mempty (eventMapAddNextParam config) fpMAdd
                 ]
         makeNameEdit myId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap
@@ -125,7 +118,7 @@ make annotationOpts showAnnotation prevId nextId param =
     where
         entityId = param ^. Sugar.fpId
         myId = WidgetIds.fromEntityId entityId
-        Info makeNameEdit mFpDel mFpAdd = param ^. Sugar.fpInfo
+        Info makeNameEdit fpDel fpMAdd = param ^. Sugar.fpInfo
         hiddenIds = map WidgetIds.fromEntityId $ param ^. Sugar.fpHiddenIds
         assignCursor x =
             foldr (`ExprGuiM.assignCursorPrefix` const myId) x hiddenIds

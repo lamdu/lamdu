@@ -29,69 +29,65 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
-plValI :: Lens.Traversal' (Input.Payload m a) (ExprIRef.ValI m)
-plValI = Input.stored . Lens._Just . Property.pVal
+plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
+plValI = Input.stored . Property.pVal
 
 convertTag :: EntityId -> T.Tag -> TagG Guid
 convertTag inst tag = TagG inst tag $ UniqueId.toGuid tag
 
 deleteField ::
     MonadA m =>
-    Maybe (ExprIRef.ValIProperty m) ->
-    Maybe (ExprIRef.ValI m) ->
+    ExprIRef.ValIProperty m ->
+    ExprIRef.ValI m ->
     Record name0 m (Expression name2 m a1) -> Val (Input.Payload m a) ->
     Expression name1 m0 a0 ->
-    ConvertM m (Maybe (Transaction m EntityId))
-deleteField mStored mRestI restS expr exprS =
+    ConvertM m (Transaction m EntityId)
+deleteField stored restI restS expr exprS =
     do
         typeProtect <- ConvertM.typeProtectTransaction
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        return $ do
-            stored <- mStored
-            restI <- mRestI
-            exprI <- expr ^? V.payload . plValI
-            Just $
-                if null (restS ^. rItems)
-                then
-                    case restS ^. rTail of
-                    ClosedRecord{}
-                        | Lens.has (rBody . _BodyHole) exprS ->
-                                ExprIRef.newVal $ Val () $ V.BLeaf V.LRecEmpty
-                        | otherwise ->
-                                -- When deleting closed one field record
-                                -- we replace the record with the field value
-                                -- (unless it is a hole)
-                                return exprI
-                    RecordExtending{} -> return restI
-                    >>= protectedSetToVal stored
-                    <&> EntityId.ofValI
-                else do
-                    let delete = DataOps.replace stored restI
-                    mResult <- typeProtect delete <&> fmap EntityId.ofValI
-                    case mResult of
-                        Just result -> return result
-                        Nothing ->
-                            unsafeUnjust "should have a way to fix type error" $
-                            case restS ^. rTail of
-                            RecordExtending ext ->
-                                ext ^? rPayload . plActions . Lens._Just . wrap . _WrapAction
-                                <&> fmap snd
-                            ClosedRecord mOpen -> mOpen <&> (delete >>)
+        return $
+            if null (restS ^. rItems)
+            then
+                case restS ^. rTail of
+                ClosedRecord{}
+                    | Lens.has (rBody . _BodyHole) exprS ->
+                        V.BLeaf V.LRecEmpty & Val () & ExprIRef.newVal
+                    | otherwise ->
+                        -- When deleting closed one field record
+                        -- we replace the record with the field value
+                        -- (unless it is a hole)
+                        expr ^. V.payload . plValI & return
+                RecordExtending{} -> return restI
+                >>= protectedSetToVal stored
+                <&> EntityId.ofValI
+            else do
+                let delete = DataOps.replace stored restI
+                mResult <- typeProtect delete <&> fmap EntityId.ofValI
+                case mResult of
+                    Just result -> return result
+                    Nothing ->
+                        unsafeUnjust "should have a way to fix type error" $
+                        case restS ^. rTail of
+                        RecordExtending ext ->
+                            ext ^? rPayload . plActions . wrap . _WrapAction
+                            <&> fmap snd
+                        ClosedRecord open -> delete >> open & Just
 
 convertField ::
     (MonadA m, Monoid a) =>
-    Maybe (ExprIRef.ValIProperty m) ->
-    Maybe (ExprIRef.ValI m) -> Record name m (ExpressionU m a) ->
+    ExprIRef.ValIProperty m ->
+    ExprIRef.ValI m -> Record name m (ExpressionU m a) ->
     EntityId -> T.Tag -> Val (Input.Payload m a) ->
     ConvertM m (RecordField Guid m (ExpressionU m a))
-convertField mStored mRestI restS inst tag expr =
+convertField stored restI restS inst tag expr =
     do
         exprS <- ConvertM.convertSubexpression expr
-        delField <- deleteField mStored mRestI restS expr exprS
+        delField <- deleteField stored restI restS expr exprS
         return RecordField
             { _rfTag = convertTag inst tag
             , _rfExpr = exprS
-            , _rfMDelete = delField
+            , _rfDelete = delField
             }
 
 makeAddField :: MonadA m =>
@@ -123,15 +119,15 @@ makeAddField stored =
 
 convertEmpty :: MonadA m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertEmpty exprPl = do
-    mAddField <- exprPl ^. Input.stored & Lens._Just %%~ makeAddField
+    addField <- exprPl ^. Input.stored & makeAddField
     BodyRecord Record
         { _rItems = []
         , _rTail =
                 exprPl ^. Input.stored
-                <&> DataOps.replaceWithHole
-                <&> Lens.mapped %~ EntityId.ofValI
+                & DataOps.replaceWithHole
+                <&> EntityId.ofValI
                 & ClosedRecord
-        , _rMAddField = mAddField
+        , _rAddField = addField
         }
         & addActions exprPl
 
@@ -152,18 +148,18 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
         BodyRecord r -> return (r, restS ^. rPayload . plData)
         _ ->
             do
-                mAddField <- rest ^. V.payload . Input.stored & Lens._Just %%~ makeAddField
+                addField <- rest ^. V.payload . Input.stored & makeAddField
                 return
-                    ( Record [] (RecordExtending restS) mAddField
+                    ( Record [] (RecordExtending restS) addField
                     , mempty
                     )
     fieldS <-
         convertField
-        (exprPl ^. Input.stored) (rest ^? V.payload . plValI) restRecord
+        (exprPl ^. Input.stored) (rest ^. V.payload . plValI) restRecord
         (EntityId.ofRecExtendTag (exprPl ^. Input.entityId)) tag val
     restRecord
         & rItems %~ (fieldS:)
-        & rMAddField . Lens._Just %~ (>>= setTagOrder (1 + length (restRecord ^. rItems)))
+        & rAddField %~ (>>= setTagOrder (1 + length (restRecord ^. rItems)))
         & BodyRecord
         & addActions exprPl
         <&> rPayload . plData <>~ hiddenEntities

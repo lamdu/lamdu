@@ -117,7 +117,7 @@ preparePayloads evalRes inferredVal =
               Input.Payload
               { Input._varRefsOfLambda = varRefs
               , Input._entityId = eId
-              , Input._stored = Just valIProp
+              , Input._stored = valIProp
               , Input._inferred = inferPl
               , Input._evalResults = evalRes <&> exprEvalRes execId
               , Input._userData = ()

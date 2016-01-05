@@ -134,7 +134,7 @@ binderNamedParams f (FieldParams ps) = FieldParams <$> (Lens.traverse . _2) f ps
 
 binderNamedParamsActions ::
     Lens.Traversal' (BinderParams name m) (FuncParamActions m)
-binderNamedParamsActions = binderNamedParams . fpInfo . npiMActions . Lens._Just
+binderNamedParamsActions = binderNamedParams . fpInfo . npiActions
 
 exprBinders ::
     Lens.Traversal'
@@ -150,8 +150,7 @@ binderContentLetActions ::
     Lens.Traversal'
     (BinderContent name m (Expression name m a))
     (LetActions m)
-binderContentLetActions f (BinderLet l) =
-    l & lActions . Lens._Just %%~ f <&> BinderLet
+binderContentLetActions f (BinderLet l) = l & lActions %%~ f <&> BinderLet
 binderContentLetActions _ (BinderExpr expr) = pure (BinderExpr expr)
 
 binderLetActions ::
@@ -165,9 +164,9 @@ binderFuncParamAdds ::
     (Binder name m (Expression name m a))
     (Transaction m ParamAddResult)
 binderFuncParamAdds f Binder{..} =
-    (\_bParams _bMActions -> Binder{..})
+    (\_bParams _bActions -> Binder{..})
     <$> (_bParams & binderNamedParamsActions . fpAddNext %%~ f)
-    <*> (_bMActions & Lens._Just . baAddFirstParam %%~ f)
+    <*> (_bActions & baAddFirstParam %%~ f)
 
 binderFuncParamDeletes ::
     Lens.Traversal'

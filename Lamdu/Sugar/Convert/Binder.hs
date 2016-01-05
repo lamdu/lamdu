@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Binder
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (guard, void)
+import           Control.Monad (void)
 import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import           Data.Set (Set)
@@ -37,11 +37,11 @@ import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
 
-mkLIActions ::
+mkLetIActions ::
     MonadA m =>
     ValIProperty m -> Redex (ValIProperty m) ->
     ConvertM m (LetActions m)
-mkLIActions topLevelProp redex =
+mkLetIActions topLevelProp redex =
     do
         float <- makeFloatLetToOuterScope topLevelProp redex
         return
@@ -60,7 +60,7 @@ localNewExtractDestPos ::
 localNewExtractDestPos val =
     ConvertM.scScopeInfo . ConvertM.siOuter .~
     ConvertM.OuterScopeInfo
-    { _osiPos = val ^. V.payload . Input.stored
+    { _osiPos = val ^. V.payload . Input.stored & Just
     , _osiVarsUnderPos = []
     }
     & ConvertM.local
@@ -71,16 +71,12 @@ localVarsUnderExtractDestPos vars =
     ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiVarsUnderPos <>~ vars
     & ConvertM.local
 
-makeInline ::
-    MonadA m =>
-    Maybe (ValIProperty m) -> Redex (Input.Payload m a) -> BinderVarInline m
-makeInline mStored redex =
+makeInline :: MonadA m => ValIProperty m -> Redex (Input.Payload m a) -> BinderVarInline m
+makeInline stored redex =
     case redexParamRefs redex of
     [_singleUsage] ->
-        inlineLet
-        <$> mStored
-        <*> (Lens.traverse (^. Input.stored) redex <&> fmap Property.value)
-        & maybe CannotInline InlineVar
+        inlineLet stored (redex <&> (^. Input.stored) <&> Property.value)
+        & InlineVar
     [] -> CannotInline
     uses -> CannotInlineDueToUses uses
 
@@ -95,10 +91,8 @@ convertRedex expr redex =
             convertBinder Nothing defGuid (redexArg redex)
             & localNewExtractDestPos expr
         actions <-
-            mkLIActions
-            <$> expr ^. V.payload . Input.stored
-            <*> Lens.traverse (^. Input.stored) redex
-            & Lens.sequenceOf Lens._Just
+            mkLetIActions (expr ^. V.payload . Input.stored)
+            (redex <&> (^. Input.stored))
         body <-
             makeBinderBody (redexBody redex)
             & localVarsUnderExtractDestPos [redexParam redex]
@@ -143,22 +137,18 @@ makeBinderBody expr =
     do
         content <- makeBinderContent expr
         BinderBody
-            { _bbMActions =
+            { _bbAddOuterLet =
               expr ^. V.payload . Input.stored
-              <&> \exprProp ->
-              BinderBodyActions
-              { _bbaAddOuterLet =
-                DataOps.redexWrap exprProp <&> EntityId.ofLambdaParam
-              }
+              & DataOps.redexWrap <&> EntityId.ofLambdaParam
             , _bbContent = content
             } & return
 
 makeBinder :: (MonadA m, Monoid a) =>
-    Maybe (MkProperty m (Maybe BinderParamScopeId)) ->
+    MkProperty m (Maybe BinderParamScopeId) ->
     Maybe (MkProperty m PresentationMode) ->
     ConventionalParams m a -> Val (Input.Payload m a) ->
     ConvertM m (Binder Guid m (ExpressionU m a))
-makeBinder mChosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody =
+makeBinder chosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody =
     do
         binderBody <-
             makeBinderBody funcBody
@@ -166,10 +156,10 @@ makeBinder mChosenScopeProp mPresentationModeProp ConventionalParams{..} funcBod
         return Binder
             { _bParams = _cpParams
             , _bMPresentationModeProp = mPresentationModeProp
-            , _bMChosenScopeProp = mChosenScopeProp
+            , _bChosenScopeProp = chosenScopeProp
             , _bBody = binderBody
             , _bBodyScopes = cpScopes
-            , _bMActions = cpMAddFirstParam <&> BinderActions
+            , _bActions = BinderActions cpAddFirstParam
             }
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
     where
@@ -187,19 +177,19 @@ convertLam ::
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLam lam@(V.Lam _ lamBody) exprPl =
     do
-        mDeleteLam <- mkStoredLam lam exprPl & Lens._Just %%~ makeDeleteLambda Nothing
+        deleteLam <- mkStoredLam lam exprPl & makeDeleteLambda Nothing
         convParams <- convertLamParams Nothing lam exprPl
         binder <-
             makeBinder
-            (exprPl ^. Input.stored <&> Anchors.assocScopeRef . Property.value)
+            (exprPl ^. Input.stored & Property.value & Anchors.assocScopeRef)
             Nothing convParams (lam ^. V.lamResult)
-        let setToInnerExprAction =
-                maybe NoInnerExpr SetToInnerExpr $
-                do
-                    guard $ Lens.nullOf ExprLens.valHole lamBody
-                    mDeleteLam
-                        <&> Lens.mapped .~ binder ^. bBody . bbContent .
-                            SugarLens.binderContentExpr . rPayload . plEntityId
+        let setToInnerExprAction
+                | Lens.nullOf ExprLens.valHole lamBody =
+                  binder ^. bBody . bbContent . SugarLens.binderContentExpr .
+                  rPayload . plEntityId
+                  <$ deleteLam
+                  & SetToInnerExpr
+                | otherwise = NoInnerExpr
         let paramSet =
                 binder ^.. bParams . SugarLens.binderNamedParams .
                 Lens.traversed . npiName
@@ -213,7 +203,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                     & Lambda LightLambda
         BodyLam lambda
             & addActions exprPl
-            <&> rPayload . plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
+            <&> rPayload . plActions . setToInnerExpr .~ setToInnerExprAction
 
 useNormalLambda :: Binder name m (Expression name m a) -> Bool
 useNormalLambda binder =
@@ -240,8 +230,7 @@ markLightParams paramNames (Expression body pl) =
             & GetParam & BodyGetVar
     BodyHole h ->
         h
-        & holeMActions . Lens._Just
-        . holeOptions . Lens.mapped . Lens.traversed . hoResults
+        & holeActions . holeOptions . Lens.mapped . Lens.traversed . hoResults
         . Lens.mapped . _2 . Lens.mapped . holeResultConverted
             %~ markLightParams paramNames
         & BodyHole
@@ -260,5 +249,5 @@ convertBinder mRecursiveVar defGuid expr =
                 | Lens.has (cpParams . _FieldParams) convParams =
                     Just $ Anchors.assocPresentationMode defGuid
                 | otherwise = Nothing
-        makeBinder (Just (Anchors.assocScopeRef defGuid)) mPresentationModeProp
+        makeBinder (Anchors.assocScopeRef defGuid) mPresentationModeProp
             convParams funcBody

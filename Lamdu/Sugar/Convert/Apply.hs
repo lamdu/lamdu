@@ -58,22 +58,16 @@ convert app@(V.Apply funcI argI) exprPl =
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
                 let setToFuncAction =
-                        maybe NoInnerExpr SetToInnerExpr $
-                        do
-                            outerStored <- exprPl ^. Input.stored
-                            funcStored <- funcI ^. V.payload . Input.stored
-                            protectedSetToVal outerStored
-                                (Property.value funcStored)
-                                <&> EntityId.ofValI & return
+                        funcI ^. V.payload . Input.stored
+                        & Property.value
+                        & protectedSetToVal (exprPl ^. Input.stored)
+                        <&> EntityId.ofValI
+                        & SetToInnerExpr
                 if Lens.has (rBody . _BodyHole) argS
                     then
                     return
-                    ( funcS
-                      & rPayload . plActions . Lens._Just . setToHole .~
-                        AlreadyAppliedToHole
-                    , argS
-                      & rPayload . plActions . Lens._Just . setToInnerExpr .~
-                        setToFuncAction
+                    ( funcS & rPayload . plActions . setToHole .~ AlreadyAppliedToHole
+                    , argS & rPayload . plActions . setToInnerExpr .~ setToFuncAction
                     )
                     else return (funcS, argS)
         justToLeft $
@@ -103,17 +97,13 @@ convertLabeled funcS argS argI exprPl =
         unless (noRepetitions tags) $ error "Repetitions should not type-check"
         protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
         let setToInnerExprAction =
-                maybe NoInnerExpr SetToInnerExpr $
-                do
-                    stored <- exprPl ^. Input.stored
-                    val <-
-                        case (filter (Lens.nullOf ExprLens.valHole) . map snd . Map.elems) fieldsI of
-                        [x] -> Just x
-                        _ -> Nothing
-                    valStored <- traverse (^. Input.stored) val
-                    return $
-                        EntityId.ofValI <$>
-                        protectedSetToVal stored (Property.value (valStored ^. V.payload))
+                case (filter (Lens.nullOf ExprLens.valHole) . map snd . Map.elems) fieldsI of
+                [x] ->
+                    x ^. V.payload . Input.stored & Property.value
+                    & protectedSetToVal (exprPl ^. Input.stored)
+                    <&> EntityId.ofValI
+                    & SetToInnerExpr
+                _ -> NoInnerExpr
         BodyApply Apply
             { _aFunc = funcS
             , _aSpecialArgs = NoSpecialArgs
@@ -121,8 +111,8 @@ convertLabeled funcS argS argI exprPl =
             }
             & lift . addActions exprPl
             <&> rPayload %~
-                ( plData <>~ (argS ^. rPayload . plData) ) .
-                ( plActions . Lens._Just . setToInnerExpr .~ setToInnerExprAction
+                ( plData <>~ argS ^. rPayload . plData ) .
+                ( plActions . setToInnerExpr .~ setToInnerExprAction
                 )
     where
         (fieldsI, Val _ (V.BLeaf V.LRecEmpty)) = RecordVal.unpack argI
@@ -218,51 +208,38 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         isTypeMatch <-
             checkTypeMatch (argI ^. V.payload . Input.inferredType)
             (exprPl ^. Input.inferredType) & lift
-        let mUnwrap =
-                do
-                    stored <- mStored
-                    argP <- argI ^. V.payload . Input.stored
-                    return $ unwrap stored argP argI
         let holeArg = HoleArg
                 { _haExpr =
                       argS
-                      & rPayload . plActions . Lens._Just . wrap .~
-                        maybe WrapNotAllowed WrappedAlready mStoredEntityId
-                      & rPayload . plActions . Lens._Just . setToHole .~
-                        ( mStored <&> fmap guidEntityId . DataOps.setToHole
-                        & maybe AlreadyAHole SetWrapperToHole )
+                      & rPayload . plActions . wrap .~ WrappedAlready storedEntityId
+                      & rPayload . plActions . setToHole .~
+                        SetWrapperToHole
+                        ( exprPl ^. Input.stored & DataOps.setToHole <&> guidEntityId )
                 , _haUnwrap =
                       if isTypeMatch
-                      then UnwrapMAction mUnwrap
+                      then unwrap (exprPl ^. Input.stored)
+                           (argI ^. V.payload . Input.stored) argI & UnwrapAction
                       else UnwrapTypeMismatch
                 }
         do
             sugarContext <- ConvertM.readContext
             hole <- ConvertHole.convertCommon (Just argI) exprPl
-            case mStored of
-                Nothing -> return hole
-                Just stored ->
-                    do
-                        suggesteds <-
-                            mkAppliedHoleSuggesteds sugarContext
-                            argI exprPl stored
-                            & ConvertM.liftTransaction
-                        hole
-                            & rBody . _BodyHole . holeMActions
-                            . Lens._Just . holeOptions . Lens.mapped
-                                %~  ConvertHole.addSuggestedOptions suggesteds
-                                .   mappend (mkAppliedHoleOptions sugarContext
-                                    argI argS exprPl stored)
-                            & return
+            suggesteds <-
+                mkAppliedHoleSuggesteds sugarContext
+                argI exprPl (exprPl ^. Input.stored)
+                & ConvertM.liftTransaction
+            hole
+                & rBody . _BodyHole . holeActions . holeOptions . Lens.mapped
+                    %~  ConvertHole.addSuggestedOptions suggesteds
+                    .   mappend (mkAppliedHoleOptions sugarContext
+                        argI argS exprPl (exprPl ^. Input.stored))
+                & return
             & lift
             <&> rBody . _BodyHole . holeMArg .~ Just holeArg
             <&> rPayload . plData <>~ funcI ^. V.payload . Input.userData
-            <&> rPayload . plActions . Lens._Just . wrap .~
-                maybe WrapNotAllowed WrapperAlready mStoredEntityId
+            <&> rPayload . plActions . wrap .~ WrapperAlready storedEntityId
     where
-        mStoredEntityId = mStored <&> addEntityId
-        mStored = exprPl ^. Input.stored
-        addEntityId = guidEntityId . Property.value
+        storedEntityId = exprPl ^. Input.stored & Property.value & guidEntityId
         guidEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
 
 convertAppliedCase ::
@@ -278,11 +255,9 @@ convertAppliedCase (BodyCase caseB) casePl argS exprPl =
             & cKind .~ CaseWithArg
                 CaseArg
                 { _caVal = argS
-                , _caMToLambdaCase =
-                    protectedSetToVal
-                    <$> exprPl ^. Input.stored
-                    <*> (casePl ^. Input.stored <&> Property.value)
-                    <&> Lens.mapped %~ EntityId.ofValI
+                , _caToLambdaCase =
+                    protectedSetToVal (exprPl ^. Input.stored)
+                    (casePl ^. Input.stored & Property.value) <&> EntityId.ofValI
                 }
             & BodyCase
             & lift . addActions exprPl
