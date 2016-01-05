@@ -213,36 +213,21 @@ mkGroup option =
             , _groupId = WidgetIds.hash (option ^. Sugar.hoVal)
             }
 
-literalNumGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
-literalNumGroups holeInfo =
+tryBuildLiteral ::
+    (Format a, MonadA m) => (a -> Sugar.Literal) -> EditableHoleInfo m ->
+    T m (Maybe (Sugar.HoleOption (Name m) m))
+tryBuildLiteral mkLiteral holeInfo =
     ehiSearchTerm holeInfo
     & tryParse
-    <&> Sugar.LiteralNum
+    <&> mkLiteral
     & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteral
-    <&> (^.. Lens._Just)
-
-literalBytesGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
-literalBytesGroups holeInfo =
-    ehiSearchTerm holeInfo
-    & tryParse
-    <&> Sugar.LiteralBytes
-    & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteral
-    <&> (^.. Lens._Just)
-
-literalTextGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
-literalTextGroups holeInfo =
-    ehiSearchTerm holeInfo
-    & tryParse
-    <&> Sugar.LiteralText
-    & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteral
-    <&> (^.. Lens._Just)
 
 literalGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
 literalGroups holeInfo =
-    [ literalNumGroups holeInfo
-    , literalBytesGroups holeInfo
-    , literalTextGroups holeInfo
-    ] & sequenceA <&> concat
+    [ tryBuildLiteral Sugar.LiteralNum holeInfo
+    , tryBuildLiteral Sugar.LiteralBytes holeInfo
+    , tryBuildLiteral Sugar.LiteralText holeInfo
+    ] & sequenceA <&> (^.. Lens.traverse . Lens._Just)
 
 insensitivePrefixOf :: String -> String -> Bool
 insensitivePrefixOf = isPrefixOf `on` map Char.toLower
