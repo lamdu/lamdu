@@ -657,15 +657,7 @@ valOfScope annotation mScopeIds =
             <&> EvalResDisplay scopeId tag
 
 valOfScopePreferCur :: Sugar.Annotation -> ScopeId -> Maybe EvalResDisplay
-valOfScopePreferCur annotation scopeId =
-    go
-    <$> curPrevTag
-    <*> annotation ^. Sugar.aMEvaluationResult
-    & fallbackToPrev
-    where
-        go tag res =
-            res ^? Lens._Just . Lens.at scopeId . Lens._Just
-            <&> EvalResDisplay scopeId tag
+valOfScopePreferCur annotation = valOfScope annotation . pure . Just
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]
 listWithDelDests = ListUtils.withPrevNext
