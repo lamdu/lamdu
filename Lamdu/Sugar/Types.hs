@@ -84,8 +84,7 @@ module Lamdu.Sugar.Types
     , Unwrap(..), _UnwrapMAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
-    , HoleActions(..), holeGuid, holeOptions, holeOptionLiteralNum, holeOptionLiteralBytes
-      , holeOptionLiteralText
+    , HoleActions(..), holeGuid, holeOptions, holeOptionLiteral
     , Hole(..), holeMActions, holeMArg
     , ScopeGetVar(..), sgvGetVar, sgvVal
     , TIdG(..), tidgName, tidgTId
@@ -275,9 +274,7 @@ data Literal
 data HoleActions name m = HoleActions
     { _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
     , _holeOptions :: T m [HoleOption name m]
-    , _holeOptionLiteralNum :: Double -> T m (HoleOption name m)
-    , _holeOptionLiteralBytes :: SBS.ByteString -> T m (HoleOption name m)
-    , _holeOptionLiteralText :: String -> T m (HoleOption name m)
+    , _holeOptionLiteral :: Literal -> T m (HoleOption name m)
     }
 
 data Unwrap m

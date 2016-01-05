@@ -217,21 +217,24 @@ literalNumGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Nam
 literalNumGroups holeInfo =
     ehiSearchTerm holeInfo
     & parseNum
-    & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteralNum
+    <&> Sugar.LiteralNum
+    & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteral
     <&> (^.. Lens._Just)
 
 literalBytesGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
 literalBytesGroups holeInfo =
     ehiSearchTerm holeInfo
     & parseBytes
-    & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteralBytes
+    <&> Sugar.LiteralBytes
+    & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteral
     <&> (^.. Lens._Just)
 
 literalTextGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
 literalTextGroups holeInfo =
     ehiSearchTerm holeInfo
     & parseText
-    & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteralText
+    <&> Sugar.LiteralText
+    & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteral
     <&> (^.. Lens._Just)
 
 literalGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]

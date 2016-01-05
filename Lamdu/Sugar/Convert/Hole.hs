@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, ConstraintKinds, OverloadedStrings, RankNTypes #-}
+{-# LANGUAGE LambdaCase, NoImplicitPrelude, ConstraintKinds, OverloadedStrings, RankNTypes #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert, convertCommon
     , mkHoleOption, mkHoleOptionFromInjected, addSuggestedOptions
@@ -33,6 +33,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
+import qualified Lamdu.Expr.Pure as Pure
 import           Lamdu.Expr.Type (Type(..))
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
@@ -195,14 +196,15 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
             mkOptions sugarContext mInjectedArg exprPl stored
             <&> addSuggestedOptions
                 (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
-        , _holeOptionLiteralNum =
-            mkLiteralOption . V.Literal Builtins.floatId . encodeS
-        , _holeOptionLiteralBytes =
-            mkLiteralOption . V.Literal Builtins.bytesId
-        , _holeOptionLiteralText =
-            mkOption . Val () .
-            V.BToNom . V.Nom Builtins.textTid .
-            V.Val () . V.BLeaf . V.LLiteral . V.Literal Builtins.bytesId . UTF8.fromString
+        , _holeOptionLiteral =
+          \case
+          LiteralNum x -> encodeS x & V.Literal Builtins.floatId & mkLiteralOption
+          LiteralBytes x -> V.Literal Builtins.bytesId x & mkLiteralOption
+          LiteralText x ->
+              UTF8.fromString x
+              & Pure.lit Builtins.bytesId
+              & Pure.toNom Builtins.textTid
+              & mkOption
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
         }
 

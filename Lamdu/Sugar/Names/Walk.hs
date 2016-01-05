@@ -80,12 +80,7 @@ toHoleActions ha@HoleActions {..} =
         InTransaction run <- opRun
         pure ha
             { _holeOptions = _holeOptions >>= run . traverse toHoleOption
-            , _holeOptionLiteralNum =
-                _holeOptionLiteralNum <&> (>>= run . toHoleOption)
-            , _holeOptionLiteralBytes =
-                _holeOptionLiteralBytes <&> (>>= run . toHoleOption)
-            , _holeOptionLiteralText =
-                _holeOptionLiteralText <&> (>>= run . toHoleOption)
+            , _holeOptionLiteral = _holeOptionLiteral <&> (>>= run . toHoleOption)
             }
 
 toParam ::
