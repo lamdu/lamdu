@@ -4,15 +4,14 @@ module Lamdu.Sugar.Names.NameGen
     , VarInfo(..), existingName, newName
     ) where
 
-import           Prelude.Compat
-
 import           Control.Arrow ((&&&))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.State (State, state)
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe)
+
+import           Prelude.Compat
 
 data VarInfo = Function | NormalVar
 
@@ -32,10 +31,8 @@ initial =
         numberCycle s = (s ++) . concat . zipWith appendAll [0::Int ..] $ repeat s
         appendAll num = map (++ show num)
 
-existingName :: (Ord g, Show g) => g -> State (NameGen g) String
-existingName g =
-    fromMaybe ("TodoError:" ++ show g) <$>
-    Lens.uses ngUsedNames (Map.lookup g)
+existingName :: (Ord g, Show g) => g -> State (NameGen g) (Maybe String)
+existingName = Lens.uses ngUsedNames . Map.lookup
 
 newName :: Ord g => (String -> Bool) -> VarInfo -> g -> State (NameGen g) String
 newName acceptName isFunc g =
