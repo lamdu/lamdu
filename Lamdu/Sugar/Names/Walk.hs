@@ -2,6 +2,7 @@
 module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
     , InTransaction(..)
+    , NameType(..)
     , NameConvertor, CPSNameConvertor
     , OldExpression, NewExpression
     , toDef, toExpression, toBody
@@ -25,6 +26,8 @@ type NameConvertor m = OldName m -> m (NewName m)
 
 newtype InTransaction m tm = InTransaction (forall a. m a -> T tm a)
 
+data NameType = DefName | TagName | NominalName | ParamName
+
 -- TODO: Rename MonadNameWalk
 class (MonadA m, MonadA (TM m)) => MonadNaming m where
     type OldName m
@@ -36,10 +39,7 @@ class (MonadA m, MonadA (TM m)) => MonadNaming m where
     opWithLetName :: NameGen.VarInfo -> CPSNameConvertor m
     opWithDefName :: CPSNameConvertor m
     opWithTagName :: CPSNameConvertor m
-    opGetDefName :: NameConvertor m
-    opGetTagName :: NameConvertor m
-    opGetTIdName :: NameConvertor m
-    opGetParamName :: NameConvertor m
+    opGetName :: NameType -> NameConvertor m
 
 type OldExpression m a = Expression (OldName m) (TM m) a
 type NewExpression m a = Expression (NewName m) (TM m) a
@@ -89,8 +89,9 @@ toParam param =
     (pNameRef . nrName) f param
     where
         f = case param ^. pForm of
-            GetParameter      -> opGetParamName
-            GetFieldParameter -> opGetTagName
+            GetParameter      -> ParamName
+            GetFieldParameter -> TagName
+            & opGetName
 
 toBinderVar ::
     MonadNaming m =>
@@ -100,16 +101,17 @@ toBinderVar binderVar =
     (bvNameRef . nrName) f binderVar
     where
         f = case binderVar ^. bvForm of
-            GetLet        -> opGetParamName -- TODO: Separate op for lets?
-            GetDefinition -> opGetDefName
+            GetLet        -> ParamName -- TODO: Separate op for lets?
+            GetDefinition -> DefName
+            & opGetName
 
 toGetVar ::
     MonadNaming m =>
     GetVar (OldName m) (TM m) ->
     m (GetVar (NewName m) (TM m))
-toGetVar (GetParam x) = GetParam <$> toParam x
-toGetVar (GetBinder x) = GetBinder <$> toBinderVar x
-toGetVar (GetParamsRecord x) = GetParamsRecord <$> traverse opGetTagName x
+toGetVar (GetParam x) = toParam x <&> GetParam
+toGetVar (GetBinder x) = toBinderVar x <&> GetBinder
+toGetVar (GetParamsRecord x) = traverse (opGetName TagName) x <&> GetParamsRecord
 
 toLet ::
     MonadNaming m => (a -> m b) ->
@@ -173,8 +175,8 @@ toBody expr = \case
     BodyLiteral      x -> pure $ BodyLiteral x
     BodyLam          x -> toLam expr x <&> BodyLam
     where
-        toTagG = tagGName opGetTagName
-        toTIdG = tidgName %%~ opGetTIdName
+        toTagG = tagGName %%~ opGetName TagName
+        toTIdG = tidgName %%~ opGetName NominalName
 
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)
 toExpression = rBody (toBody toExpression)

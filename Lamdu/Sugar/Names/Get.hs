@@ -28,10 +28,7 @@ instance MonadA m => MonadNaming (Collect name m) where
     opWithLetName _ = cpsTellName
     opWithDefName = cpsTellName
     opWithTagName = cpsTellName
-    opGetParamName = tellName
-    opGetTagName = tellName
-    opGetTIdName = tellName
-    opGetDefName = tellName
+    opGetName _ = tellName
 
 tellName :: Walk.NameConvertor (Collect name m)
 tellName name = Collect (State.modify (name:))
