@@ -12,7 +12,6 @@ module Lamdu.Eval.Val
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (void)
 import           Data.Binary (Binary)
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -85,5 +84,5 @@ extractField tag (HRecExtend (V.RecExtend vt vv vr))
     | vt == tag = vv
     | otherwise = extractField tag vr
 extractField tag x =
-    "Expected record with tag: " ++ show tag ++ " got: " ++ show (void x)
+    "Expected record with tag: " ++ show tag ++ " got: " ++ show x
     & EvalTypeError & HError

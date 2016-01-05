@@ -4,7 +4,7 @@ module Lamdu.Builtins
     ) where
 
 import           Control.Lens.Operators
-import           Control.Monad (void, when)
+import           Control.Monad (when)
 import           Data.Binary.Utils (encodeS, decodeS)
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -34,7 +34,7 @@ extractRecordParams expectedTags val =
         case matchKeys expectedTags paramsMap of
             Nothing ->
                 "Builtin expected params: " ++ show expectedTags ++ " got: " ++
-                show (void val) & EvalTypeError & Left
+                show val & EvalTypeError & Left
             Just x -> Right x
 
 data V2 a = V2 a a   deriving (Show, Functor, Foldable, Traversable)
@@ -56,7 +56,7 @@ instance GuestType Double where
     toGuest = HLiteral . V.Literal Builtins.floatId . encodeS
     fromGuestVal (HLiteral (V.Literal primId x))
         | primId == Builtins.floatId = Right (decodeS x)
-    fromGuestVal x = "expected num, got " ++ show (void x) & EvalTypeError & Left
+    fromGuestVal x = "expected num, got " ++ show x & EvalTypeError & Left
 
 instance GuestType Bool where
     toGuest b =
@@ -69,7 +69,7 @@ instance GuestType Bool where
         HInject (V.Inject boolTag _)
             | boolTag == Builtins.trueTag -> Right True
             | boolTag == Builtins.falseTag -> Right False
-        _ -> "Expected bool, got: " ++ show (void v) & EvalTypeError & Left
+        _ -> "Expected bool, got: " ++ show v & EvalTypeError & Left
 
 record :: [(T.Tag, Val srcId)] -> Val srcId
 record [] = HRecEmpty

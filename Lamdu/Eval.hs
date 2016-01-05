@@ -14,7 +14,6 @@ module Lamdu.Eval
 import           Control.Lens (at, use)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (void)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State.Strict (StateT(..))
 import           Control.MonadA (MonadA)
@@ -122,16 +121,16 @@ evalApply (V.Apply func argEr) =
             | caseTag == sumTag -> V.Apply handlerFunc injected & evalApply
             | otherwise         -> V.Apply rest        argEr    & evalApply
         HError err -> HError err & return
-        x -> EvalTypeError ("Case expects Inject, found: " ++ show (void x)) & HError & return
+        x -> EvalTypeError ("Case expects Inject, found: " ++ show x) & HError & return
     HAbsurd ->
         case argEr of
         HError err -> err
         x ->
-            "Value impossibly typed as Void: " ++ show (void x) & EvalTypeError
+            "Value impossibly typed as Void: " ++ show x & EvalTypeError
         & HError & return
     HError err -> HError err & return
     _ ->
-        "Apply expects func, builtin, or case, found: " ++ show (void func)
+        "Apply expects func, builtin, or case, found: " ++ show func
         & EvalTypeError & HError & return
 
 evalGetField ::
@@ -141,7 +140,7 @@ evalGetField (V.GetField (HRecExtend (V.RecExtend tag val rest)) searchTag)
     | searchTag == tag = return val
     | otherwise = V.GetField rest searchTag & evalGetField
 evalGetField (V.GetField x y) =
-    "GetField of " ++ show y ++ " expects record, found: " ++ show (void x)
+    "GetField of " ++ show y ++ " expects record, found: " ++ show x
     & EvalTypeError & HError & return
 
 evalScopedVal :: MonadA m => ScopedVal srcId -> EvalT srcId m (Val srcId)
