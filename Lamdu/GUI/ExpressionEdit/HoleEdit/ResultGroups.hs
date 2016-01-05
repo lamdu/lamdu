@@ -27,7 +27,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Val as V
-import           Lamdu.Formatting (formatNum, parseBytes, formatBytes, formatText, parseText)
+import           Lamdu.Formatting (formatNum, parseNum, parseBytes, formatBytes, formatText, parseText)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -212,13 +212,10 @@ mkGroup option =
 
 literalNumGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
 literalNumGroups holeInfo =
-    case reads ('0':searchTerm) of
-    [(val, "")] -> option val
-    [(val, ".")] -> option val
-    _ -> pure []
-    where
-        option val = val & ehiActions holeInfo ^. Sugar.holeOptionLiteralNum <&> (: [])
-        searchTerm = ehiSearchTerm holeInfo
+    ehiSearchTerm holeInfo
+    & parseNum
+    & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteralNum
+    <&> (^.. Lens._Just)
 
 literalBytesGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
 literalBytesGroups holeInfo =

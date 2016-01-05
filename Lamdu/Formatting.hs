@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Formatting
-    ( formatNum
+    ( formatNum, parseNum
     , formatBytes, parseBytes
     , formatText, parseText
     ) where
@@ -53,6 +53,13 @@ formatNum x
     where
         i :: Integer
         i = truncate x
+
+parseNum :: String -> Maybe Double
+parseNum searchTerm =
+    case reads ('0':searchTerm) of
+    [(val, "")] -> Just val
+    [(val, ".")] -> Just val
+    _ -> Nothing
 
 formatBytes :: SBS.ByteString -> String
 formatBytes bs = '#' : concatMap showHexByte (SBS.unpack bs)
