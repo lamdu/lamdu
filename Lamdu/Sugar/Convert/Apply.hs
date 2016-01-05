@@ -60,8 +60,8 @@ convert app@(V.Apply funcI argI) exprPl =
                 let setToFuncAction =
                         maybe NoInnerExpr SetToInnerExpr $
                         do
-                            outerStored <- exprPl ^. Input.mStored
-                            funcStored <- funcI ^. V.payload . Input.mStored
+                            outerStored <- exprPl ^. Input.stored
+                            funcStored <- funcI ^. V.payload . Input.stored
                             protectedSetToVal outerStored
                                 (Property.value funcStored)
                                 <&> EntityId.ofValI & return
@@ -105,12 +105,12 @@ convertLabeled funcS argS argI exprPl =
         let setToInnerExprAction =
                 maybe NoInnerExpr SetToInnerExpr $
                 do
-                    stored <- exprPl ^. Input.mStored
+                    stored <- exprPl ^. Input.stored
                     val <-
                         case (filter (Lens.nullOf ExprLens.valHole) . map snd . Map.elems) fieldsI of
                         [x] -> Just x
                         _ -> Nothing
-                    valStored <- traverse (^. Input.mStored) val
+                    valStored <- traverse (^. Input.stored) val
                     return $
                         EntityId.ofValI <$>
                         protectedSetToVal stored (Property.value (valStored ^. V.payload))
@@ -221,7 +221,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         let mUnwrap =
                 do
                     stored <- mStored
-                    argP <- argI ^. V.payload . Input.mStored
+                    argP <- argI ^. V.payload . Input.stored
                     return $ unwrap stored argP argI
         let holeArg = HoleArg
                 { _haExpr =
@@ -261,7 +261,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 maybe WrapNotAllowed WrapperAlready mStoredEntityId
     where
         mStoredEntityId = mStored <&> addEntityId
-        mStored = exprPl ^. Input.mStored
+        mStored = exprPl ^. Input.stored
         addEntityId = guidEntityId . Property.value
         guidEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
 
@@ -280,8 +280,8 @@ convertAppliedCase (BodyCase caseB) casePl argS exprPl =
                 { _caVal = argS
                 , _caMToLambdaCase =
                     protectedSetToVal
-                    <$> exprPl ^. Input.mStored
-                    <*> (casePl ^. Input.mStored <&> Property.value)
+                    <$> exprPl ^. Input.stored
+                    <*> (casePl ^. Input.stored <&> Property.value)
                     <&> Lens.mapped %~ EntityId.ofValI
                 }
             & BodyCase

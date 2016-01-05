@@ -30,7 +30,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
 plValI :: Lens.Traversal' (Input.Payload m a) (ExprIRef.ValI m)
-plValI = Input.mStored . Lens._Just . Property.pVal
+plValI = Input.stored . Lens._Just . Property.pVal
 
 convertTag :: EntityId -> T.Tag -> TagG Guid
 convertTag inst tag = TagG inst tag $ UniqueId.toGuid tag
@@ -123,11 +123,11 @@ makeAddField stored =
 
 convertEmpty :: MonadA m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertEmpty exprPl = do
-    mAddField <- exprPl ^. Input.mStored & Lens._Just %%~ makeAddField
+    mAddField <- exprPl ^. Input.stored & Lens._Just %%~ makeAddField
     BodyRecord Record
         { _rItems = []
         , _rTail =
-                exprPl ^. Input.mStored
+                exprPl ^. Input.stored
                 <&> DataOps.replaceWithHole
                 <&> Lens.mapped %~ EntityId.ofValI
                 & ClosedRecord
@@ -152,14 +152,14 @@ convertExtend (V.RecExtend tag val rest) exprPl = do
         BodyRecord r -> return (r, restS ^. rPayload . plData)
         _ ->
             do
-                mAddField <- rest ^. V.payload . Input.mStored & Lens._Just %%~ makeAddField
+                mAddField <- rest ^. V.payload . Input.stored & Lens._Just %%~ makeAddField
                 return
                     ( Record [] (RecordExtending restS) mAddField
                     , mempty
                     )
     fieldS <-
         convertField
-        (exprPl ^. Input.mStored) (rest ^? V.payload . plValI) restRecord
+        (exprPl ^. Input.stored) (rest ^? V.payload . plValI) restRecord
         (EntityId.ofRecExtendTag (exprPl ^. Input.entityId)) tag val
     restRecord
         & rItems %~ (fieldS:)

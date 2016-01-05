@@ -88,8 +88,8 @@ mkStoredLam ::
     Input.Payload m a -> Maybe (StoredLam m)
 mkStoredLam lam pl =
     StoredLam
-    <$> (lam & (traverse . traverse) (^. Input.mStored))
-    <*> pl ^. Input.mStored
+    <$> (lam & (traverse . traverse) (^. Input.stored))
+    <*> pl ^. Input.stored
 
 newTag :: MonadA m => T m T.Tag
 newTag = GenIds.transaction GenIds.randomTag
@@ -563,7 +563,7 @@ convertEmptyParams mRecursiveVar val =
             , _cpParams = BinderWithoutParams
             , cpMAddFirstParam =
                 val
-                <&> (^. Input.mStored)
+                <&> (^. Input.stored)
                 & sequenceA
                 & Lens._Just %~ makeAddFirstParam
             , cpScopes = SameAsParentScope

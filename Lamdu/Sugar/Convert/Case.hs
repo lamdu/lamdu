@@ -34,7 +34,7 @@ import           Lamdu.Sugar.Types
 -- with some abstraction?
 
 plValI :: Lens.Traversal' (Input.Payload m a) (ExprIRef.ValI m)
-plValI = Input.mStored . Lens._Just . Property.pVal
+plValI = Input.stored . Lens._Just . Property.pVal
 
 convertTag :: EntityId -> T.Tag -> TagG Guid
 convertTag inst tag = TagG inst tag $ UniqueId.toGuid tag
@@ -68,12 +68,12 @@ makeAddAlt stored =
 
 convertAbsurd :: MonadA m => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertAbsurd exprPl = do
-    mAddAlt <- exprPl ^. Input.mStored & Lens._Just %%~ makeAddAlt
+    mAddAlt <- exprPl ^. Input.stored & Lens._Just %%~ makeAddAlt
     BodyCase Case
         { _cKind = LambdaCase
         , _cAlts = []
         , _cTail =
-                exprPl ^. Input.mStored
+                exprPl ^. Input.stored
                 <&> DataOps.replaceWithHole
                 <&> Lens.mapped %~ EntityId.ofValI
                 & ClosedCase
@@ -158,7 +158,7 @@ convert (V.Case tag val rest) exprPl = do
         BodyCase r -> return (r, restS ^. rPayload . plData)
         _ ->
             do
-                mAddAlt <- rest ^. V.payload . Input.mStored & Lens._Just %%~ makeAddAlt
+                mAddAlt <- rest ^. V.payload . Input.stored & Lens._Just %%~ makeAddAlt
                 return
                     ( Case
                         { _cKind = LambdaCase
@@ -171,7 +171,7 @@ convert (V.Case tag val rest) exprPl = do
                     )
     altS <-
         convertAlt
-        (exprPl ^. Input.mStored) (rest ^? V.payload . plValI) restCase
+        (exprPl ^. Input.stored) (rest ^? V.payload . plValI) restCase
         (EntityId.ofCaseTag (exprPl ^. Input.entityId)) tag val
     restCase
         & cAlts %~ (altS:)

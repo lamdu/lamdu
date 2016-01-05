@@ -102,8 +102,8 @@ makeSetToInner ::
 makeSetToInner outerPl inner
     | Lens.nullOf ExprLens.valHole inner =
       makeSetToInnerStored
-      <$> outerPl ^. Input.mStored
-      <*> inner ^. V.payload . Input.mStored
+      <$> outerPl ^. Input.stored
+      <*> inner ^. V.payload . Input.stored
       & maybe (return NoInnerExpr) (fmap SetToInnerExpr)
     | otherwise = return NoInnerExpr
 
@@ -115,7 +115,7 @@ addActions exprPl body =
         return $ Expression body Payload
             { _plEntityId = exprPl ^. Input.entityId
             , _plAnnotation = makeAnnotation exprPl
-            , _plActions = exprPl ^. Input.mStored <&> mkActions ctx
+            , _plActions = exprPl ^. Input.stored <&> mkActions ctx
             , _plData = exprPl ^. Input.userData
             }
 

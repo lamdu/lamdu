@@ -49,7 +49,7 @@ nil (V.Nom tid val) exprPl =
                 }
         List
             { _lValues = []
-            , _lMActions = mkListActions <$> exprPl ^. Input.mStored
+            , _lMActions = mkListActions <$> exprPl ^. Input.stored
             , _lNilEntityId = exprPl ^. Input.entityId
             }
             & BodyList & addActions exprPl
@@ -72,8 +72,8 @@ mkListItem listItemExpr exprPl tailI mAddNextItem =
     , _liMActions =
         do
             addNext <- mAddNextItem
-            exprProp <- exprPl ^. Input.mStored
-            argProp <- tailI ^. V.payload . Input.mStored
+            exprProp <- exprPl ^. Input.stored
+            argProp <- tailI ^. V.payload . Input.stored
             return ListItemActions
                 { _itemAddNext = addNext
                 , _itemDelete = void $ replaceWith exprProp argProp
@@ -135,7 +135,7 @@ cons (V.Nom nomId (Val injPl (V.BInject (V.Inject tag argI)))) exprPl
                 ]
         let mListActions =
                 do
-                    exprS <- exprPl ^. Input.mStored
+                    exprS <- exprPl ^. Input.stored
                     innerListActions <- innerListMActions
                     pure ListActions
                         { addFirstItem = mkListAddFirstItem exprS

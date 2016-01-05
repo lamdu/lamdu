@@ -245,7 +245,7 @@ prepareUnstoredPayloads val =
               , Input._userData = x
               , Input._inferred = inferPl
               , Input._entityId = eId
-              , Input._mStored = Nothing
+              , Input._stored = Nothing
               , Input._evalResults =
                 CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
               }
@@ -271,7 +271,7 @@ mkHole ::
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (Hole Guid m (ExpressionU m a))
 mkHole mInjectedArg exprPl = do
-    mActions <- traverse (mkWritableHoleActions mInjectedArg exprPl) (exprPl ^. Input.mStored)
+    mActions <- traverse (mkWritableHoleActions mInjectedArg exprPl) (exprPl ^. Input.stored)
     pure Hole
         { _holeMActions = mActions
         , _holeMArg = Nothing
@@ -358,7 +358,7 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
                   , Input._userData = a
                   , Input._inferred = inferred
                   , Input._evalResults = CurAndPrev noEval noEval
-                  , Input._mStored = Just stored
+                  , Input._stored = Just stored
                   , Input._entityId = eId
                   }
                 )
@@ -550,7 +550,7 @@ holeResultsInject injectedArg val =
     where
         onInjectedPayload pl =
                 ( pl ^. Input.inferred
-                , (pl ^? Input.mStored . Lens._Just . Property.pVal, NotInjected)
+                , (pl ^? Input.stored . Lens._Just . Property.pVal, NotInjected)
                 )
         inject pl =
                 ( Monoid.First (Just pl)
@@ -575,7 +575,7 @@ mkHoleResultValInjected exprPl val =
             , case mInputPl of
               Nothing -> (Nothing, NotInjected)
               Just inputPl ->
-                (inputPl ^. Input.mStored <&> Property.value, Injected)
+                (inputPl ^. Input.stored <&> Property.value, Injected)
             )
 
 mkHoleResultVals ::

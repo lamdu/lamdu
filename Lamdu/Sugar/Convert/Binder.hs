@@ -60,7 +60,7 @@ localNewExtractDestPos ::
 localNewExtractDestPos val =
     ConvertM.scScopeInfo . ConvertM.siOuter .~
     ConvertM.OuterScopeInfo
-    { _osiPos = val ^. V.payload . Input.mStored
+    { _osiPos = val ^. V.payload . Input.stored
     , _osiVarsUnderPos = []
     }
     & ConvertM.local
@@ -79,7 +79,7 @@ makeInline mStored redex =
     [_singleUsage] ->
         inlineLet
         <$> mStored
-        <*> (Lens.traverse (^. Input.mStored) redex <&> fmap Property.value)
+        <*> (Lens.traverse (^. Input.stored) redex <&> fmap Property.value)
         & maybe CannotInline InlineVar
     [] -> CannotInline
     uses -> CannotInlineDueToUses uses
@@ -96,8 +96,8 @@ convertRedex expr redex =
             & localNewExtractDestPos expr
         actions <-
             mkLIActions
-            <$> expr ^. V.payload . Input.mStored
-            <*> Lens.traverse (^. Input.mStored) redex
+            <$> expr ^. V.payload . Input.stored
+            <*> Lens.traverse (^. Input.stored) redex
             & Lens.sequenceOf Lens._Just
         body <-
             makeBinderBody (redexBody redex)
@@ -105,7 +105,7 @@ convertRedex expr redex =
             & localNewExtractDestPos expr
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton (redexParam redex)
-                (makeInline (expr ^. V.payload . Input.mStored) redex))
+                (makeInline (expr ^. V.payload . Input.stored) redex))
         return Let
             { _lEntityId = defEntityId
             , _lValue =
@@ -144,7 +144,7 @@ makeBinderBody expr =
         content <- makeBinderContent expr
         BinderBody
             { _bbMActions =
-              expr ^. V.payload . Input.mStored
+              expr ^. V.payload . Input.stored
               <&> \exprProp ->
               BinderBodyActions
               { _bbaAddOuterLet =
@@ -191,7 +191,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
         convParams <- convertLamParams Nothing lam exprPl
         binder <-
             makeBinder
-            (exprPl ^. Input.mStored <&> Anchors.assocScopeRef . Property.value)
+            (exprPl ^. Input.stored <&> Anchors.assocScopeRef . Property.value)
             Nothing convParams (lam ^. V.lamResult)
         let setToInnerExprAction =
                 maybe NoInnerExpr SetToInnerExpr $

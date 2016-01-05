@@ -57,7 +57,7 @@ loadForLambdas val =
         loadLambdaParamList _ _ = return ()
 
         loadUnifyParamList pl =
-            case pl ^. Input.mStored of
+            case pl ^. Input.stored of
             Nothing -> return ()
             Just stored ->
                 do

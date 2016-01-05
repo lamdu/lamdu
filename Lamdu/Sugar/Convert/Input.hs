@@ -2,7 +2,7 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, DeriveFunctor, DeriveFoldable, DeriveTraversable, TemplateHaskell #-}
 module Lamdu.Sugar.Convert.Input
     ( Payload(..)
-        , varRefsOfLambda, entityId, inferred, mStored, evalResults, userData
+        , varRefsOfLambda, entityId, inferred, stored, evalResults, userData
     , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
     , inferredType, inferredScope
     , preparePayloads
@@ -32,7 +32,7 @@ data EvalResultsForExpr = EvalResultsForExpr
 data Payload m a = Payload
     { _entityId :: EntityId
     , _inferred :: Infer.Payload
-    , _mStored :: Maybe (ValIProperty m)
+    , _stored :: Maybe (ValIProperty m)
     , _evalResults :: CurAndPrev EvalResultsForExpr
     , -- The GetVars of this lambda's var if this is a lambda
       _varRefsOfLambda :: [EntityId]
