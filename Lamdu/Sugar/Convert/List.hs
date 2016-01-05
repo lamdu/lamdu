@@ -4,8 +4,6 @@ module Lamdu.Sugar.Convert.List
     , nil
     ) where
 
-import           Prelude.Compat
-
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (guard, void, MonadPlus(..))
@@ -30,6 +28,8 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+
+import           Prelude.Compat
 
 type T = Transaction
 
