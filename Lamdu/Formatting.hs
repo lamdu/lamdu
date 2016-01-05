@@ -55,10 +55,11 @@ formatNum x
         i = truncate x
 
 parseNum :: String -> Maybe Double
+parseNum ('.':searchTerm) = readMaybe ('0':searchTerm)
 parseNum searchTerm =
-    case reads ('0':searchTerm) of
+    case reads searchTerm of
     [(val, "")] -> Just val
-    [(val, ".")] -> Just val
+    [(val, ".")] | '.' `notElem` init searchTerm -> Just val
     _ -> Nothing
 
 formatBytes :: SBS.ByteString -> String
