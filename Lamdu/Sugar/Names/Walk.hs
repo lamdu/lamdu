@@ -40,7 +40,6 @@ class (MonadA m, MonadA (TM m)) => MonadNaming m where
     opGetTagName :: NameConvertor m
     opGetTIdName :: NameConvertor m
     opGetParamName :: NameConvertor m
-    opGetHiddenParamsName :: NameConvertor m
 
 type OldExpression m a = Expression (OldName m) (TM m) a
 type NewExpression m a = Expression (NewName m) (TM m) a

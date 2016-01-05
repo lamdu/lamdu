@@ -29,7 +29,6 @@ instance MonadA m => MonadNaming (Collect name m) where
     opWithDefName = cpsTellName
     opWithTagName = cpsTellName
     opGetParamName = tellName
-    opGetHiddenParamsName = tellName
     opGetTagName = tellName
     opGetTIdName = tellName
     opGetDefName = tellName
