@@ -16,7 +16,6 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
-import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (formatNum, formatBytes, formatText)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -67,12 +66,12 @@ makeNum ::
     Double -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 makeNum =
-    makeGeneric setColor . formatNum
+    makeGeneric setStyle . formatNum
     where
-        setColor action =
+        setStyle action =
             do
-                config <- ExprGuiM.readConfig
-                action & ExprGuiM.withFgColor (Config.literalColor config)
+                style <- ExprGuiM.readStyle
+                action & ExprGuiM.localEnv (WE.envTextStyle .~ Style.styleNum style)
 
 makeBytes ::
     MonadA m =>

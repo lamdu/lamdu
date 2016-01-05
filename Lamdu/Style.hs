@@ -25,6 +25,7 @@ data Style = Style
     , styleNameOrigin :: TextEdit.Style
     , styleBytes :: TextEdit.Style
     , styleText :: TextEdit.Style
+    , styleNum :: TextEdit.Style
     }
 
 flyNav :: FlyNav.Config
@@ -76,6 +77,8 @@ style config fonts =
       textEdit config (Config.literalColor config) (Fonts.fontMono fonts)
     , styleText =
       textEdit config (Config.literalColor config) (Fonts.fontFancy fonts)
+    , styleNum =
+      textEdit config (Config.literalColor config) (Fonts.fontMono fonts)
     }
     where
         Config.Name{..} = Config.name config
