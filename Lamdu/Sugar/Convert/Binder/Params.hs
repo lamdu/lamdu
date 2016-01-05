@@ -69,7 +69,7 @@ cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalP
 data FieldParam = FieldParam
     { fpTag :: T.Tag
     , fpFieldType :: Type
-    , fpValue :: CurAndPrev (Map ScopeId [(ScopeId, EV.EvalResult ())])
+    , fpValue :: CurAndPrev (Map ScopeId [(ScopeId, EV.Val ())])
     }
 
 data StoredLam m = StoredLam

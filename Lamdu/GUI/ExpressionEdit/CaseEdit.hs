@@ -83,7 +83,7 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
                     caseLabel <- headerLabel ":"
                     mTag <-
                         ExpressionGui.evaluationResult (arg ^. Sugar.rPayload)
-                        <&> (>>= (^? Lens._Right . EV._HInject . V.injectTag))
+                        <&> (>>= (^? EV._HInject . V.injectTag))
                     return (mTag, ExpressionGui.hbox [argEdit, caseLabel])
         (altsGui, resultPickers) <-
             ExprGuiM.listenResultPickers $

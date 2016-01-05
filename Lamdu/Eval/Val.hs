@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RecordWildCards #-}
 module Lamdu.Eval.Val
     ( EvalError(..)
-    , EvalResult, Val(..)
+    , Val(..)
     , ScopeId(..), scopeIdInt, topLevelScopeId
     , Closure(..), Scope(..)
     , emptyScope
@@ -26,7 +26,7 @@ newtype ScopeId = ScopeId { getScopeId :: Int }
     deriving (Show, Eq, Ord, Binary)
 
 data Scope srcId = Scope
-    { _scopeMap :: Map V.Var (EvalResult srcId)
+    { _scopeMap :: Map V.Var (Val srcId)
     , _scopeId :: ScopeId
     } deriving (Show, Functor, Foldable, Traversable)
 
@@ -47,17 +47,16 @@ data EvalError
     | EvalTodoError String
     deriving Show
 
-type EvalResult srcId = Either EvalError (Val srcId)
-
 data Val srcId
     = HFunc (Closure srcId)
-    | HRecExtend (V.RecExtend (EvalResult srcId))
+    | HRecExtend (V.RecExtend (Val srcId))
     | HRecEmpty
     | HAbsurd
-    | HCase (V.Case (EvalResult srcId))
+    | HCase (V.Case (Val srcId))
     | HLiteral V.Literal
     | HBuiltin FFIName
-    | HInject (V.Inject (EvalResult srcId))
+    | HInject (V.Inject (Val srcId))
+    | HError EvalError
     deriving (Functor, Foldable, Traversable)
 
 instance Show srcId => Show (Val srcId) where
@@ -67,6 +66,7 @@ instance Show srcId => Show (Val srcId) where
     show (HInject inject) = show inject
     show HRecEmpty = "()"
     show HAbsurd = "Absurd"
+    show (HError err) = show err
     show (HLiteral l) = show l
     show (HBuiltin ffiName) = show ffiName
 
@@ -78,11 +78,11 @@ topLevelScopeId = ScopeId 0
 emptyScope :: Scope srcId
 emptyScope = Scope Map.empty topLevelScopeId
 
-extractField :: T.Tag -> EvalResult srcId -> EvalResult srcId
-extractField _ (Left err) = Left err
-extractField tag (Right (HRecExtend (V.RecExtend vt vv vr)))
+extractField :: T.Tag -> Val srcId -> Val srcId
+extractField _ (HError err) = HError err
+extractField tag (HRecExtend (V.RecExtend vt vv vr))
     | vt == tag = vv
     | otherwise = extractField tag vr
-extractField tag (Right x) =
+extractField tag x =
     "Expected record with tag: " ++ show tag ++ " got: " ++ show (void x)
-    & EvalTypeError & Left
+    & EvalTypeError & HError

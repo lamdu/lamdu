@@ -21,7 +21,7 @@ import           Control.MonadA (MonadA)
 import           Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import qualified Lamdu.Data.Definition as Def
-import           Lamdu.Eval.Val (EvalResult, Val(..), EvalError(..), Closure(..), Scope(..), emptyScope, ScopeId(..), scopeIdInt)
+import           Lamdu.Eval.Val (Val(..), EvalError(..), Closure(..), Scope(..), emptyScope, ScopeId(..), scopeIdInt)
 import qualified Lamdu.Expr.Val as V
 
 import           Prelude.Compat
@@ -35,13 +35,13 @@ data EventLambdaApplied srcId = EventLambdaApplied
     { elaLam :: srcId
     , elaParentId :: !ScopeId
     , elaId :: !ScopeId
-    , elaArgument :: !(EvalResult srcId)
+    , elaArgument :: !(Val srcId)
     } deriving (Show, Functor, Foldable, Traversable)
 
 data EventResultComputed srcId = EventResultComputed
     { ercSource :: srcId
     , ercScope :: !ScopeId
-    , ercResult :: !(EvalResult srcId)
+    , ercResult :: !(Val srcId)
     } deriving (Show, Functor, Foldable, Traversable)
 
 data Event srcId
@@ -51,7 +51,7 @@ data Event srcId
 
 data EvalActions m srcId = EvalActions
     { _aReportEvent :: Event srcId -> m ()
-    , _aRunBuiltin :: Def.FFIName -> EvalResult srcId -> EvalResult srcId
+    , _aRunBuiltin :: Def.FFIName -> Val srcId -> Val srcId
     , _aLoadGlobal :: V.GlobalId -> m (Maybe (Def.Body (V.Val srcId)))
     }
 
@@ -61,7 +61,7 @@ newtype Env m srcId = Env
 
 data EvalState m srcId = EvalState
     { _esScopeCounter :: !ScopeId
-    , _esLoadedGlobals :: !(Map V.GlobalId (EvalResult srcId))
+    , _esLoadedGlobals :: !(Map V.GlobalId (Val srcId))
     , _esReader :: !(Env m srcId) -- This is ReaderT
     }
 
@@ -89,7 +89,7 @@ report event =
         rep <- ask <&> (^. eEvalActions . aReportEvent)
         rep event & lift
 
-bindVar :: MonadA m => srcId -> V.Var -> EvalResult srcId -> Scope srcId -> EvalT srcId m (Scope srcId)
+bindVar :: MonadA m => srcId -> V.Var -> Val srcId -> Scope srcId -> EvalT srcId m (Scope srcId)
 bindVar lamPl var val (Scope parentMap parentId) =
     do
         newScopeId <- liftState $ use esScopeCounter
@@ -106,9 +106,8 @@ bindVar lamPl var val (Scope parentMap parentId) =
             } & return
 
 evalApply ::
-    MonadA m => V.Apply (EvalResult srcId) -> EvalT srcId m (EvalResult srcId)
-evalApply (V.Apply (Left err) _) = Left err & return
-evalApply (V.Apply (Right func) argEr) =
+    MonadA m => V.Apply (Val srcId) -> EvalT srcId m (Val srcId)
+evalApply (V.Apply func argEr) =
     case func of
     HFunc (Closure outerScope (V.Lam var body) lamPl) ->
         bindVar lamPl var argEr outerScope
@@ -119,42 +118,43 @@ evalApply (V.Apply (Right func) argEr) =
             runBuiltin ffiname argEr & return
     HCase (V.Case caseTag handlerFunc rest) ->
         case argEr of
-        Left err -> Left err & return
-        Right (HInject (V.Inject sumTag injected))
+        HInject (V.Inject sumTag injected)
             | caseTag == sumTag -> V.Apply handlerFunc injected & evalApply
             | otherwise         -> V.Apply rest        argEr    & evalApply
-        Right x -> EvalTypeError ("Case expects Inject, found: " ++ show (void x)) & Left & return
+        HError err -> HError err & return
+        x -> EvalTypeError ("Case expects Inject, found: " ++ show (void x)) & HError & return
     HAbsurd ->
         case argEr of
-        Left err -> err
-        Right x ->
+        HError err -> err
+        x ->
             "Value impossibly typed as Void: " ++ show (void x) & EvalTypeError
-        & Left & return
+        & HError & return
+    HError err -> HError err & return
     _ ->
         "Apply expects func, builtin, or case, found: " ++ show (void func)
-        & EvalTypeError & Left & return
+        & EvalTypeError & HError & return
 
 evalGetField ::
-    Monad m => V.GetField (EvalResult srcId) -> EvalT srcId m (EvalResult srcId)
-evalGetField (V.GetField (Left err) _) = Left err & return
-evalGetField (V.GetField (Right (HRecExtend (V.RecExtend tag val rest))) searchTag)
+    Monad m => V.GetField (Val srcId) -> EvalT srcId m (Val srcId)
+evalGetField (V.GetField (HError err) _) = HError err & return
+evalGetField (V.GetField (HRecExtend (V.RecExtend tag val rest)) searchTag)
     | searchTag == tag = return val
     | otherwise = V.GetField rest searchTag & evalGetField
-evalGetField (V.GetField (Right x) y) =
+evalGetField (V.GetField x y) =
     "GetField of " ++ show y ++ " expects record, found: " ++ show (void x)
-    & EvalTypeError & Left & return
+    & EvalTypeError & HError & return
 
-evalScopedVal :: MonadA m => ScopedVal srcId -> EvalT srcId m (EvalResult srcId)
+evalScopedVal :: MonadA m => ScopedVal srcId -> EvalT srcId m (Val srcId)
 evalScopedVal (ScopedVal scope expr) =
     reportResultComputed =<<
     case expr ^. V.body of
     V.BAbs lam ->
-        Closure scope lam (expr ^. V.payload) & HFunc & Right & return
+        Closure scope lam (expr ^. V.payload) & HFunc & return
     V.BApp apply -> traverse inner apply >>= evalApply
     V.BGetField getField -> traverse inner getField >>= evalGetField
-    V.BInject    inject    -> traverse inner inject    <&> Right . HInject
-    V.BRecExtend recExtend -> traverse inner recExtend <&> Right . HRecExtend
-    V.BCase      case_     -> traverse inner case_     <&> Right . HCase
+    V.BInject    inject    -> traverse inner inject    <&> HInject
+    V.BRecExtend recExtend -> traverse inner recExtend <&> HRecExtend
+    V.BCase      case_     -> traverse inner case_     <&> HCase
     V.BFromNom (V.Nom _ v) -> inner v
     V.BToNom   (V.Nom _ v) -> inner v
     V.BLeaf (V.LGlobal global) -> loadGlobal global
@@ -162,12 +162,12 @@ evalScopedVal (ScopedVal scope expr) =
         case scope ^. scopeMap . at var of
         Nothing ->
             "Variable " ++ show var ++ " out of scope"
-            & EvalTypeError & Left & return
+            & EvalTypeError & HError & return
         Just val -> return val
-    V.BLeaf V.LRecEmpty -> Right HRecEmpty & return
-    V.BLeaf V.LAbsurd   -> Right HAbsurd & return
-    V.BLeaf (V.LLiteral literal) -> HLiteral literal & Right & return
-    V.BLeaf V.LHole -> Left EvalHole & return
+    V.BLeaf V.LRecEmpty -> HRecEmpty & return
+    V.BLeaf V.LAbsurd   -> HAbsurd & return
+    V.BLeaf (V.LLiteral literal) -> HLiteral literal & return
+    V.BLeaf V.LHole -> HError EvalHole & return
     where
         inner = evalScopedVal . ScopedVal scope
         reportResultComputed result =
@@ -176,7 +176,7 @@ evalScopedVal (ScopedVal scope expr) =
                     & EResultComputed & report
                 return result
 
-loadGlobal :: MonadA m => V.GlobalId -> EvalT srcId m (EvalResult srcId)
+loadGlobal :: MonadA m => V.GlobalId -> EvalT srcId m (Val srcId)
 loadGlobal g =
     do
         loaded <- liftState $ use (esLoadedGlobals . at g)
@@ -187,9 +187,9 @@ loadGlobal g =
                 mLoadedGlobal <- lift $ loader g
                 result <-
                     case mLoadedGlobal of
-                    Nothing -> EvalLoadGlobalFailed g & Left & return
+                    Nothing -> EvalLoadGlobalFailed g & HError & return
                     Just (Def.BodyBuiltin (Def.Builtin name _t)) ->
-                        HBuiltin name & Right & return
+                        HBuiltin name & return
                     Just (Def.BodyExpr (Def.Expr expr _t)) ->
                         evalScopedVal $ ScopedVal emptyScope expr
                 liftState $ esLoadedGlobals . at g ?= result

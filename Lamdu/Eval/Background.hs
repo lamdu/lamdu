@@ -30,16 +30,16 @@ import qualified Data.Set as Set
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Eval as Eval
 import           Lamdu.Eval.Results (EvalResults(..))
-import           Lamdu.Eval.Val (EvalResult, ScopeId)
+import           Lamdu.Eval.Val (Val, ScopeId)
 import qualified Lamdu.Eval.Val as EvalVal
 import qualified Lamdu.Expr.Val as V
 import           System.IO (stderr)
 
 data Actions srcId = Actions
     { _aLoadGlobal :: V.GlobalId -> IO (Maybe (Def.Body (V.Val srcId)))
-    , _aRunBuiltin :: Def.FFIName -> EvalResult srcId -> EvalResult srcId
+    , _aRunBuiltin :: Def.FFIName -> Val srcId -> Val srcId
     , _aReportUpdatesAvailable :: IO ()
-    , _aCompleted :: Either E.SomeException (EvalResult srcId) -> IO ()
+    , _aCompleted :: Either E.SomeException (Val srcId) -> IO ()
     }
 
 Lens.makeLenses ''Actions
@@ -47,15 +47,15 @@ Lens.makeLenses ''Actions
 data Status srcId
     = Running
     | Stopped
-    | Finished (Either E.SomeException (EvalResult srcId))
+    | Finished (Either E.SomeException (Val srcId))
 
 Lens.makePrisms ''Status
 
 data State srcId = State
     { _sStatus :: !(Status srcId)
-    , _sAppliesOfLam :: !(Map srcId (Map ScopeId [(ScopeId, EvalResult srcId)]))
+    , _sAppliesOfLam :: !(Map srcId (Map ScopeId [(ScopeId, Val srcId)]))
       -- Maps of already-evaluated srcId's/thunks
-    , _sValMap :: !(Map srcId (Map ScopeId (EvalResult srcId)))
+    , _sValMap :: !(Map srcId (Map ScopeId (Val srcId)))
     , _sDependencies :: !(Set srcId, Set V.GlobalId)
     }
 
@@ -142,10 +142,10 @@ evalThread actions stateRef src =
 results :: State srcId -> EvalResults srcId
 results state =
     EvalResults
-    { _erExprValues = state ^. sValMap <&> Lens.mapped . Lens._Right . Lens.mapped .~ ()
+    { _erExprValues = state ^. sValMap <&> Lens.mapped . Lens.mapped .~ ()
     , _erAppliesOfLam =
         state ^. sAppliesOfLam
-        <&> Lens.mapped . Lens.mapped . Lens._2 . Lens._Right . Lens.mapped .~ ()
+        <&> Lens.mapped . Lens.mapped . Lens._2 . Lens.mapped .~ ()
     }
 
 getState :: Evaluator srcId -> IO (State srcId)

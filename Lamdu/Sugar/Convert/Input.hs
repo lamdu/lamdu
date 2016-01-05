@@ -14,10 +14,10 @@ import           Control.Lens.Operators
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Lamdu.Eval.Val (EvalResult, ScopeId)
+import           Lamdu.Eval.Val (ScopeId)
+import qualified Lamdu.Eval.Val as EV
 import           Lamdu.Expr.IRef (ValIProperty)
 import           Lamdu.Expr.Type (Type)
-import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.EntityId (EntityId)
@@ -25,8 +25,8 @@ import           Lamdu.Sugar.EntityId (EntityId)
 import           Prelude.Compat
 
 data EvalResultsForExpr = EvalResultsForExpr
-    { _eResults :: Map ScopeId (EvalResult ())
-    , _eAppliesOfLam :: Map ScopeId [(ScopeId, EvalResult ())]
+    { _eResults :: Map ScopeId (EV.Val ())
+    , _eAppliesOfLam :: Map ScopeId [(ScopeId, EV.Val ())]
     }
 
 data Payload m a = Payload
@@ -51,19 +51,19 @@ inferredScope = inferred . Infer.plScope
 emptyEvalResults :: EvalResultsForExpr
 emptyEvalResults = EvalResultsForExpr Map.empty Map.empty
 
-preparePayloads :: Val (EntityId, [EntityId] -> pl) -> Val pl
+preparePayloads :: V.Val (EntityId, [EntityId] -> pl) -> V.Val pl
 preparePayloads =
     snd . go
     where
-        go :: Val (EntityId, [EntityId] -> pl) -> (Map V.Var [EntityId], Val pl)
-        go (Val (x, mkPayload) body) =
+        go :: V.Val (EntityId, [EntityId] -> pl) -> (Map V.Var [EntityId], V.Val pl)
+        go (V.Val (x, mkPayload) body) =
             ( childrenVars
               & case body of
                 V.BLeaf (V.LVar var) -> Lens.at var <>~ Just [x]
                 V.BAbs (V.Lam var _) -> Lens.at var .~ Nothing
                 _ -> id
             , b <&> snd
-              & Val
+              & V.Val
                 ( case body of
                   V.BAbs (V.Lam var _) -> childrenVars ^. Lens.at var . Lens._Just
                   _ -> []

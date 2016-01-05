@@ -4,14 +4,14 @@ module Lamdu.Eval.Results where
 import qualified Control.Lens as Lens
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Lamdu.Eval.Val (EvalResult, ScopeId)
+import           Lamdu.Eval.Val (Val, ScopeId)
 
 import           Prelude.Compat
 
 data EvalResults srcId =
     EvalResults
-    { _erExprValues :: Map srcId (Map ScopeId (EvalResult ()))
-    , _erAppliesOfLam :: Map srcId (Map ScopeId [(ScopeId, EvalResult ())])
+    { _erExprValues :: Map srcId (Map ScopeId (Val ()))
+    , _erAppliesOfLam :: Map srcId (Map ScopeId [(ScopeId, Val ())])
     } deriving Show
 
 Lens.makeLenses ''EvalResults
