@@ -18,6 +18,7 @@ instance E.Exception MissingFont
 
 data Fonts a = Fonts
     { fontDefault :: a
+    , fontFancy :: a
     , fontAutoName :: a
     , fontMono :: a
     } deriving (Eq, Generic, Show, Functor, Foldable, Traversable)

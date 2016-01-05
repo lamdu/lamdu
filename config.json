@@ -1,6 +1,7 @@
 {
     "fonts": {
         "fontDefault": "fonts/DejaVuSans.ttf",
+        "fontFancy": "fonts/DejaVuSerif.ttf",
         "fontAutoName": "fonts/DejaVuSerif-Italic.ttf",
         "fontMono": "fonts/DejaVuSansMono.ttf"
     },
