@@ -172,7 +172,6 @@ Executable lamdu
                   , Lamdu.Eval
                   , Lamdu.Eval.Background
                   , Lamdu.Eval.Results
-                  , Lamdu.Eval.ToExpr
                   , Lamdu.Eval.Val
                   , Lamdu.EvalManager
                   , Lamdu.Expr.Constraints
