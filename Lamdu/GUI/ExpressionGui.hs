@@ -647,7 +647,7 @@ valOfScope :: Sugar.Annotation -> CurAndPrev (Maybe ScopeId) -> Maybe EvalResDis
 valOfScope annotation mScopeIds =
     go
     <$> curPrevTag
-    <*> (annotation ^. Sugar.aMEvaluationResult)
+    <*> annotation ^. Sugar.aMEvaluationResult
     <*> mScopeIds
     & fallbackToPrev
     where
