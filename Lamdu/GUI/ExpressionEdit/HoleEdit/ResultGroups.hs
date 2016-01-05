@@ -162,12 +162,10 @@ makeAll holeInfo =
 mkGroup :: MonadA m => Sugar.HoleOption (Name m) m -> T m (Group m)
 mkGroup option =
     do
-        sugaredBaseExpr <- option ^. Sugar.hoSugaredBaseExpr
         names <- option ^. Sugar.hoNames
         pure Group
             { _groupSearchTerms =
-              ValTerms.body (sugaredBaseExpr ^. Sugar.rBody) <>
-              (names <&> snd <&> ValTerms.ofName)
+              ValTerms.val (option ^. Sugar.hoVal) <> concatMap ValTerms.ofNamePair names
             , _groupResults = option ^. Sugar.hoResults
             , _groupId = WidgetIds.hash (option ^. Sugar.hoVal)
             }

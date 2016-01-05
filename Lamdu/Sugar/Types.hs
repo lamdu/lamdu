@@ -83,7 +83,7 @@ module Lamdu.Sugar.Types
     , FuncParam(..), fpId, fpInfo, fpAnnotation, fpHiddenIds
     , Unwrap(..), _UnwrapAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
-    , HoleOption(..), hoVal, hoNames, hoSugaredBaseExpr, hoResults
+    , HoleOption(..), hoVal, hoNames, hoResults
     , HoleActions(..), holeGuid, holeOptions, holeOptionLiteral
     , Hole(..), holeActions, holeMArg
     , ScopeGetVar(..), sgvGetVar, sgvVal
@@ -265,7 +265,6 @@ data NameType = DefName | TagName | NominalName | ParamName
 data HoleOption name m = HoleOption
     { _hoVal :: V.Val ()
     , _hoNames :: T m [(NameType, name)]
-    , _hoSugaredBaseExpr :: T m (Expression name m ())
     , -- A group in the hole results based on this option
       _hoResults :: ListT (T m) (HoleResultScore, T m (HoleResult name m))
     }
