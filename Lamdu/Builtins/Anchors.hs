@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.Builtins.Anchors
-    ( recurseVar, objTag, infixlTag, infixrTag, listTid
+    ( recurseVar, objTag, infixlTag, infixrTag, listTid, textTid
     , headTag, tailTag, consTag, nilTag, trueTag, falseTag, justTag, nothingTag
     , Order, anchorTags
     , floatId, bytesId
@@ -30,6 +30,9 @@ bytesId = "BI:bytes"
 
 listTid :: T.NominalId
 listTid = "BI:list"
+
+textTid :: T.NominalId
+textTid = "BI:text"
 
 headTag :: Tag
 headTag = "BI:head"

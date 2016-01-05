@@ -106,9 +106,10 @@ blessAnchors =
     do
         mapM_ describeAnchorTag Builtins.anchorTags
         lift $ setName Builtins.listTid "List"
+        lift $ setName Builtins.textTid "Text"
         lift $ setName Builtins.floatId "Num"
         lift $ setName Builtins.bytesId "Bytes"
-        Writer.tell $ mempty { publicTIds = [Builtins.listTid] }
+        Writer.tell $ mempty { publicTIds = [Builtins.listTid, Builtins.textTid] }
     where
         describeAnchorTag (order, tag, name) =
             do
@@ -216,6 +217,11 @@ createBool =
             ]
         tyCon [] & return
 
+createText :: MonadA m => M m Type
+createText =
+    T.TPrim Builtins.bytesId & Scheme.mono & const
+    & newNominal Builtins.textTid [] & lift <&> ($ [])
+
 float :: Type
 float = T.TPrim Builtins.floatId
 
@@ -230,6 +236,7 @@ createPublics =
         _ <- createMaybe valTParamId
         _ <- createStream valTParamId
         _ <- createInfiniteStream valTParamId
+        _ <- createText
         bool <- createBool
 
         let infixType lType rType resType =
