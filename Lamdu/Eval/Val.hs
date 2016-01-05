@@ -37,7 +37,8 @@ data Closure srcId = Closure
     { _cOuterScope :: Scope srcId
     , _cLam :: V.Lam (V.Val srcId)
     , _cLamPayload :: srcId
-    } deriving (Show, Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable)
+instance Show (Closure srcId) where show _ = "Closure{..}"
 
 data EvalError
     = EvalHole
@@ -59,7 +60,7 @@ data Val srcId
     | HError EvalError
     deriving (Functor, Foldable, Traversable)
 
-instance Show srcId => Show (Val srcId) where
+instance Show (Val srcId) where
     show (HFunc closure) = show closure
     show (HRecExtend recExtend) = show recExtend
     show (HCase case_) = show case_
