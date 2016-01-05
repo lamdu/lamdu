@@ -85,6 +85,7 @@ makeEditor body =
     Sugar.BodyApply        x -> x & ApplyEdit.make
     Sugar.BodyLam          x -> x & LambdaEdit.make
     Sugar.BodyLiteralNum   x -> x & LiteralEdit.makeNum
+    Sugar.BodyLiteralText  x -> x & LiteralEdit.makeText
     Sugar.BodyLiteralBytes x -> x & LiteralEdit.makeBytes
     Sugar.BodyList         x -> x & ListEdit.make
     Sugar.BodyRecord       x -> x & RecordEdit.make

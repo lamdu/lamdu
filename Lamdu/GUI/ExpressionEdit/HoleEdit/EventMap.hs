@@ -82,6 +82,7 @@ disallowChars Config.Hole{..} searchTerm =
         disallowMix =
             case searchTerm of
             "" -> id
+            '"':_ -> id
             "." -> id
             '.':x:_
                 | x `elem` operatorChars -> allowOperatorsOnly
@@ -92,7 +93,9 @@ disallowChars Config.Hole{..} searchTerm =
                 | all (`elem` digitChars) searchTerm -> allowNumCharsOnly
                 | all (`notElem` operatorChars) searchTerm -> disallowOperators
                 | otherwise ->
-                  error "Mix of operator/non-operator chars happened in search term?"
+                  -- Mix of operator/non-operator chars happened in search term
+                  -- This can happen when editing a literal text, allow everything
+                  id
 
 deleteKeys :: [ModKey] -> E.EventMap a -> E.EventMap a
 deleteKeys = E.deleteKeys . map (E.KeyEvent GLFW.KeyState'Pressed)

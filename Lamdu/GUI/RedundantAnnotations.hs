@@ -43,6 +43,8 @@ markAnnotationsToDisplay (Expression oldBody pl) =
     case newBody of
     BodyLiteralNum _ ->
         Expression newBody pl & dontShowAnnotation
+    BodyLiteralText _ ->
+        Expression newBody pl & dontShowAnnotation
     BodyLiteralBytes _ ->
         Expression newBody pl & dontShowEval
     BodyRecord _ ->

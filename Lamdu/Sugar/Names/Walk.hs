@@ -84,6 +84,8 @@ toHoleActions ha@HoleActions {..} =
                 _holeOptionLiteralNum <&> (>>= run . toHoleOption)
             , _holeOptionLiteralBytes =
                 _holeOptionLiteralBytes <&> (>>= run . toHoleOption)
+            , _holeOptionLiteralText =
+                _holeOptionLiteralText <&> (>>= run . toHoleOption)
             }
 
 toParam ::
@@ -176,6 +178,7 @@ toBody expr = \case
     BodyFromNom      x -> traverse expr x >>= nTId toTIdG <&> BodyFromNom
     BodyGetVar       x -> toGetVar x <&> BodyGetVar
     BodyLiteralNum   x -> pure $ BodyLiteralNum x
+    BodyLiteralText  x -> pure $ BodyLiteralText x
     BodyLiteralBytes x -> pure $ BodyLiteralBytes x
     BodyLam          x -> toLam expr x <&> BodyLam
     where

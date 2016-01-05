@@ -80,6 +80,7 @@ orderBody (Sugar.BodyCase c) = orderCase c <&> Sugar.BodyCase
 orderBody (Sugar.BodyHole a) = orderHole a & Sugar.BodyHole & return
 orderBody x@Sugar.BodyLiteralBytes{} = return x
 orderBody x@Sugar.BodyLiteralNum{} = return x
+orderBody x@Sugar.BodyLiteralText{} = return x
 orderBody x@Sugar.BodyList{} = return x
 orderBody x@Sugar.BodyGetField{} = return x
 orderBody x@Sugar.BodyGetVar{} = return x

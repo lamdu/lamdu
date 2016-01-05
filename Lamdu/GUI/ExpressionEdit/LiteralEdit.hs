@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.LiteralEdit
-    ( makeNum, makeBytes
+    ( makeNum, makeBytes, makeText
     ) where
 
 import qualified Control.Lens as Lens
@@ -17,7 +17,7 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
-import           Lamdu.Formatting (formatNum, formatBytes)
+import           Lamdu.Formatting (formatNum, formatBytes, formatText)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -85,3 +85,15 @@ makeBytes =
             do
                 style <- ExprGuiM.readStyle
                 action & ExprGuiM.localEnv (WE.envTextStyle .~ Style.styleBytes style)
+
+makeText ::
+    MonadA m =>
+    String -> Sugar.Payload m ExprGuiT.Payload ->
+    ExprGuiM m (ExpressionGui m)
+makeText =
+    makeGeneric setStyle . formatText
+    where
+        setStyle action =
+            do
+                style <- ExprGuiM.readStyle
+                action & ExprGuiM.localEnv (WE.envTextStyle .~ Style.styleText style)

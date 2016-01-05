@@ -5,8 +5,6 @@ module Lamdu.Sugar.Convert.Hole
     , BaseExpr(..)
     ) where
 
-import           Prelude.Compat
-
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -19,6 +17,7 @@ import           Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
 import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)
 import           Data.Binary.Utils (encodeS)
+import qualified Data.ByteString.UTF8 as UTF8
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
@@ -43,6 +42,8 @@ import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Infer.Update (Update, update)
 import qualified Lamdu.Infer.Update as Update
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
+import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
+import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -50,11 +51,11 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.OrderTags (orderType)
 import           Lamdu.Sugar.Types
-import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
-import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
 import qualified System.Random as Random
 import           System.Random.Utils (genFromHashable)
 import           Text.PrettyPrint.HughesPJClass (pPrint, prettyShow)
+
+import           Prelude.Compat
 
 type T = Transaction
 
@@ -186,9 +187,9 @@ mkWritableHoleActions ::
     ConvertM m (HoleActions Guid m)
 mkWritableHoleActions mInjectedArg exprPl stored = do
     sugarContext <- ConvertM.readContext
-    let mkLiteralOption =
-            return . mkHoleOption sugarContext mInjectedArg exprPl stored .
-            SeedExpr . Val () . V.BLeaf . V.LLiteral
+    let mkOption =
+            return . mkHoleOption sugarContext mInjectedArg exprPl stored . SeedExpr
+        mkLiteralOption = mkOption . Val () . V.BLeaf . V.LLiteral
     pure HoleActions
         { _holeOptions =
             mkOptions sugarContext mInjectedArg exprPl stored
@@ -198,6 +199,10 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
             mkLiteralOption . V.Literal Builtins.floatId . encodeS
         , _holeOptionLiteralBytes =
             mkLiteralOption . V.Literal Builtins.bytesId
+        , _holeOptionLiteralText =
+            mkOption . Val () .
+            V.BToNom . V.Nom Builtins.textTid .
+            V.Val () . V.BLeaf . V.LLiteral . V.Literal Builtins.bytesId . UTF8.fromString
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
         }
 

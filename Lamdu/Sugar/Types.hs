@@ -34,7 +34,7 @@ module Lamdu.Sugar.Types
         , wrap, setToHole, setToInnerExpr, extract
     , Body(..)
         , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
-        , _BodyLiteralNum, _BodyLiteralBytes, _BodyList, _BodyCase, _BodyRecord
+        , _BodyLiteralNum, _BodyLiteralBytes, _BodyLiteralText, _BodyList, _BodyCase, _BodyRecord
         , _BodyFromNom, _BodyToNom
     , EvaluationResult
     , Annotation(..), aInferredType, aMEvaluationResult
@@ -84,6 +84,7 @@ module Lamdu.Sugar.Types
     , HoleArg(..), haExpr, haUnwrap
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
     , HoleActions(..), holeGuid, holeOptions, holeOptionLiteralNum, holeOptionLiteralBytes
+      , holeOptionLiteralText
     , Hole(..), holeMActions, holeMArg
     , ScopeGetVar(..), sgvGetVar, sgvVal
     , TIdG(..), tidgName, tidgTId
@@ -269,6 +270,7 @@ data HoleActions name m = HoleActions
     , _holeOptions :: T m [HoleOption name m]
     , _holeOptionLiteralNum :: Double -> T m (HoleOption name m)
     , _holeOptionLiteralBytes :: SBS.ByteString -> T m (HoleOption name m)
+    , _holeOptionLiteralText :: String -> T m (HoleOption name m)
     }
 
 data Unwrap m
@@ -449,6 +451,7 @@ data Body name m expr
     | BodyHole (Hole name m expr)
     | BodyLiteralNum Double
     | BodyLiteralBytes SBS.ByteString
+    | BodyLiteralText String
     | BodyList (List m expr)
     | BodyRecord (Record name m expr)
     | BodyGetField (GetField name expr)
@@ -473,6 +476,7 @@ instance Show expr => Show (Body name m expr) where
     show BodyHole {} = "Hole"
     show (BodyLiteralNum i) = show i
     show (BodyLiteralBytes i) = show i
+    show (BodyLiteralText i) = show i
     show (BodyList (List items _ _)) =
         concat
         [ "["

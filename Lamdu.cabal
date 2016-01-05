@@ -281,6 +281,7 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.ParamList
                   , Lamdu.Sugar.Convert.Record
                   , Lamdu.Sugar.Convert.TIdG
+                  , Lamdu.Sugar.Convert.Text
                   , Lamdu.Sugar.EntityId
                   , Lamdu.Sugar.Internal
                   , Lamdu.Sugar.Internal.EntityId

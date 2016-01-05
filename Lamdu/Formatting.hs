@@ -2,6 +2,7 @@
 module Lamdu.Formatting
     ( formatNum
     , formatBytes, parseBytes
+    , formatText, parseText
     ) where
 
 import           Control.Lens.Operators
@@ -9,6 +10,7 @@ import qualified Data.ByteString as SBS
 import qualified Data.Char as Char
 import           Data.Word (Word8)
 import           Text.Printf (printf)
+import           Text.Read (readMaybe)
 
 import           Prelude.Compat
 
@@ -54,3 +56,14 @@ formatNum x
 
 formatBytes :: SBS.ByteString -> String
 formatBytes bs = '#' : concatMap showHexByte (SBS.unpack bs)
+
+parseText :: String -> Maybe String
+parseText = readMaybe
+
+formatText :: String -> String
+formatText text =
+    concat ["\"", concatMap escape text, "\""]
+    where
+        escape c
+            | Char.isControl c = Char.showLitChar c ""
+            | otherwise = [c]
