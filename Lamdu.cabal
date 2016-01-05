@@ -216,6 +216,7 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ShownResult
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.State
+                  , Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
                   , Lamdu.GUI.ExpressionEdit.InjectEdit

@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, NoImplicitPrelude, FlexibleContexts, RecordWildCards, OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, OverloadedStrings, TemplateHaskell #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
     ( makeAll, HaveHiddenResults(..)
     , Result(..)
@@ -29,12 +29,12 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm)
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.Names.Get as NamesGet
-import           Lamdu.Sugar.Names.Types (Name(..), NameCollision(..))
+import           Lamdu.Sugar.Names.Types (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Prelude.Compat
@@ -71,10 +71,6 @@ data ResultsList m = ResultsList
     , _rlExtra :: [Result m]
     }
 Lens.makeLenses ''ResultsList
-
-searchTermOfName :: Name m -> String
-searchTermOfName (Name _ NoCollision _ varName) = varName
-searchTermOfName (Name _ (Collision suffix) _ varName) = varName ++ show suffix
 
 prefixId :: HoleInfo m -> WidgetId.Id
 prefixId = HoleWidgetIds.hidResultsPrefix . hiIds
@@ -164,51 +160,12 @@ makeAll holeInfo =
             >>= collectResults config
             & ExprGuiM.transaction
 
-formatLiteral :: Sugar.Literal -> String
-formatLiteral (Sugar.LiteralNum i) = format i
-formatLiteral (Sugar.LiteralText i) = format i
-formatLiteral (Sugar.LiteralBytes i) = format i
-
-searchTermsOfBodyShape :: Sugar.Body (Name m) m expr -> [String]
-searchTermsOfBodyShape = \case
-    Sugar.BodyLam {} -> ["lambda", "\\", "Λ", "λ"]
-    Sugar.BodyApply {} -> ["Apply"]
-    Sugar.BodyList {} -> ["list", "[]"]
-    Sugar.BodyRecord r ->
-        ["record", "{}", "()"] ++
-        case r of
-        Sugar.Record [] Sugar.ClosedRecord{} _ -> ["empty"]
-        _ -> []
-    Sugar.BodyGetField gf ->
-        [".", "field", "." ++ searchTermOfName (gf ^. Sugar.gfTag . Sugar.tagGName)]
-    Sugar.BodyCase cas ->
-        ["case", ":"] ++
-        case cas of
-            Sugar.Case Sugar.LambdaCase [] Sugar.ClosedCase{} _ _ -> ["absurd"]
-            _ -> []
-    Sugar.BodyInject {} -> ["inject", "[]"]
-    Sugar.BodyLiteral i -> [formatLiteral i]
-    Sugar.BodyGetVar Sugar.GetParamsRecord {} -> ["Params"]
-    Sugar.BodyGetVar {} -> []
-    Sugar.BodyToNom {} -> []
-    Sugar.BodyFromNom {} -> []
-    Sugar.BodyHole {} -> []
-
-searchTermsOfBodyNames :: MonadA m => Sugar.Body (Name m) m expr -> [String]
-searchTermsOfBodyNames = \case
-    Sugar.BodyGetVar Sugar.GetParamsRecord {} -> []
-    Sugar.BodyLam {} -> []
-    body -> NamesGet.fromBody body <&> searchTermOfName
-
 mkGroup :: MonadA m => Sugar.HoleOption (Name m) m -> T m (Group m)
 mkGroup option =
     do
         sugaredBaseExpr <- option ^. Sugar.hoSugaredBaseExpr
-        let searchTerms =
-                (searchTermsOfBodyNames <> searchTermsOfBodyShape)
-                (sugaredBaseExpr ^. Sugar.rBody)
         pure Group
-            { _groupSearchTerms = searchTerms
+            { _groupSearchTerms = sugaredBaseExpr ^. Sugar.rBody & ValTerms.body
             , _groupResults = option ^. Sugar.hoResults
             , _groupId = WidgetIds.hash (option ^. Sugar.hoVal)
             }
