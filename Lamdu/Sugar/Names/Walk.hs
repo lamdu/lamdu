@@ -177,9 +177,7 @@ toBody expr = \case
     BodyToNom        x -> traverse expr x >>= nTId toTIdG <&> BodyToNom
     BodyFromNom      x -> traverse expr x >>= nTId toTIdG <&> BodyFromNom
     BodyGetVar       x -> toGetVar x <&> BodyGetVar
-    BodyLiteralNum   x -> pure $ BodyLiteralNum x
-    BodyLiteralText  x -> pure $ BodyLiteralText x
-    BodyLiteralBytes x -> pure $ BodyLiteralBytes x
+    BodyLiteral      x -> pure $ BodyLiteral x
     BodyLam          x -> toLam expr x <&> BodyLam
     where
         toTagG = tagGName opGetTagName

@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.LiteralEdit
-    ( makeNum, makeBytes, makeText
+    ( make
     ) where
 
 import qualified Control.Lens as Lens
@@ -97,3 +97,11 @@ makeText =
             do
                 style <- ExprGuiM.readStyle
                 action & ExprGuiM.localEnv (WE.envTextStyle .~ Style.styleText style)
+
+make ::
+    MonadA m =>
+    Sugar.Literal -> Sugar.Payload m ExprGuiT.Payload ->
+    ExprGuiM m (ExpressionGui m)
+make (Sugar.LiteralNum x) = makeNum x
+make (Sugar.LiteralBytes x) = makeBytes x
+make (Sugar.LiteralText x) = makeText x

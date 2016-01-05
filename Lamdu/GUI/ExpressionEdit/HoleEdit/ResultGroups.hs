@@ -164,6 +164,11 @@ makeAll holeInfo =
             >>= collectResults config
             & ExprGuiM.transaction
 
+formatLiteral :: Sugar.Literal -> String
+formatLiteral (Sugar.LiteralNum i) = formatNum i
+formatLiteral (Sugar.LiteralText i) = formatText i
+formatLiteral (Sugar.LiteralBytes i) = formatBytes i
+
 searchTermsOfBodyShape :: Sugar.Body (Name m) m expr -> [String]
 searchTermsOfBodyShape = \case
     Sugar.BodyLam {} -> ["lambda", "\\", "Λ", "λ"]
@@ -182,9 +187,7 @@ searchTermsOfBodyShape = \case
             Sugar.Case Sugar.LambdaCase [] Sugar.ClosedCase{} _ _ -> ["absurd"]
             _ -> []
     Sugar.BodyInject {} -> ["inject", "[]"]
-    Sugar.BodyLiteralNum i -> [formatNum i]
-    Sugar.BodyLiteralText i -> [formatText i]
-    Sugar.BodyLiteralBytes i -> [formatBytes i]
+    Sugar.BodyLiteral i -> [formatLiteral i]
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> ["Params"]
     Sugar.BodyGetVar {} -> []
     Sugar.BodyToNom {} -> []

@@ -43,11 +43,11 @@ jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
 convertLiteralFloat ::
     MonadA m => Double -> Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertLiteralFloat i exprPl = addActions exprPl $ BodyLiteralNum i
+convertLiteralFloat i exprPl = addActions exprPl $ BodyLiteral (LiteralNum i)
 
 convertLiteralBytes ::
     MonadA m => SBS.ByteString -> Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertLiteralBytes bs exprPl = addActions exprPl $ BodyLiteralBytes bs
+convertLiteralBytes bs exprPl = addActions exprPl $ BodyLiteral (LiteralBytes bs)
 
 convertGlobal ::
     MonadA m => V.GlobalId -> Input.Payload m a -> ConvertM m (ExpressionU m a)

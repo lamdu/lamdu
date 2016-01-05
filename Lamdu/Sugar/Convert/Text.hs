@@ -33,6 +33,6 @@ text (V.Nom tid (Val litPl body)) toNomPl =
         V.Literal litTag utf8Bytes <- body ^? ExprLens.valBodyLiteral & maybeToMPlus
         guard $ litTag == Builtins.bytesId
         UTF8.toString utf8Bytes
-            & BodyLiteralText & addActions toNomPl
+            & LiteralText & BodyLiteral & addActions toNomPl
             <&> rPayload . plData <>~ litPl ^. Input.userData
             & lift

@@ -32,9 +32,10 @@ module Lamdu.Sugar.Types
     , ExtractToDestination(..)
     , Actions(..)
         , wrap, setToHole, setToInnerExpr, extract
+    , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , Body(..)
         , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
-        , _BodyLiteralNum, _BodyLiteralBytes, _BodyLiteralText, _BodyList, _BodyCase, _BodyRecord
+        , _BodyLiteral, _BodyList, _BodyCase, _BodyRecord
         , _BodyFromNom, _BodyToNom
     , EvaluationResult
     , Annotation(..), aInferredType, aMEvaluationResult
@@ -265,6 +266,12 @@ data HoleOption name m = HoleOption
       _hoResults :: ListT (T m) (HoleResultScore, T m (HoleResult name m))
     }
 
+data Literal
+    = LiteralNum Double
+    | LiteralBytes SBS.ByteString
+    | LiteralText String
+    deriving Show
+
 data HoleActions name m = HoleActions
     { _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
     , _holeOptions :: T m [HoleOption name m]
@@ -449,9 +456,7 @@ data Body name m expr
     = BodyLam (Lambda name m expr)
     | BodyApply (Apply name expr)
     | BodyHole (Hole name m expr)
-    | BodyLiteralNum Double
-    | BodyLiteralBytes SBS.ByteString
-    | BodyLiteralText String
+    | BodyLiteral Literal
     | BodyList (List m expr)
     | BodyRecord (Record name m expr)
     | BodyGetField (GetField name expr)
@@ -474,9 +479,7 @@ instance Show info => Show (FuncParam info) where
 instance Show expr => Show (Body name m expr) where
     show (BodyLam _) = "TODO show lam"
     show BodyHole {} = "Hole"
-    show (BodyLiteralNum i) = show i
-    show (BodyLiteralBytes i) = show i
-    show (BodyLiteralText i) = show i
+    show (BodyLiteral i) = show i
     show (BodyList (List items _ _)) =
         concat
         [ "["
@@ -654,6 +657,7 @@ Lens.makePrisms ''CaseTail
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''DefinitionTypeInfo
 Lens.makePrisms ''GetVar
+Lens.makePrisms ''Literal
 Lens.makePrisms ''ParameterForm
 Lens.makePrisms ''RecordTail
 Lens.makePrisms ''SetToHole
