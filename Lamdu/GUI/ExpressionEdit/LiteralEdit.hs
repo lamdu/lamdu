@@ -15,7 +15,7 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
-import           Lamdu.Formatting (formatNum, formatBytes, formatText)
+import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -41,17 +41,18 @@ mkEditEventMap valText setToHole =
         setHoleStateAndJump guid (HoleState valText) entityId
 
 makeGeneric ::
-    MonadA m =>
+    (MonadA m, Format a) =>
     (Style -> TextEdit.Style) ->
-    String -> Sugar.Payload m ExprGuiT.Payload ->
+    a -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-makeGeneric getStyle valText pl =
+makeGeneric getStyle val pl =
     BWidgets.makeFocusableTextView valText myId
     & setStyle . ExprGuiM.widgetEnv
     <&> Widget.weakerEvents editEventMap
     <&> ExpressionGui.fromValueWidget
     & ExpressionGui.stdWrap pl
     where
+        valText = format val
         myId = WidgetIds.fromExprPayload pl
         editEventMap =
             case pl ^? Sugar.plActions . Lens._Just . Sugar.setToHole of
@@ -69,6 +70,6 @@ make ::
     MonadA m =>
     Sugar.Literal -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.LiteralNum x) = formatNum x & makeGeneric Style.styleNum
-make (Sugar.LiteralBytes x) = formatBytes x & makeGeneric Style.styleBytes
-make (Sugar.LiteralText x) = formatText x & makeGeneric Style.styleText
+make (Sugar.LiteralNum x) = makeGeneric Style.styleNum x
+make (Sugar.LiteralBytes x) = makeGeneric Style.styleBytes x
+make (Sugar.LiteralText x) = makeGeneric Style.styleText x

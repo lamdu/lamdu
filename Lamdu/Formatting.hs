@@ -1,8 +1,6 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude, FlexibleInstances #-}
 module Lamdu.Formatting
-    ( formatNum, parseNum
-    , formatBytes, parseBytes
-    , formatText, parseText
+    ( Format(..)
     ) where
 
 import           Control.Lens.Operators
@@ -41,37 +39,35 @@ parseHexDigits :: String -> Maybe SBS.ByteString
 parseHexDigits str =
     chunks 2 str >>= mapM parseHexByte <&> SBS.pack
 
-parseBytes :: String -> Maybe SBS.ByteString
-parseBytes ('#':xs) = parseHexDigits xs
-parseBytes _ = Nothing
+class Format a where
+    tryParse :: String -> Maybe a
+    format :: a -> String
 
-formatNum :: Double -> String
-formatNum x
-    | fromIntegral i /= x = printf "%f" x
-    | isInfinite x = ['-' | x < 0] ++ "Inf"
-    | otherwise = show i
-    where
-        i :: Integer
-        i = truncate x
+instance Format SBS.ByteString where
+    tryParse ('#':xs) = parseHexDigits xs
+    tryParse _ = Nothing
+    format bs = '#' : concatMap showHexByte (SBS.unpack bs)
 
-parseNum :: String -> Maybe Double
-parseNum ('.':searchTerm) = readMaybe ('0':searchTerm)
-parseNum searchTerm =
-    case reads searchTerm of
-    [(val, "")] -> Just val
-    [(val, ".")] | '.' `notElem` init searchTerm -> Just val
-    _ -> Nothing
+instance Format Double where
+    tryParse ('.':searchTerm) = readMaybe ('0':searchTerm)
+    tryParse searchTerm =
+        case reads searchTerm of
+        [(val, "")] -> Just val
+        [(val, ".")] | '.' `notElem` init searchTerm -> Just val
+        _ -> Nothing
+    format x
+        | fromIntegral i /= x = printf "%f" x
+        | isInfinite x = ['-' | x < 0] ++ "Inf"
+        | otherwise = show i
+        where
+            i :: Integer
+            i = truncate x
 
-formatBytes :: SBS.ByteString -> String
-formatBytes bs = '#' : concatMap showHexByte (SBS.unpack bs)
-
-parseText :: String -> Maybe String
-parseText = readMaybe
-
-formatText :: String -> String
-formatText text =
-    concat ["\"", concatMap escape text, "\""]
-    where
-        escape c
-            | Char.isControl c = Char.showLitChar c ""
-            | otherwise = [c]
+instance Format [Char] where
+    tryParse = readMaybe
+    format text =
+        concat ["\"", concatMap escape text, "\""]
+        where
+            escape c
+                | Char.isControl c = Char.showLitChar c ""
+                | otherwise = [c]

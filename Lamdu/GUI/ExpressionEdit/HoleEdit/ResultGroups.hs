@@ -27,7 +27,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Val as V
-import           Lamdu.Formatting (formatNum, parseNum, parseBytes, formatBytes, formatText, parseText)
+import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), EditableHoleInfo(..), ehiSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -165,9 +165,9 @@ makeAll holeInfo =
             & ExprGuiM.transaction
 
 formatLiteral :: Sugar.Literal -> String
-formatLiteral (Sugar.LiteralNum i) = formatNum i
-formatLiteral (Sugar.LiteralText i) = formatText i
-formatLiteral (Sugar.LiteralBytes i) = formatBytes i
+formatLiteral (Sugar.LiteralNum i) = format i
+formatLiteral (Sugar.LiteralText i) = format i
+formatLiteral (Sugar.LiteralBytes i) = format i
 
 searchTermsOfBodyShape :: Sugar.Body (Name m) m expr -> [String]
 searchTermsOfBodyShape = \case
@@ -216,7 +216,7 @@ mkGroup option =
 literalNumGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
 literalNumGroups holeInfo =
     ehiSearchTerm holeInfo
-    & parseNum
+    & tryParse
     <&> Sugar.LiteralNum
     & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteral
     <&> (^.. Lens._Just)
@@ -224,7 +224,7 @@ literalNumGroups holeInfo =
 literalBytesGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
 literalBytesGroups holeInfo =
     ehiSearchTerm holeInfo
-    & parseBytes
+    & tryParse
     <&> Sugar.LiteralBytes
     & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteral
     <&> (^.. Lens._Just)
@@ -232,7 +232,7 @@ literalBytesGroups holeInfo =
 literalTextGroups :: MonadA m => EditableHoleInfo m -> T m [Sugar.HoleOption (Name m) m]
 literalTextGroups holeInfo =
     ehiSearchTerm holeInfo
-    & parseText
+    & tryParse
     <&> Sugar.LiteralText
     & Lens._Just %%~ ehiActions holeInfo ^. Sugar.holeOptionLiteral
     <&> (^.. Lens._Just)

@@ -24,7 +24,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Val (EvalResult, Val(..), EvalError(..))
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
-import           Lamdu.Formatting (formatNum, formatBytes)
+import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 
@@ -121,8 +121,8 @@ makeForVal animId val =
             (fields, recStatus) = extractFields recExtend
     HBuiltin x -> asText (show x)
     HLiteral l@(V.Literal tId x)
-        | tId == Builtins.floatId -> (asText . formatNum . decodeS) x
-        | tId == Builtins.bytesId -> (asText . formatBytes) x
+        | tId == Builtins.floatId -> (asText . (format :: Double -> String) . decodeS) x
+        | tId == Builtins.bytesId -> (asText . format) x
         | otherwise -> asText (show l)
     & ExprGuiM.advanceDepth return animId
     where
