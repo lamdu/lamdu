@@ -35,39 +35,39 @@ import qualified Lamdu.Eval.Val as EvalVal
 import qualified Lamdu.Expr.Val as V
 import           System.IO (stderr)
 
-data Actions pl = Actions
-    { _aLoadGlobal :: V.GlobalId -> IO (Maybe (Def.Body (V.Val pl)))
-    , _aRunBuiltin :: Def.FFIName -> EvalResult pl -> EvalResult pl
+data Actions srcId = Actions
+    { _aLoadGlobal :: V.GlobalId -> IO (Maybe (Def.Body (V.Val srcId)))
+    , _aRunBuiltin :: Def.FFIName -> EvalResult srcId -> EvalResult srcId
     , _aReportUpdatesAvailable :: IO ()
-    , _aCompleted :: Either E.SomeException (EvalResult pl) -> IO ()
+    , _aCompleted :: Either E.SomeException (EvalResult srcId) -> IO ()
     }
 
 Lens.makeLenses ''Actions
 
-data Status pl
+data Status srcId
     = Running
     | Stopped
-    | Finished (Either E.SomeException (EvalResult pl))
+    | Finished (Either E.SomeException (EvalResult srcId))
 
 Lens.makePrisms ''Status
 
-data State pl = State
-    { _sStatus :: !(Status pl)
-    , _sAppliesOfLam :: !(Map pl (Map ScopeId [(ScopeId, EvalResult pl)]))
-      -- Maps of already-evaluated pl's/thunks
-    , _sValMap :: !(Map pl (Map ScopeId (EvalResult pl)))
-    , _sDependencies :: !(Set pl, Set V.GlobalId)
+data State srcId = State
+    { _sStatus :: !(Status srcId)
+    , _sAppliesOfLam :: !(Map srcId (Map ScopeId [(ScopeId, EvalResult srcId)]))
+      -- Maps of already-evaluated srcId's/thunks
+    , _sValMap :: !(Map srcId (Map ScopeId (EvalResult srcId)))
+    , _sDependencies :: !(Set srcId, Set V.GlobalId)
     }
 
 Lens.makeLenses ''State
 
-data Evaluator pl = Evaluator
-    { eStateRef :: IORef (State pl)
+data Evaluator srcId = Evaluator
+    { eStateRef :: IORef (State srcId)
     , eThreadId :: ThreadId
     , eLoadResumed :: MVar () -- taken when paused
     }
 
-emptyState :: Status pl -> State pl
+emptyState :: Status srcId -> State srcId
 emptyState status = State
     { _sStatus = status
     , _sAppliesOfLam = Map.empty
@@ -75,11 +75,11 @@ emptyState status = State
     , _sDependencies = (Set.empty, Set.empty)
     }
 
-writeStatus :: IORef (State pl) -> Status pl -> IO ()
+writeStatus :: IORef (State srcId) -> Status srcId -> IO ()
 writeStatus stateRef newStatus =
     atomicModifyIORef' stateRef $ \x -> (x & sStatus .~ newStatus, ())
 
-processEvent :: Ord pl => Eval.Event pl -> State pl -> State pl
+processEvent :: Ord srcId => Eval.Event srcId -> State srcId -> State srcId
 processEvent (Eval.ELambdaApplied Eval.EventLambdaApplied{..}) state =
     state & sAppliesOfLam %~ Map.alter addApply elaLam
     where
@@ -90,13 +90,13 @@ processEvent (Eval.EResultComputed Eval.EventResultComputed{..}) state =
     state
     & sValMap %~ Map.alter (<> Just (Map.singleton ercScope ercResult)) ercSource
 
-getDependencies :: Ord pl => V.GlobalId -> Maybe (Def.Body (V.Val pl)) -> (Set pl, Set V.GlobalId)
+getDependencies :: Ord srcId => V.GlobalId -> Maybe (Def.Body (V.Val srcId)) -> (Set srcId, Set V.GlobalId)
 getDependencies globalId defBody =
     ( defBody ^. Lens._Just . Lens.traverse . Lens.traverse . Lens.to Set.singleton
     , Set.singleton globalId
     )
 
-evalActions :: Ord pl => Actions pl -> IORef (State pl) -> Eval.EvalActions IO pl
+evalActions :: Ord srcId => Actions srcId -> IORef (State srcId) -> Eval.EvalActions IO srcId
 evalActions actions stateRef =
     Eval.EvalActions
     { _aReportEvent = update . processEvent
@@ -116,7 +116,7 @@ evalActions actions stateRef =
                 _aReportUpdatesAvailable actions
 
 evalThread ::
-    Ord pl => Actions pl -> IORef (State pl) -> V.Val pl -> IO ()
+    Ord srcId => Actions srcId -> IORef (State srcId) -> V.Val srcId -> IO ()
 evalThread actions stateRef src =
     ( ( Eval.evalScopedVal (Eval.ScopedVal EvalVal.emptyScope src)
         & Eval.runEvalT
@@ -139,7 +139,7 @@ evalThread actions stateRef src =
                 res & actions ^. aCompleted
         env = Eval.Env $ evalActions actions stateRef
 
-results :: State pl -> EvalResults pl
+results :: State srcId -> EvalResults srcId
 results state =
     EvalResults
     { _erExprValues = state ^. sValMap <&> Lens.mapped . Lens._Right . Lens.mapped .~ ()
@@ -148,20 +148,20 @@ results state =
         <&> Lens.mapped . Lens.mapped . Lens._2 . Lens._Right . Lens.mapped .~ ()
     }
 
-getState :: Evaluator pl -> IO (State pl)
+getState :: Evaluator srcId -> IO (State srcId)
 getState = readIORef . eStateRef
 
-getResults :: Evaluator pl -> IO (EvalResults pl)
+getResults :: Evaluator srcId -> IO (EvalResults srcId)
 getResults evaluator = getState evaluator <&> results
 
-getStatus :: Evaluator pl -> IO (Status pl)
+getStatus :: Evaluator srcId -> IO (Status srcId)
 getStatus evaluator = getState evaluator <&> (^. sStatus)
 
 withLock :: MVar () -> IO a -> IO a
 withLock mvar action = withMVar mvar (const action)
 
 start ::
-    Ord pl => Actions pl -> V.Val pl -> IO (Evaluator pl)
+    Ord srcId => Actions srcId -> V.Val srcId -> IO (Evaluator srcId)
 start actions src =
     do
         stateRef <-
@@ -177,10 +177,10 @@ start actions src =
             , eLoadResumed = mvar
             }
 
-stop :: Evaluator pl -> IO ()
+stop :: Evaluator srcId -> IO ()
 stop = killThread . eThreadId
 
-pauseLoading :: Evaluator pl -> IO (Set pl, Set V.GlobalId)
+pauseLoading :: Evaluator srcId -> IO (Set srcId, Set V.GlobalId)
 pauseLoading evaluator =
     do
         takeMVar (eLoadResumed evaluator)
@@ -189,5 +189,5 @@ pauseLoading evaluator =
         -- position to return it
         getState evaluator <&> (^. sDependencies)
 
-resumeLoading :: Evaluator pl -> IO ()
+resumeLoading :: Evaluator srcId -> IO ()
 resumeLoading = (`putMVar` ()) . eLoadResumed

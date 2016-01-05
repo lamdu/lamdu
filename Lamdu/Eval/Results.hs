@@ -8,15 +8,15 @@ import           Lamdu.Eval.Val (EvalResult, ScopeId)
 
 import           Prelude.Compat
 
-data EvalResults pl =
+data EvalResults srcId =
     EvalResults
-    { _erExprValues :: Map pl (Map ScopeId (EvalResult ()))
-    , _erAppliesOfLam :: Map pl (Map ScopeId [(ScopeId, EvalResult ())])
+    { _erExprValues :: Map srcId (Map ScopeId (EvalResult ()))
+    , _erAppliesOfLam :: Map srcId (Map ScopeId [(ScopeId, EvalResult ())])
     } deriving Show
 
 Lens.makeLenses ''EvalResults
 
-empty :: EvalResults pl
+empty :: EvalResults srcId
 empty =
     EvalResults
     { _erExprValues = Map.empty

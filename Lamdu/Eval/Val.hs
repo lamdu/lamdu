@@ -25,18 +25,18 @@ import           Prelude.Compat
 newtype ScopeId = ScopeId { getScopeId :: Int }
     deriving (Show, Eq, Ord, Binary)
 
-data Scope pl = Scope
-    { _scopeMap :: Map V.Var (EvalResult pl)
+data Scope srcId = Scope
+    { _scopeMap :: Map V.Var (EvalResult srcId)
     , _scopeId :: ScopeId
     } deriving (Show, Functor, Foldable, Traversable)
 
 scopeIdInt :: Lens.Iso' ScopeId Int
 scopeIdInt = Lens.iso getScopeId ScopeId
 
-data Closure pl = Closure
-    { _cOuterScope :: Scope pl
-    , _cLam :: V.Lam (V.Val pl)
-    , _cLamPayload :: pl
+data Closure srcId = Closure
+    { _cOuterScope :: Scope srcId
+    , _cLam :: V.Lam (V.Val srcId)
+    , _cLamPayload :: srcId
     } deriving (Show, Functor, Foldable, Traversable)
 
 data EvalError
@@ -47,20 +47,20 @@ data EvalError
     | EvalTodoError String
     deriving Show
 
-type EvalResult pl = Either EvalError (Val pl)
+type EvalResult srcId = Either EvalError (Val srcId)
 
-data Val pl
-    = HFunc (Closure pl)
-    | HRecExtend (V.RecExtend (EvalResult pl))
+data Val srcId
+    = HFunc (Closure srcId)
+    | HRecExtend (V.RecExtend (EvalResult srcId))
     | HRecEmpty
     | HAbsurd
-    | HCase (V.Case (EvalResult pl))
+    | HCase (V.Case (EvalResult srcId))
     | HLiteral V.Literal
     | HBuiltin FFIName
-    | HInject (V.Inject (EvalResult pl))
+    | HInject (V.Inject (EvalResult srcId))
     deriving (Functor, Foldable, Traversable)
 
-instance Show pl => Show (Val pl) where
+instance Show srcId => Show (Val srcId) where
     show (HFunc closure) = show closure
     show (HRecExtend recExtend) = show recExtend
     show (HCase case_) = show case_
@@ -75,10 +75,10 @@ Lens.makePrisms ''Val
 topLevelScopeId :: ScopeId
 topLevelScopeId = ScopeId 0
 
-emptyScope :: Scope pl
+emptyScope :: Scope srcId
 emptyScope = Scope Map.empty topLevelScopeId
 
-extractField :: T.Tag -> EvalResult pl -> EvalResult pl
+extractField :: T.Tag -> EvalResult srcId -> EvalResult srcId
 extractField _ (Left err) = Left err
 extractField tag (Right (HRecExtend (V.RecExtend vt vv vr)))
     | vt == tag = vv

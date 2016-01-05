@@ -26,53 +26,53 @@ import qualified Lamdu.Expr.Val as V
 
 import           Prelude.Compat
 
-data ScopedVal pl = ScopedVal
-    { _srcScope :: !(Scope pl)
-    , _srcExpr :: !(V.Val pl)
+data ScopedVal srcId = ScopedVal
+    { _srcScope :: !(Scope srcId)
+    , _srcExpr :: !(V.Val srcId)
     } deriving (Show, Functor, Foldable, Traversable)
 
-data EventLambdaApplied pl = EventLambdaApplied
-    { elaLam :: pl
+data EventLambdaApplied srcId = EventLambdaApplied
+    { elaLam :: srcId
     , elaParentId :: !ScopeId
     , elaId :: !ScopeId
-    , elaArgument :: !(EvalResult pl)
+    , elaArgument :: !(EvalResult srcId)
     } deriving (Show, Functor, Foldable, Traversable)
 
-data EventResultComputed pl = EventResultComputed
-    { ercSource :: pl
+data EventResultComputed srcId = EventResultComputed
+    { ercSource :: srcId
     , ercScope :: !ScopeId
-    , ercResult :: !(EvalResult pl)
+    , ercResult :: !(EvalResult srcId)
     } deriving (Show, Functor, Foldable, Traversable)
 
-data Event pl
-    = ELambdaApplied (EventLambdaApplied pl)
-    | EResultComputed (EventResultComputed pl)
+data Event srcId
+    = ELambdaApplied (EventLambdaApplied srcId)
+    | EResultComputed (EventResultComputed srcId)
     deriving (Show, Functor, Foldable, Traversable)
 
-data EvalActions m pl = EvalActions
-    { _aReportEvent :: Event pl -> m ()
-    , _aRunBuiltin :: Def.FFIName -> EvalResult pl -> EvalResult pl
-    , _aLoadGlobal :: V.GlobalId -> m (Maybe (Def.Body (V.Val pl)))
+data EvalActions m srcId = EvalActions
+    { _aReportEvent :: Event srcId -> m ()
+    , _aRunBuiltin :: Def.FFIName -> EvalResult srcId -> EvalResult srcId
+    , _aLoadGlobal :: V.GlobalId -> m (Maybe (Def.Body (V.Val srcId)))
     }
 
-newtype Env m pl = Env
-    { _eEvalActions :: EvalActions m pl
+newtype Env m srcId = Env
+    { _eEvalActions :: EvalActions m srcId
     }
 
-data EvalState m pl = EvalState
+data EvalState m srcId = EvalState
     { _esScopeCounter :: !ScopeId
-    , _esLoadedGlobals :: !(Map V.GlobalId (EvalResult pl))
-    , _esReader :: !(Env m pl) -- This is ReaderT
+    , _esLoadedGlobals :: !(Map V.GlobalId (EvalResult srcId))
+    , _esReader :: !(Env m srcId) -- This is ReaderT
     }
 
-newtype EvalT pl m a = EvalT
-    { runEvalT :: StateT (EvalState m pl) m a
+newtype EvalT srcId m a = EvalT
+    { runEvalT :: StateT (EvalState m srcId) m a
     } deriving (Functor, Applicative, Monad)
 
-liftState :: Monad m => StateT (EvalState m pl) m a -> EvalT pl m a
+liftState :: Monad m => StateT (EvalState m srcId) m a -> EvalT srcId m a
 liftState = EvalT
 
-instance MonadTrans (EvalT pl) where
+instance MonadTrans (EvalT srcId) where
     lift = liftState . lift
 
 Lens.makeLenses ''Scope
@@ -80,16 +80,16 @@ Lens.makeLenses ''EvalActions
 Lens.makeLenses ''Env
 Lens.makeLenses ''EvalState
 
-ask :: Monad m => EvalT pl m (Env m pl)
+ask :: Monad m => EvalT srcId m (Env m srcId)
 ask = use esReader & liftState
 
-report :: MonadA m => Event pl -> EvalT pl m ()
+report :: MonadA m => Event srcId -> EvalT srcId m ()
 report event =
     do
         rep <- ask <&> (^. eEvalActions . aReportEvent)
         rep event & lift
 
-bindVar :: MonadA m => pl -> V.Var -> EvalResult pl -> Scope pl -> EvalT pl m (Scope pl)
+bindVar :: MonadA m => srcId -> V.Var -> EvalResult srcId -> Scope srcId -> EvalT srcId m (Scope srcId)
 bindVar lamPl var val (Scope parentMap parentId) =
     do
         newScopeId <- liftState $ use esScopeCounter
@@ -106,7 +106,7 @@ bindVar lamPl var val (Scope parentMap parentId) =
             } & return
 
 evalApply ::
-    MonadA m => V.Apply (EvalResult pl) -> EvalT pl m (EvalResult pl)
+    MonadA m => V.Apply (EvalResult srcId) -> EvalT srcId m (EvalResult srcId)
 evalApply (V.Apply (Left err) _) = Left err & return
 evalApply (V.Apply (Right func) argEr) =
     case func of
@@ -135,7 +135,7 @@ evalApply (V.Apply (Right func) argEr) =
         & EvalTypeError & Left & return
 
 evalGetField ::
-    Monad m => V.GetField (EvalResult pl) -> EvalT pl m (EvalResult pl)
+    Monad m => V.GetField (EvalResult srcId) -> EvalT srcId m (EvalResult srcId)
 evalGetField (V.GetField (Left err) _) = Left err & return
 evalGetField (V.GetField (Right (HRecExtend (V.RecExtend tag val rest))) searchTag)
     | searchTag == tag = return val
@@ -144,7 +144,7 @@ evalGetField (V.GetField (Right x) y) =
     "GetField of " ++ show y ++ " expects record, found: " ++ show (void x)
     & EvalTypeError & Left & return
 
-evalScopedVal :: MonadA m => ScopedVal pl -> EvalT pl m (EvalResult pl)
+evalScopedVal :: MonadA m => ScopedVal srcId -> EvalT srcId m (EvalResult srcId)
 evalScopedVal (ScopedVal scope expr) =
     reportResultComputed =<<
     case expr ^. V.body of
@@ -176,7 +176,7 @@ evalScopedVal (ScopedVal scope expr) =
                     & EResultComputed & report
                 return result
 
-loadGlobal :: MonadA m => V.GlobalId -> EvalT pl m (EvalResult pl)
+loadGlobal :: MonadA m => V.GlobalId -> EvalT srcId m (EvalResult srcId)
 loadGlobal g =
     do
         loaded <- liftState $ use (esLoadedGlobals . at g)
@@ -195,7 +195,7 @@ loadGlobal g =
                 liftState $ esLoadedGlobals . at g ?= result
                 return result
 
-initialState :: Env m pl -> EvalState m pl
+initialState :: Env m srcId -> EvalState m srcId
 initialState env =
     EvalState
     { _esScopeCounter = ScopeId 1

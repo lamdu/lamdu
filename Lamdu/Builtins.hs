@@ -18,7 +18,7 @@ import qualified Lamdu.Expr.Val as V
 
 import           Prelude.Compat
 
-flatRecord :: EvalResult pl -> Either EvalError (Map Tag (EvalResult pl))
+flatRecord :: EvalResult srcId -> Either EvalError (Map Tag (EvalResult srcId))
 flatRecord (Left err) = Left err
 flatRecord (Right HRecEmpty) = Right Map.empty
 flatRecord (Right (HRecExtend (V.RecExtend t v rest))) =
@@ -27,7 +27,7 @@ flatRecord _ = "Param record is not a record" & EvalTypeError & Left
 
 extractRecordParams ::
     (Traversable t, Show (t Tag)) =>
-    t Tag -> EvalResult pl -> Either EvalError (t (EvalResult pl))
+    t Tag -> EvalResult srcId -> Either EvalError (t (EvalResult srcId))
 extractRecordParams expectedTags val =
     do
         paramsMap <- flatRecord val
@@ -40,18 +40,18 @@ extractRecordParams expectedTags val =
 data V2 a = V2 a a   deriving (Show, Functor, Foldable, Traversable)
 data V3 a = V3 a a a deriving (Show, Functor, Foldable, Traversable)
 
-extractInfixParams :: EvalResult pl -> Either EvalError (V2 (EvalResult pl))
+extractInfixParams :: EvalResult srcId -> Either EvalError (V2 (EvalResult srcId))
 extractInfixParams =
         extractRecordParams (V2 Builtins.infixlTag Builtins.infixrTag)
 
 class GuestType t where
-    toGuestVal :: t -> Val pl
-    fromGuestVal :: Val pl -> Either EvalError t
+    toGuestVal :: t -> Val srcId
+    fromGuestVal :: Val srcId -> Either EvalError t
 
-toGuest :: GuestType t => t -> EvalResult pl
+toGuest :: GuestType t => t -> EvalResult srcId
 toGuest = Right . toGuestVal
 
-fromGuest :: GuestType t => EvalResult pl -> Either EvalError t
+fromGuest :: GuestType t => EvalResult srcId -> Either EvalError t
 fromGuest = (>>= fromGuestVal)
 
 instance GuestType Double where
@@ -73,19 +73,19 @@ instance GuestType Bool where
             | boolTag == Builtins.falseTag -> Right False
         _ -> "Expected bool, got: " ++ show (void v) & EvalTypeError & Left
 
-record :: [(T.Tag, EvalResult pl)] -> EvalResult pl
+record :: [(T.Tag, EvalResult srcId)] -> EvalResult srcId
 record [] = Right HRecEmpty
 record ((tag, val) : xs) =
     record xs & V.RecExtend tag val & HRecExtend & Right
 
-builtin1 :: (GuestType a, GuestType b) => (a -> b) -> EvalResult pl -> EvalResult pl
+builtin1 :: (GuestType a, GuestType b) => (a -> b) -> EvalResult srcId -> EvalResult srcId
 builtin1 f val = fromGuest val <&> f >>= toGuest
 
 builtin2Infix ::
     ( GuestType a
     , GuestType b
     , GuestType c ) =>
-    (a -> b -> c) -> EvalResult pl -> EvalResult pl
+    (a -> b -> c) -> EvalResult srcId -> EvalResult srcId
 builtin2Infix f thunkId =
     do
         V2 x y <- extractInfixParams thunkId
@@ -119,16 +119,16 @@ eqVal (HInject (V.Inject xf xv)) (HInject (V.Inject yf yv))
     | otherwise = Right False
 eqVal _ _ = Right False -- assume type checking ruled out errorenous equalities already
 
-builtinEqH :: GuestType t => (Bool -> t) -> EvalResult pl -> EvalResult pl
+builtinEqH :: GuestType t => (Bool -> t) -> EvalResult srcId -> EvalResult srcId
 builtinEqH f val =
     do
         V2 x y <- extractInfixParams val
         eq x y <&> f >>= toGuest
 
-builtinEq :: EvalResult pl -> EvalResult pl
+builtinEq :: EvalResult srcId -> EvalResult srcId
 builtinEq = builtinEqH id
 
-builtinNotEq :: EvalResult pl -> EvalResult pl
+builtinNotEq :: EvalResult srcId -> EvalResult srcId
 builtinNotEq = builtinEqH not
 
 floatArg :: (Double -> a) -> Double -> a
@@ -140,7 +140,7 @@ genericDiv n d = n / d & floor
 genericMod :: RealFrac a => a -> a -> a
 genericMod n d = n - d * fromIntegral (genericDiv n d :: Int)
 
-eval :: Def.FFIName -> EvalResult pl -> EvalResult pl
+eval :: Def.FFIName -> EvalResult srcId -> EvalResult srcId
 eval name =
     case name of
     Def.FFIName ["Prelude"] "=="     -> builtinEq
