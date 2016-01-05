@@ -30,6 +30,7 @@ import qualified Data.Set as Set
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Eval as Eval
 import           Lamdu.Eval.Results (EvalResults(..))
+import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Eval.Val (Val, ScopeId)
 import qualified Lamdu.Eval.Val as EvalVal
 import qualified Lamdu.Expr.Val as V
@@ -142,10 +143,10 @@ evalThread actions stateRef src =
 results :: State srcId -> EvalResults srcId
 results state =
     EvalResults
-    { _erExprValues = state ^. sValMap <&> Lens.mapped . Lens.mapped .~ ()
+    { _erExprValues = state ^. sValMap <&> Lens.mapped %~ ER.fromEval
     , _erAppliesOfLam =
         state ^. sAppliesOfLam
-        <&> Lens.mapped . Lens.mapped . Lens._2 . Lens.mapped .~ ()
+        <&> Lens.mapped . Lens.mapped . Lens._2 %~ ER.fromEval
     }
 
 getState :: Evaluator srcId -> IO (State srcId)

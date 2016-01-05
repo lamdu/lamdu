@@ -19,7 +19,7 @@ import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Eval.Val as EV
+import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Expr.Type (Tag)
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -83,7 +83,7 @@ make (Sugar.Case mArg alts caseTail mAddAlt cEntityId) pl =
                     caseLabel <- headerLabel ":"
                     mTag <-
                         ExpressionGui.evaluationResult (arg ^. Sugar.rPayload)
-                        <&> (>>= (^? EV._HInject . V.injectTag))
+                        <&> (>>= (^? ER.body . ER._RInject . V.injectTag))
                     return (mTag, ExpressionGui.hbox [argEdit, caseLabel])
         (altsGui, resultPickers) <-
             ExprGuiM.listenResultPickers $

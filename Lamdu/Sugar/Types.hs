@@ -112,6 +112,7 @@ import           Data.Store.Transaction (Transaction, MkProperty)
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.Eval.Val as E
 import           Lamdu.Expr.Scheme (Scheme)
 import           Lamdu.Expr.Type (Type)
@@ -148,7 +149,7 @@ data Actions m = Actions
     , _extract :: T m ExtractToDestination
     }
 
-type EvaluationResult = Map E.ScopeId (E.Val ())
+type EvaluationResult = Map E.ScopeId (ER.Val ())
 
 data Annotation = Annotation
     { _aInferredType :: Type

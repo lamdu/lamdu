@@ -32,7 +32,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Eval.Val (ScopeId)
-import qualified Lamdu.Eval.Val as EV
+import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -69,7 +69,7 @@ cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalP
 data FieldParam = FieldParam
     { fpTag :: T.Tag
     , fpFieldType :: Type
-    , fpValue :: CurAndPrev (Map ScopeId [(ScopeId, EV.Val ())])
+    , fpValue :: CurAndPrev (Map ScopeId [(ScopeId, ER.Val ())])
     }
 
 data StoredLam m = StoredLam
@@ -529,7 +529,7 @@ convertLamParams mRecursiveVar lambda lambdaPl =
             , fpValue =
                     lambdaPl ^. Input.evalResults
                     <&> (^. Input.eAppliesOfLam)
-                    <&> Lens.traversed . Lens.mapped . Lens._2 %~ EV.extractField tag
+                    <&> Lens.traversed . Lens.mapped . Lens._2 %~ ER.extractField tag
             }
 
 changeRecursionsToCalls :: MonadA m => V.Var -> Val (ValIProperty m) -> T m ()

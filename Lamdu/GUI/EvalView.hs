@@ -6,6 +6,7 @@ module Lamdu.GUI.EvalView
 
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Control.Monad (void)
 import           Control.MonadA (MonadA)
 import           Data.Binary.Utils (decodeS)
 import qualified Data.Binary.Utils as BinUtils
@@ -21,7 +22,8 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Eval.Val (Val(..), EvalError(..))
+import           Lamdu.Eval.Results (Val(..), Body(..))
+import           Lamdu.Eval.Val (EvalError(..))
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Formatting (Format(..))
@@ -30,16 +32,16 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 
 data RecordStatus = RecordComputed | RecordExtendsError EvalError
 
-extractFields :: V.RecExtend (Val ()) -> ([(T.Tag, Val ())], RecordStatus)
-extractFields (V.RecExtend tag val rest) =
+extractFields :: V.RecExtend (Val a) -> ([(T.Tag, Val a)], RecordStatus)
+extractFields (V.RecExtend tag val (Val _ rest)) =
     case rest of
-    HRecEmpty -> ([(tag, val)], RecordComputed)
-    HRecExtend recExtend ->
+    RRecEmpty -> ([(tag, val)], RecordComputed)
+    RRecExtend recExtend ->
         extractFields recExtend & _1 %~ ((tag, val):)
-    HError err -> ([], RecordExtendsError err)
+    RError err -> ([], RecordExtendsError err)
     x ->
         ( []
-        , "extractFields expects record, got: " ++ show x
+        , "extractFields expects record, got: " ++ show (void x)
           & EvalTypeError & RecordExtendsError
         )
 
@@ -78,16 +80,14 @@ makeError err animId = textView msg $ animId ++ ["error"]
             _ -> show err
 
 make :: MonadA m => AnimId -> Val () -> ExprGuiM m View
-make animId val =
+make animId (Val () val) =
     case val of
-    HError err -> makeError err animId
-    HFunc{} -> textView "Fn" animId
-    HAbsurd -> textView "Fn" animId
-    HCase{} -> textView "Fn" animId
-    HRecEmpty -> textView "()" animId
-    HInject (V.Inject injTag HRecEmpty) ->
+    RError err -> makeError err animId
+    RFunc{} -> textView "Fn" animId
+    RRecEmpty -> textView "()" animId
+    RInject (V.Inject injTag (Val () RRecEmpty)) ->
         makeTag (animId ++ ["tag"]) injTag
-    HInject inj ->
+    RInject inj ->
         do
             tagView <- inj ^. V.injectTag & makeTag (animId ++ ["tag"])
             space <-
@@ -95,7 +95,7 @@ make animId val =
                 <&> Spacer.makeHorizontal . realToFrac . Config.spaceWidth
             valView <- inj ^. V.injectVal & make (animId ++ ["val"])
             GridView.horizontalAlign 0.5 [tagView, space, valView] & return
-    HRecExtend recExtend ->
+    RRecExtend recExtend ->
         do
             fieldsView <- mapM (uncurry (makeField animId)) fields <&> GridView.make
             let barWidth
@@ -115,8 +115,7 @@ make animId val =
             GridView.verticalAlign 0.5 [fieldsView, restView] & return
         where
             (fields, recStatus) = extractFields recExtend
-    HBuiltin x -> asText (show x)
-    HLiteral l@(V.Literal tId x)
+    RLiteral l@(V.Literal tId x)
         | tId == Builtins.floatId -> (asText . (format :: Double -> String) . decodeS) x
         | tId == Builtins.bytesId -> (asText . format) x
         | otherwise -> asText (show l)

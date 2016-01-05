@@ -68,8 +68,8 @@ import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Eval.Val (ScopeId)
-import qualified Lamdu.Eval.Val as EV
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.EvalView as EvalView
@@ -249,7 +249,7 @@ makeWithAnnotationBG f (AnnotationParams minWidth animId wideAnnotationBehavior)
 data EvalResDisplay = EvalResDisplay
     { erdScope :: ScopeId
     , erdSource :: CurPrevTag
-    , erdVal :: EV.Val ()
+    , erdVal :: ER.Val ()
     }
 
 makeEvaluationResultView ::
@@ -339,15 +339,15 @@ addEvaluationResult ::
     WideAnnotationBehavior -> Sugar.EntityId ->
     ExpressionGui m -> ExprGuiM m (ExpressionGui m)
 -- REVIEW(Eyal): This is misleading when it refers to Previous results
-addEvaluationResult _typ _neigh EvalResDisplay{erdVal = EV.HRecEmpty} _wide entityId gui =
+addEvaluationResult typ neigh resDisp wideBehavior entityId gui =
     gui
-    & egWidget %%~
-        addValBGWithColor Config.evaluatedPathBGColor
-        (WidgetIds.fromEntityId entityId)
-addEvaluationResult typ _neigh EvalResDisplay{erdVal = EV.HFunc{}} wideBehavior entityId gui =
-    addAnnotationH (makeTypeView typ) wideBehavior entityId gui
-addEvaluationResult _typ prevNext res wideBehavior entityId gui =
-    addAnnotationH (makeEvalView prevNext res) wideBehavior entityId gui
+    & case erdVal resDisp ^. ER.body of
+    ER.RRecEmpty ->
+        egWidget %%~
+        addValBGWithColor Config.evaluatedPathBGColor (WidgetIds.fromEntityId entityId)
+    ER.RFunc{} ->
+        addAnnotationH (makeTypeView typ) wideBehavior entityId
+    _ -> addAnnotationH (makeEvalView neigh resDisp) wideBehavior entityId
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
@@ -577,7 +577,7 @@ maybeAddAnnotationPl pl eg =
         showAnnotation = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation
 
 evaluationResult ::
-    MonadA m => Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (Maybe (EV.Val ()))
+    MonadA m => Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (Maybe (ER.Val ()))
 evaluationResult pl =
     ExprGuiM.readMScopeId
     <&> valOfScope (pl ^. Sugar.plAnnotation)
@@ -643,8 +643,7 @@ maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation 
             addEvaluationResult inferredType neighborVals scopeAndVal
             wideAnnotationBehavior entityId eg
 
-valOfScope ::
-    Sugar.Annotation -> CurAndPrev (Maybe ScopeId) -> Maybe EvalResDisplay
+valOfScope :: Sugar.Annotation -> CurAndPrev (Maybe ScopeId) -> Maybe EvalResDisplay
 valOfScope annotation mScopeIds =
     go
     <$> curPrevTag
