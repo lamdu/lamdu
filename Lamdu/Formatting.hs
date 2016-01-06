@@ -4,6 +4,7 @@ module Lamdu.Formatting
     ) where
 
 import           Control.Lens.Operators
+import           Control.Monad (mplus)
 import qualified Data.ByteString as SBS
 import qualified Data.Char as Char
 import           Data.Word (Word8)
@@ -64,7 +65,7 @@ instance Format Double where
             i = truncate x
 
 instance Format [Char] where
-    tryParse = readMaybe
+    tryParse x = mplus (readMaybe x) (readMaybe (x ++ "\""))
     format text =
         concat ["\"", concatMap escape text, "\""]
         where
