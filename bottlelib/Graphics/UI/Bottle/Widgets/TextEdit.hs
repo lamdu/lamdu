@@ -302,9 +302,11 @@ eventMap cursor str displayStr myId =
             insert . (: [])
         ],
 
-        [ keys (insertDoc ["Newline"]) [noMods GLFW.Key'Enter] (insert "\n") ],
+        [ keys (insertDoc ["Newline"])
+            [noMods GLFW.Key'Enter, ModKey.shift GLFW.Key'Enter] (insert "\n") ],
 
-        [ keys (insertDoc ["Space"]) [ModKey mempty GLFW.Key'Space] (insert " ") ]
+        [ keys (insertDoc ["Space"])
+            [noMods GLFW.Key'Space, ModKey.shift GLFW.Key'Space] (insert " ") ]
 
         ]
     where

@@ -68,6 +68,7 @@ instance Format [Char] where
     format text =
         concat ["\"", concatMap escape text, "\""]
         where
+            escape '\n' = "\n"
             escape c
                 | Char.isControl c = Char.showLitChar c ""
                 | otherwise = [c]
