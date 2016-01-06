@@ -78,7 +78,7 @@ style config fonts =
     , styleText =
       textEdit config (Config.literalColor config) (Fonts.fontFancy fonts)
     , styleNum =
-      textEdit config (Config.literalColor config) (Fonts.fontMono fonts)
+      textEdit config (Config.literalColor config) (Fonts.fontDefault fonts)
     }
     where
         Config.Name{..} = Config.name config
