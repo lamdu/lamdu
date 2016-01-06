@@ -59,7 +59,8 @@ toHoleOption option@HoleOption{..} =
     do
         InTransaction run <- opRun
         pure option
-            { _hoResults = _hoResults <&> second (>>= run . toHoleResult)
+            { _hoSugaredBaseExpr = _hoSugaredBaseExpr >>= run . toExpression
+            , _hoResults = _hoResults <&> second (>>= run . toHoleResult)
             , _hoNames = _hoNames >>= run . traverse onNamePair
             }
     where

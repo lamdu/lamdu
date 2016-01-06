@@ -13,16 +13,14 @@ import           Control.Monad (join, void, liftM)
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either (EitherT(..))
-import           Control.Monad.Trans.State (StateT(..), mapStateT)
+import           Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
 import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)
 import           Data.Binary.Utils (encodeS)
 import qualified Data.ByteString.UTF8 as UTF8
 import           Data.CurAndPrev (CurAndPrev(..))
-import qualified Data.List as List
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe)
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import           Data.Store.Guid (Guid)
@@ -57,7 +55,7 @@ import           Lamdu.Sugar.OrderTags (orderType)
 import           Lamdu.Sugar.Types
 import qualified System.Random as Random
 import           System.Random.Utils (genFromHashable)
-import           Text.PrettyPrint.HughesPJClass (prettyShow)
+import           Text.PrettyPrint.HughesPJClass (pPrint, prettyShow)
 
 import           Prelude.Compat
 
@@ -84,23 +82,15 @@ convertCommon mInjectedArg exprPl =
 sortNub :: Ord a => [a] -> [a]
 sortNub = Set.toList . Set.fromList
 
-holeOptionNames :: Maybe (ExprIRef.DefI m) -> Val () -> [(NameType, Guid)]
-holeOptionNames mSelfDefI v =
+holeOptionNames :: Val () -> [(NameType, Guid)]
+holeOptionNames v =
     concat
     [ v ^.. ExprLens.valTags & nameList TagName
     , v ^.. ExprLens.valNominals & nameList NominalName
-    , recurseDefs ++ v ^.. ExprLens.valGlobals & nameList DefName
-    , nameList ParamName vars
+    , v ^.. ExprLens.valGlobals & nameList DefName
+    , v ^.. ExprLens.valLeafs . ExprLens._LVar & nameList ParamName
     ]
     where
-        recurseDefs =
-            ( fromMaybe (error "Recursive reference without def?!") mSelfDefI
-              & ExprIRef.globalId
-            )
-            <$ recurseVars
-        (recurseVars, vars) =
-            v ^.. ExprLens.valLeafs . ExprLens._LVar
-            & List.partition (Builtins.recurseVar ==)
         nameList :: UniqueId.ToGuid a => NameType -> [a] -> [(NameType, Guid)]
         nameList nameType l = l <&> UniqueId.toGuid & sortNub <&> (,) nameType
 
@@ -112,7 +102,8 @@ mkHoleOptionFromInjected ::
 mkHoleOptionFromInjected sugarContext exprPl stored val =
     HoleOption
     { _hoVal = baseExpr
-    , _hoNames = holeOptionNames (sugarContext ^. ConvertM.scDefI) baseExpr & return
+    , _hoNames = holeOptionNames baseExpr & return
+    , _hoSugaredBaseExpr = sugar sugarContext exprPl baseExpr
     , _hoResults =
         do
             (result, inferContext) <-
@@ -144,7 +135,8 @@ mkHoleOption ::
 mkHoleOption sugarContext mInjectedArg exprPl stored val =
     HoleOption
     { _hoVal = v
-    , _hoNames = holeOptionNames (sugarContext ^. ConvertM.scDefI) v & return
+    , _hoNames = holeOptionNames v & return
+    , _hoSugaredBaseExpr = sugar sugarContext exprPl v
     , _hoResults = mkHoleResults mInjectedArg sugarContext exprPl stored val
     }
     where
@@ -243,6 +235,54 @@ infer holeInferred =
     IRefInfer.loadInferScope scopeAtHole
     where
         scopeAtHole = holeInferred ^. Infer.plScope
+
+inferAssertSuccess ::
+    MonadA m => ConvertM.Context m -> Infer.Payload ->
+    Val a -> T m (Val (Infer.Payload, a))
+inferAssertSuccess sugarContext holeInferred val =
+    val
+    & infer holeInferred
+    & (`evalStateT` (sugarContext ^. ConvertM.scInferContext))
+    & runEitherT
+    <&> either
+        (error . ("infer error on suggested val in hole: " ++) .
+         show . pPrint) id
+
+-- Unstored and without eval results (e.g: hole result)
+prepareUnstoredPayloads ::
+    Val (Infer.Payload, EntityId, a) ->
+    Val (Input.Payload m a)
+prepareUnstoredPayloads val =
+    val <&> mk & Input.preparePayloads
+    where
+        mk (inferPl, eId, x) =
+            ( eId
+            , \varRefs ->
+              Input.Payload
+              { Input._varRefsOfLambda = varRefs
+              , Input._userData = x
+              , Input._inferred = inferPl
+              , Input._entityId = eId
+              , Input._stored = error "TODO: Nothing stored?!"
+              , Input._evalResults =
+                CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
+              }
+            )
+
+sugar ::
+    (MonadA m, Monoid a) =>
+    ConvertM.Context m -> Input.Payload m dummy -> Val a -> T m (ExpressionU m a)
+sugar sugarContext exprPl val =
+    inferAssertSuccess sugarContext holeInferred val
+    <&> Lens.mapped %~ mkPayload
+    <&> (EntityId.randomizeExprAndParams . genFromHashable)
+        (exprPl ^. Input.entityId)
+    <&> prepareUnstoredPayloads
+    <&> ConvertM.convertSubexpression
+    >>= ConvertM.run sugarContext
+    where
+        mkPayload (pl, x) entityId = (pl, entityId, x)
+        holeInferred = exprPl ^. Input.inferred
 
 mkHole ::
     (MonadA m, Monoid a) =>
