@@ -10,6 +10,7 @@ import           Data.Store.Guid (Guid)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -40,35 +41,40 @@ mkEditEventMap valText setToHole =
         (guid, entityId) <- setToHole
         setHoleStateAndJump guid (HoleState valText) entityId
 
-makeGeneric ::
+genericView ::
     (MonadA m, Format a) =>
-    (Style -> TextEdit.Style) ->
-    a -> Sugar.Payload m ExprGuiT.Payload ->
-    ExprGuiM m (ExpressionGui m)
-makeGeneric getStyle val pl =
-    BWidgets.makeFocusableTextView valText myId
-    & setStyle . ExprGuiM.widgetEnv
-    <&> Widget.weakerEvents editEventMap
-    <&> ExpressionGui.fromValueWidget
-    & ExpressionGui.stdWrap pl
+    (Style -> TextEdit.Style) -> a -> Widget.Id ->
+    ExprGuiM m (String, Widget (T m))
+genericView getStyle val myId =
+    do
+        style <- ExprGuiM.readStyle
+        BWidgets.makeFocusableTextView valText myId
+            & ExprGuiM.widgetEnv
+            & ExprGuiM.localEnv (WE.envTextStyle .~ getStyle style)
+    <&> (,) valText
     where
         valText = format val
-        myId = WidgetIds.fromExprPayload pl
-        editEventMap =
-            case pl ^. Sugar.plActions . Sugar.setToHole of
-            Sugar.SetToHole action -> mkEditEventMap valText action
-            Sugar.SetWrapperToHole action -> mkEditEventMap valText action
-            Sugar.AlreadyAHole -> error "Literal val is a hole?!"
-            Sugar.AlreadyAppliedToHole -> error "Literal val is an apply?!"
-        setStyle action =
-            do
-                style <- ExprGuiM.readStyle
-                action & ExprGuiM.localEnv (WE.envTextStyle .~ getStyle style)
 
 make ::
     MonadA m =>
     Sugar.Literal -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
-make (Sugar.LiteralNum x) = makeGeneric Style.styleNum x
-make (Sugar.LiteralBytes x) = makeGeneric Style.styleBytes x
-make (Sugar.LiteralText x) = makeGeneric Style.styleText x
+make lit pl =
+    do
+        (holeText, view) <-
+            WidgetIds.fromExprPayload pl &
+            case lit of
+            Sugar.LiteralNum x -> genericView Style.styleNum x
+            Sugar.LiteralBytes x -> genericView Style.styleBytes x
+            Sugar.LiteralText x -> genericView Style.styleText x
+        let editEventMap =
+                case pl ^. Sugar.plActions . Sugar.setToHole of
+                Sugar.SetToHole action -> mkEditEventMap holeText action
+                Sugar.SetWrapperToHole action -> mkEditEventMap holeText action
+                Sugar.AlreadyAHole -> error "Literal val is a hole?!"
+                Sugar.AlreadyAppliedToHole -> error "Literal val is an apply?!"
+        view
+            & Widget.weakerEvents editEventMap
+            & ExpressionGui.fromValueWidget
+            & return
+    & ExpressionGui.stdWrap pl
