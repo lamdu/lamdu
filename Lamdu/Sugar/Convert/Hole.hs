@@ -13,7 +13,7 @@ import           Control.Monad (join, void, liftM)
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either (EitherT(..))
-import           Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
+import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)
 import           Data.Binary.Utils (encodeS)
@@ -54,7 +54,7 @@ import           Lamdu.Sugar.OrderTags (orderType)
 import           Lamdu.Sugar.Types
 import qualified System.Random as Random
 import           System.Random.Utils (genFromHashable)
-import           Text.PrettyPrint.HughesPJClass (pPrint, prettyShow)
+import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Prelude.Compat
 
@@ -218,18 +218,6 @@ infer holeInferred =
     where
         scopeAtHole = holeInferred ^. Infer.plScope
 
-inferAssertSuccess ::
-    MonadA m => ConvertM.Context m -> Infer.Payload ->
-    Val a -> T m (Val (Infer.Payload, a))
-inferAssertSuccess sugarContext holeInferred val =
-    val
-    & infer holeInferred
-    & (`evalStateT` (sugarContext ^. ConvertM.scInferContext))
-    & runEitherT
-    <&> either
-        (error . ("infer error on suggested val in hole: " ++) .
-         show . pPrint) id
-
 -- Unstored and without eval results (e.g: hole result)
 prepareUnstoredPayloads ::
     Val (Infer.Payload, EntityId, a) ->
@@ -255,16 +243,23 @@ sugar ::
     (MonadA m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy -> Val a -> T m (ExpressionU m a)
 sugar sugarContext exprPl val =
-    inferAssertSuccess sugarContext holeInferred val
-    <&> Lens.mapped %~ mkPayload
-    <&> (EntityId.randomizeExprAndParams . genFromHashable)
+    val
+    <&> mkPayload
+    & (EntityId.randomizeExprAndParams . genFromHashable)
         (exprPl ^. Input.entityId)
-    <&> prepareUnstoredPayloads
-    <&> ConvertM.convertSubexpression
-    >>= ConvertM.run sugarContext
+    & prepareUnstoredPayloads
+    & ConvertM.convertSubexpression
+    & ConvertM.run sugarContext
     where
-        mkPayload (pl, x) entityId = (pl, entityId, x)
-        holeInferred = exprPl ^. Input.inferred
+        mkPayload x entityId = (fakeInferPayload, entityId, x)
+        -- A fake Infer payload we use to sugar the base expressions.
+        -- Currently it is a function type because
+        -- otherwise sugaring of lambdas crashes.
+        fakeInferPayload =
+            Infer.Payload
+            { Infer._plType = TFun (TVar "fakeInput") (TVar "fakeOutput")
+            , Infer._plScope = Infer.emptyScope
+            }
 
 mkHole ::
     (MonadA m, Monoid a) =>
