@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, Rank2Types, RecordWildCards, DeriveDataTypeable, ScopedTypeVariables, LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, Rank2Types, RecordWildCards, DeriveDataTypeable, ScopedTypeVariables, LambdaCase, BangPatterns #-}
 module Main
     ( main
     ) where
@@ -6,8 +6,9 @@ module Main
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import           Control.Lens.Operators
-import           Control.Monad (when, unless, replicateM_)
+import           Control.Monad (when, join, unless, replicateM_)
 import           Data.IORef
+import           Data.MRUMemo (memoIO)
 import           Data.Maybe
 import qualified Data.Monoid as Monoid
 import           Data.Proxy (Proxy(..))
@@ -113,10 +114,21 @@ settingsChangeHandler evaluator settings =
     Settings.Evaluation -> EvalManager.start evaluator
     _ -> EvalManager.stop evaluator
 
+data CachedWidgetInput = CachedWidgetInput
+    { _cwiFontsVer :: Int
+    , _cwiConfig :: Config
+    , _cwiSize :: Widget.Size
+    , _cwiFonts :: Fonts Draw.Font
+    }
+
+instance Eq CachedWidgetInput where
+    CachedWidgetInput x0 y0 z0 _ == CachedWidgetInput x1 y1 z1 _ =
+        (x0, y0, z0) == (x1, y1, z1)
+
 makeRootWidget ::
-    Fonts Draw.Font -> Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
-    Config -> Widget.Size -> IO (Widget IO)
-makeRootWidget fonts db zoom settingsRef evaluator config size =
+    Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
+    CachedWidgetInput -> IO (Widget IO)
+makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config size fonts) =
     do
         cursor <-
             DbLayout.cursor DbLayout.revisionProps
@@ -161,18 +173,26 @@ runEditor windowMode db =
             win <- createWindow windowMode
             -- Fonts must be loaded after the GL context is created..
             wrapFlyNav <- FlyNav.makeIO Style.flyNav WidgetIds.flyNav
-            refreshScheduler <- newRefreshScheduler
+            invalidateCacheRef <- newIORef (return ())
+            let invalidateCache = join (readIORef invalidateCacheRef)
             withMVarProtection db $ \dbMVar ->
                 do
-                    evaluator <- EvalManager.new (scheduleRefresh refreshScheduler) dbMVar
+                    evaluator <- EvalManager.new invalidateCache dbMVar
                     zoom <- Zoom.make =<< GLFWUtils.getDisplayScale win
                     let initialSettings = Settings Settings.defaultInfoMode
                     settingsRef <- newIORef initialSettings
                     settingsChangeHandler evaluator initialSettings
+                    (invalidateCacheAction, makeRootWidgetCached) <-
+                        makeRootWidget db zoom settingsRef evaluator
+                        & memoizeMakeWidget
+                    refreshScheduler <- newRefreshScheduler
+                    writeIORef invalidateCacheRef $
+                        do
+                            invalidateCacheAction
+                            scheduleRefresh refreshScheduler
                     addHelp <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
-
-                    mainLoop win refreshScheduler configSampler $ \fonts config size ->
-                        makeRootWidget fonts db zoom settingsRef evaluator config size
+                    mainLoop win refreshScheduler configSampler $ \fontsVer fonts config size ->
+                        makeRootWidgetCached (CachedWidgetInput fontsVer config size fonts)
                         >>= wrapFlyNav
                         >>= addHelp (Style.help (Font.fontDefault fonts) (Config.help config)) size
 
@@ -189,14 +209,14 @@ data FontChanged = FontChanged
     deriving (Show, Typeable)
 instance E.Exception FontChanged
 
-loopWhileException :: forall a e. E.Exception e => Proxy e -> IO a -> IO a
-loopWhileException _ act = loop
+loopWhileException :: forall a e. E.Exception e => Proxy e -> (Int -> IO a) -> IO a
+loopWhileException _ act = loop 0
     where
-        loop =
-            (act <&> Just)
+        loop !n =
+            (act n <&> Just)
             `E.catch` (\(_ :: e) -> return Nothing)
             >>= \case
-            Nothing -> loop
+            Nothing -> loop (n+1)
             Just res -> return res
 
 prependConfigPath ::
@@ -212,9 +232,9 @@ absFontsOfSample :: ConfigSampler.Sample Config -> Fonts FilePath
 absFontsOfSample sample =
     prependConfigPath sample $ Config.fonts $ ConfigSampler.sValue sample
 
-withFontLoop :: Sampler Config -> (IO () -> Fonts Draw.Font -> IO a) -> IO a
+withFontLoop :: Sampler Config -> (Int -> IO () -> Fonts Draw.Font -> IO a) -> IO a
 withFontLoop configSampler act =
-    loopWhileException (Proxy :: Proxy FontChanged) $ do
+    loopWhileException (Proxy :: Proxy FontChanged) $ \fontsVer -> do
         sample <- ConfigSampler.getSample configSampler
         let absFonts = absFontsOfSample sample
         let defaultFontsAbs = prependConfigPath sample defaultFonts
@@ -222,20 +242,21 @@ withFontLoop configSampler act =
                 do
                     newAbsFonts <- ConfigSampler.getSample configSampler <&> absFontsOfSample
                     when (newAbsFonts /= absFonts) $ E.throwIO FontChanged
+        let runAct = act fontsVer throwIfFontChanged
         res <-
             withFont (const (return Nothing)) absFonts $ \fonts ->
-            Just <$> act throwIfFontChanged fonts
+            Just <$> runAct fonts
         case res of
-            Nothing -> withFont E.throwIO defaultFontsAbs $ act throwIfFontChanged
+            Nothing -> withFont E.throwIO defaultFontsAbs runAct
             Just success -> return success
     where
         withFont err = Font.with (\x@E.SomeException{} -> err x)
 
 mainLoop ::
     GLFW.Window -> RefreshScheduler -> Sampler Config ->
-    (Fonts Draw.Font -> Config -> Widget.Size -> IO (Widget IO)) -> IO ()
+    (Int -> Fonts Draw.Font -> Config -> Widget.Size -> IO (Widget IO)) -> IO ()
 mainLoop win refreshScheduler configSampler iteration =
-    withFontLoop configSampler $ \checkFont font ->
+    withFontLoop configSampler $ \fontsVer checkFonts fonts ->
     do
         lastVersionNumRef <- newIORef =<< getCurrentTime
         let getAnimHalfLife =
@@ -246,10 +267,10 @@ mainLoop win refreshScheduler configSampler iteration =
                     config <-
                         ConfigSampler.getSample configSampler
                         <&> ConfigSampler.sValue
-                    iteration font config size
+                    iteration fontsVer fonts config size
             tickHandler =
                 do
-                    checkFont
+                    checkFonts
                     curVersionNum <-
                         ConfigSampler.getSample configSampler
                         <&> ConfigSampler.sVersion
@@ -259,6 +280,19 @@ mainLoop win refreshScheduler configSampler iteration =
                         then return True
                         else shouldRefresh refreshScheduler
         mainLoopWidget win tickHandler makeWidget getAnimHalfLife
+
+memoizeMakeWidget :: Eq a => (a -> IO (Widget IO)) -> IO (IO (), a -> IO (Widget IO))
+memoizeMakeWidget mkWidget =
+    do
+        widgetCacheRef <- newIORef =<< memoIO mkWidget
+        let invalidateCache = writeIORef widgetCacheRef =<< memoIO mkWidget
+        return
+            ( invalidateCache
+            , \x ->
+                readIORef widgetCacheRef
+                >>= ($ x)
+                <&> Widget.events %~ (<* invalidateCache)
+            )
 
 rootCursor :: Widget.Id
 rootCursor = WidgetIds.fromGuid $ IRef.guid $ DbLayout.panes DbLayout.codeIRefs
