@@ -2,6 +2,7 @@
 module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
     , InTransaction(..)
+    , NameType(..)
     , NameConvertor, CPSNameConvertor
     , OldExpression, NewExpression
     , toDef, toExpression, toBody
@@ -24,6 +25,8 @@ type CPSNameConvertor m = OldName m -> CPS m (NewName m)
 type NameConvertor m = OldName m -> m (NewName m)
 
 newtype InTransaction m tm = InTransaction (forall a. m a -> T tm a)
+
+data NameType = DefName | TagName | NominalName | ParamName
 
 -- TODO: Rename MonadNameWalk
 class (MonadA m, MonadA (TM m)) => MonadNaming m where
@@ -61,10 +64,9 @@ toHoleOption option@HoleOption{..} =
         pure option
             { _hoSugaredBaseExpr = _hoSugaredBaseExpr >>= run . toExpression
             , _hoResults = _hoResults <&> second (>>= run . toHoleResult)
-            , _hoNames = _hoNames >>= run . traverse onNamePair
             }
     where
-        onNamePair (nameType, name) = opGetName nameType name <&> (,) nameType
+        {-# INLINE second #-}
         second f (x, y) = (x, f y)
 
 toHoleActions ::

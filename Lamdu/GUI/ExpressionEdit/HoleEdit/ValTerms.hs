@@ -1,10 +1,13 @@
 {-# LANGUAGE LambdaCase, NoImplicitPrelude #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
-    ( body, ofName
+    ( body
     ) where
 
 import           Control.Lens.Operators
+import           Control.MonadA (MonadA)
+import           Data.Monoid ((<>))
 import           Lamdu.Formatting (Format(..))
+import qualified Lamdu.Sugar.Names.Get as NamesGet
 import           Lamdu.Sugar.Names.Types (Name(..), NameCollision(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -19,9 +22,8 @@ formatLiteral (Sugar.LiteralNum i) = format i
 formatLiteral (Sugar.LiteralText i) = format i
 formatLiteral (Sugar.LiteralBytes i) = format i
 
-body :: Sugar.Body (Name m) m expr -> [String]
-body =
-    \case
+bodyShape :: Sugar.Body (Name m) m expr -> [String]
+bodyShape = \case
     Sugar.BodyLam {} -> ["lambda", "\\", "Λ", "λ"]
     Sugar.BodyApply {} -> ["Apply"]
     Sugar.BodyList {} -> ["list", "[]"]
@@ -44,3 +46,12 @@ body =
     Sugar.BodyToNom {} -> []
     Sugar.BodyFromNom {} -> []
     Sugar.BodyHole {} -> []
+
+bodyNames :: MonadA m => Sugar.Body (Name m) m expr -> [String]
+bodyNames = \case
+    Sugar.BodyGetVar Sugar.GetParamsRecord {} -> []
+    Sugar.BodyLam {} -> []
+    b -> NamesGet.fromBody b <&> ofName
+
+body :: MonadA m => Sugar.Body (Name m) m expr -> [String]
+body = bodyShape <> bodyNames

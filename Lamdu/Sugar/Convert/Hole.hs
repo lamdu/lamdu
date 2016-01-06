@@ -22,7 +22,6 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
-import qualified Data.Set as Set
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -79,21 +78,6 @@ convertCommon mInjectedArg exprPl =
     >>= addActions exprPl
     <&> rPayload . plActions . wrap .~ WrapNotAllowed
 
-sortNub :: Ord a => [a] -> [a]
-sortNub = Set.toList . Set.fromList
-
-holeOptionNames :: Val () -> [(NameType, Guid)]
-holeOptionNames v =
-    concat
-    [ v ^.. ExprLens.valTags & nameList TagName
-    , v ^.. ExprLens.valNominals & nameList NominalName
-    , v ^.. ExprLens.valGlobals & nameList DefName
-    , v ^.. ExprLens.valLeafs . ExprLens._LVar & nameList ParamName
-    ]
-    where
-        nameList :: UniqueId.ToGuid a => NameType -> [a] -> [(NameType, Guid)]
-        nameList nameType l = l <&> UniqueId.toGuid & sortNub <&> (,) nameType
-
 mkHoleOptionFromInjected ::
     MonadA m =>
     ConvertM.Context m ->
@@ -102,7 +86,6 @@ mkHoleOptionFromInjected ::
 mkHoleOptionFromInjected sugarContext exprPl stored val =
     HoleOption
     { _hoVal = baseExpr
-    , _hoNames = holeOptionNames baseExpr & return
     , _hoSugaredBaseExpr = sugar sugarContext exprPl baseExpr
     , _hoResults =
         do
@@ -135,7 +118,6 @@ mkHoleOption ::
 mkHoleOption sugarContext mInjectedArg exprPl stored val =
     HoleOption
     { _hoVal = v
-    , _hoNames = holeOptionNames v & return
     , _hoSugaredBaseExpr = sugar sugarContext exprPl v
     , _hoResults = mkHoleResults mInjectedArg sugarContext exprPl stored val
     }

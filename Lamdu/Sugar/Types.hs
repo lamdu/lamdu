@@ -1,7 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, RankNTypes, RecordWildCards #-}
 module Lamdu.Sugar.Types
     ( EntityId
-    , NameType(..)
     , Definition(..), drEntityId, drName, drBody
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
     , ListItemActions(..), itemAddNext, itemDelete
@@ -83,7 +82,7 @@ module Lamdu.Sugar.Types
     , FuncParam(..), fpId, fpInfo, fpAnnotation, fpHiddenIds
     , Unwrap(..), _UnwrapAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
-    , HoleOption(..), hoVal, hoNames, hoSugaredBaseExpr, hoResults
+    , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
     , HoleActions(..), holeGuid, holeOptions, holeOptionLiteral
     , Hole(..), holeActions, holeMArg
     , ScopeGetVar(..), sgvGetVar, sgvVal
@@ -260,11 +259,8 @@ data TIdG name = TIdG
     , _tidgTId :: T.NominalId
     }
 
-data NameType = DefName | TagName | NominalName | ParamName
-
 data HoleOption name m = HoleOption
     { _hoVal :: V.Val ()
-    , _hoNames :: T m [(NameType, name)]
     , _hoSugaredBaseExpr :: T m (Expression name m ())
     , -- A group in the hole results based on this option
       _hoResults :: ListT (T m) (HoleResultScore, T m (HoleResult name m))
