@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.LiteralEdit
 
 
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Transaction as Transaction
@@ -13,10 +14,11 @@ import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
-import           Lamdu.Formatting (Format(..))
+import           Lamdu.Formatting (Format(..), formatTextContents)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -55,6 +57,27 @@ genericView getStyle val myId =
     where
         valText = format val
 
+textView :: MonadA m => String -> Widget.Id -> ExprGuiM m (String, Widget (T m))
+textView val myId =
+    do
+        style <- ExprGuiM.readStyle
+        do
+            text <- BWidgets.makeFocusableTextView contentsText myId
+            let quoteSize = text ^. Widget.size & _1 .~ 0
+            left <-
+                BWidgets.makeLabel "“" (Widget.toAnimId myId)
+                <&> Widget.padToSizeAlign quoteSize 0
+            right <-
+                BWidgets.makeLabel "”" (Widget.toAnimId myId)
+                <&> Widget.padToSizeAlign quoteSize 1
+            Box.hboxCentered [left, text, right] & return
+            & ExprGuiM.widgetEnv
+            & ExprGuiM.localEnv (WE.envTextStyle .~ Style.styleText style)
+    <&> (,) (init valText)
+    where
+        valText = format val
+        contentsText = formatTextContents val
+
 make ::
     MonadA m =>
     Sugar.Literal -> Sugar.Payload m ExprGuiT.Payload ->
@@ -66,7 +89,7 @@ make lit pl =
             case lit of
             Sugar.LiteralNum x -> genericView Style.styleNum x
             Sugar.LiteralBytes x -> genericView Style.styleBytes x
-            Sugar.LiteralText x -> genericView Style.styleText x
+            Sugar.LiteralText x -> textView x
         let editEventMap =
                 case pl ^. Sugar.plActions . Sugar.setToHole of
                 Sugar.SetToHole action -> mkEditEventMap holeText action

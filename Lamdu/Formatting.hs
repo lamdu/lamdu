@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, FlexibleInstances #-}
 module Lamdu.Formatting
     ( Format(..)
+    , formatTextContents
     ) where
 
 import           Control.Lens.Operators
@@ -40,6 +41,15 @@ parseHexDigits :: String -> Maybe SBS.ByteString
 parseHexDigits str =
     chunks 2 str >>= mapM parseHexByte <&> SBS.pack
 
+formatTextContents :: String -> String
+formatTextContents =
+    concatMap escape
+    where
+        escape '\n' = "\n"
+        escape c
+            | Char.isControl c = Char.showLitChar c ""
+            | otherwise = [c]
+
 class Format a where
     tryParse :: String -> Maybe a
     format :: a -> String
@@ -66,10 +76,4 @@ instance Format Double where
 
 instance Format [Char] where
     tryParse x = mplus (readMaybe x) (readMaybe (x ++ "\""))
-    format text =
-        concat ["\"", concatMap escape text, "\""]
-        where
-            escape '\n' = "\n"
-            escape c
-                | Char.isControl c = Char.showLitChar c ""
-                | otherwise = [c]
+    format text = concat ["\"", formatTextContents text, "\""]
