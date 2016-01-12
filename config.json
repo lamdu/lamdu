@@ -378,6 +378,48 @@
             "_second": 0.5
         }
     },
+    "literalText": {
+        "literalTextStartEditingKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'Enter"
+            ],
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": true,
+                    "modifierKeysControl": false
+                },
+                "Key'Right"
+            ]
+        ],
+        "literalTextStopEditingKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'Escape"
+            ],
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": false,
+                    "modifierKeysShift": true,
+                    "modifierKeysControl": false
+                },
+                "Key'Left"
+            ]
+        ]
+    },
     "name": {
         "nameOriginFGColor": [
             1.0,

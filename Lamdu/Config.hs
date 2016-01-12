@@ -3,6 +3,7 @@
 module Lamdu.Config
     ( Layers(..)
     , Help(..), Zoom(..), Pane(..), Hole(..), Name(..), Eval(..)
+    , LiteralText(..)
     , LightLambda(..)
     , Config(..)
     , delKeys
@@ -136,6 +137,14 @@ instance Aeson.ToJSON Eval where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Eval
 
+data LiteralText = LiteralText
+    { literalTextStartEditingKeys :: [ModKey]
+    , literalTextStopEditingKeys :: [ModKey]
+    } deriving (Eq, Generic, Show)
+instance Aeson.ToJSON LiteralText where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON LiteralText
+
 data Config = Config
     { fonts :: Fonts FilePath
     , layers :: Layers
@@ -144,6 +153,7 @@ data Config = Config
     , pane :: Pane
     , versionControl :: VersionControl.Config
     , hole :: Hole
+    , literalText :: LiteralText
     , name :: Name
     , lightLambda :: LightLambda
     , eval :: Eval
