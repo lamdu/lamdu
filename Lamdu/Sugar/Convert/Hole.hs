@@ -19,6 +19,7 @@ import           Control.MonadA (MonadA)
 import           Data.Binary.Utils (encodeS)
 import qualified Data.ByteString.UTF8 as UTF8
 import           Data.CurAndPrev (CurAndPrev(..))
+import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
@@ -198,9 +199,9 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
                 (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
         , _holeOptionLiteral =
           \case
-          LiteralNum x -> encodeS x & V.Literal Builtins.floatId & mkLiteralOption
-          LiteralBytes x -> V.Literal Builtins.bytesId x & mkLiteralOption
-          LiteralText x ->
+          LiteralNum (Identity x) -> encodeS x & V.Literal Builtins.floatId & mkLiteralOption
+          LiteralBytes (Identity x) -> V.Literal Builtins.bytesId x & mkLiteralOption
+          LiteralText (Identity x) ->
               UTF8.fromString x
               & Pure.lit Builtins.bytesId
               & Pure.toNom Builtins.textTid

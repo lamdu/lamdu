@@ -98,16 +98,15 @@ module Lamdu.Sugar.Types
     , BinderMode(..)
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import qualified Data.ByteString as SBS
 import           Data.CurAndPrev (CurAndPrev)
+import           Data.Functor.Identity (Identity(..))
 import qualified Data.List as List
 import           Data.Map (Map)
 import           Data.Store.Guid (Guid)
-import           Data.Store.Transaction (Transaction, MkProperty)
+import           Data.Store.Transaction (Transaction, MkProperty, Property)
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
@@ -118,6 +117,8 @@ import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
+
+import           Prelude.Compat
 
 type T = Transaction
 
@@ -266,16 +267,15 @@ data HoleOption name m = HoleOption
       _hoResults :: ListT (T m) (HoleResultScore, T m (HoleResult name m))
     }
 
-data Literal
-    = LiteralNum Double
-    | LiteralBytes SBS.ByteString
-    | LiteralText String
-    deriving Show
+data Literal f
+    = LiteralNum (f Double)
+    | LiteralBytes (f SBS.ByteString)
+    | LiteralText (f String)
 
 data HoleActions name m = HoleActions
     { _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
     , _holeOptions :: T m [HoleOption name m]
-    , _holeOptionLiteral :: Literal -> T m (HoleOption name m)
+    , _holeOptionLiteral :: Literal Identity -> T m (HoleOption name m)
     }
 
 data Unwrap m
@@ -454,7 +454,7 @@ data Body name m expr
     = BodyLam (Lambda name m expr)
     | BodyApply (Apply name expr)
     | BodyHole (Hole name m expr)
-    | BodyLiteral Literal
+    | BodyLiteral (Literal (Property m))
     | BodyList (List m expr)
     | BodyRecord (Record name m expr)
     | BodyGetField (GetField name expr)
@@ -477,7 +477,7 @@ instance Show info => Show (FuncParam info) where
 instance Show expr => Show (Body name m expr) where
     show (BodyLam _) = "TODO show lam"
     show BodyHole {} = "Hole"
-    show (BodyLiteral i) = show i
+    show BodyLiteral {} = "Literal"
     show (BodyList (List items _ _)) =
         concat
         [ "["

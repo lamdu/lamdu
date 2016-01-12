@@ -15,6 +15,7 @@ import           Control.MonadA (MonadA)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Char as Char
 import           Data.Function (on)
+import           Data.Functor.Identity (Identity(..))
 import           Data.List (isInfixOf, isPrefixOf)
 import qualified Data.List.Class as ListClass
 import           Data.List.Utils (sortOn)
@@ -170,11 +171,12 @@ mkGroup option =
             }
 
 tryBuildLiteral ::
-    (Format a, MonadA m) => (a -> Sugar.Literal) -> HoleInfo m ->
+    (Format a, MonadA m) => (Identity a -> Sugar.Literal Identity) -> HoleInfo m ->
     T m (Maybe (Sugar.HoleOption (Name m) m))
 tryBuildLiteral mkLiteral holeInfo =
     hiSearchTerm holeInfo
     & tryParse
+    <&> Identity
     <&> mkLiteral
     & Lens._Just %%~ hiHole holeInfo ^. Sugar.holeActions . Sugar.holeOptionLiteral
 

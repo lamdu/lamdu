@@ -11,7 +11,10 @@ import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.MonadA (MonadA)
 import qualified Data.ByteString.UTF8 as UTF8
 import           Data.Maybe.Utils (maybeToMPlus)
+import           Data.Store.Property (Property(..))
+import qualified Data.Store.Property as Property
 import qualified Lamdu.Builtins.Anchors as Builtins
+import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
@@ -32,7 +35,13 @@ text (V.Nom tid (Val litPl body)) toNomPl =
         guard $ tid == Builtins.textTid
         V.Literal litTag utf8Bytes <- body ^? ExprLens.valBodyLiteral & maybeToMPlus
         guard $ litTag == Builtins.bytesId
-        UTF8.toString utf8Bytes
-            & LiteralText & BodyLiteral & addActions toNomPl
+        Property
+            { _pVal = UTF8.toString utf8Bytes
+            , _pSet =
+                ExprIRef.writeValBody litIRef . V.BLeaf . V.LLiteral .
+                V.Literal Builtins.bytesId . UTF8.fromString
+            } & LiteralText & BodyLiteral & addActions toNomPl
             <&> rPayload . plData <>~ litPl ^. Input.userData
             & lift
+    where
+        litIRef = litPl ^. Input.stored . Property.pVal

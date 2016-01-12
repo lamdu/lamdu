@@ -3,13 +3,14 @@ module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where
 
-import           Prelude.Compat
-
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
-import           Data.Binary.Utils (decodeS)
+import           Data.Binary.Utils (encodeS, decodeS)
 import qualified Data.ByteString as SBS
+import           Data.Store.Property (Property(..))
+import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
+import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
@@ -35,19 +36,36 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
+import           Prelude.Compat
+
 type T = Transaction
 
 jumpToDefI ::
     MonadA m => Anchors.CodeProps m -> DefI m -> T m EntityId
 jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
+convertLiteralCommon ::
+    Monad m =>
+    (Transaction.Property m a ->
+     Literal (Transaction.Property m)) -> (a -> V.Literal) -> a ->
+    Input.Payload m b -> ConvertM m (ExpressionU m b)
+convertLiteralCommon mkLit mkBody val exprPl =
+    Property
+    { _pVal = val
+    , _pSet = ExprIRef.writeValBody iref . V.BLeaf . V.LLiteral . mkBody
+    } & mkLit & BodyLiteral & addActions exprPl
+    where
+        iref = exprPl ^. Input.stored . Property.pVal
+
 convertLiteralFloat ::
     MonadA m => Double -> Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertLiteralFloat i exprPl = addActions exprPl $ BodyLiteral (LiteralNum i)
+convertLiteralFloat =
+    convertLiteralCommon LiteralNum (V.Literal Builtins.floatId . encodeS)
 
 convertLiteralBytes ::
     MonadA m => SBS.ByteString -> Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertLiteralBytes bs exprPl = addActions exprPl $ BodyLiteral (LiteralBytes bs)
+convertLiteralBytes =
+    convertLiteralCommon LiteralBytes (V.Literal Builtins.bytesId)
 
 convertGlobal ::
     MonadA m => V.GlobalId -> Input.Payload m a -> ConvertM m (ExpressionU m a)

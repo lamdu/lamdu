@@ -8,6 +8,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.Store.Guid (Guid)
+import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
@@ -80,16 +81,16 @@ textView val myId =
 
 make ::
     MonadA m =>
-    Sugar.Literal -> Sugar.Payload m ExprGuiT.Payload ->
+    Sugar.Literal (Transaction.Property m) -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make lit pl =
     do
         (holeText, view) <-
             WidgetIds.fromExprPayload pl &
             case lit of
-            Sugar.LiteralNum x -> genericView Style.styleNum x
-            Sugar.LiteralBytes x -> genericView Style.styleBytes x
-            Sugar.LiteralText x -> textView x
+            Sugar.LiteralNum x -> genericView Style.styleNum (x ^. Property.pVal)
+            Sugar.LiteralBytes x -> genericView Style.styleBytes (x ^. Property.pVal)
+            Sugar.LiteralText x -> textView (x ^. Property.pVal)
         let editEventMap =
                 case pl ^. Sugar.plActions . Sugar.setToHole of
                 Sugar.SetToHole action -> mkEditEventMap holeText action
