@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, BangPatterns, RecordWildCards, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.TextView
     ( SizedFont.Underline(..), SizedFont.underlineColor, SizedFont.underlineWidth
     , Style(..), styleColor, styleFont, styleUnderline
@@ -25,7 +25,7 @@ import           Graphics.UI.Bottle.Animation (AnimId, Size)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import           Graphics.UI.Bottle.Rect (Rect(Rect))
 import qualified Graphics.UI.Bottle.Rect as Rect
-import           Graphics.UI.Bottle.SizedFont (SizedFont, TextSize(..))
+import           Graphics.UI.Bottle.SizedFont (SizedFont)
 import qualified Graphics.UI.Bottle.SizedFont as SizedFont
 import           Graphics.UI.Bottle.View (View(..))
 import qualified Graphics.UI.Bottle.View as View
@@ -43,7 +43,7 @@ lineHeight :: Style -> Widget.R
 lineHeight Style{..} = SizedFont.textHeight _styleFont
 
 data RenderedText a = RenderedText
-    { _renderedTextSize :: TextSize Size
+    { _renderedTextSize :: Size
     , renderedText :: a
     }
 Lens.makeLenses ''RenderedText
@@ -62,21 +62,10 @@ drawMany sizeToTranslate =
     where
         step (RenderedText sizeAcc drawAcc) (RenderedText sizeX drawX) =
             RenderedText
-            TextSize
-            { bounding = addAndMax bounding
-            , advance = addAndMax advance
-            }
-            (mappend drawAcc (Anim.translate (advance trans) . drawX))
+            (liftA2 max sizeAcc (trans + sizeX))
+            (mappend drawAcc (Anim.translate trans . drawX))
             where
-                addAndMax component =
-                    -- Add the relevant axis from the advance-so-far, to the
-                    -- new component. The relevant axis gets added, and the
-                    -- irrelevant axis gets to participate in the max below
-                    sizeToTranslate (advance sizeAcc) + component sizeX
-                    -- Keep previous accumulator as min bound on
-                    -- irrelevant axis (does nothing to relevant axis):
-                    & liftA2 max (component sizeAcc)
-                trans = sizeToTranslate <$> sizeAcc
+                trans = sizeToTranslate sizeAcc
 
 joinLines ::
     [RenderedText (AnimId -> Anim.Frame)] ->
@@ -91,8 +80,7 @@ nestedFrame ::
 nestedFrame (i, RenderedText size img) =
     RenderedText size draw
     where
-        draw animId =
-            Anim.sizedFrame (View.augmentAnimId animId i) (bounding size) img
+        draw animId = Anim.sizedFrame (View.augmentAnimId animId i) size img
 
 drawTextAsSingleLetters :: Style -> String -> RenderedText (AnimId -> Anim.Frame)
 drawTextAsSingleLetters style text =
@@ -101,7 +89,7 @@ drawTextAsSingleLetters style text =
     <&> Lens.mapped . _2 %~ renderLetter
     <&> Lens.mapped %~ nestedFrame
     <&> drawMany horizontal
-    <&> renderedTextSize . Lens.mapped . _2 %~ max minLineSize
+    <&> renderedTextSize . _2 %~ max minLineSize
     & joinLines
     where
         minLineSize = SizedFont.textHeight (_styleFont style)
@@ -119,14 +107,13 @@ letterRects Style{..} text =
         height = SizedFont.textHeight _styleFont
         makeLine textLine =
             sizes
-            <&> fmap (^. _1)
+            <&> (^. _1)
             -- scanl returns at least one element:
             & scanl (+) 0
             & zipWith makeLetterRect sizes
             where
                 sizes = textLine <&> SizedFont.textSize _styleFont . (:[])
-                makeLetterRect size xpos =
-                    Rect (Vector2 (advance xpos) 0) (bounding size)
+                makeLetterRect size xpos = Rect (Vector2 xpos 0) size
 
 drawTextAsLines :: Style -> String -> RenderedText (AnimId -> Anim.Frame)
 drawTextAsLines style text =
@@ -137,7 +124,7 @@ drawTextAsLines style text =
     & joinLines
 
 make :: Style -> String -> AnimId -> View
-make style text animId = View (bounding textSize) (frame animId)
+make style text animId = View textSize (frame animId)
     where
         RenderedText textSize frame = drawTextAsLines style text
 
