@@ -63,22 +63,26 @@ windowSize win =
 mainLoopImage :: GLFW.Window -> (Widget.Size -> ImageHandlers) -> IO ()
 mainLoopImage win imageHandlers =
     do
-        frameBufferSize <- newIORef =<< windowSize win
-        let handleEvent handlers (EventKey keyEvent) =
+        initialSize <- windowSize win
+        frameBufferSize <- newIORef initialSize
+        drawnImageHandlers <- imageHandlers initialSize & newIORef
+        let handleEvent (EventKey keyEvent) =
                 do
+                    handlers <- readIORef drawnImageHandlers
                     imageEventHandler handlers keyEvent
                     return ERNone
-            handleEvent _ EventWindowClose = return ERQuit
-            handleEvent _ EventWindowRefresh = return ERRefresh
-            handleEvent _ (EventFrameBufferSize size) =
+            handleEvent EventWindowClose = return ERQuit
+            handleEvent EventWindowRefresh = return ERRefresh
+            handleEvent (EventFrameBufferSize size) =
                 do
                     writeIORef frameBufferSize (fromIntegral <$> size)
                     return ERRefresh
         let handleEvents events =
                 do
+                    eventResult <- mconcat <$> traverse handleEvent events
                     winSize <- readIORef frameBufferSize
                     let handlers = imageHandlers winSize
-                    eventResult <- mconcat <$> traverse (handleEvent handlers) events
+                    writeIORef drawnImageHandlers handlers
                     case eventResult of
                         ERQuit -> return ResultQuit
                         ERRefresh -> imageRefresh handlers >>= draw winSize
