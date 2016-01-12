@@ -419,14 +419,15 @@ stdWrap pl mkGui =
     & wrapExprEventMap pl
 
 parentDelegator ::
-    MonadA m => Widget.Id -> ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-parentDelegator myId gui =
+    MonadA m => FocusDelegator.FocusEntryTarget -> Widget.Id ->
+    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
+parentDelegator focusEntryTarget myId gui =
     do
         config <- ExprGuiM.readConfig
         gui
             & egWidget %%~
             ExprGuiM.makeFocusDelegator (parentExprFDConfig config)
-            FocusDelegator.FocusEntryChild (WidgetIds.notDelegatingId myId)
+            focusEntryTarget (WidgetIds.notDelegatingId myId)
 
 stdWrapParentExpr ::
     MonadA m =>
@@ -435,7 +436,7 @@ stdWrapParentExpr ::
     ExprGuiM m (ExpressionGui m)
 stdWrapParentExpr pl mkGui =
     mkGui innerId
-    >>= parentDelegator myId
+    >>= parentDelegator FocusDelegator.FocusEntryChild myId
     & stdWrap pl
     & ExprGuiM.assignCursor myId innerId
     where

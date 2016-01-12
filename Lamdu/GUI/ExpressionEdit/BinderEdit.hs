@@ -444,7 +444,7 @@ makeBinderContentEdit params (Sugar.BinderLet l) =
             ] & sequence
             <&> map (ExpressionGui.egAlignment . _1 .~ 0)
             >>= ExpressionGui.vboxTopFocalSpaced
-            >>= ExpressionGui.parentDelegator letEntityId
+            >>= ExpressionGui.parentDelegator FocusDelegator.FocusEntryChild letEntityId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents delEventMap
     where
         letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
