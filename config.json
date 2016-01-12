@@ -691,26 +691,6 @@
             "Key'GraveAccent"
         ]
     ],
-    "debugModeKeys": [
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": true,
-                "modifierKeysShift": false,
-                "modifierKeysControl": true
-            },
-            "Key'D"
-        ],
-        [
-            {
-                "modifierKeysSuper": false,
-                "modifierKeysAlt": false,
-                "modifierKeysShift": false,
-                "modifierKeysControl": true
-            },
-            "Key'F7"
-        ]
-    ],
     "foreignVarColor": [
         1.0,
         0.65,

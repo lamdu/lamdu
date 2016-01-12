@@ -160,7 +160,6 @@ data Config = Config
     , spaceWidth :: Double
 
     , quitKeys :: [ModKey]
-    , debugModeKeys :: [ModKey]
     , nextInfoModeKeys :: [ModKey]
     , previousCursorKeys :: [ModKey]
 
