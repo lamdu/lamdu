@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards, NoImplicitPrelude, OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.LiteralEdit
     ( make
     ) where
@@ -19,6 +19,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
+import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -66,11 +67,20 @@ genericEdit getStyle prop pl =
             Sugar.AlreadyAppliedToHole -> error "Literal val is an apply?!"
         valText = prop ^. Property.pVal & format
 
+fdConfig :: Config.LiteralText -> FocusDelegator.Config
+fdConfig Config.LiteralText{..} = FocusDelegator.Config
+    { FocusDelegator.focusChildKeys = literalTextStartEditingKeys
+    , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Literal Text", "Start editing"]
+    , FocusDelegator.focusParentKeys = literalTextStopEditingKeys
+    , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Literal Text", "Stop editing"]
+    }
+
 textEdit ::
     MonadA m => Transaction.Property m String ->
     Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
 textEdit prop pl =
     do
+        config <- ExprGuiM.readConfig <&> Config.literalText
         style <- ExprGuiM.readStyle <&> Style.styleText
         do
             text <- BWidgets.makeTextEditor prop innerId
@@ -85,7 +95,8 @@ textEdit prop pl =
             <&> ExpressionGui.fromValueWidget
             & ExprGuiM.widgetEnv
             & ExprGuiM.localEnv (WE.envTextStyle .~ style)
-            >>= ExpressionGui.parentDelegator
+            >>= ExpressionGui.egWidget %%~
+            ExprGuiM.makeFocusDelegator (fdConfig config)
                 FocusDelegator.FocusEntryParent myId
     where
         innerId = WidgetIds.delegatingId myId
