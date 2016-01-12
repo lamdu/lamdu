@@ -6,8 +6,6 @@ module Graphics.UI.Bottle.MainLoop
     , mainLoopWidget
     ) where
 
-import           Prelude.Compat
-
 import           Control.Concurrent (ThreadId, myThreadId)
 import           Control.Concurrent.STM.TVar
 import           Control.Concurrent.Utils (forkIOUnmasked)
@@ -35,6 +33,8 @@ import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (KeyEvent, Event(..), Result(..), eventLoop)
+
+import           Prelude.Compat
 
 data AnimConfig = AnimConfig
     { acTimePeriod :: NominalDiffTime
