@@ -1,22 +1,25 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings, RecordWildCards #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap
     ( blockDownEvents, disallowChars
     , makeOpenEventMaps
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.Foldable as Foldable
+import           Data.Functor.Identity (Identity(..))
 import           Data.List (isInfixOf)
+import           Data.List.Class (List)
+import qualified Data.List.Class as List
+import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
+import qualified Graphics.UI.Bottle.ModKey as ModKey
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
@@ -33,6 +36,8 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
+
+import           Prelude.Compat
 
 type T = Transaction.Transaction
 
@@ -69,10 +74,17 @@ adHocTextEditEventMap holeConfig searchTermProp =
 disallowedHoleChars :: String
 disallowedHoleChars = ",`\n "
 
+toLiteralTextKeys :: [ModKey]
+toLiteralTextKeys =
+    [ ModKey.shift GLFW.Key'Apostrophe
+    , ModKey mempty GLFW.Key'Apostrophe
+    ]
+
 disallowChars :: Config.Hole -> String -> E.EventMap a -> E.EventMap a
 disallowChars Config.Hole{..} searchTerm =
     E.filterChars (`notElem` disallowedHoleChars) .
-    deleteKeys (holePickAndMoveToNextHoleKeys ++ holePickResultKeys) .
+    deleteKeys
+    (holePickAndMoveToNextHoleKeys ++ holePickResultKeys) .
     disallowMix
     where
         allowDigitsOnly = E.filterChars (`elem` digitChars)
@@ -168,6 +180,35 @@ emptyPickEventMap Config.Hole{..} =
     where
         keys = holePickResultKeys ++ holePickAndMoveToNextHoleKeys
 
+listTHead :: List t => b -> t b -> List.ItemM t b
+listTHead nil l =
+    l
+    & List.runList
+    <&> \case
+        List.Nil -> nil
+        List.Cons item _ -> item
+
+-- TODO: This is ugly, maybe Sugar.HoleOption should
+-- have a canonical result?
+toLiteralTextEventMap :: MonadA m => HoleInfo m -> Widget.EventHandlers (T m)
+toLiteralTextEventMap holeInfo =
+    Widget.keysEventMapMovesCursor toLiteralTextKeys
+    (E.Doc ["Edit", "Create Text Literal"]) $
+    do
+        (_score, mkResult) <-
+            Sugar.LiteralText (Identity "")
+            & hiHole holeInfo ^. Sugar.holeActions . Sugar.holeOptionLiteral
+            <&> (^. Sugar.hoResults)
+            >>= listTHead (error "Literal hole option has no results?!")
+        result <- mkResult
+        pickedResult <- result ^. Sugar.holeResultPick
+        result ^. Sugar.holeResultConverted . Sugar.rPayload . Sugar.plEntityId
+            & (`lookup` (pickedResult ^. Sugar.prIdTranslation))
+            & fromMaybe (error "PickedResult missing translation for expr")
+            & WidgetIds.fromEntityId
+            & WidgetIds.delegatingId
+            & pure
+
 makeOpenEventMaps ::
     MonadA m =>
     HoleInfo m -> Maybe (ShownResult m) ->
@@ -185,7 +226,13 @@ makeOpenEventMaps holeInfo mShownResult =
             Just shownResult ->
                 mkEventsOnPickedResult shownResult
                 <&> mappend (pickEventMap holeConfig holeInfo shownResult)
-        let adHocEdit =
-                adHocTextEditEventMap holeConfig
-                (HoleInfo.hiSearchTermProperty holeInfo)
-        pure (eventMap, adHocEdit <> eventMap)
+                <&> deleteKeys toLiteralTextKeys
+        let adHocEdit = adHocTextEditEventMap holeConfig searchTermProp
+        (eventMap, adHocEdit <> eventMap)
+            & Lens.both %~ mappend maybeLiteralTextEventMap
+            & pure
+    where
+        maybeLiteralTextEventMap
+            | null (searchTermProp ^. Property.pVal) = toLiteralTextEventMap holeInfo
+            | otherwise = mempty
+        searchTermProp = HoleInfo.hiSearchTermProperty holeInfo

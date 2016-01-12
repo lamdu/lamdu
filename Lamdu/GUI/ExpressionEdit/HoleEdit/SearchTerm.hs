@@ -56,9 +56,9 @@ make :: MonadA m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 make holeInfo =
     do
         config <- ExprGuiM.readConfig
-        let Config.Hole{..} = Config.hole config
+        let holeConfig@Config.Hole{..} = Config.hole config
         makeSearchTermPropEdit WidgetIds{..} (HoleInfo.hiSearchTermProperty holeInfo)
-            <&> Widget.eventMap %~ EventMap.disallowChars Config.Hole{..} searchTerm
+            <&> Widget.eventMap %~ EventMap.disallowChars holeConfig searchTerm
             <&> addBackground (Widget.toAnimId hidOpenSearchTerm)
                 (Config.layers config) holeSearchTermBGColor
             <&> ExpressionGui.fromValueWidget
