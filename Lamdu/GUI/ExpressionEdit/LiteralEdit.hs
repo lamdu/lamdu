@@ -12,14 +12,14 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.ModKey (ModKey(..))
-import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Graphics.UI.GLFW as GLFW
-import           Lamdu.Formatting (Format(..), formatTextContents)
+import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..), setHoleStateAndJump)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
@@ -44,61 +44,61 @@ mkEditEventMap valText setToHole =
         (guid, entityId) <- setToHole
         setHoleStateAndJump guid (HoleState valText) entityId
 
-genericView ::
+genericEdit ::
     (MonadA m, Format a) =>
-    (Style -> TextEdit.Style) -> a -> Widget.Id ->
-    ExprGuiM m (String, Widget (T m))
-genericView getStyle val myId =
+    (Style -> TextEdit.Style) -> Transaction.Property m a ->
+    Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
+genericEdit getStyle prop pl =
     do
-        style <- ExprGuiM.readStyle
+        style <- ExprGuiM.readStyle <&> getStyle
         BWidgets.makeFocusableTextView valText myId
             & ExprGuiM.widgetEnv
-            & ExprGuiM.localEnv (WE.envTextStyle .~ getStyle style)
-    <&> (,) valText
+            & ExprGuiM.localEnv (WE.envTextStyle .~ style)
+            <&> Widget.weakerEvents editEventMap
+            <&> ExpressionGui.fromValueWidget
     where
-        valText = format val
+        myId = WidgetIds.fromExprPayload pl
+        editEventMap =
+            case pl ^. Sugar.plActions . Sugar.setToHole of
+            Sugar.SetToHole action -> mkEditEventMap valText action
+            Sugar.SetWrapperToHole action -> mkEditEventMap valText action
+            Sugar.AlreadyAHole -> error "Literal val is a hole?!"
+            Sugar.AlreadyAppliedToHole -> error "Literal val is an apply?!"
+        valText = prop ^. Property.pVal & format
 
-textView :: MonadA m => String -> Widget.Id -> ExprGuiM m (String, Widget (T m))
-textView val myId =
+textEdit ::
+    MonadA m => Transaction.Property m String ->
+    Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (ExpressionGui m)
+textEdit prop pl =
     do
-        style <- ExprGuiM.readStyle
+        style <- ExprGuiM.readStyle <&> Style.styleText
         do
-            text <- BWidgets.makeFocusableTextView contentsText myId
+            text <- BWidgets.makeTextEditor prop innerId
             let quoteSize = text ^. Widget.size & _1 .~ 0
             left <-
                 BWidgets.makeLabel "“" (Widget.toAnimId myId)
                 <&> Widget.padToSizeAlign quoteSize 0
             right <-
-                BWidgets.makeLabel "”" (Widget.toAnimId myId)
+                BWidgets.makeLabel "„" (Widget.toAnimId myId)
                 <&> Widget.padToSizeAlign quoteSize 1
             Box.hboxCentered [left, text, right] & return
+            <&> ExpressionGui.fromValueWidget
             & ExprGuiM.widgetEnv
-            & ExprGuiM.localEnv (WE.envTextStyle .~ Style.styleText style)
-    <&> (,) (init valText)
+            & ExprGuiM.localEnv (WE.envTextStyle .~ style)
+            >>= ExpressionGui.parentDelegator
+                FocusDelegator.FocusEntryParent myId
     where
-        valText = format val
-        contentsText = formatTextContents val
+        innerId = WidgetIds.delegatingId myId
+        myId = WidgetIds.fromExprPayload pl
 
 make ::
     MonadA m =>
     Sugar.Literal (Transaction.Property m) -> Sugar.Payload m ExprGuiT.Payload ->
     ExprGuiM m (ExpressionGui m)
 make lit pl =
-    do
-        (holeText, view) <-
-            WidgetIds.fromExprPayload pl &
-            case lit of
-            Sugar.LiteralNum x -> genericView Style.styleNum (x ^. Property.pVal)
-            Sugar.LiteralBytes x -> genericView Style.styleBytes (x ^. Property.pVal)
-            Sugar.LiteralText x -> textView (x ^. Property.pVal)
-        let editEventMap =
-                case pl ^. Sugar.plActions . Sugar.setToHole of
-                Sugar.SetToHole action -> mkEditEventMap holeText action
-                Sugar.SetWrapperToHole action -> mkEditEventMap holeText action
-                Sugar.AlreadyAHole -> error "Literal val is a hole?!"
-                Sugar.AlreadyAppliedToHole -> error "Literal val is an apply?!"
-        view
-            & Widget.weakerEvents editEventMap
-            & ExpressionGui.fromValueWidget
-            & return
+    pl
+    & case lit of
+    Sugar.LiteralNum x -> genericEdit Style.styleNum x
+    Sugar.LiteralBytes x -> genericEdit Style.styleBytes x
+    Sugar.LiteralText x -> textEdit x
     & ExpressionGui.stdWrap pl
