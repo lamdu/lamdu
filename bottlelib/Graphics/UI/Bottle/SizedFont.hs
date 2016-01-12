@@ -4,6 +4,7 @@
 module Graphics.UI.Bottle.SizedFont
     ( SizedFont(..), font, fontSize
     , Underline(..), underlineColor, underlineWidth
+    , DrawUtils.TextSize(..)
     , render, textSize, textHeight
     ) where
 
@@ -14,6 +15,7 @@ import           Data.Monoid ((<>))
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.DrawingCombinators.Utils (TextSize(..))
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 
 data SizedFont = SizedFont
@@ -30,13 +32,13 @@ Lens.makeLenses ''Underline
 
 render ::
     SizedFont -> Draw.Color -> Maybe Underline -> String ->
-    (Vector2 Draw.R, Draw.Image ())
+    (TextSize (Vector2 Draw.R), Draw.Image ())
 render sizedFont color mUnderline str =
     ( size
     , ( ( DrawUtils.scale (realToFrac (sizedFont ^. fontSize)) %%
           DrawUtils.drawText (sizedFont ^. font) str
         ) & Draw.tint color
-      ) <> maybe mempty (drawUnderline sizedFont size) mUnderline
+      ) <> maybe mempty (drawUnderline sizedFont (DrawUtils.bounding size)) mUnderline
     )
     where
         size = textSize sizedFont str
@@ -55,5 +57,5 @@ drawUnderline sizedFont size (Underline color width) =
 textHeight :: SizedFont -> Draw.R
 textHeight SizedFont{..} = DrawUtils.textHeight * realToFrac _fontSize
 
-textSize :: SizedFont -> String -> Vector2 Draw.R
-textSize SizedFont{..} str = realToFrac _fontSize * DrawUtils.textSize _font str
+textSize :: SizedFont -> String -> TextSize (Vector2 Draw.R)
+textSize SizedFont{..} str = (realToFrac _fontSize *) <$> DrawUtils.textSize _font str

@@ -314,7 +314,3 @@ Executable lamdu
 source-repository head
   type: git
   location: https://github.com/Peaker/lamdu.git
-
-Flag SmoothFonts
-  Description: Build example programs
-  Default: False
