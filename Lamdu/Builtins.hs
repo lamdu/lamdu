@@ -6,6 +6,7 @@ module Lamdu.Builtins
 import           Control.Lens.Operators
 import           Control.Monad (when)
 import           Data.Binary.Utils (encodeS, decodeS)
+import qualified Data.ByteString as SBS
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Map.Utils (matchKeys)
@@ -51,6 +52,12 @@ class GuestType t where
 fromGuest :: GuestType t => Val srcId -> Either EvalError t
 fromGuest (HError err) = Left err
 fromGuest x = fromGuestVal x
+
+instance GuestType SBS.ByteString where
+    toGuest = HLiteral . V.Literal Builtins.bytesId
+    fromGuestVal (HLiteral (V.Literal primId x))
+        | primId == Builtins.bytesId = Right x
+    fromGuestVal x = "expected bytes, got " ++ show x & EvalTypeError & Left
 
 instance GuestType Double where
     toGuest = HLiteral . V.Literal Builtins.floatId . encodeS
@@ -137,6 +144,27 @@ builtinEq = builtinEqH id
 builtinNotEq :: Val srcId -> Val srcId
 builtinNotEq = builtinEqH not
 
+builtinBytesSlice :: Val srcId -> Val srcId
+builtinBytesSlice val =
+    do
+        V3 bytes start stop <-
+            extractRecordParams
+            (V3 Builtins.objTag Builtins.startTag Builtins.stopTag) val
+        f <$> fromGuest bytes <*> toInt start <*> toInt stop
+            <&> toGuest
+    & eitherToVal
+    where
+        f bs start stop =
+            SBS.take stop bs & SBS.drop start
+        toInt x = fromGuest x >>= doubleToInt
+        doubleToInt :: Double -> Either EvalError Int
+        doubleToInt x
+            | x == fromIntegral i = Right i
+            | otherwise =
+                "slice got frational number " ++ show x & EvalTypeError & Left
+            where
+                i = truncate x
+
 floatArg :: (Double -> a) -> Double -> a
 floatArg = id
 
@@ -163,4 +191,5 @@ eval name =
     Def.FFIName ["Prelude"] "mod"    -> builtin2Infix $ floatArg genericMod
     Def.FFIName ["Prelude"] "negate" -> builtin1      $ floatArg negate
     Def.FFIName ["Prelude"] "sqrt"   -> builtin1      $ floatArg sqrt
+    Def.FFIName ["Bytes"]   "slice"  -> builtinBytesSlice
     _ -> name & EvalMissingBuiltin & HError & const

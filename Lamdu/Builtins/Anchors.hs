@@ -2,6 +2,7 @@
 module Lamdu.Builtins.Anchors
     ( recurseVar, objTag, infixlTag, infixrTag, listTid, textTid
     , headTag, tailTag, consTag, nilTag, trueTag, falseTag, justTag, nothingTag
+    , startTag, stopTag
     , Order, anchorTags
     , floatId, bytesId
     ) where
@@ -21,6 +22,12 @@ infixlTag = "BI:infixl"
 
 infixrTag :: Tag
 infixrTag = "BI:infixr"
+
+startTag :: Tag
+startTag = "BI:start"
+
+stopTag :: Tag
+stopTag = "BI:stop"
 
 floatId :: T.PrimId
 floatId = "BI:float"
@@ -63,6 +70,8 @@ type Order = Int
 anchorTags :: [(Order, Tag, String)]
 anchorTags =
     [ (0, objTag, "object")
+    , (1, startTag, "start")
+    , (2, stopTag, "stop")
     , (0, infixlTag, "infixl")
     , (1, infixrTag, "infixr")
     , (0, headTag, "head")

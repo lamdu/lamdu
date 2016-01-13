@@ -225,6 +225,9 @@ createText =
 float :: Type
 float = T.TPrim Builtins.floatId
 
+bytes :: Type
+bytes = T.TPrim Builtins.bytesId
+
 createPublics :: MonadA m => T m (Public m)
 createPublics =
     do
@@ -240,9 +243,10 @@ createPublics =
         bool <- createBool
 
         let infixType lType rType resType =
-                recordType [ (Builtins.infixlTag, lType)
-                                      , (Builtins.infixrTag, rType)
-                                      ] ~> resType
+                recordType
+                [ (Builtins.infixlTag, lType)
+                , (Builtins.infixrTag, rType)
+                ] ~> resType
 
         let arith n i =
                 newPublicBuiltinQualified_ ("Prelude." ++ n) (Infix i)
@@ -256,6 +260,11 @@ createPublics =
         newPublicBuiltin_ "/" (Infix 7) ["Prelude"] "/" $ Scheme.mono $ infixType float float float
         newPublicBuiltinQualified_ "Prelude.negate" OO $ Scheme.mono $ float ~> float
         newPublicBuiltinQualified_ "Prelude.sqrt" OO $ Scheme.mono $ float ~> float
+        newPublicBuiltinQualified_ "Bytes.slice" OO $ Scheme.mono $
+            recordType
+            [ (Builtins.objTag, bytes)
+            , (Builtins.startTag, float) , (Builtins.stopTag, float)
+            ] ~> bytes
 
         let cmp n =
                 newPublicBuiltinQualified_ ("Prelude." ++ n) (Infix 4) $
