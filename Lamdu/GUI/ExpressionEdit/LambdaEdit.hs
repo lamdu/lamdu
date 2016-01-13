@@ -41,6 +41,21 @@ mkExpanded mParamsEdit mScopeEdit animId =
     where
         lhsEdits = mkLhsEdits mParamsEdit mScopeEdit
 
+mkShrunk ::
+    MonadA m => Maybe (ExpressionGui m) -> Widget.Id -> ExprGuiM m [ExpressionGui m]
+mkShrunk mScopeEdit myId =
+    do
+        config <- ExprGuiM.readConfig <&> Config.lightLambda
+        ExpressionGui.grammarLabel "λ" animId
+            & LightLambda.withUnderline config
+            >>= ExpressionGui.makeFocusableView
+                (Widget.joinId myId ["lam"])
+            -- TODO: add event to jump to first param
+            <&> addScopeEdit mScopeEdit
+            <&> (:[])
+    where
+        animId = Widget.toAnimId myId
+
 mkLightLambda ::
     MonadA n =>
     Maybe (ExpressionGui n) ->
@@ -49,24 +64,15 @@ mkLightLambda ::
     ExprGuiM n [ExpressionGui n]
 mkLightLambda mParamsEdit mScopeEdit params myId =
     do
-        let paramIds =
-                params ^.. SugarLens.binderNamedParams . Sugar.fpId
         isSelected <-
             mapM (WE.isSubCursor . WidgetIds.fromEntityId) paramIds
             <&> or
             & ExprGuiM.widgetEnv
-        config <- ExprGuiM.readConfig <&> Config.lightLambda
         if isSelected
             then mkExpanded mParamsEdit mScopeEdit animId
-            else
-                ExpressionGui.grammarLabel "λ" animId
-                & LightLambda.withUnderline config
-                >>= ExpressionGui.makeFocusableView
-                    (Widget.joinId myId ["lam"])
-                -- TODO: add event to jump to first param
-                <&> addScopeEdit mScopeEdit
-                <&> (:[])
+            else mkShrunk mScopeEdit myId
     where
+        paramIds = params ^.. SugarLens.binderNamedParams . Sugar.fpId
         animId = Widget.toAnimId myId
 
 make ::
