@@ -9,8 +9,10 @@ import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.EventMap as E
+import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
+import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -42,6 +44,9 @@ mkExpanded mParamsEdit mScopeEdit animId =
     where
         lhsEdits = mkLhsEdits mParamsEdit mScopeEdit
 
+lamId :: Widget.Id -> Widget.Id
+lamId = (`Widget.joinId` ["lam"])
+
 mkShrunk ::
     MonadA m => [Sugar.EntityId] -> Maybe (ExpressionGui m) -> Widget.Id ->
     ExprGuiM m [ExpressionGui m]
@@ -56,8 +61,7 @@ mkShrunk paramIds mScopeEdit myId =
                    WidgetIds.fromEntityId)
         ExpressionGui.grammarLabel "λ" animId
             & LightLambda.withUnderline (Config.lightLambda config)
-            >>= ExpressionGui.makeFocusableView
-                (Widget.joinId myId ["lam"])
+            >>= ExpressionGui.makeFocusableView (lamId myId)
             -- TODO: add event to jump to first param
             <&> addScopeEdit mScopeEdit
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents expandEventMap
@@ -77,8 +81,14 @@ mkLightLambda mParamsEdit mScopeEdit params myId =
             mapM (WE.isSubCursor . WidgetIds.fromEntityId) paramIds
             <&> or
             & ExprGuiM.widgetEnv
+        let shrinkKeys = [ModKey mempty GLFW.Key'Escape]
+        let shrinkEventMap =
+                Widget.keysEventMapMovesCursor shrinkKeys
+                (E.Doc ["View", "Shrink Lambda Params"]) (return (lamId myId))
         if isSelected
             then mkExpanded mParamsEdit mScopeEdit animId
+                 <&> Lens.mapped . ExpressionGui.egWidget %~
+                     Widget.weakerEvents shrinkEventMap
             else mkShrunk paramIds mScopeEdit myId
     where
         paramIds = params ^.. SugarLens.binderNamedParams . Sugar.fpId
