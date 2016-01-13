@@ -190,7 +190,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                   <$ deleteLam
                   & SetToInnerExpr
                 | otherwise = NoInnerExpr
-        let paramSet =
+        let paramGuids =
                 binder ^.. bParams . SugarLens.binderNamedParams .
                 Lens.traversed . npiName
                 & Set.fromList
@@ -199,7 +199,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                     Lambda NormalBinder binder
                 | otherwise =
                     binder
-                    & bBody . Lens.traverse %~ markLightParams paramSet
+                    & bBody . Lens.traverse %~ markLightParams paramGuids
                     & Lambda LightLambda
         BodyLam lambda
             & addActions exprPl
@@ -223,10 +223,10 @@ useNormalLambda binder =
 
 markLightParams ::
     MonadA m => Set Guid -> ExpressionU m a -> ExpressionU m a
-markLightParams paramNames (Expression body pl) =
+markLightParams paramGuids (Expression body pl) =
     case body of
     BodyGetVar (GetParam n)
-        | Set.member (n ^. pNameRef . nrName) paramNames ->
+        | Set.member (n ^. pNameRef . nrName) paramGuids ->
             n
             & pBinderMode .~ LightLambda
             & GetParam & BodyGetVar
@@ -234,9 +234,9 @@ markLightParams paramNames (Expression body pl) =
         h
         & holeActions . holeOptions . Lens.mapped . Lens.traversed . hoResults
         . Lens.mapped . _2 . Lens.mapped . holeResultConverted
-            %~ markLightParams paramNames
+            %~ markLightParams paramGuids
         & BodyHole
-    _ -> body <&> markLightParams paramNames
+    _ -> body <&> markLightParams paramGuids
     & (`Expression` pl)
 
 -- Let-item or definition (form of <name> [params] = <body>)
