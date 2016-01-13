@@ -8,6 +8,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Graphics.UI.Bottle.Animation (AnimId)
+import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
 import qualified Lamdu.Config as Config
@@ -42,16 +43,24 @@ mkExpanded mParamsEdit mScopeEdit animId =
         lhsEdits = mkLhsEdits mParamsEdit mScopeEdit
 
 mkShrunk ::
-    MonadA m => Maybe (ExpressionGui m) -> Widget.Id -> ExprGuiM m [ExpressionGui m]
-mkShrunk mScopeEdit myId =
+    MonadA m => [Sugar.EntityId] -> Maybe (ExpressionGui m) -> Widget.Id ->
+    ExprGuiM m [ExpressionGui m]
+mkShrunk paramIds mScopeEdit myId =
     do
-        config <- ExprGuiM.readConfig <&> Config.lightLambda
+        config <- ExprGuiM.readConfig
+        let expandEventMap =
+                paramIds ^? Lens.traverse
+                & maybe mempty
+                  (Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys config)
+                   (E.Doc ["View", "Expand Lambda Params"]) . return .
+                   WidgetIds.fromEntityId)
         ExpressionGui.grammarLabel "λ" animId
-            & LightLambda.withUnderline config
+            & LightLambda.withUnderline (Config.lightLambda config)
             >>= ExpressionGui.makeFocusableView
                 (Widget.joinId myId ["lam"])
             -- TODO: add event to jump to first param
             <&> addScopeEdit mScopeEdit
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents expandEventMap
             <&> (:[])
     where
         animId = Widget.toAnimId myId
@@ -70,7 +79,7 @@ mkLightLambda mParamsEdit mScopeEdit params myId =
             & ExprGuiM.widgetEnv
         if isSelected
             then mkExpanded mParamsEdit mScopeEdit animId
-            else mkShrunk mScopeEdit myId
+            else mkShrunk paramIds mScopeEdit myId
     where
         paramIds = params ^.. SugarLens.binderNamedParams . Sugar.fpId
         animId = Widget.toAnimId myId
