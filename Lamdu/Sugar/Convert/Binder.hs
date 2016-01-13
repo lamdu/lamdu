@@ -195,7 +195,7 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                 Lens.traversed . npiName
                 & Set.fromList
         let lambda
-                | useNormalLambda binder =
+                | useNormalLambda paramGuids binder =
                     Lambda NormalBinder binder
                 | otherwise =
                     binder
@@ -205,12 +205,13 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
             & addActions exprPl
             <&> rPayload . plActions . setToInnerExpr .~ setToInnerExprAction
 
-useNormalLambda :: Binder name m (Expression name m a) -> Bool
-useNormalLambda binder =
+useNormalLambda :: Set Guid -> Binder Guid m (Expression Guid m a) -> Bool
+useNormalLambda paramGuids binder =
     any (binder &)
     [ Lens.hasn't (bParams . _FieldParams)
     , Lens.has (bBody . bbContent . _BinderLet)
     , Lens.has (bBody . Lens.traverse . SugarLens.payloadsOf forbiddenLightLamSubExprs)
+    , not . allParamsUsed paramGuids
     ]
     where
         forbiddenLightLamSubExprs :: Lens.Fold (Body name m a) ()
@@ -220,6 +221,15 @@ useNormalLambda binder =
                 check)
         check :: Lens.Fold a ()
         check = const () & Lens.to
+
+allParamsUsed :: Set Guid -> Binder Guid m (Expression Guid m a) -> Bool
+allParamsUsed paramGuids binder =
+    Set.null (paramGuids `Set.difference` usedParams)
+    where
+        usedParams =
+            binder ^.. Lens.traverse . SugarLens.subExprPayloads . Lens.asIndex .
+            rBody . _BodyGetVar . _GetParam . pNameRef . nrName
+            & Set.fromList
 
 markLightParams ::
     MonadA m => Set Guid -> ExpressionU m a -> ExpressionU m a
