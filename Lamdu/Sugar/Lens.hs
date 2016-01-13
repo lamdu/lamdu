@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Lens
     ( bitraverseExpression, subExprPayloads, payloadsIndexedByPath
     , payloadsOf
-    , holePayloads, holeArgs, subExprsOf
+    , holePayloads, holeArgs
     , defSchemes
     , binderNamedParams
     , binderNamedParamsActions
