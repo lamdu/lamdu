@@ -207,9 +207,11 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
 
 useNormalLambda :: Binder name m (Expression name m a) -> Bool
 useNormalLambda binder =
-    Lens.has (bBody . bbContent . _BinderLet) binder
-    || Lens.has (bBody . Lens.traverse . SugarLens.payloadsOf forbiddenLightLamSubExprs) binder
-    || Lens.nullOf (bParams . _FieldParams) binder
+    any (binder &)
+    [ Lens.has (bBody . bbContent . _BinderLet)
+    , Lens.has (bBody . Lens.traverse . SugarLens.payloadsOf forbiddenLightLamSubExprs)
+    , Lens.hasn't (bParams . _FieldParams)
+    ]
     where
         forbiddenLightLamSubExprs :: Lens.Fold (Body name m a) ()
         forbiddenLightLamSubExprs =
