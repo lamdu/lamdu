@@ -42,6 +42,7 @@ data EvalError
     | EvalLoadGlobalFailed V.GlobalId
     | EvalMissingBuiltin FFIName
     | EvalTodoError String
+    | EvalIndexError String
     deriving Show
 
 data Val srcId

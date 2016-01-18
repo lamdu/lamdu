@@ -144,26 +144,33 @@ builtinEq = builtinEqH id
 builtinNotEq :: Val srcId -> Val srcId
 builtinNotEq = builtinEqH not
 
+toIndex :: Int -> Val srcId -> Either EvalError Int
+toIndex mx g =
+    fromGuest g >>= f
+    where
+        f x
+            | x /= fromIntegral i = "fractional index " ++ show x & err
+            | i < 0 = "negative index " ++ show i & err
+            | i > mx = "index too large " ++ show i ++ " >= " ++ show mx & err
+            | otherwise = Right i
+            where
+                i = floatArg truncate x
+        err = Left . EvalIndexError
+
 builtinBytesSlice :: Val srcId -> Val srcId
 builtinBytesSlice val =
     do
-        V3 bytes start stop <-
+        V3 bytesG startG stopG <-
             extractRecordParams
             (V3 Builtins.objTag Builtins.startTag Builtins.stopTag) val
-        f <$> fromGuest bytes <*> toInt start <*> toInt stop
-            <&> toGuest
+        bytes <- fromGuest bytesG
+        V2 start stop <- V2 startG stopG & mapM (toIndex (SBS.length bytes))
+        when (start > stop)
+            (Left (EvalIndexError
+            ("start index " ++ show start ++ " after stop index " ++ show stop)
+            ))
+        SBS.take stop bytes & SBS.drop start & toGuest & Right
     & eitherToVal
-    where
-        f bs start stop =
-            SBS.take stop bs & SBS.drop start
-        toInt x = fromGuest x >>= doubleToInt
-        doubleToInt :: Double -> Either EvalError Int
-        doubleToInt x
-            | x == fromIntegral i = Right i
-            | otherwise =
-                "slice got frational number " ++ show x & EvalTypeError & Left
-            where
-                i = truncate x
 
 floatArg :: (Double -> a) -> Double -> a
 floatArg = id
