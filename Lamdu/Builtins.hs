@@ -157,6 +157,16 @@ toIndex mx g =
                 i = floatArg truncate x
         err = Left . EvalIndexError
 
+builtinByteAt :: Val srcId -> Val srcId
+builtinByteAt val =
+    do
+        V2 bytesG indexG <-
+            extractRecordParams (V2 Builtins.objTag Builtins.indexTag) val
+        bytes <- fromGuest bytesG
+        index <- toIndex (SBS.length bytes - 1) indexG
+        SBS.index bytes index & fromIntegral & floatArg toGuest & Right
+    & eitherToVal
+
 builtinBytesSlice :: Val srcId -> Val srcId
 builtinBytesSlice val =
     do
@@ -199,4 +209,5 @@ eval name =
     Def.FFIName ["Prelude"] "negate" -> builtin1      $ floatArg negate
     Def.FFIName ["Prelude"] "sqrt"   -> builtin1      $ floatArg sqrt
     Def.FFIName ["Bytes"]   "slice"  -> builtinBytesSlice
+    Def.FFIName ["Bytes"]   "byteAt" -> builtinByteAt
     _ -> name & EvalMissingBuiltin & HError & const
