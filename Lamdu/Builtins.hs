@@ -204,10 +204,14 @@ eval name =
     Def.FFIName ["Prelude"] "+"      -> builtin2Infix $ floatArg (+)
     Def.FFIName ["Prelude"] "-"      -> builtin2Infix $ floatArg (-)
     Def.FFIName ["Prelude"] "/"      -> builtin2Infix $ floatArg (/)
-    Def.FFIName ["Prelude"] "div"    -> builtin2Infix $ ((fromIntegral :: Int -> Double) .) . floatArg genericDiv
+    Def.FFIName ["Prelude"] "div"    -> builtin2Infix $ (intToDouble .) . floatArg genericDiv
     Def.FFIName ["Prelude"] "mod"    -> builtin2Infix $ floatArg genericMod
     Def.FFIName ["Prelude"] "negate" -> builtin1      $ floatArg negate
     Def.FFIName ["Prelude"] "sqrt"   -> builtin1      $ floatArg sqrt
     Def.FFIName ["Bytes"]   "slice"  -> builtinBytesSlice
     Def.FFIName ["Bytes"]   "byteAt" -> builtinByteAt
+    Def.FFIName ["Bytes"]   "length" -> builtin1      $ intToDouble . SBS.length
     _ -> name & EvalMissingBuiltin & HError & const
+    where
+        intToDouble :: Int -> Double
+        intToDouble = fromIntegral

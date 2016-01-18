@@ -260,6 +260,7 @@ createPublics =
         newPublicBuiltin_ "/" (Infix 7) ["Prelude"] "/" $ Scheme.mono $ infixType float float float
         newPublicBuiltinQualified_ "Prelude.negate" OO $ Scheme.mono $ float ~> float
         newPublicBuiltinQualified_ "Prelude.sqrt" OO $ Scheme.mono $ float ~> float
+        newPublicBuiltinQualified_ "Bytes.length" OO $ Scheme.mono $ bytes ~> float
         newPublicBuiltinQualified_ "Bytes.slice" OO $ Scheme.mono $
             recordType
             [ (Builtins.objTag, bytes)
@@ -267,7 +268,7 @@ createPublics =
             ] ~> bytes
         newPublicBuiltinQualified_ "Bytes.byteAt" OO $ Scheme.mono $
             recordType
-            [ (Builtins.objTag, bytes), (Builtins.indexTag, float) ] ~> bytes
+            [ (Builtins.objTag, bytes), (Builtins.indexTag, float) ] ~> float
 
         let cmp n =
                 newPublicBuiltinQualified_ ("Prelude." ++ n) (Infix 4) $
