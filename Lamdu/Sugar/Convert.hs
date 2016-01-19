@@ -78,16 +78,9 @@ reinferCheckExpression valI =
         IRefInfer.run (IRefInfer.loadInferScope Infer.emptyScope val)
             <&> Lens.has Lens._Right
 
-mkContext ::
-    MonadA m =>
-    Maybe (DefI m) -> Anchors.Code (Transaction.MkProperty m) m -> T m Bool -> Infer.Context ->
-    Context m
-mkContext defI cp reinferCheckRoot inferContext =
-    Context
-    { _scInferContext = inferContext
-    , _scDefI = defI
-    , _scCodeAnchors = cp
-    , _scScopeInfo = ScopeInfo
+emptyScopeInfo :: ScopeInfo m
+emptyScopeInfo =
+    ScopeInfo
       { _siTagParamInfos = mempty
       , _siNullParams = mempty
       , _siLetItems = mempty
@@ -96,10 +89,6 @@ mkContext defI cp reinferCheckRoot inferContext =
         , _osiVarsUnderPos = []
         }
       }
-    , _scReinferCheckRoot = reinferCheckRoot
-    , scConvertSubexpression = ConvertExpr.convert
-    }
-
 
 propEntityId :: Property f (ValI m) -> EntityId
 propEntityId = EntityId.ofValI . Property.value
@@ -169,8 +158,17 @@ convertDefI evalRes cp (Definition.Definition body defI) =
                     IRefInfer.loadInferRecursive recurseVar val
                     & loadInferPrepareInput evalRes
                 let exprI = val ^. V.payload . Property.pVal
+                let context =
+                        Context
+                        { _scInferContext = newInferContext
+                        , _scDefI = Just defI
+                        , _scCodeAnchors = cp
+                        , _scScopeInfo = emptyScopeInfo
+                        , _scReinferCheckRoot = reinferCheckDefinition defI
+                        , scConvertSubexpression = ConvertExpr.convert
+                        }
                 ConvertDefExpr.convert exprI (Definition.Expr valInferred typ) defI
-                    & ConvertM.run (mkContext (Just defI) cp (reinferCheckDefinition defI) newInferContext)
+                    & ConvertM.run context
 
 convertExpr ::
     MonadA m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
@@ -180,6 +178,14 @@ convertExpr evalRes cp val =
         (valInferred, newInferContext) <-
             IRefInfer.loadInferScope Infer.emptyScope val
             & loadInferPrepareInput evalRes
-        ConvertM.convertSubexpression valInferred
-            & ConvertM.run
-              (mkContext Nothing cp (reinferCheckExpression (val ^. V.payload . Property.pVal)) newInferContext)
+        let context =
+                Context
+                { _scInferContext = newInferContext
+                , _scDefI = Nothing
+                , _scCodeAnchors = cp
+                , _scScopeInfo = emptyScopeInfo
+                , _scReinferCheckRoot =
+                    reinferCheckExpression (val ^. V.payload . Property.pVal)
+                , scConvertSubexpression = ConvertExpr.convert
+                }
+        ConvertM.convertSubexpression valInferred & ConvertM.run context
