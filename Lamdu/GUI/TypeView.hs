@@ -207,7 +207,7 @@ makeComposite mkField composite =
                     return $ GridView.verticalAlign 0.5 [sqr, v]
         GridView.verticalAlign 0.5 [fieldsView, varView] & addBackgroundFrame
     where
-        (fields, extension) = orderedFlatComposite composite
+        (fields, extension) = composite ^. orderedFlatComposite
 
 splitMake :: MonadA m => ParentPrecedence -> Type -> M m View
 splitMake parentPrecedence typ = split $ makeInternal parentPrecedence typ

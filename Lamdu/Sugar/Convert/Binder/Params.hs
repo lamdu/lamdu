@@ -538,7 +538,7 @@ convertLamParams mRecursiveVar lambda lambdaPl =
                     convertRecordParams mRecursiveVar fieldParams lambda lambdaPl
                 where
                     tagsInInnerScope = fields <&> fst & Set.fromList
-                    (fields, extension) = orderedFlatComposite composite
+                    (fields, extension) = composite ^. orderedFlatComposite
                     fieldParams = map makeFieldParam fields
             _ -> convertNonRecordParam mRecursiveVar lambda lambdaPl
 

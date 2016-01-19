@@ -112,10 +112,17 @@ orderDef def =
     >>= Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent
         %%~ (orderBinder >=> Lens.traversed %%~ orderExpr)
 
+{-# INLINE orderedFlatComposite #-}
 orderedFlatComposite ::
-    T.Composite a -> ([(T.Tag, T.Type)], Maybe (T.Var (T.Composite a)))
-orderedFlatComposite T.CEmpty = ([], Nothing)
-orderedFlatComposite (T.CVar x) = ([], Just x)
-orderedFlatComposite (T.CExtend tag typ rest) =
-    orderedFlatComposite rest
-    & Lens._1 %~ (:) (tag, typ)
+    Lens.Iso (T.Composite a) (T.Composite b)
+    ([(T.Tag, T.Type)], Maybe (T.Var (T.Composite a)))
+    ([(T.Tag, T.Type)], Maybe (T.Var (T.Composite b)))
+orderedFlatComposite =
+    Lens.iso to from
+    where
+        to T.CEmpty = ([], Nothing)
+        to (T.CVar x) = ([], Just x)
+        to (T.CExtend tag typ rest) = to rest & Lens._1 %~ (:) (tag, typ)
+        from ([], Nothing) = T.CEmpty
+        from ([], Just x) = T.CVar x
+        from ((tag,typ):rest, v) = (rest, v) & from & T.CExtend tag typ

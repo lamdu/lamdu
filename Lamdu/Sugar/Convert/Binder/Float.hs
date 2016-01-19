@@ -151,7 +151,7 @@ addLetParam varToReplace redex =
     V.BAbs lam | isVarAlwaysApplied (redexParam redex) (redexBody redex) ->
         case redexArgType redex of
         T.TFun (T.TRecord composite) _
-            | (fields, Nothing) <- orderedFlatComposite composite
+            | (fields, Nothing) <- composite ^. orderedFlatComposite
             , Params.isParamAlwaysUsedWithGetField lam ->
             addFieldToLetParamsRecord (fields <&> fst) varToReplace storedLam
         _ -> convertLetParamToRecord varToReplace storedLam
