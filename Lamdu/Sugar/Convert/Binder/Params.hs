@@ -55,7 +55,7 @@ import           Prelude.Compat
 
 type T = Transaction
 
-data ConventionalParams m a = ConventionalParams
+data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
     , cpParamInfos :: Map T.Tag ConvertM.TagParamInfo
     , _cpParams :: BinderParams Guid m
@@ -64,7 +64,7 @@ data ConventionalParams m a = ConventionalParams
     , cpMLamParam :: Maybe V.Var
     }
 
-cpParams :: Lens' (ConventionalParams m a) (BinderParams Guid m)
+cpParams :: Lens' (ConventionalParams m) (BinderParams Guid m)
 cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalParams{..}
 
 data FieldParam = FieldParam
@@ -274,7 +274,7 @@ convertRecordParams ::
     (MonadA m, Monoid a) =>
     Maybe V.Var -> [FieldParam] ->
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
-    ConvertM m (ConventionalParams m a)
+    ConvertM m (ConventionalParams m)
 convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
     do
         params <- traverse mkParam fieldParams
@@ -462,7 +462,7 @@ mkFuncParam paramEntityId lamExprPl info =
 convertNonRecordParam ::
     MonadA m => Maybe V.Var ->
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
-    ConvertM m (ConventionalParams m a)
+    ConvertM m (ConventionalParams m)
 convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
     do
         (funcParamActions, addParam) <- makeNonRecordParamActions mRecursiveVar storedLam
@@ -510,7 +510,7 @@ convertLamParams ::
     (MonadA m, Monoid a) =>
     Maybe V.Var ->
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
-    ConvertM m (ConventionalParams m a)
+    ConvertM m (ConventionalParams m)
 convertLamParams mRecursiveVar lambda lambdaPl =
     do
         ctx <- ConvertM.readContext
@@ -550,7 +550,7 @@ changeRecursionsToCalls =
             >>= Property.set prop
 
 convertEmptyParams :: MonadA m =>
-    Maybe V.Var -> Val (Input.Payload m a) -> ConvertM m (ConventionalParams m a)
+    Maybe V.Var -> Val (Input.Payload m a) -> ConvertM m (ConventionalParams m)
 convertEmptyParams mRecursiveVar val =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -578,7 +578,7 @@ convertParams ::
     (MonadA m, Monoid a) =>
     Maybe V.Var -> Val (Input.Payload m a) ->
     ConvertM m
-    ( ConventionalParams m a
+    ( ConventionalParams m
     , Val (Input.Payload m a)
     )
 convertParams mRecursiveVar expr =

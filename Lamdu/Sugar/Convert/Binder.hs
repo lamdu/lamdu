@@ -147,7 +147,7 @@ makeBinderBody expr =
 makeBinder :: (MonadA m, Monoid a) =>
     MkProperty m (Maybe BinderParamScopeId) ->
     Maybe (MkProperty m PresentationMode) ->
-    ConventionalParams m a -> Val (Input.Payload m a) ->
+    ConventionalParams m -> Val (Input.Payload m a) ->
     ConvertM m (Binder Guid m (ExpressionU m a))
 makeBinder chosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody =
     do
