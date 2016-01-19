@@ -16,6 +16,7 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
+import qualified Lamdu.Eval.Results.Process as ResultsProcess
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -30,11 +31,14 @@ import           Lamdu.Sugar.Types
 type T = Transaction
 
 mkExtract ::
-    MonadA m => ConvertM.Context m -> ExprIRef.ValIProperty m -> T m ExtractToDestination
-mkExtract ctx stored =
-    case ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiPos of
-    Nothing -> mkExtractToDef (ctx ^. ConvertM.scCodeAnchors) stored <&> ExtractToDef
-    Just extractDestPos -> mkExtractToLet extractDestPos stored <&> ExtractToLet
+    MonadA m => ExprIRef.ValIProperty m -> ConvertM m (T m ExtractToDestination)
+mkExtract stored =
+    do
+        ctx <- ConvertM.readContext
+        case ctx ^. ConvertM.scScopeInfo . ConvertM.siOuter . ConvertM.osiPos of
+            Nothing -> mkExtractToDef (ctx ^. ConvertM.scCodeAnchors) stored <&> ExtractToDef
+            Just extractDestPos -> mkExtractToLet extractDestPos stored <&> ExtractToLet
+            & return
 
 mkExtractToDef ::
     MonadA m => Anchors.CodeProps m -> ExprIRef.ValIProperty m -> T m EntityId
@@ -74,15 +78,16 @@ mkExtractToLet outerScope stored =
         extractPosI = Property.value outerScope
         oldStored = Property.value stored
 
-mkActions ::
-    MonadA m => ConvertM.Context m -> ExprIRef.ValIProperty m -> Actions m
-mkActions ctx stored =
-    Actions
-    { _wrap = DataOps.wrap stored <&> addEntityId & WrapAction
-    , _setToHole = DataOps.setToHole stored <&> addEntityId & SetToHole
-    , _setToInnerExpr = NoInnerExpr
-    , _extract = mkExtract ctx stored
-    }
+mkActions :: MonadA m => ExprIRef.ValIProperty m -> ConvertM m (Actions m)
+mkActions stored =
+    do
+        ext <- mkExtract stored
+        Actions
+            { _wrap = DataOps.wrap stored <&> addEntityId & WrapAction
+            , _setToHole = DataOps.setToHole stored <&> addEntityId & SetToHole
+            , _setToInnerExpr = NoInnerExpr
+            , _extract = ext
+            } & return
     where
         addEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
 
@@ -105,11 +110,12 @@ addActions ::
     MonadA m => Input.Payload m a -> BodyU m a -> ConvertM m (ExpressionU m a)
 addActions exprPl body =
     do
-        ctx <- ConvertM.readContext
+        actions <- exprPl ^. Input.stored & mkActions
+        ann <- makeAnnotation exprPl
         return $ Expression body Payload
             { _plEntityId = exprPl ^. Input.entityId
-            , _plAnnotation = makeAnnotation exprPl
-            , _plActions = exprPl ^. Input.stored & mkActions ctx
+            , _plAnnotation = ann
+            , _plActions = actions
             , _plData = exprPl ^. Input.userData
             }
 
@@ -123,15 +129,18 @@ addActionsWithSetToInner exprPl inner body =
         addActions exprPl body
             <&> rPayload . plActions . setToInnerExpr .~ setToInner
 
-makeAnnotation :: Input.Payload m a -> Annotation
+makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m Annotation
 makeAnnotation payload =
-    Annotation
-    { _aInferredType = payload ^. Input.inferredType
-    , _aMEvaluationResult =
-        payload ^. Input.evalResults <&> (^. Input.eResults) <&> mk
-    }
+    do
+        ctx <- ConvertM.readContext
+        let mk res =
+                do
+                    Map.null res & not & guard
+                    res <&> ResultsProcess.addTypes (ctx ^. ConvertM.scNominalsMap) typ & Just
+        Annotation
+            { _aInferredType = typ
+            , _aMEvaluationResult =
+                payload ^. Input.evalResults <&> (^. Input.eResults) <&> mk
+            } & return
     where
-        mk res =
-            do
-                Map.null res & not & guard
-                Just res
+        typ = payload ^. Input.inferredType

@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (unless)
-import           Control.Monad.Trans (MonadTrans(..))
+import           Control.Monad.Trans.Class (MonadTrans(..))
 import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev)

@@ -24,6 +24,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (Val(..), Body(..))
 import           Lamdu.Eval.Val (EvalError(..))
+import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Formatting (Format(..))
@@ -55,7 +56,7 @@ makeTag animId tag =
 
 makeField ::
     MonadA m =>
-    AnimId -> T.Tag -> Val () -> ExprGuiM m [(GridView.Alignment, View)]
+    AnimId -> T.Tag -> Val Type -> ExprGuiM m [(GridView.Alignment, View)]
 makeField parentAnimId tag val =
     do
         tagView <- makeTag (baseId ++ ["tag"]) tag
@@ -79,13 +80,13 @@ makeError err animId = textView msg $ animId ++ ["error"]
             EvalHole -> "?"
             _ -> show err
 
-make :: MonadA m => AnimId -> Val () -> ExprGuiM m View
-make animId (Val () val) =
+make :: MonadA m => AnimId -> Val Type -> ExprGuiM m View
+make animId (Val _typ val) =
     case val of
     RError err -> makeError err animId
     RFunc{} -> textView "Fn" animId
     RRecEmpty -> textView "()" animId
-    RInject (V.Inject injTag (Val () RRecEmpty)) ->
+    RInject (V.Inject injTag (Val _ RRecEmpty)) ->
         makeTag (animId ++ ["tag"]) injTag
     RInject inj ->
         do

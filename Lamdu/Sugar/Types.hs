@@ -149,7 +149,7 @@ data Actions m = Actions
     , _extract :: T m ExtractToDestination
     }
 
-type EvaluationResult = Map E.ScopeId (ER.Val ())
+type EvaluationResult = Map E.ScopeId (ER.Val Type)
 
 data Annotation = Annotation
     { _aInferredType :: Type

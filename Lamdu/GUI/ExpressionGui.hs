@@ -249,7 +249,7 @@ makeWithAnnotationBG f (AnnotationParams minWidth animId wideAnnotationBehavior)
 data EvalResDisplay = EvalResDisplay
     { erdScope :: ScopeId
     , erdSource :: CurPrevTag
-    , erdVal :: ER.Val ()
+    , erdVal :: ER.Val Type
     }
 
 makeEvaluationResultView ::
@@ -577,7 +577,8 @@ maybeAddAnnotationPl pl eg =
         showAnnotation = pl ^. Sugar.plData . ExprGuiT.plShowAnnotation
 
 evaluationResult ::
-    MonadA m => Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (Maybe (ER.Val ()))
+    MonadA m =>
+    Sugar.Payload m ExprGuiT.Payload -> ExprGuiM m (Maybe (ER.Val Type))
 evaluationResult pl =
     ExprGuiM.readMScopeId
     <&> valOfScope (pl ^. Sugar.plAnnotation)

@@ -5,10 +5,15 @@ module Lamdu.Eval.Results.Process
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Data.Map (Map)
+import qualified Data.Map as Map
+import           Data.Maybe (fromMaybe)
 import           Lamdu.Eval.Results (Val(..), Body(..))
 import qualified Lamdu.Eval.Val as EV
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
 import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Nominal as N
+import           Lamdu.Expr.Scheme (schemeType)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 
@@ -33,21 +38,30 @@ extractSumTypeField tag typ =
         comp <- typ ^? ExprLens._TSum
         FlatComposite.fromComposite comp ^. FlatComposite.fields . Lens.at tag
 
-addTypes :: T.Type -> Val () -> Val T.Type
-addTypes typ (Val () b) =
+addTypes :: Map T.NominalId N.Nominal -> T.Type -> Val () -> Val T.Type
+addTypes nomsMap typ (Val () b) =
     case b of
     RRecExtend (V.RecExtend tag val rest) ->
-        case extractRecordTypeField tag typ of
+        case extractRecordTypeField tag bodyType of
         Nothing -> EV.EvalTypeError "addTypes bad type for RRecExtend" & RError
         Just (valType, restType) ->
-            V.RecExtend tag (addTypes valType val) (addTypes restType rest)
+            V.RecExtend tag
+            (addTypes nomsMap valType val) (addTypes nomsMap restType rest)
             & RRecExtend
     RInject (V.Inject tag val) ->
-        case extractSumTypeField tag typ of
+        case extractSumTypeField tag bodyType of
         Nothing -> EV.EvalTypeError "addTypes bad type for RInject" & RError
-        Just valType -> addTypes valType val & V.Inject tag & RInject
+        Just valType -> addTypes nomsMap valType val & V.Inject tag & RInject
     RFunc -> RFunc
     RRecEmpty -> RRecEmpty
     RLiteral l -> RLiteral l
     RError e -> RError e
     & Val typ
+    where
+        bodyType =
+            case typ of
+            T.TInst tid params ->
+                Map.lookup tid nomsMap
+                & fromMaybe (error "addTypes: nominal missing from map")
+                & N.apply params & (^. schemeType)
+            _ -> typ

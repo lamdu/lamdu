@@ -33,6 +33,7 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Eval.Val (ScopeId)
 import qualified Lamdu.Eval.Results as ER
+import qualified Lamdu.Eval.Results.Process as ResultsProcess
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -69,7 +70,7 @@ cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalP
 data FieldParam = FieldParam
     { fpTag :: T.Tag
     , fpFieldType :: Type
-    , fpValue :: CurAndPrev (Map ScopeId [(ScopeId, ER.Val ())])
+    , fpValue :: CurAndPrev (Map ScopeId [(ScopeId, ER.Val Type)])
     }
 
 data StoredLam m = StoredLam
@@ -430,25 +431,33 @@ makeNonRecordParamActions mRecursiveVar storedLam =
             , addParam NewParamBefore
             )
 
-mkFuncParam :: EntityId -> Input.Payload m a -> info -> FuncParam info
+mkFuncParam ::
+    MonadA m =>
+    EntityId -> Input.Payload m a -> info -> ConvertM m (FuncParam info)
 mkFuncParam paramEntityId lamExprPl info =
-    FuncParam
-    { _fpInfo = info
-    , _fpId = paramEntityId
-    , _fpAnnotation =
-        Annotation
-        { _aInferredType = lamParamType lamExprPl
-        , _aMEvaluationResult =
-            lamExprPl ^. Input.evalResults
-            <&> (^. Input.eAppliesOfLam)
-            <&> \lamApplies ->
-            do
-                Map.null lamApplies & not & guard
-                lamApplies ^..
-                    Lens.traversed . Lens.traversed & Map.fromList & Just
-        }
-    , _fpHiddenIds = []
-    }
+    do
+        noms <- ConvertM.readContext <&> (^. ConvertM.scNominalsMap)
+        return FuncParam
+            { _fpInfo = info
+            , _fpId = paramEntityId
+            , _fpAnnotation =
+                Annotation
+                { _aInferredType = typ
+                , _aMEvaluationResult =
+                    lamExprPl ^. Input.evalResults
+                    <&> (^. Input.eAppliesOfLam)
+                    <&> \lamApplies ->
+                    do
+                        Map.null lamApplies & not & guard
+                        lamApplies ^..
+                            Lens.traversed . Lens.traversed & Map.fromList
+                            <&> ResultsProcess.addTypes noms typ
+                            & Just
+                }
+            , _fpHiddenIds = []
+            }
+    where
+        typ = lamParamType lamExprPl
 
 convertNonRecordParam ::
     MonadA m => Maybe V.Var ->
@@ -457,20 +466,22 @@ convertNonRecordParam ::
 convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
     do
         (funcParamActions, addParam) <- makeNonRecordParamActions mRecursiveVar storedLam
-        let funcParam =
-                case lamParamType lamExprPl of
-                T.TRecord T.CEmpty
-                    | null (lamExprPl ^. Input.varRefsOfLambda) ->
-                      funcParamActions ^. fpDelete
-                      & void
-                      & NullParamActions
-                      & NullParamInfo
-                      & mkFuncParam paramEntityId lamExprPl & NullParam
-                _ ->
-                    NamedParamInfo
-                    { _npiName = UniqueId.toGuid param
-                    , _npiActions = funcParamActions
-                    } & mkFuncParam paramEntityId lamExprPl & VarParam
+        funcParam <-
+            case lamParamType lamExprPl of
+            T.TRecord T.CEmpty
+                | null (lamExprPl ^. Input.varRefsOfLambda) ->
+                  funcParamActions ^. fpDelete
+                  & void
+                  & NullParamActions
+                  & NullParamInfo
+                  & mkFuncParam paramEntityId lamExprPl
+                  <&> NullParam
+            _ ->
+                NamedParamInfo
+                { _npiName = UniqueId.toGuid param
+                , _npiActions = funcParamActions
+                } & mkFuncParam paramEntityId lamExprPl
+                <&> VarParam
         pure ConventionalParams
             { cpTags = mempty
             , cpParamInfos = Map.empty
@@ -502,8 +513,22 @@ convertLamParams ::
     ConvertM m (ConventionalParams m a)
 convertLamParams mRecursiveVar lambda lambdaPl =
     do
-        tagsInOuterScope <-
-            ConvertM.readContext <&> Map.keysSet . (^. ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
+        ctx <- ConvertM.readContext
+        let tagsInOuterScope =
+                ctx ^. ConvertM.scScopeInfo . ConvertM.siTagParamInfos
+                & Map.keysSet
+        let noms = ctx ^. ConvertM.scNominalsMap
+        let makeFieldParam (tag, typeExpr) =
+                FieldParam
+                { fpTag = tag
+                , fpFieldType = typeExpr
+                , fpValue =
+                        lambdaPl ^. Input.evalResults
+                        <&> (^. Input.eAppliesOfLam)
+                        <&> Lens.traversed . Lens.mapped . Lens._2 %~
+                            ResultsProcess.addTypes noms typeExpr .
+                            ER.extractField tag
+                }
         case lambdaPl ^. Input.inferredType of
             T.TFun (T.TRecord composite) _
                 | Nothing <- extension
@@ -516,16 +541,6 @@ convertLamParams mRecursiveVar lambda lambdaPl =
                     (fields, extension) = orderedFlatComposite composite
                     fieldParams = map makeFieldParam fields
             _ -> convertNonRecordParam mRecursiveVar lambda lambdaPl
-    where
-        makeFieldParam (tag, typeExpr) =
-            FieldParam
-            { fpTag = tag
-            , fpFieldType = typeExpr
-            , fpValue =
-                    lambdaPl ^. Input.evalResults
-                    <&> (^. Input.eAppliesOfLam)
-                    <&> Lens.traversed . Lens.mapped . Lens._2 %~ ER.extractField tag
-            }
 
 changeRecursionsToCalls :: MonadA m => V.Var -> Val (ValIProperty m) -> T m ()
 changeRecursionsToCalls =

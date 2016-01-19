@@ -100,6 +100,7 @@ convertRedex expr redex =
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton (redexParam redex)
                 (makeInline (expr ^. V.payload . Input.stored) redex))
+        ann <- redexArg redex ^. V.payload & makeAnnotation
         return Let
             { _lEntityId = defEntityId
             , _lValue =
@@ -108,7 +109,7 @@ convertRedex expr redex =
                 redexHiddenPayloads redex ^. Lens.traversed . Input.userData
             , _lActions = actions
             , _lName = UniqueId.toGuid param
-            , _lAnnotation = redexArg redex ^. V.payload & makeAnnotation
+            , _lAnnotation = ann
             , _lBodyScope = redexBodyScope redex
             , _lBody = body
             , _lUsages = redexParamRefs redex
