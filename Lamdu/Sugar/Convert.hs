@@ -5,8 +5,13 @@ module Lamdu.Sugar.Convert
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Monad (unless)
+import           Control.Monad.Trans (MonadTrans(..))
+import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev)
+import           Data.Map (Map)
+import qualified Data.Map as Map
 import           Data.Store.Guid (Guid)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
@@ -19,6 +24,10 @@ import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
 import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
+import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Nominal as N
+import           Lamdu.Expr.Scheme (schemeType)
+import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
@@ -135,6 +144,22 @@ loadInferPrepareInput evalRes action =
         setUserData pl =
             pl & Input.userData %~ \() -> [pl ^. Input.entityId]
 
+makeNominalsMap ::
+    Monad m => Val (Input.Payload m a) -> T m (Map T.NominalId N.Nominal)
+makeNominalsMap val =
+    mapM_ loadForType (val ^.. Lens.traverse . Input.inferred . Infer.plType)
+    & (`State.execStateT` mempty)
+    where
+        loadForType typ = typ ^.. ExprLens.typeTIds & mapM_ loadForTid
+        loadForTid tid =
+            do
+                loaded <- State.get
+                unless (Map.member tid loaded) $
+                    do
+                        nom <- IRefInfer.loadNominal tid & lift
+                        Map.insert tid nom loaded & State.put
+                        N.nScheme nom ^. schemeType & loadForType
+
 convertDefI ::
     MonadA m =>
     CurAndPrev (EvalResults (ValI m)) ->
@@ -157,10 +182,12 @@ convertDefI evalRes cp (Definition.Definition body defI) =
                 (valInferred, newInferContext) <-
                     IRefInfer.loadInferRecursive recurseVar val
                     & loadInferPrepareInput evalRes
+                nomsMap <- makeNominalsMap valInferred
                 let exprI = val ^. V.payload . Property.pVal
                 let context =
                         Context
                         { _scInferContext = newInferContext
+                        , _scNominalsMap = nomsMap
                         , _scDefI = Just defI
                         , _scCodeAnchors = cp
                         , _scScopeInfo = emptyScopeInfo
@@ -178,9 +205,11 @@ convertExpr evalRes cp val =
         (valInferred, newInferContext) <-
             IRefInfer.loadInferScope Infer.emptyScope val
             & loadInferPrepareInput evalRes
+        nomsMap <- makeNominalsMap valInferred
         let context =
                 Context
                 { _scInferContext = newInferContext
+                , _scNominalsMap = nomsMap
                 , _scDefI = Nothing
                 , _scCodeAnchors = cp
                 , _scScopeInfo = emptyScopeInfo

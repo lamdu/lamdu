@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Monad
 
     , Context(..)
     , scInferContext, scReinferCheckRoot, scDefI
-    , scCodeAnchors, scScopeInfo
+    , scCodeAnchors, scScopeInfo, scNominalsMap
 
     , ConvertM(..), run
     , readContext, liftTransaction, local
@@ -30,6 +30,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.Nominal (Nominal(..))
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
@@ -76,6 +77,8 @@ data Context m = Context
     , -- Check whether the definition is valid after an edit,
       -- so that can hole-wrap bad edits.
       _scReinferCheckRoot :: T m Bool
+    , -- The nominal types appearing in the converted expr and its subexpression
+      _scNominalsMap :: Map T.NominalId Nominal
     , scConvertSubexpression ::
         forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
     }
