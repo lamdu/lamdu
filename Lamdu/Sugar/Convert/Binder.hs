@@ -26,7 +26,7 @@ import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
 import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), cpParams, convertParams, convertLamParams, mkStoredLam, makeDeleteLambda)
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..), checkForRedex)
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, scScopeInfo, siLetItems)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -108,7 +108,7 @@ convertRedex expr redex =
                 redexHiddenPayloads redex ^. Lens.traversed . Input.userData
             , _lActions = actions
             , _lName = UniqueId.toGuid param
-            , _lAnnotation = redexArgAnnotation redex
+            , _lAnnotation = redexArg redex ^. V.payload & makeAnnotation
             , _lBodyScope = redexBodyScope redex
             , _lBody = body
             , _lUsages = redexParamRefs redex

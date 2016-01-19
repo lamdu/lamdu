@@ -15,7 +15,6 @@ import           Lamdu.Expr.Type (Type)
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Infer as Infer
-import           Lamdu.Sugar.Convert.Expression.Actions (makeAnnotation)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Types
 
@@ -29,7 +28,6 @@ data Redex a = Redex
     , redexArg :: Val a
     , redexArgType :: Type
     , redexHiddenPayloads :: [a]
-    , redexArgAnnotation :: Annotation
     } deriving (Functor, Foldable, Traversable)
 
 checkForRedex :: Val (Input.Payload m a) -> Maybe (Redex (Input.Payload m a))
@@ -47,7 +45,6 @@ checkForRedex expr = do
         , redexArgType =
             arg ^. V.payload . Input.inferred . Infer.plType
         , redexHiddenPayloads = (^. V.payload) <$> [expr, func]
-        , redexArgAnnotation = makeAnnotation (arg ^. V.payload)
         , redexParamRefs = func ^. V.payload . Input.varRefsOfLambda
         }
     where
