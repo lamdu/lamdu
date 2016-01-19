@@ -9,7 +9,7 @@ import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (guard)
+import           Control.Monad (guard, void)
 import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev, current)
 import           Data.List.Utils (nonEmptyAll)
@@ -436,9 +436,17 @@ makeBinderContentEdit params (Sugar.BinderLet l) =
                 <&> WidgetIds.fromEntityId
                 & Widget.keysEventMapMovesCursor (Config.delKeys config)
                   (E.Doc ["Edit", "Delete let expression"])
+        let moveToInnerEventMap =
+                body
+                ^? Sugar.bbContent . Sugar._BinderLet
+                . Sugar.lActions . Sugar.laFloat
+                & maybe mempty
+                (Widget.keysEventMap (Config.moveLetInwardKeys config)
+                (E.Doc ["Edit", "Let clause", "Move inwards"]) . void)
         mOuterScopeId <- ExprGuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
         [ makeLetEdit l
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents moveToInnerEventMap
             , makeBinderBodyEdit params body
               & ExprGuiM.withLocalMScopeId letBodyScope
             ] & sequence

@@ -197,6 +197,7 @@ data Config = Config
 
     , extractKeys :: [ModKey]
     , inlineKeys :: [ModKey]
+    , moveLetInwardKeys:: [ModKey]
 
     , typeTint :: Draw.Color
     , valFrameBGColor :: Draw.Color

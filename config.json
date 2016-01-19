@@ -757,6 +757,26 @@
                 "modifierKeysControl": false
             },
             "Key'X"
+        ],
+        [
+            {
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": true,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
+            },
+            "Key'Up"
+        ]
+    ],
+    "moveLetInwardKeys": [
+        [
+            {
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": true,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
+            },
+            "Key'Down"
         ]
     ],
     "inlineKeys": [
