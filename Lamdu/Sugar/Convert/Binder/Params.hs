@@ -48,7 +48,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
+import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
@@ -531,15 +531,13 @@ convertLamParams mRecursiveVar lambda lambdaPl =
                 }
         case lambdaPl ^. Input.inferredType of
             T.TFun (T.TRecord composite) _
-                | Nothing <- extension
+                | Just fields <- composite ^? orderedClosedFlatComposite
                 , ListUtils.isLengthAtLeast 2 fields
+                , let tagsInInnerScope = fields <&> fst & Set.fromList
                 , Set.null (tagsInOuterScope `Set.intersection` tagsInInnerScope)
+                , let fieldParams = map makeFieldParam fields
                 , isParamAlwaysUsedWithGetField lambda ->
                     convertRecordParams mRecursiveVar fieldParams lambda lambdaPl
-                where
-                    tagsInInnerScope = fields <&> fst & Set.fromList
-                    (fields, extension) = composite ^. orderedFlatComposite
-                    fieldParams = map makeFieldParam fields
             _ -> convertNonRecordParam mRecursiveVar lambda lambdaPl
 
 changeRecursionsToCalls :: MonadA m => V.Var -> Val (ValIProperty m) -> T m ()

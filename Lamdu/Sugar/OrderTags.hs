@@ -1,11 +1,13 @@
+{-# LANGUAGE RankNTypes #-}
 module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderExpr
-    , orderedFlatComposite
+    , orderedFlatComposite, orderedClosedFlatComposite
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
+import           Control.Lens.Utils (tagged)
 import           Control.Monad ((>=>))
 import           Control.MonadA (MonadA)
 import           Data.List.Utils (sortOn)
@@ -126,3 +128,7 @@ orderedFlatComposite =
         from ([], Nothing) = T.CEmpty
         from ([], Just x) = T.CVar x
         from ((tag,typ):rest, v) = (rest, v) & from & T.CExtend tag typ
+
+orderedClosedFlatComposite :: Lens.Prism' (T.Composite b) [(T.Tag, Type)]
+orderedClosedFlatComposite =
+    orderedFlatComposite . tagged Lens._Nothing
