@@ -3,15 +3,10 @@ module Lamdu.Sugar.Convert.GetField
     ( convert
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (guard)
 import           Control.MonadA (MonadA)
-import qualified Data.Map as Map
-
-
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
@@ -24,6 +19,8 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
+import           Prelude.Compat
+
 convertGetFieldParam ::
     MonadA m =>
     V.GetField (Val a) -> Input.Payload m b ->
@@ -32,7 +29,7 @@ convertGetFieldParam (V.GetField recExpr tag) exprPl =
     do
         tagParamInfos <- ConvertM.readContext <&> (^. ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
         do
-            paramInfo <- Map.lookup tag tagParamInfos
+            paramInfo <- tagParamInfos ^? Lens.ix tag . ConvertM._TagFieldParam
             param <- recExpr ^? ExprLens.valVar
             guard $ param == ConvertM.tpiFromParameters paramInfo
             GetParam Param

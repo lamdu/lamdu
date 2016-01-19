@@ -283,7 +283,7 @@ getLocalScopeGetVars sugarContext par
             ( sugarContext ^@..
                 ConvertM.scScopeInfo . ConvertM.siTagParamInfos .>
                 ( Lens.itraversed <.
-                    Lens.to ConvertM.tpiFromParameters ) <.
+                    ConvertM._TagFieldParam . Lens.to ConvertM.tpiFromParameters ) <.
                     Lens.filtered (== par)
             ) <&> fst
         mkFieldParam tag = V.GetField var tag & V.BGetField & Val ()

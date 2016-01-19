@@ -57,7 +57,7 @@ type T = Transaction
 
 data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
-    , cpParamInfos :: Map T.Tag ConvertM.TagParamInfo
+    , cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
     , _cpParams :: BinderParams Guid m
     , cpAddFirstParam :: T m ParamAddResult
     , cpScopes :: BinderBodyScope
@@ -291,7 +291,10 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
         tags = fieldParams <&> fpTag
         fpIdEntityId = EntityId.ofLambdaTagParam param . fpTag
         mkParamInfo fp =
-            Map.singleton (fpTag fp) . ConvertM.TagParamInfo param $ fpIdEntityId fp
+            fpIdEntityId fp
+            & ConvertM.TagParamInfo param
+            & ConvertM.TagFieldParam
+            & Map.singleton (fpTag fp)
         storedLam = mkStoredLam lam pl
         mkParam fp =
             do

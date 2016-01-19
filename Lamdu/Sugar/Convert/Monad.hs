@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Monad
     ( TagParamInfo(..)
+    , TagFieldParam(..), _TagFieldParam
     , OuterScopeInfo(..), osiPos, osiVarsUnderPos
     , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siOuter
 
@@ -46,6 +47,10 @@ data TagParamInfo = TagParamInfo
     , tpiJumpTo :: Sugar.EntityId
     }
 
+newtype TagFieldParam
+    = -- Sugared field param:
+      TagFieldParam TagParamInfo
+
 data OuterScopeInfo m = OuterScopeInfo
     { _osiPos :: Maybe (ExprIRef.ValIProperty m)
     , -- The vars that disappear from scope when moving up to pos
@@ -54,7 +59,7 @@ data OuterScopeInfo m = OuterScopeInfo
 Lens.makeLenses ''OuterScopeInfo
 
 data ScopeInfo m = ScopeInfo
-    { _siTagParamInfos :: Map T.Tag TagParamInfo -- tag guids
+    { _siTagParamInfos :: Map T.Tag TagFieldParam -- tag guids
     , _siNullParams :: Set V.Var
     , -- Each let item potentially has an inline action
       _siLetItems :: Map V.Var (Sugar.BinderVarInline m)
@@ -83,6 +88,7 @@ data Context m = Context
         forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
     }
 Lens.makeLenses ''Context
+Lens.makePrisms ''TagFieldParam
 
 typeProtectTransaction :: MonadA m => ConvertM m (T m a -> T m (Maybe a))
 typeProtectTransaction =

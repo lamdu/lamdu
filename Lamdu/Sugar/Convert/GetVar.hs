@@ -6,7 +6,6 @@ module Lamdu.Sugar.Convert.GetVar
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
-import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Store.Guid (Guid)
 import           Lamdu.Builtins.Anchors (recurseVar)
@@ -67,7 +66,8 @@ convertH sugarContext param exprPl
             , _nrGotoDefinition = pure $ EntityId.ofLambdaParam param
             }
         isGetParamRecord =
-            scopeInfo ^. siTagParamInfos & Map.elems
+            scopeInfo ^..
+            siTagParamInfos . Lens.traversed . ConvertM._TagFieldParam
             & map tpiFromParameters
             & elem param
         scopeInfo = sugarContext ^. ConvertM.scScopeInfo
