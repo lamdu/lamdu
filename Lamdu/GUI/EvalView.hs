@@ -10,6 +10,7 @@ import           Control.Monad (void)
 import           Control.MonadA (MonadA)
 import           Data.Binary.Utils (decodeS)
 import qualified Data.Binary.Utils as BinUtils
+import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.Store.Transaction as Transaction
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
@@ -81,7 +82,7 @@ makeError err animId = textView msg $ animId ++ ["error"]
             _ -> show err
 
 make :: MonadA m => AnimId -> Val Type -> ExprGuiM m View
-make animId (Val _typ val) =
+make animId (Val typ val) =
     case val of
     RError err -> makeError err animId
     RFunc{} -> textView "Fn" animId
@@ -117,6 +118,10 @@ make animId (Val _typ val) =
         where
             (fields, recStatus) = extractFields recExtend
     RLiteral l@(V.Literal tId x)
+        | typ == T.TInst Builtins.textTid mempty ->
+            if tId == Builtins.bytesId
+            then (asText . format . UTF8.toString) x
+            else error "text not made of bytes"
         | tId == Builtins.floatId -> (asText . (format :: Double -> String) . decodeS) x
         | tId == Builtins.bytesId -> (asText . format) x
         | otherwise -> asText (show l)
