@@ -166,7 +166,7 @@ makeBinder chosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody
     where
         addParams ctx =
             ctx
-            & ConvertM.siTagParamInfos <>~ cpParamInfos
+            & ConvertM.siTagParamInfos <>~ _cpParamInfos
             & ConvertM.siNullParams <>~
             case _cpParams of
             NullParam {} -> Set.fromList (cpMLamParam ^.. Lens._Just)

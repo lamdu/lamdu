@@ -57,7 +57,7 @@ type T = Transaction
 
 data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
-    , cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
+    , _cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
     , _cpParams :: BinderParams Guid m
     , cpAddFirstParam :: T m ParamAddResult
     , cpScopes :: BinderBodyScope
@@ -66,6 +66,9 @@ data ConventionalParams m = ConventionalParams
 
 cpParams :: Lens' (ConventionalParams m) (BinderParams Guid m)
 cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalParams{..}
+
+cpParamInfos :: Lens' (ConventionalParams m) (Map T.Tag ConvertM.TagFieldParam)
+cpParamInfos f ConventionalParams {..} = f _cpParamInfos <&> \_cpParamInfos -> ConventionalParams{..}
 
 data FieldParam = FieldParam
     { fpTag :: T.Tag
@@ -270,6 +273,15 @@ makeFieldParamActions mRecursiveVar tags fp storedLam =
         mkNewTags tag =
             break (== fpTag fp) tags & \(pre, x:post) -> pre ++ [x, tag] ++ post
 
+fpIdEntityId :: V.Var -> FieldParam -> EntityId
+fpIdEntityId param = EntityId.ofLambdaTagParam param . fpTag
+
+mkParamInfo :: V.Var -> FieldParam -> Map T.Tag ConvertM.TagParamInfo
+mkParamInfo param fp =
+    fpIdEntityId param fp
+    & ConvertM.TagParamInfo param
+    & Map.singleton (fpTag fp)
+
 convertRecordParams ::
     (MonadA m, Monoid a) =>
     Maybe V.Var -> [FieldParam] ->
@@ -281,7 +293,7 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
         addFirstParam <- makeAddFieldParam mRecursiveVar (:tags) storedLam
         pure ConventionalParams
             { cpTags = Set.fromList tags
-            , cpParamInfos = fieldParams <&> mkParamInfo & mconcat
+            , _cpParamInfos = fieldParams <&> mkFieldParamInfo & mconcat
             , _cpParams = FieldParams params
             , cpAddFirstParam = addFirstParam
             , cpScopes = BinderBodyScope $ mkCpScopesOfLam pl
@@ -289,12 +301,7 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
             }
     where
         tags = fieldParams <&> fpTag
-        fpIdEntityId = EntityId.ofLambdaTagParam param . fpTag
-        mkParamInfo fp =
-            fpIdEntityId fp
-            & ConvertM.TagParamInfo param
-            & ConvertM.TagFieldParam
-            & Map.singleton (fpTag fp)
+        mkFieldParamInfo fp = mkParamInfo param fp <&> ConvertM.TagFieldParam
         storedLam = mkStoredLam lam pl
         mkParam fp =
             do
@@ -307,7 +314,7 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
                           { _npiName = UniqueId.toGuid $ fpTag fp
                           , _npiActions = actions
                           }
-                        , _fpId = fpIdEntityId fp
+                        , _fpId = fpIdEntityId param fp
                         , _fpAnnotation =
                             Annotation
                             { _aInferredType = fpFieldType fp
@@ -487,7 +494,7 @@ convertNonRecordParam mRecursiveVar lam@(V.Lam param _) lamExprPl =
                 <&> VarParam
         pure ConventionalParams
             { cpTags = mempty
-            , cpParamInfos = Map.empty
+            , _cpParamInfos = Map.empty
             , _cpParams = funcParam
             , cpAddFirstParam = addParam
             , cpScopes = BinderBodyScope $ mkCpScopesOfLam lamExprPl
@@ -532,15 +539,29 @@ convertLamParams mRecursiveVar lambda lambdaPl =
                             ResultsProcess.addTypes noms typeExpr .
                             ER.extractField tag
                 }
+        let param = lambda ^. V.lamParamId
+        let mkCollidingInfo fp = mkParamInfo param fp <&> ConvertM.CollidingFieldParam
         case lambdaPl ^. Input.inferredType of
             T.TFun (T.TRecord composite) _
                 | Just fields <- composite ^? orderedClosedFlatComposite
                 , ListUtils.isLengthAtLeast 2 fields
-                , let tagsInInnerScope = fields <&> fst & Set.fromList
-                , Set.null (tagsInOuterScope `Set.intersection` tagsInInnerScope)
+                , isParamAlwaysUsedWithGetField lambda
+                , let myTags = fields <&> fst & Set.fromList
                 , let fieldParams = map makeFieldParam fields
-                , isParamAlwaysUsedWithGetField lambda ->
-                    convertRecordParams mRecursiveVar fieldParams lambda lambdaPl
+                -> if Set.null (tagsInOuterScope `Set.intersection` myTags)
+                      && Set.null (tagsInInnerScope `Set.intersection` myTags)
+                   then convertRecordParams mRecursiveVar fieldParams lambda lambdaPl
+                   else
+                       convertNonRecordParam mRecursiveVar lambda lambdaPl
+                       <&> cpParamInfos <>~ (fieldParams & map mkCollidingInfo & mconcat)
+                where
+                    tagsInInnerScope =
+                        lambda ^.. V.lamResult . ExprLens.subExprs
+                        . Lens.filtered (Lens.has ExprLens.valAbs)
+                        . V.payload
+                        . Input.inferredType . ExprLens._TFun . _1
+                        . ExprLens._TRecord . ExprLens.compositeTags
+                        & Set.fromList
             _ -> convertNonRecordParam mRecursiveVar lambda lambdaPl
 
 changeRecursionsToCalls :: MonadA m => V.Var -> Val (ValIProperty m) -> T m ()
@@ -570,7 +591,7 @@ convertEmptyParams mRecursiveVar val =
         pure
             ConventionalParams
             { cpTags = mempty
-            , cpParamInfos = Map.empty
+            , _cpParamInfos = Map.empty
             , _cpParams = BinderWithoutParams
             , cpAddFirstParam = val <&> (^. Input.stored) & makeAddFirstParam
             , cpScopes = SameAsParentScope

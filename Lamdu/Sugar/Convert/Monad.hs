@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Monad
     ( TagParamInfo(..)
-    , TagFieldParam(..), _TagFieldParam
+    , TagFieldParam(..), _TagFieldParam, _CollidingFieldParam
     , OuterScopeInfo(..), osiPos, osiVarsUnderPos
     , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siOuter
 
@@ -47,9 +47,11 @@ data TagParamInfo = TagParamInfo
     , tpiJumpTo :: Sugar.EntityId
     }
 
-newtype TagFieldParam
+data TagFieldParam
     = -- Sugared field param:
       TagFieldParam TagParamInfo
+    | -- Colliding (and thus non-sugared) field param
+      CollidingFieldParam TagParamInfo
 
 data OuterScopeInfo m = OuterScopeInfo
     { _osiPos :: Maybe (ExprIRef.ValIProperty m)
