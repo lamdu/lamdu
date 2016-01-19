@@ -167,7 +167,7 @@ getFieldOnVar :: Lens.Traversal' (Val t) (V.Var, T.Tag)
 getFieldOnVar = V.body . ExprLens._BGetField . inGetField
     where
         inGetField f (V.GetField (Val pl (V.BLeaf (V.LVar v))) t) =
-            pack pl <$> f (v, t)
+            f (v, t) <&> pack pl
         inGetField _ other = pure other
         pack pl (v, t) =
             V.GetField (Val pl (V.BLeaf (V.LVar v))) t
@@ -281,14 +281,14 @@ convertRecordParams mRecursiveVar fieldParams lam@(V.Lam param _) pl =
         addFirstParam <- makeAddFieldParam mRecursiveVar (:tags) storedLam
         pure ConventionalParams
             { cpTags = Set.fromList tags
-            , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
+            , cpParamInfos = fieldParams <&> mkParamInfo & mconcat
             , _cpParams = FieldParams params
             , cpAddFirstParam = addFirstParam
             , cpScopes = BinderBodyScope $ mkCpScopesOfLam pl
             , cpMLamParam = Just param
             }
     where
-        tags = fpTag <$> fieldParams
+        tags = fieldParams <&> fpTag
         fpIdEntityId = EntityId.ofLambdaTagParam param . fpTag
         mkParamInfo fp =
             Map.singleton (fpTag fp) . ConvertM.TagParamInfo param $ fpIdEntityId fp
@@ -537,7 +537,7 @@ convertLamParams mRecursiveVar lambda lambdaPl =
                 , isParamAlwaysUsedWithGetField lambda ->
                     convertRecordParams mRecursiveVar fieldParams lambda lambdaPl
                 where
-                    tagsInInnerScope = Set.fromList $ fst <$> fields
+                    tagsInInnerScope = fields <&> fst & Set.fromList
                     (fields, extension) = orderedFlatComposite composite
                     fieldParams = map makeFieldParam fields
             _ -> convertNonRecordParam mRecursiveVar lambda lambdaPl
