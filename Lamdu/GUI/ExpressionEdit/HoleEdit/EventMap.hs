@@ -168,7 +168,7 @@ mkEventsOnPickedResult shownResult =
     do
         config <- ExprGuiM.readConfig
         srMkEventMap shownResult
-            <&> E.emDocs . E.docStrs . Lens._last %~ (++ "(On picked result)")
+            <&> E.emDocs . E.docStrs . Lens._last %~ (++ " (On picked result)")
             <&> Lens.mapped %~ pickBefore shownResult
             <&> removeUnwanted config
 
