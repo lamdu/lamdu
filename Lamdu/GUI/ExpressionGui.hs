@@ -74,7 +74,7 @@ import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.EvalView as EvalView
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, HolePickers)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui, ShowAnnotation(..), EvalModeShow(..))
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT
@@ -545,16 +545,8 @@ wrapExprEventMap ::
 wrapExprEventMap pl action =
     do
         (res, resultPickers) <- ExprGuiM.listenResultPickers action
-        res & addExprEventMap pl resultPickers
-
-addExprEventMap ::
-    MonadA m =>
-    Sugar.Payload m ExprGuiT.Payload -> HolePickers m ->
-    ExpressionGui m -> ExprGuiM m (ExpressionGui m)
-addExprEventMap pl resultPickers gui =
-    do
         exprEventMap <- ExprEventMap.make resultPickers pl
-        gui
+        res
             & egWidget %~ Widget.weakerEvents exprEventMap
             & return
 
