@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, TemplateHaskell, NoImplicitPrelude, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Eval.Results.Process
     ( addTypes
     ) where
