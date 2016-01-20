@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns, RecordWildCards, NoImplicitPrelude, OverloadedStrings, PatternGuards, LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns, RecordWildCards, NoImplicitPrelude, OverloadedStrings, LambdaCase #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     , Parts(..), makeParts
