@@ -151,7 +151,7 @@ gui env rootId replExpr panes =
             panes
             & ExprGuiM.transaction . traverse (processPane env)
             >>= traverse (makePaneEdit env (Config.pane (config env)))
-        newDefinitionButton <- makeNewDefinitionButton env rootId
+        newDefinitionButton <- makeNewDefinitionButton rootId
         eventMap <- panesEventMap env & ExprGuiM.widgetEnv
         [replEdit] ++ panesEdits ++ [newDefinitionButton]
             & intersperse space
@@ -212,17 +212,19 @@ makeNewDefinitionEventMap cp =
             Widget.keysEventMapMovesCursor newDefinitionKeys
             (E.Doc ["Edit", "New definition"]) newDefinition
 
-makeNewDefinitionButton :: MonadA m => Env m -> Widget.Id -> ExprGuiM m (Widget (T m))
-makeNewDefinitionButton env myId =
+makeNewDefinitionButton :: MonadA m => Widget.Id -> ExprGuiM m (Widget (T m))
+makeNewDefinitionButton myId =
     do
-        newDefinitionEventMap <- makeNewDefinitionEventMap (codeProps env)
+        codeAnchors <- ExprGuiM.readCodeAnchors
+        newDefinitionEventMap <-
+            makeNewDefinitionEventMap codeAnchors & ExprGuiM.widgetEnv
+        Config.Pane{..} <- ExprGuiM.readConfig <&> Config.pane
         BWidgets.makeFocusableTextView "New..." newDefinitionButtonId
             & WE.localEnv (WE.setTextColor newDefinitionActionColor)
+            & ExprGuiM.widgetEnv
             <&> Widget.weakerEvents
                 (newDefinitionEventMap newDefinitionButtonPressKeys)
-    & ExprGuiM.widgetEnv
     where
-        Config.Pane{..} = Config.pane $ config env
         newDefinitionButtonId = Widget.joinId myId ["NewDefinition"]
 
 makeReplEdit ::
