@@ -3,6 +3,7 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     ( make
     , modifyEventMap
     , jumpHolesEventMap
+    , extractCursor
     ) where
 
 import           Prelude.Compat
@@ -85,15 +86,18 @@ jumpHolesEventMapIfSelected pl =
             then pl ^. Sugar.plData . ExprGuiT.plNearestHoles & jumpHolesEventMap
             else pure mempty
 
+extractCursor :: Sugar.ExtractToDestination -> Widget.Id
+extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
+extractCursor (Sugar.ExtractToDef defId) =
+    WidgetIds.nameEditOf (WidgetIds.fromEntityId defId)
+
 extractEventMap :: Functor m => Config -> Sugar.Actions m -> EventHandlers (T m)
 extractEventMap config actions =
-    actions ^. Sugar.extract
-    & Widget.keysEventMapMovesCursor keys doc . fmap extractor
+    actions ^. Sugar.extract <&> extractCursor
+    & Widget.keysEventMapMovesCursor keys doc
     where
         doc = E.Doc ["Edit", "Extract"]
         keys = Config.extractKeys config
-        extractor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
-        extractor (Sugar.ExtractToDef defId) = WidgetIds.nameEditOf (WidgetIds.fromEntityId defId)
 
 replaceOrComeToParentEventMap ::
     MonadA m =>

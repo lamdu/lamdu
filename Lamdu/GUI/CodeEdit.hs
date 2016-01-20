@@ -35,6 +35,7 @@ import           Lamdu.Expr.Load (loadDef, loadExprProperty)
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExpressionGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -230,11 +231,23 @@ makeNewDefinitionButton myId =
 makeReplEdit ::
     MonadA m => Widget.Id -> ExprGuiT.SugarExpr m -> ExprGuiM m (Widget (T m))
 makeReplEdit myId replExpr =
-    [ ExpressionGui.makeLabel "⋙" (Widget.toAnimId myId)
-    , ExprGuiM.makeSubexpression id replExpr
-    ] & sequenceA
-    >>= ExpressionGui.hboxSpaced
-    <&> (^. ExpressionGui.egWidget)
+    do
+        Config.Pane{..} <- ExprGuiM.readConfig <&> Config.pane
+        replLabel <-
+            ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId)
+            >>= ExpressionGui.makeFocusableView replId
+            <&> ExpressionGui.egWidget %~
+                Widget.weakerEvents
+                (Widget.keysEventMapMovesCursor newDefinitionButtonPressKeys
+                    (E.Doc ["Edit", "Extract to definition"]) extractAction)
+        expr <- ExprGuiM.makeSubexpression id replExpr
+        ExpressionGui.hboxSpaced [replLabel, expr]
+            <&> (^. ExpressionGui.egWidget)
+    where
+        replId = Widget.joinId myId ["repl"]
+        extractAction =
+            replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
+            <&> ExprEventMap.extractCursor
 
 panesEventMap ::
     MonadA m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (T m))
