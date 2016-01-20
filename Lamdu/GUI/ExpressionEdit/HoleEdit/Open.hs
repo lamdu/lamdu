@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, FlexibleContexts, RecordWildCards, OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE PatternGuards, NoImplicitPrelude, FlexibleContexts, RecordWildCards, OverloadedStrings, TypeFamilies #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Open
     ( makeOpenSearchTermGui
     ) where
