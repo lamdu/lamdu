@@ -20,6 +20,7 @@ import           Data.Store.Transaction (Transaction)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
@@ -29,6 +30,7 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import           Graphics.UI.Bottle.Widgets.Layout (Layout)
 import qualified Graphics.UI.Bottle.Widgets.Layout as Layout
 import qualified Graphics.UI.Bottle.WidgetsEnvT as WE
+import           Lamdu.CharClassification (operatorChars)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Common (addBackground, addDarkBackground)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.EventMap as EventMap
@@ -38,6 +40,7 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultsList(..)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as HoleResults
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchTerm as SearchTerm
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ShownResult (PickedResult(..), ShownResult(..), pickedEventResult, pickedIdTranslations)
+import           Lamdu.GUI.ExpressionEdit.HoleEdit.State (HoleState(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.State as HoleState
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -123,6 +126,36 @@ afterPick holeInfo resultId mFirstHoleInside pr =
                       animId
                 | otherwise -> "obliterated" : animId
 
+fixNumWithDotEventMap ::
+    MonadA m =>
+    HoleInfo m -> Sugar.HoleResult name m -> Widget.EventHandlers (T m)
+fixNumWithDotEventMap holeInfo res
+    | endsWithDot
+    , Lens.has literalNum conv
+    , Sugar.WrapAction wrap <- conv ^. hrWrapAction = mkAction wrap
+    | endsWithDot
+    , Lens.has (wrappedExpr . literalNum) conv
+    , Sugar.WrapperAlready t <- conv ^. hrWrapAction = mkAction (return t)
+    | otherwise = mempty
+    where
+        mkAction toHole =
+            E.charGroup "Operator" doc operatorChars $
+            \c ->
+            do
+                (guid, entityId) <- toHole
+                cursor <-
+                    HoleState.setHoleStateAndJump guid
+                    (HoleState ('.':[c])) entityId
+                return $ Widget.eventResultFromCursor cursor
+        endsWithDot = Lens.has (suffixed ".") (HoleInfo.hiSearchTerm holeInfo)
+        doc = E.Doc ["Edit", "Apply Operator"]
+        conv = res ^. Sugar.holeResultConverted
+        literalNum = Sugar.rBody . Sugar._BodyLiteral . Sugar._LiteralNum
+        wrappedExpr =
+            Sugar.rBody . Sugar._BodyHole .
+            Sugar.holeMArg . Lens._Just . Sugar.haExpr
+        hrWrapAction = Sugar.rPayload . Sugar.plActions . Sugar.wrap
+
 makeShownResult ::
     MonadA m => HoleInfo m -> Result m -> ExprGuiM m (Widget (T m), ShownResult m)
 makeShownResult holeInfo result =
@@ -139,7 +172,8 @@ makeShownResult holeInfo result =
         return
             ( widget & Widget.pad padding
             , ShownResult
-              { srMkEventMap = mkEventMap
+              { srMkEventMap =
+                  mkEventMap <&> mappend (fixNumWithDotEventMap holeInfo res)
               , srHoleResult = res
               , srPick =
                 res ^. Sugar.holeResultPick
