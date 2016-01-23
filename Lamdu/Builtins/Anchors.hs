@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.Builtins.Anchors
-    ( recurseVar, objTag, infixlTag, infixrTag, listTid, textTid
+    ( objTag, infixlTag, infixrTag, listTid, textTid
     , headTag, tailTag, consTag, nilTag, trueTag, falseTag, justTag, nothingTag
     , startTag, stopTag, indexTag
     , Order, anchorTags
@@ -9,10 +9,6 @@ module Lamdu.Builtins.Anchors
 
 import           Lamdu.Expr.Type (Tag)
 import qualified Lamdu.Expr.Type as T
-import qualified Lamdu.Expr.Val as V
-
-recurseVar :: V.Var
-recurseVar = "RECURSE"
 
 objTag :: Tag
 objTag = "BI:object"

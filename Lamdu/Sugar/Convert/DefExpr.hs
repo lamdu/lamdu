@@ -8,7 +8,6 @@ import           Control.MonadA (MonadA)
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
-import           Lamdu.Builtins.Anchors (recurseVar)
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.IRef (DefI, ValI)
 import           Lamdu.Expr.Scheme (Scheme(..))
@@ -47,7 +46,7 @@ convert exprI (Definition.Expr val defType) defI =
     do
         sugarContext <- ConvertM.readContext
         let inferContext = sugarContext ^. ConvertM.scInferContext
-        content <- ConvertBinder.convertBinder (Just recurseVar) defGuid val
+        content <- ConvertBinder.convertBinder (Just defI) defGuid val
         return $ DefinitionBodyExpression DefinitionExpression
             { _deContent = content
             , _deTypeInfo =
