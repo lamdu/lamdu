@@ -132,14 +132,12 @@ preparePayloads evalRes inferredVal =
 loadInferPrepareInput ::
     MonadA m =>
     CurAndPrev (EvalResults (ValI m)) ->
-    IRefInfer.M m (Val (Infer.Payload, ValIProperty m)) ->
-    T m (Val (Input.Payload m [EntityId]), Infer.Context)
-loadInferPrepareInput evalRes action =
-    action
-    <&> preparePayloads evalRes
-    <&> Lens.mapped %~ setUserData
-    >>= ParamList.loadForLambdas
-    & assertRunInfer
+    Val (Infer.Payload, ValIProperty m) ->
+    IRefInfer.M m (Val (Input.Payload m [EntityId]))
+loadInferPrepareInput evalRes val =
+    preparePayloads evalRes val
+    <&> setUserData
+    & ParamList.loadForLambdas
     where
         setUserData pl =
             pl & Input.userData %~ \() -> [pl ^. Input.entityId]
@@ -181,7 +179,8 @@ convertDefI evalRes cp (Definition.Definition body defI) =
             do
                 (valInferred, newInferContext) <-
                     IRefInfer.loadInferRecursive recurseVar val
-                    & loadInferPrepareInput evalRes
+                    >>= loadInferPrepareInput evalRes
+                    & assertRunInfer
                 nomsMap <- makeNominalsMap valInferred
                 let exprI = val ^. V.payload . Property.pVal
                 let context =
@@ -204,7 +203,8 @@ convertExpr evalRes cp val =
     do
         (valInferred, newInferContext) <-
             IRefInfer.loadInferScope Infer.emptyScope val
-            & loadInferPrepareInput evalRes
+            >>= loadInferPrepareInput evalRes
+            & assertRunInfer
         nomsMap <- makeNominalsMap valInferred
         let context =
                 Context
