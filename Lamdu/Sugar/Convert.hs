@@ -174,7 +174,7 @@ convertDefI evalRes cp (Definition.Definition body defI) =
     where
         convertDefBody (Definition.BodyBuiltin builtin) =
             return $ convertDefIBuiltin builtin defI
-        convertDefBody (Definition.BodyExpr (Definition.Expr val typ)) =
+        convertDefBody (Definition.BodyExpr defExpr) =
             do
                 ((valInferred, defTypes), newInferContext) <-
                     do
@@ -195,8 +195,11 @@ convertDefI evalRes cp (Definition.Definition body defI) =
                         , _scDefinitionTypes = defTypes
                         , scConvertSubexpression = ConvertExpr.convert
                         }
-                ConvertDefExpr.convert exprI (Definition.Expr valInferred typ) defI
+                ConvertDefExpr.convert exprI
+                    (defExpr & Definition.expr .~ valInferred) defI
                     & ConvertM.run context
+            where
+                val = defExpr ^. Definition.expr
 
 convertExpr ::
     MonadA m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->

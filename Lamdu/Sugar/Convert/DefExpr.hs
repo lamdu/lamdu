@@ -33,9 +33,11 @@ makeExprDefTypeInfo defValI defI defType inferredType =
     { antOldExportedType = defType
     , antNewInferredType = inferredType
     , antAccept =
-        Transaction.writeIRef defI $
-        Definition.BodyExpr $
-        Definition.Expr defValI $ Definition.ExportedType inferredType
+        Definition.Expr
+        { Definition._expr = defValI
+        , Definition._exprType = Definition.ExportedType inferredType
+        } & Definition.BodyExpr
+        & Transaction.writeIRef defI
     }
 
 convert ::

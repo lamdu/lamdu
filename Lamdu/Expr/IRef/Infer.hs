@@ -64,10 +64,11 @@ loader givenDefs =
             do
                 defBody <- lift $ Transaction.readIRef $ ExprIRef.defI globalId
                 case defBody of
-                    Definition.BodyExpr (Definition.Expr _ (Definition.ExportedType scheme)) ->
-                        return scheme
-                    Definition.BodyExpr (Definition.Expr _ Definition.NoExportedType) ->
-                        return unknownGlobalType
+                    Definition.BodyExpr defExpr ->
+                        case defExpr ^. Definition.exprType of
+                        Definition.ExportedType scheme -> scheme
+                        Definition.NoExportedType -> unknownGlobalType
+                        & return
                     Definition.BodyBuiltin (Definition.Builtin _ scheme) -> return scheme
     , InferLoad.loadNominal = lift . loadNominal
     }
