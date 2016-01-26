@@ -6,8 +6,6 @@ module Lamdu.Sugar.Convert.Hole.Suggest
     , fillHoles
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -15,6 +13,7 @@ import           Control.Monad (mzero)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import           Control.MonadA (MonadA)
+import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -30,18 +29,22 @@ import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Update (update)
 import qualified Lamdu.Infer.Update as Update
 
-loadNominalsForType :: Monad m => (T.NominalId -> m Nominal) -> Type -> m Infer.Loaded
+import           Prelude.Compat
+
+type Nominals = Map T.NominalId Nominal
+
+loadNominalsForType :: Monad m => (T.NominalId -> m Nominal) -> Type -> m Nominals
 loadNominalsForType loadNominal typ =
     go Map.empty (typ ^. ExprLens.typeTIds . Lens.to Set.singleton)
     where
         go res toLoad
-            | Set.null toLoad = Infer.Loaded Map.empty res & return
+            | Set.null toLoad = return res
             | otherwise =
                 do
-                    loadedNominals <- Map.fromSet loadNominal toLoad & sequenceA
-                    let result = mappend res loadedNominals
+                    nominals <- Map.fromSet loadNominal toLoad & sequenceA
+                    let result = mappend res nominals
                     let newTIds =
-                            loadedNominals
+                            nominals
                             ^. Lens.traversed . Lens.to Nominal.nScheme . schemeType
                             . ExprLens.typeTIds . Lens.to Set.singleton
                             & (`Set.difference` Map.keysSet result)
@@ -53,15 +56,15 @@ valueConversion ::
     Val (Payload, a) -> m (StateT Context [] (Val (Payload, a)))
 valueConversion loadNominal empty src =
     do
-        loaded <-
+        nominals <-
             loadNominalsForType loadNominal
             (src ^. V.payload . _1 . Infer.plType)
-        valueConversionH loaded empty src & return
+        valueConversionH nominals empty src & return
 
 valueConversionH ::
-    Infer.Loaded -> a -> Val (Payload, a) ->
+    Nominals -> a -> Val (Payload, a) ->
     StateT Context [] (Val (Payload, a))
-valueConversionH loaded empty src =
+valueConversionH nominals empty src =
     case srcInferPl ^. Infer.plType of
     T.TRecord composite ->
         composite ^.. ExprLens.compositeFields
@@ -71,7 +74,7 @@ valueConversionH loaded empty src =
             getField (tag, typ) =
                 V.GetField src tag & V.BGetField
                 & V.Val (Payload typ (srcInferPl ^. Infer.plScope), empty)
-    _ -> valueConversionNoSplit loaded empty src
+    _ -> valueConversionNoSplit nominals empty src
     where
         srcInferPl = src ^. V.payload . _1
 
@@ -79,17 +82,16 @@ prependOpt :: a -> StateT s [] a -> StateT s [] a
 prependOpt opt act = StateT $ \s -> (opt, s) : runStateT act s
 
 valueConversionNoSplit ::
-    Infer.Loaded -> a -> Val (Payload, a) ->
+    Nominals -> a -> Val (Payload, a) ->
     StateT Context [] (Val (Payload, a))
-valueConversionNoSplit loaded empty src =
+valueConversionNoSplit nominals empty src =
     prependOpt src $
     case srcType of
     T.TInst name _params | bodyNot ExprLens._BToNom ->
         -- TODO: Expose primitives from Infer to do this without partiality
         do
             (_, resType) <-
-                Infer.inferFromNom
-                (Infer.loadedNominals loaded) (V.Nom name ())
+                Infer.inferFromNom nominals (V.Nom name ())
                 (\_ () -> return (srcType, ()))
                 srcScope
             updated <-
@@ -99,14 +101,14 @@ valueConversionNoSplit loaded empty src =
         & Infer.run
         & mapStateT
             (either (error "Infer of FromNom on Nominal shouldn't fail") return)
-        >>= valueConversionNoSplit loaded empty
+        >>= valueConversionNoSplit nominals empty
     T.TFun argType resType | bodyNot ExprLens._BAbs ->
         if Lens.has (ExprLens.valLeafs . ExprLens._LHole) arg
             then
                 -- If the suggested argument has holes in it
                 -- then stop suggesting there to avoid "overwhelming"..
                 return applied
-            else valueConversionNoSplit loaded empty applied
+            else valueConversionNoSplit nominals empty applied
         where
             arg =
                 valueNoSplit (Payload argType srcScope)
