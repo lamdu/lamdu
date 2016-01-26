@@ -189,8 +189,9 @@ loadGlobal g =
                     Nothing -> EvalLoadGlobalFailed g & HError & return
                     Just (Def.BodyBuiltin (Def.Builtin name _t)) ->
                         HBuiltin name & return
-                    Just (Def.BodyExpr (Def.Expr expr _t)) ->
-                        evalScopedVal $ ScopedVal emptyScope expr
+                    Just (Def.BodyExpr defExpr) ->
+                        defExpr ^. Def.expr
+                        & ScopedVal emptyScope & evalScopedVal
                 liftState $ esLoadedGlobals . at g ?= result
                 return result
 
