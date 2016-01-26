@@ -51,20 +51,19 @@ instance Pretty Error where
 unknownGlobalType :: Scheme
 unknownGlobalType = Scheme.any
 
+typeOfDefBody :: Definition.Body a -> Scheme
+typeOfDefBody (Definition.BodyExpr defExpr) =
+    case defExpr ^. Definition.exprType of
+    Definition.ExportedType scheme -> scheme
+    Definition.NoExportedType -> unknownGlobalType
+typeOfDefBody (Definition.BodyBuiltin (Definition.Builtin _ scheme)) = scheme
+
 loader :: MonadA m => Loader (EitherT Error (T m))
 loader =
     Loader
     { InferLoad.loadTypeOf =
         \globalId ->
-        do
-            defBody <- lift $ Transaction.readIRef $ ExprIRef.defI globalId
-            case defBody of
-                Definition.BodyExpr defExpr ->
-                    case defExpr ^. Definition.exprType of
-                    Definition.ExportedType scheme -> scheme
-                    Definition.NoExportedType -> unknownGlobalType
-                    & return
-                Definition.BodyBuiltin (Definition.Builtin _ scheme) -> return scheme
+        ExprIRef.defI globalId & Transaction.readIRef & lift <&> typeOfDefBody
     , InferLoad.loadNominal = lift . loadNominal
     }
 
