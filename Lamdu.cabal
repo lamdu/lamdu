@@ -257,6 +257,7 @@ Executable lamdu
                   , Lamdu.Infer.Internal.Subst
                   , Lamdu.Infer.Internal.Unify
                   , Lamdu.Infer.Load
+                  , Lamdu.Infer.Recursive
                   , Lamdu.Infer.Unify
                   , Lamdu.Infer.Update
                   , Lamdu.Main
