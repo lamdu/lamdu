@@ -270,8 +270,8 @@ makeFieldParamActions mRecursiveVar tags fp storedLam =
             , _fpDelete = delParam
             }
     where
-        mkNewTags tag =
-            break (== fpTag fp) tags & \(pre, x:post) -> pre ++ [x, tag] ++ post
+        (tagsBefore, _:tagsAfter) = break (== fpTag fp) tags
+        mkNewTags tag = tagsBefore ++ [fpTag fp, tag] ++ tagsAfter
 
 fpIdEntityId :: V.Var -> FieldParam -> EntityId
 fpIdEntityId param = EntityId.ofLambdaTagParam param . fpTag
