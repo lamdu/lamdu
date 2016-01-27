@@ -182,7 +182,6 @@ convertDefI evalRes cp (Definition.Definition body defI) =
                     >>= loadInferPrepareInput evalRes
                     & assertRunInfer
                 nomsMap <- makeNominalsMap valInferred
-                let exprI = val ^. V.payload . Property.pVal
                 let context =
                         Context
                         { _scInferContext = newInferContext
@@ -193,7 +192,7 @@ convertDefI evalRes cp (Definition.Definition body defI) =
                         , _scReinferCheckRoot = reinferCheckDefinition defI
                         , scConvertSubexpression = ConvertExpr.convert
                         }
-                ConvertDefExpr.convert exprI
+                ConvertDefExpr.convert
                     (defExpr & Definition.expr .~ valInferred) defI
                     & ConvertM.run context
             where

@@ -32,12 +32,12 @@ loadDefExpr ::
     MonadA m =>
     (Definition.Expr (ValI m) -> T m ()) ->
     Definition.Expr (ValI m) -> T m (Definition.Expr (Val (ValIProperty m)))
-loadDefExpr writeDefExpr (Definition.Expr valI exprType) =
-    loadExpr (writeDefExpr . wrap) valI
+loadDefExpr writeDefExpr defExpr =
+    loadExpr (writeDefExpr . wrap) (defExpr ^. Definition.expr)
     <&> wrap
     where
         wrap :: val -> Definition.Expr val
-        wrap = (`Definition.Expr` exprType)
+        wrap v = defExpr & Definition.expr .~ v
 
 loadDef :: MonadA m => DefI m -> T m (Definition (Val (ValIProperty m)) (DefI m))
 loadDef defI =
