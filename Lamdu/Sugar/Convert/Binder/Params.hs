@@ -48,7 +48,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
+import           Lamdu.Sugar.OrderTags (orderType, orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
@@ -555,7 +555,9 @@ convertLamParams mRecursiveVar lambda lambdaPl =
                 }
         let param = lambda ^. V.lamParamId
         let mkCollidingInfo fp = mkParamInfo param fp <&> ConvertM.CollidingFieldParam
-        case lambdaPl ^. Input.inferredType of
+        orderedType <-
+            lambdaPl ^. Input.inferredType & orderType & ConvertM.liftTransaction
+        case orderedType of
             T.TFun (T.TRecord composite) _
                 | Just fields <- composite ^? orderedClosedFlatComposite
                 , ListUtils.isLengthAtLeast 2 fields
