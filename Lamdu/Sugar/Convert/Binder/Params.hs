@@ -268,6 +268,18 @@ makeFieldParamActions mRecursiveVar tags fp storedLam =
         pure FuncParamActions
             { _fpAddNext = addParam
             , _fpDelete = delParam
+            , _fpMOrderBefore =
+                case tagsBefore of
+                [] -> Nothing
+                b ->
+                    init b ++ (fpTag fp : last b : tagsAfter)
+                    & setParamList (slParamList storedLam) & Just
+            , _fpMOrderAfter =
+                case tagsAfter of
+                [] -> Nothing
+                (x:xs) ->
+                    tagsBefore ++ (x : fpTag fp : xs)
+                    & setParamList (slParamList storedLam) & Just
             }
     where
         (tagsBefore, _:tagsAfter) = break (== fpTag fp) tags
@@ -437,6 +449,8 @@ makeNonRecordParamActions mRecursiveVar storedLam =
             ( FuncParamActions
                 { _fpAddNext = addParam NewParamAfter
                 , _fpDelete = delete
+                , _fpMOrderBefore = Nothing
+                , _fpMOrderAfter = Nothing
                 }
             , addParam NewParamBefore
             )

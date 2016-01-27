@@ -176,6 +176,8 @@ data Config = Config
     , invalidCursorBGColor :: Draw.Color
 
     , addNextParamKeys :: [ModKey]
+    , paramOrderBeforeKeys :: [ModKey]
+    , paramOrderAfterKeys :: [ModKey]
     , jumpToDefinitionKeys :: [ModKey]
     , delForwardKeys :: [ModKey]
     , delBackwardKeys :: [ModKey]

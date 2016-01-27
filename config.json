@@ -605,6 +605,28 @@
             "Key'Space"
         ]
     ],
+    "paramOrderBeforeKeys": [
+        [
+            {
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": true,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
+            },
+            "Key'Up"
+        ]
+    ],
+    "paramOrderAfterKeys": [
+        [
+            {
+                "modifierKeysSuper": false,
+                "modifierKeysAlt": true,
+                "modifierKeysShift": false,
+                "modifierKeysControl": false
+            },
+            "Key'Down"
+        ]
+    ],
     "baseTextSize": 13,
     "navArrowsSize": 10,
     "spaceWidth": 10,

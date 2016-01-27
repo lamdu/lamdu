@@ -483,6 +483,8 @@ namedParamEditInfo paramInfo =
       ExpressionGui.makeNameOriginEdit (paramInfo ^. Sugar.npiName)
       <&> Lens.mapped %~ ExpressionGui.fromValueWidget
     , ParamEdit.iMAddNext = paramInfo ^. Sugar.npiActions . Sugar.fpAddNext & Just
+    , ParamEdit.iMOrderBefore = paramInfo ^. Sugar.npiActions . Sugar.fpMOrderBefore
+    , ParamEdit.iMOrderAfter = paramInfo ^. Sugar.npiActions . Sugar.fpMOrderAfter
     , ParamEdit.iDel = paramInfo ^. Sugar.npiActions . Sugar.fpDelete
     }
 
@@ -494,6 +496,8 @@ nullParamEditInfo (Sugar.NullParamInfo mActions) =
       ExpressionGui.grammarLabel "◗" (Widget.toAnimId myId)
       >>= ExpressionGui.makeFocusableView myId
     , ParamEdit.iMAddNext = Nothing
+    , ParamEdit.iMOrderBefore = Nothing
+    , ParamEdit.iMOrderAfter = Nothing
     , ParamEdit.iDel = Sugar.ParamDelResultDelVar <$ mActions ^. Sugar.npDeleteLambda
     }
 

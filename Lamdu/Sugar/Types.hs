@@ -6,7 +6,7 @@ module Lamdu.Sugar.Types
     , ListItemActions(..), itemAddNext, itemDelete
     , VarToTags(..), TagsToVar(..)
     , ParamDelResult(..), ParamAddResult(..)
-    , FuncParamActions(..), fpAddNext, fpDelete
+    , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
     , DefinitionExpression(..), deContent, deTypeInfo
     , AcceptNewType(..)
     , DefinitionTypeInfo(..)
@@ -199,9 +199,12 @@ data ParamDelResult
     | ParamDelResultTagsToVar TagsToVar
     | ParamDelResultDelTag
 
-data FuncParamActions m = FuncParamActions
+data FuncParamActions m =
+    FuncParamActions
     { _fpAddNext :: T m ParamAddResult
     , _fpDelete :: T m ParamDelResult
+    , _fpMOrderBefore :: Maybe (T m ())
+    , _fpMOrderAfter :: Maybe (T m ())
     }
 
 data NamedParamInfo name m = NamedParamInfo

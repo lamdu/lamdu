@@ -68,6 +68,12 @@ eventMapAddNextParam config fpAdd =
     & E.keyPresses (Config.addNextParamKeys config)
         (E.Doc ["Edit", "Add next parameter"])
 
+eventMapOrderParam ::
+    MonadA m => [ModKey] -> String -> T m () -> Widget.EventHandlers (T m)
+eventMapOrderParam keys docSuffix action =
+    Widget.keysEventMap keys (E.Doc ["Edit", "Parameter", "Move " ++ docSuffix])
+    action
+
 eventParamDelEventMap ::
     MonadA m =>
     T m Sugar.ParamDelResult -> [ModKey] -> String -> Widget.Id ->
@@ -91,6 +97,8 @@ data Info m = Info
     { iMakeNameEdit :: Widget.Id -> ExprGuiM m (ExpressionGui m)
     , iDel :: T m Sugar.ParamDelResult
     , iMAddNext :: Maybe (T m Sugar.ParamAddResult)
+    , iMOrderBefore :: Maybe (T m ())
+    , iMOrderAfter :: Maybe (T m ())
     }
 
 -- exported for use in definition sugaring.
@@ -107,6 +115,8 @@ make annotationOpts showAnnotation prevId nextId param =
                 [ eventParamDelEventMap (iDel info) (Config.delForwardKeys config) "" nextId
                 , eventParamDelEventMap (iDel info) (Config.delBackwardKeys config) " backwards" prevId
                 , maybe mempty (eventMapAddNextParam config) (iMAddNext info)
+                , maybe mempty (eventMapOrderParam (Config.paramOrderBeforeKeys config) "before") (iMOrderBefore info)
+                , maybe mempty (eventMapOrderParam (Config.paramOrderAfterKeys config) "after") (iMOrderAfter info)
                 ]
         iMakeNameEdit info myId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap
