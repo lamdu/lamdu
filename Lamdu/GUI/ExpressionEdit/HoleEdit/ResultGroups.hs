@@ -55,7 +55,7 @@ data ResultType = GoodResult | BadResult
     deriving (Eq, Ord)
 
 data Result m = Result
-    { rType :: ResultType
+    { rScore :: Sugar.HoleResultScore
     , -- Warning: This transaction should be ran at most once!
         -- Running it more than once will cause inconsistencies.
         rHoleResult :: T m (Sugar.HoleResult (Name m) m)
@@ -78,7 +78,7 @@ prefixId = HoleWidgetIds.hidResultsPrefix . hiIds
 
 mResultsListOf ::
     HoleInfo m -> WidgetId.Id ->
-    [(ResultType, T m (Sugar.HoleResult (Name m) m))] ->
+    [(Sugar.HoleResultScore, T m (Sugar.HoleResult (Name m) m))] ->
     Maybe (ResultsList m)
 mResultsListOf _ _ [] = Nothing
 mResultsListOf holeInfo baseId (x:xs) = Just
@@ -92,9 +92,9 @@ mResultsListOf holeInfo baseId (x:xs) = Just
         mkExtra = mkResult . extraResultId
         extraResultId i = WidgetId.joinId extraResultsPrefixId [BS8.pack (show i)]
         extraResultsPrefixId = prefixId holeInfo <> WidgetId.Id ["extra results"] <> baseId
-        mkResult resultId (typ, holeResult) =
+        mkResult resultId (score, holeResult) =
             Result
-            { rType = typ
+            { rScore = score
             , rHoleResult = holeResult
             , rId = resultId
             }
@@ -106,13 +106,9 @@ makeResultsList holeInfo group =
     group ^. groupResults
     & ListClass.toList
     <&> sortOn (^. _1)
-    <&> Lens.mapped . _1 %~ checkGood
     <&> mResultsListOf holeInfo (group ^. groupId)
     <&> Lens.mapped %~ rlPreferred .~ toPreferred
     where
-        checkGood x
-            | x < [5] = GoodResult
-            | otherwise = BadResult
         toPreferred
             | [searchTerm] == group ^. groupSearchTerms = Preferred
             | otherwise = NotPreferred
@@ -139,13 +135,16 @@ collectResults Config.Hole{..} resultsM =
     where
         haveHiddenResults [] = NoHiddenResults
         haveHiddenResults _ = HaveHiddenResults
-        resultsListScore x = (x ^. rlPreferred, rType (x ^. rlMain))
+        resultsListScore x = (x ^. rlPreferred, rScore (x ^. rlMain))
         step results x =
             results
-            & case resultsListScore x of
+            & case (x ^. rlPreferred, checkGood (rScore (x ^. rlMain))) of
                 (NotPreferred, BadResult) -> _2
                 _ -> _1
                 %~ (x :)
+        checkGood r
+            | r < [5] = GoodResult
+            | otherwise = BadResult
 
 makeAll ::
     MonadA m => HoleInfo m ->
