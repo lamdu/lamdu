@@ -17,7 +17,7 @@ import           Data.Store.Transaction (MkProperty)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import           Lamdu.Expr.IRef (DefI, ValIProperty)
+import           Lamdu.Expr.IRef (ValIProperty)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
@@ -253,11 +253,11 @@ markLightParams paramGuids (Expression body pl) =
 -- Let-item or definition (form of <name> [params] = <body>)
 convertBinder ::
     (MonadA m, Monoid a) =>
-    Maybe (DefI m) -> Guid ->
+    Maybe V.Var -> Guid ->
     Val (Input.Payload m a) -> ConvertM m (Binder Guid m (ExpressionU m a))
-convertBinder mDef defGuid expr =
+convertBinder mRecursiveVar defGuid expr =
     do
-        (convParams, funcBody) <- convertParams mDef expr
+        (convParams, funcBody) <- convertParams mRecursiveVar expr
         let mPresentationModeProp
                 | Lens.has (cpParams . _FieldParams) convParams =
                     Just $ Anchors.assocPresentationMode defGuid

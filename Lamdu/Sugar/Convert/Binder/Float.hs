@@ -7,10 +7,12 @@ module Lamdu.Sugar.Convert.Binder.Float
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
+import           Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
@@ -30,11 +32,24 @@ import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
 
+toGetGlobal :: MonadA m => DefI m -> ValIProperty m -> Transaction m ()
+toGetGlobal defI exprP =
+    ExprIRef.writeValBody exprI $ V.BLeaf $ V.LGlobal globalId
+    where
+        exprI = Property.value exprP
+        globalId = ExprIRef.globalId defI
+
 moveToGlobalScope ::
-    MonadA m => ConvertM.Context m -> V.Var -> ValI m -> Transaction m (DefI m)
-moveToGlobalScope ctx param letI =
+    MonadA m =>
+    ConvertM.Context m -> V.Var -> Val (ValIProperty m) -> ValI m ->
+    Transaction m (DefI m)
+moveToGlobalScope ctx param letBodyStored letI =
     do
         paramName <- Anchors.assocNameRef param & Transaction.getP
+        SubExprs.onGetVars
+            (toGetGlobal
+             (fromMaybe (error "recurseVar used not in definition context?!") (ctx ^. ConvertM.scDefI)))
+            Builtins.recurseVar letBodyStored
         DataOps.newPublicDefinitionWithPane paramName
             (ctx ^. ConvertM.scCodeAnchors) letI
 
@@ -170,7 +185,7 @@ floatLetToOuterScope topLevelProp redex ctx =
                 do
                     newDefI <-
                         moveToGlobalScope ctx
-                        (redexParam redex) (nlIRef newLet)
+                        (redexParam redex) (redexArg redex) (nlIRef newLet)
                     return
                         ( ExprIRef.globalId newDefI & V.LGlobal
                         , EntityId.ofIRef newDefI

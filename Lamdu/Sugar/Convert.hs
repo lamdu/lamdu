@@ -17,6 +17,7 @@ import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Lamdu.Builtins.Anchors (recurseVar)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
@@ -76,14 +77,14 @@ reinferCheckDefinition defI =
                 <&> fmap (flip (,) ())
                 <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")
                 <&> fmap fst
-                >>= IRefInfer.run . IRefInfer.loadInferRecursive defI
+                >>= IRefInfer.run . IRefInfer.loadInferRecursive recurseVar
                 <&> Lens.has Lens._Right
 
 reinferCheckExpression :: MonadA m => ValI m -> T m Bool
 reinferCheckExpression valI =
     do
         val <- ExprIRef.readVal valI
-        IRefInfer.run (IRefInfer.loadInferScope Map.empty Infer.emptyScope val)
+        IRefInfer.run (IRefInfer.loadInferScope Infer.emptyScope val)
             <&> Lens.has Lens._Right
 
 emptyScopeInfo :: ScopeInfo m
@@ -176,11 +177,9 @@ convertDefI evalRes cp (Definition.Definition body defI) =
             return $ convertDefIBuiltin builtin defI
         convertDefBody (Definition.BodyExpr defExpr) =
             do
-                ((valInferred, defTypes), newInferContext) <-
-                    do
-                        (inferred, defTypes) <- IRefInfer.loadInferRecursive defI val
-                        prepared <- loadInferPrepareInput evalRes inferred
-                        return (prepared, defTypes)
+                (valInferred, newInferContext) <-
+                    IRefInfer.loadInferRecursive recurseVar val
+                    >>= loadInferPrepareInput evalRes
                     & assertRunInfer
                 nomsMap <- makeNominalsMap valInferred
                 let exprI = val ^. V.payload . Property.pVal
@@ -192,7 +191,6 @@ convertDefI evalRes cp (Definition.Definition body defI) =
                         , _scCodeAnchors = cp
                         , _scScopeInfo = emptyScopeInfo
                         , _scReinferCheckRoot = reinferCheckDefinition defI
-                        , _scDefinitionTypes = defTypes
                         , scConvertSubexpression = ConvertExpr.convert
                         }
                 ConvertDefExpr.convert exprI
@@ -207,7 +205,7 @@ convertExpr ::
 convertExpr evalRes cp val =
     do
         (valInferred, newInferContext) <-
-            IRefInfer.loadInferScope Map.empty Infer.emptyScope val
+            IRefInfer.loadInferScope Infer.emptyScope val
             >>= loadInferPrepareInput evalRes
             & assertRunInfer
         nomsMap <- makeNominalsMap valInferred
@@ -215,7 +213,6 @@ convertExpr evalRes cp val =
                 Context
                 { _scInferContext = newInferContext
                 , _scNominalsMap = nomsMap
-                , _scDefinitionTypes = Map.empty
                 , _scDefI = Nothing
                 , _scCodeAnchors = cp
                 , _scScopeInfo = emptyScopeInfo

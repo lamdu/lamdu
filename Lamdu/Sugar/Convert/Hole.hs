@@ -21,7 +21,6 @@ import qualified Data.ByteString.UTF8 as UTF8
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
-import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           Data.Store.Guid (Guid)
@@ -36,7 +35,6 @@ import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.Pure as Pure
-import           Lamdu.Expr.Scheme (Scheme)
 import           Lamdu.Expr.Type (Type(..))
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
@@ -166,7 +164,12 @@ mkOptions sugarContext mInjectedArg exprPl stored =
                 & Infer.scopeToTypeMap
                 & Map.keys
                 & concatMap (getLocalScopeGetVars sugarContext)
-            , globals <&> P.global . ExprIRef.globalId
+            , globals
+                & ( case sugarContext ^. ConvertM.scDefI of
+                    Nothing -> id
+                    Just defI -> filter (/= defI)
+                  )
+                <&> P.global . ExprIRef.globalId
             , do
                 nominalTid <- nominalTids
                 f <- [V.BFromNom, V.BToNom]
@@ -210,12 +213,9 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
 consistentExprIds :: EntityId -> Val (EntityId -> a) -> Val a
 consistentExprIds = EntityId.randomizeExprAndParams . genFromHashable
 
-infer ::
-    MonadA m =>
-    Map V.GlobalId Scheme -> Infer.Payload -> Val a ->
-    IRefInfer.M m (Val (Infer.Payload, a))
-infer defTypes holeInferred =
-    IRefInfer.loadInferScope defTypes scopeAtHole
+infer :: MonadA m => Infer.Payload -> Val a -> IRefInfer.M m (Val (Infer.Payload, a))
+infer holeInferred =
+    IRefInfer.loadInferScope scopeAtHole
     where
         scopeAtHole = holeInferred ^. Infer.plScope
 
@@ -576,15 +576,14 @@ mkHoleResultValInjected exprPl val =
 
 mkHoleResultVals ::
     MonadA m =>
-    Map V.GlobalId Scheme ->
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m dummy ->
     BaseExpr ->
     StateT Infer.Context (ListT (T m)) (HoleResultVal m IsInjected)
-mkHoleResultVals defTypes mInjectedArg exprPl base =
+mkHoleResultVals mInjectedArg exprPl base =
     case base of
     SeedExpr seed ->
-        infer defTypes inferred seed
+        infer inferred seed
         & mapStateT eitherTtoListT
         <&> Lens.traversed . _2 %~ (,) Nothing
         >>= applyForms (Nothing, ())
@@ -635,8 +634,7 @@ mkHoleResults ::
 mkHoleResults mInjectedArg sugarContext exprPl stored base =
     do
         (val, inferContext) <-
-            mkHoleResultVals
-            (sugarContext ^. ConvertM.scDefinitionTypes) mInjectedArg exprPl base
+            mkHoleResultVals mInjectedArg exprPl base
             & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
         let newSugarContext = sugarContext & ConvertM.scInferContext .~ inferContext
         return

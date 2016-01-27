@@ -18,8 +18,6 @@ import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either (EitherT(..), hoistEither)
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import           Control.MonadA (MonadA)
-import           Data.Map (Map)
-import qualified Data.Map as Map
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
@@ -35,6 +33,7 @@ import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Error as InferErr
 import           Lamdu.Infer.Load (Loader(Loader))
 import qualified Lamdu.Infer.Load as InferLoad
+import qualified Lamdu.Infer.Recursive as Recursive
 import           Lamdu.Infer.Unify (unify)
 import qualified Lamdu.Infer.Update as Update
 import qualified Text.PrettyPrint as PP
@@ -53,23 +52,19 @@ instance Pretty Error where
 unknownGlobalType :: Scheme
 unknownGlobalType = Scheme.any
 
-loader :: MonadA m => Map V.GlobalId Scheme -> Loader (EitherT Error (T m))
-loader givenDefs =
+loader :: MonadA m => Loader (EitherT Error (T m))
+loader =
     Loader
-    { InferLoad.loadTypeOf =
-        \globalId ->
-        case Map.lookup globalId givenDefs of
-        Just r -> return r
-        Nothing ->
-            do
-                defBody <- lift $ Transaction.readIRef $ ExprIRef.defI globalId
-                case defBody of
-                    Definition.BodyExpr defExpr ->
-                        case defExpr ^. Definition.exprType of
-                        Definition.ExportedType scheme -> scheme
-                        Definition.NoExportedType -> unknownGlobalType
-                        & return
-                    Definition.BodyBuiltin (Definition.Builtin _ scheme) -> return scheme
+    { InferLoad.loadTypeOf = \globalId ->
+        do
+            defBody <- lift $ Transaction.readIRef $ ExprIRef.defI globalId
+            case defBody of
+                Definition.BodyExpr defExpr ->
+                    case defExpr ^. Definition.exprType of
+                    Definition.ExportedType scheme -> scheme
+                    Definition.NoExportedType -> unknownGlobalType
+                    & return
+                Definition.BodyBuiltin (Definition.Builtin _ scheme) -> return scheme
     , InferLoad.loadNominal = lift . loadNominal
     }
 
@@ -92,38 +87,27 @@ liftInfer :: Monad m => Infer a -> M m a
 liftInfer = mapStateT toEitherT . Infer.run
 
 loadInferScope ::
-    MonadA m =>
-    Map V.GlobalId Scheme ->
-    Infer.Scope -> Val a -> M m (Val (Infer.Payload, a))
-loadInferScope givenDefs scope val =
-    InferLoad.loadInfer (loader givenDefs) scope val & lift >>= liftInfer
-    >>= liftInfer . Update.liftInfer . Update.inferredVal
+    MonadA m => Infer.Scope -> Val a -> M m (Val (Infer.Payload, a))
+loadInferScope scope val =
+    do
+        inferAction <- lift $ InferLoad.loadInfer loader scope val
+        liftInfer inferAction
 
 loadInferInto ::
-    MonadA m =>
-    Map V.GlobalId Scheme ->
-    Infer.Payload -> Val a -> M m (Val (Infer.Payload, a))
-loadInferInto givenDefs pl val =
+    MonadA m => Infer.Payload -> Val a -> M m (Val (Infer.Payload, a))
+loadInferInto pl val =
     do
-        inferredVal <- loadInferScope givenDefs (pl ^. Infer.plScope) val
+        inferredVal <- loadInferScope (pl ^. Infer.plScope) val
         let inferredType = inferredVal ^. V.payload . _1 . Infer.plType
         liftInfer $
             do
                 unify inferredType (pl ^. Infer.plType)
                 Update.inferredVal inferredVal & Update.liftInfer
 
-loadInferRecursive ::
-    MonadA m =>
-    ExprIRef.DefI m -> Val a ->
-    M m (Val (Infer.Payload, a), Map V.GlobalId Scheme)
-loadInferRecursive defI val =
-    do
-        defType <- Infer.freshInferredVar Infer.emptyScope "r" & liftInfer
-        let givenDefs =
-                Map.singleton (ExprIRef.globalId defI) (Scheme.mono defType)
-        inferred <-
-            loadInferInto givenDefs (Infer.Payload defType Infer.emptyScope) val
-        return (inferred, givenDefs)
+loadInferRecursive :: MonadA m => V.Var -> Val a -> M m (Val (Infer.Payload, a))
+loadInferRecursive recurseVar val =
+    liftInfer (Recursive.inferEnv recurseVar Infer.emptyScope)
+    >>= (`loadInferInto` val)
 
 run :: M m a -> T m (Either Error (a, Infer.Context))
 run = runEitherT . (`runStateT` Infer.initialContext)

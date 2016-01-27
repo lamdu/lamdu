@@ -6,7 +6,9 @@ module Lamdu.Sugar.Convert.GetVar
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
+import           Data.Maybe (fromMaybe)
 import           Data.Store.Guid (Guid)
+import           Lamdu.Builtins.Anchors (recurseVar)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Expr.Val as V
@@ -29,6 +31,17 @@ usesAround x xs =
 convertH ::
     MonadA m => ConvertM.Context m -> V.Var -> Input.Payload m a -> GetVar Guid m
 convertH sugarContext param exprPl
+    | param == recurseVar =
+      GetBinder BinderVar
+      { _bvNameRef =
+            NameRef
+            { _nrName = UniqueId.toGuid defI
+            , _nrGotoDefinition = pure $ EntityId.ofIRef defI
+            }
+      , _bvForm = GetDefinition
+      , _bvInline = CannotInline
+      }
+
     | Just inline <- scopeInfo ^. ConvertM.siLetItems . Lens.at param =
       GetBinder BinderVar
       { _bvNameRef = paramNameRef
@@ -58,6 +71,9 @@ convertH sugarContext param exprPl
             & map tpiFromParameters
             & elem param
         scopeInfo = sugarContext ^. ConvertM.scScopeInfo
+        defI =
+            sugarContext ^. ConvertM.scDefI
+            & fromMaybe (error "recurseVar used not in definition context?!")
 
 convert ::
     MonadA m =>
