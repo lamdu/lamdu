@@ -201,11 +201,16 @@ newPublicDefinition ::
 newPublicDefinition codeProps bodyI name =
     do
         defI <-
-            Definition.Expr bodyI Definition.NoExportedType
+            Definition.Expr bodyI Definition.NoExportedType usedDefinitions
             & Definition.BodyExpr
             & newDefinition name (presentationModeOfName name)
         modP (Anchors.globals codeProps) (defI :)
         return defI
+    where
+        -- Currently only definitions with exported types have usedDefinitions.
+        -- In the future after a "commit" all definitions will have
+        -- both exported type and usedDefinitions.
+        usedDefinitions = mempty
 
 newPublicDefinitionWithPane ::
     MonadA m => String -> Anchors.CodeProps m -> ValI m -> T m (DefI m)

@@ -72,7 +72,7 @@ reinferCheckDefinition defI =
         defBody <- Transaction.readIRef defI
         case defBody of
             Definition.BodyBuiltin {} -> return True
-            Definition.BodyExpr (Definition.Expr valI _) ->
+            Definition.BodyExpr (Definition.Expr valI _ _usedDefsTodo) ->
                 ExprIRef.readVal valI
                 <&> fmap (flip (,) ())
                 <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")

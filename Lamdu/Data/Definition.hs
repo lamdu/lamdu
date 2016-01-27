@@ -3,17 +3,19 @@ module Lamdu.Data.Definition
     ( FFIName(..)
     , Builtin(..)
     , ExportedType(..), _NoExportedType, _ExportedType
-    , Expr(..), expr, exprType
+    , Expr(..), expr, exprType, exprUsedDefinitions
     , Body(..), _BodyExpr, _BodyBuiltin
     , Definition(..), defBody, defPayload
     ) where
 
-import           Prelude.Compat
-
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary(..))
+import           Data.Map (Map)
 import           GHC.Generics (Generic)
 import           Lamdu.Expr.Scheme (Scheme)
+import           Lamdu.Expr.Val (GlobalId)
+
+import           Prelude.Compat
 
 data FFIName = FFIName
     { fModule :: [String]
@@ -34,6 +36,7 @@ data ExportedType = NoExportedType | ExportedType Scheme
 data Expr valExpr = Expr
     { _expr :: valExpr
     , _exprType :: ExportedType
+    , _exprUsedDefinitions :: Map GlobalId Scheme
     } deriving (Generic, Show, Functor, Foldable, Traversable)
 
 data Body valExpr

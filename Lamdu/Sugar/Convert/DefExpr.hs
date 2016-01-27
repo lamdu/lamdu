@@ -1,17 +1,23 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, ScopedTypeVariables, LambdaCase #-}
 module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
+import qualified Data.Map as Map
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
+import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Lamdu.Builtins.Anchors (recurseVar)
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.IRef (DefI)
+import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Lens as ExprLens
+import           Lamdu.Expr.Scheme (Scheme)
 import qualified Lamdu.Expr.Scheme as Scheme
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
@@ -24,6 +30,38 @@ import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
+
+loadGlobalType :: MonadA m => V.GlobalId -> Transaction m (Maybe Scheme)
+loadGlobalType globId =
+    Transaction.readIRef (ExprIRef.defI globId)
+    <&>
+    \case
+    Definition.BodyExpr defExpr ->
+        case defExpr ^. Definition.exprType of
+        Definition.ExportedType t -> Just t
+        Definition.NoExportedType -> Nothing
+    Definition.BodyBuiltin b -> Just (Definition.bType b)
+
+acceptNewType ::
+    MonadA m =>
+    Definition.Expr (Val (Input.Payload m a)) -> DefI m -> Scheme ->
+    Transaction m ()
+acceptNewType defExpr defI inferredType =
+    do
+        usedDefs <- mapM loadGlobType usedGlobals <&> concat <&> Map.fromList
+        Definition.BodyExpr
+            Definition.Expr
+            { Definition._expr =
+                defExpr ^. Definition.expr . V.payload . Input.stored . Property.pVal
+            , Definition._exprType = Definition.ExportedType inferredType
+            , Definition._exprUsedDefinitions = usedDefs
+            }
+            & Transaction.writeIRef defI
+    where
+        usedGlobals = defExpr ^.. Definition.expr . ExprLens.valGlobals
+        loadGlobType globId =
+            loadGlobalType globId
+            <&> Lens._Just %~ (,) globId <&> (^.. Lens._Just)
 
 makeExprDefTypeInfo ::
     MonadA m =>
@@ -44,13 +82,7 @@ makeExprDefTypeInfo defExpr defI =
                 DefinitionNewType AcceptNewType
                 { antOldExportedType = defType
                 , antNewInferredType = inferredType
-                , antAccept =
-                    Definition.Expr
-                    { Definition._expr =
-                        defExpr ^. Definition.expr . V.payload . Input.stored . Property.pVal
-                    , Definition._exprType = Definition.ExportedType inferredType
-                    } & Definition.BodyExpr
-                    & Transaction.writeIRef defI
+                , antAccept = acceptNewType defExpr defI inferredType
                 }
             & return
 
