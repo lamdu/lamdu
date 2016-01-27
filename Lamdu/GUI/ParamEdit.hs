@@ -104,11 +104,11 @@ make annotationOpts showAnnotation prevId nextId param =
     do
         config <- ExprGuiM.readConfig
         let paramEventMap = mconcat
-                [ eventParamDelEventMap fpDel (Config.delForwardKeys config) "" nextId
-                , eventParamDelEventMap fpDel (Config.delBackwardKeys config) " backwards" prevId
-                , maybe mempty (eventMapAddNextParam config) fpMAdd
+                [ eventParamDelEventMap (iDel info) (Config.delForwardKeys config) "" nextId
+                , eventParamDelEventMap (iDel info) (Config.delBackwardKeys config) " backwards" prevId
+                , maybe mempty (eventMapAddNextParam config) (iMAddNext info)
                 ]
-        makeNameEdit myId
+        iMakeNameEdit info myId
             <&> ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap
             <&> ExpressionGui.egAlignment . _1 .~ 0.5
             >>= ExpressionGui.maybeAddAnnotationWith annotationOpts
@@ -118,7 +118,7 @@ make annotationOpts showAnnotation prevId nextId param =
     where
         entityId = param ^. Sugar.fpId
         myId = WidgetIds.fromEntityId entityId
-        Info makeNameEdit fpDel fpMAdd = param ^. Sugar.fpInfo
+        info = param ^. Sugar.fpInfo
         hiddenIds = map WidgetIds.fromEntityId $ param ^. Sugar.fpHiddenIds
         assignCursor x =
             foldr (`ExprGuiM.assignCursorPrefix` const myId) x hiddenIds
