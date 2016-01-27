@@ -12,6 +12,7 @@ import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.MonadA (MonadA)
 import qualified Data.Map.Utils as MapUtils
 import           Data.Maybe.Utils (maybeToMPlus)
+import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Ops as DataOps
@@ -119,7 +120,7 @@ cons (V.Nom nomId (Val injPl (V.BInject (V.Inject tag argI)))) exprPl
     do
         argS <- ConvertM.convertSubexpression argI & lift
         ConsParams headS tailS <- getSugaredHeadTail argS
-        (pls, ConsParams _headI tailI) <- valConsParams argI & maybeToMPlus
+        (pls, ConsParams headI tailI) <- valConsParams argI & maybeToMPlus
         List innerValues innerListActions nilGuid <-
             tailS ^? rBody . _BodyList & maybeToMPlus
         let listItem =
@@ -134,7 +135,25 @@ cons (V.Nom nomId (Val injPl (V.BInject (V.Inject tag argI)))) exprPl
                 { addFirstItem = mkListAddFirstItem (exprPl ^. Input.stored)
                 , replaceNil = replaceNil innerListActions
                 }
+        protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
+        let setToInner =
+                case (headS ^. rBody, tailS ^. rPayload . plActions . setToInnerExpr) of
+                (BodyHole{}, _) ->
+                    NoInnerExpr
+                    -- When tail has SetToInnerExpr,
+                    -- it makes sense for us to also set to same expr.
+                    -- However its SetToInnerExpr sets the tail to it
+                    -- rather than the whole list.
+                    -- We should revamp the SetToInnerExpr mechanism
+                    -- and make it generic somehow.
+                (_, SetToInnerExpr{}) -> NoInnerExpr
+                (_, NoInnerExpr) ->
+                    headI ^. V.payload . Input.stored . Property.pVal
+                    & protectedSetToVal (exprPl ^. Input.stored)
+                    <&> EntityId.ofValI
+                    & SetToInnerExpr
         List (listItem : innerValues) actions nilGuid
             & BodyList
             & addActions exprPl & lift
+            <&> rPayload . plActions . setToInnerExpr .~ setToInner
 cons _ _ = mzero
