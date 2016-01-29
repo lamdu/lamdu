@@ -9,7 +9,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (filterM)
 import           Control.Monad.ListT (ListT)
 import           Control.MonadA (MonadA)
 import qualified Data.ByteString.Char8 as BS8
@@ -21,13 +20,8 @@ import qualified Data.List.Class as ListClass
 import           Data.List.Utils (sortOn)
 import           Data.Monoid ((<>))
 import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Lens as ExprLens
-import qualified Lamdu.Expr.Val as V
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
@@ -192,36 +186,13 @@ insensitivePrefixOf = isPrefixOf `on` map Char.toLower
 insensitiveInfixOf :: String -> String -> Bool
 insensitiveInfixOf = isInfixOf `on` map Char.toLower
 
-globalNameMatches :: Monad m => String -> V.Val () -> T m Bool
-globalNameMatches searchTerm (V.Val () body) =
-    case body of
-    V.BLeaf (V.LGlobal globalId) -> verifyName (ExprIRef.defI globalId)
-    V.BToNom (V.Nom nomId h) | isHole h -> verifyName nomId
-    V.BFromNom (V.Nom nomId h) | isHole h -> verifyName nomId
-    _ -> return True
-    where
-        isHole = Lens.notNullOf ExprLens.valHole
-        verifyName entity =
-            Anchors.assocNameRef entity & Transaction.getP
-            <&> (searchTerm `insensitiveInfixOf`)
-
 makeAllGroups :: MonadA m => HoleInfo m -> T m [Group m]
 makeAllGroups holeInfo =
     (++)
     <$> (literalGroups holeInfo >>= mapM mkGroup)
     <*> (hiHole holeInfo ^. Sugar.holeActions . Sugar.holeOptions
-         >>= preFilter
          >>= mapM mkGroup
          <&> holeMatches (hiSearchTerm holeInfo))
-    where
-        -- This is used to filter globals/nominals prior to sugaring
-        -- to avoid type-checking globals/nominals if the name doesn't
-        -- match. After sugaring, we also need a filter for the
-        -- non-globals.
-        preFilter =
-            filterM
-            (globalNameMatches (hiSearchTerm holeInfo) .
-             (^. Sugar.hoVal))
 
 groupOrdering :: String -> Group m -> [Bool]
 groupOrdering searchTerm group =
