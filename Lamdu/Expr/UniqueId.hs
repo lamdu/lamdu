@@ -26,7 +26,6 @@ identifierOfGuid = Identifier . Guid.bs
 
 class    ToGuid a           where toGuid :: a -> Guid
 instance ToGuid V.Var       where toGuid = guidOfIdentifier . V.vvName
-instance ToGuid V.GlobalId  where toGuid = guidOfIdentifier . V.globalId
 instance ToGuid T.Tag       where toGuid = guidOfIdentifier . T.tagName
 instance ToGuid T.NominalId where toGuid = guidOfIdentifier . T.nomId
 instance ToGuid T.PrimId    where toGuid = guidOfIdentifier . T.primId

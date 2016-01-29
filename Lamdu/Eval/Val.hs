@@ -39,7 +39,7 @@ instance Show (Closure srcId) where show _ = "Closure{..}"
 data EvalError
     = EvalHole
     | EvalTypeError String
-    | EvalLoadGlobalFailed V.GlobalId
+    | EvalLoadGlobalFailed V.Var
     | EvalMissingBuiltin FFIName
     | EvalTodoError String
     | EvalIndexError String

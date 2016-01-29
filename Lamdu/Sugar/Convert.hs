@@ -17,7 +17,6 @@ import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Lamdu.Builtins.Anchors (recurseVar)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
@@ -77,7 +76,7 @@ reinferCheckDefinition defI =
                 <&> fmap (flip (,) ())
                 <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")
                 <&> fmap fst
-                >>= IRefInfer.run . IRefInfer.loadInferRecursive recurseVar
+                >>= IRefInfer.run . IRefInfer.loadInferRecursive defI
                 <&> Lens.has Lens._Right
 
 reinferCheckExpression :: MonadA m => ValI m -> T m Bool
@@ -178,7 +177,7 @@ convertDefI evalRes cp (Definition.Definition body defI) =
         convertDefBody (Definition.BodyExpr defExpr) =
             do
                 (valInferred, newInferContext) <-
-                    IRefInfer.loadInferRecursive recurseVar val
+                    IRefInfer.loadInferRecursive defI val
                     >>= loadInferPrepareInput evalRes
                     & assertRunInfer
                 nomsMap <- makeNominalsMap valInferred

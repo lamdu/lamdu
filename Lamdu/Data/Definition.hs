@@ -13,7 +13,7 @@ import           Data.Binary (Binary(..))
 import           Data.Map (Map)
 import           GHC.Generics (Generic)
 import           Lamdu.Expr.Scheme (Scheme)
-import           Lamdu.Expr.Val (GlobalId)
+import           Lamdu.Expr.Val (Var)
 
 import           Prelude.Compat
 
@@ -36,7 +36,7 @@ data ExportedType = NoExportedType | ExportedType Scheme
 data Expr valExpr = Expr
     { _expr :: valExpr
     , _exprType :: ExportedType
-    , _exprUsedDefinitions :: Map GlobalId Scheme
+    , _exprUsedDefinitions :: Map Var Scheme
     } deriving (Generic, Show, Functor, Foldable, Traversable)
 
 data Body valExpr

@@ -44,11 +44,11 @@ type T = Transaction
 type DefI m = IRef m (Definition.Body (ValI m))
 
 -- NOTE: Nobody else should generate Lamdu-visible Global Id's
-globalId :: DefI m -> V.GlobalId
-globalId = V.GlobalId . Identifier . Guid.bs . IRef.guid
+globalId :: DefI m -> V.Var
+globalId = V.Var . Identifier . Guid.bs . IRef.guid
 
-defI :: V.GlobalId -> DefI m
-defI (V.GlobalId (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make bs
+defI :: V.Var -> DefI m
+defI (V.Var (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make bs
 
 nominalI :: T.NominalId -> IRef m Nominal
 nominalI (T.NominalId (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make ("Nom:" <> bs)

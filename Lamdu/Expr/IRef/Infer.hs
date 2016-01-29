@@ -33,7 +33,6 @@ import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Error as InferErr
 import           Lamdu.Infer.Load (Loader(Loader))
 import qualified Lamdu.Infer.Load as InferLoad
-import qualified Lamdu.Infer.Recursive as Recursive
 import           Lamdu.Infer.Unify (unify)
 import qualified Lamdu.Infer.Update as Update
 import qualified Text.PrettyPrint as PP
@@ -55,7 +54,8 @@ unknownGlobalType = Scheme.any
 loader :: MonadA m => Loader (EitherT Error (T m))
 loader =
     Loader
-    { InferLoad.loadTypeOf = \globalId ->
+    { InferLoad.loadTypeOf =
+        \globalId ->
         do
             defBody <- lift $ Transaction.readIRef $ ExprIRef.defI globalId
             case defBody of
@@ -89,9 +89,7 @@ liftInfer = mapStateT toEitherT . Infer.run
 loadInferScope ::
     MonadA m => Infer.Scope -> Val a -> M m (Val (Infer.Payload, a))
 loadInferScope scope val =
-    do
-        inferAction <- lift $ InferLoad.loadInfer loader scope val
-        liftInfer inferAction
+    InferLoad.loadInfer loader scope val & lift >>= liftInfer
 
 loadInferInto ::
     MonadA m => Infer.Payload -> Val a -> M m (Val (Infer.Payload, a))
@@ -104,10 +102,14 @@ loadInferInto pl val =
                 unify inferredType (pl ^. Infer.plType)
                 Update.inferredVal inferredVal & Update.liftInfer
 
-loadInferRecursive :: MonadA m => V.Var -> Val a -> M m (Val (Infer.Payload, a))
-loadInferRecursive recurseVar val =
-    liftInfer (Recursive.inferEnv recurseVar Infer.emptyScope)
-    >>= (`loadInferInto` val)
+loadInferRecursive ::
+    MonadA m => ExprIRef.DefI m -> Val a -> M m (Val (Infer.Payload, a))
+loadInferRecursive defI val =
+    do
+        defType <- Infer.freshInferredVar Infer.emptyScope "r" & liftInfer
+        let scope =
+                Infer.insertTypeOf (ExprIRef.globalId defI) defType Infer.emptyScope
+        loadInferInto (Infer.Payload defType scope) val
 
 run :: M m a -> T m (Either Error (a, Infer.Context))
 run = runEitherT . (`runStateT` Infer.initialContext)

@@ -9,14 +9,9 @@ import           Data.Binary.Utils (encodeS, decodeS)
 import qualified Data.ByteString as SBS
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
-import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins.Anchors as Builtins
-import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
@@ -29,20 +24,12 @@ import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Inject as ConvertInject
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
-import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Nominal as ConvertNominal
 import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
 import           Lamdu.Sugar.Internal
-import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
-
-type T = Transaction
-
-jumpToDefI ::
-    MonadA m => Anchors.CodeProps m -> DefI m -> T m EntityId
-jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
 convertLiteralCommon ::
     Monad m =>
@@ -67,23 +54,6 @@ convertLiteralBytes ::
 convertLiteralBytes =
     convertLiteralCommon LiteralBytes (V.Literal Builtins.bytesId)
 
-convertGlobal ::
-    MonadA m => V.GlobalId -> Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertGlobal globalId exprPl =
-    do
-        cp <- (^. ConvertM.scCodeAnchors) <$> ConvertM.readContext
-        addActions exprPl .
-            BodyGetVar $ GetBinder BinderVar
-            { _bvNameRef = NameRef
-              { _nrName = UniqueId.toGuid defI
-              , _nrGotoDefinition = jumpToDefI cp defI
-              }
-            , _bvForm = GetDefinition
-            , _bvInline = CannotInline
-            }
-    where
-        defI = ExprIRef.defI globalId
-
 convert :: (MonadA m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert v =
     v ^. V.payload
@@ -97,7 +67,6 @@ convert v =
       V.BFromNom x -> ConvertNominal.convertFromNom x
       V.BCase x -> ConvertCase.convert x
       V.BLeaf (V.LVar x) -> ConvertGetVar.convert x
-      V.BLeaf (V.LGlobal x) -> convertGlobal x
       V.BLeaf (V.LLiteral (V.Literal p bs))
           | p == Builtins.floatId -> convertLiteralFloat (decodeS bs)
           | p == Builtins.bytesId -> convertLiteralBytes bs

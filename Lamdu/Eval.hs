@@ -51,7 +51,7 @@ data Event srcId
 data EvalActions m srcId = EvalActions
     { _aReportEvent :: Event srcId -> m ()
     , _aRunBuiltin :: Def.FFIName -> Val srcId -> Val srcId
-    , _aLoadGlobal :: V.GlobalId -> m (Maybe (Def.Body (V.Val srcId)))
+    , _aLoadGlobal :: V.Var -> m (Maybe (Def.Body (V.Val srcId)))
     }
 
 newtype Env m srcId = Env
@@ -60,7 +60,7 @@ newtype Env m srcId = Env
 
 data EvalState m srcId = EvalState
     { _esScopeCounter :: !ScopeId
-    , _esLoadedGlobals :: !(Map V.GlobalId (Val srcId))
+    , _esLoadedGlobals :: !(Map V.Var (Val srcId))
     , _esReader :: !(Env m srcId) -- This is ReaderT
     }
 
@@ -156,13 +156,10 @@ evalScopedVal (ScopedVal scope expr) =
     V.BCase      case_     -> traverse inner case_     <&> HCase
     V.BFromNom (V.Nom _ v) -> inner v
     V.BToNom   (V.Nom _ v) -> inner v
-    V.BLeaf (V.LGlobal global) -> loadGlobal global
     V.BLeaf (V.LVar var) ->
         case scope ^. scopeMap . at var of
-        Nothing ->
-            "Variable " ++ show var ++ " out of scope"
-            & EvalTypeError & HError & return
         Just val -> return val
+        Nothing -> loadGlobal var
     V.BLeaf V.LRecEmpty -> HRecEmpty & return
     V.BLeaf V.LAbsurd   -> HAbsurd & return
     V.BLeaf (V.LLiteral literal) -> HLiteral literal & return
@@ -175,7 +172,7 @@ evalScopedVal (ScopedVal scope expr) =
                     & EResultComputed & report
                 return result
 
-loadGlobal :: MonadA m => V.GlobalId -> EvalT srcId m (Val srcId)
+loadGlobal :: MonadA m => V.Var -> EvalT srcId m (Val srcId)
 loadGlobal g =
     do
         loaded <- liftState $ use (esLoadedGlobals . at g)

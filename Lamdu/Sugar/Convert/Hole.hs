@@ -163,13 +163,12 @@ mkOptions sugarContext mInjectedArg exprPl stored =
             [ exprPl ^. Input.inferredScope
                 & Infer.scopeToTypeMap
                 & Map.keys
-                & concatMap (getLocalScopeGetVars sugarContext)
-            , globals
                 & ( case sugarContext ^. ConvertM.scDefI of
                     Nothing -> id
-                    Just defI -> filter (/= defI)
+                    Just defI -> filter (/= ExprIRef.globalId defI)
                   )
-                <&> P.global . ExprIRef.globalId
+                & concatMap (getLocalScopeGetVars sugarContext)
+            , globals <&> P.var . ExprIRef.globalId
             , do
                 nominalTid <- nominalTids
                 f <- [V.BFromNom, V.BToNom]
@@ -213,7 +212,8 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
 consistentExprIds :: EntityId -> Val (EntityId -> a) -> Val a
 consistentExprIds = EntityId.randomizeExprAndParams . genFromHashable
 
-infer :: MonadA m => Infer.Payload -> Val a -> IRefInfer.M m (Val (Infer.Payload, a))
+infer ::
+    MonadA m => Infer.Payload -> Val a -> IRefInfer.M m (Val (Infer.Payload, a))
 infer holeInferred =
     IRefInfer.loadInferScope scopeAtHole
     where
@@ -259,7 +259,7 @@ sugar sugarContext exprPl val =
         fakeInferPayload =
             Infer.Payload
             { Infer._plType = TFun (TVar "fakeInput") (TVar "fakeOutput")
-            , Infer._plScope = Infer.emptyScope
+            , Infer._plScope = exprPl ^. Input.inferred . Infer.plScope
             }
 
 mkHole ::

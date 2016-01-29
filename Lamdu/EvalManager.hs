@@ -29,7 +29,6 @@ import qualified Data.Store.Rev.Version as Version
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins as Builtins
-import qualified Lamdu.Builtins.Anchors as BuiltinAnchors
 import           Lamdu.Data.DbLayout (DbM, ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.Definition as Def
@@ -116,16 +115,11 @@ evalActions evaluator =
         loadGlobal globalId =
             ExprIRef.defI globalId
             & loadDef evaluator
-            <&> asDef globalId
-        asDef globalId x =
+            <&> asDef
+        asDef x =
             x ^. Def.defBody
             <&> Lens.mapped %~ Property.value
-            <&> replaceRecursiveReferences globalId
             & Just
-        replaceRecursiveReferences globalId (V.Val pl (V.BLeaf (V.LVar v)))
-            | v == BuiltinAnchors.recurseVar = V.Val pl (V.BLeaf (V.LGlobal globalId))
-        replaceRecursiveReferences globalId val =
-            val & V.body . Lens.traversed %~ replaceRecursiveReferences globalId
 
 replIRef :: IRef ViewM (ValI ViewM)
 replIRef = DbLayout.repl DbLayout.codeIRefs
@@ -146,7 +140,7 @@ stop evaluator =
         writeIORef (eEvaluatorRef evaluator) NotStarted
         writeIORef (eResultsRef evaluator) EvalResults.empty
 
-sumDependency :: Set (ExprIRef.ValI ViewM) -> Set V.GlobalId -> Set Guid
+sumDependency :: Set (ExprIRef.ValI ViewM) -> Set V.Var -> Set Guid
 sumDependency subexprs globals =
     mconcat
     [ Set.map (IRef.guid . ExprIRef.unValI) subexprs

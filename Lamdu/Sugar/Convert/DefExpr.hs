@@ -7,12 +7,12 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Lamdu.Builtins.Anchors (recurseVar)
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -31,7 +31,7 @@ import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
 
-loadGlobalType :: MonadA m => V.GlobalId -> Transaction m (Maybe Scheme)
+loadGlobalType :: MonadA m => V.Var -> Transaction m (Maybe Scheme)
 loadGlobalType globId =
     Transaction.readIRef (ExprIRef.defI globId)
     <&>
@@ -58,7 +58,7 @@ acceptNewType defExpr defI inferredType =
             }
             & Transaction.writeIRef defI
     where
-        usedGlobals = defExpr ^.. Definition.expr . ExprLens.valGlobals
+        usedGlobals = defExpr ^.. Definition.expr . ExprLens.valGlobals (Set.singleton (ExprIRef.globalId defI))
         loadGlobType globId =
             loadGlobalType globId
             <&> Lens._Just %~ (,) globId <&> (^.. Lens._Just)
@@ -93,7 +93,7 @@ convert ::
 convert defExpr defI =
     do
         content <-
-            ConvertBinder.convertBinder (Just recurseVar) (IRef.guid defI)
+            ConvertBinder.convertBinder (Just defI) (IRef.guid defI)
             (defExpr ^. Definition.expr)
         typeInfo <- makeExprDefTypeInfo defExpr defI
         return $ DefinitionBodyExpression DefinitionExpression

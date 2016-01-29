@@ -37,7 +37,7 @@ import qualified Lamdu.Expr.Val as V
 import           System.IO (stderr)
 
 data Actions srcId = Actions
-    { _aLoadGlobal :: V.GlobalId -> IO (Maybe (Def.Body (V.Val srcId)))
+    { _aLoadGlobal :: V.Var -> IO (Maybe (Def.Body (V.Val srcId)))
     , _aRunBuiltin :: Def.FFIName -> Val srcId -> Val srcId
     , _aReportUpdatesAvailable :: IO ()
     , _aCompleted :: Either E.SomeException (Val srcId) -> IO ()
@@ -57,7 +57,7 @@ data State srcId = State
     , _sAppliesOfLam :: !(Map srcId (Map ScopeId [(ScopeId, Val srcId)]))
       -- Maps of already-evaluated srcId's/thunks
     , _sValMap :: !(Map srcId (Map ScopeId (Val srcId)))
-    , _sDependencies :: !(Set srcId, Set V.GlobalId)
+    , _sDependencies :: !(Set srcId, Set V.Var)
     }
 
 Lens.makeLenses ''State
@@ -91,7 +91,7 @@ processEvent (Eval.EResultComputed Eval.EventResultComputed{..}) state =
     state
     & sValMap %~ Map.alter (<> Just (Map.singleton ercScope ercResult)) ercSource
 
-getDependencies :: Ord srcId => V.GlobalId -> Maybe (Def.Body (V.Val srcId)) -> (Set srcId, Set V.GlobalId)
+getDependencies :: Ord srcId => V.Var -> Maybe (Def.Body (V.Val srcId)) -> (Set srcId, Set V.Var)
 getDependencies globalId defBody =
     ( defBody ^. Lens._Just . Lens.traverse . Lens.traverse . Lens.to Set.singleton
     , Set.singleton globalId
@@ -181,7 +181,7 @@ start actions src =
 stop :: Evaluator srcId -> IO ()
 stop = killThread . eThreadId
 
-pauseLoading :: Evaluator srcId -> IO (Set srcId, Set V.GlobalId)
+pauseLoading :: Evaluator srcId -> IO (Set srcId, Set V.Var)
 pauseLoading evaluator =
     do
         takeMVar (eLoadResumed evaluator)
