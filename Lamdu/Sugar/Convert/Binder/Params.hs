@@ -158,7 +158,7 @@ makeAddFieldParam binderKind mkNewTags storedLam =
                     BinderKindDef defI ->
                         changeRecursiveCallArgs addFieldToCall
                         (storedLam ^. slLam . V.lamResult) defI
-                    BinderKindLet -> return ()
+                    BinderKindLet _ -> return ()
                     BinderKindLambda -> return ()
                 void $ wrapOnError $ slLambdaProp storedLam
                 ParamAddResultNewTag tagG & return
@@ -237,7 +237,7 @@ makeDelFieldParam binderKind tags fp storedLam =
                     BinderKindDef defI ->
                         changeRecursiveCallArgs fixRecurseArg
                         (storedLam ^. slLam . V.lamResult) defI
-                    BinderKindLet -> return ()
+                    BinderKindLet _ -> return ()
                     BinderKindLambda -> return ()
                 _ <- wrapOnError $ slLambdaProp storedLam
                 return delResult
@@ -374,7 +374,7 @@ makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp
                     BinderKindDef defI ->
                         changeRecursionsFromCalls defI lamBodyStored
                     BinderKindLambda -> return ()
-                    BinderKindLet -> return ()
+                    BinderKindLet _ -> return ()
                 let lamBodyI = Property.value (lamBodyStored ^. V.payload)
                 _ <- protectedSetToVal lambdaProp lamBodyI
                 return ParamDelResultDelVar
@@ -439,7 +439,7 @@ makeConvertToRecordParams binderKind storedLam =
                         changeRecursiveCallArgs
                         (wrapArgWithRecord varToTags)
                         (storedLam ^. slLam . V.lamResult) defI
-                    BinderKindLet -> return ()
+                    BinderKindLet _ -> return ()
                     BinderKindLambda -> return ()
                 _ <- wrapOnError (slLambdaProp storedLam)
                 ParamAddResultVarToTags varToTags & return
@@ -611,7 +611,7 @@ convertEmptyParams binderKind val =
                     (newParam, dst) <- DataOps.lambdaWrap (storedVal ^. V.payload)
                     case binderKind of
                         BinderKindDef defI -> changeRecursionsToCalls defI storedVal
-                        BinderKindLet -> return ()
+                        BinderKindLet _ -> return ()
                         BinderKindLambda -> return ()
                     void $ protectedSetToVal (storedVal ^. V.payload) dst
                     return $

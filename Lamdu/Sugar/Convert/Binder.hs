@@ -91,7 +91,7 @@ convertRedex ::
 convertRedex expr redex =
     do
         value <-
-            convertBinder BinderKindLet defGuid (redexArg redex)
+            convertBinder binderKind defGuid (redexArg redex)
             & localNewExtractDestPos expr
         actions <-
             mkLetIActions (expr ^. V.payload . Input.stored)
@@ -118,6 +118,10 @@ convertRedex expr redex =
             , _lUsages = redexParamRefs redex
             }
   where
+      binderKind =
+          redexLam redex
+          <&> Lens.mapped %~ (^. Input.stored)
+          & BinderKindLet
       V.Lam param body = redexLam redex
       defGuid = UniqueId.toGuid param
       defEntityId = EntityId.ofLambdaParam param
