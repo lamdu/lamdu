@@ -189,7 +189,7 @@ floatLetToOuterScope topLevelProp redex ctx =
                 nlOnVar newLet (Val s newBody)
             go (Val s (V.BApp (V.Apply f@(Val _ (V.BLeaf (V.LVar v))) a)))
               | v == param =
-                V.Apply (go f) (nlOnArgToVar newLet a)
+                V.Apply (go f) (nlOnArgToVar newLet (go a))
                 & V.BApp & Val s
             go val = val & V.body . Lens.mapped %~ go
         _ <-
