@@ -177,12 +177,12 @@ getFieldOnVar = V.body . ExprLens._BGetField . inGetField
         pack pl (v, t) =
             V.GetField (Val pl (V.BLeaf (V.LVar v))) t
 
-getFieldParamsToHole :: MonadA m => T.Tag -> StoredLam m -> T m ()
-getFieldParamsToHole tag (StoredLam (V.Lam param lamBody) _) =
+getFieldParamsToHole :: MonadA m => T.Tag -> V.Lam (Val (ValIProperty m)) -> T m ()
+getFieldParamsToHole tag (V.Lam param lamBody) =
     SubExprs.onMatchingSubexprs SubExprs.toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
 
-getFieldParamsToParams :: MonadA m => StoredLam m -> T.Tag -> T m ()
-getFieldParamsToParams (StoredLam (V.Lam param lamBody) _) tag =
+getFieldParamsToParams :: MonadA m => V.Lam (Val (ValIProperty m)) -> T.Tag -> T m ()
+getFieldParamsToParams (V.Lam param lamBody) tag =
     SubExprs.onMatchingSubexprs (toParam . Property.value)
     (getFieldOnVar . Lens.only (param, tag)) lamBody
     where
@@ -230,9 +230,9 @@ makeDelFieldParam binderKind tags fp storedLam =
         return $
             do
                 Transaction.setP (slParamList storedLam) newTags
-                getFieldParamsToHole tag storedLam
+                getFieldParamsToHole tag (storedLam ^. slLam)
                 mLastTag
-                    & traverse_ (getFieldParamsToParams storedLam)
+                    & traverse_ (getFieldParamsToParams (storedLam ^. slLam))
                 case binderKind of
                     BinderKindDef defI ->
                         changeRecursiveCallArgs fixRecurseArg
