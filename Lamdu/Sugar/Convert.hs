@@ -185,7 +185,7 @@ convertDefI evalRes cp (Definition.Definition body defI) =
                         Context
                         { _scInferContext = newInferContext
                         , _scNominalsMap = nomsMap
-                        , _scDefI = Just defI
+                        , _scGlobalsInScope = Just defI
                         , _scCodeAnchors = cp
                         , _scScopeInfo = emptyScopeInfo
                         , _scReinferCheckRoot = reinferCheckDefinition defI
@@ -211,7 +211,7 @@ convertExpr evalRes cp val =
                 Context
                 { _scInferContext = newInferContext
                 , _scNominalsMap = nomsMap
-                , _scDefI = Nothing
+                , _scGlobalsInScope = Nothing
                 , _scCodeAnchors = cp
                 , _scScopeInfo = emptyScopeInfo
                 , _scReinferCheckRoot =

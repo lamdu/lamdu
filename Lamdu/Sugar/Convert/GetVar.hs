@@ -41,7 +41,7 @@ convertGlobal param exprPl =
     do
         ctx <- lift ConvertM.readContext
         let isRecurse =
-                Lens.has (ConvertM.scDefI . Lens._Just . Lens.only defI) ctx
+                Lens.has (ConvertM.scGlobalsInScope . Lens._Just . Lens.only defI) ctx
         notInScope || isRecurse & guard
         GetBinder BinderVar
             { _bvNameRef = NameRef

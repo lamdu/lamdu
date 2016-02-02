@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Monad
     , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siOuter
 
     , Context(..)
-    , scInferContext, scReinferCheckRoot, scDefI
+    , scInferContext, scReinferCheckRoot, scGlobalsInScope
     , scCodeAnchors, scScopeInfo, scNominalsMap
 
     , ConvertM(..), run
@@ -78,7 +78,7 @@ newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
 
 data Context m = Context
     { _scInferContext :: Infer.Context
-    , _scDefI :: Maybe (ExprIRef.DefI m)
+    , _scGlobalsInScope :: Maybe (ExprIRef.DefI m)
     , _scCodeAnchors :: Anchors.CodeProps m
     , _scScopeInfo :: ScopeInfo m
     , -- Check whether the definition is valid after an edit,

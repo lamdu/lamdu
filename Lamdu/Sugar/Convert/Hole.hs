@@ -163,7 +163,7 @@ mkOptions sugarContext mInjectedArg exprPl stored =
             [ exprPl ^. Input.inferredScope
                 & Infer.scopeToTypeMap
                 & Map.keys
-                & ( case sugarContext ^. ConvertM.scDefI of
+                & ( case sugarContext ^. ConvertM.scGlobalsInScope of
                     Nothing -> id
                     Just defI -> filter (/= ExprIRef.globalId defI)
                   )
