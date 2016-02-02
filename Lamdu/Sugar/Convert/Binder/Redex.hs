@@ -21,9 +21,8 @@ import           Lamdu.Sugar.Types
 import           Prelude.Compat
 
 data Redex a = Redex
-    { redexBody :: Val a
-    , redexBodyScope :: CurAndPrev (Map ScopeId ScopeId)
-    , redexParam :: V.Var
+    { redexBodyScope :: CurAndPrev (Map ScopeId ScopeId)
+    , redexLam :: V.Lam (Val a)
     , redexParamRefs :: [EntityId]
     , redexArg :: Val a
     , redexArgType :: Type
@@ -33,14 +32,13 @@ data Redex a = Redex
 checkForRedex :: Val (Input.Payload m a) -> Maybe (Redex (Input.Payload m a))
 checkForRedex expr = do
     V.Apply func arg <- expr ^? ExprLens.valApply
-    V.Lam param body <- func ^? V.body . ExprLens._BAbs
+    lam <- func ^? V.body . ExprLens._BAbs
     Just Redex
-        { redexBody = body
+        { redexLam = lam
         , redexBodyScope =
             func ^. V.payload . Input.evalResults
             <&> (^. Input.eAppliesOfLam)
             <&> Lens.traversed %~ getRedexApplies
-        , redexParam = param
         , redexArg = arg
         , redexArgType =
             arg ^. V.payload . Input.inferred . Infer.plType

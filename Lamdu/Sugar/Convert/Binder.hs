@@ -50,12 +50,13 @@ mkLetIActions topLevelProp redex =
             LetActions
             { _laSetToInner =
                 do
-                    SubExprs.getVarsToHole (redexParam redex) (redexBody redex)
-                    redexBody redex ^. V.payload
-                        & replaceWith topLevelProp & void
+                    SubExprs.getVarsToHole param body
+                    body ^. V.payload & replaceWith topLevelProp & void
             , _laSetToHole = DataOps.setToHole topLevelProp <&> EntityId.ofValI
             , _laFloat = float
             }
+    where
+        V.Lam param body = redexLam redex
 
 localNewExtractDestPos ::
     MonadA m => Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
@@ -95,12 +96,12 @@ convertRedex expr redex =
         actions <-
             mkLetIActions (expr ^. V.payload . Input.stored)
             (redex <&> (^. Input.stored))
-        body <-
-            makeBinderBody (redexBody redex)
-            & localVarsUnderExtractDestPos [redexParam redex]
+        letBody <-
+            makeBinderBody body
+            & localVarsUnderExtractDestPos [param]
             & localNewExtractDestPos expr
             & ConvertM.local (scScopeInfo . siLetItems <>~
-                Map.singleton (redexParam redex)
+                Map.singleton param
                 (makeInline (expr ^. V.payload . Input.stored) redex))
         ann <- redexArg redex ^. V.payload & makeAnnotation
         return Let
@@ -113,11 +114,11 @@ convertRedex expr redex =
             , _lName = UniqueId.toGuid param
             , _lAnnotation = ann
             , _lBodyScope = redexBodyScope redex
-            , _lBody = body
+            , _lBody = letBody
             , _lUsages = redexParamRefs redex
             }
   where
-      param = redexParam redex
+      V.Lam param body = redexLam redex
       defGuid = UniqueId.toGuid param
       defEntityId = EntityId.ofLambdaParam param
 

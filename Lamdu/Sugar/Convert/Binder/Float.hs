@@ -135,7 +135,7 @@ addLetParam ::
     Monad m => V.Var -> Redex (ValIProperty m) -> T m (NewLet m)
 addLetParam varToReplace redex =
     case redexArg redex ^. V.body of
-    V.BAbs lam | isVarAlwaysApplied (redexParam redex) (redexBody redex) ->
+    V.BAbs lam | isVarAlwaysApplied param body ->
         case redexArgType redex of
         T.TFun (T.TRecord composite) _
             | Just fields <- composite ^? orderedClosedFlatComposite
@@ -145,6 +145,8 @@ addLetParam varToReplace redex =
         where
             storedLam = Params.StoredLam lam (redexArg redex ^. V.payload)
     _ -> convertLetToLam varToReplace redex
+    where
+        V.Lam param body = redexLam redex
 
 sameLet :: Redex (ValIProperty m) -> NewLet m
 sameLet redex =
@@ -171,29 +173,27 @@ floatLetToOuterScope topLevelProp redex ctx =
             Nothing ->
                 do
                     newDefI <-
-                        moveToGlobalScope ctx
-                        (redexParam redex) (nlIRef newLet)
+                        moveToGlobalScope ctx param (nlIRef newLet)
                     return
                         ( ExprIRef.globalId newDefI & V.LVar
                         , EntityId.ofIRef newDefI
                         )
             Just outerScope ->
-                ( V.LVar (redexParam redex)
-                , EntityId.ofLambdaParam (redexParam redex)
+                ( V.LVar param
+                , EntityId.ofLambdaParam param
                 ) <$
-                DataOps.redexWrapWithGivenParam
-                    (redexParam redex) (nlIRef newLet) outerScope
+                DataOps.redexWrapWithGivenParam param (nlIRef newLet) outerScope
         let newBody = V.BLeaf newLeafBody
         let
-            go (Val s (V.BLeaf (V.LVar v))) | v == redexParam redex =
+            go (Val s (V.BLeaf (V.LVar v))) | v == param =
                 nlOnVar newLet (Val s newBody)
             go (Val s (V.BApp (V.Apply f@(Val _ (V.BLeaf (V.LVar v))) a)))
-              | v == redexParam redex =
+              | v == param =
                 V.Apply (go f) (nlOnArgToVar newLet a)
                 & V.BApp & Val s
             go val = val & V.body . Lens.mapped %~ go
         _ <-
-            redexBody redex
+            redexLam redex ^. V.lamResult
             <&> Just . Property.value
             & go
             & V.payload .~ Just (Property.value topLevelProp)
@@ -204,6 +204,7 @@ floatLetToOuterScope topLevelProp redex ctx =
             , lfrMVarToTags = nlMVarToTags newLet
             }
     where
+        param = redexLam redex ^. V.lamParamId
         varsToRemove =
             filter (`Set.member` usedVars)
             (outerScopeInfo ^. ConvertM.osiVarsUnderPos)
