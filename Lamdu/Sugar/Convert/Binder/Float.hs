@@ -30,8 +30,10 @@ import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
 
+type T = Transaction
+
 moveToGlobalScope ::
-    MonadA m => ConvertM.Context m -> V.Var -> ValI m -> Transaction m (DefI m)
+    MonadA m => ConvertM.Context m -> V.Var -> ValI m -> T m (DefI m)
 moveToGlobalScope ctx param letI =
     do
         paramName <- Anchors.assocNameRef param & Transaction.getP
@@ -56,7 +58,7 @@ isVarAlwaysApplied var val =
             all (isVarAlwaysApplied var) (x ^.. V.body . Lens.traverse)
 
 convertLetToLam ::
-    Monad m => V.Var -> Redex (ValIProperty m) -> Transaction m (NewLet m)
+    Monad m => V.Var -> Redex (ValIProperty m) -> T m (NewLet m)
 convertLetToLam varToReplace redex =
     do
         newParam <- ExprIRef.newVar
@@ -78,7 +80,7 @@ convertLetToLam varToReplace redex =
 
 convertVarToGetFieldParam ::
     Monad m =>
-    V.Var -> T.Tag -> V.Lam (Val (ValIProperty m)) -> Transaction m ()
+    V.Var -> T.Tag -> V.Lam (Val (ValIProperty m)) -> T m ()
 convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
     SubExprs.onGetVars toNewParam oldVar lamBody
     where
@@ -89,7 +91,7 @@ convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
             >>= ExprIRef.writeValBody (Property.value prop)
 
 convertLetParamToRecord ::
-    Monad m => V.Var -> Params.StoredLam m -> Transaction m (NewLet m)
+    Monad m => V.Var -> Params.StoredLam m -> T m (NewLet m)
 convertLetParamToRecord varToReplace storedLam =
     do
         vtt <- Params.convertToRecordParams storedLam Params.NewParamAfter
@@ -112,7 +114,7 @@ convertLetParamToRecord varToReplace storedLam =
 
 addFieldToLetParamsRecord ::
     Monad m =>
-    [T.Tag] -> V.Var -> Params.StoredLam m -> Transaction m (NewLet m)
+    [T.Tag] -> V.Var -> Params.StoredLam m -> T m (NewLet m)
 addFieldToLetParamsRecord fieldTags varToReplace storedLam =
     do
         newParamTag <- Params.addFieldParam ((fieldTags ++) . return) storedLam
@@ -130,7 +132,7 @@ addFieldToLetParamsRecord fieldTags varToReplace storedLam =
             }
 
 addLetParam ::
-    Monad m => V.Var -> Redex (ValIProperty m) -> Transaction m (NewLet m)
+    Monad m => V.Var -> Redex (ValIProperty m) -> T m (NewLet m)
 addLetParam varToReplace redex =
     case redexArg redex ^. V.body of
     V.BAbs lam | isVarAlwaysApplied (redexParam redex) (redexBody redex) ->
@@ -156,7 +158,7 @@ sameLet redex =
 floatLetToOuterScope ::
     MonadA m =>
     ValIProperty m -> Redex (ValIProperty m) -> ConvertM.Context m ->
-    Transaction m LetFloatResult
+    T m LetFloatResult
 floatLetToOuterScope topLevelProp redex ctx =
     do
         newLet <-
@@ -213,6 +215,6 @@ floatLetToOuterScope topLevelProp redex ctx =
 makeFloatLetToOuterScope ::
     MonadA m =>
     ValIProperty m -> Redex (ValIProperty m) ->
-    ConvertM m (Transaction m LetFloatResult)
+    ConvertM m (T m LetFloatResult)
 makeFloatLetToOuterScope topLevelProp redex =
     ConvertM.readContext <&> floatLetToOuterScope topLevelProp redex
