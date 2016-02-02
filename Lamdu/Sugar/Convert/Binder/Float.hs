@@ -168,22 +168,22 @@ floatLetToOuterScope topLevelProp redex ctx =
             [] -> sameLet redex & return
             [x] -> addLetParam x redex
             _ -> error "multiple osiVarsUnderPos not expected!?"
-        (newLeafBody, resultEntity) <-
+        (newVarForLet, resultEntity) <-
             case outerScopeInfo ^. ConvertM.osiPos of
             Nothing ->
                 do
                     newDefI <-
                         moveToGlobalScope ctx param (nlIRef newLet)
                     return
-                        ( ExprIRef.globalId newDefI & V.LVar
+                        ( ExprIRef.globalId newDefI
                         , EntityId.ofIRef newDefI
                         )
             Just outerScope ->
-                ( V.LVar param
+                ( param
                 , EntityId.ofLambdaParam param
                 ) <$
                 DataOps.redexWrapWithGivenParam param (nlIRef newLet) outerScope
-        let newBody = V.BLeaf newLeafBody
+        let newBody = V.LVar newVarForLet & V.BLeaf
         let
             go (Val s (V.BLeaf (V.LVar v))) | v == param =
                 nlOnVar newLet (Val s newBody)
