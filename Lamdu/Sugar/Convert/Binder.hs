@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, FlexibleContexts, OverloadedStrings, TypeFamilies, RankNTypes, RecordWildCards #-}
 module Lamdu.Sugar.Convert.Binder
-    ( convertBinder, convertLam
+    ( convertDefinitionBinder, convertLam
     ) where
 
 import qualified Control.Lens as Lens
@@ -12,6 +12,7 @@ import qualified Data.Map as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Store.Guid (Guid)
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (MkProperty)
 import qualified Lamdu.Data.Anchors as Anchors
@@ -26,6 +27,7 @@ import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
 import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), cpParams, convertParams, convertLamParams, mkStoredLam, makeDeleteLambda)
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..), checkForRedex)
+import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, scScopeInfo, siLetItems)
@@ -88,7 +90,7 @@ convertRedex ::
 convertRedex expr redex =
     do
         value <-
-            convertBinder Nothing defGuid (redexArg redex)
+            convertBinder BinderKindLet defGuid (redexArg redex)
             & localNewExtractDestPos expr
         actions <-
             mkLetIActions (expr ^. V.payload . Input.stored)
@@ -178,8 +180,8 @@ convertLam ::
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLam lam@(V.Lam _ lamBody) exprPl =
     do
-        deleteLam <- mkStoredLam lam exprPl & makeDeleteLambda Nothing
-        convParams <- convertLamParams Nothing lam exprPl
+        deleteLam <- mkStoredLam lam exprPl & makeDeleteLambda BinderKindLambda
+        convParams <- convertLamParams BinderKindLambda lam exprPl
         binder <-
             makeBinder
             (exprPl ^. Input.stored & Property.value & Anchors.assocScopeRef)
@@ -252,15 +254,21 @@ markLightParams paramGuids (Expression body pl) =
 
 -- Let-item or definition (form of <name> [params] = <body>)
 convertBinder ::
-    (MonadA m, Monoid a) =>
-    Maybe (DefI m) -> Guid ->
+    (MonadA m, Monoid a) => BinderKind m -> Guid ->
     Val (Input.Payload m a) -> ConvertM m (Binder Guid m (ExpressionU m a))
-convertBinder mDef defGuid expr =
+convertBinder binderKind defGuid expr =
     do
-        (convParams, funcBody) <- convertParams mDef expr
+        (convParams, funcBody) <- convertParams binderKind expr
         let mPresentationModeProp
                 | Lens.has (cpParams . _FieldParams) convParams =
                     Just $ Anchors.assocPresentationMode defGuid
                 | otherwise = Nothing
         makeBinder (Anchors.assocScopeRef defGuid) mPresentationModeProp
             convParams funcBody
+
+convertDefinitionBinder ::
+    (MonadA m, Monoid a) =>
+    DefI m -> Val (Input.Payload m a) ->
+    ConvertM m (Binder Guid m (ExpressionU m a))
+convertDefinitionBinder defI =
+    convertBinder (BinderKindDef defI) (IRef.guid defI)

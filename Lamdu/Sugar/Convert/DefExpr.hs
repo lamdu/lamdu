@@ -9,7 +9,6 @@ import           Control.MonadA (MonadA)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.Store.Guid (Guid)
-import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -93,8 +92,7 @@ convert ::
 convert defExpr defI =
     do
         content <-
-            ConvertBinder.convertBinder (Just defI) (IRef.guid defI)
-            (defExpr ^. Definition.expr)
+            ConvertBinder.convertDefinitionBinder defI (defExpr ^. Definition.expr)
         typeInfo <- makeExprDefTypeInfo defExpr defI
         return $ DefinitionBodyExpression DefinitionExpression
             { _deContent = content

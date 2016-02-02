@@ -269,6 +269,7 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.Binder.Inline
                   , Lamdu.Sugar.Convert.Binder.Params
                   , Lamdu.Sugar.Convert.Binder.Redex
+                  , Lamdu.Sugar.Convert.Binder.Types
                   , Lamdu.Sugar.Convert.Case
                   , Lamdu.Sugar.Convert.DefExpr
                   , Lamdu.Sugar.Convert.Expression
