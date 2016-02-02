@@ -107,19 +107,19 @@ setParamList paramListProp newParamList =
     where
         setParamOrder = Transaction.setP . Anchors.assocTagOrder
 
-isCallTo :: V.Var -> [Val ()] -> Bool
-isCallTo funcVar (cur : parent : _) =
+isArgOfCallTo :: V.Var -> [Val ()] -> Bool
+isArgOfCallTo funcVar (cur : parent : _) =
     Lens.nullOf (ExprLens.valGlobals Set.empty . Lens.only funcVar) cur &&
     Lens.has
     (ExprLens.valApply . V.applyFunc . ExprLens.valVar . Lens.only funcVar)
     parent
-isCallTo _ _ = False
+isArgOfCallTo _ _ = False
 
 changeCallArgs ::
     MonadA m =>
     (ValI m -> T m (ValI m)) -> Val (ValIProperty m) -> V.Var -> T m ()
 changeCallArgs change val var =
-    SubExprs.onMatchingSubexprsWithPath changeArg (isCallTo var) val
+    SubExprs.onMatchingSubexprsWithPath changeArg (isArgOfCallTo var) val
     where
         changeArg prop =
             Property.value prop & change >>= Property.set prop
