@@ -78,7 +78,9 @@ newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
 
 data Context m = Context
     { _scInferContext :: Infer.Context
-    , _scGlobalsInScope :: Maybe (ExprIRef.DefI m)
+    , -- The globals we artificially inject into the scope in order to
+      -- infer their type supporting mutual recursions
+      _scGlobalsInScope :: Set (ExprIRef.DefI m)
     , _scCodeAnchors :: Anchors.CodeProps m
     , _scScopeInfo :: ScopeInfo m
     , -- Check whether the definition is valid after an edit,

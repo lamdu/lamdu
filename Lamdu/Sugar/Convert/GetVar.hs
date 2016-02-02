@@ -40,9 +40,9 @@ convertGlobal ::
 convertGlobal param exprPl =
     do
         ctx <- lift ConvertM.readContext
-        let isRecurse =
-                Lens.has (ConvertM.scGlobalsInScope . Lens._Just . Lens.only defI) ctx
-        notInScope || isRecurse & guard
+        let isGlobalInScope =
+                ctx ^. ConvertM.scGlobalsInScope . Lens.contains defI
+        notInScope || isGlobalInScope & guard
         GetBinder BinderVar
             { _bvNameRef = NameRef
               { _nrName = UniqueId.toGuid defI

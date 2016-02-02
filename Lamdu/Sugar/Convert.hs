@@ -12,6 +12,7 @@ import           Control.MonadA (MonadA)
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Map (Map)
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import           Data.Store.Guid (Guid)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
@@ -185,7 +186,7 @@ convertDefI evalRes cp (Definition.Definition body defI) =
                         Context
                         { _scInferContext = newInferContext
                         , _scNominalsMap = nomsMap
-                        , _scGlobalsInScope = Just defI
+                        , _scGlobalsInScope = Set.singleton defI
                         , _scCodeAnchors = cp
                         , _scScopeInfo = emptyScopeInfo
                         , _scReinferCheckRoot = reinferCheckDefinition defI
@@ -211,7 +212,7 @@ convertExpr evalRes cp val =
                 Context
                 { _scInferContext = newInferContext
                 , _scNominalsMap = nomsMap
-                , _scGlobalsInScope = Nothing
+                , _scGlobalsInScope = Set.empty
                 , _scCodeAnchors = cp
                 , _scScopeInfo = emptyScopeInfo
                 , _scReinferCheckRoot =

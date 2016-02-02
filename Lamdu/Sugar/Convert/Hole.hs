@@ -163,10 +163,7 @@ mkOptions sugarContext mInjectedArg exprPl stored =
             [ exprPl ^. Input.inferredScope
                 & Infer.scopeToTypeMap
                 & Map.keys
-                & ( case sugarContext ^. ConvertM.scGlobalsInScope of
-                    Nothing -> id
-                    Just defI -> filter (/= ExprIRef.globalId defI)
-                  )
+                & filter (not . isGlobalInScope)
                 & concatMap (getLocalScopeGetVars sugarContext)
             , globals <&> P.var . ExprIRef.globalId
             , do
@@ -180,6 +177,10 @@ mkOptions sugarContext mInjectedArg exprPl stored =
             <&> SeedExpr
             <&> mkHoleOption sugarContext mInjectedArg exprPl stored
             & return
+    where
+        isGlobalInScope varId =
+            sugarContext ^. ConvertM.scGlobalsInScope .
+            Lens.contains (ExprIRef.defI varId)
 
 mkWritableHoleActions ::
     (MonadA m) =>
