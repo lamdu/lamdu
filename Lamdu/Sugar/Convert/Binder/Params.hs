@@ -116,14 +116,38 @@ isRecursiveCallArg _ _ = False
 
 changeRecursiveCallArgs ::
     MonadA m =>
-    (ValI m -> T m (ValI m)) ->
-    Val (ValIProperty m) -> DefI m -> T m ()
-changeRecursiveCallArgs change val defI =
+    (ValI m -> T m (ValI m)) -> Val (ValIProperty m) -> V.Var -> T m ()
+changeRecursiveCallArgs change val var =
     SubExprs.onMatchingSubexprsWithPath changeRecurseArg
-    (isRecursiveCallArg (ExprIRef.globalId defI)) val
+    (isRecursiveCallArg var) val
     where
         changeRecurseArg prop =
             Property.value prop & change >>= Property.set prop
+
+changeRecursionsFromCalls ::
+    MonadA m => DefI m -> Val (ValIProperty m) -> T m ()
+changeRecursionsFromCalls defI =
+    SubExprs.onMatchingSubexprs changeRecursion
+    ( V.body . ExprLens._BApp . V.applyFunc . ExprLens.valVar
+    . Lens.only (ExprIRef.globalId defI)
+    )
+    where
+        changeRecursion prop =
+            do
+                body <- ExprIRef.readValBody (Property.value prop)
+                case body of
+                    V.BApp (V.Apply f _) -> Property.set prop f
+                    _ -> error "assertion: expected BApp"
+
+changeRecursionsToCalls :: MonadA m => DefI m -> Val (ValIProperty m) -> T m ()
+changeRecursionsToCalls defI =
+    SubExprs.onMatchingSubexprs changeRecursion
+    (ExprLens.valVar . Lens.only (ExprIRef.globalId defI))
+    where
+        changeRecursion prop =
+            DataOps.newHole
+            >>= ExprIRef.newValBody . V.BApp . V.Apply (Property.value prop)
+            >>= Property.set prop
 
 addFieldParam ::
     MonadA m => (T.Tag -> ParamList) -> StoredLam m -> T m (TagG ())
@@ -138,6 +162,17 @@ addFieldParam mkNewTags storedLam =
             , _tagVal = tag
             , _tagGName = ()
             }
+
+fixUsagesOfLamBinder ::
+    MonadA m => (ValI m -> T m (ValI m)) -> BinderKind m -> StoredLam m -> T m ()
+fixUsagesOfLamBinder fixOp binderKind storedLam =
+    case binderKind of
+    BinderKindDef defI ->
+        changeRecursiveCallArgs fixOp (storedLam ^. slLam . V.lamResult)
+        (ExprIRef.globalId defI)
+    BinderKindLet redexLam ->
+        changeRecursiveCallArgs fixOp (redexLam ^. V.lamResult) (redexLam ^. V.lamParamId)
+    BinderKindLambda -> return ()
 
 makeAddFieldParam ::
     MonadA m =>
@@ -154,12 +189,7 @@ makeAddFieldParam binderKind mkNewTags storedLam =
                             hole <- DataOps.newHole
                             V.RecExtend (tagG ^. tagVal) hole argI
                                 & V.BRecExtend & ExprIRef.newValBody
-                case binderKind of
-                    BinderKindDef defI ->
-                        changeRecursiveCallArgs addFieldToCall
-                        (storedLam ^. slLam . V.lamResult) defI
-                    BinderKindLet _ -> return ()
-                    BinderKindLambda -> return ()
+                fixUsagesOfLamBinder addFieldToCall binderKind storedLam
                 void $ wrapOnError $ slLambdaProp storedLam
                 ParamAddResultNewTag tagG & return
 
@@ -233,12 +263,7 @@ makeDelFieldParam binderKind tags fp storedLam =
                 getFieldParamsToHole tag (storedLam ^. slLam)
                 mLastTag
                     & traverse_ (getFieldParamsToParams (storedLam ^. slLam))
-                case binderKind of
-                    BinderKindDef defI ->
-                        changeRecursiveCallArgs fixRecurseArg
-                        (storedLam ^. slLam . V.lamResult) defI
-                    BinderKindLet _ -> return ()
-                    BinderKindLambda -> return ()
+                fixUsagesOfLamBinder fixRecurseArg binderKind storedLam
                 _ <- wrapOnError $ slLambdaProp storedLam
                 return delResult
     where
@@ -346,21 +371,6 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
                         }
                     )
 
-changeRecursionsFromCalls ::
-    MonadA m => DefI m -> Val (ValIProperty m) -> T m ()
-changeRecursionsFromCalls defI =
-    SubExprs.onMatchingSubexprs changeRecursion
-    ( V.body . ExprLens._BApp . V.applyFunc . ExprLens.valVar
-    . Lens.only (ExprIRef.globalId defI)
-    )
-    where
-        changeRecursion prop =
-            do
-                body <- ExprIRef.readValBody (Property.value prop)
-                case body of
-                    V.BApp (V.Apply f _) -> Property.set prop f
-                    _ -> error "assertion: expected BApp"
-
 makeDeleteLambda ::
     MonadA m => BinderKind m -> StoredLam m ->
     ConvertM m (T m ParamDelResult)
@@ -434,13 +444,7 @@ makeConvertToRecordParams binderKind storedLam =
         return $ \newParamPosition ->
             do
                 varToTags <- convertToRecordParams storedLam newParamPosition
-                case binderKind of
-                    BinderKindDef defI ->
-                        changeRecursiveCallArgs
-                        (wrapArgWithRecord varToTags)
-                        (storedLam ^. slLam . V.lamResult) defI
-                    BinderKindLet _ -> return ()
-                    BinderKindLambda -> return ()
+                fixUsagesOfLamBinder (wrapArgWithRecord varToTags) binderKind storedLam
                 _ <- wrapOnError (slLambdaProp storedLam)
                 ParamAddResultVarToTags varToTags & return
 
@@ -590,16 +594,6 @@ convertLamParams binderKind lambda lambdaPl =
                         . ExprLens._TRecord . ExprLens.compositeTags
                         & Set.fromList
             _ -> convertNonRecordParam binderKind lambda lambdaPl
-
-changeRecursionsToCalls :: MonadA m => DefI m -> Val (ValIProperty m) -> T m ()
-changeRecursionsToCalls defI =
-    SubExprs.onMatchingSubexprs changeRecursion
-    (ExprLens.valVar . Lens.only (ExprIRef.globalId defI))
-    where
-        changeRecursion prop =
-            DataOps.newHole
-            >>= ExprIRef.newValBody . V.BApp . V.Apply (Property.value prop)
-            >>= Property.set prop
 
 convertEmptyParams :: MonadA m =>
     BinderKind m -> Val (Input.Payload m a) -> ConvertM m (ConventionalParams m)
