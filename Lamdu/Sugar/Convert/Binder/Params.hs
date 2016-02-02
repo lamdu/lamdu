@@ -107,21 +107,21 @@ setParamList paramListProp newParamList =
     where
         setParamOrder = Transaction.setP . Anchors.assocTagOrder
 
-isRecursiveCallArg :: V.Var -> [Val ()] -> Bool
-isRecursiveCallArg def (cur : parent : _) =
-    Lens.allOf (ExprLens.valGlobals Set.empty) (/= def) cur &&
-    Lens.anyOf (ExprLens.valApply . V.applyFunc . ExprLens.valVar)
-    (== def) parent
-isRecursiveCallArg _ _ = False
+isCallTo :: V.Var -> [Val ()] -> Bool
+isCallTo funcVar (cur : parent : _) =
+    Lens.nullOf (ExprLens.valGlobals Set.empty . Lens.only funcVar) cur &&
+    Lens.has
+    (ExprLens.valApply . V.applyFunc . ExprLens.valVar . Lens.only funcVar)
+    parent
+isCallTo _ _ = False
 
-changeRecursiveCallArgs ::
+changeCallArgs ::
     MonadA m =>
     (ValI m -> T m (ValI m)) -> Val (ValIProperty m) -> V.Var -> T m ()
-changeRecursiveCallArgs change val var =
-    SubExprs.onMatchingSubexprsWithPath changeRecurseArg
-    (isRecursiveCallArg var) val
+changeCallArgs change val var =
+    SubExprs.onMatchingSubexprsWithPath changeArg (isCallTo var) val
     where
-        changeRecurseArg prop =
+        changeArg prop =
             Property.value prop & change >>= Property.set prop
 
 changeRecursionsFromCalls ::
@@ -168,10 +168,9 @@ fixUsagesOfLamBinder ::
 fixUsagesOfLamBinder fixOp binderKind storedLam =
     case binderKind of
     BinderKindDef defI ->
-        changeRecursiveCallArgs fixOp (storedLam ^. slLam . V.lamResult)
-        (ExprIRef.globalId defI)
+        changeCallArgs fixOp (storedLam ^. slLam . V.lamResult) (ExprIRef.globalId defI)
     BinderKindLet redexLam ->
-        changeRecursiveCallArgs fixOp (redexLam ^. V.lamResult) (redexLam ^. V.lamParamId)
+        changeCallArgs fixOp (redexLam ^. V.lamResult) (redexLam ^. V.lamParamId)
     BinderKindLambda -> return ()
 
 makeAddFieldParam ::
