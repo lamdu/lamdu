@@ -217,10 +217,10 @@ getFieldParamsToParams (V.Lam param lamBody) tag =
     where
         toParam bodyI = ExprIRef.writeValBody bodyI $ V.BLeaf $ V.LVar param
 
-fixRecursiveCallRemoveField ::
+fixCallArgRemoveField ::
     MonadA m =>
     T.Tag -> ValI m -> T m (ValI m)
-fixRecursiveCallRemoveField tag argI =
+fixCallArgRemoveField tag argI =
     do
         body <- ExprIRef.readValBody argI
         case body of
@@ -228,22 +228,22 @@ fixRecursiveCallRemoveField tag argI =
                 | t == tag -> return restI
                 | otherwise ->
                     do
-                        newRestI <- fixRecursiveCallRemoveField tag restI
+                        newRestI <- fixCallArgRemoveField tag restI
                         when (newRestI /= restI) $
                             ExprIRef.writeValBody argI $
                             V.BRecExtend $ V.RecExtend t v newRestI
                         return argI
             _ -> return argI
 
-fixRecursiveCallToSingleArg ::
+fixCallToSingleArg ::
     MonadA m => T.Tag -> ValI m -> T m (ValI m)
-fixRecursiveCallToSingleArg tag argI =
+fixCallToSingleArg tag argI =
     do
         body <- ExprIRef.readValBody argI
         case body of
             V.BRecExtend (V.RecExtend t v restI)
                 | t == tag -> return v
-                | otherwise -> fixRecursiveCallToSingleArg tag restI
+                | otherwise -> fixCallToSingleArg tag restI
             _ -> return argI
 
 tagGForLambdaTagParam :: V.Var -> T.Tag -> TagG ()
@@ -269,8 +269,8 @@ makeDelFieldParam binderKind tags fp storedLam =
         paramVar = storedLam ^. slLam . V.lamParamId
         tag = fpTag fp
         fixRecurseArg =
-            maybe (fixRecursiveCallRemoveField tag)
-            fixRecursiveCallToSingleArg mLastTag
+            maybe (fixCallArgRemoveField tag)
+            fixCallToSingleArg mLastTag
         (newTags, mLastTag, delResult) =
             case List.delete tag tags of
             [x] ->
