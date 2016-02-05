@@ -157,12 +157,11 @@ changeRecursionsFromCalls defI =
                     V.BApp (V.Apply f _) -> Property.set prop f
                     _ -> error "assertion: expected BApp"
 
-convertToCalls :: MonadA m => DefI m -> Val (ValIProperty m) -> T m ()
-convertToCalls defI =
-    SubExprs.onMatchingSubexprs changeRecursion
-    (ExprLens.valVar . Lens.only (ExprIRef.globalId defI))
+convertToCalls :: MonadA m => V.Var -> Val (ValIProperty m) -> T m ()
+convertToCalls var =
+    SubExprs.onMatchingSubexprs change (ExprLens.valVar . Lens.only var)
     where
-        changeRecursion prop =
+        change prop =
             DataOps.newHole
             >>= ExprIRef.newValBody . V.BApp . V.Apply (Property.value prop)
             >>= Property.set prop
@@ -587,31 +586,28 @@ convertLamParams binderKind lambda lambdaPl =
                         & Set.fromList
             _ -> convertNonRecordParam binderKind lambda lambdaPl
 
-convertEmptyParams :: MonadA m =>
-    BinderKind m -> Val (Input.Payload m a) -> ConvertM m (ConventionalParams m)
+convertEmptyParams ::
+    Monad m => BinderKind m -> Val (Input.Payload m a) -> ConventionalParams m
 convertEmptyParams binderKind val =
-    do
-        protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        let addFirstParam =
-                do
-                    (newParam, dst) <- DataOps.lambdaWrap (val ^. V.payload . Input.stored)
-                    case binderKind of
-                        BinderKindDef defI -> convertToCalls defI (val <&> (^. Input.stored))
-                        BinderKindLet _ -> return ()
-                        BinderKindLambda -> return ()
-                    void $ protectedSetToVal (val ^. V.payload . Input.stored) dst
-                    return $
-                        ParamAddResultNewVar (EntityId.ofLambdaParam newParam) newParam
+    ConventionalParams
+    { cpTags = mempty
+    , _cpParamInfos = Map.empty
+    , _cpParams = BinderWithoutParams
+    , cpAddFirstParam = addFirstParam
+    , cpScopes = SameAsParentScope
+    , cpMLamParam = Nothing
+    }
+    where
+        addFirstParam =
+            do
+                newParam <- DataOps.lambdaWrap (val ^. V.payload . Input.stored)
+                case binderKind of
+                    BinderKindDef defI -> convertToCalls (ExprIRef.globalId defI) (val <&> (^. Input.stored))
+                    BinderKindLet redexLam -> convertToCalls (redexLam ^. V.lamParamId) (redexLam ^. V.lamResult)
+                    BinderKindLambda -> error "Lambda will never be an empty-params binder"
+                return $
+                    ParamAddResultNewVar (EntityId.ofLambdaParam newParam) newParam
 
-        pure
-            ConventionalParams
-            { cpTags = mempty
-            , _cpParamInfos = Map.empty
-            , _cpParams = BinderWithoutParams
-            , cpAddFirstParam = addFirstParam
-            , cpScopes = SameAsParentScope
-            , cpMLamParam = Nothing
-            }
 
 convertParams ::
     (MonadA m, Monoid a) =>
@@ -634,6 +630,4 @@ convertParams binderKind expr =
         where
               hiddenIds = [expr ^. V.payload . Input.entityId]
     _ ->
-        do
-            params <- convertEmptyParams binderKind expr
-            return (params, expr)
+        return (convertEmptyParams binderKind expr, expr)
