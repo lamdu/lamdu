@@ -592,14 +592,14 @@ convertEmptyParams :: MonadA m =>
 convertEmptyParams binderKind val =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        let makeAddFirstParam storedVal =
+        let addFirstParam =
                 do
-                    (newParam, dst) <- DataOps.lambdaWrap (storedVal ^. V.payload)
+                    (newParam, dst) <- DataOps.lambdaWrap (val ^. V.payload . Input.stored)
                     case binderKind of
-                        BinderKindDef defI -> changeRecursionsToCalls defI storedVal
+                        BinderKindDef defI -> changeRecursionsToCalls defI (val <&> (^. Input.stored))
                         BinderKindLet _ -> return ()
                         BinderKindLambda -> return ()
-                    void $ protectedSetToVal (storedVal ^. V.payload) dst
+                    void $ protectedSetToVal (val ^. V.payload . Input.stored) dst
                     return $
                         ParamAddResultNewVar (EntityId.ofLambdaParam newParam) newParam
 
@@ -608,7 +608,7 @@ convertEmptyParams binderKind val =
             { cpTags = mempty
             , _cpParamInfos = Map.empty
             , _cpParams = BinderWithoutParams
-            , cpAddFirstParam = val <&> (^. Input.stored) & makeAddFirstParam
+            , cpAddFirstParam = addFirstParam
             , cpScopes = SameAsParentScope
             , cpMLamParam = Nothing
             }
