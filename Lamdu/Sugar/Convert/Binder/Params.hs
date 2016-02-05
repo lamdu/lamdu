@@ -157,8 +157,8 @@ changeRecursionsFromCalls defI =
                     V.BApp (V.Apply f _) -> Property.set prop f
                     _ -> error "assertion: expected BApp"
 
-changeRecursionsToCalls :: MonadA m => DefI m -> Val (ValIProperty m) -> T m ()
-changeRecursionsToCalls defI =
+convertToCalls :: MonadA m => DefI m -> Val (ValIProperty m) -> T m ()
+convertToCalls defI =
     SubExprs.onMatchingSubexprs changeRecursion
     (ExprLens.valVar . Lens.only (ExprIRef.globalId defI))
     where
@@ -596,7 +596,7 @@ convertEmptyParams binderKind val =
                 do
                     (newParam, dst) <- DataOps.lambdaWrap (val ^. V.payload . Input.stored)
                     case binderKind of
-                        BinderKindDef defI -> changeRecursionsToCalls defI (val <&> (^. Input.stored))
+                        BinderKindDef defI -> convertToCalls defI (val <&> (^. Input.stored))
                         BinderKindLet _ -> return ()
                         BinderKindLambda -> return ()
                     void $ protectedSetToVal (val ^. V.payload . Input.stored) dst
