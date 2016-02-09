@@ -171,10 +171,9 @@ floatLetToOuterScope topLevelProp redex ctx =
             Just outerScope ->
                 EntityId.ofLambdaParam param <$
                 DataOps.redexWrapWithGivenParam param (nlIRef newLet) outerScope
-        let newBody = V.LVar param & V.BLeaf
         let
             go (Val s (V.BLeaf (V.LVar v))) | v == param =
-                nlOnVar newLet (Val s newBody)
+                nlOnVar newLet (Val s (V.BLeaf (V.LVar param)))
             go (Val s (V.BApp (V.Apply f@(Val _ (V.BLeaf (V.LVar v))) a)))
               | v == param =
                 V.Apply (go f) (nlOnArgToVar newLet (go a))
