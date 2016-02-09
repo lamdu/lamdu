@@ -26,6 +26,7 @@ import           Data.Store.Transaction (Transaction, setP)
 import qualified Data.Store.Transaction as Transaction
 import           Data.String (IsString(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
+import qualified Lamdu.Builtins.Literal as BuiltinLiteral
 import           Lamdu.Data.Anchors (assocTagOrder, PresentationMode(..))
 import qualified Lamdu.Data.DbLayout as Db
 import qualified Lamdu.Data.Definition as Definition
@@ -107,8 +108,6 @@ blessAnchors =
         mapM_ describeAnchorTag Builtins.anchorTags
         lift $ setName Builtins.listTid "List"
         lift $ setName Builtins.textTid "Text"
-        lift $ setName Builtins.floatId "Num"
-        lift $ setName Builtins.bytesId "Bytes"
         Writer.tell $ mempty { publicTIds = [Builtins.listTid, Builtins.textTid] }
     where
         describeAnchorTag (order, tag, name) =
@@ -217,16 +216,16 @@ createBool =
             ]
         tyCon [] & return
 
-createText :: MonadA m => M m Type
-createText =
-    T.TPrim Builtins.bytesId & Scheme.mono & const
-    & newNominal Builtins.textTid [] & lift <&> ($ [])
+bytes :: Type
+bytes = BuiltinLiteral.bytesType
 
 float :: Type
-float = T.TPrim Builtins.floatId
+float = BuiltinLiteral.floatType
 
-bytes :: Type
-bytes = T.TPrim Builtins.bytesId
+createText :: MonadA m => M m Type
+createText =
+    Scheme.mono bytes
+    & const & newNominal Builtins.textTid [] & lift <&> ($ [])
 
 createPublics :: MonadA m => T m (Public m)
 createPublics =

@@ -16,7 +16,6 @@ import           Control.Monad.Trans.Either (EitherT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import qualified Control.Monad.Trans.State as State
 import           Control.MonadA (MonadA)
-import           Data.Binary.Utils (encodeS)
 import qualified Data.ByteString.UTF8 as UTF8
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
@@ -28,6 +27,8 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins.Anchors as Builtins
+import           Lamdu.Builtins.Literal (Lit(..))
+import qualified Lamdu.Builtins.Literal as BuiltinLiteral
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -191,7 +192,8 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
     sugarContext <- ConvertM.readContext
     let mkOption =
             return . mkHoleOption sugarContext mInjectedArg exprPl stored . SeedExpr
-        mkLiteralOption = mkOption . Val () . V.BLeaf . V.LLiteral
+        mkLiteralOption =
+            mkOption . Val () . V.BLeaf . V.LLiteral . BuiltinLiteral.fromLit
     pure HoleActions
         { _holeOptions =
             mkOptions sugarContext mInjectedArg exprPl stored
@@ -199,11 +201,13 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
                 (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
         , _holeOptionLiteral =
           \case
-          LiteralNum (Identity x) -> encodeS x & V.Literal Builtins.floatId & mkLiteralOption
-          LiteralBytes (Identity x) -> V.Literal Builtins.bytesId x & mkLiteralOption
+          LiteralNum (Identity x) -> LitFloat x & mkLiteralOption
+          LiteralBytes (Identity x) -> LitBytes x & mkLiteralOption
           LiteralText (Identity x) ->
               UTF8.fromString x
-              & Pure.lit Builtins.bytesId
+              & LitBytes
+              & BuiltinLiteral.fromLit
+              & V.LLiteral & Pure.leaf
               & Pure.toNom Builtins.textTid
               & mkOption
         , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored

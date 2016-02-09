@@ -27,6 +27,7 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
+import qualified Lamdu.Builtins.Literal as BuiltinLiteral
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Expr.Identifier (Identifier(..))
@@ -94,8 +95,7 @@ makeTVar :: MonadA m => T.Var p -> M m View
 makeTVar (T.Var name) = showIdentifier name
 
 makeTPrim :: MonadA m => T.PrimId -> M m View
-makeTPrim p =
-    Anchors.assocNameRef p & Transaction.getP & transaction >>= text
+makeTPrim = text . BuiltinLiteral.nameOf
 
 makeTFun :: MonadA m => ParentPrecedence -> Type -> Type -> M m View
 makeTFun parentPrecedence a b =

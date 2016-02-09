@@ -8,7 +8,7 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (void)
 import           Control.MonadA (MonadA)
-import           Data.Binary.Utils (decodeS)
+
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.Store.Transaction as Transaction
@@ -21,6 +21,8 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Builtins.Anchors as Builtins
+import           Lamdu.Builtins.Literal (Lit(..))
+import qualified Lamdu.Builtins.Literal as BuiltinLiteral
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (Val(..), Body(..))
@@ -117,14 +119,19 @@ make animId (Val typ val) =
             GridView.verticalAlign 0.5 [fieldsView, restView] & return
         where
             (fields, recStatus) = extractFields recExtend
-    RLiteral l@(V.Literal tId x)
+    RLiteral literal
         | typ == T.TInst Builtins.textTid mempty ->
-            if tId == Builtins.bytesId
-            then (asText . format . UTF8.toString) x
-            else error "text not made of bytes"
-        | tId == Builtins.floatId -> (asText . (format :: Double -> String) . decodeS) x
-        | tId == Builtins.bytesId -> (asText . format) x
-        | otherwise -> asText (show l)
+          case lit of
+          LitBytes x -> UTF8.toString x & toText
+          _ -> error "text not made of bytes"
+        | otherwise ->
+          case lit of
+          LitBytes x -> toText x
+          LitFloat x -> toText x
+        where
+            lit = BuiltinLiteral.toLit literal
+            toText :: (Format r, MonadA m) => r -> ExprGuiM m View
+            toText = asText . format
     & ExprGuiM.advanceDepth return animId
     where
         asText text = BWidgets.makeTextView text animId & ExprGuiM.widgetEnv

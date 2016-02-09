@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Text
      ) where
 
 import           Control.Lens.Operators
-import           Control.Monad (guard)
+import           Control.Monad (guard, mzero)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.MonadA (MonadA)
@@ -14,6 +14,8 @@ import           Data.Maybe.Utils (maybeToMPlus)
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Lamdu.Builtins.Anchors as Builtins
+import           Lamdu.Builtins.Literal (Lit(..))
+import qualified Lamdu.Builtins.Literal as BuiltinLiteral
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Val (Val(..))
@@ -33,13 +35,16 @@ text ::
 text (V.Nom tid (Val litPl body)) toNomPl =
     do
         guard $ tid == Builtins.textTid
-        V.Literal litTag utf8Bytes <- body ^? ExprLens.valBodyLiteral & maybeToMPlus
-        guard $ litTag == Builtins.bytesId
+        lit <- body ^? ExprLens.valBodyLiteral & maybeToMPlus
+        utf8Bytes <-
+            case BuiltinLiteral.toLit lit of
+            LitBytes utf8Bytes -> return utf8Bytes
+            _ -> mzero
         Property
             { _pVal = UTF8.toString utf8Bytes
             , _pSet =
                 ExprIRef.writeValBody litIRef . V.BLeaf . V.LLiteral .
-                V.Literal Builtins.bytesId . UTF8.fromString
+                BuiltinLiteral.fromLit . LitBytes . UTF8.fromString
             } & LiteralText & BodyLiteral & addActions toNomPl
             <&> rPayload . plData <>~ litPl ^. Input.userData
             & lift

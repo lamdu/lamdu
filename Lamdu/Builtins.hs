@@ -1,16 +1,17 @@
-{-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE LambdaCase, NoImplicitPrelude, OverloadedStrings, DeriveFunctor, DeriveFoldable, DeriveTraversable, PatternGuards #-}
 module Lamdu.Builtins
     ( eval
     ) where
 
 import           Control.Lens.Operators
 import           Control.Monad (when)
-import           Data.Binary.Utils (encodeS, decodeS)
 import qualified Data.ByteString as SBS
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Map.Utils (matchKeys)
 import qualified Lamdu.Builtins.Anchors as Builtins
+import           Lamdu.Builtins.Literal (Lit(..))
+import qualified Lamdu.Builtins.Literal as BuiltinLiteral
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Eval.Val (Val(..), EvalError(..))
 import           Lamdu.Expr.Type (Tag)
@@ -54,15 +55,15 @@ fromGuest (HError err) = Left err
 fromGuest x = fromGuestVal x
 
 instance GuestType SBS.ByteString where
-    toGuest = HLiteral . V.Literal Builtins.bytesId
-    fromGuestVal (HLiteral (V.Literal primId x))
-        | primId == Builtins.bytesId = Right x
+    toGuest = HLiteral . BuiltinLiteral.fromLit . LitBytes
+    fromGuestVal (HLiteral lit)
+        | LitBytes bytes <- BuiltinLiteral.toLit lit = Right bytes
     fromGuestVal x = "expected bytes, got " ++ show x & EvalTypeError & Left
 
 instance GuestType Double where
-    toGuest = HLiteral . V.Literal Builtins.floatId . encodeS
-    fromGuestVal (HLiteral (V.Literal primId x))
-        | primId == Builtins.floatId = Right (decodeS x)
+    toGuest = HLiteral . BuiltinLiteral.fromLit . LitFloat
+    fromGuestVal (HLiteral lit)
+        | LitFloat val <- BuiltinLiteral.toLit lit = Right val
     fromGuestVal x = "expected num, got " ++ show x & EvalTypeError & Left
 
 instance GuestType Bool where

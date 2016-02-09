@@ -4,7 +4,6 @@ module Lamdu.Builtins.Anchors
     , headTag, tailTag, consTag, nilTag, trueTag, falseTag, justTag, nothingTag
     , startTag, stopTag, indexTag
     , Order, anchorTags
-    , floatId, bytesId
     ) where
 
 import           Lamdu.Expr.Type (Tag)
@@ -27,12 +26,6 @@ startTag = "BI:start"
 
 stopTag :: Tag
 stopTag = "BI:stop"
-
-floatId :: T.PrimId
-floatId = "BI:float"
-
-bytesId :: T.PrimId
-bytesId = "BI:bytes"
 
 listTid :: T.NominalId
 listTid = "BI:list"
