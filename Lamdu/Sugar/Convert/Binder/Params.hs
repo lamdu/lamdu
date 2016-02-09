@@ -37,7 +37,7 @@ import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.Eval.Results.Process as ResultsProcess
 import           Lamdu.Eval.Val (ScopeId)
 import qualified Lamdu.Expr.GenIds as GenIds
-import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
+import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Type (Type)
@@ -144,12 +144,12 @@ changeCallArgs change val var  =
             >>= ExprIRef.newValBody
             >>= Property.set prop
 
-changeRecursionsFromCalls ::
-    MonadA m => DefI m -> Val (ValIProperty m) -> T m ()
-changeRecursionsFromCalls defI =
+removeCallsToVar ::
+    MonadA m => V.Var -> Val (ValIProperty m) -> T m ()
+removeCallsToVar funcVar =
     SubExprs.onMatchingSubexprs changeRecursion
     ( V.body . ExprLens._BApp . V.applyFunc . ExprLens.valVar
-    . Lens.only (ExprIRef.globalId defI)
+    . Lens.only funcVar
     )
     where
         changeRecursion prop =
@@ -369,9 +369,12 @@ makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp
                 SubExprs.getVarsToHole paramVar lamBodyStored
                 case binderKind of
                     BinderKindDef defI ->
-                        changeRecursionsFromCalls defI lamBodyStored
+                        removeCallsToVar
+                        (ExprIRef.globalId defI) lamBodyStored
+                    BinderKindLet redexLam ->
+                        removeCallsToVar
+                        (redexLam ^. V.lamParamId) (redexLam ^. V.lamResult)
                     BinderKindLambda -> return ()
-                    BinderKindLet _ -> return ()
                 let lamBodyI = Property.value (lamBodyStored ^. V.payload)
                 _ <- protectedSetToVal lambdaProp lamBodyI
                 return ParamDelResultDelVar
