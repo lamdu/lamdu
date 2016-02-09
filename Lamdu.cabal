@@ -156,6 +156,8 @@ Executable lamdu
                   , transformers
                   , utf8-string
                   , void >= 0.6.1
+                  , language-ecmascript >= 0.17
+                  , data-default >= 0.5
   if flag(noprettyclass)
     build-depends:  pretty >=1.1.2 && <1.2
   else
@@ -167,6 +169,7 @@ Executable lamdu
                   , Lamdu.Builtins.Anchors
                   , Lamdu.Builtins.Literal
                   , Lamdu.CharClassification
+                  , Lamdu.Compiler.Flatten
                   , Lamdu.Compiler.Javascript
                   , Lamdu.Config
                   , Lamdu.Config.Sampler

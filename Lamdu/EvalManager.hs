@@ -43,6 +43,7 @@ import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.VersionControl (getVersion)
 import qualified Lamdu.VersionControl as VersionControl
+import qualified System.IO as IO
 
 import           Prelude.Compat
 
@@ -153,15 +154,18 @@ sumDependency subexprs globals =
 
 compileRepl :: (forall a. T DbM a -> IO a) -> IO ()
 compileRepl runTrans =
-    Transaction.readIRef replIRef
-    & runViewTransaction
-    >>= Compiler.run actions . Compiler.compileValI
+    IO.withFile "output.js" IO.WriteMode $
+    \outFile ->
+    let actions = Compiler.Actions
+            { Compiler.runTransaction = runViewTransaction
+            , Compiler.output = IO.hPutStrLn outFile
+            }
+    in  Transaction.readIRef replIRef
+        & runViewTransaction
+        >>= Compiler.run actions . Compiler.compileValI
     where
         runViewTransaction :: T ViewM a -> IO a
         runViewTransaction = runTrans . VersionControl.runAction
-        actions = Compiler.Actions
-            { Compiler.runTransaction = runViewTransaction
-            }
 
 runTransactionAndMaybeRestartEvaluator :: Evaluator -> T DbM a -> IO a
 runTransactionAndMaybeRestartEvaluator evaluator transaction =
