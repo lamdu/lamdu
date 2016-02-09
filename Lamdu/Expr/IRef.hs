@@ -88,8 +88,7 @@ writeVal iref =
     (V.payload . _1 .~ Just iref) .
     fmap ((,) Nothing)
 
-readVal ::
-    MonadA m => ValI m -> T m (Val (ValI m))
+readVal :: MonadA m => ValI m -> T m (Val (ValI m))
 readVal =
     decycle loop
     where

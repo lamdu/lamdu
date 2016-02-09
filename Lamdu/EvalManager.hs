@@ -12,6 +12,7 @@ import           Control.Concurrent.MVar
 import           Control.Concurrent.Utils (runAfter)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Monad (when)
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Foldable (traverse_)
 import           Data.IORef
@@ -29,6 +30,7 @@ import qualified Data.Store.Rev.Version as Version
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins as Builtins
+import qualified Lamdu.Compiler.Javascript as Compiler
 import           Lamdu.Data.DbLayout (DbM, ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.Definition as Def
@@ -43,6 +45,8 @@ import           Lamdu.VersionControl (getVersion)
 import qualified Lamdu.VersionControl as VersionControl
 
 import           Prelude.Compat
+
+type T = Transaction
 
 data BGEvaluator = NotStarted | Started (EvalBG.Evaluator (ValI ViewM))
 
@@ -78,7 +82,7 @@ withDb mvar action =
     Nothing -> error "Trying to use DB when it is already gone"
     Just db -> action db
 
-runViewTransactionInIO :: MVar (Maybe Db) -> Transaction ViewM a -> IO a
+runViewTransactionInIO :: MVar (Maybe Db) -> T ViewM a -> IO a
 runViewTransactionInIO dbMVar trans =
     withDb dbMVar $ \db ->
     DbLayout.runDbTransaction db (VersionControl.runAction trans)
@@ -147,7 +151,19 @@ sumDependency subexprs globals =
     , Set.map (IRef.guid . ExprIRef.defI) globals
     ]
 
-runTransactionAndMaybeRestartEvaluator :: Evaluator -> Transaction DbM a -> IO a
+compileRepl :: (forall a. T DbM a -> IO a) -> IO ()
+compileRepl runTrans =
+    Transaction.readIRef replIRef
+    & runViewTransaction
+    >>= Compiler.run actions . Compiler.compileValI
+    where
+        runViewTransaction :: T ViewM a -> IO a
+        runViewTransaction = runTrans . VersionControl.runAction
+        actions = Compiler.Actions
+            { Compiler.runTransaction = runViewTransaction
+            }
+
+runTransactionAndMaybeRestartEvaluator :: Evaluator -> T DbM a -> IO a
 runTransactionAndMaybeRestartEvaluator evaluator transaction =
     readIORef (eEvaluatorRef evaluator)
     >>= \case
@@ -158,7 +174,7 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
                 EvalBG.pauseLoading eval
                 <&> uncurry sumDependency
                 <&> Set.insert (IRef.guid replIRef)
-            (dependencyChanged, result) <-
+            (haveNewVersion, dependencyChanged, result) <-
                 do
                     (oldVersion, result, newVersion) <-
                         (,,) <$> getVersion <*> transaction <*> getVersion
@@ -168,7 +184,7 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
                             <&> Monoid.Any & mconcat & return
                     Monoid.Any dependencyChanged <-
                         Version.walk checkDependencyChange checkDependencyChange oldVersion newVersion
-                    return (dependencyChanged, result)
+                    return (oldVersion /= newVersion, dependencyChanged, result)
                 & runTrans
             if dependencyChanged
                 then do
@@ -178,6 +194,7 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
                     atomicModifyIORef_ (eResultsRef evaluator) (const prevResults)
                     start evaluator
                 else EvalBG.resumeLoading eval
+            when haveNewVersion $ compileRepl runTrans
             return result
     where
         runTrans trans =

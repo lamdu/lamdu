@@ -147,11 +147,11 @@ makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config
                 , _envFullSize = size / sizeFactor
                 , _envCursor = cursor
                 }
-        let dbToIO =
+        let dbToIO action =
                 case settings ^. Settings.sInfoMode of
                 Settings.Evaluation ->
-                    EvalManager.runTransactionAndMaybeRestartEvaluator evaluator
-                _ -> DbLayout.runDbTransaction db
+                    EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
+                _ -> DbLayout.runDbTransaction db action
         mkWidgetWithFallback dbToIO env
             <&> Widget.weakerEvents eventMap
             <&> Widget.scale sizeFactor
