@@ -10,11 +10,9 @@ import           Control.MonadA (MonadA)
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
-import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
+import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Type as T
@@ -32,13 +30,10 @@ import           Prelude.Compat
 
 type T = Transaction
 
-moveToGlobalScope ::
-    MonadA m => ConvertM.Context m -> V.Var -> ValI m -> T m (DefI m)
+moveToGlobalScope :: MonadA m => ConvertM.Context m -> V.Var -> ValI m -> T m ()
 moveToGlobalScope ctx param letI =
-    do
-        paramName <- Anchors.assocNameRef param & Transaction.getP
-        DataOps.newPublicDefinitionWithPane paramName
-            (ctx ^. ConvertM.scCodeAnchors) letI
+    DataOps.newPublicDefinitionToIRef
+    (ctx ^. ConvertM.scCodeAnchors) letI (ExprIRef.defI param)
 
 data NewLet m = NewLet
     { nlIRef :: ValI m
@@ -168,22 +163,15 @@ floatLetToOuterScope topLevelProp redex ctx =
             [] -> sameLet redex & return
             [x] -> addLetParam x redex
             _ -> error "multiple osiVarsUnderPos not expected!?"
-        (newVarForLet, resultEntity) <-
+        resultEntity <-
             case outerScopeInfo ^. ConvertM.osiPos of
             Nothing ->
-                do
-                    newDefI <-
-                        moveToGlobalScope ctx param (nlIRef newLet)
-                    return
-                        ( ExprIRef.globalId newDefI
-                        , EntityId.ofIRef newDefI
-                        )
+                EntityId.ofIRef (ExprIRef.defI param) <$
+                moveToGlobalScope ctx param (nlIRef newLet)
             Just outerScope ->
-                ( param
-                , EntityId.ofLambdaParam param
-                ) <$
+                EntityId.ofLambdaParam param <$
                 DataOps.redexWrapWithGivenParam param (nlIRef newLet) outerScope
-        let newBody = V.LVar newVarForLet & V.BLeaf
+        let newBody = V.LVar param & V.BLeaf
         let
             go (Val s (V.BLeaf (V.LVar v))) | v == param =
                 nlOnVar newLet (Val s newBody)

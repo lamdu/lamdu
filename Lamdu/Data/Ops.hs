@@ -7,6 +7,7 @@ module Lamdu.Data.Ops
     , case_, CaseResult(..)
     , addListItem
     , newPublicDefinitionWithPane
+    , newPublicDefinitionToIRef
     , newDefinition
     , savePreJumpPosition, jumpBack
     , newPane
@@ -201,16 +202,26 @@ newPublicDefinition ::
 newPublicDefinition codeProps bodyI name =
     do
         defI <-
-            Definition.Expr bodyI Definition.NoExportedType usedDefinitions
+            Definition.Expr bodyI Definition.NoExportedType mempty
             & Definition.BodyExpr
             & newDefinition name (presentationModeOfName name)
         modP (Anchors.globals codeProps) (defI :)
         return defI
-    where
-        -- Currently only definitions with exported types have usedDefinitions.
-        -- In the future after a "commit" all definitions will have
-        -- both exported type and usedDefinitions.
-        usedDefinitions = mempty
+
+-- Used when writing a definition into an identifier which was a variable.
+-- Used in float.
+newPublicDefinitionToIRef ::
+    MonadA m => Anchors.CodeProps m -> ValI m -> DefI m -> T m ()
+newPublicDefinitionToIRef codeProps bodyI defI =
+    do
+        Definition.Expr bodyI Definition.NoExportedType mempty
+            & Definition.BodyExpr
+            & Transaction.writeIRef defI
+        getP (Anchors.assocNameRef defI)
+            <&> presentationModeOfName
+            >>= setP (Anchors.assocPresentationMode defI)
+        modP (Anchors.globals codeProps) (defI :)
+        newPane codeProps defI
 
 newPublicDefinitionWithPane ::
     MonadA m => String -> Anchors.CodeProps m -> ValI m -> T m (DefI m)
