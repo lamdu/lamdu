@@ -43,14 +43,12 @@ data NewLet m = NewLet
     }
 
 isVarAlwaysApplied :: V.Var -> Val a -> Bool
-isVarAlwaysApplied var val =
-    case val ^. V.body of
-    V.BLeaf (V.LVar v) | v == var -> False
-    V.BApp (V.Apply f a) -> checkChildren f && isVarAlwaysApplied var a
-    _ -> checkChildren val
+isVarAlwaysApplied var =
+    go False
     where
-        checkChildren x =
-            all (isVarAlwaysApplied var) (x ^.. V.body . Lens.traverse)
+        go isApplied (Val _ (V.BLeaf (V.LVar v))) | v == var = isApplied
+        go _ (Val _ (V.BApp (V.Apply f a))) = go True f && go False a
+        go _ v = all (go False) (v ^.. V.body . Lens.traverse)
 
 convertLetToLam ::
     Monad m => V.Var -> Redex (ValIProperty m) -> T m (NewLet m)
