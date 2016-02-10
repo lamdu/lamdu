@@ -128,36 +128,26 @@ isUnappliedVar var (cur : parent : _) =
 isUnappliedVar var [cur] = Lens.has (ExprLens.valVar . Lens.only var) cur
 isUnappliedVar _ _ = False
 
-changeCallArgs ::
-    MonadA m =>
-    (ValI m -> T m (ValI m)) -> Val (ValIProperty m) -> V.Var -> T m ()
-changeCallArgs change val var  =
-    do
-        SubExprs.onMatchingSubexprsWithPath changeArg (isArgOfCallTo var) val
-        SubExprs.onMatchingSubexprsWithPath holeWrap (isUnappliedVar var) val
+wrapUnappliedUsesOfVar :: MonadA m => V.Var -> Val (ValIProperty m) -> T m ()
+wrapUnappliedUsesOfVar var =
+    SubExprs.onMatchingSubexprsWithPath holeWrap (isUnappliedVar var)
     where
-        changeArg prop =
-            Property.value prop & change >>= Property.set prop
         holeWrap prop =
             V.BLeaf V.LHole & ExprIRef.newValBody
             <&> (`V.Apply` Property.value prop) <&> V.BApp
             >>= ExprIRef.newValBody
             >>= Property.set prop
 
-removeCallsToVar ::
-    MonadA m => V.Var -> Val (ValIProperty m) -> T m ()
-removeCallsToVar funcVar =
-    SubExprs.onMatchingSubexprs changeRecursion
-    ( V.body . ExprLens._BApp . V.applyFunc . ExprLens.valVar
-    . Lens.only funcVar
-    )
+changeCallArgs ::
+    MonadA m =>
+    (ValI m -> T m (ValI m)) -> Val (ValIProperty m) -> V.Var -> T m ()
+changeCallArgs change val var  =
+    do
+        SubExprs.onMatchingSubexprsWithPath changeArg (isArgOfCallTo var) val
+        wrapUnappliedUsesOfVar var val
     where
-        changeRecursion prop =
-            do
-                body <- ExprIRef.readValBody (Property.value prop)
-                case body of
-                    V.BApp (V.Apply f _) -> Property.set prop f
-                    _ -> error "assertion: expected BApp"
+        changeArg prop =
+            Property.value prop & change >>= Property.set prop
 
 fixUsagesOfLamBinder ::
     MonadA m => (ValI m -> T m (ValI m)) -> BinderKind m -> StoredLam m -> T m ()
@@ -357,6 +347,22 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
                 , _fpHiddenIds = []
                 }
             )
+
+removeCallsToVar :: MonadA m => V.Var -> Val (ValIProperty m) -> T m ()
+removeCallsToVar funcVar val =
+    do
+        SubExprs.onMatchingSubexprs changeRecursion
+            ( V.body . ExprLens._BApp . V.applyFunc . ExprLens.valVar
+            . Lens.only funcVar
+            ) val
+        wrapUnappliedUsesOfVar funcVar val
+    where
+        changeRecursion prop =
+            do
+                body <- ExprIRef.readValBody (Property.value prop)
+                case body of
+                    V.BApp (V.Apply f _) -> Property.set prop f
+                    _ -> error "assertion: expected BApp"
 
 makeDeleteLambda ::
     MonadA m => BinderKind m -> StoredLam m ->
