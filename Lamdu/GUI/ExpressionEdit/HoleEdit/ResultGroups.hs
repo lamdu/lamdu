@@ -45,9 +45,6 @@ data Group m = Group
 
 Lens.makeLenses ''Group
 
-data ResultType = GoodResult | BadResult
-    deriving (Eq, Ord)
-
 data Result m = Result
     { rScore :: Sugar.HoleResultScore
     , -- Warning: This transaction should be ran at most once!
@@ -132,13 +129,11 @@ collectResults Config.Hole{..} resultsM =
         resultsListScore x = (x ^. rlPreferred, rScore (x ^. rlMain))
         step results x =
             results
-            & case (x ^. rlPreferred, checkGood (rScore (x ^. rlMain))) of
-                (NotPreferred, BadResult) -> _2
+            & case (x ^. rlPreferred, isGoodResult (rScore (x ^. rlMain))) of
+                (NotPreferred, False) -> _2
                 _ -> _1
                 %~ (x :)
-        checkGood r
-            | r < [5] = GoodResult
-            | otherwise = BadResult
+        isGoodResult = (< [5])
 
 makeAll ::
     MonadA m => HoleInfo m ->
