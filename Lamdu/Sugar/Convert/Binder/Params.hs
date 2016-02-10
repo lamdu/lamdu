@@ -51,6 +51,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.OrderTags (orderType, orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
 
@@ -545,7 +546,16 @@ convertLamParams ::
     (MonadA m, Monoid a) =>
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
-convertLamParams = convertNonEmptyParams BinderKindLambda
+convertLamParams lambda lambdaPl =
+    do
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
+        let maybeWrap = protectedSetToVal lambdaProp (Property.value lambdaProp)
+        convertNonEmptyParams BinderKindLambda lambda lambdaPl
+            <&> cpAddFirstParam %~ (<* maybeWrap)
+            <&> cpParams . SugarLens.binderNamedParamsActions . fpAddNext %~
+                (<* maybeWrap)
+    where
+        lambdaProp = lambdaPl ^. Input.stored
 
 convertNonEmptyParams ::
     (MonadA m, Monoid a) =>
