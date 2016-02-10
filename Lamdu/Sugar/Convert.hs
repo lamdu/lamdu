@@ -168,6 +168,34 @@ makeNominalsMap val =
                         Map.insert tid nom loaded & State.put
                         N.nScheme nom ^. schemeType & loadForType
 
+convertInferDefExpr ::
+    MonadA m =>
+    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
+    Definition.Expr (Val (ValIProperty m)) -> DefI m ->
+    T m (DefinitionBody Guid m (ExpressionU m [EntityId]))
+convertInferDefExpr evalRes cp defExpr defI =
+    do
+        (valInferred, newInferContext) <-
+            IRefInfer.loadInferRecursive defI val
+            >>= loadInferPrepareInput evalRes
+            & assertRunInfer
+        nomsMap <- makeNominalsMap valInferred
+        let context =
+                Context
+                { _scInferContext = newInferContext
+                , _scNominalsMap = nomsMap
+                , _scGlobalsInScope = Set.singleton defI
+                , _scCodeAnchors = cp
+                , _scScopeInfo = emptyScopeInfo
+                , _scReinferCheckRoot = reinferCheckDefinition defI
+                , scConvertSubexpression = ConvertExpr.convert
+                }
+        ConvertDefExpr.convert
+            (defExpr & Definition.expr .~ valInferred) defI
+            & ConvertM.run context
+    where
+        val = defExpr ^. Definition.expr
+
 convertDefI ::
     MonadA m =>
     CurAndPrev (EvalResults (ValI m)) ->
@@ -186,27 +214,7 @@ convertDefI evalRes cp (Definition.Definition body defI) =
         convertDefBody (Definition.BodyBuiltin builtin) =
             return $ convertDefIBuiltin builtin defI
         convertDefBody (Definition.BodyExpr defExpr) =
-            do
-                (valInferred, newInferContext) <-
-                    IRefInfer.loadInferRecursive defI val
-                    >>= loadInferPrepareInput evalRes
-                    & assertRunInfer
-                nomsMap <- makeNominalsMap valInferred
-                let context =
-                        Context
-                        { _scInferContext = newInferContext
-                        , _scNominalsMap = nomsMap
-                        , _scGlobalsInScope = Set.singleton defI
-                        , _scCodeAnchors = cp
-                        , _scScopeInfo = emptyScopeInfo
-                        , _scReinferCheckRoot = reinferCheckDefinition defI
-                        , scConvertSubexpression = ConvertExpr.convert
-                        }
-                ConvertDefExpr.convert
-                    (defExpr & Definition.expr .~ valInferred) defI
-                    & ConvertM.run context
-            where
-                val = defExpr ^. Definition.expr
+            convertInferDefExpr evalRes cp defExpr defI
 
 convertExpr ::
     MonadA m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
