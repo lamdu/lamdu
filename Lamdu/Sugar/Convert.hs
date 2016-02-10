@@ -21,6 +21,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
+import qualified Lamdu.Eval.Results as Results
 import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
@@ -66,6 +67,13 @@ assertRunInfer action =
     IRefInfer.run action
     <&> either (error . ("Type inference failed: " ++) . show . pPrint) id
 
+readValAndAddProperties :: MonadA m => ValI m -> T m (Val (ValIProperty m))
+readValAndAddProperties valI =
+    ExprIRef.readVal valI
+    <&> fmap (flip (,) ())
+    <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")
+    <&> fmap fst
+
 reinferCheckDefinition :: MonadA m => DefI m -> T m Bool
 reinferCheckDefinition defI =
     do
@@ -73,18 +81,20 @@ reinferCheckDefinition defI =
         case defBody of
             Definition.BodyBuiltin {} -> return True
             Definition.BodyExpr (Definition.Expr valI _ _usedDefsTodo) ->
-                ExprIRef.readVal valI
-                <&> fmap (flip (,) ())
-                <&> ExprIRef.addProperties (error "TODO: DefExpr root setIRef")
-                <&> fmap fst
-                >>= IRefInfer.run . IRefInfer.loadInferRecursive defI
+                do
+                    val <- readValAndAddProperties valI
+                    IRefInfer.loadInferRecursive defI val
+                        >>= loadInferPrepareInput (pure Results.empty)
+                        & IRefInfer.run
                 <&> Lens.has Lens._Right
 
 reinferCheckExpression :: MonadA m => ValI m -> T m Bool
 reinferCheckExpression valI =
     do
-        val <- ExprIRef.readVal valI
-        IRefInfer.run (IRefInfer.loadInferScope Infer.emptyScope val)
+        val <- readValAndAddProperties valI
+        IRefInfer.loadInferScope Infer.emptyScope val
+            >>= loadInferPrepareInput (pure Results.empty)
+            & IRefInfer.run
             <&> Lens.has Lens._Right
 
 emptyScopeInfo :: ScopeInfo m
