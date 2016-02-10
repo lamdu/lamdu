@@ -186,7 +186,7 @@ convertLam ::
 convertLam lam@(V.Lam _ lamBody) exprPl =
     do
         deleteLam <- mkStoredLam lam exprPl & makeDeleteLambda BinderKindLambda
-        convParams <- convertLamParams BinderKindLambda lam exprPl
+        convParams <- convertLamParams lam exprPl
         binder <-
             makeBinder
             (exprPl ^. Input.stored & Property.value & Anchors.assocScopeRef)

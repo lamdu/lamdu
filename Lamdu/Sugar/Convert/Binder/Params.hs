@@ -543,10 +543,15 @@ isParamAlwaysUsedWithGetField (V.Lam param body) =
 
 convertLamParams ::
     (MonadA m, Monoid a) =>
-    BinderKind m -> V.Lam (Val (Input.Payload m a)) ->
-    Input.Payload m a ->
+    V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
-convertLamParams binderKind lambda lambdaPl =
+convertLamParams = convertNonEmptyParams BinderKindLambda
+
+convertNonEmptyParams ::
+    (MonadA m, Monoid a) =>
+    BinderKind m -> V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
+    ConvertM m (ConventionalParams m)
+convertNonEmptyParams binderKind lambda lambdaPl =
     do
         ctx <- ConvertM.readContext
         let tagsInOuterScope =
@@ -648,7 +653,7 @@ convertParams binderKind expr =
     V.BAbs lambda ->
         do
             params <-
-                convertLamParams binderKind lambda (expr ^. V.payload)
+                convertNonEmptyParams binderKind lambda (expr ^. V.payload)
                 -- The lambda disappears here, so add its id to the first
                 -- param's hidden ids:
                 <&> cpParams . _VarParam . fpHiddenIds <>~ hiddenIds
