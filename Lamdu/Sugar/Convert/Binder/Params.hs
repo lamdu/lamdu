@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, PatternGuards #-}
 module Lamdu.Sugar.Convert.Binder.Params
-    ( ConventionalParams(..), cpParams
+    ( ConventionalParams(..), cpParams, cpAddFirstParam
     , convertParams, convertLamParams
     , mkStoredLam, makeDeleteLambda
     , convertBinderToFunction
@@ -62,7 +62,7 @@ data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
     , _cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
     , _cpParams :: BinderParams Guid m
-    , cpAddFirstParam :: T m ParamAddResult
+    , _cpAddFirstParam :: T m ParamAddResult
     , cpScopes :: BinderBodyScope
     , cpMLamParam :: Maybe V.Var
     }
@@ -72,6 +72,9 @@ cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalP
 
 cpParamInfos :: Lens' (ConventionalParams m) (Map T.Tag ConvertM.TagFieldParam)
 cpParamInfos f ConventionalParams {..} = f _cpParamInfos <&> \_cpParamInfos -> ConventionalParams{..}
+
+cpAddFirstParam :: Lens' (ConventionalParams m) (T m ParamAddResult)
+cpAddFirstParam f ConventionalParams {..} = f _cpAddFirstParam <&> \_cpAddFirstParam -> ConventionalParams{..}
 
 data FieldParam = FieldParam
     { fpTag :: T.Tag
@@ -314,7 +317,7 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
     { cpTags = Set.fromList tags
     , _cpParamInfos = fieldParams <&> mkFieldParamInfo & mconcat
     , _cpParams = FieldParams (fieldParams <&> mkParam)
-    , cpAddFirstParam =
+    , _cpAddFirstParam =
         addFieldParam DataOps.newHole binderKind (:tags) storedLam
         <&> ParamAddResultNewTag
     , cpScopes = BinderBodyScope $ mkCpScopesOfLam pl
@@ -515,7 +518,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
             { cpTags = mempty
             , _cpParamInfos = Map.empty
             , _cpParams = funcParam
-            , cpAddFirstParam =
+            , _cpAddFirstParam =
                 convertToRecordParams DataOps.newHole
                 binderKind storedLam NewParamBefore
                 <&> ParamAddResultVarToTags
@@ -625,7 +628,7 @@ convertEmptyParams binderKind val =
     { cpTags = mempty
     , _cpParamInfos = Map.empty
     , _cpParams = BinderWithoutParams
-    , cpAddFirstParam =
+    , _cpAddFirstParam =
         val <&> (^. Input.stored)
         & convertBinderToFunction DataOps.newHole binderKind
         <&> fst

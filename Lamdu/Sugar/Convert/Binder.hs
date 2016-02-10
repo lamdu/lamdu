@@ -167,7 +167,7 @@ makeBinder chosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody
             , _bChosenScopeProp = chosenScopeProp
             , _bBody = binderBody
             , _bBodyScopes = cpScopes
-            , _bActions = BinderActions cpAddFirstParam
+            , _bActions = BinderActions _cpAddFirstParam
             }
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
     where
