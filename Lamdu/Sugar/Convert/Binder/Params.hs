@@ -119,9 +119,10 @@ isArgOfCallTo _ _ = False
 
 isUnappliedVar :: V.Var -> [Val ()] -> Bool
 isUnappliedVar var (cur : parent : _) =
-    Lens.has varT cur &&
+    Lens.has varT cur
     -- Var could not be both the arg and the func (will be type error)
-    not (Lens.has (ExprLens.valApply . V.applyFunc . varT) parent)
+    && not (Lens.has (ExprLens.valApply . V.applyFunc . varT) parent)
+    && not (Lens.has (ExprLens.valApply . V.applyFunc . ExprLens.valHole) parent)
     where
         varT = ExprLens.valVar . Lens.only var
 isUnappliedVar var [cur] = Lens.has (ExprLens.valVar . Lens.only var) cur
