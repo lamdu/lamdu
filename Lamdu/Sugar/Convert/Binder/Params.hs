@@ -439,24 +439,20 @@ lamParamType lamExprPl =
     lamExprPl ^? Input.inferredType . ExprLens._TFun . _1
 
 makeNonRecordParamActions ::
-    MonadA m => BinderKind m -> StoredLam m ->
-    ConvertM m (FuncParamActions m, T m ParamAddResult)
+    MonadA m => BinderKind m -> StoredLam m -> ConvertM m (FuncParamActions m)
 makeNonRecordParamActions binderKind storedLam =
     do
         delete <- makeDeleteLambda binderKind storedLam
         return
-            ( FuncParamActions
-                { _fpAddNext = addParam NewParamAfter
-                , _fpDelete = delete
-                , _fpMOrderBefore = Nothing
-                , _fpMOrderAfter = Nothing
-                }
-            , addParam NewParamBefore
-            )
-    where
-        addParam pos =
-            convertToRecordParams DataOps.newHole binderKind storedLam pos
-            <&> ParamAddResultVarToTags
+            FuncParamActions
+            { _fpAddNext =
+                convertToRecordParams DataOps.newHole
+                binderKind storedLam NewParamAfter
+                <&> ParamAddResultVarToTags
+            , _fpDelete = delete
+            , _fpMOrderBefore = Nothing
+            , _fpMOrderAfter = Nothing
+            }
 
 mkFuncParam ::
     MonadA m =>
@@ -492,7 +488,7 @@ convertNonRecordParam ::
     ConvertM m (ConventionalParams m)
 convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
     do
-        (funcParamActions, addParam) <- makeNonRecordParamActions binderKind storedLam
+        funcParamActions <- makeNonRecordParamActions binderKind storedLam
         funcParam <-
             case lamParamType lamExprPl of
             T.TRecord T.CEmpty
@@ -513,7 +509,10 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
             { cpTags = mempty
             , _cpParamInfos = Map.empty
             , _cpParams = funcParam
-            , cpAddFirstParam = addParam
+            , cpAddFirstParam =
+                convertToRecordParams DataOps.newHole
+                binderKind storedLam NewParamBefore
+                <&> ParamAddResultVarToTags
             , cpScopes = BinderBodyScope $ mkCpScopesOfLam lamExprPl
             , cpMLamParam = Just param
             }
