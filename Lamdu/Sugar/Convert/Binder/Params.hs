@@ -122,7 +122,7 @@ isUnappliedVar var (cur : parent : _) =
     Lens.has varT cur &&
     -- Var could not be both the arg and the func (will be type error),
     -- so if it is parent's arg then cur is the arg
-    Lens.has (ExprLens.valApply . V.applyArg . varT) parent
+    not (Lens.has (ExprLens.valApply . V.applyFunc . varT) parent)
     where
         varT = ExprLens.valVar . Lens.only var
 isUnappliedVar var [cur] = Lens.has (ExprLens.valVar . Lens.only var) cur
