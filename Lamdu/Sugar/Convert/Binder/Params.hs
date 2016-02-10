@@ -561,8 +561,6 @@ convertLamParams binderKind lambda lambdaPl =
                             ResultsProcess.addTypes noms typeExpr .
                             ER.extractField tag
                 }
-        let param = lambda ^. V.lamParamId
-        let mkCollidingInfo fp = mkParamInfo param fp <&> ConvertM.CollidingFieldParam
         orderedType <-
             lambdaPl ^. Input.inferredType & orderType & ConvertM.liftTransaction
         case orderedType of
@@ -587,6 +585,9 @@ convertLamParams binderKind lambda lambdaPl =
                         . ExprLens._TRecord . ExprLens.compositeTags
                         & Set.fromList
             _ -> convertNonRecordParam binderKind lambda lambdaPl
+    where
+        param = lambda ^. V.lamParamId
+        mkCollidingInfo fp = mkParamInfo param fp <&> ConvertM.CollidingFieldParam
 
 convertVarToCalls ::
     MonadA m => T m (ValI m) -> V.Var -> Val (ValIProperty m) -> T m ()
