@@ -174,10 +174,12 @@ makeShownResult holeInfo result =
             , ShownResult
               { srMkEventMap =
                   mkEventMap <&> mappend (fixNumWithDotEventMap holeInfo res)
-              , srHoleResult = res
+              , srHasHoles =
+                  Lens.has (Sugar.holeResultConverted . SugarLens.holePayloads)
+                  res
               , srPick =
-                res ^. Sugar.holeResultPick
-                >>= afterPick holeInfo (rId result) mFirstHoleInside
+                  res ^. Sugar.holeResultPick
+                  >>= afterPick holeInfo (rId result) mFirstHoleInside
               }
             )
 

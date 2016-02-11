@@ -8,8 +8,6 @@ import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import           Lamdu.Sugar.Names.Types (Name)
-import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction.Transaction
 
@@ -21,6 +19,6 @@ Lens.makeLenses ''PickedResult
 
 data ShownResult m = ShownResult
     { srMkEventMap :: ExprGuiM m (Widget.EventHandlers (T m))
-    , srHoleResult :: Sugar.HoleResult (Name m) m
+    , srHasHoles :: Bool
     , srPick :: T m PickedResult
     }
