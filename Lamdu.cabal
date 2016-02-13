@@ -34,6 +34,7 @@ Library
                   , Control.Monad.Unit
                   , Control.MonadA
                   , Data.Binary.Utils
+                  , Data.ByteString.Hex
                   , Data.ByteString.NFData
                   , Data.ByteString.Utils
                   , Data.CurAndPrev

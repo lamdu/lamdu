@@ -4,6 +4,7 @@ module Lamdu.Formatting
     , formatTextContents
     ) where
 
+import           Data.ByteString.Hex (showHexBytes)
 import           Control.Lens.Operators
 import           Control.Monad (mplus)
 import qualified Data.ByteString as SBS
@@ -34,9 +35,6 @@ parseHexByte [x,y] =
     <*> parseHexDigit y
 parseHexByte _ = Nothing
 
-showHexByte :: Word8 -> String
-showHexByte = printf "%02X"
-
 parseHexDigits :: String -> Maybe SBS.ByteString
 parseHexDigits str =
     chunks 2 str >>= mapM parseHexByte <&> SBS.pack
@@ -57,7 +55,7 @@ class Format a where
 instance Format SBS.ByteString where
     tryParse ('#':xs) = parseHexDigits xs
     tryParse _ = Nothing
-    format bs = '#' : concatMap showHexByte (SBS.unpack bs)
+    format bs = '#' : showHexBytes bs
 
 instance Format Double where
     tryParse ('.':searchTerm) = readMaybe ('0':searchTerm)
