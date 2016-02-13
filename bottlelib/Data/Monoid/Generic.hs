@@ -41,7 +41,7 @@ instance Monoid a => GMonoid (K1 i a) where
     gmempty = K1 mempty
     gmappend (K1 x) (K1 y) = K1 $ mappend x y
 
-{-# ANN module "HLint: ignore Use camelCase" #-}
+{-# ANN module ("HLint: ignore Use camelCase"::String) #-}
 
 -- Default implementations of mempty and mappend using gmempty and gmappend.
 -- All we do is use @to@ and @from@ to wrap and unwrap.

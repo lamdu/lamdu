@@ -59,8 +59,7 @@ mkEventMapWithPickers holePickers keys doc f =
     liftA2 mappend (ExprGuiM.holePickersAction holePickers) .
     fmap Widget.eventResultFromCursor . f
 
-jumpHolesEventMap ::
-    MonadA m => NearestHoles -> ExprGuiM m (EventHandlers (T m))
+jumpHolesEventMap :: MonadA m => NearestHoles -> ExprGuiM m (EventHandlers (T m))
 jumpHolesEventMap hg =
     do
         config <- ExprGuiM.readConfig <&> Config.hole
@@ -74,6 +73,7 @@ jumpHolesEventMap hg =
             , jumpEventMap Config.holeJumpToPrevKeys "previous" NearestHoles.prev
             ] & return
     where
+        jumpDoc :: String -> String
         jumpDoc dirStr = "Jump to " ++ dirStr ++ " hole"
 
 jumpHolesEventMapIfSelected ::

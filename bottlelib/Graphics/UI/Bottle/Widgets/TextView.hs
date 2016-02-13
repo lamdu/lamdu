@@ -131,7 +131,7 @@ letterRects Style{..} text =
 drawTextAsLines :: Style -> String -> RenderedText (AnimId -> Anim.Frame)
 drawTextAsLines style text =
     splitWhen (== '\n') text ^@.. Lens.traversed
-    <&> _1 %~ (,) "Line"
+    <&> _1 %~ (,) ("Line"::String)
     <&> _2 %~ fontRender style
     <&> nestedFrame
     & joinLines
