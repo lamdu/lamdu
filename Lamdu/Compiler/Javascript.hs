@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, QuasiQuotes, OverloadedStrings, PolymorphicComponents #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, QuasiQuotes, OverloadedStrings, PolymorphicComponents #-}
 -- | Compile Lamdu vals to Javascript
 
 module Lamdu.Compiler.Javascript
@@ -68,7 +68,8 @@ data State = State
     }
 Lens.makeLenses ''State
 
-type M m a = RWST (Env m) () State IO a
+newtype M m a = M (RWST (Env m) () State IO a)
+    deriving (Functor, Applicative, Monad, MonadIO)
 
 infixl 4 $.
 ($.) :: JSS.Expression () -> JSS.Id () -> JSS.Expression ()
@@ -88,7 +89,7 @@ ppOut :: MonadIO m => Actions n -> JSS.Statement () -> m ()
 ppOut actions = liftIO . output actions . pp
 
 run :: Actions m -> M m (JSS.Expression ()) -> IO ()
-run actions act =
+run actions (M act) =
     do
         replExpr <- runRWST act (Env actions mempty) (State 0 mempty) <&> (^. _1)
         JS.block
@@ -103,12 +104,14 @@ trans act =
     do
         runTrans <- RWS.asks (runTransaction . envActions)
         runTrans act & lift
+    & M
 
 getName :: String -> M m String
 getName prefix =
     do
         newId <- freshId <+= 1
         prefix ++ show newId & return
+    & M
 
 ops :: Map Char String
 ops =
@@ -163,10 +166,10 @@ tagIdent :: Monad m => T.Tag -> M m (JSS.Id ())
 tagIdent = fmap JS.ident . tagString
 
 withLocalVar :: Monad m => V.Var -> M m a -> M m (LocalVarName, a)
-withLocalVar v act =
+withLocalVar v (M act) =
     do
         varName <- getStoredName v "local_"
-        res <- RWS.local (envLocals . Lens.at v ?~ varName) act
+        res <- RWS.local (envLocals . Lens.at v ?~ varName) act & M
         return (varName, res)
 
 -- | Compile a given val and all the transitively used definitions
@@ -191,14 +194,14 @@ compileGlobal v =
 
 getGlobalVar :: Monad m => V.Var -> M m GlobalVarName
 getGlobalVar var =
-    Lens.use (compiled . Lens.at var)
+    Lens.use (compiled . Lens.at var) & M
     >>= maybe newGlobal return
     where
         newGlobal =
             do
                 varName <- getStoredName var "global_"
-                actions <- RWS.asks envActions
-                compiled . Lens.at var ?= varName
+                actions <- RWS.asks envActions & M
+                compiled . Lens.at var ?= varName & M
                 compileGlobal var
                     <&> JS.varinit (JS.ident varName)
                     <&> JS.vardecls . (:[])
@@ -207,7 +210,7 @@ getGlobalVar var =
 
 getVar :: Monad m => V.Var -> M m (JSS.Id ())
 getVar v =
-    Lens.view (envLocals . Lens.at v)
+    Lens.view (envLocals . Lens.at v) & M
     >>= maybe (getGlobalVar v) return
     <&> JS.ident
 
