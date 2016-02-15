@@ -303,23 +303,11 @@ compileLiteral literal =
             ints = [JS.int (fromIntegral byte) | byte <- BS.unpack bytes]
     LitFloat num -> JS.number num
 
-compileVar :: Monad m => V.Var -> M m (JSS.Expression ())
-compileVar var = getVar var <&> JS.var
-
 freeze :: JSS.Expression () -> JSS.Expression ()
 freeze expr = JS.call (JS.var "Object" $. "freeze") [expr]
 
-compileLeaf :: Monad m => V.Leaf -> M m (JSS.Expression ())
-compileLeaf leaf =
-    case leaf of
-    V.LHole -> throwStr "Reached hole!" & return
-    V.LRecEmpty -> JS.object [] & freeze & return
-    V.LAbsurd -> throwStr "Reached absurd!" & return
-    V.LVar var -> compileVar var
-    V.LLiteral literal -> compileLiteral literal & return
-
-compileRecExtend :: Monad m => Flatten.Record (JSS.Expression ()) -> M m (JSS.Expression ())
-compileRecExtend (Flatten.Composite tags mRest) =
+compileFlatRecExtend :: Monad m => Flatten.Record (JSS.Expression ()) -> M m (JSS.Expression ())
+compileFlatRecExtend (Flatten.Composite tags mRest) =
     do
         strTags <- Map.toList tags & Lens.traversed . _1 %%~ tagString
         let obj = strTags <&> _1 %~ JS.propId . JS.ident & JS.object
@@ -348,8 +336,8 @@ compileInject (V.Inject tag dat) =
         dat' <- compileVal dat
         inject tagStr dat' & return
 
-compileCase :: Monad m => Flatten.Case (JSS.Expression ()) -> M m (JSS.Expression ())
-compileCase (Flatten.Composite tags mRestHandler) =
+compileFlatCase :: Monad m => Flatten.Case (JSS.Expression ()) -> M m (JSS.Expression ())
+compileFlatCase (Flatten.Composite tags mRestHandler) =
     do
         tagsStr <- Map.toList tags & Lens.traverse . _1 %%~ tagString
         lam "x" $ \x ->
@@ -374,19 +362,42 @@ compileGetField (V.GetField record tag) =
         tagId <- tagIdent tag
         compileVal record <&> (`JS.dot` tagId)
 
+compileLeaf :: Monad m => V.Leaf -> M m (JSS.Expression ())
+compileLeaf leaf =
+    case leaf of
+    V.LHole -> throwStr "Reached hole!" & return
+    V.LRecEmpty -> JS.object [] & freeze & return
+    V.LAbsurd -> throwStr "Reached absurd!" & return
+    V.LVar var -> getVar var <&> JS.var
+    V.LLiteral literal -> compileLiteral literal & return
+
+compileLambda :: Monad m => V.Lam (Val (ValI m)) -> M m (JSS.Expression ())
+compileLambda (V.Lam v res) =
+    do
+        (vId, res') <- compileVal res & withLocalVar v
+        JS.lambda [JS.ident vId] [JS.returns res'] & return
+
+compileApply :: Monad m => V.Apply (Val (ValI m)) -> M m (JSS.Expression ())
+compileApply (V.Apply func arg) =
+    JS.call <$> compileVal func <*> sequence [compileVal arg]
+
+compileRecExtend :: Monad m => V.RecExtend (Val (ValI m)) -> M m (JSS.Expression ())
+compileRecExtend x =
+    Flatten.recExtend x & Lens.traverse compileVal >>= compileFlatRecExtend
+
+compileCase :: Monad m => V.Case (Val (ValI m)) -> M m (JSS.Expression ())
+compileCase x =
+    Flatten.case_ x & Lens.traverse  compileVal >>= compileFlatCase
+
 compileVal :: Monad m => Val (ValI m) -> M m (JSS.Expression ())
 compileVal (Val _ body) =
     case body of
     V.BLeaf leaf -> compileLeaf leaf
-    V.BApp (V.Apply func arg) ->
-        JS.call <$> compileVal func <*> sequence [compileVal arg]
+    V.BApp x -> compileApply x
     V.BGetField x -> compileGetField x
-    V.BAbs (V.Lam v res) ->
-        do
-            (vId, res') <- compileVal res & withLocalVar v
-            JS.lambda [JS.ident vId] [JS.returns res'] & return
+    V.BAbs x -> compileLambda x
     V.BInject x -> compileInject x
-    V.BRecExtend x -> Flatten.recExtend x & Lens.traverse compileVal >>= compileRecExtend
-    V.BCase x -> Flatten.case_ x & Lens.traverse  compileVal >>= compileCase
+    V.BRecExtend x -> compileRecExtend x
+    V.BCase x -> compileCase x
     V.BFromNom (V.Nom _tId val) -> compileVal val
     V.BToNom (V.Nom _tId val) -> compileVal val
