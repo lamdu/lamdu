@@ -97,6 +97,7 @@ run actions (M act) =
               , JS.varinit "logobj" logObj
               ] & JS.vardecls
             , JS.var "logobj" `JS.call` [JS.var "repl"] & JS.expr
+            , (JS.var "console" $. "log") `JS.call` [JS.var "repl"] & JS.expr
             ] & ppOut actions
 
 trans :: T m b -> M m b
