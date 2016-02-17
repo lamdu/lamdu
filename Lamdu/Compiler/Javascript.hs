@@ -225,19 +225,18 @@ stmtsExpressionUndefined stmts =
 throwStr :: String -> JSS.Expression ()
 throwStr str = [JS.throw (JS.string str)] & stmtsExpressionUndefined
 
--- Transforms
+-- Transforms top level statements:
 -- "return function () { x }();"   => "x"
 -- "return function (v) { x }(e);" => "var v = e; x"
 optimizeStatements :: [JSS.Statement ()] -> [JSS.Statement ()]
 optimizeStatements
     [JSS.ReturnStmt _ (Just (
         JSS.CallExpr _ (JSS.FuncExpr _ Nothing [] inner) []))] =
-    optimizeStatements inner
+    inner
 optimizeStatements
     [JSS.ReturnStmt _ (Just (
         JSS.CallExpr _ (JSS.FuncExpr _ Nothing [varId] inner) [varVal]))] =
-    JS.vardecls [JS.varinit varId varVal] :
-    optimizeStatements inner
+    JS.vardecls [JS.varinit varId varVal] : inner
 optimizeStatements x = x
 
 lam ::
