@@ -391,7 +391,7 @@ compileRecExtend x =
 
 compileCase :: Monad m => V.Case (Val (ValI m)) -> M m (JSS.Expression ())
 compileCase x =
-    Flatten.case_ x & Lens.traverse  compileVal >>= compileFlatCase
+    Flatten.case_ x & Lens.traverse compileVal >>= compileFlatCase
 
 compileVal :: Monad m => Val (ValI m) -> M m (JSS.Expression ())
 compileVal (Val _ body) =
