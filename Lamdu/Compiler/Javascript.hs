@@ -343,25 +343,24 @@ compileInject (V.Inject tag dat) =
 compileFlatCase ::
     Monad m =>
     Flatten.Case (JSS.Expression ()) -> JSS.Expression () ->
-    M m [JSS.Statement ()]
+    M m (JSS.Statement ())
 compileFlatCase (Flatten.Composite tags mRestHandler) scrutinee =
     do
         tagsStr <- Map.toList tags & Lens.traverse . _1 %%~ tagString
-        return
-            [ [ JS.casee (JS.string tagStr)
-                [ handler `JS.call` [scrutinee $. "data"] & JS.returns ]
-              | (tagStr, handler) <- tagsStr
-              ] ++
-              [ JS.defaultc
-                [ case mRestHandler of
-                  Nothing ->
-                      JS.throw (JS.string "Unhandled case? This is a type error!")
-                  Just restHandler ->
-                      restHandler `JS.call` [scrutinee $. "data"] & JS.returns
-                ]
+        [ JS.casee (JS.string tagStr)
+              [ handler `JS.call` [scrutinee $. "data"] & JS.returns ]
+            | (tagStr, handler) <- tagsStr
+            ] ++
+            [ JS.defaultc
+              [ case mRestHandler of
+                Nothing ->
+                    JS.throw (JS.string "Unhandled case? This is a type error!")
+                Just restHandler ->
+                    restHandler `JS.call` [scrutinee $. "data"] & JS.returns
               ]
-              & JS.switch (scrutinee $. "tag")
             ]
+            & JS.switch (scrutinee $. "tag")
+            & return
 
 compileGetField :: Monad m => V.GetField (Val (ValI m)) -> M m (JSS.Expression ())
 compileGetField (V.GetField record tag) =
@@ -394,7 +393,9 @@ compileRecExtend x =
 
 compileCase :: Monad m => V.Case (Val (ValI m)) -> M m (JSS.Expression ())
 compileCase x =
-    Flatten.case_ x & Lens.traverse compileVal >>= lam "x" . compileFlatCase
+    do
+        caseJs <- Flatten.case_ x & Lens.traverse compileVal
+        compileFlatCase caseJs <&> fmap (:[]) & lam "x"
 
 compileVal :: Monad m => Val (ValI m) -> M m (JSS.Expression ())
 compileVal (Val _ body) =
