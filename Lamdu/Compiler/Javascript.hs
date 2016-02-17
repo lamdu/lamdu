@@ -358,7 +358,7 @@ compileFlatCase (Flatten.Composite tags mRestHandler) scrutinee =
                 Nothing ->
                     JS.throw (JS.string "Unhandled case? This is a type error!")
                 Just restHandler ->
-                    restHandler `JS.call` [scrutinee $. "data"] & JS.returns
+                    restHandler `JS.call` [scrutinee] & JS.returns
               ]
             ]
             & JS.switch (scrutinee $. "tag")
