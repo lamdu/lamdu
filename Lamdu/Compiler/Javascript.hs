@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, QuasiQuotes, OverloadedStrings, PolymorphicComponents #-}
+{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, QuasiQuotes, OverloadedStrings, PolymorphicComponents, PatternGuards #-}
 -- | Compile Lamdu vals to Javascript
 
 module Lamdu.Compiler.Javascript
@@ -229,14 +229,10 @@ throwStr str = [JS.throw (JS.string str)] & stmtsExpressionUndefined
 -- "return function () { x }();"   => "x"
 -- "return function (v) { x }(e);" => "var v = e; x"
 optimizeStatements :: [JSS.Statement ()] -> [JSS.Statement ()]
-optimizeStatements
-    [JSS.ReturnStmt _ (Just (
-        JSS.CallExpr _ (JSS.FuncExpr _ Nothing [] inner) []))] =
-    inner
-optimizeStatements
-    [JSS.ReturnStmt _ (Just (
-        JSS.CallExpr _ (JSS.FuncExpr _ Nothing [varId] inner) [varVal]))] =
-    JS.vardecls [JS.varinit varId varVal] : inner
+optimizeStatements x@[JSS.ReturnStmt _ (Just (JSS.CallExpr _ (JSS.FuncExpr _ Nothing params inner) args))]
+    | ([], []) <- (params, args) = inner
+    | ([paramId], [arg]) <- (params, args) = JS.vardecls [JS.varinit paramId arg] : inner
+    | otherwise = x
 optimizeStatements x = x
 
 lam ::
