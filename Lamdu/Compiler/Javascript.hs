@@ -68,7 +68,7 @@ data State = State
     }
 Lens.makeLenses ''State
 
-newtype M m a = M (RWST (Env m) () State IO a)
+newtype M m a = M { unM :: RWST (Env m) () State IO a }
     deriving (Functor, Applicative, Monad, MonadIO)
 
 infixl 4 $.
@@ -85,20 +85,24 @@ logObj =
             }|]
     & void
 
-ppOut :: MonadIO m => Actions n -> JSS.Statement () -> m ()
+ppOut :: Actions n -> JSS.Statement () -> M m ()
 ppOut actions = liftIO . output actions . pp
 
 run :: Actions m -> M m (JSS.Expression ()) -> IO ()
-run actions (M act) =
-    do
-        replExpr <- runRWST act (Env actions mempty) (State 0 mempty) <&> (^. _1)
-        JS.block
+run actions act =
+    runRWST
+    (act <&> wrap >>= ppOut actions & unM)
+    (Env actions mempty) (State 0 mempty)
+    <&> (^. _1)
+    where
+        wrap replExpr =
+            JS.block
             [ [ JS.varinit "repl" replExpr
               , JS.varinit "logobj" logObj
               ] & JS.vardecls
             , JS.var "logobj" `JS.call` [JS.var "repl"] & JS.expr
             , (JS.var "console" $. "log") `JS.call` [JS.var "repl"] & JS.expr
-            ] & ppOut actions
+            ]
 
 trans :: T m b -> M m b
 trans act =
