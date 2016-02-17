@@ -182,7 +182,7 @@ withLocalVar v (M act) =
 -- | Compile a given val and all the transitively used definitions
 -- (FIXME: currently, compilation goes to stdout)
 compileValI :: MonadA m => ValI m -> M m (JSS.Expression ())
-compileValI valI = ExprIRef.readVal valI & trans >>= compileVal
+compileValI valI = ExprIRef.readVal valI & trans >>= compileVal <&> codeGenExpression
 
 identHex :: Identifier -> String
 identHex (Identifier bs) = showHexBytes bs
@@ -221,21 +221,36 @@ getVar v =
     >>= maybe (getGlobalVar v) return
     <&> JS.ident
 
--- | A statement as an expression that evaluates to undefined
-stmtsExpressionUndefined :: [JSS.Statement ()] -> JSS.Expression ()
-stmtsExpressionUndefined stmts =
-    JS.call (JS.lambda [] stmts) []
+data CodeGen = CodeGen
+    { codeGenLamStmts :: [JSS.Statement ()]
+    , codeGenExpression :: JSS.Expression ()
+    }
 
-throwStr :: String -> JSS.Expression ()
-throwStr str = [JS.throw (JS.string str)] & stmtsExpressionUndefined
+unitRedex :: [JSS.Statement ()] -> JSS.Expression ()
+unitRedex stmts = JS.lambda [] stmts `JS.call` []
 
-lam ::
-    String -> (JSS.Expression () -> M m [JSS.Statement ()]) ->
-    M m (JSS.Expression ())
-lam prefix stmts =
+throwStr :: String -> CodeGen
+throwStr str =
+    go [JS.throw (JS.string str)]
+    where
+        go stmts =
+            CodeGen
+            { codeGenLamStmts = stmts
+            , codeGenExpression = unitRedex stmts
+            }
+
+codeGenFromExpr :: JSS.Expression () -> CodeGen
+codeGenFromExpr expr =
+    CodeGen
+    { codeGenLamStmts = [JS.returns expr]
+    , codeGenExpression = expr
+    }
+
+lam :: String -> (JSS.Expression () -> M m [JSS.Statement ()]) -> M m (JSS.Expression ())
+lam prefix code =
     do
         var <- getName prefix <&> JS.ident
-        stmts (JS.var var) <&> JS.lambda [var]
+        code (JS.var var) <&> JS.lambda [var]
 
 infixFunc ::
     Monad m =>
@@ -298,48 +313,56 @@ ffiCompile ffiName@(Definition.FFIName ["Prelude"] opStr) =
         opFunc op = infixFunc (\x y -> return (op x y))
 ffiCompile ffiName = unknownFfiFunc ffiName & return
 
-stmtsExpression :: [JSS.Statement ()] -> JSS.Expression () -> JSS.Expression ()
-stmtsExpression stmts expr =
-    JS.call (JS.lambda [] (stmts ++ [JS.returns expr])) []
-
-compileLiteral :: V.Literal -> JSS.Expression ()
+compileLiteral :: V.Literal -> CodeGen
 compileLiteral literal =
     case BuiltinLiteral.toLit literal of
     LitBytes bytes ->
-        stmtsExpression
-        [ JS.vardecls
-          [ JS.varinit "arr"
-            (JS.new (JS.var "Uint8Array") [JS.int (BS.length bytes)])
-          ]
-        , JS.call (JS.var "arr" $. "set") [JS.array ints] & JS.expr
-        ] (JS.var "arr")
+        CodeGen
+        { codeGenLamStmts = stmts
+        , codeGenExpression = unitRedex stmts
+        }
         where
+            stmts =
+                [ JS.vardecls
+                  [ JS.varinit "arr"
+                    (JS.new (JS.var "Uint8Array") [JS.int (BS.length bytes)])
+                  ]
+                , JS.call (JS.var "arr" $. "set") [JS.array ints] & JS.expr
+                , JS.var "arr" & JS.returns
+                ]
             ints = [JS.int (fromIntegral byte) | byte <- BS.unpack bytes]
-    LitFloat num -> JS.number num
+    LitFloat num -> JS.number num & codeGenFromExpr
 
 freeze :: JSS.Expression () -> JSS.Expression ()
 freeze expr = JS.call (JS.var "Object" $. "freeze") [expr]
 
-compileFlatRecExtend :: Monad m => Flatten.Record (JSS.Expression ()) -> M m (JSS.Expression ())
+compileFlatRecExtend :: Monad m => Flatten.Record CodeGen -> M m CodeGen
 compileFlatRecExtend (Flatten.Composite tags mRest) =
     do
-        strTags <- Map.toList tags & Lens.traversed . _1 %%~ tagString
+        strTags <-
+            Map.toList tags
+            <&> _2 %~ codeGenExpression
+            & Lens.traversed . _1 %%~ tagString
         let obj = strTags <&> _1 %~ JS.propId . JS.ident & JS.object
         case mRest of
-            Nothing -> freeze obj
+            Nothing -> freeze obj & codeGenFromExpr
             Just rest ->
-                stmtsExpression (restDecl : restAssignments) (freeze (JS.var "rest"))
+                CodeGen
+                { codeGenLamStmts = stmts
+                , codeGenExpression = unitRedex stmts
+                }
                 where
-                    restDecl =
+                    stmts =
                         JS.vardecls
                         [ JS.varinit "rest"
-                          ((JS.var "Object" $. "create") `JS.call` [rest])
+                          ((JS.var "Object" $. "create")
+                           `JS.call` [codeGenExpression rest])
                         ]
-                    restAssignments =
-                        strTags
-                        <&> _1 %~ JS.ldot (JS.var "rest")
-                        <&> uncurry JS.assign
-                        <&> JS.expr
+                        : ( strTags
+                            <&> _1 %~ JS.ldot (JS.var "rest")
+                            <&> uncurry JS.assign
+                            <&> JS.expr )
+                        ++ [JS.var "rest" & freeze & JS.returns]
             & return
     where
 
@@ -348,16 +371,19 @@ compileInject (V.Inject tag dat) =
     do
         tagStr <- tagString tag <&> JS.string
         dat' <- compileVal dat
-        inject tagStr dat' & return
+        inject tagStr (codeGenExpression dat') & return
 
-compileFlatCase :: Monad m => Flatten.Case (JSS.Expression ()) -> M m (JSS.Expression ())
+compileFlatCase :: Monad m => Flatten.Case CodeGen -> M m CodeGen
 compileFlatCase (Flatten.Composite tags mRestHandler) =
     do
         tagsStr <- Map.toList tags & Lens.traverse . _1 %%~ tagString
-        lam "x" $ \x ->
+        fmap codeGenFromExpr $ lam "x" $ \scrutineeVar ->
             return
-            [ [ JS.casee (JS.string tagStr)
-                [ handler `JS.call` [x $. "data"] & JS.returns ]
+            [ JS.switch (scrutineeVar $. "tag") $
+              [ JS.casee (JS.string tagStr)
+                [ codeGenExpression handler `JS.call` [scrutineeVar $. "data"]
+                  & JS.returns
+                ]
               | (tagStr, handler) <- tagsStr
               ] ++
               [ JS.defaultc
@@ -365,53 +391,56 @@ compileFlatCase (Flatten.Composite tags mRestHandler) =
                   Nothing ->
                       JS.throw (JS.string "Unhandled case? This is a type error!")
                   Just restHandler ->
-                      restHandler `JS.call` [x] & JS.returns
+                      codeGenExpression restHandler
+                      `JS.call` [scrutineeVar] & JS.returns
                 ]
               ]
-              & JS.switch (x $. "tag")
             ]
 
 compileGetField :: Monad m => V.GetField (Val (ValI m)) -> M m (JSS.Expression ())
 compileGetField (V.GetField record tag) =
     do
         tagId <- tagIdent tag
-        compileVal record <&> (`JS.dot` tagId)
+        compileVal record <&> codeGenExpression <&> (`JS.dot` tagId)
 
-compileLeaf :: Monad m => V.Leaf -> M m (JSS.Expression ())
+compileLeaf :: Monad m => V.Leaf -> M m CodeGen
 compileLeaf leaf =
     case leaf of
     V.LHole -> throwStr "Reached hole!" & return
-    V.LRecEmpty -> JS.object [] & freeze & return
+    V.LRecEmpty -> JS.object [] & freeze & codeGenFromExpr & return
     V.LAbsurd -> throwStr "Reached absurd!" & return
-    V.LVar var -> getVar var <&> JS.var
+    V.LVar var -> getVar var <&> JS.var <&> codeGenFromExpr
     V.LLiteral literal -> compileLiteral literal & return
 
 compileLambda :: Monad m => V.Lam (Val (ValI m)) -> M m (JSS.Expression ())
 compileLambda (V.Lam v res) =
     do
-        (vId, res') <- compileVal res & withLocalVar v
-        JS.lambda [JS.ident vId] [JS.returns res'] & return
+        (vId, lamStmts) <- compileVal res <&> codeGenLamStmts & withLocalVar v
+        JS.lambda [JS.ident vId] lamStmts & return
 
-compileApply :: Monad m => V.Apply (Val (ValI m)) -> M m (JSS.Expression ())
+compileApply :: Monad m => V.Apply (Val (ValI m)) -> M m CodeGen
 compileApply (V.Apply func arg) =
-    JS.call <$> compileVal func <*> sequence [compileVal arg]
+    do
+        func' <- compileVal func <&> codeGenExpression
+        arg' <- compileVal arg <&> codeGenExpression
+        func' `JS.call` [arg'] & codeGenFromExpr & return
 
-compileRecExtend :: Monad m => V.RecExtend (Val (ValI m)) -> M m (JSS.Expression ())
+compileRecExtend :: Monad m => V.RecExtend (Val (ValI m)) -> M m CodeGen
 compileRecExtend x =
     Flatten.recExtend x & Lens.traverse compileVal >>= compileFlatRecExtend
 
-compileCase :: Monad m => V.Case (Val (ValI m)) -> M m (JSS.Expression ())
+compileCase :: Monad m => V.Case (Val (ValI m)) -> M m CodeGen
 compileCase x =
     Flatten.case_ x & Lens.traverse compileVal >>= compileFlatCase
 
-compileVal :: Monad m => Val (ValI m) -> M m (JSS.Expression ())
+compileVal :: Monad m => Val (ValI m) -> M m CodeGen
 compileVal (Val _ body) =
     case body of
     V.BLeaf leaf -> compileLeaf leaf
     V.BApp x -> compileApply x
-    V.BGetField x -> compileGetField x
-    V.BAbs x -> compileLambda x
-    V.BInject x -> compileInject x
+    V.BGetField x -> compileGetField x <&> codeGenFromExpr
+    V.BAbs x -> compileLambda x <&> codeGenFromExpr
+    V.BInject x -> compileInject x <&> codeGenFromExpr
     V.BRecExtend x -> compileRecExtend x
     V.BCase x -> compileCase x
     V.BFromNom (V.Nom _tId val) -> compileVal val
