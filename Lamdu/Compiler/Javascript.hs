@@ -132,9 +132,11 @@ ops =
 
 escapeName :: String -> String
 escapeName (d:xs)
-    | Char.isDigit d = '_' : d : escapeName xs
-escapeName xs =
-    concatMap replaceSpecial xs
+    | Char.isDigit d = '_' : d : replaceSpecialChars xs
+escapeName xs = replaceSpecialChars xs
+
+replaceSpecialChars :: String -> String
+replaceSpecialChars = concatMap replaceSpecial
     where
         replaceSpecial x = Map.lookup x ops & fromMaybe [x]
 
