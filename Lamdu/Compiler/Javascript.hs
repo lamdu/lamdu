@@ -357,28 +357,28 @@ compileInject (V.Inject tag dat) =
         dat' <- compileVal dat
         inject tagStr dat' & return
 
-compileFlatCase ::
-    Monad m =>
-    Flatten.Case (JSS.Expression ()) -> JSS.Expression () ->
-    M m (JSS.Statement ())
-compileFlatCase (Flatten.Composite tags mRestHandler) scrutinee =
+compileFlatCase :: Monad m => Flatten.Case (JSS.Expression ()) -> M m (JSS.Expression ())
+compileFlatCase (Flatten.Composite tags mRestHandler) =
     do
         tagsStr <- Map.toList tags & Lens.traverse . _1 %%~ tagString
-        [ JS.casee (JS.string tagStr)
-            (optimizeStatements
-                [JS.call handler [scrutinee $. "data"] & JS.returns])
-            | (tagStr, handler) <- tagsStr
-            ] ++
-            [ JS.defaultc
-              [ case mRestHandler of
-                Nothing ->
-                    JS.throw (JS.string "Unhandled case? This is a type error!")
-                Just restHandler ->
-                    restHandler `JS.call` [scrutinee] & JS.returns
+        lam "x" $ \x ->
+            return
+            [ [ JS.casee (JS.string tagStr)
+                (optimizeStatements
+                [ handler `JS.call` [x $. "data"] & JS.returns ]
+                )
+              | (tagStr, handler) <- tagsStr
+              ] ++
+              [ JS.defaultc
+                [ case mRestHandler of
+                  Nothing ->
+                      JS.throw (JS.string "Unhandled case? This is a type error!")
+                  Just restHandler ->
+                      restHandler `JS.call` [x] & JS.returns
+                ]
               ]
+              & JS.switch (x $. "tag")
             ]
-            & JS.switch (scrutinee $. "tag")
-            & return
 
 compileGetField :: Monad m => V.GetField (Val (ValI m)) -> M m (JSS.Expression ())
 compileGetField (V.GetField record tag) =
@@ -411,9 +411,7 @@ compileRecExtend x =
 
 compileCase :: Monad m => V.Case (Val (ValI m)) -> M m (JSS.Expression ())
 compileCase x =
-    do
-        caseJs <- Flatten.case_ x & Lens.traverse compileVal
-        compileFlatCase caseJs <&> fmap (:[]) & lam "x"
+    Flatten.case_ x & Lens.traverse compileVal >>= compileFlatCase
 
 compileVal :: Monad m => Val (ValI m) -> M m (JSS.Expression ())
 compileVal (Val _ body) =
