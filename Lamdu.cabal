@@ -134,7 +134,6 @@ Executable lamdu
   Build-Depends:    GLFW-b
                   , List >= 0.5.1
                   , TraceUtils
-                  , TypeCompose
                   , aeson
                   , base >= 4.7
                   , base-compat

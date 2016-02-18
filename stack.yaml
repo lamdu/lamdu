@@ -8,7 +8,6 @@ resolver: nightly-2016-02-05
 extra-deps:
 - FTGL-2.1
 - TraceUtils-0.1.0.2
-- TypeCompose-0.9.11
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1
