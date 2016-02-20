@@ -228,9 +228,6 @@ throwStr str = [JS.throw (JS.string str)] & stmtsExpressionUndefined
 -- Transforms top level statements:
 -- "return function () { x }();"   => "x"
 -- "return function (v) { x }(e);" => "var v = e; x"
---
--- NOTE: The inner "x" *must* not flow through to the end of the block
--- or this optimization breaks
 optimizeStatements :: [JSS.Statement ()] -> [JSS.Statement ()]
 optimizeStatements x@[JSS.ReturnStmt _ (Just (JSS.CallExpr _ (JSS.FuncExpr _ Nothing params inner) args))]
     | ([], []) <- (params, args) = inner
