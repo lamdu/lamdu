@@ -225,28 +225,13 @@ stmtsExpressionUndefined stmts =
 throwStr :: String -> JSS.Expression ()
 throwStr str = [JS.throw (JS.string str)] & stmtsExpressionUndefined
 
--- Transforms
--- "return function () { x }();"   => "x"
--- "return function (v) { x }(e);" => "var v = e; x"
-optimizeStatements :: [JSS.Statement ()] -> [JSS.Statement ()]
-optimizeStatements
-    [JSS.ReturnStmt _ (Just (
-        JSS.CallExpr _ (JSS.FuncExpr _ Nothing [] inner) []))] =
-    optimizeStatements inner
-optimizeStatements
-    [JSS.ReturnStmt _ (Just (
-        JSS.CallExpr _ (JSS.FuncExpr _ Nothing [varId] inner) [varVal]))] =
-    JS.vardecls [JS.varinit varId varVal] :
-    optimizeStatements inner
-optimizeStatements x = x
-
 lam ::
     String -> (JSS.Expression () -> M m [JSS.Statement ()]) ->
     M m (JSS.Expression ())
 lam prefix stmts =
     do
         var <- getName prefix <&> JS.ident
-        stmts (JS.var var) <&> optimizeStatements <&> JS.lambda [var]
+        stmts (JS.var var) <&> JS.lambda [var]
 
 infixFunc ::
     Monad m =>
@@ -364,9 +349,7 @@ compileFlatCase (Flatten.Composite tags mRestHandler) =
         lam "x" $ \x ->
             return
             [ [ JS.casee (JS.string tagStr)
-                (optimizeStatements
                 [ handler `JS.call` [x $. "data"] & JS.returns ]
-                )
               | (tagStr, handler) <- tagsStr
               ] ++
               [ JS.defaultc
@@ -399,7 +382,7 @@ compileLambda :: Monad m => V.Lam (Val (ValI m)) -> M m (JSS.Expression ())
 compileLambda (V.Lam v res) =
     do
         (vId, res') <- compileVal res & withLocalVar v
-        JS.lambda [JS.ident vId] (optimizeStatements [JS.returns res']) & return
+        JS.lambda [JS.ident vId] [JS.returns res'] & return
 
 compileApply :: Monad m => V.Apply (Val (ValI m)) -> M m (JSS.Expression ())
 compileApply (V.Apply func arg) =
