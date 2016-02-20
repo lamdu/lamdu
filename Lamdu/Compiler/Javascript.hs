@@ -48,6 +48,11 @@ import           Prelude.Compat
 
 type T = Transaction
 
+newtype JavaScript =
+    JavaScript
+    { jsExpr :: JSS.Expression ()
+    }
+
 data Actions m = Actions
     { runTransaction :: forall a. T m a -> IO a
     , output :: String -> IO ()
@@ -178,7 +183,7 @@ withLocalVar v (M act) =
 -- | Compile a given val and all the transitively used definitions
 -- (FIXME: currently, compilation goes to stdout)
 compileValI :: MonadA m => ValI m -> M m (JSS.Expression ())
-compileValI valI = ExprIRef.readVal valI & trans >>= compileVal
+compileValI valI = ExprIRef.readVal valI & trans >>= compileValExpr
 
 identHex :: Identifier -> String
 identHex (Identifier bs) = showHexBytes bs
@@ -335,12 +340,12 @@ compileFlatRecExtend (Flatten.Composite tags mRest) =
             & return
     where
 
-compileInject :: Monad m => V.Inject (Val (ValI m)) -> M m (JSS.Expression ())
+compileInject :: Monad m => V.Inject (Val (ValI m)) -> M m JavaScript
 compileInject (V.Inject tag dat) =
     do
         tagStr <- tagString tag <&> JS.string
-        dat' <- compileVal dat
-        inject tagStr dat' & return
+        dat' <- compileValExpr dat
+        inject tagStr dat' & JavaScript & return
 
 compileFlatCase :: Monad m => Flatten.Case (JSS.Expression ()) -> M m (JSS.Expression ())
 compileFlatCase (Flatten.Composite tags mRestHandler) =
@@ -363,13 +368,13 @@ compileFlatCase (Flatten.Composite tags mRestHandler) =
               & JS.switch (x $. "tag")
             ]
 
-compileGetField :: Monad m => V.GetField (Val (ValI m)) -> M m (JSS.Expression ())
+compileGetField :: Monad m => V.GetField (Val (ValI m)) -> M m JavaScript
 compileGetField (V.GetField record tag) =
     do
         tagId <- tagIdent tag
-        compileVal record <&> (`JS.dot` tagId)
+        compileValExpr record <&> (`JS.dot` tagId) <&> JavaScript
 
-compileLeaf :: Monad m => V.Leaf -> M m (JSS.Expression ())
+compileLeaf :: Monad m => V.Leaf -> M m JavaScript
 compileLeaf leaf =
     case leaf of
     V.LHole -> throwStr "Reached hole!" & return
@@ -377,26 +382,31 @@ compileLeaf leaf =
     V.LAbsurd -> throwStr "Reached absurd!" & return
     V.LVar var -> getVar var <&> JS.var
     V.LLiteral literal -> compileLiteral literal & return
+    <&> JavaScript
 
-compileLambda :: Monad m => V.Lam (Val (ValI m)) -> M m (JSS.Expression ())
+compileLambda :: Monad m => V.Lam (Val (ValI m)) -> M m JavaScript
 compileLambda (V.Lam v res) =
     do
-        (vId, res') <- compileVal res & withLocalVar v
-        JS.lambda [JS.ident vId] [JS.returns res'] & return
+        (vId, res') <- compileValExpr res & withLocalVar v
+        JS.lambda [JS.ident vId] [JS.returns res']
+            & JavaScript & return
 
-compileApply :: Monad m => V.Apply (Val (ValI m)) -> M m (JSS.Expression ())
+compileApply :: Monad m => V.Apply (Val (ValI m)) -> M m JavaScript
 compileApply (V.Apply func arg) =
-    JS.call <$> compileVal func <*> sequence [compileVal arg]
+    JS.call <$> compileValExpr func <*> sequence [compileValExpr arg]
+    <&> JavaScript
 
-compileRecExtend :: Monad m => V.RecExtend (Val (ValI m)) -> M m (JSS.Expression ())
+compileRecExtend :: Monad m => V.RecExtend (Val (ValI m)) -> M m JavaScript
 compileRecExtend x =
-    Flatten.recExtend x & Lens.traverse compileVal >>= compileFlatRecExtend
+    Flatten.recExtend x & Lens.traverse compileValExpr >>= compileFlatRecExtend
+    <&> JavaScript
 
-compileCase :: Monad m => V.Case (Val (ValI m)) -> M m (JSS.Expression ())
+compileCase :: Monad m => V.Case (Val (ValI m)) -> M m JavaScript
 compileCase x =
-    Flatten.case_ x & Lens.traverse compileVal >>= compileFlatCase
+    Flatten.case_ x & Lens.traverse compileValExpr >>= compileFlatCase
+    <&> JavaScript
 
-compileVal :: Monad m => Val (ValI m) -> M m (JSS.Expression ())
+compileVal :: Monad m => Val (ValI m) -> M m JavaScript
 compileVal (Val _ body) =
     case body of
     V.BLeaf leaf -> compileLeaf leaf
@@ -408,3 +418,6 @@ compileVal (Val _ body) =
     V.BCase x -> compileCase x
     V.BFromNom (V.Nom _tId val) -> compileVal val
     V.BToNom (V.Nom _tId val) -> compileVal val
+
+compileValExpr :: Monad m => Val (ValI m) -> M m (JSS.Expression ())
+compileValExpr v = compileVal v <&> jsExpr
