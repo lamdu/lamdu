@@ -271,29 +271,33 @@ jsBoolToSum trueTag falseTag bool =
     (JS.cond bool (JS.string trueTag) (JS.string falseTag))
     jsUndefined
 
+unknownFfiFunc :: Definition.FFIName -> JSS.Expression ()
+unknownFfiFunc (Definition.FFIName modulePath name) =
+    JS.lambda []
+    [ "Unsupported ffi function " ++ intercalate "." (modulePath ++ [name])
+        & JS.string & JS.throw
+    ]
+
 ffiCompile :: Monad m => Definition.FFIName -> M m (JSS.Expression ())
-ffiCompile (Definition.FFIName ["Prelude"] opStr) =
+ffiCompile ffiName@(Definition.FFIName ["Prelude"] opStr) =
     do
         trueTag <- tagString Builtins.trueTag
         falseTag <- tagString Builtins.falseTag
-        let infixBool f x y = f x y & jsBoolToSum trueTag falseTag
-        let op =
-                case opStr of
-                "*" -> JS.mul
-                "+" -> JS.add
-                "-" -> JS.sub
-                "mod" -> JS.mod
-                "==" -> infixBool JS.steq
-                ">=" -> infixBool JS.ge
-                ">" -> infixBool JS.gt
-                "<=" -> infixBool JS.le
-                "<" -> infixBool JS.lt
-                _ -> "Unknown Prelude function " ++ opStr & error
-        infixFunc (\x y -> return (op x y))
-
-ffiCompile (Definition.FFIName modulePath name) =
-    intercalate "." (modulePath ++ [name]) ++ " not implemented"
-    & error
+        let infixBool f = opFunc (\x y -> f x y & jsBoolToSum trueTag falseTag)
+        case opStr of
+            "*" -> opFunc JS.mul
+            "+" -> opFunc JS.add
+            "-" -> opFunc JS.sub
+            "mod" -> opFunc JS.mod
+            "==" -> infixBool JS.steq
+            ">=" -> infixBool JS.ge
+            ">" -> infixBool JS.gt
+            "<=" -> infixBool JS.le
+            "<" -> infixBool JS.lt
+            _ -> unknownFfiFunc ffiName & return
+    where
+        opFunc op = infixFunc (\x y -> return (op x y))
+ffiCompile ffiName = unknownFfiFunc ffiName & return
 
 stmtsExpression :: [JSS.Statement ()] -> JSS.Expression () -> JSS.Expression ()
 stmtsExpression stmts expr =
