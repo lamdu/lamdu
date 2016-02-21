@@ -14,7 +14,7 @@ See the [Main Page](http://lamdu.org/)
 requires [stack](https://github.com/commercialhaskell/stack/releases), [brew](http://brew.sh/) and [git](https://git-scm.com/):
 
 ```shell
-brew install ftgl leveldb
+brew install haskell-stack ftgl leveldb
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
