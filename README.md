@@ -11,10 +11,10 @@ See the [Main Page](http://lamdu.org/)
 
 #### osx
 
-requires [stack](https://github.com/commercialhaskell/stack/releases), [brew](http://brew.sh/) and [git](https://git-scm.com/):
+requires [brew](http://brew.sh/) and [git](https://git-scm.com/):
 
 ```shell
-brew install ftgl leveldb
+brew install ftgl leveldb haskell-stack
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
