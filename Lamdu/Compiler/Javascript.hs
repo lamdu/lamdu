@@ -403,11 +403,9 @@ compileCaseOnVar x scrutineeVar =
     where
         Flatten.Composite tags mRestHandler = Flatten.case_ x
         makeCase (tagStr, handler) =
-            do
-                handler' <- compileVal handler <&> codeGenExpression
-                JS.casee (JS.string tagStr)
-                    [ handler' `JS.call` [scrutineeVar $. "data"] & JS.returns
-                    ] & return
+            compileAppliedFunc handler (scrutineeVar $. "data")
+            <&> codeGenLamStmts
+            <&> JS.casee (JS.string tagStr)
 
 compileGetField :: Monad m => V.GetField (Val (ValI m)) -> M m (JSS.Expression ())
 compileGetField (V.GetField record tag) =
@@ -434,25 +432,29 @@ compileApply :: Monad m => V.Apply (Val (ValI m)) -> M m CodeGen
 compileApply (V.Apply func arg) =
     do
         arg' <- compileVal arg <&> codeGenExpression
-        case func ^. V.body of
-            V.BCase case_ ->
-                compileCaseOnVar case_ (JS.var "x")
-                <&> (JS.vardecls [JS.varinit "x" arg'] :)
-                <&> codeGenFromLamStmts
-            V.BAbs (V.Lam v res) ->
-                do
-                    (vId, lamStmts) <- compileVal res <&> codeGenLamStmts & withLocalVar v
-                    return CodeGen
-                        { codeGenLamStmts = JS.vardecls [JS.varinit vId arg'] : lamStmts
-                        , codeGenExpression =
-                            -- Can't really optimize a redex in expr
-                            -- context, as at least 1 redex must be paid
-                            JS.lambda [vId] lamStmts `JS.call` [arg']
-                        }
-            _ ->
-                do
-                    func' <- compileVal func <&> codeGenExpression
-                    func' `JS.call` [arg'] & codeGenFromExpr & return
+        compileAppliedFunc func arg'
+
+compileAppliedFunc :: Monad m => Val (ValI m) -> JSS.Expression () -> M m CodeGen
+compileAppliedFunc func arg' =
+    case func ^. V.body of
+    V.BCase case_ ->
+        compileCaseOnVar case_ (JS.var "x")
+        <&> (JS.vardecls [JS.varinit "x" arg'] :)
+        <&> codeGenFromLamStmts
+    V.BAbs (V.Lam v res) ->
+        do
+            (vId, lamStmts) <- compileVal res <&> codeGenLamStmts & withLocalVar v
+            return CodeGen
+                { codeGenLamStmts = JS.vardecls [JS.varinit vId arg'] : lamStmts
+                , codeGenExpression =
+                    -- Can't really optimize a redex in expr
+                    -- context, as at least 1 redex must be paid
+                    JS.lambda [vId] lamStmts `JS.call` [arg']
+                }
+    _ ->
+        do
+            func' <- compileVal func <&> codeGenExpression
+            func' `JS.call` [arg'] & codeGenFromExpr & return
 
 compileVal :: Monad m => Val (ValI m) -> M m CodeGen
 compileVal (Val _ body) =
