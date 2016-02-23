@@ -6,6 +6,9 @@ module Lamdu.Compiler.Javascript
     , compile
     )-} where
 
+-- TODO: Take actions to perform transactions as parameters to
+-- decouple from the deps on the transaction/iref stuff
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
