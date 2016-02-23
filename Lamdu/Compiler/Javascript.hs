@@ -88,13 +88,16 @@ logObj =
             }|]
     & void
 
-ppOut :: Actions n -> JSS.Statement () -> M m ()
-ppOut actions = liftIO . output actions . pp
+ppOut :: JSS.Statement () -> M m ()
+ppOut stmt =
+    do
+        actions <- RWS.asks envActions & M
+        pp stmt & output actions & liftIO
 
 run :: Actions m -> M m (JSS.Expression ()) -> IO ()
 run actions act =
     runRWST
-    (act <&> wrap >>= ppOut actions & unM)
+    (act <&> wrap >>= ppOut & unM)
     (Env actions mempty) (State 0 mempty)
     <&> (^. _1)
     where
@@ -210,12 +213,11 @@ getGlobalVar var =
         newGlobal =
             do
                 varName <- getStoredName var "global_" <&> JS.ident
-                actions <- RWS.asks envActions & M
                 compiled . Lens.at var ?= varName & M
                 compileGlobal var
                     <&> JS.varinit varName
                     <&> JS.vardecls . (:[])
-                    >>= ppOut actions
+                    >>= ppOut
                 return varName
 
 getVar :: Monad m => V.Var -> M m (JSS.Id ())
