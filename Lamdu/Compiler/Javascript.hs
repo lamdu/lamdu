@@ -106,12 +106,26 @@ ppOut stmt = performAction (`output` pp stmt)
 varinit :: JSS.Id () -> JSS.Expression () -> JSS.Statement ()
 varinit ident expr = JS.vardecls [JS.varinit ident expr]
 
+scopeIdent :: Int -> JSS.Id ()
+scopeIdent depth = "scopeId_" ++ show depth & JS.ident
+
+declLog :: Int -> JSS.Statement ()
+declLog depth =
+    varinit "log" $
+    JS.lambda ["exprId", "result"]
+    [ JS.var "logResult" `JS.call`
+      [ JS.var (scopeIdent depth)
+      , JS.var "exprId"
+      , JS.var "result"
+      ] & JS.returns
+    ]
+
 isReservedName :: String -> Bool
 isReservedName name =
     name `elem`
     [ "x", "o", "repl", "logobj"
     , "Object", "console", "repl"
-    , "logNewScope", "log", "scopeCounter", "logResult"
+    , "logNewScope", "log", "scopeCounter", "logResult", "wrap"
     ]
     || any (`isPrefixOf` name)
     [ "global_"
@@ -128,20 +142,6 @@ isReservedName name =
     , "dot"
     ]
 
-scopeIdent :: Int -> JSS.Id ()
-scopeIdent depth = "scopeId_" ++ show depth & JS.ident
-
-declLog :: Int -> JSS.Statement ()
-declLog depth =
-    varinit "log" $
-    JS.lambda ["exprId", "result"]
-    [ JS.var "logResult" `JS.call`
-      [ JS.var (scopeIdent depth)
-      , JS.var "exprId"
-      , JS.var "result"
-      ] & JS.returns
-    ]
-
 topLevelDecls :: [JSS.Statement ()]
 topLevelDecls =
     ( [ [jsstmt|var o = Object.freeze;|]
@@ -151,6 +151,20 @@ topLevelDecls =
       , [jsstmt|var scopeCounter = 1;|]
       , [jsstmt|var logobj = function (obj) {
                     for (var key in obj) console.log(key + " = " + obj[key]);
+                }|]
+      , [jsstmt|var wrap = function (fast, slow) {
+                    var count = 0;
+                    var callee = function() {
+                        count += 1;
+                        if (count > 10) {
+                            callee = fast;
+                            return fast.apply(this, arguments);
+                        }
+                        return slow.apply(this, arguments);
+                    };
+                    return function () {
+                        return callee.apply(this, arguments);
+                    }
                 }|]
       ] <&> void
     ) ++
@@ -533,7 +547,7 @@ compileLambda :: Monad m => V.Lam (Val ValId) -> ValId -> M m CodeGen
 compileLambda (V.Lam v res) valId =
     Lens.view envMode & M
     >>= \case
-        FastSilent -> compileRes
+        FastSilent -> compileRes <&> mkLambda
         SlowLogging loggingInfo ->
             do
                 ((varName, lamStmts), logUsed) <-
@@ -542,12 +556,14 @@ compileLambda (V.Lam v res) valId =
                       (envMode .~ SlowLogging (loggingInfo & liScopeDepth .~ 1 + parentScopeDepth))
                     & listenNoTellLogUsed
                 let stmts = slowLoggingLambdaPrefix logUsed parentScopeDepth valId
-                return (varName, stmts ++ lamStmts)
+                fastLam <- compileRes & local (envMode .~ FastSilent) <&> mkLambda
+                JS.var "wrap" `JS.call`
+                    [fastLam, JS.lambda [varName] (stmts ++ lamStmts)] & return
             where
                 parentScopeDepth = loggingInfo ^. liScopeDepth
-    <&> makeLambda
+    <&> codeGenFromExpr
     where
-        makeLambda (vId, lamStmts) = JS.lambda [vId] lamStmts & codeGenFromExpr
+        mkLambda (varId, lamStmts) = JS.lambda [varId] lamStmts
         compileRes = compileVal res <&> codeGenLamStmts & withLocalVar v
 
 compileApply :: Monad m => V.Apply (Val ValId) -> ValId -> M m CodeGen
