@@ -5,6 +5,7 @@ module Lamdu.Compiler.Javascript
     ( Actions(..), M, run
     , CodeGen
     , compileVal
+    , ValId(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -41,18 +42,29 @@ import qualified Text.PrettyPrint.Leijen as Pretty
 
 import           Prelude.Compat
 
-data Actions m pl = Actions
+newtype ValId = ValId Int
+
+data Actions m = Actions
     { readAssocName :: Guid -> m String
-    , readGlobal :: V.Var -> m (Definition.Body (Val pl))
+    , readGlobal :: V.Var -> m (Definition.Body (Val ValId))
     , output :: String -> m ()
     }
 
 type LocalVarName = JSS.Id ()
 type GlobalVarName = JSS.Id ()
 
-data Env m pl = Env
-    { envActions :: Actions m pl
+newtype LoggingInfo = LoggingInfo
+    { _liScopeDepth :: Int
+    } deriving Show
+Lens.makeLenses ''LoggingInfo
+
+data Mode = FastSilent | SlowLogging LoggingInfo
+    deriving Show
+
+data Env m = Env
+    { envActions :: Actions m
     , _envLocals :: Map V.Var LocalVarName
+    , _envMode :: Mode
     }
 Lens.makeLenses ''Env
 
@@ -63,7 +75,17 @@ data State = State
     }
 Lens.makeLenses ''State
 
-newtype M m pl a = M { unM :: RWST (Env m pl) () State m a }
+data LogUsed
+    = LogUnused
+    | LogUsed
+    deriving (Eq, Ord, Show)
+instance Monoid LogUsed where
+    mempty = LogUnused
+    mappend LogUsed _ = LogUsed
+    mappend _ LogUsed = LogUsed
+    mappend _ _ = LogUnused
+
+newtype M m a = M { unM :: RWST (Env m) LogUsed State m a }
     deriving (Functor, Applicative, Monad)
 
 infixl 4 $.
@@ -73,10 +95,10 @@ infixl 4 $.
 pp :: JSS.Statement () -> String
 pp = (`Pretty.displayS`"") . Pretty.renderPretty 1.0 90 . JSPP.prettyPrint
 
-performAction :: Monad m => (Actions m pl -> m a) -> M m pl a
+performAction :: Monad m => (Actions m -> m a) -> M m a
 performAction f = RWS.asks (f . envActions) >>= lift & M
 
-ppOut :: Monad m => JSS.Statement () -> M m pl ()
+ppOut :: Monad m => JSS.Statement () -> M m ()
 ppOut stmt = performAction (`output` pp stmt)
 
 -- Multiple vars using a single "var" is badly formatted and generally
@@ -89,10 +111,12 @@ isReservedName name =
     name `elem`
     [ "x", "o", "repl", "logobj"
     , "Object", "console", "repl"
+    , "logNewScope", "log", "scopeCounter", "logResult"
     ]
     || any (`isPrefixOf` name)
     [ "global_"
     , "local_"
+    , "scopeId_"
     , "multiply"
     , "plus"
     , "minus"
@@ -104,15 +128,35 @@ isReservedName name =
     , "dot"
     ]
 
+scopeIdent :: Int -> JSS.Id ()
+scopeIdent depth = "scopeId_" ++ show depth & JS.ident
+
+declLog :: Int -> JSS.Statement ()
+declLog depth =
+    varinit "log" $
+    JS.lambda ["exprId", "result"]
+    [ JS.var "logResult" `JS.call`
+      [ JS.var (scopeIdent depth)
+      , JS.var "exprId"
+      , JS.var "result"
+      ] & JS.returns
+    ]
+
 topLevelDecls :: [JSS.Statement ()]
 topLevelDecls =
-    [ [jsstmt|var o = Object.freeze;|]
-    , [jsstmt|var logobj = function (obj) {
-                  for (var key in obj) console.log(key + " = " + obj[key]);
-              }|]
-    ] <&> void
+    ( [ [jsstmt|var o = Object.freeze;|]
+      , [jsstmt|var logResult = function (scope, exprId, result) { return result; };|]
+      , [jsstmt|var logNewScope = function (parentScope, childScope, lamId) {};|]
+      , [jsstmt|var scopeId_0 = 0;|]
+      , [jsstmt|var scopeCounter = 1;|]
+      , [jsstmt|var logobj = function (obj) {
+                    for (var key in obj) console.log(key + " = " + obj[key]);
+                }|]
+      ] <&> void
+    ) ++
+    [ declLog 0 ]
 
-run :: Monad m => Actions m pl -> M m pl CodeGen -> m ()
+run :: Monad m => Actions m -> M m CodeGen -> m ()
 run actions act =
     runRWST
     (traverse ppOut topLevelDecls
@@ -120,6 +164,7 @@ run actions act =
     Env
     { envActions = actions
     , _envLocals = mempty
+    , _envMode = SlowLogging LoggingInfo { _liScopeDepth = 0 }
     }
     State
     { _freshId = 0
@@ -134,7 +179,16 @@ run actions act =
             , (JS.var "console" $. "log") `JS.call` [JS.var "repl"] & JS.expr
             ]
 
-freshName :: Monad m => String -> M m pl String
+-- | Reset reader/writer components of RWS for a new global compilation context
+resetRW :: Monad m => M m a -> M m a
+resetRW (M act) =
+    act
+    & RWS.censor (const LogUnused)
+    & RWS.local (envLocals .~ mempty)
+    & RWS.local (envMode .~ SlowLogging LoggingInfo { _liScopeDepth = 0 })
+    & M
+
+freshName :: Monad m => String -> M m String
 freshName prefix =
     do
         newId <- freshId <+= 1
@@ -172,7 +226,7 @@ replaceSpecialChars = concatMap replaceSpecial
     where
         replaceSpecial x = Map.lookup x ops & fromMaybe [x]
 
-readName :: (UniqueId.ToGuid a, Monad m) => a -> M m pl String -> M m pl String
+readName :: (UniqueId.ToGuid a, Monad m) => a -> M m String -> M m String
 readName g act =
     do
         name <-
@@ -197,26 +251,29 @@ readName g act =
     where
         guid = UniqueId.toGuid g
 
-freshStoredName :: (Monad m, UniqueId.ToGuid a) => a -> String -> M m pl String
+freshStoredName :: (Monad m, UniqueId.ToGuid a) => a -> String -> M m String
 freshStoredName g prefix = readName g (freshName prefix)
 
-tagString :: Monad m => T.Tag -> M m pl String
+tagString :: Monad m => T.Tag -> M m String
 tagString tag@(T.Tag ident) = readName tag ("tag" ++ identHex ident & return)
 
-tagIdent :: Monad m => T.Tag -> M m pl (JSS.Id ())
+tagIdent :: Monad m => T.Tag -> M m (JSS.Id ())
 tagIdent = fmap JS.ident . tagString
 
-withLocalVar :: Monad m => V.Var -> M m pl a -> M m pl (LocalVarName, a)
-withLocalVar v (M act) =
+local :: Monad m => (Env m -> Env m) -> M m a -> M m a
+local f (M act) = M (RWS.local f act)
+
+withLocalVar :: Monad m => V.Var -> M m a -> M m (LocalVarName, a)
+withLocalVar v act =
     do
         varName <- freshStoredName v "local_" <&> JS.ident
-        res <- RWS.local (envLocals . Lens.at v ?~ varName) act & M
+        res <- local (envLocals . Lens.at v ?~ varName) act
         return (varName, res)
 
 identHex :: Identifier -> String
 identHex (Identifier bs) = showHexBytes bs
 
-compileGlobal :: Monad m => V.Var -> M m pl (JSS.Expression ())
+compileGlobal :: Monad m => V.Var -> M m (JSS.Expression ())
 compileGlobal globalId =
     performAction (`readGlobal` globalId) >>=
     \case
@@ -224,8 +281,9 @@ compileGlobal globalId =
         ffiCompile ffiName
     Definition.BodyExpr (Definition.Expr val _type _usedDefs) ->
         compileVal val <&> codeGenExpression
+    & resetRW
 
-getGlobalVar :: Monad m => V.Var -> M m pl GlobalVarName
+getGlobalVar :: Monad m => V.Var -> M m GlobalVarName
 getGlobalVar var =
     Lens.use (compiled . Lens.at var) & M
     >>= maybe newGlobal return
@@ -239,7 +297,7 @@ getGlobalVar var =
                     >>= ppOut
                 return varName
 
-getVar :: Monad m => V.Var -> M m pl (JSS.Id ())
+getVar :: Monad m => V.Var -> M m (JSS.Id ())
 getVar v =
     Lens.view (envLocals . Lens.at v) & M
     >>= maybe (getGlobalVar v) return
@@ -278,8 +336,8 @@ codeGenFromExpr expr =
 
 lam ::
     Monad m => String ->
-    (JSS.Expression () -> M m pl [JSS.Statement ()]) ->
-    M m pl (JSS.Expression ())
+    (JSS.Expression () -> M m [JSS.Statement ()]) ->
+    M m (JSS.Expression ())
 lam prefix code =
     do
         var <- freshName prefix <&> JS.ident
@@ -289,8 +347,8 @@ infixFunc ::
     Monad m =>
     (JSS.Expression () ->
      JSS.Expression () ->
-     M m pl (JSS.Expression ())) ->
-    M m pl (JSS.Expression ())
+     M m (JSS.Expression ())) ->
+    M m (JSS.Expression ())
 infixFunc f =
     do
         lStr <- tagIdent Builtins.infixlTag
@@ -330,7 +388,7 @@ unknownFfiFunc (Definition.FFIName modulePath name) =
         & JS.string & JS.throw
     ]
 
-ffiCompile :: Monad m => Definition.FFIName -> M m pl (JSS.Expression ())
+ffiCompile :: Monad m => Definition.FFIName -> M m (JSS.Expression ())
 ffiCompile ffiName@(Definition.FFIName ["Prelude"] opStr) =
     do
         trueTag <- tagString Builtins.trueTag
@@ -369,7 +427,7 @@ compileLiteral literal =
             ints = [JS.int (fromIntegral byte) | byte <- BS.unpack bytes]
     LitFloat num -> JS.number num & codeGenFromExpr
 
-compileRecExtend :: Monad m => V.RecExtend (Val pl) -> M m pl CodeGen
+compileRecExtend :: Monad m => V.RecExtend (Val ValId) -> M m CodeGen
 compileRecExtend x =
     do
         Flatten.Composite tags mRest <- Flatten.recExtend x & Lens.traverse compileVal
@@ -396,18 +454,18 @@ compileRecExtend x =
                         ++ [JS.var "rest" & JS.returns]
             & return
 
-compileInject :: Monad m => V.Inject (Val pl) -> M m pl CodeGen
+compileInject :: Monad m => V.Inject (Val ValId) -> M m CodeGen
 compileInject (V.Inject tag dat) =
     do
         tagStr <- tagString tag <&> JS.string
         dat' <- compileVal dat
         inject tagStr (codeGenExpression dat') & codeGenFromExpr & return
 
-compileCase :: Monad m => V.Case (Val pl) -> M m pl CodeGen
+compileCase :: Monad m => V.Case (Val ValId) -> M m CodeGen
 compileCase = fmap codeGenFromExpr . lam "x" . compileCaseOnVar
 
 compileCaseOnVar ::
-    Monad m => V.Case (Val pl) -> JSS.Expression () -> M m pl [JSS.Statement ()]
+    Monad m => V.Case (Val ValId) -> JSS.Expression () -> M m [JSS.Statement ()]
 compileCaseOnVar x scrutineeVar =
     do
         tagsStr <- Map.toList tags & Lens.traverse . _1 %%~ tagString
@@ -428,7 +486,7 @@ compileCaseOnVar x scrutineeVar =
             <&> codeGenLamStmts
             <&> JS.casee (JS.string tagStr)
 
-compileGetField :: Monad m => V.GetField (Val pl) -> M m pl CodeGen
+compileGetField :: Monad m => V.GetField (Val ValId) -> M m CodeGen
 compileGetField (V.GetField record tag) =
     do
         tagId <- tagIdent tag
@@ -436,7 +494,7 @@ compileGetField (V.GetField record tag) =
             <&> codeGenExpression <&> (`JS.dot` tagId)
             <&> codeGenFromExpr
 
-compileLeaf :: Monad m => V.Leaf -> M m pl CodeGen
+compileLeaf :: Monad m => V.Leaf -> M m CodeGen
 compileLeaf leaf =
     case leaf of
     V.LHole -> throwStr "Reached hole!" & return
@@ -445,19 +503,76 @@ compileLeaf leaf =
     V.LVar var -> getVar var <&> JS.var <&> codeGenFromExpr
     V.LLiteral literal -> compileLiteral literal & return
 
-compileLambda :: Monad m => V.Lam (Val pl) -> M m pl CodeGen
-compileLambda (V.Lam v res) =
-    do
-        (vId, lamStmts) <- compileVal res <&> codeGenLamStmts & withLocalVar v
-        JS.lambda [vId] lamStmts & codeGenFromExpr & return
+declMyScopeDepth :: Int -> JSS.Statement ()
+declMyScopeDepth depth =
+    varinit (scopeIdent depth) $
+    JS.uassign JSS.PostfixInc "scopeCounter"
 
-compileApply :: Monad m => V.Apply (Val pl) -> M m pl CodeGen
-compileApply (V.Apply func arg) =
+callLogNewScope :: Int -> Int -> ValId -> JSS.Statement ()
+callLogNewScope parentDepth myDepth (ValId lamValId) =
+    JS.var "logNewScope" `JS.call`
+    [ JS.var (scopeIdent parentDepth)
+    , JS.var (scopeIdent myDepth)
+    , JS.int lamValId
+    ] & JS.expr
+
+slowLoggingLambdaPrefix :: LogUsed -> Int -> ValId -> [JSS.Statement ()]
+slowLoggingLambdaPrefix logUsed parentScopeDepth lamValId =
+    [ declMyScopeDepth myScopeDepth
+    , callLogNewScope parentScopeDepth myScopeDepth lamValId
+    ] ++
+    [ declLog myScopeDepth | LogUsed <- [logUsed] ]
+    where
+        myScopeDepth = parentScopeDepth + 1
+
+listenNoTellLogUsed :: Monad m => M m a -> M m (a, LogUsed)
+listenNoTellLogUsed act =
+    act & unM & RWS.listen & RWS.censor (const LogUnused) & M
+
+compileLambda :: Monad m => V.Lam (Val ValId) -> ValId -> M m CodeGen
+compileLambda (V.Lam v res) valId =
+    Lens.view envMode & M
+    >>= \case
+        FastSilent -> compileRes
+        SlowLogging loggingInfo ->
+            do
+                ((varName, lamStmts), logUsed) <-
+                    compileRes
+                    & local
+                      (envMode .~ SlowLogging (loggingInfo & liScopeDepth .~ 1 + parentScopeDepth))
+                    & listenNoTellLogUsed
+                let stmts = slowLoggingLambdaPrefix logUsed parentScopeDepth valId
+                return (varName, stmts ++ lamStmts)
+            where
+                parentScopeDepth = loggingInfo ^. liScopeDepth
+    <&> makeLambda
+    where
+        makeLambda (vId, lamStmts) = JS.lambda [vId] lamStmts & codeGenFromExpr
+        compileRes = compileVal res <&> codeGenLamStmts & withLocalVar v
+
+compileApply :: Monad m => V.Apply (Val ValId) -> ValId -> M m CodeGen
+compileApply (V.Apply func arg) valId =
     do
         arg' <- compileVal arg <&> codeGenExpression
         compileAppliedFunc func arg'
+    >>= maybeLogSubexprResult valId
 
-compileAppliedFunc :: Monad m => Val pl -> JSS.Expression () -> M m pl CodeGen
+maybeLogSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
+maybeLogSubexprResult valId codeGen =
+    Lens.view envMode & M
+    >>= \case
+    FastSilent -> return codeGen
+    SlowLogging _ -> logSubexprResult valId codeGen
+
+logSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
+logSubexprResult (ValId valId) codeGen =
+    do
+        RWS.tell LogUsed & M
+        JS.var "log" `JS.call` [JS.int valId, codeGenExpression codeGen]
+            & codeGenFromExpr
+            & return
+
+compileAppliedFunc :: Monad m => Val ValId -> JSS.Expression () -> M m CodeGen
 compileAppliedFunc func arg' =
     case func ^. V.body of
     V.BCase case_ ->
@@ -479,13 +594,13 @@ compileAppliedFunc func arg' =
             func' <- compileVal func <&> codeGenExpression
             func' `JS.call` [arg'] & codeGenFromExpr & return
 
-compileVal :: Monad m => Val pl -> M m pl CodeGen
-compileVal (Val _ body) =
+compileVal :: Monad m => Val ValId -> M m CodeGen
+compileVal (Val valId body) =
     case body of
     V.BLeaf leaf                -> compileLeaf leaf
-    V.BApp x                    -> compileApply x
+    V.BApp x                    -> compileApply x valId
     V.BGetField x               -> compileGetField x
-    V.BAbs x                    -> compileLambda x
+    V.BAbs x                    -> compileLambda x valId
     V.BInject x                 -> compileInject x
     V.BRecExtend x              -> compileRecExtend x
     V.BCase x                   -> compileCase x
