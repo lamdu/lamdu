@@ -378,10 +378,10 @@ compileInject (V.Inject tag dat) =
 
 compileFlatCase :: Monad m => Flatten.Case CodeGen -> M m CodeGen
 compileFlatCase (Flatten.Composite tags mRestHandler) =
+    fmap codeGenFromExpr $ lam "x" $ \scrutineeVar ->
     do
         tagsStr <- Map.toList tags & Lens.traverse . _1 %%~ tagString
-        fmap codeGenFromExpr $ lam "x" $ \scrutineeVar ->
-            return
+        return
             [ JS.switch (scrutineeVar $. "tag") $
               [ JS.casee (JS.string tagStr)
                 [ codeGenExpression handler `JS.call` [scrutineeVar $. "data"]
