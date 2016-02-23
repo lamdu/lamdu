@@ -56,8 +56,8 @@ data Actions m = Actions
     , output :: String -> IO ()
     }
 
-type LocalVarName = String
-type GlobalVarName = String
+type LocalVarName = JSS.Id ()
+type GlobalVarName = JSS.Id ()
 
 data Env m = Env
     { envActions :: Actions m
@@ -178,7 +178,7 @@ tagIdent = fmap JS.ident . tagString
 withLocalVar :: Monad m => V.Var -> M m a -> M m (LocalVarName, a)
 withLocalVar v (M act) =
     do
-        varName <- getStoredName v "local_"
+        varName <- getStoredName v "local_" <&> JS.ident
         res <- RWS.local (envLocals . Lens.at v ?~ varName) act & M
         return (varName, res)
 
@@ -209,11 +209,11 @@ getGlobalVar var =
     where
         newGlobal =
             do
-                varName <- getStoredName var "global_"
+                varName <- getStoredName var "global_" <&> JS.ident
                 actions <- RWS.asks envActions & M
                 compiled . Lens.at var ?= varName & M
                 compileGlobal var
-                    <&> JS.varinit (JS.ident varName)
+                    <&> JS.varinit varName
                     <&> JS.vardecls . (:[])
                     >>= ppOut actions
                 return varName
@@ -222,7 +222,6 @@ getVar :: Monad m => V.Var -> M m (JSS.Id ())
 getVar v =
     Lens.view (envLocals . Lens.at v) & M
     >>= maybe (getGlobalVar v) return
-    <&> JS.ident
 
 data CodeGen = CodeGen
     { codeGenLamStmts :: [JSS.Statement ()]
@@ -430,7 +429,7 @@ compileLambda :: Monad m => V.Lam (Val (ValI m)) -> M m (JSS.Expression ())
 compileLambda (V.Lam v res) =
     do
         (vId, lamStmts) <- compileVal res <&> codeGenLamStmts & withLocalVar v
-        JS.lambda [JS.ident vId] lamStmts & return
+        JS.lambda [vId] lamStmts & return
 
 compileApply :: Monad m => V.Apply (Val (ValI m)) -> M m CodeGen
 compileApply (V.Apply func arg) =
