@@ -377,12 +377,12 @@ compileRecExtend x =
                         ++ [JS.var "rest" & freeze & JS.returns]
             & return
 
-compileInject :: Monad m => V.Inject (Val (ValI m)) -> M m (JSS.Expression ())
+compileInject :: Monad m => V.Inject (Val (ValI m)) -> M m CodeGen
 compileInject (V.Inject tag dat) =
     do
         tagStr <- tagString tag <&> JS.string
         dat' <- compileVal dat
-        inject tagStr (codeGenExpression dat') & return
+        inject tagStr (codeGenExpression dat') & codeGenFromExpr & return
 
 compileCase :: Monad m => V.Case (Val (ValI m)) -> M m CodeGen
 compileCase = fmap codeGenFromExpr . lam "x" . compileCaseOnVar
@@ -409,11 +409,13 @@ compileCaseOnVar x scrutineeVar =
             <&> codeGenLamStmts
             <&> JS.casee (JS.string tagStr)
 
-compileGetField :: Monad m => V.GetField (Val (ValI m)) -> M m (JSS.Expression ())
+compileGetField :: Monad m => V.GetField (Val (ValI m)) -> M m CodeGen
 compileGetField (V.GetField record tag) =
     do
         tagId <- tagIdent tag
-        compileVal record <&> codeGenExpression <&> (`JS.dot` tagId)
+        compileVal record
+            <&> codeGenExpression <&> (`JS.dot` tagId)
+            <&> codeGenFromExpr
 
 compileLeaf :: Monad m => V.Leaf -> M m CodeGen
 compileLeaf leaf =
@@ -424,11 +426,11 @@ compileLeaf leaf =
     V.LVar var -> getVar var <&> JS.var <&> codeGenFromExpr
     V.LLiteral literal -> compileLiteral literal & return
 
-compileLambda :: Monad m => V.Lam (Val (ValI m)) -> M m (JSS.Expression ())
+compileLambda :: Monad m => V.Lam (Val (ValI m)) -> M m CodeGen
 compileLambda (V.Lam v res) =
     do
         (vId, lamStmts) <- compileVal res <&> codeGenLamStmts & withLocalVar v
-        JS.lambda [vId] lamStmts & return
+        JS.lambda [vId] lamStmts & codeGenFromExpr & return
 
 compileApply :: Monad m => V.Apply (Val (ValI m)) -> M m CodeGen
 compileApply (V.Apply func arg) =
@@ -461,12 +463,12 @@ compileAppliedFunc func arg' =
 compileVal :: Monad m => Val (ValI m) -> M m CodeGen
 compileVal (Val _ body) =
     case body of
-    V.BLeaf leaf -> compileLeaf leaf
-    V.BApp x -> compileApply x
-    V.BGetField x -> compileGetField x <&> codeGenFromExpr
-    V.BAbs x -> compileLambda x <&> codeGenFromExpr
-    V.BInject x -> compileInject x <&> codeGenFromExpr
-    V.BRecExtend x -> compileRecExtend x
-    V.BCase x -> compileCase x
+    V.BLeaf leaf                -> compileLeaf leaf
+    V.BApp x                    -> compileApply x
+    V.BGetField x               -> compileGetField x
+    V.BAbs x                    -> compileLambda x
+    V.BInject x                 -> compileInject x
+    V.BRecExtend x              -> compileRecExtend x
+    V.BCase x                   -> compileCase x
     V.BFromNom (V.Nom _tId val) -> compileVal val
-    V.BToNom (V.Nom _tId val) -> compileVal val
+    V.BToNom (V.Nom _tId val)   -> compileVal val
