@@ -2,9 +2,9 @@
 -- | Compile Lamdu vals to Javascript
 
 module Lamdu.Compiler.Javascript
-    {-( Actions(..), M, run
-    , compile
-    )-} where
+    ( Actions(..), M, run
+    , compileValI
+    ) where
 
 -- TODO: Take actions to perform transactions as parameters to
 -- decouple from the deps on the transaction/iref stuff
