@@ -440,6 +440,16 @@ compileApply (V.Apply func arg) =
                 compileCaseOnVar case_ (JS.var "x")
                 <&> (JS.vardecls [JS.varinit "x" arg'] :)
                 <&> codeGenFromLamStmts
+            V.BAbs (V.Lam v res) ->
+                do
+                    (vId, lamStmts) <- compileVal res <&> codeGenLamStmts & withLocalVar v
+                    return CodeGen
+                        { codeGenLamStmts = JS.vardecls [JS.varinit vId arg'] : lamStmts
+                        , codeGenExpression =
+                            -- Can't really optimize a redex in expr
+                            -- context, as at least 1 redex must be paid
+                            JS.lambda [vId] lamStmts `JS.call` [arg']
+                        }
             _ ->
                 do
                     func' <- compileVal func <&> codeGenExpression
