@@ -394,12 +394,12 @@ compileCaseOnVar x scrutineeVar =
         defaultCase <-
             case mRestHandler of
             Nothing ->
-                JS.throw (JS.string "Unhandled case? This is a type error!") & return
+                return [JS.throw (JS.string "Unhandled case? This is a type error!")]
             Just restHandler ->
-                do
-                    restHandler' <- compileVal restHandler <&> codeGenExpression
-                    restHandler' `JS.call` [scrutineeVar] & JS.returns & return
-        return [JS.switch (scrutineeVar $. "tag") (cases ++ [JS.defaultc [defaultCase]])]
+                compileAppliedFunc restHandler scrutineeVar
+                <&> codeGenLamStmts
+            <&> JS.defaultc
+        return [JS.switch (scrutineeVar $. "tag") (cases ++ [defaultCase])]
     where
         Flatten.Composite tags mRestHandler = Flatten.case_ x
         makeCase (tagStr, handler) =
