@@ -389,26 +389,25 @@ compileCaseOnVar ::
     Monad m => V.Case (Val (ValI m)) -> JSS.Expression () -> M m [JSS.Statement ()]
 compileCaseOnVar x scrutineeVar =
     do
-        Flatten.Composite tags mRestHandler <- Flatten.case_ x & Lens.traverse compileVal
         tagsStr <- Map.toList tags & Lens.traverse . _1 %%~ tagString
-        return
-            [ JS.switch (scrutineeVar $. "tag") $
-              [ JS.casee (JS.string tagStr)
-                [ codeGenExpression handler `JS.call` [scrutineeVar $. "data"]
-                  & JS.returns
-                ]
-              | (tagStr, handler) <- tagsStr
-              ] ++
-              [ JS.defaultc
-                [ case mRestHandler of
-                  Nothing ->
-                      JS.throw (JS.string "Unhandled case? This is a type error!")
-                  Just restHandler ->
-                      codeGenExpression restHandler
-                      `JS.call` [scrutineeVar] & JS.returns
-                ]
-              ]
-            ]
+        cases <- traverse makeCase tagsStr
+        defaultCase <-
+            case mRestHandler of
+            Nothing ->
+                JS.throw (JS.string "Unhandled case? This is a type error!") & return
+            Just restHandler ->
+                do
+                    restHandler' <- compileVal restHandler <&> codeGenExpression
+                    restHandler' `JS.call` [scrutineeVar] & JS.returns & return
+        return [JS.switch (scrutineeVar $. "tag") (cases ++ [JS.defaultc [defaultCase]])]
+    where
+        Flatten.Composite tags mRestHandler = Flatten.case_ x
+        makeCase (tagStr, handler) =
+            do
+                handler' <- compileVal handler <&> codeGenExpression
+                JS.casee (JS.string tagStr)
+                    [ handler' `JS.call` [scrutineeVar $. "data"] & JS.returns
+                    ] & return
 
 compileGetField :: Monad m => V.GetField (Val (ValI m)) -> M m (JSS.Expression ())
 compileGetField (V.GetField record tag) =
