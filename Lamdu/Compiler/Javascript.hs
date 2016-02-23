@@ -242,6 +242,13 @@ throwStr str =
             , codeGenExpression = unitRedex stmts
             }
 
+codeGenFromLamStmts :: [JSS.Statement ()] -> CodeGen
+codeGenFromLamStmts stmts =
+    CodeGen
+    { codeGenLamStmts = stmts
+    , codeGenExpression = JS.lambda [] stmts `JS.call` []
+    }
+
 codeGenFromExpr :: JSS.Expression () -> CodeGen
 codeGenFromExpr expr =
     CodeGen
@@ -377,30 +384,32 @@ compileInject (V.Inject tag dat) =
         inject tagStr (codeGenExpression dat') & return
 
 compileCase :: Monad m => V.Case (Val (ValI m)) -> M m CodeGen
-compileCase x =
+compileCase = fmap codeGenFromExpr . lam "x" . compileCaseOnVar
+
+compileCaseOnVar ::
+    Monad m => V.Case (Val (ValI m)) -> JSS.Expression () -> M m [JSS.Statement ()]
+compileCaseOnVar x scrutineeVar =
     do
         Flatten.Composite tags mRestHandler <- Flatten.case_ x & Lens.traverse compileVal
-        fmap codeGenFromExpr $ lam "x" $ \scrutineeVar ->
-            do
-                tagsStr <- Map.toList tags & Lens.traverse . _1 %%~ tagString
-                return
-                    [ JS.switch (scrutineeVar $. "tag") $
-                      [ JS.casee (JS.string tagStr)
-                        [ codeGenExpression handler `JS.call` [scrutineeVar $. "data"]
-                          & JS.returns
-                        ]
-                      | (tagStr, handler) <- tagsStr
-                      ] ++
-                      [ JS.defaultc
-                        [ case mRestHandler of
-                          Nothing ->
-                              JS.throw (JS.string "Unhandled case? This is a type error!")
-                          Just restHandler ->
-                              codeGenExpression restHandler
-                              `JS.call` [scrutineeVar] & JS.returns
-                        ]
-                      ]
-                    ]
+        tagsStr <- Map.toList tags & Lens.traverse . _1 %%~ tagString
+        return
+            [ JS.switch (scrutineeVar $. "tag") $
+              [ JS.casee (JS.string tagStr)
+                [ codeGenExpression handler `JS.call` [scrutineeVar $. "data"]
+                  & JS.returns
+                ]
+              | (tagStr, handler) <- tagsStr
+              ] ++
+              [ JS.defaultc
+                [ case mRestHandler of
+                  Nothing ->
+                      JS.throw (JS.string "Unhandled case? This is a type error!")
+                  Just restHandler ->
+                      codeGenExpression restHandler
+                      `JS.call` [scrutineeVar] & JS.returns
+                ]
+              ]
+            ]
 
 compileGetField :: Monad m => V.GetField (Val (ValI m)) -> M m (JSS.Expression ())
 compileGetField (V.GetField record tag) =
@@ -426,9 +435,16 @@ compileLambda (V.Lam v res) =
 compileApply :: Monad m => V.Apply (Val (ValI m)) -> M m CodeGen
 compileApply (V.Apply func arg) =
     do
-        func' <- compileVal func <&> codeGenExpression
         arg' <- compileVal arg <&> codeGenExpression
-        func' `JS.call` [arg'] & codeGenFromExpr & return
+        case func ^. V.body of
+            V.BCase case_ ->
+                compileCaseOnVar case_ (JS.var "x")
+                <&> (JS.vardecls [JS.varinit "x" arg'] :)
+                <&> codeGenFromLamStmts
+            _ ->
+                do
+                    func' <- compileVal func <&> codeGenExpression
+                    func' `JS.call` [arg'] & codeGenFromExpr & return
 
 compileVal :: Monad m => Val (ValI m) -> M m CodeGen
 compileVal (Val _ body) =
