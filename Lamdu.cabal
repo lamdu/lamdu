@@ -157,6 +157,7 @@ Executable lamdu
                   , transformers
                   , utf8-string
                   , void >= 0.6.1
+                  , wl-pprint >= 1.2
   if flag(noprettyclass)
     build-depends:  pretty >=1.1.2 && <1.2
   else
