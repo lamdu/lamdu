@@ -96,26 +96,27 @@ Library
 
   Other-Modules:    Data.Store.Rev.ViewBranchInternal
 
-  Build-depends:    base >= 4
-                  , base-compat >= 0.8.2 && < 0.10
-                  , aeson >= 0.6.2.1 && < 0.11
-                  , leveldb-haskell >= 0.6
-                  , cryptohash >= 0.7
-                  , GLFW-b >= 1.4.7.3 && < 1.5
-                  , QuickCheck >= 2.8 && < 2.9
-                  , deepseq
-                  , deepseq-generics >= 0.1
+  Build-depends:    GLFW-b >= 1.4.7.3 && < 1.5
                   , OpenGL
+                  , QuickCheck >= 2.8 && < 2.9
                   , StateVar
                   , TraceUtils
-                  , hashable
-                  , either
-                  , lens >= 4.1
+                  , aeson >= 0.6.2.1 && < 0.11
+                  , base >= 4
+                  , base-compat >= 0.8.2 && < 0.10
                   , binary >= 0.7
                   , bytestring
                   , containers >= 0.4
+                  , cryptohash >= 0.7
+                  , deepseq
+                  , deepseq-generics >= 0.1
                   , directory >= 1.0.1.1
+                  , either
                   , filepath >= 1.1
+                  , graphics-drawingcombinators >= 1.5.1.2
+                  , hashable
+                  , lens >= 4.1
+                  , leveldb-haskell >= 0.6
                   , random >= 1.0.0
                   , split >= 0.1
                   , stm
@@ -123,7 +124,6 @@ Library
                   , time >= 1.2
                   , transformers >= 0.2.1
                   , utf8-string >= 0.3
-                  , graphics-drawingcombinators >= 1.5.1.2
   ghc-options:         -O2 -Wall -threaded
   -- ghc-options is prepended to ghc-prof-options
   ghc-prof-options:    -auto-all -caf-all -rtsopts
@@ -132,6 +132,7 @@ Executable lamdu
   hs-Source-Dirs: .
                   , submodules/AlgoW
   Build-Depends:    GLFW-b
+                  , Lamdu
                   , List >= 0.5.1
                   , TraceUtils
                   , aeson
@@ -140,6 +141,7 @@ Executable lamdu
                   , binary
                   , bytestring
                   , containers
+                  , data-default >= 0.5
                   , deepseq
                   , deepseq-generics >= 0.1
                   , directory
@@ -147,7 +149,7 @@ Executable lamdu
                   , filepath
                   , graphics-drawingcombinators >= 1.5.1.2
                   , hashable
-                  , Lamdu
+                  , language-ecmascript >= 0.17
                   , lens
                   , random
                   , split
@@ -155,8 +157,6 @@ Executable lamdu
                   , transformers
                   , utf8-string
                   , void >= 0.6.1
-                  , language-ecmascript >= 0.17
-                  , data-default >= 0.5
   if flag(noprettyclass)
     build-depends:  pretty >=1.1.2 && <1.2
   else
