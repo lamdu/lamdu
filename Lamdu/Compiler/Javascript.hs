@@ -9,8 +9,6 @@ module Lamdu.Compiler.Javascript
 -- TODO: Take actions to perform transactions as parameters to
 -- decouple from the deps on the transaction/iref stuff
 
--- TODO: Escape any guest var names that shadow special var names
-
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -29,6 +27,7 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Store.Guid (Guid)
+import qualified Data.Store.Guid as Guid
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -108,11 +107,14 @@ run actions act =
     }
     State
     { _freshId = 0
-    , _names = mempty
+    , _names = map (`Map.singleton` fakeGuidMap) ["o", "repl", "logobj"] & mconcat
     , _compiled = mempty
     }
     <&> (^. _1)
     where
+        -- We use a fake guid in the Guid->String map just to mark the
+        -- built-in names is considered a collision
+        fakeGuidMap = Map.singleton (Guid.make "") ""
         prelude =
             JS.vardecls
             [ JS.varinit "o" (JS.var "Object" $. "freeze")
