@@ -18,12 +18,11 @@ import qualified Data.ByteString as BS
 import           Data.ByteString.Hex (showHexBytes)
 import qualified Data.Char as Char
 import           Data.Default () -- instances
-import           Data.List (intercalate)
+import           Data.List (intercalate, isPrefixOf)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Store.Guid (Guid)
-import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Builtins.Literal (Lit(..))
 import qualified Lamdu.Builtins.Literal as BuiltinLiteral
@@ -92,6 +91,26 @@ ppOut stmt = performAction (`output` pp stmt)
 varinit :: JSS.Id () -> JSS.Expression () -> JSS.Statement ()
 varinit ident expr = JS.vardecls [JS.varinit ident expr]
 
+isReservedName :: String -> Bool
+isReservedName name =
+    name `elem`
+    [ "x", "o", "repl", "logobj"
+    , "Object", "console", "repl"
+    ]
+    || any (`isPrefixOf` name)
+    [ "global_"
+    , "local_"
+    , "multiply"
+    , "plus"
+    , "minus"
+    , "equals"
+    , "greater"
+    , "lesser"
+    , "percent"
+    , "pipe"
+    , "dot"
+    ]
+
 run :: Monad m => Actions m pl -> M m pl CodeGen -> m ()
 run actions act =
     runRWST
@@ -102,14 +121,11 @@ run actions act =
     }
     State
     { _freshId = 0
-    , _names = map (`Map.singleton` fakeGuidMap) ["o", "repl", "logobj"] & mconcat
+    , _names = mempty
     , _compiled = mempty
     }
     <&> (^. _1)
     where
-        -- We use a fake guid in the Guid->String map just to mark the
-        -- built-in names is considered a collision
-        fakeGuidMap = Map.singleton (Guid.make "") ""
         prelude =
             JS.vardecls
             [ JS.varinit "o" (JS.var "Object" $. "freeze")
@@ -144,6 +160,11 @@ ops =
     where
         (==>) = Map.singleton
 
+avoidReservedNames :: String -> String
+avoidReservedNames name
+    | isReservedName name = "__" ++ name
+    | otherwise = name
+
 escapeName :: String -> String
 escapeName (d:xs)
     | Char.isDigit d = '_' : d : replaceSpecialChars xs
@@ -159,6 +180,7 @@ readName g act =
     do
         name <-
             performAction (`readAssocName` guid)
+            <&> avoidReservedNames
             <&> escapeName
             >>= \case
                 "" -> act
