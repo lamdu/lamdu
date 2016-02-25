@@ -36,7 +36,7 @@ import qualified Lamdu.Expr.Val as V
 import qualified Language.ECMAScript3.PrettyPrint as JSPP
 import qualified Language.ECMAScript3.Syntax as JSS
 import qualified Language.ECMAScript3.Syntax.CodeGen as JS
-import           Language.ECMAScript3.Syntax.QuasiQuote (jsexpr)
+import           Language.ECMAScript3.Syntax.QuasiQuote (jsstmt)
 import qualified Text.PrettyPrint.Leijen as Pretty
 
 import           Prelude.Compat
@@ -73,13 +73,6 @@ infixl 4 $.
 pp :: JSS.Statement () -> String
 pp = (`Pretty.displayS`"") . Pretty.renderPretty 1.0 90 . JSPP.prettyPrint
 
-logObj :: JSS.Expression ()
-logObj =
-    [jsexpr|function (obj) {
-                for (var key in obj) console.log(key + " = " + obj[key]);
-            }|]
-    & void
-
 performAction :: Monad m => (Actions m pl -> m a) -> M m pl a
 performAction f = RWS.asks (f . envActions) >>= lift & M
 
@@ -111,10 +104,19 @@ isReservedName name =
     , "dot"
     ]
 
+topLevelDecls :: [JSS.Statement ()]
+topLevelDecls =
+    [ [jsstmt|var o = Object.freeze;|]
+    , [jsstmt|var logobj = function (obj) {
+                  for (var key in obj) console.log(key + " = " + obj[key]);
+              }|]
+    ] <&> void
+
 run :: Monad m => Actions m pl -> M m pl CodeGen -> m ()
 run actions act =
     runRWST
-    (prelude >> act <&> wrap >>= mapM_ ppOut & unM)
+    (traverse ppOut topLevelDecls
+     >> act <&> wrap >>= mapM_ ppOut & unM)
     Env
     { envActions = actions
     , _envLocals = mempty
@@ -126,13 +128,8 @@ run actions act =
     }
     <&> (^. _1)
     where
-        prelude =
-            JS.vardecls
-            [ JS.varinit "o" (JS.var "Object" $. "freeze")
-            ] & ppOut
         wrap replExpr =
             [ varinit "repl" $ codeGenExpression replExpr
-            , varinit "logobj" logObj
             , JS.var "logobj" `JS.call` [JS.var "repl"] & JS.expr
             , (JS.var "console" $. "log") `JS.call` [JS.var "repl"] & JS.expr
             ]
