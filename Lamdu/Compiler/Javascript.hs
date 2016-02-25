@@ -125,8 +125,8 @@ trans act =
         runTrans act & lift
     & M
 
-getName :: String -> M m String
-getName prefix =
+freshName :: String -> M m String
+freshName prefix =
     do
         newId <- freshId <+= 1
         prefix ++ show newId & return
@@ -170,8 +170,8 @@ readName g act =
         guid = UniqueId.toGuid g
         hexDisamb = Guid.bs guid & showHexBytes & take 4
 
-getStoredName :: (Monad m, UniqueId.ToGuid a) => a -> String -> M m String
-getStoredName g prefix = readName g (getName prefix)
+freshStoredName :: (Monad m, UniqueId.ToGuid a) => a -> String -> M m String
+freshStoredName g prefix = readName g (freshName prefix)
 
 tagString :: Monad m => T.Tag -> M m String
 tagString tag@(T.Tag ident) = readName tag ("tag" ++ identHex ident & return)
@@ -182,7 +182,7 @@ tagIdent = fmap JS.ident . tagString
 withLocalVar :: Monad m => V.Var -> M m a -> M m (LocalVarName, a)
 withLocalVar v (M act) =
     do
-        varName <- getStoredName v "local_" <&> JS.ident
+        varName <- freshStoredName v "local_" <&> JS.ident
         res <- RWS.local (envLocals . Lens.at v ?~ varName) act & M
         return (varName, res)
 
@@ -213,7 +213,7 @@ getGlobalVar var =
     where
         newGlobal =
             do
-                varName <- getStoredName var "global_" <&> JS.ident
+                varName <- freshStoredName var "global_" <&> JS.ident
                 compiled . Lens.at var ?= varName & M
                 compileGlobal var
                     <&> JS.varinit varName
@@ -261,7 +261,7 @@ codeGenFromExpr expr =
 lam :: String -> (JSS.Expression () -> M m [JSS.Statement ()]) -> M m (JSS.Expression ())
 lam prefix code =
     do
-        var <- getName prefix <&> JS.ident
+        var <- freshName prefix <&> JS.ident
         code (JS.var var) <&> JS.lambda [var]
 
 infixFunc ::
