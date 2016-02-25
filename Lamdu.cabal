@@ -310,6 +310,7 @@ Executable lamdu
                   , Lamdu.Sugar.Types
                   , Lamdu.VersionControl
                   , Lamdu.VersionControl.Actions
+                  , Paths_Lamdu
                   , Text.PrettyPrint.HughesPJClass.Compat
 
   ghc-options:         -O2 -Wall -threaded
