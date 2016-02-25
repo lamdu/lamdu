@@ -99,7 +99,14 @@ run :: Actions m -> M m (JSS.Expression ()) -> IO ()
 run actions act =
     runRWST
     (act <&> wrap >>= ppOut & unM)
-    (Env actions mempty) (State 0 mempty)
+    Env
+    { envActions = actions
+    , _envLocals = mempty
+    }
+    State
+    { _freshId = 0
+    , _compiled = mempty
+    }
     <&> (^. _1)
     where
         wrap replExpr =
