@@ -99,7 +99,7 @@ ppOut stmt =
 run :: Actions m -> M m (JSS.Expression ()) -> IO ()
 run actions act =
     runRWST
-    (act <&> wrap >>= ppOut & unM)
+    (act <&> wrap >>= mapM_ ppOut & unM)
     Env
     { envActions = actions
     , _envLocals = mempty
@@ -112,7 +112,6 @@ run actions act =
     <&> (^. _1)
     where
         wrap replExpr =
-            JS.block
             [ [ JS.varinit "repl" replExpr
               , JS.varinit "logobj" logObj
               ] & JS.vardecls
