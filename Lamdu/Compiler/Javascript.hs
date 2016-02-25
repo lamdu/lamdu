@@ -12,8 +12,8 @@ import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (void)
 import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.RWS (RWST(..))
-import qualified Control.Monad.Trans.RWS as RWS
+import           Control.Monad.Trans.RWS.Strict (RWST(..))
+import qualified Control.Monad.Trans.RWS.Strict as RWS
 import qualified Data.ByteString as BS
 import           Data.ByteString.Hex (showHexBytes)
 import qualified Data.Char as Char
