@@ -9,7 +9,6 @@ module Lamdu.Compiler.Flatten
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.Map (Map)
-import           Lamdu.Expr.IRef (ValI(..))
 import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
@@ -25,7 +24,7 @@ Lens.makeLenses ''Composite
 type Case = Composite T.SumTag
 type Record = Composite T.ProductTag
 
-case_ :: V.Case (Val (ValI m)) -> Case (Val (ValI m))
+case_ :: V.Case (Val pl) -> Case (Val pl)
 case_ (V.Case tag handler r) =
     caseVal r
     & tags . Lens.at tag ?~ handler
@@ -36,7 +35,7 @@ case_ (V.Case tag handler r) =
             V.BCase x -> case_ x
             _ -> Composite mempty (Just val)
 
-recExtend :: V.RecExtend (Val (ValI m)) -> Record (Val (ValI m))
+recExtend :: V.RecExtend (Val pl) -> Record (Val pl)
 recExtend (V.RecExtend tag field r) =
     recExtendVal r
     & tags . Lens.at tag ?~ field
