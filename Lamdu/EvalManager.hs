@@ -31,6 +31,7 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins as Builtins
 import qualified Lamdu.Compiler.Javascript as Compiler
+import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (DbM, ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.Definition as Def
@@ -156,13 +157,24 @@ compileRepl :: (forall a. T DbM a -> IO a) -> IO ()
 compileRepl runTrans =
     IO.withFile "output.js" IO.WriteMode $
     \outFile ->
-    let actions = Compiler.Actions
-            { Compiler.runTransaction = runViewTransaction
-            , Compiler.output = IO.hPutStrLn outFile
-            }
-    in  Transaction.readIRef replIRef
-        & runViewTransaction
-        >>= Compiler.run actions . Compiler.compileValI
+    do
+        let actions =
+                Compiler.Actions
+                { Compiler.readAssocName =
+                  runViewTransaction . Transaction.getP . Anchors.assocNameRef
+                , Compiler.readGlobal =
+                  \globalId ->
+                  do
+                      defBody <- ExprIRef.defI globalId & Transaction.readIRef
+                      traverse ExprIRef.readVal defBody
+                  & runViewTransaction
+                , Compiler.output = IO.hPutStrLn outFile
+                }
+        replVal <-
+            Transaction.readIRef replIRef
+            >>= ExprIRef.readVal
+            & runViewTransaction
+        Compiler.compileVal replVal & Compiler.run actions
     where
         runViewTransaction :: T ViewM a -> IO a
         runViewTransaction = runTrans . VersionControl.runAction
