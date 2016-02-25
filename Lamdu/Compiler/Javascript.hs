@@ -9,6 +9,8 @@ module Lamdu.Compiler.Javascript
 -- TODO: Take actions to perform transactions as parameters to
 -- decouple from the deps on the transaction/iref stuff
 
+-- TODO: Escape any guest var names that shadow special var names
+
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
@@ -99,7 +101,7 @@ ppOut stmt =
 run :: Actions m -> M m (JSS.Expression ()) -> IO ()
 run actions act =
     runRWST
-    (act <&> wrap >>= mapM_ ppOut & unM)
+    (prelude >> act <&> wrap >>= mapM_ ppOut & unM)
     Env
     { envActions = actions
     , _envLocals = mempty
@@ -111,6 +113,10 @@ run actions act =
     }
     <&> (^. _1)
     where
+        prelude =
+            JS.vardecls
+            [ JS.varinit "o" (JS.var "Object" $. "freeze")
+            ] & ppOut
         wrap replExpr =
             [ [ JS.varinit "repl" replExpr
               , JS.varinit "logobj" logObj
@@ -295,7 +301,7 @@ object :: [(JSS.Prop (), JSS.Expression ())] -> JSS.Expression ()
 object =
     freeze . JS.object
     where
-        freeze expr = JS.call (JS.var "Object" $. "freeze") [expr]
+        freeze expr = JS.var "o" `JS.call` [expr]
 
 nullaryInject :: JSS.Expression () -> JSS.Expression ()
 nullaryInject tagStr = object [(JS.propId "tag", tagStr)]
