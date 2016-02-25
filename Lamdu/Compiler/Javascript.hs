@@ -3,6 +3,7 @@
 
 module Lamdu.Compiler.Javascript
     ( Actions(..), M, run
+    , CodeGen
     , compileValI
     ) where
 
@@ -97,7 +98,7 @@ ppOut stmt =
         actions <- RWS.asks envActions & M
         pp stmt & output actions & liftIO
 
-run :: Actions m -> M m (JSS.Expression ()) -> IO ()
+run :: Actions m -> M m CodeGen -> IO ()
 run actions act =
     runRWST
     (prelude >> act <&> wrap >>= mapM_ ppOut & unM)
@@ -120,7 +121,7 @@ run actions act =
             [ JS.varinit "o" (JS.var "Object" $. "freeze")
             ] & ppOut
         wrap replExpr =
-            [ [ JS.varinit "repl" replExpr
+            [ [ JS.varinit "repl" $ codeGenExpression replExpr
               , JS.varinit "logobj" logObj
               ] & JS.vardecls
             , JS.var "logobj" `JS.call` [JS.var "repl"] & JS.expr
@@ -208,8 +209,8 @@ withLocalVar v (M act) =
 
 -- | Compile a given val and all the transitively used definitions
 -- (FIXME: currently, compilation goes to stdout)
-compileValI :: MonadA m => ValI m -> M m (JSS.Expression ())
-compileValI valI = ExprIRef.readVal valI & trans >>= compileVal <&> codeGenExpression
+compileValI :: MonadA m => ValI m -> M m CodeGen
+compileValI valI = ExprIRef.readVal valI & trans >>= compileVal
 
 identHex :: Identifier -> String
 identHex (Identifier bs) = showHexBytes bs
@@ -222,7 +223,7 @@ compileGlobal v =
             Definition.BodyBuiltin (Definition.Builtin ffiName _scheme) ->
                 ffiCompile ffiName
             Definition.BodyExpr (Definition.Expr valI _type _usedDefs) ->
-                compileValI valI
+                compileValI valI <&> codeGenExpression
     where
         defI = ExprIRef.defI v
 
