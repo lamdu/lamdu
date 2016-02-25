@@ -87,6 +87,11 @@ performAction f = RWS.asks (f . envActions) >>= lift & M
 ppOut :: Monad m => JSS.Statement () -> M m pl ()
 ppOut stmt = performAction (`output` pp stmt)
 
+-- Multiple vars using a single "var" is badly formatted and generally
+-- less readable than a vardecl for each:
+varinit :: JSS.Id () -> JSS.Expression () -> JSS.Statement ()
+varinit ident expr = JS.vardecls [JS.varinit ident expr]
+
 run :: Monad m => Actions m pl -> M m pl CodeGen -> m ()
 run actions act =
     runRWST
@@ -110,9 +115,8 @@ run actions act =
             [ JS.varinit "o" (JS.var "Object" $. "freeze")
             ] & ppOut
         wrap replExpr =
-            [ [ JS.varinit "repl" $ codeGenExpression replExpr
-              , JS.varinit "logobj" logObj
-              ] & JS.vardecls
+            [ varinit "repl" $ codeGenExpression replExpr
+            , varinit "logobj" logObj
             , JS.var "logobj" `JS.call` [JS.var "repl"] & JS.expr
             , (JS.var "console" $. "log") `JS.call` [JS.var "repl"] & JS.expr
             ]
@@ -212,8 +216,7 @@ getGlobalVar var =
                 varName <- freshStoredName var "global_" <&> JS.ident
                 compiled . Lens.at var ?= varName & M
                 compileGlobal var
-                    <&> JS.varinit varName
-                    <&> JS.vardecls . (:[])
+                    <&> varinit varName
                     >>= ppOut
                 return varName
 
@@ -339,10 +342,8 @@ compileLiteral literal =
         }
         where
             stmts =
-                [ JS.vardecls
-                  [ JS.varinit "arr"
-                    (JS.new (JS.var "Uint8Array") [JS.int (BS.length bytes)])
-                  ]
+                [ varinit "arr" $
+                  JS.new (JS.var "Uint8Array") [JS.int (BS.length bytes)]
                 , JS.call (JS.var "arr" $. "set") [JS.array ints] & JS.expr
                 , JS.var "arr" & JS.returns
                 ]
@@ -367,11 +368,8 @@ compileRecExtend x =
                 }
                 where
                     stmts =
-                        JS.vardecls
-                        [ JS.varinit "rest"
-                          ((JS.var "Object" $. "create")
-                           `JS.call` [codeGenExpression rest])
-                        ]
+                        varinit "rest"
+                        ((JS.var "Object" $. "create") `JS.call` [codeGenExpression rest])
                         : ( strTags
                             <&> _1 %~ JS.ldot (JS.var "rest")
                             <&> uncurry JS.assign
@@ -445,13 +443,13 @@ compileAppliedFunc func arg' =
     case func ^. V.body of
     V.BCase case_ ->
         compileCaseOnVar case_ (JS.var "x")
-        <&> (JS.vardecls [JS.varinit "x" arg'] :)
+        <&> (varinit "x" arg' :)
         <&> codeGenFromLamStmts
     V.BAbs (V.Lam v res) ->
         do
             (vId, lamStmts) <- compileVal res <&> codeGenLamStmts & withLocalVar v
             return CodeGen
-                { codeGenLamStmts = JS.vardecls [JS.varinit vId arg'] : lamStmts
+                { codeGenLamStmts = varinit vId arg' : lamStmts
                 , codeGenExpression =
                     -- Can't really optimize a redex in expr
                     -- context, as at least 1 redex must be paid
