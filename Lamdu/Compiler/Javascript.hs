@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, GeneralizedNewtypeDeriving, TemplateHaskell, QuasiQuotes, OverloadedStrings, PolymorphicComponents #-}
+{-# LANGUAGE NoImplicitPrelude, LambdaCase, GeneralizedNewtypeDeriving, TemplateHaskell, QuasiQuotes, OverloadedStrings, PolymorphicComponents #-}
 -- | Compile Lamdu vals to Javascript
 
 module Lamdu.Compiler.Javascript
@@ -158,30 +158,23 @@ replaceSpecialChars = concatMap replaceSpecial
     where
         replaceSpecial x = Map.lookup x ops & fromMaybe [x]
 
-readName :: (UniqueId.ToGuid a, Monad m) => a -> M m String
-readName g =
+readName :: (UniqueId.ToGuid a, Monad m) => a -> M m String -> M m String
+readName g act =
     Anchors.assocNameRef g & Transaction.getP & trans
     <&> escapeName
     <&> (++ "_" ++ hexDisamb)
+    >>= \case
+        "" -> act
+        name -> return name
     where
         guid = UniqueId.toGuid g
         hexDisamb = Guid.bs guid & showHexBytes & take 4
 
 getStoredName :: (Monad m, UniqueId.ToGuid a) => a -> String -> M m String
-getStoredName g prefix =
-    do
-        name <- readName g
-        case name of
-            "" -> getName prefix
-            _ -> return name
+getStoredName g prefix = readName g (getName prefix)
 
 tagString :: Monad m => T.Tag -> M m String
-tagString tag@(T.Tag ident) =
-    do
-        name <- readName tag
-        case name of
-            "" -> "tag" ++ identHex ident & return
-            _ -> return name
+tagString tag@(T.Tag ident) = readName tag ("tag" ++ identHex ident & return)
 
 tagIdent :: Monad m => T.Tag -> M m (JSS.Id ())
 tagIdent = fmap JS.ident . tagString
