@@ -3,6 +3,9 @@ packages:
 - location:
     git: https://github.com/da-x/graphics-drawingcombinators
     commit: 2d8f9efb610dcf69c28ae9fbb8799565cef10612
+- location:
+    git: https://github.com/Peaker/language-ecmascript
+    commit: master
 
 resolver: nightly-2016-02-05
 extra-deps:
