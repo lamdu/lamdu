@@ -26,7 +26,7 @@ import           Data.List (intercalate)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
-import qualified Data.Store.Guid as Guid
+import           Data.Store.Guid (Guid)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -68,6 +68,7 @@ Lens.makeLenses ''Env
 
 data State = State
     { _freshId :: Int
+    , _names :: Map String (Map Guid String)
     , _compiled :: Map V.Var GlobalVarName
     }
 Lens.makeLenses ''State
@@ -105,6 +106,7 @@ run actions act =
     }
     State
     { _freshId = 0
+    , _names = mempty
     , _compiled = mempty
     }
     <&> (^. _1)
@@ -160,15 +162,26 @@ replaceSpecialChars = concatMap replaceSpecial
 
 readName :: (UniqueId.ToGuid a, Monad m) => a -> M m String -> M m String
 readName g act =
-    Anchors.assocNameRef g & Transaction.getP & trans
-    <&> escapeName
-    <&> (++ "_" ++ hexDisamb)
-    >>= \case
-        "" -> act
-        name -> return name
+    do
+        name <- Anchors.assocNameRef g & Transaction.getP & trans
+            <&> escapeName
+            >>= \case
+                "" -> act
+                name -> return name
+        names . Lens.at name %%= \case
+            Nothing -> (name, Just (Map.singleton guid name))
+            Just guidMap ->
+                guidMap
+                & Lens.at guid %%~
+                \case
+                Nothing -> (newName, Just newName)
+                    where
+                        newName = name ++ show (Map.size guidMap)
+                Just oldName -> (oldName, Just oldName)
+                <&> Just
+            & M
     where
         guid = UniqueId.toGuid g
-        hexDisamb = Guid.bs guid & showHexBytes & take 4
 
 freshStoredName :: (Monad m, UniqueId.ToGuid a) => a -> String -> M m String
 freshStoredName g prefix = readName g (freshName prefix)
