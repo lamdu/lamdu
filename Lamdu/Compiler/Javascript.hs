@@ -292,8 +292,8 @@ infixFunc f =
             <&> JS.returns
             <&> (: [])
 
-jsUndefined :: JSS.Expression ()
-jsUndefined = JS.var "undefined"
+nullaryInject :: JSS.Expression () -> JSS.Expression ()
+nullaryInject tagStr = JS.object [(JS.propId "tag", tagStr)]
 
 inject :: JSS.Expression () -> JSS.Expression () -> JSS.Expression ()
 inject tagStr dat' =
@@ -304,11 +304,10 @@ inject tagStr dat' =
 
 jsBoolToSum :: String -> String -> JSS.Expression () -> JSS.Expression ()
 jsBoolToSum trueTag falseTag bool =
-    inject
+    nullaryInject
     -- TODO: Use the true tag ids for False/True, not assume
     -- they're named False/True
     (JS.cond bool (JS.string trueTag) (JS.string falseTag))
-    jsUndefined
 
 unknownFfiFunc :: Definition.FFIName -> JSS.Expression ()
 unknownFfiFunc (Definition.FFIName modulePath name) =
