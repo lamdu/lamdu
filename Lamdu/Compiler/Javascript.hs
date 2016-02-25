@@ -292,12 +292,18 @@ infixFunc f =
             <&> JS.returns
             <&> (: [])
 
+object :: [(JSS.Prop (), JSS.Expression ())] -> JSS.Expression ()
+object =
+    freeze . JS.object
+    where
+        freeze expr = JS.call (JS.var "Object" $. "freeze") [expr]
+
 nullaryInject :: JSS.Expression () -> JSS.Expression ()
-nullaryInject tagStr = JS.object [(JS.propId "tag", tagStr)]
+nullaryInject tagStr = object [(JS.propId "tag", tagStr)]
 
 inject :: JSS.Expression () -> JSS.Expression () -> JSS.Expression ()
 inject tagStr dat' =
-    JS.object
+    object
     [ (JS.propId "tag", tagStr)
     , (JS.propId "data", dat')
     ]
@@ -357,9 +363,6 @@ compileLiteral literal =
             ints = [JS.int (fromIntegral byte) | byte <- BS.unpack bytes]
     LitFloat num -> JS.number num & codeGenFromExpr
 
-freeze :: JSS.Expression () -> JSS.Expression ()
-freeze expr = JS.call (JS.var "Object" $. "freeze") [expr]
-
 compileRecExtend :: Monad m => V.RecExtend (Val (ValI m)) -> M m CodeGen
 compileRecExtend x =
     do
@@ -368,9 +371,9 @@ compileRecExtend x =
             Map.toList tags
             <&> _2 %~ codeGenExpression
             & Lens.traversed . _1 %%~ tagString
-        let obj = strTags <&> _1 %~ JS.propId . JS.ident & JS.object
+        let obj = strTags <&> _1 %~ JS.propId . JS.ident & object
         case mRest of
-            Nothing -> freeze obj & codeGenFromExpr
+            Nothing -> codeGenFromExpr obj
             Just rest ->
                 CodeGen
                 { codeGenLamStmts = stmts
@@ -387,7 +390,7 @@ compileRecExtend x =
                             <&> _1 %~ JS.ldot (JS.var "rest")
                             <&> uncurry JS.assign
                             <&> JS.expr )
-                        ++ [JS.var "rest" & freeze & JS.returns]
+                        ++ [JS.var "rest" & JS.returns]
             & return
 
 compileInject :: Monad m => V.Inject (Val (ValI m)) -> M m CodeGen
@@ -434,7 +437,7 @@ compileLeaf :: Monad m => V.Leaf -> M m CodeGen
 compileLeaf leaf =
     case leaf of
     V.LHole -> throwStr "Reached hole!" & return
-    V.LRecEmpty -> JS.object [] & freeze & codeGenFromExpr & return
+    V.LRecEmpty -> object [] & codeGenFromExpr & return
     V.LAbsurd -> throwStr "Reached absurd!" & return
     V.LVar var -> getVar var <&> JS.var <&> codeGenFromExpr
     V.LLiteral literal -> compileLiteral literal & return
