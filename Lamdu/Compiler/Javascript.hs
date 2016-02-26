@@ -149,7 +149,7 @@ topLevelDecls =
                     console.log("result", scope, exprId, result);
                     return result;
                 };|]
-      , [jsstmt|var logNewScope = function (parentScope, childScope, lamId) {
+      , [jsstmt|var logNewScope = function (parentScope, childScope, lamId, argVal) {
                     console.log("scope", parentScope, childScope, lamId);
                 };|]
       , [jsstmt|var scopeId_0 = 0;|]
@@ -527,18 +527,20 @@ declMyScopeDepth depth =
     varinit (scopeIdent depth) $
     JS.uassign JSS.PostfixInc "scopeCounter"
 
-callLogNewScope :: Int -> Int -> ValId -> JSS.Statement ()
-callLogNewScope parentDepth myDepth (ValId lamValId) =
+callLogNewScope :: Int -> Int -> ValId -> JSS.Expression () -> JSS.Statement ()
+callLogNewScope parentDepth myDepth (ValId lamValId) argVal =
     JS.var "logNewScope" `JS.call`
     [ JS.var (scopeIdent parentDepth)
     , JS.var (scopeIdent myDepth)
     , JS.int lamValId
+    , argVal
     ] & JS.expr
 
-slowLoggingLambdaPrefix :: LogUsed -> Int -> ValId -> [JSS.Statement ()]
-slowLoggingLambdaPrefix logUsed parentScopeDepth lamValId =
+slowLoggingLambdaPrefix ::
+    LogUsed -> Int -> ValId -> JSS.Expression () -> [JSS.Statement ()]
+slowLoggingLambdaPrefix logUsed parentScopeDepth lamValId argVal =
     [ declMyScopeDepth myScopeDepth
-    , callLogNewScope parentScopeDepth myScopeDepth lamValId
+    , callLogNewScope parentScopeDepth myScopeDepth lamValId argVal
     ] ++
     [ declLog myScopeDepth | LogUsed <- [logUsed] ]
     where
@@ -560,7 +562,9 @@ compileLambda (V.Lam v res) valId =
                     & local
                       (envMode .~ SlowLogging (loggingInfo & liScopeDepth .~ 1 + parentScopeDepth))
                     & listenNoTellLogUsed
-                let stmts = slowLoggingLambdaPrefix logUsed parentScopeDepth valId
+                let stmts =
+                        slowLoggingLambdaPrefix logUsed parentScopeDepth valId
+                        (JS.var varName)
                 fastLam <- compileRes & local (envMode .~ FastSilent) <&> mkLambda
                 JS.var "wrap" `JS.call`
                     [fastLam, JS.lambda [varName] (stmts ++ lamStmts)] & return
