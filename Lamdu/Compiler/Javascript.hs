@@ -175,6 +175,9 @@ topLevelDecls =
     ) ++
     [ declLog 0 ]
 
+loggingEnabled :: Mode
+loggingEnabled = SlowLogging LoggingInfo { _liScopeDepth = 0 }
+
 run :: Monad m => Actions m -> M m CodeGen -> m ()
 run actions act =
     runRWST
@@ -183,7 +186,7 @@ run actions act =
     Env
     { envActions = actions
     , _envLocals = mempty
-    , _envMode = SlowLogging LoggingInfo { _liScopeDepth = 0 }
+    , _envMode = loggingEnabled
     }
     State
     { _freshId = 0
@@ -204,7 +207,7 @@ resetRW (M act) =
     act
     & RWS.censor (const LogUnused)
     & RWS.local (envLocals .~ mempty)
-    & RWS.local (envMode .~ SlowLogging LoggingInfo { _liScopeDepth = 0 })
+    & RWS.local (envMode .~ loggingEnabled)
     & M
 
 freshName :: Monad m => String -> M m String
