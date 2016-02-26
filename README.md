@@ -58,7 +58,7 @@ Directly under each expression in the code we see annotations of its evaluation 
 
 So as to not expand the expression, some annotations are shrunk. In this case `sqrt 5`'s annotation is shrunk. To see it in normal size - navigate to this expression, by going to the `sqrt` or `5` and pressing **shift+left**.
 
-To name the golden ratio you have just declared, navigate to the top-level expression using repeated pressing of **shift+left**. Press 'x' to extract the code into a new definition. Type "**`golden`**" and **return**.
+To name the golden ratio you have just declared, navigate to the top-level expression using repeated pressing of **shift+left**. Press 'x' to extract the code into a new definition. Type "**`golden`**" and **escape**.
 
 ### Creating a function
 
