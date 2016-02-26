@@ -146,11 +146,11 @@ topLevelDecls :: [JSS.Statement ()]
 topLevelDecls =
     ( [ [jsstmt|var o = Object.freeze;|]
       , [jsstmt|var logResult = function (scope, exprId, result) {
-                    console.log("result", scope, exprId, result);
+                    console.log("Result", scope, exprId, result);
                     return result;
                 };|]
       , [jsstmt|var logNewScope = function (parentScope, childScope, lamId, argVal) {
-                    console.log("scope", parentScope, childScope, lamId);
+                    console.log("LambdaApplied", parentScope, childScope, lamId, argVal);
                 };|]
       , [jsstmt|var scopeId_0 = 0;|]
       , [jsstmt|var scopeCounter = 1;|]
