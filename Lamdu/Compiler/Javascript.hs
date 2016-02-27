@@ -91,6 +91,10 @@ infixl 4 $.
 ($.) :: JSS.Expression () -> JSS.Id () -> JSS.Expression ()
 ($.) = JS.dot
 
+infixl 3 $$
+($$) :: JSS.Expression () -> JSS.Expression () -> JSS.Expression ()
+f $$ x = f `JS.call` [x]
+
 pp :: JSS.Statement () -> String
 pp = (`Pretty.displayS`"") . Pretty.renderPretty 1.0 90 . JSPP.prettyPrint
 
@@ -199,8 +203,8 @@ run actions act =
     where
         wrap replExpr =
             [ varinit "repl" $ codeGenExpression replExpr
-            , JS.var "logobj" `JS.call` [JS.var "repl"] & JS.expr
-            , (JS.var "console" $. "log") `JS.call` [JS.var "repl"] & JS.expr
+            , JS.var "logobj" $$ JS.var "repl" & JS.expr
+            , JS.var "console" $. "log" $$ JS.var "repl" & JS.expr
             ]
 
 -- | Reset reader/writer components of RWS for a new global compilation context
@@ -383,10 +387,7 @@ infixFunc f =
             <&> (: [])
 
 object :: [(JSS.Prop (), JSS.Expression ())] -> JSS.Expression ()
-object =
-    freeze . JS.object
-    where
-        freeze expr = JS.var "o" `JS.call` [expr]
+object = (JS.var "o" $$) . JS.object
 
 nullaryInject :: JSS.Expression () -> JSS.Expression ()
 nullaryInject tagStr = object [(JS.propId "tag", tagStr)]
@@ -445,7 +446,7 @@ compileLiteral literal =
             stmts =
                 [ varinit "arr" $
                   JS.new (JS.var "Uint8Array") [JS.int (BS.length bytes)]
-                , JS.call (JS.var "arr" $. "set") [JS.array ints] & JS.expr
+                , JS.var "arr" $. "set" $$ JS.array ints & JS.expr
                 , JS.var "arr" & JS.returns
                 ]
             ints = [JS.int (fromIntegral byte) | byte <- BS.unpack bytes]
@@ -471,7 +472,7 @@ compileRecExtend x =
                 where
                     stmts =
                         varinit "rest"
-                        ((JS.var "Object" $. "create") `JS.call` [codeGenExpression rest])
+                        (JS.var "Object" $. "create" $$ codeGenExpression rest)
                         : ( strTags
                             <&> _1 %~ JS.ldot (JS.var "rest")
                             <&> uncurry JS.assign
@@ -609,12 +610,12 @@ compileAppliedFunc func arg' =
                 , codeGenExpression =
                     -- Can't really optimize a redex in expr
                     -- context, as at least 1 redex must be paid
-                    JS.lambda [vId] lamStmts `JS.call` [arg']
+                    JS.lambda [vId] lamStmts $$ arg'
                 }
     _ ->
         do
             func' <- compileVal func <&> codeGenExpression
-            func' `JS.call` [arg'] & codeGenFromExpr & return
+            func' $$ arg' & codeGenFromExpr & return
 
 compileLeaf :: Monad m => V.Leaf -> M m CodeGen
 compileLeaf leaf =
