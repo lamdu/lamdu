@@ -311,10 +311,12 @@ compileGlobal globalId =
         compileVal val <&> codeGenExpression
     & resetRW
 
-getGlobalVar :: Monad m => V.Var -> M m GlobalVarName
-getGlobalVar var =
+compileGlobalVar :: Monad m => V.Var -> M m CodeGen
+compileGlobalVar var =
     Lens.use (compiled . Lens.at var) & M
     >>= maybe newGlobal return
+    <&> JS.var
+    <&> codeGenFromExpr
     where
         newGlobal =
             do
@@ -325,10 +327,13 @@ getGlobalVar var =
                     >>= ppOut
                 return varName
 
-getVar :: Monad m => V.Var -> M m (JSS.Id ())
-getVar v =
+compileLocalVar :: JSS.Id () -> CodeGen
+compileLocalVar = codeGenFromExpr . JS.var
+
+compileVar :: Monad m => V.Var -> M m CodeGen
+compileVar v =
     Lens.view (envLocals . Lens.at v) & M
-    >>= maybe (getGlobalVar v) return
+    >>= maybe (compileGlobalVar v) (return . compileLocalVar)
 
 data CodeGen = CodeGen
     { codeGenLamStmts :: [JSS.Statement ()]
@@ -623,7 +628,7 @@ compileLeaf leaf =
     V.LHole -> throwStr "Reached hole!" & return
     V.LRecEmpty -> object [] & codeGenFromExpr & return
     V.LAbsurd -> throwStr "Reached absurd!" & return
-    V.LVar var -> getVar var <&> JS.var <&> codeGenFromExpr
+    V.LVar var -> compileVar var
     V.LLiteral literal -> compileLiteral literal & return
 
 compileVal :: Monad m => Val ValId -> M m CodeGen
