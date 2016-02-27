@@ -459,9 +459,10 @@ compileRecExtend x =
             Map.toList tags
             <&> _2 %~ codeGenExpression
             & Lens.traversed . _1 %%~ tagString
-        let obj = strTags <&> _1 %~ JS.propId . JS.ident & object
         case mRest of
-            Nothing -> codeGenFromExpr obj
+            Nothing ->
+                strTags <&> _1 %~ JS.propId . JS.ident
+                & object & codeGenFromExpr
             Just rest ->
                 CodeGen
                 { codeGenLamStmts = stmts
