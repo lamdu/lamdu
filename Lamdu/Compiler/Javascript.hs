@@ -2,10 +2,9 @@
 -- | Compile Lamdu vals to Javascript
 
 module Lamdu.Compiler.Javascript
-    ( Actions(..), M, run
-    , CodeGen
-    , compileVal
+    ( Actions(..), M
     , ValId(..)
+    , compile
     ) where
 
 import qualified Control.Lens as Lens
@@ -177,6 +176,9 @@ topLevelDecls =
 
 loggingEnabled :: Mode
 loggingEnabled = SlowLogging LoggingInfo { _liScopeDepth = 0 }
+
+compile :: Monad m => Actions m -> Val ValId -> m ()
+compile actions val = compileVal val & run actions
 
 run :: Monad m => Actions m -> M m CodeGen -> m ()
 run actions act =

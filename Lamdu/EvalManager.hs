@@ -186,7 +186,7 @@ compileRepl runTrans =
             Transaction.readIRef replIRef
             >>= readVal
             & runViewTransaction
-        Compiler.compileVal replVal & Compiler.run actions
+        Compiler.compile actions replVal
     where
         runViewTransaction :: T ViewM a -> IO a
         runViewTransaction = runTrans . VersionControl.runAction
