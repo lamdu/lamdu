@@ -518,15 +518,6 @@ compileGetField (V.GetField record tag) =
             <&> codeGenExpression <&> (`JS.dot` tagId)
             <&> codeGenFromExpr
 
-compileLeaf :: Monad m => V.Leaf -> M m CodeGen
-compileLeaf leaf =
-    case leaf of
-    V.LHole -> throwStr "Reached hole!" & return
-    V.LRecEmpty -> object [] & codeGenFromExpr & return
-    V.LAbsurd -> throwStr "Reached absurd!" & return
-    V.LVar var -> getVar var <&> JS.var <&> codeGenFromExpr
-    V.LLiteral literal -> compileLiteral literal & return
-
 declMyScopeDepth :: Int -> JSS.Statement ()
 declMyScopeDepth depth =
     varinit (scopeIdent depth) $
@@ -623,6 +614,15 @@ compileAppliedFunc func arg' =
         do
             func' <- compileVal func <&> codeGenExpression
             func' `JS.call` [arg'] & codeGenFromExpr & return
+
+compileLeaf :: Monad m => V.Leaf -> M m CodeGen
+compileLeaf leaf =
+    case leaf of
+    V.LHole -> throwStr "Reached hole!" & return
+    V.LRecEmpty -> object [] & codeGenFromExpr & return
+    V.LAbsurd -> throwStr "Reached absurd!" & return
+    V.LVar var -> getVar var <&> JS.var <&> codeGenFromExpr
+    V.LLiteral literal -> compileLiteral literal & return
 
 compileVal :: Monad m => Val ValId -> M m CodeGen
 compileVal (Val valId body) =
