@@ -5,8 +5,6 @@ module Lamdu.Eval.Background
     , start, stop
     , pauseLoading, resumeLoading
     , getResults
-    , Status(..), _Running, _Stopped, _Finished
-    , getStatus
     ) where
 
 import           Prelude.Compat
@@ -45,16 +43,8 @@ data Actions srcId = Actions
 
 Lens.makeLenses ''Actions
 
-data Status srcId
-    = Running
-    | Stopped
-    | Finished (Either E.SomeException (Val srcId))
-
-Lens.makePrisms ''Status
-
 data State srcId = State
-    { _sStatus :: !(Status srcId)
-    , _sAppliesOfLam :: !(Map srcId (Map ScopeId [(ScopeId, Val srcId)]))
+    { _sAppliesOfLam :: !(Map srcId (Map ScopeId [(ScopeId, Val srcId)]))
       -- Maps of already-evaluated srcId's/thunks
     , _sValMap :: !(Map srcId (Map ScopeId (Val srcId)))
     , _sDependencies :: !(Set srcId, Set V.Var)
@@ -68,17 +58,12 @@ data Evaluator srcId = Evaluator
     , eLoadResumed :: MVar () -- taken when paused
     }
 
-emptyState :: Status srcId -> State srcId
-emptyState status = State
-    { _sStatus = status
-    , _sAppliesOfLam = Map.empty
+emptyState :: State srcId
+emptyState = State
+    { _sAppliesOfLam = Map.empty
     , _sValMap = Map.empty
     , _sDependencies = (Set.empty, Set.empty)
     }
-
-writeStatus :: IORef (State srcId) -> Status srcId -> IO ()
-writeStatus stateRef newStatus =
-    atomicModifyIORef' stateRef $ \x -> (x & sStatus .~ newStatus, ())
 
 processEvent :: Ord srcId => Eval.Event srcId -> State srcId -> State srcId
 processEvent (Eval.ELambdaApplied Eval.EventLambdaApplied{..}) state =
@@ -123,21 +108,17 @@ evalThread actions stateRef src =
         & Eval.runEvalT
         & (`evalStateT` Eval.initialState env)
         <&> Right
-        <&> finish
+        <&> actions ^. aCompleted
       )
       `E.catch` (\e -> case e of
-          E.ThreadKilled -> writeStatus stateRef Stopped & return
+          E.ThreadKilled -> return (return ())
           _ -> E.throwIO e)
       `E.catch` (\e@E.SomeException{} ->
       do
           BS8.hPutStrLn stderr $ "Background evaluator thread failed: " <> BS8.pack (show e)
-          finish (Left e) & return)
+          Left e & actions ^. aCompleted & return)
     ) & join
     where
-        finish res =
-            do
-                writeStatus stateRef (Finished res)
-                res & actions ^. aCompleted
         env = Eval.Env $ evalActions actions stateRef
 
 results :: State srcId -> EvalResults srcId
@@ -155,9 +136,6 @@ getState = readIORef . eStateRef
 getResults :: Evaluator srcId -> IO (EvalResults srcId)
 getResults evaluator = getState evaluator <&> results
 
-getStatus :: Evaluator srcId -> IO (Status srcId)
-getStatus evaluator = getState evaluator <&> (^. sStatus)
-
 withLock :: MVar () -> IO a -> IO a
 withLock mvar action = withMVar mvar (const action)
 
@@ -166,7 +144,7 @@ start ::
 start actions src =
     do
         stateRef <-
-            emptyState Running
+            emptyState
             & sDependencies . _1 <>~ foldMap Set.singleton src
             & newIORef
         mvar <- newMVar ()
