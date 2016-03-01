@@ -150,12 +150,22 @@ topLevelDecls :: [JSS.Statement ()]
 topLevelDecls =
     ( [ [jsstmt|"use strict";|]
       , [jsstmt|var logResult = function (scope, exprId, result) {
-                    console.log("Result", scope, exprId, JSON.stringify(result));
+                    console.log(JSON.stringify(
+                        { event:"Result"
+                        , scope:scope
+                        , exprId:exprId
+                        , result:result
+                        }));
                     return result;
                 };|]
-      , [jsstmt|var logNewScope = function (parentScope, childScope, lamId, argVal) {
-                    console.log("LambdaApplied", parentScope, childScope, lamId,
-                                JSON.stringify(argVal));
+      , [jsstmt|var logNewScope = function (parentScope, scope, lamId, arg) {
+                    console.log(JSON.stringify(
+                        { event:"NewScope"
+                        , parentScope:parentScope
+                        , scope:scope
+                        , lamId:lamId
+                        , arg:arg
+                        }));
                 };|]
       , [jsstmt|var scopeId_0 = 0;|]
       , [jsstmt|var scopeCounter = 1;|]
