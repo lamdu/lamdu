@@ -127,7 +127,7 @@ declLog depth =
 isReservedName :: String -> Bool
 isReservedName name =
     name `elem`
-    [ "x", "repl", "logobj"
+    [ "x", "repl"
     , "Object", "console", "repl"
     , "logNewScope", "log", "scopeCounter", "logResult", "wrap"
     ]
@@ -150,17 +150,15 @@ topLevelDecls :: [JSS.Statement ()]
 topLevelDecls =
     ( [ [jsstmt|"use strict";|]
       , [jsstmt|var logResult = function (scope, exprId, result) {
-                    console.log("Result", scope, exprId, result);
+                    console.log("Result", scope, exprId, JSON.stringify(result));
                     return result;
                 };|]
       , [jsstmt|var logNewScope = function (parentScope, childScope, lamId, argVal) {
-                    console.log("LambdaApplied", parentScope, childScope, lamId, argVal);
+                    console.log("LambdaApplied", parentScope, childScope, lamId,
+                                JSON.stringify(argVal));
                 };|]
       , [jsstmt|var scopeId_0 = 0;|]
       , [jsstmt|var scopeCounter = 1;|]
-      , [jsstmt|var logobj = function (obj) {
-                    for (var key in obj) console.log(key + " = " + obj[key]);
-                }|]
       , [jsstmt|var wrap = function (fast, slow) {
                     var count = 0;
                     var callee = function() {
@@ -204,8 +202,7 @@ run actions act =
     where
         wrap replExpr =
             [ varinit "repl" $ codeGenExpression replExpr
-            , JS.var "logobj" $$ JS.var "repl" & JS.expr
-            , JS.var "console" $. "log" $$ JS.var "repl" & JS.expr
+            , void [jsstmt|console.log(JSON.stringify(repl));|]
             ]
 
 -- | Reset reader/writer components of RWS for a new global compilation context
