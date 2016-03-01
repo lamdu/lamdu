@@ -2,7 +2,7 @@
 -- | Compile Lamdu vals to Javascript
 
 module Lamdu.Compiler.Javascript
-    ( Actions(..), M
+    ( Actions(..)
     , ValId(..)
     , compile
     ) where
