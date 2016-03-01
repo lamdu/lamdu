@@ -197,7 +197,7 @@ run :: Monad m => Actions m -> M m CodeGen -> m ()
 run actions act =
     runRWST
     (traverse ppOut topLevelDecls
-     >> act <&> wrap >>= mapM_ ppOut & unM)
+     >> act <&> codeGenExpression <&> JS.expr >>= ppOut & unM)
     Env
     { envActions = actions
     , _envLocals = mempty
@@ -209,11 +209,6 @@ run actions act =
     , _compiled = mempty
     }
     <&> (^. _1)
-    where
-        wrap replExpr =
-            [ varinit "repl" $ codeGenExpression replExpr
-            , void [jsstmt|console.log(JSON.stringify(repl));|]
-            ]
 
 -- | Reset reader/writer components of RWS for a new global compilation context
 resetRW :: Monad m => M m a -> M m a
