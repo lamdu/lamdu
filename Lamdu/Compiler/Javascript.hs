@@ -126,7 +126,7 @@ declLog depth =
 isReservedName :: String -> Bool
 isReservedName name =
     name `elem`
-    [ "x", "o", "repl", "logobj"
+    [ "x", "repl", "logobj"
     , "Object", "console", "repl"
     , "logNewScope", "log", "scopeCounter", "logResult", "wrap"
     ]
@@ -147,8 +147,7 @@ isReservedName name =
 
 topLevelDecls :: [JSS.Statement ()]
 topLevelDecls =
-    ( [ [jsstmt|var o = Object.freeze;|]
-      , [jsstmt|var logResult = function (scope, exprId, result) {
+    ( [ [jsstmt|var logResult = function (scope, exprId, result) {
                     console.log("Result", scope, exprId, result);
                     return result;
                 };|]
@@ -391,15 +390,12 @@ infixFunc f =
             <&> JS.returns
             <&> (: [])
 
-object :: [(JSS.Prop (), JSS.Expression ())] -> JSS.Expression ()
-object = (JS.var "o" $$) . JS.object
-
 nullaryInject :: JSS.Expression () -> JSS.Expression ()
-nullaryInject tagStr = object [(JS.propId "tag", tagStr)]
+nullaryInject tagStr = JS.object [(JS.propId "tag", tagStr)]
 
 inject :: JSS.Expression () -> JSS.Expression () -> JSS.Expression ()
 inject tagStr dat' =
-    object
+    JS.object
     [ (JS.propId "tag", tagStr)
     , (JS.propId "data", dat')
     ]
@@ -468,7 +464,7 @@ compileRecExtend x =
         case mRest of
             Nothing ->
                 strTags <&> _1 %~ JS.propId . JS.ident
-                & object & codeGenFromExpr
+                & JS.object & codeGenFromExpr
             Just rest ->
                 CodeGen
                 { codeGenLamStmts = stmts
@@ -626,7 +622,7 @@ compileLeaf :: Monad m => V.Leaf -> M m CodeGen
 compileLeaf leaf =
     case leaf of
     V.LHole -> throwStr "Reached hole!" & return
-    V.LRecEmpty -> object [] & codeGenFromExpr & return
+    V.LRecEmpty -> JS.object [] & codeGenFromExpr & return
     V.LAbsurd -> throwStr "Reached absurd!" & return
     V.LVar var -> compileVar var
     V.LLiteral literal -> compileLiteral literal & return
