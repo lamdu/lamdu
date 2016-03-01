@@ -1,3 +1,6 @@
 [submodule "submodules/AlgoW"]
 	path = submodules/AlgoW
 	url = https://github.com/Peaker/Algorithm-W-Step-By-Step
+[submodule "submodules/node"]
+	path = submodules/node
+	url = https://github.com/lamdu/node
