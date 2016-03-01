@@ -148,7 +148,8 @@ isReservedName name =
 
 topLevelDecls :: [JSS.Statement ()]
 topLevelDecls =
-    ( [ [jsstmt|var logResult = function (scope, exprId, result) {
+    ( [ [jsstmt|"use strict";|]
+      , [jsstmt|var logResult = function (scope, exprId, result) {
                     console.log("Result", scope, exprId, result);
                     return result;
                 };|]
