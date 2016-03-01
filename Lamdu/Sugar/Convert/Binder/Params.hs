@@ -578,6 +578,8 @@ convertNonEmptyParams binderKind lambda lambdaPl =
                         <&> Lens.traversed . Lens.mapped . _2 %~
                             ResultsProcess.addTypes noms typeExpr .
                             ER.extractField tag
+                        <&> Lens.traversed %~
+                            filter (Lens.nullOf (_2 . ER.body . ER._RError))
                 }
         orderedType <-
             lambdaPl ^. Input.inferredType & orderType & ConvertM.liftTransaction

@@ -17,6 +17,7 @@ Data-files:          fonts/DejaVuSans.ttf
                    , fonts/Purisa.ttf
                    , config.json
                    , submodules/node/node
+                   , js/rts.js
 
 Flag noprettyclass
     Description: Using pretty>=1.1.2? If so, mustn't depend on prettyclass which was inlined into the pretty package
@@ -154,9 +155,13 @@ Executable lamdu
                   , lens
                   , random
                   , split
+                  , text
                   , time
+                  , process
                   , transformers
+                  , unordered-containers
                   , utf8-string
+                  , vector
                   , void >= 0.6.1
                   , wl-pprint >= 1.2
   if flag(noprettyclass)
@@ -183,6 +188,7 @@ Executable lamdu
                   , Lamdu.DataFile
                   , Lamdu.Eval
                   , Lamdu.Eval.Background
+                  , Lamdu.Eval.JS
                   , Lamdu.Eval.Results
                   , Lamdu.Eval.Results.Process
                   , Lamdu.Eval.Val

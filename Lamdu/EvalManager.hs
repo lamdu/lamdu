@@ -29,12 +29,11 @@ import qualified Data.Store.Rev.Change as Change
 import qualified Data.Store.Rev.Version as Version
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import qualified Lamdu.Compiler.Javascript as Compiler
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (DbM, ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.Definition as Def
-import qualified Lamdu.Eval.Background as EvalBG
+import qualified Lamdu.Eval.JS as Eval
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.Expr.IRef (DefI, ValI)
@@ -43,15 +42,14 @@ import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.VersionControl (getVersion)
 import qualified Lamdu.VersionControl as VersionControl
-import qualified System.IO as IO
 
 import           Prelude.Compat
 
 type T = Transaction
 
-data BGEvaluator = NotStarted | Started (EvalBG.Evaluator (ValI ViewM))
+data BGEvaluator = NotStarted | Started (Eval.Evaluator (ValI ViewM))
 
-startedEvaluator :: BGEvaluator -> Maybe (EvalBG.Evaluator (ValI ViewM))
+startedEvaluator :: BGEvaluator -> Maybe (Eval.Evaluator (ValI ViewM))
 startedEvaluator NotStarted = Nothing
 startedEvaluator (Started eval) = Just eval
 
@@ -91,7 +89,7 @@ runViewTransactionInIO dbMVar trans =
 getLatestResults :: Evaluator -> IO (EvalResults (ValI ViewM))
 getLatestResults evaluator =
     readIORef (eEvaluatorRef evaluator) <&> startedEvaluator
-    >>= maybe (return EvalResults.empty) EvalBG.getResults
+    >>= maybe (return EvalResults.empty) Eval.getResults
 
 getResults :: Evaluator -> IO (CurAndPrev (EvalResults (ValI ViewM)))
 getResults evaluator =
@@ -105,12 +103,18 @@ loadDef ::
     IO (Def.Definition (V.Val (ExprIRef.ValIProperty ViewM)) (DefI ViewM))
 loadDef evaluator = runViewTransactionInIO (eDb evaluator) . Load.loadDef
 
-evalActions :: Evaluator -> EvalBG.Actions (ValI ViewM)
+readAssocName :: Evaluator -> Guid -> IO String
+readAssocName evaluator guid =
+    Transaction.getP (Anchors.assocNameRef guid)
+    & runViewTransactionInIO (eDb evaluator)
+
+evalActions :: Evaluator -> Eval.Actions (ValI ViewM)
 evalActions evaluator =
-    EvalBG.Actions
-    { EvalBG._aLoadGlobal = loadGlobal
-    , EvalBG._aReportUpdatesAvailable = eInvalidateCache evaluator
-    , EvalBG._aCompleted = \_ ->
+    Eval.Actions
+    { Eval._aLoadGlobal = loadGlobal
+    , Eval._aReadAssocName = readAssocName evaluator
+    , Eval._aReportUpdatesAvailable = eInvalidateCache evaluator
+    , Eval._aCompleted = \_ ->
           do
               atomicModifyIORef_ (eResultsRef evaluator) (const EvalResults.empty)
               eInvalidateCache evaluator
@@ -123,16 +127,22 @@ evalActions evaluator =
         asDef x =
             x ^. Def.defBody
             <&> Lens.mapped %~ Property.value
-            & Just
 
 replIRef :: IRef ViewM (ValI ViewM)
 replIRef = DbLayout.repl DbLayout.codeIRefs
+
+startBG :: Eval.Actions (ValI m) -> V.Val (ValI m) -> IO (Eval.Evaluator (ValI m))
+startBG =
+    Eval.start
+    (IRef.guid . ExprIRef.unValI)
+    (ExprIRef.ValI . IRef.unsafeFromGuid)
 
 start :: Evaluator -> IO ()
 start evaluator =
     Transaction.readIRef replIRef >>= ExprIRef.readVal
     & runViewTransactionInIO (eDb evaluator)
-    >>= EvalBG.start (evalActions evaluator) <&> Started
+    >>= startBG
+        (evalActions evaluator) <&> Started
     >>= writeIORef (eEvaluatorRef evaluator)
 
 stop :: Evaluator -> IO ()
@@ -140,49 +150,16 @@ stop evaluator =
     do
         readIORef (eEvaluatorRef evaluator)
             <&> startedEvaluator
-            >>= traverse_ EvalBG.stop
+            >>= traverse_ Eval.stop
         writeIORef (eEvaluatorRef evaluator) NotStarted
         writeIORef (eResultsRef evaluator) EvalResults.empty
 
-sumDependency :: Set (ExprIRef.ValI ViewM) -> Set V.Var -> Set Guid
-sumDependency subexprs globals =
+sumDependency :: Eval.Dependencies (ValI m) -> Set Guid
+sumDependency (Eval.Dependencies subexprs globals) =
     mconcat
     [ Set.map (IRef.guid . ExprIRef.unValI) subexprs
     , Set.map (IRef.guid . ExprIRef.defI) globals
     ]
-
-valId :: ValI m -> Compiler.ValId
-valId = Compiler.ValId . IRef.guid . ExprIRef.unValI
-
-readVal :: Monad m => ValI m -> T m (V.Val Compiler.ValId)
-readVal = (fmap . fmap) valId . ExprIRef.readVal
-
-compileRepl :: (forall a. T DbM a -> IO a) -> IO ()
-compileRepl runTrans =
-    IO.withFile "output.js" IO.WriteMode $
-    \outFile ->
-    do
-        let actions =
-                Compiler.Actions
-                { Compiler.readAssocName =
-                  runViewTransaction . Transaction.getP . Anchors.assocNameRef
-                , Compiler.readGlobal =
-                  \globalId ->
-                  do
-                      defBody <- ExprIRef.defI globalId & Transaction.readIRef
-                      defBody
-                          & traverse readVal
-                  & runViewTransaction
-                , Compiler.output = IO.hPutStrLn outFile
-                }
-        replVal <-
-            Transaction.readIRef replIRef
-            >>= readVal
-            & runViewTransaction
-        Compiler.compile actions replVal
-    where
-        runViewTransaction :: T ViewM a -> IO a
-        runViewTransaction = runTrans . VersionControl.runAction
 
 runTransactionAndMaybeRestartEvaluator :: Evaluator -> T DbM a -> IO a
 runTransactionAndMaybeRestartEvaluator evaluator transaction =
@@ -190,12 +167,12 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
     >>= \case
     NotStarted -> runTrans transaction
     Started eval ->
+        Eval.whilePaused eval $
+        \rawDependencies ->
         do
-            dependencies <-
-                EvalBG.pauseLoading eval
-                <&> uncurry sumDependency
-                <&> Set.insert (IRef.guid replIRef)
-            (haveNewVersion, dependencyChanged, result) <-
+            let dependencies =
+                    sumDependency rawDependencies & Set.insert (IRef.guid replIRef)
+            (dependencyChanged, result) <-
                 do
                     (oldVersion, result, newVersion) <-
                         (,,) <$> getVersion <*> transaction <*> getVersion
@@ -205,17 +182,15 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
                             <&> Monoid.Any & mconcat & return
                     Monoid.Any dependencyChanged <-
                         Version.walk checkDependencyChange checkDependencyChange oldVersion newVersion
-                    return (oldVersion /= newVersion, dependencyChanged, result)
+                    return (dependencyChanged, result)
                 & runTrans
-            if dependencyChanged
-                then do
+            when dependencyChanged $
+                do
                     prevResults <- getLatestResults evaluator
                     stop evaluator
                     setCancelTimer evaluator
                     atomicModifyIORef_ (eResultsRef evaluator) (const prevResults)
                     start evaluator
-                else EvalBG.resumeLoading eval
-            when haveNewVersion $ compileRepl runTrans
             return result
     where
         runTrans trans =

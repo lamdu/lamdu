@@ -48,6 +48,7 @@ data Actions m = Actions
     { readAssocName :: Guid -> m String
     , readGlobal :: V.Var -> m (Definition.Body (Val ValId))
     , output :: String -> m ()
+    , jsRtsPath :: FilePath
     }
 
 type LocalVarName = JSS.Id ()
@@ -117,7 +118,7 @@ declLog :: Int -> JSS.Statement ()
 declLog depth =
     varinit "log" $
     JS.lambda ["exprId", "result"]
-    [ JS.var "logResult" `JS.call`
+    [ (JS.var "rts" $. "logResult") `JS.call`
       [ JS.var (scopeIdent depth)
       , JS.var "exprId"
       , JS.var "result"
@@ -129,7 +130,7 @@ isReservedName name =
     name `elem`
     [ "x", "repl"
     , "Object", "console", "repl"
-    , "logNewScope", "log", "scopeCounter", "logResult", "wrap"
+    , "log", "scopeCounter", "rts"
     ]
     || any (`isPrefixOf` name)
     [ "global_"
@@ -147,46 +148,16 @@ isReservedName name =
     , "slash"
     ]
 
-topLevelDecls :: [JSS.Statement ()]
-topLevelDecls =
+topLevelDecls :: FilePath -> [JSS.Statement ()]
+topLevelDecls rtsPath =
     ( [ [jsstmt|"use strict";|]
-      , [jsstmt|var logResult = function (scope, exprId, result) {
-                    console.log(JSON.stringify(
-                        { event:"Result"
-                        , scope:scope
-                        , exprId:exprId
-                        , result:result
-                        }));
-                    return result;
-                };|]
-      , [jsstmt|var logNewScope = function (parentScope, scope, lamId, arg) {
-                    console.log(JSON.stringify(
-                        { event:"NewScope"
-                        , parentScope:parentScope
-                        , scope:scope
-                        , lamId:lamId
-                        , arg:arg
-                        }));
-                };|]
       , [jsstmt|var scopeId_0 = 0;|]
       , [jsstmt|var scopeCounter = 1;|]
-      , [jsstmt|var wrap = function (fast, slow) {
-                    var count = 0;
-                    var callee = function() {
-                        count += 1;
-                        if (count > 10) {
-                            callee = fast;
-                            return fast.apply(this, arguments);
-                        }
-                        return slow.apply(this, arguments);
-                    };
-                    return function () {
-                        return callee.apply(this, arguments);
-                    }
-                }|]
       ] <&> void
     ) ++
-    [ declLog 0 ]
+    [ declLog 0
+    , varinit "rts" $ JS.var "require" `JS.call` [JS.string rtsPath]
+    ]
 
 loggingEnabled :: Mode
 loggingEnabled = SlowLogging LoggingInfo { _liScopeDepth = 0 }
@@ -197,7 +168,7 @@ compile actions val = compileVal val & run actions
 run :: Monad m => Actions m -> M m CodeGen -> m ()
 run actions act =
     runRWST
-    (traverse ppOut topLevelDecls
+    (traverse ppOut (topLevelDecls (jsRtsPath actions))
      >> act <&> codeGenExpression <&> JS.expr >>= ppOut & unM)
     Env
     { envActions = actions
@@ -409,8 +380,6 @@ inject tagStr dat' =
 jsBoolToSum :: String -> String -> JSS.Expression () -> JSS.Expression ()
 jsBoolToSum trueTag falseTag bool =
     nullaryInject
-    -- TODO: Use the true tag ids for False/True, not assume
-    -- they're named False/True
     (JS.cond bool (JS.string trueTag) (JS.string falseTag))
 
 unknownFfiFunc :: Definition.FFIName -> JSS.Expression ()
@@ -468,17 +437,8 @@ compileLiteral :: V.Literal -> CodeGen
 compileLiteral literal =
     case BuiltinLiteral.toLit literal of
     LitBytes bytes ->
-        CodeGen
-        { codeGenLamStmts = stmts
-        , codeGenExpression = unitRedex stmts
-        }
+        JS.var "rts" $. "bytes" $$ JS.array ints & codeGenFromExpr
         where
-            stmts =
-                [ varinit "arr" $
-                  JS.new (JS.var "Uint8Array") [JS.int (BS.length bytes)]
-                , JS.var "arr" $. "set" $$ JS.array ints & JS.expr
-                , JS.var "arr" & JS.returns
-                ]
             ints = [JS.int (fromIntegral byte) | byte <- BS.unpack bytes]
     LitFloat num -> JS.number num & codeGenFromExpr
 
@@ -560,7 +520,7 @@ jsValId (ValId guid) = JS.string (Guid.asHex guid)
 
 callLogNewScope :: Int -> Int -> ValId -> JSS.Expression () -> JSS.Statement ()
 callLogNewScope parentDepth myDepth lamValId argVal =
-    JS.var "logNewScope" `JS.call`
+    (JS.var "rts" $. "logNewScope") `JS.call`
     [ JS.var (scopeIdent parentDepth)
     , JS.var (scopeIdent myDepth)
     , jsValId lamValId
@@ -597,7 +557,7 @@ compileLambda (V.Lam v res) valId =
                         slowLoggingLambdaPrefix logUsed parentScopeDepth valId
                         (JS.var varName)
                 fastLam <- compileRes & local (envMode .~ FastSilent) <&> mkLambda
-                JS.var "wrap" `JS.call`
+                (JS.var "rts" $. "wrap") `JS.call`
                     [fastLam, JS.lambda [varName] (stmts ++ lamStmts)] & return
             where
                 parentScopeDepth = loggingInfo ^. liScopeDepth
