@@ -23,6 +23,7 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Store.Guid (Guid)
+import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Builtins.Literal (Lit(..))
 import qualified Lamdu.Builtins.Literal as BuiltinLiteral
@@ -41,7 +42,7 @@ import qualified Text.PrettyPrint.Leijen as Pretty
 
 import           Prelude.Compat
 
-newtype ValId = ValId Int
+newtype ValId = ValId Guid
 
 data Actions m = Actions
     { readAssocName :: Guid -> m String
@@ -526,12 +527,15 @@ declMyScopeDepth depth =
     varinit (scopeIdent depth) $
     JS.uassign JSS.PostfixInc "scopeCounter"
 
+jsValId :: ValId -> JSS.Expression ()
+jsValId (ValId guid) = JS.string (Guid.asHex guid)
+
 callLogNewScope :: Int -> Int -> ValId -> JSS.Expression () -> JSS.Statement ()
-callLogNewScope parentDepth myDepth (ValId lamValId) argVal =
+callLogNewScope parentDepth myDepth lamValId argVal =
     JS.var "logNewScope" `JS.call`
     [ JS.var (scopeIdent parentDepth)
     , JS.var (scopeIdent myDepth)
-    , JS.int lamValId
+    , jsValId lamValId
     , argVal
     ] & JS.expr
 
@@ -589,10 +593,10 @@ maybeLogSubexprResult valId codeGen =
     SlowLogging _ -> logSubexprResult valId codeGen
 
 logSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
-logSubexprResult (ValId valId) codeGen =
+logSubexprResult valId codeGen =
     do
         RWS.tell LogUsed & M
-        JS.var "log" `JS.call` [JS.int valId, codeGenExpression codeGen]
+        JS.var "log" `JS.call` [jsValId valId, codeGenExpression codeGen]
             & codeGenFromExpr
             & return
 

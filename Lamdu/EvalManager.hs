@@ -13,7 +13,6 @@ import           Control.Concurrent.Utils (runAfter)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (when)
-import           Data.Binary.Utils (decodeS)
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Foldable (traverse_)
 import           Data.IORef
@@ -23,7 +22,6 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Store.Db (Db)
 import           Data.Store.Guid (Guid)
-import qualified Data.Store.Guid as Guid
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -153,11 +151,8 @@ sumDependency subexprs globals =
     , Set.map (IRef.guid . ExprIRef.defI) globals
     ]
 
-guidToInt :: Guid -> Int
-guidToInt = decodeS . Guid.bs
-
 valId :: ValI m -> Compiler.ValId
-valId = Compiler.ValId . guidToInt . IRef.guid . ExprIRef.unValI
+valId = Compiler.ValId . IRef.guid . ExprIRef.unValI
 
 readVal :: Monad m => ValI m -> T m (V.Val Compiler.ValId)
 readVal = (fmap . fmap) valId . ExprIRef.readVal
