@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, TemplateHaskell #-}
 module Lamdu.Eval.Background
     ( Evaluator
-    , Actions(..), aLoadGlobal, aRunBuiltin, aReportUpdatesAvailable, aCompleted
+    , Actions(..), aLoadGlobal, aReportUpdatesAvailable, aCompleted
     , start, stop
     , pauseLoading, resumeLoading
     , getResults
@@ -25,6 +25,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Monoid ((<>))
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Lamdu.Builtins as Builtins
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Eval as Eval
 import           Lamdu.Eval.Results (EvalResults(..))
@@ -36,7 +37,6 @@ import           System.IO (stderr)
 
 data Actions srcId = Actions
     { _aLoadGlobal :: V.Var -> IO (Maybe (Def.Body (V.Val srcId)))
-    , _aRunBuiltin :: Def.FFIName -> Val srcId -> Val srcId
     , _aReportUpdatesAvailable :: IO ()
     , _aCompleted :: Either E.SomeException (Val srcId) -> IO ()
     }
@@ -86,7 +86,7 @@ evalActions :: Ord srcId => Actions srcId -> IORef (State srcId) -> Eval.EvalAct
 evalActions actions stateRef =
     Eval.EvalActions
     { _aReportEvent = update . processEvent
-    , _aRunBuiltin = _aRunBuiltin actions
+    , _aRunBuiltin = Builtins.eval
     , _aLoadGlobal = loadGlobal
     }
     where
@@ -139,8 +139,7 @@ getResults evaluator = getState evaluator <&> results
 withLock :: MVar () -> IO a -> IO a
 withLock mvar action = withMVar mvar (const action)
 
-start ::
-    Ord srcId => Actions srcId -> V.Val srcId -> IO (Evaluator srcId)
+start :: Ord srcId => Actions srcId -> V.Val srcId -> IO (Evaluator srcId)
 start actions src =
     do
         stateRef <-

@@ -31,7 +31,6 @@ import qualified Data.Store.Rev.Change as Change
 import qualified Data.Store.Rev.Version as Version
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import qualified Lamdu.Builtins as Builtins
 import qualified Lamdu.Compiler.Javascript as Compiler
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (DbM, ViewM)
@@ -112,7 +111,6 @@ evalActions :: Evaluator -> EvalBG.Actions (ValI ViewM)
 evalActions evaluator =
     EvalBG.Actions
     { EvalBG._aLoadGlobal = loadGlobal
-    , EvalBG._aRunBuiltin = Builtins.eval
     , EvalBG._aReportUpdatesAvailable = eInvalidateCache evaluator
     , EvalBG._aCompleted = \_ ->
           do
