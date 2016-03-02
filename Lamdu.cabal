@@ -7,7 +7,7 @@ License-file:        LICENSE
 Author:              Eyal Lotem, Yair Chuchem
 Maintainer:          eyal.lotem@gmail.com, yairchu@gmail.com
 Category:            Graphics
-Build-type:          Simple
+Build-type:          Custom
 Extra-source-files:  test/*.hs test/Makefile Makefile VerifyConfig.hs
 Cabal-version:       >= 1.8
 Data-files:          fonts/DejaVuSans.ttf
@@ -16,6 +16,7 @@ Data-files:          fonts/DejaVuSans.ttf
                    , fonts/DejaVuSerif-Italic.ttf
                    , fonts/Purisa.ttf
                    , config.json
+                   , submodules/node/node
 
 Flag noprettyclass
     Description: Using pretty>=1.1.2? If so, mustn't depend on prettyclass which was inlined into the pretty package
