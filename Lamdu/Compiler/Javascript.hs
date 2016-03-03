@@ -611,25 +611,27 @@ logSubexprResult valId codeGen =
 
 compileAppliedFunc :: Monad m => Val ValId -> JSS.Expression () -> M m CodeGen
 compileAppliedFunc func arg' =
-    case func ^. V.body of
-    V.BCase case_ ->
-        compileCaseOnVar case_ (JS.var "x")
-        <&> (varinit "x" arg' :)
-        <&> codeGenFromLamStmts
-    V.BAbs (V.Lam v res) ->
-        do
-            (vId, lamStmts) <- compileVal res <&> codeGenLamStmts & withLocalVar v
-            return CodeGen
-                { codeGenLamStmts = varinit vId arg' : lamStmts
-                , codeGenExpression =
-                    -- Can't really optimize a redex in expr
-                    -- context, as at least 1 redex must be paid
-                    JS.lambda [vId] lamStmts $$ arg'
-                }
-    _ ->
-        do
-            func' <- compileVal func <&> codeGenExpression
-            func' $$ arg' & codeGenFromExpr & return
+    do
+        mode <- Lens.view envMode & M
+        case (func ^. V.body, mode) of
+            (V.BCase case_, FastSilent) ->
+                compileCaseOnVar case_ (JS.var "x")
+                <&> (varinit "x" arg' :)
+                <&> codeGenFromLamStmts
+            (V.BAbs (V.Lam v res), FastSilent) ->
+                do
+                    (vId, lamStmts) <- compileVal res <&> codeGenLamStmts & withLocalVar v
+                    return CodeGen
+                        { codeGenLamStmts = varinit vId arg' : lamStmts
+                        , codeGenExpression =
+                            -- Can't really optimize a redex in expr
+                            -- context, as at least 1 redex must be paid
+                            JS.lambda [vId] lamStmts $$ arg'
+                        }
+            _ ->
+                do
+                    func' <- compileVal func <&> codeGenExpression
+                    func' $$ arg' & codeGenFromExpr & return
 
 compileLeaf :: Monad m => V.Leaf -> M m CodeGen
 compileLeaf leaf =
