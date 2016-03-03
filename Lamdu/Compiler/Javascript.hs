@@ -437,6 +437,9 @@ ffiCompile ffiName@(Definition.FFIName ["Prelude"] opStr) =
             ">" -> infixBool JS.gt
             "<=" -> infixBool JS.le
             "<" -> infixBool JS.lt
+            "div" ->
+                infixFunc
+                (\x y -> return (JS.var "Math" $. "floor" $$ JS.div x y))
             _ -> unknownFfiFunc ffiName & return
     where
         opFunc op = infixFunc (\x y -> return (op x y))
