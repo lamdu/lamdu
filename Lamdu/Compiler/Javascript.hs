@@ -144,6 +144,7 @@ isReservedName name =
     , "percent"
     , "pipe"
     , "dot"
+    , "slash"
     ]
 
 topLevelDecls :: [JSS.Statement ()]
@@ -238,6 +239,7 @@ ops =
     , '%' ==> "percent"
     , '|' ==> "pipe"
     , '.' ==> "dot"
+    , '/' ==> "slash"
     ]
     where
         (==>) = Map.singleton
@@ -428,6 +430,7 @@ ffiCompile ffiName@(Definition.FFIName ["Prelude"] opStr) =
             "*" -> opFunc JS.mul
             "+" -> opFunc JS.add
             "-" -> opFunc JS.sub
+            "/" -> opFunc JS.div
             "mod" -> opFunc JS.mod
             "==" -> infixBool JS.steq
             ">=" -> infixBool JS.ge
