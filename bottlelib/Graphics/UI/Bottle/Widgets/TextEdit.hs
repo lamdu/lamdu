@@ -306,7 +306,9 @@ eventMap cursor str displayStr myId =
             [noMods GLFW.Key'Enter, ModKey.shift GLFW.Key'Enter] (insert "\n") ],
 
         [ keys (insertDoc ["Space"])
-            [noMods GLFW.Key'Space, ModKey.shift GLFW.Key'Space] (insert " ") ]
+            [noMods GLFW.Key'Space, ModKey.shift GLFW.Key'Space] (insert " ") ],
+
+        [ E.pasteOnKey (ctrl GLFW.Key'V) (E.Doc ["Clipboard", "Paste"]) insert ]
 
         ]
     where
