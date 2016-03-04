@@ -107,9 +107,11 @@ columns maxHeight itemHeight =
 
 makeView :: Vector2 R -> EventMap a -> Config -> AnimId -> View
 makeView size eventMap config animId =
-    makeTreeView config animId size .
-    map (makeTextViews config animId) . groupTree . groupInputDocs .
-    map ((_1 %~ (^. E.docStrs)) . Tuple.swap) $ E.eventMapDocs eventMap
+    eventMap ^.. E.emDocs . Lens.withIndex
+    <&> (_1 %~ (^. E.docStrs)) . Tuple.swap
+    & groupInputDocs & groupTree
+    <&> makeTextViews config animId
+    & makeTreeView config animId size
 
 makeTooltip :: Config -> [ModKey] -> AnimId -> View
 makeTooltip config helpKeys animId =

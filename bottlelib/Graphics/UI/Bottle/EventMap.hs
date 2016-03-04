@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveGeneric, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveGeneric, FlexibleContexts, RecordWildCards #-}
 module Graphics.UI.Bottle.EventMap
     ( KeyEvent(..)
     , InputDoc, Subtitle, Doc(..), docStrs
@@ -9,14 +9,12 @@ module Graphics.UI.Bottle.EventMap
     , keyEventMap, keyPress, keyPresses
     , deleteKey, deleteKeys
     , filterChars
-    , eventMapDocs
     , tickHandler
     , specialCharKey
     ) where
 
 import           Prelude.Compat hiding (lookup)
 
-import           Control.Arrow ((***), (&&&))
 import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
@@ -133,14 +131,16 @@ data AllCharsHandler a = AllCharsHandler
     , _chDocHandler :: DocHandler (Char -> Maybe a)
     } deriving (Generic, Functor)
 
-chInputDoc :: Lens' (AllCharsHandler a) InputDoc
-chInputDoc f AllCharsHandler{..} = f _chInputDoc <&> \_chInputDoc -> AllCharsHandler{..}
-
 chDocHandler ::
     Lens
     (AllCharsHandler a) (AllCharsHandler b)
     (DocHandler (Char -> Maybe a)) (DocHandler (Char -> Maybe b))
 chDocHandler f AllCharsHandler{..} = f _chDocHandler <&> \_chDocHandler -> AllCharsHandler{..}
+
+chDocs :: Lens.IndexedTraversal' InputDoc (AllCharsHandler a) Doc
+chDocs f AllCharsHandler{..} =
+    AllCharsHandler _chInputDoc
+    <$> dhDoc (Lens.indexed f _chInputDoc) _chDocHandler
 
 data CharGroupHandler a = CharGroupHandler
     { _cgInputDoc :: InputDoc
@@ -148,19 +148,13 @@ data CharGroupHandler a = CharGroupHandler
     , _cgDocHandler :: DocHandler (Char -> a)
     } deriving (Generic, Functor)
 
-cgInputDoc :: Lens' (CharGroupHandler a) InputDoc
-cgInputDoc f CharGroupHandler{..} = f _cgInputDoc <&> \_cgInputDoc -> CharGroupHandler{..}
-
 cgChars :: Lens' (CharGroupHandler a) (Set Char)
 cgChars f CharGroupHandler{..} = f _cgChars <&> \_cgChars -> CharGroupHandler{..}
 
-cgDocHandler ::
-    Lens
-    (CharGroupHandler a)
-    (CharGroupHandler b)
-    (DocHandler (Char -> a))
-    (DocHandler (Char -> b))
-cgDocHandler f CharGroupHandler{..} = f _cgDocHandler <&> \_cgDocHandler -> CharGroupHandler{..}
+cgDocs :: Lens.IndexedTraversal' InputDoc (CharGroupHandler a) Doc
+cgDocs f CharGroupHandler{..} =
+    CharGroupHandler _cgInputDoc _cgChars
+    <$> dhDoc (Lens.indexed f _cgInputDoc) _cgDocHandler
 
 data EventMap a = EventMap
     { _emKeyMap :: Map KeyEvent (DocHandler a)
@@ -170,14 +164,14 @@ data EventMap a = EventMap
     , _emTickHandlers :: [a]
     } deriving (Generic, Functor)
 
-emDocs :: Lens.Traversal' (EventMap a) Doc
-emDocs f (EventMap keyMap charGroupHandlers charGroupChars allCharsHandler tickHandlers) =
+emDocs :: Lens.IndexedTraversal' InputDoc (EventMap a) Doc
+emDocs f EventMap{..} =
     EventMap
-    <$> (Lens.traverse . dhDoc) f keyMap
-    <*> (Lens.traverse . cgDocHandler . dhDoc) f charGroupHandlers
-    <*> pure charGroupChars
-    <*> (Lens.traverse . chDocHandler . dhDoc) f allCharsHandler
-    <*> pure tickHandlers
+    <$> (Lens.reindexed prettyKeyEvent Lens.itraversed <. dhDoc) f _emKeyMap
+    <*> (Lens.traverse .> cgDocs) f _emCharGroupHandlers
+    <*> pure _emCharGroupChars
+    <*> (Lens.traverse .> chDocs) f _emAllCharsHandler
+    <*> pure _emTickHandlers
 
 emKeyMap :: Lens' (EventMap a) (Map KeyEvent (DocHandler a))
 emKeyMap f EventMap{..} = f _emKeyMap <&> \_emKeyMap -> EventMap{..}
@@ -259,14 +253,6 @@ isCharMods modKeys =
 -- TODO: Remove this:
 mkModKey :: GLFW.ModifierKeys -> GLFW.Key -> ModKey
 mkModKey = ModKey
-
-eventMapDocs :: EventMap a -> [(InputDoc, Doc)]
-eventMapDocs (EventMap dict charGroups _ mAllCharsHandler _) =
-    concat
-    [ map ((^. chInputDoc) &&& (^. chDocHandler . dhDoc)) mAllCharsHandler
-    , map ((^. cgInputDoc) &&& (^. cgDocHandler . dhDoc)) charGroups
-    , map (prettyKeyEvent *** (^. dhDoc)) $ Map.toList dict
-    ]
 
 filterByKey :: Ord k => (k -> Bool) -> Map k v -> Map k v
 filterByKey p = Map.filterWithKey (const . p)
