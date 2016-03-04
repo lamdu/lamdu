@@ -2,11 +2,12 @@
 module Graphics.UI.Bottle.EventMap
     ( KeyEvent(..)
     , InputDoc, Subtitle, Doc(..), docStrs
-    , EventMap, lookup, emTickHandlers
+    , EventMap, lookup, emTickHandlers, lookupPasteHandler
     , emDocs
     , charEventMap, allChars
     , charGroup
     , keyEventMap, keyPress, keyPresses
+    , pasteOnKey, pasteOnKeys
     , deleteKey, deleteKeys
     , filterChars
     , tickHandler
@@ -161,6 +162,7 @@ data EventMap a = EventMap
     , _emCharGroupHandlers :: [CharGroupHandler a]
     , _emCharGroupChars :: Set Char
     , _emAllCharsHandler :: [AllCharsHandler a]
+    , _emPasteHandlers :: Map KeyEvent (DocHandler (String -> a))
     , _emTickHandlers :: [a]
     } deriving (Generic, Functor)
 
@@ -171,6 +173,7 @@ emDocs f EventMap{..} =
     <*> (Lens.traverse .> cgDocs) f _emCharGroupHandlers
     <*> pure _emCharGroupChars
     <*> (Lens.traverse .> chDocs) f _emAllCharsHandler
+    <*> (Lens.reindexed prettyKeyEvent Lens.itraversed <. dhDoc) f _emPasteHandlers
     <*> pure _emTickHandlers
 
 emKeyMap :: Lens' (EventMap a) (Map KeyEvent (DocHandler a))
@@ -185,25 +188,30 @@ emCharGroupChars f EventMap{..} = f _emCharGroupChars <&> \_emCharGroupChars -> 
 emAllCharsHandler :: Lens' (EventMap a) [AllCharsHandler a]
 emAllCharsHandler f EventMap{..} = f _emAllCharsHandler <&> \_emAllCharsHandler -> EventMap{..}
 
+emPasteHandlers :: Lens' (EventMap a) (Map KeyEvent (DocHandler (String -> a)))
+emPasteHandlers f EventMap{..} = f _emPasteHandlers <&> \_emPasteHandlers -> EventMap{..}
+
 emTickHandlers :: Lens' (EventMap a) [a]
 emTickHandlers f EventMap{..} = f _emTickHandlers <&> \_emTickHandlers -> EventMap{..}
 
 instance Monoid (EventMap a) where
-    mempty = EventMap Map.empty [] Set.empty [] []
+    mempty = EventMap Map.empty [] Set.empty [] Map.empty []
     mappend = overrides
 
 overrides :: EventMap a -> EventMap a -> EventMap a
 overrides
-    x@(EventMap xMap xCharGroups xChars xMAllChars xTicks)
-    (EventMap yMap yCharGroups yChars yMAllChars yTicks) =
+    x@(EventMap xMap xCharGroups xChars xMAllChars xPaste xTicks)
+    (EventMap yMap yCharGroups yChars yMAllChars yPaste yTicks) =
     EventMap
     (xMap `mappend` filteredYMap)
     (xCharGroups ++ filteredYCharGroups)
     (xChars `mappend` yChars)
     (xMAllChars ++ yMAllChars)
+    (xPaste `mappend` filteredYPaste)
     (xTicks ++ yTicks)
     where
         filteredYMap = filterByKey (not . isKeyConflict) yMap
+        filteredYPaste = filterByKey (not . isKeyConflict) yPaste
         isKeyConflict (KeyEvent _ (ModKey mods key))
             | isCharMods mods =
                 maybe False (isCharConflict x) $ charOfKey key
@@ -264,7 +272,7 @@ deleteKeys :: [KeyEvent] -> EventMap a -> EventMap a
 deleteKeys = foldr ((.) . deleteKey) id
 
 lookup :: Events.KeyEvent -> EventMap a -> Maybe a
-lookup (Events.KeyEvent k _scanCode keyState modKeys mchar) (EventMap dict charGroups _ allCharHandlers _) =
+lookup (Events.KeyEvent k _scanCode keyState modKeys mchar) (EventMap dict charGroups _ allCharHandlers _ _) =
     msum
     [ (^. dhHandler) <$>
         KeyEvent keyState modKey `Map.lookup` dict
@@ -282,6 +290,14 @@ lookup (Events.KeyEvent k _scanCode keyState modKeys mchar) (EventMap dict charG
     ]
     where
         modKey = mkModKey modKeys k
+
+lookupPasteHandler :: Events.KeyEvent -> EventMap a -> Maybe (String -> a)
+lookupPasteHandler e eventMap =
+    eventMap ^? emPasteHandlers . Lens.at keyEvent . Lens._Just . dhHandler
+    where
+        keyEvent =
+            KeyEvent (Events.keState e)
+            (mkModKey (Events.keModKeys e) (Events.keKey e))
 
 charGroup :: InputDoc -> Doc -> String -> (Char -> a) -> EventMap a
 charGroup iDoc oDoc chars handler =
@@ -317,6 +333,16 @@ keyPress = keyEventMap . KeyEvent GLFW.KeyState'Pressed
 
 keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress
+
+pasteOnKey :: ModKey -> Doc -> (String -> a) -> EventMap a
+pasteOnKey key doc handler =
+    mempty
+    { _emPasteHandlers =
+        Map.singleton (KeyEvent GLFW.KeyState'Pressed key) (DocHandler doc handler)
+    }
+
+pasteOnKeys :: [ModKey] -> Doc -> (String -> a) -> EventMap a
+pasteOnKeys = mconcat . map pasteOnKey
 
 tickHandler :: a -> EventMap a
 tickHandler x = mempty { _emTickHandlers = [x] }
