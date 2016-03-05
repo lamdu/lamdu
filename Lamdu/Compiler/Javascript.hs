@@ -443,6 +443,8 @@ ffiCompile ffiName@(Definition.FFIName modul funcName) =
                 "div" ->
                     infixFunc
                     (\x y -> return (JS.var "Math" $. "floor" $$ JS.div x y))
+                "sqrt" ->
+                    lam "i" $ \x -> return [ JS.var "Math" $. "sqrt" $$ x & JS.returns ]
                 _ -> unknown
             ["Bytes"] ->
                 case funcName of
