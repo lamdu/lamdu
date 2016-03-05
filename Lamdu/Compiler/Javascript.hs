@@ -421,29 +421,46 @@ unknownFfiFunc (Definition.FFIName modulePath name) =
     ]
 
 ffiCompile :: Monad m => Definition.FFIName -> M m (JSS.Expression ())
-ffiCompile ffiName@(Definition.FFIName ["Prelude"] opStr) =
+ffiCompile ffiName@(Definition.FFIName modul funcName) =
     do
         trueTag <- tagString Builtins.trueTag
         falseTag <- tagString Builtins.falseTag
         let infixBool f = opFunc (\x y -> f x y & jsBoolToSum trueTag falseTag)
-        case opStr of
-            "*" -> opFunc JS.mul
-            "+" -> opFunc JS.add
-            "-" -> opFunc JS.sub
-            "/" -> opFunc JS.div
-            "mod" -> opFunc JS.mod
-            "==" -> infixBool JS.steq
-            ">=" -> infixBool JS.ge
-            ">" -> infixBool JS.gt
-            "<=" -> infixBool JS.le
-            "<" -> infixBool JS.lt
-            "div" ->
-                infixFunc
-                (\x y -> return (JS.var "Math" $. "floor" $$ JS.div x y))
-            _ -> unknownFfiFunc ffiName & return
+        -- TODO: use the JS FFI names in ExampleDB
+        case modul of
+            ["Prelude"] ->
+                case funcName of
+                "*" -> opFunc JS.mul
+                "+" -> opFunc JS.add
+                "-" -> opFunc JS.sub
+                "/" -> opFunc JS.div
+                "mod" -> opFunc JS.mod
+                "==" -> infixBool JS.steq
+                ">=" -> infixBool JS.ge
+                ">" -> infixBool JS.gt
+                "<=" -> infixBool JS.le
+                "<" -> infixBool JS.lt
+                "div" ->
+                    infixFunc
+                    (\x y -> return (JS.var "Math" $. "floor" $$ JS.div x y))
+                _ -> unknown
+            ["Bytes"] ->
+                case funcName of
+                "byteAt" ->
+                    do
+                        oStr <- tagIdent Builtins.objTag
+                        iStr <- tagIdent Builtins.indexTag
+                        lam "i" $ \args ->
+                            return
+                            [ (args $. oStr) `JS.brack` (args $. iStr) & JS.returns
+                            ]
+                "length" ->
+                    lam "i" $ \arg -> return [ arg $. "length" & JS.returns ]
+                _ -> unknown
+            _ -> unknown
     where
         opFunc op = infixFunc (\x y -> return (op x y))
-ffiCompile ffiName = unknownFfiFunc ffiName & return
+        unknown = unknownFfiFunc ffiName & return
 
 compileLiteral :: V.Literal -> CodeGen
 compileLiteral literal =
