@@ -1,10 +1,10 @@
 packages:
 - .
 - location:
-    git: https://github.com/da-x/graphics-drawingcombinators
+    git: https://github.com/lamdu/graphics-drawingcombinators
     commit: 2d8f9efb610dcf69c28ae9fbb8799565cef10612
 - location:
-    git: https://github.com/Peaker/language-ecmascript
+    git: https://github.com/lamdu/language-ecmascript
     commit: 2c71e37ad055163a9926ee53e5297146de9b435c
 
 resolver: nightly-2016-02-05

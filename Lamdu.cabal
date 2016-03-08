@@ -321,4 +321,4 @@ Executable lamdu
 
 source-repository head
   type: git
-  location: https://github.com/Peaker/lamdu.git
+  location: https://github.com/lamdu/lamdu.git
