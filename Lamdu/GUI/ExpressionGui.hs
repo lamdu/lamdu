@@ -71,6 +71,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Eval.Val (ScopeId)
 import           Lamdu.Expr.Type (Type)
+import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
 import qualified Lamdu.GUI.EvalView as EvalView
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -341,11 +342,11 @@ addEvaluationResult ::
 -- REVIEW(Eyal): This is misleading when it refers to Previous results
 addEvaluationResult typ neigh resDisp wideBehavior entityId gui =
     gui
-    & case erdVal resDisp ^. ER.body of
-    ER.RRecEmpty ->
+    & case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
+    (T.TRecord T.CEmpty, _) ->
         egWidget %%~
         addValBGWithColor Config.evaluatedPathBGColor (WidgetIds.fromEntityId entityId)
-    ER.RFunc{} ->
+    (_, ER.RFunc{}) ->
         addAnnotationH (makeTypeView typ) wideBehavior entityId
     _ -> addAnnotationH (makeEvalView neigh resDisp) wideBehavior entityId
 
