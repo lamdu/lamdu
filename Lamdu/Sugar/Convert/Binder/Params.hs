@@ -575,7 +575,7 @@ convertNonEmptyParams binderKind lambda lambdaPl =
                 , fpValue =
                         lambdaPl ^. Input.evalResults
                         <&> (^. Input.eAppliesOfLam)
-                        <&> Lens.traversed . Lens.mapped . Lens._2 %~
+                        <&> Lens.traversed . Lens.mapped . _2 %~
                             ResultsProcess.addTypes noms typeExpr .
                             ER.extractField tag
                 }
