@@ -3,7 +3,6 @@ module Lamdu.Sugar.Types
     ( EntityId
     , Definition(..), drEntityId, drName, drBody
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
-    , ListItemActions(..), itemAddNext, itemDelete
     , VarToTags(..), TagsToVar(..)
     , ParamDelResult(..), ParamAddResult(..)
     , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
@@ -34,7 +33,7 @@ module Lamdu.Sugar.Types
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , Body(..)
         , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
-        , _BodyLiteral, _BodyList, _BodyCase, _BodyRecord
+        , _BodyLiteral, _BodyCase, _BodyRecord
         , _BodyFromNom, _BodyToNom
     , EvaluationResult
     , Annotation(..), aInferredType, aMEvaluationResult
@@ -47,9 +46,6 @@ module Lamdu.Sugar.Types
     , Let(..)
         , lEntityId, lValue, lName, lUsages
         , lActions, lAnnotation, lBodyScope, lBody
-    , ListItem(..), liActions, liExpr
-    , ListActions(..)
-    , List(..), listValues, listActions, listNilEntityId
     -- record:
     , RecordField(..), rfDelete, rfTag, rfExpr
     , RecordTail(..), _RecordExtending, _ClosedRecord
@@ -103,7 +99,6 @@ import           Control.Monad.ListT (ListT)
 import qualified Data.ByteString as SBS
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Functor.Identity (Identity(..))
-import qualified Data.List as List
 import           Data.Map (Map)
 import           Data.Store.Guid (Guid)
 import           Data.Store.Transaction (Transaction, MkProperty, Property)
@@ -166,11 +161,6 @@ data Expression name m a = Expression
     { _rBody :: Body name m (Expression name m a)
     , _rPayload :: Payload m a
     } deriving (Functor, Foldable, Traversable)
-
-data ListItemActions m = ListItemActions
-    { _itemAddNext :: T m EntityId
-    , _itemDelete :: T m ()
-    }
 
 data VarToTags = VarToTags
     { vttReplacedVar :: V.Var
@@ -292,24 +282,6 @@ data HoleArg m expr = HoleArg
 data Hole name m expr = Hole
     { _holeActions :: HoleActions name m
     , _holeMArg :: Maybe (HoleArg m expr)
-    } deriving (Functor, Foldable, Traversable)
-
-data ListItem m expr = ListItem
-    { _liActions :: ListItemActions m
-    , _liExpr :: expr
-    } deriving (Functor, Foldable, Traversable)
-
-data ListActions m = ListActions
-    { addFirstItem :: T m EntityId
-    , replaceNil :: T m EntityId
-    }
-
-data List m expr = List
-    { _listValues :: [ListItem m expr]
-    , _listActions :: ListActions m
-    , -- Nil EntityId stays consistent when adding items.
-      -- (Exposed for consistent animations)
-      _listNilEntityId :: EntityId
     } deriving (Functor, Foldable, Traversable)
 
 {- Record start -}
@@ -457,7 +429,6 @@ data Body name m expr
     | BodyApply (Apply name expr)
     | BodyHole (Hole name m expr)
     | BodyLiteral (Literal (Property m))
-    | BodyList (List m expr)
     | BodyRecord (Record name m expr)
     | BodyGetField (GetField name expr)
     | BodyCase (Case name m expr)
@@ -480,12 +451,6 @@ instance Show expr => Show (Body name m expr) where
     show (BodyLam _) = "TODO show lam"
     show BodyHole {} = "Hole"
     show BodyLiteral {} = "Literal"
-    show (BodyList (List items _ _)) =
-        concat
-        [ "["
-        , List.intercalate ", " $ map (show . _liExpr) items
-        , "]"
-        ]
     show BodyApply {} = "LabelledApply:TODO"
     show BodyRecord {} = "Record:TODO"
     show BodyGetField {} = "GetField:TODO"
@@ -624,9 +589,6 @@ Lens.makeLenses ''Inject
 Lens.makeLenses ''Lambda
 Lens.makeLenses ''Let
 Lens.makeLenses ''LetActions
-Lens.makeLenses ''List
-Lens.makeLenses ''ListItem
-Lens.makeLenses ''ListItemActions
 Lens.makeLenses ''NameRef
 Lens.makeLenses ''NamedParamInfo
 Lens.makeLenses ''Nominal

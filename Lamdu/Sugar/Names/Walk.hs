@@ -162,7 +162,6 @@ toBody ::
     Body (OldName m) (TM m) a ->
     m (Body (NewName m) (TM m) b)
 toBody expr = \case
-    BodyList         x -> traverse expr x <&> BodyList
     BodyGetField     x -> traverse expr x >>= gfTag toTagG <&> BodyGetField
     BodyInject       x -> traverse expr x >>= iTag toTagG <&> BodyInject
     BodyRecord       x -> traverse expr x >>= (rItems . traverse . rfTag) toTagG <&> BodyRecord

@@ -170,8 +170,11 @@ mkOptions sugarContext mInjectedArg exprPl stored =
                 nominalTid <- nominalTids
                 f <- [V.BFromNom, V.BToNom]
                 [ V.Nom nominalTid P.hole & f & V.Val () ]
-            , [ P.abs "NewLambda" P.hole, P.recEmpty, P.absurd
-              , P.inject Builtins.nilTag P.recEmpty & P.toNom Builtins.listTid
+            , [ P.abs "NewLambda" P.hole
+              , P.recEmpty
+              , P.absurd
+              , P.inject Builtins.nilTag P.recEmpty
+                & P.abs "NullParam" & P.toNom Builtins.streamTid
               ]
             ]
             <&> SeedExpr

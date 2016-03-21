@@ -142,9 +142,11 @@ addListItem :: MonadA m => ValIProperty m -> T m (ValI m, ValI m)
 addListItem exprP =
     do
         newItemI <- newHole
+        newParam <- ExprIRef.newVar
         newListI <-
             ExprIRef.writeValTree $
-            v $ V.BToNom $ V.Nom Builtins.listTid $
+            v $ V.BToNom $ V.Nom Builtins.streamTid $
+            v $ V.BAbs $ V.Lam newParam $
             v $ V.BInject $ V.Inject Builtins.consTag $
             recEx Builtins.headTag (ValTreeLeaf newItemI) $
             recEx Builtins.tailTag (ValTreeLeaf (Property.value exprP))

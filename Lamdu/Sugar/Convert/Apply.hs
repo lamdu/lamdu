@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, NamedFieldPuns #-}
+{-# LANGUAGE NoImplicitPrelude, NamedFieldPuns, OverloadedStrings #-}
 module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where
@@ -169,11 +169,14 @@ mkAppliedHoleOptions sugarContext argI argS exprPl stored =
     [ P.record
       [ (Builtins.headTag, P.hole)
       , ( Builtins.tailTag
-        , P.inject Builtins.nilTag P.recEmpty & P.toNom Builtins.listTid
+        , P.inject Builtins.nilTag P.recEmpty
+          & P.abs "nilNullArg"
+          & P.toNom Builtins.streamTid
         )
       ]
       & P.inject Builtins.consTag
-      & P.toNom Builtins.listTid
+      & P.abs "consNullArg"
+      & P.toNom Builtins.streamTid
     ]
     <&> ConvertHole.SeedExpr
     <&> ConvertHole.mkHoleOption sugarContext (Just argI) exprPl stored

@@ -31,7 +31,6 @@ bodyShape :: Sugar.Body (Name m) m expr -> [String]
 bodyShape = \case
     Sugar.BodyLam {} -> ["lambda", "\\", "Λ", "λ"]
     Sugar.BodyApply {} -> ["Apply"]
-    Sugar.BodyList {} -> ["list", "[]"]
     Sugar.BodyRecord r ->
         ["record", "{}", "()"] ++
         case r of

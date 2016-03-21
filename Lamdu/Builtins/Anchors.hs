@@ -2,7 +2,7 @@
 -- Those which are supported in the runtime are repeated in JS in rts.js.
 
 module Lamdu.Builtins.Anchors
-    ( objTag, infixlTag, infixrTag, listTid, textTid
+    ( objTag, infixlTag, infixrTag, streamTid, textTid
     , headTag, tailTag, consTag, nilTag, trueTag, falseTag, justTag, nothingTag
     , startTag, stopTag, indexTag
     , Order, anchorTags
@@ -43,8 +43,8 @@ startTag = bi "start"
 stopTag :: Tag
 stopTag = bi "stop"
 
-listTid :: T.NominalId
-listTid = bi "list"
+streamTid :: T.NominalId
+streamTid = bi "stream"
 
 textTid :: T.NominalId
 textTid = bi "text"

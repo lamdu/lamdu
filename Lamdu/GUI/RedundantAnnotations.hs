@@ -18,9 +18,6 @@ showAnn = plData . T.plShowAnnotation
 dontShowEval :: Expression name m T.Payload -> Expression name m T.Payload
 dontShowEval = rPayload . showAnn . T.showInEvalMode .~ T.EvalModeShowNothing
 
-dontShowType :: Expression name m T.Payload -> Expression name m T.Payload
-dontShowType = rPayload . showAnn . T.showInTypeMode .~ False
-
 dontShowAnnotation :: Expression name m T.Payload -> Expression name m T.Payload
 dontShowAnnotation = rPayload . showAnn .~ T.neverShowAnnotations
 
@@ -71,10 +68,6 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         Expression newBody pl
     BodyApply app ->
         Expression (BodyApply (app & aFunc %~ dontShowAnnotation)) pl
-    BodyList l ->
-        Expression (BodyList l') pl & dontShowEval
-        where
-            l' = l & listValues . Lens.mapped . liExpr %~ dontShowType
     BodyHole hole ->
         Expression (BodyHole hole') pl & forceShowType
         where

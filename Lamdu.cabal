@@ -236,7 +236,6 @@ Executable lamdu
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.Wrapper
                   , Lamdu.GUI.ExpressionEdit.InjectEdit
                   , Lamdu.GUI.ExpressionEdit.LambdaEdit
-                  , Lamdu.GUI.ExpressionEdit.ListEdit
                   , Lamdu.GUI.ExpressionEdit.LiteralEdit
                   , Lamdu.GUI.ExpressionEdit.NomEdit
                   , Lamdu.GUI.ExpressionEdit.RecordEdit
@@ -290,7 +289,6 @@ Executable lamdu
                   , Lamdu.Sugar.Convert.Hole.Suggest
                   , Lamdu.Sugar.Convert.Inject
                   , Lamdu.Sugar.Convert.Input
-                  , Lamdu.Sugar.Convert.List
                   , Lamdu.Sugar.Convert.Monad
                   , Lamdu.Sugar.Convert.Nominal
                   , Lamdu.Sugar.Convert.ParamList

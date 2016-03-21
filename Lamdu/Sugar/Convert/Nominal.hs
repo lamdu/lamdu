@@ -12,7 +12,6 @@ import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Sugar.Convert.Expression.Actions (addActionsWithSetToInner)
 import qualified Lamdu.Sugar.Convert.Input as Input
-import qualified Lamdu.Sugar.Convert.List as ConvertList
 import qualified Lamdu.Sugar.Convert.Text as ConvertText
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -47,8 +46,6 @@ convertToNom ::
     ConvertM m (ExpressionU m a)
 convertToNom nom exprPl =
     do
-        ConvertList.nil nom exprPl & justToLeft
-        ConvertList.cons nom exprPl & justToLeft
         ConvertText.text nom exprPl & justToLeft
         convert BodyToNom nom exprPl & lift
     & runMatcherT

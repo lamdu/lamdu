@@ -106,9 +106,9 @@ blessAnchors :: MonadA m => M m ()
 blessAnchors =
     do
         mapM_ describeAnchorTag Builtins.anchorTags
-        lift $ setName Builtins.listTid "List"
+        lift $ setName Builtins.streamTid "Stream"
         lift $ setName Builtins.textTid "Text"
-        Writer.tell $ mempty { publicTIds = [Builtins.listTid, Builtins.textTid] }
+        Writer.tell $ mempty { publicTIds = [Builtins.streamTid, Builtins.textTid] }
     where
         describeAnchorTag (order, tag, name) =
             do
@@ -151,18 +151,6 @@ nominalSum ::
 nominalSum tid params ctors =
     newNominal tid params (Scheme.mono . sumType . ctors) & lift
 
-createList :: MonadA m => T.ParamId -> M m TypeCtor
-createList valTParamId =
-    nominalSum Builtins.listTid [(valTParamId, valT)] $ \list ->
-    [ recordType [] & Ctor Builtins.nilTag
-    , recordType
-      [ (Builtins.headTag, T.TVar valT)
-      , (Builtins.tailTag, list [T.TVar valT])
-      ] & Ctor Builtins.consTag
-    ]
-    where
-        valT = "a"
-
 createMaybe :: MonadA m => T.ParamId -> M m TypeCtor
 createMaybe valTParamId =
     do
@@ -176,19 +164,18 @@ createMaybe valTParamId =
 
 createStream :: MonadA m => T.ParamId -> M m TypeCtor
 createStream valTParamId =
-    do
-        tid <- newTId "Stream"
-        lift $ newNominal tid [(valTParamId, valT)] $
-            \stream ->
-            recordType [] ~>
-            sumType
-            [ recordType [] & Ctor Builtins.nilTag
-            , recordType
-                [ (Builtins.headTag, T.TVar valT)
-                , (Builtins.tailTag, stream [T.TVar valT])
-                ]
-              & Ctor Builtins.consTag
-            ] & Scheme.mono
+    lift $
+    newNominal Builtins.streamTid [(valTParamId, valT)] $
+    \stream ->
+    recordType [] ~>
+    sumType
+    [ recordType [] & Ctor Builtins.nilTag
+    , recordType
+        [ (Builtins.headTag, T.TVar valT)
+        , (Builtins.tailTag, stream [T.TVar valT])
+        ]
+      & Ctor Builtins.consTag
+    ] & Scheme.mono
     where
         valT = "a"
 
@@ -234,7 +221,6 @@ createPublics =
 
         valTParamId <- lift $ namedId "val"
 
-        _ <- createList valTParamId
         _ <- createMaybe valTParamId
         _ <- createStream valTParamId
         _ <- createInfiniteStream valTParamId
