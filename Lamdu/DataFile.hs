@@ -10,10 +10,10 @@ import           System.FilePath ((</>))
 getLamduDir :: IO FilePath
 getLamduDir = Directory.getHomeDirectory <&> (</> ".lamdu")
 
-getDataFilePath :: FilePath -> FilePath -> IO FilePath
-getDataFilePath startDir fileName =
+getDataFilePath :: FilePath -> IO FilePath
+getDataFilePath fileName =
     do
+        startDir <- Directory.getCurrentDirectory
+        let customPath = startDir </> fileName
         exists <- Directory.doesFileExist customPath
         if exists then return customPath else getDataFileName fileName
-    where
-        customPath = startDir </> fileName

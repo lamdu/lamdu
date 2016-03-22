@@ -65,8 +65,8 @@ maybeLoad old configPath =
             then return old
             else load configPath
 
-new :: FilePath -> IO (Sampler Config)
-new startDir =
+new :: IO (Sampler Config)
+new =
     do
         ref <-
             getConfigPath
@@ -82,4 +82,4 @@ new startDir =
                     `E.catch` \E.SomeException {} -> return old
         return $ Sampler tid $ readMVar ref
     where
-        getConfigPath = getDataFilePath startDir "config.json"
+        getConfigPath = getDataFilePath "config.json"

@@ -163,11 +163,8 @@ withMVarProtection val =
 runEditor :: Opts.WindowMode -> Db -> IO ()
 runEditor windowMode db =
     do
-        -- GLFW changes the directory from start directory, at least on macs.
-        startDir <- Directory.getCurrentDirectory
-
         -- Load config as early as possible, before we open any windows/etc
-        configSampler <- ConfigSampler.new startDir
+        configSampler <- ConfigSampler.new
 
         GLFWUtils.withGLFW $ do
             win <- createWindow windowMode
