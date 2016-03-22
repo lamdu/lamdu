@@ -171,7 +171,6 @@ Executable lamdu
                   , prettyclass ==1.0.0.0
   Other-Modules:    Data.Hashable.Generic
                   , Data.Map.Utils
-                  , Lamdu.Builtins
                   , Lamdu.Builtins.Anchors
                   , Lamdu.Builtins.Literal
                   , Lamdu.CharClassification
@@ -186,8 +185,6 @@ Executable lamdu
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs
                   , Lamdu.DataFile
-                  , Lamdu.Eval
-                  , Lamdu.Eval.Background
                   , Lamdu.Eval.JS
                   , Lamdu.Eval.Results
                   , Lamdu.Eval.Results.Process

@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, TemplateHaskell, NoImplicitPrelude, RecordWildCards #-}
 module Lamdu.Eval.Results
     ( Body(..), _RRecExtend, _RInject, _RFunc, _RRecEmpty, _RLiteral, _RError
-    , Val(..), payload, body, fromEval
+    , Val(..), payload, body
     , extractField
     , EvalResults(..), erExprValues, erAppliesOfLam
     , empty
@@ -31,20 +31,6 @@ data Val pl = Val
     { _payload :: pl
     , _body :: Body (Val pl)
     } deriving (Show, Functor, Foldable, Traversable)
-
-fromEval :: EV.Val srcId -> Val ()
-fromEval v =
-    case v of
-    EV.HRecExtend x -> x <&> fromEval & RRecExtend
-    EV.HInject x -> x <&> fromEval & RInject
-    EV.HRecEmpty -> RRecEmpty
-    EV.HLiteral x -> RLiteral x
-    EV.HFunc {} -> RFunc
-    EV.HAbsurd {} -> RFunc
-    EV.HCase {} -> RFunc
-    EV.HBuiltin {} -> RFunc
-    EV.HError err -> RError err
-    & Val ()
 
 extractField :: T.Tag -> Val () -> Val ()
 extractField tag (Val () (RRecExtend (V.RecExtend vt vv vr)))
