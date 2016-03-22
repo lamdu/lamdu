@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.Builtins.Anchors
     ( objTag, infixlTag, infixrTag, listTid, textTid
     , headTag, tailTag, consTag, nilTag, trueTag, falseTag, justTag, nothingTag
@@ -6,56 +5,70 @@ module Lamdu.Builtins.Anchors
     , Order, anchorTags
     ) where
 
+import qualified Data.Store.Guid as Guid
+import           Data.String (IsString(..))
 import           Lamdu.Expr.Type (Tag)
 import qualified Lamdu.Expr.Type as T
 
+rightPad :: Int -> a -> [a] -> [a]
+rightPad l x xs
+    | len >= l = xs
+    | otherwise = xs ++ replicate (l - len) x
+    where
+        len = length xs
+
+-- We want the translation to Guid and back to not be lossy, so we
+-- canonize to Guid format
+bi :: IsString a => String -> a
+bi = fromString . rightPad Guid.length '\x00' . ("BI:" ++)
+
 objTag :: Tag
-objTag = "BI:object"
+objTag = bi "object"
 
 infixlTag :: Tag
-infixlTag = "BI:infixl"
+infixlTag = bi "infixl"
 
 infixrTag :: Tag
-infixrTag = "BI:infixr"
+infixrTag = bi "infixr"
 
 indexTag :: Tag
-indexTag = "BI:index"
+indexTag = bi "index"
 
 startTag :: Tag
-startTag = "BI:start"
+startTag = bi "start"
 
 stopTag :: Tag
-stopTag = "BI:stop"
+stopTag = bi "stop"
 
 listTid :: T.NominalId
-listTid = "BI:list"
+listTid = bi "list"
 
 textTid :: T.NominalId
-textTid = "BI:text"
+textTid = bi "text"
 
 headTag :: Tag
-headTag = "BI:head"
+headTag = bi "head"
 
 tailTag :: Tag
-tailTag = "BI:tail"
+tailTag = bi "tail"
 
 consTag :: Tag
-consTag = "BI:cons"
+consTag = bi "cons"
 
 nilTag :: Tag
-nilTag = "BI:nil"
+nilTag = bi "nil"
 
 trueTag :: Tag
-trueTag = "BI:true"
+trueTag = bi "true"
 
 falseTag :: Tag
-falseTag = "BI:false"
+falseTag = bi "false"
 
 justTag :: Tag
-justTag = "BI:just"
+justTag = bi "just"
 
 nothingTag :: Tag
-nothingTag = "BI:nothing"
+nothingTag = bi "nothing"
 
 type Order = Int
 

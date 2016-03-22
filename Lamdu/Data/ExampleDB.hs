@@ -4,8 +4,6 @@ module Lamdu.Data.ExampleDB
     , withDB
     ) where
 
-import           Prelude.Compat
-
 import           Control.Lens.Operators
 import           Control.Monad (unless, void)
 import           Control.Monad.Trans.Class (lift)
@@ -43,6 +41,8 @@ import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
+
+import           Prelude.Compat
 
 type T = Transaction
 
