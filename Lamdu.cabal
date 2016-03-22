@@ -175,7 +175,6 @@ Executable lamdu
                   , Lamdu.Builtins.Literal
                   , Lamdu.CharClassification
                   , Lamdu.Compiler.Flatten
-                  , Lamdu.Compiler.Javascript
                   , Lamdu.Config
                   , Lamdu.Config.Sampler
                   , Lamdu.Data.Anchors
@@ -186,6 +185,7 @@ Executable lamdu
                   , Lamdu.Data.Ops.Subexprs
                   , Lamdu.DataFile
                   , Lamdu.Eval.JS
+                  , Lamdu.Eval.JS.Compiler
                   , Lamdu.Eval.Results
                   , Lamdu.Eval.Results.Process
                   , Lamdu.Eval.Val

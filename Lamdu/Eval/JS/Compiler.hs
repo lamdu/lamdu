@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude, LambdaCase, GeneralizedNewtypeDeriving, TemplateHaskell, QuasiQuotes, OverloadedStrings, PolymorphicComponents #-}
 -- | Compile Lamdu vals to Javascript
 
-module Lamdu.Compiler.Javascript
+module Lamdu.Eval.JS.Compiler
     ( Actions(..)
     , ValId(..)
     , compile

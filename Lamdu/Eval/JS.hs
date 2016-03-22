@@ -38,7 +38,7 @@ import           Data.Word (Word8)
 import           Lamdu.Builtins.Literal
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.DataFile as DataFile
-import qualified Lamdu.Compiler.Javascript as Compiler
+import qualified Lamdu.Eval.JS.Compiler as Compiler
 import           Lamdu.Eval.Results (EvalResults(..))
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Eval.Val (ScopeId(..))
