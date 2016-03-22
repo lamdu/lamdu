@@ -35,7 +35,7 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Vector as Vec
 import           Data.Word (Word8)
-import           Lamdu.Builtins.Literal
+import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.DataFile as DataFile
 import qualified Lamdu.Eval.JS.Compiler as Compiler
@@ -131,7 +131,7 @@ parseBytes :: Json.Value -> ER.Val ()
 parseBytes (Json.Array vals) =
     Vec.toList vals
     <&> parseWord8
-    & SBS.pack & LitBytes & fromLit & ER.RLiteral & ER.Val ()
+    & SBS.pack & PrimVal.Bytes & PrimVal.fromKnown & ER.RPrimVal & ER.Val ()
 parseBytes _ = error "Bytes with non-array data"
 
 parseInject :: String -> Maybe Json.Value -> ER.Val ()
@@ -146,7 +146,7 @@ parseInject tag mData =
 
 parseResult :: Json.Value -> ER.Val ()
 parseResult (Json.Number x) =
-    realToFrac x & LitFloat & fromLit & ER.RLiteral & ER.Val ()
+    realToFrac x & PrimVal.Float & PrimVal.fromKnown & ER.RPrimVal & ER.Val ()
 parseResult (Json.Object obj) =
     case Json.parseMaybe (.: "tag") obj of
     Nothing -> parseRecord obj

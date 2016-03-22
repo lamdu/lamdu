@@ -54,7 +54,7 @@ addTypes nomsMap typ (Val () b) =
         Just valType -> addTypes nomsMap valType val & V.Inject tag & RInject
     RFunc -> RFunc
     RRecEmpty -> RRecEmpty
-    RLiteral l -> RLiteral l
+    RPrimVal l -> RPrimVal l
     RError e -> RError e
     & Val typ
     where

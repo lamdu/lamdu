@@ -21,8 +21,7 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Builtins.Anchors as Builtins
-import           Lamdu.Builtins.Literal (Lit(..))
-import qualified Lamdu.Builtins.Literal as BuiltinLiteral
+import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (EvalError(..), Val(..), Body(..))
@@ -118,17 +117,17 @@ make animId (Val typ val) =
             GridView.verticalAlign 0.5 [fieldsView, restView] & return
         where
             (fields, recStatus) = extractFields recExtend
-    RLiteral literal
+    RPrimVal primVal
         | typ == T.TInst Builtins.textTid mempty ->
-          case lit of
-          LitBytes x -> UTF8.toString x & toText
+          case pv of
+          PrimVal.Bytes x -> UTF8.toString x & toText
           _ -> error "text not made of bytes"
         | otherwise ->
-          case lit of
-          LitBytes x -> toText x
-          LitFloat x -> toText x
+          case pv of
+          PrimVal.Bytes x -> toText x
+          PrimVal.Float x -> toText x
         where
-            lit = BuiltinLiteral.toLit literal
+            pv = PrimVal.toKnown primVal
             toText :: (Format r, MonadA m) => r -> ExprGuiM m View
             toText = asText . format
     & ExprGuiM.advanceDepth return animId

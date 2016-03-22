@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, TemplateHaskell, NoImplicitPrelude, RecordWildCards, GeneralizedNewtypeDeriving #-}
 module Lamdu.Eval.Results
-    ( Body(..), _RRecExtend, _RInject, _RFunc, _RRecEmpty, _RLiteral, _RError
+    ( Body(..), _RRecExtend, _RInject, _RFunc, _RRecEmpty, _RPrimVal, _RError
     , Val(..), payload, body
     , ScopeId(..), scopeIdInt, topLevelScopeId
     , EvalError(..)
@@ -43,7 +43,7 @@ data Body val
     | RInject (V.Inject val)
     | RFunc
     | RRecEmpty
-    | RLiteral V.Literal
+    | RPrimVal V.PrimVal
     | RError EvalError
     deriving (Show, Functor, Foldable, Traversable)
 

@@ -24,7 +24,7 @@ import           Data.Store.Transaction (Transaction, setP)
 import qualified Data.Store.Transaction as Transaction
 import           Data.String (IsString(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
-import qualified Lamdu.Builtins.Literal as BuiltinLiteral
+import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Data.Anchors (assocTagOrder, PresentationMode(..))
 import qualified Lamdu.Data.DbLayout as Db
 import qualified Lamdu.Data.Definition as Definition
@@ -217,10 +217,10 @@ createBool =
         tyCon [] & return
 
 bytes :: Type
-bytes = BuiltinLiteral.bytesType
+bytes = PrimVal.bytesType
 
 float :: Type
-float = BuiltinLiteral.floatType
+float = PrimVal.floatType
 
 createText :: MonadA m => M m Type
 createText =

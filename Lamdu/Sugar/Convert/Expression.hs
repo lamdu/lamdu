@@ -9,8 +9,7 @@ import qualified Data.ByteString as SBS
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import           Lamdu.Builtins.Literal (Lit(..))
-import qualified Lamdu.Builtins.Literal as BuiltinLiteral
+import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
@@ -34,25 +33,25 @@ import           Prelude.Compat
 convertLiteralCommon ::
     Monad m =>
     (Transaction.Property m a -> Literal (Transaction.Property m)) ->
-    (a -> Lit) -> a ->
+    (a -> PrimVal.KnownPrim) -> a ->
     Input.Payload m b -> ConvertM m (ExpressionU m b)
 convertLiteralCommon mkLit mkBody val exprPl =
     Property
     { _pVal = val
     , _pSet =
       ExprIRef.writeValBody iref . V.BLeaf . V.LLiteral .
-      BuiltinLiteral.fromLit . mkBody
+      PrimVal.fromKnown . mkBody
     } & mkLit & BodyLiteral & addActions exprPl
     where
         iref = exprPl ^. Input.stored . Property.pVal
 
 convertLiteralFloat ::
     MonadA m => Double -> Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertLiteralFloat = convertLiteralCommon LiteralNum LitFloat
+convertLiteralFloat = convertLiteralCommon LiteralNum PrimVal.Float
 
 convertLiteralBytes ::
     MonadA m => SBS.ByteString -> Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertLiteralBytes = convertLiteralCommon LiteralBytes LitBytes
+convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
 convert :: (MonadA m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert v =
@@ -68,9 +67,9 @@ convert v =
       V.BCase x -> ConvertCase.convert x
       V.BLeaf (V.LVar x) -> ConvertGetVar.convert x
       V.BLeaf (V.LLiteral literal) ->
-          case BuiltinLiteral.toLit literal of
-          LitFloat x -> convertLiteralFloat x
-          LitBytes x -> convertLiteralBytes x
+          case PrimVal.toKnown literal of
+          PrimVal.Float x -> convertLiteralFloat x
+          PrimVal.Bytes x -> convertLiteralBytes x
       V.BLeaf V.LHole -> ConvertHole.convert
       V.BLeaf V.LRecEmpty -> ConvertRecord.convertEmpty
       V.BLeaf V.LAbsurd -> ConvertCase.convertAbsurd

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.Builtins.Literal
-    ( Lit(..)
-    , fromLit, toLit
+module Lamdu.Builtins.PrimVal
+    ( KnownPrim(..)
+    , fromKnown, toKnown
     , floatType, bytesType
     , nameOf
     ) where
@@ -12,9 +12,9 @@ import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 
-data Lit
-    = LitFloat Double
-    | LitBytes ByteString
+data KnownPrim
+    = Float Double
+    | Bytes ByteString
     deriving (Eq, Ord, Show)
 
 bytesId :: T.PrimId
@@ -35,12 +35,12 @@ floatType = T.TPrim floatId
 bytesType :: Type
 bytesType = T.TPrim bytesId
 
-toLit :: V.Literal -> Lit
-toLit (V.Literal litId bytes)
-    | litId == floatId = LitFloat (decodeS bytes)
-    | litId == bytesId = LitBytes bytes
-    | otherwise = error $ "Unknown literal id: " ++ show litId
+toKnown :: V.PrimVal -> KnownPrim
+toKnown (V.PrimVal litId bytes)
+    | litId == floatId = Float (decodeS bytes)
+    | litId == bytesId = Bytes bytes
+    | otherwise = error $ "Unknown prim id: " ++ show litId
 
-fromLit :: Lit -> V.Literal
-fromLit (LitFloat dbl) = V.Literal floatId (encodeS dbl)
-fromLit (LitBytes bytes) = V.Literal bytesId bytes
+fromKnown :: KnownPrim -> V.PrimVal
+fromKnown (Float dbl) = V.PrimVal floatId (encodeS dbl)
+fromKnown (Bytes bytes) = V.PrimVal bytesId bytes

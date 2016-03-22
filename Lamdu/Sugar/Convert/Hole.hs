@@ -27,8 +27,7 @@ import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Builtins.Anchors as Builtins
-import           Lamdu.Builtins.Literal (Lit(..))
-import qualified Lamdu.Builtins.Literal as BuiltinLiteral
+import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -193,7 +192,7 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
     let mkOption =
             return . mkHoleOption sugarContext mInjectedArg exprPl stored . SeedExpr
         mkLiteralOption =
-            mkOption . Val () . V.BLeaf . V.LLiteral . BuiltinLiteral.fromLit
+            mkOption . Val () . V.BLeaf . V.LLiteral . PrimVal.fromKnown
     pure HoleActions
         { _holeOptions =
             mkOptions sugarContext mInjectedArg exprPl stored
@@ -201,12 +200,12 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
                 (mkHoleSuggesteds sugarContext mInjectedArg exprPl stored)
         , _holeOptionLiteral =
           \case
-          LiteralNum (Identity x) -> LitFloat x & mkLiteralOption
-          LiteralBytes (Identity x) -> LitBytes x & mkLiteralOption
+          LiteralNum (Identity x) -> PrimVal.Float x & mkLiteralOption
+          LiteralBytes (Identity x) -> PrimVal.Bytes x & mkLiteralOption
           LiteralText (Identity x) ->
               UTF8.fromString x
-              & LitBytes
-              & BuiltinLiteral.fromLit
+              & PrimVal.Bytes
+              & PrimVal.fromKnown
               & V.LLiteral & Pure.leaf
               & Pure.toNom Builtins.textTid
               & mkOption

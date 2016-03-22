@@ -172,7 +172,7 @@ Executable lamdu
   Other-Modules:    Data.Hashable.Generic
                   , Data.Map.Utils
                   , Lamdu.Builtins.Anchors
-                  , Lamdu.Builtins.Literal
+                  , Lamdu.Builtins.PrimVal
                   , Lamdu.CharClassification
                   , Lamdu.Compiler.Flatten
                   , Lamdu.Config

@@ -24,8 +24,7 @@ import qualified Data.Map as Map
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Builtins.Anchors as Builtins
-import           Lamdu.Builtins.Literal (Lit(..))
-import qualified Lamdu.Builtins.Literal as BuiltinLiteral
+import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Compiler.Flatten as Flatten
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.Identifier (Identifier(..))
@@ -407,14 +406,14 @@ ffiCompile ffiName@(Definition.FFIName modul funcName) =
         opFunc op = infixFunc (\x y -> return (op x y))
         unknown = unknownFfiFunc ffiName & return
 
-compileLiteral :: V.Literal -> CodeGen
+compileLiteral :: V.PrimVal -> CodeGen
 compileLiteral literal =
-    case BuiltinLiteral.toLit literal of
-    LitBytes bytes ->
+    case PrimVal.toKnown literal of
+    PrimVal.Bytes bytes ->
         JS.var "rts" $. "bytes" $$ JS.array ints & codeGenFromExpr
         where
             ints = [JS.int (fromIntegral byte) | byte <- BS.unpack bytes]
-    LitFloat num -> JS.number num & codeGenFromExpr
+    PrimVal.Float num -> JS.number num & codeGenFromExpr
 
 compileRecExtend :: Monad m => V.RecExtend (Val ValId) -> M m CodeGen
 compileRecExtend x =

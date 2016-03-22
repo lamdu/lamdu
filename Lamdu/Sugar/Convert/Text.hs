@@ -14,8 +14,7 @@ import           Data.Maybe.Utils (maybeToMPlus)
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import qualified Lamdu.Builtins.Anchors as Builtins
-import           Lamdu.Builtins.Literal (Lit(..))
-import qualified Lamdu.Builtins.Literal as BuiltinLiteral
+import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Val (Val(..))
@@ -37,14 +36,14 @@ text (V.Nom tid (Val litPl body)) toNomPl =
         guard $ tid == Builtins.textTid
         lit <- body ^? ExprLens.valBodyLiteral & maybeToMPlus
         utf8Bytes <-
-            case BuiltinLiteral.toLit lit of
-            LitBytes utf8Bytes -> return utf8Bytes
+            case PrimVal.toKnown lit of
+            PrimVal.Bytes utf8Bytes -> return utf8Bytes
             _ -> mzero
         Property
             { _pVal = UTF8.toString utf8Bytes
             , _pSet =
                 ExprIRef.writeValBody litIRef . V.BLeaf . V.LLiteral .
-                BuiltinLiteral.fromLit . LitBytes . UTF8.fromString
+                PrimVal.fromKnown . PrimVal.Bytes . UTF8.fromString
             } & LiteralText & BodyLiteral & addActions toNomPl
             <&> rPayload . plData <>~ litPl ^. Input.userData
             & lift
