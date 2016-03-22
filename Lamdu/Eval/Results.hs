@@ -1,22 +1,42 @@
-{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, TemplateHaskell, NoImplicitPrelude, RecordWildCards #-}
+{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, TemplateHaskell, NoImplicitPrelude, RecordWildCards, GeneralizedNewtypeDeriving #-}
 module Lamdu.Eval.Results
     ( Body(..), _RRecExtend, _RInject, _RFunc, _RRecEmpty, _RLiteral, _RError
     , Val(..), payload, body
+    , ScopeId(..), scopeIdInt, topLevelScopeId
+    , EvalError(..)
+    , EvalResults(..), erExprValues, erAppliesOfLam, empty
+
     , extractField
-    , EvalResults(..), erExprValues, erAppliesOfLam
-    , empty
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Data.Binary (Binary)
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Lamdu.Eval.Val (ScopeId, EvalError)
-import qualified Lamdu.Eval.Val as EV
+import           Lamdu.Data.Definition (FFIName)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 
 import           Prelude.Compat
+
+newtype ScopeId = ScopeId { getScopeId :: Int }
+    deriving (Show, Eq, Ord, Binary)
+
+scopeIdInt :: Lens.Iso' ScopeId Int
+scopeIdInt = Lens.iso getScopeId ScopeId
+
+data EvalError
+    = EvalHole
+    | EvalTypeError String
+    | EvalLoadGlobalFailed V.Var
+    | EvalMissingBuiltin FFIName
+    | EvalTodoError String
+    | EvalIndexError String
+    deriving Show
+
+topLevelScopeId :: ScopeId
+topLevelScopeId = ScopeId 0
 
 data Body val
     = RRecExtend (V.RecExtend val)
@@ -39,7 +59,7 @@ extractField tag (Val () (RRecExtend (V.RecExtend vt vv vr)))
 extractField _ v@(Val () RError {}) = v
 extractField tag x =
     "Expected record with tag: " ++ show tag ++ " got: " ++ show x
-    & EV.EvalTypeError & RError & Val ()
+    & EvalTypeError & RError & Val ()
 
 data EvalResults srcId =
     EvalResults

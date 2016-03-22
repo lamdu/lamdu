@@ -25,7 +25,7 @@ import           Data.Store.Transaction (MkProperty(..))
 import qualified Data.Store.Transaction as Transaction
 import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.WidgetId as WidgetId
-import           Lamdu.Eval.Val (ScopeId)
+import           Lamdu.Eval.Results (ScopeId)
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId

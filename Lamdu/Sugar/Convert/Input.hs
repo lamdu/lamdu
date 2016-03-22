@@ -15,7 +15,6 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Eval.Val (ScopeId)
 import           Lamdu.Expr.IRef (ValIProperty)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Val as V
@@ -25,8 +24,8 @@ import           Lamdu.Sugar.EntityId (EntityId)
 import           Prelude.Compat
 
 data EvalResultsForExpr = EvalResultsForExpr
-    { _eResults :: Map ScopeId (ER.Val ())
-    , _eAppliesOfLam :: Map ScopeId [(ScopeId, ER.Val ())]
+    { _eResults :: Map ER.ScopeId (ER.Val ())
+    , _eAppliesOfLam :: Map ER.ScopeId [(ER.ScopeId, ER.Val ())]
     }
 
 data Payload m a = Payload

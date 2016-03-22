@@ -69,7 +69,6 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Eval.Val (ScopeId)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.GUI.CodeEdit.Settings as CESettings
@@ -248,7 +247,7 @@ makeWithAnnotationBG f (AnnotationParams minWidth animId wideAnnotationBehavior)
             & maybeTooWide
 
 data EvalResDisplay = EvalResDisplay
-    { erdScope :: ScopeId
+    { erdScope :: ER.ScopeId
     , erdSource :: CurPrevTag
     , erdVal :: ER.Val Type
     }
@@ -637,7 +636,7 @@ maybeAddAnnotationWith opt wideAnnotationBehavior ShowAnnotation{..} annotation 
             addEvaluationResult inferredType neighborVals scopeAndVal
             wideAnnotationBehavior entityId eg
 
-valOfScope :: Sugar.Annotation -> CurAndPrev (Maybe ScopeId) -> Maybe EvalResDisplay
+valOfScope :: Sugar.Annotation -> CurAndPrev (Maybe ER.ScopeId) -> Maybe EvalResDisplay
 valOfScope annotation mScopeIds =
     go
     <$> curPrevTag
@@ -650,7 +649,7 @@ valOfScope annotation mScopeIds =
             ann ^? Lens._Just . Lens.at scopeId . Lens._Just
             <&> EvalResDisplay scopeId tag
 
-valOfScopePreferCur :: Sugar.Annotation -> ScopeId -> Maybe EvalResDisplay
+valOfScopePreferCur :: Sugar.Annotation -> ER.ScopeId -> Maybe EvalResDisplay
 valOfScopePreferCur annotation = valOfScope annotation . pure . Just
 
 listWithDelDests :: k -> k -> (a -> k) -> [a] -> [(k, k, a)]

@@ -111,7 +111,6 @@ import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Eval.Results as ER
-import qualified Lamdu.Eval.Val as E
 import           Lamdu.Expr.Scheme (Scheme)
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
@@ -149,7 +148,7 @@ data Actions m = Actions
     , _extract :: T m ExtractToDestination
     }
 
-type EvaluationResult = Map E.ScopeId (ER.Val Type)
+type EvaluationResult = Map ER.ScopeId (ER.Val Type)
 
 data Annotation = Annotation
     { _aInferredType :: Type
@@ -517,7 +516,7 @@ data Let name m expr = Let
     , -- This is a mapping from parent scope (the ScopeId inside
       -- BinderParamScopeId for outer-most let) to the inside of the
       -- redex lambda (redex is applied exactly once):
-      _lBodyScope :: CurAndPrev (Map E.ScopeId E.ScopeId)
+      _lBodyScope :: CurAndPrev (Map ER.ScopeId ER.ScopeId)
     , _lBody :: BinderBody name m expr -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable)
 
@@ -548,7 +547,7 @@ data BinderBody name m expr = BinderBody
 data BinderBodyScope
     = SameAsParentScope
       -- ^ no binder params
-    | BinderBodyScope (CurAndPrev (Map E.ScopeId [BinderParamScopeId]))
+    | BinderBodyScope (CurAndPrev (Map ER.ScopeId [BinderParamScopeId]))
       -- ^ binder has params, use the map to get the param application
       -- scopes
 

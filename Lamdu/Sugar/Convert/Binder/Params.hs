@@ -35,7 +35,6 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.Eval.Results.Process as ResultsProcess
-import           Lamdu.Eval.Val (ScopeId)
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -80,7 +79,7 @@ cpAddFirstParam f ConventionalParams {..} = f _cpAddFirstParam <&> \_cpAddFirstP
 data FieldParam = FieldParam
     { fpTag :: T.Tag
     , fpFieldType :: Type
-    , fpValue :: CurAndPrev (Map ScopeId [(ScopeId, ER.Val Type)])
+    , fpValue :: CurAndPrev (Map ER.ScopeId [(ER.ScopeId, ER.Val Type)])
     }
 
 data StoredLam m = StoredLam
@@ -187,7 +186,7 @@ addFieldParam mkArg binderKind mkNewTags storedLam =
         fixUsagesOfLamBinder addFieldToCall binderKind storedLam
         return tagG
 
-mkCpScopesOfLam :: Input.Payload m a -> CurAndPrev (Map ScopeId [BinderParamScopeId])
+mkCpScopesOfLam :: Input.Payload m a -> CurAndPrev (Map ER.ScopeId [BinderParamScopeId])
 mkCpScopesOfLam x =
     x ^. Input.evalResults <&> (^. Input.eAppliesOfLam) <&> (fmap . fmap) fst
     <&> (fmap . map) BinderParamScopeId

@@ -9,7 +9,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Map (Map)
-import           Lamdu.Eval.Val (ScopeId)
+import           Lamdu.Eval.Results (ScopeId)
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Expr.Type (Type)
 import           Lamdu.Expr.Val (Val(..))

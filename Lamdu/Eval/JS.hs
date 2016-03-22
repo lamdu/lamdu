@@ -39,10 +39,8 @@ import           Lamdu.Builtins.Literal
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.DataFile as DataFile
 import qualified Lamdu.Eval.JS.Compiler as Compiler
-import           Lamdu.Eval.Results (EvalResults(..))
+import           Lamdu.Eval.Results (ScopeId(..), EvalResults(..))
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Eval.Val (ScopeId(..))
-import qualified Lamdu.Eval.Val as EV
 import           Lamdu.Expr.Identifier (Identifier(..))
 import           Lamdu.Expr.Type (Tag(..))
 import qualified Lamdu.Expr.Val as V

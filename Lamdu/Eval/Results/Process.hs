@@ -9,7 +9,7 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import           Lamdu.Eval.Results (Val(..), Body(..))
-import qualified Lamdu.Eval.Val as EV
+import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Nominal as N
@@ -43,14 +43,14 @@ addTypes nomsMap typ (Val () b) =
     case b of
     RRecExtend (V.RecExtend tag val rest) ->
         case extractRecordTypeField tag bodyType of
-        Nothing -> EV.EvalTypeError "addTypes bad type for RRecExtend" & RError
+        Nothing -> ER.EvalTypeError "addTypes bad type for RRecExtend" & RError
         Just (valType, restType) ->
             V.RecExtend tag
             (addTypes nomsMap valType val) (addTypes nomsMap restType rest)
             & RRecExtend
     RInject (V.Inject tag val) ->
         case extractSumTypeField tag bodyType of
-        Nothing -> EV.EvalTypeError "addTypes bad type for RInject" & RError
+        Nothing -> ER.EvalTypeError "addTypes bad type for RInject" & RError
         Just valType -> addTypes nomsMap valType val & V.Inject tag & RInject
     RFunc -> RFunc
     RRecEmpty -> RRecEmpty

@@ -57,7 +57,7 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Eval.Val (ScopeId, topLevelScopeId)
+import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import           Lamdu.GUI.ExpressionGui.Types (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Types as ExprGuiT

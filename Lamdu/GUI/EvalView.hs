@@ -25,8 +25,7 @@ import           Lamdu.Builtins.Literal (Lit(..))
 import qualified Lamdu.Builtins.Literal as BuiltinLiteral
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Eval.Results (Val(..), Body(..))
-import           Lamdu.Eval.Val (EvalError(..))
+import           Lamdu.Eval.Results (EvalError(..), Val(..), Body(..))
 import           Lamdu.Expr.Type (Type)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V

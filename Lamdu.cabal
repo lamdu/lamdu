@@ -189,7 +189,6 @@ Executable lamdu
                   , Lamdu.Eval.Manager
                   , Lamdu.Eval.Results
                   , Lamdu.Eval.Results.Process
-                  , Lamdu.Eval.Val
                   , Lamdu.Expr.Constraints
                   , Lamdu.Expr.FlatComposite
                   , Lamdu.Expr.GenIds
