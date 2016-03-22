@@ -186,10 +186,10 @@ Executable lamdu
                   , Lamdu.DataFile
                   , Lamdu.Eval.JS
                   , Lamdu.Eval.JS.Compiler
+                  , Lamdu.Eval.Manager
                   , Lamdu.Eval.Results
                   , Lamdu.Eval.Results.Process
                   , Lamdu.Eval.Val
-                  , Lamdu.EvalManager
                   , Lamdu.Expr.Constraints
                   , Lamdu.Expr.FlatComposite
                   , Lamdu.Expr.GenIds

@@ -35,7 +35,7 @@ import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.ExampleDB as ExampleDB
 import           Lamdu.DataFile (getLamduDir)
-import qualified Lamdu.EvalManager as EvalManager
+import qualified Lamdu.Eval.Manager as EvalManager
 import           Lamdu.Font (Fonts(..))
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.CodeEdit.Settings (Settings(..))
