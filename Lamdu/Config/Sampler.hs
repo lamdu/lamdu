@@ -14,7 +14,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
-import           Lamdu.DataFile (getDataFilePath)
+import qualified Lamdu.DataFile as DataFile
 import           System.Directory (getModificationTime)
 
 import           Prelude.Compat
@@ -82,4 +82,4 @@ new =
                     `E.catch` \E.SomeException {} -> return old
         return $ Sampler tid $ readMVar ref
     where
-        getConfigPath = getDataFilePath "config.json"
+        getConfigPath = DataFile.getPath "config.json"

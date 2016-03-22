@@ -1,5 +1,5 @@
 module Lamdu.DataFile
-    ( getDataFilePath, getLamduDir
+    ( getPath, getLamduDir
     ) where
 
 import           Control.Lens.Operators
@@ -10,8 +10,8 @@ import           System.FilePath ((</>))
 getLamduDir :: IO FilePath
 getLamduDir = Directory.getHomeDirectory <&> (</> ".lamdu")
 
-getDataFilePath :: FilePath -> IO FilePath
-getDataFilePath fileName =
+getPath :: FilePath -> IO FilePath
+getPath fileName =
     do
         startDir <- Directory.getCurrentDirectory
         let customPath = startDir </> fileName
