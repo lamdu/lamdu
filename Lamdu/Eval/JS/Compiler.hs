@@ -539,12 +539,11 @@ compileLambda (V.Lam v res) valId =
         mkLambda (varId, lamStmts) = JS.lambda [varId] lamStmts
         compileRes = compileVal res <&> codeGenLamStmts & withLocalVar v
 
-compileApply :: Monad m => V.Apply (Val ValId) -> ValId -> M m CodeGen
-compileApply (V.Apply func arg) valId =
+compileApply :: Monad m => V.Apply (Val ValId) -> M m CodeGen
+compileApply (V.Apply func arg) =
     do
         arg' <- compileVal arg <&> codeGenExpression
         compileAppliedFunc func arg'
-    >>= maybeLogSubexprResult valId
 
 maybeLogSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
 maybeLogSubexprResult valId codeGen =
@@ -585,24 +584,26 @@ compileAppliedFunc func arg' =
                     func' <- compileVal func <&> codeGenExpression
                     func' $$ arg' & codeGenFromExpr & return
 
-compileLeaf :: Monad m => V.Leaf -> M m CodeGen
-compileLeaf leaf =
+compileLeaf :: Monad m => V.Leaf -> ValId -> M m CodeGen
+compileLeaf leaf valId =
     case leaf of
     V.LHole -> throwStr "Reached hole!" & return
     V.LRecEmpty -> JS.object [] & codeGenFromExpr & return
     V.LAbsurd -> throwStr "Reached absurd!" & return
-    V.LVar var -> compileVar var
+    V.LVar var -> compileVar var >>= maybeLogSubexprResult valId
     V.LLiteral literal -> compileLiteral literal & return
 
 compileVal :: Monad m => Val ValId -> M m CodeGen
 compileVal (Val valId body) =
     case body of
-    V.BLeaf leaf                -> compileLeaf leaf
-    V.BApp x                    -> compileApply x valId
-    V.BGetField x               -> compileGetField x
+    V.BLeaf leaf                -> compileLeaf leaf valId
+    V.BApp x                    -> compileApply x    >>= maybeLog
+    V.BGetField x               -> compileGetField x >>= maybeLog
     V.BAbs x                    -> compileLambda x valId
-    V.BInject x                 -> compileInject x
+    V.BInject x                 -> compileInject x   >>= maybeLog
     V.BRecExtend x              -> compileRecExtend x
     V.BCase x                   -> compileCase x
-    V.BFromNom (V.Nom _tId val) -> compileVal val
-    V.BToNom (V.Nom _tId val)   -> compileVal val
+    V.BFromNom (V.Nom _tId val) -> compileVal val    >>= maybeLog
+    V.BToNom (V.Nom _tId val)   -> compileVal val    >>= maybeLog
+    where
+        maybeLog = maybeLogSubexprResult valId
