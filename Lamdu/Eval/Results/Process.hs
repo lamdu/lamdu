@@ -58,10 +58,15 @@ addTypes nomsMap typ (Val () b) =
     RError e -> RError e
     & Val typ
     where
-        bodyType =
-            case typ of
-            T.TInst tid params ->
-                Map.lookup tid nomsMap
-                & fromMaybe (error "addTypes: nominal missing from map")
-                & N.apply params & (^. schemeType)
-            _ -> typ
+        bodyType = unwrapTInsts nomsMap typ
+
+-- Will loop forever for bottoms like: newtype Void = Void Void
+unwrapTInsts :: Map T.NominalId N.Nominal -> T.Type -> T.Type
+unwrapTInsts nomsMap typ =
+    case typ of
+    T.TInst tid params ->
+        Map.lookup tid nomsMap
+        & fromMaybe (error "addTypes: nominal missing from map")
+        & N.apply params & (^. schemeType)
+        & unwrapTInsts nomsMap
+    _ -> typ
