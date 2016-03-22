@@ -15,13 +15,12 @@ import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.RWS.Strict (RWST(..))
 import qualified Control.Monad.Trans.RWS.Strict as RWS
 import qualified Data.ByteString as BS
-import           Data.ByteString.Hex (showHexBytes)
+import           Data.ByteString.Hex (showHexByte, showHexBytes)
 import qualified Data.Char as Char
 import           Data.Default () -- instances
 import           Data.List (intercalate, isPrefixOf)
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe)
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -136,16 +135,6 @@ isReservedName name =
     [ "global_"
     , "local_"
     , "scopeId_"
-    , "multiply"
-    , "plus"
-    , "minus"
-    , "equals"
-    , "greater"
-    , "lesser"
-    , "percent"
-    , "pipe"
-    , "dot"
-    , "slash"
     ]
 
 topLevelDecls :: FilePath -> [JSS.Statement ()]
@@ -198,23 +187,6 @@ freshName prefix =
         prefix ++ show newId & return
     & M
 
-ops :: Map Char String
-ops =
-    mconcat
-    [ '*' ==> "multiply"
-    , '+' ==> "plus"
-    , '-' ==> "minus"
-    , '=' ==> "equals"
-    , '>' ==> "greater"
-    , '<' ==> "lesser"
-    , '%' ==> "percent"
-    , '|' ==> "pipe"
-    , '.' ==> "dot"
-    , '/' ==> "slash"
-    ]
-    where
-        (==>) = Map.singleton
-
 avoidReservedNames :: String -> String
 avoidReservedNames name
     | isReservedName name = "__" ++ name
@@ -228,7 +200,9 @@ escapeName xs = replaceSpecialChars xs
 replaceSpecialChars :: String -> String
 replaceSpecialChars = concatMap replaceSpecial
     where
-        replaceSpecial x = Map.lookup x ops & fromMaybe [x]
+        replaceSpecial x
+            | Char.isAlphaNum x = [x]
+            | otherwise = '_' : (showHexByte . fromIntegral . Char.ord) x
 
 readName :: (UniqueId.ToGuid a, Monad m) => a -> M m String -> M m String
 readName g act =
