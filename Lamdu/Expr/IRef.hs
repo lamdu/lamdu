@@ -25,7 +25,6 @@ import           Control.Lens.Tuple
 import           Control.MonadA (MonadA)
 import           Data.Binary (Binary(..))
 import           Data.Function.Decycle (decycle)
-import           Data.Monoid ((<>))
 import qualified Data.Store.Guid as Guid
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
@@ -51,7 +50,7 @@ defI :: V.Var -> DefI m
 defI (V.Var (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make bs
 
 nominalI :: T.NominalId -> IRef m Nominal
-nominalI (T.NominalId (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make ("Nom:" <> bs)
+nominalI (T.NominalId (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make bs
 
 newtype ValI m = ValI
     { unValI :: IRef m (V.Body (ValI m))
