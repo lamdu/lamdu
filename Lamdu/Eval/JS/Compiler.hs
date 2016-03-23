@@ -18,12 +18,11 @@ import qualified Data.ByteString as BS
 import           Data.ByteString.Hex (showHexByte, showHexBytes)
 import qualified Data.Char as Char
 import           Data.Default () -- instances
-import           Data.List (intercalate, isPrefixOf)
+import           Data.List (isPrefixOf)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Store.Guid (Guid)
 import qualified Data.Store.Guid as Guid
-import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Compiler.Flatten as Flatten
 import qualified Lamdu.Data.Definition as Definition
@@ -143,8 +142,8 @@ topLevelDecls rtsPath =
       , [jsstmt|var scopeCounter = 1;|]
       ] <&> void
     ) ++
-    [ declLog 0
-    , varinit "rts" $ JS.var "require" `JS.call` [JS.string rtsPath]
+    [ varinit "rts" $ JS.var "require" `JS.call` [JS.string rtsPath]
+    , declLog 0
     ]
 
 loggingEnabled :: Mode
@@ -255,7 +254,7 @@ compileGlobal globalId =
     performAction (`readGlobal` globalId) >>=
     \case
     Definition.BodyBuiltin (Definition.Builtin ffiName _scheme) ->
-        ffiCompile ffiName
+        ffiCompile ffiName & return
     Definition.BodyExpr (Definition.Expr val _type _usedDefs) ->
         compileVal val <&> codeGenExpression
     & resetRW
@@ -325,24 +324,6 @@ lam prefix code =
         var <- freshName prefix <&> JS.ident
         code (JS.var var) <&> JS.lambda [var]
 
-infixFunc ::
-    Monad m =>
-    (JSS.Expression () ->
-     JSS.Expression () ->
-     M m (JSS.Expression ())) ->
-    M m (JSS.Expression ())
-infixFunc f =
-    do
-        lStr <- tagIdent Builtins.infixlTag
-        rStr <- tagIdent Builtins.infixrTag
-        lam "i" $ \args ->
-            (args $. lStr) `f` (args $. rStr)
-            <&> JS.returns
-            <&> (: [])
-
-nullaryInject :: JSS.Expression () -> JSS.Expression ()
-nullaryInject tagStr = JS.object [(JS.propId "tag", tagStr)]
-
 inject :: JSS.Expression () -> JSS.Expression () -> JSS.Expression ()
 inject tagStr dat' =
     JS.object
@@ -350,61 +331,10 @@ inject tagStr dat' =
     , (JS.propId "data", dat')
     ]
 
-jsBoolToSum :: String -> String -> JSS.Expression () -> JSS.Expression ()
-jsBoolToSum trueTag falseTag bool =
-    nullaryInject
-    (JS.cond bool (JS.string trueTag) (JS.string falseTag))
-
-unknownFfiFunc :: Definition.FFIName -> JSS.Expression ()
-unknownFfiFunc (Definition.FFIName modulePath name) =
-    JS.lambda []
-    [ "Unsupported ffi function " ++ intercalate "." (modulePath ++ [name])
-        & JS.string & JS.throw
-    ]
-
-ffiCompile :: Monad m => Definition.FFIName -> M m (JSS.Expression ())
-ffiCompile ffiName@(Definition.FFIName modul funcName) =
-    do
-        trueTag <- tagString Builtins.trueTag
-        falseTag <- tagString Builtins.falseTag
-        let infixBool f = opFunc (\x y -> f x y & jsBoolToSum trueTag falseTag)
-        -- TODO: use the JS FFI names in ExampleDB
-        case modul of
-            ["Prelude"] ->
-                case funcName of
-                "*" -> opFunc JS.mul
-                "+" -> opFunc JS.add
-                "-" -> opFunc JS.sub
-                "/" -> opFunc JS.div
-                "mod" -> opFunc JS.mod
-                "==" -> infixBool JS.steq
-                ">=" -> infixBool JS.ge
-                ">" -> infixBool JS.gt
-                "<=" -> infixBool JS.le
-                "<" -> infixBool JS.lt
-                "div" ->
-                    infixFunc
-                    (\x y -> return (JS.var "Math" $. "floor" $$ JS.div x y))
-                "sqrt" ->
-                    lam "i" $ \x -> return [ JS.var "Math" $. "sqrt" $$ x & JS.returns ]
-                _ -> unknown
-            ["Bytes"] ->
-                case funcName of
-                "byteAt" ->
-                    do
-                        oStr <- tagIdent Builtins.objTag
-                        iStr <- tagIdent Builtins.indexTag
-                        lam "i" $ \args ->
-                            return
-                            [ (args $. oStr) `JS.brack` (args $. iStr) & JS.returns
-                            ]
-                "length" ->
-                    lam "i" $ \arg -> return [ arg $. "length" & JS.returns ]
-                _ -> unknown
-            _ -> unknown
-    where
-        opFunc op = infixFunc (\x y -> return (op x y))
-        unknown = unknownFfiFunc ffiName & return
+ffiCompile :: Definition.FFIName -> JSS.Expression ()
+ffiCompile (Definition.FFIName modul funcName) =
+    foldl ($.) (JS.var "rts" $. "builtins") (modul <&> JS.ident)
+    `JS.brack` JS.string funcName
 
 compileLiteral :: V.PrimVal -> CodeGen
 compileLiteral literal =

@@ -1,3 +1,6 @@
+-- Constant tag names which have special support in the runtime or the sugaring.
+-- Those which are supported in the runtime are repeated in JS in rts.js.
+
 module Lamdu.Builtins.Anchors
     ( objTag, infixlTag, infixrTag, listTid, textTid
     , headTag, tailTag, consTag, nilTag, trueTag, falseTag, justTag, nothingTag
