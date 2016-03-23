@@ -37,6 +37,18 @@ stack install
 
 ```
 
+#### arch linux
+
+requires [stack](https://github.com/commercialhaskell/stack/releases)
+```shell
+sudo pacman -S ftgl leveldb glfw libxrandr libxi libxcursor libxinerama
+git clone --recursive https://github.com/lamdu/lamdu
+cd lamdu
+stack setup
+stack install
+~/.local/bin/lamdu
+
+```
 ## Tutorial
 
 ### Simple expressions
