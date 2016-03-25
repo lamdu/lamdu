@@ -20,25 +20,25 @@ import           Lamdu.Sugar.Types
 
 import           Prelude.Compat
 
-insideRedexes :: (Val a -> Val a) -> Val a -> Val a
-insideRedexes f (Val a (V.BApp (V.Apply (V.Val l (V.BAbs lam)) arg))) =
-    lam
-    & V.lamResult %~ insideRedexes f
-    & V.BAbs & Val l
-    & flip V.Apply arg & V.BApp & Val a
-insideRedexes f expr = f expr
-
 redexes :: Val a -> ([(V.Var, Val a)], Val a)
 redexes (Val _ (V.BApp (V.Apply (V.Val _ (V.BAbs lam)) arg))) =
     redexes (lam ^. V.lamResult)
     & _1 %~ (:) (lam ^. V.lamParamId, arg)
 redexes v = ([], v)
 
+wrapWithRedexes :: [(V.Var, Val (Maybe a))] -> Val (Maybe a) -> Val (Maybe a)
+wrapWithRedexes rs body =
+    foldr wrapWithRedex body rs
+    where
+        wrapWithRedex (v, val) b =
+            V.Apply (Val Nothing (V.BAbs (V.Lam v b))) val
+            & V.BApp
+            & Val Nothing
+
 inlineLetH :: V.Var -> Val (Maybe a) -> Val (Maybe a) -> Val (Maybe a)
 inlineLetH var arg body =
-    foldr wrapWithRedex newBody innerRedexes
+    go body & uncurry wrapWithRedexes
     where
-        (innerRedexes, newBody) = go body
         go (Val stored b) =
             case (b, arg ^. V.body) of
             (V.BLeaf (V.LVar v), _) | v == var -> redexes arg
@@ -47,16 +47,17 @@ inlineLetH var arg body =
               | v == var ->
                 redexes lamBody
                 & _1 %~ (:) (param, a)
+            (V.BAbs (V.Lam param lamBody), _) ->
+                ( []
+                , go lamBody & uncurry wrapWithRedexes
+                  & V.Lam param & V.BAbs & Val stored
+                )
             _ ->
                 ( r ^.. Lens.traverse . _1 . Lens.traverse
                 , r <&> (^. _2) & Val stored
                 )
                 where
                     r = b <&> go
-        wrapWithRedex (v, val) b =
-            V.Apply (Val Nothing (V.BAbs (V.Lam v b))) val
-            & V.BApp
-            & Val Nothing
 
 cursorDest :: Val a -> a
 cursorDest val =
@@ -71,7 +72,7 @@ inlineLet ::
 inlineLet topLevelProp redex =
     redexLam redex ^. V.lamResult
     <&> Just
-    & insideRedexes (inlineLetH (redexLam redex ^. V.lamParamId) (redexArg redex <&> Just))
+    & inlineLetH (redexLam redex ^. V.lamParamId) (redexArg redex <&> Just)
     <&> flip (,) ()
     & ExprIRef.writeValWithStoredSubexpressions
     <&> (^. V.payload . _1)
