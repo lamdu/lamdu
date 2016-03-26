@@ -21,6 +21,8 @@ var objTag = biTagName('object');
 var infixlTag = biTagName('infixl');
 var infixrTag = biTagName('infixr');
 var indexTag = biTagName('index');
+var startTag = biTagName('start');
+var stopTag = biTagName('stop');
 
 var bool = function (x) {
     return {tag: x ? trueTag : falseTag};
@@ -98,6 +100,7 @@ module.exports = {
         Bytes: {
             length: function (x) { return x.length; },
             byteAt: function (x) { return x[objTag][x[indexTag]]; },
+            slice: function (x) { return x[objTag].slice(x[startTag], x[stopTag]); },
         },
     },
 };
