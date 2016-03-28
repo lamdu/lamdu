@@ -12,9 +12,9 @@ import           Control.Lens.Operators
 import           Control.Monad ((<=<))
 import           Control.MonadA (MonadA)
 
-data Property m a = Property {
-    _pVal :: a,
-    _pSet :: a -> m ()
+data Property m a = Property
+    { _pVal :: a
+    , _pSet :: a -> m ()
     }
 Lens.makeLenses ''Property
 
