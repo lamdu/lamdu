@@ -25,7 +25,7 @@ var startTag = biTagName('start');
 var stopTag = biTagName('stop');
 
 var bool = function (x) {
-    return {tag: x ? trueTag : falseTag};
+    return {tag: x ? trueTag : falseTag, data: {}};
 }
 
 // Assumes "a" and "b" are of same type, and it is an object created by
