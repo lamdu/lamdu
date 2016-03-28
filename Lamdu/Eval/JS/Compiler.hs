@@ -15,7 +15,7 @@ import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.RWS.Strict (RWST(..))
 import qualified Control.Monad.Trans.RWS.Strict as RWS
 import qualified Data.ByteString as BS
-import           Data.ByteString.Hex (showHexByte, showHexBytes)
+import           Data.ByteString.Hex (showHexByte)
 import qualified Data.Char as Char
 import           Data.Default () -- instances
 import           Data.List (isPrefixOf)
@@ -26,7 +26,7 @@ import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Compiler.Flatten as Flatten
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Expr.Identifier (Identifier(..))
+import           Lamdu.Expr.Identifier (identHex)
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Expr.Val (Val(..))
@@ -245,9 +245,6 @@ withLocalVar v act =
         varName <- freshStoredName v "local_" <&> JS.ident
         res <- local (envLocals . Lens.at v ?~ varName) act
         return (varName, res)
-
-identHex :: Identifier -> String
-identHex (Identifier bs) = showHexBytes bs
 
 compileGlobal :: Monad m => V.Var -> M m (JSS.Expression ())
 compileGlobal globalId =
