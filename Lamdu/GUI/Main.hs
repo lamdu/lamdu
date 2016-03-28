@@ -61,7 +61,7 @@ make (Env evalRes config settings style fullSize cursor) rootId =
                 branchGui <-
                     VersionControlGUI.make (Config.versionControl config)
                     (Config.layerChoiceBG (Config.layers config))
-                    id actions $
+                    id id actions $
                     \branchSelector ->
                         do
                             let codeSize = fullSize - Vector2 0 (branchSelector ^. Widget.height)

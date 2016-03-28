@@ -81,13 +81,14 @@ branchTextEditId :: Branch t -> Widget.Id
 branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 
 make ::
-    (MonadA m, MonadA n) =>
+    (MonadA mr, Applicative mw, MonadA n) =>
     VersionControl.Config -> Anim.Layer ->
-    (forall a. Transaction n a -> m a) ->
-    Actions n m ->
-    (Widget m -> WidgetEnvT m (Widget m)) ->
-    WidgetEnvT m (Widget m)
-make VersionControl.Config{..} choiceBGLayer transaction actions mkWidget =
+    (forall a. Transaction n a -> mw a) ->
+    (forall a. Transaction n a -> mr a) ->
+    Actions n mw ->
+    (Widget mw -> WidgetEnvT mr (Widget mw)) ->
+    WidgetEnvT mr (Widget mw)
+make VersionControl.Config{..} choiceBGLayer rwtransaction rtransaction actions mkWidget =
     do
         branchNameEdits <- traverse makeBranchNameEdit $ branches actions
         branchSelector <-
@@ -102,8 +103,9 @@ make VersionControl.Config{..} choiceBGLayer transaction actions mkWidget =
         makeBranchNameEdit branch =
             do
                 nameProp <-
-                    lift . transaction . (Lens.mapped . Property.pSet . Lens.mapped %~ transaction) $
                     Anchors.assocNameRef (Branch.guid branch) ^. Transaction.mkProperty
+                    & Lens.mapped . Property.pSet . Lens.mapped %~ rwtransaction
+                    & rtransaction & lift
                 branchNameEdit <-
                     BWidgets.makeLineEdit nameProp (branchTextEditId branch)
                     >>= BWidgets.makeFocusDelegator branchNameFDConfig
