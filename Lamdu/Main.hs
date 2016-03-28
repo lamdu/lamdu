@@ -5,7 +5,9 @@ module Main
 
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Lens.Tuple
 import           Control.Monad (when, join, unless, replicateM_)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
@@ -326,14 +328,23 @@ mkWidgetWithFallback dbToIO env =
         bgColor True = Config.backgroundColor
 
 makeMainGui ::
-    (forall a. T DbLayout.DbM a -> f a) ->
-    GUIMain.Env -> T DbLayout.DbM (Widget f)
-makeMainGui runTransaction env =
+    (forall a. T DbLayout.DbM a -> IO a) ->
+    GUIMain.Env -> T DbLayout.DbM (Widget IO)
+makeMainGui dbToIO env =
     GUIMain.make env rootCursor
-    <&> Widget.events %~ runTransaction . (attachCursor =<<)
+    <&> Widget.events %~ \act ->
+    act ^. GUIMain.m
+    & Lens.mapped %~ (>>= _2 attachCursor)
+    <&> dbToIO
+    & join
+    >>= runExtraIO
     where
+        runExtraIO :: (IO (), Widget.EventResult) -> IO Widget.EventResult
+        runExtraIO (extraAct, res) = res <$ extraAct
         attachCursor eventResult =
             do
-                maybe (return ()) (Transaction.setP (DbLayout.cursor DbLayout.revisionProps)) .
-                    Monoid.getLast $ eventResult ^. Widget.eCursor
-                return eventResult
+                eventResult ^. Widget.eCursor
+                    & Monoid.getLast
+                    & maybe (return ())
+                      (Transaction.setP (DbLayout.cursor DbLayout.revisionProps))
+                    & (eventResult <$)

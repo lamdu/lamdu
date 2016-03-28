@@ -1,9 +1,12 @@
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, DeriveFunctor #-}
 module Lamdu.GUI.CodeEdit
     ( make
     , Env(..)
+    , M(..), m, mLiftTrans
     ) where
 
+import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (lift)
@@ -55,6 +58,20 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Prelude.Compat
 
 type T = Transaction
+
+newtype M m a = M { _m :: IO (T m (IO (), a)) }
+    deriving (Functor)
+Lens.makeLenses ''M
+
+instance Monad m => Applicative (M m) where
+    pure = M . pure . pure . pure
+    M f <*> M x = (liftA2 . liftA2 . liftA2) ($) f x & M
+
+mLiftTrans :: Functor m => T m a -> M m a
+mLiftTrans = M . pure . fmap pure
+
+mLiftWidget :: Functor m => Widget (T m) -> Widget (M m)
+mLiftWidget = Widget.events %~ mLiftTrans
 
 data Pane m = Pane
     { paneDefI :: DefI m
@@ -127,7 +144,7 @@ processPane env pane =
     >>= OrderTags.orderDef
     >>= PresentationModes.addToDef
     >>= AddNames.addToDef
-    <&> Lens.mapped %~ postProcessExpr
+    <&> fmap postProcessExpr
     <&> (,) pane
 
 processExpr ::
@@ -144,7 +161,7 @@ processExpr env expr =
 gui ::
     MonadA m =>
     Env m -> Widget.Id -> ExprGuiT.SugarExpr m -> [Pane m] ->
-    WidgetEnvT (T m) (Widget (T m))
+    WidgetEnvT (T m) (Widget (M m))
 gui env rootId replExpr panes =
     do
         replEdit <- makeReplEdit rootId replExpr
@@ -152,8 +169,9 @@ gui env rootId replExpr panes =
             panes
             & ExprGuiM.transaction . traverse (processPane env)
             >>= traverse (makePaneEdit env (Config.pane (config env)))
-        newDefinitionButton <- makeNewDefinitionButton rootId
-        eventMap <- panesEventMap env & ExprGuiM.widgetEnv
+            <&> fmap mLiftWidget
+        newDefinitionButton <- makeNewDefinitionButton rootId <&> mLiftWidget
+        eventMap <- panesEventMap env & ExprGuiM.widgetEnv <&> fmap mLiftTrans
         [replEdit] ++ panesEdits ++ [newDefinitionButton]
             & intersperse space
             & Box.vboxAlign 0
@@ -166,7 +184,7 @@ gui env rootId replExpr panes =
         space = Spacer.makeWidget 50
         replId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
 
-make :: MonadA m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (T m))
+make :: MonadA m => Env m -> Widget.Id -> WidgetEnvT (T m) (Widget (M m))
 make env rootId =
     do
         replExpr <-
@@ -239,7 +257,7 @@ makeReplEventMap replExpr Config.Pane{..} =
             <&> ExprEventMap.extractCursor
 
 makeReplEdit ::
-    MonadA m => Widget.Id -> ExprGuiT.SugarExpr m -> ExprGuiM m (Widget (T m))
+    MonadA m => Widget.Id -> ExprGuiT.SugarExpr m -> ExprGuiM m (Widget (M m))
 makeReplEdit myId replExpr =
     do
         replEventMap <-
@@ -251,6 +269,7 @@ makeReplEdit myId replExpr =
         expr <- ExprGuiM.makeSubexpression id replExpr
         ExpressionGui.hboxSpaced [replLabel, expr]
             <&> (^. ExpressionGui.egWidget)
+            <&> mLiftWidget
     where
         replId = Widget.joinId myId ["repl"]
 

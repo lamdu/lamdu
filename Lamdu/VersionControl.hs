@@ -3,8 +3,7 @@ module Lamdu.VersionControl
     ( makeActions, runAction, runEvent, getVersion
     ) where
 
-import           Prelude.Compat
-
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (unless)
 import           Data.List (elemIndex)
@@ -25,6 +24,8 @@ import           Lamdu.Data.DbLayout (DbM)
 import qualified Lamdu.Data.DbLayout as DbLayout
 import           Lamdu.VersionControl.Actions (Actions(Actions))
 import qualified Lamdu.VersionControl.Actions as Actions
+
+import           Prelude.Compat
 
 -- TODO: Use the monad newtypes:
 type TDB = Transaction DbM
@@ -71,7 +72,7 @@ getVersion =
         currentBranch <- getP $ revProp DbLayout.currentBranch
         Branch.curVersion currentBranch
 
-runEvent :: Widget.Id -> TV Widget.EventResult -> TDB Widget.EventResult
+runEvent :: Traversable t => Widget.Id -> TV (t Widget.EventResult) -> TDB (t Widget.EventResult)
 runEvent preCursor eventHandler = do
     (eventResult, isEmpty) <- runAction $ do
         eventResult <- eventHandler
@@ -79,7 +80,8 @@ runEvent preCursor eventHandler = do
         unless isEmpty $ do
             setP (codeProp DbLayout.preCursor) preCursor
             setP (codeProp DbLayout.postCursor) .
-                fromMaybe preCursor . Monoid.getLast $ eventResult ^. Widget.eCursor
+                fromMaybe preCursor . Monoid.getLast $
+                eventResult ^. Lens.traversed . Widget.eCursor
         return (eventResult, isEmpty)
     unless isEmpty $ setP (revProp DbLayout.redos) []
     return eventResult

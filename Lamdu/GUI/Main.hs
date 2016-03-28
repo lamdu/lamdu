@@ -2,6 +2,7 @@
 module Lamdu.GUI.Main
     ( make
     , Env(..), envEvalRes, envConfig, envSettings, envStyle, envFullSize, envCursor
+    , CodeEdit.M(..), CodeEdit.m
     ) where
 
 import qualified Control.Lens as Lens
@@ -29,6 +30,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
+import qualified Lamdu.VersionControl.Actions as VersionControl.Actions
 
 type T = Transaction
 
@@ -42,40 +44,32 @@ data Env = Env
     }
 Lens.makeLenses ''Env
 
-make :: Env -> Widget.Id -> T DbLayout.DbM (Widget (T DbLayout.DbM))
+make :: Env -> Widget.Id -> T DbLayout.DbM (Widget (CodeEdit.M DbLayout.DbM))
 make (Env evalRes config settings style fullSize cursor) rootId =
     do
-        actions <- VersionControl.makeActions
-        let widgetEnv = WE.Env
-                { WE._envCursor = cursor
-                , WE._envTextStyle = Style.styleBase style
-                , WE.backgroundCursorId = WidgetIds.backgroundCursorId
-                , WE.cursorBGColor = Config.cursorBGColor config
-                , WE.layerCursor = Config.layerCursor $ Config.layers config
-                , WE.layerInterval = Config.layerInterval $ Config.layers config
-                , WE.verticalSpacing = Config.verticalSpacing config
-                , WE.stdSpaceWidth = Config.spaceWidth config
-                }
+        actions <-
+            VersionControl.makeActions
+            <&> VersionControl.Actions.hoist CodeEdit.mLiftTrans
         runWidgetEnvT widgetEnv $
             do
                 branchGui <-
                     VersionControlGUI.make (Config.versionControl config)
                     (Config.layerChoiceBG (Config.layers config))
-                    id id actions $
+                    CodeEdit.mLiftTrans id actions $
                     \branchSelector ->
-                        do
-                            let codeSize = fullSize - Vector2 0 (branchSelector ^. Widget.height)
-                            codeEdit <-
-                                CodeEdit.make env rootId
-                                & WE.mapWidgetEnvT VersionControl.runAction
-                                <&> Widget.events %~ VersionControl.runEvent cursor
-                            let scrollBox =
-                                    Box.vbox [(0.5, hoverPadding), (0.5, codeEdit)]
-                                    & Widget.padToSizeAlign codeSize 0
-                                    & Scroll.focusAreaIntoWindow fullSize
-                                    & Widget.size .~ codeSize
-                            Box.vbox [(0.5, scrollBox), (0.5, branchSelector)]
-                                & return
+                    do
+                        let codeSize = fullSize - Vector2 0 (branchSelector ^. Widget.height)
+                        codeEdit <-
+                            CodeEdit.make env rootId
+                            & WE.mapWidgetEnvT VersionControl.runAction
+                            <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
+                        let scrollBox =
+                                Box.vbox [(0.5, hoverPadding), (0.5, codeEdit)]
+                                & Widget.padToSizeAlign codeSize 0
+                                & Scroll.focusAreaIntoWindow fullSize
+                                & Widget.size .~ codeSize
+                        Box.vbox [(0.5, scrollBox), (0.5, branchSelector)]
+                            & return
                 let quitEventMap =
                         Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
                 branchGui
@@ -89,4 +83,14 @@ make (Env evalRes config settings style fullSize cursor) rootId =
             , CodeEdit.config = config
             , CodeEdit.settings = settings
             , CodeEdit.style = style
+            }
+        widgetEnv = WE.Env
+            { WE._envCursor = cursor
+            , WE._envTextStyle = Style.styleBase style
+            , WE.backgroundCursorId = WidgetIds.backgroundCursorId
+            , WE.cursorBGColor = Config.cursorBGColor config
+            , WE.layerCursor = Config.layerCursor $ Config.layers config
+            , WE.layerInterval = Config.layerInterval $ Config.layers config
+            , WE.verticalSpacing = Config.verticalSpacing config
+            , WE.stdSpaceWidth = Config.spaceWidth config
             }

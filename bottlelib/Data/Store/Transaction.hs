@@ -73,7 +73,7 @@ Lens.makeLenses ''Askable
 -- Define transformer stack:
 newtype Transaction m a =
     Transaction (ReaderT (Askable m) (StateT ChangesMap m) a)
-    deriving (Monad, Applicative, Functor)
+    deriving (Functor, Applicative, Monad)
 liftAskable :: ReaderT (Askable m) (StateT ChangesMap m) a -> Transaction m a
 liftAskable = Transaction
 liftChangesMap :: MonadA m => StateT ChangesMap m a -> Transaction m a
