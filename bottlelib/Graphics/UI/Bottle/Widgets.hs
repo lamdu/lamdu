@@ -142,7 +142,7 @@ makeTextEdit text myId =
         TextEdit.make style text myId env & return
 
 makeTextEditor
-    :: (MonadA m, MonadA f)
+    :: (MonadA m, Applicative f)
     => Property f String
     -> Widget.Id
     -> WidgetEnvT m (Widget f)
@@ -150,9 +150,9 @@ makeTextEditor textRef myId =
     makeTextEdit (Property.value textRef) myId
     <&> Widget.events %~ setter
     where
-        setter (newText, eventRes) = do
-            when (newText /= Property.value textRef) $ Property.set textRef newText
-            return eventRes
+        setter (newText, eventRes) =
+            eventRes <$
+            when (newText /= Property.value textRef) (Property.set textRef newText)
 
 deleteKeyEventHandler :: ModKey -> Widget f -> Widget f
 deleteKeyEventHandler key =
@@ -161,7 +161,7 @@ deleteKeyEventHandler key =
 
 -- TODO: Editor, not Edit (consistent with makeTextEditor vs. makeTextEdit)
 makeLineEdit ::
-    (MonadA m, MonadA f) =>
+    (MonadA m, Applicative f) =>
     Property f String ->
     Widget.Id ->
     WidgetEnvT m (Widget f)
@@ -169,7 +169,7 @@ makeLineEdit textRef myId =
     makeTextEditor textRef myId <&> deleteKeyEventHandler (ModKey mempty GLFW.Key'Enter)
 
 makeWordEdit ::
-    (MonadA m, MonadA f) =>
+    (MonadA m, Applicative f) =>
     Property f String ->
     Widget.Id ->
     WidgetEnvT m (Widget f)
