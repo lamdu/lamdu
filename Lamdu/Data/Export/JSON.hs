@@ -224,6 +224,11 @@ exportTag tag =
 recurse :: Val a -> M ()
 recurse val =
     do
+        -- TODO: Add a recursion on all ExprLens.subExprs -- that have
+        -- a Lam inside them, on the "Var" to export all the var names
+        -- too?  OR: alternatively, remove the "name" crap and just
+        -- add the set of all Guids we ever saw to the WriterT, and
+        -- export all associated names/data of all!
         val ^.. ExprLens.valGlobals mempty & traverse_ exportDef
         val ^.. ExprLens.valTags & traverse_ exportTag
 
