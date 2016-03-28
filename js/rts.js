@@ -28,6 +28,21 @@ var bool = function (x) {
     return {tag: x ? trueTag : falseTag};
 }
 
+// Assumes "a" and "b" are of same type, and it is an object created by
+// Lamdu's JS backend - this need not work for all JS objects..
+var isEqual = function (a, b) {
+    if (a == b)
+        return true;
+    if (typeof a != 'object')
+        return a == b;
+    if (a.length != b.length)
+        return false;
+    for (var p in a)
+        if (!isEqual(a[p], b[p]))
+            return false;
+    return true;
+}
+
 var encode = function (x) {
     var replacer = function(key, value) {
         if (value == null) { // or undefined due to auto-coercion
@@ -91,7 +106,8 @@ module.exports = {
             "/": function (x) { return x[infixlTag] / x[infixrTag]; },
             div: function (x) { return Math.floor(x[infixlTag] / x[infixrTag]); },
             mod: function (x) { return x[infixlTag] % x[infixrTag]; },
-            "==": function (x) { return bool(x[infixlTag] == x[infixrTag]); },
+            "==": function (x) { return bool(isEqual(x[infixlTag], x[infixrTag])); },
+            "/=": function (x) { return bool(!isEqual(x[infixlTag], x[infixrTag])); },
             ">=": function (x) { return bool(x[infixlTag] >= x[infixrTag]); },
             ">": function (x) { return bool(x[infixlTag] > x[infixrTag]); },
             "<=": function (x) { return bool(x[infixlTag] <= x[infixrTag]); },
