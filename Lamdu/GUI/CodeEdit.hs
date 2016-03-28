@@ -228,26 +228,31 @@ makeNewDefinitionButton myId =
     where
         newDefinitionButtonId = Widget.joinId myId ["NewDefinition"]
 
+makeReplEventMap ::
+    Functor m => Sugar.Expression name m a -> Config.Pane -> Widget.EventHandlers (T m)
+makeReplEventMap replExpr Config.Pane{..} =
+    Widget.keysEventMapMovesCursor newDefinitionButtonPressKeys
+    (E.Doc ["Edit", "Extract to definition"]) extractAction
+    where
+        extractAction =
+            replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
+            <&> ExprEventMap.extractCursor
+
 makeReplEdit ::
     MonadA m => Widget.Id -> ExprGuiT.SugarExpr m -> ExprGuiM m (Widget (T m))
 makeReplEdit myId replExpr =
     do
-        Config.Pane{..} <- ExprGuiM.readConfig <&> Config.pane
+        replEventMap <-
+            ExprGuiM.readConfig <&> Config.pane <&> makeReplEventMap replExpr
         replLabel <-
             ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId)
             >>= ExpressionGui.makeFocusableView replId
-            <&> ExpressionGui.egWidget %~
-                Widget.weakerEvents
-                (Widget.keysEventMapMovesCursor newDefinitionButtonPressKeys
-                    (E.Doc ["Edit", "Extract to definition"]) extractAction)
+            <&> ExpressionGui.egWidget %~ Widget.weakerEvents replEventMap
         expr <- ExprGuiM.makeSubexpression id replExpr
         ExpressionGui.hboxSpaced [replLabel, expr]
             <&> (^. ExpressionGui.egWidget)
     where
         replId = Widget.joinId myId ["repl"]
-        extractAction =
-            replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
-            <&> ExprEventMap.extractCursor
 
 panesEventMap ::
     MonadA m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (T m))
