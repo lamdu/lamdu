@@ -1,5 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE NoImplicitPrelude, RecordWildCards, OverloadedStrings, DeriveFunctor #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, DeriveFunctor, TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.CodeEdit
     ( make
     , Env(..)
@@ -82,6 +81,7 @@ data Pane m = Pane
 
 data Env m = Env
     { codeProps :: Anchors.CodeProps m
+    , export :: M m ()
     , evalResults :: CurAndPrev (EvalResults (ValI m))
     , config :: Config
     , settings :: Settings
@@ -164,7 +164,7 @@ gui ::
     WidgetEnvT (T m) (Widget (M m))
 gui env rootId replExpr panes =
     do
-        replEdit <- makeReplEdit rootId replExpr
+        replEdit <- makeReplEdit env rootId replExpr
         panesEdits <-
             panes
             & ExprGuiM.transaction . traverse (processPane env)
@@ -198,10 +198,11 @@ makePaneEdit ::
     MonadA m =>
     Env m -> Config.Pane -> (Pane m, DefinitionN m ExprGuiT.Payload) ->
     ExprGuiM m (Widget (T m))
-makePaneEdit env Config.Pane{..} (pane, defS) =
+makePaneEdit env paneConfig (pane, defS) =
     makePaneWidget (config env) defS
     <&> Widget.weakerEvents paneEventMap
     where
+        Config.Pane{paneCloseKeys, paneMoveDownKeys, paneMoveUpKeys} = paneConfig
         paneEventMap =
             [ maybe mempty
                 (Widget.keysEventMapMovesCursor paneCloseKeys
@@ -237,7 +238,10 @@ makeNewDefinitionButton myId =
         codeAnchors <- ExprGuiM.readCodeAnchors
         newDefinitionEventMap <-
             makeNewDefinitionEventMap codeAnchors & ExprGuiM.widgetEnv
-        Config.Pane{..} <- ExprGuiM.readConfig <&> Config.pane
+
+        Config.Pane{newDefinitionActionColor, newDefinitionButtonPressKeys} <-
+            ExprGuiM.readConfig <&> Config.pane
+
         BWidgets.makeFocusableTextView "New..." newDefinitionButtonId
             & WE.localEnv (WE.setTextColor newDefinitionActionColor)
             & ExprGuiM.widgetEnv
@@ -247,35 +251,44 @@ makeNewDefinitionButton myId =
         newDefinitionButtonId = Widget.joinId myId ["NewDefinition"]
 
 makeReplEventMap ::
-    Functor m => Sugar.Expression name m a -> Config.Pane -> Widget.EventHandlers (T m)
-makeReplEventMap replExpr Config.Pane{..} =
-    Widget.keysEventMapMovesCursor newDefinitionButtonPressKeys
-    (E.Doc ["Edit", "Extract to definition"]) extractAction
+    MonadA m => Env m -> Sugar.Expression name m a -> Config ->
+    Widget.EventHandlers (M m)
+makeReplEventMap env replExpr config =
+    mconcat
+    [ Widget.keysEventMapMovesCursor newDefinitionButtonPressKeys
+      (E.Doc ["Edit", "Extract to definition"]) extractAction
+    , Widget.keysEventMap exportKeys
+      (E.Doc ["Collaboration", "JSON", "Export repl"]) exportAction
+    ]
     where
+        Config.Export{exportKeys} = Config.export config
+        Config.Pane{newDefinitionButtonPressKeys} = Config.pane config
+        exportAction = export env
         extractAction =
             replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
             <&> ExprEventMap.extractCursor
+            & mLiftTrans
 
 makeReplEdit ::
-    MonadA m => Widget.Id -> ExprGuiT.SugarExpr m -> ExprGuiM m (Widget (M m))
-makeReplEdit myId replExpr =
+    MonadA m => Env m -> Widget.Id -> ExprGuiT.SugarExpr m -> ExprGuiM m (Widget (M m))
+makeReplEdit env myId replExpr =
     do
-        replEventMap <-
-            ExprGuiM.readConfig <&> Config.pane <&> makeReplEventMap replExpr
         replLabel <-
             ExpressionGui.makeLabel "⋙" (Widget.toAnimId replId)
             >>= ExpressionGui.makeFocusableView replId
-            <&> ExpressionGui.egWidget %~ Widget.weakerEvents replEventMap
         expr <- ExprGuiM.makeSubexpression id replExpr
+        replEventMap <-
+            ExprGuiM.readConfig <&> makeReplEventMap env replExpr
         ExpressionGui.hboxSpaced [replLabel, expr]
             <&> (^. ExpressionGui.egWidget)
             <&> mLiftWidget
+            <&> Widget.weakerEvents replEventMap
     where
         replId = Widget.joinId myId ["repl"]
 
 panesEventMap ::
     MonadA m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (T m))
-panesEventMap Env{..} =
+panesEventMap Env{config,codeProps} =
     do
         mJumpBack <- lift $ DataOps.jumpBack codeProps
         newDefinitionEventMap <- makeNewDefinitionEventMap codeProps
@@ -291,7 +304,7 @@ makePaneWidget ::
 makePaneWidget conf defS =
     DefinitionEdit.make defS <&> colorize
     where
-        Config.Pane{..} = Config.pane conf
+        Config.Pane{paneActiveBGColor,paneInactiveTintColor} = Config.pane conf
         colorize widget
             | widget ^. Widget.isFocused = colorizeActivePane widget
             | otherwise = colorizeInactivePane widget

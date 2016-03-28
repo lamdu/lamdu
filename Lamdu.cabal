@@ -103,7 +103,7 @@ Library
                   , QuickCheck >= 2.8 && < 2.9
                   , StateVar
                   , TraceUtils
-                  , aeson >= 0.6.2.1 && < 0.11
+                  , aeson >= 0.6.2.1 && < 0.12
                   , base >= 4
                   , base-compat >= 0.8.2 && < 0.10
                   , binary >= 0.7
@@ -138,6 +138,7 @@ Executable lamdu
                   , List >= 0.5.1
                   , TraceUtils
                   , aeson
+                  , aeson-pretty
                   , base >= 4.7
                   , base-compat
                   , binary
@@ -181,6 +182,7 @@ Executable lamdu
                   , Lamdu.Data.DbLayout
                   , Lamdu.Data.Definition
                   , Lamdu.Data.ExampleDB
+                  , Lamdu.Data.Export.JSON
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs
                   , Lamdu.DataFile

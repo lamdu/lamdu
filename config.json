@@ -89,6 +89,20 @@
         "shrinkFactor": 1.1,
         "enlargeFactor": 1.1
     },
+    "export": {
+        "exportPath": "lamdu.json",
+        "exportKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'E"
+            ]
+        ]
+    },
     "pane": {
         "newDefinitionKeys": [
             [

@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, Rank2Types, RecordWildCards, DeriveDataTypeable, ScopedTypeVariables, LambdaCase, BangPatterns #-}
+{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, Rank2Types, RecordWildCards, NamedFieldPuns, DeriveDataTypeable, ScopedTypeVariables, LambdaCase, BangPatterns #-}
 module Main
     ( main
     ) where
@@ -9,6 +9,8 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (when, join, unless, replicateM_)
+import qualified Data.Aeson.Encode.Pretty as Aeson
+import qualified Data.ByteString.Lazy as LBS
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Maybe
@@ -36,6 +38,7 @@ import           Lamdu.Config.Sampler (Sampler)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Data.DbLayout as DbLayout
 import qualified Lamdu.Data.ExampleDB as ExampleDB
+import qualified Lamdu.Data.Export.JSON as Export
 import           Lamdu.DataFile (getLamduDir)
 import qualified Lamdu.Eval.Manager as EvalManager
 import           Lamdu.Font (Fonts(..))
@@ -73,7 +76,7 @@ main =
         opts <- either fail return =<< Opts.get
         let withDB = ExampleDB.withDB lamduDir
         case opts of
-            Opts.Parsed{..}
+            Opts.Parsed{_poShouldDeleteDB,_poUndoCount,_poWindowMode}
                 | _poShouldDeleteDB -> deleteDB lamduDir
                 | _poUndoCount > 0  -> withDB $ undoN _poUndoCount
                 | otherwise         -> withDB $ runEditor _poWindowMode
@@ -127,6 +130,18 @@ instance Eq CachedWidgetInput where
     CachedWidgetInput x0 y0 z0 _ == CachedWidgetInput x1 y1 z1 _ =
         (x0, y0, z0) == (x1, y1, z1)
 
+export :: Config.Export -> GUIMain.M DbLayout.ViewM ()
+export Config.Export{exportPath} =
+    GUIMain.M $ return $
+    do
+        json <- Export.export
+        return
+            ( do
+                  putStrLn $ "Exporting to " ++ show exportPath
+                  LBS.writeFile exportPath (Aeson.encodePretty json)
+            , ()
+            )
+
 makeRootWidget ::
     Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
     CachedWidgetInput -> IO (Widget IO)
@@ -143,6 +158,7 @@ makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config
         settings <- readIORef settingsRef
         let env = GUIMain.Env
                 { _envEvalRes = evalResults
+                , _envExport = export (Config.export config)
                 , _envConfig = config
                 , _envSettings = settings
                 , _envStyle = Style.style config fonts

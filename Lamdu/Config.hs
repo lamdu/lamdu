@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric, RecordWildCards #-}
 module Lamdu.Config
     ( Layers(..)
-    , Help(..), Zoom(..), Pane(..), Hole(..), Name(..), Eval(..)
+    , Help(..), Zoom(..), Export(..), Pane(..), Hole(..), Name(..), Eval(..)
     , LiteralText(..)
     , LightLambda(..)
     , Config(..)
@@ -62,6 +62,14 @@ instance Aeson.ToJSON Zoom where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
 instance Aeson.FromJSON Zoom
 
+data Export = Export
+    { exportPath :: FilePath
+    , exportKeys :: [ModKey]
+    } deriving (Eq, Generic, Show)
+instance Aeson.ToJSON Export where
+    toJSON = Aeson.genericToJSON Aeson.defaultOptions
+instance Aeson.FromJSON Export
+
 data Pane = Pane
     { paneInactiveTintColor :: Draw.Color
     , paneActiveBGColor :: Draw.Color
@@ -69,8 +77,8 @@ data Pane = Pane
     , paneMoveDownKeys :: [ModKey]
     , paneMoveUpKeys :: [ModKey]
     , -- Need some padding on top because of on-top hovers, this decides
-        -- how much:
-        paneHoverPadding :: Draw.R
+      -- how much:
+      paneHoverPadding :: Draw.R
     , newDefinitionKeys :: [ModKey]
     , newDefinitionButtonPressKeys :: [ModKey]
     , newDefinitionActionColor :: Draw.Color
@@ -150,6 +158,7 @@ data Config = Config
     , layers :: Layers
     , help :: Help
     , zoom :: Zoom
+    , export :: Export
     , pane :: Pane
     , versionControl :: VersionControl.Config
     , hole :: Hole

@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, RankNTypes #-}
 module Lamdu.GUI.Main
     ( make
-    , Env(..), envEvalRes, envConfig, envSettings, envStyle, envFullSize, envCursor
+    , Env(..), envEvalRes, envExport, envConfig, envSettings, envStyle, envFullSize, envCursor
     , CodeEdit.M(..), CodeEdit.m
     ) where
 
@@ -36,6 +36,7 @@ type T = Transaction
 
 data Env = Env
     { _envEvalRes :: CurAndPrev (EvalResults (ExprIRef.ValI DbLayout.ViewM))
+    , _envExport :: CodeEdit.M DbLayout.ViewM ()
     , _envConfig :: Config
     , _envSettings :: Settings
     , _envStyle :: Style
@@ -45,7 +46,7 @@ data Env = Env
 Lens.makeLenses ''Env
 
 make :: Env -> Widget.Id -> T DbLayout.DbM (Widget (CodeEdit.M DbLayout.DbM))
-make (Env evalRes config settings style fullSize cursor) rootId =
+make (Env evalRes export config settings style fullSize cursor) rootId =
     do
         actions <-
             VersionControl.makeActions
@@ -83,6 +84,7 @@ make (Env evalRes config settings style fullSize cursor) rootId =
             , CodeEdit.config = config
             , CodeEdit.settings = settings
             , CodeEdit.style = style
+            , CodeEdit.export = export
             }
         widgetEnv = WE.Env
             { WE._envCursor = cursor
