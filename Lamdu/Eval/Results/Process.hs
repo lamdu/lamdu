@@ -40,55 +40,66 @@ extractSumTypeField tag typ =
         comp <- typ ^? ExprLens._TSum
         FlatComposite.fromComposite comp ^. FlatComposite.fields . Lens.at tag
 
+type AddTypes val res = (T.Type -> val -> res) -> T.Type -> Body res
+
+addTypesRecExtend :: V.RecExtend val -> AddTypes val res
+addTypesRecExtend (V.RecExtend tag val rest) go typ =
+    case extractRecordTypeField tag typ of
+    Nothing ->
+        -- TODO: this is a work-around for a bug. HACK
+        -- we currently don't know types for eval results of polymorphic values
+        case typ of
+        T.TVar{} ->
+            V.RecExtend tag
+            (go typ val)
+            (go typ rest)
+            & RRecExtend
+        _ -> ER.EvalTypeError "addTypes bad type for RRecExtend" & RError
+    Just (valType, restType) ->
+        V.RecExtend tag
+        (go valType val)
+        (go restType rest)
+        & RRecExtend
+
+addTypesInject :: V.Inject val -> AddTypes val res
+addTypesInject (V.Inject tag val) go typ =
+    case extractSumTypeField tag typ of
+    Nothing ->
+        -- TODO: this is a work-around for a bug. HACK
+        -- we currently don't know types for eval results of polymorphic values
+        case typ of
+        T.TVar{} -> go typ val & V.Inject tag & RInject
+        _ -> ER.EvalTypeError "addTypes bad type for RInject" & RError
+    Just valType -> go valType val & V.Inject tag & RInject
+
+addTypesArray :: [val] -> AddTypes val res
+addTypesArray items go typ =
+    do
+        (nomId, params) <- typ ^? ExprLens._TInst
+        nomId == Builtins.arrayTid & guard
+        paramType <-
+            case Map.toList params of
+            [(k, v)] ->
+                do
+                    k == Builtins.valTypeParamId & guard
+                    Just v
+            _ -> Nothing
+        items <&> go paramType & RArray & Just
+    & fromMaybe (ER.EvalTypeError "addTypes bad type for RArray" & RError)
+
 addTypes :: Map T.NominalId N.Nominal -> T.Type -> Val () -> Val T.Type
 addTypes nomsMap typ (Val () b) =
     case b of
-    RRecExtend (V.RecExtend tag val rest) ->
-        case extractRecordTypeField tag bodyType of
-        Nothing ->
-            -- TODO: this is a work-around for a bug. HACK
-            -- we currently don't know types for eval results of polymorphic values
-            case bodyType of
-            T.TVar{} ->
-                V.RecExtend tag
-                (addTypes nomsMap bodyType val)
-                (addTypes nomsMap bodyType rest)
-                & RRecExtend
-            _ -> ER.EvalTypeError "addTypes bad type for RRecExtend" & RError
-        Just (valType, restType) ->
-            V.RecExtend tag
-            (addTypes nomsMap valType val)
-            (addTypes nomsMap restType rest)
-            & RRecExtend
-    RInject (V.Inject tag val) ->
-        case extractSumTypeField tag bodyType of
-        Nothing ->
-            -- TODO: this is a work-around for a bug. HACK
-            -- we currently don't know types for eval results of polymorphic values
-            case bodyType of
-            T.TVar{} -> addTypes nomsMap bodyType val & V.Inject tag & RInject
-            _ -> ER.EvalTypeError "addTypes bad type for RInject" & RError
-        Just valType -> addTypes nomsMap valType val & V.Inject tag & RInject
-    RArray items ->
-        do
-            (nomId, params) <- typ ^? ExprLens._TInst
-            nomId == Builtins.arrayTid & guard
-            paramType <-
-                case Map.toList params of
-                [(k, v)] ->
-                    do
-                        k == Builtins.valTypeParamId & guard
-                        Just v
-                _ -> Nothing
-            items <&> addTypes nomsMap paramType & RArray & Just
-        & fromMaybe (ER.EvalTypeError "addTypes bad type for RArray" & RError)
+    RRecExtend recExtend -> recurse (addTypesRecExtend recExtend)
+    RInject inject -> recurse (addTypesInject inject)
+    RArray items -> recurse (addTypesArray items)
     RFunc -> RFunc
     RRecEmpty -> RRecEmpty
     RPrimVal l -> RPrimVal l
     RError e -> RError e
     & Val typ
     where
-        bodyType = unwrapTInsts nomsMap typ
+        recurse f = f (addTypes nomsMap) (unwrapTInsts nomsMap typ)
 
 -- Will loop forever for bottoms like: newtype Void = Void Void
 unwrapTInsts :: Map T.NominalId N.Nominal -> T.Type -> T.Type
