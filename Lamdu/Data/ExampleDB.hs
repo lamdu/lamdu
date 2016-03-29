@@ -167,12 +167,11 @@ createStream valTParamId =
     lift $
     newNominal Builtins.streamTid [(valTParamId, valT)] $
     \stream ->
-    recordType [] ~>
     sumType
     [ recordType [] & Ctor Builtins.nilTag
     , recordType
         [ (Builtins.headTag, T.TVar valT)
-        , (Builtins.tailTag, stream [T.TVar valT])
+        , (Builtins.tailTag, recordType [] ~> stream [T.TVar valT])
         ]
       & Ctor Builtins.consTag
     ] & Scheme.mono
@@ -185,9 +184,9 @@ createInfiniteStream valTParamId =
         tid <- newTId "InfStream"
         lift $ newNominal tid [(valTParamId, valT)] $
             \stream ->
-            recordType [] ~> recordType
+            recordType
             [ (Builtins.headTag, T.TVar valT)
-            , (Builtins.tailTag, stream [T.TVar valT])
+            , (Builtins.tailTag, recordType [] ~> stream [T.TVar valT])
             ] & Scheme.mono
     where
         valT = "a"
