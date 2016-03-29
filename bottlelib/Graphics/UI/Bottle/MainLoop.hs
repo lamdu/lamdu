@@ -33,7 +33,8 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
-import           Graphics.UI.GLFW.Events (KeyEvent, Event(..), Result(..), eventLoop)
+import           Graphics.UI.GLFW.Events (Result(..), eventLoop)
+import qualified Graphics.UI.GLFW.Events as GLFWEvents
 
 import           Prelude.Compat
 
@@ -49,8 +50,10 @@ instance Monoid EventResult where
     mempty = ERNone
     mappend = max
 
+type Event = GLFWEvents.KeyEvent
+
 data ImageHandlers = ImageHandlers
-    { imageEventHandler :: KeyEvent -> IO ()
+    { imageEventHandler :: Event -> IO ()
     , imageUpdate :: IO (Maybe Image)
     , imageRefresh :: IO Image
     }
@@ -67,14 +70,14 @@ mainLoopImage win imageHandlers =
         initialSize <- windowSize win
         frameBufferSize <- newIORef initialSize
         drawnImageHandlers <- imageHandlers initialSize & newIORef
-        let handleEvent (EventKey keyEvent) =
+        let handleEvent (GLFWEvents.EventKey keyEvent) =
                 do
                     handlers <- readIORef drawnImageHandlers
                     imageEventHandler handlers keyEvent
                     return ERNone
-            handleEvent EventWindowClose = return ERQuit
-            handleEvent EventWindowRefresh = return ERRefresh
-            handleEvent (EventFrameBufferSize size) =
+            handleEvent GLFWEvents.EventWindowClose = return ERQuit
+            handleEvent GLFWEvents.EventWindowRefresh = return ERRefresh
+            handleEvent (GLFWEvents.EventFrameBufferSize size) =
                 do
                     writeIORef frameBufferSize (fromIntegral <$> size)
                     return ERRefresh
@@ -106,7 +109,7 @@ mainLoopImage win imageHandlers =
 
 data AnimHandlers = AnimHandlers
     { animTickHandler :: IO (Maybe (Monoid.Endo AnimId))
-    , animEventHandler :: KeyEvent -> IO (Maybe (Monoid.Endo AnimId))
+    , animEventHandler :: Event -> IO (Maybe (Monoid.Endo AnimId))
     , animMakeFrame :: IO Anim.Frame
     }
 
@@ -127,7 +130,7 @@ data ThreadSyncVar = ThreadSyncVar
     { _tsvHaveTicks :: !Bool
     , _tsvRefreshRequested :: !Bool
     , _tsvWinSize :: !Widget.Size
-    , _tsvReversedEvents :: [KeyEvent]
+    , _tsvReversedEvents :: [Event]
     }
 
 tsvHaveTicks :: Lens' ThreadSyncVar Bool
@@ -139,7 +142,7 @@ tsvRefreshRequested f ThreadSyncVar {..} = f _tsvRefreshRequested <&> \_tsvRefre
 tsvWinSize :: Lens' ThreadSyncVar Widget.Size
 tsvWinSize f ThreadSyncVar {..} = f _tsvWinSize <&> \_tsvWinSize -> ThreadSyncVar {..}
 
-tsvReversedEvents :: Lens' ThreadSyncVar [KeyEvent]
+tsvReversedEvents :: Lens' ThreadSyncVar [Event]
 tsvReversedEvents f ThreadSyncVar {..} = f _tsvReversedEvents <&> \_tsvReversedEvents -> ThreadSyncVar {..}
 
 -- Animation thread will have not only the cur frame, but the dest
