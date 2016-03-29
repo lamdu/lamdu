@@ -108,6 +108,7 @@ blessAnchors =
         mapM_ describeAnchorTag Builtins.anchorTags
         lift $ setName Builtins.streamTid "Stream"
         lift $ setName Builtins.textTid "Text"
+        lift $ setName Builtins.valTypeParamId "val"
         lift $ setName PrimVal.bytesId "Bytes"
         lift $ setName PrimVal.floatId "Number"
         Writer.tell $ mempty { publicTIds = [Builtins.streamTid, Builtins.textTid] }
@@ -153,21 +154,21 @@ nominalSum ::
 nominalSum tid params ctors =
     newNominal tid params (Scheme.mono . sumType . ctors) & lift
 
-createMaybe :: MonadA m => T.ParamId -> M m TypeCtor
-createMaybe valTParamId =
+createMaybe :: MonadA m => M m TypeCtor
+createMaybe =
     do
         tid <- newTId "Maybe"
-        nominalSum tid [(valTParamId, valT)] $ const
+        nominalSum tid [(Builtins.valTypeParamId, valT)] $ const
             [ recordType [] & Ctor Builtins.nothingTag
             , T.TVar valT & Ctor Builtins.justTag
             ]
     where
         valT = "a"
 
-createStream :: MonadA m => T.ParamId -> M m TypeCtor
-createStream valTParamId =
+createStream :: MonadA m => M m TypeCtor
+createStream =
     lift $
-    newNominal Builtins.streamTid [(valTParamId, valT)] $
+    newNominal Builtins.streamTid [(Builtins.valTypeParamId, valT)] $
     \stream ->
     sumType
     [ recordType [] & Ctor Builtins.nilTag
@@ -180,11 +181,11 @@ createStream valTParamId =
     where
         valT = "a"
 
-createInfiniteStream :: MonadA m => T.ParamId -> M m TypeCtor
-createInfiniteStream valTParamId =
+createInfiniteStream :: MonadA m => M m TypeCtor
+createInfiniteStream =
     do
         tid <- newTId "InfStream"
-        lift $ newNominal tid [(valTParamId, valT)] $
+        lift $ newNominal tid [(Builtins.valTypeParamId, valT)] $
             \stream ->
             recordType
             [ (Builtins.headTag, T.TVar valT)
@@ -220,11 +221,9 @@ createPublics =
     do
         blessAnchors
 
-        valTParamId <- lift $ namedId "val"
-
-        _ <- createMaybe valTParamId
-        stream <- createStream valTParamId
-        _ <- createInfiniteStream valTParamId
+        _ <- createMaybe
+        stream <- createStream
+        _ <- createInfiniteStream
         _ <- createText
         bool <- createBool
 

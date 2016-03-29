@@ -5,6 +5,7 @@ module Lamdu.Builtins.Anchors
     ( objTag, infixlTag, infixrTag, streamTid, textTid
     , headTag, tailTag, consTag, nilTag, trueTag, falseTag, justTag, nothingTag
     , startTag, stopTag, indexTag
+    , valTypeParamId
     , Order, anchorTags
     ) where
 
@@ -72,6 +73,9 @@ justTag = bi "just"
 
 nothingTag :: Tag
 nothingTag = bi "nothing"
+
+valTypeParamId :: T.ParamId
+valTypeParamId = bi "val"
 
 type Order = Int
 
