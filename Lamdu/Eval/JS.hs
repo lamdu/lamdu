@@ -157,6 +157,8 @@ parseResult (Json.Object obj) =
         | otherwise -> parseInject tag dataField
         where
             dataField = Json.parseMaybe (.: "data") obj
+parseResult (Json.Array arr) =
+    Vec.toList arr <&> parseResult & ER.RArray & ER.Val ()
 parseResult x = error $ "Unsupported encoded JS output: " ++ show x
 
 addVal ::

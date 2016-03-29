@@ -5,9 +5,11 @@ module Lamdu.Eval.Results.Process
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Control.Monad (guard)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
+import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Eval.Results (Val(..), Body(..))
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
@@ -67,6 +69,19 @@ addTypes nomsMap typ (Val () b) =
             T.TVar{} -> addTypes nomsMap bodyType val & V.Inject tag & RInject
             _ -> ER.EvalTypeError "addTypes bad type for RInject" & RError
         Just valType -> addTypes nomsMap valType val & V.Inject tag & RInject
+    RArray items ->
+        do
+            (nomId, params) <- typ ^? ExprLens._TInst
+            nomId == Builtins.arrayTid & guard
+            paramType <-
+                case Map.toList params of
+                [(k, v)] ->
+                    do
+                        k == Builtins.valTypeParamId & guard
+                        Just v
+                _ -> Nothing
+            items <&> addTypes nomsMap paramType & RArray & Just
+        & fromMaybe (ER.EvalTypeError "addTypes bad type for RArray" & RError)
     RFunc -> RFunc
     RRecEmpty -> RRecEmpty
     RPrimVal l -> RPrimVal l

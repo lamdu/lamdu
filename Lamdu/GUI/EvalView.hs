@@ -50,6 +50,9 @@ extractFields (V.RecExtend tag val (Val _ rest)) =
 textView :: MonadA m => String -> AnimId -> ExprGuiM m View
 textView x animId = BWidgets.makeTextView x animId & ExprGuiM.widgetEnv
 
+label :: MonadA m => String -> AnimId -> ExprGuiM m View
+label x animId = BWidgets.makeTextView x (Anim.augmentId animId x) & ExprGuiM.widgetEnv
+
 makeTag :: MonadA m => AnimId -> T.Tag -> ExprGuiM m View
 makeTag animId tag =
     Anchors.assocNameRef tag & Transaction.getP & ExprGuiM.transaction
@@ -81,6 +84,28 @@ makeError err animId = textView msg $ animId ++ ["error"]
             EvalHole -> "?"
             _ -> show err
 
+hbox :: [View] -> View
+hbox = GridView.horizontalAlign 0.5
+
+makeArray :: MonadA m => AnimId -> [Val Type] -> ExprGuiM m View
+makeArray animId items =
+    do
+        itemViews <- zipWith makeItem [0..cutoff] items & sequence
+        opener <- label "[" animId
+        closer <- label "]" animId
+        opener : itemViews ++ [closer] & hbox & return
+    where
+        cutoff = 9
+        makeItem idx val =
+            [ [ label ", " itemId | idx > 0 ]
+            , [ make (Anim.augmentId itemId ("val" :: String)) val ]
+            , [ label "..." itemId | idx == cutoff ]
+            ] & concat
+            & sequence
+            <&> hbox
+            where
+                itemId = Anim.augmentId animId (idx :: Int)
+
 make :: MonadA m => AnimId -> Val Type -> ExprGuiM m View
 make animId (Val typ val) =
     case val of
@@ -96,7 +121,7 @@ make animId (Val typ val) =
                 ExprGuiM.readConfig
                 <&> Spacer.makeHorizontal . realToFrac . Config.spaceWidth
             valView <- inj ^. V.injectVal & make (animId ++ ["val"])
-            GridView.horizontalAlign 0.5 [tagView, space, valView] & return
+            hbox [tagView, space, valView] & return
     RRecExtend recExtend ->
         do
             fieldsView <- mapM (uncurry (makeField animId)) fields <&> GridView.make
@@ -130,6 +155,7 @@ make animId (Val typ val) =
             pv = PrimVal.toKnown primVal
             toText :: (Format r, MonadA m) => r -> ExprGuiM m View
             toText = asText . format
+    RArray items -> makeArray animId items
     & ExprGuiM.advanceDepth return animId
     where
         asText text = BWidgets.makeTextView text animId & ExprGuiM.widgetEnv

@@ -108,6 +108,7 @@ blessAnchors =
         mapM_ describeAnchorTag Builtins.anchorTags
         lift $ setName Builtins.streamTid "Stream"
         lift $ setName Builtins.textTid "Text"
+        lift $ setName Builtins.arrayTid "Array"
         lift $ setName Builtins.valTypeParamId "val"
         lift $ setName PrimVal.bytesId "Bytes"
         lift $ setName PrimVal.floatId "Number"
@@ -194,6 +195,12 @@ createInfiniteStream =
     where
         valT = "a"
 
+array :: TypeCtor
+array [typeParam] =
+    Map.fromList [(Builtins.valTypeParamId, typeParam)]
+    & T.TInst Builtins.arrayTid
+array _ = error "array bad number of args"
+
 createBool :: MonadA m => M m Type
 createBool =
     do
@@ -256,6 +263,17 @@ createPublics =
             [ (Builtins.objTag, bytes), (Builtins.indexTag, float) ] ~> float
         newPublicBuiltinQualified_ "Bytes.unshare" OO $ Scheme.mono $ bytes ~> bytes
         newPublicBuiltinQualified_ "Bytes.fromStream" OO $ Scheme.mono $ stream [float] ~> bytes
+
+        newPublicBuiltinQualified_ "Array.length" OO $
+            forAll 1 $ \[a] -> array [a] ~> float
+        newPublicBuiltinQualified_ "Array.fromStream" OO $
+            forAll 1 $ \[a] -> stream [a] ~> array [a]
+        newPublicBuiltinQualified_ "Array.item" OO $
+            forAll 1 $ \[a] ->
+                recordType
+                [ (Builtins.objTag, array [a])
+                , (Builtins.indexTag, float)
+                ] ~> a
 
         let cmp n =
                 newPublicBuiltinQualified_ ("Prelude." ++ n) (Infix 4) $

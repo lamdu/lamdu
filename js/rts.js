@@ -52,14 +52,14 @@ var bytes = function (list) {
     return arr;
 }
 
-var bytesFromStream = function (stream) {
+var arrayFromStream = function (stream) {
     var items = [];
     while (stream['tag'] == consTag)
     {
         items.push(stream['data'][headTag]);
         stream = stream['data'][tailTag]();
     }
-    return bytes(items);
+    return items;
 }
 
 var encode = function (x) {
@@ -133,7 +133,12 @@ module.exports = {
             byteAt: function (x) { return x[objTag][x[indexTag]]; },
             slice: function (x) { return x[objTag].subarray(x[startTag], x[stopTag]); },
             unshare: function (x) { return x.slice(); },
-            fromStream: bytesFromStream,
+            fromStream: function (x) { return bytes(arrayFromStream(x)); },
+        },
+        Array: {
+            length: function (x) { return x.length; },
+            item: function (x) { return x[objTag][x[indexTag]]; },
+            fromStream: arrayFromStream,
         },
     },
 };

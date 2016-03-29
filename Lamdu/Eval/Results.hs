@@ -44,6 +44,7 @@ data Body val
     | RFunc
     | RRecEmpty
     | RPrimVal V.PrimVal
+    | RArray [val]
     | RError EvalError
     deriving (Show, Functor, Foldable, Traversable)
 
