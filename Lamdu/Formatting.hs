@@ -4,40 +4,16 @@ module Lamdu.Formatting
     , formatTextContents
     ) where
 
-import           Data.ByteString.Hex (showHexBytes)
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (mplus)
 import qualified Data.ByteString as SBS
+import           Data.ByteString.Hex (showHexBytes, parseHexDigits)
 import qualified Data.Char as Char
-import           Data.Word (Word8)
 import           Text.Printf (printf)
 import           Text.Read (readMaybe)
 
 import           Prelude.Compat
-
-chunks :: Int -> [a] -> Maybe [[a]]
-chunks _ [] = Just []
-chunks n xs
-    | length firstChunk == n = chunks n rest <&> (firstChunk :)
-    | otherwise = Nothing
-    where
-        (firstChunk, rest) = splitAt n xs
-
-parseHexDigit :: Char -> Maybe Word8
-parseHexDigit x
-    | Char.isHexDigit x = Just (fromIntegral (Char.digitToInt x))
-    | otherwise = Nothing
-
-parseHexByte :: String -> Maybe Word8
-parseHexByte [x,y] =
-    (+)
-    <$> (parseHexDigit x <&> (16 *))
-    <*> parseHexDigit y
-parseHexByte _ = Nothing
-
-parseHexDigits :: String -> Maybe SBS.ByteString
-parseHexDigits str =
-    chunks 2 str >>= mapM parseHexByte <&> SBS.pack
 
 formatTextContents :: String -> String
 formatTextContents =
@@ -53,7 +29,7 @@ class Format a where
     format :: a -> String
 
 instance Format SBS.ByteString where
-    tryParse ('#':xs) = parseHexDigits xs
+    tryParse ('#':xs) = parseHexDigits xs ^? Lens._Right
     tryParse _ = Nothing
     format bs = '#' : showHexBytes bs
 
