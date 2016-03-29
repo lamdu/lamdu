@@ -223,7 +223,7 @@ createPublics =
         valTParamId <- lift $ namedId "val"
 
         _ <- createMaybe valTParamId
-        _ <- createStream valTParamId
+        stream <- createStream valTParamId
         _ <- createInfiniteStream valTParamId
         _ <- createText
         bool <- createBool
@@ -256,6 +256,7 @@ createPublics =
             recordType
             [ (Builtins.objTag, bytes), (Builtins.indexTag, float) ] ~> float
         newPublicBuiltinQualified_ "Bytes.unshare" OO $ Scheme.mono $ bytes ~> bytes
+        newPublicBuiltinQualified_ "Bytes.fromStream" OO $ Scheme.mono $ stream [float] ~> bytes
 
         let cmp n =
                 newPublicBuiltinQualified_ ("Prelude." ++ n) (Infix 4) $

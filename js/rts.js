@@ -17,6 +17,9 @@ var biTagName = function (x) {
 }
 var trueTag = biTagName('true');
 var falseTag = biTagName('false');
+var consTag = biTagName('cons');
+var headTag = biTagName('head');
+var tailTag = biTagName('tail');
 var objTag = biTagName('object');
 var infixlTag = biTagName('infixl');
 var infixrTag = biTagName('infixr');
@@ -41,6 +44,22 @@ var isEqual = function (a, b) {
         if (!isEqual(a[p], b[p]))
             return false;
     return true;
+}
+
+var bytes = function (list) {
+    var arr = new Uint8Array(list.length);
+    arr.set(list);
+    return arr;
+}
+
+var bytesFromStream = function (stream) {
+    var items = [];
+    while (stream['tag'] == consTag)
+    {
+        items.push(stream['data'][headTag]);
+        stream = stream['data'][tailTag]();
+    }
+    return bytes(items);
 }
 
 var encode = function (x) {
@@ -92,11 +111,7 @@ module.exports = {
             return callee.apply(this, arguments);
         }
     },
-    bytes: function (list) {
-        var arr = new Uint8Array(list.length);
-        arr.set(list);
-        return arr;
-    },
+    bytes: bytes,
     builtins: {
         Prelude: {
             sqrt: Math.sqrt,
@@ -118,6 +133,7 @@ module.exports = {
             byteAt: function (x) { return x[objTag][x[indexTag]]; },
             slice: function (x) { return x[objTag].subarray(x[startTag], x[stopTag]); },
             unshare: function (x) { return x.slice(); },
+            fromStream: bytesFromStream,
         },
     },
 };
