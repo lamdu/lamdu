@@ -1,0 +1,24 @@
+digraph G {
+    calc [label="LamduCalc"];
+    compiler [label="Compiler"];
+    infer [label="Type inference"];
+    store [label="Data.Store"];
+    animation [label="Animation engine"];
+    widgets [label="GUI framework"];
+    sugar [label="LamduSugar"];
+    sugarconvert [label="LamduCalc<->LamduSugar"];
+    ui [label="Lamdu UI"];
+
+    infer        -> calc;
+    compiler     -> calc;
+    widgets      -> animation;
+    sugar        -> calc;
+    sugarconvert -> sugar;
+    sugarconvert -> infer;
+    sugarconvert -> store;
+    ui           -> sugar;
+    ui           -> widgets;
+    main         -> ui;
+    main         -> sugarconvert;
+    main         -> compiler;
+}
