@@ -7,7 +7,7 @@ packages:
     git: https://github.com/lamdu/language-ecmascript
     commit: 2c71e37ad055163a9926ee53e5297146de9b435c
 
-resolver: nightly-2016-02-05
+resolver: lts-5.10
 extra-deps:
 - FTGL-2.1
 - TraceUtils-0.1.0.2
