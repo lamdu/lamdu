@@ -58,23 +58,26 @@ Lens.makeLenses ''Visited
 
 type M = WriterT [Aeson.Value] (StateT Visited (T ViewM))
 
-array :: [Aeson.Value] -> Aeson.Value
+type Encoder a = a -> Aeson.Value
+
+array :: Encoder [Aeson.Value]
 array = Aeson.Array . Vector.fromList
 
-encodeFFIName :: Definition.FFIName -> Aeson.Value
+encodeFFIName :: Encoder Definition.FFIName
 encodeFFIName (Definition.FFIName modulePath name) = modulePath ++ [name] & Aeson.toJSON
 
-encodeIdent :: Identifier -> Aeson.Value
+encodeIdent :: Encoder Identifier
 encodeIdent = Aeson.toJSON . identHex
 
-encodeIdentMap :: Aeson.ToJSON b => (k -> Identifier) -> (a -> b) -> Map k a -> Aeson.Value
+encodeIdentMap ::
+    Aeson.ToJSON b => (k -> Identifier) -> (a -> b) -> Encoder (Map k a)
 encodeIdentMap getIdent encode =
     Aeson.toJSON . Map.mapKeys (identHex . getIdent) . Map.map encode
 
-encodeTag :: T.Tag -> Aeson.Value
+encodeTag :: Encoder T.Tag
 encodeTag = Aeson.toJSON . identHex . T.tagName
 
-encodeFlatComposite :: FlatComposite p -> Aeson.Value
+encodeFlatComposite :: Encoder (FlatComposite p)
 encodeFlatComposite = \case
     FlatComposite fields Nothing -> encodedFields fields
     FlatComposite fields (Just (T.Var name)) ->
@@ -82,10 +85,10 @@ encodeFlatComposite = \case
     where
         encodedFields = encodeIdentMap T.tagName encodeType
 
-encodeComposite :: Composite p -> Aeson.Value
+encodeComposite :: Encoder (Composite p)
 encodeComposite = encodeFlatComposite . FlatComposite.fromComposite
 
-encodeType :: Type -> Aeson.Value
+encodeType :: Encoder Type
 encodeType (T.TPrim _) = Aeson.String "TODO:TPrim"
 encodeType (T.TFun a b) = Aeson.object ["TFun" .= array (map encodeType [a, b])]
 encodeType (T.TRecord composite) = Aeson.object ["record" .= encodeComposite composite]
@@ -97,8 +100,8 @@ encodeType (T.TInst tId params) =
     , "Params" .= encodeIdentMap T.typeParamId encodeType params
     ]
 
-encodeTypeVars :: TypeVars -> Constraints -> Aeson.Value
-encodeTypeVars (TypeVars tvs rtvs stvs) (Constraints productConstraints sumConstraints) =
+encodeTypeVars :: Encoder (TypeVars, Constraints)
+encodeTypeVars (TypeVars tvs rtvs stvs, Constraints productConstraints sumConstraints) =
     Aeson.object
     [ "tvs" .= encodeTVs tvs
     , "rtvs" .= encodeTVs rtvs
@@ -114,14 +117,14 @@ encodeTypeVars (TypeVars tvs rtvs stvs) (Constraints productConstraints sumConst
             constraints
         encodeTVs = Aeson.toJSON . map (encodeIdent . T.tvName) . Set.toList
 
-encodeScheme :: Scheme -> Aeson.Value
+encodeScheme :: Encoder Scheme
 encodeScheme (Scheme tvs constraints typ) =
     Aeson.object
-    [ "schemeBinders" .= encodeTypeVars tvs constraints
+    [ "schemeBinders" .= encodeTypeVars (tvs, constraints)
     , "schemeType" .= encodeType typ
     ]
 
-encodeLeaf :: V.Leaf -> Aeson.Value
+encodeLeaf :: Encoder V.Leaf
 encodeLeaf V.LHole = Aeson.String "hole"
 encodeLeaf V.LRecEmpty = Aeson.object []
 encodeLeaf V.LAbsurd = Aeson.String "absurd"
@@ -133,7 +136,7 @@ encodeLeaf (V.LLiteral (V.PrimVal (T.PrimId primId) primBytes)) =
     ]
 
 -- TODO: Should we export the Guids of subexprs?
-encodeVal :: Val (ValI m) -> Aeson.Value
+encodeVal :: Encoder (Val (ValI m))
 encodeVal (Val _ body) =
     case body <&> encodeVal of
     V.BLeaf leaf -> encodeLeaf leaf
@@ -155,11 +158,11 @@ encodeVal (Val _ body) =
     V.BFromNom (V.Nom (T.NominalId nomId) val) ->
         Aeson.object ["fromNomId" .= encodeIdent nomId, "fromNomVal" .= val]
 
-encodeExportedType :: Definition.ExportedType -> Aeson.Value
+encodeExportedType :: Encoder Definition.ExportedType
 encodeExportedType Definition.NoExportedType = Aeson.String "NoExportedType"
 encodeExportedType (Definition.ExportedType scheme) = encodeScheme scheme
 
-encodeDefBody :: Definition.Body (Val (ValI m)) -> Aeson.Value
+encodeDefBody :: Encoder (Definition.Body (Val (ValI m)))
 encodeDefBody (Definition.BodyBuiltin (Definition.Builtin name scheme)) =
     Aeson.object
     [ "builtin" .=
