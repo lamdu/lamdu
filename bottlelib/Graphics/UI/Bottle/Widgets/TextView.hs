@@ -28,7 +28,6 @@ import qualified Graphics.UI.Bottle.Rect as Rect
 import           Graphics.UI.Bottle.SizedFont (SizedFont, TextSize(..))
 import qualified Graphics.UI.Bottle.SizedFont as SizedFont
 import           Graphics.UI.Bottle.View (View(..))
-import qualified Graphics.UI.Bottle.View as View
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -92,7 +91,7 @@ nestedFrame (i, RenderedText size img) =
     RenderedText size draw
     where
         draw animId =
-            Anim.sizedFrame (View.augmentAnimId animId i) (bounding size) img
+            Anim.sizedFrame (Anim.augmentId animId i) (bounding size) img
 
 drawTextAsSingleLetters :: Style -> String -> RenderedText (AnimId -> Anim.Frame)
 drawTextAsSingleLetters style text =
@@ -145,4 +144,4 @@ makeWidget :: Style -> String -> AnimId -> Widget a
 makeWidget style text = Widget.fromView . make style text
 
 label :: Style -> AnimId -> String -> View
-label style animId text = make style text $ View.augmentAnimId animId text
+label style animId text = make style text $ Anim.augmentId animId text

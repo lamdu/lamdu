@@ -68,7 +68,7 @@ addAnimIds animId (Leaf b) = Leaf (animId ++ ["leaf"], b)
 addAnimIds animId (Branch a cs) =
     Branch (tAnimId, a) $ map (addAnimIds tAnimId) cs
     where
-        tAnimId = View.augmentAnimId animId a
+        tAnimId = Anim.augmentId animId a
 
 makeShortcutKeyView ::
     Config -> (AnimId, [E.InputDoc]) -> View
@@ -134,7 +134,7 @@ makeTreeView config animId size =
     handleResult . go
     where
         toGrid i =
-            addHelpBG config (View.augmentAnimId animId i) .
+            addHelpBG config (Anim.augmentId animId i) .
             GridView.make . map toRow
         toRow (titleView, docView) = [(0, titleView), (Vector2 1 0, docView)]
         pairHeight (titleView, docView) = (max `on` (^. View.height)) titleView docView

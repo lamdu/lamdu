@@ -6,7 +6,7 @@ module Graphics.UI.Bottle.View
     , width, height
     , pad, assymetricPad
     , Size, R
-    , augmentAnimId, backgroundColor
+    , backgroundColor
     , translate, scale, tint
     ) where
 
@@ -15,7 +15,6 @@ import           Prelude.Compat
 import           Control.Lens (Lens')
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import qualified Data.ByteString.Char8 as SBS8
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.UI.Bottle.Animation (AnimId, Layer, R)
@@ -42,9 +41,6 @@ width = size . _1
 
 height :: Lens' View R
 height = size . _2
-
-augmentAnimId :: Show a => AnimId -> a -> AnimId
-augmentAnimId animId = Anim.joinId animId . (:[]) . SBS8.pack . show
 
 backgroundColor :: AnimId -> Layer -> Draw.Color -> View -> View
 backgroundColor animId layer color view =
