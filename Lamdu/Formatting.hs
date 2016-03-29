@@ -8,7 +8,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (mplus)
 import qualified Data.ByteString as SBS
-import           Data.ByteString.Hex (showHexBytes, parseHexDigits)
+import           Data.ByteString.Hex (showHexBytes, parseHexBytes)
 import qualified Data.Char as Char
 import           Text.Printf (printf)
 import           Text.Read (readMaybe)
@@ -29,7 +29,7 @@ class Format a where
     format :: a -> String
 
 instance Format SBS.ByteString where
-    tryParse ('#':xs) = parseHexDigits xs ^? Lens._Right
+    tryParse ('#':xs) = parseHexBytes xs ^? Lens._Right
     tryParse _ = Nothing
     format bs = '#' : showHexBytes bs
 
