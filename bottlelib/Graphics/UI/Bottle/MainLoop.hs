@@ -11,7 +11,6 @@ import           Control.Concurrent.STM.TVar
 import           Control.Concurrent.Utils (forkIOUnmasked)
 import qualified Control.Exception as E
 import           Control.Lens (Lens')
-import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (void, when, unless, forever)
 import qualified Control.Monad.STM as STM
@@ -334,12 +333,9 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationConfig =
                 do
                     widget <- getWidget size
                     let eventMap = widget ^. Widget.eventMap
+                    clipboard <- GLFW.getClipboardString win
                     mAnimIdMapping <-
-                        case E.lookupPasteHandler event eventMap of
-                        Nothing -> E.lookup event eventMap & sequenceA
-                        Just pasteHandler ->
-                            GLFW.getClipboardString win
-                            >>= Lens._Just pasteHandler
+                        E.lookup clipboard event eventMap & sequenceA
                         <&> fmap (^. Widget.eAnimIdMapping)
                     case mAnimIdMapping of
                         Nothing -> return ()
