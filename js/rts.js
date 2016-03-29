@@ -116,7 +116,8 @@ module.exports = {
         Bytes: {
             length: function (x) { return x.length; },
             byteAt: function (x) { return x[objTag][x[indexTag]]; },
-            slice: function (x) { return x[objTag].slice(x[startTag], x[stopTag]); },
+            slice: function (x) { return x[objTag].subarray(x[startTag], x[stopTag]); },
+            unshare: function (x) { return x.slice(); },
         },
     },
 };

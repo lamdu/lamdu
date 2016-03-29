@@ -255,6 +255,7 @@ createPublics =
         newPublicBuiltinQualified_ "Bytes.byteAt" OO $ Scheme.mono $
             recordType
             [ (Builtins.objTag, bytes), (Builtins.indexTag, float) ] ~> float
+        newPublicBuiltinQualified_ "Bytes.unshare" OO $ Scheme.mono $ bytes ~> bytes
 
         let cmp n =
                 newPublicBuiltinQualified_ ("Prelude." ++ n) (Infix 4) $
