@@ -1,7 +1,9 @@
 {-# LANGUAGE TemplateHaskell, RankNTypes #-}
 module Lamdu.GUI.Main
     ( make
-    , Env(..), envEvalRes, envExport, envConfig, envSettings, envStyle, envFullSize, envCursor
+    , Env(..)
+      , envEvalRes, envExportRepl, envImportAll
+      , envConfig, envSettings, envStyle, envFullSize, envCursor
     , CodeEdit.M(..), CodeEdit.m
     ) where
 
@@ -36,7 +38,8 @@ type T = Transaction
 
 data Env = Env
     { _envEvalRes :: CurAndPrev (EvalResults (ExprIRef.ValI DbLayout.ViewM))
-    , _envExport :: CodeEdit.M DbLayout.ViewM ()
+    , _envExportRepl :: CodeEdit.M DbLayout.ViewM ()
+    , _envImportAll :: FilePath -> CodeEdit.M DbLayout.ViewM ()
     , _envConfig :: Config
     , _envSettings :: Settings
     , _envStyle :: Style
@@ -46,7 +49,7 @@ data Env = Env
 Lens.makeLenses ''Env
 
 make :: Env -> Widget.Id -> T DbLayout.DbM (Widget (CodeEdit.M DbLayout.DbM))
-make (Env evalRes export config settings style fullSize cursor) rootId =
+make env rootId =
     do
         actions <-
             VersionControl.makeActions
@@ -61,7 +64,7 @@ make (Env evalRes export config settings style fullSize cursor) rootId =
                     do
                         let codeSize = fullSize - Vector2 0 (branchSelector ^. Widget.height)
                         codeEdit <-
-                            CodeEdit.make env rootId
+                            CodeEdit.make codeEditEnv rootId
                             & WE.mapWidgetEnvT VersionControl.runAction
                             <&> Widget.events . CodeEdit.m %~ fmap (VersionControl.runEvent cursor)
                         let scrollBox =
@@ -78,13 +81,15 @@ make (Env evalRes export config settings style fullSize cursor) rootId =
                     & return
     where
         hoverPadding = Spacer.makeWidget $ Vector2 0 $ Config.paneHoverPadding $ Config.pane config
-        env = CodeEdit.Env
+        Env evalRes exportRepl importAll config settings style fullSize cursor = env
+        codeEditEnv = CodeEdit.Env
             { CodeEdit.codeProps = DbLayout.codeProps
             , CodeEdit.evalResults = evalRes
             , CodeEdit.config = config
             , CodeEdit.settings = settings
             , CodeEdit.style = style
-            , CodeEdit.export = export
+            , CodeEdit.exportRepl = exportRepl
+            , CodeEdit.importAll = importAll
             }
         widgetEnv = WE.Env
             { WE._envCursor = cursor

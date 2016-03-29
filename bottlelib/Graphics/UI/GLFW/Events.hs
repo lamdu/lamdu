@@ -19,6 +19,7 @@ data GLFWRawEvent
     = RawCharEvent Char
     | RawKeyEvent GLFW.Key Int GLFW.KeyState GLFW.ModifierKeys
     | RawWindowRefresh
+    | RawDropPaths [FilePath]
     | RawFrameBufferSize (Vector2 Int)
     | RawWindowClose
     deriving (Show, Eq)
@@ -36,6 +37,7 @@ data Event
     = EventKey KeyEvent
     | EventWindowClose
     | EventWindowRefresh
+    | EventDropPaths [FilePath]
     | EventFrameBufferSize (Vector2 Int)
     deriving (Show, Eq)
 
@@ -59,6 +61,7 @@ translate :: [GLFWRawEvent] -> [Event]
 translate [] = []
 translate (RawWindowClose : xs) = EventWindowClose : translate xs
 translate (RawWindowRefresh : xs) = EventWindowRefresh : translate xs
+translate (RawDropPaths paths : xs) = EventDropPaths paths : translate xs
 translate (RawFrameBufferSize size : xs) = EventFrameBufferSize size : translate xs
 translate (RawKeyEvent key scanCode keyState modKeys : RawCharEvent char : xs) =
     EventKey (KeyEvent key scanCode keyState modKeys (fromChar char)) :
@@ -102,6 +105,7 @@ rawEventLoop win eventsHandler =
 
         setCallback GLFW.setCharCallback charEventHandler
         setCallback GLFW.setKeyCallback addKeyEvent
+        setCallback GLFW.setDropCallback (addEvent . RawDropPaths)
         setCallback GLFW.setWindowRefreshCallback $ addEvent RawWindowRefresh
         setCallback GLFW.setFramebufferSizeCallback $ \w h -> addEvent (RawFrameBufferSize (Vector2 w h))
         setCallback GLFW.setWindowCloseCallback $ addEvent RawWindowClose

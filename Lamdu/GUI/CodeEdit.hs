@@ -82,7 +82,8 @@ data Pane m = Pane
 
 data Env m = Env
     { codeProps :: Anchors.CodeProps m
-    , export :: M m ()
+    , exportRepl :: M m ()
+    , importAll :: FilePath -> M m ()
     , evalResults :: CurAndPrev (EvalResults (ValI m))
     , config :: Config
     , settings :: Settings
@@ -172,7 +173,7 @@ gui env rootId replExpr panes =
             >>= traverse (makePaneEdit env (Config.pane (config env)))
             <&> fmap mLiftWidget
         newDefinitionButton <- makeNewDefinitionButton rootId <&> mLiftWidget
-        eventMap <- panesEventMap env & ExprGuiM.widgetEnv <&> fmap mLiftTrans
+        eventMap <- panesEventMap env & ExprGuiM.widgetEnv
         [replEdit] ++ panesEdits ++ [newDefinitionButton]
             & intersperse space
             & Box.vboxAlign 0
@@ -259,12 +260,12 @@ makeReplEventMap env replExpr config =
     [ Widget.keysEventMapMovesCursor newDefinitionButtonPressKeys
       (E.Doc ["Edit", "Extract to definition"]) extractAction
     , Widget.keysEventMap exportKeys
-      (E.Doc ["Collaboration", "JSON", "Export repl"]) exportAction
+      (E.Doc ["Collaboration", "Export repl to JSON file"]) exportAction
     ]
     where
         Config.Export{exportKeys} = Config.export config
         Config.Pane{newDefinitionButtonPressKeys} = Config.pane config
-        exportAction = export env
+        exportAction = exportRepl env
         extractAction =
             replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
             <&> ExprEventMap.extractCursor
@@ -288,17 +289,24 @@ makeReplEdit env myId replExpr =
         replId = Widget.joinId myId ["repl"]
 
 panesEventMap ::
-    MonadA m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (T m))
-panesEventMap Env{config,codeProps} =
+    MonadA m => Env m -> WidgetEnvT (T m) (Widget.EventHandlers (M m))
+panesEventMap Env{config,codeProps,importAll} =
     do
-        mJumpBack <- lift $ DataOps.jumpBack codeProps
+        mJumpBack <- DataOps.jumpBack codeProps & lift <&> fmap mLiftTrans
         newDefinitionEventMap <- makeNewDefinitionEventMap codeProps
         return $ mconcat
             [ newDefinitionEventMap (Config.newDefinitionKeys (Config.pane config))
+              <&> mLiftTrans
+            , E.dropEventMap "Drag&drop 1 JSON file"
+              (E.Doc ["Collaboration", "Import JSON file"]) importAction
+              <&> fmap (\() -> mempty)
             , maybe mempty
-                (Widget.keysEventMapMovesCursor (Config.previousCursorKeys config)
-                  (E.Doc ["Navigation", "Go back"])) mJumpBack
+              (Widget.keysEventMapMovesCursor (Config.previousCursorKeys config)
+               (E.Doc ["Navigation", "Go back"])) mJumpBack
             ]
+    where
+        importAction [filePath] = Just (importAll filePath)
+        importAction _ = Nothing
 
 makePaneWidget ::
     MonadA m => Config -> DefinitionN m ExprGuiT.Payload -> ExprGuiM m (Widget (T m))

@@ -98,7 +98,7 @@ Library
 
   Other-Modules:    Data.Store.Rev.ViewBranchInternal
 
-  Build-depends:    GLFW-b >= 1.4.7.3 && < 1.5
+  Build-depends:    GLFW-b >= 1.4.8.0
                   , OpenGL
                   , QuickCheck >= 2.8 && < 2.9
                   , StateVar

@@ -8,6 +8,7 @@ module Graphics.UI.Bottle.EventMap
     , charGroup
     , keyEventMap, keyPress, keyPresses
     , pasteOnKey, pasteOnKeys
+    , dropEventMap
     , deleteKey, deleteKeys
     , filterChars
     , tickHandler
@@ -145,8 +146,21 @@ cgDocs f CharGroupHandler{..} =
     CharGroupHandler cgInputDoc _cgChars
     <$> dhDoc (Lens.indexed f cgInputDoc) cgDocHandler
 
+-- File path (drag&)drop handler
+data DropHandler a = DropHandler
+    { dropHandlerInputDoc :: InputDoc
+    , _dropDocHandler :: DocHandler ([FilePath] -> Maybe a)
+    } deriving (Generic, Functor)
+Lens.makeLenses ''DropHandler
+
+dropHandlerDocs :: Lens.IndexedTraversal' InputDoc (DropHandler a) Doc
+dropHandlerDocs f DropHandler{..} =
+    DropHandler dropHandlerInputDoc
+    <$> dhDoc (Lens.indexed f dropHandlerInputDoc) _dropDocHandler
+
 data EventMap a = EventMap
     { _emKeyMap :: Map KeyEvent (DocHandler a)
+    , _emDropHandlers :: [DropHandler a]
     , _emCharGroupHandlers :: [CharGroupHandler a]
     , _emCharGroupChars :: Set Char
     , _emAllCharsHandler :: [AllCharsHandler a]
@@ -163,6 +177,7 @@ emDocs :: Lens.IndexedTraversal' InputDoc (EventMap a) Doc
 emDocs f EventMap{..} =
     EventMap
     <$> (Lens.reindexed prettyKeyEvent Lens.itraversed <. dhDoc) f _emKeyMap
+    <*> (Lens.traverse .> dropHandlerDocs) f _emDropHandlers
     <*> (Lens.traverse .> cgDocs) f _emCharGroupHandlers
     <*> pure _emCharGroupChars
     <*> (Lens.traverse .> chDocs) f _emAllCharsHandler
@@ -172,15 +187,16 @@ emDocs f EventMap{..} =
 Lens.makeLenses ''EventMap
 
 instance Monoid (EventMap a) where
-    mempty = EventMap Map.empty [] Set.empty [] Map.empty []
+    mempty = EventMap Map.empty [] [] Set.empty [] Map.empty []
     mappend = overrides
 
 overrides :: EventMap a -> EventMap a -> EventMap a
 overrides
-    x@(EventMap xMap xCharGroups xChars xMAllChars xPaste xTicks)
-    (EventMap yMap yCharGroups yChars yMAllChars yPaste yTicks) =
+    x@(EventMap xMap xDropHandlers xCharGroups xChars xMAllChars xPaste xTicks)
+    (EventMap yMap yDropHandlers yCharGroups yChars yMAllChars yPaste yTicks) =
     EventMap
     (xMap `mappend` filteredYMap)
+    (xDropHandlers ++ yDropHandlers)
     (xCharGroups ++ filteredYCharGroups)
     (xChars `mappend` yChars)
     (xMAllChars ++ yMAllChars)
@@ -243,8 +259,12 @@ deleteKey key = emKeyMap %~ Map.delete key
 deleteKeys :: [KeyEvent] -> EventMap a -> EventMap a
 deleteKeys = foldr ((.) . deleteKey) id
 
-lookup :: Maybe Clipboard -> Events.KeyEvent -> EventMap a -> Maybe a
-lookup mClipboard (Events.KeyEvent k _scanCode keyState modKeys mchar) (EventMap dict charGroups _ allCharHandlers pasteHandlers _tick) =
+lookup :: Maybe Clipboard -> Events.Event -> EventMap a -> Maybe a
+lookup _ (Events.EventDropPaths paths) eventMap =
+    map applyHandler (eventMap ^. emDropHandlers) & msum
+    where
+        applyHandler dh = dh ^. dropDocHandler . dhHandler $ paths
+lookup mClipboard (Events.EventKey event) eventMap =
     msum
     [ do
           clipboard <- mClipboard
@@ -267,7 +287,10 @@ lookup mClipboard (Events.KeyEvent k _scanCode keyState modKeys mchar) (EventMap
           (handler ^. dhHandler) char ^.. Lens._Just
     ]
     where
+        EventMap dict _dropHandlers charGroups _ allCharHandlers pasteHandlers _tick = eventMap
+        Events.KeyEvent k _scanCode keyState modKeys mchar = event
         modKey = mkModKey modKeys k
+lookup _ _ _ = Nothing
 
 charGroup :: InputDoc -> Doc -> String -> (Char -> a) -> EventMap a
 charGroup iDoc oDoc chars handler =
@@ -303,6 +326,10 @@ keyPress = keyEventMap . KeyEvent GLFW.KeyState'Pressed
 
 keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress
+
+dropEventMap :: InputDoc -> Doc -> ([FilePath] -> Maybe a) -> EventMap a
+dropEventMap iDoc oDoc handler =
+    mempty { _emDropHandlers = [DropHandler iDoc (DocHandler oDoc handler)] }
 
 pasteOnKey :: ModKey -> Doc -> (Clipboard -> a) -> EventMap a
 pasteOnKey key doc handler =

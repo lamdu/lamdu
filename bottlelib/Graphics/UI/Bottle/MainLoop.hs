@@ -32,7 +32,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import           Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
-import           Graphics.UI.GLFW.Events (Result(..), eventLoop)
+import           Graphics.UI.GLFW.Events (Event, Result(..), eventLoop)
 import qualified Graphics.UI.GLFW.Events as GLFWEvents
 
 import           Prelude.Compat
@@ -48,8 +48,6 @@ data EventResult =
 instance Monoid EventResult where
     mempty = ERNone
     mappend = max
-
-type Event = GLFWEvents.KeyEvent
 
 data ImageHandlers = ImageHandlers
     { imageEventHandler :: Event -> IO ()
@@ -69,17 +67,17 @@ mainLoopImage win imageHandlers =
         initialSize <- windowSize win
         frameBufferSize <- newIORef initialSize
         drawnImageHandlers <- imageHandlers initialSize & newIORef
-        let handleEvent (GLFWEvents.EventKey keyEvent) =
-                do
-                    handlers <- readIORef drawnImageHandlers
-                    imageEventHandler handlers keyEvent
-                    return ERNone
-            handleEvent GLFWEvents.EventWindowClose = return ERQuit
+        let handleEvent GLFWEvents.EventWindowClose = return ERQuit
             handleEvent GLFWEvents.EventWindowRefresh = return ERRefresh
             handleEvent (GLFWEvents.EventFrameBufferSize size) =
                 do
                     writeIORef frameBufferSize (fromIntegral <$> size)
                     return ERRefresh
+            handleEvent event =
+                do
+                    handlers <- readIORef drawnImageHandlers
+                    imageEventHandler handlers event
+                    return ERNone
         let handleEvents events =
                 do
                     eventResult <- mconcat <$> traverse handleEvent events

@@ -130,8 +130,8 @@ instance Eq CachedWidgetInput where
     CachedWidgetInput x0 y0 z0 _ == CachedWidgetInput x1 y1 z1 _ =
         (x0, y0, z0) == (x1, y1, z1)
 
-export :: Config.Export -> GUIMain.M DbLayout.ViewM ()
-export Config.Export{exportPath} =
+exportRepl :: Config.Export -> GUIMain.M DbLayout.ViewM ()
+exportRepl Config.Export{exportPath} =
     GUIMain.M $ return $
     do
         json <- Export.export
@@ -141,6 +141,11 @@ export Config.Export{exportPath} =
                   LBS.writeFile exportPath (Aeson.encodePretty json)
             , ()
             )
+
+importAll :: FilePath -> GUIMain.M DbLayout.ViewM ()
+importAll filePath =
+    GUIMain.M $
+    pure (pure ()) <$ putStrLn ("TODO: import from: " ++ show filePath)
 
 makeRootWidget ::
     Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->
@@ -158,7 +163,8 @@ makeRootWidget db zoom settingsRef evaluator (CachedWidgetInput _fontsVer config
         settings <- readIORef settingsRef
         let env = GUIMain.Env
                 { _envEvalRes = evalResults
-                , _envExport = export (Config.export config)
+                , _envExportRepl = exportRepl (Config.export config)
+                , _envImportAll = importAll
                 , _envConfig = config
                 , _envSettings = settings
                 , _envStyle = Style.style config fonts
