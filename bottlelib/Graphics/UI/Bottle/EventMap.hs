@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, DeriveFunctor, DeriveGeneric, FlexibleContexts, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveGeneric, FlexibleContexts, RecordWildCards #-}
 module Graphics.UI.Bottle.EventMap
     ( KeyEvent(..)
     , InputDoc, Subtitle, Doc(..), docStrs
@@ -14,9 +14,6 @@ module Graphics.UI.Bottle.EventMap
     , specialCharKey
     ) where
 
-import           Prelude.Compat hiding (lookup)
-
-import           Control.Lens (Lens, Lens')
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (guard, msum)
@@ -30,6 +27,8 @@ import           Graphics.UI.Bottle.ModKey (ModKey(..))
 import qualified Graphics.UI.Bottle.ModKey as ModKey
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Events as Events
+
+import           Prelude.Compat hiding (lookup)
 
 data KeyEvent = KeyEvent GLFW.KeyState ModKey
     deriving (Generic, Show, Eq, Ord)
@@ -112,62 +111,53 @@ type Subtitle = String
 newtype Doc = Doc
     { _docStrs :: [Subtitle]
     } deriving (Generic, Eq, Ord)
-
-docStrs :: Lens.Iso' Doc [Subtitle]
-docStrs = Lens.iso _docStrs Doc
+Lens.makeLenses ''Doc
 
 data DocHandler a = DocHandler
     { _dhDoc :: Doc
     , _dhHandler :: a
     } deriving (Generic, Functor)
-
-dhDoc :: Lens' (DocHandler a) Doc
-dhDoc f DocHandler{..} = f _dhDoc <&> \_dhDoc -> DocHandler{..}
-
-dhHandler :: Lens (DocHandler a) (DocHandler b) a b
-dhHandler f DocHandler{..} = f _dhHandler <&> \_dhHandler -> DocHandler{..}
+Lens.makeLenses ''DocHandler
 
 type InputDoc = String
 
 -- AllCharsHandler always conflict with each other
 data AllCharsHandler a = AllCharsHandler
-    { _chInputDoc :: InputDoc
+    { chInputDoc :: InputDoc
     , _chDocHandler :: DocHandler (Char -> Maybe a)
     } deriving (Generic, Functor)
-
-chDocHandler ::
-    Lens
-    (AllCharsHandler a) (AllCharsHandler b)
-    (DocHandler (Char -> Maybe a)) (DocHandler (Char -> Maybe b))
-chDocHandler f AllCharsHandler{..} = f _chDocHandler <&> \_chDocHandler -> AllCharsHandler{..}
+Lens.makeLenses ''AllCharsHandler
 
 chDocs :: Lens.IndexedTraversal' InputDoc (AllCharsHandler a) Doc
 chDocs f AllCharsHandler{..} =
-    AllCharsHandler _chInputDoc
-    <$> dhDoc (Lens.indexed f _chInputDoc) _chDocHandler
+    AllCharsHandler chInputDoc
+    <$> dhDoc (Lens.indexed f chInputDoc) _chDocHandler
 
 data CharGroupHandler a = CharGroupHandler
-    { _cgInputDoc :: InputDoc
+    { cgInputDoc :: InputDoc
     , _cgChars :: Set Char
-    , _cgDocHandler :: DocHandler (Char -> a)
+    , cgDocHandler :: DocHandler (Char -> a)
     } deriving (Generic, Functor)
-
-cgChars :: Lens' (CharGroupHandler a) (Set Char)
-cgChars f CharGroupHandler{..} = f _cgChars <&> \_cgChars -> CharGroupHandler{..}
+Lens.makeLenses ''CharGroupHandler
 
 cgDocs :: Lens.IndexedTraversal' InputDoc (CharGroupHandler a) Doc
 cgDocs f CharGroupHandler{..} =
-    CharGroupHandler _cgInputDoc _cgChars
-    <$> dhDoc (Lens.indexed f _cgInputDoc) _cgDocHandler
+    CharGroupHandler cgInputDoc _cgChars
+    <$> dhDoc (Lens.indexed f cgInputDoc) cgDocHandler
 
 data EventMap a = EventMap
     { _emKeyMap :: Map KeyEvent (DocHandler a)
     , _emCharGroupHandlers :: [CharGroupHandler a]
     , _emCharGroupChars :: Set Char
     , _emAllCharsHandler :: [AllCharsHandler a]
-    , _emPasteHandlers :: Map KeyEvent (DocHandler (Clipboard -> a))
+    , emPasteHandlers :: Map KeyEvent (DocHandler (Clipboard -> a))
     , _emTickHandlers :: [a]
     } deriving (Generic, Functor)
+
+prettyKeyEvent :: KeyEvent -> InputDoc
+prettyKeyEvent (KeyEvent GLFW.KeyState'Pressed modKey) = ModKey.pretty modKey
+prettyKeyEvent (KeyEvent GLFW.KeyState'Repeating modKey) = "Repeat " ++ ModKey.pretty modKey
+prettyKeyEvent (KeyEvent GLFW.KeyState'Released modKey) = "Depress " ++ ModKey.pretty modKey
 
 emDocs :: Lens.IndexedTraversal' InputDoc (EventMap a) Doc
 emDocs f EventMap{..} =
@@ -176,23 +166,10 @@ emDocs f EventMap{..} =
     <*> (Lens.traverse .> cgDocs) f _emCharGroupHandlers
     <*> pure _emCharGroupChars
     <*> (Lens.traverse .> chDocs) f _emAllCharsHandler
-    <*> (Lens.reindexed prettyKeyEvent Lens.itraversed <. dhDoc) f _emPasteHandlers
+    <*> (Lens.reindexed prettyKeyEvent Lens.itraversed <. dhDoc) f emPasteHandlers
     <*> pure _emTickHandlers
 
-emKeyMap :: Lens' (EventMap a) (Map KeyEvent (DocHandler a))
-emKeyMap f EventMap{..} = f _emKeyMap <&> \_emKeyMap -> EventMap{..}
-
-emCharGroupHandlers :: Lens' (EventMap a) [CharGroupHandler a]
-emCharGroupHandlers f EventMap{..} = f _emCharGroupHandlers <&> \_emCharGroupHandlers -> EventMap{..}
-
-emCharGroupChars :: Lens' (EventMap a) (Set Char)
-emCharGroupChars f EventMap{..} = f _emCharGroupChars <&> \_emCharGroupChars -> EventMap{..}
-
-emAllCharsHandler :: Lens' (EventMap a) [AllCharsHandler a]
-emAllCharsHandler f EventMap{..} = f _emAllCharsHandler <&> \_emAllCharsHandler -> EventMap{..}
-
-emTickHandlers :: Lens' (EventMap a) [a]
-emTickHandlers f EventMap{..} = f _emTickHandlers <&> \_emTickHandlers -> EventMap{..}
+Lens.makeLenses ''EventMap
 
 instance Monoid (EventMap a) where
     mempty = EventMap Map.empty [] Set.empty [] Map.empty []
@@ -244,11 +221,6 @@ filterChars p =
         f handler c = do
             guard $ p c
             handler c
-
-prettyKeyEvent :: KeyEvent -> InputDoc
-prettyKeyEvent (KeyEvent GLFW.KeyState'Pressed modKey) = ModKey.pretty modKey
-prettyKeyEvent (KeyEvent GLFW.KeyState'Repeating modKey) = "Repeat " ++ ModKey.pretty modKey
-prettyKeyEvent (KeyEvent GLFW.KeyState'Released modKey) = "Depress " ++ ModKey.pretty modKey
 
 isCharMods :: GLFW.ModifierKeys -> Bool
 isCharMods modKeys =
@@ -335,7 +307,7 @@ keyPresses = mconcat . map keyPress
 pasteOnKey :: ModKey -> Doc -> (Clipboard -> a) -> EventMap a
 pasteOnKey key doc handler =
     mempty
-    { _emPasteHandlers =
+    { emPasteHandlers =
         Map.singleton (KeyEvent GLFW.KeyState'Pressed key) (DocHandler doc handler)
     }
 
