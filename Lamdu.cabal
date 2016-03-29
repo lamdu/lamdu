@@ -141,6 +141,7 @@ Executable lamdu
                   , aeson-pretty
                   , base >= 4.7
                   , base-compat
+                  , base-orphans >= 0.5.0
                   , binary
                   , bytestring
                   , containers

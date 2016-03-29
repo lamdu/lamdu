@@ -14,6 +14,7 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.List (intersperse)
 import           Data.List.Utils (insertAt, removeAt)
+import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
