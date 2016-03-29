@@ -121,6 +121,7 @@ module.exports = {
             "/": function (x) { return x[infixlTag] / x[infixrTag]; },
             div: function (x) { return Math.floor(x[infixlTag] / x[infixrTag]); },
             mod: function (x) { return x[infixlTag] % x[infixrTag]; },
+            negate: function (x) { return -x; },
             "==": function (x) { return bool(isEqual(x[infixlTag], x[infixrTag])); },
             "/=": function (x) { return bool(!isEqual(x[infixlTag], x[infixrTag])); },
             ">=": function (x) { return bool(x[infixlTag] >= x[infixrTag]); },
