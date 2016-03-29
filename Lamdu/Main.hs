@@ -9,7 +9,8 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (when, join, unless, replicateM_)
-import qualified Data.Aeson.Encode.Pretty as Aeson
+import qualified Data.Aeson.Encode.Pretty as AesonPretty
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
@@ -134,18 +135,24 @@ exportRepl :: Config.Export -> GUIMain.M DbLayout.ViewM ()
 exportRepl Config.Export{exportPath} =
     GUIMain.M $ return $
     do
-        json <- Export.export
+        json <- Export.exportRepl
         return
             ( do
                   putStrLn $ "Exporting to " ++ show exportPath
-                  LBS.writeFile exportPath (Aeson.encodePretty json)
+                  LBS.writeFile exportPath (AesonPretty.encodePretty json)
             , ()
             )
 
 importAll :: FilePath -> GUIMain.M DbLayout.ViewM ()
 importAll filePath =
     GUIMain.M $
-    pure (pure ()) <$ putStrLn ("TODO: import from: " ++ show filePath)
+    do
+        putStrLn $ "importing from: " ++ show filePath
+        fillDbTxn <-
+            LBS.readFile filePath <&> Aeson.eitherDecode
+            >>= either fail return
+            <&> Export.importAll
+        pure ((pure (), ()) <$ fillDbTxn)
 
 makeRootWidget ::
     Db -> Zoom -> IORef Settings -> EvalManager.Evaluator ->

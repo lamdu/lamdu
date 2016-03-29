@@ -90,7 +90,7 @@
         "enlargeFactor": 1.1
     },
     "export": {
-        "exportPath": "lamdu.json",
+        "exportPath": "export.json",
         "exportKeys": [
             [
                 {
@@ -100,6 +100,17 @@
                     "modifierKeysControl": false
                 },
                 "Key'E"
+            ]
+        ],
+        "importKeys": [
+            [
+                {
+                    "modifierKeysSuper": false,
+                    "modifierKeysAlt": true,
+                    "modifierKeysShift": false,
+                    "modifierKeysControl": false
+                },
+                "Key'I"
             ]
         ]
     },

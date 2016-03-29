@@ -183,6 +183,7 @@ Executable lamdu
                   , Lamdu.Data.Definition
                   , Lamdu.Data.ExampleDB
                   , Lamdu.Data.Export.JSON
+                  , Lamdu.Data.Export.JSON.Codec
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs
                   , Lamdu.DataFile

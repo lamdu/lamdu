@@ -260,9 +260,12 @@ makeReplEventMap env replExpr config =
       (E.Doc ["Edit", "Extract to definition"]) extractAction
     , Widget.keysEventMap exportKeys
       (E.Doc ["Collaboration", "Export repl to JSON file"]) exportAction
+    , Widget.keysEventMap importKeys
+      (E.Doc ["Collaboration", "Import repl from JSON file"])
+      (importAll env exportPath)
     ]
     where
-        Config.Export{exportKeys} = Config.export config
+        Config.Export{exportPath,importKeys,exportKeys} = Config.export config
         Config.Pane{newDefinitionButtonPressKeys} = Config.pane config
         exportAction = exportRepl env
         extractAction =

@@ -1,8 +1,12 @@
 -- | Import/Export JSON support
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, LambdaCase, TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, OverloadedStrings, FlexibleContexts, LambdaCase #-}
 module Lamdu.Data.Export.JSON
-    ( export
+    ( exportRepl
+    , importAll
     ) where
+
+-- TODO: Assoc data?
+-- TODO: Schema version? What granularity?
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators hiding ((.=))
@@ -13,35 +17,27 @@ import           Control.Monad.Trans.State (StateT)
 import qualified Control.Monad.Trans.State as State
 import           Control.Monad.Trans.Writer (WriterT(..))
 import qualified Control.Monad.Trans.Writer as Writer
-import           Data.Aeson ((.=))
-import qualified Data.Aeson as Aeson
-import           Data.ByteString.Hex (showHexBytes)
+import qualified Data.Aeson.Encode.Pretty as AesonPretty
+import qualified Data.ByteString.Lazy.Char8 as BSL8
+import           Data.Either.Combinators (swapEither)
 import           Data.Foldable (traverse_)
-import           Data.Map (Map)
-import qualified Data.Map as Map
 import           Data.Set (Set)
-import qualified Data.Set as Set
 import           Data.Store.IRef
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import qualified Data.Vector as Vector
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
+import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Expr.Constraints (Constraints(..), CompositeVarConstraints(..))
-import           Lamdu.Expr.FlatComposite (FlatComposite(..))
-import qualified Lamdu.Expr.FlatComposite as FlatComposite
+import qualified Lamdu.Data.Export.JSON.Codec as Codec
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Expr.Identifier (Identifier, identHex)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
-import           Lamdu.Expr.Scheme (Scheme(..))
-import           Lamdu.Expr.Type (Type, Composite)
+import           Lamdu.Expr.Nominal (Nominal)
 import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.TypeVars (TypeVars(..))
 import           Lamdu.Expr.UniqueId (ToGuid)
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
@@ -50,146 +46,30 @@ import           Prelude.Compat
 
 type T = Transaction
 
+replIRef :: IRef ViewM (ValI ViewM)
+replIRef = DbLayout.repl DbLayout.codeIRefs
+
+
 data Visited = Visited
     { _visitedDefs :: Set V.Var
     , _visitedTags :: Set T.Tag
+    , _visitedNominals :: Set T.NominalId
     }
 Lens.makeLenses ''Visited
 
-type M = WriterT [Aeson.Value] (StateT Visited (T ViewM))
+type Export = WriterT [Codec.Encoded] (StateT Visited (T ViewM))
 
-type Encoder a = a -> Aeson.Value
-
-array :: Encoder [Aeson.Value]
-array = Aeson.Array . Vector.fromList
-
-encodeFFIName :: Encoder Definition.FFIName
-encodeFFIName (Definition.FFIName modulePath name) = modulePath ++ [name] & Aeson.toJSON
-
-encodeIdent :: Encoder Identifier
-encodeIdent = Aeson.toJSON . identHex
-
-encodeIdentMap ::
-    Aeson.ToJSON b => (k -> Identifier) -> (a -> b) -> Encoder (Map k a)
-encodeIdentMap getIdent encode =
-    Aeson.toJSON . Map.mapKeys (identHex . getIdent) . Map.map encode
-
-encodeTag :: Encoder T.Tag
-encodeTag = Aeson.toJSON . identHex . T.tagName
-
-encodeFlatComposite :: Encoder (FlatComposite p)
-encodeFlatComposite = \case
-    FlatComposite fields Nothing -> encodedFields fields
-    FlatComposite fields (Just (T.Var name)) ->
-        array [encodedFields fields, encodeIdent name]
-    where
-        encodedFields = encodeIdentMap T.tagName encodeType
-
-encodeComposite :: Encoder (Composite p)
-encodeComposite = encodeFlatComposite . FlatComposite.fromComposite
-
-encodeType :: Encoder Type
-encodeType (T.TFun a b) = Aeson.object ["TFun" .= array (map encodeType [a, b])]
-encodeType (T.TRecord composite) = Aeson.object ["record" .= encodeComposite composite]
-encodeType (T.TSum composite) = Aeson.object ["sum" .= encodeComposite composite]
-encodeType (T.TVar (T.Var name)) = Aeson.object ["TVar" .= encodeIdent name]
-encodeType (T.TInst tId params) =
-    Aeson.object
-    [ "TId" .= encodeIdent (T.nomId tId)
-    , "Params" .= encodeIdentMap T.typeParamId encodeType params
-    ]
-
-encodeTypeVars :: Encoder (TypeVars, Constraints)
-encodeTypeVars (TypeVars tvs rtvs stvs, Constraints productConstraints sumConstraints) =
-    Aeson.object
-    [ "tvs" .= encodeTVs tvs
-    , "rtvs" .= encodeTVs rtvs
-    , "stvs" .= encodeTVs stvs
-    , "constraints" .= Aeson.object
-      [ "rtvs" .= encodeConstraints productConstraints
-      , "stvs" .= encodeConstraints sumConstraints
-      ]
-    ]
-    where
-        encodeConstraints (CompositeVarConstraints constraints) =
-            encodeIdentMap T.tvName (map (encodeIdent . T.tagName) . Set.toList)
-            constraints
-        encodeTVs = Aeson.toJSON . map (encodeIdent . T.tvName) . Set.toList
-
-encodeScheme :: Encoder Scheme
-encodeScheme (Scheme tvs constraints typ) =
-    Aeson.object
-    [ "schemeBinders" .= encodeTypeVars (tvs, constraints)
-    , "schemeType" .= encodeType typ
-    ]
-
-encodeLeaf :: Encoder V.Leaf
-encodeLeaf V.LHole = Aeson.String "hole"
-encodeLeaf V.LRecEmpty = Aeson.object []
-encodeLeaf V.LAbsurd = Aeson.String "absurd"
-encodeLeaf (V.LVar (V.Var var)) = encodeIdent var
-encodeLeaf (V.LLiteral (V.PrimVal (T.NominalId primId) primBytes)) =
-    Aeson.object
-    [ "primId" .= identHex primId
-    , "primBytes" .= showHexBytes primBytes
-    ]
-
--- TODO: Should we export the Guids of subexprs?
-encodeVal :: Encoder (Val (ValI m))
-encodeVal (Val _ body) =
-    case body <&> encodeVal of
-    V.BLeaf leaf -> encodeLeaf leaf
-    V.BApp (V.Apply func arg) ->
-        Aeson.object ["applyFunc" .= func, "applyArg" .= arg]
-    V.BAbs (V.Lam (V.Var varId) res) ->
-        Aeson.object ["lamVar" .= identHex varId, "lamBody" .= res]
-    V.BGetField (V.GetField reco tag) ->
-        Aeson.object ["getFieldRec" .= reco, "getFieldName" .= encodeTag tag]
-    V.BRecExtend (V.RecExtend tag val rest) ->
-        Aeson.object
-        ["extendTag" .= encodeTag tag, "extendVal" .= val, "extendRest" .= rest]
-    V.BInject (V.Inject tag val) ->
-        Aeson.object ["injectTag" .= encodeTag tag, "injectVal" .= val]
-    V.BCase (V.Case tag handler restHandler) ->
-        Aeson.object ["caseTag" .= encodeTag tag, "caseHandler" .= handler, "caseRest" .= restHandler]
-    V.BToNom (V.Nom (T.NominalId nomId) val) ->
-        Aeson.object ["toNomId" .= encodeIdent nomId, "toNomVal" .= val]
-    V.BFromNom (V.Nom (T.NominalId nomId) val) ->
-        Aeson.object ["fromNomId" .= encodeIdent nomId, "fromNomVal" .= val]
-
-encodeExportedType :: Encoder Definition.ExportedType
-encodeExportedType Definition.NoExportedType = Aeson.String "NoExportedType"
-encodeExportedType (Definition.ExportedType scheme) = encodeScheme scheme
-
-encodeDefBody :: Encoder (Definition.Body (Val (ValI m)))
-encodeDefBody (Definition.BodyBuiltin (Definition.Builtin name scheme)) =
-    Aeson.object
-    [ "builtin" .=
-      Aeson.object
-      [ "name" .= encodeFFIName name
-      , "scheme" .= encodeScheme scheme
-      ]
-    ]
-encodeDefBody (Definition.BodyExpr (Definition.Expr val typ frozenDefTypes)) =
-    Aeson.object
-    [ "val" .= encodeVal val
-    , "typ" .= encodeExportedType typ
-    , "frozenDefTypes" .= encodedFrozen
-    ]
-    where
-        encodedFrozen = encodeIdentMap V.vvName encodeScheme frozenDefTypes
-
-run :: M a -> T ViewM (a, Aeson.Value)
-run act =
+runExport :: Export a -> T ViewM (a, Codec.Encoded)
+runExport act =
     act
     & runWriterT
-    <&> _2 %~ array
-    & (`State.evalStateT` Visited mempty mempty)
+    <&> _2 %~ Codec.encodeArray
+    & (`State.evalStateT` Visited mempty mempty mempty)
 
-trans :: T ViewM a -> M a
+trans :: T ViewM a -> Export a
 trans = lift . lift
 
-withVisited :: Lens.Contains b => Lens.ALens' Visited b -> Lens.Index b -> M () -> M ()
+withVisited :: Ord a => Lens.ALens' Visited (Set a) -> a -> Export () -> Export ()
 withVisited l x act =
     do
         alreadyVisited <- Lens.use (Lens.cloneLens l . Lens.contains x)
@@ -198,10 +78,7 @@ withVisited l x act =
                 Lens.assign (Lens.cloneLens l . Lens.contains x) True
                 act
 
-replIRef :: IRef ViewM (ValI ViewM)
-replIRef = DbLayout.repl DbLayout.codeIRefs
-
-readAssocName :: ToGuid a => a -> M (Maybe String)
+readAssocName :: ToGuid a => a -> Export (Maybe String)
 readAssocName x =
     do
         name <- Anchors.assocNameRef x & Transaction.getP & trans
@@ -210,20 +87,28 @@ readAssocName x =
             then Nothing
             else Just name
 
-tell :: Aeson.Value -> M ()
+tell :: Codec.Encoded -> Export ()
 tell = Writer.tell . (: [])
 
-exportTag :: T.Tag -> M ()
+exportTag :: T.Tag -> Export ()
 exportTag tag =
     do
         mName <- readAssocName tag
-        tell $ Aeson.object $ concat
-            [ [ "tag" .= encodeTag tag ]
-            , [ "name" .= name | Just name <- [mName] ]
-            ]
+        Codec.encodeNamedTag (mName, tag) & tell
     & withVisited visitedTags tag
 
-recurse :: Val a -> M ()
+exportNominal :: T.NominalId -> Export ()
+exportNominal nomId =
+    trans (Load.nominal nomId) >>=
+    \case
+    Nothing -> return ()
+    Just nominal ->
+        do
+            mName <- readAssocName nomId
+            Codec.encodeNamedNominal ((mName, nomId), nominal) & tell
+        & withVisited visitedNominals nomId
+
+recurse :: Val a -> Export ()
 recurse val =
     do
         -- TODO: Add a recursion on all ExprLens.subExprs -- that have
@@ -233,34 +118,75 @@ recurse val =
         -- export all associated names/data of all!
         val ^.. ExprLens.valGlobals mempty & traverse_ exportDef
         val ^.. ExprLens.valTags & traverse_ exportTag
+        val ^.. ExprLens.valNominals & traverse_ exportNominal
 
-exportDef :: V.Var -> M ()
+exportDef :: V.Var -> Export ()
 exportDef globalId =
     do
         mName <- readAssocName globalId
-        def <- ExprIRef.defI globalId & Load.def & trans
-        let encodedBody =
-                def ^. Definition.defBody
-                <&> Lens.mapped %~ Property.value
-                & encodeDefBody
-
+        def <-
+            ExprIRef.defI globalId & Load.def & trans
+            <&> Definition.defBody . Lens.mapped . Lens.mapped %~ Property.value
         traverse_ recurse (def ^. Definition.defBody)
-
-        tell $ Aeson.object $ concat
-            [ [ "def" .= identHex (V.vvName globalId) ]
-            , [ "name" .= name | Just name <- [mName] ]
-            , [ "body" .= encodedBody ]
-            ]
+        (globalId, mName) <$ def & Codec.encodeDef & tell
     & withVisited visitedDefs globalId
 
-exportRepl :: M ()
+exportRepl :: T ViewM Codec.Encoded
 exportRepl =
     do
         repl <- Transaction.readIRef replIRef >>= ExprIRef.readVal & trans
         recurse repl
-        Aeson.object
-            [ "repl" .= encodeVal repl
-            ] & tell
+        Codec.encodeRepl repl & tell
+    & runExport
+    <&> snd
 
-export :: T ViewM Aeson.Value
-export = run exportRepl <&> snd
+setName :: ToGuid a => a -> String -> T ViewM ()
+setName x = Transaction.setP (Anchors.assocNameRef x)
+
+importDef :: Definition (Val ()) (V.Var, Maybe String) -> T ViewM ()
+importDef (Definition body (globalId, mName)) =
+    do
+        traverse_ (setName globalId) mName
+        body' <- traverse ExprIRef.newVal body
+        Transaction.writeIRef defI body'
+    where
+        defI = ExprIRef.defI globalId
+
+importRepl :: Val () -> T ViewM ()
+importRepl val = ExprIRef.newVal val >>= Transaction.writeIRef replIRef
+
+importTag :: (Maybe String, T.Tag) -> T ViewM ()
+importTag (mName, tag) = traverse_ (setName tag) mName
+
+importNominal :: ((Maybe String, T.NominalId), Nominal) -> T ViewM ()
+importNominal ((mName, nomId), nominal) =
+    do
+        traverse_ (setName nomId) mName
+        Transaction.writeIRef (ExprIRef.nominalI nomId) nominal
+
+-- Like asum/msum but collects the errors
+firstSuccess :: [Either err a] -> Either [err] a
+firstSuccess = swapEither . sequence . fmap swapEither
+
+importOne :: Codec.Encoded -> T ViewM ()
+importOne json =
+    firstSuccess
+    [ try Codec.decodeDef importDef
+    , try Codec.decodeRepl importRepl
+    , try Codec.decodeNamedTag importTag
+    , try Codec.decodeNamedNominal importNominal
+    ]
+    & either parseFail return
+    >>= id
+    where
+        parseFail errors =
+            "Failed to parse: " ++ BSL8.unpack (AesonPretty.encodePretty json) ++
+            "\n" ++ unlines errors
+            & fail
+        try decode imp = Codec.runDecoder decode json <&> imp
+
+importAll :: Codec.Encoded -> T ViewM ()
+importAll json =
+    Codec.runDecoder Codec.decodeArray json
+    & either fail return
+    >>= traverse_ importOne

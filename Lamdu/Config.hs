@@ -65,6 +65,7 @@ instance Aeson.FromJSON Zoom
 data Export = Export
     { exportPath :: FilePath
     , exportKeys :: [ModKey]
+    , importKeys :: [ModKey]
     } deriving (Eq, Generic, Show)
 instance Aeson.ToJSON Export where
     toJSON = Aeson.genericToJSON Aeson.defaultOptions
