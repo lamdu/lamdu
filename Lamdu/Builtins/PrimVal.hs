@@ -2,6 +2,7 @@
 module Lamdu.Builtins.PrimVal
     ( KnownPrim(..)
     , fromKnown, toKnown
+    , floatId, bytesId
     , floatType, bytesType
     , nameOf
     ) where
@@ -17,23 +18,23 @@ data KnownPrim
     | Bytes ByteString
     deriving (Eq, Ord, Show)
 
-bytesId :: T.PrimId
+bytesId :: T.NominalId
 bytesId = "BI:bytes"
 
-floatId :: T.PrimId
+floatId :: T.NominalId
 floatId = "BI:float"
 
-nameOf :: T.PrimId -> String
+nameOf :: T.NominalId -> String
 nameOf p
     | p == bytesId = "Bytes"
     | p == floatId = "Num"
     | otherwise = error $ "Invalid prim id: " ++ show p
 
 floatType :: Type
-floatType = T.TPrim floatId
+floatType = T.TInst floatId mempty
 
 bytesType :: Type
-bytesType = T.TPrim bytesId
+bytesType = T.TInst bytesId mempty
 
 toKnown :: V.PrimVal -> KnownPrim
 toKnown (V.PrimVal litId bytes)

@@ -108,6 +108,8 @@ blessAnchors =
         mapM_ describeAnchorTag Builtins.anchorTags
         lift $ setName Builtins.streamTid "Stream"
         lift $ setName Builtins.textTid "Text"
+        lift $ setName PrimVal.bytesId "Bytes"
+        lift $ setName PrimVal.floatId "Number"
         Writer.tell $ mempty { publicTIds = [Builtins.streamTid, Builtins.textTid] }
     where
         describeAnchorTag (order, tag, name) =

@@ -27,7 +27,6 @@ import qualified Graphics.UI.Bottle.Widgets as BWidgets
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import           Graphics.UI.Bottle.WidgetsEnvT (WidgetEnvT)
-import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Expr.Identifier (Identifier(..))
@@ -93,9 +92,6 @@ parens parent my view
 
 makeTVar :: MonadA m => T.Var p -> M m View
 makeTVar (T.Var name) = showIdentifier name
-
-makeTPrim :: MonadA m => T.PrimId -> M m View
-makeTPrim = text . PrimVal.nameOf
 
 makeTFun :: MonadA m => ParentPrecedence -> Type -> Type -> M m View
 makeTFun parentPrecedence a b =
@@ -218,7 +214,6 @@ makeInternal parentPrecedence typ =
     T.TVar var -> makeTVar var
     T.TFun a b -> makeTFun parentPrecedence a b
     T.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
-    T.TPrim p -> makeTPrim p
     T.TRecord composite -> makeComposite makeField composite
     T.TSum composite ->
         [ text "+"

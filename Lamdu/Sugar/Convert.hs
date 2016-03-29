@@ -164,9 +164,13 @@ makeNominalsMap val =
                 loaded <- State.get
                 unless (Map.member tid loaded) $
                     do
-                        nom <- IRefInfer.loadNominal tid & lift
-                        Map.insert tid nom loaded & State.put
-                        N.nScheme nom ^. schemeType & loadForType
+                        mNom <- IRefInfer.loadNominal tid & lift
+                        case mNom of
+                            Nothing -> return ()
+                            Just nom ->
+                                do
+                                    Map.insert tid nom loaded & State.put
+                                    N.nScheme nom ^. schemeType & loadForType
 
 convertInferDefExpr ::
     MonadA m =>

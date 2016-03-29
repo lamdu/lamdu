@@ -67,13 +67,13 @@ loader =
     , InferLoad.loadNominal = lift . loadNominal
     }
 
-loadNominal :: MonadA m => T.NominalId -> T m Nominal
+loadNominal :: MonadA m => T.NominalId -> T m (Maybe Nominal)
 loadNominal tid =
     do
         e <- Transaction.irefExists iref
         if e
-            then Transaction.readIRef iref
-            else fail "Missing Nominal Value"
+            then Transaction.readIRef iref <&> Just
+            else return Nothing
     where
         iref = ExprIRef.nominalI tid
 

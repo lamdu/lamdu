@@ -33,7 +33,7 @@ import           Prelude.Compat
 
 type Nominals = Map T.NominalId Nominal
 
-loadNominalsForType :: Monad m => (T.NominalId -> m Nominal) -> Type -> m Nominals
+loadNominalsForType :: Monad m => (T.NominalId -> m (Maybe Nominal)) -> Type -> m Nominals
 loadNominalsForType loadNominal typ =
     go Map.empty (typ ^. ExprLens.typeTIds . Lens.to Set.singleton)
     where
@@ -41,7 +41,9 @@ loadNominalsForType loadNominal typ =
             | Set.null toLoad = return res
             | otherwise =
                 do
-                    nominals <- Map.fromSet loadNominal toLoad & sequenceA
+                    nominals <-
+                        Map.fromSet loadNominal toLoad & sequenceA
+                        <&> Map.mapMaybe id
                     let result = mappend res nominals
                     let newTIds =
                             nominals
@@ -52,7 +54,7 @@ loadNominalsForType loadNominal typ =
 
 valueConversion ::
     MonadA m =>
-    (T.NominalId -> m Nominal) -> a ->
+    (T.NominalId -> m (Maybe Nominal)) -> a ->
     Val (Payload, a) -> m (StateT Context [] (Val (Payload, a)))
 valueConversion loadNominal empty src =
     do
@@ -87,7 +89,9 @@ valueConversionNoSplit ::
 valueConversionNoSplit nominals empty src =
     prependOpt src $
     case srcType of
-    T.TInst name _params | bodyNot ExprLens._BToNom ->
+    T.TInst name _params
+        | Map.member name nominals
+        && bodyNot ExprLens._BToNom ->
         -- TODO: Expose primitives from Infer to do this without partiality
         do
             (_, resType) <-

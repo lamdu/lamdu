@@ -89,7 +89,6 @@ encodeComposite :: Encoder (Composite p)
 encodeComposite = encodeFlatComposite . FlatComposite.fromComposite
 
 encodeType :: Encoder Type
-encodeType (T.TPrim _) = Aeson.String "TODO:TPrim"
 encodeType (T.TFun a b) = Aeson.object ["TFun" .= array (map encodeType [a, b])]
 encodeType (T.TRecord composite) = Aeson.object ["record" .= encodeComposite composite]
 encodeType (T.TSum composite) = Aeson.object ["sum" .= encodeComposite composite]
@@ -129,7 +128,7 @@ encodeLeaf V.LHole = Aeson.String "hole"
 encodeLeaf V.LRecEmpty = Aeson.object []
 encodeLeaf V.LAbsurd = Aeson.String "absurd"
 encodeLeaf (V.LVar (V.Var var)) = encodeIdent var
-encodeLeaf (V.LLiteral (V.PrimVal (T.PrimId primId) primBytes)) =
+encodeLeaf (V.LLiteral (V.PrimVal (T.NominalId primId) primBytes)) =
     Aeson.object
     [ "primId" .= identHex primId
     , "primBytes" .= showHexBytes primBytes
