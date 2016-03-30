@@ -20,8 +20,6 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
-import           Data.UUID.Aeson ()
-import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
@@ -340,7 +338,7 @@ decodeExportedType :: Decoder Definition.ExportedType
 decodeExportedType (Aeson.String "NoExportedType") = pure Definition.NoExportedType
 decodeExportedType json = decodeScheme json <&> Definition.ExportedType
 
-encodeDefBody :: Encoder (Definition.Body (Val UUID))
+encodeDefBody :: Aeson.ToJSON a => Encoder (Definition.Body (Val a))
 encodeDefBody (Definition.BodyBuiltin (Definition.Builtin name scheme)) =
     Aeson.object
     [ "builtin" .=
@@ -358,7 +356,7 @@ encodeDefBody (Definition.BodyExpr (Definition.Expr val typ frozenDefTypes)) =
     where
         encodedFrozen = encodeIdentMap V.vvName encodeScheme frozenDefTypes
 
-decodeDefBody :: Decoder (Definition.Body (Val UUID))
+decodeDefBody :: Aeson.FromJSON a => Decoder (Definition.Body (Val a))
 decodeDefBody =
     Aeson.withObject "DefBody" $ \obj ->
     jsum
@@ -377,10 +375,10 @@ decodeDefBody =
             <$> (builtin .: "name" >>= decodeFFIName)
             <*> (builtin .: "scheme" >>= decodeScheme)
 
-encodeRepl :: Encoder (Val UUID)
+encodeRepl :: Aeson.ToJSON a => Encoder (Val a)
 encodeRepl val = Aeson.object [ "repl" .= encodeVal val ]
 
-decodeRepl :: Decoder (Val UUID)
+decodeRepl :: Aeson.FromJSON a => Decoder (Val a)
 decodeRepl = Aeson.withObject "repl" $ \obj -> obj .: "repl" >>= decodeVal
 
 insertField :: Aeson.ToJSON a => String -> a -> Aeson.Value -> Aeson.Value
@@ -425,16 +423,18 @@ decodeNamed idAttrName decoder =
     <*> decoder (Aeson.Object obj)
 
 encodeDef ::
+    Aeson.ToJSON a =>
     Encoder
-    (Definition (Val UUID)
+    (Definition (Val a)
      (Anchors.PresentationMode, Maybe String, V.Var))
 encodeDef (Definition body (presentationMode, mName, V.Var globalId)) =
     encodeNamed "def" encodeDefBody ((mName, globalId), body)
     & insertField "defPresentationMode" (encodePresentationMode presentationMode)
 
 decodeDef ::
+    Aeson.FromJSON a =>
     Decoder
-    (Definition (Val UUID)
+    (Definition (Val a)
      (Anchors.PresentationMode, Maybe String, V.Var))
 decodeDef =
     Aeson.withObject "def" $ \obj ->

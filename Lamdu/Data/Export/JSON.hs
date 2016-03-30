@@ -29,6 +29,7 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.UUID.Aeson ()
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (ViewM)
