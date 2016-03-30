@@ -1,5 +1,5 @@
 -- | JSON encoder/decoder for Lamdu types
-{-# LANGUAGE NoImplicitPrelude, LambdaCase, OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude, LambdaCase, OverloadedStrings, PatternGuards #-}
 module Lamdu.Data.Export.JSON.Codec
     ( Encoder, encodeNamedTag, encodeRepl, encodeDef, encodeNamedNominal, encodeArray
     , Decoder, decodeNamedTag, decodeRepl, decodeDef, decodeNamedNominal, decodeArray
@@ -23,6 +23,7 @@ import           Data.String (IsString(..))
 import           Data.UUID.Aeson ()
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
+import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.Constraints (Constraints(..), CompositeVarConstraints(..))
@@ -52,6 +53,19 @@ encodeArray = Aeson.Array . Vector.fromList
 
 decodeArray :: Decoder [Aeson.Value]
 decodeArray = fmap Vector.toList . Aeson.parseJSON
+
+encodePresentationMode :: Encoder Anchors.PresentationMode
+encodePresentationMode Anchors.OO = Aeson.String "OO"
+encodePresentationMode Anchors.Verbose = Aeson.String "Verbose"
+encodePresentationMode (Anchors.Infix prec) = Aeson.toJSON (Aeson.String "Infix", prec)
+
+decodePresentationMode :: Decoder Anchors.PresentationMode
+decodePresentationMode (Aeson.String "OO") = pure Anchors.OO
+decodePresentationMode (Aeson.String "Verbose") = pure Anchors.Verbose
+decodePresentationMode (Aeson.Array arr)
+    | [Aeson.String "Infix", Aeson.Number prec] <- Vector.toList arr =
+          pure (Anchors.Infix (truncate prec))
+decodePresentationMode other = fail $ "Unexpected presentation mode: " ++ show other
 
 encodeFFIName :: Encoder Definition.FFIName
 encodeFFIName (Definition.FFIName modulePath name) = modulePath ++ [name] & Aeson.toJSON
@@ -409,15 +423,25 @@ decodeNamed idAttrName decoder =
         )
     <*> decoder (Aeson.Object obj)
 
-encodeDef :: Encoder (Definition (Val UUID) (Maybe String, V.Var))
-encodeDef (Definition body (mName, V.Var globalId)) =
+encodeDef ::
+    Encoder
+    (Definition (Val UUID)
+     (Anchors.PresentationMode, Maybe String, V.Var))
+encodeDef (Definition body (presentationMode, mName, V.Var globalId)) =
     encodeNamed "def" encodeDefBody ((mName, globalId), body)
+    & insertField "defPresentationMode" (encodePresentationMode presentationMode)
 
-decodeDef :: Decoder (Definition (Val UUID) (Maybe String, V.Var))
-decodeDef json =
-    decodeNamed "def" decodeDefBody json <&>
+decodeDef ::
+    Decoder
+    (Definition (Val UUID)
+     (Anchors.PresentationMode, Maybe String, V.Var))
+decodeDef =
+    Aeson.withObject "def" $ \obj ->
+    decodeNamed "def" decodeDefBody (Aeson.Object obj) >>=
     \((mName, globalId), body) ->
-    Definition body (mName, V.Var globalId)
+    do
+        presentationMode <- obj .: "defPresentationMode" >>= decodePresentationMode
+        Definition body (presentationMode, mName, V.Var globalId) & return
 
 encodeNamedTag :: Encoder (Maybe String, T.Tag)
 encodeNamedTag (mName, T.Tag ident) =

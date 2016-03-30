@@ -5,7 +5,7 @@ module Lamdu.Data.Export.JSON
     , importAll
     ) where
 
--- TODO: Assoc data?
+-- TODO: Presentation Mode, Tag Order, Field ParamList
 -- TODO: Schema version? What granularity?
 
 import qualified Control.Lens as Lens
@@ -82,10 +82,10 @@ withVisited l x act =
                 Lens.assign (Lens.cloneLens l . Lens.contains x) True
                 act
 
-readAssocName :: ToUUID a => a -> Export (Maybe String)
+readAssocName :: Monad m => ToUUID a => a -> T m (Maybe String)
 readAssocName x =
     do
-        name <- Anchors.assocNameRef x & Transaction.getP & trans
+        name <- Anchors.assocNameRef x & Transaction.getP
         return $
             if null name
             then Nothing
@@ -97,7 +97,7 @@ tell = Writer.tell . (: [])
 exportTag :: T.Tag -> Export ()
 exportTag tag =
     do
-        mName <- readAssocName tag
+        mName <- readAssocName tag & trans
         Codec.encodeNamedTag (mName, tag) & tell
     & withVisited visitedTags tag
 
@@ -108,7 +108,7 @@ exportNominal nomId =
     Nothing -> return ()
     Just nominal ->
         do
-            mName <- readAssocName nomId
+            mName <- readAssocName nomId & trans
             Codec.encodeNamedNominal ((mName, nomId), nominal) & tell
         & withVisited visitedNominals nomId
 
@@ -130,13 +130,14 @@ valIToUUID = IRef.uuid . ExprIRef.unValI
 exportDef :: V.Var -> Export ()
 exportDef globalId =
     do
-        mName <- readAssocName globalId
+        presentationMode <- Transaction.getP (Anchors.assocPresentationMode globalId) & trans
+        mName <- readAssocName globalId & trans
         def <-
             ExprIRef.defI globalId & Load.def & trans
             <&> Definition.defBody . Lens.mapped . Lens.mapped %~
             valIToUUID . Property.value
         traverse_ recurse (def ^. Definition.defBody)
-        (mName, globalId) <$ def & Codec.encodeDef & tell
+        (presentationMode, mName, globalId) <$ def & Codec.encodeDef & tell
     & withVisited visitedDefs globalId
 
 exportRepl :: T ViewM Codec.Encoded
@@ -172,9 +173,10 @@ insertTo item setIRef =
     where
         iref = setIRef DbLayout.codeIRefs
 
-importDef :: Definition (Val UUID) (Maybe String, V.Var) -> T ViewM ()
-importDef (Definition defBody (mName, globalId)) =
+importDef :: Definition (Val UUID) (Anchors.PresentationMode, Maybe String, V.Var) -> T ViewM ()
+importDef (Definition defBody (presentationMode, mName, globalId)) =
     do
+        Transaction.setP (Anchors.assocPresentationMode globalId) presentationMode
         traverse_ (setName globalId) mName
         Lens.traverse writeValAtUUID defBody
             >>= Transaction.writeIRef defI
