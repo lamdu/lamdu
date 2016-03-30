@@ -5,7 +5,7 @@ module Lamdu.Data.Export.JSON
     , importAll
     ) where
 
--- TODO: Presentation Mode, Tag Order, Field ParamList
+-- TODO: Field ParamList
 -- TODO: Schema version? What granularity?
 
 import qualified Control.Lens as Lens
@@ -98,8 +98,9 @@ tell = Writer.tell . (: [])
 exportTag :: T.Tag -> Export ()
 exportTag tag =
     do
+        tagOrder <- Transaction.getP (Anchors.assocTagOrder tag) & trans
         mName <- readAssocName tag & trans
-        Codec.encodeNamedTag (mName, tag) & tell
+        Codec.encodeNamedTag (tagOrder, mName, tag) & tell
     & withVisited visitedTags tag
 
 exportNominal :: T.NominalId -> Export ()
@@ -188,9 +189,10 @@ importDef (Definition defBody (presentationMode, mName, globalId)) =
 importRepl :: Val UUID -> T ViewM ()
 importRepl val = writeValAtUUID val >>= Transaction.writeIRef replIRef
 
-importTag :: (Maybe String, T.Tag) -> T ViewM ()
-importTag (mName, tag) =
+importTag :: (Int, Maybe String, T.Tag) -> T ViewM ()
+importTag (tagOrder, mName, tag) =
     do
+        Transaction.setP (Anchors.assocTagOrder tag) tagOrder
         traverse_ (setName tag) mName
         tag `insertTo` DbLayout.tags
 

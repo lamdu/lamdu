@@ -385,12 +385,6 @@ insertField k v (Aeson.Object obj) =
     Aeson.Object (HashMap.insert (fromString k) (Aeson.toJSON v) obj)
 insertField _ _ _ = error "insertField: Expecting object"
 
-encodeUnit :: Encoder ()
-encodeUnit () = Aeson.object []
-
-decodeUnit :: Decoder ()
-decodeUnit _ = pure ()
-
 encodeNominal :: Encoder Nominal
 encodeNominal (Nominal paramsMap scheme) =
     Aeson.object
@@ -442,13 +436,23 @@ decodeDef =
         presentationMode <- obj .: "defPresentationMode" >>= decodePresentationMode
         Definition body (presentationMode, mName, V.Var globalId) & return
 
-encodeNamedTag :: Encoder (Maybe String, T.Tag)
-encodeNamedTag (mName, T.Tag ident) =
-    encodeNamed "tag" encodeUnit ((mName, ident), ())
+encodeTagOrder :: Encoder Int
+encodeTagOrder tagOrder = Aeson.object ["tagOrder" .= tagOrder]
 
-decodeNamedTag :: Decoder (Maybe String, T.Tag)
+decodeTagOrder :: Decoder Int
+decodeTagOrder =
+    Aeson.withObject "tagOrder" $ \obj ->
+    obj .: "tagOrder"
+
+encodeNamedTag :: Encoder (Int, Maybe String, T.Tag)
+encodeNamedTag (tagOrder, mName, T.Tag ident) =
+    encodeNamed "tag" encodeTagOrder ((mName, ident), tagOrder)
+
+decodeNamedTag :: Decoder (Int, Maybe String, T.Tag)
 decodeNamedTag json =
-    decodeNamed "tag" decodeUnit json <&> fst <&> _2 %~ T.Tag
+    do
+        ((mName, tag), tagOrder) <- decodeNamed "tag" decodeTagOrder json
+        return (tagOrder, mName, T.Tag tag)
 
 encodeNamedNominal :: Encoder ((Maybe String, T.NominalId), Nominal)
 encodeNamedNominal ((mName, T.NominalId nomId), nom) =
