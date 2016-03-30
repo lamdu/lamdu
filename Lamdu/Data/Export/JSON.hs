@@ -136,7 +136,7 @@ exportDef globalId =
             <&> Definition.defBody . Lens.mapped . Lens.mapped %~
             valIToUUID . Property.value
         traverse_ recurse (def ^. Definition.defBody)
-        (globalId, mName) <$ def & Codec.encodeDef & tell
+        (mName, globalId) <$ def & Codec.encodeDef & tell
     & withVisited visitedDefs globalId
 
 exportRepl :: T ViewM Codec.Encoded
@@ -172,8 +172,8 @@ insertTo item setIRef =
     where
         iref = setIRef DbLayout.codeIRefs
 
-importDef :: Definition (Val UUID) (V.Var, Maybe String) -> T ViewM ()
-importDef (Definition defBody (globalId, mName)) =
+importDef :: Definition (Val UUID) (Maybe String, V.Var) -> T ViewM ()
+importDef (Definition defBody (mName, globalId)) =
     do
         traverse_ (setName globalId) mName
         Lens.traverse writeValAtUUID defBody

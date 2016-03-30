@@ -362,23 +362,6 @@ decodeDefBody =
             <$> (builtin .: "name" >>= decodeFFIName)
             <*> (builtin .: "scheme" >>= decodeScheme)
 
-encodeDef :: Encoder (Definition (Val UUID) (V.Var, Maybe String))
-encodeDef (Definition body (globalId, mName)) =
-    Aeson.object $ concat
-    [ [ "def" .= encodeIdent (V.vvName globalId) ]
-    , [ "name" .= name | Just name <- [mName] ]
-    , [ "body" .= encodeDefBody body ]
-    ]
-
-decodeDef :: Decoder (Definition (Val UUID) (V.Var, Maybe String))
-decodeDef =
-    Aeson.withObject "Def" $ \obj ->
-    do
-        globalId <- obj .: "def" >>= decodeIdent <&> V.Var
-        body <- obj .: "body" >>= decodeDefBody
-        mName <- Just <$> obj .: "name" <|> pure Nothing
-        return (Definition body (globalId, mName))
-
 encodeRepl :: Encoder (Val UUID)
 encodeRepl val = Aeson.object [ "repl" .= encodeVal val ]
 
@@ -396,6 +379,20 @@ encodeUnit () = Aeson.object []
 decodeUnit :: Decoder ()
 decodeUnit _ = pure ()
 
+encodeNominal :: Encoder Nominal
+encodeNominal (Nominal paramsMap scheme) =
+    Aeson.object
+    [ "typeParams" .= encodeIdentMap T.typeParamId (encodeIdent . T.tvName) paramsMap
+    , "scheme" .= encodeScheme scheme
+    ]
+
+decodeNominal :: Decoder Nominal
+decodeNominal =
+    Aeson.withObject "nominal" $ \obj ->
+    Nominal
+    <$> (obj .: "typeParams" >>= decodeIdentMap T.ParamId (fmap T.Var . decodeIdent))
+    <*> (obj .: "scheme" >>= decodeScheme)
+
 encodeNamed :: String -> Encoder a -> Encoder ((Maybe String, Identifier), a)
 encodeNamed idAttrName encoder ((mName, ident), x) =
     encoder x
@@ -412,19 +409,15 @@ decodeNamed idAttrName decoder =
         )
     <*> decoder (Aeson.Object obj)
 
-encodeNominal :: Encoder Nominal
-encodeNominal (Nominal paramsMap scheme) =
-    Aeson.object
-    [ "typeParams" .= encodeIdentMap T.typeParamId (encodeIdent . T.tvName) paramsMap
-    , "scheme" .= encodeScheme scheme
-    ]
+encodeDef :: Encoder (Definition (Val UUID) (Maybe String, V.Var))
+encodeDef (Definition body (mName, V.Var globalId)) =
+    encodeNamed "def" encodeDefBody ((mName, globalId), body)
 
-decodeNominal :: Decoder Nominal
-decodeNominal =
-    Aeson.withObject "nominal" $ \obj ->
-    Nominal
-    <$> (obj .: "typeParams" >>= decodeIdentMap T.ParamId (fmap T.Var . decodeIdent))
-    <*> (obj .: "scheme" >>= decodeScheme)
+decodeDef :: Decoder (Definition (Val UUID) (Maybe String, V.Var))
+decodeDef json =
+    decodeNamed "def" decodeDefBody json <&>
+    \((mName, globalId), body) ->
+    Definition body (mName, V.Var globalId)
 
 encodeNamedTag :: Encoder (Maybe String, T.Tag)
 encodeNamedTag (mName, T.Tag ident) =
