@@ -263,7 +263,6 @@ decodeLeaf json =
     , decodeIdent json <&> V.Var <&> V.LVar
     ]
 
--- TODO: Should we export the UUIDs of subexprs?
 encodeVal :: Aeson.ToJSON a => Encoder (Val a)
 encodeVal (Val pl body) = Aeson.toJSON (pl, encodeValBody body)
 
