@@ -23,8 +23,8 @@ import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.RecordVal as RecordVal
 import           Lamdu.Expr.Type (Type)
@@ -189,7 +189,7 @@ mkAppliedHoleSuggesteds ::
     ExprIRef.ValIProperty m ->
     T m [HoleOption Guid m]
 mkAppliedHoleSuggesteds sugarContext argI exprPl stored =
-    Suggest.valueConversion IRefInfer.loadNominal Nothing (argI <&> onPl)
+    Suggest.valueConversion Load.loadNominal Nothing (argI <&> onPl)
     <&> (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     <&> Lens.mapped %~ onSuggestion
     where

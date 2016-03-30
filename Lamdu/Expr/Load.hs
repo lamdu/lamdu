@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, FlexibleContexts #-}
 module Lamdu.Expr.Load
-    ( loadDef, loadExpr, loadExprProperty
+    ( loadDef, loadExpr, loadExprProperty, loadNominal
     ) where
 
 import           Prelude.Compat
@@ -14,6 +14,8 @@ import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.Nominal (Nominal)
+import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))
 
 type T = Transaction
@@ -49,3 +51,13 @@ loadDef defI =
                 Definition.BodyExpr <$>
                 loadDefExpr (Transaction.writeIRef defI . Definition.BodyExpr) expr
             Definition.BodyBuiltin bi -> return $ Definition.BodyBuiltin bi
+
+loadNominal :: MonadA m => T.NominalId -> T m (Maybe Nominal)
+loadNominal tid =
+    do
+        e <- Transaction.irefExists iref
+        if e
+            then Transaction.readIRef iref <&> Just
+            else return Nothing
+    where
+        iref = ExprIRef.nominalI tid

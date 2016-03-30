@@ -33,6 +33,7 @@ import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Expr.Pure as Pure
 import           Lamdu.Expr.Type (Type(..))
@@ -463,7 +464,7 @@ applyForms empty val =
     _ ->
         val & V.payload . _1 . Infer.plType %%~ orderType
         <&> Suggest.fillHoles empty
-        >>= Suggest.valueConversion IRefInfer.loadNominal empty
+        >>= Suggest.valueConversion Load.loadNominal empty
         <&> mapStateT ListClass.fromList
         & lift & lift & join
     where

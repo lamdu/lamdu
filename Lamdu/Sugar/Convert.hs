@@ -26,6 +26,7 @@ import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.IRef.Infer as IRefInfer
 import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Nominal as N
 import           Lamdu.Expr.Scheme (schemeType)
 import qualified Lamdu.Expr.Type as T
@@ -164,7 +165,7 @@ makeNominalsMap val =
                 loaded <- State.get
                 unless (Map.member tid loaded) $
                     do
-                        mNom <- IRefInfer.loadNominal tid & lift
+                        mNom <- Load.loadNominal tid & lift
                         case mNom of
                             Nothing -> return ()
                             Just nom ->

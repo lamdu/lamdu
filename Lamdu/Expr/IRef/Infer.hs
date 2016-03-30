@@ -6,7 +6,6 @@ module Lamdu.Expr.IRef.Infer
     , loadInferScope
     , loadInferInto
     , loadInferRecursive
-    , loadNominal
     , run
     , Error(..), toEitherT
     ) where
@@ -22,10 +21,9 @@ import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Expr.Nominal (Nominal)
+import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Expr.Scheme (Scheme(..))
 import qualified Lamdu.Expr.Scheme as Scheme
-import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Infer (Infer)
@@ -64,18 +62,8 @@ loader =
     { InferLoad.loadTypeOf =
         \globalId ->
         ExprIRef.defI globalId & Transaction.readIRef & lift <&> typeOfDefBody
-    , InferLoad.loadNominal = lift . loadNominal
+    , InferLoad.loadNominal = lift . Load.loadNominal
     }
-
-loadNominal :: MonadA m => T.NominalId -> T m (Maybe Nominal)
-loadNominal tid =
-    do
-        e <- Transaction.irefExists iref
-        if e
-            then Transaction.readIRef iref <&> Just
-            else return Nothing
-    where
-        iref = ExprIRef.nominalI tid
 
 type M m = StateT Infer.Context (EitherT Error (T m))
 
