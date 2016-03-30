@@ -238,7 +238,7 @@ exportDef :: V.Var -> M ()
 exportDef globalId =
     do
         mName <- readAssocName globalId
-        def <- ExprIRef.defI globalId & Load.loadDef & trans
+        def <- ExprIRef.defI globalId & Load.def & trans
         let encodedBody =
                 def ^. Definition.defBody
                 <&> Lens.mapped %~ Property.value

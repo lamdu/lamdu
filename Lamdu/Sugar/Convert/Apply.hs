@@ -189,7 +189,7 @@ mkAppliedHoleSuggesteds ::
     ExprIRef.ValIProperty m ->
     T m [HoleOption Guid m]
 mkAppliedHoleSuggesteds sugarContext argI exprPl stored =
-    Suggest.valueConversion Load.loadNominal Nothing (argI <&> onPl)
+    Suggest.valueConversion Load.nominal Nothing (argI <&> onPl)
     <&> (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     <&> Lens.mapped %~ onSuggestion
     where

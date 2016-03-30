@@ -34,7 +34,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (DefI, ValI)
-import           Lamdu.Expr.Load (loadDef, loadExprProperty)
+import qualified Lamdu.Expr.Load as Load
 import           Lamdu.GUI.CodeEdit.Settings (Settings)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
@@ -141,7 +141,7 @@ processPane ::
     T m (Pane m, DefinitionN m ExprGuiT.Payload)
 processPane env pane =
     paneDefI pane
-    & loadDef
+    & Load.def
     >>= SugarConvert.convertDefI (evalResults env) (codeProps env)
     >>= OrderTags.orderDef
     >>= PresentationModes.addToDef
@@ -153,7 +153,7 @@ processExpr ::
     MonadA m => Env m -> Transaction.Property m (ValI m) ->
     T m (ExprGuiT.SugarExpr m)
 processExpr env expr =
-    loadExprProperty expr
+    Load.exprProperty expr
     >>= SugarConvert.convertExpr (evalResults env) (codeProps env)
     >>= OrderTags.orderExpr
     >>= PresentationModes.addToExpr

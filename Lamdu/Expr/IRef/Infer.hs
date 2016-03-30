@@ -62,7 +62,7 @@ loader =
     { InferLoad.loadTypeOf =
         \globalId ->
         ExprIRef.defI globalId & Transaction.readIRef & lift <&> typeOfDefBody
-    , InferLoad.loadNominal = lift . Load.loadNominal
+    , InferLoad.loadNominal = lift . Load.nominal
     }
 
 type M m = StateT Infer.Context (EitherT Error (T m))

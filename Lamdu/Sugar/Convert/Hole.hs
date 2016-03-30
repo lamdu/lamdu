@@ -464,7 +464,7 @@ applyForms empty val =
     _ ->
         val & V.payload . _1 . Infer.plType %%~ orderType
         <&> Suggest.fillHoles empty
-        >>= Suggest.valueConversion Load.loadNominal empty
+        >>= Suggest.valueConversion Load.nominal empty
         <&> mapStateT ListClass.fromList
         & lift & lift & join
     where

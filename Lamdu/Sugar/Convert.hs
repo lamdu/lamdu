@@ -165,7 +165,7 @@ makeNominalsMap val =
                 loaded <- State.get
                 unless (Map.member tid loaded) $
                     do
-                        mNom <- Load.loadNominal tid & lift
+                        mNom <- Load.nominal tid & lift
                         case mNom of
                             Nothing -> return ()
                             Just nom ->

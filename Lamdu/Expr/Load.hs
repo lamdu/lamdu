@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude, TypeFamilies, FlexibleContexts #-}
 module Lamdu.Expr.Load
-    ( loadDef, loadExpr, loadExprProperty, loadNominal
+    ( def, expr, exprProperty, nominal
     ) where
 
 import           Prelude.Compat
@@ -20,40 +20,40 @@ import           Lamdu.Expr.Val (Val(..))
 
 type T = Transaction
 
-loadExpr :: MonadA m => (ValI m -> T m ()) -> ValI m -> T m (Val (ValIProperty m))
-loadExpr writeRoot valI =
+expr :: MonadA m => (ValI m -> T m ()) -> ValI m -> T m (Val (ValIProperty m))
+expr writeRoot valI =
     ExprIRef.readVal valI
     <&> fmap (flip (,) ())
     <&> ExprIRef.addProperties writeRoot
     <&> fmap fst
 
-loadExprProperty :: MonadA m => ValIProperty m -> T m (Val (ValIProperty m))
-loadExprProperty (Property val set) = loadExpr set val
+exprProperty :: MonadA m => ValIProperty m -> T m (Val (ValIProperty m))
+exprProperty (Property val set) = expr set val
 
-loadDefExpr ::
+defExpr ::
     MonadA m =>
     (Definition.Expr (ValI m) -> T m ()) ->
     Definition.Expr (ValI m) -> T m (Definition.Expr (Val (ValIProperty m)))
-loadDefExpr writeDefExpr defExpr =
-    loadExpr (writeDefExpr . wrap) (defExpr ^. Definition.expr)
+defExpr writeDefExpr d =
+    expr (writeDefExpr . wrap) (d ^. Definition.expr)
     <&> wrap
     where
         wrap :: val -> Definition.Expr val
-        wrap v = defExpr & Definition.expr .~ v
+        wrap v = d & Definition.expr .~ v
 
-loadDef :: MonadA m => DefI m -> T m (Definition (Val (ValIProperty m)) (DefI m))
-loadDef defI =
+def :: MonadA m => DefI m -> T m (Definition (Val (ValIProperty m)) (DefI m))
+def defI =
     do
         defBody <- Transaction.readIRef defI
         (`Definition` defI) <$>
             case defBody of
-            Definition.BodyExpr expr ->
+            Definition.BodyExpr e ->
                 Definition.BodyExpr <$>
-                loadDefExpr (Transaction.writeIRef defI . Definition.BodyExpr) expr
+                defExpr (Transaction.writeIRef defI . Definition.BodyExpr) e
             Definition.BodyBuiltin bi -> return $ Definition.BodyBuiltin bi
 
-loadNominal :: MonadA m => T.NominalId -> T m (Maybe Nominal)
-loadNominal tid =
+nominal :: MonadA m => T.NominalId -> T m (Maybe Nominal)
+nominal tid =
     do
         e <- Transaction.irefExists iref
         if e

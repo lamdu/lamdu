@@ -101,7 +101,7 @@ getResults evaluator =
 loadDef ::
     Evaluator -> DefI ViewM ->
     IO (Def.Definition (V.Val (ExprIRef.ValIProperty ViewM)) (DefI ViewM))
-loadDef evaluator = runViewTransactionInIO (eDb evaluator) . Load.loadDef
+loadDef evaluator = runViewTransactionInIO (eDb evaluator) . Load.def
 
 readAssocName :: Evaluator -> Guid -> IO String
 readAssocName evaluator guid =
