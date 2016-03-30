@@ -106,12 +106,12 @@ blessAnchors :: MonadA m => M m ()
 blessAnchors =
     do
         mapM_ describeAnchorTag Builtins.anchorTags
+        lift $ setName Builtins.bytesTid "Bytes"
+        lift $ setName Builtins.floatTid "Num"
         lift $ setName Builtins.streamTid "Stream"
         lift $ setName Builtins.textTid "Text"
         lift $ setName Builtins.arrayTid "Array"
         lift $ setName Builtins.valTypeParamId "val"
-        lift $ setName PrimVal.bytesId "Bytes"
-        lift $ setName PrimVal.floatId "Number"
         Writer.tell $ mempty { publicTIds = [Builtins.streamTid, Builtins.textTid] }
     where
         describeAnchorTag (order, tag, name) =
