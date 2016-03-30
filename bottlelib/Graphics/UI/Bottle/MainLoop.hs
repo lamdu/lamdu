@@ -331,10 +331,8 @@ mainLoopWidget win widgetTickHandler mkWidgetUnmemod getAnimationConfig =
                 do
                     widget <- getWidget size
                     let eventMap = widget ^. Widget.eventMap
-                    clipboard <- GLFW.getClipboardString win
-                    mAnimIdMapping <-
-                        E.lookup clipboard event eventMap & sequenceA
-                        <&> fmap (^. Widget.eAnimIdMapping)
+                    mWidgetRes <- E.lookup (GLFW.getClipboardString win) event eventMap
+                    mAnimIdMapping <- sequenceA mWidgetRes <&> fmap (^. Widget.eAnimIdMapping)
                     case mAnimIdMapping of
                         Nothing -> return ()
                         Just _ -> newWidget

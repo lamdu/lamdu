@@ -1,8 +1,8 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveGeneric, FlexibleContexts, RecordWildCards, LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveGeneric, FlexibleContexts, RecordWildCards, LambdaCase, PatternGuards #-}
 module Graphics.UI.Bottle.EventMap
     ( KeyEvent(..)
     , InputDoc, Subtitle, Doc(..), docStrs
-    , WantsClipboard(..)
+    , MaybeWantsClipboard(..)
     , EventMap, lookup, emTickHandlers
     , emDocs
     , charEventMap, allChars
@@ -18,7 +18,8 @@ module Graphics.UI.Bottle.EventMap
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Control.Monad (guard, msum)
+import           Control.Monad (guard)
+import           Data.Foldable (asum)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (catMaybes, listToMaybe)
@@ -159,13 +160,15 @@ dropHandlerDocs f DropHandler{..} =
     DropHandler dropHandlerInputDoc
     <$> dhDoc (Lens.indexed f dropHandlerInputDoc) _dropDocHandler
 
-data WantsClipboard a
+data MaybeWantsClipboard a
     = Doesn'tWantClipboard a
     | WantsClipboard (Clipboard -> a)
     deriving (Functor)
 
+type KeyMap a = Map KeyEvent (DocHandler (MaybeWantsClipboard a))
+
 data EventMap a = EventMap
-    { _emKeyMap :: Map KeyEvent (DocHandler (WantsClipboard a))
+    { _emKeyMap :: KeyMap a
     , _emDropHandlers :: [DropHandler a]
     , _emCharGroupHandlers :: [CharGroupHandler a]
     , _emCharGroupChars :: Set Char
@@ -261,37 +264,50 @@ deleteKey key = emKeyMap %~ Map.delete key
 deleteKeys :: [KeyEvent] -> EventMap a -> EventMap a
 deleteKeys = foldr ((.) . deleteKey) id
 
-lookup :: Maybe Clipboard -> Events.Event -> EventMap a -> Maybe a
+lookup :: Applicative f => f (Maybe Clipboard) -> Events.Event -> EventMap a -> f (Maybe a)
 lookup _ (Events.EventDropPaths paths) eventMap =
-    map applyHandler (eventMap ^. emDropHandlers) & msum
+    map applyHandler (eventMap ^. emDropHandlers) & asum & pure
     where
         applyHandler dh = dh ^. dropDocHandler . dhHandler $ paths
-lookup mClipboard (Events.EventKey event) eventMap =
-    msum
-    [ KeyEvent keyState modKey `Map.lookup` dict
-      <&> (^. dhHandler)
-      >>= \case
-          Doesn'tWantClipboard x -> Just x
-          WantsClipboard f -> mClipboard <&> f
-    , listToMaybe $
-      do
-          GLFW.KeyState'Pressed <- return keyState
-          char <- mchar ^.. Lens._Just
-          CharGroupHandler _ chars handler <- charGroups
-          guard $ Set.member char chars
-          [(handler ^. dhHandler) char]
-    , listToMaybe $
-      do
-          GLFW.KeyState'Pressed <- return keyState
-          char <- mchar ^.. Lens._Just
-          AllCharsHandler _ handler <- allCharHandlers
-          (handler ^. dhHandler) char ^.. Lens._Just
-    ]
+lookup getClipboard (Events.EventKey event) eventMap
+    | Just action <- lookupKeyMap getClipboard dict event = action
+    | Just res <- lookupCharGroup charGroups event = pure (Just res)
+    | Just res <- lookupAllCharHandler allCharHandlers event = pure (Just res)
+    | otherwise = pure Nothing
     where
         EventMap dict _dropHandlers charGroups _ allCharHandlers _tick = eventMap
-        Events.KeyEvent k _scanCode keyState modKeys mchar = event
+lookup _ _ _ = pure Nothing
+
+lookupKeyMap ::
+    Applicative f => f (Maybe Clipboard) -> KeyMap a -> Events.KeyEvent ->
+    Maybe (f (Maybe a))
+lookupKeyMap getClipboard dict (Events.KeyEvent k _scanCode keyState modKeys _) =
+      KeyEvent keyState modKey `Map.lookup` dict
+      <&> (^. dhHandler)
+      <&> \case
+          Doesn'tWantClipboard x -> pure (Just x)
+          WantsClipboard f -> getClipboard <&> fmap f
+    where
         modKey = mkModKey modKeys k
-lookup _ _ _ = Nothing
+
+lookupCharGroup :: [CharGroupHandler a] -> Events.KeyEvent -> Maybe a
+lookupCharGroup charGroups (Events.KeyEvent _k _scanCode keyState _modKeys mchar) =
+    listToMaybe $
+    do
+        GLFW.KeyState'Pressed <- return keyState
+        char <- mchar ^.. Lens._Just
+        CharGroupHandler _ chars handler <- charGroups
+        guard $ Set.member char chars
+        [(handler ^. dhHandler) char]
+
+lookupAllCharHandler :: [AllCharsHandler t] -> Events.KeyEvent -> Maybe t
+lookupAllCharHandler allCharHandlers (Events.KeyEvent _k _scanCode keyState _modKeys mchar) =
+    listToMaybe $
+    do
+        GLFW.KeyState'Pressed <- return keyState
+        char <- mchar ^.. Lens._Just
+        AllCharsHandler _ handler <- allCharHandlers
+        (handler ^. dhHandler) char ^.. Lens._Just
 
 charGroup :: InputDoc -> Doc -> String -> (Char -> a) -> EventMap a
 charGroup iDoc oDoc chars handler =
@@ -316,7 +332,7 @@ charEventMap iDoc oDoc handler =
 allChars :: InputDoc -> Doc -> (Char -> a) -> EventMap a
 allChars iDoc oDoc f = charEventMap iDoc oDoc $ Just . f
 
-keyEventMapH :: KeyEvent -> Doc -> WantsClipboard a -> EventMap a
+keyEventMapH :: KeyEvent -> Doc -> MaybeWantsClipboard a -> EventMap a
 keyEventMapH eventType doc handler =
     mempty
     { _emKeyMap =
