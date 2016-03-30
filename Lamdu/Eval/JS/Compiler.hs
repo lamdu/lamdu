@@ -15,14 +15,14 @@ import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.RWS.Strict (RWST(..))
 import qualified Control.Monad.Trans.RWS.Strict as RWS
 import qualified Data.ByteString as BS
-import           Data.ByteString.Hex (showHexByte)
+import qualified Data.ByteString.Hex as Hex
 import qualified Data.Char as Char
 import           Data.Default () -- instances
 import           Data.List (isPrefixOf)
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Store.Guid (Guid)
-import qualified Data.Store.Guid as Guid
+import           Data.UUID.Types (UUID)
+import qualified Data.UUID.Utils as UUIDUtils
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Compiler.Flatten as Flatten
 import qualified Lamdu.Data.Definition as Definition
@@ -39,10 +39,10 @@ import qualified Text.PrettyPrint.Leijen as Pretty
 
 import           Prelude.Compat
 
-newtype ValId = ValId Guid
+newtype ValId = ValId UUID
 
 data Actions m = Actions
-    { readAssocName :: Guid -> m String
+    { readAssocName :: UUID -> m String
     , readGlobal :: V.Var -> m (Definition.Body (Val ValId))
     , output :: String -> m ()
     , jsRtsPath :: FilePath
@@ -68,7 +68,7 @@ Lens.makeLenses ''Env
 
 data State = State
     { _freshId :: Int
-    , _names :: Map String (Map Guid String)
+    , _names :: Map String (Map UUID String)
     , _compiled :: Map V.Var GlobalVarName
     }
 Lens.makeLenses ''State
@@ -200,34 +200,34 @@ replaceSpecialChars = concatMap replaceSpecial
     where
         replaceSpecial x
             | Char.isAlphaNum x = [x]
-            | otherwise = '_' : (showHexByte . fromIntegral . Char.ord) x
+            | otherwise = '_' : (Hex.showHexByte . fromIntegral . Char.ord) x
 
-readName :: (UniqueId.ToGuid a, Monad m) => a -> M m String -> M m String
+readName :: (UniqueId.ToUUID a, Monad m) => a -> M m String -> M m String
 readName g act =
     do
         name <-
-            performAction (`readAssocName` guid)
+            performAction (`readAssocName` uuid)
             <&> avoidReservedNames
             <&> escapeName
             >>= \case
                 "" -> act
                 name -> return name
         names . Lens.at name %%= \case
-            Nothing -> (name, Just (Map.singleton guid name))
-            Just guidMap ->
-                guidMap
-                & Lens.at guid %%~
+            Nothing -> (name, Just (Map.singleton uuid name))
+            Just uuidMap ->
+                uuidMap
+                & Lens.at uuid %%~
                 \case
                 Nothing -> (newName, Just newName)
                     where
-                        newName = name ++ show (Map.size guidMap)
+                        newName = name ++ show (Map.size uuidMap)
                 Just oldName -> (oldName, Just oldName)
                 <&> Just
             & M
     where
-        guid = UniqueId.toGuid g
+        uuid = UniqueId.toUUID g
 
-freshStoredName :: (Monad m, UniqueId.ToGuid a) => a -> String -> M m String
+freshStoredName :: (Monad m, UniqueId.ToUUID a) => a -> String -> M m String
 freshStoredName g prefix = readName g (freshName prefix)
 
 tagString :: Monad m => T.Tag -> M m String
@@ -416,7 +416,7 @@ declMyScopeDepth depth =
     JS.uassign JSS.PostfixInc "scopeCounter"
 
 jsValId :: ValId -> JSS.Expression ()
-jsValId (ValId guid) = JS.string (Guid.asHex guid)
+jsValId (ValId uuid) = (JS.string . Hex.showHexBytes . UUIDUtils.toSBS16) uuid
 
 callLogNewScope :: Int -> Int -> ValId -> JSS.Expression () -> JSS.Statement ()
 callLogNewScope parentDepth myDepth lamValId argVal =

@@ -8,9 +8,9 @@ module Data.Store.Transaction
     , insertBS, insert
     , delete, deleteIRef
     , readIRef, readIRefDef, writeIRef
-    , readGuid, readGuidDef, writeGuid
+    , readUUID, readUUIDDef, writeUUID
     , isEmpty
-    , guidExists, irefExists
+    , uuidExists, irefExists
     , newIRef, newKey
     , followBy
     , anchorRef, anchorRefDef
@@ -21,8 +21,6 @@ module Data.Store.Transaction
     , getP, setP, modP
     )
 where
-
-import           Prelude.Compat hiding (lookup)
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
@@ -39,12 +37,14 @@ import           Data.ByteString (ByteString)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, isJust)
-import           Data.Store.Guid (Guid)
-import qualified Data.Store.Guid as Guid
+import           Data.UUID.Types (UUID)
+import qualified Data.UUID.Utils as UUIDUtils
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import           Data.Store.Rev.Change (Key, Value)
+
+import           Prelude.Compat hiding (lookup)
 
 type ChangesMap = Map Key (Maybe Value)
 
@@ -118,69 +118,69 @@ merge (Changes changes) =
 isEmpty :: Monad m => Transaction m Bool
 isEmpty = liftChangesMap (State.gets Map.null)
 
-lookupBS :: Monad m => Guid -> Transaction m (Maybe Value)
-lookupBS guid = do
+lookupBS :: Monad m => UUID -> Transaction m (Maybe Value)
+lookupBS uuid = do
     base <- getBase
     changes <- liftChangesMap State.get
-    case Map.lookup guid changes <|> Map.lookup guid base of
+    case Map.lookup uuid changes <|> Map.lookup uuid base of
         Nothing -> do
             store <- getStore
-            liftInner $ storeLookup store guid
+            liftInner $ storeLookup store uuid
         Just res -> return res
 
-insertBS :: Monad m => Guid -> ByteString -> Transaction m ()
+insertBS :: Monad m => UUID -> ByteString -> Transaction m ()
 insertBS key = liftChangesMap . State.modify . Map.insert key . Just
 
-delete :: Monad m => Guid -> Transaction m ()
+delete :: Monad m => UUID -> Transaction m ()
 delete key = liftChangesMap . State.modify . Map.insert key $ Nothing
 
-lookup :: (Monad m, Binary a) => Guid -> Transaction m (Maybe a)
+lookup :: (Monad m, Binary a) => UUID -> Transaction m (Maybe a)
 lookup = (fmap . fmap) decodeS . lookupBS
 
-insert :: (Monad m, Binary a) => Guid -> a -> Transaction m ()
+insert :: (Monad m, Binary a) => UUID -> a -> Transaction m ()
 insert key = insertBS key . encodeS
 
-writeGuid :: (Monad m, Binary a) => Guid -> a -> Transaction m ()
-writeGuid = insert
+writeUUID :: (Monad m, Binary a) => UUID -> a -> Transaction m ()
+writeUUID = insert
 
-guidExists :: Monad m => Guid -> Transaction m Bool
-guidExists = fmap isJust . lookupBS
+uuidExists :: Monad m => UUID -> Transaction m Bool
+uuidExists = fmap isJust . lookupBS
 
-readGuidMb :: (Monad m, Binary a) => Transaction m a -> Guid -> Transaction m a
-readGuidMb nothingCase guid =
-    maybe nothingCase return =<< lookup guid
+readUUIDMb :: (Monad m, Binary a) => Transaction m a -> UUID -> Transaction m a
+readUUIDMb nothingCase uuid =
+    maybe nothingCase return =<< lookup uuid
 
-readGuidDef :: (Monad m, Binary a) => a -> Guid -> Transaction m a
-readGuidDef = readGuidMb . return
+readUUIDDef :: (Monad m, Binary a) => a -> UUID -> Transaction m a
+readUUIDDef = readUUIDMb . return
 
-readGuid :: (Monad m, Binary a) => Guid -> Transaction m a
-readGuid guid = readGuidMb failure guid
+readUUID :: (Monad m, Binary a) => UUID -> Transaction m a
+readUUID uuid = readUUIDMb failure uuid
     where
-        failure = fail $ "Inexistent guid: " ++ show guid ++ " referenced"
+        failure = fail $ "Inexistent uuid: " ++ show uuid ++ " referenced"
 
 deleteIRef :: Monad m => IRef m a -> Transaction m ()
-deleteIRef = delete . IRef.guid
+deleteIRef = delete . IRef.uuid
 
 readIRefDef :: (Monad m, Binary a) => a -> IRef m a -> Transaction m a
-readIRefDef def = readGuidDef def . IRef.guid
+readIRefDef def = readUUIDDef def . IRef.uuid
 
 readIRef :: (Monad m, Binary a) => IRef m a -> Transaction m a
-readIRef = readGuid . IRef.guid
+readIRef = readUUID . IRef.uuid
 
 irefExists :: (Monad m, Binary a) => IRef m a -> Transaction m Bool
-irefExists = guidExists . IRef.guid
+irefExists = uuidExists . IRef.uuid
 
 writeIRef :: (Monad m, Binary a) => IRef m a -> a -> Transaction m ()
-writeIRef = writeGuid . IRef.guid
+writeIRef = writeUUID . IRef.uuid
 
 newKey :: Monad m => Transaction m Key
 newKey = liftInner . storeNewKey =<< getStore
 
 newIRef :: (Monad m, Binary a) => a -> Transaction m (IRef m a)
 newIRef val = do
-    newGuid <- newKey
-    insert newGuid val
-    return $ IRef.unsafeFromGuid newGuid
+    newUUID <- newKey
+    insert newUUID val
+    return $ IRef.unsafeFromUUID newUUID
 
 ---------- Properties:
 
@@ -225,18 +225,18 @@ modP (MkProperty mkProp) f = do
     prop <- mkProp
     Property.pureModify prop f
 
-assocDataRef :: (Binary a, Monad m) => ByteString -> Guid -> MkProperty m (Maybe a)
-assocDataRef str guid = MkProperty $ do
-    val <- lookup assocGuid
+assocDataRef :: (Binary a, Monad m) => ByteString -> UUID -> MkProperty m (Maybe a)
+assocDataRef str uuid = MkProperty $ do
+    val <- lookup assocUUID
     return $ Property.Property val set
     where
-        assocGuid = Guid.combine guid $ Guid.make str
-        set Nothing = delete assocGuid
-        set (Just x) = writeGuid assocGuid x
+        assocUUID = UUIDUtils.augment str uuid
+        set Nothing = delete assocUUID
+        set (Just x) = writeUUID assocUUID x
 
-assocDataRefDef :: (Eq a, Binary a, Monad m) => a -> ByteString -> Guid -> MkProperty m a
-assocDataRefDef def str guid =
-    assocDataRef str guid
+assocDataRefDef :: (Eq a, Binary a, Monad m) => a -> ByteString -> UUID -> MkProperty m a
+assocDataRefDef def str uuid =
+    assocDataRef str uuid
     & mkProperty . Lens.mapped %~ Property.pureCompose (fromMaybe def) f
     where
         f x

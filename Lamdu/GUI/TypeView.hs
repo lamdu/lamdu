@@ -60,7 +60,7 @@ split (M act) =
         M $ lift $ evalStateT act splitGen
 
 randAnimId :: Monad m => M m AnimId
-randAnimId = WidgetId.toAnimId . WidgetIds.fromGuid <$> rand
+randAnimId = WidgetId.toAnimId . WidgetIds.fromUUID <$> rand
 
 text :: Monad m => String -> M m View
 text str = wenv . BWidgets.makeTextView str =<< randAnimId

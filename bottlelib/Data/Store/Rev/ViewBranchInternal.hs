@@ -15,8 +15,6 @@ where
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary(..))
 import           Data.Foldable (traverse_)
-import           Data.Store.Guid (Guid)
-import qualified Data.Store.Guid as Guid
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Rev.Change (Change)
@@ -25,6 +23,8 @@ import           Data.Store.Rev.Version (Version)
 import qualified Data.Store.Rev.Version as Version
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.UUID.Types (UUID)
+import qualified Data.UUID.Utils as UUIDUtils
 import           GHC.Generics (Generic)
 
 -- This key is XOR'd with object keys to yield the IRef to each
@@ -57,8 +57,8 @@ moveView vm =
         applyBackward = apply Change.oldValue
         apply changeDir version = applyChangesToView vm changeDir . Version.changes $ version
 
-makeViewKey :: View m -> Change.Key -> Guid
-makeViewKey (View iref) = Guid.combine . IRef.guid $ iref
+makeViewKey :: View m -> Change.Key -> UUID
+makeViewKey (View iref) = UUIDUtils.combine . IRef.uuid $ iref
 
 applyChangesToView ::
     Monad m => View m -> (Change -> Maybe Change.Value) ->

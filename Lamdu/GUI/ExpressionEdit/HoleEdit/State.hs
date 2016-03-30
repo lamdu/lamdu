@@ -6,7 +6,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.State
 
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import qualified Data.Store.Transaction as Transaction
 import           GHC.Generics (Generic)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -28,11 +28,11 @@ emptyState =
     { _hsSearchTerm = ""
     }
 
-setHoleStateAndJump :: Monad m => Guid -> HoleState -> Sugar.EntityId -> T m Widget.Id
-setHoleStateAndJump guid state entityId = do
-    Transaction.setP (assocStateRef guid) state
+setHoleStateAndJump :: Monad m => UUID -> HoleState -> Sugar.EntityId -> T m Widget.Id
+setHoleStateAndJump uuid state entityId = do
+    Transaction.setP (assocStateRef uuid) state
     let WidgetIds{..} = WidgetIds.make entityId
     return hidOpenSearchTerm
 
-assocStateRef :: Monad m => Guid -> Transaction.MkProperty m HoleState
+assocStateRef :: Monad m => UUID -> Transaction.MkProperty m HoleState
 assocStateRef = Transaction.assocDataRefDef emptyState "searchTerm"

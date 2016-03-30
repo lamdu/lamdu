@@ -10,7 +10,7 @@ import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Data.Maybe.Utils (maybeToMPlus)
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
@@ -35,7 +35,7 @@ jumpToDefI ::
 jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
 convertGlobal ::
-    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar Guid m)
+    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID m)
 convertGlobal param exprPl =
     do
         ctx <- lift ConvertM.readContext
@@ -44,7 +44,7 @@ convertGlobal param exprPl =
         notInScope || isGlobalInScope & guard
         GetBinder BinderVar
             { _bvNameRef = NameRef
-              { _nrName = UniqueId.toGuid defI
+              { _nrName = UniqueId.toUUID defI
               , _nrGotoDefinition =
                   jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
               }
@@ -64,15 +64,15 @@ usesAround x xs =
     where
         (before, after) = break (== x) xs
 
-paramNameRef :: Monad m => V.Var -> NameRef Guid m
+paramNameRef :: Monad m => V.Var -> NameRef UUID m
 paramNameRef param =
     NameRef
-    { _nrName = UniqueId.toGuid param
+    { _nrName = UniqueId.toUUID param
     , _nrGotoDefinition = pure $ EntityId.ofLambdaParam param
     }
 
 convertGetBinder ::
-    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar Guid m)
+    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID m)
 convertGetBinder param exprPl =
     do
         inline <-
@@ -88,7 +88,7 @@ convertGetBinder param exprPl =
             } & return
 
 convertParamsRecord ::
-    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar Guid m)
+    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar UUID m)
 convertParamsRecord param exprPl =
     do
         lift ConvertM.readContext
@@ -101,7 +101,7 @@ convertParamsRecord param exprPl =
             { _prvFieldNames =
                 exprPl
                 ^.. Input.inferredType . ExprLens._TRecord . ExprLens.compositeTags
-                <&> UniqueId.toGuid
+                <&> UniqueId.toUUID
             } & return
 
 convert ::

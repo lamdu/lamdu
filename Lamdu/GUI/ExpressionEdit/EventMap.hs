@@ -149,8 +149,8 @@ applyOperatorEventMap holePickers actions =
                 mappend
                 <$> ExprGuiM.holePickersAction holePickers
                 <*> do
-                    (guid, entityId) <- wrap
-                    cursor <- HoleEditState.setHoleStateAndJump guid (HoleState [c]) entityId
+                    (uuid, entityId) <- wrap
+                    cursor <- HoleEditState.setHoleStateAndJump uuid (HoleState [c]) entityId
                     return $ Widget.eventResultFromCursor cursor
 
 wrapEventMap ::

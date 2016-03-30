@@ -141,9 +141,9 @@ fixNumWithDotEventMap holeInfo res
             E.charGroup "Operator" doc operatorChars $
             \c ->
             do
-                (guid, entityId) <- toHole
+                (uuid, entityId) <- toHole
                 cursor <-
-                    HoleState.setHoleStateAndJump guid
+                    HoleState.setHoleStateAndJump uuid
                     (HoleState ('.':[c])) entityId
                 return $ Widget.eventResultFromCursor cursor
         endsWithDot = Lens.has (suffixed ".") (HoleInfo.hiSearchTerm holeInfo)

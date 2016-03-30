@@ -4,12 +4,10 @@ module Lamdu.GUI.WidgetIds
     , module Lamdu.GUI.WidgetIdIRef
     ) where
 
-import           Prelude.Compat
-
 import           Control.Lens.Operators
 import           Data.ByteString.Char8 (ByteString)
-import           Data.Store.Guid (Guid)
-import qualified Data.Store.Guid as Guid
+import           Data.UUID.Types (UUID)
+import qualified Data.UUID.Utils as UUIDUtils
 import           Graphics.UI.Bottle.Animation (AnimId)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import           Graphics.UI.Bottle.WidgetId (Id(..))
@@ -17,6 +15,8 @@ import           Lamdu.GUI.WidgetIdIRef
 import qualified Lamdu.Sugar.EntityId as EntityId
 import qualified Lamdu.Sugar.Types as Sugar
 import           System.Random.Utils (randFunc)
+
+import           Prelude.Compat
 
 fromBS :: ByteString -> Id
 fromBS = Id . (: [])
@@ -30,11 +30,11 @@ fromExprPayload pl = fromEntityId (pl ^. Sugar.plEntityId)
 nameEditOf :: Id -> Id
 nameEditOf = delegatingId
 
-fromGuid :: Guid -> Id
-fromGuid = fromBS . Guid.bs
+fromUUID :: UUID -> Id
+fromUUID = fromBS . UUIDUtils.toSBS16
 
 hash :: Show a => a -> Id
-hash = fromGuid . randFunc . show
+hash = fromUUID . randFunc . show
 
 backgroundCursorId :: AnimId
 backgroundCursorId = ["background cursor"]

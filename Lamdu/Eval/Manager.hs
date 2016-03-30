@@ -21,7 +21,7 @@ import qualified Data.Monoid as Monoid
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Store.Db (Db)
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -103,9 +103,9 @@ loadDef ::
     IO (Def.Definition (V.Val (ExprIRef.ValIProperty ViewM)) (DefI ViewM))
 loadDef evaluator = runViewTransactionInIO (eDb evaluator) . Load.def
 
-readAssocName :: Evaluator -> Guid -> IO String
-readAssocName evaluator guid =
-    Transaction.getP (Anchors.assocNameRef guid)
+readAssocName :: Evaluator -> UUID -> IO String
+readAssocName evaluator uuid =
+    Transaction.getP (Anchors.assocNameRef uuid)
     & runViewTransactionInIO (eDb evaluator)
 
 evalActions :: Evaluator -> Eval.Actions (ValI ViewM)
@@ -134,8 +134,8 @@ replIRef = DbLayout.repl DbLayout.codeIRefs
 startBG :: Eval.Actions (ValI m) -> V.Val (ValI m) -> IO (Eval.Evaluator (ValI m))
 startBG =
     Eval.start
-    (IRef.guid . ExprIRef.unValI)
-    (ExprIRef.ValI . IRef.unsafeFromGuid)
+    (IRef.uuid . ExprIRef.unValI)
+    (ExprIRef.ValI . IRef.unsafeFromUUID)
 
 start :: Evaluator -> IO ()
 start evaluator =
@@ -154,11 +154,11 @@ stop evaluator =
         writeIORef (eEvaluatorRef evaluator) NotStarted
         writeIORef (eResultsRef evaluator) EvalResults.empty
 
-sumDependency :: Eval.Dependencies (ValI m) -> Set Guid
+sumDependency :: Eval.Dependencies (ValI m) -> Set UUID
 sumDependency (Eval.Dependencies subexprs globals) =
     mconcat
-    [ Set.map (IRef.guid . ExprIRef.unValI) subexprs
-    , Set.map (IRef.guid . ExprIRef.defI) globals
+    [ Set.map (IRef.uuid . ExprIRef.unValI) subexprs
+    , Set.map (IRef.uuid . ExprIRef.defI) globals
     ]
 
 runTransactionAndMaybeRestartEvaluator :: Evaluator -> T DbM a -> IO a
@@ -171,7 +171,7 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
         \rawDependencies ->
         do
             let dependencies =
-                    sumDependency rawDependencies & Set.insert (IRef.guid replIRef)
+                    sumDependency rawDependencies & Set.insert (IRef.uuid replIRef)
             (dependencyChanged, result) <-
                 do
                     (oldVersion, result, newVersion) <-

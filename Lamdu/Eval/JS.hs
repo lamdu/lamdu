@@ -18,6 +18,7 @@ import qualified Data.Aeson as JsonStr
 import           Data.Aeson.Types ((.:))
 import qualified Data.Aeson.Types as Json
 import qualified Data.ByteString as SBS
+import qualified Data.ByteString.Hex as Hex
 import qualified Data.ByteString.Lazy as LBS
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
@@ -29,10 +30,10 @@ import           Data.Maybe (fromMaybe)
 import           Data.Monoid ((<>))
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Store.Guid (Guid)
-import qualified Data.Store.Guid as Guid
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.UUID.Types (UUID)
+import qualified Data.UUID.Utils as UUIDUtils
 import qualified Data.Vector as Vec
 import           Data.Word (Word8)
 import qualified Lamdu.Builtins.PrimVal as PrimVal
@@ -54,7 +55,7 @@ data Actions srcId = Actions
     { _aLoadGlobal :: V.Var -> IO (Def.Body (V.Val srcId))
     , -- TODO: This is currently not in use but remains here because
       -- it *should* be used for readable JS output
-      _aReadAssocName :: Guid -> IO String
+      _aReadAssocName :: UUID -> IO String
     , _aReportUpdatesAvailable :: IO ()
     , _aCompleted :: Either E.SomeException (ER.Val srcId) -> IO ()
     }
@@ -106,8 +107,8 @@ parseHexNameBs :: String -> SBS.ByteString
 parseHexNameBs ('_':n) = parseHexBs n
 parseHexNameBs n = parseHexBs n
 
-parseGuid :: String -> Guid
-parseGuid = Guid.make . parseHexNameBs
+parseUUID :: String -> UUID
+parseUUID = UUIDUtils.fromSBS16 . parseHexNameBs
 
 parseRecord :: HashMap Text Json.Value -> ER.Val ()
 parseRecord obj =
@@ -163,27 +164,27 @@ parseResult x = error $ "Unsupported encoded JS output: " ++ show x
 
 addVal ::
     Ord srcId =>
-    (Guid -> srcId) -> Json.Object ->
+    (UUID -> srcId) -> Json.Object ->
     Map srcId (Map ScopeId (ER.Val ())) ->
     Map srcId (Map ScopeId (ER.Val ()))
-addVal fromGuid obj =
+addVal fromUUID obj =
     case Json.parseMaybe (.: "result") obj of
     Nothing -> id
     Just result ->
         Map.alter
         (<> Just (Map.singleton (ScopeId scope) (parseResult result)))
-        (fromGuid (parseGuid exprId))
+        (fromUUID (parseUUID exprId))
     where
         Just scope = Json.parseMaybe (.: "scope") obj
         Just exprId = Json.parseMaybe (.: "exprId") obj
 
 newScope ::
     Ord srcId =>
-    (Guid -> srcId) -> Json.Object ->
+    (UUID -> srcId) -> Json.Object ->
     Map srcId (Map ScopeId [(ScopeId, ER.Val ())]) ->
     Map srcId (Map ScopeId [(ScopeId, ER.Val ())])
-newScope fromGuid obj =
-    Map.alter addApply (fromGuid (parseGuid lamId))
+newScope fromUUID obj =
+    Map.alter addApply (fromUUID (parseUUID lamId))
     where
         addApply Nothing = Just apply
         addApply (Just x) = Just (Map.unionWith (++) x apply)
@@ -197,26 +198,26 @@ newScope fromGuid obj =
             Just x -> parseResult x
 
 processEvent ::
-    Ord srcId => (Guid -> srcId) -> IORef (EvalResults srcId) -> Json.Object -> IO ()
-processEvent fromGuid resultsRef obj =
+    Ord srcId => (UUID -> srcId) -> IORef (EvalResults srcId) -> Json.Object -> IO ()
+processEvent fromUUID resultsRef obj =
     case event of
     "Result" ->
         atomicModifyIORef' resultsRef
-        (flip (,) () . (ER.erExprValues %~ addVal fromGuid obj))
+        (flip (,) () . (ER.erExprValues %~ addVal fromUUID obj))
     "NewScope" ->
         atomicModifyIORef' resultsRef
-        (flip (,) () . (ER.erAppliesOfLam %~ newScope fromGuid obj))
+        (flip (,) () . (ER.erAppliesOfLam %~ newScope fromUUID obj))
     _ -> "Unknown event " ++ event & putStrLn
     where
         Just event = Json.parseMaybe (.: "event") obj
 
 asyncStart ::
     Ord srcId =>
-    (srcId -> Guid) -> (Guid -> srcId) ->
+    (srcId -> UUID) -> (UUID -> srcId) ->
     MVar (Dependencies srcId) -> IORef (EvalResults srcId) ->
     V.Val srcId -> Actions srcId ->
     IO ()
-asyncStart toGuid fromGuid depsMVar resultsRef val actions =
+asyncStart toUUID fromUUID depsMVar resultsRef val actions =
     do
         nodeExePath <- DataFile.getPath "submodules/node/node"
         rtsPath <- DataFile.getPath "js/rts.js"
@@ -226,7 +227,7 @@ asyncStart toGuid fromGuid depsMVar resultsRef val actions =
                 val
                     <&> valId
                     & Compiler.compile Compiler.Actions
-                    { Compiler.readAssocName = return . Guid.asHex
+                    { Compiler.readAssocName = return . Hex.showHexBytes . UUIDUtils.toSBS16
                     , Compiler.readGlobal =
                       \globalId ->
                       modifyMVar depsMVar $ \oldDeps ->
@@ -257,14 +258,14 @@ asyncStart toGuid fromGuid depsMVar resultsRef val actions =
                                 do
                                     line <- SBS.hGetLine stdout
                                     let Just obj = JsonStr.decode (LBS.fromChunks [line])
-                                    processEvent fromGuid resultsRef obj
+                                    processEvent fromUUID resultsRef obj
                                     actions ^. aReportUpdatesAvailable
                                     processLines
                 processLines
                 _ <- Proc.waitForProcess handle
                 return ()
     where
-        valId = Compiler.ValId . toGuid
+        valId = Compiler.ValId . toUUID
 
 -- | Pause the evaluator, yielding all dependencies of evaluation so
 -- far. If any dependency changed, this evaluation is stale.
@@ -275,9 +276,9 @@ whilePaused :: Evaluator srcId -> (Dependencies srcId -> IO a) -> IO a
 whilePaused = withMVar . eDeps
 
 start ::
-    Ord srcId => (srcId -> Guid) -> (Guid -> srcId) ->
+    Ord srcId => (srcId -> UUID) -> (UUID -> srcId) ->
     Actions srcId -> V.Val srcId -> IO (Evaluator srcId)
-start toGuid fromGuid actions val =
+start toUUID fromUUID actions val =
     do
         depsMVar <-
             newMVar Dependencies
@@ -285,7 +286,7 @@ start toGuid fromGuid actions val =
             , subExprDeps = val ^.. Lens.folded & Set.fromList
             }
         resultsRef <- newIORef ER.empty
-        tid <- asyncStart toGuid fromGuid depsMVar resultsRef val actions & forkIO
+        tid <- asyncStart toUUID fromUUID depsMVar resultsRef val actions & forkIO
         return Evaluator
             { stop = killThread tid
             , eDeps = depsMVar

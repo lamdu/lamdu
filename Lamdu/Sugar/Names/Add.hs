@@ -19,7 +19,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Set.Ordered (OrderedSet)
 import qualified Data.Set.Ordered as OrderedSet
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           GHC.Generics (Generic)
@@ -42,14 +42,14 @@ type StoredName = String
 -- pass 0
 data MStoredName = MStoredName
     { _mStoredName :: Maybe StoredName
-    , _mStoredGuid :: Guid
+    , _mStoredUUID :: UUID
     }
 
 newtype Pass0M tm a = Pass0M { runPass0M :: T tm a }
     deriving (Functor, Applicative, Monad)
 
 instance Monad tm => MonadNaming (Pass0M tm) where
-    type OldName (Pass0M tm) = Guid
+    type OldName (Pass0M tm) = UUID
     type NewName (Pass0M tm) = MStoredName
     type TM (Pass0M tm) = tm
     opRun = pure $ Walk.InTransaction runPass0M
@@ -59,50 +59,50 @@ instance Monad tm => MonadNaming (Pass0M tm) where
     opWithTagName = p0cpsNameConvertor
     opGetName _ = p0nameConvertor
 
-getMStoredName :: Monad tm => Guid -> Pass0M tm MStoredName
-getMStoredName guid =
+getMStoredName :: Monad tm => UUID -> Pass0M tm MStoredName
+getMStoredName uuid =
     Pass0M $ do
-        nameStr <- Transaction.getP $ assocNameRef guid
+        nameStr <- Transaction.getP $ assocNameRef uuid
         pure MStoredName
             { _mStoredName = if null nameStr then Nothing else Just nameStr
-            , _mStoredGuid = guid
+            , _mStoredUUID = uuid
             }
 
 p0nameConvertor :: Monad tm => Walk.NameConvertor (Pass0M tm)
 p0nameConvertor = getMStoredName
 
 p0cpsNameConvertor :: Monad tm => Walk.CPSNameConvertor (Pass0M tm)
-p0cpsNameConvertor guid =
-    CPS $ \k -> (,) <$> getMStoredName guid <*> k
+p0cpsNameConvertor uuid =
+    CPS $ \k -> (,) <$> getMStoredName uuid <*> k
 
 -- Wrap the Map for a more sensible (recursive) Monoid instance
-newtype NameGuidMap = NameGuidMap (Map StoredName (OrderedSet Guid))
+newtype NameUUIDMap = NameUUIDMap (Map StoredName (OrderedSet UUID))
     deriving Show
 
-type instance Lens.Index NameGuidMap = StoredName
-type instance Lens.IxValue NameGuidMap = OrderedSet Guid
+type instance Lens.Index NameUUIDMap = StoredName
+type instance Lens.IxValue NameUUIDMap = OrderedSet UUID
 
 -- ghc-7.7.20131205 fails deriving these instances on its own.
-instance Lens.Ixed NameGuidMap where
-    ix k f (NameGuidMap m) = NameGuidMap <$> Lens.ix k f m
+instance Lens.Ixed NameUUIDMap where
+    ix k f (NameUUIDMap m) = NameUUIDMap <$> Lens.ix k f m
     {-# INLINE ix #-}
-instance Lens.At NameGuidMap where
-    at k f (NameGuidMap m) = NameGuidMap <$> Lens.at k f m
+instance Lens.At NameUUIDMap where
+    at k f (NameUUIDMap m) = NameUUIDMap <$> Lens.at k f m
     {-# INLINE at #-}
 
-instance Monoid NameGuidMap where
-    mempty = NameGuidMap Map.empty
-    NameGuidMap x `mappend` NameGuidMap y =
-        NameGuidMap $ Map.unionWith mappend x y
+instance Monoid NameUUIDMap where
+    mempty = NameUUIDMap Map.empty
+    NameUUIDMap x `mappend` NameUUIDMap y =
+        NameUUIDMap $ Map.unionWith mappend x y
 
-nameGuidMapSingleton :: StoredName -> Guid -> NameGuidMap
-nameGuidMapSingleton name guid = NameGuidMap . Map.singleton name $ OrderedSet.singleton guid
+nameUUIDMapSingleton :: StoredName -> UUID -> NameUUIDMap
+nameUUIDMapSingleton name uuid = NameUUIDMap . Map.singleton name $ OrderedSet.singleton uuid
 
 data StoredNamesWithin = StoredNamesWithin
-    { _snwGuidMap :: NameGuidMap
+    { _snwUUIDMap :: NameUUIDMap
     -- Names of tags and defs: considered conflicted if used in two
     -- different meanings anywhere in the whole definition:
-    , _snwGlobalNames :: NameGuidMap
+    , _snwGlobalNames :: NameUUIDMap
     } deriving (Generic)
 Lens.makeLenses ''StoredNamesWithin
 instance Monoid StoredNamesWithin where
@@ -146,7 +146,7 @@ instance Monad tm => MonadNaming (Pass1M tm) where
 pass1Result ::
     NameScope -> MStoredName ->
     Pass1M tm (StoredNamesWithin -> StoredNames)
-pass1Result scope sn@(MStoredName mName guid) =
+pass1Result scope sn@(MStoredName mName uuid) =
     do
         p1TellStoredNames myStoredNamesWithin
         pure $ \storedNamesUnder -> StoredNames
@@ -157,14 +157,14 @@ pass1Result scope sn@(MStoredName mName guid) =
         myStoredNamesWithin =
             maybe mempty
             (buildStoredNamesWithin .
-              (`nameGuidMapSingleton` guid)) mName
-        buildStoredNamesWithin myNameGuidMap =
-            StoredNamesWithin myNameGuidMap $
-            globalNames myNameGuidMap
-        globalNames myNameGuidMap =
+              (`nameUUIDMapSingleton` uuid)) mName
+        buildStoredNamesWithin myNameUUIDMap =
+            StoredNamesWithin myNameUUIDMap $
+            globalNames myNameUUIDMap
+        globalNames myNameUUIDMap =
             case scope of
             Local -> mempty
-            Global -> myNameGuidMap
+            Global -> myNameUUIDMap
 
 p1nameConvertor :: NameScope -> Walk.NameConvertor (Pass1M tm)
 p1nameConvertor scope mStoredName = ($ mempty) <$> pass1Result scope mStoredName
@@ -178,14 +178,14 @@ p1cpsNameConvertor scope mNameSrc =
 
 -- pass 2:
 data P2Env = P2Env
-    { _p2NameGen :: NameGen Guid
-    , _p2StoredNameSuffixes :: Map Guid Int
+    { _p2NameGen :: NameGen UUID
+    , _p2StoredNameSuffixes :: Map UUID Int
     , _p2StoredNames :: Set String
     }
 Lens.makeLenses ''P2Env
 
-emptyP2Env :: NameGuidMap -> P2Env
-emptyP2Env (NameGuidMap globalNamesMap) = P2Env
+emptyP2Env :: NameUUIDMap -> P2Env
+emptyP2Env (NameUUIDMap globalNamesMap) = P2Env
     { _p2NameGen = NameGen.initial
     , _p2StoredNames = mempty
     , _p2StoredNameSuffixes =
@@ -206,7 +206,7 @@ p2WithEnv f (Pass2M act) = Pass2M $ Reader.local f act
 runPass2MInitial :: StoredNamesWithin -> Pass2M tm a -> a
 runPass2MInitial storedNamesBelow = runPass2M (emptyP2Env (storedNamesBelow ^. snwGlobalNames))
 
-setName :: Monad tm => Guid -> StoredName -> T tm ()
+setName :: Monad tm => UUID -> StoredName -> T tm ()
 setName = Transaction.setP . assocNameRef
 
 instance Monad tm => MonadNaming (Pass2M tm) where
@@ -218,24 +218,24 @@ instance Monad tm => MonadNaming (Pass2M tm) where
     opWithTagName = p2cpsNameConvertorGlobal "tag_"
     opWithParamName = p2cpsNameConvertorLocal
     opWithLetName = p2cpsNameConvertorLocal
-    opGetName Walk.ParamName (StoredNames (MStoredName mName guid) storedNamesUnder) =
+    opGetName Walk.ParamName (StoredNames (MStoredName mName uuid) storedNamesUnder) =
         case mName of
             Just name ->
-                makeFinalName name storedNamesUnder guid <$> p2GetEnv
+                makeFinalName name storedNamesUnder uuid <$> p2GetEnv
             Nothing ->
                 do
                     nameGen <- (^. p2NameGen) <$> p2GetEnv
-                    let name = evalState (NameGen.existingName guid) nameGen
+                    let name = evalState (NameGen.existingName uuid) nameGen
                     pure $
-                        Name NameSourceAutoGenerated NoCollision (setName guid) name
+                        Name NameSourceAutoGenerated NoCollision (setName uuid) name
     opGetName Walk.TagName x = p2nameConvertor "tag_" x
     opGetName Walk.NominalName x = p2nameConvertor "nom_" x
     opGetName Walk.DefName x = p2nameConvertor "def_" x
 
 makeFinalName ::
-    Monad tm => StoredName -> StoredNamesWithin -> Guid -> P2Env -> Name tm
-makeFinalName name storedNamesBelow guid env =
-    fst $ makeFinalNameEnv name storedNamesBelow guid env
+    Monad tm => StoredName -> StoredNamesWithin -> UUID -> P2Env -> Name tm
+makeFinalName name storedNamesBelow uuid env =
+    fst $ makeFinalNameEnv name storedNamesBelow uuid env
 
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id
@@ -243,24 +243,24 @@ compose = foldr (.) id
 makeFinalNameEnv ::
     Monad tm =>
     StoredName ->
-    StoredNamesWithin -> Guid -> P2Env -> (Name tm, P2Env)
-makeFinalNameEnv name storedNamesBelow guid env =
-    (Name NameSourceStored collision (setName guid) name, newEnv)
+    StoredNamesWithin -> UUID -> P2Env -> (Name tm, P2Env)
+makeFinalNameEnv name storedNamesBelow uuid env =
+    (Name NameSourceStored collision (setName uuid) name, newEnv)
     where
         (collision, newEnv) =
-            case (mSuffixFromAbove, collidingGuids) of
+            case (mSuffixFromAbove, collidingUUIDs) of
                 (Just suffix, _) -> (Collision suffix, env)
                 (Nothing, []) -> (NoCollision, envWithName [])
-                (Nothing, otherGuids) -> (Collision 0, envWithName (guid:otherGuids))
-        envWithName guids = env
+                (Nothing, otherUUIDs) -> (Collision 0, envWithName (uuid:otherUUIDs))
+        envWithName uuids = env
             & p2StoredNames %~ Set.insert name
             -- This name is first occurence, so we get suffix 0
-            & p2StoredNameSuffixes %~ compose ((Lens.itraversed %@~ flip Map.insert) guids)
+            & p2StoredNameSuffixes %~ compose ((Lens.itraversed %@~ flip Map.insert) uuids)
         mSuffixFromAbove =
-            Map.lookup guid $ env ^. p2StoredNameSuffixes
-        collidingGuids =
-            maybe [] (filter (/= guid) . toList) $
-            storedNamesBelow ^. snwGuidMap . Lens.at name
+            Map.lookup uuid $ env ^. p2StoredNameSuffixes
+        collidingUUIDs =
+            maybe [] (filter (/= uuid) . toList) $
+            storedNamesBelow ^. snwUUIDMap . Lens.at name
 
 p2cpsNameConvertor ::
     Monad tm =>
@@ -273,42 +273,42 @@ p2cpsNameConvertor (StoredNames mStoredName storedNamesBelow) nameMaker =
         oldEnv <- p2GetEnv
         let (newName, newEnv) =
                 case mName of
-                Just name -> makeFinalNameEnv name storedNamesBelow guid oldEnv
+                Just name -> makeFinalNameEnv name storedNamesBelow uuid oldEnv
                 Nothing -> nameMaker oldEnv
         res <- p2WithEnv (const newEnv) k
         return (newName, res)
     where
-        MStoredName mName guid = mStoredName
+        MStoredName mName uuid = mStoredName
 
-makeGuidName :: Monad tm => String -> MStoredName -> Name tm
-makeGuidName prefix (MStoredName _ guid) =
-    Name NameSourceAutoGenerated NoCollision (setName guid) (prefix ++ show guid)
+makeUUIDName :: Monad tm => String -> MStoredName -> Name tm
+makeUUIDName prefix (MStoredName _ uuid) =
+    Name NameSourceAutoGenerated NoCollision (setName uuid) (prefix ++ show uuid)
 
 p2cpsNameConvertorGlobal :: Monad tm => String -> Walk.CPSNameConvertor (Pass2M tm)
 p2cpsNameConvertorGlobal prefix storedNames =
     p2cpsNameConvertor storedNames $
-    \p2env -> (makeGuidName prefix (storedNames ^. storedName), p2env)
+    \p2env -> (makeUUIDName prefix (storedNames ^. storedName), p2env)
 
 p2cpsNameConvertorLocal :: Monad tm => NameGen.VarInfo -> Walk.CPSNameConvertor (Pass2M tm)
 p2cpsNameConvertorLocal isFunction storedNames =
     p2cpsNameConvertor storedNames $ \p2env ->
     (`runState` p2env) . Lens.zoom p2NameGen $
         let conflict name =
-                Lens.has (snwGuidMap . Lens.at name . Lens._Just) storedNamesBelow ||
+                Lens.has (snwUUIDMap . Lens.at name . Lens._Just) storedNamesBelow ||
                 (p2env ^. p2StoredNames . Lens.contains name)
         in
-            Name NameSourceAutoGenerated NoCollision (setName guid) <$>
-            NameGen.newName (not . conflict) isFunction guid
+            Name NameSourceAutoGenerated NoCollision (setName uuid) <$>
+            NameGen.newName (not . conflict) isFunction uuid
     where
-        StoredNames (MStoredName _ guid) storedNamesBelow = storedNames
+        StoredNames (MStoredName _ uuid) storedNamesBelow = storedNames
 
 p2nameConvertor :: Monad tm => String -> Walk.NameConvertor (Pass2M tm)
 p2nameConvertor prefix (StoredNames mStoredName storedNamesBelow) =
     case mName of
-    Just str -> makeFinalName str storedNamesBelow guid <$> p2GetEnv
-    Nothing -> pure $ makeGuidName prefix mStoredName
+    Just str -> makeFinalName str storedNamesBelow uuid <$> p2GetEnv
+    Nothing -> pure $ makeUUIDName prefix mStoredName
     where
-        MStoredName mName guid = mStoredName
+        MStoredName mName uuid = mStoredName
 
 fixVarToTags :: Monad m => VarToTags -> T m ()
 fixVarToTags VarToTags {..} =
@@ -382,7 +382,7 @@ addToDef def =
     where
         f = Walk.toDef Walk.toExpression
 
-addToExpr :: Monad tm => Expression Guid tm a -> T tm (Expression (Name tm) tm a)
+addToExpr :: Monad tm => Expression UUID tm a -> T tm (Expression (Name tm) tm a)
 addToExpr expr =
     expr
     & fixExpr

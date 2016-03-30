@@ -16,20 +16,18 @@ module Lamdu.Expr.IRef
     , ValTree(..), ValTreeM, writeValTree
     ) where
 
-import           Prelude.Compat
-
 import           Control.DeepSeq (NFData)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Data.Binary (Binary(..))
 import           Data.Function.Decycle (decycle)
-import qualified Data.Store.Guid as Guid
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Property (Property(..))
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import qualified Data.UUID.Utils as UUIDUtils
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.Identifier (Identifier(..))
 import           Lamdu.Expr.Nominal (Nominal)
@@ -37,19 +35,21 @@ import qualified Lamdu.Expr.Type as T
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 
+import           Prelude.Compat
+
 type T = Transaction
 
 type DefI m = IRef m (Definition.Body (ValI m))
 
 -- NOTE: Nobody else should generate Lamdu-visible Global Id's
 globalId :: DefI m -> V.Var
-globalId = V.Var . Identifier . Guid.bs . IRef.guid
+globalId = V.Var . Identifier . UUIDUtils.toSBS16 . IRef.uuid
 
 defI :: V.Var -> DefI m
-defI (V.Var (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make bs
+defI (V.Var (Identifier bs)) = IRef.unsafeFromUUID $ UUIDUtils.fromSBS16 bs
 
 nominalI :: T.NominalId -> IRef m Nominal
-nominalI (T.NominalId (Identifier bs)) = IRef.unsafeFromGuid $ Guid.make bs
+nominalI (T.NominalId (Identifier bs)) = IRef.unsafeFromUUID $ UUIDUtils.fromSBS16 bs
 
 newtype ValI m = ValI
     { unValI :: IRef m (V.Body (ValI m))
@@ -64,7 +64,7 @@ newValBody :: Monad m => ValBody m -> T m (ValI m)
 newValBody = fmap ValI . Transaction.newIRef
 
 newVar :: Monad m => T m V.Var
-newVar = V.Var . Identifier . Guid.bs <$> Transaction.newKey
+newVar = V.Var . Identifier . UUIDUtils.toSBS16 <$> Transaction.newKey
 
 readValBody :: Monad m => ValI m -> T m (ValBody m)
 readValBody = Transaction.readIRef . unValI
@@ -76,7 +76,7 @@ writeValBody = Transaction.writeIRef . unValI
 newVal :: Monad m => Val () -> T m (ValI m)
 newVal = fmap (^. V.payload . _1) . writeValWithStoredSubexpressions . ((,) Nothing <$>)
 
--- Returns expression with new Guids
+-- Returns expression with new UUIDs
 writeVal ::
     Monad m =>
     ValI m -> Val a ->

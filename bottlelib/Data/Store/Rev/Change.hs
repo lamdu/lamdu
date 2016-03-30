@@ -4,10 +4,10 @@ where
 
 import Data.Binary (Binary)
 import Data.ByteString (ByteString)
-import Data.Store.Guid (Guid)
+import Data.UUID.Types (UUID)
 import GHC.Generics (Generic)
 
-type Key = Guid
+type Key = UUID
 type Value = ByteString
 
 -- TODO: Store the smaller of (Maybe Value) and (IRef Value)

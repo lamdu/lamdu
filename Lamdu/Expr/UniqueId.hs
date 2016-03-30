@@ -1,44 +1,44 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Lamdu.Expr.UniqueId
-    ( ToGuid(..), UniqueId(..)
+    ( ToUUID(..), UniqueId(..)
     ) where
 
-import           Prelude.Compat
-
-import           Data.Store.Guid (Guid)
-import qualified Data.Store.Guid as Guid
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.UUID.Types (UUID)
+import qualified Data.UUID.Utils as UUIDUtils
 import           Lamdu.Expr.IRef (ValI(..))
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.Identifier (Identifier(..))
 import qualified Lamdu.Expr.Type as T
 import qualified Lamdu.Expr.Val as V
 
-guidOfIdentifier :: Identifier -> Guid
-guidOfIdentifier (Identifier bs) = Guid.make bs
+import           Prelude.Compat
 
-identifierOfGuid :: Guid -> Identifier
-identifierOfGuid = Identifier . Guid.bs
+uuidOfIdentifier :: Identifier -> UUID
+uuidOfIdentifier (Identifier bs) = UUIDUtils.fromSBS16 bs
 
-class    ToGuid a           where toGuid :: a -> Guid
-instance ToGuid V.Var       where toGuid = guidOfIdentifier . V.vvName
-instance ToGuid T.Tag       where toGuid = guidOfIdentifier . T.tagName
-instance ToGuid T.NominalId where toGuid = guidOfIdentifier . T.nomId
-instance ToGuid T.ParamId   where toGuid = guidOfIdentifier . T.typeParamId
-instance ToGuid (IRef m a)  where toGuid = IRef.guid
-instance ToGuid (ValI m)    where toGuid = toGuid . ExprIRef.unValI
+identifierOfUUID :: UUID -> Identifier
+identifierOfUUID = Identifier . UUIDUtils.toSBS16
 
--- TODO: Remove this when all code uses more descritive types than Guid
-instance ToGuid Guid  where toGuid = id
+class    ToUUID a           where toUUID :: a -> UUID
+instance ToUUID V.Var       where toUUID = uuidOfIdentifier . V.vvName
+instance ToUUID T.Tag       where toUUID = uuidOfIdentifier . T.tagName
+instance ToUUID T.NominalId where toUUID = uuidOfIdentifier . T.nomId
+instance ToUUID T.ParamId   where toUUID = uuidOfIdentifier . T.typeParamId
+instance ToUUID (IRef m a)  where toUUID = IRef.uuid
+instance ToUUID (ValI m)    where toUUID = toUUID . ExprIRef.unValI
+
+-- TODO: Remove this when all code uses more descritive types than UUID
+instance ToUUID UUID  where toUUID = id
 
 mkNew :: Monad m => (Identifier -> a) -> Transaction m a
-mkNew f = f . identifierOfGuid <$> Transaction.newKey
+mkNew f = f . identifierOfUUID <$> Transaction.newKey
 
 -- NOTE: No other code in Lamdu should be creating var or tag ids!
-class ToGuid a => UniqueId a     where new :: Monad m => Transaction m a
+class ToUUID a => UniqueId a     where new :: Monad m => Transaction m a
 instance          UniqueId V.Var where new = mkNew V.Var
 instance          UniqueId T.Tag where new = mkNew T.Tag
 instance          UniqueId T.NominalId  where new = mkNew T.NominalId

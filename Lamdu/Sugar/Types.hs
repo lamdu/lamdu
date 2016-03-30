@@ -79,7 +79,7 @@ module Lamdu.Sugar.Types
     , Unwrap(..), _UnwrapAction, _UnwrapTypeMismatch
     , HoleArg(..), haExpr, haUnwrap
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
-    , HoleActions(..), holeGuid, holeOptions, holeOptionLiteral
+    , HoleActions(..), holeUUID, holeOptions, holeOptionLiteral
     , Hole(..), holeActions, holeMArg
     , ScopeGetVar(..), sgvGetVar, sgvVal
     , TIdG(..), tidgName, tidgTId
@@ -100,7 +100,7 @@ import qualified Data.ByteString as SBS
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Functor.Identity (Identity(..))
 import           Data.Map (Map)
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import           Data.Store.Transaction (Transaction, MkProperty, Property)
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Anchors as Anchors
@@ -117,14 +117,14 @@ import           Prelude.Compat
 type T = Transaction
 
 data WrapAction m
-    = WrapperAlready (Guid, EntityId) -- I'm an apply-of-hole, (Guid,EntityId of hole), no need to wrap
-    | WrappedAlready (Guid, EntityId) -- I'm an arg of apply-of-hole (Guid,EntityId of hole), no need to wrap
+    = WrapperAlready (UUID, EntityId) -- I'm an apply-of-hole, (UUID,EntityId of hole), no need to wrap
+    | WrappedAlready (UUID, EntityId) -- I'm an arg of apply-of-hole (UUID,EntityId of hole), no need to wrap
     | WrapNotAllowed -- I'm a hole
-    | WrapAction (T m (Guid, EntityId)) -- Wrap me!
+    | WrapAction (T m (UUID, EntityId)) -- Wrap me!
 
 data SetToHole m
-    = SetToHole (T m (Guid, EntityId))
-    | SetWrapperToHole (T m (Guid, EntityId))
+    = SetToHole (T m (UUID, EntityId))
+    | SetWrapperToHole (T m (UUID, EntityId))
     | AlreadyAHole
     | AlreadyAppliedToHole
 
@@ -265,7 +265,7 @@ data Literal f
     | LiteralText (f String)
 
 data HoleActions name m = HoleActions
-    { _holeGuid :: Guid -- TODO: Replace this with a way to associate data?
+    { _holeUUID :: UUID -- TODO: Replace this with a way to associate data?
     , _holeOptions :: T m [HoleOption name m]
     , _holeOptionLiteral :: Literal Identity -> T m (HoleOption name m)
     }
@@ -558,7 +558,7 @@ data Definition name m expr = Definition
     , _drBody :: DefinitionBody name m expr
     } deriving (Functor, Foldable, Traversable)
 
-type DefinitionU m a = Definition Guid m (Expression Guid m a)
+type DefinitionU m a = Definition UUID m (Expression UUID m a)
 
 Lens.makeLenses ''Actions
 Lens.makeLenses ''AnnotatedArg

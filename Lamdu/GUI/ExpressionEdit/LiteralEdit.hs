@@ -6,7 +6,7 @@ module Lamdu.GUI.ExpressionEdit.LiteralEdit
 
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -36,13 +36,13 @@ import           Prelude.Compat
 type T = Transaction.Transaction
 
 mkEditEventMap ::
-    Monad m => String -> T m (Guid, Sugar.EntityId) -> Widget.EventHandlers (T m)
+    Monad m => String -> T m (UUID, Sugar.EntityId) -> Widget.EventHandlers (T m)
 mkEditEventMap valText setToHole =
     Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Enter]
     (E.Doc ["Edit", "Value"]) $
     do
-        (guid, entityId) <- setToHole
-        setHoleStateAndJump guid (HoleState valText) entityId
+        (uuid, entityId) <- setToHole
+        setHoleStateAndJump uuid (HoleState valText) entityId
 
 genericEdit ::
     (Monad m, Format a) =>

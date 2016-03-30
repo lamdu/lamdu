@@ -86,7 +86,7 @@ make hole pl =
         Config.Hole{..} <- ExprGuiM.readConfig <&> Config.hole
 
         stateProp <-
-            HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeGuid)
+            HoleState.assocStateRef (hole ^. Sugar.holeActions . Sugar.holeUUID)
             ^. Transaction.mkProperty & ExprGuiM.transaction
 
         let holeInfo = HoleInfo

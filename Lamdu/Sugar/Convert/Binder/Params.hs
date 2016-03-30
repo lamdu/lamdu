@@ -24,7 +24,7 @@ import qualified Data.Map as Map
 import           Data.Maybe.Utils (unsafeUnjust)
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, MkProperty)
@@ -60,13 +60,13 @@ type T = Transaction
 data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
     , _cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
-    , _cpParams :: BinderParams Guid m
+    , _cpParams :: BinderParams UUID m
     , _cpAddFirstParam :: T m ParamAddResult
     , cpScopes :: BinderBodyScope
     , cpMLamParam :: Maybe V.Var
     }
 
-cpParams :: Lens' (ConventionalParams m) (BinderParams Guid m)
+cpParams :: Lens' (ConventionalParams m) (BinderParams UUID m)
 cpParams f ConventionalParams {..} = f _cpParams <&> \_cpParams -> ConventionalParams{..}
 
 cpParamInfos :: Lens' (ConventionalParams m) (Map T.Tag ConvertM.TagFieldParam)
@@ -331,7 +331,7 @@ convertRecordParams binderKind fieldParams lam@(V.Lam param _) pl =
             , FuncParam
                 { _fpInfo =
                   NamedParamInfo
-                  { _npiName = UniqueId.toGuid $ fpTag fp
+                  { _npiName = UniqueId.toUUID $ fpTag fp
                   , _npiActions = fieldParamActions binderKind tags fp storedLam
                   }
                 , _fpId = fpIdEntityId param fp
@@ -509,7 +509,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
                   <&> NullParam
             _ ->
                 NamedParamInfo
-                { _npiName = UniqueId.toGuid param
+                { _npiName = UniqueId.toUUID param
                 , _npiActions = funcParamActions
                 } & mkFuncParam paramEntityId lamExprPl
                 <&> VarParam

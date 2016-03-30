@@ -60,7 +60,7 @@ data OuterScopeInfo m = OuterScopeInfo
 Lens.makeLenses ''OuterScopeInfo
 
 data ScopeInfo m = ScopeInfo
-    { _siTagParamInfos :: Map T.Tag TagFieldParam -- tag guids
+    { _siTagParamInfos :: Map T.Tag TagFieldParam -- tag uuids
     , _siNullParams :: Set V.Var
     , -- Each let item potentially has an inline action
       _siLetItems :: Map V.Var (Sugar.BinderVarInline m)

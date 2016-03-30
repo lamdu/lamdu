@@ -51,8 +51,6 @@ Library
                   , Data.Random.Instances
                   , Data.Set.Ordered
                   , Data.Store.Db
-                  , Data.Store.Guid
-                  , Data.Store.Guid.Arbitrary
                   , Data.Store.IRef
                   , Data.Store.Map
                   , Data.Store.Property
@@ -61,6 +59,7 @@ Library
                   , Data.Store.Rev.Version
                   , Data.Store.Rev.View
                   , Data.Store.Transaction
+                  , Data.UUID.Utils
                   , Data.Vector.Vector2
                   , Foreign.C.Types.Instances
                   , Graphics.DrawingCombinators.Utils
@@ -125,6 +124,8 @@ Library
                   , time >= 1.2
                   , transformers >= 0.2.1
                   , utf8-string >= 0.3
+                  , uuid >= 1.3
+                  , uuid-types >= 1.0
   ghc-options:         -O2 -Wall -threaded
   -- ghc-options is prepended to ghc-prof-options
   ghc-prof-options:    -auto-all -caf-all -rtsopts
@@ -165,6 +166,7 @@ Executable lamdu
                   , vector
                   , void >= 0.6.1
                   , wl-pprint >= 1.2
+                  , uuid-types
   if flag(noprettyclass)
     build-depends:  pretty >=1.1.2 && <1.2
   else

@@ -7,7 +7,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -87,7 +87,7 @@ makeExprDefTypeInfo defExpr defI =
 convert ::
     (Monoid a, Monad m) =>
     Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
-    ConvertM m (DefinitionBody Guid m (ExpressionU m a))
+    ConvertM m (DefinitionBody UUID m (ExpressionU m a))
 convert defExpr defI =
     do
         content <-

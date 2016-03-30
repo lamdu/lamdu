@@ -74,7 +74,7 @@ choiceWidgetConfig VersionControl.Config{..} choiceBGLayer = Choice.Config
     }
 
 branchDelegatorId :: Branch t -> Widget.Id
-branchDelegatorId = WidgetIds.fromGuid . Branch.guid
+branchDelegatorId = WidgetIds.fromUUID . Branch.uuid
 
 branchTextEditId :: Branch t -> Widget.Id
 branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
@@ -102,7 +102,7 @@ make VersionControl.Config{..} choiceBGLayer rwtransaction rtransaction actions 
         makeBranchNameEdit branch =
             do
                 nameProp <-
-                    Anchors.assocNameRef (Branch.guid branch) ^. Transaction.mkProperty
+                    Anchors.assocNameRef (Branch.uuid branch) ^. Transaction.mkProperty
                     & Lens.mapped . Property.pSet . Lens.mapped %~ rwtransaction
                     & rtransaction & lift
                 branchNameEdit <-

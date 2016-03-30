@@ -11,6 +11,7 @@ import           Control.Monad.Trans.Writer (WriterT)
 import qualified Control.Monad.Trans.Writer as Writer
 import           Data.Foldable (traverse_)
 import           Data.List.Split (splitOn)
+import           Data.List.Utils (rightPad)
 import qualified Data.Map as Map
 import           Data.Store.Db (Db)
 import qualified Data.Store.Db as Db
@@ -45,21 +46,21 @@ import           Prelude.Compat
 
 type T = Transaction
 
-setName :: (Monad m, UniqueId.ToGuid a) => a -> String -> T m ()
+setName :: (Monad m, UniqueId.ToUUID a) => a -> String -> T m ()
 setName x = setP . Db.assocNameRef $ x
 
 setTagOrder :: Monad m => T.Tag -> Builtins.Order -> T m ()
 setTagOrder = Transaction.setP . assocTagOrder
 
 namedId ::
-    forall a m. (Monad m, IsString a, UniqueId.ToGuid a) => String -> T m a
+    forall a m. (Monad m, IsString a, UniqueId.ToUUID a) => String -> T m a
 namedId name =
     do
-        setName tag name
-        return tag
+        setName ident name
+        return ident
     where
-        tag :: a
-        tag = fromString name
+        ident :: a
+        ident = fromString (rightPad 16 '\x00' name)
 
 forAll :: forall a. TV.VarKind a => Int -> ([a] -> Type) -> Scheme
 forAll count f =
@@ -299,7 +300,7 @@ newBranch :: Monad m => String -> Version m -> T m (Branch m)
 newBranch name ver =
     do
         branch <- Branch.new ver
-        setName (Branch.guid branch) name
+        setName (Branch.uuid branch) name
         return branch
 
 initDB :: Db -> IO ()

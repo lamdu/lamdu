@@ -38,7 +38,7 @@ import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Expr.Nominal (Nominal)
 import qualified Lamdu.Expr.Type as T
-import           Lamdu.Expr.UniqueId (ToGuid)
+import           Lamdu.Expr.UniqueId (ToUUID)
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 
@@ -78,7 +78,7 @@ withVisited l x act =
                 Lens.assign (Lens.cloneLens l . Lens.contains x) True
                 act
 
-readAssocName :: ToGuid a => a -> Export (Maybe String)
+readAssocName :: ToUUID a => a -> Export (Maybe String)
 readAssocName x =
     do
         name <- Anchors.assocNameRef x & Transaction.getP & trans
@@ -114,7 +114,7 @@ recurse val =
         -- TODO: Add a recursion on all ExprLens.subExprs -- that have
         -- a Lam inside them, on the "Var" to export all the var names
         -- too?  OR: alternatively, remove the "name" crap and just
-        -- add the set of all Guids we ever saw to the WriterT, and
+        -- add the set of all UUIDs we ever saw to the WriterT, and
         -- export all associated names/data of all!
         val ^.. ExprLens.valGlobals mempty & traverse_ exportDef
         val ^.. ExprLens.valTags & traverse_ exportTag
@@ -140,7 +140,7 @@ exportRepl =
     & runExport
     <&> snd
 
-setName :: ToGuid a => a -> String -> T ViewM ()
+setName :: ToUUID a => a -> String -> T ViewM ()
 setName x = Transaction.setP (Anchors.assocNameRef x)
 
 importDef :: Definition (Val ()) (V.Var, Maybe String) -> T ViewM ()

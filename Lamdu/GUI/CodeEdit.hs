@@ -99,7 +99,7 @@ makePanes defaultDelDest (Property panes setPanes) =
                     let newPanes = removeAt i panes
                     setPanes newPanes
                     newPanes ^? Lens.ix i
-                        & maybe defaultDelDest (WidgetIds.fromGuid . IRef.guid)
+                        & maybe defaultDelDest (WidgetIds.fromUUID . IRef.uuid)
                         & return
             | otherwise = Nothing
         movePane oldIndex newIndex =

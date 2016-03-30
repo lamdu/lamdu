@@ -16,7 +16,7 @@ import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import           Data.Maybe.Utils (maybeToMPlus)
 import qualified Data.Set as Set
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -162,7 +162,7 @@ mkAppliedHoleOptions ::
     Expression name m a ->
     Input.Payload m a ->
     ExprIRef.ValIProperty m ->
-    [HoleOption Guid m]
+    [HoleOption UUID m]
 mkAppliedHoleOptions sugarContext argI argS exprPl stored =
     [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ] ++
     [ P.record
@@ -186,7 +186,7 @@ mkAppliedHoleSuggesteds ::
     Val (Input.Payload m a) ->
     Input.Payload m a ->
     ExprIRef.ValIProperty m ->
-    T m [HoleOption Guid m]
+    T m [HoleOption UUID m]
 mkAppliedHoleSuggesteds sugarContext argI exprPl stored =
     Suggest.valueConversion Load.nominal Nothing (argI <&> onPl)
     <&> (`runStateT` (sugarContext ^. ConvertM.scInferContext))
@@ -216,7 +216,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                       & rPayload . plActions . wrap .~ WrappedAlready storedEntityId
                       & rPayload . plActions . setToHole .~
                         SetWrapperToHole
-                        ( exprPl ^. Input.stored & DataOps.setToHole <&> guidEntityId )
+                        ( exprPl ^. Input.stored & DataOps.setToHole <&> uuidEntityId )
                 , _haUnwrap =
                       if isTypeMatch
                       then unwrap (exprPl ^. Input.stored)
@@ -241,12 +241,12 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
             <&> rPayload . plData <>~ funcI ^. V.payload . Input.userData
             <&> rPayload . plActions . wrap .~ WrapperAlready storedEntityId
     where
-        storedEntityId = exprPl ^. Input.stored & Property.value & guidEntityId
-        guidEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
+        storedEntityId = exprPl ^. Input.stored & Property.value & uuidEntityId
+        uuidEntityId valI = (UniqueId.toUUID valI, EntityId.ofValI valI)
 
 convertAppliedCase ::
     (Monad m, Monoid a) =>
-    Body Guid m (ExpressionU m a) -> Input.Payload m a ->
+    Body UUID m (ExpressionU m a) -> Input.Payload m a ->
     ExpressionU m a -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedCase (BodyCase caseB) casePl argS exprPl =

@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings #-}
 module Lamdu.Sugar.Internal.EntityId
     ( EntityId
     , bs
@@ -15,8 +15,8 @@ module Lamdu.Sugar.Internal.EntityId
 
 import           Data.ByteString (ByteString)
 import           Data.Hashable (Hashable)
-import           Data.Store.Guid (Guid)
-import qualified Data.Store.Guid as Guid
+import           Data.UUID.Types (UUID)
+import qualified Data.UUID.Utils as UUIDUtils
 import           Data.Store.IRef (IRef)
 import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -26,35 +26,35 @@ import           Lamdu.Expr.Val (Val)
 import qualified Lamdu.Expr.Val as V
 import           System.Random (RandomGen)
 
-newtype EntityId = EntityId Guid
+newtype EntityId = EntityId UUID
     deriving (Eq, Hashable, Show)
 
 bs :: EntityId -> ByteString
-bs (EntityId guid) = Guid.bs guid
+bs (EntityId uuid) = UUIDUtils.toSBS16 uuid
 
 randomizeExprAndParams ::
     RandomGen gen => gen -> Val (EntityId -> a) -> Val a
 randomizeExprAndParams gen =
     GenIds.randomizeExprAndParams gen . fmap (. EntityId)
 
-augment :: String -> EntityId -> EntityId
-augment str (EntityId x) = EntityId $ Guid.augment str x
+augment :: ByteString -> EntityId -> EntityId
+augment str (EntityId x) = EntityId $ UUIDUtils.augment str x
 
 ofIRef :: IRef m a -> EntityId
-ofIRef = EntityId . UniqueId.toGuid
+ofIRef = EntityId . UniqueId.toUUID
 
 ofValI :: ExprIRef.ValI m -> EntityId
 ofValI = ofIRef . ExprIRef.unValI
 
 ofTId :: T.NominalId -> EntityId
-ofTId = EntityId . UniqueId.toGuid
+ofTId = EntityId . UniqueId.toUUID
 
 ofLambdaParam :: V.Var -> EntityId
-ofLambdaParam = EntityId . UniqueId.toGuid
+ofLambdaParam = EntityId . UniqueId.toUUID
 
 ofLambdaTagParam :: V.Var -> T.Tag -> EntityId
 ofLambdaTagParam v p =
-    EntityId $ Guid.combine (UniqueId.toGuid v) (UniqueId.toGuid p)
+    EntityId $ UUIDUtils.combine (UniqueId.toUUID v) (UniqueId.toUUID p)
 
 ofInjectTag :: EntityId -> EntityId
 ofInjectTag = augment "tag"

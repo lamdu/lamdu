@@ -66,31 +66,31 @@ type RevisionProps m = Revision (MkProperty m) m
 makePane :: DefI m -> Pane m
 makePane = id
 
-assocNameRef :: (UniqueId.ToGuid a, Monad m) => a -> MkProperty m String
-assocNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toGuid
+assocNameRef :: (UniqueId.ToUUID a, Monad m) => a -> MkProperty m String
+assocNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toUUID
 
 assocScopeRef ::
-    (UniqueId.ToGuid a, Monad m) => a -> MkProperty m (Maybe BinderParamScopeId)
-assocScopeRef = Transaction.assocDataRef "ScopeId" . UniqueId.toGuid
+    (UniqueId.ToUUID a, Monad m) => a -> MkProperty m (Maybe BinderParamScopeId)
+assocScopeRef = Transaction.assocDataRef "ScopeId" . UniqueId.toUUID
 
 assocTagOrder :: Monad m => T.Tag -> MkProperty m Int
-assocTagOrder = Transaction.assocDataRefDef 0 "Order" . UniqueId.toGuid
+assocTagOrder = Transaction.assocDataRefDef 0 "Order" . UniqueId.toUUID
 
 type ParamList = [T.Tag]
 
 assocFieldParamList ::
     Monad m => ValI m -> Transaction.MkProperty m (Maybe ParamList)
 assocFieldParamList lambdaI =
-    Transaction.assocDataRef "field param list" $ UniqueId.toGuid lambdaI
+    Transaction.assocDataRef "field param list" $ UniqueId.toUUID lambdaI
 
 data PresentationMode = OO | Verbose | Infix Int
     deriving (Eq, Ord, Show, Generic)
 instance Binary PresentationMode
 
 assocPresentationMode ::
-    (UniqueId.ToGuid a, Monad m) =>
+    (UniqueId.ToUUID a, Monad m) =>
     a -> Transaction.MkProperty m PresentationMode
 assocPresentationMode =
-    Transaction.assocDataRefDef Verbose "PresentationMode" . UniqueId.toGuid
+    Transaction.assocDataRefDef Verbose "PresentationMode" . UniqueId.toUUID
 
 Lens.makeLenses ''BinderParamScopeId

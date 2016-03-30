@@ -254,13 +254,13 @@ factorialExpr =
 
 -- recurseScopeTest =
 --   testCase "recurse scope (f x = f ?<verify scope>)" $
---   assertEqual "scope must match" (fmap void scope) (Map.fromList [(xGuid, pureHole)])
+--   assertEqual "scope must match" (fmap void scope) (Map.fromList [(xUUID, pureHole)])
 --   where
 --     scope = runSuccessfulM (derefWithPL =<< loadInferDef expr) ^?! scopeAtPoint
 --     iset = holeWithInferredType set
 --     -- TODO: Use proper infrastructure
 --     expr = lambda "x" iset . const $ recurse (hole ~> hole) $$ hole
---     xGuid = expr ^?! ExprLens.exprKindedLam KVal . _1
+--     xUUID = expr ^?! ExprLens.exprKindedLam KVal . _1
 --     scopeAtPoint =
 --       lamResult KVal .
 --       ExprLens.exprApply . V.applyArg .

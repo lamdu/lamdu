@@ -10,7 +10,7 @@ import           Control.Monad (void)
 import qualified Data.Map as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (MkProperty)
@@ -86,11 +86,11 @@ convertRedex ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
     Redex (Input.Payload m a) ->
-    ConvertM m (Let Guid m (ExpressionU m a))
+    ConvertM m (Let UUID m (ExpressionU m a))
 convertRedex expr redex =
     do
         value <-
-            convertBinder binderKind defGuid (redexArg redex)
+            convertBinder binderKind defUUID (redexArg redex)
             & localNewExtractDestPos expr
         actions <-
             mkLetIActions (expr ^. V.payload . Input.stored)
@@ -110,7 +110,7 @@ convertRedex expr redex =
                 & bBody . bbContent . SugarLens.binderContentExpr . rPayload . plData <>~
                 redexHiddenPayloads redex ^. Lens.traversed . Input.userData
             , _lActions = actions
-            , _lName = UniqueId.toGuid param
+            , _lName = UniqueId.toUUID param
             , _lAnnotation = ann
             , _lBodyScope = redexBodyScope redex
             , _lBody = letBody
@@ -122,13 +122,13 @@ convertRedex expr redex =
           <&> Lens.mapped %~ (^. Input.stored)
           & BinderKindLet
       V.Lam param body = redexLam redex
-      defGuid = UniqueId.toGuid param
+      defUUID = UniqueId.toUUID param
       defEntityId = EntityId.ofLambdaParam param
 
 makeBinderContent ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m (BinderContent Guid m (ExpressionU m a))
+    ConvertM m (BinderContent UUID m (ExpressionU m a))
 makeBinderContent expr =
     case checkForRedex expr of
     Nothing ->
@@ -139,7 +139,7 @@ makeBinderContent expr =
 makeBinderBody ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m (BinderBody Guid m (ExpressionU m a))
+    ConvertM m (BinderBody UUID m (ExpressionU m a))
 makeBinderBody expr =
     do
         content <- makeBinderContent expr
@@ -154,7 +154,7 @@ makeBinder :: (Monad m, Monoid a) =>
     MkProperty m (Maybe BinderParamScopeId) ->
     Maybe (MkProperty m PresentationMode) ->
     ConventionalParams m -> Val (Input.Payload m a) ->
-    ConvertM m (Binder Guid m (ExpressionU m a))
+    ConvertM m (Binder UUID m (ExpressionU m a))
 makeBinder chosenScopeProp mPresentationModeProp ConventionalParams{..} funcBody =
     do
         binderBody <-
@@ -197,28 +197,28 @@ convertLam lam@(V.Lam _ lamBody) exprPl =
                   <$ deleteLam
                   & SetToInnerExpr
                 | otherwise = NoInnerExpr
-        let paramGuids =
+        let paramUUIDs =
                 binder ^.. bParams . SugarLens.binderNamedParams .
                 Lens.traversed . npiName
                 & Set.fromList
         let lambda
-                | useNormalLambda paramGuids binder =
+                | useNormalLambda paramUUIDs binder =
                     Lambda NormalBinder binder
                 | otherwise =
                     binder
-                    & bBody . Lens.traverse %~ markLightParams paramGuids
+                    & bBody . Lens.traverse %~ markLightParams paramUUIDs
                     & Lambda LightLambda
         BodyLam lambda
             & addActions exprPl
             <&> rPayload . plActions . setToInnerExpr .~ setToInnerExprAction
 
-useNormalLambda :: Set Guid -> Binder Guid m (Expression Guid m a) -> Bool
-useNormalLambda paramGuids binder =
+useNormalLambda :: Set UUID -> Binder UUID m (Expression UUID m a) -> Bool
+useNormalLambda paramUUIDs binder =
     any (binder &)
     [ Lens.hasn't (bParams . _FieldParams)
     , Lens.has (bBody . bbContent . _BinderLet)
     , Lens.has (bBody . Lens.traverse . SugarLens.payloadsOf forbiddenLightLamSubExprs)
-    , not . allParamsUsed paramGuids
+    , not . allParamsUsed paramUUIDs
     ]
     where
         forbiddenLightLamSubExprs :: Lens.Fold (Body name m a) ()
@@ -229,9 +229,9 @@ useNormalLambda paramGuids binder =
         check :: Lens.Fold a ()
         check = const () & Lens.to
 
-allParamsUsed :: Set Guid -> Binder Guid m (Expression Guid m a) -> Bool
-allParamsUsed paramGuids binder =
-    Set.null (paramGuids `Set.difference` usedParams)
+allParamsUsed :: Set UUID -> Binder UUID m (Expression UUID m a) -> Bool
+allParamsUsed paramUUIDs binder =
+    Set.null (paramUUIDs `Set.difference` usedParams)
     where
         usedParams =
             binder ^.. Lens.traverse . SugarLens.subExprPayloads . Lens.asIndex .
@@ -239,11 +239,11 @@ allParamsUsed paramGuids binder =
             & Set.fromList
 
 markLightParams ::
-    Monad m => Set Guid -> ExpressionU m a -> ExpressionU m a
-markLightParams paramGuids (Expression body pl) =
+    Monad m => Set UUID -> ExpressionU m a -> ExpressionU m a
+markLightParams paramUUIDs (Expression body pl) =
     case body of
     BodyGetVar (GetParam n)
-        | Set.member (n ^. pNameRef . nrName) paramGuids ->
+        | Set.member (n ^. pNameRef . nrName) paramUUIDs ->
             n
             & pBinderMode .~ LightLambda
             & GetParam & BodyGetVar
@@ -251,28 +251,28 @@ markLightParams paramGuids (Expression body pl) =
         h
         & holeActions . holeOptions . Lens.mapped . Lens.traversed . hoResults
         . Lens.mapped . _2 . Lens.mapped . holeResultConverted
-            %~ markLightParams paramGuids
+            %~ markLightParams paramUUIDs
         & BodyHole
-    _ -> body <&> markLightParams paramGuids
+    _ -> body <&> markLightParams paramUUIDs
     & (`Expression` pl)
 
 -- Let-item or definition (form of <name> [params] = <body>)
 convertBinder ::
-    (Monad m, Monoid a) => BinderKind m -> Guid ->
-    Val (Input.Payload m a) -> ConvertM m (Binder Guid m (ExpressionU m a))
-convertBinder binderKind defGuid expr =
+    (Monad m, Monoid a) => BinderKind m -> UUID ->
+    Val (Input.Payload m a) -> ConvertM m (Binder UUID m (ExpressionU m a))
+convertBinder binderKind defUUID expr =
     do
         (convParams, funcBody) <- convertParams binderKind expr
         let mPresentationModeProp
                 | Lens.has (cpParams . _FieldParams) convParams =
-                    Just $ Anchors.assocPresentationMode defGuid
+                    Just $ Anchors.assocPresentationMode defUUID
                 | otherwise = Nothing
-        makeBinder (Anchors.assocScopeRef defGuid) mPresentationModeProp
+        makeBinder (Anchors.assocScopeRef defUUID) mPresentationModeProp
             convParams funcBody
 
 convertDefinitionBinder ::
     (Monad m, Monoid a) =>
     DefI m -> Val (Input.Payload m a) ->
-    ConvertM m (Binder Guid m (ExpressionU m a))
+    ConvertM m (Binder UUID m (ExpressionU m a))
 convertDefinitionBinder defI =
-    convertBinder (BinderKindDef defI) (IRef.guid defI)
+    convertBinder (BinderKindDef defI) (IRef.uuid defI)

@@ -10,22 +10,17 @@ module Lamdu.Builtins.Anchors
     , Order, anchorTags
     ) where
 
-import qualified Data.Store.Guid as Guid
+import           Data.List.Utils (rightPad)
 import           Data.String (IsString(..))
 import           Lamdu.Expr.Type (Tag)
 import qualified Lamdu.Expr.Type as T
 
-rightPad :: Int -> a -> [a] -> [a]
-rightPad l x xs
-    | len >= l = xs
-    | otherwise = xs ++ replicate (l - len) x
-    where
-        len = length xs
-
--- We want the translation to Guid and back to not be lossy, so we
--- canonize to Guid format
+-- We want the translation to UUID and back to not be lossy, so we
+-- canonize to UUID format
 bi :: IsString a => String -> a
-bi = fromString . rightPad Guid.length '\x00' . ("BI:" ++)
+bi = fromString . rightPad uuidLength '\x00' . ("BI:" ++)
+    where
+        uuidLength = 16
 
 objTag :: Tag
 objTag = bi "object"

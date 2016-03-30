@@ -12,7 +12,7 @@ import           Data.CurAndPrev (CurAndPrev)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import           Data.Store.Property (Property)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
@@ -50,7 +50,7 @@ type T = Transaction
 
 convertDefIBuiltin ::
     Monad m => Definition.Builtin -> DefI m ->
-    DefinitionBody Guid m (ExpressionU m [EntityId])
+    DefinitionBody UUID m (ExpressionU m [EntityId])
 convertDefIBuiltin (Definition.Builtin name scheme) defI =
     DefinitionBodyBuiltin DefinitionBuiltin
     { _biName = name
@@ -176,7 +176,7 @@ convertInferDefExpr ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeProps m ->
     Definition.Expr (Val (ValIProperty m)) -> DefI m ->
-    T m (DefinitionBody Guid m (ExpressionU m [EntityId]))
+    T m (DefinitionBody UUID m (ExpressionU m [EntityId]))
 convertInferDefExpr evalRes cp defExpr defI =
     do
         (valInferred, newInferContext) <-
@@ -211,7 +211,7 @@ convertDefI evalRes cp (Definition.Definition body defI) =
         bodyS <- convertDefBody body
         return Definition
             { _drEntityId = EntityId.ofIRef defI
-            , _drName = UniqueId.toGuid defI
+            , _drName = UniqueId.toUUID defI
             , _drBody = bodyS
             }
     where

@@ -8,6 +8,7 @@ module Data.List.Utils
     , match
     , isLengthAtLeast
     , withPrevNext
+    , rightPad
     ) where
 
 import qualified Control.Lens as Lens
@@ -15,6 +16,13 @@ import           Control.Lens.Operators
 import           Data.Function (on)
 import           Data.List (groupBy, sortBy, minimumBy)
 import           Data.Ord (comparing)
+
+rightPad :: Int -> a -> [a] -> [a]
+rightPad l x xs
+    | len >= l = xs
+    | otherwise = xs ++ replicate (l - len) x
+    where
+        len = length xs
 
 groupOn :: Eq b => (a -> b) -> [a] -> [[a]]
 groupOn = groupBy . on (==)

@@ -21,7 +21,7 @@ import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -83,7 +83,7 @@ mkHoleOptionFromInjected ::
     Monad m =>
     ConvertM.Context m ->
     Input.Payload m a -> ExprIRef.ValIProperty m ->
-    Val (Type, Maybe (Input.Payload m a)) -> HoleOption Guid m
+    Val (Type, Maybe (Input.Payload m a)) -> HoleOption UUID m
 mkHoleOptionFromInjected sugarContext exprPl stored val =
     HoleOption
     { _hoVal = baseExpr
@@ -115,7 +115,7 @@ mkHoleOption ::
     Monad m => ConvertM.Context m ->
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ExprIRef.ValIProperty m ->
-    BaseExpr -> HoleOption Guid m
+    BaseExpr -> HoleOption UUID m
 mkHoleOption sugarContext mInjectedArg exprPl stored val =
     HoleOption
     { _hoVal = v
@@ -128,7 +128,7 @@ mkHoleOption sugarContext mInjectedArg exprPl stored val =
 mkHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m -> Maybe (Val (Input.Payload m a)) ->
-    Input.Payload m a -> ExprIRef.ValIProperty m -> [HoleOption Guid m]
+    Input.Payload m a -> ExprIRef.ValIProperty m -> [HoleOption UUID m]
 mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
     exprPl ^. Input.inferred
     & Suggest.value
@@ -137,7 +137,7 @@ mkHoleSuggesteds sugarContext mInjectedArg exprPl stored =
 
 addSuggestedOptions ::
     Monad m =>
-    [HoleOption Guid m] -> [HoleOption Guid m] -> [HoleOption Guid m]
+    [HoleOption UUID m] -> [HoleOption UUID m] -> [HoleOption UUID m]
 addSuggestedOptions suggesteds options
     | null nonTrivial = options
     | otherwise = nonTrivial ++ filter (not . equivalentToSuggested) options
@@ -150,7 +150,7 @@ mkOptions ::
     Monad m => ConvertM.Context m ->
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ExprIRef.ValIProperty m ->
-    T m [HoleOption Guid m]
+    T m [HoleOption UUID m]
 mkOptions sugarContext mInjectedArg exprPl stored =
     do
         nominalTids <-
@@ -189,7 +189,7 @@ mkWritableHoleActions ::
     (Monad m) =>
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a -> ExprIRef.ValIProperty m ->
-    ConvertM m (HoleActions Guid m)
+    ConvertM m (HoleActions UUID m)
 mkWritableHoleActions mInjectedArg exprPl stored = do
     sugarContext <- ConvertM.readContext
     let mkOption =
@@ -212,7 +212,7 @@ mkWritableHoleActions mInjectedArg exprPl stored = do
               & V.LLiteral & Pure.leaf
               & Pure.toNom Builtins.textTid
               & mkOption
-        , _holeGuid = UniqueId.toGuid $ ExprIRef.unValI $ Property.value stored
+        , _holeUUID = UniqueId.toUUID $ ExprIRef.unValI $ Property.value stored
         }
 
 -- Ignoring alpha-renames:
@@ -272,7 +272,7 @@ sugar sugarContext exprPl val =
 mkHole ::
     (Monad m, Monoid a) =>
     Maybe (Val (Input.Payload m a)) ->
-    Input.Payload m a -> ConvertM m (Hole Guid m (ExpressionU m a))
+    Input.Payload m a -> ConvertM m (Hole UUID m (ExpressionU m a))
 mkHole mInjectedArg exprPl = do
     actions <- mkWritableHoleActions mInjectedArg exprPl (exprPl ^. Input.stored)
     pure Hole
@@ -310,7 +310,7 @@ writeConvertTypeChecked ::
     , Val (ExprIRef.ValIProperty m, Input.Payload m a)
     )
 writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
-    -- With the real stored guids:
+    -- With the real stored uuids:
     writtenExpr <-
         inferredVal
         <&> intoStorePoint
@@ -322,13 +322,13 @@ writeConvertTypeChecked holeEntityId sugarContext holeStored inferredVal = do
         -- The sugar convert must apply *inside* the forked transaction
         -- upon the *written* expr because we actually make use of the
         -- resulting actions (e.g: press ',' on a list hole result).
-        -- However, the written expr goes crazy with new guids every time.
+        -- However, the written expr goes crazy with new uuids every time.
         --
         -- So, we do something a bit odd: Take the written expr with
         -- its in-tact stored allowing actions to be built correctly
         -- but replace the Input.entityId with determinstic/consistent
         -- pseudo-random generated ones that preserve proper
-        -- animations and cursor navigation. The guids are kept as
+        -- animations and cursor navigation. The uuids are kept as
         -- metadata anchors.
 
         makeConsistentPayload (False, (_, pl)) entityId = pl
@@ -605,7 +605,7 @@ mkHoleResult ::
     Monad m =>
     ConvertM.Context m -> EntityId ->
     ExprIRef.ValIProperty m -> HoleResultVal m IsInjected ->
-    T m (HoleResult Guid m)
+    T m (HoleResult UUID m)
 mkHoleResult sugarContext entityId stored val =
     do
         ((fConverted, fConsistentExpr, fWrittenExpr), forkedChanges) <-
@@ -637,7 +637,7 @@ mkHoleResults ::
     ConvertM.Context m ->
     Input.Payload m dummy -> ExprIRef.ValIProperty m ->
     BaseExpr ->
-    ListT (T m) (HoleResultScore, T m (HoleResult Guid m))
+    ListT (T m) (HoleResultScore, T m (HoleResult UUID m))
 mkHoleResults mInjectedArg sugarContext exprPl stored base =
     do
         (val, inferContext) <-

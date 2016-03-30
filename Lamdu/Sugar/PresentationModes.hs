@@ -5,7 +5,7 @@ module Lamdu.Sugar.PresentationModes
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
@@ -14,8 +14,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 type T = Transaction
 
-indirectDefinitionGuid :: ExpressionU m pl -> Maybe Guid
-indirectDefinitionGuid funcS =
+indirectDefinitionUUID :: ExpressionU m pl -> Maybe UUID
+indirectDefinitionUUID funcS =
     case funcS ^. Sugar.rBody of
     Sugar.BodyGetVar
         (Sugar.GetBinder
@@ -27,7 +27,7 @@ indirectDefinitionPresentationMode ::
     Monad m => ExpressionU m pl -> T m (Maybe Sugar.PresentationMode)
 indirectDefinitionPresentationMode =
     Lens.traverse (Transaction.getP . Anchors.assocPresentationMode) .
-    indirectDefinitionGuid
+    indirectDefinitionUUID
 
 addToApply ::
     Monad m =>
@@ -56,10 +56,10 @@ addToApply a =
     _ -> return a
 
 addToHoleResult ::
-    Monad m => Sugar.HoleResult Guid m -> T m (Sugar.HoleResult Guid m)
+    Monad m => Sugar.HoleResult UUID m -> T m (Sugar.HoleResult UUID m)
 addToHoleResult = Sugar.holeResultConverted %%~ addToExpr
 
-addToHole :: Monad m => Sugar.Hole Guid m a -> Sugar.Hole Guid m a
+addToHole :: Monad m => Sugar.Hole UUID m a -> Sugar.Hole UUID m a
 addToHole =
     Sugar.holeActions . Sugar.holeOptions .
     Lens.mapped . Lens.mapped . Sugar.hoResults . Lens.mapped .
@@ -78,27 +78,27 @@ addToExpr e =
 
 addToBinder ::
     Monad m =>
-    Sugar.Binder Guid m (ExpressionU m pl) ->
-    T m (Sugar.Binder Guid m (ExpressionU m pl))
+    Sugar.Binder UUID m (ExpressionU m pl) ->
+    T m (Sugar.Binder UUID m (ExpressionU m pl))
 addToBinder = Sugar.bBody %%~ addToBinderBody
 
 addToBinderBody ::
     Monad m =>
-    Sugar.BinderBody Guid m (ExpressionU m pl) ->
-    T m (Sugar.BinderBody Guid m (ExpressionU m pl))
+    Sugar.BinderBody UUID m (ExpressionU m pl) ->
+    T m (Sugar.BinderBody UUID m (ExpressionU m pl))
 addToBinderBody = Sugar.bbContent %%~ addToBinderContent
 
 addToBinderContent ::
     Monad m =>
-    Sugar.BinderContent Guid m (ExpressionU m pl) ->
-    T m (Sugar.BinderContent Guid m (ExpressionU m pl))
+    Sugar.BinderContent UUID m (ExpressionU m pl) ->
+    T m (Sugar.BinderContent UUID m (ExpressionU m pl))
 addToBinderContent (Sugar.BinderExpr e) = addToExpr e <&> Sugar.BinderExpr
 addToBinderContent (Sugar.BinderLet l) = addToLet l <&> Sugar.BinderLet
 
 addToLet ::
     Monad m =>
-    Sugar.Let Guid m (ExpressionU m pl) ->
-    T m (Sugar.Let Guid m (ExpressionU m pl))
+    Sugar.Let UUID m (ExpressionU m pl) ->
+    T m (Sugar.Let UUID m (ExpressionU m pl))
 addToLet letItem =
     letItem
     & Sugar.lValue %%~ addToBinder
@@ -106,8 +106,8 @@ addToLet letItem =
 
 addToDef ::
     Monad m =>
-    Sugar.Definition Guid m (ExpressionU m a) ->
-    T m (Sugar.Definition Guid m (ExpressionU m a))
+    Sugar.Definition UUID m (ExpressionU m a) ->
+    T m (Sugar.Definition UUID m (ExpressionU m a))
 addToDef def =
     def
     & Sugar.drBody . Sugar._DefinitionBodyExpression .

@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Nominal
 import           Control.Lens.Operators
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Either.Utils (runMatcherT, justToLeft)
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import           Lamdu.Expr.Val (Val(..))
 import qualified Lamdu.Expr.Val as V
 import           Lamdu.Sugar.Convert.Expression.Actions (addActionsWithSetToInner)
@@ -27,7 +27,7 @@ convertFromNom = convert BodyFromNom
 
 convert ::
     (Monad m, Monoid a) =>
-    (Nominal Guid (ExpressionU m a) -> BodyU m b) ->
+    (Nominal UUID (ExpressionU m a) -> BodyU m b) ->
     V.Nom (Val (Input.Payload m a)) ->
     Input.Payload m b -> ConvertM m (ExpressionU m b)
 convert f (V.Nom tid val) exprPl =

@@ -1,10 +1,10 @@
 module Data.Store.Rev.Branch
-    (Branch, guid, new, move, curVersion, newVersion)
+    (Branch, uuid, new, move, curVersion, newVersion)
 where
 
 import           Control.Lens.Operators
 import           Data.Foldable (traverse_)
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import qualified Data.Store.IRef as IRef
 import           Data.Store.Rev.Change (Change)
 import           Data.Store.Rev.Version (Version)
@@ -13,8 +13,8 @@ import           Data.Store.Rev.ViewBranchInternal (BranchData(..), Branch(..), 
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 
-guid :: Branch t -> Guid
-guid = IRef.guid . unBranch
+uuid :: Branch t -> UUID
+uuid = IRef.uuid . unBranch
 
 move :: Monad m => Branch m -> Version m -> Transaction m ()
 move (Branch dataIRef) destVersion = do

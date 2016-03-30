@@ -88,7 +88,7 @@ mkActions stored =
             , _extract = ext
             } & return
     where
-        addEntityId valI = (UniqueId.toGuid valI, EntityId.ofValI valI)
+        addEntityId valI = (UniqueId.toUUID valI, EntityId.ofValI valI)
 
 makeSetToInner ::
     Monad m => Input.Payload m a -> V.Val (Input.Payload m b) ->

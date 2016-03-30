@@ -9,7 +9,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (void)
 import           Data.Maybe.Utils (unsafeUnjust)
-import           Data.Store.Guid (Guid)
+import           Data.UUID.Types (UUID)
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
@@ -31,8 +31,8 @@ import           Lamdu.Sugar.Types
 plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
 plValI = Input.stored . Property.pVal
 
-convertTag :: EntityId -> T.Tag -> TagG Guid
-convertTag inst tag = TagG inst tag $ UniqueId.toGuid tag
+convertTag :: EntityId -> T.Tag -> TagG UUID
+convertTag inst tag = TagG inst tag $ UniqueId.toUUID tag
 
 deleteField ::
     Monad m =>
@@ -78,7 +78,7 @@ convertField ::
     ExprIRef.ValIProperty m ->
     ExprIRef.ValI m -> Record name m (ExpressionU m a) ->
     EntityId -> T.Tag -> Val (Input.Payload m a) ->
-    ConvertM m (RecordField Guid m (ExpressionU m a))
+    ConvertM m (RecordField UUID m (ExpressionU m a))
 convertField stored restI restS inst tag expr =
     do
         exprS <- ConvertM.convertSubexpression expr

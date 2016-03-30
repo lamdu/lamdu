@@ -33,7 +33,7 @@ convertGetFieldParam (V.GetField recExpr tag) exprPl =
             guard $ param == ConvertM.tpiFromParameters paramInfo
             GetParam Param
                 { _pNameRef = NameRef
-                  { _nrName = UniqueId.toGuid tag
+                  { _nrName = UniqueId.toUUID tag
                   , _nrGotoDefinition = return (ConvertM.tpiJumpTo paramInfo)
                   }
                 , _pForm = GetFieldParameter
@@ -52,7 +52,7 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
         TagG
         { _tagInstance = EntityId.ofGetFieldTag entityId
         , _tagVal = tag
-        , _tagGName = UniqueId.toGuid tag
+        , _tagGName = UniqueId.toUUID tag
         }
     }
     & traverse ConvertM.convertSubexpression

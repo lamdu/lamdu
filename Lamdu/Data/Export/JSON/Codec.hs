@@ -249,7 +249,7 @@ decodeLeaf json =
     , decodeIdent json <&> V.Var <&> V.LVar
     ]
 
--- TODO: Should we export the Guids of subexprs?
+-- TODO: Should we export the UUIDs of subexprs?
 encodeVal :: Encoder (Val (ValI m))
 encodeVal (Val _ body) =
     case body <&> encodeVal of

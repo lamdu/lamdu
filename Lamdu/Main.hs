@@ -323,7 +323,7 @@ memoizeMakeWidget mkWidget =
             )
 
 rootCursor :: Widget.Id
-rootCursor = WidgetIds.fromGuid $ IRef.guid $ DbLayout.panes DbLayout.codeIRefs
+rootCursor = WidgetIds.fromUUID $ IRef.uuid $ DbLayout.panes DbLayout.codeIRefs
 
 mkWidgetWithFallback ::
     (forall a. T DbLayout.DbM a -> IO a) ->
