@@ -140,9 +140,8 @@ jsum parsers =
 decodeFlatComposite :: Decoder (FlatComposite p)
 decodeFlatComposite json =
     jsum
-    [ Aeson.parseJSON json
-      >>= \(encodedFields, encodedIdent) ->
-      do
+    [ do
+          (encodedFields, encodedIdent) <- Aeson.parseJSON json
           fields <- decodeFields encodedFields
           tv <- decodeIdent encodedIdent <&> T.Var
           FlatComposite fields (Just tv) & return
@@ -176,7 +175,9 @@ decodeType (Aeson.String "TODO:TPrim") = error "TODO:TPrim"
 decodeType json =
     Aeson.withObject "Type" ?? json $ \o ->
     jsum
-    [ o .: "TFun" >>= \(a, b) -> T.TFun <$> decodeType a <*> decodeType b
+    [ do
+          (a, b) <- o .: "TFun"
+          T.TFun <$> decodeType a <*> decodeType b
     , o .: "record" >>= decodeComposite <&> T.TRecord
     , o .: "sum" >>= decodeComposite <&> T.TSum
     , o .: "TVar" >>= decodeIdent <&> T.Var <&> T.TVar
@@ -296,7 +297,7 @@ encodeValBody body =
         Aeson.object ["fromNomId" .= encodeIdent nomId, "fromNomVal" .= val]
     V.BLeaf leaf -> encodeLeaf leaf
 
-decodeValBody :: AesonTypes.FromJSON a => Encoded -> AesonTypes.Parser (V.Body (Val a))
+decodeValBody :: AesonTypes.FromJSON a => Decoder (V.Body (Val a))
 decodeValBody json =
     (decodeLeaf json <&> V.BLeaf)
     <|>
@@ -437,9 +438,8 @@ decodeDef ::
      (Anchors.PresentationMode, Maybe String, V.Var))
 decodeDef =
     Aeson.withObject "def" $ \obj ->
-    decodeNamed "def" decodeDefBody (Aeson.Object obj) >>=
-    \((mName, globalId), body) ->
     do
+        ((mName, globalId), body) <- decodeNamed "def" decodeDefBody (Aeson.Object obj)
         presentationMode <- obj .: "defPresentationMode" >>= decodePresentationMode
         Definition body (presentationMode, mName, V.Var globalId) & return
 
