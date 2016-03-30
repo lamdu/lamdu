@@ -39,7 +39,7 @@ mkEditEventMap ::
     Monad m => String -> T m (Guid, Sugar.EntityId) -> Widget.EventHandlers (T m)
 mkEditEventMap valText setToHole =
     Widget.keysEventMapMovesCursor [ModKey mempty GLFW.Key'Enter]
-    (E.Doc ["Edit", "Double"]) $
+    (E.Doc ["Edit", "Value"]) $
     do
         (guid, entityId) <- setToHole
         setHoleStateAndJump guid (HoleState valText) entityId
