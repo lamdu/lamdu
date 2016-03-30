@@ -13,6 +13,8 @@ import           Data.Foldable (traverse_)
 import           Data.List.Split (splitOn)
 import           Data.List.Utils (rightPad)
 import qualified Data.Map as Map
+import           Data.Set (Set)
+import qualified Data.Set as Set
 import           Data.Store.Db (Db)
 import qualified Data.Store.Db as Db
 import           Data.Store.Rev.Branch (Branch)
@@ -83,9 +85,9 @@ sumType =
         f (Ctor tag typ) = T.CExtend tag typ
 
 data Public m = Public
-    { publicDefs :: [DefI m]
-    , publicTags :: [T.Tag]
-    , publicTIds :: [T.NominalId]
+    { publicDefs :: Set (DefI m)
+    , publicTags :: Set T.Tag
+    , publicTIds :: Set T.NominalId
     }
 
 instance Monoid (Public m) where
@@ -112,20 +114,20 @@ blessAnchors =
         lift $ setName Builtins.textTid "Text"
         lift $ setName Builtins.arrayTid "Array"
         lift $ setName Builtins.valTypeParamId "val"
-        Writer.tell $ mempty { publicTIds = [Builtins.streamTid, Builtins.textTid] }
+        Writer.tell $ mempty { publicTIds = Set.fromList [Builtins.streamTid, Builtins.textTid] }
     where
         describeAnchorTag (order, tag, name) =
             do
                 lift $ setName tag name
                 lift $ setTagOrder tag order
-                Writer.tell $ mempty { publicTags = [tag] }
+                Writer.tell $ mempty { publicTags = Set.singleton tag }
 
 newTId :: Monad m => String -> M m T.NominalId
-newTId n = publicize (namedId n) $ \x -> mempty { publicTIds = [x] }
+newTId n = publicize (namedId n) $ \x -> mempty { publicTIds = Set.singleton x }
 
 newPublicDef ::
     Monad m => m (DefI n) -> WriterT (Public n) m (DefI n)
-newPublicDef act = publicize act $ \x -> mempty { publicDefs = [x] }
+newPublicDef act = publicize act $ \x -> mempty { publicDefs = Set.singleton x }
 
 type TypeCtor = [Type] -> Type
 

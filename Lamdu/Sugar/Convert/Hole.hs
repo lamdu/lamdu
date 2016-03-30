@@ -21,10 +21,11 @@ import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
-import           Data.UUID.Types (UUID)
+import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.UUID.Types (UUID)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Data.Anchors as Anchors
@@ -155,10 +156,10 @@ mkOptions sugarContext mInjectedArg exprPl stored =
     do
         nominalTids <-
             sugarContext ^. ConvertM.scCodeAnchors
-            & Anchors.tids & Transaction.getP
+            & Anchors.tids & Transaction.getP <&> Set.toList
         globals <-
             sugarContext ^. ConvertM.scCodeAnchors
-            & Anchors.globals & Transaction.getP
+            & Anchors.globals & Transaction.getP <&> Set.toList
         concat
             [ exprPl ^. Input.inferredScope
                 & Infer.scopeToTypeMap

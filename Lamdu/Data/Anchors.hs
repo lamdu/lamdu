@@ -17,6 +17,7 @@ module Lamdu.Data.Anchors
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.ByteString.Char8 ()
+import           Data.Set (Set)
 import           Data.Store.Rev.Branch (Branch)
 import           Data.Store.Rev.Version (Version)
 import           Data.Store.Rev.View (View)
@@ -34,12 +35,12 @@ type Pane m = DefI m
 data Code f m = Code
     { repl :: f (ValI m)
     , panes :: f [Pane m]
-    , globals :: f [DefI m]
+    , globals :: f (Set (DefI m))
     , preJumps :: f [WidgetId.Id]
     , preCursor :: f WidgetId.Id
     , postCursor :: f WidgetId.Id
-    , tags :: f [T.Tag]
-    , tids :: f [T.NominalId]
+    , tags :: f (Set (T.Tag))
+    , tids :: f (Set (T.NominalId))
     }
 onCode :: (forall a. Binary a => f a -> g a) -> Code f m -> Code g m
 onCode f (Code x0 x1 x2 x3 x4 x5 x6 x7) =

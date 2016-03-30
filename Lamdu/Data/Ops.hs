@@ -17,6 +17,7 @@ module Lamdu.Data.Ops
 
 import           Control.Lens.Operators
 import           Control.Monad (when)
+import qualified Data.Set as Set
 import           Data.Store.Property (Property(..))
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction, getP, setP, modP)
@@ -206,7 +207,7 @@ newPublicDefinition codeProps bodyI name =
             Definition.Expr bodyI Definition.NoExportedType mempty
             & Definition.BodyExpr
             & newDefinition name (presentationModeOfName name)
-        modP (Anchors.globals codeProps) (defI :)
+        modP (Anchors.globals codeProps) (Set.insert defI)
         return defI
 
 -- Used when writing a definition into an identifier which was a variable.
@@ -221,7 +222,7 @@ newPublicDefinitionToIRef codeProps bodyI defI =
         getP (Anchors.assocNameRef defI)
             <&> presentationModeOfName
             >>= setP (Anchors.assocPresentationMode defI)
-        modP (Anchors.globals codeProps) (defI :)
+        modP (Anchors.globals codeProps) (Set.insert defI)
         newPane codeProps defI
 
 newPublicDefinitionWithPane ::
