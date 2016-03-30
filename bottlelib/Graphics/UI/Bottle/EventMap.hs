@@ -1,7 +1,8 @@
-{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveGeneric, FlexibleContexts, RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DeriveFunctor, DeriveGeneric, FlexibleContexts, RecordWildCards, LambdaCase #-}
 module Graphics.UI.Bottle.EventMap
     ( KeyEvent(..)
     , InputDoc, Subtitle, Doc(..), docStrs
+    , WantsClipboard(..)
     , EventMap, lookup, emTickHandlers
     , emDocs
     , charEventMap, allChars
@@ -158,13 +159,17 @@ dropHandlerDocs f DropHandler{..} =
     DropHandler dropHandlerInputDoc
     <$> dhDoc (Lens.indexed f dropHandlerInputDoc) _dropDocHandler
 
+data WantsClipboard a
+    = Doesn'tWantClipboard a
+    | WantsClipboard (Clipboard -> a)
+    deriving (Functor)
+
 data EventMap a = EventMap
-    { _emKeyMap :: Map KeyEvent (DocHandler a)
+    { _emKeyMap :: Map KeyEvent (DocHandler (WantsClipboard a))
     , _emDropHandlers :: [DropHandler a]
     , _emCharGroupHandlers :: [CharGroupHandler a]
     , _emCharGroupChars :: Set Char
     , _emAllCharsHandler :: [AllCharsHandler a]
-    , emPasteHandlers :: Map KeyEvent (DocHandler (Clipboard -> a))
     , _emTickHandlers :: [a]
     } deriving (Generic, Functor)
 
@@ -181,30 +186,27 @@ emDocs f EventMap{..} =
     <*> (Lens.traverse .> cgDocs) f _emCharGroupHandlers
     <*> pure _emCharGroupChars
     <*> (Lens.traverse .> chDocs) f _emAllCharsHandler
-    <*> (Lens.reindexed prettyKeyEvent Lens.itraversed <. dhDoc) f emPasteHandlers
     <*> pure _emTickHandlers
 
 Lens.makeLenses ''EventMap
 
 instance Monoid (EventMap a) where
-    mempty = EventMap Map.empty [] [] Set.empty [] Map.empty []
+    mempty = EventMap mempty mempty mempty mempty mempty mempty
     mappend = overrides
 
 overrides :: EventMap a -> EventMap a -> EventMap a
 overrides
-    x@(EventMap xMap xDropHandlers xCharGroups xChars xMAllChars xPaste xTicks)
-    (EventMap yMap yDropHandlers yCharGroups yChars yMAllChars yPaste yTicks) =
+    x@(EventMap xMap xDropHandlers xCharGroups xChars xMAllChars xTicks)
+    (EventMap yMap yDropHandlers yCharGroups yChars yMAllChars yTicks) =
     EventMap
     (xMap `mappend` filteredYMap)
     (xDropHandlers ++ yDropHandlers)
     (xCharGroups ++ filteredYCharGroups)
     (xChars `mappend` yChars)
     (xMAllChars ++ yMAllChars)
-    (xPaste `mappend` filteredYPaste)
     (xTicks ++ yTicks)
     where
         filteredYMap = filterByKey (not . isKeyConflict) yMap
-        filteredYPaste = filterByKey (not . isKeyConflict) yPaste
         isKeyConflict (KeyEvent _ (ModKey mods key))
             | isCharMods mods =
                 maybe False (isCharConflict x) $ charOfKey key
@@ -266,12 +268,11 @@ lookup _ (Events.EventDropPaths paths) eventMap =
         applyHandler dh = dh ^. dropDocHandler . dhHandler $ paths
 lookup mClipboard (Events.EventKey event) eventMap =
     msum
-    [ do
-          clipboard <- mClipboard
-          handler <- KeyEvent keyState modKey `Map.lookup` pasteHandlers
-          (handler ^. dhHandler) clipboard & Just
-    , (^. dhHandler) <$>
-      KeyEvent keyState modKey `Map.lookup` dict
+    [ KeyEvent keyState modKey `Map.lookup` dict
+      <&> (^. dhHandler)
+      >>= \case
+          Doesn'tWantClipboard x -> Just x
+          WantsClipboard f -> mClipboard <&> f
     , listToMaybe $
       do
           GLFW.KeyState'Pressed <- return keyState
@@ -287,7 +288,7 @@ lookup mClipboard (Events.EventKey event) eventMap =
           (handler ^. dhHandler) char ^.. Lens._Just
     ]
     where
-        EventMap dict _dropHandlers charGroups _ allCharHandlers pasteHandlers _tick = eventMap
+        EventMap dict _dropHandlers charGroups _ allCharHandlers _tick = eventMap
         Events.KeyEvent k _scanCode keyState modKeys mchar = event
         modKey = mkModKey modKeys k
 lookup _ _ _ = Nothing
@@ -315,14 +316,18 @@ charEventMap iDoc oDoc handler =
 allChars :: InputDoc -> Doc -> (Char -> a) -> EventMap a
 allChars iDoc oDoc f = charEventMap iDoc oDoc $ Just . f
 
-keyEventMap :: KeyEvent -> Doc -> a -> EventMap a
-keyEventMap eventType doc handler =
+keyEventMapH :: KeyEvent -> Doc -> WantsClipboard a -> EventMap a
+keyEventMapH eventType doc handler =
     mempty
-    { _emKeyMap = Map.singleton eventType $ DocHandler doc handler
+    { _emKeyMap =
+      Map.singleton eventType (DocHandler doc handler)
     }
 
+keyEventMap :: KeyEvent -> Doc -> a -> EventMap a
+keyEventMap eventType doc handler = keyEventMapH eventType doc (Doesn'tWantClipboard handler)
+
 keyPress :: ModKey -> Doc -> a -> EventMap a
-keyPress = keyEventMap . KeyEvent GLFW.KeyState'Pressed
+keyPress key doc handler = keyEventMap (KeyEvent GLFW.KeyState'Pressed key) doc handler
 
 keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress
@@ -333,10 +338,7 @@ dropEventMap iDoc oDoc handler =
 
 pasteOnKey :: ModKey -> Doc -> (Clipboard -> a) -> EventMap a
 pasteOnKey key doc handler =
-    mempty
-    { emPasteHandlers =
-        Map.singleton (KeyEvent GLFW.KeyState'Pressed key) (DocHandler doc handler)
-    }
+    keyEventMapH (KeyEvent GLFW.KeyState'Pressed key) doc (WantsClipboard handler)
 
 pasteOnKeys :: [ModKey] -> Doc -> (Clipboard -> a) -> EventMap a
 pasteOnKeys = mconcat . map pasteOnKey
