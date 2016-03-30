@@ -5,7 +5,6 @@ module Lamdu.Data.Export.JSON
     , importAll
     ) where
 
--- TODO: Field ParamList
 -- TODO: Schema version? What granularity?
 
 import qualified Control.Lens as Lens
@@ -114,17 +113,21 @@ exportNominal nomId =
             Codec.encodeNamedNominal ((mName, nomId), nominal) & tell
         & withVisited visitedNominals nomId
 
-recurse :: Val a -> Export ()
-recurse val =
+exportSubexpr :: Val (ValI ViewM) -> Export ()
+exportSubexpr (Val lamI (V.BAbs (V.Lam lamVar _))) =
     do
-        -- TODO: Add a recursion on all ExprLens.subExprs -- that have
-        -- a Lam inside them, on the "Var" to export all the var names
-        -- too?  OR: alternatively, remove the "name" crap and just
-        -- add the set of all UUIDs we ever saw to the WriterT, and
-        -- export all associated names/data of all!
+        mName <- readAssocName lamVar & trans
+        mParamList <- Transaction.getP (Anchors.assocFieldParamList lamI) & trans
+        Codec.encodeNamedLamVar (mParamList, mName, valIToUUID lamI, lamVar) & tell
+exportSubexpr _ = return ()
+
+exportVal :: Val (ValI ViewM) -> Export ()
+exportVal val =
+    do
         val ^.. ExprLens.valGlobals mempty & traverse_ exportDef
         val ^.. ExprLens.valTags & traverse_ exportTag
         val ^.. ExprLens.valNominals & traverse_ exportNominal
+        val ^.. ExprLens.subExprs & traverse_ exportSubexpr
 
 valIToUUID :: ValI m -> UUID
 valIToUUID = IRef.uuid . ExprIRef.unValI
@@ -136,20 +139,19 @@ exportDef globalId =
         mName <- readAssocName globalId & trans
         def <-
             ExprIRef.defI globalId & Load.def & trans
-            <&> Definition.defBody . Lens.mapped . Lens.mapped %~
-            valIToUUID . Property.value
-        traverse_ recurse (def ^. Definition.defBody)
-        (presentationMode, mName, globalId) <$ def & Codec.encodeDef & tell
+            <&> Definition.defBody . Lens.mapped . Lens.mapped %~ Property.value
+        traverse_ exportVal (def ^. Definition.defBody)
+        let def' = def & Definition.defBody . Lens.mapped . Lens.mapped %~ valIToUUID
+        (presentationMode, mName, globalId) <$ def' & Codec.encodeDef & tell
     & withVisited visitedDefs globalId
 
 exportRepl :: T ViewM Codec.Encoded
 exportRepl =
     do
-        repl <-
-            Transaction.readIRef replIRef >>= ExprIRef.readVal & trans
-            <&> fmap valIToUUID
-        recurse repl
-        Codec.encodeRepl repl & tell
+        repl <- Transaction.readIRef replIRef >>= ExprIRef.readVal & trans
+        exportVal repl
+        repl <&> valIToUUID
+            & Codec.encodeRepl & tell
     & runExport
     <&> snd
 
@@ -196,6 +198,14 @@ importTag (tagOrder, mName, tag) =
         traverse_ (setName tag) mName
         tag `insertTo` DbLayout.tags
 
+importLamVar :: (Maybe Anchors.ParamList, Maybe String, UUID, V.Var) -> T ViewM ()
+importLamVar (paramList, mName, lamUUID, var) =
+    do
+        Transaction.setP (Anchors.assocFieldParamList lamI) paramList
+        traverse_ (setName var) mName
+    where
+        lamI = IRef.unsafeFromUUID lamUUID & ExprIRef.ValI
+
 importNominal :: ((Maybe String, T.NominalId), Nominal) -> T ViewM ()
 importNominal ((mName, nomId), nominal) =
     do
@@ -214,6 +224,7 @@ importOne json =
     , try Codec.decodeRepl importRepl
     , try Codec.decodeNamedTag importTag
     , try Codec.decodeNamedNominal importNominal
+    , try Codec.decodeNamedLamVar importLamVar
     ]
     & either parseFail return
     >>= id

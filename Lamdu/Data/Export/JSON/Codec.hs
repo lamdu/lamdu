@@ -1,8 +1,16 @@
 -- | JSON encoder/decoder for Lamdu types
 {-# LANGUAGE NoImplicitPrelude, LambdaCase, OverloadedStrings, PatternGuards #-}
 module Lamdu.Data.Export.JSON.Codec
-    ( Encoder, encodeNamedTag, encodeRepl, encodeDef, encodeNamedNominal, encodeArray
-    , Decoder, decodeNamedTag, decodeRepl, decodeDef, decodeNamedNominal, decodeArray
+    ( Encoder
+      , encodeRepl, encodeDef, encodeArray
+      , encodeNamedTag
+      , encodeNamedNominal
+      , encodeNamedLamVar
+    , Decoder
+      , decodeRepl, decodeDef, decodeArray
+      , decodeNamedTag
+      , decodeNamedNominal
+      , decodeNamedLamVar
     , Encoded, runDecoder
     ) where
 
@@ -383,7 +391,7 @@ decodeRepl = Aeson.withObject "repl" $ \obj -> obj .: "repl" >>= decodeVal
 insertField :: Aeson.ToJSON a => String -> a -> Aeson.Value -> Aeson.Value
 insertField k v (Aeson.Object obj) =
     Aeson.Object (HashMap.insert (fromString k) (Aeson.toJSON v) obj)
-insertField _ _ _ = error "insertField: Expecting object"
+insertField _ _ o = error $ "insertField: Expecting object, got: " ++ show o
 
 encodeNominal :: Encoder Nominal
 encodeNominal (Nominal paramsMap scheme) =
@@ -453,6 +461,45 @@ decodeNamedTag json =
     do
         ((mName, tag), tagOrder) <- decodeNamed "tag" decodeTagOrder json
         return (tagOrder, mName, T.Tag tag)
+
+encodeParamList :: Encoder Anchors.ParamList
+encodeParamList = Aeson.toJSON . map encodeTagId
+
+decodeParamList :: Decoder Anchors.ParamList
+decodeParamList json = Aeson.parseJSON json >>= traverse decodeTagId
+
+encodeMaybe :: Encoder a -> Encoder (Maybe a)
+encodeMaybe encoder mVal = mVal <&> encoder & Aeson.toJSON
+
+decodeMaybe :: Decoder a -> Decoder (Maybe a)
+decodeMaybe decoder json = Aeson.parseJSON json >>= traverse decoder
+
+encodeLam :: Aeson.ToJSON a => Encoder (a, Maybe Anchors.ParamList)
+encodeLam (lamI, mParamList) =
+    Aeson.object
+    [ "lamId" .= lamI
+    , "lamFieldParams" .= encodeMaybe encodeParamList mParamList
+    ]
+
+decodeLam :: Aeson.FromJSON a => Decoder (a, Maybe Anchors.ParamList)
+decodeLam =
+    Aeson.withObject "lam" $ \obj ->
+    do
+        lamI <- obj .: "lamId"
+        mParamList <- obj .: "lamFieldParams" >>= decodeMaybe decodeParamList
+        return (lamI, mParamList)
+
+encodeNamedLamVar ::
+    Aeson.ToJSON a => Encoder (Maybe Anchors.ParamList, Maybe String, a, V.Var)
+encodeNamedLamVar (mParamList, mName, lamI, V.Var ident) =
+    encodeNamed "lamVar" encodeLam ((mName, ident), (lamI, mParamList))
+
+decodeNamedLamVar ::
+    Aeson.FromJSON a => Decoder (Maybe Anchors.ParamList, Maybe String, a, V.Var)
+decodeNamedLamVar json =
+    do
+        ((mName, ident), (lamI, mParamList)) <- decodeNamed "lamVar" decodeLam json
+        return (mParamList, mName, lamI, V.Var ident)
 
 encodeNamedNominal :: Encoder ((Maybe String, T.NominalId), Nominal)
 encodeNamedNominal ((mName, T.NominalId nomId), nom) =
