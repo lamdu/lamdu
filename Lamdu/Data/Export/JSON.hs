@@ -18,10 +18,12 @@ import qualified Control.Monad.Trans.State as State
 import           Control.Monad.Trans.Writer (WriterT(..))
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
+import           Data.Binary (Binary)
 import qualified Data.ByteString.Lazy.Char8 as BSL8
 import           Data.Either.Combinators (swapEither)
 import           Data.Foldable (traverse_)
 import           Data.Set (Set)
+import qualified Data.Set as Set
 import           Data.Store.IRef (IRef)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -160,12 +162,23 @@ writeValAt (Val valI body) =
 writeValAtUUID :: Monad m => Val UUID -> T m (ValI m)
 writeValAtUUID val = val <&> IRef.unsafeFromUUID <&> ExprIRef.ValI & writeValAt
 
+insertTo ::
+    (Monad m, Ord a, Binary a) =>
+    a -> (DbLayout.Code (IRef ViewM) ViewM -> IRef m (Set a)) -> Transaction m ()
+insertTo item setIRef =
+    Transaction.readIRef iref
+    <&> Set.insert item
+    >>= Transaction.writeIRef iref
+    where
+        iref = setIRef DbLayout.codeIRefs
+
 importDef :: Definition (Val UUID) (V.Var, Maybe String) -> T ViewM ()
 importDef (Definition defBody (globalId, mName)) =
     do
         traverse_ (setName globalId) mName
         Lens.traverse writeValAtUUID defBody
             >>= Transaction.writeIRef defI
+        defI `insertTo` DbLayout.globals
     where
         defI = ExprIRef.defI globalId
 
@@ -173,13 +186,17 @@ importRepl :: Val UUID -> T ViewM ()
 importRepl val = writeValAtUUID val >>= Transaction.writeIRef replIRef
 
 importTag :: (Maybe String, T.Tag) -> T ViewM ()
-importTag (mName, tag) = traverse_ (setName tag) mName
+importTag (mName, tag) =
+    do
+        traverse_ (setName tag) mName
+        tag `insertTo` DbLayout.tags
 
 importNominal :: ((Maybe String, T.NominalId), Nominal) -> T ViewM ()
 importNominal ((mName, nomId), nominal) =
     do
         traverse_ (setName nomId) mName
         Transaction.writeIRef (ExprIRef.nominalI nomId) nominal
+        nomId `insertTo` DbLayout.tids
 
 -- Like asum/msum but collects the errors
 firstSuccess :: [Either err a] -> Either [err] a
