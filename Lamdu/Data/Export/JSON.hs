@@ -22,10 +22,12 @@ import qualified Data.ByteString.Lazy.Char8 as BSL8
 import           Data.Either.Combinators (swapEither)
 import           Data.Foldable (traverse_)
 import           Data.Set (Set)
-import           Data.Store.IRef
+import           Data.Store.IRef (IRef)
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
+import           Data.UUID.Types (UUID)
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.DbLayout (ViewM)
 import qualified Lamdu.Data.DbLayout as DbLayout
@@ -120,13 +122,17 @@ recurse val =
         val ^.. ExprLens.valTags & traverse_ exportTag
         val ^.. ExprLens.valNominals & traverse_ exportNominal
 
+valIToUUID :: ValI m -> UUID
+valIToUUID = IRef.uuid . ExprIRef.unValI
+
 exportDef :: V.Var -> Export ()
 exportDef globalId =
     do
         mName <- readAssocName globalId
         def <-
             ExprIRef.defI globalId & Load.def & trans
-            <&> Definition.defBody . Lens.mapped . Lens.mapped %~ Property.value
+            <&> Definition.defBody . Lens.mapped . Lens.mapped %~
+            valIToUUID . Property.value
         traverse_ recurse (def ^. Definition.defBody)
         (globalId, mName) <$ def & Codec.encodeDef & tell
     & withVisited visitedDefs globalId
@@ -134,7 +140,9 @@ exportDef globalId =
 exportRepl :: T ViewM Codec.Encoded
 exportRepl =
     do
-        repl <- Transaction.readIRef replIRef >>= ExprIRef.readVal & trans
+        repl <-
+            Transaction.readIRef replIRef >>= ExprIRef.readVal & trans
+            <&> fmap valIToUUID
         recurse repl
         Codec.encodeRepl repl & tell
     & runExport
@@ -143,17 +151,26 @@ exportRepl =
 setName :: ToUUID a => a -> String -> T ViewM ()
 setName x = Transaction.setP (Anchors.assocNameRef x)
 
-importDef :: Definition (Val ()) (V.Var, Maybe String) -> T ViewM ()
-importDef (Definition body (globalId, mName)) =
+writeValAt :: Monad m => Val (ValI m) -> T m (ValI m)
+writeValAt (Val valI body) =
+    do
+        traverse writeValAt body >>= ExprIRef.writeValBody valI
+        return valI
+
+writeValAtUUID :: Monad m => Val UUID -> T m (ValI m)
+writeValAtUUID val = val <&> IRef.unsafeFromUUID <&> ExprIRef.ValI & writeValAt
+
+importDef :: Definition (Val UUID) (V.Var, Maybe String) -> T ViewM ()
+importDef (Definition defBody (globalId, mName)) =
     do
         traverse_ (setName globalId) mName
-        body' <- traverse ExprIRef.newVal body
-        Transaction.writeIRef defI body'
+        Lens.traverse writeValAtUUID defBody
+            >>= Transaction.writeIRef defI
     where
         defI = ExprIRef.defI globalId
 
-importRepl :: Val () -> T ViewM ()
-importRepl val = ExprIRef.newVal val >>= Transaction.writeIRef replIRef
+importRepl :: Val UUID -> T ViewM ()
+importRepl val = writeValAtUUID val >>= Transaction.writeIRef replIRef
 
 importTag :: (Maybe String, T.Tag) -> T ViewM ()
 importTag (mName, tag) = traverse_ (setName tag) mName

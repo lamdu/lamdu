@@ -20,13 +20,14 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
+import           Data.UUID.Aeson ()
+import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.Constraints (Constraints(..), CompositeVarConstraints(..))
 import           Lamdu.Expr.FlatComposite (FlatComposite(..))
 import qualified Lamdu.Expr.FlatComposite as FlatComposite
-import           Lamdu.Expr.IRef (ValI)
 import           Lamdu.Expr.Identifier (Identifier, identHex, identFromHex)
 import           Lamdu.Expr.Nominal (Nominal(..))
 import           Lamdu.Expr.Scheme (Scheme(..))
@@ -250,8 +251,17 @@ decodeLeaf json =
     ]
 
 -- TODO: Should we export the UUIDs of subexprs?
-encodeVal :: Encoder (Val (ValI m))
-encodeVal (Val _ body) =
+encodeVal :: Aeson.ToJSON a => Encoder (Val a)
+encodeVal (Val pl body) = Aeson.toJSON (pl, encodeValBody body)
+
+decodeVal :: Aeson.FromJSON a => Decoder (Val a)
+decodeVal json =
+    do
+        (pl, body) <- Aeson.parseJSON json
+        Val pl <$> decodeValBody body
+
+encodeValBody :: Aeson.ToJSON a => V.Body (Val a) -> AesonTypes.Value
+encodeValBody body =
     case body <&> encodeVal of
     V.BApp (V.Apply func arg) ->
         Aeson.object ["applyFunc" .= func, "applyArg" .= arg]
@@ -272,8 +282,8 @@ encodeVal (Val _ body) =
         Aeson.object ["fromNomId" .= encodeIdent nomId, "fromNomVal" .= val]
     V.BLeaf leaf -> encodeLeaf leaf
 
-decodeVal :: Decoder (Val ())
-decodeVal json =
+decodeValBody :: AesonTypes.FromJSON a => Encoded -> AesonTypes.Parser (V.Body (Val a))
+decodeValBody json =
     (decodeLeaf json <&> V.BLeaf)
     <|>
     ( Aeson.withObject "Val" ?? json $ \obj ->
@@ -306,7 +316,6 @@ decodeVal json =
         <&> V.BFromNom
       ] >>= traverse decodeVal
     )
-    <&> V.Val ()
 
 encodeExportedType :: Encoder Definition.ExportedType
 encodeExportedType Definition.NoExportedType = Aeson.String "NoExportedType"
@@ -316,7 +325,7 @@ decodeExportedType :: Decoder Definition.ExportedType
 decodeExportedType (Aeson.String "NoExportedType") = pure Definition.NoExportedType
 decodeExportedType json = decodeScheme json <&> Definition.ExportedType
 
-encodeDefBody :: Encoder (Definition.Body (Val (ValI m)))
+encodeDefBody :: Encoder (Definition.Body (Val UUID))
 encodeDefBody (Definition.BodyBuiltin (Definition.Builtin name scheme)) =
     Aeson.object
     [ "builtin" .=
@@ -334,7 +343,7 @@ encodeDefBody (Definition.BodyExpr (Definition.Expr val typ frozenDefTypes)) =
     where
         encodedFrozen = encodeIdentMap V.vvName encodeScheme frozenDefTypes
 
-decodeDefBody :: Decoder (Definition.Body (Val ()))
+decodeDefBody :: Decoder (Definition.Body (Val UUID))
 decodeDefBody =
     Aeson.withObject "DefBody" $ \obj ->
     jsum
@@ -353,7 +362,7 @@ decodeDefBody =
             <$> (builtin .: "name" >>= decodeFFIName)
             <*> (builtin .: "scheme" >>= decodeScheme)
 
-encodeDef :: Encoder (Definition (Val (ValI m)) (V.Var, Maybe String))
+encodeDef :: Encoder (Definition (Val UUID) (V.Var, Maybe String))
 encodeDef (Definition body (globalId, mName)) =
     Aeson.object $ concat
     [ [ "def" .= encodeIdent (V.vvName globalId) ]
@@ -361,7 +370,7 @@ encodeDef (Definition body (globalId, mName)) =
     , [ "body" .= encodeDefBody body ]
     ]
 
-decodeDef :: Decoder (Definition (Val ()) (V.Var, Maybe String))
+decodeDef :: Decoder (Definition (Val UUID) (V.Var, Maybe String))
 decodeDef =
     Aeson.withObject "Def" $ \obj ->
     do
@@ -370,10 +379,10 @@ decodeDef =
         mName <- Just <$> obj .: "name" <|> pure Nothing
         return (Definition body (globalId, mName))
 
-encodeRepl :: Encoder (Val (ValI m))
+encodeRepl :: Encoder (Val UUID)
 encodeRepl val = Aeson.object [ "repl" .= encodeVal val ]
 
-decodeRepl :: Decoder (Val ())
+decodeRepl :: Decoder (Val UUID)
 decodeRepl = Aeson.withObject "repl" $ \obj -> obj .: "repl" >>= decodeVal
 
 insertField :: Aeson.ToJSON a => String -> a -> Aeson.Value -> Aeson.Value

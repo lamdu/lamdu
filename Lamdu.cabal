@@ -166,6 +166,7 @@ Executable lamdu
                   , vector
                   , void >= 0.6.1
                   , wl-pprint >= 1.2
+                  , uuid-aeson
                   , uuid-types
   if flag(noprettyclass)
     build-depends:  pretty >=1.1.2 && <1.2
